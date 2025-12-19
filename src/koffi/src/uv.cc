@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: MIT
 
 #include "uv.hh"
+#include "util.hh"
+
+#include <uv.h>
 
 namespace K {
 
@@ -8,141 +11,164 @@ Napi::Function Poll::Define(Napi::Env env)
 {
     return DefineClass(env, "Poll", {
         InstanceMethod("start", &Poll::Start),
-        InstanceMethod("stop",  &Poll::Stop),
+        InstanceMethod("stop", &Poll::Stop),
         InstanceMethod("close", &Poll::Close),
         InstanceMethod("unref", &Poll::Unref),
-        InstanceMethod("ref",   &Poll::Ref),
+        InstanceMethod("ref", &Poll::Ref)
     });
 }
 
-Poll::Poll(const Napi::CallbackInfo& info)
+Poll::Poll(const Napi::CallbackInfo &info)
     : Napi::ObjectWrap<Poll>(info), env(info.Env())
 {
-    if (info.Length() != 1 || !info[0].IsNumber()) {
-        ThrowError<Napi::Error>(env, "Poll only accepts the file descripter as number");
+    InstanceData *instance = env.GetInstanceData<InstanceData>();
+
+    if (info.Length() < 1 || !info[0].IsNumber()) {
+        ThrowError<Napi::Error>(env, "Expected 1 argument, got %1", info.Length());
+        return;
+    }
+    if (!info[0].IsNumber()) {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for descriptor, expected number", GetValueType(instance, info[0]));
         return;
     }
 
-    const int fd = info[0].As<Napi::Number>().Int32Value();
+    int fd = info[0].As<Napi::Number>().Int32Value();
 
-    // get the main event loop object
-    uv_loop_t* loop = nullptr;
-    napi_status st = napi_get_uv_event_loop(env, &loop);
-    if (st != napi_ok || !loop) {
-        ThrowError<Napi::Error>(env, "napi_get_uv_event_loop failed");
+    uv_loop_t *loop = nullptr;
+    if (napi_get_uv_event_loop(env, &loop) != napi_ok || !loop) {
+        ThrowError<Napi::Error>(env, "napi_get_uv_event_loop() failed");
         return;
     }
 
-    int r = uv_poll_init(loop, &uv_poll, fd);
-    if (r != 0) {
-        Napi::Error::New(env, uv_strerror(r)).ThrowAsJavaScriptException();
+    // We would store it inside the class, but the definition of uv_poll_t involves windows.h...
+    // and we won't want that on Windows. Heap allocation it is!
+    // Also, it may have to outlive the object, because uv_close() is asynchronous.
+    handle = new uv_poll_t();
+
+    if (int ret = uv_poll_init(loop, handle, fd); ret != 0) {
+        ThrowError<Napi::Error>(env, "Failed to init UV poll: %1", uv_strerror(ret));
         return;
     }
 
-    uv_poll.data = this;
+    handle->data = this;
 }
 
-void Poll::Start(const Napi::CallbackInfo& info)
+void Poll::Start(const Napi::CallbackInfo &info)
 {
-    Napi::Object opts = info.Length() >= 1 && info[0].IsObject()
-        ? info[0].As<Napi::Object>()
-        : Napi::Object::New(env);
+    InstanceData *instance = env.GetInstanceData<InstanceData>();
 
-    if (info.Length() != 2) {
-        ThrowError<Napi::Error>(env, "start expects two parameters: opts, cb");
+    bool has_opts = (info.Length() >= 2 && info[0].IsObject());
+
+    if (info.Length() < 1u + has_opts) {
+        ThrowError<Napi::TypeError>(env, "Expected 1 to 2 arguments, got %1", info.Length());
         return;
     }
-    if (!info[1].IsFunction()) {
-        ThrowError<Napi::Error>(env, "start expects a function as second parameter");
+    if (!info[0u + has_opts].IsFunction()) {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for callback, expected function", GetValueType(instance, info[0u + has_opts]));
         return;
     }
 
     int events = 0;
-    if (opts.Has("readable") && opts.Get("readable").ToBoolean()) {
-        events |= UV_READABLE;
-    }
-    if (opts.Has("writable") && opts.Get("writable").ToBoolean()) {
-        events |= UV_WRITABLE;
-    }
-    if (opts.Has("disconnect") && opts.Get("disconnect").ToBoolean()) {
-        events |= UV_DISCONNECT;
+    Napi::Function cb = info[0 + has_opts].As<Napi::Function>();
+
+    if (has_opts) {
+        Napi::Object opts = has_opts ? info[0].As<Napi::Object>() : Napi::Object::New(env);
+
+        events |= opts.Get("readable").ToBoolean() ? UV_READABLE : 0;
+        events |= opts.Get("writable").ToBoolean() ? UV_WRITABLE : 0;
+        events |= opts.Get("disconnect").ToBoolean() ? UV_DISCONNECT : 0;
+    } else {
+        events = UV_READABLE;
     }
 
-    cb.Reset(info[1].As<Napi::Function>(), 1);
+    callback.Reset(cb, 1);
 
-    int r = uv_poll_start(&uv_poll, events, &Poll::OnPoll);
-    if (r != 0) {
-        Napi::Error::New(env, uv_strerror(r)).ThrowAsJavaScriptException();
-        cb.Reset();
-    }
-}
-
-void Poll::Stop(const Napi::CallbackInfo&)
-{
-    if (uv_is_active(reinterpret_cast<uv_handle_t*>(&uv_poll))) {
-        uv_poll_stop(&uv_poll);
-    }
-    cb.Reset();
-}
-
-void Poll::Close(const Napi::CallbackInfo& info)
-{
-    Stop(info);
-    if (!uv_is_closing(reinterpret_cast<uv_handle_t*>(&uv_poll))) {
-        uv_close(reinterpret_cast<uv_handle_t*>(&uv_poll), nullptr);
+    if (int ret = uv_poll_start(handle, events, &Poll::OnPoll); ret != 0) {
+        callback.Reset();
+        ThrowError<Napi::Error>(env, "Failed to start UV poll: %1", uv_strerror(ret));
     }
 }
 
-void Poll::Unref(const Napi::CallbackInfo&)
+void Poll::Stop(const Napi::CallbackInfo &)
 {
-    uv_unref(reinterpret_cast<uv_handle_t*>(&uv_poll));
+    uv_poll_stop(handle);
+    callback.Reset();
 }
 
-void Poll::Ref(const Napi::CallbackInfo&)
+void Poll::Close(const Napi::CallbackInfo &info)
 {
-    uv_ref(reinterpret_cast<uv_handle_t*>(&uv_poll));
+    Close();
+    callback.Reset();
 }
 
-void Poll::OnPoll(uv_poll_t* h, int status, int events)
+void Poll::Ref(const Napi::CallbackInfo &)
 {
-    auto* self = static_cast<Poll*>(h->data);
-    if (!self)
+    uv_ref((uv_handle_t *)handle);
+}
+
+void Poll::Unref(const Napi::CallbackInfo &)
+{
+    uv_unref((uv_handle_t *)handle);
+}
+
+void Poll::Close()
+{
+    if (!handle)
         return;
 
-    Napi::Env env = self->env;
-    Napi::HandleScope scope(env);
+    const auto release = [](uv_handle_t *ptr) {
+        uv_poll_t *handle = (uv_poll_t *)ptr;
+        delete handle;
+    };
 
-    Napi::Object ev = Napi::Object::New(env);
-
-    ev.Set("status", status);
-    ev.Set("readable", (events & UV_READABLE) != 0);
-    ev.Set("writable", (events & UV_WRITABLE) != 0);
-    ev.Set("disconnect", (events & UV_DISCONNECT) != 0);
-
-    if (!self->cb.IsEmpty()) {
-        self->cb.Call(self->Value(), { ev });
-    }
+    uv_poll_stop(handle);
+    uv_close((uv_handle_t *)handle, release);
 }
 
-Napi::Value Watch(const Napi::CallbackInfo& info)
+void Poll::OnPoll(uv_poll_t *h, int status, int events)
+{
+    Poll *poll = (Poll *)h->data;
+
+    if (poll->callback.IsEmpty())
+        return;
+
+    Napi::Env env = poll->env;
+    Napi::HandleScope scope(env);
+
+    Napi::Object obj = Napi::Object::New(env);
+
+    obj.Set("readable", !!(events & UV_READABLE));
+    obj.Set("writable", !!(events & UV_WRITABLE));
+    obj.Set("disconnect", !!(events & UV_DISCONNECT));
+
+    napi_value args[] = { Napi::Number::New(env, status), obj };
+    poll->callback.Call(poll->Value(), K_LEN(args), args);
+}
+
+Napi::Value Watch(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
-    if (info.Length() != 3) {
-        ThrowError<Napi::Error>(env, "watch expects three parameters: fd, opts, cb");
+    InstanceData *instance = env.GetInstanceData<InstanceData>();
+
+    if (info.Length() < 3) {
+        ThrowError<Napi::TypeError>(env, "Expected 1 to 3 arguments, got %1", info.Length());
         return env.Null();
     }
+
+    bool has_opts = info[1].IsObject();
+
     if (!info[0].IsNumber()) {
-        ThrowError<Napi::Error>(env, "watch expects a number as second parameter");
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for descriptor, expected number", GetValueType(instance, info[0]));
         return env.Null();
     }
-    if (!info[2].IsFunction()) {
-        ThrowError<Napi::Error>(env, "watch expects a function as third parameter");
+    if (!info[1 + has_opts].IsFunction()) {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for callback, expected function", GetValueType(instance, info[1 + has_opts]));
         return env.Null();
     }
 
     int fd = info[0].As<Napi::Number>().Int32Value();
-    Napi::Object opts = info[1].IsObject() ? info[1].As<Napi::Object>() : Napi::Object::New(env);
-    Napi::Function cb = info[2].As<Napi::Function>();
+    Napi::Object opts = has_opts ? info[1].As<Napi::Object>() : Napi::Object::New(env);
+    Napi::Function cb = info[1 + has_opts].As<Napi::Function>();
 
     Napi::Function ctor = Poll::Define(env);
     Napi::Object inst = ctor.New({ Napi::Number::New(env, fd) });

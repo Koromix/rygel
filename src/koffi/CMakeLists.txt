@@ -142,4 +142,4 @@ if(NOT MSVC OR CMAKE_C_COMPILER_ID MATCHES "[Cc]lang")
     endif()
 endif()
 
-enable_unity_build(koffi)
+enable_unity_build(koffi EXCLUDE src/uv.cc)

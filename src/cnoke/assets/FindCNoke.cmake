@@ -40,6 +40,8 @@ endfunction()
 
 if(USE_UNITY_BUILDS)
     function(enable_unity_build TARGET)
+        cmake_parse_arguments(ARG "" "" "EXCLUDE" ${ARGN})
+
         get_target_property(sources ${TARGET} SOURCES)
         string(GENEX_STRIP "${sources}" sources)
 
@@ -51,6 +53,10 @@ if(USE_UNITY_BUILDS)
         set(cpp_definitions "")
 
         foreach(src ${sources})
+            if (src IN_LIST ARG_EXCLUDE)
+                continue()
+            endif()
+
             get_source_file_property(language ${src} LANGUAGE)
             get_property(definitions SOURCE ${src} PROPERTY COMPILE_DEFINITIONS)
             if(IS_ABSOLUTE ${src})
