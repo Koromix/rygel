@@ -730,10 +730,6 @@ wait:
                 r = select_compatible_firmware(board, task->u.upload.fws, task->u.upload.fws_count, &ehex);
                 if (r < 0)
                     return r;
-
-                if (!ehex)
-                    return ty_error(TY_ERROR_UNSUPPORTED, "Cannot find compatible firmware");
-
                 fw = ehex;
             } else {
                 ehex = task->u.upload.fws[0];
