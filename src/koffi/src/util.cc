@@ -180,7 +180,7 @@ const TypeInfo *ResolveType(Napi::Value value, int *out_directions)
         }
 
         return type;
-    } else if (CheckValueTag(instance, value, &TypeInfoMarker)) {
+    } else if (CheckValueTag(value, &TypeInfoMarker)) {
         Napi::External<TypeInfo> external = value.As<Napi::External<TypeInfo>>();
         const TypeInfo *raw = external.Data();
 
@@ -455,10 +455,10 @@ TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len, A
     return MakeArrayType(instance, ref, len, hint, false);
 }
 
-Napi::External<TypeInfo> WrapType(Napi::Env env, InstanceData *instance, const TypeInfo *type)
+Napi::External<TypeInfo> WrapType(Napi::Env env, const TypeInfo *type)
 {
     Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, (TypeInfo *)type);
-    SetValueTag(instance, external, &TypeInfoMarker);
+    SetValueTag(external, &TypeInfoMarker);
 
     return external;
 }
@@ -522,17 +522,17 @@ bool CanStoreType(const TypeInfo *type)
 
 const char *GetValueType(const InstanceData *instance, Napi::Value value)
 {
-    if (CheckValueTag(instance, value, &CastMarker)) {
+    if (CheckValueTag(value, &CastMarker)) {
         Napi::External<ValueCast> external = value.As<Napi::External<ValueCast>>();
         ValueCast *cast = external.Data();
 
         return cast->type->name;
     }
 
-    if (CheckValueTag(instance, value, &TypeInfoMarker))
+    if (CheckValueTag(value, &TypeInfoMarker))
         return "Type";
     for (const TypeInfo &type: instance->types) {
-        if (type.ref.marker && CheckValueTag(instance, value, type.ref.marker))
+        if (type.ref.marker && CheckValueTag(value, type.ref.marker))
             return type.name;
     }
 
@@ -577,7 +577,7 @@ const char *GetValueType(const InstanceData *instance, Napi::Value value)
     return "Unknown";
 }
 
-void SetValueTag(const InstanceData *instance, Napi::Value value, const void *marker)
+void SetValueTag(Napi::Value value, const void *marker)
 {
     static_assert(K_SIZE(TypeInfo) >= 16);
 
@@ -596,7 +596,7 @@ void SetValueTag(const InstanceData *instance, Napi::Value value, const void *ma
     K_ASSERT(status == napi_ok);
 }
 
-bool CheckValueTag(const InstanceData *instance, Napi::Value value, const void *marker)
+bool CheckValueTag(Napi::Value value, const void *marker)
 {
     bool match = false;
 
@@ -660,10 +660,8 @@ Napi::Object DecodeObject(Napi::Env env, const uint8_t *origin, const TypeInfo *
 {
     // We can't decode unions because we don't know which member is valid
     if (type->primitive == PrimitiveKind::Union) {
-        InstanceData *instance = env.GetInstanceData<InstanceData>();
-
         Napi::Object wrapper = type->construct.New({}).As<Napi::Object>();
-        SetValueTag(instance, wrapper, &MagicUnionMarker);
+        SetValueTag(wrapper, &MagicUnionMarker);
 
         MagicUnion *u = MagicUnion::Unwrap(wrapper);
         u->SetRaw(origin);
@@ -759,7 +757,6 @@ static uint32_t DecodeDynamicLength(const uint8_t *origin, const RecordMember &b
 void DecodeObject(Napi::Object obj, const uint8_t *origin, const TypeInfo *type)
 {
     Napi::Env env = obj.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
 
     K_ASSERT(type->primitive == PrimitiveKind::Record);
 
@@ -871,7 +868,7 @@ void DecodeObject(Napi::Object obj, const uint8_t *origin, const TypeInfo *type)
                     obj.Set(member.name, value);
                 } else if (ptr2) {
                     Napi::External<void> external = Napi::External<void>::New(env, ptr2);
-                    SetValueTag(instance, external, member.type->ref.marker);
+                    SetValueTag(external, member.type->ref.marker);
 
                     obj.Set(member.name, external);
                 } else {
@@ -920,7 +917,6 @@ void DecodeObject(Napi::Object obj, const uint8_t *origin, const TypeInfo *type)
 
 Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *type, uint32_t len)
 {
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
     Size offset = 0;
 
 #define POP_ARRAY(SetCode) \
@@ -1071,7 +1067,7 @@ Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *ty
 
                 if (ptr2) {
                     Napi::External<void> external = Napi::External<void>::New(env, ptr2);
-                    SetValueTag(instance, external, type->ref.type->ref.marker);
+                    SetValueTag(external, type->ref.type->ref.marker);
 
                     array.Set(i, external);
                 } else {
@@ -1116,7 +1112,6 @@ Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *ty
 void DecodeNormalArray(Napi::Array array, const uint8_t *origin, const TypeInfo *ref)
 {
     Napi::Env env = array.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
 
     K_ASSERT(array.IsArray());
 
@@ -1231,7 +1226,7 @@ void DecodeNormalArray(Napi::Array array, const uint8_t *origin, const TypeInfo 
 
                 if (ptr2) {
                     Napi::External<void> external = Napi::External<void>::New(env, ptr2);
-                    SetValueTag(instance, external, ref->ref.marker);
+                    SetValueTag(external, ref->ref.marker);
 
                     array.Set(i, external);
                 } else {
@@ -1668,7 +1663,7 @@ bool Encode(Napi::Env env, uint8_t *origin, Napi::Value value, const TypeInfo *t
             if (value.IsFunction()) {
                 ThrowError<Napi::Error>(env, "Cannot encode non-registered callback");
                 return false;
-            } else if (CheckValueTag(instance, value, type->ref.marker)) {
+            } else if (CheckValueTag(value, type->ref.marker)) {
                 ptr = value.As<Napi::External<void>>().Data();
             } else if (IsNullOrUndefined(value)) {
                 ptr = nullptr;
@@ -1707,8 +1702,6 @@ bool Encode(Napi::Env env, uint8_t *origin, Napi::Value value, const TypeInfo *t
 
 Napi::Function WrapFunction(Napi::Env env, const FunctionInfo *func)
 {
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
-
     Napi::Function wrapper;
     if (func->variadic) {
         Napi::Function::Callback call = TranslateVariadicCall;
@@ -1734,11 +1727,11 @@ Napi::Function WrapFunction(Napi::Env env, const FunctionInfo *func)
 
         meta.Set("name", Napi::String::New(env, func->name));
         meta.Set("arguments", arguments);
-        meta.Set("result", WrapType(env, instance, func->ret.type));
+        meta.Set("result", WrapType(env, func->ret.type));
 
         for (Size i = 0; i < func->parameters.len; i++) {
             const ParameterInfo &param = func->parameters[i];
-            arguments.Set((uint32_t)i, WrapType(env, instance, param.type));
+            arguments.Set((uint32_t)i, WrapType(env, param.type));
         }
 
         wrapper.Set("info", meta);

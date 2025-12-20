@@ -102,7 +102,7 @@ void Poll::Stop(const Napi::CallbackInfo &)
     callback.Reset();
 }
 
-void Poll::Close(const Napi::CallbackInfo &info)
+void Poll::Close(const Napi::CallbackInfo &)
 {
     Close();
     callback.Reset();

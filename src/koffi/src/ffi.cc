@@ -227,7 +227,7 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
 
     bool skip = (info.Length() > 1);
     bool named = skip && !IsNullOrUndefined(info[0]);
-    bool redefine = named && CheckValueTag(instance, info[0], &TypeInfoMarker);
+    bool redefine = named && CheckValueTag(info[0], &TypeInfoMarker);
 
     if (named && !info[0].IsString() && !redefine) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string", GetValueType(instance, info[0]));
@@ -397,7 +397,7 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
         type = replace;
     }
 
-    return WrapType(env, instance, type);
+    return WrapType(env, type);
 }
 
 static Napi::Value CreatePaddedStructType(const Napi::CallbackInfo &info)
@@ -422,7 +422,7 @@ static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
 
     bool skip = (info.Length() > 1);
     bool named = skip && !IsNullOrUndefined(info[0]);
-    bool redefine = named && CheckValueTag(instance, info[0], &TypeInfoMarker);
+    bool redefine = named && CheckValueTag(info[0], &TypeInfoMarker);
 
     if (named && !info[0].IsString() && !redefine) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string", GetValueType(instance, info[0]));
@@ -566,13 +566,12 @@ static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
         type = replace;
     }
 
-    return WrapType(env, instance, type);
+    return WrapType(env, type);
 }
 
 Napi::Value InstantiateUnion(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
 
     if (!info.IsConstructCall()) {
         ThrowError<Napi::TypeError>(env, "This function is a constructor and must be called with new");
@@ -592,7 +591,7 @@ Napi::Value InstantiateUnion(const Napi::CallbackInfo &info)
     }
 
     Napi::Object wrapper = type->construct.New({}).As<Napi::Object>();
-    SetValueTag(instance, wrapper, &MagicUnionMarker);
+    SetValueTag(wrapper, &MagicUnionMarker);
 
     return wrapper;
 }
@@ -626,7 +625,7 @@ static Napi::Value CreateOpaqueType(const Napi::CallbackInfo &info)
         return env.Null();
     err_guard.Disable();
 
-    return WrapType(env, instance, type);
+    return WrapType(env, type);
 }
 
 static Napi::Value CreatePointerType(const Napi::CallbackInfo &info)
@@ -695,7 +694,7 @@ static Napi::Value CreatePointerType(const Napi::CallbackInfo &info)
         type = copy;
     }
 
-    return WrapType(env, instance, type);
+    return WrapType(env, type);
 }
 
 static Napi::Value EncodePointerDirection(const Napi::CallbackInfo &info, int directions)
@@ -703,7 +702,6 @@ static Napi::Value EncodePointerDirection(const Napi::CallbackInfo &info, int di
     K_ASSERT(directions >= 1 && directions <= 3);
 
     Napi::Env env = info.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
 
     if (info.Length() < 1) {
         ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", info.Length());
@@ -725,7 +723,7 @@ static Napi::Value EncodePointerDirection(const Napi::CallbackInfo &info, int di
     // Embed direction in unused pointer bits
     const TypeInfo *marked = (const TypeInfo *)((uint8_t *)type + directions - 1);
 
-    return WrapType(env, instance, marked);
+    return WrapType(env, marked);
 }
 
 static Napi::Value MarkIn(const Napi::CallbackInfo &info)
@@ -793,7 +791,7 @@ static Napi::Value CreateDisposableType(const Napi::CallbackInfo &info)
             const Napi::FunctionReference &ref = type->dispose_ref;
 
             Napi::External<void> external = Napi::External<void>::New(env, (void *)ptr);
-            SetValueTag(instance, external, type->ref.marker);
+            SetValueTag(external, type->ref.marker);
 
             Napi::Value self = env.Null();
             napi_value args[] = {
@@ -837,7 +835,7 @@ static Napi::Value CreateDisposableType(const Napi::CallbackInfo &info)
     }
     err_guard.Disable();
 
-    return WrapType(env, instance, type);
+    return WrapType(env, type);
 }
 
 static inline bool GetExternalPointer(Napi::Env env, Napi::Value value, void **out_ptr)
@@ -847,9 +845,9 @@ static inline bool GetExternalPointer(Napi::Env env, Napi::Value value, void **o
     if (IsNullOrUndefined(value)) {
         *out_ptr = 0;
         return true;
-    } else if (value.IsExternal() && !CheckValueTag(instance, value, &TypeInfoMarker) &&
-                                     !CheckValueTag(instance, value, &CastMarker) &&
-                                     !CheckValueTag(instance, value, &MagicUnionMarker)) {
+    } else if (value.IsExternal() && !CheckValueTag(value, &TypeInfoMarker) &&
+                                     !CheckValueTag(value, &CastMarker) &&
+                                     !CheckValueTag(value, &MagicUnionMarker)) {
         Napi::External<void> external = value.As<Napi::External<void>>();
         void *ptr = external.Data();
 
@@ -905,7 +903,7 @@ static Napi::Value CallAlloc(const Napi::CallbackInfo &info)
     }
 
     Napi::External<void> external = Napi::External<void>::New(env, ptr);
-    SetValueTag(instance, external, type);
+    SetValueTag(external, type);
 
     return external;
 }
@@ -1030,7 +1028,7 @@ static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
         type->countedby = DuplicateString(str.Utf8Value().c_str(), &instance->str_alloc).ptr;
     }
 
-    return WrapType(env, instance, type);
+    return WrapType(env, type);
 }
 
 static bool ParseClassicFunction(const Napi::CallbackInfo &info, bool concrete, FunctionInfo *out_func)
@@ -1193,7 +1191,7 @@ static Napi::Value CreateFunctionType(const Napi::CallbackInfo &info)
 
     instance->types_map.Set(type->name, type);
 
-    return WrapType(env, instance, type);
+    return WrapType(env, type);
 }
 
 static Napi::Value CreateTypeAlias(const Napi::CallbackInfo &info)
@@ -1221,7 +1219,7 @@ static Napi::Value CreateTypeAlias(const Napi::CallbackInfo &info)
     if (!MapType(env, instance, type, alias))
         return env.Null();
 
-    return WrapType(env, instance, type);
+    return WrapType(env, type);
 }
 
 static Napi::Value GetTypeSize(const Napi::CallbackInfo &info)
@@ -1293,7 +1291,6 @@ static Napi::Value GetMemberOffset(const Napi::CallbackInfo &info)
 static Napi::Value GetResolvedType(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
 
     if (info.Length() < 1) {
         ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", info.Length());
@@ -1304,13 +1301,12 @@ static Napi::Value GetResolvedType(const Napi::CallbackInfo &info)
     if (!type)
         return env.Null();
 
-    return WrapType(env, instance, type);
+    return WrapType(env, type);
 }
 
 static Napi::Value GetTypeDefinition(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
 
     if (info.Length() < 1) {
         ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", info.Length());
@@ -1361,7 +1357,7 @@ static Napi::Value GetTypeDefinition(const Napi::CallbackInfo &info)
                 defn.Set("hint", ArrayHintNames[(int)type->hint]);
             } [[fallthrough]];
             case PrimitiveKind::Pointer: {
-                Napi::Value value = WrapType(env, instance, type->ref.type);
+                Napi::Value value = WrapType(env, type->ref.type);
                 defn.Set("ref", value);
             } break;
             case PrimitiveKind::Record:
@@ -1372,7 +1368,7 @@ static Napi::Value GetTypeDefinition(const Napi::CallbackInfo &info)
                     Napi::Object obj = Napi::Object::New(env);
 
                     obj.Set("name", member.name);
-                    obj.Set("type", WrapType(env, instance, member.type));
+                    obj.Set("type", WrapType(env, member.type));
                     obj.Set("offset", member.offset);
                     if (member.countedby >= 0) {
                         obj.Set("countedBy", type->members[member.countedby].name);
@@ -1827,7 +1823,7 @@ static Napi::Value FindSymbol(const Napi::CallbackInfo &info)
     }
 
     Napi::External<void> external = Napi::External<void>::New(env, ptr);
-    SetValueTag(instance, external, &type);
+    SetValueTag(external, &type);
 
     return external;
 }
@@ -1999,7 +1995,7 @@ static Napi::Value RegisterCallback(const Napi::CallbackInfo &info)
     void *ptr = GetTrampoline(idx, type->ref.proto);
 
     Napi::External<void> external = Napi::External<void>::New(env, ptr);
-    SetValueTag(instance, external, type->ref.marker);
+    SetValueTag(external, type->ref.marker);
 
     // Cache index for fast unregistration
     instance->trampolines_map.Set(ptr, idx);
@@ -2056,7 +2052,6 @@ static Napi::Value UnregisterCallback(const Napi::CallbackInfo &info)
 static Napi::Value CastValue(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
 
     if (info.Length() < 2) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected 2 arguments, got %1", info.Length());
@@ -2083,7 +2078,7 @@ static Napi::Value CastValue(const Napi::CallbackInfo &info)
     cast->type = type;
 
     Napi::External<ValueCast> external = Napi::External<ValueCast>::New(env, cast, [](Napi::Env, ValueCast *cast) { delete cast; });
-    SetValueTag(instance, external, &CastMarker);
+    SetValueTag(external, &CastMarker);
 
     return external;
 }
@@ -2386,7 +2381,7 @@ static void RegisterPrimitiveType(Napi::Env env, Napi::Object map, std::initiali
         type->ref.marker = marker;
     }
 
-    Napi::Value wrapper = WrapType(env, instance, type);
+    Napi::Value wrapper = WrapType(env, type);
 
     for (const char *name: names) {
         bool inserted;
@@ -2598,7 +2593,7 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
         exports.Set("node", node);
 
         Napi::External<void> external = Napi::External<void>::New(env, (napi_env)env);
-        SetValueTag(instance, external, instance->void_type);
+        SetValueTag(external, instance->void_type);
 
         node.Set("env", external);
 

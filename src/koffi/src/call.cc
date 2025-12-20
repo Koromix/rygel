@@ -296,7 +296,7 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
     if (type->primitive == PrimitiveKind::Record) {
         members = type->members;
     } else if (type->primitive == PrimitiveKind::Union) {
-        if (CheckValueTag(instance, obj, &MagicUnionMarker)) {
+        if (CheckValueTag(obj, &MagicUnionMarker)) {
             MagicUnion *u = MagicUnion::Unwrap(obj);
             const uint8_t *raw = u->GetRaw();
 
@@ -889,7 +889,7 @@ bool CallData::PushStringArray(Napi::Value obj, const TypeInfo *type, uint8_t *o
 
 bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directions, void **out_ptr)
 {
-    if (CheckValueTag(instance, value, &CastMarker)) {
+    if (CheckValueTag(value, &CastMarker)) {
         Napi::External<ValueCast> external = value.As<Napi::External<ValueCast>>();
         ValueCast *cast = external.Data();
 
@@ -912,8 +912,8 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
                       type->primitive == PrimitiveKind::String16 ||
                       type->primitive == PrimitiveKind::String32);
 
-            if (!CheckValueTag(instance, value, type->ref.marker) &&
-                    !CheckValueTag(instance, value, instance->void_type) &&
+            if (!CheckValueTag(value, type->ref.marker) &&
+                    !CheckValueTag(value, instance->void_type) &&
                     ref != instance->void_type) [[unlikely]]
                 goto unexpected;
 
@@ -980,7 +980,7 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
                 ptr = AllocHeap(ref->size, 16);
 
                 if (ref->primitive == PrimitiveKind::Union &&
-                        (directions & 2) && !CheckValueTag(instance, obj, &MagicUnionMarker)) [[unlikely]] {
+                        (directions & 2) && !CheckValueTag(obj, &MagicUnionMarker)) [[unlikely]] {
                     ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected union value", GetValueType(instance, obj));
                     return false;
                 }
@@ -1088,9 +1088,9 @@ bool CallData::PushCallback(Napi::Value value, const TypeInfo *type, void **out_
             return false;
 
         *out_ptr = ptr;
-    } else if (CheckValueTag(instance, value, type->ref.marker)) {
+    } else if (CheckValueTag(value, type->ref.marker)) {
         *out_ptr = value.As<Napi::External<void>>().Data();
-    } else if (CheckValueTag(instance, value, &CastMarker)) {
+    } else if (CheckValueTag(value, &CastMarker)) {
         Napi::External<ValueCast> external = value.As<Napi::External<ValueCast>>();
         ValueCast *cast = external.Data();
 
@@ -1304,7 +1304,7 @@ void CallData::PopOutArguments()
             case OutArgument::Kind::Object: {
                 Napi::Object obj = value.As<Napi::Object>();
 
-                if (CheckValueTag(instance, value, &MagicUnionMarker)) {
+                if (CheckValueTag(value, &MagicUnionMarker)) {
                     MagicUnion *u = MagicUnion::Unwrap(obj);
                     u->SetRaw(out.ptr);
                 } else {

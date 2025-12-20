@@ -76,7 +76,7 @@ TypeInfo *MakePointerType(InstanceData *instance, const TypeInfo *ref, int count
 TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len);
 TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len, ArrayHint hint);
 
-Napi::External<TypeInfo> WrapType(Napi::Env env, InstanceData *instance, const TypeInfo *type);
+Napi::External<TypeInfo> WrapType(Napi::Env env, const TypeInfo *type);
 
 bool CanPassType(const TypeInfo *type, int directions);
 bool CanReturnType(const TypeInfo *type);
@@ -85,8 +85,8 @@ bool CanStoreType(const TypeInfo *type);
 // Can be slow, only use for error messages
 const char *GetValueType(const InstanceData *instance, Napi::Value value);
 
-void SetValueTag(const InstanceData *instance, Napi::Value value, const void *marker);
-bool CheckValueTag(const InstanceData *instance, Napi::Value value, const void *marker);
+void SetValueTag(Napi::Value value, const void *marker);
+bool CheckValueTag(Napi::Value value, const void *marker);
 
 static inline bool IsNullOrUndefined(Napi::Value value)
 {

@@ -518,7 +518,7 @@ Napi::Value CallData::Complete(const FunctionInfo *func)
         case PrimitiveKind::Callback: {
             if (result.ptr) {
                 Napi::External<void> external = Napi::External<void>::New(env, result.ptr);
-                SetValueTag(instance, external, func->ret.type->ref.marker);
+                SetValueTag(external, func->ret.type->ref.marker);
 
                 return external;
             } else {
@@ -717,7 +717,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
 
                 if (ptr2) {
                     Napi::External<void> external = Napi::External<void>::New(env, ptr2);
-                    SetValueTag(instance, external, param.type->ref.marker);
+                    SetValueTag(external, param.type->ref.marker);
 
                     arguments.Append(external);
                 } else {
@@ -918,7 +918,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
         case PrimitiveKind::Pointer: {
             uint8_t *ptr;
 
-            if (CheckValueTag(instance, value, type->ref.marker)) {
+            if (CheckValueTag(value, type->ref.marker)) {
                 ptr = value.As<Napi::External<uint8_t>>().Data();
             } else if (IsObject(value) && (type->ref.type->primitive == PrimitiveKind::Record ||
                                            type->ref.type->primitive == PrimitiveKind::Union)) {
@@ -992,7 +992,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
                 ptr = ReserveTrampoline(type->ref.proto, func2);
                 if (!ptr) [[unlikely]]
                     return;
-            } else if (CheckValueTag(instance, value, type->ref.marker)) {
+            } else if (CheckValueTag(value, type->ref.marker)) {
                 ptr = value.As<Napi::External<void>>().Data();
             } else if (IsNullOrUndefined(value)) {
                 ptr = nullptr;
