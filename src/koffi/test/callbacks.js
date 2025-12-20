@@ -359,8 +359,8 @@ async function test() {
         await wait;
 
         let out = Buffer.allocUnsafe(16);
-        ReadSocket(sockets[1], out, out.length);
-        let read = out.subarray(0, out.indexOf(0)).toString('utf-8');
+        let bytes = ReadSocket(sockets[1], out, out.length);
+        let read = out.subarray(0, bytes).toString('utf-8');
 
         assert.equal(read, 'Hello!');
 
