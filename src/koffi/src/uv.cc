@@ -123,6 +123,8 @@ void Poll::Close()
 
     uv_poll_stop(handle);
     uv_close((uv_handle_t *)handle, release);
+
+    handle = nullptr;
 }
 
 void Poll::OnPoll(uv_poll_t *h, int status, int events)
