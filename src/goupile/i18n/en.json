@@ -19,6 +19,7 @@
         "archive": "Archive",
         "archive_done": "Archive complete",
         "archive_in_progress": "Archiving in progress",
+        "archive_key": "Archive key",
         "archive_retention_period": "Archives created manually or automatically (every day) are stored locally for a <span style=\"color: red; font-weight: bold;\">period of {1} days</span>. You can download them and save them to your own storage media.",
         "archive_x_deleted": "Archive '{1}' deleted",
         "archive_x_restored": "Archive '{1}' restored",

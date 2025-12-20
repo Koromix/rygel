@@ -703,6 +703,8 @@ function runConfigureDomainDialog(e) {
                     value: domain.default_lang,
                     help: T.default_project_language
                 });
+
+                d.text('*archive_key', T.archive_key, { value: domain.archive.key });
             });
 
             d.tab(T.smtp, () => {
@@ -747,7 +749,7 @@ function runConfigureDomainDialog(e) {
                     name: d.values.name,
                     title: d.values.title,
                     default_lang: d.values.default_lang,
-                    archive_key: domain.archive.key,
+                    archive_key: d.values.archive_key,
 
                     smtp: !domain.smtp.provisioned ? {
                         url: d.values.smtp_url,
