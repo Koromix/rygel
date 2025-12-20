@@ -28,8 +28,6 @@ const CommandFunctions = {
 
 // Globals
 
-const BINARY_PREFIX = '@koromix/koffi-';
-
 let script_dir = null;
 let root_dir = null;
 
@@ -151,7 +149,7 @@ async function main() {
 
 async function build() {
     let build_dir = root_dir + '/bin/Koffi';
-    let dist_dir = build_dir + '/packages';
+    let dist_dir = build_dir + '/package';
 
     let snapshot_dir = snapshot();
 
@@ -187,7 +185,6 @@ async function build() {
     let ready_machines = runner.ignoreCount;
 
     let artifacts = [];
-    let packages = [];
 
     // Run machine commands
     {
@@ -209,11 +206,7 @@ async function build() {
             let src_dir = build.info.directory + `/bin/Koffi/${src_name}`;
             let dest_dir = build_dir + `/qemu/${version}/${build.key}`;
 
-            let artifact =  {
-                package: build.info.package,
-                build: dest_dir
-            };
-            artifacts.push(artifact);
+            artifacts.push(dest_dir);
 
             if (runner.isIgnored(machine))
                 return;
@@ -247,93 +240,18 @@ async function build() {
         if (!success) {
             console.log('');
             console.log('>> Status: ' + style_ansi('FAILED', 'red bold'));
-            return false;
+            return null;
         }
     }
 
-    console.log('>> Clean up previous packages');
-    unlink_recursive(dist_dir);
-
-    console.log('>> Prepare binary packages');
+    console.log('>> Prepare NPM package');
     {
-        let map = new Map;
+        let binary_dir = dist_dir + '/build/koffi';
 
-        for (let artifact of artifacts) {
-            let build = path.basename(artifact.build);
+        unlink_recursive(dist_dir);
+        fs.mkdirSync(dist_dir, { mode: 0o755, recursive: true });
 
-            let name = BINARY_PREFIX + artifact.package;
-            let pkg = map.get(artifact.package);
-
-            if (pkg == null) {
-                pkg = {
-                    target: artifact.package,
-                    name: name,
-                    path: dist_dir + '/' + name,
-                    builds: []
-                };
-
-                map.set(artifact.package, pkg);
-                packages.push(pkg);
-            }
-
-            pkg.builds.push(build);
-
-            let binary_dir = pkg.path + '/' + build;
-
-            fs.mkdirSync(binary_dir, { mode: 0o755, recursive: true });
-            copy_recursive(artifact.build, binary_dir);
-        }
-
-        for (let pkg of packages) {
-            let main = JSON.parse(json);
-            let [os, cpu] = pkg.target.split('-');
-
-            let binary = {
-                name: pkg.name,
-                version: main.version,
-                description: main.description + ` (${pkg.name})`,
-                author: main.author,
-                homepage: main.homepage,
-                repository: main.repository,
-                license: main.license,
-                funding: main.funding,
-                main: './index.js',
-                os: [os],
-                cpu: [cpu]
-            };
-
-            let code = `
-                let native = null;
-                let err = null;
-
-                ${pkg.builds.map(build => `
-                    if (native == null) {
-                        try {
-                            native = require('./${build}/koffi.node');
-                        } catch (e) {
-                            err = e;
-                        }
-                    }
-                `).join('\n')}
-
-                if (native == null)
-                    throw err;
-
-                module.exports = native;
-            `;
-            code = esbuild.transformSync(code, { loader: 'js' }).code;
-
-            fs.writeFileSync(pkg.path + '/index.js', code);
-            fs.writeFileSync(pkg.path + '/package.json', JSON.stringify(binary, null, 4));
-        }
-    }
-
-    console.log('>> Prepare main package');
-    {
-        let pkg_dir = dist_dir + '/koffi';
-        fs.mkdirSync(pkg_dir, { mode: 0o755, recursive: true });
-
-        copy_recursive(snapshot_dir, pkg_dir, make_path_filter([
+        copy_recursive(snapshot_dir, dist_dir, make_path_filter([
             'src/core',
             'src/cnoke',
             'src/koffi/cmake',
@@ -351,55 +269,58 @@ async function build() {
             'vendor/node-api-headers',
             'web/koffi.dev'
         ]));
+        fs.mkdirSync(binary_dir, { mode: 0o755, recursive: true });
 
-        let main = JSON.parse(json);
+        for (let artifact of artifacts) {
+            let dest_dir = binary_dir + '/' + path.basename(artifact);
 
-        main.scripts = {
+            fs.mkdirSync(dest_dir, { mode: 0o755 });
+            copy_recursive(artifact, dest_dir);
+        }
+
+        let pkg = JSON.parse(json);
+
+        pkg.scripts = {
             install: 'node src/cnoke/cnoke.js -p . -d src/koffi --prebuild'
         };
-        main.cnoke.output = 'build/koffi/{{ platform }}_{{ arch }}';
-        delete main.devDependencies;
-
-        main.optionalDependencies = packages.reduce((obj, pkg) => { obj[pkg.name] = main.version; return obj; }, {});
+        pkg.cnoke.output = 'build/koffi/{{ platform }}_{{ arch }}';
+        delete pkg.devDependencies;
 
         esbuild.buildSync({
-            entryPoints: [pkg_dir + '/src/koffi/index.js'],
-            bundle: true,
-            minify: false,
-            write: true,
-            external: [BINARY_PREFIX + '*'],
-            platform: 'node',
-            outfile: pkg_dir + '/index.js'
-        });
-        esbuild.buildSync({
-            entryPoints: [pkg_dir + '/src/koffi/indirect.js'],
+            entryPoints: [dist_dir + '/src/koffi/index.js'],
             bundle: true,
             minify: false,
             write: true,
             platform: 'node',
-            outfile: pkg_dir + '/indirect.js'
+            outfile: dist_dir + '/index.js'
+        });
+        esbuild.buildSync({
+            entryPoints: [dist_dir + '/src/koffi/indirect.js'],
+            bundle: true,
+            minify: false,
+            write: true,
+            platform: 'node',
+            outfile: dist_dir + '/indirect.js'
         });
 
-        fs.writeFileSync(pkg_dir + '/package.json', JSON.stringify(main, null, 4));
-        fs.unlinkSync(pkg_dir + '/src/koffi/package.json');
-        fs.unlinkSync(pkg_dir + '/src/koffi/index.js');
-        fs.unlinkSync(pkg_dir + '/src/koffi/indirect.js');
-        fs.renameSync(pkg_dir + '/src/koffi/index.d.ts', pkg_dir + '/index.d.ts');
-        fs.renameSync(pkg_dir + '/src/koffi/README.md', pkg_dir + '/README.md');
-        fs.renameSync(pkg_dir + '/src/koffi/LICENSE.txt', pkg_dir + '/LICENSE.txt');
-        fs.renameSync(pkg_dir + '/src/koffi/CHANGELOG.md', pkg_dir + '/CHANGELOG.md');
-        fs.renameSync(pkg_dir + '/web/koffi.dev', pkg_dir + '/doc');
-        fs.rmdirSync(pkg_dir + '/web');
+        fs.writeFileSync(dist_dir + '/package.json', JSON.stringify(pkg, null, 4));
+        fs.unlinkSync(dist_dir + '/src/koffi/package.json');
+        fs.unlinkSync(dist_dir + '/src/koffi/index.js');
+        fs.unlinkSync(dist_dir + '/src/koffi/indirect.js');
+        fs.renameSync(dist_dir + '/src/koffi/index.d.ts', dist_dir + '/index.d.ts');
+        fs.renameSync(dist_dir + '/src/koffi/README.md', dist_dir + '/README.md');
+        fs.renameSync(dist_dir + '/src/koffi/LICENSE.txt', dist_dir + '/LICENSE.txt');
+        fs.renameSync(dist_dir + '/src/koffi/CHANGELOG.md', dist_dir + '/CHANGELOG.md');
+        fs.renameSync(dist_dir + '/web/koffi.dev', dist_dir + '/doc');
+        fs.rmdirSync(dist_dir + '/web');
     }
 
     console.log('>> Test prebuild');
     {
-        let pkg = JSON.parse(fs.readFileSync(dist_dir + '/koffi/package.json'));
-        let require_filename = path.join(dist_dir + '/koffi', pkg.cnoke.require);
+        let pkg = JSON.parse(fs.readFileSync(dist_dir + '/package.json'));
+        let require_filename = path.join(dist_dir, pkg.cnoke.require);
 
-        let proc = spawnSync(process.execPath, ['-e', 'require(process.argv[1])', require_filename], {
-            env: { ...process.env, NODE_PATH: dist_dir }
-        });
+        let proc = spawnSync(process.execPath, ['-e', 'require(process.argv[1])', require_filename]);
 
         if (proc.status !== 0) {
             let stdout = proc.stdout.toString().trim();
@@ -409,23 +330,7 @@ async function build() {
         }
     }
 
-    console.log('>> Write publish script');
-    {
-        let code = '#!/bin/sh -e\n\n';
-
-        for (let pkg of packages) {
-            code += `cd ${dist_dir}/${pkg.name}\n`;
-            code += 'npm publish --access public $*\n\n';
-        }
-
-        code += `cd ${dist_dir}/koffi\n`;
-        code += 'npm publish --access public $*\n';
-
-        let script = dist_dir + '/publish.sh';
-        fs.writeFileSync(script, code, { mode: 0o755 });
-    }
-
-    return true;
+    return dist_dir;
 }
 
 async function compile(debug = false) {

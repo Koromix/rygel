@@ -32,7 +32,6 @@ function init(triplet, native) {
 
         if (process.resourcesPath != null)
             roots.push(process.resourcesPath);
-
         if (triplet.startsWith('linux_')) {
             let musl = triplet.replace(/^linux_/, 'musl_');
             triplets.push(musl);
