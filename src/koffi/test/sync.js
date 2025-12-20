@@ -232,7 +232,7 @@ async function test() {
     const MultiplyIntegers = lib.func('void MultiplyIntegers(int multiplier, _Inout_ int *values, int len)');
     const ThroughStr = lib.func('str ThroughStr(StrStruct s)');
     const ThroughStr16 = lib.func('str16 ThroughStr16(StrStruct s)');
-    const ReverseBytes = lib.func('void ReverseBytes(_Inout_ void *array, int len)');
+    const ReverseBytes = lib.func('void ReverseBytes(_Inout_ void *array, int)');
     const CopyEndianInts1 = lib.func('void CopyEndianInts1(EndianInts ints, _Out_ uint8_t *buf)');
     const CopyEndianInts2 = lib.func('void CopyEndianInts2(int16_le_t i16le, int16_be_t i16be, uint16_le_t u16le, uint16_be_t u16be, ' +
                                                           'int32_le_t i32le, int32_be_t i32be, uint32_le_t u32le, uint32_be_t u32be, ' +

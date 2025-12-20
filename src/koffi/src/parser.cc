@@ -146,12 +146,16 @@ const TypeInfo *PrototypeParser::ParseType(int *out_directions)
     }
     offset--;
 
-    if (out_directions && offset > start) {
-        int directions = ResolveDirections(tokens[start]);
+    if (out_directions) {
+        if (offset > start) {
+            int directions = ResolveDirections(tokens[start]);
 
-        if (directions) {
-            *out_directions = directions;
-            start++;
+            if (directions) {
+                *out_directions = directions;
+                start++;
+            } else {
+                *out_directions = 1;
+            }
         } else {
             *out_directions = 1;
         }
