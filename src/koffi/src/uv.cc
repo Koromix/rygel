@@ -129,7 +129,7 @@ void Poll::OnPoll(uv_poll_t *h, int status, int events)
 {
     Poll *poll = (Poll *)h->data;
 
-    if (poll->callback.IsEmpty())
+    if (poll->callback.IsEmpty()) [[unlikely]]
         return;
 
     Napi::Env env = poll->env;
@@ -150,12 +150,12 @@ Napi::Value Watch(const Napi::CallbackInfo &info)
     Napi::Env env = info.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();
 
-    if (info.Length() < 3) {
-        ThrowError<Napi::TypeError>(env, "Expected 1 to 3 arguments, got %1", info.Length());
+    bool has_opts = (info.Length() >= 3 && info[1].IsObject());
+
+    if (info.Length() < 2 + has_opts) {
+        ThrowError<Napi::TypeError>(env, "Expected 2 to 3 arguments, got %1", info.Length());
         return env.Null();
     }
-
-    bool has_opts = info[1].IsObject();
 
     if (!info[0].IsNumber()) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for descriptor, expected number", GetValueType(instance, info[0]));
