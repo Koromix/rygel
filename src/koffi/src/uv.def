@@ -5,5 +5,6 @@ uv_ref
 uv_unref
 uv_strerror
 uv_poll_init
+uv_poll_init_socket
 uv_poll_start
 uv_poll_stop

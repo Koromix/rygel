@@ -45,10 +45,17 @@ Poll::Poll(const Napi::CallbackInfo &info)
     // Also, it may have to outlive the object, because uv_close() is asynchronous.
     handle = new uv_poll_t();
 
+#if defined(_WIN32)
+    if (int ret = uv_poll_init_socket(loop, handle, (uv_os_sock_t)fd); ret != 0) {
+        ThrowError<Napi::Error>(env, "Failed to init UV poll: %1", uv_strerror(ret));
+        return;
+    }
+#else
     if (int ret = uv_poll_init(loop, handle, fd); ret != 0) {
         ThrowError<Napi::Error>(env, "Failed to init UV poll: %1", uv_strerror(ret));
         return;
     }
+#endif
 
     handle->data = this;
 }
@@ -173,6 +180,9 @@ Napi::Value Watch(const Napi::CallbackInfo &info)
     Napi::Function ctor = Poll::Define(env);
     Napi::Object inst = ctor.New({ Napi::Number::New(env, fd) });
     Napi::Function start = inst.Get("start").As<Napi::Function>();
+
+    if (env.IsExceptionPending()) [[unlikely]]
+        return env.Null();
 
     if (has_opts) {
         Napi::Value opts = info[1];

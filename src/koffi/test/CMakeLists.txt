@@ -28,6 +28,10 @@ add_library(callbacks SHARED callbacks.c)
 set_target_properties(callbacks PROPERTIES PREFIX "")
 target_link_node(callbacks)
 
+if(WIN32)
+    target_link_libraries(callbacks PRIVATE ws2_32)
+endif()
+
 add_library(union SHARED union.c)
 set_target_properties(union PROPERTIES PREFIX "")
 
@@ -36,7 +40,7 @@ if(WIN32)
     set_target_properties(win32_dep PROPERTIES PREFIX "")
 
     add_library(win32 SHARED win32.c)
-    target_link_libraries(win32 win32_dep)
+    target_link_libraries(win32 PRIVATE win32_dep)
     set_target_properties(win32 PROPERTIES PREFIX "")
 endif()
 

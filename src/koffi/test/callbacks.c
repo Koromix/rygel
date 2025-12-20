@@ -10,6 +10,8 @@
     #define NOMINMAX
     #define WIN32_LEAN_AND_MEAN
     #include <windows.h>
+    #include <ws2tcpip.h>
+    #include <mswsock.h>
 #else
     #include <unistd.h>
     #include <errno.h>
@@ -307,6 +309,64 @@ EXPORT void TriggerIdle(void)
     assert(!ret);
 }
 
+#if defined(_WIN32)
+
+EXPORT void SocketPair(int pfd[2])
+{
+    SOCKET listener = INVALID_SOCKET;
+    SOCKET client = INVALID_SOCKET;
+    SOCKET peer = INVALID_SOCKET;
+
+    struct sockaddr_in addr = {};
+    socklen_t addr_len = sizeof(addr);
+
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    addr.sin_port = 0;
+
+    listener = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (listener == INVALID_SOCKET)
+        abort();
+    client = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (client == INVALID_SOCKET)
+        abort();
+
+    if (bind(listener, (struct sockaddr *)&addr, sizeof(addr)) < 0)
+        abort();
+    if (getsockname(listener, (struct sockaddr *)&addr, &addr_len) < 0)
+        abort();
+    if (listen(listener, 1) < 0)
+        abort();
+    if (connect(client, (struct sockaddr *)&addr, sizeof(addr)) < 0)
+        abort();
+
+    peer = accept(listener, NULL, NULL);
+    if (peer == INVALID_SOCKET)
+        abort();
+
+    closesocket(listener);
+    pfd[0] = (int)client;
+    pfd[1] = (int)peer;
+}
+
+EXPORT int ReadSocket(int fd, void *buf, int size)
+{
+    return recv((SOCKET)fd, (char *)buf, size, 0);
+}
+
+EXPORT void WriteSocket(int fd, const void *buf, int len)
+{
+    while (len) {
+        int ret = send((SOCKET)fd, (const char *)buf, len, 0);
+        assert(ret > 0);
+
+        buf = (const unsigned char *)buf + ret;
+        len -= ret;
+    }
+}
+
+#else
+
 EXPORT void SocketPair(int pfd[2])
 {
     int ret = socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0, pfd);
@@ -324,7 +384,9 @@ EXPORT void WriteSocket(int fd, const void *buf, int len)
         int ret = (int)send(fd, buf, len, 0);
         assert(ret > 0);
 
-        buf += ret;
+        buf = (const unsigned char *)buf + ret;
         len -= ret;
     }
 }
+
+#endif
