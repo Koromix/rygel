@@ -2597,8 +2597,8 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
 
         node.Set("env", external);
 
-        node.Set("watch", Napi::Function::New(env, &Watch, "watch"));
-        node.Set("Poll", Poll::Define(env));
+        node.Set("poll", Napi::Function::New(env, &Poll, "poll"));
+        node.Set("PollHandle", PollHandle::Define(env));
     }
 
     exports.Set("version", Napi::String::New(env, K_STRINGIFY(VERSION)));

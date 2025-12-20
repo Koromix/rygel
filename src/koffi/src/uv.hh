@@ -11,7 +11,7 @@ typedef struct uv_poll_s uv_poll_t;
 
 namespace K {
 
-class Poll: public Napi::ObjectWrap<Poll> {
+class PollHandle: public Napi::ObjectWrap<PollHandle> {
     Napi::Env env = nullptr;
 
     uv_poll_t *handle = nullptr;
@@ -20,8 +20,8 @@ class Poll: public Napi::ObjectWrap<Poll> {
 public:
     static Napi::Function Define(Napi::Env env);
 
-    Poll(const Napi::CallbackInfo &info);
-    ~Poll() { Close(); }
+    PollHandle(const Napi::CallbackInfo &info);
+    ~PollHandle() { Close(); }
 
     void Start(const Napi::CallbackInfo &info);
     void Stop(const Napi::CallbackInfo &info);
@@ -35,6 +35,6 @@ private:
     static void OnPoll(uv_poll_t *handle, int status, int events);
 };
 
-Napi::Value Watch(const Napi::CallbackInfo &info);
+Napi::Value Poll(const Napi::CallbackInfo &info);
 
 }

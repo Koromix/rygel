@@ -7,19 +7,19 @@
 
 namespace K {
 
-Napi::Function Poll::Define(Napi::Env env)
+Napi::Function PollHandle::Define(Napi::Env env)
 {
-    return DefineClass(env, "Poll", {
-        InstanceMethod("start", &Poll::Start),
-        InstanceMethod("stop", &Poll::Stop),
-        InstanceMethod("close", &Poll::Close),
-        InstanceMethod("unref", &Poll::Unref),
-        InstanceMethod("ref", &Poll::Ref)
+    return DefineClass(env, "PollHandle", {
+        InstanceMethod("start", &PollHandle::Start),
+        InstanceMethod("stop", &PollHandle::Stop),
+        InstanceMethod("close", &PollHandle::Close),
+        InstanceMethod("unref", &PollHandle::Unref),
+        InstanceMethod("ref", &PollHandle::Ref)
     });
 }
 
-Poll::Poll(const Napi::CallbackInfo &info)
-    : Napi::ObjectWrap<Poll>(info), env(info.Env())
+PollHandle::PollHandle(const Napi::CallbackInfo &info)
+    : Napi::ObjectWrap<PollHandle>(info), env(info.Env())
 {
     InstanceData *instance = env.GetInstanceData<InstanceData>();
 
@@ -53,7 +53,7 @@ Poll::Poll(const Napi::CallbackInfo &info)
     handle->data = this;
 }
 
-void Poll::Start(const Napi::CallbackInfo &info)
+void PollHandle::Start(const Napi::CallbackInfo &info)
 {
     InstanceData *instance = env.GetInstanceData<InstanceData>();
 
@@ -83,35 +83,35 @@ void Poll::Start(const Napi::CallbackInfo &info)
 
     callback.Reset(cb, 1);
 
-    if (int ret = uv_poll_start(handle, events, &Poll::OnPoll); ret != 0) {
+    if (int ret = uv_poll_start(handle, events, &PollHandle::OnPoll); ret != 0) {
         callback.Reset();
         ThrowError<Napi::Error>(env, "Failed to start UV poll: %1", uv_strerror(ret));
     }
 }
 
-void Poll::Stop(const Napi::CallbackInfo &)
+void PollHandle::Stop(const Napi::CallbackInfo &)
 {
     uv_poll_stop(handle);
     callback.Reset();
 }
 
-void Poll::Close(const Napi::CallbackInfo &)
+void PollHandle::Close(const Napi::CallbackInfo &)
 {
     Close();
     callback.Reset();
 }
 
-void Poll::Ref(const Napi::CallbackInfo &)
+void PollHandle::Ref(const Napi::CallbackInfo &)
 {
     uv_ref((uv_handle_t *)handle);
 }
 
-void Poll::Unref(const Napi::CallbackInfo &)
+void PollHandle::Unref(const Napi::CallbackInfo &)
 {
     uv_unref((uv_handle_t *)handle);
 }
 
-void Poll::Close()
+void PollHandle::Close()
 {
     if (!handle)
         return;
@@ -127,9 +127,9 @@ void Poll::Close()
     handle = nullptr;
 }
 
-void Poll::OnPoll(uv_poll_t *h, int status, int events)
+void PollHandle::OnPoll(uv_poll_t *h, int status, int events)
 {
-    Poll *poll = (Poll *)h->data;
+    PollHandle *poll = (PollHandle *)h->data;
 
     if (poll->callback.IsEmpty()) [[unlikely]]
         return;
@@ -147,7 +147,7 @@ void Poll::OnPoll(uv_poll_t *h, int status, int events)
     poll->callback.Call(poll->Value(), K_LEN(args), args);
 }
 
-Napi::Value Watch(const Napi::CallbackInfo &info)
+Napi::Value Poll(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();
@@ -170,7 +170,7 @@ Napi::Value Watch(const Napi::CallbackInfo &info)
 
     int fd = info[0].As<Napi::Number>().Int32Value();
 
-    Napi::Function ctor = Poll::Define(env);
+    Napi::Function ctor = PollHandle::Define(env);
     Napi::Object inst = ctor.New({ Napi::Number::New(env, fd) });
     Napi::Function start = inst.Get("start").As<Napi::Function>();
 

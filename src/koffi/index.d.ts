@@ -274,7 +274,7 @@ export interface IKoffiPollEvents {
 export namespace node {
     export const env: { __brand: 'IKoffiNodeEnv' };
 
-    export class Poll {
+    export class PollHandle {
         start(opts: IKoffiPollOptions, callback: (ev: IKoffiPollEvents) => void): void;
         start(callback: (ev: IKoffiPollEvents) => void): void;
         stop(): void;
@@ -283,6 +283,6 @@ export namespace node {
         ref(): void;
     }
 
-    export function watch(fd: number, opts: IKoffiPollOptions, callback: (ev: IKoffiPollEvents) => void): Poll;
-    export function watch(fd: number, callback: (ev: IKoffiPollEvents) => void): Poll;
+    export function poll(fd: number, opts: IKoffiPollOptions, callback: (ev: IKoffiPollEvents) => void): PollHandle;
+    export function poll(fd: number, callback: (ev: IKoffiPollEvents) => void): PollHandle;
 }

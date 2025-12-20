@@ -343,7 +343,7 @@ async function test() {
         let poll = { stop: () => {} };
 
         let wait = new Promise((resolve, reject) => {
-            poll = koffi.node.watch(sockets[1], { readable: true }, (status, events) => {
+            poll = koffi.node.poll(sockets[1], { readable: true }, (status, events) => {
                 assert.equal(status, 0);
                 assert.deepEqual(events, { readable: true, writable: false, disconnect: false });
 
