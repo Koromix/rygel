@@ -369,7 +369,7 @@ EXPORT void WriteSocket(int fd, const void *buf, int len)
 
 EXPORT void SocketPair(int pfd[2])
 {
-    int ret = socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0, pfd);
+    int ret = socketpair(AF_UNIX, SOCK_STREAM, 0, pfd);
     assert(ret == 0);
 }
 
