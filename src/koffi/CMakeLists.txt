@@ -119,6 +119,18 @@ endif()
 add_node_addon(NAME koffi SOURCES ${KOFFI_SRC})
 target_include_directories(koffi PRIVATE . ../.. ../../vendor/node-addon-api)
 
+if(WIN32)
+    set(UV_LINK_LIB "${CMAKE_CURRENT_BINARY_DIR}/uv.lib")
+    add_custom_command(OUTPUT ${UV_LINK_LIB}
+                       COMMAND ${CMAKE_AR} ${CMAKE_STATIC_LINKER_FLAGS}
+                               /def:src/uv.def /out:${UV_LINK_LIB}
+                       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+                       MAIN_DEPENDENCY src/uv.def)
+    add_custom_target(uv.lib DEPENDS ${UV_LINK_LIB})
+    add_dependencies(koffi uv.lib)
+    target_link_libraries(koffi PRIVATE ${UV_LINK_LIB})
+endif()
+
 target_compile_definitions(koffi PRIVATE FELIX_TARGET=koffi NAPI_DISABLE_CPP_EXCEPTIONS NAPI_VERSION=8 CORE_NO_STATX)
 if(WIN32)
     target_compile_definitions(koffi PRIVATE _CRT_SECURE_NO_WARNINGS _CRT_NONSTDC_NO_DEPRECATE)
