@@ -14,6 +14,7 @@
     #include <unistd.h>
     #include <errno.h>
     #include <pthread.h>
+    #include <sys/socket.h>
 #endif
 #include <node_api.h>
 #include <uv.h>
@@ -304,4 +305,26 @@ EXPORT void TriggerIdle(void)
 {
     int ret = uv_async_send(&idle_async);
     assert(!ret);
+}
+
+EXPORT void SocketPair(int pfd[2])
+{
+    int ret = socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0, pfd);
+    assert(ret == 0);
+}
+
+EXPORT int ReadSocket(int fd, void *buf, int size)
+{
+    return (int)recv(fd, buf, size, 0);
+}
+
+EXPORT void WriteSocket(int fd, const void *buf, int len)
+{
+    while (len) {
+        int ret = (int)send(fd, buf, len, 0);
+        assert(ret > 0);
+
+        buf += ret;
+        len -= ret;
+    }
 }

@@ -84,6 +84,9 @@ async function test() {
     const FmtRepeat = lib.func('str_free FmtRepeat(RepeatCallback *cb)');
     const SetIdle = lib.func('void SetIdle(void *env, IdleCallback *cb)');
     const TriggerIdle = lib.func('void TriggerIdle(void)');
+    const SocketPair = lib.func('void SocketPair(_Out_ int *pfd)');
+    const ReadSocket = lib.func('int ReadSocket(int fd, _Out_ void *buf, int size)');
+    const WriteSocket = lib.func('void WriteSocket(int fd, const void *buf, int len)');
 
     free_ptr = CallFree;
 
@@ -330,5 +333,37 @@ async function test() {
         assert.equal(called, true);
 
         SetIdle(koffi.node.env, null);
+    }
+
+    // Watch file descriptor
+    {
+        let sockets = [null, null];
+        SocketPair(sockets);
+
+        let poll = { stop: () => {} };
+
+        let wait = new Promise((resolve, reject) => {
+            poll = koffi.node.watch(sockets[1], { readable: true }, (status, events) => {
+                assert.equal(status, 0);
+                assert.deepEqual(events, { readable: true, writable: false, disconnect: false });
+
+                resolve();
+            });
+
+            setTimeout(() => reject('Timed out'), 5000);
+        });
+
+        let write = Buffer.from('Hello!', 'utf-8');
+        WriteSocket(sockets[0], write, write.length);
+
+        await wait;
+
+        let out = Buffer.allocUnsafe(16);
+        ReadSocket(sockets[1], out, out.length);
+        let read = out.subarray(0, out.indexOf(0)).toString('utf-8');
+
+        assert.equal(read, 'Hello!');
+
+        poll.stop();
     }
 }

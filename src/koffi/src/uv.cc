@@ -152,7 +152,7 @@ Napi::Value Watch(const Napi::CallbackInfo &info)
 
     bool has_opts = (info.Length() >= 3 && info[1].IsObject());
 
-    if (info.Length() < 2 + has_opts) {
+    if (info.Length() < 2u + has_opts) {
         ThrowError<Napi::TypeError>(env, "Expected 2 to 3 arguments, got %1", info.Length());
         return env.Null();
     }
@@ -167,12 +167,20 @@ Napi::Value Watch(const Napi::CallbackInfo &info)
     }
 
     int fd = info[0].As<Napi::Number>().Int32Value();
-    Napi::Object opts = has_opts ? info[1].As<Napi::Object>() : Napi::Object::New(env);
-    Napi::Function cb = info[1 + has_opts].As<Napi::Function>();
 
     Napi::Function ctor = Poll::Define(env);
     Napi::Object inst = ctor.New({ Napi::Number::New(env, fd) });
-    inst.Get("start").As<Napi::Function>().Call(inst, { opts, cb });
+    Napi::Function start = inst.Get("start").As<Napi::Function>();
+
+    if (has_opts) {
+        Napi::Value opts = info[1];
+        Napi::Function cb = info[2].As<Napi::Function>();
+
+        start.Call(inst, { opts, cb });
+    } else {
+        Napi::Function cb = info[1].As<Napi::Function>();
+        start.Call(inst, { cb });
+    }
 
     return inst;
 }
