@@ -123,6 +123,8 @@ Async calls run on worker threads, the number of which depends on the number of 
 
 ## Default settings
 
+*Changed in Koffi 2.15*
+
 Setting              | Default | Maximum | Description
 -------------------- | ------- | ------- | ----------------------------------------------------
 sync_stack_size      | 1 MiB   | 16 MiB  | Stack size for synchronous calls
