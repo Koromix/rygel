@@ -1,6 +1,6 @@
 #pragma once
 
-#define FUSE_HOTFIX_VERSION 0
+#define FUSE_HOTFIX_VERSION 1
 
 #define FUSE_MAJOR_VERSION 3
 

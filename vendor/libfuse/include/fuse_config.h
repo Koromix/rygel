@@ -1,6 +1,6 @@
 #pragma once
 
-#define PACKAGE_VERSION "3.18.0"
+#define PACKAGE_VERSION "3.18.1"
 
 #if defined(__linux__)
     #define HAVE_CLOSE_RANGE
