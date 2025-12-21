@@ -1132,7 +1132,9 @@ static bool CopyFile(int src_fd, const char *src_filename, int dest_fd, const ch
     if (!FlushFile(dest_fd, dest_filename))
         return false;
 
+#if !defined(_WIN32)
     SetFileMode(dest_fd, dest_filename, 0644);
+#endif
     SetFileTimes(dest_fd, dest_filename, mtime, 0);
 
     return true;
