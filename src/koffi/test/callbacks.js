@@ -340,10 +340,10 @@ async function test() {
         let sockets = [null, null];
         SocketPair(sockets);
 
-        let poll = { stop: () => {} };
+        let handle = { stop: () => {} };
 
-        let wait = new Promise((resolve, reject) => {
-            poll = koffi.node.poll(sockets[1], { readable: true }, (status, events) => {
+        let poll = new Promise((resolve, reject) => {
+            handle = koffi.node.poll(sockets[1], { readable: true }, (status, events) => {
                 assert.equal(status, 0);
                 assert.deepEqual(events, { readable: true, writable: false, disconnect: false });
 
@@ -356,7 +356,7 @@ async function test() {
         let write = Buffer.from('Hello!', 'utf-8');
         WriteSocket(sockets[0], write, write.length);
 
-        await wait;
+        await poll;
 
         let out = Buffer.allocUnsafe(16);
         let bytes = ReadSocket(sockets[1], out, out.length);
@@ -364,6 +364,6 @@ async function test() {
 
         assert.equal(read, 'Hello!');
 
-        poll.stop();
+        handle.stop();
     }
 }
