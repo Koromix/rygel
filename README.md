@@ -14,7 +14,6 @@ As a general rule, applications are licensed under the [GPL 3.0 license](https:/
 | *goupile*  | Programmable electronic data capture application                                 | Felix      | **WIP**  | GPL 3     |
 | *heimdall* | Interactive timeline visualization UI                                            | Felix/R    | **WIP**  | GPL 3     |
 | *hodler*   | Simple markdown-to-HTML website generator (e.g. koromix.dev)                     | Felix      | **Good** | GPL 3     |
-| *jumbll*   | Backup media files to multiple disjoint disks                                    | Felix      | **Good** | GPL 3     |
 | *koffi*    | Fast and simple C FFI (foreign function interface) for Node.js                   | Node.js    | **Good** | MIT       |
 | *ludivine* | Platform underlying the Lignes de Vie project (https://ldv-recherche.fr)         | Felix      | **Good** | GPL 3     |
 | *meestic*  | Control the keyboard lighting on MSI Delta 15 laptops                            | Felix      | **Good** | GPL 3     |
@@ -25,7 +24,7 @@ As a general rule, applications are licensed under the [GPL 3.0 license](https:/
 | *tytools*  | Independent tools to manage, flash and communicate with Teensy microcontrollers  | Felix      | **Good** | Unlicense |
 | *web*      | Reusable utility functions and HTML/CSS/JS widgets                               | Felix      | **Good** | MIT       |
 
-You can also visit the [attic](src/attic/) for a few more single-file tools.
+You can also visit the [attic](src/attic/) for a few more small tools.
 
 # How to build
 
