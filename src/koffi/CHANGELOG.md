@@ -5,6 +5,25 @@
 
 ## Koffi 2
 
+### Koffi 2.15
+
+#### Koffi 2.15.0
+
+*Released on 2025-12-21*
+
+- Fix parsing error with some parameter types that could lead to weird crashes (regression introduced in Koffi 2.14)
+- Fix rare data race in Koffi memory allocation/release
+- Increase default and maximum length of async call queue
+- Decrease default stack and heap size used for async calls
+- Add API to poll sockets with Node libuv event loop ([@mkicherer](https://github.com/mkicherer))
+- Fix erroneous UTF-32 range checks when decoding UTF-32 buffers ([@VastBlast](https://github.com/VastBlast))
+- Fix possible overflow when encoding malformed UTF-16 to UTF-32
+- Throw error when using negative offset in encode and decode functions ([@VastBlast](https://github.com/VastBlast))
+- Use proper Unicode replacement char in UTF-32 routines
+
+> [!NOTE]
+> The socket polling/libuv integration API is not yet documented and might change in subsequent releases. You've been warned!
+
 ### Koffi 2.14
 
 #### Koffi 2.14.1
