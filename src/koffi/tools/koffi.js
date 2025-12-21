@@ -252,6 +252,7 @@ async function build() {
         fs.mkdirSync(dist_dir, { mode: 0o755, recursive: true });
 
         copy_recursive(snapshot_dir, dist_dir, make_path_filter([
+            'lib/native/base',
             'src/core',
             'src/cnoke',
             'src/koffi/cmake',
@@ -374,7 +375,6 @@ function snapshot() {
     console.log('>> Snapshot code...');
     copy_recursive(root_dir, snapshot_dir, make_path_filter([
         'lib/native/base',
-        'lib/native/unicode',
         'src/cnoke',
         'src/koffi',
         'vendor/node-addon-api',
