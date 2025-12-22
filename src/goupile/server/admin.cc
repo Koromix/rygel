@@ -25,45 +25,6 @@
 
 namespace K {
 
-static const char *DefaultConfig =
-R"([Data]
-# RootDirectory = .
-# DatabaseFile = goupile.db
-# ArchiveDirectory = archives
-# SnapshotDirectory = snapshots
-# SynchronousFull = Off
-# UseSnapshots = On
-# AutoCreate = On
-# AutoMigrate = On
-
-[Security]
-# UserPassword = Moderate
-# AdminPassword = Moderate
-# RootPassword = Hard
-
-[Demo]
-# DemoMode = Off
-
-[SMS]
-# Provider = Twilio
-# AuthID = <AuthID>
-# AuthToken = <AuthToken>
-# From = <Phone number or alphanumeric sender>
-
-[SMTP]
-# URL = <Curl URL>
-# Username = <Username> (if any)
-# Password = <Password> (if any)
-# From = <Sender email address>
-
-[HTTP]
-# SocketType = Dual
-# Port = 8889
-# Threads =
-# AsyncThreads =
-# ClientAddress = Socket
-)";
-
 #pragma pack(push, 1)
 struct ArchiveIntro {
     char signature[15];
@@ -211,7 +172,15 @@ T(R"(Usage: %!..+%1 init [option...] [directory]%!0)"), FelixTarget);
         const char *filename = Fmt(&temp_alloc, "%1%/goupile.ini", root_directory).ptr;
         files.Append(filename);
 
-        if (!WriteFile(DefaultConfig, filename))
+        const AssetInfo *asset = FindEmbedAsset("src/goupile/server/config.ini");
+        K_ASSERT(asset);
+
+        StreamReader reader(asset->data, "<asset>", asset->compression_type);
+        StreamWriter writer(filename, (int)StreamWriterFlag::Atomic);
+
+        if (!SpliceStream(&reader, -1, &writer))
+            return 1;
+        if (!writer.Close())
             return 1;
 
 #if !defined(_WIN32)
