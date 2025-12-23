@@ -9,6 +9,7 @@ namespace K {
 
 struct oidc_Provider {
     const char *name = nullptr;
+    const char *title = nullptr;
 
     const char *url = nullptr;
     const char *client_id = nullptr;

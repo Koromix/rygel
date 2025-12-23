@@ -169,10 +169,15 @@ bool oidc_Provider::Validate() const
 {
     bool valid = true;
 
+    if (!title) {
+        LogError("OIDC provider title is not set");
+        valid = false;
+    }
+
     if (url) {
         valid = CheckURL(url);
     } else {
-        LogError("OIDC URL is not set");
+        LogError("OIDC provider URL is not set");
         valid = false;
     }
 
@@ -250,7 +255,9 @@ bool oidc_LoadProviders(StreamReader *st, oidc_ProviderSet *out_set)
             }
 
             do {
-                if (prop.key == "URL") {
+                if (prop.key == "Title") {
+                    provider->title = DuplicateString(prop.value, alloc).ptr;
+                } else if (prop.key == "URL") {
                     Span<const char> url = TrimStrRight(prop.value, '/');
                     provider->url = DuplicateString(url, alloc).ptr;
                 } else if (prop.key == "ClientID") {
