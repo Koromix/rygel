@@ -767,7 +767,7 @@ static inline const char *mbedtls_cipher_get_name(
     const mbedtls_cipher_context_t *ctx)
 {
     if (ctx->MBEDTLS_PRIVATE(cipher_info) == NULL) {
-        return 0;
+        return NULL;
     }
 
     return ctx->MBEDTLS_PRIVATE(cipher_info)->MBEDTLS_PRIVATE(name);
