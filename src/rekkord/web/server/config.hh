@@ -6,6 +6,7 @@
 #include "lib/native/base/base.hh"
 #include "lib/native/http/http.hh"
 #include "lib/native/request/smtp.hh"
+#include "lib/native/sso/oidc.hh"
 
 namespace K {
 
@@ -26,6 +27,8 @@ struct Config {
     http_Config http { 8891 };
 
     smtp_Config smtp;
+
+    oidc_ProviderSet oidc;
 
     BlockAllocator str_alloc;
 

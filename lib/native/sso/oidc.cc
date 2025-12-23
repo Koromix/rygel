@@ -427,7 +427,7 @@ bool oidc_ExchangeCode(const oidc_Provider &provider, const char *callback_url, 
 
         if (status != 200) {
             if (status >= 0) {
-                LogError("Failed to fetch OIDC configuration with status %1", status);
+                LogError("Failed to exchange OIDC code with status %1", status);
             }
             return false;
         }
@@ -608,7 +608,7 @@ static psa_key_id_t FetchJwksKey(const oidc_Provider &provider, const char *kid)
 
             if (status != 200) {
                 if (status >= 0) {
-                    LogError("Failed to fetch OIDC configuration with status %1", status);
+                    LogError("Failed to fetch OIDC JWKS with status %1", status);
                 }
                 return PSA_KEY_ID_NULL;
             }
@@ -896,7 +896,7 @@ bool oidc_DecodeIdToken(const oidc_Provider &provider, Span<const char> token, S
                 } else if (key == "sub") {
                     json.ParseString(&identity.sub);
                 } else if (key == "email") {
-                    json.ParseString(&identity.email);
+                    json.ParseString(&identity.mail);
                 } else if (key == "email_verified") {
                     json.ParseBool(&identity.verified);
                 } else {
@@ -929,6 +929,8 @@ bool oidc_DecodeIdToken(const oidc_Provider &provider, Span<const char> token, S
             LogError("Invalid OIDC nonce in JWT payload");
             return false;
         }
+
+        identity.verified &= !!identity.mail;
     }
 
     std::swap(*out_identity, identity);

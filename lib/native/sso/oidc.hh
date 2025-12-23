@@ -53,7 +53,7 @@ struct oidc_TokenSet {
 
 struct oidc_IdentityInfo {
     const char *sub = nullptr;
-    const char *email = nullptr; // Can be NULL
+    const char *mail = nullptr; // Can be NULL
     bool verified = false;
 };
 

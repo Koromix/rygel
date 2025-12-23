@@ -2,12 +2,14 @@
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
 #include "lib/native/base/base.hh"
+#include "lib/native/sqlite/sqlite.hh"
 #include "rokkerd.hh"
 #include "mail.hh"
 #include "user.hh"
 #include "lib/native/http/http.hh"
 #include "lib/native/password/otp.hh"
 #include "lib/native/password/password.hh"
+#include "lib/native/sso/oidc.hh"
 #include "lib/native/wrap/qrcode.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 
@@ -28,6 +30,9 @@ static const int64_t BanTime = 1800 * 1000;
 
 static const int64_t PictureCacheDelay = 3600 * 1000;
 static const Size MaxPictureSize = Kibibytes(256);
+
+static const int SsoCookieFlags =  (int)http_CookieFlag::SameSiteStrict | (int)http_CookieFlag::Secure | (int)http_CookieFlag::HttpOnly;
+static const int SsoCookieMaxAge = 15 * 60000; // 15 minutes
 
 struct EventInfo {
     struct Key {
@@ -242,7 +247,7 @@ bool HashPassword(Span<const char> password, char out_hash[PasswordHashBytes])
     return true;
 }
 
-static RetainPtr<SessionInfo> CreateUserSession(int64_t userid, const char *username, const char *secret, int picture)
+static RetainPtr<SessionInfo> CreateUserSession(int64_t userid, const char *username, const char *totp, int picture)
 {
     Size username_bytes = strlen(username) + 1;
     Size session_bytes = K_SIZE(SessionInfo) + username_bytes;
@@ -256,13 +261,13 @@ static RetainPtr<SessionInfo> CreateUserSession(int64_t userid, const char *user
     });
 
     session->userid = userid;
-    if (secret) {
+    if (totp) {
         session->totp = true;
-        session->confirmed = false;
-        CopyString(secret, session->secret);
+        session->authorized = false;
+        CopyString(totp, session->secret);
     } else {
         session->totp = false;
-        session->confirmed = true;
+        session->authorized = true;
     }
     session->picture = picture;
     CopyString(username, MakeSpan((char *)session->username, username_bytes));
@@ -360,7 +365,7 @@ RetainPtr<SessionInfo> GetNormalSession(http_IO *io)
 
     if (!session)
         return nullptr;
-    if (!session->confirmed)
+    if (!session->authorized)
         return nullptr;
 
     return session;
@@ -375,11 +380,11 @@ static void ExportSession(const SessionInfo *session, json_Writer *json)
         json->Key("username"); json->String(session->username);
         json->Key("totp"); json->Bool(session->totp);
 
-        if (session->confirmed) {
-            json->Key("confirmed"); json->Bool(true);
+        if (session->authorized) {
+            json->Key("authorized"); json->Bool(true);
             json->Key("picture"); json->Int(session->picture);
         } else {
-            json->Key("confirmed"); json->Bool(false);
+            json->Key("authorized"); json->Bool(false);
         }
 
         json->EndObject();
@@ -452,16 +457,16 @@ void HandleUserRegister(http_IO *io)
         int64_t now = GetUnixTime();
 
         sq_Statement stmt;
-        if (!db.Prepare(R"(INSERT INTO users (mail, username, creation, version)
-                           VALUES (?1, ?2, ?3, 1)
-                           ON CONFLICT DO UPDATE SET mail = excluded.mail
-                           RETURNING id, password_hash)",
+        if (!db.Prepare(R"(INSERT INTO users (mail, username, creation, confirmed, version)
+                           VALUES (?1, ?2, ?3, 0, 1)
+                           ON CONFLICT DO UPDATE SET confirmed = confirmed
+                           RETURNING id, confirmed)",
                         &stmt, mail, mail, GetUnixTime()))
             return false;
 
         if (stmt.Step()) {
             userid = sqlite3_column_int64(stmt, 0);
-            exists = (sqlite3_column_type(stmt, 1) != SQLITE_NULL);
+            exists = sqlite3_column_int(stmt, 1);
         } else {
             K_ASSERT(!stmt.IsValid());
             return false;
@@ -546,11 +551,11 @@ void HandleUserLogin(http_IO *io)
         int64_t userid = sqlite3_column_int64(stmt, 0);
         const char *password_hash = (const char *)sqlite3_column_text(stmt, 1);
         const char *username = (const char *)sqlite3_column_text(stmt, 2);
-        const char *secret = (const char *)sqlite3_column_text(stmt, 3);
+        const char *totp = (const char *)sqlite3_column_text(stmt, 3);
         int picture = sqlite3_column_int(stmt, 4);
 
         if (password_hash && crypto_pwhash_str_verify(password_hash, password, strlen(password)) == 0) {
-            RetainPtr<SessionInfo> session = CreateUserSession(userid, username, secret, picture);
+            RetainPtr<SessionInfo> session = CreateUserSession(userid, username, totp, picture);
             sessions.Open(io, session);
 
             http_SendJson(io, 200, [&](json_Writer *json) {
@@ -873,6 +878,243 @@ void HandleUserPassword(http_IO *io)
     return;
 }
 
+void HandleSsoLogin(http_IO *io)
+{
+    const char *type = nullptr;
+    const char *redirect = nullptr;
+    {
+        bool success = http_ParseJson(io, Kibibytes(1), [&](json_Parser *json) {
+            bool valid = true;
+
+            for (json->ParseObject(); json->InObject(); ) {
+                Span<const char> key = json->ParseKey();
+
+                if (key == "provider") {
+                    json->ParseString(&type);
+                } else if (key == "redirect") {
+                    json->ParseString(&redirect);
+                } else {
+                    json->UnexpectedKey(key);
+                    valid = false;
+                }
+            }
+            valid &= json->IsValid();
+
+            if (valid) {
+                if (!type) {
+                    LogError("Missing 'type' parameter");
+                    valid = false;
+                }
+                if (!redirect) {
+                    LogError("Missing 'redirect' parameter");
+                    valid = false;
+                }
+            }
+
+            return valid;
+        });
+
+        if (!success) {
+            io->SendError(422);
+            return;
+        }
+    }
+
+    const oidc_Provider *provider = config.oidc.map.FindValue(type, nullptr);
+    if (!provider) {
+        LogError("Unknown provider type '%1'", type);
+        io->SendError(404);
+        return;
+    }
+
+    const char *callback = Fmt(io->Allocator(), "%1/callback", config.url).ptr;
+
+    oidc_AuthorizationInfo auth;
+    oidc_PrepareAuthorization(*provider, callback, redirect, io->Allocator(), &auth);
+
+    // Don't set SameSite=Strict because we want the cookie to be available when the user gets redirected to the callback URL
+    io->AddCookieHeader("/", "oidc", auth.cookie, SsoCookieFlags, SsoCookieMaxAge);
+
+    Span<const char> json = Fmt(io->Allocator(), "{\"url\": \"%1\"}", FmtEscape(auth.url, '"'));
+    io->SendText(200, json, "application/json");
+}
+
+void HandleSsoCallback(http_IO *io)
+{
+    const http_RequestInfo &request = io->Request();
+
+    const char *cookie = request.GetCookieValue("oidc");
+
+    if (!cookie) {
+        LogError("Missing SSO safety cookie");
+        io->SendError(422);
+        return;
+    }
+
+    const char *code = nullptr;
+    const char *state = nullptr;
+    {
+        bool success = http_ParseJson(io, Kibibytes(1), [&](json_Parser *json) {
+            bool valid = true;
+
+            for (json->ParseObject(); json->InObject(); ) {
+                Span<const char> key = json->ParseKey();
+
+                if (key == "code") {
+                    json->ParseString(&code);
+                } else if (key == "state") {
+                    json->ParseString(&state);
+                } else {
+                    json->UnexpectedKey(key);
+                    valid = false;
+                }
+            }
+            valid &= json->IsValid();
+
+            if (valid) {
+                if (!code) {
+                    LogError("Missing 'code' parameter");
+                    valid = false;
+                }
+                if (!state) {
+                    LogError("Missing 'state' parameter");
+                    valid = false;
+                }
+            }
+
+            return valid;
+        });
+
+        if (!success) {
+            io->SendError(422);
+            return;
+        }
+    }
+
+    oidc_CookieInfo info;
+    if (!oidc_CheckCookie(cookie, state, io->Allocator(), &info)) {
+        io->SendError(401);
+        return;
+    }
+
+    const oidc_Provider *provider = config.oidc.map.FindValue(info.provider, nullptr);
+    if (!provider) [[unlikely]] {
+        LogError("SSO provider '%1' is gone!", info.provider);
+        io->SendError(401);
+        return;
+    }
+
+    oidc_TokenSet tokens;
+    {
+        const char *callback = Fmt(io->Allocator(), "%1/callback", config.url).ptr;
+
+        if (!oidc_ExchangeCode(*provider, callback, code, io->Allocator(), &tokens)) {
+            io->SendError(401);
+            return;
+        }
+    }
+
+    oidc_IdentityInfo identity;
+    if (!oidc_DecodeIdToken(*provider, tokens.id, info.nonce, io->Allocator(), &identity)) {
+        io->SendError(401);
+        return;
+    }
+
+    if (!identity.mail || !identity.verified) {
+        LogError("Cannot use SSO login without mail address");
+        io->SendError(403);
+        return;
+    }
+    if (!identity.verified) {
+        LogError("Please verify your mail address with %1 before you attempt to login", provider->name);
+        io->SendError(403);
+        return;
+    }
+
+    RetainPtr<SessionInfo> session;
+
+    // Find matching identity and user account
+    {
+        sq_Statement stmt;
+        if (!db.Prepare(R"(SELECT i.authorized, u.id, u.username, u.version
+                           FROM identities i
+                           INNER JOIN users u ON (u.id = i.user)
+                           WHERE i.issuer = ?1 AND i.sub = ?2)",
+                        &stmt, provider->issuer, identity.sub))
+            return;
+
+        if (stmt.Step()) {
+            bool authorized = sqlite3_column_int(stmt, 0);
+            int64_t userid = sqlite3_column_int64(stmt, 1);
+            const char *username = (const char *)sqlite3_column_text(stmt, 2);
+            int picture = sqlite3_column_int(stmt, 3);
+
+            if (authorized) {
+                session = CreateUserSession(userid, username, nullptr, picture);
+            } else {
+                LogError("There is already an account using this mail address, please login with existing identifiers");
+                io->SendError(403);
+                return;
+            }
+        }
+        if (!stmt.IsValid())
+            return;
+    }
+
+    if (!session) {
+        int64_t user = 0;
+        bool authorized = false;
+
+        bool success = db.Transaction([&]() {
+            sq_Statement stmt;
+            if (!db.Prepare(R"(INSERT INTO users (mail, username, creation, confirmed, version)
+                               VALUES (?1, ?2, ?3, 1, 1)
+                               ON CONFLICT DO UPDATE SET confirmed = confirmed
+                               RETURNING id)",
+                            &stmt, identity.mail, identity.mail, GetUnixTime()))
+                return false;
+
+            if (!stmt.Step()) {
+                K_ASSERT(!stmt.IsValid());
+                return false;
+            }
+
+            user = sqlite3_column_int64(stmt, 0);
+            authorized = (user == sqlite3_last_insert_rowid(db));
+
+            if (!db.Run(R"(INSERT INTO identities (user, issuer, sub, authorized)
+                           VALUES (?1, ?2, ?3, ?4)
+                           ON CONFLICT (issuer, sub) DO NOTHING)",
+                        user, provider->issuer, identity.sub, 0 + authorized))
+                return false;
+
+            return true;
+        });
+        if (!success)
+            return;
+
+        if (authorized) {
+            session = CreateUserSession(user, identity.mail, nullptr, 1);
+        } else {
+            LogError("There is already an account using this mail address, please login with existing identifiers");
+            io->SendError(403);
+            return;
+        }
+    }
+
+    K_ASSERT(session);
+    sessions.Open(io, session);
+
+    http_SendJson(io, 200, [&](json_Writer *json) {
+        json->StartObject();
+
+        json->Key("redirect"); json->String(info.redirect);
+        json->Key("session"); ExportSession(session.GetRaw(), json);
+
+        json->EndObject();
+    });
+}
+
 static bool CheckTotp(http_IO *io, int64_t userid, const char *secret, const char *code)
 {
     int64_t time = GetUnixTime();
@@ -914,8 +1156,8 @@ void HandleTotpConfirm(http_IO *io)
         io->SendError(401);
         return;
     }
-    if (session->confirmed) {
-        LogError("Session does not need confirmation");
+    if (session->authorized) {
+        LogError("Session does not need TOTP check");
         io->SendError(403);
         return;
     }
@@ -960,7 +1202,7 @@ void HandleTotpConfirm(http_IO *io)
     WaitDelay(800);
 
     if (CheckTotp(io, session->userid, secret, code)) {
-        session->confirmed = true;
+        session->authorized = true;
         ZeroSafe(session->secret, K_SIZE(session->secret));
 
         http_SendJson(io, 200, [&](json_Writer *json) {

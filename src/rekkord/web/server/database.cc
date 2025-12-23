@@ -7,7 +7,7 @@
 
 namespace K {
 
-const int DatabaseVersion = 27;
+const int DatabaseVersion = 28;
 
 int GetDatabaseVersion(sq_Database *db)
 {
@@ -580,9 +580,44 @@ bool MigrateDatabase(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 27: {
+                bool success = db->RunMany(R"(
+                    CREATE TABLE users_NEW (
+                        id INTEGER PRIMARY KEY NOT NULL,
+                        mail TEXT COLLATE NOCASE NOT NULL,
+                        password_hash TEXT,
+                        username TEXT NOT NULL,
+                        creation INTEGER NOT NULL,
+                        confirmed INTEGER CHECK (confirmed IN (0, 1)) NOT NULL,
+                        totp TEXT,
+                        picture BLOB,
+                        version INTEGER NOT NULL
+                    );
+
+                    INSERT INTO users_NEW (id, mail, password_hash, username, creation, confirmed, totp, picture, version)
+                        SELECT id, mail, password_hash, username, creation, IIF(password_hash IS NOT NULL, 1, 0), totp, picture, version FROM users;
+                    DROP TABLE users;
+                    ALTER TABLE users_NEW RENAME TO users;
+
+                    CREATE UNIQUE INDEX users_m ON users (mail);
+
+                    CREATE TABLE identities (
+                        id INTEGER PRIMARY KEY NOT NULL,
+                        user INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+                        issuer TEXT NOT NULL,
+                        sub TEXT NOT NULL,
+                        authorized CHECK (authorized IN (0, 1)) NOT NULL
+                    );
+                    CREATE UNIQUE INDEX identities_is ON identities (issuer, sub);
+                    CREATE INDEX identities_u ON identities (user);
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            static_assert(DatabaseVersion == 27);
+            static_assert(DatabaseVersion == 28);
         }
 
         if (!db->Run("INSERT INTO migrations (version, build, timestamp) VALUES (?, ?, ?)",

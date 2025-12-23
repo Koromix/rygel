@@ -264,6 +264,13 @@ static void InitAssets()
             json.StartObject();
             json.Key("title"); json.String(config.title);
             json.Key("url"); json.String(config.url);
+
+            json.Key("sso"); json.StartObject();
+            for (const oidc_Provider &provider: config.oidc.providers) {
+                json.Key(provider.name); json.String(provider.title);
+            }
+            json.EndObject();
+
             json.EndObject();
         } else if (key == "JS") {
             writer->Write(js);
@@ -356,6 +363,10 @@ static void HandleRequest(http_IO *io)
             HandleUserReset(io);
         } else if (url == "/api/user/password" && method == http_RequestMethod::Post) {
             HandleUserPassword(io);
+        } else if (url == "/api/sso/login" && method == http_RequestMethod::Post) {
+            HandleSsoLogin(io);
+        } else if (url == "/api/sso/callback" && method == http_RequestMethod::Post) {
+            HandleSsoCallback(io);
         } else if (url == "/api/totp/confirm" && method == http_RequestMethod::Post) {
             HandleTotpConfirm(io);
         } else if (url == "/api/totp/secret" && method == http_RequestMethod::Post) {

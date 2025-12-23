@@ -21,6 +21,7 @@ const RUN_LOCK = 'run';
 
 const MODES = {
     login: { run: runLogin, session: false },
+    callback: { run: runCallback, session: false, },
     register: { run: runRegister, session: false },
     finalize: { run: runFinalize, session: false },
     recover: { run: runRecover, session: false },
@@ -344,6 +345,26 @@ async function logout() {
     poisoned = true;
 }
 
+async function sso(provider, redirect) {
+    let info = await Net.post('/api/sso/login', {
+        provider: provider,
+        redirect: redirect
+    });
+
+    window.location.href = info.url;
+}
+
+async function callback(code, state) {
+    let info = await Net.post('/api/sso/callback', {
+        code: code,
+        state: state
+    });
+
+    session = info.session;
+
+    go(info.redirect, false);
+}
+
 // ------------------------------------------------------------------------
 // User
 // ------------------------------------------------------------------------
@@ -481,6 +502,10 @@ async function runLogin() {
                         <button type="submit">${T.login}</button>
                         <a href="/register">${T.maybe_create_account}</a>
                         <a href="/recover">${T.maybe_lost_password}</a>
+                        ${Object.keys(ENV.sso).map(provider => {
+                            let title = ENV.sso[provider];
+                            return html`<button type="button" @click=${UI.wrap(e => sso(provider, window.location.pathname))}>${title}</button>`;
+                        })}
                     </div>
                 </form>
             </div>
@@ -500,7 +525,7 @@ async function runLogin() {
 
             await login(mail, password);
         }
-    } else if (!session.confirmed) {
+    } else if (!session.authorized) {
         UI.main(html`
             <div class="tabbar">
                 <a class="active">${T.login}</a>
@@ -536,6 +561,22 @@ async function runLogin() {
     } else {
         go('/');
     }
+}
+
+async function runCallback() {
+    let query = new URLSearchParams(window.location.search);
+
+    let code = query.get('code');
+    let state = query.get('state');
+
+    if (code == null || state == null) {
+        console.error('Missing SSO callback parameters');
+
+        go('/');
+        return;
+    }
+
+    await callback(code, state);
 }
 
 async function runRecover() {
@@ -652,7 +693,7 @@ async function runReset() {
 function isLogged() {
     if (session == null)
         return false;
-    if (!session.confirmed)
+    if (!session.authorized)
         return false;
 
     return true;

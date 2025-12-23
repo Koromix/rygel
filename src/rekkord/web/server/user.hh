@@ -13,10 +13,12 @@ struct smtp_Config;
 struct SessionInfo: public RetainObject<SessionInfo> {
     int64_t userid;
 
+    // TOTP
     std::atomic_bool totp;
-    std::atomic_bool confirmed;
+    std::atomic_bool authorized;
     char secret[33];
 
+    // User picture
     std::atomic_int picture;
 
     char username[];
@@ -36,6 +38,9 @@ void HandleUserLogout(http_IO *io);
 void HandleUserRecover(http_IO *io);
 void HandleUserReset(http_IO *io);
 void HandleUserPassword(http_IO *io);
+
+void HandleSsoLogin(http_IO *io);
+void HandleSsoCallback(http_IO *io);
 
 void HandleTotpConfirm(http_IO *io);
 void HandleTotpSecret(http_IO *io);

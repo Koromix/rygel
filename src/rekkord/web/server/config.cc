@@ -21,6 +21,7 @@ bool Config::Validate() const
 
     valid &= http.Validate();
     valid &= smtp.Validate();
+    valid &= oidc.Validate();
 
     return valid;
 }
@@ -104,6 +105,19 @@ bool LoadConfig(StreamReader *st, Config *out_config)
                     config.smtp.password = DuplicateString(prop.value, &config.str_alloc).ptr;
                 } else if (prop.key == "From") {
                     config.smtp.from = DuplicateString(prop.value, &config.str_alloc).ptr;
+                } else {
+                    LogError("Unknown attribute '%1'", prop.key);
+                    valid = false;
+                }
+            } else if (prop.section == "SSO") {
+                if (prop.key == "ProviderFile") {
+                    if (!config.oidc.providers.count) {
+                        const char *filename = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
+                        valid &= oidc_LoadProviders(filename, &config.oidc);
+                    } else {
+                        LogError("Cannot load multiple SSO provider configurations");
+                        valid = false;
+                    }
                 } else {
                     LogError("Unknown attribute '%1'", prop.key);
                     valid = false;
