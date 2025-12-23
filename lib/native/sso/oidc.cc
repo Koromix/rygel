@@ -528,6 +528,7 @@ static psa_key_id_t FetchJwksKey(const oidc_Provider &provider, const char *kid)
     int64_t now = GetUnixTime();
 
     bool reset = false;
+    bool provided = false;
 
     // Fast path
     {
@@ -538,6 +539,11 @@ static psa_key_id_t FetchJwksKey(const oidc_Provider &provider, const char *kid)
 
             if (entry)
                 return entry->key;
+
+            provided = jwks_providers.Find(&provider);
+
+            if (provided)
+                return PSA_KEY_ID_NULL;
         } else {
             reset = true;
         }
@@ -563,7 +569,7 @@ static psa_key_id_t FetchJwksKey(const oidc_Provider &provider, const char *kid)
         jwks_timestamp = now;
     }
 
-    if (!jwks_providers.Find(&provider)) {
+    if (!provided) {
         LogDebug("Fetching OIDC JWKS file from '%1'", provider.jwks_url);
 
         Size prev_count = jwks_entries.count;
