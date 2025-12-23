@@ -17,7 +17,7 @@ class http_SessionManager {
     static const int64_t MaxLockDelay = 120 * 60000;
     static const int64_t RegenerateDelay = 5 * 60000;
 
-    static const unsigned int CookieFlags = (int)http_CookieFlag::Secure;
+    static const unsigned int CookieFlags = (int)http_CookieFlag::SameSiteStrict | (int)http_CookieFlag::Secure;
 
     struct SessionHandle {
         char session_key[65];

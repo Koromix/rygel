@@ -182,8 +182,9 @@ enum class http_RequestStatus {
 };
 
 enum class http_CookieFlag {
-    HttpOnly = 1 << 0,
-    Secure = 1 << 1
+    SameSiteStrict = 1 << 0,
+    HttpOnly = 1 << 1,
+    Secure = 1 << 2
 };
 
 enum class http_WebSocketFlag {
@@ -239,7 +240,7 @@ public:
 
     void AddHeader(Span<const char> key, Span<const char> value);
     void AddEncodingHeader(CompressionType encoding);
-    void AddCookieHeader(const char *path, const char *name, const char *value, unsigned int flags);
+    void AddCookieHeader(const char *path, const char *name, const char *value, unsigned int flags, int max_age = -1);
     void AddCachingHeaders(int64_t max_age, const char *etag = nullptr);
 
     bool OpenForWrite(int status, CompressionType encoding, int64_t len, StreamWriter *out_st);

@@ -553,19 +553,24 @@ void http_IO::AddEncodingHeader(CompressionType encoding)
     }
 }
 
-void http_IO::AddCookieHeader(const char *path, const char *name, const char *value, unsigned int flags)
+void http_IO::AddCookieHeader(const char *path, const char *name, const char *value, unsigned int flags, int max_age)
 {
-    LocalArray<char, 1024> buf;
+    LocalArray<char, 2048> buf;
 
-    if (value) {
-        buf.len = Fmt(buf.data, "%1=%2; Path=%3;", name, value, path).len;
-    } else {
-        buf.len = Fmt(buf.data, "%1=; Path=%2; Max-Age=0;", name, path).len;
-    }
+    // Delete if value is NULL
+    max_age = value ? max_age : 0;
 
+    buf.len = Fmt(buf.data, "%1=%2; Path=%3;", name, value ? value : "", path).len;
     K_ASSERT(buf.Available() >= 128);
 
-    buf.len += Fmt(buf.TakeAvailable(), " SameSite=Strict;").len;
+    if (max_age >= 0) {
+        buf.len += Fmt(buf.TakeAvailable(), " Max-Age=%1;", max_age / 1000).len;
+    }
+    if (flags & (int)http_CookieFlag::SameSiteStrict) {
+        buf.len += Fmt(buf.TakeAvailable(), " SameSite=Strict;").len;
+    } else {
+        buf.len += Fmt(buf.TakeAvailable(), " SameSite=Lax;").len;
+    }
     if (flags & (int)http_CookieFlag::HttpOnly) {
         buf.len += Fmt(buf.TakeAvailable(), " HttpOnly;").len;
     }
