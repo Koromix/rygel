@@ -403,7 +403,8 @@ bool oidc_ExchangeCode(const oidc_Provider &provider, const char *callback_url, 
         curl_slist header = { (char *)"Content-Type: application/x-www-form-urlencoded", nullptr };
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, &header);
         curl_easy_setopt(curl, CURLOPT_POST, 1L);
-        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post);
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, post.ptr);
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)post.len);
 
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, +[](char *ptr, size_t, size_t nmemb, void *udata) {
             HeapArray<char> *body = (HeapArray<char> *)udata;
