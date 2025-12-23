@@ -56,14 +56,13 @@ struct oidc_IdentityInfo {
     bool verified = false;
 };
 
-// You must finalize the set once every provider is loaded
 bool oidc_LoadProviders(StreamReader *st, oidc_ProviderSet *out_set);
 bool oidc_LoadProviders(const char *filename, oidc_ProviderSet *out_set);
 
 void oidc_PrepareAuthorization(const oidc_Provider &provider, const char *callback, const char *redirect,
                                Allocator *alloc, oidc_AuthorizationInfo *out_auth);
-bool oidc_CheckCookie(Span<const char> cookie, Span<const char> rnd, Allocator *alloc, oidc_CookieInfo *out_info);
 
+bool oidc_CheckCookie(Span<const char> cookie, Span<const char> rnd, Allocator *alloc, oidc_CookieInfo *out_info);
 bool oidc_ExchangeCode(const oidc_Provider &provider, const char *callback_url, const char *code,
                         Allocator *alloc, oidc_TokenSet *out_set);
 bool oidc_DecodeIdToken(const oidc_Provider &provider, Span<const char> token, Span<const char> nonce,
