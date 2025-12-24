@@ -927,7 +927,7 @@ void HandleSsoLogin(http_IO *io)
         return;
     }
 
-    const char *scopes = "email email_verified";
+    const char *scopes = "email";
     const char *callback = Fmt(io->Allocator(), "%1/callback", config.url).ptr;
 
     oidc_AuthorizationInfo auth;
