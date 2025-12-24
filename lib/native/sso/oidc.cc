@@ -491,8 +491,8 @@ static psa_key_id_t ImportRsaSigningKey(Span<const char> n, Span<const char> e)
     psa_set_key_algorithm(&attributes, PSA_ALG_RSA_PKCS1V15_SIGN(PSA_ALG_SHA_256));
     psa_set_key_type(&attributes, PSA_KEY_TYPE_RSA_PUBLIC_KEY);
 
-    LocalArray<uint8_t, 1025> modulo;
-    LocalArray<uint8_t, 33> exponent;
+    LocalArray<uint8_t, 1024> modulo;
+    LocalArray<uint8_t, 32> exponent;
     if (sodium_base642bin(modulo.data, K_SIZE(modulo.data), n.ptr, (size_t)n.len, nullptr, (size_t *)&modulo.len, nullptr, sodium_base64_VARIANT_URLSAFE_NO_PADDING) != 0) {
         LogError("Failed to decode RSA key modulus");
         return PSA_KEY_ID_NULL;
