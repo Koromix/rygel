@@ -875,6 +875,7 @@ bool oidc_DecodeIdToken(const oidc_Provider &provider, Span<const char> token, S
         int64_t iat = -1;
         int64_t exp = -1;
         const char *iss = nullptr;
+        const char *aud = nullptr;
         Span<const char> nonce2 = {};
 
         // Parse JSON
@@ -891,6 +892,8 @@ bool oidc_DecodeIdToken(const oidc_Provider &provider, Span<const char> token, S
                     json.ParseInt(&exp);
                 } else if (key == "iss") {
                     json.ParseString(&iss);
+                } else if (key == "aud") {
+                    json.ParseString(&aud);
                 } else if (key == "nonce") {
                     json.ParseString(&nonce2);
                 } else if (key == "sub") {
@@ -907,7 +910,7 @@ bool oidc_DecodeIdToken(const oidc_Provider &provider, Span<const char> token, S
                 return false;
         }
 
-        if (iat < 0 || exp < 0 || !iss || !nonce2.ptr || !identity.sub) {
+        if (iat < 0 || exp < 0 || !iss || !aud || !nonce2.ptr || !identity.sub) {
             LogError("Missing or invalid JWT payload values");
             return false;
         }
@@ -922,6 +925,10 @@ bool oidc_DecodeIdToken(const oidc_Provider &provider, Span<const char> token, S
         }
         if (!TestStr(iss, provider.issuer)) {
             LogError("JWT issuer mismatch with OIDC configuration");
+            return false;
+        }
+        if (!TestStr(aud, provider.client_id)) {
+            LogError("JWT client ID mismatch with OIDC configuration");
             return false;
         }
 
