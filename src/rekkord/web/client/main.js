@@ -378,15 +378,28 @@ async function runRegister() {
         <div class="tab" style="align-items: center;">
             <div class="header">${T.create_your_account}</div>
 
-            <form style="text-align: center;" @submit=${UI.wrap(submit)}>
-                <label>
-                    <input type="text" name="mail" style="width: 20em;" placeholder=${T.mail_address.toLowerCase()} />
-                </label>
-                <div class="actions">
-                    <button type="submit">${T.register}</button>
-                    <a href="/login">${T.already_have_account}</a>
-                </div>
-            </form>
+            <div class="columns">
+                <form style="text-align: center;" @submit=${UI.wrap(submit)}>
+                    <label>
+                        <input type="text" name="mail" style="width: 20em;" placeholder=${T.mail_address.toLowerCase()} />
+                    </label>
+                    <div class="actions">
+                        <button type="submit">${T.register}</button>
+                        <a href="/login">${T.already_have_account}</a>
+                    </div>
+                </form>
+
+                ${ENV.sso.length ? html`
+                    <div>
+                        <p class="sub" style="text-align: center;">${T.you_can_login_with}</p>
+
+                        <div class="actions vertical">
+                            ${ENV.sso.map(provider =>
+                                html`<button type="button" @click=${UI.wrap(e => sso(provider.name, window.location.pathname))}>${T.format(T.login_with_x, provider.title)}</button>`)}
+                        </div>
+                    </div>
+                ` : ''}
+            </div>
         </div>
     `);
 
@@ -491,23 +504,32 @@ async function runLogin() {
             <div class="tab" style="align-items: center;">
                 <div class="header">${T.format(T.login_to_x, ENV.title)}</div>
 
-                <form style="text-align: center;" @submit=${UI.wrap(submit)}>
-                    <label>
-                        <input type="text" name="mail" style="width: 20em;" placeholder=${T.mail_address.toLowerCase()} />
-                    </label>
-                    <label>
-                        <input type="password" name="password" style="width: 20em;" placeholder=${T.password.toLowerCase()} />
-                    </label>
-                    <div class="actions">
-                        <button type="submit">${T.login}</button>
-                        <a href="/register">${T.maybe_create_account}</a>
-                        <a href="/recover">${T.maybe_lost_password}</a>
-                        ${Object.keys(ENV.sso).map(provider => {
-                            let title = ENV.sso[provider];
-                            return html`<button type="button" @click=${UI.wrap(e => sso(provider, window.location.pathname))}>${title}</button>`;
-                        })}
-                    </div>
-                </form>
+                <div class="columns">
+                    <form style="text-align: center;" @submit=${UI.wrap(submit)}>
+                        <label>
+                            <input type="text" name="mail" style="width: 20em;" placeholder=${T.mail_address.toLowerCase()} />
+                        </label>
+                        <label>
+                            <input type="password" name="password" style="width: 20em;" placeholder=${T.password.toLowerCase()} />
+                        </label>
+                        <div class="actions">
+                            <button type="submit">${T.login}</button>
+                            <a href="/register">${T.maybe_create_account}</a>
+                            <a href="/recover">${T.maybe_lost_password}</a>
+                        </div>
+                    </form>
+
+                    ${ENV.sso.length ? html`
+                        <div>
+                            <p class="sub" style="text-align: center;">${T.you_can_login_with}</p>
+
+                            <div class="actions vertical">
+                                ${ENV.sso.map(provider =>
+                                    html`<button type="button" @click=${UI.wrap(e => sso(provider.name, window.location.pathname))}>${T.format(T.login_with_x, provider.title)}</button>`)}
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
             </div>
         `);
 

@@ -262,14 +262,20 @@ static void InitAssets()
             json_Writer json(writer);
 
             json.StartObject();
+
             json.Key("title"); json.String(config.title);
             json.Key("url"); json.String(config.url);
 
-            json.Key("sso"); json.StartObject();
+            json.Key("sso"); json.StartArray();
             for (const oidc_Provider &provider: config.oidc.providers) {
-                json.Key(provider.name); json.String(provider.title);
+                json.StartObject();
+
+                json.Key("name"); json.String(provider.name);
+                json.Key("title"); json.String(provider.title);
+
+                json.EndObject();
             }
-            json.EndObject();
+            json.EndArray();
 
             json.EndObject();
         } else if (key == "JS") {

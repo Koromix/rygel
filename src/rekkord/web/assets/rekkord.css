@@ -15,7 +15,7 @@ html {
     --top_height: 80px;
     --small_height: 70px;
 
-    --button_radius: 10px;
+    --button_radius: 16px;
 }
 
 body { font-size: 15px; }
@@ -30,8 +30,6 @@ h1 {
 }
 
 span[title] { border-bottom: 1px dotted #383838; }
-
-button { border-radius: 16px; }
 
 .reference {
     font-weight: bold;

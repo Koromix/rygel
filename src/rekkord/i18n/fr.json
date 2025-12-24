@@ -59,6 +59,7 @@
         "last_run": "Dernière exécution",
         "login": "Se connecter",
         "login_to_x": "Connectez-vous à {1}",
+        "login_with_x": "Se connecter avec {1}",
         "logout": "Se déconnecter",
         "mail_address": "Adresse e-mail",
         "maybe_create_account": "Créer un nouveau compte ?",
@@ -123,6 +124,7 @@
         "url": "URL",
         "valid": "Valide",
         "x_snapshots": "{1} instantanés",
+        "you_can_login_with": "Vous pouvez aussi vous connecter avec...",
         "zoom": "Zoom"
     },
     "messages": {

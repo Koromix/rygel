@@ -42,6 +42,30 @@ main.dialog {
     gap: 1em;
 }
 
+.columns {
+    display: flex;
+    gap: 1em;
+
+    & > * + * {
+        padding-left: 1em;
+        border-left: 1px dashed #ccc;
+    }
+}
+
+@media screen and (max-width: 960px) {
+    .columns {
+        flex-direction: column;
+
+        & > * + * {
+            padding-left: 0;
+            border-left: none;
+
+            padding-top: 1em;
+            border-top: 1px dashed #ccc;
+        }
+    }
+}
+
 .popup {
     position: fixed;
     max-width: 90vw;
@@ -71,6 +95,13 @@ main.dialog {
 
     & > button + button { margin-left: 0.5em; }
     & > button + a { margin-top: 0.5em; }
+}
+.actions.vertical {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+
+    & > button + button { margin-left: 0; }
 }
 
 button {

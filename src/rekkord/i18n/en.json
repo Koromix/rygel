@@ -57,8 +57,9 @@
         "key_prefix": "Key prefix",
         "language": "Language",
         "last_run": "Last run",
-        "login": "Login",
-        "login_to_x": "Login to {1}",
+        "login": "Sign in",
+        "login_to_x": "Sign in to {1}",
+        "login_with_x": "Sign in with {1}",
         "logout": "Logout",
         "mail_address": "Mail address",
         "maybe_create_account": "Create a new account?",
@@ -123,6 +124,7 @@
         "url": "URL",
         "valid": "Valid",
         "x_snapshots": "{1} snapshots",
+        "you_can_login_with": "You can also sign in with...",
         "zoom": "Zoom"
     },
     "messages": {}
