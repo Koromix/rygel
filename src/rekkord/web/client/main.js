@@ -414,8 +414,10 @@ async function runRegister() {
 
         await Net.post('/api/user/register', { mail: mail });
 
-        form.innerHTML = '';
-        render(html`<p>${unsafeHTML(T.consult_registration_mail)}</p>`, form);
+        let div = form.parentNode;
+
+        div.innerHTML = '';
+        render(html`<p>${unsafeHTML(T.consult_registration_mail)}</p>`, div);
     }
 }
 
