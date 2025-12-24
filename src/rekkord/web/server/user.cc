@@ -1020,13 +1020,13 @@ void HandleSsoCallback(http_IO *io)
         return;
     }
 
-    if (!identity.mail || !identity.verified) {
+    if (!identity.mail) {
         LogError("Cannot use SSO login without mail address");
         io->SendError(403);
         return;
     }
     if (!identity.verified) {
-        LogError("Please verify your mail address with %1 before you attempt to login", provider->name);
+        LogError("Please verify your mail address with %1 before you attempt to log in", provider->title);
         io->SendError(403);
         return;
     }
@@ -1052,7 +1052,7 @@ void HandleSsoCallback(http_IO *io)
             if (authorized) {
                 session = CreateUserSession(userid, username, nullptr, picture);
             } else {
-                LogError("There is already an account using this mail address, please login with existing identifiers");
+                LogError("There is already an account using this mail address, please log in with existing identifiers");
                 io->SendError(403);
                 return;
             }
