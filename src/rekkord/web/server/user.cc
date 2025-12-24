@@ -927,10 +927,11 @@ void HandleSsoLogin(http_IO *io)
         return;
     }
 
+    const char *scopes = "email email_verified";
     const char *callback = Fmt(io->Allocator(), "%1/callback", config.url).ptr;
 
     oidc_AuthorizationInfo auth;
-    oidc_PrepareAuthorization(*provider, callback, redirect, io->Allocator(), &auth);
+    oidc_PrepareAuthorization(*provider, scopes, callback, redirect, io->Allocator(), &auth);
 
     // Don't set SameSite=Strict because we want the cookie to be available when the user gets redirected to the callback URL
     io->AddCookieHeader("/", "oidc", auth.cookie, SsoCookieFlags, SsoCookieMaxAge);
@@ -1020,12 +1021,12 @@ void HandleSsoCallback(http_IO *io)
         return;
     }
 
-    if (!identity.mail) {
+    if (!identity.email) {
         LogError("Cannot use SSO login without mail address");
         io->SendError(403);
         return;
     }
-    if (!identity.verified) {
+    if (!identity.email_verified) {
         LogError("Please verify your mail address with %1 before you attempt to log in", provider->title);
         io->SendError(403);
         return;
@@ -1071,7 +1072,7 @@ void HandleSsoCallback(http_IO *io)
                                VALUES (?1, ?2, ?3, 1, 1)
                                ON CONFLICT DO UPDATE SET confirmed = confirmed
                                RETURNING id)",
-                            &stmt, identity.mail, identity.mail, GetUnixTime()))
+                            &stmt, identity.email, identity.email, GetUnixTime()))
                 return false;
 
             if (!stmt.Step()) {
@@ -1094,7 +1095,7 @@ void HandleSsoCallback(http_IO *io)
             return;
 
         if (authorized) {
-            session = CreateUserSession(user, identity.mail, nullptr, 1);
+            session = CreateUserSession(user, identity.email, nullptr, 1);
         } else {
             LogError("There is already an account using this mail address, please login with existing identifiers");
             io->SendError(403);

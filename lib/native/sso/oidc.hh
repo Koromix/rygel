@@ -53,15 +53,18 @@ struct oidc_TokenSet {
 
 struct oidc_IdentityInfo {
     const char *sub = nullptr;
-    const char *mail = nullptr; // Can be NULL
-    bool verified = false;
+
+    const char *email = nullptr;
+    bool email_verified = false;
+
+    HashMap<const char *, const char *> attributes;
 };
 
 bool oidc_LoadProviders(StreamReader *st, oidc_ProviderSet *out_set);
 bool oidc_LoadProviders(const char *filename, oidc_ProviderSet *out_set);
 
-void oidc_PrepareAuthorization(const oidc_Provider &provider, const char *callback, const char *redirect,
-                               Allocator *alloc, oidc_AuthorizationInfo *out_auth);
+void oidc_PrepareAuthorization(const oidc_Provider &provider, const char *scopes, const char *callback,
+                               const char *redirect, Allocator *alloc, oidc_AuthorizationInfo *out_auth);
 
 bool oidc_CheckCookie(Span<const char> cookie, Span<const char> rnd, Allocator *alloc, oidc_CookieInfo *out_info);
 bool oidc_ExchangeCode(const oidc_Provider &provider, const char *callback_url, const char *code,

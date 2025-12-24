@@ -298,17 +298,17 @@ static uint8_t *GetSsoCookieKey32()
     return key;
 }
 
-void oidc_PrepareAuthorization(const oidc_Provider &provider, const char *callback, const char *redirect,
-                               Allocator *alloc, oidc_AuthorizationInfo *out_auth)
+void oidc_PrepareAuthorization(const oidc_Provider &provider, const char *scopes, const char *callback,
+                               const char *redirect, Allocator *alloc, oidc_AuthorizationInfo *out_auth)
 {
     BlockAllocator temp_alloc;
 
     Span<const char> state = Fmt(&temp_alloc, "%1|%2|%3", FmtRandom(32), provider.name, redirect);
     Span<const char> nonce = Fmt(&temp_alloc, "%1", FmtRandom(32));
 
-    out_auth->url = Fmt(alloc, "%1?client_id=%2&redirect_uri=%3&scope=%4&response_type=code&state=%5&nonce=%6",
+    out_auth->url = Fmt(alloc, "%1?client_id=%2&redirect_uri=%3&scope=openid+%4&response_type=code&state=%5&nonce=%6",
                                provider.auth_url, FmtUrlSafe(provider.client_id, "-._~@"),
-                               FmtUrlSafe(callback, "-._~@"), FmtUrlSafe("openid email", "-._~@"),
+                               FmtUrlSafe(callback, "-._~@"), FmtUrlSafe(scopes, "-._~@"),
                                FmtUrlSafe(state, "-._~@"), FmtUrlSafe(nonce, "-._~@")).ptr;
 
     // Prepare encrypted cookie
@@ -899,9 +899,12 @@ bool oidc_DecodeIdToken(const oidc_Provider &provider, Span<const char> token, S
                 } else if (key == "sub") {
                     json.ParseString(&identity.sub);
                 } else if (key == "email") {
-                    json.ParseString(&identity.mail);
+                    json.ParseString(&identity.email);
                 } else if (key == "email_verified") {
-                    json.ParseBool(&identity.verified);
+                    json.ParseBool(&identity.email_verified);
+                } else if (json.PeekToken() == json_TokenType::String) {
+                    const char *str = json.ParseString().ptr;
+                    identity.attributes.Set(key.ptr, str);
                 } else {
                     json.Skip();
                 }
@@ -937,7 +940,7 @@ bool oidc_DecodeIdToken(const oidc_Provider &provider, Span<const char> token, S
             return false;
         }
 
-        identity.verified &= !!identity.mail;
+        identity.email_verified &= !!identity.email;
     }
 
     std::swap(*out_identity, identity);
