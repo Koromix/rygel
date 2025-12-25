@@ -483,6 +483,7 @@ static bool DecodeJwtFragment(Span<const T> str, Allocator *alloc, Span<const T>
     return true;
 }
 
+// Must be called with exclusive jwks_mutex lock
 static psa_key_id_t ImportRsaSigningKey(Span<const char> n, Span<const char> e)
 {
     psa_key_attributes_t attributes = PSA_KEY_ATTRIBUTES_INIT;
@@ -526,6 +527,7 @@ static psa_key_id_t ImportRsaSigningKey(Span<const char> n, Span<const char> e)
         LogError("Failed to import JWK public RSA key: error %1", ret);
         return PSA_KEY_ID_NULL;
     }
+    jwks_keys.Append(key);
 
     return key;
 }
