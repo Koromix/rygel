@@ -561,10 +561,13 @@ static psa_key_id_t FetchJwksKey(const oidc_Provider &provider, const char *kid,
             const JwksCacheID id = { &provider, kid, algorithm };
             const JwksCacheEntry *entry = jwks_map.FindValue(id, nullptr);
 
-            if (entry)
+            if (entry && entry->key != PSA_KEY_ID_NULL)
                 return entry->key;
-            if (jwks_providers.Find(&provider))
+
+            if (jwks_providers.Find(&provider)) {
+                LogError("Unknown JWT key");
                 return PSA_KEY_ID_NULL;
+            }
         }
     }
 
@@ -722,12 +725,8 @@ static psa_key_id_t FetchJwksKey(const oidc_Provider &provider, const char *kid,
     const JwksCacheID id = { &provider, kid, algorithm };
     const JwksCacheEntry *entry = jwks_map.FindValue(id, nullptr);
 
-    if (!entry) {
-        LogError("Unknown JWT key with KID '%1' (%2)", kid, provider.name);
-        return PSA_KEY_ID_NULL;
-    }
-    if (entry->key == PSA_KEY_ID_NULL) {
-        LogError("Cannot verify JWT key with KID '%1' (%2)", kid, provider.name);
+    if (!entry || entry->key == PSA_KEY_ID_NULL) {
+        LogError("Unknown JWT key");
         return PSA_KEY_ID_NULL;
     }
 
