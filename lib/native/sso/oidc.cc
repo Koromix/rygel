@@ -12,28 +12,33 @@ namespace K {
 
 enum class JwtSigningAlgorithm {
     RS256,
+    PS256,
     HS256
 };
 static const char *const JwtSigningAlgorithmNames[] = {
     "RS256",
+    "PS256",
     "HS256"
 };
 
 struct JwksCacheID {
     const oidc_Provider *provider;
     const char *kid;
+    psa_algorithm_t algorithm;
 
     bool operator==(const JwksCacheID &other) const
     {
         return provider == other.provider &&
-               TestStr(kid, other.kid);
+               TestStr(kid, other.kid) &&
+               algorithm == other.algorithm;
     }
     bool operator !=(const JwksCacheID &other) const { return !(*this == other); }
 
     uint64_t Hash() const
     {
         uint64_t hash = HashTraits<const void *>::Hash(provider) ^
-                        HashTraits<const char *>::Hash(kid);
+                        HashTraits<const char *>::Hash(kid) ^
+                        HashTraits<uint32_t>::Hash(algorithm);
         return hash;
     }
 };
@@ -484,23 +489,17 @@ static bool DecodeJwtFragment(Span<const T> str, Allocator *alloc, Span<const T>
 }
 
 // Must be called with exclusive jwks_mutex lock
-static psa_key_id_t ImportRsaSigningKey(Span<const char> n, Span<const char> e)
+static bool ImportRsaSigningKey(Span<const char> n, Span<const char> e, psa_key_id_t *out_rs256, psa_key_id_t *out_ps256)
 {
-    psa_key_attributes_t attributes = PSA_KEY_ATTRIBUTES_INIT;
-
-    psa_set_key_usage_flags(&attributes, PSA_KEY_USAGE_VERIFY_MESSAGE);
-    psa_set_key_algorithm(&attributes, PSA_ALG_RSA_PKCS1V15_SIGN(PSA_ALG_SHA_256));
-    psa_set_key_type(&attributes, PSA_KEY_TYPE_RSA_PUBLIC_KEY);
-
     LocalArray<uint8_t, 1024> modulo;
     LocalArray<uint8_t, 32> exponent;
     if (sodium_base642bin(modulo.data, K_SIZE(modulo.data), n.ptr, (size_t)n.len, nullptr, (size_t *)&modulo.len, nullptr, sodium_base64_VARIANT_URLSAFE_NO_PADDING) != 0) {
         LogError("Failed to decode RSA key modulus");
-        return PSA_KEY_ID_NULL;
+        return false;
     }
     if (sodium_base642bin(exponent.data, K_SIZE(exponent.data), e.ptr, (size_t)e.len, nullptr, (size_t *)&exponent.len, nullptr, sodium_base64_VARIANT_URLSAFE_NO_PADDING) != 0) {
         LogError("Failed to decode RSA key exponent");
-        return PSA_KEY_ID_NULL;
+        return false;
     }
 
     LocalArray<uint8_t, 4096> der;
@@ -521,18 +520,42 @@ static psa_key_id_t ImportRsaSigningKey(Span<const char> n, Span<const char> e)
     der.Append(0);
     der.Append(exponent);
 
-    psa_key_id_t key = PSA_KEY_ID_NULL;
+    // Import for RS256 algorithm
+    {
+        psa_key_attributes_t attributes = PSA_KEY_ATTRIBUTES_INIT;
 
-    if (int ret = psa_import_key(&attributes, der.data, (size_t)der.len, &key); ret != PSA_SUCCESS) {
-        LogError("Failed to import JWK public RSA key: error %1", ret);
-        return PSA_KEY_ID_NULL;
+        psa_set_key_usage_flags(&attributes, PSA_KEY_USAGE_VERIFY_MESSAGE);
+        psa_set_key_type(&attributes, PSA_KEY_TYPE_RSA_PUBLIC_KEY);
+        psa_set_key_algorithm(&attributes, PSA_ALG_RSA_PKCS1V15_SIGN(PSA_ALG_SHA_256));
+
+        if (int ret = psa_import_key(&attributes, der.data, (size_t)der.len, out_rs256); ret != PSA_SUCCESS) {
+            LogError("Failed to import JWK public RSA key: error %1", ret);
+            return false;
+        }
+
+        jwks_keys.Append(*out_rs256);
     }
-    jwks_keys.Append(key);
 
-    return key;
+    // Import for PS256 algorithm
+    {
+        psa_key_attributes_t attributes = PSA_KEY_ATTRIBUTES_INIT;
+
+        psa_set_key_usage_flags(&attributes, PSA_KEY_USAGE_VERIFY_MESSAGE);
+        psa_set_key_type(&attributes, PSA_KEY_TYPE_RSA_PUBLIC_KEY);
+        psa_set_key_algorithm(&attributes, PSA_ALG_RSA_PSS(PSA_ALG_SHA_256));
+
+        if (int ret = psa_import_key(&attributes, der.data, (size_t)der.len, out_ps256); ret != PSA_SUCCESS) {
+            LogError("Failed to import JWK public RSA key: error %1", ret);
+            return false;
+        }
+
+        jwks_keys.Append(*out_ps256);
+    }
+
+    return true;
 }
 
-static psa_key_id_t FetchJwksKey(const oidc_Provider &provider, const char *kid)
+static psa_key_id_t FetchJwksKey(const oidc_Provider &provider, const char *kid, psa_algorithm_t algorithm)
 {
     int64_t now = GetUnixTime();
 
@@ -543,7 +566,8 @@ static psa_key_id_t FetchJwksKey(const oidc_Provider &provider, const char *kid)
         std::shared_lock<std::shared_mutex> lock_shr(jwks_mutex);
 
         if (now - jwks_timestamp < JwksExpirationDelay) {
-            const JwksCacheEntry *entry = jwks_map.FindValue({ &provider, kid }, nullptr);
+            const JwksCacheID id = { &provider, kid, algorithm };
+            const JwksCacheEntry *entry = jwks_map.FindValue(id, nullptr);
 
             if (entry)
                 return entry->key;
@@ -628,9 +652,9 @@ static psa_key_id_t FetchJwksKey(const oidc_Provider &provider, const char *kid)
                     for (json.ParseArray(); json.InArray(); ) {
                         const char *kid = nullptr;
                         const char *kty = nullptr;
+                        const char *use = nullptr;
                         const char *n = nullptr;
                         const char *e = nullptr;
-                        const char *use = nullptr;
 
                         for (json.ParseObject(); json.InObject(); ) {
                             Span<const char> key = json.ParseKey();
@@ -639,12 +663,12 @@ static psa_key_id_t FetchJwksKey(const oidc_Provider &provider, const char *kid)
                                 json.ParseString(&kid);
                             } else if (key == "kty") {
                                 json.ParseString(&kty);
+                            } else if (key == "use") {
+                                json.ParseString(&use);
                             } else if (key == "n") {
                                 json.ParseString(&n);
                             } else if (key == "e") {
                                 json.ParseString(&e);
-                            } else if (key == "use") {
-                                json.ParseString(&use);
                             } else {
                                 json.Skip();
                             }
@@ -659,11 +683,32 @@ static psa_key_id_t FetchJwksKey(const oidc_Provider &provider, const char *kid)
                             if (!n || !e)
                                 continue;
 
-                            Allocator *alloc;
-                            JwksCacheEntry *entry = jwks_entries.AppendDefault(&alloc);
+                            // In theory, there's an alg field in the JWKS entry. But in practice, at least
+                            // with several providers, it is RS256 even when PS256 is used. So just make two keys,
+                            // one for each algorithm.
 
-                            entry->id = { &provider, DuplicateString(kid, alloc).ptr };
-                            entry->key = ImportRsaSigningKey(n, e);
+                            psa_key_id_t rs256;
+                            psa_key_id_t ps256;
+                            if (!ImportRsaSigningKey(n, e, &rs256, &ps256))
+                                continue;
+
+                            // Create entry for RS256 algorithm
+                            {
+                                Allocator *alloc;
+                                JwksCacheEntry *entry = jwks_entries.AppendDefault(&alloc);
+
+                                entry->id = { &provider, DuplicateString(kid, alloc).ptr, PSA_ALG_RSA_PKCS1V15_SIGN(PSA_ALG_SHA_256) };
+                                entry->key = rs256;
+                            }
+
+                            // Create entry for PS256 algorithm
+                            {
+                                Allocator *alloc;
+                                JwksCacheEntry *entry = jwks_entries.AppendDefault(&alloc);
+
+                                entry->id = { &provider, DuplicateString(kid, alloc).ptr, PSA_ALG_RSA_PSS(PSA_ALG_SHA_256) };
+                                entry->key = ps256;
+                            }
                         } else {
                             continue;
                         }
@@ -684,7 +729,8 @@ static psa_key_id_t FetchJwksKey(const oidc_Provider &provider, const char *kid)
         err_guard.Disable();
     }
 
-    const JwksCacheEntry *entry = jwks_map.FindValue({ &provider, kid }, nullptr);
+    const JwksCacheID id = { &provider, kid, algorithm };
+    const JwksCacheEntry *entry = jwks_map.FindValue(id, nullptr);
 
     if (!entry) {
         LogError("Unknown JWT key with KID '%1' (%2)", kid, provider.name);
@@ -820,7 +866,8 @@ bool oidc_DecodeIdToken(const oidc_Provider &provider, Span<const char> token, S
         }
 
         switch (algorithm) {
-            case JwtSigningAlgorithm::RS256: {
+            case JwtSigningAlgorithm::RS256:
+            case JwtSigningAlgorithm::PS256: {
                 if (!kid) {
                     LogError("Missing JWT signing key KID");
                     return false;
@@ -836,7 +883,7 @@ bool oidc_DecodeIdToken(const oidc_Provider &provider, Span<const char> token, S
         case JwtSigningAlgorithm::RS256: {
             K_ASSERT(kid);
 
-            psa_key_id_t key = FetchJwksKey(provider, kid);
+            psa_key_id_t key = FetchJwksKey(provider, kid, PSA_ALG_RSA_PKCS1V15_SIGN(PSA_ALG_SHA_256));
 
             if (key == PSA_KEY_ID_NULL)
                 return false;
@@ -847,6 +894,24 @@ bool oidc_DecodeIdToken(const oidc_Provider &provider, Span<const char> token, S
 
             if (ret != PSA_SUCCESS) {
                 LogError("Failed JWT RS256 signature verification");
+                return false;
+            }
+        } break;
+
+        case JwtSigningAlgorithm::PS256: {
+            K_ASSERT(kid);
+
+            psa_key_id_t key = FetchJwksKey(provider, kid, PSA_ALG_RSA_PSS(PSA_ALG_SHA_256));
+
+            if (key == PSA_KEY_ID_NULL)
+                return false;
+
+            int ret = psa_verify_message(key, PSA_ALG_RSA_PSS(PSA_ALG_SHA_256),
+                                         siginput.ptr, (size_t)siginput.len,
+                                         signature.ptr, (size_t)signature.len);
+
+            if (ret != PSA_SUCCESS) {
+                LogError("Failed JWT PS256 signature verification");
                 return false;
             }
         } break;
