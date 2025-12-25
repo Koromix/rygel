@@ -1021,6 +1021,9 @@ void HandleSsoCallback(http_IO *io)
         return;
     }
 
+    // Delete cookie with state and nonce
+    io->AddCookieHeader("/", "oidc", nullptr, SsoCookieFlags, SsoCookieMaxAge);
+
     if (!identity.email) {
         LogError("Cannot use SSO login without mail address");
         io->SendError(403);
