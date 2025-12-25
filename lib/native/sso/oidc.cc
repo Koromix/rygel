@@ -575,7 +575,7 @@ static psa_key_id_t FetchJwksKey(const oidc_Provider &provider, const char *kid,
     // Regularly refresh keysets, they are not static!
     // We keep the old keys for another cycle because they might be in use somewhere... but after 24 hours,
     // they will definitely be forgotten and we'll be good to go!
-    if (now - jwks_timestamp < JwksExpirationDelay) {
+    if (now - jwks_timestamp >= JwksExpirationDelay) {
         jwks_entries.Clear();
         jwks_providers.Clear();
 
