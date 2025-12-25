@@ -7,6 +7,17 @@
 
 namespace K {
 
+enum class oidc_JwtSigningAlgorithm {
+    RS256,
+    PS256,
+    HS256
+};
+static const char *const oidc_JwtSigningAlgorithmNames[] = {
+    "RS256",
+    "PS256",
+    "HS256"
+};
+
 struct oidc_Provider {
     const char *name = nullptr;
     const char *title = nullptr;
@@ -14,6 +25,7 @@ struct oidc_Provider {
     const char *url = nullptr;
     const char *client_id = nullptr;
     const char *client_secret = nullptr;
+    oidc_JwtSigningAlgorithm jwt_algorithm = oidc_JwtSigningAlgorithm::RS256;
 
     // Auto-discovery
     const char *issuer = nullptr;

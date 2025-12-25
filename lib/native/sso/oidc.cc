@@ -10,17 +10,6 @@
 
 namespace K {
 
-enum class JwtSigningAlgorithm {
-    RS256,
-    PS256,
-    HS256
-};
-static const char *const JwtSigningAlgorithmNames[] = {
-    "RS256",
-    "PS256",
-    "HS256"
-};
-
 struct JwksCacheID {
     const oidc_Provider *provider;
     const char *kid;
@@ -269,6 +258,11 @@ bool oidc_LoadProviders(StreamReader *st, oidc_ProviderSet *out_set)
                     provider->client_id = DuplicateString(prop.value, alloc).ptr;
                 } else if (prop.key == "ClientSecret") {
                     provider->client_secret = DuplicateString(prop.value, alloc).ptr;
+                } else if (prop.key == "JwtAlgorithm") {
+                    if (!OptionToEnumI(oidc_JwtSigningAlgorithmNames, prop.value, &provider->jwt_algorithm)) {
+                        LogError("Unsupported JWT signing algorithm '%1'", prop.value);
+                        valid = false;
+                    }
                 } else {
                     LogError("Unknown attribute '%1'", prop.key);
                     valid = false;
@@ -819,7 +813,6 @@ bool oidc_DecodeIdToken(const oidc_Provider &provider, Span<const char> token, S
         return false;
 
     // Decode and check header
-    JwtSigningAlgorithm algorithm;
     const char *kid = nullptr;
     {
         const char *type = nullptr;
@@ -852,8 +845,8 @@ bool oidc_DecodeIdToken(const oidc_Provider &provider, Span<const char> token, S
             return false;
         }
         if (alg) {
-            if (!OptionToEnum(JwtSigningAlgorithmNames, alg, &algorithm)) {
-                LogError("Unsupported JWT signing algorithm '%1'", alg);
+            if (!TestStrI(alg, oidc_JwtSigningAlgorithmNames[(int)provider.jwt_algorithm])) {
+                LogError("JWT signing algorithm mismatch with configured provider");
                 return false;
             }
         } else {
@@ -861,22 +854,22 @@ bool oidc_DecodeIdToken(const oidc_Provider &provider, Span<const char> token, S
             return false;
         }
 
-        switch (algorithm) {
-            case JwtSigningAlgorithm::RS256:
-            case JwtSigningAlgorithm::PS256: {
+        switch (provider.jwt_algorithm) {
+            case oidc_JwtSigningAlgorithm::RS256:
+            case oidc_JwtSigningAlgorithm::PS256: {
                 if (!kid) {
                     LogError("Missing JWT signing key KID");
                     return false;
                 }
             } break;
 
-            case JwtSigningAlgorithm::HS256: {} break;
+            case oidc_JwtSigningAlgorithm::HS256: {} break;
         }
     }
 
     // Check signature
-    switch (algorithm) {
-        case JwtSigningAlgorithm::RS256: {
+    switch (provider.jwt_algorithm) {
+        case oidc_JwtSigningAlgorithm::RS256: {
             K_ASSERT(kid);
 
             psa_key_id_t key = FetchJwksKey(provider, kid, PSA_ALG_RSA_PKCS1V15_SIGN(PSA_ALG_SHA_256));
@@ -894,7 +887,7 @@ bool oidc_DecodeIdToken(const oidc_Provider &provider, Span<const char> token, S
             }
         } break;
 
-        case JwtSigningAlgorithm::PS256: {
+        case oidc_JwtSigningAlgorithm::PS256: {
             K_ASSERT(kid);
 
             psa_key_id_t key = FetchJwksKey(provider, kid, PSA_ALG_RSA_PSS(PSA_ALG_SHA_256));
@@ -912,7 +905,7 @@ bool oidc_DecodeIdToken(const oidc_Provider &provider, Span<const char> token, S
             }
         } break;
 
-        case JwtSigningAlgorithm::HS256: {
+        case oidc_JwtSigningAlgorithm::HS256: {
             Span<const uint8_t> key = MakeSpan((const uint8_t *)provider.client_secret, strlen(provider.client_secret));
 
             if (signature.len != 32) {
