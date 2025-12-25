@@ -559,8 +559,6 @@ static psa_key_id_t FetchJwksKey(const oidc_Provider &provider, const char *kid,
 {
     int64_t now = GetUnixTime();
 
-    bool reset = false;
-
     // Fast path
     {
         std::shared_lock<std::shared_mutex> lock_shr(jwks_mutex);
@@ -573,8 +571,6 @@ static psa_key_id_t FetchJwksKey(const oidc_Provider &provider, const char *kid,
                 return entry->key;
             if (jwks_providers.Find(&provider))
                 return PSA_KEY_ID_NULL;
-        } else {
-            reset = true;
         }
     }
 
@@ -585,7 +581,7 @@ static psa_key_id_t FetchJwksKey(const oidc_Provider &provider, const char *kid,
     // Regularly refresh keysets, they are not static!
     // We keep the old keys for another cycle because they might be in use somewhere... but after 24 hours,
     // they will definitely be forgotten and we'll be good to go!
-    if (reset) {
+    if (now - jwks_timestamp < JwksExpirationDelay) {
         jwks_entries.Clear();
         jwks_providers.Clear();
 
