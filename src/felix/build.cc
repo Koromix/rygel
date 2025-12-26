@@ -15,125 +15,6 @@ namespace K {
     #define MAX_COMMAND_LEN 32768
 #endif
 
-template <typename T>
-static bool AssembleResourceFile(const pugi::xml_document *doc, const char *icon_filename, T *out_buf)
-{
-    class StaticWriter: public pugi::xml_writer {
-        T *out_buf;
-        bool error = false;
-
-    public:
-        StaticWriter(T *out_buf) : out_buf(out_buf) {}
-
-        bool IsValid() const { return !error; }
-
-        void Append(Span<const char> str)
-        {
-            error |= (str.len > out_buf->Available());
-            if (error) [[unlikely]]
-                return;
-
-            out_buf->Append(str);
-        }
-
-        void write(const void *buf, size_t len) override
-        {
-            for (Size i = 0; i < (Size)len; i++) {
-                int c = ((const uint8_t *)buf)[i];
-
-                switch (c) {
-                    case '\"': { Append("\"\""); } break;
-                    case '\t':
-                    case '\r': {} break;
-                    case '\n': { Append("\\n\",\n\t\""); } break;
-
-                    default: {
-                        if (IsAsciiControl(c) || (unsigned int)c >= 128) {
-                            error |= (out_buf->Available() < 4);
-                            if (error) [[unlikely]]
-                                return;
-
-                            Fmt(out_buf->TakeAvailable(), "\\x%1", FmtHex(c, 2));
-                            out_buf->len += 4;
-                        } else {
-                            char ch = (char)c;
-                            Append(ch);
-                        }
-                    } break;
-                }
-            }
-        }
-    };
-
-    StaticWriter writer(out_buf);
-    if (icon_filename) {
-        writer.Append("1 ICON \"");
-        writer.Append(icon_filename);
-        writer.Append("\"\n");
-    }
-    writer.Append("1 24 {\n\t\"");
-    doc->save(writer);
-    writer.Append("\"\n}\n");
-
-    return writer.IsValid();
-}
-
-static bool UpdateResourceFile(const char *target_name, const char *icon_filename, bool fake, const char *dest_filename)
-{
-    static const char *const manifest = R"(
-<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<assembly manifestVersion="1.0" xmlns="urn:schemas-microsoft-com:asm.v1" xmlns:asmv3="urn:schemas-microsoft-com:asm.v3">
-    <assemblyIdentity type="win32" name="" version="1.0.0.0"/>
-    <application>
-        <windowsSettings>
-            <activeCodePage xmlns="http://schemas.microsoft.com/SMI/2019/WindowsSettings">UTF-8</activeCodePage>
-            <longPathAware xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">true</longPathAware>
-            <heapType xmlns="http://schemas.microsoft.com/SMI/2020/WindowsSettings">SegmentHeap</heapType>
-        </windowsSettings>
-    </application>
-    <asmv3:application>
-        <asmv3:windowsSettings>
-            <dpiAware xmlns="http://schemas.microsoft.com/SMI/2005/WindowsSettings">true</dpiAware>
-            <dpiAwareness xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">PerMonitorV2</dpiAwareness>
-        </asmv3:windowsSettings>
-    </asmv3:application>
-    <dependency>
-        <dependentAssembly>
-            <assemblyIdentity type="win32" name="Microsoft.Windows.Common-Controls" version="6.0.0.0"
-                              processorArchitecture="*" publicKeyToken="6595b64144ccf1df" language="*"/>
-        </dependentAssembly>
-    </dependency>
-</assembly>
-)";
-
-    pugi::xml_document doc;
-    pugi::xml_parse_result result = doc.load_string(manifest);
-    K_ASSERT(result);
-
-    pugi::xml_node identity = doc.select_node("/assembly/assemblyIdentity").node();
-    identity.attribute("name").set_value(target_name);
-
-    LocalArray<char, 2048> res;
-    if (!AssembleResourceFile(&doc, icon_filename, &res))
-        return false;
-
-    bool new_manifest;
-    if (TestFile(dest_filename, FileType::File)) {
-        char old_res[2048] = {};
-        ReadFile(dest_filename, MakeSpan(old_res, K_SIZE(old_res) - 1));
-
-        new_manifest = !TestStr(old_res, res);
-    } else {
-        new_manifest = true;
-    }
-
-    if (!fake && new_manifest) {
-        return WriteFile(res, dest_filename);
-    } else {
-        return true;
-    }
-}
-
 static bool CreatePrecompileHeader(const char *pch_filename, const char *dest_filename)
 {
     if (!EnsureDirectoryExists(dest_filename))
@@ -169,9 +50,14 @@ Builder::Builder(const BuildSettings &build)
     const char *platform = SplitStrReverse(HostPlatformNames[(int)build.compiler->platform], '/').ptr;
     const char *architecture = HostArchitectureNames[(int)build.compiler->architecture];
 
-    cache_directory = Fmt(&str_alloc, "%1%/%2_%3@%4", build.output_directory, build.compiler->name, platform, architecture).ptr;
     log_directory = Fmt(&str_alloc, "%1%/Log", build.output_directory).ptr;
+    cache_directory = Fmt(&str_alloc, "%1%/%2_%3@%4", build.output_directory, build.compiler->name, platform, architecture).ptr;
     cache_filename = Fmt(&str_alloc, "%1%/commands.txt", log_directory).ptr;
+
+    if (!build.fake) {
+        MakeDirectoryRec(log_directory);
+        MakeDirectoryRec(cache_directory);
+    }
 
     LoadCache();
 }
@@ -336,7 +222,7 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
 
     // Translations
     if (target.translations.len) {
-        const char *src_filename = Fmt(&str_alloc, "%1%/Misc%/%2_i18n.c", cache_directory, target.name).ptr;
+        const char *src_filename = Fmt(&str_alloc, "%1%/%2_i18n.c", cache_directory, target.name).ptr;
         const char *obj_filename = Fmt(&str_alloc, "%1%2", src_filename, build.compiler->GetObjectExtension()).ptr;
 
         uint32_t features = target.CombineFeatures(build.features);
@@ -373,7 +259,7 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
 
     // Assets
     if (embed_filenames.len) {
-        const char *src_filename = Fmt(&str_alloc, "%1%/Misc%/%2_embed.c", cache_directory, target.name).ptr;
+        const char *src_filename = Fmt(&str_alloc, "%1%/%2_embed.c", cache_directory, target.name).ptr;
         const char *obj_filename = Fmt(&str_alloc, "%1%2", src_filename, build.compiler->GetObjectExtension()).ptr;
 
         uint32_t features = target.CombineFeatures(build.features);
@@ -442,7 +328,7 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
 
     // Version string
     if (target.type == TargetType::Executable) {
-        const char *src_filename = Fmt(&str_alloc, "%1%/Misc%/%2_version.c", cache_directory, target.name).ptr;
+        const char *src_filename = Fmt(&str_alloc, "%1%/%2_version.c", cache_directory, target.name).ptr;
         const char *obj_filename = Fmt(&str_alloc, "%1%2", src_filename, build.compiler->GetObjectExtension()).ptr;
 
         uint32_t features = target.CombineFeatures(build.features);
@@ -465,10 +351,10 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
     // Resource file (Windows only)
     if (build.compiler->platform == HostPlatform::Windows &&
             target.type == TargetType::Executable) {
-        const char *rc_filename = Fmt(&str_alloc, "%1%/Misc%/%2_res.rc", cache_directory, target.name).ptr;
-        const char *res_filename = Fmt(&str_alloc, "%1%/Misc%/%2_res.res", cache_directory, target.name).ptr;
+        const char *rc_filename = Fmt(&str_alloc, "%1%/%2_res.rc", cache_directory, target.name).ptr;
+        const char *res_filename = Fmt(&str_alloc, "%1%/%2_res.res", cache_directory, target.name).ptr;
 
-        if (!UpdateResourceFile(target.name, target.icon_filename, build.fake, rc_filename))
+        if (!UpdateResourceFile(target.name, target.icon_filename, rc_filename))
             return false;
 
         Command cmd = InitCommand();
@@ -556,9 +442,6 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
         // Write down basic target info
         {
             const char *info_filename = Fmt(&str_alloc, "%1%/%2.json", log_directory, target.name).ptr;
-
-            if (!EnsureDirectoryExists(info_filename))
-                return false;
 
             StreamWriter st(info_filename);
             json_PrettyWriter json(&st);
@@ -758,9 +641,6 @@ bool Builder::AddAssemblySource(const SourceFileInfo &src, HeapArray<const char 
 
 bool Builder::UpdateVersionSource(const char *target, const char *version, const char *dest_filename)
 {
-    if (!build.fake && !EnsureDirectoryExists(dest_filename))
-        return false;
-
     char code[1024];
     Fmt(code, "// This file is auto-generated by felix\n\n"
               "const char *FelixTarget = \"%1\";\n"
@@ -779,11 +659,136 @@ bool Builder::UpdateVersionSource(const char *target, const char *version, const
         new_version = true;
     }
 
-    if (!build.fake && new_version) {
-        return WriteFile(code, dest_filename);
-    } else {
-        return true;
+    if (new_version) {
+        mtime_map.Set(dest_filename, -1);
+
+        if (!build.fake && !WriteFile(code, dest_filename))
+            return false;
     }
+
+    return true;
+}
+
+template <typename T>
+static bool AssembleResourceFile(const pugi::xml_document *doc, const char *icon_filename, T *out_buf)
+{
+    class StaticWriter: public pugi::xml_writer {
+        T *out_buf;
+        bool error = false;
+
+    public:
+        StaticWriter(T *out_buf) : out_buf(out_buf) {}
+
+        bool IsValid() const { return !error; }
+
+        void Append(Span<const char> str)
+        {
+            error |= (str.len > out_buf->Available());
+            if (error) [[unlikely]]
+                return;
+
+            out_buf->Append(str);
+        }
+
+        void write(const void *buf, size_t len) override
+        {
+            for (Size i = 0; i < (Size)len; i++) {
+                int c = ((const uint8_t *)buf)[i];
+
+                switch (c) {
+                    case '\"': { Append("\"\""); } break;
+                    case '\t':
+                    case '\r': {} break;
+                    case '\n': { Append("\\n\",\n\t\""); } break;
+
+                    default: {
+                        if (IsAsciiControl(c) || (unsigned int)c >= 128) {
+                            error |= (out_buf->Available() < 4);
+                            if (error) [[unlikely]]
+                                return;
+
+                            Fmt(out_buf->TakeAvailable(), "\\x%1", FmtHex(c, 2));
+                            out_buf->len += 4;
+                        } else {
+                            char ch = (char)c;
+                            Append(ch);
+                        }
+                    } break;
+                }
+            }
+        }
+    };
+
+    StaticWriter writer(out_buf);
+    if (icon_filename) {
+        writer.Append("1 ICON \"");
+        writer.Append(icon_filename);
+        writer.Append("\"\n");
+    }
+    writer.Append("1 24 {\n\t\"");
+    doc->save(writer);
+    writer.Append("\"\n}\n");
+
+    return writer.IsValid();
+}
+
+bool Builder::UpdateResourceFile(const char *target_name, const char *icon_filename, const char *dest_filename)
+{
+    static const char *const manifest = R"(
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<assembly manifestVersion="1.0" xmlns="urn:schemas-microsoft-com:asm.v1" xmlns:asmv3="urn:schemas-microsoft-com:asm.v3">
+    <assemblyIdentity type="win32" name="" version="1.0.0.0"/>
+    <application>
+        <windowsSettings>
+            <activeCodePage xmlns="http://schemas.microsoft.com/SMI/2019/WindowsSettings">UTF-8</activeCodePage>
+            <longPathAware xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">true</longPathAware>
+            <heapType xmlns="http://schemas.microsoft.com/SMI/2020/WindowsSettings">SegmentHeap</heapType>
+        </windowsSettings>
+    </application>
+    <asmv3:application>
+        <asmv3:windowsSettings>
+            <dpiAware xmlns="http://schemas.microsoft.com/SMI/2005/WindowsSettings">true</dpiAware>
+            <dpiAwareness xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">PerMonitorV2</dpiAwareness>
+        </asmv3:windowsSettings>
+    </asmv3:application>
+    <dependency>
+        <dependentAssembly>
+            <assemblyIdentity type="win32" name="Microsoft.Windows.Common-Controls" version="6.0.0.0"
+                              processorArchitecture="*" publicKeyToken="6595b64144ccf1df" language="*"/>
+        </dependentAssembly>
+    </dependency>
+</assembly>
+)";
+
+    pugi::xml_document doc;
+    pugi::xml_parse_result result = doc.load_string(manifest);
+    K_ASSERT(result);
+
+    pugi::xml_node identity = doc.select_node("/assembly/assemblyIdentity").node();
+    identity.attribute("name").set_value(target_name);
+
+    LocalArray<char, 2048> res;
+    if (!AssembleResourceFile(&doc, icon_filename, &res))
+        return false;
+
+    bool new_manifest;
+    if (TestFile(dest_filename, FileType::File)) {
+        char old_res[2048] = {};
+        ReadFile(dest_filename, MakeSpan(old_res, K_SIZE(old_res) - 1));
+
+        new_manifest = !TestStr(old_res, res);
+    } else {
+        new_manifest = true;
+    }
+
+    if (new_manifest) {
+        mtime_map.Set(dest_filename, -1);
+
+        if (!build.fake && !WriteFile(res, dest_filename))
+            return false;
+    }
+
+    return true;
 }
 
 static bool DetectInterrupt()
@@ -880,10 +885,7 @@ bool Builder::Build(int jobs, bool verbose)
                 // that response files will be generated for anything other than link commands,
                 // so the risk is very low.
                 const char *target_basename = SplitStrReverseAny(node.dest_filename, K_PATH_SEPARATORS).ptr;
-                const char *rsp_filename = Fmt(&str_alloc, "%1%/Misc%/%2.rsp", cache_directory, target_basename).ptr;
-
-                if (!EnsureDirectoryExists(rsp_filename))
-                    return false;
+                const char *rsp_filename = Fmt(&str_alloc, "%1%/%2.rsp", cache_directory, target_basename).ptr;
 
                 Span<const char> rsp = cmd.cmd_line.Take(cmd.rsp_offset + 1,
                                                          cmd.cmd_line.len - cmd.rsp_offset - 1);
@@ -1064,7 +1066,10 @@ void Builder::LoadCache()
 
 void Builder::SaveCompileDatabase()
 {
-    const char *compile_filename = Fmt(&str_alloc, "%1%/compile_commands.json", log_directory).ptr;
+    const char *compile_filename = Fmt(&str_alloc, "%1%/Misc%/compile_commands.json", build.output_directory).ptr;
+
+    if (!EnsureDirectoryExists(compile_filename))
+        return;
 
     StreamWriter st(compile_filename, (int)StreamWriterFlag::Atomic);
     if (!st.IsValid())

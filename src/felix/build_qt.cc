@@ -77,7 +77,7 @@ const char *Builder::AddQtResource(const TargetInfo &target, Span<const char *> 
         return nullptr;
 
     if (!cpp_filename) {
-        cpp_filename = Fmt(&str_alloc, "%1%/Misc%/%2_qrc.cc", cache_directory, target.name).ptr;
+        cpp_filename = Fmt(&str_alloc, "%1%/%2_qrc.cc", cache_directory, target.name).ptr;
 
         Command cmd = {};
 
@@ -136,7 +136,9 @@ bool Builder::AddQtDirectories(const SourceFileInfo &src, HeapArray<const char *
 #else
         if (build.compiler->platform == HostPlatform::macOS) {
             if (!misc_includes) {
-                misc_includes = Fmt(&str_alloc, "%1%/Misc/%2", cache_directory, src.target->name).ptr;
+                misc_includes = Fmt(&str_alloc, "%1%/Qt%/%2", cache_directory, src.target->name).ptr;
+                if (!EnsureDirectoryExists(misc_includes))
+                    return false;
                 out_list->Append(misc_includes);
             }
 

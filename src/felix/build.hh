@@ -88,8 +88,8 @@ class Builder {
     };
 
     BuildSettings build;
-    const char *cache_directory;
     const char *log_directory;
+    const char *cache_directory;
     const char *cache_filename;
     const char *current_ns = "default";
 
@@ -163,6 +163,7 @@ private:
     void ParsePrlFile(const char *filename, HeapArray<const char *> *out_libraries);
 
     bool UpdateVersionSource(const char *target, const char *version, const char *dest_filename);
+    bool UpdateResourceFile(const char *target_name, const char *icon_filename, const char *dest_filename);
 
     const char *BuildObjectPath(Span<const char> src_filename, const char *output_directory,
                                 const char *prefix, const char *suffix);
