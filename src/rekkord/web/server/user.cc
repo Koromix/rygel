@@ -928,7 +928,7 @@ void HandleSsoLogin(http_IO *io)
     }
 
     const char *scopes = "email";
-    const char *callback = Fmt(io->Allocator(), "%1/callback", config.url).ptr;
+    const char *callback = Fmt(io->Allocator(), "%1/oidc", config.url).ptr;
 
     oidc_AuthorizationInfo auth;
     oidc_PrepareAuthorization(*provider, scopes, callback, redirect, io->Allocator(), &auth);
@@ -940,7 +940,7 @@ void HandleSsoLogin(http_IO *io)
     io->SendText(200, json, "application/json");
 }
 
-void HandleSsoCallback(http_IO *io)
+void HandleSsoOidc(http_IO *io)
 {
     const http_RequestInfo &request = io->Request();
 
@@ -1007,7 +1007,7 @@ void HandleSsoCallback(http_IO *io)
 
     oidc_TokenSet tokens;
     {
-        const char *callback = Fmt(io->Allocator(), "%1/callback", config.url).ptr;
+        const char *callback = Fmt(io->Allocator(), "%1/oidc", config.url).ptr;
 
         if (!oidc_ExchangeCode(*provider, callback, code, io->Allocator(), &tokens)) {
             io->SendError(401);

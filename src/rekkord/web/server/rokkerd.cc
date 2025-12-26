@@ -371,8 +371,8 @@ static void HandleRequest(http_IO *io)
             HandleUserPassword(io);
         } else if (url == "/api/sso/login" && method == http_RequestMethod::Post) {
             HandleSsoLogin(io);
-        } else if (url == "/api/sso/callback" && method == http_RequestMethod::Post) {
-            HandleSsoCallback(io);
+        } else if (url == "/api/sso/oidc" && method == http_RequestMethod::Post) {
+            HandleSsoOidc(io);
         } else if (url == "/api/totp/confirm" && method == http_RequestMethod::Post) {
             HandleTotpConfirm(io);
         } else if (url == "/api/totp/secret" && method == http_RequestMethod::Post) {

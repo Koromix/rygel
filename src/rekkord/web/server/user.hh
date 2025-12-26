@@ -40,7 +40,7 @@ void HandleUserReset(http_IO *io);
 void HandleUserPassword(http_IO *io);
 
 void HandleSsoLogin(http_IO *io);
-void HandleSsoCallback(http_IO *io);
+void HandleSsoOidc(http_IO *io);
 
 void HandleTotpConfirm(http_IO *io);
 void HandleTotpSecret(http_IO *io);

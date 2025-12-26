@@ -21,8 +21,9 @@ const RUN_LOCK = 'run';
 
 const MODES = {
     login: { run: runLogin, session: false },
-    callback: { run: runCallback, session: false, },
+    oidc: { run: runOidc, session: false, },
     register: { run: runRegister, session: false },
+
     finalize: { run: runFinalize, session: false },
     recover: { run: runRecover, session: false },
     reset: { run: runReset, session: false },
@@ -354,8 +355,8 @@ async function sso(provider, redirect) {
     window.location.href = info.url;
 }
 
-async function callback(code, state) {
-    let info = await Net.post('/api/sso/callback', {
+async function oidc(code, state) {
+    let info = await Net.post('/api/sso/oidc', {
         code: code,
         state: state
     });
@@ -587,20 +588,20 @@ async function runLogin() {
     }
 }
 
-async function runCallback() {
+async function runOidc() {
     let query = new URLSearchParams(window.location.search);
 
     let code = query.get('code');
     let state = query.get('state');
 
     if (code == null || state == null) {
-        console.error('Missing SSO callback parameters');
+        console.error('Missing OIDC callback parameters');
 
         go('/');
         return;
     }
 
-    await callback(code, state);
+    await oidc(code, state);
 }
 
 async function runRecover() {
