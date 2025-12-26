@@ -920,7 +920,7 @@ void HandleSsoLogin(http_IO *io)
         }
     }
 
-    const oidc_Provider *provider = config.oidc.map.FindValue(type, nullptr);
+    const oidc_Provider *provider = config.oidc_map.FindValue(type, nullptr);
     if (!provider) {
         LogError("Unknown provider type '%1'", type);
         io->SendError(404);
@@ -998,10 +998,9 @@ void HandleSsoOidc(http_IO *io)
         return;
     }
 
-    const oidc_Provider *provider = config.oidc.map.FindValue(info.provider, nullptr);
+    const oidc_Provider *provider = config.oidc_map.FindValue(info.issuer, nullptr);
     if (!provider) [[unlikely]] {
-        LogError("SSO provider '%1' is gone!", info.provider);
-        io->SendError(401);
+        LogError("SSO provider '%1' is gone!", info.issuer);
         return;
     }
 

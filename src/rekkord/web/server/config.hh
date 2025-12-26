@@ -28,7 +28,8 @@ struct Config {
 
     smtp_Config smtp;
 
-    oidc_ProviderSet oidc;
+    HeapArray<oidc_Provider> oidc_providers;
+    HashMap<const char *, const oidc_Provider *> oidc_map;
 
     BlockAllocator str_alloc;
 

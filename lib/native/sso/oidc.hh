@@ -19,7 +19,6 @@ static const char *const oidc_JwtSigningAlgorithmNames[] = {
 };
 
 struct oidc_Provider {
-    const char *name = nullptr;
     const char *title = nullptr;
 
     const char *url = nullptr;
@@ -33,16 +32,10 @@ struct oidc_Provider {
     const char *token_url = nullptr;
     const char *jwks_url = nullptr;
 
-    bool Finalize(Allocator *alloc);
+    BlockAllocator str_alloc;
 
-    bool Validate() const;
-
-    K_HASHTABLE_HANDLER(oidc_Provider, name);
-};
-
-struct oidc_ProviderSet {
-    BucketArray<oidc_Provider> providers;
-    HashTable<const char *, const oidc_Provider *> map;
+    bool SetProperty(Span<const char> key, Span<const char> value, Span<const char> root_directory);
+    bool Finalize();
 
     bool Validate() const;
 };
@@ -53,7 +46,7 @@ struct oidc_AuthorizationInfo {
 };
 
 struct oidc_CookieInfo {
-    const char *provider = nullptr;
+    const char *issuer = nullptr;
     const char *redirect = nullptr;
     Span<const char> nonce = {};
 };
@@ -71,9 +64,6 @@ struct oidc_IdentityInfo {
 
     HashMap<const char *, const char *> attributes;
 };
-
-bool oidc_LoadProviders(StreamReader *st, oidc_ProviderSet *out_set);
-bool oidc_LoadProviders(const char *filename, oidc_ProviderSet *out_set);
 
 void oidc_PrepareAuthorization(const oidc_Provider &provider, const char *scopes, const char *callback,
                                const char *redirect, Allocator *alloc, oidc_AuthorizationInfo *out_auth);

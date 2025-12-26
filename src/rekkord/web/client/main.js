@@ -396,7 +396,7 @@ async function runRegister() {
 
                         <div class="actions vertical">
                             ${ENV.sso.map(provider =>
-                                html`<button type="button" @click=${UI.wrap(e => sso(provider.name, '/'))}>${T.format(T.login_with_x, provider.title)}</button>`)}
+                                html`<button type="button" @click=${UI.wrap(e => sso(provider.issuer, '/'))}>${T.format(T.login_with_x, provider.title)}</button>`)}
                         </div>
                     </div>
                 ` : ''}
@@ -528,7 +528,7 @@ async function runLogin() {
 
                             <div class="actions vertical">
                                 ${ENV.sso.map(provider =>
-                                    html`<button type="button" @click=${UI.wrap(e => sso(provider.name, window.location.pathname))}>${T.format(T.login_with_x, provider.title)}</button>`)}
+                                    html`<button type="button" @click=${UI.wrap(e => sso(provider.issuer, window.location.pathname))}>${T.format(T.login_with_x, provider.title)}</button>`)}
                             </div>
                         </div>
                     ` : ''}

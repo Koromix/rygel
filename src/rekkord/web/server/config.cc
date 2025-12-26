@@ -21,7 +21,10 @@ bool Config::Validate() const
 
     valid &= http.Validate();
     valid &= smtp.Validate();
-    valid &= oidc.Validate();
+
+    for (const oidc_Provider &provider: oidc_providers) {
+        valid &= provider.Validate();
+    }
 
     return valid;
 }
@@ -110,18 +113,11 @@ bool LoadConfig(StreamReader *st, Config *out_config)
                     valid = false;
                 }
             } else if (prop.section == "SSO") {
-                if (prop.key == "ProviderFile") {
-                    if (!config.oidc.providers.count) {
-                        const char *filename = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
-                        valid &= oidc_LoadProviders(filename, &config.oidc);
-                    } else {
-                        LogError("Cannot load multiple SSO provider configurations");
-                        valid = false;
-                    }
-                } else {
-                    LogError("Unknown attribute '%1'", prop.key);
-                    valid = false;
-                }
+                oidc_Provider *provider = config.oidc_providers.AppendDefault();
+
+                do {
+                    valid &= provider->SetProperty(prop.key, prop.value, root_directory);
+                } while (ini.NextInSection(&prop));
             } else {
                 LogError("Unknown section '%1'", prop.section);
                 while (ini.NextInSection(&prop));
@@ -139,6 +135,22 @@ bool LoadConfig(StreamReader *st, Config *out_config)
     if (!config.tmp_directory) {
         config.tmp_directory = NormalizePath("tmp", data_directory, &config.str_alloc).ptr;
     }
+
+    // Finalize OIDC providers
+    {
+        for (oidc_Provider &provider: config.oidc_providers) {
+            valid &= !provider.url || provider.Finalize();
+        }
+        if (!valid)
+            return false;
+
+        for (const oidc_Provider &provider: config.oidc_providers) {
+            if (provider.issuer) {
+                config.oidc_map.Set(provider.issuer, &provider);
+            }
+        }
+    }
+
     if (!config.Validate())
         return false;
 

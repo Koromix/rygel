@@ -267,10 +267,10 @@ static void InitAssets()
             json.Key("url"); json.String(config.url);
 
             json.Key("sso"); json.StartArray();
-            for (const oidc_Provider &provider: config.oidc.providers) {
+            for (const oidc_Provider &provider: config.oidc_providers) {
                 json.StartObject();
 
-                json.Key("name"); json.String(provider.name);
+                json.Key("issuer"); json.String(provider.issuer);
                 json.Key("title"); json.String(provider.title);
 
                 json.EndObject();

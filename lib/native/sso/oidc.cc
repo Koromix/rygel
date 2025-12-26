@@ -62,9 +62,38 @@ K_EXIT(ClearJwtKeys)
     }
 }
 
-bool oidc_Provider::Finalize(Allocator *alloc)
+bool oidc_Provider::SetProperty(Span<const char> key, Span<const char> value, Span<const char>)
 {
-    const char *discover_url = Fmt(alloc, "%1/.well-known/openid-configuration", url).ptr;
+    if (key == "Title") {
+        title = DuplicateString(value, &str_alloc).ptr;
+        return true;
+    } else if (key == "URL") {
+        Span<const char> trimmed = TrimStrRight(value, '/');
+        url = DuplicateString(trimmed, &str_alloc).ptr;
+
+        return true;
+    } else if (key == "ClientID") {
+        client_id = DuplicateString(value, &str_alloc).ptr;
+        return true;
+    } else if (key == "ClientSecret") {
+        client_secret = DuplicateString(value, &str_alloc).ptr;
+        return true;
+    } else if (key == "JwtAlgorithm") {
+        if (!OptionToEnumI(oidc_JwtSigningAlgorithmNames, value, &jwt_algorithm)) {
+            LogError("Unsupported JWT signing algorithm '%1'", value);
+            return false;
+        }
+
+        return true;
+    }
+
+    LogError("Unknown OIDC property '%1'", key);
+    return false;
+}
+
+bool oidc_Provider::Finalize()
+{
+    const char *discover_url = Fmt(&str_alloc, "%1/.well-known/openid-configuration", url).ptr;
 
     LogDebug("Fetching OIDC configuration from '%1'", discover_url);
 
@@ -100,7 +129,7 @@ bool oidc_Provider::Finalize(Allocator *alloc)
     // Parse configuration
     {
         StreamReader st(body.As<uint8_t>(), "<openid-configuration>");
-        json_Parser json(&st, alloc);
+        json_Parser json(&st, &str_alloc);
 
         for (json.ParseObject(); json.InObject(); ) {
             Span<const char> key = json.ParseKey();
@@ -204,87 +233,6 @@ bool oidc_Provider::Validate() const
     return valid;
 }
 
-bool oidc_ProviderSet::Validate() const
-{
-    bool valid = true;
-
-    for (const oidc_Provider &provider: providers) {
-        valid &= provider.Validate();
-    }
-
-    return valid;
-}
-
-bool oidc_LoadProviders(StreamReader *st, oidc_ProviderSet *out_set)
-{
-    oidc_ProviderSet set;
-
-    IniParser ini(st);
-    ini.PushLogFilter();
-    K_DEFER { PopLogFilter(); };
-
-    bool valid = true;
-    {
-        IniProperty prop;
-        while (ini.Next(&prop)) {
-            if (!prop.section.len) {
-                LogError("SSO config file must use sections");
-                return false;
-            }
-
-            Allocator *alloc;
-            oidc_Provider *provider = set.providers.AppendDefault(&alloc);
-
-            provider->name = DuplicateString(prop.section, alloc).ptr;
-
-            // Insert into map of providers
-            {
-                bool inserted;
-                set.map.InsertOrGet(provider, &inserted);
-
-                if (!inserted) {
-                    LogError("Duplicate SSO provider '%1'", provider->name);
-                    valid = false;
-                }
-            }
-
-            do {
-                if (prop.key == "Title") {
-                    provider->title = DuplicateString(prop.value, alloc).ptr;
-                } else if (prop.key == "URL") {
-                    Span<const char> url = TrimStrRight(prop.value, '/');
-                    provider->url = DuplicateString(url, alloc).ptr;
-                } else if (prop.key == "ClientID") {
-                    provider->client_id = DuplicateString(prop.value, alloc).ptr;
-                } else if (prop.key == "ClientSecret") {
-                    provider->client_secret = DuplicateString(prop.value, alloc).ptr;
-                } else if (prop.key == "JwtAlgorithm") {
-                    if (!OptionToEnumI(oidc_JwtSigningAlgorithmNames, prop.value, &provider->jwt_algorithm)) {
-                        LogError("Unsupported JWT signing algorithm '%1'", prop.value);
-                        valid = false;
-                    }
-                } else {
-                    LogError("Unknown attribute '%1'", prop.key);
-                    valid = false;
-                }
-            } while (ini.NextInSection(&prop));
-
-            valid &= provider->url && provider->Finalize(alloc);
-        }
-    }
-    if (!ini.IsValid() || !valid)
-        return false;
-
-    std::swap(*out_set, set);
-    return true;
-}
-
-bool oidc_LoadProviders(const char *filename, oidc_ProviderSet *out_set)
-{
-    StreamReader st(filename);
-    return oidc_LoadProviders(&st, out_set);
-}
-
 static uint8_t *GetSsoCookieKey32()
 {
     static uint8_t key[32];
@@ -302,8 +250,8 @@ void oidc_PrepareAuthorization(const oidc_Provider &provider, const char *scopes
 {
     BlockAllocator temp_alloc;
 
-    Span<const char> state = Fmt(&temp_alloc, "%1|%2|%3", FmtRandom(32), provider.name, redirect);
-    Span<const char> nonce = Fmt(&temp_alloc, "%1", FmtRandom(32));
+    Span<const char> state = Fmt(&temp_alloc, "%1|%2|%3", FmtRandom(24), provider.issuer, redirect);
+    Span<const char> nonce = Fmt(&temp_alloc, "%1", FmtRandom(24));
 
     out_auth->url = Fmt(alloc, "%1?client_id=%2&redirect_uri=%3&scope=openid+%4&response_type=code&state=%5&nonce=%6",
                                provider.auth_url, FmtUrlSafe(provider.client_id, "-._~@"),
@@ -366,7 +314,7 @@ bool oidc_CheckCookie(Span<const char> cookie, Span<const char> rnd, Allocator *
         return false;
     }
 
-    Span<const char> provider;
+    Span<const char> issuer;
     Span<const char> redirect;
     {
         Span<const char> remain = state;
@@ -374,11 +322,11 @@ bool oidc_CheckCookie(Span<const char> cookie, Span<const char> rnd, Allocator *
         // Skip random part
         SplitStr(remain, '|', &remain);
 
-        provider = SplitStr(remain, '|', &remain);
+        issuer = SplitStr(remain, '|', &remain);
         redirect = SplitStr(remain, '|', &remain);
     }
 
-    out_info->provider = DuplicateString(provider, alloc).ptr;
+    out_info->issuer = DuplicateString(issuer, alloc).ptr;
     out_info->redirect = DuplicateString(redirect, alloc).ptr;
     out_info->nonce = DuplicateString(nonce, alloc).ptr;
 
