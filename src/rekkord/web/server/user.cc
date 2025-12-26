@@ -32,7 +32,7 @@ static const int64_t PictureCacheDelay = 3600 * 1000;
 static const Size MaxPictureSize = Kibibytes(256);
 
 static const int SsoCookieFlags =  (int)http_CookieFlag::SameSiteStrict | (int)http_CookieFlag::Secure | (int)http_CookieFlag::HttpOnly;
-static const int SsoCookieMaxAge = 15 * 60000; // 15 minutes
+static const int SsoCookieMaxAge = 10 * 60000; // 10 minutes
 
 struct EventInfo {
     struct Key {
