@@ -8,10 +8,12 @@
 
 namespace K {
 
+struct oidc_Provider;
 struct smtp_Config;
 
 struct SessionInfo: public RetainObject<SessionInfo> {
     int64_t userid;
+    const oidc_Provider *provider;
 
     // TOTP
     std::atomic_bool totp;

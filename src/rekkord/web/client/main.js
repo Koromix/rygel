@@ -736,7 +736,10 @@ async function runAccount() {
 
         <div class="tab" style="align-items: center;">
             <div class="header">${T.account}</div>
-            <div class="sub">${session.username}</div>
+            <div class="sub">
+                ${session.provider != null ? `${session.provider} |` : ''}
+                ${session.username}
+            </div>
             <img class="picture" src=${`/pictures/${session.userid}?v=${session.picture}`} alt="" />
             <div class="actions">
                 <button type="button" class="secondary" @click=${UI.wrap(changePicture)}>${T.change_picture}</button>

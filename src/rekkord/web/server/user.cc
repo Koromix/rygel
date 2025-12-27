@@ -247,7 +247,8 @@ bool HashPassword(Span<const char> password, char out_hash[PasswordHashBytes])
     return true;
 }
 
-static RetainPtr<SessionInfo> CreateUserSession(int64_t userid, const char *username, const char *totp, int picture)
+static RetainPtr<SessionInfo> CreateUserSession(int64_t userid, const oidc_Provider *provider, const char *totp,
+                                                const char *username, int picture)
 {
     Size username_bytes = strlen(username) + 1;
     Size session_bytes = K_SIZE(SessionInfo) + username_bytes;
@@ -261,6 +262,8 @@ static RetainPtr<SessionInfo> CreateUserSession(int64_t userid, const char *user
     });
 
     session->userid = userid;
+    session->provider = provider;
+
     if (totp) {
         session->totp = true;
         session->authorized = false;
@@ -269,8 +272,9 @@ static RetainPtr<SessionInfo> CreateUserSession(int64_t userid, const char *user
         session->totp = false;
         session->authorized = true;
     }
-    session->picture = picture;
+
     CopyString(username, MakeSpan((char *)session->username, username_bytes));
+    session->picture = picture;
 
     return ptr;
 }
@@ -377,6 +381,11 @@ static void ExportSession(const SessionInfo *session, json_Writer *json)
         json->StartObject();
 
         json->Key("userid"); json->Int64(session->userid);
+        if (session->provider) {
+            json->Key("provider"); json->String(session->provider->title);
+        } else {
+            json->Key("provider"); json->Null();
+        }
         json->Key("username"); json->String(session->username);
         json->Key("totp"); json->Bool(session->totp);
 
@@ -555,7 +564,7 @@ void HandleUserLogin(http_IO *io)
         int picture = sqlite3_column_int(stmt, 4);
 
         if (password_hash && crypto_pwhash_str_verify(password_hash, password, strlen(password)) == 0) {
-            RetainPtr<SessionInfo> session = CreateUserSession(userid, username, totp, picture);
+            RetainPtr<SessionInfo> session = CreateUserSession(userid, nullptr, totp, username, picture);
             sessions.Open(io, session);
 
             http_SendJson(io, 200, [&](json_Writer *json) {
@@ -1053,7 +1062,7 @@ void HandleSsoOidc(http_IO *io)
             int picture = sqlite3_column_int(stmt, 3);
 
             if (authorized) {
-                session = CreateUserSession(userid, username, nullptr, picture);
+                session = CreateUserSession(userid, provider, nullptr, username, picture);
             } else {
                 LogError("There is already an account using this mail address, please log in with existing identifiers");
                 io->SendError(403);
@@ -1097,7 +1106,7 @@ void HandleSsoOidc(http_IO *io)
             return;
 
         if (authorized) {
-            session = CreateUserSession(user, identity.email, nullptr, 1);
+            session = CreateUserSession(user, provider, nullptr, identity.email, 1);
         } else {
             LogError("There is already an account using this mail address, please login with existing identifiers");
             io->SendError(403);
