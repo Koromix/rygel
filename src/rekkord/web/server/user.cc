@@ -719,12 +719,16 @@ void HandleUserRecover(http_IO *io)
     // Always create it to reduce timing discloure
     FillRandomSafe(token, K_SIZE(token));
 
-    // Find user
+    // Find user, unless it has no password and has been linked with an SSO... which would mean that
+    // it was created through SSO, and we don't want users to use this API to create a password on an
+    // "SSO-only" account.
     {
         sq_Statement stmt;
-        if (!db.Prepare(R"(SELECT id FROM users
-                           WHERE mail = ?1 AND
-                                 confirmed = 1 AND password_hash IS NOT NULL)",
+        if (!db.Prepare(R"(SELECT u.id
+                           FROM users u
+                           LEFT JOIN identities i ON (i.user = u.id)
+                           WHERE u.mail = ?1 AND
+                                 (u.password_hash IS NULL OR i.id IS NULL))",
                         &stmt, mail))
             return;
 
@@ -746,6 +750,8 @@ void HandleUserRecover(http_IO *io)
 
         if (!SendResetPasswordMail(mail, token, io->Allocator()))
             return;
+    } else {
+        LogError("Refusing to send password recovery email for '%1'", mail);
     }
 
     io->SendText(200, "{}", "application/json");
