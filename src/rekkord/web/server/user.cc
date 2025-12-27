@@ -722,7 +722,10 @@ void HandleUserRecover(http_IO *io)
     // Find user
     {
         sq_Statement stmt;
-        if (!db.Prepare("SELECT id FROM users WHERE mail = ?1 AND confirmed = 1", &stmt, mail))
+        if (!db.Prepare(R"(SELECT id FROM users
+                           WHERE mail = ?1 AND
+                                 confirmed = 1 AND password_hash IS NOT NULL)",
+                        &stmt, mail))
             return;
 
         if (stmt.Step()) {
