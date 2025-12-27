@@ -629,7 +629,7 @@ void HandleUserLogin(http_IO *io)
     sq_Statement stmt;
     if (!db.Prepare(R"(SELECT id, password_hash, username, totp, version
                        FROM users
-                       WHERE mail = ?1)", &stmt, mail))
+                       WHERE mail = ?1 AND confirmed = 1)", &stmt, mail))
         return;
     stmt.Run();
 
@@ -722,7 +722,7 @@ void HandleUserRecover(http_IO *io)
     // Find user
     {
         sq_Statement stmt;
-        if (!db.Prepare("SELECT id FROM users WHERE mail = ?1", &stmt, mail))
+        if (!db.Prepare("SELECT id FROM users WHERE mail = ?1 AND confirmed = 1", &stmt, mail))
             return;
 
         if (stmt.Step()) {
@@ -833,7 +833,7 @@ void HandleUserReset(http_IO *io)
             return;
 
         bool success = db.Transaction([&]() {
-            if (!db.Run("UPDATE users SET password_hash = ?2 WHERE id = ?1", userid, hash))
+            if (!db.Run("UPDATE users SET password_hash = ?2, confirmed = 1 WHERE id = ?1", userid, hash))
                 return false;
             if (!db.Run("DELETE FROM tokens WHERE user = ?1", userid))
                 return false;
