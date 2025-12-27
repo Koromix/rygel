@@ -43,6 +43,7 @@ void HandleUserPassword(http_IO *io);
 
 void HandleSsoLogin(http_IO *io);
 void HandleSsoOidc(http_IO *io);
+void HandleSsoLink(http_IO *io);
 
 void HandleTotpConfirm(http_IO *io);
 void HandleTotpSecret(http_IO *io);

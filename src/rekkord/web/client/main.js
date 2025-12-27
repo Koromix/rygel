@@ -27,6 +27,7 @@ const MODES = {
     finalize: { run: runFinalize, session: false },
     recover: { run: runRecover, session: false },
     reset: { run: runReset, session: false },
+    link: { run: runLink, session: false },
     account: { run: runAccount, session: true },
 
     repositories: { run: runRepositories, session: true },
@@ -356,14 +357,13 @@ async function sso(provider, redirect) {
 }
 
 async function oidc(code, state) {
-    let info = await Net.post('/api/sso/oidc', {
+    let login = await Net.post('/api/sso/oidc', {
         code: code,
         state: state
     });
 
-    session = info.session;
-
-    go(info.redirect, false);
+    session = login.session;
+    go(login.redirect, false);
 }
 
 // ------------------------------------------------------------------------
@@ -715,6 +715,35 @@ async function runReset() {
     }
 }
 
+async function runLink() {
+    let token = null;
+
+    if (window.location.hash) {
+        let hash = window.location.hash.substr(1);
+        let query = new URLSearchParams(hash);
+
+        token = query.get('token') || null;
+    }
+    if (token == null)
+        throw new Error(T.message(`Missing token`));
+
+    let link = await Net.post('/api/sso/link', { token: token });
+    let provider = ENV.sso.find(provider => provider.issuer == link.issuer);
+
+    UI.main(html`
+        <div class="tabbar">
+            <a class="active">${T.account_link}</a>
+        </div>
+
+        <div class="tab" style="align-items: center;">
+            <div class="header">${T.account_link}</div>
+            <div>
+                <p>${unsafeHTML(T.format(T.account_linked_with_x, provider.title))}</p>
+            </div>
+        </div>
+    `);
+}
+
 function isLogged() {
     if (session == null)
         return false;
@@ -729,6 +758,8 @@ function isLogged() {
 // ------------------------------------------------------------------------
 
 async function runAccount() {
+    let provider = ENV.sso.find(provider => provider.issuer == session.issuer);
+
     UI.main(html`
         <div class="tabbar">
             <a class="active">${T.account}</a>
@@ -737,7 +768,7 @@ async function runAccount() {
         <div class="tab" style="align-items: center;">
             <div class="header">${T.account}</div>
             <div class="sub">
-                ${session.provider != null ? `${session.provider} |` : ''}
+                ${provider != null ? `${provider.title} |` : ''}
                 ${session.username}
             </div>
             <img class="picture" src=${`/pictures/${session.userid}?v=${session.picture}`} alt="" />

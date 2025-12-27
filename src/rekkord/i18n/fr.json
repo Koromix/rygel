@@ -2,6 +2,8 @@
     "keys": {
         "account": "Compte",
         "account_is_ready": "Votre compte est prêt, veuillez vous connecter pour continuer.",
+        "account_link": "Liaison de compte",
+        "account_linked_with_x": "Votre compte a été associé avec succès, vous pouvez désormais vous connecter avec {1} !",
         "add_item": "Ajouter un item",
         "add_plan": "Ajouter un plan",
         "add_repository": "Ajouter un dépôt",

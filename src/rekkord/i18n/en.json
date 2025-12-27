@@ -2,6 +2,8 @@
     "keys": {
         "account": "Account",
         "account_is_ready": "Your account is now ready, please login to continue.",
+        "account_link": "Account link",
+        "account_linked_with_x": "Your account has been successfully linked, you can now sign in with {1}!",
         "add_item": "Add item",
         "add_plan": "Add plan",
         "add_repository": "Add repository",

@@ -137,6 +137,33 @@ If you did not ask for password recovery, delete this mail. Someone may have tri
     {}
 };
 
+static const smtp_MailContent LinkIdentity = {
+    "Welcome to {{ TITLE }}",
+
+    R"(Welcome !
+
+Use the following link to link your {{ PROVIDER }} user to your {{ MAIL }} account on {{ TITLE }}:
+
+{{ URL }}
+
+If you have not tried to sign in on {{ TITLE }} with {{ PROVIDER }}, please ignore and delete this email!
+
+{{ TITLE }})",
+
+    R"(<html lang="en"><body>
+<p>Welcome !</p>
+<p>Use the following link to link your {{ PROVIDER }} user to your {{ MAIL }} account on {{ TITLE }}:</p>
+<div align="center"><br>
+    <a style="padding: 0.7em 2em; background: #2d8261; border-radius: 30px;
+              font-weight: bold; text-decoration: none !important; color: white; text-transform: uppercase; text-wrap: nowrap;" href="{{ URL }}">Link account</a>
+<br><br></div>
+<p>If you have not tried to sign in on {{ TITLE }} with {{ PROVIDER }}, please ignore and delete this email!</p>
+<p><i>{{ TITLE }}</i></p>
+</body></html>)",
+
+    {}
+};
+
 static bool IsMailValid(const char *mail)
 {
     const auto test_char = [](char c) { return strchr("<>& ", c) || IsAsciiControl(c); };
@@ -166,26 +193,6 @@ static bool IsNameValid(Span<const char> name)
     return true;
 }
 
-static Span<const char> PatchText(Span<const char> text, const char *mail, const char *url, Allocator *alloc)
-{
-    Span<const char> ret = PatchFile(text, alloc, [&](Span<const char> expr, StreamWriter *writer) {
-        Span<const char> key = TrimStr(expr);
-
-        if (key == "TITLE") {
-            writer->Write(config.title);
-        } else if (key == "MAIL") {
-            writer->Write(mail);
-        } else if (key == "URL") {
-            K_ASSERT(url);
-            writer->Write(url);
-        } else {
-            Print(writer, "{{%1}}", expr);
-        }
-    });
-
-    return ret;
-}
-
 static const char *FormatUUID(const uint8_t raw[16], Allocator *alloc)
 {
     const char *uuid = Fmt(alloc, "%1-%2-%3-%4-%5",
@@ -197,41 +204,111 @@ static const char *FormatUUID(const uint8_t raw[16], Allocator *alloc)
     return uuid;
 }
 
-static bool SendNewMail(const char *to, const uint8_t token[16], Allocator *alloc)
+static bool SendNewUserMail(const char *to, const uint8_t token[16], Allocator *alloc)
 {
     smtp_MailContent content;
 
     const char *uuid = FormatUUID(token, alloc);
     const char *url = Fmt(alloc, "%1/finalize#token=%2", config.url, uuid).ptr;
 
-    content.subject = PatchText(NewUser.subject, to, url, alloc).ptr;
-    content.html = PatchText(NewUser.html, to, url, alloc).ptr;
-    content.text = PatchText(NewUser.text, to, url, alloc).ptr;
+    const auto patch = [&](Span<const char> expr, StreamWriter *writer) {
+        Span<const char> key = TrimStr(expr);
+
+        if (key == "TITLE") {
+            writer->Write(config.title);
+        } else if (key == "MAIL") {
+            writer->Write(to);
+        } else if (key == "URL") {
+            writer->Write(url);
+        } else {
+            Print(writer, "{{%1}}", expr);
+        }
+    };
+
+    content.subject = PatchFile(NewUser.subject, alloc, patch).ptr;
+    content.html = PatchFile(NewUser.html, alloc, patch).ptr;
+    content.text = PatchFile(NewUser.text, alloc, patch).ptr;
 
     return PostMail(to, content);
 }
 
-static bool SendExistingMail(const char *to, Allocator *alloc)
+static bool SendExistingUserMail(const char *to, Allocator *alloc)
 {
     smtp_MailContent content;
 
-    content.subject = PatchText(ExistingUser.subject, to, nullptr, alloc).ptr;
-    content.html = PatchText(ExistingUser.html, to, nullptr, alloc).ptr;
-    content.text = PatchText(ExistingUser.text, to, nullptr, alloc).ptr;
+    const auto patch = [&](Span<const char> expr, StreamWriter *writer) {
+        Span<const char> key = TrimStr(expr);
+
+        if (key == "TITLE") {
+            writer->Write(config.title);
+        } else if (key == "MAIL") {
+            writer->Write(to);
+        } else {
+            Print(writer, "{{%1}}", expr);
+        }
+    };
+
+    content.subject = PatchFile(ExistingUser.subject, alloc, patch).ptr;
+    content.html = PatchFile(ExistingUser.html, alloc, patch).ptr;
+    content.text = PatchFile(ExistingUser.text, alloc, patch).ptr;
 
     return PostMail(to, content);
 }
 
-static bool SendResetMail(const char *to, const uint8_t token[16], Allocator *alloc)
+static bool SendResetPasswordMail(const char *to, const uint8_t token[16], Allocator *alloc)
 {
     smtp_MailContent content;
 
     const char *uuid = FormatUUID(token, alloc);
     const char *url = Fmt(alloc, "%1/reset#token=%2", config.url, uuid).ptr;
 
-    content.subject = PatchText(ResetPassword.subject, to, url, alloc).ptr;
-    content.html = PatchText(ResetPassword.html, to, url, alloc).ptr;
-    content.text = PatchText(ResetPassword.text, to, url, alloc).ptr;
+    const auto patch = [&](Span<const char> expr, StreamWriter *writer) {
+        Span<const char> key = TrimStr(expr);
+
+        if (key == "TITLE") {
+            writer->Write(config.title);
+        } else if (key == "MAIL") {
+            writer->Write(to);
+        } else if (key == "URL") {
+            writer->Write(url);
+        } else {
+            Print(writer, "{{%1}}", expr);
+        }
+    };
+
+    content.subject = PatchFile(ResetPassword.subject, alloc, patch).ptr;
+    content.html = PatchFile(ResetPassword.html, alloc, patch).ptr;
+    content.text = PatchFile(ResetPassword.text, alloc, patch).ptr;
+
+    return PostMail(to, content);
+}
+
+static bool SendLinkIdentityMail(const char *to, const oidc_Provider &provider, const uint8_t token[16], Allocator *alloc)
+{
+    smtp_MailContent content;
+
+    const char *uuid = FormatUUID(token, alloc);
+    const char *url = Fmt(alloc, "%1/link#token=%2", config.url, uuid).ptr;
+
+    const auto patch = [&](Span<const char> expr, StreamWriter *writer) {
+        Span<const char> key = TrimStr(expr);
+
+        if (key == "TITLE") {
+            writer->Write(config.title);
+        } else if (key == "MAIL") {
+            writer->Write(to);
+        } else if (key == "PROVIDER") {
+            writer->Write(provider.title);
+        } else if (key == "URL") {
+            writer->Write(url);
+        } else {
+            Print(writer, "{{%1}}", expr);
+        }
+    };
+
+    content.subject = PatchFile(LinkIdentity.subject, alloc, patch).ptr;
+    content.html = PatchFile(LinkIdentity.html, alloc, patch).ptr;
+    content.text = PatchFile(LinkIdentity.text, alloc, patch).ptr;
 
     return PostMail(to, content);
 }
@@ -481,8 +558,9 @@ void HandleUserRegister(http_IO *io)
             return false;
         }
 
-        if (!exists && !db.Run(R"(INSERT INTO tokens (token, timestamp, user)
-                                  VALUES (?1, ?2, ?3))", sq_Binding(token), now, userid))
+        if (!exists && !db.Run(R"(INSERT INTO tokens (token, type, timestamp, user)
+                                  VALUES (?1, 'password', ?2, ?3))",
+                               sq_Binding(token), now, userid))
             return false;
 
         return true;
@@ -491,10 +569,10 @@ void HandleUserRegister(http_IO *io)
         return;
 
     if (exists) {
-        if (!SendExistingMail(mail, io->Allocator()))
+        if (!SendExistingUserMail(mail, io->Allocator()))
             return;
     } else {
-        if (!SendNewMail(mail, token, io->Allocator()))
+        if (!SendNewUserMail(mail, token, io->Allocator()))
             return;
     }
 
@@ -635,7 +713,7 @@ void HandleUserRecover(http_IO *io)
         }
     }
 
-    int64_t userid = -1;
+    int64_t userid = 0;
     uint8_t token[16];
 
     // Always create it to reduce timing discloure
@@ -658,11 +736,12 @@ void HandleUserRecover(http_IO *io)
     if (userid > 0) {
         int64_t now = GetUnixTime();
 
-        if (!db.Run(R"(INSERT INTO tokens (token, timestamp, user)
-                       VALUES (?1, ?2, ?3))", sq_Binding(token), now, userid))
+        if (!db.Run(R"(INSERT INTO tokens (token, type, timestamp, user)
+                       VALUES (?1, 'password', ?2, ?3))",
+                    sq_Binding(token), now, userid))
             return;
 
-        if (!SendResetMail(mail, token, io->Allocator()))
+        if (!SendResetPasswordMail(mail, token, io->Allocator()))
             return;
     }
 
@@ -713,7 +792,7 @@ void HandleUserReset(http_IO *io)
         }
     }
 
-    int64_t userid = -1;
+    int64_t userid = 0;
     const char *username = nullptr;
 
     // Validate token
@@ -724,7 +803,7 @@ void HandleUserReset(http_IO *io)
         if (!db.Prepare(R"(SELECT t.timestamp, t.user, u.username
                            FROM tokens t
                            INNER JOIN users u ON (u.id = t.user)
-                           WHERE t.token = uuid_blob(?1))", &stmt, token))
+                           WHERE t.token = uuid_blob(?1) AND t.type = 'password')", &stmt, token))
             return;
 
         if (stmt.Step()) {
@@ -1037,67 +1116,88 @@ void HandleSsoOidc(http_IO *io)
         io->SendError(403);
         return;
     }
-    if (!identity.email_verified) {
-        LogError("Please verify your mail address with %1 before you attempt to log in", provider->title);
-        io->SendError(403);
-        return;
-    }
 
     RetainPtr<SessionInfo> session;
 
     // Find matching identity and user account
     {
         sq_Statement stmt;
-        if (!db.Prepare(R"(SELECT i.authorized, u.id, u.username, u.version
+        if (!db.Prepare(R"(SELECT u.id, u.username, u.version
                            FROM identities i
                            INNER JOIN users u ON (u.id = i.user)
-                           WHERE i.issuer = ?1 AND i.sub = ?2)",
+                           WHERE i.issuer = ?1 AND i.sub = ?2 AND
+                                 i.allowed = 1 AND u.confirmed = 1)",
                         &stmt, provider->issuer, identity.sub))
             return;
 
         if (stmt.Step()) {
-            bool authorized = sqlite3_column_int(stmt, 0);
-            int64_t userid = sqlite3_column_int64(stmt, 1);
-            const char *username = (const char *)sqlite3_column_text(stmt, 2);
-            int picture = sqlite3_column_int(stmt, 3);
+            int64_t userid = sqlite3_column_int64(stmt, 0);
+            const char *username = (const char *)sqlite3_column_text(stmt, 1);
+            int picture = sqlite3_column_int(stmt, 2);
 
-            if (authorized) {
-                session = CreateUserSession(userid, provider, nullptr, username, picture);
-            } else {
-                LogError("There is already an account using this mail address, please log in with existing identifiers");
-                io->SendError(403);
-                return;
-            }
+            session = CreateUserSession(userid, provider, nullptr, username, picture);
         }
         if (!stmt.IsValid())
             return;
     }
 
+    // Create user if needed and safely link it with social identity
     if (!session) {
-        int64_t user = 0;
-        bool authorized = false;
+        int64_t now = GetUnixTime();
+        bool verified = identity.email_verified;
+
+        int64_t userid = 0;
+        uint8_t token[16];
+        bool created = false;
+        bool allowed = false;
+
+        // Always create it to reduce timing discloure
+        FillRandomSafe(token, K_SIZE(token));
 
         bool success = db.Transaction([&]() {
-            sq_Statement stmt;
-            if (!db.Prepare(R"(INSERT INTO users (mail, username, creation, confirmed, version)
-                               VALUES (?1, ?2, ?3, 1, 1)
-                               ON CONFLICT DO UPDATE SET confirmed = confirmed
-                               RETURNING id)",
-                            &stmt, identity.email, identity.email, GetUnixTime()))
-                return false;
+            {
+                sq_Statement stmt;
+                if (!db.Prepare(R"(INSERT INTO users (mail, username, creation, confirmed, version)
+                                   VALUES (?1, ?2, ?3, ?4, 1)
+                                   ON CONFLICT DO UPDATE SET confirmed = confirmed
+                                   RETURNING id, creation)",
+                                &stmt, identity.email, identity.email, now, 0 + verified))
+                    return false;
 
-            if (!stmt.Step()) {
-                K_ASSERT(!stmt.IsValid());
-                return false;
+                if (!stmt.Step()) {
+                    K_ASSERT(!stmt.IsValid());
+                    return false;
+                }
+
+                userid = sqlite3_column_int64(stmt, 0);
+                created = (sqlite3_column_int64(stmt, 1) == now);
+
+                // Automatically allow the provider that resulted in user creation if address mail is verified
+                allowed = verified && created;
             }
 
-            user = sqlite3_column_int64(stmt, 0);
-            authorized = (user == sqlite3_last_insert_rowid(db));
+            // Create identity
+            int64_t id;
+            {
+                sq_Statement stmt;
+                if (!db.Prepare(R"(INSERT INTO identities (user, issuer, sub, allowed)
+                                   VALUES (?1, ?2, ?3, ?4)
+                                   ON CONFLICT (issuer, sub) DO UPDATE SET allowed = allowed
+                                   RETURNING id)",
+                                &stmt, userid, provider->issuer, identity.sub, 0 + allowed))
+                    return false;
 
-            if (!db.Run(R"(INSERT INTO identities (user, issuer, sub, authorized)
-                           VALUES (?1, ?2, ?3, ?4)
-                           ON CONFLICT (issuer, sub) DO NOTHING)",
-                        user, provider->issuer, identity.sub, 0 + authorized))
+                if (!stmt.Step()) {
+                    K_ASSERT(!stmt.IsValid());
+                    return false;
+                }
+
+                id = sqlite3_column_int64(stmt, 0);
+            }
+
+            if (!allowed && !db.Run(R"(INSERT INTO tokens (token, type, timestamp, user, identity)
+                                       VALUES (?1, 'link', ?2, ?3, ?4))",
+                                    sq_Binding(token), now, userid, id))
                 return false;
 
             return true;
@@ -1105,11 +1205,18 @@ void HandleSsoOidc(http_IO *io)
         if (!success)
             return;
 
-        if (authorized) {
-            session = CreateUserSession(user, provider, nullptr, identity.email, 1);
+        if (allowed) {
+            session = CreateUserSession(userid, provider, nullptr, identity.email, 1);
         } else {
-            LogError("There is already an account using this mail address, please login with existing identifiers");
-            io->SendError(403);
+            if (!SendLinkIdentityMail(identity.email, *provider, token, io->Allocator()))
+                return;
+
+            if (created) {
+                LogError("Your account has been created, but you must confirm your mail address. Consult the mail that has been sent to you to confirm it.");
+            } else {
+                LogError("An account with address '%1' already exists, consult the mail that has been sent to you to confirm.", identity.email);
+            }
+            io->SendError(409);
             return;
         }
     }
@@ -1120,11 +1227,107 @@ void HandleSsoOidc(http_IO *io)
     http_SendJson(io, 200, [&](json_Writer *json) {
         json->StartObject();
 
+        json->Key("allowed"); json->Bool(true);
         json->Key("redirect"); json->String(info.redirect);
         json->Key("session"); ExportSession(session.GetRaw(), json);
 
         json->EndObject();
     });
+}
+
+void HandleSsoLink(http_IO *io)
+{
+    const char *token = nullptr;
+    {
+        bool success = http_ParseJson(io, Kibibytes(1), [&](json_Parser *json) {
+            bool valid = true;
+
+            for (json->ParseObject(); json->InObject(); ) {
+                Span<const char> key = json->ParseKey();
+
+                if (key == "token") {
+                    json->ParseString(&token);
+                } else {
+                    json->UnexpectedKey(key);
+                    valid = false;
+                }
+            }
+            valid &= json->IsValid();
+
+            if (valid) {
+                if (!token) {
+                    LogError("Missing token");
+                    valid = false;
+                }
+            }
+
+            return valid;
+        });
+
+        if (!success) {
+            io->SendError(422);
+            return;
+        }
+    }
+
+    int64_t userid = 0;
+    int64_t identity = 0;
+    const char *issuer = nullptr;
+
+    // Validate token
+    {
+        int64_t now = GetUnixTime();
+
+        sq_Statement stmt;
+        if (!db.Prepare(R"(SELECT t.timestamp, t.user, t.identity, i.issuer
+                           FROM tokens t
+                           INNER JOIN users u ON (u.id = t.user)
+                           INNER JOIN identities i ON (i.id = t.identity)
+                           WHERE t.token = uuid_blob(?1) AND t.type = 'link')", &stmt, token))
+            return;
+
+        if (stmt.Step()) {
+            int64_t timestamp = sqlite3_column_int64(stmt, 0);
+
+            if (now - timestamp > TokenDuration)
+                goto invalid;
+
+            userid = sqlite3_column_int64(stmt, 1);
+            identity = sqlite3_column_int64(stmt, 2);
+            issuer = DuplicateString((const char *)sqlite3_column_text(stmt, 3), io->Allocator()).ptr;
+        } else if (stmt.IsValid()) {
+            goto invalid;
+        } else {
+            return;
+        }
+    }
+
+    // Confirm link
+    {
+        bool success = db.Transaction([&]() {
+            if (!db.Run("UPDATE users SET confirmed = 1 WHERE id = ?1", userid))
+                return false;
+            if (!db.Run("UPDATE identities SET allowed = 1 WHERE id = ?1", identity))
+                return false;
+            if (!db.Run("DELETE FROM tokens WHERE user = ?1", userid))
+                return false;
+
+            return true;
+        });
+        if (!success)
+            return;
+    }
+
+    http_SendJson(io, 200, [&](json_Writer *json) {
+        json->StartObject();
+        json->Key("issuer"); json->String(issuer);
+        json->EndObject();
+    });
+    return;
+
+invalid:
+    LogError("Invalid or expired token");
+    io->SendError(404);
 }
 
 static bool CheckTotp(http_IO *io, int64_t userid, const char *secret, const char *code)
