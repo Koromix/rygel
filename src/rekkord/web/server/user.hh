@@ -13,7 +13,6 @@ struct smtp_Config;
 
 struct SessionInfo: public RetainObject<SessionInfo> {
     int64_t userid;
-    const oidc_Provider *provider;
 
     // TOTP
     std::atomic_bool totp;
@@ -40,10 +39,12 @@ void HandleUserLogout(http_IO *io);
 void HandleUserRecover(http_IO *io);
 void HandleUserReset(http_IO *io);
 void HandleUserPassword(http_IO *io);
+void HandleUserSecurity(http_IO *io);
 
 void HandleSsoLogin(http_IO *io);
 void HandleSsoOidc(http_IO *io);
 void HandleSsoLink(http_IO *io);
+void HandleSsoUnlink(http_IO *io);
 
 void HandleTotpConfirm(http_IO *io);
 void HandleTotpSecret(http_IO *io);

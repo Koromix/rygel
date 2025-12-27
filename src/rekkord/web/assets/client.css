@@ -361,6 +361,8 @@ form {
         gap: 0.71em;
         overflow-y: auto;
         padding: 16px;
+
+        & > .tabbar + .tab { margin-top: -0.71em; }
     }
     & > .footer {
         display: flex;

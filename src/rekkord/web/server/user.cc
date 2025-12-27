@@ -324,8 +324,7 @@ bool HashPassword(Span<const char> password, char out_hash[PasswordHashBytes])
     return true;
 }
 
-static RetainPtr<SessionInfo> CreateUserSession(int64_t userid, const oidc_Provider *provider, const char *totp,
-                                                const char *username, int picture)
+static RetainPtr<SessionInfo> CreateUserSession(int64_t userid, const char *totp, const char *username, int picture)
 {
     Size username_bytes = strlen(username) + 1;
     Size session_bytes = K_SIZE(SessionInfo) + username_bytes;
@@ -339,7 +338,6 @@ static RetainPtr<SessionInfo> CreateUserSession(int64_t userid, const oidc_Provi
     });
 
     session->userid = userid;
-    session->provider = provider;
 
     if (totp) {
         session->totp = true;
@@ -458,13 +456,7 @@ static void ExportSession(const SessionInfo *session, json_Writer *json)
         json->StartObject();
 
         json->Key("userid"); json->Int64(session->userid);
-        if (session->provider) {
-            json->Key("provider"); json->String(session->provider->title);
-        } else {
-            json->Key("provider"); json->Null();
-        }
         json->Key("username"); json->String(session->username);
-        json->Key("totp"); json->Bool(session->totp);
 
         if (session->authorized) {
             json->Key("authorized"); json->Bool(true);
@@ -642,7 +634,7 @@ void HandleUserLogin(http_IO *io)
         int picture = sqlite3_column_int(stmt, 4);
 
         if (password_hash && crypto_pwhash_str_verify(password_hash, password, strlen(password)) == 0) {
-            RetainPtr<SessionInfo> session = CreateUserSession(userid, nullptr, totp, username, picture);
+            RetainPtr<SessionInfo> session = CreateUserSession(userid, totp, username, picture);
             sessions.Open(io, session);
 
             http_SendJson(io, 200, [&](json_Writer *json) {
@@ -668,6 +660,7 @@ void HandleUserLogin(http_IO *io)
 void HandleUserRecover(http_IO *io)
 {
     const http_RequestInfo &request = io->Request();
+    RetainPtr<const SessionInfo> session = GetNormalSession(io);
 
     const char *mail = nullptr;
     {
@@ -722,14 +715,15 @@ void HandleUserRecover(http_IO *io)
     // Find user, unless it has no password and has been linked with an SSO... which would mean that
     // it was created through SSO, and we don't want users to use this API to create a password on an
     // "SSO-only" account.
+    // Unless the user is logged in, in which case all is well, allow password creation.
     {
         sq_Statement stmt;
         if (!db.Prepare(R"(SELECT u.id
                            FROM users u
                            LEFT JOIN identities i ON (i.user = u.id)
                            WHERE u.mail = ?1 AND
-                                 (u.password_hash IS NULL OR i.id IS NULL))",
-                        &stmt, mail))
+                                 (u.id = ?2 OR u.password_hash IS NULL OR i.id IS NULL))",
+                        &stmt, mail, session ? session->userid : 0))
             return;
 
         if (stmt.Step()) {
@@ -922,7 +916,7 @@ void HandleUserPassword(http_IO *io)
         int64_t start = GetMonotonicTime();
 
         sq_Statement stmt;
-        if (!db.Prepare("SELECT password_hash FROM users WHERE id = ?1", &stmt))
+        if (!db.Prepare("SELECT password_hash FROM users WHERE id = ?1 AND confirmed = 1", &stmt))
             return;
         sqlite3_bind_int64(stmt, 1, session->userid);
 
@@ -936,28 +930,20 @@ void HandleUserPassword(http_IO *io)
 
         const char *password_hash = (const char *)sqlite3_column_text(stmt, 0);
 
-        if (old_password) {
-            if (!password_hash || crypto_pwhash_str_verify(password_hash, old_password, strlen(old_password)) < 0) {
-                // Enforce constant delay if authentification fails
-                int64_t safety = std::max(2000 - GetMonotonicTime() + start, (int64_t)0);
-                WaitDelay(safety);
+        if (!password_hash || crypto_pwhash_str_verify(password_hash, old_password, strlen(old_password)) < 0) {
+            // Enforce constant delay if authentification fails
+            int64_t safety = std::max(2000 - GetMonotonicTime() + start, (int64_t)0);
+            WaitDelay(safety);
 
-                LogError("Invalid password");
-                io->SendError(403);
-                return;
-            }
+            LogError("Invalid password");
+            io->SendError(403);
+            return;
+        }
 
-            if (TestStr(new_password, old_password)) {
-                LogError("You cannot reuse the same password");
-                io->SendError(422);
-                return;
-            }
-        } else {
-            if (password_hash && crypto_pwhash_str_verify(password_hash, new_password, strlen(new_password)) == 0) {
-                LogError("You cannot reuse the same password");
-                io->SendError(422);
-                return;
-            }
+        if (TestStr(new_password, old_password)) {
+            LogError("You cannot reuse the same password");
+            io->SendError(422);
+            return;
         }
     }
 
@@ -973,6 +959,74 @@ void HandleUserPassword(http_IO *io)
 
     io->SendText(200, "{}", "application/json");
     return;
+}
+
+void HandleUserSecurity(http_IO *io)
+{
+    RetainPtr<const SessionInfo> session = GetNormalSession(io);
+
+    if (!session) {
+        LogError("User is not logged in");
+        io->SendError(401);
+        return;
+    }
+
+    const char *mail;
+    bool has_password;
+    bool has_totp;
+    {
+        sq_Statement stmt;
+        if (!db.Prepare(R"(SELECT mail,
+                                  IIF(password_hash IS NOT NULL, 1, 0) AS password,
+                                  IIF(totp IS NOT NULL, 1, 0) AS totp
+                           FROM users WHERE id = ?1)",
+                        &stmt, session->userid))
+            return;
+
+        if (!stmt.Step()) {
+            if (stmt.IsValid()) {
+                LogError("User does not exist");
+                io->SendError(404);
+            }
+            return;
+        }
+
+        mail = DuplicateString((const char *)sqlite3_column_text(stmt, 0), io->Allocator()).ptr;
+        has_password = sqlite3_column_int(stmt, 1);
+        has_totp = sqlite3_column_int(stmt, 2);
+    }
+
+    sq_Statement stmt;
+    if (!db.Prepare("SELECT id, issuer, allowed FROM identities WHERE user = ?1", &stmt, session->userid))
+        return;
+
+    http_SendJson(io, 200, [&](json_Writer *json) {
+        json->StartObject();
+
+        json->Key("mail"); json->String(mail);
+        json->Key("password"); json->Bool(has_password);
+        json->Key("totp"); json->Bool(has_totp);
+
+        json->Key("identities"); json->StartArray();
+        while (stmt.Step()) {
+            int64_t id = sqlite3_column_int64(stmt, 0);
+            const char *issuer = (const char *)sqlite3_column_text(stmt, 1);
+            bool allowed = sqlite3_column_int(stmt, 2);
+
+            json->StartObject();
+
+            json->Key("id"); json->Int64(id);
+            json->Key("issuer"); json->String(issuer);
+            json->Key("allowed"); json->Bool(allowed);
+
+            json->EndObject();
+        }
+        if (!stmt.IsValid())
+            return;
+        json->EndArray();
+
+        json->EndObject();
+    });
 }
 
 void HandleSsoLogin(http_IO *io)
@@ -1144,7 +1198,7 @@ void HandleSsoOidc(http_IO *io)
             const char *username = (const char *)sqlite3_column_text(stmt, 1);
             int picture = sqlite3_column_int(stmt, 2);
 
-            session = CreateUserSession(userid, provider, nullptr, username, picture);
+            session = CreateUserSession(userid, nullptr, username, picture);
         }
         if (!stmt.IsValid())
             return;
@@ -1215,7 +1269,7 @@ void HandleSsoOidc(http_IO *io)
             return;
 
         if (allowed) {
-            session = CreateUserSession(userid, provider, nullptr, identity.email, 1);
+            session = CreateUserSession(userid, nullptr, identity.email, 1);
         } else {
             if (!SendLinkIdentityMail(identity.email, *provider, token, io->Allocator()))
                 return;
@@ -1337,6 +1391,55 @@ void HandleSsoLink(http_IO *io)
 invalid:
     LogError("Invalid or expired token");
     io->SendError(404);
+}
+
+void HandleSsoUnlink(http_IO *io)
+{
+    RetainPtr<SessionInfo> session = sessions.Find(io);
+
+    if (!session) {
+        LogError("User is not logged in");
+        io->SendError(401);
+        return;
+    }
+
+    int64_t identity = -1;
+    {
+        bool success = http_ParseJson(io, Kibibytes(1), [&](json_Parser *json) {
+            bool valid = true;
+
+            for (json->ParseObject(); json->InObject(); ) {
+                Span<const char> key = json->ParseKey();
+
+                if (key == "identity") {
+                    json->ParseInt(&identity);
+                } else {
+                    json->UnexpectedKey(key);
+                    valid = false;
+                }
+            }
+            valid &= json->IsValid();
+
+            if (valid) {
+                if (identity < 0) {
+                    LogError("Missing identity");
+                    valid = false;
+                }
+            }
+
+            return valid;
+        });
+
+        if (!success) {
+            io->SendError(422);
+            return;
+        }
+    }
+
+    if (!db.Run("DELETE FROM identities WHERE user = ?1 AND id = ?2", session->userid, identity))
+        return;
+
+    io->SendText(200, "{}", "application/json");
 }
 
 static bool CheckTotp(http_IO *io, int64_t userid, const char *secret, const char *code)

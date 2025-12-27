@@ -369,12 +369,16 @@ static void HandleRequest(http_IO *io)
             HandleUserReset(io);
         } else if (url == "/api/user/password" && method == http_RequestMethod::Post) {
             HandleUserPassword(io);
+        } else if (url == "/api/user/security" && method == http_RequestMethod::Get) {
+            HandleUserSecurity(io);
         } else if (url == "/api/sso/login" && method == http_RequestMethod::Post) {
             HandleSsoLogin(io);
         } else if (url == "/api/sso/oidc" && method == http_RequestMethod::Post) {
             HandleSsoOidc(io);
         } else if (url == "/api/sso/link" && method == http_RequestMethod::Post) {
             HandleSsoLink(io);
+        } else if (url == "/api/sso/unlink" && method == http_RequestMethod::Post) {
+            HandleSsoUnlink(io);
         } else if (url == "/api/totp/confirm" && method == http_RequestMethod::Post) {
             HandleTotpConfirm(io);
         } else if (url == "/api/totp/secret" && method == http_RequestMethod::Post) {
