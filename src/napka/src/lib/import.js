@@ -44,6 +44,8 @@ async function geomapAddress(address, api_key) {
 
         if (response.ok) {
             json = await response.json();
+            if (json.status == 'REQUEST_DENIED')
+                throw new Error('Request denied by Google Maps API');
             break;
         }
 
