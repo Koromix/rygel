@@ -39,7 +39,7 @@ main.dialog {
 .tab {
     display: flex;
     flex-direction: column;
-    gap: 1em;
+    gap: 0.71em;
 }
 
 .columns {
