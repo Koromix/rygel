@@ -306,6 +306,7 @@ static void AttachTemplate(http_IO *io, const AssetInfo &asset, FunctionRef<void
     Span<const uint8_t> render = PatchFile(asset, io->Allocator(), func);
     const char *mimetype = GetMimeType(GetPathExtension(asset.name));
 
+    io->AddCachingHeaders(0, nullptr);
     io->SendAsset(200, render, mimetype, asset.compression_type);
 }
 

@@ -475,7 +475,9 @@ static void HandleRequest(http_IO *io)
                 }
             });
 
+            io->AddCachingHeaders(0, nullptr);
             io->SendAsset(200, index.data, "text/html", index.compression_type);
+
             return;
         } else {
             const AssetInfo *asset = asset_map.FindValue(path, nullptr);
