@@ -272,7 +272,7 @@ async function configurePlan(plan) {
                                                 return html`
                                                     <label>
                                                         <input type="checkbox" .checked=${active} @change=${UI.wrap(e => toggle_day(item, idx))} />
-                                                        ${T.day_names[DAYS[idx]]}
+                                                        <span>${T.day_names[DAYS[idx]]}</span>
                                                     </label>
                                                 `;
                                             })}
