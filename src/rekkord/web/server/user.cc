@@ -1277,7 +1277,7 @@ void HandleSsoOidc(http_IO *io)
             if (created) {
                 LogError("Your account has been created, but you must confirm your mail address. Consult the mail that has been sent to you to confirm it.");
             } else {
-                LogError("An account with address '%1' already exists, consult the mail that has been sent to you to confirm.", identity.email);
+                LogError("An account with address '%1' already exists, consult the mail that has been sent to you to continue.", identity.email);
             }
             io->SendError(409);
             return;
