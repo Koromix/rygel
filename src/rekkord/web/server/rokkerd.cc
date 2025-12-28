@@ -397,9 +397,12 @@ static void HandleRequest(http_IO *io)
 
             Span<const char> nonce = Fmt(io->Allocator(), "%1", FmtRandom(16));
 
-            Span<const char> csp = Fmt(io->Allocator(), "script-src 'self' 'nonce-%1', "
+            Span<const char> csp = Fmt(io->Allocator(), "base-uri 'none', "
+                                                        "default-src 'self', "
+                                                        "script-src 'self' 'nonce-%1', "
                                                         "style-src 'self' 'unsafe-inline', "
-                                                        "frame-ancestors 'none'", nonce);
+                                                        "frame-ancestors 'none', "
+                                                        "form-action 'none'", nonce);
             io->AddHeader("Content-Security-Policy", csp);
             io->AddHeader("X-Content-Type-Options", "nosniff");
 
