@@ -59,7 +59,7 @@
             }
         </style>
 
-        <script>
+        <script nonce="{{ NONCE }}">
             // Version: {{ VERSION }}
             // Compiler: {{ COMPILER }}
 
@@ -85,7 +85,7 @@
                 <b>Apple Safari</b> <span class="browser">(version ≥ 16.4)</span>
             </div></div>
         </noscript>
-        <script>
+        <script nonce="{{ NONCE }}">
             BROWSERS =
                 '<div id="fatal"><div>' +
                     '<span style="color: red;">⚠\uFE0E <b>Ce navigateur n\'est pas supporté, ou il s\'agit d\'une version trop ancienne</b></span><br/><br/>' +
@@ -100,7 +100,7 @@
             document.body.innerHTML += BROWSERS;
         </script>
 
-        <script type="module">
+        <script nonce="{{ NONCE }}" type="module">
             document.body.classList.add('loading');
 
             import { start } from '{{ JS }}';
