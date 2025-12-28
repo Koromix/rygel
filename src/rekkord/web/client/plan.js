@@ -5,7 +5,7 @@ import { render, html, live, unsafeHTML } from 'vendor/lit-html/lit-html.bundle.
 import dayjs from 'vendor/dayjs/dayjs.bundle.js';
 import { Util, Log, Net } from 'lib/web/base/base.js';
 import * as UI from 'lib/web/ui/ui.js';
-import * as app from './main.js';
+import * as App from './main.js';
 import { route, cache } from './main.js';
 import { ASSETS } from '../assets/assets.js';
 
@@ -19,7 +19,7 @@ async function runPlans() {
     UI.main(html`
         <div class="tabbar">
             <a class="active">${T.plans}</a>
-            ${cache.plan != null ? html`<a href=${app.makeURL({ mode: 'plan' })}>${cache.plan.name}</a>` : ''}
+            ${cache.plan != null ? html`<a href=${App.makeURL({ mode: 'plan' })}>${cache.plan.name}</a>` : ''}
         </div>
 
         <div class="tab">
@@ -41,13 +41,13 @@ async function runPlans() {
                 </thead>
                 <tbody>
                     ${plans.map(plan => {
-                        let url = app.makeURL({ mode: 'plan', plan: plan.id });
+                        let url = App.makeURL({ mode: 'plan', plan: plan.id });
                         let repo = cache.repositories.find(repo => repo.id == plan.repository);
 
                         return html`
-                            <tr style="cursor: pointer;" @click=${UI.wrap(e => app.go(url))}>
+                            <tr style="cursor: pointer;" @click=${UI.wrap(e => App.go(url))}>
                                 <td><a href=${url}>${plan.name}</a></td>
-                                <td><a href=${app.makeURL({ mode: 'repository', repository: plan.repository })}>${repo?.name}</a></td>
+                                <td><a href=${App.makeURL({ mode: 'repository', repository: plan.repository })}>${repo?.name}</a></td>
                                 <td><span class="sub">${plan.key}</sub></td>
                                 <td>${makePlanTasks(plan)}</td>
                             </tr>
@@ -101,7 +101,7 @@ async function runPlan() {
     route.plan = cache.plan?.id;
 
     if (cache.plan == null) {
-        app.go('/plans');
+        App.go('/plans');
         return;
     }
 
@@ -382,8 +382,8 @@ async function configurePlan(plan) {
             Net.invalidate('plans');
             Net.invalidate('plan');
 
-            let url = app.makeURL({ mode: 'plan', plan: json.id });
-            await app.go(url);
+            let url = App.makeURL({ mode: 'plan', plan: json.id });
+            await App.go(url);
 
             if (ptr == null)
                 await showKey(plan, json.key, json.secret);

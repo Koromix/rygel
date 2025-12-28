@@ -5,7 +5,7 @@ import { render, html, live, unsafeHTML } from 'vendor/lit-html/lit-html.bundle.
 import dayjs from 'vendor/dayjs/dayjs.bundle.js';
 import { Util, Log, Net } from 'lib/web/base/base.js';
 import * as UI from 'lib/web/ui/ui.js';
-import * as app from './main.js';
+import * as App from './main.js';
 import { route, cache } from './main.js';
 import { ASSETS } from '../assets/assets.js';
 
@@ -15,7 +15,7 @@ async function runRepositories() {
     UI.main(html`
         <div class="tabbar">
             <a class="active">${T.repositories}</a>
-            ${cache.repository != null ? html`<a href=${app.makeURL({ mode: 'repository' })}>${cache.repository.name}</a>` : ''}
+            ${cache.repository != null ? html`<a href=${App.makeURL({ mode: 'repository' })}>${cache.repository.name}</a>` : ''}
         </div>
 
         <div class="tab">
@@ -41,10 +41,10 @@ async function runRepositories() {
                 </thead>
                 <tbody>
                     ${repositories.map(repo => {
-                        let url = app.makeURL({ mode: 'repository', repository: repo.id });
+                        let url = App.makeURL({ mode: 'repository', repository: repo.id });
 
                         return html`
-                            <tr style="cursor: pointer;" @click=${UI.wrap(e => app.go(url))}>
+                            <tr style="cursor: pointer;" @click=${UI.wrap(e => App.go(url))}>
                                 <td><a href=${url}>${repo.name}</a></td>
                                 <td>${repo.url}</td>
                                 <td style="text-align: right;">
@@ -84,7 +84,7 @@ async function runRepository() {
     route.repository = cache.repository?.id;
 
     if (cache.repository == null) {
-        app.go('/repositories');
+        App.go('/repositories');
         return;
     }
 
@@ -198,8 +198,8 @@ async function configureRepository(repo) {
             Net.invalidate('repositories');
             Net.invalidate('repository');
 
-            let url = app.makeURL({ mode: 'repository', repository: json.id });
-            await app.go(url);
+            let url = App.makeURL({ mode: 'repository', repository: json.id });
+            await App.go(url);
         }
     });
 }
