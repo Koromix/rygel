@@ -22,9 +22,12 @@ namespace K {
 Config config;
 sq_Database db;
 
-static HashMap<const char *, const AssetInfo *> assets_map;
-static AssetInfo assets_index;
-static BlockAllocator assets_alloc;
+static HashMap<const char *, const AssetInfo *> asset_map;
+static const AssetInfo *asset_index = nullptr;
+static const char *asset_js = nullptr;
+static const char *asset_css = nullptr;
+static HeapArray<const char *> asset_bundles;
+static BlockAllocator asset_alloc;
 static char shared_etag[17];
 
 static bool ApplySandbox(Span<const char *const> reveals)
@@ -221,8 +224,12 @@ static bool NameContainsHash(Span<const char> name)
 
 static void InitAssets()
 {
-    assets_map.Clear();
-    assets_alloc.ReleaseAll();
+    asset_map.Clear();
+    asset_index = nullptr;
+    asset_js = nullptr;
+    asset_css = nullptr;
+    asset_bundles.Clear();
+    asset_alloc.ReleaseAll();
 
     // Update ETag
     {
@@ -231,83 +238,36 @@ static void InitAssets()
         Fmt(shared_etag, "%1", FmtHex(buf, 16));
     }
 
-    HeapArray<const char *> bundles;
-    const char *js = nullptr;
-    const char *css = nullptr;
-
     for (const AssetInfo &asset: GetEmbedAssets()) {
         if (TestStr(asset.name, "src/ludivine/client/index.html")) {
-            assets_index = asset;
-            assets_map.Set("/", &assets_index);
+            asset_index = &asset;
+            asset_map.Set("/", &asset);
         } else if (TestStr(asset.name, "src/ludivine/assets/main/ldv.webp")) {
-            assets_map.Set("/favicon.webp", &asset);
+            asset_map.Set("/favicon.webp", &asset);
         } else {
             Span<const char> name = SplitStrReverseAny(asset.name, K_PATH_SEPARATORS);
 
             if (NameContainsHash(name)) {
-                const char *url = Fmt(&assets_alloc, "/static/%1", name).ptr;
-                assets_map.Set(url, &asset);
+                const char *url = Fmt(&asset_alloc, "/static/%1", name).ptr;
+                asset_map.Set(url, &asset);
             } else {
-                const char *url = Fmt(&assets_alloc, "/static/%1/%2", shared_etag, name).ptr;
-                assets_map.Set(url, &asset);
+                const char *url = Fmt(&asset_alloc, "/static/%1/%2", shared_etag, name).ptr;
+                asset_map.Set(url, &asset);
 
                 if (name == "app.js") {
-                    js = url;
+                    asset_js = url;
                 } else if (name == "app.css") {
-                    css = url;
+                    asset_css = url;
                 } else {
-                    bundles.Append(url);
+                    asset_bundles.Append(url);
                 }
             }
         }
     }
 
-    K_ASSERT(js);
-    K_ASSERT(css);
-
-    assets_index.data = PatchFile(assets_index, &assets_alloc, [&](Span<const char> expr, StreamWriter *writer) {
-        Span<const char> key = TrimStr(expr);
-
-        if (key == "VERSION") {
-            writer->Write(FelixVersion);
-        } else if (key == "COMPILER") {
-            writer->Write(FelixCompiler);
-        } else if (key == "TITLE") {
-            writer->Write(config.title);
-        } else if (key == "ENV") {
-            json_Writer json(writer);
-
-            json.StartObject();
-            json.Key("title"); json.String(config.title);
-            json.Key("contact"); json.String(config.contact);
-            json.Key("url"); json.String(config.url);
-            json.Key("pages"); json.StartArray();
-            for (const Config::PageInfo &page: config.pages) {
-                json.StartObject();
-                json.Key("title"); json.String(page.title);
-                json.Key("url"); json.String(page.url);
-                json.EndObject();
-            }
-            json.EndArray();
-            json.Key("test"); json.Bool(config.test_mode);
-            json.EndObject();
-        } else if (key == "JS") {
-            writer->Write(js);
-        } else if (key == "CSS") {
-            writer->Write(css);
-        } else if (key == "BUNDLES") {
-            json_Writer json(writer);
-
-            json.StartObject();
-            for (const char *bundle: bundles) {
-                const char *name = SplitStrReverseAny(bundle, K_PATH_SEPARATORS).ptr;
-                json.Key(name); json.String(bundle);
-            }
-            json.EndObject();
-        } else {
-            Print(writer, "{{%1}}", expr);
-        }
-    });
+    K_ASSERT(asset_index);
+    K_ASSERT(asset_js);
+    K_ASSERT(asset_css);
 }
 
 static void AttachStatic(http_IO *io, const AssetInfo &asset, int64_t max_age, const char *etag)
@@ -413,20 +373,83 @@ static void HandleRequest(http_IO *io)
 
     // Embedded static asset?
     {
-        const char *path = request.path;
-        const char *ext = GetPathExtension(path).ptr;
+        Span<const char> path = request.path;
+        Span<const char> ext = GetPathExtension(path);
 
-        if (!ext[0] || TestStr(ext, ".html")) {
-            path = "/";
-        }
+        if (path == "/" || !ext.len) {
+            AssetInfo index = *asset_index;
 
-        const AssetInfo *asset = assets_map.FindValue(path, nullptr);
+            Span<const char> nonce = Fmt(io->Allocator(), "%1", FmtRandom(16));
 
-        if (asset) {
-            int64_t max_age = StartsWith(url, "/static/") ? (28ll * 86400000) : 0;
-            AttachStatic(io, *asset, max_age, shared_etag);
+            Span<const char> csp = Fmt(io->Allocator(), "base-uri 'none'; "
+                                                        "default-src 'self'; "
+                                                        "script-src 'self' 'nonce-%1'; "
+                                                        "style-src 'self' 'unsafe-inline'; "
+                                                        "img-src 'self' data:; "
+                                                        "frame-ancestors 'none'; "
+                                                        "form-action 'none'", nonce);
+            io->AddHeader("Content-Security-Policy", csp);
+            io->AddHeader("X-Content-Type-Options", "nosniff");
+
+            index.data = PatchFile(index, io->Allocator(), [&](Span<const char> expr, StreamWriter *writer) {
+                Span<const char> key = TrimStr(expr);
+
+                if (key == "VERSION") {
+                    writer->Write(FelixVersion);
+                } else if (key == "COMPILER") {
+                    writer->Write(FelixCompiler);
+                } else if (key == "TITLE") {
+                    writer->Write(config.title);
+                } else if (key == "ENV") {
+                    json_Writer json(writer);
+
+                    json.StartObject();
+                    json.Key("title"); json.String(config.title);
+                    json.Key("contact"); json.String(config.contact);
+                    json.Key("url"); json.String(config.url);
+                    json.Key("pages"); json.StartArray();
+                    for (const Config::PageInfo &page: config.pages) {
+                        json.StartObject();
+                        json.Key("title"); json.String(page.title);
+                        json.Key("url"); json.String(page.url);
+                        json.EndObject();
+                    }
+                    json.EndArray();
+                    json.Key("test"); json.Bool(config.test_mode);
+                    json.EndObject();
+                } else if (key == "NONCE") {
+                    writer->Write(nonce);
+                } else if (key == "JS") {
+                    writer->Write(asset_js);
+                } else if (key == "CSS") {
+                    writer->Write(asset_css);
+                } else if (key == "BUNDLES") {
+                    json_Writer json(writer);
+
+                    json.StartObject();
+                    for (const char *bundle: asset_bundles) {
+                        const char *name = SplitStrReverseAny(bundle, K_PATH_SEPARATORS).ptr;
+                        json.Key(name); json.String(bundle);
+                    }
+                    json.EndObject();
+                } else {
+                    Print(writer, "{{%1}}", expr);
+                }
+            });
+
+            io->AddCachingHeaders(0, nullptr);
+            io->SendAsset(200, index.data, "text/html", index.compression_type);
 
             return;
+        } else {
+            const AssetInfo *asset = asset_map.FindValue(path, nullptr);
+
+            if (asset) {
+                int64_t max_age = StartsWith(url, "/static/") ? (28ll * 86400000) : 0;
+                AttachStatic(io, *asset, max_age, shared_etag);
+
+                return;
+            }
         }
     }
 
