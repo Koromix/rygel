@@ -471,7 +471,7 @@ static void ExportSession(const SessionInfo *session, json_Writer *json)
     }
 }
 
-void HandleUserSession(http_IO *io)
+void HandleSessionInfo(http_IO *io)
 {
     RetainPtr<const SessionInfo> session = sessions.Find(io);
 
@@ -480,7 +480,7 @@ void HandleUserSession(http_IO *io)
     });
 }
 
-void HandleUserPing(http_IO *io)
+void HandleSessionPing(http_IO *io)
 {
     // Do this to renew session and clear invalid session cookies
     sessions.Find(io);

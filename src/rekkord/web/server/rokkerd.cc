@@ -353,10 +353,10 @@ static void HandleRequest(http_IO *io)
 
     // API endpoint?
     if (StartsWith(url, "/api/")) {
-        if (url == "/api/user/session" && method == http_RequestMethod::Get) {
-            HandleUserSession(io);
-        } else if (url == "/api/user/ping" && method == http_RequestMethod::Get) {
-            HandleUserPing(io);
+        if (url == "/api/session/info" && method == http_RequestMethod::Get) {
+            HandleSessionInfo(io);
+        } else if (url == "/api/session/ping" && method == http_RequestMethod::Get) {
+            HandleSessionPing(io);
         } else if (url == "/api/user/register" && method == http_RequestMethod::Post) {
             HandleUserRegister(io);
         } else if (url == "/api/user/login" && method == http_RequestMethod::Post) {

@@ -30,8 +30,8 @@ void PruneSessions();
 
 RetainPtr<SessionInfo> GetNormalSession(http_IO *io);
 
-void HandleUserSession(http_IO *io);
-void HandleUserPing(http_IO *io);
+void HandleSessionInfo(http_IO *io);
+void HandleSessionPing(http_IO *io);
 
 void HandleUserRegister(http_IO *io);
 void HandleUserLogin(http_IO *io);

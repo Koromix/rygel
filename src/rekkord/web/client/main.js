@@ -107,7 +107,7 @@ async function start() {
         let rnd = Util.getCookie('session_rnd');
 
         if (rnd != null)
-            session = await Net.get('/api/user/session');
+            session = await Net.get('/api/session/info');
     }
 
     await go(window.location.href, false);
@@ -187,7 +187,7 @@ async function run(changes = {}, push = false) {
     // Keep session alive
     if (isLogged() && ping_timer == null) {
         ping_timer = setInterval(() => {
-            Net.get('/api/user/ping');
+            Net.get('/api/session/ping');
         }, 180 * 1000);
     }
 
