@@ -282,7 +282,7 @@ async function configurePlan(plan) {
                                         <td>${paths.map((path, idx) =>
                                             html`<input type="text" style=${idx ? 'margin-top: 3px;' : ''} .value=${live(path)}
                                                         @input=${UI.wrap(e => edit_path(item, idx, e.target.value))} />`)}</td>
-                                        <td class="right">
+                                        <td class="center">
                                             <button type="button" class="small"
                                                     @click=${UI.insist(e => delete_item(item))}><img src=${ASSETS['ui/delete']} alt=${T.delete} /></button>
                                         </td>

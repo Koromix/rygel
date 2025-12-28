@@ -908,7 +908,7 @@ async function configureSecurity() {
                                 <colgroup>
                                     <col style="width: 200px;"/>
                                     <col style="width: 80px;"/>
-                                    <col style="width: 80px;"/>
+                                    <col style="width: 60px;"/>
                                 </colgroup>
                                 <thead>
                                     <tr>
@@ -925,9 +925,9 @@ async function configureSecurity() {
                                             <tr>
                                                 <td>${provider.title}</td>
                                                 <td>${identity.allowed ? T.yes : T.no}</td>
-                                                <td class="right">
+                                                <td class="center">
                                                     <button type="button" class="small"
-                                                            @click=${UI.insist(e => delete_identity(identity.id))}>${T.delete}</button>
+                                                            @click=${UI.insist(e => delete_identity(identity.id))}><img src=${ASSETS['ui/delete']} alt=${T.delete} /></button>
                                                 </td>
                                             </tr>
                                         `;
