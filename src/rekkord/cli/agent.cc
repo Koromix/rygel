@@ -70,7 +70,7 @@ static bool FetchPlan(Allocator *alloc, HeapArray<ItemData> *out_items)
         });
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &body);
 
-        int status = curl_Perform(curl, "fetch");
+        int status = curl_Perform(curl, "fetch backup plan");
 
         if (status != 200) {
             if (status >= 0) {

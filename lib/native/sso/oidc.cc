@@ -116,7 +116,7 @@ bool oidc_Provider::Finalize()
         });
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &body);
 
-        int status = curl_Perform(curl, "fetch");
+        int status = curl_Perform(curl, "OIDC configuration");
 
         if (status != 200) {
             if (status >= 0) {
@@ -370,7 +370,7 @@ bool oidc_ExchangeCode(const oidc_Provider &provider, const char *callback_url, 
         });
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &body);
 
-        int status = curl_Perform(curl, "fetch");
+        int status = curl_Perform(curl, "OIDC exchange");
 
         if (status != 200) {
             if (status >= 0) {
@@ -571,7 +571,7 @@ static psa_key_id_t FetchJwksKey(const oidc_Provider &provider, const char *kid,
             });
             curl_easy_setopt(curl, CURLOPT_WRITEDATA, &body);
 
-            int status = curl_Perform(curl, "fetch");
+            int status = curl_Perform(curl, "OIDC JWKS");
 
             if (status != 200) {
                 if (status >= 0) {
