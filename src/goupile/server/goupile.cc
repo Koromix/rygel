@@ -378,8 +378,8 @@ static void HandleAdminRequest(http_IO *io)
 
             const char *nonce = Fmt(io->Allocator(), "%1", FmtRandom(16)).ptr;
 
-            Span<const char> csp = Fmt(io->Allocator(), "script-src 'self' 'nonce-%1', "
-                                                        "style-src 'self' 'unsafe-inline', "
+            Span<const char> csp = Fmt(io->Allocator(), "script-src 'self' 'nonce-%1'; "
+                                                        "style-src 'self' 'unsafe-inline'; "
                                                         "frame-ancestors 'none'", nonce);
             io->AddHeader("Content-Security-Policy", csp);
             io->AddHeader("X-Content-Type-Options", "nosniff");
@@ -631,8 +631,8 @@ static void HandleInstanceRequest(http_IO *io)
 
             if (nonce) {
                 // We will make this more secure progressively!
-                Span<const char> csp = Fmt(io->Allocator(), "script-src 'self' 'nonce-%1' 'unsafe-eval' blob:,"
-                                                            "style-src 'self' 'unsafe-inline', "
+                Span<const char> csp = Fmt(io->Allocator(), "script-src 'self' 'nonce-%1' 'unsafe-eval' blob:;"
+                                                            "style-src 'self' 'unsafe-inline'; "
                                                             "frame-ancestors 'none'", nonce);
                 io->AddHeader("Content-Security-Policy", csp);
                 io->AddHeader("X-Content-Type-Options", "nosniff");
@@ -819,8 +819,8 @@ static void HandleRequest(http_IO *io)
     if (TestStr(request.path, "/")) {
         const char *nonce = Fmt(io->Allocator(), "%1", FmtRandom(16)).ptr;
 
-        Span<const char> csp = Fmt(io->Allocator(), "script-src 'self' 'nonce-%1', "
-                                                    "style-src 'self' 'unsafe-inline', "
+        Span<const char> csp = Fmt(io->Allocator(), "script-src 'self' 'nonce-%1'; "
+                                                    "style-src 'self' 'unsafe-inline'; "
                                                     "frame-ancestors 'none'", nonce);
         io->AddHeader("Content-Security-Policy", csp);
         io->AddHeader("X-Content-Type-Options", "nosniff");
