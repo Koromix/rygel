@@ -350,12 +350,13 @@ button > img:only-child {
         background: color-mix(in srgb, var(--button_color) 90%, black);
         color: white;
     }
-    & > :is(a, button).disabled {
-        pointer-events: none;
-        filter: saturate(10%) brightness(50%);
-    }
 }
 .actions + * { margin-top: 1em; }
+
+:is(a, button).disabled {
+    pointer-events: none;
+    filter: saturate(10%) brightness(150%) contrast(30%);
+}
 
 span.warning { color: var(--color, red); }
 span.warning:before {
