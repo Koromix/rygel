@@ -401,6 +401,7 @@ static void HandleRequest(http_IO *io)
                                                         "default-src 'self'; "
                                                         "script-src 'self' 'nonce-%1'; "
                                                         "style-src 'self' 'unsafe-inline'; "
+                                                        "img-src 'self' data:; "
                                                         "frame-ancestors 'none'; "
                                                         "form-action 'none'", nonce);
             io->AddHeader("Content-Security-Policy", csp);
