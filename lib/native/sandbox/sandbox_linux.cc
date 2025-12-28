@@ -198,17 +198,19 @@ static bool DropCapabilities()
     return true;
 }
 
-static bool InitLandlock(unsigned int flags, Span<const sb_RevealedPath> reveals)
+static bool InitLandlock(unsigned int isolation, Span<const sb_RevealedPath> reveals)
 {
     LogDebug("Using Landlock for process isolation");
 
     landlock_ruleset_attr attr = {};
     {
         attr.handled_access_fs = ACCESS_FS_READ | ACCESS_FS_WRITE;
-        attr.handled_access_net = LANDLOCK_ACCESS_NET_BIND_TCP | LANDLOCK_ACCESS_NET_CONNECT_TCP;
         attr.scoped = LANDLOCK_SCOPE_ABSTRACT_UNIX_SOCKET;
 
-        if (flags & (int)sb_IsolationFlag::Signals) {
+        if (isolation & (int)sb_IsolationFlag::Network) {
+            attr.handled_access_net = LANDLOCK_ACCESS_NET_BIND_TCP | LANDLOCK_ACCESS_NET_CONNECT_TCP;
+        }
+        if (isolation & (int)sb_IsolationFlag::Signals) {
             attr.scoped |= LANDLOCK_SCOPE_SIGNAL;
         }
 
@@ -354,10 +356,14 @@ static bool WriteUidGidMap(pid_t pid, uid_t uid, gid_t gid)
     return true;
 }
 
-static bool DoUnshare()
+static bool DoUnshare(unsigned int isolation)
 {
     uint32_t flags = CLONE_NEWNS | CLONE_NEWUSER | CLONE_NEWIPC |
                      CLONE_NEWUTS | CLONE_NEWCGROUP | CLONE_THREAD;
+
+    if (isolation & (int)sb_IsolationFlag::Network) {
+        flags |= CLONE_NEWNET;
+    }
 
     if (unshare(flags) < 0) {
         LogError("Failed to create namespace: %1", strerror(errno));
@@ -367,7 +373,7 @@ static bool DoUnshare()
     return true;
 }
 
-static bool InitNamespaces(unsigned int, Span<const sb_RevealedPath> reveals)
+static bool InitNamespaces(unsigned int isolation, Span<const sb_RevealedPath> reveals)
 {
     LogDebug("Using Linux namespaces for process isolation");
 
@@ -447,7 +453,7 @@ static bool InitNamespaces(unsigned int, Span<const sb_RevealedPath> reveals)
             prctl(PR_SET_DUMPABLE, 1, 0, 0, 0);
 
             int64_t dummy = 1;
-            if (!DoUnshare())
+            if (!DoUnshare(isolation))
                 return false;
             if (K_RESTART_EINTR(write(efd, &dummy, K_SIZE(dummy)), < 0) < 0) {
                 LogError("Failed to write to eventfd: %1", strerror(errno));
@@ -488,7 +494,7 @@ static bool InitNamespaces(unsigned int, Span<const sb_RevealedPath> reveals)
     } else {
         LogDebug("Trying unprivileged sandbox method");
 
-        if (!DoUnshare())
+        if (!DoUnshare(isolation))
             return false;
         if (!WriteUidGidMap(getpid(), uid, gid))
             return false;

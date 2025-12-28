@@ -31,7 +31,10 @@ static bool ApplySandbox(Span<const char *const> reveals)
 {
     sb_SandboxBuilder sb;
 
-    if (!sb.Init())
+    // We need to access the network to send mails
+    unsigned int flags = UINT_MAX & ~(int)sb_IsolationFlag::Network;
+
+    if (!sb.Init(flags))
         return false;
 
     sb.RevealPaths(reveals, false);

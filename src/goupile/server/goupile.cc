@@ -55,8 +55,8 @@ static bool ApplySandbox(Span<const char *const> reveals)
 {
     sb_SandboxBuilder sb;
 
-    // We need to send signals to the zygote
-    unsigned int flags = UINT_MAX & ~(int)sb_IsolationFlag::Signals;
+    // We need the network and to send signals to the zygote
+    unsigned int flags = UINT_MAX & ~((int)sb_IsolationFlag::Network | ~(int)sb_IsolationFlag::Signals);
 
     if (!sb.Init(flags))
         return false;

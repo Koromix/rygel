@@ -9,11 +9,13 @@ namespace K {
 
 enum class sb_IsolationFlag {
     Filesystem = 1 << 0,
-    Signals = 1 << 1,
-    Syscalls = 1 << 2
+    Network = 1 << 1,
+    Signals = 1 << 2,
+    Syscalls = 1 << 3
 };
 static const char *const sb_IsolationFlagNames[] = {
     "Filesystem",
+    "Network",
     "Signals",
     "Syscalls"
 };
