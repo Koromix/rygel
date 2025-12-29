@@ -123,7 +123,7 @@ void HandleSendMail(http_IO *io, InstanceHolder *instance)
                     LogError("Missing or invalid 'to' parameter");
                     valid = false;
                 }
-                if (!content.subject && !content.text && !content.html) {
+                if (!content.subject.len && !content.text.len && !content.html.len) {
                     LogError("Missing 'subject', 'text' and 'html' parameters");
                     valid = false;
                 }

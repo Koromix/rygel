@@ -286,7 +286,7 @@ Span<const char> smtp_BuildMail(const char *from, const char *to, const smtp_Mai
     Fmt(&buf, "Date: %1\r\n", FmtRfcDate(GetUnixTime()));
     Fmt(&buf, "From: %1\r\n", from);
     Fmt(&buf, "To: %1\r\n", to);
-    if (content.subject) {
+    if (content.subject.len) {
         Fmt(&buf, "Subject: %1\r\n", FmtRfc2047(content.subject));
     }
     Fmt(&buf, "MIME-version: 1.0\r\n");
@@ -301,7 +301,7 @@ Span<const char> smtp_BuildMail(const char *from, const char *to, const smtp_Mai
         Fmt(&buf, "--%1\r\n", mixed);
     }
 
-    if (content.text && content.html) {
+    if (content.text.len && content.html.len) {
         Fmt(alternative, "=_%1", FmtRandom(28));
 
         Fmt(&buf, "Content-Type: multipart/alternative; boundary=\"%1\";\r\n\r\n", alternative);
@@ -312,12 +312,12 @@ Span<const char> smtp_BuildMail(const char *from, const char *to, const smtp_Mai
         Fmt(&buf, "Content-Type: text/html; charset=UTF-8;\r\n\r\n");
         Fmt(&buf, "%1\r\n", content.html);
         Fmt(&buf, "--%1--\r\n", alternative);
-    } else if (content.html) {
+    } else if (content.html.len) {
         Fmt(&buf, "Content-Type: text/html; charset=UTF-8;\r\n");
         Fmt(&buf, "%1\r\n", content.html);
     } else {
         Fmt(&buf, "Content-Type: text/plain; charset=UTF-8;\r\n");
-        Fmt(&buf, "%1\r\n", content.text ? content.text : "");
+        Fmt(&buf, "%1\r\n", content.text);
     }
 
     if (content.files.len) {

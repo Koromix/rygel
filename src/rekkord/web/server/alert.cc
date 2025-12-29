@@ -106,9 +106,9 @@ bool DetectAlerts()
 
                 smtp_MailContent content = unsolved ? FailureMessage : FailureResolved;
 
-                content.subject = PatchFailure(content.subject, name, error, &temp_alloc).ptr;
-                content.text = PatchFailure(content.text, name, error, &temp_alloc).ptr;
-                content.html = PatchFailure(content.html, name, error, &temp_alloc).ptr;
+                content.subject = PatchFailure(content.subject, name, error, &temp_alloc);
+                content.text = PatchFailure(content.text, name, error, &temp_alloc);
+                content.html = PatchFailure(content.html, name, error, &temp_alloc);
 
                 if (!PostMail(to, content))
                     return false;
@@ -153,9 +153,9 @@ bool DetectAlerts()
 
                 smtp_MailContent content = unsolved ? StaleMessage : StaleResolved;
 
-                content.subject = PatchStale(content.subject, name, channel, timestamp, &temp_alloc).ptr;
-                content.text = PatchStale(content.text, name, channel, timestamp, &temp_alloc).ptr;
-                content.html = PatchStale(content.html, name, channel, timestamp, &temp_alloc).ptr;
+                content.subject = PatchStale(content.subject, name, channel, timestamp, &temp_alloc);
+                content.text = PatchStale(content.text, name, channel, timestamp, &temp_alloc);
+                content.html = PatchStale(content.html, name, channel, timestamp, &temp_alloc);
 
                 if (!PostMail(to, content))
                     return false;

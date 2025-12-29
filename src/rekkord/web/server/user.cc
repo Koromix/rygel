@@ -115,9 +115,9 @@ static bool SendNewUserMail(const char *to, const uint8_t token[16], Allocator *
         }
     };
 
-    content.subject = Fmt(alloc, T("Welcome to %1"), config.title).ptr;
-    content.html = PatchMail("new_user.html", alloc, patch).ptr;
-    content.text = PatchMail("new_user.txt", alloc, patch).ptr;
+    content.subject = Fmt(alloc, T("Welcome to %1"), config.title);
+    content.html = PatchMail("new_user.html", alloc, patch);
+    content.text = PatchMail("new_user.txt", alloc, patch);
 
     return PostMail(to, content);
 }
@@ -138,9 +138,9 @@ static bool SendExistingUserMail(const char *to, Allocator *alloc)
         }
     };
 
-    content.subject = Fmt(alloc, T("Recover %1 account"), config.title).ptr;
-    content.html = PatchMail("existing_user.html", alloc, patch).ptr;
-    content.text = PatchMail("existing_user.txt", alloc, patch).ptr;
+    content.subject = Fmt(alloc, T("Recover %1 account"), config.title);
+    content.html = PatchMail("existing_user.html", alloc, patch);
+    content.text = PatchMail("existing_user.txt", alloc, patch);
 
     return PostMail(to, content);
 }
@@ -166,9 +166,9 @@ static bool SendResetPasswordMail(const char *to, const uint8_t token[16], Alloc
         }
     };
 
-    content.subject = Fmt(alloc, T("Reset %1 password"), config.title).ptr;
-    content.html = PatchMail("reset_password.html", alloc, patch).ptr;
-    content.text = PatchMail("reset_password.txt", alloc, patch).ptr;
+    content.subject = Fmt(alloc, T("Reset %1 password"), config.title);
+    content.html = PatchMail("reset_password.html", alloc, patch);
+    content.text = PatchMail("reset_password.txt", alloc, patch);
 
     return PostMail(to, content);
 }
@@ -196,9 +196,9 @@ static bool SendLinkIdentityMail(const char *to, const oidc_Provider &provider, 
         }
     };
 
-    content.subject = Fmt(alloc, T("Welcome to %1"), config.title).ptr;
-    content.html = PatchMail("link_identity.html", alloc, patch).ptr;
-    content.text = PatchMail("link_identity.txt", alloc, patch).ptr;
+    content.subject = Fmt(alloc, T("Welcome to %1"), config.title);
+    content.html = PatchMail("link_identity.html", alloc, patch);
+    content.text = PatchMail("link_identity.txt", alloc, patch);
 
     return PostMail(to, content);
 }

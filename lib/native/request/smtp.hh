@@ -25,9 +25,9 @@ struct smtp_AttachedFile {
 };
 
 struct smtp_MailContent {
-    const char *subject = nullptr;
-    const char *text = nullptr;
-    const char *html = nullptr;
+    Span<const char> subject = {};
+    Span<const char> text = {};
+    Span<const char> html = {};
     Span<const smtp_AttachedFile> files = {};
 };
 

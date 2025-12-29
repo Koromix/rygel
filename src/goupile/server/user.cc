@@ -803,14 +803,14 @@ static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, Sessio
         CopyString(code, session->secret);
 
         smtp_MailContent content;
-        content.subject = Fmt(&temp_alloc, "Vérification %1", instance->title).ptr;
-        content.text = Fmt(&temp_alloc, "Code: %1", code).ptr;
+        content.subject = Fmt(&temp_alloc, "Vérification %1", instance->title);
+        content.text = Fmt(&temp_alloc, "Code: %1", code);
         content.html = Fmt(&temp_alloc, R"(
             <div style="text-align: center;">
                 <p style="font-size: 1.3em;">Code de vérification</p>
                 <p style="font-size: 3em; font-weight: bold;">%1</p>
             </div>
-        )", code).ptr;
+        )", code);
 
         SendMail(email, content);
     } else if (sms) {

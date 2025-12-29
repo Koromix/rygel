@@ -229,9 +229,9 @@ static bool SendNewMail(const char *to, const char *uid, Span<const uint8_t> tke
         return ret;
     };
 
-    content.subject = patch(NewUser.subject).ptr;
-    content.html = patch(NewUser.html).ptr;
-    content.text = patch(NewUser.text).ptr;
+    content.subject = patch(NewUser.subject);
+    content.html = patch(NewUser.html);
+    content.text = patch(NewUser.text);
 
     Span<const uint8_t> png;
     {
@@ -284,9 +284,9 @@ static bool SendExistingMail(const char *to, bool password, Allocator *alloc)
 
     const smtp_MailContent &model = password ? ExistingWithPassword : ExistingNoPassword;
 
-    content.subject = patch(model.subject).ptr;
-    content.html = patch(model.html).ptr;
-    content.text = patch(model.text).ptr;
+    content.subject = patch(model.subject);
+    content.html = patch(model.html);
+    content.text = patch(model.text);
 
     return PostMail(to, content);
 }
@@ -318,9 +318,9 @@ static bool SendContinueMail(const char *to, const char *uid, int64_t study, con
         return ret;
     };
 
-    content.subject = patch(ContinueStudy.subject).ptr;
-    content.html = patch(ContinueStudy.html).ptr;
-    content.text = patch(ContinueStudy.text).ptr;
+    content.subject = patch(ContinueStudy.subject);
+    content.html = patch(ContinueStudy.html);
+    content.text = patch(ContinueStudy.text);
 
     return PostMail(to, content);
 }
