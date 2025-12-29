@@ -60,7 +60,7 @@ static bool IsAddressSafe(const char *mail)
     return true;
 }
 
-static bool IsFileHeaderSafe(Span<const char> str)
+[[maybe_unused]] static bool IsFileHeaderSafe(Span<const char> str)
 {
     const auto test_char = [](char c) { return IsAsciiControl(c); };
 
