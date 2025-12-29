@@ -9,7 +9,7 @@ async function run() {
     try {
         let div = document.querySelector('#game');
 
-        await load('static/staks', 'fr', (value, total) => {
+        await load('static/relax', 'fr', (value, total) => {
             let progress = Math.floor(value / total * 100);
             div.innerHTML = progress + '%';
         });
