@@ -397,6 +397,8 @@ static void HandleAdminRequest(http_IO *io)
 
             Span<const char> csp = Fmt(io->Allocator(), "script-src 'self' 'nonce-%1'; "
                                                         "style-src 'self' 'unsafe-inline'; "
+                                                        "style-src-elem 'self' 'nonce-%1'; "
+                                                        "style-src-attr 'self' 'unsafe-inline'; "
                                                         "frame-ancestors 'none'", nonce);
             io->AddHeader("Content-Security-Policy", csp);
             io->AddHeader("X-Content-Type-Options", "nosniff");
@@ -650,6 +652,8 @@ static void HandleInstanceRequest(http_IO *io)
                 // We will make this more secure progressively!
                 Span<const char> csp = Fmt(io->Allocator(), "script-src 'self' 'nonce-%1' 'unsafe-eval' blob:;"
                                                             "style-src 'self' 'unsafe-inline'; "
+                                                            "style-src-elem 'self' 'nonce-%1'; "
+                                                            "style-src-attr 'self' 'unsafe-inline'; "
                                                             "frame-ancestors 'none'", nonce);
                 io->AddHeader("Content-Security-Policy", csp);
                 io->AddHeader("X-Content-Type-Options", "nosniff");
@@ -838,6 +842,8 @@ static void HandleRequest(http_IO *io)
 
         Span<const char> csp = Fmt(io->Allocator(), "script-src 'self' 'nonce-%1'; "
                                                     "style-src 'self' 'unsafe-inline'; "
+                                                    "style-src-elem 'self' 'nonce-%1'; "
+                                                    "style-src-attr 'self' 'unsafe-inline'; "
                                                     "frame-ancestors 'none'", nonce);
         io->AddHeader("Content-Security-Policy", csp);
         io->AddHeader("X-Content-Type-Options", "nosniff");

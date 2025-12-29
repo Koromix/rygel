@@ -384,7 +384,9 @@ static void HandleRequest(http_IO *io)
             Span<const char> csp = Fmt(io->Allocator(), "base-uri 'none'; "
                                                         "default-src 'self'; "
                                                         "script-src 'self' 'nonce-%1'; "
-                                                        "style-src 'self' 'unsafe-inline'; "
+                                                        "style-src 'unsafe-inline'; "
+                                                        "style-src-elem 'self' 'nonce-%1'; "
+                                                        "style-src-attr 'self' 'unsafe-inline'; "
                                                         "img-src 'self' data:; "
                                                         "frame-ancestors 'none'; "
                                                         "form-action 'none'", nonce);
