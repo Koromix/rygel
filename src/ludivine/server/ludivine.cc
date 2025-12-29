@@ -392,6 +392,7 @@ static void HandleRequest(http_IO *io)
                                                         "form-action 'none'", nonce);
             io->AddHeader("Content-Security-Policy", csp);
             io->AddHeader("X-Content-Type-Options", "nosniff");
+            io->AddHeader("X-Frame-Options", "DENY");
 
             index.data = PatchFile(index, io->Allocator(), [&](Span<const char> expr, StreamWriter *writer) {
                 Span<const char> key = TrimStr(expr);
