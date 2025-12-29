@@ -282,8 +282,15 @@ static bool ParseEsbuildMeta(const char *filename, Allocator *alloc, HeapArray<B
         Span<const char> key = json.ParseKey();
 
         if (key == "outputs") {
+            HashSet<Span<const char>> handled;
+
             for (json.ParseObject(); json.InObject(); ) {
                 Span<const char> output = json.ParseKey();
+
+                if (handled.Find(output)) {
+                    json.Skip();
+                    continue;
+                }
 
                 HeapArray<const char *> inputs;
                 const char *js = nullptr;
@@ -314,6 +321,7 @@ static bool ParseEsbuildMeta(const char *filename, Allocator *alloc, HeapArray<B
                         .src_filename = DuplicateString(js, alloc).ptr,
                         .unique = false
                     });
+                    handled.Set(js);
 
                     if (css) {
                         Span<const char> prefix;
@@ -324,6 +332,7 @@ static bool ParseEsbuildMeta(const char *filename, Allocator *alloc, HeapArray<B
                             .src_filename = Fmt(alloc, "%1.css", prefix).ptr,
                             .unique = false
                         });
+                        handled.Set(css);
                     }
                 } else if (inputs.len == 1) {
                     out_objects->Append({
@@ -331,6 +340,7 @@ static bool ParseEsbuildMeta(const char *filename, Allocator *alloc, HeapArray<B
                         .src_filename = DuplicateString(inputs[0], alloc).ptr,
                         .unique = true
                     });
+                    handled.Set(output);
                 }
             }
         } else {
