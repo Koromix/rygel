@@ -1,0 +1,9 @@
+Welcome !
+
+Use the following link to link your {{ PROVIDER }} user to your {{ MAIL }} account on {{ TITLE }}:
+
+{{ URL }}
+
+If you have not tried to sign in on {{ TITLE }} with {{ PROVIDER }}, please ignore and delete this email!
+
+{{ TITLE }}

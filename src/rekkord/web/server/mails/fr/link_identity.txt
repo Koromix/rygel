@@ -1,0 +1,9 @@
+Bienvenue !
+
+Utilisez le lien suivant pour associer votre compte {{ PROVIDER }} à votre compte {{ MAIL }} sur {{ TITLE }} :
+
+{{ URL }}
+
+Si vous n'avez pas encore essayé de vous connecter à {{ TITLE }} avec {{ PROVIDER }}, veuillez ignorer et supprimer cet e-mail !
+
+{{ TITLE }}

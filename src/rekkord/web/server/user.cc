@@ -66,104 +66,6 @@ static std::shared_mutex events_mutex;
 static BucketArray<EventInfo> events;
 static HashTable<EventInfo::Key, EventInfo *> events_map;
 
-static const smtp_MailContent NewUser = {
-    "Welcome to {{ TITLE }}",
-
-    R"(Welcome !
-
-Use the following link to validate your account and access {{ TITLE }}:
-
-{{ URL }}
-
-Once your address is confirmed, you will be invited to choose a secure password.
-
-{{ TITLE }})",
-
-    R"(<html lang="en"><body>
-<p>Welcome !</p>
-<p>Use the following link to validate your account and access {{ TITLE }}:</p>
-<div align="center"><br>
-    <a style="padding: 0.7em 2em; background: #2d8261; border-radius: 30px;
-              font-weight: bold; text-decoration: none !important; color: white; text-transform: uppercase; text-wrap: nowrap;" href="{{ URL }}">Create account</a>
-<br><br></div>
-<p>Once your address is confirmed, you will be invited to choose a secure password.</p>
-<p><i>{{ TITLE }}</i></p>
-</body></html>)",
-
-    {}
-};
-
-static const smtp_MailContent ExistingUser = {
-    "Recover {{ TITLE }} account",
-    R"(Hello,
-
-Someone tried to create an account on {{ TITLE }} with your email.
-
-If it is not you, ignore this mail. Use the recovery page if you are trying to login but you have forgotten the password.
-
-{{ TITLE }})",
-    R"(<html lang="en"><body>
-<p>Hello,</p>
-<p>Someone tried to create an account on {{ TITLE }} with your email.</p>
-<p>If it is not you, ignore this mail. Use the recovery page if you are trying to login but you have forgotten the password.</p>
-<p><i>{{ TITLE }}</i></p>
-</body></html>)",
-
-    {}
-};
-
-static const smtp_MailContent ResetPassword = {
-    "Reset {{ TITLE }} password",
-    R"(Hello,
-
-Use the following link to reset your password on {{ TITLE }}:
-
-{{ URL }}
-
-If you did not ask for password recovery, delete this mail. Someone may have tried to access your account without your permission.
-
-{{ TITLE }})",
-    R"(<html lang="en"><body>
-<p>Hello,</p>
-<p>Use the following link to reset your password on {{ TITLE }}:</p>
-<div align="center"><br>
-    <a style="padding: 0.7em 2em; background: #2d8261; border-radius: 30px;
-              font-weight: bold; text-decoration: none !important; color: white; text-transform: uppercase; text-wrap: nowrap;" href="{{ URL }}">Reset password</a>
-<br><br></div>
-<p>If you did not ask for password recovery, delete this mail. Someone may have tried to access your account without your permission.</p>
-<p><i>{{ TITLE }}</i></p>
-</body></html>)",
-
-    {}
-};
-
-static const smtp_MailContent LinkIdentity = {
-    "Welcome to {{ TITLE }}",
-
-    R"(Welcome !
-
-Use the following link to link your {{ PROVIDER }} user to your {{ MAIL }} account on {{ TITLE }}:
-
-{{ URL }}
-
-If you have not tried to sign in on {{ TITLE }} with {{ PROVIDER }}, please ignore and delete this email!
-
-{{ TITLE }})",
-
-    R"(<html lang="en"><body>
-<p>Welcome !</p>
-<p>Use the following link to link your {{ PROVIDER }} user to your {{ MAIL }} account on {{ TITLE }}:</p>
-<div align="center"><br>
-    <a style="padding: 0.7em 2em; background: #2d8261; border-radius: 30px;
-              font-weight: bold; text-decoration: none !important; color: white; text-transform: uppercase; text-wrap: nowrap;" href="{{ URL }}">Link account</a>
-<br><br></div>
-<p>If you have not tried to sign in on {{ TITLE }} with {{ PROVIDER }}, please ignore and delete this email!</p>
-<p><i>{{ TITLE }}</i></p>
-</body></html>)",
-
-    {}
-};
-
 static bool IsMailValid(const char *mail)
 {
     const auto test_char = [](char c) { return strchr("<>& ", c) || IsAsciiControl(c); };
@@ -213,9 +115,9 @@ static bool SendNewUserMail(const char *to, const uint8_t token[16], Allocator *
         }
     };
 
-    content.subject = PatchFile(NewUser.subject, alloc, patch).ptr;
-    content.html = PatchFile(NewUser.html, alloc, patch).ptr;
-    content.text = PatchFile(NewUser.text, alloc, patch).ptr;
+    content.subject = Fmt(alloc, T("Welcome to %1"), config.title).ptr;
+    content.html = PatchMail("new_user.html", alloc, patch).ptr;
+    content.text = PatchMail("new_user.txt", alloc, patch).ptr;
 
     return PostMail(to, content);
 }
@@ -236,9 +138,9 @@ static bool SendExistingUserMail(const char *to, Allocator *alloc)
         }
     };
 
-    content.subject = PatchFile(ExistingUser.subject, alloc, patch).ptr;
-    content.html = PatchFile(ExistingUser.html, alloc, patch).ptr;
-    content.text = PatchFile(ExistingUser.text, alloc, patch).ptr;
+    content.subject = Fmt(alloc, T("Recover %1 account"), config.title).ptr;
+    content.html = PatchMail("existing_user.html", alloc, patch).ptr;
+    content.text = PatchMail("existing_user.txt", alloc, patch).ptr;
 
     return PostMail(to, content);
 }
@@ -264,9 +166,9 @@ static bool SendResetPasswordMail(const char *to, const uint8_t token[16], Alloc
         }
     };
 
-    content.subject = PatchFile(ResetPassword.subject, alloc, patch).ptr;
-    content.html = PatchFile(ResetPassword.html, alloc, patch).ptr;
-    content.text = PatchFile(ResetPassword.text, alloc, patch).ptr;
+    content.subject = Fmt(alloc, T("Reset %1 password"), config.title).ptr;
+    content.html = PatchMail("reset_password.html", alloc, patch).ptr;
+    content.text = PatchMail("reset_password.txt", alloc, patch).ptr;
 
     return PostMail(to, content);
 }
@@ -294,9 +196,9 @@ static bool SendLinkIdentityMail(const char *to, const oidc_Provider &provider, 
         }
     };
 
-    content.subject = PatchFile(LinkIdentity.subject, alloc, patch).ptr;
-    content.html = PatchFile(LinkIdentity.html, alloc, patch).ptr;
-    content.text = PatchFile(LinkIdentity.text, alloc, patch).ptr;
+    content.subject = Fmt(alloc, T("Welcome to %1"), config.title).ptr;
+    content.html = PatchMail("link_identity.html", alloc, patch).ptr;
+    content.text = PatchMail("link_identity.txt", alloc, patch).ptr;
 
     return PostMail(to, content);
 }

@@ -12,7 +12,9 @@ struct smtp_MailContent;
 
 bool InitSMTP(const smtp_Config &config);
 
+Span<const char> PatchMail(const char *basename, Allocator *alloc, FunctionRef<void(Span<const char>, StreamWriter *)> func);
 bool PostMail(const char *to, const smtp_MailContent &content);
+
 bool SendMails();
 
 }

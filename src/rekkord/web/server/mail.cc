@@ -18,6 +18,38 @@ bool InitSMTP(const smtp_Config &config)
     return smtp.Init(config);
 }
 
+Span<const char> PatchMail(const char *basename, Allocator *alloc, FunctionRef<void(Span<const char>, StreamWriter *)> func)
+{
+    const char *path = Fmt(alloc, "src/rekkord/web/server/mails/%1/%2", GetThreadLocale(), basename).ptr;
+    const AssetInfo *asset = FindEmbedAsset(path);
+
+    if (!asset) [[unlikely]] {
+        path = Fmt(alloc, "src/rekkord/web/server/mails/en/%1", basename).ptr;
+        asset = FindEmbedAsset(path);
+
+        K_ASSERT(asset);
+    }
+
+    Span<const char> mail;
+    {
+        HeapArray<char> buf(alloc);
+
+        StreamReader reader(asset->data, "<asset>", asset->compression_type);
+        StreamWriter writer(&buf, "<asset>");
+
+        bool success = PatchFile(&reader, &writer, func);
+        K_ASSERT(success);
+
+        buf.Grow(1);
+        buf.ptr[buf.len] = 0;
+
+        mail = buf.Leak();
+    }
+
+    return mail;
+}
+
+
 bool PostMail(const char *to, const smtp_MailContent &content)
 {
     BlockAllocator temp_alloc;
