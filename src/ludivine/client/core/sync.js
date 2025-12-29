@@ -26,7 +26,9 @@ function isSyncing() {
 }
 
 async function downloadVault(vid) {
-    let ref = await callWorker('download', vid);
+    let force_sabfs = !sqlite3.hasOPFS();
+    let ref = await callWorker('download', vid, force_sabfs);
+
     return ref;
 }
 

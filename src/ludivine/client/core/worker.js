@@ -27,7 +27,7 @@ async function wrapAsync(id, func, args) {
     }
 }
 
-async function downloadVault(vid) {
+async function downloadVault(vid, force_sabfs = false) {
     let response = await Net.fetch('/api/download', {
         headers: {
             'X-Vault-Id': vid
@@ -50,10 +50,12 @@ async function downloadVault(vid) {
     let filename = 'ludivine/' + vid + '.db';
     let root = null;
 
-    try {
-        root = await navigator.storage.getDirectory();
-    } catch (err) {
-        console.error(err);
+    if (!force_sabfs) {
+        try {
+            root = await navigator.storage.getDirectory();
+        } catch (err) {
+            console.error(err);
+        }
     }
 
     if (root != null) {
