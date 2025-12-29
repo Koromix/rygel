@@ -49,7 +49,6 @@ Span<const char> PatchMail(const char *basename, Allocator *alloc, FunctionRef<v
     return mail;
 }
 
-
 bool PostMail(const char *to, const smtp_MailContent &content)
 {
     BlockAllocator temp_alloc;
