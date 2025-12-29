@@ -12,6 +12,7 @@ const CHANNEL_NAME = 'ludivine';
 window.addEventListener('load', e => {
     initPicture();
     initCards();
+    initRandomizers();
 });
 
 function initPicture() {
@@ -168,29 +169,6 @@ function activateCard(cards, active) {
     }
 }
 
-function randomCard(cards) {
-    if (!Array.isArray(cards)) {
-        if (typeof cards == 'string')
-            cards = document.querySelector(cards);
-        if (!(cards instanceof NodeList))
-            cards = cards.querySelectorAll('.card');
-        cards = Array.from(cards);
-    }
-
-    let active = cards.findIndex(card => card.classList.contains('active'));
-    let rnd = (parseInt(cards[active].dataset.rnd, 10) + 1) % cards.length;
-    let next = cards.findIndex(card => card.dataset.rnd == rnd);
-
-    if (!rnd) {
-        do {
-            shuffleCards(cards);
-            next = cards.findIndex(card => card.dataset.rnd == rnd);
-        } while (next == active);
-    }
-
-    activateCard(cards, next);
-}
-
 function detectSwipe(el, func) {
     let identifier = null;
     let start = null;
@@ -241,6 +219,30 @@ function detectSwipe(el, func) {
     }, { passive: false });
 }
 
+function initRandomizers() {
+    let buttons = document.querySelectorAll('button.randomize[data-cardset]');
+
+    for (let btn of buttons) {
+        let cards = Array.from(document.querySelector(btn.dataset.cardset).querySelectorAll('.card'));
+        btn.addEventListener('click', e => randomCard(cards));
+    }
+}
+
+function randomCard(cards) {
+    let active = cards.findIndex(card => card.classList.contains('active'));
+    let rnd = (parseInt(cards[active].dataset.rnd, 10) + 1) % cards.length;
+    let next = cards.findIndex(card => card.dataset.rnd == rnd);
+
+    if (!rnd) {
+        do {
+            shuffleCards(cards);
+            next = cards.findIndex(card => card.dataset.rnd == rnd);
+        } while (next == active);
+    }
+
+    activateCard(cards, next);
+}
+
 function isTouchDevice() {
     if (!('ontouchstart' in window))
         return false;
@@ -259,7 +261,5 @@ function offset(start, length, delta) {
 
 export {
     render,
-    html,
-
-    randomCard
+    html
 }

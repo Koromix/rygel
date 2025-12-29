@@ -72,10 +72,5 @@
             </div>
         </div>
     </div>
-    <button id="randomize" style="display: none;" onclick="app.randomCard('.cardset')"><img src="{{ ASSET ../../src/ludivine/assets/ui/dice.webp }}" alt="Choix aléatoire" title="Choix aléatoire" /></button>
+    <button type="button" class="randomize" data-cardset=".cardset"><img src="{{ ASSET ../../src/ludivine/assets/ui/dice.webp }}" alt="Choix aléatoire" title="Choix aléatoire" /></button>
 </div>
-
-<script>
-    let button = document.querySelector('#randomize');
-    button.style.display = 'block';
-</script>

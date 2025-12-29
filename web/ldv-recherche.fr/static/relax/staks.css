@@ -1,0 +1,55 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com> */
+
+@import '../../../../src/staks/src/game.css';
+
+main {
+    display: flex;
+    margin: 0;
+    padding: 0;
+    max-width: none;
+    position: relative;
+}
+
+#game {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+}
+
+.loading {
+    display: flex;
+    position: relative;
+    height: 100%;
+    flex-direction: column;
+}
+.loading > main {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.loading > main::after {
+    position: absolute;
+    content: ' ';
+    display: block;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    border: 12px solid #383838;
+    border-color: #383838 transparent #383838 transparent;
+    animation: spin 1.6s ease-in-out infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+#fatal {
+    padding: 1em;
+}
+
+@media screen and (max-width: 960px) {
+    body:not(.loading) > footer { display: none; }
+}

@@ -69,6 +69,8 @@
     .cardset > .arrows { display: none; }
 }
 
+.nojs .randomize { display: none; }
+
 .tileset {
     display: flex;
     flex-wrap: wrap;
