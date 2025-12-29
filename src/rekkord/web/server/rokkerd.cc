@@ -411,7 +411,7 @@ static void HandleRequest(http_IO *io)
         Span<const char> path = request.path;
         Span<const char> ext = GetPathExtension(path);
 
-        if (path == "/" || !ext.len) {
+        if (path == "/" || ext == "" || ext == ".html") {
             AssetInfo index = *asset_index;
 
             Span<const char> nonce = Fmt(io->Allocator(), "%1", FmtRandom(16));
