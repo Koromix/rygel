@@ -1296,7 +1296,7 @@ For help about those commands, type: %!..+%1 command --help%!0)"),
 
 int Main(int argc, char **argv)
 {
-    InitLocales(TranslationTables);
+    InitLocales(TranslationTables, "en");
 
     // Handle help and version arguments
     if (argc >= 2) {

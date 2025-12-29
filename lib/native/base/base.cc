@@ -9265,12 +9265,14 @@ static HeapArray<TranslationTable> i18n_tables;
 static NoDestroy<HeapArray<TranslationMap>> i18n_maps;
 static HashMap<Span<const char> , const TranslationTable *> i18n_locales;
 
-static const TranslationMap *i18n_default;
-static thread_local const TranslationMap *i18n_thread = i18n_default;
+static const TranslationTable *i18n_default_table;
+static const TranslationMap *i18n_default_map;
+static thread_local const TranslationTable *i18n_thread_table = i18n_default_table;
+static thread_local const TranslationMap *i18n_thread_map = i18n_default_map;
 
-static void SetDefaultLocale()
+static void SetDefaultLocale(const char *default_lang)
 {
-    if (i18n_default)
+    if (i18n_default_table)
         return;
 
     // Obey environment settings, even on Windows, for easy override
@@ -9283,9 +9285,11 @@ static void SetDefaultLocale()
 
             if (env) {
                 ChangeThreadLocale(env);
-                i18n_default = i18n_thread;
 
-                if (i18n_default)
+                i18n_default_table = i18n_thread_table;
+                i18n_default_map = i18n_thread_map;
+
+                if (i18n_default_table)
                     return;
             }
         }
@@ -9303,9 +9307,11 @@ static void SetDefaultLocale()
                 ConvertWin32WideToUtf8(buffer, lang);
 
                 ChangeThreadLocale(lang);
-                i18n_default = i18n_thread;
 
-                if (i18n_default)
+                i18n_default_table = i18n_thread_table;
+                i18n_default_map = i18n_thread_map;
+
+                if (i18n_default_table)
                     return;
             }
         } else {
@@ -9313,9 +9319,15 @@ static void SetDefaultLocale()
         }
     }
 #endif
+
+    ChangeThreadLocale(default_lang);
+    K_CRITICAL(i18n_thread_table, "Missing default locale");
+
+    i18n_default_table = i18n_thread_table;
+    i18n_default_map = i18n_thread_map;
 }
 
-void InitLocales(Span<const TranslationTable> tables)
+void InitLocales(Span<const TranslationTable> tables, const char *default_lang)
 {
     K_ASSERT(!i18n_tables.len);
 
@@ -9332,7 +9344,7 @@ void InitLocales(Span<const TranslationTable> tables)
         i18n_locales.Set(table.language, &table);
     }
 
-    SetDefaultLocale();
+    SetDefaultLocale(default_lang);
 }
 
 void ChangeThreadLocale(const char *name)
@@ -9342,18 +9354,27 @@ void ChangeThreadLocale(const char *name)
 
     if (table) {
         Size idx = table - i18n_tables.ptr;
-        i18n_thread = &(*i18n_maps)[idx];
+
+        i18n_thread_table = table;
+        i18n_thread_map = &(*i18n_maps)[idx];
     } else {
-        i18n_thread = i18n_default;
+        i18n_thread_table = i18n_default_table;
+        i18n_thread_map = i18n_default_map;
     }
+}
+
+const char *GetThreadLocale()
+{
+    K_ASSERT(i18n_thread_table);
+    return i18n_thread_table->language;
 }
 
 const char *T(const char *key)
 {
-    if (!i18n_thread)
+    if (!i18n_thread_map)
         return key;
 
-    return i18n_thread->FindValue(key, key);
+    return i18n_thread_map->FindValue(key, key);
 }
 
 // ------------------------------------------------------------------------

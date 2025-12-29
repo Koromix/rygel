@@ -673,7 +673,7 @@ Other commands:
 
 int Main(int argc, char **argv)
 {
-    InitLocales(TranslationTables);
+    InitLocales(TranslationTables, "en");
 
     // Handle help and version arguments
     if (argc >= 2) {

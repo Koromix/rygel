@@ -5572,10 +5572,11 @@ struct TranslationTable {
 
 extern "C" const Span<const TranslationTable> TranslationTables;
 
-void InitLocales(Span<const TranslationTable> tables);
+void InitLocales(Span<const TranslationTable> tables, const char *default_lang);
 
 // Resets the locale to the process default if lang is NULL or is unknown
 void ChangeThreadLocale(const char *name);
+const char *GetThreadLocale();
 
 // ------------------------------------------------------------------------
 // Options

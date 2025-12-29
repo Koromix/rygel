@@ -81,7 +81,7 @@ bool HandleCommonOption(OptionParser &opt, bool ignore_unknown)
 
 int Main(int argc, char **argv)
 {
-    InitLocales(TranslationTables);
+    InitLocales(TranslationTables, "en");
 
     BlockAllocator temp_alloc;
 

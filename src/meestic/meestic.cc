@@ -522,7 +522,7 @@ Be careful, color names and most options are %!..+case-sensitive%!0.)"), FelixTa
 
 int Main(int argc, char **argv)
 {
-    InitLocales(TranslationTables);
+    InitLocales(TranslationTables, "en");
 
     // Handle help and version arguments
     if (argc >= 2) {

@@ -126,7 +126,7 @@ static void UpdateTray()
 
 int Main(int argc, char **argv)
 {
-    InitLocales(TranslationTables);
+    InitLocales(TranslationTables, "en");
 
     BlockAllocator temp_alloc;
 
