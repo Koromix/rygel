@@ -223,7 +223,7 @@ async function runLogin() {
             await App.confirm(code);
         }
     } else {
-        go('/');
+        App.go('/');
     }
 }
 
@@ -236,7 +236,7 @@ async function runOidc() {
     if (code == null || state == null) {
         console.error('Missing OIDC callback parameters');
 
-        go('/');
+        App.go('/');
         return;
     }
 
