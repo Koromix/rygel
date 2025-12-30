@@ -270,6 +270,21 @@ static void InitAssets()
     K_ASSERT(asset_css);
 }
 
+static void AttachFile(http_IO *io, const char *filename, int64_t max_age, const char *etag)
+{
+    const http_RequestInfo &request = io->Request();
+    const char *client_etag = request.GetHeaderValue("If-None-Match");
+
+    if (client_etag && TestStr(client_etag, etag)) {
+        io->SendEmpty(304);
+    } else {
+        const char *mimetype = GetMimeType(GetPathExtension(filename));
+
+        io->AddCachingHeaders(max_age, etag);
+        io->SendFile(200, filename, mimetype);
+    }
+}
+
 static void AttachStatic(http_IO *io, const AssetInfo &asset, int64_t max_age, const char *etag)
 {
     const http_RequestInfo &request = io->Request();
@@ -363,10 +378,9 @@ static void HandleRequest(http_IO *io)
         }
 
         if (exists) {
-            Span<const char> extension = GetPathExtension(filename);
-            const char *mimetype = GetMimeType(extension);
+            int64_t max_age = StartsWith(url, "/static/") ? (28ll * 86400000) : 0;
+            AttachFile(io, filename, max_age, shared_etag);
 
-            io->SendFile(200, filename, mimetype);
             return;
         }
     }
