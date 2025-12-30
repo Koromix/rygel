@@ -240,7 +240,25 @@ async function runOidc() {
         return;
     }
 
-    await App.oidc(code, state);
+    try {
+        await App.oidc(code, state);
+    } catch (err) {
+        if (err.status != 409)
+            throw err;
+
+        UI.main(html`
+            <div class="tabbar">
+                <a class="active">${T.account_link}</a>
+            </div>
+
+            <div class="tab" style="align-items: center;">
+                <div class="header">${T.account_link}</div>
+                <div>
+                    <p>${err.message}</p>
+                </div>
+            </div>
+        `);
+    }
 }
 
 async function runRecover() {
