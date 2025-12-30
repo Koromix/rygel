@@ -436,8 +436,6 @@ async function changePicture() {
             session.picture = json.picture;
         }
     });
-
-    await run({}, false);
 }
 
 async function configureSecurity() {
