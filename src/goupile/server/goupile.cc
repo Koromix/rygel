@@ -549,7 +549,7 @@ static void HandleAdminRequest(http_IO *io)
         HandleUserList(io);
     } else if (url == "/api/send/mail" && method == http_RequestMethod::Post) {
         HandleSendMail(io, nullptr);
-    } else if (TestStr(url, "/api/send/sms") && method == http_RequestMethod::Post) {
+    } else if (url == "/api/send/sms" && method == http_RequestMethod::Post) {
         HandleSendSMS(io, nullptr);
 #if !defined(_WIN32)
     } else if (url == "/api/process/exit" && method == http_RequestMethod::Post) {
