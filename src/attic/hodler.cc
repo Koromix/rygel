@@ -197,6 +197,24 @@ static const char *TextToID(Span<const char> text, char replace_char, Allocator 
     return id.ptr;
 }
 
+static bool ShouldCompressFile(const char *filename)
+{
+    const char *mimetype = GetMimeType(GetPathExtension(filename));
+
+    if (StartsWith(mimetype, "text/"))
+        return true;
+    if (TestStr(mimetype, "application/javascript"))
+        return true;
+    if (TestStr(mimetype, "application/json"))
+        return true;
+    if (TestStr(mimetype, "application/xml"))
+        return true;
+    if (TestStr(mimetype, "image/svg+xml"))
+        return true;
+
+    return false;
+}
+
 static const char *FindEsbuild(const char *path, Allocator *alloc)
 {
     // Try environment first
@@ -454,7 +472,7 @@ static bool BundleScript(const AssetBundle &bundle, const char *esbuild_binary, 
         }
 
         // Precompress file
-        if (gzip) {
+        if (gzip && ShouldCompressFile(obj.dest_filename)) {
             reader.Rewind();
             StreamWriter writer(gzip_filename, (int)StreamWriterFlag::Atomic, CompressionType::Gzip);
 
@@ -862,24 +880,6 @@ static bool SpliceWithChecksum(StreamReader *reader, StreamWriter *writer, uint8
     crypto_hash_sha256_final(&state, out_hash);
 
     return true;
-}
-
-static bool ShouldCompressFile(const char *filename)
-{
-    const char *mimetype = GetMimeType(GetPathExtension(filename));
-
-    if (StartsWith(mimetype, "text/"))
-        return true;
-    if (TestStr(mimetype, "application/javascript"))
-        return true;
-    if (TestStr(mimetype, "application/json"))
-        return true;
-    if (TestStr(mimetype, "application/xml"))
-        return true;
-    if (TestStr(mimetype, "image/svg+xml"))
-        return true;
-
-    return false;
 }
 
 static bool BuildAll(Span<const char> source_dir, const BuildSettings &build, const char *output_dir)
