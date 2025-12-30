@@ -7,7 +7,7 @@
 
 namespace K {
 
-const int DatabaseVersion = 29;
+const int DatabaseVersion = 30;
 
 int GetDatabaseVersion(sq_Database *db)
 {
@@ -636,9 +636,17 @@ bool MigrateDatabase(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 29: {
+                bool success = db->RunMany(R"(
+                    CREATE UNIQUE INDEX tokens_t ON tokens (token);
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            static_assert(DatabaseVersion == 29);
+            static_assert(DatabaseVersion == 30);
         }
 
         if (!db->Run("INSERT INTO migrations (version, build, timestamp) VALUES (?, ?, ?)",
