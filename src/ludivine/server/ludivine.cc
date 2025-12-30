@@ -270,33 +270,17 @@ static void InitAssets()
     K_ASSERT(asset_css);
 }
 
-static void AttachFile(http_IO *io, const char *filename, int64_t max_age, const char *etag)
+static bool HandleCache(http_IO *io, int64_t max_age, const char *etag)
 {
     const http_RequestInfo &request = io->Request();
     const char *client_etag = request.GetHeaderValue("If-None-Match");
 
     if (client_etag && TestStr(client_etag, etag)) {
         io->SendEmpty(304);
+        return true;
     } else {
-        const char *mimetype = GetMimeType(GetPathExtension(filename));
-
         io->AddCachingHeaders(max_age, etag);
-        io->SendFile(200, filename, mimetype);
-    }
-}
-
-static void AttachStatic(http_IO *io, const AssetInfo &asset, int64_t max_age, const char *etag)
-{
-    const http_RequestInfo &request = io->Request();
-    const char *client_etag = request.GetHeaderValue("If-None-Match");
-
-    if (client_etag && TestStr(client_etag, etag)) {
-        io->SendEmpty(304);
-    } else {
-        const char *mimetype = GetMimeType(GetPathExtension(asset.name));
-
-        io->AddCachingHeaders(max_age, etag);
-        io->SendAsset(200, asset.data, mimetype, asset.compression_type);
+        return false;
     }
 }
 
@@ -362,24 +346,71 @@ static void HandleRequest(http_IO *io)
 
     // External static asset?
     if (config.static_directory) {
-        const char *filename = nullptr;
+        Span<const char> filename = {};
 
         if (url == "/") {
-            filename = Fmt(io->Allocator(), "%1/index.html", config.static_directory).ptr;
+            filename = Fmt(io->Allocator(), "%1/index.html", config.static_directory);
         } else {
-            filename = Fmt(io->Allocator(), "%1%2", config.static_directory, request.path).ptr;
+            filename = Fmt(io->Allocator(), "%1%2", config.static_directory, request.path);
         }
 
-        bool exists = TestFile(filename);
+        bool exists = TestFile(filename.ptr);
 
         if (!exists && !strchr(request.path + 1, '/') && !strchr(request.path + 1, '.')) {
-            filename = Fmt(io->Allocator(), "%1.html", filename).ptr;
-            exists = TestFile(filename);
+            filename = Fmt(io->Allocator(), "%1.html", filename);
+            exists = TestFile(filename.ptr);
         }
+
+        Span<const char> ext = GetPathExtension(filename);
 
         if (exists) {
             int64_t max_age = StartsWith(url, "/static/") ? (28ll * 86400000) : 0;
-            AttachFile(io, filename, max_age, shared_etag);
+            const char *mimetype = GetMimeType(ext);
+
+            if (HandleCache(io, max_age, shared_etag))
+                return;
+
+            if (ext == ".html") {
+                io->AddHeader("Content-Security-Policy", "base-uri 'none'; "
+                                                         "default-src 'self'; "
+                                                         "script-src 'self'; "
+                                                         "style-src 'self' 'unsafe-inline'; "
+                                                         "style-src-elem 'self'; "
+                                                         "style-src-attr 'self' 'unsafe-inline'; "
+                                                         "frame-ancestors 'none'; "
+                                                         "form-action 'none'");
+                io->AddHeader("X-Content-Type-Options", "nosniff");
+                io->AddHeader("X-Frame-Options", "DENY");
+            }
+
+            if (config.static_gzip || config.static_brotli) {
+                const char *accept_str = request.GetHeaderValue("Accept-Encoding");
+                uint32_t encodings = http_ParseAcceptableEncodings(accept_str);
+
+                if (config.static_brotli && (encodings & (1u << (int)CompressionType::Brotli))) {
+                    const char *brotli_filename = Fmt(io->Allocator(), "%1.br", filename).ptr;
+
+                    if (TestFile(brotli_filename)) {
+                        io->AddEncodingHeader(CompressionType::Brotli);
+                        io->SendFile(200, brotli_filename, mimetype);
+
+                        return;
+                    }
+                }
+
+                if (config.static_gzip && (encodings & (1u << (int)CompressionType::Gzip))) {
+                    const char *gzip_filename = Fmt(io->Allocator(), "%1.gz", filename).ptr;
+
+                    if (TestFile(gzip_filename)) {
+                        io->AddEncodingHeader(CompressionType::Gzip);
+                        io->SendFile(200, gzip_filename, mimetype);
+
+                        return;
+                    }
+                }
+            }
+
+            io->SendFile(200, filename.ptr, mimetype);
 
             return;
         }
@@ -463,7 +494,11 @@ static void HandleRequest(http_IO *io)
 
             if (asset) {
                 int64_t max_age = StartsWith(url, "/static/") ? (28ll * 86400000) : 0;
-                AttachStatic(io, *asset, max_age, shared_etag);
+                const char *mimetype = GetMimeType(GetPathExtension(asset->name));
+
+                if (HandleCache(io, max_age, shared_etag))
+                    return;
+                io->SendAsset(200, asset->data, mimetype, asset->compression_type);
 
                 return;
             }

@@ -83,8 +83,6 @@ bool LoadConfig(StreamReader *st, Config *out_config)
                         config.vault_directory = NormalizePath(prop.value, data_directory, &config.str_alloc).ptr;
                     } else if (prop.key == "TempDirectory") {
                         config.tmp_directory = NormalizePath(prop.value, data_directory, &config.str_alloc).ptr;
-                    } else if (prop.key == "StaticDirectory") {
-                        config.static_directory = NormalizePath(prop.value, data_directory, &config.str_alloc).ptr;
                     } else {
                         LogError("Unknown attribute '%1'", prop.key);
                         valid = false;
@@ -92,6 +90,17 @@ bool LoadConfig(StreamReader *st, Config *out_config)
 
                     first = false;
                 } while (ini.NextInSection(&prop));
+            } else if (prop.section == "Static") {
+                if (prop.key == "StaticDirectory") {
+                    config.static_directory = NormalizePath(prop.value, data_directory, &config.str_alloc).ptr;
+                } else if (prop.key == "AutoGzip") {
+                    valid &= ParseBool(prop.value, &config.static_gzip);
+                } else if (prop.key == "AutoBrotli") {
+                    valid &= ParseBool(prop.value, &config.static_brotli);
+                } else {
+                    LogError("Unknown attribute '%1'", prop.key);
+                    valid = false;
+                }
             } else if (prop.section == "HTTP") {
                 valid &= config.http.SetProperty(prop.key.ptr, prop.value.ptr, root_directory);
             } else if (prop.section == "SMTP") {
