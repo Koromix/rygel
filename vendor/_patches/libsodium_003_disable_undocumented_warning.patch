@@ -1,15 +1,15 @@
 diff --git a/vendor/libsodium/src/libsodium/include/sodium/private/common.h b/vendor/libsodium/src/libsodium/include/sodium/private/common.h
-index 74529bb9b..c68392a37 100644
+index b1a9f6534..3bfbe5162 100644
 --- a/vendor/libsodium/src/libsodium/include/sodium/private/common.h
 +++ b/vendor/libsodium/src/libsodium/include/sodium/private/common.h
 @@ -10,12 +10,6 @@
- # warning Alternatively, use the "stable" branch in the git repository.
+ # warning *** Alternatively, use the "stable" branch in the git repository.
  #endif
  
 -#if !defined(_MSC_VER) && (!defined(CONFIGURED) || CONFIGURED != 1)
 -# warning *** The library is being compiled using an undocumented method.
--# warning This is not supported. It has not been tested, it might not
--# warning work as expected, and performance is likely to be suboptimal.
+-# warning *** This is not supported. It has not been tested, it might not
+-# warning *** work as expected, and performance is likely to be suboptimal.
 -#endif
 -
  #include <stdint.h>
