@@ -488,6 +488,8 @@ async function configureSecurity() {
 
     await UI.dialog({
         run: (render, close) => {
+            let can_dissociate = security.password || (security.identities.reduce((acc, identity) => acc + identity.allowed, 0) > 1);
+
             return html`
                 <div class="title">
                     ${T.account_security}
@@ -593,10 +595,12 @@ async function configureSecurity() {
                                                     ${identity?.allowed === false ? html`<span class="sub">(${T.pending.toLowerCase()})</span>` : ''}
                                                 </td>
                                                 <td class="center">
-                                                    ${identity != null ? html`
+                                                    ${identity != null && !can_dissociate ? T.allowed : ''}
+                                                    ${identity != null && can_dissociate ? html`
                                                         <button type="button" class="danger small"
                                                                 @click=${UI.wrap(e => delete_identity(identity.id))}>${T.dissociate}</button>
                                                     ` : ''}
+                                                    ${identity == null ? html`<span class="sub">${T.not_used}</span>` : ''}
                                                 </td>
                                             </tr>
                                         `;
