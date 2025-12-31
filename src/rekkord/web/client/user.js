@@ -10,6 +10,11 @@ import { PictureCropper } from './picture.js';
 import { ASSETS } from '../assets/assets.js';
 
 async function runRegister() {
+    if (!ENV.auth.internal) {
+        App.go('/login');
+        return;
+    }
+
     UI.main(html`
         <div class="tabbar">
             <a class="active">${T.new_account}</a>
@@ -62,6 +67,11 @@ async function runRegister() {
 }
 
 async function runFinalize() {
+    if (!ENV.auth.internal) {
+        App.go('/login');
+        return;
+    }
+
     let error = T.message(`Missing token`);
     let token = null;
 
@@ -147,23 +157,25 @@ async function runLogin() {
                 <div class="header">${T.format(T.login_to_x, ENV.title)}</div>
 
                 <div class="columns">
-                    <form style="text-align: center;" @submit=${UI.wrap(submit)}>
-                        <label>
-                            <input type="text" name="mail" style="width: 20em;" placeholder=${T.mail_address.toLowerCase()} />
-                        </label>
-                        <label>
-                            <input type="password" name="password" style="width: 20em;" placeholder=${T.password.toLowerCase()} />
-                        </label>
-                        <div class="actions">
-                            <button type="submit">${T.login}</button>
-                            <a href="/register">${T.maybe_create_account}</a>
-                            <a href="/recover">${T.maybe_lost_password}</a>
-                        </div>
-                    </form>
+                    ${ENV.auth.internal ? html`
+                        <form style="text-align: center;" @submit=${UI.wrap(submit)}>
+                            <label>
+                                <input type="text" name="mail" style="width: 20em;" placeholder=${T.mail_address.toLowerCase()} />
+                            </label>
+                            <label>
+                                <input type="password" name="password" style="width: 20em;" placeholder=${T.password.toLowerCase()} />
+                            </label>
+                            <div class="actions">
+                                <button type="submit">${T.login}</button>
+                                <a href="/register">${T.maybe_create_account}</a>
+                                <a href="/recover">${T.maybe_lost_password}</a>
+                            </div>
+                        </form>
+                    ` : ''}
 
                     ${ENV.auth.providers.length ? html`
                         <div>
-                            <p class="sub" style="text-align: center;">${T.you_can_login_with}</p>
+                            ${ENV.auth.internal ? html`<p class="sub" style="text-align: center;">${T.you_can_login_with}</p>` : ''}
 
                             <div class="actions vertical">
                                 ${ENV.auth.providers.map(provider =>
@@ -262,6 +274,11 @@ async function runOidc() {
 }
 
 async function runRecover() {
+    if (!ENV.auth.internal) {
+        App.go('/login');
+        return;
+    }
+
     UI.main(html`
         <div class="tabbar">
             <a class="active">${T.recover_account}</a>
@@ -298,6 +315,11 @@ async function runRecover() {
 }
 
 async function runReset() {
+    if (!ENV.auth.internal) {
+        App.go('/login');
+        return;
+    }
+
     let error = T.message(`Missing token`);
     let token = null;
 
@@ -462,7 +484,7 @@ async function configureSecurity() {
     let tab = security.password ? 'password' : 'identities';
 
     let enable_totp = !security.totp;
-    let totp = await Net.post('/api/totp/secret');
+    let totp = ENV.auth.internal ? await Net.post('/api/totp/secret') : null;
 
     await UI.dialog({
         run: (render, close) => {
@@ -482,7 +504,7 @@ async function configureSecurity() {
                         ` : ''}
                         ${!security.password ? html`
                             <a class=${tab == 'identities' ? 'active' : '' } @click=${e => { tab = 'identities'; render(); }}>${T.external_identities}</a>
-                            <a class=${tab == 'password' ? 'active' : '' } @click=${e => { tab = 'password'; render(); }}>${T.password}</a>
+                            ${ENV.auth.internal ? html`<a class=${tab == 'password' ? 'active' : '' } @click=${e => { tab = 'password'; render(); }}>${T.password}</a>` : ''}
                         ` : ''}
                     </div>
 

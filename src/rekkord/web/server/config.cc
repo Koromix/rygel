@@ -22,6 +22,11 @@ bool Config::Validate() const
     valid &= http.Validate();
     valid &= smtp.Validate();
 
+    if (!internal_auth && !oidc_providers.len) {
+        LogError("Cannot disable internal auth if no SSO provider is configured");
+        valid = false;
+    }
+
     for (const oidc_Provider &provider: oidc_providers) {
         valid &= provider.Validate();
     }
@@ -108,6 +113,13 @@ bool LoadConfig(StreamReader *st, Config *out_config)
                     config.smtp.password = DuplicateString(prop.value, &config.str_alloc).ptr;
                 } else if (prop.key == "From") {
                     config.smtp.from = DuplicateString(prop.value, &config.str_alloc).ptr;
+                } else {
+                    LogError("Unknown attribute '%1'", prop.key);
+                    valid = false;
+                }
+            } else if (prop.section == "Authentication") {
+                if (prop.key == "AllowInternal") {
+                    valid &= ParseBool(prop.value, &config.internal_auth);
                 } else {
                     LogError("Unknown attribute '%1'", prop.key);
                     valid = false;

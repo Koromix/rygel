@@ -447,6 +447,7 @@ static void HandleRequest(http_IO *io)
                     json.Key("url"); json.String(config.url);
 
                     json.Key("auth"); json.StartObject();
+                    json.Key("internal"); json.Bool(config.internal_auth);
                     json.Key("providers"); json.StartArray();
                     for (const oidc_Provider &provider: config.oidc_providers) {
                         json.StartObject();

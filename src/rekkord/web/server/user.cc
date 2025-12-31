@@ -380,6 +380,12 @@ void HandleSessionPing(http_IO *io)
 
 void HandleUserRegister(http_IO *io)
 {
+    if (!config.internal_auth) {
+        LogError("Internal authentication is disabled");
+        io->SendError(403);
+        return;
+    }
+
     const char *mail = nullptr;
     {
         bool success = http_ParseJson(io, Kibibytes(1), [&](json_Parser *json) {
@@ -463,6 +469,12 @@ void HandleUserRegister(http_IO *io)
 
 void HandleUserLogin(http_IO *io)
 {
+    if (!config.internal_auth) {
+        LogError("Internal authentication is disabled");
+        io->SendError(403);
+        return;
+    }
+
     const http_RequestInfo &request = io->Request();
 
     const char *mail = nullptr;
@@ -549,6 +561,12 @@ void HandleUserLogin(http_IO *io)
 
 void HandleUserRecover(http_IO *io)
 {
+    if (!config.internal_auth) {
+        LogError("Internal authentication is disabled");
+        io->SendError(403);
+        return;
+    }
+
     const http_RequestInfo &request = io->Request();
     RetainPtr<const SessionInfo> session = GetNormalSession(io);
 
@@ -649,6 +667,12 @@ void HandleUserLogout(http_IO *io)
 
 void HandleUserReset(http_IO *io)
 {
+    if (!config.internal_auth) {
+        LogError("Internal authentication is disabled");
+        io->SendError(403);
+        return;
+    }
+
     const char *token = nullptr;
     const char *password = nullptr;
     {
@@ -747,6 +771,12 @@ invalid:
 
 void HandleUserPassword(http_IO *io)
 {
+    if (!config.internal_auth) {
+        LogError("Internal authentication is disabled");
+        io->SendError(403);
+        return;
+    }
+
     RetainPtr<const SessionInfo> session = GetNormalSession(io);
 
     if (!session) {
@@ -884,6 +914,11 @@ void HandleUserSecurity(http_IO *io)
         mail = DuplicateString((const char *)sqlite3_column_text(stmt, 0), io->Allocator()).ptr;
         has_password = sqlite3_column_int(stmt, 1);
         has_totp = sqlite3_column_int(stmt, 2);
+    }
+
+    if (!config.internal_auth) {
+        has_password = false;
+        has_totp = false;
     }
 
     sq_Statement stmt;
@@ -1366,6 +1401,12 @@ static bool CheckTotp(http_IO *io, int64_t userid, const char *secret, const cha
 
 void HandleTotpConfirm(http_IO *io)
 {
+    if (!config.internal_auth) {
+        LogError("Internal authentication is disabled");
+        io->SendError(403);
+        return;
+    }
+
     RetainPtr<SessionInfo> session = sessions.Find(io);
 
     if (!session) {
@@ -1430,6 +1471,12 @@ void HandleTotpConfirm(http_IO *io)
 
 void HandleTotpSecret(http_IO *io)
 {
+    if (!config.internal_auth) {
+        LogError("Internal authentication is disabled");
+        io->SendError(403);
+        return;
+    }
+
     RetainPtr<SessionInfo> session = GetNormalSession(io);
 
     if (!session) {
@@ -1481,6 +1528,12 @@ void HandleTotpSecret(http_IO *io)
 
 void HandleTotpChange(http_IO *io)
 {
+    if (!config.internal_auth) {
+        LogError("Internal authentication is disabled");
+        io->SendError(403);
+        return;
+    }
+
     RetainPtr<SessionInfo> session = GetNormalSession(io);
 
     if (!session) {
@@ -1576,6 +1629,12 @@ void HandleTotpChange(http_IO *io)
 
 void HandleTotpDisable(http_IO *io)
 {
+    if (!config.internal_auth) {
+        LogError("Internal authentication is disabled");
+        io->SendError(403);
+        return;
+    }
+
     RetainPtr<SessionInfo> session = GetNormalSession(io);
 
     if (!session) {

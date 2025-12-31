@@ -289,7 +289,7 @@ function renderApp(el) {
                     <img class="picture" src=${`/pictures/${session.userid}?v=${session.picture}`} alt="" />
                 ` : ''}
                 ${!isLogged() ? html`
-                    <li><a href="/register" class=${route.mode == 'register' ? 'active' : ''}>${T.register}</a></li>
+                    ${ENV.auth.internal ? html`<li><a href="/register" class=${route.mode == 'register' ? 'active' : ''}>${T.register}</a></li>` : ''}
                     <li><a href="/repositories" class=${route.mode != 'register' ? 'active' : ''}>${T.login}</a></li>
                 ` : ''}
             </menu>
