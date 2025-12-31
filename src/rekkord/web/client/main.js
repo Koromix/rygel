@@ -111,6 +111,13 @@ async function start() {
 
     await go(window.location.href, false);
 
+    if (session == null && !ENV.auth.internal && ENV.auth.providers.length == 1) {
+        let provider = ENV.auth.providers[0];
+        await sso(provider.issuer, window.location.pathname);
+
+        return;
+    }
+
     UI.main();
     document.body.classList.remove('loading');
 }
