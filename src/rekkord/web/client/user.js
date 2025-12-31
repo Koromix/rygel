@@ -29,12 +29,12 @@ async function runRegister() {
                     </div>
                 </form>
 
-                ${ENV.sso.length ? html`
+                ${ENV.auth.providers.length ? html`
                     <div>
                         <p class="sub" style="text-align: center;">${T.you_can_login_with}</p>
 
                         <div class="actions vertical">
-                            ${ENV.sso.map(provider =>
+                            ${ENV.auth.providers.map(provider =>
                                 html`<button type="button" @click=${UI.wrap(e => App.sso(provider.issuer, '/'))}>${T.format(T.login_with_x, provider.title)}</button>`)}
                         </div>
                     </div>
@@ -161,12 +161,12 @@ async function runLogin() {
                         </div>
                     </form>
 
-                    ${ENV.sso.length ? html`
+                    ${ENV.auth.providers.length ? html`
                         <div>
                             <p class="sub" style="text-align: center;">${T.you_can_login_with}</p>
 
                             <div class="actions vertical">
-                                ${ENV.sso.map(provider =>
+                                ${ENV.auth.providers.map(provider =>
                                     html`<button type="button" @click=${UI.wrap(e => App.sso(provider.issuer, window.location.pathname))}>${T.format(T.login_with_x, provider.title)}</button>`)}
                             </div>
                         </div>
@@ -385,7 +385,7 @@ async function runLink() {
         throw new Error(T.message(`Missing token`));
 
     let link = await Net.post('/api/sso/link', { token: token });
-    let provider = ENV.sso.find(provider => provider.issuer == link.issuer);
+    let provider = ENV.auth.providers.find(provider => provider.issuer == link.issuer);
 
     UI.main(html`
         <div class="tabbar">
@@ -478,7 +478,7 @@ async function configureSecurity() {
                         ${security.password ? html`
                             <a class=${tab == 'password' ? 'active' : '' } @click=${e => { tab = 'password'; render(); }}>${T.password}</a>
                             <a class=${tab == 'totp' ? 'active' : '' } @click=${e => { tab = 'totp'; render(); }}>${T.two_factor_authentication}</a>
-                            ${ENV.sso.length ? html`<a class=${tab == 'identities' ? 'active' : '' } @click=${e => { tab = 'identities'; render(); }}>${T.external_identities}</a>` : ''}
+                            ${ENV.auth.providers.length ? html`<a class=${tab == 'identities' ? 'active' : '' } @click=${e => { tab = 'identities'; render(); }}>${T.external_identities}</a>` : ''}
                         ` : ''}
                         ${!security.password ? html`
                             <a class=${tab == 'identities' ? 'active' : '' } @click=${e => { tab = 'identities'; render(); }}>${T.external_identities}</a>
@@ -552,32 +552,33 @@ async function configureSecurity() {
                             <table style="table-layout: fixed;">
                                 <colgroup>
                                     <col style="width: 200px;"/>
-                                    <col style="width: 80px;"/>
-                                    <col style="width: 60px;"/>
+                                    <col style="width: 100px;"/>
                                 </colgroup>
                                 <thead>
                                     <tr>
                                         <th>${T.provider}</th>
-                                        <th>${T.allowed}</th>
-                                        <th></th>
+                                        <th>${T.status}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    ${security.identities.map(identity => {
-                                        let provider = ENV.sso.find(provider => provider.issuer == identity.issuer);
+                                    ${ENV.auth.providers.map(provider => {
+                                        let identity = security.identities.find(identity => identity.issuer == provider.issuer);
 
                                         return html`
                                             <tr>
-                                                <td>${provider.title}</td>
-                                                <td>${identity.allowed ? T.yes : T.no}</td>
+                                                <td>
+                                                    ${provider.title}
+                                                    ${identity?.allowed === false ? html`<span class="sub">(${T.pending.toLowerCase()})</span>` : ''}
+                                                </td>
                                                 <td class="center">
-                                                    <button type="button" class="small"
-                                                            @click=${UI.insist(e => delete_identity(identity.id))}><img src=${ASSETS['ui/delete']} alt=${T.delete} /></button>
+                                                    ${identity != null ? html`
+                                                        <button type="button" class="danger small"
+                                                                @click=${UI.wrap(e => delete_identity(identity.id))}>${T.dissociate}</button>
+                                                    ` : ''}
                                                 </td>
                                             </tr>
                                         `;
                                     })}
-                                    ${!security.identities.length ? html`<tr><td colspan="3" style="text-align: center;">${T.no_external_identity}</td></tr>` : ''}
                                 </tbody>
                             </table>
                         ` : ''}
@@ -593,6 +594,15 @@ async function configureSecurity() {
             `;
 
             async function delete_identity(id) {
+                await UI.dialog((render, close) => html`
+                    <div class="title">${T.dissociate}</div>
+                    <div class="main">${T.confirm_not_reversible}</div>
+                    <div class="footer">
+                        <button type="button" class="secondary" @click=${UI.wrap(close)}>${T.cancel}</button>
+                        <button type="submit">${T.confirm}</button>
+                    </div>
+                `);
+
                 await Net.post('/api/sso/unlink', { identity: id });
 
                 security = await Net.get('/api/user/security');

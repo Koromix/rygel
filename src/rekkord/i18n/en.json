@@ -54,6 +54,7 @@
         "delete_plan": "Delete plan",
         "delete_repository": "Delete repository",
         "disable_2fa": "Disable two-factor authentification",
+        "dissociate": "Dissociate",
         "drag_paste_or_browse_image": "Drop an image, paste it or use the 'Browse' button below",
         "edit_plan": "Edit plan",
         "edit_repository": "Edit repository",
@@ -89,6 +90,7 @@
         "password": "Password",
         "password_reset_successful": "Your password has been changed, please login to continue.",
         "paths": "Paths",
+        "pending": "Pending",
         "periodic_scans": "Periodic scans",
         "plan": "Plan",
         "plans": "Plans",
@@ -118,6 +120,7 @@
             "zero": "0"
         },
         "snapshot_items": "Snapshot items",
+        "status": "Status",
         "stored": "Stored",
         "success": "Success",
         "tasks": "Tasks",

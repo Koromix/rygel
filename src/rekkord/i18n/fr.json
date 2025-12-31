@@ -54,6 +54,7 @@
         "delete_plan": "Supprimer le plan",
         "delete_repository": "Supprimer le dépôt",
         "disable_2fa": "Désactiver l'authentification à deux facteurs",
+        "dissociate": "Dissocier",
         "drag_paste_or_browse_image": "Déposez une image, copier-collez la ou utilisez le bouton « Parcourir »",
         "edit_plan": "Modifier le plan",
         "edit_repository": "Modifier le dépôt",
@@ -89,6 +90,7 @@
         "password": "Mot de passe",
         "password_reset_successful": "Votre mot de passe a été modifié, veuillez vous connecter pour continuer.",
         "paths": "Chemins",
+        "pending": "En attente",
         "periodic_scans": "Analyses périodiques",
         "plan": "Plan",
         "plans": "Plans",
@@ -118,6 +120,7 @@
             "zero": "0"
         },
         "snapshot_items": "Items de l'instantané",
+        "status": "Statut",
         "stored": "Stockage",
         "success": "Terminé",
         "tasks": "Tâches",

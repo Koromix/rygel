@@ -446,7 +446,8 @@ static void HandleRequest(http_IO *io)
                     json.Key("title"); json.String(config.title);
                     json.Key("url"); json.String(config.url);
 
-                    json.Key("sso"); json.StartArray();
+                    json.Key("auth"); json.StartObject();
+                    json.Key("providers"); json.StartArray();
                     for (const oidc_Provider &provider: config.oidc_providers) {
                         json.StartObject();
 
@@ -456,6 +457,7 @@ static void HandleRequest(http_IO *io)
                         json.EndObject();
                     }
                     json.EndArray();
+                    json.EndObject();
 
                     json.EndObject();
                 } else if (key == "NONCE") {
