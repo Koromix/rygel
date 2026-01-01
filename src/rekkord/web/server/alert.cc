@@ -87,7 +87,7 @@ bool DetectAlerts()
     // Post error alerts
     {
         sq_Statement stmt;
-        if (!db.Prepare(R"(SELECT f.id, u.mail, r.name, f.message, f.resolved
+        if (!db.Prepare(R"(SELECT f.id, u.mail, r.url, f.message, f.resolved
                            FROM failures f
                            INNER JOIN repositories r ON (r.id = f.repository)
                            INNER JOIN users u ON (u.id = r.owner)
@@ -100,15 +100,15 @@ bool DetectAlerts()
             bool success = db.Transaction([&]() {
                 int64_t id = sqlite3_column_int64(stmt, 0);
                 const char *to = (const char *)sqlite3_column_text(stmt, 1);
-                const char *name = (const char *)sqlite3_column_text(stmt, 2);
+                const char *url = (const char *)sqlite3_column_text(stmt, 2);
                 const char *error = (const char *)sqlite3_column_text(stmt, 3);
                 bool unsolved = !sqlite3_column_int(stmt, 4);
 
                 smtp_MailContent content = unsolved ? FailureMessage : FailureResolved;
 
-                content.subject = PatchFailure(content.subject, name, error, &temp_alloc);
-                content.text = PatchFailure(content.text, name, error, &temp_alloc);
-                content.html = PatchFailure(content.html, name, error, &temp_alloc);
+                content.subject = PatchFailure(content.subject, url, error, &temp_alloc);
+                content.text = PatchFailure(content.text, url, error, &temp_alloc);
+                content.html = PatchFailure(content.html, url, error, &temp_alloc);
 
                 if (!PostMail(to, content))
                     return false;
@@ -133,7 +133,7 @@ bool DetectAlerts()
     // Post stale alerts
     {
         sq_Statement stmt;
-        if (!db.Prepare(R"(SELECT s.id, u.mail, r.name, s.channel, s.timestamp, s.resolved
+        if (!db.Prepare(R"(SELECT s.id, u.mail, r.url, s.channel, s.timestamp, s.resolved
                            FROM stales s
                            INNER JOIN repositories r ON (r.id = s.repository)
                            INNER JOIN users u ON (u.id = r.owner)
@@ -146,16 +146,16 @@ bool DetectAlerts()
             bool success = db.Transaction([&]() {
                 int64_t id = sqlite3_column_int64(stmt, 0);
                 const char *to = (const char *)sqlite3_column_text(stmt, 1);
-                const char *name = (const char *)sqlite3_column_text(stmt, 2);
+                const char *url = (const char *)sqlite3_column_text(stmt, 2);
                 const char *channel = (const char *)sqlite3_column_text(stmt, 3);
                 int64_t timestamp = sqlite3_column_int64(stmt, 4);
                 bool unsolved = !sqlite3_column_int(stmt, 5);
 
                 smtp_MailContent content = unsolved ? StaleMessage : StaleResolved;
 
-                content.subject = PatchStale(content.subject, name, channel, timestamp, &temp_alloc);
-                content.text = PatchStale(content.text, name, channel, timestamp, &temp_alloc);
-                content.html = PatchStale(content.html, name, channel, timestamp, &temp_alloc);
+                content.subject = PatchStale(content.subject, url, channel, timestamp, &temp_alloc);
+                content.text = PatchStale(content.text, url, channel, timestamp, &temp_alloc);
+                content.html = PatchStale(content.html, url, channel, timestamp, &temp_alloc);
 
                 if (!PostMail(to, content))
                     return false;
