@@ -467,7 +467,7 @@ async function configureSecurity() {
                 <div class="main">
                     <div class="tabbar">
                         ${security.password ? html`
-                            <a class=${tab == 'password' ? 'active' : '' } @click=${e => { tab = 'password'; render(); }}>${T.password}</a>
+                            <a class=${tab == 'password' ? 'active' : '' } @click=${e => { tab = 'password'; render(); }}>${T.change_password}</a>
                             <a class=${tab == 'totp' ? 'active' : '' } @click=${e => { tab = 'totp'; render(); }}>${T.two_factor_authentication}</a>
                             ${ENV.auth.providers.length ? html`<a class=${tab == 'identities' ? 'active' : '' } @click=${e => { tab = 'identities'; render(); }}>${T.external_identities}</a>` : ''}
                         ` : ''}
@@ -479,7 +479,6 @@ async function configureSecurity() {
 
                     <div class="block">
                         ${tab == 'password' && security.password ? html`
-                            <div class="section">${T.change_password}</div>
                             <label>
                                 <span>${T.new_password}</span>
                                 <input type="password" name="password1" style="width: 20em;" placeholder=${T.new_password.toLowerCase()} />
@@ -487,12 +486,6 @@ async function configureSecurity() {
                             <label>
                                 <span>${T.confirmation}</span>
                                 <input type="password" name="password2" style="width: 20em;" placeholder=${T.confirmation.toLowerCase()} />
-                            </label>
-
-                            <div class="section">${T.confirm_identity}</div>
-                            <label>
-                                <span>${T.current_password}</span>
-                                <input type="password" name="old_password" style="width: 20em;" placeholder=${T.current_password.toLowerCase()} />
                             </label>
                         ` : ''}
                         ${tab == 'password' && !security.password ? html`
@@ -506,7 +499,6 @@ async function configureSecurity() {
 
                         ${tab == 'totp' ? html`
                             ${security.totp ? html`
-                                <div class="section">${T.two_factor_authentication}</div>
                                 <label>
                                     <input type="checkbox" checked @change=${UI.wrap(e => { enable_totp = !e.target.checked; render(); })} />
                                     <span>${T.disable_2fa}</span>
@@ -514,7 +506,6 @@ async function configureSecurity() {
                             ` : ''}
 
                             ${enable_totp ? html`
-                                <div class="section">${T.two_factor_authentication}</div>
                                 <div style="text-align: center;"><img src=${totp.image} alt="" /></div>
                                 <p style="text-align: center; font-size: 0.8em; margin-top: 0;">${totp.secret}</p>
 
@@ -530,16 +521,6 @@ async function configureSecurity() {
 
                                 <p><i>${T.totp_applications}</i></p>
                             ` : ''}
-
-                            <div class="section">${T.confirm_identity}</div>
-                            <p>
-                                ${!security.totp ? T.confirm_to_enable_2fa : ''}
-                                ${security.totp ? T.confirm_to_change_2fa : ''}
-                            </p>
-                            <label>
-                                <span>${T.password}</span>
-                                <input type="password" name="password" style="width: 20em;" placeholder=${T.password.toLowerCase()} />
-                            </label>
                         ` : ''}
 
                         ${tab == 'identities' ? html`
@@ -612,16 +593,15 @@ async function configureSecurity() {
             switch (tab) {
                 case 'password': {
                     if (security.password) {
-                        let old_password = elements.old_password?.value?.trim?.();
                         let password1 = elements.password1.value.trim();
                         let password2 = elements.password2.value.trim();
 
-                        if (security.password && !old_password)
-                            throw new Error(T.message(`Current password is missing`));
                         if (!password1 || !password2)
                             throw new Error(T.message(`New password is missing`));
                         if (password2 != password1)
                             throw new Error(T.message(`Passwords do not match`));
+
+                        let old_password = security.password ? await confirmPassword() : null;
 
                         await Net.post('/api/user/password', {
                             old_password: old_password,
@@ -639,9 +619,11 @@ async function configureSecurity() {
 
                 case 'totp': {
                     if (enable_totp) {
+                        let password = security.password ? await confirmPassword() : null;
+
                         await Net.post('/api/totp/change', {
                             token: totp.token,
-                            password: elements.password.value,
+                            password: password,
                             code: elements.code.value
                         });
                     } else {
@@ -651,6 +633,36 @@ async function configureSecurity() {
             }
         }
     });
+}
+
+async function confirmPassword() {
+    let password = await UI.dialog({
+        run: (render, close) => html`
+            <div class="title">${T.confirm_identity}</div>
+            <div class="main">
+                <p>${T.confirm_identity_with_password}</p>
+                <label>
+                    <span>${T.current_password}</span>
+                    <input type="password" name="password" style="width: 20em;" placeholder=${T.current_password.toLowerCase()} />
+                </label>
+            </div>
+            <div class="footer">
+                <button type="button" class="secondary" @click=${UI.wrap(close)}>${T.cancel}</button>
+                <button type="submit">${T.confirm}</button>
+            </div>
+        `,
+
+        submit: async (elements) => {
+            let password = elements.password.value.trim();
+
+            if (!password)
+                throw new Error(T.message(`Password is missing`));
+
+            return password;
+        }
+    });
+
+    return password;
 }
 
 export {
