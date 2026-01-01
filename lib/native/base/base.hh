@@ -3395,7 +3395,7 @@ public:
 
     constexpr ConstMap(std::initializer_list<Bucket> l)
     {
-        K_CRITICAL(l.size() <= N, "ConstMap<%1> cannot be store %2 values", N, l.size());
+        K_CRITICAL(l.size() <= N, "ConstMap<%1> cannot store %2 values", N, l.size());
 
         for (const Bucket &it: l) {
             Bucket *bucket = Insert(it.key);
