@@ -230,11 +230,9 @@ static RetainPtr<SessionInfo> CreateUserSession(int64_t userid, const char *totp
     session->userid = userid;
 
     if (totp) {
-        session->totp = true;
         session->authorized = false;
         CopyString(totp, session->secret);
     } else {
-        session->totp = false;
         session->authorized = true;
     }
 
@@ -1684,7 +1682,6 @@ void HandleTotpChange(http_IO *io)
 
     if (!db.Run("UPDATE users SET totp = ?2 WHERE id = ?1", session->userid, secret))
         return;
-    session->totp = true;
 
     io->SendText(200, "{}", "application/json");
 }
@@ -1771,7 +1768,6 @@ void HandleTotpDisable(http_IO *io)
 
     if (!db.Run("UPDATE users SET totp = NULL WHERE id = ?1", session->userid))
         return;
-    session->totp = false;
 
     io->SendText(200, "{}", "application/json");
 }

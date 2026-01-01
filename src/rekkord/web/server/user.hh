@@ -14,14 +14,10 @@ struct smtp_Config;
 struct SessionInfo: public RetainObject<SessionInfo> {
     int64_t userid;
 
-    // TOTP
-    std::atomic_bool totp;
     std::atomic_bool authorized;
     char secret[33];
 
-    // User picture
     std::atomic_int picture;
-
     char username[];
 };
 
