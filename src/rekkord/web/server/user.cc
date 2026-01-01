@@ -630,7 +630,7 @@ void HandleUserRecover(http_IO *io)
                            FROM users u
                            LEFT JOIN identities i ON (i.user = u.id)
                            WHERE u.mail = ?1 AND
-                                 (u.id = ?2 OR u.password_hash IS NULL OR i.id IS NULL))",
+                                 (u.id = ?2 OR u.password_hash IS NOT NULL OR i.id IS NULL))",
                         &stmt, mail, session ? session->userid : 0))
             return;
 
