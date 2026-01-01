@@ -618,16 +618,16 @@ async function configureSecurity() {
                 } break;
 
                 case 'totp': {
-                    if (enable_totp) {
-                        let password = security.password ? await confirmPassword() : null;
+                    let password = security.password ? await confirmPassword() : null;
 
+                    if (enable_totp) {
                         await Net.post('/api/totp/change', {
                             token: totp.token,
                             password: password,
                             code: elements.code.value
                         });
                     } else {
-                        await Net.post('/api/totp/disable', { password: elements.password.value });
+                        await Net.post('/api/totp/disable', { password: password });
                     }
                 } break;
             }
