@@ -484,7 +484,7 @@ async function configureSecurity() {
     let tab = security.password ? 'password' : 'identities';
 
     let enable_totp = !security.totp;
-    let totp = ENV.auth.internal ? await Net.post('/api/totp/secret') : null;
+    let totp = ENV.auth.internal ? await Net.get('/api/totp/secret') : null;
 
     await UI.dialog({
         run: (render, close) => {
@@ -668,6 +668,7 @@ async function configureSecurity() {
                 case 'totp': {
                     if (enable_totp) {
                         await Net.post('/api/totp/change', {
+                            token: totp.token,
                             password: elements.password.value,
                             code: elements.code.value
                         });

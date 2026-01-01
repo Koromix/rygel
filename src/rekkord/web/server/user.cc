@@ -1469,6 +1469,18 @@ void HandleTotpConfirm(http_IO *io)
     }
 }
 
+static uint8_t *GetTotpTokenKey32()
+{
+    static uint8_t key[32];
+    static std::once_flag flag;
+
+    std::call_once(flag, []() {
+        FillRandomSafe(key, K_SIZE(key));
+    });
+
+    return key;
+}
+
 void HandleTotpSecret(http_IO *io)
 {
     if (!config.internal_auth) {
@@ -1513,11 +1525,24 @@ void HandleTotpSecret(http_IO *io)
         image = buf.Take(0, buf.len - 1);
     }
 
-    MemCpy(session->secret, secret, 33);
+    // Encrypt secret
+    char token[1024];
+    {
+        const uint8_t *key = GetTotpTokenKey32();
+        const Size secret_len = K_SIZE(secret) - 1;
+
+        uint8_t cypher[crypto_secretbox_NONCEBYTES + crypto_secretbox_MACBYTES + secret_len];
+        FillRandomSafe(cypher, crypto_secretbox_NONCEBYTES);
+        crypto_secretbox_easy(cypher + crypto_secretbox_NONCEBYTES, (const uint8_t *)secret, secret_len, cypher, key);
+        static_assert(K_SIZE(token) >= K_SIZE(cypher) * 2);
+
+        sodium_bin2base64(token, K_SIZE(token), cypher, K_SIZE(cypher), sodium_base64_VARIANT_ORIGINAL);
+    }
 
     http_SendJson(io, 200, [&](json_Writer *json) {
         json->StartObject();
 
+        json->Key("token"); json->String(token);
         json->Key("secret"); json->String(secret);
         json->Key("url"); json->String(url);
         json->Key("image"); json->String(image.ptr, image.len);
@@ -1542,6 +1567,7 @@ void HandleTotpChange(http_IO *io)
         return;
     }
 
+    const char *token = nullptr;
     const char *password = nullptr;
     const char *code = nullptr;
     {
@@ -1551,7 +1577,9 @@ void HandleTotpChange(http_IO *io)
             for (json->ParseObject(); json->InObject(); ) {
                 Span<const char> key = json->ParseKey();
 
-                if (key == "password") {
+                if (key == "token") {
+                    json->ParseString(&token);
+                } else if (key == "password") {
                     json->ParseString(&password);
                 } else if (key == "code") {
                     json->ParseString(&code);
@@ -1563,6 +1591,10 @@ void HandleTotpChange(http_IO *io)
             valid &= json->IsValid();
 
             if (valid) {
+                if (!token) {
+                    LogError("Missing 'token' parameter");
+                    valid = false;
+                }
                 if (!password) {
                     LogError("Missing 'password' parameter");
                     valid = false;
@@ -1580,6 +1612,39 @@ void HandleTotpChange(http_IO *io)
             io->SendError(422);
             return;
         }
+    }
+
+    // Decrypt secret
+    char secret[33];
+    {
+        const uint8_t *key = GetTotpTokenKey32();
+        const Size secret_len = K_SIZE(secret) - 1;
+
+        uint8_t cypher[crypto_secretbox_NONCEBYTES + crypto_secretbox_MACBYTES + secret_len];
+        {
+            size_t cypher_len;
+
+            if (sodium_base642bin(cypher, K_SIZE(cypher), token, strlen(token),
+                                  nullptr, &cypher_len, nullptr, sodium_base64_VARIANT_ORIGINAL) != 0) {
+                LogError("Malformed TOTP secret token");
+                io->SendError(422);
+                return;
+            }
+            if (cypher_len != K_SIZE(cypher)) {
+                LogError("Malformed TOTP secret token");
+                io->SendError(422);
+                return;
+            }
+        }
+
+        if (crypto_secretbox_open_easy((uint8_t *)secret, cypher + crypto_secretbox_NONCEBYTES,
+                                       K_SIZE(cypher) - crypto_secretbox_NONCEBYTES, cypher, key) != 0) {
+            LogError("Invalid TOTP secret token");
+            io->SendError(422);
+            return;
+        }
+
+        secret[secret_len] = 0;
     }
 
     // We use this to extend/fix the response delay in case of error
@@ -1612,9 +1677,6 @@ void HandleTotpChange(http_IO *io)
             return;
         }
     }
-
-    char secret[33];
-    MemCpy(secret, session->secret, 33);
 
     // Check user knows secret
     if (!CheckTotp(io, session->userid, secret, code))

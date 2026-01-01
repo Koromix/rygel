@@ -357,7 +357,7 @@ static void HandleRequest(http_IO *io)
             HandleSsoUnlink(io);
         } else if (url == "/api/totp/confirm" && method == http_RequestMethod::Post) {
             HandleTotpConfirm(io);
-        } else if (url == "/api/totp/secret" && method == http_RequestMethod::Post) {
+        } else if (url == "/api/totp/secret" && method == http_RequestMethod::Get) {
             HandleTotpSecret(io);
         } else if (url == "/api/totp/change" && method == http_RequestMethod::Post) {
             HandleTotpChange(io);
