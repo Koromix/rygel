@@ -216,20 +216,6 @@ async function configurePlan(plan) {
                         </select>
                     </label>
 
-                    <div class="section">${T.periodic_scans}</div>
-                    <label>
-                        <input type="checkbox" ?checked=${scan} @change=${UI.wrap(e => { scan = e.target.checked; render(); })} />
-                        <span>${T.run_daily_scans}</span>
-                    </label>
-                    ${scan ? html`
-                        <label>
-                            <span>${T.scan_time}</span>
-                            <td><input type="time" .value=${live(formatClock(plan.scan))}
-                                       @change=${UI.wrap(e => { plan.scan = parseClock(e.target.value); render(); })} /></td>
-                        </label>
-                        <div style="color: red; font-style: italic;">${T.scan_safety_warning}</div>
-                    ` : ''}
-
                     <div class="section">
                         ${T.snapshot_items}
                         <div style="flex: 1;"></div>
@@ -292,6 +278,20 @@ async function configurePlan(plan) {
                                 html`<tr><td colspan="6" style="text-align: center;">${T.no_item}</td></tr>` : ''}
                         </tbody>
                     </table>
+
+                    <div class="section">${T.periodic_scans}</div>
+                    <label>
+                        <input type="checkbox" ?checked=${scan} @change=${UI.wrap(e => { scan = e.target.checked; render(); })} />
+                        <span>${T.run_daily_scans}</span>
+                    </label>
+                    ${scan ? html`
+                        <label>
+                            <span>${T.scan_time}</span>
+                            <td><input type="time" .value=${live(formatClock(plan.scan))}
+                                       @change=${UI.wrap(e => { plan.scan = parseClock(e.target.value); render(); })} /></td>
+                        </label>
+                        <div style="color: red; font-style: italic;">${T.scan_safety_warning}</div>
+                    ` : ''}
 
                     ${ptr != null ? html`
                         <div class="section">${T.api_key}</div>
