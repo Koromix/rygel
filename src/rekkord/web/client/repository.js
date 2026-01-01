@@ -24,15 +24,15 @@ async function runRepositories() {
                 </colgroup>
                 <thead>
                     <tr>
-                        ${UI.tableHeader('repositories', 'name', 'Name')}
-                        ${UI.tableHeader('repositories', 'url', 'URL')}
+                        ${UI.tableHeader('repositories', 'name', T.name)}
+                        ${UI.tableHeader('repositories', 'url', T.url)}
                         ${UI.tableHeader('repositories', repo => {
                             if (repo.errors) {
                                 return 1;
                             } else {
                                 return repo.checked ?? 0;
                             }
-                        }, 'Status')}
+                        }, T.status)}
                     </tr>
                 </thead>
                 <tbody>

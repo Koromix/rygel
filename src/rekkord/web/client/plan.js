@@ -113,7 +113,7 @@ async function runPlan() {
                     <div class="sub">${repo?.name ?? T.unassigned.toLowerCase()}</div>
                 </div>
                 <div>
-                    ${T.api_key}
+                    ${T.key_prefix}
                     <div class="sub">${cache.plan.key}</div>
                 </div>
                 <button type="button" @click=${UI.wrap(e => configurePlan(cache.plan))}>${T.configure}</button>
@@ -197,12 +197,12 @@ async function configurePlan(plan) {
 
                 <div class="main">
                     <label>
-                        <span>Name</span>
+                        <span>${T.name}</span>
                         <input type="text" name="name" required .value=${live(plan.name)}
                                @change=${UI.wrap(e => { plan.name = e.target.value; render(); })} />
                     </label>
                     <label>
-                        <span>Repository</span>
+                        <span>${T.repository}</span>
                         <select ?disabled=${ptr != null}
                                 @change=${UI.wrap(e => { plan.repository = parseInt(e.target.value, 10); render(); })}>
                             ${cache.repositories.map(repo =>
@@ -225,7 +225,7 @@ async function configurePlan(plan) {
                     ` : ''}
 
                     <div class="section">
-                        Snapshot items
+                        ${T.snapshot_items}
                         <div style="flex: 1;"></div>
                         <button type="button" class="small" @click=${UI.wrap(add_item)}>${T.add_item}</button>
                     </div>
