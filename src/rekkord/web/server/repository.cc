@@ -90,7 +90,7 @@ void HandleRepositoryList(http_IO *io)
     }
 
     sq_Statement stmt;
-    if (!db.Prepare(R"(SELECT id, name, url, checked, failed, errors
+    if (!db.Prepare(R"(SELECT id, url, checked, failed, errors
                        FROM repositories
                        WHERE owner = ?1)", &stmt, session->userid))
         return;
@@ -100,16 +100,14 @@ void HandleRepositoryList(http_IO *io)
 
         while (stmt.Step()) {
             int64_t id = sqlite3_column_int64(stmt, 0);
-            const char *name = (const char *)sqlite3_column_text(stmt, 1);
-            const char *url = (const char *)sqlite3_column_text(stmt, 2);
-            int64_t checked = sqlite3_column_int64(stmt, 3);
-            const char *failed = (const char *)sqlite3_column_text(stmt, 4);
-            int errors = sqlite3_column_int(stmt, 5);
+            const char *url = (const char *)sqlite3_column_text(stmt, 1);
+            int64_t checked = sqlite3_column_int64(stmt, 2);
+            const char *failed = (const char *)sqlite3_column_text(stmt, 3);
+            int errors = sqlite3_column_int(stmt, 4);
 
             json->StartObject();
 
             json->Key("id"); json->Int64(id);
-            json->Key("name"); json->String(name);
             json->Key("url"); json->String(url);
             if (checked) {
                 json->Key("checked"); json->Int64(checked);
@@ -155,7 +153,7 @@ void HandleRepositoryGet(http_IO *io)
     }
 
     sq_Statement stmt;
-    if (!db.Prepare(R"(SELECT name, url, checked, failed, errors
+    if (!db.Prepare(R"(SELECT url, checked, failed, errors
                        FROM repositories
                        WHERE owner = ?1 AND id = ?2)",
                     &stmt, session->userid, id))
@@ -174,14 +172,12 @@ void HandleRepositoryGet(http_IO *io)
 
         // Main information
         {
-            const char *name = (const char *)sqlite3_column_text(stmt, 0);
-            const char *url = (const char *)sqlite3_column_text(stmt, 1);
-            int64_t checked = sqlite3_column_int64(stmt, 2);
-            const char *failed = (const char *)sqlite3_column_text(stmt, 3);
-            int errors = sqlite3_column_int(stmt, 4);
+            const char *url = (const char *)sqlite3_column_text(stmt, 0);
+            int64_t checked = sqlite3_column_int64(stmt, 1);
+            const char *failed = (const char *)sqlite3_column_text(stmt, 2);
+            int errors = sqlite3_column_int(stmt, 3);
 
             json->Key("id"); json->Int64(id);
-            json->Key("name"); json->String(name);
             json->Key("url"); json->String(url);
             if (checked) {
                 json->Key("checked"); json->Int64(checked);

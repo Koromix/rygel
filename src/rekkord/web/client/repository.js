@@ -12,7 +12,7 @@ import { ASSETS } from '../assets/assets.js';
 async function runRepositories() {
     cache.repositories = await Net.cache('repositories', '/api/repository/list');
 
-    let repositories = UI.tableValues('repositories', cache.repositories, 'name');
+    let repositories = UI.tableValues('repositories', cache.repositories, 'url');
 
     UI.main(html`
         <div class="header">${T.repositories}</div>
@@ -20,13 +20,11 @@ async function runRepositories() {
         <div class="block">
             <table style="table-layout: fixed; width: 100%;">
                 <colgroup>
-                    <col style="width: 30%;"></col>
                     <col></col>
-                    <col style="width: 140px;"></col>
+                    <col style="width: 220px;"></col>
                 </colgroup>
                 <thead>
                     <tr>
-                        ${UI.tableHeader('repositories', 'name', T.name)}
                         ${UI.tableHeader('repositories', 'url', T.url)}
                         ${UI.tableHeader('repositories', repo => {
                             if (repo.errors) {
@@ -43,8 +41,7 @@ async function runRepositories() {
 
                         return html`
                             <tr style="cursor: pointer;" @click=${UI.wrap(e => App.go(url))}>
-                                <td><a href=${url}>${repo.name}</a></td>
-                                <td>${repo.url}</td>
+                                <td><a href=${url}>${repo.url}</a></td>
                                 <td style="text-align: right;">
                                     ${!repo.checked ? T.valid : ''}
                                     ${repo.checked && !repo.errors ? T.success : ''}
@@ -54,7 +51,7 @@ async function runRepositories() {
                             </tr>
                         `;
                     })}
-                    ${!repositories.length ? html`<tr><td colspan="3" style="text-align: center;">${T.no_repository}</td></tr>` : ''}
+                    ${!repositories.length ? html`<tr><td colspan="2" style="text-align: center;">${T.no_repository}</td></tr>` : ''}
                 </tbody>
             </table>
         </div>
