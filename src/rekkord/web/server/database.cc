@@ -648,6 +648,7 @@ bool MigrateDatabase(sq_Database *db)
 
             case 30: {
                 bool success = db->RunMany(R"(
+                    DROP INDEX repositories_on;
                     ALTER TABLE repositories DROP COLUMN name;
                 )");
                 if (!success)
