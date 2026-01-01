@@ -13,9 +13,7 @@ struct smtp_Config;
 
 struct SessionInfo: public RetainObject<SessionInfo> {
     int64_t userid;
-
     std::atomic_bool authorized;
-    char secret[33];
 
     std::atomic_int picture;
     char username[];

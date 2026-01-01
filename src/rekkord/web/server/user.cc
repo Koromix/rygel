@@ -214,7 +214,7 @@ bool HashPassword(Span<const char> password, char out_hash[PasswordHashBytes])
     return true;
 }
 
-static RetainPtr<SessionInfo> CreateUserSession(int64_t userid, const char *totp, const char *username, int picture)
+static RetainPtr<SessionInfo> CreateUserSession(int64_t userid, bool authorize, const char *username, int picture)
 {
     Size username_bytes = strlen(username) + 1;
     Size session_bytes = K_SIZE(SessionInfo) + username_bytes;
@@ -228,13 +228,7 @@ static RetainPtr<SessionInfo> CreateUserSession(int64_t userid, const char *totp
     });
 
     session->userid = userid;
-
-    if (totp) {
-        session->authorized = false;
-        CopyString(totp, session->secret);
-    } else {
-        session->authorized = true;
-    }
+    session->authorized = authorize;
 
     CopyString(username, MakeSpan((char *)session->username, username_bytes));
     session->picture = picture;
@@ -530,11 +524,11 @@ void HandleUserLogin(http_IO *io)
         int64_t userid = sqlite3_column_int64(stmt, 0);
         const char *password_hash = (const char *)sqlite3_column_text(stmt, 1);
         const char *username = (const char *)sqlite3_column_text(stmt, 2);
-        const char *totp = (const char *)sqlite3_column_text(stmt, 3);
+        bool authorize = (sqlite3_column_type(stmt, 3) == SQLITE_NULL);
         int picture = sqlite3_column_int(stmt, 4);
 
         if (password_hash && crypto_pwhash_str_verify(password_hash, password, strlen(password)) == 0) {
-            RetainPtr<SessionInfo> session = CreateUserSession(userid, totp, username, picture);
+            RetainPtr<SessionInfo> session = CreateUserSession(userid, authorize, username, picture);
             sessions.Open(io, session);
 
             http_SendJson(io, 200, [&](json_Writer *json) {
@@ -1121,7 +1115,7 @@ void HandleSsoOidc(http_IO *io)
             const char *username = (const char *)sqlite3_column_text(stmt, 1);
             int picture = sqlite3_column_int(stmt, 2);
 
-            session = CreateUserSession(userid, nullptr, username, picture);
+            session = CreateUserSession(userid, true, username, picture);
         }
         if (!stmt.IsValid())
             return;
@@ -1192,7 +1186,7 @@ void HandleSsoOidc(http_IO *io)
             return;
 
         if (allowed) {
-            session = CreateUserSession(userid, nullptr, identity.email, 1);
+            session = CreateUserSession(userid, true, identity.email, 1);
         } else {
             if (!SendLinkIdentityMail(identity.email, *provider, token, io->Allocator()))
                 return;
@@ -1451,15 +1445,28 @@ void HandleTotpConfirm(http_IO *io)
         }
     }
 
-    char secret[33];
-    MemCpy(secret, session->secret, 33);
+    const char *secret;
+    {
+        sq_Statement stmt;
+        if (!db.Prepare("SELECT totp FROM users WHERE id = ?1 AND totp IS NOT NULL", &stmt, session->userid))
+            return;
+
+        if (!stmt.Step()) {
+            if (stmt.IsValid()) {
+                LogError("Cannot find TOTP secret");
+                io->SendError(404);
+            }
+            return;
+        }
+
+        secret = DuplicateString((const char *)sqlite3_column_text(stmt, 0), io->Allocator()).ptr;
+    }
 
     // Immediate confirmation looks weird
     WaitDelay(800);
 
     if (CheckTotp(io, session->userid, secret, code)) {
         session->authorized = true;
-        ZeroSafe(session->secret, K_SIZE(session->secret));
 
         http_SendJson(io, 200, [&](json_Writer *json) {
             ExportSession(session.GetRaw(), json);
