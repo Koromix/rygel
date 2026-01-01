@@ -373,8 +373,6 @@ static void HandleRequest(http_IO *io)
             HandleRepositoryList(io);
         } else if (url == "/api/repository/get" && method == http_RequestMethod::Get) {
             HandleRepositoryGet(io);
-        } else if (url == "/api/repository/save" && method == http_RequestMethod::Post) {
-            HandleRepositorySave(io);
         } else if (url == "/api/repository/delete" && method == http_RequestMethod::Post) {
             HandleRepositoryDelete(io);
         } else if (url == "/api/repository/snapshots" && method == http_RequestMethod::Get) {

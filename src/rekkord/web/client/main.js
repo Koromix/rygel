@@ -33,7 +33,7 @@ const MODES = {
     repository: { run: RepositoryMod.runRepository, session: true, path: [{ key: 'repository', type: 'integer' }]},
 
     plans: { run: PlanMod.runPlans, session: true },
-    plan: { run: PlanMod.runPlan, session: true, path: [{ key: 'plan', type: 'integer' }]}
+    plan: { run: PlanMod.runPlan, session: true, path: [{ key: 'plan', type: 'integer' }]},
 };
 const DEFAULT_MODE = 'repositories';
 
@@ -214,11 +214,6 @@ async function run(changes = {}, push = false) {
 
             let info = MODES[route.mode] ?? MODES[DEFAULT_MODE];
 
-            if (isLogged()) {
-                // Cache resources used by everyone
-                cache.repositories = await Net.cache('repositories', '/api/repository/list');
-            }
-
             if (info.session && !isLogged()) {
                 await UserMod.runLogin();
             } else {
@@ -288,7 +283,7 @@ function renderApp(el) {
                     <li><a href=${!in_repositories && route.repository != null ? makeURL({ mode: 'repository' }) : '/repositories'}
                            class=${in_repositories ? 'active' : ''}>${T.repositories}</a></li>
                     <li><a href=${!in_plans && route.plan != null ? makeURL({ mode: 'plan' }) : '/plans'}
-                           class=${in_plans ? 'active' : ''}>${T.plans}</a></li>
+                           class=${in_plans ? 'active' : ''}>${T.machines}</a></li>
                 ` : ''}
                 <div style="flex: 1;"></div>
                 ${isLogged() ? html`
@@ -297,7 +292,7 @@ function renderApp(el) {
                 ` : ''}
                 ${!isLogged() ? html`
                     ${ENV.auth.internal ? html`<li><a href="/register" class=${route.mode == 'register' ? 'active' : ''}>${T.register}</a></li>` : ''}
-                    <li><a href="/repositories" class=${route.mode != 'register' ? 'active' : ''}>${T.login}</a></li>
+                    <li><a href="/" class=${route.mode != 'register' ? 'active' : ''}>${T.login}</a></li>
                 ` : ''}
             </menu>
         </nav>

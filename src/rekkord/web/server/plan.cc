@@ -52,7 +52,11 @@ void HandlePlanList(http_IO *io)
             json->StartObject();
 
             json->Key("id"); json->Int64(id);
-            json->Key("repository"); json->Int64(repository);
+            if (repository > 0) {
+                json->Key("repository"); json->Int64(repository);
+            } else {
+                json->Key("repository"); json->Null();
+            }
             json->Key("name"); json->String(name);
             json->Key("key"); json->String(key);
             if (scan) {
@@ -189,7 +193,11 @@ void HandlePlanGet(http_IO *io)
         json->StartObject();
 
         json->Key("id"); json->Int64(id);
-        json->Key("repository"); json->Int64(repository);
+        if (repository > 0) {
+            json->Key("repository"); json->Int64(repository);
+        } else {
+            json->Key("repository"); json->Null();
+        }
         json->Key("name"); json->String(name);
         json->Key("key"); json->String(key);
         if (scan) {
@@ -276,14 +284,6 @@ void HandlePlanSave(http_IO *io)
                     LogError("Missing or invalid 'name' parameter");
                     valid = false;
                 }
-                if (id < 0) {
-                    if (repository < 0) {
-                        LogError("Missing or invalid 'repository' parameter");
-                        valid = false;
-                    }
-                } else {
-                    repository = -1;
-                }
                 if (scan >= 2400) {
                     LogError("Invalid 'scan' parameter");
                     valid = false;
@@ -333,7 +333,7 @@ void HandlePlanSave(http_IO *io)
 
         if (!stmt.Step()) {
             if (stmt.IsValid()) {
-                LogError("Unknown repository ID %1", id);
+                LogError("Unknown repository ID %1", repository);
                 io->SendError(404);
             }
             return;
@@ -372,12 +372,13 @@ void HandlePlanSave(http_IO *io)
         if (!db.Prepare(R"(INSERT INTO plans (id, owner, repository, name, key, hash, scan)
                            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
                            ON CONFLICT DO UPDATE SET id = IF(owner = excluded.owner, id, NULL),
+                                                     repository = excluded.repository,
                                                      name = excluded.name,
                                                      scan = excluded.scan
                            RETURNING id)",
                         &stmt, id >= 0 ? sq_Binding(id) : sq_Binding(),
-                        session->userid, repository, name, key, hash,
-                        scan >= 0 ? sq_Binding(scan) : sq_Binding()))
+                        session->userid, repository > 0 ? sq_Binding(repository) : sq_Binding(),
+                        name, key, hash, scan >= 0 ? sq_Binding(scan) : sq_Binding()))
             return false;
         if (!stmt.Step()) {
             K_ASSERT(!stmt.IsValid());
@@ -533,7 +534,7 @@ void HandlePlanKey(http_IO *io)
 
         if (!stmt.Step()) {
             if (stmt.IsValid()) {
-                LogError("Unknown repository ID %1", id);
+                LogError("Unknown plan ID %1", id);
                 io->SendError(404);
             }
             return;

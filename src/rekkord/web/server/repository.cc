@@ -11,26 +11,6 @@
 
 namespace K {
 
-static const char *NormalizeURL(const char *url, Allocator *alloc)
-{
-    rk_Config config;
-
-    if (!rk_DecodeURL(url, &config))
-        return nullptr;
-
-    switch (config.type) {
-        case rk_DiskType::Local: {
-            LogError("Unsupported local URL '%1'", url);
-            return nullptr;
-        } break;
-
-        case rk_DiskType::S3:
-        case rk_DiskType::SFTP: {} break;
-    }
-
-    return rk_MakeURL(config, alloc);
-}
-
 static bool UpdateSnapshots(int64_t id, int64_t now,
                             Span<const rk_SnapshotInfo> snapshots, Span<const rk_ChannelInfo> channels)
 {
@@ -250,84 +230,6 @@ void HandleRepositoryGet(http_IO *io)
 
         json->EndObject();
     });
-}
-
-void HandleRepositorySave(http_IO *io)
-{
-    RetainPtr<const SessionInfo> session = GetNormalSession(io);
-
-    if (!session) {
-        LogError("User is not logged in");
-        io->SendError(401);
-        return;
-    }
-
-    int64_t id = -1;
-    const char *name = nullptr;
-    const char *url = nullptr;
-    {
-        bool success = http_ParseJson(io, Kibibytes(4), [&](json_Parser *json) {
-            bool valid = true;
-
-            for (json->ParseObject(); json->InObject(); ) {
-                Span<const char> key = json->ParseKey();
-
-                if (key == "id") {
-                    json->SkipNull() || json->ParseInt(&id);
-                } else if (key == "name") {
-                    json->ParseString(&name);
-                } else if (key == "url") {
-                    json->ParseString(&url);
-                } else {
-                    json->UnexpectedKey(key);
-                    valid = false;
-                }
-            }
-            valid &= json->IsValid();
-
-            if (valid) {
-                if (!name || !name[0]) {
-                    LogError("Missing or invalid 'name' parameter");
-                    valid = false;
-                }
-
-                if (url) {
-                    url = NormalizeURL(url, io->Allocator());
-                }
-                if (!url) {
-                    LogError("Missing or invalid 'url' value");
-                    valid = false;
-                }
-            }
-
-            return valid;
-        });
-
-        if (!success) {
-            io->SendError(422);
-            return;
-        }
-    }
-
-    // Create or update repository
-    {
-        sq_Statement stmt;
-        if (!db.Prepare(R"(INSERT INTO repositories (id, owner, name, url, checked, failed, errors)
-                           VALUES (?1, ?2, ?3, ?4, 0, NULL, 0)
-                           ON CONFLICT DO UPDATE SET id = IF(owner = excluded.owner, id, NULL),
-                                                     name = excluded.name,
-                                                     url = excluded.url,
-                                                     checked = excluded.checked
-                           RETURNING id)",
-                        &stmt, id >= 0 ? sq_Binding(id) : sq_Binding(),
-                        session->userid, name, url))
-            return;
-        if (!stmt.GetSingleValue(&id))
-            return;
-    }
-
-    const char *json = Fmt(io->Allocator(), "{\"id\": %1}", id).ptr;
-    io->SendText(200, json, "application/json");
 }
 
 void HandleRepositoryDelete(http_IO *io)

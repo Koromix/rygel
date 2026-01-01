@@ -12,12 +12,15 @@ import { ASSETS } from '../assets/assets.js';
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
 async function runPlans() {
-    cache.plans = await Net.cache('plans', '/api/plan/list');
+    [cache.repositories, cache.plans] = await Promise.all([
+        Net.cache('repositories', '/api/repository/list'),
+        Net.cache('plans', '/api/plan/list')
+    ]);
 
     let plans = UI.tableValues('plans', cache.plans, 'name');
 
     UI.main(html`
-        <div class="header">${T.plans}</div>
+        <div class="header">${T.machines}</div>
 
         <div class="block">
             <table style="table-layout: fixed; width: 100%;">
@@ -30,9 +33,9 @@ async function runPlans() {
                 <thead>
                     <tr>
                         ${UI.tableHeader('plans', 'name', T.name)}
-                        ${UI.tableHeader('plans', 'repository', T.repository)}
                         <th>${T.key_prefix}</th>
                         ${UI.tableHeader('plans', makePlanTasks, T.tasks)}
+                        ${UI.tableHeader('plans', 'repository', T.repository)}
                     </tr>
                 </thead>
                 <tbody>
@@ -43,17 +46,20 @@ async function runPlans() {
                         return html`
                             <tr style="cursor: pointer;" @click=${UI.wrap(e => App.go(url))}>
                                 <td><a href=${url}>${plan.name}</a></td>
-                                <td><a href=${App.makeURL({ mode: 'repository', repository: plan.repository })}>${repo?.name}</a></td>
                                 <td><span class="sub">${plan.key}</sub></td>
                                 <td>${makePlanTasks(plan)}</td>
+                                <td>
+                                    ${repo != null ? html`<a href=${App.makeURL({ mode: 'repository', repository: plan.repository })}>${repo.name}</a>` : ''}
+                                    ${repo == null ? html`<span class="sub">${T.unassigned}</span>` : ''}
+                                </td>
                             </tr>
                         `;
                     })}
-                    ${!plans.length ? html`<tr><td colspan="4" style="text-align: center;">${T.no_plan}</td></tr>` : ''}
+                    ${!plans.length ? html`<tr><td colspan="4" style="text-align: center;">${T.no_machine}</td></tr>` : ''}
                 </tbody>
             </table>
             <div class="actions">
-                <button type="button" @click=${UI.wrap(e => configurePlan(null))}>${T.add_plan}</button>
+                <button type="button" @click=${UI.wrap(e => configurePlan(null))}>${T.add_machine}</button>
             </div>
         </div>
     `);
@@ -72,7 +78,7 @@ function makePlanTasks(plan) {
     }
 
     if (!parts.length) {
-        let empty = html`<span class="sub">(${T.nothing_to_do.toLowerCase()})</span>`;
+        let empty = html`<span class="sub">${T.nothing_to_do}</span>`;
         parts.push(empty);
     }
 
@@ -80,6 +86,8 @@ function makePlanTasks(plan) {
 }
 
 async function runPlan() {
+    cache.repositories = await Net.cache('repositories', '/api/repository/list');
+
     if (route.plan != null) {
         try {
             let url = Util.pasteURL('/api/plan/get', { id: route.plan });
@@ -110,7 +118,7 @@ async function runPlan() {
             <div class="block info" style="min-width: 250px;">
                 <div>
                     ${T.repository}
-                    <div class="sub">${repo?.name ?? T.unassigned.toLowerCase()}</div>
+                    <div class="sub">${repo?.name ?? T.unassigned}</div>
                 </div>
                 <div>
                     ${T.key_prefix}
@@ -165,12 +173,9 @@ async function configurePlan(plan) {
     let ptr = plan;
 
     if (plan == null) {
-        if (!cache.repositories.length)
-            throw new Error(T.message(`Create a repository before you create a plan`));
-
         plan = {
             name: '',
-            repository: route.repository ?? cache.repositories[0].id,
+            repository: route.repository ?? cache.repositories[0]?.id,
             scan: null,
             items: []
         };
@@ -190,7 +195,7 @@ async function configurePlan(plan) {
         run: (render, close) => {
             return html`
                 <div class="title">
-                    ${ptr != null ? T.edit_plan : T.create_plan}
+                    ${ptr != null ? T.edit_machine : T.add_machine}
                     <div style="flex: 1;"></div>
                     <button type="button" class="secondary" @click=${UI.insist(close)}>✖\uFE0E</button>
                 </div>
@@ -204,7 +209,8 @@ async function configurePlan(plan) {
                     <label>
                         <span>${T.repository}</span>
                         <select ?disabled=${ptr != null}
-                                @change=${UI.wrap(e => { plan.repository = parseInt(e.target.value, 10); render(); })}>
+                                @change=${UI.wrap(e => { plan.repository = parseInt(e.target.value, 10) || null; render(); })}>
+                            <option value="0" ?selected=${plan.repository == null}>-- ${T.unassigned} --</option>
                             ${cache.repositories.map(repo =>
                                 html`<option value=${repo.id} ?selected=${repo.id == plan.repository}>${repo.name}</option>`)}
                         </select>
@@ -419,7 +425,7 @@ async function showKey(plan, key, secret) {
 
 async function deletePlan(id) {
     await UI.dialog((render, close) => html`
-        <div class="title">${T.delete_plan}</div>
+        <div class="title">${T.delete_machine}</div>
         <div class="main">${T.confirm_not_reversible}</div>
         <div class="footer">
             <button type="button" class="secondary" @click=${UI.wrap(close)}>${T.cancel}</button>

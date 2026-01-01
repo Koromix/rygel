@@ -10,6 +10,8 @@ import { route, cache } from './main.js';
 import { ASSETS } from '../assets/assets.js';
 
 async function runRepositories() {
+    cache.repositories = await Net.cache('repositories', '/api/repository/list');
+
     let repositories = UI.tableValues('repositories', cache.repositories, 'name');
 
     UI.main(html`
@@ -55,9 +57,6 @@ async function runRepositories() {
                     ${!repositories.length ? html`<tr><td colspan="3" style="text-align: center;">${T.no_repository}</td></tr>` : ''}
                 </tbody>
             </table>
-            <div class="actions">
-                <button type="button" @click=${UI.wrap(e => configureRepository(null))}>${T.add_repository}</button>
-            </div>
         </div>
     `);
 }
@@ -95,7 +94,6 @@ async function runRepository() {
                     ${T.url}
                     <div class="sub">${cache.repository.url}</div>
                 </div>
-                <button type="button" @click=${UI.wrap(e => configureRepository(cache.repository))}>${T.configure}</button>
             </div>
 
             <div class="block">
@@ -126,71 +124,6 @@ async function runRepository() {
             </div>
         </div>
     `);
-}
-
-async function configureRepository(repo) {
-    let ptr = repo;
-
-    if (repo == null) {
-        repo = {
-            name: '',
-            url: ''
-        };
-    } else {
-        repo = Object.assign({}, repo);
-    }
-
-    let url = repo.url;
-
-    await UI.dialog({
-        run: (render, close) => {
-            return html`
-                <div class="title">
-                    ${ptr != null ? T.edit_repository : T.create_repository}
-                    <div style="flex: 1;"></div>
-                    <button type="button" class="secondary" @click=${UI.insist(close)}>✖\uFE0E</button>
-                </div>
-
-                <div class="main">
-                    <label>
-                        <span>${T.name}</span>
-                        <input type="text" name="name" required value=${repo.name} />
-                    </label>
-                    <label>
-                        <span>${T.url}</span>
-                        <input type="text" name="url" required value=${url}
-                               @input=${e => { url = e.target.value; render(); }} />
-                    </label>
-                </div>
-
-                <div class="footer">
-                    ${ptr != null ? html`
-                        <button type="button" class="danger"
-                                @click=${UI.wrap(e => deleteRepository(repo.id).then(close))}>${T.delete}</button>
-                        <div style="flex: 1;"></div>
-                    ` : ''}
-                    <button type="button" class="secondary" @click=${UI.insist(close)}>${T.cancel}</button>
-                    <button type="submit">${ptr != null ? T.save : T.create}</button>
-                </div>
-            `
-        },
-
-        submit: async (elements) => {
-            let obj = {
-                id: repo.id,
-                name: elements.name.value.trim() || null,
-                url: elements.url.value.trim() || null
-            };
-
-            let json = await Net.post('/api/repository/save', obj);
-
-            Net.invalidate('repositories');
-            Net.invalidate('repository');
-
-            let url = App.makeURL({ mode: 'repository', repository: json.id });
-            await App.go(url);
-        }
-    });
 }
 
 async function deleteRepository(id) {
