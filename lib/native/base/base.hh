@@ -3404,14 +3404,6 @@ public:
             bucket->value = it.value;
         }
     }
-    ~ConstMap()
-    {
-        if constexpr(!std::is_trivial<ValueType>::value) {
-            for (Size i = 0; i < N; i++) {
-                data[i].~ValueType();
-            }
-        }
-    }
 
     template <typename T = KeyType>
     ValueType *Find(const T &key)
