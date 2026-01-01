@@ -332,7 +332,7 @@ RetainPtr<SessionInfo> GetNormalSession(http_IO *io)
 
     if (!session)
         return nullptr;
-    if (!session->authorized)
+    if (!session->authorized.load(std::memory_order_acquire))
         return nullptr;
 
     return session;
@@ -346,9 +346,9 @@ static void ExportSession(const SessionInfo *session, json_Writer *json)
         json->Key("userid"); json->Int64(session->userid);
         json->Key("username"); json->String(session->username);
 
-        if (session->authorized) {
+        if (session->authorized.load(std::memory_order_acquire)) {
             json->Key("authorized"); json->Bool(true);
-            json->Key("picture"); json->Int(session->picture);
+            json->Key("picture"); json->Int(session->picture.load(std::memory_order_relaxed));
         } else {
             json->Key("authorized"); json->Bool(false);
         }
@@ -1412,7 +1412,7 @@ void HandleTotpConfirm(http_IO *io)
         io->SendError(401);
         return;
     }
-    if (session->authorized) {
+    if (session->authorized.load(std::memory_order_acquire)) {
         LogError("Session does not need TOTP check");
         io->SendError(403);
         return;
@@ -1961,7 +1961,7 @@ void HandlePictureSave(http_IO *io)
     if (!success)
         return;
 
-    const char *response = Fmt(io->Allocator(), "{ \"picture\": %1 }", session->picture.load()).ptr;
+    const char *response = Fmt(io->Allocator(), "{ \"picture\": %1 }", session->picture.load(std::memory_order_relaxed)).ptr;
     io->SendText(200, response, "application/json");
 }
 
@@ -1986,7 +1986,7 @@ void HandlePictureDelete(http_IO *io)
     if (!success)
         return;
 
-    const char *response = Fmt(io->Allocator(), "{ \"picture\": %1 }", session->picture.load()).ptr;
+    const char *response = Fmt(io->Allocator(), "{ \"picture\": %1 }", session->picture.load(std::memory_order_relaxed)).ptr;
     io->SendText(200, response, "application/json");
 }
 
