@@ -17,13 +17,9 @@ async function runPlans() {
     let plans = UI.tableValues('plans', cache.plans, 'name');
 
     UI.main(html`
-        <div class="tabbar">
-            <a class="active">${T.plans}</a>
-            ${cache.plan != null ? html`<a href=${App.makeURL({ mode: 'plan' })}>${cache.plan.name}</a>` : ''}
-        </div>
+        <div class="header">${T.plans}</div>
 
-        <div class="tab">
-            <div class="header">${T.plans}</div>
+        <div class="block">
             <table style="table-layout: fixed; width: 100%;">
                 <colgroup>
                     <col/>
@@ -108,61 +104,58 @@ async function runPlan() {
     let repo = cache.repositories.find(repo => repo.id == cache.plan.repository);
 
     UI.main(html`
-        <div class="tabbar">
-            <a href="/plans">${T.plans}</a>
-            <a class="active">${cache.plan.name}</a>
-        </div>
+        <div class="header">${cache.plan.name}</div>
 
-        <div class="tab">
-            <div class="row">
-                <div class="box" style="min-width: 250px;">
-                    <div class="header">${T.plan}</div>
-                    <div class="info">
-                        ${cache.plan.name} (${repo?.name ?? T.unassigned.toLowerCase()})
-                        <div class="sub">${cache.plan.key}</div>
-                    </div>
-                    <button type="button" @click=${UI.wrap(e => configurePlan(cache.plan))}>${T.configure}</button>
-                    ${cache.plan.scan != null ?
-                        html`<div style="text-align: center;">${T.format(T.scan_repository_at_x, formatClock(cache.plan.scan))}</div>` : ''}
+        <div class="row">
+            <div class="block info" style="min-width: 250px;">
+                <div>
+                    ${T.repository}
+                    <div class="sub">${repo?.name ?? T.unassigned.toLowerCase()}</div>
                 </div>
+                <div>
+                    ${T.api_key}
+                    <div class="sub">${cache.plan.key}</div>
+                </div>
+                <button type="button" @click=${UI.wrap(e => configurePlan(cache.plan))}>${T.configure}</button>
+                ${cache.plan.scan != null ?
+                    html`<div style="text-align: center;">${T.format(T.scan_repository_at_x, formatClock(cache.plan.scan))}</div>` : ''}
+            </div>
 
-                <div class="box">
-                    <div class="header">${T.snapshot_items}</div>
-                    <table style="table-layout: fixed; width: 100%;">
-                        <colgroup>
-                            <col style="width: 150px;"></col>
-                            <col></col>
-                            <col style="width: 100px;"></col>
-                            <col></col>
-                            <col></col>
-                        </colgroup>
-                        <thead>
+            <div class="block">
+                <table style="table-layout: fixed; width: 100%;">
+                    <colgroup>
+                        <col style="width: 150px;"></col>
+                        <col></col>
+                        <col style="width: 100px;"></col>
+                        <col></col>
+                        <col></col>
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th>${T.channel}</th>
+                            <th>${T.days}</th>
+                            <th>${T.clock_time}</th>
+                            <th>${T.paths}</th>
+                            <th>${T.last_run}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${cache.plan.items.map(item => html`
                             <tr>
-                                <th>${T.channel}</th>
-                                <th>${T.days}</th>
-                                <th>${T.clock_time}</th>
-                                <th>${T.paths}</th>
-                                <th>${T.last_run}</th>
+                                <td>${item.channel}</td>
+                                <td>${formatDays(item.days)}</td>
+                                <td style="text-align: center;">${formatClock(item.clock)}</td>
+                                <td class="nowrap">${item.paths.map(path => html`${path}<br>`)}</td>
+                                <td style=${'text-align: right;' + (item.error != null ? ' color: var(--color, red);' : '')}>
+                                    ${item.timestamp == null ? T.never : ''}
+                                    ${item.timestamp != null ? dayjs(item.timestamp).format('lll') : ''}
+                                    <br>${item.error || ''}
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            ${cache.plan.items.map(item => html`
-                                <tr>
-                                    <td>${item.channel}</td>
-                                    <td>${formatDays(item.days)}</td>
-                                    <td style="text-align: center;">${formatClock(item.clock)}</td>
-                                    <td class="nowrap">${item.paths.map(path => html`${path}<br>`)}</td>
-                                    <td style=${'text-align: right;' + (item.error != null ? ' color: var(--color, red);' : '')}>
-                                        ${item.timestamp == null ? T.never : ''}
-                                        ${item.timestamp != null ? dayjs(item.timestamp).format('lll') : ''}
-                                        <br>${item.error || ''}
-                                    </td>
-                                </tr>
-                            `)}
-                            ${!cache.plan.items.length ? html`<tr><td colspan="5" style="text-align: center;">${T.no_snapshot_item}</td></tr>` : ''}
-                        </tbody>
-                    </table>
-                </div>
+                        `)}
+                        ${!cache.plan.items.length ? html`<tr><td colspan="5" style="text-align: center;">${T.no_snapshot_item}</td></tr>` : ''}
+                    </tbody>
+                </table>
             </div>
         </div>
     `);

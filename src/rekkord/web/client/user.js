@@ -16,13 +16,9 @@ async function runRegister() {
     }
 
     UI.main(html`
-        <div class="tabbar">
-            <a class="active">${T.new_account}</a>
-        </div>
+        <div class="header">${T.create_your_account}</div>
 
-        <div class="tab" style="align-items: center;">
-            <div class="header">${T.create_your_account}</div>
-
+        <div class="block" style="align-items: center;">
             <div class="columns">
                 <form style="text-align: center;" @submit=${UI.wrap(submit)}>
                     <label>
@@ -95,13 +91,9 @@ async function runFinalize() {
     }
 
     UI.main(html`
-        <div class="tabbar">
-            <a class="active">${T.finalize_account}</a>
-        </div>
+        <div class="header">${T.create_password}</div>
 
-        <div class="tab" style="align-items: center;">
-            <div class="header">${T.create_password}</div>
-
+        <div class="block" style="align-items: center;">
             <form @submit=${UI.wrap(submit)}>
                 ${error == null ? html`
                     <label>
@@ -149,13 +141,9 @@ async function runFinalize() {
 async function runLogin() {
     if (session == null) {
         UI.main(html`
-            <div class="tabbar">
-                <a class="active">${T.login}</a>
-            </div>
+            <div class="header">${T.format(T.login_to_x, ENV.title)}</div>
 
-            <div class="tab" style="align-items: center;">
-                <div class="header">${T.format(T.login_to_x, ENV.title)}</div>
-
+            <div class="block" style="align-items: center;">
                 <div class="columns">
                     ${ENV.auth.internal ? html`
                         <form style="text-align: center;" @submit=${UI.wrap(submit)}>
@@ -203,13 +191,9 @@ async function runLogin() {
         }
     } else if (!session.authorized) {
         UI.main(html`
-            <div class="tabbar">
-                <a class="active">${T.login}</a>
-            </div>
+            <div class="header">${T.format(T.login_to_x, ENV.title)}</div>
 
-            <div class="tab" style="align-items: center;">
-                <div class="header">${T.format(T.login_to_x, ENV.title)}</div>
-
+            <div class="block" style="align-items: center;">
                 <form style="text-align: center;" @submit=${UI.wrap(submit)}>
                     <p>${T.two_factor_authentication}</p>
                     <label  style="text-align: center;">
@@ -259,12 +243,9 @@ async function runOidc() {
             throw err;
 
         UI.main(html`
-            <div class="tabbar">
-                <a class="active">${T.account_link}</a>
-            </div>
+            <div class="header">${T.account_link}</div>
 
-            <div class="tab" style="align-items: center;">
-                <div class="header">${T.account_link}</div>
+            <div class="block" style="align-items: center;">
                 <div>
                     <p>${err.message}</p>
                 </div>
@@ -280,13 +261,9 @@ async function runRecover() {
     }
 
     UI.main(html`
-        <div class="tabbar">
-            <a class="active">${T.recover_account}</a>
-        </div>
+        <div class="header">${T.recover_account}</div>
 
-        <div class="tab" style="align-items: center;">
-            <div class="header">${T.recover_account}</div>
-
+        <div class="block" style="align-items: center;">
             <form style="text-align: center;" @submit=${UI.wrap(submit)}>
                 <label>
                     <input type="text" name="mail" style="width: 20em;" placeholder=${T.mail_address.toLowerCase()} />
@@ -343,13 +320,9 @@ async function runReset() {
     }
 
     UI.main(html`
-        <div class="tabbar">
-            <a class="active">${T.recover_account}</a>
-        </div>
+        <div class="header">${T.recover_account}</div>
 
-        <div class="tab" style="align-items: center;">
-            <div class="header">${T.recover_account}</div>
-
+        <div class="block" style="align-items: center;">
             <form @submit=${UI.wrap(submit)}>
                 ${error == null ? html`
                     <label>
@@ -410,12 +383,9 @@ async function runLink() {
     let provider = ENV.auth.providers.find(provider => provider.issuer == link.issuer);
 
     UI.main(html`
-        <div class="tabbar">
-            <a class="active">${T.account_link}</a>
-        </div>
+        <div class="header">${T.account_link}</div>
 
-        <div class="tab" style="align-items: center;">
-            <div class="header">${T.account_link}</div>
+        <div class="block" style="align-items: center;">
             <div>
                 <p>${unsafeHTML(T.format(T.account_linked_with_x, provider.title))}</p>
             </div>
@@ -425,12 +395,9 @@ async function runLink() {
 
 async function runAccount() {
     UI.main(html`
-        <div class="tabbar">
-            <a class="active">${T.account}</a>
-        </div>
+        <div class="header">${T.account}</div>
 
-        <div class="tab" style="align-items: center;">
-            <div class="header">${T.account}</div>
+        <div class="block" style="align-items: center;">
             <div class="sub">${session.username}</div>
             <img class="picture" src=${`/pictures/${session.userid}?v=${session.picture}`} alt="" />
             <div class="actions">
@@ -510,12 +477,9 @@ async function configureSecurity() {
                         ` : ''}
                     </div>
 
-                    <div class="tab">
+                    <div class="block">
                         ${tab == 'password' && security.password ? html`
-                            <label>
-                                <span>${T.current_password}</span>
-                                <input type="password" name="old_password" style="width: 20em;" placeholder=${T.current_password.toLowerCase()} />
-                            </label>
+                            <div class="section">${T.change_password}</div>
                             <label>
                                 <span>${T.new_password}</span>
                                 <input type="password" name="password1" style="width: 20em;" placeholder=${T.new_password.toLowerCase()} />
@@ -523,6 +487,12 @@ async function configureSecurity() {
                             <label>
                                 <span>${T.confirmation}</span>
                                 <input type="password" name="password2" style="width: 20em;" placeholder=${T.confirmation.toLowerCase()} />
+                            </label>
+
+                            <div class="section">${T.confirm_identity}</div>
+                            <label>
+                                <span>${T.current_password}</span>
+                                <input type="password" name="old_password" style="width: 20em;" placeholder=${T.current_password.toLowerCase()} />
                             </label>
                         ` : ''}
                         ${tab == 'password' && !security.password ? html`
@@ -535,17 +505,8 @@ async function configureSecurity() {
                         ` : ''}
 
                         ${tab == 'totp' ? html`
-                            <p>
-                                ${!security.totp ? T.confirm_to_enable_2fa : ''}
-                                ${security.totp ? T.confirm_to_change_2fa : ''}
-                            </p>
-
-                            <label>
-                                <span>${T.password}</span>
-                                <input type="password" name="password" style="width: 20em;" placeholder=${T.password.toLowerCase()} />
-                            </label>
-
                             ${security.totp ? html`
+                                <div class="section">${T.two_factor_authentication}</div>
                                 <label>
                                     <input type="checkbox" checked @change=${UI.wrap(e => { enable_totp = !e.target.checked; render(); })} />
                                     <span>${T.disable_2fa}</span>
@@ -553,7 +514,8 @@ async function configureSecurity() {
                             ` : ''}
 
                             ${enable_totp ? html`
-                                <div style="text-align: center; margin-top: 2em;"><img src=${totp.image} alt="" /></div>
+                                <div class="section">${T.two_factor_authentication}</div>
+                                <div style="text-align: center;"><img src=${totp.image} alt="" /></div>
                                 <p style="text-align: center; font-size: 0.8em; margin-top: 0;">${totp.secret}</p>
 
                                 <p>
@@ -568,6 +530,16 @@ async function configureSecurity() {
 
                                 <p><i>${T.totp_applications}</i></p>
                             ` : ''}
+
+                            <div class="section">${T.confirm_identity}</div>
+                            <p>
+                                ${!security.totp ? T.confirm_to_enable_2fa : ''}
+                                ${security.totp ? T.confirm_to_change_2fa : ''}
+                            </p>
+                            <label>
+                                <span>${T.password}</span>
+                                <input type="password" name="password" style="width: 20em;" placeholder=${T.password.toLowerCase()} />
+                            </label>
                         ` : ''}
 
                         ${tab == 'identities' ? html`

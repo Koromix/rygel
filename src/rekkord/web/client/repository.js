@@ -13,13 +13,9 @@ async function runRepositories() {
     let repositories = UI.tableValues('repositories', cache.repositories, 'name');
 
     UI.main(html`
-        <div class="tabbar">
-            <a class="active">${T.repositories}</a>
-            ${cache.repository != null ? html`<a href=${App.makeURL({ mode: 'repository' })}>${cache.repository.name}</a>` : ''}
-        </div>
+        <div class="header">${T.repositories}</div>
 
-        <div class="tab">
-            <div class="header">${T.repositories}</div>
+        <div class="block">
             <table style="table-layout: fixed; width: 100%;">
                 <colgroup>
                     <col style="width: 30%;"></col>
@@ -91,49 +87,42 @@ async function runRepository() {
     let channels = UI.tableValues('channels', cache.repository.channels, 'name');
 
     UI.main(html`
-        <div class="tabbar">
-            <a href="/repositories">${T.repositories}</a>
-            <a class="active">${cache.repository.name}</a>
-        </div>
+        <div class="header">${cache.repository.name}</div>
 
-        <div class="tab">
-            <div class="row">
-                <div class="box" style="min-width: 250px;">
-                    <div class="header">${T.repository}</div>
-                    <div class="info">
-                        ${cache.repository.name}
-                        <div class="sub">${cache.repository.url}</div>
-                    </div>
-                    <button type="button" @click=${UI.wrap(e => configureRepository(cache.repository))}>${T.configure}</button>
+        <div class="row">
+            <div class="block info" style="min-width: 250px;">
+                <div>
+                    ${T.url}
+                    <div class="sub">${cache.repository.url}</div>
                 </div>
+                <button type="button" @click=${UI.wrap(e => configureRepository(cache.repository))}>${T.configure}</button>
+            </div>
 
-                <div class="box">
-                    <div class="header">${T.channels}</div>
-                    <table style="table-layout: fixed; width: 100%;">
-                        <colgroup>
-                            <col></col>
-                            <col></col>
-                            <col></col>
-                        </colgroup>
-                        <thead>
-                            <tr>
-                                ${UI.tableHeader('channels', 'name', T.name)}
-                                ${UI.tableHeader('channels', 'size', T.size)}
-                                ${UI.tableHeader('channels', 'time', T.timestamp)}
+            <div class="block">
+                <table style="table-layout: fixed; width: 100%;">
+                    <colgroup>
+                        <col></col>
+                        <col></col>
+                        <col></col>
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            ${UI.tableHeader('channels', 'name', T.name)}
+                            ${UI.tableHeader('channels', 'size', T.size)}
+                            ${UI.tableHeader('channels', 'time', T.timestamp)}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${channels.map(channel => html`
+                            <tr style="cursor: pointer;" @click=${UI.wrap(e => runChannel(cache.repository, channel.name))}>
+                                <td>${channel.name} <span class="sub">(${channel.count})</span></td>
+                                <td style="text-align: right;">${formatSize(channel.size)}</td>
+                                <td style="text-align: right;">${dayjs(channel.time).format('lll')}</td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            ${channels.map(channel => html`
-                                <tr style="cursor: pointer;" @click=${UI.wrap(e => runChannel(cache.repository, channel.name))}>
-                                    <td>${channel.name} <span class="sub">(${channel.count})</span></td>
-                                    <td style="text-align: right;">${formatSize(channel.size)}</td>
-                                    <td style="text-align: right;">${dayjs(channel.time).format('lll')}</td>
-                                </tr>
-                            `)}
-                            ${!channels.length ? html`<tr><td colspan="3" style="text-align: center;">${T.no_channel}</td></tr>` : ''}
-                        </tbody>
-                    </table>
-                </div>
+                        `)}
+                        ${!channels.length ? html`<tr><td colspan="3" style="text-align: center;">${T.no_channel}</td></tr>` : ''}
+                    </tbody>
+                </table>
             </div>
         </div>
     `);
