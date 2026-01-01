@@ -875,9 +875,10 @@ bool oidc_DecodeIdToken(const oidc_Provider &provider, Span<const char> token, S
     // Decode and check payload
     oidc_IdentityInfo identity = {};
     {
-        int64_t iat = -1;
-        int64_t exp = -1;
         const char *iss = nullptr;
+        int64_t iat = -1;
+        int64_t nbf = -1;
+        int64_t exp = -1;
         HashSet<const char *> audiences;
         Span<const char> nonce2 = {};
 
@@ -889,12 +890,17 @@ bool oidc_DecodeIdToken(const oidc_Provider &provider, Span<const char> token, S
             for (json.ParseObject(); json.InObject(); ) {
                 Span<const char> key = json.ParseKey();
 
-                if (key == "iat") {
+                if (key == "iss") {
+                    json.ParseString(&iss);
+                } else if (key == "jti") {
+                    // We don't care about this one
+                    json.Skip();
+                } else if (key == "iat") {
                     json.ParseInt(&iat);
+                } else if (key == "nbf") {
+                    json.ParseInt(&nbf);
                 } else if (key == "exp") {
                     json.ParseInt(&exp);
-                } else if (key == "iss") {
-                    json.ParseString(&iss);
                 } else if (key == "aud") {
                     if (json.PeekToken() == json_TokenType::String) {
                         const char *aud = json.ParseString().ptr;
@@ -921,7 +927,7 @@ bool oidc_DecodeIdToken(const oidc_Provider &provider, Span<const char> token, S
                     json.ParseBool(&identity.email_verified);
                 } else if (json.PeekToken() == json_TokenType::String) {
                     const char *str = json.ParseString().ptr;
-                    identity.attributes.Set(key.ptr, str);
+                    identity.claims.Set(key.ptr, str);
                 } else {
                     json.Skip();
                 }
@@ -937,6 +943,10 @@ bool oidc_DecodeIdToken(const oidc_Provider &provider, Span<const char> token, S
 
         if (iat > (now + TimestampTolerance) / 1000) {
             LogError("Cannot use JWT token with future issue timestamp");
+            return false;
+        }
+        if (nbf >= 0 && nbf > (now + TimestampTolerance) / 1000) {
+            LogError("Cannot use JWT token with future validity timestamp");
             return false;
         }
         if (exp < (now - TimestampTolerance) / 1000) {

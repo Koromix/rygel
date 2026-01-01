@@ -62,7 +62,7 @@ struct oidc_IdentityInfo {
     const char *email = nullptr;
     bool email_verified = false;
 
-    HashMap<const char *, const char *> attributes;
+    HashMap<const char *, const char *> claims;
 };
 
 void oidc_PrepareAuthorization(const oidc_Provider &provider, const char *scopes, const char *callback,
