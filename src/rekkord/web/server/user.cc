@@ -1790,7 +1790,7 @@ static void SendDefaultPicture(http_IO *io)
 #endif
 
     io->AddEncodingHeader(DefaultPicture->compression_type);
-    io->SendBinary(200, DefaultPicture->data, "image.png");
+    io->SendBinary(200, DefaultPicture->data, "image/png");
 }
 
 void HandlePictureGet(http_IO *io)
