@@ -107,17 +107,14 @@ button {
 }
 button.secondary {
     --button_color: #ddd;
-    border: 1px solid #ddd;
     --color: black;
 }
 button.danger {
     --button_color: #d33410;
-    border-color: #d33410;
     --color: white;
 }
 button.small {
     --button_color: #ddd;
-    border: 1px solid #ddd;
     --color: black;
     font-size: 0.7em;
 }
