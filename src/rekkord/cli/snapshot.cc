@@ -232,7 +232,7 @@ Available metadata save options:
         rk_SaveInfo info = {};
         if (!rk_Save(repo.get(), save.channel, save.filenames, settings, &info)) {
             if (report && rk_config.connect_url) {
-                LogInfo("Reporting error to configured web app...");
+                LogInfo("Reporting error to connected web app...");
 
                 int64_t now = GetUnixTime();
                 ReportError(rk_config.connect_url, rk_config.api_key, repo->GetURL(), save.channel, now, last_err);
@@ -256,7 +256,7 @@ Available metadata save options:
         LogInfo("Execution time: %!..+%1s%!0", FmtDouble(time, 1));
 
         if (report && rk_config.connect_url) {
-            LogInfo("Reporting status to configured web app...");
+            LogInfo("Reporting snapshot to connected web app...");
             complete &= ReportSnapshot(rk_config.connect_url, rk_config.api_key, repo->GetURL(), save.channel, info);
         }
     }

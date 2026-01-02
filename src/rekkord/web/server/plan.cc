@@ -733,11 +733,12 @@ void HandlePlanReport(http_IO *io)
         int64_t repository;
         {
             sq_Statement stmt;
-            if (!db.Prepare(R"(INSERT INTO repositories (owner, url, checked, errors)
-                               VALUES (?1, ?2, 0, ?3)
-                               ON CONFLICT (url) DO UPDATE SET errors = errors + excluded.errors
+            if (!db.Prepare(R"(INSERT INTO repositories (owner, url, checked, failed, errors)
+                               VALUES (?1, ?2, 0, ?3, ?4)
+                               ON CONFLICT (url) DO UPDATE SET failed = excluded.failed,
+                                                               errors = errors + excluded.errors
                                RETURNING id)",
-                            &stmt, owner, url, 0 + !!error))
+                            &stmt, owner, url, error, 0 + !!error))
                 return false;
 
             if (!stmt.Step()) {
