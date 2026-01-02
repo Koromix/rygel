@@ -83,7 +83,7 @@ async function runRepository() {
     let channels = UI.tableValues('channels', cache.repository.channels, 'name');
 
     UI.main(html`
-        <div class="header">${cache.repository.name}</div>
+        <div class="header">${cache.repository.url}</div>
 
         <div class="row">
             <div class="block info" style="min-width: 250px;">
