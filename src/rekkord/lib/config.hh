@@ -51,7 +51,7 @@ struct rk_Config {
     int threads = -1;
     int compression_level = 6;
 
-    const char *agent_url = nullptr;
+    const char *connect_url = nullptr;
     const char *api_key = nullptr;
     int64_t agent_period = 20 * 60000; // 20 minutes
 

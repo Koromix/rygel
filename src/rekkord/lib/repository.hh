@@ -119,6 +119,7 @@ public:
     void Lock();
 
     rk_Disk *GetDisk() const { return disk; }
+    const char *GetURL() const;
     Async *GetAsync() { return &tasks; }
 
     const rk_KeySet &GetKeys() const { return *keyset; }

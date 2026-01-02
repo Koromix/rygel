@@ -49,7 +49,7 @@ async function runPlans() {
                                 <td><span class="sub">${plan.key}</sub></td>
                                 <td>${makePlanTasks(plan)}</td>
                                 <td>
-                                    ${repo != null ? html`<a href=${App.makeURL({ mode: 'repository', repository: plan.repository })}>${repo.name}</a>` : ''}
+                                    ${repo != null ? html`<a href=${App.makeURL({ mode: 'repository', repository: plan.repository })}>${repo.url}</a>` : ''}
                                     ${repo == null ? html`<span class="sub">${T.unassigned}</span>` : ''}
                                 </td>
                             </tr>
@@ -118,7 +118,7 @@ async function runPlan() {
             <div class="block info" style="min-width: 250px;">
                 <div>
                     ${T.repository}
-                    <div class="sub">${repo?.name ?? T.unassigned}</div>
+                    <div class="sub">${repo?.url ?? T.unassigned}</div>
                 </div>
                 <div>
                     ${T.key_prefix}
@@ -212,7 +212,7 @@ async function configurePlan(plan) {
                                 @change=${UI.wrap(e => { plan.repository = parseInt(e.target.value, 10) || null; render(); })}>
                             <option value="0" ?selected=${plan.repository == null}>-- ${T.unassigned} --</option>
                             ${cache.repositories.map(repo =>
-                                html`<option value=${repo.id} ?selected=${repo.id == plan.repository}>${repo.name}</option>`)}
+                                html`<option value=${repo.id} ?selected=${repo.id == plan.repository}>${repo.url}</option>`)}
                         </select>
                     </label>
 

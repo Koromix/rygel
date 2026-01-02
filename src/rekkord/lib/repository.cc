@@ -221,6 +221,11 @@ void rk_Repository::Lock()
     str_alloc.ReleaseAll();
 }
 
+const char *rk_Repository::GetURL() const
+{
+    return disk->GetURL();
+}
+
 void rk_Repository::MakeID(Span<uint8_t> out_id) const
 {
     K_ASSERT(out_id.len >= 16 && out_id.len <= 64);

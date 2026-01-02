@@ -4,6 +4,7 @@
 #include "lib/native/base/base.hh"
 #include "lib/native/base/tower.hh"
 #include "rekkord.hh"
+#include "connect.hh"
 #include "lib/native/request/curl.hh"
 #include "lib/native/wrap/json.hh"
 
@@ -25,23 +26,9 @@ static BlockAllocator plan_alloc;
 
 static TowerServer server;
 
-static void LinkHeaders(Span<curl_slist> headers)
-{
-    if (!headers.len)
-        return;
-
-    for (Size i = 0; i < headers.len - 1; i++) {
-        headers[i].next = &headers[i + 1];
-    }
-    headers[headers.len - 1].next = nullptr;
-}
-
 static bool FetchPlan(Allocator *alloc, HeapArray<ItemData> *out_items)
 {
     K_DEFER_NC(err_guard, len = out_items->len) { out_items->RemoveFrom(len); };
-
-    Span<const char> api = rk_config.agent_url;
-    const char *key = rk_config.api_key;
 
     HeapArray<char> body;
     {
@@ -50,12 +37,11 @@ static bool FetchPlan(Allocator *alloc, HeapArray<ItemData> *out_items)
             return false;
         K_DEFER { curl_easy_cleanup(curl); };
 
-        const char *url = Fmt(alloc, "%1/api/plan/fetch", TrimStrRight(api, '/')).ptr;
+        const char *url = Fmt(alloc, "%1/api/plan/fetch", TrimStrRight(rk_config.connect_url, '/')).ptr;
 
         curl_slist headers[] = {
-            { Fmt(alloc, "X-Api-Key: %1", key).ptr, nullptr }
+            { Fmt(alloc, "X-Api-Key: %1", rk_config.api_key).ptr, nullptr }
         };
-        LinkHeaders(headers);
 
         curl_easy_setopt(curl, CURLOPT_URL, url);
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, &headers);
@@ -160,57 +146,6 @@ static bool ShouldRun(const ItemData &item)
     return false;
 }
 
-static bool SendReport(Span<const char> json)
-{
-    BlockAllocator temp_alloc;
-
-    Span<const char> api = rk_config.agent_url;
-    const char *key = rk_config.api_key;
-
-    CURL *curl = curl_Init();
-    if (!curl)
-        return false;
-    K_DEFER { curl_easy_cleanup(curl); };
-
-    const char *url = Fmt(&temp_alloc, "%1/api/plan/report", TrimStrRight(api, '/')).ptr;
-
-    curl_slist headers[] = {
-        { (char *)"Content-Type: application/json", nullptr },
-        { Fmt(&temp_alloc, "X-Api-Key: %1", key).ptr, nullptr }
-    };
-    LinkHeaders(headers);
-
-    curl_easy_setopt(curl, CURLOPT_URL, url);
-    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, &headers);
-
-    Span<const char> remain = json;
-
-    curl_easy_setopt(curl, CURLOPT_POST, 1L); // POST
-    curl_easy_setopt(curl, CURLOPT_READFUNCTION, +[](char *ptr, size_t size, size_t nmemb, void *udata) {
-        Span<const char> *remain = (Span<const char> *)udata;
-        Size give = std::min((Size)(size * nmemb), remain->len);
-
-        MemCpy(ptr, remain->ptr, give);
-        remain->ptr += (Size)give;
-        remain->len -= (Size)give;
-
-        return (size_t)give;
-    });
-    curl_easy_setopt(curl, CURLOPT_READDATA, &remain);
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE_LARGE, (curl_off_t)remain.len);
-
-    int status = curl_Perform(curl, "report");
-
-    if (status != 200) {
-        if (status >= 0) {
-            LogError("Failed to send report with status %1", status);
-        }
-        return false;
-    }
-
-    return true;
-}
-
 static bool UpdatePlan(bool post)
 {
     LogInfo("Fetching backup plan...");
@@ -231,50 +166,6 @@ static bool UpdatePlan(bool post)
     }
 
     return true;
-}
-
-static bool ReportSuccess(const char *channel, const rk_SaveInfo &info)
-{
-    HeapArray<char> body;
-
-    char oid[128];
-    Fmt(oid, "%1", info.oid);
-
-    // Format JSON
-    {
-        StreamWriter st(&body, "<report>");
-        json_Writer json(&st);
-
-        json.StartObject();
-        json.Key("channel"); json.String(channel);
-        json.Key("timestamp"); json.Int64(info.time);
-        json.Key("oid"); json.String(oid);
-        json.Key("size"); json.Int64(info.size);
-        json.Key("stored"); json.Int64(info.stored);
-        json.Key("added"); json.Int64(info.added);
-        json.EndObject();
-    }
-
-    return SendReport(body);
-}
-
-static bool ReportError(const char *channel, int64_t time, const char *message)
-{
-    HeapArray<char> body;
-
-    // Format JSON
-    {
-        StreamWriter st(&body, "<report>");
-        json_Writer json(&st);
-
-        json.StartObject();
-        json.Key("channel"); json.String(channel);
-        json.Key("timestamp"); json.Int64(time);
-        json.Key("error"); json.String(message);
-        json.EndObject();
-    }
-
-    return SendReport(body);
 }
 
 static bool RunSnapshot(const char *channel, Span<const char *const> paths, rk_SaveInfo *out_info)
@@ -311,13 +202,13 @@ static bool RunPlan()
             bool success = RunSnapshot(item.channel, item.paths, &info);
 
             if (success) {
-                ReportSuccess(item.channel, info);
+                ReportSnapshot(rk_config.connect_url, rk_config.api_key, rk_config.url, item.channel, info);
 
                 item.timestamp = info.time;
                 item.success = true;
             } else {
                 int64_t now = GetUnixTime();
-                ReportError(item.channel, now, last_err);
+                ReportError(rk_config.connect_url, rk_config.api_key, rk_config.url, item.channel, now, last_err);
 
                 item.timestamp = now;
                 item.success = false;

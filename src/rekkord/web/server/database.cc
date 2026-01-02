@@ -7,7 +7,7 @@
 
 namespace K {
 
-const int DatabaseVersion = 31;
+const int DatabaseVersion = 32;
 
 int GetDatabaseVersion(sq_Database *db)
 {
@@ -653,9 +653,40 @@ bool MigrateDatabase(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 31: {
+                bool success = db->RunMany(R"(
+                    CREATE TABLE reports_NEW (
+                        id INTEGER PRIMARY KEY NOT NULL,
+                        plan INTEGER NOT NULL,
+                        repository INTEGER NOT NULL,
+                        channel TEXT NOT NULL,
+                        timestamp INTEGER NOT NULL,
+                        oid TEXT,
+                        error TEXT,
+
+                        FOREIGN KEY (plan, channel) REFERENCES items (plan, channel) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED
+                    );
+
+                    INSERT INTO reports_NEW (id, plan, repository, channel, timestamp, oid, error)
+                        SELECT r.id, r.plan, p.repository, r.channel, r.timestamp, r.oid, r.error
+                        FROM reports r
+                        INNER JOIN plans p ON (p.id = r.plan)
+                        WHERE p.repository IS NOT NULL;
+                    DROP TABLE reports;
+                    ALTER TABLE reports_NEW RENAME TO reports;
+
+                    CREATE INDEX reports_pc ON reports (plan, channel);
+
+                    CREATE UNIQUE INDEX repositories_u ON repositories (url);
+                    CREATE INDEX items_r ON items (report);
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            static_assert(DatabaseVersion == 31);
+            static_assert(DatabaseVersion == 32);
         }
 
         if (!db->Run("INSERT INTO migrations (version, build, timestamp) VALUES (?, ?, ?)",

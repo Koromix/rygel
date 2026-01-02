@@ -575,7 +575,7 @@ void HandlePlanKey(http_IO *io)
     });
 }
 
-static bool ValidateApiKey(http_IO *io, int64_t *out_plan = nullptr, int64_t *out_repository = nullptr)
+static bool ValidateApiKey(http_IO *io, int64_t *out_owner, int64_t *out_plan)
 {
     const http_RequestInfo &request = io->Request();
     const char *header = request.GetHeaderValue("X-Api-Key");
@@ -593,7 +593,7 @@ static bool ValidateApiKey(http_IO *io, int64_t *out_plan = nullptr, int64_t *ou
     Span<const char> key = SplitStr(header, '/', &secret);
 
     sq_Statement stmt;
-    if (!db.Prepare("SELECT id, repository, hash FROM plans WHERE key = ?1", &stmt, key))
+    if (!db.Prepare("SELECT id, owner, hash FROM plans WHERE key = ?1", &stmt, key))
         return false;
 
     if (!stmt.Step()) {
@@ -608,7 +608,7 @@ static bool ValidateApiKey(http_IO *io, int64_t *out_plan = nullptr, int64_t *ou
     }
 
     int64_t plan = sqlite3_column_int64(stmt, 0);
-    int64_t repository = sqlite3_column_int64(stmt, 1);
+    int64_t owner = sqlite3_column_int64(stmt, 1);
     const char *hash = (const char *)sqlite3_column_text(stmt, 2);
 
     if (crypto_pwhash_str_verify(hash, secret.ptr, (size_t)secret.len) < 0) {
@@ -620,20 +620,20 @@ static bool ValidateApiKey(http_IO *io, int64_t *out_plan = nullptr, int64_t *ou
         return false;
     }
 
+    if (out_owner) {
+        *out_owner = owner;
+    }
     if (out_plan) {
         *out_plan = plan;
     }
-    if (out_repository) {
-        *out_repository = repository;
-    }
 
-    return true;
+    return plan;
 }
 
 void HandlePlanFetch(http_IO *io)
 {
     int64_t plan;
-    if (!ValidateApiKey(io, &plan))
+    if (!ValidateApiKey(io, nullptr, &plan))
         return;
 
     http_SendJson(io, 200, [&](json_Writer *json) {
@@ -643,11 +643,12 @@ void HandlePlanFetch(http_IO *io)
 
 void HandlePlanReport(http_IO *io)
 {
+    int64_t owner;
     int64_t plan;
-    int64_t repository;
-    if (!ValidateApiKey(io, &plan, &repository))
+    if (!ValidateApiKey(io, &owner, &plan))
         return;
 
+    const char *url = nullptr;
     const char *channel = nullptr;
     int64_t timestamp = -1;
     const char *oid = nullptr;
@@ -662,7 +663,9 @@ void HandlePlanReport(http_IO *io)
             for (json->ParseObject(); json->InObject(); ) {
                 Span<const char> key = json->ParseKey();
 
-                if (key == "channel") {
+                if (key == "repository") {
+                    json->ParseString(&url);
+                } else if (key == "channel") {
                     json->ParseString(&channel);
                 } else if (key == "timestamp") {
                     json->ParseInt(&timestamp);
@@ -684,6 +687,10 @@ void HandlePlanReport(http_IO *io)
             valid &= json->IsValid();
 
             if (valid) {
+                if (!url) {
+                    LogError("Missing or invalid 'repository' parameter");
+                    valid = false;
+                }
                 if (!channel) {
                     LogError("Missing or invalid 'channel' parameter");
                     valid = false;
@@ -723,12 +730,40 @@ void HandlePlanReport(http_IO *io)
     }
 
     bool success = db.Transaction([&]() {
-        if (!db.Run(R"(INSERT INTO reports (plan, channel, timestamp, oid, error)
-                       VALUES (?1, ?2, ?3, ?4, ?5))",
-                    plan, channel, timestamp, oid, error))
-            return false;
+        int64_t repository;
+        {
+            sq_Statement stmt;
+            if (!db.Prepare(R"(INSERT INTO repositories (owner, url, checked, errors)
+                               VALUES (?1, ?2, 0, ?3)
+                               ON CONFLICT (url) DO UPDATE SET errors = errors + excluded.errors
+                               RETURNING id)",
+                            &stmt, owner, url, 0 + !!error))
+                return false;
 
-        int64_t id = sqlite3_last_insert_rowid(db);
+            if (!stmt.Step()) {
+                K_ASSERT(!stmt.IsValid());
+                return false;
+            }
+
+            repository = sqlite3_column_int64(stmt, 0);
+        }
+
+        int64_t report;
+        {
+            sq_Statement stmt;
+            if (!db.Prepare(R"(INSERT INTO reports (plan, repository, channel, timestamp, oid, error)
+                               VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+                               RETURNING id)",
+                            &stmt, plan, repository, channel, timestamp, oid, error))
+                return false;
+
+            if (!stmt.Step()) {
+                K_ASSERT(!stmt.IsValid());
+                return false;
+            }
+
+            report = sqlite3_column_int64(stmt, 0);
+        }
 
         if (oid) {
             if (!db.Run(R"(INSERT INTO snapshots (repository, oid, channel, timestamp, size, stored, added)
@@ -745,8 +780,11 @@ void HandlePlanReport(http_IO *io)
                 return false;
         }
 
-        if (!db.Run(R"(UPDATE items SET report = ?3
-                       WHERE plan = ?1 AND channel = ?2)", plan, channel, id))
+        if (!db.Run(R"(INSERT INTO items (plan, channel, days, clock, report)
+                       VALUES (?1, ?2, 0, 0, ?3)
+                       ON CONFLICT (plan, channel) DO UPDATE SET report = excluded.report)", plan, channel, report))
+            return false;
+        if (!db.Run("UPDATE plans SET repository = ?2 WHERE id = ?1", plan, repository))
             return false;
 
         return true;

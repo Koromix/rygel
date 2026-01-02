@@ -3,6 +3,7 @@
 
 #include "lib/native/base/base.hh"
 #include "rekkord.hh"
+#include "connect.hh"
 
 namespace K {
 
@@ -73,6 +74,7 @@ int RunSave(Span<const char *> arguments)
     rk_SaveSettings settings;
     const char *from = nullptr;
     bool raw = false;
+    bool report = true;
     HeapArray<SaveRequest> saves;
 
     const auto print_usage = [=](StreamWriter *st) {
@@ -95,6 +97,8 @@ Save options:
     %!..+-m, --meta metadata%!0            Save additional directory/file metadata, see below
 
         %!..+--raw%!0                      Skip snapshot object and report data OID
+
+        %!..+--no_report%!0                Skip reporting status to web app even if link is configured
 
 Available metadata save options:
 
@@ -139,6 +143,8 @@ Available metadata save options:
                 }
             } else if (opt.Test("--raw")) {
                 raw = true;
+            } else if (opt.Test("--no_report")) {
+                report = false;
             } else if (!HandleCommonOption(opt)) {
                 return 1;
             }
@@ -213,8 +219,25 @@ Available metadata save options:
     for (const SaveRequest &save: saves) {
         int64_t now = GetMonotonicTime();
 
+        const char *last_err = "Unknown error";
+        PushLogFilter([&](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
+            if (level == LogLevel::Error) {
+                last_err = DuplicateString(msg, &temp_alloc).ptr;
+            }
+
+            func(level, ctx, msg);
+        });
+        K_DEFER { PopLogFilter(); };
+
         rk_SaveInfo info = {};
         if (!rk_Save(repo.get(), save.channel, save.filenames, settings, &info)) {
+            if (report && rk_config.connect_url) {
+                LogInfo("Reporting error to configured web app...");
+
+                int64_t now = GetUnixTime();
+                ReportError(rk_config.connect_url, rk_config.api_key, repo->GetURL(), save.channel, now, last_err);
+            }
+
             complete = false;
             continue;
         }
@@ -231,6 +254,11 @@ Available metadata save options:
         LogInfo("Source size: %!..+%1%!0", FmtDiskSize(info.size));
         LogInfo("Total stored: %!..+%1%!0 (added %2)", FmtDiskSize(info.stored), FmtDiskSize(info.added));
         LogInfo("Execution time: %!..+%1s%!0", FmtDouble(time, 1));
+
+        if (report && rk_config.connect_url) {
+            LogInfo("Reporting status to configured web app...");
+            complete &= ReportSnapshot(rk_config.connect_url, rk_config.api_key, repo->GetURL(), save.channel, info);
+        }
     }
 
     return !complete;
