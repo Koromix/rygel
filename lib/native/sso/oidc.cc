@@ -528,6 +528,7 @@ static psa_key_id_t FetchJwksKey(const oidc_Provider &provider, const char *kid,
     // they will definitely be forgotten and we'll be good to go!
     if (now - jwks_timestamp >= JwksExpirationDelay) {
         jwks_entries.Clear();
+        jwks_map.Clear();
         jwks_providers.Clear();
 
         for (psa_key_id_t key: jwks_old_keys) {
