@@ -323,7 +323,7 @@ Agent options:
     {
         unsigned int flags = (int)rk_ConfigFlag::RequireAuth | (int)rk_ConfigFlag::RequireAgent;
 
-        if (!rk_config.Complete(flags))
+        if (!rk_config.Complete())
             return 1;
         if (!rk_config.Validate(flags))
             return 1;

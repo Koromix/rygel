@@ -441,7 +441,7 @@ Options:
         opt.LogUnusedArguments();
     }
 
-    if (!rk_config.Complete(0))
+    if (!rk_config.Complete())
         return 1;
     if (!rk_config.Validate(0))
         return 1;

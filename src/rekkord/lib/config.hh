@@ -57,7 +57,7 @@ struct rk_Config {
 
     BlockAllocator str_alloc;
 
-    bool Complete(unsigned int flags = (int)rk_ConfigFlag::RequireAuth);
+    bool Complete();
     bool Validate(unsigned int flags = (int)rk_ConfigFlag::RequireAuth) const;
 };
 

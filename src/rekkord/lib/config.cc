@@ -7,7 +7,7 @@
 
 namespace K {
 
-bool rk_Config::Complete(unsigned int flags)
+bool rk_Config::Complete()
 {
     if (!url) {
         url = GetEnv("REKKORD_REPOSITORY");
