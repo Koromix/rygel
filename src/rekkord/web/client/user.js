@@ -467,7 +467,7 @@ async function configureSecurity() {
                 <div class="main">
                     <div class="tabbar">
                         ${security.password ? html`
-                            <a class=${tab == 'password' ? 'active' : '' } @click=${e => { tab = 'password'; render(); }}>${T.change_password}</a>
+                            <a class=${tab == 'password' ? 'active' : '' } @click=${e => { tab = 'password'; render(); }}>${T.password}</a>
                             <a class=${tab == 'totp' ? 'active' : '' } @click=${e => { tab = 'totp'; render(); }}>${T.two_factor_authentication}</a>
                             ${ENV.auth.providers.length ? html`<a class=${tab == 'identities' ? 'active' : '' } @click=${e => { tab = 'identities'; render(); }}>${T.external_identities}</a>` : ''}
                         ` : ''}
