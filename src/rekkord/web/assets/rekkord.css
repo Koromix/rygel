@@ -36,7 +36,6 @@ span[title] { border-bottom: 1px dotted #383838; }
     box-sizing: border-box;
     width: var(--size);
     height: var(--size);
-    background: white;
     border-radius: 50%;
     border: none;
     vertical-align: middle;
