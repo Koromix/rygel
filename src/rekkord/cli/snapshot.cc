@@ -80,8 +80,7 @@ int RunSave(Span<const char *> arguments)
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
 T(R"(Usage: %!..+%1 save [-C filename] [option...] channel path...%!0
-       %!..+%1 save [-C filename] [option...] --from file%!0
-       %!..+%1 save [-C filename] [option...] --raw path...%!0)"), FelixTarget);
+       %!..+%1 save [-C filename] [option...] --from file%!0%!0)"), FelixTarget);
         PrintCommonOptions(st);
         PrintLn(st, T(R"(
 Save options:
@@ -96,8 +95,7 @@ Save options:
 
     %!..+-m, --meta metadata%!0            Save additional directory/file metadata, see below
 
-        %!..+--raw%!0                      Skip snapshot object and report data OID
-
+        %!..+--no_snapshot%!0              Skip snapshot object and report data OID
         %!..+--no_report%!0                Skip reporting status to web app even if link is configured
 
 Available metadata save options:
@@ -141,7 +139,7 @@ Available metadata save options:
                         }
                     }
                 }
-            } else if (opt.Test("--raw")) {
+            } else if (opt.Test("--no_snapshot")) {
                 raw = true;
             } else if (opt.Test("--no_report")) {
                 report = false;
