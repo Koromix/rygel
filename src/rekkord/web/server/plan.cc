@@ -321,21 +321,6 @@ void HandlePlanSave(http_IO *io)
         }
     }
 
-    // Make sure user owns repository
-    if (repository >= 0) {
-        sq_Statement stmt;
-        if (!db.Prepare("SELECT id FROM repositories WHERE owner = ?1 AND id = ?2", &stmt, session->userid, repository))
-            return;
-
-        if (!stmt.Step()) {
-            if (stmt.IsValid()) {
-                LogError("Unknown repository ID %1", repository);
-                io->SendError(404);
-            }
-            return;
-        }
-    }
-
     // Prepare new API key if needed
     char key[33];
     char secret[33];
@@ -365,15 +350,13 @@ void HandlePlanSave(http_IO *io)
     // Create or update plan
     bool success = db.Transaction([&]() {
         sq_Statement stmt;
-        if (!db.Prepare(R"(INSERT INTO plans (id, owner, repository, name, key, hash, scan)
-                           VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+        if (!db.Prepare(R"(INSERT INTO plans (id, owner, name, key, hash, scan)
+                           VALUES (?1, ?2, ?3, ?4, ?5, ?6)
                            ON CONFLICT DO UPDATE SET id = IF(owner = excluded.owner, id, NULL),
-                                                     repository = excluded.repository,
                                                      name = excluded.name,
                                                      scan = excluded.scan
                            RETURNING id)",
-                        &stmt, id >= 0 ? sq_Binding(id) : sq_Binding(),
-                        session->userid, repository > 0 ? sq_Binding(repository) : sq_Binding(),
+                        &stmt, id >= 0 ? sq_Binding(id) : sq_Binding(), session->userid,
                         name, key, hash, scan >= 0 ? sq_Binding(scan) : sq_Binding()))
             return false;
         if (!stmt.Step()) {

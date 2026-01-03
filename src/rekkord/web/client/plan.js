@@ -206,15 +206,6 @@ async function configurePlan(plan) {
                         <input type="text" name="name" required .value=${live(plan.name)}
                                @change=${UI.wrap(e => { plan.name = e.target.value; render(); })} />
                     </label>
-                    <label>
-                        <span>${T.repository}</span>
-                        <select ?disabled=${ptr != null}
-                                @change=${UI.wrap(e => { plan.repository = parseInt(e.target.value, 10) || null; render(); })}>
-                            <option value="0" ?selected=${plan.repository == null}>-- ${T.unassigned} --</option>
-                            ${cache.repositories.map(repo =>
-                                html`<option value=${repo.id} ?selected=${repo.id == plan.repository}>${repo.name ?? repo.url}</option>`)}
-                        </select>
-                    </label>
 
                     <div class="section">
                         ${T.snapshot_items}
@@ -366,7 +357,6 @@ async function configurePlan(plan) {
             let obj = {
                 id: plan.id,
                 name: plan.name,
-                repository: plan.repository,
                 scan: scan ? plan.scan : null,
                 items: plan.items.map(item => ({
                     channel: item.channel,
