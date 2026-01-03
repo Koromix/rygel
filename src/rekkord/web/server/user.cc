@@ -26,7 +26,7 @@ static const int64_t TotpPeriod = 30000;
 static const int64_t TokenDuration = 1800 * 1000;
 static const int64_t InvalidTimeout = 86400 * 1000;
 static const int BanThreshold = 6;
-static const int64_t BanTime = 1800 * 1000;
+static const int64_t BanTime = 15 * 60000;
 
 static const int64_t PictureCacheDelay = 3600 * 1000;
 static const Size MaxPictureSize = Kibibytes(256);
