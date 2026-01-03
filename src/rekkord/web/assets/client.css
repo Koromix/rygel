@@ -270,6 +270,7 @@ table tbody tr:hover > td {
     text-align: center;
     color: #262626;
 }
+
 .block {
     display: flex;
     flex-direction: column;
@@ -277,6 +278,13 @@ table tbody tr:hover > td {
     background: var(--tab_color);
     border-radius: 6px;
     gap: 0.71em;
+}
+.block.info {
+    display: flex;
+    flex-direction: column;
+    gap: 1em;
+
+    & > div { text-align: center; }
 }
 
 .tabbar {
@@ -322,14 +330,6 @@ table tbody tr:hover > td {
         font-size: 0.9em;
     }
     .block { padding: 1em 0.5em; }
-}
-
-.info {
-    display: flex;
-    flex-direction: column;
-    gap: 1em;
-
-    & > div { text-align: center; }
 }
 
 .sub {
