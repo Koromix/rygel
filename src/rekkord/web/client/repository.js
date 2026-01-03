@@ -101,6 +101,15 @@ async function runRepository() {
                     ${T.name}
                     <div class="sub">${cache.repository.name ?? T.unnamed}</div>
                 </div>
+                <div>
+                    ${T.status}
+                    <div class="sub">
+                        ${!cache.repository.checked ? T.unchecked : ''}
+                        ${cache.repository.checked && !cache.repository.errors ? T.success : ''}
+                        ${cache.repository.checked && cache.repository.errors ? html`<span style="color: red;">${cache.repository.failed || T.unknown_error}</span>` : ''}
+                        ${cache.repository.checked ? html`<br>${dayjs(cache.repository.checked).format('lll')}` : ''}
+                    </div>
+                </div>
                 <button type="button" @click=${UI.wrap(e => configureRepository(cache.repository))}>${T.configure}</button>
             </div>
 
