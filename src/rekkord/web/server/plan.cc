@@ -309,6 +309,11 @@ void HandlePlanSave(http_IO *io)
                             valid = false;
                         }
                     }
+
+                    if (item.days && !item.paths.len) {
+                        LogError("Missing item paths");
+                        valid = false;
+                    }
                 }
             }
 

@@ -71,6 +71,7 @@
         "login_with_x": "Sign in with {1}",
         "logout": "Logout",
         "mail_address": "Mail address",
+        "manual_snapshots": "Manual snapshots",
         "maybe_create_account": "Create a new account?",
         "maybe_lost_password": "Lost your password?",
         "move": "Move",

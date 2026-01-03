@@ -134,31 +134,34 @@ async function runPlan() {
                     <colgroup>
                         <col style="width: 150px;"></col>
                         <col></col>
-                        <col style="width: 100px;"></col>
                         <col></col>
+                        <col style="width: 100px;"></col>
                         <col></col>
                     </colgroup>
                     <thead>
                         <tr>
                             <th>${T.channel}</th>
+                            <th>${T.last_run}</th>
                             <th>${T.days}</th>
                             <th>${T.clock_time}</th>
                             <th>${T.paths}</th>
-                            <th>${T.last_run}</th>
                         </tr>
                     </thead>
                     <tbody>
                         ${cache.plan.items.map(item => html`
                             <tr>
                                 <td>${item.channel}</td>
-                                <td>${formatDays(item.days)}</td>
-                                <td style="text-align: center;">${formatClock(item.clock)}</td>
-                                <td class="nowrap">${item.paths.map(path => html`${path}<br>`)}</td>
-                                <td style=${'text-align: right;' + (item.error != null ? ' color: var(--color, red);' : '')}>
+                                <td style=${item.error != null ? 'color: var(--color, red);' : ''}>
                                     ${item.timestamp == null ? T.never : ''}
                                     ${item.timestamp != null ? dayjs(item.timestamp).format('lll') : ''}
                                     <br>${item.error || ''}
                                 </td>
+                                ${item.days ? html`
+                                    <td>${formatDays(item.days)}</td>
+                                    <td style="text-align: center;">${formatClock(item.clock)}</td>
+                                    <td class="nowrap">${item.paths.map(path => html`${path}<br>`)}</td>
+                                ` : ''}
+                                ${!item.days ? html`<td colspan="3" class="center"><span class="sub">${T.manual_snapshots}</span></td>` : ''}
                             </tr>
                         `)}
                         ${!cache.plan.items.length ? html`<tr><td colspan="5" style="text-align: center;">${T.no_snapshot_item}</td></tr>` : ''}
