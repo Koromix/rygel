@@ -34,23 +34,23 @@ static const Size MaxPictureSize = Kibibytes(256);
 static const int SsoCookieFlags =  (int)http_CookieFlag::SameSiteStrict | (int)http_CookieFlag::Secure | (int)http_CookieFlag::HttpOnly;
 static const int SsoCookieMaxAge = 10 * 60000; // 10 minutes
 
+struct EventKey {
+    const char *resource;
+    const char *who;
+
+    bool operator==(const EventKey &other) const { return TestStr(resource, other.resource) && TestStr(who, other.who); }
+    bool operator!=(const EventKey &other) const { return !(*this == other); }
+
+    uint64_t Hash() const
+    {
+        uint64_t hash = HashTraits<const char *>::Hash(resource) ^
+                        HashTraits<const char *>::Hash(who);
+        return hash;
+    }
+};
+
 struct EventInfo {
-    struct Key {
-        const char *where;
-        const char *who;
-
-        bool operator==(const Key &other) const { return TestStr(where, other.where) && TestStr(who, other.who); }
-        bool operator!=(const Key &other) const { return !(*this == other); }
-
-        uint64_t Hash() const
-        {
-            uint64_t hash = HashTraits<const char *>::Hash(where) ^
-                            HashTraits<const char *>::Hash(who);
-            return hash;
-        }
-    };
-
-    Key key;
+    EventKey key;
     int64_t until; // Monotonic
 
     int count;
@@ -64,7 +64,7 @@ static http_SessionManager<SessionInfo> sessions;
 
 static std::shared_mutex events_mutex;
 static BucketArray<EventInfo> events;
-static HashTable<EventInfo::Key, EventInfo *> events_map;
+static HashTable<EventKey, EventInfo *> events_map;
 
 static bool IsMailValid(const char *mail)
 {
@@ -236,19 +236,18 @@ static RetainPtr<SessionInfo> CreateUserSession(int64_t userid, bool authorize, 
     return ptr;
 }
 
-static const EventInfo *RegisterEvent(const char *where, const char *who, int64_t time = GetUnixTime())
+static const EventInfo *RegisterEvent(const EventKey &key, int64_t time)
 {
     std::lock_guard<std::shared_mutex> lock_excl(events_mutex);
 
-    EventInfo::Key key = { where, who };
     EventInfo *event = events_map.FindValue(key, nullptr);
 
     if (!event || event->until < GetMonotonicTime()) {
         Allocator *alloc;
         event = events.AppendDefault(&alloc);
 
-        event->key.where = DuplicateString(where, alloc).ptr;
-        event->key.who = DuplicateString(who, alloc).ptr;
+        event->key.resource = DuplicateString(key.resource, alloc).ptr;
+        event->key.who = DuplicateString(key.who, alloc).ptr;
         event->until = GetMonotonicTime() + BanTime;
 
         events_map.Set(event);
@@ -261,11 +260,10 @@ static const EventInfo *RegisterEvent(const char *where, const char *who, int64_
     return event;
 }
 
-static int CountEvents(const char *where, const char *who)
+static int CountEvents(const EventKey &key)
 {
     std::shared_lock<std::shared_mutex> lock_shr(events_mutex);
 
-    EventInfo::Key key = { where, who };
     const EventInfo *event = events_map.FindValue(key, nullptr);
 
     // We don't need to use precise timing, and a ban can last a bit
@@ -571,7 +569,7 @@ void HandleUserLogin(http_IO *io)
     stmt.Run();
 
     // Validate password if user exists
-    if (stmt.IsRow() && CountEvents(request.client_addr, mail) < BanThreshold) {
+    if (stmt.IsRow() && CountEvents({ request.client_addr, mail }) < BanThreshold) {
         int64_t userid = sqlite3_column_int64(stmt, 0);
         const char *password_hash = (const char *)sqlite3_column_text(stmt, 1);
         const char *username = (const char *)sqlite3_column_text(stmt, 2);
@@ -588,7 +586,7 @@ void HandleUserLogin(http_IO *io)
 
             return;
         } else {
-            RegisterEvent(request.client_addr, mail);
+            RegisterEvent({ request.client_addr, mail }, start);
         }
     }
 
@@ -646,17 +644,6 @@ void HandleUserRecover(http_IO *io)
         }
     }
 
-    // Prevent excessive recovery tries from same client
-    {
-        const EventInfo *event = RegisterEvent(request.client_addr, mail);
-
-        if (event->count >= BanThreshold) {
-            LogError("You are blocked for %1 minutes after excessive login failures", (BanTime + 59000) / 60000);
-            io->SendError(403);
-            return;
-        }
-    }
-
     int64_t userid = 0;
     uint8_t token[16];
 
@@ -684,8 +671,10 @@ void HandleUserRecover(http_IO *io)
         }
     }
 
+    int64_t now = GetMonotonicTime();
+
     // Create recovery token
-    if (userid > 0) {
+    if (userid > 0 && RegisterEvent({ request.client_addr, mail }, now)->count < BanThreshold) {
         int64_t now = GetUnixTime();
 
         if (!db.Run(R"(INSERT INTO tokens (token, type, timestamp, user)
@@ -1421,7 +1410,7 @@ static bool CheckTotp(http_IO *io, int64_t userid, const char *secret, const cha
         char who[64];
         Fmt(who, "%1", userid);
 
-        const EventInfo *event = RegisterEvent("TOTP", who, time);
+        const EventInfo *event = RegisterEvent({ "TOTP", who }, time);
 
         bool replay = (event->prev_time / TotpPeriod >= min) &&
                       pwd_CheckHotp(secret, pwd_HotpAlgorithm::SHA1, min, event->prev_time / TotpPeriod, 6, code);
