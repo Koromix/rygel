@@ -58,7 +58,7 @@ bool rk_Config::Validate(unsigned int flags) const
             LogError("Missing connect API key");
             valid = false;
         }
-    } else {
+    } else if (connect_url) {
         if (!api_key) {
             LogError("Missing connect API key");
             valid = false;
