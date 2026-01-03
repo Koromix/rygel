@@ -119,7 +119,10 @@ async function runPlan() {
             <div class="block info" style="min-width: 250px;">
                 <div>
                     ${T.repository}
-                    <div class="sub">${repo?.url ?? T.unassigned}</div>
+                    <div class="sub">
+                        ${repo != null ? html`<a href=${App.makeURL({ mode: 'repository', repository: repo.id })}>${repo.name ?? repo.url}</a>` : ''}
+                        ${repo == null ? T.unassigned : ''}
+                    </div>
                 </div>
                 <div>
                     ${T.key_prefix}
