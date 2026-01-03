@@ -294,7 +294,7 @@ void HandlePlanSave(http_IO *io)
                         LogError("Missing or invalid 'channel' parameter");
                         valid = false;
                     }
-                    if (item.days < 1 || item.days >= 128) {
+                    if (item.days < 0 || item.days >= 128) {
                         LogError("Missing or invalid 'days' parameter");
                         valid = false;
                     }
@@ -303,10 +303,6 @@ void HandlePlanSave(http_IO *io)
                         valid = false;
                     }
 
-                    if (!item.paths.len) {
-                        LogError("Missing item paths");
-                        valid = false;
-                    }
                     for (const char *path: item.paths) {
                         if (!path || !path[0]) {
                             LogError("Missing or invalid item path");

@@ -22,7 +22,7 @@ void HandleRepositoryList(http_IO *io)
     }
 
     sq_Statement stmt;
-    if (!db.Prepare(R"(SELECT id, url, checked, failed, errors
+    if (!db.Prepare(R"(SELECT id, url, name, checked, failed, errors
                        FROM repositories
                        WHERE owner = ?1)", &stmt, session->userid))
         return;
@@ -33,14 +33,16 @@ void HandleRepositoryList(http_IO *io)
         while (stmt.Step()) {
             int64_t id = sqlite3_column_int64(stmt, 0);
             const char *url = (const char *)sqlite3_column_text(stmt, 1);
-            int64_t checked = sqlite3_column_int64(stmt, 2);
-            const char *failed = (const char *)sqlite3_column_text(stmt, 3);
-            int errors = sqlite3_column_int(stmt, 4);
+            const char *name = (const char *)sqlite3_column_text(stmt, 2);
+            int64_t checked = sqlite3_column_int64(stmt, 3);
+            const char *failed = (const char *)sqlite3_column_text(stmt, 4);
+            int errors = sqlite3_column_int(stmt, 5);
 
             json->StartObject();
 
             json->Key("id"); json->Int64(id);
             json->Key("url"); json->String(url);
+            json->Key("name"); json->StringOrNull(name);
             if (checked) {
                 json->Key("checked"); json->Int64(checked);
             } else {
@@ -85,7 +87,7 @@ void HandleRepositoryGet(http_IO *io)
     }
 
     sq_Statement stmt;
-    if (!db.Prepare(R"(SELECT url, checked, failed, errors
+    if (!db.Prepare(R"(SELECT url, name, checked, failed, errors
                        FROM repositories
                        WHERE owner = ?1 AND id = ?2)",
                     &stmt, session->userid, id))
@@ -105,12 +107,14 @@ void HandleRepositoryGet(http_IO *io)
         // Main information
         {
             const char *url = (const char *)sqlite3_column_text(stmt, 0);
-            int64_t checked = sqlite3_column_int64(stmt, 1);
-            const char *failed = (const char *)sqlite3_column_text(stmt, 2);
-            int errors = sqlite3_column_int(stmt, 3);
+            const char *name = (const char *)sqlite3_column_text(stmt, 1);
+            int64_t checked = sqlite3_column_int64(stmt, 2);
+            const char *failed = (const char *)sqlite3_column_text(stmt, 3);
+            int errors = sqlite3_column_int(stmt, 4);
 
             json->Key("id"); json->Int64(id);
             json->Key("url"); json->String(url);
+            json->Key("name"); json->StringOrNull(name);
             if (checked) {
                 json->Key("checked"); json->Int64(checked);
             } else {
@@ -158,6 +162,73 @@ void HandleRepositoryGet(http_IO *io)
 
         json->EndObject();
     });
+}
+
+void HandleRepositorySave(http_IO *io)
+{
+    RetainPtr<const SessionInfo> session = GetNormalSession(io);
+
+    if (!session) {
+        LogError("User is not logged in");
+        io->SendError(401);
+        return;
+    }
+
+    int64_t id = -1;
+    const char *name = nullptr;
+    {
+        bool success = http_ParseJson(io, Kibibytes(4), [&](json_Parser *json) {
+            bool valid = true;
+
+            for (json->ParseObject(); json->InObject(); ) {
+                Span<const char> key = json->ParseKey();
+
+                if (key == "id") {
+                    json->ParseInt(&id);
+                } else if (key == "name") {
+                    json->SkipNull() || json->ParseString(&name);
+                } else {
+                    json->UnexpectedKey(key);
+                    valid = false;
+                }
+            }
+            valid &= json->IsValid();
+
+            if (valid) {
+                if (name && !name[0]) {
+                    LogError("Invalid 'name' parameter");
+                    valid = false;
+                }
+            }
+
+            return valid;
+        });
+
+        if (!success) {
+            io->SendError(422);
+            return;
+        }
+    }
+
+    // Update repository
+    {
+        sq_Statement stmt;
+        if (!db.Prepare(R"(UPDATE repositories SET name = ?3
+                           WHERE id = ?1 AND owner = ?2
+                           RETURNING id)",
+                        &stmt, id, session->userid, name))
+            return;
+
+        if (!stmt.Step()) {
+            if (stmt.IsValid()) {
+                LogError("Unknown repository ID %1", id);
+                io->SendError(404);
+            }
+            return;
+        }
+    }
+
+    io->SendText(200, "{}", "application/json");
 }
 
 void HandleRepositoryDelete(http_IO *io)

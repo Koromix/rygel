@@ -20,11 +20,13 @@ async function runRepositories() {
         <div class="block">
             <table style="table-layout: fixed; width: 100%;">
                 <colgroup>
+                    <col style="width: 220px;"></col>
                     <col></col>
                     <col style="width: 220px;"></col>
                 </colgroup>
                 <thead>
                     <tr>
+                        ${UI.tableHeader('repositories', 'name', T.name)}
                         ${UI.tableHeader('repositories', 'url', T.url)}
                         ${UI.tableHeader('repositories', repo => {
                             if (repo.errors) {
@@ -41,6 +43,10 @@ async function runRepositories() {
 
                         return html`
                             <tr style="cursor: pointer;" @click=${UI.wrap(e => App.go(url))}>
+                                <td>
+                                    ${repo.name != null ? repo.name : ''}
+                                    ${repo.name == null ? html`<span class="sub">${T.unnamed}</span>` : ''}
+                                </td>
                                 <td><a href=${url}>${repo.url}</a></td>
                                 <td style="text-align: right;">
                                     ${!repo.checked ? T.valid : ''}
@@ -83,7 +89,7 @@ async function runRepository() {
     let channels = UI.tableValues('channels', cache.repository.channels, 'name');
 
     UI.main(html`
-        <div class="header">${cache.repository.url}</div>
+        <div class="header">${cache.repository.name ?? cache.repository.url}</div>
 
         <div class="row">
             <div class="block info" style="min-width: 250px;">
@@ -91,6 +97,11 @@ async function runRepository() {
                     ${T.url}
                     <div class="sub">${cache.repository.url}</div>
                 </div>
+                <div>
+                    ${T.name}
+                    <div class="sub">${cache.repository.name ?? T.unnamed}</div>
+                </div>
+                <button type="button" @click=${UI.wrap(e => configureRepository(cache.repository))}>${T.configure}</button>
             </div>
 
             <div class="block">
@@ -121,6 +132,60 @@ async function runRepository() {
             </div>
         </div>
     `);
+}
+
+async function configureRepository(repo) {
+    let ptr = repo;
+
+    repo = Object.assign({}, repo);
+
+    await UI.dialog({
+        run: (render, close) => {
+            return html`
+                <div class="title">
+                    ${T.edit_repository}
+                    <div style="flex: 1;"></div>
+                    <button type="button" class="secondary" @click=${UI.insist(close)}>✖\uFE0E</button>
+                </div>
+
+                <div class="main">
+                    <label>
+                        <span>${T.url}</span>
+                        <div>${repo.url}</div>
+                    </label>
+                    <label>
+                        <span>${T.name}</span>
+                        <input type="text" name="name" placeholder=${T.optional_repository_name} value=${repo.name} />
+                    </label>
+                </div>
+
+                <div class="footer">
+                    ${ptr != null ? html`
+                        <button type="button" class="danger"
+                                @click=${UI.wrap(e => deleteRepository(repo.id).then(close))}>${T.delete}</button>
+                        <div style="flex: 1;"></div>
+                    ` : ''}
+                    <button type="button" class="secondary" @click=${UI.insist(close)}>${T.cancel}</button>
+                    <button type="submit">${ptr != null ? T.save : T.create}</button>
+                </div>
+            `
+        },
+
+        submit: async (elements) => {
+            let obj = {
+                id: repo.id,
+                name: elements.name.value.trim() || null
+            };
+
+            await Net.post('/api/repository/save', obj);
+
+            Net.invalidate('repositories');
+            Net.invalidate('repository');
+
+            let url = App.makeURL({ mode: 'repository', repository: repo.id });
+            await App.go(url);
+        }
+    });
 }
 
 async function deleteRepository(id) {
