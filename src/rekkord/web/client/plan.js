@@ -7,6 +7,7 @@ import { Util, Log, Net } from 'lib/web/base/base.js';
 import * as UI from 'lib/web/ui/ui.js';
 import * as App from './main.js';
 import { route, cache } from './main.js';
+import { runChannel } from './repository.js';
 import { ASSETS } from '../assets/assets.js';
 
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
@@ -153,7 +154,8 @@ async function runPlan() {
                                 <td>${item.channel}</td>
                                 <td style=${item.error != null ? 'color: var(--color, red);' : ''}>
                                     ${item.timestamp == null ? T.never : ''}
-                                    ${item.timestamp != null ? dayjs(item.timestamp).format('lll') : ''}
+                                    ${item.timestamp != null && repo != null ? html`<a @click=${UI.wrap(e => runChannel(repo, item.channel))}>${dayjs(item.timestamp).format('lll')}</a>` : ''}
+                                    ${item.timestamp != null && repo == null ? dayjs(item.timestamp).format('lll') : ''}
                                     <br>${item.error || ''}
                                 </td>
                                 ${item.days ? html`

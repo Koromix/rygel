@@ -349,5 +349,6 @@ function formatSize(size) {
 
 export {
     runRepositories,
-    runRepository
+    runRepository,
+    runChannel
 }
