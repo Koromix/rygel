@@ -253,7 +253,7 @@ Available metadata save options:
         LogInfo("Total stored: %!..+%1%!0 (added %2)", FmtDiskSize(info.stored), FmtDiskSize(info.added));
         LogInfo("Execution time: %!..+%1s%!0", FmtDouble(time, 1));
 
-        if (report && rk_config.connect_url) {
+        if (rk_config.connect_url && report && !raw) {
             LogInfo("Reporting snapshot to connected web app...");
             complete &= ReportSnapshot(rk_config.connect_url, rk_config.api_key, repo->GetURL(), save.channel, info);
         }
