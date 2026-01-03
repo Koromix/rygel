@@ -136,6 +136,7 @@
         "totp_scan2": "Une fois terminé, entrez le code à 6 chiffres dans le champ ci-dessous.",
         "two_factor_authentication": "Authentification à deux facteurs",
         "unassigned": "Non attribué",
+        "unchecked": "Non vérifié",
         "unnamed": "Sans nom",
         "unknown": "Inconnu",
         "unknown_error": "Erreur inconnue",

@@ -49,10 +49,10 @@ async function runRepositories() {
                                 </td>
                                 <td><a href=${url}>${repo.url}</a></td>
                                 <td style="text-align: right;">
-                                    ${!repo.checked ? T.valid : ''}
+                                    ${!repo.checked ? T.unchecked : ''}
                                     ${repo.checked && !repo.errors ? T.success : ''}
-                                    ${repo.errors ? html`<span style="color: red;">${repo.failed || T.unknown_error}</span>` : ''}
-                                    <br><span class="sub">${repo.checked ? dayjs(repo.checked).format('lll') : T.check_pending}</span>
+                                    ${repo.checked && repo.errors ? html`<span style="color: red;">${repo.failed || T.unknown_error}</span>` : ''}
+                                    ${repo.checked ? html`<br><span class="sub">${dayjs(repo.checked).format('lll')}</span>` : ''}
                                 </td>
                             </tr>
                         `;

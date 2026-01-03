@@ -136,6 +136,7 @@
         "totp_scan2": "Once done, enter the 6-digit code into the field below.",
         "two_factor_authentication": "Two-factor authentication",
         "unassigned": "Unassigned",
+        "unchecked": "Unchecked",
         "unnamed": "Unnamed",
         "unknown": "Unknown",
         "unknown_error": "Unknown error",
