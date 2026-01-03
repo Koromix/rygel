@@ -4,7 +4,7 @@
 #include "lib/native/base/base.hh"
 #include "lib/native/base/tower.hh"
 #include "rekkord.hh"
-#include "connect.hh"
+#include "link.hh"
 #include "lib/native/request/curl.hh"
 #include "lib/native/wrap/json.hh"
 
@@ -19,7 +19,7 @@ static bool SendReport(const char *web, const char *key, Span<const char> json)
         return false;
     K_DEFER { curl_easy_cleanup(curl); };
 
-    const char *url = Fmt(&temp_alloc, "%1/api/plan/report", TrimStrRight(web, '/')).ptr;
+    const char *url = Fmt(&temp_alloc, "%1/api/link/snapshot", TrimStrRight(web, '/')).ptr;
 
     curl_slist headers[] = {
         { (char *)"Content-Type: application/json", nullptr },

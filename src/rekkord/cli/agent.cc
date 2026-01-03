@@ -4,7 +4,7 @@
 #include "lib/native/base/base.hh"
 #include "lib/native/base/tower.hh"
 #include "rekkord.hh"
-#include "connect.hh"
+#include "link.hh"
 #include "lib/native/request/curl.hh"
 #include "lib/native/wrap/json.hh"
 
@@ -37,10 +37,10 @@ static bool FetchPlan(Allocator *alloc, HeapArray<ItemData> *out_items)
             return false;
         K_DEFER { curl_easy_cleanup(curl); };
 
-        const char *url = Fmt(alloc, "%1/api/plan/fetch", TrimStrRight(rk_config.connect_url, '/')).ptr;
+        const char *url = Fmt(alloc, "%1/api/plan/fetch", TrimStrRight(rk_config.link_url, '/')).ptr;
 
         curl_slist headers[] = {
-            { Fmt(alloc, "X-Api-Key: %1", rk_config.api_key).ptr, nullptr }
+            { Fmt(alloc, "X-Api-Key: %1", rk_config.link_key).ptr, nullptr }
         };
 
         curl_easy_setopt(curl, CURLOPT_URL, url);
@@ -202,13 +202,13 @@ static bool RunPlan()
             bool success = RunSnapshot(item.channel, item.paths, &info);
 
             if (success) {
-                ReportSnapshot(rk_config.connect_url, rk_config.api_key, rk_config.url, item.channel, info);
+                ReportSnapshot(rk_config.link_url, rk_config.link_key, rk_config.url, item.channel, info);
 
                 item.timestamp = info.time;
                 item.success = true;
             } else {
                 int64_t now = GetUnixTime();
-                ReportError(rk_config.connect_url, rk_config.api_key, rk_config.url, item.channel, now, last_err);
+                ReportError(rk_config.link_url, rk_config.link_key, rk_config.url, item.channel, now, last_err);
 
                 item.timestamp = now;
                 item.success = false;

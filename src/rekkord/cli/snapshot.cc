@@ -3,7 +3,7 @@
 
 #include "lib/native/base/base.hh"
 #include "rekkord.hh"
-#include "connect.hh"
+#include "link.hh"
 
 namespace K {
 
@@ -229,11 +229,11 @@ Available metadata save options:
 
         rk_SaveInfo info = {};
         if (!rk_Save(repo.get(), save.channel, save.filenames, settings, &info)) {
-            if (report && rk_config.connect_url) {
-                LogInfo("Reporting error to connected web app...");
+            if (report && rk_config.link_url) {
+                LogInfo("Reporting error to linked web app...");
 
                 int64_t now = GetUnixTime();
-                ReportError(rk_config.connect_url, rk_config.api_key, repo->GetURL(), save.channel, now, last_err);
+                ReportError(rk_config.link_url, rk_config.link_key, repo->GetURL(), save.channel, now, last_err);
             }
 
             complete = false;
@@ -253,9 +253,9 @@ Available metadata save options:
         LogInfo("Total stored: %!..+%1%!0 (added %2)", FmtDiskSize(info.stored), FmtDiskSize(info.added));
         LogInfo("Execution time: %!..+%1s%!0", FmtDouble(time, 1));
 
-        if (rk_config.connect_url && report && !raw) {
-            LogInfo("Reporting snapshot to connected web app...");
-            complete &= ReportSnapshot(rk_config.connect_url, rk_config.api_key, repo->GetURL(), save.channel, info);
+        if (rk_config.link_url && report && !raw) {
+            LogInfo("Reporting snapshot to linked web app...");
+            complete &= ReportSnapshot(rk_config.link_url, rk_config.link_key, repo->GetURL(), save.channel, info);
         }
     }
 

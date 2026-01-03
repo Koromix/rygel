@@ -20,8 +20,8 @@ bool rk_Config::Complete()
         key_filename = GetEnv("REKKORD_KEYFILE");
     }
 
-    if (!api_key) {
-        api_key = GetEnv("REKKORD_AGENT_KEY");
+    if (!link_key) {
+        link_key = GetEnv("REKKORD_LINK_KEY");
     }
 
     switch (type) {
@@ -50,17 +50,17 @@ bool rk_Config::Validate(unsigned int flags) const
     }
 
     if (flags & (int)rk_ConfigFlag::RequireAgent) {
-        if (!connect_url) {
-            LogError("Missing connect URL for agent");
+        if (!link_url) {
+            LogError("Missing link URL for agent");
             valid = false;
         }
-        if (!api_key) {
-            LogError("Missing connect API key");
+        if (!link_key) {
+            LogError("Missing link API key");
             valid = false;
         }
-    } else if (connect_url) {
-        if (!api_key) {
-            LogError("Missing connect API key");
+    } else if (link_url) {
+        if (!link_key) {
+            LogError("Missing link API key");
             valid = false;
         }
     }
@@ -254,11 +254,11 @@ bool rk_LoadConfig(StreamReader *st, rk_Config *out_config)
                     LogError("Unknown attribute '%1'", prop.key);
                     valid = false;
                 }
-            } else if (prop.section == "Connect") {
+            } else if (prop.section == "Link") {
                 if (prop.key == "URL") {
-                    config.connect_url = DuplicateString(prop.value, &config.str_alloc).ptr;
+                    config.link_url = DuplicateString(prop.value, &config.str_alloc).ptr;
                 } else if (prop.key == "ApiKey") {
-                    config.api_key = DuplicateString(prop.value, &config.str_alloc).ptr;
+                    config.link_key = DuplicateString(prop.value, &config.str_alloc).ptr;
                 } else if (prop.key == "CheckPeriod") {
                     if (ParseDuration(prop.value, &config.agent_period)) {
                         if (config.agent_period <= 0) {

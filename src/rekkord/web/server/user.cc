@@ -332,6 +332,57 @@ RetainPtr<SessionInfo> GetNormalSession(http_IO *io)
     return session;
 }
 
+int64_t ValidateApiKey(http_IO *io, int64_t *out_owner)
+{
+    const http_RequestInfo &request = io->Request();
+    const char *header = request.GetHeaderValue("X-Api-Key");
+
+    if (!header) {
+        LogError("Missing API key");
+        io->SendError(422);
+        return -1;
+    }
+
+    // We use this to extend/fix the response delay in case of error
+    int64_t start = GetMonotonicTime();
+
+    Span<const char> secret;
+    Span<const char> key = SplitStr(header, '/', &secret);
+
+    sq_Statement stmt;
+    if (!db.Prepare("SELECT id, owner, hash FROM plans WHERE key = ?1", &stmt, key))
+        return -1;
+
+    if (!stmt.Step()) {
+        if (stmt.IsValid()) {
+            int64_t safety = std::max(2000 - GetMonotonicTime() + start, (int64_t)0);
+            WaitDelay(safety);
+
+            LogError("Invalid API key");
+            io->SendError(403);
+        }
+        return -1;
+    }
+
+    int64_t plan = sqlite3_column_int64(stmt, 0);
+    int64_t owner = sqlite3_column_int64(stmt, 1);
+    const char *hash = (const char *)sqlite3_column_text(stmt, 2);
+
+    if (crypto_pwhash_str_verify(hash, secret.ptr, (size_t)secret.len) < 0) {
+        int64_t safety = std::max(2000 - GetMonotonicTime() + start, (int64_t)0);
+        WaitDelay(safety);
+
+        LogError("Invalid API key");
+        io->SendError(403);
+        return -1;
+    }
+
+    if (out_owner) {
+        *out_owner = owner;
+    }
+    return plan;
+}
+
 static void ExportSession(const SessionInfo *session, json_Writer *json)
 {
     if (session) {

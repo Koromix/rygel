@@ -6,6 +6,7 @@
 #include "alert.hh"
 #include "config.hh"
 #include "database.hh"
+#include "link.hh"
 #include "mail.hh"
 #include "plan.hh"
 #include "repository.hh"
@@ -391,8 +392,8 @@ static void HandleRequest(http_IO *io)
             HandlePlanKey(io);
         } else if (url == "/api/plan/fetch" && method == http_RequestMethod::Get) {
             HandlePlanFetch(io);
-        } else if (url == "/api/plan/report" && method == http_RequestMethod::Post) {
-            HandlePlanReport(io);
+        } else if (url == "/api/link/snapshot" && method == http_RequestMethod::Post) {
+            HandleLinkSnapshot(io);
         } else {
             io->SendError(404);
         }
