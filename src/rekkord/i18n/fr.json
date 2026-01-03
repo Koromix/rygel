@@ -143,7 +143,7 @@
         "upload_image": "Choisir une image",
         "url": "URL",
         "valid": "Valide",
-        "x_snapshots": "{1} instantanés",
+        "x_snapshots": "Instantanés de {1}",
         "yes": "Oui",
         "you_can_login_with": "Vous pouvez aussi vous connecter avec...",
         "zoom": "Zoom"
