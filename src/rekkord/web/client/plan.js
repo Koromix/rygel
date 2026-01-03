@@ -323,7 +323,7 @@ async function configurePlan(plan) {
             }
 
             function toggle_day(item, idx) {
-                item.days = (item.days ^ (1 << idx)) || item.days;
+                item.days = (item.days ^ (1 << idx));
                 render();
             }
 
