@@ -226,27 +226,6 @@ const char *rk_Repository::GetURL() const
     return disk->GetURL();
 }
 
-void rk_Repository::MakeID(Span<uint8_t> out_id) const
-{
-    K_ASSERT(out_id.len >= 16 && out_id.len <= 64);
-
-    Span<const char> url = disk->GetURL();
-
-    uint8_t sha512[64];
-    {
-        crypto_hash_sha512_state state;
-        crypto_hash_sha512_init(&state);
-
-        crypto_hash_sha512_update(&state, ids.rid, K_SIZE(ids.rid));
-        crypto_hash_sha512_update(&state, (const uint8_t *)url.ptr, (size_t)url.len);
-        crypto_hash_sha512_update(&state, (const uint8_t *)&out_id.len, K_SIZE(out_id.len));
-
-        crypto_hash_sha512_final(&state, sha512);
-    }
-
-    MemCpy(out_id.ptr, sha512, out_id.len);
-}
-
 void rk_Repository::MakeSalt(rk_SaltKind kind, Span<uint8_t> out_buf) const
 {
     K_ASSERT(HasMode(rk_AccessMode::Write));

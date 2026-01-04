@@ -119,7 +119,7 @@ public:
     void Lock();
 
     rk_Disk *GetDisk() const { return disk; }
-    const char *GetURL() const;
+    const char *GetURL() const; // rk_Disk is not defined so implementation must live in repository.cc
     Async *GetAsync() { return &tasks; }
 
     const rk_KeySet &GetKeys() const { return *keyset; }
@@ -128,9 +128,9 @@ public:
     bool HasMode(rk_AccessMode mode) const { return keyset ? keyset->HasMode(mode) : false; }
     bool CanRetain() const { return retain; }
 
-    void MakeID(Span<uint8_t> out_id) const;
     void MakeSalt(rk_SaltKind kind, Span<uint8_t> out_buf) const;
 
+    Span<const uint8_t> GetRID() const { return ids.rid; }
     Span<const uint8_t> GetCID() const { return ids.cid; }
     bool ChangeCID();
 

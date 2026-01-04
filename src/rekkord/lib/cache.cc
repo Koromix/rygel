@@ -5,6 +5,7 @@
 #include "cache.hh"
 #include "disk.hh"
 #include "repository.hh"
+#include "vendor/libsodium/src/libsodium/include/sodium.h"
 
 namespace K {
 
@@ -25,8 +26,22 @@ bool rk_Cache::Open(rk_Repository *repo, bool build)
 
     const char *filename;
     {
+        // Combine the RID with the repository URL to prevent malicious repository
+        // from interfering with the file of another one.
         uint8_t id[32];
-        repo->MakeID(id);
+        {
+            Span<const uint8_t> rid = repo->GetRID();
+            Span<const char> url = repo->GetURL();
+
+            crypto_hash_sha256_state state;
+            crypto_hash_sha256_init(&state);
+
+            crypto_hash_sha256_update(&state, rid.ptr, (size_t)rid.len);
+            crypto_hash_sha256_update(&state, (const uint8_t *)url.ptr, (size_t)url.len);
+
+            static_assert(K_SIZE(id) == crypto_hash_sha256_BYTES);
+            crypto_hash_sha256_final(&state, id);
+        }
 
         const char *dirname = GetUserCachePath("rekkord", &temp_alloc);
         if (!dirname) {
