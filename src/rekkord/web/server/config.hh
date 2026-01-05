@@ -17,9 +17,6 @@ struct Config {
     const char *database_filename = nullptr;
     const char *tmp_directory = nullptr;
 
-    int64_t update_period = 6 * 3600000;
-    int64_t retry_delay = 10 * 60000;
-
     int64_t stale_delay = 30 * 3600000;
     int64_t mail_delay = 1 * 3600000;
     int64_t repeat_delay = 24 * 3600000;

@@ -82,15 +82,6 @@ bool LoadConfig(StreamReader *st, Config *out_config)
 
                     first = false;
                 } while (ini.NextInSection(&prop));
-            } else if (prop.section == "Repositories") {
-                if (prop.key == "UpdatePeriod") {
-                    valid &= ParseDuration(prop.value, &config.update_period);
-                } else if (prop.key == "RetryDelay") {
-                    valid &= ParseDuration(prop.value, &config.retry_delay);
-                } else {
-                    LogError("Unknown attribute '%1'", prop.key);
-                    valid = false;
-                }
             } else if (prop.section == "Alerts") {
                 if (prop.key == "StaleDelay") {
                     valid &= ParseDuration(prop.value, &config.stale_delay);
