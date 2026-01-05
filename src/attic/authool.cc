@@ -485,7 +485,7 @@ Options:
     }
 
     if (!secret) {
-        secret = Prompt(T("Secret:"), &temp_alloc);
+        secret = Prompt(T("Secret:"), nullptr, "*", &temp_alloc);
         if (!secret)
             return 1;
         if (!secret[0]) {
@@ -583,7 +583,7 @@ Options:
         if (!pwd_CheckSecret(secret))
             return 1;
     } else {
-        secret = Prompt(T("Secret:"), &temp_alloc);
+        secret = Prompt(T("Secret:"), nullptr, "*", &temp_alloc);
         if (!secret)
             return 1;
         if (!secret[0]) {
