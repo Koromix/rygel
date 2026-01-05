@@ -93,13 +93,15 @@ async function runRepository() {
 
         <div class="row">
             <div class="block info" style="min-width: 250px;">
+                ${cache.repository.name != null ? html`
+                    <div>
+                        ${T.name}
+                        <div class="sub">${cache.repository.name ?? T.unnamed}</div>
+                    </div>
+                ` : ''}
                 <div>
                     ${T.url}
                     <div class="sub">${cache.repository.url}</div>
-                </div>
-                <div>
-                    ${T.name}
-                    <div class="sub">${cache.repository.name ?? T.unnamed}</div>
                 </div>
                 <div>
                     ${T.status}
@@ -159,12 +161,12 @@ async function configureRepository(repo) {
 
                 <div class="main">
                     <label>
-                        <span>${T.url}</span>
-                        <div>${repo.url}</div>
-                    </label>
-                    <label>
                         <span>${T.name}</span>
                         <input type="text" name="name" placeholder=${T.optional_repository_name} value=${repo.name} />
+                    </label>
+                    <label>
+                        <span>${T.url}</span>
+                        <div>${repo.url}</div>
                     </label>
                 </div>
 
