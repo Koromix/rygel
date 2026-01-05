@@ -268,6 +268,18 @@ async function runChannel(repo, channel) {
                     x: {
                         type: 'time',
                         ticks: {
+                            source: 'data'
+                        },
+                        time: {
+                            displayFormats: {
+                                minute: 'L H:mm',
+                                hour: 'L H:mm',
+                                day: 'L',
+                                week: 'L',
+                                month: 'L',
+                                quarter: 'L',
+                                year: 'L'
+                            }
                         }
                     },
                     y: {
