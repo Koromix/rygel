@@ -57,7 +57,7 @@ async function runRepositories() {
                             </tr>
                         `;
                     })}
-                    ${!repositories.length ? html`<tr><td colspan="2" style="text-align: center;">${T.no_repository}</td></tr>` : ''}
+                    ${!repositories.length ? html`<tr><td colspan="3" style="text-align: center;">${T.no_repository}</td></tr>` : ''}
                 </tbody>
             </table>
         </div>
