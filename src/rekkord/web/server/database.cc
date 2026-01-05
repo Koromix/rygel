@@ -7,7 +7,7 @@
 
 namespace K {
 
-const int DatabaseVersion = 33;
+const int DatabaseVersion = 34;
 
 int GetDatabaseVersion(sq_Database *db)
 {
@@ -692,9 +692,27 @@ bool MigrateDatabase(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 33: {
+                bool success = db->RunMany(R"(
+                    CREATE TABLE paths_NEW (
+                        item INTEGER REFERENCES items (id) ON DELETE CASCADE,
+                        path TEXT NOT NULL
+                    );
+
+                    INSERT INTO paths_NEW (item, path)
+                        SELECT item, path FROM paths;
+                    DROP TABLE paths;
+                    ALTER TABLE paths_NEW RENAME TO paths;
+
+                    CREATE INDEX paths_ip ON paths (item, path);
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            static_assert(DatabaseVersion == 33);
+            static_assert(DatabaseVersion == 34);
         }
 
         if (!db->Run("INSERT INTO migrations (version, build, timestamp) VALUES (?, ?, ?)",
