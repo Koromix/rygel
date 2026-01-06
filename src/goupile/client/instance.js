@@ -45,6 +45,7 @@ let form_cache = null;
 
 let autosave_timer = null;
 
+let data_search = null;
 let data_tags = null;
 let data_threads = null;
 let data_columns = null;
@@ -621,11 +622,14 @@ function renderData() {
                 <button @click=${UI.wrap(e => go(e, route.page.chain[0].url))}>${T.create_record}</button>
             </div>
 
-            <div class="ui_quick" style="margin-right: 2.2em;">
+            <div class="ui_quick">
+                <input type="text" placeholder=${T.search + '...'} .value=${data_search || ''}
+                       @input=${UI.wrap(e => changeDataSearch(e.target.value))} />
+                <div style="flex: 1;"></div>
                 <div class="ins_filters">
                     <div class="fm_check">
                         <input id="ins_tags" type="checkbox" .checked=${data_tags != null}
-                               @change=${UI.wrap(e => toggleTagFilter(null))} />
+                               @change=${UI.wrap(e => toggleDataTag(null))} />
                         <label for="ins_tags">${T.filter}${T._colon}</label>
                     </div>
                     ${app.tags.map(tag => {
@@ -639,7 +643,7 @@ function renderData() {
                                 <input id=${id} type="checkbox"
                                        ?disabled=${data_tags == null}
                                        .checked=${data_tags?.has?.(tag.key)}
-                                       @change=${UI.wrap(e => toggleTagFilter(tag.key))} />
+                                       @change=${UI.wrap(e => toggleDataTag(tag.key))} />
                                 <label for=${id}><span class="ui_tag" style=${'background: ' + tag.color + ';'}>${tag.label}</label>
                             </div>
                         `;
@@ -756,7 +760,23 @@ function runDeleteRecordDialog(e, row) {
     });
 }
 
-function toggleTagFilter(tag) {
+function changeDataSearch(filter) {
+    data_search = filter ? simplifyString(filter) : null;
+    return go();
+}
+
+function simplifyString(str) {
+    str = str ? str.toString() : '';
+
+    str = str.normalize('NFD').replace(/\p{Diacritic}/gu, '');
+    str = str.replace(/[^A-Za-z0-9]/g, '-');
+    str = str.replace(/-+/g, '-');
+    str = str.toLowerCase();
+
+    return str;
+}
+
+function toggleDataTag(tag) {
     if (tag == null) {
         data_tags = (data_tags == null) ? new Set : null;
     } else if (data_tags != null) {
@@ -1797,6 +1817,7 @@ async function run(push_history = true) {
                         tid: thread.tid,
                         sequence: thread.sequence,
                         hid: thread.hid,
+                        search: simplifyString(thread.hid),
                         locked: thread.locked,
                         ctime: new Date(min_ctime),
                         mtime: new Date(max_mtime),
@@ -1809,6 +1830,8 @@ async function run(push_history = true) {
             data_rows = data_threads;
             data_columns = [];
 
+            if (data_search != null)
+                data_rows = data_rows.filter(thread => thread.search.includes(data_search));
             if (data_tags != null)
                 data_rows = data_rows.filter(thread => thread.tags.some(tag => data_tags.has(tag)));
 
