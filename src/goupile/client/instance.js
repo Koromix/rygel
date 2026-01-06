@@ -740,6 +740,7 @@ function renderData() {
             </table>
 
             <div class="ui_actions">
+                ${app.dashboard != null ? html`<button @click=${e => window.open(app.dashboard, '_blank')}>${T.dashboard}</button>` : ''}
                 ${goupile.hasPermission('bulk_export') || goupile.hasPermission('bulk_download') ? html`<button @click=${UI.wrap(e => runExportDialog(e, app))}>${T.data_exports}</button>` : ''}
             </div>
         </div>

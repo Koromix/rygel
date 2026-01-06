@@ -7,6 +7,7 @@ function ApplicationInfo(profile) {
     this.pages = [];
     this.homepage = null;
     this.annotate = false;
+    this.dashboard = null;
 
     this.stores = [];
 
@@ -54,6 +55,7 @@ function ApplicationBuilder(app) {
     Object.defineProperties(this, {
         homepage: { get: () => app.homepage, set: homepage => { app.homepage = homepage; }, enumerable: true },
         annotate: { get: () => app.annotate, set: annotate => { app.annotate = annotate; }, enumerable: true },
+        dashboard: { get: () => app.dashboard, set: dashboard => { app.dashboard = dashboard; }, enumerable: true },
 
         head: { get: () => app.head, set: head => { app.head = head; }, enumerable: true },
         tags: { get: () => app.tags, set: tags => { app.tags = tags; }, enumerable: true },
