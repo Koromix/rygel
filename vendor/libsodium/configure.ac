@@ -1,5 +1,5 @@
 AC_PREREQ([2.69])
-AC_INIT([libsodium],[1.0.20],[https://github.com/jedisct1/libsodium/issues],[libsodium],[https://libsodium.org])
+AC_INIT([libsodium],[1.0.21],[https://github.com/jedisct1/libsodium/issues],[libsodium],[https://libsodium.org])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SRCDIR([src/libsodium/sodium/version.c])
@@ -13,9 +13,9 @@ AM_DEP_TRACK
 AC_SUBST(VERSION)
 
 SODIUM_LIBRARY_VERSION_MAJOR=26
-SODIUM_LIBRARY_VERSION_MINOR=2
+SODIUM_LIBRARY_VERSION_MINOR=3
 DLL_VERSION=26
-SODIUM_LIBRARY_VERSION=28:0:2
+SODIUM_LIBRARY_VERSION=29:0:3
 #                       | | |
 #                +------+ | +---+
 #                |        |     |
@@ -381,6 +381,21 @@ AS_IF([test "x$with_threads" = "xyes"], [
          [AC_MSG_RESULT(thread local storage is not supported)]) ])
 
 LT_INIT
+
+dnl CompCert compiler support
+AC_MSG_CHECKING([if we are using CompCert])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+#ifndef __COMPCERT__
+# error __COMPCERT__ is not defined
+#endif
+]], [[]])],
+  [AC_MSG_RESULT(yes)
+   lt_prog_compiler_wl='-Wl,'
+   enable_asm="no"
+   CFLAGS="$CFLAGS -fstruct-passing"
+   AC_MSG_WARN([compiling with CompCert - asm implementations disabled])],
+  [AC_MSG_RESULT(no)])
+
 AC_SUBST(LIBTOOL_DEPS)
 
 AC_ARG_VAR([AR], [path to the ar utility])
@@ -978,7 +993,7 @@ AC_SUBST([LIBTOOL_EXTRA_FLAGS])
 TEST_LDFLAGS=''
 AS_IF([test "x$EMSCRIPTEN" != "x"],[
   EXEEXT=.js
-  TEST_LDFLAGS='--pre-js pre.js.inc -s RESERVED_FUNCTION_POINTERS=8'
+  TEST_LDFLAGS='--pre-js pre.js.inc -sALLOW_TABLE_GROWTH'
 ])
 AC_SUBST(TEST_LDFLAGS)
 AM_CONDITIONAL([EMSCRIPTEN], [test "x$EMSCRIPTEN" != "x"])

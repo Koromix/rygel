@@ -102,6 +102,31 @@ fn initLibConfig(b: *std.Build, target: std.Build.ResolvedTarget, lib: *Compile)
             lib.root_module.addCMacro("HAVE_SYS_PARAM_H", "1");
             lib.root_module.addCMacro("HAVE_SYS_RANDOM_H", "1");
         },
+        .freebsd => {
+            lib.root_module.addCMacro("ASM_HIDE_SYMBOL", ".hidden");
+            lib.root_module.addCMacro("TLS", "_Thread_local");
+
+            lib.root_module.addCMacro("HAVE_ARC4RANDOM", "1");
+            lib.root_module.addCMacro("HAVE_ARC4RANDOM_BUF", "1");
+            lib.root_module.addCMacro("HAVE_CATCHABLE_ABRT", "1");
+            lib.root_module.addCMacro("HAVE_CATCHABLE_SEGV", "1");
+            lib.root_module.addCMacro("HAVE_CLOCK_GETTIME", "1");
+            lib.root_module.addCMacro("HAVE_GETPID", "1");
+            lib.root_module.addCMacro("HAVE_MADVISE", "1");
+            lib.root_module.addCMacro("HAVE_MLOCK", "1");
+            lib.root_module.addCMacro("HAVE_MMAP", "1");
+            lib.root_module.addCMacro("HAVE_MPROTECT", "1");
+            lib.root_module.addCMacro("HAVE_NANOSLEEP", "1");
+            lib.root_module.addCMacro("HAVE_POSIX_MEMALIGN", "1");
+            lib.root_module.addCMacro("HAVE_PTHREAD_PRIO_INHERIT", "1");
+            lib.root_module.addCMacro("HAVE_PTHREAD", "1");
+            lib.root_module.addCMacro("HAVE_RAISE", "1");
+            lib.root_module.addCMacro("HAVE_SYSCONF", "1");
+            lib.root_module.addCMacro("HAVE_SYS_MMAN_H", "1");
+            lib.root_module.addCMacro("HAVE_SYS_PARAM_H", "1");
+            lib.root_module.addCMacro("HAVE_SYS_RANDOM_H", "1");
+            lib.root_module.addCMacro("HAVE_WEAK_SYMBOLS", "1");
+        },
         else => {},
     }
 
@@ -290,6 +315,9 @@ pub fn build(b: *std.Build) !void {
 
     const allocator = heap.page_allocator;
     var walker = try test_dir.walk(allocator);
+
+    const test_step = b.step("test", "Run all libsodium tests");
+
     if (build_tests) {
         while (if (is_zig_16) try walker.next(io) else try walker.next()) |entry| {
             const name = entry.basename;
@@ -327,6 +355,11 @@ pub fn build(b: *std.Build) !void {
             }
 
             b.installArtifact(exe);
+
+            // Add a run step for this test
+            const run_test = b.addRunArtifact(exe);
+            run_test.setCwd(b.path(test_path));
+            test_step.dependOn(&run_test.step);
         }
     }
 }
