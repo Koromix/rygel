@@ -626,29 +626,31 @@ function renderData() {
                 <input type="text" placeholder=${T.search + '...'} .value=${data_search || ''}
                        @input=${UI.wrap(e => changeDataSearch(e.target.value))} />
                 <div style="flex: 1;"></div>
-                <div class="ins_filters">
-                    <div class="fm_check">
-                        <input id="ins_tags" type="checkbox" .checked=${data_tags != null}
-                               @change=${UI.wrap(e => toggleDataTag(null))} />
-                        <label for="ins_tags">${T.filter}${T._colon}</label>
+                ${app.annotate ? html`
+                    <div class="ins_filters">
+                        <div class="fm_check">
+                            <input id="ins_tags" type="checkbox" .checked=${data_tags != null}
+                                   @change=${UI.wrap(e => toggleDataTag(null))} />
+                            <label for="ins_tags">${T.filter}${T._colon}</label>
+                        </div>
+                        ${app.tags.map(tag => {
+                            if (!tag.filter)
+                                return '';
+
+                            let id = 'ins_tag_' + tag.key;
+
+                            return html`
+                                <div class=${data_tags == null ? 'fm_check disabled' : 'fm_check'} style="padding-top: 0;">
+                                    <input id=${id} type="checkbox"
+                                           ?disabled=${data_tags == null}
+                                           .checked=${data_tags?.has?.(tag.key)}
+                                           @change=${UI.wrap(e => toggleDataTag(tag.key))} />
+                                    <label for=${id}><span class="ui_tag" style=${'background: ' + tag.color + ';'}>${tag.label}</label>
+                                </div>
+                            `;
+                        })}
                     </div>
-                    ${app.tags.map(tag => {
-                        if (!tag.filter)
-                            return '';
-
-                        let id = 'ins_tag_' + tag.key;
-
-                        return html`
-                            <div class=${data_tags == null ? 'fm_check disabled' : 'fm_check'} style="padding-top: 0;">
-                                <input id=${id} type="checkbox"
-                                       ?disabled=${data_tags == null}
-                                       .checked=${data_tags?.has?.(tag.key)}
-                                       @change=${UI.wrap(e => toggleDataTag(tag.key))} />
-                                <label for=${id}><span class="ui_tag" style=${'background: ' + tag.color + ';'}>${tag.label}</label>
-                            </div>
-                        `;
-                    })}
-                </div>
+                ` : ''}
             </div>
 
             <table class="ui_table fixed" id="ins_data"
