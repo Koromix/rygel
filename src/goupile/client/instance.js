@@ -1200,7 +1200,13 @@ async function syncEditor() {
     if (editor_el == null) {
         if (typeof ace === 'undefined') {
             await import(`${ENV.urls.static}ace/ace.js`);
+
             ace.config.set('basePath', `${ENV.urls.static}ace`);
+            ace.config.set('useStrictCSP', true);
+
+            addCssFile(`${ENV.urls.static}ace/ace.css`);
+            addCssFile(`${ENV.urls.static}ace/merbivore_soft.css`);
+            addCssFile(`${ENV.urls.static}ace/monokai.css`);
         }
 
         editor_el = document.createElement('div');
@@ -1250,6 +1256,15 @@ async function syncEditor() {
     }
 
     editor_ace.setSession(buffer.session);
+}
+
+function addCssFile(url) {
+    let link = document.createElement('link');
+
+    link.setAttribute('rel', 'stylesheet');
+    link.setAttribute('href', url);
+
+    document.head.appendChild(link);
 }
 
 function toggleEditorTab(e, tab) {
