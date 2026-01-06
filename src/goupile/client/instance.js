@@ -6,6 +6,7 @@ import { Util, Log, Net, HttpError, LruMap, Mutex,
          LocalDate, LocalTime, FileReference } from 'lib/web/base/base.js';
 import * as mixer from 'lib/web/base/mixer.js';
 import * as Data from 'lib/web/ui/data.js';
+import { EasyPager } from 'lib/web/widgets/easypager.js';
 import * as goupile from './goupile.js';
 import { profile } from './goupile.js';
 import * as UI from './ui.js';
@@ -17,6 +18,8 @@ import { FormState, FormModel, FormBuilder } from './form.js';
 import { MetaModel, MetaInterface } from './form_meta.js';
 
 import './instance.css';
+
+const PAGE_LEN = 200;
 
 let app = null;
 
@@ -50,6 +53,7 @@ let data_tags = null;
 let data_threads = null;
 let data_columns = null;
 let data_rows = null;
+let data_offset = null;
 
 let code_buffers = new LruMap(32);
 let code_builds = new LruMap(4);
@@ -616,6 +620,9 @@ async function restoreFile(filename, sha256) {
 function renderData() {
     let recording_new = !form_thread.saved && form_state.hasChanged();
 
+    let offset = data_offset;
+    let end = Math.min(data_offset + PAGE_LEN, data_rows.length);
+
     return html`
         <div class="padded">
             <div class="ui_actions">
@@ -681,7 +688,8 @@ function renderData() {
                 </thead>
 
                 <tbody>
-                    ${data_rows.map(row => {
+                    ${Util.mapRange(offset, end, idx => {
+                        let row = data_rows[idx];
                         let active = (row.tid == route.tid);
                         let cls = (row.hid == null ? 'missing' : '') + (active ? ' active' : '');
 
@@ -739,12 +747,31 @@ function renderData() {
                 </tbody>
             </table>
 
+            ${renderDataPages(data_rows)}
+
             <div class="ui_actions">
                 ${app.dashboard != null ? html`<button @click=${e => window.open(app.dashboard, '_blank')}>${T.dashboard}</button>` : ''}
                 ${goupile.hasPermission('bulk_export') || goupile.hasPermission('bulk_download') ? html`<button @click=${UI.wrap(e => runExportDialog(e, app))}>${T.data_exports}</button>` : ''}
             </div>
         </div>
     `;
+}
+
+function renderDataPages() {
+    let epag = new EasyPager;
+
+    if (data_rows.length <= PAGE_LEN)
+        return '';
+
+    epag.clickHandler = (e, page) => {
+        data_offset = (page - 1) * PAGE_LEN;
+        go();
+    };
+
+    epag.lastPage = Math.floor((data_rows.length - 1) / PAGE_LEN + 1);
+    epag.currentPage = Math.ceil(data_offset / PAGE_LEN) + 1;
+
+    return epag.render();
 }
 
 function runDeleteRecordDialog(e, row) {
@@ -763,8 +790,14 @@ function runDeleteRecordDialog(e, row) {
     });
 }
 
-function changeDataSearch(filter) {
-    data_search = filter ? simplifyString(filter) : null;
+function changeDataSearch(search) {
+    search = search ? simplifyString(search) : null;
+
+    if (search !== data_search) {
+        data_search = search;
+        data_offset = null;
+    }
+
     return go();
 }
 
@@ -1849,6 +1882,11 @@ async function run(push_history = true) {
 
                 data_columns.push(col);
             }
+
+            if (data_offset == null || data_offset >= data_rows.length) {
+                let offset = Math.max(0, data_rows.findIndex(row => row.tid == route.tid));
+                data_offset = Math.floor(offset / PAGE_LEN) * PAGE_LEN;
+            }
         }
 
         // Run page script
@@ -2272,6 +2310,9 @@ async function openRecord(tid, anchor, page) {
     route.tid = tid;
     route.anchor = anchor;
     route.page = page;
+
+    if (form_thread.saved)
+        data_offset = null;
 }
 
 function runAnnotationDialog(e, intf) {

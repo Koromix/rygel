@@ -13,7 +13,8 @@
             "sources": [
                 "src/goupile/server",
                 "src/goupile/client",
-                "src/goupile/legacy"
+                "src/goupile/legacy",
+                "lib/web/widgets"
             ],
             "path": "src/goupile/i18n",
             "keys": true,

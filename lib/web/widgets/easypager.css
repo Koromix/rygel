@@ -2,18 +2,18 @@
 /* SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com> */
 
 .epag {
-    margin: 2px;
-    font-size: 1.1em;
     text-align: center;
-}
 
-.epag table {
-    table-layout: fixed;
-    margin: 0 auto;
-    padding: 0;
-}
-.epag td {
-    width: 28px;
-    vertical-align: middle;
-    padding: 0;
+    & table {
+        table-layout: fixed;
+        margin: 0 auto;
+        padding: 0;
+    }
+
+    & td {
+        min-width: 28px;
+        vertical-align: middle;
+        padding: 0;
+    }
+    & .special { width: 120px; }
 }
