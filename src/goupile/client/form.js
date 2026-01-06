@@ -187,7 +187,7 @@ function FormBuilder(state, model, options = {}) {
         options_stack.length = 1;
     };
 
-    this.pushPath = function(key, sub = null) {
+    this.pushPath = function(key) {
         key = decodeKey(key);
 
         if (key.variables.has(key.name))
@@ -1710,12 +1710,29 @@ instead of:
     function decodeKey(key, options = {}) {
         // Normalize key
         if (!Array.isArray(key))
-            key = [null, key];
-        if (key.length != 2)
+            key = [key];
+        if (key[0] == null || typeof key[0] != 'object')
+            key = [paths_stack[paths_stack.length - 1], ...key];
+        if (key.length < 2)
             throw new Error(T.message(`Unsupported key type`));
 
-        let ptr = key[0] ?? paths_stack[paths_stack.length - 1];
-        let name = key[1];
+        let ptr = key[0];
+
+        if (key.length > 2) {
+            for (let i = 1; i < key.length - 1; i++) {
+                let sub = key[i];
+                let value = ptr[sub];
+
+                if (value == null) {
+                    ptr[sub] = {};
+                    value = ptr[sub];
+                }
+
+                ptr = value;
+            }
+        }
+
+        let name = key[key.length - 1];
 
         // Decode option shortcuts
         for (;;) {
