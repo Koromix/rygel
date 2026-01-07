@@ -87,7 +87,7 @@ function PictureCropper(title, size) {
                             <span>${T.zoom}</span>
                             <input type="range" min="-32" max="32"
                                    .value=${live(zoom)} ?disabled=${is_default}
-                                   @input=${UI.wrap(e => changeZoom(parseInt(e.target.value, 10) - zoom))} />
+                                   @input=${e => changeZoom(parseInt(e.target.value, 10) - zoom)} />
                         </label>
                         <label>
                             <span>${T.upload_image}</span>
