@@ -83,7 +83,7 @@ For other distributions, you can [build the code from source](#build-from-source
 
 You can manage multiple devices connected simultaneously, tycmd (and the other tools) uniquely identifies each device by its position in the host USB topology. Meaning if it stays on the same USB port, it is handled as the same device. That's necessary because across reboots and resets, Teensies look completely different to the host.
 
-To target a specific device, use `tycmd <command> --board "[<serial>][-<family>][@<location>]"`. _serial_ is the USB serial number, _family_ is the board family name and _location_ can be the virtual path computed by tycmd (see `tycmd list`) or an OS device path (e.g. /dev/hidraw1 or COM1). Any of them can be omitted. See the examples in the table below.
+To target a specific device, use option `--board "[serial][-family][@location]"`. _serial_ is the USB serial number, _family_ is the board family name and _location_ can be the virtual path computed by tycmd (see `tycmd list`) or an OS device path (e.g. /dev/hidraw1 or COM1). Any of them can be omitted. See the examples in the table below.
 
 Tag filter         | Effect
 ------------------ | ---------------------------------------------------------------------------
