@@ -1,0 +1,12 @@
+diff --git a/vendor/curl/lib/curl_setup_once.h b/vendor/curl/lib/curl_setup_once.h
+index 06ccc98639..db7838a1a3 100644
+--- a/vendor/curl/lib/curl_setup_once.h
++++ b/vendor/curl/lib/curl_setup_once.h
+@@ -28,6 +28,7 @@
+  * Inclusion of common header files.
+  */
+ 
++#include <stdint.h>
+ #include <stdlib.h>
+ #include <string.h>
+ #include <stdarg.h>

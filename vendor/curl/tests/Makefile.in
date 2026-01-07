@@ -135,8 +135,7 @@ am__aclocal_m4_deps = $(top_srcdir)/m4/curl-amissl.m4 \
 	$(top_srcdir)/m4/xc-lt-iface.m4 \
 	$(top_srcdir)/m4/xc-val-flgs.m4 \
 	$(top_srcdir)/m4/zz40-xc-ovr.m4 \
-	$(top_srcdir)/m4/zz50-xc-ovr.m4 \
-	$(top_srcdir)/m4/zz60-xc-ovr.m4 $(top_srcdir)/acinclude.m4 \
+	$(top_srcdir)/m4/zz50-xc-ovr.m4 $(top_srcdir)/acinclude.m4 \
 	$(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
@@ -324,7 +323,9 @@ RANLIB = @RANLIB@
 RC = @RC@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
+SFTPD = @SFTPD@
 SHELL = @SHELL@
+SSHD = @SSHD@
 SSL_BACKENDS = @SSL_BACKENDS@
 STRIP = @STRIP@
 SUPPORT_FEATURES = @SUPPORT_FEATURES@
@@ -393,7 +394,6 @@ top_srcdir = @top_srcdir@
 # scripts used in test cases
 TESTSCRIPTS = \
  test1119.pl  \
- test1132.pl  \
  test1135.pl  \
  test1139.pl  \
  test1140.pl  \
@@ -430,6 +430,7 @@ EXTRA_DIST = \
  http2-server.pl    \
  http3-server.pl    \
  memanalyze.pl      \
+ memanalyzer.pm     \
  negtelnetserver.py \
  nghttpx.conf       \
  pathhelp.pm        \
@@ -454,7 +455,7 @@ EXTRA_DIST = \
 
 @BUILD_UNITTESTS_FALSE@BUILD_UNIT = 
 
-# we have two variables here to make sure DIST_SUBDIRS won't get 'unit'
+# we have two variables here to make sure DIST_SUBDIRS does not get 'unit'
 # added twice as then targets such as 'distclean' misbehave and try to
 # do things twice in that subdir at times (and thus fails).
 @BUILD_UNITTESTS_TRUE@BUILD_UNIT = unit tunit
@@ -466,7 +467,7 @@ PERLFLAGS = -I$(srcdir)
 CLEANFILES = .http.pid .https.pid .ftp.pid .ftps.pid
 TEST_COMMON = $(am__append_1)
 @CROSSCOMPILING_FALSE@TEST = srcdir=$(srcdir) @PERL@ $(PERLFLAGS) $(srcdir)/runtests.pl $(TEST_COMMON)
-@CROSSCOMPILING_TRUE@TEST = @echo "NOTICE: we can't run the tests when cross-compiling!"
+@CROSSCOMPILING_TRUE@TEST = @echo "NOTICE: we cannot run the tests when cross-compiling!"
 @CROSSCOMPILING_FALSE@PYTEST = pytest
 @CROSSCOMPILING_TRUE@PYTEST = $(TEST)
 @CROSSCOMPILING_FALSE@TEST_Q = -a -s
@@ -475,11 +476,11 @@ TEST_COMMON = $(am__append_1)
 @CROSSCOMPILING_FALSE@TEST_T = -a -t -j20
 @CROSSCOMPILING_FALSE@TEST_E = -a -e
 
-# ~<keyword> means that it will run all tests matching the keyword, but will
-# ignore their results (since these ones are likely to fail for no good reason)
+# ~<keyword> means that it runs all tests matching the keyword, but ignores
+# their results (since these ones are likely to fail for no good reason)
 @CROSSCOMPILING_FALSE@TEST_NF = -a -p ~flaky ~timing-dependent
 
-# special CI target derived from nonflaky with CI-specific flags
+# special target for CI use
 @CROSSCOMPILING_FALSE@TEST_CI = $(TEST_NF) -r --retry=5 -j20 --buildinfo
 all: all-recursive
 
@@ -845,8 +846,6 @@ checksrc:
 	(cd unit && $(MAKE) checksrc)
 	(cd tunit && $(MAKE) checksrc)
 	(cd server && $(MAKE) checksrc)
-	(cd client && $(MAKE) checksrc)
-	(cd http && $(MAKE) checksrc)
 
 all-local: $(MANFILES) build-certs
 

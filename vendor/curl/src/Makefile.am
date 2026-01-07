@@ -61,7 +61,6 @@ if CURLDEBUG
 AM_CPPFLAGS += -DCURLDEBUG
 endif
 
-AM_LDFLAGS =
 if USE_UNICODE
 UNICODEFLAG = -municode
 endif
@@ -94,7 +93,7 @@ curl_SOURCES += $(CURL_RCFILES)
 $(CURL_RCFILES): tool_version.h
 endif
 
-curl_LDFLAGS = $(AM_LDFLAGS) $(CURL_LDFLAGS_BIN) $(UNICODEFLAG)
+curl_LDFLAGS = $(CURL_LDFLAGS_BIN) $(UNICODEFLAG)
 
 # This might hold -Werror
 CFLAGS += @CURL_CFLAG_EXTRAS@
@@ -220,7 +219,7 @@ endif
 endif
 
 # disable the tests that are mostly causing false positives
-TIDYFLAGS := -checks=-clang-analyzer-security.insecureAPI.bzero,-clang-analyzer-security.insecureAPI.strcpy,-clang-analyzer-optin.performance.Padding,-clang-analyzer-security.ArrayBound,-clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling -quiet
+TIDYFLAGS := -checks=-clang-analyzer-security.insecureAPI.bzero,-clang-analyzer-optin.performance.Padding,-clang-analyzer-security.ArrayBound,-clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling -quiet
 if CURL_WERROR
 TIDYFLAGS += --warnings-as-errors=*
 endif

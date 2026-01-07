@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="US-ASCII"?>
 <testcase>
 <info>
 <keywords>
@@ -11,7 +12,7 @@ followlocation
 <data>
 HTTP/1.1 302 This is a weirdo text message swsclose
 Connection: close
-Location:%spc%
+Location:%SP
 
 This server reply is for testing
 </data>

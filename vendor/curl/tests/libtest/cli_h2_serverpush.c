@@ -24,7 +24,6 @@
 #include "first.h"
 
 #include "testtrace.h"
-#include "memdebug.h"
 
 static FILE *out_download = NULL;
 
@@ -151,13 +150,13 @@ static CURLcode test_cli_h2_serverpush(const char *URL)
   do {
     struct CURLMsg *m;
     int still_running; /* keep number of running handles */
-    CURLMcode mc = curl_multi_perform(multi, &still_running);
+    CURLMcode mresult = curl_multi_perform(multi, &still_running);
 
     if(still_running)
       /* wait for activity, timeout or "nothing" */
-      mc = curl_multi_poll(multi, NULL, 0, 1000, NULL);
+      mresult = curl_multi_poll(multi, NULL, 0, 1000, NULL);
 
-    if(mc)
+    if(mresult)
       break;
 
     /*

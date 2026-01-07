@@ -8,13 +8,17 @@
 #include "../../lib/curl_threads.c"
 #include "../../lib/curlx/fopen.c"
 #include "../../lib/curlx/multibyte.c"
+#include "../../lib/curlx/strcopy.c"
 #include "../../lib/curlx/strerr.c"
+#include "../../lib/curlx/strparse.c"
 #include "../../lib/curlx/timediff.c"
 #include "../../lib/curlx/timeval.c"
 #include "../../lib/curlx/version_win32.c"
 #include "../../lib/curlx/wait.c"
 #include "../../lib/curlx/warnless.c"
 #include "../../lib/curlx/winapi.c"
+#include "../../src/toolx/tool_time.c"
+#include "cli_ftp_upload.c"
 #include "cli_h2_pausing.c"
 #include "cli_h2_serverpush.c"
 #include "cli_h2_upgrade_extreme.c"
@@ -204,6 +208,7 @@
 #include "lib1916.c"
 #include "lib1918.c"
 #include "lib1919.c"
+#include "lib1920.c"
 #include "lib1933.c"
 #include "lib1934.c"
 #include "lib1935.c"
@@ -261,6 +266,7 @@
 #include "lib1521.c"
 
 const struct entry_s s_entries[] = {
+  {"cli_ftp_upload", test_cli_ftp_upload},
   {"cli_h2_pausing", test_cli_h2_pausing},
   {"cli_h2_serverpush", test_cli_h2_serverpush},
   {"cli_h2_upgrade_extreme", test_cli_h2_upgrade_extreme},
@@ -450,6 +456,7 @@ const struct entry_s s_entries[] = {
   {"lib1916", test_lib1916},
   {"lib1918", test_lib1918},
   {"lib1919", test_lib1919},
+  {"lib1920", test_lib1920},
   {"lib1933", test_lib1933},
   {"lib1934", test_lib1934},
   {"lib1935", test_lib1935},

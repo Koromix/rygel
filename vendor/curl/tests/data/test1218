@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="US-ASCII"?>
 <testcase>
 <info>
 <keywords>
@@ -8,7 +9,7 @@ cookies
 </keywords>
 </info>
 
-# This test is very similar to 1216, only that it sets the cookies from the
+# This test is similar to 1216, only that it sets the cookies from the
 # first site instead of reading from a file
 <reply>
 <data crlf="headers">

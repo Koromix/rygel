@@ -25,16 +25,14 @@
  * multi interface and debug callback
  * </DESC>
  */
-
 #include <stdio.h>
 #include <string.h>
 
-/* curl stuff */
 #include <curl/curl.h>
 
 #define TRUE 1
 
-static void dump(const char *text, FILE *stream, unsigned char *ptr,
+static void dump(const char *text, FILE *stream, const unsigned char *ptr,
                  size_t size, char nohex)
 {
   size_t i;
@@ -71,7 +69,7 @@ static void dump(const char *text, FILE *stream, unsigned char *ptr,
       }
       fprintf(stream, "%c",
               (ptr[i + c] >= 0x20) && (ptr[i + c] < 0x80) ? ptr[i + c] : '.');
-      /* check again for 0D0A, to avoid an extra \n if it's at width */
+      /* check again for 0D0A, to avoid an extra \n if it is at width */
       if(nohex && (i + c + 2 < size) && ptr[i + c + 1] == 0x0D &&
          ptr[i + c + 2] == 0x0A) {
         i += (c + 3 - width);
@@ -123,9 +121,9 @@ int main(void)
 {
   CURL *curl;
 
-  CURLcode res = curl_global_init(CURL_GLOBAL_ALL);
-  if(res)
-    return (int)res;
+  CURLcode result = curl_global_init(CURL_GLOBAL_ALL);
+  if(result)
+    return (int)result;
 
   curl = curl_easy_init();
   if(curl) {
@@ -148,13 +146,13 @@ int main(void)
       curl_multi_add_handle(multi, curl);
 
       do {
-        CURLMcode mc = curl_multi_perform(multi, &still_running);
+        CURLMcode mresult = curl_multi_perform(multi, &still_running);
 
         if(still_running)
           /* wait for activity, timeout or "nothing" */
-          mc = curl_multi_poll(multi, NULL, 0, 1000, NULL);
+          mresult = curl_multi_poll(multi, NULL, 0, 1000, NULL);
 
-        if(mc)
+        if(mresult)
           break;
 
       } while(still_running);

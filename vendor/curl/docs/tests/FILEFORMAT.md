@@ -11,10 +11,9 @@ XML. All data for a single test case resides in a single ASCII file. Labels
 mark the beginning and the end of all sections, and each label must be written
 in its own line. Comments are either XML-style (enclosed with `<!--` and
 `-->`) or shell script style (beginning with `#`) and must appear on their own
-lines and not alongside actual test data. Most test data files are
-syntactically valid XML, although a few files are not (lack of support for
-character entities and the preservation of CR/LF characters at the end of
-lines are the biggest differences).
+lines and not alongside actual test data. Test data files are syntactically
+valid XML; lack of support for character entities is a big difference but macros
+like %CR fill that particular role here.
 
 Each test case source exists as a file matching the format
 `tests/data/testNUM`, where `NUM` is the unique test number, and must begin
@@ -78,11 +77,23 @@ For example, to insert the word hello 100 times:
 
 ## Whitespace
 
+To force CRLF newline, add this macro to the end of the line:
+
+    %CR  - carriage return
+
 To add significant whitespace characters at the end of the line, or to empty
 lines:
 
-    %spc%
-    %tab%
+    %SP  - space
+    %TAB - horizontal tab
+
+## Special characters
+
+Macros to help keep data files XML-compliant:
+
+    %AMP - Ampersand: `&`
+    %GT  - Greater-than sign: `>`
+    %LT  - Less-than sign: `<`
 
 ## Insert capped epoch days
 
@@ -101,6 +112,12 @@ The filename cannot contain `%` as that letter is used to end the name for
 the include instruction:
 
     %include filename%
+
+Or, a variant of the above where the file is loaded as a newline-agnostic
+text file, and whitespace, special character macros and variables expanded
+after inclusion:
+
+    %includetext filename%
 
 ## Conditional lines
 
@@ -230,7 +247,7 @@ When running a unit test and the keywords include `unittest`, the `<tool>`
 section can be left empty to use the standard unit test tool name `unitN` where
 `N` is the test number.
 
-The `text-ci` make target automatically skips test with the `flaky` keyword.
+The `test-ci` make target automatically skips test with the `flaky` keyword.
 
 Tests that have strict timing dependencies have the `timing-dependent` keyword.
 These are intended to eventually be treated specially on CI builds which are
@@ -495,7 +512,7 @@ Features testable here are:
 - `large-size` (size_t is larger than 32-bit)
 - `libssh2`
 - `libssh`
-- `oldlibssh` (versions before 0.9.4)
+- `badlibssh` (libssh configuration incompatible with the test suite)
 - `libz`
 - `local-http`. The HTTP server runs on 127.0.0.1
 - `manual`
@@ -572,20 +589,11 @@ command has been run.
 If the variable name has no assignment, no `=`, then that variable is just
 deleted.
 
-### `<command [option="no-q/no-output/no-include/force-output/binary-trace"] [timeout="secs"][delay="secs"][type="perl/shell"]>`
+### `<command [option="no-q/no-output/no-include/no-memdebug/force-output/binary-trace"] [timeout="secs"][delay="secs"][type="perl/shell"]>`
 Command line to run.
 
-Note that the URL that gets passed to the server actually controls what data
-that is returned. The last slash in the URL must be followed by a number. That
-number (N) is used by the test-server to load test case N and return the data
-that is defined within the `<reply><data></data></reply>` section.
-
-If there is no test number found above, the HTTP test server uses the number
-following the last dot in the given hostname (made so that a CONNECT can still
-pass on test number) so that "foo.bar.123" gets treated as test case
-123. Alternatively, if an IPv6 address is provided to CONNECT, the last
-hexadecimal group in the address is used as the test number. For example the
-address "[1234::ff]" would be treated as test case 255.
+If the command spans multiple lines, they are concatenated with a space added
+between them.
 
 Set `type="perl"` to write the test case as a perl script. It implies that
 there is no memory debugging and valgrind gets shut off for this test.
@@ -602,6 +610,9 @@ otherwise written to verify stdout.
 
 Set `option="no-include"` to prevent the test script to slap on the
 `--include` argument.
+
+Set `option="no-memdebug"` to make the test run without the memdebug tracking
+system. For tests that are incompatible - multi-threaded for example.
 
 Set `option="no-q"` avoid using `-q` as the first argument in the curl command
 line.

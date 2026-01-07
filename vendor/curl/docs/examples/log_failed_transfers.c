@@ -31,20 +31,21 @@
  * The transfer's log is written to disk only if the transfer fails.
  *
  */
-
-#ifndef UNDER_CE
-#include <errno.h>
+#ifdef _MSC_VER
+#ifndef _CRT_SECURE_NO_WARNINGS
+#define _CRT_SECURE_NO_WARNINGS  /* for fopen(), strerror(), vsnprintf() */
 #endif
+#endif
+
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <limits.h>
 #include <string.h>
+
 #include <curl/curl.h>
 
 #ifdef _WIN32
-#ifndef _CRT_SECURE_NO_WARNINGS
-#define _CRT_SECURE_NO_WARNINGS
-#endif
 #include <windows.h>
 #define strcasecmp _stricmp
 #define strncasecmp _strnicmp
@@ -140,8 +141,8 @@ static int mem_addf(struct mem *mem, const char *format, ...)
   /* we need about 100 chars or less to write 95% of lines */
   x = 128;
 
-  /* first try: there's probably enough memory to write everything.
-     second try: there's definitely enough memory to write everything. */
+  /* first try: there is probably enough memory to write everything.
+     second try: there is definitely enough memory to write everything. */
   for(i = 0; i < 2; ++i) {
     if(x < 0 || mem_need(mem, (size_t)x + 1) < 0)
       break;
@@ -156,7 +157,7 @@ static int mem_addf(struct mem *mem, const char *format, ...)
       return x;
     }
 
-#if defined(_WIN32) && !defined(UNDER_CE)
+#ifdef _WIN32
     /* Not all versions of Windows CRT vsnprintf are compliant with C99. Some
        return -1 if buffer too small. Try _vscprintf to get the needed size. */
     if(!i && x < 0) {
@@ -207,7 +208,7 @@ static size_t write_cb(char *ptr, size_t size, size_t nmemb, void *userdata)
 
 int main(void)
 {
-  CURLcode res;
+  CURLcode result;
   unsigned i;
   int total_failed = 0;
   char errbuf[CURL_ERROR_SIZE] = { 0, };
@@ -223,10 +224,10 @@ int main(void)
   transfer[1].bodyfile = "400.txt";
   transfer[1].logfile = "400_transfer_log.txt";
 
-  res = curl_global_init(CURL_GLOBAL_ALL);
-  if(res) {
+  result = curl_global_init(CURL_GLOBAL_ALL);
+  if(result) {
     fprintf(stderr, "curl_global_init failed\n");
-    return (int)res;
+    return (int)result;
   }
 
   /* You could enable global tracing for extra verbosity when verbosity is
@@ -235,7 +236,7 @@ int main(void)
   curl_global_trace("all");
 #endif
 
-  for(i = 0; i < sizeof(transfer)/sizeof(transfer[0]); ++i) {
+  for(i = 0; i < sizeof(transfer) / sizeof(transfer[0]); ++i) {
     int failed = 0;
     struct transfer *t = &transfer[i];
 
@@ -276,7 +277,7 @@ int main(void)
 
     if(t->bodyfp) {
       /* Perform the transfer */
-      CURLcode result = curl_easy_perform(t->curl);
+      result = curl_easy_perform(t->curl);
 
       /* Save the body file */
       fclose(t->bodyfp);
@@ -297,11 +298,9 @@ int main(void)
       }
     }
     else {
-#ifndef UNDER_CE
       mem_addf(&t->log, "Failed to create body output file %s: %s\n",
                t->bodyfile, strerror(errno));
       fprintf(stderr, "%s", t->log.recent);
-#endif
       failed = 1;
     }
 
@@ -310,12 +309,10 @@ int main(void)
 
       if(fp && t->log.len == fwrite(t->log.buf, 1, t->log.len, fp))
         fprintf(stderr, "Transfer log written to %s\n", t->logfile);
-#ifndef UNDER_CE
       else {
         fprintf(stderr, "Failed to write transfer log to %s: %s\n",
                 t->logfile, strerror(errno));
       }
-#endif
 
       if(fp)
         fclose(fp);

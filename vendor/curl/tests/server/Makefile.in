@@ -137,8 +137,7 @@ am__aclocal_m4_deps = $(top_srcdir)/m4/curl-amissl.m4 \
 	$(top_srcdir)/m4/xc-lt-iface.m4 \
 	$(top_srcdir)/m4/xc-val-flgs.m4 \
 	$(top_srcdir)/m4/zz40-xc-ovr.m4 \
-	$(top_srcdir)/m4/zz50-xc-ovr.m4 \
-	$(top_srcdir)/m4/zz60-xc-ovr.m4 $(top_srcdir)/acinclude.m4 \
+	$(top_srcdir)/m4/zz50-xc-ovr.m4 $(top_srcdir)/acinclude.m4 \
 	$(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
@@ -320,7 +319,9 @@ RANLIB = @RANLIB@
 RC = @RC@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
+SFTPD = @SFTPD@
 SHELL = @SHELL@
+SSHD = @SSHD@
 SSL_BACKENDS = @SSL_BACKENDS@
 STRIP = @STRIP@
 SUPPORT_FEATURES = @SUPPORT_FEATURES@
@@ -419,10 +420,12 @@ AUTOMAKE_OPTIONS = foreign nostdinc
 # $(top_srcdir)/include is for libcurl's external include files
 # $(top_builddir)/lib is for libcurl's generated lib/curl_config.h file
 # $(top_srcdir)/lib for libcurl's lib/curl_setup.h and other "borrowed" files
+# $(top_srcdir)/src for toolx header files
 # $(srcdir) for the generated bundle source to find included test sources
 AM_CPPFLAGS = -I$(top_srcdir)/include        \
               -I$(top_builddir)/lib          \
               -I$(top_srcdir)/lib            \
+              -I$(top_srcdir)/src            \
               -I$(srcdir)
 
 BUNDLE = servers
@@ -441,6 +444,7 @@ CURLX_C = \
   ../../lib/curlx/inet_pton.c \
   ../../lib/curlx/multibyte.c \
   ../../lib/curlx/nonblock.c \
+  ../../lib/curlx/strcopy.c \
   ../../lib/curlx/strerr.c \
   ../../lib/curlx/strparse.c \
   ../../lib/curlx/timediff.c \
@@ -449,6 +453,9 @@ CURLX_C = \
   ../../lib/curlx/wait.c \
   ../../lib/curlx/warnless.c \
   ../../lib/curlx/winapi.c
+
+TOOLX_C = \
+  ../../src/toolx/tool_time.c
 
 
 # All test servers
@@ -463,7 +470,7 @@ TESTS_C = \
   tftpd.c
 
 
-# Get BUNDLE, FIRST_C, FIRST_H, UTILS_C, UTILS_H, CURLX_C, TESTS_C variables
+# Get BUNDLE, FIRST_C, FIRST_H, UTILS_C, UTILS_H, CURLX_C, TOOLX_C, TESTS_C variables
 EXTRA_DIST = CMakeLists.txt .checksrc $(FIRST_C) $(FIRST_H) $(UTILS_C) $(UTILS_H) $(TESTS_C)
 LDADD = @CURL_NETWORK_AND_TIME_LIBS@
 CLEANFILES = $(BUNDLE).c
@@ -773,8 +780,8 @@ uninstall-am:
 .PRECIOUS: Makefile
 
 
-$(BUNDLE).c: $(top_srcdir)/scripts/mk-unity.pl Makefile.inc $(FIRST_C) $(UTILS_C) $(CURLX_C) $(TESTS_C)
-	@PERL@ $(top_srcdir)/scripts/mk-unity.pl --include $(UTILS_C) $(CURLX_C) --test $(TESTS_C) > $(BUNDLE).c
+$(BUNDLE).c: $(top_srcdir)/scripts/mk-unity.pl Makefile.inc $(FIRST_C) $(UTILS_C) $(CURLX_C) $(TOOLX_C) $(TESTS_C)
+	@PERL@ $(top_srcdir)/scripts/mk-unity.pl --include $(UTILS_C) $(CURLX_C) $(TOOLX_C) --test $(TESTS_C) > $(BUNDLE).c
 
 # ignore generated C files since they play by slightly different rules!
 checksrc:

@@ -25,6 +25,12 @@
  * Download a given URL into a local file named page.out.
  * </DESC>
  */
+#ifdef _MSC_VER
+#ifndef _CRT_SECURE_NO_WARNINGS
+#define _CRT_SECURE_NO_WARNINGS  /* for fopen() */
+#endif
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -40,7 +46,7 @@ int main(int argc, char *argv[])
 {
   static const char *pagefilename = "page.out";
 
-  CURLcode res;
+  CURLcode result;
   CURL *curl;
 
   if(argc < 2) {
@@ -48,10 +54,10 @@ int main(int argc, char *argv[])
     return 1;
   }
 
-  res = curl_global_init(CURL_GLOBAL_ALL);
-  if(res) {
+  result = curl_global_init(CURL_GLOBAL_ALL);
+  if(result) {
     fprintf(stderr, "Could not init curl\n");
-    return (int)res;
+    return (int)result;
   }
 
   /* init the curl session */
@@ -79,7 +85,7 @@ int main(int argc, char *argv[])
       curl_easy_setopt(curl, CURLOPT_WRITEDATA, pagefile);
 
       /* get it! */
-      res = curl_easy_perform(curl);
+      result = curl_easy_perform(curl);
 
       /* close the header file */
       fclose(pagefile);
@@ -91,5 +97,5 @@ int main(int argc, char *argv[])
 
   curl_global_cleanup();
 
-  return (int)res;
+  return (int)result;
 }

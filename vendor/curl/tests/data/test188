@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="US-ASCII"?>
 <testcase>
 <info>
 <keywords>
@@ -19,7 +20,7 @@ Content-Length: 3
 OK
 </data>
 <data1>
-HTTP/1.1 200 OK%spc%
+HTTP/1.1 200 OK%SP
 Connection: close
 Content-Length: 15
 Content-Range: bytes 50-
@@ -32,7 +33,7 @@ HTTP/1.1 301 OK swsbounce
 Location: /%TESTNUMBER
 Content-Length: 3
 
-HTTP/1.1 200 OK%spc%
+HTTP/1.1 200 OK%SP
 Connection: close
 Content-Length: 15
 Content-Range: bytes 50-

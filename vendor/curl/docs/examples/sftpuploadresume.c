@@ -25,9 +25,15 @@
  * Upload to SFTP, resuming a previously aborted transfer.
  * </DESC>
  */
+#ifdef _MSC_VER
+#ifndef _CRT_SECURE_NO_WARNINGS
+#define _CRT_SECURE_NO_WARNINGS  /* for fopen() */
+#endif
+#endif
 
 #include <stdlib.h>
 #include <stdio.h>
+
 #include <curl/curl.h>
 
 /* read data to upload */
@@ -65,9 +71,8 @@ static curl_off_t sftpGetRemoteFileSize(const char *i_remoteFile)
 
     result = curl_easy_perform(curl);
     if(CURLE_OK == result) {
-      result = curl_easy_getinfo(curl,
-                                 CURLINFO_CONTENT_LENGTH_DOWNLOAD_T,
-                                 &remoteFileSizeByte);
+      result = curl_easy_getinfo(curl, CURLINFO_CONTENT_LENGTH_DOWNLOAD_T,
+                              &remoteFileSizeByte);
       if(result)
         return -1;
       printf("filesize: %" CURL_FORMAT_CURL_OFF_T "\n", remoteFileSizeByte);
@@ -77,7 +82,6 @@ static curl_off_t sftpGetRemoteFileSize(const char *i_remoteFile)
 
   return remoteFileSizeByte;
 }
-
 
 static int sftpResumeUpload(CURL *curl, const char *remotepath,
                             const char *localpath)
@@ -93,9 +97,7 @@ static int sftpResumeUpload(CURL *curl, const char *remotepath,
 
   f = fopen(localpath, "rb");
   if(!f) {
-#ifndef UNDER_CE
     perror(NULL);
-#endif
     return 0;
   }
 
@@ -104,7 +106,7 @@ static int sftpResumeUpload(CURL *curl, const char *remotepath,
   curl_easy_setopt(curl, CURLOPT_READFUNCTION, read_cb);
   curl_easy_setopt(curl, CURLOPT_READDATA, f);
 
-#if defined(_WIN32) && !defined(UNDER_CE)
+#ifdef _WIN32
   _fseeki64(f, remoteFileSizeByte, SEEK_SET);
 #else
   fseek(f, (long)remoteFileSizeByte, SEEK_SET);
@@ -126,9 +128,9 @@ int main(void)
 {
   CURL *curl = NULL;
 
-  CURLcode res = curl_global_init(CURL_GLOBAL_ALL);
-  if(res)
-    return (int)res;
+  CURLcode result = curl_global_init(CURL_GLOBAL_ALL);
+  if(result)
+    return (int)result;
 
   curl = curl_easy_init();
   if(curl) {

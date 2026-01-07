@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="US-ASCII"?>
 <testcase>
 <info>
 <keywords>
@@ -51,11 +52,11 @@ PWD
 CWD a
 CWD path
 EPRT |1|
-PORT%spc%
+PORT%SP
 TYPE I
 SIZE %TESTNUMBER
 RETR %TESTNUMBER
-PORT%spc%
+PORT%SP
 SIZE %TESTNUMBER
 RETR %TESTNUMBER
 QUIT

@@ -30,12 +30,8 @@
 
 #include "first.h"
 
-#include "testtrace.h"
-#include "memdebug.h"
-
 #ifdef USE_OPENSSL
 
-#include <openssl/x509.h>
 #include <openssl/ssl.h>
 
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
@@ -44,6 +40,8 @@
 #endif
 
 #ifdef T578_ENABLED
+
+#include "testtrace.h"
 
 static struct t758_ctx {
   int socket_calls;
@@ -58,8 +56,7 @@ static struct t758_ctx {
 
 static const char *t758_tag(void)
 {
-  curl_msnprintf(t758_ctx.buf, sizeof(t758_ctx.buf),
-                 "[T758-%d-%d] [%d/%d]",
+  curl_msnprintf(t758_ctx.buf, sizeof(t758_ctx.buf), "[T758-%d-%d] [%d/%d]",
                  t758_ctx.max_socket_calls, t758_ctx.max_timer_calls,
                  t758_ctx.socket_calls, t758_ctx.timer_calls);
   return t758_ctx.buf;
@@ -69,7 +66,6 @@ static void t758_msg(const char *msg)
 {
   curl_mfprintf(stderr, "%s %s\n", t758_tag(), msg);
 }
-
 
 struct t758_Sockets {
   curl_socket_t *sockets;
@@ -121,14 +117,15 @@ static int t758_addFd(struct t758_Sockets *sockets, curl_socket_t fd,
    * Allocate array storage when required.
    */
   if(!sockets->sockets) {
-    sockets->sockets = malloc(sizeof(curl_socket_t) * 20U);
+    sockets->sockets = curlx_malloc(sizeof(curl_socket_t) * 20U);
     if(!sockets->sockets)
       return 1;
     sockets->max_count = 20;
   }
   else if(sockets->count + 1 > sockets->max_count) {
-    curl_socket_t *ptr = realloc(sockets->sockets, sizeof(curl_socket_t) *
-                                 (sockets->max_count + 20));
+    curl_socket_t *ptr = curlx_realloc(sockets->sockets,
+                                       sizeof(curl_socket_t) *
+                                       (sockets->max_count + 20));
     if(!ptr)
       /* cleanup in test_cleanup */
       return 1;
@@ -203,10 +200,10 @@ static int t758_curlTimerCallback(CURLM *multi, long timeout_ms, void *userp)
 
 static int t758_cert_verify_callback(X509_STORE_CTX *ctx, void *arg)
 {
-  SSL * ssl;
+  SSL *ssl;
   (void)arg;
-  ssl = (SSL *)X509_STORE_CTX_get_ex_data(ctx,
-        SSL_get_ex_data_X509_STORE_CTX_idx());
+  ssl = (SSL *)X509_STORE_CTX_get_ex_data(
+    ctx, SSL_get_ex_data_X509_STORE_CTX_idx());
   t758_ctx.number_of_cert_verify_callbacks++;
   if(!t758_ctx.fake_async_cert_verification_pending) {
     t758_ctx.fake_async_cert_verification_pending = 1;
@@ -223,10 +220,10 @@ static int t758_cert_verify_callback(X509_STORE_CTX *ctx, void *arg)
   }
 }
 
-static CURLcode
-t758_set_ssl_ctx_callback(CURL *curl, void *ssl_ctx, void *clientp)
+static CURLcode t758_set_ssl_ctx_callback(CURL *curl, void *ssl_ctx,
+                                          void *clientp)
 {
-  SSL_CTX *ctx = (SSL_CTX *) ssl_ctx;
+  SSL_CTX *ctx = (SSL_CTX *)ssl_ctx;
   (void)curl;
   SSL_CTX_set_cert_verify_callback(ctx, t758_cert_verify_callback, clientp);
   return CURLE_OK;
@@ -277,7 +274,7 @@ static ssize_t t758_getMicroSecondTimeout(struct curltime *timeout)
 /**
  * Update a fd_set with all of the sockets in use.
  */
-static void t758_updateFdSet(struct t758_Sockets *sockets, fd_set* fdset,
+static void t758_updateFdSet(struct t758_Sockets *sockets, fd_set *fdset,
                              curl_socket_t *maxFd)
 {
   int i;
@@ -300,13 +297,13 @@ static CURLMcode t758_saction(CURLM *multi, curl_socket_t s,
                               int evBitmask, const char *info)
 {
   int numhandles = 0;
-  CURLMcode result = curl_multi_socket_action(multi, s, evBitmask,
-                                              &numhandles);
-  if(result != CURLM_OK) {
-    curl_mfprintf(stderr, "%s Curl error on %s (%i) %s\n",
-                  t758_tag(), info, result, curl_multi_strerror(result));
+  CURLMcode mresult = curl_multi_socket_action(multi, s, evBitmask,
+                                               &numhandles);
+  if(mresult != CURLM_OK) {
+    curl_mfprintf(stderr, "%s curl error on %s (%i) %s\n",
+                  t758_tag(), info, mresult, curl_multi_strerror(mresult));
   }
-  return result;
+  return mresult;
 }
 
 /**
@@ -331,12 +328,12 @@ static CURLMcode t758_checkFdSet(CURLM *multi, struct t758_Sockets *sockets,
 static CURLcode t758_one(const char *URL, int timer_fail_at,
                          int socket_fail_at)
 {
-  CURLcode res = CURLE_OK;
+  CURLcode result = CURLE_OK;
   CURL *curl = NULL;
   CURLM *multi = NULL;
-  struct t758_ReadWriteSockets sockets = {{NULL, 0, 0}, {NULL, 0, 0}};
+  struct t758_ReadWriteSockets sockets = { { NULL, 0, 0 }, { NULL, 0, 0 } };
   int success = 0;
-  struct curltime timeout = {0};
+  struct curltime timeout = { 0 };
   timeout.tv_sec = (time_t)-1;
 
   /* set the limits */
@@ -349,16 +346,15 @@ static CURLcode t758_one(const char *URL, int timer_fail_at,
 
   if(curl_global_sslset(CURLSSLBACKEND_OPENSSL, NULL, NULL) != CURLSSLSET_OK) {
     t758_msg("could not set OpenSSL as backend");
-    res = CURLE_FAILED_INIT;
-    return res;
+    result = CURLE_FAILED_INIT;
+    return result;
   }
 
   res_global_init(CURL_GLOBAL_ALL);
-  if(res != CURLE_OK)
-    return res;
+  if(result != CURLE_OK)
+    return result;
 
   curl_global_trace("all");
-
 
   easy_init(curl);
   debug_config.nohex = TRUE;
@@ -386,42 +382,42 @@ static CURLcode t758_one(const char *URL, int timer_fail_at,
   multi_add_handle(multi, curl);
 
   if(t758_saction(multi, CURL_SOCKET_TIMEOUT, 0, "timeout")) {
-    res = TEST_ERR_MAJOR_BAD;
+    result = TEST_ERR_MAJOR_BAD;
     goto test_cleanup;
   }
   while(!t758_checkForCompletion(multi, &success)) {
     fd_set readSet, writeSet;
     curl_socket_t maxFd = 0;
-    struct timeval tv = {0};
+    struct timeval tv = { 0 };
     tv.tv_sec = 10;
 
     if(t758_ctx.fake_async_cert_verification_pending &&
        !t758_ctx.fake_async_cert_verification_finished) {
       if(sockets.read.count || sockets.write.count) {
         t758_msg("during verification there should be no sockets scheduled");
-        res = TEST_ERR_MAJOR_BAD;
+        result = TEST_ERR_MAJOR_BAD;
         goto test_cleanup;
       }
       if(t758_ctx.number_of_cert_verify_callbacks != 1) {
         t758_msg("expecting exactly one cert verify callback here");
-        res = TEST_ERR_MAJOR_BAD;
+        result = TEST_ERR_MAJOR_BAD;
         goto test_cleanup;
       }
       t758_ctx.fake_async_cert_verification_finished = 1;
       if(t758_saction(multi, CURL_SOCKET_TIMEOUT, 0, "timeout")) {
         t758_msg("spurious retry cert action");
-        res = TEST_ERR_MAJOR_BAD;
+        result = TEST_ERR_MAJOR_BAD;
         goto test_cleanup;
       }
       curl_easy_pause(curl, CURLPAUSE_CONT);
       if(t758_saction(multi, CURL_SOCKET_TIMEOUT, 0, "timeout")) {
         t758_msg("unblocking transfer after cert verification finished");
-        res = TEST_ERR_MAJOR_BAD;
+        result = TEST_ERR_MAJOR_BAD;
         goto test_cleanup;
       }
       if(t758_ctx.number_of_cert_verify_callbacks != 2) {
         t758_msg("this should have triggered the callback again, right?");
-        res = TEST_ERR_MAJOR_BAD;
+        result = TEST_ERR_MAJOR_BAD;
         goto test_cleanup;
       }
       t758_msg("TEST: all fine?");
@@ -446,20 +442,20 @@ static CURLcode t758_one(const char *URL, int timer_fail_at,
     /* Check the sockets for reading / writing */
     if(t758_checkFdSet(multi, &sockets.read, &readSet, CURL_CSELECT_IN,
                        "read")) {
-      res = TEST_ERR_MAJOR_BAD;
+      result = TEST_ERR_MAJOR_BAD;
       goto test_cleanup;
     }
     if(t758_checkFdSet(multi, &sockets.write, &writeSet, CURL_CSELECT_OUT,
                        "write")) {
-      res = TEST_ERR_MAJOR_BAD;
+      result = TEST_ERR_MAJOR_BAD;
       goto test_cleanup;
     }
 
     if(timeout.tv_sec != (time_t)-1 &&
        t758_getMicroSecondTimeout(&timeout) == 0) {
-      /* Curl's timer has elapsed. */
+      /* curl's timer has elapsed. */
       if(t758_saction(multi, CURL_SOCKET_TIMEOUT, 0, "timeout")) {
-        res = TEST_ERR_BAD_TIMEOUT;
+        result = TEST_ERR_BAD_TIMEOUT;
         goto test_cleanup;
       }
     }
@@ -468,13 +464,13 @@ static CURLcode t758_one(const char *URL, int timer_fail_at,
   }
   if(success && t758_ctx.number_of_cert_verify_callbacks != 2) {
     t758_msg("unexpected invocations of cert verify callback");
-    res = TEST_ERR_MAJOR_BAD;
+    result = TEST_ERR_MAJOR_BAD;
     goto test_cleanup;
   }
 
   if(!success) {
     t758_msg("Error getting file.");
-    res = TEST_ERR_MAJOR_BAD;
+    result = TEST_ERR_MAJOR_BAD;
   }
 
 test_cleanup:
@@ -487,11 +483,11 @@ test_cleanup:
   curl_global_cleanup();
 
   /* free local memory */
-  free(sockets.read.sockets);
-  free(sockets.write.sockets);
+  curlx_free(sockets.read.sockets);
+  curlx_free(sockets.write.sockets);
   t758_msg("done");
 
-  return res;
+  return result;
 }
 
 static CURLcode test_lib758(const char *URL)

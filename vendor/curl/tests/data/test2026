@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="US-ASCII"?>
 <testcase>
 <info>
 <keywords>
@@ -11,7 +12,7 @@ HTTP Digest auth
 <reply>
 
 <!-- Alternate the order that Basic and Digest headers appear in responses to
-ensure that the order doesn't matter. -->
+ensure that the order does not matter. -->
 
 <!-- First request has Digest auth, wrong password -->
 <data100 crlf="headers">

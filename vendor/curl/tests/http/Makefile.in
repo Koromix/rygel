@@ -134,8 +134,7 @@ am__aclocal_m4_deps = $(top_srcdir)/m4/curl-amissl.m4 \
 	$(top_srcdir)/m4/xc-lt-iface.m4 \
 	$(top_srcdir)/m4/xc-val-flgs.m4 \
 	$(top_srcdir)/m4/zz40-xc-ovr.m4 \
-	$(top_srcdir)/m4/zz50-xc-ovr.m4 \
-	$(top_srcdir)/m4/zz60-xc-ovr.m4 $(top_srcdir)/acinclude.m4 \
+	$(top_srcdir)/m4/zz50-xc-ovr.m4 $(top_srcdir)/acinclude.m4 \
 	$(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
@@ -265,7 +264,9 @@ RANLIB = @RANLIB@
 RC = @RC@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
+SFTPD = @SFTPD@
 SHELL = @SHELL@
+SSHD = @SSHD@
 SSL_BACKENDS = @SSL_BACKENDS@
 STRIP = @STRIP@
 SUPPORT_FEATURES = @SUPPORT_FEATURES@
@@ -342,6 +343,7 @@ testenv/httpd.py                      \
 testenv/mod_curltest/mod_curltest.c   \
 testenv/nghttpx.py                    \
 testenv/ports.py                      \
+testenv/sshd.py                       \
 testenv/vsftpd.py                     \
 testenv/ws_echo_server.py
 
@@ -373,7 +375,9 @@ test_20_websockets.py  \
 test_30_vsftpd.py      \
 test_31_vsftpds.py     \
 test_32_ftps_vsftpd.py \
-test_40_socks.py \
+test_40_socks.py       \
+test_50_scp.py         \
+test_51_sftp.py        \
 $(TESTENV)
 
 all: all-am

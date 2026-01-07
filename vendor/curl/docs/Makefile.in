@@ -134,8 +134,7 @@ am__aclocal_m4_deps = $(top_srcdir)/m4/curl-amissl.m4 \
 	$(top_srcdir)/m4/xc-lt-iface.m4 \
 	$(top_srcdir)/m4/xc-val-flgs.m4 \
 	$(top_srcdir)/m4/zz40-xc-ovr.m4 \
-	$(top_srcdir)/m4/zz50-xc-ovr.m4 \
-	$(top_srcdir)/m4/zz60-xc-ovr.m4 $(top_srcdir)/acinclude.m4 \
+	$(top_srcdir)/m4/zz50-xc-ovr.m4 $(top_srcdir)/acinclude.m4 \
 	$(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
@@ -229,7 +228,7 @@ am__define_uniq_tagged_files = \
   unique=`for i in $$list; do \
     if test -f "$$i"; then echo $$i; else echo $(srcdir)/$$i; fi; \
   done | $(am__uniquify_input)`
-am__DIST_COMMON = $(srcdir)/Makefile.in INSTALL README.md THANKS TODO
+am__DIST_COMMON = $(srcdir)/Makefile.in INSTALL README.md THANKS
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 am__relativize = \
   dir0=`pwd`; \
@@ -355,7 +354,9 @@ RANLIB = @RANLIB@
 RC = @RC@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
+SFTPD = @SFTPD@
 SHELL = @SHELL@
+SSHD = @SSHD@
 SSL_BACKENDS = @SSL_BACKENDS@
 STRIP = @STRIP@
 SUPPORT_FEATURES = @SUPPORT_FEATURES@
@@ -453,10 +454,12 @@ INTERNALDOCS = \
  internals/MULTI-EV.md                          \
  internals/NEW-PROTOCOL.md                      \
  internals/PORTING.md                           \
+ internals/RATELIMITS.md                        \
  internals/README.md                            \
  internals/SCORECARD.md                         \
  internals/SPLAY.md                             \
  internals/STRPARSE.md                          \
+ internals/TIME-KEEPING.md                      \
  internals/TLS-SESSIONS.md                      \
  internals/UINT_SETS.md                         \
  internals/WEBSOCKET.md
@@ -482,7 +485,7 @@ EXTRA_DIST = \
  EARLY-RELEASE.md                               \
  ECH.md                                         \
  EXPERIMENTAL.md                                \
- FAQ                                            \
+ FAQ.md                                         \
  FEATURES.md                                    \
  GOVERNANCE.md                                  \
  HELP-US.md                                     \
@@ -497,7 +500,8 @@ EXTRA_DIST = \
  INSTALL.md                                     \
  INTERNALS.md                                   \
  IPFS.md                                        \
- KNOWN_BUGS                                     \
+ KNOWN_BUGS.md                                  \
+ KNOWN_RISKS.md                                 \
  MAIL-ETIQUETTE.md                              \
  MANUAL.md                                      \
  options-in-versions                            \
@@ -509,7 +513,8 @@ EXTRA_DIST = \
  SPONSORS.md                                    \
  SSL-PROBLEMS.md                                \
  SSLCERTS.md                                    \
- THANKS TODO                                    \
+ THANKS                                         \
+ TODO.md                                        \
  TheArtOfHttpScripting.md                       \
  URL-SYNTAX.md                                  \
  VERSIONS.md                                    \

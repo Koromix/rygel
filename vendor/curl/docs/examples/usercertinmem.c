@@ -38,9 +38,9 @@
 #endif
 
 #include <openssl/ssl.h>
-#include <openssl/x509.h>
-#include <openssl/pem.h>
+
 #include <curl/curl.h>
+
 #include <stdio.h>
 
 #if defined(__GNUC__) || defined(__clang__)
@@ -114,7 +114,7 @@ static CURLcode sslctx_function(CURL *curl, void *sslctx, void *pointer)
   }
 
   /* tell SSL to use the X509 certificate */
-  ret = SSL_CTX_use_certificate((SSL_CTX*)sslctx, cert);
+  ret = SSL_CTX_use_certificate((SSL_CTX *)sslctx, cert);
   if(ret != 1) {
     printf("Use certificate failed\n");
   }
@@ -132,7 +132,7 @@ static CURLcode sslctx_function(CURL *curl, void *sslctx, void *pointer)
   }
 
   /* tell SSL to use the RSA key from memory */
-  ret = SSL_CTX_use_RSAPrivateKey((SSL_CTX*)sslctx, rsa);
+  ret = SSL_CTX_use_RSAPrivateKey((SSL_CTX *)sslctx, rsa);
   if(ret != 1) {
     printf("Use Key failed\n");
   }
@@ -158,9 +158,9 @@ int main(void)
 {
   CURL *curl;
 
-  CURLcode res = curl_global_init(CURL_GLOBAL_ALL);
-  if(res)
-    return (int)res;
+  CURLcode result = curl_global_init(CURL_GLOBAL_ALL);
+  if(result)
+    return (int)result;
 
   curl = curl_easy_init();
   if(curl) {
@@ -183,19 +183,19 @@ int main(void)
     curl_easy_setopt(curl, CURLOPT_SSLKEYTYPE, "PEM");
 
     /* first try: retrieve page without user certificate and key -> fails */
-    res = curl_easy_perform(curl);
-    if(res == CURLE_OK)
+    result = curl_easy_perform(curl);
+    if(result == CURLE_OK)
       printf("*** transfer succeeded ***\n");
     else
       printf("*** transfer failed ***\n");
 
-    /* second try: retrieve page using user certificate and key -> succeeds
+    /* second try: retrieve page using user certificate and key -> succeeds to
      * load the certificate and key by installing a function doing
      * the necessary "modifications" to the SSL CONTEXT just before link init
      */
     curl_easy_setopt(curl, CURLOPT_SSL_CTX_FUNCTION, sslctx_function);
-    res = curl_easy_perform(curl);
-    if(res == CURLE_OK)
+    result = curl_easy_perform(curl);
+    if(result == CURLE_OK)
       printf("*** transfer succeeded ***\n");
     else
       printf("*** transfer failed ***\n");
@@ -203,5 +203,5 @@ int main(void)
     curl_easy_cleanup(curl);
   }
   curl_global_cleanup();
-  return (int)res;
+  return (int)result;
 }

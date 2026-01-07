@@ -21,13 +21,12 @@
  * SPDX-License-Identifier: curl
  *
  ***************************************************************************/
-
 /* <DESC>
  * Send SMTP email with the multi interface
  * </DESC>
  */
-
 #include <string.h>
+
 #include <curl/curl.h>
 
 /* This is an example showing how to send mail using libcurl's SMTP
@@ -35,9 +34,9 @@
  * libcurl's multi interface.
  */
 
-#define FROM_MAIL     "<sender@example.com>"
-#define TO_MAIL       "<recipient@example.com>"
-#define CC_MAIL       "<info@example.com>"
+#define FROM_MAIL "<sender@example.com>"
+#define TO_MAIL   "<recipient@example.com>"
+#define CC_MAIL   "<info@example.com>"
 
 static const char *payload_text =
   "Date: Mon, 29 Nov 2010 21:54:29 +1100\r\n"
@@ -64,7 +63,7 @@ static size_t read_cb(char *ptr, size_t size, size_t nmemb, void *userp)
   size_t room = size * nmemb;
   size_t len;
 
-  if((size == 0) || (nmemb == 0) || ((size*nmemb) < 1)) {
+  if((size == 0) || (nmemb == 0) || ((size * nmemb) < 1)) {
     return 0;
   }
 
@@ -83,9 +82,9 @@ int main(void)
 {
   CURL *curl;
 
-  CURLcode res = curl_global_init(CURL_GLOBAL_ALL);
-  if(res)
-    return (int)res;
+  CURLcode result = curl_global_init(CURL_GLOBAL_ALL);
+  if(result)
+    return (int)result;
 
   curl = curl_easy_init();
   if(curl) {
@@ -127,13 +126,13 @@ int main(void)
       curl_multi_add_handle(multi, curl);
 
       do {
-        CURLMcode mc = curl_multi_perform(multi, &still_running);
+        CURLMcode mresult = curl_multi_perform(multi, &still_running);
 
         if(still_running)
           /* wait for activity, timeout or "nothing" */
-          mc = curl_multi_poll(multi, NULL, 0, 1000, NULL);
+          mresult = curl_multi_poll(multi, NULL, 0, 1000, NULL);
 
-        if(mc)
+        if(mresult)
           break;
 
       } while(still_running);

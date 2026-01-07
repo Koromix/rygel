@@ -25,6 +25,12 @@
  * Simple HTTP GET that stores the headers in a separate file
  * </DESC>
  */
+#ifdef _MSC_VER
+#ifndef _CRT_SECURE_NO_WARNINGS
+#define _CRT_SECURE_NO_WARNINGS  /* for fopen() */
+#endif
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -40,9 +46,9 @@ int main(void)
 {
   CURL *curl;
 
-  CURLcode res = curl_global_init(CURL_GLOBAL_ALL);
-  if(res)
-    return (int)res;
+  CURLcode result = curl_global_init(CURL_GLOBAL_ALL);
+  if(result)
+    return (int)result;
 
   /* init the curl session */
   curl = curl_easy_init();
@@ -85,7 +91,7 @@ int main(void)
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, bodyfile);
 
     /* get it! */
-    res = curl_easy_perform(curl);
+    result = curl_easy_perform(curl);
 
     /* close the header file */
     fclose(headerfile);
@@ -99,5 +105,5 @@ int main(void)
 
   curl_global_cleanup();
 
-  return (int)res;
+  return (int)result;
 }
