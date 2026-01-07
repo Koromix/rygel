@@ -46,6 +46,7 @@ li + .picture { margin-left: -1em; }
 
 #top {
     font-size: 1.1em;
+        color: white;
 
     & menu {
         gap: 2em;
@@ -54,7 +55,7 @@ li + .picture { margin-left: -1em; }
     & li > a {
         border-bottom: none;
         margin-bottom: 1px;
-        color: white;
+        color: inherit;
     }
     & li > a:hover, li.active > a {
         margin-bottom: -1px;

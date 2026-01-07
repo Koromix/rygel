@@ -68,6 +68,7 @@ a:has(> img) { text-decoration: none !important; }
     transition: border-bottom-color 0.4s ease;
 }
 #top.border { border-bottom-color: #383838; }
+#top > div { display: none; }
 #top menu {
     position: sticky;
     top: 0;
@@ -178,8 +179,6 @@ a:has(> img) { text-decoration: none !important; }
 #side a.lv4 { padding-left: 57px; }
 #side a.lv5 { padding-left: 72px; }
 #side a.lv6 { padding-left: 87px; }
-
-:is(#deploy, .deploy) { display: none; }
 
 main {
     flex: 1;

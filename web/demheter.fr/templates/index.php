@@ -100,9 +100,8 @@
     </head>
 
     <body>
-        <div id="deploy"></div>
-
         <nav id="top">
+            <div class="deploy"></div>
             <menu>
                 <a id="logo" href="/"><img src="{{ ASSET static/logo.webp }}" alt="Logo DEMHETER" /></a>
 

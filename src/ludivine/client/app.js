@@ -89,6 +89,9 @@ async function start() {
         func(e);
 
         e.preventDefault();
+
+        let top = document.querySelector('#top');
+        top.classList.remove('active');
     });
 
     // Handle back navigation
@@ -651,9 +654,8 @@ function renderApp(el, fullscreen) {
         render(el, root_el);
     } else {
         render(html`
-            <div class="deploy" @click=${deploy}></div>
-
             <nav id="top">
+                <div @click=${deploy}></div>
                 <menu>
                     <a id="logo" href="/"><img src=${ASSETS['main/logo']} alt=${'Logo ' + ENV.title} /></a>
                     ${ENV.pages.map((page, idx) => {

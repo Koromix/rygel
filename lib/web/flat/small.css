@@ -64,7 +64,7 @@
     .js #top.active #logo { display: none; }
     .nojs #top:hover #logo { display: none; }
 
-    :is(#deploy, .deploy) {
+    #top > div {
         display: block !important;
         position: fixed;
         box-sizing: border-box;
@@ -89,7 +89,7 @@
             content: ' ';
         }
     }
-    :is(#deploy, .deploy).active {
+    #top.active > div {
         border-top: none;
         border-bottom: none;
 
@@ -113,7 +113,7 @@
             width: 90%;
         }
     }
-    .nojs #deploy { pointer-events: none; }
+    .nojs #top > div { pointer-events: none; }
 
     pre { margin: 1em 0; }
 
