@@ -16,6 +16,7 @@
     margin: 0.5em auto;
     position: relative;
     overflow: hidden;
+    touch-action: none;
 }
 .pic_preview.interactive { cursor: grab; }
 
