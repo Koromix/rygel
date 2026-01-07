@@ -1754,13 +1754,11 @@ function sos(e) {
     render(html`
         <div @click=${stop}>
             <img src=${ASSETS['ui/3114']} width="232" height="58" alt="">
-            <p>Le <b>3114</b> est le numéro national de prévention de suicide. Consultez le <a href="https://3114.fr/" target="_blank">site du 3114</a> pour plus d'informations.</p>
-
-            <img src=${ASSETS['ui/116006']} width="292" height="150" alt="">
-            <p>Le <b>116 006</b> est un numéro d’aide aux victimes géré par France Victimes. L'appel est gratuit 7j/7 24h/24. Consultez le <a href="https://www.france-victimes.fr/index.php/categories-inavem/105-actualites/824-116006-un-nouveau-numero-pour-l-aide-aux-victimes-enparlerpouravancer" target="_blank">site de France Victimes</a> pour plus d'informations.</p>
-
-            <img src=${ASSETS['ui/15']} width="237" height="114" alt="">
-            <p>Le <b>15</b> est le numéro du SAMU, disponible 7j/7 24h/24.</p>
+            <p>Le <b>3114</b> est le numéro national de prévention de suicide, <a href="https://3114.fr/" target="_blank">consultez le site</a> pour plus d'informations.</p>
+            <img src=${ASSETS['ui/116006']} width="195" height="100" alt="">
+            <p>L'appel au <b>116 006</b> est gratuit 7j/7 24h/24, <a href="https://www.france-victimes.fr/index.php/categories-inavem/105-actualites/824-116006-un-nouveau-numero-pour-l-aide-aux-victimes-enparlerpouravancer" target="_blank">consultez le site</a> pour plus d'informations.</p>
+            <img src=${ASSETS['ui/15']} width="183" height="48" alt="">
+            <p>Le <b>15</b> est disponible 7j/7 24h/24.</p>
 
             <button type="button" class="secondary" @click=${close}>Fermer</button>
         </div>
