@@ -452,7 +452,7 @@ form {
     }
     & label:has(> :only-child) { justify-content: center; }
     & label:empty { display: none; }
-    & :not(.section) + label { margin-top: 0.2em; }
+    & :not(.section) + label { margin-top: 0.4em; }
 }
 
 & input {
