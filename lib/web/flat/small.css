@@ -101,13 +101,13 @@
             height: 4px;
             width: 100%;
             content: ' ';
-            transform: rotate(45deg);
+            transform: translateY(3px) rotate(45deg);
             border-radius: 3px;
             left: 5%;
             width: 90%;
         }
         &::after {
-            transform: rotate(-45deg);
+            transform: translateY(3px) rotate(-45deg);
             border-radius: 6px;
             left: 5%;
             width: 90%;
