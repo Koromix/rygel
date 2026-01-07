@@ -78,15 +78,40 @@
         cursor: pointer;
         border-top: 4px solid currentColor;
         border-bottom: 4px solid currentColor;
+
+        &::after {
+            background: currentColor;
+            position: absolute;
+            left: 0;
+            top: 7px;
+            height: 4px;
+            width: 100%;
+            content: ' ';
+        }
     }
-    :is(#deploy, .deploy)::after {
-        background: currentColor;
-        position: absolute;
-        left: 0;
-        top: 7px;
-        height: 4px;
-        width: 100%;
-        content: ' ';
+    :is(#deploy, .deploy).active {
+        border-top: none;
+        border-bottom: none;
+
+        &::before {
+            background: currentColor;
+            position: absolute;
+            left: 0;
+            top: 7px;
+            height: 4px;
+            width: 100%;
+            content: ' ';
+            transform: rotate(45deg);
+            border-radius: 3px;
+            left: 5%;
+            width: 90%;
+        }
+        &::after {
+            transform: rotate(-45deg);
+            border-radius: 6px;
+            left: 5%;
+            width: 90%;
+        }
     }
     .nojs #deploy { pointer-events: none; }
 
