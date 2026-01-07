@@ -377,6 +377,7 @@ static void HandleRequest(http_IO *io)
                                                          "style-src 'self' 'unsafe-inline'; "
                                                          "style-src-elem 'self'; "
                                                          "style-src-attr 'self' 'unsafe-inline'; "
+                                                         "img-src 'self' data:; "
                                                          "frame-ancestors 'none'; "
                                                          "form-action 'none'");
                 io->AddHeader("X-Content-Type-Options", "nosniff");
