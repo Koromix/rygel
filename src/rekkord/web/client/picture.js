@@ -268,8 +268,8 @@ function PictureCropper(title, size) {
 
         ctx.fillStyle = '#f8f8f8dd';
         ctx.beginPath();
-        ctx.arc(size / 2, size / 2, size / 2, 0, 2 * Math.PI);
-        ctx.rect(size, 0, -size, size);
+        ctx.rect(0, 0, size, size);
+        ctx.arc(size / 2, size / 2, size / 2, 0, 2 * Math.PI, true);
         ctx.fill();
     }
 
