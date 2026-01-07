@@ -42,7 +42,7 @@ span[title] { border-bottom: 1px dotted #383838; }
 }
 li + .picture { margin-left: -1em; }
 
-.deploy { background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABYAAAAWCAYAAADEtGw7AAAAN0lEQVQ4T2P8DwQMNACMowbDQpWRBsELNnLUYHjI0i4oRtMxPB3TLChGM8gQLitolipGDYalCgAbXC/n+p2w3QAAAABJRU5ErkJggg==') !important; }
+.deploy { color: white; }
 
 #top {
     font-size: 1.1em;

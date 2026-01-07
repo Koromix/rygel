@@ -67,16 +67,26 @@
     :is(#deploy, .deploy) {
         display: block !important;
         position: fixed;
-        width: 42px;
-        height: 40px;
+        box-sizing: border-box;
+        width: 28px;
+        height: 26px;
+        margin: 8px 10px 4px 10px;
+        padding: 0;
         top: 10px;
         left: 8px;
-        padding: 0;
-        background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABYAAAAWCAYAAADEtGw7AAAAOUlEQVQ4T2O0sLD4z0ADwDhqMCxUGWkQvGAjRw2GhyztgmI0HcPTMc2CYjSDDOGygmapYtRgWKoAAGrCE+uzrIQ5AAAAAElFTkSuQmCC");
-        background-repeat: no-repeat;
-        background-position: center;
         z-index: 999;
         cursor: pointer;
+        border-top: 4px solid currentColor;
+        border-bottom: 4px solid currentColor;
+    }
+    :is(#deploy, .deploy)::after {
+        background: currentColor;
+        position: absolute;
+        left: 0;
+        top: 7px;
+        height: 4px;
+        width: 100%;
+        content: ' ';
     }
     .nojs #deploy { pointer-events: none; }
 
