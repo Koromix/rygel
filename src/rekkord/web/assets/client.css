@@ -72,11 +72,8 @@ main.dialog {
 }
 
 .actions {
-    display: block;
-    margin-top: 1.5em;
-    text-align: center;
+    gap: 0.5em;
 
-    & > button { display: inline-block; }
     & > a {
         display: block;
         width: auto;
@@ -86,17 +83,15 @@ main.dialog {
         color: var(--anchor_color) !important;
         font-size: 0.9em;
         text-decoration: underline;
+        flex-basis: 100%;
     }
 
-    & > button + button { margin-left: 0.5em; }
     & > button + a { margin-top: 0.5em; }
+    & > a + a { margin-top: -0.5em; }
 }
-.actions.vertical {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-
-    & > button + button { margin-left: 0; }
+.actions.horizontal {
+    flex-direction: row;
+    justify-content: center;
 }
 
 button {

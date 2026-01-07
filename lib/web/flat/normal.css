@@ -186,7 +186,7 @@ main {
     width: 100%;
     max-width: 1200px;
     box-sizing: border-box;
-    margin: 20px auto 0 auto;
+    margin: 1em auto;
     padding: 0 16px 16px 16px;
 }
 #side ~ main { padding-right: 290px; }

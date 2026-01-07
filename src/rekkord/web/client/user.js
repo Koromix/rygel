@@ -34,7 +34,7 @@ async function runRegister() {
                     <div>
                         <p class="sub" style="text-align: center;">${T.you_can_login_with}</p>
 
-                        <div class="actions vertical">
+                        <div class="actions">
                             ${ENV.auth.providers.map(provider =>
                                 html`<button type="button" @click=${UI.wrap(e => App.sso(provider.issuer, '/'))}>${T.format(T.login_with_x, provider.title)}</button>`)}
                         </div>
@@ -165,7 +165,7 @@ async function runLogin() {
                         <div>
                             ${ENV.auth.internal ? html`<p class="sub" style="text-align: center;">${T.you_can_login_with}</p>` : ''}
 
-                            <div class="actions vertical">
+                            <div class="actions">
                                 ${ENV.auth.providers.map(provider =>
                                     html`<button type="button" @click=${UI.wrap(e => App.sso(provider.issuer, window.location.pathname))}>${T.format(T.login_with_x, provider.title)}</button>`)}
                             </div>
@@ -400,7 +400,7 @@ async function runAccount() {
         <div class="block" style="align-items: center;">
             <div class="sub">${session.username}</div>
             <img class="picture" src=${`/pictures/${session.userid}?v=${session.picture}`} alt="" />
-            <div class="actions">
+            <div class="actions horizontal">
                 <button type="button" class="secondary" @click=${UI.wrap(changePicture)}>${T.change_picture}</button>
                 <button type="button" class="secondary" @click=${UI.wrap(configureSecurity)}>${T.account_security}</button>
             </div>
