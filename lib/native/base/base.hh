@@ -1388,7 +1388,7 @@ static constexpr inline bool IsAsciiWhite(int c)
 }
 static constexpr inline bool IsAsciiControl(int c)
 {
-    return c == 0x7F || (c < ' ' && c != '\t');
+    return c == 0x7F || ((uint8_t)c < ' ' && c != '\t');
 }
 
 static constexpr inline char UpperAscii(int c)
