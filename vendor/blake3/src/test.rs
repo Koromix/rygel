@@ -756,6 +756,9 @@ fn test_hash_conversions() {
     let hash4 = crate::Hash::from_slice(slice1).expect("correct length");
     assert_eq!(hash1, hash4);
 
+    let slice2 = hash1.as_slice();
+    assert_eq!(slice1, slice2);
+
     assert!(crate::Hash::from_slice(&[]).is_err());
     assert!(crate::Hash::from_slice(&[42]).is_err());
     assert!(crate::Hash::from_slice([42; 31].as_slice()).is_err());
@@ -982,7 +985,7 @@ fn test_serde() {
     // Version 1.5.2 of this crate changed the default serialization format to a bytestring
     // (instead of an array/list) to save bytes on the wire. That was a backwards compatibility
     // mistake for non-self-describing formats, and it's been reverted. Since some small number of
-    // serialized bytestrings will probably exist forever in the wild, we shold test that we can
+    // serialized bytestrings will probably exist forever in the wild, we should test that we can
     // still deserialize these from self-describing formats.
     let bytestring_cbor: &[u8] = &[
         0x58, 0x20, 0xfe, 0xfe, 0xfe, 0xfe, 0xfe, 0xfe, 0xfe, 0xfe, 0xfe, 0xfe, 0xfe, 0xfe, 0xfe,

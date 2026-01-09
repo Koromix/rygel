@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.9...3.18 FATAL_ERROR)
 
 # respect C_EXTENSIONS OFF without explicitly setting C_STANDARD
 if (POLICY CMP0128)
@@ -10,7 +10,7 @@ if (POLICY CMP0102)
 endif()
 
 project(libblake3
-  VERSION 1.8.2
+  VERSION 1.8.3
   DESCRIPTION "BLAKE3 C implementation"
   LANGUAGES C CXX ASM
 )
@@ -23,6 +23,7 @@ option(BLAKE3_FETCH_TBB "Allow fetching oneTBB from GitHub if not found on syste
 include(CTest)
 include(FeatureSummary)
 include(GNUInstallDirs)
+include(BLAKE3/Utils)
 
 add_subdirectory(dependencies)
 
@@ -240,7 +241,12 @@ if(BLAKE3_USE_TBB)
       PUBLIC
         BLAKE3_USE_TBB)
   endif()
-  list(APPEND PKG_CONFIG_REQUIRES "tbb >= ${TBB_VERSION}")
+  if (CMAKE_SIZEOF_VOID_P EQUAL 8)
+    set(TBB_PC_NAME tbb)
+  else()
+    set(TBB_PC_NAME tbb32)
+  endif()
+  list(APPEND PKG_CONFIG_REQUIRES "${TBB_PC_NAME} >= ${TBB_VERSION}")
   list(APPEND PKG_CONFIG_CFLAGS -DBLAKE3_USE_TBB)
   include(CheckCXXSymbolExists)
   check_cxx_symbol_exists(_LIBCPP_VERSION "version" BLAKE3_HAVE_LIBCPP)
@@ -258,32 +264,19 @@ if(BLAKE3_USE_TBB)
     set(APPEND BLAKE3_CXX_STANDARD_FLAGS_GNU -std=c++20)
     set(APPEND BLAKE3_CXX_STANDARD_FLAGS_MSVC /std:c++20)
   endif()
+
   set(BLAKE3_CXXFLAGS_GNU "-fno-exceptions;-fno-rtti;${BLAKE3_CXX_STANDARD_FLAGS_GNU}" CACHE STRING "C++ flags used for compiling private BLAKE3 library components with GNU-like compiler frontends.")
   set(BLAKE3_CXXFLAGS_MSVC "/EHs-c-;/GR-;${BLAKE3_CXX_STANDARD_FLAGS_MSVC}" CACHE STRING "C++ flags used for compiling private BLAKE3 library components with MSVC-like compiler frontends.")
-  # Get the C++ compiler name without extension
-  get_filename_component(BLAKE3_CMAKE_CXX_COMPILER_NAME "${CMAKE_CXX_COMPILER}" NAME_WE)
-  # Strip any trailing versioning from the C++ compiler name
-  string(REGEX MATCH "^(clang\\+\\+|clang-cl)" BLAKE3_CMAKE_CXX_COMPILER_NAME "${BLAKE3_CMAKE_CXX_COMPILER_NAME}")
 
-  # TODO: Simplify with CMAKE_CXX_COMPILER_FRONTEND_VARIANT once min CMake version is 3.14.
-  if(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
+  if(BLAKE3_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "GNU")
     target_compile_options(blake3 PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${BLAKE3_CXXFLAGS_GNU}>)
-  elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    if(BLAKE3_CMAKE_CXX_COMPILER_NAME STREQUAL "clang++")
-      target_compile_options(blake3 PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${BLAKE3_CXXFLAGS_GNU}>)
-    elseif(BLAKE3_CMAKE_CXX_COMPILER_NAME STREQUAL "clang-cl")
-      target_compile_options(blake3 PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${BLAKE3_CXXFLAGS_MSVC}>)
-    endif()
-  elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    target_compile_options(blake3 PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${BLAKE3_CXXFLAGS_GNU}>)
-  elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+  elseif(BLAKE3_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
     target_compile_options(blake3 PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${BLAKE3_CXXFLAGS_MSVC}>)
   endif()
 
   # Undefine scratch variables
   unset(BLAKE3_CXX_STANDARD_FLAGS_GNU)
   unset(BLAKE3_CXX_STANDARD_FLAGS_MSVC)
-  unset(BLAKE3_CMAKE_CXX_COMPILER_NAME)
   unset(BLAKE3_CXXFLAGS_GNU)
   unset(BLAKE3_CXXFLAGS_MSVC)
 endif()
