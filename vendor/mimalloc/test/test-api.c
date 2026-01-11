@@ -43,6 +43,8 @@ we therefore test the API over various inputs. Please add more tests :-)
 // ---------------------------------------------------------------------------
 bool test_heap1(void);
 bool test_heap2(void);
+bool test_heap_arena_destroy(void);
+bool test_heap_arena_delete(void);
 bool test_stl_allocator1(void);
 bool test_stl_allocator2(void);
 
@@ -335,10 +337,31 @@ int main(void) {
   };
 
   // ---------------------------------------------------
+  // Returned block sizes
+  // ---------------------------------------------------
+  CHECK_BODY("umalloc1") {
+    for(size_t size = 1; size <= 32*MI_MiB; size *= 2 ) {
+      size_t bsize;
+      void* p = mi_umalloc(size,&bsize);
+      assert(bsize >= size);
+      size_t pre_size;
+      size_t post_size;
+      p = mi_urealloc(p, size + 1024, &pre_size, &post_size);
+      assert(pre_size == bsize);
+      assert(post_size >= size + 1024);
+      size_t fsize;
+      mi_ufree(p,&fsize);
+      assert(fsize == post_size);
+    }
+  }
+
+  // ---------------------------------------------------
   // Heaps
   // ---------------------------------------------------
   CHECK("heap_destroy", test_heap1());
   CHECK("heap_delete", test_heap2());
+  CHECK("heap_arena_destroy", test_heap_arena_destroy());
+  CHECK("heap_arena_delete", test_heap_arena_delete());
 
   //mi_stats_print(NULL);
 
@@ -388,6 +411,32 @@ bool test_heap2(void) {
   *p1 = 42;
   mi_free(p1);
   mi_free(p2);
+  return true;
+}
+
+bool test_heap_arena_destroy(void) {
+  mi_arena_id_t arena_id = NULL;
+  if (mi_reserve_os_memory_ex(64 * 1024 * 1024, true, false, true, &arena_id) != 0) {
+    return false;
+  }
+  mi_heap_t* heap = mi_heap_new_ex(0, true, arena_id);
+  if (heap == NULL) {
+    return false;
+  }
+  mi_heap_destroy(heap);
+  return true;
+}
+
+bool test_heap_arena_delete(void) {
+  mi_arena_id_t arena_id = NULL;
+  if (mi_reserve_os_memory_ex(64 * 1024 * 1024, true, false, true, &arena_id) != 0) {
+    return false;
+  }
+  mi_heap_t* heap = mi_heap_new_ex(0, true, arena_id);
+  if (heap == NULL) {
+    return false;
+  }
+  mi_heap_delete(heap);
   return true;
 }
 
