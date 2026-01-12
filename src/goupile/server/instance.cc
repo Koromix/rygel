@@ -81,7 +81,8 @@ bool InstanceHolder::Open(DomainHolder *domain, InstanceHolder *master, sq_Datab
                 } else if (TestStr(setting, "MaxFileSize")) {
                     valid &= ParseSize(value, &settings.max_file_size);
                 } else if (TestStr(setting, "TokenKey")) {
-                    if (ParseKeyString(value)) {
+                    if (ParseKeyString(value, settings.token_skey)) {
+                        crypto_scalarmult_base(settings.token_pkey, settings.token_skey);
                         settings.token_key = DuplicateString(value, &str_alloc).ptr;
                     } else {
                         valid = false;
