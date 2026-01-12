@@ -420,7 +420,7 @@ static void HandleAdminRequest(http_IO *io)
                 } else if (key == "STATIC_URL") {
                     Print(writer, "/admin/static/%1/", shared_etag);
                 } else if (key == "ENV_JSON") {
-                    json_Writer json(writer);
+                    json_CompactWriter json(writer);
                     char buf[128];
 
                     int64_t now = GetUnixTime();
@@ -678,7 +678,7 @@ static void HandleInstanceRequest(http_IO *io)
                 } else if (key == "STATIC_URL") {
                     Print(writer, "/%1/static/%2/", master->key, shared_etag);
                 } else if (key == "ENV_JSON") {
-                    json_Writer json(writer);
+                    json_CompactWriter json(writer);
                     char buf[512];
 
                     json.StartObject();

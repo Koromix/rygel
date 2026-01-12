@@ -440,7 +440,7 @@ static void HandleRequest(http_IO *io)
                 } else if (key == "TITLE") {
                     writer->Write(config.title);
                 } else if (key == "ENV") {
-                    json_Writer json(writer);
+                    json_CompactWriter json(writer);
 
                     json.StartObject();
 
@@ -469,7 +469,7 @@ static void HandleRequest(http_IO *io)
                 } else if (key == "CSS") {
                     writer->Write(asset_css);
                 }  else if (key == "BUNDLES") {
-                    json_Writer json(writer);
+                    json_CompactWriter json(writer);
 
                     json.StartObject();
                     for (const char *bundle: asset_bundles) {

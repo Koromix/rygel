@@ -313,7 +313,7 @@ static void InitAssets()
         } else if (key == "CSS") {
             writer->Write(css);
         }  else if (key == "BUNDLES") {
-            json_Writer json(writer);
+            json_CompactWriter json(writer);
 
             json.StartObject();
             for (const char *bundle: bundles) {

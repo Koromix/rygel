@@ -189,7 +189,7 @@ static bool HandleInputEvent(int fd)
 
 static void SendInfo(StreamWriter *writer, bool profiles)
 {
-    json_Writer json(writer);
+    json_CompactWriter json(writer);
 
     json.StartObject();
 

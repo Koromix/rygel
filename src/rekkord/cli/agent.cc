@@ -230,7 +230,7 @@ static bool RunPlan()
 // Call with plan_mutex locked
 static void SendInfo(StreamWriter *writer)
 {
-    json_Writer json(writer);
+    json_CompactWriter json(writer);
 
     json.StartObject();
 
