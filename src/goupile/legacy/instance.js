@@ -300,10 +300,10 @@ function renderMenu() {
             <div style="flex: 1; min-width: 15px;"></div>
 
             ${!goupile.isLocked() && profile.instances == null ?
-                html`<button class="icon lines" @click=${e => go(e, ENV.urls.instance)}>${ENV.title}</button>` : ''}
+                html`<button class="icon instance" @click=${e => go(e, ENV.urls.instance)}>${ENV.title}</button>` : ''}
             ${!goupile.isLocked() && profile.instances != null ? html`
                 <div class="drop right" @click=${UI.deployMenu}>
-                    <button class="icon lines" @click=${UI.deployMenu}>${ENV.title}</button>
+                    <button class="icon instance" @click=${UI.deployMenu}>${ENV.title}</button>
                     <div>
                         ${profile.instances.slice().sort(Util.makeComparator(instance => instance.name))
                                            .map(instance =>
