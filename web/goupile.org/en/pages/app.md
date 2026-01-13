@@ -123,7 +123,7 @@ form.section("Inclusion criteria", () => {
 ```
 
 > [!NOTE]
-> This is the only dynamic option as of now, but others may become dynamic in future versions.
+> Not all options can be used dynamically. In version 3.12, the `enabled` and `sequence` options are dynamic options.
 
 ## Successive pages
 
@@ -179,6 +179,47 @@ app.form("project", "6 pages", {
     form.text('f', 'F', { sequence: bdf }) // Back to the status page
 })
 ```
+
+### Dynamic sequence
+
+The `sequence` option is dynamic, meaning it can be computed based on the record data. This allows you, for example, to change the order of forms based on data entered or randomization (for example).
+
+The example below changes the order in which the `test1` and `test2` pages are displayed based on a randomized counter:
+
+```js
+// Project script
+
+app.form("project", "Validation", () => {
+    app.pushOptions({ sequence: sequence })
+
+    app.form("general", "General data")
+    app.form("test1", "Test 1")
+    app.form("test2", "Test 2")
+})
+
+function sequence(thread) {
+    if (thread.counters.random == 2) {
+        return ["inclusion", "test2", "test1"]
+    } else {
+        return ["inclusion", "test1", "test2"]
+    }
+}
+```
+
+```js
+// Content of the "general" page
+
+form.section("Base information", () => {
+    form.number("age", "How old are you?")
+    form.binary("metropole", "Do you live in France?")
+
+    // Randomization counter for page order
+    meta.randomize("random", 2)
+})
+```
+
+> [!NOTE]
+> Not all options can be used dynamically. In version 3.12, the `enabled` and `sequence` options are dynamic options.
 
 ## Autosave
 

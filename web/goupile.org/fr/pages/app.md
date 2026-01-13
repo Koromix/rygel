@@ -123,7 +123,7 @@ form.section("Critères d'inclusion", () => {
 ```
 
 > [!NOTE]
-> Cette option est la seule option dynamique à l'heure actuelle, mais d'autres options seront peut-être concernées dans des versions ultérieures.
+> Toutes les options ne peuvent pas être utilisées de manière dynamique. Dans la version 3.12, les options `enabled` et `sequence` sont des options dynamiques.
 
 ## Pages successives
 
@@ -179,6 +179,47 @@ app.form("projet", "6 pages", {
     form.text('f', 'F', { sequence: bdf }) // Retour à la page de statut
 })
 ```
+
+### Séquence dynamique
+
+L'option `sequence` est dynamique, c'est à dire qu'elle peut être calculée en fonction des données de l'enregistrement. Ceci permet par exemple de modifier l'ordre de passation en fonction d'une donnée remplie ou bien d'un randomisation (par exemple).
+
+L'exemple ci-dessous modifie l'ordre de passation des pages `test1` et `test2` en fonction d'un compteur randomisé :
+
+```js
+// Script de projet
+
+app.form("projet", "Validation", () => {
+    app.pushOptions({ sequence: sequence })
+
+    app.form("general", "Données générales")
+    app.form("test1", "Test 1")
+    app.form("test2", "Test 2")
+})
+
+function sequence(thread) {
+    if (thread.counters.random == 2) {
+        return ["inclusion", "test2", "test1"]
+    } else {
+        return ["inclusion", "test1", "test2"]
+    }
+}
+```
+
+```js
+// Contenu de la page "general"
+
+form.section("Données de base", () => {
+    form.number("age", "Quel âge avez-vous ?")
+    form.binary("metropole", "Vivez-vous en France métropolitaine ?")
+
+    // Compteur de randomisation pour l'ordre des pages
+    meta.randomize("random", 2)
+})
+```
+
+> [!NOTE]
+> Toutes les options ne peuvent pas être utilisées de manière dynamique. Dans la version 3.12, les options `enabled` et `sequence` sont des options dynamiques.
 
 ## Sauvegarde automatique
 
