@@ -1021,16 +1021,17 @@ function addAutomaticActions(builder, model) {
     builder.resetOptions();
 
     if (route.page.store != null) {
-        let next = selectNextPage(route.page, form_thread);
+        let edit = (form_entry.anchor != null);
+        let next = selectNextPage(route.page, form_thread, edit);
 
         let can_save = !form_thread.locked && model.variables.length &&
                        (form_state.hasChanged() || next != null);
-        let can_confirm = (form_entry.anchor != null) && !form_state.hasChanged() &&
+        let can_confirm = edit && !form_state.hasChanged() &&
                           form_entry.tags.includes('draft');
         let can_lock = form_thread.saved && (route.page.lock != null) &&
                        (!form_thread.locked || goupile.hasPermission('data_audit'));
 
-        if (can_save || can_confirm || form_entry.anchor != null) {
+        if (can_save || can_confirm || edit) {
             let label = '+' + T.save;
             let disabled = !can_save;
 
@@ -1067,8 +1068,12 @@ function addAutomaticActions(builder, model) {
                     data_threads = null;
                 });
 
-                if (next == null)
+                if (next != null) {
+                    // Update because it may change (dynamic option) with saved data
+                    next = selectNextPage(route.page, form_thread, edit);
+                } else {
                     next = route.page;
+                }
 
                 let url = contextualizeURL(next.url, form_thread);
                 go(null, url);
@@ -1114,16 +1119,23 @@ function addAutomaticActions(builder, model) {
     }
 }
 
-function selectNextPage(page, thread) {
+function selectNextPage(page, thread, edit) {
     let sequence = page.sequence;
-    let entry = thread.entries[page.store.key];
 
     if (sequence == null)
         return null;
     if (UI.isPanelActive('data'))
         return null;
 
-    if (entry.anchor == null) {
+    if (typeof sequence == 'function') {
+        try {
+            sequence = sequence(thread);
+        } catch (err) {
+            triggerError(err);
+        }
+    }
+
+    if (!edit) {
         if (typeof sequence == 'string') {
             let next = app.pages.find(page => page.key == sequence);
             return next;
