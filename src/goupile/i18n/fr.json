@@ -658,6 +658,7 @@
         "You cannot delete yourself": "Vous ne pouvez pas vous supprimer vous-même",
         "You cannot reuse the same password": "Vous ne pouvez pas réutiliser le même mot de passe",
         "You did not answer all questions correctly. Please check your answers or add notes.": "Vous n'avez pas répondu correctement à toutes les questions. Veuillez vérifier vos réponses ou annoter les questions.",
+        "You did not answer all questions correctly. Please check your answers.": "Vous n'avez pas répondu correctement à toutes les questions. Veuillez vérifier vos réponses.",
         "You must be fully logged in before you do that": "Vous devez être entièrement connecté avant d'effectuer cette opération",
         "You need this key to restore Goupile archives, %!..+you must not lose it!%!0": "Vous avez besoin de cette clé pour restaurer les archives de Goupile, %!..+vous ne devez pas la perdre !%!0",
         "Zygote process failed to initialize": "Le processus zygote n'a pas réussi à s'initialiser",

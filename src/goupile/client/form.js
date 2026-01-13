@@ -66,7 +66,11 @@ function FormState(raw = null, obj = null) {
             self.trigger_errors = true;
             self.restart();
 
-            throw new Error(T.message(`You did not answer all questions correctly. Please check your answers or add notes.`));
+            let annotate = model.widgets.some(intf => intf.options.annotate);
+
+            let msg = annotate ? T.message(`You did not answer all questions correctly. Please check your answers or add notes.`)
+                               : T.message(`You did not answer all questions correctly. Please check your answers.`);
+            throw new Error(msg);
         }
     };
 
