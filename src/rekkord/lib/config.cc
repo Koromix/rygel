@@ -17,7 +17,7 @@ bool rk_Config::Complete()
         return false;
 
     if (!key_filename) {
-        key_filename = GetEnv("REKKORD_KEYFILE");
+        key_filename = GetEnv("REKKORD_KEY_FILE");
     }
 
     if (!link_key) {

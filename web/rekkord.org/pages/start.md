@@ -158,7 +158,7 @@ rekkord derive -K master.key -t WriteOnly -O write.key
 
 Most Rekkord commands require you to specify the keyfile, you can do this in one of three ways:
 
-- Set the `REKKORD_KEYFILE` environment variable (e.g. `export REKKORD_KEYFILE=write.key`)
+- Set the `REKKORD_KEY_FILE` environment variable (e.g. `export REKKORD_KEY_FILE=write.key`)
 - Use the `-K file.key` argument (e.g. `rekkord -K write.key snapshots`)
 - Set the *KeyFile* setting in the *Repository* section of the config file (see example below)
 
