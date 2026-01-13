@@ -2234,6 +2234,9 @@ async function run(push_history = true) {
                     ignorePunctuation: true,
                     sensitivity: 'base'
                 }));
+
+                if (ENV.key.startsWith('arrival/'))
+                    data_rows.reverse();
             }
         }
 
