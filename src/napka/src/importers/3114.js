@@ -156,7 +156,7 @@ async function run() {
     {
         let response = await fetch(EXPORT_URL, {
             headers: {
-                'X-Export-Key': F2RSM_EXPORT_KEY
+                'X-API-Key': F2RSM_EXPORT_KEY
             }
         });
 
