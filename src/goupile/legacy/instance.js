@@ -407,6 +407,13 @@ function renderDropItem(meta, item) {
     `;
 }
 
+async function writeClipboard(label, text) {
+    await navigator.clipboard.writeText(text);
+
+    let msg = T.message(`{1} copied to clipboard`, label);
+    Log.info(msg);
+}
+
 async function togglePanels(left, right) {
     if (left != null)
         UI.togglePanel(0, left);
