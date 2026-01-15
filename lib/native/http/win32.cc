@@ -375,9 +375,9 @@ bool http_Dispatcher::Run()
                     if (error == WSAEINVAL)
                         return true;
 
-                    // Assume transient error (such as too many open files)
+                    // Assume transient error (such as too many open files), slow down
                     LogError("Failed to accept client: %1", GetWin32ErrorString());
-                    WaitDelay(1000);
+                    WaitDelay(20);
 
                     break;
                 }

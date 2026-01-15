@@ -393,7 +393,7 @@ bool http_Dispatcher::Run()
 
                     // Assume transient error (such as too many open files)
                     LogError("Failed to accept client: %1", strerror(errno));
-                    WaitDelay(1000);
+                    WaitDelay(20);
 
                     break;
                 }
