@@ -375,8 +375,11 @@ bool http_Dispatcher::Run()
                     if (error == WSAEINVAL)
                         return true;
 
+                    // Assume transient error (such as too many open files)
                     LogError("Failed to accept client: %1", GetWin32ErrorString());
-                    return false;
+                    WaitDelay(1000);
+
+                    break;
                 }
 
                 SetDescriptorNonBlock((int)sock, true);

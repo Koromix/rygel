@@ -391,8 +391,11 @@ bool http_Dispatcher::Run()
                     if (errno == EINVAL)
                         return true;
 
+                    // Assume transient error (such as too many open files)
                     LogError("Failed to accept client: %1", strerror(errno));
-                    return false;
+                    WaitDelay(1000);
+
+                    break;
                 }
 
                 http_Socket *socket = InitSocket(sock, now, (sockaddr *)&ss);
