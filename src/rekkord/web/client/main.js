@@ -20,20 +20,20 @@ import '../assets/client.css';
 const RUN_LOCK = 'run';
 
 const MODES = {
-    login: { run: UserMod.runLogin, session: false },
-    oidc: { run: UserMod.runOidc, session: false, },
-    register: { run: UserMod.runRegister, session: false },
-    finalize: { run: UserMod.runFinalize, session: false },
-    recover: { run: UserMod.runRecover, session: false },
-    reset: { run: UserMod.runReset, session: false },
-    link: { run: UserMod.runLink, session: false },
-    account: { run: UserMod.runAccount, session: true },
+    login: { run: UserMod.runLogin },
+    oidc: { run: UserMod.runOidc },
+    register: { run: UserMod.runRegister },
+    finalize: { run: UserMod.runFinalize },
+    recover: { run: UserMod.runRecover },
+    reset: { run: UserMod.runReset },
+    link: { run: UserMod.runLink },
+    account: { run: UserMod.runAccount },
 
-    repositories: { run: RepositoryMod.runRepositories, session: true },
-    repository: { run: RepositoryMod.runRepository, session: true, path: [{ key: 'repository', type: 'integer' }]},
+    repositories: { run: RepositoryMod.runRepositories },
+    repository: { run: RepositoryMod.runRepository, path: [{ key: 'repository', type: 'integer' }]},
 
-    plans: { run: PlanMod.runPlans, session: true },
-    plan: { run: PlanMod.runPlan, session: true, path: [{ key: 'plan', type: 'integer' }]},
+    plans: { run: PlanMod.runPlans },
+    plan: { run: PlanMod.runPlan, path: [{ key: 'plan', type: 'integer' }]},
 };
 const DEFAULT_MODE = 'repositories';
 
@@ -209,12 +209,7 @@ async function run(changes = {}, push = false) {
             }
 
             let info = MODES[route.mode] ?? MODES[DEFAULT_MODE];
-
-            if (info.session && !isLogged()) {
-                await UserMod.runLogin();
-            } else {
-                await info.run();
-            }
+            await info.run();
 
             // Update URL
             if (!pending) {

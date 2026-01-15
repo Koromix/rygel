@@ -7,12 +7,16 @@ import { Util, Log, Net } from 'lib/web/base/base.js';
 import * as UI from 'lib/web/ui/ui.js';
 import * as App from './main.js';
 import { route, cache } from './main.js';
+import * as UserMod from './user.js';
 import { runChannel } from './repository.js';
 import { ASSETS } from '../assets/assets.js';
 
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
 async function runPlans() {
+    if (!App.isLogged())
+        return UserMod.runLogin();
+
     [cache.repositories, cache.plans] = await Promise.all([
         Net.cache('repositories', '/api/repository/list'),
         Net.cache('plans', '/api/plan/list')
@@ -87,6 +91,9 @@ function makePlanTasks(plan) {
 }
 
 async function runPlan() {
+    if (!App.isLogged())
+        return UserMod.runLogin();
+
     cache.repositories = await Net.cache('repositories', '/api/repository/list');
 
     if (route.plan != null) {

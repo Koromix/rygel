@@ -391,6 +391,9 @@ async function runLink() {
 }
 
 async function runAccount() {
+    if (!App.isLogged())
+        return runLogin();
+
     UI.main(html`
         <div class="header">${T.account}</div>
 

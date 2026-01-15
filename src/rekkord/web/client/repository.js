@@ -7,9 +7,13 @@ import { Util, Log, Net } from 'lib/web/base/base.js';
 import * as UI from 'lib/web/ui/ui.js';
 import * as App from './main.js';
 import { route, cache } from './main.js';
+import * as UserMod from './user.js';
 import { ASSETS } from '../assets/assets.js';
 
 async function runRepositories() {
+    if (!App.isLogged())
+        return UserMod.runLogin();
+
     cache.repositories = await Net.cache('repositories', '/api/repository/list');
 
     let repositories = UI.tableValues('repositories', cache.repositories, 'url');
@@ -65,6 +69,9 @@ async function runRepositories() {
 }
 
 async function runRepository() {
+    if (!App.isLogged())
+        return UserMod.runLogin();
+
     if (route.repository != null) {
         try {
             let url = Util.pasteURL('/api/repository/get', { id: route.repository });
@@ -373,5 +380,6 @@ function formatSize(size) {
 export {
     runRepositories,
     runRepository,
+
     runChannel
 }
