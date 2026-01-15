@@ -626,12 +626,12 @@ static int RunEncodeQR(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 encode_qr [option...]%!0
+R"(Usage: %!..+%1 encode_qr [option...] [text]%!0
+       %!..+%1 encode_qr [option...] -F file%!0
 
 Options:
 
     %!..+-F, --file filename%!0            Encode data from file
-    %!..+-t, --text text%!0                Encode string passed as argument
 
          %!..+--force_binary%!0            Force use of binary encoding
 
@@ -650,9 +650,6 @@ Options:
             } else if (opt.Test("-F", "--file", OptionType::Value)) {
                 filename_or_text = opt.current_value;
                 is_text = false;
-            } else if (opt.Test("-t", "--text", OptionType::Value)) {
-                filename_or_text = opt.current_value;
-                is_text = true;
             } else if (opt.Test("--force_binary")) {
                 force_binary = true;
             } else if (opt.Test("-P", "--png_file", OptionType::Value)) {
@@ -661,6 +658,11 @@ Options:
                 opt.LogUnknownError();
                 return 1;
             }
+        }
+
+        if (!filename_or_text) {
+            filename_or_text = opt.ConsumeNonOption();
+            is_text = filename_or_text;
         }
 
         opt.LogUnusedArguments();
