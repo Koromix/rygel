@@ -239,18 +239,8 @@ async function runOidc() {
     try {
         await App.oidc(code, state);
     } catch (err) {
-        if (err.status != 409)
-            throw err;
-
-        UI.main(html`
-            <div class="header">${T.account_link}</div>
-
-            <div class="block" style="align-items: center;">
-                <div>
-                    <p>${err.message}</p>
-                </div>
-            </div>
-        `);
+        Log.error(err);
+        App.go('/login');
     }
 }
 
