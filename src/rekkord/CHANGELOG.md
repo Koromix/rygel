@@ -6,6 +6,15 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.96
+
+*Released on 2025-01-16*
+
+- Fix error when listing objects with some S3 providers (such as CloudFlare R2)
+- Rename `REKKORD_KEYFILE` environment variable to `REKKORD_KEY_FILE`
+- Rename some rarely-used `rekkord save` options
+- Add preliminary support for web app link in snapshot operations (undocumented)
+
 ### Rekkord 0.95
 
 *Released on 2025-12-18*
