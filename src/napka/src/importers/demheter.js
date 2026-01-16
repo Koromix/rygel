@@ -167,7 +167,7 @@ function transformPsychologist(row) {
 
         individus: (row.Identites || []).map((identite, i) => ({
             identite: identite,
-            mail: parse.cleanMail(row.Mails[i])
+            mail: parse.cleanMail(row.Mails?.[i])
         })),
         telephone: parse.cleanPhoneNumber(row.Telephone),
         orientation: row.Orientation,
