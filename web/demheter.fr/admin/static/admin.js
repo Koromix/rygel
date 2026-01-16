@@ -79,12 +79,12 @@ function renderNews() {
                 </div>
 
                 <div class="main">
-                    <table style="table-layout: fixed;">
+                    <table style="table-layout: fixed; width: 800px;">
                         <colgroup>
+                            <col style="width: 140px;">
+                            <col style="width: 200px;">
                             <col>
-                            <col>
-                            <col>
-                            <col class="check">
+                            <col style="width: 80px;">
                         </colgroup>
 
                         <thead>
@@ -110,16 +110,16 @@ function renderNews() {
                                     <tr>
                                         <td style="text-align: center;">
                                             ${image != null ? html`<img src=${image} height="32" alt=""/><br/>` : ''}
-                                            <div style="float: right">
+                                            <div>
                                                 <button type="button" class="small" @click=${e => updateImage(item)}>Modifier</button>
                                                 ${item.png != null ? html`<button type="button" class="small"  @click=${e => { item.png = null; run(); }}><img src="static/delete.webp" alt="Supprimer" /></button>` : ''}
                                             </div>
                                         </td>
                                         <td><input class="title" type="text" value=${item.title}
                                                    @input=${e => { item.title = e.target.value; }}></td>
-                                        <td><textarea class="content" style="width: 100%";" rows="5"
+                                        <td><textarea class="content" style="width: 100%;" rows="7"
                                                       @input=${e => { item.content = e.target.value; }}>${item.content}</textarea></td>
-                                        <td class="right">
+                                        <td class="center">
                                             <button type="button" class="small"
                                                     @click=${UI.wrap(e => deleteNews(item))}><img src="static/delete.webp" alt="Supprimer" /></button>
                                         </td>
