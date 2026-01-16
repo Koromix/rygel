@@ -75,7 +75,7 @@
                     position: relative;
                     overflow: hidden;
                 }
-                #news > img { top: calc(100% - 16px); }
+                #news > img { top: calc(100% - 48px); }
                 #news > div > img {
                     position: absolute;
                     width: 100%;
@@ -87,7 +87,7 @@
                     z-index: -1;
                 }
                 #news > div > div {
-                    padding: 2em 1em;
+                    padding: 2em 1em calc(3em + 32px) 1em;
                     background: #112a2ccc;
                 }
                 #news > div p.title { margin-bottom: 0; }
