@@ -377,12 +377,6 @@ bool s3_Client::ListObjects(Span<const char> prefix, FunctionRef<bool(const char
         prefix = DuplicateString(prefix, &temp_alloc);
     }
 
-    KeyValue params[] = {
-        { "continuation-token", continuation },
-        { "list-type", "2" },
-        { "prefix", prefix.ptr }
-    };
-
     // Reuse for performance
     HeapArray<uint8_t> xml;
 
@@ -391,7 +385,19 @@ bool s3_Client::ListObjects(Span<const char> prefix, FunctionRef<bool(const char
             int64_t now = GetUnixTime();
             TimeSpec date = DecomposeTimeUTC(now);
 
-            PrepareRequest(curl, date, "GET", {}, params, &temp_alloc);
+            // Prepare request URL and headers
+            {
+                LocalArray<KeyValue, 8> params;
+
+                if (continuation[0]) {
+                    // Some S3 providers (such as CloudFlare R2) fail with empty continuation-token value
+                    params.Append({ "continuation-token", continuation });
+                }
+                params.Append({ "list-type", "2" });
+                params.Append({ "prefix", prefix.ptr });
+
+                PrepareRequest(curl, date, "GET", {}, params, &temp_alloc);
+            }
 
             curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, +[](char *ptr, size_t, size_t nmemb, void *udata) {
                 HeapArray<uint8_t> *xml = (HeapArray<uint8_t> *)udata;
