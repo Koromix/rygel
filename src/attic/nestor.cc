@@ -17,6 +17,13 @@ struct SourceInfo {
     const char *path;
 };
 
+struct FilterInfo {
+    const char *extension;
+    const char *command;
+
+    K_HASHTABLE_HANDLER(FilterInfo, extension);
+};
+
 struct ServiceInfo {
     const char *name;
     const char *command;
@@ -41,6 +48,8 @@ struct Config {
     int64_t max_age = 0;
     bool verbose = false;
 
+    HashMap<const char *, const char *> mimetypes;
+    HashTable<const char *, FilterInfo> filters;
     HeapArray<ServiceInfo> services;
 
     BlockAllocator str_alloc;
@@ -245,6 +254,18 @@ static bool LoadConfig(StreamReader *st, Config *out_config)
                 header.value = DuplicateString(prop.value, &config.str_alloc).ptr;
 
                 config.headers.Append(header);
+            } else if (prop.section == "Mimetypes") {
+                const char *extension = DuplicateString(prop.key, &config.str_alloc).ptr;
+                const char *mimetype = DuplicateString(prop.value, &config.str_alloc).ptr;
+
+                config.mimetypes.Set(extension, mimetype);
+            } else if (prop.section == "Filters") {
+                FilterInfo filter = {};
+
+                filter.extension = DuplicateString(prop.key, &config.str_alloc).ptr;
+                filter.command = DuplicateString(prop.value, &config.str_alloc).ptr;
+
+                config.filters.Set(filter);
             } else if (prop.section == "Services") {
                 ServiceInfo service = {};
 
@@ -299,17 +320,53 @@ static void ServeFile(http_IO *io, const char *filename, const FileInfo &file_in
         LogInfo("Serving '%1' with '%2'", request.path, filename);
     }
 
-    const char *mimetype = GetMimeType(GetPathExtension(filename));
-    io->AddCachingHeaders(config.max_age, etag);
+    Span<const char> extension = GetPathExtension(filename);
+    const char *mimetype = config.mimetypes.FindValue(extension, nullptr);
+    const FilterInfo *filter = config.filters.Find(extension);
+
+    if (!mimetype) {
+        mimetype = GetMimeType(extension);
+    }
+
     if (mimetype) {
         io->AddHeader("Content-Type", mimetype);
     }
+    io->AddCachingHeaders(config.max_age, etag);
 
-    // Send the file
-    int fd = OpenFile(filename, (int)OpenFlag::Read);
-    if (fd < 0)
-        return;
-    io->SendFile(200, fd, file_info.size);
+    // Send file directly or transformed (by handler command)
+    if (filter) {
+        StreamReader reader(filename);
+        if (!reader.IsValid())
+            return;
+
+        StreamWriter writer;
+        if (!io->OpenForWrite(200, -1, &writer))
+            return;
+
+        uint8_t buf[16384];
+        auto read = [&]() {
+            Size len = reader.Read(buf);
+            return MakeSpan(buf, std::max(len, (Size)0));
+        };
+        auto write = [&](const Span<uint8_t> buf) { writer.Write(buf); };
+
+        ExecuteInfo info = {};
+
+        info.work_dir = DuplicateString(GetPathDirectory(filename), io->Allocator()).ptr;
+
+        int code;
+        bool success = ExecuteCommandLine(filter->command, info, read, write, &code);
+
+        if (success && code != 0) {
+            // Can't do much more and inform client properly, response status has been sent already
+            LogError("Handler command for '%1' failed with code %2", filename, code);
+        }
+    } else {
+        int fd = OpenFile(filename, (int)OpenFlag::Read);
+        if (fd < 0)
+            return;
+        io->SendFile(200, fd, file_info.size);
+    }
 }
 
 static void WriteContent(Span<const char> str, StreamWriter *writer) {
