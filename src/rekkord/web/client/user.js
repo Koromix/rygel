@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
 import { render, html, live, unsafeHTML } from 'vendor/lit-html/lit-html.bundle.js';
-import { Util, Log, Net } from 'lib/web/base/base.js';
+import { Util, Log, Net, HttpError } from 'lib/web/base/base.js';
 import * as UI from 'lib/web/ui/ui.js';
 import * as App from './main.js';
 import { route, cache, session } from './main.js';
