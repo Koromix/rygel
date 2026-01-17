@@ -286,7 +286,7 @@ bool PruneTokens()
     if (!db.Run(R"(DELETE FROM users
                    WHERE creation < ?1 AND
                          password_hash IS NULL AND
-                         id NOT IN (SELECT user FROM identities)", now - InvalidTimeout))
+                         id NOT IN (SELECT user FROM identities))", now - InvalidTimeout))
         return false;
 
     return true;
