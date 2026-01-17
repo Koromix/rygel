@@ -3,7 +3,7 @@
 
 import { render, html, live, classMap, unsafeHTML } from 'vendor/lit-html/lit-html.bundle.js';
 import dayjs from 'vendor/dayjs/dayjs.bundle.js';
-import { Util, Log, Net, HttpError } from 'lib/web/base/base.js';
+import { Util, Mutex, Log, Net, HttpError } from 'lib/web/base/base.js';
 import { Base64 } from 'lib/web/base/mixer.js';
 import * as UI from 'lib/web/ui/ui.js';
 import { deploy } from 'lib/web/flat/static.js';
@@ -16,8 +16,6 @@ import en from '../../i18n/en.json';
 import fr from '../../i18n/fr.json';
 
 import '../assets/client.css';
-
-const RUN_LOCK = 'run';
 
 const MODES = {
     login: { run: UserMod.runLogin },
@@ -46,7 +44,8 @@ let route = {
 };
 let route_url = null;
 let poisoned = false;
-let pending = -1;
+let run_pending = -1;
+let run_mutex = new Mutex;
 
 let session = null;
 let ping_timer = null;
@@ -197,9 +196,9 @@ async function run(changes = {}, push = false) {
     let scroll = (changes.mode != null && changes.mode != route.mode);
 
     try {
-        pending++;
+        run_pending++;
 
-        await navigator.locks.request(RUN_LOCK, async () => {
+        await run_mutex.run(async () => {
             Object.assign(route, changes);
 
             // Don't run stateful code while dialog is running to avoid concurrency issues
@@ -212,7 +211,7 @@ async function run(changes = {}, push = false) {
             await info.run();
 
             // Update URL
-            if (!pending) {
+            if (!run_pending) {
                 let url = makeURL();
 
                 if (url != route_url) {
@@ -230,7 +229,7 @@ async function run(changes = {}, push = false) {
         if (scroll)
             window.scrollTo(0, 0);
     } finally {
-        pending--;
+        run_pending--;
     }
 }
 
