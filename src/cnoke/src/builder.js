@@ -106,73 +106,61 @@ function Builder(config = {}) {
             args.push(`-DNODE_JS_INCLUDE_DIRS=${options.api}/include`);
         }
 
-        // Download or create Node import library (Windows)
-        if (process.platform == 'win32') {
-            if (options.api == null) {
-                let dirname;
-                switch (arch) {
-                    case 'ia32': { dirname = 'win-x86'; } break;
-                    case 'x64': { dirname = 'win-x64'; } break;
-                    case 'arm64': { dirname = 'win-arm64'; } break;
-
-                    default: {
-                        throw new Error(`Unsupported architecture '${arch}' for Node on Windows`);
-                    } break;
-                }
-
-                let destname = `${cache_dir}/node_v${runtime_version}_${arch}.lib`;
-
-                if (!fs.existsSync(destname)) {
-                    fs.mkdirSync(cache_dir, { recursive: true, mode: 0o755 });
-
-                    let url = `https://nodejs.org/dist/v${runtime_version}/${dirname}/node.lib`;
-                    await tools.download_http(url, destname);
-                }
-
-                fs.copyFileSync(destname, work_dir + '/node.lib');
-                args.push(`-DNODE_JS_LINK_LIB=${work_dir}/node.lib`);
-            } else {
-                args.push(`-DNODE_JS_LINK_DEF=${options.api}/def/node_api.def`);
-            }
-        }
-
         args.push(`-DCMAKE_MODULE_PATH=${app_dir}/assets`);
 
         let win32 = (process.platform == 'win32');
         let msvc = (process.platform == 'win32' && process.env.MSYSTEM == null);
         let darwin = (process.platform == 'darwin');
 
+        // Handle Node import library on Windows
         if (win32) {
-            fs.copyFileSync(`${app_dir}/assets/win_delay_hook.c`, work_dir + '/win_delay_hook.c');
-            args.push(`-DNODE_JS_SOURCES=${work_dir}/win_delay_hook.c`);
-        }
+            if (msvc) {
+                if (options.api == null) {
+                    let dirname;
+                    switch (arch) {
+                        case 'ia32': { dirname = 'win-x86'; } break;
+                        case 'x64': { dirname = 'win-x64'; } break;
+                        case 'arm64': { dirname = 'win-arm64'; } break;
 
-        if (msvc) {
-            switch (arch) {
-                case 'ia32': {
-                    args.push('-DNODE_JS_LINK_FLAGS=/DELAYLOAD:node.exe;/SAFESEH:NO');
-                    args.push('-A', 'Win32');
-                } break;
-                case 'arm64': {
-                    args.push('-DNODE_JS_LINK_FLAGS=/DELAYLOAD:node.exe;/SAFESEH:NO');
-                    args.push('-A', 'ARM64');
-                } break;
-                case 'x64': {
-                    args.push('-DNODE_JS_LINK_FLAGS=/DELAYLOAD:node.exe');
-                    args.push('-A', 'x64');
-                } break;
-            }
-        } else {
-            if (spawnSync('ninja', ['--version']).status === 0) {
-                args.push('-G', 'Ninja');
-            } else if (process.platform == 'win32') {
-                args.push('-G', 'MinGW Makefiles');
-            }
+                        default: {
+                            throw new Error(`Unsupported architecture '${arch}' for Node on Windows`);
+                        } break;
+                    }
 
-            // Use CCache if available
-            if (spawnSync('ccache', ['--version']).status === 0) {
-                args.push('-DCMAKE_C_COMPILER_LAUNCHER=ccache');
-                args.push('-DCMAKE_CXX_COMPILER_LAUNCHER=ccache');
+                    let destname = `${cache_dir}/node_v${runtime_version}_${arch}.lib`;
+
+                    if (!fs.existsSync(destname)) {
+                        fs.mkdirSync(cache_dir, { recursive: true, mode: 0o755 });
+
+                        let url = `https://nodejs.org/dist/v${runtime_version}/${dirname}/node.lib`;
+                        await tools.download_http(url, destname);
+                    }
+
+                    fs.copyFileSync(destname, work_dir + '/node.lib');
+                    args.push(`-DNODE_JS_LINK_LIB=${work_dir}/node.lib`);
+                } else {
+                    args.push(`-DNODE_JS_LINK_DEF=${options.api}/def/node_api.def`);
+                }
+
+                switch (arch) {
+                    case 'ia32': {
+                        args.push('-DNODE_JS_LINK_FLAGS=/DELAYLOAD:node.exe;/SAFESEH:NO');
+                        args.push('-A', 'Win32');
+                    } break;
+                    case 'arm64': {
+                        args.push('-DNODE_JS_LINK_FLAGS=/DELAYLOAD:node.exe;/SAFESEH:NO');
+                        args.push('-A', 'ARM64');
+                    } break;
+                    case 'x64': {
+                        args.push('-DNODE_JS_LINK_FLAGS=/DELAYLOAD:node.exe');
+                        args.push('-A', 'x64');
+                    } break;
+                }
+
+                fs.copyFileSync(`${app_dir}/assets/win_delay_hook.c`, work_dir + '/win_delay_hook.c');
+                args.push(`-DNODE_JS_SOURCES=${work_dir}/win_delay_hook.c`);
+            } else {
+                args.push(`-DNODE_JS_LINK_LIB=node.dll`);
             }
         }
 
@@ -185,6 +173,19 @@ function Builder(config = {}) {
             }
         }
 
+        if (!msvc) {
+            if (spawnSync('ninja', ['--version']).status === 0) {
+                args.push('-G', 'Ninja');
+            } else if (process.platform == 'win32') {
+                args.push('-G', 'MinGW Makefiles');
+            }
+
+            // Use CCache if available
+            if (spawnSync('ccache', ['--version']).status === 0) {
+                args.push('-DCMAKE_C_COMPILER_LAUNCHER=ccache');
+                args.push('-DCMAKE_CXX_COMPILER_LAUNCHER=ccache');
+            }
+        }
         if (prefer_clang) {
             if (msvc) {
                 args.push('-T', 'ClangCL');
