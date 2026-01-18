@@ -437,7 +437,8 @@ async function test() {
     if (detect_glibc() || process.platform == 'win32') {
         let disposed = koffi.stats().disposed;
 
-        let fmt = (process.platform == 'win32') ? 'foo %d %g %S %s' : 'foo %d %g %s %ls';
+        let msvc = (process.platform == 'win32' && process.env.MSYSTEM == null);
+        let fmt = msvc ? 'foo %d %g %S %s' : 'foo %d %g %s %ls';
         let str = PrintFmtWide(fmt, 'int', 200, 'double', 1.5, 'str', 'BAR', 'wchar_t *', '\u{1F600} ><');
         assert.equal(str, 'foo 200 1.5 BAR \u{1F600} ><');
 

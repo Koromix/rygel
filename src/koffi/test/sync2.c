@@ -11,7 +11,11 @@ __attribute__((naked)) void DoReturnBool(int cond)
     // On x86_64, only the least signifiant byte matters for bools and the rest is explicitly undefined.
 
     __asm__ (
+#if defined(_WIN32)
+        "cmpl $0, %ecx\n"
+#else
         "cmpl $0, %edi\n"
+#endif
         "setne %r10b\n"
         "movl $0xFFFFFFFF, %eax\n"
         "andb %r10b, %al\n"
