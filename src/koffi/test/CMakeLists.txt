@@ -19,6 +19,8 @@ set_target_properties(sync PROPERTIES PREFIX "")
 if(MSVC)
     target_compile_options(sync PRIVATE /wd4116)
     target_link_options(sync PRIVATE "/DEF:${CMAKE_CURRENT_SOURCE_DIR}/sync.def")
+elseif(WIN32)
+    target_sources(sync PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/sync.def")
 endif()
 
 add_library(async SHARED async.c)
