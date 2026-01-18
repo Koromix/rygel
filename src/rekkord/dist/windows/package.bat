@@ -4,7 +4,7 @@ setlocal EnableDelayedExpansion
 cd %~dp0
 cd ..\..\..\..
 
-start bootstrap.bat
+call bootstrap.bat
 felix.exe -pFast rekkord
 
 for /f "tokens=2 delims= " %%i in ('bin\Fast\rekkord.exe --version') do (
