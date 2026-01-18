@@ -25,6 +25,10 @@
 
 #include "config.h"
 
+#ifdef _WIN32
+#include <winsock2.h>
+#endif
+
 #include "libssh/sftp.h"
 #include "libssh/sftp_priv.h"
 #include "libssh/buffer.h"

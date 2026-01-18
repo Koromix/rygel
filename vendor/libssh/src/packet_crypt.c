@@ -27,7 +27,9 @@
 #include <stdio.h>
 #include <string.h>
 
-#ifndef _WIN32
+#ifdef _WIN32
+#include <winsock2.h>
+#else
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #endif

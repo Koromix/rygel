@@ -35,6 +35,9 @@
 #include "config.h"
 #include "libssh/wrapper.h"
 
+#ifdef _WIN32
+#include <winsock2.h>
+#endif
 #include <errno.h>
 #include <ctype.h>
 #include <stdint.h>

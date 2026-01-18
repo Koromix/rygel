@@ -30,6 +30,9 @@
 #include <libssh/priv.h>
 #include <string.h>
 
+#ifdef _WIN32
+#include <winsock2.h>
+#endif
 #ifdef HAVE_TERMIOS_H
 #include <termios.h>
 #endif
