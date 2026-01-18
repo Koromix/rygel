@@ -186,7 +186,7 @@ function Builder(config = {}) {
         }
 
         if (prefer_clang) {
-            if (!msvc) {
+            if (msvc) {
                 args.push('-T', 'ClangCL');
             } else {
                 args.push('-DCMAKE_C_COMPILER=clang');
