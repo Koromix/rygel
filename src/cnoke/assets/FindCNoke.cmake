@@ -107,7 +107,6 @@ else()
 endif()
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    message(STATUS ${CMAKE_SYSTEM_PROCESSOR})
     if(CMAKE_SYSTEM_PROCESSOR MATCHES "(amd64|x86_64)")
         foreach(lang C CXX)
             set(CMAKE_${lang}_FLAGS_RELEASE "${CMAKE_${lang}_FLAGS_RELEASE} -mpopcnt -msse4.1 -msse4.2 -mssse3 -mcx16")
