@@ -35,7 +35,7 @@ endif()
 add_library(union SHARED union.c)
 set_target_properties(union PROPERTIES PREFIX "")
 
-if(WIN32)
+if(MSVC)
     add_library(win32_dep SHARED win32_dep.cc)
     set_target_properties(win32_dep PROPERTIES PREFIX "")
 

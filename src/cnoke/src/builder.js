@@ -130,6 +130,7 @@ function Builder(config = {}) {
                 }
 
                 fs.copyFileSync(destname, work_dir + '/node.lib');
+                args.push(`-DNODE_JS_LINK_LIB=${work_dir}/node.lib`);
             } else {
                 args.push(`-DNODE_JS_LINK_DEF=${options.api}/def/node_api.def`);
             }
@@ -137,44 +138,36 @@ function Builder(config = {}) {
 
         args.push(`-DCMAKE_MODULE_PATH=${app_dir}/assets`);
 
-        // Set platform flags
-        switch (process.platform) {
-            case 'win32': {
-                fs.copyFileSync(`${app_dir}/assets/win_delay_hook.c`, work_dir + '/win_delay_hook.c');
+        let win32 = (process.platform == 'win32');
+        let msvc = (process.platform == 'win32' && process.env.MSYSTEM == null);
+        let darwin = (process.platform == 'darwin');
 
-                args.push(`-DNODE_JS_SOURCES=${work_dir}/win_delay_hook.c`);
-                args.push(`-DNODE_JS_LINK_LIB=${work_dir}/node.lib`);
-
-                switch (arch) {
-                    case 'ia32': {
-                        args.push('-DNODE_JS_LINK_FLAGS=/DELAYLOAD:node.exe;/SAFESEH:NO');
-                        args.push('-A', 'Win32');
-                    } break;
-                    case 'arm64': {
-                        args.push('-DNODE_JS_LINK_FLAGS=/DELAYLOAD:node.exe;/SAFESEH:NO');
-                        args.push('-A', 'ARM64');
-                    } break;
-                    case 'x64': {
-                        args.push('-DNODE_JS_LINK_FLAGS=/DELAYLOAD:node.exe');
-                        args.push('-A', 'x64');
-                    } break;
-                }
-            } break;
-
-            case 'darwin': {
-                args.push('-DNODE_JS_LINK_FLAGS=-undefined;dynamic_lookup');
-
-                switch (arch) {
-                    case 'arm64': { args.push('-DCMAKE_OSX_ARCHITECTURES=arm64'); } break;
-                    case 'x64': { args.push('-DCMAKE_OSX_ARCHITECTURES=x86_64'); } break;
-                }
-            } break;
+        if (win32) {
+            fs.copyFileSync(`${app_dir}/assets/win_delay_hook.c`, work_dir + '/win_delay_hook.c');
+            args.push(`-DNODE_JS_SOURCES=${work_dir}/win_delay_hook.c`);
         }
 
-        if (process.platform != 'win32') {
-            // Prefer Ninja if available
-            if (spawnSync('ninja', ['--version']).status === 0)
+        if (msvc) {
+            switch (arch) {
+                case 'ia32': {
+                    args.push('-DNODE_JS_LINK_FLAGS=/DELAYLOAD:node.exe;/SAFESEH:NO');
+                    args.push('-A', 'Win32');
+                } break;
+                case 'arm64': {
+                    args.push('-DNODE_JS_LINK_FLAGS=/DELAYLOAD:node.exe;/SAFESEH:NO');
+                    args.push('-A', 'ARM64');
+                } break;
+                case 'x64': {
+                    args.push('-DNODE_JS_LINK_FLAGS=/DELAYLOAD:node.exe');
+                    args.push('-A', 'x64');
+                } break;
+            }
+        } else {
+            if (spawnSync('ninja', ['--version']).status === 0) {
                 args.push('-G', 'Ninja');
+            } else if (process.platform == 'win32') {
+                args.push('-G', 'MinGW Makefiles');
+            }
 
             // Use CCache if available
             if (spawnSync('ccache', ['--version']).status === 0) {
@@ -183,8 +176,17 @@ function Builder(config = {}) {
             }
         }
 
+        if (darwin) {
+            args.push('-DNODE_JS_LINK_FLAGS=-undefined;dynamic_lookup');
+
+            switch (arch) {
+                case 'arm64': { args.push('-DCMAKE_OSX_ARCHITECTURES=arm64'); } break;
+                case 'x64': { args.push('-DCMAKE_OSX_ARCHITECTURES=x86_64'); } break;
+            }
+        }
+
         if (prefer_clang) {
-            if (process.platform == 'win32') {
+            if (!msvc) {
                 args.push('-T', 'ClangCL');
             } else {
                 args.push('-DCMAKE_C_COMPILER=clang');

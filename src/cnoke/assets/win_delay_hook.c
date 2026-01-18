@@ -29,4 +29,8 @@ static FARPROC WINAPI self_exe_hook(unsigned int event, DelayLoadInfo *info)
     return NULL;
 }
 
+#if defined(__MINGW32__)
+PfnDliHook __pfnDliNotifyHook2 = self_exe_hook;
+#else
 const PfnDliHook __pfnDliNotifyHook2 = self_exe_hook;
+#endif

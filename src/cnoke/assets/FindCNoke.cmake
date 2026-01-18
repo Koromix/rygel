@@ -9,12 +9,19 @@ else()
 endif()
 
 if(NODE_JS_LINK_DEF)
-    add_custom_command(OUTPUT ${NODE_JS_LINK_LIB}
-                       COMMAND ${CMAKE_AR} ${CMAKE_STATIC_LINKER_FLAGS}
-                               /def:${NODE_JS_LINK_DEF} /out:${NODE_JS_LINK_LIB}
-                       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-                       MAIN_DEPENDENCY ${NODE_JS_LINK_DEF})
-    add_custom_target(node.lib DEPENDS ${NODE_JS_LINK_LIB})
+    set(NODE_JS_LINK_LIB "${CMAKE_CURRENT_BINARY_DIR}/node.lib")
+    if (MSVC)
+        add_custom_command(OUTPUT node.lib
+                           COMMAND ${CMAKE_AR} ${CMAKE_STATIC_LINKER_FLAGS}
+                                   /def:${NODE_JS_LINK_DEF} /out:${NODE_JS_LINK_LIB}
+                           WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+                           MAIN_DEPENDENCY ${NODE_JS_LINK_DEF})
+    else()
+        add_custom_command(OUTPUT node.lib
+                           COMMAND ${CMAKE_DLLTOOL} -d ${NODE_JS_LINK_DEF} -l ${NODE_JS_LINK_LIB}
+                           WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+                           MAIN_DEPENDENCY ${NODE_JS_LINK_DEF})
+    endif()
 endif()
 
 function(add_node_addon)
@@ -26,10 +33,10 @@ endfunction()
 
 function(target_link_node TARGET)
     target_include_directories(${TARGET} PRIVATE ${NODE_JS_INCLUDE_DIRS})
+    if(NODE_JS_LINK_DEF)
+        target_sources(${TARGET} PRIVATE node.lib)
+    endif()
     if(NODE_JS_LINK_LIB)
-        if(TARGET node.lib)
-            add_dependencies(${TARGET} node.lib)
-        endif()
         target_link_libraries(${TARGET} PRIVATE ${NODE_JS_LINK_LIB})
     endif()
     target_compile_options(${TARGET} PRIVATE ${NODE_JS_COMPILE_FLAGS})

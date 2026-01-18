@@ -19,6 +19,7 @@
     #define NOMINMAX
     #define WIN32_LEAN_AND_MEAN
     #include <windows.h>
+    #include <direct.h>
 #else
     #include <unistd.h>
     #include <errno.h>
@@ -814,7 +815,11 @@ EXPORT size_t UpperCaseStrAscii32(const char32_t *str, char32_t *out)
 
 EXPORT void ChangeDirectory(const char *dirname)
 {
+#if defined(_WIN32)
+    _chdir(dirname);
+#else
     chdir(dirname);
+#endif
 }
 
 EXPORT void UpperToInternalBuffer(const char *str, char **ptr)

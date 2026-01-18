@@ -32,7 +32,7 @@ function test() {
     scripts.Union = 'union.js';
     if (process.platform != 'win32' && process.platform != 'darwin')
         scripts.POSIX = 'posix.js';
-    if (process.platform == 'win32')
+    if (process.platform == 'win32' && process.env.MSYSTEM == null)
         scripts.Win32 = 'win32.js';
     if (process.platform != 'darwin')
         scripts.Raylib = 'raylib.js';

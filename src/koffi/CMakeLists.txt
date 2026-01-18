@@ -99,7 +99,11 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 8)
         list(APPEND KOFFI_SRC src/abi_riscv64.cc src/abi_loong64_asm.S)
     else()
         if(WIN32)
-            list(APPEND KOFFI_SRC src/abi_x64_win.cc src/abi_x64_win_asm.asm)
+            if(MSVC)
+                list(APPEND KOFFI_SRC src/abi_x64_win.cc src/abi_x64_win_asm.asm)
+            else()
+                list(APPEND KOFFI_SRC src/abi_x64_win.cc src/abi_x64_win_asm.S)
+            endif()
         else()
             list(APPEND KOFFI_SRC src/abi_x64_sysv.cc src/abi_x64_sysv_asm.S)
         endif()
@@ -121,13 +125,19 @@ target_include_directories(koffi PRIVATE . ../.. ../../vendor/node-addon-api)
 
 if(WIN32)
     set(UV_LINK_LIB "${CMAKE_CURRENT_BINARY_DIR}/uv.lib")
-    add_custom_command(OUTPUT ${UV_LINK_LIB}
-                       COMMAND ${CMAKE_AR} ${CMAKE_STATIC_LINKER_FLAGS}
-                               /def:src/uv.def /out:${UV_LINK_LIB}
-                       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-                       MAIN_DEPENDENCY src/uv.def)
-    add_custom_target(uv.lib DEPENDS ${UV_LINK_LIB})
-    add_dependencies(koffi uv.lib)
+    if(MSVC)
+        add_custom_command(OUTPUT uv.lib
+                           COMMAND ${CMAKE_AR} ${CMAKE_STATIC_LINKER_FLAGS}
+                                   /def:src/uv.def /out:${UV_LINK_LIB}
+                           WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+                           MAIN_DEPENDENCY src/uv.def)
+    else()
+        add_custom_command(OUTPUT uv.lib
+                           COMMAND ${CMAKE_DLLTOOL} -d src/uv.def -l ${UV_LINK_LIB}
+                           WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+                           MAIN_DEPENDENCY src/uv.def)
+    endif()
+    target_sources(koffi PRIVATE uv.lib)
     target_link_libraries(koffi PRIVATE ${UV_LINK_LIB})
 endif()
 
