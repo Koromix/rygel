@@ -554,7 +554,9 @@ function update() {
                     play();
             }
         } else {
-            if (mouse_state.left == -1 || pressed_keys.return == -1) {
+            let start = runner.isTouch ? (mouse_stat.left == -1) : (pressed_keys.return == -1);
+
+            if (start) {
                 play();
                 pressed_keys.space = 0;
             }
