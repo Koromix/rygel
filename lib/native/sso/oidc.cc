@@ -150,7 +150,7 @@ bool oidc_Provider::Finalize()
             return false;
     }
 
-    return true;
+    return Validate();
 }
 
 static bool CheckURL(const char *url)
@@ -198,7 +198,7 @@ bool oidc_Provider::Validate() const
     }
 
     if (url) {
-        valid = CheckURL(url);
+        valid &= CheckURL(url);
     } else {
         LogError("OIDC provider URL is not set");
         valid = false;
