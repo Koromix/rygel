@@ -27,8 +27,8 @@
         "input_turbo": "Descente rapide",
         "input_wallpaper": "Modifier le fond d'écran",
         "music_by": "Musiques par",
-        "start_button": "Appuyez sur le bouton pour commencer",
-        "start_return": "Appuyez sur la touche entrée ⏎︎ pour commencer",
+        "start_button": "Appuyez sur le bouton ci-dessous pour commencer",
+        "start_return": "Appuyez sur la touche entrée ⏎︎ du clavier pour commencer",
         "wallpapers_by": "Fonds d'écran par"
     },
     "messages": {}
