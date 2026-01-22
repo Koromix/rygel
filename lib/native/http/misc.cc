@@ -213,7 +213,7 @@ bool http_ParseJson(http_IO *io, int64_t max_len, FunctionRef<bool(json_Parser *
 bool http_SendJson(http_IO *io, int status, FunctionRef<void(json_Writer *json)> func)
 {
     CompressionType encoding;
-    if (!io->NegociateEncoding(CompressionType::Brotli, CompressionType::Gzip, &encoding))
+    if (!io->NegociateEncoding({ CompressionType::Zstd, CompressionType::Brotli, CompressionType::Gzip }, &encoding))
         return false;
     io->AddHeader("Content-Type", "application/json");
 

@@ -615,7 +615,7 @@ void ProduceMcoResults(http_IO *io, const User *user)
 
         StreamWriter st;
         CompressionType encoding;
-        if (!io->NegociateEncoding(CompressionType::Brotli, CompressionType::Gzip, &encoding))
+        if (!io->NegociateEncoding({ CompressionType::Zstd, CompressionType::Brotli, CompressionType::Gzip }, &encoding))
             return;
         if (!st.Open(&buf, "<json>", 0, encoding))
             return;

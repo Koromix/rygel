@@ -614,32 +614,32 @@ bool http_IO::NegociateEncoding(CompressionType preferred, CompressionType *out_
         *out_encoding = (CompressionType)clz;
 
         return true;
-    } else {
-        SendError(406);
-        return false;
     }
+
+    SendError(406);
+    return false;
 }
 
-bool http_IO::NegociateEncoding(CompressionType preferred1, CompressionType preferred2, CompressionType *out_encoding)
+bool http_IO::NegociateEncoding(Span<const CompressionType> preferences, CompressionType *out_encoding)
 {
     const char *accept_str = request.GetHeaderValue("Accept-Encoding");
     uint32_t acceptable_encodings = http_ParseAcceptableEncodings(accept_str);
 
-    if (acceptable_encodings & (1 << (int)preferred1)) {
-        *out_encoding = preferred1;
-        return true;
-    } else if (acceptable_encodings & (1 << (int)preferred2)) {
-        *out_encoding = preferred2;
-        return true;
-    } else if (acceptable_encodings) {
+    for (CompressionType preferred: preferences) {
+        if (acceptable_encodings & (1 << (int)preferred)) {
+            *out_encoding = preferred;
+            return true;
+        }
+    }
+    if (acceptable_encodings) {
         int clz = 31 - CountLeadingZeros(acceptable_encodings);
         *out_encoding = (CompressionType)clz;
 
         return true;
-    } else {
-        SendError(406);
-        return false;
     }
+
+    SendError(406);
+    return false;
 }
 
 bool http_IO::OpenForWrite(int status, CompressionType encoding, int64_t len, StreamWriter *out_st)
