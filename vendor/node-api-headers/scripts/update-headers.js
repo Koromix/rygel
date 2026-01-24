@@ -71,6 +71,12 @@ function removeExperimentals(stream, destination, verbose = false) {
                 const identifier = matches[2];
                 macroStack.push(identifier);
 
+                if (mode.length && mode[mode.length - 1] === 'ignore') {
+                    debug(`Line ${lineNumber} Continued-Ignored ${identifier}`);
+                    mode.push('ignore');
+                    return;
+                }
+
                 debug(`Line ${lineNumber} Pushed ${identifier}`);
 
                 if (identifier === 'NAPI_EXPERIMENTAL') {

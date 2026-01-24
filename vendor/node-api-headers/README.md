@@ -9,10 +9,6 @@
 - **[Team](#team)**
 - **[License](#license)**
 
-## Current Node-API version: 9
-
-(See [CHANGELOG.md](CHANGELOG.md) for complete Changelog)
-
 <a name="introduction"></a>
 
 ## Introduction
@@ -45,8 +41,8 @@ npm i node-api-headers
 
 ## Versions
 
-Node-API C headers are backward-compatible. Its version (e.g. `8`) is released 
-separately from the Node.js version stream (e.g. `19.8.1`) and changes are 
+Node-API C headers are backward-compatible. Its version (e.g. `8`) is released
+separately from the Node.js version stream (e.g. `19.8.1`) and changes are
 backported to active Node.js LTS lines (e.g. `16.x` and `18.x`).
 
 This package publishes semver-minor versions with new Node-API C headers changes.
@@ -57,6 +53,7 @@ JS API breaking changes are published with new semver-major versions.
 ## API
 
 The module exports two properties `include_dir` and `symbols`.
+
 ### `include_dir`
 
 This property is a string that represents the include path for the Node-API
@@ -89,18 +86,10 @@ grouped by version and api types.
 
 ## Team members
 
-### Active
-| Name                | GitHub Link                                           |
-| ------------------- | ----------------------------------------------------- |
-| Anna Henningsen     | [addaleax](https://github.com/addaleax)               |
-| Chengzhong Wu       | [legendecas](https://github.com/legendecas)           |
-| Gabriel Schulhof    | [gabrielschulhof](https://github.com/gabrielschulhof) |
-| Hitesh Kanwathirtha | [digitalinfinity](https://github.com/digitalinfinity) |
-| Jim Schlight        | [jschlight](https://github.com/jschlight)             |
-| Michael Dawson      | [mhdawson](https://github.com/mhdawson)               |
-| Kevin Eady          | [KevinEady](https://github.com/KevinEady)
-| Nicola Del Gobbo    | [NickNaso](https://github.com/NickNaso)               |
+The project is maintained by the [Node-API team members](https://github.com/nodejs/abi-stable-node/?tab=readme-ov-file#project-participants).
 
 <a name="license"></a>
+
+## License
 
 Licensed under [MIT](./LICENSE.md)
