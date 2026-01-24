@@ -752,21 +752,31 @@ int64_t GetUnixTime()
 
 int64_t GetMonotonicTime()
 {
+    static std::atomic_int64_t memory;
+
 #if defined(_WIN32)
-    return (int64_t)GetTickCount64();
+    int64_t clock = (int64_t)GetTickCount64();
 #elif defined(__EMSCRIPTEN__)
-    return (int64_t)emscripten_get_now();
+    int64_t clock = emscripten_get_now();
 #elif defined(CLOCK_MONOTONIC_COARSE)
     struct timespec ts;
     K_CRITICAL(clock_gettime(CLOCK_MONOTONIC_COARSE, &ts) == 0, "clock_gettime(CLOCK_MONOTONIC_COARSE) failed: %1", strerror(errno));
 
-    return (int64_t)ts.tv_sec * 1000 + (int64_t)ts.tv_nsec / 1000000;
+    int64_t clock = (int64_t)ts.tv_sec * 1000 + (int64_t)ts.tv_nsec / 1000000;
 #else
     struct timespec ts;
     K_CRITICAL(clock_gettime(CLOCK_MONOTONIC, &ts) == 0, "clock_gettime(CLOCK_MONOTONIC) failed: %1", strerror(errno));
 
-    return (int64_t)ts.tv_sec * 1000 + (int64_t)ts.tv_nsec / 1000000;
+    int64_t clock = (int64_t)ts.tv_sec * 1000 + (int64_t)ts.tv_nsec / 1000000;
 #endif
+
+    // Protect against clock going backwards
+    int64_t prev = memory.load(std::memory_order_relaxed);
+    if (clock < prev) [[unlikely]]
+        return prev;
+    memory.compare_exchange_weak(prev, clock, std::memory_order_relaxed, std::memory_order_relaxed);
+
+    return clock;
 }
 
 TimeSpec DecomposeTimeUTC(int64_t time)
