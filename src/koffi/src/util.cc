@@ -549,6 +549,7 @@ const char *GetValueType(const InstanceData *instance, Napi::Value value)
             case napi_uint16_array: return "Uint16Array";
             case napi_int32_array: return "Int32Array";
             case napi_uint32_array: return "Uint32Array";
+            case napi_float16_array: return "Float16Array";
             case napi_float32_array: return "Float32Array";
             case napi_float64_array: return "Float64Array";
             case napi_bigint64_array: return "BigInt64Array";

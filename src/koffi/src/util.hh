@@ -120,6 +120,7 @@ static inline Span<uint8_t> GetRawBuffer(Napi::Value value)
             case napi_uint16_array: { length *= 2; } break;
             case napi_int32_array: { length *= 4; } break;
             case napi_uint32_array: { length *= 4; } break;
+            case napi_float16_array: { length *= 2; } break;
             case napi_float32_array: { length *= 4; } break;
             case napi_float64_array: { length *= 8; } break;
             case napi_bigint64_array: { length *= 8; } break;
