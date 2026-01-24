@@ -90,8 +90,8 @@ static inline void RunBenchmark(const char *name, Size iterations, FunctionRef<v
     Print("  %!..+%1%!0", FmtPad(name, 34));
     StdOut->Flush();
 
-    int64_t time = GetMonotonicTime();
-    int64_t clock = GetClockCounter();
+    int64_t clock = GetMonotonicClock();
+    int64_t cycles = GetClockCounter();
 
     for (Size i = 0; i < iterations; i++) {
         func(i);
@@ -100,10 +100,10 @@ static inline void RunBenchmark(const char *name, Size iterations, FunctionRef<v
 #endif
     }
 
-    time = GetMonotonicTime() - time;
-    clock = GetClockCounter() - clock;
+    clock = GetMonotonicClock() - clock;
+    cycles = GetClockCounter() - cycles;
 
-    PrintLn(" %!c..%1 ms%!0 (%2 cycles per iteration)", time, clock / iterations);
+    PrintLn(" %!c..%1 ms%!0 (%2 cycles per iteration)", clock, cycles / iterations);
 }
 
 }

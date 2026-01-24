@@ -457,12 +457,12 @@ Test options:
     int64_t *perf_counter = nullptr;
     int64_t perf_start;
     const auto switch_perf_counter = [&](int64_t *counter) {
-        int64_t now = GetMonotonicTime();
+        int64_t clock = GetMonotonicClock();
 
         if (perf_counter) {
-            *perf_counter += now - perf_start;
+            *perf_counter += clock - perf_start;
         }
-        perf_start = now;
+        perf_start = clock;
         perf_counter = counter;
     };
 

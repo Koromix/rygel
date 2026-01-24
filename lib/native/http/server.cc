@@ -518,7 +518,7 @@ bool http_IO::OpenForRead(Size max_len, StreamReader *out_st)
     daemon->StartRead(socket);
 
     incoming.reading = true;
-    timeout_at = GetMonotonicTime() + daemon->send_timeout;
+    timeout_at = GetMonotonicClock() + daemon->send_timeout;
 
     bool success = out_st->Open([this](Span<uint8_t> out_buf) { return ReadDirect(out_buf); }, "<http>");
     K_ASSERT(success);
@@ -806,8 +806,7 @@ void http_IO::SendFile(int status, const char *filename, const char *mimetype)
 
 void http_IO::ExtendTimeout(int timeout)
 {
-    int64_t now = GetMonotonicTime();
-    timeout_at = now + timeout;
+    timeout_at = GetMonotonicClock() + timeout;
 }
 
 bool http_IO::Init(http_Socket *socket, int64_t start, struct sockaddr *sa)

@@ -557,7 +557,7 @@ void HandlePassword(http_IO *io)
     }
 
     // We use this to extend/fix the response delay in case of error
-    int64_t start = GetMonotonicTime();
+    int64_t start = GetMonotonicClock();
 
     sq_Statement stmt;
     if (!db.Prepare(R"(SELECT uuid_str(u.uid), t.password_hash, t.token
@@ -590,7 +590,7 @@ void HandlePassword(http_IO *io)
 
     // Enforce constant delay if authentification fails
     if (stmt.IsValid()) {
-        int64_t safety = std::max(2000 - GetMonotonicTime() + start, (int64_t)0);
+        int64_t safety = std::max(2000 - GetMonotonicClock() + start, (int64_t)0);
         WaitDelay(safety);
 
         LogError("Invalid mail address or password");

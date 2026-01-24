@@ -743,7 +743,7 @@ static HandlerResult HandleProxy(http_IO *io, const char *proxy_url, bool relay4
             WaitDelay(delay);
         }
 
-        int64_t start = GetMonotonicTime();
+        int64_t start = GetMonotonicClock();
 
         status = curl_Perform(curl, "HTTP");
 
@@ -753,7 +753,7 @@ static HandlerResult HandleProxy(http_IO *io, const char *proxy_url, bool relay4
                 status == -CURLE_SSL_CONNECT_ERROR)
             continue;
         if (status == -CURLE_OPERATION_TIMEDOUT &&
-                GetMonotonicTime() - start < config.max_time)
+                GetMonotonicClock() - start < config.max_time)
             continue;
 
         break;

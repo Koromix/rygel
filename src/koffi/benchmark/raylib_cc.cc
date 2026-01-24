@@ -27,10 +27,10 @@ int Main(int argc, char **argv)
     Image img = GenImageColor(800, 600, Color { 0, 0, 0, 255 });
     Font font = GetFontDefault();
 
-    int64_t start = GetMonotonicTime();
+    int64_t start = GetMonotonicClock();
     int64_t iterations = 0;
 
-    while (GetMonotonicTime() - start < time) {
+    while (GetMonotonicClock() - start < time) {
         ImageClearBackground(&img, Color { 0, 0, 0, 255 });
 
         for (int i = 0; i < 3600; i++) {
@@ -63,7 +63,7 @@ int Main(int argc, char **argv)
         iterations += 3600;
     }
 
-    time = GetMonotonicTime() - start;
+    time = GetMonotonicClock() - start;
     PrintLn("{\"iterations\": %1, \"time\": %2}", iterations, time);
 
     return 0;

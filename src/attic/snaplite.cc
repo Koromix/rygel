@@ -312,10 +312,10 @@ static bool TortureSnapshots(const char *database_filename, const char *snapshot
         return false;
 
     Async async;
-    int64_t start = GetMonotonicTime();
+    int64_t start = GetMonotonicClock();
 
     async.Run([&]() {
-        while (GetMonotonicTime() - start < duration) {
+        while (GetMonotonicClock() - start < duration) {
             if (!db.Checkpoint())
                 return false;
 
@@ -328,8 +328,8 @@ static bool TortureSnapshots(const char *database_filename, const char *snapshot
 
     for (Size i = 0; i < 32; i++) {
         async.Run([&]() {
-            while (GetMonotonicTime() - start < duration) {
-                while (GetMonotonicTime() - start < duration) {
+            while (GetMonotonicClock() - start < duration) {
+                while (GetMonotonicClock() - start < duration) {
                     if (!InsertRandom(&db))
                         return false;
                 }
@@ -339,12 +339,12 @@ static bool TortureSnapshots(const char *database_filename, const char *snapshot
         });
 
         async.Run([&]() {
-            while (GetMonotonicTime() - start < duration) {
+            while (GetMonotonicClock() - start < duration) {
                 sq_Statement stmt;
                 if (!db.Prepare("SELECT * FROM dummy", &stmt))
                     return false;
 
-                while (GetMonotonicTime() - start < duration) {
+                while (GetMonotonicClock() - start < duration) {
                     if (!stmt.Step())
                         break;
                 }

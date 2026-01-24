@@ -215,7 +215,7 @@ Available metadata save options:
     bool complete = true;
 
     for (const SaveRequest &save: saves) {
-        int64_t now = GetMonotonicTime();
+        int64_t start = GetMonotonicClock();
 
         const char *last_err = "Unknown error";
         PushLogFilter([&](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
@@ -240,7 +240,7 @@ Available metadata save options:
             continue;
         }
 
-        double time = (double)(GetMonotonicTime() - now) / 1000.0;
+        double time = (double)(GetMonotonicClock() - start) / 1000.0;
 
         LogInfo();
         if (raw) {
@@ -367,7 +367,7 @@ If you use a snapshot channel, the most recent snapshot object that matches will
 
     LogInfo("Restoring...");
 
-    int64_t now = GetMonotonicTime();
+    int64_t start = GetMonotonicClock();
 
     rk_ObjectID oid = {};
     if (!rk_LocateObject(repo.get(), identifier, &oid))
@@ -377,7 +377,7 @@ If you use a snapshot channel, the most recent snapshot object that matches will
     if (!rk_Restore(repo.get(), oid, settings, dest_filename, &file_len))
         return 1;
 
-    double time = (double)(GetMonotonicTime() - now) / 1000.0;
+    double time = (double)(GetMonotonicClock() - start) / 1000.0;
 
     LogInfo();
     LogInfo("Restored: %!..+%1%!0 (%2)", dest_filename, FmtDiskSize(file_len));

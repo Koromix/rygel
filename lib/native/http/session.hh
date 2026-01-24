@@ -50,11 +50,12 @@ public:
         SessionHandle *handle = CreateHandle();
         if (!handle)
             return;
-        int64_t now = GetMonotonicTime();
 
-        handle->login_time = now;
-        handle->register_time = now;
-        handle->lock_time = now;
+        int64_t clock = GetMonotonicClock();
+
+        handle->login_time = clock;
+        handle->register_time = clock;
+        handle->lock_time = clock;
         handle->udata = udata;
 
         // Set session cookies
@@ -91,10 +92,10 @@ public:
         if (ptr) {
             SessionHandle *handle = *ptr;
             RetainPtr<T> udata = handle->udata;
-            int64_t now = GetMonotonicTime();
+            int64_t clock = GetMonotonicClock();
 
             // Regenerate session if needed
-            if (now - handle->register_time >= RegenerateDelay) {
+            if (clock - handle->register_time >= RegenerateDelay) {
                 static_assert(K_SIZE(handle->session_rnd) == 33);
 
                 char session_rnd[33];
@@ -112,8 +113,8 @@ public:
                 }
 
                 handle->login_time = login_time;
-                handle->register_time = now;
-                handle->lock_time = locked ? lock_time : now;
+                handle->register_time = clock;
+                handle->lock_time = locked ? lock_time : clock;
                 handle->udata = udata;
 
                 // Set session cookies
@@ -140,11 +141,11 @@ public:
     {
         std::lock_guard<std::shared_mutex> lock_excl(mutex);
 
-        int64_t now = GetMonotonicTime();
+        int64_t clock = GetMonotonicClock();
 
         Size expired = 0;
         for (const SessionHandle &handle: sessions) {
-            if (now - handle.register_time < MaxKeyDelay)
+            if (clock - handle.register_time < MaxKeyDelay)
                 break;
 
             sessions_map.Remove(handle.session_key);
@@ -207,7 +208,7 @@ private:
 
     SessionHandle **FindHandle(const http_RequestInfo &request, bool *out_mismatch, bool *out_locked)
     {
-        int64_t now = GetMonotonicTime();
+        int64_t clock = GetMonotonicClock();
 
         const char *session_key = request.GetCookieValue("session_key");
         const char *session_rnd = request.GetCookieValue("session_rnd");
@@ -227,9 +228,9 @@ private:
         // disconnected during localhost tests because login used IPv4 and a subsequent request
         // used IPv6, or vice versa.
         SessionHandle *handle = *ptr;
-        if (now - handle->login_time >= MaxSessionDelay ||
-                now - handle->register_time >= MaxKeyDelay ||
-                now - handle->lock_time >= MaxLockDelay ||
+        if (clock - handle->login_time >= MaxSessionDelay ||
+                clock - handle->register_time >= MaxKeyDelay ||
+                clock - handle->lock_time >= MaxLockDelay ||
                 (session_rnd && !TestStr(handle->session_rnd, session_rnd))) {
             *out_mismatch = true;
             return nullptr;

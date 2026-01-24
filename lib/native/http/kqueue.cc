@@ -172,7 +172,7 @@ restart:
         return -1;
     }
 
-    socket->client.timeout_at = GetMonotonicTime() + idle_timeout;
+    socket->client.timeout_at = GetMonotonicClock() + idle_timeout;
 
     return bytes;
 }
@@ -201,7 +201,7 @@ bool http_Daemon::WriteSocket(http_Socket *socket, Span<const uint8_t> buf)
             return false;
         }
 
-        socket->client.timeout_at = GetMonotonicTime() + send_timeout;
+        socket->client.timeout_at = GetMonotonicClock() + send_timeout;
 
         buf.ptr += bytes;
         buf.len -= bytes;
@@ -247,7 +247,7 @@ bool http_Daemon::WriteSocket(http_Socket *socket, Span<Span<const uint8_t>> par
             return false;
         }
 
-        socket->client.timeout_at = GetMonotonicTime() + send_timeout;
+        socket->client.timeout_at = GetMonotonicClock() + send_timeout;
 
         do {
             struct iovec *part = msg.msg_iov;
@@ -343,7 +343,7 @@ void http_IO::SendFile(int status, int fd, int64_t len)
             return;
         }
 
-        socket->client.timeout_at = GetMonotonicTime() + daemon->send_timeout;
+        socket->client.timeout_at = GetMonotonicClock() + daemon->send_timeout;
 
         if (sent < (Size)header.iov_len) [[unlikely]] {
             header.iov_base = (uint8_t *)header.iov_base + sent;
@@ -420,14 +420,14 @@ bool http_Dispatcher::Run()
         if (!async.Wait(100)) {
             LogInfo("Waiting up to %1 sec before shutting down clients...", (double)daemon->stop_timeout / 1000);
 
-            int64_t start = GetMonotonicTime();
+            int64_t start = GetMonotonicClock();
 
             do {
                 StopWS();
 
                 if (async.Wait(100))
                     break;
-            } while (GetMonotonicTime() - start < daemon->stop_timeout);
+            } while (GetMonotonicClock() - start < daemon->stop_timeout);
 
             for (http_Socket *socket: sockets) {
                 shutdown(socket->sock, SHUT_RDWR);
@@ -456,7 +456,7 @@ bool http_Dispatcher::Run()
     int next_worker = 0;
 
     for (;;) {
-        int64_t now = GetMonotonicTime();
+        int64_t clock = GetMonotonicClock();
         bool accepts = false;
 
         for (const struct kevent &ev: events) {
@@ -524,7 +524,7 @@ bool http_Dispatcher::Run()
                 SetDescriptorNonBlock(sock, true);
 #endif
 
-                http_Socket *socket = InitSocket(sock, now, (sockaddr *)&ss);
+                http_Socket *socket = InitSocket(sock, clock, (sockaddr *)&ss);
 
                 if (!socket) [[unlikely]] {
                     close(sock);
@@ -591,9 +591,9 @@ bool http_Dispatcher::Run()
 
                     async.Run(worker_idx, [=, this] {
                         do {
-                            daemon->RunHandler(client, now);
+                            daemon->RunHandler(client, clock);
 
-                            if (!client->Rearm(GetMonotonicTime())) {
+                            if (!client->Rearm(GetMonotonicClock())) {
                                 shutdown(socket->sock, SHUT_RD);
                                 break;
                             }
@@ -613,7 +613,7 @@ bool http_Dispatcher::Run()
                 } break;
             }
 
-            int delay = (int)(client->timeout_at.load() - now);
+            int delay = (int)(client->timeout_at.load() - clock);
 
             if (delay <= 0) {
                 shutdown(socket->sock, SHUT_RDWR);

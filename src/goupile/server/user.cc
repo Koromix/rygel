@@ -337,7 +337,7 @@ void ExportProfile(const SessionInfo *session, const InstanceHolder *instance, j
                 json->Key("authorized"); json->Bool(false);
             }
         } else {
-            bool authorized = (session->is_admin && session->admin_until > GetMonotonicTime());
+            bool authorized = (session->is_admin && session->admin_until > GetMonotonicClock());
 
             json->Key("authorized"); json->Bool(authorized);
             json->Key("root"); json->Bool(session->is_root);
@@ -436,7 +436,7 @@ RetainPtr<const SessionInfo> GetAdminSession(http_IO *io, InstanceHolder *instan
         return nullptr;
     if (!session->is_admin)
         return nullptr;
-    if (session->admin_until <= GetMonotonicTime())
+    if (session->admin_until <= GetMonotonicClock())
         return nullptr;
 
     return session;
@@ -451,11 +451,11 @@ void PruneSessions()
     {
         std::lock_guard<std::shared_mutex> lock_excl(events_mutex);
 
-        int64_t now = GetMonotonicTime();
+        int64_t clock = GetMonotonicClock();
 
         Size expired = 0;
         for (const EventInfo &event: events) {
-            if (event.until > now)
+            if (event.until > clock)
                 break;
 
             EventInfo **ptr = events_map.Find(event.key);
@@ -522,13 +522,13 @@ static const EventInfo *RegisterEvent(const char *where, const char *who, int64_
     EventInfo::Key key = { where, who };
     EventInfo *event = events_map.FindValue(key, nullptr);
 
-    if (!event || event->until < GetMonotonicTime()) {
+    if (!event || event->until < GetMonotonicClock()) {
         Allocator *alloc;
         event = events.AppendDefault(&alloc);
 
         event->key.where = DuplicateString(where, alloc).ptr;
         event->key.who = DuplicateString(who, alloc).ptr;
-        event->until = GetMonotonicTime() + BanTime;
+        event->until = GetMonotonicClock() + BanTime;
 
         events_map.Set(event);
     }
@@ -597,7 +597,7 @@ void HandleSessionLogin(http_IO *io, InstanceHolder *instance)
     }
 
     // We use this to extend/fix the response delay in case of error
-    int64_t now = GetMonotonicTime();
+    int64_t start = GetMonotonicClock();
 
     sq_Statement stmt;
     if (instance) {
@@ -710,7 +710,7 @@ void HandleSessionLogin(http_IO *io, InstanceHolder *instance)
                 session->is_admin = admin;
 
                 if (!instance && (root || admin)) {
-                    session->admin_until = GetMonotonicTime() + 1200 * 1000;
+                    session->admin_until = GetMonotonicClock() + 1200 * 1000;
                 }
 
                 if (!change_password && (root || admin)) {
@@ -730,7 +730,7 @@ void HandleSessionLogin(http_IO *io, InstanceHolder *instance)
 
     if (stmt.IsValid()) {
         // Enforce constant delay if authentification fails
-        int64_t safety_delay = std::max(2000 - GetMonotonicTime() + now, (int64_t)0);
+        int64_t safety_delay = std::max(2000 - GetMonotonicClock() + start, (int64_t)0);
         WaitDelay(safety_delay);
 
         LogError("Invalid username or password");
@@ -1275,7 +1275,7 @@ void HandleChangePassword(http_IO *io, InstanceHolder *instance)
         K_ASSERT(old_password || session->change_password);
 
         // We use this to extend/fix the response delay in case of error
-        int64_t now = GetMonotonicTime();
+        int64_t start = GetMonotonicClock();
 
         sq_Statement stmt;
         if (!gp_db.Prepare("SELECT password_hash FROM dom_users WHERE userid = ?1", &stmt))
@@ -1295,7 +1295,7 @@ void HandleChangePassword(http_IO *io, InstanceHolder *instance)
         if (old_password) {
             if (!password_hash || crypto_pwhash_str_verify(password_hash, old_password, strlen(old_password)) < 0) {
                 // Enforce constant delay if authentification fails
-                int64_t safety_delay = std::max(2000 - GetMonotonicTime() + now, (int64_t)0);
+                int64_t safety_delay = std::max(2000 - GetMonotonicClock() + start, (int64_t)0);
                 WaitDelay(safety_delay);
 
                 LogError("Invalid password");
@@ -1477,7 +1477,7 @@ void HandleChangeTOTP(http_IO *io)
     }
 
     // We use this to extend/fix the response delay in case of error
-    int64_t now = GetMonotonicTime();
+    int64_t start = GetMonotonicClock();
 
     // Authenticate with password
     {
@@ -1498,7 +1498,7 @@ void HandleChangeTOTP(http_IO *io)
 
         if (!password_hash || crypto_pwhash_str_verify(password_hash, password, strlen(password)) < 0) {
             // Enforce constant delay if authentification fails
-            int64_t safety_delay = std::max(2000 - GetMonotonicTime() + now, (int64_t)0);
+            int64_t safety_delay = std::max(2000 - GetMonotonicClock() + start, (int64_t)0);
             WaitDelay(safety_delay);
 
             LogError("Invalid password");

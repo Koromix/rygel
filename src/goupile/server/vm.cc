@@ -528,13 +528,13 @@ static bool ServeRequests()
 
         // Wait for request or fork timeout
         {
-            int64_t now = GetMonotonicTime();
+            int64_t clock = GetMonotonicClock();
 
             unsigned int timeout = UINT_MAX;
             struct pollfd pfd = { main_pfd[1], POLLIN, 0 };
 
             for (const RunningFork &fork: forks) {
-                int64_t duration = now - fork.start;
+                int64_t duration = clock - fork.start;
                 int64_t delay = std::max(KillDelay - duration, (int64_t)1000);
 
                 timeout = std::min(timeout, (unsigned int)delay);
@@ -548,7 +548,7 @@ static bool ServeRequests()
 
         // Kill timed out forks
         {
-            int64_t now = GetMonotonicTime();
+            int64_t clock = GetMonotonicClock();
 
             Size j = 0;
             for (Size i = 0; i < forks.len; i++) {
@@ -559,7 +559,7 @@ static bool ServeRequests()
                 if (waitpid(fork.pid, nullptr, WNOHANG) > 0) {
                     LogDebug("VM %1 has ended", fork.pid);
                 } else {
-                    if (now - fork.start >= KillDelay) {
+                    if (clock - fork.start >= KillDelay) {
                         LogDebug("Kill VM %1 (timeout)", fork.pid);
                         kill(fork.pid, SIGKILL);
                     }
@@ -587,7 +587,7 @@ static bool ServeRequests()
 
         if (!HandleRequest(kind, cmsg, &fork.pid))
             continue;
-        fork.start = GetMonotonicTime();
+        fork.start = GetMonotonicClock();
 
         forks.Append(fork);
     }
@@ -689,7 +689,7 @@ void StopZygote()
 
     // Terminate after delay
     {
-        int64_t start = GetMonotonicTime();
+        int64_t start = GetMonotonicClock();
 
         for (;;) {
             int ret = K_RESTART_EINTR(waitpid(main_pid, nullptr, WNOHANG), < 0);
@@ -698,7 +698,7 @@ void StopZygote()
                 LogError("Failed to wait for process exit: %1", strerror(errno));
                 break;
             } else if (!ret) {
-                int64_t delay = GetMonotonicTime() - start;
+                int64_t delay = GetMonotonicClock() - start;
 
                 if (delay < 2000) {
                     // A timeout on waitpid would be better, but... sigh

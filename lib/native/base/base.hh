@@ -3579,7 +3579,28 @@ union LocalDate {
 // ------------------------------------------------------------------------
 
 int64_t GetUnixTime();
-int64_t GetMonotonicTime();
+
+struct TimeSpec {
+    int16_t year;
+    int8_t month;
+    int8_t day;
+    int8_t week_day; // 1 (monday) to 7 (sunday)
+
+    int8_t hour;
+    int8_t min;
+    int8_t sec;
+    int16_t msec;
+
+    int16_t offset; // minutes
+};
+
+TimeSpec DecomposeTimeUTC(int64_t time);
+TimeSpec DecomposeTimeLocal(int64_t time);
+int64_t ComposeTimeUTC(const TimeSpec &spec);
+
+// ------------------------------------------------------------------------
+// Clock
+// ------------------------------------------------------------------------
 
 #if defined(_MSC_VER) && !defined(_M_ARM64)
 static inline int64_t GetClockCounter()
@@ -3605,23 +3626,7 @@ static inline int64_t GetClockCounter()
 }
 #endif
 
-struct TimeSpec {
-    int16_t year;
-    int8_t month;
-    int8_t day;
-    int8_t week_day; // 1 (monday) to 7 (sunday)
-
-    int8_t hour;
-    int8_t min;
-    int8_t sec;
-    int16_t msec;
-
-    int16_t offset; // minutes
-};
-
-TimeSpec DecomposeTimeUTC(int64_t time);
-TimeSpec DecomposeTimeLocal(int64_t time);
-int64_t ComposeTimeUTC(const TimeSpec &spec);
+int64_t GetMonotonicClock();
 
 // ------------------------------------------------------------------------
 // Format

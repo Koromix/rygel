@@ -288,14 +288,14 @@ bool http_Dispatcher::Run()
         if (!async.Wait(100)) {
             LogInfo("Waiting up to %1 sec before shutting down clients...", (double)daemon->stop_timeout / 1000);
 
-            int64_t start = GetMonotonicTime();
+            int64_t start = GetMonotonicClock();
 
             do {
                 StopWS();
 
                 if (async.Wait(100))
                     break;
-            } while (GetMonotonicTime() - start < daemon->stop_timeout);
+            } while (GetMonotonicClock() - start < daemon->stop_timeout);
 
             for (http_Socket *socket: sockets) {
                 shutdown(socket->sock, SD_BOTH);
@@ -322,7 +322,7 @@ bool http_Dispatcher::Run()
     pfds.Append({ (SOCKET)pair_fd[0], POLLIN, 0 });
 
     for (;;) {
-        int64_t now = GetMonotonicTime();
+        int64_t clock = GetMonotonicClock();
         bool accepts = false;
 
         // Handle poll events
@@ -384,7 +384,7 @@ bool http_Dispatcher::Run()
 
                 SetDescriptorNonBlock((int)sock, true);
 
-                http_Socket *socket = InitSocket(sock, now, (sockaddr *)&ss);
+                http_Socket *socket = InitSocket(sock, clock, (sockaddr *)&ss);
 
                 if (!socket) [[unlikely]] {
                     closesocket(sock);
@@ -450,9 +450,9 @@ bool http_Dispatcher::Run()
 
                     async.Run(worker_idx, [=, this] {
                         do {
-                            daemon->RunHandler(client, now);
+                            daemon->RunHandler(client, clock);
 
-                            if (!client->Rearm(GetMonotonicTime())) {
+                            if (!client->Rearm(GetMonotonicClock())) {
                                 shutdown(socket->sock, SD_RECEIVE);
                                 break;
                             }
@@ -472,7 +472,7 @@ bool http_Dispatcher::Run()
                 } break;
             }
 
-            int delay = (int)(client->timeout_at.load() - now);
+            int delay = (int)(client->timeout_at.load() - clock);
 
             if (delay <= 0) {
                 shutdown(socket->sock, SD_BOTH);

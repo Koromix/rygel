@@ -392,14 +392,15 @@ bool LinuxTray::RegisterIcon()
             return 1;
         }, 0),
         SD_BUS_METHOD("Scroll", "is", "", [](sd_bus_message *m, void *, sd_bus_error *) {
+            static int64_t last_time = -50;
+
             if (!self->scroll)
                 return 1;
 
-            static int64_t last_time = -50;
-            int64_t now = GetMonotonicTime();
+            int64_t clock = GetMonotonicClock();
 
-            if (now - last_time >= 50) {
-                last_time = now;
+            if (clock - last_time >= 50) {
+                last_time = clock;
 
                 int delta;
                 const char *orientation;

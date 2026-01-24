@@ -907,7 +907,7 @@ bool Builder::Build(int jobs, bool verbose)
     }
 
     LogInfo("Building with %1 %2...", jobs, jobs > 1 ? "threads" : "thread");
-    int64_t now = GetMonotonicTime();
+    int64_t start = GetMonotonicClock();
 
     Async async(jobs);
 
@@ -925,7 +925,7 @@ bool Builder::Build(int jobs, bool verbose)
     if (async.Sync()) {
         if (busy) {
             if (!build.fake) {
-                double time = (double)(GetMonotonicTime() - now) / 1000.0;
+                double time = (double)(GetMonotonicClock() - start) / 1000.0;
                 LogInfo("Done (%1s)", FmtDouble(time, 1));
             } else {
                 LogInfo("Done %!D..[dry run]%!0");

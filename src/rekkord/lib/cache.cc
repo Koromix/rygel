@@ -484,9 +484,9 @@ bool rk_Cache::Commit(bool force)
 {
     K_ASSERT(repo);
 
-    int64_t now = GetMonotonicTime();
+    int64_t clock = GetMonotonicClock();
 
-    if (!force && now - last_commit < CommitDelay) {
+    if (!force && clock - last_commit < CommitDelay) {
         put_mutex.unlock();
         return true;
     }
@@ -494,7 +494,7 @@ bool rk_Cache::Commit(bool force)
     std::unique_lock<std::mutex> lock_commit(commit_mutex);
 
     std::swap(pending, commit);
-    last_commit = now;
+    last_commit = clock;
 
     put_mutex.unlock();
 

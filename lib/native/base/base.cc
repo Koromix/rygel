@@ -750,35 +750,6 @@ int64_t GetUnixTime()
 #endif
 }
 
-int64_t GetMonotonicTime()
-{
-    static std::atomic_int64_t memory;
-
-#if defined(_WIN32)
-    int64_t clock = (int64_t)GetTickCount64();
-#elif defined(__EMSCRIPTEN__)
-    int64_t clock = emscripten_get_now();
-#elif defined(CLOCK_MONOTONIC_COARSE)
-    struct timespec ts;
-    K_CRITICAL(clock_gettime(CLOCK_MONOTONIC_COARSE, &ts) == 0, "clock_gettime(CLOCK_MONOTONIC_COARSE) failed: %1", strerror(errno));
-
-    int64_t clock = (int64_t)ts.tv_sec * 1000 + (int64_t)ts.tv_nsec / 1000000;
-#else
-    struct timespec ts;
-    K_CRITICAL(clock_gettime(CLOCK_MONOTONIC, &ts) == 0, "clock_gettime(CLOCK_MONOTONIC) failed: %1", strerror(errno));
-
-    int64_t clock = (int64_t)ts.tv_sec * 1000 + (int64_t)ts.tv_nsec / 1000000;
-#endif
-
-    // Protect against clock going backwards
-    int64_t prev = memory.load(std::memory_order_relaxed);
-    if (clock < prev) [[unlikely]]
-        return prev;
-    memory.compare_exchange_weak(prev, clock, std::memory_order_relaxed, std::memory_order_relaxed);
-
-    return clock;
-}
-
 TimeSpec DecomposeTimeUTC(int64_t time)
 {
     TimeSpec spec = {};
@@ -870,6 +841,39 @@ int64_t ComposeTimeUTC(const TimeSpec &spec)
     time += spec.msec;
 
     return time;
+}
+
+// ------------------------------------------------------------------------
+// Clock
+// ------------------------------------------------------------------------
+
+int64_t GetMonotonicClock()
+{
+    static std::atomic_int64_t memory;
+
+#if defined(_WIN32)
+    int64_t clock = (int64_t)GetTickCount64();
+#elif defined(__EMSCRIPTEN__)
+    int64_t clock = emscripten_get_now();
+#elif defined(CLOCK_MONOTONIC_COARSE)
+    struct timespec ts;
+    K_CRITICAL(clock_gettime(CLOCK_MONOTONIC_COARSE, &ts) == 0, "clock_gettime(CLOCK_MONOTONIC_COARSE) failed: %1", strerror(errno));
+
+    int64_t clock = (int64_t)ts.tv_sec * 1000 + (int64_t)ts.tv_nsec / 1000000;
+#else
+    struct timespec ts;
+    K_CRITICAL(clock_gettime(CLOCK_MONOTONIC, &ts) == 0, "clock_gettime(CLOCK_MONOTONIC) failed: %1", strerror(errno));
+
+    int64_t clock = (int64_t)ts.tv_sec * 1000 + (int64_t)ts.tv_nsec / 1000000;
+#endif
+
+    // Protect against clock going backwards
+    int64_t prev = memory.load(std::memory_order_relaxed);
+    if (clock < prev) [[unlikely]]
+        return prev;
+    memory.compare_exchange_weak(prev, clock, std::memory_order_relaxed, std::memory_order_relaxed);
+
+    return clock;
 }
 
 // ------------------------------------------------------------------------
@@ -2041,7 +2045,7 @@ FmtArg FmtVersion(int64_t version, int parts, int by)
 // Debug and errors
 // ------------------------------------------------------------------------
 
-static int64_t start_time = GetMonotonicTime();
+static int64_t start_clock = GetMonotonicClock();
 
 static std::function<LogFunc> log_handler = DefaultLogHandler;
 static bool log_vt100 = FileIsVt100(STDERR_FILENO);
@@ -2140,7 +2144,7 @@ void LogFmt(LogLevel level, const char *ctx, const char *fmt, Span<const FmtArg>
 
     char ctx_buf[512];
     if (log_times) {
-        double time = (double)(GetMonotonicTime() - start_time) / 1000;
+        double time = (double)(GetMonotonicClock() - start_clock) / 1000;
         Fmt(ctx_buf, "[%1] %2", FmtDouble(time, 3, 8), ctx ? ctx : "");
 
         ctx = ctx_buf;
@@ -5575,7 +5579,7 @@ bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
     // Wait for process exit
     int status;
     {
-        int64_t start = GetMonotonicTime();
+        int64_t start = GetMonotonicClock();
 
         for (;;) {
             int ret = K_RESTART_EINTR(waitpid(pid, &status, terminate ? WNOHANG : 0), < 0);
@@ -5584,7 +5588,7 @@ bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
                 LogError("Failed to wait for process exit: %1", strerror(errno));
                 return false;
             } else if (!ret) {
-                int64_t delay = GetMonotonicTime() - start;
+                int64_t delay = GetMonotonicClock() - start;
 
                 if (delay < 2000) {
                     // A timeout on waitpid would be better, but... sigh
@@ -5847,7 +5851,7 @@ WaitResult WaitEvents(Span<const WaitSource> sources, int64_t timeout, uint64_t 
     InitInterruptPipe();
     pfds.Append({ interrupt_pfd[0], POLLIN, 0 });
 
-    int64_t start = (timeout >= 0) ? GetMonotonicTime() : 0;
+    int64_t start = (timeout >= 0) ? GetMonotonicClock() : 0;
     int64_t until = start + timeout;
     int timeout32 = (int)std::min(until - start, (int64_t)INT_MAX);
 
@@ -5884,10 +5888,10 @@ WaitResult WaitEvents(Span<const WaitSource> sources, int64_t timeout, uint64_t 
         }
 
         if (timeout >= 0) {
-            int64_t now = GetMonotonicTime();
-            if (now >= until)
+            int64_t clock = GetMonotonicClock();
+            if (clock >= until)
                 break;
-            timeout32 = (int)std::min(until - now, (int64_t)INT_MAX);
+            timeout32 = (int)std::min(until - clock, (int64_t)INT_MAX);
         }
     }
 
@@ -6751,7 +6755,7 @@ bool ParseVersion(Span<const char> str, int parts, int multiplier,
 // ------------------------------------------------------------------------
 
 static thread_local Size rnd_remain;
-static thread_local int64_t rnd_time;
+static thread_local int64_t rnd_clock;
 #if !defined(_WIN32)
 static thread_local pid_t rnd_pid;
 #endif
@@ -6864,7 +6868,7 @@ void FillRandomSafe(void *out_buf, Size len)
 
     // Reseed every 4 megabytes, or every hour, or after a fork
     reseed |= (rnd_remain <= 0);
-    reseed |= (GetMonotonicTime() - rnd_time > 3600 * 1000);
+    reseed |= (GetMonotonicClock() - rnd_clock > 3600 * 1000);
 #if !defined(_WIN32)
     reseed |= (getpid() != rnd_pid);
 #endif
@@ -6892,7 +6896,7 @@ restart:
         ZeroSafe(&buf, K_SIZE(buf));
 
         rnd_remain = Mebibytes(4);
-        rnd_time = GetMonotonicTime();
+        rnd_clock = GetMonotonicClock();
 #if !defined(_WIN32)
         rnd_pid = getpid();
 #endif

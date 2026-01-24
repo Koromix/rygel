@@ -242,13 +242,13 @@ static const EventInfo *RegisterEvent(const EventKey &key, int64_t time)
 
     EventInfo *event = events_map.FindValue(key, nullptr);
 
-    if (!event || event->until < GetMonotonicTime()) {
+    if (!event || event->until < GetMonotonicClock()) {
         Allocator *alloc;
         event = events.AppendDefault(&alloc);
 
         event->key.resource = DuplicateString(key.resource, alloc).ptr;
         event->key.who = DuplicateString(key.who, alloc).ptr;
-        event->until = GetMonotonicTime() + BanTime;
+        event->until = GetMonotonicClock() + BanTime;
 
         events_map.Set(event);
     }
@@ -301,11 +301,11 @@ void PruneSessions()
     {
         std::lock_guard<std::shared_mutex> lock_excl(events_mutex);
 
-        int64_t now = GetMonotonicTime();
+        int64_t clock = GetMonotonicClock();
 
         Size expired = 0;
         for (const EventInfo &event: events) {
-            if (event.until > now)
+            if (event.until > clock)
                 break;
 
             EventInfo **ptr = events_map.Find(event.key);
@@ -345,7 +345,7 @@ int64_t ValidateApiKey(http_IO *io, int64_t *out_owner)
     }
 
     // We use this to extend/fix the response delay in case of error
-    int64_t start = GetMonotonicTime();
+    int64_t start = GetMonotonicClock();
 
     Span<const char> secret;
     Span<const char> key = SplitStr(header, '/', &secret);
@@ -356,7 +356,7 @@ int64_t ValidateApiKey(http_IO *io, int64_t *out_owner)
 
     if (!stmt.Step()) {
         if (stmt.IsValid()) {
-            int64_t safety = std::max(2000 - GetMonotonicTime() + start, (int64_t)0);
+            int64_t safety = std::max(2000 - GetMonotonicClock() + start, (int64_t)0);
             WaitDelay(safety);
 
             LogError("Invalid API key");
@@ -370,7 +370,7 @@ int64_t ValidateApiKey(http_IO *io, int64_t *out_owner)
     const char *hash = (const char *)sqlite3_column_text(stmt, 2);
 
     if (crypto_pwhash_str_verify(hash, secret.ptr, (size_t)secret.len) < 0) {
-        int64_t safety = std::max(2000 - GetMonotonicTime() + start, (int64_t)0);
+        int64_t safety = std::max(2000 - GetMonotonicClock() + start, (int64_t)0);
         WaitDelay(safety);
 
         LogError("Invalid API key");
@@ -562,7 +562,7 @@ void HandleUserLogin(http_IO *io)
     }
 
     // We use this to extend/fix the response delay in case of error
-    int64_t start = GetMonotonicTime();
+    int64_t start = GetMonotonicClock();
 
     sq_Statement stmt;
     if (!db.Prepare(R"(SELECT id, password_hash, username, totp, version
@@ -595,7 +595,7 @@ void HandleUserLogin(http_IO *io)
 
     // Enforce constant delay if authentification fails
     if (stmt.IsValid()) {
-        int64_t safety = std::max(2000 - GetMonotonicTime() + start, (int64_t)0);
+        int64_t safety = std::max(2000 - GetMonotonicClock() + start, (int64_t)0);
         WaitDelay(safety);
 
         LogError("Invalid username or password");
@@ -674,10 +674,10 @@ void HandleUserRecover(http_IO *io)
         }
     }
 
-    int64_t now = GetMonotonicTime();
+    int64_t start = GetMonotonicClock();
 
     // Create recovery token
-    if (userid > 0 && RegisterEvent({ request.client_addr, mail }, now)->count < BanThreshold) {
+    if (userid > 0 && RegisterEvent({ request.client_addr, mail }, start)->count < BanThreshold) {
         int64_t now = GetUnixTime();
 
         if (!db.Run(R"(INSERT INTO tokens (token, type, timestamp, user)
@@ -868,7 +868,7 @@ void HandleUserPassword(http_IO *io)
 
     // Authenticate with old password
     {
-        int64_t start = GetMonotonicTime();
+        int64_t start = GetMonotonicClock();
 
         sq_Statement stmt;
         if (!db.Prepare("SELECT password_hash FROM users WHERE id = ?1 AND confirmed = 1", &stmt))
@@ -887,7 +887,7 @@ void HandleUserPassword(http_IO *io)
 
         if (!password_hash || crypto_pwhash_str_verify(password_hash, old_password, strlen(old_password)) < 0) {
             // Enforce constant delay if authentification fails
-            int64_t safety = std::max(2000 - GetMonotonicTime() + start, (int64_t)0);
+            int64_t safety = std::max(2000 - GetMonotonicClock() + start, (int64_t)0);
             WaitDelay(safety);
 
             LogError("Invalid password");
@@ -1696,7 +1696,7 @@ void HandleTotpChange(http_IO *io)
     }
 
     // We use this to extend/fix the response delay in case of error
-    int64_t now = GetMonotonicTime();
+    int64_t start = GetMonotonicClock();
 
     // Authenticate with password
     {
@@ -1717,7 +1717,7 @@ void HandleTotpChange(http_IO *io)
 
         if (!password_hash || crypto_pwhash_str_verify(password_hash, password, strlen(password)) < 0) {
             // Enforce constant delay if authentification fails
-            int64_t safety_delay = std::max(2000 - GetMonotonicTime() + now, (int64_t)0);
+            int64_t safety_delay = std::max(2000 - GetMonotonicClock() + start, (int64_t)0);
             WaitDelay(safety_delay);
 
             LogError("Invalid password");
@@ -1786,7 +1786,7 @@ void HandleTotpDisable(http_IO *io)
     }
 
     // We use this to extend/fix the response delay in case of error
-    int64_t now = GetMonotonicTime();
+    int64_t start = GetMonotonicClock();
 
     // Authenticate with password
     {
@@ -1807,7 +1807,7 @@ void HandleTotpDisable(http_IO *io)
 
         if (!password_hash || crypto_pwhash_str_verify(password_hash, password, strlen(password)) < 0) {
             // Enforce constant delay if authentification fails
-            int64_t safety_delay = std::max(2000 - GetMonotonicTime() + now, (int64_t)0);
+            int64_t safety_delay = std::max(2000 - GetMonotonicClock() + start, (int64_t)0);
             WaitDelay(safety_delay);
 
             LogError("Invalid password");
