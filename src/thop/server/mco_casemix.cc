@@ -617,7 +617,7 @@ void ProduceMcoResults(http_IO *io, const User *user)
         CompressionType encoding;
         if (!io->NegociateEncoding(&encoding))
             return;
-        if (!st.Open(&buf, "<json>", 0, encoding))
+        if (!st.Open(&buf, "<json>", 0, encoding, CompressionSpeed::Fast))
             return;
         json_Writer json(&st);
 
