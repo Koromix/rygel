@@ -91,7 +91,7 @@ static inline void RunBenchmark(const char *name, Size iterations, FunctionRef<v
     StdOut->Flush();
 
     int64_t clock = GetMonotonicClock();
-    int64_t cycles = GetClockCounter();
+    int64_t cycles = GetCoreCycles();
 
     for (Size i = 0; i < iterations; i++) {
         func(i);
@@ -101,7 +101,7 @@ static inline void RunBenchmark(const char *name, Size iterations, FunctionRef<v
     }
 
     clock = GetMonotonicClock() - clock;
-    cycles = GetClockCounter() - cycles;
+    cycles = GetCoreCycles() - cycles;
 
     PrintLn(" %!c..%1 ms%!0 (%2 cycles per iteration)", clock, cycles / iterations);
 }

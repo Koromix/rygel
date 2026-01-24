@@ -3603,12 +3603,12 @@ int64_t ComposeTimeUTC(const TimeSpec &spec);
 // ------------------------------------------------------------------------
 
 #if defined(_MSC_VER) && !defined(_M_ARM64)
-static inline int64_t GetClockCounter()
+static inline int64_t GetCoreCycles()
 {
     return (int64_t)__rdtsc();
 }
 #elif defined(__i386__) || defined(__x86_64__)
-static inline int64_t GetClockCounter()
+static inline int64_t GetCoreCycles()
 {
     uint32_t counter_low, counter_high;
     __asm__ __volatile__ ("cpuid; rdtsc"
@@ -3618,7 +3618,7 @@ static inline int64_t GetClockCounter()
     return counter;
 }
 #elif defined(__aarch64__)
-static inline int64_t GetClockCounter()
+static inline int64_t GetCoreCycles()
 {
     uint64_t counter;
     __asm__ __volatile__ ("mrs %0, cntvct_el0" : "=r" (counter));
