@@ -43,7 +43,7 @@ MagicUnion::MagicUnion(const Napi::CallbackInfo &info)
     Napi::Env env = info.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();
 
-    active_symbol = instance->active_symbol;
+    active_symbol.Reset(instance->active_symbol.Value(), 1);
 }
 
 void MagicUnion::SetRaw(const uint8_t *ptr)
@@ -51,7 +51,7 @@ void MagicUnion::SetRaw(const uint8_t *ptr)
     raw.RemoveFrom(0);
     raw.Append(MakeSpan(ptr, type->size));
 
-    Value().Set(active_symbol, Env().Undefined());
+    Value().Set(active_symbol.Value(), Env().Undefined());
     active_idx = -1;
 }
 
@@ -63,7 +63,7 @@ Napi::Value MagicUnion::Getter(const Napi::CallbackInfo &info)
     Napi::Value value;
 
     if (idx == active_idx) {
-        value = Value().Get(active_symbol);
+        value = Value().Get(active_symbol.Value());
     } else {
         Napi::Env env = info.Env();
 
@@ -74,7 +74,7 @@ Napi::Value MagicUnion::Getter(const Napi::CallbackInfo &info)
 
         value = Decode(env, raw.ptr, member.type);
 
-        Value().Set(active_symbol, value);
+        Value().Set(active_symbol.Value(), value);
         active_idx = idx;
     }
 
@@ -86,7 +86,7 @@ void MagicUnion::Setter(const Napi::CallbackInfo &info, const Napi::Value &value
 {
     Size idx = (Size)info.Data();
 
-    Value().Set(active_symbol, value);
+    Value().Set(active_symbol.Value(), value);
     active_idx = idx;
 
     raw.Clear();

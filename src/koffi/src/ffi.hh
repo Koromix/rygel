@@ -274,7 +274,7 @@ struct InstanceData {
     const TypeInfo *str16_type;
     const TypeInfo *str32_type;
 
-    Napi::Symbol active_symbol;
+    Napi::Reference<Napi::Symbol> active_symbol;
 
     std::mutex mem_mutex;
     LocalArray<InstanceMemory *, 17> memories;

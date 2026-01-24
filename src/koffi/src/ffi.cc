@@ -2582,7 +2582,8 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
         instance->str16_type = instance->types_map.FindValue("char16_t *", nullptr);
         instance->str32_type = instance->types_map.FindValue("char32_t *", nullptr);
 
-        instance->active_symbol = Napi::Symbol::New(env, "active");
+        Napi::Symbol symbol = Napi::Symbol::New(env, "active");
+        instance->active_symbol.Reset(symbol, 1);
 
         instance->base_types_count = instance->types.count;
     }
