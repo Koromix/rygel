@@ -7,6 +7,13 @@
 
 ### Koffi 2.15
 
+#### Koffi 2.15.1
+
+*Released on 2025-01-24*
+
+- Fix possible union-related crashes
+- Support MinGW-w64 x64 builds on Windows
+
 #### Koffi 2.15.0
 
 *Released on 2025-12-21*
