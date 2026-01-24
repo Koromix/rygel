@@ -233,8 +233,8 @@ public:
     const http_RequestInfo &Request() const { return request; }
     K::BlockAllocator *Allocator() { return &allocator; }
 
+    bool NegociateEncoding(CompressionType *out_encoding);
     bool NegociateEncoding(CompressionType preferred, CompressionType *out_encoding);
-    bool NegociateEncoding(Span<const CompressionType> preferences, CompressionType *out_encoding);
 
     bool OpenForRead(int64_t max_len, StreamReader *out_st);
 

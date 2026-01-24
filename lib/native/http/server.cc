@@ -601,15 +601,17 @@ void http_IO::AddCachingHeaders(int64_t max_age, const char *etag)
     }
 }
 
-bool http_IO::NegociateEncoding(CompressionType preferred, CompressionType *out_encoding)
+bool http_IO::NegociateEncoding(CompressionType *out_encoding)
 {
     const char *accept_str = request.GetHeaderValue("Accept-Encoding");
     uint32_t acceptable_encodings = http_ParseAcceptableEncodings(accept_str);
 
-    if (acceptable_encodings & (1 << (int)preferred)) {
-        *out_encoding = preferred;
-        return true;
-    } else if (acceptable_encodings) {
+    static_assert((int)CompressionType::Zstd > (int)CompressionType::Brotli);
+    static_assert((int)CompressionType::Brotli > (int)CompressionType::Gzip);
+    static_assert((int)CompressionType::Gzip > (int)CompressionType::Zlib);
+    static_assert((int)CompressionType::Zlib > (int)CompressionType::None);
+
+    if (acceptable_encodings) {
         int clz = 31 - CountLeadingZeros(acceptable_encodings);
         *out_encoding = (CompressionType)clz;
 
@@ -620,18 +622,15 @@ bool http_IO::NegociateEncoding(CompressionType preferred, CompressionType *out_
     return false;
 }
 
-bool http_IO::NegociateEncoding(Span<const CompressionType> preferences, CompressionType *out_encoding)
+bool http_IO::NegociateEncoding(CompressionType preferred, CompressionType *out_encoding)
 {
     const char *accept_str = request.GetHeaderValue("Accept-Encoding");
     uint32_t acceptable_encodings = http_ParseAcceptableEncodings(accept_str);
 
-    for (CompressionType preferred: preferences) {
-        if (acceptable_encodings & (1 << (int)preferred)) {
-            *out_encoding = preferred;
-            return true;
-        }
-    }
-    if (acceptable_encodings) {
+    if (acceptable_encodings & (1 << (int)preferred)) {
+        *out_encoding = preferred;
+        return true;
+    } else if (acceptable_encodings) {
         int clz = 31 - CountLeadingZeros(acceptable_encodings);
         *out_encoding = (CompressionType)clz;
 
