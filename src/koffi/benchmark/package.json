@@ -3,6 +3,7 @@
     "@napi-ffi/ffi-napi": "^4.0.3",
     "@napi-ffi/ref-napi": "^3.0.5",
     "@napi-ffi/ref-struct-di": "^1.1.1",
+    "node-ctypes": "^1.0.2",
     "raylib": "^0.14.0"
   },
   "cnoke": {
