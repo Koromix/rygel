@@ -225,16 +225,11 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
 
 FLATTEN_IF_UNITY bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
 {
-    uint64_t *args_ptr = nullptr;
-    uint64_t *gpr_ptr = nullptr;
-    uint64_t *xmm_ptr = nullptr;
+    uint64_t *gpr_ptr = AllocStack<uint64_t>(14 * 8 + func->args_size);
+    uint64_t *xmm_ptr = gpr_ptr + 6;
+    uint64_t *args_ptr = gpr_ptr + 14;
 
-    // Return through registers unless it's too big
-    if (!AllocStack(func->args_size, 16, &args_ptr)) [[unlikely]]
-        return false;
-    if (!AllocStack(8 * 8, 8, &xmm_ptr)) [[unlikely]]
-        return false;
-    if (!AllocStack(6 * 8, 8, &gpr_ptr)) [[unlikely]]
+    if (!gpr_ptr) [[unlikely]]
         return false;
     if (func->ret.use_memory) {
         return_ptr = AllocHeap(func->ret.type->size, 16);

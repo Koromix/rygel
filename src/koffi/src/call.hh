@@ -104,7 +104,7 @@ public:
 
 private:
     template <typename T>
-    bool AllocStack(Size size, Size align, T **out_ptr);
+    T *AllocStack(Size size);
     template <typename T = uint8_t>
     T *AllocHeap(Size size, Size align);
 
@@ -114,15 +114,15 @@ private:
 };
 
 template <typename T>
-inline bool CallData::AllocStack(Size size, Size align, T **out_ptr)
+inline T *CallData::AllocStack(Size size)
 {
-    uint8_t *ptr = AlignDown(mem->stack.end() - size, align);
+    uint8_t *ptr = AlignDown(mem->stack.end() - size, 16);
     Size delta = mem->stack.end() - ptr;
 
     // Keep 512 bytes for redzone (required in some ABIs)
     if (mem->stack.len - 512 < delta) [[unlikely]] {
         ThrowError<Napi::Error>(env, "FFI call is taking up too much memory");
-        return false;
+        return nullptr;
     }
 
 #if defined(K_DEBUG)
@@ -131,8 +131,7 @@ inline bool CallData::AllocStack(Size size, Size align, T **out_ptr)
 
     mem->stack.len -= delta;
 
-    *out_ptr = (T *)ptr;
-    return true;
+    return (T *)ptr;
 }
 
 template <typename T>

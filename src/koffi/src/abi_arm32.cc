@@ -201,19 +201,13 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
 
 FLATTEN_IF_UNITY bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
 {
-    uint32_t *args_ptr = nullptr;
-    uint32_t *gpr_ptr = nullptr;
-    uint32_t *vec_ptr = nullptr;
+    // Unlike other call conventions, here we put the general-purpose registers before the stack, behind the vector ones).
+    // In the armv7hf calling convention, some arguments can end up partially in GPR, partially in the stack.
+    uint32_t *vec_ptr = AllocStack<uint32_t>(20 * 4 + func->args_size);
+    uint32_t *gpr_ptr = vec_ptr + 16;
+    uint32_t *args_ptr = vec_ptr + 20;
 
-    // Unlike other call conventions, here we put the general-purpose
-    // registers just before the stack (so behind the vector ones).
-    // In the armv7hf calling convention, some arguments can end up
-    // partially in GPR, partially in the stack.
-    if (!AllocStack(func->args_size, 16, &args_ptr)) [[unlikely]]
-        return false;
-    if (!AllocStack(4 * 4, 8, &gpr_ptr)) [[unlikely]]
-        return false;
-    if (!AllocStack(8 * 8, 8, &vec_ptr)) [[unlikely]]
+    if (!vec_ptr) [[unlikely]]
         return false;
     if (func->ret.use_memory) {
         return_ptr = AllocHeap(func->ret.type->size, 16);
