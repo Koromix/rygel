@@ -23,6 +23,8 @@ function benchmark(select) {
         format(run('rand', 'rand_napi'), 'ns');
     if (!select.length || select.includes('atoi'))
         format(run('atoi', 'atoi_napi'), 'ns');
+    if (!select.length || select.includes('memset'))
+        format(run('memset', 'memset_napi'), 'ns');
     if (!select.length || select.includes('raylib'))
         format(run('raylib', 'raylib_node_raylib'), 'us');
 }
