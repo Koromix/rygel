@@ -1512,14 +1512,14 @@ static Napi::Value TranslateNormalCall(const FunctionInfo *func, void *native,
     return call.Complete(func);
 }
 
-Napi::Value TranslateNormalCall(const Napi::CallbackInfo &info)
+FLATTEN_IF_UNITY Napi::Value TranslateNormalCall(const Napi::CallbackInfo &info)
 {
     FunctionInfo *func = (FunctionInfo *)info.Data();
     return TranslateNormalCall(func, func->native, info);
 }
 
-static Napi::Value TranslateVariadicCall(const FunctionInfo *func, void *native,
-                                         const Napi::CallbackInfo &info)
+FLATTEN_IF_UNITY static Napi::Value TranslateVariadicCall(const FunctionInfo *func, void *native,
+                                                          const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();

@@ -247,7 +247,7 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
     return true;
 }
 
-bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
+FLATTEN_IF_UNITY bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
 {
     uint64_t *args_ptr = nullptr;
     uint64_t *gpr_ptr = nullptr;
@@ -265,7 +265,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
         gpr_ptr[8] = (uint64_t)return_ptr;
     }
 
-    static const void *DispatchTable[] = {
+    static const void *const DispatchTable[] = {
         #define PRIMITIVE(Name) && Name,
         #include "primitives.inc"
     };
@@ -579,7 +579,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
     return true;
 }
 
-void CallData::Execute(const FunctionInfo *func, void *native)
+FLATTEN_IF_UNITY void CallData::Execute(const FunctionInfo *func, void *native)
 {
 #if defined(_WIN32)
     TEB *teb = GetTEB();
@@ -661,7 +661,7 @@ void CallData::Execute(const FunctionInfo *func, void *native)
 #undef PERFORM_CALL
 }
 
-Napi::Value CallData::Complete(const FunctionInfo *func)
+FLATTEN_IF_UNITY Napi::Value CallData::Complete(const FunctionInfo *func)
 {
     K_DEFER {
        PopOutArguments();
