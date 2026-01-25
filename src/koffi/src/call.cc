@@ -753,176 +753,170 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
 
     const TypeInfo *ref = type->ref.type;
 
-    switch (value.Type()) {
-        case napi_undefined:
-        case napi_null: {
-            *out_ptr = nullptr;
-            return true;
-        } break;
+    // In the past we were naively using napi_typeof() and a switch to "reduce" branching,
+    // but it did not match the common types very well (so there was still various if tests),
+    // and it turns out that napi_typeof() is made of successive type tests anyway so it
+    // just made things worse. Oh, well.
 
-        case napi_external: {
-            K_ASSERT(type->primitive == PrimitiveKind::Pointer ||
-                      type->primitive == PrimitiveKind::String ||
-                      type->primitive == PrimitiveKind::String16 ||
-                      type->primitive == PrimitiveKind::String32);
+    if (IsNullOrUndefined(value)) {
+        *out_ptr = nullptr;
+        return true;
+    } else if (Span<uint8_t> buffer = TryRawBuffer(value); buffer.ptr) {
+        *out_ptr = buffer.ptr;
+        return true;
+    } else if (value.IsExternal()) {
+        K_ASSERT(type->primitive == PrimitiveKind::Pointer ||
+                 type->primitive == PrimitiveKind::String ||
+                 type->primitive == PrimitiveKind::String16 ||
+                 type->primitive == PrimitiveKind::String32);
 
-            if (!CheckValueTag(value, type->ref.marker) &&
-                    !CheckValueTag(value, instance->void_type) &&
-                    ref != instance->void_type) [[unlikely]]
-                goto unexpected;
+        if (!CheckValueTag(value, type->ref.marker) &&
+                !CheckValueTag(value, instance->void_type) &&
+                ref != instance->void_type) [[unlikely]]
+            goto unexpected;
 
-            *out_ptr = value.As<Napi::External<uint8_t>>().Data();
-            return true;
-        } break;
+        *out_ptr = value.As<Napi::External<uint8_t>>().Data();
+        return true;
+    } else if (value.IsArray()) {
+        uint8_t *ptr = nullptr;
 
-        case napi_object: {
-            uint8_t *ptr = nullptr;
+        Napi::Array array = value.As<Napi::Array>();
+        Size len = PushIndirectString(array, ref, &ptr);
 
-            OutArgument::Kind out_kind;
-            Size out_max_len = -1;
+        OutArgument::Kind out_kind;
+        Size out_max_len = -1;
 
-            if (Span<uint8_t> buffer = TryRawBuffer(value); buffer.ptr) {
-                // We can fast path
-                ptr = buffer.ptr;
-                directions = 1;
+        if (len >= 0) {
+            if (!ref->size && ref != instance->void_type) [[unlikely]] {
+                ThrowError<Napi::TypeError>(env, "Cannot pass [string] value to %1", type->name);
+                return false;
+            }
 
-                out_kind = OutArgument::Kind::Buffer;
-            } else if (value.IsArray()) {
-                Napi::Array array = value.As<Napi::Array>();
-                Size len = PushIndirectString(array, ref, &ptr);
+            switch (ref->size) {
+                default: { out_kind = OutArgument::Kind::String; } break;
+                case 2: { out_kind = OutArgument::Kind::String16; } break;
+                case 4: { out_kind = OutArgument::Kind::String32; } break;
+            }
+            out_max_len = len;
+        } else {
+            if (!ref->size) [[unlikely]] {
+                ThrowError<Napi::TypeError>(env, "Cannot pass %1 value to %2, use koffi.as()",
+                                            ref != instance->void_type ? "opaque" : "ambiguous", type->name);
+                return false;
+            }
 
-                if (len >= 0) {
-                    if (!ref->size && ref != instance->void_type) [[unlikely]] {
-                        ThrowError<Napi::TypeError>(env, "Cannot pass [string] value to %1", type->name);
-                        return false;
-                    }
+            Size len = (Size)array.Length();
+            Size size = len * ref->size;
 
-                    switch (ref->size) {
-                        default: { out_kind = OutArgument::Kind::String; } break;
-                        case 2: { out_kind = OutArgument::Kind::String16; } break;
-                        case 4: { out_kind = OutArgument::Kind::String32; } break;
-                    }
-                    out_max_len = len;
-                } else {
-                    if (!ref->size) [[unlikely]] {
-                        ThrowError<Napi::TypeError>(env, "Cannot pass %1 value to %2, use koffi.as()",
-                                                    ref != instance->void_type ? "opaque" : "ambiguous", type->name);
-                        return false;
-                    }
+            ptr = AllocHeap(size, 16);
 
-                    Size len = (Size)array.Length();
-                    Size size = len * ref->size;
-
-                    ptr = AllocHeap(size, 16);
-
-                    if (directions & 1) {
-                        if (!PushNormalArray(array, type, size, ptr))
-                            return false;
-                    } else {
-                        MemSet(ptr, 0, size);
-                    }
-
-                    out_kind = OutArgument::Kind::Array;
-                }
-            } else if (ref->primitive == PrimitiveKind::Record ||
-                       ref->primitive == PrimitiveKind::Union) [[likely]] {
-                Napi::Object obj = value.As<Napi::Object>();
-                K_ASSERT(IsObject(value));
-
-                ptr = AllocHeap(ref->size, 16);
-
-                if (ref->primitive == PrimitiveKind::Union &&
-                        (directions & 2) && !CheckValueTag(obj, &MagicUnionMarker)) [[unlikely]] {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected union value", GetValueType(instance, obj));
+            if (directions & 1) {
+                if (!PushNormalArray(array, type, size, ptr))
                     return false;
-                }
-
-                if (directions & 1) {
-                    if (!PushObject(obj, ref, ptr))
-                        return false;
-                } else {
-                    MemSet(ptr, 0, ref->size);
-                }
-
-                out_kind = OutArgument::Kind::Object;
             } else {
-                goto unexpected;
+                MemSet(ptr, 0, size);
             }
 
-            if (directions & 2) {
-                OutArgument *out = out_arguments.AppendDefault();
+            out_kind = OutArgument::Kind::Array;
+        }
 
-                napi_status status = napi_create_reference(env, value, 1, &out->ref);
-                K_ASSERT(status == napi_ok);
+        if (directions & 2) {
+            OutArgument *out = out_arguments.AppendDefault();
 
-                out->kind = out_kind;
-                out->ptr = ptr;
-                out->type = ref;
-                out->max_len = out_max_len;
-            }
+            napi_status status = napi_create_reference(env, value, 1, &out->ref);
+            K_ASSERT(status == napi_ok);
 
-            *out_ptr = ptr;
-            return true;
-        } break;
+            out->kind = out_kind;
+            out->ptr = ptr;
+            out->type = ref;
+            out->max_len = out_max_len;
+        }
 
-        case napi_string: {
-            K_ASSERT(type->primitive == PrimitiveKind::Pointer);
+        *out_ptr = ptr;
+        return true;
+    } else if (ref->primitive == PrimitiveKind::Record ||
+               ref->primitive == PrimitiveKind::Union) [[likely]] {
+        Napi::Object obj = value.As<Napi::Object>();
+        K_ASSERT(IsObject(value));
 
-            if (directions & 2) [[unlikely]]
-                goto unexpected;
+        uint8_t *ptr = AllocHeap(ref->size, 16);
 
-            if (ref == instance->void_type) {
-                PushStringValue(value, (const char **)out_ptr);
-                return true;
-            } else if (ref->primitive == PrimitiveKind::Int8) {
-                PushStringValue(value, (const char **)out_ptr);
-                return true;
-            } else if (ref->primitive == PrimitiveKind::Int16) {
-                PushString16Value(value, (const char16_t **)out_ptr);
-                return true;
-            } else if (ref->primitive == PrimitiveKind::Int32) {
-                PushString32Value(value, (const char32_t **)out_ptr);
-                return true;
-            } else {
-                goto unexpected;
-            }
-        } break;
+        if (ref->primitive == PrimitiveKind::Union &&
+                (directions & 2) && !CheckValueTag(obj, &MagicUnionMarker)) [[unlikely]] {
+            ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected union value", GetValueType(instance, obj));
+            return false;
+        }
 
-        case napi_function: {
-            if (type->primitive != PrimitiveKind::Callback) [[unlikely]] {
-                ThrowError<Napi::TypeError>(env, "Cannot pass function to type %1", type->name);
+        if (directions & 1) {
+            if (!PushObject(obj, ref, ptr))
                 return false;
-            }
+        } else {
+            MemSet(ptr, 0, ref->size);
+        }
 
-            Napi::Function func = value.As<Napi::Function>();
+        if (directions & 2) {
+            OutArgument *out = out_arguments.AppendDefault();
 
-            void *ptr = ReserveTrampoline(type->ref.proto, func);
-            if (!ptr) [[unlikely]]
-                return false;
+            napi_status status = napi_create_reference(env, value, 1, &out->ref);
+            K_ASSERT(status == napi_ok);
 
-            *out_ptr = (void *)ptr;
+            out->kind = OutArgument::Kind::Object;
+            out->ptr = ptr;
+            out->type = ref;
+            out->max_len = -1;
+        }
+
+        *out_ptr = ptr;
+        return true;
+    } else if (value.IsString()) {
+        K_ASSERT(type->primitive == PrimitiveKind::Pointer);
+
+        if (directions & 2) [[unlikely]]
+            goto unexpected;
+
+        if (ref == instance->void_type) {
+            PushStringValue(value, (const char **)out_ptr);
             return true;
-        } break;
-
-        case napi_number: {
-            Napi::Number number = value.As<Napi::Number>();
-            intptr_t ptr = (intptr_t)number.Int32Value();
-
-            *out_ptr = (void *)ptr;
+        } else if (ref->primitive == PrimitiveKind::Int8) {
+            PushStringValue(value, (const char **)out_ptr);
             return true;
-        } break;
-
-        case napi_bigint: {
-            Napi::BigInt bigint = value.As<Napi::BigInt>();
-
-            bool lossless;
-            intptr_t ptr = (intptr_t)bigint.Int64Value(&lossless);
-
-            *out_ptr = (void *)ptr;
+        } else if (ref->primitive == PrimitiveKind::Int16) {
+            PushString16Value(value, (const char16_t **)out_ptr);
             return true;
-        } break;
+        } else if (ref->primitive == PrimitiveKind::Int32) {
+            PushString32Value(value, (const char32_t **)out_ptr);
+            return true;
+        } else {
+            goto unexpected;
+        }
+    } else if (value.IsFunction()) {
+        if (type->primitive != PrimitiveKind::Callback) [[unlikely]] {
+            ThrowError<Napi::TypeError>(env, "Cannot pass function to type %1", type->name);
+            return false;
+        }
 
-        default: {} break;
+        Napi::Function func = value.As<Napi::Function>();
+
+        void *ptr = ReserveTrampoline(type->ref.proto, func);
+        if (!ptr) [[unlikely]]
+            return false;
+
+        *out_ptr = (void *)ptr;
+        return true;
+    } else if (value.IsNumber()) {
+        Napi::Number number = value.As<Napi::Number>();
+        intptr_t ptr = (intptr_t)number.Int32Value();
+
+        *out_ptr = (void *)ptr;
+        return true;
+    } else if (value.IsBigInt()) {
+        Napi::BigInt bigint = value.As<Napi::BigInt>();
+
+        bool lossless;
+        intptr_t ptr = (intptr_t)bigint.Int64Value(&lossless);
+
+        *out_ptr = (void *)ptr;
+        return true;
     }
 
 unexpected:
