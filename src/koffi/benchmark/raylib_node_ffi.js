@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
-const ref = require('ref-napi');
-const ffi = require('ffi-napi');
-const struct = require('ref-struct-di')(ref);
+const ref = require('@napi-ffi/ref-napi');
+const ffi = require('@napi-ffi/ffi-napi');
+const struct = require('@napi-ffi/ref-struct-di')(ref);
 const koffi = require('../../koffi');
 const path = require('path');
 const { performance } = require('perf_hooks');
