@@ -74,7 +74,7 @@ static const char *const ArrayHintNames[] = {
 struct TypeInfo {
     const char *name;
 
-    // Make sure primitie ends up as the upper N-API tag value when we cast TypeInfo pointers to
+    // Make sure primitive ends up as the upper N-API tag value when we cast TypeInfo pointers to
     // napi_type_tag pointers. Yes, I want to do this. We don't do strict aliasing here.
     // N.B. Some node versions don't like when one of the two tag values is 0, so make sure
     // this does not happen! It would happen if primitive is 0 and size is 0. To avoid this
