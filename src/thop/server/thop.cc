@@ -350,7 +350,7 @@ static void HandleRequest(http_IO *io)
     const User *user = CheckSessionUser(io);
 
     // Send these headers whenever possible
-    io->AddHeader("Referrer-Policy", "no-referrer");
+    io->AddHeader("Referrer-Policy", "same-origin");
     io->AddHeader("Cross-Origin-Opener-Policy", "same-origin");
     io->AddHeader("X-Robots-Tag", "noindex");
     io->AddHeader("Permissions-Policy", "interest-cohort=()");
