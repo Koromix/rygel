@@ -761,8 +761,8 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
     if (IsNullOrUndefined(value)) {
         *out_ptr = nullptr;
         return true;
-    } else if (Span<uint8_t> buffer = TryRawBuffer(value); buffer.ptr) {
-        *out_ptr = buffer.ptr;
+    } else if (uint8_t *ptr = TryRawPointer(value); ptr) {
+        *out_ptr = ptr;
         return true;
     } else if (value.IsExternal()) {
         K_ASSERT(type->primitive == PrimitiveKind::Pointer ||

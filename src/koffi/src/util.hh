@@ -98,17 +98,39 @@ static inline bool IsObject(Napi::Value value)
     return value.IsObject() && !IsNullOrUndefined(value) && !value.IsArray();
 }
 
-static inline Span<uint8_t> TryRawBuffer(Napi::Value value)
+static inline uint8_t *TryRawPointer(Napi::Value value)
 {
     // Assume TypedArray, test for ArrayBuffer only if wrong
     {
         void *ptr = nullptr;
-        size_t length = 0;
-
-        napi_status status = napi_get_buffer_info(value.Env(), value, &ptr, &length);
+        napi_status status = napi_get_typedarray_info(value.Env(), value, nullptr, nullptr, &ptr, nullptr, nullptr);
 
         if (status == napi_ok)
-            return MakeSpan((uint8_t *)ptr, (Size)length);
+            return (uint8_t *)ptr;
+    }
+
+    if (value.IsArrayBuffer()) {
+        Napi::ArrayBuffer buffer = value.As<Napi::ArrayBuffer>();
+        return (uint8_t *)buffer.Data();
+    }
+
+    return nullptr;
+}
+
+static inline Span<uint8_t> TryRawBuffer(Napi::Value value)
+{
+    // Before somewhere around Node 20.12, napi_get_buffer_info() would assert/crash
+    // when used with something it did not support, instead of returning napi_invalid_arg.
+    // So we need to call napi_is_buffer(), at least for now.
+
+    if (value.IsBuffer()) {
+        void *ptr = nullptr;
+        size_t length = 0;
+
+        // Assume it works
+        napi_get_buffer_info(value.Env(), value, &ptr, &length);
+
+        return MakeSpan((uint8_t *)ptr, (Size)length);
     }
 
     if (value.IsArrayBuffer()) {
