@@ -284,7 +284,7 @@ FLATTEN_IF_UNITY bool CallData::Prepare(const FunctionInfo *func, const Napi::Ca
 
         Napi::Value value = info[param.offset];
 
-        switch (param.type->primitive) {
+        switch (func->primitives[i]) {
             case PrimitiveKind::Void: { K_UNREACHABLE(); } break;
 
             case PrimitiveKind::Bool: {
