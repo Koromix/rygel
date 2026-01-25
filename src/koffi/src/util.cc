@@ -1471,6 +1471,10 @@ Napi::Value Decode(Napi::Env env, const uint8_t *ptr, const TypeInfo *type, cons
             }
             func->required_parameters -= 2;
 
+            // Support branchless push loops
+            func->parameters.Grow(1);
+            func->parameters.ptr[func->parameters.len].type = &FakePrototypeType;
+
             Napi::Function wrapper = WrapFunction(env, func);
             return wrapper;
         } break;

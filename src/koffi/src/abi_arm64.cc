@@ -265,6 +265,21 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
         gpr_ptr[8] = (uint64_t)return_ptr;
     }
 
+    static const void *DispatchTable[] = {
+        #define PRIMITIVE(Name) && Name,
+        #include "primitives.inc"
+    };
+
+    Size i = -1;
+    const ParameterInfo *param = nullptr;
+
+ #define DISPATCH() \
+        param = &func->parameters[++i]; \
+        goto *DispatchTable[(int)param->type->primitive];
+#define PRIMITIVE(Primitive) \
+        DISPATCH(); \
+        Primitive:
+
 #if defined(_M_ARM64EC)
     if (func->variadic) {
         gpr_ptr[4] = (uint64_t)args_ptr;
@@ -280,258 +295,284 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
 #if defined(__APPLE__)
     #define PUSH_INTEGER(CType) \
         do { \
-            CType v; \
+            Napi::Value value = info[param->offset]; \
              \
+            CType v; \
             if (!TryNumber(value, &v)) [[unlikely]] { \
                 ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value)); \
                 return false; \
             } \
              \
-            if (param.gpr_count) [[likely]] { \
+            if (param->gpr_count) [[likely]] { \
                 *(gpr_ptr++) = (uint64_t)v; \
             } else { \
-                args_ptr = AlignUp(args_ptr, param.type->align); \
+                args_ptr = AlignUp(args_ptr, param->type->align); \
                 *args_ptr = (uint64_t)v; \
-                args_ptr = (uint64_t *)((uint8_t *)args_ptr + param.type->size); \
+                args_ptr = (uint64_t *)((uint8_t *)args_ptr + param->type->size); \
             } \
         } while (false)
     #define PUSH_INTEGER_SWAP(CType) \
         do { \
-            CType v; \
+            Napi::Value value = info[param->offset]; \
              \
+            CType v; \
             if (!TryNumber(value, &v)) [[unlikely]] { \
                 ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value)); \
                 return false; \
             } \
              \
-            if (param.gpr_count) [[likely]] { \
+            if (param->gpr_count) [[likely]] { \
                 *(gpr_ptr++) = (uint64_t)ReverseBytes(v); \
             } else { \
-                args_ptr = AlignUp(args_ptr, param.type->align); \
+                args_ptr = AlignUp(args_ptr, param->type->align); \
                 *args_ptr = (uint64_t)ReverseBytes(v); \
-                args_ptr = (uint64_t *)((uint8_t *)args_ptr + param.type->size); \
+                args_ptr = (uint64_t *)((uint8_t *)args_ptr + param->type->size); \
             } \
         } while (false)
 #else
     #define PUSH_INTEGER(CType) \
         do { \
+            Napi::Value value = info[param->offset]; \
+             \
             CType v; \
             if (!TryNumber(value, &v)) [[unlikely]] { \
                 ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value)); \
                 return false; \
             } \
              \
-            *((param.gpr_count ? gpr_ptr : args_ptr)++) = (uint64_t)v; \
+            *((param->gpr_count ? gpr_ptr : args_ptr)++) = (uint64_t)v; \
         } while (false)
     #define PUSH_INTEGER_SWAP(CType) \
         do { \
+            Napi::Value value = info[param->offset]; \
+             \
             CType v; \
             if (!TryNumber(value, &v)) [[unlikely]] { \
                 ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value)); \
                 return false; \
             } \
              \
-            *((param.gpr_count ? gpr_ptr : args_ptr)++) = (uint64_t)ReverseBytes(v); \
+            *((param->gpr_count ? gpr_ptr : args_ptr)++) = (uint64_t)ReverseBytes(v); \
         } while (false)
 #endif
 
     // Push arguments
-    for (Size i = 0; i < func->parameters.len; i++) {
-        const ParameterInfo &param = func->parameters[i];
-        K_ASSERT(param.directions >= 1 && param.directions <= 3);
+    {
+        PRIMITIVE(Void) { K_UNREACHABLE(); };
 
-        Napi::Value value = info[param.offset];
+        PRIMITIVE(Bool) {
+            Napi::Value value = info[param->offset];
 
-        switch (param.type->primitive) {
-            case PrimitiveKind::Void: { K_UNREACHABLE(); } break;
-
-            case PrimitiveKind::Bool: {
-                bool b;
-                if (napi_get_value_bool(env, value, &b) != napi_ok) [[unlikely]] {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected boolean", GetValueType(instance, value));
-                    return false;
-                }
+            bool b;
+            if (napi_get_value_bool(env, value, &b) != napi_ok) [[unlikely]] {
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected boolean", GetValueType(instance, value));
+                return false;
+            }
 
 #if defined(__APPLE__)
-                if (param.gpr_count) [[likely]] {
-                    *(gpr_ptr++) = (uint64_t)b;
-                } else {
-                    *(uint8_t *)args_ptr = b;
-                    args_ptr = (uint64_t *)((uint8_t *)args_ptr + 1);
-                }
+            if (param->gpr_count) [[likely]] {
+                *(gpr_ptr++) = (uint64_t)b;
+            } else {
+                *(uint8_t *)args_ptr = b;
+                args_ptr = (uint64_t *)((uint8_t *)args_ptr + 1);
+            }
 #else
-                *((param.gpr_count ? gpr_ptr : args_ptr)++) = (uint64_t)b;
+            *((param->gpr_count ? gpr_ptr : args_ptr)++) = (uint64_t)b;
 #endif
-            } break;
-            case PrimitiveKind::Int8: { PUSH_INTEGER(int8_t); } break;
-            case PrimitiveKind::UInt8: { PUSH_INTEGER(uint8_t); } break;
-            case PrimitiveKind::Int16: { PUSH_INTEGER(int16_t); } break;
-            case PrimitiveKind::Int16S: { PUSH_INTEGER_SWAP(int16_t); } break;
-            case PrimitiveKind::UInt16: { PUSH_INTEGER(uint16_t); } break;
-            case PrimitiveKind::UInt16S: { PUSH_INTEGER_SWAP(uint16_t); } break;
-            case PrimitiveKind::Int32: { PUSH_INTEGER(int32_t); } break;
-            case PrimitiveKind::Int32S: { PUSH_INTEGER_SWAP(int32_t); } break;
-            case PrimitiveKind::UInt32: { PUSH_INTEGER(uint32_t); } break;
-            case PrimitiveKind::UInt32S: { PUSH_INTEGER_SWAP(uint32_t); } break;
-            case PrimitiveKind::Int64: { PUSH_INTEGER(int64_t); } break;
-            case PrimitiveKind::Int64S: { PUSH_INTEGER_SWAP(int64_t); } break;
-            case PrimitiveKind::UInt64: { PUSH_INTEGER(uint64_t); } break;
-            case PrimitiveKind::UInt64S: { PUSH_INTEGER_SWAP(uint64_t); } break;
-            case PrimitiveKind::String: {
-                const char *str;
-                if (!PushString(value, param.directions, &str)) [[unlikely]]
-                    return false;
+        };
+
+        PRIMITIVE(Int8) { PUSH_INTEGER(int8_t); };
+        PRIMITIVE(UInt8) { PUSH_INTEGER(uint8_t); };
+        PRIMITIVE(Int16) { PUSH_INTEGER(int16_t); };
+        PRIMITIVE(Int16S) { PUSH_INTEGER_SWAP(int16_t); };
+        PRIMITIVE(UInt16) { PUSH_INTEGER(uint16_t); };
+        PRIMITIVE(UInt16S) { PUSH_INTEGER_SWAP(uint16_t); };
+        PRIMITIVE(Int32) { PUSH_INTEGER(int32_t); };
+        PRIMITIVE(Int32S) { PUSH_INTEGER_SWAP(int32_t); };
+        PRIMITIVE(UInt32) { PUSH_INTEGER(uint32_t); };
+        PRIMITIVE(UInt32S) { PUSH_INTEGER_SWAP(uint32_t); };
+        PRIMITIVE(Int64) { PUSH_INTEGER(int64_t); };
+        PRIMITIVE(Int64S) { PUSH_INTEGER_SWAP(int64_t); };
+        PRIMITIVE(UInt64) { PUSH_INTEGER(uint64_t); };
+        PRIMITIVE(UInt64S) { PUSH_INTEGER_SWAP(uint64_t); };
+
+        PRIMITIVE(String) {
+            Napi::Value value = info[param->offset];
+
+            const char *str;
+            if (!PushString(value, param->directions, &str)) [[unlikely]]
+                return false;
 
 #if defined(__APPLE__)
-                args_ptr = param.gpr_count ? args_ptr : AlignUp(args_ptr, 8);
+            args_ptr = param->gpr_count ? args_ptr : AlignUp(args_ptr, 8);
 #endif
-                *(const char **)((param.gpr_count ? gpr_ptr : args_ptr)++) = str;
-            } break;
-            case PrimitiveKind::String16: {
-                const char16_t *str16;
-                if (!PushString16(value, param.directions, &str16)) [[unlikely]]
-                    return false;
+            *(const char **)((param->gpr_count ? gpr_ptr : args_ptr)++) = str;
+        };
+        PRIMITIVE(String16) {
+            Napi::Value value = info[param->offset];
+
+            const char16_t *str16;
+            if (!PushString16(value, param->directions, &str16)) [[unlikely]]
+                return false;
 
 #if defined(__APPLE__)
-                args_ptr = param.gpr_count ? args_ptr : AlignUp(args_ptr, 8);
+            args_ptr = param->gpr_count ? args_ptr : AlignUp(args_ptr, 8);
 #endif
-                *(const char16_t **)((param.gpr_count ? gpr_ptr : args_ptr)++) = str16;
-            } break;
-            case PrimitiveKind::String32: {
-                const char32_t *str32;
-                if (!PushString32(value, param.directions, &str32)) [[unlikely]]
-                    return false;
+            *(const char16_t **)((param->gpr_count ? gpr_ptr : args_ptr)++) = str16;
+        };
+        PRIMITIVE(String32) {
+            Napi::Value value = info[param->offset];
+
+            const char32_t *str32;
+            if (!PushString32(value, param->directions, &str32)) [[unlikely]]
+                return false;
 
 #if defined(__APPLE__)
-                args_ptr = param.gpr_count ? args_ptr : AlignUp(args_ptr, 8);
+            args_ptr = param->gpr_count ? args_ptr : AlignUp(args_ptr, 8);
 #endif
-                *(const char32_t **)((param.gpr_count ? gpr_ptr : args_ptr)++) = str32;
-            } break;
-            case PrimitiveKind::Pointer: {
-                void *ptr;
-                if (!PushPointer(value, param.type, param.directions, &ptr)) [[unlikely]]
-                    return false;
+            *(const char32_t **)((param->gpr_count ? gpr_ptr : args_ptr)++) = str32;
+        };
+
+        PRIMITIVE(Pointer) {
+            Napi::Value value = info[param->offset];
+
+            void *ptr;
+            if (!PushPointer(value, param->type, param->directions, &ptr)) [[unlikely]]
+                return false;
 
 #if defined(__APPLE__)
-                args_ptr = param.gpr_count ? args_ptr : AlignUp(args_ptr, 8);
+            args_ptr = param->gpr_count ? args_ptr : AlignUp(args_ptr, 8);
 #endif
-                *(void **)((param.gpr_count ? gpr_ptr : args_ptr)++) = ptr;
-            } break;
-            case PrimitiveKind::Record:
-            case PrimitiveKind::Union: {
-                if (!IsObject(value)) [[unlikely]] {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected object", GetValueType(instance, value));
+            *(void **)((param->gpr_count ? gpr_ptr : args_ptr)++) = ptr;
+        };
+
+        PRIMITIVE(Record) {
+            Napi::Value value = info[param->offset];
+
+            if (!IsObject(value)) [[unlikely]] {
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected object", GetValueType(instance, value));
+                return false;
+            }
+
+            Napi::Object obj = value.As<Napi::Object>();
+
+            if (param->vec_count) { // HFA
+                uint8_t *ptr = (uint8_t *)vec_ptr;
+
+                if (!PushObject(obj, param->type, ptr))
                     return false;
-                }
+                ExpandFloats(ptr, param->vec_count, param->vec_bytes);
 
-                Napi::Object obj = value.As<Napi::Object>();
+                vec_ptr += param->vec_count;
+            } else if (!param->use_memory) {
+                if (param->gpr_count) {
+                    K_ASSERT(param->type->align <= 8);
 
-                if (param.vec_count) { // HFA
-                    uint8_t *ptr = (uint8_t *)vec_ptr;
-
-                    if (!PushObject(obj, param.type, ptr))
+                    if (!PushObject(obj, param->type, (uint8_t *)gpr_ptr))
                         return false;
-                    ExpandFloats(ptr, param.vec_count, param.vec_bytes);
-
-                    vec_ptr += param.vec_count;
-                } else if (!param.use_memory) {
-                    if (param.gpr_count) {
-                        K_ASSERT(param.type->align <= 8);
-
-                        if (!PushObject(obj, param.type, (uint8_t *)gpr_ptr))
-                            return false;
-                        gpr_ptr += param.gpr_count;
-                    } else if (param.type->size) {
+                    gpr_ptr += param->gpr_count;
+                } else if (param->type->size) {
 #if defined(__APPLE__)
-                        args_ptr = AlignUp(args_ptr, 8);
+                    args_ptr = AlignUp(args_ptr, 8);
 #endif
-                        if (!PushObject(obj, param.type, (uint8_t *)args_ptr))
-                            return false;
-                        args_ptr += (param.type->size + 7) / 8;
-                    }
-                } else {
-                    uint8_t *ptr = AllocHeap(param.type->size, 16);
-
-                    if (param.gpr_count) {
-                        K_ASSERT(param.gpr_count == 1);
-                        K_ASSERT(param.vec_count == 0);
-
-                        *(uint8_t **)(gpr_ptr++) = ptr;
-                    } else {
-#if defined(__APPLE__)
-                        args_ptr = AlignUp(args_ptr, 8);
-#endif
-                        *(uint8_t **)(args_ptr++) = ptr;
-                    }
-
-                    if (!PushObject(obj, param.type, ptr))
+                    if (!PushObject(obj, param->type, (uint8_t *)args_ptr))
                         return false;
+                    args_ptr += (param->type->size + 7) / 8;
                 }
-            } break;
-            case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
-            case PrimitiveKind::Float32: {
-                float f;
-                if (!TryNumber(value, &f)) [[unlikely]] {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
-                    return false;
-                }
+            } else {
+                uint8_t *ptr = AllocHeap(param->type->size, 16);
 
-                if (param.vec_count) [[likely]] {
-                    memset((uint8_t *)vec_ptr + 4, 0, 4);
-                    *(float *)(vec_ptr++) = f;
-#if defined(_WIN32)
-                } else if (param.gpr_count) {
-                    memset((uint8_t *)gpr_ptr + 4, 0, 4);
-                    *(float *)(gpr_ptr++) = f;
-#endif
-                } else {
-#if defined(__APPLE__)
-                    args_ptr = AlignUp(args_ptr, 4);
-                    *(float *)args_ptr = f;
-                    args_ptr = (uint64_t *)((uint8_t *)args_ptr + 4);
-#else
-                    memset((uint8_t *)args_ptr + 4, 0, 4);
-                    *(float *)(args_ptr++) = f;
-#endif
-                }
-            } break;
-            case PrimitiveKind::Float64: {
-                double d;
-                if (!TryNumber(value, &d)) [[unlikely]] {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
-                    return false;
-                }
+                if (param->gpr_count) {
+                    K_ASSERT(param->gpr_count == 1);
+                    K_ASSERT(param->vec_count == 0);
 
-                if (param.vec_count) [[likely]] {
-                    *(double *)(vec_ptr++) = d;
-#if defined(_WIN32)
-                } else if (param.gpr_count) {
-                    *(double *)(gpr_ptr++) = d;
-#endif
+                    *(uint8_t **)(gpr_ptr++) = ptr;
                 } else {
 #if defined(__APPLE__)
                     args_ptr = AlignUp(args_ptr, 8);
 #endif
-                    *(double *)(args_ptr++) = d;
+                    *(uint8_t **)(args_ptr++) = ptr;
                 }
-            } break;
-            case PrimitiveKind::Callback: {
-                void *ptr;
-                if (!PushCallback(value, param.type, &ptr)) [[unlikely]]
+
+                if (!PushObject(obj, param->type, ptr))
                     return false;
+            }
+        };
+        PRIMITIVE(Union) goto Record;
+        PRIMITIVE(Array) { K_UNREACHABLE(); };
+
+        PRIMITIVE(Float32) {
+            Napi::Value value = info[param->offset];
+
+            float f;
+            if (!TryNumber(value, &f)) [[unlikely]] {
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
+                return false;
+            }
+
+            if (param->vec_count) [[likely]] {
+                memset((uint8_t *)vec_ptr + 4, 0, 4);
+                *(float *)(vec_ptr++) = f;
+#if defined(_WIN32)
+            } else if (param->gpr_count) {
+                memset((uint8_t *)gpr_ptr + 4, 0, 4);
+                *(float *)(gpr_ptr++) = f;
+#endif
+            } else {
+#if defined(__APPLE__)
+                args_ptr = AlignUp(args_ptr, 4);
+                *(float *)args_ptr = f;
+                args_ptr = (uint64_t *)((uint8_t *)args_ptr + 4);
+#else
+                memset((uint8_t *)args_ptr + 4, 0, 4);
+                *(float *)(args_ptr++) = f;
+#endif
+            }
+        };
+        PRIMITIVE(Float64) {
+            Napi::Value value = info[param->offset];
+
+            double d;
+            if (!TryNumber(value, &d)) [[unlikely]] {
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
+                return false;
+            }
+
+            if (param->vec_count) [[likely]] {
+                *(double *)(vec_ptr++) = d;
+#if defined(_WIN32)
+            } else if (param->gpr_count) {
+                *(double *)(gpr_ptr++) = d;
+#endif
+            } else {
+#if defined(__APPLE__)
+                args_ptr = AlignUp(args_ptr, 8);
+#endif
+                *(double *)(args_ptr++) = d;
+            }
+        };
+
+        PRIMITIVE(Callback) {
+            Napi::Value value = info[param->offset];
+
+            void *ptr;
+            if (!PushCallback(value, param->type, &ptr)) [[unlikely]]
+                return false;
 
 #if defined(__APPLE__)
-                args_ptr = param.gpr_count ? args_ptr : AlignUp(args_ptr, 8);
+            args_ptr = param->gpr_count ? args_ptr : AlignUp(args_ptr, 8);
 #endif
-                *(void **)((param.gpr_count ? gpr_ptr : args_ptr)++) = ptr;
-            } break;
+            *(void **)((param->gpr_count ? gpr_ptr : args_ptr)++) = ptr;
+        };
 
-            case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;
-        }
+        PRIMITIVE(Prototype) { /* End loop */ };
     }
 
 #undef PUSH_INTEGER_SWAP
 #undef PUSH_INTEGER
+
+#undef PRIMITIVE
+#undef DISPATCH
 
     new_sp = mem->stack.end();
 

@@ -22,64 +22,12 @@ static const Size MaxParameters = 64;
 static const Size MaxTrampolines = 8192;
 
 enum class PrimitiveKind {
-    // Void is explictly not first so that it is not 0, for reasons related to N-API type tags.
-    // Look at TypeInfo definition for more information!
-    Bool,
-    Void,
-    Int8,
-    UInt8,
-    Int16,
-    Int16S,  // Keep behind Int16
-    UInt16,
-    UInt16S, // Keep behind UInt16
-    Int32,
-    Int32S,  // Keep behind Int32
-    UInt32,
-    UInt32S, // Keep behind UInt32
-    Int64,
-    Int64S,  // Keep behind Int64
-    UInt64,
-    UInt64S, // Keep behind UInt64
-    String,
-    String16,
-    String32,
-    Pointer,
-    Record,
-    Union,
-    Array,
-    Float32,
-    Float64,
-    Prototype,
-    Callback
+    #define PRIMITIVE(Name) Name,
+    #include "primitives.inc"
 };
 static const char *const PrimitiveKindNames[] = {
-    "Bool",
-    "Void",
-    "Int8",
-    "UInt8",
-    "Int16",
-    "Int16S",
-    "UInt16",
-    "UInt16S",
-    "Int32",
-    "Int32S",
-    "UInt32",
-    "UInt32S",
-    "Int64",
-    "Int64S",
-    "UInt64",
-    "UInt64S",
-    "String",
-    "String16",
-    "String32",
-    "Pointer",
-    "Record",
-    "Union",
-    "Array",
-    "Float32",
-    "Float64",
-    "Prototype",
-    "Callback"
+    #define PRIMITIVE(Name) K_STRINGIFY(Name),
+    #include "primitives.inc"
 };
 
 struct TypeInfo;
@@ -136,6 +84,8 @@ struct TypeInfo {
 
     K_HASHTABLE_HANDLER(TypeInfo, name);
 };
+
+extern const TypeInfo FakePrototypeType;
 
 struct RecordMember {
     const char *name;

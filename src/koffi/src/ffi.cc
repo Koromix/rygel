@@ -35,6 +35,9 @@
 
 namespace K {
 
+// Used to mark the end of function parameters
+const TypeInfo FakePrototypeType = { nullptr, PrimitiveKind::Prototype };
+
 SharedData shared;
 
 static thread_local CallData *exec_call;
@@ -1173,6 +1176,10 @@ static Napi::Value CreateFunctionType(const Napi::CallbackInfo &info)
     }
     func->required_parameters += 2;
 
+    // Support branchless push loops
+    func->parameters.Grow(1);
+    func->parameters.ptr[func->parameters.len].type = &FakePrototypeType;
+
     // We cannot fail after this check
     if (named && instance->types_map.Find(func->name)) {
         ThrowError<Napi::Error>(env, "Duplicate type name '%1'", func->name);
@@ -1565,6 +1572,10 @@ static Napi::Value TranslateVariadicCall(const FunctionInfo *func, void *native,
     if (!AnalyseFunction(env, instance, &copy)) [[unlikely]]
         return env.Null();
 
+    // Support branchless push loops
+    copy.parameters.Grow(1);
+    copy.parameters.ptr[copy.parameters.len].type = &FakePrototypeType;
+
     InstanceMemory *mem = instance->memories[0];
     CallData call(env, instance, mem);
 
@@ -1755,10 +1766,10 @@ static Napi::Value FindLibraryFunction(const Napi::CallbackInfo &info)
 
     if (!AnalyseFunction(env, instance, func))
         return env.Null();
-    if (func->variadic) {
-        // Minimize reallocations
-        func->parameters.Grow(32);
-    }
+
+    // Support branchless push loops
+    func->parameters.Grow(func->variadic ? 32 : 1);
+    func->parameters.ptr[func->parameters.len].type = &FakePrototypeType;
 
 #if defined(_WIN32)
     if (func->ordinal_name < 0) {
