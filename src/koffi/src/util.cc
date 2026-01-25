@@ -1299,9 +1299,7 @@ Napi::Value Decode(Napi::Value value, Size offset, const TypeInfo *type, const S
     if (value.IsExternal()) {
         Napi::External<void> external = value.As<Napi::External<void>>();
         ptr = (const uint8_t *)external.Data();
-    } else if (IsRawBuffer(value)) {
-        Span<uint8_t> buffer = GetRawBuffer(value);
-
+    } else if (Span<uint8_t> buffer = TryRawBuffer(value); buffer.ptr) {
         if (offset < 0) [[unlikely]] {
             ThrowError<Napi::Error>(env, "Offset must be >= 0");
             return env.Null();
@@ -1494,9 +1492,7 @@ bool Encode(Napi::Value ref, Size offset, Napi::Value value, const TypeInfo *typ
     if (ref.IsExternal()) {
         Napi::External<void> external = ref.As<Napi::External<void>>();
         ptr = (uint8_t *)external.Data();
-    } else if (IsRawBuffer(ref)) {
-        Span<uint8_t> buffer = GetRawBuffer(ref);
-
+    } else if (Span<uint8_t> buffer = TryRawBuffer(ref); buffer.ptr) {
         if (offset < 0) [[unlikely]] {
             ThrowError<Napi::Error>(env, "Offset must be >= 0");
             return env.Null();
@@ -1543,22 +1539,24 @@ bool Encode(Napi::Env env, uint8_t *origin, Napi::Value value, const TypeInfo *t
 
 #define PUSH_INTEGER(CType) \
         do { \
-            if (!value.IsNumber() && !value.IsBigInt()) [[unlikely]] { \
+            CType v; \
+            \
+            if (!TryNumber(value, &v)) [[unlikely]] { \
                 ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value)); \
                 return false; \
             } \
              \
-            CType v = GetNumber<CType>(value); \
             *(CType *)origin = v; \
         } while (false)
 #define PUSH_INTEGER_SWAP(CType) \
         do { \
-            if (!value.IsNumber() && !value.IsBigInt()) [[unlikely]] { \
+            CType v; \
+            \
+            if (!TryNumber(value, &v)) [[unlikely]] { \
                 ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value)); \
                 return false; \
             } \
              \
-            CType v = GetNumber<CType>(value); \
             *(CType *)origin = ReverseBytes(v); \
         } while (false)
 
@@ -1566,12 +1564,14 @@ bool Encode(Napi::Env env, uint8_t *origin, Napi::Value value, const TypeInfo *t
         case PrimitiveKind::Void: { K_UNREACHABLE(); } break;
 
         case PrimitiveKind::Bool: {
-            if (!value.IsBoolean()) [[unlikely]] {
+            bool b;
+            napi_status status = napi_get_value_bool(env, value, &b);
+
+            if (status != napi_ok) [[unlikely]] {
                 ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected boolean", GetValueType(instance, value));
                 return false;
             }
 
-            bool b = value.As<Napi::Boolean>();
             *(bool *)origin = b;
         } break;
         case PrimitiveKind::Int8: { PUSH_INTEGER(int8_t); } break;
@@ -1629,8 +1629,7 @@ bool Encode(Napi::Env env, uint8_t *origin, Napi::Value value, const TypeInfo *t
                 Napi::Array array = value.As<Napi::Array>();
                 if (!call.PushNormalArray(array, type, type->size, origin))
                     return false;
-            } else if (IsRawBuffer(value)) {
-                Span<const uint8_t> buffer = GetRawBuffer(value);
+            } else if (Span<uint8_t> buffer = TryRawBuffer(value); buffer.ptr) {
                 call.PushBuffer(buffer, type, origin);
             } else if (value.IsString()) {
                 if (!call.PushStringArray(value, type, origin))
@@ -1641,21 +1640,23 @@ bool Encode(Napi::Env env, uint8_t *origin, Napi::Value value, const TypeInfo *t
             }
         } break;
         case PrimitiveKind::Float32: {
-            if (!value.IsNumber() && !value.IsBigInt()) [[unlikely]] {
+            float f;
+
+            if (!TryNumber(value, &f)) [[unlikely]] {
                 ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
                 return false;
             }
 
-            float f = GetNumber<float>(value);
             *(float *)origin = f;
         } break;
         case PrimitiveKind::Float64: {
-            if (!value.IsNumber() && !value.IsBigInt()) [[unlikely]] {
+            double d;
+
+            if (!TryNumber(value, &d)) [[unlikely]] {
                 ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
                 return false;
             }
 
-            double d = GetNumber<double>(value);
             *(double *)origin = d;
         } break;
         case PrimitiveKind::Callback: {

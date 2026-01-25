@@ -222,32 +222,31 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
 
 #define PUSH_INTEGER_32(CType) \
         do { \
-            if (!value.IsNumber() && !value.IsBigInt()) [[unlikely]] { \
+            CType v; \
+            if (!TryNumber(value, &v)) [[unlikely]] { \
                 ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value)); \
                 return false; \
             } \
              \
-            CType v = GetNumber<CType>(value); \
             *((param.gpr_count ? gpr_ptr : args_ptr)++) = (uint32_t)v; \
         } while (false)
 #define PUSH_INTEGER_32_SWAP(CType) \
         do { \
-            if (!value.IsNumber() && !value.IsBigInt()) [[unlikely]] { \
+            CType v; \
+            if (!TryNumber(value, &v)) [[unlikely]] { \
                 ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value)); \
                 return false; \
             } \
              \
-            CType v = GetNumber<CType>(value); \
             *((param.gpr_count ? gpr_ptr : args_ptr)++) = (uint32_t)ReverseBytes(v); \
         } while (false)
 #define PUSH_INTEGER_64(CType) \
         do { \
-            if (!value.IsNumber() && !value.IsBigInt()) [[unlikely]] { \
+            CType v; \
+            if (!TryNumber(value, &v)) [[unlikely]] { \
                 ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value)); \
                 return false; \
             } \
-             \
-            CType v = GetNumber<CType>(value); \
              \
             if (param.gpr_count) [[likely]] { \
                 gpr_ptr = AlignUp(gpr_ptr, 8); \
@@ -261,12 +260,11 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
         } while (false)
 #define PUSH_INTEGER_64_SWAP(CType) \
         do { \
-            if (!value.IsNumber() && !value.IsBigInt()) [[unlikely]] { \
+            CType v; \
+            if (!TryNumber(value, &v)) [[unlikely]] { \
                 ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value)); \
                 return false; \
             } \
-             \
-            CType v = GetNumber<CType>(value); \
              \
             if (param.gpr_count) [[likely]] { \
                 gpr_ptr = AlignUp(gpr_ptr, 8); \
@@ -290,12 +288,12 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
             case PrimitiveKind::Void: { K_UNREACHABLE(); } break;
 
             case PrimitiveKind::Bool: {
-                if (!value.IsBoolean()) [[unlikely]] {
+                bool b;
+                if (napi_get_value_bool(env, value, &b) != napi_ok) [[unlikely]] {
                     ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected boolean", GetValueType(instance, value));
                     return false;
                 }
 
-                bool b = value.As<Napi::Boolean>();
                 *((param.gpr_count ? gpr_ptr : args_ptr)++) = (uint32_t)b;
             } break;
             case PrimitiveKind::Int8: { PUSH_INTEGER_32(int8_t); } break;
@@ -375,12 +373,11 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
             } break;
             case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
             case PrimitiveKind::Float32: {
-                if (!value.IsNumber() && !value.IsBigInt()) [[unlikely]] {
+                float f;
+                if (!TryNumber(value, &f)) [[unlikely]] {
                     ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
                     return false;
                 }
-
-                float f = GetNumber<float>(value);
 
                 if (param.vec_count) [[likely]] {
                     *(float *)(vec_ptr++) = f;
@@ -391,12 +388,11 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
                 }
             } break;
             case PrimitiveKind::Float64: {
-                if (!value.IsNumber() && !value.IsBigInt()) [[unlikely]] {
+                double d;
+                if (!TryNumber(value, &d)) [[unlikely]] {
                     ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
                     return false;
                 }
-
-                double d = GetNumber<double>(value);
 
                 if (param.vec_count) [[likely]] {
                     *(double *)vec_ptr = d;
@@ -825,44 +821,42 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
 
 #define RETURN_INTEGER_32(CType) \
         do { \
-            if (!value.IsNumber() && !value.IsBigInt()) [[unlikely]] { \
+            CType v; \
+            if (!TryNumber(value, &v)) [[unlikely]] { \
                 ThrowError<Napi::TypeError>(env, "Unexpected %1 value for return value, expected number", GetValueType(instance, value)); \
                 return; \
             } \
              \
-            CType v = GetNumber<CType>(value); \
             out_reg->r0 = (uint32_t)v; \
         } while (false)
 #define RETURN_INTEGER_32_SWAP(CType) \
         do { \
-            if (!value.IsNumber() && !value.IsBigInt()) [[unlikely]] { \
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value)); \
+            CType v; \
+            if (!TryNumber(value, &v)) [[unlikely]] { \
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value for return value, expected number", GetValueType(instance, value)); \
                 return; \
             } \
              \
-            CType v = GetNumber<CType>(value); \
             out_reg->r0 = (uint32_t)ReverseBytes(v); \
         } while (false)
 #define RETURN_INTEGER_64(CType) \
         do { \
-            if (!value.IsNumber() && !value.IsBigInt()) [[unlikely]] { \
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value)); \
+            CType v; \
+            if (!TryNumber(value, &v)) [[unlikely]] { \
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value for return value, expected number", GetValueType(instance, value)); \
                 return; \
             } \
-             \
-            CType v = GetNumber<CType>(value); \
              \
             out_reg->r0 = (uint32_t)((uint64_t)v >> 32); \
             out_reg->r1 = (uint32_t)((uint64_t)v & 0xFFFFFFFFu); \
         } while (false)
 #define RETURN_INTEGER_64_SWAP(CType) \
         do { \
-            if (!value.IsNumber() && !value.IsBigInt()) [[unlikely]] { \
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value)); \
+            CType v; \
+            if (!TryNumber(value, &v)) [[unlikely]] { \
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value for return value, expected number", GetValueType(instance, value)); \
                 return; \
             } \
-             \
-            CType v = ReverseBytes(GetNumber<CType>(value)); \
              \
             out_reg->r0 = (uint32_t)((uint64_t)v >> 32); \
             out_reg->r1 = (uint32_t)((uint64_t)v & 0xFFFFFFFFu); \
@@ -872,12 +866,12 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
     switch (type->primitive) {
         case PrimitiveKind::Void: {} break;
         case PrimitiveKind::Bool: {
-            if (!value.IsBoolean()) [[unlikely]] {
+            bool b;
+            if (napi_get_value_bool(env, value, &b) != napi_ok) [[unlikely]] {
                 ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected boolean", GetValueType(instance, value));
                 return;
             }
 
-            bool b = value.As<Napi::Boolean>();
             out_reg->r0 = (uint32_t)b;
         } break;
         case PrimitiveKind::Int8: { RETURN_INTEGER_32(int8_t); } break;
@@ -958,12 +952,12 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
         } break;
         case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
         case PrimitiveKind::Float32: {
-            if (!value.IsNumber() && !value.IsBigInt()) [[unlikely]] {
+            float f;
+            if (!TryNumber(value, &f)) [[unlikely]] {
                 ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
                 return;
             }
 
-            float f = GetNumber<float>(value);
 #if defined(__ARM_PCS_VFP)
             memcpy(&out_reg->d0, &f, 4);
 #else
@@ -971,12 +965,12 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
 #endif
         } break;
         case PrimitiveKind::Float64: {
-            if (!value.IsNumber() && !value.IsBigInt()) [[unlikely]] {
+            double d;
+            if (!TryNumber(value, &d)) [[unlikely]] {
                 ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
                 return;
             }
 
-            double d = GetNumber<double>(value);
 #if defined(__ARM_PCS_VFP)
             out_reg->d0 = d;
 #else

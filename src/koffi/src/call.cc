@@ -343,6 +343,29 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
 
     MemSet(origin, 0, type->size);
 
+#define PUSH_NUMBER(CType) \
+        do { \
+            CType v; \
+            \
+            if (!TryNumber(value, &v)) [[unlikely]] { \
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value)); \
+                return false; \
+            } \
+             \
+            *(CType *)dest = v; \
+        } while (false)
+#define PUSH_NUMBER_SWAP(CType) \
+        do { \
+            CType v; \
+            \
+            if (!TryNumber(value, &v)) [[unlikely]] { \
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value)); \
+                return false; \
+            } \
+             \
+            *(CType *)dest = ReverseBytes(v); \
+        } while (false)
+
     for (Size i = 0; i < members.len; i++) {
         const RecordMember &member = members[i];
         Napi::Value value = obj.Get(member.name);
@@ -363,140 +386,30 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
             case PrimitiveKind::Void: { K_UNREACHABLE(); } break;
 
             case PrimitiveKind::Bool: {
-                if (!value.IsBoolean()) [[unlikely]] {
+                bool b;
+                napi_status status = napi_get_value_bool(env, value, &b);
+
+                if (status != napi_ok) [[unlikely]] {
                     ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected boolean", GetValueType(instance, value));
                     return false;
                 }
 
-                bool b = value.As<Napi::Boolean>();
                 *(bool *)dest = b;
             } break;
-            case PrimitiveKind::Int8: {
-                if (!value.IsNumber() && !value.IsBigInt()) [[unlikely]] {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
-                    return false;
-                }
-
-                int8_t v = GetNumber<int8_t>(value);
-                *(int8_t *)dest = v;
-            } break;
-            case PrimitiveKind::UInt8: {
-                if (!value.IsNumber() && !value.IsBigInt()) [[unlikely]] {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
-                    return false;
-                }
-
-                uint8_t v = GetNumber<uint8_t>(value);
-                *(uint8_t *)dest = v;
-            } break;
-            case PrimitiveKind::Int16: {
-                if (!value.IsNumber() && !value.IsBigInt()) [[unlikely]] {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
-                    return false;
-                }
-
-                int16_t v = GetNumber<int16_t>(value);
-                *(int16_t *)dest = v;
-            } break;
-            case PrimitiveKind::Int16S: {
-                if (!value.IsNumber() && !value.IsBigInt()) [[unlikely]] {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
-                    return false;
-                }
-
-                int16_t v = GetNumber<int16_t>(value);
-                *(int16_t *)dest = ReverseBytes(v);
-            } break;
-            case PrimitiveKind::UInt16: {
-                if (!value.IsNumber() && !value.IsBigInt()) [[unlikely]] {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
-                    return false;
-                }
-
-                uint16_t v = GetNumber<uint16_t>(value);
-                *(uint16_t *)dest = v;
-            } break;
-            case PrimitiveKind::UInt16S: {
-                if (!value.IsNumber() && !value.IsBigInt()) [[unlikely]] {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
-                    return false;
-                }
-
-                uint16_t v = GetNumber<uint16_t>(value);
-                *(uint16_t *)dest = ReverseBytes(v);
-            } break;
-            case PrimitiveKind::Int32: {
-                if (!value.IsNumber() && !value.IsBigInt()) [[unlikely]] {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
-                    return false;
-                }
-
-                int32_t v = GetNumber<int32_t>(value);
-                *(int32_t *)dest = v;
-            } break;
-            case PrimitiveKind::Int32S: {
-                if (!value.IsNumber() && !value.IsBigInt()) [[unlikely]] {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
-                    return false;
-                }
-
-                int32_t v = GetNumber<int32_t>(value);
-                *(int32_t *)dest = ReverseBytes(v);
-            } break;
-            case PrimitiveKind::UInt32: {
-                if (!value.IsNumber() && !value.IsBigInt()) [[unlikely]] {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
-                    return false;
-                }
-
-                uint32_t v = GetNumber<uint32_t>(value);
-                *(uint32_t *)dest = v;
-            } break;
-            case PrimitiveKind::UInt32S: {
-                if (!value.IsNumber() && !value.IsBigInt()) [[unlikely]] {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
-                    return false;
-                }
-
-                uint32_t v = GetNumber<uint32_t>(value);
-                *(uint32_t *)dest = ReverseBytes(v);
-            } break;
-            case PrimitiveKind::Int64: {
-                if (!value.IsNumber() && !value.IsBigInt()) [[unlikely]] {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
-                    return false;
-                }
-
-                int64_t v = GetNumber<int64_t>(value);
-                *(int64_t *)dest = v;
-            } break;
-            case PrimitiveKind::Int64S: {
-                if (!value.IsNumber() && !value.IsBigInt()) [[unlikely]] {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
-                    return false;
-                }
-
-                int64_t v = GetNumber<int64_t>(value);
-                *(int64_t *)dest = ReverseBytes(v);
-            } break;
-            case PrimitiveKind::UInt64: {
-                if (!value.IsNumber() && !value.IsBigInt()) [[unlikely]] {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
-                    return false;
-                }
-
-                uint64_t v = GetNumber<uint64_t>(value);
-                *(uint64_t *)dest = v;
-            } break;
-            case PrimitiveKind::UInt64S: {
-                if (!value.IsNumber() && !value.IsBigInt()) [[unlikely]] {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
-                    return false;
-                }
-
-                uint64_t v = GetNumber<uint64_t>(value);
-                *(uint64_t *)dest = ReverseBytes(v);
-            } break;
+            case PrimitiveKind::Int8: { PUSH_NUMBER(int8_t); } break;
+            case PrimitiveKind::UInt8: { PUSH_NUMBER(uint8_t); } break;
+            case PrimitiveKind::Int16: { PUSH_NUMBER(int16_t); } break;
+            case PrimitiveKind::Int16S: { PUSH_NUMBER_SWAP(int16_t); } break;
+            case PrimitiveKind::UInt16: { PUSH_NUMBER(uint16_t); } break;
+            case PrimitiveKind::UInt16S: { PUSH_NUMBER_SWAP(uint16_t); } break;
+            case PrimitiveKind::Int32: { PUSH_NUMBER(int32_t); } break;
+            case PrimitiveKind::Int32S: { PUSH_NUMBER_SWAP(int32_t); } break;
+            case PrimitiveKind::UInt32: { PUSH_NUMBER(uint32_t); } break;
+            case PrimitiveKind::UInt32S: { PUSH_NUMBER_SWAP(uint32_t); } break;
+            case PrimitiveKind::Int64: { PUSH_NUMBER(int64_t); } break;
+            case PrimitiveKind::Int64S: { PUSH_NUMBER_SWAP(int64_t); } break;
+            case PrimitiveKind::UInt64: { PUSH_NUMBER(uint64_t); } break;
+            case PrimitiveKind::UInt64S: { PUSH_NUMBER_SWAP(uint64_t); } break;
             case PrimitiveKind::String: {
                 const char *str;
                 if (!PushString(value, 1, &str)) [[unlikely]]
@@ -541,8 +454,7 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
                     Napi::Array array = value.As<Napi::Array>();
                     if (!PushNormalArray(array, member.type, member.type->size, dest))
                         return false;
-                } else if (IsRawBuffer(value)) {
-                    Span<const uint8_t> buffer = GetRawBuffer(value);
+                } else if (Span<uint8_t> buffer = TryRawBuffer(value); buffer.ptr) {
                     PushBuffer(buffer, member.type, dest);
                 } else if (value.IsString()) {
                     if (!PushStringArray(value, member.type, dest))
@@ -552,24 +464,8 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
                     return false;
                 }
             } break;
-            case PrimitiveKind::Float32: {
-                if (!value.IsNumber() && !value.IsBigInt()) [[unlikely]] {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
-                    return false;
-                }
-
-                float f = GetNumber<float>(value);
-                *(float *)dest = f;
-            } break;
-            case PrimitiveKind::Float64: {
-                if (!value.IsNumber() && !value.IsBigInt()) [[unlikely]] {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
-                    return false;
-                }
-
-                double d = GetNumber<double>(value);
-                *(double *)dest = d;
-            } break;
+            case PrimitiveKind::Float32: { PUSH_NUMBER(float); } break;
+            case PrimitiveKind::Float64: { PUSH_NUMBER(double); } break;
             case PrimitiveKind::Callback: {
                 void *ptr;
                 if (!PushCallback(value, member.type, &ptr))
@@ -581,6 +477,9 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
             case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;
         }
     }
+
+#undef PUSH_NUMBER_SWAP
+#undef PUSH_NUMBER
 
     return true;
 }
@@ -601,7 +500,7 @@ bool CallData::PushNormalArray(Napi::Array array, const TypeInfo *type, Size siz
 
     Size offset = 0;
 
-#define PUSH_ARRAY(Check, Expected, GetCode) \
+#define PUSH_ARRAY(Code) \
         do { \
             for (Size i = 0; i < len; i++) { \
                 Napi::Value value = array[(uint32_t)i]; \
@@ -609,16 +508,33 @@ bool CallData::PushNormalArray(Napi::Array array, const TypeInfo *type, Size siz
                 offset = AlignLen(offset, ref->align); \
                 uint8_t *dest = origin + offset; \
                  \
-                if (!(Check)) [[unlikely]] { \
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected %2", GetValueType(instance, value), (Expected)); \
-                    return false; \
-                } \
-                 \
-                GetCode \
+                Code \
                  \
                 offset += ref->size; \
             } \
         } while (false)
+#define PUSH_NUMBERS(CType) \
+        PUSH_ARRAY({ \
+            CType v; \
+             \
+            if (!TryNumber(value, &v)) [[unlikely]] { \
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value)); \
+                return false; \
+            } \
+             \
+            *(CType *)dest = v; \
+        })
+#define PUSH_NUMBERS_SWAP(CType) \
+        PUSH_ARRAY({ \
+            CType v; \
+             \
+            if (!TryNumber(value, &v)) [[unlikely]] { \
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value)); \
+                return false; \
+            } \
+             \
+            *(CType *)dest = ReverseBytes(v); \
+        })
 
     switch (ref->primitive) {
         case PrimitiveKind::Void: {
@@ -627,97 +543,34 @@ bool CallData::PushNormalArray(Napi::Array array, const TypeInfo *type, Size siz
         } break;
 
         case PrimitiveKind::Bool: {
-            PUSH_ARRAY(value.IsBoolean(), "boolean", {
-                bool b = value.As<Napi::Boolean>();
+            PUSH_ARRAY({
+                bool b;
+                napi_status status = napi_get_value_bool(env, value, &b);
+
+                if (status != napi_ok) [[unlikely]] {
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected boolean", GetValueType(instance, value));
+                    return false;
+                }
+
                 *(bool *)dest = b;
             });
         } break;
-        case PrimitiveKind::Int8: {
-            PUSH_ARRAY(value.IsNumber() || value.IsBigInt(), "number", {
-                int8_t v = GetNumber<int8_t>(value);
-                *(int8_t *)dest = v;
-            });
-        } break;
-        case PrimitiveKind::UInt8: {
-            PUSH_ARRAY(value.IsNumber() || value.IsBigInt(), "number", {
-                uint8_t v = GetNumber<uint8_t>(value);
-                *(uint8_t *)dest = v;
-            });
-        } break;
-        case PrimitiveKind::Int16: {
-            PUSH_ARRAY(value.IsNumber() || value.IsBigInt(), "number", {
-                int16_t v = GetNumber<int16_t>(value);
-                *(int16_t *)dest = v;
-            });
-        } break;
-        case PrimitiveKind::Int16S: {
-            PUSH_ARRAY(value.IsNumber() || value.IsBigInt(), "number", {
-                int16_t v = GetNumber<int16_t>(value);
-                *(int16_t *)dest = ReverseBytes(v);
-            });
-        } break;
-        case PrimitiveKind::UInt16: {
-            PUSH_ARRAY(value.IsNumber() || value.IsBigInt(), "number", {
-                uint16_t v = GetNumber<uint16_t>(value);
-                *(uint16_t *)dest = v;
-            });
-        } break;
-        case PrimitiveKind::UInt16S: {
-            PUSH_ARRAY(value.IsNumber() || value.IsBigInt(), "number", {
-                uint16_t v = GetNumber<uint16_t>(value);
-                *(uint16_t *)dest = ReverseBytes(v);
-            });
-        } break;
-        case PrimitiveKind::Int32: {
-            PUSH_ARRAY(value.IsNumber() || value.IsBigInt(), "number", {
-                int32_t v = GetNumber<int32_t>(value);
-                *(int32_t *)dest = v;
-            });
-        } break;
-        case PrimitiveKind::Int32S: {
-            PUSH_ARRAY(value.IsNumber() || value.IsBigInt(), "number", {
-                int32_t v = GetNumber<int32_t>(value);
-                *(int32_t *)dest = ReverseBytes(v);
-            });
-        } break;
-        case PrimitiveKind::UInt32: {
-            PUSH_ARRAY(value.IsNumber() || value.IsBigInt(), "number", {
-                uint32_t v = GetNumber<uint32_t>(value);
-                *(uint32_t *)dest = v;
-            });
-        } break;
-        case PrimitiveKind::UInt32S: {
-            PUSH_ARRAY(value.IsNumber() || value.IsBigInt(), "number", {
-                uint32_t v = GetNumber<uint32_t>(value);
-                *(uint32_t *)dest = ReverseBytes(v);
-            });
-        } break;
-        case PrimitiveKind::Int64: {
-            PUSH_ARRAY(value.IsNumber() || value.IsBigInt(), "number", {
-                int64_t v = GetNumber<int64_t>(value);
-                *(int64_t *)dest = v;
-            });
-        } break;
-        case PrimitiveKind::Int64S: {
-            PUSH_ARRAY(value.IsNumber() || value.IsBigInt(), "number", {
-                int64_t v = GetNumber<int64_t>(value);
-                *(int64_t *)dest = ReverseBytes(v);
-            });
-        } break;
-        case PrimitiveKind::UInt64: {
-            PUSH_ARRAY(value.IsNumber() || value.IsBigInt(), "number", {
-                uint64_t v = GetNumber<uint64_t>(value);
-                *(uint64_t *)dest = v;
-            });
-        } break;
-        case PrimitiveKind::UInt64S: {
-            PUSH_ARRAY(value.IsNumber() || value.IsBigInt(), "number", {
-                uint64_t v = GetNumber<uint64_t>(value);
-                *(uint64_t *)dest = ReverseBytes(v);
-            });
-        } break;
+        case PrimitiveKind::Int8: { PUSH_NUMBERS(int8_t); } break;
+        case PrimitiveKind::UInt8: { PUSH_NUMBERS(uint8_t); } break;
+        case PrimitiveKind::Int16: { PUSH_NUMBERS(int16_t); } break;
+        case PrimitiveKind::Int16S: { PUSH_NUMBERS_SWAP(int16_t); } break;
+        case PrimitiveKind::UInt16: { PUSH_NUMBERS(uint16_t); } break;
+        case PrimitiveKind::UInt16S: { PUSH_NUMBERS_SWAP(uint16_t); } break;
+        case PrimitiveKind::Int32: { PUSH_NUMBERS(int32_t); } break;
+        case PrimitiveKind::Int32S: { PUSH_NUMBERS_SWAP(int32_t); } break;
+        case PrimitiveKind::UInt32: { PUSH_NUMBERS(uint32_t); } break;
+        case PrimitiveKind::UInt32S: { PUSH_NUMBERS_SWAP(uint32_t); } break;
+        case PrimitiveKind::Int64: { PUSH_NUMBERS(int64_t); } break;
+        case PrimitiveKind::Int64S: { PUSH_NUMBERS_SWAP(int64_t); } break;
+        case PrimitiveKind::UInt64: { PUSH_NUMBERS(uint64_t); } break;
+        case PrimitiveKind::UInt64S: { PUSH_NUMBERS_SWAP(uint64_t); } break;
         case PrimitiveKind::String: {
-            PUSH_ARRAY(true, "string", {
+            PUSH_ARRAY({
                 const char *str;
                 if (!PushString(value, 1, &str)) [[unlikely]]
                     return false;
@@ -726,7 +579,7 @@ bool CallData::PushNormalArray(Napi::Array array, const TypeInfo *type, Size siz
             });
         } break;
         case PrimitiveKind::String16: {
-            PUSH_ARRAY(true, "string", {
+            PUSH_ARRAY({
                 const char16_t *str16;
                 if (!PushString16(value, 1, &str16)) [[unlikely]]
                     return false;
@@ -735,7 +588,7 @@ bool CallData::PushNormalArray(Napi::Array array, const TypeInfo *type, Size siz
             });
         } break;
         case PrimitiveKind::String32: {
-            PUSH_ARRAY(true, "string", {
+            PUSH_ARRAY({
                 const char32_t *str32;
                 if (!PushString32(value, 1, &str32)) [[unlikely]]
                     return false;
@@ -744,7 +597,12 @@ bool CallData::PushNormalArray(Napi::Array array, const TypeInfo *type, Size siz
             });
         } break;
         case PrimitiveKind::Pointer: {
-            PUSH_ARRAY(true, ref->name, {
+            PUSH_ARRAY({
+                if (!IsObject(value)) [[unlikely]] {
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected object", GetValueType(instance, value));
+                    return false;
+                }
+
                 void *ptr;
                 if (!PushPointer(value, ref, 1, &ptr)) [[unlikely]]
                     return false;
@@ -754,7 +612,12 @@ bool CallData::PushNormalArray(Napi::Array array, const TypeInfo *type, Size siz
         } break;
         case PrimitiveKind::Record:
         case PrimitiveKind::Union: {
-            PUSH_ARRAY(IsObject(value), "object", {
+            PUSH_ARRAY({
+                if (!IsObject(value)) [[unlikely]] {
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected object", GetValueType(instance, value));
+                    return false;
+                }
+
                 Napi::Object obj2 = value.As<Napi::Object>();
                 if (!PushObject(obj2, ref, dest))
                     return false;
@@ -772,8 +635,7 @@ bool CallData::PushNormalArray(Napi::Array array, const TypeInfo *type, Size siz
                     Napi::Array array2 = value.As<Napi::Array>();
                     if (!PushNormalArray(array2, ref, (Size)ref->size, dest))
                         return false;
-                } else if (IsRawBuffer(value)) {
-                    Span<const uint8_t> buffer = GetRawBuffer(value);
+                } else if (Span<uint8_t> buffer = TryRawBuffer(value); buffer.ptr) {
                     PushBuffer(buffer, ref, dest);
                 } else if (value.IsString()) {
                     if (!PushStringArray(value, ref, dest))
@@ -786,18 +648,8 @@ bool CallData::PushNormalArray(Napi::Array array, const TypeInfo *type, Size siz
                 offset += ref->size;
             }
         } break;
-        case PrimitiveKind::Float32: {
-            PUSH_ARRAY(value.IsNumber() || value.IsBigInt(), "number", {
-                float f = GetNumber<float>(value);
-                *(float *)dest = f;
-            });
-        } break;
-        case PrimitiveKind::Float64: {
-            PUSH_ARRAY(value.IsNumber() || value.IsBigInt(), "number", {
-                double d = GetNumber<double>(value);
-                *(double *)dest = d;
-            });
-        } break;
+        case PrimitiveKind::Float32: { PUSH_NUMBERS(float); } break;
+        case PrimitiveKind::Float64: { PUSH_NUMBERS(double); } break;
         case PrimitiveKind::Callback: {
             for (Size i = 0; i < len; i++) {
                 Napi::Value value = array[(uint32_t)i];
@@ -819,6 +671,8 @@ bool CallData::PushNormalArray(Napi::Array array, const TypeInfo *type, Size siz
         case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;
     }
 
+#undef PUSH_NUMBERS_SWAP
+#undef PUSH_NUMBERS
 #undef PUSH_ARRAY
 
     return true;
@@ -927,7 +781,13 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
             OutArgument::Kind out_kind;
             Size out_max_len = -1;
 
-            if (value.IsArray()) {
+            if (Span<uint8_t> buffer = TryRawBuffer(value); buffer.ptr) {
+                // We can fast path
+                ptr = buffer.ptr;
+                directions = 1;
+
+                out_kind = OutArgument::Kind::Buffer;
+            } else if (value.IsArray()) {
                 Napi::Array array = value.As<Napi::Array>();
                 Size len = PushIndirectString(array, ref, &ptr);
 
@@ -964,14 +824,6 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
 
                     out_kind = OutArgument::Kind::Array;
                 }
-            } else if (IsRawBuffer(value)) {
-                Span<uint8_t> buffer = GetRawBuffer(value);
-
-                // We can fast path
-                ptr = buffer.ptr;
-                directions = 1;
-
-                out_kind = OutArgument::Kind::Buffer;
             } else if (ref->primitive == PrimitiveKind::Record ||
                        ref->primitive == PrimitiveKind::Union) [[likely]] {
                 Napi::Object obj = value.As<Napi::Object>();
@@ -1200,14 +1052,14 @@ bool CallData::CheckDynamicLength(Napi::Object obj, Size element, const char *co
     {
         Napi::Value by = obj.Get(countedby);
 
-        if (!by.IsNumber() && !by.IsBigInt()) [[unlikely]] {
+        if (!TryNumber(by, &expected)) [[unlikely]] {
             ThrowError<Napi::Error>(env, "Unexpected %1 value for dynamic length, expected number", GetValueType(instance, by));
             return false;
         }
 
         // If we get anywhere near overflow there are other problems to worry about.
         // So let's not worry about that.
-        expected = GetNumber<int64_t>(by) * element;
+        expected *= element;
     }
 
     // Get actual size
@@ -1259,9 +1111,9 @@ void CallData::PopOutArguments()
             } break;
 
             case OutArgument::Kind::Buffer: {
-                K_ASSERT(IsRawBuffer(value));
+                Span<uint8_t> buffer = TryRawBuffer(value);
+                K_ASSERT(buffer.len);
 
-                Span<uint8_t> buffer = GetRawBuffer(value);
                 DecodeBuffer(buffer, out.ptr, out.type);
             } break;
 

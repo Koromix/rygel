@@ -98,62 +98,75 @@ static inline bool IsObject(Napi::Value value)
     return value.IsObject() && !IsNullOrUndefined(value) && !value.IsArray();
 }
 
-static inline bool IsRawBuffer(Napi::Value value)
+static inline Span<uint8_t> TryRawBuffer(Napi::Value value)
 {
-    return value.IsTypedArray() || value.IsArrayBuffer();
-}
-
-static inline Span<uint8_t> GetRawBuffer(Napi::Value value)
-{
-    if (value.IsTypedArray()) {
-        napi_typedarray_type type = napi_int8_array;
-        size_t length = 0;
+    // Assume TypedArray, test for ArrayBuffer only if wrong
+    {
         void *ptr = nullptr;
+        size_t length = 0;
 
-        napi_get_typedarray_info(value.Env(), value, &type, &length, &ptr, nullptr, nullptr);
+        napi_status status = napi_get_buffer_info(value.Env(), value, &ptr, &length);
 
-        switch (type) {
-            case napi_int8_array: { length *= 1; } break;
-            case napi_uint8_array: { length *= 1; } break;
-            case napi_uint8_clamped_array: { length *= 1; } break;
-            case napi_int16_array: { length *= 2; } break;
-            case napi_uint16_array: { length *= 2; } break;
-            case napi_int32_array: { length *= 4; } break;
-            case napi_uint32_array: { length *= 4; } break;
-            case napi_float16_array: { length *= 2; } break;
-            case napi_float32_array: { length *= 4; } break;
-            case napi_float64_array: { length *= 8; } break;
-            case napi_bigint64_array: { length *= 8; } break;
-            case napi_biguint64_array: { length *= 8; } break;
-        }
+        if (status == napi_ok)
+            return MakeSpan((uint8_t *)ptr, (Size)length);
+    }
 
-        return MakeSpan((uint8_t *)ptr, (Size)length);
-    } else if (value.IsArrayBuffer()) {
+    if (value.IsArrayBuffer()) {
         Napi::ArrayBuffer buffer = value.As<Napi::ArrayBuffer>();
-
         return MakeSpan((uint8_t *)buffer.Data(), (Size)buffer.ByteLength());
     }
 
-    K_UNREACHABLE();
+    return {};
 }
 
 int GetTypedArrayType(const TypeInfo *type);
 
 template <typename T>
-T GetNumber(Napi::Value value)
+bool TryNumber(Napi::Value value, T *out_value)
 {
     K_ASSERT(value.IsNumber() || value.IsBigInt());
 
-    if (value.IsNumber()) [[likely]] {
-        return (T)value.As<Napi::Number>().DoubleValue();
-    } else if (value.IsBigInt()) {
+    // Assume number first
+    {
+        T v;
+        napi_status status = napi_invalid_arg;
+
+        if constexpr (std::is_same_v<T, double>) {
+            status = napi_get_value_double(value.Env(), value, &v);
+        } else if constexpr (std::is_same_v<T, float>) {
+            double d;
+            status = napi_get_value_double(value.Env(), value, &d);
+            v = (float)d;
+        } else if constexpr (std::is_same_v<T, int64_t>) {
+            status = napi_get_value_int64(value.Env(), value, &v);
+        } else if constexpr (std::is_same_v<T, uint64_t>) {
+            status = napi_get_value_int64(value.Env(), value, (int64_t *)&v);
+        } else if constexpr (std::is_signed_v<T>) {
+            int32_t i32;
+            status = napi_get_value_int32(value.Env(), value, &i32);
+            v = (T)i32;
+        } else {
+            uint32_t u32;
+            status = napi_get_value_uint32(value.Env(), value, &u32);
+            v = (T)u32;
+        }
+
+        if (status == napi_ok) [[likely]] {
+            *out_value = v;
+            return true;
+        }
+    }
+
+    if (value.IsBigInt()) {
         Napi::BigInt bigint = value.As<Napi::BigInt>();
 
         bool lossless;
-        return (T)bigint.Uint64Value(&lossless);
+        *out_value = (T)bigint.Uint64Value(&lossless);
+
+        return true;
     }
 
-    K_UNREACHABLE();
+    return false;
 }
 
 template <typename T>
