@@ -1460,20 +1460,18 @@ Napi::Value Decode(Napi::Env env, const uint8_t *ptr, const TypeInfo *type, cons
 
             memcpy((void *)func, proto, K_SIZE(*proto));
             memset((void *)&func->parameters, 0, K_SIZE(func->parameters));
-            func->parameters = proto->parameters;
+            memset((void *)&func->primitives, 0, K_SIZE(func->primitives));
 
             func->name = "<anonymous>";
             func->native = (void *)ptr;
+            func->parameters = proto->parameters;
+            func->primitives = proto->primitives;
 
             // Fix back parameter offset
             for (ParameterInfo &param: func->parameters) {
                 param.offset -= 2;
             }
             func->required_parameters -= 2;
-
-            // Support branchless push loops
-            func->parameters.Grow(1);
-            func->parameters.ptr[func->parameters.len].type = &FakePrototypeType;
 
             Napi::Function wrapper = WrapFunction(env, func);
             return wrapper;

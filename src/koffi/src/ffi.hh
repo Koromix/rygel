@@ -102,8 +102,6 @@ struct TypeInfo {
     K_HASHTABLE_HANDLER(TypeInfo, name);
 };
 
-extern const TypeInfo FakePrototypeType;
-
 struct RecordMember {
     const char *name;
     const TypeInfo *type;
@@ -190,6 +188,7 @@ struct FunctionInfo {
 
     ParameterInfo ret;
     HeapArray<ParameterInfo> parameters;
+    HeapArray<PrimitiveKind> primitives;
     int8_t required_parameters;
     int8_t out_parameters;
     bool variadic;

@@ -271,11 +271,12 @@ FLATTEN_IF_UNITY bool CallData::Prepare(const FunctionInfo *func, const Napi::Ca
     };
 
     Size i = -1;
-    const ParameterInfo *param = nullptr;
 
  #define DISPATCH() \
-        param = &func->parameters[++i]; \
-        goto *DispatchTable[(int)param->type->primitive];
+        do { \
+            PrimitiveKind next = func->primitives[++i]; \
+            goto *DispatchTable[(int)next]; \
+        } while (false)
 #define PRIMITIVE(Primitive) \
         DISPATCH(); \
         Primitive:
@@ -295,7 +296,8 @@ FLATTEN_IF_UNITY bool CallData::Prepare(const FunctionInfo *func, const Napi::Ca
 #if defined(__APPLE__)
     #define PUSH_INTEGER(CType) \
         do { \
-            Napi::Value value = info[param->offset]; \
+            const ParameterInfo &param = func->parameters[i]; \
+            Napi::Value value = info[param.offset]; \
              \
             CType v; \
             if (!TryNumber(value, &v)) [[unlikely]] { \
@@ -303,17 +305,18 @@ FLATTEN_IF_UNITY bool CallData::Prepare(const FunctionInfo *func, const Napi::Ca
                 return false; \
             } \
              \
-            if (param->gpr_count) [[likely]] { \
+            if (param.gpr_count) [[likely]] { \
                 *(gpr_ptr++) = (uint64_t)v; \
             } else { \
-                args_ptr = AlignUp(args_ptr, param->type->align); \
+                args_ptr = AlignUp(args_ptr, param.type->align); \
                 *args_ptr = (uint64_t)v; \
-                args_ptr = (uint64_t *)((uint8_t *)args_ptr + param->type->size); \
+                args_ptr = (uint64_t *)((uint8_t *)args_ptr + param.type->size); \
             } \
         } while (false)
     #define PUSH_INTEGER_SWAP(CType) \
         do { \
-            Napi::Value value = info[param->offset]; \
+            const ParameterInfo &param = func->parameters[i]; \
+            Napi::Value value = info[param.offset]; \
              \
             CType v; \
             if (!TryNumber(value, &v)) [[unlikely]] { \
@@ -321,18 +324,19 @@ FLATTEN_IF_UNITY bool CallData::Prepare(const FunctionInfo *func, const Napi::Ca
                 return false; \
             } \
              \
-            if (param->gpr_count) [[likely]] { \
+            if (param.gpr_count) [[likely]] { \
                 *(gpr_ptr++) = (uint64_t)ReverseBytes(v); \
             } else { \
-                args_ptr = AlignUp(args_ptr, param->type->align); \
+                args_ptr = AlignUp(args_ptr, param.type->align); \
                 *args_ptr = (uint64_t)ReverseBytes(v); \
-                args_ptr = (uint64_t *)((uint8_t *)args_ptr + param->type->size); \
+                args_ptr = (uint64_t *)((uint8_t *)args_ptr + param.type->size); \
             } \
         } while (false)
 #else
     #define PUSH_INTEGER(CType) \
         do { \
-            Napi::Value value = info[param->offset]; \
+            const ParameterInfo &param = func->parameters[i]; \
+            Napi::Value value = info[param.offset]; \
              \
             CType v; \
             if (!TryNumber(value, &v)) [[unlikely]] { \
@@ -340,11 +344,12 @@ FLATTEN_IF_UNITY bool CallData::Prepare(const FunctionInfo *func, const Napi::Ca
                 return false; \
             } \
              \
-            *((param->gpr_count ? gpr_ptr : args_ptr)++) = (uint64_t)v; \
+            *((param.gpr_count ? gpr_ptr : args_ptr)++) = (uint64_t)v; \
         } while (false)
     #define PUSH_INTEGER_SWAP(CType) \
         do { \
-            Napi::Value value = info[param->offset]; \
+            const ParameterInfo &param = func->parameters[i]; \
+            Napi::Value value = info[param.offset]; \
              \
             CType v; \
             if (!TryNumber(value, &v)) [[unlikely]] { \
@@ -352,7 +357,7 @@ FLATTEN_IF_UNITY bool CallData::Prepare(const FunctionInfo *func, const Napi::Ca
                 return false; \
             } \
              \
-            *((param->gpr_count ? gpr_ptr : args_ptr)++) = (uint64_t)ReverseBytes(v); \
+            *((param.gpr_count ? gpr_ptr : args_ptr)++) = (uint64_t)ReverseBytes(v); \
         } while (false)
 #endif
 
@@ -361,7 +366,8 @@ FLATTEN_IF_UNITY bool CallData::Prepare(const FunctionInfo *func, const Napi::Ca
         PRIMITIVE(Void) { K_UNREACHABLE(); };
 
         PRIMITIVE(Bool) {
-            Napi::Value value = info[param->offset];
+            const ParameterInfo &param = func->parameters[i];
+            Napi::Value value = info[param.offset];
 
             bool b;
             if (napi_get_value_bool(env, value, &b) != napi_ok) [[unlikely]] {
@@ -370,14 +376,14 @@ FLATTEN_IF_UNITY bool CallData::Prepare(const FunctionInfo *func, const Napi::Ca
             }
 
 #if defined(__APPLE__)
-            if (param->gpr_count) [[likely]] {
+            if (param.gpr_count) [[likely]] {
                 *(gpr_ptr++) = (uint64_t)b;
             } else {
                 *(uint8_t *)args_ptr = b;
                 args_ptr = (uint64_t *)((uint8_t *)args_ptr + 1);
             }
 #else
-            *((param->gpr_count ? gpr_ptr : args_ptr)++) = (uint64_t)b;
+            *((param.gpr_count ? gpr_ptr : args_ptr)++) = (uint64_t)b;
 #endif
         };
 
@@ -397,57 +403,62 @@ FLATTEN_IF_UNITY bool CallData::Prepare(const FunctionInfo *func, const Napi::Ca
         PRIMITIVE(UInt64S) { PUSH_INTEGER_SWAP(uint64_t); };
 
         PRIMITIVE(String) {
-            Napi::Value value = info[param->offset];
+            const ParameterInfo &param = func->parameters[i];
+            Napi::Value value = info[param.offset];
 
             const char *str;
-            if (!PushString(value, param->directions, &str)) [[unlikely]]
+            if (!PushString(value, param.directions, &str)) [[unlikely]]
                 return false;
 
 #if defined(__APPLE__)
-            args_ptr = param->gpr_count ? args_ptr : AlignUp(args_ptr, 8);
+            args_ptr = param.gpr_count ? args_ptr : AlignUp(args_ptr, 8);
 #endif
-            *(const char **)((param->gpr_count ? gpr_ptr : args_ptr)++) = str;
+            *(const char **)((param.gpr_count ? gpr_ptr : args_ptr)++) = str;
         };
         PRIMITIVE(String16) {
-            Napi::Value value = info[param->offset];
+            const ParameterInfo &param = func->parameters[i];
+            Napi::Value value = info[param.offset];
 
             const char16_t *str16;
-            if (!PushString16(value, param->directions, &str16)) [[unlikely]]
+            if (!PushString16(value, param.directions, &str16)) [[unlikely]]
                 return false;
 
 #if defined(__APPLE__)
-            args_ptr = param->gpr_count ? args_ptr : AlignUp(args_ptr, 8);
+            args_ptr = param.gpr_count ? args_ptr : AlignUp(args_ptr, 8);
 #endif
-            *(const char16_t **)((param->gpr_count ? gpr_ptr : args_ptr)++) = str16;
+            *(const char16_t **)((param.gpr_count ? gpr_ptr : args_ptr)++) = str16;
         };
         PRIMITIVE(String32) {
-            Napi::Value value = info[param->offset];
+            const ParameterInfo &param = func->parameters[i];
+            Napi::Value value = info[param.offset];
 
             const char32_t *str32;
-            if (!PushString32(value, param->directions, &str32)) [[unlikely]]
+            if (!PushString32(value, param.directions, &str32)) [[unlikely]]
                 return false;
 
 #if defined(__APPLE__)
-            args_ptr = param->gpr_count ? args_ptr : AlignUp(args_ptr, 8);
+            args_ptr = param.gpr_count ? args_ptr : AlignUp(args_ptr, 8);
 #endif
-            *(const char32_t **)((param->gpr_count ? gpr_ptr : args_ptr)++) = str32;
+            *(const char32_t **)((param.gpr_count ? gpr_ptr : args_ptr)++) = str32;
         };
 
         PRIMITIVE(Pointer) {
-            Napi::Value value = info[param->offset];
+            const ParameterInfo &param = func->parameters[i];
+            Napi::Value value = info[param.offset];
 
             void *ptr;
-            if (!PushPointer(value, param->type, param->directions, &ptr)) [[unlikely]]
+            if (!PushPointer(value, param.type, param.directions, &ptr)) [[unlikely]]
                 return false;
 
 #if defined(__APPLE__)
-            args_ptr = param->gpr_count ? args_ptr : AlignUp(args_ptr, 8);
+            args_ptr = param.gpr_count ? args_ptr : AlignUp(args_ptr, 8);
 #endif
-            *(void **)((param->gpr_count ? gpr_ptr : args_ptr)++) = ptr;
+            *(void **)((param.gpr_count ? gpr_ptr : args_ptr)++) = ptr;
         };
 
         PRIMITIVE(Record) {
-            Napi::Value value = info[param->offset];
+            const ParameterInfo &param = func->parameters[i];
+            Napi::Value value = info[param.offset];
 
             if (!IsObject(value)) [[unlikely]] {
                 ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected object", GetValueType(instance, value));
@@ -456,35 +467,35 @@ FLATTEN_IF_UNITY bool CallData::Prepare(const FunctionInfo *func, const Napi::Ca
 
             Napi::Object obj = value.As<Napi::Object>();
 
-            if (param->vec_count) { // HFA
+            if (param.vec_count) { // HFA
                 uint8_t *ptr = (uint8_t *)vec_ptr;
 
-                if (!PushObject(obj, param->type, ptr))
+                if (!PushObject(obj, param.type, ptr))
                     return false;
-                ExpandFloats(ptr, param->vec_count, param->vec_bytes);
+                ExpandFloats(ptr, param.vec_count, param.vec_bytes);
 
-                vec_ptr += param->vec_count;
-            } else if (!param->use_memory) {
-                if (param->gpr_count) {
-                    K_ASSERT(param->type->align <= 8);
+                vec_ptr += param.vec_count;
+            } else if (!param.use_memory) {
+                if (param.gpr_count) {
+                    K_ASSERT(param.type->align <= 8);
 
-                    if (!PushObject(obj, param->type, (uint8_t *)gpr_ptr))
+                    if (!PushObject(obj, param.type, (uint8_t *)gpr_ptr))
                         return false;
-                    gpr_ptr += param->gpr_count;
-                } else if (param->type->size) {
+                    gpr_ptr += param.gpr_count;
+                } else if (param.type->size) {
 #if defined(__APPLE__)
                     args_ptr = AlignUp(args_ptr, 8);
 #endif
-                    if (!PushObject(obj, param->type, (uint8_t *)args_ptr))
+                    if (!PushObject(obj, param.type, (uint8_t *)args_ptr))
                         return false;
-                    args_ptr += (param->type->size + 7) / 8;
+                    args_ptr += (param.type->size + 7) / 8;
                 }
             } else {
-                uint8_t *ptr = AllocHeap(param->type->size, 16);
+                uint8_t *ptr = AllocHeap(param.type->size, 16);
 
-                if (param->gpr_count) {
-                    K_ASSERT(param->gpr_count == 1);
-                    K_ASSERT(param->vec_count == 0);
+                if (param.gpr_count) {
+                    K_ASSERT(param.gpr_count == 1);
+                    K_ASSERT(param.vec_count == 0);
 
                     *(uint8_t **)(gpr_ptr++) = ptr;
                 } else {
@@ -494,7 +505,7 @@ FLATTEN_IF_UNITY bool CallData::Prepare(const FunctionInfo *func, const Napi::Ca
                     *(uint8_t **)(args_ptr++) = ptr;
                 }
 
-                if (!PushObject(obj, param->type, ptr))
+                if (!PushObject(obj, param.type, ptr))
                     return false;
             }
         };
@@ -502,7 +513,8 @@ FLATTEN_IF_UNITY bool CallData::Prepare(const FunctionInfo *func, const Napi::Ca
         PRIMITIVE(Array) { K_UNREACHABLE(); };
 
         PRIMITIVE(Float32) {
-            Napi::Value value = info[param->offset];
+            const ParameterInfo &param = func->parameters[i];
+            Napi::Value value = info[param.offset];
 
             float f;
             if (!TryNumber(value, &f)) [[unlikely]] {
@@ -510,11 +522,11 @@ FLATTEN_IF_UNITY bool CallData::Prepare(const FunctionInfo *func, const Napi::Ca
                 return false;
             }
 
-            if (param->vec_count) [[likely]] {
+            if (param.vec_count) [[likely]] {
                 memset((uint8_t *)vec_ptr + 4, 0, 4);
                 *(float *)(vec_ptr++) = f;
 #if defined(_WIN32)
-            } else if (param->gpr_count) {
+            } else if (param.gpr_count) {
                 memset((uint8_t *)gpr_ptr + 4, 0, 4);
                 *(float *)(gpr_ptr++) = f;
 #endif
@@ -530,7 +542,8 @@ FLATTEN_IF_UNITY bool CallData::Prepare(const FunctionInfo *func, const Napi::Ca
             }
         };
         PRIMITIVE(Float64) {
-            Napi::Value value = info[param->offset];
+            const ParameterInfo &param = func->parameters[i];
+            Napi::Value value = info[param.offset];
 
             double d;
             if (!TryNumber(value, &d)) [[unlikely]] {
@@ -538,10 +551,10 @@ FLATTEN_IF_UNITY bool CallData::Prepare(const FunctionInfo *func, const Napi::Ca
                 return false;
             }
 
-            if (param->vec_count) [[likely]] {
+            if (param.vec_count) [[likely]] {
                 *(double *)(vec_ptr++) = d;
 #if defined(_WIN32)
-            } else if (param->gpr_count) {
+            } else if (param.gpr_count) {
                 *(double *)(gpr_ptr++) = d;
 #endif
             } else {
@@ -553,16 +566,17 @@ FLATTEN_IF_UNITY bool CallData::Prepare(const FunctionInfo *func, const Napi::Ca
         };
 
         PRIMITIVE(Callback) {
-            Napi::Value value = info[param->offset];
+            const ParameterInfo &param = func->parameters[i];
+            Napi::Value value = info[param.offset];
 
             void *ptr;
-            if (!PushCallback(value, param->type, &ptr)) [[unlikely]]
+            if (!PushCallback(value, param.type, &ptr)) [[unlikely]]
                 return false;
 
 #if defined(__APPLE__)
-            args_ptr = param->gpr_count ? args_ptr : AlignUp(args_ptr, 8);
+            args_ptr = param.gpr_count ? args_ptr : AlignUp(args_ptr, 8);
 #endif
-            *(void **)((param->gpr_count ? gpr_ptr : args_ptr)++) = ptr;
+            *(void **)((param.gpr_count ? gpr_ptr : args_ptr)++) = ptr;
         };
 
         PRIMITIVE(Prototype) { /* End loop */ };

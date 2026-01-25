@@ -35,9 +35,6 @@
 
 namespace K {
 
-// Used to mark the end of function parameters
-const TypeInfo FakePrototypeType = { nullptr, PrimitiveKind::Prototype };
-
 SharedData shared;
 
 static thread_local CallData *exec_call;
@@ -1170,15 +1167,19 @@ static Napi::Value CreateFunctionType(const Napi::CallbackInfo &info)
     if (!AnalyseFunction(env, instance, func))
         return env.Null();
 
+    // Branchless push loop
+    for (const ParameterInfo &param: func->parameters) {
+        func->primitives.Append(param.type->primitive);
+    }
+    if (!func->variadic) {
+        func->primitives.Append(PrimitiveKind::Prototype);
+    }
+
     // Adjust parameter offsets for koffi.call()
     for (ParameterInfo &param: func->parameters) {
         param.offset += 2;
     }
     func->required_parameters += 2;
-
-    // Support branchless push loops
-    func->parameters.Grow(1);
-    func->parameters.ptr[func->parameters.len].type = &FakePrototypeType;
 
     // We cannot fail after this check
     if (named && instance->types_map.Find(func->name)) {
@@ -1528,10 +1529,14 @@ FLATTEN_IF_UNITY static Napi::Value TranslateVariadicCall(const FunctionInfo *fu
     memcpy((void *)&copy, func, K_SIZE(*func));
     copy.lib = nullptr;
 
+    Size start_parameters = copy.parameters.len;
+
     // This makes variadic calls non-reentrant
-    K_DEFER_C(len = copy.parameters.len) {
-        copy.parameters.RemoveFrom(len);
+    K_DEFER {
+        copy.parameters.RemoveFrom(start_parameters);
+        copy.primitives.RemoveFrom(start_parameters);
         copy.parameters.Leak();
+        copy.primitives.Leak();
     };
 
     if (info.Length() < (uint32_t)copy.required_parameters) [[unlikely]] {
@@ -1572,9 +1577,12 @@ FLATTEN_IF_UNITY static Napi::Value TranslateVariadicCall(const FunctionInfo *fu
     if (!AnalyseFunction(env, instance, &copy)) [[unlikely]]
         return env.Null();
 
-    // Support branchless push loops
-    copy.parameters.Grow(1);
-    copy.parameters.ptr[copy.parameters.len].type = &FakePrototypeType;
+    // Branchless push loop
+    for (Size i = start_parameters; i < copy.parameters.len; i++) {
+        const ParameterInfo &param = copy.parameters[i];
+        copy.primitives.Append(param.type->primitive);
+    }
+    copy.primitives.Append(PrimitiveKind::Prototype);
 
     InstanceMemory *mem = instance->memories[0];
     CallData call(env, instance, mem);
@@ -1767,9 +1775,16 @@ static Napi::Value FindLibraryFunction(const Napi::CallbackInfo &info)
     if (!AnalyseFunction(env, instance, func))
         return env.Null();
 
-    // Support branchless push loops
-    func->parameters.Grow(func->variadic ? 32 : 1);
-    func->parameters.ptr[func->parameters.len].type = &FakePrototypeType;
+    // Branchless push loop
+    for (const ParameterInfo &param: func->parameters) {
+        func->primitives.Append(param.type->primitive);
+    }
+    if (func->variadic) {
+        func->parameters.Grow(32);
+        func->primitives.Grow(32);
+    } else {
+        func->primitives.Append(PrimitiveKind::Prototype);
+    }
 
 #if defined(_WIN32)
     if (func->ordinal_name < 0) {
