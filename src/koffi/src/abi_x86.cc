@@ -111,7 +111,7 @@ bool AnalyseFunction(Napi::Env env, InstanceData *instance, FunctionInfo *func)
     return true;
 }
 
-FLATTEN_IF_UNITY bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
+bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
 {
     uint32_t *args_ptr = AllocStack<uint32_t>(func->args_size);
     uint32_t *fast_ptr = nullptr;
@@ -293,7 +293,7 @@ FLATTEN_IF_UNITY bool CallData::Prepare(const FunctionInfo *func, const Napi::Ca
     return true;
 }
 
-FLATTEN_IF_UNITY void CallData::Execute(const FunctionInfo *func, void *native)
+void CallData::Execute(const FunctionInfo *func, void *native)
 {
 #if defined(_WIN32)
     TEB *teb = GetTEB();
@@ -383,7 +383,7 @@ FLATTEN_IF_UNITY void CallData::Execute(const FunctionInfo *func, void *native)
 #undef PERFORM_CALL
 }
 
-FLATTEN_IF_UNITY Napi::Value CallData::Complete(const FunctionInfo *func)
+Napi::Value CallData::Complete(const FunctionInfo *func)
 {
     K_DEFER {
        PopOutArguments();

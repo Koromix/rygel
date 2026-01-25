@@ -9,23 +9,6 @@
 
 namespace K {
 
-#if defined(UNITY_BUILD)
-    #if defined(__clang__)
-        #define FLATTEN_IF_UNITY __attribute__((flatten))
-        #define INLINE_IF_UNITY __attribute__((always_inline)) inline
-    #elif defined(_MSC_VER)
-        #define FLATTEN_IF_UNITY
-        #define INLINE_IF_UNITY __forceinline
-    #else
-        // GCC fails in various ways and consumes a lot of memory with these attributes
-        #define FLATTEN_IF_UNITY
-        #define INLINE_IF_UNITY
-    #endif
-#else
-    #define FLATTEN_IF_UNITY
-    #define INLINE_IF_UNITY
-#endif
-
 static const Size DefaultSyncStackSize = Mebibytes(1);
 static const Size DefaultSyncHeapSize = Mebibytes(2);
 static const Size DefaultAsyncStackSize = Kibibytes(128);

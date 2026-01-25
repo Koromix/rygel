@@ -74,9 +74,23 @@ public:
 
     void Dispose();
 
+#if defined(UNITY_BUILD)
+    #if defined(_MSC_VER)
+        #define INLINE_IF_UNITY __forceinline
+    #elif defined(__clang__)
+        #define INLINE_IF_UNITY __attribute__((always_inline)) inline
+    #else
+        #define INLINE_IF_UNITY
+    #endif
+#else
+    #define INLINE_IF_UNITY
+#endif
+
     INLINE_IF_UNITY bool Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info);
     INLINE_IF_UNITY void Execute(const FunctionInfo *func, void *native);
     INLINE_IF_UNITY Napi::Value Complete(const FunctionInfo *func);
+
+#undef INLINE_IF_UNITY
 
     void Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_stack, BackRegisters *out_reg);
     void RelaySafe(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool outside_call, BackRegisters *out_reg);

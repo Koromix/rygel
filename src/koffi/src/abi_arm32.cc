@@ -199,7 +199,7 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
     return true;
 }
 
-FLATTEN_IF_UNITY bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
+bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
 {
     // Unlike other call conventions, here we put the general-purpose registers before the stack, behind the vector ones).
     // In the armv7hf calling convention, some arguments can end up partially in GPR, partially in the stack.
@@ -423,7 +423,7 @@ FLATTEN_IF_UNITY bool CallData::Prepare(const FunctionInfo *func, const Napi::Ca
     return true;
 }
 
-FLATTEN_IF_UNITY void CallData::Execute(const FunctionInfo *func, void *native)
+void CallData::Execute(const FunctionInfo *func, void *native)
 {
 #define PERFORM_CALL(Suffix) \
         ([&]() { \
@@ -474,7 +474,7 @@ FLATTEN_IF_UNITY void CallData::Execute(const FunctionInfo *func, void *native)
 #undef PERFORM_CALL
 }
 
-FLATTEN_IF_UNITY Napi::Value CallData::Complete(const FunctionInfo *func)
+Napi::Value CallData::Complete(const FunctionInfo *func)
 {
     K_DEFER {
        PopOutArguments();
