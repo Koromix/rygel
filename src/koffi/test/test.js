@@ -13,6 +13,8 @@ const TSC_OPTIONS = '--target es2020 --module node16 --allowJs --checkJs --noEmi
 main();
 
 function main() {
+    process.chdir(__dirname);
+
     try {
         if (!test())
             process.exit(1);
