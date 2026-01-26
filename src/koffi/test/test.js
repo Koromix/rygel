@@ -28,28 +28,43 @@ function test() {
     let scripts = {};
     let success = true;
 
-    scripts.Sync = 'sync.js';
-    scripts.Async = 'async.js';
-    scripts.Callbacks = 'callbacks.js';
-    scripts.Union = 'union.js';
+    scripts['Sync'] = ['sync.js'];
+    scripts['Sync (fast pointers)'] = ['sync.js', '--fast_pointers'];
+    scripts['Async'] = ['async.js'];
+    scripts['Callbacks'] = ['callbacks.js'];
+    scripts['Union'] = ['union.js'];
     if (process.platform != 'win32' && process.platform != 'darwin')
-        scripts.POSIX = 'posix.js';
+        scripts['POSIX'] = ['posix.js'];
     if (process.platform == 'win32' && process.env.MSYSTEM == null)
-        scripts.Win32 = 'win32.js';
+        scripts['Win32'] = ['win32.js'];
     if (process.platform != 'darwin')
-        scripts.Raylib = 'raylib.js';
-    scripts.SQLite = 'sqlite.js';
+        scripts['Raylib'] = ['raylib.js'];
+    scripts['SQLite'] = ['sqlite.js'];
 
     for (let key in scripts) {
-        let filename = path.join(__dirname, scripts[key]);
-        success &= run('Test', key, [filename]);
+        let script = scripts[key][0];
+        let args = scripts[key].slice(1);
+
+        let filename = path.join(__dirname, script);
+        success &= run('Test', key, [filename, ...args]);
     }
 
-    for (let key in scripts) {
-        let filename = path.join(__dirname, scripts[key]);
-        let args = ['../../../vendor/typescript/tsc', ...TSC_OPTIONS, filename];
+    // Make sure tests compile in TypeScript mode
+    {
+        let tested = new Set;
 
-        success &= run('TypeScript', key, args);
+        for (let key in scripts) {
+            let script = scripts[key][0];
+
+            if (tested.has(script))
+                continue;
+            tested.add(script);
+
+            let filename = path.join(__dirname, script);
+            let args = ['../../../vendor/typescript/tsc', ...TSC_OPTIONS, filename];
+
+            success &= run('TypeScript', key, args);
+        }
     }
 
     return success;

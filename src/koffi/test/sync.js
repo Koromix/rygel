@@ -8,6 +8,9 @@ const path = require('path');
 const util = require('util');
 const { cnoke } = require('./package.json');
 
+let fast_pointers = process.argv.slice(2).includes('--fast_pointers');
+koffi.config({ fast_pointers: fast_pointers, fast_callbacks: fast_pointers });
+
 // We need to change this on Windows because the DLL CRT might
 // not (probably not) match the one used by Node.js!
 let free_ptr = koffi.free;
@@ -665,7 +668,11 @@ async function test() {
         UpperToInternalBuffer2('BoNjOuR MoNdE', ptr2);
 
         assert.equal(ptr1[0], 'HELLO WORLD')
-        assert.ok(util.types.isExternal(ptr2[0]));
+        if (fast_pointers) {
+            assert.ok(typeof ptr2[0] == 'bigint');
+        } else {
+            assert.ok(util.types.isExternal(ptr2[0]));
+        }
         assert.equal(koffi.decode(ptr2[0], 'char', -1), 'BONJOUR MONDE');
 
         let view = Buffer.from(koffi.view(ptr2[0], 7));
