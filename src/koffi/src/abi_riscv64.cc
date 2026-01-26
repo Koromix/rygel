@@ -159,20 +159,21 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
         *(uint8_t **)(gpr_ptr++) = return_ptr;
     }
 
+    Size i = -1;
+
     static const void *const DispatchTable[] = {
         #define PRIMITIVE(Name) && Name,
         #include "primitives.inc"
     };
 
-    Size i = -1;
-
- #define DISPATCH() \
+#define LOOP
+#define CASE(Primitive) \
         do { \
             PrimitiveKind next = func->primitives[++i]; \
             goto *DispatchTable[(int)next]; \
-        } while (false)
-#define PRIMITIVE(Primitive) \
-        DISPATCH(); \
+        } while (false); \
+        Primitive:
+#define OR(Primitive) \
         Primitive:
 
 #define PUSH_INTEGER(CType) \
@@ -203,10 +204,10 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
         } while (false)
 
     // Push arguments
-    {
-        PRIMITIVE(Void) { K_UNREACHABLE(); };
+    LOOP {
+        CASE(Void) { K_UNREACHABLE(); };
 
-        PRIMITIVE(Bool) {
+        CASE(Bool) {
             const ParameterInfo &param = func->parameters[i];
             Napi::Value value = info[param.offset];
 
@@ -219,22 +220,22 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
             *((param.gpr_count ? gpr_ptr : args_ptr)++) = (uint64_t)b;
         };
 
-        PRIMITIVE(Int8) { PUSH_INTEGER(int8_t); };
-        PRIMITIVE(UInt8) { PUSH_INTEGER(uint8_t); };
-        PRIMITIVE(Int16) { PUSH_INTEGER(int16_t); };
-        PRIMITIVE(Int16S) { PUSH_INTEGER_SWAP(int16_t); };
-        PRIMITIVE(UInt16) { PUSH_INTEGER(uint16_t); };
-        PRIMITIVE(UInt16S) { PUSH_INTEGER_SWAP(uint16_t); };
-        PRIMITIVE(Int32) { PUSH_INTEGER(int32_t); };
-        PRIMITIVE(Int32S) { PUSH_INTEGER_SWAP(int32_t); };
-        PRIMITIVE(UInt32) { PUSH_INTEGER(uint32_t); };
-        PRIMITIVE(UInt32S) { PUSH_INTEGER_SWAP(uint32_t); };
-        PRIMITIVE(Int64) { PUSH_INTEGER(int64_t); };
-        PRIMITIVE(Int64S) { PUSH_INTEGER_SWAP(int64_t); };
-        PRIMITIVE(UInt64) { PUSH_INTEGER(uint64_t); };
-        PRIMITIVE(UInt64S) { PUSH_INTEGER_SWAP(uint64_t); };
+        CASE(Int8) { PUSH_INTEGER(int8_t); };
+        CASE(UInt8) { PUSH_INTEGER(uint8_t); };
+        CASE(Int16) { PUSH_INTEGER(int16_t); };
+        CASE(Int16S) { PUSH_INTEGER_SWAP(int16_t); };
+        CASE(UInt16) { PUSH_INTEGER(uint16_t); };
+        CASE(UInt16S) { PUSH_INTEGER_SWAP(uint16_t); };
+        CASE(Int32) { PUSH_INTEGER(int32_t); };
+        CASE(Int32S) { PUSH_INTEGER_SWAP(int32_t); };
+        CASE(UInt32) { PUSH_INTEGER(uint32_t); };
+        CASE(UInt32S) { PUSH_INTEGER_SWAP(uint32_t); };
+        CASE(Int64) { PUSH_INTEGER(int64_t); };
+        CASE(Int64S) { PUSH_INTEGER_SWAP(int64_t); };
+        CASE(UInt64) { PUSH_INTEGER(uint64_t); };
+        CASE(UInt64S) { PUSH_INTEGER_SWAP(uint64_t); };
 
-        PRIMITIVE(String) {
+        CASE(String) {
             const ParameterInfo &param = func->parameters[i];
             Napi::Value value = info[param.offset];
 
@@ -244,7 +245,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
 
             *(const char **)((param.gpr_count ? gpr_ptr : args_ptr)++) = str;
         };
-        PRIMITIVE(String16) {
+        CASE(String16) {
             const ParameterInfo &param = func->parameters[i];
             Napi::Value value = info[param.offset];
 
@@ -254,7 +255,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
 
             *(const char16_t **)((param.gpr_count ? gpr_ptr : args_ptr)++) = str16;
         };
-        PRIMITIVE(String32) {
+        CASE(String32) {
             const ParameterInfo &param = func->parameters[i];
             Napi::Value value = info[param.offset];
 
@@ -265,7 +266,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
             *(const char32_t **)((param.gpr_count ? gpr_ptr : args_ptr)++) = str32;
         };
 
-        PRIMITIVE(Pointer) {
+        CASE(Pointer) {
             const ParameterInfo &param = func->parameters[i];
             Napi::Value value = info[param.offset];
 
@@ -276,7 +277,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
             *(void **)((param.gpr_count ? gpr_ptr : args_ptr)++) = ptr;
         };
 
-        PRIMITIVE(Record) {
+        CASE(Record) OR(Union) {
             const ParameterInfo &param = func->parameters[i];
             Napi::Value value = info[param.offset];
 
@@ -336,10 +337,9 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
                     return false;
             }
         };
-        PRIMITIVE(Union) goto Record;
-        PRIMITIVE(Array) { K_UNREACHABLE(); };
+        CASE(Array) { K_UNREACHABLE(); };
 
-        PRIMITIVE(Float32) {
+        CASE(Float32) {
             const ParameterInfo &param = func->parameters[i];
             Napi::Value value = info[param.offset];
 
@@ -360,7 +360,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
                 *(float *)(args_ptr++) = f;
             }
         };
-        PRIMITIVE(Float64) {
+        CASE(Float64) {
             const ParameterInfo &param = func->parameters[i];
             Napi::Value value = info[param.offset];
 
@@ -379,7 +379,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
             }
         };
 
-        PRIMITIVE(Callback) {
+        CASE(Callback) {
             const ParameterInfo &param = func->parameters[i];
             Napi::Value value = info[param.offset];
 
@@ -390,14 +390,15 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
             *(void **)((param.gpr_count ? gpr_ptr : args_ptr)++) = ptr;
         };
 
-        PRIMITIVE(Prototype) { /* End loop */ };
+        CASE(Prototype) { /* End loop */ };
     }
 
 #undef PUSH_INTEGER_SWAP
 #undef PUSH_INTEGER
 
-#undef PRIMITIVE
-#undef DISPATCH
+#undef OR
+#undef CASE
+#undef LOOP
 
     new_sp = mem->stack.end();
 
