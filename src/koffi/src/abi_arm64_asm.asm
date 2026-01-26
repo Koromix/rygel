@@ -108,35 +108,13 @@ ForwardCallXDDDD PROC
     EXTERN RelayCallback
     EXPORT CallSwitchStack
 
-    ; First, make a copy of the GPR argument registers (x0 to x7).
+    ; First, make a copy of the argument registers.
     ; Then call the C function RelayCallback with the following arguments:
     ; static trampoline ID, a pointer to the saved GPR array, a pointer to the stack
     ; arguments of this call, and a pointer to a struct that will contain the result registers.
     ; After the call, simply load these registers from the output struct.
     MACRO
     trampoline $ID
-
-    stp x29, x30, [sp, -16]!
-    sub sp, sp, #192
-    stp x0, x1, [sp, 0]
-    stp x2, x3, [sp, 16]
-    stp x4, x5, [sp, 32]
-    stp x6, x7, [sp, 48]
-    str x8, [sp, 64]
-    mov x0, $ID
-    mov x1, sp
-    add x2, sp, #208
-    add x3, sp, #136
-    bl RelayCallback
-    ldp x0, x1, [sp, 136]
-    add sp, sp, #192
-    ldp x29, x30, [sp], 16
-    ret
-    MEND
-
-    ; Same thing, but also forwards the floating-point argument registers and loads them at the end.
-    MACRO
-    trampoline_vec $ID
 
     stp x29, x30, [sp, -16]!
     sub sp, sp, #192

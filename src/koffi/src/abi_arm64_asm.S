@@ -114,43 +114,12 @@ SYMBOL(ForwardCallXDDDD):
 .global SYMBOL(RelayCallback)
 .global SYMBOL(CallSwitchStack)
 
-# First, make a copy of the GPR argument registers (x0 to x7).
+# First, make a copy of the argument registers.
 # Then call the C function RelayCallback with the following arguments:
 # static trampoline ID, a pointer to the saved GPR array, a pointer to the stack
 # arguments of this call, and a pointer to a struct that will contain the result registers.
 # After the call, simply load these registers from the output struct.
 .macro trampoline id
-    .cfi_startproc
-    hint #34
-    stp x29, x30, [sp, -16]!
-    .cfi_def_cfa sp, 16
-    .cfi_offset 29, 16
-    .cfi_offset 30, 8
-    sub sp, sp, #192
-    .cfi_def_cfa sp, 208
-    stp x0, x1, [sp, 0]
-    stp x2, x3, [sp, 16]
-    stp x4, x5, [sp, 32]
-    stp x6, x7, [sp, 48]
-    str x8, [sp, 64]
-    mov x0, \id
-    mov x1, sp
-    add x2, sp, #208
-    add x3, sp, #136
-    bl SYMBOL(RelayCallback)
-    ldp x0, x1, [sp, 136]
-    add sp, sp, #192
-    .cfi_def_cfa sp, 16
-    ldp x29, x30, [sp], 16
-    .cfi_def_cfa sp, 0
-    .cfi_restore 30
-    .cfi_restore 29
-    ret
-    .cfi_endproc
-.endm
-
-# Same thing, but also forwards the floating-point argument registers and loads them at the end.
-.macro trampoline_vec id
     .cfi_startproc
     hint #34
     stp x29, x30, [sp, -16]!

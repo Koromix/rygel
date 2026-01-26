@@ -103,32 +103,12 @@ ForwardCallXD endp
 extern RelayCallback : PROC
 public CallSwitchStack
 
-; First, make a copy of the GPR argument registers (rcx, rdx, r8, r9).
+; First, make a copy of argument registers.
 ; Then call the C function RelayCallback with the following arguments:
 ; static trampoline ID, a pointer to the saved GPR array, a pointer to the stack
 ; arguments of this call, and a pointer to a struct that will contain the result registers.
 ; After the call, simply load these registers from the output struct.
 trampoline macro ID
-    endbr64
-    sub rsp, 120
-    .allocstack 120
-    .endprolog
-    mov qword ptr [rsp+32], rcx
-    mov qword ptr [rsp+40], rdx
-    mov qword ptr [rsp+48], r8
-    mov qword ptr [rsp+56], r9
-    mov rcx, ID
-    lea rdx, qword ptr [rsp+32]
-    lea r8, qword ptr [rsp+160]
-    lea r9, qword ptr [rsp+96]
-    call RelayCallback
-    mov rax, qword ptr [rsp+96]
-    add rsp, 120
-    ret
-endm
-
-; Same thing, but also forward the XMM argument registers and load the XMM result registers.
-trampoline_vec macro ID
     endbr64
     sub rsp, 120
     .allocstack 120

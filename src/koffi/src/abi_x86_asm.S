@@ -90,6 +90,7 @@ ForwardCallRD:
 # Depending on ABI, call convention and return value size, we need to issue ret <something>. Since ret
 # only takes an immediate value, and I prefer not to branch, the return address is moved instead according
 # to BackRegisters::ret_pop before ret is issued.
+# We need to branch at the end to avoid x87 stack imbalance.
 .macro trampoline id
     .cfi_startproc
     .cfi_def_cfa esp, 4
@@ -108,36 +109,16 @@ ForwardCallRD:
     movl 44(%esp), %edx
     movl 36(%esp), %ecx
     movl %edx, 44(%esp, %ecx)
+    cmpl $1, 32(%esp)
+    je 1f
+    cmpl $2, 32(%esp)
+    je 2f
+0:
     movl 16(%esp), %eax
     movl 20(%esp), %edx
     leal 44(%esp, %ecx), %esp
     .cfi_def_cfa esp, 4
     ret
-    .cfi_endproc
-.endm
-
-# This version also loads the x87 stack with the result, if need be.
-# We have to branch to avoid x87 stack imbalance.
-.macro trampoline_vec id
-    .cfi_startproc
-    .cfi_def_cfa esp, 4
-    ENDBR32
-    sub $44, %esp
-    .cfi_def_cfa esp, 48
-    movl $\id, 0(%esp)
-    movl %esp, 4(%esp)
-    leal 48(%esp), %eax
-    movl %eax, 8(%esp)
-    leal 16(%esp), %eax
-    movl %eax, 12(%esp)
-    call GetEIP
-    addl $_GLOBAL_OFFSET_TABLE_, %ecx
-    call *RelayCallback@GOT(%ecx)
-    movl 44(%esp), %edx
-    movl 36(%esp), %ecx
-    movl %edx, 44(%esp, %ecx, 4)
-    cmpb $0, 32(%esp)
-    jne 2f
 1:
     flds 24(%esp)
     leal 44(%esp, %ecx), %esp

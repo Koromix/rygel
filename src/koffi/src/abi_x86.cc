@@ -22,7 +22,7 @@ struct BackRegisters {
         double d;
         float f;
     } x87;
-    bool x87_double;
+    int ret_type;
     int ret_pop;
 };
 
@@ -477,7 +477,7 @@ void CallData::Relay(Size idx, uint8_t *, uint8_t *caller_sp, bool switch_stack,
     K_DEFER_N(err_guard) {
         int pop = out_reg->ret_pop;
         memset(out_reg, 0, K_SIZE(*out_reg));
-        out_reg->x87_double = true;
+        out_reg->ret_type = 0;
         out_reg->ret_pop = pop;
     };
 
@@ -696,6 +696,7 @@ void CallData::Relay(Size idx, uint8_t *, uint8_t *caller_sp, bool switch_stack,
             } \
              \
             out_reg->eax = (uint32_t)v; \
+            out_reg->ret_type = 0; \
         } while (false)
 #define RETURN_INTEGER_32_SWAP(CType) \
         do { \
@@ -706,6 +707,7 @@ void CallData::Relay(Size idx, uint8_t *, uint8_t *caller_sp, bool switch_stack,
             } \
              \
             out_reg->eax = (uint32_t)ReverseBytes(v); \
+            out_reg->ret_type = 0; \
         } while (false)
 #define RETURN_INTEGER_64(CType) \
         do { \
@@ -717,6 +719,7 @@ void CallData::Relay(Size idx, uint8_t *, uint8_t *caller_sp, bool switch_stack,
              \
             out_reg->eax = (uint32_t)((uint64_t)v >> 32); \
             out_reg->edx = (uint32_t)((uint64_t)v & 0xFFFFFFFFu); \
+            out_reg->ret_type = 0; \
         } while (false)
 #define RETURN_INTEGER_64_SWAP(CType) \
         do { \
@@ -728,10 +731,11 @@ void CallData::Relay(Size idx, uint8_t *, uint8_t *caller_sp, bool switch_stack,
              \
             out_reg->eax = (uint32_t)((uint64_t)v >> 32); \
             out_reg->edx = (uint32_t)((uint64_t)v & 0xFFFFFFFFu); \
+            out_reg->ret_type = 0; \
         } while (false)
 
     switch (type->primitive) {
-        case PrimitiveKind::Void: {} break;
+        case PrimitiveKind::Void: { out_reg->ret_type = 0; } break;
         case PrimitiveKind::Bool: {
             bool b;
             if (napi_get_value_bool(env, value, &b) != napi_ok) [[unlikely]] {
@@ -740,6 +744,7 @@ void CallData::Relay(Size idx, uint8_t *, uint8_t *caller_sp, bool switch_stack,
             }
 
             out_reg->eax = (uint32_t)b;
+            out_reg->ret_type = 0;
         } break;
         case PrimitiveKind::Int8: { RETURN_INTEGER_32(int8_t); } break;
         case PrimitiveKind::UInt8: { RETURN_INTEGER_32(uint8_t); } break;
@@ -761,6 +766,7 @@ void CallData::Relay(Size idx, uint8_t *, uint8_t *caller_sp, bool switch_stack,
                 return;
 
             out_reg->eax = (uint32_t)str;
+            out_reg->ret_type = 0;
         } break;
         case PrimitiveKind::String16: {
             const char16_t *str16;
@@ -768,6 +774,7 @@ void CallData::Relay(Size idx, uint8_t *, uint8_t *caller_sp, bool switch_stack,
                 return;
 
             out_reg->eax = (uint32_t)str16;
+            out_reg->ret_type = 0;
         } break;
         case PrimitiveKind::String32: {
             const char32_t *str32;
@@ -775,6 +782,7 @@ void CallData::Relay(Size idx, uint8_t *, uint8_t *caller_sp, bool switch_stack,
                 return;
 
             out_reg->eax = (uint32_t)str32;
+            out_reg->ret_type = 0;
         } break;
         case PrimitiveKind::Pointer: {
             void *ptr;
@@ -782,6 +790,7 @@ void CallData::Relay(Size idx, uint8_t *, uint8_t *caller_sp, bool switch_stack,
                 return;
 
             out_reg->eax = (uint32_t)ptr;
+            out_reg->ret_type = 0;
         } break;
         case PrimitiveKind::Record:
         case PrimitiveKind::Union: {
@@ -799,6 +808,8 @@ void CallData::Relay(Size idx, uint8_t *, uint8_t *caller_sp, bool switch_stack,
             } else {
                 PushObject(obj, type, (uint8_t *)&out_reg->eax);
             }
+
+            out_reg->ret_type = 0;
         } break;
         case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
         case PrimitiveKind::Float32: {
@@ -809,7 +820,7 @@ void CallData::Relay(Size idx, uint8_t *, uint8_t *caller_sp, bool switch_stack,
             }
 
             out_reg->x87.f = f;
-            out_reg->x87_double = false;
+            out_reg->ret_type = 1;
         } break;
         case PrimitiveKind::Float64: {
             double d;
@@ -819,7 +830,7 @@ void CallData::Relay(Size idx, uint8_t *, uint8_t *caller_sp, bool switch_stack,
             }
 
             out_reg->x87.d = d;
-            out_reg->x87_double = true;
+            out_reg->ret_type = 2;
         } break;
         case PrimitiveKind::Callback: {
             void *ptr;
@@ -827,6 +838,7 @@ void CallData::Relay(Size idx, uint8_t *, uint8_t *caller_sp, bool switch_stack,
                 return;
 
             out_reg->eax = (uint32_t)ptr;
+            out_reg->ret_type = 0;
         } break;
 
         case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;

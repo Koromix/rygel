@@ -89,7 +89,10 @@ public CallSwitchStack
 ; Depending on ABI, call convention and return value size, we need to issue ret <something>. Since ret
 ; only takes an immediate value, and I prefer not to branch, the return address is moved instead according
 ; to BackRegisters::ret_pop before ret is issued.
+; We need to branch at the end to avoid x87 stack imbalance.
 trampoline macro ID
+    local l0, l1, l2
+
     endbr32
     sub esp, 44
     mov dword ptr [esp+0], ID
@@ -102,31 +105,15 @@ trampoline macro ID
     mov edx, dword ptr [esp+44]
     mov ecx, dword ptr [esp+36]
     mov dword ptr [esp+ecx+44], edx
+    cmp dword ptr [esp+32], 1
+    je l1
+    cmp dword ptr [esp+32], 2
+    je l2
+l0:
     mov eax, dword ptr [esp+16]
     mov edx, dword ptr [esp+20]
-    lea esp, [esp+ecx+44]
+    lea esp, dword ptr [esp+ecx+44]
     ret
-endm
-
-; This version also loads the x87 stack with the result, if need be.
-; We have to branch to avoid x87 stack imbalance.
-trampoline_vec macro ID
-    local l1, l2, l3
-
-    endbr32
-    sub esp, 44
-    mov dword ptr [esp+0], ID
-    mov dword ptr [esp+4], esp
-    lea eax, dword ptr [esp+48]
-    mov dword ptr [esp+8], eax
-    lea eax, dword ptr [esp+16]
-    mov dword ptr [esp+12], eax
-    call RelayCallback
-    mov edx, dword ptr [esp+44]
-    mov ecx, dword ptr [esp+36]
-    mov dword ptr [esp+ecx+44], edx
-    cmp byte ptr [esp+32], 0
-    jne l2
 l1:
     fld dword ptr [esp+24]
     lea esp, dword ptr [esp+ecx+44]
