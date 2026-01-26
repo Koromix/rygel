@@ -146,8 +146,6 @@ int GetTypedArrayType(const TypeInfo *type);
 template <typename T>
 bool TryNumber(Napi::Value value, T *out_value)
 {
-    K_ASSERT(value.IsNumber() || value.IsBigInt());
-
     // Assume number first
     {
         T v;
