@@ -148,42 +148,12 @@ SYMBOL(ForwardCallXDD):
 .global SYMBOL(RelayCallback)
 .global SYMBOL(CallSwitchStack)
 
-# First, make a copy of the GPR argument registers (rdi, rsi, rdx, rcx, r8, r9).
+# First, make a copy of argument registers.
 # Then call the C function RelayCallback with the following arguments:
 # static trampoline ID, a pointer to the saved GPR array, a pointer to the stack
 # arguments of this call, and a pointer to a struct that will contain the result registers.
 # After the call, simply load these registers from the output struct.
 .macro trampoline id
-    .cfi_startproc
-    .cfi_def_cfa rsp, 8
-    ENDBR64
-    subq $152, %rsp
-    .cfi_def_cfa rsp, 160
-    movq %rdi, 0(%rsp)
-    movq %rsi, 8(%rsp)
-    movq %rdx, 16(%rsp)
-    movq %rcx, 24(%rsp)
-    movq %r8, 32(%rsp)
-    movq %r9, 40(%rsp)
-    movq $\id, %rdi
-    movq %rsp, %rsi
-    leaq 160(%rsp), %rdx
-    leaq 112(%rsp), %rcx
-#if defined(__linux__)
-    call *RelayCallback@GOTPCREL(%rip)
-#else
-    call SYMBOL(RelayCallback)
-#endif
-    movq 112(%rsp), %rax
-    movq 120(%rsp), %rdx
-    addq $152, %rsp
-    .cfi_def_cfa rsp, 8
-    ret
-    .cfi_endproc
-.endm
-
-# Same thing, but also forward the XMM argument registers and load the XMM result registers.
-.macro trampoline_vec id
     .cfi_startproc
     .cfi_def_cfa rsp, 8
     ENDBR64

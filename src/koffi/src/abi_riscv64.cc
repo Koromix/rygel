@@ -52,8 +52,6 @@ extern "C" napi_value CallSwitchStack(Napi::Function *func, size_t argc, napi_va
                                       uint8_t *old_sp, Span<uint8_t> *new_stack,
                                       napi_value (*call)(Napi::Function *func, size_t argc, napi_value *argv));
 
-#include "trampolines/prototypes.inc"
-
 static inline void ExpandPair(const uint8_t raw[16], int size1, int size2, uint64_t out_regs[2])
 {
     memcpy(out_regs + 0, raw, size1);
@@ -954,12 +952,6 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
 #undef RETURN_INTEGER
 
     err_guard.Disable();
-}
-
-void *GetTrampoline(int16_t idx, const FunctionInfo *proto)
-{
-    bool fp = proto->forward_fp || proto->ret.vec_count;
-    return Trampolines[idx][fp];
 }
 
 }

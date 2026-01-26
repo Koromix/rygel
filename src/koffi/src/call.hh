@@ -177,6 +177,6 @@ inline T *CallData::AllocHeap(Size size, Size align)
     }
 }
 
-void *GetTrampoline(int16_t idx, const FunctionInfo *proto);
+void *GetTrampoline(int16_t idx);
 
 }

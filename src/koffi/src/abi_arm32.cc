@@ -42,8 +42,6 @@ extern "C" napi_value CallSwitchStack(Napi::Function *func, size_t argc, napi_va
                                       uint8_t *old_sp, Span<uint8_t> *new_stack,
                                       napi_value (*call)(Napi::Function *func, size_t argc, napi_value *argv));
 
-#include "trampolines/prototypes.inc"
-
 static int IsHFA(const TypeInfo *type)
 {
 #if defined(__ARM_PCS_VFP)
@@ -1001,12 +999,6 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
 #undef RETURN_INTEGER_32
 
     err_guard.Disable();
-}
-
-void *GetTrampoline(int16_t idx, const FunctionInfo *proto)
-{
-    bool vec = proto->forward_fp || IsFloat(proto->ret.type);
-    return Trampolines[idx][vec];
 }
 
 }

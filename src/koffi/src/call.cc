@@ -24,6 +24,8 @@ struct RelayContext {
     bool done = false;
 };
 
+#include "trampolines/prototypes.inc"
+
 CallData::CallData(Napi::Env env, InstanceData *instance, InstanceMemory *mem)
     : env(env), instance(instance),
       mem(mem), old_stack_mem(mem->stack), old_heap_mem(mem->heap)
@@ -1012,7 +1014,7 @@ void *CallData::ReserveTrampoline(const FunctionInfo *proto, Napi::Function func
     trampoline->recv.Reset();
     trampoline->generation = (int32_t)mem->generation;
 
-    void *ptr = GetTrampoline(idx, proto);
+    void *ptr = GetTrampoline(idx);
 
     return ptr;
 }
@@ -1159,6 +1161,11 @@ void CallData::PopOutArguments()
             } break;
         }
     }
+}
+
+void *GetTrampoline(int16_t idx)
+{
+    return Trampolines[idx];
 }
 
 }

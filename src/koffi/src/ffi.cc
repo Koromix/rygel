@@ -2057,7 +2057,7 @@ static Napi::Value RegisterCallback(const Napi::CallbackInfo &info)
     }
     trampoline->generation = -1;
 
-    void *ptr = GetTrampoline(idx, type->ref.proto);
+    void *ptr = GetTrampoline(idx);
 
     Napi::External<void> external = Napi::External<void>::New(env, ptr);
     SetValueTag(external, type->ref.marker);

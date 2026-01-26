@@ -29,8 +29,6 @@ extern "C" napi_value CallSwitchStack(Napi::Function *func, size_t argc, napi_va
                                       uint8_t *old_sp, Span<uint8_t> *new_stack,
                                       napi_value (*call)(Napi::Function *func, size_t argc, napi_value *argv));
 
-#include "trampolines/prototypes.inc"
-
 bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
 {
     func->ret.regular = IsRegularSize(func->ret.type->size, 8);
@@ -737,12 +735,6 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
 #undef RETURN_INTEGER
 
     err_guard.Disable();
-}
-
-void *GetTrampoline(int16_t idx, const FunctionInfo *proto)
-{
-    bool xmm = proto->forward_fp || IsFloat(proto->ret.type);
-    return Trampolines[idx][xmm];
 }
 
 }
