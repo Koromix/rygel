@@ -169,8 +169,8 @@ export function errno(value: number): number;
 
 export function reset(): void;
 
-export const internal: Boolean;
-export const extension: String;
+export const internal: boolean;
+export const extension: string;
 
 export const os: {
     errno: Record<string, number>
