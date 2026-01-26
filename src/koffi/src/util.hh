@@ -98,51 +98,6 @@ static inline bool IsObject(Napi::Value value)
     return value.IsObject() && !IsNullOrUndefined(value) && !value.IsArray();
 }
 
-static inline uint8_t *TryRawPointer(Napi::Value value)
-{
-    // Assume TypedArray, test for ArrayBuffer only if wrong
-    {
-        void *ptr = nullptr;
-        napi_status status = napi_get_typedarray_info(value.Env(), value, nullptr, nullptr, &ptr, nullptr, nullptr);
-
-        if (status == napi_ok)
-            return (uint8_t *)ptr;
-    }
-
-    if (value.IsArrayBuffer()) {
-        Napi::ArrayBuffer buffer = value.As<Napi::ArrayBuffer>();
-        return (uint8_t *)buffer.Data();
-    }
-
-    return nullptr;
-}
-
-static inline Span<uint8_t> TryRawBuffer(Napi::Value value)
-{
-    // Before somewhere around Node 20.12, napi_get_buffer_info() would assert/crash
-    // when used with something it did not support, instead of returning napi_invalid_arg.
-    // So we need to call napi_is_buffer(), at least for now.
-
-    if (value.IsBuffer()) {
-        void *ptr = nullptr;
-        size_t length = 0;
-
-        // Assume it works
-        napi_get_buffer_info(value.Env(), value, &ptr, &length);
-
-        return MakeSpan((uint8_t *)ptr, (Size)length);
-    }
-
-    if (value.IsArrayBuffer()) {
-        Napi::ArrayBuffer buffer = value.As<Napi::ArrayBuffer>();
-        return MakeSpan((uint8_t *)buffer.Data(), (Size)buffer.ByteLength());
-    }
-
-    return {};
-}
-
-int GetTypedArrayType(const TypeInfo *type);
-
 template <typename T>
 bool TryNumber(Napi::Value value, T *out_value)
 {
@@ -188,6 +143,59 @@ bool TryNumber(Napi::Value value, T *out_value)
 
     return false;
 }
+
+static inline bool TryPointer(Napi::Value value, void **out_ptr)
+{
+    if (IsNullOrUndefined(value)) {
+        *out_ptr = nullptr;
+        return true;
+    } else if (uintptr_t ptr = 0; TryNumber(value, &ptr)) {
+        *out_ptr = (void *)ptr;
+        return true;
+    } else if (value.IsTypedArray()) {
+        napi_get_typedarray_info(value.Env(), value, nullptr, nullptr, out_ptr, nullptr, nullptr);
+        return true;
+    } else if (value.IsExternal()) {
+        Napi::External<void> external = value.As<Napi::External<void>>();
+
+        *out_ptr = (void *)external.Data();
+        return true;
+    } else if (value.IsArrayBuffer()) {
+        Napi::ArrayBuffer buffer = value.As<Napi::ArrayBuffer>();
+
+        *out_ptr = (void *)buffer.Data();
+        return true;
+    }
+
+    return false;
+}
+
+static inline bool TryBuffer(Napi::Value value, Span<uint8_t> *out_buffer)
+{
+    // Before somewhere around Node 20.12, napi_get_buffer_info() would assert/crash
+    // when used with something it did not support, instead of returning napi_invalid_arg.
+    // So we need to call napi_is_buffer(), at least for now.
+
+    if (value.IsBuffer()) {
+        void *ptr = nullptr;
+        size_t length = 0;
+
+        // Assume it works
+        napi_get_buffer_info(value.Env(), value, &ptr, &length);
+
+        *out_buffer = MakeSpan((uint8_t *)ptr, (Size)length);
+        return true;
+    } else if (value.IsArrayBuffer()) {
+        Napi::ArrayBuffer buffer = value.As<Napi::ArrayBuffer>();
+
+        *out_buffer = MakeSpan((uint8_t *)buffer.Data(), (Size)buffer.ByteLength());
+        return true;
+    }
+
+    return false;
+}
+
+int GetTypedArrayType(const TypeInfo *type);
 
 template <typename T>
 Size NullTerminatedLength(const T *ptr)
@@ -259,6 +267,9 @@ static inline Napi::Array GetOwnPropertyNames(Napi::Object obj)
 }
 
 Napi::Function WrapFunction(Napi::Env env, const FunctionInfo *func);
+
+Napi::Value WrapPointer(Napi::Env env, const TypeInfo *ref, void *ptr);
+Napi::Value WrapCallback(Napi::Env env, const TypeInfo *ref, void *ptr);
 
 bool DetectCallConvention(Span<const char> name, CallConvention *out_convention);
 

@@ -72,7 +72,6 @@ struct TypeInfo {
 
     HeapArray<RecordMember> members; // Record only
     union {
-        const void *marker;
         const TypeInfo *type; // Pointer or array
         const FunctionInfo *proto; // Callback only
     } ref;
@@ -257,6 +256,9 @@ struct InstanceData {
         int resident_async_pools = DefaultResidentAsyncPools;
         int max_temporaries = DefaultMaxAsyncCalls - DefaultResidentAsyncPools;
         Size max_type_size = DefaultMaxTypeSize;
+
+        bool fast_pointers = false;
+        bool fast_callbacks = false;
     } config;
 
     struct {

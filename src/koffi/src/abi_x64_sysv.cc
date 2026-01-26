@@ -535,17 +535,8 @@ Napi::Value CallData::Complete(const FunctionInfo *func)
         case PrimitiveKind::String: return result.ptr ? Napi::String::New(env, (const char *)result.ptr) : env.Null();
         case PrimitiveKind::String16: return result.ptr ? Napi::String::New(env, (const char16_t *)result.ptr) : env.Null();
         case PrimitiveKind::String32: return result.ptr ? MakeStringFromUTF32(env, (const char32_t *)result.ptr) : env.Null();
-        case PrimitiveKind::Pointer:
-        case PrimitiveKind::Callback: {
-            if (result.ptr) {
-                Napi::External<void> external = Napi::External<void>::New(env, result.ptr);
-                SetValueTag(external, func->ret.type->ref.marker);
-
-                return external;
-            } else {
-                return env.Null();
-            }
-        } break;
+        case PrimitiveKind::Pointer: return result.ptr ? WrapPointer(env, func->ret.type->ref.type, result.ptr) : env.Null();
+        case PrimitiveKind::Callback: return result.ptr ? WrapCallback(env, func->ret.type->ref.type, result.ptr) : env.Null();
         case PrimitiveKind::Record:
         case PrimitiveKind::Union: {
             const uint8_t *ptr = return_ptr ? (const uint8_t *)return_ptr
@@ -720,18 +711,21 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
                 Napi::Value arg = str32 ? MakeStringFromUTF32(env, str32) : env.Null();
                 arguments.Append(arg);
             } break;
-            case PrimitiveKind::Pointer:
+            case PrimitiveKind::Pointer: {
+                void *ptr2 = *(void **)((param.gpr_count ? gpr_ptr : args_ptr)++);
+
+                Napi::Value p = ptr2 ? WrapPointer(env, param.type->ref.type, ptr2) : env.Null();
+                arguments.Append(p);
+
+                if (param.type->dispose) {
+                    param.type->dispose(env, param.type, ptr2);
+                }
+            } break;
             case PrimitiveKind::Callback: {
                 void *ptr2 = *(void **)((param.gpr_count ? gpr_ptr : args_ptr)++);
 
-                if (ptr2) {
-                    Napi::External<void> external = Napi::External<void>::New(env, ptr2);
-                    SetValueTag(external, param.type->ref.marker);
-
-                    arguments.Append(external);
-                } else {
-                    arguments.Append(env.Null());
-                }
+                Napi::Value p = ptr2 ? WrapCallback(env, param.type->ref.type, ptr2) : env.Null();
+                arguments.Append(p);
 
                 if (param.type->dispose) {
                     param.type->dispose(env, param.type, ptr2);
@@ -873,24 +867,9 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
             out_reg->rax = (uint64_t)str32;
         } break;
         case PrimitiveKind::Pointer: {
-            uint8_t *ptr;
-
-            if (CheckValueTag(value, type->ref.marker)) {
-                ptr = value.As<Napi::External<uint8_t>>().Data();
-            } else if (IsObject(value) && (type->ref.type->primitive == PrimitiveKind::Record ||
-                                           type->ref.type->primitive == PrimitiveKind::Union)) {
-                Napi::Object obj = value.As<Napi::Object>();
-
-                ptr = AllocHeap(type->ref.type->size, 16);
-
-                if (!PushObject(obj, type->ref.type, ptr))
-                    return;
-            } else if (IsNullOrUndefined(value)) {
-                ptr = nullptr;
-            } else {
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected %2", GetValueType(instance, value), type->name);
+            void *ptr;
+            if (!PushPointer(value, type, 1, &ptr)) [[unlikely]]
                 return;
-            }
 
             out_reg->rax = (uint64_t)ptr;
         } break;
@@ -951,21 +930,8 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
         } break;
         case PrimitiveKind::Callback: {
             void *ptr;
-
-            if (value.IsFunction()) {
-                Napi::Function func2 = value.As<Napi::Function>();
-
-                ptr = ReserveTrampoline(type->ref.proto, func2);
-                if (!ptr) [[unlikely]]
-                    return;
-            } else if (CheckValueTag(value, type->ref.marker)) {
-                ptr = value.As<Napi::External<void>>().Data();
-            } else if (IsNullOrUndefined(value)) {
-                ptr = nullptr;
-            } else {
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected %2", GetValueType(instance, value), type->name);
+            if (!PushCallback(value, type, &ptr)) [[unlikely]]
                 return;
-            }
 
             out_reg->rax = (uint64_t)ptr;
         } break;

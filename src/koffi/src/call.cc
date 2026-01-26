@@ -456,7 +456,7 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
                     Napi::Array array = value.As<Napi::Array>();
                     if (!PushNormalArray(array, member.type, member.type->size, dest))
                         return false;
-                } else if (Span<uint8_t> buffer = TryRawBuffer(value); buffer.ptr) {
+                } else if (Span<uint8_t> buffer = {}; TryBuffer(value, &buffer)) {
                     PushBuffer(buffer, member.type, dest);
                 } else if (value.IsString()) {
                     if (!PushStringArray(value, member.type, dest))
@@ -637,7 +637,7 @@ bool CallData::PushNormalArray(Napi::Array array, const TypeInfo *type, Size siz
                     Napi::Array array2 = value.As<Napi::Array>();
                     if (!PushNormalArray(array2, ref, (Size)ref->size, dest))
                         return false;
-                } else if (Span<uint8_t> buffer = TryRawBuffer(value); buffer.ptr) {
+                } else if (Span<uint8_t> buffer = {}; TryBuffer(value, &buffer)) {
                     PushBuffer(buffer, ref, dest);
                 } else if (value.IsString()) {
                     if (!PushStringArray(value, ref, dest))
@@ -760,24 +760,8 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
     // and it turns out that napi_typeof() is made of successive type tests anyway so it
     // just made things worse. Oh, well.
 
-    if (IsNullOrUndefined(value)) {
-        *out_ptr = nullptr;
-        return true;
-    } else if (uint8_t *ptr = TryRawPointer(value); ptr) {
+    if (void *ptr = nullptr; TryPointer(value, &ptr)) {
         *out_ptr = ptr;
-        return true;
-    } else if (value.IsExternal()) {
-        K_ASSERT(type->primitive == PrimitiveKind::Pointer ||
-                 type->primitive == PrimitiveKind::String ||
-                 type->primitive == PrimitiveKind::String16 ||
-                 type->primitive == PrimitiveKind::String32);
-
-        if (!CheckValueTag(value, type->ref.marker) &&
-                !CheckValueTag(value, instance->void_type) &&
-                ref != instance->void_type) [[unlikely]]
-            goto unexpected;
-
-        *out_ptr = value.As<Napi::External<uint8_t>>().Data();
         return true;
     } else if (value.IsArray()) {
         uint8_t *ptr = nullptr;
@@ -905,20 +889,6 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
 
         *out_ptr = (void *)ptr;
         return true;
-    } else if (value.IsNumber()) {
-        Napi::Number number = value.As<Napi::Number>();
-        intptr_t ptr = (intptr_t)number.Int32Value();
-
-        *out_ptr = (void *)ptr;
-        return true;
-    } else if (value.IsBigInt()) {
-        Napi::BigInt bigint = value.As<Napi::BigInt>();
-
-        bool lossless;
-        intptr_t ptr = (intptr_t)bigint.Int64Value(&lossless);
-
-        *out_ptr = (void *)ptr;
-        return true;
     }
 
 unexpected:
@@ -928,7 +898,18 @@ unexpected:
 
 bool CallData::PushCallback(Napi::Value value, const TypeInfo *type, void **out_ptr)
 {
-    if (value.IsFunction()) {
+    if (CheckValueTag(value, &CastMarker)) {
+        Napi::External<ValueCast> external = value.As<Napi::External<ValueCast>>();
+        ValueCast *cast = external.Data();
+
+        value = cast->ref.Value();
+        type = cast->type;
+    }
+
+    if (void *ptr = nullptr; TryPointer(value, &ptr)) {
+        *out_ptr = ptr;
+        return true;
+    } else if (value.IsFunction()) {
         Napi::Function func = value.As<Napi::Function>();
 
         void *ptr = ReserveTrampoline(type->ref.proto, func);
@@ -936,27 +917,9 @@ bool CallData::PushCallback(Napi::Value value, const TypeInfo *type, void **out_
             return false;
 
         *out_ptr = ptr;
-    } else if (CheckValueTag(value, type->ref.marker)) {
-        *out_ptr = value.As<Napi::External<void>>().Data();
-    } else if (CheckValueTag(value, &CastMarker)) {
-        Napi::External<ValueCast> external = value.As<Napi::External<ValueCast>>();
-        ValueCast *cast = external.Data();
-
-        value = cast->ref.Value();
-
-        if (!value.IsExternal() || cast->type != type)
-            goto unexpected;
-
-        *out_ptr = value.As<Napi::External<void>>().Data();
-    } else if (IsNullOrUndefined(value)) {
-        *out_ptr = nullptr;
-    } else {
-        goto unexpected;
+        return true;
     }
 
-    return true;
-
-unexpected:
     ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected %2", GetValueType(instance, value), type->name);
     return false;
 }
@@ -1107,8 +1070,10 @@ void CallData::PopOutArguments()
             } break;
 
             case OutArgument::Kind::Buffer: {
-                Span<uint8_t> buffer = TryRawBuffer(value);
-                K_ASSERT(buffer.len);
+                Span<uint8_t> buffer;
+
+                bool success = TryBuffer(value, &buffer);
+                K_ASSERT(success);
 
                 DecodeBuffer(buffer, out.ptr, out.type);
             } break;

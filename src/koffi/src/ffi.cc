@@ -138,6 +138,20 @@ static Napi::Value GetSetConfig(const Napi::CallbackInfo &info)
             } else if (key == "max_type_size") {
                 if (!ChangeSize(key.c_str(), value, 32, Mebibytes(512), &new_config.max_type_size))
                     return env.Null();
+            } else if (key == "fast_pointers") {
+                if (!value.IsBoolean()) {
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for '%2', expected boolean", GetValueType(instance, value), key.c_str());
+                    return env.Null();
+                }
+
+                new_config.fast_pointers = value.As<Napi::Boolean>();
+            } else if (key == "fast_callbacks") {
+                if (!value.IsBoolean()) {
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for '%2', expected boolean", GetValueType(instance, value), key.c_str());
+                    return env.Null();
+                }
+
+                new_config.fast_callbacks = value.As<Napi::Boolean>();
             } else {
                 ThrowError<Napi::Error>(env, "Unexpected config member '%1'", key.c_str());
                 return env.Null();
@@ -162,6 +176,8 @@ static Napi::Value GetSetConfig(const Napi::CallbackInfo &info)
     obj.Set("resident_async_pools", instance->config.resident_async_pools);
     obj.Set("max_async_calls", instance->config.resident_async_pools + instance->config.max_temporaries);
     obj.Set("max_type_size", instance->config.max_type_size);
+    obj.Set("fast_pointers", instance->config.fast_pointers);
+    obj.Set("fast_callbacks", instance->config.fast_callbacks);
 
     return obj;
 }
@@ -790,13 +806,10 @@ static Napi::Value CreateDisposableType(const Napi::CallbackInfo &info)
             InstanceData *instance = env.GetInstanceData<InstanceData>();
             const Napi::FunctionReference &ref = type->dispose_ref;
 
-            Napi::External<void> external = Napi::External<void>::New(env, (void *)ptr);
-            SetValueTag(external, type->ref.marker);
+            Napi::Value p = WrapPointer(env, type->ref.type, (void *)ptr);
 
-            Napi::Value self = env.Null();
-            napi_value args[] = {
-                external
-            };
+            napi_value self = env.Null();
+            napi_value args[] = { p };
 
             ref.Call(self, K_LEN(args), args);
             instance->stats.disposed++;
@@ -842,21 +855,12 @@ static inline bool GetExternalPointer(Napi::Env env, Napi::Value value, void **o
 {
     InstanceData *instance = env.GetInstanceData<InstanceData>();
 
-    if (IsNullOrUndefined(value)) {
-        *out_ptr = 0;
-        return true;
-    } else if (value.IsExternal() && !CheckValueTag(value, &TypeInfoMarker) &&
-                                     !CheckValueTag(value, &CastMarker) &&
-                                     !CheckValueTag(value, &MagicUnionMarker)) {
-        Napi::External<void> external = value.As<Napi::External<void>>();
-        void *ptr = external.Data();
-
-        *out_ptr = ptr;
-        return true;
-    } else {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected external pointer", GetValueType(instance, value));
+    if (!TryPointer(value, out_ptr)) {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected pointer", GetValueType(instance, value));
         return false;
     }
+
+    return true;
 }
 
 static Napi::Value CallAlloc(const Napi::CallbackInfo &info)
@@ -902,10 +906,7 @@ static Napi::Value CallAlloc(const Napi::CallbackInfo &info)
         return env.Null();
     }
 
-    Napi::External<void> external = Napi::External<void>::New(env, ptr);
-    SetValueTag(external, type);
-
-    return external;
+    return WrapPointer(env, type, ptr);
 }
 
 static Napi::Value CallFree(const Napi::CallbackInfo &info)
@@ -1698,11 +1699,8 @@ void AsyncCall::OnOK()
 
     Napi::FunctionReference &callback = Callback();
 
-    Napi::Value self = env.Null();
-    napi_value args[] = {
-        env.Null(),
-        call.Complete(func)
-    };
+    napi_value self = env.Null();
+    napi_value args[] = { env.Null(), call.Complete(func) };
 
     callback.Call(self, K_LEN(args), args);
 }
@@ -1887,10 +1885,7 @@ static Napi::Value FindSymbol(const Napi::CallbackInfo &info)
         return env.Null();
     }
 
-    Napi::External<void> external = Napi::External<void>::New(env, ptr);
-    SetValueTag(external, &type);
-
-    return external;
+    return WrapPointer(env, type, ptr);
 }
 
 static Napi::Value UnloadLibrary(const Napi::CallbackInfo &info)
@@ -2059,13 +2054,10 @@ static Napi::Value RegisterCallback(const Napi::CallbackInfo &info)
 
     void *ptr = GetTrampoline(idx);
 
-    Napi::External<void> external = Napi::External<void>::New(env, ptr);
-    SetValueTag(external, type->ref.marker);
-
     // Cache index for fast unregistration
     instance->trampolines_map.Set(ptr, idx);
 
-    return external;
+    return WrapCallback(env, type->ref.type, ptr);
 }
 
 static Napi::Value UnregisterCallback(const Napi::CallbackInfo &info)
@@ -2077,13 +2069,12 @@ static Napi::Value UnregisterCallback(const Napi::CallbackInfo &info)
         ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", info.Length());
         return env.Null();
     }
-    if (!info[0].IsExternal()) {
+
+    void *ptr;
+    if (!TryPointer(info[0], &ptr)) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for id, expected registered callback", GetValueType(instance, info[0]));
         return env.Null();
     }
-
-    Napi::External<void> external = info[0].As<Napi::External<void>>();
-    void *ptr = external.Data();
 
     int16_t idx;
     {
@@ -2440,10 +2431,8 @@ static void RegisterPrimitiveType(Napi::Env env, Napi::Object map, std::initiali
     }
 
     if (ref) {
-        const TypeInfo *marker = instance->types_map.FindValue(ref, nullptr);
-        K_ASSERT(marker);
-
-        type->ref.marker = marker;
+        type->ref.type = instance->types_map.FindValue(ref, nullptr);
+        K_ASSERT(type->ref.type);
     }
 
     Napi::Value wrapper = WrapType(env, type);
@@ -2658,10 +2647,7 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
         Napi::Object node = Napi::Object::New(env);
         exports.Set("node", node);
 
-        Napi::External<void> external = Napi::External<void>::New(env, (napi_env)env);
-        SetValueTag(external, instance->void_type);
-
-        node.Set("env", external);
+        node.Set("env", WrapPointer(env, instance->void_type, (napi_env)env));
 
         node.Set("poll", Napi::Function::New(env, &Poll, "poll"));
         node.Set("PollHandle", PollHandle::Define(env));
