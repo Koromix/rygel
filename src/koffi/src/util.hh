@@ -104,7 +104,7 @@ bool TryNumber(Napi::Value value, T *out_value)
     // Assume number first
     {
         T v;
-        napi_status status = napi_invalid_arg;
+        napi_status status;
 
         if constexpr (std::is_same_v<T, double>) {
             status = napi_get_value_double(value.Env(), value, &v);
@@ -112,18 +112,10 @@ bool TryNumber(Napi::Value value, T *out_value)
             double d;
             status = napi_get_value_double(value.Env(), value, &d);
             v = (float)d;
-        } else if constexpr (std::is_same_v<T, int64_t>) {
-            status = napi_get_value_int64(value.Env(), value, &v);
-        } else if constexpr (std::is_same_v<T, uint64_t>) {
-            status = napi_get_value_int64(value.Env(), value, (int64_t *)&v);
-        } else if constexpr (std::is_signed_v<T>) {
-            int32_t i32;
-            status = napi_get_value_int32(value.Env(), value, &i32);
-            v = (T)i32;
         } else {
-            uint32_t u32;
-            status = napi_get_value_uint32(value.Env(), value, &u32);
-            v = (T)u32;
+            int64_t i64;
+            status = napi_get_value_int64(value.Env(), value, &i64);
+            v = (T)i64;
         }
 
         if (status == napi_ok) [[likely]] {
