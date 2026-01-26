@@ -145,15 +145,15 @@ export function introspect(type: TypeSpec): TypeInfo;
 export function alias(name: string, type: TypeSpec): IKoffiCType;
 
 type KoffiConfig = {
-    sync_stack_size: number
-    sync_heap_size: number
-    async_stack_size: number
-    async_heap_size: number
-    resident_async_pools: number
-    max_async_calls: number
-    max_type_size: number,
-    fast_pointers: boolean,
-    fast_callbacks: boolean
+    sync_stack_size?: number;
+    sync_heap_size?: number;
+    async_stack_size?: number;
+    async_heap_size?: number;
+    resident_async_pools?: number;
+    max_async_calls?: number;
+    max_type_size?: number;
+    fast_pointers?: boolean;
+    fast_callbacks?: boolean;
 };
 type KoffiStats = {
     disposed: number
