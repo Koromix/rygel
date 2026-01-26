@@ -44,7 +44,7 @@ static Napi::Value RunMemset(const Napi::CallbackInfo &info)
     void *ptr = (uint8_t *)buf.ArrayBuffer().Data() + buf.ByteOffset();
     void *ret = memset(ptr, value, len);
 
-    return Napi::BigInt::New(env, (uintptr_t)ret);
+    return Napi::BigInt::New(env, (uint64_t)(uintptr_t)ret);
 }
 
 }

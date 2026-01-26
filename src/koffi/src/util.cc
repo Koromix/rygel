@@ -1762,7 +1762,7 @@ Napi::Value WrapPointer(Napi::Env env, const TypeInfo *ref, void *ptr)
     InstanceData *instance = env.GetInstanceData<InstanceData>();
 
     if (instance->config.fast_pointers) {
-        Napi::BigInt big = Napi::BigInt::New(env, (uintptr_t)ptr);
+        Napi::BigInt big = Napi::BigInt::New(env, (uint64_t)(uintptr_t)ptr);
         return big;
     } else {
         Napi::External<void> external = Napi::External<void>::New(env, ptr);
@@ -1775,7 +1775,7 @@ Napi::Value WrapCallback(Napi::Env env, const TypeInfo *ref, void *ptr)
     InstanceData *instance = env.GetInstanceData<InstanceData>();
 
     if (instance->config.fast_callbacks) {
-        Napi::BigInt big = Napi::BigInt::New(env, (uintptr_t)ptr);
+        Napi::BigInt big = Napi::BigInt::New(env, (uint64_t)(uintptr_t)ptr);
         return big;
     } else {
         Napi::External<void> external = Napi::External<void>::New(env, ptr);
