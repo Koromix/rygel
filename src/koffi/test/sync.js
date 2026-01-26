@@ -424,7 +424,7 @@ async function test() {
     }
 
     // Variadic
-    {
+    for (let i = 0; i < 10; i++) {
         let disposed = koffi.stats().disposed;
 
         let str = PrintFmt('foo %d %g %s', 'int', 200, 'double', 1.5, 'str', 'BAR');

@@ -229,6 +229,9 @@ struct InstanceData {
     LocalArray<InstanceMemory *, 17> memories;
     int temporaries = 0;
 
+    // Variadic cache
+    FunctionInfo *variadic_func = nullptr;
+
     std::thread::id main_thread_id;
     napi_threadsafe_function broker = nullptr;
 

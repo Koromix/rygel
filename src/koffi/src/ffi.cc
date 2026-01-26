@@ -1525,73 +1525,105 @@ static Napi::Value TranslateVariadicCall(const FunctionInfo *func, void *native,
     Napi::Env env = info.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();
 
-    FunctionInfo copy;
-    memcpy((void *)&copy, func, K_SIZE(*func));
-    copy.lib = nullptr;
+    FunctionInfo *variadic = nullptr;
+    K_DEFER_N(err_guard) { delete variadic; };
 
-    Size start_parameters = copy.parameters.len;
+    // Try cached function
+    {
+        FunctionInfo *prev = instance->variadic_func;
 
-    // This makes variadic calls non-reentrant
-    K_DEFER {
-        copy.parameters.RemoveFrom(start_parameters);
-        copy.primitives.RemoveFrom(start_parameters);
-        copy.parameters.Leak();
-        copy.primitives.Leak();
-    };
+        if (prev && prev->native == native) {
+            Size specified = (info.Length() - prev->required_parameters);
+            Size processed = (prev->parameters.len - prev->required_parameters) * 2;
 
-    if (info.Length() < (uint32_t)copy.required_parameters) [[unlikely]] {
-        ThrowError<Napi::TypeError>(env, "Expected %1 arguments or more, got %2", copy.parameters.len, info.Length());
-        return env.Null();
+            if (specified == processed) {
+                bool match = true;
+
+                for (Size i = prev->required_parameters, j = prev->required_parameters; i < (Size)info.Length(); i += 2, j++) {
+                    int directions;
+                    const TypeInfo *type = ResolveType(info[(uint32_t)i], &directions);
+
+                    if (type != prev->parameters[j].type || directions != prev->parameters[j].directions) [[unlikely]] {
+                        match = false;
+                        break;
+                    }
+                }
+
+                if (match) [[likely]] {
+                    variadic = prev;
+
+                    // If an error happens it'll get destroyed, so don't keep it around
+                    instance->variadic_func = nullptr;
+                }
+            }
+        }
     }
-    if ((info.Length() - copy.required_parameters) % 2) [[unlikely]] {
-        ThrowError<Napi::Error>(env, "Missing value argument for variadic call");
-        return env.Null();
-    }
 
-    for (Size i = copy.required_parameters; i < (Size)info.Length(); i += 2) {
-        ParameterInfo param = {};
+    if (!variadic) {
+        variadic = new FunctionInfo();
 
-        param.type = ResolveType(info[(uint32_t)i], &param.directions);
+        memcpy((void *)variadic, func, K_SIZE(*func));
+        memset((void *)&variadic->parameters, 0, K_SIZE(variadic->parameters));
+        memset((void *)&variadic->primitives, 0, K_SIZE(variadic->primitives));
 
-        if (!param.type) [[unlikely]]
-            return env.Null();
-        if (!CanPassType(param.type, param.directions)) [[unlikely]] {
-            ThrowError<Napi::TypeError>(env, "Type %1 cannot be used as a parameter", param.type->name);
+        variadic->parameters = func->parameters;
+        variadic->primitives = func->primitives;
+        variadic->lib = nullptr;
+
+        if (info.Length() < (uint32_t)variadic->required_parameters) [[unlikely]] {
+            ThrowError<Napi::TypeError>(env, "Expected %1 arguments or more, got %2", variadic->parameters.len, info.Length());
             return env.Null();
         }
-        if (copy.parameters.len >= MaxParameters) [[unlikely]] {
-            ThrowError<Napi::TypeError>(env, "Functions cannot have more than %1 parameters", MaxParameters);
-            return env.Null();
-        }
-        if ((param.directions & 2) && ++copy.out_parameters >= MaxParameters) [[unlikely]] {
-            ThrowError<Napi::TypeError>(env, "Functions cannot have more than %1 output parameters", MaxParameters);
+        if ((info.Length() - variadic->required_parameters) % 2) [[unlikely]] {
+            ThrowError<Napi::Error>(env, "Missing value argument for variadic call");
             return env.Null();
         }
 
-        param.variadic = true;
-        param.offset = (int8_t)(i + 1);
+        for (Size i = variadic->required_parameters; i < (Size)info.Length(); i += 2) {
+            ParameterInfo param = {};
 
-        copy.parameters.Append(param);
+            param.type = ResolveType(info[(uint32_t)i], &param.directions);
+
+            if (!param.type) [[unlikely]]
+                return env.Null();
+            if (!CanPassType(param.type, param.directions)) [[unlikely]] {
+                ThrowError<Napi::TypeError>(env, "Type %1 cannot be used as a parameter", param.type->name);
+                return env.Null();
+            }
+            if (variadic->parameters.len >= MaxParameters) [[unlikely]] {
+                ThrowError<Napi::TypeError>(env, "Functions cannot have more than %1 parameters", MaxParameters);
+                return env.Null();
+            }
+            if ((param.directions & 2) && ++variadic->out_parameters >= MaxParameters) [[unlikely]] {
+                ThrowError<Napi::TypeError>(env, "Functions cannot have more than %1 output parameters", MaxParameters);
+                return env.Null();
+            }
+
+            param.variadic = true;
+            param.offset = (int8_t)(i + 1);
+
+            variadic->parameters.Append(param);
+        }
+
+        if (!AnalyseFunction(env, instance, variadic)) [[unlikely]]
+            return env.Null();
+
+        // Branchless push loop
+        for (Size i = func->parameters.len; i < variadic->parameters.len; i++) {
+            const ParameterInfo &param = variadic->parameters[i];
+            variadic->primitives.Append(param.type->primitive);
+        }
+        variadic->primitives.Append(PrimitiveKind::Prototype);
     }
-
-    if (!AnalyseFunction(env, instance, &copy)) [[unlikely]]
-        return env.Null();
-
-    // Branchless push loop
-    for (Size i = start_parameters; i < copy.parameters.len; i++) {
-        const ParameterInfo &param = copy.parameters[i];
-        copy.primitives.Append(param.type->primitive);
-    }
-    copy.primitives.Append(PrimitiveKind::Prototype);
 
     InstanceMemory *mem = instance->memories[0];
     CallData call(env, instance, mem);
 
-    if (!call.Prepare(&copy, info)) [[unlikely]]
+    if (!call.Prepare(variadic, info)) [[unlikely]]
         return env.Null();
 
     if (instance->debug) {
-        call.DumpForward(&copy);
+        call.DumpForward(variadic);
     }
 
     // Execute call
@@ -1599,10 +1631,17 @@ static Napi::Value TranslateVariadicCall(const FunctionInfo *func, void *native,
         K_DEFER_C(prev_call = exec_call) { exec_call = prev_call; };
         exec_call = &call;
 
-        call.Execute(&copy, native);
+        call.Execute(variadic, native);
     }
 
-    return call.Complete(&copy);
+    if (variadic != instance->variadic_func) {
+        err_guard.Disable();
+
+        delete instance->variadic_func;
+        instance->variadic_func = variadic;
+    }
+
+    return call.Complete(variadic);
 }
 
 Napi::Value TranslateVariadicCall(const Napi::CallbackInfo &info)
@@ -2635,6 +2674,8 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
 
 InstanceData::~InstanceData()
 {
+    delete variadic_func;
+
     for (InstanceMemory *mem: memories) {
         delete mem;
     }
