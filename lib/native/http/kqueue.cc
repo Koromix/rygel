@@ -570,7 +570,7 @@ bool http_Dispatcher::Run()
                 } else if (!bytes || errno != EAGAIN) {
                     if (client->IsBusy()) {
                         if (bytes) {
-                            LogError("Connection failed: %1", GetWin32ErrorString());
+                            LogError("Connection failed: %1", strerror(errno));
                         } else {
                             LogError("Connection closed unexpectedly");
                         }
