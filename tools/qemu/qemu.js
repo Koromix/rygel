@@ -288,7 +288,10 @@ function QemuRunner(registry = null) {
                    '-p', machine.qemu.ssh_port, machine.qemu.username + '@127.0.0.1'
         ];
 
-        let proc = spawnSync('sshpass', args, { stdio: 'inherit' });
+        let proc = spawnSync('sshpass', args, {
+            stdio: 'inherit',
+            env: { ...process.env, SSH_ASKPASS_REQUIRE: 'never' }
+        });
 
         if (proc.status !== 0) {
             if (spawnSync('sshpass', ['-h']).status !== 0)
