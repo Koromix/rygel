@@ -1002,7 +1002,7 @@ function defaultFormPage(ctx) {
                 }
 
                 return html`
-                    <div class=${cls} @click=${UI.wrap(e => go(e, url))}>
+                    <div class=${cls} style=${child.style ?? ''} @click=${UI.wrap(e => go(e, url))}>
                         ${child.icon != null ? html`<img src=${child.icon} alt="" />` : ''}
                         ${child.icon == null ? html`<div class="index">${idx + 1}</div>` : ''}
                         <div class="title">${child.title}</div>

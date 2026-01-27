@@ -47,6 +47,7 @@ function ApplicationBuilder(app) {
             claim: true,
             lock: null,
             confirm: null,
+            style: null,
             icon: null,
             help: null
         }
@@ -69,6 +70,7 @@ function ApplicationBuilder(app) {
         claim: makeOptionProperty('claim'),
         confirm: makeOptionProperty('confirm'),
         lock: makeOptionProperty('lock'),
+        style: makeOptionProperty('style'),
         icon: makeOptionProperty('icon'),
         help: makeOptionProperty('help')
     });
