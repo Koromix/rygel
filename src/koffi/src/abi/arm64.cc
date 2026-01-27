@@ -4,11 +4,11 @@
 #if defined(__aarch64__) || defined(_M_ARM64)
 
 #include "lib/native/base/base.hh"
-#include "ffi.hh"
-#include "call.hh"
-#include "util.hh"
+#include "../ffi.hh"
+#include "../call.hh"
+#include "../util.hh"
 #if defined(_WIN32)
-    #include "win32.hh"
+    #include "../win32.hh"
 #endif
 
 #include <napi.h>
@@ -263,7 +263,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
 #if defined(__GNUC__) || defined(__clang__)
     static const void *const DispatchTable[] = {
         #define PRIMITIVE(Name) && Name,
-        #include "primitives.inc"
+        #include "../primitives.inc"
     };
 
     #define LOOP

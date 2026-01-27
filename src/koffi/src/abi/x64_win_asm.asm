@@ -160,6 +160,6 @@ CallSwitchStack endp
 ; Trampolines
 ; ----------------------------
 
-include trampolines/masm64.inc
+include ../trampolines/masm64.inc
 
 end

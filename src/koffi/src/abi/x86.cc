@@ -1,222 +1,136 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
-#if defined(__arm__) || (defined(__M_ARM) && !defined(_M_ARM64))
+#if defined(__i386__) || defined(_M_IX86)
 
 #include "lib/native/base/base.hh"
-#include "ffi.hh"
-#include "call.hh"
-#include "util.hh"
+#include "../ffi.hh"
+#include "../call.hh"
+#include "../util.hh"
+#if defined(_WIN32)
+    #include "../win32.hh"
+#endif
 
 #include <napi.h>
-#include <signal.h>
-#include <setjmp.h>
 
 namespace K {
 
-struct HfaRet {
-    double d0;
-    double d1;
-    double d2;
-    double d3;
-};
-
 struct BackRegisters {
-    uint32_t r0;
-    uint32_t r1;
-    double d0;
-    double d1;
-    double d2;
-    double d3;
+    uint32_t eax;
+    uint32_t edx;
+    union {
+        double d;
+        float f;
+    } x87;
+    int ret_type;
+    int ret_pop;
 };
 
-extern "C" uint64_t ForwardCallGG(const void *func, uint8_t *sp, uint8_t **out_old_sp);
+extern "C" uint64_t ForwardCallG(const void *func, uint8_t *sp, uint8_t **out_old_sp);
 extern "C" float ForwardCallF(const void *func, uint8_t *sp, uint8_t **out_old_sp);
-extern "C" HfaRet ForwardCallDDDD(const void *func, uint8_t *sp, uint8_t **out_old_sp);
-
-extern "C" uint64_t ForwardCallXGG(const void *func, uint8_t *sp, uint8_t **out_old_sp);
-extern "C" float ForwardCallXF(const void *func, uint8_t *sp, uint8_t **out_old_sp);
-extern "C" HfaRet ForwardCallXDDDD(const void *func, uint8_t *sp, uint8_t **out_old_sp);
+extern "C" double ForwardCallD(const void *func, uint8_t *sp, uint8_t **out_old_sp);
+extern "C" uint64_t ForwardCallRG(const void *func, uint8_t *sp, uint8_t **out_old_sp);
+extern "C" float ForwardCallRF(const void *func, uint8_t *sp, uint8_t **out_old_sp);
+extern "C" double ForwardCallRD(const void *func, uint8_t *sp, uint8_t **out_old_sp);
 
 extern "C" napi_value CallSwitchStack(Napi::Function *func, size_t argc, napi_value *argv,
                                       uint8_t *old_sp, Span<uint8_t> *new_stack,
                                       napi_value (*call)(Napi::Function *func, size_t argc, napi_value *argv));
 
-static int IsHFA(const TypeInfo *type)
+bool AnalyseFunction(Napi::Env env, InstanceData *instance, FunctionInfo *func)
 {
-#if defined(__ARM_PCS_VFP)
-    bool float32 = false;
-    bool float64 = false;
-    int count = 0;
+    if (!func->lib && func->convention != CallConvention::Cdecl &&
+                      func->convention != CallConvention::Stdcall) {
+        ThrowError<Napi::Error>(env, "Only Cdecl and Stdcall callbacks are supported");
+        return false;
+    }
 
-    count = AnalyseFlat(type, [&](const TypeInfo *type, int, int) {
-        if (type->primitive == PrimitiveKind::Float32) {
-            float32 = true;
-        } else if (type->primitive == PrimitiveKind::Float64) {
-            float64 = true;
-        } else {
-            float32 = true;
-            float64 = true;
-        }
-    });
+    int fast = (func->convention == CallConvention::Fastcall) ? 2 :
+               (func->convention == CallConvention::Thiscall) ? 1 : 0;
+    func->fast = fast;
 
-    if (count < 1 || count > 4)
-        return 0;
-    if (float32 && float64)
-        return 0;
-
-    return count;
-#else
-    return 0;
-#endif
-}
-
-bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
-{
-    if (int hfa = IsHFA(func->ret.type); hfa) {
-        func->ret.vec_count = hfa;
-    } else if (func->ret.type->primitive != PrimitiveKind::Record &&
-               func->ret.type->primitive != PrimitiveKind::Union) {
-        func->ret.gpr_count = (func->ret.type->size > 4) ? 2 : 1;
-    } else if (func->ret.type->size <= 4) {
-        func->ret.gpr_count = 1;
+    if (func->ret.type->primitive != PrimitiveKind::Record &&
+            func->ret.type->primitive != PrimitiveKind::Union) {
+        func->ret.trivial = true;
+#if defined(_WIN32) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__DragonFly__)
     } else {
-        func->ret.use_memory = true;
+        func->ret.trivial = IsRegularSize(func->ret.type->size, 8);
+
+    #if defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__DragonFly__)
+        if (func->ret.type->members.len == 1) {
+            const RecordMember &member = func->ret.type->members[0];
+
+            if (member.type->primitive == PrimitiveKind::Float32) {
+                func->ret.fast = 1;
+            } else if (member.type->primitive == PrimitiveKind::Float64) {
+                func->ret.fast = 2;
+            }
+        }
+    #endif
+#endif
     }
-
-    int gpr_avail = 4 - func->ret.use_memory;
-    int vec_avail = 16;
-    bool started_stack = false;
-
-    for (ParameterInfo &param: func->parameters) {
-        switch (param.type->primitive) {
-            case PrimitiveKind::Void: { K_UNREACHABLE(); } break;
-
-            case PrimitiveKind::Bool:
-            case PrimitiveKind::Int8:
-            case PrimitiveKind::UInt8:
-            case PrimitiveKind::Int16:
-            case PrimitiveKind::Int16S:
-            case PrimitiveKind::UInt16:
-            case PrimitiveKind::UInt16S:
-            case PrimitiveKind::Int32:
-            case PrimitiveKind::Int32S:
-            case PrimitiveKind::UInt32:
-            case PrimitiveKind::UInt32S:
-            case PrimitiveKind::String:
-            case PrimitiveKind::String16:
-            case PrimitiveKind::String32:
-            case PrimitiveKind::Pointer:
-            case PrimitiveKind::Callback: {
-                if (gpr_avail) {
-                    param.gpr_count = 1;
-                    gpr_avail--;
-                } else {
-                    started_stack = true;
-                }
-            } break;
-            case PrimitiveKind::Int64:
-            case PrimitiveKind::Int64S:
-            case PrimitiveKind::UInt64:
-            case PrimitiveKind::UInt64S: {
-                bool realign = gpr_avail % 2;
-                int need = 2 + realign;
-
-                if (gpr_avail >= need) {
-                    param.gpr_count = 2;
-                    gpr_avail -= need;
-                } else {
-                    started_stack = true;
-                }
-            } break;
-            case PrimitiveKind::Record:
-            case PrimitiveKind::Union: {
-                int hfa = IsHFA(param.type);
-
-                if (hfa) {
-                    if (hfa <= vec_avail) {
-                        param.vec_count = hfa;
-                        vec_avail -= hfa;
-                    } else {
-                        vec_avail = 0;
-                        started_stack = true;
-                    }
-                } else {
-                    bool realign = (param.type->align == 8 && (gpr_avail % 2));
-                    int need = (param.type->size + 3) / 4 + realign;
-
-                    if (need <= gpr_avail) {
-                        param.gpr_count = need - realign;
-                        gpr_avail -= need;
-                    } else if (!started_stack) {
-                        param.gpr_count = gpr_avail - realign;
-                        gpr_avail = 0;
-
-                        started_stack = true;
-                    }
-                }
-            } break;
-            case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
-            case PrimitiveKind::Float32:
-            case PrimitiveKind::Float64: {
-#if defined(__ARM_PCS_VFP)
-                bool vfp = !param.variadic;
-#else
-                bool vfp = false;
+#if !defined(_WIN32)
+    if (fast && !func->ret.trivial) {
+        func->ret.fast = 1;
+        fast--;
+    }
 #endif
 
-                int need = param.type->size / 4;
-
-                if (vfp) {
-                    if (need <= vec_avail) {
-                        param.vec_count = need;
-                        vec_avail -= need;
-                    } else {
-                        started_stack = true;
-                    }
-                } else {
-                    need += (gpr_avail % 2);
-
-                    if (need <= gpr_avail) {
-                        param.gpr_count = 2;
-                        gpr_avail -= need;
-                    } else {
-                        started_stack = true;
-                    }
-                }
-            } break;
-
-            case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;
+    Size params_size = 0;
+    for (ParameterInfo &param: func->parameters) {
+        if (fast && param.type->size <= 4) {
+            param.fast = 1;
+            fast--;
         }
 
-        func->args_size += AlignLen(param.type->size, 16);
+        params_size += std::max(4, AlignLen(param.type->size, 4));
     }
+    func->args_size = params_size + 4 * !func->ret.trivial;
 
-    func->forward_fp = (vec_avail < 16);
+    switch (func->convention) {
+        case CallConvention::Cdecl: {
+            func->decorated_name = Fmt(&instance->str_alloc, "_%1", func->name).ptr;
+        } break;
+        case CallConvention::Stdcall: {
+            K_ASSERT(!func->variadic);
+            func->decorated_name = Fmt(&instance->str_alloc, "_%1@%2", func->name, params_size).ptr;
+        } break;
+        case CallConvention::Fastcall: {
+            K_ASSERT(!func->variadic);
+            func->decorated_name = Fmt(&instance->str_alloc, "@%1@%2", func->name, params_size).ptr;
+            func->args_size += 16;
+        } break;
+        case CallConvention::Thiscall: {
+            K_ASSERT(!func->variadic);
+            func->args_size += 16;
+        } break;
+    }
 
     return true;
 }
 
 bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
 {
-    // Unlike other call conventions, here we put the general-purpose registers before the stack, behind the vector ones).
-    // In the armv7hf calling convention, some arguments can end up partially in GPR, partially in the stack.
-    uint32_t *vec_ptr = AllocStack<uint32_t>(20 * 4 + func->args_size);
-    uint32_t *gpr_ptr = vec_ptr + 16;
-    uint32_t *args_ptr = vec_ptr + 20;
+    uint32_t *args_ptr = AllocStack<uint32_t>(func->args_size);
+    uint32_t *fast_ptr = nullptr;
 
-    if (!vec_ptr) [[unlikely]]
+    if (!args_ptr) [[unlikely]]
         return false;
-    if (func->ret.use_memory) {
+    if (func->fast) {
+        fast_ptr = args_ptr;
+        args_ptr += 4;
+    }
+    if (!func->ret.trivial) {
         return_ptr = AllocHeap(func->ret.type->size, 16);
-        *(uint8_t **)(gpr_ptr++) = return_ptr;
+        *((func->ret.fast ? fast_ptr : args_ptr)++) = (uint32_t)return_ptr;
     }
 
     Size i = -1;
 
+#if defined(__GNUC__) || defined(__clang__)
     static const void *const DispatchTable[] = {
         #define PRIMITIVE(Name) && Name,
-        #include "primitives.inc"
+        #include "../primitives.inc"
     };
 
     #define LOOP
@@ -228,6 +142,16 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
         Primitive:
     #define OR(Primitive) \
         Primitive:
+#else
+    #define LOOP \
+        while (++i < func->parameters.len) \
+            switch (func->primitives[i])
+    #define CASE(Primitive) \
+        break; \
+        case PrimitiveKind::Primitive:
+    #define OR(Primitive) \
+        case PrimitiveKind::Primitive:
+#endif
 
 #define PUSH_INTEGER_32(CType) \
         do { \
@@ -240,7 +164,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
                 return false; \
             } \
              \
-            *((param.gpr_count ? gpr_ptr : args_ptr)++) = (uint32_t)v; \
+            *((param.fast ? fast_ptr : args_ptr)++) = (uint32_t)v; \
         } while (false)
 #define PUSH_INTEGER_32_SWAP(CType) \
         do { \
@@ -253,7 +177,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
                 return false; \
             } \
              \
-            *((param.gpr_count ? gpr_ptr : args_ptr)++) = (uint32_t)ReverseBytes(v); \
+            *((param.fast ? fast_ptr : args_ptr)++) = (uint32_t)ReverseBytes(v); \
         } while (false)
 #define PUSH_INTEGER_64(CType) \
         do { \
@@ -266,15 +190,8 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
                 return false; \
             } \
              \
-            if (param.gpr_count) [[likely]] { \
-                gpr_ptr = AlignUp(gpr_ptr, 8); \
-                *(uint64_t *)gpr_ptr = (uint64_t)v; \
-                gpr_ptr += param.gpr_count; \
-            } else { \
-                args_ptr = AlignUp(args_ptr, 8); \
-                *(uint64_t *)args_ptr = (uint64_t)v; \
-                args_ptr += 2; \
-            } \
+            *(uint64_t *)args_ptr = (uint64_t)v; \
+            args_ptr += 2; \
         } while (false)
 #define PUSH_INTEGER_64_SWAP(CType) \
         do { \
@@ -287,15 +204,8 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
                 return false; \
             } \
              \
-            if (param.gpr_count) [[likely]] { \
-                gpr_ptr = AlignUp(gpr_ptr, 8); \
-                *(uint64_t *)gpr_ptr = (uint64_t)ReverseBytes(v); \
-                gpr_ptr += param.gpr_count; \
-            } else { \
-                args_ptr = AlignUp(args_ptr, 8); \
-                *(uint64_t *)args_ptr = (uint64_t)ReverseBytes(v); \
-                args_ptr += 2; \
-            } \
+            *(uint64_t *)args_ptr = (uint64_t)ReverseBytes(v); \
+            args_ptr += 2; \
         } while (false)
 
     LOOP {
@@ -311,7 +221,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
                 return false;
             }
 
-            *((param.gpr_count ? gpr_ptr : args_ptr)++) = (uint32_t)b;
+            *(bool *)((param.fast ? fast_ptr : args_ptr)++) = b;
         };
 
         CASE(Int8) { PUSH_INTEGER_32(int8_t); };
@@ -337,7 +247,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
             if (!PushString(value, param.directions, &str)) [[unlikely]]
                 return false;
 
-            *(const char **)((param.gpr_count ? gpr_ptr : args_ptr)++) = str;
+            *(const char **)((param.fast ? fast_ptr : args_ptr)++) = str;
         };
         CASE(String16) {
             const ParameterInfo &param = func->parameters[i];
@@ -347,7 +257,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
             if (!PushString16(value, param.directions, &str16)) [[unlikely]]
                 return false;
 
-            *(const char16_t **)((param.gpr_count ? gpr_ptr : args_ptr)++) = str16;
+            *(const char16_t **)((param.fast ? fast_ptr : args_ptr)++) = str16;
         };
         CASE(String32) {
             const ParameterInfo &param = func->parameters[i];
@@ -357,7 +267,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
             if (!PushString32(value, param.directions, &str32)) [[unlikely]]
                 return false;
 
-            *(const char32_t **)((param.gpr_count ? gpr_ptr : args_ptr)++) = str32;
+            *(const char32_t **)((param.fast ? fast_ptr : args_ptr)++) = str32;
         };
 
         CASE(Pointer) {
@@ -368,7 +278,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
             if (!PushPointer(value, param.type, param.directions, &ptr)) [[unlikely]]
                 return false;
 
-            *(void **)((param.gpr_count ? gpr_ptr : args_ptr)++) = ptr;
+            *(void **)((param.fast ? fast_ptr : args_ptr)++) = ptr;
         };
 
         CASE(Record) OR(Union) {
@@ -382,28 +292,15 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
 
             Napi::Object obj = value.As<Napi::Object>();
 
-            if (param.vec_count) {
-                if (!PushObject(obj, param.type, (uint8_t *)vec_ptr))
+            if (param.fast) {
+                uint8_t *ptr = (uint8_t *)(fast_ptr++);
+                if (!PushObject(obj, param.type, ptr))
                     return false;
-                vec_ptr += param.vec_count;
-            } else if (param.gpr_count) {
-                K_ASSERT(param.type->align <= 8);
-
-                int16_t align = (param.type->align <= 4) ? 4 : 8;
-                gpr_ptr = AlignUp(gpr_ptr, align);
-
-                if (!PushObject(obj, param.type, (uint8_t *)gpr_ptr))
+            } else {
+                uint8_t *ptr = (uint8_t *)args_ptr;
+                if (!PushObject(obj, param.type, ptr))
                     return false;
-
-                gpr_ptr += param.gpr_count;
-                args_ptr += (param.type->size - param.gpr_count * 4 + 3) / 4;
-            } else if (param.type->size) {
-                int16_t align = (param.type->align <= 4) ? 4 : 8;
-                args_ptr = AlignUp(args_ptr, align);
-
-                if (!PushObject(obj, param.type, (uint8_t *)args_ptr))
-                    return false;
-                args_ptr += (param.type->size + 3) / 4;
+                args_ptr = (uint32_t *)AlignUp(ptr + param.type->size, 4);
             }
         };
         CASE(Array) { K_UNREACHABLE(); };
@@ -418,13 +315,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
                 return false;
             }
 
-            if (param.vec_count) [[likely]] {
-                *(float *)(vec_ptr++) = f;
-            } else if (param.gpr_count) {
-                *(float *)(gpr_ptr++) = f;
-            } else {
-                *(float *)(args_ptr++) = f;
-            }
+            *(float *)((param.fast ? fast_ptr : args_ptr)++) = f;
         };
         CASE(Float64) {
             const ParameterInfo &param = func->parameters[i];
@@ -436,18 +327,8 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
                 return false;
             }
 
-            if (param.vec_count) [[likely]] {
-                *(double *)vec_ptr = d;
-                vec_ptr += 2;
-            } else if (param.gpr_count) {
-                gpr_ptr = AlignUp(gpr_ptr, 8);
-                *(double *)gpr_ptr = d;
-                gpr_ptr += 2;
-            } else {
-                args_ptr = AlignUp(args_ptr, 8);
-                *(double *)args_ptr = d;
-                args_ptr += 2;
-            }
+            *(double *)args_ptr = d;
+            args_ptr += 2;
         };
 
         CASE(Callback) {
@@ -458,7 +339,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
             if (!PushCallback(value, param.type, &ptr)) [[unlikely]]
                 return false;
 
-            *(void **)((param.gpr_count ? gpr_ptr : args_ptr)++) = ptr;
+            *(void **)((param.fast ? fast_ptr : args_ptr)++) = ptr;
         };
 
         CASE(Prototype) { /* End loop */ };
@@ -480,10 +361,41 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
 
 void CallData::Execute(const FunctionInfo *func, void *native)
 {
+#if defined(_WIN32)
+    TEB *teb = GetTEB();
+
+    // Restore previous stack limits at the end
+    K_DEFER_C(exception_list = teb->ExceptionList,
+               base = teb->StackBase,
+               limit = teb->StackLimit,
+               dealloc = teb->DeallocationStack,
+               guaranteed = teb->GuaranteedStackBytes,
+               stfs = teb->SameTebFlags) {
+        teb->ExceptionList = exception_list;
+        teb->StackBase = base;
+        teb->StackLimit = limit;
+        teb->DeallocationStack = dealloc;
+        teb->GuaranteedStackBytes = guaranteed;
+        teb->SameTebFlags = stfs;
+
+        instance->last_error = teb->LastErrorValue;
+    };
+
+    // Adjust stack limits so SEH works correctly
+    teb->ExceptionList = (void *)-1; // EXCEPTION_CHAIN_END
+    teb->StackBase = mem->stack0.end();
+    teb->StackLimit = mem->stack0.ptr;
+    teb->DeallocationStack = mem->stack0.ptr;
+    teb->GuaranteedStackBytes = 0;
+    teb->SameTebFlags &= ~0x200;
+
+    teb->LastErrorValue = instance->last_error;
+#endif
+
 #define PERFORM_CALL(Suffix) \
         ([&]() { \
-            auto ret = (func->forward_fp ? ForwardCallX ## Suffix(native, new_sp, &old_sp) \
-                                         : ForwardCall ## Suffix(native, new_sp, &old_sp)); \
+            auto ret = (func->fast ? ForwardCallR ## Suffix(native, new_sp, &old_sp) \
+                                   : ForwardCall ## Suffix(native, new_sp, &old_sp)); \
             return ret; \
         })()
 
@@ -509,19 +421,27 @@ void CallData::Execute(const FunctionInfo *func, void *native)
         case PrimitiveKind::String16:
         case PrimitiveKind::String32:
         case PrimitiveKind::Pointer:
-        case PrimitiveKind::Callback: { result.u64 = PERFORM_CALL(GG); } break;
+        case PrimitiveKind::Callback: { result.u64 = PERFORM_CALL(G); } break;
+#if defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__DragonFly__)
         case PrimitiveKind::Record:
         case PrimitiveKind::Union: {
-            if (func->ret.vec_count) {
-                HfaRet ret = PERFORM_CALL(DDDD);
-                memcpy(&result.buf, &ret, K_SIZE(ret));
+            if (!func->ret.fast) {
+                result.u64 = PERFORM_CALL(G);
+            } else if (func->ret.fast == 1) {
+                result.f = PERFORM_CALL(F);
+            } else if (func->ret.fast == 2) {
+                result.d = PERFORM_CALL(D);
             } else {
-                result.u64 = PERFORM_CALL(GG);
+                K_UNREACHABLE();
             }
         } break;
+#else
+        case PrimitiveKind::Record:
+        case PrimitiveKind::Union: { result.u64 = PERFORM_CALL(G); } break;
+#endif
         case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
         case PrimitiveKind::Float32: { result.f = PERFORM_CALL(F); } break;
-        case PrimitiveKind::Float64: { result.d = PERFORM_CALL(DDDD).d0; } break;
+        case PrimitiveKind::Float64: { result.d = PERFORM_CALL(D); } break;
 
         case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;
     }
@@ -579,24 +499,55 @@ Napi::Value CallData::Complete(const FunctionInfo *func)
     K_UNREACHABLE();
 }
 
-void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_stack, BackRegisters *out_reg)
+void CallData::Relay(Size idx, uint8_t *, uint8_t *caller_sp, bool switch_stack, BackRegisters *out_reg)
 {
     if (env.IsExceptionPending()) [[unlikely]]
         return;
+
+#if defined(_WIN32)
+    TEB *teb = GetTEB();
+
+    // Restore previous stack limits at the end
+    K_DEFER_C(base = teb->StackBase,
+               limit = teb->StackLimit,
+               dealloc = teb->DeallocationStack) {
+        teb->StackBase = base;
+        teb->StackLimit = limit;
+        teb->DeallocationStack = dealloc;
+    };
+
+    // Adjust stack limits so SEH works correctly
+    teb->StackBase = instance->main_stack_max;
+    teb->StackLimit = instance->main_stack_min;
+    teb->DeallocationStack = instance->main_stack_min;
+#endif
 
     const TrampolineInfo &trampoline = shared.trampolines[idx];
 
     const FunctionInfo *proto = trampoline.proto;
     Napi::Function func = trampoline.func.Value();
 
-    uint32_t *vec_ptr = (uint32_t *)own_sp;
-    uint32_t *gpr_ptr = vec_ptr + 16;
     uint32_t *args_ptr = (uint32_t *)caller_sp;
 
-    uint8_t *return_ptr = proto->ret.use_memory ? (uint8_t *)gpr_ptr[0] : nullptr;
-    gpr_ptr += proto->ret.use_memory;
+    uint8_t *return_ptr = !proto->ret.trivial ? (uint8_t *)args_ptr[0] : nullptr;
+    args_ptr += !proto->ret.trivial;
 
-    K_DEFER_N(err_guard) { memset(out_reg, 0, K_SIZE(*out_reg)); };
+    if (proto->convention == CallConvention::Stdcall) {
+        out_reg->ret_pop = (int)proto->args_size;
+    } else {
+#if defined(_WIN32)
+        out_reg->ret_pop = 0;
+#else
+        out_reg->ret_pop = return_ptr ? 4 : 0;
+#endif
+    }
+
+    K_DEFER_N(err_guard) {
+        int pop = out_reg->ret_pop;
+        memset(out_reg, 0, K_SIZE(*out_reg));
+        out_reg->ret_type = 0;
+        out_reg->ret_pop = pop;
+    };
 
     if (trampoline.generation >= 0 && trampoline.generation != (int32_t)mem->generation) [[unlikely]] {
         ThrowError<Napi::Error>(env, "Cannot use non-registered callback beyond FFI call");
@@ -616,113 +567,105 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
             case PrimitiveKind::Void: { K_UNREACHABLE(); } break;
 
             case PrimitiveKind::Bool: {
-                bool b = *(bool *)((param.gpr_count ? gpr_ptr : args_ptr)++);
+                bool b = *(bool *)(args_ptr++);
 
                 Napi::Value arg = Napi::Boolean::New(env, b);
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::Int8: {
-                double d = (double)*(int8_t *)((param.gpr_count ? gpr_ptr : args_ptr)++);
+                double d = (double)*(int8_t *)(args_ptr++);
 
                 Napi::Value arg = Napi::Number::New(env, d);
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::UInt8: {
-                double d = (double)*(uint8_t *)((param.gpr_count ? gpr_ptr : args_ptr)++);
+                double d = (double)*(uint8_t *)(args_ptr++);
 
                 Napi::Value arg = Napi::Number::New(env, d);
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::Int16: {
-                double d = (double)*(int16_t *)((param.gpr_count ? gpr_ptr : args_ptr)++);
+                double d = (double)*(int16_t *)(args_ptr++);
 
                 Napi::Value arg = Napi::Number::New(env, d);
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::Int16S: {
-                int16_t v = *(int16_t *)((param.gpr_count ? gpr_ptr : args_ptr)++);
+                int16_t v = *(int16_t *)(args_ptr++);
                 double d = (double)ReverseBytes(v);
 
                 Napi::Value arg = Napi::Number::New(env, d);
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::UInt16: {
-                double d = (double)*(uint16_t *)((param.gpr_count ? gpr_ptr : args_ptr)++);
+                double d = (double)*(uint16_t *)(args_ptr++);
 
                 Napi::Value arg = Napi::Number::New(env, d);
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::UInt16S: {
-                uint16_t v = *(uint16_t *)((param.gpr_count ? gpr_ptr : args_ptr)++);
+                uint16_t v = *(uint16_t *)(args_ptr++);
                 double d = (double)ReverseBytes(v);
 
                 Napi::Value arg = Napi::Number::New(env, d);
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::Int32: {
-                double d = (double)*(int32_t *)((param.gpr_count ? gpr_ptr : args_ptr)++);
+                double d = (double)*(int32_t *)(args_ptr++);
 
                 Napi::Value arg = Napi::Number::New(env, d);
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::Int32S: {
-                int32_t v = *(int32_t *)((param.gpr_count ? gpr_ptr : args_ptr)++);
+                int32_t v = *(int32_t *)(args_ptr++);
                 double d = (double)ReverseBytes(v);
 
                 Napi::Value arg = Napi::Number::New(env, d);
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::UInt32: {
-                double d = (double)*(uint32_t *)((param.gpr_count ? gpr_ptr : args_ptr)++);
+                double d = (double)*(uint32_t *)(args_ptr++);
 
                 Napi::Value arg = Napi::Number::New(env, d);
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::UInt32S: {
-                uint32_t v = *(uint32_t *)((param.gpr_count ? gpr_ptr : args_ptr)++);
+                uint32_t v = *(uint32_t *)(args_ptr++);
                 double d = (double)ReverseBytes(v);
 
                 Napi::Value arg = Napi::Number::New(env, d);
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::Int64: {
-                gpr_ptr = AlignUp(gpr_ptr, 8);
-
-                int64_t v = *(int64_t *)(param.gpr_count ? gpr_ptr : args_ptr);
-                (param.gpr_count ? gpr_ptr : args_ptr) += 2;
+                int64_t v = *(int64_t *)args_ptr;
+                args_ptr += 2;
 
                 Napi::Value arg = NewBigInt(env, v);
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::Int64S: {
-                gpr_ptr = AlignUp(gpr_ptr, 8);
-
-                int64_t v = *(int64_t *)(param.gpr_count ? gpr_ptr : args_ptr);
-                (param.gpr_count ? gpr_ptr : args_ptr) += 2;
+                int64_t v = *(int64_t *)args_ptr;
+                args_ptr += 2;
 
                 Napi::Value arg = NewBigInt(env, ReverseBytes(v));
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::UInt64: {
-                gpr_ptr = AlignUp(gpr_ptr, 8);
-
-                uint64_t v = *(uint64_t *)(param.gpr_count ? gpr_ptr : args_ptr);
-                (param.gpr_count ? gpr_ptr : args_ptr) += 2;
+                uint64_t v = *(uint64_t *)args_ptr;
+                args_ptr += 2;
 
                 Napi::Value arg = NewBigInt(env, v);
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::UInt64S: {
-                gpr_ptr = AlignUp(gpr_ptr, 8);
-
-                uint64_t v = *(uint64_t *)(param.gpr_count ? gpr_ptr : args_ptr);
-                (param.gpr_count ? gpr_ptr : args_ptr) += 2;
+                uint64_t v = *(uint64_t *)args_ptr;
+                args_ptr += 2;
 
                 Napi::Value arg = NewBigInt(env, ReverseBytes(v));
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::String: {
-                const char *str = *(const char **)((param.gpr_count ? gpr_ptr : args_ptr)++);
+                const char *str = *(const char **)(args_ptr++);
 
                 Napi::Value arg = str ? Napi::String::New(env, str) : env.Null();
                 arguments.Append(arg);
@@ -732,7 +675,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
                 }
             } break;
             case PrimitiveKind::String16: {
-                const char16_t *str16 = *(const char16_t **)((param.gpr_count ? gpr_ptr : args_ptr)++);
+                const char16_t *str16 = *(const char16_t **)(args_ptr++);
 
                 Napi::Value arg = str16 ? Napi::String::New(env, str16) : env.Null();
                 arguments.Append(arg);
@@ -742,13 +685,13 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
                 }
             } break;
             case PrimitiveKind::String32: {
-                const char32_t *str32 = *(const char32_t **)((param.gpr_count ? gpr_ptr : args_ptr)++);
+                const char32_t *str32 = *(const char32_t **)(args_ptr++);
 
                 Napi::Value arg = str32 ? MakeStringFromUTF32(env, str32) : env.Null();
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::Pointer: {
-                void *ptr2 = *(void **)((param.gpr_count ? gpr_ptr : args_ptr)++);
+                void *ptr2 = *(void **)(args_ptr++);
 
                 Napi::Value p = ptr2 ? WrapPointer(env, param.type->ref.type, ptr2) : env.Null();
                 arguments.Append(p);
@@ -758,7 +701,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
                 }
             } break;
             case PrimitiveKind::Callback: {
-                void *ptr2 = *(void **)((param.gpr_count ? gpr_ptr : args_ptr)++);
+                void *ptr2 = *(void **)(args_ptr++);
 
                 Napi::Value p = ptr2 ? WrapCallback(env, param.type->ref.type, ptr2) : env.Null();
                 arguments.Append(p);
@@ -769,75 +712,25 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
             } break;
             case PrimitiveKind::Record:
             case PrimitiveKind::Union: {
-                if (param.vec_count) {
-                    Napi::Object obj = DecodeObject(env, (const uint8_t *)vec_ptr, param.type);
-                    arguments.Append(obj);
+                K_ASSERT(!param.fast);
 
-                    vec_ptr += param.vec_count;
-                } else if (param.gpr_count) {
-                    K_ASSERT(param.type->align <= 8);
+                uint8_t *ptr = (uint8_t *)args_ptr;
 
-                    int16_t gpr_size = param.gpr_count * 4;
-                    int16_t align = (param.type->align <= 4) ? 4 : 8;
-                    gpr_ptr = AlignUp(gpr_ptr, align);
+                Napi::Object obj2 = DecodeObject(env, ptr, param.type);
+                arguments.Append(obj2);
 
-                    if (param.type->size > gpr_size) {
-                        // XXX: Expensive, can we do better?
-                        // The problem is that the object is split between the GPRs and the caller stack.
-                        uint8_t *ptr = AllocHeap(param.type->size, 16);
-
-                        memcpy(ptr, gpr_ptr, gpr_size);
-                        memcpy(ptr + gpr_size, args_ptr, param.type->size - gpr_size);
-
-                        Napi::Object obj = DecodeObject(env, ptr, param.type);
-                        arguments.Append(obj);
-
-                        gpr_ptr += param.gpr_count;
-                        args_ptr += (param.type->size - gpr_size + 3) / 4;
-                    } else {
-                        Napi::Object obj = DecodeObject(env, (const uint8_t *)gpr_ptr, param.type);
-                        arguments.Append(obj);
-
-                        gpr_ptr += param.gpr_count;
-                    }
-                } else if (param.type->size) {
-                    int16_t align = (param.type->align <= 4) ? 4 : 8;
-                    args_ptr = AlignUp(args_ptr, align);
-
-                    Napi::Object obj = DecodeObject(env, (const uint8_t *)args_ptr, param.type);
-                    arguments.Append(obj);
-
-                    args_ptr += (param.type->size + 3) / 4;
-                }
+                args_ptr = (uint32_t *)AlignUp(ptr + param.type->size, 4);
             } break;
             case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
             case PrimitiveKind::Float32: {
-                float f;
-                if (param.vec_count) [[likely]] {
-                    f = *(float *)(vec_ptr++);
-                } else if (param.gpr_count) {
-                    f = *(float *)(gpr_ptr++);
-                } else {
-                    f = *(float *)(args_ptr++);
-                }
+                float f = *(float *)(args_ptr++);
 
                 Napi::Value arg = Napi::Number::New(env, (double)f);
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::Float64: {
-                double d;
-                if (param.vec_count) [[likely]] {
-                    d = *(double *)vec_ptr;
-                    vec_ptr += 2;
-                } else if (param.gpr_count) {
-                    gpr_ptr = AlignUp(gpr_ptr, 8);
-                    d = *(double *)gpr_ptr;
-                    gpr_ptr += 2;
-                } else {
-                    args_ptr = AlignUp(args_ptr, 8);
-                    d = *(double *)args_ptr;
-                    args_ptr += 2;
-                }
+                double d = *(double *)args_ptr;
+                args_ptr += 2;
 
                 Napi::Value arg = Napi::Number::New(env, d);
                 arguments.Append(arg);
@@ -866,48 +759,51 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
         do { \
             CType v; \
             if (!TryNumber(value, &v)) [[unlikely]] { \
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value for return value, expected number", GetValueType(instance, value)); \
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value)); \
                 return; \
             } \
              \
-            out_reg->r0 = (uint32_t)v; \
+            out_reg->eax = (uint32_t)v; \
+            out_reg->ret_type = 0; \
         } while (false)
 #define RETURN_INTEGER_32_SWAP(CType) \
         do { \
             CType v; \
             if (!TryNumber(value, &v)) [[unlikely]] { \
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value for return value, expected number", GetValueType(instance, value)); \
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value)); \
                 return; \
             } \
              \
-            out_reg->r0 = (uint32_t)ReverseBytes(v); \
+            out_reg->eax = (uint32_t)ReverseBytes(v); \
+            out_reg->ret_type = 0; \
         } while (false)
 #define RETURN_INTEGER_64(CType) \
         do { \
             CType v; \
             if (!TryNumber(value, &v)) [[unlikely]] { \
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value for return value, expected number", GetValueType(instance, value)); \
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value)); \
                 return; \
             } \
              \
-            out_reg->r0 = (uint32_t)((uint64_t)v >> 32); \
-            out_reg->r1 = (uint32_t)((uint64_t)v & 0xFFFFFFFFu); \
+            out_reg->eax = (uint32_t)((uint64_t)v >> 32); \
+            out_reg->edx = (uint32_t)((uint64_t)v & 0xFFFFFFFFu); \
+            out_reg->ret_type = 0; \
         } while (false)
 #define RETURN_INTEGER_64_SWAP(CType) \
         do { \
             CType v; \
             if (!TryNumber(value, &v)) [[unlikely]] { \
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value for return value, expected number", GetValueType(instance, value)); \
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value)); \
                 return; \
             } \
              \
-            out_reg->r0 = (uint32_t)((uint64_t)v >> 32); \
-            out_reg->r1 = (uint32_t)((uint64_t)v & 0xFFFFFFFFu); \
+            out_reg->eax = (uint32_t)((uint64_t)v >> 32); \
+            out_reg->edx = (uint32_t)((uint64_t)v & 0xFFFFFFFFu); \
+            out_reg->ret_type = 0; \
         } while (false)
 
-    // Convert the result
     switch (type->primitive) {
-        case PrimitiveKind::Void: {} break;
+        case PrimitiveKind::Void: { out_reg->ret_type = 0; } break;
         case PrimitiveKind::Bool: {
             bool b;
             if (napi_get_value_bool(env, value, &b) != napi_ok) [[unlikely]] {
@@ -915,7 +811,8 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
                 return;
             }
 
-            out_reg->r0 = (uint32_t)b;
+            out_reg->eax = (uint32_t)b;
+            out_reg->ret_type = 0;
         } break;
         case PrimitiveKind::Int8: { RETURN_INTEGER_32(int8_t); } break;
         case PrimitiveKind::UInt8: { RETURN_INTEGER_32(uint8_t); } break;
@@ -936,28 +833,32 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
             if (!PushString(value, 1, &str)) [[unlikely]]
                 return;
 
-            out_reg->r0 = (uint32_t)str;
+            out_reg->eax = (uint32_t)str;
+            out_reg->ret_type = 0;
         } break;
         case PrimitiveKind::String16: {
             const char16_t *str16;
             if (!PushString16(value, 1, &str16)) [[unlikely]]
                 return;
 
-            out_reg->r0 = (uint32_t)str16;
+            out_reg->eax = (uint32_t)str16;
+            out_reg->ret_type = 0;
         } break;
         case PrimitiveKind::String32: {
             const char32_t *str32;
             if (!PushString32(value, 1, &str32)) [[unlikely]]
                 return;
 
-            out_reg->r0 = (uint32_t)str32;
+            out_reg->eax = (uint32_t)str32;
+            out_reg->ret_type = 0;
         } break;
         case PrimitiveKind::Pointer: {
             void *ptr;
             if (!PushPointer(value, type, 1, &ptr)) [[unlikely]]
                 return;
 
-            out_reg->r0 = (uint32_t)ptr;
+            out_reg->eax = (uint32_t)ptr;
+            out_reg->ret_type = 0;
         } break;
         case PrimitiveKind::Record:
         case PrimitiveKind::Union: {
@@ -971,12 +872,12 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
             if (return_ptr) {
                 if (!PushObject(obj, type, return_ptr))
                     return;
-                out_reg->r0 = (uint32_t)return_ptr;
-            } else if (proto->ret.vec_count) {
-                PushObject(obj, type, (uint8_t *)&out_reg->d0);
+                out_reg->eax = (uint32_t)return_ptr;
             } else {
-                PushObject(obj, type, (uint8_t *)&out_reg->r0);
+                PushObject(obj, type, (uint8_t *)&out_reg->eax);
             }
+
+            out_reg->ret_type = 0;
         } break;
         case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
         case PrimitiveKind::Float32: {
@@ -986,11 +887,8 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
                 return;
             }
 
-#if defined(__ARM_PCS_VFP)
-            memcpy(&out_reg->d0, &f, 4);
-#else
-            memcpy(&out_reg->r0, &f, 4);
-#endif
+            out_reg->x87.f = f;
+            out_reg->ret_type = 1;
         } break;
         case PrimitiveKind::Float64: {
             double d;
@@ -999,18 +897,16 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
                 return;
             }
 
-#if defined(__ARM_PCS_VFP)
-            out_reg->d0 = d;
-#else
-            memcpy(&out_reg->r0, &d, 8);
-#endif
+            out_reg->x87.d = d;
+            out_reg->ret_type = 2;
         } break;
         case PrimitiveKind::Callback: {
             void *ptr;
             if (!PushCallback(value, type, &ptr)) [[unlikely]]
                 return;
 
-            out_reg->r0 = (uint32_t)ptr;
+            out_reg->eax = (uint32_t)ptr;
+            out_reg->ret_type = 0;
         } break;
 
         case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;
