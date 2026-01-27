@@ -130,7 +130,7 @@ private:
 template <typename T>
 inline T *CallData::AllocStack(Size size)
 {
-    uint8_t *ptr = AlignDown(mem->stack.end() - size, 16);
+    uint8_t *ptr = AlignDown(mem->stack.end(), 16) - size;
     Size delta = mem->stack.end() - ptr;
 
     // Keep 512 bytes for redzone (required in some ABIs)

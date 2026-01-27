@@ -32,9 +32,6 @@ CallData::CallData(Napi::Env env, InstanceData *instance, InstanceMemory *mem)
 {
     mem->generation += !mem->depth;
     mem->depth++;
-
-    K_ASSERT(AlignUp(mem->stack.ptr, 16) == mem->stack.ptr);
-    K_ASSERT(AlignUp(mem->stack.end(), 16) == mem->stack.end());
 }
 
 CallData::~CallData()
