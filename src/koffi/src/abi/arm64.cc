@@ -489,7 +489,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
                     gpr_ptr += param.gpr_count;
                 } else if (param.type->size) {
 #if defined(__APPLE__)
-                    args_ptr = AlignUp(args_ptr, 8);
+                    args_ptr = AlignUp(args_ptr, param.type->align);
 #endif
                     if (!PushObject(obj, param.type, (uint8_t *)args_ptr))
                         return false;
