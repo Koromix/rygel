@@ -320,6 +320,21 @@ EXPORT Float2 ThroughFloat2(Float2 f2)
     return f2;
 }
 
+EXPORT Float2 ThroughFloat2Odd(float a, float b, float c, float d, float e, float f, float g, float h, float i, Float2 f2)
+{
+    (void)a;
+    (void)b;
+    (void)c;
+    (void)d;
+    (void)e;
+    (void)f;
+    (void)g;
+    (void)h;
+    (void)i;
+
+    return f2;
+}
+
 EXPORT Float3 PackFloat3(float a, float b, float c, Float3 *out)
 {
     Float3 ret;
