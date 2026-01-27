@@ -212,8 +212,28 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
         *(uint8_t **)(gpr_ptr++) = return_ptr;
     }
 
+    Size i = -1;
+
+    static const void *const DispatchTable[] = {
+        #define PRIMITIVE(Name) && Name,
+        #include "primitives.inc"
+    };
+
+    #define LOOP
+    #define CASE(Primitive) \
+        do { \
+            PrimitiveKind next = func->primitives[++i]; \
+            goto *DispatchTable[(int)next]; \
+        } while (false); \
+        Primitive:
+    #define OR(Primitive) \
+        Primitive:
+
 #define PUSH_INTEGER_32(CType) \
         do { \
+            const ParameterInfo &param = func->parameters[i]; \
+            Napi::Value value = info[param.offset]; \
+             \
             CType v; \
             if (!TryNumber(value, &v)) [[unlikely]] { \
                 ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value)); \
@@ -224,6 +244,9 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
         } while (false)
 #define PUSH_INTEGER_32_SWAP(CType) \
         do { \
+            const ParameterInfo &param = func->parameters[i]; \
+            Napi::Value value = info[param.offset]; \
+             \
             CType v; \
             if (!TryNumber(value, &v)) [[unlikely]] { \
                 ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value)); \
@@ -234,6 +257,9 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
         } while (false)
 #define PUSH_INTEGER_64(CType) \
         do { \
+            const ParameterInfo &param = func->parameters[i]; \
+            Napi::Value value = info[param.offset]; \
+             \
             CType v; \
             if (!TryNumber(value, &v)) [[unlikely]] { \
                 ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value)); \
@@ -252,6 +278,9 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
         } while (false)
 #define PUSH_INTEGER_64_SWAP(CType) \
         do { \
+            const ParameterInfo &param = func->parameters[i]; \
+            Napi::Value value = info[param.offset]; \
+             \
             CType v; \
             if (!TryNumber(value, &v)) [[unlikely]] { \
                 ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value)); \
@@ -269,152 +298,180 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
             } \
         } while (false)
 
-    // Push arguments
-    for (Size i = 0; i < func->parameters.len; i++) {
-        const ParameterInfo &param = func->parameters[i];
-        K_ASSERT(param.directions >= 1 && param.directions <= 3);
+    LOOP {
+        CASE(Void) { K_UNREACHABLE(); };
 
-        Napi::Value value = info[param.offset];
+        CASE(Bool) {
+            const ParameterInfo &param = func->parameters[i];
+            Napi::Value value = info[param.offset];
 
-        switch (func->primitives[i]) {
-            case PrimitiveKind::Void: { K_UNREACHABLE(); } break;
+            bool b;
+            if (napi_get_value_bool(env, value, &b) != napi_ok) [[unlikely]] {
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected boolean", GetValueType(instance, value));
+                return false;
+            }
 
-            case PrimitiveKind::Bool: {
-                bool b;
-                if (napi_get_value_bool(env, value, &b) != napi_ok) [[unlikely]] {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected boolean", GetValueType(instance, value));
+            *((param.gpr_count ? gpr_ptr : args_ptr)++) = (uint32_t)b;
+        };
+
+        CASE(Int8) { PUSH_INTEGER_32(int8_t); };
+        CASE(UInt8) { PUSH_INTEGER_32(uint8_t); };
+        CASE(Int16) { PUSH_INTEGER_32(int16_t); };
+        CASE(Int16S) { PUSH_INTEGER_32_SWAP(int16_t); };
+        CASE(UInt16) { PUSH_INTEGER_32(uint16_t); };
+        CASE(UInt16S) { PUSH_INTEGER_32_SWAP(uint16_t); };
+        CASE(Int32) { PUSH_INTEGER_32(int32_t); };
+        CASE(Int32S) { PUSH_INTEGER_32_SWAP(int32_t); };
+        CASE(UInt32) { PUSH_INTEGER_32(uint32_t); };
+        CASE(UInt32S) { PUSH_INTEGER_32_SWAP(uint32_t); };
+        CASE(Int64) { PUSH_INTEGER_64(int64_t); };
+        CASE(Int64S) { PUSH_INTEGER_64_SWAP(int64_t); };
+        CASE(UInt64) { PUSH_INTEGER_64(uint64_t); };
+        CASE(UInt64S) { PUSH_INTEGER_64_SWAP(uint64_t); };
+
+        CASE(String) {
+            const ParameterInfo &param = func->parameters[i];
+            Napi::Value value = info[param.offset];
+
+            const char *str;
+            if (!PushString(value, param.directions, &str)) [[unlikely]]
+                return false;
+
+            *(const char **)((param.gpr_count ? gpr_ptr : args_ptr)++) = str;
+        };
+        CASE(String16) {
+            const ParameterInfo &param = func->parameters[i];
+            Napi::Value value = info[param.offset];
+
+            const char16_t *str16;
+            if (!PushString16(value, param.directions, &str16)) [[unlikely]]
+                return false;
+
+            *(const char16_t **)((param.gpr_count ? gpr_ptr : args_ptr)++) = str16;
+        };
+        CASE(String32) {
+            const ParameterInfo &param = func->parameters[i];
+            Napi::Value value = info[param.offset];
+
+            const char32_t *str32;
+            if (!PushString32(value, param.directions, &str32)) [[unlikely]]
+                return false;
+
+            *(const char32_t **)((param.gpr_count ? gpr_ptr : args_ptr)++) = str32;
+        };
+
+        CASE(Pointer) {
+            const ParameterInfo &param = func->parameters[i];
+            Napi::Value value = info[param.offset];
+
+            void *ptr;
+            if (!PushPointer(value, param.type, param.directions, &ptr)) [[unlikely]]
+                return false;
+
+            *(void **)((param.gpr_count ? gpr_ptr : args_ptr)++) = ptr;
+        };
+
+        CASE(Record) OR(Union) {
+            const ParameterInfo &param = func->parameters[i];
+            Napi::Value value = info[param.offset];
+
+            if (!IsObject(value)) [[unlikely]] {
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected object", GetValueType(instance, value));
+                return false;
+            }
+
+            Napi::Object obj = value.As<Napi::Object>();
+
+            if (param.vec_count) {
+                if (!PushObject(obj, param.type, (uint8_t *)vec_ptr))
                     return false;
-                }
+                vec_ptr += param.vec_count;
+            } else if (param.gpr_count) {
+                K_ASSERT(param.type->align <= 8);
 
-                *((param.gpr_count ? gpr_ptr : args_ptr)++) = (uint32_t)b;
-            } break;
-            case PrimitiveKind::Int8: { PUSH_INTEGER_32(int8_t); } break;
-            case PrimitiveKind::UInt8: { PUSH_INTEGER_32(uint8_t); } break;
-            case PrimitiveKind::Int16: { PUSH_INTEGER_32(int16_t); } break;
-            case PrimitiveKind::Int16S: { PUSH_INTEGER_32_SWAP(int16_t); } break;
-            case PrimitiveKind::UInt16: { PUSH_INTEGER_32(uint16_t); } break;
-            case PrimitiveKind::UInt16S: { PUSH_INTEGER_32_SWAP(uint16_t); } break;
-            case PrimitiveKind::Int32: { PUSH_INTEGER_32(int32_t); } break;
-            case PrimitiveKind::Int32S: { PUSH_INTEGER_32_SWAP(int32_t); } break;
-            case PrimitiveKind::UInt32: { PUSH_INTEGER_32(uint32_t); } break;
-            case PrimitiveKind::UInt32S: { PUSH_INTEGER_32_SWAP(uint32_t); } break;
-            case PrimitiveKind::Int64: { PUSH_INTEGER_64(int64_t); } break;
-            case PrimitiveKind::Int64S: { PUSH_INTEGER_64_SWAP(int64_t); } break;
-            case PrimitiveKind::UInt64: { PUSH_INTEGER_64(uint64_t); } break;
-            case PrimitiveKind::UInt64S: { PUSH_INTEGER_64_SWAP(uint64_t); } break;
-            case PrimitiveKind::String: {
-                const char *str;
-                if (!PushString(value, param.directions, &str)) [[unlikely]]
-                    return false;
+                int16_t align = (param.type->align <= 4) ? 4 : 8;
+                gpr_ptr = AlignUp(gpr_ptr, align);
 
-                *(const char **)((param.gpr_count ? gpr_ptr : args_ptr)++) = str;
-            } break;
-            case PrimitiveKind::String16: {
-                const char16_t *str16;
-                if (!PushString16(value, param.directions, &str16)) [[unlikely]]
-                    return false;
-
-                *(const char16_t **)((param.gpr_count ? gpr_ptr : args_ptr)++) = str16;
-            } break;
-            case PrimitiveKind::String32: {
-                const char32_t *str32;
-                if (!PushString32(value, param.directions, &str32)) [[unlikely]]
-                    return false;
-
-                *(const char32_t **)((param.gpr_count ? gpr_ptr : args_ptr)++) = str32;
-            } break;
-            case PrimitiveKind::Pointer: {
-                void *ptr;
-                if (!PushPointer(value, param.type, param.directions, &ptr)) [[unlikely]]
-                    return false;
-
-                *(void **)((param.gpr_count ? gpr_ptr : args_ptr)++) = ptr;
-            } break;
-            case PrimitiveKind::Record:
-            case PrimitiveKind::Union: {
-                if (!IsObject(value)) [[unlikely]] {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected object", GetValueType(instance, value));
-                    return false;
-                }
-
-                Napi::Object obj = value.As<Napi::Object>();
-
-                if (param.vec_count) {
-                    if (!PushObject(obj, param.type, (uint8_t *)vec_ptr))
-                        return false;
-                    vec_ptr += param.vec_count;
-                } else if (param.gpr_count) {
-                    K_ASSERT(param.type->align <= 8);
-
-                    int16_t align = (param.type->align <= 4) ? 4 : 8;
-                    gpr_ptr = AlignUp(gpr_ptr, align);
-
-                    if (!PushObject(obj, param.type, (uint8_t *)gpr_ptr))
-                        return false;
-
-                    gpr_ptr += param.gpr_count;
-                    args_ptr += (param.type->size - param.gpr_count * 4 + 3) / 4;
-                } else if (param.type->size) {
-                    int16_t align = (param.type->align <= 4) ? 4 : 8;
-                    args_ptr = AlignUp(args_ptr, align);
-
-                    if (!PushObject(obj, param.type, (uint8_t *)args_ptr))
-                        return false;
-                    args_ptr += (param.type->size + 3) / 4;
-                }
-            } break;
-            case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
-            case PrimitiveKind::Float32: {
-                float f;
-                if (!TryNumber(value, &f)) [[unlikely]] {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
-                    return false;
-                }
-
-                if (param.vec_count) [[likely]] {
-                    *(float *)(vec_ptr++) = f;
-                } else if (param.gpr_count) {
-                    *(float *)(gpr_ptr++) = f;
-                } else {
-                    *(float *)(args_ptr++) = f;
-                }
-            } break;
-            case PrimitiveKind::Float64: {
-                double d;
-                if (!TryNumber(value, &d)) [[unlikely]] {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
-                    return false;
-                }
-
-                if (param.vec_count) [[likely]] {
-                    *(double *)vec_ptr = d;
-                    vec_ptr += 2;
-                } else if (param.gpr_count) {
-                    gpr_ptr = AlignUp(gpr_ptr, 8);
-                    *(double *)gpr_ptr = d;
-                    gpr_ptr += 2;
-                } else {
-                    args_ptr = AlignUp(args_ptr, 8);
-                    *(double *)args_ptr = d;
-                    args_ptr += 2;
-                }
-            } break;
-            case PrimitiveKind::Callback: {
-                void *ptr;
-                if (!PushCallback(value, param.type, &ptr)) [[unlikely]]
+                if (!PushObject(obj, param.type, (uint8_t *)gpr_ptr))
                     return false;
 
-                *(void **)((param.gpr_count ? gpr_ptr : args_ptr)++) = ptr;
-            } break;
+                gpr_ptr += param.gpr_count;
+                args_ptr += (param.type->size - param.gpr_count * 4 + 3) / 4;
+            } else if (param.type->size) {
+                int16_t align = (param.type->align <= 4) ? 4 : 8;
+                args_ptr = AlignUp(args_ptr, align);
 
-            case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;
-        }
+                if (!PushObject(obj, param.type, (uint8_t *)args_ptr))
+                    return false;
+                args_ptr += (param.type->size + 3) / 4;
+            }
+        };
+        CASE(Array) { K_UNREACHABLE(); };
+
+        CASE(Float32) {
+            const ParameterInfo &param = func->parameters[i];
+            Napi::Value value = info[param.offset];
+
+            float f;
+            if (!TryNumber(value, &f)) [[unlikely]] {
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
+                return false;
+            }
+
+            if (param.vec_count) [[likely]] {
+                *(float *)(vec_ptr++) = f;
+            } else if (param.gpr_count) {
+                *(float *)(gpr_ptr++) = f;
+            } else {
+                *(float *)(args_ptr++) = f;
+            }
+        };
+        CASE(Float64) {
+            const ParameterInfo &param = func->parameters[i];
+            Napi::Value value = info[param.offset];
+
+            double d;
+            if (!TryNumber(value, &d)) [[unlikely]] {
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
+                return false;
+            }
+
+            if (param.vec_count) [[likely]] {
+                *(double *)vec_ptr = d;
+                vec_ptr += 2;
+            } else if (param.gpr_count) {
+                gpr_ptr = AlignUp(gpr_ptr, 8);
+                *(double *)gpr_ptr = d;
+                gpr_ptr += 2;
+            } else {
+                args_ptr = AlignUp(args_ptr, 8);
+                *(double *)args_ptr = d;
+                args_ptr += 2;
+            }
+        };
+
+        CASE(Callback) {
+            const ParameterInfo &param = func->parameters[i];
+            Napi::Value value = info[param.offset];
+
+            void *ptr;
+            if (!PushCallback(value, param.type, &ptr)) [[unlikely]]
+                return false;
+
+            *(void **)((param.gpr_count ? gpr_ptr : args_ptr)++) = ptr;
+        };
+
+        CASE(Prototype) { /* End loop */ };
     }
 
 #undef PUSH_INTEGER_64_SWAP
 #undef PUSH_INTEGER_64
 #undef PUSH_INTEGER_32_SWAP
 #undef PUSH_INTEGER_32
+
+#undef OR
+#undef CASE
+#undef LOOP
 
     new_sp = mem->stack.end();
 
