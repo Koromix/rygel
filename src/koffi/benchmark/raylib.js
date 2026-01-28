@@ -16,7 +16,7 @@ const { performance } = require('perf_hooks');
 main();
 
 function main() {
-    let time = 3000;
+    let time = 8000;
 
     if (process.argv.length >= 3) {
         time = parseFloat(process.argv[2]) * 1000;
