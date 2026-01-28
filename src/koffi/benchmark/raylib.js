@@ -43,7 +43,9 @@ function run_cc(time) {
     if (proc.status == null)
         throw new Error(proc.error);
     if (proc.status != 0) {
-        let output = proc.stderr?.trim?.() || proc.stdout?.trim?.() || 'Unknown error';
+        let output = proc.stderr?.toString?.('utf-8')?.trim?.() ||
+                     proc.stdout?.toString?.('utf-8')?.trim?.() ||
+                     'Unknown error';
         throw new Error(output);
     }
 
