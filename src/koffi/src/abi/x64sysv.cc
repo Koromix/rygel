@@ -143,17 +143,12 @@ ClassResult ClassAnalyser::Analyse(const TypeInfo *type)
         }
     }
 
-    if (type->primitive != PrimitiveKind::Record &&
-            type->primitive != PrimitiveKind::Union) {
+    // Fall back to the stack
+    {
         ret.method = AbiMethod::Stack;
+        ret.stack_offset = stack_offset;
 
-        ret.stack_offset = AlignLen(stack_offset, 8);
-        stack_offset = ret.stack_offset + 8;
-    } else {
-        ret.method = AbiMethod::Stack;
-
-        ret.stack_offset = AlignLen(stack_offset, type->align);
-        stack_offset = ret.stack_offset + type->size;
+        stack_offset += AlignLen(type->size, 8);
     }
 
     return ret;
