@@ -2318,6 +2318,11 @@ static Napi::Value ResetKoffi(const Napi::CallbackInfo &info)
 
     instance->callbacks.Clear();
 
+    for (InstanceMemory *mem: instance->memories) {
+        delete mem;
+    }
+    instance->memories.Clear();
+
     return env.Undefined();
 }
 
