@@ -20,52 +20,32 @@ function main() {
 
 function benchmark(select) {
     if (!select.length || select.includes('rand'))
-        format(run('rand', 'rand_napi'), 'ns');
+        format(run('rand.js', 'napi'), 'ns');
     if (!select.length || select.includes('atoi'))
-        format(run('atoi', 'atoi_napi'), 'ns');
+        format(run('atoi.js', 'napi'), 'ns');
     if (!select.length || select.includes('memset'))
-        format(run('memset', 'memset_napi'), 'ns');
+        format(run('memset.js', 'napi'), 'ns');
     if (!select.length || select.includes('raylib'))
-        format(run('raylib', 'raylib_node_raylib'), 'us');
+        format(run('raylib.js', 'napi'), 'us');
 }
 
-function run(name, ref) {
-    let tests = [];
-    {
-        let entries = fs.readdirSync(__dirname);
+function run(basename, ref) {
+    let filename = path.join(__dirname, basename)
+    let proc = spawnSync(process.execPath, [filename]);
 
-        let re = new RegExp(name + '_[a-z0-9_]+\.js$');
-
-        for (let entry of entries) {
-            if (entry.match(re)) {
-                let test = {
-                    name: path.basename(entry, '.js'),
-                    filename: path.join(__dirname, entry)
-                };
-
-                if (test.name == ref)
-                    ref = test;
-                tests.push(test);
-            }
-        }
+    if (proc.status == null)
+        throw new Error(proc.error);
+    if (proc.status != 0) {
+        let output = proc.stderr?.trim?.() || proc.stdout?.trim?.() || 'Unknown error';
+        throw new Error(output);
     }
 
-    if (typeof ref == 'string')
+    let results = JSON.parse(proc.stdout.toString('utf-8'));
+    let tests = Object.keys(results).map(name => ({ name: name, ...results[name] }));
+
+    if (!Object.hasOwn(results, ref))
         throw new Error('Failed to find reference test');
-
-    for (let test of tests) {
-        let proc = spawnSync(process.execPath, [test.filename]);
-
-        if (proc.status == null)
-            throw new Error(proc.error);
-        if (proc.status !== 0)
-            throw new Error(proc.stderr || proc.stdout);
-
-        let perf = JSON.parse(proc.stdout);
-
-        test.iterations = perf.iterations;
-        test.time = perf.time;
-    }
+    ref = results[ref];
 
     for (let test of tests) {
         test.ratio = (ref.time / ref.iterations) / (test.time / test.iterations);
