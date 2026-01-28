@@ -225,24 +225,21 @@ Napi::Value Decode(Napi::Env env, const uint8_t *ptr, const TypeInfo *type, cons
 bool Encode(Napi::Value ref, Size offset, Napi::Value value, const TypeInfo *type, const Size *len = nullptr);
 bool Encode(Napi::Env env, uint8_t *ptr, Napi::Value value, const TypeInfo *type, const Size *len = nullptr);
 
-static inline Napi::Value NewBigInt(Napi::Env env, int64_t value)
+template <typename T>
+Napi::Value NewBigInt(Napi::Env env, T value)
 {
-    if (value <= 9007199254740992ll && value >= -9007199254740992ll) {
-        double d = (double)value;
-        return Napi::Number::New(env, d);
-    } else {
+    if constexpr (sizeof(T) <= 4)
         return Napi::BigInt::New(env, value);
-    }
-}
 
-static inline Napi::Value NewBigInt(Napi::Env env, uint64_t value)
-{
-    if (value <= 9007199254740992ull) {
-        double d = (double)value;
-        return Napi::Number::New(env, d);
+    if constexpr (std::is_signed_v<T>) {
+        if (value <= 9007199254740992ll && value >= -9007199254740992ll)
+            return Napi::Number::New(env, (double)value);
     } else {
-        return Napi::BigInt::New(env, value);
+        if (value <= 9007199254740992ull)
+            return Napi::Number::New(env, (double)value);
     }
+
+    return Napi::BigInt::New(env, value);
 }
 
 static inline Napi::Array GetOwnPropertyNames(Napi::Object obj)

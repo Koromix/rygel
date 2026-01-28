@@ -117,6 +117,9 @@ static const char *const CallConventionNames[] = {
     "Thiscall"
 };
 
+// ABI specific
+enum class ParameterMethod : int;
+
 struct ParameterInfo {
     const TypeInfo *type;
     int directions;
@@ -128,10 +131,10 @@ struct ParameterInfo {
 #if defined(_M_X64)
     bool regular;
 #elif defined(__x86_64__)
-    bool use_memory;
-    int8_t gpr_count;
-    int8_t xmm_count;
-    bool gpr_first;
+    struct {
+        ParameterMethod method;
+        int offsets[2];
+    } abi;
 #elif defined(__arm__) || defined(__aarch64__) || defined(_M_ARM64)
     bool use_memory; // Only used for return value on ARM32
     int8_t gpr_count;
