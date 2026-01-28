@@ -118,7 +118,7 @@ static const char *const CallConventionNames[] = {
 };
 
 // ABI specific
-enum class ParameterMethod : int;
+enum class AbiMethod : int;
 
 struct ParameterInfo {
     const TypeInfo *type;
@@ -132,8 +132,36 @@ struct ParameterInfo {
     bool regular;
 #elif defined(__x86_64__)
     struct {
-        ParameterMethod method;
+        bool regular;
         int offsets[2];
+    } abi;
+#elif defined(__arm__) || defined(__aarch64__) || defined(_M_ARM64)
+    bool use_memory; // Only used for return value on ARM32
+    int8_t gpr_count;
+    int8_t vec_count;
+    int8_t vec_bytes; // ARM64
+#elif defined(__i386__) || defined(_M_IX86)
+    bool trivial; // Only matters for return value
+    int8_t fast;
+#elif __riscv_xlen == 64 || defined(__loongarch64)
+    bool use_memory;
+    int8_t gpr_count;
+    int8_t vec_count;
+    bool gpr_first; // Only for structs
+    int8_t reg_size[2];
+#endif
+};
+
+struct ReturnInfo {
+    const TypeInfo *type;
+
+    // ABI-specific part
+
+#if defined(_M_X64)
+    bool regular;
+#elif defined(__x86_64__)
+    struct {
+        AbiMethod method;
     } abi;
 #elif defined(__arm__) || defined(__aarch64__) || defined(_M_ARM64)
     bool use_memory; // Only used for return value on ARM32
@@ -171,7 +199,7 @@ struct FunctionInfo {
     void *native;
     CallConvention convention;
 
-    ParameterInfo ret;
+    ReturnInfo ret;
     HeapArray<ParameterInfo> parameters;
     HeapArray<PrimitiveKind> primitives;
     int8_t required_parameters;

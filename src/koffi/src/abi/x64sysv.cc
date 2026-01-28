@@ -52,7 +52,7 @@ extern "C" napi_value CallSwitchStack(Napi::Function *func, size_t argc, napi_va
                                       uint8_t *old_sp, Span<uint8_t> *new_stack,
                                       napi_value (*call)(Napi::Function *func, size_t argc, napi_value *argv));
 
-enum class ParameterMethod {
+enum class AbiMethod {
     Stack,
     GprGpr,
     XmmXmm,
@@ -61,7 +61,7 @@ enum class ParameterMethod {
 };
 
 struct ClassResult {
-    ParameterMethod method;
+    AbiMethod method;
 
     int gpr_index;
     int gpr_count;
@@ -113,7 +113,7 @@ ClassResult ClassAnalyser::Analyse(const TypeInfo *type)
             K_ASSERT(cls != RegisterClass::NoClass);
 
             if (cls == RegisterClass::Memory) {
-                ret.method = ParameterMethod::Stack;
+                ret.method = AbiMethod::Stack;
                 return ret;
             }
 
@@ -124,11 +124,11 @@ ClassResult ClassAnalyser::Analyse(const TypeInfo *type)
         if (gpr_count <= gpr_avail && xmm_count <= xmm_avail) {
             if (gpr_count && xmm_count) {
                 bool gpr_xmm = (classes.len && classes[0] == RegisterClass::Integer);
-                ret.method = gpr_xmm ? ParameterMethod::GprXmm : ParameterMethod::XmmGpr;
+                ret.method = gpr_xmm ? AbiMethod::GprXmm : AbiMethod::XmmGpr;
             } else if (gpr_count) {
-                ret.method = ParameterMethod::GprGpr;
+                ret.method = AbiMethod::GprGpr;
             } else {
-                ret.method = ParameterMethod::XmmXmm;
+                ret.method = AbiMethod::XmmXmm;
             }
 
             ret.gpr_index = (gpr_max - gpr_avail);
@@ -145,12 +145,12 @@ ClassResult ClassAnalyser::Analyse(const TypeInfo *type)
 
     if (type->primitive != PrimitiveKind::Record &&
             type->primitive != PrimitiveKind::Union) {
-        ret.method = ParameterMethod::Stack;
+        ret.method = AbiMethod::Stack;
 
         ret.stack_offset = AlignLen(stack_offset, 8);
         stack_offset = ret.stack_offset + 8;
     } else {
-        ret.method = ParameterMethod::Stack;
+        ret.method = AbiMethod::Stack;
 
         ret.stack_offset = AlignLen(stack_offset, type->align);
         stack_offset = ret.stack_offset + type->size;
@@ -276,32 +276,35 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
 
     // Handle parameters
     {
-        int gpr_base = (func->ret.abi.method == ParameterMethod::Stack);
+        int gpr_base = (func->ret.abi.method == AbiMethod::Stack);
         ClassAnalyser analyser(6 - gpr_base, 8);
 
         for (ParameterInfo &param: func->parameters) {
             ClassResult ret = analyser.Analyse(param.type);
 
-            param.abi.method = ret.method;
-
             switch (ret.method) {
-                case ParameterMethod::Stack: {
+                case AbiMethod::Stack: {
+                    param.abi.regular = false;
                     param.abi.offsets[0] = 14 * 8 + ret.stack_offset;
                 } break;
 
-                case ParameterMethod::GprGpr: {
+                case AbiMethod::GprGpr: {
+                    param.abi.regular = true;
                     param.abi.offsets[0] = (gpr_base + ret.gpr_index) * 8;
                     param.abi.offsets[1] = param.abi.offsets[0] + (ret.gpr_count == 2) * 8;
                 } break;
-                case ParameterMethod::XmmXmm: {
+                case AbiMethod::XmmXmm: {
+                    param.abi.regular = true;
                     param.abi.offsets[0] = (6 + ret.xmm_index) * 8;
                     param.abi.offsets[1] = param.abi.offsets[0] + (ret.xmm_count == 2) * 8;
                 } break;
-                case ParameterMethod::GprXmm: {
+                case AbiMethod::GprXmm: {
+                    param.abi.regular = true;
                     param.abi.offsets[0] = (gpr_base + ret.gpr_index) * 8;
                     param.abi.offsets[1] = (6 + ret.xmm_index) * 8;
                 } break;
-                case ParameterMethod::XmmGpr: {
+                case AbiMethod::XmmGpr: {
+                    param.abi.regular = true;
                     param.abi.offsets[0] = (6 + ret.xmm_index) * 8;
                     param.abi.offsets[1] = (gpr_base + ret.gpr_index) * 8;
                 } break;
@@ -323,7 +326,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
         return false;
     new_sp = base;
 
-    if (func->ret.abi.method == ParameterMethod::Stack) {
+    if (func->ret.abi.method == AbiMethod::Stack) {
         return_ptr = AllocHeap(func->ret.type->size, 16);
         *(uint8_t **)base = return_ptr;
     } else {
@@ -459,7 +462,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
 
             Napi::Object obj = value.As<Napi::Object>();
 
-            if (param.abi.method != ParameterMethod::Stack) {
+            if (param.abi.regular) {
                 K_ASSERT(param.type->size <= 16);
 
                 uint64_t buf[2] = {};
@@ -564,21 +567,21 @@ void CallData::Execute(const FunctionInfo *func, void *native)
         case PrimitiveKind::Record:
         case PrimitiveKind::Union: {
             switch (func->ret.abi.method) {
-                case ParameterMethod::Stack: { PERFORM_CALL(GG); } break;
+                case AbiMethod::Stack: { PERFORM_CALL(GG); } break;
 
-                case ParameterMethod::GprGpr: {
+                case AbiMethod::GprGpr: {
                     RaxRdxRet ret = PERFORM_CALL(GG);
                     memcpy(return_ptr, &ret, K_SIZE(ret));
                 } break;
-                case ParameterMethod::XmmXmm: {
+                case AbiMethod::XmmXmm: {
                     Xmm0Xmm1Ret ret = PERFORM_CALL(DD);
                     memcpy(return_ptr, &ret, K_SIZE(ret));
                 } break;
-                case ParameterMethod::GprXmm: {
+                case AbiMethod::GprXmm: {
                     RaxXmm0Ret ret = PERFORM_CALL(GD);
                     memcpy(return_ptr, &ret, K_SIZE(ret));
                 } break;
-                case ParameterMethod::XmmGpr: {
+                case AbiMethod::XmmGpr: {
                     Xmm0RaxRet ret = PERFORM_CALL(DG);
                     memcpy(return_ptr, &ret, K_SIZE(ret));
                 } break;
@@ -668,7 +671,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
 
 #define POP_INTEGER(CType) \
         do { \
-            const uint8_t *src = (param.abi.method != ParameterMethod::Stack ? own_sp : caller_sp) + param.abi.offsets[0]; \
+            const uint8_t *src = (param.abi.regular ? own_sp : caller_sp) + param.abi.offsets[0]; \
             CType v = *(const CType *)src; \
              \
             if constexpr (sizeof(v) > 4) { \
@@ -681,7 +684,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
         } while (false)
 #define POP_INTEGER_SWAP(CType) \
         do { \
-            const uint8_t *src = (param.abi.method != ParameterMethod::Stack ? own_sp : caller_sp) + param.abi.offsets[0]; \
+            const uint8_t *src = (param.abi.regular ? own_sp : caller_sp) + param.abi.offsets[0]; \
             CType v = *(const CType *)src; \
              \
             if constexpr (sizeof(v) > 4) { \
@@ -702,7 +705,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
             case PrimitiveKind::Void: { K_UNREACHABLE(); } break;
 
             case PrimitiveKind::Bool: {
-                const uint8_t *src = (param.abi.method != ParameterMethod::Stack ? own_sp : caller_sp) + param.abi.offsets[0];
+                const uint8_t *src = (param.abi.regular ? own_sp : caller_sp) + param.abi.offsets[0];
                 bool b = *(bool *)src;
 
                 Napi::Value arg = Napi::Boolean::New(env, b);
@@ -725,7 +728,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
             case PrimitiveKind::UInt64S: { POP_INTEGER_SWAP(uint64_t); } break;
 
             case PrimitiveKind::String: {
-                const uint8_t *src = (param.abi.method != ParameterMethod::Stack ? own_sp : caller_sp) + param.abi.offsets[0];
+                const uint8_t *src = (param.abi.regular ? own_sp : caller_sp) + param.abi.offsets[0];
                 const char *str = *(const char **)src;
 
                 Napi::Value arg = str ? Napi::String::New(env, str) : env.Null();
@@ -736,7 +739,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
                 }
             } break;
             case PrimitiveKind::String16: {
-                const uint8_t *src = (param.abi.method != ParameterMethod::Stack ? own_sp : caller_sp) + param.abi.offsets[0];
+                const uint8_t *src = (param.abi.regular ? own_sp : caller_sp) + param.abi.offsets[0];
                 const char16_t *str16 = *(const char16_t **)src;
 
                 Napi::Value arg = str16 ? Napi::String::New(env, str16) : env.Null();
@@ -747,7 +750,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
                 }
             } break;
             case PrimitiveKind::String32: {
-                const uint8_t *src = (param.abi.method != ParameterMethod::Stack ? own_sp : caller_sp) + param.abi.offsets[0];
+                const uint8_t *src = (param.abi.regular ? own_sp : caller_sp) + param.abi.offsets[0];
                 const char32_t *str32 = *(const char32_t **)src;
 
                 Napi::Value arg = str32 ? MakeStringFromUTF32(env, str32) : env.Null();
@@ -755,7 +758,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
             } break;
 
             case PrimitiveKind::Pointer: {
-                const uint8_t *src = (param.abi.method != ParameterMethod::Stack ? own_sp : caller_sp) + param.abi.offsets[0];
+                const uint8_t *src = (param.abi.regular ? own_sp : caller_sp) + param.abi.offsets[0];
                 void *ptr2 = *(void **)src;
 
                 Napi::Value p = ptr2 ? WrapPointer(env, param.type->ref.type, ptr2) : env.Null();
@@ -768,7 +771,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
 
             case PrimitiveKind::Record:
             case PrimitiveKind::Union: {
-                if (param.abi.method != ParameterMethod::Stack) {
+                if (param.abi.regular) {
                     uint64_t buf[2];
 
                     buf[0] = *(uint64_t *)(own_sp + param.abi.offsets[0]);
@@ -784,14 +787,14 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
             case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
 
             case PrimitiveKind::Float32: {
-                const uint8_t *src = (param.abi.method != ParameterMethod::Stack ? own_sp : caller_sp) + param.abi.offsets[0];
+                const uint8_t *src = (param.abi.regular ? own_sp : caller_sp) + param.abi.offsets[0];
                 float f = *(float *)src;
 
                 Napi::Value arg = Napi::Number::New(env, (double)f);
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::Float64: {
-                const uint8_t *src = (param.abi.method != ParameterMethod::Stack ? own_sp : caller_sp) + param.abi.offsets[0];
+                const uint8_t *src = (param.abi.regular ? own_sp : caller_sp) + param.abi.offsets[0];
                 double d = *(double *)src;
 
                 Napi::Value arg = Napi::Number::New(env, d);
@@ -799,7 +802,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
             } break;
 
             case PrimitiveKind::Callback: {
-                const uint8_t *src = (param.abi.method != ParameterMethod::Stack ? own_sp : caller_sp) + param.abi.offsets[0];
+                const uint8_t *src = (param.abi.regular ? own_sp : caller_sp) + param.abi.offsets[0];
                 void *ptr2 = *(void **)src;
 
                 Napi::Value p = ptr2 ? WrapCallback(env, param.type->ref.type, ptr2) : env.Null();
@@ -921,7 +924,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
 
             Napi::Object obj = value.As<Napi::Object>();
 
-            if (proto->ret.abi.method == ParameterMethod::Stack) {
+            if (proto->ret.abi.method == AbiMethod::Stack) {
                 uint64_t *gpr_ptr = (uint64_t *)own_sp;
                 uint8_t *dest = (uint8_t *)gpr_ptr[0];
 
@@ -937,21 +940,21 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
                     return;
 
                 switch (proto->ret.abi.method) {
-                    case ParameterMethod::Stack: { K_UNREACHABLE(); } break;
+                    case AbiMethod::Stack: { K_UNREACHABLE(); } break;
 
-                    case ParameterMethod::GprGpr: {
+                    case AbiMethod::GprGpr: {
                         memcpy(&out_reg->rax, buf + 0, 8);
                         memcpy(&out_reg->rdx, buf + 8, 8);
                     } break;
-                    case ParameterMethod::XmmXmm: {
+                    case AbiMethod::XmmXmm: {
                         memcpy(&out_reg->xmm0, buf + 0, 8);
                         memcpy(&out_reg->xmm1, buf + 8, 8);
                     } break;
-                    case ParameterMethod::GprXmm: {
+                    case AbiMethod::GprXmm: {
                         memcpy(&out_reg->rax, buf + 0, 8);
                         memcpy(&out_reg->xmm0, buf + 8, 8);
                     } break;
-                    case ParameterMethod::XmmGpr: {
+                    case AbiMethod::XmmGpr: {
                         memcpy(&out_reg->xmm0, buf + 0, 8);
                         memcpy(&out_reg->rax, buf + 8, 8);
                     } break;
