@@ -345,7 +345,7 @@ namespace {
     #warning Falling back to inlining instead of tail calls (missing attributes)
 
     #define OP(Code) \
-        inline __attribute__((always_inline)) bool Handle ## Code(CallData *call, const FunctionInfo *func, const Napi::CallbackInfo &info, uint8_t *base, Size i)
+        FORCE_INLINE bool Handle ## Code(CallData *call, const FunctionInfo *func, const Napi::CallbackInfo &info, uint8_t *base, Size i)
     #define DISPATCH() \
         return true
 

@@ -32,6 +32,7 @@ extern "C" napi_value CallSwitchStack(Napi::Function *func, size_t argc, napi_va
 enum class AbiOpcode : int8_t {
     #define PRIMITIVE(Name) Name,
     #include "../primitives.inc"
+    Aggregate,
     End
 };
 
@@ -42,7 +43,12 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
     for (ParameterInfo &param: func->parameters) {
         param.regular = IsRegularSize(param.type->size, 8);
 
-        func->instructions.Append((AbiOpcode)param.type->primitive);
+        if (param.type->primitive == PrimitiveKind::Record || param.type->primitive == PrimitiveKind::Union) {
+            func->instructions.Append(AbiOpcode::Aggregate);
+        } else {
+            func->instructions.Append((AbiOpcode)param.type->primitive);
+        }
+
         func->forward_fp |= IsFloat(param.type);
     }
 
@@ -52,44 +58,24 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
     return true;
 }
 
-bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
-{
-    uint64_t *args_ptr = AllocStack<uint64_t>(func->args_size);
+namespace {
+#if defined(MUST_TAIL)
+    #define OP(Code) \
+            PRESERVE_NONE bool Handle ## Code(CallData *call, const FunctionInfo *func, const Napi::CallbackInfo &info, uint64_t *base, Size i)
+    #define DISPATCH() \
+            do { \
+                AbiOpcode next = func->instructions[i + 1]; \
+                MUST_TAIL return ForwardDispatch[(int)next](call, func, info, base, i + 1); \
+            } while (false)
 
-    if (!args_ptr) [[unlikely]]
-        return false;
-    if (!func->ret.regular) {
-        return_ptr = AllocHeap(func->ret.type->size, 16);
-        *(uint8_t **)(args_ptr++) = return_ptr;
-    }
-
-    Size i = -1;
-
-#if defined(__GNUC__) || defined(__clang__)
-    static const void *const DispatchTable[] = {
-        #define PRIMITIVE(Name) && Name,
-        #include "../primitives.inc"
-        && End
-    };
-
-    #define LOOP
-    #define CASE(Primitive) \
-        do { \
-            AbiOpcode next = func->instructions[++i]; \
-            goto *DispatchTable[(int)next]; \
-        } while (false); \
-        Primitive:
-    #define OR(Primitive) \
-        Primitive:
+    PRESERVE_NONE typedef bool ForwardFunc(CallData *call, const FunctionInfo *func, const Napi::CallbackInfo &info, uint64_t *base, Size i);
 #else
-    #define LOOP \
-        while (++i < func->parameters.len) \
-            switch (func->instructions[i])
-    #define CASE(Primitive) \
-        break; \
-        case AbiOpcode::Primitive:
-    #define OR(Primitive) \
-        case AbiOpcode::Primitive:
+    #define OP(Code) \
+        FORCE_INLINE bool Handle ## Code (CallData *call, const FunctionInfo *func, const Napi::CallbackInfo &info, uint64_t *base, Size i)
+    #define DISPATCH() \
+        return true
+
+    typedef bool ForwardFunc(CallData *call, const FunctionInfo *func, const Napi::CallbackInfo &info, uint64_t *base, Size i);
 #endif
 
 #define PUSH_INTEGER(CType) \
@@ -99,11 +85,11 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
              \
             CType v; \
             if (!TryNumber(value, &v)) [[unlikely]] { \
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value)); \
+                ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected number", GetValueType(call->instance, value)); \
                 return false; \
             } \
              \
-            *(args_ptr++) = (uint64_t)v; \
+            *(base + i) = (uint64_t)v; \
         } while (false)
 #define PUSH_INTEGER_SWAP(CType) \
         do { \
@@ -112,156 +98,227 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
              \
             CType v; \
             if (!TryNumber(value, &v)) [[unlikely]] { \
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value)); \
+                ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected number", GetValueType(call->instance, value)); \
                 return false; \
             } \
              \
-            *(args_ptr++) = (uint64_t)ReverseBytes(v); \
+            *(base + i) = (uint64_t)ReverseBytes(v); \
         } while (false)
 
-    LOOP {
-        CASE(Void) { K_UNREACHABLE(); };
+    extern ForwardFunc *const ForwardDispatch[256];
 
-        CASE(Bool) {
-            const ParameterInfo &param = func->parameters[i];
-            Napi::Value value = info[param.offset];
+    OP(Void) { K_UNREACHABLE(); return false; }
 
-            bool b;
-            if (napi_get_value_bool(env, value, &b) != napi_ok) [[unlikely]] {
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected boolean", GetValueType(instance, value));
-                return false;
-            }
+    OP(Bool) {
+        const ParameterInfo &param = func->parameters[i];
+        Napi::Value value = info[param.offset];
 
-            *(bool *)(args_ptr++) = b;
-        };
+        bool b;
+        if (napi_get_value_bool(call->env, value, &b) != napi_ok) [[unlikely]] {
+            ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected boolean", GetValueType(call->instance, value));
+            return false;
+        }
 
-        CASE(Int8) { PUSH_INTEGER(int8_t); };
-        CASE(UInt8) { PUSH_INTEGER(uint8_t); };
-        CASE(Int16) { PUSH_INTEGER(int16_t); };
-        CASE(Int16S) { PUSH_INTEGER_SWAP(int16_t); };
-        CASE(UInt16) { PUSH_INTEGER(uint16_t); };
-        CASE(UInt16S) { PUSH_INTEGER_SWAP(uint16_t); };
-        CASE(Int32) { PUSH_INTEGER(int32_t); };
-        CASE(Int32S) { PUSH_INTEGER_SWAP(int32_t); };
-        CASE(UInt32) { PUSH_INTEGER(uint32_t); };
-        CASE(UInt32S) { PUSH_INTEGER_SWAP(uint32_t); };
-        CASE(Int64) { PUSH_INTEGER(int64_t); };
-        CASE(Int64S) { PUSH_INTEGER_SWAP(int64_t); };
-        CASE(UInt64) { PUSH_INTEGER(uint64_t); };
-        CASE(UInt64S) { PUSH_INTEGER_SWAP(uint64_t); };
+        *(bool *)(base + i) = b;
 
-        CASE(String) {
-            const ParameterInfo &param = func->parameters[i];
-            Napi::Value value = info[param.offset];
-
-            const char *str;
-            if (!PushString(value, param.directions, &str)) [[unlikely]]
-                return false;
-
-            *(const char **)(args_ptr++) = str;
-        };
-        CASE(String16) {
-            const ParameterInfo &param = func->parameters[i];
-            Napi::Value value = info[param.offset];
-
-            const char16_t *str16;
-            if (!PushString16(value, param.directions, &str16)) [[unlikely]]
-                return false;
-
-            *(const char16_t **)(args_ptr++) = str16;
-        };
-        CASE(String32) {
-            const ParameterInfo &param = func->parameters[i];
-            Napi::Value value = info[param.offset];
-
-            const char32_t *str32;
-            if (!PushString32(value, param.directions, &str32)) [[unlikely]]
-                return false;
-
-            *(const char32_t **)(args_ptr++) = str32;
-        };
-
-        CASE(Pointer) {
-            const ParameterInfo &param = func->parameters[i];
-            Napi::Value value = info[param.offset];
-
-            void *ptr;
-            if (!PushPointer(value, param.type, param.directions, &ptr)) [[unlikely]]
-                return false;
-
-            *(void **)(args_ptr++) = ptr;
-        };
-
-        CASE(Record) OR(Union) {
-            const ParameterInfo &param = func->parameters[i];
-            Napi::Value value = info[param.offset];
-
-            if (!IsObject(value)) [[unlikely]] {
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected object", GetValueType(instance, value));
-                return false;
-            }
-
-            uint8_t *ptr;
-            if (param.regular) {
-                ptr = (uint8_t *)(args_ptr++);
-            } else {
-                ptr = AllocHeap(param.type->size, 16);
-                *(uint8_t **)(args_ptr++) = ptr;
-            }
-
-            Napi::Object obj = value.As<Napi::Object>();
-            if (!PushObject(obj, param.type, ptr))
-                return false;
-        };
-        CASE(Array) { K_UNREACHABLE(); };
-
-        CASE(Float32) {
-            const ParameterInfo &param = func->parameters[i];
-            Napi::Value value = info[param.offset];
-
-            float f;
-            if (!TryNumber(value, &f)) [[unlikely]] {
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
-                return false;
-            }
-
-            memset(args_ptr, 0, 8);
-            memcpy(args_ptr++, &f, 4);
-        };
-        CASE(Float64) {
-            const ParameterInfo &param = func->parameters[i];
-            Napi::Value value = info[param.offset];
-
-            double d;
-            if (!TryNumber(value, &d)) [[unlikely]] {
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
-                return false;
-            }
-
-            *(double *)(args_ptr++) = d;
-        };
-        CASE(Callback) {
-            const ParameterInfo &param = func->parameters[i];
-            Napi::Value value = info[param.offset];
-
-            void *ptr;
-            if (!PushCallback(value, param.type, &ptr)) [[unlikely]]
-                return false;
-
-            *(void **)(args_ptr++) = ptr;
-        };
-
-        CASE(Prototype) { K_UNREACHABLE(); };
-
-        CASE(End) { /* End loop */ };
+        DISPATCH();
     }
+
+    OP(Int8) { PUSH_INTEGER(int8_t); DISPATCH(); }
+    OP(UInt8) { PUSH_INTEGER(uint8_t); DISPATCH(); }
+    OP(Int16) { PUSH_INTEGER(int16_t); DISPATCH(); }
+    OP(Int16S) { PUSH_INTEGER_SWAP(int16_t); DISPATCH(); }
+    OP(UInt16) { PUSH_INTEGER(uint16_t); DISPATCH(); }
+    OP(UInt16S) { PUSH_INTEGER_SWAP(uint16_t); DISPATCH(); }
+    OP(Int32) { PUSH_INTEGER(int32_t); DISPATCH(); }
+    OP(Int32S) { PUSH_INTEGER_SWAP(int32_t); DISPATCH(); }
+    OP(UInt32) { PUSH_INTEGER(uint32_t); DISPATCH(); }
+    OP(UInt32S) { PUSH_INTEGER_SWAP(uint32_t); DISPATCH(); }
+    OP(Int64) { PUSH_INTEGER(int64_t); DISPATCH(); }
+    OP(Int64S) { PUSH_INTEGER_SWAP(int64_t); DISPATCH(); }
+    OP(UInt64) { PUSH_INTEGER(uint64_t); DISPATCH(); }
+    OP(UInt64S) { PUSH_INTEGER_SWAP(uint64_t); DISPATCH(); }
+
+    OP(String) {
+        const ParameterInfo &param = func->parameters[i];
+        Napi::Value value = info[param.offset];
+
+        const char *str;
+        if (!call->PushString(value, param.directions, &str)) [[unlikely]]
+            return false;
+
+        *(const char **)(base + i) = str;
+
+        DISPATCH();
+    }
+
+    OP(String16) {
+        const ParameterInfo &param = func->parameters[i];
+        Napi::Value value = info[param.offset];
+
+        const char16_t *str16;
+        if (!call->PushString16(value, param.directions, &str16)) [[unlikely]]
+            return false;
+
+        *(const char16_t **)(base + i) = str16;
+
+        DISPATCH();
+    }
+
+    OP(String32) {
+        const ParameterInfo &param = func->parameters[i];
+        Napi::Value value = info[param.offset];
+
+        const char32_t *str32;
+        if (!call->PushString32(value, param.directions, &str32)) [[unlikely]]
+            return false;
+
+        *(const char32_t **)(base + i) = str32;
+
+        DISPATCH();
+    }
+
+    OP(Pointer) {
+        const ParameterInfo &param = func->parameters[i];
+        Napi::Value value = info[param.offset];
+
+        void *ptr;
+        if (!call->PushPointer(value, param.type, param.directions, &ptr)) [[unlikely]]
+            return false;
+
+        *(void **)(base + i) = ptr;
+
+        DISPATCH();
+    }
+
+    OP(Record) { K_UNREACHABLE(); return false; }
+    OP(Union) { K_UNREACHABLE(); return false; }
+    OP(Array) { K_UNREACHABLE(); return false; }
+
+    OP(Float32) {
+        const ParameterInfo &param = func->parameters[i];
+        Napi::Value value = info[param.offset];
+
+        float f;
+        if (!TryNumber(value, &f)) [[unlikely]] {
+            ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected number", GetValueType(call->instance, value));
+            return false;
+        }
+
+        memset(base + i, 0, 8);
+        memcpy(base + i, &f, 4);
+
+        DISPATCH();
+    }
+
+    OP(Float64) {
+        const ParameterInfo &param = func->parameters[i];
+        Napi::Value value = info[param.offset];
+
+        double d;
+        if (!TryNumber(value, &d)) [[unlikely]] {
+            ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected number", GetValueType(call->instance, value));
+            return false;
+        }
+
+        *(double *)(base + i) = d;
+
+        DISPATCH();
+    }
+
+    OP(Callback) {
+        const ParameterInfo &param = func->parameters[i];
+        Napi::Value value = info[param.offset];
+
+        void *ptr;
+        if (!call->PushCallback(value, param.type, &ptr)) [[unlikely]]
+            return false;
+
+        *(void **)(base + i) = ptr;
+
+        DISPATCH();
+    }
+
+    OP(Prototype) { K_UNREACHABLE(); return false; }
+
+    OP(Aggregate) {
+        const ParameterInfo &param = func->parameters[i];
+        Napi::Value value = info[param.offset];
+
+        if (!IsObject(value)) [[unlikely]] {
+            ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected object", GetValueType(call->instance, value));
+            return false;
+        }
+
+        uint8_t *ptr;
+        if (param.regular) {
+            ptr = (uint8_t *)(base + i);
+        } else {
+            ptr = call->AllocHeap(param.type->size, 16);
+            *(uint8_t **)(base + i) = ptr;
+        }
+
+        Napi::Object obj = value.As<Napi::Object>();
+        if (!call->PushObject(obj, param.type, ptr))
+            return false;
+
+        DISPATCH();
+    }
+
+    OP(End) { return true; }
+
+    ForwardFunc *const ForwardDispatch[256] = {
+#if defined(__clang__)
+        #define PRIMITIVE(Name) [(int)AbiOpcode::Name] = Handle ## Name,
+        #include "../primitives.inc"
+        [(int)AbiOpcode::Aggregate] = HandleAggregate,
+        [(int)AbiOpcode::End] = HandleEnd
+#else
+        // MSVC does not have GCC-like designated initializers, don't screw up the order!
+        #define PRIMITIVE(Name) Handle ## Name,
+        #include "../primitives.inc"
+        HandleAggregate,
+        HandleEnd
+#endif
+    };
 
 #undef PUSH_INTEGER_SWAP
 #undef PUSH_INTEGER
 
-#undef OR
-#undef CASE
-#undef LOOP
+#undef DISPATCH
+#undef OP
+}
+
+bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
+{
+    uint64_t *base = AllocStack<uint64_t>(func->args_size);
+    if (!base) [[unlikely]]
+        return false;
+    new_sp = (uint8_t *)base;
+
+    if (!func->ret.regular) {
+        return_ptr = AllocHeap(func->ret.type->size, 16);
+        *(uint8_t **)(base++) = return_ptr;
+    } else {
+        return_ptr = result.buf;
+    }
+
+#if defined(MUST_TAIL)
+    AbiOpcode first = func->instructions[0];
+    return ForwardDispatch[(int)first](this, func, info, base, 0);
+#else
+    for (Size i = 0;; i++) {
+        AbiOpcode code = func->instructions[i];
+        ForwardFunc *op = ForwardDispatch[(int)code];
+
+        if (code == AbiOpcode::End)
+            break;
+        if (!op(this, func, info, base, i)) [[unlikely]]
+            return false;
+    }
+
+    return true;
+#endif
 
     new_sp = mem->stack.end();
 
@@ -374,10 +431,7 @@ Napi::Value CallData::Complete(const FunctionInfo *func)
         case PrimitiveKind::Callback: return result.ptr ? WrapCallback(env, func->ret.type->ref.type, result.ptr) : env.Null();
         case PrimitiveKind::Record:
         case PrimitiveKind::Union: {
-            const uint8_t *ptr = return_ptr ? (const uint8_t *)return_ptr
-                                            : (const uint8_t *)&result.buf;
-
-            Napi::Object obj = DecodeObject(env, ptr, func->ret.type);
+            Napi::Object obj = DecodeObject(env, return_ptr, func->ret.type);
             return obj;
         } break;
         case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
@@ -418,7 +472,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
 
     uint64_t *gpr_ptr = (uint64_t *)own_sp;
     uint64_t *xmm_ptr = gpr_ptr + 4;
-    uint64_t *args_ptr = (uint64_t *)caller_sp;
+    uint64_t *stk_ptr = (uint64_t *)caller_sp;
 
     uint8_t *return_ptr = !proto->ret.regular ? (uint8_t *)gpr_ptr[0] : nullptr;
 
@@ -442,113 +496,113 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
             case PrimitiveKind::Void: { K_UNREACHABLE(); } break;
 
             case PrimitiveKind::Bool: {
-                bool b = *(bool *)(j < 4 ? gpr_ptr + j : args_ptr);
-                args_ptr += (j >= 4);
+                bool b = *(bool *)(j < 4 ? gpr_ptr + j : stk_ptr);
+                stk_ptr += (j >= 4);
 
                 Napi::Value arg = Napi::Boolean::New(env, b);
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::Int8: {
-                int8_t i = *(int8_t *)(j < 4 ? gpr_ptr + j : args_ptr);
-                args_ptr += (j >= 4);
+                int8_t i = *(int8_t *)(j < 4 ? gpr_ptr + j : stk_ptr);
+                stk_ptr += (j >= 4);
 
                 Napi::Value arg = NewInt(env, i);
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::UInt8: {
-                uint8_t i = *(uint8_t *)(j < 4 ? gpr_ptr + j : args_ptr);
-                args_ptr += (j >= 4);
+                uint8_t i = *(uint8_t *)(j < 4 ? gpr_ptr + j : stk_ptr);
+                stk_ptr += (j >= 4);
 
                 Napi::Value arg = NewInt(env, i);
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::Int16: {
-                int16_t i = *(int16_t *)(j < 4 ? gpr_ptr + j : args_ptr);
-                args_ptr += (j >= 4);
+                int16_t i = *(int16_t *)(j < 4 ? gpr_ptr + j : stk_ptr);
+                stk_ptr += (j >= 4);
 
                 Napi::Value arg = NewInt(env, i);
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::Int16S: {
-                int16_t i = *(int16_t *)(j < 4 ? gpr_ptr + j : args_ptr);
-                args_ptr += (j >= 4);
+                int16_t i = *(int16_t *)(j < 4 ? gpr_ptr + j : stk_ptr);
+                stk_ptr += (j >= 4);
 
                 Napi::Value arg = NewInt(env, ReverseBytes(i));
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::UInt16: {
-                uint16_t i = *(uint16_t *)(j < 4 ? gpr_ptr + j : args_ptr);
-                args_ptr += (j >= 4);
+                uint16_t i = *(uint16_t *)(j < 4 ? gpr_ptr + j : stk_ptr);
+                stk_ptr += (j >= 4);
 
                 Napi::Value arg = NewInt(env, i);
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::UInt16S: {
-                uint16_t i = *(uint16_t *)(j < 4 ? gpr_ptr + j : args_ptr);
-                args_ptr += (j >= 4);
+                uint16_t i = *(uint16_t *)(j < 4 ? gpr_ptr + j : stk_ptr);
+                stk_ptr += (j >= 4);
 
                 Napi::Value arg = NewInt(env, ReverseBytes(i));
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::Int32: {
-                int32_t i = *(int32_t *)(j < 4 ? gpr_ptr + j : args_ptr);
-                args_ptr += (j >= 4);
+                int32_t i = *(int32_t *)(j < 4 ? gpr_ptr + j : stk_ptr);
+                stk_ptr += (j >= 4);
 
                 Napi::Value arg = NewInt(env, i);
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::Int32S: {
-                int32_t i = *(int32_t *)(j < 4 ? gpr_ptr + j : args_ptr);
-                args_ptr += (j >= 4);
+                int32_t i = *(int32_t *)(j < 4 ? gpr_ptr + j : stk_ptr);
+                stk_ptr += (j >= 4);
 
                 Napi::Value arg = NewInt(env, ReverseBytes(i));
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::UInt32: {
-                uint32_t i = *(uint32_t *)(j < 4 ? gpr_ptr + j : args_ptr);
-                args_ptr += (j >= 4);
+                uint32_t i = *(uint32_t *)(j < 4 ? gpr_ptr + j : stk_ptr);
+                stk_ptr += (j >= 4);
 
                 Napi::Value arg = NewInt(env, i);
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::UInt32S: {
-                uint32_t i = *(uint32_t *)(j < 4 ? gpr_ptr + j : args_ptr);
-                args_ptr += (j >= 4);
+                uint32_t i = *(uint32_t *)(j < 4 ? gpr_ptr + j : stk_ptr);
+                stk_ptr += (j >= 4);
 
                 Napi::Value arg = NewInt(env, ReverseBytes(i));
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::Int64: {
-                int64_t v = *(int64_t *)(j < 4 ? gpr_ptr + j : args_ptr);
-                args_ptr += (j >= 4);
+                int64_t v = *(int64_t *)(j < 4 ? gpr_ptr + j : stk_ptr);
+                stk_ptr += (j >= 4);
 
                 Napi::Value arg = NewInt(env, v);
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::Int64S: {
-                int64_t v = *(int64_t *)(j < 4 ? gpr_ptr + j : args_ptr);
-                args_ptr += (j >= 4);
+                int64_t v = *(int64_t *)(j < 4 ? gpr_ptr + j : stk_ptr);
+                stk_ptr += (j >= 4);
 
                 Napi::Value arg = NewInt(env, ReverseBytes(v));
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::UInt64: {
-                uint64_t v = *(uint64_t *)(j < 4 ? gpr_ptr + j : args_ptr);
-                args_ptr += (j >= 4);
+                uint64_t v = *(uint64_t *)(j < 4 ? gpr_ptr + j : stk_ptr);
+                stk_ptr += (j >= 4);
 
                 Napi::Value arg = NewInt(env, v);
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::UInt64S: {
-                uint64_t v = *(uint64_t *)(j < 4 ? gpr_ptr + j : args_ptr);
-                args_ptr += (j >= 4);
+                uint64_t v = *(uint64_t *)(j < 4 ? gpr_ptr + j : stk_ptr);
+                stk_ptr += (j >= 4);
 
                 Napi::Value arg = NewInt(env, ReverseBytes(v));
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::String: {
-                const char *str = *(const char **)(j < 4 ? gpr_ptr + j : args_ptr);
-                args_ptr += (j >= 4);
+                const char *str = *(const char **)(j < 4 ? gpr_ptr + j : stk_ptr);
+                stk_ptr += (j >= 4);
 
                 Napi::Value arg = str ? Napi::String::New(env, str) : env.Null();
                 arguments.Append(arg);
@@ -558,8 +612,8 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
                 }
             } break;
             case PrimitiveKind::String16: {
-                const char16_t *str16 = *(const char16_t **)(j < 4 ? gpr_ptr + j : args_ptr);
-                args_ptr += (j >= 4);
+                const char16_t *str16 = *(const char16_t **)(j < 4 ? gpr_ptr + j : stk_ptr);
+                stk_ptr += (j >= 4);
 
                 Napi::Value arg = str16 ? Napi::String::New(env, str16) : env.Null();
                 arguments.Append(arg);
@@ -569,15 +623,15 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
                 }
             } break;
             case PrimitiveKind::String32: {
-                const char32_t *str32 = *(const char32_t **)(j < 4 ? gpr_ptr + j : args_ptr);
-                args_ptr += (j >= 4);
+                const char32_t *str32 = *(const char32_t **)(j < 4 ? gpr_ptr + j : stk_ptr);
+                stk_ptr += (j >= 4);
 
                 Napi::Value arg = str32 ? MakeStringFromUTF32(env, str32) : env.Null();
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::Pointer: {
-                void *ptr2 = *(void **)(j < 4 ? gpr_ptr + j : args_ptr);
-                args_ptr += (j >= 4);
+                void *ptr2 = *(void **)(j < 4 ? gpr_ptr + j : stk_ptr);
+                stk_ptr += (j >= 4);
 
                 Napi::Value p = ptr2 ? WrapPointer(env, param.type->ref.type, ptr2) : env.Null();
                 arguments.Append(p);
@@ -587,8 +641,8 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
                 }
             } break;
             case PrimitiveKind::Callback: {
-                void *ptr2 = *(void **)(j < 4 ? gpr_ptr + j : args_ptr);
-                args_ptr += (j >= 4);
+                void *ptr2 = *(void **)(j < 4 ? gpr_ptr + j : stk_ptr);
+                stk_ptr += (j >= 4);
 
                 Napi::Value p = ptr2 ? WrapCallback(env, param.type->ref.type, ptr2) : env.Null();
                 arguments.Append(p);
@@ -601,26 +655,26 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
             case PrimitiveKind::Union: {
                 uint8_t *ptr;
                 if (param.regular) {
-                    ptr = (uint8_t *)(j < 4 ? gpr_ptr + j : args_ptr);
+                    ptr = (uint8_t *)(j < 4 ? gpr_ptr + j : stk_ptr);
                 } else {
-                    ptr = *(uint8_t **)(j < 4 ? gpr_ptr + j : args_ptr);
+                    ptr = *(uint8_t **)(j < 4 ? gpr_ptr + j : stk_ptr);
                 }
-                args_ptr += (j >= 4);
+                stk_ptr += (j >= 4);
 
                 Napi::Object obj2 = DecodeObject(env, ptr, param.type);
                 arguments.Append(obj2);
             } break;
             case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
             case PrimitiveKind::Float32: {
-                float f = *(float *)(j < 4 ? xmm_ptr + j : args_ptr);
-                args_ptr += (j >= 4);
+                float f = *(float *)(j < 4 ? xmm_ptr + j : stk_ptr);
+                stk_ptr += (j >= 4);
 
                 Napi::Value arg = Napi::Number::New(env, (double)f);
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::Float64: {
-                double d = *(double *)(j < 4 ? xmm_ptr + j : args_ptr);
-                args_ptr += (j >= 4);
+                double d = *(double *)(j < 4 ? xmm_ptr + j : stk_ptr);
+                stk_ptr += (j >= 4);
 
                 Napi::Value arg = Napi::Number::New(env, d);
                 arguments.Append(arg);

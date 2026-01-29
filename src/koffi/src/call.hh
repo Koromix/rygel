@@ -73,14 +73,8 @@ struct alignas(8) CallData {
 
     void Dispose();
 
-#if defined(UNITY_BUILD)
-    #if defined(_MSC_VER)
-        #define INLINE_IF_UNITY __forceinline
-    #elif defined(__clang__)
-        #define INLINE_IF_UNITY __attribute__((always_inline)) inline
-    #else
-        #define INLINE_IF_UNITY
-    #endif
+#if defined(UNITY_BUILD) && (defined(__clang__) || defined(_MSC_VER))
+    #define INLINE_IF_UNITY FORCE_INLINE
 #else
     #define INLINE_IF_UNITY
 #endif
