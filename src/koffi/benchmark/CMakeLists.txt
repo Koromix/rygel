@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 # SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.11)
 project(koffi_benchmark C CXX)
 
 find_package(CNoke)
