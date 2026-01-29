@@ -2482,6 +2482,12 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
 
     env.SetInstanceData(instance);
 
+#if defined(__clang__)
+    // First call to napi_create_double() does some weird stuff I can't explain
+    // in clang-cl builds. I don't like this... but this fixes it, somehow ><
+    Napi::Number::New(env, 0.0);
+#endif
+
     exports.Set("config", Napi::Function::New(env, GetSetConfig, "config"));
     exports.Set("stats", Napi::Function::New(env, GetStats, "stats"));
 
