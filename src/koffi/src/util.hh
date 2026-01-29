@@ -10,6 +10,16 @@
 
 namespace K {
 
+#if defined(__GNUC__) || defined(__clang__)
+    #if  __has_attribute(musttail) && __has_attribute(preserve_none)
+        #define MUST_TAIL __attribute__((musttail))
+        #define PRESERVE_NONE __attribute__((preserve_none))
+    #endif
+#elif defined(_MSC_VER) && _MSC_VER >= 1950
+    #define MUST_TAIL [[msvc::musttail]]
+    #define PRESERVE_NONE __preserve_none
+#endif
+
 extern const napi_type_tag TypeInfoMarker;
 extern const napi_type_tag CastMarker;
 extern const napi_type_tag MagicUnionMarker;

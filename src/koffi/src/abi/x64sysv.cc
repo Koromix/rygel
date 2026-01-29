@@ -331,18 +331,16 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
 }
 
 namespace {
-#if  __has_attribute(musttail) && __has_attribute(preserve_none)
-    #define TAIL
-
+#if defined(MUST_TAIL)
     #define OP(Code) \
-            __attribute__((preserve_none)) bool Handle ## Code(CallData *call, const FunctionInfo *func, const Napi::CallbackInfo &info, uint8_t *base, Size i)
+            PRESERVE_NONE bool Handle ## Code(CallData *call, const FunctionInfo *func, const Napi::CallbackInfo &info, uint8_t *base, Size i)
     #define DISPATCH() \
             do { \
                 AbiOpcode next = func->instructions[i + 1]; \
-                [[clang::musttail]] return ForwardDispatch[(int)next](call, func, info, base, i + 1); \
+                MUST_TAIL return ForwardDispatch[(int)next](call, func, info, base, i + 1); \
             } while (false)
 
-    __attribute__((preserve_none)) typedef bool ForwardFunc(CallData *call, const FunctionInfo *func, const Napi::CallbackInfo &info, uint8_t *base, Size i);
+    PRESERVE_NONE typedef bool ForwardFunc(CallData *call, const FunctionInfo *func, const Napi::CallbackInfo &info, uint8_t *base, Size i);
 #else
     #warning Falling back to inlining instead of tail calls (missing attributes)
 
@@ -590,7 +588,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
         return_ptr = result.buf;
     }
 
-#if defined(TAIL)
+#if defined(MUST_TAIL)
     AbiOpcode first = func->instructions[0];
     return ForwardDispatch[(int)first](this, func, info, base, 0);
 #else
