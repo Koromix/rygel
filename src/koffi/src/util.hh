@@ -254,11 +254,17 @@ Napi::Value NewInt(Napi::Env env, T i)
     static_assert(sizeof(T) == 8);
 
     if constexpr (std::is_signed_v<T>) {
-        if (i <= 9007199254740992ll && i >= -9007199254740992ll)
-            return Napi::Number::New(env, (double)i);
+        if (i <= 9007199254740992ll && i >= -9007199254740992ll) {
+            napi_value value;
+            napi_create_int64(env, (int64_t)i, &value);
+            return Napi::Value(env, value);
+        }
     } else {
-        if (i <= 9007199254740992ull)
-            return Napi::Number::New(env, (double)i);
+        if (i <= 9007199254740992ull) {
+            napi_value value;
+            napi_create_int64(env, (int64_t)i, &value);
+            return Napi::Value(env, value);
+        }
     }
 
     return Napi::BigInt::New(env, i);
