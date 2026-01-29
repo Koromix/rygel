@@ -900,11 +900,15 @@ void DecodeObject(Napi::Object obj, const uint8_t *origin, const TypeInfo *type)
                 }
             } break;
             case PrimitiveKind::Float32: {
-                float f = *(float *)src;
+                float f;
+                memcpy(&f, src, 4);
+
                 obj.Set(member.name, Napi::Number::New(env, (double)f));
             } break;
             case PrimitiveKind::Float64: {
-                double d = *(double *)src;
+                double d;
+                memcpy(&d, src, 8);
+
                 obj.Set(member.name, Napi::Number::New(env, d));
             } break;
 
@@ -1090,7 +1094,9 @@ Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *ty
         case PrimitiveKind::Float32: {
             if (type->hint == ArrayHint::Array) {
                 POP_ARRAY({
-                    float f = *(float *)src;
+                    float f;
+                    memcpy(&f, src, 4);
+
                     array.Set(i, Napi::Number::New(env, (double)f));
                 });
             } else {
@@ -1105,7 +1111,9 @@ Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *ty
         case PrimitiveKind::Float64: {
             if (type->hint == ArrayHint::Array) {
                 POP_ARRAY({
-                    double d = *(double *)src;
+                    double d;
+                    memcpy(&d, src, 8);
+
                     array.Set(i, Napi::Number::New(env, d));
                 });
             } else {
@@ -1266,13 +1274,17 @@ void DecodeNormalArray(Napi::Array array, const uint8_t *origin, const TypeInfo 
         } break;
         case PrimitiveKind::Float32: {
             POP_ARRAY({
-                float f = *(float *)src;
+                float f;
+                memcpy(&f, src, 4);
+
                 array.Set(i, Napi::Number::New(env, (double)f));
             });
         } break;
         case PrimitiveKind::Float64: {
             POP_ARRAY({
-                double d = *(double *)src;
+                double d;
+                memcpy(&d, src, 8);
+
                 array.Set(i, Napi::Number::New(env, d));
             });
         } break;
@@ -1467,11 +1479,15 @@ Napi::Value Decode(Napi::Env env, const uint8_t *ptr, const TypeInfo *type, cons
             return array;
         } break;
         case PrimitiveKind::Float32: {
-            float f = *(float *)ptr;
+            float f;
+            memcpy(&f, ptr, 4);
+
             return Napi::Number::New(env, (double)f);
         } break;
         case PrimitiveKind::Float64: {
-            double d = *(double *)ptr;
+            double d;
+            memcpy(&d, ptr, 8);
+
             return Napi::Number::New(env, d);
         } break;
 
@@ -1566,7 +1582,6 @@ bool Encode(Napi::Env env, uint8_t *origin, Napi::Value value, const TypeInfo *t
 #define PUSH_INTEGER(CType) \
         do { \
             CType v; \
-            \
             if (!TryNumber(value, &v)) [[unlikely]] { \
                 ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value)); \
                 return false; \
@@ -1577,7 +1592,6 @@ bool Encode(Napi::Env env, uint8_t *origin, Napi::Value value, const TypeInfo *t
 #define PUSH_INTEGER_SWAP(CType) \
         do { \
             CType v; \
-            \
             if (!TryNumber(value, &v)) [[unlikely]] { \
                 ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value)); \
                 return false; \
@@ -1667,27 +1681,24 @@ bool Encode(Napi::Env env, uint8_t *origin, Napi::Value value, const TypeInfo *t
         } break;
         case PrimitiveKind::Float32: {
             float f;
-
             if (!TryNumber(value, &f)) [[unlikely]] {
                 ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
                 return false;
             }
 
-            *(float *)origin = f;
+            memcpy(origin, &f, 4);
         } break;
         case PrimitiveKind::Float64: {
             double d;
-
             if (!TryNumber(value, &d)) [[unlikely]] {
                 ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
                 return false;
             }
 
-            *(double *)origin = d;
+            memcpy(origin, &d, 8);
         } break;
         case PrimitiveKind::Callback: {
             void *ptr;
-
             if (!TryPointer(value, &ptr)) [[unlikely]] {
                 if (value.IsFunction()) {
                     ThrowError<Napi::Error>(env, "Cannot encode non-registered callback");

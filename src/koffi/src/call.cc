@@ -342,10 +342,9 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
 
     MemSet(origin, 0, type->size);
 
-#define PUSH_NUMBER(CType) \
+#define PUSH_INTEGER(CType) \
         do { \
             CType v; \
-            \
             if (!TryNumber(value, &v)) [[unlikely]] { \
                 ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value)); \
                 return false; \
@@ -353,10 +352,9 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
              \
             *(CType *)dest = v; \
         } while (false)
-#define PUSH_NUMBER_SWAP(CType) \
+#define PUSH_INTEGER_SWAP(CType) \
         do { \
             CType v; \
-            \
             if (!TryNumber(value, &v)) [[unlikely]] { \
                 ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value)); \
                 return false; \
@@ -395,20 +393,20 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
 
                 *(bool *)dest = b;
             } break;
-            case PrimitiveKind::Int8: { PUSH_NUMBER(int8_t); } break;
-            case PrimitiveKind::UInt8: { PUSH_NUMBER(uint8_t); } break;
-            case PrimitiveKind::Int16: { PUSH_NUMBER(int16_t); } break;
-            case PrimitiveKind::Int16S: { PUSH_NUMBER_SWAP(int16_t); } break;
-            case PrimitiveKind::UInt16: { PUSH_NUMBER(uint16_t); } break;
-            case PrimitiveKind::UInt16S: { PUSH_NUMBER_SWAP(uint16_t); } break;
-            case PrimitiveKind::Int32: { PUSH_NUMBER(int32_t); } break;
-            case PrimitiveKind::Int32S: { PUSH_NUMBER_SWAP(int32_t); } break;
-            case PrimitiveKind::UInt32: { PUSH_NUMBER(uint32_t); } break;
-            case PrimitiveKind::UInt32S: { PUSH_NUMBER_SWAP(uint32_t); } break;
-            case PrimitiveKind::Int64: { PUSH_NUMBER(int64_t); } break;
-            case PrimitiveKind::Int64S: { PUSH_NUMBER_SWAP(int64_t); } break;
-            case PrimitiveKind::UInt64: { PUSH_NUMBER(uint64_t); } break;
-            case PrimitiveKind::UInt64S: { PUSH_NUMBER_SWAP(uint64_t); } break;
+            case PrimitiveKind::Int8: { PUSH_INTEGER(int8_t); } break;
+            case PrimitiveKind::UInt8: { PUSH_INTEGER(uint8_t); } break;
+            case PrimitiveKind::Int16: { PUSH_INTEGER(int16_t); } break;
+            case PrimitiveKind::Int16S: { PUSH_INTEGER_SWAP(int16_t); } break;
+            case PrimitiveKind::UInt16: { PUSH_INTEGER(uint16_t); } break;
+            case PrimitiveKind::UInt16S: { PUSH_INTEGER_SWAP(uint16_t); } break;
+            case PrimitiveKind::Int32: { PUSH_INTEGER(int32_t); } break;
+            case PrimitiveKind::Int32S: { PUSH_INTEGER_SWAP(int32_t); } break;
+            case PrimitiveKind::UInt32: { PUSH_INTEGER(uint32_t); } break;
+            case PrimitiveKind::UInt32S: { PUSH_INTEGER_SWAP(uint32_t); } break;
+            case PrimitiveKind::Int64: { PUSH_INTEGER(int64_t); } break;
+            case PrimitiveKind::Int64S: { PUSH_INTEGER_SWAP(int64_t); } break;
+            case PrimitiveKind::UInt64: { PUSH_INTEGER(uint64_t); } break;
+            case PrimitiveKind::UInt64S: { PUSH_INTEGER_SWAP(uint64_t); } break;
             case PrimitiveKind::String: {
                 const char *str;
                 if (!PushString(value, 1, &str)) [[unlikely]]
@@ -463,8 +461,24 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
                     return false;
                 }
             } break;
-            case PrimitiveKind::Float32: { PUSH_NUMBER(float); } break;
-            case PrimitiveKind::Float64: { PUSH_NUMBER(double); } break;
+            case PrimitiveKind::Float32: {
+                float f;
+                if (!TryNumber(value, &f)) [[unlikely]] {
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
+                    return false;
+                }
+
+                memcpy(dest, &f, 4);
+            } break;
+            case PrimitiveKind::Float64: {
+                double d;
+                if (!TryNumber(value, &d)) [[unlikely]] {
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
+                    return false;
+                }
+
+                memcpy(dest, &d, 8);
+            } break;
             case PrimitiveKind::Callback: {
                 void *ptr;
                 if (!PushCallback(value, member.type, &ptr))
@@ -477,8 +491,8 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
         }
     }
 
-#undef PUSH_NUMBER_SWAP
-#undef PUSH_NUMBER
+#undef PUSH_INTEGER_SWAP
+#undef PUSH_INTEGER
 
     return true;
 }
@@ -512,7 +526,7 @@ bool CallData::PushNormalArray(Napi::Array array, const TypeInfo *type, Size siz
                 offset += ref->size; \
             } \
         } while (false)
-#define PUSH_NUMBERS(CType) \
+#define PUSH_INTEGERS(CType) \
         PUSH_ARRAY({ \
             CType v; \
              \
@@ -523,7 +537,7 @@ bool CallData::PushNormalArray(Napi::Array array, const TypeInfo *type, Size siz
              \
             *(CType *)dest = v; \
         })
-#define PUSH_NUMBERS_SWAP(CType) \
+#define PUSH_INTEGERS_SWAP(CType) \
         PUSH_ARRAY({ \
             CType v; \
              \
@@ -554,20 +568,20 @@ bool CallData::PushNormalArray(Napi::Array array, const TypeInfo *type, Size siz
                 *(bool *)dest = b;
             });
         } break;
-        case PrimitiveKind::Int8: { PUSH_NUMBERS(int8_t); } break;
-        case PrimitiveKind::UInt8: { PUSH_NUMBERS(uint8_t); } break;
-        case PrimitiveKind::Int16: { PUSH_NUMBERS(int16_t); } break;
-        case PrimitiveKind::Int16S: { PUSH_NUMBERS_SWAP(int16_t); } break;
-        case PrimitiveKind::UInt16: { PUSH_NUMBERS(uint16_t); } break;
-        case PrimitiveKind::UInt16S: { PUSH_NUMBERS_SWAP(uint16_t); } break;
-        case PrimitiveKind::Int32: { PUSH_NUMBERS(int32_t); } break;
-        case PrimitiveKind::Int32S: { PUSH_NUMBERS_SWAP(int32_t); } break;
-        case PrimitiveKind::UInt32: { PUSH_NUMBERS(uint32_t); } break;
-        case PrimitiveKind::UInt32S: { PUSH_NUMBERS_SWAP(uint32_t); } break;
-        case PrimitiveKind::Int64: { PUSH_NUMBERS(int64_t); } break;
-        case PrimitiveKind::Int64S: { PUSH_NUMBERS_SWAP(int64_t); } break;
-        case PrimitiveKind::UInt64: { PUSH_NUMBERS(uint64_t); } break;
-        case PrimitiveKind::UInt64S: { PUSH_NUMBERS_SWAP(uint64_t); } break;
+        case PrimitiveKind::Int8: { PUSH_INTEGERS(int8_t); } break;
+        case PrimitiveKind::UInt8: { PUSH_INTEGERS(uint8_t); } break;
+        case PrimitiveKind::Int16: { PUSH_INTEGERS(int16_t); } break;
+        case PrimitiveKind::Int16S: { PUSH_INTEGERS_SWAP(int16_t); } break;
+        case PrimitiveKind::UInt16: { PUSH_INTEGERS(uint16_t); } break;
+        case PrimitiveKind::UInt16S: { PUSH_INTEGERS_SWAP(uint16_t); } break;
+        case PrimitiveKind::Int32: { PUSH_INTEGERS(int32_t); } break;
+        case PrimitiveKind::Int32S: { PUSH_INTEGERS_SWAP(int32_t); } break;
+        case PrimitiveKind::UInt32: { PUSH_INTEGERS(uint32_t); } break;
+        case PrimitiveKind::UInt32S: { PUSH_INTEGERS_SWAP(uint32_t); } break;
+        case PrimitiveKind::Int64: { PUSH_INTEGERS(int64_t); } break;
+        case PrimitiveKind::Int64S: { PUSH_INTEGERS_SWAP(int64_t); } break;
+        case PrimitiveKind::UInt64: { PUSH_INTEGERS(uint64_t); } break;
+        case PrimitiveKind::UInt64S: { PUSH_INTEGERS_SWAP(uint64_t); } break;
         case PrimitiveKind::String: {
             PUSH_ARRAY({
                 const char *str;
@@ -647,8 +661,28 @@ bool CallData::PushNormalArray(Napi::Array array, const TypeInfo *type, Size siz
                 offset += ref->size;
             }
         } break;
-        case PrimitiveKind::Float32: { PUSH_NUMBERS(float); } break;
-        case PrimitiveKind::Float64: { PUSH_NUMBERS(double); } break;
+        case PrimitiveKind::Float32: {
+            PUSH_ARRAY({
+                float f;
+                if (!TryNumber(value, &f)) [[unlikely]] {
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
+                    return false;
+                }
+
+                memcpy(dest, &f, 4);
+            });
+        } break;
+        case PrimitiveKind::Float64: {
+            PUSH_ARRAY({
+                double d;
+                if (!TryNumber(value, &d)) [[unlikely]] {
+                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
+                    return false;
+                }
+
+                memcpy(dest, &d, 8);
+            });
+        } break;
         case PrimitiveKind::Callback: {
             for (Size i = 0; i < len; i++) {
                 Napi::Value value = array[(uint32_t)i];
@@ -670,8 +704,8 @@ bool CallData::PushNormalArray(Napi::Array array, const TypeInfo *type, Size siz
         case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;
     }
 
-#undef PUSH_NUMBERS_SWAP
-#undef PUSH_NUMBERS
+#undef PUSH_INTEGERS_SWAP
+#undef PUSH_INTEGERS
 #undef PUSH_ARRAY
 
     return true;

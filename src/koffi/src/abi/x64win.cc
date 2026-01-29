@@ -225,8 +225,8 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
                 return false;
             }
 
-            memset((uint8_t *)args_ptr + 4, 0, 4);
-            *(float *)(args_ptr++) = f;
+            memset(args_ptr, 0, 8);
+            memcpy(args_ptr++, &f, 4);
         };
         CASE(Float64) {
             const ParameterInfo &param = func->parameters[i];
@@ -744,7 +744,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
                 return;
             }
 
-            memset((uint8_t *)&out_reg->xmm0 + 4, 0, 4);
+            memset(&out_reg->xmm0, 0, 8);
             memcpy(&out_reg->xmm0, &f, 4);
         } break;
         case PrimitiveKind::Float64: {

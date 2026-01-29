@@ -479,8 +479,8 @@ namespace {
             return false;
         }
 
-        *(uint32_t *)(base + param.abi.offsets[0] + 4) = 0;
-        *(float *)(base + param.abi.offsets[0]) = f;
+        memset(base + param.abi.offsets[0], 0, 8);
+        memcpy(base + param.abi.offsets[0], &f, 4);
 
         DISPATCH();
     }
@@ -1034,7 +1034,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
                 return;
             }
 
-            memset((uint8_t *)&out_reg->xmm0 + 4, 0, 4);
+            memset(&out_reg->xmm0, 0, 8);
             memcpy(&out_reg->xmm0, &f, 4);
         } break;
         case PrimitiveKind::Float64: {
