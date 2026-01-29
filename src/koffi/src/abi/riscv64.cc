@@ -64,7 +64,8 @@ static inline void CompactPair(const uint64_t regs[2], int size1, int size2, uin
     memcpy(out_raw + size1, regs + 1, size2);
 }
 
-static void AnalyseParameter(ParameterInfo *param, int gpr_avail, int vec_avail)
+template <typename T>
+void AnalyseParameter(T *param, int gpr_avail, int vec_avail)
 {
     // Too big, pass pointer to struct
     if (param->type->size > 16) {
