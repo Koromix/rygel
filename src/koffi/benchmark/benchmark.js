@@ -20,17 +20,17 @@ function main() {
 
 function benchmark(select) {
     if (!select.length || select.includes('rand'))
-        format(run('rand.js', 'napi'), 'ns');
+        format('rand', run('rand.js', 'napi'), 'ns');
     if (!select.length || select.includes('atoi'))
-        format(run('atoi.js', 'napi'), 'ns');
+        format('atoi', run('atoi.js', 'napi'), 'ns');
     if (!select.length || select.includes('memset'))
-        format(run('memset.js', 'napi'), 'ns');
+        format('memset', run('memset.js', 'napi'), 'ns');
     if (!select.length || select.includes('raylib'))
-        format(run('raylib.js', 'napi'), 'us');
+        format('raylib', run('raylib.js', 'napi'), 'us');
 }
 
 function run(basename, ref) {
-    let filename = path.join(__dirname, basename)
+    let filename = path.join(__dirname, basename);
     let proc = spawnSync(process.execPath, [filename]);
 
     if (proc.status == null)
@@ -64,10 +64,10 @@ function run(basename, ref) {
     return tests;
 }
 
-function format(tests, unit) {
-    let len0 = tests.reduce((acc, test) => Math.max(acc, test.name.length), 0);
+function format(name, tests, unit) {
+    let len0 = Math.max(name.length, ...tests.map(test => test.name.length));
 
-    console.log(`${'Benchmark'.padEnd(len0, ' ')} | Iteration time | Relative performance | Overhead`);
+    console.log(`${name.padEnd(len0, ' ')} | Iteration time | Relative performance | Overhead`);
     console.log(`${'-'.padEnd(len0, '-')} | -------------- | -------------------- | --------`);
     for (let test of tests) {
         let time = format_time(test.time / test.iterations, unit);
