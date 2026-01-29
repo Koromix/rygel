@@ -40,6 +40,7 @@ set_target_properties(union PROPERTIES PREFIX "")
 if(MSVC)
     add_library(win32_dep SHARED win32_dep.cc)
     set_target_properties(win32_dep PROPERTIES PREFIX "")
+    target_compile_options(win32_dep PRIVATE "/EHa")
 
     add_library(win32 SHARED win32.c)
     target_link_libraries(win32 PRIVATE win32_dep)

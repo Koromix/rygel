@@ -155,7 +155,7 @@ if(NOT MSVC OR CMAKE_C_COMPILER_ID MATCHES "[Cc]lang")
     # Restore C/C++ compiler sanity
 
     if(NOT MSVC)
-        target_compile_options(koffi PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions -fno-strict-aliasing -fwrapv
+        target_compile_options(koffi PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-fno-strict-aliasing -fwrapv
                                                                        -fno-delete-null-pointer-checks>)
     else()
         target_compile_options(koffi PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-fno-strict-aliasing /clang:-fwrapv
