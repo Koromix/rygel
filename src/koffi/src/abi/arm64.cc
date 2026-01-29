@@ -52,6 +52,12 @@ extern "C" napi_value CallSwitchStack(Napi::Function *func, size_t argc, napi_va
                                       uint8_t *old_sp, Span<uint8_t> *new_stack,
                                       napi_value (*call)(Napi::Function *func, size_t argc, napi_value *argv));
 
+enum class AbiOpcode : int8_t {
+    #define PRIMITIVE(Name) Name,
+    #include "../primitives.inc"
+    End
+};
+
 static HfaInfo IsHFA(const TypeInfo *type)
 {
     bool float32 = false;
@@ -237,8 +243,11 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
 
             case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;
         }
+
+        func->instructions.Append((AbiOpcode)param.type->primitive);
     }
 
+    func->instructions.Append(AbiOpcode::End);
     func->args_size = 16 * func->parameters.len;
     func->forward_fp = (vec_avail < 8);
 
@@ -264,12 +273,13 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
     static const void *const DispatchTable[] = {
         #define PRIMITIVE(Name) && Name,
         #include "../primitives.inc"
+        && End
     };
 
     #define LOOP
     #define CASE(Primitive) \
         do { \
-            PrimitiveKind next = func->primitives[++i]; \
+            AbiOpcode next = func->instructions[++i]; \
             goto *DispatchTable[(int)next]; \
         } while (false); \
         Primitive:
@@ -278,12 +288,12 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
 #else
     #define LOOP \
         while (++i < func->parameters.len) \
-            switch (func->primitives[i])
+            switch (func->instructions[i])
     #define CASE(Primitive) \
         break; \
-        case PrimitiveKind::Primitive:
+        case AbiOpcode::Primitive:
     #define OR(Primitive) \
-        case PrimitiveKind::Primitive:
+        case AbiOpcode::Primitive:
 #endif
 
 #if defined(_M_ARM64EC)
@@ -583,7 +593,9 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
             *(void **)((param.gpr_count ? gpr_ptr : args_ptr)++) = ptr;
         };
 
-        CASE(Prototype) { /* End loop */ };
+        CASE(Prototype) { K_UNREACHABLE(); };
+
+        CASE(End) { /* End loop */ };
     }
 
 #undef PUSH_INTEGER_SWAP

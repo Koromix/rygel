@@ -42,6 +42,12 @@ extern "C" napi_value CallSwitchStack(Napi::Function *func, size_t argc, napi_va
                                       uint8_t *old_sp, Span<uint8_t> *new_stack,
                                       napi_value (*call)(Napi::Function *func, size_t argc, napi_value *argv));
 
+enum class AbiOpcode : int8_t {
+    #define PRIMITIVE(Name) Name,
+    #include "../primitives.inc"
+    End
+};
+
 static int IsHFA(const TypeInfo *type)
 {
 #if defined(__ARM_PCS_VFP)
@@ -189,9 +195,11 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
             case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;
         }
 
+        func->instructions.Append((AbiOpcode)param.type->primitive);
         func->args_size += AlignLen(param.type->size, 16);
     }
 
+    func->instructions.Append(AbiOpcode::End);
     func->forward_fp = (vec_avail < 16);
 
     return true;
@@ -217,12 +225,13 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
     static const void *const DispatchTable[] = {
         #define PRIMITIVE(Name) && Name,
         #include "../primitives.inc"
+        && End
     };
 
     #define LOOP
     #define CASE(Primitive) \
         do { \
-            PrimitiveKind next = func->primitives[++i]; \
+            AbiOpcode next = func->instructions[++i]; \
             goto *DispatchTable[(int)next]; \
         } while (false); \
         Primitive:
@@ -461,7 +470,9 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
             *(void **)((param.gpr_count ? gpr_ptr : args_ptr)++) = ptr;
         };
 
-        CASE(Prototype) { /* End loop */ };
+        CASE(Prototype) { K_UNREACHABLE(); };
+
+        CASE(End) { /* End loop */ };
     }
 
 #undef PUSH_INTEGER_64_SWAP

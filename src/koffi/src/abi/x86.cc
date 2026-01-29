@@ -37,6 +37,12 @@ extern "C" napi_value CallSwitchStack(Napi::Function *func, size_t argc, napi_va
                                       uint8_t *old_sp, Span<uint8_t> *new_stack,
                                       napi_value (*call)(Napi::Function *func, size_t argc, napi_value *argv));
 
+enum class AbiOpcode : int8_t {
+    #define PRIMITIVE(Name) Name,
+    #include "../primitives.inc"
+    End
+};
+
 bool AnalyseFunction(Napi::Env env, InstanceData *instance, FunctionInfo *func)
 {
     if (!func->lib && func->convention != CallConvention::Cdecl &&
@@ -83,8 +89,11 @@ bool AnalyseFunction(Napi::Env env, InstanceData *instance, FunctionInfo *func)
             fast--;
         }
 
+        func->instructions.Append((AbiOpcode)param.type->primitive);
         params_size += std::max(4, AlignLen(param.type->size, 4));
     }
+
+    func->instructions.Append(AbiOpcode::End);
     func->args_size = params_size + 4 * !func->ret.trivial;
 
     switch (func->convention) {
@@ -131,12 +140,13 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
     static const void *const DispatchTable[] = {
         #define PRIMITIVE(Name) && Name,
         #include "../primitives.inc"
+        && End
     };
 
     #define LOOP
     #define CASE(Primitive) \
         do { \
-            PrimitiveKind next = func->primitives[++i]; \
+            AbiOpcode next = func->instructions[++i]; \
             goto *DispatchTable[(int)next]; \
         } while (false); \
         Primitive:
@@ -145,12 +155,12 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
 #else
     #define LOOP \
         while (++i < func->parameters.len) \
-            switch (func->primitives[i])
+            switch (func->instructions[i])
     #define CASE(Primitive) \
         break; \
-        case PrimitiveKind::Primitive:
+        case AbiOpcode::Primitive:
     #define OR(Primitive) \
-        case PrimitiveKind::Primitive:
+        case AbiOpcode::Primitive:
 #endif
 
 #define PUSH_INTEGER_32(CType) \
@@ -342,7 +352,9 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
             *(void **)((param.fast ? fast_ptr : args_ptr)++) = ptr;
         };
 
-        CASE(Prototype) { /* End loop */ };
+        CASE(Prototype) { K_UNREACHABLE(); };
+
+        CASE(End) { /* End loop */ };
     }
 
 #undef PUSH_INTEGER_64_SWAP

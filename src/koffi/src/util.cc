@@ -1477,12 +1477,12 @@ Napi::Value Decode(Napi::Env env, const uint8_t *ptr, const TypeInfo *type, cons
 
             memcpy((void *)func, proto, K_SIZE(*proto));
             memset((void *)&func->parameters, 0, K_SIZE(func->parameters));
-            memset((void *)&func->primitives, 0, K_SIZE(func->primitives));
+            memset((void *)&func->instructions, 0, K_SIZE(func->instructions));
 
             func->name = "<anonymous>";
             func->native = (void *)ptr;
             func->parameters = proto->parameters;
-            func->primitives = proto->primitives;
+            func->instructions = proto->instructions;
 
             // Fix back parameter offset
             for (ParameterInfo &param: func->parameters) {

@@ -1168,14 +1168,6 @@ static Napi::Value CreateFunctionType(const Napi::CallbackInfo &info)
     if (!AnalyseFunction(env, instance, func))
         return env.Null();
 
-    // Branchless push loop
-    for (const ParameterInfo &param: func->parameters) {
-        func->primitives.Append(param.type->primitive);
-    }
-    if (!func->variadic) {
-        func->primitives.Append(PrimitiveKind::Prototype);
-    }
-
     // Adjust parameter offsets for koffi.call()
     for (ParameterInfo &param: func->parameters) {
         param.offset += 2;
@@ -1565,10 +1557,9 @@ static Napi::Value TranslateVariadicCall(const FunctionInfo *func, void *native,
 
         memcpy((void *)variadic, func, K_SIZE(*func));
         memset((void *)&variadic->parameters, 0, K_SIZE(variadic->parameters));
-        memset((void *)&variadic->primitives, 0, K_SIZE(variadic->primitives));
+        memset((void *)&variadic->instructions, 0, K_SIZE(variadic->instructions));
 
         variadic->parameters = func->parameters;
-        variadic->primitives = func->primitives;
         variadic->lib = nullptr;
 
         if (info.Length() < (uint32_t)variadic->required_parameters) [[unlikely]] {
@@ -1608,13 +1599,6 @@ static Napi::Value TranslateVariadicCall(const FunctionInfo *func, void *native,
 
         if (!AnalyseFunction(env, instance, variadic)) [[unlikely]]
             return env.Null();
-
-        // Branchless push loop
-        for (Size i = func->parameters.len; i < variadic->parameters.len; i++) {
-            const ParameterInfo &param = variadic->parameters[i];
-            variadic->primitives.Append(param.type->primitive);
-        }
-        variadic->primitives.Append(PrimitiveKind::Prototype);
     }
 
     InstanceMemory *mem = instance->memories[0];
@@ -1811,17 +1795,6 @@ static Napi::Value FindLibraryFunction(const Napi::CallbackInfo &info)
 
     if (!AnalyseFunction(env, instance, func))
         return env.Null();
-
-    // Branchless push loop
-    for (const ParameterInfo &param: func->parameters) {
-        func->primitives.Append(param.type->primitive);
-    }
-    if (func->variadic) {
-        func->parameters.Grow(32);
-        func->primitives.Grow(32);
-    } else {
-        func->primitives.Append(PrimitiveKind::Prototype);
-    }
 
 #if defined(_WIN32)
     if (func->ordinal_name < 0) {

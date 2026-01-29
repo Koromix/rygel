@@ -33,7 +33,7 @@ static const char *const PrimitiveKindNames[] = {
 struct TypeInfo;
 struct RecordMember;
 struct FunctionInfo;
-class CallData;
+struct CallData;
 
 typedef void DisposeFunc (Napi::Env env, const TypeInfo *type, const void *ptr);
 
@@ -119,6 +119,7 @@ static const char *const CallConventionNames[] = {
 
 // ABI specific
 enum class AbiMethod : int;
+enum class AbiOpcode : int8_t;
 
 struct ParameterInfo {
     const TypeInfo *type;
@@ -201,7 +202,6 @@ struct FunctionInfo {
 
     ReturnInfo ret;
     HeapArray<ParameterInfo> parameters;
-    HeapArray<PrimitiveKind> primitives;
     int8_t required_parameters;
     int8_t out_parameters;
     bool variadic;
@@ -209,6 +209,7 @@ struct FunctionInfo {
     // ABI-specific part
 
     Size args_size;
+    HeapArray<AbiOpcode> instructions;
 #if defined(__i386__) || defined(_M_IX86)
     bool fast;
 #else
