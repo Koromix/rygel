@@ -225,21 +225,33 @@ Napi::Value Decode(Napi::Env env, const uint8_t *ptr, const TypeInfo *type, cons
 bool Encode(Napi::Value ref, Size offset, Napi::Value value, const TypeInfo *type, const Size *len = nullptr);
 bool Encode(Napi::Env env, uint8_t *ptr, Napi::Value value, const TypeInfo *type, const Size *len = nullptr);
 
+static inline Napi::Value NewInt(Napi::Env env, int8_t i)
+    { napi_value value; napi_create_int32(env, (int32_t)i, &value); return Napi::Value(env, value); }
+static inline Napi::Value NewInt(Napi::Env env, uint8_t i)
+    { napi_value value; napi_create_uint32(env, (uint32_t)i, &value); return Napi::Value(env, value); }
+static inline Napi::Value NewInt(Napi::Env env, int16_t i)
+    { napi_value value; napi_create_int32(env, (int32_t)i, &value); return Napi::Value(env, value); }
+static inline Napi::Value NewInt(Napi::Env env, uint16_t i)
+    { napi_value value; napi_create_uint32(env, (uint32_t)i, &value); return Napi::Value(env, value); }
+static inline Napi::Value NewInt(Napi::Env env, int32_t i)
+    { napi_value value; napi_create_int32(env, i, &value); return Napi::Value(env, value); }
+static inline Napi::Value NewInt(Napi::Env env, uint32_t i)
+    { napi_value value; napi_create_uint32(env, i, &value); return Napi::Value(env, value); }
+
 template <typename T>
-Napi::Value NewBigInt(Napi::Env env, T value)
+Napi::Value NewInt(Napi::Env env, T i)
 {
-    if constexpr (sizeof(T) <= 4)
-        return Napi::BigInt::New(env, value);
+    static_assert(sizeof(T) == 8);
 
     if constexpr (std::is_signed_v<T>) {
-        if (value <= 9007199254740992ll && value >= -9007199254740992ll)
-            return Napi::Number::New(env, (double)value);
+        if (i <= 9007199254740992ll && i >= -9007199254740992ll)
+            return Napi::Number::New(env, (double)i);
     } else {
-        if (value <= 9007199254740992ull)
-            return Napi::Number::New(env, (double)value);
+        if (i <= 9007199254740992ull)
+            return Napi::Number::New(env, (double)i);
     }
 
-    return Napi::BigInt::New(env, value);
+    return Napi::BigInt::New(env, i);
 }
 
 static inline Napi::Array GetOwnPropertyNames(Napi::Object obj)

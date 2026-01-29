@@ -943,8 +943,7 @@ static Napi::Value GetOrSetErrNo(const Napi::CallbackInfo &info)
         errno = value;
     }
 
-    Napi::Number ret = Napi::Number::New(env, errno);
-    return ret;
+    return NewInt(env, (int32_t)errno);
 }
 
 static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
@@ -1236,7 +1235,7 @@ static Napi::Value GetTypeSize(const Napi::CallbackInfo &info)
     if (!type)
         return env.Null();
 
-    return Napi::Number::New(env, type->size);
+    return NewInt(env, type->size);
 }
 
 static Napi::Value GetTypeAlign(const Napi::CallbackInfo &info)
@@ -1252,7 +1251,7 @@ static Napi::Value GetTypeAlign(const Napi::CallbackInfo &info)
     if (!type)
         return env.Null();
 
-    return Napi::Number::New(env, type->align);
+    return NewInt(env, type->align);
 }
 
 static Napi::Value GetMemberOffset(const Napi::CallbackInfo &info)
@@ -1286,7 +1285,7 @@ static Napi::Value GetMemberOffset(const Napi::CallbackInfo &info)
         return env.Null();
     }
 
-    return Napi::Number::New(env, member->offset);
+    return NewInt(env, member->offset);
 }
 
 static Napi::Value GetResolvedType(const Napi::CallbackInfo &info)
@@ -1323,8 +1322,8 @@ static Napi::Value GetTypeDefinition(const Napi::CallbackInfo &info)
 
         defn.Set("name", Napi::String::New(env, type->name));
         defn.Set("primitive", PrimitiveKindNames[(int)type->primitive]);
-        defn.Set("size", Napi::Number::New(env, (double)type->size));
-        defn.Set("alignment", Napi::Number::New(env, (double)type->align));
+        defn.Set("size", NewInt(env, type->size));
+        defn.Set("alignment", NewInt(env, type->align));
         defn.Set("disposable", Napi::Boolean::New(env, !!type->dispose));
 
         switch (type->primitive) {
@@ -1354,7 +1353,7 @@ static Napi::Value GetTypeDefinition(const Napi::CallbackInfo &info)
 
             case PrimitiveKind::Array: {
                 uint32_t len = type->size / type->ref.type->size;
-                defn.Set("length", Napi::Number::New(env, (double)len));
+                defn.Set("length", NewInt(env, len));
                 defn.Set("hint", ArrayHintNames[(int)type->hint]);
             } [[fallthrough]];
             case PrimitiveKind::Pointer: {
@@ -2534,7 +2533,7 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
         Napi::Object codes = Napi::Object::New(env);
 
         for (const ErrnoCodeInfo &info: ErrnoCodes) {
-            codes.Set(info.name, Napi::Number::New(env, info.value));
+            codes.Set(info.name, NewInt(env, (int32_t)info.value));
         }
 
         os.Set("errno", codes);

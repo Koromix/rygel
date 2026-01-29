@@ -774,68 +774,60 @@ void DecodeObject(Napi::Object obj, const uint8_t *origin, const TypeInfo *type)
                 obj.Set(member.name, Napi::Boolean::New(env, b));
             } break;
             case PrimitiveKind::Int8: {
-                double d = (double)*(int8_t *)src;
-                obj.Set(member.name, Napi::Number::New(env, d));
+                int8_t i = *(int8_t *)src;
+                obj.Set(member.name, NewInt(env, i));
             } break;
             case PrimitiveKind::UInt8: {
-                double d = (double)*(uint8_t *)src;
-                obj.Set(member.name, Napi::Number::New(env, d));
+                uint8_t i = *(uint8_t *)src;
+                obj.Set(member.name, NewInt(env, i));
             } break;
             case PrimitiveKind::Int16: {
-                double d = (double)*(int16_t *)src;
-                obj.Set(member.name, Napi::Number::New(env, d));
+                int16_t i = *(int16_t *)src;
+                obj.Set(member.name, NewInt(env, i));
             } break;
             case PrimitiveKind::Int16S: {
-                int16_t v = *(int16_t *)src;
-                double d = (double)ReverseBytes(v);
-
-                obj.Set(member.name, Napi::Number::New(env, d));
+                int16_t i = *(int16_t *)src;
+                obj.Set(member.name, NewInt(env, ReverseBytes(i)));
             } break;
             case PrimitiveKind::UInt16: {
-                double d = (double)*(uint16_t *)src;
-                obj.Set(member.name, Napi::Number::New(env, d));
+                uint16_t i = *(uint16_t *)src;
+                obj.Set(member.name, NewInt(env, i));
             } break;
             case PrimitiveKind::UInt16S: {
-                uint16_t v = *(uint16_t *)src;
-                double d = (double)ReverseBytes(v);
-
-                obj.Set(member.name, Napi::Number::New(env, d));
+                uint16_t i = *(uint16_t *)src;
+                obj.Set(member.name, NewInt(env, ReverseBytes(i)));
             } break;
             case PrimitiveKind::Int32: {
-                double d = (double)*(int32_t *)src;
-                obj.Set(member.name, Napi::Number::New(env, d));
+                int32_t i = *(int32_t *)src;
+                obj.Set(member.name, NewInt(env, i));
             } break;
             case PrimitiveKind::Int32S: {
-                int32_t v = *(int32_t *)src;
-                double d = (double)ReverseBytes(v);
-
-                obj.Set(member.name, Napi::Number::New(env, d));
+                int32_t i = *(int32_t *)src;
+                obj.Set(member.name, NewInt(env, ReverseBytes(i)));
             } break;
             case PrimitiveKind::UInt32: {
-                double d = (double)*(uint32_t *)src;
-                obj.Set(member.name, Napi::Number::New(env, d));
+                uint32_t i = *(uint32_t *)src;
+                obj.Set(member.name, NewInt(env, i));
             } break;
             case PrimitiveKind::UInt32S: {
-                uint32_t v = *(uint32_t *)src;
-                double d = (double)ReverseBytes(v);
-
-                obj.Set(member.name, Napi::Number::New(env, d));
+                uint32_t i = *(uint32_t *)src;
+                obj.Set(member.name, NewInt(env, ReverseBytes(i)));
             } break;
             case PrimitiveKind::Int64: {
                 int64_t v = *(int64_t *)src;
-                obj.Set(member.name, NewBigInt(env, v));
+                obj.Set(member.name, NewInt(env, v));
             } break;
             case PrimitiveKind::Int64S: {
                 int64_t v = ReverseBytes(*(int64_t *)src);
-                obj.Set(member.name, NewBigInt(env, v));
+                obj.Set(member.name, NewInt(env, v));
             } break;
             case PrimitiveKind::UInt64: {
                 uint64_t v = *(uint64_t *)src;
-                obj.Set(member.name, NewBigInt(env, v));
+                obj.Set(member.name, NewInt(env, v));
             } break;
             case PrimitiveKind::UInt64S: {
                 uint64_t v = ReverseBytes(*(uint64_t *)src);
-                obj.Set(member.name, NewBigInt(env, v));
+                obj.Set(member.name, NewInt(env, v));
             } break;
             case PrimitiveKind::String: {
                 const char *str = *(const char **)src;
@@ -942,12 +934,12 @@ Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *ty
             return array; \
         } while (false)
 
-#define POP_NUMBERS(TypedArrayType, CType) \
+#define POP_INTEGERS(TypedArrayType, CType) \
         do { \
             if (type->hint == ArrayHint::Array) { \
                 POP_ARRAY({ \
-                    double d = (double)*(CType *)src; \
-                    array.Set(i, Napi::Number::New(env, d)); \
+                    CType v = *(CType *)src; \
+                    array.Set(i, NewInt(env, v)); \
                 }); \
             } else { \
                 Napi::TypedArrayType array = Napi::TypedArrayType::New(env, len); \
@@ -958,13 +950,12 @@ Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *ty
                 return array; \
             } \
         } while (false)
-#define POP_NUMBERS_SWAP(TypedArrayType, CType) \
+#define POP_INTEGERS_SWAP(TypedArrayType, CType) \
         do { \
             if (type->hint == ArrayHint::Array) { \
                 POP_ARRAY({ \
                     CType v = *(CType *)src; \
-                    double d = (double)ReverseBytes(v); \
-                    array.Set(i, Napi::Number::New(env, d)); \
+                    array.Set(i, NewInt(env, ReverseBytes(v))); \
                 }); \
             } else { \
                 Napi::TypedArrayType array = Napi::TypedArrayType::New(env, len); \
@@ -994,9 +985,9 @@ Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *ty
                 return str;
             }
 
-            POP_NUMBERS(Int8Array, int8_t);
+            POP_INTEGERS(Int8Array, int8_t);
         } break;
-        case PrimitiveKind::UInt8: { POP_NUMBERS(Uint8Array, uint8_t); } break;
+        case PrimitiveKind::UInt8: { POP_INTEGERS(Uint8Array, uint8_t); } break;
         case PrimitiveKind::Int16: {
             if (type->hint == ArrayHint::String) {
                 const char16_t *ptr = (const char16_t *)origin;
@@ -1006,11 +997,11 @@ Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *ty
                 return str;
             }
 
-            POP_NUMBERS(Int16Array, int16_t);
+            POP_INTEGERS(Int16Array, int16_t);
         } break;
-        case PrimitiveKind::Int16S: { POP_NUMBERS_SWAP(Int16Array, int16_t); } break;
-        case PrimitiveKind::UInt16: { POP_NUMBERS(Uint16Array, uint16_t); } break;
-        case PrimitiveKind::UInt16S: { POP_NUMBERS_SWAP(Uint16Array, uint16_t); } break;
+        case PrimitiveKind::Int16S: { POP_INTEGERS_SWAP(Int16Array, int16_t); } break;
+        case PrimitiveKind::UInt16: { POP_INTEGERS(Uint16Array, uint16_t); } break;
+        case PrimitiveKind::UInt16S: { POP_INTEGERS_SWAP(Uint16Array, uint16_t); } break;
         case PrimitiveKind::Int32: {
             if (type->hint == ArrayHint::String) {
                 const char32_t *ptr = (const char32_t *)origin;
@@ -1020,33 +1011,33 @@ Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *ty
                 return str;
             }
 
-            POP_NUMBERS(Int32Array, int32_t);
+            POP_INTEGERS(Int32Array, int32_t);
         } break;
-        case PrimitiveKind::Int32S: { POP_NUMBERS_SWAP(Int32Array, int32_t); } break;
-        case PrimitiveKind::UInt32: { POP_NUMBERS(Uint32Array, uint32_t); } break;
-        case PrimitiveKind::UInt32S: { POP_NUMBERS_SWAP(Uint32Array, uint32_t); } break;
+        case PrimitiveKind::Int32S: { POP_INTEGERS_SWAP(Int32Array, int32_t); } break;
+        case PrimitiveKind::UInt32: { POP_INTEGERS(Uint32Array, uint32_t); } break;
+        case PrimitiveKind::UInt32S: { POP_INTEGERS_SWAP(Uint32Array, uint32_t); } break;
         case PrimitiveKind::Int64: {
             POP_ARRAY({
                 int64_t v = *(int64_t *)src;
-                array.Set(i, NewBigInt(env, v));
+                array.Set(i, NewInt(env, v));
             });
         } break;
         case PrimitiveKind::Int64S: {
             POP_ARRAY({
                 int64_t v = ReverseBytes(*(int64_t *)src);
-                array.Set(i, NewBigInt(env, v));
+                array.Set(i, NewInt(env, v));
             });
         } break;
         case PrimitiveKind::UInt64: {
             POP_ARRAY({
                 uint64_t v = *(uint64_t *)src;
-                array.Set(i, NewBigInt(env, v));
+                array.Set(i, NewInt(env, v));
             });
         } break;
         case PrimitiveKind::UInt64S: {
             POP_ARRAY({
                 uint64_t v = ReverseBytes(*(uint64_t *)src);
-                array.Set(i, NewBigInt(env, v));
+                array.Set(i, NewInt(env, v));
             });
         } break;
         case PrimitiveKind::String: {
@@ -1096,14 +1087,42 @@ Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *ty
                 array.Set(i, value);
             });
         } break;
-        case PrimitiveKind::Float32: { POP_NUMBERS(Float32Array, float); } break;
-        case PrimitiveKind::Float64: { POP_NUMBERS(Float64Array, double); } break;
+        case PrimitiveKind::Float32: {
+            if (type->hint == ArrayHint::Array) {
+                POP_ARRAY({
+                    float f = *(float *)src;
+                    array.Set(i, Napi::Number::New(env, (double)f));
+                });
+            } else {
+                Napi::Float32Array array = Napi::Float32Array::New(env, len);
+                Span<uint8_t> buffer = MakeSpan((uint8_t *)array.ArrayBuffer().Data(), (Size)len * 4);
+
+                DecodeBuffer(buffer, origin, type->ref.type);
+
+                return array;
+            }
+        } break;
+        case PrimitiveKind::Float64: {
+            if (type->hint == ArrayHint::Array) {
+                POP_ARRAY({
+                    double d = *(double *)src;
+                    array.Set(i, Napi::Number::New(env, d));
+                });
+            } else {
+                Napi::Float64Array array = Napi::Float64Array::New(env, len);
+                Span<uint8_t> buffer = MakeSpan((uint8_t *)array.ArrayBuffer().Data(), (Size)len * 8);
+
+                DecodeBuffer(buffer, origin, type->ref.type);
+
+                return array;
+            }
+        } break;
 
         case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;
     }
 
-#undef POP_NUMBERS_SWAP
-#undef POP_NUMBERS
+#undef POP_INTEGERS_SWAP
+#undef POP_INTEGERS
 
 #undef POP_ARRAY
 
@@ -1140,19 +1159,18 @@ void DecodeNormalArray(Napi::Array array, const uint8_t *origin, const TypeInfo 
             } \
         } while (false)
 
-#define POP_NUMBERS(CType) \
-        do { \
-            POP_ARRAY({ \
-                double d = (double)*(CType *)src; \
-                array.Set(i, Napi::Number::New(env, d)); \
-            }); \
-        } while (false)
-#define POP_NUMBERS_SWAP(CType) \
+#define POP_INTEGERS(CType) \
         do { \
             POP_ARRAY({ \
                 CType v = *(CType *)src; \
-                double d = (double)ReverseBytes(v); \
-                array.Set(i, Napi::Number::New(env, d)); \
+                array.Set(i, NewInt(env, v)); \
+            }); \
+        } while (false)
+#define POP_INTEGERS_SWAP(CType) \
+        do { \
+            POP_ARRAY({ \
+                CType v = *(CType *)src; \
+                array.Set(i, NewInt(env, ReverseBytes(v))); \
             }); \
         } while (false)
 
@@ -1165,40 +1183,20 @@ void DecodeNormalArray(Napi::Array array, const uint8_t *origin, const TypeInfo 
                 array.Set(i, Napi::Boolean::New(env, b));
             });
         } break;
-        case PrimitiveKind::Int8: { POP_NUMBERS(int8_t); } break;
-        case PrimitiveKind::UInt8: { POP_NUMBERS(uint8_t); } break;
-        case PrimitiveKind::Int16: { POP_NUMBERS(int16_t); } break;
-        case PrimitiveKind::Int16S: { POP_NUMBERS_SWAP(int16_t); } break;
-        case PrimitiveKind::UInt16: { POP_NUMBERS(uint16_t); } break;
-        case PrimitiveKind::UInt16S: { POP_NUMBERS_SWAP(uint16_t); } break;
-        case PrimitiveKind::Int32: { POP_NUMBERS(int32_t); } break;
-        case PrimitiveKind::Int32S: { POP_NUMBERS_SWAP(int32_t); } break;
-        case PrimitiveKind::UInt32: { POP_NUMBERS(uint32_t); } break;
-        case PrimitiveKind::UInt32S: { POP_NUMBERS_SWAP(uint32_t); } break;
-        case PrimitiveKind::Int64: {
-            POP_ARRAY({
-                int64_t v = *(int64_t *)src;
-                array.Set(i, NewBigInt(env, v));
-            });
-        } break;
-        case PrimitiveKind::Int64S: {
-            POP_ARRAY({
-                int64_t v = ReverseBytes(*(int64_t *)src);
-                array.Set(i, NewBigInt(env, v));
-            });
-        } break;
-        case PrimitiveKind::UInt64: {
-            POP_ARRAY({
-                uint64_t v = *(uint64_t *)src;
-                array.Set(i, NewBigInt(env, v));
-            });
-        } break;
-        case PrimitiveKind::UInt64S: {
-            POP_ARRAY({
-                uint64_t v = ReverseBytes(*(uint64_t *)src);
-                array.Set(i, NewBigInt(env, v));
-            });
-        } break;
+        case PrimitiveKind::Int8: { POP_INTEGERS(int8_t); } break;
+        case PrimitiveKind::UInt8: { POP_INTEGERS(uint8_t); } break;
+        case PrimitiveKind::Int16: { POP_INTEGERS(int16_t); } break;
+        case PrimitiveKind::Int16S: { POP_INTEGERS_SWAP(int16_t); } break;
+        case PrimitiveKind::UInt16: { POP_INTEGERS(uint16_t); } break;
+        case PrimitiveKind::UInt16S: { POP_INTEGERS_SWAP(uint16_t); } break;
+        case PrimitiveKind::Int32: { POP_INTEGERS(int32_t); } break;
+        case PrimitiveKind::Int32S: { POP_INTEGERS_SWAP(int32_t); } break;
+        case PrimitiveKind::UInt32: { POP_INTEGERS(uint32_t); } break;
+        case PrimitiveKind::UInt32S: { POP_INTEGERS_SWAP(uint32_t); } break;
+        case PrimitiveKind::Int64: { POP_INTEGERS(int64_t); } break;
+        case PrimitiveKind::Int64S: { POP_INTEGERS_SWAP(int64_t); } break;
+        case PrimitiveKind::UInt64: { POP_INTEGERS(uint64_t); } break;
+        case PrimitiveKind::UInt64S: { POP_INTEGERS_SWAP(uint64_t); } break;
         case PrimitiveKind::String: {
             POP_ARRAY({
                 const char *str = *(const char **)src;
@@ -1266,14 +1264,24 @@ void DecodeNormalArray(Napi::Array array, const uint8_t *origin, const TypeInfo 
                 array.Set(i, value);
             });
         } break;
-        case PrimitiveKind::Float32: { POP_NUMBERS(float); } break;
-        case PrimitiveKind::Float64: { POP_NUMBERS(double); } break;
+        case PrimitiveKind::Float32: {
+            POP_ARRAY({
+                float f = *(float *)src;
+                array.Set(i, Napi::Number::New(env, (double)f));
+            });
+        } break;
+        case PrimitiveKind::Float64: {
+            POP_ARRAY({
+                double d = *(double *)src;
+                array.Set(i, Napi::Number::New(env, d));
+            });
+        } break;
 
         case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;
     }
 
-#undef POP_NUMBERS_SWAP
-#undef POP_NUMBERS
+#undef POP_INTEGERS_SWAP
+#undef POP_INTEGERS
 
 #undef POP_ARRAY
 }
@@ -1400,20 +1408,20 @@ Napi::Value Decode(Napi::Env env, const uint8_t *ptr, const TypeInfo *type, cons
             bool v = *(bool *)ptr;
             return Napi::Boolean::New(env, v);
         } break;
-        case PrimitiveKind::Int8: { RETURN_INT(int8_t, Napi::Number::New); } break;
-        case PrimitiveKind::UInt8: { RETURN_INT(uint8_t, Napi::Number::New); } break;
-        case PrimitiveKind::Int16: { RETURN_INT(int16_t, Napi::Number::New); } break;
-        case PrimitiveKind::Int16S: { RETURN_INT_SWAP(int16_t, Napi::Number::New); } break;
-        case PrimitiveKind::UInt16: { RETURN_INT(uint16_t, Napi::Number::New); } break;
-        case PrimitiveKind::UInt16S: { RETURN_INT_SWAP(uint16_t, Napi::Number::New); } break;
-        case PrimitiveKind::Int32: { RETURN_INT(int32_t, Napi::Number::New); } break;
-        case PrimitiveKind::Int32S: { RETURN_INT_SWAP(int32_t, Napi::Number::New); } break;
-        case PrimitiveKind::UInt32: { RETURN_INT(uint32_t, Napi::Number::New); } break;
-        case PrimitiveKind::UInt32S: { RETURN_INT_SWAP(uint32_t, Napi::Number::New); } break;
-        case PrimitiveKind::Int64: { RETURN_INT(int64_t, NewBigInt); } break;
-        case PrimitiveKind::Int64S: { RETURN_INT_SWAP(int64_t, NewBigInt); } break;
-        case PrimitiveKind::UInt64: { RETURN_INT(uint64_t, NewBigInt); } break;
-        case PrimitiveKind::UInt64S: { RETURN_INT_SWAP(uint64_t, NewBigInt); } break;
+        case PrimitiveKind::Int8: { RETURN_INT(int8_t, NewInt); } break;
+        case PrimitiveKind::UInt8: { RETURN_INT(uint8_t, NewInt); } break;
+        case PrimitiveKind::Int16: { RETURN_INT(int16_t, NewInt); } break;
+        case PrimitiveKind::Int16S: { RETURN_INT_SWAP(int16_t, NewInt); } break;
+        case PrimitiveKind::UInt16: { RETURN_INT(uint16_t, NewInt); } break;
+        case PrimitiveKind::UInt16S: { RETURN_INT_SWAP(uint16_t, NewInt); } break;
+        case PrimitiveKind::Int32: { RETURN_INT(int32_t, NewInt); } break;
+        case PrimitiveKind::Int32S: { RETURN_INT_SWAP(int32_t, NewInt); } break;
+        case PrimitiveKind::UInt32: { RETURN_INT(uint32_t, NewInt); } break;
+        case PrimitiveKind::UInt32S: { RETURN_INT_SWAP(uint32_t, NewInt); } break;
+        case PrimitiveKind::Int64: { RETURN_INT(int64_t, NewInt); } break;
+        case PrimitiveKind::Int64S: { RETURN_INT_SWAP(int64_t, NewInt); } break;
+        case PrimitiveKind::UInt64: { RETURN_INT(uint64_t, NewInt); } break;
+        case PrimitiveKind::UInt64S: { RETURN_INT_SWAP(uint64_t, NewInt); } break;
         case PrimitiveKind::String: {
             if (len) {
                 const char *str = *(const char **)ptr;
@@ -1460,7 +1468,7 @@ Napi::Value Decode(Napi::Env env, const uint8_t *ptr, const TypeInfo *type, cons
         } break;
         case PrimitiveKind::Float32: {
             float f = *(float *)ptr;
-            return Napi::Number::New(env, f);
+            return Napi::Number::New(env, (double)f);
         } break;
         case PrimitiveKind::Float64: {
             double d = *(double *)ptr;

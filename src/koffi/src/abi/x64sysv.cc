@@ -686,20 +686,20 @@ Napi::Value CallData::Complete(const FunctionInfo *func)
     switch (func->ret.type->primitive) {
         case PrimitiveKind::Void: return env.Undefined();
         case PrimitiveKind::Bool: return Napi::Boolean::New(env, result.u8 & 0x1);
-        case PrimitiveKind::Int8: return Napi::Number::New(env, (double)result.i8);
-        case PrimitiveKind::UInt8: return Napi::Number::New(env, (double)result.u8);
-        case PrimitiveKind::Int16: return Napi::Number::New(env, (double)result.i16);
-        case PrimitiveKind::Int16S: return Napi::Number::New(env, (double)ReverseBytes(result.i16));
-        case PrimitiveKind::UInt16: return Napi::Number::New(env, (double)result.u16);
-        case PrimitiveKind::UInt16S: return Napi::Number::New(env, (double)ReverseBytes(result.u16));
-        case PrimitiveKind::Int32: return Napi::Number::New(env, (double)result.i32);
-        case PrimitiveKind::Int32S: return Napi::Number::New(env, (double)ReverseBytes(result.i32));
-        case PrimitiveKind::UInt32: return Napi::Number::New(env, (double)result.u32);
-        case PrimitiveKind::UInt32S: return Napi::Number::New(env, (double)ReverseBytes(result.u32));
-        case PrimitiveKind::Int64: return NewBigInt(env, result.i64);
-        case PrimitiveKind::Int64S: return NewBigInt(env, ReverseBytes(result.i64));
-        case PrimitiveKind::UInt64: return NewBigInt(env, result.u64);
-        case PrimitiveKind::UInt64S: return NewBigInt(env, ReverseBytes(result.u64));
+        case PrimitiveKind::Int8: return NewInt(env, result.i8);
+        case PrimitiveKind::UInt8: return NewInt(env, result.u8);
+        case PrimitiveKind::Int16: return NewInt(env, result.i16);
+        case PrimitiveKind::Int16S: return NewInt(env, ReverseBytes(result.i16));
+        case PrimitiveKind::UInt16: return NewInt(env, result.u16);
+        case PrimitiveKind::UInt16S: return NewInt(env, ReverseBytes(result.u16));
+        case PrimitiveKind::Int32: return NewInt(env, result.i32);
+        case PrimitiveKind::Int32S: return NewInt(env, ReverseBytes(result.i32));
+        case PrimitiveKind::UInt32: return NewInt(env, result.u32);
+        case PrimitiveKind::UInt32S: return NewInt(env, ReverseBytes(result.u32));
+        case PrimitiveKind::Int64: return NewInt(env, result.i64);
+        case PrimitiveKind::Int64S: return NewInt(env, ReverseBytes(result.i64));
+        case PrimitiveKind::UInt64: return NewInt(env, result.u64);
+        case PrimitiveKind::UInt64S: return NewInt(env, ReverseBytes(result.u64));
         case PrimitiveKind::String: return result.ptr ? Napi::String::New(env, (const char *)result.ptr) : env.Null();
         case PrimitiveKind::String16: return result.ptr ? Napi::String::New(env, (const char16_t *)result.ptr) : env.Null();
         case PrimitiveKind::String32: return result.ptr ? MakeStringFromUTF32(env, (const char32_t *)result.ptr) : env.Null();
@@ -750,26 +750,16 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
             const uint8_t *src = (param.abi.regular ? own_sp : caller_sp) + param.abi.offsets[0]; \
             CType v = *(const CType *)src; \
              \
-            if constexpr (sizeof(v) > 4) { \
-                Napi::Value arg = NewBigInt(env, v); \
-                arguments.Append(arg); \
-            } else { \
-                Napi::Value arg = Napi::Number::New(env, (double)v); \
-                arguments.Append(arg); \
-            } \
+            Napi::Value arg = NewInt(env, v); \
+            arguments.Append(arg); \
         } while (false)
 #define POP_INTEGER_SWAP(CType) \
         do { \
             const uint8_t *src = (param.abi.regular ? own_sp : caller_sp) + param.abi.offsets[0]; \
             CType v = *(const CType *)src; \
              \
-            if constexpr (sizeof(v) > 4) { \
-                Napi::Value arg = NewBigInt(env, ReverseBytes(v)); \
-                arguments.Append(arg); \
-            } else { \
-                Napi::Value arg = Napi::Number::New(env, (double)ReverseBytes(v)); \
-                arguments.Append(arg); \
-            } \
+            Napi::Value arg = NewInt(env, ReverseBytes(v)); \
+            arguments.Append(arg); \
         } while (false)
 
     // Convert to JS arguments

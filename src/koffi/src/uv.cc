@@ -143,7 +143,7 @@ void PollHandle::OnPoll(uv_poll_t *h, int status, int events)
     obj.Set("writable", !!(events & UV_WRITABLE));
     obj.Set("disconnect", !!(events & UV_DISCONNECT));
 
-    napi_value args[] = { Napi::Number::New(env, status), obj };
+    napi_value args[] = { NewInt(env, (int32_t)status), obj };
     poll->callback.Call(poll->Value(), K_LEN(args), args);
 }
 
@@ -171,7 +171,7 @@ Napi::Value Poll(const Napi::CallbackInfo &info)
     int fd = info[0].As<Napi::Number>().Int32Value();
 
     Napi::Function ctor = PollHandle::Define(env);
-    Napi::Object inst = ctor.New({ Napi::Number::New(env, fd) });
+    Napi::Object inst = ctor.New({ NewInt(env, (int32_t)fd) });
     Napi::Function start = inst.Get("start").As<Napi::Function>();
 
     if (env.IsExceptionPending()) [[unlikely]]
