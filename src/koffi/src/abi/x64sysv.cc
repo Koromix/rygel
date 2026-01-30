@@ -334,52 +334,28 @@ namespace {
 #if defined(MUST_TAIL)
     #define OP(Code) \
             PRESERVE_NONE bool Handle ## Code(CallData *call, const FunctionInfo *func, const Napi::CallbackInfo &info, uint8_t *base, Size i)
-    #define DISPATCH() \
+    #define NEXT() \
             do { \
                 AbiOpcode next = func->instructions[i + 1]; \
                 MUST_TAIL return ForwardDispatch[(int)next](call, func, info, base, i + 1); \
             } while (false)
 
     PRESERVE_NONE typedef bool ForwardFunc(CallData *call, const FunctionInfo *func, const Napi::CallbackInfo &info, uint8_t *base, Size i);
+
+    extern ForwardFunc *const ForwardDispatch[256];
 #else
     #warning Falling back to inlining instead of tail calls (missing attributes)
 
     #define OP(Code) \
-        FORCE_INLINE bool Handle ## Code(CallData *call, const FunctionInfo *func, const Napi::CallbackInfo &info, uint8_t *base, Size i)
-    #define DISPATCH() \
-        return true
+        case AbiOpcode::Code:
+    #define NEXT() \
+        break
 
-    typedef bool ForwardFunc(CallData *call, const FunctionInfo *func, const Napi::CallbackInfo &info, uint8_t *base, Size i);
+    bool PushArguments(CallData *call, const FunctionInfo *func, const Napi::CallbackInfo &info, uint8_t *base)
+    {
+        for (Size i = 0;; i++) {
+            switch (func->instructions[i]) {
 #endif
-
-#define PUSH_INTEGER(CType) \
-        do { \
-            const ParameterInfo &param = func->parameters[i]; \
-            Napi::Value value = info[param.offset]; \
-             \
-            CType v; \
-            if (!TryNumber(value, &v)) [[unlikely]] { \
-                ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected number", GetValueType(call->instance, value)); \
-                return false; \
-            } \
-             \
-            *(uint64_t *)(base + param.abi.offsets[0]) = (uint64_t)v; \
-        } while (false)
-#define PUSH_INTEGER_SWAP(CType) \
-        do { \
-            const ParameterInfo &param = func->parameters[i]; \
-            Napi::Value value = info[param.offset]; \
-             \
-            CType v; \
-            if (!TryNumber(value, &v)) [[unlikely]] { \
-                ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected number", GetValueType(call->instance, value)); \
-                return false; \
-            } \
-             \
-            *(uint64_t *)(base + param.abi.offsets[0]) = (uint64_t)ReverseBytes(v); \
-        } while (false)
-
-    extern ForwardFunc *const ForwardDispatch[256];
 
     OP(Bool) {
         const ParameterInfo &param = func->parameters[i];
@@ -393,25 +369,55 @@ namespace {
 
         *(uint64_t *)(base + param.abi.offsets[0]) = (uint64_t)b;
 
-        DISPATCH();
+        NEXT();
     }
 
     OP(Void) { K_UNREACHABLE(); return false; }
 
-    OP(Int8) { PUSH_INTEGER(int8_t); DISPATCH(); }
-    OP(UInt8) { PUSH_INTEGER(uint8_t); DISPATCH(); }
-    OP(Int16) { PUSH_INTEGER(int16_t); DISPATCH(); }
-    OP(Int16S) { PUSH_INTEGER_SWAP(int16_t); DISPATCH(); }
-    OP(UInt16) { PUSH_INTEGER(uint16_t); DISPATCH(); }
-    OP(UInt16S) { PUSH_INTEGER_SWAP(uint16_t); DISPATCH(); }
-    OP(Int32) { PUSH_INTEGER(int32_t); DISPATCH(); }
-    OP(Int32S) { PUSH_INTEGER_SWAP(int32_t); DISPATCH(); }
-    OP(UInt32) { PUSH_INTEGER(uint32_t); DISPATCH(); }
-    OP(UInt32S) { PUSH_INTEGER_SWAP(uint32_t); DISPATCH(); }
-    OP(Int64) { PUSH_INTEGER(int64_t); DISPATCH(); }
-    OP(Int64S) { PUSH_INTEGER_SWAP(int64_t); DISPATCH(); }
-    OP(UInt64) { PUSH_INTEGER(int64_t); DISPATCH(); }
-    OP(UInt64S) { PUSH_INTEGER_SWAP(int64_t); DISPATCH(); }
+#define INTEGER(CType) \
+        do { \
+            const ParameterInfo &param = func->parameters[i]; \
+            Napi::Value value = info[param.offset]; \
+             \
+            CType v; \
+            if (!TryNumber(value, &v)) [[unlikely]] { \
+                ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected number", GetValueType(call->instance, value)); \
+                return false; \
+            } \
+             \
+            *(uint64_t *)(base + param.abi.offsets[0]) = (uint64_t)v; \
+        } while (false)
+#define INTEGER_SWAP(CType) \
+        do { \
+            const ParameterInfo &param = func->parameters[i]; \
+            Napi::Value value = info[param.offset]; \
+             \
+            CType v; \
+            if (!TryNumber(value, &v)) [[unlikely]] { \
+                ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected number", GetValueType(call->instance, value)); \
+                return false; \
+            } \
+             \
+            *(uint64_t *)(base + param.abi.offsets[0]) = (uint64_t)ReverseBytes(v); \
+        } while (false)
+
+    OP(Int8) { INTEGER(int8_t); NEXT(); }
+    OP(UInt8) { INTEGER(uint8_t); NEXT(); }
+    OP(Int16) { INTEGER(int16_t); NEXT(); }
+    OP(Int16S) { INTEGER_SWAP(int16_t); NEXT(); }
+    OP(UInt16) { INTEGER(uint16_t); NEXT(); }
+    OP(UInt16S) { INTEGER_SWAP(uint16_t); NEXT(); }
+    OP(Int32) { INTEGER(int32_t); NEXT(); }
+    OP(Int32S) { INTEGER_SWAP(int32_t); NEXT(); }
+    OP(UInt32) { INTEGER(uint32_t); NEXT(); }
+    OP(UInt32S) { INTEGER_SWAP(uint32_t); NEXT(); }
+    OP(Int64) { INTEGER(int64_t); NEXT(); }
+    OP(Int64S) { INTEGER_SWAP(int64_t); NEXT(); }
+    OP(UInt64) { INTEGER(int64_t); NEXT(); }
+    OP(UInt64S) { INTEGER_SWAP(int64_t); NEXT(); }
+
+#undef INTEGER_SWAP
+#undef INTEGER
 
     OP(String) {
         const ParameterInfo &param = func->parameters[i];
@@ -423,7 +429,7 @@ namespace {
 
         *(const char **)(base + param.abi.offsets[0]) = str;
 
-        DISPATCH();
+        NEXT();
     }
 
     OP(String16) {
@@ -436,7 +442,7 @@ namespace {
 
         *(const char16_t **)(base + param.abi.offsets[0]) = str16;
 
-        DISPATCH();
+        NEXT();
     }
 
     OP(String32) {
@@ -449,7 +455,7 @@ namespace {
 
         *(const char32_t **)(base + param.abi.offsets[0]) = str32;
 
-        DISPATCH();
+        NEXT();
     }
 
     OP(Pointer) {
@@ -462,7 +468,7 @@ namespace {
 
         *(void **)(base + param.abi.offsets[0]) = ptr;
 
-        DISPATCH();
+        NEXT();
     }
 
     OP(Record) { K_UNREACHABLE(); return false; }
@@ -482,7 +488,7 @@ namespace {
         memset(base + param.abi.offsets[0], 0, 8);
         memcpy(base + param.abi.offsets[0], &f, 4);
 
-        DISPATCH();
+        NEXT();
     }
 
     OP(Float64) {
@@ -497,7 +503,7 @@ namespace {
 
         *(double *)(base + param.abi.offsets[0]) = d;
 
-        DISPATCH();
+        NEXT();
     }
 
     OP(Callback) {
@@ -510,7 +516,7 @@ namespace {
 
         *(void **)(base + param.abi.offsets[0]) = ptr;
 
-        DISPATCH();
+        NEXT();
     }
 
     OP(Prototype) { K_UNREACHABLE(); return false; }
@@ -537,7 +543,7 @@ namespace {
         *(uint64_t *)(base + param.abi.offsets[1]) = buf[1];
         *(uint64_t *)(base + param.abi.offsets[0]) = buf[0];
 
-        DISPATCH();
+        NEXT();
     }
 
     OP(AggregateStack) {
@@ -554,23 +560,28 @@ namespace {
         if (!call->PushObject(obj, param.type, base + param.abi.offsets[0]))
             return false;
 
-        DISPATCH();
+        NEXT();
     }
 
     OP(End) { return true; }
 
+#if defined(MUST_TAIL)
     ForwardFunc *const ForwardDispatch[256] = {
-        #define PRIMITIVE(Name) [(int)AbiOpcode::Name] = Handle ## Name,
+        #define PRIMITIVE(Name) Handle ## Name,
         #include "../primitives.inc"
-        [(int)AbiOpcode::AggregateReg] = HandleAggregateReg,
-        [(int)AbiOpcode::AggregateStack] = HandleAggregateStack,
-        [(int)AbiOpcode::End] = HandleEnd
+        HandleAggregateReg,
+        HandleAggregateStack,
+        HandleEnd
     };
+#else
+            }
+        }
 
-#undef PUSH_INTEGER_SWAP
-#undef PUSH_INTEGER
+        K_UNREACHABLE();
+    }
+#endif
 
-#undef DISPATCH
+#undef NEXT
 #undef OP
 }
 
@@ -592,17 +603,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
     AbiOpcode first = func->instructions[0];
     return ForwardDispatch[(int)first](this, func, info, base, 0);
 #else
-    for (Size i = 0;; i++) {
-        AbiOpcode code = func->instructions[i];
-        ForwardFunc *op = ForwardDispatch[(int)code];
-
-        if (code == AbiOpcode::End)
-            break;
-        if (!op(this, func, info, base, i)) [[unlikely]]
-            return false;
-    }
-
-    return true;
+    return PushArguments(this, func, info, base);
 #endif
 }
 
