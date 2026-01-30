@@ -633,99 +633,99 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::Int8: {
-                int8_t i = *(int8_t *)((param.gpr_count ? gpr_ptr : args_ptr)++);
+                int8_t v = *(int8_t *)((param.gpr_count ? gpr_ptr : args_ptr)++);
 
-                Napi::Value arg = NewInt(env, i);
+                Napi::Value arg = NewInt(env, v);
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::UInt8: {
-                uint8_t i = *(uint8_t *)((param.gpr_count ? gpr_ptr : args_ptr)++);
+                uint8_t v = *(uint8_t *)((param.gpr_count ? gpr_ptr : args_ptr)++);
 
-                Napi::Value arg = NewInt(env, i);
+                Napi::Value arg = NewInt(env, v);
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::Int16: {
-                int16_t i = *(int16_t *)((param.gpr_count ? gpr_ptr : args_ptr)++);
+                int16_t v = *(int16_t *)((param.gpr_count ? gpr_ptr : args_ptr)++);
 
-                Napi::Value arg = NewInt(env, i);
+                Napi::Value arg = NewInt(env, v);
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::Int16S: {
-                int16_t i = *(int16_t *)((param.gpr_count ? gpr_ptr : args_ptr)++);
+                int16_t v = *(int16_t *)((param.gpr_count ? gpr_ptr : args_ptr)++);
 
-                Napi::Value arg = NewInt(env, ReverseBytes(i));
+                Napi::Value arg = NewInt(env, ReverseBytes(v));
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::UInt16: {
-                uint16_t i = *(uint16_t *)((param.gpr_count ? gpr_ptr : args_ptr)++);
+                uint16_t v = *(uint16_t *)((param.gpr_count ? gpr_ptr : args_ptr)++);
 
-                Napi::Value arg = NewInt(env, i);
+                Napi::Value arg = NewInt(env, v);
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::UInt16S: {
-                uint16_t i = *(uint16_t *)((param.gpr_count ? gpr_ptr : args_ptr)++);
+                uint16_t v = *(uint16_t *)((param.gpr_count ? gpr_ptr : args_ptr)++);
 
-                Napi::Value arg = NewInt(env, ReverseBytes(i));
+                Napi::Value arg = NewInt(env, ReverseBytes(v));
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::Int32: {
-                int32_t i = *(int32_t *)((param.gpr_count ? gpr_ptr : args_ptr)++);
+                int32_t v = *(int32_t *)((param.gpr_count ? gpr_ptr : args_ptr)++);
 
-                Napi::Value arg = NewInt(env, i);
+                Napi::Value arg = NewInt(env, v);
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::Int32S: {
-                int32_t i = *(int32_t *)((param.gpr_count ? gpr_ptr : args_ptr)++);
+                int32_t v = *(int32_t *)((param.gpr_count ? gpr_ptr : args_ptr)++);
 
-                Napi::Value arg = NewInt(env, ReverseBytes(i));
+                Napi::Value arg = NewInt(env, ReverseBytes(v));
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::UInt32: {
-                uint32_t i = *(uint32_t *)((param.gpr_count ? gpr_ptr : args_ptr)++);
+                uint32_t v = *(uint32_t *)((param.gpr_count ? gpr_ptr : args_ptr)++);
 
-                Napi::Value arg = NewInt(env, i);
+                Napi::Value arg = NewInt(env, v);
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::UInt32S: {
-                uint32_t i = *(uint32_t *)((param.gpr_count ? gpr_ptr : args_ptr)++);
+                uint32_t v = *(uint32_t *)((param.gpr_count ? gpr_ptr : args_ptr)++);
 
-                Napi::Value arg = NewInt(env, ReverseBytes(i));
+                Napi::Value arg = NewInt(env, ReverseBytes(v));
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::Int64: {
                 gpr_ptr = AlignUp(gpr_ptr, 8);
 
-                int64_t i = *(int64_t *)(param.gpr_count ? gpr_ptr : args_ptr);
+                int64_t v = *(int64_t *)(param.gpr_count ? gpr_ptr : args_ptr);
                 (param.gpr_count ? gpr_ptr : args_ptr) += 2;
 
-                Napi::Value arg = NewInt(env, i);
+                Napi::Value arg = NewInt(env, v);
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::Int64S: {
                 gpr_ptr = AlignUp(gpr_ptr, 8);
 
-                int64_t i = *(int64_t *)(param.gpr_count ? gpr_ptr : args_ptr);
+                int64_t v = *(int64_t *)(param.gpr_count ? gpr_ptr : args_ptr);
                 (param.gpr_count ? gpr_ptr : args_ptr) += 2;
 
-                Napi::Value arg = NewInt(env, ReverseBytes(i));
+                Napi::Value arg = NewInt(env, ReverseBytes(v));
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::UInt64: {
                 gpr_ptr = AlignUp(gpr_ptr, 8);
 
-                uint64_t i = *(uint64_t *)(param.gpr_count ? gpr_ptr : args_ptr);
+                uint64_t v = *(uint64_t *)(param.gpr_count ? gpr_ptr : args_ptr);
                 (param.gpr_count ? gpr_ptr : args_ptr) += 2;
 
-                Napi::Value arg = NewInt(env, i);
+                Napi::Value arg = NewInt(env, v);
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::UInt64S: {
                 gpr_ptr = AlignUp(gpr_ptr, 8);
 
-                uint64_t i = *(uint64_t *)(param.gpr_count ? gpr_ptr : args_ptr);
+                uint64_t v = *(uint64_t *)(param.gpr_count ? gpr_ptr : args_ptr);
                 (param.gpr_count ? gpr_ptr : args_ptr) += 2;
 
-                Napi::Value arg = NewInt(env, ReverseBytes(i));
+                Napi::Value arg = NewInt(env, ReverseBytes(v));
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::String: {

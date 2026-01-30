@@ -761,9 +761,7 @@ void DecodeObject(Napi::Object obj, const uint8_t *origin, const TypeInfo *type)
 
     K_ASSERT(type->primitive == PrimitiveKind::Record);
 
-    for (Size i = 0; i < type->members.len; i++) {
-        const RecordMember &member = type->members[i];
-
+    for (const RecordMember &member: type->members) {
         const uint8_t *src = origin + member.offset;
 
         switch (member.type->primitive) {

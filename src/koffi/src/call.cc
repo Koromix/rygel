@@ -795,8 +795,6 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
         *out_ptr = ptr;
         return true;
     } else if (value.IsArray()) {
-        uint8_t *ptr = nullptr;
-
         Napi::Array array = value.As<Napi::Array>();
         Size len = PushIndirectString(array, ref, &ptr);
 
@@ -816,19 +814,18 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
             }
             out_max_len = len;
         } else {
+            Size size = (Size)array.Length() * ref->size;
+
             if (!ref->size) [[unlikely]] {
                 ThrowError<Napi::TypeError>(env, "Cannot pass %1 value to %2, use koffi.as()",
                                             ref != instance->void_type ? "opaque" : "ambiguous", type->name);
                 return false;
             }
 
-            Size len = (Size)array.Length();
-            Size size = len * ref->size;
-
             ptr = AllocHeap(size, 16);
 
             if (directions & 1) {
-                if (!PushNormalArray(array, type, size, ptr))
+                if (!PushNormalArray(array, type, size, (uint8_t *)ptr))
                     return false;
             } else {
                 MemSet(ptr, 0, size);
@@ -844,7 +841,7 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
             K_ASSERT(status == napi_ok);
 
             out->kind = out_kind;
-            out->ptr = ptr;
+            out->ptr = (const uint8_t *)ptr;
             out->type = ref;
             out->max_len = out_max_len;
         }
@@ -856,7 +853,7 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
         Napi::Object obj = value.As<Napi::Object>();
         K_ASSERT(IsObject(value));
 
-        uint8_t *ptr = AllocHeap(ref->size, 16);
+        ptr = (void *)AllocHeap(ref->size, 16);
 
         if (ref->primitive == PrimitiveKind::Union &&
                 (directions & 2) && !CheckValueTag(obj, &MagicUnionMarker)) [[unlikely]] {
@@ -865,7 +862,7 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
         }
 
         if (directions & 1) {
-            if (!PushObject(obj, ref, ptr))
+            if (!PushObject(obj, ref, (uint8_t *)ptr))
                 return false;
         } else {
             MemSet(ptr, 0, ref->size);
@@ -878,7 +875,7 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
             K_ASSERT(status == napi_ok);
 
             out->kind = OutArgument::Kind::Object;
-            out->ptr = ptr;
+            out->ptr = (const uint8_t *)ptr;
             out->type = ref;
             out->max_len = -1;
         }
@@ -914,7 +911,7 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
 
         Napi::Function func = value.As<Napi::Function>();
 
-        void *ptr = ReserveTrampoline(type->ref.proto, func);
+        ptr = ReserveTrampoline(type->ref.proto, func);
         if (!ptr) [[unlikely]]
             return false;
 
@@ -943,7 +940,7 @@ bool CallData::PushCallback(Napi::Value value, const TypeInfo *type, void **out_
     } else if (value.IsFunction()) {
         Napi::Function func = value.As<Napi::Function>();
 
-        void *ptr = ReserveTrampoline(type->ref.proto, func);
+        ptr = ReserveTrampoline(type->ref.proto, func);
         if (!ptr) [[unlikely]]
             return false;
 
@@ -955,7 +952,7 @@ bool CallData::PushCallback(Napi::Value value, const TypeInfo *type, void **out_
     return false;
 }
 
-Size CallData::PushIndirectString(Napi::Array array, const TypeInfo *ref, uint8_t **out_ptr)
+Size CallData::PushIndirectString(Napi::Array array, const TypeInfo *ref, void **out_ptr)
 {
     if (array.Length() != 1)
         return -1;

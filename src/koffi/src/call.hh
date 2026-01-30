@@ -101,7 +101,7 @@ struct alignas(8) CallData {
     bool PushStringArray(Napi::Value value, const TypeInfo *type, uint8_t *origin);
     INLINE_IF_UNITY bool PushPointer(Napi::Value value, const TypeInfo *type, int directions, void **out_ptr);
     bool PushCallback(Napi::Value value, const TypeInfo *type, void **out_ptr);
-    Size PushIndirectString(Napi::Array array, const TypeInfo *ref, uint8_t **out_ptr);
+    Size PushIndirectString(Napi::Array array, const TypeInfo *ref, void **out_ptr);
 
 #undef INLINE_IF_UNITY
 
