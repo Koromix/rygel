@@ -330,6 +330,9 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
     return true;
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+
 namespace {
 #if defined(MUST_TAIL)
     #define OP(Code) \
@@ -584,6 +587,8 @@ namespace {
 #undef NEXT
 #undef OP
 }
+
+#pragma GCC diagnostic pop
 
 bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
 {
