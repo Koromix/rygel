@@ -4094,6 +4094,10 @@ inline const Value CallbackInfo::operator[](size_t index) const {
   return index < _argc ? Value(_env, _argv[index]) : Env().Undefined();
 }
 
+inline napi_value *CallbackInfo::First() const {
+  return _argv;
+}
+
 inline Value CallbackInfo::This() const {
   if (_this == nullptr) {
     return Env().Undefined();

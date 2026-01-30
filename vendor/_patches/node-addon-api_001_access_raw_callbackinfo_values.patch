@@ -1,0 +1,27 @@
+diff --git a/vendor/node-addon-api/napi-inl.h b/vendor/node-addon-api/napi-inl.h
+index 54651c1b5d..2e8242ff4b 100644
+--- a/vendor/node-addon-api/napi-inl.h
++++ b/vendor/node-addon-api/napi-inl.h
+@@ -4094,6 +4094,10 @@ inline const Value CallbackInfo::operator[](size_t index) const {
+   return index < _argc ? Value(_env, _argv[index]) : Env().Undefined();
+ }
+ 
++inline napi_value *CallbackInfo::First() const {
++  return _argv;
++}
++
+ inline Value CallbackInfo::This() const {
+   if (_this == nullptr) {
+     return Env().Undefined();
+diff --git a/vendor/node-addon-api/napi.h b/vendor/node-addon-api/napi.h
+index ba0e134167..9514865a76 100644
+--- a/vendor/node-addon-api/napi.h
++++ b/vendor/node-addon-api/napi.h
+@@ -1977,6 +1977,7 @@ class CallbackInfo {
+   bool IsConstructCall() const;
+   size_t Length() const;
+   const Value operator[](size_t index) const;
++  napi_value *First() const;
+   Value This() const;
+   void* Data() const;
+   void SetData(void* data);
