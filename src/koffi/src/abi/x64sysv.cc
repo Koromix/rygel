@@ -1143,9 +1143,7 @@ Napi::Value CallData::Run(const Napi::CallbackInfo &info)
     if (!base) [[unlikely]]
         return env.Null();
 
-    // Follow sync bytecode
     const AbiInstruction *first = func->sync.ptr;
-
     return RunLoop(this, info.First(), base, first);
 }
 
@@ -1156,9 +1154,7 @@ bool CallData::PrepareAsync(const Napi::CallbackInfo &info)
         return env.Null();
     async_base = base;
 
-    // Follow async bytecode
     const AbiInstruction *first = func->async.ptr;
-
     return RunLoop(this, info.First(), base, first);
 }
 
