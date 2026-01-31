@@ -145,7 +145,7 @@ struct ParameterInfo {
     // ABI-specific part
 
 #if defined(_M_X64)
-    bool regular;
+    bool regular; // Used for structs and unions
 #elif defined(__x86_64__)
     struct {
         bool regular;
