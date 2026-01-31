@@ -613,6 +613,7 @@ NamedDeferGuard<Fun> operator+(NamedDeferGuardHelper, Fun &&f)
 {
     return NamedDeferGuard<Fun>(std::forward<Fun>(f));
 }
+
 // Write 'DEFER { code };' to do something at the end of the current scope, you
 // can use DEFER_N(Name) if you need to disable the guard for some reason, and
 // DEFER_NC(Name, Captures) if you need to capture values.
