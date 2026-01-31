@@ -1681,9 +1681,7 @@ static Napi::Value TranslateAsyncCall(const FunctionInfo *func, void *native, co
     }
     AsyncCall *async = new AsyncCall(env, instance, func, native, mem, callback);
 
-    if (async->Prepare(info) && instance->debug) {
-        async->DumpForward();
-    }
+    async->Prepare(info);
     async->Queue();
 
     return env.Undefined();
