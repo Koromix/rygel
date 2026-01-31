@@ -117,9 +117,24 @@ static const char *const CallConventionNames[] = {
     "Thiscall"
 };
 
-// ABI specific
 enum class AbiMethod : int;
-enum class AbiOpcode : int8_t;
+enum class AbiOpcode : int16_t;
+
+struct AbiInstruction {
+    AbiOpcode code;
+    int16_t a;
+    union {
+        int32_t b;
+        struct {
+            int16_t b1;
+            int16_t b2;
+        };
+    };
+    union {
+        int64_t c;
+        const TypeInfo *type;
+    };
+};
 
 struct ParameterInfo {
     const TypeInfo *type;
@@ -208,8 +223,9 @@ struct FunctionInfo {
 
     // ABI-specific part
 
-    Size args_size;
-    HeapArray<AbiOpcode> instructions;
+    HeapArray<AbiInstruction> sync;
+    HeapArray<AbiInstruction> async;
+    Size stk_size;
 #if defined(__i386__) || defined(_M_IX86)
     bool fast;
 #else

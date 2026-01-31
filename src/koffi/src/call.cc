@@ -26,9 +26,9 @@ struct RelayContext {
 
 #include "trampolines/prototypes.inc"
 
-CallData::CallData(Napi::Env env, InstanceData *instance, InstanceMemory *mem)
-    : env(env), instance(instance),
-      mem(mem), old_stack_mem(mem->stack), old_heap_mem(mem->heap)
+CallData::CallData(Napi::Env env, InstanceData *instance, InstanceMemory *mem, const FunctionInfo *func, void *native)
+    : env(env), instance(instance), mem(mem), func(func), native(native),
+      old_stack_mem(mem->stack), old_heap_mem(mem->heap)
 {
     mem->generation += !mem->depth;
     mem->depth++;
@@ -1010,7 +1010,7 @@ void *CallData::ReserveTrampoline(const FunctionInfo *proto, Napi::Function func
     return ptr;
 }
 
-void CallData::DumpForward(const FunctionInfo *func) const
+void CallData::DumpForward() const
 {
     PrintLn(StdErr, "%!..+---- %1 (%2) ----%!0", func->name, CallConventionNames[(int)func->convention]);
 

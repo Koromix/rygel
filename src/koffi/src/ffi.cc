@@ -1167,12 +1167,6 @@ static Napi::Value CreateFunctionType(const Napi::CallbackInfo &info)
     if (!AnalyseFunction(env, instance, func))
         return env.Null();
 
-    // Adjust parameter offsets for koffi.call()
-    for (ParameterInfo &param: func->parameters) {
-        param.offset += 2;
-    }
-    func->required_parameters += 2;
-
     // We cannot fail after this check
     if (named && instance->types_map.Find(func->name)) {
         ThrowError<Napi::Error>(env, "Duplicate type name '%1'", func->name);
@@ -1473,46 +1467,32 @@ void ReleaseMemory(InstanceData *instance, InstanceMemory *mem)
     }
 }
 
-static Napi::Value TranslateNormalCall(const FunctionInfo *func, void *native,
-                                       const Napi::CallbackInfo &info)
+static Napi::Value TranslateNormalCall(const FunctionInfo *func, void *native, const Napi::CallbackInfo &info, Size count)
 {
     Napi::Env env = info.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();
 
-    if (info.Length() < (uint32_t)func->required_parameters) [[unlikely]] {
-        ThrowError<Napi::TypeError>(env, "Expected %1 arguments, got %2", func->parameters.len, info.Length());
+    if (count < (uint32_t)func->required_parameters) [[unlikely]] {
+        ThrowError<Napi::TypeError>(env, "Expected %1 arguments, got %2", func->parameters.len, count);
         return env.Null();
     }
 
     InstanceMemory *mem = instance->memories[0];
-    CallData call(env, instance, mem);
+    CallData call(env, instance, mem, func, native);
 
-    if (!call.Prepare(func, info)) [[unlikely]]
-        return env.Null();
+    K_DEFER_C(prev_call = exec_call) { exec_call = prev_call; };
+    exec_call = &call;
 
-    if (instance->debug) {
-        call.DumpForward(func);
-    }
-
-    // Execute call
-    {
-        K_DEFER_C(prev_call = exec_call) { exec_call = prev_call; };
-        exec_call = &call;
-
-        call.Execute(func, native);
-    }
-
-    return call.Complete(func);
+    return call.Run(info);
 }
 
 Napi::Value TranslateNormalCall(const Napi::CallbackInfo &info)
 {
     FunctionInfo *func = (FunctionInfo *)info.Data();
-    return TranslateNormalCall(func, func->native, info);
+    return TranslateNormalCall(func, func->native, info, (Size)info.Length());
 }
 
-static Napi::Value TranslateVariadicCall(const FunctionInfo *func, void *native,
-                                         const Napi::CallbackInfo &info)
+static Napi::Value TranslateVariadicCall(const FunctionInfo *func, void *native, const Napi::CallbackInfo &info, Size count)
 {
     Napi::Env env = info.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();
@@ -1525,13 +1505,13 @@ static Napi::Value TranslateVariadicCall(const FunctionInfo *func, void *native,
         FunctionInfo *prev = instance->variadic_func;
 
         if (prev && prev->native == native) {
-            Size specified = (info.Length() - prev->required_parameters);
+            Size specified = (count - prev->required_parameters);
             Size processed = (prev->parameters.len - prev->required_parameters) * 2;
 
             if (specified == processed) {
                 bool match = true;
 
-                for (Size i = prev->required_parameters, j = prev->required_parameters; i < (Size)info.Length(); i += 2, j++) {
+                for (Size i = prev->required_parameters, j = prev->required_parameters; i < (Size)count; i += 2, j++) {
                     int directions;
                     const TypeInfo *type = ResolveType(info[(uint32_t)i], &directions);
 
@@ -1556,21 +1536,22 @@ static Napi::Value TranslateVariadicCall(const FunctionInfo *func, void *native,
 
         memcpy((void *)variadic, func, K_SIZE(*func));
         memset((void *)&variadic->parameters, 0, K_SIZE(variadic->parameters));
-        memset((void *)&variadic->instructions, 0, K_SIZE(variadic->instructions));
+        memset((void *)&variadic->sync, 0, K_SIZE(variadic->sync));
+        memset((void *)&variadic->async, 0, K_SIZE(variadic->async));
 
         variadic->parameters = func->parameters;
         variadic->lib = nullptr;
 
-        if (info.Length() < (uint32_t)variadic->required_parameters) [[unlikely]] {
-            ThrowError<Napi::TypeError>(env, "Expected %1 arguments or more, got %2", variadic->parameters.len, info.Length());
+        if (count < (uint32_t)variadic->required_parameters) [[unlikely]] {
+            ThrowError<Napi::TypeError>(env, "Expected %1 arguments or more, got %2", variadic->parameters.len, count);
             return env.Null();
         }
-        if ((info.Length() - variadic->required_parameters) % 2) [[unlikely]] {
+        if ((count - variadic->required_parameters) % 2) [[unlikely]] {
             ThrowError<Napi::Error>(env, "Missing value argument for variadic call");
             return env.Null();
         }
 
-        for (Size i = variadic->required_parameters; i < (Size)info.Length(); i += 2) {
+        for (Size i = variadic->required_parameters; i < count; i += 2) {
             ParameterInfo param = {};
 
             param.type = ResolveType(info[(uint32_t)i], &param.directions);
@@ -1601,22 +1582,12 @@ static Napi::Value TranslateVariadicCall(const FunctionInfo *func, void *native,
     }
 
     InstanceMemory *mem = instance->memories[0];
-    CallData call(env, instance, mem);
+    CallData call(env, instance, mem, variadic, native);
 
-    if (!call.Prepare(variadic, info)) [[unlikely]]
-        return env.Null();
+    K_DEFER_C(prev_call = exec_call) { exec_call = prev_call; };
+    exec_call = &call;
 
-    if (instance->debug) {
-        call.DumpForward(variadic);
-    }
-
-    // Execute call
-    {
-        K_DEFER_C(prev_call = exec_call) { exec_call = prev_call; };
-        exec_call = &call;
-
-        call.Execute(variadic, native);
-    }
+    Napi::Value ret = call.Run(info);
 
     if (variadic != instance->variadic_func) {
         err_guard.Disable();
@@ -1625,20 +1596,17 @@ static Napi::Value TranslateVariadicCall(const FunctionInfo *func, void *native,
         instance->variadic_func = variadic;
     }
 
-    return call.Complete(variadic);
+    return ret;
 }
 
 Napi::Value TranslateVariadicCall(const Napi::CallbackInfo &info)
 {
     FunctionInfo *func = (FunctionInfo *)info.Data();
-    return TranslateVariadicCall(func, func->native, info);
+    return TranslateVariadicCall(func, func->native, info, (Size)info.Length());
 }
 
 class AsyncCall: public Napi::AsyncWorker {
     Napi::Env env;
-
-    const FunctionInfo *func;
-    void *native;
 
     CallData call;
     bool prepared = false;
@@ -1646,21 +1614,20 @@ class AsyncCall: public Napi::AsyncWorker {
 public:
     AsyncCall(Napi::Env env, InstanceData *instance, const FunctionInfo *func,
               void *native, InstanceMemory *mem, Napi::Function &callback)
-        : Napi::AsyncWorker(callback), env(env), func(func->Ref()), native(native),
-          call(env, instance, mem) {}
-    ~AsyncCall() { func->Unref(); }
+        : Napi::AsyncWorker(callback), env(env), call(env, instance, mem, func->Ref(), native) {}
+    ~AsyncCall() { call.func->Unref(); }
 
     bool Prepare(const Napi::CallbackInfo &info) {
-        prepared = call.Prepare(func, info);
+        prepared = call.PrepareAsync(info);
 
-        if (!prepared) {
+        if (!prepared) [[unlikely]] {
             Napi::Error err = env.GetAndClearPendingException();
             SetError(err.Message());
         }
 
         return prepared;
     }
-    void DumpForward() { call.DumpForward(func); }
+    void DumpForward() { call.DumpForward(); }
 
     void Execute() override;
     void OnOK() override;
@@ -1668,11 +1635,11 @@ public:
 
 void AsyncCall::Execute()
 {
-    if (prepared) {
+    if (prepared) [[likely]] {
         K_DEFER_C(prev_call = exec_call) { exec_call = prev_call; };
         exec_call = &call;
 
-        call.Execute(func, native);
+        call.ExecuteAsync();
     }
 }
 
@@ -1683,21 +1650,20 @@ void AsyncCall::OnOK()
     Napi::FunctionReference &callback = Callback();
 
     napi_value self = env.Null();
-    napi_value args[] = { env.Null(), call.Complete(func) };
+    napi_value args[] = { env.Null(), call.EndAsync() };
 
     callback.Call(self, K_LEN(args), args);
 }
 
-static Napi::Value TranslateAsyncCall(const FunctionInfo *func, void *native,
-                                      const Napi::CallbackInfo &info)
+static Napi::Value TranslateAsyncCall(const FunctionInfo *func, void *native, const Napi::CallbackInfo &info, Size count)
 {
     K_ASSERT(!func->variadic);
 
     Napi::Env env = info.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();
 
-    if (info.Length() <= (uint32_t)func->required_parameters) {
-        ThrowError<Napi::TypeError>(env, "Expected %1 arguments, got %2", func->parameters.len + 1, info.Length());
+    if (count <= (uint32_t)func->required_parameters) {
+        ThrowError<Napi::TypeError>(env, "Expected %1 arguments, got %2", func->parameters.len + 1, count);
         return env.Null();
     }
 
@@ -1726,7 +1692,7 @@ static Napi::Value TranslateAsyncCall(const FunctionInfo *func, void *native,
 Napi::Value TranslateAsyncCall(const Napi::CallbackInfo &info)
 {
     FunctionInfo *func = (FunctionInfo *)info.Data();
-    return TranslateAsyncCall(func, func->native, info);
+    return TranslateAsyncCall(func, func->native, info, (Size)info.Length());
 }
 
 extern "C" void RelayCallback(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegisters *out_reg)
@@ -1753,7 +1719,7 @@ extern "C" void RelayCallback(Size idx, uint8_t *own_sp, uint8_t *caller_sp, Bac
         trampoline->generation = -1;
 
         // We set dispose_call to true so that the main thread will dispose of CallData itself
-        CallData call(env, instance, mem);
+        CallData call(env, instance, mem, nullptr, nullptr);
         call.RelaySafe(idx, own_sp, caller_sp, true, out_reg);
     }
 }
@@ -2171,21 +2137,21 @@ static Napi::Value CallPointerSync(const Napi::CallbackInfo &info)
     }
 
     void *ptr = nullptr;
-    if (!GetExternalPointer(env, info[0], &ptr)) [[unlikely]]
+    if (!GetExternalPointer(env, info[info.Length() - 2], &ptr)) [[unlikely]]
         return env.Null();
 
-    const TypeInfo *type = ResolveType(info[1]);
+    const TypeInfo *type = ResolveType(info[info.Length() - 1]);
     if (!type) [[unlikely]]
         return env.Null();
     if (type->primitive != PrimitiveKind::Prototype) [[unlikely]] {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for type, expected function type", GetValueType(instance, info[1]));
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for type, expected function type", GetValueType(instance, info[info.Length() - 1]));
         return env.Null();
     }
 
     const FunctionInfo *proto = type->ref.proto;
 
-    return proto->variadic ? TranslateVariadicCall(proto, ptr, info)
-                           : TranslateNormalCall(proto, ptr, info);
+    return proto->variadic ? TranslateVariadicCall(proto, ptr, info, info.Length() - 2)
+                           : TranslateNormalCall(proto, ptr, info, info.Length() - 2);
 }
 
 static Napi::Value EncodeValue(const Napi::CallbackInfo &info)

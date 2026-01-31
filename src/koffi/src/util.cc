@@ -1499,18 +1499,14 @@ Napi::Value Decode(Napi::Env env, const uint8_t *ptr, const TypeInfo *type, cons
 
             memcpy((void *)func, proto, K_SIZE(*proto));
             memset((void *)&func->parameters, 0, K_SIZE(func->parameters));
-            memset((void *)&func->instructions, 0, K_SIZE(func->instructions));
+            memset((void *)&func->sync, 0, K_SIZE(func->sync));
+            memset((void *)&func->async, 0, K_SIZE(func->async));
 
             func->name = "<anonymous>";
             func->native = (void *)ptr;
             func->parameters = proto->parameters;
-            func->instructions = proto->instructions;
-
-            // Fix back parameter offset
-            for (ParameterInfo &param: func->parameters) {
-                param.offset -= 2;
-            }
-            func->required_parameters -= 2;
+            func->sync = proto->sync;
+            func->async = proto->async;
 
             Napi::Function wrapper = WrapFunction(env, func);
             return wrapper;
@@ -1575,7 +1571,7 @@ bool Encode(Napi::Env env, uint8_t *origin, Napi::Value value, const TypeInfo *t
     }
 
     InstanceMemory mem = {};
-    CallData call(env, instance, &mem);
+    CallData call(env, instance, &mem, nullptr, nullptr);
 
 #define PUSH_INTEGER(CType) \
         do { \

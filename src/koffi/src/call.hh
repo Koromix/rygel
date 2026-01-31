@@ -39,39 +39,24 @@ struct alignas(8) CallData {
 
     Napi::Env env;
     InstanceData *instance;
-
     InstanceMemory *mem;
+    const FunctionInfo *func;
+    void *native;
+
     Span<uint8_t> old_stack_mem;
     Span<uint8_t> old_heap_mem;
+    uint8_t *saved_sp;
 
-    uint8_t *new_sp;
-    uint8_t *old_sp;
-
-    union {
-        int8_t i8;
-        uint8_t u8;
-        int16_t i16;
-        uint16_t u16;
-        int32_t i32;
-        uint32_t u32;
-        int64_t i64;
-        uint64_t u64;
-        float f;
-        double d;
-        void *ptr;
-        uint8_t buf[32];
-    } result;
-    uint8_t *return_ptr = nullptr;
+    uint8_t *async_base;
+    const AbiInstruction *async_ip;
 
     LocalArray<int16_t, 16> used_trampolines;
     HeapArray<OutArgument> out_arguments;
 
     BlockAllocator call_alloc;
 
-    CallData(Napi::Env env, InstanceData *instance, InstanceMemory *mem);
+    CallData(Napi::Env env, InstanceData *instance, InstanceMemory *mem, const FunctionInfo *func, void *native);
     ~CallData();
-
-    void Dispose();
 
 #if defined(UNITY_BUILD) && (defined(__clang__) || defined(_MSC_VER))
     #define INLINE_IF_UNITY FORCE_INLINE
@@ -79,15 +64,19 @@ struct alignas(8) CallData {
     #define INLINE_IF_UNITY
 #endif
 
-    INLINE_IF_UNITY bool Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info);
-    INLINE_IF_UNITY void Execute(const FunctionInfo *func, void *native);
-    INLINE_IF_UNITY Napi::Value Complete(const FunctionInfo *func);
+    void Dispose();
+
+    INLINE_IF_UNITY Napi::Value Run(const Napi::CallbackInfo &info);
+
+    bool PrepareAsync(const Napi::CallbackInfo &info);
+    void ExecuteAsync();
+    Napi::Value EndAsync();
 
     void Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_stack, BackRegisters *out_reg);
     void RelaySafe(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool outside_call, BackRegisters *out_reg);
     static void RelayAsync(napi_env, napi_value, void *, void *udata);
 
-    void DumpForward(const FunctionInfo *func) const;
+    void DumpForward() const;
 
     INLINE_IF_UNITY bool PushString(Napi::Value value, int directions, const char **out_str);
     INLINE_IF_UNITY bool PushString16(Napi::Value value, int directions, const char16_t **out_str16);
@@ -103,8 +92,6 @@ struct alignas(8) CallData {
     bool PushCallback(Napi::Value value, const TypeInfo *type, void **out_ptr);
     Size PushIndirectString(Napi::Array array, const TypeInfo *ref, void **out_ptr);
 
-#undef INLINE_IF_UNITY
-
     void *ReserveTrampoline(const FunctionInfo *proto, Napi::Function func);
 
     BlockAllocator *GetAllocator() { return &call_alloc; }
@@ -116,7 +103,9 @@ struct alignas(8) CallData {
 
     bool CheckDynamicLength(Napi::Object obj, Size element, const char *countedby, Napi::Value value);
 
-    void PopOutArguments();
+    INLINE_IF_UNITY void PopOutArguments();
+
+#undef INLINE_IF_UNITY
 };
 
 template <typename T>
