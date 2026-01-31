@@ -564,19 +564,33 @@ class DeferGuard {
     K_DELETE_COPY(DeferGuard)
 
     Fun f;
-    bool enabled;
 
 public:
     DeferGuard() = delete;
-    DeferGuard(Fun f_, bool enable = true) : f(std::move(f_)), enabled(enable) {}
-    ~DeferGuard()
+    DeferGuard(Fun f_) : f(std::move(f_)) {}
+    ~DeferGuard() { f(); }
+
+    DeferGuard(DeferGuard &&other) : f(std::move(other.f)) {}
+};
+
+template <typename Fun>
+class NamedDeferGuard {
+    K_DELETE_COPY(NamedDeferGuard)
+
+    Fun f;
+    bool enabled;
+
+public:
+    NamedDeferGuard() = delete;
+    NamedDeferGuard(Fun f_, bool enable = true) : f(std::move(f_)), enabled(enable) {}
+    ~NamedDeferGuard()
     {
         if (enabled) {
             f();
         }
     }
 
-    DeferGuard(DeferGuard &&other)
+    NamedDeferGuard(NamedDeferGuard &&other)
         : f(std::move(other.f)), enabled(other.enabled)
     {
         other.enabled = false;
@@ -593,18 +607,23 @@ DeferGuard<Fun> operator+(DeferGuardHelper, Fun &&f)
 {
     return DeferGuard<Fun>(std::forward<Fun>(f));
 }
-
+struct NamedDeferGuardHelper {};
+template <typename Fun>
+NamedDeferGuard<Fun> operator+(NamedDeferGuardHelper, Fun &&f)
+{
+    return NamedDeferGuard<Fun>(std::forward<Fun>(f));
+}
 // Write 'DEFER { code };' to do something at the end of the current scope, you
 // can use DEFER_N(Name) if you need to disable the guard for some reason, and
 // DEFER_NC(Name, Captures) if you need to capture values.
 #define K_DEFER \
     auto K_UNIQUE_NAME(defer) = K::DeferGuardHelper() + [&]()
 #define K_DEFER_N(Name) \
-    auto Name = K::DeferGuardHelper() + [&]()
+    auto Name = K::NamedDeferGuardHelper() + [&]()
 #define K_DEFER_C(...) \
     auto K_UNIQUE_NAME(defer) = K::DeferGuardHelper() + [&, __VA_ARGS__]()
 #define K_DEFER_NC(Name, ...) \
-    auto Name = K::DeferGuardHelper() + [&, __VA_ARGS__]()
+    auto Name = K::NamedDeferGuardHelper() + [&, __VA_ARGS__]()
 
 template <typename T>
 class NoDestroy {
