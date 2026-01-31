@@ -27,7 +27,7 @@ struct BenchmarkInfo {
     static const TestInfo VarName((Path), FuncName); \
      \
     static void FuncName(Size *out_total, Size *out_failures)
-#define TEST_FUNCTION(Path) TEST_FUNCTION_(K_UNIQUE_NAME(func_), K_UNIQUE_NAME(test_), "test/" Path)
+#define TEST_FUNCTION(Path) TEST_FUNCTION_(K_UNIQUE_NAME(Test), K_UNIQUE_NAME(test), "test/" Path)
 
 #define TEST_EX(Condition, ...) \
     do { \

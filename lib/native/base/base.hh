@@ -140,7 +140,7 @@ static_assert(sizeof(double) == 8, "This code base is not designed to support si
 #define K_STRINGIFY(a) K_STRINGIFY_(a)
 #define K_CONCAT_(a, b) a ## b
 #define K_CONCAT(a, b) K_CONCAT_(a, b)
-#define K_UNIQUE_NAME(prefix) K_CONCAT(prefix, __LINE__)
+#define K_UNIQUE_NAME(prefix) K_CONCAT(prefix, __COUNTER__)
 #define K_FORCE_EXPAND(x) x
 #define K_IGNORE (void)!
 
@@ -4740,34 +4740,34 @@ public:
     virtual void Run() = 0;
 };
 
-#define K_INIT_(ClassName, Name) \
-    class ClassName: public InitHelper { \
+#define K_INIT_(Cls, Name) \
+    class Cls: public InitHelper { \
     public: \
-        ClassName(): InitHelper(Name) {} \
+        Cls(): InitHelper(Name) {} \
         void Run() override; \
     }; \
-    static ClassName K_UNIQUE_NAME(init); \
-    void ClassName::Run()
-#define K_INIT(Name) K_INIT_(K_CONCAT(K_UNIQUE_NAME(InitHelper), Name), K_STRINGIFY(Name))
+    static Cls K_UNIQUE_NAME(init); \
+    void Cls::Run()
+#define K_INIT(Name) K_INIT_(K_CONCAT(InitHelper ## Name, K_STRINGIFY(Name))
 
-#define K_FINALIZE_(ClassName, Name) \
-    class ClassName: public FinalizeHelper { \
+#define K_FINALIZE_(Cls, Name) \
+    class Cls: public FinalizeHelper { \
     public: \
-        ClassName(): FinalizeHelper(Name) {} \
+        Cls(): FinalizeHelper(Name) {} \
         void Run() override; \
     }; \
-    static ClassName K_UNIQUE_NAME(finalize); \
-    void ClassName::Run()
-#define K_FINALIZE(Name) K_FINALIZE_(K_CONCAT(K_UNIQUE_NAME(FinalizeHelper), Name), K_STRINGIFY(Name))
+    static Cls K_UNIQUE_NAME(finalize); \
+    void Cls::Run()
+#define K_FINALIZE(Name) K_FINALIZE_(FinalizeHelper ## Name, K_STRINGIFY(Name))
 
-#define K_EXIT_(ClassName) \
-    class ClassName { \
+#define K_EXIT_(Cls) \
+    class Cls { \
     public: \
-        ~ClassName(); \
+        ~Cls(); \
     }; \
-    static ClassName K_UNIQUE_NAME(exit); \
-    ClassName::~ClassName()
-#define K_EXIT(Name) K_EXIT_(K_CONCAT(K_UNIQUE_NAME(ExitHelper), Name))
+    static Cls K_UNIQUE_NAME(exit); \
+    Cls::~Cls()
+#define K_EXIT(Name) K_EXIT_(ExitHelper ## Name)
 
 void InitApp();
 void ExitApp();
@@ -5226,13 +5226,14 @@ public:
     StreamDecompressorHelper(CompressionType type, CreateDecompressorFunc *func);
 };
 
-#define K_REGISTER_DECOMPRESSOR(Type, Cls) \
-    static StreamDecoder *K_UNIQUE_NAME(CreateDecompressor)(StreamReader *reader, CompressionType type) \
+#define K_REGISTER_DECOMPRESSOR_(Func, Type, Cls) \
+    static StreamDecoder *Func(StreamReader *reader, CompressionType type) \
     { \
         StreamDecoder *decompressor = new Cls(reader, type); \
         return decompressor; \
     } \
-    static StreamDecompressorHelper K_UNIQUE_NAME(CreateDecompressorHelper)((Type), K_UNIQUE_NAME(CreateDecompressor))
+    static StreamDecompressorHelper K_UNIQUE_NAME(decompressor_helper)((Type), Func)
+#define K_REGISTER_DECOMPRESSOR(Type, Cls) K_REGISTER_DECOMPRESSOR_(K_UNIQUE_NAME(CreateDecompressor), (Type), (Cls))
 
 class LineReader {
     K_DELETE_COPY(LineReader)
@@ -5438,13 +5439,14 @@ public:
     StreamCompressorHelper(CompressionType type, CreateCompressorFunc *func);
 };
 
-#define K_REGISTER_COMPRESSOR(Type, Cls) \
-    static StreamEncoder *K_UNIQUE_NAME(CreateCompressor)(StreamWriter *writer, CompressionType type, CompressionSpeed speed) \
+#define K_REGISTER_COMPRESSOR_(Func, Type, Cls) \
+    static StreamEncoder *Func(StreamWriter *writer, CompressionType type, CompressionSpeed speed) \
     { \
         StreamEncoder *compressor = new Cls(writer, type, speed); \
         return compressor; \
     } \
-    static StreamCompressorHelper K_UNIQUE_NAME(CreateCompressorHelper)((Type), K_UNIQUE_NAME(CreateCompressor))
+    static StreamCompressorHelper K_UNIQUE_NAME(compressor_helper)((Type), Func)
+#define K_REGISTER_COMPRESSOR(Type, Cls) K_REGISTER_COMPRESSOR_(K_UNIQUE_NAME(CreateCompressor), (Type), (Cls))
 
 bool SpliceStream(StreamReader *reader, int64_t max_len, StreamWriter *writer, Span<uint8_t> buf,
                   FunctionRef<void(int64_t, int64_t)> progress = [](int64_t, int64_t) {});
