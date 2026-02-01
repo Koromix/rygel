@@ -1078,6 +1078,8 @@ namespace {
         return DecodeObject(call->env, (const uint8_t *)rax, inst->type);
     }
 
+#undef INTEGER_SWAP
+#undef INTEGER
 #undef DISPOSE
 #undef CALL
 
