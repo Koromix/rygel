@@ -103,25 +103,16 @@ static inline TEB *GetTEB()
 }
 
 #define ADJUST_TEB(Teb, Low, High) \
-    K_DEFER_C(exception_list = (Teb)->ExceptionList, \
-              base = (Teb)->StackBase, \
+    K_DEFER_C(base = (Teb)->StackBase, \
               limit = (Teb)->StackLimit, \
-              dealloc = (Teb)->DeallocationStack, \
-              guaranteed = (Teb)->GuaranteedStackBytes, \
-              stfs = (Teb)->SameTebFlags) { \
-        (Teb)->ExceptionList = exception_list; \
+              dealloc = (Teb)->DeallocationStack) { \
         (Teb)->StackBase = base; \
         (Teb)->StackLimit = limit; \
         (Teb)->DeallocationStack = dealloc; \
-        (Teb)->GuaranteedStackBytes = guaranteed; \
-        (Teb)->SameTebFlags = stfs; \
     }; \
-    (Teb)->ExceptionList = (void *)-1; \
     (Teb)->StackBase = (High); \
     (Teb)->StackLimit = (Low); \
-    (Teb)->DeallocationStack = (Low); \
-    (Teb)->GuaranteedStackBytes = 0; \
-    (Teb)->SameTebFlags &= ~0x200;
+    (Teb)->DeallocationStack = (Low);
 
 extern const HashMap<int, const char *> WindowsMachineNames;
 
