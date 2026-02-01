@@ -735,7 +735,7 @@ namespace {
         #include "../primitives.inc"
         HandleRunAggregateStack,
         HandleRunAggregateReg,
-        #define PRIMITIVE(Name) HandleRun ## Name ##X,
+        #define PRIMITIVE(Name) HandleRun ## Name ## X,
         #include "../primitives.inc"
         HandleRunAggregateXStack,
         HandleRunAggregateXReg,
