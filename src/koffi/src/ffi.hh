@@ -156,9 +156,6 @@ struct ParameterInfo {
     int8_t gpr_count;
     int8_t vec_count;
     int8_t vec_bytes; // ARM64
-#elif defined(__i386__) || defined(_M_IX86)
-    bool trivial; // Only matters for return value
-    int8_t fast;
 #elif __riscv_xlen == 64 || defined(__loongarch64)
     bool use_memory;
     int8_t gpr_count;
@@ -185,8 +182,7 @@ struct ReturnInfo {
     int8_t vec_count;
     int8_t vec_bytes; // ARM64
 #elif defined(__i386__) || defined(_M_IX86)
-    bool trivial; // Only matters for return value
-    int8_t fast;
+    bool trivial;
 #elif __riscv_xlen == 64 || defined(__loongarch64)
     bool use_memory;
     int8_t gpr_count;
@@ -227,7 +223,7 @@ struct FunctionInfo {
     HeapArray<AbiInstruction> async;
     Size stk_size;
 #if defined(__i386__) || defined(_M_IX86)
-    bool fast;
+    int ret_pop;
 #else
     bool forward_fp;
 #endif
