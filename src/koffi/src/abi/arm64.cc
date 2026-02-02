@@ -34,28 +34,60 @@ struct HfaRet {
 struct BackRegisters {
     uint64_t x0;
     uint64_t x1;
+
     double d0;
     double d1;
     double d2;
     double d3;
 };
 
-extern "C" X0X1Ret ForwardCallGG(const void *func, uint8_t *sp, uint8_t **out_old_sp);
-extern "C" float ForwardCallF(const void *func, uint8_t *sp, uint8_t **out_old_sp);
-extern "C" HfaRet ForwardCallDDDD(const void *func, uint8_t *sp, uint8_t **out_old_sp);
+extern "C" X0X1Ret ForwardCallGG(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
+extern "C" float ForwardCallF(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
+extern "C" HfaRet ForwardCallDDDD(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
 
-extern "C" X0X1Ret ForwardCallXGG(const void *func, uint8_t *sp, uint8_t **out_old_sp);
-extern "C" float ForwardCallXF(const void *func, uint8_t *sp, uint8_t **out_old_sp);
-extern "C" HfaRet ForwardCallXDDDD(const void *func, uint8_t *sp, uint8_t **out_old_sp);
+extern "C" X0X1Ret ForwardCallXGG(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
+extern "C" float ForwardCallXF(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
+extern "C" HfaRet ForwardCallXDDDD(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
 
 extern "C" napi_value CallSwitchStack(Napi::Function *func, size_t argc, napi_value *argv,
-                                      uint8_t *old_sp, Span<uint8_t> *new_stack,
+                                      uint8_t *saved_sp, Span<uint8_t> *new_stack,
                                       napi_value (*call)(Napi::Function *func, size_t argc, napi_value *argv));
 
-enum class AbiOpcode : int8_t {
-    #define PRIMITIVE(Name) Name,
+enum class AbiOpcode : int16_t {
+    #define PRIMITIVE(Name) Push ## Name,
     #include "../primitives.inc"
-    End
+    PushAggregateReg,
+    PushAggregateStack,
+    PushHfa32,
+    #define PRIMITIVE(Name) Run ## Name,
+    #include "../primitives.inc"
+    RunAggregateStack,
+    RunAggregateGG,
+    RunAggregateDDDD,
+    RunHfa32,
+    #define PRIMITIVE(Name) Run ## Name ## X,
+    #include "../primitives.inc"
+    RunAggregateXStack,
+    RunAggregateXGG,
+    RunAggregateXDDDD,
+    RunHfa32X,
+    Yield,
+    CallGG,
+    CallF,
+    CallDDDD,
+    CallStack,
+    CallXGG,
+    CallXF,
+    CallXDDDD,
+    CallXStack,
+    #define PRIMITIVE(Name) Return ## Name,
+    #include "../primitives.inc"
+    ReturnAggregateReg,
+    ReturnAggregateStack,
+    ReturnHfa32,
+#if defined(_M_ARM64EC)
+    SetVariadicRegisters
+#endif
 };
 
 static HfaInfo IsHFA(const TypeInfo *type)
@@ -88,46 +120,28 @@ static HfaInfo IsHFA(const TypeInfo *type)
     return info;
 }
 
-static inline void ExpandFloats(uint8_t *ptr, Size len, Size bytes)
-{
-    for (Size i = len - 1; i >= 0; i--) {
-        const uint8_t *src = ptr + i * bytes;
-        uint8_t *dest = ptr + i * 8;
-
-        memmove(dest, src, bytes);
-    }
-}
-
-static inline void CompactFloats(uint8_t *ptr, Size len, Size bytes)
-{
-    for (Size i = 0; i < len; i++) {
-        const uint8_t *src = ptr + i * 8;
-        uint8_t *dest = ptr + i * bytes;
-
-        memmove(dest, src, bytes);
-    }
-}
-
 bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
 {
-    if (HfaInfo hfa = IsHFA(func->ret.type); hfa.count) {
-        func->ret.vec_count = (int8_t)hfa.count;
-        func->ret.vec_bytes = hfa.float32 ? 4 : 8;
-    } else if (func->ret.type->size <= 16) {
-        func->ret.gpr_count = (int8_t)((func->ret.type->size + 7) / 8);
-    } else {
-        func->ret.use_memory = true;
-    }
+    Size gpr_index = 0;
+    Size vec_index = 0;
+    Size stack_offset = 0;
 
-    int gpr_avail = 8;
-    int vec_avail = 8;
 #if defined(_M_ARM64EC)
-    if (func->variadic) {
-        gpr_avail = 4;
-    }
+    int gpr_max = func->variadic ? 4 : 8;
+    int vec_max = 8;
+#else
+    int gpr_max = 8;
+    int vec_max = 8;
 #endif
 
     for (ParameterInfo &param: func->parameters) {
+#if defined(__APPLE__)
+        if (param.variadic) {
+            gpr_index = gpr_max;
+            vec_index = vec_max;
+        }
+#endif
+
         switch (param.type->primitive) {
             case PrimitiveKind::Void: { K_UNREACHABLE(); } break;
 
@@ -151,31 +165,95 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
             case PrimitiveKind::String32:
             case PrimitiveKind::Pointer:
             case PrimitiveKind::Callback: {
+                if (gpr_index < gpr_max) {
+                    param.abi.regular = true;
+                    param.abi.offset = gpr_index * 8;
+                    gpr_index++;
+                } else {
 #if defined(__APPLE__)
-                if (param.variadic)
-                    break;
+                    stack_offset = AlignLen(stack_offset, param.variadic ? 8 : param.type->align);
+                    param.abi.offset = 17 * 8 + stack_offset;
+                    stack_offset += param.type->size;
+#else
+                    param.abi.offset = 17 * 8 + stack_offset;
+                    stack_offset += 8;
 #endif
-
-                if (gpr_avail) {
-                    param.gpr_count = 1;
-                    gpr_avail--;
                 }
+
+                int delta = (int)AbiOpcode::PushVoid - (int)PrimitiveKind::Void;
+                AbiOpcode code = (AbiOpcode)((int)param.type->primitive + delta);
+
+                func->sync.Append({ .code = code, .a = param.offset, .b1 = (int16_t)param.abi.offset, .b2 = (int16_t)param.directions, .type = param.type });
+                func->async.Append({ .code = code, .a = param.offset, .b1 = (int16_t)param.abi.offset, .b2 = (int16_t)param.directions, .type = param.type });
             } break;
+
             case PrimitiveKind::Record:
             case PrimitiveKind::Union: {
-                HfaInfo hfa = IsHFA(param.type);
-
 #if defined(_M_ARM64EC)
                 if (func->variadic) {
-                    if (IsRegularSize(param.type->size, 8) && gpr_avail) {
-                        param.gpr_count = 1;
-                        gpr_avail--;
+                    if (IsRegularSize(param.type->size, 8) && gpr_index < gpr_max) {
+                        param.abi.regular = true;
+                        param.abi.offset = gpr_index;
+                        gpr_index++;
+
+                        func->sync.Append({ .code = AbiOpcode::PushAggregateReg, .a = param.offset, .b1 = (int16_t)param.abi.offset, .type = param.type });
+                        func->async.Append({ .code = AbiOpcode::PushAggregateReg, .a = param.offset, .b1 = (int16_t)param.abi.offset, .type = param.type });
                     } else {
-                        if (gpr_avail) {
-                            param.gpr_count = 1;
-                            gpr_avail--;
+                        if (gpr_index < gpr_max) {
+                            param.abi.regular = true;
+                            param.abi.offset = gpr_index * 8;
+                            gpr_index++;
+                        } else {
+                            param.abi.offset = 17 * 8 + stack_offset;
+                            stack_offset += 8;
                         }
-                        param.use_memory = true;
+
+                        param.abi.indirect = true;
+
+                        func->sync.Append({ .code = AbiOpcode::PushAggregateStack, .a = param.offset, .b1 = (int16_t)param.abi.offset, .type = param.type });
+                        func->async.Append({ .code = AbiOpcode::PushAggregateStack, .a = param.offset, .b1 = (int16_t)param.abi.offset, .type = param.type });
+                    }
+
+                    break;
+                }
+#endif
+
+#if defined(__APPLE__)
+                if (param.variadic) {
+                    if (param.type->size <= 16) {
+                        int registers = (param.type->size + 7) / 8;
+
+                        if (registers <= gpr_max - gpr_index) {
+                            K_ASSERT(param.type->align <= 8);
+
+                            param.abi.regular = true;
+                            param.abi.offset = gpr_index * 8;
+                            gpr_index += registers;
+                        } else {
+                            gpr_index = gpr_max;
+
+                            stack_offset = AlignLen(stack_offset, param.type->align);
+                            param.abi.offset = 17 * 8 + stack_offset;
+                            stack_offset += registers * 8;
+                        }
+
+                        func->sync.Append({ .code = AbiOpcode::PushAggregateReg, .a = param.offset, .b1 = (int16_t)param.abi.offset, .type = param.type });
+                        func->async.Append({ .code = AbiOpcode::PushAggregateReg, .a = param.offset, .b1 = (int16_t)param.abi.offset, .type = param.type });
+                    } else {
+                        if (gpr_index < gpr_max) {
+                            param.abi.regular = true;
+                            param.abi.offset = gpr_index * 8;
+                            gpr_index++;
+                        } else {
+                            stack_offset = AlignLen(stack_offset, 8);
+                            param.abi.offset = 17 * 8 + stack_offset;
+                            stack_offset += 8;
+                        }
+
+                        param.abi.indirect = true;
+
+                        func->sync.Append({ .code = AbiOpcode::PushAggregateStack, .a = param.offset, .b1 = (int16_t)param.abi.offset, .type = param.type });
+                        func->async.Append({ .code = AbiOpcode::PushAggregateStack, .a = param.offset, .b1 = (int16_t)param.abi.offset, .type = param.type });
                     }
 
                     break;
@@ -183,471 +261,170 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
 #endif
 
 #if defined(_WIN32)
-                if (param.variadic) {
-                    hfa.count = 0;
-                }
-#elif defined(__APPLE__)
-                if (param.variadic) {
-                    param.use_memory = (param.type->size > 16);
-                    break;
-                }
+                // Windows ignores HFA optimization for variadic parameters
+                HfaInfo hfa = !param.variadic ? IsHFA(param.type) : {};
+#else
+                HfaInfo hfa = IsHFA(param.type);
 #endif
 
                 if (hfa.count) {
-                    if (hfa.count <= vec_avail) {
-                        param.vec_count = (int8_t)hfa.count;
-                        param.vec_bytes = hfa.float32 ? 4 : 8;
-                        vec_avail -= hfa.count;
+                    if (hfa.count <= vec_max - vec_index) {
+                        param.abi.regular = true;
+                        param.abi.offset = 9 * 8 + vec_index * 8;
+                        vec_index += hfa.count;
+
+                        if (hfa.float32) {
+                            param.abi.hfa32 = hfa.count;
+
+                            func->sync.Append({ .code = AbiOpcode::PushHfa32, .a = param.offset, .b1 = (int16_t)param.abi.offset, .b2 = (int16_t)hfa.count, .type = param.type });
+                            func->async.Append({ .code = AbiOpcode::PushHfa32, .a = param.offset, .b1 = (int16_t)param.abi.offset, .b2 = (int16_t)hfa.count, .type = param.type });
+                        } else {
+                            func->sync.Append({ .code = AbiOpcode::PushAggregateReg, .a = param.offset, .b1 = (int16_t)param.abi.offset, .type = param.type });
+                            func->async.Append({ .code = AbiOpcode::PushAggregateReg, .a = param.offset, .b1 = (int16_t)param.abi.offset, .type = param.type });
+                        }
                     } else {
-                        vec_avail = 0;
+                        vec_index = vec_max;
+
+#if defined(__APPLE__)
+                        stack_offset = AlignLen(stack_offset, param.type->align);
+#endif
+                        param.abi.offset = 17 * 8 + stack_offset;
+                        stack_offset += 8;
+
+                        func->sync.Append({ .code = AbiOpcode::PushAggregateReg, .a = param.offset, .b1 = (int16_t)param.abi.offset, .type = param.type });
+                        func->async.Append({ .code = AbiOpcode::PushAggregateReg, .a = param.offset, .b1 = (int16_t)param.abi.offset, .type = param.type });
                     }
                 } else if (param.type->size <= 16) {
-                    int gpr_count = (param.type->size + 7) / 8;
+                    int registers = (param.type->size + 7) / 8;
 
-                    if (gpr_count <= gpr_avail) {
-                        param.gpr_count = (int8_t)gpr_count;
-                        gpr_avail -= gpr_count;
+                    if (registers <= gpr_max - gpr_index) {
+                        K_ASSERT(param.type->align <= 8);
+
+                        param.abi.regular = true;
+                        param.abi.offset = gpr_index * 8;
+                        gpr_index += registers;
                     } else {
-                        gpr_avail = 0;
+                        gpr_index = gpr_max;
+
+#if defined(__APPLE__)
+                        stack_offset = AlignLen(stack_offset, 8);
+#endif
+                        param.abi.offset = 17 * 8 + stack_offset;
+                        stack_offset += registers * 8;
                     }
+
+                    func->sync.Append({ .code = AbiOpcode::PushAggregateReg, .a = param.offset, .b1 = (int16_t)param.abi.offset, .type = param.type });
+                    func->async.Append({ .code = AbiOpcode::PushAggregateReg, .a = param.offset, .b1 = (int16_t)param.abi.offset, .type = param.type });
                 } else {
                     // Big types (more than 16 bytes) are replaced by a pointer
-                    if (gpr_avail) {
-                        param.gpr_count = 1;
-                        gpr_avail--;
+                    if (gpr_index < gpr_max) {
+                        param.abi.regular = true;
+                        param.abi.offset = gpr_index * 8;
+                        gpr_index++;
+                    } else {
+#if defined(__APPLE__)
+                        stack_offset = AlignLen(stack_offset, 8);
+#endif
+                        param.abi.offset = 17 * 8 + stack_offset;
+                        stack_offset += 8;
                     }
-                    param.use_memory = true;
+
+                    param.abi.indirect = true;
+
+                    func->sync.Append({ .code = AbiOpcode::PushAggregateStack, .a = param.offset, .b1 = (int16_t)param.abi.offset, .type = param.type });
+                    func->async.Append({ .code = AbiOpcode::PushAggregateStack, .a = param.offset, .b1 = (int16_t)param.abi.offset, .type = param.type });
                 }
             } break;
             case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
-            case PrimitiveKind::Float32:
+
+            case PrimitiveKind::Float32: {
+#if defined(_WIN32)
+                if (param.variadic) {
+                    if (gpr_index < gpr_max) {
+                        param.abi.regular = true;
+                        param.abi.offset = gpr_index * 8;
+                        gpr_index++;
+                    } else {
+                        param.abi.offset = 17 * 8 + stack_offset;
+                        stack_offset += 8;
+                    }
+
+                    func->sync.Append({ .code = AbiOpcode::PushFloat32, .a = param.offset, .b1 = (int16_t)param.abi.offset, .b2 = (int16_t)param.directions, .type = param.type });
+                    func->async.Append({ .code = AbiOpcode::PushFloat32, .a = param.offset, .b1 = (int16_t)param.abi.offset, .b2 = (int16_t)param.directions, .type = param.type });
+
+                    break;
+                }
+#endif
+
+                if (vec_index < vec_max) {
+                    param.abi.regular = true;
+                    param.abi.offset = 9 * 8 + vec_index * 8;
+                    vec_index++;
+                } else {
+#if defined(__APPLE__)
+                    stack_offset = AlignLen(stack_offset, param.variadic ? 8 : 4);
+                    param.abi.offset = 17 * 8 + stack_offset;
+                    stack_offset += 4;
+#else
+                    param.abi.offset = 17 * 8 + stack_offset;
+                    stack_offset += 8;
+#endif
+                }
+
+                func->sync.Append({ .code = AbiOpcode::PushFloat32, .a = param.offset, .b1 = (int16_t)param.abi.offset, .b2 = (int16_t)param.directions, .type = param.type });
+                func->async.Append({ .code = AbiOpcode::PushFloat32, .a = param.offset, .b1 = (int16_t)param.abi.offset, .b2 = (int16_t)param.directions, .type = param.type });
+            } break;
             case PrimitiveKind::Float64: {
 #if defined(_WIN32)
                 if (param.variadic) {
-                    if (gpr_avail) {
-                        param.gpr_count = 1;
-                        gpr_avail--;
+                    if (gpr_index < gpr_max) {
+                        param.abi.regular = true;
+                        param.abi.offset = gpr_index * 8;
+                        gpr_index++;
+                    } else {
+                        param.abi.offset = 17 * 8 + stack_offset;
+                        stack_offset += 8;
                     }
+
+                    func->sync.Append({ .code = AbiOpcode::PushFloat64, .a = param.offset, .b1 = (int16_t)param.abi.offset, .b2 = (int16_t)param.directions, .type = param.type });
+                    func->async.Append({ .code = AbiOpcode::PushFloat64, .a = param.offset, .b1 = (int16_t)param.abi.offset, .b2 = (int16_t)param.directions, .type = param.type });
+
                     break;
                 }
-#elif defined(__APPLE__)
-                if (param.variadic)
-                    break;
 #endif
 
-                if (vec_avail) {
-                    param.vec_count = 1;
-                    vec_avail--;
+                if (vec_index < vec_max) {
+                    param.abi.regular = true;
+                    param.abi.offset = 9 * 8 + vec_index * 8;
+                    vec_index++;
+                } else {
+#if defined(__APPLE__)
+                    stack_offset = AlignLen(stack_offset, 8);
+#endif
+                    param.abi.offset = 17 * 8 + stack_offset;
+                    stack_offset += 8;
                 }
+
+                func->sync.Append({ .code = AbiOpcode::PushFloat64, .a = param.offset, .b1 = (int16_t)param.abi.offset, .b2 = (int16_t)param.directions, .type = param.type });
+                func->async.Append({ .code = AbiOpcode::PushFloat64, .a = param.offset, .b1 = (int16_t)param.abi.offset, .b2 = (int16_t)param.directions, .type = param.type });
             } break;
 
             case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;
         }
-
-        func->instructions.Append((AbiOpcode)param.type->primitive);
     }
 
-    func->instructions.Append(AbiOpcode::End);
-    func->args_size = 16 * func->parameters.len;
-    func->forward_fp = (vec_avail < 8);
+    func->stk_size = AlignLen(17 * 8 + stack_offset, 16) + 8;
+    func->forward_fp = vec_index;
 
-    return true;
-}
-
-bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
-{
-    uint64_t *gpr_ptr = AllocStack<uint64_t>(17 * 8 + func->args_size);
-    uint64_t *vec_ptr = gpr_ptr + 9;
-    uint64_t *args_ptr = gpr_ptr + 17;
-
-    if (!gpr_ptr) [[unlikely]]
-        return false;
-    if (func->ret.use_memory) {
-        return_ptr = AllocHeap(func->ret.type->size, 16);
-        gpr_ptr[8] = (uint64_t)return_ptr;
-    }
-
-    Size i = -1;
-
-#if defined(__GNUC__) || defined(__clang__)
-    static const void *const DispatchTable[] = {
-        #define PRIMITIVE(Name) && Name,
-        #include "../primitives.inc"
-        && End
-    };
-
-    #define LOOP
-    #define CASE(Primitive) \
-        do { \
-            AbiOpcode next = func->instructions[++i]; \
-            goto *DispatchTable[(int)next]; \
-        } while (false); \
-        Primitive:
-    #define OR(Primitive) \
-        Primitive:
-#else
-    #define LOOP \
-        while (++i < func->parameters.len) \
-            switch (func->instructions[i])
-    #define CASE(Primitive) \
-        break; \
-        case AbiOpcode::Primitive:
-    #define OR(Primitive) \
-        case AbiOpcode::Primitive:
-#endif
+    func->async.Append({ .code = AbiOpcode::Yield });
 
 #if defined(_M_ARM64EC)
     if (func->variadic) {
-        gpr_ptr[4] = (uint64_t)args_ptr;
-        gpr_ptr[5] = 0;
-
-        for (Size i = 4; i < func->parameters.len; i++) {
-            const ParameterInfo &param = func->parameters[i];
-            gpr_ptr[5] += std::max((Size)8, param.type->size);
-        }
+        func->sync.Append({ .code = AbiOpcode::SetVariadicRegisters, .b = (int32_t)stack_offset });
+        func->async.Append({ .code = AbiOpcode::SetVariadicRegisters, .b = (int32_t)stack_offset });
     }
 #endif
 
-#if defined(__APPLE__)
-    #define PUSH_INTEGER(CType) \
-        do { \
-            const ParameterInfo &param = func->parameters[i]; \
-            Napi::Value value = info[param.offset]; \
-             \
-            CType v; \
-            if (!TryNumber(value, &v)) [[unlikely]] { \
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value)); \
-                return false; \
-            } \
-             \
-            if (param.gpr_count) [[likely]] { \
-                *(gpr_ptr++) = (uint64_t)v; \
-            } else { \
-                args_ptr = AlignUp(args_ptr, param.variadic ? 8 : param.type->align); \
-                *args_ptr = (uint64_t)v; \
-                args_ptr = (uint64_t *)((uint8_t *)args_ptr + param.type->size); \
-            } \
-        } while (false)
-    #define PUSH_INTEGER_SWAP(CType) \
-        do { \
-            const ParameterInfo &param = func->parameters[i]; \
-            Napi::Value value = info[param.offset]; \
-             \
-            CType v; \
-            if (!TryNumber(value, &v)) [[unlikely]] { \
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value)); \
-                return false; \
-            } \
-             \
-            if (param.gpr_count) [[likely]] { \
-                *(gpr_ptr++) = (uint64_t)ReverseBytes(v); \
-            } else { \
-                args_ptr = AlignUp(args_ptr, param.variadic ? 8 : param.type->align); \
-                *args_ptr = (uint64_t)ReverseBytes(v); \
-                args_ptr = (uint64_t *)((uint8_t *)args_ptr + param.type->size); \
-            } \
-        } while (false)
-#else
-    #define PUSH_INTEGER(CType) \
-        do { \
-            const ParameterInfo &param = func->parameters[i]; \
-            Napi::Value value = info[param.offset]; \
-             \
-            CType v; \
-            if (!TryNumber(value, &v)) [[unlikely]] { \
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value)); \
-                return false; \
-            } \
-             \
-            *((param.gpr_count ? gpr_ptr : args_ptr)++) = (uint64_t)v; \
-        } while (false)
-    #define PUSH_INTEGER_SWAP(CType) \
-        do { \
-            const ParameterInfo &param = func->parameters[i]; \
-            Napi::Value value = info[param.offset]; \
-             \
-            CType v; \
-            if (!TryNumber(value, &v)) [[unlikely]] { \
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value)); \
-                return false; \
-            } \
-             \
-            *((param.gpr_count ? gpr_ptr : args_ptr)++) = (uint64_t)ReverseBytes(v); \
-        } while (false)
-#endif
-
-    // Push arguments
-    LOOP {
-        CASE(Void) { K_UNREACHABLE(); };
-
-        CASE(Bool) {
-            const ParameterInfo &param = func->parameters[i];
-            Napi::Value value = info[param.offset];
-
-            bool b;
-            if (napi_get_value_bool(env, value, &b) != napi_ok) [[unlikely]] {
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected boolean", GetValueType(instance, value));
-                return false;
-            }
-
-#if defined(__APPLE__)
-            if (param.gpr_count) [[likely]] {
-                *(gpr_ptr++) = (uint64_t)b;
-            } else {
-                *(uint8_t *)args_ptr = b;
-                args_ptr = (uint64_t *)((uint8_t *)args_ptr + 1);
-            }
-#else
-            *((param.gpr_count ? gpr_ptr : args_ptr)++) = (uint64_t)b;
-#endif
-        };
-
-        CASE(Int8) { PUSH_INTEGER(int8_t); };
-        CASE(UInt8) { PUSH_INTEGER(uint8_t); };
-        CASE(Int16) { PUSH_INTEGER(int16_t); };
-        CASE(Int16S) { PUSH_INTEGER_SWAP(int16_t); };
-        CASE(UInt16) { PUSH_INTEGER(uint16_t); };
-        CASE(UInt16S) { PUSH_INTEGER_SWAP(uint16_t); };
-        CASE(Int32) { PUSH_INTEGER(int32_t); };
-        CASE(Int32S) { PUSH_INTEGER_SWAP(int32_t); };
-        CASE(UInt32) { PUSH_INTEGER(uint32_t); };
-        CASE(UInt32S) { PUSH_INTEGER_SWAP(uint32_t); };
-        CASE(Int64) { PUSH_INTEGER(int64_t); };
-        CASE(Int64S) { PUSH_INTEGER_SWAP(int64_t); };
-        CASE(UInt64) { PUSH_INTEGER(uint64_t); };
-        CASE(UInt64S) { PUSH_INTEGER_SWAP(uint64_t); };
-
-        CASE(String) {
-            const ParameterInfo &param = func->parameters[i];
-            Napi::Value value = info[param.offset];
-
-            const char *str;
-            if (!PushString(value, param.directions, &str)) [[unlikely]]
-                return false;
-
-#if defined(__APPLE__)
-            args_ptr = param.gpr_count ? args_ptr : AlignUp(args_ptr, 8);
-#endif
-            *(const char **)((param.gpr_count ? gpr_ptr : args_ptr)++) = str;
-        };
-        CASE(String16) {
-            const ParameterInfo &param = func->parameters[i];
-            Napi::Value value = info[param.offset];
-
-            const char16_t *str16;
-            if (!PushString16(value, param.directions, &str16)) [[unlikely]]
-                return false;
-
-#if defined(__APPLE__)
-            args_ptr = param.gpr_count ? args_ptr : AlignUp(args_ptr, 8);
-#endif
-            *(const char16_t **)((param.gpr_count ? gpr_ptr : args_ptr)++) = str16;
-        };
-        CASE(String32) {
-            const ParameterInfo &param = func->parameters[i];
-            Napi::Value value = info[param.offset];
-
-            const char32_t *str32;
-            if (!PushString32(value, param.directions, &str32)) [[unlikely]]
-                return false;
-
-#if defined(__APPLE__)
-            args_ptr = param.gpr_count ? args_ptr : AlignUp(args_ptr, 8);
-#endif
-            *(const char32_t **)((param.gpr_count ? gpr_ptr : args_ptr)++) = str32;
-        };
-
-        CASE(Pointer) {
-            const ParameterInfo &param = func->parameters[i];
-            Napi::Value value = info[param.offset];
-
-            void *ptr;
-            if (!PushPointer(value, param.type, param.directions, &ptr)) [[unlikely]]
-                return false;
-
-#if defined(__APPLE__)
-            args_ptr = param.gpr_count ? args_ptr : AlignUp(args_ptr, 8);
-#endif
-            *(void **)((param.gpr_count ? gpr_ptr : args_ptr)++) = ptr;
-        };
-
-        CASE(Record) OR(Union) {
-            const ParameterInfo &param = func->parameters[i];
-            Napi::Value value = info[param.offset];
-
-            if (!IsObject(value)) [[unlikely]] {
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected object", GetValueType(instance, value));
-                return false;
-            }
-
-            Napi::Object obj = value.As<Napi::Object>();
-
-            if (param.vec_count) { // HFA
-                uint8_t *ptr = (uint8_t *)vec_ptr;
-
-                if (!PushObject(obj, param.type, ptr))
-                    return false;
-                ExpandFloats(ptr, param.vec_count, param.vec_bytes);
-
-                vec_ptr += param.vec_count;
-            } else if (!param.use_memory) {
-                if (param.gpr_count) {
-                    K_ASSERT(param.type->align <= 8);
-
-                    if (!PushObject(obj, param.type, (uint8_t *)gpr_ptr))
-                        return false;
-                    gpr_ptr += param.gpr_count;
-                } else if (param.type->size) {
-#if defined(__APPLE__)
-                    args_ptr = AlignUp(args_ptr, param.type->align);
-#endif
-                    if (!PushObject(obj, param.type, (uint8_t *)args_ptr))
-                        return false;
-                    args_ptr += (param.type->size + 7) / 8;
-                }
-            } else {
-                uint8_t *ptr = AllocHeap(param.type->size, 16);
-
-                if (param.gpr_count) {
-                    K_ASSERT(param.gpr_count == 1);
-                    K_ASSERT(param.vec_count == 0);
-
-                    *(uint8_t **)(gpr_ptr++) = ptr;
-                } else {
-#if defined(__APPLE__)
-                    args_ptr = AlignUp(args_ptr, 8);
-#endif
-                    *(uint8_t **)(args_ptr++) = ptr;
-                }
-
-                if (!PushObject(obj, param.type, ptr))
-                    return false;
-            }
-        };
-        CASE(Array) { K_UNREACHABLE(); };
-
-        CASE(Float32) {
-            const ParameterInfo &param = func->parameters[i];
-            Napi::Value value = info[param.offset];
-
-            float f;
-            if (!TryNumber(value, &f)) [[unlikely]] {
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
-                return false;
-            }
-
-            if (param.vec_count) [[likely]] {
-                memset((uint8_t *)vec_ptr + 4, 0, 4);
-                *(float *)(vec_ptr++) = f;
-#if defined(_WIN32)
-            } else if (param.gpr_count) {
-                memset((uint8_t *)gpr_ptr + 4, 0, 4);
-                *(float *)(gpr_ptr++) = f;
-#endif
-            } else {
-#if defined(__APPLE__)
-                args_ptr = AlignUp(args_ptr, 4);
-                *(float *)args_ptr = f;
-                args_ptr = (uint64_t *)((uint8_t *)args_ptr + 4);
-#else
-                memset((uint8_t *)args_ptr + 4, 0, 4);
-                *(float *)(args_ptr++) = f;
-#endif
-            }
-        };
-        CASE(Float64) {
-            const ParameterInfo &param = func->parameters[i];
-            Napi::Value value = info[param.offset];
-
-            double d;
-            if (!TryNumber(value, &d)) [[unlikely]] {
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
-                return false;
-            }
-
-            if (param.vec_count) [[likely]] {
-                *(double *)(vec_ptr++) = d;
-#if defined(_WIN32)
-            } else if (param.gpr_count) {
-                *(double *)(gpr_ptr++) = d;
-#endif
-            } else {
-#if defined(__APPLE__)
-                args_ptr = AlignUp(args_ptr, 8);
-#endif
-                *(double *)(args_ptr++) = d;
-            }
-        };
-
-        CASE(Callback) {
-            const ParameterInfo &param = func->parameters[i];
-            Napi::Value value = info[param.offset];
-
-            void *ptr;
-            if (!PushCallback(value, param.type, &ptr)) [[unlikely]]
-                return false;
-
-#if defined(__APPLE__)
-            args_ptr = param.gpr_count ? args_ptr : AlignUp(args_ptr, 8);
-#endif
-            *(void **)((param.gpr_count ? gpr_ptr : args_ptr)++) = ptr;
-        };
-
-        CASE(Prototype) { K_UNREACHABLE(); };
-
-        CASE(End) { /* End loop */ };
-    }
-
-#undef PUSH_INTEGER_SWAP
-#undef PUSH_INTEGER
-
-#undef OR
-#undef CASE
-#undef LOOP
-
-    new_sp = mem->stack.end();
-
-    return true;
-}
-
-void CallData::Execute(const FunctionInfo *func, void *native)
-{
-#if defined(_WIN32)
-    TEB *teb = GetTEB();
-
-    // Restore previous stack limits at the end
-    K_DEFER_C(exception_list = teb->ExceptionList,
-               base = teb->StackBase,
-               limit = teb->StackLimit,
-               dealloc = teb->DeallocationStack,
-               guaranteed = teb->GuaranteedStackBytes) {
-        teb->ExceptionList = exception_list;
-        teb->StackBase = base;
-        teb->StackLimit = limit;
-        teb->DeallocationStack = dealloc;
-        teb->GuaranteedStackBytes = guaranteed;
-
-        instance->last_error = teb->LastErrorValue;
-    };
-
-    // Adjust stack limits so SEH works correctly
-    teb->ExceptionList = (void *)-1; // EXCEPTION_CHAIN_END
-    teb->StackBase = mem->stack0.end();
-    teb->StackLimit = mem->stack0.ptr;
-    teb->DeallocationStack = mem->stack0.ptr;
-    teb->GuaranteedStackBytes = 0;
-
-    teb->LastErrorValue = instance->last_error;
-#endif
-
-#define PERFORM_CALL(Suffix) \
-        ([&]() { \
-            auto ret = (func->forward_fp ? ForwardCallX ## Suffix(native, new_sp, &old_sp) \
-                                         : ForwardCall ## Suffix(native, new_sp, &old_sp)); \
-            return ret; \
-        })()
-
-    // Execute and convert return value
     switch (func->ret.type->primitive) {
         case PrimitiveKind::Void:
         case PrimitiveKind::Bool:
@@ -669,86 +446,822 @@ void CallData::Execute(const FunctionInfo *func, void *native)
         case PrimitiveKind::String16:
         case PrimitiveKind::String32:
         case PrimitiveKind::Pointer:
-        case PrimitiveKind::Callback: { result.u64 = PERFORM_CALL(GG).x0; } break;
+        case PrimitiveKind::Callback: {
+            if (func->forward_fp) {
+                int delta = (int)AbiOpcode::RunVoidX - (int)PrimitiveKind::Void;
+                AbiOpcode run = (AbiOpcode)((int)func->ret.type->primitive + delta);
+
+                func->sync.Append({ .code = run, .type = func->ret.type });
+            } else {
+                int delta = (int)AbiOpcode::RunVoid - (int)PrimitiveKind::Void;
+                AbiOpcode run = (AbiOpcode)((int)func->ret.type->primitive + delta);
+
+                func->sync.Append({ .code = run, .type = func->ret.type });
+            }
+
+            // Async
+            {
+                int delta = (int)AbiOpcode::ReturnVoid - (int)PrimitiveKind::Void;
+                AbiOpcode call = func->forward_fp ? AbiOpcode::CallXGG : AbiOpcode::CallGG;
+                AbiOpcode ret = (AbiOpcode)((int)func->ret.type->primitive + delta);
+
+                func->async.Append({ .code = call });
+                func->async.Append({ .code = ret, .type = func->ret.type });
+            }
+        } break;
+
         case PrimitiveKind::Record:
         case PrimitiveKind::Union: {
-            if (func->ret.gpr_count) {
-                X0X1Ret ret = PERFORM_CALL(GG);
-                memcpy(&result.buf, &ret, K_SIZE(ret));
-            } else if (func->ret.vec_count) {
-                HfaRet ret = PERFORM_CALL(DDDD);
-                memcpy(&result.buf, &ret, K_SIZE(ret));
+            HfaInfo hfa = IsHFA(func->ret.type);
+
+            if (hfa.count && hfa.float32) {
+                func->ret.abi.regular = true;
+                func->ret.abi.offset = offsetof(BackRegisters, d0);
+                func->ret.abi.hfa32 = hfa.count;
+
+                AbiOpcode run = func->forward_fp ? AbiOpcode::RunHfa32X : AbiOpcode::RunHfa32;
+                AbiOpcode call = func->forward_fp ? AbiOpcode::CallXDDDD : AbiOpcode::CallDDDD;
+
+                func->sync.Append({ .code = run, .b = hfa.count, .type = func->ret.type });
+                func->async.Append({ .code = call });
+                func->async.Append({ .code = AbiOpcode::ReturnHfa32, .b = hfa.count, .type = func->ret.type });
+            } else if (hfa.count) {
+                func->ret.abi.regular = true;
+                func->ret.abi.offset = offsetof(BackRegisters, d0);
+
+                AbiOpcode run = func->forward_fp ? AbiOpcode::RunAggregateXDDDD : AbiOpcode::RunAggregateDDDD;
+                AbiOpcode call = func->forward_fp ? AbiOpcode::CallXDDDD : AbiOpcode::CallDDDD;
+
+                func->sync.Append({ .code = run, .b = hfa.count, .type = func->ret.type });
+                func->async.Append({ .code = call });
+                func->async.Append({ .code = AbiOpcode::ReturnAggregateReg, .b = hfa.count, .type = func->ret.type });
+            } else if (func->ret.type->size <= 16) {
+                func->ret.abi.regular = true;
+                func->ret.abi.offset = offsetof(BackRegisters, x0);
+
+                AbiOpcode run = func->forward_fp ? AbiOpcode::RunAggregateXGG : AbiOpcode::RunAggregateGG;
+                AbiOpcode call = func->forward_fp ? AbiOpcode::CallXGG : AbiOpcode::CallGG;
+
+                func->sync.Append({ .code = run, .type = func->ret.type });
+                func->async.Append({ .code = call });
+                func->async.Append({ .code = AbiOpcode::ReturnAggregateReg, .type = func->ret.type });
             } else {
-                PERFORM_CALL(GG);
+                AbiOpcode run = func->forward_fp ? AbiOpcode::RunAggregateXStack : AbiOpcode::RunAggregateStack;
+                AbiOpcode call = func->forward_fp ? AbiOpcode::CallXStack : AbiOpcode::CallStack;
+
+                func->sync.Append({ .code = run, .b = (int32_t)func->ret.type->size, .type = func->ret.type });
+                func->async.Append({ .code = call, .b = (int32_t)func->ret.type->size });
+                func->async.Append({ .code = AbiOpcode::ReturnAggregateStack, .type = func->ret.type });
             }
         } break;
         case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
-        case PrimitiveKind::Float32: { result.f = PERFORM_CALL(F); } break;
-        case PrimitiveKind::Float64: { result.d = PERFORM_CALL(DDDD).d0; } break;
+
+        case PrimitiveKind::Float32: {
+            AbiOpcode run = func->forward_fp ? AbiOpcode::RunFloat32X : AbiOpcode::RunFloat32;
+            AbiOpcode call = func->forward_fp ? AbiOpcode::CallXF : AbiOpcode::CallF;
+
+            func->sync.Append({ .code = run, .type = func->ret.type });
+            func->async.Append({ .code = call });
+            func->async.Append({ .code = AbiOpcode::ReturnFloat32, .type = func->ret.type });
+        } break;
+        case PrimitiveKind::Float64: {
+            AbiOpcode run = func->forward_fp ? AbiOpcode::RunFloat64X : AbiOpcode::RunFloat64;
+            AbiOpcode call = func->forward_fp ? AbiOpcode::CallXDDDD : AbiOpcode::CallDDDD;
+
+            func->sync.Append({ .code = run, .type = func->ret.type });
+            func->async.Append({ .code = call });
+            func->async.Append({ .code = AbiOpcode::ReturnFloat64, .type = func->ret.type });
+        } break;
 
         case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;
     }
 
-#undef PERFORM_CALL
+    return true;
 }
 
-Napi::Value CallData::Complete(const FunctionInfo *func)
+static inline void ExpandFloats(uint8_t *ptr, Size len)
 {
-    K_DEFER {
-       PopOutArguments();
+    for (Size i = len - 1; i >= 0; i--) {
+        const uint8_t *src = ptr + i * 4;
+        uint8_t *dest = ptr + i * 8;
 
-        if (func->ret.type->dispose) {
-            func->ret.type->dispose(env, func->ret.type, result.ptr);
+        memmove(dest, src, 4);
+    }
+}
+
+static inline void CompactFloats(uint8_t *ptr, Size len)
+{
+    for (Size i = 0; i < len; i++) {
+        const uint8_t *src = ptr + i * 8;
+        uint8_t *dest = ptr + i * 4;
+
+        memmove(dest, src, 4);
+    }
+}
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+
+namespace {
+#if defined(MUST_TAIL)
+    #define OP(Code) \
+            PRESERVE_NONE Napi::Value Handle ## Code(CallData *call, napi_value *args, uint8_t *base, const AbiInstruction *inst)
+    #define NEXT() \
+            do { \
+                const AbiInstruction *next = inst + 1; \
+                MUST_TAIL return ForwardDispatch[(int)next->code](call, args, base, next); \
+            } while (false)
+
+    PRESERVE_NONE typedef Napi::Value ForwardFunc(CallData *call, napi_value *args, uint8_t *base, const AbiInstruction *inst);
+
+    extern ForwardFunc *const ForwardDispatch[256];
+#else
+    #warning Falling back to inlining instead of tail calls (missing attributes)
+
+    #define OP(Code) \
+        case AbiOpcode::Code:
+    #define NEXT() \
+        break
+
+    Napi::Value RunLoop(CallData *call, napi_value *args, uint8_t *base, const AbiInstruction *inst)
+    {
+        for (;; ++inst) {
+            switch (inst->code) {
+#endif
+
+#if defined(_WIN32)
+    #define WRAP(Expr) \
+        [&]() { \
+            TEB *teb = GetTEB(); \
+             \
+            K_DEFER { call->instance->last_error = teb->LastErrorValue; }; \
+            teb->LastErrorValue = call->instance->last_error; \
+             \
+            ADJUST_TEB(teb, call->mem->stack.ptr, call->mem->stack.end() + 128); \
+             \
+            return (Expr); \
+        }()
+#else
+    #define WRAP(Expr) (Expr)
+#endif
+
+#define INTEGER(CType) \
+        do { \
+            Napi::Value value(call->env, args[inst->a]); \
+             \
+            CType v; \
+            if (!TryNumber(value, &v)) [[unlikely]] { \
+                ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected number", GetValueType(call->instance, value)); \
+                return call->env.Null(); \
+            } \
+             \
+            *(uint64_t *)(base + inst->b1) = (uint64_t)v; \
+        } while (false)
+#define INTEGER_SWAP(CType) \
+        do { \
+            Napi::Value value(call->env, args[inst->a]); \
+             \
+            CType v; \
+            if (!TryNumber(value, &v)) [[unlikely]] { \
+                ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected number", GetValueType(call->instance, value)); \
+                return call->env.Null(); \
+            } \
+             \
+            *(uint64_t *)(base + inst->b1) = (uint64_t)ReverseBytes(v); \
+        } while (false)
+
+    OP(PushVoid) { K_UNREACHABLE(); return call->env.Null(); }
+    OP(PushBool) {
+        Napi::Value value(call->env, args[inst->a]);
+
+        bool b;
+        if (napi_get_value_bool(call->env, value, &b) != napi_ok) [[unlikely]] {
+            ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected boolean", GetValueType(call->instance, value));
+            return call->env.Null();
         }
-    };
 
-    switch (func->ret.type->primitive) {
-        case PrimitiveKind::Void: return env.Undefined();
-        case PrimitiveKind::Bool: return Napi::Boolean::New(env, result.u8 & 0x1);
-        case PrimitiveKind::Int8: return NewInt(env, result.i8);
-        case PrimitiveKind::UInt8: return NewInt(env, result.u8);
-        case PrimitiveKind::Int16: return NewInt(env, result.i16);
-        case PrimitiveKind::Int16S: return NewInt(env, ReverseBytes(result.i16));
-        case PrimitiveKind::UInt16: return NewInt(env, result.u16);
-        case PrimitiveKind::UInt16S: return NewInt(env, ReverseBytes(result.u16));
-        case PrimitiveKind::Int32: return NewInt(env, result.i32);
-        case PrimitiveKind::Int32S: return NewInt(env, ReverseBytes(result.i32));
-        case PrimitiveKind::UInt32: return NewInt(env, result.u32);
-        case PrimitiveKind::UInt32S: return NewInt(env, ReverseBytes(result.u32));
-        case PrimitiveKind::Int64: return NewInt(env, result.i64);
-        case PrimitiveKind::Int64S: return NewInt(env, ReverseBytes(result.i64));
-        case PrimitiveKind::UInt64: return NewInt(env, result.u64);
-        case PrimitiveKind::UInt64S: return NewInt(env, ReverseBytes(result.u64));
-        case PrimitiveKind::String: return result.ptr ? Napi::String::New(env, (const char *)result.ptr) : env.Null();
-        case PrimitiveKind::String16: return result.ptr ? Napi::String::New(env, (const char16_t *)result.ptr) : env.Null();
-        case PrimitiveKind::String32: return result.ptr ? MakeStringFromUTF32(env, (const char32_t *)result.ptr) : env.Null();
-        case PrimitiveKind::Pointer: return result.ptr ? WrapPointer(env, func->ret.type->ref.type, result.ptr) : env.Null();
-        case PrimitiveKind::Callback: return result.ptr ? WrapCallback(env, func->ret.type->ref.type, result.ptr) : env.Null();
-        case PrimitiveKind::Record:
-        case PrimitiveKind::Union: {
-            if (func->ret.vec_count) { // HFA
-                uint8_t *ptr = (uint8_t *)&result.buf;
+        *(uint64_t *)(base + inst->b1) = (uint64_t)b;
 
-                CompactFloats(ptr, func->ret.vec_count, func->ret.vec_bytes);
+        NEXT();
+    }
+    OP(PushInt8) { INTEGER(int8_t); NEXT(); }
+    OP(PushUInt8) { INTEGER(uint8_t); NEXT(); }
+    OP(PushInt16) { INTEGER(int16_t); NEXT(); }
+    OP(PushInt16S) { INTEGER_SWAP(int16_t); NEXT(); }
+    OP(PushUInt16) { INTEGER(uint16_t); NEXT(); }
+    OP(PushUInt16S) { INTEGER_SWAP(uint16_t); NEXT(); }
+    OP(PushInt32) { INTEGER(int32_t); NEXT(); }
+    OP(PushInt32S) { INTEGER_SWAP(int32_t); NEXT(); }
+    OP(PushUInt32) { INTEGER(uint32_t); NEXT(); }
+    OP(PushUInt32S) { INTEGER_SWAP(uint32_t); NEXT(); }
+    OP(PushInt64) { INTEGER(int64_t); NEXT(); }
+    OP(PushInt64S) { INTEGER_SWAP(int64_t); NEXT(); }
+    OP(PushUInt64) { INTEGER(int64_t); NEXT(); }
+    OP(PushUInt64S) { INTEGER_SWAP(int64_t); NEXT(); }
+    OP(PushString) {
+        Napi::Value value(call->env, args[inst->a]);
 
-                Napi::Object obj = DecodeObject(env, ptr, func->ret.type);
-                return obj;
-            } else {
-                const uint8_t *ptr = return_ptr ? (const uint8_t *)return_ptr
-                                                : (const uint8_t *)&result.buf;
+        const char *str;
+        if (!call->PushString(value, inst->b2, &str)) [[unlikely]]
+            return call->env.Null();
 
-                Napi::Object obj = DecodeObject(env, ptr, func->ret.type);
-                return obj;
-            }
-        } break;
-        case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
-        case PrimitiveKind::Float32: return Napi::Number::New(env, (double)result.f);
-        case PrimitiveKind::Float64: return Napi::Number::New(env, result.d);
+        *(const char **)(base + inst->b1) = str;
 
-        case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;
+        NEXT();
+    }
+    OP(PushString16) {
+        Napi::Value value(call->env, args[inst->a]);
+
+        const char16_t *str16;
+        if (!call->PushString16(value, inst->b2, &str16)) [[unlikely]]
+            return call->env.Null();
+
+        *(const char16_t **)(base + inst->b1) = str16;
+
+        NEXT();
+    }
+    OP(PushString32) {
+        Napi::Value value(call->env, args[inst->a]);
+
+        const char32_t *str32;
+        if (!call->PushString32(value, inst->b2, &str32)) [[unlikely]]
+            return call->env.Null();
+
+        *(const char32_t **)(base + inst->b1) = str32;
+
+        NEXT();
+    }
+    OP(PushPointer) {
+        Napi::Value value(call->env, args[inst->a]);
+
+        void *ptr;
+        if (!call->PushPointer(value, inst->type, inst->b2, &ptr)) [[unlikely]]
+            return call->env.Null();
+
+        *(void **)(base + inst->b1) = ptr;
+
+        NEXT();
+    }
+    OP(PushRecord) { K_UNREACHABLE(); return call->env.Null(); }
+    OP(PushUnion) { K_UNREACHABLE(); return call->env.Null(); }
+    OP(PushArray) { K_UNREACHABLE(); return call->env.Null(); }
+    OP(PushFloat32) {
+        Napi::Value value(call->env, args[inst->a]);
+
+        float f;
+        if (!TryNumber(value, &f)) [[unlikely]] {
+            ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected number", GetValueType(call->instance, value));
+            return call->env.Null();
+        }
+
+        memset(base + inst->b1, 0, 8);
+        memcpy(base + inst->b1, &f, 4);
+
+        NEXT();
+    }
+    OP(PushFloat64) {
+        Napi::Value value(call->env, args[inst->a]);
+
+        double d;
+        if (!TryNumber(value, &d)) [[unlikely]] {
+            ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected number", GetValueType(call->instance, value));
+            return call->env.Null();
+        }
+
+        *(double *)(base + inst->b1) = d;
+
+        NEXT();
+    }
+    OP(PushCallback) {
+        Napi::Value value(call->env, args[inst->a]);
+
+        void *ptr;
+        if (!call->PushCallback(value, inst->type, &ptr)) [[unlikely]]
+            return call->env.Null();
+
+        *(void **)(base + inst->b1) = ptr;
+
+        NEXT();
+    }
+    OP(PushPrototype) { K_UNREACHABLE(); return call->env.Null(); }
+    OP(PushAggregateReg) {
+        Napi::Value value(call->env, args[inst->a]);
+
+        if (!IsObject(value)) [[unlikely]] {
+            ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected object", GetValueType(call->instance, value));
+            return call->env.Null();
+        }
+
+        uint8_t *ptr = base + inst->b1;
+
+        Napi::Object obj = value.As<Napi::Object>();
+        if (!call->PushObject(obj, inst->type, ptr))
+            return call->env.Null();
+
+        NEXT();
+    }
+    OP(PushAggregateStack) {
+        Napi::Value value(call->env, args[inst->a]);
+
+        if (!IsObject(value)) [[unlikely]] {
+            ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected object", GetValueType(call->instance, value));
+            return call->env.Null();
+        }
+
+        uint8_t *ptr = call->AllocHeap(inst->type->size, 16);
+        *(uint8_t **)(base + inst->b1) = ptr;
+
+        Napi::Object obj = value.As<Napi::Object>();
+        if (!call->PushObject(obj, inst->type, ptr))
+            return call->env.Null();
+
+        NEXT();
+    }
+    OP(PushHfa32) {
+        Napi::Value value(call->env, args[inst->a]);
+
+        if (!IsObject(value)) [[unlikely]] {
+            ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected object", GetValueType(call->instance, value));
+            return call->env.Null();
+        }
+
+        uint8_t *ptr = base + inst->b1;
+
+        Napi::Object obj = value.As<Napi::Object>();
+        if (!call->PushObject(obj, inst->type, ptr))
+            return call->env.Null();
+
+        ExpandFloats(ptr, inst->b2);
+
+        NEXT();
     }
 
-    K_UNREACHABLE();
+#undef INTEGER_SWAP
+#undef INTEGER
+
+#define INTEGER(Suffix, CType) \
+        do { \
+            uint64_t x0 = WRAP(ForwardCall ## Suffix(call->native, base, &call->saved_sp)).x0; \
+            call->PopOutArguments(); \
+            return NewInt(call->env, (CType)x0); \
+        } while (false)
+#define INTEGER_SWAP(Suffix, CType) \
+        do { \
+            uint64_t x0 = WRAP(ForwardCall ## Suffix(call->native, base, &call->saved_sp)).x0; \
+            call->PopOutArguments(); \
+            return NewInt(call->env, ReverseBytes((CType)x0)); \
+        } while (false)
+#define DISPOSE(Ptr) \
+        do { \
+            if (inst->type->dispose) { \
+                inst->type->dispose(call->env, inst->type, (Ptr)); \
+            } \
+        } while (false)
+
+    OP(RunVoid) {
+        WRAP(ForwardCallGG(call->native, base, &call->saved_sp));
+        call->PopOutArguments();
+        return call->env.Undefined();
+    }
+    OP(RunBool) {
+        uint64_t x0 = WRAP(ForwardCallGG(call->native, base, &call->saved_sp).x0);
+        call->PopOutArguments();
+        return Napi::Boolean::New(call->env, x0 & 0x1);
+    }
+    OP(RunInt8) { INTEGER(GG, int8_t); }
+    OP(RunUInt8) { INTEGER(GG, uint8_t); }
+    OP(RunInt16) { INTEGER(GG, int16_t); }
+    OP(RunInt16S) { INTEGER_SWAP(GG, int16_t); }
+    OP(RunUInt16) { INTEGER(GG, uint16_t); }
+    OP(RunUInt16S) { INTEGER_SWAP(GG, uint16_t); }
+    OP(RunInt32) { INTEGER(GG, int32_t); }
+    OP(RunInt32S) { INTEGER_SWAP(GG, int32_t); }
+    OP(RunUInt32) { INTEGER(GG, uint32_t); }
+    OP(RunUInt32S) { INTEGER_SWAP(GG, uint32_t); }
+    OP(RunInt64) { INTEGER(GG, int64_t); }
+    OP(RunInt64S) { INTEGER_SWAP(GG, int64_t); }
+    OP(RunUInt64) { INTEGER(GG, uint64_t); }
+    OP(RunUInt64S) { INTEGER_SWAP(GG, uint64_t); }
+    OP(RunString) {
+        uint64_t x0 = WRAP(ForwardCallGG(call->native, base, &call->saved_sp)).x0;
+        Napi::Value value = x0 ? Napi::String::New(call->env, (const char *)x0) : call->env.Null();
+        DISPOSE((void *)x0);
+        call->PopOutArguments();
+        return value;
+    }
+    OP(RunString16) {
+        uint64_t x0 = WRAP(ForwardCallGG(call->native, base, &call->saved_sp)).x0;
+        Napi::Value value = x0 ? Napi::String::New(call->env, (const char16_t *)x0) : call->env.Null();
+        DISPOSE((void *)x0);
+        call->PopOutArguments();
+        return value;
+    }
+    OP(RunString32) {
+        uint64_t x0 = WRAP(ForwardCallGG(call->native, base, &call->saved_sp)).x0;
+        Napi::Value value = x0 ? MakeStringFromUTF32(call->env, (const char32_t *)x0) : call->env.Null();
+        DISPOSE((void *)x0);
+        call->PopOutArguments();
+        return value;
+    }
+    OP(RunPointer) {
+        uint64_t x0 = WRAP(ForwardCallGG(call->native, base, &call->saved_sp)).x0;
+        Napi::Value value = x0 ? WrapPointer(call->env, inst->type, (void *)x0) : call->env.Null();
+        DISPOSE((void *)x0);
+        call->PopOutArguments();
+        return value;
+    }
+    OP(RunCallback) {
+        uint64_t x0 = WRAP(ForwardCallGG(call->native, base, &call->saved_sp)).x0;
+        call->PopOutArguments();
+        return x0 ? WrapCallback(call->env, inst->type, (void *)x0) : call->env.Null();
+    }
+    OP(RunRecord) { K_UNREACHABLE(); return call->env.Null(); }
+    OP(RunUnion) { K_UNREACHABLE(); return call->env.Null(); }
+    OP(RunArray) { K_UNREACHABLE(); return call->env.Null(); }
+    OP(RunFloat32) {
+        float f = WRAP(ForwardCallF(call->native, base, &call->saved_sp));
+        call->PopOutArguments();
+        return Napi::Number::New(call->env, (double)f);
+    }
+    OP(RunFloat64) {
+        double d = WRAP(ForwardCallDDDD(call->native, base, &call->saved_sp)).d0;
+        call->PopOutArguments();
+        return Napi::Number::New(call->env, d);
+    }
+    OP(RunPrototype) { K_UNREACHABLE(); return call->env.Null(); }
+    OP(RunAggregateStack) {
+        uint8_t *ptr = call->AllocHeap(inst->b, 16);
+        *(uint8_t **)(base + 8 * 8) = ptr; // x8
+        WRAP(ForwardCallGG(call->native, base, &call->saved_sp));
+        call->PopOutArguments();
+        return DecodeObject(call->env, ptr, inst->type);
+    }
+    OP(RunAggregateGG) {
+        auto ret = WRAP(ForwardCallGG(call->native, base, &call->saved_sp));
+        call->PopOutArguments();
+        return DecodeObject(call->env, (const uint8_t *)&ret, inst->type);
+    }
+    OP(RunAggregateDDDD) {
+        auto ret = WRAP(ForwardCallDDDD(call->native, base, &call->saved_sp));
+        call->PopOutArguments();
+        return DecodeObject(call->env, (const uint8_t *)&ret, inst->type);
+    }
+    OP(RunHfa32) {
+        auto ret = WRAP(ForwardCallDDDD(call->native, base, &call->saved_sp));
+        uint8_t *ptr = (uint8_t *)&ret;
+        CompactFloats(ptr, inst->b);
+        call->PopOutArguments();
+        return DecodeObject(call->env, ptr, inst->type);
+    }
+    OP(RunVoidX) {
+        WRAP(ForwardCallXGG(call->native, base, &call->saved_sp));
+        call->PopOutArguments();
+        return call->env.Undefined();
+    }
+    OP(RunBoolX) {
+        uint64_t x0 = WRAP(ForwardCallXGG(call->native, base, &call->saved_sp)).x0;
+        call->PopOutArguments();
+        return Napi::Boolean::New(call->env, x0 & 0x1);
+    }
+    OP(RunInt8X) { INTEGER(XGG, int8_t); }
+    OP(RunUInt8X) { INTEGER(XGG, uint8_t); }
+    OP(RunInt16X) { INTEGER(XGG, int16_t); }
+    OP(RunInt16SX) { INTEGER_SWAP(XGG, int16_t); }
+    OP(RunUInt16X) { INTEGER(XGG, uint16_t); }
+    OP(RunUInt16SX) { INTEGER_SWAP(XGG, uint16_t); }
+    OP(RunInt32X) { INTEGER(XGG, int32_t); }
+    OP(RunInt32SX) { INTEGER_SWAP(XGG, int32_t); }
+    OP(RunUInt32X) { INTEGER(XGG, uint32_t); }
+    OP(RunUInt32SX) { INTEGER_SWAP(XGG, uint32_t); }
+    OP(RunInt64X) { INTEGER(XGG, int64_t); }
+    OP(RunInt64SX) { INTEGER_SWAP(XGG, int64_t); }
+    OP(RunUInt64X) { INTEGER(XGG, uint64_t); }
+    OP(RunUInt64SX) { INTEGER_SWAP(XGG, uint64_t); }
+    OP(RunStringX) {
+        uint64_t x0 = WRAP(ForwardCallXGG(call->native, base, &call->saved_sp)).x0;
+        Napi::Value value = x0 ? Napi::String::New(call->env, (const char *)x0) : call->env.Null();
+        DISPOSE((void *)x0);
+        call->PopOutArguments();
+        return value;
+    }
+    OP(RunString16X) {
+        uint64_t x0 = WRAP(ForwardCallXGG(call->native, base, &call->saved_sp)).x0;
+        Napi::Value value = x0 ? Napi::String::New(call->env, (const char16_t *)x0) : call->env.Null();
+        DISPOSE((void *)x0);
+        call->PopOutArguments();
+        return value;
+    }
+    OP(RunString32X) {
+        uint64_t x0 = WRAP(ForwardCallXGG(call->native, base, &call->saved_sp)).x0;
+        Napi::Value value = x0 ? MakeStringFromUTF32(call->env, (const char32_t *)x0) : call->env.Null();
+        DISPOSE((void *)x0);
+        call->PopOutArguments();
+        return value;
+    }
+    OP(RunPointerX) {
+        uint64_t x0 = WRAP(ForwardCallXGG(call->native, base, &call->saved_sp)).x0;
+        Napi::Value value = x0 ? WrapPointer(call->env, inst->type, (void *)x0) : call->env.Null();
+        DISPOSE((void *)x0);
+        call->PopOutArguments();
+        return value;
+    }
+    OP(RunCallbackX) {
+        uint64_t x0 = WRAP(ForwardCallXGG(call->native, base, &call->saved_sp)).x0;
+        call->PopOutArguments();
+        return x0 ? WrapCallback(call->env, inst->type, (void *)x0) : call->env.Null();
+    }
+    OP(RunRecordX) { K_UNREACHABLE(); return call->env.Null(); }
+    OP(RunUnionX) { K_UNREACHABLE(); return call->env.Null(); }
+    OP(RunArrayX) { K_UNREACHABLE(); return call->env.Null(); }
+    OP(RunFloat32X) {
+        float f = WRAP(ForwardCallXF(call->native, base, &call->saved_sp));
+        call->PopOutArguments();
+        return Napi::Number::New(call->env, (double)f);
+    }
+    OP(RunFloat64X) {
+        double d = WRAP(ForwardCallXDDDD(call->native, base, &call->saved_sp)).d0;
+        call->PopOutArguments();
+        return Napi::Number::New(call->env, d);
+    }
+    OP(RunPrototypeX) { K_UNREACHABLE(); return call->env.Null(); }
+    OP(RunAggregateXStack) {
+        uint8_t *ptr = call->AllocHeap(inst->b, 16);
+        *(uint8_t **)(base + 8 * 8) = ptr; // x8
+        WRAP(ForwardCallXGG(call->native, base, &call->saved_sp));
+        call->PopOutArguments();
+        return DecodeObject(call->env, ptr, inst->type);
+    }
+    OP(RunAggregateXGG) {
+        auto ret = WRAP(ForwardCallXGG(call->native, base, &call->saved_sp));
+        call->PopOutArguments();
+        return DecodeObject(call->env, (const uint8_t *)&ret, inst->type);
+    }
+    OP(RunAggregateXDDDD) {
+        auto ret = WRAP(ForwardCallXDDDD(call->native, base, &call->saved_sp));
+        call->PopOutArguments();
+        return DecodeObject(call->env, (const uint8_t *)&ret, inst->type);
+    }
+    OP(RunHfa32X) {
+        auto ret = WRAP(ForwardCallXDDDD(call->native, base, &call->saved_sp));
+        uint8_t *ptr = (uint8_t *)&ret;
+        CompactFloats(ptr, inst->b);
+        call->PopOutArguments();
+        return DecodeObject(call->env, ptr, inst->type);
+    }
+
+#undef DISPOSE
+#undef INTEGER_SWAP
+#undef INTEGER
+
+#define CALL(Suffix) \
+        do { \
+            auto ret = WRAP(ForwardCall ## Suffix(call->native, base, &call->saved_sp)); \
+            memcpy(base, &ret, K_SIZE(ret)); \
+        } while (false)
+#define DISPOSE() \
+        do { \
+            if (inst->type->dispose) { \
+                void *ptr = *(void **)base; \
+                inst->type->dispose(call->env, inst->type, ptr); \
+            } \
+        } while (false)
+#define INTEGER(CType) \
+        do { \
+            uint64_t x0 = *(uint64_t *)base; \
+            call->PopOutArguments(); \
+            return NewInt(call->env, (CType)x0); \
+        } while (false)
+#define INTEGER_SWAP(CType) \
+        do { \
+            uint64_t x0 = *(uint64_t *)base; \
+            call->PopOutArguments(); \
+            return NewInt(call->env, ReverseBytes((CType)x0)); \
+        } while (false)
+
+    OP(Yield) {
+        call->async_ip = inst + 1;
+        return call->env.Null();
+    }
+
+    OP(CallGG) {
+        *(uint8_t **)(base + 8 * 8) = base; // x8
+        CALL(GG);
+        return call->env.Null();
+    }
+    OP(CallF) { CALL(F); return call->env.Null(); }
+    OP(CallDDDD) { CALL(DDDD); return call->env.Null(); }
+    OP(CallStack) {
+        uint8_t *ptr = call->AllocHeap(inst->b, 16);
+        *(uint8_t **)(base + 8 * 8) = ptr; // x8
+        CALL(GG);
+        *(uint8_t **)base = ptr; // Store pointer for ReturnAggregateStack
+        return call->env.Null();
+    }
+    OP(CallXGG) {
+        *(uint8_t **)(base + 8 * 8) = base; // x8
+        CALL(XGG);
+        return call->env.Null();
+    }
+    OP(CallXF) { CALL(XF); return call->env.Null(); }
+    OP(CallXDDDD) { CALL(XDDDD); return call->env.Null(); }
+    OP(CallXStack) {
+        uint8_t *ptr = call->AllocHeap(inst->b, 16);
+        *(uint8_t **)(base + 8 * 8) = ptr; // x8
+        CALL(XGG);
+        *(uint8_t **)base = ptr; // Store pointer for ReturnAggregateStack
+        return call->env.Null();
+    }
+
+    OP(ReturnVoid) {
+        call->PopOutArguments();
+        return call->env.Undefined();
+    }
+    OP(ReturnBool) {
+        uint64_t x0 = *(uint64_t *)base;
+        call->PopOutArguments();
+        return Napi::Boolean::New(call->env, x0 & 0x1);
+    }
+    OP(ReturnInt8) { INTEGER(int8_t); }
+    OP(ReturnUInt8) { INTEGER(uint8_t); }
+    OP(ReturnInt16) { INTEGER(int16_t); }
+    OP(ReturnInt16S) { INTEGER_SWAP(int16_t); }
+    OP(ReturnUInt16) { INTEGER(uint16_t); }
+    OP(ReturnUInt16S) { INTEGER_SWAP(uint16_t); }
+    OP(ReturnInt32) { INTEGER(int32_t); }
+    OP(ReturnInt32S) { INTEGER_SWAP(int32_t); }
+    OP(ReturnUInt32) { INTEGER(uint32_t); }
+    OP(ReturnUInt32S) { INTEGER_SWAP(uint32_t); }
+    OP(ReturnInt64) { INTEGER(int64_t); }
+    OP(ReturnInt64S) { INTEGER_SWAP(int64_t); }
+    OP(ReturnUInt64) { INTEGER(uint64_t); }
+    OP(ReturnUInt64S) { INTEGER_SWAP(uint64_t); }
+    OP(ReturnString) {
+        uint64_t x0 = *(uint64_t *)base;
+        call->PopOutArguments();
+        Napi::Value value = x0 ? Napi::String::New(call->env, (const char *)x0) : call->env.Null();
+        DISPOSE();
+        return value;
+    }
+    OP(ReturnString16) {
+        uint64_t x0 = *(uint64_t *)base;
+        call->PopOutArguments();
+        Napi::Value value = x0 ? Napi::String::New(call->env, (const char16_t *)x0) : call->env.Null();
+        DISPOSE();
+        return value;
+    }
+    OP(ReturnString32) {
+        uint64_t x0 = *(uint64_t *)base;
+        call->PopOutArguments();
+        Napi::Value value = x0 ? MakeStringFromUTF32(call->env, (const char32_t *)x0) : call->env.Null();
+        DISPOSE();
+        return value;
+    }
+    OP(ReturnPointer) {
+        uint64_t x0 = *(uint64_t *)base;
+        call->PopOutArguments();
+        Napi::Value value = x0 ? WrapPointer(call->env, inst->type, (void *)x0) : call->env.Null();
+        DISPOSE();
+        return value;
+    }
+    OP(ReturnCallback) {
+        uint64_t x0 = *(uint64_t *)base;
+        call->PopOutArguments();
+        return x0 ? WrapCallback(call->env, inst->type, (void *)x0) : call->env.Null();
+    }
+    OP(ReturnRecord) { K_UNREACHABLE(); return call->env.Null(); }
+    OP(ReturnUnion) { K_UNREACHABLE(); return call->env.Null(); }
+    OP(ReturnArray) { K_UNREACHABLE(); return call->env.Null(); }
+    OP(ReturnFloat32) {
+        float f = *(float *)base;
+        call->PopOutArguments();
+        return Napi::Number::New(call->env, (double)f);
+    }
+    OP(ReturnFloat64) {
+        double d = *(double *)base;
+        call->PopOutArguments();
+        return Napi::Number::New(call->env, d);
+    }
+    OP(ReturnPrototype) { K_UNREACHABLE(); return call->env.Null(); }
+    OP(ReturnAggregateReg) {
+        call->PopOutArguments();
+        return DecodeObject(call->env, base, inst->type);
+    }
+    OP(ReturnAggregateStack) {
+        const uint8_t *ptr = *(const uint8_t **)base;
+        call->PopOutArguments();
+        return DecodeObject(call->env, ptr, inst->type);
+    }
+    OP(ReturnHfa32) {
+        CompactFloats(base, inst->b);
+        call->PopOutArguments();
+        return DecodeObject(call->env, base, inst->type);
+    }
+
+#if defined(_M_ARM64EC)
+    OP(SetVariadicRegisters) {
+        uint64_t *gpr_ptr = (uint64_t *)base;
+
+        gpr_ptr[4] = (uint64_t)base + 17 * 8;
+        gpr_ptr[5] = inst->b;
+
+        NEXT();
+    }
+#endif
+
+#undef INTEGER_SWAP
+#undef INTEGER
+#undef DISPOSE
+#undef CALL
+
+#if defined(MUST_TAIL)
+    ForwardFunc *const ForwardDispatch[256] = {
+        #define PRIMITIVE(Name) HandlePush ## Name,
+        #include "../primitives.inc"
+        HandlePushAggregateReg,
+        HandlePushAggregateStack,
+        HandlePushHfa32,
+        #define PRIMITIVE(Name) HandleRun ## Name,
+        #include "../primitives.inc"
+        HandleRunAggregateStack,
+        HandleRunAggregateGG,
+        HandleRunAggregateDDDD,
+        HandleRunHfa32,
+        #define PRIMITIVE(Name) HandleRun ## Name ## X,
+        #include "../primitives.inc"
+        HandleRunAggregateXStack,
+        HandleRunAggregateXGG,
+        HandleRunAggregateXDDDD,
+        HandleRunHfa32X,
+        HandleYield,
+        HandleCallGG,
+        HandleCallF,
+        HandleCallDDDD,
+        HandleCallStack,
+        HandleCallXGG,
+        HandleCallXF,
+        HandleCallXDDDD,
+        HandleCallXStack,
+        #define PRIMITIVE(Name) HandleReturn ## Name,
+        #include "../primitives.inc"
+        HandleReturnAggregateReg,
+        HandleReturnAggregateStack,
+        HandleReturnHfa32,
+#if defined(_M_ARM64EC)
+        HandleSetVariadicRegisters
+#endif
+    };
+
+    FORCE_INLINE Napi::Value RunLoop(CallData *call, napi_value *args, uint8_t *base, const AbiInstruction *inst)
+    {
+        return ForwardDispatch[(int)inst->code](call, args, base, inst);
+    }
+#else
+            }
+        }
+
+        K_UNREACHABLE();
+    }
+#endif
+
+#undef WRAP
+
+#undef NEXT
+#undef OP
+}
+
+#pragma GCC diagnostic pop
+
+Napi::Value CallData::Run(const Napi::CallbackInfo &info)
+{
+    uint8_t *base = AllocStack<uint8_t>(func->stk_size);
+    if (!base) [[unlikely]]
+        return env.Null();
+
+    const AbiInstruction *first = func->sync.ptr;
+    return RunLoop(this, info.First(), base, first);
+}
+
+bool CallData::PrepareAsync(const Napi::CallbackInfo &info)
+{
+    uint8_t *base = AllocStack<uint8_t>(func->stk_size);
+    if (!base) [[unlikely]]
+        return env.Null();
+    async_base = base;
+
+    const AbiInstruction *first = func->async.ptr;
+    return RunLoop(this, info.First(), base, first);
+}
+
+void CallData::ExecuteAsync()
+{
+    const AbiInstruction *next = async_ip++;
+    RunLoop(this, nullptr, async_base, next);
+}
+
+Napi::Value CallData::EndAsync()
+{
+    const AbiInstruction *next = async_ip++;
+    return RunLoop(this, nullptr, async_base, next);
 }
 
 void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_stack, BackRegisters *out_reg)
@@ -774,16 +1287,14 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
     teb->DeallocationStack = instance->main_stack_min;
 #endif
 
+    // Account for the fact that the stack offsets are optimized for the forward call code,
+    // and they start after the GPR (6 registers) and the XMM (8 registers).
+    caller_sp -= 17 * 8;
+
     const TrampolineInfo &trampoline = shared.trampolines[idx];
 
     const FunctionInfo *proto = trampoline.proto;
     Napi::Function func = trampoline.func.Value();
-
-    uint64_t *gpr_ptr = (uint64_t *)own_sp;
-    uint64_t *vec_ptr = gpr_ptr + 9;
-    uint64_t *args_ptr = (uint64_t *)caller_sp;
-
-    uint8_t *return_ptr = proto->ret.use_memory ? (uint8_t *)gpr_ptr[8] : nullptr;
 
     K_DEFER_N(err_guard) { memset(out_reg, 0, K_SIZE(*out_reg)); };
 
@@ -796,6 +1307,23 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
 
     arguments.Append(!trampoline.recv.IsEmpty() ? trampoline.recv.Value() : env.Undefined());
 
+#define POP_INTEGER(CType) \
+        do { \
+            const uint8_t *src = (param.abi.regular ? own_sp : caller_sp) + param.abi.offset; \
+            CType v = *(const CType *)src; \
+             \
+            Napi::Value arg = NewInt(env, v); \
+            arguments.Append(arg); \
+        } while (false)
+#define POP_INTEGER_SWAP(CType) \
+        do { \
+            const uint8_t *src = (param.abi.regular ? own_sp : caller_sp) + param.abi.offset; \
+            CType v = *(const CType *)src; \
+             \
+            Napi::Value arg = NewInt(env, ReverseBytes(v)); \
+            arguments.Append(arg); \
+        } while (false)
+
     // Convert to JS arguments
     for (Size i = 0; i < proto->parameters.len; i++) {
         const ParameterInfo &param = proto->parameters[i];
@@ -805,235 +1333,31 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
             case PrimitiveKind::Void: { K_UNREACHABLE(); } break;
 
             case PrimitiveKind::Bool: {
-#if defined(__APPLE__)
-                bool b;
-                if (param.gpr_count) {
-                    b = *(bool *)(gpr_ptr++);
-                } else {
-                    b = *(bool *)args_ptr;
-                    args_ptr = (uint64_t *)((uint8_t *)args_ptr + 1);
-                }
-#else
-                bool b = *(bool *)((param.gpr_count ? gpr_ptr : args_ptr)++);
-#endif
+                const uint8_t *src = (param.abi.regular ? own_sp : caller_sp) + param.abi.offset;
+                bool b = *(bool *)src;
 
                 Napi::Value arg = Napi::Boolean::New(env, b);
                 arguments.Append(arg);
             } break;
-            case PrimitiveKind::Int8: {
-#if defined(__APPLE__)
-                int8_t v;
-                if (param.gpr_count) {
-                    v = *(int8_t *)(gpr_ptr++);
-                } else {
-                    v = *(int8_t *)args_ptr;
-                    args_ptr = (uint64_t *)((uint8_t *)args_ptr + 1);
-                }
-#else
-                int8_t v = *(int8_t *)((param.gpr_count ? gpr_ptr : args_ptr)++);
-#endif
 
-                Napi::Value arg = NewInt(env, v);
-                arguments.Append(arg);
-            } break;
-            case PrimitiveKind::UInt8: {
-#if defined(__APPLE__)
-                uint8_t v;
-                if (param.gpr_count) {
-                    v = *(uint8_t *)(gpr_ptr++);
-                } else {
-                    v = *(uint8_t *)args_ptr;
-                    args_ptr = (uint64_t *)((uint8_t *)args_ptr + 1);
-                }
-#else
-                uint8_t v = *(uint8_t *)((param.gpr_count ? gpr_ptr : args_ptr)++);
-#endif
+            case PrimitiveKind::Int8: { POP_INTEGER(int8_t); } break;
+            case PrimitiveKind::UInt8: { POP_INTEGER(uint8_t); } break;
+            case PrimitiveKind::Int16: { POP_INTEGER(int16_t); } break;
+            case PrimitiveKind::Int16S: { POP_INTEGER_SWAP(int16_t); } break;
+            case PrimitiveKind::UInt16: { POP_INTEGER(uint16_t); } break;
+            case PrimitiveKind::UInt16S: { POP_INTEGER_SWAP(uint16_t); } break;
+            case PrimitiveKind::Int32: { POP_INTEGER(int32_t); } break;
+            case PrimitiveKind::Int32S: { POP_INTEGER_SWAP(int32_t); } break;
+            case PrimitiveKind::UInt32: { POP_INTEGER(uint32_t); } break;
+            case PrimitiveKind::UInt32S: { POP_INTEGER_SWAP(uint32_t); } break;
+            case PrimitiveKind::Int64: { POP_INTEGER(int64_t); } break;
+            case PrimitiveKind::Int64S: { POP_INTEGER_SWAP(int64_t); } break;
+            case PrimitiveKind::UInt64: { POP_INTEGER(uint64_t); } break;
+            case PrimitiveKind::UInt64S: { POP_INTEGER_SWAP(uint64_t); } break;
 
-                Napi::Value arg = NewInt(env, v);
-                arguments.Append(arg);
-            } break;
-            case PrimitiveKind::Int16: {
-#if defined(__APPLE__)
-                int16_t v;
-                if (param.gpr_count) {
-                    v = *(int16_t *)(gpr_ptr++);
-                } else {
-                    args_ptr = AlignUp(args_ptr, 2);
-                    v = *(int16_t *)args_ptr;
-                    args_ptr = (uint64_t *)((uint8_t *)args_ptr + 2);
-                }
-#else
-                int16_t v = *(int16_t *)((param.gpr_count ? gpr_ptr : args_ptr)++);
-#endif
-
-                Napi::Value arg = NewInt(env, v);
-                arguments.Append(arg);
-            } break;
-            case PrimitiveKind::Int16S: {
-#if defined(__APPLE__)
-                int16_t v;
-                if (param.gpr_count) {
-                    v = *(int16_t *)(gpr_ptr++);
-                } else {
-                    args_ptr = AlignUp(args_ptr, 2);
-                    v = *(int16_t *)args_ptr;
-                    args_ptr = (uint64_t *)((uint8_t *)args_ptr + 2);
-                }
-#else
-                int16_t v = *(int16_t *)((param.gpr_count ? gpr_ptr : args_ptr)++);
-#endif
-
-                Napi::Value arg = NewInt(env, ReverseBytes(v));
-                arguments.Append(arg);
-            } break;
-            case PrimitiveKind::UInt16: {
-#if defined(__APPLE__)
-                uint16_t v;
-                if (param.gpr_count) {
-                    v = *(uint16_t *)(gpr_ptr++);
-                } else {
-                    args_ptr = AlignUp(args_ptr, 2);
-                    v = *(uint16_t *)args_ptr;
-                    args_ptr = (uint64_t *)((uint8_t *)args_ptr + 2);
-                }
-#else
-                uint16_t v = *(uint16_t *)((param.gpr_count ? gpr_ptr : args_ptr)++);
-#endif
-
-                Napi::Value arg = NewInt(env, v);
-                arguments.Append(arg);
-            } break;
-            case PrimitiveKind::UInt16S: {
-#if defined(__APPLE__)
-                uint16_t v;
-                if (param.gpr_count) {
-                    v = *(uint16_t *)(gpr_ptr++);
-                } else {
-                    args_ptr = AlignUp(args_ptr, 2);
-                    v = *(uint16_t *)args_ptr;
-                    args_ptr = (uint64_t *)((uint8_t *)args_ptr + 2);
-                }
-#else
-                uint16_t v = *(uint16_t *)((param.gpr_count ? gpr_ptr : args_ptr)++);
-#endif
-
-                Napi::Value arg = NewInt(env, ReverseBytes(v));
-                arguments.Append(arg);
-            } break;
-            case PrimitiveKind::Int32: {
-#if defined(__APPLE__)
-                int32_t v;
-                if (param.gpr_count) {
-                    v = *(int32_t *)(gpr_ptr++);
-                } else {
-                    args_ptr = AlignUp(args_ptr, 4);
-                    v = *(int32_t *)args_ptr;
-                    args_ptr = (uint64_t *)((uint8_t *)args_ptr + 4);
-                }
-#else
-                int32_t v = *(int32_t *)((param.gpr_count ? gpr_ptr : args_ptr)++);
-#endif
-
-                Napi::Value arg = NewInt(env, v);
-                arguments.Append(arg);
-            } break;
-            case PrimitiveKind::Int32S: {
-#if defined(__APPLE__)
-                int32_t v;
-                if (param.gpr_count) {
-                    v = *(int32_t *)(gpr_ptr++);
-                } else {
-                    args_ptr = AlignUp(args_ptr, 4);
-                    v = *(int32_t *)args_ptr;
-                    args_ptr = (uint64_t *)((uint8_t *)args_ptr + 4);
-                }
-#else
-                int32_t v = *(int32_t *)((param.gpr_count ? gpr_ptr : args_ptr)++);
-#endif
-
-                Napi::Value arg = NewInt(env, ReverseBytes(v));
-                arguments.Append(arg);
-            } break;
-            case PrimitiveKind::UInt32: {
-#if defined(__APPLE__)
-                uint32_t v;
-                if (param.gpr_count) {
-                    v = *(uint32_t *)(gpr_ptr++);
-                } else {
-                    args_ptr = AlignUp(args_ptr, 4);
-                    v = *(uint32_t *)args_ptr;
-                    args_ptr = (uint64_t *)((uint8_t *)args_ptr + 4);
-                }
-#else
-                uint32_t v = *(uint32_t *)((param.gpr_count ? gpr_ptr : args_ptr)++);
-#endif
-
-                Napi::Value arg = NewInt(env, v);
-                arguments.Append(arg);
-            } break;
-            case PrimitiveKind::UInt32S: {
-#if defined(__APPLE__)
-                uint32_t v;
-                if (param.gpr_count) {
-                    v = *(uint32_t *)(gpr_ptr++);
-                } else {
-                    args_ptr = AlignUp(args_ptr, 4);
-                    v = *(uint32_t *)args_ptr;
-                    args_ptr = (uint64_t *)((uint8_t *)args_ptr + 4);
-                }
-#else
-                uint32_t v = *(uint32_t *)((param.gpr_count ? gpr_ptr : args_ptr)++);
-#endif
-
-                Napi::Value arg = NewInt(env, ReverseBytes(v));
-                arguments.Append(arg);
-            } break;
-            case PrimitiveKind::Int64: {
-#if defined(__APPLE__)
-                args_ptr = AlignUp(args_ptr, 8);
-#endif
-
-                int64_t v = *(int64_t *)((param.gpr_count ? gpr_ptr : args_ptr)++);
-
-                Napi::Value arg = NewInt(env, v);
-                arguments.Append(arg);
-            } break;
-            case PrimitiveKind::Int64S: {
-#if defined(__APPLE__)
-                args_ptr = AlignUp(args_ptr, 8);
-#endif
-
-                int64_t v = *(int64_t *)((param.gpr_count ? gpr_ptr : args_ptr)++);
-
-                Napi::Value arg = NewInt(env, ReverseBytes(v));
-                arguments.Append(arg);
-            } break;
-            case PrimitiveKind::UInt64: {
-#if defined(__APPLE__)
-                args_ptr = AlignUp(args_ptr, 8);
-#endif
-
-                uint64_t v = *(uint64_t *)((param.gpr_count ? gpr_ptr : args_ptr)++);
-
-                Napi::Value arg = NewInt(env, v);
-                arguments.Append(arg);
-            } break;
-            case PrimitiveKind::UInt64S: {
-#if defined(__APPLE__)
-                args_ptr = AlignUp(args_ptr, 8);
-#endif
-
-                uint64_t v = *(uint64_t *)((param.gpr_count ? gpr_ptr : args_ptr)++);
-
-                Napi::Value arg = NewInt(env, ReverseBytes(v));
-                arguments.Append(arg);
-            } break;
             case PrimitiveKind::String: {
-#if defined(__APPLE__)
-                args_ptr = AlignUp(args_ptr, 8);
-#endif
-
-                const char *str = *(const char **)((param.gpr_count ? gpr_ptr : args_ptr)++);
+                const uint8_t *src = (param.abi.regular ? own_sp : caller_sp) + param.abi.offset;
+                const char *str = *(const char **)src;
 
                 Napi::Value arg = str ? Napi::String::New(env, str) : env.Null();
                 arguments.Append(arg);
@@ -1043,11 +1367,8 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
                 }
             } break;
             case PrimitiveKind::String16: {
-#if defined(__APPLE__)
-                args_ptr = AlignUp(args_ptr, 8);
-#endif
-
-                const char16_t *str16 = *(const char16_t **)((param.gpr_count ? gpr_ptr : args_ptr)++);
+                const uint8_t *src = (param.abi.regular ? own_sp : caller_sp) + param.abi.offset;
+                const char16_t *str16 = *(const char16_t **)src;
 
                 Napi::Value arg = str16 ? Napi::String::New(env, str16) : env.Null();
                 arguments.Append(arg);
@@ -1057,21 +1378,16 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
                 }
             } break;
             case PrimitiveKind::String32: {
-#if defined(__APPLE__)
-                args_ptr = AlignUp(args_ptr, 8);
-#endif
-
-                const char32_t *str32 = *(const char32_t **)((param.gpr_count ? gpr_ptr : args_ptr)++);
+                const uint8_t *src = (param.abi.regular ? own_sp : caller_sp) + param.abi.offset;
+                const char32_t *str32 = *(const char32_t **)src;
 
                 Napi::Value arg = str32 ? MakeStringFromUTF32(env, str32) : env.Null();
                 arguments.Append(arg);
             } break;
-            case PrimitiveKind::Pointer: {
-#if defined(__APPLE__)
-                args_ptr = AlignUp(args_ptr, 8);
-#endif
 
-                void *ptr2 = *(void **)((param.gpr_count ? gpr_ptr : args_ptr)++);
+            case PrimitiveKind::Pointer: {
+                const uint8_t *src = (param.abi.regular ? own_sp : caller_sp) + param.abi.offset;
+                void *ptr2 = *(void **)src;
 
                 Napi::Value p = ptr2 ? WrapPointer(env, param.type->ref.type, ptr2) : env.Null();
                 arguments.Append(p);
@@ -1080,12 +1396,37 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
                     param.type->dispose(env, param.type, ptr2);
                 }
             } break;
-            case PrimitiveKind::Callback: {
-#if defined(__APPLE__)
-                args_ptr = AlignUp(args_ptr, 8);
-#endif
 
-                void *ptr2 = *(void **)((param.gpr_count ? gpr_ptr : args_ptr)++);
+            case PrimitiveKind::Record:
+            case PrimitiveKind::Union: {
+                uint8_t *ptr = (param.abi.regular ? own_sp : caller_sp) + param.abi.offset;
+                uint8_t *src = param.abi.indirect ? *(uint8_t **)ptr : ptr;
+
+                CompactFloats(src, param.abi.hfa32);
+
+                Napi::Object obj = DecodeObject(env, src, param.type);
+                arguments.Append(obj);
+            } break;
+            case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
+
+            case PrimitiveKind::Float32: {
+                const uint8_t *src = (param.abi.regular ? own_sp : caller_sp) + param.abi.offset;
+                float f = *(float *)src;
+
+                Napi::Value arg = Napi::Number::New(env, (double)f);
+                arguments.Append(arg);
+            } break;
+            case PrimitiveKind::Float64: {
+                const uint8_t *src = (param.abi.regular ? own_sp : caller_sp) + param.abi.offset;
+                double d = *(double *)src;
+
+                Napi::Value arg = Napi::Number::New(env, d);
+                arguments.Append(arg);
+            } break;
+
+            case PrimitiveKind::Callback: {
+                const uint8_t *src = (param.abi.regular ? own_sp : caller_sp) + param.abi.offset;
+                void *ptr2 = *(void **)src;
 
                 Napi::Value p = ptr2 ? WrapCallback(env, param.type->ref.type, ptr2) : env.Null();
                 arguments.Append(p);
@@ -1094,96 +1435,20 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
                     param.type->dispose(env, param.type, ptr2);
                 }
             } break;
-            case PrimitiveKind::Record:
-            case PrimitiveKind::Union: {
-                if (param.vec_count) { // HFA
-                    uint8_t *ptr = (uint8_t *)vec_ptr;
-
-                    CompactFloats(ptr, param.vec_count, param.vec_bytes);
-
-                    Napi::Object obj = DecodeObject(env, ptr, param.type);
-                    arguments.Append(obj);
-
-                    vec_ptr += param.vec_count;
-                } else if (!param.use_memory) {
-                    if (param.gpr_count) {
-                        K_ASSERT(param.type->align <= 8);
-
-                        Napi::Object obj = DecodeObject(env, (uint8_t *)gpr_ptr, param.type);
-                        arguments.Append(obj);
-
-                        gpr_ptr += param.gpr_count;
-                    } else if (param.type->size) {
-                        args_ptr = AlignUp(args_ptr, param.type->align);
-
-                        Napi::Object obj = DecodeObject(env, (uint8_t *)args_ptr, param.type);
-                        arguments.Append(obj);
-
-                        args_ptr += (param.type->size + 7) / 8;
-                    }
-                } else {
-#if defined(__APPLE__)
-                    args_ptr = AlignUp(args_ptr, 8);
-#endif
-
-                    void *ptr2 = *(void **)((param.gpr_count ? gpr_ptr : args_ptr)++);
-
-                    Napi::Object obj = DecodeObject(env, (uint8_t *)ptr2, param.type);
-                    arguments.Append(obj);
-                }
-            } break;
-            case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
-            case PrimitiveKind::Float32: {
-                float f;
-                if (param.vec_count) [[likely]] {
-                    f = *(float *)(vec_ptr++);
-#if defined(_WIN32)
-                } else if (param.gpr_count) {
-                    f = *(float *)(gpr_ptr++);
-#endif
-                } else {
-#if defined(__APPLE__)
-                    args_ptr = AlignUp(args_ptr, 4);
-                    f = *(float *)args_ptr;
-                    args_ptr = (uint64_t *)((uint8_t *)args_ptr + 4);
-#else
-                    f = *(float *)(args_ptr++);
-#endif
-                }
-
-                Napi::Value arg = Napi::Number::New(env, (double)f);
-                arguments.Append(arg);
-            } break;
-            case PrimitiveKind::Float64: {
-                double d;
-                if (param.vec_count) [[likely]] {
-                    d = *(double *)(vec_ptr++);
-#if defined(_WIN32)
-                } else if (param.gpr_count) {
-                    d = *(double *)(gpr_ptr++);
-#endif
-                } else {
-#if defined(__APPLE__)
-                    args_ptr = AlignUp(args_ptr, 8);
-#endif
-
-                    d = *(double *)(args_ptr++);
-                }
-
-                Napi::Value arg = Napi::Number::New(env, d);
-                arguments.Append(arg);
-            } break;
 
             case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;
         }
     }
+
+#undef POP_INTEGER_SWAP
+#undef POP_INTEGER
 
     const TypeInfo *type = proto->ret.type;
 
     // Make the call
     napi_value ret;
     if (switch_stack) {
-        ret = CallSwitchStack(&func, (size_t)arguments.len, arguments.data, old_sp, &mem->stack,
+        ret = CallSwitchStack(&func, (size_t)arguments.len, arguments.data, saved_sp, &mem->stack,
                               [](Napi::Function *func, size_t argc, napi_value *argv) { return (napi_value)func->Call(argv[0], argc - 1, argv + 1); });
     } else {
         ret = (napi_value)func.Call(arguments[0], arguments.len - 1, arguments.data + 1);
@@ -1217,6 +1482,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
     // Convert the result
     switch (type->primitive) {
         case PrimitiveKind::Void: {} break;
+
         case PrimitiveKind::Bool: {
             bool b;
             if (napi_get_value_bool(env, value, &b) != napi_ok) [[unlikely]] {
@@ -1226,6 +1492,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
 
             out_reg->x0 = (uint64_t)b;
         } break;
+
         case PrimitiveKind::Int8: { RETURN_INTEGER(int8_t); } break;
         case PrimitiveKind::UInt8: { RETURN_INTEGER(uint8_t); } break;
         case PrimitiveKind::Int16: { RETURN_INTEGER(int16_t); } break;
@@ -1240,6 +1507,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
         case PrimitiveKind::Int64S: { RETURN_INTEGER_SWAP(int64_t); } break;
         case PrimitiveKind::UInt64: { RETURN_INTEGER(uint64_t); } break;
         case PrimitiveKind::UInt64S: { RETURN_INTEGER_SWAP(uint64_t); } break;
+
         case PrimitiveKind::String: {
             const char *str;
             if (!PushString(value, 1, &str)) [[unlikely]]
@@ -1261,6 +1529,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
 
             out_reg->x0 = (uint64_t)str32;
         } break;
+
         case PrimitiveKind::Pointer: {
             void *ptr;
             if (!PushPointer(value, type, 1, &ptr)) [[unlikely]]
@@ -1268,6 +1537,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
 
             out_reg->x0 = (uint64_t)ptr;
         } break;
+
         case PrimitiveKind::Record:
         case PrimitiveKind::Union: {
             if (!IsObject(value)) [[unlikely]] {
@@ -1277,20 +1547,21 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
 
             Napi::Object obj = value.As<Napi::Object>();
 
-            if (return_ptr) {
-                if (!PushObject(obj, type, return_ptr))
+            if (proto->ret.abi.regular) {
+                uint8_t *dest = (uint8_t *)&out_reg + proto->ret.abi.offset;
+                if (!PushObject(obj, type, dest))
                     return;
-                out_reg->x0 = (uint64_t)return_ptr;
-            } else if (proto->ret.vec_count) { // HFA
-                uint8_t *ptr = (uint8_t *)&out_reg->d0;
-
-                ExpandFloats(ptr, proto->ret.vec_count, proto->ret.vec_bytes);
-                PushObject(obj, type, ptr);
+                ExpandFloats(dest, proto->ret.abi.hfa32);
             } else {
-                PushObject(obj, type, (uint8_t *)&out_reg->x0);
+                uint64_t *gpr_ptr = (uint64_t *)own_sp;
+                uint8_t *dest = (uint8_t *)gpr_ptr[8]; // r8
+
+                if (!PushObject(obj, type, dest))
+                    return;
             }
         } break;
         case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
+
         case PrimitiveKind::Float32: {
             float f;
             if (!TryNumber(value, &f)) [[unlikely]] {
@@ -1298,7 +1569,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
                 return;
             }
 
-            memset((uint8_t *)&out_reg->d0 + 4, 0, 4);
+            memset((uint8_t *)&out_reg->d0, 0, 8);
             memcpy(&out_reg->d0, &f, 4);
         } break;
         case PrimitiveKind::Float64: {
@@ -1310,6 +1581,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
 
             out_reg->d0 = d;
         } break;
+
         case PrimitiveKind::Callback: {
             void *ptr;
             if (!PushCallback(value, type, &ptr)) [[unlikely]]

@@ -152,10 +152,12 @@ struct ParameterInfo {
         int offsets[2];
     } abi;
 #elif defined(__arm__) || defined(__aarch64__) || defined(_M_ARM64)
-    bool use_memory; // Only used for return value on ARM32
-    int8_t gpr_count;
-    int8_t vec_count;
-    int8_t vec_bytes; // ARM64
+    struct {
+        bool regular;
+        bool indirect;
+        int hfa32;
+        int offset;
+    } abi;
 #elif __riscv_xlen == 64 || defined(__loongarch64)
     bool use_memory;
     int8_t gpr_count;
@@ -177,10 +179,11 @@ struct ReturnInfo {
         AbiMethod method;
     } abi;
 #elif defined(__arm__) || defined(__aarch64__) || defined(_M_ARM64)
-    bool use_memory; // Only used for return value on ARM32
-    int8_t gpr_count;
-    int8_t vec_count;
-    int8_t vec_bytes; // ARM64
+    struct {
+        bool regular;
+        int hfa32;
+        int offset;
+    } abi;
 #elif defined(__i386__) || defined(_M_IX86)
     bool trivial;
 #elif __riscv_xlen == 64 || defined(__loongarch64)
