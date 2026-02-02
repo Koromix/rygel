@@ -230,7 +230,7 @@ namespace {
             K_DEFER { call->instance->last_error = teb->LastErrorValue; }; \
             teb->LastErrorValue = call->instance->last_error; \
              \
-            ADJUST_TEB(teb, call->mem->stack.ptr, call->mem->stack.end() + 128); \
+            ADJUST_TEB(teb, call->mem->stack.ptr, call->mem->stack.end()); \
              \
             return (Expr); \
         }()

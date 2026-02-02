@@ -309,7 +309,7 @@ Napi::Value RunLoop(CallData *call, napi_value *args, uint32_t *base, const AbiI
             K_DEFER { call->instance->last_error = teb->LastErrorValue; }; \
             teb->LastErrorValue = call->instance->last_error; \
              \
-            ADJUST_TEB(teb, call->mem->stack.ptr, call->mem->stack.end() + 128); \
+            ADJUST_TEB(teb, call->mem->stack.ptr, call->mem->stack.end()); \
              \
             return (Expr); \
         }()
