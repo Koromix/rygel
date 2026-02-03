@@ -4749,7 +4749,7 @@ public:
     }; \
     static Cls K_UNIQUE_NAME(init); \
     void Cls::Run()
-#define K_INIT(Name) K_INIT_(K_CONCAT(InitHelper ## Name, K_STRINGIFY(Name))
+#define K_INIT(Name) K_INIT_(InitHelper ## Name, K_STRINGIFY(Name))
 
 #define K_FINALIZE_(Cls, Name) \
     class Cls: public FinalizeHelper { \
