@@ -30,6 +30,8 @@ libsodium_la_SOURCES = \
 	crypto_core/keccak1600/keccak1600.c \
 	crypto_core/keccak1600/ref/keccak1600_ref.c \
 	crypto_core/keccak1600/ref/keccak1600_ref.h \
+	crypto_core/keccak1600/armsha3/keccak1600_armsha3.c \
+	crypto_core/keccak1600/armsha3/keccak1600_armsha3.h \
 	crypto_core/salsa/ref/core_salsa_ref.c \
 	crypto_core/softaes/softaes.c \
 	crypto_generichash/crypto_generichash.c \
@@ -67,11 +69,13 @@ libsodium_la_SOURCES = \
 	crypto_pwhash/argon2/argon2-encoding.c \
 	crypto_pwhash/argon2/argon2-encoding.h \
 	crypto_pwhash/argon2/argon2-fill-block-ref.c \
+	crypto_pwhash/argon2/argon2-fill-block-wasm32.c \
 	crypto_pwhash/argon2/argon2.c \
 	crypto_pwhash/argon2/argon2.h \
 	crypto_pwhash/argon2/blake2b-long.c \
 	crypto_pwhash/argon2/blake2b-long.h \
 	crypto_pwhash/argon2/blamka-round-ref.h \
+	crypto_pwhash/argon2/blamka-round-wasm32.h \
 	crypto_pwhash/argon2/pwhash_argon2i.c \
 	crypto_pwhash/argon2/pwhash_argon2id.c \
 	crypto_pwhash/crypto_pwhash.c \
