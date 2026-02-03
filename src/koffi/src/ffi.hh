@@ -130,10 +130,7 @@ struct AbiInstruction {
             int16_t b2;
         };
     };
-    union {
-        int64_t c;
-        const TypeInfo *type;
-    };
+    const TypeInfo *type;
 };
 
 struct ParameterInfo {
