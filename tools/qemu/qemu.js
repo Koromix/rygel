@@ -173,9 +173,9 @@ function QemuRunner(registry = null) {
             // Version check
             {
                 let filename = dirname + '/VERSION';
-                let version = fs.existsSync(filename) ? parseInt(fs.readFileSync(filename).toString(), 10) : 0;
+                let version = fs.existsSync(filename) ? fs.readFileSync(filename).toString().trim() : null;
 
-                if (version < machine.qemu.version) {
+                if (version != machine.qemu.version) {
                     self.log(machine, 'Machine version mismatch', style_ansi('[ignore]', 'gray bold'));
 
                     ignore_machines.add(machine);

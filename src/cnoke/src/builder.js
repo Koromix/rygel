@@ -173,6 +173,12 @@ function Builder(config = {}) {
             }
         }
 
+        if (process.platform == 'linux' && arch == 'ia32') {
+            // Support limited Linux cross-compilation for i386 binaries
+            args.push('-DCMAKE_ASM_FLAGS=-m32', '-DCMAKE_C_FLAGS=-m32', '-DCMAKE_CXX_FLAGS=-m32');
+        }
+
+
         if (!msvc) {
             if (spawnSync('ninja', ['--version']).status === 0) {
                 args.push('-G', 'Ninja');

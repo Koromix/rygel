@@ -31,11 +31,11 @@
             "arch": "arm64",
             "machine": "debian_arm64",
             "directory": "/home/debian/luigi",
-            "build": "node ../cnoke/cnoke.js"
+            "build": "CC=clang-21 CXX=clang++-21 node ../cnoke/cnoke.js"
         },
 
         "test": {
-            "build": "node ../cnoke/cnoke.js -d test",
+            "build": "CC=clang-21 CXX=clang++-21 node ../cnoke/cnoke.js -d test",
             "commands": {
                 "Test Sync": "node test/sync.js",
                 "Test Sync (slow pointers)": "node test/sync.js --slow_pointers",
@@ -81,11 +81,11 @@
             "arch": "x64",
             "machine": "debian_x64",
             "directory": "/home/debian/luigi",
-            "build": "CC=clang-17 CXX=clang++-17 node ../cnoke/cnoke.js"
+            "build": "CC=clang-21 CXX=clang++-21 node ../cnoke/cnoke.js"
         },
 
         "test": {
-            "build": "CC=clang-17 CXX=clang++-17 node ../cnoke/cnoke.js -d test",
+            "build": "CC=clang-21 CXX=clang++-21 node ../cnoke/cnoke.js -d test",
             "commands": {
                 "Test Sync": "node test/sync.js",
                 "Test Sync (slow pointers)": "node test/sync.js --slow_pointers",
