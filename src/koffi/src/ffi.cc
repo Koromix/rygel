@@ -301,7 +301,7 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
     type->flags = (int)TypeFlag::IsIncomplete;
 
     HashSet<const char *> members;
-    int64_t size = 0;
+    Size size = 0;
 
     for (uint32_t i = 0; i < keys.Length(); i++) {
         RecordMember member = {};
@@ -398,7 +398,7 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
         }
     }
 
-    size = (int32_t)AlignLen(size, type->align);
+    size = AlignLen(size, type->align);
     if (!size) {
         ThrowError<Napi::Error>(env, "Empty struct '%1' is not allowed in C", type->name);
         return env.Null();
@@ -1018,9 +1018,9 @@ static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
             return env.Null();
         }
 
-        type = MakeArrayType(instance, ref, len, hint);
+        type = MakeArrayType(instance, ref, (Size)len, hint);
     } else {
-        type = MakeArrayType(instance, ref, len);
+        type = MakeArrayType(instance, ref, (Size)len);
     }
 
     if (dynamic) {
@@ -1472,7 +1472,7 @@ static Napi::Value TranslateNormalCall(const FunctionInfo *func, void *native, c
     Napi::Env env = info.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();
 
-    if (count < (uint32_t)func->required_parameters) [[unlikely]] {
+    if (count < func->required_parameters) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected %1 arguments, got %2", func->parameters.len, count);
         return env.Null();
     }
@@ -1542,7 +1542,7 @@ static Napi::Value TranslateVariadicCall(const FunctionInfo *func, void *native,
         variadic->parameters = func->parameters;
         variadic->lib = nullptr;
 
-        if (count < (uint32_t)variadic->required_parameters) [[unlikely]] {
+        if (count < variadic->required_parameters) [[unlikely]] {
             ThrowError<Napi::TypeError>(env, "Expected %1 arguments or more, got %2", variadic->parameters.len, count);
             return env.Null();
         }
@@ -1662,7 +1662,7 @@ static Napi::Value TranslateAsyncCall(const FunctionInfo *func, void *native, co
     Napi::Env env = info.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();
 
-    if (count <= (uint32_t)func->required_parameters) {
+    if (count <= func->required_parameters) {
         ThrowError<Napi::TypeError>(env, "Expected %1 arguments, got %2", func->parameters.len + 1, count);
         return env.Null();
     }
@@ -2097,10 +2097,10 @@ static Napi::Value DecodeValue(const Napi::CallbackInfo &info)
     if (has_len) {
         Size len = info[2 + has_offset].As<Napi::Number>();
 
-        Napi::Value ret = Decode(value, offset, type, &len);
+        Napi::Value ret = Decode(value, (Size)offset, type, &len);
         return ret;
     } else {
-        Napi::Value ret = Decode(value, offset, type);
+        Napi::Value ret = Decode(value, (Size)offset, type);
         return ret;
     }
 }
@@ -2175,10 +2175,10 @@ static Napi::Value EncodeValue(const Napi::CallbackInfo &info)
     if (has_len) {
         Size len = info[3 + has_offset].As<Napi::Number>();
 
-        if (!Encode(ref, offset, value, type, &len))
+        if (!Encode(ref, (Size)offset, value, type, &len))
             return env.Null();
     } else {
-        if (!Encode(ref, offset, value, type))
+        if (!Encode(ref, (Size)offset, value, type))
             return env.Null();
     }
 
