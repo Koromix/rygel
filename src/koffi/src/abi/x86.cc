@@ -130,7 +130,7 @@ bool AnalyseFunction(Napi::Env env, InstanceData *instance, FunctionInfo *func)
 
     // We need enough space to memcpy result in CallX instructions
     func->ret_pop = (int)(4 * stk_offset);
-    func->stk_size = std::max((Size)8, 4 * stk_offset);
+    func->stk_size = stk_offset ? AlignLen(4 * stk_offset, 16) : 16;
 
     func->async.Append({ .code = AbiOpcode::Yield });
 
