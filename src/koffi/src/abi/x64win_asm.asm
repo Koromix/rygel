@@ -11,9 +11,9 @@ public ForwardCallF
 public ForwardCallD
 
 ; The X variants are slightly slower, and are used when XMM arguments must be forwarded.
-public ForwardCallXG
-public ForwardCallXF
-public ForwardCallXD
+public ForwardCallGX
+public ForwardCallFX
+public ForwardCallDX
 
 .code
 
@@ -76,26 +76,26 @@ ForwardCallD proc frame
     epilogue
 ForwardCallD endp
 
-ForwardCallXG proc frame
+ForwardCallGX proc frame
     prologue
     forward_xmm
     forward_gpr
     epilogue
-ForwardCallXG endp
+ForwardCallGX endp
 
-ForwardCallXF proc frame
+ForwardCallFX proc frame
     prologue
     forward_xmm
     forward_gpr
     epilogue
-ForwardCallXF endp
+ForwardCallFX endp
 
-ForwardCallXD proc frame
+ForwardCallDX proc frame
     prologue
     forward_xmm
     forward_gpr
     epilogue
-ForwardCallXD endp
+ForwardCallDX endp
 
 ; Callbacks
 ; ----------------------------

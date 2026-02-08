@@ -9,9 +9,9 @@
 .global ForwardCallG
 .global ForwardCallF
 .global ForwardCallD
-.global ForwardCallRG
-.global ForwardCallRF
-.global ForwardCallRD
+.global ForwardCallGR
+.global ForwardCallFR
+.global ForwardCallDR
 
 #define ENDBR32 .byte 0xf3, 0x0f, 0x1e, 0xfb
 
@@ -62,17 +62,17 @@ ForwardCallD:
     prologue
     epilogue
 
-ForwardCallRG:
+ForwardCallGR:
     prologue
     fastcall
     epilogue
 
-ForwardCallRF:
+ForwardCallFR:
     prologue
     fastcall
     epilogue
 
-ForwardCallRD:
+ForwardCallDR:
     prologue
     fastcall
     epilogue

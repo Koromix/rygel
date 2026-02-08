@@ -22,9 +22,9 @@
 .global SYMBOL(ForwardCallDDDD)
 
 # The X variants are slightly slower, and are used when XMM arguments must be forwarded.
-.global SYMBOL(ForwardCallXGG)
-.global SYMBOL(ForwardCallXF)
-.global SYMBOL(ForwardCallXDDDD)
+.global SYMBOL(ForwardCallGGX)
+.global SYMBOL(ForwardCallFX)
+.global SYMBOL(ForwardCallDDDDX)
 
 # Copy function pointer to r9, in order to save it through argument forwarding.
 # Also make a copy of the SP to CallData::old_sp because the callback system might need it.
@@ -90,19 +90,19 @@ SYMBOL(ForwardCallDDDD):
     forward_gpr
     epilogue
 
-SYMBOL(ForwardCallXGG):
+SYMBOL(ForwardCallGGX):
     prologue
     forward_vec
     forward_gpr
     epilogue
 
-SYMBOL(ForwardCallXF):
+SYMBOL(ForwardCallFX):
     prologue
     forward_vec
     forward_gpr
     epilogue
 
-SYMBOL(ForwardCallXDDDD):
+SYMBOL(ForwardCallDDDDX):
     prologue
     forward_vec
     forward_gpr

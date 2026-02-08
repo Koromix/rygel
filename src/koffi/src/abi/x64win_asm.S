@@ -9,9 +9,9 @@
 .global ForwardCallG
 .global ForwardCallF
 .global ForwardCallD
-.global ForwardCallXG
-.global ForwardCallXF
-.global ForwardCallXD
+.global ForwardCallGX
+.global ForwardCallFX
+.global ForwardCallDX
 
 # Copy function pointer to RAX, in order to save it through argument forwarding.
 # Also make a copy of the SP to CallData::old_sp because the callback system might need it.
@@ -66,19 +66,19 @@ ForwardCallD:
     forward_gpr
     epilogue
 
-ForwardCallXG:
+ForwardCallGX:
     prologue
     forward_xmm
     forward_gpr
     epilogue
 
-ForwardCallXF:
+ForwardCallFX:
     prologue
     forward_xmm
     forward_gpr
     epilogue
 
-ForwardCallXD:
+ForwardCallDX:
     prologue
     forward_xmm
     forward_gpr

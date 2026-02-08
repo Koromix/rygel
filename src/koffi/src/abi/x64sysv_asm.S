@@ -19,11 +19,11 @@
 .global SYMBOL(ForwardCallDD)
 
 # The X variants are slightly slower, and are used when XMM arguments must be forwarded.
-.global SYMBOL(ForwardCallXGG)
-.global SYMBOL(ForwardCallXF)
-.global SYMBOL(ForwardCallXDG)
-.global SYMBOL(ForwardCallXGD)
-.global SYMBOL(ForwardCallXDD)
+.global SYMBOL(ForwardCallGGX)
+.global SYMBOL(ForwardCallFX)
+.global SYMBOL(ForwardCallDGX)
+.global SYMBOL(ForwardCallGDX)
+.global SYMBOL(ForwardCallDDX)
 
 #define ENDBR64 .byte 0xf3, 0x0f, 0x1e, 0xfa
 
@@ -107,35 +107,35 @@ SYMBOL(ForwardCallDD):
     movb $0, %al
     epilogue
 
-SYMBOL(ForwardCallXGG):
+SYMBOL(ForwardCallGGX):
     prologue
     forward_xmm
     forward_gpr
     movb $8, %al
     epilogue
 
-SYMBOL(ForwardCallXF):
+SYMBOL(ForwardCallFX):
     prologue
     forward_xmm
     forward_gpr
     movb $8, %al
     epilogue
 
-SYMBOL(ForwardCallXDG):
+SYMBOL(ForwardCallDGX):
     prologue
     forward_xmm
     forward_gpr
     movb $8, %al
     epilogue
 
-SYMBOL(ForwardCallXGD):
+SYMBOL(ForwardCallGDX):
     prologue
     forward_xmm
     forward_gpr
     movb $8, %al
     epilogue
 
-SYMBOL(ForwardCallXDD):
+SYMBOL(ForwardCallDDX):
     prologue
     forward_xmm
     forward_gpr

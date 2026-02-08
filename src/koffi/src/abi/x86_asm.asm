@@ -7,9 +7,9 @@
 public ForwardCallG
 public ForwardCallF
 public ForwardCallD
-public ForwardCallRG
-public ForwardCallRF
-public ForwardCallRD
+public ForwardCallGR
+public ForwardCallFR
+public ForwardCallDR
 
 .model flat, C
 .code
@@ -58,23 +58,23 @@ ForwardCallD proc
     epilogue
 ForwardCallD endp
 
-ForwardCallRG proc
+ForwardCallGR proc
     prologue
     fastcall
     epilogue
-ForwardCallRG endp
+ForwardCallGR endp
 
-ForwardCallRF proc
+ForwardCallFR proc
     prologue
     fastcall
     epilogue
-ForwardCallRF endp
+ForwardCallFR endp
 
-ForwardCallRD proc
+ForwardCallDR proc
     prologue
     fastcall
     epilogue
-ForwardCallRD endp
+ForwardCallDR endp
 
 ; Callbacks
 ; ----------------------------

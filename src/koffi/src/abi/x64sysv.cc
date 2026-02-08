@@ -42,11 +42,11 @@ extern "C" Xmm0RaxRet ForwardCallDG(const void *func, uint8_t *sp, uint8_t **out
 extern "C" RaxXmm0Ret ForwardCallGD(const void *func, uint8_t *sp, uint8_t **out_old_sp);
 extern "C" Xmm0Xmm1Ret ForwardCallDD(const void *func, uint8_t *sp, uint8_t **out_old_sp);
 
-extern "C" RaxRdxRet ForwardCallXGG(const void *func, uint8_t *sp, uint8_t **out_old_sp);
-extern "C" float ForwardCallXF(const void *func, uint8_t *sp, uint8_t **out_old_sp);
-extern "C" Xmm0RaxRet ForwardCallXDG(const void *func, uint8_t *sp, uint8_t **out_old_sp);
-extern "C" RaxXmm0Ret ForwardCallXGD(const void *func, uint8_t *sp, uint8_t **out_old_sp);
-extern "C" Xmm0Xmm1Ret ForwardCallXDD(const void *func, uint8_t *sp, uint8_t **out_old_sp);
+extern "C" RaxRdxRet ForwardCallGGX(const void *func, uint8_t *sp, uint8_t **out_old_sp);
+extern "C" float ForwardCallFX(const void *func, uint8_t *sp, uint8_t **out_old_sp);
+extern "C" Xmm0RaxRet ForwardCallDGX(const void *func, uint8_t *sp, uint8_t **out_old_sp);
+extern "C" RaxXmm0Ret ForwardCallGDX(const void *func, uint8_t *sp, uint8_t **out_old_sp);
+extern "C" Xmm0Xmm1Ret ForwardCallDDX(const void *func, uint8_t *sp, uint8_t **out_old_sp);
 
 extern "C" napi_value CallSwitchStack(Napi::Function *func, size_t argc, napi_value *argv,
                                       uint8_t *saved_sp, Span<uint8_t> *new_stack,
@@ -59,18 +59,18 @@ enum class AbiOpcode : int16_t {
     PushAggregateStack,
     #define PRIMITIVE(Name) Run ## Name,
     #include "../primitives.inc"
-    RunAggregateStack,
     RunAggregateGG,
     RunAggregateDD,
     RunAggregateGD,
     RunAggregateDG,
+    RunAggregateStack,
     #define PRIMITIVE(Name) Run ## Name ## X,
     #include "../primitives.inc"
-    RunAggregateXStack,
-    RunAggregateXGG,
-    RunAggregateXDD,
-    RunAggregateXGD,
-    RunAggregateXDG,
+    RunAggregateGGX,
+    RunAggregateDDX,
+    RunAggregateGDX,
+    RunAggregateDGX,
+    RunAggregateStackX,
     Yield,
     CallGG,
     CallF,
@@ -78,12 +78,12 @@ enum class AbiOpcode : int16_t {
     CallGD,
     CallDD,
     CallStack,
-    CallXGG,
-    CallXF,
-    CallXDG,
-    CallXGD,
-    CallXDD,
-    CallXStack,
+    CallGGX,
+    CallFX,
+    CallDGX,
+    CallGDX,
+    CallDDX,
+    CallStackX,
     #define PRIMITIVE(Name) Return ## Name,
     #include "../primitives.inc"
     ReturnAggregate
@@ -408,7 +408,7 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
             // Async
             {
                 int delta = (int)AbiOpcode::ReturnVoid - (int)PrimitiveKind::Void;
-                AbiOpcode call = func->forward_fp ? AbiOpcode::CallXGG : AbiOpcode::CallGG;
+                AbiOpcode call = func->forward_fp ? AbiOpcode::CallGGX : AbiOpcode::CallGG;
                 AbiOpcode ret = (AbiOpcode)((int)func->ret.type->primitive + delta);
 
                 func->async.Append({ .code = call });
@@ -418,7 +418,7 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
 
         case PrimitiveKind::Pointer: {
             AbiOpcode run = func->forward_fp ? AbiOpcode::RunPointerX : AbiOpcode::RunPointer;
-            AbiOpcode call = func->forward_fp ? AbiOpcode::CallXGG : AbiOpcode::CallGG;
+            AbiOpcode call = func->forward_fp ? AbiOpcode::CallGGX : AbiOpcode::CallGG;
 
             func->sync.Append({ .code = run, .type = func->ret.type->ref.type });
             func->async.Append({ .code = call });
@@ -426,7 +426,7 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
         } break;
         case PrimitiveKind::Callback: {
             AbiOpcode run = func->forward_fp ? AbiOpcode::RunCallbackX : AbiOpcode::RunCallback;
-            AbiOpcode call = func->forward_fp ? AbiOpcode::CallXGG : AbiOpcode::CallGG;
+            AbiOpcode call = func->forward_fp ? AbiOpcode::CallGGX : AbiOpcode::CallGG;
 
             func->sync.Append({ .code = run, .type = func->ret.type });
             func->async.Append({ .code = call });
@@ -437,8 +437,8 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
         case PrimitiveKind::Union: {
             switch (func->ret.abi.method) {
                 case AbiMethod::Stack: {
-                    AbiOpcode run = func->forward_fp ? AbiOpcode::RunAggregateXStack : AbiOpcode::RunAggregateStack;
-                    AbiOpcode call = func->forward_fp ? AbiOpcode::CallXStack : AbiOpcode::CallStack;
+                    AbiOpcode run = func->forward_fp ? AbiOpcode::RunAggregateStackX : AbiOpcode::RunAggregateStack;
+                    AbiOpcode call = func->forward_fp ? AbiOpcode::CallStackX : AbiOpcode::CallStack;
 
                     func->sync.Append({ .code = run, .b = (int32_t)func->stk_size, .type = func->ret.type });
                     func->async.Append({ .code = call, .b = (int32_t)func->stk_size });
@@ -448,48 +448,48 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
                     func->stk_size += AlignLen(func->ret.type->size, 16);
                 } break;
                 case AbiMethod::Gpr: {
-                    AbiOpcode run = func->forward_fp ? AbiOpcode::RunAggregateXGG : AbiOpcode::RunAggregateGG;
-                    AbiOpcode call = func->forward_fp ? AbiOpcode::CallXGG : AbiOpcode::CallGG;
+                    AbiOpcode run = func->forward_fp ? AbiOpcode::RunAggregateGGX : AbiOpcode::RunAggregateGG;
+                    AbiOpcode call = func->forward_fp ? AbiOpcode::CallGGX : AbiOpcode::CallGG;
 
                     func->sync.Append({ .code = run, .type = func->ret.type });
                     func->async.Append({ .code = call });
                     func->async.Append({ .code = AbiOpcode::ReturnAggregate, .type = func->ret.type });
                 } break;
                 case AbiMethod::GprGpr: {
-                    AbiOpcode run = func->forward_fp ? AbiOpcode::RunAggregateXGG : AbiOpcode::RunAggregateGG;
-                    AbiOpcode call = func->forward_fp ? AbiOpcode::CallXGG : AbiOpcode::CallGG;
+                    AbiOpcode run = func->forward_fp ? AbiOpcode::RunAggregateGGX : AbiOpcode::RunAggregateGG;
+                    AbiOpcode call = func->forward_fp ? AbiOpcode::CallGGX : AbiOpcode::CallGG;
 
                     func->sync.Append({ .code = run, .type = func->ret.type });
                     func->async.Append({ .code = call });
                     func->async.Append({ .code = AbiOpcode::ReturnAggregate, .type = func->ret.type });
                 } break;
                 case AbiMethod::Xmm: {
-                    AbiOpcode run = func->forward_fp ? AbiOpcode::RunAggregateXDD : AbiOpcode::RunAggregateDD;
-                    AbiOpcode call = func->forward_fp ? AbiOpcode::CallXDD : AbiOpcode::CallDD;
+                    AbiOpcode run = func->forward_fp ? AbiOpcode::RunAggregateDDX : AbiOpcode::RunAggregateDD;
+                    AbiOpcode call = func->forward_fp ? AbiOpcode::CallDDX : AbiOpcode::CallDD;
 
                     func->sync.Append({ .code = run, .type = func->ret.type });
                     func->async.Append({ .code = call });
                     func->async.Append({ .code = AbiOpcode::ReturnAggregate, .type = func->ret.type });
                 } break;
                 case AbiMethod::XmmXmm: {
-                    AbiOpcode run = func->forward_fp ? AbiOpcode::RunAggregateXDD : AbiOpcode::RunAggregateDD;
-                    AbiOpcode call = func->forward_fp ? AbiOpcode::CallXDD : AbiOpcode::CallDD;
+                    AbiOpcode run = func->forward_fp ? AbiOpcode::RunAggregateDDX : AbiOpcode::RunAggregateDD;
+                    AbiOpcode call = func->forward_fp ? AbiOpcode::CallDDX : AbiOpcode::CallDD;
 
                     func->sync.Append({ .code = run, .type = func->ret.type });
                     func->async.Append({ .code = call });
                     func->async.Append({ .code = AbiOpcode::ReturnAggregate, .type = func->ret.type });
                 } break;
                 case AbiMethod::GprXmm: {
-                    AbiOpcode run = func->forward_fp ? AbiOpcode::RunAggregateXGD : AbiOpcode::RunAggregateGD;
-                    AbiOpcode call = func->forward_fp ? AbiOpcode::CallXGD : AbiOpcode::CallGD;
+                    AbiOpcode run = func->forward_fp ? AbiOpcode::RunAggregateGDX : AbiOpcode::RunAggregateGD;
+                    AbiOpcode call = func->forward_fp ? AbiOpcode::CallGDX : AbiOpcode::CallGD;
 
                     func->sync.Append({ .code = run, .type = func->ret.type });
                     func->async.Append({ .code = call });
                     func->async.Append({ .code = AbiOpcode::ReturnAggregate, .type = func->ret.type });
                 } break;
                 case AbiMethod::XmmGpr: {
-                    AbiOpcode run = func->forward_fp ? AbiOpcode::RunAggregateXDG : AbiOpcode::RunAggregateDG;
-                    AbiOpcode call = func->forward_fp ? AbiOpcode::CallXDG : AbiOpcode::CallDG;
+                    AbiOpcode run = func->forward_fp ? AbiOpcode::RunAggregateDGX : AbiOpcode::RunAggregateDG;
+                    AbiOpcode call = func->forward_fp ? AbiOpcode::CallDGX : AbiOpcode::CallDG;
 
                     func->sync.Append({ .code = run, .type = func->ret.type });
                     func->async.Append({ .code = call });
@@ -501,7 +501,7 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
 
         case PrimitiveKind::Float32: {
             AbiOpcode run = func->forward_fp ? AbiOpcode::RunFloat32X : AbiOpcode::RunFloat32;
-            AbiOpcode call = func->forward_fp ? AbiOpcode::CallXF : AbiOpcode::CallF;
+            AbiOpcode call = func->forward_fp ? AbiOpcode::CallFX : AbiOpcode::CallF;
 
             func->sync.Append({ .code = run, .type = func->ret.type });
             func->async.Append({ .code = call });
@@ -509,7 +509,7 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
         } break;
         case PrimitiveKind::Float64: {
             AbiOpcode run = func->forward_fp ? AbiOpcode::RunFloat64X : AbiOpcode::RunFloat64;
-            AbiOpcode call = func->forward_fp ? AbiOpcode::CallXDD : AbiOpcode::CallDD;
+            AbiOpcode call = func->forward_fp ? AbiOpcode::CallDDX : AbiOpcode::CallDD;
 
             func->sync.Append({ .code = run, .type = func->ret.type });
             func->async.Append({ .code = call });
@@ -823,12 +823,6 @@ namespace {
         return Napi::Number::New(call->env, d);
     }
     OP(RunPrototype) { K_UNREACHABLE(); return call->env.Null(); }
-    OP(RunAggregateStack) {
-        *(uint8_t **)base = base + inst->b;
-        uint64_t rax = ForwardCallGG(call->native, base, &call->saved_sp).rax;
-        call->PopOutArguments();
-        return DecodeObject(call->env, (const uint8_t *)rax, inst->type);
-    }
     OP(RunAggregateGG) {
         auto ret = ForwardCallGG(call->native, base, &call->saved_sp);
         call->PopOutArguments();
@@ -849,60 +843,66 @@ namespace {
         call->PopOutArguments();
         return DecodeObject(call->env, (const uint8_t *)&ret, inst->type);
     }
+    OP(RunAggregateStack) {
+        *(uint8_t **)base = base + inst->b;
+        uint64_t rax = ForwardCallGG(call->native, base, &call->saved_sp).rax;
+        call->PopOutArguments();
+        return DecodeObject(call->env, (const uint8_t *)rax, inst->type);
+    }
     OP(RunVoidX) {
-        ForwardCallXGG(call->native, base, &call->saved_sp);
+        ForwardCallGGX(call->native, base, &call->saved_sp);
         call->PopOutArguments();
         return call->env.Undefined();
     }
     OP(RunBoolX) {
-        uint64_t rax = ForwardCallXGG(call->native, base, &call->saved_sp).rax;
+        uint64_t rax = ForwardCallGGX(call->native, base, &call->saved_sp).rax;
         call->PopOutArguments();
         return Napi::Boolean::New(call->env, rax & 0x1);
     }
-    OP(RunInt8X) { INTEGER(XGG, int8_t); }
-    OP(RunUInt8X) { INTEGER(XGG, uint8_t); }
-    OP(RunInt16X) { INTEGER(XGG, int16_t); }
-    OP(RunInt16SX) { INTEGER_SWAP(XGG, int16_t); }
-    OP(RunUInt16X) { INTEGER(XGG, uint16_t); }
-    OP(RunUInt16SX) { INTEGER_SWAP(XGG, uint16_t); }
-    OP(RunInt32X) { INTEGER(XGG, int32_t); }
-    OP(RunInt32SX) { INTEGER_SWAP(XGG, int32_t); }
-    OP(RunUInt32X) { INTEGER(XGG, uint32_t); }
-    OP(RunUInt32SX) { INTEGER_SWAP(XGG, uint32_t); }
-    OP(RunInt64X) { INTEGER(XGG, int64_t); }
-    OP(RunInt64SX) { INTEGER_SWAP(XGG, int64_t); }
-    OP(RunUInt64X) { INTEGER(XGG, uint64_t); }
-    OP(RunUInt64SX) { INTEGER_SWAP(XGG, uint64_t); }
+    OP(RunInt8X) { INTEGER(GGX, int8_t); }
+    OP(RunUInt8X) { INTEGER(GGX, uint8_t); }
+    OP(RunInt16X) { INTEGER(GGX, int16_t); }
+    OP(RunInt16SX) { INTEGER_SWAP(GGX, int16_t); }
+    OP(RunUInt16X) { INTEGER(GGX, uint16_t); }
+    OP(RunUInt16SX) { INTEGER_SWAP(GGX, uint16_t); }
+    OP(RunInt32X) { INTEGER(GGX, int32_t); }
+    OP(RunInt32SX) { INTEGER_SWAP(GGX, int32_t); }
+    OP(RunUInt32X) { INTEGER(GGX, uint32_t); }
+    OP(RunUInt32SX) { INTEGER_SWAP(GGX, uint32_t); }
+    OP(RunInt64X) { INTEGER(GGX, int64_t); }
+    OP(RunInt64SX) { INTEGER_SWAP(GGX, int64_t); }
+    OP(RunUInt64X) { INTEGER(GGX, uint64_t); }
+    OP(RunUInt64SX) { INTEGER_SWAP(GGX, uint64_t); }
     OP(RunStringX) {
-        uint64_t rax = ForwardCallXGG(call->native, base, &call->saved_sp).rax;
+        uint64_t rax = ForwardCallGGX(call->native, base, &call->saved_sp).rax;
         Napi::Value value = rax ? Napi::String::New(call->env, (const char *)rax) : call->env.Null();
         DISPOSE((void *)rax);
         call->PopOutArguments();
         return value;
     }
     OP(RunString16X) {
-        uint64_t rax = ForwardCallXGG(call->native, base, &call->saved_sp).rax;
+        uint64_t rax = ForwardCallGGX(call->native, base, &call->saved_sp).rax;
         Napi::Value value = rax ? Napi::String::New(call->env, (const char16_t *)rax) : call->env.Null();
         DISPOSE((void *)rax);
         call->PopOutArguments();
         return value;
     }
     OP(RunString32X) {
-        uint64_t rax = ForwardCallXGG(call->native, base, &call->saved_sp).rax;
+        uint64_t rax = ForwardCallGGX(call->native, base, &call->saved_sp).rax;
         Napi::Value value = rax ? MakeStringFromUTF32(call->env, (const char32_t *)rax) : call->env.Null();
         DISPOSE((void *)rax);
         call->PopOutArguments();
         return value;
     }
     OP(RunPointerX) {
-        uint64_t rax = ForwardCallXGG(call->native, base, &call->saved_sp).rax;
+        uint64_t rax = ForwardCallGGX(call->native, base, &call->saved_sp).rax;
         Napi::Value value = rax ? WrapPointer(call->env, inst->type, (void *)rax) : call->env.Null();
         DISPOSE((void *)rax);
         call->PopOutArguments();
         return value;
     }
     OP(RunCallbackX) {
-        uint64_t rax = ForwardCallXGG(call->native, base, &call->saved_sp).rax;
+        uint64_t rax = ForwardCallGGX(call->native, base, &call->saved_sp).rax;
         call->PopOutArguments();
         return rax ? WrapCallback(call->env, inst->type, (void *)rax) : call->env.Null();
     }
@@ -910,41 +910,41 @@ namespace {
     OP(RunUnionX) { K_UNREACHABLE(); return call->env.Null(); }
     OP(RunArrayX) { K_UNREACHABLE(); return call->env.Null(); }
     OP(RunFloat32X) {
-        float f = ForwardCallXF(call->native, base, &call->saved_sp);
+        float f = ForwardCallFX(call->native, base, &call->saved_sp);
         call->PopOutArguments();
         return Napi::Number::New(call->env, (double)f);
     }
     OP(RunFloat64X) {
-        double d = ForwardCallXDD(call->native, base, &call->saved_sp).xmm0;
+        double d = ForwardCallDDX(call->native, base, &call->saved_sp).xmm0;
         call->PopOutArguments();
         return Napi::Number::New(call->env, d);
     }
     OP(RunPrototypeX) { K_UNREACHABLE(); return call->env.Null(); }
-    OP(RunAggregateXStack) {
+    OP(RunAggregateGGX) {
+        auto ret = ForwardCallGGX(call->native, base, &call->saved_sp);
+        call->PopOutArguments();
+        return DecodeObject(call->env, (const uint8_t *)&ret, inst->type);
+    }
+    OP(RunAggregateDDX) {
+        auto ret = ForwardCallDDX(call->native, base, &call->saved_sp);
+        call->PopOutArguments();
+        return DecodeObject(call->env, (const uint8_t *)&ret, inst->type);
+    }
+    OP(RunAggregateGDX) {
+        auto ret = ForwardCallGDX(call->native, base, &call->saved_sp);
+        call->PopOutArguments();
+        return DecodeObject(call->env, (const uint8_t *)&ret, inst->type);
+    }
+    OP(RunAggregateDGX) {
+        auto ret = ForwardCallDGX(call->native, base, &call->saved_sp);
+        call->PopOutArguments();
+        return DecodeObject(call->env, (const uint8_t *)&ret, inst->type);
+    }
+    OP(RunAggregateStackX) {
         *(uint8_t **)base = base + inst->b;
-        uint64_t rax = ForwardCallXGG(call->native, base, &call->saved_sp).rax;
+        uint64_t rax = ForwardCallGGX(call->native, base, &call->saved_sp).rax;
         call->PopOutArguments();
         return DecodeObject(call->env, (const uint8_t *)rax, inst->type);
-    }
-    OP(RunAggregateXGG) {
-        auto ret = ForwardCallXGG(call->native, base, &call->saved_sp);
-        call->PopOutArguments();
-        return DecodeObject(call->env, (const uint8_t *)&ret, inst->type);
-    }
-    OP(RunAggregateXDD) {
-        auto ret = ForwardCallXDD(call->native, base, &call->saved_sp);
-        call->PopOutArguments();
-        return DecodeObject(call->env, (const uint8_t *)&ret, inst->type);
-    }
-    OP(RunAggregateXGD) {
-        auto ret = ForwardCallXGD(call->native, base, &call->saved_sp);
-        call->PopOutArguments();
-        return DecodeObject(call->env, (const uint8_t *)&ret, inst->type);
-    }
-    OP(RunAggregateXDG) {
-        auto ret = ForwardCallXDG(call->native, base, &call->saved_sp);
-        call->PopOutArguments();
-        return DecodeObject(call->env, (const uint8_t *)&ret, inst->type);
     }
 
 #undef DISPOSE
@@ -991,14 +991,14 @@ namespace {
         CALL(GG);
         return call->env.Null();
     }
-    OP(CallXGG) { CALL(XGG); return call->env.Null(); }
-    OP(CallXF) { CALL(XF); return call->env.Null(); }
-    OP(CallXDG) { CALL(XDG); return call->env.Null(); }
-    OP(CallXGD) { CALL(XGD); return call->env.Null(); }
-    OP(CallXDD) { CALL(XDD); return call->env.Null(); }
-    OP(CallXStack) {
+    OP(CallGGX) { CALL(GGX); return call->env.Null(); }
+    OP(CallFX) { CALL(FX); return call->env.Null(); }
+    OP(CallDGX) { CALL(DGX); return call->env.Null(); }
+    OP(CallGDX) { CALL(GDX); return call->env.Null(); }
+    OP(CallDDX) { CALL(DDX); return call->env.Null(); }
+    OP(CallStackX) {
         *(uint8_t **)base = base + inst->b;
-        CALL(XGG);
+        CALL(GGX);
         return call->env.Null();
     }
 
@@ -1091,18 +1091,18 @@ namespace {
         HandlePushAggregateStack,
         #define PRIMITIVE(Name) HandleRun ## Name,
         #include "../primitives.inc"
-        HandleRunAggregateStack,
         HandleRunAggregateGG,
         HandleRunAggregateDD,
         HandleRunAggregateGD,
         HandleRunAggregateDG,
+        HandleRunAggregateStack,
         #define PRIMITIVE(Name) HandleRun ## Name ## X,
         #include "../primitives.inc"
-        HandleRunAggregateXStack,
-        HandleRunAggregateXGG,
-        HandleRunAggregateXDD,
-        HandleRunAggregateXGD,
-        HandleRunAggregateXDG,
+        HandleRunAggregateGGX,
+        HandleRunAggregateDDX,
+        HandleRunAggregateGDX,
+        HandleRunAggregateDGX,
+        HandleRunAggregateStackX,
         HandleYield,
         HandleCallGG,
         HandleCallF,
@@ -1110,12 +1110,12 @@ namespace {
         HandleCallGD,
         HandleCallDD,
         HandleCallStack,
-        HandleCallXGG,
-        HandleCallXF,
-        HandleCallXDG,
-        HandleCallXGD,
-        HandleCallXDD,
-        HandleCallXStack,
+        HandleCallGGX,
+        HandleCallFX,
+        HandleCallDGX,
+        HandleCallGDX,
+        HandleCallDDX,
+        HandleCallStackX,
         #define PRIMITIVE(Name) HandleReturn ## Name,
         #include "../primitives.inc"
         HandleReturnAggregate

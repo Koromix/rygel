@@ -13,9 +13,9 @@
     EXPORT ForwardCallDDDD
 
     ; The X variants are slightly slower, and are used when XMM arguments must be forwarded.
-    EXPORT ForwardCallXGG
-    EXPORT ForwardCallXF
-    EXPORT ForwardCallXDDDD
+    EXPORT ForwardCallGGX
+    EXPORT ForwardCallFX
+    EXPORT ForwardCallDDDDX
 
     ; Copy function pointer to r9, in order to save it through argument forwarding.
     ; Save RSP in r29 (non-volatile), and use carefully assembled stack provided by caller.
@@ -80,21 +80,21 @@ ForwardCallDDDD PROC
     epilogue
     ENDP
 
-ForwardCallXGG PROC
+ForwardCallGGX PROC
     prologue
     forward_vec
     forward_gpr
     epilogue
     ENDP
 
-ForwardCallXF PROC
+ForwardCallFX PROC
     prologue
     forward_vec
     forward_gpr
     epilogue
     ENDP
 
-ForwardCallXDDDD PROC
+ForwardCallDDDDX PROC
     prologue
     forward_vec
     forward_gpr
