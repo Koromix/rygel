@@ -26,8 +26,8 @@ function main() {
 
     let perf = {
         'napi': run_napi(time),
-        'koffi': run_koffi(time, false),
-        'koffi (fast pointers)': run_koffi(time, true),
+        'koffi': run_koffi(time, true),
+        'koffi (slow pointers)': run_koffi(time, false),
         'node-ctypes': run_node_ctypes(time),
         'node-ffi-napi': run_node_ffi(time)
     }

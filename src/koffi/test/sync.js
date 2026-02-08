@@ -8,8 +8,8 @@ const path = require('path');
 const util = require('util');
 const { cnoke } = require('./package.json');
 
-let fast_pointers = process.argv.slice(2).includes('--fast_pointers');
-koffi.config({ fast_pointers: fast_pointers, fast_callbacks: fast_pointers });
+let slow_pointers = process.argv.slice(2).includes('--slow_pointers');
+koffi.config({ fast_pointers: !slow_pointers, fast_callbacks: !slow_pointers });
 
 // We need to change this on Windows because the DLL CRT might
 // not (probably not) match the one used by Node.js!
@@ -671,10 +671,10 @@ async function test() {
         UpperToInternalBuffer2('BoNjOuR MoNdE', ptr2);
 
         assert.equal(ptr1[0], 'HELLO WORLD')
-        if (fast_pointers) {
-            assert.ok(typeof ptr2[0] == 'bigint');
-        } else {
+        if (slow_pointers) {
             assert.ok(util.types.isExternal(ptr2[0]));
+        } else {
+            assert.ok(typeof ptr2[0] == 'bigint');
         }
         assert.equal(koffi.decode(ptr2[0], 'char', -1), 'BONJOUR MONDE');
 
