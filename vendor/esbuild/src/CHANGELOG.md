@@ -1,5 +1,174 @@
 # Changelog
 
+## 0.27.3
+
+* Preserve URL fragments in data URLs ([#4370](https://github.com/evanw/esbuild/issues/4370))
+
+    Consider the following HTML, CSS, and SVG:
+
+    * `index.html`:
+
+        ```html
+        <!DOCTYPE html>
+        <html>
+          <head><link rel="stylesheet" href="icons.css"></head>
+          <body><div class="triangle"></div></body>
+        </html>
+        ```
+
+    * `icons.css`:
+
+        ```css
+        .triangle {
+          width: 10px;
+          height: 10px;
+          background: currentColor;
+          clip-path: url(./triangle.svg#x);
+        }
+        ```
+
+    * `triangle.svg`:
+
+        ```xml
+        <svg xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <clipPath id="x">
+              <path d="M0 0H10V10Z"/>
+            </clipPath>
+          </defs>
+        </svg>
+        ```
+
+    The CSS uses a URL fragment (the `#x`) to reference the `clipPath` element in the SVG file. Previously esbuild's CSS bundler didn't preserve the URL fragment when bundling the SVG using the `dataurl` loader, which broke the bundled CSS. With this release, esbuild will now preserve the URL fragment in the bundled CSS:
+
+    ```css
+    /* icons.css */
+    .triangle {
+      width: 10px;
+      height: 10px;
+      background: currentColor;
+      clip-path: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg"><defs><clipPath id="x"><path d="M0 0H10V10Z"/></clipPath></defs></svg>#x');
+    }
+    ```
+
+* Parse and print CSS `@scope` rules ([#4322](https://github.com/evanw/esbuild/issues/4322))
+
+    This release includes dedicated support for parsing `@scope` rules in CSS. These rules include optional "start" and "end" selector lists. One important consequence of this is that the local/global status of names in selector lists is now respected, which improves the correctness of esbuild's support for [CSS modules](https://esbuild.github.io/content-types/#local-css). Minification of selectors inside `@scope` rules has also improved slightly.
+
+    Here's an example:
+
+    ```css
+    /* Original code */
+    @scope (:global(.foo)) to (:local(.bar)) {
+      .bar {
+        color: red;
+      }
+    }
+
+    /* Old output (with --loader=local-css --minify) */
+    @scope (:global(.foo)) to (:local(.bar)){.o{color:red}}
+
+    /* New output (with --loader=local-css --minify) */
+    @scope(.foo)to (.o){.o{color:red}}
+    ```
+
+* Fix a minification bug with lowering of `for await` ([#4378](https://github.com/evanw/esbuild/pull/4378), [#4385](https://github.com/evanw/esbuild/pull/4385))
+
+    This release fixes a bug where the minifier would incorrectly strip the variable in the automatically-generated `catch` clause of lowered `for await` loops. The code that generated the loop previously failed to mark the internal variable references as used.
+
+* Update the Go compiler from v1.25.5 to v1.25.7 ([#4383](https://github.com/evanw/esbuild/issues/4383), [#4388](https://github.com/evanw/esbuild/pull/4388))
+
+    This PR was contributed by [@MikeWillCook](https://github.com/MikeWillCook).
+
+## 0.27.2
+
+* Allow import path specifiers starting with `#/` ([#4361](https://github.com/evanw/esbuild/pull/4361))
+
+    Previously the specification for `package.json` disallowed import path specifiers starting with `#/`, but this restriction [has recently been relaxed](https://github.com/nodejs/node/pull/60864) and support for it is being added across the JavaScript ecosystem. One use case is using it for a wildcard pattern such as mapping `#/*` to `./src/*` (previously you had to use another character such as `#_*` instead, which was more confusing). There is some more context in [nodejs/node#49182](https://github.com/nodejs/node/issues/49182).
+
+    This change was contributed by [@hybrist](https://github.com/hybrist).
+
+* Automatically add the `-webkit-mask` prefix ([#4357](https://github.com/evanw/esbuild/issues/4357), [#4358](https://github.com/evanw/esbuild/issues/4358))
+
+    This release automatically adds the `-webkit-` vendor prefix for the [`mask`](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/mask) CSS shorthand property:
+
+    ```css
+    /* Original code */
+    main {
+      mask: url(x.png) center/5rem no-repeat
+    }
+
+    /* Old output (with --target=chrome110) */
+    main {
+      mask: url(x.png) center/5rem no-repeat;
+    }
+
+    /* New output (with --target=chrome110) */
+    main {
+      -webkit-mask: url(x.png) center/5rem no-repeat;
+      mask: url(x.png) center/5rem no-repeat;
+    }
+    ```
+
+    This change was contributed by [@BPJEnnova](https://github.com/BPJEnnova).
+
+* Additional minification of `switch` statements ([#4176](https://github.com/evanw/esbuild/issues/4176), [#4359](https://github.com/evanw/esbuild/issues/4359))
+
+    This release contains additional minification patterns for reducing `switch` statements. Here is an example:
+
+    ```js
+    // Original code
+    switch (x) {
+      case 0:
+        foo()
+        break
+      case 1:
+      default:
+        bar()
+    }
+
+    // Old output (with --minify)
+    switch(x){case 0:foo();break;case 1:default:bar()}
+
+    // New output (with --minify)
+    x===0?foo():bar();
+    ```
+
+* Forbid `using` declarations inside `switch` clauses ([#4323](https://github.com/evanw/esbuild/issues/4323))
+
+    This is a rare change to remove something that was previously possible. The [Explicit Resource Management](https://github.com/tc39/proposal-explicit-resource-management) proposal introduced `using` declarations. These were previously allowed inside `case` and `default` clauses in `switch` statements. This had well-defined semantics and was already widely implemented (by V8, SpiderMonkey, TypeScript, esbuild, and others). However, it was considered to be too confusing because of how scope works in switch statements, so it has been removed from the specification. This edge case will now be a syntax error. See [tc39/proposal-explicit-resource-management#215](https://github.com/tc39/proposal-explicit-resource-management/issues/215) and [rbuckton/ecma262#14](https://github.com/rbuckton/ecma262/pull/14) for details.
+
+    Here is an example of code that is no longer allowed:
+
+    ```js
+    switch (mode) {
+      case 'read':
+        using readLock = db.read()
+        return readAll(readLock)
+
+      case 'write':
+        using writeLock = db.write()
+        return writeAll(writeLock)
+    }
+    ```
+
+    That code will now have to be modified to look like this instead (note the additional `{` and `}` block statements around each case body):
+
+    ```js
+    switch (mode) {
+      case 'read': {
+        using readLock = db.read()
+        return readAll(readLock)
+      }
+      case 'write': {
+        using writeLock = db.write()
+        return writeAll(writeLock)
+      }
+    }
+    ```
+
+    This is not being released in one of esbuild's breaking change releases since this feature hasn't been finalized yet, and esbuild always tracks the current state of the specification (so esbuild's previous behavior was arguably incorrect).
+
 ## 0.27.1
 
 * Fix bundler bug with `var` nested inside `if` ([#4348](https://github.com/evanw/esbuild/issues/4348))

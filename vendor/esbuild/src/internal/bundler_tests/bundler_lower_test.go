@@ -2693,34 +2693,10 @@ func TestLowerUsing(t *testing.T) {
 					for await (await using j of k) l(() => j)
 				}
 			`,
-			"/switch.js": `
-				using x = y
-				switch (foo) {
-					case 0: using c = d
-					default: using e = f
-				}
-				switch (foo) {
-					case 0: await using c = d
-					default: using e = f
-				}
-
-				async function foo() {
-					using x = y
-					switch (foo) {
-						case 0: using c = d
-						default: using e = f
-					}
-					switch (foo) {
-						case 0: await using c = d
-						default: using e = f
-					}
-				}
-			`,
 		},
 		entryPaths: []string{
 			"/entry.js",
 			"/loops.js",
-			"/switch.js",
 		},
 		options: config.Options{
 			Mode:                  config.ModePassThrough,
@@ -2766,30 +2742,10 @@ func TestLowerUsingUnsupportedAsync(t *testing.T) {
 					for (await using d of e) f(() => d)
 				}
 			`,
-			"/switch.js": `
-				using x = y
-				switch (foo) {
-					case 0: using c = d
-					default: using e = f
-				}
-
-				async function foo() {
-					using x = y
-					switch (foo) {
-						case 0: using c = d
-						default: using e = f
-					}
-					switch (foo) {
-						case 0: await using c = d
-						default: using e = f
-					}
-				}
-			`,
 		},
 		entryPaths: []string{
 			"/entry.js",
 			"/loops.js",
-			"/switch.js",
 		},
 		options: config.Options{
 			Mode:                  config.ModePassThrough,
@@ -2835,30 +2791,10 @@ func TestLowerUsingUnsupportedUsingAndAsync(t *testing.T) {
 					for (await using d of e) f(() => d)
 				}
 			`,
-			"/switch.js": `
-				using x = y
-				switch (foo) {
-					case 0: using c = d
-					default: using e = f
-				}
-
-				async function foo() {
-					using x = y
-					switch (foo) {
-						case 0: using c = d
-						default: using e = f
-					}
-					switch (foo) {
-						case 0: await using c = d
-						default: using e = f
-					}
-				}
-			`,
 		},
 		entryPaths: []string{
 			"/entry.js",
 			"/loops.js",
-			"/switch.js",
 		},
 		options: config.Options{
 			Mode:                  config.ModePassThrough,
@@ -3179,6 +3115,7 @@ func TestLowerAsyncGeneratorNoAwait(t *testing.T) {
 	})
 }
 
+// https://github.com/evanw/esbuild/issues/3768
 func TestJavaScriptDecoratorsBundleIssue3768(t *testing.T) {
 	lower_suite.expectBundled(t, bundled{
 		files: map[string]string{
@@ -3203,6 +3140,26 @@ func TestJavaScriptDecoratorsBundleIssue3768(t *testing.T) {
 			Mode:                  config.ModeBundle,
 			AbsOutputDir:          "/out",
 			UnsupportedJSFeatures: compat.Decorators,
+		},
+	})
+}
+
+// https://github.com/evanw/esbuild/issues/4378
+func TestForAwaitWithOptionalCatchIssue4378(t *testing.T) {
+	lower_suite.expectBundled(t, bundled{
+		files: map[string]string{
+			"/entry.js": `
+				async function test(b) {
+					for await (const a of b) a()
+				}
+			`,
+		},
+		entryPaths: []string{"/entry.js"},
+		options: config.Options{
+			Mode:                  config.ModePassThrough,
+			AbsOutputFile:         "/out.js",
+			UnsupportedJSFeatures: compat.ForAwait,
+			MinifySyntax:          true,
 		},
 	})
 }

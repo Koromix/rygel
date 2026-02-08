@@ -1,6 +1,6 @@
 // This file processes data from https://developer.mozilla.org/en-US/docs/Web
 
-import bcd, { BrowserName, SupportBlock } from '@mdn/browser-compat-data'
+import bcd, { BrowserName, SimpleSupportStatement, SupportBlock } from '@mdn/browser-compat-data'
 import { CSSFeature, CSSPrefixMap, CSSProperty, Engine, JSFeature, PrefixData, Support, SupportMap } from './index'
 
 const supportedEnvironments: Record<string, Engine> = {
@@ -84,6 +84,7 @@ const similarPrefixedProperty: Record<string, { prefix: string, property: string
 
 const cssPrefixFeatures: Record<string, CSSProperty> = {
   'css.properties.height.stretch': 'DHeight',
+  'css.properties.mask': 'DMask',
   'css.properties.mask-composite': 'DMaskComposite',
   'css.properties.mask-image': 'DMaskImage',
   'css.properties.mask-origin': 'DMaskOrigin',
@@ -189,8 +190,8 @@ for (const fullKey in cssPrefixFeatures) {
     const engine = supportedEnvironments[env]
 
     if (engine) {
-      let entries = support[env as BrowserName]!
-      if (!Array.isArray(entries)) entries = [entries]
+      const initialEntries = support[env as BrowserName]!
+      let entries: SimpleSupportStatement[] = Array.isArray(initialEntries) ? initialEntries : [initialEntries]
 
       // Figure out which version this property can be used unprefixed, if any.
       // This assumes that support for these CSS properties is never removed.
