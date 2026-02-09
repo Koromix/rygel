@@ -123,8 +123,8 @@ class ClassAnalyser {
     Size stack_offset = 0;
 
 public:
-    ClassAnalyser(int gprs, int xmms)
-        : gpr_max(gprs), xmm_max(xmms), gpr_avail(gprs), xmm_avail(xmms) {}
+    ClassAnalyser(int gpr_index, int gpr_max, int xmm_index, int xmm_max)
+        : gpr_max(gpr_max), xmm_max(xmm_max), gpr_avail(gpr_max - gpr_index), xmm_avail(xmm_max - xmm_index) {}
 
     ClassResult Analyse(const TypeInfo *type);
 
@@ -302,7 +302,7 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
 {
     // Handle return value
     {
-        ClassAnalyser analyser(2, 2);
+        ClassAnalyser analyser(0, 2, 0, 2);
         ClassResult ret = analyser.Analyse(func->ret.type);
 
         func->ret.abi.method = ret.method;
@@ -310,8 +310,8 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
 
     // Handle parameters
     {
-        int gpr_base = (func->ret.abi.method == AbiMethod::Stack);
-        ClassAnalyser analyser(6 - gpr_base, 8);
+        int gpr_result = (func->ret.abi.method == AbiMethod::Stack);
+        ClassAnalyser analyser(gpr_result, 6, 0, 8);
 
         for (ParameterInfo &param: func->parameters) {
             ClassResult ret = analyser.Analyse(param.type);
@@ -323,12 +323,12 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
                 } break;
                 case AbiMethod::Gpr: {
                     param.abi.regular = true;
-                    param.abi.offsets[0] = (gpr_base + ret.gpr_index) * 8;
+                    param.abi.offsets[0] = (0 + ret.gpr_index) * 8;
                     param.abi.offsets[1] = param.abi.offsets[0];
                 } break;
                 case AbiMethod::GprGpr: {
                     param.abi.regular = true;
-                    param.abi.offsets[0] = (gpr_base + ret.gpr_index) * 8;
+                    param.abi.offsets[0] = (0 + ret.gpr_index) * 8;
                     param.abi.offsets[1] = param.abi.offsets[0] + 8;
                 } break;
                 case AbiMethod::Xmm: {
@@ -343,13 +343,13 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
                 } break;
                 case AbiMethod::GprXmm: {
                     param.abi.regular = true;
-                    param.abi.offsets[0] = (gpr_base + ret.gpr_index) * 8;
+                    param.abi.offsets[0] = (0 + ret.gpr_index) * 8;
                     param.abi.offsets[1] = (6 + ret.xmm_index) * 8;
                 } break;
                 case AbiMethod::XmmGpr: {
                     param.abi.regular = true;
                     param.abi.offsets[0] = (6 + ret.xmm_index) * 8;
-                    param.abi.offsets[1] = (gpr_base + ret.gpr_index) * 8;
+                    param.abi.offsets[1] = (0 + ret.gpr_index) * 8;
                 } break;
             }
 
