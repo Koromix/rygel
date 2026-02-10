@@ -18,7 +18,8 @@ function initDemo() {
     if (div != null) {
         AsciinemaPlayer.create('static/' + demo, div, {
             autoPlay: true,
-            loop: true
+            loop: true,
+            controls: true
         });
     }
 }
