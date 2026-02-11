@@ -75,4 +75,11 @@
         <div class="mission">Consultations troubles de l'humeur résistantes</div>
         <div class="mission">Activité d'ECT</div>
     </div>
+    <div>
+        <div class="name">Dr Tristan GAGGIOLI</div>
+        <img src="{{ ASSET static/equipe/avatar.png }}" alt="" />
+        <div class="title">Psychiatre</div>
+        <div class="mission">Consultations troubles de l'humeur résistantes</div>
+        <div class="mission">Activité d'ECT</div>
+    </div>
 </div>
