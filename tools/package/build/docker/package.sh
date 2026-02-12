@@ -21,6 +21,7 @@ echo "$TARGET = $VERSION" > $DEST_DIR/versions.txt
 
 cd $DEST_DIR
 
+podman manifest rm $IMAGE_PREFIX$TARGET:$VERSION  2>/dev/null || true
 podman manifest create $IMAGE_PREFIX$TARGET:$VERSION
 podman build --platform "$PLATFORMS" --manifest $IMAGE_PREFIX$TARGET:$VERSION .
 
