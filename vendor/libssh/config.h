@@ -1,9 +1,10 @@
 #define PACKAGE "libssh"
-#define VERSION "0.11.3"
+#define VERSION "0.12.0"
 
 #if defined(_WIN32)
     #define GLOBAL_BIND_CONFIG "/etc/ssh/libssh_server_config"
     #define GLOBAL_CLIENT_CONFIG "/etc/ssh/ssh_config"
+    #define GLOBAL_CONF_DIR "/etc"
 
     #define HAVE_SYS_UTIME_H 1
     #define HAVE_IO_H 1
@@ -37,6 +38,7 @@
 #elif defined(__APPLE__)
     #define GLOBAL_BIND_CONFIG "/etc/ssh/libssh_server_config"
     #define GLOBAL_CLIENT_CONFIG "/etc/ssh/ssh_config"
+    #define GLOBAL_CONF_DIR "/etc"
 
     #define HAVE_ARPA_INET_H 1
     #define HAVE_GLOB_H 1
@@ -82,6 +84,7 @@
 #elif defined(__EMSCRIPTEN__)
     #define GLOBAL_BIND_CONFIG "/etc/ssh/libssh_server_config"
     #define GLOBAL_CLIENT_CONFIG "/etc/ssh/ssh_config"
+    #define GLOBAL_CONF_DIR "/etc"
 
     #define HAVE_ARPA_INET_H 1
     #define HAVE_GLOB_H 1
@@ -125,6 +128,7 @@
 #else
     #define GLOBAL_BIND_CONFIG "/etc/ssh/libssh_server_config"
     #define GLOBAL_CLIENT_CONFIG "/etc/ssh/ssh_config"
+    #define GLOBAL_CONF_DIR "/etc"
 
     #define HAVE_ARPA_INET_H 1
     #define HAVE_GLOB_H 1

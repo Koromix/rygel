@@ -31,13 +31,21 @@
 #else
 #include <winsock2.h>
 #endif
-#include <sys/types.h>
+#include "libssh/config.h"
+#include "libssh/config_parser.h"
+#include "libssh/misc.h"
+#include "libssh/options.h"
+#include "libssh/pki.h"
+#include "libssh/pki_context.h"
 #include "libssh/pki_priv.h"
 #include "libssh/priv.h"
 #include "libssh/session.h"
+#include <sys/types.h>
 #include "libssh/misc.h"
 #include "libssh/options.h"
 #include "libssh/config_parser.h"
+#include "libssh/gssapi.h"
+#include "libssh/token.h"
 #ifdef WITH_SERVER
 #include "libssh/server.h"
 #include "libssh/bind.h"
@@ -253,8 +261,18 @@ int ssh_options_copy(ssh_session src, ssh_session *dest)
     new->opts.nodelay               = src->opts.nodelay;
     new->opts.config_processed      = src->opts.config_processed;
     new->opts.control_master        = src->opts.control_master;
+    new->opts.address_family        = src->opts.address_family;
     new->common.log_verbosity       = src->common.log_verbosity;
     new->common.callbacks           = src->common.callbacks;
+
+    SSH_PKI_CTX_FREE(new->pki_context);
+    if (src->pki_context != NULL) {
+        new->pki_context = ssh_pki_ctx_dup(src->pki_context);
+        if (new->pki_context == NULL) {
+            ssh_free(new);
+            return -1;
+        }
+    }
 
     *dest = new;
 
@@ -381,6 +399,8 @@ int ssh_options_set_algo(ssh_session session,
  *                the identity list.\n
  *                \n
  *                By default id_rsa, id_ecdsa and id_ed25519 files are used.\n
+ *                If libssh is built with FIDO2/U2F support, id_ecdsa_sk and\n
+ *                id_ed25519_sk files are also used by default.\n
  *                \n
  *                The identity used to authenticate with public key will be
  *                prepended to the list.
@@ -545,6 +565,16 @@ int ssh_options_set_algo(ssh_session session,
  *                Set it to specify that GSSAPI should delegate credentials
  *                to the server (int, 0 = false).
  *
+ *              - SSH_OPTIONS_GSSAPI_KEY_EXCHANGE
+ *                Set to true to allow GSSAPI key exchange (bool).
+ *
+ *              - SSH_OPTIONS_GSSAPI_KEY_EXCHANGE_ALGS
+ *                Set the GSSAPI key exchange method to be used (const char *,
+ *                comma-separated list). ex:
+ *                "gss-curve25519-sha256-,gss-nistp256-sha256-"
+ *                These will prefix the default algorithms if
+ *                SSH_OPTIONS_GSSAPI_KEY_EXCHANGE is true.
+ *
  *              - SSH_OPTIONS_PASSWORD_AUTH
  *                Set it if password authentication should be used
  *                in ssh_userauth_auto_pubkey(). (int, 0=false).
@@ -592,17 +622,17 @@ int ssh_options_set_algo(ssh_session session,
  *              - SSH_OPTIONS_RSA_MIN_SIZE
  *                Set the minimum RSA key size in bits to be accepted by the
  *                client for both authentication and hostkey verification.
- *                The values under 768 bits are not accepted even with this
+ *                The values under 1024 bits are not accepted even with this
  *                configuration option as they are considered completely broken.
  *                Setting 0 will revert the value to defaults.
- *                Default is 1024 bits or 2048 bits in FIPS mode.
+ *                Default is 3072 bits or 2048 bits in FIPS mode.
  *                (int)
-
+ *
  *              - SSH_OPTIONS_IDENTITY_AGENT
  *                Set the path to the SSH agent socket. If unset, the
  *                SSH_AUTH_SOCK environment is consulted.
  *                (const char *)
-
+ *
  *              - SSH_OPTIONS_IDENTITIES_ONLY
  *                Use only keys specified in the SSH config, even if agent
  *                offers more.
@@ -627,6 +657,22 @@ int ssh_options_set_algo(ssh_session session,
  *                Set to "none" to disable connection sharing.
  *                (const char *)
  *
+ *              - SSH_OPTIONS_PKI_CONTEXT
+ *                Attach a previously created generic PKI context to the
+ *                session. This allows supplying per-session PKI
+ *                configuration options for PKI operations.
+ *                All fields from the user's context are copied to the session's
+ *                own context. The user retains ownership of the original
+ *                context and can free it after this call.
+ *                (ssh_pki_ctx)
+ *
+ *              - SSH_OPTIONS_ADDRESS_FAMILY
+ *                Specify which address family to use when connecting.
+ *
+ *                Possible options:
+ *                 - SSH_ADDRESS_FAMILY_ANY: use any address family
+ *                 - SSH_ADDRESS_FAMILY_INET: IPv4 only
+ *                 - SSH_ADDRESS_FAMILY_INET6: IPv6 only
  *
  * @param  value The value to set. This is a generic pointer and the
  *               datatype which is used should be set according to the
@@ -861,7 +907,7 @@ int ssh_options_set(ssh_session session, enum ssh_options_e type,
             SAFE_FREE(session->opts.global_knownhosts);
             if (v == NULL) {
                 session->opts.global_knownhosts =
-                    strdup("/etc/ssh/ssh_known_hosts");
+                    strdup(GLOBAL_CONF_DIR "/ssh_known_hosts");
                 if (session->opts.global_knownhosts == NULL) {
                     ssh_set_error_oom(session);
                     return -1;
@@ -1151,7 +1197,6 @@ int ssh_options_set(ssh_session session, enum ssh_options_e type,
                 ssh_set_error_invalid(session);
                 return -1;
             } else {
-                ssh_proxyjumps_free(session->opts.proxy_jumps);
                 rc = ssh_config_parse_proxy_jump(session, v, true);
                 if (rc != SSH_OK) {
                     return SSH_ERROR;
@@ -1209,6 +1254,37 @@ int ssh_options_set(ssh_session session, enum ssh_options_e type,
                 session->opts.gss_delegate_creds = (x & 0xff);
             }
             break;
+#ifdef WITH_GSSAPI
+        case SSH_OPTIONS_GSSAPI_KEY_EXCHANGE:
+            if (value == NULL) {
+                ssh_set_error_invalid(session);
+                return -1;
+            } else {
+                bool *x = (bool *)value;
+                session->opts.gssapi_key_exchange = *x;
+            }
+            break;
+        case SSH_OPTIONS_GSSAPI_KEY_EXCHANGE_ALGS:
+            v = value;
+            if (v == NULL || v[0] == '\0') {
+                ssh_set_error_invalid(session);
+                return -1;
+            } else {
+                /* Check if algorithms are supported */
+                char *ret =
+                    ssh_find_all_matching(GSSAPI_KEY_EXCHANGE_SUPPORTED, v);
+                if (ret == NULL) {
+                    ssh_set_error(session,
+                                  SSH_FATAL,
+                                  "GSSAPI key exchange algorithms not "
+                                  "supported or invalid");
+                    return -1;
+                }
+                SAFE_FREE(session->opts.gssapi_key_exchange_algs);
+                session->opts.gssapi_key_exchange_algs = ret;
+            }
+            break;
+#endif
         case SSH_OPTIONS_PASSWORD_AUTH:
         case SSH_OPTIONS_PUBKEY_AUTH:
         case SSH_OPTIONS_KBDINT_AUTH:
@@ -1288,11 +1364,13 @@ int ssh_options_set(ssh_session session, enum ssh_options_e type,
 
                 /* (*x == 0) is allowed as it is used to revert to default */
 
-                if (*x > 0 && *x < 768) {
-                    ssh_set_error(session, SSH_REQUEST_DENIED,
+                if (*x > 0 && *x < RSA_MIN_KEY_SIZE) {
+                    ssh_set_error(session,
+                                  SSH_REQUEST_DENIED,
                                   "The provided value (%d) for minimal RSA key "
-                                  "size is too small. Use at least 768 bits.",
-                                  *x);
+                                  "size is too small. Use at least %d bits.",
+                                  *x,
+                                  RSA_MIN_KEY_SIZE);
                     return -1;
                 }
                 session->opts.rsa_min_size = *x;
@@ -1352,6 +1430,34 @@ int ssh_options_set(ssh_session session, enum ssh_options_e type,
                     }
                     session->opts.exp_flags &= ~SSH_OPT_EXP_FLAG_CONTROL_PATH;
                 }
+            }
+            break;
+        case SSH_OPTIONS_PKI_CONTEXT:
+            if (value == NULL) {
+                ssh_set_error_invalid(session);
+                return -1;
+            }
+
+            SSH_PKI_CTX_FREE(session->pki_context);
+
+            session->pki_context = ssh_pki_ctx_dup((const ssh_pki_ctx)value);
+            if (session->pki_context == NULL) {
+                ssh_set_error_oom(session);
+                return -1;
+            }
+            break;
+        case SSH_OPTIONS_ADDRESS_FAMILY:
+            if (value == NULL) {
+                ssh_set_error_invalid(session);
+                return -1;
+            } else {
+                int *x = (int *)value;
+                if (*x < SSH_ADDRESS_FAMILY_ANY ||
+                    *x > SSH_ADDRESS_FAMILY_INET6) {
+                    ssh_set_error_invalid(session);
+                    return -1;
+                }
+                session->opts.address_family = *x;
             }
             break;
         default:
@@ -1455,7 +1561,16 @@ int ssh_options_get_port(ssh_session session, unsigned int* port_target) {
  *              - SSH_OPTIONS_IDENTITY:
  *                Get the first identity file name (const char *).\n
  *                \n
- *                By default id_rsa, id_ecdsa and id_ed25519 files are used.
+ *                By default `id_rsa`, `id_ecdsa`, `id_ed25519`, `id_ecdsa_sk`
+ *                and `id_ed25519_sk` (when SK support is built in) files are
+ *                used.
+ *
+ *              - SSH_OPTIONS_NEXT_IDENTITY:
+ *                Get the next identity file name (const char *).\n
+ *                \n
+ *                Repeat calls to get all key paths. SSH_EOF is returned when
+ *                the end of list is reached. Another call will start another
+ *                iteration over the same list.
  *
  *              - SSH_OPTIONS_PROXYCOMMAND:
  *                Get the proxycommand necessary to log into the
@@ -1548,6 +1663,30 @@ int ssh_options_get(ssh_session session, enum ssh_options_e type, char** value)
                 return SSH_ERROR;
             }
             src = ssh_iterator_value(char *, it);
+            break;
+        }
+
+        case SSH_OPTIONS_NEXT_IDENTITY: {
+            if (session->opts.identity_it != NULL) {
+                /* Move to the next item */
+                session->opts.identity_it = session->opts.identity_it->next;
+                if (session->opts.identity_it == NULL) {
+                    *value = NULL;
+                    return SSH_EOF;
+                }
+            } else {
+                /* Get iterator from opts */
+                struct ssh_iterator *it = NULL;
+                it = ssh_list_get_iterator(session->opts.identity);
+                if (it == NULL) {
+                    it = ssh_list_get_iterator(session->opts.identity_non_exp);
+                }
+                if (it == NULL) {
+                    return SSH_ERROR;
+                }
+                session->opts.identity_it = it;
+            }
+            src = ssh_iterator_value(char *, session->opts.identity_it);
             break;
         }
 
@@ -1660,6 +1799,7 @@ int ssh_options_getopt(ssh_session session, int *argcptr, char **argv)
     int compress = 0;
     int cont = 1;
     size_t current = 0;
+    int opt_rc = 0;
     int saveoptind = optind; /* need to save 'em */
     int saveopterr = opterr;
     int opt;
@@ -1670,7 +1810,7 @@ int ssh_options_getopt(ssh_session session, int *argcptr, char **argv)
     }
 
     opterr = 0; /* shut up getopt */
-    while((opt = getopt(argc, argv, "c:i:Cl:p:vb:r12")) != -1) {
+    while ((opt = getopt(argc, argv, "c:i:o:Cl:p:vb:r12")) != -1) {
         switch(opt) {
         case 'l':
             user = optarg;
@@ -1680,6 +1820,7 @@ int ssh_options_getopt(ssh_session session, int *argcptr, char **argv)
             break;
         case 'v':
             debuglevel++;
+            ssh_set_log_level(debuglevel);
             break;
         case 'r':
             break;
@@ -1691,6 +1832,9 @@ int ssh_options_getopt(ssh_session session, int *argcptr, char **argv)
             break;
         case 'C':
             compress++;
+            break;
+        case 'o':
+            opt_rc = ssh_config_parse_line_cli(session, optarg);
             break;
         case '2':
             break;
@@ -1723,6 +1867,9 @@ int ssh_options_getopt(ssh_session session, int *argcptr, char **argv)
                 }
             }
         } /* switch */
+        if (opt_rc == SSH_ERROR) {
+            break;
+        }
     } /* while */
     opterr = saveopterr;
     tmp = realloc(save, (current + (argc - optind)) * sizeof(char*));
@@ -1745,9 +1892,12 @@ int ssh_options_getopt(ssh_session session, int *argcptr, char **argv)
         optind++;
     }
 
-    ssh_set_log_level(debuglevel);
-
     optind = saveoptind;
+
+    if (opt_rc == SSH_ERROR) {
+        SAFE_FREE(save);
+        return SSH_ERROR;
+    }
 
     if(!cont) {
         SAFE_FREE(save);
@@ -1814,6 +1964,8 @@ int ssh_options_getopt(ssh_session session, int *argcptr, char **argv)
  *
  * @param  filename     The options file to use, if NULL the default
  *                      ~/.ssh/config and /etc/ssh/ssh_config will be used.
+ *                      If complied with support for hermetic-usr,
+ *                      /usr/etc/ssh/ssh_config will be used last.
  *
  * @return 0 on success, < 0 on error.
  *
@@ -1821,48 +1973,68 @@ int ssh_options_getopt(ssh_session session, int *argcptr, char **argv)
  */
 int ssh_options_parse_config(ssh_session session, const char *filename)
 {
-  char *expanded_filename = NULL;
-  int r;
+    char *expanded_filename = NULL;
+    int r;
+    FILE *fp = NULL;
 
-  if (session == NULL) {
-    return -1;
-  }
-  if (session->opts.host == NULL) {
-    ssh_set_error_invalid(session);
-    return -1;
-  }
+    if (session == NULL) {
+        return -1;
+    }
+    if (session->opts.host == NULL) {
+        ssh_set_error_invalid(session);
+        return -1;
+    }
 
-  if (session->opts.sshdir == NULL) {
-      r = ssh_options_set(session, SSH_OPTIONS_SSH_DIR, NULL);
-      if (r < 0) {
-          ssh_set_error_oom(session);
-          return -1;
-      }
-  }
+    if (session->opts.sshdir == NULL) {
+        r = ssh_options_set(session, SSH_OPTIONS_SSH_DIR, NULL);
+        if (r < 0) {
+            ssh_set_error_oom(session);
+            return -1;
+        }
+    }
 
-  /* set default filename */
-  if (filename == NULL) {
-    expanded_filename = ssh_path_expand_escape(session, "%d/config");
-  } else {
-    expanded_filename = ssh_path_expand_escape(session, filename);
-  }
-  if (expanded_filename == NULL) {
-    return -1;
-  }
+    /* set default filename */
+    if (filename == NULL) {
+        expanded_filename = ssh_path_expand_escape(session, "%d/.ssh/config");
+    } else {
+        expanded_filename = ssh_path_expand_escape(session, filename);
+    }
+    if (expanded_filename == NULL) {
+        return -1;
+    }
 
-  r = ssh_config_parse_file(session, expanded_filename);
-  if (r < 0) {
-      goto out;
-  }
-  if (filename == NULL) {
-      r = ssh_config_parse_file(session, GLOBAL_CLIENT_CONFIG);
-  }
+    r = ssh_config_parse_file(session, expanded_filename);
+    if (r < 0) {
+        goto out;
+    }
+    if (filename == NULL) {
+        fp = ssh_strict_fopen(GLOBAL_CLIENT_CONFIG, SSH_MAX_CONFIG_FILE_SIZE);
+        if (fp != NULL) {
+            filename = GLOBAL_CLIENT_CONFIG;
+#ifdef USR_GLOBAL_CLIENT_CONFIG
+        } else {
+            fp = ssh_strict_fopen(USR_GLOBAL_CLIENT_CONFIG,
+                                  SSH_MAX_CONFIG_FILE_SIZE);
+            if (fp != NULL) {
+                filename = USR_GLOBAL_CLIENT_CONFIG;
+            }
+#endif
+        }
 
-  /* Do not process the default configuration as part of connection again */
-  session->opts.config_processed = true;
+        if (fp) {
+            SSH_LOG(SSH_LOG_PACKET,
+                    "Reading configuration data from %s",
+                    filename);
+            r = ssh_config_parse(session, fp, true);
+            fclose(fp);
+        }
+    }
+
+    /* Do not process the default configuration as part of connection again */
+    session->opts.config_processed = true;
 out:
-  free(expanded_filename);
-  return r;
+    free(expanded_filename);
+    return r;
 }
 
 int ssh_options_apply(ssh_session session)
@@ -1886,7 +2058,7 @@ int ssh_options_apply(ssh_session session)
 
     if ((session->opts.exp_flags & SSH_OPT_EXP_FLAG_KNOWNHOSTS) == 0) {
         if (session->opts.knownhosts == NULL) {
-            tmp = ssh_path_expand_escape(session, "%d/known_hosts");
+            tmp = ssh_path_expand_escape(session, "%d/.ssh/known_hosts");
         } else {
             tmp = ssh_path_expand_escape(session, session->opts.knownhosts);
         }
@@ -1900,7 +2072,7 @@ int ssh_options_apply(ssh_session session)
 
     if ((session->opts.exp_flags & SSH_OPT_EXP_FLAG_GLOBAL_KNOWNHOSTS) == 0) {
         if (session->opts.global_knownhosts == NULL) {
-            tmp = strdup("/etc/ssh/ssh_known_hosts");
+            tmp = strdup(GLOBAL_CONF_DIR "/ssh_known_hosts");
         } else {
             tmp = ssh_path_expand_escape(session,
                                          session->opts.global_knownhosts);
@@ -1968,10 +2140,10 @@ int ssh_options_apply(ssh_session session)
              * it with ssh expansion of ssh escape characters.
              */
             tmp = ssh_path_expand_escape(session, id);
+            free(id);
             if (tmp == NULL) {
                 return -1;
             }
-            free(id);
         }
 
         /* use append to keep the order at first call and use prepend
@@ -1982,6 +2154,7 @@ int ssh_options_apply(ssh_session session)
             rc = ssh_list_append(session->opts.identity, tmp);
         }
         if (rc != SSH_OK) {
+            free(tmp);
             return -1;
         }
     }
@@ -1993,16 +2166,27 @@ int ssh_options_apply(ssh_session session)
         char *id = tmp;
 
         tmp = ssh_path_expand_escape(session, id);
+        free(id);
         if (tmp == NULL) {
             return -1;
         }
-        free(id);
 
         rc = ssh_list_append(session->opts.certificate, tmp);
         if (rc != SSH_OK) {
+            free(tmp);
             return -1;
         }
     }
+
+#ifdef WITH_GSSAPI
+    if (session->opts.gssapi_key_exchange) {
+        rc = ssh_gssapi_check_client_config(session);
+        if (rc != SSH_OK) {
+            SSH_LOG(SSH_LOG_WARN, "Disabled GSSAPI key exchange");
+            session->opts.gssapi_key_exchange = false;
+        }
+    }
+#endif
 
     return 0;
 }
@@ -2179,13 +2363,21 @@ static int ssh_bind_set_algo(ssh_bind sshbind,
  *                      - SSH_BIND_OPTIONS_RSA_MIN_SIZE
  *                        Set the minimum RSA key size in bits to be accepted by
  *                        the server for both authentication and hostkey
- *                        operations. The values under 768 bits are not accepted
+ *                        operations. The values under 1024 bits are not accepted
  *                        even with this configuration option as they are
  *                        considered completely broken. Setting 0 will revert
  *                        the value to defaults.
- *                        Default is 1024 bits or 2048 bits in FIPS mode.
+ *                        Default is 3072 bits or 2048 bits in FIPS mode.
  *                        (int)
  *
+ *                      - SSH_BIND_OPTIONS_GSSAPI_KEY_EXCHANGE
+ *                        Set true to enable GSSAPI key exchange,
+ *                        false to disable GSSAPI key exchange. (bool)
+ *
+ *                      - SSH_BIND_OPTIONS_GSSAPI_KEY_EXCHANGE_ALGS
+ *                        Set the GSSAPI key exchange method to be used
+ *                        (const char *, comma-separated list).
+ *                        ex: "gss-group14-sha256-,gss-group16-sha512-"
  *
  * @param  value        The value to set. This is a generic pointer and the
  *                      datatype which should be used is described at the
@@ -2268,6 +2460,9 @@ ssh_bind_options_set(ssh_bind sshbind,
                               SSH_FATAL,
                               "The host key size %d is too small.",
                               ssh_key_size(key));
+                if (type != SSH_BIND_OPTIONS_IMPORT_KEY) {
+                    SSH_KEY_FREE(key);
+                }
                 return -1;
             }
             key_type = ssh_key_type(key);
@@ -2310,6 +2505,11 @@ ssh_bind_options_set(ssh_bind sshbind,
                    need it in case some other function wants it */
                 rc = ssh_bind_set_key(sshbind, bind_key_path_loc, value);
                 if (rc < 0) {
+                    ssh_key_free(key);
+                    return -1;
+                }
+            } else if (type == SSH_BIND_OPTIONS_IMPORT_KEY_STR) {
+                if (bind_key_loc == NULL) {
                     ssh_key_free(key);
                     return -1;
                 }
@@ -2563,17 +2763,47 @@ ssh_bind_options_set(ssh_bind sshbind,
 
             /* (*x == 0) is allowed as it is used to revert to default */
 
-            if (*x > 0 && *x < 768) {
+            if (*x > 0 && *x < RSA_MIN_KEY_SIZE) {
                 ssh_set_error(sshbind,
                               SSH_REQUEST_DENIED,
                               "The provided value (%d) for minimal RSA key "
-                              "size is too small. Use at least 768 bits.",
-                              *x);
+                              "size is too small. Use at least %d bits.",
+                              *x,
+                              RSA_MIN_KEY_SIZE);
                 return -1;
             }
             sshbind->rsa_min_size = *x;
         }
         break;
+#ifdef WITH_GSSAPI
+    case SSH_BIND_OPTIONS_GSSAPI_KEY_EXCHANGE:
+        if (value == NULL) {
+            ssh_set_error_invalid(sshbind);
+            return -1;
+        } else {
+            bool *x = (bool *)value;
+            sshbind->gssapi_key_exchange = *x;
+        }
+        break;
+    case SSH_BIND_OPTIONS_GSSAPI_KEY_EXCHANGE_ALGS:
+        if (value == NULL) {
+            ssh_set_error_invalid(sshbind);
+            return -1;
+        } else {
+            char *ret = NULL;
+            SAFE_FREE(sshbind->gssapi_key_exchange_algs);
+            ret = ssh_find_all_matching(GSSAPI_KEY_EXCHANGE_SUPPORTED, value);
+            if (ret == NULL) {
+                ssh_set_error(
+                    sshbind,
+                    SSH_REQUEST_DENIED,
+                    "GSSAPI key exchange algorithms not supported or invalid");
+                return -1;
+            }
+            sshbind->gssapi_key_exchange_algs = ret;
+        }
+        break;
+#endif /* WITH_GSSAPI */
     default:
         ssh_set_error(sshbind,
                       SSH_REQUEST_DENIED,
@@ -2706,7 +2936,13 @@ int ssh_bind_options_parse_config(ssh_bind sshbind, const char *filename)
     /* If the global default configuration hasn't been processed yet, process it
      * before the provided configuration. */
     if (!(sshbind->config_processed)) {
-        rc = ssh_bind_config_parse_file(sshbind, GLOBAL_BIND_CONFIG);
+        if (ssh_file_readaccess_ok(GLOBAL_BIND_CONFIG)) {
+            rc = ssh_bind_config_parse_file(sshbind, GLOBAL_BIND_CONFIG);
+#ifdef USR_GLOBAL_BIND_CONFIG
+        } else {
+            rc = ssh_bind_config_parse_file(sshbind, USR_GLOBAL_BIND_CONFIG);
+#endif
+        }
         if (rc != 0) {
             return rc;
         }

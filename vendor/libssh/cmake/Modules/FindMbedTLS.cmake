@@ -72,21 +72,23 @@ find_library(MBEDTLS_X509_LIBRARY
 set(MBEDTLS_LIBRARIES ${MBEDTLS_SSL_LIBRARY} ${MBEDTLS_CRYPTO_LIBRARY}
         ${MBEDTLS_X509_LIBRARY})
 
+# mbedtls 2.8
 if (MBEDTLS_INCLUDE_DIR AND EXISTS "${MBEDTLS_INCLUDE_DIR}/mbedtls/version.h")
-    # mbedtls 2.8
     file(STRINGS "${MBEDTLS_INCLUDE_DIR}/mbedtls/version.h" _mbedtls_version_str REGEX
             "^#[\t ]*define[\t ]+MBEDTLS_VERSION_STRING[\t ]+\"[0-9]+.[0-9]+.[0-9]+\"")
 
-    string(REGEX REPLACE "^.*MBEDTLS_VERSION_STRING.*([0-9]+.[0-9]+.[0-9]+).*"
+    string(REGEX REPLACE "^.*MBEDTLS_VERSION_STRING.*([0-9]+\\.[0-9]+\\.[0-9]+).*$"
             "\\1" MBEDTLS_VERSION "${_mbedtls_version_str}")
-elseif (MBEDTLS_INCLUDE_DIR AND EXISTS "${MBEDTLS_INCLUDE_DIR}/mbedtls/build_info.h")
-    # mbedtls 3.6
-    file(STRINGS "${MBEDTLS_INCLUDE_DIR}/mbedtls/version.h" _mbedtls_version_str REGEX
+endif()
+
+# mbedtls 3.6
+if (NOT MBEDTLS_VERSION AND MBEDTLS_INCLUDE_DIR AND EXISTS "${MBEDTLS_INCLUDE_DIR}/mbedtls/build_info.h")
+    file(STRINGS "${MBEDTLS_INCLUDE_DIR}/mbedtls/build_info.h" _mbedtls_version_str REGEX
             "^#[\t ]*define[\t ]+MBEDTLS_VERSION_STRING[\t ]+\"[0-9]+.[0-9]+.[0-9]+\"")
 
-    string(REGEX REPLACE "^.*MBEDTLS_VERSION_STRING.*([0-9]+.[0-9]+.[0-9]+).*"
+    string(REGEX REPLACE "^.*MBEDTLS_VERSION_STRING.*([0-9]+\\.[0-9]+\\.[0-9]+).*$"
             "\\1" MBEDTLS_VERSION "${_mbedtls_version_str}")
-endif ()
+endif()
 
 include(FindPackageHandleStandardArgs)
 if (MBEDTLS_VERSION)

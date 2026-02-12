@@ -29,6 +29,11 @@
 /* all OID begin with the tag identifier + length */
 #define SSH_OID_TAG 06
 
+#define GSSAPI_KEY_EXCHANGE_SUPPORTED "gss-group14-sha256-," \
+                                      "gss-group16-sha512-," \
+                                      "gss-nistp256-sha256-," \
+                                      "gss-curve25519-sha256-"
+
 typedef struct ssh_gssapi_struct *ssh_gssapi;
 
 #ifdef __cplusplus
@@ -44,14 +49,12 @@ enum ssh_gssapi_state_e {
 
 struct ssh_gssapi_struct{
     enum ssh_gssapi_state_e state; /* current state */
-    struct gss_OID_desc_struct mech; /* mechanism being elected for auth */
     gss_cred_id_t server_creds; /* credentials of server */
     gss_cred_id_t client_creds; /* creds delegated by the client */
     gss_ctx_id_t ctx; /* the authentication context */
     gss_name_t client_name; /* Identity of the client */
     char *user; /* username of client */
     char *canonic_user; /* canonic form of the client's username */
-    char *service; /* name of the service */
     struct {
         gss_name_t server_name; /* identity of server */
         OM_uint32 flags; /* flags used for init context */
@@ -65,6 +68,7 @@ struct ssh_gssapi_struct{
 int ssh_gssapi_handle_userauth(ssh_session session, const char *user, uint32_t n_oid, ssh_string *oids);
 SSH_PACKET_CALLBACK(ssh_packet_userauth_gssapi_token_server);
 SSH_PACKET_CALLBACK(ssh_packet_userauth_gssapi_mic);
+int ssh_gssapi_server_oids(gss_OID_set *selected);
 #endif /* WITH_SERVER */
 
 SSH_PACKET_CALLBACK(ssh_packet_userauth_gssapi_token);
@@ -76,7 +80,20 @@ int ssh_gssapi_init(ssh_session session);
 void ssh_gssapi_log_error(int verb, const char *msg_a, int maj_stat, int min_stat);
 int ssh_gssapi_auth_mic(ssh_session session);
 void ssh_gssapi_free(ssh_session session);
+int ssh_gssapi_client_identity(ssh_session session, gss_OID_set *valid_oids);
 char *ssh_gssapi_name_to_char(gss_name_t name);
+int ssh_gssapi_import_name(struct ssh_gssapi_struct *gssapi, const char *host);
+OM_uint32 ssh_gssapi_init_ctx(struct ssh_gssapi_struct *gssapi,
+                              gss_buffer_desc *input_token,
+                              gss_buffer_desc *output_token,
+                              OM_uint32 *ret_flags);
+
+char *ssh_gssapi_oid_hash(ssh_string oid);
+char *ssh_gssapi_kex_mechs(ssh_session session);
+int ssh_gssapi_check_client_config(ssh_session session);
+ssh_buffer ssh_gssapi_build_mic(ssh_session session, const char *context);
+int ssh_gssapi_auth_keyex_mic(ssh_session session,
+                              gss_buffer_desc *mic_token_buf);
 
 #ifdef __cplusplus
 }

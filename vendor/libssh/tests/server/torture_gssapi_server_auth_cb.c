@@ -238,6 +238,7 @@ setup_callback_server(void **state)
     ss->server_cb->gssapi_verify_mic_function = verify_mic;
     ss->server_cb->userdata = &sdata;
 
+    setenv("NSS_WRAPPER_HOSTNAME", "server.libssh.site", 1);
     /* Start the server using the default values */
     pid = fork_run_server(ss, free_test_server_state, &tss);
     if (pid < 0) {

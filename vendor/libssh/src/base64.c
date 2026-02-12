@@ -186,7 +186,7 @@ error:
 static int to_block4(unsigned long *block, const char *source, int num)
 {
     const char *ptr = NULL;
-    unsigned int i;
+    size_t i;
 
     *block = 0;
     if (num < 1) {

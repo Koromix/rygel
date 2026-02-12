@@ -145,9 +145,8 @@ int run_server(struct server_state_st *state)
     }
 
     if (state->host_key == NULL && state->rsa_key == NULL &&
-        state->ecdsa_key == NULL && state->ed25519_key) {
+        state->ecdsa_key == NULL && state->ed25519_key == NULL) {
         fprintf(stderr, "Missing host key\n");
-        goto out;
     }
 
     sshbind = ssh_bind_new();
@@ -193,6 +192,30 @@ int run_server(struct server_state_st *state)
                 ssh_get_error(sshbind));
         goto out;
     }
+
+#ifdef WITH_GSSAPI
+    rc = ssh_bind_options_set(sshbind,
+                              SSH_BIND_OPTIONS_GSSAPI_KEY_EXCHANGE,
+                              &(state->gssapi_key_exchange));
+    if (rc != 0) {
+        fprintf(stderr,
+                "Error setting GSSAPI key exchange: %s\n",
+                ssh_get_error(sshbind));
+        goto out;
+    }
+
+    if (state->gssapi_key_exchange_algs != NULL) {
+        rc = ssh_bind_options_set(sshbind,
+                                  SSH_BIND_OPTIONS_GSSAPI_KEY_EXCHANGE_ALGS,
+                                  state->gssapi_key_exchange_algs);
+        if (rc != 0) {
+            fprintf(stderr,
+                    "Error setting GSSAPI key exchange algorithms: %s\n",
+                    ssh_get_error(sshbind));
+            goto out;
+        }
+    }
+#endif /* WITH_GSSAPI */
 
     rc = ssh_bind_options_set(sshbind,
                               SSH_BIND_OPTIONS_BINDPORT,

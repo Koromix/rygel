@@ -60,6 +60,27 @@
 #define MAX_ENTRIES_NUM_IN_PACKET 50
 #define MAX_LONG_NAME_LEN 350
 
+/**
+ * @internal
+ *
+ * @brief Creates an SFTP client message from a received packet.
+ *
+ * Allocates and initializes a sftp_client_message structure from a raw
+ * SFTP packet. Copies the complete @p packet payload and parses common
+ * fields such as message type, request id, and message-specific data
+ * (handle, filename, attributes, offsets, etc.) depending on the SFTP
+ * message type.
+ *
+ * On success, the returned message owns its internal buffers and must
+ * be freed with sftp_client_message_free().
+ *
+ * @param[in] sftp   The SFTP session associated with the packet.
+ * @param[in] packet The received SFTP packet to decode.
+ *
+ * @return A newly allocated sftp_client_message on success, or NULL on
+ *         error (memory allocation failure, malformed packet, or
+ *         unsupported message type).
+ */
 static sftp_client_message
 sftp_make_client_message(sftp_session sftp, sftp_packet packet)
 {
@@ -256,6 +277,17 @@ error:
     return NULL;
 }
 
+/**
+ * @brief Reads the next SFTP client message from the session.
+ *
+ * Reads a single SFTP packet from the given SFTP session and converts it
+ * into a parsed sftp_client_message structure.
+ *
+ * @param[in] sftp The SFTP session to read from.
+ *
+ * @return A newly allocated sftp_client_message on success; NULL if no packet
+ *         is available or an error occurs.
+ */
 sftp_client_message sftp_get_client_message(sftp_session sftp)
 {
     sftp_packet packet = NULL;
@@ -286,22 +318,62 @@ sftp_get_client_message_from_packet(sftp_session sftp)
     return sftp_make_client_message(sftp, packet);
 }
 
-/* Send an sftp client message. Can be used in case of proxying */
+/**
+ * @brief Send an SFTP client message.
+ *
+ * Writes the given client message as a packet using the stored message
+ * type and complete_message buffer. Can be used in case of proxying.
+ *
+ * @param[in] sftp The SFTP session.
+ * @param[in] msg  The client message to send.
+ *
+ * @return 0 on success; -1 on error from sftp_packet_write().
+ */
 int sftp_send_client_message(sftp_session sftp, sftp_client_message msg)
 {
     return sftp_packet_write(sftp, msg->type, msg->complete_message);
 }
 
+/**
+ * @brief Get the SFTP client message type.
+ *
+ * Returns the SFTP packet type associated with the given client message
+ * (for example `SSH_FXP_READ`, `SSH_FXP_WRITE`, `SSH_FXP_OPEN`, ...).
+ *
+ * @param[in] msg The SFTP client message.
+ *
+ * @return The SFTP message type as an unsigned 8-bit value.
+ */
 uint8_t sftp_client_message_get_type(sftp_client_message msg)
 {
     return msg->type;
 }
 
+/**
+ * @brief Get the filename associated with an SFTP client message.
+ *
+ * Returns the filename carried by the given SFTP client message, if the
+ * message type includes a filename field (for example OPEN, REMOVE, RENAME).
+ *
+ * @param[in] msg The SFTP client message.
+ *
+ * @return Filename string, or NULL if no filename
+ *         is associated with the message.
+ */
 const char *sftp_client_message_get_filename(sftp_client_message msg)
 {
     return msg->filename;
 }
 
+/**
+ * @brief Set the filename associated with an SFTP client message.
+ *
+ * Replaces the current filename stored in the client message with a copy
+ * of the given @p newname string.
+ *
+ * @param[in] msg     The SFTP client message to modify.
+ * @param[in] newname The new filename to store in the message.
+ */
 void
 sftp_client_message_set_filename(sftp_client_message msg, const char *newname)
 {
@@ -309,6 +381,17 @@ sftp_client_message_set_filename(sftp_client_message msg, const char *newname)
     msg->filename = strdup(newname);
 }
 
+/**
+ * @brief Get the data field of an SFTP client message as a string.
+ *
+ * Converts the internal ssh_string data field to a string
+ * on first use and caches the result in the message. Subsequent calls
+ * return the cached pointer.
+ *
+ * @param[in] msg The SFTP client message.
+ *
+ * @return The data as string, or NULL on error.
+ */
 const char *sftp_client_message_get_data(sftp_client_message msg)
 {
     if (msg->str_data == NULL)
@@ -316,16 +399,48 @@ const char *sftp_client_message_get_data(sftp_client_message msg)
     return msg->str_data;
 }
 
+/**
+ * @brief Get the flags associated with an SFTP client message.
+ *
+ * Returns the flags field stored in the given SFTP client message. The exact
+ * meaning of the flags depends on the SFTP message type (for example, open
+ * or stat flags).
+ *
+ * @param[in] msg The SFTP client message.
+ *
+ * @return The flags value as an unsigned 32-bit integer.
+ */
 uint32_t sftp_client_message_get_flags(sftp_client_message msg)
 {
     return msg->flags;
 }
 
+/**
+ * @brief Get the submessage name associated with an SFTP client message.
+ *
+ * Returns the submessage string stored in the given SFTP client message.
+ * This is typically used for vendor-specific SFTP operations.
+ *
+ * @param[in] msg The SFTP client message.
+ *
+ * @return The submessage name as a string, or NULL if no
+ *         submessage is associated with the message.
+ */
 const char *sftp_client_message_get_submessage(sftp_client_message msg)
 {
     return msg->submessage;
 }
 
+/**
+ * @brief Free an SFTP client message and its associated resources.
+ *
+ * Releases all dynamically allocated fields in the SFTP client message
+ * (such as filename, submessage, data, handle, attributes, and cached
+ * buffers) and then frees the message structure itself. The function
+ * does nothing if msg is NULL.
+ *
+ * @param[in] msg The SFTP client message to free, or NULL.
+ */
 void sftp_client_message_free(sftp_client_message msg)
 {
     if (msg == NULL) {
@@ -343,6 +458,20 @@ void sftp_client_message_free(sftp_client_message msg)
     SAFE_FREE(msg);
 }
 
+/**
+ * @brief Send an SFTP NAME reply for a client message.
+ *
+ * Builds and sends an `SSH_FXP_NAME` packet in response to the given
+ * SFTP client message, containing a single filename and its attributes.
+ * The function encodes the message id, the count of returned names
+ * (always 1), the filename fields and the provided attributes.
+ *
+ * @param[in] msg   The SFTP client message being answered.
+ * @param[in] name  The filename to return to the client.
+ * @param[in] attr  The file attributes associated with the filename.
+ *
+ * @return 0 on success; -1 on memory allocation failure or packet send error.
+ */
 int
 sftp_reply_name(sftp_client_message msg, const char *name, sftp_attributes attr)
 {
@@ -378,6 +507,19 @@ sftp_reply_name(sftp_client_message msg, const char *name, sftp_attributes attr)
     return 0;
 }
 
+/**
+ * @brief Send an SFTP HANDLE reply for a client message.
+ *
+ * Builds and sends an `SSH_FXP_HANDLE` packet in response to the given
+ * SFTP client message, containing the provided file @p handle. The message
+ * id is taken from the client message and the handle is encoded as an
+ * SSH string.
+ *
+ * @param[in] msg    The SFTP client message being answered.
+ * @param[in] handle The file handle to return to the client.
+ *
+ * @return 0 on success; -1 on memory allocation failure or packet send error.
+ */
 int sftp_reply_handle(sftp_client_message msg, ssh_string handle)
 {
     ssh_buffer out;
@@ -402,6 +544,18 @@ int sftp_reply_handle(sftp_client_message msg, ssh_string handle)
     return 0;
 }
 
+/**
+ * @brief Send an SFTP ATTRS reply for a client message.
+ *
+ * Builds and sends an `SSH_FXP_ATTRS` packet in response to the given
+ * SFTP client message, encoding the message id and the provided file
+ * attributes.
+ *
+ * @param[in] msg  The SFTP client message being answered.
+ * @param[in] attr The file attributes to return to the client.
+ *
+ * @return 0 on success; -1 on memory allocation failure or packet send error.
+ */
 int sftp_reply_attr(sftp_client_message msg, sftp_attributes attr)
 {
     ssh_buffer out;
@@ -424,6 +578,20 @@ int sftp_reply_attr(sftp_client_message msg, sftp_attributes attr)
     return 0;
 }
 
+/**
+ * @brief Add one name entry to a multi-name SFTP reply.
+ *
+ * Appends a @p file name, @p longname and attributes to the buffered NAME reply
+ * stored in the client message. Can be called multiple times before the
+ * reply is sent.
+ *
+ * @param[in] msg      The SFTP client message being prepared.
+ * @param[in] file     The filename to add.
+ * @param[in] longname The long name to add.
+ * @param[in] attr     The file attributes for this entry.
+ *
+ * @return 0 on success; -1 on memory allocation or buffer write error.
+ */
 int
 sftp_reply_names_add(sftp_client_message msg, const char *file,
                      const char *longname, sftp_attributes attr)
@@ -464,6 +632,17 @@ sftp_reply_names_add(sftp_client_message msg, const char *file,
     return 0;
 }
 
+/**
+ * @brief Send a multi-name SFTP reply.
+ *
+ * Sends an `SSH_FXP_NAME` packet for the given client message using the
+ * accumulated name entries stored in msg->attrbuf and msg->attr_num.
+ * After sending, the buffer and counter are reset.
+ *
+ * @param[in] msg The SFTP client message to reply to.
+ *
+ * @return 0 on success; -1 on memory allocation or packet send error.
+ */
 int sftp_reply_names(sftp_client_message msg)
 {
     ssh_buffer out;
@@ -495,6 +674,20 @@ int sftp_reply_names(sftp_client_message msg)
     return 0;
 }
 
+/**
+ * @brief Send an SFTP STATUS reply.
+ *
+ * Sends an `SSH_FXP_STATUS` packet for the given client message, including
+ * the @p status code and an optional human readable @p message. The language
+ * tag is sent as an empty string.
+ *
+ * @param[in] msg     The SFTP client message to reply to.
+ * @param[in] status  The SFTP status code to send (e.g. `SSH_FX_OK`,
+ * `SSH_FX_FAILURE`).
+ * @param[in] message Optional text message describing the status, or NULL.
+ *
+ * @return 0 on success; -1 on memory allocation or packet send error.
+ */
 int
 sftp_reply_status(sftp_client_message msg, uint32_t status, const char *message)
 {
@@ -531,6 +724,18 @@ sftp_reply_status(sftp_client_message msg, uint32_t status, const char *message)
     return 0;
 }
 
+/**
+ * @brief Send an SFTP DATA reply.
+ *
+ * Sends an `SSH_FXP_DATA` packet for the given client message, containing
+ * the provided data buffer and its length.
+ *
+ * @param[in] msg  The SFTP client message to reply to.
+ * @param[in] data The data buffer to send.
+ * @param[in] len  Number of bytes from data to send.
+ *
+ * @return 0 on success; -1 on memory allocation or packet send error.
+ */
 int sftp_reply_data(sftp_client_message msg, const void *data, int len)
 {
     ssh_buffer out;
@@ -646,12 +851,18 @@ int sftp_reply_version(sftp_client_message client_msg)
     return SSH_OK;
 }
 
-
-/*
- * This function will return you a new handle to give the client.
- * the function accepts an info that can be retrieved later with
- * the handle. Care is given that a corrupted handle won't give a
- * valid info (or worse).
+/**
+ * @brief Allocate a new SFTP handle slot.
+ *
+ * Finds a free handle slot in the SFTP session, stores the given @p info
+ * there and returns a 4-byte ssh_string that encodes the handle
+ * index.
+ *
+ * @param[in] sftp The SFTP session.
+ * @param[in] info Info to be stored in the handle slot.
+ *
+ * @return A new handle as ssh_string on success; NULL if no slot is
+ *         available or on memory allocation failure.
  */
 ssh_string sftp_handle_alloc(sftp_session sftp, void *info)
 {
@@ -688,6 +899,19 @@ ssh_string sftp_handle_alloc(sftp_session sftp, void *info)
     return ret;
 }
 
+/**
+ * @brief Resolve an SFTP handle to its stored info.
+ *
+ * Decodes the 4-byte @p handle value, checks bounds and returns the pointer
+ * stored in the corresponding handle slot in the SFTP session.
+ *
+ * @param[in] sftp   The SFTP session.
+ * @param[in] handle The handle value as ssh_string.
+ *
+ * @return The stored pointer on success, or NULL if the handle table is
+ *         not initialized, the handle size is invalid, or the index is
+ *         out of range.
+ */
 void *sftp_handle(sftp_session sftp, ssh_string handle)
 {
     uint32_t val;
@@ -787,8 +1011,8 @@ stat_to_filexfer_attrib(const struct stat *z_st, struct sftp_attributes_struct *
     z_attr->permissions = z_st->st_mode;
 
     z_attr->flags |= (uint32_t)SSH_FILEXFER_ATTR_ACMODTIME;
-    z_attr->atime = z_st->st_atime;
-    z_attr->mtime = z_st->st_mtime;
+    z_attr->atime = (uint32_t)z_st->st_atime;
+    z_attr->mtime = (uint32_t)z_st->st_mtime;
 }
 
 static void
@@ -820,7 +1044,7 @@ struct sftp_handle
     char *name;
 };
 
-SSH_SFTP_CALLBACK(process_unsupposed);
+SSH_SFTP_CALLBACK(process_unsupported);
 SSH_SFTP_CALLBACK(process_open);
 SSH_SFTP_CALLBACK(process_read);
 SSH_SFTP_CALLBACK(process_write);
@@ -844,9 +1068,9 @@ const struct sftp_message_handler message_handlers[] = {
     {"read", NULL, SSH_FXP_READ, process_read},
     {"write", NULL, SSH_FXP_WRITE, process_write},
     {"lstat", NULL, SSH_FXP_LSTAT, process_lstat},
-    {"fstat", NULL, SSH_FXP_FSTAT, process_unsupposed},
+    {"fstat", NULL, SSH_FXP_FSTAT, process_unsupported},
     {"setstat", NULL, SSH_FXP_SETSTAT, process_setstat},
-    {"fsetstat", NULL, SSH_FXP_FSETSTAT, process_unsupposed},
+    {"fsetstat", NULL, SSH_FXP_FSETSTAT, process_unsupported},
     {"opendir", NULL, SSH_FXP_OPENDIR, process_opendir},
     {"readdir", NULL, SSH_FXP_READDIR, process_readdir},
     {"remove", NULL, SSH_FXP_REMOVE, process_remove},
@@ -854,7 +1078,7 @@ const struct sftp_message_handler message_handlers[] = {
     {"rmdir", NULL, SSH_FXP_RMDIR, process_rmdir},
     {"realpath", NULL, SSH_FXP_REALPATH, process_realpath},
     {"stat", NULL, SSH_FXP_STAT, process_stat},
-    {"rename", NULL, SSH_FXP_RENAME, process_unsupposed},
+    {"rename", NULL, SSH_FXP_RENAME, process_unsupported},
     {"readlink", NULL, SSH_FXP_READLINK, process_readlink},
     {"symlink", NULL, SSH_FXP_SYMLINK, process_symlink},
     {"init", NULL, SSH_FXP_INIT, sftp_reply_version},
@@ -882,17 +1106,26 @@ process_open(sftp_client_message client_msg)
     SSH_LOG(SSH_LOG_PROTOCOL, "Processing open: filename %s, mode=0%o" PRIu32,
             filename, mode);
 
-    if (((msg_flag & (uint32_t)SSH_FXF_READ) == SSH_FXF_READ) &&
-        ((msg_flag & (uint32_t)SSH_FXF_WRITE) == SSH_FXF_WRITE)) {
-        file_flag = O_RDWR; // file must exist
-        if ((msg_flag & (uint32_t)SSH_FXF_CREAT) == SSH_FXF_CREAT)
-            file_flag |= O_CREAT;
-    } else if ((msg_flag & (uint32_t)SSH_FXF_WRITE) == SSH_FXF_WRITE) {
-        file_flag = O_WRONLY;
-        if ((msg_flag & (uint32_t)SSH_FXF_APPEND) == SSH_FXF_APPEND)
+    if ((msg_flag & (uint32_t)SSH_FXF_WRITE) == SSH_FXF_WRITE) {
+        if ((msg_flag & (uint32_t)SSH_FXF_READ) == SSH_FXF_READ) {
+            /* Both read and write */
+            file_flag = O_RDWR;
+        } else {
+            /* Only write */
+            file_flag = O_WRONLY;
+        }
+
+        if ((msg_flag & (uint32_t)SSH_FXF_APPEND) == SSH_FXF_APPEND) {
             file_flag |= O_APPEND;
-        if ((msg_flag & (uint32_t)SSH_FXF_CREAT) == SSH_FXF_CREAT)
+        }
+
+        if ((msg_flag & (uint32_t)SSH_FXF_CREAT) == SSH_FXF_CREAT) {
             file_flag |= O_CREAT;
+        }
+
+        if ((msg_flag & (uint32_t)SSH_FXF_TRUNC) == SSH_FXF_TRUNC) {
+            file_flag |= O_TRUNC;
+        }
     } else if ((msg_flag & (uint32_t)SSH_FXF_READ) == SSH_FXF_READ) {
         file_flag = O_RDONLY;
     } else {
@@ -1632,7 +1865,7 @@ process_remove(sftp_client_message client_msg)
 }
 
 static int
-process_unsupposed(sftp_client_message client_msg)
+process_unsupported(sftp_client_message client_msg)
 {
     sftp_reply_status(client_msg, SSH_FX_OP_UNSUPPORTED,
                       "Operation not supported");
@@ -1778,8 +2011,8 @@ process_client_message(sftp_client_message client_msg)
  * @param[out] userdata  The pointer to sftp_session which will get the
  *                       resulting SFTP session
  *
- * @return SSH_OK when the SFTP server was successfully initialized, SSH_ERROR
- *         otherwise.
+ * @return `SSH_OK` when the SFTP server was successfully initialized,
+ * `SSH_ERROR` otherwise.
  */
 int
 sftp_channel_default_subsystem_request(ssh_session session,

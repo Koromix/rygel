@@ -696,6 +696,82 @@ static void torture_knownhosts_algorithms_global(void **state)
     ssh_free(session);
 }
 
+static int setup_bad_knownhosts_file(void **state)
+{
+    char *tmp_file = NULL;
+    size_t nwritten;
+    FILE *fp = NULL;
+    int rc = 0;
+
+    tmp_file = torture_create_temp_file(TMP_FILE_NAME);
+    assert_non_null(tmp_file);
+
+    *state = tmp_file;
+
+    fp = fopen(tmp_file, "w");
+    assert_non_null(fp);
+
+    nwritten = fwrite(LOCALHOST_DEFAULT_ED25519,
+                      sizeof(char),
+                      strlen(LOCALHOST_DEFAULT_ED25519),
+                      fp);
+    if (nwritten != strlen(LOCALHOST_DEFAULT_ED25519)) {
+        rc = -1;
+        goto close_fp;
+    }
+
+    nwritten = fwrite("\n", sizeof(char), 1, fp);
+    if (nwritten != 1) {
+        rc = -1;
+        goto close_fp;
+    }
+
+#define LOCALHOST_BAD_LINE "localhost \n"
+    nwritten = fwrite(LOCALHOST_BAD_LINE,
+                      sizeof(char),
+                      strlen(LOCALHOST_BAD_LINE),
+                      fp);
+    if (nwritten != strlen(LOCALHOST_BAD_LINE)) {
+        rc = -1;
+        goto close_fp;
+    }
+
+close_fp:
+    fclose(fp);
+
+    return rc;
+}
+
+static void torture_knownhosts_has_entry(void **state)
+{
+    const char *knownhosts_file = *state;
+    enum ssh_known_hosts_e found;
+    ssh_session session;
+    bool process_config = false;
+    struct ssh_knownhosts_entry *entry = NULL;
+
+    session = ssh_new();
+    assert_non_null(session);
+
+    /* This makes sure the global configuration file is not processed */
+    ssh_options_set(session, SSH_OPTIONS_PROCESS_CONFIG, &process_config);
+
+    ssh_options_set(session, SSH_OPTIONS_HOST, "localhost");
+    /* This makes sure the current-user's known hosts are not used */
+    ssh_options_set(session, SSH_OPTIONS_KNOWNHOSTS, "/dev/null");
+    ssh_options_set(session, SSH_OPTIONS_GLOBAL_KNOWNHOSTS, knownhosts_file);
+
+    /* Error is expected -- this tests the memory is not leaked from this
+     * test case */
+    found = ssh_session_has_known_hosts_entry(session);
+    assert_int_equal(found, SSH_KNOWN_HOSTS_ERROR);
+
+    found = ssh_session_get_known_hosts_entry(session, &entry);
+    assert_int_equal(found, SSH_KNOWN_HOSTS_ERROR);
+    assert_null(entry);
+
+    ssh_free(session);
+}
 #endif /* _WIN32 There is no /dev/null on Windows */
 
 int torture_run_tests(void) {
@@ -737,6 +813,9 @@ int torture_run_tests(void) {
                                         teardown_knownhosts_file),
         cmocka_unit_test_setup_teardown(torture_knownhosts_algorithms_global,
                                         setup_knownhosts_file,
+                                        teardown_knownhosts_file),
+        cmocka_unit_test_setup_teardown(torture_knownhosts_has_entry,
+                                        setup_bad_knownhosts_file,
                                         teardown_knownhosts_file),
 #endif
     };

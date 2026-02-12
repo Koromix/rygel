@@ -1,4 +1,4 @@
-# This map file was updated with abimap-0.3.2
+# This map file was updated with abimap-0.4.0
 
 LIBSSH_4_5_0    # Released
 {
@@ -481,3 +481,29 @@ LIBSSH_4_10_0    # Released
         ssh_pki_export_privkey_file_format;
         ssh_request_no_more_sessions;
 } LIBSSH_4_9_0;
+
+LIBSSH_4_11_0    # Released
+{
+    global:
+        sftp_get_users_groups_by_id;
+        sftp_name_id_map_free;
+        sftp_name_id_map_new;
+        ssh_get_supported_methods;
+        ssh_key_get_sk_application;
+        ssh_key_get_sk_flags;
+        ssh_key_get_sk_user_id;
+        ssh_pki_ctx_free;
+        ssh_pki_ctx_get_sk_attestation_buffer;
+        ssh_pki_ctx_new;
+        ssh_pki_ctx_options_set;
+        ssh_pki_ctx_set_sk_pin_callback;
+        ssh_pki_ctx_sk_callbacks_option_set;
+        ssh_pki_ctx_sk_callbacks_options_clear;
+        ssh_pki_generate_key;
+        ssh_sk_resident_keys_load;
+        ssh_string_cmp;
+        ssh_string_from_data;
+        sshsig_sign;
+        sshsig_verify;
+} LIBSSH_4_10_0;
+

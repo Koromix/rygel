@@ -30,14 +30,15 @@
 #include <arpa/inet.h>
 #endif
 
-#include "libssh/priv.h"
-#include "libssh/ssh2.h"
 #include "libssh/buffer.h"
-#include "libssh/packet.h"
-#include "libssh/options.h"
-#include "libssh/socket.h"
-#include "libssh/session.h"
+#include "libssh/kex-gss.h"
 #include "libssh/dh.h"
+#include "libssh/options.h"
+#include "libssh/packet.h"
+#include "libssh/priv.h"
+#include "libssh/session.h"
+#include "libssh/socket.h"
+#include "libssh/ssh2.h"
 #ifdef WITH_GEX
 #include "libssh/dh-gex.h"
 #endif /* WITH_GEX */
@@ -46,6 +47,7 @@
 #include "libssh/misc.h"
 #include "libssh/pki.h"
 #include "libssh/kex.h"
+#include "libssh/hybrid_mlkem.h"
 
 #ifndef _WIN32
 #ifdef HAVE_PTHREAD
@@ -226,7 +228,7 @@ int ssh_send_banner(ssh_session session, int server)
                  terminator);
     }
 
-    rc = ssh_socket_write(session->socket, buffer, strlen(buffer));
+    rc = ssh_socket_write(session->socket, buffer, (uint32_t)strlen(buffer));
     if (rc == SSH_ERROR) {
         goto end;
     }
@@ -235,8 +237,8 @@ int ssh_send_banner(ssh_session session, int server)
         ssh_pcap_context_write(session->pcap_ctx,
                                SSH_PCAP_DIR_OUT,
                                buffer,
-                               strlen(buffer),
-                               strlen(buffer));
+                               (uint32_t)strlen(buffer),
+                               (uint32_t)strlen(buffer));
     }
 #endif
 
@@ -254,45 +256,68 @@ end:
  */
 int dh_handshake(ssh_session session)
 {
-  int rc = SSH_AGAIN;
+    int rc = SSH_AGAIN;
 
-  SSH_LOG(SSH_LOG_TRACE, "dh_handshake_state = %d, kex_type = %d",
-          session->dh_handshake_state,  session->next_crypto->kex_type);
+    SSH_LOG(SSH_LOG_TRACE,
+            "dh_handshake_state = %d, kex_type = %d",
+            session->dh_handshake_state,
+            session->next_crypto->kex_type);
 
-  switch (session->dh_handshake_state) {
+    switch (session->dh_handshake_state) {
     case DH_STATE_INIT:
-      switch(session->next_crypto->kex_type){
+        switch (session->next_crypto->kex_type) {
+#ifdef WITH_GSSAPI
+        case SSH_GSS_KEX_DH_GROUP14_SHA256:
+        case SSH_GSS_KEX_DH_GROUP16_SHA512:
+        case SSH_GSS_KEX_ECDH_NISTP256_SHA256:
+        case SSH_GSS_KEX_CURVE25519_SHA256:
+            rc = ssh_client_gss_kex_init(session);
+            break;
+#endif
         case SSH_KEX_DH_GROUP1_SHA1:
         case SSH_KEX_DH_GROUP14_SHA1:
         case SSH_KEX_DH_GROUP14_SHA256:
         case SSH_KEX_DH_GROUP16_SHA512:
         case SSH_KEX_DH_GROUP18_SHA512:
-          rc = ssh_client_dh_init(session);
-          break;
+            rc = ssh_client_dh_init(session);
+            break;
 #ifdef WITH_GEX
         case SSH_KEX_DH_GEX_SHA1:
         case SSH_KEX_DH_GEX_SHA256:
-          rc = ssh_client_dhgex_init(session);
-          break;
+            rc = ssh_client_dhgex_init(session);
+            break;
 #endif /* WITH_GEX */
 #ifdef HAVE_ECDH
         case SSH_KEX_ECDH_SHA2_NISTP256:
         case SSH_KEX_ECDH_SHA2_NISTP384:
         case SSH_KEX_ECDH_SHA2_NISTP521:
-          rc = ssh_client_ecdh_init(session);
-          break;
+            rc = ssh_client_ecdh_init(session);
+            break;
 #endif
 #ifdef HAVE_CURVE25519
         case SSH_KEX_CURVE25519_SHA256:
         case SSH_KEX_CURVE25519_SHA256_LIBSSH_ORG:
-          rc = ssh_client_curve25519_init(session);
-          break;
+            rc = ssh_client_curve25519_init(session);
+            break;
 #endif
+#ifdef HAVE_SNTRUP761
+        case SSH_KEX_SNTRUP761X25519_SHA512:
+        case SSH_KEX_SNTRUP761X25519_SHA512_OPENSSH_COM:
+            rc = ssh_client_sntrup761x25519_init(session);
+            break;
+#endif
+        case SSH_KEX_MLKEM768X25519_SHA256:
+        case SSH_KEX_MLKEM768NISTP256_SHA256:
+#ifdef HAVE_MLKEM1024
+        case SSH_KEX_MLKEM1024NISTP384_SHA384:
+#endif
+            rc = ssh_client_hybrid_mlkem_init(session);
+            break;
         default:
-          rc = SSH_ERROR;
-      }
+            rc = SSH_ERROR;
+        }
 
-      break;
+        break;
     case DH_STATE_INIT_SENT:
     	/* wait until ssh_packet_dh_reply is called */
     	break;
@@ -300,15 +325,17 @@ int dh_handshake(ssh_session session)
     	/* wait until ssh_packet_newkeys is called */
     	break;
     case DH_STATE_FINISHED:
-      return SSH_OK;
+        return SSH_OK;
     default:
-      ssh_set_error(session, SSH_FATAL, "Invalid state in dh_handshake(): %d",
-          session->dh_handshake_state);
+        ssh_set_error(session,
+                      SSH_FATAL,
+                      "Invalid state in dh_handshake(): %d",
+                      session->dh_handshake_state);
 
-      return SSH_ERROR;
-  }
+        return SSH_ERROR;
+    }
 
-  return rc;
+    return rc;
 }
 
 static int ssh_service_request_termination(void *s)
@@ -593,8 +620,7 @@ int ssh_connect(ssh_session session)
 
     if (session->opts.fd != SSH_INVALID_SOCKET) {
         session->session_state = SSH_SESSION_STATE_SOCKET_CONNECTED;
-        ssh_socket_set_fd(session->socket, session->opts.fd);
-        ret = SSH_OK;
+        ret = ssh_socket_set_fd(session->socket, session->opts.fd);
 #ifndef _WIN32
 #ifdef HAVE_PTHREAD
     } else if (ssh_libssh_proxy_jumps() &&
@@ -836,6 +862,7 @@ error:
     session->opts.fd = SSH_INVALID_SOCKET;
     session->session_state = SSH_SESSION_STATE_DISCONNECTED;
     session->pending_call_state = SSH_PENDING_CALL_NONE;
+    session->packet_state = PACKET_STATE_INIT;
 
     while ((it = ssh_list_get_iterator(session->channels)) != NULL) {
         ssh_channel_do_free(ssh_iterator_value(ssh_channel, it));
@@ -895,7 +922,7 @@ error:
  */
 const char *ssh_copyright(void)
 {
-    return SSH_STRINGIFY(LIBSSH_VERSION) " (c) 2003-2025 "
+    return SSH_STRINGIFY(LIBSSH_VERSION) " (c) 2003-2026 "
            "Aris Adamantiadis, Andreas Schneider "
            "and libssh contributors. "
            "Distributed under the LGPL, please refer to COPYING "

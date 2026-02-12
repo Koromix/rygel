@@ -39,6 +39,8 @@
 #include "test_server.h"
 #include "default_cb.h"
 
+#include "channels.c"
+
 #define TORTURE_KNOWN_HOSTS_FILE "libssh_torture_knownhosts"
 
 const char template[] = "temp_dir_XXXXXX";
@@ -285,6 +287,76 @@ static void torture_server_auth_pubkey(void **state)
     assert_int_equal(rc, SSH_AUTH_SUCCESS);
 }
 
+static void torture_server_auth_kbdint(void **state)
+{
+    struct test_server_st *tss = *state;
+    struct torture_state *s = NULL;
+    ssh_session session = NULL;
+    int rc;
+
+    assert_non_null(tss);
+
+    s = tss->state;
+    assert_non_null(s);
+
+    session = s->ssh.session;
+    assert_non_null(session);
+
+    rc = ssh_options_set(session, SSH_OPTIONS_USER, TORTURE_SSH_USER_BOB);
+    assert_ssh_return_code(session, rc);
+
+    rc = ssh_connect(session);
+    assert_ssh_return_code(session, rc);
+
+    rc = ssh_userauth_none(session, NULL);
+    assert_int_equal(rc, SSH_AUTH_DENIED);
+
+    rc = ssh_userauth_list(session, NULL);
+    assert_true(rc & SSH_AUTH_METHOD_INTERACTIVE);
+
+    rc = ssh_userauth_kbdint(session, NULL, NULL);
+    assert_int_equal(rc, SSH_AUTH_INFO);
+    assert_int_equal(ssh_userauth_kbdint_getnprompts(session), 2);
+
+    /* Passing a wrong password */
+    rc = ssh_userauth_kbdint_setanswer(session, 0, SSHD_DEFAULT_USER);
+    assert_int_equal(rc, 0);
+
+    rc = ssh_userauth_kbdint_setanswer(session, 1, "wrongpassword");
+    assert_int_equal(rc, 0);
+
+    rc = ssh_userauth_kbdint(session, NULL, NULL);
+    assert_int_equal(rc, SSH_AUTH_DENIED);
+
+    rc = ssh_userauth_kbdint(session, NULL, NULL);
+    assert_int_equal(rc, SSH_AUTH_INFO);
+    assert_int_equal(ssh_userauth_kbdint_getnprompts(session), 2);
+
+    /* Passing a wrong username */
+    rc = ssh_userauth_kbdint_setanswer(session, 0, "wrongusername");
+    assert_int_equal(rc, 0);
+
+    rc = ssh_userauth_kbdint_setanswer(session, 1, SSHD_DEFAULT_PASSWORD);
+    assert_int_equal(rc, 0);
+
+    rc = ssh_userauth_kbdint(session, NULL, NULL);
+    assert_int_equal(rc, SSH_AUTH_DENIED);
+
+    rc = ssh_userauth_kbdint(session, NULL, NULL);
+    assert_int_equal(rc, SSH_AUTH_INFO);
+    assert_int_equal(ssh_userauth_kbdint_getnprompts(session), 2);
+
+    /* Passing the right password */
+    rc = ssh_userauth_kbdint_setanswer(session, 0, SSHD_DEFAULT_USER);
+    assert_int_equal(rc, 0);
+
+    rc = ssh_userauth_kbdint_setanswer(session, 1, SSHD_DEFAULT_PASSWORD);
+    assert_int_equal(rc, 0);
+
+    rc = ssh_userauth_kbdint(session, NULL, NULL);
+    assert_int_equal(rc, SSH_AUTH_SUCCESS);
+}
+
 static void torture_server_hostkey_mismatch(void **state)
 {
     struct test_server_st *tss = *state;
@@ -377,6 +449,51 @@ static void torture_server_unknown_global_request(void **state)
     assert_ssh_return_code(session, rc);
 
     ssh_channel_close(channel);
+}
+
+static void torture_server_unknown_channel_request(void **state)
+{
+    struct test_server_st *tss = *state;
+    struct torture_state *s = NULL;
+    ssh_session session = NULL;
+    ssh_channel channel;
+    int rc;
+
+    assert_non_null(tss);
+
+    s = tss->state;
+    assert_non_null(s);
+
+    session = s->ssh.session;
+    assert_non_null(session);
+
+    rc = ssh_options_set(session, SSH_OPTIONS_USER, SSHD_DEFAULT_USER);
+    assert_int_equal(rc, SSH_OK);
+
+    rc = ssh_connect(session);
+    assert_int_equal(rc, SSH_OK);
+
+    /* Using the default password for the server */
+    rc = ssh_userauth_password(session, NULL, SSHD_DEFAULT_PASSWORD);
+    assert_int_equal(rc, SSH_AUTH_SUCCESS);
+
+    /* Open a channel session */
+    channel = ssh_channel_new(session);
+    assert_non_null(channel);
+
+    rc = ssh_channel_open_session(channel);
+    assert_ssh_return_code(session, rc);
+
+    /* Request asking for reply */
+    rc = channel_request(channel, "unknown-request-00@test.com", NULL, 1);
+    assert_ssh_return_code_equal(session, rc, SSH_ERROR);
+
+    /* Request and don't ask for reply */
+    rc = channel_request(channel, "another-bad-req-00@test.com", NULL, 0);
+    assert_ssh_return_code(session, rc);
+
+    ssh_channel_close(channel);
+    ssh_channel_free(channel);
 }
 
 static void torture_server_no_more_sessions(void **state)
@@ -504,10 +621,16 @@ int torture_run_tests(void) {
         cmocka_unit_test_setup_teardown(torture_server_auth_pubkey,
                                         session_setup,
                                         session_teardown),
+        cmocka_unit_test_setup_teardown(torture_server_auth_kbdint,
+                                        session_setup,
+                                        session_teardown),
         cmocka_unit_test_setup_teardown(torture_server_hostkey_mismatch,
                                         session_setup,
                                         session_teardown),
         cmocka_unit_test_setup_teardown(torture_server_unknown_global_request,
+                                        session_setup,
+                                        session_teardown),
+        cmocka_unit_test_setup_teardown(torture_server_unknown_channel_request,
                                         session_setup,
                                         session_teardown),
         cmocka_unit_test_setup_teardown(torture_server_no_more_sessions,

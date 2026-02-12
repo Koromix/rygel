@@ -40,11 +40,15 @@
 #include "libssh/ssh2.h"
 #include "libssh/string.h"
 #include "libssh/curve25519.h"
+#include "libssh/sntrup761.h"
+#include "libssh/hybrid_mlkem.h"
+#include "libssh/kex-gss.h"
 #include "libssh/knownhosts.h"
 #include "libssh/misc.h"
 #include "libssh/pki.h"
 #include "libssh/bignum.h"
 #include "libssh/token.h"
+#include "libssh/gssapi.h"
 
 #ifdef HAVE_BLOWFISH
 # define BLOWFISH ",blowfish-cbc"
@@ -94,6 +98,21 @@
 #else
 #define CURVE25519 ""
 #endif /* HAVE_CURVE25519 */
+
+#ifdef HAVE_SNTRUP761
+#define SNTRUP761X25519 "sntrup761x25519-sha512,sntrup761x25519-sha512@openssh.com,"
+#else
+#define SNTRUP761X25519 ""
+#endif /* HAVE_SNTRUP761 */
+
+#ifdef HAVE_MLKEM1024
+#define HYBRID_MLKEM "mlkem768x25519-sha256," \
+                     "mlkem768nistp256-sha256," \
+                     "mlkem1024nistp384-sha384,"
+#else
+#define HYBRID_MLKEM "mlkem768x25519-sha256," \
+                     "mlkem768nistp256-sha256,"
+#endif /* HAVE_MLKEM1024 */
 
 #ifdef HAVE_ECC
 #define ECDH "ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521,"
@@ -158,6 +177,8 @@
 #define CHACHA20 "chacha20-poly1305@openssh.com,"
 
 #define DEFAULT_KEY_EXCHANGE \
+    HYBRID_MLKEM \
+    SNTRUP761X25519 \
     CURVE25519 \
     ECDH \
     "diffie-hellman-group18-sha512,diffie-hellman-group16-sha512," \
@@ -267,38 +288,58 @@ static const char *ssh_kex_descriptions[] = {
   NULL
 };
 
-const char *ssh_kex_get_default_methods(uint32_t algo)
+const char *ssh_kex_get_default_methods(enum ssh_kex_types_e type)
 {
-    if (algo >= SSH_KEX_METHODS) {
+    if (type >= SSH_KEX_METHODS) {
         return NULL;
     }
 
-    return default_methods[algo];
+    return default_methods[type];
 }
-
-const char *ssh_kex_get_supported_method(uint32_t algo)
+const char *ssh_kex_get_supported_method(enum ssh_kex_types_e type)
 {
-    if (algo >= SSH_KEX_METHODS) {
+    if (type >= SSH_KEX_METHODS) {
         return NULL;
     }
 
-    return supported_methods[algo];
+    return supported_methods[type];
 }
 
-const char *ssh_kex_get_description(uint32_t algo) {
-  if (algo >= SSH_KEX_METHODS) {
-    return NULL;
-  }
+const char *ssh_kex_get_description(enum ssh_kex_types_e type)
+{
+    if (type >= SSH_KEX_METHODS) {
+        return NULL;
+    }
 
-  return ssh_kex_descriptions[algo];
+    return ssh_kex_descriptions[type];
 }
 
-const char *ssh_kex_get_fips_methods(uint32_t algo) {
-  if (algo >= SSH_KEX_METHODS) {
-    return NULL;
-  }
+const char *ssh_kex_get_fips_methods(enum ssh_kex_types_e type)
+{
+    if (type >= SSH_KEX_METHODS) {
+        return NULL;
+    }
 
-  return fips_methods[algo];
+    return fips_methods[type];
+}
+
+/**
+ * @brief Get a list of supported algorithms of a given type. This respects the
+ * FIPS mode status.
+ *
+ * @param[in] type The type of the algorithm to query (SSH_KEX, SSH_MAC_C_S,
+ * ...).
+ *
+ * @return The list of supported methods as comma-separated string, or NULL for
+ * unknown type.
+ */
+const char *ssh_get_supported_methods(enum ssh_kex_types_e type)
+{
+    if (ssh_fips_mode()) {
+        return ssh_kex_get_fips_methods(type);
+    } else {
+        return ssh_kex_get_supported_method(type);
+    }
 }
 
 /**
@@ -754,6 +795,8 @@ int ssh_set_client_kex(ssh_session session)
     const char *wanted = NULL;
     int ok;
     int i;
+    bool gssapi_null_alg = false;
+    char *hostkeys = NULL;
 
     /* Skip if already set, for example for the rekey or when we do the guessing
      * it could have been already used to make some protocol decisions. */
@@ -766,6 +809,42 @@ int ssh_set_client_kex(ssh_session session)
         ssh_set_error(session, SSH_FATAL, "PRNG error");
         return SSH_ERROR;
     }
+#ifdef WITH_GSSAPI
+    if (session->opts.gssapi_key_exchange) {
+        char *gssapi_algs = NULL;
+
+        ok = ssh_gssapi_init(session);
+        if (ok != SSH_OK) {
+            ssh_set_error_oom(session);
+            return SSH_ERROR;
+        }
+
+        ok = ssh_gssapi_import_name(session->gssapi, session->opts.host);
+        if (ok != SSH_OK) {
+            return SSH_ERROR;
+        }
+
+        gssapi_algs = ssh_gssapi_kex_mechs(session);
+        if (gssapi_algs == NULL) {
+            return SSH_ERROR;
+        }
+
+        /* Prefix the default algorithms with gsskex algs */
+        if (ssh_fips_mode()) {
+            session->opts.wanted_methods[SSH_KEX] =
+                ssh_prefix_without_duplicates(fips_methods[SSH_KEX],
+                                              gssapi_algs);
+        } else {
+            session->opts.wanted_methods[SSH_KEX] =
+                ssh_prefix_without_duplicates(default_methods[SSH_KEX],
+                                              gssapi_algs);
+        }
+
+        gssapi_null_alg = true;
+
+        SAFE_FREE(gssapi_algs);
+    }
+#endif
 
     /* Set the list of allowed algorithms in order of preference, if it hadn't
      * been set yet. */
@@ -778,6 +857,16 @@ int ssh_set_client_kex(ssh_session session)
             if (client->methods[i] == NULL) {
                 ssh_set_error_oom(session);
                 return SSH_ERROR;
+            }
+            if (gssapi_null_alg) {
+                hostkeys =
+                    ssh_append_without_duplicates(client->methods[i], "null");
+                if (hostkeys == NULL) {
+                    ssh_set_error_oom(session);
+                    return SSH_ERROR;
+                }
+                SAFE_FREE(client->methods[i]);
+                client->methods[i] = hostkeys;
             }
             continue;
         }
@@ -870,6 +959,14 @@ kex_select_kex_type(const char *kex)
 {
     if (strcmp(kex, "diffie-hellman-group1-sha1") == 0) {
         return SSH_KEX_DH_GROUP1_SHA1;
+    } else if (strncmp(kex, "gss-group14-sha256-", 19) == 0) {
+        return SSH_GSS_KEX_DH_GROUP14_SHA256;
+    } else if (strncmp(kex, "gss-group16-sha512-", 19) == 0) {
+        return SSH_GSS_KEX_DH_GROUP16_SHA512;
+    } else if (strncmp(kex, "gss-nistp256-sha256-", 20) == 0) {
+        return SSH_GSS_KEX_ECDH_NISTP256_SHA256;
+    } else if (strncmp(kex, "gss-curve25519-sha256-", 22) == 0) {
+        return SSH_GSS_KEX_CURVE25519_SHA256;
     } else if (strcmp(kex, "diffie-hellman-group14-sha1") == 0) {
         return SSH_KEX_DH_GROUP14_SHA1;
     } else if (strcmp(kex, "diffie-hellman-group14-sha256") == 0) {
@@ -894,6 +991,18 @@ kex_select_kex_type(const char *kex)
         return SSH_KEX_CURVE25519_SHA256_LIBSSH_ORG;
     } else if (strcmp(kex, "curve25519-sha256") == 0) {
         return SSH_KEX_CURVE25519_SHA256;
+    } else if (strcmp(kex, "sntrup761x25519-sha512@openssh.com") == 0) {
+        return SSH_KEX_SNTRUP761X25519_SHA512_OPENSSH_COM;
+    } else if (strcmp(kex, "sntrup761x25519-sha512") == 0) {
+        return SSH_KEX_SNTRUP761X25519_SHA512;
+    } else if (strcmp(kex, "mlkem768x25519-sha256") == 0) {
+        return SSH_KEX_MLKEM768X25519_SHA256;
+    } else if (strcmp(kex, "mlkem768nistp256-sha256") == 0) {
+        return SSH_KEX_MLKEM768NISTP256_SHA256;
+#ifdef HAVE_MLKEM1024
+    } else if (strcmp(kex, "mlkem1024nistp384-sha384") == 0) {
+        return SSH_KEX_MLKEM1024NISTP384_SHA384;
+#endif
     }
     /* should not happen. We should be getting only valid names at this stage */
     return 0;
@@ -915,6 +1024,14 @@ static void revert_kex_callbacks(ssh_session session)
     case SSH_KEX_DH_GROUP18_SHA512:
         ssh_client_dh_remove_callbacks(session);
         break;
+    case SSH_GSS_KEX_DH_GROUP14_SHA256:
+    case SSH_GSS_KEX_DH_GROUP16_SHA512:
+    case SSH_GSS_KEX_ECDH_NISTP256_SHA256:
+    case SSH_GSS_KEX_CURVE25519_SHA256:
+#ifdef WITH_GSSAPI
+        ssh_client_gss_kex_remove_callbacks(session);
+#endif /* WITH_GSSAPI */
+        break;
 #ifdef WITH_GEX
     case SSH_KEX_DH_GEX_SHA1:
     case SSH_KEX_DH_GEX_SHA256:
@@ -934,6 +1051,19 @@ static void revert_kex_callbacks(ssh_session session)
         ssh_client_curve25519_remove_callbacks(session);
         break;
 #endif
+#ifdef HAVE_SNTRUP761
+    case SSH_KEX_SNTRUP761X25519_SHA512:
+    case SSH_KEX_SNTRUP761X25519_SHA512_OPENSSH_COM:
+        ssh_client_sntrup761x25519_remove_callbacks(session);
+        break;
+#endif
+    case SSH_KEX_MLKEM768X25519_SHA256:
+    case SSH_KEX_MLKEM768NISTP256_SHA256:
+#ifdef HAVE_MLKEM1024
+    case SSH_KEX_MLKEM1024NISTP384_SHA384:
+#endif
+        ssh_client_hybrid_mlkem_remove_callbacks(session);
+        break;
     }
 }
 
@@ -1340,6 +1470,7 @@ int ssh_make_sessionid(ssh_session session)
 
     buf = ssh_buffer_new();
     if (buf == NULL) {
+        ssh_set_error_oom(session);
         return rc;
     }
 
@@ -1348,6 +1479,9 @@ int ssh_make_sessionid(ssh_session session)
                          session->clientbanner,
                          session->serverbanner);
     if (rc == SSH_ERROR) {
+        ssh_set_error(session,
+                      SSH_FATAL,
+                      "Failed to pack client and server banner");
         goto error;
     }
 
@@ -1361,7 +1495,22 @@ int ssh_make_sessionid(ssh_session session)
 
     rc = ssh_dh_get_next_server_publickey_blob(session, &server_pubkey_blob);
     if (rc != SSH_OK) {
+        ssh_set_error(session,
+                      SSH_FATAL,
+                      "Failed to get next server pubkey blob");
         goto error;
+    }
+
+    if (server_pubkey_blob == NULL) {
+        if ((session->server && ssh_kex_is_gss(session->next_crypto)) ||
+            session->opts.gssapi_key_exchange) {
+            server_pubkey_blob = ssh_string_new(0);
+            if (server_pubkey_blob == NULL) {
+                ssh_set_error_oom(session);
+                rc = SSH_ERROR;
+                goto error;
+            }
+        }
     }
 
     rc = ssh_buffer_pack(buf,
@@ -1375,6 +1524,9 @@ int ssh_make_sessionid(ssh_session session)
                          server_pubkey_blob);
     SSH_STRING_FREE(server_pubkey_blob);
     if (rc != SSH_OK){
+        ssh_set_error(session,
+                      SSH_FATAL,
+                      "Failed to pack hashes and pubkey blob");
         goto error;
     }
 
@@ -1382,7 +1534,9 @@ int ssh_make_sessionid(ssh_session session)
     case SSH_KEX_DH_GROUP1_SHA1:
     case SSH_KEX_DH_GROUP14_SHA1:
     case SSH_KEX_DH_GROUP14_SHA256:
+    case SSH_GSS_KEX_DH_GROUP14_SHA256:
     case SSH_KEX_DH_GROUP16_SHA512:
+    case SSH_GSS_KEX_DH_GROUP16_SHA512:
     case SSH_KEX_DH_GROUP18_SHA512:
         rc = ssh_dh_keypair_get_keys(session->next_crypto->dh_ctx,
                                      DH_CLIENT_KEYPAIR, NULL, &client_pubkey);
@@ -1399,6 +1553,7 @@ int ssh_make_sessionid(ssh_session session)
                              client_pubkey,
                              server_pubkey);
         if (rc != SSH_OK) {
+            ssh_set_error(session, SSH_FATAL, "Failed to pack DH pubkeys");
             goto error;
         }
 #if defined(HAVE_LIBCRYPTO) && OPENSSL_VERSION_NUMBER >= 0x30000000L
@@ -1434,6 +1589,7 @@ int ssh_make_sessionid(ssh_session session)
                     client_pubkey,
                     server_pubkey);
         if (rc != SSH_OK) {
+            ssh_set_error(session, SSH_FATAL, "Failed to pack DH GEX params");
             goto error;
         }
 #if defined(HAVE_LIBCRYPTO) && OPENSSL_VERSION_NUMBER >= 0x30000000L
@@ -1446,6 +1602,7 @@ int ssh_make_sessionid(ssh_session session)
     case SSH_KEX_ECDH_SHA2_NISTP256:
     case SSH_KEX_ECDH_SHA2_NISTP384:
     case SSH_KEX_ECDH_SHA2_NISTP521:
+    case SSH_GSS_KEX_ECDH_NISTP256_SHA256:
         if (session->next_crypto->ecdh_client_pubkey == NULL ||
             session->next_crypto->ecdh_server_pubkey == NULL) {
             SSH_LOG(SSH_LOG_TRACE, "ECDH parameter missing");
@@ -1456,6 +1613,7 @@ int ssh_make_sessionid(ssh_session session)
                              session->next_crypto->ecdh_client_pubkey,
                              session->next_crypto->ecdh_server_pubkey);
         if (rc != SSH_OK) {
+            ssh_set_error(session, SSH_FATAL, "Failed to pack ECDH pubkeys");
             goto error;
         }
         break;
@@ -1463,6 +1621,7 @@ int ssh_make_sessionid(ssh_session session)
 #ifdef HAVE_CURVE25519
     case SSH_KEX_CURVE25519_SHA256:
     case SSH_KEX_CURVE25519_SHA256_LIBSSH_ORG:
+    case SSH_GSS_KEX_CURVE25519_SHA256:
         rc = ssh_buffer_pack(buf,
                              "dPdP",
                              CURVE25519_PUBKEY_SIZE,
@@ -1473,13 +1632,80 @@ int ssh_make_sessionid(ssh_session session)
                              session->next_crypto->curve25519_server_pubkey);
 
         if (rc != SSH_OK) {
+            ssh_set_error(session,
+                          SSH_FATAL,
+                          "Failed to pack Curve25519 pubkeys");
             goto error;
         }
         break;
 #endif /* HAVE_CURVE25519 */
+#ifdef HAVE_SNTRUP761
+    case SSH_KEX_SNTRUP761X25519_SHA512:
+    case SSH_KEX_SNTRUP761X25519_SHA512_OPENSSH_COM:
+        rc = ssh_buffer_pack(buf,
+                             "dPPdPP",
+                             SNTRUP761_PUBLICKEY_SIZE + CURVE25519_PUBKEY_SIZE,
+                             (size_t)SNTRUP761_PUBLICKEY_SIZE,
+                             session->next_crypto->sntrup761_client_pubkey,
+                             (size_t)CURVE25519_PUBKEY_SIZE,
+                             session->next_crypto->curve25519_client_pubkey,
+                             SNTRUP761_CIPHERTEXT_SIZE + CURVE25519_PUBKEY_SIZE,
+                             (size_t)SNTRUP761_CIPHERTEXT_SIZE,
+                             session->next_crypto->sntrup761_ciphertext,
+                             (size_t)CURVE25519_PUBKEY_SIZE,
+                             session->next_crypto->curve25519_server_pubkey);
+
+        if (rc != SSH_OK) {
+            ssh_set_error(session,
+                          SSH_FATAL,
+                          "Failed to pack SNTRU Prime params");
+            goto error;
+        }
+        break;
+#endif /* HAVE_SNTRUP761 */
+    case SSH_KEX_MLKEM768X25519_SHA256:
+    case SSH_KEX_MLKEM768NISTP256_SHA256:
+#ifdef HAVE_MLKEM1024
+    case SSH_KEX_MLKEM1024NISTP384_SHA384:
+#endif
+        rc = ssh_buffer_pack(buf,
+                             "SS",
+                             session->next_crypto->hybrid_client_init,
+                             session->next_crypto->hybrid_server_reply);
+        if (rc != SSH_OK) {
+            ssh_set_error(session,
+                          SSH_FATAL,
+                          "Failed to pack ML-KEM individual components");
+            goto error;
+        }
+        break;
+    default:
+        /* Handle unsupported kex types - this should not happen in normal operation */
+        rc = SSH_ERROR;
+        ssh_set_error(session, SSH_FATAL, "Unsupported KEX algorithm");
+        goto error;
     }
-    rc = ssh_buffer_pack(buf, "B", session->next_crypto->shared_secret);
+    switch (session->next_crypto->kex_type) {
+    case SSH_KEX_SNTRUP761X25519_SHA512:
+    case SSH_KEX_SNTRUP761X25519_SHA512_OPENSSH_COM:
+        rc = ssh_buffer_pack(buf,
+                             "F",
+                             session->next_crypto->shared_secret,
+                             SHA512_DIGEST_LEN);
+        break;
+    case SSH_KEX_MLKEM768X25519_SHA256:
+    case SSH_KEX_MLKEM768NISTP256_SHA256:
+#ifdef HAVE_MLKEM1024
+    case SSH_KEX_MLKEM1024NISTP384_SHA384:
+#endif
+        rc = ssh_buffer_pack(buf, "S", session->next_crypto->hybrid_shared_secret);
+        break;
+    default:
+        rc = ssh_buffer_pack(buf, "B", session->next_crypto->shared_secret);
+        break;
+    }
     if (rc != SSH_OK) {
+        ssh_set_error(session, SSH_FATAL, "Failed to pack shared secret");
         goto error;
     }
 
@@ -1506,9 +1732,14 @@ int ssh_make_sessionid(ssh_session session)
                                    session->next_crypto->secret_hash);
         break;
     case SSH_KEX_DH_GROUP14_SHA256:
+    case SSH_GSS_KEX_DH_GROUP14_SHA256:
     case SSH_KEX_ECDH_SHA2_NISTP256:
     case SSH_KEX_CURVE25519_SHA256:
     case SSH_KEX_CURVE25519_SHA256_LIBSSH_ORG:
+    case SSH_KEX_MLKEM768X25519_SHA256:
+    case SSH_KEX_MLKEM768NISTP256_SHA256:
+    case SSH_GSS_KEX_ECDH_NISTP256_SHA256:
+    case SSH_GSS_KEX_CURVE25519_SHA256:
 #ifdef WITH_GEX
     case SSH_KEX_DH_GEX_SHA256:
 #endif /* WITH_GEX */
@@ -1523,6 +1754,9 @@ int ssh_make_sessionid(ssh_session session)
                                      session->next_crypto->secret_hash);
         break;
     case SSH_KEX_ECDH_SHA2_NISTP384:
+#ifdef HAVE_MLKEM1024
+    case SSH_KEX_MLKEM1024NISTP384_SHA384:
+#endif
         session->next_crypto->digest_len = SHA384_DIGEST_LENGTH;
         session->next_crypto->digest_type = SSH_KDF_SHA384;
         session->next_crypto->secret_hash = malloc(session->next_crypto->digest_len);
@@ -1534,8 +1768,11 @@ int ssh_make_sessionid(ssh_session session)
                                      session->next_crypto->secret_hash);
         break;
     case SSH_KEX_DH_GROUP16_SHA512:
+    case SSH_GSS_KEX_DH_GROUP16_SHA512:
     case SSH_KEX_DH_GROUP18_SHA512:
     case SSH_KEX_ECDH_SHA2_NISTP521:
+    case SSH_KEX_SNTRUP761X25519_SHA512:
+    case SSH_KEX_SNTRUP761X25519_SHA512_OPENSSH_COM:
         session->next_crypto->digest_len = SHA512_DIGEST_LENGTH;
         session->next_crypto->digest_type = SSH_KDF_SHA512;
         session->next_crypto->secret_hash = malloc(session->next_crypto->digest_len);
@@ -1547,6 +1784,11 @@ int ssh_make_sessionid(ssh_session session)
                ssh_buffer_get_len(buf),
                session->next_crypto->secret_hash);
         break;
+    default:
+        /* Handle unsupported kex types - this should not happen in normal operation */
+        ssh_set_error(session, SSH_FATAL, "Unsupported KEX algorithm for hash computation");
+        rc = SSH_ERROR;
+        goto error;
     }
 
     /* During the first kex, secret hash and session ID are equal. However, after
@@ -1674,7 +1916,23 @@ int ssh_generate_session_keys(ssh_session session)
     size_t intkey_srv_to_cli_len = 0;
     int rc = -1;
 
-    k_string = ssh_make_bignum_string(crypto->shared_secret);
+    switch (session->next_crypto->kex_type) {
+    case SSH_KEX_SNTRUP761X25519_SHA512:
+    case SSH_KEX_SNTRUP761X25519_SHA512_OPENSSH_COM:
+        k_string = ssh_make_padded_bignum_string(crypto->shared_secret,
+                                                 crypto->digest_len);
+        break;
+    case SSH_KEX_MLKEM768X25519_SHA256:
+    case SSH_KEX_MLKEM768NISTP256_SHA256:
+#ifdef HAVE_MLKEM1024
+    case SSH_KEX_MLKEM1024NISTP384_SHA384:
+#endif
+        k_string = ssh_string_copy(crypto->hybrid_shared_secret);
+        break;
+    default:
+        k_string = ssh_make_bignum_string(crypto->shared_secret);
+        break;
+    }
     if (k_string == NULL) {
         ssh_set_error_oom(session);
         goto error;
@@ -1785,4 +2043,23 @@ error:
     }
 
     return rc;
+}
+
+/** @internal
+ * @brief Check if a given crypto context has a GSSAPI KEX set
+ *
+ * @param[in] crypto The SSH crypto context
+ * @return true if the KEX of the context is a GSSAPI KEX, false otherwise
+ */
+bool ssh_kex_is_gss(struct ssh_crypto_struct *crypto)
+{
+    switch (crypto->kex_type) {
+    case SSH_GSS_KEX_DH_GROUP14_SHA256:
+    case SSH_GSS_KEX_DH_GROUP16_SHA512:
+    case SSH_GSS_KEX_ECDH_NISTP256_SHA256:
+    case SSH_GSS_KEX_CURVE25519_SHA256:
+        return true;
+    default:
+        return false;
+    }
 }

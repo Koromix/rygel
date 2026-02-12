@@ -226,7 +226,7 @@ static int session_setup(void **state)
     struct test_server_st *tss = *state;
     struct torture_state *s;
     int verbosity = torture_libssh_verbosity();
-    const char *compat_hostkeys = ssh_kex_get_supported_method(SSH_HOSTKEYS);
+    const char *compat_hostkeys = ssh_get_supported_methods(SSH_HOSTKEYS);
     struct passwd *pwd;
     bool b = false;
     int rc;

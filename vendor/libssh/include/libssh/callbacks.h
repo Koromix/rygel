@@ -114,6 +114,17 @@ typedef void (*ssh_global_request_callback) (ssh_session session,
                                         ssh_message message, void *userdata);
 
 /**
+ * @brief SSH connect status callback. These are functions that report the
+ * status of the connection i,e. a function indicating the completed percentage
+ * of the connection
+ * steps.
+ * @param userdata Userdata to be passed to the callback function.
+ * @param status Percentage of connection status, going from 0.0 to 1.0
+ * once connection is done.
+ */
+typedef void (*ssh_connect_status_callback)(void *userdata, float status);
+
+/**
  * @brief Handles an SSH new channel open X11 request. This happens when the server
  * sends back an X11 connection attempt. This is a client-side API
  * @param session current session handler
@@ -181,7 +192,7 @@ struct ssh_callbacks_struct {
    * This function gets called during connection time to indicate the
    * percentage of connection steps completed.
    */
-  void (*connect_status_function)(void *userdata, float status);
+  ssh_connect_status_callback connect_status_function;
   /**
    * This function will be called each time a global request is received.
    */
@@ -209,36 +220,41 @@ typedef struct ssh_callbacks_struct *ssh_callbacks;
  * @param user User that wants to authenticate
  * @param password Password used for authentication
  * @param userdata Userdata to be passed to the callback function.
- * @returns SSH_AUTH_SUCCESS Authentication is accepted.
- * @returns SSH_AUTH_PARTIAL Partial authentication, more authentication means are needed.
- * @returns SSH_AUTH_DENIED Authentication failed.
+ * @returns `SSH_AUTH_SUCCESS` Authentication is accepted.
+ * @returns `SSH_AUTH_PARTIAL` Partial authentication, more authentication means
+ * are needed.
+ * @returns `SSH_AUTH_DENIED` Authentication failed.
  */
 typedef int (*ssh_auth_password_callback) (ssh_session session, const char *user, const char *password,
 		void *userdata);
 
 /**
- * @brief SSH authentication callback. Tries to authenticates user with the "none" method
- * which is anonymous or passwordless.
+ * @brief SSH authentication callback. Tries to authenticates user with the
+ * "none" method which is anonymous or passwordless.
  * @param session Current session handler
  * @param user User that wants to authenticate
  * @param userdata Userdata to be passed to the callback function.
- * @returns SSH_AUTH_SUCCESS Authentication is accepted.
- * @returns SSH_AUTH_PARTIAL Partial authentication, more authentication means are needed.
- * @returns SSH_AUTH_DENIED Authentication failed.
+ * @returns `SSH_AUTH_SUCCESS` Authentication is accepted.
+ * @returns `SSH_AUTH_PARTIAL` Partial authentication, more authentication means
+ * are needed.
+ * @returns `SSH_AUTH_DENIED` Authentication failed.
  */
 typedef int (*ssh_auth_none_callback) (ssh_session session, const char *user, void *userdata);
 
 /**
- * @brief SSH authentication callback. Tries to authenticates user with the "gssapi-with-mic" method
+ * @brief SSH authentication callback. Tries to authenticates user with the
+ * "gssapi-with-mic" method
  * @param session Current session handler
  * @param user Username of the user (can be spoofed)
  * @param principal Authenticated principal of the user, including realm.
  * @param userdata Userdata to be passed to the callback function.
- * @returns SSH_AUTH_SUCCESS Authentication is accepted.
- * @returns SSH_AUTH_PARTIAL Partial authentication, more authentication means are needed.
- * @returns SSH_AUTH_DENIED Authentication failed.
- * @warning Implementations should verify that parameter user matches in some way the principal.
- * user and principal can be different. Only the latter is guaranteed to be safe.
+ * @returns `SSH_AUTH_SUCCESS` Authentication is accepted.
+ * @returns `SSH_AUTH_PARTIAL` Partial authentication, more authentication means
+ * are needed.
+ * @returns `SSH_AUTH_DENIED` Authentication failed.
+ * @warning Implementations should verify that parameter user matches in some
+ * way the principal. user and principal can be different. Only the latter is
+ * guaranteed to be safe.
  */
 typedef int (*ssh_auth_gssapi_mic_callback) (ssh_session session, const char *user, const char *principal,
 		void *userdata);
@@ -248,17 +264,29 @@ typedef int (*ssh_auth_gssapi_mic_callback) (ssh_session session, const char *us
  * @param session Current session handler
  * @param user User that wants to authenticate
  * @param pubkey public key used for authentication
- * @param signature_state SSH_PUBLICKEY_STATE_NONE if the key is not signed (simple public key probe),
- *							SSH_PUBLICKEY_STATE_VALID if the signature is valid. Others values should be
- *							replied with a SSH_AUTH_DENIED.
+ * @param signature_state `SSH_PUBLICKEY_STATE_NONE` if the key is not signed
+ * (simple public key probe), `SSH_PUBLICKEY_STATE_VALID` if the signature is
+ * valid. Others values should be replied with a `SSH_AUTH_DENIED`.
  * @param userdata Userdata to be passed to the callback function.
- * @returns SSH_AUTH_SUCCESS Authentication is accepted.
- * @returns SSH_AUTH_PARTIAL Partial authentication, more authentication means are needed.
- * @returns SSH_AUTH_DENIED Authentication failed.
+ * @returns `SSH_AUTH_SUCCESS` Authentication is accepted.
+ * @returns `SSH_AUTH_PARTIAL` Partial authentication, more authentication means
+ * are needed.
+ * @returns `SSH_AUTH_DENIED` Authentication failed.
  */
 typedef int (*ssh_auth_pubkey_callback) (ssh_session session, const char *user, struct ssh_key_struct *pubkey,
 		char signature_state, void *userdata);
 
+/**
+ * @brief SSH authentication callback. Tries to authenticates user with the "keyboard-interactive" method
+ * @param message Current message
+ * @param session Current session handler
+ * @param userdata Userdata to be passed to the callback function.
+ * @returns SSH_AUTH_SUCCESS Authentication is accepted.
+ * @returns SSH_AUTH_INFO More info required for authentication.
+ * @returns SSH_AUTH_PARTIAL Partial authentication, more authentication means are needed.
+ * @returns SSH_AUTH_DENIED Authentication failed.
+*/
+typedef int (*ssh_auth_kbdint_callback) (ssh_message message, ssh_session session, void *userdata);
 
 /**
  * @brief Handles an SSH service request
@@ -268,7 +296,6 @@ typedef int (*ssh_auth_pubkey_callback) (ssh_session session, const char *user, 
  * @returns 0 if the request is to be allowed
  * @returns -1 if the request should not be allowed
  */
-
 typedef int (*ssh_service_request_callback) (ssh_session session, const char *service, void *userdata);
 
 /**
@@ -281,7 +308,7 @@ typedef int (*ssh_service_request_callback) (ssh_session session, const char *se
  */
 typedef ssh_channel (*ssh_channel_open_request_session_callback) (ssh_session session, void *userdata);
 
-/*
+/**
  * @brief handle the beginning of a GSSAPI authentication, server side.
  *        Callback should select the oid and also acquire the server credential.
  * @param session current session handler
@@ -296,35 +323,57 @@ typedef ssh_channel (*ssh_channel_open_request_session_callback) (ssh_session se
 typedef ssh_string (*ssh_gssapi_select_oid_callback) (ssh_session session, const char *user,
 		int n_oid, ssh_string *oids, void *userdata);
 
-/*
+/**
  * @brief handle the negotiation of a security context, server side.
  * @param session current session handler
  * @param[in] input_token input token provided by client
  * @param[out] output_token output of the gssapi accept_sec_context method,
  *				NULL after completion.
- * @returns SSH_OK if the token was generated correctly or accept_sec_context
+ * @returns `SSH_OK` if the token was generated correctly or accept_sec_context
  * returned GSS_S_COMPLETE
- * @returns SSH_ERROR in case of error
+ * @returns `SSH_ERROR` in case of error
  * @warning It is not necessary to fill this callback in if libssh is linked
  * with libgssapi.
  */
 typedef int (*ssh_gssapi_accept_sec_ctx_callback) (ssh_session session,
 		ssh_string input_token, ssh_string *output_token, void *userdata);
 
-/*
+/**
  * @brief Verify and authenticates a MIC, server side.
  * @param session current session handler
  * @param[in] mic input mic to be verified provided by client
  * @param[in] mic_buffer buffer of data to be signed.
  * @param[in] mic_buffer_size size of mic_buffer
- * @returns SSH_OK if the MIC was authenticated correctly
- * @returns SSH_ERROR in case of error
+ * @returns `SSH_OK` if the MIC was authenticated correctly
+ * @returns `SSH_ERROR` in case of error
  * @warning It is not necessary to fill this callback in if libssh is linked
  * with libgssapi.
  */
 typedef int (*ssh_gssapi_verify_mic_callback) (ssh_session session,
 		ssh_string mic, void *mic_buffer, size_t mic_buffer_size, void *userdata);
 
+/**
+ * @brief Handles an SSH new channel open "direct-tcpip" request. This
+ * happens when the client forwards an incoming TCP connection on a port it
+ * wants to forward to the destination. This is a server-side API
+ * @param session current session handler
+ * @param destination_address the address that the TCP connection connected to
+ * @param destination_port the port that the TCP connection connected to
+ * @param originator_address the originator IP address
+ * @param originator_port the originator port
+ * @param userdata Userdata to be passed to the callback function.
+ * @returns a valid ssh_channel handle if the request is to be allowed
+ * @returns NULL if the request should not be allowed
+ * @warning The channel pointer returned by this callback must be closed by the
+ * application.
+ */
+typedef ssh_channel (*ssh_channel_open_request_direct_tcpip_callback)(
+    ssh_session session,
+    const char *destination_address,
+    int destination_port,
+    const char *originator_address,
+    int originator_port,
+    void *userdata);
 
 /**
  * This structure can be used to implement a libssh server, with appropriate callbacks.
@@ -372,9 +421,21 @@ struct ssh_server_callbacks_struct {
   /** This function will be called when a gssapi token comes in.
    */
   ssh_gssapi_accept_sec_ctx_callback gssapi_accept_sec_ctx_function;
-  /* This function will be called when a MIC needs to be verified.
+  /** This function will be called when a MIC needs to be verified.
    */
   ssh_gssapi_verify_mic_callback gssapi_verify_mic_function;
+  /**
+   * This function will be called when an incoming "direct-tcpip"
+   * request is received.
+   */
+  ssh_channel_open_request_direct_tcpip_callback
+      channel_open_request_direct_tcpip_function;
+
+  /** This function gets called when a client tries to authenticate through
+   * keyboard interactive method.
+  */
+  ssh_auth_kbdint_callback auth_kbdint_function;
+
 };
 typedef struct ssh_server_callbacks_struct *ssh_server_callbacks;
 
@@ -400,7 +461,7 @@ typedef struct ssh_server_callbacks_struct *ssh_server_callbacks;
  *
  * @param  cb           The callback structure itself.
  *
- * @return SSH_OK on success, SSH_ERROR on error.
+ * @return `SSH_OK` on success, `SSH_ERROR` on error.
  */
 LIBSSH_API int ssh_set_server_callbacks(ssh_session session, ssh_server_callbacks cb);
 
@@ -531,14 +592,17 @@ typedef struct ssh_socket_callbacks_struct *ssh_socket_callbacks;
         }                           \
     } while(0)
 
-/** @brief Prototype for a packet callback, to be called when a new packet arrives
+/** @brief Prototype for a packet callback, to be called when a new packet
+ * arrives
  * @param session The current session of the packet
  * @param type packet type (see ssh2.h)
- * @param packet buffer containing the packet, excluding size, type and padding fields
+ * @param packet buffer containing the packet, excluding size, type and padding
+ * fields
  * @param user user argument to the callback
  * and are called each time a packet shows up
- * @returns SSH_PACKET_USED Packet was parsed and used
- * @returns SSH_PACKET_NOT_USED Packet was not used or understood, processing must continue
+ * @returns `SSH_PACKET_USED` Packet was parsed and used
+ * @returns `SSH_PACKET_NOT_USED` Packet was not used or understood, processing
+ * must continue
  */
 typedef int (*ssh_packet_callback) (ssh_session session, uint8_t type, ssh_buffer packet, void *user);
 
@@ -597,7 +661,7 @@ typedef struct ssh_packet_callbacks_struct *ssh_packet_callbacks;
  *
  * @param  cb           The callback structure itself.
  *
- * @return SSH_OK on success, SSH_ERROR on error.
+ * @return `SSH_OK` on success, `SSH_ERROR` on error.
  */
 LIBSSH_API int ssh_set_callbacks(ssh_session session, ssh_callbacks cb);
 
@@ -949,7 +1013,7 @@ typedef struct ssh_channel_callbacks_struct *ssh_channel_callbacks;
  *
  * @param  cb           The callback structure itself.
  *
- * @return SSH_OK on success, SSH_ERROR on error.
+ * @return `SSH_OK` on success, `SSH_ERROR` on error.
  * @warning this function will not replace existing callbacks but set the
  *          new one atop of them.
  */
@@ -968,7 +1032,7 @@ LIBSSH_API int ssh_set_channel_callbacks(ssh_channel channel,
  *
  * @param  cb           The callback structure itself.
  *
- * @return SSH_OK on success, SSH_ERROR on error.
+ * @return `SSH_OK` on success, `SSH_ERROR` on error.
  *
  * @see ssh_set_channel_callbacks
  */
@@ -985,7 +1049,7 @@ LIBSSH_API int ssh_add_channel_callbacks(ssh_channel channel,
  *
  * @param cb       The callback structure to remove
  *
- * @returns SSH_OK on success, SSH_ERROR on error.
+ * @returns `SSH_OK` on success, `SSH_ERROR` on error.
  */
 LIBSSH_API int ssh_remove_channel_callbacks(ssh_channel channel,
                                             ssh_channel_callbacks cb);
@@ -1018,7 +1082,7 @@ struct ssh_threads_callbacks_struct {
  * @param[in] cb   A pointer to a ssh_threads_callbacks_struct structure, which
  *                 contains the different callbacks to be set.
  *
- * @returns        Always returns SSH_OK.
+ * @returns        Always returns `SSH_OK`.
  *
  * @see ssh_threads_callbacks_struct
  * @see SSH_THREADS_PTHREAD
@@ -1114,6 +1178,177 @@ struct ssh_jump_callbacks_struct {
     ssh_jump_verify_knownhost_callback verify_knownhost;
     ssh_jump_authenticate_callback authenticate;
 };
+
+/* Security key callbacks */
+
+/*
+ * Forward declarations for structs that have been defined in sk_api.h.
+ * If you need to work with the fields inside them, please include
+ * libssh/sk_api.h
+ */
+struct sk_enroll_response;
+struct sk_sign_response;
+struct sk_resident_key;
+struct sk_option;
+
+#define LIBSSH_SK_API_VERSION_MAJOR 0x000a0000
+
+/**
+ * @brief FIDO2/U2F SK API version callback.
+ *
+ * Returns the version of the FIDO2/U2F API that the callbacks implement.
+ * This callback allows custom callback implementations to specify their
+ * SK API version for compatibility checking with libssh's security key
+ * interface.
+ *
+ * @details Version compatibility is determined by comparing the major version
+ * portion (upper 16 bits) of the returned value with SSH_SK_VERSION_MAJOR.
+ *
+ * For compatibility, implementations should return a version where:
+ * (returned_version & SSH_SK_VERSION_MAJOR_MASK) == SSH_SK_VERSION_MAJOR
+ *
+ * This ensures that the callbacks' SK API matches the major version expected
+ * by libssh, while allowing minor version differences for backward
+ * compatibility.
+ *
+ * @see LIBSSH_SK_API_VERSION_MAJOR Current expected major API version
+ * @see SSH_SK_VERSION_MAJOR_MASK Mask for extracting major version (0xffff0000)
+ */
+typedef uint32_t (*sk_api_version_callback)(void);
+
+/**
+ * @brief FIDO2/U2F key enrollment callback.
+ *
+ * Enrolls a new FIDO2/U2F security key credential (private key generation).
+ * This callback handles the creation of new FIDO2/U2F credentials, including
+ * both resident and non-resident keys.
+ *
+ * @param[in] alg The cryptographic algorithm to use
+ * @param[in] challenge Random challenge data for enrollment
+ * @param[in] challenge_len Length of the challenge data
+ * @param[in] application Application identifier (relying party ID)
+ * @param[in] flags Enrollment flags
+ * @param[in] pin PIN for user verification (may be NULL)
+ * @param[in] options Array of enrollment options (device path, user ID, etc.)
+ * @param[out] enroll_response Enrollment response containing public key,
+ *                             key handle, signature, and attestation data
+ *
+ * @returns SSH_OK on success, SSH_SK_ERR_* codes on failure.
+ */
+typedef int (*sk_enroll_callback)(uint32_t alg,
+                                  const uint8_t *challenge,
+                                  size_t challenge_len,
+                                  const char *application,
+                                  uint8_t flags,
+                                  const char *pin,
+                                  struct sk_option **options,
+                                  struct sk_enroll_response **enroll_response);
+
+/**
+ * @brief FIDO2/U2F security key signing callback.
+ *
+ * Signs data using a FIDO2 security key credential. This callback performs
+ * cryptographic signing operations using previously enrolled FIDO2/U2F
+ * credentials.
+ *
+ * @param[in] alg The cryptographic algorithm used by the key
+ * @param[in] data Data to be signed
+ * @param[in] data_len Length of the data to sign
+ * @param[in] application Application identifier (relying party ID)
+ * @param[in] key_handle Key handle identifying the credential
+ * @param[in] key_handle_len Length of the key handle
+ * @param[in] flags Signing flags
+ * @param[in] pin PIN for user verification (may be NULL)
+ * @param[in] options Array of signing options (device path, etc.)
+ * @param[out] sign_response Signature response containing signature data,
+ *                           flags, and counter information
+ *
+ * @returns SSH_OK on success, SSH_SK_ERR_* codes on failure.
+ */
+typedef int (*sk_sign_callback)(uint32_t alg,
+                                const uint8_t *data,
+                                size_t data_len,
+                                const char *application,
+                                const uint8_t *key_handle,
+                                size_t key_handle_len,
+                                uint8_t flags,
+                                const char *pin,
+                                struct sk_option **options,
+                                struct sk_sign_response **sign_response);
+
+/**
+ * @brief FIDO2 security key resident keys loading callback.
+ *
+ * Enumerates and loads all resident keys (discoverable credentials) stored
+ * on FIDO2 devices. Resident keys are credentials stored directly on
+ * the device itself and can be discovered without prior knowledge
+ * of key handles.
+ *
+ * @param[in] pin PIN for accessing resident keys (required for most operations)
+ * @param[in] options Array of options (device path, etc.)
+ * @param[out] resident_keys Array of resident key structures containing key
+ * data, application IDs, user information, and metadata
+ * @param[out] num_keys_found Number of resident keys found and loaded
+ *
+ * @returns SSH_OK on success, SSH_SK_ERR_* codes on failure.
+ */
+typedef int (*sk_load_resident_keys_callback)(
+    const char *pin,
+    struct sk_option **options,
+    struct sk_resident_key ***resident_keys,
+    size_t *num_keys_found);
+
+/**
+ * @brief FIDO2/U2F security key callbacks structure.
+ *
+ * This structure contains callbacks for FIDO2/U2F operations.
+ * It allows applications to provide custom implementations of FIDO2/U2F
+ * operations to override the default libfido2-based implementation.
+ *
+ * @warning These callbacks will only be called if libssh was built with
+ * FIDO2/U2F support enabled. (WITH_FIDO2 = ON).
+ */
+struct ssh_sk_callbacks_struct {
+    /** DON'T SET THIS use ssh_callbacks_init() instead. */
+    size_t size;
+
+    /**
+     * This callback returns the SK API version used by the callback
+     * implementation.
+     *
+     * @see sk_api_version_callback for detailed documentation
+     */
+    sk_api_version_callback api_version;
+
+    /**
+     * This callback enrolls a new FIDO2/U2F credential, generating
+     * a new key pair and optionally storing it on the device itself
+     * (resident keys).
+     *
+     * @see sk_enroll_callback for detailed documentation
+     */
+    sk_enroll_callback enroll;
+
+    /**
+     * This callback performs cryptographic signing operations using a
+     * previously enrolled FIDO2/U2F credential.
+     *
+     * @see sk_sign_callback for detailed documentation
+     */
+    sk_sign_callback sign;
+
+    /**
+     * This callback enumerates and loads all resident keys (discoverable
+     * credentials) stored on the FIDO2 device.
+     *
+     * @see sk_load_resident_keys_callback for detailed documentation
+     */
+    sk_load_resident_keys_callback load_resident_keys;
+};
+
+typedef struct ssh_sk_callbacks_struct *ssh_sk_callbacks;
+
+const struct ssh_sk_callbacks_struct *ssh_sk_get_default_callbacks(void);
 
 #ifdef __cplusplus
 }

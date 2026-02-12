@@ -36,28 +36,46 @@
 /** @internal
  * @brief Map the given key exchange enum value to its curve name.
  */
-static const char *ecdh_kex_type_to_curve(enum ssh_key_exchange_e kex_type) {
-    if (kex_type == SSH_KEX_ECDH_SHA2_NISTP256) {
+static const char *ecdh_kex_type_to_curve(enum ssh_key_exchange_e kex_type)
+{
+    switch (kex_type) {
+    case SSH_KEX_ECDH_SHA2_NISTP256:
+    case SSH_GSS_KEX_ECDH_NISTP256_SHA256:
+    case SSH_KEX_MLKEM768NISTP256_SHA256:
         return "NIST P-256";
-    } else if (kex_type == SSH_KEX_ECDH_SHA2_NISTP384) {
+    case SSH_KEX_ECDH_SHA2_NISTP384:
+#if HAVE_MLKEM1024
+    case SSH_KEX_MLKEM1024NISTP384_SHA384:
+#endif
         return "NIST P-384";
-    } else if (kex_type == SSH_KEX_ECDH_SHA2_NISTP521) {
+    case SSH_KEX_ECDH_SHA2_NISTP521:
         return "NIST P-521";
+    default:
+        return NULL;
     }
-    return NULL;
 }
 
 /** @internal
- * @brief Starts ecdh-sha2-nistp{256,384,521} key exchange.
+ * @brief Set up a nistp{256,384,521} key pair for ECDH key exchange.
  */
-int ssh_client_ecdh_init(ssh_session session)
+int ssh_ecdh_init(ssh_session session)
 {
-    int rc;
+    int rc = SSH_OK;
+    const char *curve = NULL;
+    const char *genstring = NULL;
     gpg_error_t err;
-    ssh_string client_pubkey = NULL;
     gcry_sexp_t param = NULL;
     gcry_sexp_t key = NULL;
-    const char *curve = NULL;
+    ssh_string pubkey = NULL;
+    ssh_string *pubkey_loc = NULL;
+
+    if (session->server) {
+        pubkey_loc = &session->next_crypto->ecdh_server_pubkey;
+        genstring = "(genkey(ecdh(curve %s) (flags transient-key)))";
+    } else {
+        pubkey_loc = &session->next_crypto->ecdh_client_pubkey;
+        genstring = "(genkey(ecdh(curve %s)))";
+    }
 
     curve = ecdh_kex_type_to_curve(session->next_crypto->kex_type);
     if (curve == NULL) {
@@ -65,16 +83,7 @@ int ssh_client_ecdh_init(ssh_session session)
         goto out;
     }
 
-    rc = ssh_buffer_add_u8(session->out_buffer, SSH2_MSG_KEX_ECDH_INIT);
-    if (rc < 0) {
-        rc = SSH_ERROR;
-        goto out;
-    }
-
-    err = gcry_sexp_build(&param,
-                          NULL,
-                          "(genkey(ecdh(curve %s)))",
-                          curve);
+    err = gcry_sexp_build(&param, NULL, genstring, curve);
     if (err) {
         rc = SSH_ERROR;
         goto out;
@@ -86,17 +95,8 @@ int ssh_client_ecdh_init(ssh_session session)
         goto out;
     }
 
-    client_pubkey = ssh_sexp_extract_mpi(key,
-                                         "q",
-                                         GCRYMPI_FMT_USG,
-                                         GCRYMPI_FMT_STD);
-    if (client_pubkey == NULL) {
-        rc = SSH_ERROR;
-        goto out;
-    }
-
-    rc = ssh_buffer_add_ssh_string(session->out_buffer, client_pubkey);
-    if (rc < 0) {
+    pubkey = ssh_sexp_extract_mpi(key, "q", GCRYMPI_FMT_USG, GCRYMPI_FMT_STD);
+    if (pubkey == NULL) {
         rc = SSH_ERROR;
         goto out;
     }
@@ -109,20 +109,45 @@ int ssh_client_ecdh_init(ssh_session session)
     session->next_crypto->ecdh_privkey = key;
     key = NULL;
 
-    SSH_STRING_FREE(session->next_crypto->ecdh_client_pubkey);
-    session->next_crypto->ecdh_client_pubkey = client_pubkey;
-    client_pubkey = NULL;
+    SSH_STRING_FREE(*pubkey_loc);
+    *pubkey_loc = pubkey;
+    pubkey = NULL;
+
+out:
+    gcry_sexp_release(param);
+    gcry_sexp_release(key);
+    SSH_STRING_FREE(pubkey);
+    return rc;
+}
+
+/** @internal
+ * @brief Starts ecdh-sha2-nistp{256,384,521} key exchange.
+ */
+int ssh_client_ecdh_init(ssh_session session)
+{
+    int rc;
+
+    rc = ssh_buffer_add_u8(session->out_buffer, SSH2_MSG_KEX_ECDH_INIT);
+    if (rc < 0) {
+        return SSH_ERROR;
+    }
+
+    rc = ssh_ecdh_init(session);
+    if (rc < 0) {
+        return SSH_ERROR;
+    }
+
+    rc = ssh_buffer_add_ssh_string(session->out_buffer,
+                                   session->next_crypto->ecdh_client_pubkey);
+    if (rc < 0) {
+        return SSH_ERROR;
+    }
 
     /* register the packet callbacks */
     ssh_packet_set_callbacks(session, &ssh_ecdh_client_callbacks);
     session->dh_handshake_state = DH_STATE_INIT_SENT;
 
     rc = ssh_packet_send(session);
-
- out:
-    gcry_sexp_release(param);
-    gcry_sexp_release(key);
-    SSH_STRING_FREE(client_pubkey);
     return rc;
 }
 
@@ -272,27 +297,16 @@ int ecdh_build_k(ssh_session session)
  * SSH_MSG_KEXDH_REPLY
  */
 SSH_PACKET_CALLBACK(ssh_packet_server_ecdh_init){
-    gpg_error_t err;
-    /* ECDH keys */
     ssh_string q_c_string = NULL;
-    ssh_string q_s_string = NULL;
-    gcry_sexp_t param = NULL;
-    gcry_sexp_t key = NULL;
-    /* SSH host keys (rsa, ed25519 and ecdsa) */
     ssh_key privkey = NULL;
     enum ssh_digest_e digest = SSH_DIGEST_AUTO;
     ssh_string sig_blob = NULL;
     ssh_string pubkey_blob = NULL;
     int rc = SSH_ERROR;
-    const char *curve = NULL;
     (void)type;
     (void)user;
 
     ssh_packet_remove_callbacks(session, &ssh_ecdh_server_callbacks);
-    curve = ecdh_kex_type_to_curve(session->next_crypto->kex_type);
-    if (curve == NULL) {
-        goto out;
-    }
 
     /* Extract the client pubkey from the init packet */
     q_c_string = ssh_buffer_get_ssh_string(packet);
@@ -302,28 +316,11 @@ SSH_PACKET_CALLBACK(ssh_packet_server_ecdh_init){
     }
     session->next_crypto->ecdh_client_pubkey = q_c_string;
 
-    /* Build server's key pair */
-    err = gcry_sexp_build(&param, NULL, "(genkey(ecdh(curve %s) (flags transient-key)))",
-                          curve);
-    if (err) {
+    rc = ssh_ecdh_init(session);
+    if (rc != SSH_OK) {
+        ssh_set_error(session, SSH_FATAL, "Failed to generate a key pair");
         goto out;
     }
-
-    err = gcry_pk_genkey(&key, param);
-    if (err)
-        goto out;
-
-    q_s_string = ssh_sexp_extract_mpi(key,
-                                      "q",
-                                      GCRYMPI_FMT_USG,
-                                      GCRYMPI_FMT_STD);
-    if (q_s_string == NULL) {
-        goto out;
-    }
-
-    session->next_crypto->ecdh_privkey = key;
-    key = NULL;
-    session->next_crypto->ecdh_server_pubkey = q_s_string;
 
     /* build k and session_id */
     rc = ecdh_build_k(session);
@@ -362,7 +359,7 @@ SSH_PACKET_CALLBACK(ssh_packet_server_ecdh_init){
                          "bSSS",
                          SSH2_MSG_KEXDH_REPLY,
                          pubkey_blob, /* host's pubkey */
-                         q_s_string, /* ecdh public key */
+                         session->next_crypto->ecdh_server_pubkey, /* ecdh public key */
                          sig_blob); /* signature blob */
 
     SSH_STRING_FREE(sig_blob);
@@ -387,8 +384,6 @@ SSH_PACKET_CALLBACK(ssh_packet_server_ecdh_init){
     }
 
  out:
-    gcry_sexp_release(param);
-    gcry_sexp_release(key);
     if (rc == SSH_ERROR) {
         ssh_buffer_reinit(session->out_buffer);
         session->session_state = SSH_SESSION_STATE_ERROR;

@@ -75,11 +75,27 @@ typedef struct sftp_file_struct* sftp_file;
 typedef struct sftp_message_struct* sftp_message;
 typedef struct sftp_packet_struct* sftp_packet;
 typedef struct sftp_request_queue_struct* sftp_request_queue;
+
+/**
+ * @brief SFTP session handle.
+ *
+ * This type represents an active SFTP session associated with an SSH channel.
+ * It is created and destroyed via the libssh SFTP API and is internally
+ * managed by libssh. It is used by applications to perform SFTP operations
+ * such as file access and directory management.
+ *
+ * The internal structure of this type is opaque and must not be accessed
+ * directly by applications.
+ *
+ * @see sftp_new
+ * @see sftp_free
+ */
 typedef struct sftp_session_struct* sftp_session;
 typedef struct sftp_status_message_struct* sftp_status_message;
 typedef struct sftp_statvfs_struct* sftp_statvfs_t;
 typedef struct sftp_limits_struct* sftp_limits_t;
 typedef struct sftp_aio_struct* sftp_aio;
+typedef struct sftp_name_id_map_struct *sftp_name_id_map;
 
 struct sftp_session_struct {
     ssh_session session;
@@ -215,30 +231,52 @@ struct sftp_limits_struct {
 };
 
 /**
+ * @brief SFTP names map structure to store the mapping between ids and names.
+ *
+ * This is mainly for the use of sftp_get_users_groups_by_id() function.
+ */
+struct sftp_name_id_map_struct {
+    /** @brief Count of name-id pairs in the map */
+    uint32_t count;
+
+    /** @brief Array of ids, ids[i] mapped to names[i] */
+    uint32_t *ids;
+
+    /** @brief Array of names, names[i] mapped to ids[i] */
+    char **names;
+};
+
+/**
  * @brief Creates a new sftp session.
  *
  * This function creates a new sftp session and allocates a new sftp channel
  * with the server inside of the provided ssh session. This function call is
  * usually followed by the sftp_init(), which initializes SFTP protocol itself.
  *
- * @param session       The ssh session to use.
+ * @param session       The ssh session to use. The session *must* be in
+ *                      blocking mode since most `sftp_*` functions do not
+ *                      support the non-blocking API.
  *
  * @return              A new sftp session or NULL on error.
  *
  * @see sftp_free()
  * @see sftp_init()
+ * @see ssh_set_blocking()
  */
 LIBSSH_API sftp_session sftp_new(ssh_session session);
 
 /**
  * @brief Start a new sftp session with an existing channel.
  *
- * @param session       The ssh session to use.
+ * @param session       The ssh session to use. The session *must* be in
+ *                      blocking mode since most `sftp_*` functions do not
+ *                      support the non-blocking API.
  * @param channel		An open session channel with subsystem already allocated
  *
  * @return              A new sftp session or NULL on error.
  *
  * @see sftp_free()
+ * @see ssh_set_blocking()
  */
 LIBSSH_API sftp_session sftp_new_channel(ssh_session session, ssh_channel channel);
 
@@ -1207,6 +1245,58 @@ LIBSSH_API char *sftp_expand_path(sftp_session sftp, const char *path);
  *                      using ssh_string_free_char().
  */
 LIBSSH_API char *sftp_home_directory(sftp_session sftp, const char *username);
+
+/**
+ * @brief Create a new sftp_name_id_map struct.
+ *
+ * @param count         The number of ids/names to store in the map.
+ *
+ * @return              A pointer to the newly allocated sftp_name_id_map
+ * struct.
+ */
+LIBSSH_API sftp_name_id_map sftp_name_id_map_new(uint32_t count);
+
+/**
+ * @brief Free the memory of an allocated `sftp_name_id_map` struct.
+ *
+ * @param  map          A pointer to the `sftp_name_id_map` struct to free.
+ */
+LIBSSH_API void sftp_name_id_map_free(sftp_name_id_map map);
+
+/**
+ * @brief Retrieves usernames and group names based on provided user and group
+ *        IDs.
+ *
+ * The retrieved names are stored in the `names` field of the
+ * `sftp_name_id_map` structure. In case a uid or gid is not found, an empty
+ * string is stored.
+ *
+ * This calls the "users-groups-by-id@openssh.com" extension.
+ * You should check if the extension is supported using:
+ *
+ * @code
+ * int supported = sftp_extension_supported(sftp,
+ * "users-groups-by-id@openssh.com", "1");
+ * @endcode
+ *
+ * @param sftp           The SFTP session handle.
+ *
+ * @param users_map      A pointer to a `sftp_name_id_map` struct with the user
+ *                       IDs. Can be NULL if only group names are needed.
+ *
+ * @param groups_map     A pointer to a `sftp_name_id_map` struct with the group
+ *                       IDs. Can be NULL if only user names are needed.
+ *
+ * @return               0 on success, < 0 on error with ssh and sftp error set.
+ *
+ * @note                 The caller needs to free the memory used for
+ *                       the maps later using `sftp_name_id_map_free()`.
+ *
+ * @see sftp_get_error()
+ */
+LIBSSH_API int sftp_get_users_groups_by_id(sftp_session sftp,
+                                           sftp_name_id_map users_map,
+                                           sftp_name_id_map groups_map);
 
 #ifdef WITH_SERVER
 /**

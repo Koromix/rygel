@@ -4,12 +4,13 @@ find_package(socket_wrapper)
 
 set(LIBSSH_CLIENT_TESTS
     torture_algorithms
+    torture_auth
+    torture_auth_cert
+    torture_auth_agent_forwarding
     torture_client_callbacks
     torture_client_config
     torture_connect
     torture_hostkey
-    torture_auth
-    torture_auth_cert
     torture_rekey
     torture_forward
     torture_knownhosts
@@ -18,7 +19,9 @@ set(LIBSSH_CLIENT_TESTS
     torture_session
     torture_request_env
     torture_request_pty_modes
-    torture_client_global_requests)
+    torture_client_global_requests
+    torture_get_kex_algo
+    )
 
 find_program(SCP_EXECUTABLE NAMES scp)
 if (SCP_EXECUTABLE)
@@ -42,7 +45,9 @@ endif()
 if (WITH_GSSAPI AND GSSAPI_FOUND AND GSSAPI_TESTING)
     set(LIBSSH_CLIENT_TESTS
         ${LIBSSH_CLIENT_TESTS}
-        torture_gssapi_auth)
+        torture_gssapi_auth
+        torture_gssapi_key_exchange
+        torture_gssapi_key_exchange_null)
 endif()
 
 if (DEFAULT_C_NO_DEPRECATION_FLAGS)
@@ -72,6 +77,8 @@ if (WITH_SFTP)
         torture_sftp_home_directory
         torture_sftp_setstat
         torture_sftp_packet_read
+        torture_sftp_recv_response_msg
+        torture_sftp_get_users_groups_by_id
         ${SFTP_BENCHMARK_TESTS})
 endif (WITH_SFTP)
 

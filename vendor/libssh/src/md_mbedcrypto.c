@@ -405,3 +405,51 @@ md5_ctx_final(unsigned char *md, MD5CTX c)
     }
     return SSH_OK;
 }
+
+int md5_direct(const unsigned char *digest, size_t len, unsigned char *hash)
+{
+    MD5CTX ctx = NULL;
+    int rc;
+    const mbedtls_md_info_t *md_info =
+        mbedtls_md_info_from_type(MBEDTLS_MD_MD5);
+    if (md_info == NULL) {
+        return SSH_ERROR;
+    }
+
+    ctx = malloc(sizeof(mbedtls_md_context_t));
+    if (ctx == NULL) {
+        return SSH_ERROR;
+    }
+
+    mbedtls_md_init(ctx);
+
+    rc = mbedtls_md_setup(ctx, md_info, 0);
+    if (rc != 0) {
+        mbedtls_md_free(ctx);
+        SAFE_FREE(ctx);
+        return SSH_ERROR;
+    }
+
+    rc = mbedtls_md_starts(ctx);
+    if (rc != 0) {
+        mbedtls_md_free(ctx);
+        SAFE_FREE(ctx);
+        return SSH_ERROR;
+    }
+
+    rc = mbedtls_md_update(ctx, digest, len);
+    if (rc != 0) {
+        mbedtls_md_free(ctx);
+        SAFE_FREE(ctx);
+        return SSH_ERROR;
+    }
+
+    rc = mbedtls_md_finish(ctx, hash);
+    mbedtls_md_free(ctx);
+    SAFE_FREE(ctx);
+    if (rc != 0) {
+        return SSH_ERROR;
+    }
+
+    return SSH_OK;
+}

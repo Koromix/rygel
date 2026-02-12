@@ -172,6 +172,65 @@ null_userdata:
     return SSH_AUTH_DENIED;
 }
 
+static int kbdint_check_response(ssh_session session, struct session_data_st *sdata)
+{
+    int count, cmp;
+    const char *answer = NULL;
+
+    count = ssh_userauth_kbdint_getnanswers(session);
+    if (count != 2) {
+        return 0;
+    }
+
+    answer = ssh_userauth_kbdint_getanswer(session, 0);
+    cmp = strcasecmp(sdata->username, answer);
+    if (cmp != 0) {
+        return 0;
+    }
+    answer = ssh_userauth_kbdint_getanswer(session, 1);
+    cmp = strcmp(sdata->password, answer);
+    if (cmp != 0) {
+        return 0;
+    }
+
+    return 1;
+}
+
+static int
+auth_kbdint_cb(ssh_message message, ssh_session session, void *userdata)
+{
+    struct session_data_st *sdata = (struct session_data_st *)userdata;
+
+    const char *name = "\n\nKeyboard-Interactive Fancy Authentication\n";
+    const char *instruction = "Get yourself authenticated";
+    const char *prompts[2] = {"Username: ", "Password: "};
+    char echo[] = {1, 0};
+
+    if (sdata == NULL) {
+        fprintf(stderr, "Error: NULL userdata\n");
+        return SSH_AUTH_DENIED;
+    }
+
+    if (!ssh_message_auth_kbdint_is_response(message)) {
+        printf("User %s wants to auth with kbdint\n",
+               ssh_message_auth_user(message));
+        ssh_message_auth_interactive_request(message,
+                                             name,
+                                             instruction,
+                                             2,
+                                             prompts,
+                                             echo);
+        return SSH_AUTH_INFO;
+    } else {
+        if (kbdint_check_response(session, sdata)) {
+            sdata->authenticated = 1;
+            return SSH_AUTH_SUCCESS;
+        }
+    }
+
+    return SSH_AUTH_DENIED;
+}
+
 #if WITH_GSSAPI
 int auth_gssapi_mic_cb(ssh_session session,
                        UNUSED_PARAM(const char *user),
@@ -783,6 +842,7 @@ struct ssh_server_callbacks_struct *get_default_server_cb(void)
     cb->auth_password_function = auth_password_cb;
     cb->auth_pubkey_function = auth_pubkey_cb;
     cb->channel_open_request_session_function = channel_new_session_cb;
+    cb->auth_kbdint_function = auth_kbdint_cb;
 #if WITH_GSSAPI
     cb->auth_gssapi_mic_function = auth_gssapi_mic_cb;
 #endif
@@ -912,7 +972,8 @@ void default_handle_session_cb(ssh_event event,
     } else {
         ssh_set_auth_methods(session,
                 SSH_AUTH_METHOD_PASSWORD |
-                SSH_AUTH_METHOD_PUBLICKEY|
+                SSH_AUTH_METHOD_PUBLICKEY |
+                SSH_AUTH_METHOD_INTERACTIVE |
                 SSH_AUTH_METHOD_GSSAPI_MIC);
     }
 

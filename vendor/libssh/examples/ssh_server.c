@@ -192,9 +192,6 @@ static struct argp argp = {options, parse_opt, args_doc, doc, NULL, NULL, NULL};
 static int
 parse_opt(int argc, char **argv, ssh_bind sshbind)
 {
-    int no_default_keys = 0;
-    int rsa_already_set = 0;
-    int ecdsa_already_set = 0;
     int key;
 
     while((key = getopt(argc, argv, "a:e:k:p:P:r:u:v")) != -1) {
@@ -202,16 +199,10 @@ parse_opt(int argc, char **argv, ssh_bind sshbind)
             ssh_bind_options_set(sshbind, SSH_BIND_OPTIONS_BINDPORT_STR, optarg);
         } else if (key == 'k') {
             ssh_bind_options_set(sshbind, SSH_BIND_OPTIONS_HOSTKEY, optarg);
-            /* We can't track the types of keys being added with this
-            option, so let's ensure we keep the keys we're adding
-            by just not setting the default keys */
-            no_default_keys = 1;
         } else if (key == 'r') {
             ssh_bind_options_set(sshbind, SSH_BIND_OPTIONS_HOSTKEY, optarg);
-            rsa_already_set = 1;
         } else if (key == 'e') {
             ssh_bind_options_set(sshbind, SSH_BIND_OPTIONS_HOSTKEY, optarg);
-            ecdsa_already_set = 1;
         } else if (key == 'a') {
             strncpy(authorizedkeys, optarg, DEF_STR_SIZE-1);
         } else if (key == 'u') {
@@ -255,12 +246,6 @@ parse_opt(int argc, char **argv, ssh_bind sshbind)
     }
 
     ssh_bind_options_set(sshbind, SSH_BIND_OPTIONS_BINDADDR, argv[optind]);
-
-    if (!no_default_keys) {
-        set_default_keys(sshbind,
-                         rsa_already_set,
-                         ecdsa_already_set);
-    }
 
     return 0;
 }
@@ -646,6 +631,58 @@ auth_publickey(ssh_session session,
     return SSH_AUTH_DENIED;
 }
 
+static int kbdint_check_response(ssh_session session)
+{
+    int count, cmp;
+    const char *answer = NULL;
+
+    count = ssh_userauth_kbdint_getnanswers(session);
+    if (count != 2) {
+        return 0;
+    }
+
+    answer = ssh_userauth_kbdint_getanswer(session, 0);
+    cmp = strcasecmp("omnitrix", answer);
+    if (cmp != 0) {
+        return 0;
+    }
+
+    answer = ssh_userauth_kbdint_getanswer(session, 1);
+    cmp = strcmp("000", answer);
+    if (cmp != 0) {
+        return 0;
+    }
+
+    return 1;
+}
+
+static int
+auth_kbdint(ssh_message message, ssh_session session, void *userdata)
+{
+    struct session_data_struct *sdata = (struct session_data_struct *)userdata;
+    const char *name = "\n\nKeyboard-Interactive Fancy Authentication\n";
+    const char *instruction = "Most powerful weapon in the galaxy";
+    const char *prompts[2] = {"Name of the weapon: ", "Destruct Code: "};
+    char echo[] = {1, 0};
+    if (!ssh_message_auth_kbdint_is_response(message)) {
+        printf("User %s wants to auth with kbdint\n",
+               ssh_message_auth_user(message));
+        ssh_message_auth_interactive_request(message,
+                                             name,
+                                             instruction,
+                                             2,
+                                             prompts,
+                                             echo);
+        return SSH_AUTH_INFO;
+    } else {
+        if (kbdint_check_response(session)) {
+            sdata->authenticated = 1;
+            return SSH_AUTH_SUCCESS;
+        }
+        return SSH_AUTH_DENIED;
+    }
+}
+
 static ssh_channel
 channel_open(ssh_session session, void *userdata)
 {
@@ -735,14 +772,15 @@ handle_session(ssh_event event, ssh_session session)
     struct ssh_server_callbacks_struct server_cb = {
         .userdata = &sdata,
         .auth_password_function = auth_password,
+        .auth_kbdint_function = auth_kbdint,
         .channel_open_request_session_function = channel_open,
     };
 
     if (authorizedkeys[0]) {
         server_cb.auth_pubkey_function = auth_publickey;
-        ssh_set_auth_methods(session, SSH_AUTH_METHOD_PASSWORD | SSH_AUTH_METHOD_PUBLICKEY);
+        ssh_set_auth_methods(session, SSH_AUTH_METHOD_PASSWORD | SSH_AUTH_METHOD_PUBLICKEY | SSH_AUTH_METHOD_INTERACTIVE);
     } else
-        ssh_set_auth_methods(session, SSH_AUTH_METHOD_PASSWORD);
+        ssh_set_auth_methods(session, SSH_AUTH_METHOD_PASSWORD | SSH_AUTH_METHOD_INTERACTIVE);
 
     ssh_callbacks_init(&server_cb);
     ssh_callbacks_init(&channel_cb);

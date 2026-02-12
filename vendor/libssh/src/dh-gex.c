@@ -409,6 +409,7 @@ static int ssh_retrieve_dhgroup_file(FILE *moduli,
     size_t line = 0;
     size_t best_nlines = 0;
 
+    *best_size = 0;
     for(;;) {
         line++;
         firstbyte = getc(moduli);
@@ -416,6 +417,9 @@ static int ssh_retrieve_dhgroup_file(FILE *moduli,
             do {
                 firstbyte = getc(moduli);
             } while(firstbyte != '\n' && firstbyte != EOF);
+            if (firstbyte == EOF) {
+                break;
+            }
             continue;
         }
         if (firstbyte == EOF) {
@@ -439,6 +443,9 @@ static int ssh_retrieve_dhgroup_file(FILE *moduli,
             do {
                 firstbyte = getc(moduli);
             } while(firstbyte != '\n' && firstbyte != EOF);
+            if (firstbyte == EOF) {
+                break;
+            }
             continue;
         }
 
@@ -519,9 +526,9 @@ static int ssh_retrieve_dhgroup(char *moduli_file,
     }
 
     if (moduli_file != NULL)
-        moduli = fopen(moduli_file, "r");
+        moduli = ssh_strict_fopen(moduli_file, SSH_MAX_CONFIG_FILE_SIZE);
     else
-        moduli = fopen(MODULI_FILE, "r");
+        moduli = ssh_strict_fopen(MODULI_FILE, SSH_MAX_CONFIG_FILE_SIZE);
 
     if (moduli == NULL) {
         char err_msg[SSH_ERRNO_MSG_MAX] = {0};

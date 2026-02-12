@@ -145,6 +145,9 @@ extern LIBSSH_THREAD int ssh_log_level;
     "KexAlgorithms "KEXALGORITHMS"\n" \
     "Include "LIBSSH_TEST_BIND_CONFIG_KEXALGORITHMS2"\n"
 
+#define LIBSSH_TEST_BIND_CONFIG_REQUIRED_RSA_SIZE "libssh_test_bind_config_required_rsa_size"
+#define LIBSSH_TEST_BIND_CONFIG_REQUIRED_RSA_SIZE_STRING "RequiredRsaSize 2233\n"
+
 #define LIBSSH_TEST_BIND_CONFIG_FULL "libssh_test_bind_config_full"
 #define LIBSSH_TEST_BIND_CONFIG_INCLUDE "libssh_test_bind_config_include"
 #define LIBSSH_TEST_BIND_CONFIG_INCLUDE_RECURSIVE "libssh_test_bind_config_include_recursive"
@@ -298,6 +301,9 @@ static int setup_config_files(void **state)
     torture_write_file(LIBSSH_TEST_BIND_CONFIG_KEXALGORITHMS_TWICE_REC,
                        LIBSSH_TEST_BIND_CONFIG_KEXALGORITHMS_TWICE_REC_STRING);
 
+    torture_write_file(LIBSSH_TEST_BIND_CONFIG_REQUIRED_RSA_SIZE,
+                       LIBSSH_TEST_BIND_CONFIG_REQUIRED_RSA_SIZE_STRING);
+
     torture_write_file(LIBSSH_TEST_BIND_CONFIG_FULL,
                        "ListenAddress "LISTEN_ADDRESS"\n"
                        "Port 123\n"
@@ -305,7 +311,8 @@ static int setup_config_files(void **state)
                        "LogLevel "LOGLEVEL"\n"
                        "Ciphers "CIPHERS"\n"
                        "MACs "MACS"\n"
-                       "KexAlgorithms "KEXALGORITHMS"\n");
+                       "KexAlgorithms "KEXALGORITHMS"\n"
+                       "RequiredRsaSize 2233\n");
 
     torture_write_file(LIBSSH_TEST_BIND_CONFIG_INCLUDE,
                        "Include "LIBSSH_TEST_BIND_CONFIG_LISTENADDRESS"\n"
@@ -314,7 +321,8 @@ static int setup_config_files(void **state)
                        "Include "LIBSSH_TEST_BIND_CONFIG_LOGLEVEL"\n"
                        "Include "LIBSSH_TEST_BIND_CONFIG_CIPHERS"\n"
                        "Include "LIBSSH_TEST_BIND_CONFIG_MACS"\n"
-                       "Include "LIBSSH_TEST_BIND_CONFIG_KEXALGORITHMS"\n");
+                       "Include "LIBSSH_TEST_BIND_CONFIG_KEXALGORITHMS"\n"
+                       "Include "LIBSSH_TEST_BIND_CONFIG_REQUIRED_RSA_SIZE"\n");
 
     torture_write_file(LIBSSH_TEST_BIND_CONFIG_INCLUDE_RECURSIVE,
                        "Include "LIBSSH_TEST_BIND_CONFIG_INCLUDE"\n");
@@ -1409,6 +1417,8 @@ static int assert_full_bind_config(void **state)
     } else {
         assert_string_equal(bind->wanted_methods[SSH_KEX], KEXALGORITHMS);
     }
+
+    assert_int_equal(bind->rsa_min_size, 2233);
 
     SAFE_FREE(fips_ciphers);
     SAFE_FREE(fips_kex);

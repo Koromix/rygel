@@ -85,6 +85,20 @@ static ssize_t ssh_connector_fd_write(ssh_connector connector,
                                       uint32_t len);
 static bool ssh_connector_fd_is_socket(socket_t socket);
 
+/**
+ * @brief Create a new SSH connector.
+ *
+ * Allocates and initializes a new connector object for moving data between
+ * an SSH session and file descriptors. The connector is created with invalid
+ * file descriptors and callback structures initialized, but not yet attached
+ * to any channels or sockets.
+ *
+ * @param[in]  session   The SSH session to associate with the connector.
+ *
+ * @return               A newly allocated connector on success, or NULL if an
+ *                       error occurred. On error, an out-of-memory error is
+ *                       set on the session.
+ */
 ssh_connector ssh_connector_new(ssh_session session)
 {
     ssh_connector connector;
@@ -114,8 +128,20 @@ ssh_connector ssh_connector_new(ssh_session session)
     return connector;
 }
 
+/**
+ * @brief Free an SSH connector.
+ *
+ * Cleans up and deallocates a connector created by ssh_connector_new().
+ * Any channel callbacks and poll objects associated with the @p connector
+ * are removed and freed before the connector structure itself is released.
+ *
+ * @param[in] connector  The connector to free.
+ */
 void ssh_connector_free (ssh_connector connector)
 {
+    if (connector == NULL) {
+        return;
+    }
     if (connector->in_channel != NULL) {
         ssh_remove_channel_callbacks(connector->in_channel,
                                      &connector->in_channel_cb);
@@ -142,6 +168,24 @@ void ssh_connector_free (ssh_connector connector)
     free(connector);
 }
 
+/**
+ * @brief Set the input channel for a connector.
+ *
+ * Associates an SSH channel with the @p connector as its input source and
+ * installs the internal channel callbacks used for reading data. Any
+ * configured input file descriptor is disabled and the connector will
+ * receive data from the given channel only.
+ *
+ * If neither `SSH_CONNECTOR_STDOUT` nor `SSH_CONNECTOR_STDERR` is specified
+ * in @p flags, `SSH_CONNECTOR_STDOUT` is used as the default.
+ *
+ * @param[in] connector  The connector to configure.
+ * @param[in] channel    The SSH channel to use as input.
+ * @param[in] flags      A combination of ssh_connector_flags_e values
+ *                       selecting which channel streams to read from.
+ *
+ * @return               `SSH_OK` on success, `SSH_ERROR` on failure.
+ */
 int ssh_connector_set_in_channel(ssh_connector connector,
                                   ssh_channel channel,
                                   enum ssh_connector_flags_e flags)
@@ -158,6 +202,24 @@ int ssh_connector_set_in_channel(ssh_connector connector,
     return ssh_add_channel_callbacks(channel, &connector->in_channel_cb);
 }
 
+/**
+ * @brief Set the output channel for a connector.
+ *
+ * Associates an SSH channel with the @p connector as its output target and
+ * installs the internal channel callbacks used for writing data. Any
+ * configured output file descriptor is disabled and the connector will
+ * send data to the given channel only.
+ *
+ * If neither `SSH_CONNECTOR_STDOUT` nor `SSH_CONNECTOR_STDERR` is specified
+ * in @p flags, `SSH_CONNECTOR_STDOUT` is used as the default.
+ *
+ * @param[in] connector  The connector to configure.
+ * @param[in] channel    The SSH channel to use as output.
+ * @param[in] flags      A combination of ssh_connector_flags_e values
+ *                       selecting which channel streams to write to.
+ *
+ * @return               `SSH_OK` on success, `SSH_ERROR` on failure.
+ */
 int ssh_connector_set_out_channel(ssh_connector connector,
                                   ssh_channel channel,
                                   enum ssh_connector_flags_e flags)
@@ -168,12 +230,21 @@ int ssh_connector_set_out_channel(ssh_connector connector,
 
     /* Fallback to default value for invalid flags */
     if (!(flags & SSH_CONNECTOR_STDOUT) && !(flags & SSH_CONNECTOR_STDERR)) {
-        connector->in_flags = SSH_CONNECTOR_STDOUT;
+        connector->out_flags = SSH_CONNECTOR_STDOUT;
     }
 
     return ssh_add_channel_callbacks(channel, &connector->out_channel_cb);
 }
 
+/**
+ * @brief Set the connector's input file descriptor.
+ *
+ * Sets the @p fd (file descriptor) to be used as the input source for the
+ * @p connector , replacing any previously configured input channel.
+ *
+ * @param[in] connector  The connector to configure.
+ * @param[in] fd         The file descriptor (socket or regular).
+ */
 void ssh_connector_set_in_fd(ssh_connector connector, socket_t fd)
 {
     connector->in_fd = fd;
@@ -181,6 +252,15 @@ void ssh_connector_set_in_fd(ssh_connector connector, socket_t fd)
     connector->in_channel = NULL;
 }
 
+/**
+ * @brief Set the connector's output file descriptor.
+ *
+ * Sets the @p fd (file descriptor) to be used as the output target for the
+ * @p connector , replacing any previously configured output channel.
+ *
+ * @param[in] connector  The connector to configure.
+ * @param[in] fd         The file descriptor (socket or regular).
+ */
 void ssh_connector_set_out_fd(ssh_connector connector, socket_t fd)
 {
     connector->out_fd = fd;
@@ -230,6 +310,87 @@ static void ssh_connector_reset_pollevents(ssh_connector connector)
 /**
  * @internal
  *
+ * @brief Update the connector's flags after a read-write io
+ *        operation
+ *
+ * This should be called after some data is successfully read from
+ * connector's input and written to connector's output.
+ *
+ * @param[in, out] connector Connector for which the io operation occurred.
+ *
+ * @warning This does not consider the case when the io indicated failure
+ *
+ * @warning This does not consider the case when the input indicated that
+ *          EOF was encountered.
+ */
+static void ssh_connector_update_flags_after_io(ssh_connector connector)
+{
+    /*
+     * With fds we can afford to mark:
+     * - in_available as 0 after an fd read (even if more pending data can be
+     *   immediately read from the fd)
+     *
+     * - out_wontblock as 0 after an fd write (even if more data can
+     *   be written to the fd without blocking)
+     *
+     * since poll events set on the fd will get raised to indicate
+     * possibility of read/write in case existing situation is apt
+     * (i.e can read/write occur right now) or if situation becomes
+     * apt in future (read data becomes available, write becomes
+     * possible)
+     */
+
+    /*
+     * On the other hand, with channels we need to be more careful
+     * before claiming read/write not possible because channel callbacks
+     * are called in limited scenarios.
+     *
+     * (e.g. connector callback to indicate read data available on input
+     * channel is called only when new data is received on channel. It is
+     * not called when we have some pending data in channel's buffers but
+     * don't receive any new data on the channel)
+     *
+     * Hence, in case of channels, blindly setting flag associated with
+     * read/write input/output to 0 after a read/write may not be a good
+     * idea as the callback that sets it back to 1 again may not be ever
+     * called again.
+     */
+
+    uint32_t window_size;
+
+    /* update in_available based on input source (fd or channel) */
+    if (connector->in_fd != SSH_INVALID_SOCKET) {
+        connector->in_available = 0;
+    } else if (connector->in_channel != NULL) {
+        if (ssh_channel_poll_timeout(connector->in_channel, 0, 0) > 0) {
+            connector->in_available = 1;
+        } else {
+            connector->in_available = 0;
+        }
+    } else {
+        /* connector input is invalid ! */
+        return;
+    }
+
+    /* update out_wontblock based on output source (fd or channel) */
+    if (connector->out_fd != SSH_INVALID_SOCKET) {
+        connector->out_wontblock = 0;
+    } else if (connector->out_channel != NULL) {
+        window_size = ssh_channel_window_size(connector->out_channel);
+        if (window_size > 0) {
+            connector->out_wontblock = 1;
+        } else {
+            connector->out_wontblock = 0;
+        }
+    } else {
+        /* connector output is invalid ! */
+        return;
+    }
+}
+
+/**
+ * @internal
+ *
  * @brief Callback called when a poll event is received on an input fd.
  */
 static void ssh_connector_fd_in_cb(ssh_connector connector)
@@ -252,7 +413,9 @@ static void ssh_connector_fd_in_cb(ssh_connector connector)
         }
 
         r = ssh_connector_fd_read(connector, buffer, toread);
-        if (r < 0) {
+        /* Sanity: Make sure we do not get too large return value to make static
+         * analysis tools happy */
+        if (r < 0 || r > (ssize_t)toread) {
             ssh_connector_except(connector, connector->in_fd);
             return;
         }
@@ -266,17 +429,17 @@ static void ssh_connector_fd_in_cb(ssh_connector connector)
                 }
                 connector->in_available = 1; /* Don't poll on it */
                 return;
-            } else if (r> 0) {
+            } else if (r > 0) {
                 /* loop around ssh_channel_write in case our window reduced due to a race */
                 while (total != r){
                     if (connector->out_flags & SSH_CONNECTOR_STDOUT) {
                         w = ssh_channel_write(connector->out_channel,
                                               buffer + total,
-                                              r - total);
+                                              (uint32_t)(r - total));
                     } else {
                         w = ssh_channel_write_stderr(connector->out_channel,
                                                      buffer + total,
-                                                     r - total);
+                                                     (uint32_t)(r - total));
                     }
                     if (w == SSH_ERROR) {
                         return;
@@ -296,8 +459,10 @@ static void ssh_connector_fd_in_cb(ssh_connector connector)
                 while (total < r) {
                     w = ssh_connector_fd_write(connector,
                                                buffer + total,
-                                               r - total);
-                    if (w < 0) {
+                                               (uint32_t)(r - total));
+                    /* Sanity: Make sure we do not get too large return value
+                     * to make static analysis tools happy */
+                    if (w < 0 || w > (r - total)) {
                         ssh_connector_except(connector, connector->out_fd);
                         return;
                     }
@@ -308,8 +473,8 @@ static void ssh_connector_fd_in_cb(ssh_connector connector)
             ssh_set_error(connector->session, SSH_FATAL, "output socket or channel closed");
             return;
         }
-        connector->out_wontblock = 0;
-        connector->in_available = 0;
+
+        ssh_connector_update_flags_after_io(connector);
     } else {
         connector->in_available = 1;
     }
@@ -342,8 +507,9 @@ ssh_connector_fd_out_cb(ssh_connector connector)
             } else if (r > 0) {
                 /* loop around write in case the write blocks even for CHUNKSIZE bytes */
                 while (total != r) {
-                    w = ssh_connector_fd_write(connector, buffer + total,
-                                               r - total);
+                    w = ssh_connector_fd_write(connector,
+                                               buffer + total,
+                                               (uint32_t)(r - total));
                     if (w < 0) {
                         ssh_connector_except(connector, connector->out_fd);
                         return;
@@ -361,8 +527,8 @@ ssh_connector_fd_out_cb(ssh_connector connector)
                           "Output socket or channel closed");
             return;
         }
-        connector->in_available = 0;
-        connector->out_wontblock = 0;
+
+        ssh_connector_update_flags_after_io(connector);
     } else {
         connector->out_wontblock = 1;
     }
@@ -373,7 +539,7 @@ ssh_connector_fd_out_cb(ssh_connector connector)
  *
  * @brief Callback called when a poll event is received on a file descriptor.
  *
- * This is for (input or output.
+ * This is for input or output.
  *
  * @param[in] fd file descriptor receiving the event
  *
@@ -383,14 +549,12 @@ ssh_connector_fd_out_cb(ssh_connector connector)
  *
  * @returns 0
  */
-static int ssh_connector_fd_cb(ssh_poll_handle p,
+static int ssh_connector_fd_cb(UNUSED_PARAM(ssh_poll_handle p),
                                socket_t fd,
                                int revents,
                                void *userdata)
 {
     ssh_connector connector = userdata;
-
-    (void)p;
 
     if (revents & POLLERR) {
         ssh_connector_except(connector, fd);
@@ -410,6 +574,10 @@ static int ssh_connector_fd_cb(ssh_poll_handle p,
  *
  * @brief Callback called when data is received on channel.
  *
+ * @param[in] session The SSH session
+ *
+ * @param[in] channel The channel data came from
+ *
  * @param[in] data Pointer to the data
  *
  * @param[in] len Length of data
@@ -421,7 +589,7 @@ static int ssh_connector_fd_cb(ssh_poll_handle p,
  * @returns Amount of data bytes consumed
  */
 static int ssh_connector_channel_data_cb(ssh_session session,
-                                         ssh_channel channel,
+                                         UNUSED_PARAM(ssh_channel channel),
                                          void *data,
                                          uint32_t len,
                                          int is_stderr,
@@ -431,11 +599,11 @@ static int ssh_connector_channel_data_cb(ssh_session session,
     int w;
     uint32_t window;
 
-    (void) session;
-    (void) channel;
-    (void) is_stderr;
-
-    SSH_LOG(SSH_LOG_TRACE,"connector data on channel");
+    SSH_LOG(SSH_LOG_TRACE,
+            "Received data (%" PRIu32 ") on channel (%" PRIu32 ":%" PRIu32 ")",
+            len,
+            channel->local_channel,
+            channel->remote_channel);
 
     if (is_stderr && !(connector->in_flags & SSH_CONNECTOR_STDERR)) {
         /* ignore stderr */
@@ -449,6 +617,7 @@ static int ssh_connector_channel_data_cb(ssh_session session,
     }
 
     if (connector->out_wontblock) {
+        SSH_LOG(SSH_LOG_TRACE, "Writing won't block");
         if (connector->out_channel != NULL) {
             uint32_t window_len;
 
@@ -456,16 +625,8 @@ static int ssh_connector_channel_data_cb(ssh_session session,
             window_len = MIN(window, len);
 
             /* Route the data to the right exception channel */
-            if (is_stderr && (connector->out_flags & SSH_CONNECTOR_STDERR)) {
-                w = ssh_channel_write_stderr(connector->out_channel,
-                                             data,
-                                             window_len);
-            } else if (!is_stderr &&
-                       (connector->out_flags & SSH_CONNECTOR_STDOUT)) {
-                w = ssh_channel_write(connector->out_channel,
-                                      data,
-                                      window_len);
-            } else if (connector->out_flags & SSH_CONNECTOR_STDOUT) {
+            if (connector->out_flags & SSH_CONNECTOR_STDOUT &&
+                !(is_stderr && (connector->out_flags & SSH_CONNECTOR_STDERR))) {
                 w = ssh_channel_write(connector->out_channel,
                                       data,
                                       window_len);
@@ -478,23 +639,22 @@ static int ssh_connector_channel_data_cb(ssh_session session,
                 ssh_connector_except_channel(connector, connector->out_channel);
             }
         } else if (connector->out_fd != SSH_INVALID_SOCKET) {
-                w = ssh_connector_fd_write(connector, data, len);
-            if (w < 0)
+            ssize_t ws = ssh_connector_fd_write(connector, data, len);
+            if (ws < 0) {
                 ssh_connector_except(connector, connector->out_fd);
+            }
+            w = (int)ws;
         } else {
             ssh_set_error(session, SSH_FATAL, "output socket or channel closed");
             return SSH_ERROR;
         }
 
-        connector->out_wontblock = 0;
-        connector->in_available = 0;
-        if ((unsigned int)w < len) {
-            connector->in_available = 1;
-        }
+        ssh_connector_update_flags_after_io(connector);
         ssh_connector_reset_pollevents(connector);
 
         return w;
     } else {
+        SSH_LOG(SSH_LOG_TRACE, "Writing would block: wait?");
         connector->in_available = 1;
 
         return 0;
@@ -512,10 +672,11 @@ static int ssh_connector_channel_data_cb(ssh_session session,
  *
  * @returns Amount of data bytes consumed
  */
-static int ssh_connector_channel_write_wontblock_cb(ssh_session session,
-                                                    ssh_channel channel,
-                                                    uint32_t bytes,
-                                                    void *userdata)
+static int
+ssh_connector_channel_write_wontblock_cb(ssh_session session,
+                                         UNUSED_PARAM(ssh_channel channel),
+                                         uint32_t bytes,
+                                         void *userdata)
 {
     ssh_connector connector = userdata;
     uint8_t buffer[CHUNKSIZE];
@@ -523,7 +684,12 @@ static int ssh_connector_channel_write_wontblock_cb(ssh_session session,
 
     (void) channel;
 
-    SSH_LOG(SSH_LOG_TRACE, "Channel write won't block");
+    SSH_LOG(SSH_LOG_TRACE,
+            "Write won't block (%" PRIu32 ") on channel (%" PRIu32 ":%" PRIu32 ")",
+            bytes,
+            channel->local_channel,
+            channel->remote_channel);
+
     if (connector->in_available) {
         if (connector->in_channel != NULL) {
             uint32_t len = MIN(CHUNKSIZE, bytes);
@@ -534,7 +700,7 @@ static int ssh_connector_channel_write_wontblock_cb(ssh_session session,
                                              0);
             if (r == SSH_ERROR) {
                 ssh_connector_except_channel(connector, connector->in_channel);
-            } else if(r == 0 && ssh_channel_is_eof(connector->in_channel)){
+            } else if (r == 0 && ssh_channel_is_eof(connector->in_channel)) {
                 ssh_channel_send_eof(connector->out_channel);
             } else if (r > 0) {
                 w = ssh_channel_write(connector->out_channel, buffer, r);
@@ -555,8 +721,8 @@ static int ssh_connector_channel_write_wontblock_cb(ssh_session session,
 
             return 0;
         }
-        connector->in_available = 0;
-        connector->out_wontblock = 0;
+
+        ssh_connector_update_flags_after_io(connector);
     } else {
         connector->out_wontblock = 1;
     }
@@ -605,15 +771,15 @@ int ssh_connector_set_event(ssh_connector connector, ssh_event event)
         }
     }
     if (connector->in_channel != NULL) {
-        rc = ssh_event_add_session(event,
-                ssh_channel_get_session(connector->in_channel));
+        ssh_session session = ssh_channel_get_session(connector->in_channel);
+        rc = ssh_event_add_session(event, session);
         if (rc != SSH_OK)
             goto error;
         if (ssh_channel_poll_timeout(connector->in_channel, 0, 0) > 0){
             connector->in_available = 1;
         }
     }
-    if(connector->out_channel != NULL) {
+    if (connector->out_channel != NULL) {
         ssh_session session = ssh_channel_get_session(connector->out_channel);
 
         rc =  ssh_event_add_session(event, session);

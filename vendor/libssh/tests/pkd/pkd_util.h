@@ -12,5 +12,6 @@ int system_checked(const char *cmd);
 /* Is client 'X' enabled? */
 int is_openssh_client_enabled(void);
 int is_dropbear_client_enabled(void);
+int is_putty_client_enabled(void);
 
 #endif /* __PKD_UTIL_H__ */

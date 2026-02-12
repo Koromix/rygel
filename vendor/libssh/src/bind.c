@@ -218,27 +218,11 @@ static int ssh_bind_import_keys(ssh_bind sshbind) {
   return SSH_OK;
 }
 
-int ssh_bind_listen(ssh_bind sshbind) {
+int ssh_bind_listen(ssh_bind sshbind)
+{
     const char *host = NULL;
     socket_t fd;
     int rc;
-
-    /* Apply global bind configurations, if it hasn't been applied before */
-    rc = ssh_bind_options_parse_config(sshbind, NULL);
-    if (rc != 0) {
-        ssh_set_error(sshbind, SSH_FATAL,"Could not parse global config");
-        return SSH_ERROR;
-    }
-
-    /* Set default hostkey paths if no hostkey was found before */
-    if (sshbind->ecdsakey == NULL &&
-        sshbind->rsakey == NULL &&
-        sshbind->ed25519key == NULL) {
-
-        sshbind->ecdsakey = strdup("/etc/ssh/ssh_host_ecdsa_key");
-        sshbind->rsakey = strdup("/etc/ssh/ssh_host_rsa_key");
-        sshbind->ed25519key = strdup("/etc/ssh/ssh_host_ed25519_key");
-    }
 
     /* Apply global bind configurations, if it hasn't been applied before */
     rc = ssh_bind_options_parse_config(sshbind, NULL);
@@ -261,8 +245,13 @@ int ssh_bind_listen(ssh_bind sshbind) {
         sshbind->ecdsa == NULL &&
         sshbind->ed25519 == NULL) {
         rc = ssh_bind_import_keys(sshbind);
-        if (rc != SSH_OK) {
-            return SSH_ERROR;
+        if (rc == SSH_ERROR) {
+            if (!sshbind->gssapi_key_exchange) {
+                ssh_set_error(sshbind, SSH_FATAL, "No usable hostkeys found");
+                return SSH_ERROR;
+            }
+            SSH_LOG(SSH_LOG_DEBUG,
+                    "No usable hostkeys found: Using \"null\" hostkey algorithm");
         }
     }
 
@@ -289,10 +278,10 @@ int ssh_bind_listen(ssh_bind sshbind) {
         }
 
         sshbind->bindfd = fd;
-  } else {
-      SSH_LOG(SSH_LOG_DEBUG, "Using app-provided bind socket");
-  }
-  return 0;
+    } else {
+        SSH_LOG(SSH_LOG_DEBUG, "Using app-provided bind socket");
+    }
+    return 0;
 }
 
 int ssh_bind_set_callbacks(ssh_bind sshbind, ssh_bind_callbacks callbacks, void *userdata)
@@ -402,6 +391,7 @@ void ssh_bind_free(ssh_bind sshbind){
   SAFE_FREE(sshbind->rsakey);
   SAFE_FREE(sshbind->ecdsakey);
   SAFE_FREE(sshbind->ed25519key);
+  SAFE_FREE(sshbind->gssapi_key_exchange_algs);
 
   ssh_key_free(sshbind->rsa);
   sshbind->rsa = NULL;
@@ -479,6 +469,17 @@ int ssh_bind_accept_fd(ssh_bind sshbind, ssh_session session, socket_t fd)
     }
 
     session->common.log_verbosity = sshbind->common.log_verbosity;
+    session->opts.gssapi_key_exchange = sshbind->gssapi_key_exchange;
+
+    if (sshbind->gssapi_key_exchange_algs != NULL) {
+        SAFE_FREE(session->opts.gssapi_key_exchange_algs);
+        session->opts.gssapi_key_exchange_algs =
+            strdup(sshbind->gssapi_key_exchange_algs);
+        if (session->opts.gssapi_key_exchange_algs == NULL) {
+            ssh_set_error_oom(sshbind);
+            return SSH_ERROR;
+        }
+    }
 
     if (sshbind->banner != NULL) {
         session->server_opts.custombanner = strdup(sshbind->banner);
@@ -505,7 +506,10 @@ int ssh_bind_accept_fd(ssh_bind sshbind, ssh_session session, socket_t fd)
       ssh_set_error_oom(sshbind);
       return SSH_ERROR;
     }
-    ssh_socket_set_fd(session->socket, fd);
+    rc = ssh_socket_set_fd(session->socket, fd);
+    if (rc != SSH_OK) {
+        return rc;
+    }
     handle = ssh_socket_get_poll_handle(session->socket);
     if (handle == NULL) {
         ssh_set_error_oom(sshbind);
@@ -522,8 +526,13 @@ int ssh_bind_accept_fd(ssh_bind sshbind, ssh_session session, socket_t fd)
         sshbind->ecdsa == NULL &&
         sshbind->ed25519 == NULL) {
         rc = ssh_bind_import_keys(sshbind);
-        if (rc != SSH_OK) {
-            return SSH_ERROR;
+        if (rc == SSH_ERROR) {
+            if (!sshbind->gssapi_key_exchange) {
+                ssh_set_error(sshbind, SSH_FATAL, "No usable hostkeys found");
+                return SSH_ERROR;
+            }
+            SSH_LOG(SSH_LOG_DEBUG,
+                    "No usable hostkeys found: Using \"null\" hostkey algorithm");
         }
     }
 

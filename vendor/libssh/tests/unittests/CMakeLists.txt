@@ -19,6 +19,7 @@ set(LIBSSH_UNIT_TESTS
     torture_temp_file
     torture_push_pop_dir
     torture_session_keys
+    torture_string
     torture_tokens
 )
 
@@ -46,6 +47,8 @@ if (UNIX AND NOT WIN32)
         torture_pki_rsa
         torture_pki_dsa
         torture_pki_ed25519
+        torture_pki_sk_ed25519
+        torture_pki_sshsig
         # requires /dev/null
         torture_channel
     )
@@ -75,13 +78,28 @@ if (UNIX AND NOT WIN32)
             torture_pki_rsa_uri
             torture_pki_ecdsa_uri
         )
-        list(APPEND TORTURE_UNIT_ENVIRONMENT PKCS11_PROVIDER_DEBUG=file:/tmp/p11prov-debug.log)
+        if (WITH_PKCS11_PROVIDER)
+            set(LIBSSH_UNIT_TESTS
+                ${LIBSSH_UNIT_TESTS}
+                torture_pki_ed25519_uri
+            )
+            list(APPEND TORTURE_UNIT_ENVIRONMENT
+                 PKCS11_PROVIDER_DEBUG=file:/tmp/p11prov-debug.log)
+        endif()
     endif()
+
+    if (WITH_FIDO2)
+        set(LIBSSH_UNIT_TESTS
+            ${LIBSSH_UNIT_TESTS}
+            torture_pki_sk
+        )
+    endif (WITH_FIDO2)
 
     if (HAVE_ECC)
         set(LIBSSH_UNIT_TESTS
             ${LIBSSH_UNIT_TESTS}
             torture_pki_ecdsa
+            torture_pki_sk_ecdsa
         )
     endif()
 
@@ -94,9 +112,26 @@ if (UNIX AND NOT WIN32)
         set(LIBSSH_THREAD_UNIT_TESTS
             ${LIBSSH_THREAD_UNIT_TESTS}
             torture_unit_server
+            torture_server_x11
+            torture_forwarded_tcpip_callback
+            torture_server_direct_tcpip
         )
     endif (WITH_SERVER)
 endif (UNIX AND NOT WIN32)
+
+if (HAVE_LIBFIDO2)
+    set(LIBSSH_UNIT_TESTS
+        ${LIBSSH_UNIT_TESTS}
+        torture_sk_usbhid
+    )
+endif (HAVE_LIBFIDO2)
+
+if (WITH_SFTP)
+    set(LIBSSH_UNIT_TESTS
+        ${LIBSSH_UNIT_TESTS}
+        torture_unit_sftp
+    )
+endif (WITH_SFTP)
 
 foreach(_UNIT_TEST ${LIBSSH_UNIT_TESTS})
     add_cmocka_test(${_UNIT_TEST}

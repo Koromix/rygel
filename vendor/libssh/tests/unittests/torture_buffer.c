@@ -6,6 +6,8 @@
 #define DEBUG_BUFFER
 #include "buffer.c"
 
+#include <string.h>
+
 #define LIMIT (8*1024*1024)
 
 static int setup(void **state) {
@@ -154,7 +156,7 @@ static void torture_ssh_buffer_add_format(void **state) {
     d=0xbadc0de;
     q=0x13243546acbdcedf;
     s=ssh_string_from_char("libssh");
-    rc=ssh_buffer_pack(buffer, "bwdqSsPt",b,w,d,q,s,"rocks",7,"So much","Fun!");
+    rc=ssh_buffer_pack(buffer, "bwdqSsPt",b,w,d,q,s,"rocks",(size_t)7,"So much","Fun!");
     assert_int_equal(rc, SSH_OK);
 
     len = ssh_buffer_get_len(buffer);
@@ -259,17 +261,139 @@ static void torture_buffer_pack_badformat(void **state){
      * it could crash the process */
 }
 
+static void torture_ssh_buffer_bignum(void **state)
+{
+    ssh_buffer buffer = NULL;
+    bignum num = NULL;
+    int rc;
+    size_t len;
+    uint8_t verif[] = "\x00\x00\x00\x04" /* len 4 byte */
+                      "\x00\x00\x00\xff" /* padded 255 */
+                      "\x00\x00\x00\x02" /* len 2 byte */
+                      "\x00\xff";        /* padded 255 */
+
+    (void)state;
+
+    buffer = ssh_buffer_new();
+    assert_non_null(buffer);
+
+    num = bignum_new();
+    assert_non_null(num);
+
+    rc = bignum_set_word(num, 255);
+    assert_int_equal(rc, 1);
+
+    rc = ssh_buffer_pack(buffer, "FB", num, (size_t)4, num);
+    assert_int_equal(rc, SSH_OK);
+
+    len = ssh_buffer_get_len(buffer);
+    assert_int_equal(len, sizeof(verif) - 1);
+    assert_memory_equal(ssh_buffer_get(buffer), verif, sizeof(verif) - 1);
+
+    /* negative test -- this number requires 3 bytes */
+    rc = bignum_set_word(num, 256 * 256);
+    assert_int_equal(rc, 1);
+
+    rc = ssh_buffer_pack(buffer, "FB", num, (size_t)2, num);
+    assert_int_equal(rc, SSH_ERROR);
+
+    bignum_safe_free(num);
+
+    SSH_BUFFER_FREE(buffer);
+}
+
+static void torture_ssh_buffer_dup(void **state)
+{
+    ssh_buffer buffer = *state;
+    ssh_buffer dup_buffer = NULL;
+    ssh_buffer null_buffer = NULL;
+    const char *test_data = "test data";
+    size_t test_data_len = strlen(test_data);
+    int rc;
+
+    /* test NULL buffer */
+    dup_buffer = ssh_buffer_dup(NULL);
+    assert_null(dup_buffer);
+
+    /* test empty buffer */
+    dup_buffer = ssh_buffer_dup(buffer);
+    assert_non_null(dup_buffer);
+    assert_int_equal(ssh_buffer_get_len(dup_buffer), 0);
+    assert_true(dup_buffer->secure);
+    SSH_BUFFER_FREE(dup_buffer);
+
+    /* test buffer with data */
+    rc = ssh_buffer_add_data(buffer, test_data, test_data_len);
+    assert_int_equal(rc, SSH_OK);
+    dup_buffer = ssh_buffer_dup(buffer);
+    assert_non_null(dup_buffer);
+    assert_int_equal(ssh_buffer_get_len(dup_buffer), test_data_len);
+    assert_memory_equal(ssh_buffer_get(dup_buffer), test_data, test_data_len);
+    assert_true(dup_buffer->secure);
+
+    /* test independence of buffers - modify original buffer */
+    rc = ssh_buffer_add_data(buffer, " more data", 10);
+    assert_int_equal(rc, SSH_OK);
+    assert_int_equal(ssh_buffer_get_len(buffer), test_data_len + 10);
+    assert_int_equal(ssh_buffer_get_len(dup_buffer), test_data_len);
+
+    /* test independence of buffers - modify duplicated buffer */
+    rc = ssh_buffer_add_data(dup_buffer, " different", 10);
+    assert_int_equal(rc, SSH_OK);
+    assert_int_equal(ssh_buffer_get_len(dup_buffer), test_data_len + 10);
+    assert_int_equal(ssh_buffer_get_len(buffer), test_data_len + 10);
+
+    assert_memory_not_equal(ssh_buffer_get(buffer),
+                            ssh_buffer_get(dup_buffer),
+                            test_data_len + 10);
+
+    SSH_BUFFER_FREE(dup_buffer);
+
+    /* test duplicating non-secure buffer */
+    null_buffer = ssh_buffer_new();
+    assert_non_null(null_buffer);
+    rc = ssh_buffer_add_data(null_buffer, "non-secure data", 15);
+    assert_int_equal(rc, SSH_OK);
+
+    dup_buffer = ssh_buffer_dup(null_buffer);
+    assert_non_null(dup_buffer);
+    assert_int_equal(ssh_buffer_get_len(dup_buffer), 15);
+    assert_memory_equal(ssh_buffer_get(dup_buffer), "non-secure data", 15);
+    assert_false(dup_buffer->secure);
+
+    SSH_BUFFER_FREE(dup_buffer);
+    SSH_BUFFER_FREE(null_buffer);
+}
+
 int torture_run_tests(void) {
     int rc;
     struct CMUnitTest tests[] = {
-        cmocka_unit_test_setup_teardown(torture_growing_buffer, setup, teardown),
-        cmocka_unit_test_setup_teardown(torture_growing_buffer_shifting, setup, teardown),
-        cmocka_unit_test_setup_teardown(torture_buffer_prepend, setup, teardown),
+        cmocka_unit_test_setup_teardown(torture_growing_buffer,
+                                        setup,
+                                        teardown),
+        cmocka_unit_test_setup_teardown(torture_growing_buffer_shifting,
+                                        setup,
+                                        teardown),
+        cmocka_unit_test_setup_teardown(torture_buffer_prepend,
+                                        setup,
+                                        teardown),
         cmocka_unit_test(torture_ssh_buffer_get_ssh_string),
-        cmocka_unit_test_setup_teardown(torture_ssh_buffer_add_format, setup, teardown),
-        cmocka_unit_test_setup_teardown(torture_ssh_buffer_get_format, setup, teardown),
-        cmocka_unit_test_setup_teardown(torture_ssh_buffer_get_format_error, setup, teardown),
-        cmocka_unit_test_setup_teardown(torture_buffer_pack_badformat, setup, teardown)
+        cmocka_unit_test_setup_teardown(torture_ssh_buffer_add_format,
+                                        setup,
+                                        teardown),
+        cmocka_unit_test_setup_teardown(torture_ssh_buffer_get_format,
+                                        setup,
+                                        teardown),
+        cmocka_unit_test_setup_teardown(torture_ssh_buffer_get_format_error,
+                                        setup,
+                                        teardown),
+        cmocka_unit_test_setup_teardown(torture_buffer_pack_badformat,
+                                        setup,
+                                        teardown),
+        cmocka_unit_test(torture_ssh_buffer_bignum),
+        cmocka_unit_test_setup_teardown(torture_ssh_buffer_dup,
+                                        setup,
+                                        teardown),
     };
 
     ssh_init();

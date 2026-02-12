@@ -30,9 +30,11 @@
 #include <pwd.h>
 
 #include "chacha20_override.h"
-#include "poly1305_override.h"
 #include "curve25519_override.h"
 #include "ed25519_override.h"
+#include "mlkem768_override.h"
+#include "poly1305_override.h"
+#include "sntrup761_override.h"
 
 const char template[] = "temp_dir_XXXXXX";
 
@@ -118,6 +120,8 @@ static int session_setup(void **state)
     reset_poly1305_function_called();
     reset_curve25519_function_called();
     reset_ed25519_function_called();
+    reset_sntrup761_function_called();
+    reset_mlkem768_function_called();
 
     return 0;
 }
@@ -255,6 +259,132 @@ static void torture_override_ecdh_curve25519_sha256_libssh_org(void **state)
 }
 #endif /* OPENSSH_CURVE25519_SHA256_LIBSSH_ORG */
 
+#ifdef OPENSSH_SNTRUP761X25519_SHA512_OPENSSH_COM
+static void
+torture_override_ecdh_sntrup761x25519_sha512_openssh_com(void **state)
+{
+    struct torture_state *s = *state;
+    bool internal_curve25519_called;
+    bool internal_sntrup761_called;
+
+    if (ssh_fips_mode()) {
+        skip();
+    }
+
+    test_algorithm(s->ssh.session,
+                   "sntrup761x25519-sha512@openssh.com",
+                   NULL, /* cipher */
+                   NULL  /* hostkey */);
+
+    internal_curve25519_called = internal_curve25519_function_called();
+    internal_sntrup761_called = internal_sntrup761_function_called();
+
+#if SHOULD_CALL_INTERNAL_SNTRUP761
+    assert_true(internal_sntrup761_called);
+#else
+    assert_false(internal_sntrup761_called);
+#endif
+
+#if SHOULD_CALL_INTERNAL_CURVE25519
+    assert_true(internal_curve25519_called);
+#else
+    assert_false(internal_curve25519_called);
+#endif
+}
+#endif /* OPENSSH_SNTRUP761X25519_SHA512_OPENSSH_COM */
+
+#ifdef OPENSSH_SNTRUP761X25519_SHA512
+static void
+torture_override_ecdh_sntrup761x25519_sha512(void **state)
+{
+    struct torture_state *s = *state;
+    bool internal_curve25519_called;
+    bool internal_sntrup761_called;
+
+    if (ssh_fips_mode()) {
+        skip();
+    }
+
+    test_algorithm(s->ssh.session,
+                   "sntrup761x25519-sha512",
+                   NULL, /* cipher */
+                   NULL  /* hostkey */);
+
+    internal_curve25519_called = internal_curve25519_function_called();
+    internal_sntrup761_called = internal_sntrup761_function_called();
+
+#if SHOULD_CALL_INTERNAL_SNTRUP761
+    assert_true(internal_sntrup761_called);
+#else
+    assert_false(internal_sntrup761_called);
+#endif
+
+#if SHOULD_CALL_INTERNAL_CURVE25519
+    assert_true(internal_curve25519_called);
+#else
+    assert_false(internal_curve25519_called);
+#endif
+}
+#endif /* OPENSSH_SNTRUP761X25519_SHA512 */
+
+#ifdef OPENSSH_MLKEM768X25519_SHA256
+static void torture_override_mlkem768x25519_sha256(void **state)
+{
+    struct torture_state *s = *state;
+    bool internal_curve25519_called;
+    bool internal_mlkem768_called;
+
+    if (ssh_fips_mode()) {
+        skip();
+    }
+
+    test_algorithm(s->ssh.session,
+                   "mlkem768x25519-sha256",
+                   NULL, /* cipher */
+                   NULL  /* hostkey */);
+
+    internal_curve25519_called = internal_curve25519_function_called();
+    internal_mlkem768_called = internal_mlkem768_function_called();
+
+#if SHOULD_CALL_INTERNAL_MLKEM
+    assert_true(internal_mlkem768_called);
+#else
+    assert_false(internal_mlkem768_called);
+#endif
+
+#if SHOULD_CALL_INTERNAL_CURVE25519
+    assert_true(internal_curve25519_called);
+#else
+    assert_false(internal_curve25519_called);
+#endif
+}
+#endif /* OPENSSH_MLKEM768X25519_SHA256 */
+
+#ifdef OPENSSH_MLKEM768NISTP256_SHA256
+static void torture_override_mlkem768nistp256_sha256(void **state)
+{
+    struct torture_state *s = *state;
+    bool internal_mlkem768_called;
+
+    if (ssh_fips_mode()) {
+        skip();
+    }
+
+    test_algorithm(s->ssh.session,
+                   "mlkem768nistp256-sha256",
+                   NULL, /* cipher */
+                   NULL  /* hostkey */);
+
+    internal_mlkem768_called = internal_mlkem768_function_called();
+
+#if SHOULD_CALL_INTERNAL_MLKEM
+    assert_true(internal_mlkem768_called);
+#else
+    assert_false(internal_mlkem768_called);
+#endif
+}
+#endif /* OPENSSH_MLKEM768NISTP256_SHA256 */
+
 #ifdef OPENSSH_SSH_ED25519
 static void torture_override_ed25519(void **state)
 {
@@ -299,6 +429,26 @@ int torture_run_tests(void)
                                         session_setup,
                                         session_teardown),
 #endif /* OPENSSH_CURVE25519_SHA256_LIBSSH_ORG */
+#ifdef OPENSSH_SNTRUP761X25519_SHA512_OPENSSH_COM
+        cmocka_unit_test_setup_teardown(torture_override_ecdh_sntrup761x25519_sha512_openssh_com,
+                                        session_setup,
+                                        session_teardown),
+#endif /* OPENSSH_SNTRUP761X25519_SHA512_OPENSSH_COM */
+#ifdef OPENSSH_SNTRUP761X25519_SHA512
+        cmocka_unit_test_setup_teardown(torture_override_ecdh_sntrup761x25519_sha512,
+                                        session_setup,
+                                        session_teardown),
+#endif /* OPENSSH_SNTRUP761X25519_SHA512 */
+#ifdef OPENSSH_MLKEM768X25519_SHA256
+        cmocka_unit_test_setup_teardown(torture_override_mlkem768x25519_sha256,
+                                        session_setup,
+                                        session_teardown),
+#endif /* OPENSSH_MLKEM768X25519_SHA256 */
+#ifdef OPENSSH_MLKEM768NISTP256_SHA256
+        cmocka_unit_test_setup_teardown(torture_override_mlkem768nistp256_sha256,
+                                        session_setup,
+                                        session_teardown),
+#endif /* OPENSSH_MLKEM768NISTP256_SHA256 */
 #ifdef OPENSSH_SSH_ED25519
         cmocka_unit_test_setup_teardown(torture_override_ed25519,
                                         session_setup,

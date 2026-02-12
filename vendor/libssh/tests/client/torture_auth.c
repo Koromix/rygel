@@ -34,6 +34,10 @@
 
 #include "torture_auth_common.c"
 
+#ifdef WITH_FIDO2
+#include "torture_sk.h"
+#endif
+
 static int sshd_setup(void **state)
 {
     torture_setup_sshd_server(state, true);
@@ -72,7 +76,7 @@ static int session_setup(void **state)
     assert_ssh_return_code(s->ssh.session, rc);
 
     /* Enable all hostkeys */
-    all_keytypes = ssh_kex_get_supported_method(SSH_HOSTKEYS);
+    all_keytypes = ssh_get_supported_methods(SSH_HOSTKEYS);
     rc = ssh_options_set(s->ssh.session, SSH_OPTIONS_PUBLICKEY_ACCEPTED_TYPES, all_keytypes);
     assert_ssh_return_code(s->ssh.session, rc);
 
@@ -108,11 +112,8 @@ static int pubkey_setup(void **state)
 static int agent_setup(void **state)
 {
     struct torture_state *s = *state;
-    char ssh_agent_cmd[4096];
-    char ssh_agent_sock[1024];
-    char ssh_agent_pidfile[1024];
-    char ssh_key_add[1024];
     struct passwd *pwd;
+    char ssh_key_path[1024];
     int rc;
 
     rc = pubkey_setup(state);
@@ -123,45 +124,18 @@ static int agent_setup(void **state)
     pwd = getpwnam("bob");
     assert_non_null(pwd);
 
-    snprintf(ssh_agent_sock,
-             sizeof(ssh_agent_sock),
-             "%s/agent.sock",
-             s->socket_dir);
-
-    snprintf(ssh_agent_pidfile,
-             sizeof(ssh_agent_pidfile),
-             "%s/agent.pid",
-             s->socket_dir);
-
-    /* Production ready code!!! */
-    snprintf(ssh_agent_cmd,
-             sizeof(ssh_agent_cmd),
-             "eval `ssh-agent -a %s`; echo $SSH_AGENT_PID > %s",
-             ssh_agent_sock, ssh_agent_pidfile);
-
-    /* run ssh-agent and ssh-add as the normal user */
-    unsetenv("UID_WRAPPER_ROOT");
-
-    rc = system(ssh_agent_cmd);
-    assert_return_code(rc, errno);
-
-    setenv("SSH_AUTH_SOCK", ssh_agent_sock, 1);
-    setenv("TORTURE_SSH_AGENT_PIDFILE", ssh_agent_pidfile, 1);
-
-    snprintf(ssh_key_add,
-             sizeof(ssh_key_add),
-             "ssh-add %s/.ssh/id_rsa",
-             pwd->pw_dir);
-
-    rc = system(ssh_key_add);
-    assert_return_code(rc, errno);
+    /* Use the common function to set up the SSH agent with Bob's key */
+    snprintf(ssh_key_path, sizeof(ssh_key_path), "%s/.ssh/id_rsa", pwd->pw_dir);
+    rc = torture_setup_ssh_agent(s, ssh_key_path);
+    if (rc != 0) {
+        return rc;
+    }
 
     return 0;
 }
 
 static int agent_teardown(void **state)
 {
-    const char *ssh_agent_pidfile;
     int rc;
 
     rc = session_teardown(state);
@@ -169,17 +143,11 @@ static int agent_teardown(void **state)
         return rc;
     }
 
-    ssh_agent_pidfile = getenv("TORTURE_SSH_AGENT_PIDFILE");
-    assert_non_null(ssh_agent_pidfile);
-
-    /* kill agent pid */
-    rc = torture_terminate_process(ssh_agent_pidfile);
-    assert_return_code(rc, errno);
-
-    unlink(ssh_agent_pidfile);
-
-    unsetenv("TORTURE_SSH_AGENT_PIDFILE");
-    unsetenv("SSH_AUTH_SOCK");
+    /* Use the common function to clean up the SSH agent */
+    rc = torture_cleanup_ssh_agent();
+    if (rc != 0) {
+        return rc;
+    }
 
     return 0;
 }
@@ -408,7 +376,7 @@ torture_auth_autopubkey_protected_auth_function (const char *prompt, char *buf, 
     assert_int_equal(echo, 0);
     assert_int_equal(verify, 0);
 
-    expected_id = ssh_path_expand_escape(data->session, "%d/id_rsa_protected");
+    expected_id = ssh_path_expand_escape(data->session, "%d/.ssh/id_rsa_protected");
     assert_true(expected_id != NULL);
 
     rc = ssh_userauth_publickey_auto_get_current_identity(data->session, &id);
@@ -461,7 +429,7 @@ static void torture_auth_autopubkey_protected(void **state) {
 
     /* Try id_rsa_protected first.
      */
-    rc = ssh_options_set(session, SSH_OPTIONS_IDENTITY, "%d/id_rsa_protected");
+    rc = ssh_options_set(session, SSH_OPTIONS_IDENTITY, "%d/.ssh/id_rsa_protected");
     assert_int_equal(rc, SSH_OK);
 
     rc = ssh_connect(session);
@@ -1130,6 +1098,123 @@ static void torture_auth_pubkey_types_ed25519_nonblocking(void **state)
     SSH_KEY_FREE(privkey);
 }
 
+#ifdef WITH_FIDO2
+
+static void torture_auth_pubkey_types_sk_key(void **state,
+                                             enum ssh_keytypes_e key_type)
+{
+    struct torture_state *s = *state;
+    ssh_session session = s->ssh.session;
+    const char *privkey_file_name = NULL;
+    const char *key_type_str = NULL;
+    char bob_ssh_key[1024];
+    ssh_key privkey = NULL;
+    struct passwd *pwd = NULL;
+    const struct ssh_sk_callbacks_struct *sk_dummy_callbacks = NULL;
+    ssh_pki_ctx pki_context = NULL;
+    int rc;
+
+    /* Conditions to skip the test */
+    sk_dummy_callbacks = torture_get_sk_dummy_callbacks();
+    if (sk_dummy_callbacks == NULL) {
+        skip();
+    }
+
+    if (key_type == SSH_KEYTYPE_SK_ED25519 && ssh_fips_mode()) {
+        skip();
+    }
+
+    /* Key type specific setup */
+    switch (key_type) {
+    case SSH_KEYTYPE_SK_ECDSA:
+        privkey_file_name = "id_ecdsa_sk";
+        key_type_str = "sk-ecdsa-sha2-nistp256@openssh.com";
+        break;
+
+    case SSH_KEYTYPE_SK_ED25519:
+        privkey_file_name = "id_ed25519_sk";
+        key_type_str = "sk-ssh-ed25519@openssh.com";
+        break;
+
+    default:
+        /* should never reach here */
+        assert_true(0);
+    }
+
+    pwd = getpwnam("bob");
+    assert_non_null(pwd);
+
+    snprintf(bob_ssh_key,
+             sizeof(bob_ssh_key),
+             "%s/.ssh/%s",
+             pwd->pw_dir,
+             privkey_file_name);
+
+    rc = ssh_options_set(session, SSH_OPTIONS_USER, TORTURE_SSH_USER_ALICE);
+    assert_ssh_return_code(session, rc);
+
+    pki_context = ssh_pki_ctx_new();
+    assert_non_null(pki_context);
+
+    rc = ssh_pki_ctx_options_set(pki_context,
+                                 SSH_PKI_OPTION_SK_CALLBACKS,
+                                 sk_dummy_callbacks);
+    assert_int_equal(rc, SSH_OK);
+
+    rc = ssh_options_set(session, SSH_OPTIONS_PKI_CONTEXT, pki_context);
+    assert_int_equal(rc, SSH_OK);
+
+    rc = ssh_connect(session);
+    assert_ssh_return_code(session, rc);
+
+    rc = ssh_userauth_none(session, NULL);
+
+    /* This request should return a SSH_REQUEST_DENIED error */
+    if (rc == SSH_ERROR) {
+        assert_int_equal(ssh_get_error_code(session), SSH_REQUEST_DENIED);
+    }
+
+    rc = ssh_userauth_list(session, NULL);
+    assert_true(rc & SSH_AUTH_METHOD_PUBLICKEY);
+
+    /* Import the private key */
+    rc = ssh_pki_import_privkey_file(bob_ssh_key, NULL, NULL, NULL, &privkey);
+    assert_int_equal(rc, SSH_OK);
+
+    /* Enable only RSA keys -- authentication should fail */
+    rc = ssh_options_set(session,
+                         SSH_OPTIONS_PUBLICKEY_ACCEPTED_TYPES,
+                         "ssh-rsa");
+    assert_ssh_return_code(session, rc);
+
+    rc = ssh_userauth_publickey(session, NULL, privkey);
+    assert_int_equal(rc, SSH_AUTH_DENIED);
+
+    /* Verify we can use the SK key */
+    rc = ssh_options_set(session,
+                         SSH_OPTIONS_PUBLICKEY_ACCEPTED_TYPES,
+                         key_type_str);
+    assert_ssh_return_code(session, rc);
+
+    rc = ssh_userauth_publickey(session, NULL, privkey);
+    assert_int_equal(rc, SSH_AUTH_SUCCESS);
+
+    SSH_KEY_FREE(privkey);
+    SSH_PKI_CTX_FREE(pki_context);
+}
+
+static void torture_auth_pubkey_types_sk_ecdsa(void **state)
+{
+    torture_auth_pubkey_types_sk_key(state, SSH_KEYTYPE_SK_ECDSA);
+}
+
+static void torture_auth_pubkey_types_sk_ed25519(void **state)
+{
+    torture_auth_pubkey_types_sk_key(state, SSH_KEYTYPE_SK_ED25519);
+}
+
+#endif /* WITH_FIDO2 */
+
 static void torture_auth_pubkey_rsa_key_size(void **state)
 {
     struct torture_state *s = *state;
@@ -1360,6 +1445,14 @@ int torture_run_tests(void) {
         cmocka_unit_test_setup_teardown(torture_auth_pubkey_types_ed25519_nonblocking,
                                         pubkey_setup,
                                         session_teardown),
+#ifdef WITH_FIDO2
+        cmocka_unit_test_setup_teardown(torture_auth_pubkey_types_sk_ecdsa,
+                                        pubkey_setup,
+                                        session_teardown),
+        cmocka_unit_test_setup_teardown(torture_auth_pubkey_types_sk_ed25519,
+                                        pubkey_setup,
+                                        session_teardown),
+#endif /* WITH_FIDO2 */
         cmocka_unit_test_setup_teardown(torture_auth_pubkey_rsa_key_size,
                                         pubkey_setup,
                                         session_teardown),

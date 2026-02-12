@@ -24,6 +24,26 @@
 #include <libssh/libssh.h>
 #include <libssh/callbacks.h>
 
+#include "nallocinc.c"
+
+static void _fuzz_finalize(void)
+{
+    ssh_finalize();
+}
+
+int LLVMFuzzerInitialize(int *argc, char ***argv)
+{
+    (void)argc;
+
+    nalloc_init(*argv[0]);
+
+    ssh_init();
+
+    atexit(_fuzz_finalize);
+
+    return 0;
+}
+
 static int auth_callback(const char *prompt,
                          char *buf,
                          size_t len,
@@ -113,33 +133,53 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
     rc = shutdown(socket_fds[1], SHUT_WR);
     assert(rc == 0);
 
-    ssh_init();
+    assert(nalloc_start(data, size) > 0);
 
     session = ssh_new();
-    assert(session != NULL);
+    if (session == NULL) {
+        goto out;
+    }
 
     env = getenv("LIBSSH_VERBOSITY");
     if (env != NULL && strlen(env) > 0) {
         ssh_options_set(session, SSH_OPTIONS_LOG_VERBOSITY_STR, env);
     }
     rc = ssh_options_set(session, SSH_OPTIONS_FD, &socket_fds[0]);
-    assert(rc == 0);
+    if (rc != SSH_OK) {
+        goto out;
+    }
     rc = ssh_options_set(session, SSH_OPTIONS_HOST, "127.0.0.1");
-    assert(rc == 0);
+    if (rc != SSH_OK) {
+        goto out;
+    }
     rc = ssh_options_set(session, SSH_OPTIONS_USER, "alice");
-    assert(rc == 0);
+    if (rc != SSH_OK) {
+        goto out;
+    }
     rc = ssh_options_set(session, SSH_OPTIONS_CIPHERS_C_S, "none");
-    assert(rc == 0);
+    if (rc != SSH_OK) {
+        goto out;
+    }
     rc = ssh_options_set(session, SSH_OPTIONS_CIPHERS_S_C, "none");
-    assert(rc == 0);
+    if (rc != SSH_OK) {
+        goto out;
+    }
     rc = ssh_options_set(session, SSH_OPTIONS_HMAC_C_S, "none");
-    assert(rc == 0);
+    if (rc != SSH_OK) {
+        goto out;
+    }
     rc = ssh_options_set(session, SSH_OPTIONS_HMAC_S_C, "none");
-    assert(rc == 0);
+    if (rc != SSH_OK) {
+        goto out;
+    }
     rc = ssh_options_set(session, SSH_OPTIONS_PROCESS_CONFIG, &no);
-    assert(rc == 0);
+    if (rc != SSH_OK) {
+        goto out;
+    }
     rc = ssh_options_set(session, SSH_OPTIONS_TIMEOUT, &timeout);
-    assert(rc == 0);
+    if (rc != SSH_OK) {
+        goto out;
+    }
 
     ssh_callbacks_init(&cb);
     ssh_set_callbacks(session, &cb);
@@ -176,10 +216,9 @@ out:
     ssh_disconnect(session);
     ssh_free(session);
 
-    ssh_finalize();
-
     close(socket_fds[0]);
     close(socket_fds[1]);
 
+    nalloc_end();
     return 0;
 }

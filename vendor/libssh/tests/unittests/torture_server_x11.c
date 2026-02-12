@@ -1,3 +1,5 @@
+#include "config.h"
+
 #define LIBSSH_STATIC
 
 #include <errno.h>
@@ -6,9 +8,11 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#include <libssh/libssh.h>
 #include "torture.h"
+#include "torture_key.h"
+#include <libssh/libssh.h>
 
+#define TEST_SERVER_HOST "127.0.0.1"
 #define TEST_SERVER_PORT 2222
 
 struct hostkey_state {
@@ -76,7 +80,7 @@ static void *client_thread(void *arg) {
     (void)arg;
 
     usleep(200);
-    session = torture_ssh_session(NULL, "localhost",
+    session = torture_ssh_session(NULL, TEST_SERVER_HOST,
                                   &test_port,
                                   "foo", "bar");
     assert_non_null(session);
@@ -175,7 +179,7 @@ static void test_ssh_channel_request_x11(void **state) {
     ssh_callbacks_init(&server_cb);
 
     /* Create server */
-    sshbind = torture_ssh_bind("localhost",
+    sshbind = torture_ssh_bind(TEST_SERVER_HOST,
                                TEST_SERVER_PORT,
                                h->key_type,
                                h->hostkey_path);

@@ -67,87 +67,94 @@
   (((x) == SSH_AGENT_FAILURE) || ((x) == SSH_COM_AGENT2_FAILURE) || \
    ((x) == SSH2_AGENT_FAILURE))
 
-static uint32_t atomicio(struct ssh_agent_struct *agent, void *buf, uint32_t n, int do_read) {
-  char *b = buf;
-  uint32_t pos = 0;
-  ssize_t res;
-  ssh_pollfd_t pfd;
-  ssh_channel channel = agent->channel;
-  socket_t fd;
+static uint32_t
+atomicio(struct ssh_agent_struct *agent, void *buf, uint32_t n, int do_read)
+{
+    char *b = buf;
+    uint32_t pos = 0;
+    ssize_t res;
+    ssh_pollfd_t pfd;
+    ssh_channel channel = agent->channel;
+    socket_t fd;
 
-  /* Using a socket ? */
-  if (channel == NULL) {
-    fd = ssh_socket_get_fd(agent->sock);
-    pfd.fd = fd;
-    pfd.events = do_read ? POLLIN : POLLOUT;
+    /* Using a socket ? */
+    if (channel == NULL) {
+        fd = ssh_socket_get_fd(agent->sock);
+        pfd.fd = fd;
+        pfd.events = do_read ? POLLIN : POLLOUT;
 
-    while (n > pos) {
-      if (do_read) {
-        res = recv(fd, b + pos, n - pos, 0);
-      } else {
-        res = send(fd, b + pos, n - pos, 0);
-      }
-      switch (res) {
-      case -1:
-        if (errno == EINTR) {
-          continue;
-        }
+        while (n > pos) {
+            if (do_read) {
+                res = recv(fd, b + pos, n - pos, 0);
+            } else {
+                res = send(fd, b + pos, n - pos, 0);
+            }
+            switch (res) {
+            case -1:
+                if (errno == EINTR) {
+                    continue;
+                }
 #ifdef EWOULDBLOCK
-        if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                if (errno == EAGAIN || errno == EWOULDBLOCK) {
 #else
-          if (errno == EAGAIN) {
+                if (errno == EAGAIN) {
 #endif
-            (void) ssh_poll(&pfd, 1, -1);
-            continue;
-          }
-          return 0;
-      case 0:
-        /* read returns 0 on end-of-file */
-        errno = do_read ? 0 : EPIPE;
-        return pos;
-      default:
-        pos += (uint32_t) res;
+                    (void)ssh_poll(&pfd, 1, -1);
+                    continue;
+                }
+                return 0;
+            case 0:
+                /* read returns 0 on end-of-file */
+                errno = do_read ? 0 : EPIPE;
+                return pos;
+            default:
+                pos += (uint32_t)res;
+            }
         }
-      }
-      return pos;
+        return pos;
     } else {
-      /* using an SSH channel */
-      while (n > pos){
-        if (do_read)
-          res = ssh_channel_read(channel,b + pos, n-pos, 0);
-        else
-          res = ssh_channel_write(channel, b+pos, n-pos);
-        if (res == SSH_AGAIN)
-          continue;
-        if (res == SSH_ERROR)
-          return 0;
-        pos += (uint32_t)res;
-      }
-      return pos;
+        /* using an SSH channel */
+        while (n > pos) {
+            if (do_read) {
+                res = ssh_channel_read(channel, b + pos, n - pos, 0);
+            } else {
+                res = ssh_channel_write(channel, b + pos, n - pos);
+            }
+            if (res == SSH_AGAIN) {
+                continue;
+            }
+            if (res == SSH_ERROR) {
+                return 0;
+            }
+            pos += (uint32_t)res;
+        }
+        return pos;
     }
 }
 
-ssh_agent ssh_agent_new(struct ssh_session_struct *session) {
-  ssh_agent agent = NULL;
+ssh_agent ssh_agent_new(struct ssh_session_struct *session)
+{
+    ssh_agent agent = NULL;
 
-  agent = malloc(sizeof(struct ssh_agent_struct));
-  if (agent == NULL) {
-    return NULL;
-  }
-  ZERO_STRUCTP(agent);
+    agent = calloc(1, sizeof(struct ssh_agent_struct));
+    if (agent == NULL) {
+        return NULL;
+    }
 
-  agent->count = 0;
-  agent->sock = ssh_socket_new(session);
-  if (agent->sock == NULL) {
-    SAFE_FREE(agent);
-    return NULL;
-  }
-  agent->channel = NULL;
-  return agent;
+    agent->count = 0;
+    agent->sock = ssh_socket_new(session);
+    if (agent->sock == NULL) {
+        SAFE_FREE(agent);
+        return NULL;
+    }
+    agent->channel = NULL;
+    return agent;
 }
 
-static void agent_set_channel(struct ssh_agent_struct *agent, ssh_channel channel){
-  agent->channel = channel;
+static void agent_set_channel(struct ssh_agent_struct *agent,
+                              ssh_channel channel)
+{
+    agent->channel = channel;
 }
 
 /**
@@ -168,15 +175,19 @@ static void agent_set_channel(struct ssh_agent_struct *agent, ssh_channel channe
  * @returns SSH_OK in case of success
  *          SSH_ERROR in case of an error
  */
-int ssh_set_agent_channel(ssh_session session, ssh_channel channel){
-  if (!session)
-    return SSH_ERROR;
-  if (!session->agent){
-    ssh_set_error(session, SSH_REQUEST_DENIED, "Session has no active agent");
-    return SSH_ERROR;
-  }
-  agent_set_channel(session->agent, channel);
-  return SSH_OK;
+int ssh_set_agent_channel(ssh_session session, ssh_channel channel)
+{
+    if (!session) {
+        return SSH_ERROR;
+    }
+    if (!session->agent) {
+        ssh_set_error(session,
+                      SSH_REQUEST_DENIED,
+                      "Session has no active agent");
+        return SSH_ERROR;
+    }
+    agent_set_channel(session->agent, channel);
+    return SSH_OK;
 }
 
 /** @brief sets the SSH agent socket.
@@ -187,64 +198,71 @@ int ssh_set_agent_channel(ssh_session session, ssh_channel channel){
  * @returns SSH_OK in case of success
  *          SSH_ERROR in case of an error
  */
-int ssh_set_agent_socket(ssh_session session, socket_t fd){
-  if (!session)
-    return SSH_ERROR;
-  if (!session->agent){
-    ssh_set_error(session, SSH_REQUEST_DENIED, "Session has no active agent");
-    return SSH_ERROR;
-  }
+int ssh_set_agent_socket(ssh_session session, socket_t fd)
+{
+    if (!session) {
+        return SSH_ERROR;
+    }
+    if (!session->agent) {
+        ssh_set_error(session,
+                      SSH_REQUEST_DENIED,
+                      "Session has no active agent");
+        return SSH_ERROR;
+    }
 
-  ssh_socket_set_fd(session->agent->sock, fd);
-  return SSH_OK;
+    return ssh_socket_set_fd(session->agent->sock, fd);
 }
 
 /**
  * @}
  */
 
-void ssh_agent_close(struct ssh_agent_struct *agent) {
-  if (agent == NULL) {
-    return;
-  }
+void ssh_agent_close(struct ssh_agent_struct *agent)
+{
+    if (agent == NULL) {
+        return;
+    }
 
-  ssh_socket_close(agent->sock);
+    ssh_socket_close(agent->sock);
 }
 
-void ssh_agent_free(ssh_agent agent) {
-  if (agent) {
-    if (agent->ident) {
-      SSH_BUFFER_FREE(agent->ident);
+void ssh_agent_free(ssh_agent agent)
+{
+    if (agent) {
+        if (agent->ident) {
+            SSH_BUFFER_FREE(agent->ident);
+        }
+        if (agent->sock) {
+            ssh_agent_close(agent);
+            ssh_socket_free(agent->sock);
+        }
+        SAFE_FREE(agent);
     }
-    if (agent->sock) {
-      ssh_agent_close(agent);
-      ssh_socket_free(agent->sock);
-    }
-    SAFE_FREE(agent);
-  }
 }
 
-static int agent_connect(ssh_session session) {
-  const char *auth_sock = NULL;
+static int agent_connect(ssh_session session)
+{
+    const char *auth_sock = NULL;
 
-  if (session == NULL || session->agent == NULL) {
+    if (session == NULL || session->agent == NULL) {
+        return -1;
+    }
+
+    if (session->agent->channel != NULL) {
+        return 0;
+    }
+
+    auth_sock = session->opts.agent_socket ? session->opts.agent_socket
+                                           : getenv("SSH_AUTH_SOCK");
+
+    if (auth_sock && *auth_sock) {
+        if (ssh_socket_unix(session->agent->sock, auth_sock) < 0) {
+            return -1;
+        }
+        return 0;
+    }
+
     return -1;
-  }
-
-  if (session->agent->channel != NULL)
-    return 0;
-
-  auth_sock = session->opts.agent_socket ?
-    session->opts.agent_socket : getenv("SSH_AUTH_SOCK");
-
-  if (auth_sock && *auth_sock) {
-    if (ssh_socket_unix(session->agent->sock, auth_sock) < 0) {
-      return -1;
-    }
-    return 0;
-  }
-
-  return -1;
 }
 
 #if 0
@@ -268,61 +286,66 @@ static int agent_decode_reply(struct ssh_session_struct *session, int type) {
 #endif
 
 static int agent_talk(struct ssh_session_struct *session,
-    struct ssh_buffer_struct *request, struct ssh_buffer_struct *reply) {
-  uint32_t len = 0;
-  uint8_t tmpbuf[4];
-  uint8_t *payload = tmpbuf;
-  char err_msg[SSH_ERRNO_MSG_MAX] = {0};
+                      struct ssh_buffer_struct *request,
+                      struct ssh_buffer_struct *reply)
+{
+    uint32_t len = 0;
+    uint8_t tmpbuf[4];
+    uint8_t *payload = tmpbuf;
+    char err_msg[SSH_ERRNO_MSG_MAX] = {0};
 
-  len = ssh_buffer_get_len(request);
-  SSH_LOG(SSH_LOG_TRACE, "Request length: %" PRIu32, len);
-  PUSH_BE_U32(payload, 0, len);
+    len = ssh_buffer_get_len(request);
+    SSH_LOG(SSH_LOG_TRACE, "Request length: %" PRIu32, len);
+    PUSH_BE_U32(payload, 0, len);
 
-  /* send length and then the request packet */
-  if (atomicio(session->agent, payload, 4, 0) == 4) {
-    if (atomicio(session->agent, ssh_buffer_get(request), len, 0)
-        != len) {
-      SSH_LOG(SSH_LOG_TRACE, "atomicio sending request failed: %s",
-          strerror(errno));
-      return -1;
+    /* send length and then the request packet */
+    if (atomicio(session->agent, payload, 4, 0) == 4) {
+        if (atomicio(session->agent, ssh_buffer_get(request), len, 0) != len) {
+            SSH_LOG(SSH_LOG_TRACE,
+                    "atomicio sending request failed: %s",
+                    ssh_strerror(errno, err_msg, SSH_ERRNO_MSG_MAX));
+            return -1;
+        }
+    } else {
+        SSH_LOG(SSH_LOG_TRACE,
+                "atomicio sending request length failed: %s",
+                ssh_strerror(errno, err_msg, SSH_ERRNO_MSG_MAX));
+        return -1;
     }
-  } else {
-    SSH_LOG(SSH_LOG_TRACE,
-        "atomicio sending request length failed: %s",
-        ssh_strerror(errno, err_msg, SSH_ERRNO_MSG_MAX));
-    return -1;
-  }
 
-  /* wait for response, read the length of the response packet */
-  if (atomicio(session->agent, payload, 4, 1) != 4) {
-    SSH_LOG(SSH_LOG_TRACE, "atomicio read response length failed: %s",
-        strerror(errno));
-    return -1;
-  }
+    /* wait for response, read the length of the response packet */
+    if (atomicio(session->agent, payload, 4, 1) != 4) {
+        SSH_LOG(SSH_LOG_TRACE,
+                "atomicio read response length failed: %s",
+                ssh_strerror(errno, err_msg, SSH_ERRNO_MSG_MAX));
+        return -1;
+    }
 
-  len = PULL_BE_U32(payload, 0);
-  if (len > 256 * 1024) {
-    ssh_set_error(session, SSH_FATAL,
-        "Authentication response too long: %" PRIu32, len);
-    return -1;
-  }
-  SSH_LOG(SSH_LOG_TRACE, "Response length: %" PRIu32, len);
+    len = PULL_BE_U32(payload, 0);
+    if (len > 256 * 1024) {
+        ssh_set_error(session,
+                      SSH_FATAL,
+                      "Authentication response too long: %" PRIu32,
+                      len);
+        return -1;
+    }
+    SSH_LOG(SSH_LOG_TRACE, "Response length: %" PRIu32, len);
 
-  payload = ssh_buffer_allocate(reply, len);
-  if (payload == NULL) {
-    SSH_LOG(SSH_LOG_DEBUG, "Not enough space");
-    return -1;
-  }
+    payload = ssh_buffer_allocate(reply, len);
+    if (payload == NULL) {
+        SSH_LOG(SSH_LOG_DEBUG, "Not enough space");
+        return -1;
+    }
 
-  if (atomicio(session->agent, payload, len, 1) != len) {
-    SSH_LOG(SSH_LOG_DEBUG,
-        "Error reading response from authentication socket.");
-    /* Rollback the unused space */
-    ssh_buffer_pass_bytes_end(reply, len);
-    return -1;
-  }
+    if (atomicio(session->agent, payload, len, 1) != len) {
+        SSH_LOG(SSH_LOG_DEBUG,
+                "Error reading response from authentication socket.");
+        /* Rollback the unused space */
+        ssh_buffer_pass_bytes_end(reply, len);
+        return -1;
+    }
 
-  return 0;
+    return 0;
 }
 
 uint32_t ssh_agent_get_ident_count(struct ssh_session_struct *session)
@@ -471,22 +494,23 @@ ssh_key ssh_agent_get_next_ident(struct ssh_session_struct *session,
     return key;
 }
 
-int ssh_agent_is_running(ssh_session session) {
-  if (session == NULL || session->agent == NULL) {
-    return 0;
-  }
-
-  if (ssh_socket_is_open(session->agent->sock)) {
-    return 1;
-  } else {
-    if (agent_connect(session) < 0) {
-      return 0;
-    } else {
-      return 1;
+int ssh_agent_is_running(ssh_session session)
+{
+    if (session == NULL || session->agent == NULL) {
+        return 0;
     }
-  }
 
-  return 0;
+    if (ssh_socket_is_open(session->agent->sock)) {
+        return 1;
+    } else {
+        if (agent_connect(session) < 0) {
+            return 0;
+        } else {
+            return 1;
+        }
+    }
+
+    return 0;
 }
 
 ssh_string ssh_agent_sign_data(ssh_session session,
@@ -500,6 +524,7 @@ ssh_string ssh_agent_sign_data(ssh_session session,
     unsigned int type = 0;
     unsigned int flags = 0;
     uint32_t dlen;
+    size_t request_len;
     int rc;
 
     request = ssh_buffer_new();
@@ -525,11 +550,14 @@ ssh_string ssh_agent_sign_data(ssh_session session,
      * - 2 x uint32_t
      * - 1 x ssh_string (uint8_t + data)
      */
-    rc = ssh_buffer_allocate_size(request,
-                                  sizeof(uint8_t) * 2 +
-                                  sizeof(uint32_t) * 2 +
-                                  ssh_string_len(key_blob));
+    request_len = sizeof(uint8_t) * 2 +
+                  sizeof(uint32_t) * 2 +
+                  ssh_string_len(key_blob);
+    /* this can't overflow the uint32_t as the
+     * STRING_SIZE_MAX is (UINT32_MAX >> 8) + 1 */
+    rc = ssh_buffer_allocate_size(request, (uint32_t)request_len);
     if (rc < 0) {
+        SSH_STRING_FREE(key_blob);
         SSH_BUFFER_FREE(request);
         return NULL;
     }

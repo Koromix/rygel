@@ -56,6 +56,18 @@ if (MINGW AND Threads_FOUND)
   )
 endif()
 
+if (HAVE_LIBFIDO2)
+    set(LIBSSH_PRIVATE_INCLUDE_DIRS
+        ${LIBSSH_PRIVATE_INCLUDE_DIRS}
+        ${LIBFIDO2_INCLUDE_DIR}
+    )
+
+    set(LIBSSH_LINK_LIBRARIES
+        ${LIBSSH_LINK_LIBRARIES}
+        ${LIBFIDO2_LIBRARIES}
+    )
+endif (HAVE_LIBFIDO2)
+
 # The ws2_32 needs to be last for mingw to build
 # https://gitlab.com/libssh/libssh-mirror/-/issues/84
 if (WIN32)
@@ -87,11 +99,13 @@ set(libssh_SRCS
   connector.c
   crypto_common.c
   curve25519.c
+  sntrup761.c
   dh.c
   ecdh.c
   error.c
   getpass.c
   gzip.c
+  hybrid_mlkem.c
   init.c
   kdf.c
   kex.c
@@ -102,12 +116,14 @@ set(libssh_SRCS
   match.c
   messages.c
   misc.c
+  mlkem.c
   options.c
   packet.c
   packet_cb.c
   packet_crypt.c
   pcap.c
   pki.c
+  pki_context.c
   pki_container_openssh.c
   poll.c
   session.c
@@ -174,6 +190,20 @@ if (WITH_GCRYPT)
             chachapoly.c
         )
     endif (NOT HAVE_GCRYPT_CHACHA_POLY)
+
+    if (HAVE_GCRYPT_CURVE25519)
+        set(libssh_SRCS
+            ${libssh_SRCS}
+            curve25519_gcrypt.c
+        )
+    endif(HAVE_GCRYPT_CURVE25519)
+
+    if (HAVE_GCRYPT_MLKEM)
+        set(libssh_SRCS
+            ${libssh_SRCS}
+            mlkem_gcrypt.c
+        )
+    endif (HAVE_GCRYPT_MLKEM)
 elseif (WITH_MBEDTLS)
     set(libssh_SRCS
         ${libssh_SRCS}
@@ -190,6 +220,7 @@ elseif (WITH_MBEDTLS)
         external/fe25519.c
         external/ge25519.c
         external/sc25519.c
+        external/sntrup761.c
        )
     if (NOT (HAVE_MBEDTLS_CHACHA20_H AND HAVE_MBEDTLS_POLY1305_H))
         set(libssh_SRCS
@@ -199,17 +230,24 @@ elseif (WITH_MBEDTLS)
             chachapoly.c
            )
     endif()
-
+    if (HAVE_MBEDTLS_CURVE25519)
+        set(libssh_SRCS
+            ${libssh_SRCS}
+            curve25519_mbedcrypto.c
+        )
+    endif(HAVE_MBEDTLS_CURVE25519)
 else (WITH_GCRYPT)
     set(libssh_SRCS
         ${libssh_SRCS}
         threads/libcrypto.c
         pki_crypto.c
         ecdh_crypto.c
+        curve25519_crypto.c
         getrandom_crypto.c
         md_crypto.c
         libcrypto.c
         dh_crypto.c
+        external/sntrup761.c
        )
     if (NOT HAVE_OPENSSL_EVP_CHACHA20)
         set(libssh_SRCS
@@ -219,6 +257,12 @@ else (WITH_GCRYPT)
             chachapoly.c
         )
     endif (NOT HAVE_OPENSSL_EVP_CHACHA20)
+    if (HAVE_OPENSSL_MLKEM)
+        set(libssh_SRCS
+            ${libssh_SRCS}
+            mlkem_crypto.c
+        )
+    endif (HAVE_OPENSSL_MLKEM)
 endif (WITH_GCRYPT)
 
 if (WITH_SFTP)
@@ -257,17 +301,47 @@ if (WITH_GSSAPI AND GSSAPI_FOUND)
   set(libssh_SRCS
     ${libssh_SRCS}
     gssapi.c
+    kex-gss.c
   )
 endif (WITH_GSSAPI AND GSSAPI_FOUND)
 
 if (NOT WITH_NACL)
-    if (NOT HAVE_LIBCRYPTO)
+    if (NOT (HAVE_LIBCRYPTO OR HAVE_MBEDTLS_CURVE25519 OR HAVE_GCRYPT_CURVE25519))
         set(libssh_SRCS
             ${libssh_SRCS}
+            curve25519_fallback.c
             external/curve25519_ref.c
            )
     endif()
 endif (NOT WITH_NACL)
+
+if (NOT HAVE_MLKEM1024)
+    set(libssh_SRCS
+        ${libssh_SRCS}
+        mlkem_native.c
+        external/libcrux_mlkem768_sha3.c
+    )
+    if (WITH_WERROR_DECLARATION_AFTER_STATEMENT_FLAG)
+        set_source_files_properties(external/libcrux_mlkem768_sha3.c
+                                    PROPERTIES
+                                        COMPILE_FLAGS -Wno-error=declaration-after-statement)
+    endif()
+endif()
+
+if (WITH_FIDO2)
+    set(libssh_SRCS
+        ${libssh_SRCS}
+        sk_common.c
+        pki_sk.c
+    )
+
+    if (HAVE_LIBFIDO2)
+        set(libssh_SRCS
+            ${libssh_SRCS}
+            sk_usbhid.c
+        )
+    endif (HAVE_LIBFIDO2)
+endif (WITH_FIDO2)
 
 # Set the path to the default map file
 set(MAP_PATH "${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}.map")

@@ -21,11 +21,10 @@ static int myauthcallback (const char *prompt, char *buf, size_t len,
 
 static int setup(void **state)
 {
-    struct ssh_callbacks_struct *cb;
+    struct ssh_callbacks_struct *cb = NULL;
 
-    cb = malloc(sizeof(struct ssh_callbacks_struct));
+    cb = calloc(1, sizeof(struct ssh_callbacks_struct));
     assert_non_null(cb);
-    ZERO_STRUCTP(cb);
 
     cb->userdata = (void *) 0x0badc0de;
     cb->auth_function = myauthcallback;

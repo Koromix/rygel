@@ -297,7 +297,7 @@ static int pkd_exec_hello(int fd, struct pkd_daemon_args *args)
         /* Add methods not enabled by default */
 
         /* Enable all supported key exchange methods */
-        all_kex = ssh_kex_get_supported_method(SSH_KEX);
+        all_kex = ssh_get_supported_methods(SSH_KEX);
         rc = ssh_bind_options_set(b, SSH_BIND_OPTIONS_KEY_EXCHANGE, all_kex);
         if (rc != 0) {
             pkderr("ssh_bind_options_set kex methods: %s\n", ssh_get_error(b));
@@ -305,14 +305,14 @@ static int pkd_exec_hello(int fd, struct pkd_daemon_args *args)
         }
 
         /* Enable all supported ciphers */
-        all_ciphers = ssh_kex_get_supported_method(SSH_CRYPT_C_S);
+        all_ciphers = ssh_get_supported_methods(SSH_CRYPT_C_S);
         rc = ssh_bind_options_set(b, SSH_BIND_OPTIONS_CIPHERS_C_S, all_ciphers);
         if (rc != 0) {
             pkderr("ssh_bind_options_set Ciphers C-S: %s\n", ssh_get_error(b));
             goto outclose;
         }
 
-        all_ciphers = ssh_kex_get_supported_method(SSH_CRYPT_S_C);
+        all_ciphers = ssh_get_supported_methods(SSH_CRYPT_S_C);
         rc = ssh_bind_options_set(b, SSH_BIND_OPTIONS_CIPHERS_S_C, all_ciphers);
         if (rc != 0) {
             pkderr("ssh_bind_options_set Ciphers S-C: %s\n", ssh_get_error(b));
@@ -320,7 +320,7 @@ static int pkd_exec_hello(int fd, struct pkd_daemon_args *args)
         }
 
         /* Enable all hostkey algorithms */
-        all_hostkeys = ssh_kex_get_supported_method(SSH_HOSTKEYS);
+        all_hostkeys = ssh_get_supported_methods(SSH_HOSTKEYS);
         rc = ssh_bind_options_set(b, SSH_BIND_OPTIONS_HOSTKEY_ALGORITHMS, all_hostkeys);
         if (rc != 0) {
             pkderr("ssh_bind_options_set Hostkeys: %s\n", ssh_get_error(b));
@@ -328,14 +328,14 @@ static int pkd_exec_hello(int fd, struct pkd_daemon_args *args)
         }
 
         /* Enable all message authentication codes */
-        all_macs = ssh_kex_get_supported_method(SSH_MAC_C_S);
+        all_macs = ssh_get_supported_methods(SSH_MAC_C_S);
         rc = ssh_bind_options_set(b, SSH_BIND_OPTIONS_HMAC_C_S, all_macs);
         if (rc != 0) {
             pkderr("ssh_bind_options_set MACs C-S: %s\n", ssh_get_error(b));
             goto outclose;
         }
 
-        all_macs = ssh_kex_get_supported_method(SSH_MAC_S_C);
+        all_macs = ssh_get_supported_methods(SSH_MAC_S_C);
         rc = ssh_bind_options_set(b, SSH_BIND_OPTIONS_HMAC_S_C, all_macs);
         if (rc != 0) {
             pkderr("ssh_bind_options_set MACs S-C: %s\n", ssh_get_error(b));

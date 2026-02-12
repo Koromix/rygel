@@ -45,10 +45,11 @@
 #ifdef HAVE_OPENSSL_ECDH_H
 #include <openssl/ecdh.h>
 #endif
+#include "libssh/curve25519.h"
 #include "libssh/dh.h"
 #include "libssh/ecdh.h"
 #include "libssh/kex.h"
-#include "libssh/curve25519.h"
+#include "libssh/sntrup761.h"
 
 #define DIGEST_MAX_LEN 64
 
@@ -56,32 +57,52 @@
 #define AES_GCM_IVLEN  12
 
 enum ssh_key_exchange_e {
-  /* diffie-hellman-group1-sha1 */
-  SSH_KEX_DH_GROUP1_SHA1=1,
-  /* diffie-hellman-group14-sha1 */
-  SSH_KEX_DH_GROUP14_SHA1,
+    /* diffie-hellman-group1-sha1 */
+    SSH_KEX_DH_GROUP1_SHA1 = 1,
+    /* diffie-hellman-group14-sha1 */
+    SSH_KEX_DH_GROUP14_SHA1,
 #ifdef WITH_GEX
-  /* diffie-hellman-group-exchange-sha1 */
-  SSH_KEX_DH_GEX_SHA1,
-  /* diffie-hellman-group-exchange-sha256 */
-  SSH_KEX_DH_GEX_SHA256,
+    /* diffie-hellman-group-exchange-sha1 */
+    SSH_KEX_DH_GEX_SHA1,
+    /* diffie-hellman-group-exchange-sha256 */
+    SSH_KEX_DH_GEX_SHA256,
 #endif /* WITH_GEX */
-  /* ecdh-sha2-nistp256 */
-  SSH_KEX_ECDH_SHA2_NISTP256,
-  /* ecdh-sha2-nistp384 */
-  SSH_KEX_ECDH_SHA2_NISTP384,
-  /* ecdh-sha2-nistp521 */
-  SSH_KEX_ECDH_SHA2_NISTP521,
-  /* curve25519-sha256@libssh.org */
-  SSH_KEX_CURVE25519_SHA256_LIBSSH_ORG,
-  /* curve25519-sha256 */
-  SSH_KEX_CURVE25519_SHA256,
-  /* diffie-hellman-group16-sha512 */
-  SSH_KEX_DH_GROUP16_SHA512,
-  /* diffie-hellman-group18-sha512 */
-  SSH_KEX_DH_GROUP18_SHA512,
-  /* diffie-hellman-group14-sha256 */
-  SSH_KEX_DH_GROUP14_SHA256,
+    /* ecdh-sha2-nistp256 */
+    SSH_KEX_ECDH_SHA2_NISTP256,
+    /* ecdh-sha2-nistp384 */
+    SSH_KEX_ECDH_SHA2_NISTP384,
+    /* ecdh-sha2-nistp521 */
+    SSH_KEX_ECDH_SHA2_NISTP521,
+    /* curve25519-sha256@libssh.org */
+    SSH_KEX_CURVE25519_SHA256_LIBSSH_ORG,
+    /* curve25519-sha256 */
+    SSH_KEX_CURVE25519_SHA256,
+    /* diffie-hellman-group16-sha512 */
+    SSH_KEX_DH_GROUP16_SHA512,
+    /* diffie-hellman-group18-sha512 */
+    SSH_KEX_DH_GROUP18_SHA512,
+    /* diffie-hellman-group14-sha256 */
+    SSH_KEX_DH_GROUP14_SHA256,
+    /* sntrup761x25519-sha512@openssh.com */
+    SSH_KEX_SNTRUP761X25519_SHA512_OPENSSH_COM,
+    /* sntrup761x25519-sha512 */
+    SSH_KEX_SNTRUP761X25519_SHA512,
+    /* mlkem768x25519-sha256 */
+    SSH_KEX_MLKEM768X25519_SHA256,
+    /* mlkem768nistp256-sha256 */
+    SSH_KEX_MLKEM768NISTP256_SHA256,
+#ifdef HAVE_MLKEM1024
+    /* mlkem1024nistp384-sha384 */
+    SSH_KEX_MLKEM1024NISTP384_SHA384,
+#endif /* HAVE_MLKEM1024 */
+    /* gss-group14-sha256-* */
+    SSH_GSS_KEX_DH_GROUP14_SHA256,
+    /* gss-group16-sha512-* */
+    SSH_GSS_KEX_DH_GROUP16_SHA512,
+    /* gss-nistp256-sha256-* */
+    SSH_GSS_KEX_ECDH_NISTP256_SHA256,
+    /* gss-curve25519-sha256-* */
+    SSH_GSS_KEX_CURVE25519_SHA256,
 };
 
 enum ssh_cipher_e {
@@ -105,6 +126,9 @@ struct dh_ctx;
 
 struct ssh_crypto_struct {
     bignum shared_secret;
+    ssh_string hybrid_client_init;
+    ssh_string hybrid_server_reply;
+    ssh_string hybrid_shared_secret;
     struct dh_ctx *dh_ctx;
 #ifdef WITH_GEX
     size_t dh_pmin; size_t dh_pn; size_t dh_pmax; /* preferred group parameters */
@@ -125,9 +149,28 @@ struct ssh_crypto_struct {
     ssh_string ecdh_server_pubkey;
 #endif
 #ifdef HAVE_CURVE25519
+#ifdef HAVE_LIBCRYPTO
+    EVP_PKEY *curve25519_privkey;
+#elif defined(HAVE_GCRYPT_CURVE25519)
+    gcry_sexp_t curve25519_privkey;
+#else
     ssh_curve25519_privkey curve25519_privkey;
+#endif
     ssh_curve25519_pubkey curve25519_client_pubkey;
     ssh_curve25519_pubkey curve25519_server_pubkey;
+#endif
+#ifdef HAVE_OPENSSL_MLKEM
+    EVP_PKEY *mlkem_privkey;
+#else
+    unsigned char *mlkem_privkey;
+    size_t mlkem_privkey_len;
+#endif
+    ssh_string mlkem_client_pubkey;
+    ssh_string mlkem_ciphertext;
+#ifdef HAVE_SNTRUP761
+    ssh_sntrup761_privkey sntrup761_privkey;
+    ssh_sntrup761_pubkey sntrup761_client_pubkey;
+    ssh_sntrup761_ciphertext sntrup761_ciphertext;
 #endif
     ssh_string dh_server_signature; /* information used by dh_handshake. */
     size_t session_id_len;

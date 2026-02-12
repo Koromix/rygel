@@ -8,10 +8,16 @@
 #cmakedefine BINARYDIR "${BINARYDIR}"
 #cmakedefine SOURCEDIR "${SOURCEDIR}"
 
+/* Global configuration directory */
+#cmakedefine USR_GLOBAL_CONF_DIR "${USR_GLOBAL_CONF_DIR}"
+#cmakedefine GLOBAL_CONF_DIR "${GLOBAL_CONF_DIR}"
+
 /* Global bind configuration file path */
+#cmakedefine USR_GLOBAL_BIND_CONFIG "${USR_GLOBAL_BIND_CONFIG}"
 #cmakedefine GLOBAL_BIND_CONFIG "${GLOBAL_BIND_CONFIG}"
 
 /* Global client configuration file path */
+#cmakedefine USR_GLOBAL_CLIENT_CONFIG "${USR_GLOBAL_CLIENT_CONFIG}"
 #cmakedefine GLOBAL_CLIENT_CONFIG "${GLOBAL_CLIENT_CONFIG}"
 
 /************************** HEADER FILES *************************/
@@ -85,6 +91,9 @@
 /* Define to 1 if you have elliptic curve cryptography in openssl */
 #cmakedefine HAVE_OPENSSL_ECC 1
 
+/* Define to 1 if mbedTLS supports curve25519 */
+#cmakedefine HAVE_MBEDTLS_CURVE25519 1
+
 /* Define to 1 if you have elliptic curve cryptography in gcrypt */
 #cmakedefine HAVE_GCRYPT_ECC 1
 
@@ -96,6 +105,9 @@
 
 /* Define to 1 if you have gcrypt with ChaCha20/Poly1305 support */
 #cmakedefine HAVE_GCRYPT_CHACHA_POLY 1
+
+/* Define to 1 if you have gcrypt with curve25519 support */
+#cmakedefine HAVE_GCRYPT_CURVE25519
 
 /*************************** FUNCTIONS ***************************/
 
@@ -171,6 +183,9 @@
 /* Define to 1 if you have the `explicit_bzero' function. */
 #cmakedefine HAVE_EXPLICIT_BZERO 1
 
+/* Define to 1 if you have the `memset_explicit' function. */
+#cmakedefine HAVE_MEMSET_EXPLICIT 1
+
 /* Define to 1 if you have the `memset_s' function. */
 #cmakedefine HAVE_MEMSET_S 1
 
@@ -182,6 +197,15 @@
 
 /* Define to 1 if we have support for blowfish */
 #cmakedefine HAVE_BLOWFISH 1
+
+/* Define to 1 if we have support for ML-KEM in libgcrypt */
+#cmakedefine HAVE_GCRYPT_MLKEM 1
+
+/* Define to 1 if we have support for ML-KEM in OpenSSL */
+#cmakedefine HAVE_OPENSSL_MLKEM 1
+
+/* Define to 1 if we have support for ML-KEM1024 in either backend */
+#cmakedefine HAVE_MLKEM1024 1
 
 /*************************** LIBRARIES ***************************/
 
@@ -199,6 +223,10 @@
 
 /* Define to 1 if you have the `cmocka' library (-lcmocka). */
 #cmakedefine HAVE_CMOCKA 1
+
+/* Define to 1 if you have the `libfido2' library (-lfido2).
+ * This is required for interacting with FIDO2/U2F devices over USB-HID. */
+#cmakedefine HAVE_LIBFIDO2 1
 
 /**************************** OPTIONS ****************************/
 
@@ -265,6 +293,9 @@
 
 /* Define to 1 if we want to build a support for PKCS #11 provider. */
 #cmakedefine WITH_PKCS11_PROVIDER 1
+
+/* Define to 1 if you want to enable FIDO2/U2F support */
+#cmakedefine WITH_FIDO2 1
 
 /*************************** ENDIAN *****************************/
 

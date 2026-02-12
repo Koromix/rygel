@@ -31,6 +31,7 @@ extern "C" {
 
 bignum ssh_make_string_bn(ssh_string string);
 ssh_string ssh_make_bignum_string(bignum num);
+ssh_string ssh_make_padded_bignum_string(bignum num, size_t pad_len);
 void ssh_print_bignum(const char *which, const_bignum num);
 
 #ifdef __cplusplus

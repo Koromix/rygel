@@ -46,10 +46,23 @@
 #define MAX_PUBKEY_SIZE 0x100000 /* 1M */
 #define MAX_PRIVKEY_SIZE 0x400000 /* 4M */
 
+#define RSA_MIN_KEY_SIZE      1024
+#define RSA_MIN_FIPS_KEY_SIZE 2048
+#define RSA_DEFAULT_KEY_SIZE  3072
+
 #define SSH_KEY_FLAG_EMPTY   0x0
 #define SSH_KEY_FLAG_PUBLIC  0x0001
 #define SSH_KEY_FLAG_PRIVATE 0x0002
 #define SSH_KEY_FLAG_PKCS11_URI 0x0004
+
+/* Constants matching the Lightweight Secure Shell Signature Format */
+/* https://datatracker.ietf.org/doc/draft-josefsson-sshsig-format */
+#define SSHSIG_VERSION            0x01
+#define SSHSIG_MAGIC_PREAMBLE     "SSHSIG"
+#define SSHSIG_MAGIC_PREAMBLE_LEN (sizeof(SSHSIG_MAGIC_PREAMBLE) - 1)
+#define SSHSIG_BEGIN_SIGNATURE    "-----BEGIN SSH SIGNATURE-----"
+#define SSHSIG_END_SIGNATURE      "-----END SSH SIGNATURE-----"
+#define SSHSIG_LINE_LENGTH        76
 
 struct ssh_key_struct {
     enum ssh_keytypes_e type;
@@ -63,11 +76,12 @@ struct ssh_key_struct {
     mbedtls_pk_context *pk;
     mbedtls_ecdsa_context *ecdsa;
 #elif defined(HAVE_LIBCRYPTO)
-    /* This holds either ENGINE key for PKCS#11 support or just key in
-     * high-level format */
+    /* This holds either ENGINE/PROVIDER key for PKCS#11 support
+     * or just key in high-level format */
     EVP_PKEY *key;
+    /* keep this around for FIPS mode so we can parse the public keys. We won't
+     * be able to use them nor use the private keys though */
     uint8_t *ed25519_pubkey;
-    uint8_t *ed25519_privkey;
 #endif /* HAVE_LIBGCRYPT */
 #ifndef HAVE_LIBCRYPTO
     ed25519_pubkey *ed25519_pubkey;
@@ -76,6 +90,14 @@ struct ssh_key_struct {
     ssh_string sk_application;
     ssh_buffer cert;
     enum ssh_keytypes_e cert_type;
+
+    /* Security Key specific private data */
+    uint8_t sk_flags;
+    ssh_string sk_key_handle;
+    ssh_string sk_reserved;
+
+    /* Resident key specific metadata */
+    ssh_string sk_user_id;
 };
 
 struct ssh_signature_struct {
@@ -126,6 +148,11 @@ enum ssh_digest_e ssh_key_hash_from_name(const char *name);
      (kt) == SSH_KEYTYPE_SK_ED25519_CERT01 ||\
     ((kt) >= SSH_KEYTYPE_ECDSA_P256_CERT01 &&\
      (kt) <= SSH_KEYTYPE_ED25519_CERT01))
+
+#define is_sk_key_type(kt)                                             \
+    ((kt) == SSH_KEYTYPE_SK_ECDSA || (kt) == SSH_KEYTYPE_SK_ED25519 || \
+     (kt) == SSH_KEYTYPE_SK_ECDSA_CERT01 ||                            \
+     (kt) == SSH_KEYTYPE_SK_ED25519_CERT01)
 
 /* SSH Signature Functions */
 ssh_signature ssh_signature_new(void);

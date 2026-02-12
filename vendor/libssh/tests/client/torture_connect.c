@@ -20,6 +20,7 @@
  */
 
 #include "config.h"
+#include "torture_cmocka.h"
 
 #define LIBSSH_STATIC
 
@@ -141,6 +142,48 @@ static void torture_connect_ipv6(void **state) {
     ssh_set_blocking(session, 1);
     rc = ssh_connect(session);
     assert_ssh_return_code(session, rc);
+}
+
+static void torture_connect_addrfamily(void **state)
+{
+    struct torture_state *s = *state;
+    ssh_session session = s->ssh.session;
+    int rc;
+
+    struct aftest {
+        enum ssh_address_family_options_e family;
+        char const *host;
+        int return_code;
+    };
+    static struct aftest aftests[] = {
+        {SSH_ADDRESS_FAMILY_ANY, "afboth", SSH_OK},
+        {SSH_ADDRESS_FAMILY_INET, "afboth", SSH_OK},
+        {SSH_ADDRESS_FAMILY_INET6, "afboth", SSH_OK},
+        {SSH_ADDRESS_FAMILY_ANY, "afinet", SSH_OK},
+        {SSH_ADDRESS_FAMILY_INET, "afinet", SSH_OK},
+        {SSH_ADDRESS_FAMILY_INET6, "afinet", SSH_ERROR},
+        {SSH_ADDRESS_FAMILY_ANY, "afinet6", SSH_OK},
+        {SSH_ADDRESS_FAMILY_INET, "afinet6", SSH_ERROR},
+        {SSH_ADDRESS_FAMILY_INET6, "afinet6", SSH_OK},
+    };
+
+    int aftest_count = sizeof(aftests) / sizeof(aftests[0]);
+    for (int i = 0; i < aftest_count; ++i) {
+        struct aftest const *t = &aftests[i];
+
+        rc = ssh_options_set(session, SSH_OPTIONS_ADDRESS_FAMILY, &t->family);
+        assert_ssh_return_code(session, rc);
+
+        rc = ssh_options_set(session, SSH_OPTIONS_HOST, t->host);
+        assert_ssh_return_code(session, rc);
+
+        do {
+            rc = ssh_connect(session);
+        } while (rc == SSH_AGAIN);
+
+        assert_ssh_return_code_equal(session, rc, t->return_code);
+        ssh_disconnect(session);
+    }
 }
 
 #if 0 /* This does not work with socket_wrapper */
@@ -327,6 +370,9 @@ int torture_run_tests(void) {
                                         session_setup,
                                         session_teardown),
         cmocka_unit_test_setup_teardown(torture_connect_ipv6,
+                                        session_setup,
+                                        session_teardown),
+        cmocka_unit_test_setup_teardown(torture_connect_addrfamily,
                                         session_setup,
                                         session_teardown),
         cmocka_unit_test_setup_teardown(torture_connect_double,

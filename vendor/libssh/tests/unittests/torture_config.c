@@ -25,7 +25,7 @@ extern LIBSSH_THREAD int ssh_log_level;
 #define HOSTKEYALGORITHMS "ssh-ed25519,ecdsa-sha2-nistp521,ssh-rsa"
 #define PUBKEYACCEPTEDTYPES "rsa-sha2-512,ssh-rsa,ecdsa-sha2-nistp521"
 #define MACS "hmac-sha1,hmac-sha2-256,hmac-sha2-512,hmac-sha1-etm@openssh.com,hmac-sha2-256-etm@openssh.com,hmac-sha2-512-etm@openssh.com"
-#define USER_KNOWN_HOSTS "%d/my_known_hosts"
+#define USER_KNOWN_HOSTS "%d/.ssh/my_known_hosts"
 #define GLOBAL_KNOWN_HOSTS "/etc/ssh/my_ssh_known_hosts"
 #define BIND_ADDRESS "::1"
 
@@ -46,6 +46,7 @@ extern LIBSSH_THREAD int ssh_log_level;
 #define LIBSSH_TESTCONFIG15 "libssh_testconfig15.tmp"
 #define LIBSSH_TESTCONFIG16 "libssh_testconfig16.tmp"
 #define LIBSSH_TESTCONFIG17 "libssh_testconfig17.tmp"
+#define LIBSSH_TESTCONFIG18 "libssh_testconfig18.tmp"
 #define LIBSSH_TESTCONFIGGLOB "libssh_testc*[36].tmp"
 #define LIBSSH_TEST_PUBKEYTYPES "libssh_test_PubkeyAcceptedKeyTypes.tmp"
 #define LIBSSH_TEST_PUBKEYALGORITHMS "libssh_test_PubkeyAcceptedAlgorithms.tmp"
@@ -53,6 +54,8 @@ extern LIBSSH_THREAD int ssh_log_level;
 #define LIBSSH_TEST_NONEWLINEONELINE "libssh_test_NoNewLineOneline.tmp"
 #define LIBSSH_TEST_RECURSIVE_INCLUDE "libssh_test_recursive_include.tmp"
 #define LIBSSH_TESTCONFIG_MATCH_COMPLEX "libssh_test_match_complex.tmp"
+#define LIBSSH_TESTCONFIG_LOGLEVEL_MISSING "libssh_test_loglevel_missing.tmp"
+#define LIBSSH_TESTCONFIG_JUMP "libssh_test_jump.tmp"
 
 #define LIBSSH_TESTCONFIG_STRING1 \
     "User "USERNAME"\nInclude "LIBSSH_TESTCONFIG2"\n\n"
@@ -90,7 +93,10 @@ extern LIBSSH_THREAD int ssh_log_level;
     "\tGSSAPIDelegateCredentials yes\n" \
     "\tGSSAPIServerIdentity example.com\n" \
     "\tGSSAPIClientIdentity home.sweet\n" \
-    "\tUserKnownHostsFile "USER_KNOWN_HOSTS"\n"
+    "\tUserKnownHostsFile "USER_KNOWN_HOSTS"\n" \
+    "\tRequiredRSASize 2233\n" \
+    "\tGSSAPIKeyExchange yes\n" \
+    "\tGSSAPIKexAlgorithms gss-group14-sha256-\n"
 
 /* authentication methods */
 #define LIBSSH_TESTCONFIG_STRING8 \
@@ -153,6 +159,8 @@ extern LIBSSH_THREAD int ssh_log_level;
     "\tProxyJump jumpbox:2222\n" \
     "Host two-step\n" \
     "\tProxyJump u1@first:222,u2@second:33\n" \
+    "Host three-step\n" \
+    "\tProxyJump u1@first:222,u2@second:33,u3@third:444\n" \
     "Host none\n" \
     "\tProxyJump none\n" \
     "Host only-command\n" \
@@ -220,6 +228,15 @@ extern LIBSSH_THREAD int ssh_log_level;
     "\tControlMaster yes\n" \
     "\tControlPath none\n"
 
+#define LIBSSH_TESTCONFIG_STRING18 \
+    "Host simple\n"                \
+    "Host af\n"                    \
+    "\tAddressFamily any\n"        \
+    "Host af4\n"                   \
+    "\tAddressFamily inet\n"       \
+    "Host af6\n"                   \
+    "\tAddressFamily inet6\n"
+
 #define LIBSSH_TEST_PUBKEYTYPES_STRING \
     "PubkeyAcceptedKeyTypes "PUBKEYACCEPTEDTYPES"\n"
 
@@ -242,6 +259,26 @@ extern LIBSSH_THREAD int ssh_log_level;
     "Match exec \"[ \\\"$(ps h o comm p $(ps h o ppid p $PPID))\\\" != \\\"rsync\\\" ]\"\n" \
     "\tForwardAgent yes\n" \
     "\tHostName complex-match\n"
+
+#define LIBSSH_TESTCONFIG_LOGLEVEL_MISSING_STRING "LogLevel\n"
+#define LIBSSH_TESTCONFIG_JUMP_STRING \
+    "# The jump host\n" \
+    "Host ub-jumphost\n" \
+    "    HostName 1xxxxxx\n" \
+    "    User ubuntu\n" \
+    "    IdentityFile ~/of/temp-libssh.pem\n" \
+    "    Port 23\n" \
+    "    LogLevel DEBUG3\n" \
+    "\n" \
+    "# Cisco Router through Jump Host\n" \
+    "Host cisco-router\n" \
+    "    HostName xx.xxxxxxxxx\n" \
+    "    User username\n" \
+    "    ProxyJump ub-jumphost\n" \
+    "    Port 5555\n" \
+    "    #RequiredRSASize 512\n" \
+    "    PasswordAuthentication yes\n" \
+    "    LogLevel DEBUG3\n"
 
 /**
  * @brief helper function loading configuration from either file or string
@@ -288,11 +325,14 @@ static int setup_config_files(void **state)
     unlink(LIBSSH_TESTCONFIG15);
     unlink(LIBSSH_TESTCONFIG16);
     unlink(LIBSSH_TESTCONFIG17);
+    unlink(LIBSSH_TESTCONFIG18);
     unlink(LIBSSH_TEST_PUBKEYTYPES);
     unlink(LIBSSH_TEST_PUBKEYALGORITHMS);
     unlink(LIBSSH_TEST_NONEWLINEEND);
     unlink(LIBSSH_TEST_NONEWLINEONELINE);
     unlink(LIBSSH_TESTCONFIG_MATCH_COMPLEX);
+    unlink(LIBSSH_TESTCONFIG_LOGLEVEL_MISSING);
+    unlink(LIBSSH_TESTCONFIG_JUMP);
 
     torture_write_file(LIBSSH_TESTCONFIG1,
                        LIBSSH_TESTCONFIG_STRING1);
@@ -345,6 +385,8 @@ static int setup_config_files(void **state)
                        LIBSSH_TESTCONFIG_STRING16);
     torture_write_file(LIBSSH_TESTCONFIG17,
                        LIBSSH_TESTCONFIG_STRING17);
+    torture_write_file(LIBSSH_TESTCONFIG18,
+                       LIBSSH_TESTCONFIG_STRING18);
 
     torture_write_file(LIBSSH_TEST_PUBKEYTYPES,
                        LIBSSH_TEST_PUBKEYTYPES_STRING);
@@ -361,6 +403,10 @@ static int setup_config_files(void **state)
     /* Match complex combinations */
     torture_write_file(LIBSSH_TESTCONFIG_MATCH_COMPLEX,
                        LIBSSH_TESTCONFIG_MATCH_COMPLEX_STRING);
+    torture_write_file(LIBSSH_TESTCONFIG_LOGLEVEL_MISSING,
+                       LIBSSH_TESTCONFIG_LOGLEVEL_MISSING_STRING);
+    torture_write_file(LIBSSH_TESTCONFIG_JUMP,
+                       LIBSSH_TESTCONFIG_JUMP_STRING);
 
     return 0;
 }
@@ -385,11 +431,14 @@ static int teardown_config_files(void **state)
     unlink(LIBSSH_TESTCONFIG15);
     unlink(LIBSSH_TESTCONFIG16);
     unlink(LIBSSH_TESTCONFIG17);
+    unlink(LIBSSH_TESTCONFIG18);
     unlink(LIBSSH_TEST_PUBKEYTYPES);
     unlink(LIBSSH_TEST_PUBKEYALGORITHMS);
     unlink(LIBSSH_TEST_NONEWLINEEND);
     unlink(LIBSSH_TEST_NONEWLINEONELINE);
     unlink(LIBSSH_TESTCONFIG_MATCH_COMPLEX);
+    unlink(LIBSSH_TESTCONFIG_LOGLEVEL_MISSING);
+    unlink(LIBSSH_TESTCONFIG_JUMP);
 
     return 0;
 }
@@ -626,9 +675,15 @@ static void torture_config_new(void ** state,
     assert_int_equal(session->opts.gss_delegate_creds, 1);
     assert_string_equal(session->opts.gss_server_identity, "example.com");
     assert_string_equal(session->opts.gss_client_identity, "home.sweet");
+#ifdef WITH_GSSAPI
+    assert_true(session->opts.gssapi_key_exchange);
+    assert_string_equal(session->opts.gssapi_key_exchange_algs,
+                        "gss-group14-sha256-");
+#endif /* WITH_GSSAPI */
 
     assert_int_equal(ssh_get_log_level(), SSH_LOG_TRACE);
     assert_int_equal(session->common.log_verbosity, SSH_LOG_TRACE);
+    assert_int_equal(session->opts.rsa_min_size, 2233);
 }
 
 static void torture_config_new_file(void **state)
@@ -788,7 +843,7 @@ static void torture_config_match(void **state,
 {
     ssh_session session = *state;
     char *localuser = NULL;
-    const char *config;
+    const char *config = NULL;
     char config_string[1024];
 
     /* Without any settings we should get all-matched.com hostname */
@@ -1075,7 +1130,7 @@ static void torture_config_proxyjump(void **state,
 {
     ssh_session session = *state;
 
-    const char *config;
+    const char *config = NULL;
 
 
     /* Tests for libssh based proxyjump */
@@ -1115,6 +1170,23 @@ static void torture_config_proxyjump(void **state,
                             "u2",
                             "33");
     helper_proxy_jump_check(session->opts.proxy_jumps->root->next,
+                            "first",
+                            "u1",
+                            "222");
+
+    /* Three step jump */
+    torture_reset_config(session);
+    ssh_options_set(session, SSH_OPTIONS_HOST, "three-step");
+    _parse_config(session, file, string, SSH_OK);
+    helper_proxy_jump_check(session->opts.proxy_jumps->root,
+                            "third",
+                            "u3",
+                            "444");
+    helper_proxy_jump_check(session->opts.proxy_jumps->root->next,
+                            "second",
+                            "u2",
+                            "33");
+    helper_proxy_jump_check(session->opts.proxy_jumps->root->next->next,
                             "first",
                             "u1",
                             "222");
@@ -1183,6 +1255,13 @@ static void torture_config_proxyjump(void **state,
     _parse_config(session, file, string, SSH_OK);
     assert_string_equal(session->opts.ProxyCommand,
                         "ssh -l u1 -p 222 -J u2@second:33 -W '[%h]:%p' first");
+
+    /* Three step jump */
+    torture_reset_config(session);
+    ssh_options_set(session, SSH_OPTIONS_HOST, "three-step");
+    _parse_config(session, file, string, SSH_OK);
+    assert_string_equal(session->opts.ProxyCommand,
+                        "ssh -l u1 -p 222 -J u2@second:33,u3@third:444 -W '[%h]:%p' first");
 
     /* none */
     torture_reset_config(session);
@@ -1509,6 +1588,79 @@ static void torture_config_control_master_string(void **state)
 static void torture_config_control_master_file(void **state)
 {
     torture_config_control_master(state, LIBSSH_TESTCONFIG17, NULL);
+}
+
+/**
+ * @brief Verify we can parse AdressFamily configuration option
+ */
+static void torture_config_address_family(void **state,
+                                          const char *file,
+                                          const char *string)
+{
+    ssh_session session = *state;
+
+    const char *config = NULL;
+
+    torture_reset_config(session);
+    ssh_options_set(session, SSH_OPTIONS_HOST, "simple");
+    _parse_config(session, file, string, SSH_OK);
+    assert_int_equal(session->opts.address_family, SSH_ADDRESS_FAMILY_ANY);
+
+    torture_reset_config(session);
+    ssh_options_set(session, SSH_OPTIONS_HOST, "af");
+    _parse_config(session, file, string, SSH_OK);
+    assert_int_equal(session->opts.address_family, SSH_ADDRESS_FAMILY_ANY);
+
+    torture_reset_config(session);
+    ssh_options_set(session, SSH_OPTIONS_HOST, "af4");
+    _parse_config(session, file, string, SSH_OK);
+    assert_int_equal(session->opts.address_family, SSH_ADDRESS_FAMILY_INET);
+
+    torture_reset_config(session);
+    ssh_options_set(session, SSH_OPTIONS_HOST, "af6");
+    _parse_config(session, file, string, SSH_OK);
+    assert_int_equal(session->opts.address_family, SSH_ADDRESS_FAMILY_INET6);
+
+    /* test for parsing failures */
+    config = "Host afmissing\n"
+             "\tAddressFamily\n";
+    if (file != NULL) {
+        torture_write_file(file, config);
+    } else {
+        string = config;
+    }
+
+    torture_reset_config(session);
+    ssh_options_set(session, SSH_OPTIONS_HOST, "afmissing");
+    _parse_config(session, file, string, SSH_ERROR);
+
+    config = "Host afinvalid\n"
+             "\tAddressFamily wurstkäse\n";
+    if (file != NULL) {
+        torture_write_file(file, config);
+    } else {
+        string = config;
+    }
+
+    torture_reset_config(session);
+    ssh_options_set(session, SSH_OPTIONS_HOST, "afinvalid");
+    _parse_config(session, file, string, SSH_ERROR);
+}
+
+/**
+ * @brief Verify we can parse AdressFamily configuration option from string
+ */
+static void torture_config_address_family_string(void **state)
+{
+    torture_config_address_family(state, NULL, LIBSSH_TESTCONFIG_STRING18);
+}
+
+/**
+ * @brief Verify we can parse AdressFamily configuration option from file
+ */
+static void torture_config_address_family_file(void **state)
+{
+    torture_config_address_family(state, LIBSSH_TESTCONFIG18, NULL);
 }
 
 /**
@@ -2342,80 +2494,138 @@ static void torture_config_match_pattern(void **state)
     (void) state;
 
     /* Simple test "a" matches "a" */
-    rv = match_pattern("a", "a", MAX_MATCH_RECURSION);
+    rv = match_pattern("a", "a");
     assert_int_equal(rv, 1);
 
     /* Simple test "a" does not match "b" */
-    rv = match_pattern("a", "b", MAX_MATCH_RECURSION);
+    rv = match_pattern("a", "b");
     assert_int_equal(rv, 0);
 
     /* NULL arguments are correctly handled */
-    rv = match_pattern("a", NULL, MAX_MATCH_RECURSION);
+    rv = match_pattern("a", NULL);
     assert_int_equal(rv, 0);
-    rv = match_pattern(NULL, "a", MAX_MATCH_RECURSION);
+    rv = match_pattern(NULL, "a");
     assert_int_equal(rv, 0);
 
     /* Simple wildcard ? is handled in pattern */
-    rv = match_pattern("a", "?", MAX_MATCH_RECURSION);
+    rv = match_pattern("a", "?");
     assert_int_equal(rv, 1);
-    rv = match_pattern("aa", "?", MAX_MATCH_RECURSION);
+    rv = match_pattern("aa", "?");
     assert_int_equal(rv, 0);
     /* Wildcard in search string */
-    rv = match_pattern("?", "a", MAX_MATCH_RECURSION);
+    rv = match_pattern("?", "a");
     assert_int_equal(rv, 0);
-    rv = match_pattern("?", "?", MAX_MATCH_RECURSION);
+    rv = match_pattern("?", "?");
     assert_int_equal(rv, 1);
 
     /* Simple wildcard * is handled in pattern */
-    rv = match_pattern("a", "*", MAX_MATCH_RECURSION);
+    rv = match_pattern("a", "*");
     assert_int_equal(rv, 1);
-    rv = match_pattern("aa", "*", MAX_MATCH_RECURSION);
+    rv = match_pattern("aa", "*");
     assert_int_equal(rv, 1);
     /* Wildcard in search string */
-    rv = match_pattern("*", "a", MAX_MATCH_RECURSION);
+    rv = match_pattern("*", "a");
     assert_int_equal(rv, 0);
-    rv = match_pattern("*", "*", MAX_MATCH_RECURSION);
+    rv = match_pattern("*", "*");
     assert_int_equal(rv, 1);
 
     /* More complicated patterns */
-    rv = match_pattern("a", "*a", MAX_MATCH_RECURSION);
+    rv = match_pattern("a", "*a");
     assert_int_equal(rv, 1);
-    rv = match_pattern("a", "a*", MAX_MATCH_RECURSION);
+    rv = match_pattern("a", "a*");
     assert_int_equal(rv, 1);
-    rv = match_pattern("abababc", "*abc", MAX_MATCH_RECURSION);
+    rv = match_pattern("abababc", "*abc");
     assert_int_equal(rv, 1);
-    rv = match_pattern("ababababca", "*abc", MAX_MATCH_RECURSION);
+    rv = match_pattern("ababababca", "*abc");
     assert_int_equal(rv, 0);
-    rv = match_pattern("ababababca", "*abc*", MAX_MATCH_RECURSION);
+    rv = match_pattern("ababababca", "*abc*");
     assert_int_equal(rv, 1);
 
     /* Multiple wildcards in row */
-    rv = match_pattern("aa", "??", MAX_MATCH_RECURSION);
+    rv = match_pattern("aa", "??");
     assert_int_equal(rv, 1);
-    rv = match_pattern("bba", "??a", MAX_MATCH_RECURSION);
+    rv = match_pattern("bba", "??a");
     assert_int_equal(rv, 1);
-    rv = match_pattern("aaa", "**a", MAX_MATCH_RECURSION);
+    rv = match_pattern("aaa", "**a");
     assert_int_equal(rv, 1);
-    rv = match_pattern("bbb", "**a", MAX_MATCH_RECURSION);
+    rv = match_pattern("bbb", "**a");
     assert_int_equal(rv, 0);
 
     /* Consecutive asterisks do not make sense and do not need to recurse */
-    rv = match_pattern("hostname", "**********pattern", 5);
+    rv = match_pattern("hostname", "**********pattern");
     assert_int_equal(rv, 0);
-    rv = match_pattern("hostname", "pattern**********", 5);
+    rv = match_pattern("hostname", "pattern**********");
     assert_int_equal(rv, 0);
-    rv = match_pattern("pattern", "***********pattern", 5);
+    rv = match_pattern("pattern", "***********pattern");
     assert_int_equal(rv, 1);
-    rv = match_pattern("pattern", "pattern***********", 5);
+    rv = match_pattern("pattern", "pattern***********");
     assert_int_equal(rv, 1);
 
-    /* Limit the maximum recursion */
-    rv = match_pattern("hostname", "*p*a*t*t*e*r*n*", 5);
+    rv = match_pattern("hostname", "*p*a*t*t*e*r*n*");
     assert_int_equal(rv, 0);
-    /* Too much recursion */
-    rv = match_pattern("pattern", "*p*a*t*t*e*r*n*", 5);
+    rv = match_pattern("pattern", "*p*a*t*t*e*r*n*");
+    assert_int_equal(rv, 1);
+
+    /* Regular Expression Denial of Service */
+    rv = match_pattern("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                       "*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a");
+    assert_int_equal(rv, 1);
+    rv = match_pattern("ababababababababababababababababababababab",
+                       "*a*b*a*b*a*b*a*b*a*b*a*b*a*b*a*b");
+    assert_int_equal(rv, 1);
+
+    /* A lot of backtracking */
+    rv = match_pattern("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaax",
+                       "a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*a*ax");
+    assert_int_equal(rv, 1);
+
+    /* Test backtracking: *a matches first 'a', fails on 'b', must backtrack */
+    rv = match_pattern("axaxaxb", "*a*b");
+    assert_int_equal(rv, 1);
+
+    /* Test greedy consumption with suffix */
+    rv = match_pattern("foo_bar_baz_bar", "*bar");
+    assert_int_equal(rv, 1);
+
+    /* Test exact suffix requirement (ensure no partial match acceptance) */
+    rv = match_pattern("foobar_extra", "*bar");
     assert_int_equal(rv, 0);
 
+    /* Test multiple distinct wildcards */
+    rv = match_pattern("a_very_long_string_with_a_pattern", "*long*pattern");
+    assert_int_equal(rv, 1);
+
+    /* ? inside a * sequence */
+    rv = match_pattern("abcdefg", "a*c?e*g");
+    assert_int_equal(rv, 1);
+
+    /* Consecutive mixed wildcards */
+    rv = match_pattern("abc", "*?c");
+    assert_int_equal(rv, 1);
+
+    /* ? at the very end after * */
+    rv = match_pattern("abc", "ab?");
+    assert_int_equal(rv, 1);
+    rv = match_pattern("abc", "ab*?");
+    assert_int_equal(rv, 1);
+
+    /* Consecutive stars should be collapsed or handled gracefully */
+    rv = match_pattern("abc", "a**c");
+    assert_int_equal(rv, 1);
+    rv = match_pattern("abc", "***");
+    assert_int_equal(rv, 1);
+
+    /* Empty string handling */
+    rv = match_pattern("", "*");
+    assert_int_equal(rv, 1);
+    rv = match_pattern("", "?");
+    assert_int_equal(rv, 0);
+    rv = match_pattern("", "");
+    assert_int_equal(rv, 1);
+
+    /* Pattern longer than string */
+    rv = match_pattern("short", "short_but_longer");
+    assert_int_equal(rv, 0);
 }
 
 /* Identity file can be specified multiple times in the configuration
@@ -2617,104 +2827,287 @@ static void torture_config_match_complex(void **state)
     ssh_string_free_char(v);
 }
 
+/* Missing value to LogLevel configuration option
+ */
+static void torture_config_loglevel_missing_value(void **state)
+{
+    ssh_session session = *state;
+
+    ssh_options_set(session, SSH_OPTIONS_HOST, "Bar");
+
+    _parse_config(session, LIBSSH_TESTCONFIG_LOGLEVEL_MISSING, NULL, SSH_OK);
+}
+
+static int before_connection(ssh_session jump_session, void *user)
+{
+    char *v = NULL;
+    int ret;
+
+    (void)user;
+
+    /* During the connection, we force parsing the same configuration file
+     * (would be normally parsed automatically during the connection itself)
+     */
+    ret = ssh_config_parse_file(jump_session, LIBSSH_TESTCONFIG_JUMP);
+    assert_return_code(ret, errno);
+
+    /* Test the variable presence */
+    ret = ssh_options_get(jump_session, SSH_OPTIONS_HOST, &v);
+    assert_return_code(ret, errno);
+    assert_string_equal(v, "1xxxxxx");
+    ssh_string_free_char(v);
+
+    ret = ssh_options_get(jump_session, SSH_OPTIONS_USER, &v);
+    assert_return_code(ret, errno);
+    assert_string_equal(v, "ubuntu");
+    ssh_string_free_char(v);
+
+    assert_int_equal(jump_session->opts.port, 23);
+
+    /* Fail the connection -- we are in unit tests so it would fail anyway */
+    return 1;
+}
+
+static int verify_knownhost(ssh_session jump_session, void *user)
+{
+    (void)jump_session;
+    (void)user;
+
+    return 0;
+}
+
+static int authenticate(ssh_session jump_session, void *user)
+{
+    (void)jump_session;
+    (void)user;
+
+    return 0;
+}
+/* Reproducer for complex proxy jump
+ */
+static void torture_config_jump(void **state)
+{
+    ssh_session session = *state;
+    struct ssh_jump_callbacks_struct c = {
+        .before_connection = before_connection,
+        .verify_knownhost = verify_knownhost,
+        .authenticate = authenticate,
+    };
+    char *v = NULL;
+    int ret;
+
+    ssh_options_set(session, SSH_OPTIONS_HOST, "cisco-router");
+
+    _parse_config(session, LIBSSH_TESTCONFIG_JUMP, NULL, SSH_OK);
+
+    /* Test the variable presence */
+    ret = ssh_options_get(session, SSH_OPTIONS_HOST, &v);
+    assert_return_code(ret, errno);
+    assert_string_equal(v, "xx.xxxxxxxxx");
+    ssh_string_free_char(v);
+
+    ret = ssh_options_get(session, SSH_OPTIONS_USER, &v);
+    assert_return_code(ret, errno);
+    assert_string_equal(v, "username");
+    ssh_string_free_char(v);
+
+    assert_int_equal(session->opts.port, 5555);
+
+    /* At this point, the configuration file is not parsed for the jump host so
+     * we are getting just the the hostname -- the port and username will get
+     * pulled during the session connecting to this host */
+    assert_int_equal(ssh_list_count(session->opts.proxy_jumps), 1);
+    helper_proxy_jump_check(session->opts.proxy_jumps->root,
+                            "ub-jumphost",
+                            NULL,
+                            NULL);
+
+    /* Set up the callbacks -- they should verify we are going to connect to the
+     * right host */
+    ret = ssh_options_set(session, SSH_OPTIONS_PROXYJUMP_CB_LIST_APPEND, &c);
+    assert_ssh_return_code(session, ret);
+
+    ret = ssh_connect(session);
+    assert_ssh_return_code_equal(session, ret, SSH_ERROR);
+
+    printf("%s: EOF\n", __func__);
+}
+
+/* Invalid configuration files
+ */
+static void torture_config_invalid(void **state)
+{
+    ssh_session session = *state;
+
+    ssh_options_set(session, SSH_OPTIONS_HOST, "Bar");
+
+    /* non-regular file -- ignored (or missing on non-unix) so OK */
+    _parse_config(session, "/dev/random", NULL, SSH_OK);
+
+#ifndef _WIN32
+    /* huge file -- ignored (or missing on non-unix) so OK */
+    _parse_config(session, "/proc/kcore", NULL, SSH_OK);
+#endif
+}
+
 int torture_run_tests(void)
 {
     int rc;
     struct CMUnitTest tests[] = {
         cmocka_unit_test_setup_teardown(torture_config_include_file,
-                                        setup, teardown),
+                                        setup,
+                                        teardown),
         cmocka_unit_test_setup_teardown(torture_config_include_string,
-                                        setup, teardown),
+                                        setup,
+                                        teardown),
         cmocka_unit_test_setup_teardown(torture_config_include_recursive_file,
-                                        setup, teardown),
+                                        setup,
+                                        teardown),
         cmocka_unit_test_setup_teardown(torture_config_include_recursive_string,
-                                        setup, teardown),
+                                        setup,
+                                        teardown),
         cmocka_unit_test_setup_teardown(torture_config_double_ports_file,
-                                        setup, teardown),
+                                        setup,
+                                        teardown),
         cmocka_unit_test_setup_teardown(torture_config_double_ports_string,
-                                        setup, teardown),
+                                        setup,
+                                        teardown),
         cmocka_unit_test_setup_teardown(torture_config_glob_file,
-                                        setup, teardown),
+                                        setup,
+                                        teardown),
         cmocka_unit_test_setup_teardown(torture_config_glob_string,
-                                        setup, teardown),
+                                        setup,
+                                        teardown),
         cmocka_unit_test_setup_teardown(torture_config_new_file,
-                                        setup, teardown),
+                                        setup,
+                                        teardown),
         cmocka_unit_test_setup_teardown(torture_config_new_string,
-                                        setup, teardown),
+                                        setup,
+                                        teardown),
         cmocka_unit_test_setup_teardown(torture_config_auth_methods_file,
-                                        setup, teardown),
+                                        setup,
+                                        teardown),
         cmocka_unit_test_setup_teardown(torture_config_auth_methods_string,
-                                        setup, teardown),
+                                        setup,
+                                        teardown),
         cmocka_unit_test_setup_teardown(torture_config_unknown_file,
-                                        setup, teardown),
+                                        setup,
+                                        teardown),
         cmocka_unit_test_setup_teardown(torture_config_unknown_string,
-                                        setup, teardown),
+                                        setup,
+                                        teardown),
         cmocka_unit_test_setup_teardown(torture_config_match_file,
-                                        setup, teardown),
+                                        setup,
+                                        teardown),
         cmocka_unit_test_setup_teardown(torture_config_match_string,
-                                        setup, teardown),
+                                        setup,
+                                        teardown),
         cmocka_unit_test_setup_teardown(torture_config_proxyjump_file,
-                                        setup, teardown),
+                                        setup,
+                                        teardown),
         cmocka_unit_test_setup_teardown(torture_config_proxyjump_string,
-                                        setup, teardown),
+                                        setup,
+                                        teardown),
         cmocka_unit_test_setup_teardown(torture_config_control_path_file,
-                                        setup, teardown),
+                                        setup,
+                                        teardown),
         cmocka_unit_test_setup_teardown(torture_config_control_path_string,
-                                        setup, teardown),
+                                        setup,
+                                        teardown),
         cmocka_unit_test_setup_teardown(torture_config_control_master_file,
-                                        setup, teardown),
+                                        setup,
+                                        teardown),
         cmocka_unit_test_setup_teardown(torture_config_control_master_string,
-                                        setup, teardown),
+                                        setup,
+                                        teardown),
+        cmocka_unit_test_setup_teardown(torture_config_address_family_file,
+                                        setup,
+                                        teardown),
+        cmocka_unit_test_setup_teardown(torture_config_address_family_string,
+                                        setup,
+                                        teardown),
         cmocka_unit_test_setup_teardown(torture_config_rekey_file,
-                                        setup, teardown),
+                                        setup,
+                                        teardown),
         cmocka_unit_test_setup_teardown(torture_config_rekey_string,
-                                        setup, teardown),
+                                        setup,
+                                        teardown),
         cmocka_unit_test_setup_teardown(torture_config_plus_file,
-                                        setup, teardown),
+                                        setup,
+                                        teardown),
         cmocka_unit_test_setup_teardown(torture_config_plus_string,
-                                        setup, teardown),
+                                        setup,
+                                        teardown),
         cmocka_unit_test_setup_teardown(torture_config_minus_file,
-                                        setup, teardown),
+                                        setup,
+                                        teardown),
         cmocka_unit_test_setup_teardown(torture_config_minus_string,
-                                        setup, teardown),
+                                        setup,
+                                        teardown),
         cmocka_unit_test_setup_teardown(torture_config_caret_file,
-                                        setup, teardown),
+                                        setup,
+                                        teardown),
         cmocka_unit_test_setup_teardown(torture_config_caret_string,
-                                        setup, teardown),
+                                        setup,
+                                        teardown),
         cmocka_unit_test_setup_teardown(torture_config_pubkeytypes_file,
-                                        setup, teardown),
+                                        setup,
+                                        teardown),
         cmocka_unit_test_setup_teardown(torture_config_pubkeytypes_string,
-                                        setup, teardown),
+                                        setup,
+                                        teardown),
         cmocka_unit_test_setup_teardown(torture_config_pubkeyalgorithms_file,
-                                        setup, teardown),
+                                        setup,
+                                        teardown),
         cmocka_unit_test_setup_teardown(torture_config_pubkeyalgorithms_string,
-                                        setup, teardown),
+                                        setup,
+                                        teardown),
         cmocka_unit_test_setup_teardown(torture_config_nonewlineend_file,
-                                        setup, teardown),
+                                        setup,
+                                        teardown),
         cmocka_unit_test_setup_teardown(torture_config_nonewlineend_string,
-                                        setup, teardown),
+                                        setup,
+                                        teardown),
         cmocka_unit_test_setup_teardown(torture_config_nonewlineoneline_file,
-                                        setup, teardown),
+                                        setup,
+                                        teardown),
         cmocka_unit_test_setup_teardown(torture_config_nonewlineoneline_string,
-                                        setup, teardown),
+                                        setup,
+                                        teardown),
         cmocka_unit_test_setup_teardown(torture_config_parser_get_cmd,
-                                        setup, teardown),
+                                        setup,
+                                        teardown),
         cmocka_unit_test_setup_teardown(torture_config_parser_get_token,
-                                        setup, teardown),
+                                        setup,
+                                        teardown),
         cmocka_unit_test_setup_teardown(torture_config_match_pattern,
-                                        setup, teardown),
+                                        setup,
+                                        teardown),
         cmocka_unit_test_setup_teardown(torture_config_identity,
-                                        setup, teardown),
+                                        setup,
+                                        teardown),
         cmocka_unit_test_setup_teardown(torture_config_make_absolute,
-                                        setup, teardown),
+                                        setup,
+                                        teardown),
         cmocka_unit_test_setup_teardown(torture_config_make_absolute_no_sshdir,
-                                        setup_no_sshdir, teardown),
+                                        setup_no_sshdir,
+                                        teardown),
         cmocka_unit_test_setup_teardown(torture_config_parse_uri,
-                                        setup, teardown),
+                                        setup,
+                                        teardown),
         cmocka_unit_test_setup_teardown(torture_config_match_complex,
-                                        setup, teardown),
+                                        setup,
+                                        teardown),
+        cmocka_unit_test_setup_teardown(torture_config_loglevel_missing_value,
+                                        setup,
+                                        teardown),
+        cmocka_unit_test_setup_teardown(torture_config_jump,
+                                        setup,
+                                        teardown),
+        cmocka_unit_test_setup_teardown(torture_config_invalid,
+                                        setup,
+                                        teardown),
     };
-
 
     ssh_init();
     torture_filter_tests(tests);

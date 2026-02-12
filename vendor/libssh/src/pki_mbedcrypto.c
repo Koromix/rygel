@@ -380,17 +380,9 @@ ssh_key pki_key_dup(const ssh_key key, int demote)
     mbedtls_mpi Q;
 #endif
 
-    new = ssh_key_new();
+    new = pki_key_dup_common_init(key, demote);
     if (new == NULL) {
         return NULL;
-    }
-
-    new->type = key->type;
-    new->type_c = key->type_c;
-    if (demote) {
-        new->flags = SSH_KEY_FLAG_PUBLIC;
-    } else {
-        new->flags = key->flags;
     }
 
 #if MBEDTLS_VERSION_MAJOR > 2
@@ -512,6 +504,7 @@ ssh_key pki_key_dup(const ssh_key key, int demote)
         case SSH_KEYTYPE_ECDSA_P256:
         case SSH_KEYTYPE_ECDSA_P384:
         case SSH_KEYTYPE_ECDSA_P521:
+        case SSH_KEYTYPE_SK_ECDSA:
             new->ecdsa_nid = key->ecdsa_nid;
 
             new->ecdsa = malloc(sizeof(mbedtls_ecdsa_context));
@@ -522,7 +515,8 @@ ssh_key pki_key_dup(const ssh_key key, int demote)
 
             mbedtls_ecdsa_init(new->ecdsa);
 
-            if (demote && ssh_key_is_private(key)) {
+            if ((demote && ssh_key_is_private(key)) ||
+                is_sk_key_type(key->type)) {
                 rc = mbedtls_ecp_copy(&new->ecdsa->MBEDTLS_PRIVATE(Q),
                                 &key->ecdsa->MBEDTLS_PRIVATE(Q));
                 if (rc != 0) {
@@ -540,6 +534,7 @@ ssh_key pki_key_dup(const ssh_key key, int demote)
 
             break;
         case SSH_KEYTYPE_ED25519:
+        case SSH_KEYTYPE_SK_ED25519:
             rc = pki_ed25519_key_dup(new, key);
             if (rc != SSH_OK) {
                 goto fail;
@@ -568,6 +563,10 @@ int pki_key_generate_rsa(ssh_key key, int parameter)
 {
     int rc;
     const mbedtls_pk_info_t *info = NULL;
+
+    if (parameter == 0) {
+        parameter = RSA_DEFAULT_KEY_SIZE;
+    }
 
     key->pk = malloc(sizeof(mbedtls_pk_context));
     if (key->pk == NULL) {
@@ -768,7 +767,8 @@ int pki_key_compare(const ssh_key k1, const ssh_key k2, enum ssh_keycmp_e what)
                 goto cleanup;
             }
 
-            if (what == SSH_KEY_CMP_PRIVATE) {
+            if (what == SSH_KEY_CMP_PRIVATE &&
+                k1->type != SSH_KEYTYPE_SK_ECDSA) {
                 if (mbedtls_mpi_cmp_mpi(&ecdsa1->MBEDTLS_PRIVATE(d),
                     &ecdsa2->MBEDTLS_PRIVATE(d)))
                 {
@@ -782,7 +782,7 @@ int pki_key_compare(const ssh_key k1, const ssh_key k2, enum ssh_keycmp_e what)
         case SSH_KEYTYPE_ED25519:
         case SSH_KEYTYPE_SK_ED25519:
             /* ed25519 keys handled globally */
-            rc = 0;
+            rc = 1;
             break;
         default:
             rc = 1;
@@ -1070,7 +1070,7 @@ ssh_string pki_key_to_blob(const ssh_key key, enum ssh_key_e type)
             goto out;
         }
 
-        if (type == SSH_KEY_PRIVATE) {
+        if (type == SSH_KEY_PRIVATE && key->type != SSH_KEYTYPE_SK_ECDSA) {
             d = ssh_make_bignum_string(&key->ecdsa->MBEDTLS_PRIVATE(d));
 
             if (d == NULL) {
@@ -1082,7 +1082,14 @@ ssh_string pki_key_to_blob(const ssh_key key, enum ssh_key_e type)
             if (rc < 0) {
                 goto out;
             }
-        } else if (key->type == SSH_KEYTYPE_SK_ECDSA) {
+        } else if (type == SSH_KEY_PRIVATE &&
+                   key->type == SSH_KEYTYPE_SK_ECDSA) {
+            rc = pki_buffer_pack_sk_priv_data(buffer, key);
+            if (rc != SSH_OK) {
+                goto out;
+            }
+        } else if (type == SSH_KEY_PUBLIC &&
+                   key->type == SSH_KEYTYPE_SK_ECDSA) {
             /* public key can contain certificate sk information */
             rc = ssh_buffer_add_ssh_string(buffer, key->sk_application);
             if (rc < 0) {
@@ -1105,9 +1112,21 @@ ssh_string pki_key_to_blob(const ssh_key key, enum ssh_key_e type)
                 }
             }
         } else {
-            rc = pki_ed25519_private_key_to_blob(buffer, key);
-            if (rc == SSH_ERROR) {
-                goto out;
+            if (key->type == SSH_KEYTYPE_SK_ED25519) {
+                rc = pki_ed25519_public_key_to_blob(buffer, key);
+                if (rc == SSH_ERROR) {
+                    goto out;
+                }
+
+                rc = pki_buffer_pack_sk_priv_data(buffer, key);
+                if (rc == SSH_ERROR) {
+                    goto out;
+                }
+            } else {
+                rc = pki_ed25519_private_key_to_blob(buffer, key);
+                if (rc == SSH_ERROR) {
+                    goto out;
+                }
             }
         }
         break;
@@ -1219,6 +1238,11 @@ ssh_string pki_signature_to_blob(const ssh_signature sig)
         case SSH_KEYTYPE_ED25519:
             sig_blob = pki_ed25519_signature_to_blob(sig);
             break;
+        case SSH_KEYTYPE_SK_ECDSA:
+        case SSH_KEYTYPE_SK_ED25519:
+            /* For SK keys, signature data is already in raw_sig */
+            sig_blob = ssh_string_copy(sig->raw_sig);
+            break;
         default:
             SSH_LOG(SSH_LOG_TRACE, "Unknown signature key type: %s",
                     sig->type_c);
@@ -1273,7 +1297,7 @@ static ssh_signature pki_signature_from_rsa_blob(const ssh_key pubkey, const
         blob_padded_data = (char *) ssh_string_data(sig_blob_padded);
         blob_orig = (char *) ssh_string_data(sig_blob);
 
-        explicit_bzero(blob_padded_data, pad_len);
+        ssh_burn(blob_padded_data, pad_len);
         memcpy(blob_padded_data + pad_len, blob_orig, len);
 
         sig->rsa_sig = sig_blob_padded;
@@ -1462,7 +1486,7 @@ static ssh_string rsa_do_sign_hash(const unsigned char *digest,
     }
 
     ok = ssh_string_fill(sig_blob, sig, slen);
-    explicit_bzero(sig, slen);
+    ssh_burn(sig, slen);
     SAFE_FREE(sig);
     if (ok < 0) {
         SSH_STRING_FREE(sig_blob);
@@ -1802,7 +1826,6 @@ int pki_privkey_build_ecdsa(ssh_key key, int nid, ssh_string e, ssh_string exp)
     mbedtls_ecp_point Q;
 
     key->ecdsa_nid = nid;
-    key->type_c = pki_key_ecdsa_nid_to_name(nid);
 
     key->ecdsa = malloc(sizeof(mbedtls_ecdsa_context));
     if (key->ecdsa == NULL) {
@@ -1870,7 +1893,6 @@ int pki_pubkey_build_ecdsa(ssh_key key, int nid, ssh_string e)
     mbedtls_ecp_point Q;
 
     key->ecdsa_nid = nid;
-    key->type_c = pki_key_ecdsa_nid_to_name(nid);
 
     key->ecdsa = malloc(sizeof(mbedtls_ecdsa_context));
     if (key->ecdsa == NULL) {

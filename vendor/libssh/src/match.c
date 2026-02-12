@@ -53,85 +53,70 @@
 
 #include "libssh/priv.h"
 
-#define MAX_MATCH_RECURSION 16
-
-/*
- * Returns true if the given string matches the pattern (which may contain ?
- * and * as wildcards), and zero if it does not match.
+/**
+ * @brief Compare a string with a pattern containing wildcards `*` and `?`
+ *
+ * This function is an iterative replacement for the previously recursive
+ * implementation to avoid exponential complexity (DoS) with specific patterns.
+ *
+ * @param[in]  s        The string to match.
+ * @param[in]  pattern  The pattern to match against.
+ *
+ * @return              1 if the pattern matches, 0 otherwise.
  */
-static int match_pattern(const char *s, const char *pattern, size_t limit)
+static int match_pattern(const char *s, const char *pattern)
 {
-    bool had_asterisk = false;
+    const char *s_star = NULL; /* Position in s when last `*` was met */
+    const char *p_star = NULL; /* Position in pattern after last `*` */
 
-    if (s == NULL || pattern == NULL || limit <= 0) {
+    if (s == NULL || pattern == NULL) {
         return 0;
     }
 
-    for (;;) {
-        /* If at end of pattern, accept if also at end of string. */
-        if (*pattern == '\0') {
-            return (*s == '\0');
-        }
-
-        /* Skip all the asterisks and adjacent question marks */
-        while (*pattern == '*' || (had_asterisk && *pattern == '?')) {
-            if (*pattern == '*') {
-                had_asterisk = true;
-            }
+    while (*s) {
+        /* Case 1: Exact match or '?' wildcard */
+        if (*pattern == *s || *pattern == '?') {
+            s++;
             pattern++;
+            continue;
         }
 
-        if (had_asterisk) {
-            /* If at end of pattern, accept immediately. */
-            if (!*pattern)
-                return 1;
-
-            /* If next character in pattern is known, optimize. */
-            if (*pattern != '?') {
-                /*
-                 * Look instances of the next character in
-                 * pattern, and try to match starting from
-                 * those.
-                 */
-                for (; *s; s++)
-                    if (*s == *pattern && match_pattern(s + 1, pattern + 1, limit - 1)) {
-                        return 1;
-                    }
-                /* Failed. */
-                return 0;
-            }
-            /*
-             * Move ahead one character at a time and try to
-             * match at each position.
+        /* Case 2: '*' wildcard */
+        if (*pattern == '*') {
+            /* Record the position of the star and the current string position.
+             * We optimistically assume * matches 0 characters first.
              */
-            for (; *s; s++) {
-                if (match_pattern(s, pattern, limit - 1)) {
-                    return 1;
-                }
-            }
-            /* Failed. */
-            return 0;
-        }
-        /*
-         * There must be at least one more character in the string.
-         * If we are at the end, fail.
-         */
-        if (!*s) {
-            return 0;
+            p_star = ++pattern;
+            s_star = s;
+            continue;
         }
 
-        /* Check if the next character of the string is acceptable. */
-        if (*pattern != '?' && *pattern != *s) {
-            return 0;
+        /* Case 3: Mismatch */
+        if (p_star) {
+            /* If we have seen a star previously, backtrack.
+             * We restore the pattern to just after the star,
+             * but advance the string position (consume one more char for the
+             * star).
+             * No need to backtrack to previous stars as any match of the last
+             * star could be eaten the same way by the previous star.
+             */
+            pattern = p_star;
+            s = ++s_star;
+            continue;
         }
 
-        /* Move to the next character, both in string and in pattern. */
-        s++;
+        /* Case 4: Mismatch and no star to backtrack to */
+        return 0;
+    }
+
+    /* Handle trailing stars in the pattern
+     * (e.g., pattern "abc*" matching "abc") */
+    while (*pattern == '*') {
         pattern++;
     }
 
-    /* NOTREACHED */
-    return 0;
+    /* If we reached the end of the pattern, it's a match */
+    return (*pattern == '\0');
 }
 
 /*
@@ -182,7 +167,7 @@ int match_pattern_list(const char *string, const char *pattern,
     sub[subi] = '\0';
 
     /* Try to match the subpattern against the string. */
-    if (match_pattern(string, sub, MAX_MATCH_RECURSION)) {
+    if (match_pattern(string, sub)) {
       if (negated) {
         return -1;        /* Negative */
       } else {
@@ -205,8 +190,10 @@ int match_pattern_list(const char *string, const char *pattern,
  * Returns -1 if negation matches, 1 if there is a positive match, 0 if there
  * is no match at all.
  */
-int match_hostname(const char *host, const char *pattern, unsigned int len) {
-  return match_pattern_list(host, pattern, len, 1);
+int
+match_hostname(const char *host, const char *pattern, size_t len)
+{
+    return match_pattern_list(host, pattern, len, 1);
 }
 
 #ifndef _WIN32

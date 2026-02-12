@@ -117,6 +117,52 @@ libssh Developer's Certificate of Origin for each patch, or inside each
 patch. Just the sign-off message is all that is required once we've
 received the initial email.
 
+## Continuous Integration
+
+Contributing patches through Merge Request workflow on Gitlab allows us to run
+various checks on various configuration as part of Gitlab CI. Unfortunately,
+some pipelines are slower (as they involve building dependencies) so the default
+timeout of 1 hour needs to be extended at least to 2 hours. This can be done in
+project settings of your libssh fork:
+
+https://docs.gitlab.com/ee/ci/pipelines/settings.html#set-a-limit-for-how-long-jobs-can-run
+
+Otherwise you will encounter errors like these, usually on visualstudio builds:
+
+```
+ERROR: Job failed: execution took longer than 1h0m0s seconds
+The script exceeded the maximum execution time set for the job
+```
+
+Note, that the built dependencies are cached so after successful build in your
+namespace, the rebuilds should be much faster.
+
+## Running GitLab CI locally (optional helper)
+
+For contributors working on CI, build system changes, or adding new CI jobs, it can be useful to run GitLab CI pipelines locally before pushing.
+
+libssh provides a small helper script based on `gitlab-ci-local` that can:
+
+- List all jobs defined in `.gitlab-ci.yml`
+- Run a specific job or the full pipeline locally
+- Automatically pick up new jobs when they are added to the CI configuration
+- Optionally clean up CI Docker images after execution
+
+### Requirements
+
+- Docker (daemon running)
+- git
+- gitlab-ci-local  
+  https://github.com/firecow/gitlab-ci-local
+
+### Usage
+
+```bash
+./.gitlab-ci/local-ci.sh --list
+./.gitlab-ci/local-ci.sh --run fedora/libressl/x86_64
+./.gitlab-ci/local-ci.sh --all
+./.gitlab-ci/local-ci.sh --run fedora/libressl/x86_64 --clean
+```
 
 # Coding conventions in the libssh tree
 
@@ -517,6 +563,37 @@ Bad example:
             break;
     }
 
+## ABI Versioning and Symbol Management
+
+To maintain [ABI](https://en.wikipedia.org/wiki/Application_binary_interface) stability
+and ensure backward compatibility, libssh uses **symbol versioning** to track and manage
+exported functions and variables. This allows libssh to introduce new symbols or modify
+existing functions in an ABI-compatible way.
+
+When introducing a new symbol:
+
+1. Use the `LIBSSH_API` macro to mark the symbol as part of the public API.
+2. If you have [abimap](https://github.com/ansasaki/abimap) installed, the new symbols are
+automatically generated in the `src/libssh_dev.map` file in the **build** directory and used automatically for building the updated library. But, depending on the version of `abimap` under use, you may face linker errors like: `unable to find version dependency LIBSSH_4_9_0`. In this case, you need to manually replace the existing `src/libssh.map` file with the generated `libssh_dev.map` file to update the symbol versioning.
+3. If you do not have abimap installed, the modified/added symbols must manually be added to the
+`src/libssh.map` file. The symbols must be added in the following format (assuming that 4_10_0 is the latest released version):
+
+```
+LIBSSH_AFTER_4_10_0
+{
+    global:
+        new_function;
+        new_variable;
+} LIBSSH_4_10_0;
+```
+4. After following either of the above steps, the library can be successfully built and
+tested without any linker errors.
+
+5. When submitting the patch, make sure that any new symbols have been added to `libssh.map` as described in step 3, so that the new additions may not be excluded from the next release due to human error.
+
+Also, to maintain ABI compatibility, existing symbols must not be removed. Instead, they can
+be marked as deprecated using the `LIBSSH_DEPRECATED` macro. This allows the symbol to be
+removed in a future release without breaking the ABI.
 
 Have fun and happy libssh hacking!
 

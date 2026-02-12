@@ -48,6 +48,7 @@ extern "C" {
 
 extern struct ssh_packet_callbacks_struct ssh_ecdh_client_callbacks;
 /* Backend-specific functions.  */
+int ssh_ecdh_init(ssh_session session);
 int ssh_client_ecdh_init(ssh_session session);
 void ssh_client_ecdh_remove_callbacks(ssh_session session);
 int ecdh_build_k(ssh_session session);

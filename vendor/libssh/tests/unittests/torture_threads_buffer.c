@@ -119,6 +119,8 @@ static void *thread_growing_buffer_shifting(void *threadid)
     buffer = ssh_buffer_new();
     if (buffer == NULL) {
         pthread_exit((void *)-1);
+        /* dummy analyzers ... */
+        return NULL;
     }
     ssh_buffer_set_secure(buffer);
 
@@ -307,7 +309,7 @@ static void *thread_ssh_buffer_add_format(void *threadid)
                          q,
                          s,
                          "rocks",
-                         7,
+                         (size_t)7,
                          "So much",
                          "Fun!");
     assert_int_equal(rc, SSH_OK);

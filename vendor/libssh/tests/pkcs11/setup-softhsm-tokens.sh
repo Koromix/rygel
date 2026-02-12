@@ -28,6 +28,9 @@ if [ ! -d "$TESTDIR/db" ]; then
 directories.tokendir = $TESTDIR/db
 objectstore.backend = file
 log.level = DEBUG
+# # The hashed ECDSA mechanisms wrongly do not support multi-part operations
+# https://github.com/softhsm/SoftHSMv2/issues/842
+slots.mechanisms = -CKM_ECDSA_SHA1,CKM_ECDSA_SHA224,CKM_ECDSA_SHA256,CKM_ECDSA_SHA384,CKM_ECDSA_SHA512
 EOF
 
     cat "$TESTDIR/softhsm.conf"

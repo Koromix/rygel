@@ -858,6 +858,7 @@ static void torture_rekey_guess_all_combinations(void **state)
     const char *supported = NULL;
     struct ssh_tokens_st *s_tok = NULL;
     uint64_t rekey_limit = 0;
+    char *p = NULL;
     int rc, i, j;
 
     /* The rekey limit is 1/2 of the transferred file size so we will likely get
@@ -875,8 +876,12 @@ static void torture_rekey_guess_all_combinations(void **state)
     s_tok = ssh_tokenize(supported, ',');
     assert_non_null(s_tok);
     for (i = 0; s_tok->tokens[i]; i++) {
-        /* Skip algorithms not supported by the OpenSSH server */
-        if (strstr(OPENSSH_KEX, s_tok->tokens[i]) == NULL) {
+        /* Skip algorithms not supported by the OpenSSH server.
+         * Check also for prefix matches to distinguish vendor-specific names
+         * such as sntrup761x25519-sha512 and the @openssh.com alias */
+        if ((p = strstr(OPENSSH_KEX, s_tok->tokens[i])) == NULL ||
+            (*(p + strlen(s_tok->tokens[i])) != ',' &&
+             *(p + strlen(s_tok->tokens[i])) != '\0')) {
             SSH_LOG(SSH_LOG_INFO, "Server: %s [skipping]", s_tok->tokens[i]);
             continue;
         }

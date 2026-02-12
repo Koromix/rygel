@@ -63,22 +63,22 @@ static int current_timestring(int hires, char *buf, size_t len)
 {
     char tbuf[64];
     struct timeval tv;
-    struct tm *tm;
+    struct tm tm, *tm_ptr = NULL;
     time_t t;
 
     gettimeofday(&tv, NULL);
     t = (time_t) tv.tv_sec;
 
-    tm = localtime(&t);
-    if (tm == NULL) {
+    tm_ptr = localtime_r(&t, &tm);
+    if (tm_ptr == NULL) {
         return -1;
     }
 
     if (hires) {
-        strftime(tbuf, sizeof(tbuf) - 1, "%Y/%m/%d %H:%M:%S", tm);
+        strftime(tbuf, sizeof(tbuf), "%Y/%m/%d %H:%M:%S", &tm);
         snprintf(buf, len, "%s.%06ld", tbuf, (long)tv.tv_usec);
     } else {
-        strftime(tbuf, sizeof(tbuf) - 1, "%Y/%m/%d %H:%M:%S", tm);
+        strftime(tbuf, sizeof(tbuf), "%Y/%m/%d %H:%M:%S", &tm);
         snprintf(buf, len, "%s", tbuf);
     }
 

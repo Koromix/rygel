@@ -23,6 +23,26 @@
 #include "libssh/libssh.h"
 #include "libssh/options.h"
 
+#include "nallocinc.c"
+
+static void _fuzz_finalize(void)
+{
+    ssh_finalize();
+}
+
+int LLVMFuzzerInitialize(int *argc, char ***argv)
+{
+    (void)argc;
+
+    nalloc_init(*argv[0]);
+
+    ssh_init();
+
+    atexit(_fuzz_finalize);
+
+    return 0;
+}
+
 int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 {
     ssh_session session = NULL;
@@ -35,10 +55,12 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
     strncpy(input, (const char *)data, size);
     input[size] = '\0';
 
-    ssh_init();
+    assert(nalloc_start(data, size) > 0);
 
     session = ssh_new();
-    assert(session != NULL);
+    if (session == NULL) {
+        goto out;
+    }
 
     /* Make sure we have default options set */
     ssh_options_set(session, SSH_OPTIONS_SSH_DIR, NULL);
@@ -47,9 +69,10 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
     ssh_config_parse_string(session, input);
 
     ssh_free(session);
-    ssh_finalize();
 
+out:
     free(input);
 
+    nalloc_end();
     return 0;
 }

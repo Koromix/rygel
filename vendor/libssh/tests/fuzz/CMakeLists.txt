@@ -10,6 +10,9 @@ macro(fuzzer name)
                                   LINK_FLAGS "-fsanitize=fuzzer")
         # Run the fuzzer to make sure it works
         add_test(${name} ${CMAKE_CURRENT_BINARY_DIR}/${name} -runs=1)
+        # Run the fuzzer with nalloc to make sure it works
+        add_test(${name}_nalloc ${CMAKE_CURRENT_BINARY_DIR}/${name} -runs=1)
+        set_property(TEST ${name}_nalloc PROPERTY ENVIRONMENT NALLOC_FREQ 32)
     else()
         target_sources(${name} PRIVATE fuzzer.c)
         # Run the fuzzer to make sure it works
@@ -30,6 +33,7 @@ fuzzer(ssh_client_config_fuzzer)
 fuzzer(ssh_known_hosts_fuzzer)
 fuzzer(ssh_privkey_fuzzer)
 fuzzer(ssh_pubkey_fuzzer)
+fuzzer(ssh_sshsig_fuzzer)
 if (WITH_SERVER)
     fuzzer(ssh_server_fuzzer)
     fuzzer(ssh_bind_config_fuzzer)

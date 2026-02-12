@@ -350,7 +350,12 @@ int main(int argc, char *argv[])
         goto end;
     }
 
-    if (arguments.action_list && arguments.file) {
+    if (arguments.file == NULL) {
+        fprintf(stderr, "Error: Missing argument file\n");
+        goto end;
+    }
+
+    if (arguments.action_list) {
         list_fingerprint(arguments.file);
         goto end;
     }

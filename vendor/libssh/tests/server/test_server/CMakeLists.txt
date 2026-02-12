@@ -17,10 +17,6 @@ if (WITH_COVERAGE)
     append_coverage_compiler_flags_to_target(testserver)
 endif (WITH_COVERAGE)
 
-set(LIBSSH_SERVER_TESTS
-#    torture_server_kbdint
-)
-
 include_directories(${libssh_SOURCE_DIR}/include
                     ${libssh_BINARY_DIR}/include
                     ${libssh_BINARY_DIR})

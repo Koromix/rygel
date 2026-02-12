@@ -8,3 +8,4 @@ Description: The SSH Library
 Version: @PROJECT_VERSION@
 Libs: -L${libdir} -lssh
 Cflags: -I${includedir}
+Requires.private: @LIBSSH_PC_REQUIRES_PRIVATE@

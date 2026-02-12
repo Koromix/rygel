@@ -140,6 +140,40 @@
    fun:FIPS_mode_set
    fun:OPENSSL_init_library
 }
+{
+   Threads + Failed PEM decoder do not play well openssl/openssl#29077
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:malloc
+   fun:CRYPTO_malloc
+   fun:CRYPTO_zalloc
+   fun:ossl_rcu_read_lock
+   fun:module_find
+   fun:module_run
+   fun:CONF_modules_load
+   fun:CONF_modules_load_file_ex
+   fun:ossl_config_int
+   fun:ossl_config_int
+   fun:ossl_init_config
+   fun:ossl_init_config_ossl_
+   fun:__pthread_once_slow.isra.0
+   fun:pthread_once@@GLIBC_2.34
+   fun:CRYPTO_THREAD_run_once
+   fun:OPENSSL_init_crypto
+   fun:ossl_provider_doall_activated
+   fun:ossl_algorithm_do_all
+   fun:ossl_method_construct.constprop.0
+   fun:inner_evp_generic_fetch.constprop.0
+   fun:evp_generic_do_all
+   fun:EVP_KEYMGMT_do_all_provided
+   fun:ossl_decoder_ctx_setup_for_pkey
+   fun:OSSL_DECODER_CTX_new_for_pkey
+   fun:pem_read_bio_key_decoder
+   fun:pem_read_bio_key
+   fun:PEM_read_bio_PrivateKey_ex
+   fun:pki_private_key_from_base64
+   ...
+}
 # Cmocka
 {
    This looks like leak from cmocka when the forked server is not properly terminated
@@ -207,6 +241,25 @@
    Memcheck:Leak
    match-leak-kinds: reachable
    fun:malloc
+   ...
+   fun:__nss_module_get_function
+   ...
+   fun:getaddrinfo
+   ...
+   fun:torture_*
+   ...
+   fun:_cmocka_run_group_tests
+   fun:torture_run_tests
+   fun:main
+}
+## libkrb5
+# krb5_mcc_generate_new allocates a hashtab on a static global variable
+# It doesn't get freed.
+{
+   Reachable memory from getaddrinfo
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
    fun:malloc
    fun:strdup
    fun:_dl_load_cache_lookup
@@ -220,22 +273,12 @@
    fun:_dl_catch_exception
    fun:_dl_catch_error
    fun:dlerror_run
-   fun:__libc_dlopen_mode
-   fun:module_load
-   fun:__nss_module_get_function
+   ...
    fun:getaddrinfo
    ...
-   fun:krb5_sname_to_principal
-   ...
    fun:gss_init_sec_context
-   fun:ssh_packet_userauth_gssapi_response
-   fun:ssh_packet_process
-   fun:ssh_packet_socket_callback
-   fun:ssh_socket_pollcallback
-   fun:ssh_poll_ctx_dopoll
-   fun:ssh_handle_packets
-   fun:ssh_handle_packets_termination
-   fun:ssh_userauth_get_response
+   fun:ssh_gssapi_init_ctx
+   ...
    fun:ssh_userauth_gssapi
    fun:torture_gssapi_auth_server_identity
    ...
@@ -248,22 +291,26 @@
    Reachable memory from getaddrinfo
    Memcheck:Leak
    match-leak-kinds: reachable
-   ...
-   fun:__nss_module_get_function
+   fun:malloc
+   fun:UnknownInlinedFun
+   fun:_dl_new_object
+   fun:_dl_map_object_from_fd
+   fun:_dl_map_object
+   fun:dl_open_worker_begin
+   fun:_dl_catch_exception
+   fun:dl_open_worker
+   fun:_dl_catch_exception
+   fun:_dl_open
+   fun:do_dlopen
+   fun:_dl_catch_exception
+   fun:_dl_catch_error
+   fun:dlerror_run
    ...
    fun:getaddrinfo
    ...
-   fun:krb5_sname_to_principal
-   ...
    fun:gss_init_sec_context
-   fun:ssh_packet_userauth_gssapi_response
-   fun:ssh_packet_process
-   fun:ssh_packet_socket_callback
-   fun:ssh_socket_pollcallback
-   fun:ssh_poll_ctx_dopoll
-   fun:ssh_handle_packets
-   fun:ssh_handle_packets_termination
-   fun:ssh_userauth_get_response
+   fun:ssh_gssapi_init_ctx
+   ...
    fun:ssh_userauth_gssapi
    fun:torture_gssapi_auth_server_identity
    ...
@@ -271,9 +318,7 @@
    fun:torture_run_tests
    fun:main
 }
-## libkrb5
-# krb5_mcc_generate_new allocates a hashtab on a static global variable
-# It doesn't get freed.
+
 {
    Reachable memory from libkrb5
    Memcheck:Leak
@@ -290,13 +335,11 @@
    fun:malloc
    ...
    fun:krb5_gss_save_error_string
-   fun:UnknownInlinedFun
+   ...
    fun:acquire_cred_context.isra.0
    fun:acquire_cred_from.isra.0
    fun:gss_add_cred_from
    fun:gss_acquire_cred_from
-   ...
-   fun:gss_acquire_cred
 }
 {
    error string from gss init sec context
@@ -305,8 +348,76 @@
    fun:malloc
    ...
    fun:krb5_gss_save_error_string
-   fun:UnknownInlinedFun
+   ...
    fun:krb5_gss_init_sec_context_ext
    fun:krb5_gss_init_sec_context
    fun:gss_init_sec_context
+}
+
+
+## sk-dummy.so
+# The sk-dummy.so enroll function allocates 1-byte memory for the signature, but marks the signature length as 0.
+# Since, we use burn_free to free the signature, it skips the freeing because the size is 0, which results in a memory leak.
+{
+   sk-dummy.so memory leak in sk_enroll
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:calloc
+   fun:sk_enroll
+   fun:pki_sk_enroll_key
+   ...
+}
+
+
+{
+   malloc inside expand_hostname
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   ...
+   fun:expand_hostname
+   fun:canonicalize_princ
+   fun:krb5_sname_to_principal
+   fun:krb5_gss_import_name
+   fun:gssint_import_internal_name
+   fun:gss_init_sec_context
+   fun:ssh_gssapi_init_ctx
+}
+{
+   malloc in krb5_build_principal
+   Memcheck:Leak
+   match-leak-kinds: indirect
+   fun:malloc
+   ...
+   fun:krb5_build_principal_alloc_va
+   fun:krb5_build_principal
+   ...
+   fun:gss_add_cred_from
+   fun:gss_acquire_cred_from
+   fun:gss_acquire_cred
+}
+{
+   malloc in krb5_build_principal
+   Memcheck:Leak
+   match-leak-kinds: indirect,definite
+   fun:malloc
+   fun:krb5_build_principal_alloc_va
+   fun:krb5_build_principal
+   ...
+   fun:gss_add_cred_from
+   fun:gss_acquire_cred_from
+   fun:gss_acquire_cred
+}
+{
+   calloc in krb5_build_principal
+   Memcheck:Leak
+   match-leak-kinds: indirect
+   fun:calloc
+   ...
+   fun:krb5_build_principal_alloc_va
+   fun:krb5_build_principal
+   ...
+   fun:gss_add_cred_from
+   fun:gss_acquire_cred_from
+   fun:gss_acquire_cred
 }

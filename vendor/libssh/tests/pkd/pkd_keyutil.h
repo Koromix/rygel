@@ -30,14 +30,28 @@ void cleanup_ecdsa_keys(void);
 #define OPENSSH_ECDSA521_TESTKEY  "openssh_testkey.id_ecdsa521"
 #define OPENSSH_ED25519_TESTKEY   "openssh_testkey.id_ed25519"
 #define OPENSSH_CA_TESTKEY        "libssh_testkey.ca"
+#define OPENSSH_ECDSA_SK_TESTKEY  "openssh_testkey.id_ecdsa-sk"
+#define OPENSSH_ED25519_SK_TESTKEY "openssh_testkey.id_ed25519-sk"
 
 #define DROPBEAR_RSA_TESTKEY      "dropbear_testkey.id_rsa"
+#define DROPBEAR_ECDSA256_TESTKEY "dropbear_testkey.id_ecdsa256"
+#define DROPBEAR_ED25519_TESTKEY  "dropbear_testkey.id_ed25519"
+
+#define PUTTY_RSA_TESTKEY          "putty_testkey.id_rsa"
+#define PUTTY_RSA_PPK_TESTKEY      "putty_testkey.id_rsa.ppk"
+#define PUTTY_ECDSA256_TESTKEY     "putty_testkey.id_ecdsa256"
+#define PUTTY_ECDSA256_PPK_TESTKEY "putty_testkey.id_ecdsa256.ppk"
+#define PUTTY_ED25519_TESTKEY      "putty_testkey.id_ed25519"
+#define PUTTY_ED25519_PPK_TESTKEY  "putty_testkey.id_ed25519.ppk"
 
 void setup_openssh_client_keys(void);
 void cleanup_openssh_client_keys(void);
 
-void setup_dropbear_client_rsa_key(void);
-void cleanup_dropbear_client_rsa_key(void);
+void setup_dropbear_client_keys(void);
+void cleanup_dropbear_client_keys(void);
+
+void setup_putty_client_keys(void);
+void cleanup_putty_client_keys(void);
 
 #define cleanup_file(name) do {\
     if (access((name), F_OK) != -1) {\

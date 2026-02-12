@@ -30,6 +30,10 @@
 #ifdef HAVE_ARPA_INET_H
 #include <arpa/inet.h>
 #endif
+#ifdef WITH_GSSAPI
+#include "libssh/gssapi.h"
+#include <gssapi/gssapi.h>
+#endif
 
 #include "libssh/priv.h"
 #include "libssh/buffer.h"
@@ -176,53 +180,93 @@ SSH_PACKET_CALLBACK(ssh_packet_newkeys)
         /* server things are done in server.c */
         session->dh_handshake_state=DH_STATE_FINISHED;
     } else {
-        ssh_key server_key = NULL;
+#ifdef WITH_GSSAPI
+        if (ssh_kex_is_gss(session->next_crypto)) {
+            OM_uint32 maj_stat, min_stat;
+            gss_buffer_desc mic = GSS_C_EMPTY_BUFFER, msg = GSS_C_EMPTY_BUFFER;
 
-        /* client */
-
-        /* Verify the host's signature. FIXME do it sooner */
-        sig_blob = session->next_crypto->dh_server_signature;
-        session->next_crypto->dh_server_signature = NULL;
-
-        /* get the server public key */
-        server_key = ssh_dh_get_next_server_publickey(session);
-        if (server_key == NULL) {
-            goto error;
-        }
-
-        rc = ssh_pki_import_signature_blob(sig_blob, server_key, &sig);
-        ssh_string_burn(sig_blob);
-        SSH_STRING_FREE(sig_blob);
-        if (rc != SSH_OK) {
-            goto error;
-        }
-
-        /* Check if signature from server matches user preferences */
-        if (session->opts.wanted_methods[SSH_HOSTKEYS]) {
-            rc = match_group(session->opts.wanted_methods[SSH_HOSTKEYS],
-                             sig->type_c);
-            if (rc == 0) {
-                ssh_set_error(session,
-                              SSH_FATAL,
-                              "Public key from server (%s) doesn't match user "
-                              "preference (%s)",
-                              sig->type_c,
-                              session->opts.wanted_methods[SSH_HOSTKEYS]);
+            if (session->gssapi == NULL || session->gssapi->ctx == NULL) {
+                ssh_set_error(session, SSH_FATAL, "GSSAPI context not initialized");
                 goto error;
             }
-        }
 
-        rc = ssh_pki_signature_verify(session,
-                                      sig,
-                                      server_key,
-                                      session->next_crypto->secret_hash,
-                                      session->next_crypto->digest_len);
-        SSH_SIGNATURE_FREE(sig);
-        if (rc == SSH_ERROR) {
-            ssh_set_error(session,
-                          SSH_FATAL,
-                          "Failed to verify server hostkey signature");
-            goto error;
+            if (session->gssapi_key_exchange_mic == NULL) {
+                ssh_set_error(session,
+                              SSH_FATAL,
+                              "GSSAPI mic not set");
+                goto error;
+            }
+
+            mic.length = ssh_string_len(session->gssapi_key_exchange_mic);
+            mic.value = ssh_string_data(session->gssapi_key_exchange_mic);
+
+            msg.length = session->next_crypto->digest_len;
+            msg.value = session->next_crypto->secret_hash;
+
+            maj_stat = gss_verify_mic(&min_stat,
+                                      session->gssapi->ctx,
+                                      &msg,
+                                      &mic,
+                                      NULL);
+            if (maj_stat != GSS_S_COMPLETE) {
+                ssh_set_error(session,
+                              SSH_FATAL,
+                              "Failed to verify mic after GSSAPI Key Exchange");
+                goto error;
+            }
+            SSH_STRING_FREE(session->gssapi_key_exchange_mic);
+        } else
+#endif
+        {
+            ssh_key server_key = NULL;
+
+            /* client */
+
+            /* Verify the host's signature. FIXME do it sooner */
+            sig_blob = session->next_crypto->dh_server_signature;
+            session->next_crypto->dh_server_signature = NULL;
+
+            /* get the server public key */
+            server_key = ssh_dh_get_next_server_publickey(session);
+            if (server_key == NULL) {
+                goto error;
+            }
+
+            rc = ssh_pki_import_signature_blob(sig_blob, server_key, &sig);
+            ssh_string_burn(sig_blob);
+            SSH_STRING_FREE(sig_blob);
+            if (rc != SSH_OK) {
+                goto error;
+            }
+
+            /* Check if signature from server matches user preferences */
+            if (session->opts.wanted_methods[SSH_HOSTKEYS]) {
+                rc = match_group(session->opts.wanted_methods[SSH_HOSTKEYS],
+                                 sig->type_c);
+                if (rc == 0) {
+                    ssh_set_error(
+                        session,
+                        SSH_FATAL,
+                        "Public key from server (%s) doesn't match user "
+                        "preference (%s)",
+                        sig->type_c,
+                        session->opts.wanted_methods[SSH_HOSTKEYS]);
+                    goto error;
+                }
+            }
+
+            rc = ssh_pki_signature_verify(session,
+                                          sig,
+                                          server_key,
+                                          session->next_crypto->secret_hash,
+                                          session->next_crypto->digest_len);
+            SSH_SIGNATURE_FREE(sig);
+            if (rc == SSH_ERROR) {
+                ssh_set_error(session,
+                              SSH_FATAL,
+                              "Failed to verify server hostkey signature");
+                goto error;
+            }
         }
         SSH_LOG(SSH_LOG_DEBUG, "Signature verified and valid");
 
@@ -237,6 +281,9 @@ SSH_PACKET_CALLBACK(ssh_packet_newkeys)
     return SSH_PACKET_USED;
 
 error:
+#ifdef WITH_GSSAPI
+    SSH_STRING_FREE(session->gssapi_key_exchange_mic);
+#endif
     SSH_SIGNATURE_FREE(sig);
     ssh_string_burn(sig_blob);
     SSH_STRING_FREE(sig_blob);
@@ -294,7 +341,6 @@ SSH_PACKET_CALLBACK(ssh_packet_ext_info)
     for (i = 0; i < nr_extensions; i++) {
         char *name = NULL;
         char *value = NULL;
-        int cmp;
 
         rc = ssh_buffer_unpack(packet, "ss", &name, &value);
         if (rc != SSH_OK) {
@@ -302,8 +348,7 @@ SSH_PACKET_CALLBACK(ssh_packet_ext_info)
             return SSH_PACKET_USED;
         }
 
-        cmp = strcmp(name, "server-sig-algs");
-        if (cmp == 0) {
+        if (strcmp(name, "server-sig-algs") == 0) {
             /* TODO check for NULL bytes */
             SSH_LOG(SSH_LOG_PACKET, "Extension: %s=<%s>", name, value);
 
@@ -316,6 +361,9 @@ SSH_PACKET_CALLBACK(ssh_packet_ext_info)
             if (rc == 1) {
                 session->extensions |= SSH_EXT_SIG_RSA_SHA256;
             }
+        } else if (strcmp(name, "publickey-hostbound@openssh.com") == 0) {
+            SSH_LOG(SSH_LOG_PACKET, "Extension: %s=<%s>", name, value);
+            session->extensions |= SSH_EXT_PUBLICKEY_HOSTBOUND;
         } else {
             SSH_LOG(SSH_LOG_PACKET, "Unknown extension: %s", name);
         }

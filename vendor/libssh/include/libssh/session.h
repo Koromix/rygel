@@ -58,16 +58,17 @@ enum ssh_dh_state_e {
 };
 
 enum ssh_pending_call_e {
-	SSH_PENDING_CALL_NONE = 0,
-	SSH_PENDING_CALL_CONNECT,
-	SSH_PENDING_CALL_AUTH_NONE,
-	SSH_PENDING_CALL_AUTH_PASSWORD,
-	SSH_PENDING_CALL_AUTH_OFFER_PUBKEY,
-	SSH_PENDING_CALL_AUTH_PUBKEY,
-	SSH_PENDING_CALL_AUTH_AGENT,
-	SSH_PENDING_CALL_AUTH_KBDINT_INIT,
-	SSH_PENDING_CALL_AUTH_KBDINT_SEND,
-	SSH_PENDING_CALL_AUTH_GSSAPI_MIC
+    SSH_PENDING_CALL_NONE = 0,
+    SSH_PENDING_CALL_CONNECT,
+    SSH_PENDING_CALL_AUTH_NONE,
+    SSH_PENDING_CALL_AUTH_PASSWORD,
+    SSH_PENDING_CALL_AUTH_OFFER_PUBKEY,
+    SSH_PENDING_CALL_AUTH_PUBKEY,
+    SSH_PENDING_CALL_AUTH_AGENT,
+    SSH_PENDING_CALL_AUTH_KBDINT_INIT,
+    SSH_PENDING_CALL_AUTH_KBDINT_SEND,
+    SSH_PENDING_CALL_AUTH_GSSAPI_MIC,
+    SSH_PENDING_CALL_AUTH_GSSAPI_KEYEX,
 };
 
 /* libssh calls may block an undefined amount of time */
@@ -89,6 +90,9 @@ enum ssh_pending_call_e {
 #define SSH_SESSION_FLAG_KEX_STRICT 0x0010
 /* Unexpected packets have been sent while the session was still unencrypted */
 #define SSH_SESSION_FLAG_KEX_TAINTED 0x0020
+/* The scp on server can not handle quoted paths. Skip the mitigation for
+ * CVE-2019-14889 when using scp */
+#define SSH_SESSION_FLAG_SCP_QUOTING_BROKEN 0x0040
 
 /* codes to use with ssh_handle_packets*() */
 /* Infinite timeout */
@@ -120,6 +124,8 @@ enum ssh_pending_call_e {
 /* server-sig-algs extension */
 #define SSH_EXT_SIG_RSA_SHA256  0x02
 #define SSH_EXT_SIG_RSA_SHA512  0x04
+/* Host-bound public key authentication extension */
+#define SSH_EXT_PUBLICKEY_HOSTBOUND 0x08
 
 /* members that are common to ssh_session and ssh_bind */
 struct ssh_common_struct {
@@ -196,6 +202,8 @@ struct ssh_session_struct {
      */
     bool first_kex_follows_guess_wrong;
 
+    ssh_string gssapi_key_exchange_mic;
+
     ssh_buffer in_hashbuf;
     ssh_buffer out_hashbuf;
     struct ssh_crypto_struct *current_crypto;
@@ -238,13 +246,16 @@ struct ssh_session_struct {
     struct {
         struct ssh_list *identity;
         struct ssh_list *identity_non_exp;
+        struct ssh_iterator *identity_it;
         struct ssh_list *certificate;
         struct ssh_list *certificate_non_exp;
         struct ssh_list *proxy_jumps;
         struct ssh_list *proxy_jumps_user_cb;
+        char *proxy_jumps_str;
         char *username;
         char *host;
         char *bindaddr; /* bind the client to an ip addr */
+        char *homedir;
         char *sshdir;
         char *knownhosts;
         char *global_knownhosts;
@@ -260,6 +271,8 @@ struct ssh_session_struct {
         char compressionlevel;
         char *gss_server_identity;
         char *gss_client_identity;
+        bool gssapi_key_exchange;
+        char *gssapi_key_exchange_algs;
         int gss_delegate_creds;
         int flags;
         int exp_flags;
@@ -272,6 +285,7 @@ struct ssh_session_struct {
         bool identities_only;
         int control_master;
         char *control_path;
+        int address_family;
     } opts;
 
     /* server options */
@@ -283,6 +297,10 @@ struct ssh_session_struct {
     /* counters */
     ssh_counter socket_counter;
     ssh_counter raw_counter;
+
+    /* PKI context structure containing various parameters to configure PKI
+     * operations */
+    struct ssh_pki_ctx_struct *pki_context;
 };
 
 /** @internal

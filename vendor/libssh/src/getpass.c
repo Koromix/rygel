@@ -63,7 +63,7 @@ static int ssh_gets(const char *prompt, char *buf, size_t len, int verify)
             fprintf(stdout, "%s", prompt);
         }
         fflush(stdout);
-        if (fgets(tmp, len, stdin) == NULL) {
+        if (fgets(tmp, (int)len, stdin) == NULL) {
             free(tmp);
             return 0;
         }
@@ -87,8 +87,8 @@ static int ssh_gets(const char *prompt, char *buf, size_t len, int verify)
 
             fprintf(stdout, "\nVerifying, please re-enter. %s", prompt);
             fflush(stdout);
-            if (! fgets(key_string, len, stdin)) {
-                explicit_bzero(key_string, len);
+            if (!fgets(key_string, (int)len, stdin)) {
+                ssh_burn(key_string, len);
                 SAFE_FREE(key_string);
                 clearerr(stdin);
                 continue;
@@ -99,17 +99,17 @@ static int ssh_gets(const char *prompt, char *buf, size_t len, int verify)
             fprintf(stdout, "\n");
             if (strcmp(buf, key_string)) {
                 printf("\n\07\07Mismatch - try again\n");
-                explicit_bzero(key_string, len);
+                ssh_burn(key_string, len);
                 SAFE_FREE(key_string);
                 fflush(stdout);
                 continue;
             }
-            explicit_bzero(key_string, len);
+            ssh_burn(key_string, len);
             SAFE_FREE(key_string);
         }
         ok = 1;
     }
-    explicit_bzero(tmp, len);
+    ssh_burn(tmp, len);
     free(tmp);
 
     return ok;
@@ -152,7 +152,7 @@ int ssh_getpass(const char *prompt,
     SetConsoleMode(h, mode);
 
     if (!ok) {
-        explicit_bzero(buf, len);
+        ssh_burn(buf, len);
         return -1;
     }
 
@@ -257,8 +257,8 @@ int ssh_getpass(const char *prompt,
     }
 
     /* disable nonblocking I/O */
-    if (fd & O_NDELAY) {
-        ok = fcntl(0, F_SETFL, fd & ~O_NDELAY);
+    if (fd & O_NONBLOCK) {
+        ok = fcntl(0, F_SETFL, fd & ~O_NONBLOCK);
         if (ok < 0) {
             perror("fcntl");
             return -1;
@@ -273,7 +273,7 @@ int ssh_getpass(const char *prompt,
     }
 
     /* close fd */
-    if (fd & O_NDELAY) {
+    if (fd & O_NONBLOCK) {
         ok = fcntl(0, F_SETFL, fd);
         if (ok < 0) {
             perror("fcntl");
@@ -282,7 +282,7 @@ int ssh_getpass(const char *prompt,
     }
 
     if (!ok) {
-        explicit_bzero(buf, len);
+        ssh_burn(buf, len);
         return -1;
     }
 

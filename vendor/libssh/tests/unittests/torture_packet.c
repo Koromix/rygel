@@ -12,10 +12,11 @@
 
 #include "socket.c"
 
-uint8_t test_data[]="AThis is test data. Use it to check the validity of packet functions"
-                    "AThis is test data. Use it to check the validity of packet functions"
-                    "AThis is test data. Use it to check the validity of packet functions"
-                    "AThis is test data. Use it to check the validity of packet functions";
+uint8_t test_data[]="\x02"
+                    "This is test data. Use it to check the validity of packet functions."
+                    "This is test data. Use it to check the validity of packet functions."
+                    "This is test data. Use it to check the validity of packet functions."
+                    "This is test data. Use it to check the validity of packet functions.";
 uint8_t key[]="iekaeshoa7ooCie2shai8shahngee3ONsee3xoishooj0ojei6aeChieth1iraPh";
 uint8_t iv[]="eixaxughoomah4ui7Aew3ohxuolaifuu";
 uint8_t mac[]="thook2Jai0ahmahyae7ChuuruoPhee8Y";
@@ -57,7 +58,7 @@ torture_packet(const char *cipher, const char *mac_type,
     size_t encrypted_packet_len;
     ssh_packet_callback callbacks[]={copy_packet_data};
     struct ssh_packet_callbacks_struct cb = {
-            .start='A',
+            .start=2,
             .n_callbacks=1,
             .callbacks=callbacks,
             .user=response
@@ -129,7 +130,7 @@ torture_packet(const char *cipher, const char *mac_type,
     assert_int_equal(rc, encrypted_packet_len);
 
     ssh_packet_set_callbacks(session, &cb);
-    explicit_bzero(response, sizeof(response));
+    ssh_burn(response, sizeof(response));
     rc = ssh_packet_socket_callback(buffer, encrypted_packet_len, session);
     assert_int_not_equal(rc, SSH_ERROR);
     if(payload_len > 0){

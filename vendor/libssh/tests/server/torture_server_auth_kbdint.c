@@ -375,6 +375,22 @@ static void handle_kbdint_session_cb(ssh_event event,
         goto end;
     }
 
+    /*
+     * This test was written prior to adding the kbdint callback
+     * for the server. Hence, here the server uses the
+     * ssh_message_callback for kbdint authentication,
+     * instead of the kbdint callback.
+     *
+     * Setting the kbdint callback as NULL ensures that the
+     * default kbdint callback for test_server doesn't get used
+     * for kbdint authentication.
+     *
+     * The test for kbdint callback based authentication has
+     * been added in torture_server.c, libssh keeps this test to
+     * test the old way of doing kbdint authentication using
+     * ssh_message_callback.
+     */
+    server_cb->auth_kbdint_function = NULL;
     server_cb->userdata = &sdata;
 
     /* This is a macro, it does not return a value */

@@ -54,6 +54,7 @@ static int setup_files(void **state)
     struct test_server_st *tss;
     struct torture_state *s;
     char sshd_path[1024];
+    char log_file[1024];
 
     int rc;
 
@@ -74,11 +75,16 @@ static int setup_files(void **state)
     rc = mkdir(sshd_path, 0755);
     assert_return_code(rc, errno);
 
+    snprintf(log_file, sizeof(log_file), "%s/sshd/log", s->socket_dir);
+
     snprintf(tss->rsa_hostkey,
              sizeof(tss->rsa_hostkey),
              "%s/sshd/ssh_host_rsa_key",
              s->socket_dir);
     torture_write_file(tss->rsa_hostkey, torture_get_testkey(SSH_KEYTYPE_RSA, 0));
+
+    /* not to mix up the client and server messages */
+    s->log_file = strdup(log_file);
 
     tss->state = s;
     *state = tss;
@@ -257,7 +263,7 @@ static void test_algorithm_no_hmac_overlap(void **state, const char *algorithm)
     s = tss->state;
     assert_non_null(s);
 
-    /* Prepare key files */
+    /* Prepare config file */
     snprintf(config_content,
              sizeof(config_content),
              "HostKey %s\nCiphers %s\nMACs %s\n",
@@ -268,9 +274,10 @@ static void test_algorithm_no_hmac_overlap(void **state, const char *algorithm)
     assert_non_null(s->srv_config);
     torture_write_file(s->srv_config, config_content);
 
-    fprintf(stderr, "Config file %s content: \n\n%s\n", s->srv_config,
+    SSH_LOG(SSH_LOG_TRACE,
+            "Config file %s content: \n\n%s\n",
+            s->srv_config,
             config_content);
-    fflush(stderr);
 
     /* Start server */
     rc = start_server(state);
@@ -339,6 +346,87 @@ static void torture_algorithm_aes128gcm_with_no_hmac_overlap(void **state)
     test_algorithm_no_hmac_overlap(state, "aes128-gcm@openssh.com");
 }
 
+/*
+ * Check the self-compatibility of a given key exchange method.
+ */
+static void test_kex_self_compat(void **state, const char *kex)
+{
+    struct test_server_st *tss = *state;
+    struct torture_state *s = NULL;
+    ssh_session session = NULL;
+    char config_content[4096];
+    int rc;
+
+    assert_non_null(tss);
+    s = tss->state;
+    assert_non_null(s);
+
+    /* Prepare config file */
+    snprintf(config_content,
+             sizeof(config_content),
+             "HostKey %s\nKexAlgorithms %s\n",
+             tss->rsa_hostkey,
+             kex);
+
+    assert_non_null(s->srv_config);
+    torture_write_file(s->srv_config, config_content);
+
+    SSH_LOG(SSH_LOG_TRACE,
+            "Config file %s content: \n\n%s\n",
+            s->srv_config,
+            config_content);
+
+    rc = start_server(state);
+    assert_int_equal(rc, 0);
+
+    rc = session_setup(state);
+    assert_int_equal(rc, 0);
+
+    session = s->ssh.session;
+    assert_non_null(session);
+
+    rc = ssh_options_set(session, SSH_OPTIONS_KEY_EXCHANGE, kex);
+    assert_int_equal(rc, SSH_OK);
+
+    rc = ssh_connect(session);
+    assert_int_equal(rc, SSH_OK);
+
+    rc = ssh_userauth_publickey_auto(session, NULL, NULL);
+    assert_ssh_return_code(session, rc);
+
+    rc = session_teardown(state);
+    assert_int_equal(rc, 0);
+
+    rc = stop_server(state);
+    assert_int_equal(rc, 0);
+}
+
+static void torture_algorithm_mlkem768x25119_self_compat(void **state)
+{
+    if (ssh_fips_mode()) {
+        skip();
+    }
+    test_kex_self_compat(state, "mlkem768x25519-sha256");
+}
+
+static void torture_algorithm_mlkem768nistp256_self_compat(void **state)
+{
+    if (ssh_fips_mode()) {
+        skip();
+    }
+    test_kex_self_compat(state, "mlkem768nistp256-sha256");
+}
+
+#ifdef HAVE_MLKEM1024
+static void torture_algorithm_mlkem1024nistp384_self_compat(void **state)
+{
+    if (ssh_fips_mode()) {
+        skip();
+    }
+    test_kex_self_compat(state, "mlkem1024nistp384-sha384");
+}
+#endif /* HAVE_MLKEM1024 */
+
 int torture_run_tests(void)
 {
     int rc;
@@ -349,6 +437,14 @@ int torture_run_tests(void)
                                         setup_temp_dir, teardown_temp_dir),
         cmocka_unit_test_setup_teardown(torture_algorithm_aes128gcm_with_no_hmac_overlap,
                                         setup_temp_dir, teardown_temp_dir),
+        cmocka_unit_test_setup_teardown(torture_algorithm_mlkem768x25119_self_compat,
+                                        setup_temp_dir, teardown_temp_dir),
+        cmocka_unit_test_setup_teardown(torture_algorithm_mlkem768nistp256_self_compat,
+                                        setup_temp_dir, teardown_temp_dir),
+#ifdef HAVE_MLKEM1024
+        cmocka_unit_test_setup_teardown(torture_algorithm_mlkem1024nistp384_self_compat,
+                                        setup_temp_dir, teardown_temp_dir),
+#endif /* HAVE_MLKEM1024 */
     };
 
     ssh_init();

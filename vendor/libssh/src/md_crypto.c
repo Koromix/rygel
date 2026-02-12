@@ -322,3 +322,52 @@ md5_ctx_final(unsigned char *md, MD5CTX c)
     }
     return SSH_OK;
 }
+
+/**
+* @ brief One-shot MD5. Not intended for use in security-relevant contexts.
+*/
+int
+md5_direct(const unsigned char *digest, size_t len, unsigned char *hash)
+{
+    int rc, ret = SSH_ERROR;
+    unsigned int mdlen = 0;
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+    EVP_MD *md5 = NULL;
+#endif
+    MD5CTX c = EVP_MD_CTX_new();
+    if (c == NULL) {
+        goto out;
+    }
+
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+    md5 = EVP_MD_fetch(NULL, "MD5", "provider=default,-fips");
+    if (md5 == NULL) {
+        goto out;
+    }
+    rc = EVP_DigestInit(c, md5);
+#else
+    rc = EVP_DigestInit_ex(c, EVP_md5(), NULL);
+#endif
+    if (rc == 0) {
+        goto out;
+    }
+
+    rc = EVP_DigestUpdate(c, digest, len);
+    if (rc != 1) {
+        goto out;
+    }
+
+    rc = EVP_DigestFinal(c, hash, &mdlen);
+    if (rc != 1) {
+        goto out;
+    }
+
+    ret = SSH_OK;
+
+out:
+    EVP_MD_CTX_free(c);
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+    EVP_MD_free(md5);
+#endif
+    return ret;
+}

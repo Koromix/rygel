@@ -700,6 +700,37 @@ static const char torture_ecdsa521_testkey_cert[] =
     "PKJ0pHVLZEx3FMZI3SfwS9mVm+oojLkZ2hr8X0xn28zbN045d8daB7BB1mHMGNT+YA"
     "= ./ec521.pub";
 
+static const char torture_ecdsa_sk_private_openssh_testkey[] =
+    "-----BEGIN OPENSSH PRIVATE KEY-----\n"
+    "b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAfwAAACJzay1lY2\n"
+    "RzYS1zaGEyLW5pc3RwMjU2QG9wZW5zc2guY29tAAAACG5pc3RwMjU2AAAAQQRUfa1IVvak\n"
+    "xFQZudDtXVlTtw6SiuAgfTpqZBuMdcK55kgy3o7V2z02/XClN1zpvSydzdjGWVgLj6WE9Q\n"
+    "6xEOhQAAAABHNzaDoAAADoWSfkhlkn5IYAAAAic2stZWNkc2Etc2hhMi1uaXN0cDI1NkBv\n"
+    "cGVuc3NoLmNvbQAAAAhuaXN0cDI1NgAAAEEEVH2tSFb2pMRUGbnQ7V1ZU7cOkorgIH06am\n"
+    "QbjHXCueZIMt6O1ds9Nv1wpTdc6b0snc3YxllYC4+lhPUOsRDoUAAAAARzc2g6AQAAAEBS\n"
+    "Smuf/sZP2WxVdlqgSMN7E8VLFdZI717mTi/svHahGy3wcFp2tPPylCaIG9aKAQrfVt+pOJ\n"
+    "U+OPsm8rphRRM1AAAAAAAAABJwaG9lbml4QHBob2VuaXgtcGMBAg==\n"
+    "-----END OPENSSH PRIVATE KEY-----\n";
+
+static const char torture_ecdsa_sk_private_openssh_testkey_passphrase[] =
+    "-----BEGIN OPENSSH PRIVATE KEY-----\n"
+    "b3BlbnNzaC1rZXktdjEAAAAACmFlczI1Ni1jdHIAAAAGYmNyeXB0AAAAGAAAABCzS672qr\n"
+    "+0DRopx7VjkjCnAAAAGAAAAAEAAAB/AAAAInNrLWVjZHNhLXNoYTItbmlzdHAyNTZAb3Bl\n"
+    "bnNzaC5jb20AAAAIbmlzdHAyNTYAAABBBFR9rUhW9qTEVBm50O1dWVO3DpKK4CB9OmpkG4\n"
+    "x1wrnmSDLejtXbPTb9cKU3XOm9LJ3N2MZZWAuPpYT1DrEQ6FAAAAAEc3NoOgAAAPDoWSmM\n"
+    "ki/XGLXidNxyLy2uRGejaZTOI3Ran10b7UF2ddRCrmBc6eVEXzgJ+BzB0sO0/uc1Q7QJhy\n"
+    "fGR9bz1rvwJd5RpLLw9cSoTHbDiap4tkQu2snQt7AF/E6MOgQ3mvdhDDYoTYvxNIiwZTH1\n"
+    "/Cxl2ZcRBKwSl6yp3JOxIVgttmJmNTqpt2U/uYwag9N1o6wxhWy1aamKZd1qHtPVC7MPL8\n"
+    "/Q96mBlCEIe3vd4Hge4wgDa24F4Lwat7IA0/NGNFISIQH7x4VaGHAiTeMFL1NOVyw52xWr\n"
+    "aAgXfkyplffxlB7ZfCf7RLsiCZDinMCE9y8=\n"
+    "-----END OPENSSH PRIVATE KEY-----\n";
+
+static const char torture_ecdsa_sk_public_testkey[] =
+    "sk-ecdsa-sha2-nistp256@openssh.com "
+    "AAAAInNrLWVjZHNhLXNoYTItbmlzdHAyNTZAb3BlbnNzaC5jb20AAAAIbmlzdHAyNTYAAABBBF"
+    "R9rUhW9qTEVBm50O1dWVO3DpKK4CB9OmpkG4x1wrnmSDLejtXbPTb9cKU3XOm9LJ3N2MZZWAuP"
+    "pYT1DrEQ6FAAAAAEc3NoOg== phoenix@phoenix-pc";
+
 /****************************************************************************
  * ED25519 KEYS
  ****************************************************************************/
@@ -740,6 +771,11 @@ static const char torture_ed25519_public_testkey[] =
     "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBWWnxuCYiOyvMYLtkgoEyEKlLV+klM+"
     "BU6Nh3PmAiqX aris@kalix86";
 
+static const char torture_ed25519_public_testkey_pem[] =
+    "-----BEGIN PUBLIC KEY-----\n"
+    "MCowBQYDK2VwAyEAFZafG4JiI7K8xgu2SCgTIQqUtX6SUz4FTo2Hc+YCKpc=\n"
+    "-----END PUBLIC KEY-----\n";
+
 static const char torture_ed25519_testkey_cert[] =
     "ssh-ed25519-cert-v01@openssh.com AAAAIHNzaC1lZDI1NTE5LWNlcnQtdjAxQ"
     "G9wZW5zc2guY29tAAAAILrR4sPB+b6BRId/OkQha9nWwoACXqUTILz1TrmG4R9CAAA"
@@ -751,6 +787,35 @@ static const char torture_ed25519_testkey_cert[] =
     "iOyvMYLtkgoEyEKlLV+klM+BU6Nh3PmAiqXAAAAUwAAAAtzc2gtZWQyNTUxOQAAAEB"
     "d8AogGWM6njfejbazFVyfnjNiWqatx6IV3Nnqc3LjCiPY19fqIPe2YJSzytHwLTD5X"
     "IjD2bJpq2ZfjQwXpO0J ./ed.pub";
+
+static const char torture_ed25519_sk_private_openssh_testkey[] =
+    "-----BEGIN OPENSSH PRIVATE KEY-----\n"
+    "b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAASgAAABpzay1zc2\n"
+    "gtZWQyNTUxOUBvcGVuc3NoLmNvbQAAACCihqLlueARJOQCZMYRHefNkQ3WBHlhlUOuG7a/\n"
+    "ivCkaQAAAARzc2g6AAAA+OivRKLor0SiAAAAGnNrLXNzaC1lZDI1NTE5QG9wZW5zc2guY2\n"
+    "9tAAAAIKKGouW54BEk5AJkxhEd582RDdYEeWGVQ64btr+K8KRpAAAABHNzaDoBAAAAgNxc\n"
+    "Q6pfw2S2fpCEB1UGO4Fy8O5gXZDbw3Vj8EHTcUDucNmk/iaI/GTPcUQK5cgPJH8AaB+lIZ\n"
+    "GasyHd28mghgpaztG2cYmxrF3ZuvNdEZJecflgMOJDXZwoYvKpb7rZWjQgf8AeDy2u2dpl\n"
+    "XCKHH8/LkJHdo4MABojarKofgaGzAAAAAAAAABJwaG9lbml4QHBob2VuaXgtcGMBAgMEBQ\n"
+    "YH\n"
+    "-----END OPENSSH PRIVATE KEY-----\n";
+
+static const char torture_ed25519_sk_private_openssh_testkey_passphrase[] =
+    "-----BEGIN OPENSSH PRIVATE KEY-----\n"
+    "b3BlbnNzaC1rZXktdjEAAAAACmFlczI1Ni1jdHIAAAAGYmNyeXB0AAAAGAAAABAkfYBhph\n"
+    "EvYRpuOO6V4wihAAAAGAAAAAEAAABKAAAAGnNrLXNzaC1lZDI1NTE5QG9wZW5zc2guY29t\n"
+    "AAAAIKKGouW54BEk5AJkxhEd582RDdYEeWGVQ64btr+K8KRpAAAABHNzaDoAAAEA2WmpuB\n"
+    "2ip0Bq4XJ9c2C33fE5twVYvK3WrJfAJKzih7bFXxbt5NmUFs121SD/x+3xZLwBJWGOIhdf\n"
+    "idOD4gy9VWWAGCdJ0v87T/WaBYzEACr32hd99cD+Ki7VmmAxOKxx2/+/gg+WkbgygNns3c\n"
+    "7YoYW5SSJm7WlhtmHFCKHtSh0fd8X1Q7gLHWTdd4B+3U9PyGpVgCKe2s2IOoTIcWOHlDW3\n"
+    "KbEdlKELKCUEb0kof5m3hu8cktn0J/YIe1Y98YVjv472P6CO0Jw92jHSEPiTGn8JdSPkBY\n"
+    "Qcoq18tszucoR2gp+sf5UvQhW8iOALDxO72Yq6HINAXNbpCB22U++GJw==\n"
+    "-----END OPENSSH PRIVATE KEY-----\n";
+
+static const char torture_ed25519_sk_public_testkey[] =
+    "sk-ssh-ed25519@openssh.com "
+    "AAAAGnNrLXNzaC1lZDI1NTE5QG9wZW5zc2guY29tAAAAIKKGouW54BEk5AJkxhEd582RDdYEeW"
+    "GVQ64btr+K8KRpAAAABHNzaDo= phoenix@phoenix-pc";
 
 static const char *
 torture_get_testkey_public_internal(enum ssh_keytypes_e type,
@@ -783,8 +848,7 @@ torture_get_testkey_public_internal(enum ssh_keytypes_e type,
         if (format == FORMAT_OPENSSH) {
             return torture_ed25519_public_testkey;
         }
-        /* not available in other formats */
-        return NULL;
+        return torture_ed25519_public_testkey_pem;
     case SSH_KEYTYPE_DSS_CERT01:
         return torture_dsa_testkey_cert;
     case SSH_KEYTYPE_RSA_CERT01:
@@ -797,11 +861,19 @@ torture_get_testkey_public_internal(enum ssh_keytypes_e type,
         return torture_ecdsa521_testkey_cert;
     case SSH_KEYTYPE_ED25519_CERT01:
         return torture_ed25519_testkey_cert;
+    case SSH_KEYTYPE_SK_ECDSA:
+        if (format == FORMAT_OPENSSH) {
+            return torture_ecdsa_sk_public_testkey;
+        }
+        return NULL;
+    case SSH_KEYTYPE_SK_ED25519:
+        if (format == FORMAT_OPENSSH) {
+            return torture_ed25519_sk_public_testkey;
+        }
+        return NULL;
     case SSH_KEYTYPE_RSA1:
     case SSH_KEYTYPE_ECDSA:
-    case SSH_KEYTYPE_SK_ECDSA:
     case SSH_KEYTYPE_SK_ECDSA_CERT01:
-    case SSH_KEYTYPE_SK_ED25519:
     case SSH_KEYTYPE_SK_ED25519_CERT01:
     case SSH_KEYTYPE_UNKNOWN:
         return NULL;
@@ -876,6 +948,26 @@ torture_get_testkey_encrypted_internal(enum ssh_keytypes_e type,
             return NULL;
         }
         return NULL;
+    case SSH_KEYTYPE_SK_ECDSA:
+        switch (format) {
+        case FORMAT_OPENSSH:
+            return torture_ecdsa_sk_private_openssh_testkey_passphrase;
+        case FORMAT_PKCS8:
+        case FORMAT_PEM:
+            /* SK keys are not available in PKCS8 or PEM format */
+            return NULL;
+        }
+        return NULL;
+    case SSH_KEYTYPE_SK_ED25519:
+        switch (format) {
+        case FORMAT_OPENSSH:
+            return torture_ed25519_sk_private_openssh_testkey_passphrase;
+        case FORMAT_PKCS8:
+        case FORMAT_PEM:
+            /* SK keys are not available in PKCS8 or PEM format */
+            return NULL;
+        }
+        return NULL;
     case SSH_KEYTYPE_DSS_CERT01:
     case SSH_KEYTYPE_RSA_CERT01:
     case SSH_KEYTYPE_ECDSA_P256_CERT01:
@@ -884,9 +976,7 @@ torture_get_testkey_encrypted_internal(enum ssh_keytypes_e type,
     case SSH_KEYTYPE_ED25519_CERT01:
     case SSH_KEYTYPE_RSA1:
     case SSH_KEYTYPE_ECDSA:
-    case SSH_KEYTYPE_SK_ECDSA:
     case SSH_KEYTYPE_SK_ECDSA_CERT01:
-    case SSH_KEYTYPE_SK_ED25519:
     case SSH_KEYTYPE_SK_ED25519_CERT01:
     case SSH_KEYTYPE_UNKNOWN:
         return NULL;
@@ -961,6 +1051,24 @@ torture_get_testkey_internal(enum ssh_keytypes_e type,
             return NULL;
         }
         return NULL;
+    case SSH_KEYTYPE_SK_ECDSA:
+        switch (format) {
+        case FORMAT_OPENSSH:
+            return torture_ecdsa_sk_private_openssh_testkey;
+        case FORMAT_PKCS8:
+        case FORMAT_PEM:
+            return NULL;
+        }
+        return NULL;
+    case SSH_KEYTYPE_SK_ED25519:
+        switch (format) {
+        case FORMAT_OPENSSH:
+            return torture_ed25519_sk_private_openssh_testkey;
+        case FORMAT_PKCS8:
+        case FORMAT_PEM:
+            return NULL;
+        }
+        return NULL;
     case SSH_KEYTYPE_DSS_CERT01:
     case SSH_KEYTYPE_RSA_CERT01:
     case SSH_KEYTYPE_ECDSA_P256_CERT01:
@@ -969,9 +1077,7 @@ torture_get_testkey_internal(enum ssh_keytypes_e type,
     case SSH_KEYTYPE_ED25519_CERT01:
     case SSH_KEYTYPE_RSA1:
     case SSH_KEYTYPE_ECDSA:
-    case SSH_KEYTYPE_SK_ECDSA:
     case SSH_KEYTYPE_SK_ECDSA_CERT01:
-    case SSH_KEYTYPE_SK_ED25519:
     case SSH_KEYTYPE_SK_ED25519_CERT01:
     case SSH_KEYTYPE_UNKNOWN:
         return NULL;

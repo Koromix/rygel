@@ -244,3 +244,9 @@ md5_ctx_final(unsigned char *md, MD5CTX c)
     gcry_md_close(c);
     return SSH_OK;
 }
+
+int md5_direct(const unsigned char *digest, size_t len, unsigned char *hash)
+{
+    gcry_md_hash_buffer(GCRY_MD_MD5, hash, digest, len);
+    return SSH_OK;
+}

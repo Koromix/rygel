@@ -24,11 +24,11 @@
 #ifndef _TORTURE_H
 #define _TORTURE_H
 
-#include <stdio.h>
-#include <stdlib.h>
+#include <setjmp.h>
 #include <stdarg.h>
 #include <stddef.h>
-#include <setjmp.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #include "libssh/priv.h"
 #include "libssh/server.h"
@@ -36,13 +36,12 @@
 
 #include <cmocka.h>
 
-#include "torture_cmocka.h"
 #include "tests_config.h"
+#include "torture_cmocka.h"
 
 #ifndef assert_return_code
 /* hack for older versions of cmocka */
-#define assert_return_code(code, errno) \
-    assert_true(code >= 0)
+#define assert_return_code(code, errno) assert_true(code >= 0)
 #endif /* assert_return_code */
 
 #define TORTURE_SSH_SERVER "127.0.0.10"
@@ -55,14 +54,20 @@
 
 /* Used by main to communicate with parse_opt. */
 struct argument_s {
-  const char *pattern;
-  int verbose;
+    const char *pattern;
+    int verbose;
 };
 
 struct torture_sftp {
     ssh_session ssh;
     sftp_session sftp;
     char *testdir;
+};
+
+struct torture_ssh {
+    ssh_session session;
+    void *cb_state;  /* For storing callback state */
+    void *callbacks; /* For storing callbacks */
 };
 
 struct torture_state {
@@ -72,11 +77,15 @@ struct torture_state {
     char *log_file;
     char *srv_pidfile;
     char *srv_config;
+    char *srv1_pidfile;
+    char *srv1_config;
     bool srv_pam;
+    bool disable_hostkeys;
     char *srv_additional_config;
     struct {
         ssh_session session;
         struct torture_sftp *tsftp;
+        struct torture_ssh ssh;
     } ssh;
 #ifdef WITH_PCAP
     ssh_pcap_file plain_pcap;
@@ -106,21 +115,26 @@ ssh_session torture_ssh_session(struct torture_state *s,
                                 const char *user,
                                 const char *password);
 
+ssh_session torture_ssh_session_proxyjump(void);
+
 ssh_bind torture_ssh_bind(const char *addr,
                           const unsigned int port,
                           enum ssh_keytypes_e key_type,
                           const char *private_key_file);
 
 struct torture_sftp *torture_sftp_session(ssh_session session);
-struct torture_sftp *torture_sftp_session_channel(ssh_session session, ssh_channel channel);
+struct torture_sftp *torture_sftp_session_channel(ssh_session session,
+                                                  ssh_channel channel);
 void torture_sftp_close(struct torture_sftp *t);
 
 void torture_write_file(const char *filename, const char *data);
 
-#define torture_filter_tests(tests) _torture_filter_tests(tests, sizeof(tests) / sizeof(tests)[0])
+#define torture_filter_tests(tests) \
+    _torture_filter_tests(tests, sizeof(tests) / sizeof(tests)[0])
 void _torture_filter_tests(struct CMUnitTest *tests, size_t ntests);
 
 const char *torture_server_address(int domain);
+const char *torture_server1_address(int domain);
 int torture_server_port(void);
 
 int torture_wait_for_daemon(unsigned int seconds);
@@ -128,9 +142,11 @@ int torture_wait_for_daemon(unsigned int seconds);
 #ifdef SSHD_EXECUTABLE
 void torture_setup_socket_dir(void **state);
 void torture_setup_sshd_server(void **state, bool pam);
+void torture_setup_sshd_servers(void **state, bool pam);
 
 void torture_teardown_socket_dir(void **state);
 void torture_teardown_sshd_server(void **state);
+void torture_teardown_sshd_server1(void **state);
 
 int torture_update_sshd_config(void **state, const char *config);
 #endif /* SSHD_EXECUTABLE */
@@ -175,8 +191,11 @@ char *torture_create_temp_file(const char *template);
 char *torture_get_current_working_dir(void);
 int torture_change_dir(char *path);
 
-void torture_setenv(char const* variable, char const* value);
-void torture_unsetenv(char const* variable);
+void torture_setenv(char const *variable, char const *value);
+void torture_unsetenv(char const *variable);
+
+int torture_setup_ssh_agent(struct torture_state *s, const char *add_key);
+int torture_cleanup_ssh_agent(void);
 
 void torture_finalize(void);
 

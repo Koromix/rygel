@@ -30,10 +30,11 @@
 #define _LIBSSH_PRIV_H
 
 #include <limits.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdbool.h>
+#include <time.h>
 
 #if !defined(HAVE_STRTOULL)
 # if defined(HAVE___STRTOULL)
@@ -163,6 +164,9 @@ struct timeval;
 int ssh_gettimeofday(struct timeval *__p, void *__t);
 
 #define gettimeofday ssh_gettimeofday
+
+struct tm *ssh_localtime(const time_t *timer, struct tm *result);
+# define localtime_r ssh_localtime
 
 #define _XCLOSESOCKET closesocket
 
@@ -329,7 +333,7 @@ int decompress_buffer(ssh_session session,ssh_buffer buf, size_t maxlen);
 /* match.c */
 int match_pattern_list(const char *string, const char *pattern,
     size_t len, int dolower);
-int match_hostname(const char *host, const char *pattern, unsigned int len);
+int match_hostname(const char *host, const char *pattern, size_t len);
 #ifndef _WIN32
 int match_cidr_address_list(const char *address,
                             const char *addrlist,
@@ -353,17 +357,48 @@ int ssh_connector_remove_event(ssh_connector connector);
 #define SAFE_FREE(x) do { if ((x) != NULL) {free(x); x=NULL;} } while(0)
 
 /** Zero a structure */
-#define ZERO_STRUCT(x) memset((char *)&(x), 0, sizeof(x))
+#define ZERO_STRUCT(x) memset(&(x), 0, sizeof(x))
 
 /** Zero a structure given a pointer to the structure */
-#define ZERO_STRUCTP(x) do { if ((x) != NULL) memset((char *)(x), 0, sizeof(*(x))); } while(0)
+#define ZERO_STRUCTP(x) do { if ((x) != NULL) memset((x), 0, sizeof(*(x))); } while(0)
 
 /** Get the size of an array */
 #define ARRAY_SIZE(a) (sizeof(a)/sizeof(a[0]))
 
-#ifndef HAVE_EXPLICIT_BZERO
-void explicit_bzero(void *s, size_t n);
-#endif /* !HAVE_EXPLICIT_BZERO */
+/** Securely zero memory in a way that won't be optimized away */
+#if defined(HAVE_MEMSET_EXPLICIT)
+#define ssh_burn(ptr, len) memset_explicit((ptr), '\0', (len))
+#elif defined(HAVE_EXPLICIT_BZERO)
+#define ssh_burn(ptr, len) explicit_bzero((ptr), (len))
+#elif defined(HAVE_MEMSET_S)
+#define ssh_burn(ptr, len) memset_s((ptr), (len), '\0', (len))
+#elif defined(HAVE_SECURE_ZERO_MEMORY)
+#define ssh_burn(ptr, len) SecureZeroMemory((ptr), (len))
+#else
+#if defined(HAVE_GCC_VOLATILE_MEMORY_PROTECTION)
+#define ssh_burn(ptr, len)                            \
+    do {                                              \
+        memset((ptr), '\0', (len));                   \
+        __asm__ volatile("" : : "g"(ptr) : "memory"); \
+    } while (0)
+#else
+#define ssh_burn(ptr, len)          \
+    do {                            \
+        memset((ptr), '\0', (len)); \
+    } while (0)
+#endif
+#endif
+
+void burn_free(void *ptr, size_t len);
+
+/** Free memory space after zeroing it */
+#define BURN_FREE(x, len)          \
+    do {                           \
+        if ((x) != NULL) {         \
+            burn_free((x), (len)); \
+            (x) = NULL;            \
+        }                          \
+    } while (0)
 
 /**
  * This is a hack to fix warnings. The idea is to use this everywhere that we
@@ -472,6 +507,9 @@ char *ssh_strerror(int err_num, char *buf, size_t buflen);
 /** 55 defined options (5 bytes each) + terminator */
 #define SSH_TTY_MODES_MAX_BUFSIZE   (55 * 5 + 1)
 int encode_current_tty_opts(unsigned char *buf, size_t buflen);
+
+/** The default maximum file size for a configuration file */
+#define SSH_MAX_CONFIG_FILE_SIZE 16 * 1024 * 1024
 
 #ifdef __cplusplus
 }

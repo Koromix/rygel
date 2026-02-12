@@ -91,4 +91,10 @@ that it used:
 }
 @endcode
 
+Warning: In a single channel, only ONE command can be executed!
+If you want to executed multiple commands, allocate separate channels for
+them or consider opening interactive shell.
+Attempting to run multiple consecutive commands in one channel will fail.
+
+
 */

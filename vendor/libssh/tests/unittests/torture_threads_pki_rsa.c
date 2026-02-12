@@ -58,14 +58,8 @@ static int run_on_threads(void *(*func)(void *))
     }
 
     for (i = 0; i < NUM_THREADS; ++i) {
-        void *p = NULL;
-        uint64_t *result;
-
-        rc = pthread_join(threads[i], &p);
+        rc = pthread_join(threads[i], NULL);
         assert_int_equal(rc, 0);
-
-        result = (uint64_t *)p;
-        assert_null(result);
     }
 
     return rc;
@@ -164,7 +158,7 @@ static void *thread_pki_rsa_import_pubkey_file(void *threadid)
 
     SSH_KEY_FREE(pubkey);
 
-    pthread_exit(NULL);
+    return NULL;
 }
 
 static void torture_pki_rsa_import_pubkey_file(void **state)
@@ -197,8 +191,7 @@ static void *thread_pki_rsa_import_privkey_base64_NULL_key(void *threadid)
                                        NULL,
                                        NULL);
     assert_true(rc == -1);
-
-    pthread_exit(NULL);
+    return NULL;
 }
 
 static void torture_pki_rsa_import_privkey_base64_NULL_key(void **state){
@@ -225,7 +218,8 @@ static void *thread_pki_rsa_import_privkey_base64_NULL_str(void *threadid)
     assert_true(rc == -1);
 
     SSH_KEY_FREE(key);
-    pthread_exit(NULL);
+
+    return NULL;
 }
 
 static void torture_pki_rsa_import_privkey_base64_NULL_str(void **state){
@@ -267,7 +261,7 @@ static void *thread_pki_rsa_import_privkey_base64(void *threadid)
     free(key_str);
     SSH_KEY_FREE(key);
 
-    pthread_exit(NULL);
+    return NULL;
 }
 
 static void torture_pki_rsa_import_privkey_base64(void **state)
@@ -310,7 +304,8 @@ static void *thread_pki_rsa_publickey_from_privatekey(void *threadid)
 
     SSH_KEY_FREE(key);
     SSH_KEY_FREE(pubkey);
-    pthread_exit(NULL);
+
+    return NULL;
 }
 
 static void torture_pki_rsa_publickey_from_privatekey(void **state)
@@ -383,7 +378,8 @@ static void *thread_pki_rsa_copy_cert_to_privkey(void *threadid)
     SSH_KEY_FREE(cert);
     SSH_KEY_FREE(privkey);
     SSH_KEY_FREE(pubkey);
-    pthread_exit(NULL);
+
+    return NULL;
 }
 
 static void torture_pki_rsa_copy_cert_to_privkey(void **state)
@@ -416,7 +412,8 @@ static void *thread_pki_rsa_import_cert_file(void *threadid)
     assert_true(rc == 1);
 
     SSH_KEY_FREE(cert);
-    pthread_exit(NULL);
+
+    return NULL;
 }
 
 static void torture_pki_rsa_import_cert_file(void **state)
@@ -467,7 +464,8 @@ static void *thread_pki_rsa_publickey_base64(void *threadid)
     free(b64_key);
     free(key_buf);
     SSH_KEY_FREE(key);
-    pthread_exit(NULL);
+
+    return NULL;
 }
 
 static void torture_pki_rsa_publickey_base64(void **state)
@@ -531,7 +529,8 @@ static void *thread_pki_rsa_duplicate_key(void *threadid)
     SSH_KEY_FREE(privkey_dup);
     SSH_STRING_FREE_CHAR(b64_key);
     SSH_STRING_FREE_CHAR(b64_key_gen);
-    pthread_exit(NULL);
+
+    return NULL;
 }
 
 static void torture_pki_rsa_duplicate_key(void **state)
@@ -614,7 +613,8 @@ static void *thread_pki_rsa_generate_key(void *threadid)
     SSH_KEY_FREE(pubkey);
 
     ssh_free(session);
-    pthread_exit(NULL);
+
+    return NULL;
 }
 
 static void torture_pki_rsa_generate_key(void **state)
@@ -672,7 +672,8 @@ static void *thread_pki_rsa_import_privkey_base64_passphrase(void *threadid)
     assert_true(rc == -1);
     SSH_KEY_FREE(key);
 #endif
-    pthread_exit(NULL);
+
+    return NULL;
 }
 
 static void torture_pki_rsa_import_privkey_base64_passphrase(void **state)
@@ -723,14 +724,8 @@ static void torture_mixed(void **state)
 
     for (f = 0; f < NUM_TESTS; f++) {
         for (i = 0; i < NUM_THREADS; ++i) {
-            void *p = NULL;
-            uint64_t *result = NULL;
-
-            rc = pthread_join(threads[f][i], &p);
+            rc = pthread_join(threads[f][i], NULL);
             assert_int_equal(rc, 0);
-
-            result = (uint64_t *)p;
-            assert_null(result);
         }
     }
 }

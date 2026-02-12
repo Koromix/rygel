@@ -48,6 +48,8 @@ Table of contents:
 
 @subpage libssh_tutor_sftp_aio
 
+@subpage libssh_tutor_fido2
+
 @subpage libssh_tutor_todo
 
 */

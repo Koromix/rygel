@@ -25,28 +25,48 @@
 #include "libssh/libssh.h"
 #include "libssh/priv.h"
 
+#include "nallocinc.c"
+
+static void _fuzz_finalize(void)
+{
+    ssh_finalize();
+}
+
+int LLVMFuzzerInitialize(int *argc, char ***argv)
+{
+    (void)argc;
+
+    nalloc_init(*argv[0]);
+
+    ssh_init();
+
+    atexit(_fuzz_finalize);
+
+    return 0;
+}
+
 int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 {
     ssh_key pkey = NULL;
     uint8_t *input = NULL;
     int rc;
 
+    assert(nalloc_start(data, size) > 0);
+
     input = bin_to_base64(data, size);
     if (input == NULL) {
-        return 1;
+        goto out;
     }
-
-    ssh_init();
 
     rc = ssh_pki_import_privkey_base64((char *)input, NULL, NULL, NULL, &pkey);
     free(input);
     if (rc != SSH_OK) {
-        return 1;
+        goto out;
     }
     ssh_key_free(pkey);
 
-    ssh_finalize();
-
+out:
+    nalloc_end();
     return 0;
 }
 

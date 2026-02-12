@@ -39,8 +39,6 @@
 
 #include <libssh/callbacks.h>
 #include <libssh/libssh.h>
-#include <libssh/sftp.h>
-
 
 #include "examples_common.h"
 #define MAXCMD 10
@@ -88,22 +86,24 @@ static void add_cmd(char *cmd)
 
 static void usage(void)
 {
-    fprintf(stderr,
-            "Usage : ssh [options] [login@]hostname\n"
-            "sample client - libssh-%s\n"
-            "Options :\n"
-            "  -l user : log in as user\n"
-            "  -p port : connect to port\n"
-            "  -r : use RSA to verify host public key\n"
-            "  -F file : parse configuration file instead of default one\n"
+    fprintf(
+        stderr,
+        "Usage : ssh [options] [login@]hostname\n"
+        "sample client - libssh-%s\n"
+        "Options :\n"
+        "  -l user : log in as user\n"
+        "  -p port : connect to port\n"
+        "  -o option : set configuration option (e.g., -o Compression=yes)\n"
+        "  -r : use RSA to verify host public key\n"
+        "  -F file : parse configuration file instead of default one\n"
 #ifdef WITH_PCAP
-            "  -P file : create a pcap debugging file\n"
+        "  -P file : create a pcap debugging file\n"
 #endif
 #ifndef _WIN32
-            "  -T proxycommand : command to execute as a socket proxy\n"
+        "  -T proxycommand : command to execute as a socket proxy\n"
 #endif
-            "\n",
-            ssh_version(0));
+        "\n",
+        ssh_version(0));
 
     exit(0);
 }
@@ -112,8 +112,8 @@ static int opts(int argc, char **argv)
 {
     int i;
 
-    while((i = getopt(argc,argv,"T:P:F:")) != -1) {
-        switch(i){
+    while ((i = getopt(argc, argv, "T:P:F:")) != -1) {
+        switch (i) {
         case 'P':
             pcap_file = optarg;
             break;
@@ -159,16 +159,14 @@ static void cfmakeraw(struct termios *termios_p)
 
 static void do_cleanup(int i)
 {
-  /* unused variable */
-  (void) i;
+    (void)i;
 
-  tcsetattr(0, TCSANOW, &terminal);
+    tcsetattr(0, TCSANOW, &terminal);
 }
 
 static void do_exit(int i)
 {
-    /* unused variable */
-    (void) i;
+    (void)i;
 
     do_cleanup(0);
     exit(0);
@@ -179,7 +177,7 @@ static int signal_delayed = 0;
 #ifdef SIGWINCH
 static void sigwindowchanged(int i)
 {
-    (void) i;
+    (void)i;
     signal_delayed = 1;
 }
 #endif
@@ -213,18 +211,18 @@ static void select_loop(ssh_session session,ssh_channel channel)
     /* stdin */
     connector_in = ssh_connector_new(session);
     ssh_connector_set_out_channel(connector_in, channel, SSH_CONNECTOR_STDINOUT);
-    ssh_connector_set_in_fd(connector_in, 0);
+    ssh_connector_set_in_fd(connector_in, STDIN_FILENO);
     ssh_event_add_connector(event, connector_in);
 
     /* stdout */
     connector_out = ssh_connector_new(session);
-    ssh_connector_set_out_fd(connector_out, 1);
+    ssh_connector_set_out_fd(connector_out, STDOUT_FILENO);
     ssh_connector_set_in_channel(connector_out, channel, SSH_CONNECTOR_STDINOUT);
     ssh_event_add_connector(event, connector_out);
 
     /* stderr */
     connector_err = ssh_connector_new(session);
-    ssh_connector_set_out_fd(connector_err, 2);
+    ssh_connector_set_out_fd(connector_err, STDERR_FILENO);
     ssh_connector_set_in_channel(connector_err, channel, SSH_CONNECTOR_STDERR);
     ssh_event_add_connector(event, connector_err);
 
@@ -253,7 +251,7 @@ static void shell(ssh_session session)
 {
     ssh_channel channel = NULL;
     struct termios terminal_local;
-    int interactive=isatty(0);
+    int interactive = isatty(0);
 
     channel = ssh_channel_new(session);
     if (channel == NULL) {
@@ -357,10 +355,8 @@ static int client(ssh_session session)
     }
     /* Parse configuration file if specified: The command-line options will
      * overwrite items loaded from configuration file */
-    if (config_file != NULL) {
-        ssh_options_parse_config(session, config_file);
-    } else {
-        ssh_options_parse_config(session, NULL);
+    if (ssh_options_parse_config(session, config_file) < 0) {
+        return -1;
     }
 
     if (ssh_connect(session)) {

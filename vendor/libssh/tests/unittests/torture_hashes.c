@@ -57,25 +57,22 @@ static void torture_md5_hash(void **state)
     size_t hlen;
     int rc = 0;
 
+#if defined(HAVE_LIBCRYPTO) && OPENSSL_VERSION_NUMBER < 0x30000000L
+    /* In FIPS mode without OpenSSL providers, we cannot use MD5 */
     if (ssh_fips_mode()) {
         skip();
     }
+#endif
 
     rc = ssh_get_publickey_hash(pubkey, SSH_PUBLICKEY_HASH_MD5,
                                 (unsigned char **)&hash, &hlen);
-    if (ssh_fips_mode()) {
-        /* When in FIPS mode, expect the call to fail */
-        assert_int_equal(rc, SSH_ERROR);
-    } else {
-        assert_int_equal(rc, SSH_OK);
+    assert_int_equal(rc, SSH_OK);
 
-        hexa = ssh_get_hexa((unsigned char *)hash, hlen);
-        SSH_STRING_FREE_CHAR(hash);
-        assert_string_equal(hexa,
-                            "50:15:a0:9b:92:bf:33:1c:01:c5:8c:fe:18:fa:ce:78");
-
-        SSH_STRING_FREE_CHAR(hexa);
-    }
+    hexa = ssh_get_hexa((unsigned char *)hash, hlen);
+    SSH_STRING_FREE_CHAR(hash);
+    assert_string_equal(hexa,
+                        "50:15:a0:9b:92:bf:33:1c:01:c5:8c:fe:18:fa:ce:78");
+    SSH_STRING_FREE_CHAR(hexa);
 }
 
 static void torture_sha1_hash(void **state)

@@ -109,7 +109,8 @@ static int ssh_connect_socket_close(socket_t s)
 #endif
 }
 
-static int getai(const char *host, int port, struct addrinfo **ai)
+static int
+getai(const char *host, int port, int ai_family, struct addrinfo **ai)
 {
     const char *service = NULL;
     struct addrinfo hints;
@@ -118,7 +119,7 @@ static int getai(const char *host, int port, struct addrinfo **ai)
     ZERO_STRUCT(hints);
 
     hints.ai_protocol = IPPROTO_TCP;
-    hints.ai_family = PF_UNSPEC;
+    hints.ai_family = ai_family;
     hints.ai_socktype = SOCK_STREAM;
 
     if (port == 0) {
@@ -165,14 +166,39 @@ socket_t ssh_connect_host_nonblocking(ssh_session session, const char *host,
 {
     socket_t s = -1, first = -1;
     int rc;
+    int ai_family;
+    static const char *ai_family_str = NULL;
     struct addrinfo *ai = NULL;
     struct addrinfo *itr = NULL;
+    char addrname[NI_MAXHOST], portname[NI_MAXSERV];
 
-    rc = getai(host, port, &ai);
+    switch (session->opts.address_family) {
+    case SSH_ADDRESS_FAMILY_INET:
+        ai_family = PF_INET;
+        ai_family_str = "inet";
+        break;
+    case SSH_ADDRESS_FAMILY_INET6:
+        ai_family = PF_INET6;
+        ai_family_str = "inet6";
+        break;
+    case SSH_ADDRESS_FAMILY_ANY:
+    default:
+        ai_family = PF_UNSPEC;
+        ai_family_str = "any";
+    }
+    SSH_LOG(SSH_LOG_PACKET,
+            "Resolve target hostname %s port %d (%s)",
+            host,
+            port,
+            ai_family_str);
+    rc = getai(host, port, ai_family, &ai);
     if (rc != 0) {
-        ssh_set_error(session, SSH_FATAL,
-                      "Failed to resolve hostname %s (%s)",
-                      host, gai_strerror(rc));
+        ssh_set_error(session,
+                      SSH_FATAL,
+                      "Failed to resolve hostname %s (%s): %s",
+                      host,
+                      ai_family_str,
+                      gai_strerror(rc));
 
         return -1;
     }
@@ -192,13 +218,18 @@ socket_t ssh_connect_host_nonblocking(ssh_session session, const char *host,
             struct addrinfo *bind_ai = NULL;
             struct addrinfo *bind_itr = NULL;
 
-            SSH_LOG(SSH_LOG_PACKET, "Resolving %s", bind_addr);
+            SSH_LOG(SSH_LOG_PACKET,
+                    "Resolving bind address %s (%s)",
+                    bind_addr,
+                    ai_family_str);
 
-            rc = getai(bind_addr, 0, &bind_ai);
+            rc = getai(bind_addr, 0, ai_family, &bind_ai);
             if (rc != 0) {
-                ssh_set_error(session, SSH_FATAL,
-                              "Failed to resolve bind address %s (%s)",
+                ssh_set_error(session,
+                              SSH_FATAL,
+                              "Failed to resolve bind address %s (%s): %s",
                               bind_addr,
+                              ai_family_str,
                               gai_strerror(rc));
                 ssh_connect_socket_close(s);
                 s = -1;
@@ -209,7 +240,8 @@ socket_t ssh_connect_host_nonblocking(ssh_session session, const char *host,
                  bind_itr != NULL;
                  bind_itr = bind_itr->ai_next)
             {
-                if (bind(s, bind_itr->ai_addr, bind_itr->ai_addrlen) < 0) {
+                rc = bind(s, bind_itr->ai_addr, bind_itr->ai_addrlen);
+                if (rc < 0) {
                     ssh_set_error(session, SSH_FATAL,
                                   "Binding local address: %s",
                                   ssh_strerror(errno, err_msg, SSH_ERRNO_MSG_MAX));
@@ -251,7 +283,28 @@ socket_t ssh_connect_host_nonblocking(ssh_session session, const char *host,
             }
         }
 
+        rc = getnameinfo(itr->ai_addr,
+                         itr->ai_addrlen,
+                         addrname,
+                         sizeof(addrname),
+                         portname,
+                         sizeof(portname),
+                         NI_NUMERICHOST | NI_NUMERICSERV);
+        if (rc != 0) {
+            ssh_set_error(session, SSH_FATAL,
+                          "getnameinfo failed: %s",
+                          ssh_strerror(errno, err_msg, SSH_ERRNO_MSG_MAX));
+            ssh_connect_socket_close(s);
+            s = -1;
+            continue;
+        }
+
         errno = 0;
+        SSH_LOG(SSH_LOG_PACKET,
+                "Connecting to host %s [%s] port %s",
+                host,
+                addrname,
+                portname);
         rc = connect(s, itr->ai_addr, itr->ai_addrlen);
         if (rc == -1) {
             if ((errno != 0) && (errno != EINPROGRESS)) {
@@ -262,6 +315,7 @@ socket_t ssh_connect_host_nonblocking(ssh_session session, const char *host,
                 s = -1;
             } else {
                 if (first == -1) {
+                    SSH_LOG(SSH_LOG_PACKET, "EINPROGRESS => Store for later.");
                     first = s;
                 } else { /* errno == EINPROGRESS */
                     /* save only the first "working" socket */
@@ -281,6 +335,9 @@ socket_t ssh_connect_host_nonblocking(ssh_session session, const char *host,
      * connection, otherwise return the first address without error or error */
     if (s == -1) {
         s = first;
+    } else if (s != first && first != -1) {
+        /* Clean up the saved socket if any */
+        ssh_connect_socket_close(first);
     }
 
     return s;

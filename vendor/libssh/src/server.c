@@ -44,21 +44,22 @@
 # include <netinet/in.h>
 #endif
 
-#include "libssh/priv.h"
-#include "libssh/libssh.h"
-#include "libssh/server.h"
-#include "libssh/ssh2.h"
 #include "libssh/buffer.h"
-#include "libssh/packet.h"
-#include "libssh/socket.h"
-#include "libssh/session.h"
-#include "libssh/kex.h"
-#include "libssh/misc.h"
-#include "libssh/pki.h"
-#include "libssh/dh.h"
-#include "libssh/messages.h"
-#include "libssh/options.h"
 #include "libssh/curve25519.h"
+#include "libssh/dh.h"
+#include "libssh/gssapi.h"
+#include "libssh/kex.h"
+#include "libssh/libssh.h"
+#include "libssh/messages.h"
+#include "libssh/misc.h"
+#include "libssh/options.h"
+#include "libssh/packet.h"
+#include "libssh/pki.h"
+#include "libssh/priv.h"
+#include "libssh/server.h"
+#include "libssh/session.h"
+#include "libssh/socket.h"
+#include "libssh/ssh2.h"
 #include "libssh/token.h"
 
 #define set_status(session, status) do {\
@@ -72,15 +73,22 @@
  * @{
  */
 
-/** @internal
+/**
+ * @internal
+ * @brief Sets the server's key exchange, encryption, MAC, and compression
+ * algorithms.
  *
- * @brief initialize the set of key exchange, hostkey, ciphers, MACs, and
- *        compression algorithms for the given ssh_session
+ * Prepares the server key exchange (KEX) proposals by prioritizing the
+ * available host keys (Ed25519, ECDSA, RSA)  based on their strength and fills
+ * in the KEX method lists based on session options or defaults. This is
+ * essential for negotiating secure communication parameters in the SSH
+ * handshake.
  *
- * The selection of algorithms and keys used are determined by the
- * options that are currently set in the given ssh_session structure.
+ * @param[in] session The SSH session to set up.
+ *
+ * @return `SSH_OK` on success, `SSH_ERROR` on failure (e.g., no host keys
+ * available, random number generation error, or memory allocation failure).
  */
-
 int server_set_kex(ssh_session session)
 {
     struct ssh_kex_struct *server = &session->next_crypto->server_kex;
@@ -91,6 +99,9 @@ int server_set_kex(ssh_session session)
     enum ssh_keytypes_e keytype;
     size_t len;
     int ok;
+#ifdef WITH_GSSAPI
+    char *gssapi_algs = NULL;
+#endif /* WITH_GSSAPI */
 
     /* Skip if already set, for example for the rekey or when we do the guessing
      * it could have been already used to make some protocol decisions. */
@@ -130,10 +141,6 @@ int server_set_kex(ssh_session session)
                  ",%s", ssh_key_type_to_char(keytype));
     }
 
-    if (strlen(hostkeys) == 0) {
-        return -1;
-    }
-
     if (session->opts.wanted_methods[SSH_HOSTKEYS]) {
         allowed = session->opts.wanted_methods[SSH_HOSTKEYS];
     } else {
@@ -144,23 +151,52 @@ int server_set_kex(ssh_session session)
         }
     }
 
-    /* It is expected for the list of allowed hostkeys to be ordered by
-     * preference */
-    kept = ssh_find_all_matching(hostkeys[0] == ',' ? hostkeys + 1 : hostkeys,
-                                 allowed);
-    if (kept == NULL) {
-        /* Nothing was allowed */
-        return -1;
-    }
+    if (strlen(hostkeys) != 0) {
+        /* It is expected for the list of allowed hostkeys to be ordered by
+         * preference */
+        kept =
+            ssh_find_all_matching(hostkeys[0] == ',' ? hostkeys + 1 : hostkeys,
+                                  allowed);
+        if (kept == NULL) {
+            /* Nothing was allowed */
+            return -1;
+        }
 
-    rc = ssh_options_set_algo(session,
-                              SSH_HOSTKEYS,
-                              kept,
-                              &session->opts.wanted_methods[SSH_HOSTKEYS]);
-    SAFE_FREE(kept);
-    if (rc < 0) {
-        return -1;
+        rc = ssh_options_set_algo(session,
+                                  SSH_HOSTKEYS,
+                                  kept,
+                                  &session->opts.wanted_methods[SSH_HOSTKEYS]);
+        SAFE_FREE(kept);
+        if (rc < 0) {
+            return -1;
+        }
     }
+#ifdef WITH_GSSAPI
+    if (session->opts.gssapi_key_exchange) {
+        ok = ssh_gssapi_init(session);
+        if (ok != SSH_OK) {
+            ssh_set_error_oom(session);
+            return SSH_ERROR;
+        }
+
+        gssapi_algs = ssh_gssapi_kex_mechs(session);
+        if (gssapi_algs == NULL) {
+            return SSH_ERROR;
+        }
+        ssh_gssapi_free(session);
+
+        /* Prefix the default algorithms with gsskex algs */
+        session->opts.wanted_methods[SSH_KEX] =
+            ssh_prefix_without_duplicates(ssh_kex_get_default_methods(SSH_KEX),
+                                          gssapi_algs);
+
+        if (strlen(hostkeys) == 0) {
+            session->opts.wanted_methods[SSH_HOSTKEYS] = strdup("null");
+        }
+
+        SAFE_FREE(gssapi_algs);
+    }
+#endif /* WITH_GSSAPI */
 
     for (i = 0; i < SSH_KEX_METHODS; i++) {
         wanted = session->opts.wanted_methods[i];
@@ -211,6 +247,23 @@ int ssh_server_init_kex(ssh_session session) {
     return server_set_kex(session);
 }
 
+/**
+ * @internal
+ *
+ * @brief Sends SSH extension information from the server to client.
+ *
+ * A server may send this message (`SSH_MSG_EXT_INFO`) after its first
+ * `SSH_MSG_NEWKEYS` message or just before sending `SSH_MSG_USERAUTH_SUCCESS`
+ * to provide additional extensions support that are not meant for an
+ * unauthenticated client.
+ *
+ * If any error occurs during the packing or sending of the packet, the function
+ * aborts to avoid partial or corrupted sends.
+ *
+ * @param[in] session The SSH session.
+ *
+ * @return `SSH_OK` on success, `SSH_ERROR` on failure.
+ */
 static int ssh_server_send_extensions(ssh_session session)
 {
     int rc;
@@ -230,11 +283,13 @@ static int ssh_server_send_extensions(ssh_session session)
     }
 
     rc = ssh_buffer_pack(session->out_buffer,
-                         "bdss",
+                         "bdssss",
                          SSH2_MSG_EXT_INFO,
-                         1, /* nr. of extensions */
+                         2, /* nr. of extensions */
                          "server-sig-algs",
-                         hostkey_algorithms);
+                         hostkey_algorithms,
+                         "publickey-hostbound@openssh.com",
+                         "0");
     if (rc != SSH_OK) {
         goto error;
     }
@@ -274,6 +329,22 @@ SSH_PACKET_CALLBACK(ssh_packet_kexdh_init){
   return SSH_PACKET_NOT_USED;
 }
 
+/**
+ * @brief Prepares server host key parameters for the key exchange process.
+ *
+ * Selects the appropriate private host key (RSA, ECDSA, or Ed25519) based on
+ * the session's configured host key type, sets the corresponding @p digest
+ * algorithm, and imports the public key blob into the Diffie-Hellman key
+ * exchange state.
+ *
+ * @param[in]  session  The SSH session to which we are preparing host key
+ * parameters.
+ * @param[out] privkey  Pointer to receive the selected private host key.
+ * @param[out] digest   Pointer to receive the host key digest algorithm.
+ *
+ * @return `SSH_OK` on success; `SSH_ERROR` on failure (invalid key type, export
+ * failure, or DH import error).
+ */
 int
 ssh_get_key_params(ssh_session session,
                    ssh_key *privkey,
@@ -483,8 +554,8 @@ static size_t callback_receive_banner(const void *data, size_t len, void *user)
             ssh_pcap_context_write(session->pcap_ctx,
                                    SSH_PCAP_DIR_IN,
                                    buffer,
-                                   i + 1,
-                                   i + 1);
+                                   (uint32_t)(i + 1),
+                                   (uint32_t)(i + 1));
         }
 #endif
         if (buffer[i] == '\r') {
@@ -495,6 +566,11 @@ static size_t callback_receive_banner(const void *data, size_t len, void *user)
             buffer[i] = '\0';
 
             str = strdup(buffer);
+            if (str == NULL) {
+                session->session_state = SSH_SESSION_STATE_ERROR;
+                ssh_set_error_oom(session);
+                return 0;
+            }
             /* number of bytes read */
             processed = i + 1;
             session->clientbanner = str;
@@ -626,6 +702,14 @@ int ssh_auth_reply_default(ssh_session session,int partial) {
 	  strncat(methods_c,"gssapi-with-mic,",
 			  sizeof(methods_c) - strlen(methods_c) - 1);
   }
+  /* Check if GSSAPI Key exchange was performed */
+  if (session->auth.supported_methods & SSH_AUTH_METHOD_GSSAPI_KEYEX) {
+      if (ssh_kex_is_gss(session->current_crypto)) {
+          strncat(methods_c,
+                  "gssapi-keyex,",
+                  sizeof(methods_c) - strlen(methods_c) - 1);
+      }
+  }
   if (session->auth.supported_methods & SSH_AUTH_METHOD_INTERACTIVE) {
     strncat(methods_c, "keyboard-interactive,",
             sizeof(methods_c) - strlen(methods_c) - 1);
@@ -662,6 +746,20 @@ int ssh_auth_reply_default(ssh_session session,int partial) {
   return rc;
 }
 
+/**
+ * @internal
+ *
+ * @brief Sends default refusal for a channel open request.
+ *
+ * Default handler that rejects incoming SSH channel open requests by sending
+ * a `SSH2_MSG_CHANNEL_OPEN_FAILURE` packet with "administratively prohibited"
+ * reason code. Used when no custom channel open handler is registered.
+ *
+ * @param[in] msg The SSH message containing the channel open request details.
+ *
+ * @return `SSH_OK` on successful packet send; `SSH_ERROR` on buffer allocation
+ *         or packet send failure.
+ */
 static int ssh_message_channel_request_open_reply_default(ssh_message msg) {
     int rc;
 
@@ -683,6 +781,21 @@ static int ssh_message_channel_request_open_reply_default(ssh_message msg) {
     return rc;
 }
 
+/**
+ * @internal
+ *
+ * @brief Sends default refusal for a channel request.
+ *
+ * Default handler that rejects incoming SSH channel requests. If the client
+ * requested a reply (`want_reply`), sends `SSH2_MSG_CHANNEL_FAILURE` to the
+ * specific channel. If no reply requested, logs the refusal and returns
+ * success.
+ *
+ * @param[in] msg The SSH message containing the channel request details.
+ *
+ * @return `SSH_OK` on success; `SSH_ERROR` if buffer allocation or packet send
+ * fails.
+ */
 static int ssh_message_channel_request_reply_default(ssh_message msg) {
   uint32_t channel;
   int rc;
@@ -716,11 +829,11 @@ static int ssh_message_service_request_reply_default(ssh_message msg) {
 }
 
 /**
- * @brief   Sends SERVICE_ACCEPT to the client
+ * @brief   Sends `SSH2_MSG_SERVICE_ACCEPT` to the client
  *
  * @param msg The message to reply to
  *
- * @returns SSH_OK when success otherwise SSH_ERROR
+ * @returns `SSH_OK` when success otherwise `SSH_ERROR`
  */
 int ssh_message_service_reply_success(ssh_message msg)
 {
@@ -754,7 +867,7 @@ int ssh_message_service_reply_success(ssh_message msg)
  *
  * @param bound_port The remote bind port
  *
- * @returns SSH_OK on success, otherwise SSH_ERROR
+ * @returns `SSH_OK` on success, otherwise `SSH_ERROR`
  */
 int ssh_message_global_request_reply_success(ssh_message msg, uint16_t bound_port) {
     int rc;
@@ -790,6 +903,20 @@ error:
     return SSH_ERROR;
 }
 
+/**
+ * @internal
+ *
+ * @brief Sends default refusal for a global request.
+ *
+ * Default handler that rejects incoming SSH global requests. If the client
+ * requested a reply (`want_reply`), sends `SSH2_MSG_REQUEST_FAILURE`. If no
+ * reply requested, logs the refusal and returns success immediately.
+ *
+ * @param[in] msg The SSH message containing the global request details.
+ *
+ * @return `SSH_OK` on success; `SSH_ERROR` if buffer allocation or packet send
+ * fails.
+ */
 static int ssh_message_global_request_reply_default(ssh_message msg) {
     SSH_LOG(SSH_LOG_FUNCTIONS, "Refusing a global request");
 
@@ -928,6 +1055,28 @@ int ssh_message_auth_set_methods(ssh_message msg, int methods) {
   return 0;
 }
 
+/**
+ * @brief Sends an interactive authentication request message.
+ *
+ * Builds and sends an `SSH2_MSG_USERAUTH_INFO_REQUEST` packet containing the
+ * given name and @p instruction, followed by a number of @p prompts with
+ * associated @p echo flags to control whether user input is echoed.
+ * It initializes the keyboard-interactive state in the session.
+ *
+ * @param[in]  msg          The SSH message representing the client
+ *                          authentication request.
+ * @param[in]  name         The name of the authentication request.
+ * @param[in]  instruction  Instruction string with information for the user.
+ * @param[in]  num_prompts  Number of prompts to send. The arrays prompts and
+ *                          echo must both have num_prompts elements.
+ * @param[in]  prompts      Array of @p num_prompts prompt strings to display.
+ * @param[in]  echo         Array of num_prompts boolean values (0 or 1). A
+ *                          non-zero value means the user input for that prompt
+ *                          is echoed (visible); 0 means the input is hidden
+ *                          (typically for passwords).
+ *
+ * @return `SSH_OK` on successful send; `SSH_ERROR` on failure.
+ */
 int ssh_message_auth_interactive_request(ssh_message msg, const char *name,
                             const char *instruction, unsigned int num_prompts,
                             const char **prompts, char *echo) {
@@ -1034,15 +1183,15 @@ int ssh_message_auth_interactive_request(ssh_message msg, const char *name,
 }
 
 /**
- * @brief Sends SSH2_MSG_USERAUTH_SUCCESS or SSH2_MSG_USERAUTH_FAILURE message
- * depending on the success of the authentication method
+ * @brief Sends `SSH2_MSG_USERAUTH_SUCCESS` or `SSH2_MSG_USERAUTH_FAILURE`
+ * message depending on the success of the authentication method
  *
  * @param session The session to reply to
  *
  * @param partial Denotes if the authentication process was partially completed
  * (unsuccessful)
  *
- * @returns SSH_OK on success, otherwise SSH_ERROR
+ * @returns `SSH_OK` on success, otherwise `SSH_ERROR`
  */
 int ssh_auth_reply_success(ssh_session session, int partial)
 {
@@ -1066,9 +1215,9 @@ int ssh_auth_reply_success(ssh_session session, int partial)
 
     /*
      * Consider the session as having been authenticated only after sending
-     * the USERAUTH_SUCCESS message.  Setting these flags after ssh_packet_send
-     * ensures that a rekey is not triggered prematurely, causing the message
-     * to be queued.
+     * the `USERAUTH_SUCCESS` message.  Setting these flags after
+     * ssh_packet_send ensures that a rekey is not triggered prematurely,
+     * causing the message to be queued.
      */
     session->session_state = SSH_SESSION_STATE_AUTHENTICATED;
     session->flags |= SSH_SESSION_FLAG_AUTHENTICATED;
@@ -1087,6 +1236,18 @@ int ssh_auth_reply_success(ssh_session session, int partial)
     return r;
 }
 
+/**
+ * @brief Replies to an authentication request with success.
+ *
+ * Sends an authentication success message (`SSH2_MSG_USERAUTH_SUCCESS`) to the
+ * client, or a partial success if further authentication steps are required.
+ *
+ * @param[in] msg     The SSH authentication message being handled.
+ * @param[in] partial Set to nonzero if partial success (more auth needed), zero
+ * for full success.
+ *
+ * @return `SSH_OK` on success, `SSH_ERROR` if msg is NULL or on send failure.
+ */
 int ssh_message_auth_reply_success(ssh_message msg, int partial) {
 	if(msg == NULL)
 		return SSH_ERROR;
@@ -1094,7 +1255,7 @@ int ssh_message_auth_reply_success(ssh_message msg, int partial) {
 }
 
 /**
- * @brief Answer SSH2_MSG_USERAUTH_PK_OK to a pubkey authentication request
+ * @brief Answer `SSH2_MSG_USERAUTH_PK_OK` to a pubkey authentication request
  *
  * @param msg The message
  *
@@ -1102,7 +1263,7 @@ int ssh_message_auth_reply_success(ssh_message msg, int partial) {
  *
  * @param pubkey The accepted public key
  *
- * @returns SSH_OK on success, otherwise SSH_ERROR
+ * @returns `SSH_OK` on success, otherwise `SSH_ERROR`
  */
 int ssh_message_auth_reply_pk_ok(ssh_message msg, ssh_string algo, ssh_string pubkey) {
     int rc;
@@ -1125,11 +1286,11 @@ int ssh_message_auth_reply_pk_ok(ssh_message msg, ssh_string algo, ssh_string pu
 }
 
 /**
- * @brief Answer SSH2_MSG_USERAUTH_PK_OK to a pubkey authentication request
+ * @brief Answer `SSH2_MSG_USERAUTH_PK_OK` to a pubkey authentication request
  *
  * @param msg The message
  *
- * @returns SSH_OK on success, otherwise SSH_ERROR
+ * @returns `SSH_OK` on success, otherwise `SSH_ERROR`
  */
 int ssh_message_auth_reply_pk_ok_simple(ssh_message msg)
 {
@@ -1156,83 +1317,271 @@ int ssh_message_auth_reply_pk_ok_simple(ssh_message msg)
     return ret;
 }
 
-
+/**
+ * @brief Get the originator address from the channel open message.
+ *
+ * @param[in] msg        The message.
+ *
+ * @return               The originator address, or NULL.
+ */
 const char *ssh_message_channel_request_open_originator(ssh_message msg){
     return msg->channel_request_open.originator;
 }
 
+/**
+ * @brief Get the originator port from the channel open message.
+ *
+ * @param[in] msg        The message.
+ *
+ * @return               The originator port.
+ */
 int ssh_message_channel_request_open_originator_port(ssh_message msg){
     return msg->channel_request_open.originator_port;
 }
 
+/**
+ * @brief Get the destination address from the channel open message.
+ *
+ * @param[in] msg        The message.
+ *
+ * @return               The destination address, or NULL.
+ */
 const char *ssh_message_channel_request_open_destination(ssh_message msg){
     return msg->channel_request_open.destination;
 }
 
+/**
+ * @brief Get the destination port from the channel open message.
+ *
+ * @param[in] msg        The message.
+ *
+ * @return               The destination port.
+ */
 int ssh_message_channel_request_open_destination_port(ssh_message msg){
     return msg->channel_request_open.destination_port;
 }
 
+/**
+ * @brief Get the channel associated with the message.
+ *
+ * @param[in] msg        The message.
+ *
+ * @return               The channel associated with the message.
+ */
 ssh_channel ssh_message_channel_request_channel(ssh_message msg){
     return msg->channel_request.channel;
 }
 
+/**
+ * @brief Get the terminal type from the message.
+ *
+ * @param[in] msg        The message.
+ *
+ * @return               The terminal type (e.g. "xterm"), or NULL.
+ *
+ * @deprecated This function should not be used anymore as there is a
+ * callback based server implementation function channel_pty_request_function.
+ *
+ * @see channel_pty_request_function.
+ */
 const char *ssh_message_channel_request_pty_term(ssh_message msg){
     return msg->channel_request.TERM;
 }
 
+/**
+ * @brief Get the terminal width from the message.
+ *
+ * @param[in] msg        The message.
+ *
+ * @return               The terminal width in characters.
+ *
+ * @deprecated This function should not be used anymore as there is a
+ * callback based server implementation function channel_pty_request_function.
+ *
+ * @see channel_pty_request_function.
+ */
 int ssh_message_channel_request_pty_width(ssh_message msg){
     return msg->channel_request.width;
 }
 
+/**
+ * @brief Get the terminal height from the message.
+ *
+ * @param[in] msg        The message.
+ *
+ * @return               The terminal height in characters.
+ *
+ * @deprecated This function should not be used anymore as there is a
+ * callback based server implementation function channel_pty_request_function.
+ *
+ * @see channel_pty_request_function.
+ */
 int ssh_message_channel_request_pty_height(ssh_message msg){
     return msg->channel_request.height;
 }
 
+/**
+ * @brief Get the terminal pixel width from the message.
+ *
+ * @param[in] msg        The message.
+ *
+ * @return               The pixel width.
+ *
+ * @deprecated This function should not be used anymore as there is a
+ * callback based server implementation function channel_pty_request_function.
+ *
+ * @see channel_pty_request_function.
+ */
 int ssh_message_channel_request_pty_pxwidth(ssh_message msg){
     return msg->channel_request.pxwidth;
 }
 
+/**
+ * @brief Get the terminal pixel height from the message.
+ *
+ * @param[in] msg        The message.
+ *
+ * @return               The pixel height.
+ *
+ * @deprecated This function should not be used anymore as there is a
+ * callback based server implementation function channel_pty_request_function.
+ *
+ * @see channel_pty_request_function.
+ */
 int ssh_message_channel_request_pty_pxheight(ssh_message msg){
     return msg->channel_request.pxheight;
 }
 
+/**
+ * @brief Get the name of the environment variable from the message.
+ *
+ * @param[in] msg        The message.
+ *
+ * @return               The variable name, or NULL.
+ */
 const char *ssh_message_channel_request_env_name(ssh_message msg){
     return msg->channel_request.var_name;
 }
 
+/**
+ * @brief Get the value of the environment variable from the message.
+ *
+ * @param[in] msg        The message.
+ *
+ * @return               The variable value, or NULL.
+ */
 const char *ssh_message_channel_request_env_value(ssh_message msg){
     return msg->channel_request.var_value;
 }
 
+/**
+ * @brief Get the command from a channel request message.
+ *
+ * @param[in] msg        The message.
+ *
+ * @return               The command, or NULL.
+ */
 const char *ssh_message_channel_request_command(ssh_message msg){
     return msg->channel_request.command;
 }
 
+/**
+ * @brief Get the subsystem from a channel request message.
+ *
+ * @param[in] msg        The message.
+ *
+ * @return               The subsystem, or NULL.
+ */
 const char *ssh_message_channel_request_subsystem(ssh_message msg){
     return msg->channel_request.subsystem;
 }
 
+/**
+ * @brief Check if the X11 request is for a single connection.
+ *
+ * @param[in] msg        The message.
+ *
+ * @return               1 if single connection, 0 otherwise.
+ *
+ * @deprecated This function should not be used anymore as there is a
+ * callback based server implementation function
+ * channel_open_request_x11_function.
+ *
+ * @see channel_open_request_x11_function.
+ */
 int ssh_message_channel_request_x11_single_connection(ssh_message msg){
     return msg->channel_request.x11_single_connection ? 1 : 0;
 }
 
+/**
+ * @brief Get the X11 authentication protocol from the message.
+ *
+ * @param[in] msg        The message.
+ *
+ * @return               The authentication protocol, or NULL.
+ *
+ * @deprecated This function should not be used anymore as there is a
+ * callback based server implementation function
+ * channel_open_request_x11_function.
+ *
+ * @see channel_open_request_x11_function.
+ */
 const char *ssh_message_channel_request_x11_auth_protocol(ssh_message msg){
     return msg->channel_request.x11_auth_protocol;
 }
 
+/**
+ * @brief Get the X11 authentication cookie from the message.
+ *
+ * @param[in] msg        The message.
+ *
+ * @return               The authentication cookie, or NULL.
+ *
+ * @deprecated This function should not be used anymore as there is a
+ * callback based server implementation function
+ * channel_open_request_x11_function.
+ *
+ * @see channel_open_request_x11_function.
+ */
 const char *ssh_message_channel_request_x11_auth_cookie(ssh_message msg){
     return msg->channel_request.x11_auth_cookie;
 }
 
+/**
+ * @brief Get the X11 screen number from the message.
+ *
+ * @param[in] msg        The message.
+ *
+ * @return               The screen number.
+ *
+ * @deprecated This function should not be used anymore as there is a
+ * callback based server implementation function
+ * channel_open_request_x11_function.
+ *
+ * @see channel_open_request_x11_function.
+ */
 int ssh_message_channel_request_x11_screen_number(ssh_message msg){
     return msg->channel_request.x11_screen_number;
 }
 
+/**
+ * @brief Get the bind address from the global request message.
+ *
+ * @param[in] msg        The message.
+ *
+ * @return               The bind address, or NULL.
+ */
 const char *ssh_message_global_request_address(ssh_message msg){
     return msg->global_request.bind_address;
 }
 
+/**
+ * @brief Get the bind port from the global request message.
+ *
+ * @param[in] msg        The message.
+ *
+ * @return               The bind port.
+ */
 int ssh_message_global_request_port(ssh_message msg){
     return msg->global_request.bind_port;
 }
@@ -1252,6 +1601,13 @@ void ssh_set_message_callback(ssh_session session,
   session->ssh_message_callback_data = data;
 }
 
+/**
+ * @brief Execute callbacks for the messages in the queue.
+ *
+ * @param[in] session    The session.
+ *
+ * @return               `SSH_OK` on success, `SSH_ERROR` on error.
+ */
 int ssh_execute_message_callbacks(ssh_session session){
   ssh_message msg=NULL;
   int ret;
@@ -1287,7 +1643,7 @@ int ssh_execute_message_callbacks(ssh_session session){
  *
  * @param session   The session to send the message to
  *
- * @returns SSH_OK
+ * @returns `SSH_OK`
  */
 int ssh_send_keepalive(ssh_session session)
 {

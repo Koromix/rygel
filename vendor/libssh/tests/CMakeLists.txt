@@ -30,6 +30,15 @@ if (WITH_GSSAPI AND GSSAPI_FOUND)
         OpenSSL::Crypto)
 endif (WITH_GSSAPI AND GSSAPI_FOUND)
 
+# Check for sk-dummy library if FIDO2 support is enabled
+if (WITH_FIDO2)
+    find_file(SK_DUMMY_LIBRARY
+        NAMES sk-dummy.so
+        PATHS /usr/lib64/sshtest /usr/lib/sshtest
+        NO_DEFAULT_PATH
+    )
+endif (WITH_FIDO2)
+
 # create test library
 add_library(${TORTURE_LIBRARY}
             STATIC
@@ -37,11 +46,22 @@ add_library(${TORTURE_LIBRARY}
                 torture.c
                 torture_key.c
                 torture_pki.c
+                torture_sk.c
                 torture_cmocka.c)
 target_link_libraries(${TORTURE_LIBRARY} PRIVATE ${TORTURE_LINK_LIBRARIES})
 target_compile_options(${TORTURE_LIBRARY} PRIVATE
                        -DSSH_PING_EXECUTABLE="${CMAKE_CURRENT_BINARY_DIR}/ssh_ping"
 )
+
+# Check for sk-dummy and add HAVE_SK_DUMMY definition if available
+if (SK_DUMMY_LIBRARY)
+    add_library(sk-dummy SHARED IMPORTED)
+    set_target_properties(sk-dummy PROPERTIES IMPORTED_LOCATION "${SK_DUMMY_LIBRARY}")
+    target_link_libraries(${TORTURE_LIBRARY} PRIVATE sk-dummy)
+    set(HAVE_SK_DUMMY 1)
+    set(SK_DUMMY_LIBRARY_PATH ${SK_DUMMY_LIBRARY})
+endif()
+
 if (WITH_COVERAGE)
     append_coverage_compiler_flags_to_target(${TORTURE_LIBRARY})
 endif (WITH_COVERAGE)
@@ -66,6 +86,15 @@ if (CLIENT_TESTING)
     list(APPEND WRAP_SYMBOLS
          "-Wl,--wrap=crypto_scalarmult_base"
          "-Wl,--wrap=crypto_scalarmult")
+    list(APPEND WRAP_SYMBOLS
+         "-Wl,--wrap=sntrup761_keypair"
+         "-Wl,--wrap=sntrup761_enc"
+         "-Wl,--wrap=sntrup761_dec")
+    list(APPEND WRAP_SYMBOLS
+         "-Wl,--wrap=libcrux_ml_kem_mlkem768_portable_generate_key_pair"
+         "-Wl,--wrap=libcrux_ml_kem_mlkem768_portable_validate_public_key"
+         "-Wl,--wrap=libcrux_ml_kem_mlkem768_portable_encapsulate"
+         "-Wl,--wrap=libcrux_ml_kem_mlkem768_portable_decapsulate")
 
     add_library(${TORTURE_SHARED_LIBRARY}
                 SHARED
@@ -73,6 +102,7 @@ if (CLIENT_TESTING)
                     torture.c
                     torture_key.c
                     torture_pki.c
+                    torture_sk.c
                     torture_cmocka.c
                )
     target_link_libraries(${TORTURE_SHARED_LIBRARY} PUBLIC
@@ -80,6 +110,12 @@ if (CLIENT_TESTING)
                           ssh::static
                           ${WRAP_SYMBOLS}
                          )
+
+    # Link sk-dummy to torture_shared library if available
+    if (SK_DUMMY_LIBRARY)
+        target_link_libraries(${TORTURE_SHARED_LIBRARY} PRIVATE sk-dummy)
+    endif (SK_DUMMY_LIBRARY)
+
     target_compile_options(${TORTURE_SHARED_LIBRARY} PRIVATE
                            -DSSH_PING_EXECUTABLE="${CMAKE_CURRENT_BINARY_DIR}/ssh_ping"
                            -DTORTURE_SHARED
@@ -104,6 +140,7 @@ add_subdirectory(unittests)
 
 # OpenSSH Capabilities are required for all unit tests
 find_program(SSH_EXECUTABLE NAMES ssh)
+find_program(SSH_KEYGEN_EXECUTABLE NAMES ssh-keygen)
 if (SSH_EXECUTABLE)
     file(SIZE ${SSH_EXECUTABLE} SSH_EXECUTABLE_SIZE)
     execute_process(COMMAND ${SSH_EXECUTABLE} -V ERROR_VARIABLE OPENSSH_VERSION_STR)
@@ -111,6 +148,13 @@ if (SSH_EXECUTABLE)
     string(REGEX REPLACE "^.*OpenSSH_[0-9]+.([0-9]).*$" "\\1" OPENSSH_VERSION_MINOR "${OPENSSH_VERSION_STR}")
     set(OPENSSH_VERSION "${OPENSSH_VERSION_MAJOR}.${OPENSSH_VERSION_MINOR}")
     add_definitions(-DOPENSSH_VERSION_MAJOR=${OPENSSH_VERSION_MAJOR} -DOPENSSH_VERSION_MINOR=${OPENSSH_VERSION_MINOR})
+    if("${OPENSSH_VERSION}" VERSION_GREATER_EQUAL "8.1" AND SSH_KEYGEN_EXECUTABLE)
+        set(OPENSSH_SUPPORTS_SSHSIG 1)
+        message(STATUS "OpenSSH ${OPENSSH_VERSION} supports SSH signatures")
+    else()
+        set(OPENSSH_SUPPORTS_SSHSIG 0)
+        message(STATUS "OpenSSH ${OPENSSH_VERSION} does not support SSH signatures (requires 8.1+)")
+    endif()
     if("${OPENSSH_VERSION}" VERSION_LESS "6.3")
         # ssh - Q was introduced in 6.3
         message("Version less than 6.3, hardcoding cipher list")
@@ -143,12 +187,16 @@ if (SSH_EXECUTABLE)
         diffie-hellman-group1-sha1 diffie-hellman-group14-sha1 diffie-hellman-group14-sha256
         diffie-hellman-group16-sha512 diffie-hellman-group18-sha512 diffie-hellman-group-exchange-sha1
         diffie-hellman-group-exchange-sha256 ecdh-sha2-nistp256 ecdh-sha2-nistp384 ecdh-sha2-nistp521
+        sntrup761x25519-sha512@openssh.com sntrup761x25519-sha512
+        mlkem768x25519-sha256 mlkem768nistp256-sha256 mlkem1024nistp384-sha384
         curve25519-sha256 curve25519-sha256@libssh.org
         ssh-ed25519 ssh-ed25519-cert-v01@openssh.com ssh-rsa
         ecdsa-sha2-nistp256 ecdsa-sha2-nistp384 ecdsa-sha2-nistp521
         ssh-rsa-cert-v01@openssh.com
         ecdsa-sha2-nistp256-cert-v01@openssh.com ecdsa-sha2-nistp384-cert-v01@openssh.com
         ecdsa-sha2-nistp521-cert-v01@openssh.com
+        sk-ssh-ed25519@openssh.com sk-ecdsa-sha2-nistp256@openssh.com
+        sk-ssh-ed25519-cert-v01@openssh.com sk-ecdsa-sha2-nistp256-cert-v01@openssh.com
         )
     foreach(ALGORITHM ${SSH_ALGORITHMS})
         string(TOUPPER ${ALGORITHM} VARNAME)
@@ -184,6 +232,31 @@ if (DROPBEAR_EXECUTABLE)
 else()
     message(STATUS "Could NOT find Dropbear (missing: dbclient executable)")
     set(DROPBEAR_EXECUTABLE "/bin/false")
+endif()
+
+find_program(PUTTY_EXECUTABLE
+             NAMES
+                plink
+                plink.exe
+                putty   # Fallback for systems where plink isn't separate
+             DOC "Path to PuTTY plink executable for automated tests")
+
+if (PUTTY_EXECUTABLE)
+    message(STATUS "Found PuTTY client: ${PUTTY_EXECUTABLE}")
+else()
+    set(PUTTY_EXECUTABLE "/bin/putty-not-found")
+endif()
+
+find_program(PUTTYGEN_EXECUTABLE
+             NAMES
+                puttygen
+                puttygen.exe
+             DOC "Path to PuTTYgen executable for key conversion")
+
+if (PUTTYGEN_EXECUTABLE)
+    message(STATUS "Found PuTTY keygen: ${PUTTYGEN_EXECUTABLE}")
+else()
+    set(PUTTYGEN_EXECUTABLE "/bin/puttygen-not-found")
 endif()
 
 find_program(SSHD_EXECUTABLE
@@ -289,7 +362,7 @@ if (CLIENT_TESTING OR SERVER_TESTING)
 
 
     set(TORTURE_ENVIRONMENT
-        "LD_PRELOAD=${SOCKET_WRAPPER_LIBRARY}:${NSS_WRAPPER_LIBRARY}:${UID_WRAPPER_LIBRARY}:${PAM_WRAPPER_LIBRARY}:${CHROOT_WRAPPER}:${FS_WRAPPER}")
+        "LD_PRELOAD=${FS_WRAPPER}:${SOCKET_WRAPPER_LIBRARY}:${NSS_WRAPPER_LIBRARY}:${UID_WRAPPER_LIBRARY}:${PAM_WRAPPER_LIBRARY}:${CHROOT_WRAPPER}")
     if (priv_wrapper_FOUND)
         list(APPEND TORTURE_ENVIRONMENT PRIV_WRAPPER=1 PRIV_WRAPPER_CHROOT_DISABLE=1)
         list(APPEND TORTURE_ENVIRONMENT PRIV_WRAPPER_PRCTL_DISABLE="ALL" PRIV_WRAPPER_SETRLIMIT_DISABLE="ALL")
@@ -312,9 +385,16 @@ if (CLIENT_TESTING OR SERVER_TESTING)
     file(COPY keys/id_ecdsa.pub DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/home/bob/.ssh/ FILE_PERMISSIONS OWNER_READ OWNER_WRITE)
     file(COPY keys/id_ed25519 DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/home/bob/.ssh/ FILE_PERMISSIONS OWNER_READ OWNER_WRITE)
     file(COPY keys/id_ed25519.pub DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/home/bob/.ssh/ FILE_PERMISSIONS OWNER_READ OWNER_WRITE)
+    # Security key support
+    file(COPY keys/id_ecdsa_sk DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/home/bob/.ssh/ FILE_PERMISSIONS OWNER_READ OWNER_WRITE)
+    file(COPY keys/id_ecdsa_sk.pub DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/home/bob/.ssh/ FILE_PERMISSIONS OWNER_READ OWNER_WRITE)
+    file(COPY keys/id_ed25519_sk DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/home/bob/.ssh/ FILE_PERMISSIONS OWNER_READ OWNER_WRITE)
+    file(COPY keys/id_ed25519_sk.pub DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/home/bob/.ssh/ FILE_PERMISSIONS OWNER_READ OWNER_WRITE)
 
-    # Allow to auth with bob's public keys on alice account
+    # Allow to auth with bob's public keys on alice and doe account
     configure_file(keys/id_rsa.pub ${CMAKE_CURRENT_BINARY_DIR}/home/alice/.ssh/authorized_keys @ONLY)
+    configure_file(keys/id_rsa.pub ${CMAKE_CURRENT_BINARY_DIR}/home/doe/.ssh/authorized_keys @ONLY)
+    configure_file(keys/id_ecdsa.pub ${CMAKE_CURRENT_BINARY_DIR}/home/frank/.ssh/authorized_keys @ONLY)
 
     # append ECDSA public key
     file(READ keys/id_ecdsa.pub CONTENTS)
@@ -322,6 +402,14 @@ if (CLIENT_TESTING OR SERVER_TESTING)
 
     # append ed25519 public key
     file(READ keys/id_ed25519.pub CONTENTS)
+    file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/home/alice/.ssh/authorized_keys "${CONTENTS}")
+
+    # append sk-ecdsa public key
+    file(READ keys/id_ecdsa_sk.pub CONTENTS)
+    file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/home/alice/.ssh/authorized_keys "${CONTENTS}")
+
+    # append sk-ed25519 public key
+    file(READ keys/id_ed25519_sk.pub CONTENTS)
     file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/home/alice/.ssh/authorized_keys "${CONTENTS}")
 
     # Allow to auth with bob his public keys on charlie account
@@ -335,6 +423,9 @@ if (CLIENT_TESTING OR SERVER_TESTING)
     file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/home/charlie/.ssh/authorized_keys "${CONTENTS}")
 
     file(READ keys/pkcs11/id_pkcs11_ecdsa_521_openssh.pub CONTENTS)
+    file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/home/charlie/.ssh/authorized_keys "${CONTENTS}")
+
+    file(READ keys/pkcs11/id_pkcs11_ed25519_openssh.pub CONTENTS)
     file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/home/charlie/.ssh/authorized_keys "${CONTENTS}")
 
     # Copy the signed key to an doe's homedir.
@@ -373,10 +464,10 @@ if (FUZZ_TESTING)
 endif()
 
 add_custom_target(test_memcheck
-    # FIXME: The threads_pki_rsa test is skipped under valgrind as it times out
+    # FIXME: The pkd_hello_i1 test is skipped under valgrind as it times out
     # Passing suppression file is also stupid so lets go with override here:
     # https://stackoverflow.com/a/56116311
-    COMMAND ${CMAKE_CTEST_COMMAND} -E torture_threads_pki_rsa -E pkd_hello_i1
+    COMMAND ${CMAKE_CTEST_COMMAND} -E pkd_hello_i1
         --output-on-failure --force-new-ctest-process --test-action memcheck
         --overwrite MemoryCheckSuppressionFile=${CMAKE_SOURCE_DIR}/tests/valgrind.supp
     WORKING_DIRECTORY "${CMAKE_BINARY_DIR}")

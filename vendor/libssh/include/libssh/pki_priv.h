@@ -61,6 +61,7 @@ enum ssh_digest_e ssh_key_type_to_hash(ssh_session session,
                                        enum ssh_keytypes_e type);
 
 /* SSH Key Functions */
+ssh_key pki_key_dup_common_init(const ssh_key key, int demote);
 ssh_key pki_key_dup(const ssh_key key, int demote);
 int pki_key_generate_rsa(ssh_key key, int parameter);
 int pki_key_generate_ecdsa(ssh_key key, int parameter);
@@ -148,6 +149,7 @@ int pki_signature_from_ed25519_blob(ssh_signature sig, ssh_string sig_blob);
 int pki_privkey_build_ed25519(ssh_key key,
                               ssh_string pubkey,
                               ssh_string privkey);
+int pki_pubkey_build_ed25519(ssh_key key, ssh_string pubkey);
 
 /* PKI Container OpenSSH */
 ssh_key ssh_pki_openssh_pubkey_import(const char *text_key);
@@ -162,6 +164,16 @@ int pki_uri_import(const char *uri_name, ssh_key *key, enum ssh_key_e key_type);
 #endif /* WITH_PKCS11_URI */
 
 bool ssh_key_size_allowed_rsa(int min_size, ssh_key key);
+
+/* Security Key Helper Functions */
+int pki_buffer_pack_sk_priv_data(ssh_buffer buffer, const ssh_key key);
+int pki_buffer_unpack_sk_priv_data(ssh_buffer buffer, ssh_key key);
+int pki_sk_signature_buffer_prepare(const ssh_key key,
+                                    const ssh_signature sig,
+                                    const unsigned char *input,
+                                    size_t input_len,
+                                    ssh_buffer *sk_buffer_out);
+
 #ifdef __cplusplus
 }
 #endif

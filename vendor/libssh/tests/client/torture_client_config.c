@@ -6,6 +6,7 @@
 #include <errno.h>
 #include "torture.h"
 #include "libssh/session.h"
+#include "libssh/options.h"
 #include "libssh/misc.h"
 
 #define LIBSSH_SSH_CONFIG "libssh_config"
@@ -59,6 +60,23 @@ static int setup_config_files(void **state)
     return 0;
 }
 
+static int setup_session(void **state)
+{
+    struct torture_state *s = *state;
+    int verbosity;
+
+    s->ssh.session = ssh_new();
+    assert_non_null(s->ssh.session);
+
+    verbosity = torture_libssh_verbosity();
+    ssh_options_set(s->ssh.session, SSH_OPTIONS_LOG_VERBOSITY, &verbosity);
+    ssh_options_set(s->ssh.session, SSH_OPTIONS_HOST, TORTURE_SSH_SERVER);
+
+    setenv("NSS_WRAPPER_HOSTNAME", "client.libssh.site", 1);
+
+    return 0;
+}
+
 static int teardown(void **state)
 {
     struct torture_state *s = *state;
@@ -73,6 +91,16 @@ static int teardown(void **state)
     }
 
     unlink(LIBSSH_SSH_CONFIG);
+
+    ssh_disconnect(s->ssh.session);
+    ssh_free(s->ssh.session);
+
+    return 0;
+}
+
+static int teardown_session(void **state)
+{
+    struct torture_state *s = *state;
 
     ssh_disconnect(s->ssh.session);
     ssh_free(s->ssh.session);
@@ -210,10 +238,233 @@ static void torture_client_config_suppress(void **state)
     assert_string_equal(s->ssh.session->opts.username, "bob");
 }
 
+static void torture_client_config_expand_bad(void **state)
+{
+    ssh_session session = ssh_new();
+    int ret = 0;
+
+    (void)state;
+
+    assert_non_null(session);
+
+    /* The hash without host fails, but does not crash */
+    ssh_options_set(session, SSH_OPTIONS_KNOWNHOSTS, "%C");
+
+    ret = ssh_options_apply(session);
+    assert_ssh_return_code_equal(session, ret, SSH_ERROR);
+
+    /* The hash without host fails, but does not crash */
+    ssh_options_set(session, SSH_OPTIONS_HOST, TORTURE_SSH_SERVER);
+    ssh_options_set(session, SSH_OPTIONS_KNOWNHOSTS, "%C");
+
+    ret = ssh_options_apply(session);
+    assert_ssh_return_code_equal(session, ret, SSH_OK);
+
+    ssh_free(session);
+}
+
+static void torture_client_config_expand(void **state)
+{
+    struct torture_state *s = *state;
+    int ret = 0;
+
+    /* TEST: user home directory */
+    ssh_options_set(s->ssh.session, SSH_OPTIONS_KNOWNHOSTS, "%d");
+
+    ret = ssh_options_apply(s->ssh.session);
+    assert_ssh_return_code(s->ssh.session, ret);
+
+    assert_string_equal(s->ssh.session->opts.knownhosts,
+                        BINARYDIR "/tests/home");
+
+    /* Reset the flag so we can repeat the test */
+    s->ssh.session->opts.exp_flags &= ~SSH_OPT_EXP_FLAG_KNOWNHOSTS;
+
+
+    /* TEST: target host name */
+    ssh_options_set(s->ssh.session, SSH_OPTIONS_KNOWNHOSTS, "%h");
+
+    ret = ssh_options_apply(s->ssh.session);
+    assert_ssh_return_code(s->ssh.session, ret);
+
+    assert_string_equal(s->ssh.session->opts.knownhosts, TORTURE_SSH_SERVER);
+
+    /* Reset the flag so we can repeat the test */
+    s->ssh.session->opts.exp_flags &= ~SSH_OPT_EXP_FLAG_KNOWNHOSTS;
+
+
+    /* TEST: local username */
+    ssh_options_set(s->ssh.session, SSH_OPTIONS_KNOWNHOSTS, "%u");
+
+    ret = ssh_options_apply(s->ssh.session);
+    assert_ssh_return_code(s->ssh.session, ret);
+
+    assert_string_equal(s->ssh.session->opts.knownhosts, "root");
+
+    /* Reset the flag so we can repeat the test */
+    s->ssh.session->opts.exp_flags &= ~SSH_OPT_EXP_FLAG_KNOWNHOSTS;
+
+
+    /* TEST: local hostname */
+    ssh_options_set(s->ssh.session, SSH_OPTIONS_KNOWNHOSTS, "%l");
+
+    ret = ssh_options_apply(s->ssh.session);
+    assert_ssh_return_code(s->ssh.session, ret);
+
+    assert_string_equal(s->ssh.session->opts.knownhosts, "client.libssh.site");
+
+    /* Reset the flag so we can repeat the test */
+    s->ssh.session->opts.exp_flags &= ~SSH_OPT_EXP_FLAG_KNOWNHOSTS;
+
+
+    /* TEST: remote username */
+    ssh_options_set(s->ssh.session, SSH_OPTIONS_USER, "alice");
+    ssh_options_set(s->ssh.session, SSH_OPTIONS_KNOWNHOSTS, "%r");
+
+    ret = ssh_options_apply(s->ssh.session);
+    assert_ssh_return_code(s->ssh.session, ret);
+
+    assert_string_equal(s->ssh.session->opts.knownhosts, "alice");
+
+    /* Reset the flag so we can repeat the test */
+    s->ssh.session->opts.exp_flags &= ~SSH_OPT_EXP_FLAG_KNOWNHOSTS;
+
+
+    /* TEST: remote port */
+    ssh_options_set(s->ssh.session, SSH_OPTIONS_PORT_STR, "2222");
+    ssh_options_set(s->ssh.session, SSH_OPTIONS_KNOWNHOSTS, "%p");
+
+    ret = ssh_options_apply(s->ssh.session);
+    assert_ssh_return_code(s->ssh.session, ret);
+
+    assert_string_equal(s->ssh.session->opts.knownhosts, "2222");
+
+    /* Reset the flag so we can repeat the test */
+    s->ssh.session->opts.exp_flags &= ~SSH_OPT_EXP_FLAG_KNOWNHOSTS;
+
+
+    /* TEST: empty proxyjump */
+    ssh_options_set(s->ssh.session, SSH_OPTIONS_KNOWNHOSTS, "%j");
+
+    ret = ssh_options_apply(s->ssh.session);
+    assert_ssh_return_code(s->ssh.session, ret);
+
+    /* No proxyjump string should not explode */
+    assert_string_equal(s->ssh.session->opts.knownhosts, "");
+
+    /* Reset the flag so we can repeat the test */
+    s->ssh.session->opts.exp_flags &= ~SSH_OPT_EXP_FLAG_KNOWNHOSTS;
+
+
+    /* TEST: proxyjump string present */
+    ssh_options_set(s->ssh.session, SSH_OPTIONS_KNOWNHOSTS, "%j");
+    ssh_options_set(s->ssh.session,
+                    SSH_OPTIONS_PROXYJUMP,
+                    "user@" TORTURE_SSH_SERVER ":22");
+
+    ret = ssh_options_apply(s->ssh.session);
+    assert_ssh_return_code(s->ssh.session, ret);
+
+    assert_string_equal(s->ssh.session->opts.knownhosts,
+                        "user@" TORTURE_SSH_SERVER ":22");
+
+    /* Reset the flag so we can repeat the test */
+    s->ssh.session->opts.exp_flags &= ~SSH_OPT_EXP_FLAG_KNOWNHOSTS;
+
+
+    /* TEST: separate list %l-%h-%p-%r-%j with empty ProxyJump */
+    ssh_options_set(s->ssh.session, SSH_OPTIONS_KNOWNHOSTS, "%l-%h-%p-%r-%j");
+    ssh_options_set(s->ssh.session, SSH_OPTIONS_PROXYJUMP, "none");
+    ssh_options_set(s->ssh.session, SSH_OPTIONS_PORT_STR, "22");
+
+    ret = ssh_options_apply(s->ssh.session);
+    assert_ssh_return_code(s->ssh.session, ret);
+
+    // Tested by
+    // ret = system(SSH_EXECUTABLE
+    //              " -p 22 -o UserKnownHostsFile=/dev/null"
+    //              " -o KnownHostsCommand='/bin/touch \"/tmp/%l-%h-%p-%r-%j\"'"
+    //             " alice@" TORTURE_SSH_SERVER);
+    // assert_return_code(ret, errno);
+    assert_string_equal(s->ssh.session->opts.knownhosts,
+                        "client.libssh.site-127.0.0.10-22-alice-");
+
+
+    /* TEST: hash of %l%h%p%r%j with empty ProxyJump */
+    ssh_options_set(s->ssh.session, SSH_OPTIONS_KNOWNHOSTS, "%C");
+
+    ret = ssh_options_apply(s->ssh.session);
+    assert_ssh_return_code(s->ssh.session, ret);
+
+    // Tested by
+    // ret = system(SSH_EXECUTABLE
+    //              " -p 22 -o UserKnownHostsFile=/dev/null"
+    //              " -o KnownHostsCommand='/bin/touch \"/tmp/%C\"'"
+    //              " alice@" TORTURE_SSH_SERVER);
+    // assert_return_code(ret, errno);
+    assert_string_equal(s->ssh.session->opts.knownhosts,
+                        "133e3957ff9d01fdcf1f6c7f83325a8ce49bf850");
+
+    /* Reset the flag so we can repeat the test */
+    s->ssh.session->opts.exp_flags &= ~SSH_OPT_EXP_FLAG_KNOWNHOSTS;
+
+
+    /* TEST: separate list %l-%h-%p-%r-%j */
+    ssh_options_set(s->ssh.session, SSH_OPTIONS_KNOWNHOSTS, "%l-%h-%p-%r-%j");
+    ssh_options_set(s->ssh.session,
+                    SSH_OPTIONS_PROXYJUMP,
+                    "user@" TORTURE_SSH_SERVER ":22");
+
+    ret = ssh_options_apply(s->ssh.session);
+    assert_ssh_return_code(s->ssh.session, ret);
+
+    // Tested by
+    // ret = system(SSH_EXECUTABLE
+    //              " -p 22 -oProxyJump=user@" TORTURE_SSH_SERVER ":22"
+    //              " -o UserKnownHostsFile=/dev/null"
+    //              " -o KnownHostsCommand='/bin/touch \"/tmp/%l-%h-%p-%r-%j\"'"
+    //             " alice@" TORTURE_SSH_SERVER);
+    // assert_return_code(ret, errno);
+    assert_string_equal(s->ssh.session->opts.knownhosts,
+                        "client.libssh.site-127.0.0.10-22-alice-user@"
+                        TORTURE_SSH_SERVER ":22");
+
+
+    /* Reset the flag so we can repeat the test */
+    s->ssh.session->opts.exp_flags &= ~SSH_OPT_EXP_FLAG_KNOWNHOSTS;
+
+
+    /* TEST: hash of %l%h%p%r%j */
+    ssh_options_set(s->ssh.session, SSH_OPTIONS_KNOWNHOSTS, "%C");
+
+    ret = ssh_options_apply(s->ssh.session);
+    assert_ssh_return_code(s->ssh.session, ret);
+
+    // Tested by
+    // ret = system(SSH_EXECUTABLE
+    //              " -p 22 -oProxyJump=user@" TORTURE_SSH_SERVER ":22"
+    //              " -o UserKnownHostsFile=/dev/null"
+    //              " -o KnownHostsCommand='/bin/touch \"/tmp/%C\"'"
+    //              " alice@" TORTURE_SSH_SERVER);
+    // assert_return_code(ret, errno);
+    assert_string_equal(s->ssh.session->opts.knownhosts,
+                        "adf0b7c4e71a0fee85fd97506507ba8591f3663b");
+
+    /* Reset the flag so we can repeat the test */
+    s->ssh.session->opts.exp_flags &= ~SSH_OPT_EXP_FLAG_KNOWNHOSTS;
+
+}
+
 
 int torture_run_tests(void) {
     int rc;
     struct CMUnitTest tests[] = {
+        /* Keep these first -- following setup is changing user to bob, which we
+         * do not want */
+        cmocka_unit_test(torture_client_config_expand_bad),
+        cmocka_unit_test_setup_teardown(torture_client_config_expand,
+                                        setup_session,
+                                        teardown_session),
         cmocka_unit_test_setup_teardown(torture_client_config_system,
                                         setup_config_files,
                                         teardown),
@@ -227,7 +478,6 @@ int torture_run_tests(void) {
                                         setup_config_files,
                                         teardown),
     };
-
 
     ssh_init();
     torture_filter_tests(tests);

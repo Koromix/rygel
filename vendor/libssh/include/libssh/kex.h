@@ -31,6 +31,9 @@ struct ssh_kex_struct {
     char *methods[SSH_KEX_METHODS];
 };
 
+/* crypto.h needs ssh_kex_struct so it is included below the struct definition */
+#include "libssh/crypto.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -52,10 +55,10 @@ char *ssh_prefix_default_algos(enum ssh_kex_types_e algo, const char *list);
 char **ssh_space_tokenize(const char *chain);
 int ssh_get_kex1(ssh_session session);
 char *ssh_find_matching(const char *in_d, const char *what_d);
-const char *ssh_kex_get_supported_method(uint32_t algo);
-const char *ssh_kex_get_default_methods(uint32_t algo);
-const char *ssh_kex_get_fips_methods(uint32_t algo);
-const char *ssh_kex_get_description(uint32_t algo);
+const char *ssh_kex_get_supported_method(enum ssh_kex_types_e type);
+const char *ssh_kex_get_default_methods(enum ssh_kex_types_e type);
+const char *ssh_kex_get_fips_methods(enum ssh_kex_types_e type);
+const char *ssh_kex_get_description(enum ssh_kex_types_e type);
 char *ssh_client_select_hostkeys(ssh_session session);
 int ssh_send_rekex(ssh_session session);
 int server_set_kex(ssh_session session);
@@ -64,6 +67,7 @@ int ssh_make_sessionid(ssh_session session);
 int ssh_hashbufin_add_cookie(ssh_session session, unsigned char *cookie);
 int ssh_hashbufout_add_cookie(ssh_session session);
 int ssh_generate_session_keys(ssh_session session);
+bool ssh_kex_is_gss(struct ssh_crypto_struct *crypto);
 
 #ifdef __cplusplus
 }

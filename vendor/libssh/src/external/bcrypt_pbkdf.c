@@ -97,8 +97,8 @@ bcrypt_hash(ssh_blf_ctx *state, uint8_t *sha2pass, uint8_t *sha2salt, uint8_t *o
 	}
 
 	/* zap */
-	explicit_bzero(ciphertext, sizeof(ciphertext));
-	explicit_bzero(cdata, sizeof(cdata));
+        ssh_burn(ciphertext, sizeof(ciphertext));
+        ssh_burn(cdata, sizeof(cdata));
 }
 
 int
@@ -180,12 +180,12 @@ bcrypt_pbkdf(const char *pass, size_t passlen, const uint8_t *salt, size_t saltl
 	}
 
 	/* zap */
-	explicit_bzero(out, sizeof(out));
-	explicit_bzero(state, sizeof(*state));
+        ssh_burn(out, sizeof(out));
+        ssh_burn(state, sizeof(*state));
 
-	free(state);
-	free(countsalt);
+        free(state);
+        free(countsalt);
 
-	return 0;
+        return 0;
 }
 #endif /* HAVE_BCRYPT_PBKDF */

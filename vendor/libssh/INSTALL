@@ -38,13 +38,15 @@ First, you need to configure the compilation, using CMake. Go inside the
 `build` dir. Create it if it doesn't exist.
 
 GNU/Linux, MacOS X, MSYS/MinGW:
-
-    cmake -DUNIT_TESTING=ON -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Debug ..
+    cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Debug ..
     make
 
 On Windows you should choose a makefile generator with -G or use
 
     cmake-gui.exe ..
+
+To enable building tests use -DUNIT_TESTING=ON. For this, the
+[cmocka](https://cmocka.org) dependency is required.
 
 To enable additional client tests against a local OpenSSH server, add the
 compile option -DCLIENT_TESTING=ON. These tests require an OpenSSH

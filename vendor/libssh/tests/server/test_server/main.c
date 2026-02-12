@@ -67,7 +67,7 @@ struct arguments_st {
 static void free_arguments(struct arguments_st *arguments)
 {
     if (arguments == NULL) {
-        goto end;
+        return;
     }
 
     SAFE_FREE(arguments->address);
@@ -87,9 +87,6 @@ static void free_arguments(struct arguments_st *arguments)
     SAFE_FREE(arguments->config_file);
     SAFE_FREE(arguments->log_file);
     SAFE_FREE(arguments->pid_file);
-
-end:
-    return;
 }
 
 #ifdef HAVE_ARGP_H
@@ -114,6 +111,9 @@ static void print_auth_methods(int auth_methods)
     }
     if (auth_methods & SSH_AUTH_METHOD_GSSAPI_MIC) {
         printf("\tSSH_AUTH_METHOD_GSSAPI_MIC\n");
+    }
+    if (auth_methods & SSH_AUTH_METHOD_GSSAPI_KEYEX) {
+        printf("\tSSH_AUTH_METHOD_GSSAPI_KEYEX\n");
     }
 }
 
@@ -273,6 +273,7 @@ static int init_server_state(struct server_state_st *state,
     } else {
         state->auth_methods = SSH_AUTH_METHOD_PASSWORD |
                               SSH_AUTH_METHOD_PUBLICKEY |
+                              SSH_AUTH_METHOD_INTERACTIVE |
                               SSH_AUTH_METHOD_GSSAPI_MIC;
     }
 
@@ -295,6 +296,7 @@ static int init_server_state(struct server_state_st *state,
     }
 
     state->parse_global_config = arguments->with_global_config;
+    state->gssapi_key_exchange_algs = NULL;
 
     if (arguments->config_file) {
         state->config_file = arguments->config_file;

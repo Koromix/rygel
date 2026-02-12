@@ -66,7 +66,6 @@ int authenticate_kbdint(ssh_session session, const char *password)
                     return SSH_AUTH_ERROR;
                 }
 
-                buffer[sizeof(buffer) - 1] = '\0';
                 if ((p = strchr(buffer, '\n'))) {
                     *p = '\0';
                 }
@@ -75,7 +74,7 @@ int authenticate_kbdint(ssh_session session, const char *password)
                     return SSH_AUTH_ERROR;
                 }
 
-                memset(buffer, 0, strlen(buffer));
+                memset(buffer, 0, sizeof(buffer));
             } else {
                 if (password && strstr(prompt, "Password:")) {
                     answer = password;
@@ -147,7 +146,7 @@ int authenticate_console(ssh_session session)
 
     // Try to authenticate
     rc = ssh_userauth_none(session, NULL);
-    if (rc == SSH_AUTH_ERROR) {
+    if (rc == SSH_AUTH_ERROR || !ssh_is_connected(session)) {
         error(session);
         return rc;
     }
@@ -156,7 +155,7 @@ int authenticate_console(ssh_session session)
     while (rc != SSH_AUTH_SUCCESS) {
         if (method & SSH_AUTH_METHOD_GSSAPI_MIC){
             rc = ssh_userauth_gssapi(session);
-            if(rc == SSH_AUTH_ERROR) {
+            if (rc == SSH_AUTH_ERROR || !ssh_is_connected(session)) {
                 error(session);
                 return rc;
             } else if (rc == SSH_AUTH_SUCCESS) {
@@ -166,7 +165,7 @@ int authenticate_console(ssh_session session)
         // Try to authenticate with public key first
         if (method & SSH_AUTH_METHOD_PUBLICKEY) {
             rc = ssh_userauth_publickey_auto(session, NULL, NULL);
-            if (rc == SSH_AUTH_ERROR) {
+            if (rc == SSH_AUTH_ERROR || !ssh_is_connected(session)) {
                 error(session);
                 return rc;
             } else if (rc == SSH_AUTH_SUCCESS) {
@@ -206,7 +205,7 @@ int authenticate_console(ssh_session session)
         // Try to authenticate with keyboard interactive";
         if (method & SSH_AUTH_METHOD_INTERACTIVE) {
             rc = authenticate_kbdint(session, NULL);
-            if (rc == SSH_AUTH_ERROR) {
+            if (rc == SSH_AUTH_ERROR || !ssh_is_connected(session)) {
                 error(session);
                 return rc;
             } else if (rc == SSH_AUTH_SUCCESS) {
@@ -221,7 +220,7 @@ int authenticate_console(ssh_session session)
         // Try to authenticate with password
         if (method & SSH_AUTH_METHOD_PASSWORD) {
             rc = ssh_userauth_password(session, NULL, password);
-            if (rc == SSH_AUTH_ERROR) {
+            if (rc == SSH_AUTH_ERROR || !ssh_is_connected(session)) {
                 error(session);
                 return rc;
             } else if (rc == SSH_AUTH_SUCCESS) {

@@ -29,12 +29,41 @@
  * @{
  */
 
+/** @internal
+ * @brief ED25519 public key.
+ * Ed25519 public key consist of 32 bytes.
+ */
 #define ED25519_PK_LEN 32
+
+/** @internal
+ * @brief ED25519 secret key.
+ * Ed25519 secret key consist of 64 bytes.
+ */
 #define ED25519_SK_LEN 64
+
+/** @internal
+ * @brief ED25519 signature.
+ * Ed25519 signatures consist of 64 bytes.
+ */
 #define ED25519_SIG_LEN 64
 
+/** @internal
+ * @brief ED25519 public key.
+ * The public key consists of 32 bytes and can be used for signature
+ * verification.
+ */
 typedef uint8_t ed25519_pubkey[ED25519_PK_LEN];
+
+/** @internal
+ * @brief ED25519 private key.
+ * The private key consists of 64 bytes and should be kept secret.
+ */
 typedef uint8_t ed25519_privkey[ED25519_SK_LEN];
+
+/** @internal
+ * @brief ED25519 signature.
+ * Ed25519 signatures consists of 64 bytes.
+ */
 typedef uint8_t ed25519_signature[ED25519_SIG_LEN];
 
 #ifdef __cplusplus
@@ -46,7 +75,7 @@ extern "C" {
  * @param[out] pk generated public key
  * @param[out] sk generated secret key
  * @return     0 on success, -1 on error.
- * */
+ */
 int _ssh_crypto_sign_ed25519_keypair(ed25519_pubkey pk, ed25519_privkey sk);
 
 /** @internal

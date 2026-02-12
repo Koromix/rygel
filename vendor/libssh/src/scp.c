@@ -30,6 +30,7 @@
 #include "libssh/priv.h"
 #include "libssh/scp.h"
 #include "libssh/misc.h"
+#include "libssh/session.h"
 
 /**
  * @defgroup libssh_scp The SSH scp functions
@@ -195,6 +196,17 @@ int ssh_scp_init(ssh_scp scp)
         SAFE_FREE(quoted_location);
         scp->state = SSH_SCP_ERROR;
         return SSH_ERROR;
+    }
+
+    /* Some servers do not handle the quoting well. Pass in the raw file
+     * location */
+    if (scp->session->flags & SSH_SESSION_FLAG_SCP_QUOTING_BROKEN) {
+        free(quoted_location);
+        quoted_location = strdup(scp->location);
+        if (quoted_location == NULL) {
+            ssh_set_error_oom(scp->session);
+            return SSH_ERROR;
+        }
     }
 
     if (scp->mode == SSH_SCP_WRITE) {
@@ -862,6 +874,22 @@ int ssh_scp_pull_request(ssh_scp scp)
         size = strtoull(tmp, NULL, 10);
         p++;
         name = strdup(p);
+        /* Catch invalid name:
+         *  - empty ones
+         *  - containing any forward slash -- directory traversal handled
+         *    differently
+         *  - special names "." and ".." referring to the current and parent
+         *    directories -- they are not expected either
+         */
+        if (name == NULL || name[0] == '\0' || strchr(name, '/') ||
+            strcmp(name, ".") == 0 || strcmp(name, "..") == 0) {
+            ssh_set_error(scp->session,
+                          SSH_FATAL,
+                          "Received invalid filename: %s",
+                          name == NULL ? "<NULL>" : name);
+            SAFE_FREE(name);
+            goto error;
+        }
         SAFE_FREE(scp->request_name);
         scp->request_name = name;
         if (buffer[0] == 'C') {

@@ -155,7 +155,7 @@ static int pki_private_key_decrypt(ssh_string blob,
     }
     rc = ssh_buffer_add_data(buffer,
                              ssh_string_data(kdfoptions),
-                             ssh_string_len(kdfoptions));
+                             (uint32_t)ssh_string_len(kdfoptions));
     if (rc != SSH_ERROR){
         rc = ssh_buffer_unpack(buffer, "Sd", &salt, &rounds);
     }
@@ -208,7 +208,7 @@ static int pki_private_key_decrypt(ssh_string blob,
     if (rc < 0){
         return SSH_ERROR;
     }
-    explicit_bzero(passphrase_buffer, sizeof(passphrase_buffer));
+    ssh_burn(passphrase_buffer, sizeof(passphrase_buffer));
 
     cipher.set_decrypt_key(&cipher,
                            key_material,
@@ -339,7 +339,7 @@ ssh_pki_openssh_import(const char *text_key,
     ssh_buffer_set_secure(privkey_buffer);
     ssh_buffer_add_data(privkey_buffer,
                         ssh_string_data(privkeys),
-                        ssh_string_len(privkeys));
+                        (uint32_t)ssh_string_len(privkeys));
 
     rc = ssh_buffer_unpack(privkey_buffer, "dd", &checkint1, &checkint2);
     if (rc == SSH_ERROR || checkint1 != checkint2) {
@@ -487,7 +487,7 @@ static int pki_private_key_encrypt(ssh_buffer privkey_buffer,
                    ssh_buffer_get(privkey_buffer),
                    ssh_buffer_get_len(privkey_buffer));
     ssh_cipher_clear(&cipher);
-    explicit_bzero(passphrase_buffer, sizeof(passphrase_buffer));
+    ssh_burn(passphrase_buffer, sizeof(passphrase_buffer));
 
     return SSH_OK;
 }
@@ -653,7 +653,7 @@ ssh_string ssh_pki_openssh_privkey_export(const ssh_key privkey,
                          "\n",
                          OPENSSH_HEADER_END,
                          "\n");
-    explicit_bzero(b64, strlen((char *)b64));
+    ssh_burn(b64, strlen((char *)b64));
     SAFE_FREE(b64);
 
     if (rc != SSH_OK){
@@ -677,7 +677,7 @@ error:
     ssh_string_free(blob);
     if (privkey_buffer != NULL) {
         void *bufptr = ssh_buffer_get(privkey_buffer);
-        explicit_bzero(bufptr, ssh_buffer_get_len(privkey_buffer));
+        ssh_burn(bufptr, ssh_buffer_get_len(privkey_buffer));
         SSH_BUFFER_FREE(privkey_buffer);
     }
     SAFE_FREE(pubkey_s);

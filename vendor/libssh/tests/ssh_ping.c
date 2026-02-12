@@ -29,6 +29,9 @@ int main(int argc, char **argv)
     const char *hostkeys = NULL;
     const char *kex = NULL;
     int rc = 1;
+#ifdef WITH_GSSAPI
+    bool t = true;
+#endif /* WITH_GSSAPI */
 
     bool process_config = false;
 
@@ -62,18 +65,25 @@ int main(int argc, char **argv)
     }
 
     /* Enable all supported algorithms */
-    hostkeys = ssh_kex_get_supported_method(SSH_HOSTKEYS);
+    hostkeys = ssh_get_supported_methods(SSH_HOSTKEYS);
     rc = ssh_options_set(session, SSH_OPTIONS_HOSTKEYS, hostkeys);
     if (rc < 0) {
         goto out;
     }
 
     /* Enable all supported kex algorithms */
-    kex = ssh_kex_get_supported_method(SSH_KEX);
+    kex = ssh_get_supported_methods(SSH_KEX);
     rc = ssh_options_set(session, SSH_OPTIONS_KEY_EXCHANGE, kex);
     if (rc < 0) {
         goto out;
     }
+
+#ifdef WITH_GSSAPI
+    rc = ssh_options_set(session, SSH_OPTIONS_GSSAPI_KEY_EXCHANGE, &t);
+    if (rc < 0) {
+        goto out;
+    }
+#endif /* WITH_GSSAPI */
 
     rc = ssh_connect(session);
     if (rc != SSH_OK) {

@@ -37,6 +37,7 @@
 #endif /* _WIN32 */
 
 #include <errno.h>
+#include <fcntl.h>
 #include <limits.h>
 #include <stdio.h>
 #include <string.h>
@@ -108,22 +109,22 @@
  */
 
 #ifdef _WIN32
-char *ssh_get_user_home_dir(void)
+static char *ssh_get_user_home_dir_internal(void)
 {
-  char tmp[PATH_MAX] = {0};
-  char *szPath = NULL;
+    char tmp[PATH_MAX] = {0};
+    char *szPath = NULL;
 
-  if (SHGetSpecialFolderPathA(NULL, tmp, CSIDL_PROFILE, TRUE)) {
-    szPath = malloc(strlen(tmp) + 1);
-    if (szPath == NULL) {
-      return NULL;
+    if (SHGetSpecialFolderPathA(NULL, tmp, CSIDL_PROFILE, TRUE)) {
+        szPath = malloc(strlen(tmp) + 1);
+        if (szPath == NULL) {
+            return NULL;
+        }
+
+        strcpy(szPath, tmp);
+        return szPath;
     }
 
-    strcpy(szPath, tmp);
-    return szPath;
-  }
-
-  return NULL;
+    return NULL;
 }
 
 /* we have read access on file */
@@ -176,6 +177,35 @@ int ssh_gettimeofday(struct timeval *__p, void *__t)
   __p->tv_sec  = (long)(((now.ns100 / 10LL ) / SSH_USEC_IN_SEC) - SSH_SECONDS_SINCE_1601);
 
   return (0);
+}
+
+/**
+ * @internal
+ *
+ * @brief Convert time in seconds since the Epoch to broken-down local time
+ *
+ * This is a helper used to provide localtime_r() like function interface
+ * on Windows.
+ *
+ * @param timer    Pointer to a location storing the time_t which
+ *                 represents the time in seconds since the Epoch.
+ *
+ * @param result   Pointer to a location where the broken-down time
+ *                 (expressed as local time) should be stored.
+ *
+ * @returns        A pointer to the structure pointed to by the parameter
+ *                 <tt>result</tt> on success, NULL on error with the errno
+ *                 set to indicate the error.
+ */
+struct tm *ssh_localtime(const time_t *timer, struct tm *result)
+{
+    errno_t rc;
+    rc = localtime_s(result, timer);
+    if (rc != 0) {
+        return NULL;
+    }
+
+    return result;
 }
 
 char *ssh_get_local_username(void)
@@ -269,7 +299,7 @@ int ssh_is_ipaddr(const char *str)
 #define NSS_BUFLEN_PASSWD 4096
 #endif /* NSS_BUFLEN_PASSWD */
 
-char *ssh_get_user_home_dir(void)
+static char *ssh_get_user_home_dir_internal(void)
 {
     char *szPath = NULL;
     struct passwd pwd;
@@ -284,7 +314,6 @@ char *ssh_get_user_home_dir(void)
             return NULL;
         }
         snprintf(buf, sizeof(buf), "%s", szPath);
-
         return strdup(buf);
     }
 
@@ -399,24 +428,47 @@ int ssh_is_ipaddr(const char *str)
 
 #endif /* _WIN32 */
 
+char *ssh_get_user_home_dir(ssh_session session)
+{
+    char *szPath = NULL;
+
+    /* If used previously, reuse cached value */
+    if (session != NULL && session->opts.homedir != NULL) {
+        return strdup(session->opts.homedir);
+    }
+
+    szPath = ssh_get_user_home_dir_internal();
+    if (szPath == NULL) {
+        return NULL;
+    }
+
+    if (session != NULL) {
+        /* cache it:
+         * failure is not fatal -- at worst we will just not cache it */
+        session->opts.homedir = strdup(szPath);
+    }
+
+    return szPath;
+}
+
 char *ssh_lowercase(const char* str)
 {
-  char *new = NULL, *p = NULL;
+    char *new = NULL, *p = NULL;
 
-  if (str == NULL) {
-    return NULL;
-  }
+    if (str == NULL) {
+        return NULL;
+    }
 
-  new = strdup(str);
-  if (new == NULL) {
-    return NULL;
-  }
+    new = strdup(str);
+    if (new == NULL) {
+        return NULL;
+    }
 
-  for (p = new; *p; p++) {
-    *p = tolower(*p);
-  }
+    for (p = new; *p; p++) {
+        *p = tolower(*p);
+    }
 
-  return new;
+    return new;
 }
 
 char *ssh_hostport(const char *host, int port)
@@ -439,6 +491,38 @@ char *ssh_hostport(const char *host, int port)
     return dest;
 }
 
+static char *
+ssh_get_hexa_internal(const unsigned char *what, size_t len, bool colons)
+{
+    const char h[] = "0123456789abcdef";
+    char *hexa = NULL;
+    size_t i;
+    size_t bytes_per_byte = 2 + (colons ? 1 : 0);
+    size_t hlen = len * bytes_per_byte;
+
+    if (what == NULL || len < 1 || len > (UINT_MAX - 1) / bytes_per_byte) {
+        return NULL;
+    }
+
+    hexa = calloc(hlen + 1, sizeof(char));
+    if (hexa == NULL) {
+        return NULL;
+    }
+
+    for (i = 0; i < len; i++) {
+        hexa[i * bytes_per_byte] = h[(what[i] >> 4) & 0xF];
+        hexa[i * bytes_per_byte + 1] = h[what[i] & 0xF];
+        if (colons) {
+            hexa[i * bytes_per_byte + 2] = ':';
+        }
+    }
+    if (colons) {
+        hexa[hlen - 1] = '\0';
+    }
+
+    return hexa;
+}
+
 /**
  * @brief Convert a buffer into a colon separated hex string.
  * The caller has to free the memory.
@@ -454,28 +538,7 @@ char *ssh_hostport(const char *host, int port)
  */
 char *ssh_get_hexa(const unsigned char *what, size_t len)
 {
-    const char h[] = "0123456789abcdef";
-    char *hexa = NULL;
-    size_t i;
-    size_t hlen = len * 3;
-
-    if (len > (UINT_MAX - 1) / 3) {
-        return NULL;
-    }
-
-    hexa = malloc(hlen + 1);
-    if (hexa == NULL) {
-        return NULL;
-    }
-
-    for (i = 0; i < len; i++) {
-        hexa[i * 3] = h[(what[i] >> 4) & 0xF];
-        hexa[i * 3 + 1] = h[what[i] & 0xF];
-        hexa[i * 3 + 2] = ':';
-    }
-    hexa[hlen - 1] = '\0';
-
-    return hexa;
+    return ssh_get_hexa_internal(what, len, true);
 }
 
 /**
@@ -785,7 +848,17 @@ static struct ssh_iterator *ssh_iterator_new(const void *data)
     return iterator;
 }
 
-int ssh_list_append(struct ssh_list *list,const void *data)
+/**
+ * @internal
+ *
+ * @brief Appends an element to the end of the list.
+ *
+ * @param[in] list  The list to append the element
+ * @param[in] data  The element to append
+ *
+ * @return          `SSH_OK` on success, `SSH_ERROR` on error
+ */
+int ssh_list_append(struct ssh_list *list, const void *data)
 {
   struct ssh_iterator *iterator = NULL;
 
@@ -836,32 +909,32 @@ int ssh_list_prepend(struct ssh_list *list, const void *data)
 
 void ssh_list_remove(struct ssh_list *list, struct ssh_iterator *iterator)
 {
-  struct ssh_iterator *ptr = NULL, *prev = NULL;
+    struct ssh_iterator *ptr = NULL, *prev = NULL;
 
-  if (list == NULL) {
-      return;
-  }
+    if (list == NULL) {
+        return;
+    }
 
-  prev=NULL;
-  ptr=list->root;
-  while(ptr && ptr != iterator){
-    prev=ptr;
-    ptr=ptr->next;
-  }
-  if(!ptr){
-    /* we did not find the element */
-    return;
-  }
-  /* unlink it */
-  if(prev)
-    prev->next=ptr->next;
-  /* if iterator was the head */
-  if(list->root == iterator)
-    list->root=iterator->next;
-  /* if iterator was the tail */
-  if(list->end == iterator)
-    list->end = prev;
-  SAFE_FREE(iterator);
+    prev = NULL;
+    ptr = list->root;
+    while (ptr && ptr != iterator) {
+        prev = ptr;
+        ptr = ptr->next;
+    }
+    if (!ptr) {
+        /* we did not find the element */
+        return;
+    }
+    /* unlink it */
+    if (prev)
+        prev->next = ptr->next;
+    /* if iterator was the head */
+    if (list->root == iterator)
+        list->root = iterator->next;
+    /* if iterator was the tail */
+    if (list->end == iterator)
+        list->end = prev;
+    SAFE_FREE(iterator);
 }
 
 /**
@@ -1150,7 +1223,7 @@ char *ssh_path_expand_tilde(const char *d)
     } else {
         ld = strlen(d);
         p = (char *) d;
-        h = ssh_get_user_home_dir();
+        h = ssh_get_user_home_dir(NULL);
     }
     if (h == NULL) {
         return NULL;
@@ -1172,15 +1245,118 @@ char *ssh_path_expand_tilde(const char *d)
     return r;
 }
 
+char *ssh_get_local_hostname(void)
+{
+    char host[NI_MAXHOST] = {0};
+    int rc;
+
+    rc = gethostname(host, sizeof(host));
+    if (rc != 0) {
+        return NULL;
+    }
+    return strdup(host);
+}
+
+static char *get_connection_hash(ssh_session session)
+{
+    unsigned char conn_hash[SHA_DIGEST_LENGTH];
+    char *local_hostname = NULL;
+    SHACTX ctx = sha1_ctx_init();
+    char strport[10] = {0};
+    unsigned int port;
+    char *username = NULL;
+    int rc;
+
+    if (session == NULL) {
+        return NULL;
+    }
+
+    if (ctx == NULL) {
+        goto err;
+    }
+
+    /* Local hostname %l */
+    local_hostname = ssh_get_local_hostname();
+    if (local_hostname == NULL) {
+        goto err;
+    }
+    rc = sha1_ctx_update(ctx, local_hostname, strlen(local_hostname));
+    if (rc != SSH_OK) {
+        goto err;
+    }
+    SAFE_FREE(local_hostname);
+
+    /* Remote hostname %h */
+    if (session->opts.host == NULL) {
+        goto err;
+    }
+    rc = sha1_ctx_update(ctx, session->opts.host, strlen(session->opts.host));
+    if (rc != SSH_OK) {
+        goto err;
+    }
+
+    /* Remote port %p */
+    ssh_options_get_port(session, &port);
+    snprintf(strport, sizeof(strport), "%d", port);
+    rc = sha1_ctx_update(ctx, strport, strlen(strport));
+    if (rc != SSH_OK) {
+        goto err;
+    }
+
+    /* The remote username %r */
+    username = session->opts.username;
+    if (username == NULL) {
+        /* fallback to local username: it will be used if not explicitly set */
+        username = ssh_get_local_username();
+        if (username == NULL) {
+            goto err;
+        }
+    }
+    rc = sha1_ctx_update(ctx, username, strlen(username));
+    if (username != session->opts.username) {
+        free(username);
+    }
+    if (rc != SSH_OK) {
+        goto err;
+    }
+
+    /* ProxyJump */
+    if (session->opts.proxy_jumps_str != NULL) {
+        rc = sha1_ctx_update(ctx,
+                             session->opts.proxy_jumps_str,
+                             strlen(session->opts.proxy_jumps_str));
+    }
+    if (rc != SSH_OK) {
+        goto err;
+    }
+
+    /* Frees context */
+    rc = sha1_ctx_final(conn_hash, ctx);
+    if (rc != SSH_OK) {
+        goto err;
+    }
+
+    return ssh_get_hexa_internal(conn_hash, SHA_DIGEST_LENGTH, false);
+
+err:
+    free(local_hostname);
+    sha1_ctx_free(ctx);
+    return NULL;
+}
+
 /** @internal
  * @brief expands a string in function of session options
+ *
  * @param[in] s Format string to expand. Known parameters:
- *              %d SSH configuration directory (~/.ssh)
- *              %h target host name
- *              %u local username
- *              %l local hostname
- *              %r remote username
- *              %p remote port
+ *               - %d user home directory (~)
+ *               - %h target host name
+ *               - %u local username
+ *               - %l local hostname
+ *               - %r remote username
+ *               - %p remote port
+ *               - %j proxyjump string
+ *               - %C Hash of %l%h%p%r%j
+ *
  * @returns Expanded string. The caller needs to free the memory using
  *          ssh_string_free_char().
  *
@@ -1188,7 +1364,6 @@ char *ssh_path_expand_tilde(const char *d)
  */
 char *ssh_path_expand_escape(ssh_session session, const char *s)
 {
-    char host[NI_MAXHOST] = {0};
     char *buf = NULL;
     char *r = NULL;
     char *x = NULL;
@@ -1237,65 +1412,67 @@ char *ssh_path_expand_escape(ssh_session session, const char *s)
         }
 
         switch (*p) {
-            case '%':
-                goto escape;
-            case 'd':
-                if (session->opts.sshdir) {
-                    x = strdup(session->opts.sshdir);
-                } else {
-                    ssh_set_error(session, SSH_FATAL,
-                            "Cannot expand sshdir");
-                    free(buf);
-                    free(r);
-                    return NULL;
-                }
-                break;
-            case 'u':
-                x = ssh_get_local_username();
-                break;
-            case 'l':
-                if (gethostname(host, sizeof(host) == 0)) {
-                    x = strdup(host);
-                }
-                break;
-            case 'h':
-                if (session->opts.host) {
-                    x = strdup(session->opts.host);
-                } else {
-                    ssh_set_error(session, SSH_FATAL,
-                            "Cannot expand host");
-                    free(buf);
-                    free(r);
-                    return NULL;
-                }
-                break;
-            case 'r':
-                if (session->opts.username) {
-                    x = strdup(session->opts.username);
-                } else {
-                    ssh_set_error(session, SSH_FATAL,
-                            "Cannot expand username");
-                    free(buf);
-                    free(r);
-                    return NULL;
-                }
-                break;
-            case 'p':
-                {
-                  char tmp[6];
-
-                  snprintf(tmp, sizeof(tmp), "%hu",
-                           (uint16_t)(session->opts.port > 0 ? session->opts.port
-                                                             : 22));
-                  x = strdup(tmp);
-                }
-                break;
-            default:
-                ssh_set_error(session, SSH_FATAL,
-                        "Wrong escape sequence detected");
+        case '%':
+            goto escape;
+        case 'd':
+            x = ssh_get_user_home_dir(session);
+            if (x == NULL) {
+                ssh_set_error(session, SSH_FATAL, "Cannot expand homedir");
                 free(buf);
                 free(r);
                 return NULL;
+            }
+            break;
+        case 'u':
+            x = ssh_get_local_username();
+            break;
+        case 'l':
+            x = ssh_get_local_hostname();
+            break;
+        case 'h':
+            if (session->opts.host) {
+                x = strdup(session->opts.host);
+            } else {
+                ssh_set_error(session, SSH_FATAL, "Cannot expand host");
+                free(buf);
+                free(r);
+                return NULL;
+            }
+            break;
+        case 'r':
+            if (session->opts.username) {
+                x = strdup(session->opts.username);
+            } else {
+                ssh_set_error(session, SSH_FATAL, "Cannot expand username");
+                free(buf);
+                free(r);
+                return NULL;
+            }
+            break;
+        case 'p': {
+            char tmp[6];
+            unsigned int port;
+
+            ssh_options_get_port(session, &port);
+            snprintf(tmp, sizeof(tmp), "%u", port);
+            x = strdup(tmp);
+            break;
+        }
+        case 'j':
+            if (session->opts.proxy_jumps_str != NULL) {
+                x = strdup(session->opts.proxy_jumps_str);
+            } else {
+                x = strdup("");
+            }
+            break;
+        case 'C':
+            x = get_connection_hash(session);
+            break;
+        default:
+            ssh_set_error(session, SSH_FATAL, "Wrong escape sequence detected");
+            free(buf);
+            free(r);
+            return NULL;
         }
 
         if (x == NULL) {
@@ -1307,8 +1484,7 @@ char *ssh_path_expand_escape(ssh_session session, const char *s)
 
         i += strlen(x);
         if (i >= MAX_BUF_SIZE) {
-            ssh_set_error(session, SSH_FATAL,
-                    "String too long");
+            ssh_set_error(session, SSH_FATAL, "String too long");
             free(buf);
             free(x);
             free(r);
@@ -1347,6 +1523,7 @@ int ssh_analyze_banner(ssh_session session, int server)
 {
     const char *banner = NULL;
     const char *openssh = NULL;
+    const char *ios = NULL;
 
     if (server) {
         banner = session->clientbanner;
@@ -1435,6 +1612,11 @@ int ssh_analyze_banner(ssh_session session, int server)
                     server ? "client" : "server",
                     major, minor, session->openssh);
         }
+    }
+    /* Cisco devices have odd scp implementation which breaks */
+    ios = strstr(banner, "Cisco");
+    if (ios != NULL) {
+        session->flags |= SSH_SESSION_FLAG_SCP_QUOTING_BROKEN;
     }
 
 done:
@@ -1573,22 +1755,26 @@ int ssh_timeout_update(struct ssh_timestamp *ts, int timeout)
   return ret >= 0 ? ret: 0;
 }
 
-#if !defined(HAVE_EXPLICIT_BZERO)
-void explicit_bzero(void *s, size_t n)
+/**
+ * @brief Securely free memory by overwriting it before deallocation
+ *
+ * Overwrites the memory region with zeros before calling free() to prevent
+ * sensitive data from remaining in memory after deallocation.
+ *
+ * @param[in] ptr Pointer to the memory region to securely free.
+ *                Can be NULL (no operation performed).
+ * @param[in] len Length of the memory region in bytes.
+ *
+ */
+void burn_free(void *ptr, size_t len)
 {
-#if defined(HAVE_MEMSET_S)
-    memset_s(s, n, '\0', n);
-#elif defined(HAVE_SECURE_ZERO_MEMORY)
-    SecureZeroMemory(s, n);
-#else
-    memset(s, '\0', n);
-#if defined(HAVE_GCC_VOLATILE_MEMORY_PROTECTION)
-    /* See http://llvm.org/bugs/show_bug.cgi?id=15495 */
-    __asm__ volatile("" : : "g"(s) : "memory");
-#endif /* HAVE_GCC_VOLATILE_MEMORY_PROTECTION */
-#endif
+    if (ptr == NULL || len == 0) {
+        return;
+    }
+
+    ssh_burn(ptr, len);
+    free(ptr);
 }
-#endif /* !HAVE_EXPLICIT_BZERO */
 
 #if !defined(HAVE_STRNDUP)
 char *strndup(const char *s, size_t n)
@@ -1802,7 +1988,7 @@ int ssh_quote_file_name(const char *file_name, char *buf, size_t buf_len)
     /* Put the string terminator */
     *dst = '\0';
 
-    return dst - buf;
+    return (int)(dst - buf);
 
 error:
     return SSH_ERROR;
@@ -1848,7 +2034,7 @@ int ssh_newline_vis(const char *string, char *buf, size_t buf_len)
     }
     *out = '\0';
 
-    return out - buf;
+    return (int)(out - buf);
 }
 
 /**
@@ -2242,6 +2428,79 @@ ssh_libssh_proxy_jumps(void)
     const char *t = getenv("OPENSSH_PROXYJUMP");
 
     return !(t != NULL && t[0] == '1');
+}
+
+/**
+ * @internal
+ *
+ * @brief Safely open a file containing some configuration.
+ *
+ * Runs checks if the file can be used as some configuration file (is regular
+ * file and is not too large). If so, returns the opened file (for reading).
+ * Otherwise logs error and returns `NULL`.
+ *
+ * @param filename      The path to the file to open.
+ * @param max_file_size Maximum file size that is accepted.
+ *
+ * @returns the opened file or `NULL` on error.
+ */
+FILE *ssh_strict_fopen(const char *filename, size_t max_file_size)
+{
+    FILE *f = NULL;
+    struct stat sb;
+    char err_msg[SSH_ERRNO_MSG_MAX] = {0};
+    int r, fd;
+
+    /* open first to avoid TOCTOU */
+    fd = open(filename, O_RDONLY);
+    if (fd == -1) {
+        SSH_LOG(SSH_LOG_RARE,
+                "Failed to open a file %s for reading: %s",
+                filename,
+                ssh_strerror(errno, err_msg, SSH_ERRNO_MSG_MAX));
+        return NULL;
+    }
+
+    /* Check the file is sensible for a configuration file */
+    r = fstat(fd, &sb);
+    if (r != 0) {
+        SSH_LOG(SSH_LOG_RARE,
+                "Failed to stat %s: %s",
+                filename,
+                ssh_strerror(errno, err_msg, SSH_ERRNO_MSG_MAX));
+        close(fd);
+        return NULL;
+    }
+    if ((sb.st_mode & S_IFMT) != S_IFREG) {
+        SSH_LOG(SSH_LOG_RARE,
+                "The file %s is not a regular file: skipping",
+                filename);
+        close(fd);
+        return NULL;
+    }
+
+    if ((size_t)sb.st_size > max_file_size) {
+        SSH_LOG(SSH_LOG_RARE,
+                "The file %s is too large (%jd MB > %zu MB): skipping",
+                filename,
+                (intmax_t)sb.st_size / 1024 / 1024,
+                max_file_size / 1024 / 1024);
+        close(fd);
+        return NULL;
+    }
+
+    f = fdopen(fd, "r");
+    if (f == NULL) {
+        SSH_LOG(SSH_LOG_RARE,
+                "Failed to open a file %s for reading: %s",
+                filename,
+                ssh_strerror(r, err_msg, SSH_ERRNO_MSG_MAX));
+        close(fd);
+        return NULL;
+    }
+
+    /* the flcose() will close also the underlying fd */
+    return f;
 }
 
 /** @} */

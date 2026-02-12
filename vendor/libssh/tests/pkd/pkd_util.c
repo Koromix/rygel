@@ -112,3 +112,10 @@ int is_openssh_client_enabled(void) {
 int is_dropbear_client_enabled(void) {
     return (bin_exists(DROPBEAR_BINARY) && bin_exists(DROPBEAR_KEYGEN));
 }
+
+int is_putty_client_enabled(void)
+{
+    return (bin_exists(PUTTY_BINARY) &&
+            bin_exists(PUTTY_KEYGEN) &&
+            bin_exists(OPENSSH_KEYGEN));
+}

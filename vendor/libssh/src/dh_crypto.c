@@ -424,9 +424,11 @@ int ssh_dh_init_common(struct ssh_crypto_struct *crypto)
         break;
     case SSH_KEX_DH_GROUP14_SHA1:
     case SSH_KEX_DH_GROUP14_SHA256:
+    case SSH_GSS_KEX_DH_GROUP14_SHA256:
         rc = ssh_dh_set_parameters(ctx, ssh_dh_group14, ssh_dh_generator);
         break;
     case SSH_KEX_DH_GROUP16_SHA512:
+    case SSH_GSS_KEX_DH_GROUP16_SHA512:
         rc = ssh_dh_set_parameters(ctx, ssh_dh_group16, ssh_dh_generator);
         break;
     case SSH_KEX_DH_GROUP18_SHA512:
@@ -597,7 +599,7 @@ int ssh_dh_compute_shared_secret(struct dh_ctx *dh_ctx, int local, int remote,
     }
 #endif /* OPENSSL_VERSION_NUMBER */
 
-    *dest = BN_bin2bn(kstring, klen, NULL);
+    *dest = BN_bin2bn(kstring, (int)klen, NULL);
     if (*dest == NULL) {
         rc = SSH_ERROR;
         goto done;

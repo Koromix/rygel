@@ -48,8 +48,11 @@
 #ifdef WITH_GEX
 #include "libssh/dh-gex.h"
 #endif /* WITH_GEX */
-#include "libssh/ecdh.h"
 #include "libssh/curve25519.h"
+#include "libssh/kex-gss.h"
+#include "libssh/ecdh.h"
+#include "libssh/hybrid_mlkem.h"
+#include "libssh/sntrup761.h"
 
 static struct ssh_hmac_struct ssh_hmac_tab[] = {
   { "hmac-sha1",                     SSH_HMAC_SHA1,          false },
@@ -188,13 +191,18 @@ void crypto_free(struct ssh_crypto_struct *crypto)
         crypto->ecdh_privkey = NULL;
     }
 #endif
+#ifdef HAVE_LIBCRYPTO
+    EVP_PKEY_free(crypto->curve25519_privkey);
+#elif defined(HAVE_GCRYPT_CURVE25519)
+    gcry_sexp_release(crypto->curve25519_privkey);
+#endif
     SAFE_FREE(crypto->dh_server_signature);
     if (crypto->session_id != NULL) {
-        explicit_bzero(crypto->session_id, crypto->session_id_len);
+        ssh_burn(crypto->session_id, crypto->session_id_len);
         SAFE_FREE(crypto->session_id);
     }
     if (crypto->secret_hash != NULL) {
-        explicit_bzero(crypto->secret_hash, crypto->digest_len);
+        ssh_burn(crypto->secret_hash, crypto->digest_len);
         SAFE_FREE(crypto->secret_hash);
     }
     compress_cleanup(crypto);
@@ -203,11 +211,11 @@ void crypto_free(struct ssh_crypto_struct *crypto)
     SAFE_FREE(crypto->encryptMAC);
     SAFE_FREE(crypto->decryptMAC);
     if (crypto->encryptkey != NULL) {
-        explicit_bzero(crypto->encryptkey, crypto->out_cipher->keysize / 8);
+        ssh_burn(crypto->encryptkey, crypto->out_cipher->keysize / 8);
         SAFE_FREE(crypto->encryptkey);
     }
     if (crypto->decryptkey != NULL) {
-        explicit_bzero(crypto->decryptkey, crypto->in_cipher->keysize / 8);
+        ssh_burn(crypto->decryptkey, crypto->in_cipher->keysize / 8);
         SAFE_FREE(crypto->decryptkey);
     }
 
@@ -220,7 +228,23 @@ void crypto_free(struct ssh_crypto_struct *crypto)
         SAFE_FREE(crypto->kex_methods[i]);
     }
 
-    explicit_bzero(crypto, sizeof(struct ssh_crypto_struct));
+#ifdef HAVE_OPENSSL_MLKEM
+    EVP_PKEY_free(crypto->mlkem_privkey);
+#else
+    if (crypto->mlkem_privkey != NULL) {
+        ssh_burn(crypto->mlkem_privkey, crypto->mlkem_privkey_len);
+        SAFE_FREE(crypto->mlkem_privkey);
+        crypto->mlkem_privkey_len = 0;
+    }
+#endif
+    ssh_string_burn(crypto->hybrid_shared_secret);
+    ssh_string_free(crypto->mlkem_client_pubkey);
+    ssh_string_free(crypto->mlkem_ciphertext);
+    ssh_string_free(crypto->hybrid_client_init);
+    ssh_string_free(crypto->hybrid_server_reply);
+    ssh_string_free(crypto->hybrid_shared_secret);
+
+    ssh_burn(crypto, sizeof(struct ssh_crypto_struct));
 
     SAFE_FREE(crypto);
 }
@@ -568,6 +592,14 @@ int crypt_set_algorithms_server(ssh_session session){
     case SSH_KEX_DH_GROUP18_SHA512:
       ssh_server_dh_init(session);
       break;
+#ifdef WITH_GSSAPI
+    case SSH_GSS_KEX_DH_GROUP14_SHA256:
+    case SSH_GSS_KEX_DH_GROUP16_SHA512:
+    case SSH_GSS_KEX_ECDH_NISTP256_SHA256:
+    case SSH_GSS_KEX_CURVE25519_SHA256:
+        ssh_server_gss_kex_init(session);
+        break;
+#endif /* WITH_GSSAPI */
 #ifdef WITH_GEX
     case SSH_KEX_DH_GEX_SHA1:
     case SSH_KEX_DH_GEX_SHA256:
@@ -587,6 +619,19 @@ int crypt_set_algorithms_server(ssh_session session){
         ssh_server_curve25519_init(session);
         break;
 #endif
+#ifdef HAVE_SNTRUP761
+    case SSH_KEX_SNTRUP761X25519_SHA512:
+    case SSH_KEX_SNTRUP761X25519_SHA512_OPENSSH_COM:
+        ssh_server_sntrup761x25519_init(session);
+        break;
+#endif
+    case SSH_KEX_MLKEM768X25519_SHA256:
+    case SSH_KEX_MLKEM768NISTP256_SHA256:
+#ifdef HAVE_MLKEM1024
+    case SSH_KEX_MLKEM1024NISTP384_SHA384:
+#endif
+        ssh_server_hybrid_mlkem_init(session);
+        break;
     default:
         ssh_set_error(session,
                       SSH_FATAL,

@@ -24,6 +24,26 @@
 #include "libssh/server.h"
 #include "libssh/bind_config.h"
 
+#include "nallocinc.c"
+
+static void _fuzz_finalize(void)
+{
+    ssh_finalize();
+}
+
+int LLVMFuzzerInitialize(int *argc, char ***argv)
+{
+    (void)argc;
+
+    nalloc_init(*argv[0]);
+
+    ssh_init();
+
+    atexit(_fuzz_finalize);
+
+    return 0;
+}
+
 int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 {
     ssh_bind bind = NULL;
@@ -36,17 +56,20 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
     strncpy(input, (const char *)data, size);
     input[size] = '\0';
 
-    ssh_init();
+    assert(nalloc_start(data, size) > 0);
 
     bind = ssh_bind_new();
-    assert(bind != NULL);
+    if (bind == NULL) {
+        goto out;
+    }
 
     ssh_bind_config_parse_string(bind, input);
 
     ssh_bind_free(bind);
-    ssh_finalize();
 
+out:
     free(input);
 
+    nalloc_end();
     return 0;
 }

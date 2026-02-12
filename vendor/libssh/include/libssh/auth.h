@@ -52,42 +52,45 @@ typedef struct ssh_kbdint_struct* ssh_kbdint;
 ssh_kbdint ssh_kbdint_new(void);
 void ssh_kbdint_clean(ssh_kbdint kbd);
 void ssh_kbdint_free(ssh_kbdint kbd);
+int ssh_userauth_gssapi_keyex(ssh_session session);
 
 /** @internal
  * States of authentication in the client-side. They describe
  * what was the last response from the server
  */
 enum ssh_auth_state_e {
-  /** No authentication asked */
-  SSH_AUTH_STATE_NONE=0,
-  /** Last authentication response was a partial success */
-  SSH_AUTH_STATE_PARTIAL,
-  /** Last authentication response was a success */
-  SSH_AUTH_STATE_SUCCESS,
-  /** Last authentication response was failed */
-  SSH_AUTH_STATE_FAILED,
-  /** Last authentication was erroneous */
-  SSH_AUTH_STATE_ERROR,
-  /** Last state was a keyboard-interactive ask for info */
-  SSH_AUTH_STATE_INFO,
-  /** Last state was a public key accepted for authentication */
-  SSH_AUTH_STATE_PK_OK,
-  /** We asked for a keyboard-interactive authentication */
-  SSH_AUTH_STATE_KBDINT_SENT,
-  /** We have sent an userauth request with gssapi-with-mic */
-  SSH_AUTH_STATE_GSSAPI_REQUEST_SENT,
-  /** We are exchanging tokens until authentication */
-  SSH_AUTH_STATE_GSSAPI_TOKEN,
-  /** We have sent the MIC and expecting to be authenticated */
-  SSH_AUTH_STATE_GSSAPI_MIC_SENT,
-  /** We have offered a pubkey to check if it is supported */
-  SSH_AUTH_STATE_PUBKEY_OFFER_SENT,
-  /** We have sent pubkey and signature expecting to be authenticated */
-  SSH_AUTH_STATE_PUBKEY_AUTH_SENT,
-  /** We have sent a password expecting to be authenticated */
-  SSH_AUTH_STATE_PASSWORD_AUTH_SENT,
-  /** We have sent a request without auth information (method 'none') */
-  SSH_AUTH_STATE_AUTH_NONE_SENT,
+    /** No authentication asked */
+    SSH_AUTH_STATE_NONE = 0,
+    /** Last authentication response was a partial success */
+    SSH_AUTH_STATE_PARTIAL,
+    /** Last authentication response was a success */
+    SSH_AUTH_STATE_SUCCESS,
+    /** Last authentication response was failed */
+    SSH_AUTH_STATE_FAILED,
+    /** Last authentication was erroneous */
+    SSH_AUTH_STATE_ERROR,
+    /** Last state was a keyboard-interactive ask for info */
+    SSH_AUTH_STATE_INFO,
+    /** Last state was a public key accepted for authentication */
+    SSH_AUTH_STATE_PK_OK,
+    /** We asked for a keyboard-interactive authentication */
+    SSH_AUTH_STATE_KBDINT_SENT,
+    /** We have sent an userauth request with gssapi-with-mic */
+    SSH_AUTH_STATE_GSSAPI_REQUEST_SENT,
+    /** We are exchanging tokens until authentication */
+    SSH_AUTH_STATE_GSSAPI_TOKEN,
+    /** We have sent the MIC and expecting to be authenticated */
+    SSH_AUTH_STATE_GSSAPI_MIC_SENT,
+    /** We have offered a pubkey to check if it is supported */
+    SSH_AUTH_STATE_PUBKEY_OFFER_SENT,
+    /** We have sent pubkey and signature expecting to be authenticated */
+    SSH_AUTH_STATE_PUBKEY_AUTH_SENT,
+    /** We have sent a password expecting to be authenticated */
+    SSH_AUTH_STATE_PASSWORD_AUTH_SENT,
+    /** We have sent a request without auth information (method 'none') */
+    SSH_AUTH_STATE_AUTH_NONE_SENT,
+    /** We have sent the MIC and expecting to be authenticated */
+    SSH_AUTH_STATE_GSSAPI_KEYEX_MIC_SENT,
 };
 
 /** @internal

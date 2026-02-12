@@ -74,6 +74,8 @@ ssh_string ssh_buffer_get_ssh_string(ssh_buffer buffer);
 uint32_t ssh_buffer_pass_bytes_end(ssh_buffer buffer, uint32_t len);
 uint32_t ssh_buffer_pass_bytes(ssh_buffer buffer, uint32_t len);
 
+ssh_buffer ssh_buffer_dup(const ssh_buffer buffer);
+
 #ifdef __cplusplus
 }
 #endif

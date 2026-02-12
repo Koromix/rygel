@@ -373,6 +373,7 @@ static void torture_pki_rsa_copy_cert_to_privkey(void **state)
     ssh_key pubkey = NULL;
     ssh_key privkey = NULL;
     ssh_key cert = NULL;
+    enum ssh_keytypes_e type;
 
     (void)state; /* unused */
 
@@ -389,6 +390,13 @@ static void torture_pki_rsa_copy_cert_to_privkey(void **state)
     assert_return_code(rc, errno);
     assert_non_null(pubkey);
 
+    type = ssh_key_type(cert);
+    assert_true(type == SSH_KEYTYPE_RSA_CERT01);
+
+    rc = ssh_key_is_public(cert);
+    assert_int_equal(rc, 1);
+
+    /* Import matching private key file and verify the pubkey matches */
     rc = ssh_pki_import_privkey_base64(torture_get_testkey(SSH_KEYTYPE_RSA, 0),
                                        passphrase,
                                        NULL,
@@ -396,6 +404,9 @@ static void torture_pki_rsa_copy_cert_to_privkey(void **state)
                                        &privkey);
     assert_return_code(rc, errno);
     assert_non_null(privkey);
+
+    type = ssh_key_type(privkey);
+    assert_true(type == SSH_KEYTYPE_RSA);
 
     /* Basic sanity. */
     rc = ssh_pki_copy_cert_to_privkey(NULL, privkey);
@@ -416,6 +427,10 @@ static void torture_pki_rsa_copy_cert_to_privkey(void **state)
     rc = ssh_pki_copy_cert_to_privkey(cert, privkey);
     assert_return_code(rc, errno);
     assert_non_null(privkey->cert);
+    assert_true(privkey->cert_type == SSH_KEYTYPE_RSA_CERT01);
+
+    assert_int_equal(ssh_key_cmp(privkey, cert, SSH_KEY_CMP_PUBLIC), 0);
+    assert_int_equal(ssh_key_cmp(cert, privkey, SSH_KEY_CMP_PUBLIC), 0);
 
     /* The private key's cert is already set, another copy should fail. */
     rc = ssh_pki_copy_cert_to_privkey(cert, privkey);
@@ -436,6 +451,9 @@ static void torture_pki_rsa_copy_cert_to_privkey(void **state)
     assert_int_equal(rc, SSH_ERROR);
     rc = ssh_pki_copy_cert_to_privkey(cert, pubkey);
     assert_int_equal(rc, SSH_ERROR);
+
+    assert_int_equal(ssh_key_cmp(privkey, cert, SSH_KEY_CMP_PUBLIC), 1);
+    assert_int_equal(ssh_key_cmp(cert, privkey, SSH_KEY_CMP_PUBLIC), 1);
 
     SSH_KEY_FREE(cert);
     SSH_KEY_FREE(privkey);
@@ -601,7 +619,13 @@ static void torture_pki_rsa_duplicate_key(void **state)
     SSH_STRING_FREE_CHAR(b64_key_gen);
 }
 
-static void torture_pki_rsa_generate_key(void **state)
+/**
+ * @brief Test RSA key generation using the deprecated ssh_pki_generate API.
+ *
+ * This test is kept for backward compatibility testing of the legacy API.
+ * For testing the new context-based API, see torture_pki_generate_key_rsa().
+ */
+static void torture_pki_generate_rsa_deprecated(void **state)
 {
     int rc;
     ssh_key key = NULL, pubkey = NULL;
@@ -770,6 +794,68 @@ static void torture_pki_rsa_key_size(void **state)
     pubkey = NULL;
 
     ssh_free(session);
+}
+
+/**
+ * @brief Test RSA key generation using the new context-based
+ * ssh_pki_generate_key API.
+ *
+ * This test validates the new ssh_pki_ctx-based key generation API with
+ * both positive and negative test cases.
+ *
+ * For testing the old/deprecated API, see torture_pki_generate_rsa().
+ */
+static void torture_pki_generate_key_rsa(void **state)
+{
+    int rc;
+    ssh_key key = NULL, pubkey = NULL;
+    ssh_pki_ctx ctx = NULL;
+    int desired = 4096;
+    int invalid_size = 512;
+
+    (void)state;
+
+    /* Test with NULL context - should use default size */
+    rc = ssh_pki_generate_key(SSH_KEYTYPE_RSA, NULL, &key);
+    assert_int_equal(rc, SSH_OK);
+    assert_non_null(key);
+    assert_int_equal(ssh_key_type(key), SSH_KEYTYPE_RSA);
+    assert_int_equal(ssh_key_size(key), RSA_DEFAULT_KEY_SIZE);
+    SSH_KEY_FREE(key);
+
+    /* Test with NULL key pointer - should fail */
+    ctx = ssh_pki_ctx_new();
+    assert_non_null(ctx);
+
+    rc = ssh_pki_ctx_options_set(ctx, SSH_PKI_OPTION_RSA_KEY_SIZE, &desired);
+    assert_int_equal(rc, SSH_OK);
+
+    rc = ssh_pki_generate_key(SSH_KEYTYPE_RSA, ctx, NULL);
+    assert_int_equal(rc, SSH_ERROR);
+
+    /* Test with invalid RSA key size (too small) - should fail */
+    rc = ssh_pki_ctx_options_set(ctx,
+                                 SSH_PKI_OPTION_RSA_KEY_SIZE,
+                                 &invalid_size);
+    assert_int_equal(rc, SSH_ERROR);
+
+    rc = ssh_pki_ctx_options_set(ctx, SSH_PKI_OPTION_RSA_KEY_SIZE, &desired);
+    assert_int_equal(rc, SSH_OK);
+
+    rc = ssh_pki_generate_key(SSH_KEYTYPE_RSA, ctx, &key);
+    assert_int_equal(rc, SSH_OK);
+    assert_non_null(key);
+
+    assert_int_equal(ssh_key_type(key), SSH_KEYTYPE_RSA);
+    assert_int_equal(ssh_key_size(key), desired);
+
+    rc = ssh_pki_export_privkey_to_pubkey(key, &pubkey);
+    assert_int_equal(rc, SSH_OK);
+    assert_non_null(pubkey);
+
+    SSH_KEY_FREE(key);
+    SSH_KEY_FREE(pubkey);
+    SSH_PKI_CTX_FREE(ctx);
 }
 
 static int test_sign_verify_data(ssh_key key,
@@ -1085,33 +1171,41 @@ int torture_run_tests(void) {
         cmocka_unit_test_setup_teardown(torture_pki_rsa_import_pubkey_file,
                                         setup_rsa_key,
                                         teardown),
-        cmocka_unit_test_setup_teardown(torture_pki_rsa_import_pubkey_from_openssh_privkey,
-                                        setup_openssh_rsa_key,
-                                        teardown),
-        cmocka_unit_test_setup_teardown(torture_pki_rsa_import_privkey_base64_NULL_key,
-                                        setup_rsa_key,
-                                        teardown),
-        cmocka_unit_test_setup_teardown(torture_pki_rsa_import_privkey_base64_NULL_str,
-                                        setup_rsa_key,
-                                        teardown),
-        cmocka_unit_test_setup_teardown(torture_pki_rsa_import_export_privkey_base64,
-                                        setup_rsa_key,
-                                        teardown),
-        cmocka_unit_test_setup_teardown(torture_pki_rsa_import_privkey_base64_comment,
-                                        setup_rsa_key,
-                                        teardown),
-        cmocka_unit_test_setup_teardown(torture_pki_rsa_import_privkey_base64_whitespace,
-                                        setup_rsa_key,
-                                        teardown),
+        cmocka_unit_test_setup_teardown(
+            torture_pki_rsa_import_pubkey_from_openssh_privkey,
+            setup_openssh_rsa_key,
+            teardown),
+        cmocka_unit_test_setup_teardown(
+            torture_pki_rsa_import_privkey_base64_NULL_key,
+            setup_rsa_key,
+            teardown),
+        cmocka_unit_test_setup_teardown(
+            torture_pki_rsa_import_privkey_base64_NULL_str,
+            setup_rsa_key,
+            teardown),
+        cmocka_unit_test_setup_teardown(
+            torture_pki_rsa_import_export_privkey_base64,
+            setup_rsa_key,
+            teardown),
+        cmocka_unit_test_setup_teardown(
+            torture_pki_rsa_import_privkey_base64_comment,
+            setup_rsa_key,
+            teardown),
+        cmocka_unit_test_setup_teardown(
+            torture_pki_rsa_import_privkey_base64_whitespace,
+            setup_rsa_key,
+            teardown),
         cmocka_unit_test_setup_teardown(
             torture_pki_rsa_import_export_privkey_base64,
             setup_openssh_rsa_key,
             teardown),
-        cmocka_unit_test_setup_teardown(torture_pki_rsa_publickey_from_privatekey,
-                                        setup_rsa_key,
-                                        teardown),
+        cmocka_unit_test_setup_teardown(
+            torture_pki_rsa_publickey_from_privatekey,
+            setup_rsa_key,
+            teardown),
         cmocka_unit_test(torture_pki_rsa_import_privkey_base64_passphrase),
-        cmocka_unit_test(torture_pki_rsa_import_openssh_privkey_base64_passphrase),
+        cmocka_unit_test(
+            torture_pki_rsa_import_openssh_privkey_base64_passphrase),
         cmocka_unit_test_setup_teardown(torture_pki_rsa_copy_cert_to_privkey,
                                         setup_rsa_key,
                                         teardown),
@@ -1121,14 +1215,16 @@ int torture_run_tests(void) {
         cmocka_unit_test_setup_teardown(torture_pki_rsa_publickey_base64,
                                         setup_rsa_key,
                                         teardown),
-        cmocka_unit_test_setup_teardown(torture_pki_rsa_generate_pubkey_from_privkey,
-                                        setup_rsa_key,
-                                        teardown),
+        cmocka_unit_test_setup_teardown(
+            torture_pki_rsa_generate_pubkey_from_privkey,
+            setup_rsa_key,
+            teardown),
         cmocka_unit_test_setup_teardown(torture_pki_rsa_duplicate_key,
                                         setup_rsa_key,
                                         teardown),
-        cmocka_unit_test(torture_pki_rsa_generate_key),
+        cmocka_unit_test(torture_pki_generate_rsa_deprecated),
         cmocka_unit_test(torture_pki_rsa_key_size),
+        cmocka_unit_test(torture_pki_generate_key_rsa),
         cmocka_unit_test_setup_teardown(torture_pki_rsa_write_privkey,
                                         setup_rsa_key,
                                         teardown),

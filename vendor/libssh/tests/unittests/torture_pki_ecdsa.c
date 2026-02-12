@@ -367,9 +367,13 @@ static void torture_pki_ecdsa_publickey_from_privatekey(void **state)
 static void torture_pki_ecdsa_import_cert_file(void **state)
 {
     int rc;
+    ssh_key pubkey = NULL;
+    ssh_key privkey = NULL;
     ssh_key cert = NULL;
-    enum ssh_keytypes_e type;
+    enum ssh_keytypes_e type, exp_cert_type;
     struct pki_st *test_state = *((struct pki_st **)state);
+
+    exp_cert_type = test_state->type + 3;
 
     /* Importing public key as cert should fail */
     rc = ssh_pki_import_cert_file(LIBSSH_ECDSA_TESTKEY ".pub", &cert);
@@ -380,13 +384,78 @@ static void torture_pki_ecdsa_import_cert_file(void **state)
     assert_int_equal(rc, 0);
     assert_non_null(cert);
 
+    rc = ssh_pki_import_pubkey_file(LIBSSH_ECDSA_TESTKEY ".pub", &pubkey);
+    assert_return_code(rc, errno);
+    assert_non_null(pubkey);
+
     type = ssh_key_type(cert);
-    assert_int_equal(type, test_state->type+3);
+    assert_int_equal(type, exp_cert_type);
 
     rc = ssh_key_is_public(cert);
     assert_int_equal(rc, 1);
 
+    /* Import matching private key file and verify the pubkey matches */
+    rc = ssh_pki_import_privkey_file(LIBSSH_ECDSA_TESTKEY,
+                                     NULL,
+                                     NULL,
+                                     NULL,
+                                     &privkey);
+    assert_return_code(rc, errno);
+    assert_non_null(privkey);
+
+    type = ssh_key_type(privkey);
+    assert_true(type == test_state->type);
+
+    /* Basic sanity. */
+    rc = ssh_pki_copy_cert_to_privkey(NULL, privkey);
+    assert_int_equal(rc, SSH_ERROR);
+
+    rc = ssh_pki_copy_cert_to_privkey(pubkey, NULL);
+    assert_int_equal(rc, SSH_ERROR);
+
+    /* A public key doesn't have a cert, copy should fail. */
+    assert_null(pubkey->cert);
+    rc = ssh_pki_copy_cert_to_privkey(pubkey, privkey);
+    assert_int_equal(rc, SSH_ERROR);
+
+    /* Copying the cert to non-cert keys should work fine. */
+    rc = ssh_pki_copy_cert_to_privkey(cert, pubkey);
+    assert_return_code(rc, errno);
+    assert_non_null(pubkey->cert);
+    rc = ssh_pki_copy_cert_to_privkey(cert, privkey);
+    assert_return_code(rc, errno);
+    assert_non_null(privkey->cert);
+    assert_true(privkey->cert_type == exp_cert_type);
+
+    assert_int_equal(ssh_key_cmp(privkey, cert, SSH_KEY_CMP_PUBLIC), 0);
+    assert_int_equal(ssh_key_cmp(cert, privkey, SSH_KEY_CMP_PUBLIC), 0);
+
+    /* The private key's cert is already set, another copy should fail. */
+    rc = ssh_pki_copy_cert_to_privkey(cert, privkey);
+    assert_int_equal(rc, SSH_ERROR);
+
+    SSH_KEY_FREE(privkey);
+    SSH_KEY_FREE(pubkey);
+
+    /* Generate different key and try to assign it this certificate */
+    rc = ssh_pki_generate_key(test_state->type, NULL, &privkey);
+    assert_return_code(rc, errno);
+    assert_non_null(privkey);
+    rc = ssh_pki_export_privkey_to_pubkey(privkey, &pubkey);
+    assert_return_code(rc, errno);
+    assert_non_null(pubkey);
+
+    rc = ssh_pki_copy_cert_to_privkey(cert, privkey);
+    assert_int_equal(rc, SSH_ERROR);
+    rc = ssh_pki_copy_cert_to_privkey(cert, pubkey);
+    assert_int_equal(rc, SSH_ERROR);
+
+    assert_int_equal(ssh_key_cmp(privkey, cert, SSH_KEY_CMP_PUBLIC), 1);
+    assert_int_equal(ssh_key_cmp(cert, privkey, SSH_KEY_CMP_PUBLIC), 1);
+
     SSH_KEY_FREE(cert);
+    SSH_KEY_FREE(privkey);
+    SSH_KEY_FREE(pubkey);
 }
 
 static void torture_pki_ecdsa_publickey_base64(void **state)
@@ -1025,12 +1094,14 @@ int torture_run_tests(void) {
         cmocka_unit_test_setup_teardown(torture_pki_ecdsa_import_pubkey_file,
                                         setup_ecdsa_key_521,
                                         teardown),
-        cmocka_unit_test_setup_teardown(torture_pki_ecdsa_import_pubkey_from_openssh_privkey,
-                                        setup_openssh_ecdsa_key_256,
-                                        teardown),
-        cmocka_unit_test_setup_teardown(torture_pki_ecdsa_import_pubkey_from_openssh_privkey,
-                                        setup_openssh_ecdsa_key_384,
-                                        teardown),
+        cmocka_unit_test_setup_teardown(
+            torture_pki_ecdsa_import_pubkey_from_openssh_privkey,
+            setup_openssh_ecdsa_key_256,
+            teardown),
+        cmocka_unit_test_setup_teardown(
+            torture_pki_ecdsa_import_pubkey_from_openssh_privkey,
+            setup_openssh_ecdsa_key_384,
+            teardown),
         cmocka_unit_test_setup_teardown(torture_pki_ecdsa_import_pubkey_file,
                                         setup_openssh_ecdsa_key_521,
                                         teardown),
@@ -1046,24 +1117,30 @@ int torture_run_tests(void) {
             torture_pki_ecdsa_import_export_privkey_base64_default,
             setup_ecdsa_key_521,
             teardown),
-        cmocka_unit_test_setup_teardown(torture_pki_ecdsa_import_privkey_base64_comment,
-                                        setup_ecdsa_key_256,
-                                        teardown),
-        cmocka_unit_test_setup_teardown(torture_pki_ecdsa_import_privkey_base64_comment,
-                                        setup_ecdsa_key_384,
-                                        teardown),
-        cmocka_unit_test_setup_teardown(torture_pki_ecdsa_import_privkey_base64_comment,
-                                        setup_ecdsa_key_521,
-                                        teardown),
-        cmocka_unit_test_setup_teardown(torture_pki_ecdsa_import_privkey_base64_whitespace,
-                                        setup_ecdsa_key_521,
-                                        teardown),
-        cmocka_unit_test_setup_teardown(torture_pki_ecdsa_import_privkey_base64_whitespace,
-                                        setup_ecdsa_key_521,
-                                        teardown),
-        cmocka_unit_test_setup_teardown(torture_pki_ecdsa_import_privkey_base64_whitespace,
-                                        setup_ecdsa_key_521,
-                                        teardown),
+        cmocka_unit_test_setup_teardown(
+            torture_pki_ecdsa_import_privkey_base64_comment,
+            setup_ecdsa_key_256,
+            teardown),
+        cmocka_unit_test_setup_teardown(
+            torture_pki_ecdsa_import_privkey_base64_comment,
+            setup_ecdsa_key_384,
+            teardown),
+        cmocka_unit_test_setup_teardown(
+            torture_pki_ecdsa_import_privkey_base64_comment,
+            setup_ecdsa_key_521,
+            teardown),
+        cmocka_unit_test_setup_teardown(
+            torture_pki_ecdsa_import_privkey_base64_whitespace,
+            setup_ecdsa_key_521,
+            teardown),
+        cmocka_unit_test_setup_teardown(
+            torture_pki_ecdsa_import_privkey_base64_whitespace,
+            setup_ecdsa_key_521,
+            teardown),
+        cmocka_unit_test_setup_teardown(
+            torture_pki_ecdsa_import_privkey_base64_whitespace,
+            setup_ecdsa_key_521,
+            teardown),
         cmocka_unit_test_setup_teardown(
             torture_pki_ecdsa_import_export_privkey_base64_default,
             setup_openssh_ecdsa_key_256,
@@ -1076,15 +1153,18 @@ int torture_run_tests(void) {
             torture_pki_ecdsa_import_export_privkey_base64_default,
             setup_openssh_ecdsa_key_521,
             teardown),
-        cmocka_unit_test_setup_teardown(torture_pki_ecdsa_publickey_from_privatekey,
-                                        setup_ecdsa_key_256,
-                                        teardown),
-        cmocka_unit_test_setup_teardown(torture_pki_ecdsa_publickey_from_privatekey,
-                                        setup_ecdsa_key_384,
-                                        teardown),
-        cmocka_unit_test_setup_teardown(torture_pki_ecdsa_publickey_from_privatekey,
-                                        setup_ecdsa_key_521,
-                                        teardown),
+        cmocka_unit_test_setup_teardown(
+            torture_pki_ecdsa_publickey_from_privatekey,
+            setup_ecdsa_key_256,
+            teardown),
+        cmocka_unit_test_setup_teardown(
+            torture_pki_ecdsa_publickey_from_privatekey,
+            setup_ecdsa_key_384,
+            teardown),
+        cmocka_unit_test_setup_teardown(
+            torture_pki_ecdsa_publickey_from_privatekey,
+            setup_ecdsa_key_521,
+            teardown),
         cmocka_unit_test_setup_teardown(torture_pki_ecdsa_import_cert_file,
                                         setup_ecdsa_key_256,
                                         teardown),
@@ -1112,15 +1192,18 @@ int torture_run_tests(void) {
         cmocka_unit_test_setup_teardown(torture_pki_ecdsa_publickey_base64,
                                         setup_ecdsa_key_521,
                                         teardown),
-        cmocka_unit_test_setup_teardown(torture_pki_ecdsa_generate_pubkey_from_privkey,
-                                        setup_ecdsa_key_256,
-                                        teardown),
-        cmocka_unit_test_setup_teardown(torture_pki_ecdsa_generate_pubkey_from_privkey,
-                                        setup_ecdsa_key_384,
-                                        teardown),
-        cmocka_unit_test_setup_teardown(torture_pki_ecdsa_generate_pubkey_from_privkey,
-                                        setup_ecdsa_key_521,
-                                        teardown),
+        cmocka_unit_test_setup_teardown(
+            torture_pki_ecdsa_generate_pubkey_from_privkey,
+            setup_ecdsa_key_256,
+            teardown),
+        cmocka_unit_test_setup_teardown(
+            torture_pki_ecdsa_generate_pubkey_from_privkey,
+            setup_ecdsa_key_384,
+            teardown),
+        cmocka_unit_test_setup_teardown(
+            torture_pki_ecdsa_generate_pubkey_from_privkey,
+            setup_ecdsa_key_521,
+            teardown),
         cmocka_unit_test_setup_teardown(torture_pki_ecdsa_duplicate_key,
                                         setup_ecdsa_key_256,
                                         teardown),

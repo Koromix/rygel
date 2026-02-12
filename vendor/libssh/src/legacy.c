@@ -32,6 +32,10 @@
 #include <errno.h>
 #include <stdio.h>
 
+#ifdef _WIN32
+#include <winsock2.h>
+#endif
+
 #include <libssh/priv.h>
 #include <libssh/session.h>
 #include <libssh/server.h>
@@ -618,10 +622,10 @@ int ssh_publickey_to_file(ssh_session session,
     FILE *fp = NULL;
     char *user = NULL;
     char buffer[1024];
-    char host[256];
+    char *host = NULL;
     unsigned char *pubkey_64 = NULL;
     size_t len;
-    int rc;
+
     if(session==NULL)
         return SSH_ERROR;
     if(file==NULL || pubkey==NULL){
@@ -639,8 +643,8 @@ int ssh_publickey_to_file(ssh_session session,
         return SSH_ERROR;
     }
 
-    rc = gethostname(host, sizeof(host));
-    if (rc < 0) {
+    host = ssh_get_local_hostname();
+    if (host == NULL) {
         SAFE_FREE(user);
         SAFE_FREE(pubkey_64);
         return SSH_ERROR;
@@ -654,6 +658,7 @@ int ssh_publickey_to_file(ssh_session session,
 
     SAFE_FREE(pubkey_64);
     SAFE_FREE(user);
+    SAFE_FREE(host);
 
     SSH_LOG(SSH_LOG_RARE, "Trying to write public key file: %s", file);
     SSH_LOG(SSH_LOG_PACKET, "public key file content: %s", buffer);

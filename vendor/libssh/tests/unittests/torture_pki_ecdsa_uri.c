@@ -561,7 +561,7 @@ int torture_run_tests(void) {
         cmocka_unit_test(torture_pki_ecdsa_import_pubkey_without_loading_public_uri_521),
     };
     ssh_session session = ssh_new();
-    int verbosity = SSH_LOG_FUNCTIONS;
+    int verbosity = torture_libssh_verbosity();
 
     /* Do not use system openssl.cnf for the pkcs11 uri tests.
      * It can load a pkcs11 provider too early before we will set up environment
@@ -569,7 +569,7 @@ int torture_run_tests(void) {
      * tokens, causing unexpected failures.
      * Make sure this comes before ssh_init(), which initializes OpenSSL!
      */
-    setenv("OPENSSL_CONF", "/dev/null", 1);
+    setenv("OPENSSL_CONF", SOURCEDIR "/tests/etc/openssl.cnf", 1);
 
     ssh_init();
     ssh_options_set(session, SSH_OPTIONS_LOG_VERBOSITY, &verbosity);

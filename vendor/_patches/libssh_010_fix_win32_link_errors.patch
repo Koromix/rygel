@@ -1,5 +1,11 @@
+commit cb860b78c291b1bd3cfc38f6f2a6af3db81ec809
+Author: Niels Martignène <niels.martignene@protonmail.com>
+Date:   Thu Feb 12 10:44:46 2026 +0100
+
+    10
+
 diff --git a/vendor/libssh/src/buffer.c b/vendor/libssh/src/buffer.c
-index 449fa941c7..e00b094f32 100644
+index 601191755f..caab6334de 100644
 --- a/vendor/libssh/src/buffer.c
 +++ b/vendor/libssh/src/buffer.c
 @@ -28,7 +28,9 @@
@@ -14,10 +20,16 @@ index 449fa941c7..e00b094f32 100644
  #include <arpa/inet.h>
  #endif
 diff --git a/vendor/libssh/src/legacy.c b/vendor/libssh/src/legacy.c
-index 65a47d6e63..edc950eb53 100644
+index 5fad635f9f..a2a39a6d21 100644
 --- a/vendor/libssh/src/legacy.c
 +++ b/vendor/libssh/src/legacy.c
-@@ -29,6 +29,10 @@
+@@ -26,9 +26,16 @@
+ 
+ #include "config.h"
+ 
++#ifdef _WIN32
++#include <winsock2.h>
++#endif
  #include <errno.h>
  #include <stdio.h>
  
@@ -29,7 +41,7 @@ index 65a47d6e63..edc950eb53 100644
  #include <libssh/session.h>
  #include <libssh/server.h>
 diff --git a/vendor/libssh/src/messages.c b/vendor/libssh/src/messages.c
-index a9f5279f8a..3fa98dd329 100644
+index 824b2772a4..47cd402956 100644
 --- a/vendor/libssh/src/messages.c
 +++ b/vendor/libssh/src/messages.c
 @@ -26,7 +26,9 @@
@@ -44,21 +56,21 @@ index a9f5279f8a..3fa98dd329 100644
  #include <arpa/inet.h>
  #endif
 diff --git a/vendor/libssh/src/packet_cb.c b/vendor/libssh/src/packet_cb.c
-index 54c94c8438..24f6c3e024 100644
+index 6228b44a48..162b9dbb67 100644
 --- a/vendor/libssh/src/packet_cb.c
 +++ b/vendor/libssh/src/packet_cb.c
-@@ -27,6 +27,9 @@
- #ifdef HAVE_ARPA_INET_H
- #include <arpa/inet.h>
- #endif
+@@ -24,6 +24,9 @@
+ #include "config.h"
+ 
+ #include <stdlib.h>
 +#ifdef _WIN32
 +#include <winsock2.h>
 +#endif
- 
- #include "libssh/priv.h"
- #include "libssh/buffer.h"
+ #ifdef HAVE_ARPA_INET_H
+ #include <arpa/inet.h>
+ #endif
 diff --git a/vendor/libssh/src/packet_crypt.c b/vendor/libssh/src/packet_crypt.c
-index 96e9586c02..ad9ca4238a 100644
+index 12846fe583..02a3454b4c 100644
 --- a/vendor/libssh/src/packet_crypt.c
 +++ b/vendor/libssh/src/packet_crypt.c
 @@ -27,7 +27,9 @@
@@ -73,22 +85,21 @@ index 96e9586c02..ad9ca4238a 100644
  #include <arpa/inet.h>
  #endif
 diff --git a/vendor/libssh/src/pki.c b/vendor/libssh/src/pki.c
-index a719d85f70..4bf87a2d8f 100644
+index 76fde83837..f8d02ddfcd 100644
 --- a/vendor/libssh/src/pki.c
 +++ b/vendor/libssh/src/pki.c
-@@ -43,6 +43,10 @@
- #include <sys/stat.h>
- #include <sys/types.h>
+@@ -35,6 +35,9 @@
+ #include "config.h"
+ #include "libssh/wrapper.h"
  
 +#ifdef _WIN32
 +#include <winsock2.h>
 +#endif
-+
- #include "libssh/libssh.h"
- #include "libssh/session.h"
- #include "libssh/priv.h"
+ #include <errno.h>
+ #include <ctype.h>
+ #include <stdint.h>
 diff --git a/vendor/libssh/src/sftp_aio.c b/vendor/libssh/src/sftp_aio.c
-index c1c54561ae..37eb5a6bad 100644
+index 20e9853af8..0dc5467d7c 100644
 --- a/vendor/libssh/src/sftp_aio.c
 +++ b/vendor/libssh/src/sftp_aio.c
 @@ -25,6 +25,10 @@
@@ -103,22 +114,21 @@ index c1c54561ae..37eb5a6bad 100644
  #include "libssh/sftp_priv.h"
  #include "libssh/buffer.h"
 diff --git a/vendor/libssh/src/sftp_common.c b/vendor/libssh/src/sftp_common.c
-index 13512b8dbe..be284baaa8 100644
+index 02970e4a47..3b400e771a 100644
 --- a/vendor/libssh/src/sftp_common.c
 +++ b/vendor/libssh/src/sftp_common.c
-@@ -28,6 +28,10 @@
+@@ -26,6 +26,9 @@
  
- #include <ctype.h>
+ #include "config.h"
  
 +#ifdef _WIN32
 +#include <winsock2.h>
 +#endif
-+
+ #include <ctype.h>
+ 
  #include "libssh/sftp.h"
- #include "libssh/sftp_priv.h"
- #include "libssh/buffer.h"
 diff --git a/vendor/libssh/src/string.c b/vendor/libssh/src/string.c
-index 0ab9310c4e..e1e63fd0ac 100644
+index e78737b3eb..5d7f7f8452 100644
 --- a/vendor/libssh/src/string.c
 +++ b/vendor/libssh/src/string.c
 @@ -26,7 +26,9 @@
@@ -129,14 +139,14 @@ index 0ab9310c4e..e1e63fd0ac 100644
 +#ifdef _WIN32
 +#include <winsock2.h>
 +#else
- #include <netinet/in.h>
  #include <arpa/inet.h>
+ #include <netinet/in.h>
  #endif
 diff --git a/vendor/libssh/src/ttyopts.c b/vendor/libssh/src/ttyopts.c
-index a1ab31f0c7..546060e5b4 100644
+index 251a988bb7..0d01fba1ac 100644
 --- a/vendor/libssh/src/ttyopts.c
 +++ b/vendor/libssh/src/ttyopts.c
-@@ -27,6 +27,10 @@
+@@ -27,9 +27,16 @@
  #include <stdint.h>
  #include <stdio.h>
  
@@ -147,3 +157,9 @@ index a1ab31f0c7..546060e5b4 100644
  #include <libssh/priv.h>
  #include <string.h>
  
++#ifdef _WIN32
++#include <winsock2.h>
++#endif
+ #ifdef HAVE_TERMIOS_H
+ #include <termios.h>
+ #endif

@@ -52,6 +52,7 @@ enum ssh_bind_config_opcode_e {
     BIND_CFG_MATCH,
     BIND_CFG_PUBKEY_ACCEPTED_KEY_TYPES,
     BIND_CFG_HOSTKEY_ALGORITHMS,
+    BIND_CFG_REQUIRED_RSA_SIZE,
 
     BIND_CFG_MAX /* Keep this one last in the list */
 };

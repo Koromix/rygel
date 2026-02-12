@@ -25,6 +25,7 @@
 extern "C" {
 #endif
 
+int ssh_config_parse(ssh_session session, FILE *fp, bool global);
 int ssh_config_parse_file(ssh_session session, const char *filename);
 int ssh_config_parse_string(ssh_session session, const char *input);
 int ssh_options_set_algo(ssh_session session,

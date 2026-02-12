@@ -160,6 +160,7 @@ setup_default_server(void **state)
     ss = tss->ss;
     s = tss->state;
 
+    setenv("NSS_WRAPPER_HOSTNAME", "server.libssh.site", 1);
     /* Start the server using the default values */
     pid = fork_run_server(ss, free_test_server_state, &tss);
     if (pid < 0) {
@@ -335,7 +336,7 @@ torture_gssapi_server_auth_invalid_host(void **state)
 
         "echo bar | kinit alice");
     rc = ssh_userauth_gssapi(session);
-    assert_int_equal(rc, SSH_AUTH_ERROR);
+    assert_int_equal(rc, SSH_AUTH_DENIED);
     torture_teardown_kdc_server((void **)&s);
 }
 

@@ -718,6 +718,88 @@ static void torture_algorithms_ecdh_curve25519_sha256_libssh_org(void **state) {
 }
 #endif /* OPENSSH_CURVE25519_SHA256_LIBSSH_ORG */
 
+#ifdef OPENSSH_SNTRUP761X25519_SHA512_OPENSSH_COM
+static void
+torture_algorithms_ecdh_sntrup761x25519_sha512_openssh_com(void **state)
+{
+    struct torture_state *s = *state;
+
+    if (ssh_fips_mode()) {
+        skip();
+    }
+
+    test_algorithm(s->ssh.session,
+                   "sntrup761x25519-sha512@openssh.com",
+                   NULL /*cipher*/,
+                   NULL /*hmac*/);
+}
+#endif /* OPENSSH_SNTRUP761X25519_SHA512_OPENSSH_COM */
+
+#ifdef OPENSSH_SNTRUP761X25519_SHA512
+static void
+torture_algorithms_ecdh_sntrup761x25519_sha512(void **state)
+{
+    struct torture_state *s = *state;
+
+    if (ssh_fips_mode()) {
+        skip();
+    }
+
+    test_algorithm(s->ssh.session,
+                   "sntrup761x25519-sha512",
+                   NULL /*cipher*/,
+                   NULL /*hmac*/);
+}
+#endif /* OPENSSH_SNTRUP761X25519_SHA512 */
+
+#if defined(OPENSSH_MLKEM768X25519_SHA256)
+static void torture_algorithms_ecdh_mlkem768x25519_sha256(void **state)
+{
+    struct torture_state *s = *state;
+
+    if (ssh_fips_mode()) {
+        skip();
+    }
+
+    test_algorithm(s->ssh.session,
+                   "mlkem768x25519-sha256",
+                   NULL /*cipher*/,
+                   NULL /*hmac*/);
+}
+#endif /* defined(OPENSSH_MLKEM768X25519_SHA256) */
+
+#if defined(OPENSSH_MLKEM768NISTP256_SHA256)
+static void torture_algorithms_ecdh_mlkem768nistp256_sha256(void **state)
+{
+    struct torture_state *s = *state;
+
+    if (ssh_fips_mode()) {
+        skip();
+    }
+
+    test_algorithm(s->ssh.session,
+                   "mlkem768nistp256-sha256",
+                   NULL /*cipher*/,
+                   NULL /*hmac*/);
+}
+#endif /* defined(OPENSSH_MLKEM768NISTP256_SHA256) */
+
+#if defined(HAVE_MLKEM1024) && defined(OPENSSH_MLKEM1024NISTP384_SHA384)
+static void torture_algorithms_ecdh_mlkem1024nistp384_sha384(void **state)
+{
+    struct torture_state *s = *state;
+
+    if (ssh_fips_mode()) {
+        skip();
+    }
+
+    test_algorithm(s->ssh.session,
+                   "mlkem1024nistp384-sha384",
+                   NULL /*cipher*/,
+                   NULL /*hmac*/);
+}
+#endif /* HAVE_MLKEM1024 && defined(OPENSSH_MLKEM1024NISTP384_SHA384) */
+
 static void torture_algorithms_dh_group1(void **state) {
     struct torture_state *s = *state;
 
@@ -985,6 +1067,31 @@ int torture_run_tests(void) {
                                         session_setup,
                                         session_teardown),
 #endif /* OPENSSH_CURVE25519_SHA256_LIBSSH_ORG */
+#ifdef OPENSSH_SNTRUP761X25519_SHA512_OPENSSH_COM
+        cmocka_unit_test_setup_teardown(torture_algorithms_ecdh_sntrup761x25519_sha512_openssh_com,
+                                        session_setup,
+                                        session_teardown),
+#endif /* OPENSSH_SNTRUP761X25519_SHA512_OPENSSH_COM */
+#ifdef OPENSSH_SNTRUP761X25519_SHA512
+        cmocka_unit_test_setup_teardown(torture_algorithms_ecdh_sntrup761x25519_sha512,
+                                        session_setup,
+                                        session_teardown),
+#endif /* OPENSSH_SNTRUP761X25519_SHA512 */
+#if defined(OPENSSH_MLKEM768X25519_SHA256)
+        cmocka_unit_test_setup_teardown(torture_algorithms_ecdh_mlkem768x25519_sha256,
+                                        session_setup,
+                                        session_teardown),
+#endif /* defined(OPENSSH_MLKEM768X25519_SHA256) */
+#if defined(OPENSSH_MLKEM768NISTP256_SHA256)
+        cmocka_unit_test_setup_teardown(torture_algorithms_ecdh_mlkem768nistp256_sha256,
+                                        session_setup,
+                                        session_teardown),
+#endif /* defined(OPENSSH_MLKEM768NISTP256_SHA256) */
+#if defined(HAVE_MLKEM1024) && defined(OPENSSH_MLKEM1024NISTP384_SHA384)
+        cmocka_unit_test_setup_teardown(torture_algorithms_ecdh_mlkem1024nistp384_sha384,
+                                        session_setup,
+                                        session_teardown),
+#endif /* defined(HAVE_MLKEM1024) && defined(OPENSSH_MLKEM1024NISTP384_SHA384) */
 #if defined(HAVE_ECC)
         cmocka_unit_test_setup_teardown(torture_algorithms_ecdh_sha2_nistp256,
                                         session_setup,

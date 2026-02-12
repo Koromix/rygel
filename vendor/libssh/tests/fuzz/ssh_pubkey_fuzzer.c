@@ -15,6 +15,7 @@
  */
 #include "config.h"
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -23,6 +24,26 @@
 #include "libssh/libssh.h"
 #include "libssh/misc.h"
 
+#include "nallocinc.c"
+
+static void _fuzz_finalize(void)
+{
+    ssh_finalize();
+}
+
+int LLVMFuzzerInitialize(int *argc, char ***argv)
+{
+    (void)argc;
+
+    nalloc_init(*argv[0]);
+
+    ssh_init();
+
+    atexit(_fuzz_finalize);
+
+    return 0;
+}
+
 int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 {
     ssh_key pkey = NULL;
@@ -30,8 +51,6 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
     int fd;
     int rc;
     ssize_t sz;
-
-    ssh_init();
 
     filename = strdup("/tmp/libssh_pubkey_XXXXXX");
     if (filename == NULL) {
@@ -51,18 +70,18 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
         return -1;
     }
 
+    assert(nalloc_start(data, size) > 0);
+
     rc = ssh_pki_import_pubkey_file(filename, &pkey);
     if (rc != SSH_OK) {
-        unlink(filename);
-        free(filename);
-        return 1;
+        goto out;
     }
     ssh_key_free(pkey);
+
+out:
     unlink(filename);
     free(filename);
-
-    ssh_finalize();
-
+    nalloc_end();
     return 0;
 }
 

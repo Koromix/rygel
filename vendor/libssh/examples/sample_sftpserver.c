@@ -148,6 +148,7 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
     ssh_bind sshbind = state->input;
     static int no_default_keys = 0;
     static int rsa_already_set = 0, ecdsa_already_set = 0;
+    static int verbosity = 0;
 
     switch (key)
     {
@@ -176,8 +177,10 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
         strncpy(authorizedkeys, arg, DEF_STR_SIZE - 1);
         break;
     case 'v':
-        ssh_bind_options_set(sshbind, SSH_BIND_OPTIONS_LOG_VERBOSITY_STR,
-                             "3");
+        verbosity++;
+        ssh_bind_options_set(sshbind,
+                             SSH_BIND_OPTIONS_LOG_VERBOSITY,
+                             &verbosity);
         break;
     case ARGP_KEY_ARG:
         if (state->arg_num >= 1)
@@ -213,10 +216,7 @@ static struct argp argp = {options, parse_opt, args_doc, doc, NULL, NULL, NULL};
 #endif /* HAVE_ARGP_H */
 
 /* A userdata struct for channel. */
-struct channel_data_struct
-{
-    /* Event which is used to poll the above descriptors. */
-    ssh_event event;
+struct channel_data_struct {
     sftp_session sftp;
 };
 
@@ -378,18 +378,11 @@ static void handle_session(ssh_event event, ssh_session session)
     do {
         /* Poll the main event which takes care of the session, the channel and
          * even our child process's stdout/stderr (once it's started). */
-        if (ssh_event_dopoll(event, -1) == SSH_ERROR) {
+        if (ssh_event_dopoll(event, 100) == SSH_ERROR) {
             ssh_channel_close(sdata.channel);
         }
-
-        /* If child process's stdout/stderr has been registered with the event,
-         * or the child process hasn't started yet, continue. */
-        if (cdata.event != NULL) {
-            continue;
-        }
-        /* FIXME The server keeps hanging in the poll above when the client
-         * closes the channel */
-    } while (ssh_channel_is_open(sdata.channel));
+    } while (ssh_channel_is_open(sdata.channel) &&
+             !ssh_channel_is_eof(sdata.channel));
 
     ssh_channel_send_eof(sdata.channel);
     ssh_channel_close(sdata.channel);

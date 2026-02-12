@@ -97,6 +97,10 @@ struct ssh_socket_struct {
 struct jump_thread_data_struct {
     ssh_session session;
     socket_t fd;
+    char *next_hostname;
+    uint16_t next_port;
+    struct ssh_jump_info_struct *next_jump;
+    struct ssh_jump_callbacks_struct *next_cb;
 };
 
 int proxy_disconnect = 0;
@@ -112,8 +116,14 @@ static ssize_t ssh_socket_unbuffered_write(ssh_socket s,
                                            uint32_t len);
 
 /**
- * \internal
- * \brief inits the socket system (windows specific)
+ * @internal
+ *
+ * @brief Initialize socket support for libssh.
+ *
+ * Initializes the socket subsystem, calling WSAStartup() on Windows and
+ * ssh_poll_init() on all platforms. Can be called multiple times.
+ *
+ * @return 0 on success; -1 on Windows socket initialization failure.
  */
 int ssh_socket_init(void)
 {
@@ -135,7 +145,12 @@ int ssh_socket_init(void)
 }
 
 /**
- * @brief Cleanup the socket system.
+ * @internal
+ *
+ * @brief Cleanup socket support for libssh.
+ *
+ * Cleans up the socket subsystem, calling ssh_poll_cleanup() on all platforms
+ * and WSACleanup() on Windows. Can be called multiple times.
  */
 void ssh_socket_cleanup(void)
 {
@@ -148,10 +163,17 @@ void ssh_socket_cleanup(void)
     }
 }
 
-
 /**
- * \internal
- * \brief creates a new Socket object
+ * @internal
+ *
+ * @brief Allocate and initialize a new SSH socket structure.
+ *
+ * Creates a new ssh_socket structure associated with the given session,
+ * initializes input/output buffers and sets default socket state.
+ *
+ * @param[in] session The SSH session to associate with the socket.
+ *
+ * @return A new ssh_socket on success; NULL on memory allocation failure.
  */
 ssh_socket ssh_socket_new(ssh_session session)
 {
@@ -189,8 +211,13 @@ ssh_socket ssh_socket_new(ssh_session session)
 
 /**
  * @internal
- * @brief Reset the state of a socket so it looks brand-new
- * @param[in] s socket to rest
+ *
+ * @brief Reset the state of a socket, so it looks brand new.
+ *
+ * Clears the file descriptor, reinitializes input/output buffers, frees
+ * the poll handle if present, and resets all socket state flags.
+ *
+ * @param[in] s The SSH socket to reset.
  */
 void ssh_socket_reset(ssh_socket s)
 {
@@ -202,7 +229,10 @@ void ssh_socket_reset(ssh_socket s)
     s->read_wontblock = 0;
     s->write_wontblock = 0;
     s->data_except = 0;
-    s->poll_handle = NULL;
+    if (s->poll_handle != NULL) {
+        ssh_poll_free(s->poll_handle);
+        s->poll_handle = NULL;
+    }
     s->state=SSH_SOCKET_NONE;
 #ifndef _WIN32
     s->proxy_pid = 0;
@@ -216,24 +246,36 @@ void ssh_socket_reset(ssh_socket s)
  * @param s socket to set callbacks on.
  * @param callbacks a ssh_socket_callback object reference.
  */
-
 void ssh_socket_set_callbacks(ssh_socket s, ssh_socket_callbacks callbacks)
 {
     s->callbacks = callbacks;
 }
 
+/**
+ * @internal
+ *
+ * @brief Mark an SSH socket as connected.
+ *
+ * Sets the socket state to connected and configures the poll handle
+ * to wait for `POLLIN` and `POLLOUT` events (needed for non-blocking connect).
+ *
+ * @param[in] s The SSH socket.
+ * @param[in] p The poll handle to configure, or NULL.
+ */
 void ssh_socket_set_connected(ssh_socket s, struct ssh_poll_handle_struct *p)
 {
     s->state = SSH_SOCKET_CONNECTED;
-    /* POLLOUT is the event to wait for in a nonblocking connect */
+    /* `POLLOUT` is the event to wait for in a non-blocking connect */
     if (p != NULL) {
         ssh_poll_set_events(p, POLLIN | POLLOUT);
     }
 }
 
 /**
- * @brief               SSH poll callback. This callback will be used when an event
- *                      caught on the socket.
+ * @internal
+ *
+ * @brief               SSH poll callback. This callback will be used when an
+ *                      event caught on the socket.
  *
  * @param p             Poll object this callback belongs to.
  * @param fd            The raw socket.
@@ -312,7 +354,8 @@ int ssh_socket_pollcallback(struct ssh_poll_handle_struct *p,
         }
 
         /* Rollback the unused space */
-        ssh_buffer_pass_bytes_end(s->in_buffer, MAX_BUF_SIZE - nread);
+        ssh_buffer_pass_bytes_end(s->in_buffer,
+                                  (uint32_t)(MAX_BUF_SIZE - nread));
 
         if (nread == 0) {
             if (p != NULL) {
@@ -337,7 +380,7 @@ int ssh_socket_pollcallback(struct ssh_poll_handle_struct *p,
                 processed = s->callbacks->data(ssh_buffer_get(s->in_buffer),
                                                ssh_buffer_get_len(s->in_buffer),
                                                s->callbacks->userdata);
-                ssh_buffer_pass_bytes(s->in_buffer, processed);
+                ssh_buffer_pass_bytes(s->in_buffer, (uint32_t)processed);
             } while ((processed > 0) && (s->state == SSH_SOCKET_CONNECTED));
 
             /* p may have been freed, so don't use it
@@ -412,8 +455,15 @@ ssh_poll_handle ssh_socket_get_poll_handle(ssh_socket s)
     return s->poll_handle;
 }
 
-/** \internal
- * \brief Deletes a socket object
+/**
+ * @internal
+ *
+ * @brief Deletes a socket object.
+ *
+ * Closes the socket connection, frees input/output buffers and
+ * releases the socket structure memory.
+ *
+ * @param[in] s The SSH socket to free, or NULL.
  */
 void ssh_socket_free(ssh_socket s)
 {
@@ -426,6 +476,20 @@ void ssh_socket_free(ssh_socket s)
     SAFE_FREE(s);
 }
 
+/**
+ * @internal
+ *
+ * @brief Connect an SSH socket to a Unix domain socket.
+ *
+ * Creates a Unix domain socket connection to the given @p path and associates
+ * it with the SSH socket.
+ *
+ * @param[in] s    The SSH socket to connect.
+ * @param[in] path Path to the Unix domain socket.
+ *
+ * @return `SSH_OK` on success; `SSH_ERROR` on socket creation, connect, or fd
+ * setup failure.
+ */
 int ssh_socket_unix(ssh_socket s, const char *path)
 {
     struct sockaddr_un sunaddr;
@@ -439,7 +503,7 @@ int ssh_socket_unix(ssh_socket s, const char *path)
         ssh_set_error(s->session, SSH_FATAL,
                       "Error from socket(AF_UNIX, SOCK_STREAM, 0): %s",
                       ssh_strerror(errno, err_msg, SSH_ERRNO_MSG_MAX));
-        return -1;
+        return SSH_ERROR;
     }
 
 #ifndef _WIN32
@@ -448,7 +512,7 @@ int ssh_socket_unix(ssh_socket s, const char *path)
                       "Error from fcntl(fd, F_SETFD, 1): %s",
                       ssh_strerror(errno, err_msg, SSH_ERRNO_MSG_MAX));
         CLOSE_SOCKET(fd);
-        return -1;
+        return SSH_ERROR;
     }
 #endif
 
@@ -457,14 +521,22 @@ int ssh_socket_unix(ssh_socket s, const char *path)
                       path,
                       ssh_strerror(errno, err_msg, SSH_ERRNO_MSG_MAX));
         CLOSE_SOCKET(fd);
-        return -1;
+        return SSH_ERROR;
     }
-    ssh_socket_set_fd(s,fd);
-    return 0;
+    return ssh_socket_set_fd(s, fd);
 }
 
-/** \internal
- * \brief closes a socket
+/**
+ * @internal
+ *
+ * @brief Close an SSH socket.
+ *
+ * Closes the socket file descriptor if open, saves the last error code,
+ * frees the poll handle if unlocked, and marks the socket state as closed.
+ * On Unix, attempts to terminate and wait for any running proxy command
+ * process.
+ *
+ * @param[in] s The SSH socket to close.
  */
 void ssh_socket_close(ssh_socket s)
 {
@@ -518,7 +590,7 @@ void ssh_socket_close(ssh_socket s)
  * @warning this function updates both the input and output
  * file descriptors
  */
-void ssh_socket_set_fd(ssh_socket s, socket_t fd)
+int ssh_socket_set_fd(ssh_socket s, socket_t fd)
 {
     ssh_poll_handle h = NULL;
 
@@ -530,7 +602,7 @@ void ssh_socket_set_fd(ssh_socket s, socket_t fd)
         s->state = SSH_SOCKET_CONNECTING;
         h = ssh_socket_get_poll_handle(s);
         if (h == NULL) {
-            return;
+            return SSH_ERROR;
         }
 
         /* POLLOUT is the event to wait for in a nonblocking connect */
@@ -539,26 +611,51 @@ void ssh_socket_set_fd(ssh_socket s, socket_t fd)
         ssh_poll_add_events(h, POLLWRNORM);
 #endif
     }
+    return SSH_OK;
 }
 
-/** \internal
- * \brief returns the input file descriptor of the socket
+/**
+ * @internal
+ *
+ * @brief Returns the input file descriptor of a socket.
+ *
+ * @param[in] s The SSH socket.
+ *
+ * @return The socket file descriptor (socket_t).
  */
 socket_t ssh_socket_get_fd(ssh_socket s)
 {
     return s->fd;
 }
 
-/** \internal
- * \brief returns nonzero if the socket is open
+/**
+ * @internal
+ *
+ * @brief Check if an SSH socket is open.
+ *
+ * @param[in] s The SSH socket.
+ *
+ * @return Non-zero if socket is open, 0 if closed or invalid.
  */
 int ssh_socket_is_open(ssh_socket s)
 {
     return s->fd != SSH_INVALID_SOCKET;
 }
 
-/** \internal
- * \brief read len bytes from socket into buffer
+/**
+ * @internal
+ *
+ * @brief Perform an unbuffered read from an SSH socket.
+ *
+ * Reads @p len bytes from the socket file descriptor directly into @p buffer,
+ * using `recv()` if the descriptor is a socket, or `read()` otherwise.
+ * Updates internal error and state flags based on the result.
+ *
+ * @param[in]  s      The SSH socket.
+ * @param[out] buffer Buffer to read data into.
+ * @param[in]  len    Maximum number of bytes to read.
+ *
+ * @return Number of bytes read on success, or -1 on error.
  */
 static ssize_t ssh_socket_unbuffered_read(ssh_socket s,
                                           void *buffer,
@@ -590,8 +687,21 @@ static ssize_t ssh_socket_unbuffered_read(ssh_socket s,
     return rc;
 }
 
-/** \internal
- * \brief writes len bytes from buffer to socket
+/**
+ * @internal
+ *
+ * @brief Perform an unbuffered write to an SSH socket.
+ *
+ * Writes @p len bytes from @p buffer to the socket file descriptor,
+ * using `send()` if the descriptor is a socket or `write()` otherwise.
+ * Updates internal error and state flags, and re-enables POLLOUT
+ * polling if a poll handle exists.
+ *
+ * @param[in] s      The SSH socket.
+ * @param[in] buffer Buffer containing data to write.
+ * @param[in] len    Number of bytes to write.
+ *
+ * @return Number of bytes written on success, or -1 on error.
  */
 static ssize_t ssh_socket_unbuffered_write(ssh_socket s,
                                            const void *buffer,
@@ -632,8 +742,18 @@ static ssize_t ssh_socket_unbuffered_write(ssh_socket s,
     return w;
 }
 
-/** \internal
- * \brief returns nonzero if the current socket is in the fd_set
+/**
+ * @internal
+ *
+ * @brief Check if SSH socket file descriptor is set in an fd_set.
+ *
+ * Tests if the socket's file descriptor is present in the
+ * given @p set (fd_set) . Returns 0 if the socket has no valid file descriptor.
+ *
+ * @param[in] s   The SSH socket.
+ * @param[in] set The fd_set to test against.
+ *
+ * @return Non-zero if the socket fd is set in the fd_set, 0 otherwise.
  */
 int ssh_socket_fd_isset(ssh_socket s, void *set)
 {
@@ -643,10 +763,17 @@ int ssh_socket_fd_isset(ssh_socket s, void *set)
     return FD_ISSET(s->fd,(fd_set *)set);
 }
 
-/** \internal
- * \brief sets the current fd in a fd_set and updates the max_fd
+/**
+ * @internal
+ *
+ * @brief Add SSH socket file descriptor to an fd_set.
+ *
+ * Adds the socket's file descriptor to the given @p set (fd_set)
+ * and updates @p max_fd if this socket has the highest file descriptor number.
+ * @param[in]     s       The SSH socket.
+ * @param[in,out] set     The fd_set to add the socket to.
+ * @param[in,out] max_fd  the maximum fd value.
  */
-
 void ssh_socket_fd_set(ssh_socket s, void *set, socket_t *max_fd)
 {
     if (s->fd == SSH_INVALID_SOCKET) {
@@ -662,10 +789,21 @@ void ssh_socket_fd_set(ssh_socket s, void *set, socket_t *max_fd)
     }
 }
 
-/** \internal
- * \brief buffered write of data
- * \returns SSH_OK, or SSH_ERROR
- * \warning has no effect on socket before a flush
+/**
+ * @internal
+ *
+ * @brief Write data to an SSH socket output buffer.
+ *
+ * Adds the data to the socket's output @p buffer and calls a nonblocking
+ * flush attempt to send buffered data.
+ *
+ * @param[in] s      The SSH socket.
+ * @param[in] buffer Data to write.
+ * @param[in] len    Number of bytes to write.
+ *
+ * @return `SSH_OK` on success; `SSH_ERROR` on buffer allocation failure.
+ *
+ * @warning It has no effect on socket before a flush.
  */
 int ssh_socket_write(ssh_socket s, const void *buffer, uint32_t len)
 {
@@ -680,10 +818,22 @@ int ssh_socket_write(ssh_socket s, const void *buffer, uint32_t len)
     return SSH_OK;
 }
 
-
-/** \internal
- * \brief starts a nonblocking flush of the output buffer
+/**
+ * @internal
  *
+ * @brief Starts a nonblocking flush of the output buffer.
+ *
+ * Sends all buffered data from the socket's output buffer.
+ * If the socket is not open, marks the session as dead and calls an
+ * exception callback or sets a fatal error. If the socket cannot currently
+ * accept data, polls for writable events and returns `SSH_AGAIN`.
+ * On write errors, closes the socket and signals the error. Updates
+ * byte counters on successful writes.
+ *
+ * @param[in] s The SSH socket.
+ *
+ * @return `SSH_OK` if all data was sent; `SSH_AGAIN` if the operation should
+ *         be retried later; `SSH_ERROR` on fatal socket error.
  */
 int ssh_socket_nonblocking_flush(ssh_socket s)
 {
@@ -742,7 +892,7 @@ int ssh_socket_nonblocking_flush(ssh_socket s)
             return SSH_ERROR;
         }
 
-        ssh_buffer_pass_bytes(s->out_buffer, bwritten);
+        ssh_buffer_pass_bytes(s->out_buffer, (uint32_t)bwritten);
         if (s->session->socket_counter != NULL) {
             s->session->socket_counter->out_bytes += bwritten;
         }
@@ -763,26 +913,79 @@ int ssh_socket_nonblocking_flush(ssh_socket s)
     return SSH_OK;
 }
 
+/**
+ * @internal
+ *
+ * @brief Set the SSH socket write_wontblock flag.
+ *
+ * Marks the socket as ready for nonblocking writes (`write_wontblock = 1`).
+ * Used by the poll system when POLLOUT becomes available.
+ *
+ * @param[in] s The SSH socket.
+ */
 void ssh_socket_set_write_wontblock(ssh_socket s)
 {
     s->write_wontblock = 1;
 }
 
+/**
+ * @internal
+ *
+ * @brief Set the SSH socket read_wontblock flag.
+ *
+ * Marks the socket as ready for nonblocking reads (`read_wontblock = 1`).
+ * Used by the poll system when POLLIN becomes available.
+ *
+ * @param[in] s The SSH socket.
+ */
 void ssh_socket_set_read_wontblock(ssh_socket s)
 {
     s->read_wontblock = 1;
 }
 
+/**
+ * @internal
+ *
+ * @brief Set the SSH socket exception flag.
+ *
+ * Marks the socket as having an exception condition (`data_except = 1`).
+ *
+ * @param[in] s The SSH socket.
+ */
 void ssh_socket_set_except(ssh_socket s)
 {
     s->data_except = 1;
 }
 
+/**
+ * @internal
+ *
+ * @brief Check if SSH socket data is available for reading.
+ *
+ * Returns true if the socket is ready for nonblocking reads
+ * (`read_wontblock` flag is set).
+ *
+ * @param[in] s The SSH socket.
+ *
+ * @return 1 if data is available, 0 otherwise.
+ */
 int ssh_socket_data_available(ssh_socket s)
 {
     return s->read_wontblock;
 }
 
+/**
+ * @internal
+ *
+ * @brief Check if SSH socket is writable.
+ *
+ * Returns true if the socket is ready for nonblocking writes
+ * (`write_wontblock` flag is set).
+ *
+ * @param[in] s The SSH socket.
+ *
+ * @return 1 if socket is writable, 0 otherwise.
+ */
 int ssh_socket_data_writable(ssh_socket s)
 {
     return s->write_wontblock;
@@ -802,7 +1005,19 @@ int ssh_socket_buffered_write_bytes(ssh_socket s)
     return ssh_buffer_get_len(s->out_buffer);
 }
 
-
+/**
+ * @internal
+ *
+ * @brief Get the current status of an SSH socket.
+ *
+ * Checks the input/output buffers and exception flag to determine socket
+ * status: `SSH_READ_PENDING` if input data available, `SSH_WRITE_PENDING`
+ * if output data pending, `SSH_CLOSED_ERROR` if exception occurred.
+ *
+ * @param[in] s The SSH socket.
+ *
+ * @return Socket status flags.
+ */
 int ssh_socket_get_status(ssh_socket s)
 {
     int r = 0;
@@ -822,6 +1037,18 @@ int ssh_socket_get_status(ssh_socket s)
     return r;
 }
 
+/**
+ * @internal
+ *
+ * @brief Get SSH socket poll flags from the poll handle.
+ *
+ * Checks the poll handle events and returns `SSH_READ_PENDING` if POLLIN
+ * is set, `SSH_WRITE_PENDING` if POLLOUT is set.
+ *
+ * @param[in] s The SSH socket.
+ *
+ * @return Socket status flags based on poll events.
+ */
 int ssh_socket_get_poll_flags(ssh_socket s)
 {
     int r = 0;
@@ -868,8 +1095,8 @@ int ssh_socket_set_blocking(socket_t fd)
  * @param host hostname or ip address to connect to.
  * @param port port number to connect to.
  * @param bind_addr address to bind to, or NULL for default.
- * @returns SSH_OK socket is being connected.
- * @returns SSH_ERROR error while connecting to remote host.
+ * @returns `SSH_OK` socket is being connected.
+ * @returns `SSH_ERROR` error while connecting to remote host.
  */
 int ssh_socket_connect(ssh_socket s,
                        const char *host,
@@ -888,9 +1115,7 @@ int ssh_socket_connect(ssh_socket s,
     if (fd == SSH_INVALID_SOCKET) {
         return SSH_ERROR;
     }
-    ssh_socket_set_fd(s,fd);
-
-    return SSH_OK;
+    return ssh_socket_set_fd(s, fd);
 }
 
 #ifdef WITH_EXEC
@@ -956,8 +1181,8 @@ ssh_execute_command(const char *command, socket_t in, socket_t out)
  * This call will always be nonblocking.
  * @param s    socket to connect.
  * @param command Command to execute.
- * @returns SSH_OK socket is being connected.
- * @returns SSH_ERROR error while executing the command.
+ * @returns `SSH_OK` socket is being connected.
+ * @returns `SSH_ERROR` error while executing the command.
  */
 int
 ssh_socket_connect_proxycommand(ssh_socket s, const char *command)
@@ -984,8 +1209,16 @@ ssh_socket_connect_proxycommand(ssh_socket s, const char *command)
     }
     s->proxy_pid = pid;
     close(pair[0]);
-    SSH_LOG(SSH_LOG_DEBUG, "ProxyCommand connection pipe: [%d,%d]",pair[0],pair[1]);
-    ssh_socket_set_fd(s, pair[1]);
+    SSH_LOG(SSH_LOG_DEBUG,
+            "ProxyCommand connection pipe: [%d,%d]",
+            pair[0],
+            pair[1]);
+
+    rc = ssh_socket_set_fd(s, pair[1]);
+    if (rc != SSH_OK) {
+        return rc;
+    }
+
     s->fd_is_socket = 0;
     h = ssh_socket_get_poll_handle(s);
     if (h == NULL) {
@@ -1020,6 +1253,22 @@ verify_knownhost(ssh_session session)
     return SSH_OK;
 }
 
+static void free_jump_thread_data(struct jump_thread_data_struct *data)
+{
+    if (data == NULL) {
+        return;
+    }
+
+    ssh_free(data->session);
+    SAFE_FREE(data->next_hostname);
+    if (data->next_jump != NULL) {
+        SAFE_FREE(data->next_jump->hostname);
+        SAFE_FREE(data->next_jump->username);
+    }
+    SAFE_FREE(data->next_jump);
+    SAFE_FREE(data);
+}
+
 static void *
 jump_thread_func(void *arg)
 {
@@ -1031,78 +1280,43 @@ jump_thread_func(void *arg)
     int rc;
     ssh_event event = NULL;
     ssh_connector connector_in = NULL, connector_out = NULL;
-    ssh_session session = NULL;
-    int next_port;
+    uint16_t next_port;
     char *next_hostname = NULL;
 
     jump_thread_data = (struct jump_thread_data_struct *)arg;
-    session = jump_thread_data->session;
+    jump_session = jump_thread_data->session;
 
-    next_port = session->opts.port;
-    next_hostname = strdup(session->opts.host);
+    /* First thing we need to do is to set the right level as its kept in
+     * thread local variable, therefore reset to 0 after spawning new thread.
+     */
+    ssh_set_log_level(jump_session->common.log_verbosity);
 
-    jump_session = ssh_new();
-    if (jump_session == NULL) {
-        goto exit;
-    }
+    cb = jump_thread_data->next_cb;
+    jis = jump_thread_data->next_jump;
 
-    jump_session->proxy_root = false;
-    /* Reset the global variable if it was previously 1 */
-    if (session->proxy_root) {
-        proxy_disconnect = 0;
-    }
-
-    for (jis = ssh_list_pop_head(struct ssh_jump_info_struct *,
-                                 session->opts.proxy_jumps);
-         jis != NULL;
-         jis = ssh_list_pop_head(struct ssh_jump_info_struct *,
-                                 session->opts.proxy_jumps)) {
-        rc = ssh_list_append(jump_session->opts.proxy_jumps, jis);
-        if (rc != SSH_OK) {
-            ssh_set_error_oom(session);
-            goto exit;
-        }
-    }
-    for (jis =
-            ssh_list_pop_head(struct ssh_jump_info_struct *,
-                              session->opts.proxy_jumps_user_cb);
-         jis != NULL;
-         jis = ssh_list_pop_head(struct ssh_jump_info_struct *,
-                                 session->opts.proxy_jumps_user_cb)) {
-        rc = ssh_list_append(jump_session->opts.proxy_jumps_user_cb, jis);
-        if (rc != SSH_OK) {
-            ssh_set_error_oom(session);
-            goto exit;
-        }
-    }
-
-    ssh_options_set(jump_session,
-                    SSH_OPTIONS_LOG_VERBOSITY,
-                    &session->common.log_verbosity);
-
-    /* Pop the information about the current jump */
-    jis = ssh_list_pop_head(struct ssh_jump_info_struct *,
-                            jump_session->opts.proxy_jumps);
-    if (jis == NULL) {
-        SSH_LOG(SSH_LOG_WARN, "Inconsistent list of proxy jumps received");
-        goto exit;
-    }
+    /* This is the calling thread target where we will eventually initialize
+     * forwarding */
+    next_port = jump_thread_data->next_port;
+    next_hostname = jump_thread_data->next_hostname;
 
     ssh_options_set(jump_session, SSH_OPTIONS_HOST, jis->hostname);
     ssh_options_set(jump_session, SSH_OPTIONS_USER, jis->username);
     ssh_options_set(jump_session, SSH_OPTIONS_PORT, &jis->port);
 
-    /* Pop the callbacks for the current jump */
-    cb = ssh_list_pop_head(struct ssh_jump_callbacks_struct *,
-                           jump_session->opts.proxy_jumps_user_cb);
-
-    if (cb != NULL) {
+    if (cb != NULL && cb->before_connection != NULL) {
         rc = cb->before_connection(jump_session, cb->userdata);
         if (rc != SSH_OK) {
             SSH_LOG(SSH_LOG_WARN, "%s", ssh_get_error(jump_session));
             goto exit;
         }
     }
+
+    SSH_LOG(SSH_LOG_PACKET,
+            "Proxy connecting to host %s port %d user %s, callbacks=%p",
+            jis->hostname,
+            jis->port,
+            jis->username,
+            (void *)cb);
 
     /* If there are more jumps then this will make a new thread and call the
      * current function again, until there are no jumps. When there are no jumps
@@ -1194,34 +1408,42 @@ exit:
         ssh_event_remove_connector(event, connector_out);
         ssh_connector_free(connector_out);
     }
-    SAFE_FREE(next_hostname);
-    if (jis != NULL) {
-        SAFE_FREE(jis->hostname);
-        SAFE_FREE(jis->username);
-    }
-    SAFE_FREE(jis);
 
     ssh_disconnect(jump_session);
     ssh_event_free(event);
-    ssh_free(jump_session);
 
-    SAFE_FREE(jump_thread_data);
+    shutdown(jump_thread_data->fd, SHUT_RDWR);
+    close(jump_thread_data->fd);
 
+    free_jump_thread_data(jump_thread_data);
     pthread_exit(NULL);
 }
 
 int
 ssh_socket_connect_proxyjump(ssh_socket s)
 {
+    char err_msg[SSH_ERRNO_MSG_MAX] = {0};
     ssh_poll_handle h = NULL;
     int rc;
     pthread_t jump_thread;
+    struct ssh_jump_info_struct *jis = NULL;
+    struct ssh_jump_callbacks_struct *cb = NULL;
     struct jump_thread_data_struct *jump_thread_data = NULL;
-    socket_t pair[2];
+    ssh_session jump_session = NULL, session = NULL;
+    struct ssh_list *empty_list = NULL;
+    socket_t pair[2] = {SSH_INVALID_SOCKET, SSH_INVALID_SOCKET};
+
+    session = s->session;
+
+    SSH_LOG(SSH_LOG_INFO,
+            "Connecting to host %s port %d user %s through ProxyJump",
+            session->opts.host,
+            session->opts.port,
+            session->opts.username);
 
     if (s->state != SSH_SOCKET_NONE) {
         ssh_set_error(
-            s->session,
+            session,
             SSH_FATAL,
             "ssh_socket_connect_proxyjump called on socket not unconnected");
         return SSH_ERROR;
@@ -1229,53 +1451,109 @@ ssh_socket_connect_proxyjump(ssh_socket s)
 
     jump_thread_data = calloc(1, sizeof(struct jump_thread_data_struct));
     if (jump_thread_data == NULL) {
-        ssh_set_error_oom(s->session);
+        ssh_set_error_oom(session);
         return SSH_ERROR;
     }
 
     rc = socketpair(PF_UNIX, SOCK_STREAM, 0, pair);
     if (rc == -1) {
-        char err_msg[SSH_ERRNO_MSG_MAX] = {0};
-
-        ssh_set_error(s->session,
+        ssh_set_error(session,
                       SSH_FATAL,
                       "Creating socket pair failed: %s",
                       ssh_strerror(errno, err_msg, SSH_ERRNO_MSG_MAX));
-        SAFE_FREE(jump_thread_data);
-        return SSH_ERROR;
+        goto fail;
     }
 
-    jump_thread_data->session = s->session;
+    jump_session = ssh_new();
+    if (jump_session == NULL) {
+        ssh_set_error_oom(session);
+        goto fail;
+    }
+
+    jump_session->proxy_root = false;
+    /* Reset the global variable if it was previously 1 */
+    if (session->proxy_root) {
+        proxy_disconnect = 0;
+    }
+
+    /* Pop first jump that will be used by the following thread */
+    jis = ssh_list_pop_head(struct ssh_jump_info_struct *,
+                            session->opts.proxy_jumps);
+    if (jis == NULL) {
+        SSH_LOG(SSH_LOG_WARN, "Inconsistent list of proxy jumps received");
+        ssh_free(jump_session);
+        goto fail;
+    }
+    jump_thread_data->next_jump = jis;
+    /* Move remaining to the jump session without reallocation.
+     * The list in the new jump_session is just allocated so empty */
+    empty_list = jump_session->opts.proxy_jumps;
+    jump_session->opts.proxy_jumps = session->opts.proxy_jumps;
+    session->opts.proxy_jumps = empty_list;
+
+    /* Pop the callbacks for the first jump */
+    cb = ssh_list_pop_head(struct ssh_jump_callbacks_struct *,
+                           session->opts.proxy_jumps_user_cb);
+    /* empty is ok */
+    jump_thread_data->next_cb = cb;
+    /* Move remaining to the jump session without reallocation.
+     * The list in the new jump_session is just allocated so empty */
+    empty_list = jump_session->opts.proxy_jumps_user_cb;
+    jump_session->opts.proxy_jumps_user_cb = session->opts.proxy_jumps_user_cb;
+    session->opts.proxy_jumps_user_cb = empty_list;
+
+    ssh_options_set(jump_session,
+                    SSH_OPTIONS_LOG_VERBOSITY,
+                    &session->common.log_verbosity);
+
+    jump_thread_data->next_port = session->opts.port;
+    jump_thread_data->next_hostname = strdup(session->opts.host);
+
     jump_thread_data->fd = pair[0];
+    pair[0] = SSH_INVALID_SOCKET;
+    jump_thread_data->session = jump_session;
+    /* transferred to the jump_thread_data */
+    jump_session = NULL;
+
+    SSH_LOG(SSH_LOG_INFO,
+            "Starting proxy thread to host %s port %d user %s, callbacks=%p",
+            jump_thread_data->next_jump->hostname,
+            jump_thread_data->next_jump->port,
+            jump_thread_data->next_jump->username,
+            (void *)jump_thread_data->next_cb);
 
     rc = pthread_create(&jump_thread, NULL, jump_thread_func, jump_thread_data);
     if (rc != 0) {
-        char err_msg[SSH_ERRNO_MSG_MAX] = {0};
-
-        ssh_set_error(s->session,
+        ssh_set_error(session,
                       SSH_FATAL,
                       "Creating new thread failed: %s",
                       ssh_strerror(rc, err_msg, SSH_ERRNO_MSG_MAX));
-        SAFE_FREE(jump_thread_data);
-        return SSH_ERROR;
+        goto fail;
     }
+    /* ownership passed to the thread */
+    jump_thread_data = NULL;
+
     rc = pthread_detach(jump_thread);
     if (rc != 0) {
-        char err_msg[SSH_ERRNO_MSG_MAX] = {0};
-
-        ssh_set_error(s->session,
+        ssh_set_error(session,
                       SSH_FATAL,
                       "Failed to detach thread: %s",
                       ssh_strerror(rc, err_msg, SSH_ERRNO_MSG_MAX));
-        SAFE_FREE(jump_thread_data);
-        return SSH_ERROR;
+        goto fail;
     }
 
     SSH_LOG(SSH_LOG_DEBUG,
-            "ProxyJump connection pipe: [%d,%d]",
+            "ProxyJump connection thread %lu started pipe: [%d,%d]",
+            (unsigned long)jump_thread,
             pair[0],
             pair[1]);
-    ssh_socket_set_fd(s, pair[1]);
+
+    rc = ssh_socket_set_fd(s, pair[1]);
+    if (rc != SSH_OK) {
+        return rc;
+    }
+    pair[1] = SSH_INVALID_SOCKET;
+
     s->fd_is_socket = 1;
     h = ssh_socket_get_poll_handle(s);
     if (h == NULL) {
@@ -1289,6 +1567,16 @@ ssh_socket_connect_proxyjump(ssh_socket s)
     }
 
     return SSH_OK;
+
+fail:
+    if (pair[0] != SSH_INVALID_SOCKET) {
+        close(pair[0]);
+    }
+    if (pair[1] != SSH_INVALID_SOCKET) {
+        close(pair[1]);
+    }
+    free_jump_thread_data(jump_thread_data);
+    return SSH_ERROR;
 }
 
 #endif /* HAVE_PTHREAD */

@@ -38,35 +38,44 @@
 
 #ifdef HAVE_ECDH
 
-static mbedtls_ecp_group_id ecdh_kex_type_to_curve(enum ssh_key_exchange_e kex_type) {
-    if (kex_type == SSH_KEX_ECDH_SHA2_NISTP256) {
+static mbedtls_ecp_group_id
+ecdh_kex_type_to_curve(enum ssh_key_exchange_e kex_type)
+{
+    switch (kex_type) {
+    case SSH_KEX_ECDH_SHA2_NISTP256:
+    case SSH_KEX_MLKEM768NISTP256_SHA256:
+    case SSH_GSS_KEX_ECDH_NISTP256_SHA256:
         return MBEDTLS_ECP_DP_SECP256R1;
-    } else if (kex_type == SSH_KEX_ECDH_SHA2_NISTP384) {
+    case SSH_KEX_ECDH_SHA2_NISTP384:
         return MBEDTLS_ECP_DP_SECP384R1;
-    } else if (kex_type == SSH_KEX_ECDH_SHA2_NISTP521) {
+    case SSH_KEX_ECDH_SHA2_NISTP521:
         return MBEDTLS_ECP_DP_SECP521R1;
+    default:
+        return MBEDTLS_ECP_DP_NONE;
     }
-
     return MBEDTLS_ECP_DP_NONE;
 }
-int ssh_client_ecdh_init(ssh_session session)
+
+int ssh_ecdh_init(ssh_session session)
 {
-    ssh_string client_pubkey = NULL;
-    mbedtls_ecp_group grp;
     int rc;
+    mbedtls_ecp_group grp;
     mbedtls_ecp_group_id curve;
     mbedtls_ctr_drbg_context *ctr_drbg = NULL;
     mbedtls_ecp_keypair *ecdh_privkey = NULL;
+    ssh_string pubkey = NULL;
+    ssh_string *pubkey_loc = NULL;
+
+    if (session->server) {
+        pubkey_loc = &session->next_crypto->ecdh_server_pubkey;
+    } else {
+        pubkey_loc = &session->next_crypto->ecdh_client_pubkey;
+    }
 
     ctr_drbg = ssh_get_mbedtls_ctr_drbg_context();
 
     curve = ecdh_kex_type_to_curve(session->next_crypto->kex_type);
     if (curve == MBEDTLS_ECP_DP_NONE) {
-        return SSH_ERROR;
-    }
-
-    rc = ssh_buffer_add_u8(session->out_buffer, SSH2_MSG_KEX_ECDH_INIT);
-    if (rc < 0) {
         return SSH_ERROR;
     }
 
@@ -93,41 +102,55 @@ int ssh_client_ecdh_init(ssh_session session)
     }
 
     rc = mbedtls_ecp_gen_keypair(&grp,
-                     &ecdh_privkey->MBEDTLS_PRIVATE(d),
-                     &ecdh_privkey->MBEDTLS_PRIVATE(Q),
-                     mbedtls_ctr_drbg_random,
-                     ctr_drbg);
-
+                                 &ecdh_privkey->MBEDTLS_PRIVATE(d),
+                                 &ecdh_privkey->MBEDTLS_PRIVATE(Q),
+                                 mbedtls_ctr_drbg_random,
+                                 ctr_drbg);
     if (rc != 0) {
         rc = SSH_ERROR;
         goto out;
     }
 
-    client_pubkey = make_ecpoint_string(&grp,
-            &ecdh_privkey->MBEDTLS_PRIVATE(Q));
-    if (client_pubkey == NULL) {
+    pubkey = make_ecpoint_string(&grp, &ecdh_privkey->MBEDTLS_PRIVATE(Q));
+    if (pubkey == NULL) {
         rc = SSH_ERROR;
         goto out;
     }
 
-    rc = ssh_buffer_add_ssh_string(session->out_buffer, client_pubkey);
+    SSH_STRING_FREE(*pubkey_loc);
+    *pubkey_loc = pubkey;
+    pubkey = NULL;
+
+out:
+    mbedtls_ecp_group_free(&grp);
+    SSH_STRING_FREE(pubkey);
+    return rc;
+}
+
+int ssh_client_ecdh_init(ssh_session session)
+{
+    int rc;
+
+    rc = ssh_buffer_add_u8(session->out_buffer, SSH2_MSG_KEX_ECDH_INIT);
     if (rc < 0) {
-        rc = SSH_ERROR;
-        goto out;
+        return SSH_ERROR;
     }
 
-    SSH_STRING_FREE(session->next_crypto->ecdh_client_pubkey);
-    session->next_crypto->ecdh_client_pubkey = client_pubkey;
-    client_pubkey = NULL;
+    rc = ssh_ecdh_init(session);
+    if (rc < 0) {
+        return SSH_ERROR;
+    }
+
+    rc = ssh_buffer_add_ssh_string(session->out_buffer,
+                                   session->next_crypto->ecdh_client_pubkey);
+    if (rc < 0) {
+        return SSH_ERROR;
+    }
 
     /* register the packet callbacks */
     ssh_packet_set_callbacks(session, &ssh_ecdh_client_callbacks);
     session->dh_handshake_state = DH_STATE_INIT_SENT;
     rc = ssh_packet_send(session);
-
-out:
-    mbedtls_ecp_group_free(&grp);
-    SSH_STRING_FREE(client_pubkey);
 
     return rc;
 }
@@ -204,24 +227,15 @@ out:
 
 SSH_PACKET_CALLBACK(ssh_packet_server_ecdh_init){
     ssh_string q_c_string = NULL;
-    ssh_string q_s_string = NULL;
-    mbedtls_ecp_group grp;
-    mbedtls_ctr_drbg_context *ctr_drbg = NULL;
-    mbedtls_ecp_keypair *ecdh_privkey = NULL;
     ssh_key privkey = NULL;
     enum ssh_digest_e digest = SSH_DIGEST_AUTO;
     ssh_string sig_blob = NULL;
     ssh_string pubkey_blob = NULL;
     int rc;
-    mbedtls_ecp_group_id curve;
     (void)type;
     (void)user;
 
     ssh_packet_remove_callbacks(session, &ssh_ecdh_server_callbacks);
-    curve = ecdh_kex_type_to_curve(session->next_crypto->kex_type);
-    if (curve == MBEDTLS_ECP_DP_NONE) {
-        return SSH_ERROR;
-    }
 
     q_c_string = ssh_buffer_get_ssh_string(packet);
     if (q_c_string == NULL) {
@@ -229,44 +243,12 @@ SSH_PACKET_CALLBACK(ssh_packet_server_ecdh_init){
         return SSH_ERROR;
     }
 
-    session->next_crypto->ecdh_privkey = malloc(sizeof(mbedtls_ecp_keypair));
-    if (session->next_crypto->ecdh_privkey == NULL) {
-        ssh_set_error_oom(session);
-        return SSH_ERROR;
-    }
-
-    ecdh_privkey = session->next_crypto->ecdh_privkey;
-
     session->next_crypto->ecdh_client_pubkey = q_c_string;
 
-    ctr_drbg = ssh_get_mbedtls_ctr_drbg_context();
-
-    mbedtls_ecp_group_init(&grp);
-    mbedtls_ecp_keypair_init(ecdh_privkey);
-
-    rc = mbedtls_ecp_group_load(&grp, curve);
-    if (rc != 0) {
-        rc = SSH_ERROR;
-        goto out;
+    rc = ssh_ecdh_init(session);
+    if (rc < 0) {
+        return SSH_ERROR;
     }
-
-    rc = mbedtls_ecp_gen_keypair(&grp,
-                     &ecdh_privkey->MBEDTLS_PRIVATE(d),
-                     &ecdh_privkey->MBEDTLS_PRIVATE(Q),
-                     mbedtls_ctr_drbg_random,
-                     ctr_drbg);
-    if (rc != 0) {
-        rc = SSH_ERROR;
-        goto out;
-    }
-
-    q_s_string = make_ecpoint_string(&grp, &ecdh_privkey->MBEDTLS_PRIVATE(Q));
-    if (q_s_string == NULL) {
-        rc = SSH_ERROR;
-        goto out;
-    }
-
-    session->next_crypto->ecdh_server_pubkey = q_s_string;
 
     /* build k and session_id */
     rc = ecdh_build_k(session);
@@ -306,7 +288,7 @@ SSH_PACKET_CALLBACK(ssh_packet_server_ecdh_init){
     rc = ssh_buffer_pack(session->out_buffer, "bSSS",
                          SSH2_MSG_KEXDH_REPLY,
                          pubkey_blob, /* host's pubkey */
-                         q_s_string, /* ecdh public key */
+                         session->next_crypto->ecdh_server_pubkey, /* ecdh public key */
                          sig_blob); /* signature blob */
 
     SSH_STRING_FREE(sig_blob);
@@ -333,7 +315,6 @@ SSH_PACKET_CALLBACK(ssh_packet_server_ecdh_init){
     }
 
 out:
-    mbedtls_ecp_group_free(&grp);
     if (rc == SSH_ERROR) {
         ssh_buffer_reinit(session->out_buffer);
         session->session_state = SSH_SESSION_STATE_ERROR;

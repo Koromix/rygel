@@ -27,6 +27,10 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#ifdef _WIN32
+#include <winsock2.h>
+#endif
+
 #include <libssh/priv.h>
 #include <string.h>
 
@@ -175,12 +179,18 @@ baud2speed(int baudrate)
         return 19200;
     case B38400:
         return 38400;
+#ifdef B57600
     case B57600:
         return 57600;
+#endif
+#ifdef B115200
     case B115200:
         return 115200;
+#endif
+#ifdef B230400
     case B230400:
         return 230400;
+#endif
     }
 }
 
@@ -225,7 +235,9 @@ encode_termios_opts(struct termios *attr, unsigned char *buf, size_t buflen)
     SSH_ENCODE_INPUT_OPT(IXON)
     SSH_ENCODE_INPUT_OPT(IXANY)
     SSH_ENCODE_INPUT_OPT(IXOFF)
+#ifdef IMAXBEL
     SSH_ENCODE_INPUT_OPT(IMAXBEL)
+#endif
 #ifdef IUTF8
     SSH_ENCODE_INPUT_OPT(IUTF8)
 #endif
@@ -265,8 +277,12 @@ encode_termios_opts(struct termios *attr, unsigned char *buf, size_t buflen)
     SSH_ENCODE_LOCAL_OPT(NOFLSH)
     SSH_ENCODE_LOCAL_OPT(TOSTOP)
     SSH_ENCODE_LOCAL_OPT(IEXTEN)
+#ifdef ECHOCTL
     SSH_ENCODE_LOCAL_OPT(ECHOCTL)
+#endif
+#ifdef ECHOKE
     SSH_ENCODE_LOCAL_OPT(ECHOKE)
+#endif
 #ifdef PENDIN
     SSH_ENCODE_LOCAL_OPT(PENDIN)
 #endif
@@ -279,16 +295,24 @@ encode_termios_opts(struct termios *attr, unsigned char *buf, size_t buflen)
     SSH_ENCODE_CC_OPT(VKILL)
     SSH_ENCODE_CC_OPT(VEOF)
     SSH_ENCODE_CC_OPT(VEOL)
+#ifdef VEOL2
     SSH_ENCODE_CC_OPT(VEOL2)
+#endif
     SSH_ENCODE_CC_OPT(VSTART)
     SSH_ENCODE_CC_OPT(VSTOP)
     SSH_ENCODE_CC_OPT(VSUSP)
 #ifdef VDSUSP
     SSH_ENCODE_CC_OPT(VDSUSP)
 #endif
+#ifdef VREPRINT
     SSH_ENCODE_CC_OPT(VREPRINT)
+#endif
+#ifdef VWERASE
     SSH_ENCODE_CC_OPT(VWERASE)
+#endif
+#ifdef VLNEXT
     SSH_ENCODE_CC_OPT(VLNEXT)
+#endif
 #ifdef VFLUSH
     SSH_ENCODE_CC_OPT(VFLUSH)
 #endif
@@ -298,7 +322,9 @@ encode_termios_opts(struct termios *attr, unsigned char *buf, size_t buflen)
 #ifdef VSTATUS
     SSH_ENCODE_CC_OPT(VSTATUS)
 #endif
+#ifdef VDISCARD
     SSH_ENCODE_CC_OPT(VDISCARD)
+#endif
 #undef SSH_ENCODE_CC_OPT
 
     SSH_ENCODE_OPT(TTY_OP_ISPEED, baud2speed(cfgetispeed(attr)))

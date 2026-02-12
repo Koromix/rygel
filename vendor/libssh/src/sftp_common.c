@@ -421,6 +421,9 @@ static sftp_attributes sftp_parse_attr_4(sftp_session sftp,
                    (attr->extended_type = ssh_buffer_get_ssh_string(buf)) &&
                    (attr->extended_data = ssh_buffer_get_ssh_string(buf))) {
                 attr->extended_count--;
+                /* just ignore the extensions -- we can't interpret them */
+                SSH_STRING_FREE(attr->extended_type);
+                SSH_STRING_FREE(attr->extended_data);
             }
 
             if (attr->extended_count) {
@@ -461,19 +464,24 @@ enum sftp_longname_field_e {
 static char * sftp_parse_longname(const char *longname,
                                   enum sftp_longname_field_e longname_field)
 {
-    const char *p, *q;
+    const char *p = NULL, *q = NULL;
     size_t len, field = 0;
+
+    if (longname == NULL || longname_field < SFTP_LONGNAME_PERM ||
+        longname_field > SFTP_LONGNAME_NAME) {
+        return NULL;
+    }
 
     p = longname;
     /*
      * Find the beginning of the field which is specified
      * by sftp_longname_field_e.
      */
-    while (field != longname_field) {
+    while (*p != '\0' && field != longname_field) {
         if (isspace(*p)) {
             field++;
             p++;
-            while (*p && isspace(*p)) {
+            while (*p != '\0' && isspace(*p)) {
                 p++;
             }
         } else {
@@ -481,8 +489,13 @@ static char * sftp_parse_longname(const char *longname,
         }
     }
 
+    /* If we reached NULL before we got our field fail */
+    if (field != longname_field) {
+        return NULL;
+    }
+
     q = p;
-    while (! isspace(*q)) {
+    while (*q != '\0' && !isspace(*q)) {
         q++;
     }
 
@@ -549,17 +562,14 @@ static sftp_attributes sftp_parse_attr_3(sftp_session sftp,
     if (rc != SSH_OK){
         goto error;
     }
-    SSH_LOG(SSH_LOG_DEBUG,
-            "Flags: %.8" PRIx32 "\n", attr->flags);
+    SSH_LOG(SSH_LOG_DEBUG, "Flags: %.8" PRIx32, attr->flags);
 
     if (attr->flags & SSH_FILEXFER_ATTR_SIZE) {
         rc = ssh_buffer_unpack(buf, "q", &attr->size);
         if(rc != SSH_OK) {
             goto error;
         }
-        SSH_LOG(SSH_LOG_DEBUG,
-                "Size: %" PRIu64 "\n",
-                (uint64_t) attr->size);
+        SSH_LOG(SSH_LOG_DEBUG, "Size: %" PRIu64, (uint64_t)attr->size);
     }
 
     if (attr->flags & SSH_FILEXFER_ATTR_UIDGID) {
@@ -860,6 +870,94 @@ int sftp_read_and_dispatch(sftp_session sftp)
     }
 
     return 0;
+}
+
+int sftp_recv_response_msg(sftp_session sftp,
+                           uint32_t id,
+                           bool blocking,
+                           sftp_message *msg_ptr)
+{
+    sftp_message msg = NULL;
+    int rc;
+
+    if (sftp == NULL) {
+        return SSH_ERROR;
+    }
+
+    if (msg_ptr == NULL) {
+        ssh_set_error_invalid(sftp->session);
+        sftp_set_error(sftp, SSH_FX_FAILURE);
+        return SSH_ERROR;
+    }
+
+    SSH_LOG(SSH_LOG_PACKET,
+            "Trying to receive response of request id %" PRIu32 " in %s mode",
+            id,
+            blocking ? "blocking" : "non-blocking");
+
+    /*
+     * We deliberately check the queue first for the response before
+     * polling/blocking on the channel. The reason for this approach is
+     * explained by the following example (And a similar scenario can occur when
+     * the async sftp aio API is used, because it provides the control of which
+     * responses to receive (and in what order) to the user via the
+     * sftp_aio_wait_*() functions)
+     *
+     * Its possible that while this function is trying to receive some
+     * specific response (based on request id), other responses have already
+     * arrived (or may arrive) before that specific response on the channel. In
+     * that case, this function would collect those other responses from the
+     * channel, add them to the sftp response queue (using
+     * sftp_read_and_dipatch()) and finally provide the caller with the
+     * required specific response.
+     *
+     * Now, whenever the caller will call this function again to get one of
+     * those other responses, it won't be on the channel, instead it would be
+     * present in the queue.
+     *
+     * Assuming that no new response ever comes on the channel, if we don't
+     * check the queue first and instead:
+     * - (In non blocking mode) poll on the channel, then we'd always get 0
+     *    bytes of data and return SSH_AGAIN.
+     * - (In blocking mode) wait on the channel, then
+     *   sftp_read_and_dispatch() would block infinitely by default if the
+     *   user has not set any timeout.
+     *
+     * Hence checking the queue for the response first and if not found there,
+     * polling/blocking on the channel is advised.
+     */
+    while (msg == NULL) {
+        /*
+         * Before trying to poll/block on the channel for data, probe the queue
+         * to check whether the response is already present in it.
+         */
+        msg = sftp_dequeue(sftp, id);
+        if (msg != NULL) {
+            break;
+        }
+
+        if (!blocking) {
+            rc = ssh_channel_poll(sftp->channel, 0);
+            if (rc == SSH_ERROR) {
+                sftp_set_error(sftp, SSH_FX_FAILURE);
+                return SSH_ERROR;
+            }
+
+            if (rc == 0) {
+                /* nothing available and we cannot block */
+                return SSH_AGAIN;
+            }
+        }
+
+        rc = sftp_read_and_dispatch(sftp);
+        if (rc == -1) {
+            /* something nasty has happened */
+            return SSH_ERROR;
+        }
+    }
+
+    *msg_ptr = msg;
+    return SSH_OK;
 }
 
 sftp_status_message parse_status_msg(sftp_message msg)

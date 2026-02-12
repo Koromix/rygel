@@ -128,6 +128,11 @@ static void torture_pki_ed25519_import_privkey_base64(void **state)
 
     (void) state; /* unused */
 
+    /* Skip test if in FIPS mode */
+    if (ssh_fips_mode()) {
+        skip();
+    }
+
     key_str = torture_pki_read_file(LIBSSH_ED25519_TESTKEY);
     assert_non_null(key_str);
 
@@ -159,6 +164,11 @@ static void torture_pki_ed25519_import_privkey_base64_comment(void **state)
     enum ssh_keytypes_e type;
 
     (void) state; /* unused */
+
+    /* Skip test if in FIPS mode */
+    if (ssh_fips_mode()) {
+        skip();
+    }
 
     key_str = torture_pki_read_file(LIBSSH_ED25519_TESTKEY);
     assert_non_null(key_str);
@@ -199,6 +209,11 @@ static void torture_pki_ed25519_import_privkey_base64_whitespace(void **state)
 
     (void) state; /* unused */
 
+    /* Skip test if in FIPS mode */
+    if (ssh_fips_mode()) {
+        skip();
+    }
+
     key_str = torture_pki_read_file(LIBSSH_ED25519_TESTKEY);
     assert_non_null(key_str);
 
@@ -236,6 +251,11 @@ static void torture_pki_ed25519_import_export_privkey_base64(void **state)
     int rc;
 
     (void) state; /* unused */
+
+    /* Skip test if in FIPS mode */
+    if (ssh_fips_mode()) {
+        skip();
+    }
 
     rc = ssh_pki_import_privkey_base64(torture_get_openssh_testkey(SSH_KEYTYPE_ED25519,
                                                                    false),
@@ -289,6 +309,11 @@ static void torture_pki_ed25519_publickey_from_privatekey(void **state)
 
     (void) state; /* unused */
 
+    /* Skip test if in FIPS mode */
+    if (ssh_fips_mode()) {
+        skip();
+    }
+
     keystring = torture_get_openssh_testkey(SSH_KEYTYPE_ED25519, 0);
     rc = ssh_pki_import_privkey_base64(keystring,
                                        passphrase,
@@ -312,6 +337,8 @@ static void torture_pki_ed25519_publickey_from_privatekey(void **state)
 static void torture_pki_ed25519_import_cert_file(void **state)
 {
     int rc;
+    ssh_key pubkey = NULL;
+    ssh_key privkey = NULL;
     ssh_key cert = NULL;
     enum ssh_keytypes_e type;
 
@@ -323,16 +350,88 @@ static void torture_pki_ed25519_import_cert_file(void **state)
     assert_null(cert);
 
     rc = ssh_pki_import_cert_file(LIBSSH_ED25519_TESTKEY "-cert.pub", &cert);
-    assert_true(rc == 0);
+    assert_return_code(rc, errno);
     assert_non_null(cert);
+
+    rc = ssh_pki_import_pubkey_file(LIBSSH_ED25519_TESTKEY ".pub", &pubkey);
+    assert_return_code(rc, errno);
+    assert_non_null(pubkey);
 
     type = ssh_key_type(cert);
     assert_true(type == SSH_KEYTYPE_ED25519_CERT01);
 
     rc = ssh_key_is_public(cert);
-    assert_true(rc == 1);
+    assert_int_equal(rc, 1);
+
+    /* Skip test if in FIPS mode */
+    if (ssh_fips_mode()) {
+        SSH_KEY_FREE(cert);
+        SSH_KEY_FREE(pubkey);
+        skip();
+    }
+
+    /* Import matching private key file and verify the pubkey matches */
+    rc = ssh_pki_import_privkey_file(LIBSSH_ED25519_TESTKEY,
+                                     NULL,
+                                     NULL,
+                                     NULL,
+                                     &privkey);
+    assert_return_code(rc, errno);
+    assert_non_null(privkey);
+
+    type = ssh_key_type(privkey);
+    assert_true(type == SSH_KEYTYPE_ED25519);
+
+    /* Basic sanity. */
+    rc = ssh_pki_copy_cert_to_privkey(NULL, privkey);
+    assert_int_equal(rc, SSH_ERROR);
+
+    rc = ssh_pki_copy_cert_to_privkey(pubkey, NULL);
+    assert_int_equal(rc, SSH_ERROR);
+
+    /* A public key doesn't have a cert, copy should fail. */
+    assert_null(pubkey->cert);
+    rc = ssh_pki_copy_cert_to_privkey(pubkey, privkey);
+    assert_int_equal(rc, SSH_ERROR);
+
+    /* Copying the cert to non-cert keys should work fine. */
+    rc = ssh_pki_copy_cert_to_privkey(cert, pubkey);
+    assert_return_code(rc, errno);
+    assert_non_null(pubkey->cert);
+    rc = ssh_pki_copy_cert_to_privkey(cert, privkey);
+    assert_return_code(rc, errno);
+    assert_non_null(privkey->cert);
+    assert_true(privkey->cert_type == SSH_KEYTYPE_ED25519_CERT01);
+
+    assert_int_equal(ssh_key_cmp(privkey, cert, SSH_KEY_CMP_PUBLIC), 0);
+    assert_int_equal(ssh_key_cmp(cert, privkey, SSH_KEY_CMP_PUBLIC), 0);
+
+    /* The private key's cert is already set, another copy should fail. */
+    rc = ssh_pki_copy_cert_to_privkey(cert, privkey);
+    assert_int_equal(rc, SSH_ERROR);
+
+    SSH_KEY_FREE(privkey);
+    SSH_KEY_FREE(pubkey);
+
+    /* Generate different key and try to assign it this certificate */
+    rc = ssh_pki_generate_key(SSH_KEYTYPE_ED25519, NULL, &privkey);
+    assert_return_code(rc, errno);
+    assert_non_null(privkey);
+    rc = ssh_pki_export_privkey_to_pubkey(privkey, &pubkey);
+    assert_return_code(rc, errno);
+    assert_non_null(pubkey);
+
+    rc = ssh_pki_copy_cert_to_privkey(cert, privkey);
+    assert_int_equal(rc, SSH_ERROR);
+    rc = ssh_pki_copy_cert_to_privkey(cert, pubkey);
+    assert_int_equal(rc, SSH_ERROR);
+
+    assert_int_equal(ssh_key_cmp(privkey, cert, SSH_KEY_CMP_PUBLIC), 1);
+    assert_int_equal(ssh_key_cmp(cert, privkey, SSH_KEY_CMP_PUBLIC), 1);
 
     SSH_KEY_FREE(cert);
+    SSH_KEY_FREE(privkey);
+    SSH_KEY_FREE(pubkey);
 }
 
 static void torture_pki_ed25519_publickey_base64(void **state)
@@ -344,6 +443,11 @@ static void torture_pki_ed25519_publickey_base64(void **state)
     int rc;
 
     (void) state; /* unused */
+
+    /* Skip test if in FIPS mode */
+    if (ssh_fips_mode()) {
+        skip();
+    }
 
     key_buf = strdup(torture_get_testkey_pub(SSH_KEYTYPE_ED25519));
     assert_non_null(key_buf);
@@ -364,11 +468,11 @@ static void torture_pki_ed25519_publickey_base64(void **state)
     }
 
     rc = ssh_pki_import_pubkey_base64(q, type, &key);
-    assert_true(rc == 0);
+    assert_return_code(rc, errno);
     assert_non_null(key);
 
     rc = ssh_pki_export_pubkey_base64(key, &b64_key);
-    assert_true(rc == 0);
+    assert_return_code(rc, errno);
     assert_non_null(b64_key);
 
     assert_string_equal(q, b64_key);
@@ -386,7 +490,12 @@ static void torture_pki_ed25519_generate_pubkey_from_privkey(void **state)
     int rc;
     int len;
 
-    (void) state; /* unused */
+    (void)state; /* unused */
+
+    /* Skip test if in FIPS mode */
+    if (ssh_fips_mode()) {
+        skip();
+    }
 
     /* remove the public key, generate it from the private key and write it. */
     unlink(LIBSSH_ED25519_TESTKEY ".pub");
@@ -403,12 +512,12 @@ static void torture_pki_ed25519_generate_pubkey_from_privkey(void **state)
     assert_non_null(pubkey);
 
     rc = ssh_pki_export_pubkey_file(pubkey, LIBSSH_ED25519_TESTKEY ".pub");
-    assert_true(rc == 0);
+    assert_return_code(rc, errno);
 
     rc = torture_read_one_line(LIBSSH_ED25519_TESTKEY ".pub",
                                pubkey_generated,
                                sizeof(pubkey_generated));
-    assert_true(rc == 0);
+    assert_return_code(rc, errno);
 
     len = torture_pubkey_len(torture_get_testkey_pub(SSH_KEYTYPE_ED25519));
     assert_memory_equal(torture_get_testkey_pub(SSH_KEYTYPE_ED25519),
@@ -490,17 +599,17 @@ static void torture_pki_ed25519_cert_verify(void **state)
                                      NULL,
                                      NULL,
                                      &privkey);
-    assert_true(rc == 0);
+    assert_return_code(rc, errno);
     assert_non_null(privkey);
 
     rc = ssh_pki_import_cert_file(LIBSSH_ED25519_TESTKEY "-cert.pub", &cert);
-    assert_true(rc == 0);
+    assert_return_code(rc, errno);
     assert_non_null(cert);
 
     sign = pki_do_sign(privkey, HASH, 20, SSH_DIGEST_AUTO);
     assert_non_null(sign);
     rc = ssh_pki_signature_verify(session, sign, cert, HASH, 20);
-    assert_true(rc == SSH_OK);
+    assert_return_code(rc, errno);
     ssh_signature_free(sign);
     SSH_KEY_FREE(privkey);
     SSH_KEY_FREE(cert);
@@ -528,7 +637,7 @@ torture_pki_ed25519_write_privkey_format(void **state,
                                      NULL,
                                      NULL,
                                      &origkey);
-    assert_int_equal(rc, 0);
+    assert_return_code(rc, errno);
     assert_non_null(origkey);
 
     unlink(LIBSSH_ED25519_TESTKEY);
@@ -539,18 +648,18 @@ torture_pki_ed25519_write_privkey_format(void **state,
                                             NULL,
                                             LIBSSH_ED25519_TESTKEY,
                                             format);
-    assert_int_equal(rc, 0);
+    assert_return_code(rc, errno);
 
     rc = ssh_pki_import_privkey_file(LIBSSH_ED25519_TESTKEY,
                                      NULL,
                                      NULL,
                                      NULL,
                                      &privkey);
-    assert_int_equal(rc, 0);
+    assert_return_code(rc, errno);
     assert_non_null(privkey);
 
     rc = ssh_key_cmp(origkey, privkey, SSH_KEY_CMP_PRIVATE);
-    assert_int_equal(rc, 0);
+    assert_return_code(rc, errno);
 
     unlink(LIBSSH_ED25519_TESTKEY);
     SSH_KEY_FREE(privkey);
@@ -561,7 +670,7 @@ torture_pki_ed25519_write_privkey_format(void **state,
                                             NULL,
                                             LIBSSH_ED25519_TESTKEY,
                                             format);
-    assert_int_equal(rc, 0);
+    assert_return_code(rc, errno);
 
     /* Opening passphrase protected key will prompt for the pin interactively,
      * which would hang in the test */
@@ -580,11 +689,11 @@ torture_pki_ed25519_write_privkey_format(void **state,
                                      NULL,
                                      NULL,
                                      &privkey);
-    assert_int_equal(rc, 0);
+    assert_return_code(rc, errno);
     assert_non_null(privkey);
 
     rc = ssh_key_cmp(origkey, privkey, SSH_KEY_CMP_PRIVATE);
-    assert_int_equal(rc, 0);
+    assert_return_code(rc, errno);
     unlink(LIBSSH_ED25519_TESTKEY);
 
     SSH_KEY_FREE(origkey);
@@ -596,7 +705,7 @@ torture_pki_ed25519_write_privkey_format(void **state,
                                      NULL,
                                      NULL,
                                      &origkey);
-    assert_int_equal(rc, 0);
+    assert_return_code(rc, errno);
     assert_non_null(origkey);
 
     unlink(LIBSSH_ED25519_TESTKEY_PASSPHRASE);
@@ -606,7 +715,7 @@ torture_pki_ed25519_write_privkey_format(void **state,
                                             NULL,
                                             LIBSSH_ED25519_TESTKEY_PASSPHRASE,
                                             format);
-    assert_int_equal(rc, 0);
+    assert_return_code(rc, errno);
 
     /* Test with invalid passphrase */
     rc = ssh_pki_import_privkey_file(LIBSSH_ED25519_TESTKEY_PASSPHRASE,
@@ -832,7 +941,7 @@ static void torture_pki_ed25519_verify(void **state){
         *ptr = '\0';
     }
     rc = ssh_pki_import_pubkey_base64(pkey_ptr, SSH_KEYTYPE_ED25519, &pubkey);
-    assert_true(rc == SSH_OK);
+    assert_return_code(rc, errno);
     assert_non_null(pubkey);
 
     rc = ssh_string_fill(blob, ref_signature, ED25519_SIG_LEN);
@@ -841,7 +950,7 @@ static void torture_pki_ed25519_verify(void **state){
     assert_non_null(sig);
 
     rc = ssh_pki_signature_verify(session, sig, pubkey, HASH, sizeof(HASH));
-    assert_true(rc == SSH_OK);
+    assert_return_code(rc, errno);
 
     /* Alter signature and expect verification error */
 #ifdef HAVE_LIBCRYPTO
@@ -919,6 +1028,11 @@ static void torture_pki_ed25519_import_privkey_base64_passphrase(void **state)
 
     (void) state; /* unused */
 
+    /* Skip test if in FIPS mode */
+    if (ssh_fips_mode()) {
+        skip();
+    }
+
     /* same for ED25519 */
     testkey = torture_get_openssh_testkey(SSH_KEYTYPE_ED25519, 1);
     rc = ssh_pki_import_privkey_base64(testkey,
@@ -954,6 +1068,11 @@ static void torture_pki_ed25519_privkey_dup(void **state)
 
     (void) state; /* unused */
 
+    /* Skip test if in FIPS mode */
+    if (ssh_fips_mode()) {
+        skip();
+    }
+
     testkey = torture_get_openssh_testkey(SSH_KEYTYPE_ED25519, 1);
     rc = ssh_pki_import_privkey_base64(testkey,
                                        passphrase,
@@ -983,6 +1102,11 @@ static void torture_pki_ed25519_pubkey_dup(void **state)
     int rc;
 
     (void) state; /* unused */
+
+    /* Skip test if in FIPS mode */
+    if (ssh_fips_mode()) {
+        skip();
+    }
 
     pub_str = strdup(p + 1);
     assert_non_null(pub_str);
@@ -1017,33 +1141,40 @@ int torture_run_tests(void) {
         cmocka_unit_test_setup_teardown(torture_pki_ed25519_import_pubkey_file,
                                         setup_ed25519_key,
                                         teardown),
-        cmocka_unit_test_setup_teardown(torture_pki_ed25519_import_pubkey_from_openssh_privkey,
-                                        setup_ed25519_key,
-                                        teardown),
-        cmocka_unit_test_setup_teardown(torture_pki_ed25519_import_privkey_base64,
-                                        setup_ed25519_key,
-                                        teardown),
-        cmocka_unit_test_setup_teardown(torture_pki_ed25519_import_privkey_base64_comment,
-                                        setup_ed25519_key,
-                                        teardown),
-        cmocka_unit_test_setup_teardown(torture_pki_ed25519_import_privkey_base64_whitespace,
-                                        setup_ed25519_key,
-                                        teardown),
-        cmocka_unit_test_setup_teardown(torture_pki_ed25519_import_export_privkey_base64,
-                                        setup_ed25519_key,
-                                        teardown),
-        cmocka_unit_test_setup_teardown(torture_pki_ed25519_publickey_from_privatekey,
-                                        setup_ed25519_key,
-                                        teardown),
+        cmocka_unit_test_setup_teardown(
+            torture_pki_ed25519_import_pubkey_from_openssh_privkey,
+            setup_ed25519_key,
+            teardown),
+        cmocka_unit_test_setup_teardown(
+            torture_pki_ed25519_import_privkey_base64,
+            setup_ed25519_key,
+            teardown),
+        cmocka_unit_test_setup_teardown(
+            torture_pki_ed25519_import_privkey_base64_comment,
+            setup_ed25519_key,
+            teardown),
+        cmocka_unit_test_setup_teardown(
+            torture_pki_ed25519_import_privkey_base64_whitespace,
+            setup_ed25519_key,
+            teardown),
+        cmocka_unit_test_setup_teardown(
+            torture_pki_ed25519_import_export_privkey_base64,
+            setup_ed25519_key,
+            teardown),
+        cmocka_unit_test_setup_teardown(
+            torture_pki_ed25519_publickey_from_privatekey,
+            setup_ed25519_key,
+            teardown),
         cmocka_unit_test_setup_teardown(torture_pki_ed25519_import_cert_file,
                                         setup_ed25519_key,
                                         teardown),
         cmocka_unit_test_setup_teardown(torture_pki_ed25519_publickey_base64,
                                         setup_ed25519_key,
                                         teardown),
-        cmocka_unit_test_setup_teardown(torture_pki_ed25519_generate_pubkey_from_privkey,
-                                        setup_ed25519_key,
-                                        teardown),
+        cmocka_unit_test_setup_teardown(
+            torture_pki_ed25519_generate_pubkey_from_privkey,
+            setup_ed25519_key,
+            teardown),
         cmocka_unit_test(torture_pki_ed25519_generate_key),
         cmocka_unit_test_setup_teardown(torture_pki_ed25519_cert_verify,
                                         setup_ed25519_key,

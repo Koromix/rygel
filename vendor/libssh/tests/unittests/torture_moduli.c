@@ -82,7 +82,8 @@ static void torture_retrieve_dhgroup_file(UNUSED_PARAM(void **state))
     int rc;
 
     fwrite(moduli_content, 1, sizeof(moduli_content), moduli);
-    rewind(moduli);
+    rc = fseek(moduli, 0L, SEEK_SET);
+    assert_int_equal(rc, 0);
     rc = ssh_retrieve_dhgroup_file(moduli,
                                    1024,
                                    2048,

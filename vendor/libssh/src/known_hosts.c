@@ -83,7 +83,7 @@ static struct ssh_tokens_st *ssh_get_knownhost_line(FILE **file,
     struct ssh_tokens_st *tokens = NULL;
 
     if (*file == NULL) {
-        *file = fopen(filename,"r");
+        *file = ssh_strict_fopen(filename, SSH_MAX_CONFIG_FILE_SIZE);
         if (*file == NULL) {
             return NULL;
         }

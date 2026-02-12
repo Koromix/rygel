@@ -23,6 +23,26 @@
 #include "libssh/libssh.h"
 #include "knownhosts.c"
 
+#include "nallocinc.c"
+
+static void _fuzz_finalize(void)
+{
+    ssh_finalize();
+}
+
+int LLVMFuzzerInitialize(int *argc, char ***argv)
+{
+    (void)argc;
+
+    nalloc_init(*argv[0]);
+
+    ssh_init();
+
+    atexit(_fuzz_finalize);
+
+    return 0;
+}
+
 int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 {
     char *hostname = NULL;
@@ -59,7 +79,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
     fwrite(data + hostname_len, size - hostname_len, 1, fp);
     fclose(fp);
 
-    ssh_init();
+    assert(nalloc_start(data, size) > 0);
 
     ssh_known_hosts_read_entries(hostname, filename, &entries);
     for (it = ssh_list_get_iterator(entries);
@@ -78,5 +98,6 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
     free(hostname);
     unlink(filename);
 
+    nalloc_end();
     return 0;
 }

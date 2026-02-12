@@ -26,6 +26,10 @@
 #include "config.h"
 
 #include <stdio.h>
+#ifdef WITH_GSSAPI
+#include "libssh/gssapi.h"
+#include <gssapi/gssapi.h>
+#endif
 
 #include "libssh/priv.h"
 #include "libssh/crypto.h"
@@ -36,6 +40,7 @@
 #include "libssh/ssh2.h"
 #include "libssh/pki.h"
 #include "libssh/bignum.h"
+#include "libssh/string.h"
 
 static unsigned char p_group1_value[] = {
         0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xC9, 0x0F, 0xDA, 0xA2,

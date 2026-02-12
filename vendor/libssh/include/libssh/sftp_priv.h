@@ -21,6 +21,8 @@
 #ifndef SFTP_PRIV_H
 #define SFTP_PRIV_H
 
+#include <stdbool.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -61,6 +63,39 @@ void sftp_message_free(sftp_message msg);
 int sftp_read_and_dispatch(sftp_session sftp);
 
 sftp_message sftp_dequeue(sftp_session sftp, uint32_t id);
+
+/**
+ * @brief Receive the response of an sftp request
+ *
+ * In blocking mode, if the response hasn't arrived at the time of call, this
+ * function waits for the response to arrive.
+ *
+ * @param sftp           The sftp session via which the request was sent.
+ *
+ * @param id             The request identifier of the request whose
+ *                       corresponding response is required.
+ *
+ * @param blocking       Flag to indicate the operating mode. true indicates
+ *                       blocking mode and false indicates non-blocking mode
+ *
+ * @param msg_ptr        Pointer to the location to store the response message.
+ *                       In case of success, the message is allocated
+ *                       dynamically and must be freed (using
+ *                       sftp_message_free()) by the caller after usage. In case
+ *                       of failure, this is left untouched.
+ *
+ * @returns SSH_OK on success
+ * @returns SSH_ERROR on failure with the sftp and ssh errors set
+ * @returns SSH_AGAIN in case of non-blocking mode if the response hasn't
+ *          arrived yet.
+ *
+ * @warning In blocking mode, this may block indefinitely for an invalid request
+ *          identifier.
+ */
+int sftp_recv_response_msg(sftp_session sftp,
+                           uint32_t id,
+                           bool blocking,
+                           sftp_message *msg_ptr);
 
 /*
  * Assigns a new SFTP ID for new requests and assures there is no collision

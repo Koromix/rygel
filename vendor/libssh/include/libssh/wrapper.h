@@ -75,6 +75,7 @@ MD5CTX md5_ctx_init(void);
 void md5_ctx_free(MD5CTX);
 int md5_ctx_update(MD5CTX c, const void *data, size_t len);
 int md5_ctx_final(unsigned char *md, MD5CTX c);
+int md5_direct(const unsigned char *digest, size_t len, unsigned char *hash);
 
 SHACTX sha1_ctx_init(void);
 void sha1_ctx_free(SHACTX);
@@ -129,6 +130,7 @@ int evp_build_pkey(const char* name, OSSL_PARAM_BLD *param_bld, EVP_PKEY **pkey,
 int evp_dup_dsa_pkey(const ssh_key key, ssh_key new_key, int demote);
 int evp_dup_rsa_pkey(const ssh_key key, ssh_key new_key, int demote);
 int evp_dup_ecdsa_pkey(const ssh_key key, ssh_key new_key, int demote);
+int evp_dup_ed25519_pkey(const ssh_key key, ssh_key new_key, int demote);
 #endif /* HAVE_LIBCRYPTO && OPENSSL_VERSION_NUMBER */
 
 #ifdef __cplusplus

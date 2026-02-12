@@ -24,10 +24,20 @@
   "-o PubkeyAcceptedKeyTypes="  \
   OPENSSH_KEYS
 
+#ifdef HAVE_SK_DUMMY
+#define SECURITY_KEY_PROVIDER \
+    "-oSecurityKeyProvider=\"" SK_DUMMY_LIBRARY_PATH "\" "
+#else
+#define SECURITY_KEY_PROVIDER ""
+#endif
+
+/* GlobalKnownHostsFile is just a place holder and won't actually set the hostkey */
 #define OPENSSH_CMD_START(hostkey_algos) \
     OPENSSH_BINARY " "                  \
     "-o UserKnownHostsFile=/dev/null "  \
     "-o StrictHostKeyChecking=no "      \
+    SECURITY_KEY_PROVIDER               \
+    "-o GlobalKnownHostsFile=%s "       \
     "-F /dev/null "                     \
     hostkey_algos " "                   \
     OPENSSH_PKACCEPTED_TYPES " "        \
@@ -64,9 +74,11 @@
 #define DROPBEAR_BINARY DROPBEAR_EXECUTABLE
 #define DROPBEAR_KEYGEN "dropbearkey"
 
+/* HostKeyAlias is just a place holder and won't actually set the hostkey */
 #define DROPBEAR_CMD_START \
     DROPBEAR_BINARY " "      \
     "-y -y "                 \
+    "-o HostKeyAlias=%s "    \
     "-i " CLIENT_ID_FILE " " \
     "1> %s.out "             \
     "2> %s.err "
@@ -86,5 +98,23 @@
 
 #define DROPBEAR_MAC_CMD(macs) \
     DROPBEAR_CMD_START "-m " macs " " DROPBEAR_CMD_END
+
+/* PuTTY */
+
+#define PUTTY_BINARY PUTTY_EXECUTABLE
+#define PUTTY_KEYGEN PUTTYGEN_EXECUTABLE
+
+#define PUTTY_CMD_START                                    \
+    PUTTY_BINARY " "                                       \
+    "-batch -ssh -P 1234 "                                 \
+    "-i " CLIENT_ID_FILE " "                               \
+    "-hostkey $(" OPENSSH_KEYGEN                           \
+    " -l -f %s.pub -E md5 | awk '{print $2}' | cut -d: -f2-) " \
+    "1> %s.out 2> %s.err "
+
+#define PUTTY_CMD_END " localhost ls"
+
+#define PUTTY_CMD \
+    PUTTY_CMD_START PUTTY_CMD_END
 
 #endif /* __PKD_CLIENT_H__ */

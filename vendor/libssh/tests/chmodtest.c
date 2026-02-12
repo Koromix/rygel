@@ -10,7 +10,7 @@ int main(void) {
   char buffer[1024*1024];
   int rc;
 
-  session = connect_ssh("localhost", NULL, 0);
+  session = connect_ssh("localhost", NULL, NULL, 0);
   if (session == NULL) {
     return 1;
   }

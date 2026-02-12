@@ -98,9 +98,9 @@ int ssh_gcry_rand_range(bignum rnd, bignum max);
 #define bignum_rand_range(rnd, max) ssh_gcry_rand_range(rnd, max);
 #define bignum_dup(orig, dest) do { \
         if (*(dest) == NULL) { \
-            *(dest) = gcry_mpi_copy(orig); \
+            *(dest) = gcry_mpi_copy((const gcry_mpi_t)orig); \
         } else { \
-            gcry_mpi_set(*(dest), orig); \
+            gcry_mpi_set(*(dest), (const gcry_mpi_t)orig); \
         } \
     } while(0)
 /* Helper functions for data conversions.  */

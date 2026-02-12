@@ -237,7 +237,7 @@ unsigned char *ssh_packet_encrypt(ssh_session session, void *data, size_t len)
 #endif
       }
   }
-  explicit_bzero(out, len);
+  ssh_burn(out, len);
   SAFE_FREE(out);
 
   return crypto->hmacbuf;

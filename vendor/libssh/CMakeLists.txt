@@ -9,7 +9,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
 include(DefineCMakeDefaults)
 include(DefineCompilerFlags)
 
-project(libssh VERSION 0.11.3 LANGUAGES C)
+project(libssh VERSION 0.12.00 LANGUAGES C)
 
 # global needed variable
 set(APPLICATION_NAME ${PROJECT_NAME})
@@ -21,7 +21,7 @@ set(APPLICATION_NAME ${PROJECT_NAME})
 #     Increment AGE. Set REVISION to 0
 #   If the source code was changed, but there were no interface changes:
 #     Increment REVISION.
-set(LIBRARY_VERSION "4.10.3")
+set(LIBRARY_VERSION "4.11.0")
 set(LIBRARY_SOVERSION "4")
 
 # where to look first for cmake modules, before ${CMAKE_ROOT}/Modules/ is checked
@@ -40,6 +40,8 @@ macro_ensure_out_of_source_build("${PROJECT_NAME} requires an out of source buil
 
 # Copy library files to a lib sub-directory
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
+
+set(LIBSSSH_PC_REQUIRES_PRIVATE "")
 
 # search for libraries
 if (WITH_ZLIB)
@@ -66,6 +68,7 @@ find_package(Threads)
 
 if (WITH_GSSAPI)
     find_package(GSSAPI)
+    list(APPEND LIBSSH_PC_REQUIRES_PRIVATE ${GSSAPI_PC_REQUIRES})
 endif (WITH_GSSAPI)
 
 if (WITH_NACL)
@@ -75,9 +78,19 @@ if (WITH_NACL)
     endif (NOT NACL_FOUND)
 endif (WITH_NACL)
 
+if (WITH_FIDO2)
+    find_package(libfido2)
+    if (LIBFIDO2_FOUND)
+        set(HAVE_LIBFIDO2 ON)
+    else (LIBFIDO2_FOUND)
+        set(HAVE_LIBFIDO2 OFF)
+        message(WARNING "libfido2 was not found. Internal support for interacting with FIDO2/U2F devices using the USB HID protocol will not be available.")
+    endif (LIBFIDO2_FOUND)
+endif (WITH_FIDO2)
+
 # Disable symbol versioning in non UNIX platforms
 if (UNIX)
-    find_package(ABIMap 0.3.1)
+    find_package(ABIMap 0.4.0)
 else (UNIX)
     set(WITH_SYMBOL_VERSIONING OFF)
 endif (UNIX)
@@ -168,6 +181,10 @@ if (WITH_SYMBOL_VERSIONING AND ABIMAP_FOUND)
             set(ALLOW_ABI_BREAK "BREAK_ABI")
         endif()
 
+        if (WITH_FINAL)
+            set(FINAL "FINAL")
+        endif()
+
         # Target we can depend on in 'make dist'
         set(_SYMBOL_TARGET "${PROJECT_NAME}.map")
 
@@ -180,7 +197,7 @@ if (WITH_SYMBOL_VERSIONING AND ABIMAP_FOUND)
                           RELEASE_NAME_VERSION ${PROJECT_NAME}_${LIBRARY_VERSION}
                           CURRENT_MAP ${MAP_PATH}
                           COPY_TO ${MAP_PATH}
-                          FINAL
+                          ${FINAL}
                           ${ALLOW_ABI_BREAK})
 
         # Write the current version to the source
@@ -196,7 +213,7 @@ if (WITH_COVERAGE)
         NAME "coverage"
         EXECUTABLE make test
         DEPENDENCIES ssh tests)
-    set(GCOVR_ADDITIONAL_ARGS --xml-pretty --exclude-unreachable-branches --print-summary)
+    set(GCOVR_ADDITIONAL_ARGS --xml-pretty --exclude-unreachable-branches --print-summary --gcov-ignore-parse-errors)
     setup_target_for_coverage_gcovr_xml(
         NAME "coverage_xml"
         EXECUTABLE make test
@@ -235,6 +252,10 @@ message(STATUS "Client code testing: ${CLIENT_TESTING}")
 message(STATUS "Blowfish cipher support: ${HAVE_BLOWFISH}")
 message(STATUS "PKCS #11 URI support: ${WITH_PKCS11_URI}")
 message(STATUS "With PKCS #11 provider support: ${WITH_PKCS11_PROVIDER}")
+message(STATUS "With FIDO2/U2F support: ${WITH_FIDO2}")
+if (WITH_FIDO2)
+    message(STATUS "With libfido2 (internal usb-hid support): ${HAVE_LIBFIDO2}")
+endif (WITH_FIDO2)
 set(_SERVER_TESTING OFF)
 if (WITH_SERVER)
     set(_SERVER_TESTING ${SERVER_TESTING})
@@ -249,9 +270,15 @@ message(STATUS "Benchmarks: ${WITH_BENCHMARKS}")
 message(STATUS "Symbol versioning: ${WITH_SYMBOL_VERSIONING}")
 message(STATUS "Allow ABI break: ${WITH_ABI_BREAK}")
 message(STATUS "Release is final: ${WITH_FINAL}")
+if (WITH_HERMETIC_USR)
+    message(STATUS "User global client config: ${USR_GLOBAL_CLIENT_CONFIG}")
+endif ()
 message(STATUS "Global client config: ${GLOBAL_CLIENT_CONFIG}")
 if (WITH_SERVER)
-message(STATUS "Global bind config: ${GLOBAL_BIND_CONFIG}")
+    if (WITH_HERMETIC_USR)
+        message(STATUS "User global bind config: ${USR_GLOBAL_BIND_CONFIG}")
+    endif ()
+    message(STATUS "Global bind config: ${GLOBAL_BIND_CONFIG}")
 endif()
 message(STATUS "********************************************")
 

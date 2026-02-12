@@ -711,7 +711,7 @@ chacha20_poly1305_packet_setup(struct ssh_cipher_struct *cipher,
 
     ret = SSH_OK;
 out:
-    explicit_bzero(poly_key, sizeof(poly_key));
+    ssh_burn(poly_key, sizeof(poly_key));
     return ret;
 }
 

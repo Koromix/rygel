@@ -11,6 +11,8 @@
 #  GSSAPI_INCLUDE_DIR - the GSSAPI include directory
 #  GSSAPI_LIBRARIES - Link these to use GSSAPI
 #  GSSAPI_DEFINITIONS - Compiler switches required for using GSSAPI
+#  GSSAPI_PC_REQUIRES - pkg-config module name if found, needed for
+#                       Requires.private for static linking
 #
 #=============================================================================
 #  Copyright (c) 2013 Andreas Schneider <asn@cryptomilk.org>
@@ -24,12 +26,23 @@
 #=============================================================================
 #
 
+set(_mit_modname "mit-krb5-gssapi")
+set(_heimdal_modname "heimdal-gssapi")
+
+if(NOT _GSSAPI_ROOT_HINTS AND NOT _GSSAPI_ROOT_PATHS)
+    find_package(PkgConfig QUIET)
+    if (PKG_CONFIG_FOUND)
+        pkg_search_module(_GSSAPI ${_mit_modname} ${_heimdal_modname})
+    endif()
+endif()
+
 find_path(GSSAPI_ROOT_DIR
     NAMES
         include/gssapi.h
         include/gssapi/gssapi.h
     HINTS
         ${_GSSAPI_ROOT_HINTS}
+        "${_GSSAPI_INCLUDEDIR}"
     PATHS
         ${_GSSAPI_ROOT_PATHS}
 )
@@ -317,9 +330,15 @@ endif (GSSAPI_FLAVOR_HEIMDAL)
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(GSSAPI DEFAULT_MSG GSSAPI_LIBRARIES GSSAPI_INCLUDE_DIR)
 
-if (GSSAPI_INCLUDE_DIRS AND GSSAPI_LIBRARIES)
-    set(GSSAPI_FOUND TRUE)
-endif (GSSAPI_INCLUDE_DIRS AND GSSAPI_LIBRARIES)
+if(GSSAPI_FOUND)
+    if(_GSSAPI_FOUND) # via pkg-config
+        if (GSSAPI_FLAVOR_MIT)
+            set(GSSAPI_PC_REQUIRES ${_mit_modname})
+        elseif (GSSAPI_FLAVOR_HEIMDAL)
+            set(GSSAPI_PC_REQUIRES ${_heimdal_modname})
+        endif()
+    endif()
+endif()
 
-# show the GSSAPI_INCLUDE_DIRS and GSSAPI_LIBRARIES variables only in the advanced view
-mark_as_advanced(GSSAPI_INCLUDE_DIRS GSSAPI_LIBRARIES)
+# show the GSSAPI_INCLUDE_DIR and GSSAPI_LIBRARIES variables only in the advanced view
+mark_as_advanced(GSSAPI_INCLUDE_DIR GSSAPI_LIBRARIES)

@@ -30,6 +30,7 @@ static char **sources = NULL;
 static int nsources;
 static char *destination = NULL;
 static int verbosity = 0;
+static char *port = NULL;
 
 struct location {
     int is_ssh;
@@ -49,9 +50,10 @@ enum {
 static void usage(const char *argv0) {
     fprintf(stderr, "Usage : %s [options] [[user@]host1:]file1 ... \n"
             "                               [[user@]host2:]destination\n"
-            "sample scp client - libssh-%s\n",
-            //      "Options :\n",
-            //      "  -r : use RSA to verify host public key\n",
+            "sample scp client - libssh-%s\n"
+            "Options :\n"
+            "  -P : use port to connect to remote host\n"
+            "  -v : increase verbosity of libssh. Can be used multiple times\n",
             argv0,
             ssh_version(0));
     exit(0);
@@ -60,10 +62,13 @@ static void usage(const char *argv0) {
 static int opts(int argc, char **argv) {
     int i;
 
-    while((i = getopt(argc, argv, "v")) != -1) {
+    while((i = getopt(argc, argv, "P:v")) != -1) {
         switch(i) {
         case 'v':
             verbosity++;
+            break;
+        case 'P':
+            port = optarg;
             break;
         default:
             fprintf(stderr, "unknown option %c\n", optopt);
@@ -118,6 +123,10 @@ static struct location *parse_location(char *loc)
 {
     struct location *location = NULL;
     char *ptr = NULL;
+
+    if (loc == NULL) {
+        return NULL;
+    }
 
     location = malloc(sizeof(struct location));
     if (location == NULL) {
@@ -179,7 +188,7 @@ static void close_location(struct location *loc) {
 
 static int open_location(struct location *loc, int flag) {
     if (loc->is_ssh && flag == WRITE) {
-        loc->session = connect_ssh(loc->host, loc->user, verbosity);
+        loc->session = connect_ssh(loc->host, port, loc->user, verbosity);
         if (!loc->session) {
             fprintf(stderr, "Couldn't connect to %s\n", loc->host);
             return -1;
@@ -205,7 +214,7 @@ static int open_location(struct location *loc, int flag) {
         }
         return 0;
     } else if (loc->is_ssh && flag == READ) {
-        loc->session = connect_ssh(loc->host, loc->user, verbosity);
+        loc->session = connect_ssh(loc->host, port, loc->user, verbosity);
         if (!loc->session) {
             fprintf(stderr, "Couldn't connect to %s\n", loc->host);
             return -1;

@@ -35,10 +35,11 @@
 /* agent_is_running */
 #include "agent.c"
 
-#define LIBSSH_RSA_TESTKEY  "id_pkcs11_rsa"
+#define LIBSSH_RSA_TESTKEY        "id_pkcs11_rsa"
 #define LIBSSH_ECDSA_256_TESTKEY  "id_pkcs11_ecdsa_256"
 #define LIBSSH_ECDSA_384_TESTKEY  "id_pkcs11_ecdsa_384"
 #define LIBSSH_ECDSA_521_TESTKEY  "id_pkcs11_ecdsa_521"
+#define LIBSSH_ED25519_TESTKEY    "id_pkcs11_ed25519"
 
 const char template[] = "/tmp/temp_dir_XXXXXX";
 
@@ -58,17 +59,22 @@ static int setup_tokens(void **state, const char *type, const char *obj_name)
     cwd = test_state->temp_dir;
     assert_non_null(cwd);
 
-    snprintf(priv_filename, sizeof(priv_filename), "%s%s", test_state->keys_dir, type);
+    snprintf(priv_filename,
+             sizeof(priv_filename),
+             "%s%s",
+             test_state->keys_dir,
+             type);
 
     torture_setup_tokens(cwd, priv_filename, obj_name, "1");
 
     return 0;
 }
+
 static int session_setup(void **state)
 {
     int verbosity = torture_libssh_verbosity();
     struct torture_state *s = *state;
-    struct passwd *pwd;
+    struct passwd *pwd = NULL;
     bool b = false;
     int rc;
 
@@ -110,7 +116,7 @@ static int setup_pkcs11(void **state)
     struct pki_st *test_state = NULL;
     int rc;
     char keys_dir[1024] = {0};
-    char *temp_dir;
+    char *temp_dir = NULL;
 
     test_state = malloc(sizeof(struct pki_st));
     assert_non_null(test_state);
@@ -137,6 +143,9 @@ static int setup_pkcs11(void **state)
     setup_tokens(state, LIBSSH_ECDSA_256_TESTKEY, "ecdsa256");
     setup_tokens(state, LIBSSH_ECDSA_384_TESTKEY, "ecdsa384");
     setup_tokens(state, LIBSSH_ECDSA_521_TESTKEY, "ecdsa521");
+    if (!ssh_fips_mode()) {
+        setup_tokens(state, LIBSSH_ED25519_TESTKEY, "ed25519");
+    }
 
     return 0;
 }
@@ -150,8 +159,8 @@ static int sshd_setup(void **state)
     return 0;
 }
 
-static int sshd_teardown(void **state) {
-
+static int sshd_teardown(void **state)
+{
     struct torture_state *s = *state;
     struct pki_st *test_state = s->private_data;
     int rc;
@@ -176,7 +185,9 @@ static int sshd_teardown(void **state) {
     return 0;
 }
 
-static void torture_auth_autopubkey(void **state, const char *obj_name, const char *pin) {
+static void
+torture_auth_autopubkey(void **state, const char *obj_name, const char *pin)
+{
     struct torture_state *s = *state;
     ssh_session session = s->ssh.session;
     int rc;
@@ -186,8 +197,12 @@ static void torture_auth_autopubkey(void **state, const char *obj_name, const ch
     rc = ssh_options_set(session, SSH_OPTIONS_USER, TORTURE_SSH_USER_CHARLIE);
     assert_int_equal(rc, SSH_OK);
 
-    snprintf(priv_uri, sizeof(priv_uri), "pkcs11:token=%s;object=%s;type=private?pin-value=%s",
-            obj_name, obj_name, pin);
+    snprintf(priv_uri,
+             sizeof(priv_uri),
+             "pkcs11:token=%s;object=%s;type=private?pin-value=%s",
+             obj_name,
+             obj_name,
+             pin);
 
     rc = ssh_options_set(session, SSH_OPTIONS_IDENTITY, priv_uri);
     assert_int_equal(rc, SSH_OK);
@@ -207,23 +222,40 @@ static void torture_auth_autopubkey(void **state, const char *obj_name, const ch
     assert_int_equal(rc, SSH_AUTH_SUCCESS);
 }
 
-static void torture_auth_autopubkey_rsa(void **state) {
+static void torture_auth_autopubkey_rsa(void **state)
+{
     torture_auth_autopubkey(state, "rsa", "1234");
 }
 
-static void torture_auth_autopubkey_ecdsa_key_256(void **state) {
+static void torture_auth_autopubkey_ecdsa_key_256(void **state)
+{
     torture_auth_autopubkey(state, "ecdsa256", "1234");
 }
 
-static void torture_auth_autopubkey_ecdsa_key_384(void **state) {
+static void torture_auth_autopubkey_ecdsa_key_384(void **state)
+{
     torture_auth_autopubkey(state, "ecdsa384", "1234");
 }
 
-static void torture_auth_autopubkey_ecdsa_key_521(void **state) {
+static void torture_auth_autopubkey_ecdsa_key_521(void **state)
+{
     torture_auth_autopubkey(state, "ecdsa521", "1234");
 }
 
-int torture_run_tests(void) {
+#ifdef WITH_PKCS11_PROVIDER
+static void torture_auth_autopubkey_ed25519(void **state)
+{
+    /* The Ed25519 keys are not supported in FIPS mode */
+    if (ssh_fips_mode()) {
+        skip();
+    }
+
+    torture_auth_autopubkey(state, "ed25519", "1234");
+}
+#endif /* WITH_PKCS11_PROVIDER */
+
+int torture_run_tests(void)
+{
     int rc;
     struct CMUnitTest tests[] = {
         cmocka_unit_test_setup_teardown(torture_auth_autopubkey_rsa,
@@ -238,6 +270,11 @@ int torture_run_tests(void) {
         cmocka_unit_test_setup_teardown(torture_auth_autopubkey_ecdsa_key_521,
                                         session_setup,
                                         session_teardown),
+#ifdef WITH_PKCS11_PROVIDER
+        cmocka_unit_test_setup_teardown(torture_auth_autopubkey_ed25519,
+                                        session_setup,
+                                        session_teardown),
+#endif /* WITH_PKCS11_PROVIDER */
     };
 
     /* Do not use system openssl.cnf for the pkcs11 uri tests.
@@ -246,7 +283,7 @@ int torture_run_tests(void) {
      * tokens, causing unexpected failures.
      * Make sure this comes before ssh_init(), which initializes OpenSSL!
      */
-    setenv("OPENSSL_CONF", "/dev/null", 1);
+    setenv("OPENSSL_CONF", SOURCEDIR "/tests/etc/openssl.cnf", 1);
 
     ssh_init();
     torture_filter_tests(tests);

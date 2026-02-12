@@ -48,7 +48,7 @@ void ssh_tokens_free(struct ssh_tokens_st *tokens)
 
     if (tokens->tokens != NULL) {
         for (i = 0; tokens->tokens[i] != NULL; i++) {
-            explicit_bzero(tokens->tokens[i], strlen(tokens->tokens[i]));
+            ssh_burn(tokens->tokens[i], strlen(tokens->tokens[i]));
         }
     }
 
