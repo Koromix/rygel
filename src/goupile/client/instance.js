@@ -1784,9 +1784,9 @@ async function go(e, url = null, options = {}) {
                 UI.togglePanel('view', true);
             }
         }
-    });
 
-    await run(options.push_history);
+        await data_mutex.chain(() => run(options.push_history));
+    });
 }
 
 function contextualizeURL(url, thread) {
@@ -1928,36 +1928,36 @@ async function run(push_history = true) {
             if (err != null)
                 triggerError(route.page.filename, err);
         }
-    });
 
-    // Update URL and title
-    {
-        let defaults = null;
+        // Update URL and title
+        {
+            let defaults = null;
 
-        if (profile.develop) {
-            defaults = 'editor|view';
-        } else if (form_thread.saved || !app.panels.data) {
-            defaults = 'view';
-        } else {
-            defaults = 'data';
+            if (profile.develop) {
+                defaults = 'editor|view';
+            } else if (form_thread.saved || !app.panels.data) {
+                defaults = 'view';
+            } else {
+                defaults = 'data';
+            }
+
+            let url = contextualizeURL(route.page.url, form_thread);
+            let panels = UI.getPanels().join('|');
+
+            if (panels == defaults)
+                panels = null;
+
+            url = Util.pasteURL(url, { p: panels });
+            goupile.syncHistory(url, push_history);
+
+            document.title = `${route.page.title} — ${ENV.title}`;
         }
 
-        let url = contextualizeURL(route.page.url, form_thread);
-        let panels = UI.getPanels().join('|');
+        // Don't mess with the editor when render accidently triggers a scroll event!
+        ignore_page_scroll = performance.now();
 
-        if (panels == defaults)
-            panels = null;
-
-        url = Util.pasteURL(url, { p: panels });
-        goupile.syncHistory(url, push_history);
-
-        document.title = `${route.page.title} — ${ENV.title}`;
-    }
-
-    // Don't mess with the editor when render accidently triggers a scroll event!
-    ignore_page_scroll = performance.now();
-
-    await UI.draw();
+        await UI.draw();
+    });
 }
 
 async function fetchCode(filename) {
