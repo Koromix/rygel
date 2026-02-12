@@ -29,7 +29,7 @@ echo "podman manifest push --all $IMAGE_PREFIX$TARGET:$VERSION docker.io/$IMAGE_
 podman image tag $IMAGE_PREFIX$TARGET:$VERSION $IMAGE_PREFIX$TARGET:dev
 echo "podman manifest push --all $IMAGE_PREFIX$TARGET:dev docker.io/$IMAGE_PREFIX$TARGET:dev"
 
-if echo "$VERSION" | grep -qv dev; then
+if echo "$VERSION" | grep -qv '-'; then
     podman image tag $IMAGE_PREFIX$TARGET:$VERSION $IMAGE_PREFIX$TARGET:latest
     echo "podman manifest push --all $IMAGE_PREFIX$TARGET:latest docker.io/$IMAGE_PREFIX$TARGET:latest"
 fi
