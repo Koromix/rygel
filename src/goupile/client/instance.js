@@ -1048,6 +1048,8 @@ function addAutomaticActions(builder, model) {
                 disabled = false;
             } else if (next != null) {
                 label = '+' + T.continue;
+            } else if (form_thread.saved && !form_state.hasChanged()) {
+                label = '+' + T.saved;
             }
 
             builder.action(label, { color: '#2d8261', disabled: disabled }, async e => {
