@@ -98,7 +98,7 @@ Les images de développement sont régulièrement déployées sur le Docker Hub 
 docker run -p 8889:80 koromix/goupile:dev
 ```
 
-Utilisez les versions dévéloppement pour faire des tests, **ne les utilisez pas en production !**
+Utilisez les versions de développement pour faire des tests, **ne les utilisez pas en production !**
 
 # Proxy inversé
 
