@@ -44,7 +44,8 @@ function ApplicationBuilder(app) {
             sequence: null,
             progress: true,
             enabled: true,
-            claim: true,
+            forget: false,
+            claim: null, // Deprecated
             lock: null,
             confirm: null,
             style: null,
@@ -67,9 +68,10 @@ function ApplicationBuilder(app) {
         sequence: makeOptionProperty('sequence'),
         progress: makeOptionProperty('progress'),
         enabled: makeOptionProperty('enabled'),
+        forget: makeOptionProperty('forget'),
         claim: makeOptionProperty('claim'),
-        confirm: makeOptionProperty('confirm'),
         lock: makeOptionProperty('lock'),
+        confirm: makeOptionProperty('confirm'),
         style: makeOptionProperty('style'),
         icon: makeOptionProperty('icon'),
         help: makeOptionProperty('help')

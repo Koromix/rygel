@@ -404,6 +404,14 @@ function isPageEnabled(page, thread) {
     return enabled;
 }
 
+function claimPage(page) {
+     // Support deprecated option
+    if (page.claim != null)
+        return page.claim;
+
+    return !page.forget;
+}
+
 async function generateExportKey(e) {
     let api_key = null;
 
@@ -1046,7 +1054,7 @@ function addAutomaticActions(builder, model) {
                 form_state.triggerErrors(form_model);
 
                 await data_mutex.run(async () => {
-                    let keep = goupile.hasPermission('data_read') || route.page.claim;
+                    let keep = goupile.hasPermission('data_read') || claimPage(route.page);
                     let finalize = (route.page.lock === true) || !keep;
                     let confirm = route.page.confirm ?? finalize;
 
@@ -2390,7 +2398,7 @@ async function saveRecord(thread, page, state, entry, raw, meta, draft) {
             counters: (ticket != null) ? meta.counters : {},
             publics: [],
             signup: (ticket != null) ? meta.signup : null,
-            claim: (ticket != null) ? route.page.claim : true,
+            claim: (ticket != null) ? claimPage(route.page) : true,
             lock: (ticket != null) ? route.page.lock : false
         };
 
