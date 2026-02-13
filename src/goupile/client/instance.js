@@ -1041,7 +1041,7 @@ function addAutomaticActions(builder, model) {
         let can_lock = form_thread.saved && (route.page.lock != null) &&
                        (!form_thread.locked || goupile.hasPermission('data_audit'));
 
-        if (can_save || can_confirm || edit) {
+        if (can_save || can_confirm || edit || next != null) {
             let label = '+' + T.save;
             let disabled = !can_save;
 
@@ -1050,6 +1050,7 @@ function addAutomaticActions(builder, model) {
                 disabled = false;
             } else if (next != null) {
                 label = '+' + T.continue;
+                disabled &= !!model.variables.length;
             } else if (form_thread.saved && !form_state.hasChanged()) {
                 label = '+' + T.saved;
             }
@@ -1057,34 +1058,36 @@ function addAutomaticActions(builder, model) {
             builder.action(label, { color: '#2d8261', disabled: disabled }, async e => {
                 form_state.triggerErrors(form_model);
 
-                await data_mutex.run(async () => {
-                    let keep = goupile.hasPermission('data_read') || claimPage(route.page);
-                    let finalize = (route.page.lock === true) || !keep;
-                    let confirm = route.page.confirm ?? finalize;
+                if (model.variables.length) {
+                    await data_mutex.run(async () => {
+                        let keep = goupile.hasPermission('data_read') || claimPage(route.page);
+                        let finalize = (route.page.lock === true) || !keep;
+                        let confirm = route.page.confirm ?? finalize;
 
-                    if (confirm) {
-                        let text = finalize ? unsafeHTML(T.confirm_final) : unsafeHTML(T.confirm_save);
-                        await UI.confirm(e, text, T.continue, () => {});
-                    }
+                        if (confirm) {
+                            let text = finalize ? unsafeHTML(T.confirm_final) : unsafeHTML(T.confirm_save);
+                            await UI.confirm(e, text, T.continue, () => {});
+                        }
 
-                    let draft = profile.develop && !can_confirm;
-                    await saveRecord(form_thread, route.page, form_state, form_entry, form_raw, form_meta, draft);
+                        let draft = profile.develop && !can_confirm;
+                        await saveRecord(form_thread, route.page, form_state, form_entry, form_raw, form_meta, draft);
 
-                    if (keep) {
-                        await openRecord(form_thread.tid, null, route.page);
+                        if (keep) {
+                            await openRecord(form_thread.tid, null, route.page);
+                        } else {
+                            let page = route.page.chain[0];
+                            await openRecord(null, null, page);
+                        }
+
+                        data_threads = null;
+                    });
+
+                    if (next != null) {
+                        // Update because it may change (dynamic option) with saved data
+                        next = selectNextPage(route.page, form_thread, edit);
                     } else {
-                        let page = route.page.chain[0];
-                        await openRecord(null, null, page);
+                        next = route.page;
                     }
-
-                    data_threads = null;
-                });
-
-                if (next != null) {
-                    // Update because it may change (dynamic option) with saved data
-                    next = selectNextPage(route.page, form_thread, edit);
-                } else {
-                    next = route.page;
                 }
 
                 let url = contextualizeURL(next.url, form_thread);
