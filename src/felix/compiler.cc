@@ -3038,12 +3038,8 @@ bool DetermineSourceType(const char *filename, SourceType *out_type)
 static const KnownCompiler CompilerTable[] = {
 #if defined(_WIN32)
     { "Clang", "clang", true },
-    { "MSVC", "cl", true },
+    { "MSVC", "cl", true},
     { "GCC", "gcc", true },
-#elif defined(__linux)
-    { "GCC", "gcc", true },
-    { "Clang", "clang", true },
-    { "MSVC", "cl", false },
 #else
     { "Clang", "clang", true },
     { "GCC", "gcc", true },
