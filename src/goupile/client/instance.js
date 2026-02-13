@@ -874,6 +874,8 @@ async function renderPage() {
         anchor: intf.options.anchor
     }));
 
+    let static_actions = (goupile.isLocked() && form_entry.anchor == null);
+
     return html`
         <div class="print" @scroll=${syncEditorScroll}}>
             <div id="ins_page">
@@ -887,7 +889,7 @@ async function renderPage() {
                 </form>
 
                 <div id="ins_actions">
-                    ${form_model.actions.length ? html`
+                    ${form_model.actions.length && !static_actions ? html`
                         ${app.panels.data && form_thread.hid != null ? html`<div class="ins_id">${form_thread.hid}</div>` : ''}
                         ${form_model.renderActions()}
                     ` : ''}
@@ -904,11 +906,11 @@ async function renderPage() {
                 html`<div id="ins_develop">${T.page_disabled_warning}</div>` : ''}
 
             ${form_model.actions.length ? html`
-                <nav class="ui_toolbar" id="ins_tasks" style="z-index: 999999;">
+                <nav class=${'ui_toolbar' + (static_actions ? ' force' : '')} id="ins_tasks" style="z-index: 999999;">
                     ${app.panels.data && form_thread.hid != null ? html`
                         <button class="ins_id">${form_thread.hid}</button>
+                        <div style="flex: 1;"></div>
                     ` : ''}
-                    <div style="flex: 1;"></div>
                     ${form_model.actions.some(action => !action.options.always) ? html`
                         <div class="drop up right">
                             <button @click=${UI.deployMenu}>${T.other_actions}</button>
