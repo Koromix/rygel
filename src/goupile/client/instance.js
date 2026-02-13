@@ -1858,6 +1858,8 @@ async function run(push_history = true) {
                 data_threads = threads.map(thread => {
                     let min_ctime = Number.MAX_SAFE_INTEGER;
                     let max_mtime = 0;
+
+                    let search = [simplifyString(thread.hid)];
                     let tags = new Set;
 
                     for (let entry of thread.entries) {
@@ -1869,13 +1871,16 @@ async function run(push_history = true) {
 
                         entry.ctime = new Date(entry.ctime);
                         entry.mtime = new Date(entry.mtime);
+
+                        if (entry.summary != null)
+                            search.push(simplifyString(entry.summary));
                     }
 
                     return {
                         tid: thread.tid,
                         sequence: thread.sequence,
                         hid: thread.hid,
-                        search: simplifyString(thread.hid),
+                        search: search,
                         locked: thread.locked,
                         ctime: new Date(min_ctime),
                         mtime: new Date(max_mtime),
@@ -1889,7 +1894,7 @@ async function run(push_history = true) {
             data_columns = [];
 
             if (data_search != null)
-                data_rows = data_rows.filter(thread => thread.search.includes(data_search));
+                data_rows = data_rows.filter(thread => thread.search.some(search => search.includes(data_search)));
             if (data_tags != null)
                 data_rows = data_rows.filter(thread => thread.tags.some(tag => data_tags.has(tag)));
 
