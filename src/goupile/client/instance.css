@@ -217,6 +217,7 @@ html:not(.small) #ui_panels > div:only-child #ins_actions { display: flex; }
 }
 #ins_tasks.force {
     display: flex;
+    position: static;
 }
 #ins_tasks button { color: black; }
 #ins_tasks .drop > button::after { filter: invert(100%); }
