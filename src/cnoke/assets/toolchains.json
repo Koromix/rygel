@@ -1,0 +1,62 @@
+{
+    "linux_riscv64d": {
+        "system": "Linux",
+        "processor": "riscv64",
+        "triplet": "riscv64-linux-gnu"
+    },
+    "linux_armhf": {
+        "system": "Linux",
+        "processor": "arm",
+        "triplet": "arm-linux-gnueabihf"
+    },
+    "linux_arm64": {
+        "system": "Linux",
+        "processor": "aarch64",
+        "triplet": "aarch64-linux-gnu"
+    },
+    "linux_loong64": {
+        "system": "Linux",
+        "processor": "loongarch64",
+        "triplet": "loongarch64-linux-gnu"
+    },
+    "linux_ia32": {
+        "system": "Linux",
+        "processor": "i386",
+        "triplet": "i686-linux-gnu"
+    },
+    "linux_x64": {
+        "system": "Linux",
+        "processor": "x86_64",
+        "triplet": "x86_64-linux-gnu"
+    },
+
+    "win32_arm64": {
+        "system": "Windows",
+        "processor": "ARM64",
+        "lib": "win-arm64",
+        "flags": ["-DNODE_JS_LINK_FLAGS=/DELAYLOAD:node.exe;/SAFESEH:NO", "-A", "ARM64"]
+    },
+    "win32_ia32": {
+        "system": "Windows",
+        "processor": "X86",
+        "lib": "win-x86",
+        "flags": ["-DNODE_JS_LINK_FLAGS=/DELAYLOAD:node.exe;/SAFESEH:NO", "-A", "Win32"]
+    },
+    "win32_x64": {
+        "system": "Windows",
+        "processor": "AMD64",
+        "lib": "win-x64",
+        "flags": ["-DNODE_JS_LINK_FLAGS=/DELAYLOAD:node.exe", "-A", "x64"]
+    },
+
+    "darwin_x64": {
+        "system": "Darwin",
+        "processor": "x86_64",
+        "flags": ["-DNODE_JS_LINK_FLAGS=-undefined;dynamic_lookup", "-DCMAKE_OSX_ARCHITECTURES=x86_64"]
+    },
+    "darwin_arm64": {
+        "system": "Darwin",
+        "processor": "arm64",
+        "flags": ["-DNODE_JS_LINK_FLAGS=-undefined;dynamic_lookup", "-DCMAKE_OSX_ARCHITECTURES=arm64"]
+    }
+}

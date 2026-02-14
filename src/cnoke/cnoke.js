@@ -75,16 +75,11 @@ async function main() {
                     throw new Error(`Malformed runtime version '${value}'`);
 
                 config.runtime_version = value;
-            } else if ((command == 'build' || command == 'configure') && (arg == '-a' || arg == '--arch')) {
+            } else if ((command == 'build' || command == 'configure') && (arg == '-t' || arg == '--toolchain')) {
                 if (value == null)
                     throw new Error(`Missing value for ${arg}`);
 
-                config.arch = value;
-            } else if ((command == 'build' || command == 'configure') && (arg == '-t' || arg == '--toolset')) {
-                if (value == null)
-                    throw new Error(`Missing value for ${arg}`);
-
-                config.toolset = value;
+                config.toolchain = value;
             } else if ((command == 'build' || command == 'configure') && (arg == '-C' || arg == '--prefer-clang')) {
                 config.prefer_clang = true;
             } else if ((command == 'build' || command == 'configure') && (arg == '-B' || arg == '--config')) {
@@ -155,11 +150,9 @@ Options:
 
         --prebuild                       Use prebuilt binary if available
 
-    -a, --arch <ARCH>                    Change architecture and ABI
-                                         (default: ${cnoke.determine_arch()})
+    -t, --toolchain <TOOLCHAIN>          Cross-compile for specific platform
     -v, --runtime-version <VERSION>      Change node version
                                          (default: ${process.version})
-    -t, --toolset <TOOLSET>              Change default CMake toolset
     -C, --prefer-clang                   Use Clang instead of default CMake compiler
 
     -T, --target <TARGET>                Only build the specified target

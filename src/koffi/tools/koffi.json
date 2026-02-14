@@ -313,7 +313,7 @@
             "arch": "arm64",
             "machine": "windows_x64",
             "directory": "C:/Users/windows/Desktop/luigi_arm64",
-            "build": "C:\\Node64\\node64.cmd node ../cnoke/cnoke.js -a arm64 -v 19.9.0"
+            "build": "C:\\Node64\\node64.cmd node ../cnoke/cnoke.js -t win32_arm64 -v 24.13.0"
         }
     },
 
@@ -347,7 +347,7 @@
             "arch": "arm64",
             "machine": "macos_x64",
             "directory": "/Users/macos/luigi_arm64",
-            "build": "PATH=/usr/local/bin:/usr/bin:/bin SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX11.3.sdk node ../cnoke/cnoke.js -a arm64"
+            "build": "PATH=/usr/local/bin:/usr/bin:/bin SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX11.3.sdk node ../cnoke/cnoke.js -t darwin_arm64"
         }
     },
 
