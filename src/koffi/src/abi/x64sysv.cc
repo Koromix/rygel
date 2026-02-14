@@ -539,8 +539,6 @@ namespace {
 
     extern ForwardFunc *const ForwardDispatch[256];
 #else
-    #warning Falling back to inlining instead of tail calls (missing attributes)
-
     #define OP(Code) \
         case AbiOpcode::Code:
     #define NEXT() \

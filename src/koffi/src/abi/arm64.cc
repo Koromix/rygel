@@ -260,12 +260,12 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
                 }
 #endif
 
-#if defined(_WIN32)
-                // Windows ignores HFA optimization for variadic parameters
-                HfaInfo hfa = !param.variadic ? IsHFA(param.type) : {};
-#else
                 HfaInfo hfa = IsHFA(param.type);
-#endif
+
+                if (param.variadic) {
+                    // Windows ignores HFA optimization for variadic parameters
+                    hfa.count = 0;
+                }
 
                 if (hfa.count) {
                     if (hfa.count <= vec_max - vec_index) {
@@ -576,8 +576,6 @@ namespace {
 
     extern ForwardFunc *const ForwardDispatch[256];
 #else
-    #warning Falling back to inlining instead of tail calls (missing attributes)
-
     #define OP(Code) \
         case AbiOpcode::Code:
     #define NEXT() \
