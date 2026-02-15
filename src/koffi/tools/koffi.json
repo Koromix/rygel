@@ -313,7 +313,7 @@
             "arch": "arm64",
             "machine": "windows_x64",
             "directory": "C:/Users/windows/Desktop/luigi_arm64",
-            "build": "C:\\Node64\\node64.cmd node ../cnoke/cnoke.js -t win32_arm64 -v 24.13.0"
+            "build": "C:\\Node64\\node64.cmd node ../cnoke/cnoke.js -t win32_arm64"
         }
     },
 
