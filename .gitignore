@@ -55,6 +55,7 @@ package-lock.json
 
 /tools/docker/goupile/goupile
 /tools/qemu/machines/**
+/tools/cross/*/
 
 /vendor/spidermonkey/spidermonkey/
 !/vendor/esbuild/native/node_modules/

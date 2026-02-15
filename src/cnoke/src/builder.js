@@ -187,6 +187,15 @@ function Builder(config = {}) {
                     values.push(['CMAKE_CXX_COMPILER', info.triplet + '-g++']);
                 }
 
+                if (info.sysroot != null) {
+                    let sysroot = path.join(__dirname, '..', info.sysroot);
+
+                    if (!fs.existsSync(sysroot))
+                        throw new Error(`Cross-compilation sysroot '${sysroot}' does not exist`);
+
+                    values.push(['CMAKE_SYSROOT', sysroot]);
+                }
+
                 let filename = `${work_dir}/toolchain.cmake`;
                 let text = values.map(pair => `set(${pair[0]} "${pair[1]}")`).join('\n');
 

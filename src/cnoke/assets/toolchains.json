@@ -58,5 +58,23 @@
         "system": "Darwin",
         "processor": "arm64",
         "flags": ["-DNODE_JS_LINK_FLAGS=-undefined;dynamic_lookup", "-DCMAKE_OSX_ARCHITECTURES=arm64"]
+    },
+
+    "freebsd_x64": {
+        "system": "FreeBSD",
+        "processor": "amd64",
+        "triplet": "x86_64-unknown-freebsd",
+        "sysroot": "../../tools/cross/freebsd_amd64"
+    },
+    "freebsd_arm64": {
+        "system": "FreeBSD",
+        "processor": "arm64",
+        "triplet": "aarch64-unknown-freebsd",
+        "sysroot": "../../tools/cross/freebsd_arm64",
+        "flags": [
+            "-DCMAKE_EXE_LINKER_FLAGS=-fuse-ld=lld",
+            "-DCMAKE_SHARED_LINKER_FLAGS=-fuse-ld=lld",
+            "-DCMAKE_STATIC_LINKER_FLAGS=-fuse-ld=lld"
+        ]
     }
 }
