@@ -129,6 +129,7 @@ static bool ApplySandbox(Span<const char *const> reveal_paths)
         { "poll", sb_FilterAction::Allow },
         { "ppoll", sb_FilterAction::Allow },
         { "select", sb_FilterAction::Allow },
+        { "gettimeofday", sb_FilterAction::Allow },
         { "clock_nanosleep", sb_FilterAction::Allow },
         { "clock_gettime", sb_FilterAction::Allow },
         { "clock_gettime64", sb_FilterAction::Allow },
