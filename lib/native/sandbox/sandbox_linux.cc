@@ -703,8 +703,9 @@ static bool InitSeccomp(Span<const sb_SyscallFilter> filters)
                 int syscall = seccomp_syscall_resolve_name("ioctl");
                 K_ASSERT(syscall != __NR_SCMP_ERROR);
 
+                // Check the "Type" byte (Bits 8-15) is 'T' (0x54), they are all tty commands
                 ret = seccomp_rule_add(ctx, translate_action(filter.action), syscall, 1,
-                                       SCMP_A1(SCMP_CMP_MASKED_EQ, 0xFFFFFFFFFFFFFF00ul, 0x5400u));
+                                       SCMP_A1(SCMP_CMP_MASKED_EQ, 0x000000000000FF00ul, 0x5400u));
             } else if (TestStr(filter.name, "mmap/anon")) {
                 int syscall = seccomp_syscall_resolve_name("mmap");
                 K_ASSERT(syscall != __NR_SCMP_ERROR);
