@@ -41,6 +41,7 @@
             "flags": ["-DNODE_JS_LINK_FLAGS=-Wl,/DELAYLOAD:node.exe,/SAFESEH:NO", "-DNODE_JS_DLLTOOL_MACHINE=arm64"],
             "variables": {
                 "CMAKE_DLLTOOL": "llvm-dlltool",
+                "CMAKE_RC_COMPILER": "llvm-rc",
                 "CMAKE_C_FLAGS": "-Xmicrosoft-windows-sys-root {{ root }}/../../tools/cross/windows_arm64",
                 "CMAKE_CXX_FLAGS": "-Xmicrosoft-windows-sys-root {{ root }}/../../tools/cross/windows_arm64",
                 "CMAKE_EXE_LINKER_FLAGS": "-Wl,-libpath:{{ root }}/../../tools/cross/windows_arm64/VC/Tools/MSVC/Current/lib/aarch64,-libpath:{{ root }}/../../tools/cross/windows_arm64/Kits/10/Lib/Current/ucrt/aarch64,-libpath:{{ root }}/../../tools/cross/windows_arm64/Kits/10/Lib/Current/um/aarch64 -ldelayimp",
@@ -66,6 +67,7 @@
             "flags": ["-DNODE_JS_LINK_FLAGS=-Wl,/DELAYLOAD:node.exe", "-DNODE_JS_DLLTOOL_MACHINE=i386:x86-64"],
             "variables": {
                 "CMAKE_DLLTOOL": "llvm-dlltool",
+                "CMAKE_RC_COMPILER": "llvm-rc",
                 "CMAKE_C_FLAGS": "-Xmicrosoft-windows-sys-root {{ root }}/../../tools/cross/windows_amd64",
                 "CMAKE_CXX_FLAGS": "-Xmicrosoft-windows-sys-root {{ root }}/../../tools/cross/windows_amd64",
                 "CMAKE_EXE_LINKER_FLAGS": "-Wl,-libpath:{{ root }}/../../tools/cross/windows_amd64/VC/Tools/MSVC/Current/lib/x86_64,-libpath:{{ root }}/../../tools/cross/windows_amd64/Kits/10/Lib/Current/ucrt/x86_64,-libpath:{{ root }}/../../tools/cross/windows_amd64/Kits/10/Lib/Current/um/x86_64 -ldelayimp",
