@@ -46,7 +46,20 @@
         "system": "Windows",
         "processor": "AMD64",
         "lib": "win-x64",
-        "flags": ["-DNODE_JS_LINK_FLAGS=/DELAYLOAD:node.exe", "-A", "x64"]
+        "flags": ["-DNODE_JS_LINK_FLAGS=/DELAYLOAD:node.exe"],
+
+        "linux": {
+            "triplet": "x86_64-pc-windows-msvc",
+            "flags": ["-DNODE_JS_LINK_FLAGS=-Wl,/DELAYLOAD:node.exe"],
+            "variables": {
+                "CMAKE_DLLTOOL": "llvm-dlltool",
+                "CMAKE_C_FLAGS": "-Xmicrosoft-windows-sys-root {{ root }}/../../tools/cross/windows_amd64",
+                "CMAKE_CXX_FLAGS": "-Xmicrosoft-windows-sys-root {{ root }}/../../tools/cross/windows_amd64",
+                "CMAKE_EXE_LINKER_FLAGS": "-Wl,-libpath:{{ root }}/../../tools/cross/windows_amd64/VC/Tools/MSVC/Current/lib/x86_64,-libpath:{{ root }}/../../tools/cross/windows_amd64/Kits/10/Lib/Current/ucrt/x86_64,-libpath:{{ root }}/../../tools/cross/windows_amd64/Kits/10/Lib/Current/um/x86_64 -ldelayimp",
+                "CMAKE_STATIC_LINKER_FLAGS": "-Wl,-libpath:{{ root }}/../../tools/cross/windows_amd64/VC/Tools/MSVC/Current/lib/x86_64,-libpath:{{ root }}/../../tools/cross/windows_amd64/Kits/10/Lib/Current/ucrt/x86_64,-libpath:{{ root }}/../../tools/cross/windows_amd64/Kits/10/Lib/Current/um/x86_64 -ldelayimp",
+                "CMAKE_SHARED_LINKER_FLAGS": "-Wl,-libpath:{{ root }}/../../tools/cross/windows_amd64/VC/Tools/MSVC/Current/lib/x86_64,-libpath:{{ root }}/../../tools/cross/windows_amd64/Kits/10/Lib/Current/ucrt/x86_64,-libpath:{{ root }}/../../tools/cross/windows_amd64/Kits/10/Lib/Current/um/x86_64 -ldelayimp"
+            }
+        }
     },
 
     "darwin_x64": {
@@ -64,17 +77,17 @@
         "system": "FreeBSD",
         "processor": "amd64",
         "triplet": "x86_64-unknown-freebsd",
-        "sysroot": "../../tools/cross/freebsd_amd64"
+        "sysroot": "{{ root }}/../../tools/cross/freebsd_amd64"
     },
     "freebsd_arm64": {
         "system": "FreeBSD",
         "processor": "arm64",
         "triplet": "aarch64-unknown-freebsd",
-        "sysroot": "../../tools/cross/freebsd_arm64",
-        "flags": [
-            "-DCMAKE_EXE_LINKER_FLAGS=-fuse-ld=lld",
-            "-DCMAKE_SHARED_LINKER_FLAGS=-fuse-ld=lld",
-            "-DCMAKE_STATIC_LINKER_FLAGS=-fuse-ld=lld"
-        ]
+        "sysroot": "{{ root }}/../../tools/cross/freebsd_arm64",
+        "variables": {
+            "CMAKE_EXE_LINKER_FLAGS": "-fuse-ld=lld",
+            "CMAKE_SHARED_LINKER_FLAGS": "-fuse-ld=lld",
+            "CMAKE_STATIC_LINKER_FLAGS": "-fuse-ld=lld"
+        }
     }
 }

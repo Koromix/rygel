@@ -61,7 +61,7 @@ function Builder(config = {}) {
         let options = read_cnoke_options();
 
         if (options.output != null) {
-            build_dir = expand_path(options.output, options.directory);
+            build_dir = expand_value(options.output, options.directory);
         } else {
             build_dir = project_dir + '/build';
         }
@@ -106,7 +106,9 @@ function Builder(config = {}) {
             args.push(`-DNODE_JS_INCLUDE_DIRS=${work_dir}/headers/include/node`);
         } else {
             console.log(`>> Using local node-api headers`);
-            args.push(`-DNODE_JS_INCLUDE_DIRS=${options.api}/include`);
+
+            let api_dir = expand_value(options.api, project_dir);
+            args.push(`-DNODE_JS_INCLUDE_DIRS=${api_dir}/include`);
         }
 
         args.push(`-DCMAKE_MODULE_PATH=${app_dir}/assets`);
@@ -132,14 +134,15 @@ function Builder(config = {}) {
                     fs.copyFileSync(destname, work_dir + '/node.lib');
                     args.push(`-DNODE_JS_LINK_LIB=${work_dir}/node.lib`);
                 } else {
-                    args.push(`-DNODE_JS_LINK_DEF=${options.api}/def/node_api.def`);
+                    let api_dir = expand_value(options.api, project_dir);
+                    args.push(`-DNODE_JS_LINK_DEF=${api_dir}/def/node_api.def`);
                 }
-
-                fs.copyFileSync(`${app_dir}/assets/win_delay_hook.c`, work_dir + '/win_delay_hook.c');
-                args.push(`-DNODE_JS_SOURCES=${work_dir}/win_delay_hook.c`);
             } else {
                 args.push(`-DNODE_JS_LINK_LIB=node.dll`);
             }
+
+            fs.copyFileSync(`${app_dir}/assets/win_delay_hook.c`, work_dir + '/win_delay_hook.c');
+            args.push(`-DNODE_JS_SOURCES=${work_dir}/win_delay_hook.c`);
         }
 
         if (!msvc) {
@@ -156,7 +159,7 @@ function Builder(config = {}) {
             }
         }
         if (prefer_clang) {
-            if (msvc) {
+            if (process.platform == 'win32' && msvc) {
                 args.push('-T', 'ClangCL');
             } else {
                 args.push('-DCMAKE_C_COMPILER=clang');
@@ -168,8 +171,13 @@ function Builder(config = {}) {
         {
             let info = TOOLCHAINS[toolchain];
 
-            if (info?.flags != null)
-                args.push(...info.flags);
+            if (Object.hasOwn(info, process.platform))
+                info = Object.assign({}, info, info[process.platform]);
+
+            if (info?.flags != null) {
+                let flags = info.flags.map(flag => expand_value(flag, __dirname + '/..'))
+                args.push(...flags);
+            }
 
             if (toolchain != host && info.triplet != null) {
                 let values = [
@@ -194,6 +202,13 @@ function Builder(config = {}) {
                         throw new Error(`Cross-compilation sysroot '${sysroot}' does not exist`);
 
                     values.push(['CMAKE_SYSROOT', sysroot]);
+                }
+
+                if (info.variables != null) {
+                    for (let key in info.variables) {
+                        let value = expand_value(info.variables[key], __dirname + '/..');
+                        values.push([key, value]);
+                    }
                 }
 
                 let filename = `${work_dir}/toolchain.cmake`;
@@ -268,7 +283,7 @@ function Builder(config = {}) {
         if (options.prebuild != null) {
             fs.mkdirSync(build_dir, { recursive: true, mode: 0o755 });
 
-            let archive_filename = expand_path(options.prebuild, options.directory);
+            let archive_filename = expand_value(options.prebuild, options.directory);
 
             if (fs.existsSync(archive_filename)) {
                 try {
@@ -283,7 +298,7 @@ function Builder(config = {}) {
         }
 
         if (options.require != null) {
-            let require_filename = expand_path(options.require, options.directory);
+            let require_filename = expand_value(options.require, options.directory);
 
             if (fs.existsSync(require_filename)) {
                 let proc = spawnSync(process.execPath, ['-e', 'require(process.argv[1])', require_filename]);
@@ -430,9 +445,13 @@ function Builder(config = {}) {
         return options;
     }
 
-    function expand_path(str, root_dir) {
+    function expand_value(str, root_dir) {
+        root_dir = fs.realpathSync(root_dir);
+
         let expanded = str.replace(/{{ *([a-zA-Z_][a-zA-Z_0-9]*) *}}/g, (match, p1) => {
             switch (p1) {
+                case 'root': return root_dir;
+
                 case 'version': {
                     let options = read_cnoke_options();
                     return options.version || '';
@@ -442,9 +461,6 @@ function Builder(config = {}) {
                 default: return match;
             }
         });
-
-        if (!tools.path_is_absolute(expanded))
-            expanded = path.join(root_dir, expanded);
 
         return expanded;
     }

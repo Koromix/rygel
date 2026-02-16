@@ -31,11 +31,11 @@
   },
   "license": "MIT",
   "cnoke": {
-    "api": "../../vendor/node-api-headers",
-    "output": "../../bin/Koffi/{{ toolchain }}",
+    "api": "{{ root }}/../../vendor/node-api-headers",
+    "output": "{{ root }}/../../bin/Koffi/{{ toolchain }}",
     "node": 16,
     "napi": 8,
-    "require": "./index.js"
+    "require": "{{ root }}./index.js"
   },
   "funding": "https://liberapay.com/Koromix"
 }

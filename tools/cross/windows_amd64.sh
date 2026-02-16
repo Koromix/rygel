@@ -7,9 +7,9 @@ mkdir windows_amd64
 
 XWIN=../../vendor/xwin/xwin_$(uname -m)
 
-$XWIN --cache-dir windows_amd64/cache --accept-license  download
-$XWIN --cache-dir windows_amd64/cache --accept-license unpack
-$XWIN --cache-dir windows_amd64/cache --accept-license splat --output windows_amd64 --include-debug-libs --use-winsysroot-style
+$XWIN --cache-dir windows_amd64/cache --accept-license --arch x86_64 download
+$XWIN --cache-dir windows_amd64/cache --accept-license --arch x86_64 unpack
+$XWIN --cache-dir windows_amd64/cache --accept-license --arch x86_64 splat --output windows_amd64 --include-debug-libs --use-winsysroot-style
 
 (cd 'windows_amd64/VC/Tools/MSVC' && ln -s *.*.*.* Current)
 (cd 'windows_amd64/Windows Kits/10/Lib' && ln -s *.*.* Current)
