@@ -34,7 +34,20 @@
         "system": "Windows",
         "processor": "ARM64",
         "lib": "win-arm64",
-        "flags": ["-DNODE_JS_LINK_FLAGS=/DELAYLOAD:node.exe;/SAFESEH:NO", "-A", "ARM64"]
+        "flags": ["-DNODE_JS_LINK_FLAGS=/DELAYLOAD:node.exe;/SAFESEH:NO", "-A", "ARM64"],
+
+        "linux": {
+            "triplet": "aarch64-pc-windows-msvc",
+            "flags": ["-DNODE_JS_LINK_FLAGS=-Wl,/DELAYLOAD:node.exe,/SAFESEH:NO", "-DNODE_JS_DLLTOOL_MACHINE=arm64"],
+            "variables": {
+                "CMAKE_DLLTOOL": "llvm-dlltool",
+                "CMAKE_C_FLAGS": "-Xmicrosoft-windows-sys-root {{ root }}/../../tools/cross/windows_arm64",
+                "CMAKE_CXX_FLAGS": "-Xmicrosoft-windows-sys-root {{ root }}/../../tools/cross/windows_arm64",
+                "CMAKE_EXE_LINKER_FLAGS": "-Wl,-libpath:{{ root }}/../../tools/cross/windows_arm64/VC/Tools/MSVC/Current/lib/aarch64,-libpath:{{ root }}/../../tools/cross/windows_arm64/Kits/10/Lib/Current/ucrt/aarch64,-libpath:{{ root }}/../../tools/cross/windows_arm64/Kits/10/Lib/Current/um/aarch64 -ldelayimp",
+                "CMAKE_STATIC_LINKER_FLAGS": "-Wl,-libpath:{{ root }}/../../tools/cross/windows_arm64/VC/Tools/MSVC/Current/lib/aarch64,-libpath:{{ root }}/../../tools/cross/windows_arm64/Kits/10/Lib/Current/ucrt/aarch64,-libpath:{{ root }}/../../tools/cross/windows_arm64/Kits/10/Lib/Current/um/aarch64 -ldelayimp",
+                "CMAKE_SHARED_LINKER_FLAGS": "-Wl,-libpath:{{ root }}/../../tools/cross/windows_arm64/VC/Tools/MSVC/Current/lib/aarch64,-libpath:{{ root }}/../../tools/cross/windows_arm64/Kits/10/Lib/Current/ucrt/aarch64,-libpath:{{ root }}/../../tools/cross/windows_arm64/Kits/10/Lib/Current/um/aarch64 -ldelayimp"
+            }
+        }
     },
     "win32_ia32": {
         "system": "Windows",
@@ -50,7 +63,7 @@
 
         "linux": {
             "triplet": "x86_64-pc-windows-msvc",
-            "flags": ["-DNODE_JS_LINK_FLAGS=-Wl,/DELAYLOAD:node.exe"],
+            "flags": ["-DNODE_JS_LINK_FLAGS=-Wl,/DELAYLOAD:node.exe", "-DNODE_JS_DLLTOOL_MACHINE=i386:x86-64"],
             "variables": {
                 "CMAKE_DLLTOOL": "llvm-dlltool",
                 "CMAKE_C_FLAGS": "-Xmicrosoft-windows-sys-root {{ root }}/../../tools/cross/windows_amd64",

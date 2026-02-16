@@ -8,22 +8,6 @@ else()
     set(USE_UNITY_BUILDS OFF CACHE BOOL "Use single-TU builds (aka. Unity builds)")
 endif()
 
-if(NODE_JS_LINK_DEF)
-    set(NODE_JS_LINK_LIB "${CMAKE_CURRENT_BINARY_DIR}/node.lib")
-    if (MSVC)
-        add_custom_command(OUTPUT node.lib
-                           COMMAND ${CMAKE_AR} ${CMAKE_STATIC_LINKER_FLAGS}
-                                   /def:${NODE_JS_LINK_DEF} /out:${NODE_JS_LINK_LIB}
-                           WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-                           MAIN_DEPENDENCY ${NODE_JS_LINK_DEF})
-    else()
-        add_custom_command(OUTPUT node.lib
-                           COMMAND ${CMAKE_DLLTOOL} -d ${NODE_JS_LINK_DEF} -l ${NODE_JS_LINK_LIB}
-                           WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-                           MAIN_DEPENDENCY ${NODE_JS_LINK_DEF})
-    endif()
-endif()
-
 function(add_node_addon)
     cmake_parse_arguments(ARG "" "NAME" "SOURCES" ${ARGN})
     add_library(${ARG_NAME} SHARED ${ARG_SOURCES} ${NODE_JS_SOURCES})
@@ -44,6 +28,33 @@ function(target_link_node TARGET)
         target_link_options(${TARGET} PRIVATE ${NODE_JS_LINK_FLAGS})
     endif()
 endfunction()
+
+if(WIN32)
+    function(create_import_lib OUTPUT SRC)
+        if (MSVC)
+            add_custom_command(OUTPUT ${OUTPUT}
+                               COMMAND ${CMAKE_AR} ${CMAKE_STATIC_LINKER_FLAGS}
+                                       /def:${SRC} /out:"${CMAKE_CURRENT_BINARY_DIR}/${OUTPUT}"
+                               WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+                               MAIN_DEPENDENCY ${SRC})
+        elseif(DEFINED NODE_JS_DLLTOOL_MACHINE)
+            add_custom_command(OUTPUT ${OUTPUT}
+                               COMMAND ${CMAKE_DLLTOOL} -d ${SRC} -l "${CMAKE_CURRENT_BINARY_DIR}/${OUTPUT}" -m ${NODE_JS_DLLTOOL_MACHINE}
+                               WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+                               MAIN_DEPENDENCY ${SRC})
+        else()
+            add_custom_command(OUTPUT ${OUTPUT}
+                               COMMAND ${CMAKE_DLLTOOL} -d ${SRC} -l "${CMAKE_CURRENT_BINARY_DIR}/${OUTPUT}"
+                               WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+                               MAIN_DEPENDENCY ${SRC})
+        endif()
+    endfunction()
+endif()
+
+if(NODE_JS_LINK_DEF)
+    create_import_lib(node.lib ${NODE_JS_LINK_DEF})
+    set(NODE_JS_LINK_LIB "${CMAKE_CURRENT_BINARY_DIR}/node.lib")
+endif()
 
 if(USE_UNITY_BUILDS)
     function(enable_unity_build TARGET)

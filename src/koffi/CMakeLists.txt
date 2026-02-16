@@ -66,8 +66,8 @@ set(KOFFI_SRC
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
     # CMAKE_SYSTEM_PROCESSOR is wrong on Windows ARM64
 
-    if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch|arm" OR CMAKE_GENERATOR_PLATFORM STREQUAL "ARM64" OR CMAKE_OSX_ARCHITECTURES MATCHES "arm")
-        if(WIN32)
+    if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch|arm|ARM|AARCH" OR CMAKE_GENERATOR_PLATFORM STREQUAL "ARM64" OR CMAKE_OSX_ARCHITECTURES MATCHES "arm")
+        if(MSVC)
             get_filename_component(cl_dir "${CMAKE_CXX_COMPILER}" DIRECTORY)
             file(TO_CMAKE_PATH "${cl_dir}/armasm64.exe" asm_compiler)
 
@@ -128,19 +128,8 @@ add_node_addon(NAME koffi SOURCES ${KOFFI_SRC})
 target_include_directories(koffi PRIVATE . ../.. ../../vendor/node-addon-api)
 
 if(WIN32)
+    create_import_lib(uv.lib src/uv.def)
     set(UV_LINK_LIB "${CMAKE_CURRENT_BINARY_DIR}/uv.lib")
-    if(MSVC)
-        add_custom_command(OUTPUT uv.lib
-                           COMMAND ${CMAKE_AR} ${CMAKE_STATIC_LINKER_FLAGS}
-                                   /def:src/uv.def /out:${UV_LINK_LIB}
-                           WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-                           MAIN_DEPENDENCY src/uv.def)
-    else()
-        add_custom_command(OUTPUT uv.lib
-                           COMMAND ${CMAKE_DLLTOOL} -d src/uv.def -l ${UV_LINK_LIB}
-                           WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-                           MAIN_DEPENDENCY src/uv.def)
-    endif()
     target_sources(koffi PRIVATE uv.lib)
     target_link_libraries(koffi PRIVATE ${UV_LINK_LIB})
 endif()
