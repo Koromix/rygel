@@ -114,7 +114,7 @@ elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
     if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch|arm")
         list(APPEND KOFFI_SRC src/abi/arm32.cc src/abi/arm32_asm.S)
     else()
-        if(WIN32)
+        if(MSVC)
             list(APPEND KOFFI_SRC src/abi/x86.cc src/abi/x86_asm.asm)
             set_source_files_properties(src/abi/x86_asm.asm PROPERTIES
                 INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/src/trampolines")

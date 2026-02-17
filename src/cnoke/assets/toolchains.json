@@ -54,7 +54,21 @@
         "system": "Windows",
         "processor": "X86",
         "lib": "win-x86",
-        "flags": ["-DNODE_JS_LINK_FLAGS=/DELAYLOAD:node.exe;/SAFESEH:NO", "-A", "Win32"]
+        "flags": ["-DNODE_JS_LINK_FLAGS=/DELAYLOAD:node.exe;/SAFESEH:NO", "-A", "Win32"],
+
+        "linux": {
+            "triplet": "i386-pc-windows-msvc",
+            "flags": ["-DNODE_JS_LINK_FLAGS=-Wl,/DELAYLOAD:node.exe,/SAFESEH:NO", "-DNODE_JS_DLLTOOL_MACHINE=i386"],
+            "variables": {
+                "CMAKE_DLLTOOL": "llvm-dlltool",
+                "CMAKE_RC_COMPILER": "llvm-rc",
+                "CMAKE_C_FLAGS": "-Xmicrosoft-windows-sys-root {{ root }}/../../tools/cross/windows_ia32",
+                "CMAKE_CXX_FLAGS": "-Xmicrosoft-windows-sys-root {{ root }}/../../tools/cross/windows_ia32",
+                "CMAKE_EXE_LINKER_FLAGS": "-Wl,-libpath:{{ root }}/../../tools/cross/windows_ia32/VC/Tools/MSVC/Current/lib/x86_64,-libpath:{{ root }}/../../tools/cross/windows_amd64/Kits/10/Lib/Current/ucrt/x86_64,-libpath:{{ root }}/../../tools/cross/windows_amd64/Kits/10/Lib/Current/um/x86_64 -ldelayimp",
+                "CMAKE_STATIC_LINKER_FLAGS": "-Wl,-libpath:{{ root }}/../../tools/cross/windows_ia32/VC/Tools/MSVC/Current/lib/x86_64,-libpath:{{ root }}/../../tools/cross/windows_amd64/Kits/10/Lib/Current/ucrt/x86_64,-libpath:{{ root }}/../../tools/cross/windows_amd64/Kits/10/Lib/Current/um/x86_64 -ldelayimp",
+                "CMAKE_SHARED_LINKER_FLAGS": "-Wl,-libpath:{{ root }}/../../tools/cross/windows_ia32/VC/Tools/MSVC/Current/lib/x86_64,-libpath:{{ root }}/../../tools/cross/windows_amd64/Kits/10/Lib/Current/ucrt/x86_64,-libpath:{{ root }}/../../tools/cross/windows_amd64/Kits/10/Lib/Current/um/x86_64 -ldelayimp"
+            }
+        }
     },
     "win32_x64": {
         "system": "Windows",

@@ -1,17 +1,21 @@
 # SPDX-License-Identifier: MIT
 # SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
-#define SYMBOL(Symbol) Symbol
+#if defined(_WIN32)
+    #define SYMBOL(Symbol) _ ## Symbol
+#else
+    #define SYMBOL(Symbol) Symbol
+#endif
 
 # Forward
 # ----------------------------
 
-.global ForwardCallG
-.global ForwardCallF
-.global ForwardCallD
-.global ForwardCallGR
-.global ForwardCallFR
-.global ForwardCallDR
+.global SYMBOL(ForwardCallG)
+.global SYMBOL(ForwardCallF)
+.global SYMBOL(ForwardCallD)
+.global SYMBOL(ForwardCallGR)
+.global SYMBOL(ForwardCallFR)
+.global SYMBOL(ForwardCallDR)
 
 #define ENDBR32 .byte 0xf3, 0x0f, 0x1e, 0xfb
 
@@ -50,29 +54,29 @@
     .cfi_endproc
 .endm
 
-ForwardCallG:
+SYMBOL(ForwardCallG):
     prologue
     epilogue
 
-ForwardCallF:
+SYMBOL(ForwardCallF):
     prologue
     epilogue
 
-ForwardCallD:
+SYMBOL(ForwardCallD):
     prologue
     epilogue
 
-ForwardCallGR:
-    prologue
-    fastcall
-    epilogue
-
-ForwardCallFR:
+SYMBOL(ForwardCallGR):
     prologue
     fastcall
     epilogue
 
-ForwardCallDR:
+SYMBOL(ForwardCallFR):
+    prologue
+    fastcall
+    epilogue
+
+SYMBOL(ForwardCallDR):
     prologue
     fastcall
     epilogue
@@ -80,8 +84,8 @@ ForwardCallDR:
 # Callbacks
 # ----------------------------
 
-.global RelayCallback
-.global CallSwitchStack
+.global SYMBOL(RelayCallback)
+.global SYMBOL(CallSwitchStack)
 
 # Call the C function RelayCallback with the following arguments:
 # static trampoline ID, the current stack pointer, a pointer to the stack arguments of this call,
@@ -103,9 +107,13 @@ ForwardCallDR:
     movl %eax, 8(%esp)
     leal 16(%esp), %eax
     movl %eax, 12(%esp)
+#if defined(_WIN32)
+    call _RelayCallback
+#else
     call GetEIP
     addl $_GLOBAL_OFFSET_TABLE_, %ecx
     call *RelayCallback@GOT(%ecx)
+#endif
     movl 44(%esp), %edx
     movl 36(%esp), %ecx
     movl %edx, 44(%esp, %ecx)
@@ -132,15 +140,17 @@ ForwardCallDR:
     .cfi_endproc
 .endm
 
+#if !defined(_WIN32)
 GetEIP:
     movl (%esp), %ecx
     ret
+#endif
 
 # When a callback is relayed, Koffi will call into Node.js and V8 to execute Javascript.
 # The problem is that we're still running on the separate Koffi stack, and V8 will
 # probably misdetect this as a "stack overflow". We have to restore the old
 # stack pointer, call Node.js/V8 and go back to ours.
-CallSwitchStack:
+SYMBOL(CallSwitchStack):
     .cfi_startproc
     .cfi_def_cfa esp, 4
     ENDBR32
