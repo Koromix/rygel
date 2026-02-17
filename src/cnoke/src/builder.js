@@ -61,7 +61,7 @@ function Builder(config = {}) {
         let options = read_cnoke_options();
 
         if (options.output != null) {
-            build_dir = expand_value(options.output, options.directory);
+            build_dir = expand_value(options.output, { root: options.directory });
         } else {
             build_dir = project_dir + '/build';
         }
@@ -107,7 +107,7 @@ function Builder(config = {}) {
         } else {
             console.log(`>> Using local node-api headers`);
 
-            let api_dir = expand_value(options.api, project_dir);
+            let api_dir = expand_value(options.api, { root: project_dir });
             args.push(`-DNODE_JS_INCLUDE_DIRS=${api_dir}/include`);
         }
 
@@ -134,7 +134,7 @@ function Builder(config = {}) {
                     fs.copyFileSync(destname, work_dir + '/node.lib');
                     args.push(`-DNODE_JS_LINK_LIB=${work_dir}/node.lib`);
                 } else {
-                    let api_dir = expand_value(options.api, project_dir);
+                    let api_dir = expand_value(options.api, { root: project_dir });
                     args.push(`-DNODE_JS_LINK_DEF=${api_dir}/def/node_api.def`);
                 }
             } else {
@@ -167,7 +167,7 @@ function Builder(config = {}) {
                 info = Object.assign({}, info, info[process.platform]);
 
             if (info?.flags != null) {
-                let flags = info.flags.map(flag => expand_value(flag, __dirname + '/..'))
+                let flags = info.flags.map(flag => expand_value(flag, { root: __dirname + '/..' }))
                 args.push(...flags);
             }
 
@@ -176,6 +176,7 @@ function Builder(config = {}) {
                     ['CMAKE_SYSTEM_NAME', info.system],
                     ['CMAKE_SYSTEM_PROCESSOR', info.processor]
                 ];
+                let sysroot = null;
 
                 // Switch to Clang automatically if the GCC cross-compiler does not exist
                 if (!prefer_clang) {
@@ -196,17 +197,17 @@ function Builder(config = {}) {
                 }
 
                 if (info.sysroot != null) {
-                    let sysroot = path.join(__dirname, '..', info.sysroot);
-
+                    sysroot = expand_value(info.sysroot, { root: __dirname + '/..' });
                     if (!fs.existsSync(sysroot))
                         throw new Error(`Cross-compilation sysroot '${sysroot}' does not exist`);
+                    sysroot = fs.realpathSync(sysroot);
 
                     values.push(['CMAKE_SYSROOT', sysroot]);
                 }
 
                 if (info.variables != null) {
                     for (let key in info.variables) {
-                        let value = expand_value(info.variables[key], __dirname + '/..');
+                        let value = expand_value(info.variables[key], { root: __dirname + '/..', sysroot: sysroot });
                         values.push([key, value]);
                     }
                 }
@@ -292,7 +293,7 @@ function Builder(config = {}) {
         if (options.prebuild != null) {
             fs.mkdirSync(build_dir, { recursive: true, mode: 0o755 });
 
-            let archive_filename = expand_value(options.prebuild, options.directory);
+            let archive_filename = expand_value(options.prebuild, { root: options.directory });
 
             if (fs.existsSync(archive_filename)) {
                 try {
@@ -307,7 +308,7 @@ function Builder(config = {}) {
         }
 
         if (options.require != null) {
-            let require_filename = expand_value(options.require, options.directory);
+            let require_filename = expand_value(options.require, { root: options.directory });
 
             if (fs.existsSync(require_filename)) {
                 let proc = spawnSync(process.execPath, ['-e', 'require(process.argv[1])', require_filename]);
@@ -454,20 +455,23 @@ function Builder(config = {}) {
         return options;
     }
 
-    function expand_value(str, root_dir) {
-        root_dir = fs.realpathSync(root_dir);
-
+    function expand_value(str, values) {
         let expanded = str.replace(/{{ *([a-zA-Z_][a-zA-Z_0-9]*) *}}/g, (match, p1) => {
             switch (p1) {
-                case 'root': return root_dir;
-
                 case 'version': {
                     let options = read_cnoke_options();
                     return options.version || '';
                 } break;
+
                 case 'toolchain': return toolchain;
 
-                default: return match;
+                default: {
+                    if (Object.hasOwn(values, p1)) {
+                        return values[p1];
+                    } else {
+                        return match;
+                    }
+                } break;
             }
         });
 

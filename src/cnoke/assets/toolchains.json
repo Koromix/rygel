@@ -36,17 +36,18 @@
         "lib": "win-x86",
         "flags": ["-DNODE_JS_LINK_FLAGS=/DELAYLOAD:node.exe;/SAFESEH:NO", "-A", "Win32"],
 
+        "triplet": "i386-pc-windows-msvc",
+        "sysroot": "{{ root }}/../../tools/cross/windows_ia32",
         "linux": {
-            "triplet": "i386-pc-windows-msvc",
             "flags": ["-DNODE_JS_LINK_FLAGS=-Wl,/DELAYLOAD:node.exe,/SAFESEH:NO", "-DNODE_JS_DLLTOOL_MACHINE=i386"],
             "variables": {
                 "CMAKE_DLLTOOL": "llvm-dlltool",
                 "CMAKE_RC_COMPILER": "llvm-rc",
-                "CMAKE_C_FLAGS": "-Xmicrosoft-windows-sys-root {{ root }}/../../tools/cross/windows_ia32",
-                "CMAKE_CXX_FLAGS": "-Xmicrosoft-windows-sys-root {{ root }}/../../tools/cross/windows_ia32",
-                "CMAKE_EXE_LINKER_FLAGS": "-Wl,-libpath:{{ root }}/../../tools/cross/windows_ia32/VC/Tools/MSVC/Current/lib/x86_64,-libpath:{{ root }}/../../tools/cross/windows_amd64/Kits/10/Lib/Current/ucrt/x86_64,-libpath:{{ root }}/../../tools/cross/windows_amd64/Kits/10/Lib/Current/um/x86_64 -ldelayimp",
-                "CMAKE_STATIC_LINKER_FLAGS": "-Wl,-libpath:{{ root }}/../../tools/cross/windows_ia32/VC/Tools/MSVC/Current/lib/x86_64,-libpath:{{ root }}/../../tools/cross/windows_amd64/Kits/10/Lib/Current/ucrt/x86_64,-libpath:{{ root }}/../../tools/cross/windows_amd64/Kits/10/Lib/Current/um/x86_64 -ldelayimp",
-                "CMAKE_SHARED_LINKER_FLAGS": "-Wl,-libpath:{{ root }}/../../tools/cross/windows_ia32/VC/Tools/MSVC/Current/lib/x86_64,-libpath:{{ root }}/../../tools/cross/windows_amd64/Kits/10/Lib/Current/ucrt/x86_64,-libpath:{{ root }}/../../tools/cross/windows_amd64/Kits/10/Lib/Current/um/x86_64 -ldelayimp"
+                "CMAKE_C_FLAGS": "-Xmicrosoft-windows-sys-root {{ sysroot }}",
+                "CMAKE_CXX_FLAGS": "-Xmicrosoft-windows-sys-root {{ sysroot }}",
+                "CMAKE_EXE_LINKER_FLAGS": "-Wl,-libpath:{{ sysroot }}/VC/Tools/MSVC/Current/lib/x86_64,-libpath:{{ root }}/../../tools/cross/windows_amd64/Kits/10/Lib/Current/ucrt/x86_64,-libpath:{{ root }}/../../tools/cross/windows_amd64/Kits/10/Lib/Current/um/x86_64 -ldelayimp",
+                "CMAKE_STATIC_LINKER_FLAGS": "-Wl,-libpath:{{ sysroot }}/VC/Tools/MSVC/Current/lib/x86_64,-libpath:{{ root }}/../../tools/cross/windows_amd64/Kits/10/Lib/Current/ucrt/x86_64,-libpath:{{ root }}/../../tools/cross/windows_amd64/Kits/10/Lib/Current/um/x86_64 -ldelayimp",
+                "CMAKE_SHARED_LINKER_FLAGS": "-Wl,-libpath:{{ sysroot }}/VC/Tools/MSVC/Current/lib/x86_64,-libpath:{{ root }}/../../tools/cross/windows_amd64/Kits/10/Lib/Current/ucrt/x86_64,-libpath:{{ root }}/../../tools/cross/windows_amd64/Kits/10/Lib/Current/um/x86_64 -ldelayimp"
             }
         }
     },
@@ -56,17 +57,18 @@
         "lib": "win-x64",
         "flags": ["-DNODE_JS_LINK_FLAGS=/DELAYLOAD:node.exe"],
 
+        "triplet": "x86_64-pc-windows-msvc",
+        "sysroot": "{{ root }}/../../tools/cross/windows_amd64",
         "linux": {
-            "triplet": "x86_64-pc-windows-msvc",
             "flags": ["-DNODE_JS_LINK_FLAGS=-Wl,/DELAYLOAD:node.exe", "-DNODE_JS_DLLTOOL_MACHINE=i386:x86-64"],
             "variables": {
                 "CMAKE_DLLTOOL": "llvm-dlltool",
                 "CMAKE_RC_COMPILER": "llvm-rc",
-                "CMAKE_C_FLAGS": "-Xmicrosoft-windows-sys-root {{ root }}/../../tools/cross/windows_amd64",
-                "CMAKE_CXX_FLAGS": "-Xmicrosoft-windows-sys-root {{ root }}/../../tools/cross/windows_amd64",
-                "CMAKE_EXE_LINKER_FLAGS": "-Wl,-libpath:{{ root }}/../../tools/cross/windows_amd64/VC/Tools/MSVC/Current/lib/x86_64,-libpath:{{ root }}/../../tools/cross/windows_amd64/Kits/10/Lib/Current/ucrt/x86_64,-libpath:{{ root }}/../../tools/cross/windows_amd64/Kits/10/Lib/Current/um/x86_64 -ldelayimp",
-                "CMAKE_STATIC_LINKER_FLAGS": "-Wl,-libpath:{{ root }}/../../tools/cross/windows_amd64/VC/Tools/MSVC/Current/lib/x86_64,-libpath:{{ root }}/../../tools/cross/windows_amd64/Kits/10/Lib/Current/ucrt/x86_64,-libpath:{{ root }}/../../tools/cross/windows_amd64/Kits/10/Lib/Current/um/x86_64 -ldelayimp",
-                "CMAKE_SHARED_LINKER_FLAGS": "-Wl,-libpath:{{ root }}/../../tools/cross/windows_amd64/VC/Tools/MSVC/Current/lib/x86_64,-libpath:{{ root }}/../../tools/cross/windows_amd64/Kits/10/Lib/Current/ucrt/x86_64,-libpath:{{ root }}/../../tools/cross/windows_amd64/Kits/10/Lib/Current/um/x86_64 -ldelayimp"
+                "CMAKE_C_FLAGS": "-Xmicrosoft-windows-sys-root {{ sysroot }}",
+                "CMAKE_CXX_FLAGS": "-Xmicrosoft-windows-sys-root {{ sysroot }}",
+                "CMAKE_EXE_LINKER_FLAGS": "-Wl,-libpath:{{ sysroot }}/VC/Tools/MSVC/Current/lib/x86_64,-libpath:{{ sysroot }}/Kits/10/Lib/Current/ucrt/x86_64,-libpath:{{ sysroot }}/Kits/10/Lib/Current/um/x86_64 -ldelayimp",
+                "CMAKE_STATIC_LINKER_FLAGS": "-Wl,-libpath:{{ sysroot }}/VC/Tools/MSVC/Current/lib/x86_64,-libpath:{{ sysroot }}/Kits/10/Lib/Current/ucrt/x86_64,-libpath:{{ sysroot }}/Kits/10/Lib/Current/um/x86_64 -ldelayimp",
+                "CMAKE_SHARED_LINKER_FLAGS": "-Wl,-libpath:{{ sysroot }}/VC/Tools/MSVC/Current/lib/x86_64,-libpath:{{ sysroot }}/Kits/10/Lib/Current/ucrt/x86_64,-libpath:{{ sysroot }}/Kits/10/Lib/Current/um/x86_64 -ldelayimp"
             }
         }
     },
@@ -76,17 +78,18 @@
         "lib": "win-arm64",
         "flags": ["-DNODE_JS_LINK_FLAGS=/DELAYLOAD:node.exe;/SAFESEH:NO", "-A", "ARM64"],
 
+        "triplet": "aarch64-pc-windows-msvc",
+        "sysroot": "{{ root }}/../../tools/cross/windows_arm64",
         "linux": {
-            "triplet": "aarch64-pc-windows-msvc",
             "flags": ["-DNODE_JS_LINK_FLAGS=-Wl,/DELAYLOAD:node.exe,/SAFESEH:NO", "-DNODE_JS_DLLTOOL_MACHINE=arm64"],
             "variables": {
                 "CMAKE_DLLTOOL": "llvm-dlltool",
                 "CMAKE_RC_COMPILER": "llvm-rc",
-                "CMAKE_C_FLAGS": "-Xmicrosoft-windows-sys-root {{ root }}/../../tools/cross/windows_arm64",
-                "CMAKE_CXX_FLAGS": "-Xmicrosoft-windows-sys-root {{ root }}/../../tools/cross/windows_arm64",
-                "CMAKE_EXE_LINKER_FLAGS": "-Wl,-libpath:{{ root }}/../../tools/cross/windows_arm64/VC/Tools/MSVC/Current/lib/aarch64,-libpath:{{ root }}/../../tools/cross/windows_arm64/Kits/10/Lib/Current/ucrt/aarch64,-libpath:{{ root }}/../../tools/cross/windows_arm64/Kits/10/Lib/Current/um/aarch64 -ldelayimp",
-                "CMAKE_STATIC_LINKER_FLAGS": "-Wl,-libpath:{{ root }}/../../tools/cross/windows_arm64/VC/Tools/MSVC/Current/lib/aarch64,-libpath:{{ root }}/../../tools/cross/windows_arm64/Kits/10/Lib/Current/ucrt/aarch64,-libpath:{{ root }}/../../tools/cross/windows_arm64/Kits/10/Lib/Current/um/aarch64 -ldelayimp",
-                "CMAKE_SHARED_LINKER_FLAGS": "-Wl,-libpath:{{ root }}/../../tools/cross/windows_arm64/VC/Tools/MSVC/Current/lib/aarch64,-libpath:{{ root }}/../../tools/cross/windows_arm64/Kits/10/Lib/Current/ucrt/aarch64,-libpath:{{ root }}/../../tools/cross/windows_arm64/Kits/10/Lib/Current/um/aarch64 -ldelayimp"
+                "CMAKE_C_FLAGS": "-Xmicrosoft-windows-sys-root {{ sysroot }}",
+                "CMAKE_CXX_FLAGS": "-Xmicrosoft-windows-sys-root {{ sysroot }}",
+                "CMAKE_EXE_LINKER_FLAGS": "-Wl,-libpath:{{ sysroot }}/VC/Tools/MSVC/Current/lib/aarch64,-libpath:{{ sysroot }}/Kits/10/Lib/Current/ucrt/aarch64,-libpath:{{ sysroot }}/Kits/10/Lib/Current/um/aarch64 -ldelayimp",
+                "CMAKE_STATIC_LINKER_FLAGS": "-Wl,-libpath:{{ sysroot }}/VC/Tools/MSVC/Current/lib/aarch64,-libpath:{{ sysroot }}/Kits/10/Lib/Current/ucrt/aarch64,-libpath:{{ sysroot }}/Kits/10/Lib/Current/um/aarch64 -ldelayimp",
+                "CMAKE_SHARED_LINKER_FLAGS": "-Wl,-libpath:{{ sysroot }}/VC/Tools/MSVC/Current/lib/aarch64,-libpath:{{ sysroot }}/Kits/10/Lib/Current/ucrt/aarch64,-libpath:{{ sysroot }}/Kits/10/Lib/Current/um/aarch64 -ldelayimp"
             }
         }
     },
@@ -105,12 +108,14 @@
     "freebsd_x64": {
         "system": "FreeBSD",
         "processor": "amd64",
+
         "triplet": "x86_64-unknown-freebsd",
         "sysroot": "{{ root }}/../../tools/cross/freebsd_amd64"
     },
     "freebsd_arm64": {
         "system": "FreeBSD",
         "processor": "arm64",
+
         "triplet": "aarch64-unknown-freebsd",
         "sysroot": "{{ root }}/../../tools/cross/freebsd_arm64",
         "variables": {
