@@ -53,36 +53,36 @@ async function main() {
             if (arg == '--help') {
                 print_usage();
                 return;
-            } else if (arg == '-d' || arg == '--directory') {
+            } else if (arg == '-D' || arg == '--directory') {
                 if (value == null)
                     throw new Error(`Missing value for ${arg}`);
 
                 config.project_dir = fs.realpathSync(value);
-            } else if (arg == '-p' || arg == '--package') {
+            } else if (arg == '-P' || arg == '--package') {
                 if (value == null)
                     throw new Error(`Missing value for ${arg}`);
 
                 config.package_dir = fs.realpathSync(value);
-            } else if (arg == '-O' || arg == '--out') {
+            } else if (arg == '-O' || arg == '--output') {
                 if (value == null)
                     throw new Error(`Missing value for ${arg}`);
 
                 config.output_directory = value;
-            } else if ((command == 'build' || command == 'configure') && (arg == '-v' || arg == '--runtime-version')) {
+            } else if ((command == 'build' || command == 'configure') && arg == '--runtime') {
                 if (value == null)
                     throw new Error(`Missing value for ${arg}`);
                 if (!value.match(/^[0-9]+\.[0-9]+\.[0-9]+$/))
                     throw new Error(`Malformed runtime version '${value}'`);
 
                 config.runtime_version = value;
+            } else if ((command == 'build' || command == 'configure') && arg == '--clang') {
+                config.prefer_clang = true;
             } else if ((command == 'build' || command == 'configure') && (arg == '-t' || arg == '--toolchain')) {
                 if (value == null)
                     throw new Error(`Missing value for ${arg}`);
 
                 config.toolchain = value;
-            } else if ((command == 'build' || command == 'configure') && (arg == '-C' || arg == '--prefer-clang')) {
-                config.prefer_clang = true;
-            } else if ((command == 'build' || command == 'configure') && (arg == '-B' || arg == '--config')) {
+            } else if ((command == 'build' || command == 'configure') && (arg == '-c' || arg == '--config')) {
                 if (value == null)
                     throw new Error(`Missing value for ${arg}`);
 
@@ -95,17 +95,19 @@ async function main() {
                         throw new Error(`Unknown value '${value}' for ${arg}`);
                     } break;
                 }
-            } else if ((command == 'build' || command == 'configure') && (arg == '-D' || arg == '--debug')) {
+            } else if ((command == 'build' || command == 'configure') && arg == '--debug') {
                 config.mode = 'Debug';
-            } else if (command == 'build' && arg == '--verbose') {
-                config.verbose = true;
+            } else if ((command == 'build' || command == 'configure') && arg == '--release') {
+                config.mode = 'Release';
             } else if (command == 'build' && arg == '--prebuild') {
                 config.prebuild = true;
-            } else if (command == 'build' && (arg == '-T' || arg == '--target')) {
+            } else if (command == 'build' && arg == '--target') {
                 if (value == null)
                     throw new Error(`Missing value for ${arg}`);
 
                 config.targets = [value];
+            } else if (command == 'build' && (arg == '-v' || arg == '--verbose')) {
+                config.verbose = true;
             } else {
                 if (arg[0] == '-') {
                     throw new Error(`Unexpected argument '${arg}'`);
@@ -136,28 +138,27 @@ Commands:
 
 Options:
 
-    -d, --directory <DIR>                Change source directory
+    -D, --directory <DIR>                Change source directory
                                          (default: current working directory)
-    -p, --package <DIR>                  Change package directory
+    -P, --package <DIR>                  Change package directory
                                          (default: current working directory)
-
-    -O, --out <DIR>                      Set explicit output directory
+    -O, --output <DIR>                   Set explicit output directory
                                          (default: ./build)
 
-    -B, --config <CONFIG>                Change build type: RelWithDebInfo, Debug, Release
+    -c, --config <CONFIG>                Change build type: RelWithDebInfo, Debug, Release
                                          (default: ${cnoke.DefaultOptions.mode})
-    -D, --debug                          Shortcut for --config Debug
-
-        --prebuild                       Use prebuilt binary if available
+        --debug                          Shortcut for --config Debug
+        --release                        Shortcut for --config Release
 
     -t, --toolchain <TOOLCHAIN>          Cross-compile for specific platform
-    -v, --runtime-version <VERSION>      Change node version
+        --runtime <VERSION>              Change node version
                                          (default: ${process.version})
-    -C, --prefer-clang                   Use Clang instead of default CMake compiler
+        --clang                          Use Clang instead of default CMake compiler
 
-    -T, --target <TARGET>                Only build the specified target
+        --prebuild                       Use prebuilt binary if available
+        --target <TARGET>                Only build the specified target
 
-        --verbose                        Show build commands while building
+    -v, --verbose                        Show build commands while building
 
 The ARCH value is similar to process.arch, with the following differences:
 

@@ -10,7 +10,7 @@
         },
 
         "test": {
-            "build": "node ../cnoke/cnoke.js -d test",
+            "build": "node ../cnoke/cnoke.js -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
                 "Test Sync (slow pointers)": "node test/sync.js --slow_pointers",
@@ -35,7 +35,7 @@
         },
 
         "test": {
-            "build": "CC=clang-21 CXX=clang++-21 node ../cnoke/cnoke.js -d test",
+            "build": "CC=clang-21 CXX=clang++-21 node ../cnoke/cnoke.js -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
                 "Test Sync (slow pointers)": "node test/sync.js --slow_pointers",
@@ -60,7 +60,7 @@
         },
 
         "test": {
-            "build": "node ../cnoke/cnoke.js -d test",
+            "build": "node ../cnoke/cnoke.js -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
                 "Test Sync (slow pointers)": "node test/sync.js --slow_pointers",
@@ -85,7 +85,7 @@
         },
 
         "test": {
-            "build": "CC=clang-21 CXX=clang++-21 node ../cnoke/cnoke.js -d test",
+            "build": "CC=clang-21 CXX=clang++-21 node ../cnoke/cnoke.js -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
                 "Test Sync (slow pointers)": "node test/sync.js --slow_pointers",
@@ -111,7 +111,7 @@
         },
 
         "test": {
-            "build": "node ../cnoke/cnoke.js -d test",
+            "build": "node ../cnoke/cnoke.js -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
                 "Test Sync (slow pointers)": "node test/sync.js --slow_pointers",
@@ -136,7 +136,7 @@
         },
 
         "test": {
-            "build": "node ../cnoke/cnoke.js -d test",
+            "build": "node ../cnoke/cnoke.js -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
                 "Test Sync (slow pointers)": "node test/sync.js --slow_pointers",
@@ -161,7 +161,7 @@
         },
 
         "test": {
-            "build": "node ../cnoke/cnoke.js -d test",
+            "build": "node ../cnoke/cnoke.js -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
                 "Test Sync (slow pointers)": "node test/sync.js --slow_pointers",
@@ -186,7 +186,7 @@
         },
 
         "test": {
-            "build": "node ../cnoke/cnoke.js -d test",
+            "build": "node ../cnoke/cnoke.js -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
                 "Test Sync (slow pointers)": "node test/sync.js --slow_pointers",
@@ -211,7 +211,7 @@
         },
 
         "test": {
-            "build": "node ../cnoke/cnoke.js -d test",
+            "build": "node ../cnoke/cnoke.js -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
                 "Test Sync (slow pointers)": "node test/sync.js --slow_pointers",
@@ -236,7 +236,7 @@
         },
 
         "test": {
-            "build": "node ../cnoke/cnoke.js -d test",
+            "build": "node ../cnoke/cnoke.js -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
                 "Test Sync (slow pointers)": "node test/sync.js --slow_pointers",
@@ -261,7 +261,7 @@
         },
 
         "test": {
-            "build": "C:\\Node32\\node32.cmd node ../cnoke/cnoke.js -d test",
+            "build": "C:\\Node32\\node32.cmd node ../cnoke/cnoke.js -D test",
             "commands": {
                 "Test Sync": "C:\\Node32\\node32.cmd node test/sync.js",
                 "Test Sync (slow pointers)": "C:\\Node32\\node32.cmd node test/sync.js --slow_pointers",
@@ -289,7 +289,7 @@
         },
 
         "test": {
-            "build": "C:\\Node64\\node64.cmd node ../cnoke/cnoke.js -d test",
+            "build": "C:\\Node64\\node64.cmd node ../cnoke/cnoke.js -D test",
             "commands": {
                 "Test Sync": "C:\\Node64\\node64.cmd node test/sync.js",
                 "Test Sync (slow pointers)": "C:\\Node64\\node64.cmd node test/sync.js --slow_pointers",
@@ -328,7 +328,7 @@
         },
 
         "test": {
-            "build": "PATH=/usr/local/bin:/usr/bin:/bin SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX11.3.sdk node ../cnoke/cnoke.js -d test",
+            "build": "PATH=/usr/local/bin:/usr/bin:/bin SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX11.3.sdk node ../cnoke/cnoke.js -D test",
             "commands": {
                 "Test Sync": "PATH=/usr/local/bin:/usr/bin:/bin node test/sync.js",
                 "Test Sync (slow pointers)": "PATH=/usr/local/bin:/usr/bin:/bin node test/sync.js --slow_pointers",
@@ -362,7 +362,7 @@
         },
 
         "test": {
-            "build": "node ../cnoke/cnoke.js -d test",
+            "build": "node ../cnoke/cnoke.js -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
                 "Test Sync (slow pointers)": "node test/sync.js --slow_pointers",
@@ -386,7 +386,7 @@
         },
 
         "test": {
-            "build": "node ../cnoke/cnoke.js -d test",
+            "build": "node ../cnoke/cnoke.js -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
                 "Test Sync (slow pointers)": "node test/sync.js --slow_pointers",
@@ -411,7 +411,7 @@
         },
 
         "test": {
-            "build": "node ../cnoke/cnoke.js -d test",
+            "build": "node ../cnoke/cnoke.js -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
                 "Test Sync (slow pointers)": "node test/sync.js --slow_pointers",
