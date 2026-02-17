@@ -179,7 +179,7 @@ function Builder(config = {}) {
                 let sysroot = null;
 
                 // Switch to Clang automatically if the GCC cross-compiler does not exist
-                if (!prefer_clang) {
+                if (process.platform != 'win32' && !prefer_clang) {
                     let binary = info.triplet + '-gcc';
 
                     if (spawnSync(binary, ['-v']).status !== 0)
@@ -190,7 +190,7 @@ function Builder(config = {}) {
                     values.push(['CMAKE_ASM_COMPILER_TARGET', info.triplet]);
                     values.push(['CMAKE_C_COMPILER_TARGET', info.triplet]);
                     values.push(['CMAKE_CXX_COMPILER_TARGET', info.triplet]);
-                } else {
+                } else if (process.platform != 'win32') {
                     values.push(['CMAKE_ASM_COMPILER', info.triplet + '-gcc']);
                     values.push(['CMAKE_C_COMPILER', info.triplet + '-gcc']);
                     values.push(['CMAKE_CXX_COMPILER', info.triplet + '-g++']);
@@ -221,7 +221,7 @@ function Builder(config = {}) {
         }
 
         if (prefer_clang) {
-            if (process.platform == 'win32' && msvc) {
+            if (process.platform == 'win32' && !mingw) {
                 args.push('-T', 'ClangCL');
             } else {
                 args.push('-DCMAKE_C_COMPILER=clang');

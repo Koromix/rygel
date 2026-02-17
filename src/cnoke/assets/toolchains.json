@@ -37,8 +37,8 @@
         "flags": ["-DNODE_JS_LINK_FLAGS=/DELAYLOAD:node.exe;/SAFESEH:NO", "-A", "Win32"],
 
         "triplet": "i386-pc-windows-msvc",
-        "sysroot": "{{ root }}/../../tools/cross/windows_ia32",
         "linux": {
+            "sysroot": "{{ root }}/../../tools/cross/windows_ia32",
             "flags": ["-DNODE_JS_LINK_FLAGS=-Wl,/DELAYLOAD:node.exe,/SAFESEH:NO", "-DNODE_JS_DLLTOOL_MACHINE=i386"],
             "variables": {
                 "CMAKE_DLLTOOL": "llvm-dlltool",
@@ -58,8 +58,8 @@
         "flags": ["-DNODE_JS_LINK_FLAGS=/DELAYLOAD:node.exe"],
 
         "triplet": "x86_64-pc-windows-msvc",
-        "sysroot": "{{ root }}/../../tools/cross/windows_amd64",
         "linux": {
+            "sysroot": "{{ root }}/../../tools/cross/windows_amd64",
             "flags": ["-DNODE_JS_LINK_FLAGS=-Wl,/DELAYLOAD:node.exe", "-DNODE_JS_DLLTOOL_MACHINE=i386:x86-64"],
             "variables": {
                 "CMAKE_DLLTOOL": "llvm-dlltool",
@@ -79,8 +79,8 @@
         "flags": ["-DNODE_JS_LINK_FLAGS=/DELAYLOAD:node.exe;/SAFESEH:NO", "-A", "ARM64"],
 
         "triplet": "aarch64-pc-windows-msvc",
-        "sysroot": "{{ root }}/../../tools/cross/windows_arm64",
         "linux": {
+            "sysroot": "{{ root }}/../../tools/cross/windows_arm64",
             "flags": ["-DNODE_JS_LINK_FLAGS=-Wl,/DELAYLOAD:node.exe,/SAFESEH:NO", "-DNODE_JS_DLLTOOL_MACHINE=arm64"],
             "variables": {
                 "CMAKE_DLLTOOL": "llvm-dlltool",
