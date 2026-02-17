@@ -158,14 +158,6 @@ function Builder(config = {}) {
                 args.push('-DCMAKE_CXX_COMPILER_LAUNCHER=ccache');
             }
         }
-        if (prefer_clang) {
-            if (process.platform == 'win32' && msvc) {
-                args.push('-T', 'ClangCL');
-            } else {
-                args.push('-DCMAKE_C_COMPILER=clang');
-                args.push('-DCMAKE_CXX_COMPILER=clang++');
-            }
-        }
 
         // Handle toolchain flags and cross-compilation
         {
@@ -184,6 +176,14 @@ function Builder(config = {}) {
                     ['CMAKE_SYSTEM_NAME', info.system],
                     ['CMAKE_SYSTEM_PROCESSOR', info.processor]
                 ];
+
+                // Switch to Clang automatically if the GCC cross-compiler does not exist
+                if (!prefer_clang) {
+                    let binary = info.triplet + '-gcc';
+
+                    if (spawnSync(binary, ['-v']).status !== 0)
+                        prefer_clang = true;
+                }
 
                 if (prefer_clang) {
                     values.push(['CMAKE_ASM_COMPILER_TARGET', info.triplet]);
@@ -216,6 +216,15 @@ function Builder(config = {}) {
 
                 fs.writeFileSync(filename, text);
                 args.push(`-DCMAKE_TOOLCHAIN_FILE=${filename}`);
+            }
+        }
+
+        if (prefer_clang) {
+            if (process.platform == 'win32' && msvc) {
+                args.push('-T', 'ClangCL');
+            } else {
+                args.push('-DCMAKE_C_COMPILER=clang');
+                args.push('-DCMAKE_CXX_COMPILER=clang++');
             }
         }
 
