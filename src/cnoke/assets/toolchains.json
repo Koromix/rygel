@@ -1,8 +1,13 @@
 {
-    "linux_riscv64d": {
+    "linux_ia32": {
         "system": "Linux",
-        "processor": "riscv64",
-        "triplet": "riscv64-linux-gnu"
+        "processor": "i386",
+        "triplet": "i686-linux-gnu"
+    },
+    "linux_x64": {
+        "system": "Linux",
+        "processor": "x86_64",
+        "triplet": "x86_64-linux-gnu"
     },
     "linux_armhf": {
         "system": "Linux",
@@ -14,42 +19,17 @@
         "processor": "aarch64",
         "triplet": "aarch64-linux-gnu"
     },
+    "linux_riscv64d": {
+        "system": "Linux",
+        "processor": "riscv64",
+        "triplet": "riscv64-linux-gnu"
+    },
     "linux_loong64": {
         "system": "Linux",
         "processor": "loongarch64",
         "triplet": "loongarch64-linux-gnu"
     },
-    "linux_ia32": {
-        "system": "Linux",
-        "processor": "i386",
-        "triplet": "i686-linux-gnu"
-    },
-    "linux_x64": {
-        "system": "Linux",
-        "processor": "x86_64",
-        "triplet": "x86_64-linux-gnu"
-    },
 
-    "win32_arm64": {
-        "system": "Windows",
-        "processor": "ARM64",
-        "lib": "win-arm64",
-        "flags": ["-DNODE_JS_LINK_FLAGS=/DELAYLOAD:node.exe;/SAFESEH:NO", "-A", "ARM64"],
-
-        "linux": {
-            "triplet": "aarch64-pc-windows-msvc",
-            "flags": ["-DNODE_JS_LINK_FLAGS=-Wl,/DELAYLOAD:node.exe,/SAFESEH:NO", "-DNODE_JS_DLLTOOL_MACHINE=arm64"],
-            "variables": {
-                "CMAKE_DLLTOOL": "llvm-dlltool",
-                "CMAKE_RC_COMPILER": "llvm-rc",
-                "CMAKE_C_FLAGS": "-Xmicrosoft-windows-sys-root {{ root }}/../../tools/cross/windows_arm64",
-                "CMAKE_CXX_FLAGS": "-Xmicrosoft-windows-sys-root {{ root }}/../../tools/cross/windows_arm64",
-                "CMAKE_EXE_LINKER_FLAGS": "-Wl,-libpath:{{ root }}/../../tools/cross/windows_arm64/VC/Tools/MSVC/Current/lib/aarch64,-libpath:{{ root }}/../../tools/cross/windows_arm64/Kits/10/Lib/Current/ucrt/aarch64,-libpath:{{ root }}/../../tools/cross/windows_arm64/Kits/10/Lib/Current/um/aarch64 -ldelayimp",
-                "CMAKE_STATIC_LINKER_FLAGS": "-Wl,-libpath:{{ root }}/../../tools/cross/windows_arm64/VC/Tools/MSVC/Current/lib/aarch64,-libpath:{{ root }}/../../tools/cross/windows_arm64/Kits/10/Lib/Current/ucrt/aarch64,-libpath:{{ root }}/../../tools/cross/windows_arm64/Kits/10/Lib/Current/um/aarch64 -ldelayimp",
-                "CMAKE_SHARED_LINKER_FLAGS": "-Wl,-libpath:{{ root }}/../../tools/cross/windows_arm64/VC/Tools/MSVC/Current/lib/aarch64,-libpath:{{ root }}/../../tools/cross/windows_arm64/Kits/10/Lib/Current/ucrt/aarch64,-libpath:{{ root }}/../../tools/cross/windows_arm64/Kits/10/Lib/Current/um/aarch64 -ldelayimp"
-            }
-        }
-    },
     "win32_ia32": {
         "system": "Windows",
         "processor": "X86",
@@ -87,6 +67,26 @@
                 "CMAKE_EXE_LINKER_FLAGS": "-Wl,-libpath:{{ root }}/../../tools/cross/windows_amd64/VC/Tools/MSVC/Current/lib/x86_64,-libpath:{{ root }}/../../tools/cross/windows_amd64/Kits/10/Lib/Current/ucrt/x86_64,-libpath:{{ root }}/../../tools/cross/windows_amd64/Kits/10/Lib/Current/um/x86_64 -ldelayimp",
                 "CMAKE_STATIC_LINKER_FLAGS": "-Wl,-libpath:{{ root }}/../../tools/cross/windows_amd64/VC/Tools/MSVC/Current/lib/x86_64,-libpath:{{ root }}/../../tools/cross/windows_amd64/Kits/10/Lib/Current/ucrt/x86_64,-libpath:{{ root }}/../../tools/cross/windows_amd64/Kits/10/Lib/Current/um/x86_64 -ldelayimp",
                 "CMAKE_SHARED_LINKER_FLAGS": "-Wl,-libpath:{{ root }}/../../tools/cross/windows_amd64/VC/Tools/MSVC/Current/lib/x86_64,-libpath:{{ root }}/../../tools/cross/windows_amd64/Kits/10/Lib/Current/ucrt/x86_64,-libpath:{{ root }}/../../tools/cross/windows_amd64/Kits/10/Lib/Current/um/x86_64 -ldelayimp"
+            }
+        }
+    },
+    "win32_arm64": {
+        "system": "Windows",
+        "processor": "ARM64",
+        "lib": "win-arm64",
+        "flags": ["-DNODE_JS_LINK_FLAGS=/DELAYLOAD:node.exe;/SAFESEH:NO", "-A", "ARM64"],
+
+        "linux": {
+            "triplet": "aarch64-pc-windows-msvc",
+            "flags": ["-DNODE_JS_LINK_FLAGS=-Wl,/DELAYLOAD:node.exe,/SAFESEH:NO", "-DNODE_JS_DLLTOOL_MACHINE=arm64"],
+            "variables": {
+                "CMAKE_DLLTOOL": "llvm-dlltool",
+                "CMAKE_RC_COMPILER": "llvm-rc",
+                "CMAKE_C_FLAGS": "-Xmicrosoft-windows-sys-root {{ root }}/../../tools/cross/windows_arm64",
+                "CMAKE_CXX_FLAGS": "-Xmicrosoft-windows-sys-root {{ root }}/../../tools/cross/windows_arm64",
+                "CMAKE_EXE_LINKER_FLAGS": "-Wl,-libpath:{{ root }}/../../tools/cross/windows_arm64/VC/Tools/MSVC/Current/lib/aarch64,-libpath:{{ root }}/../../tools/cross/windows_arm64/Kits/10/Lib/Current/ucrt/aarch64,-libpath:{{ root }}/../../tools/cross/windows_arm64/Kits/10/Lib/Current/um/aarch64 -ldelayimp",
+                "CMAKE_STATIC_LINKER_FLAGS": "-Wl,-libpath:{{ root }}/../../tools/cross/windows_arm64/VC/Tools/MSVC/Current/lib/aarch64,-libpath:{{ root }}/../../tools/cross/windows_arm64/Kits/10/Lib/Current/ucrt/aarch64,-libpath:{{ root }}/../../tools/cross/windows_arm64/Kits/10/Lib/Current/um/aarch64 -ldelayimp",
+                "CMAKE_SHARED_LINKER_FLAGS": "-Wl,-libpath:{{ root }}/../../tools/cross/windows_arm64/VC/Tools/MSVC/Current/lib/aarch64,-libpath:{{ root }}/../../tools/cross/windows_arm64/Kits/10/Lib/Current/ucrt/aarch64,-libpath:{{ root }}/../../tools/cross/windows_arm64/Kits/10/Lib/Current/um/aarch64 -ldelayimp"
             }
         }
     },
