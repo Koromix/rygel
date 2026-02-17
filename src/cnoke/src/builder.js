@@ -114,11 +114,13 @@ function Builder(config = {}) {
         args.push(`-DCMAKE_MODULE_PATH=${app_dir}/assets`);
 
         let win32 = toolchain.startsWith('win32_');
-        let msvc = win32 && (process.env.MSYSTEM == null);
+        let mingw = (process.platform == 'win32' && process.env.MSYSTEM != null);
 
         // Handle Node import library on Windows
         if (win32) {
-            if (msvc) {
+            if (mingw) {
+                args.push(`-DNODE_JS_LINK_LIB=node.dll`);
+            } else {
                 let info = TOOLCHAINS[toolchain];
 
                 if (options.api == null) {
@@ -137,15 +139,13 @@ function Builder(config = {}) {
                     let api_dir = expand_value(options.api, { root: project_dir });
                     args.push(`-DNODE_JS_LINK_DEF=${api_dir}/def/node_api.def`);
                 }
-            } else {
-                args.push(`-DNODE_JS_LINK_LIB=node.dll`);
             }
 
             fs.copyFileSync(`${app_dir}/assets/win_delay_hook.c`, work_dir + '/win_delay_hook.c');
             args.push(`-DNODE_JS_SOURCES=${work_dir}/win_delay_hook.c`);
         }
 
-        if (!msvc) {
+        if (process.platform != 'win32' || mingw) {
             if (spawnSync('ninja', ['--version']).status === 0) {
                 args.push('-G', 'Ninja');
             } else if (process.platform == 'win32') {
