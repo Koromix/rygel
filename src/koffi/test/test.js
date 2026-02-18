@@ -6,7 +6,6 @@ const { spawnSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const tty = require('tty');
-const { style_ansi } = require('../../../tools/qemu/qemu.js');
 
 const TSC_OPTIONS = '--target es2020 --module node16 --allowJs --checkJs --noEmit --resolveJsonModule'.split(' ');
 
@@ -96,4 +95,47 @@ function run(action, title, args) {
 
         return false;
     }
+}
+
+function style_ansi(text, styles = []) {
+    if (!tty.isatty(process.stdout.fd))
+        return text;
+
+    if (typeof styles == 'string')
+        styles = styles.split(' ');
+
+    let ansi = [];
+
+    for (let style of styles) {
+        switch (style) {
+            case 'black': { ansi.push('30'); } break;
+            case 'red': { ansi.push('31'); } break;
+            case 'green': { ansi.push('32'); } break;
+            case 'yellow': { ansi.push('33'); } break;
+            case 'blue': { ansi.push('34'); } break;
+            case 'magenta': { ansi.push('35'); } break;
+            case 'cyan': { ansi.push('36'); } break;
+            case 'white': { ansi.push('37'); } break;
+
+            case 'gray':
+            case 'black+': { ansi.push('90'); } break;
+            case 'red+': { ansi.push('91'); } break;
+            case 'green+': { ansi.push('92'); } break;
+            case 'yellow+': { ansi.push('93'); } break;
+            case 'blue+': { ansi.push('94'); } break;
+            case 'magenta': { ansi.push('95'); } break;
+            case 'cyan+': { ansi.push('96'); } break;
+            case 'white+': { ansi.push('97'); } break;
+
+            case 'bold': { ansi.push('1'); } break;
+            case 'dim': { ansi.push('2'); } break;
+            case 'underline': { ansi.push('4'); } break;
+        }
+    }
+
+    if (!ansi.length)
+        return text;
+
+    let str = `\x1b[${ansi.join(';')}m${text}\x1b[0m`;
+    return str;
 }
