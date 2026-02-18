@@ -5,7 +5,7 @@ cd "$(dirname $0)"
 rm -rf ../sysroots/windows_i386
 mkdir ../sysroots/windows_i386
 
-XWIN=../../vendor/xwin/xwin_$(uname -m)
+XWIN=../../../vendor/xwin/xwin_$(uname -m)
 
 $XWIN --cache-dir ../sysroots/windows_i386/cache --accept-license --arch x86 download
 $XWIN --cache-dir ../sysroots/windows_i386/cache --accept-license --arch x86 unpack
