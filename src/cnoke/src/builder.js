@@ -35,7 +35,7 @@ function Builder(config = {}) {
         package_dir = package_dir.replace(/\\/g, '/');
 
     let runtime_version = config.runtime_version;
-    let toolchain = config.toolchain || host;
+    let toolchain = config.toolchain || null;
     let prefer_clang = config.prefer_clang || false;
     let mode = config.mode || DefaultOptions.mode;
     let targets = config.targets || [];
@@ -47,7 +47,7 @@ function Builder(config = {}) {
     if (runtime_version.startsWith('v'))
         runtime_version = runtime_version.substr(1);
 
-    if (toolchain != host && !Object.hasOwn(TOOLCHAINS, toolchain))
+    if (toolchain != null && !Object.hasOwn(TOOLCHAINS, toolchain))
         throw new Error(`Unknown cross-compilation toolchain '${toolchain}'`);
 
     let options = null;
@@ -67,7 +67,7 @@ function Builder(config = {}) {
         }
     }
     build_dir = build_dir.replace(/\\/g, '/');
-    work_dir = build_dir + `/v${runtime_version}_${toolchain}/${mode}`;
+    work_dir = build_dir + `/v${runtime_version}_${toolchain ?? 'native'}/${mode}`;
     output_dir = work_dir + '/Output';
 
     let cmake_bin = null;
@@ -81,7 +81,7 @@ function Builder(config = {}) {
         check_compatibility();
 
         console.log(`>> Node: ${runtime_version}`);
-        console.log(`>> Toolchain: ${toolchain}`);
+        console.log(`>> Toolchain: ${toolchain ?? 'native'}`);
 
         // Prepare build directory
         fs.mkdirSync(build_dir, { recursive: true, mode: 0o755 });
@@ -113,7 +113,7 @@ function Builder(config = {}) {
 
         args.push(`-DCMAKE_MODULE_PATH=${app_dir}/assets`);
 
-        let win32 = toolchain.startsWith('win32_');
+        let win32 = (toolchain ?? host).startsWith('win32_');
         let mingw = (process.platform == 'win32' && process.env.MSYSTEM != null);
 
         // Handle Node import library on Windows
@@ -121,10 +121,10 @@ function Builder(config = {}) {
             if (mingw) {
                 args.push(`-DNODE_JS_LINK_LIB=node.dll`);
             } else {
-                let info = TOOLCHAINS[toolchain];
+                let info = TOOLCHAINS[toolchain ?? host];
 
                 if (options.api == null) {
-                    let destname = `${cache_dir}/node_v${runtime_version}_${toolchain}.lib`;
+                    let destname = `${cache_dir}/node_v${runtime_version}_${toolchain ?? host}.lib`;
 
                     if (!fs.existsSync(destname)) {
                         fs.mkdirSync(cache_dir, { recursive: true, mode: 0o755 });
@@ -161,7 +161,7 @@ function Builder(config = {}) {
 
         // Handle toolchain flags and cross-compilation
         {
-            let info = TOOLCHAINS[toolchain];
+            let info = TOOLCHAINS[toolchain ?? host];
 
             if (Object.hasOwn(info, process.platform))
                 info = Object.assign({}, info, info[process.platform]);
@@ -169,7 +169,7 @@ function Builder(config = {}) {
             if (info?.flags != null)
                 args.push(...info.flags);
 
-            if (toolchain != host && info.triplet != null) {
+            if (toolchain != null && info.triplet != null) {
                 let values = [
                     ['CMAKE_SYSTEM_NAME', info.system],
                     ['CMAKE_SYSTEM_PROCESSOR', info.processor]
@@ -460,7 +460,7 @@ function Builder(config = {}) {
                     return options.version || '';
                 } break;
 
-                case 'toolchain': return toolchain;
+                case 'toolchain': return toolchain ?? host;
 
                 default: {
                     if (Object.hasOwn(values, p1)) {
