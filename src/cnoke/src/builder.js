@@ -188,6 +188,10 @@ function Builder(config = {}) {
                     values.push(['CMAKE_ASM_COMPILER_TARGET', info.triplet]);
                     values.push(['CMAKE_C_COMPILER_TARGET', info.triplet]);
                     values.push(['CMAKE_CXX_COMPILER_TARGET', info.triplet]);
+
+                    values.push(['CMAKE_EXE_LINKER_FLAGS', '-fuse-ld=lld']);
+                    values.push(['CMAKE_SHARED_LINKER_FLAGS', '-fuse-ld=lld']);
+                    values.push(['CMAKE_STATIC_LINKER_FLAGS', '-fuse-ld=lld']);
                 } else if (process.platform != 'win32') {
                     values.push(['CMAKE_ASM_COMPILER', info.triplet + '-gcc']);
                     values.push(['CMAKE_C_COMPILER', info.triplet + '-gcc']);
