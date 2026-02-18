@@ -54,8 +54,8 @@ package-lock.json
 /src/ludivine/web/dist/*
 
 /tools/docker/goupile/goupile
-/tools/qemu/machines/**
-/tools/cross/*/
+/tools/cross/machines/*/
+/tools/cross/sysroots/*/
 
 /vendor/spidermonkey/spidermonkey/
 !/vendor/esbuild/native/node_modules/

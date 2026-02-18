@@ -2,12 +2,13 @@
 
 cd /
 
-ARCH=riscv64
+ARCH=amd64
 HOSTNAME=debian-$ARCH
 TARGET=target
 DEST=dest
-PACKAGES="curl wget htop dfc sudo nodejs build-essential git ninja-build clang lld gdb cmake ssh libx11-dev libxi-dev libgl-dev libxrandr-dev libxcursor-dev libxinerama-dev ccache vim xvfb xauth"
-SUITE=trixie
+SYSROOT=sysroot
+PACKAGES="curl wget htop dfc sudo build-essential git ninja-build gdb lldb cmake ssh libx11-dev libxi-dev libgl-dev libxrandr-dev libxcursor-dev libxinerama-dev ccache vim xvfb xauth"
+SUITE=bullseye
 
 export DEBIAN_FRONTEND=noninteractive
 
@@ -32,20 +33,25 @@ echo "127.0.0.1 $HOSTNAME" >> $TARGET/etc/hosts
 chroot $TARGET apt update -y
 chroot $TARGET apt install -y $PACKAGES
 
+chroot $TARGET apt install -y lsb-release wget software-properties-common gnupg
+curl -o $TARGET/llvm.sh https://apt.llvm.org/llvm.sh
+chmod +x $TARGET/llvm.sh
+chroot $TARGET /llvm.sh 21
+rm $TARGET/llvm.sh
+
 chroot $TARGET adduser --gecos "Debian user,,," --disabled-password debian
 echo "root:root" | chroot $TARGET chpasswd
 echo "debian:debian" | chroot $TARGET chpasswd
 chroot $TARGET adduser debian sudo
 sed -i $TARGET/etc/sudoers -re 's/^%sudo.*/%sudo ALL=(ALL:ALL) NOPASSWD: ALL/g'
 
-chroot $TARGET apt install -y opensbi u-boot-menu u-boot-qemu
-chroot $TARGET ln -sf /dev/null /etc/systemd/system/serial-getty@hvc0.service
-cat >> $TARGET/etc/default/u-boot <<EOF
-U_BOOT_PARAMETERS="rw noquiet root=LABEL=rootfs"
-U_BOOT_FDT_DIR="noexist"
-EOF
-chroot $TARGET u-boot-update
-chroot $TARGET update-initramfs -k all -c
+mkdir $TARGET/opt/node
+curl -L -o- https://nodejs.org/dist/v24.13.0/node-v24.13.0-linux-x64.tar.xz | tar -xJ -C $TARGET/opt/node --strip-components=1
+ln -s /opt/node/bin/node $TARGET/usr/local/bin/node
+ln -s /opt/node/bin/npm $TARGET/usr/local/bin/npm
+
+ln -s /usr/bin/clang-19 /usr/local/bin/clang
+ln -s /usr/bin/clang++-19 /usr/local/bin/clang++
 
 ln -s /dev/null $TARGET/etc/systemd/network/99-default.link
 cp interfaces $TARGET/etc/network/interfaces
@@ -60,13 +66,19 @@ umount $TARGET/dev
 rm -rf $TARGET/var/lib/apt/*
 rm -rf $TARGET/var/cache/apt/*
 
-# cp -L $TARGET/vmlinuz $DEST/vmlinuz
-# cp -L $TARGET/initrd.img $DEST/initrd.img
-cp -L $TARGET/usr/lib/riscv64-linux-gnu/opensbi/generic/fw_jump.bin $DEST/fw_jump.bin
-cp -L $TARGET/usr/lib/u-boot/qemu-riscv64_smode/uboot.elf $DEST/uboot.elf
+cp -L $TARGET/vmlinuz $DEST/vmlinuz
+cp -L $TARGET/initrd.img $DEST/initrd.img
 
 tar -cz -S -f $DEST/disk.tar.gz -C $TARGET .
 sha256sum $DEST/disk.tar.gz | cut -d ' ' -f 1 > $DEST/VERSION
 virt-make-fs --format=qcow2 --size=24G --partition=gpt --type=ext4 --label=rootfs $DEST/disk.tar.gz $DEST/disk.qcow2
 qemu-img snapshot -c base $DEST/disk.qcow2
 rm $DEST/disk.tar.gz
+
+mkdir $SYSROOT/usr
+cp -a $TARGET/usr/include $SYSROOT/usr/include
+cp -a $TARGET/usr/lib $SYSROOT/usr/lib
+cp -a $TARGET/usr/lib64 $SYSROOT/usr/lib64
+ln -s ./usr/lib $SYSROOT/lib
+ln -s ./usr/lib64 $SYSROOT/lib64
+symlinks -cr $TARGET/usr

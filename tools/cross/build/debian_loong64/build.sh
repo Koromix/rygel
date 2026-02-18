@@ -1,0 +1,22 @@
+#!/bin/sh -e
+
+cd "$(dirname $0)"
+
+rm -rf ../../sysroots/debian_loong64
+mkdir -p ../../machines/debian_loong64 ../../sysroots/debian_loong64
+
+podman build -t build/debian_loong64 .
+podman run --privileged --rm \
+    -v $PWD/../../machines/debian_loong64:/dest \
+    -v $PWD/../../sysroots/debian_loong64:/sysroot \
+    build/debian_loong64 /stage2.sh
+
+cp QEMU_EFI.fd $PWD/../../machines/debian_loong64/QEMU_EFI.fd
+
+cd ../..
+
+tar -cSv machines/debian_loong64/* | zstd --fast > qemu_debian_loong64.tar.zst
+
+old=$(grep -v debian_loong64 machines.b3sum)
+echo "$old" > machines.b3sum
+b3sum machines/debian_loong64/* >> machines.b3sum

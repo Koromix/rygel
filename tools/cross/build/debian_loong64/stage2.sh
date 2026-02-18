@@ -2,12 +2,13 @@
 
 cd /
 
-ARCH=amd64
-HOSTNAME=debian-i386
+ARCH=loong64
+HOSTNAME=debian-$ARCH
 TARGET=target
 DEST=dest
-PACKAGES="curl wget htop dfc sudo build-essential git ninja-build clang lld gdb lldb cmake ssh libx11-dev:i386 libxi-dev:i386 libgl-dev:i386 libxrandr-dev:i386 libxcursor-dev:i386 libxinerama-dev:i386 libglx-dev:i386 ccache vim xvfb xauth"
-SUITE=bookworm
+SYSROOT=sysroot
+PACKAGES="curl wget htop dfc sudo nodejs build-essential git ninja-build clang lld gdb cmake ssh libx11-dev libxi-dev libgl-dev libxrandr-dev libxcursor-dev libxinerama-dev ccache vim xvfb xauth"
+SUITE=sid
 
 export DEBIAN_FRONTEND=noninteractive
 
@@ -29,10 +30,8 @@ mount --bind /run $TARGET/run
 echo "$HOSTNAME" > $TARGET/etc/hostname
 echo "127.0.0.1 $HOSTNAME" >> $TARGET/etc/hosts
 
-chroot $TARGET dpkg --add-architecture i386
 chroot $TARGET apt update -y
 chroot $TARGET apt install -y $PACKAGES
-chroot $TARGET apt install -y nodejs:i386 gcc-multilib g++-multilib
 
 chroot $TARGET adduser --gecos "Debian user,,," --disabled-password debian
 echo "root:root" | chroot $TARGET chpasswd
@@ -55,9 +54,19 @@ rm -rf $TARGET/var/cache/apt/*
 
 cp -L $TARGET/vmlinuz $DEST/vmlinuz
 cp -L $TARGET/initrd.img $DEST/initrd.img
+# cp -L $TARGET/usr/lib/riscv64-linux-gnu/opensbi/generic/fw_jump.bin $DEST/fw_jump.bin
+# cp -L $TARGET/usr/lib/u-boot/qemu-riscv64_smode/uboot.elf $DEST/uboot.elf
 
 tar -cz -S -f $DEST/disk.tar.gz -C $TARGET .
 sha256sum $DEST/disk.tar.gz | cut -d ' ' -f 1 > $DEST/VERSION
 virt-make-fs --format=qcow2 --size=24G --partition=gpt --type=ext4 --label=rootfs $DEST/disk.tar.gz $DEST/disk.qcow2
 qemu-img snapshot -c base $DEST/disk.qcow2
 rm $DEST/disk.tar.gz
+
+mkdir $SYSROOT/usr
+cp -a $TARGET/usr/include $SYSROOT/usr/include
+cp -a $TARGET/usr/lib $SYSROOT/usr/lib
+cp -a $TARGET/usr/lib64 $SYSROOT/usr/lib64
+ln -s ./usr/lib $SYSROOT/lib
+ln -s ./usr/lib64 $SYSROOT/lib64
+symlinks -cr $TARGET/usr
