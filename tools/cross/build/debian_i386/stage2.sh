@@ -6,7 +6,6 @@ ARCH=amd64
 HOSTNAME=debian-i386
 TARGET=target
 DEST=dest
-SYSROOT=sysroot
 PACKAGES="curl wget htop dfc sudo build-essential git ninja-build clang lld gdb lldb cmake ssh libx11-dev:i386 libxi-dev:i386 libgl-dev:i386 libxrandr-dev:i386 libxcursor-dev:i386 libxinerama-dev:i386 libglx-dev:i386 ccache vim xvfb xauth"
 SUITE=bookworm
 
@@ -62,9 +61,3 @@ sha256sum $DEST/disk.tar.gz | cut -d ' ' -f 1 > $DEST/VERSION
 virt-make-fs --format=qcow2 --size=24G --partition=gpt --type=ext4 --label=rootfs $DEST/disk.tar.gz $DEST/disk.qcow2
 qemu-img snapshot -c base $DEST/disk.qcow2
 rm $DEST/disk.tar.gz
-
-mkdir $SYSROOT/usr
-cp -a $TARGET/usr/include $SYSROOT/usr/include
-cp -a $TARGET/usr/lib $SYSROOT/usr/lib
-ln -s ./usr/lib $SYSROOT/lib
-symlinks -cr $TARGET/usr
