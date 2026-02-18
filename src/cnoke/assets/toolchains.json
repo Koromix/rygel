@@ -5,7 +5,7 @@
         "triplet": "i686-linux-gnu",
 
         "linux": {
-            "sysroot": "../../tools/cross/sysroots/debian_ia32",
+            "sysroot": "../../tools/cross/sysroots/debian_i386",
             "variables": {
                 "CMAKE_EXE_LINKER_FLAGS": "-fuse-ld=lld",
                 "CMAKE_SHARED_LINKER_FLAGS": "-fuse-ld=lld",
@@ -92,7 +92,7 @@
 
         "triplet": "i386-pc-windows-msvc",
         "linux": {
-            "sysroot": "../../tools/cross/sysroots/windows_ia32",
+            "sysroot": "../../tools/cross/sysroots/windows_i386",
             "flags": ["-DNODE_JS_LINK_FLAGS=-Wl,/DELAYLOAD:node.exe,/SAFESEH:NO", "-DNODE_JS_DLLTOOL_MACHINE=i386"],
             "variables": {
                 "CMAKE_DLLTOOL": "llvm-dlltool",
@@ -113,7 +113,7 @@
 
         "triplet": "x86_64-pc-windows-msvc",
         "linux": {
-            "sysroot": "../../tools/cross/sysroots/windows_amd64",
+            "sysroot": "../../tools/cross/sysroots/windows_x64",
             "flags": ["-DNODE_JS_LINK_FLAGS=-Wl,/DELAYLOAD:node.exe", "-DNODE_JS_DLLTOOL_MACHINE=i386:x86-64"],
             "variables": {
                 "CMAKE_DLLTOOL": "llvm-dlltool",
@@ -164,7 +164,7 @@
         "processor": "amd64",
 
         "triplet": "x86_64-unknown-freebsd",
-        "sysroot": "../../tools/cross/sysroots/freebsd_amd64"
+        "sysroot": "../../tools/cross/sysroots/freebsd_x64"
     },
     "freebsd_arm64": {
         "system": "FreeBSD",
