@@ -112,11 +112,11 @@ raylib_node_ffi    | 96.3 µs        | x0.28                | +253%
 Please note that all benchmark results on this page are made with Clang-built binaries.
 
 ```sh
-cd koffi
-node ../../cnoke/cnoke.js --prefer-clang
+cd src/koffi
+node ../cnoke/cnoke.js --clang --release
 
-cd koffi/benchmark
-node ../../cnoke/cnoke.js --prefer-clang
+cd benchmark
+node ../../cnoke/cnoke.js --clang --release
 ```
 
 Once everything is built and ready, run:
