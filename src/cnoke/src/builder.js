@@ -48,7 +48,7 @@ function Builder(config = {}) {
         runtime_version = runtime_version.substr(1);
 
     if (toolchain != host && !Object.hasOwn(TOOLCHAINS, toolchain))
-        throw new Error(`Cannot cross-compile for ${toolchain}`);
+        throw new Error(`Unknown cross-compilation toolchain '${toolchain}'`);
 
     let options = null;
 
@@ -61,7 +61,7 @@ function Builder(config = {}) {
         let options = read_cnoke_options();
 
         if (options.output != null) {
-            build_dir = expand_value(options.output, { root: options.directory });
+            build_dir = expand_path(options.output, options.directory);
         } else {
             build_dir = project_dir + '/build';
         }
@@ -107,7 +107,7 @@ function Builder(config = {}) {
         } else {
             console.log(`>> Using local node-api headers`);
 
-            let api_dir = expand_value(options.api, { root: project_dir });
+            let api_dir = expand_path(options.api, project_dir);
             args.push(`-DNODE_JS_INCLUDE_DIRS=${api_dir}/include`);
         }
 
@@ -136,7 +136,7 @@ function Builder(config = {}) {
                     fs.copyFileSync(destname, work_dir + '/node.lib');
                     args.push(`-DNODE_JS_LINK_LIB=${work_dir}/node.lib`);
                 } else {
-                    let api_dir = expand_value(options.api, { root: project_dir });
+                    let api_dir = expand_path(options.api, project_dir);
                     args.push(`-DNODE_JS_LINK_DEF=${api_dir}/def/node_api.def`);
                 }
             }
@@ -166,10 +166,8 @@ function Builder(config = {}) {
             if (Object.hasOwn(info, process.platform))
                 info = Object.assign({}, info, info[process.platform]);
 
-            if (info?.flags != null) {
-                let flags = info.flags.map(flag => expand_value(flag, { root: __dirname + '/..' }))
-                args.push(...flags);
-            }
+            if (info?.flags != null)
+                args.push(...info.flags);
 
             if (toolchain != host && info.triplet != null) {
                 let values = [
@@ -197,17 +195,16 @@ function Builder(config = {}) {
                 }
 
                 if (info.sysroot != null) {
-                    sysroot = expand_value(info.sysroot, { root: __dirname + '/..' });
+                    sysroot = expand_path(info.sysroot, __dirname + '/..');
                     if (!fs.existsSync(sysroot))
                         throw new Error(`Cross-compilation sysroot '${sysroot}' does not exist`);
-                    sysroot = fs.realpathSync(sysroot);
 
                     values.push(['CMAKE_SYSROOT', sysroot]);
                 }
 
                 if (info.variables != null) {
                     for (let key in info.variables) {
-                        let value = expand_value(info.variables[key], { root: __dirname + '/..', sysroot: sysroot });
+                        let value = expand_string(info.variables[key], { sysroot: sysroot });
                         values.push([key, value]);
                     }
                 }
@@ -293,7 +290,7 @@ function Builder(config = {}) {
         if (options.prebuild != null) {
             fs.mkdirSync(build_dir, { recursive: true, mode: 0o755 });
 
-            let archive_filename = expand_value(options.prebuild, { root: options.directory });
+            let archive_filename = expand_path(options.prebuild, options.directory);
 
             if (fs.existsSync(archive_filename)) {
                 try {
@@ -308,7 +305,7 @@ function Builder(config = {}) {
         }
 
         if (options.require != null) {
-            let require_filename = expand_value(options.require, { root: options.directory });
+            let require_filename = expand_path(options.require, options.directory);
 
             if (fs.existsSync(require_filename)) {
                 let proc = spawnSync(process.execPath, ['-e', 'require(process.argv[1])', require_filename]);
@@ -455,7 +452,7 @@ function Builder(config = {}) {
         return options;
     }
 
-    function expand_value(str, values) {
+    function expand_string(str, values = {}) {
         let expanded = str.replace(/{{ *([a-zA-Z_][a-zA-Z_0-9]*) *}}/g, (match, p1) => {
             switch (p1) {
                 case 'version': {
@@ -474,6 +471,16 @@ function Builder(config = {}) {
                 } break;
             }
         });
+
+        return expanded;
+    }
+
+    function expand_path(str, root) {
+        let expanded = expand_string(str);
+
+        if (!tools.path_is_absolute(expanded))
+            expanded = path.join(root, expanded);
+        expanded = path.normalize(expanded);
 
         return expanded;
     }

@@ -5,7 +5,7 @@
         "triplet": "i686-linux-gnu",
 
         "linux": {
-            "sysroot": "{{ root }}/../../tools/cross/sysroots/debian_ia32",
+            "sysroot": "../../tools/cross/sysroots/debian_ia32",
             "variables": {
                 "CMAKE_EXE_LINKER_FLAGS": "-fuse-ld=lld",
                 "CMAKE_SHARED_LINKER_FLAGS": "-fuse-ld=lld",
@@ -19,7 +19,7 @@
         "triplet": "x86_64-linux-gnu",
 
         "linux": {
-            "sysroot": "{{ root }}/../../tools/cross/sysroots/debian_x64",
+            "sysroot": "../../tools/cross/sysroots/debian_x64",
             "variables": {
                 "CMAKE_EXE_LINKER_FLAGS": "-fuse-ld=lld",
                 "CMAKE_SHARED_LINKER_FLAGS": "-fuse-ld=lld",
@@ -33,7 +33,7 @@
         "triplet": "arm-linux-gnueabihf",
 
         "linux": {
-            "sysroot": "{{ root }}/../../tools/cross/sysroots/debian_arm32",
+            "sysroot": "../../tools/cross/sysroots/debian_arm32",
             "variables": {
                 "CMAKE_EXE_LINKER_FLAGS": "-fuse-ld=lld",
                 "CMAKE_SHARED_LINKER_FLAGS": "-fuse-ld=lld",
@@ -47,7 +47,7 @@
         "triplet": "aarch64-linux-gnu",
 
         "linux": {
-            "sysroot": "{{ root }}/../../tools/cross/sysroots/debian_arm64",
+            "sysroot": "../../tools/cross/sysroots/debian_arm64",
             "variables": {
                 "CMAKE_EXE_LINKER_FLAGS": "-fuse-ld=lld",
                 "CMAKE_SHARED_LINKER_FLAGS": "-fuse-ld=lld",
@@ -61,7 +61,7 @@
         "triplet": "riscv64-linux-gnu",
 
         "linux": {
-            "sysroot": "{{ root }}/../../tools/cross/sysroots/debian_riscv64",
+            "sysroot": "../../tools/cross/sysroots/debian_riscv64",
             "variables": {
                 "CMAKE_EXE_LINKER_FLAGS": "-fuse-ld=lld",
                 "CMAKE_SHARED_LINKER_FLAGS": "-fuse-ld=lld",
@@ -75,7 +75,7 @@
         "triplet": "loongarch64-linux-gnu",
 
         "linux": {
-            "sysroot": "{{ root }}/../../tools/cross/sysroots/debian_loong64",
+            "sysroot": "../../tools/cross/sysroots/debian_loong64",
             "variables": {
                 "CMAKE_EXE_LINKER_FLAGS": "-fuse-ld=lld",
                 "CMAKE_SHARED_LINKER_FLAGS": "-fuse-ld=lld",
@@ -92,16 +92,16 @@
 
         "triplet": "i386-pc-windows-msvc",
         "linux": {
-            "sysroot": "{{ root }}/../../tools/cross/sysroots/windows_ia32",
+            "sysroot": "../../tools/cross/sysroots/windows_ia32",
             "flags": ["-DNODE_JS_LINK_FLAGS=-Wl,/DELAYLOAD:node.exe,/SAFESEH:NO", "-DNODE_JS_DLLTOOL_MACHINE=i386"],
             "variables": {
                 "CMAKE_DLLTOOL": "llvm-dlltool",
                 "CMAKE_RC_COMPILER": "llvm-rc",
                 "CMAKE_C_FLAGS": "-Xmicrosoft-windows-sys-root {{ sysroot }}",
                 "CMAKE_CXX_FLAGS": "-Xmicrosoft-windows-sys-root {{ sysroot }}",
-                "CMAKE_EXE_LINKER_FLAGS": "-Wl,-libpath:{{ sysroot }}/VC/Tools/MSVC/Current/lib/x86_64,-libpath:{{ root }}/../../tools/cross/sysroots/windows_amd64/Kits/10/Lib/Current/ucrt/x86_64,-libpath:{{ root }}/../../tools/cross/sysroots/windows_amd64/Kits/10/Lib/Current/um/x86_64 -ldelayimp",
-                "CMAKE_STATIC_LINKER_FLAGS": "-Wl,-libpath:{{ sysroot }}/VC/Tools/MSVC/Current/lib/x86_64,-libpath:{{ root }}/../../tools/cross/sysroots/windows_amd64/Kits/10/Lib/Current/ucrt/x86_64,-libpath:{{ root }}/../../tools/cross/sysroots/windows_amd64/Kits/10/Lib/Current/um/x86_64 -ldelayimp",
-                "CMAKE_SHARED_LINKER_FLAGS": "-Wl,-libpath:{{ sysroot }}/VC/Tools/MSVC/Current/lib/x86_64,-libpath:{{ root }}/../../tools/cross/sysroots/windows_amd64/Kits/10/Lib/Current/ucrt/x86_64,-libpath:{{ root }}/../../tools/cross/sysroots/windows_amd64/Kits/10/Lib/Current/um/x86_64 -ldelayimp"
+                "CMAKE_EXE_LINKER_FLAGS": "-Wl,-libpath:{{ sysroot }}/VC/Tools/MSVC/Current/lib/x86_64,-libpath:{{ sysroot }}/Kits/10/Lib/Current/ucrt/x86_64,-libpath:{{ sysroot }}/Kits/10/Lib/Current/um/x86_64 -ldelayimp",
+                "CMAKE_STATIC_LINKER_FLAGS": "-Wl,-libpath:{{ sysroot }}/VC/Tools/MSVC/Current/lib/x86_64,-libpath:{{ sysroot }}/Kits/10/Lib/Current/ucrt/x86_64,-libpath:{{ sysroot }}/Kits/10/Lib/Current/um/x86_64 -ldelayimp",
+                "CMAKE_SHARED_LINKER_FLAGS": "-Wl,-libpath:{{ sysroot }}/VC/Tools/MSVC/Current/lib/x86_64,-libpath:{{ sysroot }}/Kits/10/Lib/Current/ucrt/x86_64,-libpath:{{ sysroot }}/Kits/10/Lib/Current/um/x86_64 -ldelayimp"
             }
         }
     },
@@ -113,7 +113,7 @@
 
         "triplet": "x86_64-pc-windows-msvc",
         "linux": {
-            "sysroot": "{{ root }}/../../tools/cross/sysroots/windows_amd64",
+            "sysroot": "../../tools/cross/sysroots/windows_amd64",
             "flags": ["-DNODE_JS_LINK_FLAGS=-Wl,/DELAYLOAD:node.exe", "-DNODE_JS_DLLTOOL_MACHINE=i386:x86-64"],
             "variables": {
                 "CMAKE_DLLTOOL": "llvm-dlltool",
@@ -134,7 +134,7 @@
 
         "triplet": "aarch64-pc-windows-msvc",
         "linux": {
-            "sysroot": "{{ root }}/../../tools/cross/sysroots/windows_arm64",
+            "sysroot": "../../tools/cross/sysroots/windows_arm64",
             "flags": ["-DNODE_JS_LINK_FLAGS=-Wl,/DELAYLOAD:node.exe,/SAFESEH:NO", "-DNODE_JS_DLLTOOL_MACHINE=arm64"],
             "variables": {
                 "CMAKE_DLLTOOL": "llvm-dlltool",
@@ -164,14 +164,14 @@
         "processor": "amd64",
 
         "triplet": "x86_64-unknown-freebsd",
-        "sysroot": "{{ root }}/../../tools/cross/sysroots/freebsd_amd64"
+        "sysroot": "../../tools/cross/sysroots/freebsd_amd64"
     },
     "freebsd_arm64": {
         "system": "FreeBSD",
         "processor": "arm64",
 
         "triplet": "aarch64-unknown-freebsd",
-        "sysroot": "{{ root }}/../../tools/cross/sysroots/freebsd_arm64",
+        "sysroot": "../../tools/cross/sysroots/freebsd_arm64",
         "variables": {
             "CMAKE_EXE_LINKER_FLAGS": "-fuse-ld=lld",
             "CMAKE_SHARED_LINKER_FLAGS": "-fuse-ld=lld",
