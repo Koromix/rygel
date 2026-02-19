@@ -39,4 +39,4 @@ mkdir $SYSROOT/usr
 cp -a $TARGET/usr/include $SYSROOT/usr/include
 cp -a $TARGET/usr/lib $SYSROOT/usr/lib
 ln -s ./usr/lib $SYSROOT/lib
-symlinks -cr $TARGET/usr
+symlinks -cr $SYSROOT/usr

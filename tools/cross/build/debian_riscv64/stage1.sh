@@ -66,7 +66,7 @@ mkdir $SYSROOT/usr
 cp -a $TARGET/usr/include $SYSROOT/usr/include
 cp -a $TARGET/usr/lib $SYSROOT/usr/lib
 ln -s ./usr/lib $SYSROOT/lib
-symlinks -cr $TARGET/usr
+symlinks -cr $SYSROOT/usr
 
 cp -L $TARGET/usr/lib/riscv64-linux-gnu/opensbi/generic/fw_jump.bin $DEST/fw_jump.bin
 cp -L $TARGET/usr/lib/u-boot/qemu-riscv64_smode/uboot.elf $DEST/uboot.elf
