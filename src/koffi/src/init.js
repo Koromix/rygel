@@ -38,6 +38,7 @@ function init(triplet, native) {
         }
 
         let filenames = roots.flatMap(root => triplets.flatMap(triplet => [
+            `${root}/koffi/build/koffi/${triplet}/koffi.node`,
             `${root}/build/koffi/${triplet}/koffi.node`,
             `${root}/koffi/${triplet}/koffi.node`,
             `${root}/node_modules/koffi/build/koffi/${triplet}/koffi.node`,
