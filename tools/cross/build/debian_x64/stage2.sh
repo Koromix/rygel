@@ -70,10 +70,10 @@ rm -rf $TARGET/var/cache/apt/*
 mkdir $SYSROOT/usr
 cp -a $TARGET/usr/include $SYSROOT/usr/include
 cp -a $TARGET/usr/lib $SYSROOT/usr/lib
-cp -a $TARGET/usr/lib64 $SYSROOT/usr/lib64
 ln -s ./usr/lib $SYSROOT/lib
-ln -s ./usr/lib64 $SYSROOT/lib64
 symlinks -cr $TARGET/usr
+mkdir $SYSROOT/lib64
+ln -s ../usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 $SYSROOT/lib64/ld-linux-x86-64.so.2
 
 cp -L $TARGET/vmlinuz $DEST/vmlinuz
 cp -L $TARGET/initrd.img $DEST/initrd.img
