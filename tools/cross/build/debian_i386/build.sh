@@ -7,11 +7,11 @@ mkdir -p ../../machines/debian_i386 ../../sysroots/debian_i386
 
 podman build -t build/debian_i386 .
 podman run --privileged --rm \
-    -v $PWD/../../machines/debian_i386:/dest \
-    build/debian_i386 /stage2.sh
-podman run --privileged --rm \
     -v $PWD/../../sysroots/debian_i386:/sysroot \
-    build/debian_i386 /stage3.sh
+    build/debian_i386 /stage2s.sh
+podman run --privileged --rm \
+    -v $PWD/../../machines/debian_i386:/dest \
+    build/debian_i386 /stage2m.sh
 
 cd ../..
 

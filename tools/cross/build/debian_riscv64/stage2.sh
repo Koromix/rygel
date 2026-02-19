@@ -61,19 +61,16 @@ umount $TARGET/dev
 rm -rf $TARGET/var/lib/apt/*
 rm -rf $TARGET/var/cache/apt/*
 
-# cp -L $TARGET/vmlinuz $DEST/vmlinuz
-# cp -L $TARGET/initrd.img $DEST/initrd.img
-cp -L $TARGET/usr/lib/riscv64-linux-gnu/opensbi/generic/fw_jump.bin $DEST/fw_jump.bin
-cp -L $TARGET/usr/lib/u-boot/qemu-riscv64_smode/uboot.elf $DEST/uboot.elf
-
-tar -cz -S -f $DEST/disk.tar.gz -C $TARGET .
-sha256sum $DEST/disk.tar.gz | cut -d ' ' -f 1 > $DEST/VERSION
-virt-make-fs --format=qcow2 --size=24G --partition=gpt --type=ext4 --label=rootfs $DEST/disk.tar.gz $DEST/disk.qcow2
-qemu-img snapshot -c base $DEST/disk.qcow2
-rm $DEST/disk.tar.gz
-
 mkdir $SYSROOT/usr
 cp -a $TARGET/usr/include $SYSROOT/usr/include
 cp -a $TARGET/usr/lib $SYSROOT/usr/lib
 ln -s ./usr/lib $SYSROOT/lib
 symlinks -cr $TARGET/usr
+
+cp -L $TARGET/usr/lib/riscv64-linux-gnu/opensbi/generic/fw_jump.bin $DEST/fw_jump.bin
+cp -L $TARGET/usr/lib/u-boot/qemu-riscv64_smode/uboot.elf $DEST/uboot.elf
+tar -cz -S -f $DEST/disk.tar.gz -C $TARGET .
+sha256sum $DEST/disk.tar.gz | cut -d ' ' -f 1 > $DEST/VERSION
+virt-make-fs --format=qcow2 --size=24G --partition=gpt --type=ext4 --label=rootfs $DEST/disk.tar.gz $DEST/disk.qcow2
+qemu-img snapshot -c base $DEST/disk.qcow2
+rm $DEST/disk.tar.gz
