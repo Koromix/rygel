@@ -436,6 +436,7 @@ void HandleRecordList(http_IO *io, InstanceHolder *instance)
 
         while (walker.Next()) {
             const RecordInfo *cursor = walker.GetCursor();
+            int64_t max_anchor = -1;
 
             json->StartObject();
 
@@ -461,6 +462,7 @@ void HandleRecordList(http_IO *io, InstanceHolder *instance)
                     K_ASSERT(!cursor->deleted);
                 }
                 json->Key("anchor"); json->Int64(cursor->anchor);
+                json->Key("saved"); json->Bool(true);
                 json->Key("ctime"); json->Int64(cursor->ctime);
                 json->Key("mtime"); json->Int64(cursor->mtime);
                 if (cursor->summary) {
@@ -474,9 +476,13 @@ void HandleRecordList(http_IO *io, InstanceHolder *instance)
                     json->Key("tags"); json->Null();
                 }
 
+                max_anchor = std::max(max_anchor, cursor->anchor);
+
                 json->EndObject();
             } while (walker.NextInThread());
             json->EndArray();
+
+            json->Key("anchor"); json->Int64(max_anchor);
 
             json->EndObject();
         }
@@ -578,6 +584,7 @@ void HandleRecordGet(http_IO *io, InstanceHolder *instance)
 
     http_SendJson(io, 200, [&](json_Writer *json) {
         const RecordInfo *cursor = walker.GetCursor();
+        int64_t max_anchor = -1;
 
         json->StartObject();
 
@@ -604,6 +611,7 @@ void HandleRecordGet(http_IO *io, InstanceHolder *instance)
                 K_ASSERT(!cursor->deleted);
             }
             json->Key("anchor"); json->Int64(cursor->anchor);
+            json->Key("saved"); json->Bool(true);
             json->Key("ctime"); json->Int64(cursor->ctime);
             json->Key("mtime"); json->Int64(cursor->mtime);
             if (cursor->summary) {
@@ -622,12 +630,16 @@ void HandleRecordGet(http_IO *io, InstanceHolder *instance)
                 json->Key("data"); json->Null();
             }
 
+            max_anchor = std::max(max_anchor, cursor->anchor);
+
             json->EndObject();
         } while (walker.NextInThread());
         json->EndArray();
 
         if (!walker.IsValid())
             return;
+
+        json->Key("anchor"); json->Int64(max_anchor);
 
         json->EndObject();
     });

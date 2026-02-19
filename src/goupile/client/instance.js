@@ -380,7 +380,7 @@ function computeStatus(page, thread) {
 
         return status;
     } else {
-        let complete = (thread.entries[page.store?.key]?.anchor != null);
+        let complete = !!thread.entries[page.store?.key]?.saved;
 
         let status = {
             filled: 0 + complete,
@@ -881,7 +881,7 @@ async function renderPage() {
         anchor: intf.options.anchor
     }));
 
-    let static_actions = (goupile.isLocked() && form_entry.anchor == null);
+    let static_actions = goupile.isLocked() && !form_entry.saved;
 
     return html`
         <div class="print" @scroll=${syncEditorScroll}}>
@@ -1038,7 +1038,7 @@ function addAutomaticActions(builder, model) {
     builder.resetOptions();
 
     if (route.page.store != null) {
-        let edit = (form_entry.anchor != null);
+        let edit = form_entry.saved;
         let next = selectNextPage(route.page, form_thread, edit);
 
         let can_save = !form_thread.locked && model.variables.length &&
@@ -1125,7 +1125,7 @@ function addAutomaticActions(builder, model) {
             });
         }
 
-        if (form_entry.anchor != null && form_state.hasChanged()) {
+        if (form_entry.saved && form_state.hasChanged()) {
             builder.action('-');
             builder.action(T.forget_changes, {}, async e => {
                 await UI.confirm(e, unsafeHTML(T.confirm_forget_changes),
@@ -1237,7 +1237,7 @@ function addAutomaticTags(variables) {
                 status.filling = null;
             }
         } else if (intf.missing && intf.options.mandatory) {
-            if (form_entry.anchor != null || intf.errors.some(err => !err.delay)) {
+            if (form_entry.saved || intf.errors.some(err => !err.delay)) {
                 tags.push('incomplete');
                 error = false;
             }
@@ -1804,7 +1804,7 @@ async function go(e, url = null, options = {}) {
 }
 
 function contextualizeURL(url, thread) {
-    if (thread != null && thread.saved) {
+    if (thread?.anchor != null) {
         url += `/${thread.tid}`;
 
         if (thread == form_thread && route.anchor != null)
@@ -2303,7 +2303,7 @@ async function openRecord(tid, anchor, page) {
     }
 
     // Restore delayed errors for existing entry
-    if (new_entry?.anchor != null)
+    if (new_entry?.saved)
         new_state.trigger_errors = true;
 
     new_state.changeHandler = async () => {
@@ -2323,8 +2323,10 @@ async function openRecord(tid, anchor, page) {
                 autosave_timer = null;
 
                 data_mutex.run(async () => {
-                    await saveRecord(form_thread, route.page, form_state, form_entry, form_raw, form_meta, true);
-                    await openRecord(form_thread.tid, null, page);
+                    let anchor = await saveRecord(form_thread, route.page, form_state, form_entry, form_raw, form_meta, true);
+
+                    form_thread.anchor = anchor;
+                    form_entry.anchor = anchor;
 
                     await data_mutex.chain(run);
                 });
@@ -2393,6 +2395,8 @@ function runAnnotationDialog(e, intf) {
 
 // Call with data_mutex locked
 async function saveRecord(thread, page, state, entry, raw, meta, draft) {
+    let anchor = null;
+
     for (;;) {
         let ticket = null;
 
@@ -2442,7 +2446,7 @@ async function saveRecord(thread, page, state, entry, raw, meta, draft) {
         }
 
         try {
-            await records.save(thread.tid, entry, frag, ENV.version);
+            anchor = await records.save(thread.tid, entry, frag, ENV.version);
             break;
         } catch (err) {
             if (!(err instanceof HttpError))
@@ -2454,6 +2458,8 @@ async function saveRecord(thread, page, state, entry, raw, meta, draft) {
 
     if (!profile.userid)
         await goupile.syncProfile();
+
+    return anchor;
 }
 
 export {

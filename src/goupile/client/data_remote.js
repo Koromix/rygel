@@ -33,7 +33,7 @@ function DataRemote() {
         let blobs = [];
         let data = await preserve(frag.data, blobs);
 
-        await Net.post(ENV.urls.instance + 'api/records/save', {
+        let json = await Net.post(ENV.urls.instance + 'api/records/save', {
             reservation: frag.reservation,
             tid: tid,
 
@@ -55,6 +55,8 @@ function DataRemote() {
             lock: frag.lock,
             claim: frag.claim
         });
+
+        return json.anchor;
     };
 
     this.delete = async function(tid) {
