@@ -320,13 +320,20 @@ function renderDropItem(page, first) {
     let enabled = status.enabled || profile.develop;
 
     if (first) {
+        let cls = null;
+
         if (form_thread.hid != null) {
-            return html`<button class=${'ins_id' + (active ? ' active' : '')} ?disabled=${!enabled}
-                                @click=${UI.wrap(e => (page != route.page) ? go(e, url) : togglePanels(null, true))}>${form_thread.hid}</button>`;
+            cls = 'ins_id';
+        } else if (form_thread.saved) {
+            cls = 'icon half';
         } else {
-            return html`<button class=${'icon new' + (active ? ' active' : '')} ?disabled=${!enabled}
-                                @click=${UI.wrap(e => (page != route.page) ? go(e, url) : togglePanels(null, true))}></button>`;
+            cls = 'icon new';
         }
+        if (active)
+            cls += ' active';
+
+        return html`<button class=${cls} ?disabled=${!enabled}
+                            @click=${UI.wrap(e => (page != route.page) ? go(e, url) : togglePanels(null, true))}>${form_thread.hid ?? ''}</button>`;
     } else {
         let suffix = (UI.allowTwoPanels() && !goupile.isLocked()) ? makeStatusText(status, page.progress) : '';
 
