@@ -264,8 +264,9 @@ function Builder(config = {}) {
             await self.configure();
 
         // In case Make gets used
+        // os.cpus() returns [] on Android (no /proc/cpuinfo access), so fall back to 1
         if (process.env.MAKEFLAGS == null)
-            process.env.MAKEFLAGS = '-j' + os.cpus().length;
+            process.env.MAKEFLAGS = '-j' + (os.cpus().length || 1);
 
         let args = [
             '--build', work_dir,
