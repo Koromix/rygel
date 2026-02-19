@@ -56,10 +56,10 @@ rm -rf $TARGET/var/cache/apt/*
 mkdir $SYSROOT/usr
 cp -a $TARGET/usr/include $SYSROOT/usr/include
 cp -a $TARGET/usr/lib $SYSROOT/usr/lib
-cp -a $TARGET/usr/lib64 $SYSROOT/usr/lib64
 ln -s ./usr/lib $SYSROOT/lib
-ln -s ./usr/lib64 $SYSROOT/lib64
 symlinks -cr $TARGET/usr
+mkdir $SYSROOT/lib64
+ln -s ../usr/lib/loongarch64-linux-gnu/ld-linux-loongarch-lp64d.so.1 $SYSROOT/lib64/ld-linux-loongarch-lp64d.so.1
 
 cp -L $TARGET/vmlinuz $DEST/vmlinuz
 cp -L $TARGET/initrd.img $DEST/initrd.img
