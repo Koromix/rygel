@@ -5,7 +5,8 @@ dpkg --add-architecture arm64
 apt update
 apt install -y build-essential curl git cmake ninja-build pkg-config gdb debhelper dh-make devscripts \
                gcc-aarch64-linux-gnu g++-aarch64-linux-gnu binutils-aarch64-linux-gnu libc6:arm64 \
-               cmake ninja-build perl ruby nodejs npm patchelf
+               cmake ninja-build perl ruby nodejs npm patchelf \
+               fakeroot debootstrap libguestfs-tools symlinks qemu-user-static rsync
 
 curl https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -
 echo "deb http://apt.llvm.org/bullseye/ llvm-toolchain-bullseye-18 main" >> /etc/apt/sources.list

@@ -9,9 +9,9 @@ apt install -y build-essential curl git cmake ninja-build pkg-config gdb debhelp
                fakeroot debootstrap libguestfs-tools symlinks qemu-user-static rsync
 
 curl https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -
-echo "deb http://apt.llvm.org/bookworm/ llvm-toolchain-bookworm-18 main" >> /etc/apt/sources.list
-echo "deb-src http://apt.llvm.org/bookworm/ llvm-toolchain-bookworm-18 main" >> /etc/apt/sources.list
-echo "deb http://deb.debian.org/debian bookworm-backports main" >> /etc/apt/sources.list
+echo "deb http://apt.llvm.org/trixie/ llvm-toolchain-trixie-18 main" >> /etc/apt/sources.list
+echo "deb-src http://apt.llvm.org/trixie/ llvm-toolchain-trixie-18 main" >> /etc/apt/sources.list
+echo "deb http://deb.debian.org/debian trixie-backports main" >> /etc/apt/sources.list
 
 apt update
 apt install -y clang-18 lld-18 libclang-rt-18-dev:arm64
