@@ -12,6 +12,7 @@ let native = null;
 // Try an explicit list with static strings to help bundlers
 try {
     switch (triplet) {
+        case 'android_arm64': { native = require('./build/koffi/android_arm64/koffi.node'); } break;
         case 'darwin_arm64': { native = require('./build/koffi/darwin_arm64/koffi.node'); } break;
         case 'darwin_x64': { native = require('./build/koffi/darwin_x64/koffi.node'); } break;
         case 'freebsd_arm64': { native = require('./build/koffi/freebsd_arm64/koffi.node'); } break;
