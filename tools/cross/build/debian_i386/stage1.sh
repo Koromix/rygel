@@ -3,4 +3,4 @@
 export DEBIAN_FRONTEND=noninteractive
 
 apt update -y
-apt install -y qemu-user-static debootstrap libguestfs-tools symlinks
+apt install -y fakeroot debootstrap libguestfs-tools symlinks qemu-user-static

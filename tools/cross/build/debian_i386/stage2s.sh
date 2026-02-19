@@ -11,11 +11,12 @@ SUITE=bookworm
 
 export DEBIAN_FRONTEND=noninteractive
 
-mount binfmt_misc -t binfmt_misc /proc/sys/fs/binfmt_misc
+mount -t binfmt_misc binfmt_misc /proc/sys/fs/binfmt_misc
+/usr/lib/systemd/systemd-binfmt
 
 mkdir -p $TARGET $DEST
 
-qemu-debootstrap \
+fakeroot qemu-debootstrap \
     --arch=$ARCH \
     $SUITE $TARGET
 
