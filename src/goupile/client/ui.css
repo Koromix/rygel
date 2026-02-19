@@ -485,6 +485,7 @@ button.ui_busy::after {
 .ui_sub {
     color: #777;
     font-style: italic;
+    font-size: 0.9em;
 }
 
 /* -------------------- Print -------------------- */

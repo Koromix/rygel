@@ -110,6 +110,7 @@
         "domain_title": "Domain title",
         "domain_title_help": "This title is displayed to the user in some places, such as the TOTP label.",
         "download": "Download",
+        "draft": "Draft",
         "edit": "Edit",
         "edit_x": "Edit {1}",
         "email": "Mail",

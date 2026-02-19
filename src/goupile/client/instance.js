@@ -706,11 +706,11 @@ function renderData() {
                     ${Util.mapRange(offset, end, idx => {
                         let row = data_rows[idx];
                         let active = (row.tid == route.tid);
-                        let cls = (row.hid == null ? 'missing' : '') + (active ? ' active' : '');
+                        let cls = (row.hid == null ? 'ui_sub' : '') + (active ? ' active' : '');
 
                         return html`
                             <tr>
-                                <td class=${cls} title=${row.hid}>${row.hid != null ? row.hid : 'NA'}</td>
+                                <td class=${cls} title=${row.hid}>${row.hid ?? T.draft}</td>
                                 <td class=${active ? ' active' : ''} title=${row.ctime.toLocaleString()}>${row.ctime.toLocaleString()}</td>
                                 ${data_columns.map(col => {
                                     let entry = row.entries[col.page.store.key];

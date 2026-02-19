@@ -110,6 +110,7 @@
         "domain_title": "Titre du domaine",
         "domain_title_help": "Ce titre est affiché est à l'utilisateur dans certains contextes, comme le libellé TOTP.",
         "download": "Télécharger",
+        "draft": "Brouillon",
         "edit": "Modifier",
         "edit_x": "Modification de {1}",
         "email": "Courriel",
