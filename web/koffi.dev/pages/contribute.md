@@ -77,7 +77,7 @@ cd tools/cross/build
 ./debian_arm64/build.sh
 ```
 
-The other machines (Alpine, FreeBSD, OpenBSD, macOS and Windows), are created manually, at least for now. These machines are not included directly in this repository (for license and size reasons), but they are available here: https://download.koromix.dev/machines/
+The other machines (Alpine, FreeBSD, OpenBSD, macOS and Windows) are created manually, at least for now. These machines are not included directly in this repository (for license and size reasons), but they are available here: https://download.koromix.dev/machines/
 
 For example, if you want to build and test for Windows, run the following commands:
 
