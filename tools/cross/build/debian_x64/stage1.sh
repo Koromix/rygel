@@ -78,7 +78,6 @@ ln -s ../usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 $SYSROOT/lib64/ld-linux-x
 cp -L $TARGET/vmlinuz $DEST/vmlinuz
 cp -L $TARGET/initrd.img $DEST/initrd.img
 tar -cz -S -f $DEST/disk.tar.gz -C $TARGET .
-sha256sum $DEST/disk.tar.gz | cut -d ' ' -f 1 > $DEST/VERSION
 virt-make-fs --format=qcow2 --size=24G --partition=gpt --type=ext4 --label=rootfs $DEST/disk.tar.gz $DEST/disk.qcow2
 qemu-img snapshot -c base $DEST/disk.qcow2
 rm $DEST/disk.tar.gz

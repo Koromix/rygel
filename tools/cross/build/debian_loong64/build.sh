@@ -14,11 +14,3 @@ podman run --privileged --rm \
     rygel/debian13 /host/stage1.sh
 
 cp QEMU_EFI.fd $PWD/../../machines/debian_loong64/QEMU_EFI.fd
-
-cd ../..
-
-tar -cSv machines/debian_loong64/* | zstd --fast > qemu_debian_loong64.tar.zst
-
-old=$(grep -v debian_loong64 machines.b3sum)
-echo "$old" > machines.b3sum
-b3sum machines/debian_loong64/* >> machines.b3sum

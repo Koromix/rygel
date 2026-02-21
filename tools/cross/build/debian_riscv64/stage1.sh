@@ -71,7 +71,6 @@ symlinks -cr $SYSROOT/usr
 cp -L $TARGET/usr/lib/riscv64-linux-gnu/opensbi/generic/fw_jump.bin $DEST/fw_jump.bin
 cp -L $TARGET/usr/lib/u-boot/qemu-riscv64_smode/uboot.elf $DEST/uboot.elf
 tar -cz -S -f $DEST/disk.tar.gz -C $TARGET .
-sha256sum $DEST/disk.tar.gz | cut -d ' ' -f 1 > $DEST/VERSION
 virt-make-fs --format=qcow2 --size=24G --partition=gpt --type=ext4 --label=rootfs $DEST/disk.tar.gz $DEST/disk.qcow2
 qemu-img snapshot -c base $DEST/disk.qcow2
 rm $DEST/disk.tar.gz

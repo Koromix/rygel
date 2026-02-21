@@ -171,7 +171,7 @@ function QemuRunner(registry = null) {
             }
 
             // Version check
-            {
+            if (machine.qemu.version != null) {
                 let filename = dirname + '/VERSION';
                 let version = fs.existsSync(filename) ? fs.readFileSync(filename).toString().trim() : null;
 

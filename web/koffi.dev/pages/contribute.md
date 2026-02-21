@@ -70,14 +70,21 @@ node test.js
 
 Koffi is tested on multiple architectures using emulated (accelerated when possible) QEMU machines. First, you need to install qemu packages, such as `qemu-system` (or even `qemu-system-gui`) on Ubuntu.
 
-These machines are not included directly in this repository (for license and size reasons), but they are available here: https://koromix.dev/files/machines/
+The Linux machines are based on Debian, they are not included in the repository but they can be created at any time with the scripts in `tools/cross/build`. For example, to create the Debian ARM64 machine, use the following commands:
 
-For example, if you want to run the tests on Debian ARM64, run the following commands:
+```sh
+cd tools/cross/build
+./debian_arm64/build.sh
+```
+
+The other machines (Alpine, FreeBSD, OpenBSD, macOS and Windows), are created manually, at least for now. These machines are not included directly in this repository (for license and size reasons), but they are available here: https://download.koromix.dev/machines/
+
+For example, if you want to build and test for Windows, run the following commands:
 
 ```sh
 cd tools/cross/
 
-wget -q -O- https://koromix.dev/files/machines/qemu_debian_arm64.tar.zst | zstd -d | tar xv
+wget -q -O- https://koromix.dev/files/machines/qemu_windows_x64.tar.zst | zstd -d | tar xv
 b3sum -c machines.b3sum
 ```
 
