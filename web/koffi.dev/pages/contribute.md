@@ -83,9 +83,7 @@ For example, if you want to build and test for Windows, run the following comman
 
 ```sh
 cd tools/cross/
-
 wget -q -O- https://koromix.dev/files/machines/qemu_windows_x64.tar.zst | zstd -d | tar xv
-b3sum -c machines.b3sum
 ```
 
 Note that the machine disk content may change each time the machine runs, so the checksum test will fail once a machine has been used at least once.
