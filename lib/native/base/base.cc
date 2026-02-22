@@ -3125,12 +3125,7 @@ RenameResult RenameFile(const char *src_filename, const char *dest_filename, uns
         if (rename(src_filename, dest_filename) < 0)
             goto error;
     } else {
-#if defined(RENAME_NOREPLACE)
-        if (!renameat2(AT_FDCWD, src_filename, AT_FDCWD, dest_filename, RENAME_NOREPLACE))
-            goto sync;
-        if (!IsErrnoNotSupported(errno) && errno != EINVAL)
-            goto error;
-#elif defined(SYS_renameat2)
+#if defined(SYS_renameat2)
         {
             int dirfd = AT_FDCWD;
             int rflags = 1; // RENAME_NOREPLACE
