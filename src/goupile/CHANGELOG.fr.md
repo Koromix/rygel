@@ -105,6 +105,7 @@
 
   * Prise en charge d'une option `sequence` dynamique calculée par une fonction, analogue à l'option `enabled`.
   * Prise en charge de l'utilisation de tableaux comme valeur de `sequence`.
+  * Le retour à la page de statut doit désormais être déclaré explicitement.
 
 * Les pages sans stockage de données (sans *store* défini) fonctionnement mieux. Il est possible d'y placer des widgets, mais il n'y a aucune action par défaut, et aucun avertissement n'apparait lorsque la page est fermée malgré la présence de données.
 

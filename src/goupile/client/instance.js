@@ -1157,47 +1157,33 @@ function selectNextPage(page, thread, edit) {
         }
     }
 
-    if (!edit) {
-        if (typeof sequence == 'string') {
-            let next = app.pages.find(page => page.key == sequence);
-            return next;
-        }
+    if (sequence === true || typeof sequence == 'string' || typeof sequence == 'number') {
+        let parent = page.chain[page.chain.length - 2];
 
-        if (sequence === true) {
-            let parent = page.chain[page.chain.length - 2];
-            sequence = (parent != null) ? parent.children.map(page => page.key) : [];
-        }
+        if (parent != null) {
+            let keys = [];
 
-        if (Array.isArray(sequence)) {
-            let idx = sequence.indexOf(page.key);
+            if (!edit)
+                keys.push(...parent.children.map(page => page.key));
+            if (parent.sequence === sequence)
+                keys.push(parent.key);
 
-            if (idx < 0) {
-                console.error(T.message(`Page '{1}' is not in sequence`, page.key));
-                return null;
-            }
-
-            if (idx + 1 < sequence.length) {
-                let next = app.pages.find(page => page.key == sequence[idx + 1]);
-                return next;
-            }
+            sequence = keys;
         }
     }
 
-    // Try to go back to parent
-    {
-        let next = null;
+    if (Array.isArray(sequence)) {
+        let idx = sequence.indexOf(page.key);
 
-        for (let i = page.chain.length - 2; i >= 0; i--) {
-            next = page.chain[i];
-
-            let status = computeStatus(next, thread);
-
-            if (next.url != page.url && !status.complete)
-                break;
+        if (idx < 0) {
+            console.error(T.message(`Page '{1}' is not in sequence`, page.key));
+            return null;
         }
 
-        if (next != null)
+        if (idx + 1 < sequence.length) {
+            let next = app.pages.find(page => page.key == sequence[idx + 1]);
             return next;
+        }
     }
 
     return null;

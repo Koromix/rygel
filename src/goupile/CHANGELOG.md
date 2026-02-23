@@ -105,6 +105,7 @@
 
   * Support dynamic page `sequence` option computed by a function, analogous to the `enabled` option.
   * Support use of custom sequence arrays.
+  * Return to the status page must now be declared explicitly.
 
 - Pages without data storage (no *store* defined) now work better. Widgets can be added, but there is no default action, and no warning is shown when the page is closed even if it contains data.
 
