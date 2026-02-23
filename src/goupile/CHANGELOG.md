@@ -1,5 +1,199 @@
 # Goupile changelog
 
+## Goupile 3.12 (beta)
+
+*Currently in beta*
+
+**Identifiers:**
+
+- Support custom thread HID identifier in-lieu of sequence numbers, in addition to the custom per-page summary values.
+- Recompute form data when saving with valid sequence number and counter values. This can be used to compute custom identifiers that use server-side computer values (such as the thread sequence number, a custom counter or random identifier).
+
+**Data:**
+
+- Implement draft status for record entries. This gets used when autosave is enabled, and for records that get created or edited in conception mode.
+- Add support for non-blocking errors. Use this feature to add the error status to record entries without blocking the user from saving data or putting a variable annotation.
+
+- Improve autosave behavior:
+  
+  * The UI does not change when autosave happens.
+  * Draft status is set on the page, and remove when an explicit save happens.
+
+- Adjust behavior of status tags:
+
+  * The error tag remains active even if a status is set.
+  * Avoid stacking error and incomplete variable statuses together.
+
+**Monitoring:**
+
+- Adjust data monitoring table:
+
+  * Add pagination.
+  * Change set of columns: show level 1 and level 2 columns in data monitoring table.
+  * Show full creation time in monitoring table.
+
+- Improve data monitoring filter controls:
+
+  * Add a search box to filter records by their sequence number, HID or summary values.
+  * Fix various quirks of the status filter buttons.
+
+- Show per-entry status tag dots in data monitoring table.
+
+- Use natural sort for thread sequence/HID values instead of plain alphabetical order.
+
+- Fix HID filter failing with some values (legacy).
+
+- Fix small UI problems in legacy projects: missing icon, unstyled menu titles.
+
+**Exports:**
+
+- Use single dialog to create and download exports.
+
+- Add support for XLSX export templates, which can be used to integrate export data inside pe-exisiting XLSX file, in dedicated sheets.
+
+- Improve dialog for API/export keys. A new code is generated only when the action is explicitly triggered, and a Copy button has been aded.
+
+**Data entry:**
+
+- Improve situational awareness and logic:
+
+  * Show sequence/HID value in main menu, and alongside actions (on top on big screens, bottom left on small screens).
+  * Move New record button to data panel instead of putting in inside top menu.
+  * Differentiate icon used for new records and draft records without sequence/HID value.
+
+- Improve UI for simple surveys and remote users:
+
+  * Keep action buttons at the bottom for remote surveys, instead of showing the classic *"Save"* button on the right on big screens.
+  * Indicate that the record has been saved correctly, by changing the button *"Save"* label to *"Saved"*.
+  * Do not mention annotation system in error message when no variable can be annotated.
+
+- Reduce content in main menu on small screens to make it usable for more projects without hacks.
+
+- Instantly show delayed errors when loading existing record entry.
+
+- Fix empty items sometimes showing up in table of sections.
+
+- Fix visual bugs in bottom task bar: weird separating line, text and color contrast bugs.
+
+**Admin:**
+
+- Rename instance key and name settings to name and title.
+
+- Add GUI domain settings for password complexity.
+
+- Remove unused user permissions, such as BuildBatch. Once the feature works, it will be linked to DataAudit instead.
+
+- Fix non-toggle-able admin panels on small screens.
+
+- Prevent splitting legacy projects, because it does not work correctly and we want to kill legacy support eventually.
+
+**Project scripts:**
+
+- Support automatic page locking, triggered on save or after a configurable delay. Only users with DataAudit permission can unlock records.
+
+- Replace `claim: false` page option with `forget: true` for clarity. The old option remains supported for now.
+
+- Improve page `sequence` option:
+
+  * Support dynamic page `sequence` option computed by a function, analogous to the `enabled` option.
+  * Support use of custom sequence arrays.
+
+- [XXX] Make pages without data store work properly: no default action, no warning when data has been input.
+
+- Drop unused Goupile shortcut system.
+
+- Fix file restore from history using bundled code instead of the original user script.
+
+> [!WARNING]
+> Custom `<style>` tags don't work anymore because of the Content-Security-Policy. A new solution will be developed for a later version.
+
+**Form scripts:**
+
+- [XXX] Nested data:
+
+  * [XXX] Improve support for repeat sections
+  * Support path-like data key specifiers
+  * Fix broken pushPath system
+  * [XXX] Export nested data correctly.
+
+- Fix a bunch of quirks:
+  
+  * Fix default widget value not resetting when the default value goes back to null.
+  * Fix default actions (such as Save) inheriting leftover disabled option after end of script.
+  * Fix retroactive effect of `form.pushOptions` with `form.sameLine`.
+
+- Run page code inside main code path instead of render function. This makes for cleaner code, and errors finally show up when the overview panel is not visible.
+
+- Fix file restore from history using bundled code instead of the original user script.
+
+- Fix various widget highlighting bugs in conception mode.
+
+> [!WARNING]
+> Custom `<style>` tags don't work anymore because of the Content-Security-Policy. A new solution will be developed for a later version.
+
+**Security:**
+
+As part of the NLnet grant, a security audit was performed by [Radically Open Security](https://www.radicallyopensecurity.com/). The security flaws have largely been fixed, and most changes have been implemented, in Goupile 3.11 and in this release.
+
+The report is available here: https://goupile.org/static/nlnet/ros_goupile_2025.pdf
+
+- Increase minimal password length to 10 characters instead of 8.
+
+- Fix security flaw where users can lock unclaimed records.
+
+- Fix inability to fetch some pages in split projects even if users are allowed to access suprojects. This regression was introduced in Goupile 3.11.
+
+- Force password change for root/admin users after login if their password is too simple compared to the required complexity.
+
+- Define `Content-Security-Policy` to prevent script and stylesheet injection. However, inline style attributes (*style-src-attr*) remain allowed.
+
+- Set `X-Frame-Options` and `X-Content-Type-Options` headers.
+
+- Fix security flaw that could allow users without DataRead permission to lock records for which they have no claim.
+
+- Replace the use of custom headers with `Sec-Fetch-Site` and `Origin` (fallback) to prevent CSRF attacks.
+
+- Prevent injection of control characters from user-controlled strings to the log file.
+
+**Back-end fixes:**
+
+- Whitelist several rarely-used syscalls in Linux seccomp sandbox that could cause a crash in rare occasions:
+
+  * Whitelisted: *restart_syscalls*, *gettimeofday*.
+  * Relax *ioctl/tty* seccomp filter to allow more commands.
+ 
+- Fix excessive network isolation in landlock sandboxes that prevented SMTP from working at all on some kernels.
+
+- Fix duplication of instances in split projects after some admin actions.
+
+- Fix PWA caching problems caused by duplicate asset URLs and big assets (such as `esbuild.wasm`, which is only needed for conception) that caused the service worker to throw an exception.
+
+- Send JSON responses with fast Zstd encoding if the browsers support it.
+
+- Fix HTTP listener giving up when too many clients tried to connect and caused exhaustion of file descriptors.
+
+- Fix possible thread sequence number runaway regression that could happen after editing existing records.
+
+- Use POST request for TOTP secret generation.
+
+**Translations:**
+
+- Translate default Goupile project pages.
+
+- Translate binary widget answers, which were still in french enven in english projects.
+
+- Translate Goupile documentation into english. It is available online: [https://goupile.org/en](https://goupile.org/en).
+
+- Always use *"Close"* button in dialogs instead of *"Cancel"*.
+
+- Various translation fixes and changes.
+
+**Distribution:**
+
+- Provide source tarballs in addition to the existing Debian and RPM, packages and Docker images.
+
+- Clean up default config file used by `goupile init`.
+
 ## Goupile 3.11
 
 > [!IMPORTANT]
