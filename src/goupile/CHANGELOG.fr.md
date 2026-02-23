@@ -117,7 +117,7 @@
 
 **Scripts de formulaire :**
 
-* Améliorationsdu supprot des données et objets imbriqués :
+* Améliorations du support des données et objets imbriqués :
 
   * Prise en charge de spécificateurs de clés en forme de chemin.
   * Correction de la fonction `form.pushPath()` qui était peu utilisable.
