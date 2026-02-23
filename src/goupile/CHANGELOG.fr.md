@@ -22,7 +22,7 @@
 
 - Amélioration du comportement de l'enregistrement automatique :
 
-  * L'interface et les statuts affichés ne change pas lors d'un enregistrement automatique.
+  * L'interface et les statuts affichés ne changent pas lors d'un enregistrement automatique.
   * Les erreurs retardées (*delayed*) ne sont pas déclenchées par l'enregistrement automatique.
   * Le statut brouillon est affecté à la page, puis supprimé lors de l'enregistrement explicite.
 
