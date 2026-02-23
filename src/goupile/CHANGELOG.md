@@ -688,3 +688,32 @@ The report is available here: https://goupile.org/static/nlnet/ros_goupile_2025.
 - Fix error when creating multi-centric projects
 - Fix possible NULL dereference in goupile login code
 - Allow reset of email and phone in goupile admin panel
+
+# Roadmap
+
+## Goupile 3.13
+
+- Improve export API to provide computed set of columns directly
+- Improve export of nested objects and arrays
+- Support bulk recompute API and functionality
+- Improve and document import API
+- Export/import project structure in ZIP file
+
+## Goupile 3.14
+
+- Add page and permission groups to send subsets of thread metadata and data to users
+  (this allows implementation of a contact module, for example)
+- Support SSO authentication with OIDC
+- Support SCIM user provisioning
+
+## Goupile 3.15
+
+- Rework offline support with new UI and new code
+- Restrict offline use to new data entry, drop mirror system entirely
+- Improve data audit tools
+
+## Goupile 3.16
+
+- Implement proper merging of data when changed by multiple users
+- Support collaborative edition of form scripts
+- Use WebSockets for realtime update of data and scripts, and see who is doing what
