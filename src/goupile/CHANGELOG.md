@@ -11,15 +11,22 @@
 
 **Data:**
 
-- Implement draft status for record entries. This gets used when autosave is enabled, and for records that get created or edited in conception mode.
-- Add support for non-blocking errors. Use this feature to add the error status to record entries without blocking the user from saving data or putting a variable annotation.
-
 - Improve autosave behavior:
-  
-  * The UI does not change when autosave happens.
-  * Draft status is set on the page, and remove when an explicit save happens.
 
-- Adjust behavior of status tags:
+  * Draft status is automatically added during an autosave.
+  * Draft status is automatically added to records created or modified in conception mode.
+  * No sequence number or counter is used by these records.
+  * A "Confirm" button allows removing the draft status, notably for records created in conception mode.
+
+- Add support for non-blocking errors. Use this feature to add the error tag to records without blocking the user from saving data and without the need to annotate the variable.
+
+* Improve autosave behavior:
+
+  * The interface and displayed statuses do not change during an autosave.
+  * Delayed errors are not triggered by autosave.
+  * The draft status is assigned to the page, then removed on explicit save.
+
+- Adjust behavior of variable status tags:
 
   * The error tag remains active even if a status is set.
   * Avoid stacking error and incomplete variable statuses together.
@@ -35,15 +42,16 @@
 - Improve data monitoring filter controls:
 
   * Add a search box to filter records by their sequence number, HID or summary values.
+  * Improve order and coherency of record status filters with variable statuses.
   * Fix various quirks of the status filter buttons.
 
-- Show per-entry status tag dots in data monitoring table.
+- Show per-entry status tags (colored dots) in data monitoring table.
 
 - Use natural sort for thread sequence/HID values instead of plain alphabetical order.
 
-- Fix HID filter failing with some values (legacy).
+- Fix HID filter failing when integer and string values are mixed in legacy instances.
 
-- Fix small UI problems in legacy projects: missing icon, unstyled menu titles.
+- Fix small UI problems in legacy instances: missing icon, unstyled menu titles.
 
 **Exports:**
 
@@ -55,10 +63,10 @@
 
 **Data entry:**
 
-- Improve situational awareness and logic:
+- Improve situational awareness of active thread:
 
   * Show sequence/HID value in main menu, and alongside actions (on top on big screens, bottom left on small screens).
-  * Move New record button to data panel instead of putting in inside top menu.
+  * Move "New" record button to data panel instead of putting in inside top menu.
   * Differentiate icon used for new records and draft records without sequence/HID value.
 
 - Improve UI for simple surveys and remote users:
@@ -81,7 +89,7 @@
 
 - Add GUI domain settings for password complexity.
 
-- Remove unused user permissions, such as BuildBatch. Once the feature works, it will be linked to DataAudit instead.
+- Remove unused user permissions, such as *BuildBatch*. Once the feature works, it will be linked to *DataAudit* instead.
 
 - Fix non-toggle-able admin panels on small screens.
 
@@ -89,7 +97,7 @@
 
 **Project scripts:**
 
-- Support automatic page locking, triggered on save or after a configurable delay. Only users with DataAudit permission can unlock records.
+- Support automatic page locking, triggered on save or after a configurable delay. Only users with *DataAudit* permission can unlock records.
 
 - Replace `claim: false` page option with `forget: true` for clarity. The old option remains supported for now.
 
@@ -100,7 +108,7 @@
 
 - [XXX] Make pages without data store work properly: no default action, no warning when data has been input.
 
-- Drop unused Goupile shortcut system.
+- Drop unused Goupile shortcut system (`app.shortcut()`).
 
 - Fix file restore from history using bundled code instead of the original user script.
 
@@ -139,7 +147,7 @@ The report is available here: https://goupile.org/static/nlnet/ros_goupile_2025.
 
 - Increase minimal password length to 10 characters instead of 8.
 
-- Fix security flaw where users can lock unclaimed records.
+- Fix security flaw that could allow users without *DataRead* permission to lock records for which they have no claim.
 
 - Fix inability to fetch some pages in split projects even if users are allowed to access suprojects. This regression was introduced in Goupile 3.11.
 
@@ -148,8 +156,6 @@ The report is available here: https://goupile.org/static/nlnet/ros_goupile_2025.
 - Define `Content-Security-Policy` to prevent script and stylesheet injection. However, inline style attributes (*style-src-attr*) remain allowed.
 
 - Set `X-Frame-Options` and `X-Content-Type-Options` headers.
-
-- Fix security flaw that could allow users without DataRead permission to lock records for which they have no claim.
 
 - Replace the use of custom headers with `Sec-Fetch-Site` and `Origin` (fallback) to prevent CSRF attacks.
 
