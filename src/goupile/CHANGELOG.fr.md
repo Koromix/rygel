@@ -36,7 +36,7 @@
 - Ajustement du tableau de suivi de remplissage :
 
   * Ajout de la pagination au tableau.
-  * Modification des colonnes : affichage des colonnes de niveau 1 et niveau 2 dans le tableau.
+  * Modification des colonnes, affichage des colonnes de niveau 1 et niveau 2 dans le tableau.
   * Affichage de la date et de l'heure dans le tableau de supervision.
 
 - Amélioration des contrôles de filtre :
@@ -51,7 +51,7 @@
 
 - Correction du mauvais fonctionnement du filtre HID avec certaines valeurs dans les anciens projets v2, notamment lorsque des valeurs numériques et des chaînes sont mélangées.
 
-- Correction de petits problèmes d'interface dans les projets v2 : icône manquante, titres de menu non stylés.
+- Correction de petits problèmes d'interface dans les projets v2 (icône manquante, titres de menu non stylés).
 
 **Exports :**
 
@@ -164,7 +164,7 @@ Le rapport est disponible ici : [https://goupile.org/static/nlnet/ros_goupile_20
 
 * Mise en liste blanche de plusieurs appels système Linux rarement utilisés dans le bac à sable seccomp pouvant provoquer un crash dans de rares cas :
 
-  * Nouveaux appels autorisés : *restart_syscalls*, *gettimeofday*.
+  * Nouveaux appels autorisés (*restart_syscalls*, *gettimeofday*).
   * Assouplissement du filtre seccomp *ioctl/tty* pour autoriser plus de commandes.
 
 * Correction d'une isolation réseau excessive dans les bacs à sable landlock qui empêchait SMTP de fonctionner sur certains noyaux.
@@ -187,7 +187,7 @@ Le rapport est disponible ici : [https://goupile.org/static/nlnet/ros_goupile_20
 
 * Traduction des réponses des widgets binaires, qui étaient encore en français même dans les projets en anglais.
 
-* Traduction de la documentation Goupile en anglais. Elle est disponible en ligne : [https://goupile.org/en](https://goupile.org/en).
+* Traduction de la documentation Goupile en anglais : [https://goupile.org/en](https://goupile.org/en).
 
 * Utilisation systématique du libellé *« Fermer »* dans les dialogues au lieu de *« Annuler »*.
 
@@ -195,7 +195,7 @@ Le rapport est disponible ici : [https://goupile.org/static/nlnet/ros_goupile_20
 
 **Distribution :**
 
-* Fourniture d'archives source (tarballs) en plus des paquets Debian et RPM existants et des images Docker.
+* Distribution d'archives source (tarballs) en plus des paquets Debian et RPM existants et des images Docker.
 
 * Nettoyage du fichier de configuration par défaut utilisé par `goupile init`.
 

@@ -36,7 +36,7 @@
 - Adjust data monitoring table:
 
   * Add pagination.
-  * Change set of columns: show level 1 and level 2 columns in data monitoring table.
+  * Change set of columns, show level 1 and level 2 columns in data monitoring table.
   * Show full creation time in monitoring table.
 
 - Improve data monitoring filter controls:
@@ -51,7 +51,7 @@
 
 - Fix HID filter failing when integer and string values are mixed in legacy instances.
 
-- Fix small UI problems in legacy instances: missing icon, unstyled menu titles.
+- Fix small UI problems in legacy instances (missing icon, unstyled menu titles).
 
 **Exports:**
 
@@ -81,7 +81,7 @@
 
 - Fix empty items sometimes showing up in table of sections.
 
-- Fix visual bugs in bottom task bar: weird separating line, text and color contrast bugs.
+- Fix visual bugs in bottom task bar (weird separating line, text and color contrast bugs).
 
 **Admin:**
 
@@ -164,7 +164,7 @@ The report is available here: https://goupile.org/static/nlnet/ros_goupile_2025.
 
 - Whitelist several rarely-used syscalls in Linux seccomp sandbox that could cause a crash in rare occasions:
 
-  * Whitelisted: *restart_syscalls*, *gettimeofday*.
+  * Whitelisted (*restart_syscalls*, *gettimeofday*).
   * Relax *ioctl/tty* seccomp filter to allow more commands.
  
 - Fix excessive network isolation in landlock sandboxes that prevented SMTP from working at all on some kernels.
@@ -187,7 +187,7 @@ The report is available here: https://goupile.org/static/nlnet/ros_goupile_2025.
 
 - Translate binary widget answers, which were still in french enven in english projects.
 
-- Translate Goupile documentation into english. It is available online: [https://goupile.org/en](https://goupile.org/en).
+- Translate Goupile documentation into english: [https://goupile.org/en](https://goupile.org/en).
 
 - Always use *"Close"* button in dialogs instead of *"Cancel"*.
 
