@@ -29,7 +29,7 @@
 - Adjust behavior of variable status tags:
 
   * The error tag remains active even if a status is set.
-  * Avoid stacking error and incomplete variable statuses together.
+  * Avoid showing both Error and Incomplete variable statuses when a variable is missing (redundant).
 
 **Monitoring:**
 
@@ -56,6 +56,8 @@
 **Exports:**
 
 - Use single dialog to create and download exports.
+
+- The *BulkExport* permission can now be used without the *BulkDownload* permission to create an export and download it immediately. This combination allows users to generate new exports but not to download existing (previous) exports.
 
 - Add support for XLSX export templates, which can be used to integrate export data inside pe-exisiting XLSX file, in dedicated sheets.
 

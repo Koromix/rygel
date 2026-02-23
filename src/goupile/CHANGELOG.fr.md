@@ -29,7 +29,7 @@
 - Ajustement du comportement des étiquettes de statut des variables :
 
   * L'étiquette d'erreur reste active même si un statut utilisateur est défini (par exemple "En attente").
-  * Les statuts d'erreur et de variable incomplète ne sont plus affichés tous les deux (redondant).
+  * Les statuts *Erreur* et *Incomplet* ne sont plus affichés tous les deux sur les variable en cas de valeur manquante (redondant).
 
 **Suivi :**
 
@@ -57,19 +57,21 @@
 
 - Utilisation d'une boîte de dialogue unique pour créer et télécharger les exports.
 
+- Le droit *BulkExport* peut désormais être utilisé sans le droit *BulkDownload* pour créer un export et le télécharger immédiatement. Cette combinaison permet de réaliser de nouveaux exports mais pas de télécharger les exports existants.
+
 - Ajout de la prise en charge de modèles d'export XLSX, permettant d'intégrer les données exportées dans un fichier XLSX préexistant, par exemple dans des feuilles spécifiques.
 
-- Amélioration de la boîte de dialogue pour les clés d'API/d'export. Un nouveau code n'est généré que lorsque l'action est explicitement déclenchée, et un bouton Copier (dans le presse-papier) a été ajouté.
+- Amélioration de la boîte de dialogue pour les clés d'API et d'export. Un nouveau code n'est généré que lorsque l'action est explicitement déclenchée, et un bouton Copier (dans le presse-papier) a été ajouté.
 
 **Saisie des données :**
 
-* Amélioration de la conscience situationnelle par rapport à l'enregistrement affiché :
+* Amélioration de la conscience situationnelle de l'enregistrement actif :
 
   * Affichage de la valeur séquence/HID dans le menu principal, et à côté des actions (en haut sur les grands écrans, en bas à gauche sur les petits écrans).
   * Déplacement du bouton "Créer un enregistrement" dans le panneau de données au lieu du menu supérieur.
   * Différenciation de l'icône utilisée pour les nouveaux enregistrements et les brouillons sans valeur de séquence/HID.
 
-* Amélioration de l'interface pour les recueils simples et les utilisateurs à distance :
+* Amélioration de l'interface pour les recueils simples et le remplissage à distance/en ligne :
 
   * Maintien des boutons d'action en bas pour les recueils invités ou à distance, au lieu d'afficher le bouton *« Enregistrer »* ou *« Continuer »* à droite sur les grands écrans.
   * Indication qu'un enregistrement a été sauvegardé correctement en remplaçant le libellé du bouton *« Enregistrer »* par *« Enregistré »*.
