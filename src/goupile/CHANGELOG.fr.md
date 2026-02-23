@@ -76,6 +76,7 @@
   * Maintien des boutons d'action en bas pour les recueils invités ou à distance, au lieu d'afficher le bouton *« Enregistrer »* ou *« Continuer »* à droite sur les grands écrans.
   * Indication qu'un enregistrement a été sauvegardé correctement en remplaçant le libellé du bouton *« Enregistrer »* par *« Enregistré »*.
   * La possibilité d'annoter une variable n'est plus mentionnée lorsqu'aucune variable ne peut être annotée.
+  * Retrait du préfixe '#' des titres de section.
 
 * Réduction du contenu du menu principal sur les petits écrans pour le rendre lisible dans davantage de projets.
 

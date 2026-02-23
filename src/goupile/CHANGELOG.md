@@ -76,6 +76,7 @@
   * Keep action buttons at the bottom for remote surveys, instead of showing the classic *"Save"* button on the right on big screens.
   * Indicate that the record has been saved correctly, by changing the button *"Save"* label to *"Saved"*.
   * Do not mention annotation system in error message when no variable can be annotated.
+  * Drop '#' prefix from section titles.
 
 - Reduce content in main menu on small screens to make it usable for more projects without hacks.
 

@@ -21,17 +21,13 @@
     box-sizing: border-box;
     width: calc(100% + 28px);
     margin: -14px 0 10px -14px;
-    padding: 0.2em 0.5em;
+    padding: 0.25em 0.7em;
     background: linear-gradient(var(--page_color_n1), var(--page_color));
     border-radius: var(--block_rounding) var(--block_rounding) 0 0;
     font-size: 1.1em;
     color: white;
     color-adjust: exact !important;
     -webkit-print-color-adjust: exact !important;
-}
-.fm_legend::before {
-    padding-right: 0.5em;
-    content: '#';
 }
 .fm_legend > span {
     color: inherit;
