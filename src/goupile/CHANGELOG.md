@@ -106,7 +106,7 @@
   * Support dynamic page `sequence` option computed by a function, analogous to the `enabled` option.
   * Support use of custom sequence arrays.
 
-- [XXX] Make pages without data store work properly: no default action, no warning when data has been input.
+- Pages without data storage (no *store* defined) now work better. Widgets can be added, but there is no default action, and no warning is shown when the page is closed even if it contains data.
 
 - Drop unused Goupile shortcut system (`app.shortcut()`).
 
@@ -117,15 +117,13 @@
 
 **Form scripts:**
 
-- [XXX] Nested data:
+- Improve support for nested data objects:
 
-  * [XXX] Improve support for repeat sections
-  * Support path-like data key specifiers
-  * Fix broken pushPath system
-  * [XXX] Export nested data correctly.
+  * Support path-like (arrays) data key specifiers
+  * Fix broken `form.pushPath()` system for nested data objects
 
 - Fix a bunch of quirks:
-  
+
   * Fix default widget value not resetting when the default value goes back to null.
   * Fix default actions (such as Save) inheriting leftover disabled option after end of script.
   * Fix retroactive effect of `form.pushOptions` with `form.sameLine`.
