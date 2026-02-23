@@ -117,7 +117,7 @@
 - Fix file restore from history using bundled code instead of the original user script.
 
 > [!WARNING]
-> Custom `<style>` tags don't work anymore because of the Content-Security-Policy. A new solution will be developed for a later version.
+> Custom `<style>` tags don't work anymore because of the Content-Security-Policy. A solution will be developed for a later version.
 
 **Form scripts:**
 
@@ -139,7 +139,7 @@
 - Fix various widget highlighting bugs in conception mode.
 
 > [!WARNING]
-> Custom `<style>` tags don't work anymore because of the Content-Security-Policy. A new solution will be developed for a later version.
+> Custom `<style>` tags don't work anymore because of the Content-Security-Policy. A solution will be developed for a later version.
 
 **Security:**
 
