@@ -163,7 +163,7 @@ Le rapport est disponible ici : [https://goupile.org/static/nlnet/ros_goupile_20
 
 * Empêchement de l'injection de caractères de contrôle provenant de chaînes contrôlées par l'utilisateur dans le fichier de log.
 
-**Corrections côté back-end :**
+**Bugs divers :**
 
 * Mise en liste blanche de plusieurs appels système Linux rarement utilisés dans le bac à sable seccomp pouvant provoquer un crash dans de rares cas :
 

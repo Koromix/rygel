@@ -163,7 +163,7 @@ The report is available here: https://goupile.org/static/nlnet/ros_goupile_2025.
 
 - Prevent injection of control characters from user-controlled strings to the log file.
 
-**Back-end fixes:**
+**Miscellaneous bugs:**
 
 - Whitelist several rarely-used syscalls in Linux seccomp sandbox that could cause a crash in rare occasions:
 
