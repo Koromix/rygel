@@ -147,7 +147,6 @@ html.mobile #ins_drop > button { max-width: 200px; }
     top: 18px;
     align-self: flex-start;
     box-sizing: border-box;
-    height: calc(100vh - 3.5em - 28px);
     width: 220px;
     flex-direction: column;
     padding-left: 12px;
