@@ -36,7 +36,7 @@
 - Ajustement du tableau de suivi de remplissage :
 
   * Ajout de la pagination au tableau.
-  * [XXX] Modification des colonnes : affichage des colonnes de niveau 1 et niveau 2 dans le tableau.
+  * Modification des colonnes : affichage des colonnes de niveau 1 et niveau 2 dans le tableau.
   * Affichage de la date et de l'heure dans le tableau de supervision.
 
 - Amélioration des contrôles de filtre :
