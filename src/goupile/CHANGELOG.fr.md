@@ -690,3 +690,40 @@ Le rapport est disponible ici : [https://goupile.org/static/nlnet/ros_goupile_20
 - Correction d'une erreur lors de la création de projets multicentriques
 - Correction d'une possible déréférencement de NULL dans le code de connexion de goupile
 - Correction de la réinitialisation de l'email et du téléphone dans le panneau d'administration de goupile
+
+# Feuille de route
+
+## Goupile 3.13
+
+* Amélioration de l'API d'export avec les métadonnées de colonnes.
+* Amélioration de l'export des objets imbriqués et des tableaux.
+* Prendre en charge une API et une fonctionnalité de recalcul en masse.
+* Amélioration et documentayio de l'API d'import.
+* Export / import de la structure du projet dans un fichier ZIP.
+
+## Goupile 3.14
+
+* Support de groupes de pages et de permissions afin d'envoyer des sous-ensembles de métadonnées et de données des enregistrements. Cela permettra par exemple l'implémentation d'un module de contact.
+* Prise en charge de l'authentification SSO avec OIDC.
+* Prise en charge de l'approvisionnement (*provisiong*) des utilisateurs via SCIM.
+
+## Goupile 3.15
+
+* Prendre en charge de codes d'erreur pour un système de *queries*.
+* Présentation d'un tableau clair des erreurs bloquantes et non bloquantes (*query monitor*).
+* Amélioration des outils d’audit des données : meilleur journal de modifications, fusion et séparation de données.
+
+## Goupile 3.16
+
+* Réécriture de la prise en charge du mode hors ligne avec une nouvelle interface.
+* Restriction du hors ligne à la saisie de nouvelles données, suppression du système de miroir.
+
+## Goupile 3.17
+
+* Mise en œuvre d'une fusion correcte des données lorsqu’elles sont modifiées par plusieurs utilisateurs en parallèle.
+* Prise en charge de l'édition collaborative des scripts de formulaire.
+* Utilisation des WebSockets pour la mise à jour en temps réel des données et des scripts, et voir qui fait quoi.
+
+## Goupile 4 (2027)
+
+* Abandon de la prise en charge des projets v2.
