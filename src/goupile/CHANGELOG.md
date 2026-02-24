@@ -36,7 +36,7 @@
 - Adjust data monitoring table:
 
   * Add pagination.
-  * Change set of columns, show level 1 and level 2 columns in data monitoring table.
+  * Group columns and stats in two levels for complex multi-phase projects.
   * Show full creation time in monitoring table.
 
 - Improve data monitoring filter controls:

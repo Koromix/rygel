@@ -51,6 +51,7 @@ let autosave_timer = null;
 let data_search = null;
 let data_tags = null;
 let data_threads = null;
+let data_groups = null;
 let data_columns = null;
 let data_rows = null;
 let data_offset = null;
@@ -685,21 +686,25 @@ function renderData() {
                 </colgroup>
 
                 <thead>
-                    <tr>
-                        <th>${T.id}</th>
-                        <th>${T.creation}</th>
-                        ${data_columns.map(col => {
-                            let stats = `${col.count} / ${data_rows.length}`;
-                            let title = `${col.page.title}\n${T.available}${T._colon}${stats} ${data_rows.length > 1 ? T.rows.toLowerCase() : T.row.toLowerCase()}`;
+                    ${data_groups.map((group, idx) => html`
+                        <tr>
+                            ${!idx ? html`
+                                <th rowspan=${data_groups.length}>${T.id}</th>
+                                <th rowspan=${data_groups.length}>${T.creation}</th>
+                            ` : ''}
+                            ${group.map(col => {
+                                let stats = `${col.count} / ${data_rows.length}`;
+                                let title = `${col.page.title}\n${T.available}${T._colon}${stats} ${data_rows.length > 1 ? T.rows.toLowerCase() : T.row.toLowerCase()}`;
 
-                            return html`
-                                <th title=${title}>
-                                    ${col.page.title}<br/>
-                                    <span style="font-size: 0.7em; font-weight: normal;">${stats}</span>
-                                </th>
-                            `;
-                        })}
-                    </tr>
+                                return html`
+                                    <th rowspan=${col.rows} colspan=${col.columns} title=${title}>
+                                        ${col.page.title}<br/>
+                                        <span style="font-size: 0.7em; font-weight: normal;">${stats}</span>
+                                    </th>
+                                `;
+                            })}
+                        </tr>
+                    `)}
                 </thead>
 
                 <tbody>
@@ -1890,23 +1895,89 @@ async function run(push_history = true) {
             }
 
             data_rows = data_threads;
-            data_columns = [];
 
             if (data_search != null)
                 data_rows = data_rows.filter(thread => thread.search.some(search => search.includes(data_search)));
             if (data_tags != null)
                 data_rows = data_rows.filter(thread => thread.tags.some(tag => data_tags.has(tag)));
 
-            for (let page of app.pages.slice(1)) {
-                if (page.store == null)
-                    continue;
+            // Create detailed columns
+            {
+                let columns = [];
+                let stores = new Set;
 
-                let col = {
-                    page: page,
-                    count: data_rows.reduce((acc, row) => acc + (row.entries[page.store.key] != null), 0)
-                };
+                for (let page of app.pages.slice(1)) {
+                    if (page.store == null)
+                        continue;
+                    if (stores.has(page.store))
+                        continue;
+                    stores.add(page.store);
 
-                data_columns.push(col);
+                    if (page.children.length && page.chain.length < 3)
+                        continue;
+                    if (page.chain.length > 3)
+                        continue;
+
+                    let col = {
+                        page: page,
+                        columns: 1,
+                        rows: 1,
+                        count: data_rows.reduce((acc, row) => acc + (row.entries[page.store.key] != null), 0)
+                    };
+
+                    columns.push(col);
+                }
+
+                data_columns = columns;
+                data_groups = [columns.slice()];
+            }
+
+            // Group columns
+            for (let i = 1; i > 0; i--) {
+                let columns = [];
+                let acc = null;
+
+                for (let j = 0; j < data_columns.length; j++) {
+                    let col = data_columns[j];
+                    let page = col.page.chain[i] ?? col.page;
+
+                    if (page == acc?.page) {
+                        acc.count += col.count;
+                        acc.columns++;
+                    } else {
+                        acc = Object.assign({}, col);
+                        acc.page = page;
+
+                        columns.push(acc);
+                    }
+                }
+
+                data_groups.push(columns);
+            }
+
+            data_groups.reverse();
+
+            // Filter out repetitions
+            {
+                let merges = new Map;
+
+                for (let columns of data_groups) {
+                    let j = 0;
+                    for (let i = 0; i < columns.length; i++) {
+                        let col = columns[i];
+                        let prev = merges.get(col.page);
+
+                        columns[j] = col;
+
+                        if (prev != null) {
+                            prev.rows++;
+                        } else {
+                            merges.set(col.page, col);
+                            j++;
+                        }
+                    }
+                    columns.length = j;
+                }
             }
 
             if (data_offset == null || data_offset >= data_rows.length) {
