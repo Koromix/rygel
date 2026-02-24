@@ -46,6 +46,7 @@ public:
         int export_days = 0;
         int export_time = 0;
         bool export_all = false;
+        const char *frame_ancestor = nullptr;
     } settings;
 
     std::atomic_int64_t fs_version { 0 };

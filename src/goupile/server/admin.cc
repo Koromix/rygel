@@ -10,6 +10,7 @@
 #include "instance.hh"
 #include "user.hh"
 #include "lib/native/password/password.hh"
+#include "lib/native/request/curl.hh"
 #include "lib/native/wrap/json.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 #define MINIZ_NO_ZLIB_COMPATIBLE_NAMES
@@ -1827,6 +1828,44 @@ void HandleInstanceDelete(http_IO *io)
     io->SendText(200, "{}", "application/json");
 }
 
+static bool CheckOrigin(const char *url)
+{
+    CURLU *h = curl_url();
+    K_DEFER { curl_url_cleanup(h); };
+
+    // Parse URL
+    {
+        CURLUcode ret = curl_url_set(h, CURLUPART_URL, url, CURLU_NON_SUPPORT_SCHEME);
+        if (ret == CURLUE_OUT_OF_MEMORY)
+            K_BAD_ALLOC();
+        if (ret != CURLUE_OK) {
+            LogError("Malformed origin '%1'", url);
+            return false;
+        }
+    }
+
+    char *scheme = nullptr;
+    if (curl_url_get(h, CURLUPART_SCHEME, &scheme, 0) == CURLUE_OUT_OF_MEMORY)
+        K_BAD_ALLOC();
+    K_DEFER { curl_free(scheme); };
+
+    char *path = nullptr;
+    if (curl_url_get(h, CURLUPART_PATH, &path, 0) == CURLUE_OUT_OF_MEMORY)
+        K_BAD_ALLOC();
+    K_DEFER { curl_free(path); };
+
+    if (scheme && !TestStr(scheme, "http") && !TestStr(scheme, "https")) {
+        LogError("Unsupported origin scheme '%1'", scheme);
+        return false;
+    }
+    if (path && !TestStr(path, "/")) {
+        LogError("Origin must not include path");
+        return false;
+    }
+
+    return true;
+}
+
 void HandleInstanceConfigure(http_IO *io)
 {
     const http_RequestInfo &request = io->Request();
@@ -1849,6 +1888,7 @@ void HandleInstanceConfigure(http_IO *io)
     bool change_data_remote = false;
     bool change_allow_guests = false;
     bool change_export = false;
+    bool change_frame_ancestor = false;
     int64_t fs_version = -1;
     {
         bool success = http_ParseJson(io, Kibibytes(4), [&](json_Parser *json) {
@@ -1897,6 +1937,9 @@ void HandleInstanceConfigure(http_IO *io)
                         json->ParseBool(&settings.export_all);
                         change_export = true;
                     }
+                } else if (key == "frame_ancestor") {
+                    json->SkipNull() || json->ParseString(&settings.frame_ancestor);
+                    change_frame_ancestor = true;
                 } else {
                     json->UnexpectedKey(key);
                     valid = false;
@@ -1925,6 +1968,8 @@ void HandleInstanceConfigure(http_IO *io)
                         valid = false;
                     }
                 }
+
+                valid &= !settings.frame_ancestor || CheckOrigin(settings.frame_ancestor);
             }
 
             return valid;
@@ -1987,6 +2032,7 @@ void HandleInstanceConfigure(http_IO *io)
             success &= !change_export || instance->db->Run(sql, "ExportDays", settings.export_days);
             success &= !change_export || instance->db->Run(sql, "ExportTime", settings.export_time);
             success &= !change_export || instance->db->Run(sql, "ExportAll", 0 + settings.export_all);
+            success &= !change_frame_ancestor || instance->db->Run(sql, "FrameAncestor", settings.frame_ancestor);
 
             if (fs_version > 0) {
                 success &= instance->db->Run(sql, "FsVersion", fs_version);
@@ -2085,6 +2131,7 @@ void HandleInstanceList(http_IO *io)
                 }
                 json->Key("export_time"); json->Int(instance->settings.export_time);
                 json->Key("export_all"); json->Bool(instance->settings.export_all);
+                json->Key("frame_ancestor"); json->StringOrNull(instance->settings.frame_ancestor);
                 json->Key("fs_version"); json->Int64(instance->fs_version);
             json->EndObject();
 

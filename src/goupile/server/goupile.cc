@@ -649,12 +649,14 @@ static void HandleInstanceRequest(http_IO *io)
             const char *nonce = (url == "/") ? Fmt(io->Allocator(), "%1", FmtRandom(16)).ptr : nullptr;
 
             if (nonce) {
+                const char *ancestor = master->settings.frame_ancestor ? master->settings.frame_ancestor : "'none'";
+
                 // We will make this more secure progressively!
                 Span<const char> csp = Fmt(io->Allocator(), "script-src 'self' 'nonce-%1' 'unsafe-eval' blob:;"
                                                             "style-src 'self' 'unsafe-inline'; "
                                                             "style-src-elem 'self' 'nonce-%1'; "
                                                             "style-src-attr 'self' 'unsafe-inline'; "
-                                                            "frame-ancestors 'none'", nonce);
+                                                            "frame-ancestors %2", nonce, ancestor);
                 io->AddHeader("Content-Security-Policy", csp);
                 io->AddHeader("X-Content-Type-Options", "nosniff");
             }

@@ -521,6 +521,11 @@ function runConfigureInstanceDialog(e, instance) {
                         suffix: T.format(T.current_fs_x, instance.config.fs_version),
                         help: T.fs_version_warning
                     });
+
+                    d.text('frame_ancestor', T.allowed_frame_ancestor, {
+                        value: instance.config.frame_ancestor,
+                        placeholder: T.none
+                    });
                 });
 
                 d.tab(T.exports, () => {
@@ -551,7 +556,7 @@ function runConfigureInstanceDialog(e, instance) {
                         value: instance.config.export_all,
                         disabled: !d.values.export_days?.length
                     });
-                })
+                });
             });
 
             d.action(T.configure, { disabled: !d.isValid() }, async () => {
@@ -570,7 +575,8 @@ function runConfigureInstanceDialog(e, instance) {
                         fs_version: d.values.fs_version,
                         export_days: export_days,
                         export_time: export_time,
-                        export_all: d.values.export_all
+                        export_all: d.values.export_all,
+                        frame_ancestor: d.values.frame_ancestor ?? null
                     });
 
                     resolve();
