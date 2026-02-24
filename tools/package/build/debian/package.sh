@@ -7,8 +7,14 @@ CLIENT_DIR=${DEST_DIR}/client
 if [ "$1" = "" -o "$1" = "package" ]; then
     ./bootstrap.sh
 
-    VERSION=$(./felix -pDebug --run ${VERSION_TARGET} --version | awk -F'[ _]' "/^${VERSION_TARGET}/ {print \$2}")
-    DATE=$(git show -s --format=%ci | LANG=en_US xargs -0 -n1 date "+%a, %d %b %Y %H:%M:%S %z" -d)
+    RAW_VERSION=$(./felix -pDebug --run ${VERSION_TARGET} --version | awk -F'[ _]' "/^${VERSION_TARGET}/ {print \$2}")
+    RAW_DATE=$(git show -s --format=%ci | LANG=en_US xargs -0 -n1 date "+%a, %d %b %Y %H:%M:%S %z" -d)
+
+    version=$(echo "$RAW_VERSION" | sed 's/-dev-.*//')
+    if echo "$RAW_VERSION" | grep -q '\-dev-'; then dev="-dev"; else dev=""; fi
+
+    VERSION=$(echo "$version$dev" | sed 's/-/~/')
+    echo "Version: $VERSION (date $RAW_DATE)"
 
     if [ -d ${DEST_DIR} ]; then
         find ${DEST_DIR} -type d -exec chmod u+rwx {} \;
@@ -39,7 +45,7 @@ ${PKG_NAME} ($VERSION) unstable; urgency=low
 
   * Current release.
 
- -- ${PKG_AUTHOR}  $DATE
+ -- ${PKG_AUTHOR}  $RAW_DATE
 " > ${DEBIAN_DIR}/changelog
 
     echo "\

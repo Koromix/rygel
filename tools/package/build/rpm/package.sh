@@ -7,12 +7,17 @@ CLIENT_DIR=${DEST_DIR}/client
 if [ "$1" = "" -o "$1" = "package" ]; then
     ./bootstrap.sh
 
-    VERSION=$(./felix -pDebug --run ${VERSION_TARGET} --version | awk -F'[ _]' "/^${VERSION_TARGET}/ {print \$2}")
-    DATE=$(git show -s --format=%ci | LANG=en_US xargs -0 -n1 date "+%a, %d %b %Y %H:%M:%S %z" -d)
+    RAW_VERSION=$(./felix -pDebug --run ${VERSION_TARGET} --version | awk -F'[ _]' "/^${VERSION_TARGET}/ {print \$2}")
 
-    RELEASE=$(echo $VERSION | sed 's/^.*-//')
-    VERSION=$(echo $VERSION | sed 's/-.*$//')
-    [ "$RELEASE" = "$VERSION" ] && RELEASE=1
+    version=$(echo "$RAW_VERSION" | sed 's/-dev-.*//')
+    if echo "$RAW_VERSION" | grep -q '\-dev-'; then dev="-dev"; else dev=""; fi
+    release=$(echo "$RAW_VERSION" | sed 's/.*-dev-//')
+    [ "$RAW_VERSION" = "$release" ] && release=0
+    release=$(expr "$release" + 1)
+
+    VERSION=$(echo "$version$dev" | sed 's/-/~/')
+    RELEASE="$release"
+    echo "Version: $VERSION (release $RELEASE)"
 
     if [ -d ${DEST_DIR} ]; then
         find ${DEST_DIR} -type d -exec chmod u+rwx {} \;
