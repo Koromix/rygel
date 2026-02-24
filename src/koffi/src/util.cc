@@ -1375,17 +1375,17 @@ Napi::Value Decode(Napi::Env env, const uint8_t *ptr, const TypeInfo *type, cons
                 } break;
                 case PrimitiveKind::Int16:
                 case PrimitiveKind::UInt16: {
-                    Size count = NullTerminatedLength((const char16_t *)ptr, K_SIZE_MAX);
+                    Size count = NullTerminatedLength((const char16_t *)ptr);
                     type = MakeArrayType(instance, type, count);
                 } break;
                 case PrimitiveKind::Int32:
                 case PrimitiveKind::UInt32: {
-                    Size count = NullTerminatedLength((const char32_t *)ptr, K_SIZE_MAX);
+                    Size count = NullTerminatedLength((const char32_t *)ptr);
                     type = MakeArrayType(instance, type, count);
                 } break;
 
                 case PrimitiveKind::Pointer: {
-                    Size count = NullTerminatedLength((const void **)ptr, K_SIZE_MAX);
+                    Size count = NullTerminatedLength((const void **)ptr);
                     type = MakeArrayType(instance, type, count);
                 } break;
 
