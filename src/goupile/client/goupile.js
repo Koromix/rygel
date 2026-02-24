@@ -419,6 +419,7 @@ async function runInstallScreen(e) {
 
                 window.onbeforeunload = null;
                 window.location.href = window.location.href;
+                await Util.waitFor(2000);
             } catch (err) {
                 Log.error(err);
                 d.refresh();
