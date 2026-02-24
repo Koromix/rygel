@@ -522,6 +522,7 @@ function runConfigureInstanceDialog(e, instance) {
                         help: T.fs_version_warning
                     });
 
+                    d.boolean('*allow_style', T.allow_style_tags, { value: instance.config.allow_style });
                     d.text('frame_ancestor', T.allowed_frame_ancestor, {
                         value: instance.config.frame_ancestor,
                         placeholder: T.none
@@ -576,6 +577,7 @@ function runConfigureInstanceDialog(e, instance) {
                         export_days: export_days,
                         export_time: export_time,
                         export_all: d.values.export_all,
+                        allow_style: d.values.allow_style,
                         frame_ancestor: d.values.frame_ancestor ?? null
                     });
 

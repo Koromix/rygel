@@ -1888,6 +1888,7 @@ void HandleInstanceConfigure(http_IO *io)
     bool change_data_remote = false;
     bool change_allow_guests = false;
     bool change_export = false;
+    bool change_allow_style = false;
     bool change_frame_ancestor = false;
     int64_t fs_version = -1;
     {
@@ -1936,6 +1937,11 @@ void HandleInstanceConfigure(http_IO *io)
                     if (!json->SkipNull()) {
                         json->ParseBool(&settings.export_all);
                         change_export = true;
+                    }
+                } else if (key == "allow_style") {
+                    if (!json->SkipNull()) {
+                        json->ParseBool(&settings.allow_style);
+                        change_allow_style = true;
                     }
                 } else if (key == "frame_ancestor") {
                     json->SkipNull() || json->ParseString(&settings.frame_ancestor);
@@ -2032,6 +2038,7 @@ void HandleInstanceConfigure(http_IO *io)
             success &= !change_export || instance->db->Run(sql, "ExportDays", settings.export_days);
             success &= !change_export || instance->db->Run(sql, "ExportTime", settings.export_time);
             success &= !change_export || instance->db->Run(sql, "ExportAll", 0 + settings.export_all);
+            success &= !change_allow_style || instance->db->Run(sql, "AllowStyle", 0 + settings.allow_style);
             success &= !change_frame_ancestor || instance->db->Run(sql, "FrameAncestor", settings.frame_ancestor);
 
             if (fs_version > 0) {
@@ -2131,6 +2138,7 @@ void HandleInstanceList(http_IO *io)
                 }
                 json->Key("export_time"); json->Int(instance->settings.export_time);
                 json->Key("export_all"); json->Bool(instance->settings.export_all);
+                json->Key("allow_style"); json->Bool(instance->settings.allow_style);
                 json->Key("frame_ancestor"); json->StringOrNull(instance->settings.frame_ancestor);
                 json->Key("fs_version"); json->Int64(instance->fs_version);
             json->EndObject();

@@ -11,6 +11,7 @@
         "administration": "Administration",
         "advanced": "Avancé",
         "allow_guests": "Autoriser les invités",
+        "allow_style_tags": "Autoriser les éléments CSS (<style>)",
         "allowed_frame_ancestor": "Ancêtre iframe autorisé",
         "annotate_comment": "Commentaire libre",
         "annotate_lock": "Verrouiller la valeur",

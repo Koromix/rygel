@@ -46,6 +46,7 @@ public:
         int export_days = 0;
         int export_time = 0;
         bool export_all = false;
+        bool allow_style = false;
         const char *frame_ancestor = nullptr;
     } settings;
 

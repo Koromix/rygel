@@ -16,7 +16,7 @@
 namespace K {
 
 // If you change InstanceVersion, don't forget to update the migration switch!
-const int InstanceVersion = 146;
+const int InstanceVersion = 147;
 const int LegacyVersion = 61;
 
 // Process-wide unique instance identifier
@@ -109,6 +109,8 @@ bool InstanceHolder::Open(DomainHolder *domain, InstanceHolder *master, sq_Datab
                     }
                 } else if (TestStr(setting, "ExportAll")) {
                     valid &= ParseBool(value, &settings.export_all);
+                } else if (TestStr(setting, "AllowStyle")) {
+                    valid &= ParseBool(value, &settings.allow_style);
                 } else if (TestStr(setting, "FrameAncestor")) {
                     settings.frame_ancestor = DuplicateString(value, &str_alloc).ptr;
                 } else if (TestStr(setting, "FsVersion")) {
@@ -3140,9 +3142,14 @@ bool MigrateInstance(sq_Database *db, int target)
             case 145: {
                 if (!db->Run("INSERT INTO fs_settings (key, value) VALUES ('FrameAncestor', NULL)"))
                     return false;
+            } [[fallthrough]];
+
+            case 146: {
+                if (!db->Run("INSERT INTO fs_settings (key, value) VALUES ('AllowStyle', 0)"))
+                    return false;
             } // [[fallthrough]];
 
-            static_assert(InstanceVersion == 146);
+            static_assert(InstanceVersion == 147);
         }
 
         if (!db->Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",
