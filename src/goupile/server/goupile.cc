@@ -402,7 +402,6 @@ static void HandleAdminRequest(http_IO *io)
                                                         "frame-ancestors 'none'", nonce);
             io->AddHeader("Content-Security-Policy", csp);
             io->AddHeader("X-Content-Type-Options", "nosniff");
-            io->AddHeader("X-Frame-Options", "DENY");
 
             AttachTemplate(io, *asset, [&](Span<const char> expr, StreamWriter *writer) {
                 Span<const char> key = TrimStr(expr);
@@ -658,7 +657,6 @@ static void HandleInstanceRequest(http_IO *io)
                                                             "frame-ancestors 'none'", nonce);
                 io->AddHeader("Content-Security-Policy", csp);
                 io->AddHeader("X-Content-Type-Options", "nosniff");
-                io->AddHeader("X-Frame-Options", "DENY");
             }
 
             AttachTemplate(io, *asset, [&](Span<const char> expr, StreamWriter *writer) {
@@ -849,7 +847,6 @@ static void HandleRequest(http_IO *io)
                                                     "frame-ancestors 'none'", nonce);
         io->AddHeader("Content-Security-Policy", csp);
         io->AddHeader("X-Content-Type-Options", "nosniff");
-        io->AddHeader("X-Frame-Options", "DENY");
 
         AttachTemplate(io, *assets_root, [&](Span<const char> expr, StreamWriter *writer) {
             Span<const char> key = TrimStr(expr);
