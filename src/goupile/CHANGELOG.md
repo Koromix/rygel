@@ -116,8 +116,8 @@
 
 - Fix file restore from history using bundled code instead of the original user script.
 
-> [!WARNING]
-> Custom `<style>` tags don't work anymore because of the Content-Security-Policy. A solution will be developed for a later version.
+> [!NOTE]
+> Custom `<style>` tags now fail by default because of the Content-Security-Policy. You need to enable the “Allow CSS style elements” project option in the admin panel to fix this.
 
 **Form scripts:**
 
@@ -138,8 +138,8 @@
 
 - Fix various widget highlighting bugs in conception mode.
 
-> [!WARNING]
-> Custom `<style>` tags don't work anymore because of the Content-Security-Policy. A solution will be developed for a later version.
+> [!NOTE]
+> Custom `<style>` tags now fail by default because of the Content-Security-Policy. You need to enable the “Allow CSS style elements” project option in the admin panel to fix this.
 
 **Security:**
 
@@ -157,7 +157,7 @@ The report is available here: https://goupile.org/static/nlnet/ros_goupile_2025.
 
 - Define `Content-Security-Policy` to prevent script and stylesheet injection. However, inline style attributes (*style-src-attr*) remain allowed.
 
-- Set `X-Frame-Options` and `X-Content-Type-Options` headers.
+- Set `X-Content-Type-Options` header to "nosniff" to prevent MIME confusion attacks.
 
 - Replace the use of custom headers with `Sec-Fetch-Site` and `Origin` (fallback) to prevent CSRF attacks.
 

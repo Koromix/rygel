@@ -117,7 +117,7 @@
 - Correction de la restauration de fichiers depuis l'historique, qui utilisait parfois le code *bundle* au lieu du script créé par l'utilisateur.
 
 > [!NOTE]
-> Les balises `<style>` personnalisées ne fonctionnent plus à cause du header `Content-Security-Policy`. Une solution sera développée dans une version ultérieure.
+> Les balises `<style>` personnalisées ne fonctionnent plus par défaut à cause du header `Content-Security-Policy`. Vous devez activer l'option « Autoriser les éléments CSS » dans le panneau d'administration pour corriger cela.
 
 **Scripts de formulaire :**
 
@@ -139,7 +139,7 @@
 - Correction de divers bugs de surlignage de widgets en mode conception.
 
 > [!NOTE]
-> Les balises `<style>` personnalisées ne fonctionnent plus à cause du header `Content-Security-Policy`. Une solution sera développée dans une version ultérieure.
+> Les balises `<style>` personnalisées ne fonctionnent plus par défaut à cause du header `Content-Security-Policy`. Vous devez activer l'option « Autoriser les éléments CSS » dans le panneau d'administration pour corriger cela.
 
 **Sécurité :**
 
@@ -157,7 +157,7 @@ Le rapport est disponible ici : [https://goupile.org/static/nlnet/ros_goupile_20
 
 - Définition d'une `Content-Security-Policy` pour empêcher l'injection de scripts et de feuilles de style. Toutefois, les attributs de style en ligne (*style-src-attr*) restent autorisés.
 
-- Définition des en-têtes `X-Frame-Options` et `X-Content-Type-Options`.
+- Définition de l'en-tête `X-Content-Type-Options` sur la valeur "nosniff" pour prévenir les attaques par confusion de type MIME.
 
 - Remplacement de l'utilisation d'en-têtes personnalisés par `Sec-Fetch-Site` et `Origin` (en secours) pour prévenir les attaques CSRF.
 
