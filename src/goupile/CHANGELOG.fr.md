@@ -65,80 +65,80 @@
 
 **Saisie des données :**
 
-* Amélioration de la conscience situationnelle de l'enregistrement actif :
+- Amélioration de la conscience situationnelle de l'enregistrement actif :
 
   * Affichage de la valeur séquence/HID dans le menu principal, et à côté des actions (en haut sur les grands écrans, en bas à gauche sur les petits écrans).
   * Déplacement du bouton "Créer un enregistrement" dans le panneau de données au lieu du menu supérieur.
   * Différenciation de l'icône utilisée pour les nouveaux enregistrements et les brouillons sans valeur de séquence/HID.
 
-* Amélioration de l'interface pour les recueils simples et le remplissage à distance/en ligne :
+- Amélioration de l'interface pour les recueils simples et le remplissage à distance/en ligne :
 
   * Maintien des boutons d'action en bas pour les recueils invités ou à distance, au lieu d'afficher le bouton *« Enregistrer »* ou *« Continuer »* à droite sur les grands écrans.
   * Indication qu'un enregistrement a été sauvegardé correctement en remplaçant le libellé du bouton *« Enregistrer »* par *« Enregistré »*.
   * La possibilité d'annoter une variable n'est plus mentionnée lorsqu'aucune variable ne peut être annotée.
   * Retrait du préfixe '#' des titres de section.
 
-* Réduction du contenu du menu principal sur les petits écrans pour le rendre lisible dans davantage de projets.
+- Réduction du contenu du menu principal sur les petits écrans pour le rendre lisible dans davantage de projets.
 
-* Les erreurs immédiates et différées sont désormais toutes affichées dès l'ouverture d'un enregistrement existant.
+- Les erreurs immédiates et différées sont désormais toutes affichées dès l'ouverture d'un enregistrement existant.
 
-* Correction d'éléments et liens vides apparaissant parfois dans la table des sections d'une page.
+- Correction d'éléments et liens vides apparaissant parfois dans la table des sections d'une page.
 
-* Correction de bugs visuels dans la barre des tâches inférieure, affichées en mode conception et sur les petits écrans (ligne de séparation étrange, problèmes de contraste de texte et de couleur).
+- Correction de bugs visuels dans la barre des tâches inférieure, affichées en mode conception et sur les petits écrans (ligne de séparation étrange, problèmes de contraste de texte et de couleur).
 
 **Administration :**
 
-* Renommage des paramètres *Clé* et *Nom* des projets en *Nom* et *Titre*.
+- Renommage des paramètres *Clé* et *Nom* des projets en *Nom* et *Titre*.
 
-* Ajout de la possibilité de modifier la complexité des mots de passe depuis le panneau d'administration.
+- Ajout de la possibilité de modifier la complexité des mots de passe depuis le panneau d'administration.
 
-* Suppression d'autorisations utilisateur inutilisées, comme *BuildBatch*. Une fois la fonctionnalité opérationnelle, elle sera liée à *DataAudit* à la place.
+- Suppression d'autorisations utilisateur inutilisées, comme *BuildBatch*. Une fois la fonctionnalité opérationnelle, elle sera liée à *DataAudit* à la place.
 
-* Correction de l'impossibilité de changer de panneau actif sur les petits écrans.
+- Correction de l'impossibilité de changer de panneau actif sur les petits écrans.
 
-* Empêchement de la division des anciens projets v2 en sous-projets, car cela ne fonctionne pas correctement et le support de ces projets sera supprimé à terme.
+- Empêchement de la division des anciens projets v2 en sous-projets, car cela ne fonctionne pas correctement et le support de ces projets sera supprimé à terme.
 
 **Scripts de projet :**
 
-* Prise en charge du verrouillage automatique des pages, déclenché lors de l'enregistrement ou après un délai configurable. Seuls les utilisateurs avec la permission *DataAudit* peuvent déverrouiller les enregistrements.
+- Prise en charge du verrouillage automatique des pages, déclenché lors de l'enregistrement ou après un délai configurable. Seuls les utilisateurs avec la permission *DataAudit* peuvent déverrouiller les enregistrements.
 
-* Remplacement de l'option de page `claim: false` par `forget: true` pour plus de clarté. L'ancienne option est dépréciée mais reste prise en charge pour le moment.
+- Remplacement de l'option de page `claim: false` par `forget: true` pour plus de clarté. L'ancienne option est dépréciée mais reste prise en charge pour le moment.
 
-* Amélioration de l'option de page `sequence` :
+- Amélioration de l'option de page `sequence` :
 
   * Prise en charge d'une option `sequence` dynamique calculée par une fonction, analogue à l'option `enabled`.
   * Prise en charge de l'utilisation de tableaux comme valeur de `sequence`.
   * Le retour à la page de statut doit désormais être déclaré explicitement.
 
-* Les pages sans stockage de données (sans *store* défini) fonctionnement mieux. Il est possible d'y placer des widgets, mais il n'y a aucune action par défaut, et aucun avertissement n'apparait lorsque la page est fermée malgré la présence de données.
+- Les pages sans stockage de données (sans *store* défini) fonctionnement mieux. Il est possible d'y placer des widgets, mais il n'y a aucune action par défaut, et aucun avertissement n'apparait lorsque la page est fermée malgré la présence de données.
 
-* Suppression du système de raccourcis Goupile inutilisé (`app.shortcut()`).
+- Suppression du système de raccourcis Goupile inutilisé (`app.shortcut()`).
 
-* Correction de la restauration de fichiers depuis l'historique, qui utilisait parfois le code *bundle* au lieu du script créé par l'utilisateur.
+- Correction de la restauration de fichiers depuis l'historique, qui utilisait parfois le code *bundle* au lieu du script créé par l'utilisateur.
 
-> [!WARNING]
+> [!NOTE]
 > Les balises `<style>` personnalisées ne fonctionnent plus à cause du header `Content-Security-Policy`. Une solution sera développée dans une version ultérieure.
 
 **Scripts de formulaire :**
 
-* Améliorations du support des données et objets imbriqués :
+- Améliorations du support des données et objets imbriqués :
 
   * Prise en charge de spécificateurs de clés en forme de chemin.
   * Correction de la fonction `form.pushPath()` qui était peu utilisable.
 
-* Correction de quelques comportements anorùaux :
+- Correction de quelques comportements anorùaux :
 
   * Correction de la valeur par défaut des widgets qui ne se réinitialise pas lorsque la valeur par défaut revient à *null*.
   * Correction des actions par défaut (comme Enregistrer) qui étaient désactivées par une option `disabled: true` résiduelle après la fin du script.
   * Correction de l'effet rétroactif de `form.pushOptions()` avec `form.sameLine()`.
 
-* Exécution du code de page dans la boucle centrale au lieu de la fonction de rendu. Cela rend le code plus propre, et les erreurs apparaissent même si le panneau d'aperçu est fermé.
+- Exécution du code de page dans la boucle centrale au lieu de la fonction de rendu. Cela rend le code plus propre, et les erreurs apparaissent même si le panneau d'aperçu est fermé.
 
-* Correction de la restauration de fichiers depuis l'historique, qui utilisait parfois le code *bundle* au lieu du script créé par l'utilisateur.
+- Correction de la restauration de fichiers depuis l'historique, qui utilisait parfois le code *bundle* au lieu du script créé par l'utilisateur.
 
-* Correction de divers bugs de surlignage de widgets en mode conception.
+- Correction de divers bugs de surlignage de widgets en mode conception.
 
-> [!WARNING]
+> [!NOTE]
 > Les balises `<style>` personnalisées ne fonctionnent plus à cause du header `Content-Security-Policy`. Une solution sera développée dans une version ultérieure.
 
 **Sécurité :**
@@ -147,60 +147,60 @@ Dans le cadre de la subvention NLnet, un audit de sécurité a été réalisé p
 
 Le rapport est disponible ici : [https://goupile.org/static/nlnet/ros_goupile_2025.pdf](https://goupile.org/static/nlnet/ros_goupile_2025.pdf)
 
-* Augmentation de la longueur minimale des mots de passe à 10 caractères au lieu de 8.
+- Augmentation de la longueur minimale des mots de passe à 10 caractères au lieu de 8.
 
-* Correction d'une faille de sécurité pouvant permettre à des utilisateurs sans permission *DataRead* de verrouiller des enregistrements qu'ils n'ont pas revendiqués.
+- Correction d'une faille de sécurité pouvant permettre à des utilisateurs sans permission *DataRead* de verrouiller des enregistrements qu'ils n'ont pas revendiqués.
 
-* Correction de l'impossibilité de récupérer certaines pages dans des projets divisés même si les utilisateurs sont autorisés à accéder aux sous-projets. Cette régression a été introduite dans Goupile 3.11.
+- Correction de l'impossibilité de récupérer certaines pages dans des projets divisés même si les utilisateurs sont autorisés à accéder aux sous-projets. Cette régression a été introduite dans Goupile 3.11.
 
-* Obligation de changer le mot de passe pour les utilisateurs root/admin après connexion si leur mot de passe est trop simple par rapport à la complexité requise.
+- Obligation de changer le mot de passe pour les utilisateurs root/admin après connexion si leur mot de passe est trop simple par rapport à la complexité requise.
 
-* Définition d'une `Content-Security-Policy` pour empêcher l'injection de scripts et de feuilles de style. Toutefois, les attributs de style en ligne (*style-src-attr*) restent autorisés.
+- Définition d'une `Content-Security-Policy` pour empêcher l'injection de scripts et de feuilles de style. Toutefois, les attributs de style en ligne (*style-src-attr*) restent autorisés.
 
-* Définition des en-têtes `X-Frame-Options` et `X-Content-Type-Options`.
+- Définition des en-têtes `X-Frame-Options` et `X-Content-Type-Options`.
 
-* Remplacement de l'utilisation d'en-têtes personnalisés par `Sec-Fetch-Site` et `Origin` (en secours) pour prévenir les attaques CSRF.
+- Remplacement de l'utilisation d'en-têtes personnalisés par `Sec-Fetch-Site` et `Origin` (en secours) pour prévenir les attaques CSRF.
 
-* Empêchement de l'injection de caractères de contrôle provenant de chaînes contrôlées par l'utilisateur dans le fichier de log.
+- Empêchement de l'injection de caractères de contrôle provenant de chaînes contrôlées par l'utilisateur dans le fichier de log.
 
 **Bugs divers :**
 
-* Mise en liste blanche de plusieurs appels système Linux rarement utilisés dans le bac à sable seccomp pouvant provoquer un crash dans de rares cas :
+- Mise en liste blanche de plusieurs appels système Linux rarement utilisés dans le bac à sable seccomp pouvant provoquer un crash dans de rares cas :
 
   * Nouveaux appels autorisés (*restart_syscalls*, *gettimeofday*).
   * Assouplissement du filtre seccomp *ioctl/tty* pour autoriser plus de commandes.
 
-* Correction d'une isolation réseau excessive dans les bacs à sable landlock qui empêchait SMTP de fonctionner sur certains noyaux.
+- Correction d'une isolation réseau excessive dans les bacs à sable landlock qui empêchait SMTP de fonctionner sur certains noyaux.
 
-* Correction de la duplication d'instances dans les projets divisés en sous-projets après certaines actions administratives.
+- Correction de la duplication d'instances dans les projets divisés en sous-projets après certaines actions administratives.
 
-* Correction de problèmes de cache PWA causés par des URL d'assets dupliquées et de gros assets (comme `esbuild.wasm`, nécessaire uniquement pour la conception) provoquant une exception dans le service worker.
+- Correction de problèmes de cache PWA causés par des URL d'assets dupliquées et de gros assets (comme `esbuild.wasm`, nécessaire uniquement pour la conception) provoquant une exception dans le service worker.
 
-* Envoi des réponses JSON avec un encodage Zstd rapide si le navigateur le supporte.
+- Envoi des réponses JSON avec un encodage Zstd rapide si le navigateur le supporte.
 
-* Correction du listener HTTP abandonnant lorsque trop de clients tentaient de se connecter (ce qui provoquait un épuisement des descripteurs de fichiers, et l'échec des appels à `accept`).
+- Correction du listener HTTP abandonnant lorsque trop de clients tentaient de se connecter (ce qui provoquait un épuisement des descripteurs de fichiers, et l'échec des appels à `accept`).
 
-* Correction d'une possible régression provoquant une incrémentation excessive du numéro de séquence après modification d'enregistrements existants.
+- Correction d'une possible régression provoquant une incrémentation excessive du numéro de séquence après modification d'enregistrements existants.
 
-* Utilisation d'une requête POST pour la génération du secret TOTP.
+- Utilisation d'une requête POST pour la génération du secret TOTP.
 
 **Traductions :**
 
-* Traduction des pages par défaut des projets Goupile lorsqu'un projet est créé en anglais.
+- Traduction des pages par défaut des projets Goupile lorsqu'un projet est créé en anglais.
 
-* Traduction des réponses des widgets binaires, qui étaient encore en français même dans les projets en anglais.
+- Traduction des réponses des widgets binaires, qui étaient encore en français même dans les projets en anglais.
 
-* Traduction de la documentation Goupile en anglais : [https://goupile.org/en](https://goupile.org/en).
+- Traduction de la documentation Goupile en anglais : [https://goupile.org/en](https://goupile.org/en).
 
-* Utilisation systématique du libellé *« Fermer »* dans les dialogues au lieu de *« Annuler »*.
+- Utilisation systématique du libellé *« Fermer »* dans les dialogues au lieu de *« Annuler »*.
 
-* Diverses corrections et améliorations de traduction.
+- Diverses corrections et améliorations de traduction.
 
 **Distribution :**
 
-* Distribution d'archives source (tarballs) en plus des paquets Debian et RPM existants et des images Docker.
+- Distribution d'archives source (tarballs) en plus des paquets Debian et RPM existants et des images Docker.
 
-* Nettoyage du fichier de configuration par défaut utilisé par `goupile init`.
+- Nettoyage du fichier de configuration par défaut utilisé par `goupile init`.
 
 ## Goupile 3.11
 
@@ -695,35 +695,35 @@ Le rapport est disponible ici : [https://goupile.org/static/nlnet/ros_goupile_20
 
 ## Goupile 3.13
 
-* Amélioration de l'API d'export avec les métadonnées de colonnes.
-* Amélioration de l'export des objets imbriqués et des tableaux.
-* Prendre en charge une API et une fonctionnalité de recalcul en masse.
-* Amélioration et documentayio de l'API d'import.
-* Export / import de la structure du projet dans un fichier ZIP.
+- Amélioration de l'API d'export avec les métadonnées de colonnes.
+- Amélioration de l'export des objets imbriqués et des tableaux.
+- Prendre en charge une API et une fonctionnalité de recalcul en masse.
+- Amélioration et documentayio de l'API d'import.
+- Export / import de la structure du projet dans un fichier ZIP.
 
 ## Goupile 3.14
 
-* Support de groupes de pages et de permissions afin d'envoyer des sous-ensembles de métadonnées et de données des enregistrements. Cela permettra par exemple l'implémentation d'un module de contact.
-* Prise en charge de l'authentification SSO avec OIDC.
-* Prise en charge de l'approvisionnement (*provisiong*) des utilisateurs via SCIM.
+- Support de groupes de pages et de permissions afin d'envoyer des sous-ensembles de métadonnées et de données des enregistrements. Cela permettra par exemple l'implémentation d'un module de contact.
+- Prise en charge de l'authentification SSO avec OIDC.
+- Prise en charge de l'approvisionnement (*provisiong*) des utilisateurs via SCIM.
 
 ## Goupile 3.15
 
-* Prendre en charge de codes d'erreur pour un système de *queries*.
-* Présentation d'un tableau clair des erreurs bloquantes et non bloquantes (*query monitor*).
-* Amélioration des outils d’audit des données : meilleur journal de modifications, fusion et séparation de données.
+- Prendre en charge de codes d'erreur pour un système de *queries*.
+- Présentation d'un tableau clair des erreurs bloquantes et non bloquantes (*query monitor*).
+- Amélioration des outils d’audit des données : meilleur journal de modifications, fusion et séparation de données.
 
 ## Goupile 3.16
 
-* Réécriture de la prise en charge du mode hors ligne avec une nouvelle interface.
-* Restriction du hors ligne à la saisie de nouvelles données, suppression du système de miroir.
+- Réécriture de la prise en charge du mode hors ligne avec une nouvelle interface.
+- Restriction du hors ligne à la saisie de nouvelles données, suppression du système de miroir.
 
 ## Goupile 3.17
 
-* Mise en œuvre d'une fusion correcte des données lorsqu’elles sont modifiées par plusieurs utilisateurs en parallèle.
-* Prise en charge de l'édition collaborative des scripts de formulaire.
-* Utilisation des WebSockets pour la mise à jour en temps réel des données et des scripts, et voir qui fait quoi.
+- Mise en œuvre d'une fusion correcte des données lorsqu’elles sont modifiées par plusieurs utilisateurs en parallèle.
+- Prise en charge de l'édition collaborative des scripts de formulaire.
+- Utilisation des WebSockets pour la mise à jour en temps réel des données et des scripts, et voir qui fait quoi.
 
 ## Goupile 4 (2027)
 
-* Abandon de la prise en charge des projets v2.
+- Abandon de la prise en charge des projets v2.

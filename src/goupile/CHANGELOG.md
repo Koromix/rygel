@@ -20,7 +20,7 @@
 
 - Add support for non-blocking errors. Use this feature to add the error tag to records without blocking the user from saving data and without the need to annotate the variable.
 
-* Improve autosave behavior:
+- Improve autosave behavior:
 
   * The interface and displayed statuses do not change during an autosave.
   * Delayed errors are not triggered by autosave.
