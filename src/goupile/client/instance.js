@@ -693,13 +693,13 @@ function renderData() {
                                 <th rowspan=${data_groups.length}>${T.creation}</th>
                             ` : ''}
                             ${group.map(col => {
-                                let stats = `${col.count} / ${data_rows.length}`;
+                                let stats = (col.count != null) ? `${col.count} / ${data_rows.length}` : '';
                                 let title = `${col.page.title}\n${T.available}${T._colon}${stats} ${data_rows.length > 1 ? T.rows.toLowerCase() : T.row.toLowerCase()}`;
 
                                 return html`
                                     <th rowspan=${col.rows} colspan=${col.columns} title=${title}>
-                                        ${col.page.title}<br/>
-                                        <span style="font-size: 0.7em; font-weight: normal;">${stats}</span>
+                                        ${col.page.title}
+                                        ${stats != null ? html`<br/><span style="font-size: 0.7em; font-weight: normal;">${stats}</span>` : ''}
                                     </th>
                                 `;
                             })}
@@ -1942,7 +1942,7 @@ async function run(push_history = true) {
                     let page = col.page.chain[i] ?? col.page;
 
                     if (page == acc?.page) {
-                        acc.count += col.count;
+                        acc.count = null;
                         acc.columns++;
                     } else {
                         acc = Object.assign({}, col);
