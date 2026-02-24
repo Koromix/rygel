@@ -6,6 +6,10 @@ Preset = Debug
 [Debug]
 Features = ?PCH, ?DistCC, ?Ccache, Warnings, DebugInfo, HotAssets
 
+[FastDebug]
+Template = Debug
+Features = +Optimize
+
 [ASan]
 Template = Debug
 Features = +ASan
