@@ -119,6 +119,7 @@ async function start() {
 
             window.onbeforeunload = null;
             window.location.href = window.location.href;
+            await Util.waitFor(2000);
         }
     }
 }
@@ -835,6 +836,7 @@ async function logout(e) {
 
         window.onbeforeunload = null;
         window.location.href = reload;
+        await Util.waitFor(2000);
     } catch (err) {
         throw err;
     }
@@ -848,6 +850,7 @@ async function goToLogin(e) {
 
     window.onbeforeunload = null;
     window.location.href = reload;
+    await Util.waitFor(2000);
 }
 
 function isLoggedOnline() {

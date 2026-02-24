@@ -1652,6 +1652,7 @@ async function go(e, url = null, options = {}) {
 
                 window.onbeforeunload = null;
                 window.location.href = url.href;
+                await Util.waitFor(2000);
 
                 return;
             }

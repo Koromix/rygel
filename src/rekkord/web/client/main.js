@@ -346,6 +346,7 @@ async function logout() {
 
     window.onbeforeunload = null;
     window.location.href = '/';
+    await Util.waitFor(2000);
 
     poisoned = true;
 }
