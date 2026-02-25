@@ -49,7 +49,7 @@ static void AddMimeTypeHeader(http_IO *io, const char *filename)
     }
 }
 
-bool ServeFile(http_IO *io, InstanceHolder *instance, const char *sha256, const char *filename, bool download, int64_t max_age)
+bool ServeFile(http_IO *io, InstanceHolder *instance, const char *sha256, const char *filename, int64_t max_age, unsigned int flags)
 {
     const http_RequestInfo &request = io->Request();
 
@@ -104,7 +104,7 @@ bool ServeFile(http_IO *io, InstanceHolder *instance, const char *sha256, const 
     src_len = sqlite3_blob_bytes(src_blob);
     K_DEFER { sqlite3_blob_close(src_blob); };
 
-    if (download) {
+    if (flags & (int)ServeFlag::Download) {
         const char *disposition = Fmt(io->Allocator(), "attachment; filename=\"%1\"", FmtUrlSafe(filename, "")).ptr;
         io->AddHeader("Content-Disposition", disposition);
     }
@@ -120,7 +120,9 @@ bool ServeFile(http_IO *io, InstanceHolder *instance, const char *sha256, const 
         }
 
         io->AddEncodingHeader(dest_encoding);
-        AddMimeTypeHeader(io, filename);
+        if (!(flags & (int)ServeFlag::SilentType)) {
+            AddMimeTypeHeader(io, filename);
+        }
 
         io->SendBinary(200, MakeSpan(ptr, src_len));
 
@@ -231,7 +233,9 @@ bool ServeFile(http_IO *io, InstanceHolder *instance, const char *sha256, const 
 
                 io->AddHeader("Content-Range", buf);
                 io->AddEncodingHeader(dest_encoding);
-                AddMimeTypeHeader(io, filename);
+                if (!(flags & (int)ServeFlag::SilentType)) {
+                    AddMimeTypeHeader(io, filename);
+                }
             }
 
             StreamWriter writer;
@@ -264,7 +268,9 @@ bool ServeFile(http_IO *io, InstanceHolder *instance, const char *sha256, const 
     // Default path, for big files and/or transcoding (Gzip to None, etc.)
     {
         io->AddEncodingHeader(dest_encoding);
-        AddMimeTypeHeader(io, filename);
+        if (!(flags & (int)ServeFlag::SilentType)) {
+            AddMimeTypeHeader(io, filename);
+        }
 
         StreamWriter writer;
         if (src_encoding == dest_encoding) {
@@ -566,6 +572,7 @@ bool HandleFileGet(http_IO *io, InstanceHolder *instance)
     }
 
     Span<const char> filename = url + 7;
+    unsigned int flags = 0;
 
     int64_t fs_version;
     bool explicit_version;
@@ -616,6 +623,8 @@ bool HandleFileGet(http_IO *io, InstanceHolder *instance)
 
         buf[buf_len] = 0;
         filename = buf.Take(0, buf_len);
+
+        flags |= (int)ServeFlag::SilentType;
     }
 
     // Lookup file in database
@@ -647,7 +656,7 @@ bool HandleFileGet(http_IO *io, InstanceHolder *instance)
     }
 
     int64_t max_age = (explicit_version && fs_version > 0) ? (28ll * 86400000) : 0;
-    ServeFile(io, instance, sha256, filename.ptr, false, max_age);
+    ServeFile(io, instance, sha256, filename.ptr, max_age, flags);
 
     return true;
 }

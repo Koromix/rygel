@@ -2664,7 +2664,8 @@ void HandleBlobGet(http_IO *io, InstanceHolder *instance)
     const char *name = (const char *)sqlite3_column_text(stmt, 0);
     int64_t max_age = 28ll * 86400000;
 
-    ServeFile(io, instance, sha256, name, download, max_age);
+    unsigned int flags = download ? (int)ServeFlag::Download : 0;
+    ServeFile(io, instance, sha256, name, max_age, flags);
 }
 
 void HandleBlobPost(http_IO *io, InstanceHolder *instance)

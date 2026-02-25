@@ -10,7 +10,12 @@ namespace K {
 
 class InstanceHolder;
 
-bool ServeFile(http_IO *io, InstanceHolder *instance, const char *sha256, const char *filename, bool download, int64_t max_age);
+enum class ServeFlag {
+    Download = 1 << 0,
+    SilentType = 1 << 1
+};
+
+bool ServeFile(http_IO *io, InstanceHolder *instance, const char *sha256, const char *filename, int64_t max_age, unsigned int flags);
 bool PutFile(http_IO *io, InstanceHolder *instance, CompressionType compression_type, const char *expect, const char **out_sha256);
 
 void HandleFileList(http_IO *io, InstanceHolder *instance);
