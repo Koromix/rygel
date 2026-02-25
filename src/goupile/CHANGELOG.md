@@ -11,7 +11,7 @@
 
 **Data:**
 
-- Improve autosave behavior:
+- Implement draft status for each saved record page:
 
   * Draft status is automatically added during an autosave.
   * Draft status is automatically added to records created or modified in conception mode.
