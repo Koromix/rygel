@@ -8,7 +8,7 @@
 
 ### Rekkord 0.96
 
-*Released on 2025-01-16*
+*Released on 2026-01-16*
 
 - Fix error when listing objects with some S3 providers (such as CloudFlare R2)
 - Rename `REKKORD_KEYFILE` environment variable to `REKKORD_KEY_FILE`
