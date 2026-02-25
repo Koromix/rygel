@@ -8,7 +8,7 @@
 #include "instance.hh"
 #include "goupile.hh"
 #include "user.hh"
-#include "vendor/libsodium/src/libsodium/include/sodium/crypto_hash_sha256.h"
+#include "vendor/libsodium/src/libsodium/include/sodium.h"
 
 #if defined(_WIN32)
     #include <io.h>
@@ -540,12 +540,15 @@ bool HandleFileGet(http_IO *io, InstanceHolder *instance)
     K_ASSERT(url[0] == '/');
 
     const char *client_sha256 = request.GetQueryValue("sha256");
+    bool fallback = false;
 
     // Handle various paths
     if (TestStr(url, "/favicon.png")) {
         url ="/files/favicon.png";
+        fallback = true;
     } else if (TestStr(url, "/manifest.json")) {
         url = "/files/manifest.json";
+        fallback = true;
     } else if (!instance->settings.allow_guests && !instance->settings.use_offline) {
         RetainPtr<const SessionInfo> session = GetNormalSession(io, instance);
         const SessionStamp *stamp = session ? session->GetStamp(instance) : nullptr;
@@ -598,6 +601,23 @@ bool HandleFileGet(http_IO *io, InstanceHolder *instance)
         bundle = (fs_version > 0);
     }
 
+    // Support alternate name encoding for annoying proxies
+    if (StartsWith(filename, "$/")) {
+        Span<const char> base64 = filename.Take(2, filename.len - 2);
+
+        Span<char> buf = AllocateSpan<char>(io->Allocator(), base64.len + 1);
+        size_t buf_len;
+
+        if (sodium_base642bin((uint8_t *)buf.ptr, (size_t)buf.len, base64.ptr, (size_t)base64.len,
+                              nullptr, &buf_len, nullptr, sodium_base64_VARIANT_URLSAFE_NO_PADDING) != 0) {
+            LogError("Invalid base64-encoded filename");
+            return true;
+        }
+
+        buf[buf_len] = 0;
+        filename = buf.Take(0, buf_len);
+    }
+
     // Lookup file in database
     sq_Statement stmt;
     if (!instance->db->Prepare(R"(SELECT IIF(?3 = 1 AND bundle IS NOT NULL, bundle, sha256)
@@ -605,8 +625,17 @@ bool HandleFileGet(http_IO *io, InstanceHolder *instance)
                                   WHERE version = ?1 AND filename = ?2)",
                                &stmt, fs_version, filename, 0 + bundle))
         return true;
-    if (!stmt.Step())
-        return !stmt.IsValid();
+    if (!stmt.Step()) {
+        if (!stmt.IsValid())
+            return true;
+
+        if (fallback) {
+            return false;
+        } else {
+            io->SendError(404);
+            return true;
+        }
+    }
 
     const char *sha256 = (const char *)sqlite3_column_text(stmt, 0);
 

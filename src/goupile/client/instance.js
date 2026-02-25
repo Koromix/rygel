@@ -2069,6 +2069,13 @@ async function fetchCode(filename) {
         let url = `${ENV.urls.files}${filename}`;
         let response = await Net.fetch(url);
 
+        if (response.status == 403) {
+            // Try to circumvent annoying proxies (FortiGate) that block random JS (and other) assets
+
+            let url = `${ENV.urls.files}$/${mixer.Base64.toBase64Url(filename)}`;
+            response = await Net.fetch(url);
+        }
+
         if (response.ok) {
             let code = await response.text();
             return updateBuffer(filename, code);
