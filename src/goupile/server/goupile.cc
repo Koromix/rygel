@@ -652,12 +652,12 @@ static void HandleInstanceRequest(http_IO *io)
                 const char *ancestor = master->settings.frame_ancestor ? master->settings.frame_ancestor : "'none'";
 
                 if (master->settings.allow_style) {
-                    Span<const char> csp = Fmt(io->Allocator(), "script-src 'self' 'nonce-%1' 'unsafe-eval' blob:;"
+                    Span<const char> csp = Fmt(io->Allocator(), "script-src 'self' 'nonce-%1' 'unsafe-eval' blob:; "
                                                                 "style-src 'self' 'unsafe-inline'; "
                                                                 "frame-ancestors %2", nonce, ancestor);
                     io->AddHeader("Content-Security-Policy", csp);
                 } else {
-                    Span<const char> csp = Fmt(io->Allocator(), "script-src 'self' 'nonce-%1' 'unsafe-eval' blob:;"
+                    Span<const char> csp = Fmt(io->Allocator(), "script-src 'self' 'nonce-%1' 'unsafe-eval' blob:; "
                                                                 "style-src 'self' 'unsafe-inline'; "
                                                                 "style-src-elem 'self' 'nonce-%1'; "
                                                                 "style-src-attr 'self' 'unsafe-inline'; "
