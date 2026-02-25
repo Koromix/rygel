@@ -592,7 +592,7 @@ bool HandleFileGet(http_IO *io, InstanceHolder *instance)
     if (const char *str = request.GetQueryValue("bundle"); str) {
         if (!ParseBool(str, &bundle)) {
             io->SendError(422);
-            return false;
+            return true;
         }
     } else {
         bundle = (fs_version > 0);
