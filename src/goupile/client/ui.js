@@ -517,9 +517,11 @@ function notifyHandler(action, entry) {
                     renderLog();
                 }
             } break;
+
             case 'edit': {
                 renderLog();
             } break;
+
             case 'close': {
                 log_entries = log_entries.filter(it => it !== entry);
                 renderLog();
@@ -527,7 +529,7 @@ function notifyHandler(action, entry) {
         }
     }
 
-    Log.defaultHandler(action, entry);
+    return true;
 }
 
 function renderLog() {

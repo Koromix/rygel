@@ -426,6 +426,7 @@ static void HandleAdminRequest(http_IO *io)
                     TimeSpec spec = DecomposeTimeLocal(now);
 
                     json.StartObject();
+                    json.Key("version"); json.String(FelixVersion);
                     if (!domain->IsInstalled()) {
                         json.Key("upgrade"); json.Int(domain->GetUpgrade());
                     }
@@ -689,6 +690,7 @@ static void HandleInstanceRequest(http_IO *io)
                     char buf[512];
 
                     json.StartObject();
+                    json.Key("version"); json.String(FelixVersion);
                     json.Key("key"); json.String(master->key.ptr);
                     json.Key("urls"); json.StartObject();
                         json.Key("base"); json.String(Fmt(buf, "/%1/", master->key).ptr);
@@ -700,7 +702,7 @@ static void HandleInstanceRequest(http_IO *io)
                     json.Key("lang"); json.String(master->settings.lang);
                     json.Key("legacy"); json.Bool(master->legacy);
                     json.Key("demo"); json.Bool(instance->demo);
-                    json.Key("version"); json.Int64(fs_version);
+                    json.Key("fs"); json.Int64(fs_version);
                     json.Key("buster"); json.String(etag);
                     json.Key("use_offline"); json.Bool(master->settings.use_offline);
                     json.Key("data_remote"); json.Bool(master->settings.data_remote);

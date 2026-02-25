@@ -52,6 +52,8 @@ function renderMenu() {
                     <button @click=${UI.wrap(goupile.runChangePasswordDialog)}>${T.change_my_password}</button>
                     <button @click=${UI.wrap(goupile.runResetTOTP)}>${T.configure_my_totp}</button>
                     <hr/>
+                    <button @click=${UI.wrap(goupile.runAboutDialog)}>${T.about}</button>
+                    <hr/>
                     <button @click=${UI.wrap(goupile.logout)}>${T.logout}</button>
                 </div>
             </div>

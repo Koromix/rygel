@@ -2,6 +2,7 @@
     "keys": {
         "_colon": ": ",
         "abandon_changes": "Abandon changes",
+        "about": "About",
         "access": "Access",
         "add": "Add",
         "add_file": "Add file",
@@ -30,6 +31,7 @@
         "available": "Available",
         "basic": "Basic",
         "browse": "Browse",
+        "browser": "Browser",
         "cache_clean_done": "Finished clean up, application is about to restart",
         "cache_clean_wait": "Cleaning up cache, please wait",
         "cancel": "Cancel",
@@ -120,6 +122,7 @@
         "error_code_digits": "Code must only contain digits",
         "error_inferior_equal": "Value must be ≤ {1}",
         "error_invalid_number": "Invalid number (decimals?)",
+        "error_log": "Error log",
         "error_mandatory": "Mandatory",
         "error_mandatory_unless": "Mandatory unless justified",
         "error_superior_equal": "Value must be ≥ {1}",
@@ -310,6 +313,7 @@
         "user_x_edited": "Changed user '{1}'",
         "username": "Username",
         "users": "Users",
+        "version": "Version",
         "yes": "Yes"
     },
     "messages": {}

@@ -2,6 +2,7 @@
     "keys": {
         "_colon": " : ",
         "abandon_changes": "Abandonner les modifications",
+        "about": "À propos",
         "access": "Accès",
         "add": "Ajouter",
         "add_file": "Ajouter un fichier",
@@ -30,6 +31,7 @@
         "available": "Disponible",
         "basic": "Basique",
         "browse": "Parcourir",
+        "browser": "Navigateur",
         "cache_clean_done": "Nettoyage effectué, l'application va redémarrer",
         "cache_clean_wait": "Nettoyage du cache en cours, veuillez patienter",
         "cancel": "Annuler",
@@ -120,6 +122,7 @@
         "error_code_digits": "Le code doit comporter uniquement des chiffres",
         "error_inferior_equal": "Doit être ≤ {1}",
         "error_invalid_number": "Nombre invalide (décimales ?)",
+        "error_log": "Journal d'erreurs",
         "error_mandatory": "Réponse obligatoire",
         "error_mandatory_unless": "Réponse obligatoire sauf justification",
         "error_superior_equal": "Doit être ≥ {1}",
@@ -172,6 +175,7 @@
         "lock": "Verrouiller",
         "lock_code": "Code de verrouillage",
         "locking": "Verrouillage",
+        "log": "Journal",
         "login": "Se connecter",
         "logout": "Se déconnecter",
         "messages": "Messages",
@@ -310,6 +314,7 @@
         "user_x_edited": "Utilisateur '{1}' modifié",
         "username": "Nom d'utilisateur",
         "users": "Utilisateurs",
+        "version": "Version",
         "yes": "Oui"
     },
     "messages": {

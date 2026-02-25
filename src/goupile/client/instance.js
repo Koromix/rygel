@@ -77,7 +77,7 @@ let ignore_page_scroll = 0;
 async function init() {
     if (profile.develop) {
         ENV.urls.files = `${ENV.urls.base}files/0/`;
-        ENV.version = 0;
+        ENV.fs = 0;
 
         bundler = await import(`${ENV.urls.static}bundler.js`);
         await bundler.init();
@@ -287,8 +287,9 @@ function renderMenu() {
                     ` : ''}
                     ${profile.root || goupile.hasPermission('build_admin') ? html`
                         <button @click=${e => window.open('/admin/')}>${T.administration}</button>
-                        <hr/>
                     ` : ''}
+                    <button @click=${UI.wrap(goupile.runAboutDialog)}>${T.about}</button>
+                    <hr/>
                     <button @click=${UI.wrap(goupile.logout)}>${profile.userid ? T.logout : T.login}</button>
                 </div>
             </div>
@@ -2504,7 +2505,7 @@ async function saveRecord(thread, page, state, entry, raw, meta, draft) {
         }
 
         try {
-            anchor = await records.save(thread.tid, entry, frag, ENV.version);
+            anchor = await records.save(thread.tid, entry, frag, ENV.fs);
             break;
         } catch (err) {
             if (!(err instanceof HttpError))

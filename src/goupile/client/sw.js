@@ -11,7 +11,7 @@ self.addEventListener('install', e => {
     e.waitUntil(async function() {
         let [assets, list, cache] = await Promise.all([
             Net.get(`${ENV.urls.base}api/files/static`),
-            Net.get(Util.pasteURL(`${ENV.urls.base}api/files/list`, { version: ENV.version })),
+            Net.get(Util.pasteURL(`${ENV.urls.base}api/files/list`, { version: ENV.fs })),
             caches.open(ENV.buster)
         ]);
 

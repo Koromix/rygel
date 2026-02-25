@@ -38,6 +38,8 @@ let current_url;
 let current_hash = '';
 let prev_hash = null;
 
+let recent_errors = [];
+
 async function start() {
     let url = new URL(window.location.href);
 
@@ -67,6 +69,9 @@ async function start() {
     UI.init();
     await registerSW();
     initNavigation();
+
+    // Log errors for debug
+    Log.pushHandler(logError);
 
     // Get current session profile (unless ?login=1 is present)
     if (url.searchParams.get('login')) {
@@ -367,6 +372,33 @@ async function pingServer() {
     } catch (err) {
         online = false;
     }
+}
+
+function logError(action, entry) {
+    if (action == 'close')
+        return true;
+
+    if (entry.type == 'error' || entry.type == 'warning') {
+        recent_errors.unshift(entry.msg);
+        recent_errors.length = Math.min(recent_errors.length, 10);
+    }
+
+    return true;
+}
+
+async function runAboutDialog(e) {
+    await UI.dialog(null, T.about, {}, (d, resolve, reject) => {
+        d.pushOptions({
+            readonly: true,
+            cols: 60,
+            wide: true
+        });
+
+        d.text("goupile", T.version, { value: ENV.version });
+        d.text("instance", T.project, { value: ENV.key + (ENV.fs != null ? ` (${ENV.fs})` : '') });
+        d.textArea("agent", T.browser, { value: navigator.userAgent, rows: 4 });
+        d.textArea("log", T.error_log, { value: recent_errors.join('\n'), rows: 8 });
+    });
 }
 
 async function runInstallScreen(e) {
@@ -1129,6 +1161,8 @@ export {
     logout,
     goToLogin,
     isLoggedOnline,
+
+    runAboutDialog,
 
     changeDevelopMode,
 

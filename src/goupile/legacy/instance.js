@@ -62,7 +62,7 @@ let prev_anchor = null;
 async function init() {
     if (profile.develop) {
         ENV.urls.files = `${ENV.urls.base}files/0/`;
-        ENV.version = 0;
+        ENV.fs = 0;
     }
 
     await openInstanceDB();
@@ -335,8 +335,9 @@ function renderMenu() {
                         ` : ''}
                         ${profile.root || goupile.hasPermission('build_admin') ? html`
                             <button @click=${e => window.open('/admin/')}>Administration</button>
-                            <hr/>
                         ` : ''}
+                        <button @click=${UI.wrap(goupile.runAboutDialog)}>À propos</button>
+                        <hr/>
                         ${profile.userid < 0 ? html`<button @click=${UI.wrap(goupile.logout)}>Changer de compte</button>` : ''}
                         <button @click=${UI.wrap(goupile.logout)}>${profile.userid ? 'Se déconnecter' : 'Se connecter'}</button>
                     </div>
@@ -1372,7 +1373,7 @@ async function saveRecord(e, record, hid, values, page, options = {}) {
                             type: 'save',
                             user: profile.username,
                             mtime: new Date,
-                            fs: ENV.version,
+                            fs: ENV.fs,
                             page: page_key,
                             values: ptr,
                             tags: tags
@@ -1515,7 +1516,7 @@ async function deleteRecord(ulid) {
                     type: 'delete',
                     user: profile.username,
                     mtime: new Date,
-                    fs: ENV.version
+                    fs: ENV.fs
                 };
                 entry.fragments.push(fragment);
 
@@ -2893,8 +2894,7 @@ async function syncRecords(standalone = true, full = false) {
                             fragments: record.fragments.map((fragment, idx) => ({
                                 type: fragment.type,
                                 mtime: fragment.mtime.toISOString(),
-                                fs: (fragment.fs != null) ? fragment.fs : ENV.version, // Use ENV.version for transition,
-                                                                                       // will be removed eventually
+                                fs: (fragment.fs != null) ? fragment.fs : ENV.fs, // Use ENV.fs for transition, will be removed eventually
                                 page: fragment.page,
                                 json: JSON.stringify(fragment.values),
                                 tags: JSON.stringify(fragment.tags || [])

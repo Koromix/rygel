@@ -27,7 +27,7 @@ const UI = new function() {
             }
         }
 
-        Log.defaultHandler(action, entry);
+        return true;
     };
 
     function renderLog() {
