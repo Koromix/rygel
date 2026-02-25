@@ -202,6 +202,8 @@ The report is available here: https://goupile.org/static/nlnet/ros_goupile_2025.
 
 - Clean up default config file used by `goupile init`.
 
+- Add *About* dialog with basic debug info: user agent string, Goupile version, recent errors.
+
 ## Goupile 3.11
 
 > [!IMPORTANT]

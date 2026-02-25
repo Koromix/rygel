@@ -202,6 +202,8 @@ Le rapport est disponible ici : [https://goupile.org/static/nlnet/ros_goupile_20
 
 - Nettoyage du fichier de configuration par défaut utilisé par `goupile init`.
 
+- Ajout d'une boîte de dialogue « À propos » avec des informations de débogage de base : agent utilisateur (*user agent string*), version de Goupile, erreurs récentes.
+
 ## Goupile 3.11
 
 > [!IMPORTANT]
