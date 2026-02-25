@@ -63,6 +63,8 @@
 
 - Amélioration de la boîte de dialogue pour les clés d'API et d'export. Un nouveau code n'est généré que lorsque l'action est explicitement déclenchée, et un bouton Copier (dans le presse-papier) a été ajouté.
 
+- Les clés d'API sont correctement attribuées à l'instance principale dans les projets multi-centriques, et les permissions sont vérifiées sur chaque centre.
+
 **Saisie des données :**
 
 - Amélioration de la conscience situationnelle de l'enregistrement actif :

@@ -1717,4 +1717,85 @@ RetainPtr<const SessionInfo> MigrateGuestSession(http_IO *io, InstanceHolder *in
     return session;
 }
 
+int64_t CheckApiPermission(http_IO *io, InstanceHolder *instance, FunctionRef<bool(uint32_t)> check, const char **out_username)
+{
+    const http_RequestInfo &request = io->Request();
+    const char *api_key = !instance->slaves.len ? request.GetHeaderValue("X-Api-Key") : nullptr;
+
+    if (api_key) {
+        const InstanceHolder *master = instance->master;
+
+        sq_Statement stmt;
+        if (!gp_db.Prepare(R"(SELECT p.permissions, u.userid, u.username
+                              FROM dom_permissions p
+                              INNER JOIN dom_users u ON (u.userid = p.userid)
+                              WHERE p.instance = ?1 AND p.api_key = ?2)", &stmt))
+            return -1;
+        sqlite3_bind_text(stmt, 1, master->key.ptr, (int)master->key.len, SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 2, api_key, -1, SQLITE_STATIC);
+
+        if (!stmt.Step()) {
+            if (stmt.IsValid()) {
+                LogError("API key is not valid");
+                io->SendError(403);
+            }
+            return -1;
+        }
+
+        uint32_t permissions = (uint32_t)sqlite3_column_int(stmt, 0);
+        int64_t userid = sqlite3_column_int64(stmt, 1);
+        const char *username = (const char *)sqlite3_column_text(stmt, 2);
+
+        if (master != instance) {
+            sq_Statement stmt;
+            if (!gp_db.Prepare(R"(SELECT permissions
+                                  FROM dom_permissions
+                                  WHERE instance = ?1 AND userid = ?2)", &stmt))
+                return -1;
+            sqlite3_bind_text(stmt, 1, instance->key.ptr, (int)instance->key.len, SQLITE_STATIC);
+            sqlite3_bind_int64(stmt, 2, userid);
+
+            if (!stmt.Step()) {
+                if (stmt.IsValid()) {
+                    LogError("API key is not valid");
+                    io->SendError(403);
+                }
+                return -1;
+            }
+
+            permissions |= (uint32_t)sqlite3_column_int(stmt, 0);
+        }
+
+        if (!check(permissions)) {
+            LogError("Missing necessary API key permissions");
+            io->SendError(403);
+            return -1;
+        }
+
+        if (out_username) {
+            *out_username = DuplicateString(username, io->Allocator()).ptr;
+        }
+        return userid;
+    } else {
+       RetainPtr<const SessionInfo> session = GetNormalSession(io, instance);
+       const SessionStamp *stamp = session ? session->GetStamp(instance) : nullptr;
+
+       if (!session) {
+            LogError("User is not logged in");
+            io->SendError(401);
+            return -1;
+        }
+        if (!stamp || !check(stamp->permissions)) {
+            LogError("User is not allowed to use this API");
+            io->SendError(403);
+            return -1;
+        }
+
+        if (out_username) {
+            *out_username = DuplicateString(session->username, io->Allocator()).ptr;
+        }
+        return session->userid;
+    }
+}
+
 }

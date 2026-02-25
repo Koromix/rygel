@@ -143,4 +143,7 @@ void HandleChangeApiKey(http_IO *io, InstanceHolder *instance);
 int64_t CreateInstanceUser(InstanceHolder *instance, const char *username);
 RetainPtr<const SessionInfo> MigrateGuestSession(http_IO *io, InstanceHolder *instance, const char *username);
 
+int64_t CheckApiPermission(http_IO *io, InstanceHolder *instance, FunctionRef<bool(uint32_t)> check,
+                           const char **out_username = nullptr);
+
 }

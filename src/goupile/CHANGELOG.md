@@ -63,6 +63,8 @@
 
 - Improve dialog for API/export keys. A new code is generated only when the action is explicitly triggered, and a Copy button has been aded.
 
+- API keys are correctly assigned to the main instance in multi-center projects, and permissions are verified for each child individual (or center).
+
 **Data entry:**
 
 - Improve situational awareness of active thread:

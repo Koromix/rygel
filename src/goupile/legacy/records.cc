@@ -1036,49 +1036,18 @@ RecordExporter::Row *RecordExporter::GetRow(RecordExporter::Table *table, const 
 
 void HandleLegacyExport(http_IO *io, InstanceHolder *instance)
 {
-    const http_RequestInfo &request = io->Request();
-
     if (!instance->settings.data_remote) {
         LogError("Records API is disabled in Offline mode");
         io->SendError(403);
         return;
     }
 
-    RetainPtr<const SessionInfo> session = GetNormalSession(io, instance);
+    // Check permission from session or API key
+    {
+        const auto check = [](uint32_t permissions) { return permissions & (int)UserPermission::BulkExport; };
 
-    if (!session || !session->HasPermission(instance, UserPermission::BulkExport)) {
-        const InstanceHolder *master = instance->master;
-        const char *api_key = !instance->slaves.len ? request.GetHeaderValue("X-Api-Key") : nullptr;
-
-        if (!api_key) {
-            if (!session) {
-                LogError("User is not logged in");
-                io->SendError(401);
-            } else {
-                K_ASSERT(!session->HasPermission(instance, UserPermission::BulkExport));
-
-                LogError("User is not allowed to export data");
-                io->SendError(403);
-            }
+        if (CheckApiPermission(io, instance, check) < 0)
             return;
-        }
-
-        sq_Statement stmt;
-        if (!gp_db.Prepare(R"(SELECT permissions FROM dom_permissions
-                              WHERE instance = ?1 AND api_key = ?2)", &stmt))
-            return;
-        sqlite3_bind_text(stmt, 1, master->key.ptr, (int)master->key.len, SQLITE_STATIC);
-        sqlite3_bind_text(stmt, 2, api_key, -1, SQLITE_STATIC);
-
-        uint32_t permissions = stmt.Step() ? (uint32_t)sqlite3_column_int(stmt, 0) : 0;
-
-        if (!stmt.IsValid())
-            return;
-        if (!(permissions & (int)UserPermission::BulkExport)) {
-            LogError("Export key is not valid");
-            io->SendError(403);
-            return;
-        }
     }
 
     sq_Statement stmt;
