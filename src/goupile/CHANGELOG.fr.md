@@ -13,7 +13,7 @@
 
 - Implémentation du statut brouillon (*draft*) pour chaque page enregistrée :
 
-  * Le statut brouillon est automatiquement ajouté lors d'un enregistrement automatique (*autosave*)
+  * Le statut brouillon est automatiquement ajouté lors d'un enregistrement automatique (*autosave*).
   * Le statut brouillon est automatiquement ajouté sur les enregistrements créés ou modifiés en mode conception.
   * Aucun numéro de séquence ou compteur n'est utilisé par ces enregistrements.
   * Un bouton de Confirmation permet de retirer le statut brouillon, notamment pour les enregistrements créés en mode conception.
@@ -126,7 +126,7 @@
   * Prise en charge de spécificateurs de clés en forme de chemin.
   * Correction de la fonction `form.pushPath()` qui était peu utilisable.
 
-- Correction de quelques comportements anorùaux :
+- Correction de quelques comportements anormaux :
 
   * Correction de la valeur par défaut des widgets qui ne se réinitialise pas lorsque la valeur par défaut revient à *null*.
   * Correction des actions par défaut (comme Enregistrer) qui étaient désactivées par une option `disabled: true` résiduelle après la fin du script.
