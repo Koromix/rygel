@@ -701,7 +701,7 @@ Le rapport est disponible ici : [https://goupile.org/static/nlnet/ros_goupile_20
 
 - Amélioration de l'API d'export avec les métadonnées de colonnes.
 - Amélioration de l'export des objets imbriqués et des tableaux.
-- Prendre en charge une API et une fonctionnalité de recalcul en masse.
+- Prise en charge une API et une fonctionnalité de recalcul en masse.
 - Amélioration et documentation de l'API d'import.
 - Export / import de la structure du projet dans un fichier ZIP.
 
@@ -709,12 +709,12 @@ Le rapport est disponible ici : [https://goupile.org/static/nlnet/ros_goupile_20
 
 - Support de groupes de pages et de permissions afin d'envoyer des sous-ensembles de métadonnées et de données des enregistrements. Cela permettra par exemple l'implémentation d'un module de contact.
 - Prise en charge de l'authentification SSO avec OIDC.
-- Prise en charge de l'approvisionnement (*provisiong*) des utilisateurs via SCIM.
+- Prise en charge de l'approvisionnement (*provisioning*) des utilisateurs via SCIM.
 
 ## Goupile 3.15
 
-- Prendre en charge de codes d'erreur pour un système de *queries*.
-- Présentation d'un tableau clair des erreurs bloquantes et non bloquantes (*query monitor*).
+- Ajout de codes d'erreur structurés pour un système de *queries*.
+- Ajout d'un tableau de suivi dédié aux erreurs bloquantes et non bloquantes (*query monitor*).
 - Amélioration des outils d’audit des données : meilleur journal de modifications, fusion et séparation de données.
 
 ## Goupile 3.16
