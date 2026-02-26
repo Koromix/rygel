@@ -725,7 +725,7 @@ The report is available here: https://goupile.org/static/nlnet/ros_goupile_2025.
 
 ## Goupile 3.17
 
-- Implement proper merging of data when changed by multiple users.
+- Implement proper merging of data (CRDT) when changed by multiple users.
 - Support collaborative edition of form scripts.
 - Use WebSockets for realtime update of data and scripts, and see who is doing what.
 

@@ -724,7 +724,7 @@ Le rapport est disponible ici : [https://goupile.org/static/nlnet/ros_goupile_20
 
 ## Goupile 3.17
 
-- Mise en œuvre d'une fusion correcte des données lorsqu’elles sont modifiées par plusieurs utilisateurs en parallèle.
+- Fusion propre des données (CRDT) lors de modifications parallèles d'une page.
 - Prise en charge de l'édition collaborative des scripts de formulaire.
 - Utilisation des WebSockets pour la mise à jour en temps réel des données et des scripts, et voir qui fait quoi.
 

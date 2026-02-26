@@ -514,8 +514,6 @@ function runConfigureInstanceDialog(e, instance) {
                 });
 
                 d.tab(T.advanced, () => {
-                    d.boolean('*data_remote', T.online_data, { value: instance.config.data_remote });
-
                     d.text('token_key', T.session_by_token, { value: instance.config.token_key });
                     if (d.values.token_key != null && !checkCryptoKey(d.values.token_key))
                         d.error('token_key', T.invalid_key_format);
@@ -573,7 +571,6 @@ function runConfigureInstanceDialog(e, instance) {
                         name: d.values.name,
                         lang: d.values.lang,
                         use_offline: d.values.use_offline,
-                        data_remote: d.values.data_remote,
                         token_key: d.values.token_key,
                         allow_guests: d.values.allow_guests,
                         fs_version: d.values.fs_version,

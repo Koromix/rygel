@@ -201,7 +201,6 @@
         "offline_password_error": "Mot de passe non reconnu",
         "offline_password_error_disabled": "Mot de passe non reconnu, connexion hors ligne désactivée",
         "old_password": "Ancien mot de passe",
-        "online_data": "Données en ligne",
         "other_actions": "Autres actions",
         "page": "Page",
         "page_disabled_warning": "Cette page n'est théoriquement pas activée. Le mode de conception vous permet d'y accéder.",

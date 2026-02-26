@@ -200,7 +200,6 @@
         "offline_password_error": "Unknown password",
         "offline_password_error_disabled": "Unknown password, offline login has been disabled",
         "old_password": "Old password",
-        "online_data": "Online data",
         "other_actions": "Other actions",
         "page": "Page",
         "page_disabled_warning": "This page is not theoretically activated. Design mode allows you to access it.",
