@@ -282,7 +282,7 @@ async function build() {
         let pkg = JSON.parse(json);
 
         pkg.scripts = {
-            install: 'node src/cnoke/cnoke.js -p . -d src/koffi --prebuild'
+            install: 'node src/cnoke/cnoke.js -P . -D src/koffi --prebuild'
         };
         pkg.cnoke.output = 'build/koffi/{{ platform }}_{{ arch }}';
         delete pkg.devDependencies;
