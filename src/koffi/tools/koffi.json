@@ -6,7 +6,8 @@
             "arch": "armhf",
             "machine": "debian_arm32",
             "directory": "/home/debian/luigi",
-            "build": "node ../cnoke/cnoke.js"
+            "build": "node ../cnoke/cnoke.js",
+            "package": "linux-arm"
         },
 
         "test": {
@@ -31,7 +32,8 @@
             "arch": "arm64",
             "machine": "debian_arm64",
             "directory": "/home/debian/luigi",
-            "build": "CC=clang-21 CXX=clang++-21 node ../cnoke/cnoke.js"
+            "build": "CC=clang-21 CXX=clang++-21 node ../cnoke/cnoke.js",
+            "package": "linux-arm64"
         },
 
         "test": {
@@ -56,7 +58,8 @@
             "arch": "ia32",
             "machine": "debian_i386",
             "directory": "/home/debian/luigi",
-            "build": "node ../cnoke/cnoke.js"
+            "build": "node ../cnoke/cnoke.js",
+            "package": "linux-ia32"
         },
 
         "test": {
@@ -81,7 +84,8 @@
             "arch": "x64",
             "machine": "debian_x64",
             "directory": "/home/debian/luigi",
-            "build": "CC=clang-21 CXX=clang++-21 node ../cnoke/cnoke.js"
+            "build": "CC=clang-21 CXX=clang++-21 node ../cnoke/cnoke.js",
+            "package": "linux-x64"
         },
 
         "test": {
@@ -107,7 +111,8 @@
             "arch": "riscv64d",
             "machine": "debian_riscv64",
             "directory": "/home/debian/luigi",
-            "build": "node ../cnoke/cnoke.js"
+            "build": "node ../cnoke/cnoke.js",
+            "package": "linux-riscv64"
         },
 
         "test": {
@@ -132,7 +137,8 @@
             "arch": "ia32",
             "machine": "freebsd_i386",
             "directory": "/home/freebsd/luigi",
-            "build": "node ../cnoke/cnoke.js"
+            "build": "node ../cnoke/cnoke.js",
+            "package": "freebsd-ia32"
         },
 
         "test": {
@@ -157,7 +163,8 @@
             "arch": "x64",
             "machine": "freebsd_x64",
             "directory": "/home/freebsd/luigi",
-            "build": "node ../cnoke/cnoke.js"
+            "build": "node ../cnoke/cnoke.js",
+            "package": "freebsd-x64"
         },
 
         "test": {
@@ -182,7 +189,8 @@
             "arch": "arm64",
             "machine": "freebsd_arm64",
             "directory": "/home/freebsd/luigi",
-            "build": "node ../cnoke/cnoke.js"
+            "build": "node ../cnoke/cnoke.js",
+            "package": "freebsd-arm64"
         },
 
         "test": {
@@ -207,7 +215,8 @@
             "arch": "ia32",
             "machine": "openbsd_i386",
             "directory": "/home/openbsd/luigi",
-            "build": "node ../cnoke/cnoke.js"
+            "build": "node ../cnoke/cnoke.js",
+            "package": "openbsd-ia32"
         },
 
         "test": {
@@ -232,7 +241,8 @@
             "arch": "x64",
             "machine": "openbsd_x64",
             "directory": "/home/openbsd/luigi",
-            "build": "node ../cnoke/cnoke.js"
+            "build": "node ../cnoke/cnoke.js",
+            "package": "openbsd-x64"
         },
 
         "test": {
@@ -257,7 +267,8 @@
             "arch": "ia32",
             "machine": "windows_x64",
             "directory": "C:/Users/windows/Desktop/luigi_ia32",
-            "build": "C:\\Node32\\node32.cmd node ../cnoke/cnoke.js"
+            "build": "C:\\Node32\\node32.cmd node ../cnoke/cnoke.js",
+            "package": "win32-ia32"
         },
 
         "test": {
@@ -285,7 +296,8 @@
             "arch": "x64",
             "machine": "windows_x64",
             "directory": "C:/Users/windows/Desktop/luigi_x64",
-            "build": "C:\\Node64\\node64.cmd node ../cnoke/cnoke.js"
+            "build": "C:\\Node64\\node64.cmd node ../cnoke/cnoke.js",
+            "package": "win32-x64"
         },
 
         "test": {
@@ -313,7 +325,8 @@
             "arch": "arm64",
             "machine": "windows_x64",
             "directory": "C:/Users/windows/Desktop/luigi_arm64",
-            "build": "C:\\Node64\\node64.cmd node ../cnoke/cnoke.js -t win32_arm64"
+            "build": "C:\\Node64\\node64.cmd node ../cnoke/cnoke.js -t win32_arm64",
+            "package": "win32-arm64"
         }
     },
 
@@ -324,7 +337,8 @@
             "arch": "x64",
             "machine": "macos_x64",
             "directory": "/Users/macos/luigi",
-            "build": "PATH=/usr/local/bin:/usr/bin:/bin SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX11.3.sdk node ../cnoke/cnoke.js"
+            "build": "PATH=/usr/local/bin:/usr/bin:/bin SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX11.3.sdk node ../cnoke/cnoke.js",
+            "package": "darwin-x64"
         },
 
         "test": {
@@ -347,7 +361,8 @@
             "arch": "arm64",
             "machine": "macos_x64",
             "directory": "/Users/macos/luigi_arm64",
-            "build": "PATH=/usr/local/bin:/usr/bin:/bin SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX11.3.sdk node ../cnoke/cnoke.js -t darwin_arm64"
+            "build": "PATH=/usr/local/bin:/usr/bin:/bin SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX11.3.sdk node ../cnoke/cnoke.js -t darwin_arm64",
+            "package": "darwin-arm64"
         }
     },
 
@@ -358,7 +373,8 @@
             "arch": "x64",
             "machine": "alpine_x64",
             "directory": "/home/alpine/luigi",
-            "build": "node ../cnoke/cnoke.js"
+            "build": "node ../cnoke/cnoke.js",
+            "package": "linux-x64"
         },
 
         "test": {
@@ -382,7 +398,8 @@
             "arch": "loong64",
             "machine": "debian_loong64",
             "directory": "/home/debian/luigi",
-            "build": "node ../cnoke/cnoke.js"
+            "build": "node ../cnoke/cnoke.js",
+            "package": "linux-loong64"
         },
 
         "test": {
@@ -407,7 +424,8 @@
             "arch": "arm64",
             "machine": "alpine_arm64",
             "directory": "/home/alpine/luigi",
-            "build": "node ../cnoke/cnoke.js"
+            "build": "node ../cnoke/cnoke.js",
+            "package": "linux-arm64"
         },
 
         "test": {
