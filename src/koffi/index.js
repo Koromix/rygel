@@ -5,7 +5,7 @@
 
 const { detect, init } = require('./src/init.js');
 
-let triplet = detect();
+let [pkg, triplet] = detect();
 
 let native = null;
 
@@ -33,6 +33,6 @@ try {
     // Go on
 }
 
-let mod = init(triplet, native);
+let mod = init(pkg, triplet, native);
 
 module.exports = mod;

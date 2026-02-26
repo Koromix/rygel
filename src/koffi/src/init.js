@@ -5,27 +5,30 @@ const fs = require('fs');
 const path = require('path');
 const util = require('util');
 const { get_napi_version, determine_arch } = require('../../cnoke/src/tools.js');
-const pkg = require('../package.json');
+
+const PACKAGE = require('../package.json');
 
 function detect() {
-    if (process.versions.napi == null || process.versions.napi < pkg.cnoke.napi) {
+    if (process.versions.napi == null || process.versions.napi < PACKAGE.cnoke.napi) {
         let major = parseInt(process.versions.node, 10);
-        let required = get_napi_version(pkg.cnoke.napi, major);
+        let required = get_napi_version(PACKAGE.cnoke.napi, major);
 
         if (required != null) {
-            throw new Error(`This engine is based on Node ${process.versions.node}, but ${pkg.name} requires Node >= ${required} in the Node ${major}.x branch (N-API >= ${pkg.cnoke.napi})`);
+            throw new Error(`This engine is based on Node ${process.versions.node}, but ${PACKAGE.name} requires Node >= ${required} in the Node ${major}.x branch (N-API >= ${PACKAGE.cnoke.napi})`);
         } else {
-            throw new Error(`This engine is based on Node ${process.versions.node}, but ${pkg.name} does not support the Node ${major}.x branch (N-API < ${pkg.cnoke.napi})`);
+            throw new Error(`This engine is based on Node ${process.versions.node}, but ${PACKAGE.name} does not support the Node ${major}.x branch (N-API < ${PACKAGE.cnoke.napi})`);
         }
     }
 
     let arch = determine_arch();
+
+    let pkg = `${process.platform}-${process.arch}`;
     let triplet = `${process.platform}_${arch}`;
 
-    return triplet;
+    return [pkg, triplet];
 }
 
-function init(triplet, native) {
+function init(pkg, triplet, native) {
     if (native == null) {
         let roots = [path.join(__dirname, '..')];
         let triplets = [triplet];
@@ -39,6 +42,7 @@ function init(triplet, native) {
         }
 
         let filenames = roots.flatMap(root => triplets.flatMap(triplet => [
+            `${root}/@koromix/koffi-${pkg}/${triplet}/koffi.node`,
             `${root}/koffi/build/koffi/${triplet}/koffi.node`,
             `${root}/build/koffi/${triplet}/koffi.node`,
             `${root}/koffi/${triplet}/koffi.node`,
@@ -70,7 +74,7 @@ function init(triplet, native) {
 
     if (native == null)
         throw new Error('Cannot find the native Koffi module; did you bundle it correctly?');
-    if (native.version != pkg.version)
+    if (native.version != PACKAGE.version)
         throw new Error('Mismatched native Koffi modules');
 
     let mod = wrap(native);
