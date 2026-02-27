@@ -69,7 +69,7 @@ static bool ApplySandbox(Span<const char *const> reveals)
     // What a bunch of crap. Why does all this need to use shared libraries??
     {
         struct addrinfo *result = nullptr;
-        int err = getaddrinfo("www.example.com", nullptr, nullptr, &result);
+        int err = getaddrinfo("localhost", nullptr, nullptr, &result);
 
         if (err != 0) {
             LogError("Failed to init DNS resolver: '%1'", gai_strerror(err));
