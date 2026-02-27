@@ -272,6 +272,10 @@ function renderMenu() {
                 <button class=${goupile.isLoggedOnline() ? 'icon online' : 'icon offline'}
                         @click=${UI.deployMenu}>${profile.type !== 'auto' ? profile.username : ''}</button>
                 <div>
+                    ${!profile.userid ? html`
+                        <button @click=${UI.wrap(goupile.logout)}>${T.login}</button>
+                        <hr/>
+                    ` : ''}
                     ${profile.type === 'auto' && profile.userid ? html`
                         <button style="text-align: center;">${profile.username}</button>
                         <hr/>
@@ -289,8 +293,10 @@ function renderMenu() {
                         <button @click=${e => window.open('/admin/')}>${T.administration}</button>
                     ` : ''}
                     <button @click=${UI.wrap(goupile.runAboutDialog)}>${T.about}</button>
-                    <hr/>
-                    <button @click=${UI.wrap(goupile.logout)}>${profile.userid ? T.logout : T.login}</button>
+                    ${profile.userid ? html`
+                        <hr/>
+                        <button @click=${UI.wrap(goupile.logout)}>${T.logout}</button>
+                    ` : ''}
                 </div>
             </div>
         </nav>
