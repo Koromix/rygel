@@ -132,7 +132,6 @@
 
   * Correction de la valeur par défaut des widgets qui ne se réinitialise pas lorsque la valeur par défaut revient à *null*.
   * Correction des actions par défaut (comme Enregistrer) qui étaient désactivées par une option `disabled: true` résiduelle après la fin du script.
-  * Correction de l'effet rétroactif de `form.pushOptions()` avec `form.sameLine()`.
 
 - Exécution du code de page dans la boucle centrale au lieu de la fonction de rendu. Cela rend le code plus propre, et les erreurs apparaissent même si le panneau d'aperçu est fermé.
 

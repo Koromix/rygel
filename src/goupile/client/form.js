@@ -1607,21 +1607,13 @@ instead of:
     this.sameLine = function(wide = false) {
         if (inline_widgets == null) {
             let prev_widget = widgets_ref.pop();
-            let prev_options = options_stack;
 
             let widgets;
-
-            try {
-                options_stack = [prev_widget.options];
-
-                self.columns(() => {
-                    if (prev_widget != null)
-                        widgets_ref.push(prev_widget);
-                    widgets = widgets_ref;
-                }, { wide: wide });
-            } finally {
-                options_stack = prev_options;
-            }
+            self.columns(() => {
+                if (prev_widget != null)
+                    widgets_ref.push(prev_widget);
+                widgets = widgets_ref;
+            }, { wide: wide });
 
             inline_widgets = widgets;
             inline_next = true;

@@ -132,7 +132,6 @@
 
   * Fix default widget value not resetting when the default value goes back to null.
   * Fix default actions (such as Save) inheriting leftover disabled option after end of script.
-  * Fix retroactive effect of `form.pushOptions` with `form.sameLine`.
 
 - Run page code inside main code path instead of render function. This makes for cleaner code, and errors finally show up when the overview panel is not visible.
 
