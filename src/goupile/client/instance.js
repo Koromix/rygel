@@ -19,7 +19,7 @@ import { MetaModel, MetaInterface } from './form_meta.js';
 
 import './instance.css';
 
-const PAGE_LEN = 200;
+const PAGE_LEN = 50;
 
 let app = null;
 
