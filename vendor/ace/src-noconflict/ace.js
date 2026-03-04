@@ -1351,7 +1351,7 @@ var reportErrorIfPathIsNotConfigured = function () {
         reportErrorIfPathIsNotConfigured = function () { };
     }
 };
-exports.version = "1.43.5";
+exports.version = "1.43.6";
 
 });
 
@@ -16011,6 +16011,18 @@ var Editor = /** @class */ (function () {
             module.prompt(editor, message, options, callback);
         });
     };
+    Object.defineProperty(Editor.prototype, "hoverTooltip", {
+        get: function () {
+            return this.$hoverTooltip || (this.$hoverTooltip = new HoverTooltip(this.container));
+        },
+        set: function (value) {
+            if (this.$hoverTooltip)
+                this.$hoverTooltip.destroy();
+            this.$hoverTooltip = value;
+        },
+        enumerable: false,
+        configurable: true
+    });
     return Editor;
 }());
 Editor.$uid = 0;
@@ -16082,9 +16094,6 @@ config.defineOptions(Editor.prototype, "editor", {
                         shouldShow = true;
                     }
                     if (shouldShow) {
-                        if (!_this.hoverTooltip) {
-                            _this.hoverTooltip = new HoverTooltip();
-                        }
                         var domNode = dom.createElement("div");
                         domNode.textContent = nls("editor.tooltip.disable-editing", "Editing is disabled");
                         if (!_this.hoverTooltip.isOpen) {
@@ -16106,10 +16115,6 @@ config.defineOptions(Editor.prototype, "editor", {
                 event.removeListener(textArea, "keydown", this.$readOnlyCallback);
                 this.commands.off("exec", this.$readOnlyCallback);
                 this.commands.off("commandUnavailable", this.$readOnlyCallback);
-                if (this.hoverTooltip) {
-                    this.hoverTooltip.destroy();
-                    this.hoverTooltip = null;
-                }
             }
         },
         initialValue: false

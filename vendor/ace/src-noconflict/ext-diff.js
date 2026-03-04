@@ -241,7 +241,7 @@ var dummyDiffProvider = {
         return [];
     }
 };
-dom.importCssString(css, "diffview.css");
+dom.importCssString(css, "diffview.css", false);
 var BaseDiffView = /** @class */ (function () {
     function BaseDiffView(inlineDiffEditor, container) {
         this.onChangeTheme = this.onChangeTheme.bind(this);

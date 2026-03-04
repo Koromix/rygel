@@ -2513,7 +2513,7 @@ oop.inherits(RazorLangHighlightRules, CSharpHighlightRules);
 var RazorHighlightRules = function () {
     HtmlHighlightRules.call(this);
     var blockStartRule = {
-        regex: '@[({]|@functions{',
+        regex: '@[({]|@functions{|@code ?{',
         onMatch: function (value, state, stack) {
             stack.unshift(value);
             stack.unshift('razor-block-start');
@@ -2524,7 +2524,9 @@ var RazorHighlightRules = function () {
     var blockEndMap = {
         '@{': '}',
         '@(': ')',
-        '@functions{': '}'
+        '@functions{': '}',
+        '@code {': '}',
+        '@code{': '}'
     };
     var blockEndRule = {
         regex: '[})]',
@@ -2571,7 +2573,11 @@ var RazorHighlightRules = function () {
         },
         {
             token: ["meta.directive.razor", "text", "identifier"],
-            regex: "^(\\s*@model)(\\s+)(.+)$"
+            regex: "^(\\s*@(?:model|inject|inherits|implements|attribute|layout|namespace|rendermode|using))(\\s+)(.+)$"
+        },
+        {
+            token: ["meta.directive.razor", "text", "string"],
+            regex: "^(\\s*@page)(\\s+)(.*)$"
         },
         blockStartRule,
         shortStartRule
