@@ -25,6 +25,10 @@ function ApplicationInfo(profile) {
         { key: 'error', label: T.label_error, color: '#db0a0a', filter: true }
     ];
 
+    this.table = {
+        count: 50
+    };
+
     this.exports = {
         xlsx: null,
         sheets: null
@@ -61,6 +65,8 @@ function ApplicationBuilder(app) {
 
         head: { get: () => app.head, set: head => { app.head = head; }, enumerable: true },
         tags: { get: () => app.tags, set: tags => { app.tags = tags; }, enumerable: true },
+
+        table: { get: () => app.table, enumerable: true },
         exports: { get: () => app.exports, enumerable: true },
 
         menu: makeOptionProperty('menu'),

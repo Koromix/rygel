@@ -19,8 +19,6 @@ import { MetaModel, MetaInterface } from './form_meta.js';
 
 import './instance.css';
 
-const PAGE_LEN = 50;
-
 let app = null;
 
 // Explicit mutexes to serialize (global) state-changing functions
@@ -644,7 +642,7 @@ function renderData() {
     let recording_new = !form_thread.saved && form_state.hasChanged();
 
     let offset = data_offset;
-    let end = Math.min(data_offset + PAGE_LEN, data_rows.length);
+    let end = Math.min(data_offset + app.table.count, data_rows.length);
 
     return html`
         <div class="padded">
@@ -774,7 +772,10 @@ function renderData() {
                 </tbody>
             </table>
 
-            ${renderDataPages(data_rows)}
+            ${renderDataPages(data_offset, data_rows.length, app.table.count, (e, page) => {
+                data_offset = (page - 1) * app.table.count;
+                go();
+            })}
 
             <div class="ui_actions">
                 ${app.dashboard != null ? html`<button @click=${e => window.open(app.dashboard, '_blank')}>${T.dashboard}</button>` : ''}
@@ -784,19 +785,15 @@ function renderData() {
     `;
 }
 
-function renderDataPages() {
+function renderDataPages(offset, total, size, click) {
     let epag = new EasyPager;
 
-    if (data_rows.length <= PAGE_LEN)
+    if (total <= size)
         return '';
 
-    epag.clickHandler = (e, page) => {
-        data_offset = (page - 1) * PAGE_LEN;
-        go();
-    };
-
-    epag.lastPage = Math.floor((data_rows.length - 1) / PAGE_LEN + 1);
-    epag.currentPage = Math.ceil(data_offset / PAGE_LEN) + 1;
+    epag.clickHandler = click;
+    epag.lastPage = Math.floor((total - 1) / size + 1);
+    epag.currentPage = Math.ceil(offset / size) + 1;
 
     return epag.render();
 }
@@ -1989,7 +1986,7 @@ async function run(push_history = true) {
 
             if (data_offset == null || data_offset >= data_rows.length) {
                 let offset = Math.max(0, data_rows.findIndex(row => row.tid == route.tid));
-                data_offset = Math.floor(offset / PAGE_LEN) * PAGE_LEN;
+                data_offset = Math.floor(offset / app.table.count) * app.table.count;
             }
         }
 
