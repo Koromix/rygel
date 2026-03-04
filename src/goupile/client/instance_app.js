@@ -26,7 +26,8 @@ function ApplicationInfo(profile) {
     ];
 
     this.table = {
-        count: 50
+        count: 50,
+        ascending: true
     };
 
     this.exports = {

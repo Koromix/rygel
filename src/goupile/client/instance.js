@@ -1896,6 +1896,9 @@ async function run(push_history = true) {
                         tags: Array.from(tags)
                     };
                 });
+
+                if (!app.table.ascending)
+                    data_threads.reverse();
             }
 
             data_rows = data_threads;
