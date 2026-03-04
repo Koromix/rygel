@@ -35,6 +35,7 @@ function InstancePublisher(bundler = null) {
                         <col style="width: 8em;"/>
                         <col/>
                         <col style="width: 5em;"/>
+                        <col style="width: 5em;"/>
                     </colgroup>
 
                     <tbody>
@@ -73,6 +74,8 @@ function InstancePublisher(bundler = null) {
                                         ${action.type === 'conflict' ? html`<span class="conflict" title=${T.conflict_between_actions}>⚠\uFE0E</span>&nbsp;` : ''}
                                         ${action.from != null ? Util.formatDiskSize(action.from.size) : ''}
                                     </td>
+
+                                    <td><a style="font-size: 0.9em;" href=${ENV.urls.files + action.filename} download>${T.download}</a></td>
                                 </tr>
                             `;
                         })}
