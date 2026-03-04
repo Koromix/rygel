@@ -35,7 +35,8 @@
 
 - Adjust data monitoring table:
 
-  * Add pagination.
+  * Add configurable pagination.
+  * Add setting to reverse the display order of records.
   * Group columns and stats in two levels for complex multi-phase projects.
   * Show full creation time in monitoring table.
 

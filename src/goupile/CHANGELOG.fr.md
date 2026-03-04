@@ -35,7 +35,8 @@
 
 - Ajustement du tableau de suivi de remplissage :
 
-  * Ajout de la pagination au tableau.
+  * Ajout d'une pagination paramétrable au tableau.
+  * Ajout d'une option pour inverser l'ordre d'affichage des enregistrements.
   * Groupement des colonnes en deux niveaux pour les recueils à plusieurs temps.
   * Affichage de la date et de l'heure dans le tableau de supervision.
 
