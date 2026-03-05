@@ -726,12 +726,13 @@ function renderData() {
                                     let entry = row.entries[col.page.store.key];
 
                                     let status = computeStatus(col.page, row);
-                                    let summary = entry?.summary;
                                     let url = col.page.url + `/${row.tid}`;
                                     let highlight = active && route.page.chain.includes(col.page);
 
                                     let tooltip = col.page.title;
                                     let dots = '';
+                                    let cls = 'ui_tag';
+                                    let summary = entry?.summary;
 
                                     if (entry != null) {
                                         let tags = app.tags.filter(tag => entry.tags.includes(tag.key));
@@ -742,18 +743,28 @@ function renderData() {
                                         }
                                     }
 
-                                    if (status.complete) {
-                                        return html`<td class=${highlight ? 'complete active' : 'complete'}
-                                                        title=${tooltip}><a href=${url}>${summary ?? '✓\uFE0E ' + T.filled}</a>${dots}</td>`;
-                                    } else if (status.filled) {
-                                        let progress = Math.floor(100 * status.filled / status.total);
-
-                                        return html`<td class=${highlight ? 'partial active' : 'partial'}
-                                                        title=${tooltip}><a href=${url}>${summary ?? progress + '%'}</a>${dots}</td>`;
-                                    } else {
-                                        return html`<td class=${highlight ? 'missing active' : 'missing'}
-                                                        title=${tooltip}><a href=${url}>${T.show}</a>${dots}</td>`;
+                                    if (summary == null) {
+                                        if (status.complete) {
+                                            summary = !dots ? '✓\uFE0E' : '⚠\uFE0E';
+                                            cls += !dots ? ' complete' : ' partial';
+                                        } else if (status.filled) {
+                                            let progress = Math.floor(100 * status.filled / status.total);
+                                            summary = progress + '%';
+                                            cls += ' partial';
+                                        } else {
+                                            summary = '🖊\uFE0E';
+                                            cls += ' missing';
+                                        }
                                     }
+                                    if (highlight)
+                                        cls += ' highlight';
+
+                                    return html`
+                                        <td class=${active ? 'active' : ''} title=${tooltip}>
+                                            <a href=${url}><span class=${cls}>${summary}</span></a>
+                                            ${dots}
+                                        </td>
+                                    `;
                                 })}
                                 ${row.locked ? html`<th>🔒</th>` : ''}
                                 ${goupile.hasPermission('data_delete') && !row.locked ?
