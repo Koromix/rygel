@@ -1074,7 +1074,7 @@ function addAutomaticActions(builder, model) {
             builder.action(label, { color: '#2d8261', disabled: disabled }, async e => {
                 form_state.triggerErrors(form_model);
 
-                if (model.variables.length) {
+                if (model.variables.length || can_confirm) {
                     await data_mutex.run(async () => {
                         let keep = goupile.hasPermission('data_read') || claimPage(route.page);
                         let finalize = (route.page.lock === true) || !keep;
