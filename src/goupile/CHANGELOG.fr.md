@@ -1,8 +1,8 @@
 # Historique des versions
 
-## Goupile 3.12 (bêta)
+## Goupile 3.12
 
-*Actuellement en bêta*
+*Sortie le 05/03/2026*
 
 **Identifiants :**
 
