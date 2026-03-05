@@ -2379,7 +2379,12 @@ async function openRecord(tid, anchor, page) {
         new_state.trigger_errors = true;
 
     new_state.changeHandler = async () => {
-        await run();
+        try {
+            await run();
+        } catch (err) {
+            Log.error(err);
+            return;
+        }
 
         // Highlight might need to change (conditions, etc.)
         if (UI.isPanelActive('editor'))

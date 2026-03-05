@@ -77,8 +77,11 @@ function FormState(raw = null, obj = null) {
     this.restart = function() {
         if (!restart) {
             setTimeout(async () => {
-                await self.changeHandler();
-                restart = false;
+                try {
+                    await self.changeHandler();
+                } finally {
+                    restart = false;
+                }
             }, 0);
 
             restart = true;
