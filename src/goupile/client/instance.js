@@ -1066,7 +1066,7 @@ function addAutomaticActions(builder, model) {
                 disabled = false;
             } else if (next != null) {
                 label = '+' + T.continue;
-                disabled &= !!model.variables.length;
+                disabled &&= !!model.variables.length;
             } else if (form_thread.saved && !form_state.hasChanged()) {
                 label = '+' + T.saved;
             }
@@ -1098,13 +1098,13 @@ function addAutomaticActions(builder, model) {
                         data_threads = null;
                     });
 
-                    if (next != null) {
-                        // Update because it may change (dynamic option) with saved data
+                    // Update because it may change (dynamic option) with saved data
+                    if (next != null)
                         next = selectNextPage(route.page, form_thread, edit);
-                    } else {
-                        next = route.page;
-                    }
                 }
+
+                if (next == null)
+                    next = route.page;
 
                 let url = contextualizeURL(next.url, form_thread);
                 go(null, url);
