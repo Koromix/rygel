@@ -118,7 +118,7 @@ if (file_exists(__DIR__ . "/data/news.db")) {
 
     $db = open_database();
 
-    $res = $db->query("SELECT png, title, content FROM news ORDER BY id");
+    $res = $db->query("SELECT png, title, content FROM news ORDER BY id DESC");
     $news = fetch_all($res);
 } else {
     $news = [];
