@@ -694,15 +694,23 @@ function renderData() {
                     ${data_groups.map((group, idx) => html`
                         <tr>
                             ${!idx ? html`
-                                <th rowspan=${data_groups.length}>${T.id}</th>
-                                <th rowspan=${data_groups.length}>${T.creation}</th>
+                                <th class="group" rowspan=${data_groups.length}>${T.id}</th>
+                                <th class="group" rowspan=${data_groups.length}>${T.creation}</th>
                             ` : ''}
                             ${group.map(col => {
-                                let stats = (col.count != null) ? `${col.count} / ${data_rows.length}` : '';
-                                let title = `${col.page.title}\n${T.available}${T._colon}${stats} ${data_rows.length > 1 ? T.rows.toLowerCase() : T.row.toLowerCase()}`;
+                                let cls = '';
+                                let stats = '';
+                                let title = col.page.title;
+
+                                if (idx < data_groups.length - 1)
+                                    cls = 'group';
+                                if (col.count != null) {
+                                    stats = `${col.count} / ${data_rows.length}`;
+                                    title += `\n${T.available}${T._colon}${stats} ${data_rows.length > 1 ? T.rows.toLowerCase() : T.row.toLowerCase()}`;
+                                }
 
                                 return html`
-                                    <th rowspan=${col.rows} colspan=${col.columns} title=${title}>
+                                    <th class=${cls} rowspan=${col.rows} colspan=${col.columns} title=${title}>
                                         ${col.page.title}
                                         ${stats != null ? html`<br/><span style="font-size: 0.7em; font-weight: normal;">${stats}</span>` : ''}
                                     </th>
