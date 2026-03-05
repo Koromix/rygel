@@ -167,7 +167,7 @@ span[title] { border-bottom: 1px dotted #383838; }
 .shelf img { object-fit: contain; }
 
 .links {
-    margin: 1em;
+    margin: 2em;
     display: flex;
     align-items: center;
     flex-direction: column;
@@ -231,6 +231,7 @@ span[title] { border-bottom: 1px dotted #383838; }
     .columns {
         flex-direction: column;
         align-items: center;
+        gap: 0;
     }
     .columns > * { width: auto; }
     .columns > * + * { margin-top: 2em; }
