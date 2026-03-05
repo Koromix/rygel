@@ -124,7 +124,7 @@ a:has(> img) { text-decoration: none !important; }
     position: absolute;
     margin-top: 0px;
     margin-left: -10px;
-    width: 220px;
+    width: 280px;
     padding: 12px 1em 10px 1em;
     display: flex;
     flex-direction: column;

@@ -228,7 +228,10 @@ span[title] { border-bottom: 1px dotted #383838; }
 }
 
 @media screen and (max-width: 960px) {
-    .columns { display: block; }
+    .columns {
+        flex-direction: column;
+        align-items: center;
+    }
     .columns > * { width: auto; }
     .columns > * + * { margin-top: 2em; }
 

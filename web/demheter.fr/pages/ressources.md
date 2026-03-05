@@ -1,7 +1,13 @@
 # Flyer DEMHETER
 
 <div class="shelf">
-    <a href="static/flyer.pdf" target="_blank"><img src="{{ ASSET static/flyer.webp }}" height="340" alt="Flyer DEMHETER" /></a>
+    <a href="static/guide/flyer.pdf" target="_blank"><img src="{{ ASSET static/guide/flyer.webp }}" height="340" alt="Flyer DEMHETER" /></a>
+</div>
+
+# Guide pour s'aider soi-même
+
+<div class="shelf">
+    <a href="static/guide/guide.pdf" target="_blank"><img src="{{ ASSET static/guide/guide.webp }}" height="340" alt="Guide pour s'aider soi-même" /></a>
 </div>
 
 # Troubles de l’humeur
