@@ -1,8 +1,8 @@
 # Goupile changelog
 
-## Goupile 3.12 (beta)
+## Goupile 3.12
 
-*Currently in beta*
+*Released on 2026-03-05*
 
 **Identifiers:**
 
