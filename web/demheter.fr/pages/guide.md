@@ -8,3 +8,7 @@
         <p><b>Il ne remplace pas un traitement ou un suivi, si l’aide d’un spécialiste est nécessaire n’hésitez pas à consulter.</b>
     </div>
 </div>
+
+<div class="links">
+    <a href="static/guide/guide.pdf">Télécharger le guide</a>
+</div>
