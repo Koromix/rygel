@@ -35,8 +35,9 @@
 
 - Ajustement du tableau de suivi de remplissage :
 
-  * Ajout d'une pagination paramétrable au tableau.
-  * Ajout d'une option pour inverser l'ordre d'affichage des enregistrements.
+  * Pagination du tableau de suivi.
+  * Utilisation de pictogrammes colorés pour réduire le texte répété dans le tableau.
+  * Affichage du statut (pastilles colorées) de chaque entrée et page dans le tableau de supervision.
   * Groupement des colonnes en deux niveaux pour les recueils à plusieurs temps.
   * Affichage de la date et de l'heure dans le tableau de supervision.
 
@@ -46,7 +47,10 @@
   * Amélioration de l'ordre et de la cohérence des filtres de statut.
   * Correction de comportements anormaux des boutons de filtre de statut.
 
-- Affichage du statut (pastilles colorées) de chaque entrée et page dans le tableau de supervision.
+- Ajout d'options de paramétrage dans le script de projet :
+
+  * Ajout d'une option pour contrôler la quantité de lignes par page.
+  * Ajout d'une option pour inverser l'ordre d'affichage des enregistrements.
 
 - Utilisation d'un tri naturel pour les valeurs de séquence/HID au lieu d'un tri alphabétique simple.
 

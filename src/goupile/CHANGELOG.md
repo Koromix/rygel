@@ -35,8 +35,9 @@
 
 - Adjust data monitoring table:
 
-  * Add configurable pagination.
-  * Add setting to reverse the display order of records.
+  * Paginate monitoring table.
+  * Use of colored pictograms to reduce repeated text in the table.
+  * Show per-entry status tags (colored dots) in data monitoring table.
   * Group columns and stats in two levels for complex multi-phase projects.
   * Show full creation time in monitoring table.
 
@@ -46,7 +47,10 @@
   * Improve order and coherency of record status filters with variable statuses.
   * Fix various quirks of the status filter buttons.
 
-- Show per-entry status tags (colored dots) in data monitoring table.
+* Add project script settings to adjust the status table:
+
+  * Add option to change the number of rows per page.
+  * Add option to reverse the display order of records.
 
 - Use natural sort for thread sequence/HID values instead of plain alphabetical order.
 
