@@ -705,7 +705,8 @@ Le rapport est disponible ici : [https://goupile.org/static/nlnet/ros_goupile_20
 
 - Amélioration de l'API d'export avec les métadonnées de colonnes.
 - Amélioration de l'export des objets imbriqués et des tableaux.
-- Prise en charge une API et une fonctionnalité de recalcul en masse.
+- Ajout d'une API et d'une fonctionnalité de recalcul en masse.
+- Ajout d'une API de calcul des données de formulaire.
 - Amélioration et documentation de l'API d'import.
 - Export / import de la structure du projet dans un fichier ZIP.
 

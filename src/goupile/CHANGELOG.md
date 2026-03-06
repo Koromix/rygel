@@ -706,7 +706,8 @@ The report is available here: https://goupile.org/static/nlnet/ros_goupile_2025.
 
 - Improve export API to provide computed set of columns directly.
 - Improve export of nested objects and arrays.
-- Support bulk recompute API and functionality.
+- Add bulk recompute API and user feature.
+- Add web API to run script values and return computed values.
 - Improve and document import API.
 - Export/import project structure in ZIP file.
 
