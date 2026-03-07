@@ -394,7 +394,7 @@ static bool BundleScript(const AssetBundle &bundle, const char *esbuild_binary, 
         if (root_dir) {
             HeapArray<char> tsconfig;
             StreamWriter st(&tsconfig, "<tsconfig>");
-            json_Writer json(&st);
+            json_CompactWriter json(&st);
 
             json.StartObject();
 
