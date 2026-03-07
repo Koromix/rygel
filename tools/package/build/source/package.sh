@@ -36,8 +36,10 @@ echo "./felix" >> "${TMP_DIR}/build.sh"
 echo "Preset = ${FELIX_PRESET}" > "${TMP_DIR}/FelixBuild.ini.user"
 chmod +x "${TMP_DIR}/build.sh"
 
-# Run project-specific adjust function
-adjust "${TMP_DIR}/"
+# Run project-specific adjust function (if any)
+if type -t adjust > /dev/null; then
+    adjust "${TMP_DIR}/"
+fi
 
 cd "${DEST_DIR}"
 
