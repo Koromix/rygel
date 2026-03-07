@@ -27,7 +27,14 @@ bool Builder::PrepareEsbuild()
         json.StartObject();
 
         json.Key("compilerOptions"); json.StartObject();
-        json.Key("baseUrl"); json.String(GetWorkingDirectory());
+        json.Key("paths"); json.StartObject();
+        {
+            const char *path = Fmt(&str_alloc, "%1%/*", GetWorkingDirectory()).ptr;
+            json.Key("*"); json.StartArray();
+            json.String(path);
+            json.EndArray();
+        }
+        json.EndObject();
         json.EndObject();
 
         json.EndObject();

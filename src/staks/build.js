@@ -61,7 +61,9 @@ async function run() {
         sourcemap: watch ? 'inline' : false,
         tsconfigRaw: JSON.stringify({
             compilerOptions: {
-                baseUrl: __dirname + '/../..'
+                paths: {
+                    '*': [__dirname + '/../../*']
+                }
             },
         }),
         format: 'esm',

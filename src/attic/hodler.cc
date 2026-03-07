@@ -286,15 +286,13 @@ static bool ParseEsbuildMeta(const char *filename, Allocator *alloc, HeapArray<B
 {
     K_ASSERT(alloc);
 
-    BlockAllocator temp_alloc;
-
     Size prev_len = out_objects->len;
     K_DEFER_N(err_guard) { out_objects->RemoveFrom(prev_len); };
 
     StreamReader reader(filename);
     if (!reader.IsValid())
         return false;
-    json_Parser json(&reader, &temp_alloc);
+    json_Parser json(&reader, alloc);
 
     for (json.ParseObject(); json.InObject(); ) {
         Span<const char> key = json.ParseKey();
@@ -376,39 +374,55 @@ static bool ParseEsbuildMeta(const char *filename, Allocator *alloc, HeapArray<B
 static bool BundleScript(const AssetBundle &bundle, const char *esbuild_binary, const char *root_dir,
                          bool sourcemap, bool gzip, Allocator *alloc, HeapArray<FileHash> *out_hashes)
 {
+    BlockAllocator temp_alloc;
+
     Span<const char> basename = SplitStrReverseAny(bundle.name, K_PATH_SEPARATORS);
     Span<const char> prefix = MakeSpan(bundle.name, basename.ptr - bundle.name);
 
-    const char *meta_filename = Fmt(alloc, "%1.meta", bundle.dest_filename).ptr;
+    const char *meta_filename = Fmt(&temp_alloc, "%1.meta", bundle.dest_filename).ptr;
     K_DEFER { UnlinkFile(meta_filename); };
+
+    Span<const char> tsconfig = {};
+
+    // Prepare TypeScript configuration (if needed)
+    if (root_dir) {
+        const char *root_star = Fmt(&temp_alloc, "%1%/*", root_dir).ptr;
+
+        HeapArray<char> buf(&temp_alloc);
+        StreamWriter st(&buf, "<tsconfig>");
+        json_CompactWriter json(&st);
+
+        json.StartObject();
+
+        json.Key("compilerOptions"); json.StartObject();
+        json.Key("paths"); json.StartObject();
+        {
+            json.Key("*"); json.StartArray();
+            json.String(root_star);
+            json.EndArray();
+        }
+        json.EndObject();
+        json.EndObject();
+
+        json.EndObject();
+
+        st.Close();
+
+        tsconfig = buf.Leak();
+    }
 
     // Prepare command
     const char *cmd;
     {
-        HeapArray<char> buf(alloc);
+        HeapArray<char> buf(&temp_alloc);
 
         Fmt(&buf, "\"%1\" \"%2\" --bundle --log-level=warning --allow-overwrite --outfile=\"%3\""
                   "  --minify --platform=browser --target=es6 --metafile=\"%4\"",
                   esbuild_binary, bundle.src_filename, bundle.dest_filename, meta_filename);
 
-        if (root_dir) {
-            HeapArray<char> tsconfig;
-            StreamWriter st(&tsconfig, "<tsconfig>");
-            json_CompactWriter json(&st);
-
-            json.StartObject();
-
-            json.Key("compilerOptions"); json.StartObject();
-            json.Key("baseUrl"); json.String(root_dir);
-            json.EndObject();
-
-            json.EndObject();
-
-            st.Close();
-
+        if (tsconfig.len) {
             Fmt(&buf, " --tsconfig-raw=\"%1\"", FmtEscape(tsconfig, '"'));
         }
-
         if (sourcemap) {
             Fmt(&buf, " --sourcemap=inline");
         }
@@ -437,7 +451,7 @@ static bool BundleScript(const AssetBundle &bundle, const char *esbuild_binary, 
 
     // List output files
     HeapArray<BundleObject> bundle_objects;
-    if (!ParseEsbuildMeta(meta_filename, alloc, &bundle_objects))
+    if (!ParseEsbuildMeta(meta_filename, &temp_alloc, &bundle_objects))
         return false;
 
     // Handle output files
@@ -445,10 +459,10 @@ static bool BundleScript(const AssetBundle &bundle, const char *esbuild_binary, 
         FileHash *hash = out_hashes->AppendDefault();
 
         Span<const char> basename = SplitStrReverseAny(obj.dest_filename, K_PATH_SEPARATORS);
-        const char *gzip_filename = Fmt(alloc, "%1.gz", obj.dest_filename).ptr;
+        const char *gzip_filename = Fmt(&temp_alloc, "%1.gz", obj.dest_filename).ptr;
 
-        hash->name = obj.src_filename;
-        hash->filename = obj.dest_filename;
+        hash->name = DuplicateString(obj.src_filename, alloc).ptr;
+        hash->filename = DuplicateString(obj.dest_filename, alloc).ptr;
         hash->url = Fmt(alloc, "%1%2", prefix, basename).ptr;
         hash->unique = obj.unique;
 

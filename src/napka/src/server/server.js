@@ -223,8 +223,10 @@ function buildFiles(map, live, sourcemap) {
         write: false,
         tsconfigRaw: JSON.stringify({
             compilerOptions: {
-                baseUrl: __dirname + '/../../..'
-            },
+                paths: {
+                    '*': [__dirname + '/../../../*']
+                }
+            }
         }),
         loader: {
             '.png': 'dataurl'
@@ -241,8 +243,10 @@ function buildFiles(map, live, sourcemap) {
         write: false,
         tsconfigRaw: JSON.stringify({
             compilerOptions: {
-                baseUrl: __dirname + '/../../..'
-            },
+                paths: {
+                    '*': [__dirname + '/../../../*']
+                }
+            }
         }),
         format: 'iife',
         globalName: 'napka',
