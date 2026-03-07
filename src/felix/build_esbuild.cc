@@ -29,9 +29,10 @@ bool Builder::PrepareEsbuild()
         json.Key("compilerOptions"); json.StartObject();
         json.Key("paths"); json.StartObject();
         {
-            const char *path = Fmt(&str_alloc, "%1%/*", GetWorkingDirectory()).ptr;
+            const char *path_star = Fmt(&str_alloc, "%1%/*", GetWorkingDirectory()).ptr;
+
             json.Key("*"); json.StartArray();
-            json.String(path);
+            json.String(path_star);
             json.EndArray();
         }
         json.EndObject();
