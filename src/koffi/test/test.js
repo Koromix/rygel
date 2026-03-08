@@ -7,7 +7,7 @@ const fs = require('fs');
 const path = require('path');
 const tty = require('tty');
 
-const TSC_OPTIONS = '--target es2020 --module node16 --allowJs --checkJs --noEmit --resolveJsonModule'.split(' ');
+const TSC_OPTIONS = '--target es2020 --module node16 --allowJs --checkJs --noEmit --resolveJsonModule --strict false'.split(' ');
 
 main();
 
