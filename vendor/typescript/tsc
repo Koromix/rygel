@@ -4,7 +4,7 @@ const { spawnSync } = require('child_process');
 
 let args = [
     __dirname + '/node_modules/typescript/bin/tsc',
-    '--types', __dirname + '/node_modules/@types/node',
+    '--ignoreConfig', '--types', __dirname + '/node_modules/@types/node',
     ...process.argv.slice(2)
 ];
 
