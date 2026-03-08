@@ -178,10 +178,6 @@ async function test(display) {
             throw new Error('Image mismatch');
         }
     } finally {
-        if (fs.rmSync != null) {
-            fs.rmSync(tmp_dir, { recursive: true });
-        } else {
-            fs.rmdirSync(tmp_dir, { recursive: true });
-        }
+        fs.rmSync(tmp_dir, { recursive: true });
     }
 }

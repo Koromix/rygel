@@ -351,11 +351,7 @@ function decode_elf_header(buf) {
 
 function unlink_recursive(path) {
     try {
-        if (fs.rmSync != null) {
-            fs.rmSync(path, { recursive: true, maxRetries: process.platform == 'win32' ? 3 : 0 });
-        } else {
-            fs.rmdirSync(path, { recursive: true, maxRetries: process.platform == 'win32' ? 3 : 0 });
-        }
+        fs.rmSync(path, { recursive: true, maxRetries: process.platform == 'win32' ? 3 : 0 });
     } catch (err) {
         if (err.code !== 'ENOENT')
             throw err;
