@@ -12,6 +12,7 @@ let native = null;
 try {
     switch (triplet) {
         case 'android_arm64': { native = require('@koromix/koffi-android-arm64'); } break;
+        case 'android_x64': { native = require('@koromix/koffi-android-x64'); } break;
         case 'darwin_arm64': { native = require('@koromix/koffi-darwin-arm64'); } break;
         case 'darwin_x64': { native = require('@koromix/koffi-darwin-x64'); } break;
         case 'freebsd_arm64': { native = require('@koromix/koffi-freebsd-arm64'); } break;
