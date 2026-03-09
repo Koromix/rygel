@@ -2,6 +2,14 @@
 
 ## Goupile 3.12
 
+### Goupile 3.12.1
+
+*Released on 2026-03-09*
+
+- Fix barely visible white summary text in data monitoring table.
+
+### Goupile 3.12
+
 *Released on 2026-03-05*
 
 **Identifiers:**

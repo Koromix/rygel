@@ -2,6 +2,14 @@
 
 ## Goupile 3.12
 
+### Goupile 3.12.1
+
+*Sortie le 09/03/2026*
+
+- Correction du texte blanc peu visible dans le tableau de suivi.
+
+### Goupile 3.12
+
 *Sortie le 05/03/2026*
 
 **Identifiants :**
