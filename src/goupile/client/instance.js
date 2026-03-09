@@ -751,18 +751,20 @@ function renderData() {
                                         }
                                     }
 
-                                    if (summary == null) {
-                                        if (status.complete) {
+                                    if (status.complete) {
+                                        if (summary == null)
                                             summary = !dots ? '✓\uFE0E' : '⚠\uFE0E';
-                                            cls += !dots ? ' complete' : ' partial';
-                                        } else if (status.filled) {
+                                        cls += !dots ? ' complete' : ' partial';
+                                    } else if (status.filled) {
+                                        if (summary == null) {
                                             let progress = Math.floor(100 * status.filled / status.total);
                                             summary = progress + '%';
-                                            cls += ' partial';
-                                        } else {
-                                            summary = '🖊\uFE0E';
-                                            cls += ' missing';
                                         }
+                                        cls += ' partial';
+                                    } else {
+                                        if (summary == null)
+                                            summary = '🖊\uFE0E';
+                                        cls += ' missing';
                                     }
                                     if (highlight)
                                         cls += ' highlight';
