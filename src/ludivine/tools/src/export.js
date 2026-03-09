@@ -2,14 +2,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
-import * as esbuild from 'vendor/esbuild/native/lib/main.js';
-import * as XLSX from 'vendor/sheetjs/XLSX.bundle.js';
-import fs from 'fs';
-import path from 'path';
+import * as esbuild from '../../../../vendor/esbuild/native/lib/main.js';
+import * as XLSX from '../../../../vendor/sheetjs/XLSX.bundle.js';
+import fs from 'node:fs';
+import path from 'node:path';
 import sqlite3 from 'better-sqlite3';
 import { Util, LocalDate } from 'lib/web/base/base.js';
-import { ProjectInfo, ProjectBuilder } from '../client/core/project.js';
-import { wrap } from '../client/form/data.js';
+import { wrap } from 'lib/web/ui/data.js';
+import { ProjectInfo, ProjectBuilder } from '../../client/core/project.js';
 
 let imports = new Map;
 
@@ -96,7 +96,7 @@ async function buildProject(key) {
 
     // Get basic project info
     {
-        let { PROJECTS: projects } = await importScript('../projects/projects.js');
+        let { PROJECTS: projects } = await importScript('../../projects/projects.js');
 
         info = projects.find(project => project.key == key);
 
@@ -105,7 +105,7 @@ async function buildProject(key) {
     }
 
     // Build project script
-    bundle = await importScript(`../projects/${key}.js`);
+    bundle = await importScript(`../../projects/${key}.js`);
 
     // Create project structure
     {
@@ -133,7 +133,7 @@ function loadResults(db, study, key) {
 }
 
 async function extractFields(build, data) {
-    let { FormState, FormModel, FormBuilder } = await importScript('../../../lib/web/ui/form.js');
+    let { FormState, FormModel, FormBuilder } = await importScript('../../../../lib/web/ui/form.js');
 
     let state = new FormState(data);
     let model = new FormModel;
@@ -352,13 +352,13 @@ async function importScript(filename) {
                 '.webm': 'file',
                 '.mp3': 'file'
             },
-            inject: [import.meta.dirname + '/fake/globals.js'],
+            inject: [import.meta.dirname + '/../src/globals.js'],
             plugins: [
                 {
                     name: 'lit-html',
                     setup: build => {
                         build.onResolve({ filter: /\/lit-html.bundle.js$/ }, args => {
-                            return { path: import.meta.dirname + '/fake/lit-html.js' };
+                            return { path: import.meta.dirname + '/../src/lit-html.js' };
                         })
                     }
                 }

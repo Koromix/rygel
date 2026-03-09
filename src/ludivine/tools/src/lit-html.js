@@ -6,10 +6,12 @@ function svg() { return strings.map(str => str.trim()).join('?').replace(/[ \n]+
 
 function render() {}
 function live() {}
+function classMap() {}
 
 export {
     html,
     svg,
     render,
-    live
+    live,
+    classMap
 }
