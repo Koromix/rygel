@@ -6,6 +6,12 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.97
+
+*Released on 2026-03-10*
+
+- Support pre-save and post-save hook commands
+
 ### Rekkord 0.96
 
 *Released on 2026-01-16*
