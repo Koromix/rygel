@@ -163,11 +163,13 @@ function Builder(config = {}) {
         {
             let info = TOOLCHAINS[toolchain ?? host];
 
-            if (Object.hasOwn(info, process.platform))
-                info = Object.assign({}, info, info[process.platform]);
+            if (info != null) {
+                if (Object.hasOwn(info, process.platform))
+                    info = Object.assign({}, info, info[process.platform]);
 
-            if (info?.flags != null)
-                args.push(...info.flags);
+                if (info.flags != null)
+                    args.push(...info.flags);
+            }
 
             if (toolchain != null && info.triplet != null) {
                 let values = [
