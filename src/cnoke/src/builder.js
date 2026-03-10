@@ -171,6 +171,16 @@ function Builder(config = {}) {
                     args.push(...info.flags);
             }
 
+            if (toolchain == null && process.arch == 'ia32') {
+                let proc = spawnSync('uname', ['-m']);
+                let machine = (proc.stdout ?? '').toString('utf-8').trim();
+
+                if (machine == 'x86_64') {
+                    // Compiler probably does not default to 32-bit... just force it
+                    args.push('-DCMAKE_ASM_FLAGS=-m32', '-DCMAKE_C_FLAGS=-m32', '-DCMAKE_CXX_FLAGS=-m32');
+                }
+            }
+
             if (toolchain != null && info.triplet != null) {
                 let values = [
                     ['CMAKE_SYSTEM_NAME', info.system],
