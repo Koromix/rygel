@@ -66,6 +66,28 @@ static bool LoadFromFile(const char *filename, Allocator *alloc, HeapArray<SaveR
     return true;
 }
 
+static bool RunHookCommands(Span<const char *const> commands)
+{
+    bool success = true;
+
+    for (const char *cmd: commands) {
+        Span<const char> basename = SplitStrReverseAny(cmd, K_PATH_SEPARATORS);
+        LogInfo(("> %1"), basename);
+
+        int status = -1;
+        bool ret = ExecuteCommandLine(cmd, {}, &status);
+
+        if (!ret) {
+            success = false;
+        } else if (status) {
+            LogError("Command '%1' failed with status %2", basename, status);
+            success = false;
+        }
+    }
+
+    return success;
+}
+
 int RunSave(Span<const char *> arguments)
 {
     BlockAllocator temp_alloc;
@@ -74,6 +96,7 @@ int RunSave(Span<const char *> arguments)
     rk_SaveSettings settings;
     const char *from = nullptr;
     bool raw = false;
+    bool hooks = true;
     bool report = true;
     HeapArray<SaveRequest> saves;
 
@@ -96,6 +119,7 @@ Save options:
     %!..+-m, --meta metadata%!0            Save additional directory/file metadata, see below
 
         %!..+--no_snapshot%!0              Skip snapshot object and report data OID
+        %!..+--no_hooks%!0                 Skip pre-save and post-save hook commands
         %!..+--no_report%!0                Skip reporting status to web app even if link is configured
 
 Available metadata save options:
@@ -141,6 +165,8 @@ Available metadata save options:
                 }
             } else if (opt.Test("--no_snapshot")) {
                 raw = true;
+            } else if (opt.Test("--no_hooks")) {
+                hooks = false;
             } else if (opt.Test("--no_report")) {
                 report = false;
             } else if (!HandleCommonOption(opt)) {
@@ -210,6 +236,13 @@ Available metadata save options:
     }
     LogInfo();
 
+    if (hooks && rk_config.hooks_presave.len) {
+        LogInfo("Running pre-save hooks...");
+
+        if (!RunHookCommands(rk_config.hooks_presave))
+            return 1;
+    }
+
     LogInfo("Backing up...");
 
     bool complete = true;
@@ -257,6 +290,11 @@ Available metadata save options:
             LogInfo("Reporting snapshot to linked web app...");
             complete &= ReportSnapshot(rk_config.link_url, rk_config.link_key, repo->GetURL(), save.channel, info);
         }
+    }
+
+    if (hooks && rk_config.hooks_postsave.len) {
+        LogInfo("Running post-save hooks...");
+        complete &= RunHookCommands(rk_config.hooks_postsave);
     }
 
     return !complete;

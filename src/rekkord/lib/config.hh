@@ -55,6 +55,9 @@ struct rk_Config {
     const char *link_key = nullptr;
     int64_t agent_period = 20 * 60000; // 20 minutes
 
+    HeapArray<const char *> hooks_presave;
+    HeapArray<const char *> hooks_postsave;
+
     BlockAllocator str_alloc;
 
     bool Complete();

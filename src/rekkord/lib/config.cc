@@ -187,6 +187,23 @@ const char *rk_MakeURL(const rk_Config &config, Allocator *alloc)
     K_UNREACHABLE();
 }
 
+static bool EnumerateSortedFiles(const char *directory, Allocator *alloc, HeapArray<const char *> *out_filenames)
+{
+    K_ASSERT(alloc);
+
+    Size start_idx = out_filenames->len;
+
+    if (!EnumerateFiles(directory, nullptr, 0, 1024, alloc, out_filenames))
+        return false;
+
+    std::sort(out_filenames->begin() + start_idx, out_filenames->end(),
+              [](const char *filename1, const char *filename2) {
+        return CmpStr(filename1, filename2) < 0;
+    });
+
+    return true;
+}
+
 bool rk_LoadConfig(StreamReader *st, rk_Config *out_config)
 {
     rk_Config config;
@@ -250,6 +267,17 @@ bool rk_LoadConfig(StreamReader *st, rk_Config *out_config)
                     }
                 } else if (prop.key == "DurationSafety") {
                     valid &= ParseBool(prop.value, &config.safety);
+                } else {
+                    LogError("Unknown attribute '%1'", prop.key);
+                    valid = false;
+                }
+            } else if (prop.section == "Hooks") {
+                if (prop.key == "PreSaveDirectory") {
+                    const char *dirname = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
+                    valid &= EnumerateSortedFiles(dirname, &config.str_alloc, &config.hooks_presave);
+                } else if (prop.key == "PostSaveDirectory") {
+                    const char *dirname = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
+                    valid &= EnumerateSortedFiles(dirname, &config.str_alloc, &config.hooks_postsave);
                 } else {
                     LogError("Unknown attribute '%1'", prop.key);
                     valid = false;
