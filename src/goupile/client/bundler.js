@@ -46,6 +46,9 @@ async function build(code, get_file) {
         outfile: '@',
         target: 'es2022',
         sourcemap: 'external',
+        banner: {
+            js: '\"use strict\";'
+        },
         plugins: [plugin]
     })
 
