@@ -7,6 +7,16 @@
 
 ### Koffi 2.15
 
+#### Koffi 2.15.2
+
+*Released on 2026-03-11*
+
+- Fix possible deadlock or crash after a callback has been used when exiting from Node 24.14+
+- Fix build problems on Android/Termux
+- Fix failing indirect loading caused by missing path test
+- Don't force users to set all members when using koffi.config() in TypeScript
+- Use Clang to build Linux ARM64 prebuild
+
 #### Koffi 2.15.1
 
 *Released on 2026-01-24*
