@@ -34,7 +34,7 @@ int main(void)
   CURL *curl;
 
   CURLcode result = curl_global_init(CURL_GLOBAL_ALL);
-  if(result)
+  if(result != CURLE_OK)
     return (int)result;
 
   curl = curl_easy_init();
@@ -42,12 +42,12 @@ int main(void)
     curl_easy_setopt(curl, CURLOPT_URL, "https://www.example.com/");
     result = curl_easy_perform(curl);
 
-    if(CURLE_OK == result) {
-      char *ct;
+    if(result == CURLE_OK) {
+      const char *ct;
       /* ask for the content-type */
       result = curl_easy_getinfo(curl, CURLINFO_CONTENT_TYPE, &ct);
 
-      if((CURLE_OK == result) && ct)
+      if((result == CURLE_OK) && ct)
         printf("We received Content-Type: %s\n", ct);
     }
 

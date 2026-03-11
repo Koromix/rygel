@@ -27,14 +27,14 @@
 
 #include "tool_cb_hdr.h"
 #include "tool_cb_prg.h"
-#include "tool_sdecls.h"
+#include "tool_cfgable.h"
 
 struct per_transfer {
   /* double linked */
   struct per_transfer *next;
   struct per_transfer *prev;
   struct OperationConfig *config; /* for this transfer */
-  struct curl_certinfo *certinfo;
+  const struct curl_certinfo *certinfo;
   CURL *curl;
   long retry_remaining;
   long retry_sleep_default;

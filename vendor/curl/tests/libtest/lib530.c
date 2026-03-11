@@ -217,7 +217,7 @@ static ssize_t t530_getMicroSecondTimeout(struct curltime *timeout)
   struct curltime now;
   ssize_t result;
   now = curlx_now();
-  result = (ssize_t)((timeout->tv_sec - now.tv_sec) * 1000000 +
+  result = (ssize_t)(((timeout->tv_sec - now.tv_sec) * 1000000) +
     timeout->tv_usec - now.tv_usec);
   if(result < 0)
     result = 0;
@@ -233,14 +233,7 @@ static void t530_updateFdSet(struct t530_Sockets *sockets, fd_set *fdset,
 {
   int i;
   for(i = 0; i < sockets->count; ++i) {
-#ifdef __DJGPP__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Warith-conversion"
-#endif
     FD_SET(sockets->sockets[i], fdset);
-#ifdef __DJGPP__
-#pragma GCC diagnostic pop
-#endif
     if(*maxFd < sockets->sockets[i] + 1) {
       *maxFd = sockets->sockets[i] + 1;
     }
@@ -396,28 +389,28 @@ test_cleanup:
 
 static CURLcode test_lib530(const char *URL)
 {
-  CURLcode rc;
+  CURLcode result;
   /* rerun the same transfer multiple times and make it fail in different
      callback calls */
-  rc = testone(URL, 0, 0); /* no callback fails */
-  if(rc)
-    curl_mfprintf(stderr, "%s FAILED: %d\n", t530_tag(), rc);
+  result = testone(URL, 0, 0); /* no callback fails */
+  if(result)
+    curl_mfprintf(stderr, "%s FAILED: %d\n", t530_tag(), result);
 
-  rc = testone(URL, 1, 0); /* fail 1st call to timer callback */
-  if(!rc)
-    curl_mfprintf(stderr, "%s FAILED: %d\n", t530_tag(), rc);
+  result = testone(URL, 1, 0); /* fail 1st call to timer callback */
+  if(!result)
+    curl_mfprintf(stderr, "%s FAILED: %d\n", t530_tag(), result);
 
-  rc = testone(URL, 2, 0); /* fail 2nd call to timer callback */
-  if(!rc)
-    curl_mfprintf(stderr, "%s FAILED: %d\n", t530_tag(), rc);
+  result = testone(URL, 2, 0); /* fail 2nd call to timer callback */
+  if(!result)
+    curl_mfprintf(stderr, "%s FAILED: %d\n", t530_tag(), result);
 
-  rc = testone(URL, 0, 1); /* fail 1st call to socket callback */
-  if(!rc)
-    curl_mfprintf(stderr, "%s FAILED: %d\n", t530_tag(), rc);
+  result = testone(URL, 0, 1); /* fail 1st call to socket callback */
+  if(!result)
+    curl_mfprintf(stderr, "%s FAILED: %d\n", t530_tag(), result);
 
-  rc = testone(URL, 0, 2); /* fail 2nd call to socket callback */
-  if(!rc)
-    curl_mfprintf(stderr, "%s FAILED: %d\n", t530_tag(), rc);
+  result = testone(URL, 0, 2); /* fail 2nd call to socket callback */
+  if(!result)
+    curl_mfprintf(stderr, "%s FAILED: %d\n", t530_tag(), result);
 
   return CURLE_OK;
 }

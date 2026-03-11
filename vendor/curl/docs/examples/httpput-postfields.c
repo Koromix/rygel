@@ -47,11 +47,11 @@ static const char olivertwist[] =
  * CURLOPT_POSTFIELDS to the URL given as an argument.
  */
 
-int main(int argc, char **argv)
+int main(int argc, const char **argv)
 {
   CURL *curl;
   CURLcode result;
-  char *url;
+  const char *url;
 
   if(argc < 2)
     return 1;
@@ -60,7 +60,7 @@ int main(int argc, char **argv)
 
   /* In Windows, this inits the Winsock stuff */
   result = curl_global_init(CURL_GLOBAL_ALL);
-  if(result)
+  if(result != CURLE_OK)
     return (int)result;
 
   /* get a curl handle */

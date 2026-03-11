@@ -46,7 +46,7 @@
 # variables $libcurl_feature_xxx and $libcurl_protocol_yyy are also
 # defined to 'yes' for those features and protocols that were found.
 # Note that xxx and yyy keep the same capitalization as in the
-# curl-config list (e.g. it's "HTTP" and not "http").
+# curl-config list (e.g. it is "HTTP" and not "http").
 #
 # Users may override the detected values by doing something like:
 # LIBCURL="-lcurl" LIBCURL_CPPFLAGS="-I/usr/myinclude" ./configure
@@ -219,7 +219,7 @@ AC_DEFUN([LIBCURL_CHECK_CONFIG],
 
         if test -z "$_libcurl_protocols"; then
 
-          # We do not have --protocols, so just assume that all
+          # We do not have --protocols; assume that all
           # protocols are available
           _libcurl_protocols="HTTP FTP FILE TELNET LDAP DICT TFTP"
 

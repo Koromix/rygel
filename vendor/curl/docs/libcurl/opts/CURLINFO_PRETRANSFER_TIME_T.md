@@ -30,7 +30,7 @@ CURLcode curl_easy_getinfo(CURL *handle, CURLINFO_PRETRANSFER_TIME_T,
 # DESCRIPTION
 
 Pass a pointer to a curl_off_t to receive the time, in microseconds, it took
-from the start until the file transfer is just about to begin.
+from the start until the file transfer is about to begin.
 
 This time-stamp includes all pre-transfer commands and negotiations that are
 specific to the particular protocol(s) involved. It includes the sending of
@@ -53,10 +53,10 @@ int main(void)
     curl_off_t pretransfer;
     curl_easy_setopt(curl, CURLOPT_URL, "https://example.com/");
     result = curl_easy_perform(curl);
-    if(CURLE_OK == result) {
+    if(result == CURLE_OK) {
       result = curl_easy_getinfo(curl, CURLINFO_PRETRANSFER_TIME_T,
                                  &pretransfer);
-      if(CURLE_OK == result) {
+      if(result == CURLE_OK) {
         printf("Time: %" CURL_FORMAT_CURL_OFF_T ".%06ld\n",
                pretransfer / 1000000,
                (long)(pretransfer % 1000000));

@@ -233,7 +233,7 @@ static unsigned char ancount_aaaa;
 /* this is an answer to a question */
 static int send_response(curl_socket_t sock,
                          const struct sockaddr *addr, curl_socklen_t addrlen,
-                         unsigned char *qbuf, size_t qlen,
+                         const unsigned char *qbuf, size_t qlen,
                          unsigned short qtype, unsigned short id)
 {
   ssize_t rc;
@@ -378,7 +378,7 @@ static void read_instructions(void)
     logmsg("Error opening file '%s'", file);
 }
 
-static int test_dnsd(int argc, char **argv)
+static int test_dnsd(int argc, const char **argv)
 {
   srvr_sockaddr_union_t me;
   ssize_t n = 0;
@@ -483,7 +483,7 @@ static int test_dnsd(int argc, char **argv)
     sock = socket(AF_INET6, SOCK_DGRAM, 0);
 #endif
 
-  if(CURL_SOCKET_BAD == sock) {
+  if(sock == CURL_SOCKET_BAD) {
     error = SOCKERRNO;
     logmsg("Error creating socket (%d) %s",
            error, curlx_strerror(error, errbuf, sizeof(errbuf)));
@@ -531,6 +531,7 @@ static int test_dnsd(int argc, char **argv)
        port we actually got and update the listener port value with it. */
     curl_socklen_t la_size;
     srvr_sockaddr_union_t localaddr;
+    memset(&localaddr, 0, sizeof(localaddr));
 #ifdef USE_IPV6
     if(!use_ipv6)
 #endif
@@ -539,7 +540,6 @@ static int test_dnsd(int argc, char **argv)
     else
       la_size = sizeof(localaddr.sa6);
 #endif
-    memset(&localaddr.sa, 0, (size_t)la_size);
     if(getsockname(sock, &localaddr.sa, &la_size) < 0) {
       error = SOCKERRNO;
       logmsg("getsockname() failed with error (%d) %s",
@@ -632,7 +632,9 @@ static int test_dnsd(int argc, char **argv)
       clear_advisor_read_lock(loglockfile);
     }
 
-    /* logmsg("end of one transfer"); */
+#if 0
+    logmsg("end of one transfer");
+#endif
   }
 
 dnsd_cleanup:

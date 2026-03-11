@@ -59,16 +59,8 @@ extern FILE *tool_stderr;
 #define CURL_OS "unknown"
 #endif
 
-#ifndef UNPRINTABLE_CHAR
 /* define what to use for unprintable characters */
 #define UNPRINTABLE_CHAR '.'
-#endif
-
-#ifndef HAVE_STRDUP
-#include "tool_strdup.h"
-#undef Curl_strdup
-#define Curl_strdup tool_strdup
-#endif
 
 #ifndef tool_nop_stmt
 #define tool_nop_stmt do {} while(0)
@@ -105,5 +97,9 @@ int tool_ftruncate64(int fd, curl_off_t where);
 
 #endif /* !HAVE_FTRUNCATE */
 #endif /* _WIN32 */
+
+#ifdef CURL_CA_EMBED
+extern const unsigned char curl_ca_embed[];
+#endif
 
 #endif /* HEADER_CURL_TOOL_SETUP_H */

@@ -515,7 +515,7 @@ class ExecResult:
         s = self._stats[idx]
 
         url = s['url_effective']
-        # connect time is sometimes reported as 0 by openssl-quic (sigh)
+
         self.check_stat_positive_or_0(s, idx, 'time_connect')
         # all stat keys which reporting timings
         all_keys = {
@@ -526,7 +526,7 @@ class ExecResult:
         }
         # stat keys where we expect a positive value
         ref_tl = []
-        # time_queue has it's own start timestamp. Other timers start *after*
+        # time_queue has its own start timestamp. Other timers start *after*
         # queueing is done. queue duration might therefore be anywhere.
         somewhere_keys = ['time_queue']
         exact_match = True
@@ -724,7 +724,8 @@ class CurlClient:
                       with_tcpdump: bool = False,
                       no_save: bool = False,
                       limit_rate: Optional[str] = None,
-                      extra_args: Optional[List[str]] = None):
+                      extra_args: Optional[List[str]] = None,
+                      url_options: Optional[Dict[str,List[str]]] = None):
         if extra_args is None:
             extra_args = []
         if no_save:
@@ -742,6 +743,7 @@ class CurlClient:
             ])
         return self._raw(urls, alpn_proto=alpn_proto, options=extra_args,
                          with_stats=with_stats,
+                         url_options=url_options,
                          with_headers=with_headers,
                          with_profile=with_profile,
                          with_tcpdump=with_tcpdump)
@@ -1083,6 +1085,7 @@ class CurlClient:
 
     def _raw(self, urls, intext='', timeout=None, options=None, insecure=False,
              alpn_proto: Optional[str] = None,
+             url_options=None,
              force_resolve=True,
              with_stats=False,
              with_headers=True,
@@ -1092,7 +1095,8 @@ class CurlClient:
         args = self._complete_args(
             urls=urls, timeout=timeout, options=options, insecure=insecure,
             alpn_proto=alpn_proto, force_resolve=force_resolve,
-            with_headers=with_headers, def_tracing=def_tracing)
+            with_headers=with_headers, def_tracing=def_tracing,
+            url_options=url_options)
         r = self._run(args, intext=intext, with_stats=with_stats,
                       with_profile=with_profile, with_tcpdump=with_tcpdump)
         if r.exit_code == 0 and with_headers:
@@ -1102,8 +1106,10 @@ class CurlClient:
     def _complete_args(self, urls, timeout=None, options=None,
                        insecure=False, force_resolve=True,
                        alpn_proto: Optional[str] = None,
+                       url_options=None,
                        with_headers: bool = True,
                        def_tracing: bool = True):
+        url_sep = []
         if not isinstance(urls, list):
             urls = [urls]
 
@@ -1129,7 +1135,13 @@ class CurlClient:
             active_options = options[options.index('--next') + 1:]
 
         for url in urls:
-            u = urlparse(urls[0])
+            args.extend(url_sep)
+            if url_options is not None:
+                url_sep = ['--next']
+
+            u = urlparse(url)
+            if url_options is not None and url in url_options:
+                args.extend(url_options[url])
             if options:
                 args.extend(options)
             if alpn_proto is not None:

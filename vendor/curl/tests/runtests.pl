@@ -111,7 +111,7 @@ my $ACURL=$VCURL;  # what curl binary to use to talk to APIs (relevant for CI)
 my $CURLCONFIG="../curl-config"; # curl-config from current build
 
 # Normally, all test cases should be run, but at times it is handy to
-# simply run a particular one:
+# run a particular one:
 my $TESTCASES="all";
 
 # To run specific test cases, set them like:
@@ -656,8 +656,8 @@ sub checksystemfeatures {
         elsif($_ =~ /^Features: (.*)/i) {
             $feat = $1;
 
-            # built with memory tracking support (--enable-curldebug); may be disabled later
-            $feature{"TrackMemory"} = $feat =~ /TrackMemory/i;
+            # built with memory tracking support (--enable-debug); may be disabled later
+            $feature{"TrackMemory"} = $feat =~ /Debug/i;
             # curl was built with --enable-debug
             $feature{"Debug"} = $feat =~ /Debug/i;
             # ssl enabled
@@ -765,7 +765,7 @@ sub checksystemfeatures {
         }
         elsif($versretval & 127) {
             logmsg sprintf("command died with signal %d, and %s coredump.\n",
-                           ($versretval & 127), ($versretval & 128)?"a":"no");
+                           ($versretval & 127), ($versretval & 128) ? "a" : "no");
         }
         else {
             logmsg sprintf("command exited with value %d \n", $versretval >> 8);
@@ -846,7 +846,7 @@ sub checksystemfeatures {
 
     if($torture && !$feature{"TrackMemory"}) {
         die "cannot run torture tests since curl was built without ".
-            "TrackMemory feature (--enable-curldebug)";
+            "TrackMemory feature (--enable-debug)";
     }
 
     my $hostname=join(' ', runclientoutput("hostname"));
@@ -873,11 +873,11 @@ sub checksystemfeatures {
     }
 
     my $env = sprintf("%s%s%s%s%s",
-                      $valgrind?"Valgrind ":"",
-                      $run_duphandle?"test-duphandle ":"",
-                      $run_event_based?"event-based ":"",
-                      $nghttpx_h3?"nghttpx-h3 " :"",
-                      $libtool?"Libtool ":"");
+                      $valgrind ? "Valgrind " : "",
+                      $run_duphandle ? "test-duphandle " : "",
+                      $run_event_based ? "event-based " : "",
+                      $nghttpx_h3 ? "nghttpx-h3 " : "",
+                      $libtool ? "Libtool " : "");
     if($env) {
         logmsg "* Env: $env\n";
     }
@@ -894,10 +894,10 @@ sub checksystemfeatures {
 # display information about server features
 #
 sub displayserverfeatures {
-    logmsg sprintf("* Servers: %s", $stunnel?"SSL ":"");
-    logmsg sprintf("%s", $http_ipv6?"HTTP-IPv6 ":"");
-    logmsg sprintf("%s", $http_unix?"HTTP-unix ":"");
-    logmsg sprintf("%s\n", $ftp_ipv6?"FTP-IPv6 ":"");
+    logmsg sprintf("* Servers: %s", $stunnel ? "SSL " : "");
+    logmsg sprintf("%s", $http_ipv6 ? "HTTP-IPv6 " : "");
+    logmsg sprintf("%s", $http_unix ? "HTTP-unix " : "");
+    logmsg sprintf("%s\n", $ftp_ipv6 ? "FTP-IPv6 " : "");
     logmsg "***************************************** \n";
 }
 
@@ -1346,6 +1346,22 @@ sub singletest_check {
             normalize_text(\@validstderr);
             normalize_text(\@actual);
         }
+        if($filemode && ($filemode eq "warn")) {
+            for(@validstderr) {
+                s/Warning: //;
+                s/\r//;
+                s/\n/ /;
+            }
+            for(@actual) {
+                s/Warning: //;
+                s/\r//;
+                s/\n/ /;
+            }
+            my $v = join(@validstderr, "");
+            my $a = join(@actual, "");
+            @validstderr = $v;
+            @actual = $a;
+        }
 
         if($hash{'nonewline'}) {
             # Yes, we must cut off the final newline from the final line
@@ -1431,7 +1447,6 @@ sub singletest_check {
         }
 
         $ok .= "p";
-
     }
     else {
         $ok .= "-"; # protocol not checked
@@ -1593,7 +1608,6 @@ sub singletest_check {
         }
 
         $ok .= "P";
-
     }
     else {
         $ok .= "-"; # proxy not checked
@@ -1732,7 +1746,7 @@ sub singletest_check {
     else {
         if(!$short) {
             logmsg sprintf("\n%s returned $cmdres, when expecting %s\n",
-                           (!$tool)?"curl":$tool, $errorcode);
+                           (!$tool) ? "curl" : $tool, $errorcode);
         }
         logmsg " $testnum: exit FAILED\n";
         # timestamp test result verification end
@@ -2192,7 +2206,7 @@ sub runtimestats {
 
     $counter = 25;
     logmsg "\nTest server starting and verification time per test ".
-        sprintf("(%s)...\n\n", (not $fullstats)?"top $counter":"full");
+        sprintf("(%s)...\n\n", (not $fullstats) ? "top $counter" : "full");
     logmsg "-time-  test\n";
     logmsg "------  ----\n";
     foreach my $txt (@timesrvr) {
@@ -2202,7 +2216,7 @@ sub runtimestats {
 
     $counter = 10;
     logmsg "\nTest definition reading and preparation time per test ".
-        sprintf("(%s)...\n\n", (not $fullstats)?"top $counter":"full");
+        sprintf("(%s)...\n\n", (not $fullstats) ? "top $counter" : "full");
     logmsg "-time-  test\n";
     logmsg "------  ----\n";
     foreach my $txt (@timeprep) {
@@ -2212,7 +2226,7 @@ sub runtimestats {
 
     $counter = 25;
     logmsg "\nTest tool execution time per test ".
-        sprintf("(%s)...\n\n", (not $fullstats)?"top $counter":"full");
+        sprintf("(%s)...\n\n", (not $fullstats) ? "top $counter" : "full");
     logmsg "-time-  test\n";
     logmsg "------  ----\n";
     foreach my $txt (@timetool) {
@@ -2222,7 +2236,7 @@ sub runtimestats {
 
     $counter = 15;
     logmsg "\nTest server logs lock removal time per test ".
-        sprintf("(%s)...\n\n", (not $fullstats)?"top $counter":"full");
+        sprintf("(%s)...\n\n", (not $fullstats) ? "top $counter" : "full");
     logmsg "-time-  test\n";
     logmsg "------  ----\n";
     foreach my $txt (@timelock) {
@@ -2232,7 +2246,7 @@ sub runtimestats {
 
     $counter = 10;
     logmsg "\nTest results verification time per test ".
-        sprintf("(%s)...\n\n", (not $fullstats)?"top $counter":"full");
+        sprintf("(%s)...\n\n", (not $fullstats) ? "top $counter" : "full");
     logmsg "-time-  test\n";
     logmsg "------  ----\n";
     foreach my $txt (@timevrfy) {
@@ -2242,7 +2256,7 @@ sub runtimestats {
 
     $counter = 50;
     logmsg "\nTotal time per test ".
-        sprintf("(%s)...\n\n", (not $fullstats)?"top $counter":"full");
+        sprintf("(%s)...\n\n", (not $fullstats) ? "top $counter" : "full");
     logmsg "-time-  test\n";
     logmsg "------  ----\n";
     foreach my $txt (@timetest) {
@@ -2633,7 +2647,7 @@ if(!$randseed) {
     close($curlvh) || die "could not get curl version!";
     # use the first line of output and get the md5 out of it
     my $str = md5($c[0]);
-    $randseed += unpack('S', $str);  # unsigned 16 bit value
+    $randseed += unpack('S', $str);  # unsigned 16-bit value
 }
 srand $randseed;
 

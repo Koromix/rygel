@@ -40,7 +40,7 @@ int main(void)
   CURL *curl;
 
   CURLcode result = curl_global_init(CURL_GLOBAL_ALL);
-  if(result)
+  if(result != CURLE_OK)
     return (int)result;
 
   curl = curl_easy_init();
@@ -49,7 +49,7 @@ int main(void)
     curl_easy_setopt(curl, CURLOPT_USERNAME, "user");
     curl_easy_setopt(curl, CURLOPT_PASSWORD, "secret");
 
-    /* This is just the server URL */
+    /* This is the server URL */
     curl_easy_setopt(curl, CURLOPT_URL, "imap://imap.example.com");
 
     /* Set the NOOP command */

@@ -36,7 +36,7 @@ static char input[4096];
 static char output[4096];
 
 /*
- * This debugf callback is simply dumping the string into the static buffer
+ * This debugf callback dumps the string into the static buffer
  * for the unit test to inspect. Since we know that we are only dealing with
  * text we can afford the luxury of skipping the type check here.
  */
@@ -76,7 +76,7 @@ static void t1652_stop(struct Curl_easy *easy)
 static int verify(const char *info, const char *two)
 {
   /* the 'info' one has a newline appended */
-  char *nl = strchr(info, '\n');
+  const char *nl = strchr(info, '\n');
   if(!nl)
     return 1; /* nope */
   return strncmp(info, two, nl - info);

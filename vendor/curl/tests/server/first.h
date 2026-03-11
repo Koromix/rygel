@@ -24,7 +24,7 @@
  *
  ***************************************************************************/
 
-/* Test servers simply are standalone programs that do not use libcurl
+/* Test servers are standalone programs that do not use libcurl
  * library.  For convenience and to ease portability of these servers,
  * some source code files from the libcurl subdirectory are also used
  * to build the servers.  In order to achieve proper linkage of these
@@ -39,7 +39,7 @@
 
 #include "curl_setup.h"
 
-typedef int (*entry_func_t)(int, char **);
+typedef int (*entry_func_t)(int, const char **);
 
 struct entry_s {
   const char *name;
@@ -64,13 +64,9 @@ extern const struct entry_s s_entries[];
 
 #include <curlx/curlx.h>
 
-/* adjust for old MSVC */
-#if defined(_MSC_VER) && (_MSC_VER < 1900)
-#  define snprintf _snprintf
-#endif
-
 #ifdef _WIN32
-#  define strdup _strdup
+#include <curlx/snprintf.h>
+#define snprintf curlx_win32_snprintf
 #endif
 
 #ifdef _WIN32
@@ -116,8 +112,8 @@ typedef union {
 } srvr_sockaddr_union_t;
 
 /* getpart */
-#define GPE_NO_BUFFER_SPACE -2
-#define GPE_OUT_OF_MEMORY   -1
+#define GPE_NO_BUFFER_SPACE  (-2)
+#define GPE_OUT_OF_MEMORY    (-1)
 #define GPE_OK               0
 #define GPE_END_OF_FILE      1
 
@@ -125,9 +121,8 @@ extern int getpart(char **outbuf, size_t *outlen,
                    const char *main, const char *sub, FILE *stream);
 
 /* utility functions */
-extern char *data_to_hex(char *data, size_t len);
-extern void logmsg(const char *msg, ...);
-extern void loghex(unsigned char *buffer, ssize_t len);
+extern void logmsg(const char *msg, ...) CURL_PRINTF(1, 2);
+extern void loghex(const unsigned char *buffer, ssize_t len);
 extern int win32_init(void);
 extern FILE *test2fopen(long testno, const char *logdir2);
 extern curl_off_t our_getpid(void);

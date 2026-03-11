@@ -68,7 +68,7 @@ int getfiletime(const char *filename, curl_off_t *stamp)
           GetLastError());
   }
 #else
-  struct_stat statbuf;
+  curlx_struct_stat statbuf;
   if(curlx_stat(filename, &statbuf) != -1) {
     *stamp = (curl_off_t)statbuf.st_mtime;
     rc = 0;
@@ -108,8 +108,7 @@ void setfiletime(curl_off_t filetime, const char *filename)
                            FILE_SHARE_READ | FILE_SHARE_WRITE |
                            FILE_SHARE_DELETE, NULL, OPEN_EXISTING, 0, NULL);
   if(hfile != INVALID_HANDLE_VALUE) {
-    curl_off_t converted = ((curl_off_t)filetime * 10000000) +
-      116444736000000000;
+    curl_off_t converted = (filetime * 10000000) + 116444736000000000;
     FILETIME ft;
     ft.dwLowDateTime = (DWORD)(converted & 0xFFFFFFFF);
     ft.dwHighDateTime = (DWORD)(converted >> 32);

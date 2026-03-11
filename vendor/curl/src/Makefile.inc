@@ -34,11 +34,13 @@
 # the official API, but we reuse the code here to avoid duplication.
 CURLX_CFILES = \
   ../lib/curlx/base64.c \
+  ../lib/curlx/basename.c \
   ../lib/curlx/dynbuf.c \
   ../lib/curlx/fopen.c \
   ../lib/curlx/multibyte.c \
   ../lib/curlx/nonblock.c \
   ../lib/curlx/strcopy.c \
+  ../lib/curlx/strdup.c \
   ../lib/curlx/strerr.c \
   ../lib/curlx/strparse.c \
   ../lib/curlx/timediff.c \
@@ -50,13 +52,14 @@ CURLX_CFILES = \
 
 CURLX_HFILES = \
   ../lib/curl_setup.h \
-  ../lib/curlx/binmode.h \
+  ../lib/curlx/base64.h \
+  ../lib/curlx/basename.h \
   ../lib/curlx/dynbuf.h \
   ../lib/curlx/fopen.h \
   ../lib/curlx/multibyte.h \
   ../lib/curlx/nonblock.h \
-  ../lib/curlx/snprintf.h \
   ../lib/curlx/strcopy.h \
+  ../lib/curlx/strdup.h \
   ../lib/curlx/strerr.h \
   ../lib/curlx/strparse.h \
   ../lib/curlx/timediff.h \
@@ -76,7 +79,6 @@ CURL_CFILES = \
   config2setopts.c \
   slist_wc.c \
   terminal.c \
-  tool_bname.c \
   tool_cb_dbg.c \
   tool_cb_hdr.c \
   tool_cb_prg.c \
@@ -108,7 +110,6 @@ CURL_CFILES = \
   tool_setopt.c \
   tool_ssls.c \
   tool_stderr.c \
-  tool_strdup.c \
   tool_urlglob.c \
   tool_util.c \
   tool_vms.c \
@@ -122,7 +123,6 @@ CURL_HFILES = \
   config2setopts.h \
   slist_wc.h \
   terminal.h \
-  tool_bname.h \
   tool_cb_dbg.h \
   tool_cb_hdr.h \
   tool_cb_prg.h \
@@ -155,7 +155,6 @@ CURL_HFILES = \
   tool_setup.h \
   tool_ssls.h \
   tool_stderr.h \
-  tool_strdup.h \
   tool_urlglob.h \
   tool_util.h \
   tool_version.h \

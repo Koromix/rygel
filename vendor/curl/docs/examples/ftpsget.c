@@ -62,7 +62,7 @@ int main(void)
   };
 
   result = curl_global_init(CURL_GLOBAL_ALL);
-  if(result)
+  if(result != CURLE_OK)
     return (int)result;
 
   curl = curl_easy_init();
@@ -90,7 +90,7 @@ int main(void)
     /* always cleanup */
     curl_easy_cleanup(curl);
 
-    if(CURLE_OK != result) {
+    if(result != CURLE_OK) {
       /* we failed */
       fprintf(stderr, "curl told us %d\n", result);
     }

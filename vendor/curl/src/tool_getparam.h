@@ -336,6 +336,7 @@ struct LongShort {
 typedef enum {
   PARAM_OK = 0,
   PARAM_OPTION_UNKNOWN,
+  PARAM_CONFIG_OPTION_UNKNOWN,
   PARAM_REQUIRES_PARAMETER,
   PARAM_BAD_USE,
   PARAM_HELP_REQUESTED,
@@ -372,9 +373,10 @@ ParameterError getparameter(const char *flag, const char *nextarg,
                             int max_recursive);
 
 #ifdef UNITTESTS
-ParameterError parse_cert_parameter(const char *cert_parameter,
-                                    char **certname,
-                                    char **passphrase);
+UNITTEST ParameterError parse_cert_parameter(const char *cert_parameter,
+                                             char **certname,
+                                             char **passphrase);
+UNITTEST ParameterError GetSizeParameter(const char *arg, curl_off_t *out);
 #endif
 
 ParameterError parse_args(int argc, argv_item_t argv[]);

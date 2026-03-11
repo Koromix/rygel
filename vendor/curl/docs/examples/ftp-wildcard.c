@@ -97,7 +97,7 @@ static size_t write_cb(char *buff, size_t size, size_t nmemb, void *cb_data)
   return written;
 }
 
-int main(int argc, char **argv)
+int main(int argc, const char **argv)
 {
   /* curl easy handle */
   CURL *curl;
@@ -107,7 +107,7 @@ int main(int argc, char **argv)
 
   /* global initialization */
   CURLcode result = curl_global_init(CURL_GLOBAL_ALL);
-  if(result)
+  if(result != CURLE_OK)
     return (int)result;
 
   /* initialization of easy handle */
@@ -133,7 +133,9 @@ int main(int argc, char **argv)
   curl_easy_setopt(curl, CURLOPT_CHUNK_DATA, &data);
   curl_easy_setopt(curl, CURLOPT_WRITEDATA, &data);
 
-  /* curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L); */
+#if 0
+  curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+#endif
 
   /* set a URL containing wildcard pattern (only in the last part) */
   if(argc == 2)

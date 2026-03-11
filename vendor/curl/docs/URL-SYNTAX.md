@@ -11,9 +11,9 @@ SPDX-License-Identifier: curl
 The official "URL syntax" is primarily defined in these two different
 specifications:
 
- - [RFC 3986](https://datatracker.ietf.org/doc/html/rfc3986) (although URL is called
-   "URI" in there)
- - [The WHATWG URL Specification](https://url.spec.whatwg.org/)
+- [RFC 3986](https://datatracker.ietf.org/doc/html/rfc3986) (although URL is called
+  "URI" in there)
+- [The WHATWG URL Specification](https://url.spec.whatwg.org/)
 
 RFC 3986 is the earlier one, and curl has always tried to adhere to that one
 (since it shipped in January 2005).
@@ -100,13 +100,13 @@ supported by browsers early on and has been mimicked by curl.
 
 Based on what the hostname starts with, curl "guesses" what protocol to use:
 
- - `ftp.` means FTP
- - `dict.` means DICT
- - `ldap.` means LDAP
- - `imap.` means IMAP
- - `smtp.` means SMTP
- - `pop3.` means POP3
- - all other means HTTP
+- `ftp.` means FTP
+- `dict.` means DICT
+- `ldap.` means LDAP
+- `imap.` means IMAP
+- `smtp.` means SMTP
+- `pop3.` means POP3
+- all other means HTTP
 
 ### Globbing letters
 
@@ -210,7 +210,7 @@ If the port number is not specified in the URL, curl uses a default port
 number based on the provide scheme:
 
 DICT 2628, FTP 21, FTPS 990, GOPHER 70, GOPHERS 70, HTTP 80, HTTPS 443,
-IMAP 132, IMAPS 993, LDAP 369, LDAPS 636, MQTT 1883, POP3 110, POP3S 995,
+IMAP 143, IMAPS 993, LDAP 389, LDAPS 636, MQTT 1883, POP3 110, POP3S 995,
 RTMP 1935, RTMPS 443, RTMPT 80, RTSP 554, SCP 22, SFTP 22, SMB 445, SMBS 445,
 SMTP 25, SMTPS 465, TELNET 23, TFTP 69
 
@@ -374,9 +374,9 @@ curl supports SMB version 1 (only)
 
 The path part of an SMTP request specifies the hostname to present during
 communication with the mail server. If the path is omitted, then libcurl
-attempts to resolve the local computer's hostname. However, this may not
-return the fully qualified domain name that is required by some mail servers
-and specifying this path allows you to set an alternative name, such as your
+attempts to resolve the local computer's hostname. This may not return the
+fully qualified domain name that is required by some mail servers and
+specifying this path allows you to set an alternative name, such as your
 machine's fully qualified domain name, which you might have obtained from an
 external function such as gethostname or getaddrinfo.
 

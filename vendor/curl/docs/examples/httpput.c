@@ -73,15 +73,15 @@ static size_t read_cb(char *ptr, size_t size, size_t nmemb, void *stream)
   return retcode;
 }
 
-int main(int argc, char **argv)
+int main(int argc, const char **argv)
 {
   CURL *curl;
   CURLcode result;
   FILE *hd_src;
   struct stat file_info;
 
-  char *file;
-  char *url;
+  const char *file;
+  const char *url;
 
   if(argc < 3)
     return 1;
@@ -89,9 +89,8 @@ int main(int argc, char **argv)
   file = argv[1];
   url = argv[2];
 
-  /* get a FILE * of the same file, could also be made with
-     fdopen() from the previous descriptor, but hey this is just
-     an example! */
+  /* get a FILE * of the same file, could also be made with fdopen() from the
+     previous descriptor, but hey this is an example! */
   hd_src = fopen(file, "rb");
   if(!hd_src)
     return 2;
@@ -104,7 +103,7 @@ int main(int argc, char **argv)
 
   /* In Windows, this inits the Winsock stuff */
   result = curl_global_init(CURL_GLOBAL_ALL);
-  if(result) {
+  if(result != CURLE_OK) {
     fclose(hd_src);
     return (int)result;
   }

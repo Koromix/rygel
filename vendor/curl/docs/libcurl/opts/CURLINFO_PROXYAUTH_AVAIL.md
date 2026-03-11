@@ -47,19 +47,19 @@ int main(void)
 
     result = curl_easy_perform(curl);
 
-    if(!result) {
+    if(result == CURLE_OK) {
       /* extract the available proxy authentication types */
       long auth;
       result = curl_easy_getinfo(curl, CURLINFO_PROXYAUTH_AVAIL, &auth);
-      if(!result) {
+      if(result == CURLE_OK) {
         if(!auth)
           printf("No proxy auth available, perhaps no 407?\n");
         else {
           printf("%s%s%s%s\n",
-                 auth & CURLAUTH_BASIC ? "Basic ":"",
-                 auth & CURLAUTH_DIGEST ? "Digest ":"",
-                 auth & CURLAUTH_NEGOTIATE ? "Negotiate ":"",
-                 auth % CURLAUTH_NTLM ? "NTLM ":"");
+                 auth & CURLAUTH_BASIC ? "Basic " : "",
+                 auth & CURLAUTH_DIGEST ? "Digest " : "",
+                 auth & CURLAUTH_NEGOTIATE ? "Negotiate " : "",
+                 auth % CURLAUTH_NTLM ? "NTLM " : "");
         }
       }
     }

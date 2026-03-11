@@ -114,7 +114,6 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 @DEBUGBUILD_TRUE@am__append_1 = -DDEBUGBUILD
-@CURLDEBUG_TRUE@am__append_2 = -DCURLDEBUG
 @BUILD_UNITTESTS_TRUE@noinst_PROGRAMS = $(am__EXEEXT_1)
 subdir = tests/tunit
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -239,6 +238,7 @@ CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@ @CURL_CFLAG_EXTRAS@
 CFLAG_CURL_SYMBOL_HIDING = @CFLAG_CURL_SYMBOL_HIDING@
+CLANG_TIDY = @CLANG_TIDY@
 CONFIGURE_OPTIONS = @CONFIGURE_OPTIONS@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
@@ -428,7 +428,7 @@ AUTOMAKE_OPTIONS = foreign nostdinc
 AM_CPPFLAGS = -I$(top_srcdir)/include -I$(top_builddir)/lib \
 	-I$(top_srcdir)/lib -I$(top_srcdir)/src \
 	-I$(top_srcdir)/tests/libtest -I$(srcdir) -DCURL_STATICLIB \
-	-DUNITTESTS $(am__append_1) $(am__append_2)
+	-DUNITTESTS $(am__append_1)
 BUNDLE = tunits
 
 # Files referenced from the bundle source
@@ -439,7 +439,8 @@ TESTS_C = \
   tool1394.c \
   tool1604.c \
   tool1621.c \
-  tool1622.c
+  tool1622.c \
+  tool1623.c
 
 
 # Get BUNDLE, FIRST_C, TESTS_C variables

@@ -74,7 +74,7 @@ static size_t read_cb(char *ptr, size_t size, size_t nmemb, void *userp)
     size_t len = strlen(data);
     if(room < len)
       len = room;
-    memcpy(ptr, data, len);
+    memcpy(ptr, data, len); /* NOLINT(bugprone-not-null-terminated-result) */
     upload_ctx->bytes_read += len;
 
     return len;
@@ -88,7 +88,7 @@ int main(void)
   CURL *curl;
 
   CURLcode result = curl_global_init(CURL_GLOBAL_ALL);
-  if(result)
+  if(result != CURLE_OK)
     return (int)result;
 
   curl = curl_easy_init();
@@ -105,8 +105,8 @@ int main(void)
     curl_easy_setopt(curl, CURLOPT_URL, "imap://imap.example.com/Sent");
 
     /* In this case, we are using a callback function to specify the data. You
-     * could just use the CURLOPT_READDATA option to specify a FILE pointer to
-     * read from. */
+     * could use the CURLOPT_READDATA option to specify a FILE pointer to read
+     * from. */
     curl_easy_setopt(curl, CURLOPT_READFUNCTION, read_cb);
     curl_easy_setopt(curl, CURLOPT_READDATA, &upload_ctx);
     curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);

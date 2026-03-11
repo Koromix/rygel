@@ -33,11 +33,9 @@ int main(void)
 {
   CURL *curl;
   CURLcode result;
-  char *location;
-  long response_code;
 
   result = curl_global_init(CURL_GLOBAL_ALL);
-  if(result)
+  if(result != CURLE_OK)
     return (int)result;
 
   curl = curl_easy_init();
@@ -53,12 +51,14 @@ int main(void)
       fprintf(stderr, "curl_easy_perform() failed: %s\n",
               curl_easy_strerror(result));
     else {
+      long response_code;
       result = curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &response_code);
       if((result == CURLE_OK) && ((response_code / 100) != 3)) {
         /* a redirect implies a 3xx response code */
         fprintf(stderr, "Not a redirect.\n");
       }
       else {
+        const char *location;
         result = curl_easy_getinfo(curl, CURLINFO_REDIRECT_URL, &location);
 
         if((result == CURLE_OK) && location) {

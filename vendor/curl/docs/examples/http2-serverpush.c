@@ -47,7 +47,8 @@
 
 static FILE *out_download;
 
-static void dump(const char *text, unsigned char *ptr, size_t size, char nohex)
+static void dump(const char *text, const unsigned char *ptr,
+                 size_t size, char nohex)
 {
   size_t i;
   size_t c;
@@ -126,7 +127,7 @@ static int my_trace(CURL *curl, curl_infotype type,
     return 0;
   }
 
-  dump(text, (unsigned char *)data, size, 1);
+  dump(text, (const unsigned char *)data, size, 1);
   return 0;
 }
 
@@ -171,7 +172,7 @@ static int server_push_callback(CURL *parent,
                                 struct curl_pushheaders *headers,
                                 void *userp)
 {
-  char *headp;
+  const char *headp;
   size_t i;
   int *transfers = (int *)userp;
   char filename[128];
@@ -213,7 +214,7 @@ static int server_push_callback(CURL *parent,
 /*
  * Download a file over HTTP/2, take care of server push.
  */
-int main(int argc, char *argv[])
+int main(int argc, const char *argv[])
 {
   CURLcode result;
   CURL *curl;
@@ -225,7 +226,7 @@ int main(int argc, char *argv[])
     url = argv[1];
 
   result = curl_global_init(CURL_GLOBAL_ALL);
-  if(result)
+  if(result != CURLE_OK)
     return (int)result;
 
   /* init a multi stack */

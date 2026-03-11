@@ -57,13 +57,19 @@ extern int unitfail; /* for unittests */
 #define CURL_GNUC_DIAG
 #endif
 
-#define test_setopt(A, B, C)                            \
-  if((result = curl_easy_setopt(A, B, C)) != CURLE_OK)  \
-    goto test_cleanup
+#define test_setopt(A, B, C)            \
+  do {                                  \
+    result = curl_easy_setopt(A, B, C); \
+    if(result != CURLE_OK)              \
+      goto test_cleanup;                \
+  } while(0)
 
-#define test_multi_setopt(A, B, C)                      \
-  if((result = curl_multi_setopt(A, B, C)) != CURLE_OK) \
-    goto test_cleanup
+#define test_multi_setopt(A, B, C)       \
+  do {                                   \
+    result = curl_multi_setopt(A, B, C); \
+    if(result != CURLE_OK)               \
+      goto test_cleanup;                 \
+  } while(0)
 
 extern const char *libtest_arg2; /* set by first.c to the argv[2] or NULL */
 extern const char *libtest_arg3; /* set by first.c to the argv[3] or NULL */
@@ -82,21 +88,20 @@ int cgetopt(int argc, const char * const argv[], const char *optstring);
 extern int select_wrapper(int nfds, fd_set *rd, fd_set *wr, fd_set *exc,
                           struct timeval *tv);
 
-extern char *hexdump(const unsigned char *buffer, size_t len);
+extern char *hexdump(const unsigned char *buf, size_t len);
 
 #ifndef CURL_DISABLE_WEBSOCKETS
 CURLcode ws_send_ping(CURL *curl, const char *send_payload);
 CURLcode ws_recv_pong(CURL *curl, const char *expected_payload);
-/* just close the connection */
-void ws_close(CURL *curl);
+void ws_close(CURL *curl);  /* just close the connection */
 #endif
 
 /*
-** TEST_ERR_* values must within the CURLcode range to not cause compiler
-** errors.
-
-** For portability reasons TEST_ERR_* values should be less than 127.
-*/
+ * TEST_ERR_* values must within the CURLcode range to not cause compiler
+ * errors.
+ *
+ * For portability reasons TEST_ERR_* values should be less than 127.
+ */
 
 #define TEST_ERR_MAJOR_BAD    CURLE_OBSOLETE20
 #define TEST_ERR_RUNS_FOREVER CURLE_OBSOLETE24
@@ -112,39 +117,40 @@ void ws_close(CURL *curl);
 #define TEST_ERR_BAD_TIMEOUT  CURLE_OBSOLETE57
 
 /*
-** Macros for test source code readability/maintainability.
-**
-** All of the following macros require that an int data type 'res' variable
-** exists in scope where macro is used, and that it has been initialized to
-** zero before the macro is used.
-**
-** exe_* and chk_* macros are helper macros not intended to be used from
-** outside of this header file. Arguments 'Y' and 'Z' of these represent
-** source code file and line number, while Arguments 'A', 'B', etc, are
-** the arguments used to actually call a libcurl function.
-**
-** All easy_* and multi_* macros call a libcurl function and evaluate if
-** the function has succeeded or failed. When the function succeeds 'res'
-** variable is not set nor cleared and program continues normal flow. On
-** the other hand if function fails 'res' variable is set and a jump to
-** label 'test_cleanup' is performed.
-**
-** Every easy_* and multi_* macros have a res_easy_* and res_multi_* macro
-** counterpart that operates in the same way with the exception that no
-** jump takes place in case of failure. res_easy_* and res_multi_* macros
-** should be immediately followed by checking if 'res' variable has been
-** set.
-**
-** 'res' variable when set will hold a CURLcode, CURLMcode, or any of the
-** TEST_ERR_* values defined above. It is advisable to return this value
-** as test result.
-*/
+ * Macros for test source code readability/maintainability.
+ *
+ * All of the following macros require that an int data type 'res' variable
+ * exists in scope where macro is used, and that it has been initialized to
+ * zero before the macro is used.
+ *
+ * exe_* and chk_* macros are helper macros not intended to be used from
+ * outside of this header file. Arguments 'Y' and 'Z' of these represent
+ * source code file and line number, while Arguments 'A', 'B', etc, are
+ * the arguments used to actually call a libcurl function.
+ *
+ * All easy_* and multi_* macros call a libcurl function and evaluate if
+ * the function has succeeded or failed. When the function succeeds 'res'
+ * variable is not set nor cleared and program continues normal flow. On
+ * the other hand if function fails 'res' variable is set and a jump to
+ * label 'test_cleanup' is performed.
+ *
+ * Every easy_* and multi_* macros have a res_easy_* and res_multi_* macro
+ * counterpart that operates in the same way with the exception that no
+ * jump takes place in case of failure. res_easy_* and res_multi_* macros
+ * should be immediately followed by checking if 'res' variable has been
+ * set.
+ *
+ * 'res' variable when set will hold a CURLcode, CURLMcode, or any of the
+ * TEST_ERR_* values defined above. It is advisable to return this value
+ * as test result.
+ */
 
 /* ---------------------------------------------------------------- */
 
 #define exe_easy_init(A, Y, Z)                                        \
   do {                                                                \
-    if((A = curl_easy_init()) == NULL) {                              \
+    (A) = curl_easy_init();                                           \
+    if(!(A)) {                                                        \
       curl_mfprintf(stderr, "%s:%d curl_easy_init() failed\n", Y, Z); \
       result = TEST_ERR_EASY_INIT;                                    \
     }                                                                 \
@@ -156,7 +162,7 @@ void ws_close(CURL *curl);
 #define chk_easy_init(A, Y, Z) \
   do {                         \
     exe_easy_init(A, Y, Z);    \
-    if(result)                    \
+    if(result)                 \
       goto test_cleanup;       \
   } while(0)
 
@@ -167,7 +173,8 @@ void ws_close(CURL *curl);
 
 #define exe_multi_init(A, Y, Z)                                        \
   do {                                                                 \
-    if((A = curl_multi_init()) == NULL) {                              \
+    (A) = curl_multi_init();                                           \
+    if(!(A)) {                                                         \
       curl_mfprintf(stderr, "%s:%d curl_multi_init() failed\n", Y, Z); \
       result = TEST_ERR_MULTI;                                         \
     }                                                                  \
@@ -190,8 +197,8 @@ void ws_close(CURL *curl);
 
 #define exe_easy_setopt(A, B, C, Y, Z)                  \
   do {                                                  \
-    CURLcode ec;                                        \
-    if((ec = curl_easy_setopt(A, B, C)) != CURLE_OK) {  \
+    CURLcode ec = curl_easy_setopt(A, B, C);            \
+    if(ec != CURLE_OK) {                                \
       curl_mfprintf(stderr,                             \
                     "%s:%d curl_easy_setopt() failed, " \
                     "with code %d (%s)\n",              \
@@ -217,8 +224,8 @@ void ws_close(CURL *curl);
 
 #define exe_multi_setopt(A, B, C, Y, Z)                  \
   do {                                                   \
-    CURLMcode ec;                                        \
-    if((ec = curl_multi_setopt(A, B, C)) != CURLM_OK) {  \
+    CURLMcode ec = curl_multi_setopt(A, B, C);           \
+    if(ec != CURLM_OK) {                                 \
       curl_mfprintf(stderr,                              \
                     "%s:%d curl_multi_setopt() failed, " \
                     "with code %d (%s)\n",               \
@@ -244,8 +251,8 @@ void ws_close(CURL *curl);
 
 #define exe_multi_add_handle(A, B, Y, Z)                     \
   do {                                                       \
-    CURLMcode ec;                                            \
-    if((ec = curl_multi_add_handle(A, B)) != CURLM_OK) {     \
+    CURLMcode ec = curl_multi_add_handle(A, B);              \
+    if(ec != CURLM_OK) {                                     \
       curl_mfprintf(stderr,                                  \
                     "%s:%d curl_multi_add_handle() failed, " \
                     "with code %d (%s)\n",                   \
@@ -271,8 +278,8 @@ void ws_close(CURL *curl);
 
 #define exe_multi_remove_handle(A, B, Y, Z)                     \
   do {                                                          \
-    CURLMcode ec;                                               \
-    if((ec = curl_multi_remove_handle(A, B)) != CURLM_OK) {     \
+    CURLMcode ec = curl_multi_remove_handle(A, B);              \
+    if(ec != CURLM_OK) {                                        \
       curl_mfprintf(stderr,                                     \
                     "%s:%d curl_multi_remove_handle() failed, " \
                     "with code %d (%s)\n",                      \
@@ -296,23 +303,23 @@ void ws_close(CURL *curl);
 
 /* ---------------------------------------------------------------- */
 
-#define exe_multi_perform(A, B, Y, Z)                                   \
-  do {                                                                  \
-    CURLMcode ec;                                                       \
-    if((ec = curl_multi_perform(A, B)) != CURLM_OK) {                   \
-      curl_mfprintf(stderr,                                             \
-                    "%s:%d curl_multi_perform() failed, "               \
-                    "with code %d (%s)\n",                              \
-                    Y, Z, ec, curl_multi_strerror(ec));                 \
-      result = TEST_ERR_MULTI;                                          \
-    }                                                                   \
-    else if(*(B) < 0) {                                                 \
-      curl_mfprintf(stderr,                                             \
-                    "%s:%d curl_multi_perform() succeeded, "            \
+#define exe_multi_perform(A, B, Y, Z)                                    \
+  do {                                                                   \
+    CURLMcode ec = curl_multi_perform(A, B);                             \
+    if(ec != CURLM_OK) {                                                 \
+      curl_mfprintf(stderr,                                              \
+                    "%s:%d curl_multi_perform() failed, "                \
+                    "with code %d (%s)\n",                               \
+                    Y, Z, ec, curl_multi_strerror(ec));                  \
+      result = TEST_ERR_MULTI;                                           \
+    }                                                                    \
+    else if(*(B) < 0) {                                                  \
+      curl_mfprintf(stderr,                                              \
+                    "%s:%d curl_multi_perform() succeeded, "             \
                     "but returned invalid running_handles value (%d)\n", \
-                    Y, Z, (int)*(B));                                   \
-      result = TEST_ERR_NUM_HANDLES;                                    \
-    }                                                                   \
+                    Y, Z, (int)*(B));                                    \
+      result = TEST_ERR_NUM_HANDLES;                                     \
+    }                                                                    \
   } while(0)
 
 #define res_multi_perform(A, B) \
@@ -332,8 +339,8 @@ void ws_close(CURL *curl);
 
 #define exe_multi_fdset(A, B, C, D, E, Y, Z)                    \
   do {                                                          \
-    CURLMcode ec;                                               \
-    if((ec = curl_multi_fdset(A, B, C, D, E)) != CURLM_OK) {    \
+    CURLMcode ec = curl_multi_fdset(A, B, C, D, E);             \
+    if(ec != CURLM_OK) {                                        \
       curl_mfprintf(stderr,                                     \
                     "%s:%d curl_multi_fdset() failed, "         \
                     "with code %d (%s)\n",                      \
@@ -366,8 +373,8 @@ void ws_close(CURL *curl);
 
 #define exe_multi_timeout(A, B, Y, Z)                             \
   do {                                                            \
-    CURLMcode ec;                                                 \
-    if((ec = curl_multi_timeout(A, B)) != CURLM_OK) {             \
+    CURLMcode ec = curl_multi_timeout(A, B);                      \
+    if(ec != CURLM_OK) {                                          \
       curl_mfprintf(stderr,                                       \
                     "%s:%d curl_multi_timeout() failed, "         \
                     "with code %d (%s)\n",                        \
@@ -400,8 +407,8 @@ void ws_close(CURL *curl);
 
 #define exe_multi_poll(A, B, C, D, E, Y, Z)                     \
   do {                                                          \
-    CURLMcode ec;                                               \
-    if((ec = curl_multi_poll(A, B, C, D, E)) != CURLM_OK) {     \
+    CURLMcode ec = curl_multi_poll(A, B, C, D, E);              \
+    if(ec != CURLM_OK) {                                        \
       curl_mfprintf(stderr,                                     \
                     "%s:%d curl_multi_poll() failed, "          \
                     "with code %d (%s)\n",                      \
@@ -434,8 +441,8 @@ void ws_close(CURL *curl);
 
 #define exe_multi_wakeup(A, Y, Z)                        \
   do {                                                   \
-    CURLMcode ec;                                        \
-    if((ec = curl_multi_wakeup(A)) != CURLM_OK) {        \
+    CURLMcode ec = curl_multi_wakeup(A);                 \
+    if(ec != CURLM_OK) {                                 \
       curl_mfprintf(stderr,                              \
                     "%s:%d curl_multi_wakeup() failed, " \
                     "with code %d (%s)\n",               \
@@ -450,7 +457,7 @@ void ws_close(CURL *curl);
 #define chk_multi_wakeup(A, Y, Z) \
   do {                            \
     exe_multi_wakeup(A, Y, Z);    \
-    if(result)                       \
+    if(result)                    \
       goto test_cleanup;          \
   } while(0)
 
@@ -461,10 +468,9 @@ void ws_close(CURL *curl);
 
 #define exe_select_test(A, B, C, D, E, Y, Z)                             \
   do {                                                                   \
-    int ec;                                                              \
     if(select_wrapper(A, B, C, D, E) == -1) {                            \
+      int ec = SOCKERRNO;                                                \
       char ecbuf[STRERROR_LEN];                                          \
-      ec = SOCKERRNO;                                                    \
       curl_mfprintf(stderr,                                              \
                     "%s:%d select() failed, with "                       \
                     "errno %d (%s)\n",                                   \
@@ -493,7 +499,7 @@ void ws_close(CURL *curl);
     tv_test_start = curlx_now(); \
   } while(0)
 
-#define TEST_HANG_TIMEOUT 60 * 1000  /* global default */
+#define TEST_HANG_TIMEOUT (60 * 1000)  /* global default */
 
 #define exe_test_timedout(T, Y, Z)                                        \
   do {                                                                    \
@@ -502,7 +508,7 @@ void ws_close(CURL *curl);
       curl_mfprintf(stderr,                                               \
                     "%s:%d ABORTING TEST, since it seems "                \
                     "that it would have run forever (%ld ms > %ld ms)\n", \
-                    Y, Z, (long)timediff, (long)(TEST_HANG_TIMEOUT));     \
+                    Y, Z, (long)timediff, (long)TEST_HANG_TIMEOUT);       \
       result = TEST_ERR_RUNS_FOREVER;                                     \
     }                                                                     \
   } while(0)
@@ -530,8 +536,8 @@ void ws_close(CURL *curl);
 
 #define exe_global_init(A, Y, Z)                        \
   do {                                                  \
-    CURLcode ec;                                        \
-    if((ec = curl_global_init(A)) != CURLE_OK) {        \
+    CURLcode ec = curl_global_init(A);                  \
+    if(ec != CURLE_OK) {                                \
       curl_mfprintf(stderr,                             \
                     "%s:%d curl_global_init() failed, " \
                     "with code %d (%s)\n",              \

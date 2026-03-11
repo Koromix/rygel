@@ -55,7 +55,7 @@ struct transfer {
   int num;
 };
 
-static void dump(const char *text, int num, unsigned char *ptr,
+static void dump(const char *text, int num, const unsigned char *ptr,
                  size_t size, char nohex)
 {
   size_t i;
@@ -136,7 +136,7 @@ static int my_trace(CURL *curl, curl_infotype type,
     return 0;
   }
 
-  dump(text, num, (unsigned char *)data, size, 1);
+  dump(text, num, (const unsigned char *)data, size, 1);
   return 0;
 }
 
@@ -187,7 +187,7 @@ static int setup(struct transfer *t, int num)
 /*
  * Download many transfers over HTTP/2, using the same connection!
  */
-int main(int argc, char **argv)
+int main(int argc, const char **argv)
 {
   CURLcode result;
   struct transfer *trans;
@@ -206,7 +206,7 @@ int main(int argc, char **argv)
     num_transfers = 3; /* a suitable low default */
 
   result = curl_global_init(CURL_GLOBAL_ALL);
-  if(result)
+  if(result != CURLE_OK)
     return (int)result;
 
   trans = calloc(num_transfers, sizeof(*trans));

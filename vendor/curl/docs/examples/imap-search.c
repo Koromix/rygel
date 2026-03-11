@@ -40,7 +40,7 @@ int main(void)
   CURL *curl;
 
   CURLcode result = curl_global_init(CURL_GLOBAL_ALL);
-  if(result)
+  if(result != CURLE_OK)
     return (int)result;
 
   curl = curl_easy_init();
@@ -56,7 +56,7 @@ int main(void)
      * this can contain a message sequence set and a number of search criteria
      * keywords including flags such as ANSWERED, DELETED, DRAFT, FLAGGED, NEW,
      * RECENT and SEEN. For more information about the search criteria please
-     * see RFC-3501 section 6.4.4.   */
+     * see RFC-3501 section 6.4.4. */
     curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "SEARCH NEW");
 
     /* Perform the custom request */

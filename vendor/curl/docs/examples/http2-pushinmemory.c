@@ -77,7 +77,7 @@ static void setup(CURL *curl)
   curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
   curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
 
-  /* write data to a struct  */
+  /* write data to a struct */
   curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_cb);
   init_memory(&files[0]);
   curl_easy_setopt(curl, CURLOPT_WRITEDATA, &files[0]);
@@ -93,7 +93,7 @@ static int server_push_callback(CURL *parent,
                                 struct curl_pushheaders *headers,
                                 void *userp)
 {
-  char *headp;
+  const char *headp;
   int *transfers = (int *)userp;
   (void)parent;
   (void)num_headers;
@@ -126,7 +126,7 @@ int main(void)
   int i;
 
   CURLcode result = curl_global_init(CURL_GLOBAL_ALL);
-  if(result)
+  if(result != CURLE_OK)
     return (int)result;
 
   /* init a multi stack */

@@ -38,6 +38,7 @@
 #include <stdio.h>
 
 #include <curl/curl.h>
+
 #include <gnutls/gnutls.h>
 #include <gnutls/x509.h>
 
@@ -53,7 +54,7 @@ static size_t write_cb(void *ptr, size_t size, size_t nmemb, void *stream)
 
   result = curl_easy_getinfo(curl, CURLINFO_TLS_SESSION, &info);
 
-  if(!result) {
+  if(result == CURLE_OK) {
     unsigned int cert_list_size;
     const gnutls_datum_t *chainp;
 
@@ -97,7 +98,7 @@ static size_t write_cb(void *ptr, size_t size, size_t nmemb, void *stream)
 int main(void)
 {
   CURLcode result = curl_global_init(CURL_GLOBAL_ALL);
-  if(result)
+  if(result != CURLE_OK)
     return (int)result;
 
   curl = curl_easy_init();

@@ -213,6 +213,7 @@ CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
 CFLAG_CURL_SYMBOL_HIDING = @CFLAG_CURL_SYMBOL_HIDING@
+CLANG_TIDY = @CLANG_TIDY@
 CONFIGURE_OPTIONS = @CONFIGURE_OPTIONS@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
@@ -362,11 +363,12 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-EXTRA_DIST = coverage.sh completion.pl firefox-db2pem.sh checksrc.pl checksrc-all.pl \
-  mk-ca-bundle.pl mk-unity.pl schemetable.c cd2nroff nroff2cd cdall cd2cd managen    \
-  dmaketgz maketgz release-tools.sh verify-release cmakelint.sh mdlinkcheck          \
-  CMakeLists.txt perlcheck.sh pythonlint.sh randdisable wcurl top-complexity         \
-  extract-unit-protos .checksrc
+EXTRA_DIST = coverage.sh completion.pl firefox-db2pem.sh checksrc.pl          \
+  checksrc-all.pl mk-ca-bundle.pl mk-unity.pl schemetable.c cd2nroff nroff2cd \
+  cdall cd2cd managen dmaketgz maketgz release-tools.sh verify-release        \
+  cmakelint.sh mdlinkcheck CMakeLists.txt perlcheck.sh pythonlint.sh          \
+  spacecheck.pl randdisable wcurl top-complexity extract-unit-protos          \
+  .checksrc badwords badwords-all badwords.ok badwords.txt
 
 dist_bin_SCRIPTS = wcurl
 @USE_ZSH_COMPLETION_TRUE@ZSH_COMPLETION_FUNCTION_FILENAME = _curl

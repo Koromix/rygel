@@ -58,11 +58,11 @@ char *getpass_r(const char *prompt, char *buffer, size_t buflen)
   long sts;
   short chan;
 
-  /* iosbdef.h was not in VAX V7.2 or CC 6.4  */
+  /* iosbdef.h was not in VAX V7.2 or CC 6.4 */
   struct _isb {
-    short int iosb$w_status; /* status     */
+    short int iosb$w_status; /* status */
     short int iosb$w_bcnt;   /* byte count */
-    int unused;              /* unused     */
+    int unused;              /* unused */
   } iosb;
 
   $DESCRIPTOR(ttdesc, "TT");
@@ -86,7 +86,6 @@ char *getpass_r(const char *prompt, char *buffer, size_t buflen)
 #endif /* __VMS */
 
 #ifdef _WIN32
-
 char *getpass_r(const char *prompt, char *buffer, size_t buflen)
 {
   size_t i;
@@ -100,7 +99,7 @@ char *getpass_r(const char *prompt, char *buffer, size_t buflen)
     }
     else if(buffer[i] == '\b')
       /* remove this letter and if this is not the first key, remove the
-           previous one as well */
+         previous one as well */
       i = i - (i >= 1 ? 2 : 1);
   }
   /* since echo is disabled, print a newline */
@@ -163,7 +162,7 @@ static bool ttyecho(bool enable, int fd)
 }
 
 char *getpass_r(const char *prompt, /* prompt to display */
-                char *password,     /* buffer to store password in */
+                char *buffer,       /* buffer to store password in */
                 size_t buflen)      /* size of buffer to store password in */
 {
   ssize_t nread;
@@ -175,11 +174,11 @@ char *getpass_r(const char *prompt, /* prompt to display */
   disabled = ttyecho(FALSE, fd); /* disable terminal echo */
 
   fputs(prompt, tool_stderr);
-  nread = read(fd, password, buflen);
+  nread = read(fd, buffer, buflen);
   if(nread > 0)
-    password[--nread] = '\0'; /* null-terminate where enter is stored */
+    buffer[--nread] = '\0'; /* null-terminate where enter is stored */
   else
-    password[0] = '\0'; /* got nothing */
+    buffer[0] = '\0'; /* got nothing */
 
   if(disabled) {
     /* if echo actually was disabled, add a newline */
@@ -188,9 +187,9 @@ char *getpass_r(const char *prompt, /* prompt to display */
   }
 
   if(STDIN_FILENO != fd)
-    close(fd);
+    curlx_close(fd);
 
-  return password; /* return pointer to buffer */
+  return buffer; /* return pointer to buffer */
 }
 
 #endif /* DONE */

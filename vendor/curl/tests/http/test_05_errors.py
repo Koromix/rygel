@@ -25,6 +25,7 @@
 ###########################################################################
 #
 import logging
+import os
 import pytest
 
 from testenv import Env, CurlClient
@@ -58,10 +59,8 @@ class TestErrors:
     # download files, check that we get CURLE_PARTIAL_FILE for all
     @pytest.mark.parametrize("proto", Env.http_mplx_protos())
     def test_05_02_partial_20(self, env: Env, httpd, nghttpx, proto):
-        if proto == 'h3' and env.curl_uses_ossl_quic():
-            pytest.skip("openssl-quic is flaky in yielding proper error codes")
         if proto == 'h3' and env.curl_uses_lib('quiche') and \
-                not env.curl_lib_version_at_least('quiche', '0.24.7'):
+                not env.curl_lib_version_at_least('quiche', '0.24.8'):
             pytest.skip("quiche issue #2277 not fixed")
         count = 20
         curl = CurlClient(env=env)
@@ -125,3 +124,19 @@ class TestErrors:
         else:
             r.check_exit_code(0)
             r.check_response(http_status=200, count=count)
+
+    # Make a connect with a fail for '::1' and wrong certificate for '127.0.0.1'
+    # The error message reported needs to be from the certificate.
+    # verifies issue #20608
+    @pytest.mark.parametrize("proto", Env.http_h1_h2_protos())
+    def test_05_05_failed_peer(self, env: Env, proto, httpd, nghttpx):
+        domain = f'invalid.{env.tld}'
+        url = f'https://{domain}:{env.port_for(proto)}/'
+        run_env = os.environ.copy()
+        run_env['CURL_DBG_SOCK_FAIL_IPV6'] = '1'
+        curl = CurlClient(env=env, run_env=run_env)
+        r = curl.http_download(urls=[url], alpn_proto=proto, extra_args=[
+            '--resolve', f'{domain}:{env.port_for(proto)}:::1,127.0.0.1',
+        ])
+        assert r.exit_code == 60, f'{r}'
+        assert r.stats[0]['errormsg'] != 'CURL_DBG_SOCK_FAIL_IPV6: failed to open socket'

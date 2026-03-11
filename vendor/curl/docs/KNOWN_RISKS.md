@@ -26,8 +26,8 @@ to you from untrusted sources.
 curl can do a lot of things, and you should only ask it do things you want and
 deem correct.
 
-Even just accepting just the URL part without careful vetting might make curl
-do things you do not like. Like accessing internal hosts, like connecting to
+Even accepting only the URL part without careful vetting might make curl do
+things you do not like. Like accessing internal hosts, like connecting to
 rogue servers that redirect to even weirder places, like using ports or
 protocols that play tricks on you.
 
@@ -90,12 +90,12 @@ The curl command blanks the contents of a number of command line arguments to
 prevent them from appearing in process listings. It does not blank all
 arguments, even though some that are not blanked might contain sensitive data.
 
- - not all systems allow the arguments to be blanked in the first place
- - since curl blanks the argument itself they are readable for a short moment
-   no matter what
- - virtually every argument can contain sensitive data, depending on use
- - blanking all arguments would make it impractical for users to differentiate
-   curl command lines in process listings
+- not all systems allow the arguments to be blanked in the first place
+- since curl blanks the argument itself they are readable for a short moment
+  no matter what
+- virtually every argument can contain sensitive data, depending on use
+- blanking all arguments would make it impractical for users to differentiate
+  curl command lines in process listings
 
 ## HTTP headers in redirects
 

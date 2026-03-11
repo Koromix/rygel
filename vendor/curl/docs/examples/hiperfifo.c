@@ -22,41 +22,40 @@
  *
  ***************************************************************************/
 /* <DESC>
- * multi socket API usage with libevent 2
+ * multi socket interface with libevent 2
  * </DESC>
  */
 /* Example application source code using the multi socket interface to
-   download many files at once.
-
-Written by Jeff Pohlmeyer
-
-Requires libevent version 2 and a (POSIX?) system that has mkfifo().
-
-This is an adaptation of libcurl's "hipev.c" and libevent's "event-test.c"
-sample programs.
-
-When running, the program creates the named pipe "hiper.fifo"
-
-Whenever there is input into the fifo, the program reads the input as a list
-of URL's and creates some new easy handles to fetch each URL via the
-curl_multi "hiper" API.
-
-Thus, you can try a single URL:
-  % echo http://www.yahoo.com > hiper.fifo
-
-Or a whole bunch of them:
-  % cat my-url-list > hiper.fifo
-
-The fifo buffer is handled almost instantly, so you can even add more URL's
-while the previous requests are still being downloaded.
-
-Note:
-  For the sake of simplicity, URL length is limited to 1023 char's !
-
-This is purely a demo app, all retrieved data is simply discarded by the write
-callback.
-
-*/
+ * download many files at once.
+ *
+ * Written by Jeff Pohlmeyer
+ *
+ * Requires libevent version 2 and a (POSIX?) system that has mkfifo().
+ *
+ * This is an adaptation of libcurl's "hipev.c" and libevent's "event-test.c"
+ * sample programs.
+ *
+ * When running, the program creates the named pipe "hiper.fifo"
+ *
+ * Whenever there is input into the fifo, the program reads the input as a list
+ * of URL's and creates some new easy handles to fetch each URL via the
+ * curl_multi "hiper" API.
+ *
+ * Thus, you can try a single URL:
+ *   % echo http://www.yahoo.com > hiper.fifo
+ *
+ * Or a whole bunch of them:
+ *   % cat my-url-list > hiper.fifo
+ *
+ * The fifo buffer is handled almost instantly, so you can even add more URL's
+ * while the previous requests are still being downloaded.
+ *
+ * Note:
+ *   For the sake of simplicity, URL length is limited to 1023 chars.
+ *
+ * This is purely a demo app, all retrieved data is discarded by
+ * the write callback.
+ */
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -154,7 +153,7 @@ static int multi_timer_cb(CURLM *multi, long timeout_ms, struct GlobalInfo *g)
   fprintf(MSG_OUT, "multi_timer_cb: Setting timeout to %ld ms\n", timeout_ms);
 
   /*
-   * if timeout_ms is -1, just delete the timer
+   * if timeout_ms is -1, delete the timer
    *
    * For all other values of timeout_ms, this should set or *update* the timer
    * to the new value
@@ -198,9 +197,8 @@ static void event_cb(int fd, short kind, void *userp)
   struct GlobalInfo *g = (struct GlobalInfo *)userp;
   CURLMcode mresult;
 
-  int action =
-    ((kind & EV_READ) ? CURL_CSELECT_IN : 0) |
-    ((kind & EV_WRITE) ? CURL_CSELECT_OUT : 0);
+  int action = ((kind & EV_READ) ? CURL_CSELECT_IN : 0) |
+               ((kind & EV_WRITE) ? CURL_CSELECT_OUT : 0);
 
   mresult = curl_multi_socket_action(g->multi, fd, action, &g->still_running);
   mcode_or_die("event_cb: curl_multi_socket_action", mresult);
@@ -222,8 +220,8 @@ static void timer_cb(int fd, short kind, void *userp)
   (void)fd;
   (void)kind;
 
-  mresult = curl_multi_socket_action(g->multi,
-                                  CURL_SOCKET_TIMEOUT, 0, &g->still_running);
+  mresult = curl_multi_socket_action(g->multi, CURL_SOCKET_TIMEOUT, 0,
+                                     &g->still_running);
   mcode_or_die("timer_cb: curl_multi_socket_action", mresult);
   check_multi_info(g);
 }
@@ -243,9 +241,8 @@ static void remsock(struct SockInfo *f)
 static void setsock(struct SockInfo *f, curl_socket_t s, CURL *e, int act,
                     struct GlobalInfo *g)
 {
-  int kind =
-     ((act & CURL_POLL_IN) ? EV_READ : 0) |
-     ((act & CURL_POLL_OUT) ? EV_WRITE : 0) | EV_PERSIST;
+  int kind = ((act & CURL_POLL_IN) ? EV_READ : 0) |
+             ((act & CURL_POLL_OUT) ? EV_WRITE : 0) | EV_PERSIST;
 
   f->sockfd = s;
   f->action = act;
@@ -371,7 +368,7 @@ static void fifo_cb(int fd, short event, void *arg)
           event_base_loopbreak(g->evbase);
       }
       else
-        new_conn(s, arg);  /* if we read a URL, go get it! */
+        new_conn(s, arg); /* if we read a URL, go get it! */
     }
     else
       break;
@@ -425,7 +422,7 @@ int main(void)
   struct GlobalInfo g;
 
   result = curl_global_init(CURL_GLOBAL_ALL);
-  if(result)
+  if(result != CURLE_OK)
     return (int)result;
 
   memset(&g, 0, sizeof(g));

@@ -34,7 +34,7 @@ int main(void)
   CURL *curl;
 
   CURLcode result = curl_global_init(CURL_GLOBAL_ALL);
-  if(result)
+  if(result != CURLE_OK)
     return (int)result;
 
   curl = curl_easy_init();
@@ -47,7 +47,7 @@ int main(void)
     };
     int i = 0;
 
-    /* Change the maximum number of persistent connection   */
+    /* Change the maximum number of persistent connection */
     curl_easy_setopt(curl, CURLOPT_MAXCONNECTS, 1L);
 
     curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);

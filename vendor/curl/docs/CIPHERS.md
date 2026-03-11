@@ -78,6 +78,7 @@ OpenSSL (1.1.1+, curl 7.61.0+), LibreSSL (3.4.1+, curl 8.3.0+),
 wolfSSL (curl 8.10.0+) and mbedTLS (3.6.0+, curl 8.10.0+).
 
 The list of cipher suites that can be used for the `--tls13-ciphers` option:
+
 ```
 TLS_AES_128_GCM_SHA256
 TLS_AES_256_GCM_SHA384
@@ -109,15 +110,15 @@ TLS 1.2 cipher suites with curl it is recommended that you use OpenSSL names
 as these are most widely recognized by the supported SSL backends.
 
 The complete list of cipher suites that may be considered for the `--ciphers`
-option is extensive, it consists of more than 300 ciphers suites. However,
-nowadays for most of them their usage is discouraged, and support for a lot of
-them have been removed from the various SSL backends, if ever implemented at
-all.
+option is extensive, it consists of more than 300 ciphers suites. Nowadays,
+most of them are discouraged, and support for a lot of them has been removed
+from the various SSL backends, if ever implemented at all.
 
 A shortened list (based on [recommendations by
 Mozilla](https://wiki.mozilla.org/Security/Server_Side_TLS)) of cipher suites,
 which are (mostly) supported by all SSL backends, that can be used for the
 `--ciphers` option:
+
 ```
 ECDHE-ECDSA-AES128-GCM-SHA256
 ECDHE-RSA-AES128-GCM-SHA256
@@ -180,6 +181,7 @@ curl \
 ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305 \
   https://example.com/
 ```
+
 Restrict ciphers to `aes128-gcm` and `chacha20`. Works with OpenSSL, LibreSSL,
 mbedTLS and wolfSSL.
 
@@ -189,6 +191,7 @@ curl \
   --tls13-ciphers TLS_AES_128_GCM_SHA256:TLS_CHACHA20_POLY1305_SHA256 \
   https://example.com/
 ```
+
 Restrict to only TLS 1.3 with `aes128-gcm` and `chacha20` ciphers. Works with
 OpenSSL, LibreSSL, mbedTLS, wolfSSL and Schannel.
 
@@ -198,6 +201,7 @@ curl \
 ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305 \
   https://example.com/
 ```
+
 Restrict TLS 1.2 ciphers to `aes128-gcm` and `chacha20`, use default TLS 1.3
 ciphers (if TLS 1.3 is available). Works with OpenSSL, LibreSSL, BoringSSL,
 mbedTLS and wolfSSL.
@@ -244,6 +248,7 @@ curl \
   --ciphers '-CIPHER_ALL:+AES-128-GCM:+CHACHA20-POLY1305' \
   https://example.com/
 ```
+
 Restrict ciphers to `aes128-gcm` and `chacha20` in GnuTLS.
 
 ```sh
@@ -251,6 +256,7 @@ curl \
   --ciphers 'NORMAL:-VERS-ALL:+TLS1.3:-AES-256-GCM' \
   https://example.com/
 ```
+
 Restrict to only TLS 1.3 without the `aes256-gcm` cipher.
 
 ```sh
@@ -258,9 +264,11 @@ curl \
   --ciphers 'NORMAL:-VERS-ALL:+TLS1.2:-CIPHER_ALL:+CAMELLIA-128-GCM' \
   https://example.com/
 ```
+
 Restrict to only TLS 1.2 with the `CAMELLIA-128-GCM` cipher.
 
 ## Further reading
+
 - [OpenSSL cipher suite names documentation](https://docs.openssl.org/master/man1/openssl-ciphers/#cipher-suite-names)
 - [wolfSSL cipher support documentation](https://www.wolfssl.com/documentation/manuals/wolfssl/chapter04.html#cipher-support)
 - [mbedTLS cipher suites reference](https://mbed-tls.readthedocs.io/projects/api/en/development/api/file/ssl__ciphersuites_8h/)

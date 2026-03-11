@@ -45,7 +45,6 @@ struct State {
   struct getout *urlnode;
   struct URLGlob inglob;
   struct URLGlob urlglob;
-  char *httpgetfields;
   char *uploadfile;
   curl_off_t upnum;     /* number of files to upload */
   curl_off_t upidx;     /* index for upload glob */
@@ -107,7 +106,7 @@ struct OperationConfig {
   size_t num_urls;          /* number of URLs added to the list */
 #ifndef CURL_DISABLE_IPFS
   char *ipfs_gateway;
-#endif /* !CURL_DISABLE_IPFS */
+#endif
   char *doh_url;
   char *cipher_list;
   char *proxy_cipher_list;
@@ -143,6 +142,7 @@ struct OperationConfig {
   char *krblevel;
   char *request_target;
   char *writeout;           /* %-styled format string to output */
+  char *httpgetfields;
   struct curl_slist *quote;
   struct curl_slist *postquote;
   struct curl_slist *prequote;

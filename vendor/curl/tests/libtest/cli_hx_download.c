@@ -42,6 +42,11 @@
 #ifdef USE_RUSTLS
 #include <rustls.h>
 #endif
+#ifdef USE_SCHANNEL
+#include <sspi.h>  /* for CtxtHandle, QueryContextAttributes() */
+#include <schannel.h>  /* for SecPkgContext_ConnectionInfo,
+                          SECPKG_ATTR_CONNECTION_INFO */
+#endif
 
 static int verbose_d = 1;
 
@@ -80,10 +85,10 @@ static size_t my_write_d_cb(char *buf, size_t nitems, size_t buflen,
                             void *userdata)
 {
   struct transfer_d *t = userdata;
-  size_t blen = (nitems * buflen);
+  curl_off_t blen = nitems * buflen;
   size_t nwritten;
 
-  curl_mfprintf(stderr, "[t-%zu] RECV %zu bytes, "
+  curl_mfprintf(stderr, "[t-%zu] RECV %" CURL_FORMAT_CURL_OFF_T " bytes, "
                 "total=%" CURL_FORMAT_CURL_OFF_T ", "
                 "pause_at=%" CURL_FORMAT_CURL_OFF_T "\n",
                 t->idx, blen, t->recv_size, t->pause_at);
@@ -103,19 +108,19 @@ static size_t my_write_d_cb(char *buf, size_t nitems, size_t buflen,
     return CURL_WRITEFUNC_PAUSE;
   }
 
-  nwritten = fwrite(buf, nitems, buflen, t->out);
-  if(nwritten < blen) {
+  nwritten = fwrite(buf, buflen, nitems, t->out);
+  if(nwritten < nitems) {
     curl_mfprintf(stderr, "[t-%zu] write failure\n", t->idx);
     return 0;
   }
-  t->recv_size += (curl_off_t)nwritten;
+  t->recv_size += blen;
   if(t->fail_at > 0 && t->recv_size >= t->fail_at) {
     curl_mfprintf(stderr, "[t-%zu] FAIL by write callback at "
                   "%" CURL_FORMAT_CURL_OFF_T " bytes\n", t->idx, t->recv_size);
     return CURL_WRITEFUNC_ERROR;
   }
 
-  return (size_t)nwritten;
+  return (size_t)blen;
 }
 
 static int my_progress_d_cb(void *userdata,
@@ -133,7 +138,8 @@ static int my_progress_d_cb(void *userdata,
   }
 
 #if defined(USE_QUICHE) || defined(USE_OPENSSL) || defined(USE_WOLFSSL) || \
-  defined(USE_GNUTLS) || defined(USE_MBEDTLS) || defined(USE_RUSTLS)
+  defined(USE_GNUTLS) || defined(USE_MBEDTLS) || defined(USE_RUSTLS) || \
+  defined(USE_SCHANNEL)
   if(!t->checked_ssl && dlnow > 0) {
     struct curl_tlssessioninfo *tls;
     CURLcode result;
@@ -197,9 +203,24 @@ static int my_progress_d_cb(void *userdata,
         break;
       }
 #endif
+#ifdef USE_SCHANNEL
+      case CURLSSLBACKEND_SCHANNEL: {
+        CtxtHandle *ctxt_handle = (CtxtHandle *)tls->internals;
+        SecPkgContext_ConnectionInfo info;
+        SECURITY_STATUS sspi_status;
+        sspi_status = QueryContextAttributes(ctxt_handle,
+                                             SECPKG_ATTR_CONNECTION_INFO,
+                                             &info);
+        assert(sspi_status == SEC_E_OK);
+        (void)sspi_status;
+        curl_mfprintf(stderr, "[t-%zu] info Schannel TLS version 0x%08lx\n",
+                      t->idx, info.dwProtocol);
+        break;
+      }
+#endif
       default:
         curl_mfprintf(stderr, "[t-%zu] info SSL_PTR backend=%d, ptr=%p\n",
-                      t->idx, tls->backend, (void *)tls->internals);
+                      t->idx, tls->backend, tls->internals);
         break;
       }
     }
@@ -211,13 +232,13 @@ static int my_progress_d_cb(void *userdata,
 static int setup_hx_download(CURL *curl, const char *url, struct transfer_d *t,
                              long http_version, struct curl_slist *host,
                              CURLSH *share, int use_earlydata,
-                             int fresh_connect)
+                             int fresh_connect, const char *cafile)
 {
   curl_easy_setopt(curl, CURLOPT_SHARE, share);
   curl_easy_setopt(curl, CURLOPT_URL, url);
   curl_easy_setopt(curl, CURLOPT_HTTP_VERSION, http_version);
-  curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
-  curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
+  if(cafile)
+    curl_easy_setopt(curl, CURLOPT_CAINFO, cafile);
   curl_easy_setopt(curl, CURLOPT_ACCEPT_ENCODING, "");
   curl_easy_setopt(curl, CURLOPT_BUFFERSIZE, (long)(128 * 1024));
   curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, my_write_d_cb);
@@ -292,11 +313,12 @@ static CURLcode test_cli_hx_download(const char *URL)
   size_t max_host_conns = 0;
   size_t max_total_conns = 0;
   int fresh_connect = 0;
+  char *cafile = NULL;
   CURLcode result = CURLE_OK;
 
   (void)URL;
 
-  while((ch = cgetopt(test_argc, test_argv, "aefhm:n:xA:F:M:P:r:T:V:"))
+  while((ch = cgetopt(test_argc, test_argv, "aefhm:n:xA:C:F:M:P:r:T:V:"))
         != -1) {
     const char *opt = coptarg;
     curl_off_t num;
@@ -328,6 +350,10 @@ static CURLcode test_cli_hx_download(const char *URL)
     case 'A':
       if(!curlx_str_number(&opt, &num, LONG_MAX))
         abort_offset = (size_t)num;
+      break;
+    case 'C':
+      curlx_free(cafile);
+      cafile = curlx_strdup(coptarg);
       break;
     case 'F':
       if(!curlx_str_number(&opt, &num, LONG_MAX))
@@ -399,7 +425,9 @@ static CURLcode test_cli_hx_download(const char *URL)
   curl_share_setopt(share, CURLSHOPT_SHARE, CURL_LOCK_DATA_COOKIE);
   curl_share_setopt(share, CURLSHOPT_SHARE, CURL_LOCK_DATA_DNS);
   curl_share_setopt(share, CURLSHOPT_SHARE, CURL_LOCK_DATA_SSL_SESSION);
-  /* curl_share_setopt(share, CURLSHOPT_SHARE, CURL_LOCK_DATA_CONNECT); */
+#if 0
+  curl_share_setopt(share, CURLSHOPT_SHARE, CURL_LOCK_DATA_CONNECT);
+#endif
   curl_share_setopt(share, CURLSHOPT_SHARE, CURL_LOCK_DATA_PSL);
   curl_share_setopt(share, CURLSHOPT_SHARE, CURL_LOCK_DATA_HSTS);
 
@@ -432,7 +460,7 @@ static CURLcode test_cli_hx_download(const char *URL)
     t->curl = curl_easy_init();
     if(!t->curl ||
        setup_hx_download(t->curl, url, t, http_version, host, share,
-                         use_earlydata, fresh_connect)) {
+                         use_earlydata, fresh_connect, cafile)) {
       curl_mfprintf(stderr, "[t-%zu] FAILED setup\n", i);
       result = (CURLcode)1;
       goto cleanup;
@@ -515,7 +543,7 @@ static CURLcode test_cli_hx_download(const char *URL)
             t->curl = curl_easy_init();
             if(!t->curl ||
                setup_hx_download(t->curl, url, t, http_version, host, share,
-                                 use_earlydata, fresh_connect)) {
+                                 use_earlydata, fresh_connect, cafile)) {
               curl_mfprintf(stderr, "[t-%zu] FAILED setup\n", i);
               result = (CURLcode)1;
               goto cleanup;
@@ -566,6 +594,7 @@ cleanup:
 optcleanup:
 
   curlx_free(resolve);
+  curlx_free(cafile);
 
   return result;
 }

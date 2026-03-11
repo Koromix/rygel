@@ -35,7 +35,7 @@
 
 #include <curl/curl.h>
 
-/* curl write callback, to fill tidy's input buffer...  */
+/* curl write callback, to fill tidy's input buffer... */
 static uint write_cb(char *in, uint size, uint nmemb, TidyBuffer *out)
 {
   uint r;
@@ -74,7 +74,7 @@ static void dumpNode(TidyDoc doc, TidyNode tnod, int indent)
   }
 }
 
-int main(int argc, char **argv)
+int main(int argc, const char **argv)
 {
   CURL *curl;
   char curl_errbuf[CURL_ERROR_SIZE];
@@ -89,7 +89,7 @@ int main(int argc, char **argv)
   }
 
   result = curl_global_init(CURL_GLOBAL_ALL);
-  if(result)
+  if(result != CURLE_OK)
     return (int)result;
 
   tdoc = tidyCreate();
@@ -108,7 +108,7 @@ int main(int argc, char **argv)
 
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &docbuf);
     result = curl_easy_perform(curl);
-    if(!result) {
+    if(result == CURLE_OK) {
       result = tidyParseBuffer(tdoc, &docbuf); /* parse the input */
       if(result >= 0) {
         result = tidyCleanAndRepair(tdoc); /* fix any problems */

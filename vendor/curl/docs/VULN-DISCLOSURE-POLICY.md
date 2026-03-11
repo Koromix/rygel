@@ -9,6 +9,9 @@ SPDX-License-Identifier: curl
 This document describes how security vulnerabilities are handled in the curl
 project.
 
+There is no bug bounty and the curl project never offers rewards for reported
+vulnerabilities.
+
 ## Publishing Information
 
 All known and public curl or libcurl related vulnerabilities are listed on
@@ -76,10 +79,6 @@ announcement.
   repository via a normal PR - but without mentioning it being a security
   vulnerability.
 
-- The monetary reward part of the bug-bounty is managed by the Internet Bug
-  Bounty team and the reporter is asked to request the reward from them after
-  the issue has been completely handled and published by curl.
-
 - No more than seven days before release, inform
   [distros@openwall](https://oss-security.openwall.org/wiki/mailing-lists/distros)
   to prepare them about the upcoming public security vulnerability
@@ -109,10 +108,10 @@ issues.
 
 Who is on this list? There are a couple of criteria you must meet, and then we
 might ask you to join the list or you can ask to join it. It really is not a
-formal process. We basically only require that you have a long-term presence
-in the curl project and you have shown an understanding for the project and
-its way of working. You must have been around for a good while and you should
-have no plans of vanishing in the near future.
+formal process. We only require that you have a long-term presence in the curl
+project and you have shown an understanding for the project and its way of
+working. You must have been around for a good while and you should have no
+plans of vanishing in the near future.
 
 We do not make the list of participants public mostly because it tends to vary
 somewhat over time and a list somewhere only risks getting outdated.
@@ -143,11 +142,6 @@ has been published.
 
 *All* reports submitted to the project, valid or not, should be disclosed and
 made public.
-
-## Bug Bounty
-
-See [BUG-BOUNTY](https://curl.se/docs/bugbounty.html) for details on the
-bug bounty program.
 
 # Severity levels
 
@@ -210,8 +204,8 @@ This is an incomplete list of issues that are not considered vulnerabilities.
 We do not consider a small memory leak a security problem; even if the amount
 of allocated memory grows by a small amount every now and then. Long-living
 applications and services already need to have countermeasures and deal with
-growing memory usage, be it leaks or just increased use. A small memory or
-resource leak is then expected to *not* cause a security problem.
+growing memory usage, be it leaks or increased use. A small memory or resource
+leak is then expected to *not* cause a security problem.
 
 Of course there can be a discussion if a leak is small or not. A large leak
 can be considered a security problem due to the DOS risk. If leaked memory
@@ -224,7 +218,8 @@ problem. There are already several benign and likely reasons for transfers to
 stall and never end, so applications that cannot deal with never-ending
 transfers already need to have counter-measures established.
 
-If the problem avoids the regular counter-measures when it causes a never-
+Well known attacks, like [Slowloris](https://en.wikipedia.org/wiki/Slowloris_(cyber_attack)), that send partial
+requests are usually not considered a flaw. If the problem avoids the regular counter-measures when it causes a never-
 ending transfer, it might be a security problem.
 
 ## Not practically possible
@@ -276,12 +271,12 @@ arguments, even though some that are not blanked might contain sensitive
 data. We consider this functionality a best-effort and omissions are not
 security vulnerabilities.
 
- - not all systems allow the arguments to be blanked in the first place
- - since curl blanks the argument itself they are readable for a short moment
-   no matter what
- - virtually every argument can contain sensitive data, depending on use
- - blanking all arguments would make it impractical for users to differentiate
-   curl command lines in process listings
+- not all systems allow the arguments to be blanked in the first place
+- since curl blanks the argument itself they are readable for a short moment
+  no matter what
+- virtually every argument can contain sensitive data, depending on use
+- blanking all arguments would make it impractical for users to differentiate
+  curl command lines in process listings
 
 ## Busy-loops
 
@@ -301,9 +296,8 @@ same directory where curl is directed to save files.
 A creative, misleading or funny looking command line is not a security
 problem. The curl command line tool takes options and URLs on the command line
 and if an attacker can trick the user to run a specifically crafted curl
-command line, all bets are off. Such an attacker can just as well have the
-user run a much worse command that can do something fatal (like
-`sudo rm -rf /`).
+command line, all bets are off. Such an attacker can already have the user run
+a much worse command that can do something fatal (like `sudo rm -rf /`).
 
 ## Terminal output and escape sequences
 
@@ -422,9 +416,9 @@ roles:
 It is likely that our [BDFL](https://en.wikipedia.org/wiki/Benevolent_dictator_for_life) occupies
 one of these roles, though this plan does not depend on it.
 
-A declaration may also contain more detailed information but as we honor embargoes
-and vulnerability disclosure throughout this process, it may also just contain
-brief notification that a **major incident** is occurring.
+A declaration may also contain more detailed information but as we honor
+embargoes and vulnerability disclosure throughout this process, it may also
+contain a brief notification that a **major incident** is occurring.
 
 ## Major incident ongoing
 

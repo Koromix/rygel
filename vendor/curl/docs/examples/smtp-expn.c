@@ -43,7 +43,7 @@ int main(void)
   CURL *curl;
 
   CURLcode result = curl_global_init(CURL_GLOBAL_ALL);
-  if(result)
+  if(result != CURLE_OK)
     return (int)result;
 
   curl = curl_easy_init();
@@ -53,7 +53,7 @@ int main(void)
     /* This is the URL for your mailserver */
     curl_easy_setopt(curl, CURLOPT_URL, "smtp://mail.example.com");
 
-    /* Note that the CURLOPT_MAIL_RCPT takes a list, not a char array  */
+    /* Note that the CURLOPT_MAIL_RCPT takes a list, not a char array */
     recipients = curl_slist_append(recipients, "Friends");
     curl_easy_setopt(curl, CURLOPT_MAIL_RCPT, recipients);
 

@@ -22,8 +22,7 @@
  *
  ***************************************************************************/
 /* <DESC>
- * Performs an FTP upload and renames the file just after a successful
- * transfer.
+ * Performs an FTP upload and renames the file after a successful transfer.
  * </DESC>
  */
 #ifdef _MSC_VER
@@ -107,7 +106,7 @@ int main(void)
 
   /* In Windows, this inits the Winsock stuff */
   result = curl_global_init(CURL_GLOBAL_ALL);
-  if(result) {
+  if(result != CURLE_OK) {
     fclose(hd_src);
     return (int)result;
   }

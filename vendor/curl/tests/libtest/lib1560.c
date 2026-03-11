@@ -50,16 +50,16 @@ static int checkparts(CURLU *u, const char *in, const char *wanted,
   };
 
   struct part parts[] = {
-    {CURLUPART_SCHEME, "scheme"},
-    {CURLUPART_USER, "user"},
-    {CURLUPART_PASSWORD, "password"},
-    {CURLUPART_OPTIONS, "options"},
-    {CURLUPART_HOST, "host"},
-    {CURLUPART_PORT, "port"},
-    {CURLUPART_PATH, "path"},
-    {CURLUPART_QUERY, "query"},
-    {CURLUPART_FRAGMENT, "fragment"},
-    {CURLUPART_URL, NULL}
+    { CURLUPART_SCHEME, "scheme" },
+    { CURLUPART_USER, "user" },
+    { CURLUPART_PASSWORD, "password" },
+    { CURLUPART_OPTIONS, "options" },
+    { CURLUPART_HOST, "host" },
+    { CURLUPART_PORT, "port" },
+    { CURLUPART_PATH, "path" },
+    { CURLUPART_QUERY, "query" },
+    { CURLUPART_FRAGMENT, "fragment" },
+    { CURLUPART_URL, NULL }
   };
   memset(buf, 0, sizeof(buf));
 
@@ -1150,7 +1150,7 @@ static const struct setcase set_parts_list[] = {
   {NULL, NULL, NULL, 0, 0, CURLUE_OK, CURLUE_OK}
 };
 
-static CURLUPart part2id(char *part)
+static CURLUPart part2id(const char *part)
 {
   if(!strcmp("url", part))
     return CURLUPART_URL;
@@ -1185,7 +1185,7 @@ static CURLUcode updateurl(CURLU *u, const char *cmd, unsigned int setflags)
 
   /* make sure the last command ends with a comma too! */
   while(p) {
-    char *e = strchr(p, ',');
+    const char *e = strchr(p, ',');
     if(e) {
       size_t n = (size_t)(e - p);
       char buf[80];

@@ -64,7 +64,7 @@ int main(void)
   static const char *postthis = "Field=1&Field=2&Field=3";
 
   result = curl_global_init(CURL_GLOBAL_ALL);
-  if(result)
+  if(result != CURLE_OK)
     return (int)result;
 
   chunk.memory = malloc(1);  /* grown as needed by realloc above */
@@ -74,7 +74,7 @@ int main(void)
   if(curl) {
     curl_easy_setopt(curl, CURLOPT_URL, "https://www.example.org/");
 
-    /* send all data to this function  */
+    /* send all data to this function */
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_cb);
 
     /* we pass our 'chunk' struct to the callback function */

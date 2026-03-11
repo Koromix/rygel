@@ -25,7 +25,7 @@ locally build `src/curl` (by default).
 
 A typical invocation for measuring performance of HTTP/2 downloads would be:
 
-```
+```sh
 curl> python3 tests/http/scorecard.py -d h2
 ```
 
@@ -35,7 +35,7 @@ JSON instead of text.
 
 Help for all command line options are available via:
 
-```
+```sh
 curl> python3 tests/http/scorecard.py -h
 ```
 
@@ -43,12 +43,12 @@ curl> python3 tests/http/scorecard.py -h
 
 Apart from `-d/--downloads` there is `-u/--uploads` and `-r/--requests`. These
 are run with a variation of resource sizes and parallelism by default. You can
-specify these in some way if you are just interested in a particular case.
+specify these in some way if you are interested in a particular case.
 
 For example, to run downloads of a 1 MB resource only, 100 times with at max 6
 parallel transfers, use:
 
-```
+```sh
 curl> python3 tests/http/scorecard.py -d --download-sizes=1mb --download-count=100 --download-parallel=6 h2
 ```
 
@@ -69,7 +69,7 @@ interactive SVG. Either clone the `Flamegraph` repository next to your `curl`
 project or set the environment variable `FLAMEGRAPH` to the location of your
 clone. Then run scorecard with the `--flame` option, like
 
-```
+```sh
 curl> FLAMEGRAPH=/Users/sei/projects/FlameGraph python3 tests/http/scorecard.py \
    -r --request-count=50000 --request-parallels=100 --samples=1 --flame h2
 ```

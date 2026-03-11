@@ -58,6 +58,10 @@ only send 800.
 The percentage of send() calls that should be answered with EAGAIN at random.
 QUIC only.
 
+## `CURL_DBG_SOCK_FAIL_IPV6`
+
+Fail opening of sockets for the IPv6 address family.
+
 ## `CURL_DEBUG`
 
 Trace logging behavior as an alternative to calling curl_global_trace(3).
@@ -106,6 +110,11 @@ A time of 0 is used for AWS signatures and NTLM if this variable exists.
 A fixed faked value to use instead of a proper random number so that functions
 in libcurl that are otherwise getting random outputs can be tested for what
 they generate.
+
+## `CURL_SIGPIPE_DEBUG`
+
+When present, `curl` does not set `SIGPIPE` to ignore. This allows
+verification that `libcurl` does not cause `SIGPIPE` to be raised.
 
 ## `CURL_SMALLREQSEND`
 

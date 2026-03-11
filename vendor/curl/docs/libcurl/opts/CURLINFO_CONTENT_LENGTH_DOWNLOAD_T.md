@@ -9,7 +9,7 @@ See-also:
   - curl_easy_getinfo (3)
   - curl_easy_setopt (3)
 Protocol:
-  - HTTP
+  - All
 Added-in: 7.55.0
 ---
 
@@ -47,12 +47,12 @@ int main(void)
     /* Perform the request */
     result = curl_easy_perform(curl);
 
-    if(!result) {
+    if(result == CURLE_OK) {
       /* check the size */
       curl_off_t cl;
       result =
         curl_easy_getinfo(curl, CURLINFO_CONTENT_LENGTH_DOWNLOAD_T, &cl);
-      if(!result) {
+      if(result == CURLE_OK) {
         printf("Download size: %" CURL_FORMAT_CURL_OFF_T "\n", cl);
       }
     }

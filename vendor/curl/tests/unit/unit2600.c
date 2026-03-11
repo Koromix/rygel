@@ -46,6 +46,7 @@
 #include "cf-ip-happy.h"
 #include "multiif.h"
 #include "select.h"
+#include "curl_addrinfo.h"
 #include "curl_trc.h"
 
 static CURLcode t2600_setup(CURL **easy)
@@ -83,7 +84,7 @@ struct test_case {
   int exp_cf6_creations;
   timediff_t min_duration_ms;
   timediff_t max_duration_ms;
-  CURLcode exp_res;
+  CURLcode result_exp;
   const char *pref_family;
 };
 
@@ -119,12 +120,8 @@ struct cf_test_ctx {
 static void cf_test_destroy(struct Curl_cfilter *cf, struct Curl_easy *data)
 {
   struct cf_test_ctx *ctx = cf->ctx;
-#ifndef CURL_DISABLE_VERBOSE_STRINGS
   infof(data, "%04dms: cf[%s] destroyed",
         (int)curlx_timediff_ms(curlx_now(), current_tr->started), ctx->id);
-#else
-  (void)data;
-#endif
   curlx_free(ctx);
   cf->ctx = NULL;
 }
@@ -246,11 +243,11 @@ static void check_result(const struct test_case *tc, struct test_result *tr)
   duration_ms = curlx_timediff_ms(tr->ended, tr->started);
   curl_mfprintf(stderr, "%d: test case took %dms\n", tc->id, (int)duration_ms);
 
-  if(tr->result != tc->exp_res && CURLE_OPERATION_TIMEDOUT != tr->result) {
+  if(tr->result != tc->result_exp && tr->result != CURLE_OPERATION_TIMEDOUT) {
     /* on CI we encounter the TIMEOUT result, since images get less CPU
      * and events are not as sharply timed. */
     curl_msprintf(msg, "%d: expected result %d but got %d",
-                  tc->id, tc->exp_res, tr->result);
+                  tc->id, tc->result_exp, tr->result);
     fail(msg);
   }
   if(tr->cf4.creations != tc->exp_cf4_creations) {
@@ -364,17 +361,17 @@ static CURLcode test_unit2600(const char *arg)
     /* CNCT   HE      v4    v6     v4 v6      MIN   MAX */
     { 1, TURL, "test.com:123:192.0.2.1", CURL_IPRESOLVE_WHATEVER,
       CNCT_TMOT, 150, 250,  250,    1,  0,      200,  TC_TMOT,  R_FAIL, NULL },
-    /* 1 ipv4, fails after ~200ms, reports COULDNT_CONNECT   */
+    /* 1 ipv4, fails after ~200ms, reports COULDNT_CONNECT */
     { 2, TURL, "test.com:123:192.0.2.1,192.0.2.2", CURL_IPRESOLVE_WHATEVER,
       CNCT_TMOT, 150, 250,  250,    2,  0,      400,  TC_TMOT,  R_FAIL, NULL },
-    /* 2 ipv4, fails after ~400ms, reports COULDNT_CONNECT   */
+    /* 2 ipv4, fails after ~400ms, reports COULDNT_CONNECT */
 #ifdef USE_IPV6
     { 3, TURL, "test.com:123:::1", CURL_IPRESOLVE_WHATEVER,
       CNCT_TMOT, 150, 250,  250,    0,  1,      200,  TC_TMOT,  R_FAIL, NULL },
-    /* 1 ipv6, fails after ~200ms, reports COULDNT_CONNECT   */
+    /* 1 ipv6, fails after ~200ms, reports COULDNT_CONNECT */
     { 4, TURL, "test.com:123:::1,::2", CURL_IPRESOLVE_WHATEVER,
       CNCT_TMOT, 150, 250,  250,    0,  2,      400,  TC_TMOT,  R_FAIL, NULL },
-    /* 2 ipv6, fails after ~400ms, reports COULDNT_CONNECT   */
+    /* 2 ipv6, fails after ~400ms, reports COULDNT_CONNECT */
     { 5, TURL, "test.com:123:192.0.2.1,::1", CURL_IPRESOLVE_WHATEVER,
       CNCT_TMOT, 150, 250, 250,     1,  1,      350,  TC_TMOT,  R_FAIL, "v6" },
     /* mixed ip4+6, v6 always first, v4 kicks in on HE, fails after ~350ms */

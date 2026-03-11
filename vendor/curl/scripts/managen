@@ -116,7 +116,7 @@ sub justline {
             print " ";
             $spare--;
         }
-        printf "%s%s", $prev?" ":"", $_;
+        printf "%s%s", $prev ? " " : "", $_;
         $prev = 1;
         $spare += $ratio;
     }
@@ -131,7 +131,7 @@ sub lastline {
     prefixline($lvl * $indent + $l);
     my $prev = 0;
     for(@line) {
-        printf "%s%s", $prev?" ":"", $_;
+        printf "%s%s", $prev ? " " : "", $_;
         $prev = 1;
     }
     print "\n";
@@ -526,10 +526,9 @@ sub render {
         push @desc, "\n" if($blankline && !$header);
         $blankline = 0;
         push @desc, $d if($manpage);
-        my $qstr = $quote ? "q": "";
+        my $qstr = $quote ? "q" : "";
         push @desc, "[".(1 + $level)."$qstr]$d" if(!$manpage);
         $header = 0;
-
     }
     if($finalblank) {
         print STDERR "$f:$line:1:ERROR: trailing blank line\n";
@@ -581,10 +580,10 @@ sub single {
     my $magic; # cmdline special option
     my $line;
     my $dline;
-    my $multi;
+    my $multi = "";
     my $scope;
     my $experimental;
-    my $start;
+    my $start = 0;
     my $list; # identifies the list, 1 example, 2 see-also
     while(<$fh>) {
         $line++;
@@ -760,7 +759,7 @@ sub single {
         push @leading, "$pref**WARNING**: this option is experimental. Do not use in production.\n\n";
     }
 
-    my $pre = $manpage ? "\n": "[1]";
+    my $pre = $manpage ? "\n" : "[1]";
 
     if($scope) {
         if($category !~ /global/) {
@@ -819,7 +818,7 @@ sub single {
                     "when you use several URLs in a command line.\n",
                     manpageify($long, $manpage));
     }
-    else {
+    elsif($multi) {
         print STDERR "$f:$line:1:ERROR: unrecognized Multi: '$multi'\n";
         return 2;
     }
@@ -846,7 +845,7 @@ sub single {
         if($and && ($i < $and)) {
             $sep = ",";
         }
-        $mstr .= sprintf "%s$l", $mstr?"$sep ":"";
+        $mstr .= sprintf "%s$l", $mstr ? "$sep " : "";
         $i++;
     }
 
@@ -1168,7 +1167,7 @@ sub listcats {
     @categories = sort @categories;
     for my $i (0..$#categories) {
         printf("#define CURLHELP_%-10s (%s)\n",
-               uc($categories[$i]), "1u << ${i}u");
+               uc($categories[$i]), "1 << ${i}");
     }
 }
 
@@ -1338,7 +1337,8 @@ my $dir = ".";
 my $include = "../../include";
 my $cmd = shift @ARGV || '';
 
- check:
+check:
+
 if($cmd eq "-d") {
     # specifies source directory
     $dir = shift @ARGV;

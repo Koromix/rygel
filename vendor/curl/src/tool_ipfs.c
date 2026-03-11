@@ -33,7 +33,7 @@
 static bool has_trailing_slash(const char *input)
 {
   size_t len = strlen(input);
-  return (len && input[len - 1] == '/');
+  return len && input[len - 1] == '/';
 }
 
 static char *ipfs_gateway(void)
@@ -181,7 +181,7 @@ CURLcode ipfs_url_rewrite(CURLU *uh, const char *protocol, char **url,
      curl_url_set(uh, CURLUPART_PORT, gwport, CURLU_URLENCODE))
     goto clean;
 
-  /* if the input path is just a slash, clear it */
+  /* if the input path is a slash, clear it */
   if(inputpath && (inputpath[0] == '/') && !inputpath[1])
     *inputpath = '\0';
 

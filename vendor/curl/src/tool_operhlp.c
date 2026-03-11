@@ -53,7 +53,7 @@ bool output_expected(const char *url, const char *uploadfile)
   if(!uploadfile)
     return TRUE;  /* download */
   if(checkprefix("http://", url) || checkprefix("https://", url))
-    return TRUE;   /* HTTP(S) upload */
+    return TRUE;  /* HTTP(S) upload */
 
   return FALSE; /* non-HTTP upload, probably no output should be expected */
 }
@@ -89,7 +89,7 @@ CURLcode add_file_name_to_url(CURL *curl, char **inurlp, const char *filename)
   char *path = NULL;
   char *query = NULL;
   if(uh) {
-    char *ptr;
+    const char *ptr;
     uerr = curl_url_set(uh, CURLUPART_URL, *inurlp,
                         CURLU_GUESS_SCHEME | CURLU_NON_SUPPORT_SCHEME);
     if(uerr) {
@@ -116,7 +116,7 @@ CURLcode add_file_name_to_url(CURL *curl, char **inurlp, const char *filename)
       /* We only want the part of the local path that is on the right
          side of the rightmost slash and backslash. */
       const char *filep = strrchr(filename, '/');
-      char *file2 = strrchr(filep ? filep : filename, '\\');
+      const char *file2 = strrchr(filep ? filep : filename, '\\');
       char *encfile;
 
       if(file2)
@@ -172,11 +172,13 @@ fail:
  * Returns a pointer to a heap-allocated string or NULL if
  * no name part, at location indicated by first argument.
  */
-CURLcode get_url_file_name(char **filename, const char *url)
+CURLcode get_url_file_name(char **filename, const char *url, SANITIZEcode *sc)
 {
   CURLU *uh = curl_url();
   char *path = NULL;
   CURLUcode uerr;
+
+  *sc = SANITIZE_ERR_OK;
 
   if(!uh)
     return CURLE_OUT_OF_MEMORY;
@@ -220,13 +222,10 @@ CURLcode get_url_file_name(char **filename, const char *url)
 #if defined(_WIN32) || defined(MSDOS)
       {
         char *sanitized;
-        SANITIZEcode sc = sanitize_file_name(&sanitized, *filename, 0);
+        *sc = sanitize_file_name(&sanitized, *filename, 0);
         tool_safefree(*filename);
-        if(sc) {
-          if(sc == SANITIZE_ERR_OUT_OF_MEMORY)
-            return CURLE_OUT_OF_MEMORY;
-          return CURLE_URL_MALFORMAT;
-        }
+        if(*sc)
+          return CURLE_BAD_FUNCTION_ARGUMENT;
         *filename = sanitized;
       }
 #endif /* _WIN32 || MSDOS */

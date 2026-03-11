@@ -29,15 +29,21 @@ mark_as_advanced(TEST_NGHTTPX)
 # Consumed variables: TEST_NGHTTPX
 configure_file("config.in" "${CMAKE_CURRENT_BINARY_DIR}/config" @ONLY)
 
-add_custom_target(testdeps)
+add_custom_target(tt)
 if(BUILD_CURL_EXE)
-  add_dependencies(testdeps "curlinfo")
+  add_dependencies(tt "curlinfo")
+endif()
+if(CURL_BUILD_EVERYTHING)
+  set_target_properties(tt PROPERTIES EXCLUDE_FROM_ALL FALSE)
 endif()
 
 if(CURL_CLANG_TIDY)
   add_custom_target(tests-clang-tidy)
-  add_dependencies(testdeps tests-clang-tidy)
+  add_dependencies(tt tests-clang-tidy)
 endif()
+
+add_custom_target(testdeps)
+add_dependencies(testdeps "tt")
 
 add_subdirectory(http)
 add_subdirectory(server)
@@ -61,9 +67,17 @@ function(curl_add_runtests _targetname _test_flags)
     endif()
     list(APPEND _depends "testdeps")
   endif()
-  set(_setenv "")
+  set(_setenvs "")
   if(CMAKE_CONFIGURATION_TYPES)
-    set(_setenv "${CMAKE_COMMAND}" -E env "CURL_DIRSUFFIX=$<CONFIG>")
+    list(APPEND _setenvs "CURL_DIRSUFFIX=$<CONFIG>")
+  endif()
+  if(WIN32 AND NOT CMAKE_HOST_WIN32)
+    list(APPEND _setenvs "CURL_TEST_EXE_EXT_SRV=${CMAKE_EXECUTABLE_SUFFIX}")  # .exe
+    list(APPEND _setenvs "CURL_TEST_EXE_EXT_TOOL=${CMAKE_EXECUTABLE_SUFFIX}")  # .exe
+    list(APPEND _setenvs "CURL_TEST_EXE_RUNNER=wine")
+  endif()
+  if(_setenvs)
+    set(_setenvs "${CMAKE_COMMAND}" -E env ${_setenvs})
   endif()
   # Use a special '$TFLAGS' placeholder as last argument which will be
   # replaced by the contents of the environment variable in runtests.pl.
@@ -72,7 +86,7 @@ function(curl_add_runtests _targetname _test_flags)
   string(REPLACE " " ";" _test_flags_list "${_test_flags}")
   add_custom_target(${_targetname}
     COMMAND
-      ${_setenv}
+      ${_setenvs}
       "${PERL_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/runtests.pl"
         ${_test_flags_list}
         "\$TFLAGS"
@@ -89,6 +103,7 @@ function(curl_add_pytests _targetname _test_flags)
       list(APPEND _depends "${EXE_NAME}" "curlinfo")
     endif()
     list(APPEND _depends "libtests")
+    list(APPEND _depends "build-certs")
   endif()
   string(REPLACE " " ";" _test_flags_list "${_test_flags}")
   add_custom_target(${_targetname}

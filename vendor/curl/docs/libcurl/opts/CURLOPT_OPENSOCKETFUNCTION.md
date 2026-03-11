@@ -22,7 +22,7 @@ CURLOPT_OPENSOCKETFUNCTION - callback for opening socket
 ~~~c
 #include <curl/curl.h>
 
-typedef enum  {
+typedef enum {
   CURLSOCKTYPE_IPCXN,  /* socket created for a specific IP connection */
 } curlsocktype;
 
@@ -80,7 +80,7 @@ signal that it already is connected.
 
 The equivalent of this:
 ~~~c
-   return socket(addr->family, addr->socktype, addr->protocol);
+  return socket(addr->family, addr->socktype, addr->protocol);
 ~~~
 
 # %PROTOCOLS%

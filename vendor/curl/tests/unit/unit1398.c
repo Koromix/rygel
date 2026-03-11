@@ -38,7 +38,7 @@ static CURLcode test_unit1398(const char *arg)
   int width = 3;
   char output[130];
 
-  /*#define curl_msnprintf snprintf */
+/* #define curl_msnprintf snprintf */
 
   /* without a trailing zero */
   rc = curl_msnprintf(output, 4, "%.*s", width, buf);

@@ -79,10 +79,6 @@ source_group("curl header files" FILES ${CURL_HFILES} ${_curl_hfiles_gen})
 source_group("curlx source files" FILES ${CURLX_CFILES})
 source_group("curlx header files" FILES ${CURLX_HFILES})
 
-if(WIN32)
-  list(APPEND CURL_CFILES ${CURL_RCFILES})
-endif()
-
 set(_curlx_cfiles_lib ${CURLX_CFILES})
 set(_curlx_hfiles_lib ${CURLX_HFILES})
 if(LIB_SELECTED STREQUAL LIB_STATIC)
@@ -105,6 +101,10 @@ set_property(DIRECTORY APPEND PROPERTY INCLUDE_DIRECTORIES
 add_executable(${EXE_NAME} ${CURL_CFILES} ${CURL_HFILES} ${_curl_cfiles_gen} ${_curl_hfiles_gen} ${CURLX_CFILES} ${CURLX_HFILES})
 target_compile_definitions(${EXE_NAME} PRIVATE ${_curl_definitions})
 target_link_libraries(${EXE_NAME} ${LIB_SELECTED_FOR_EXE} ${CURL_LIBS})
+set_property(TARGET ${EXE_NAME} APPEND PROPERTY COMPILE_OPTIONS "${CURL_CFLAGS}")
+if(WIN32)
+  set_property(TARGET ${EXE_NAME} APPEND PROPERTY SOURCES ${CURL_RCFILES})
+endif()
 
 add_executable(${PROJECT_NAME}::${EXE_NAME} ALIAS ${EXE_NAME})
 
@@ -112,14 +112,17 @@ add_executable(curlinfo EXCLUDE_FROM_ALL "curlinfo.c")
 target_link_libraries(curlinfo PRIVATE ${CURL_LIBS})
 set_target_properties(curlinfo PROPERTIES UNITY_BUILD OFF)
 
-# special libcurltool library just for unittests
+# special libcurltool library for unittests
 add_library(curltool STATIC EXCLUDE_FROM_ALL ${CURL_CFILES} ${CURL_HFILES} ${_curlx_cfiles_lib} ${_curlx_hfiles_lib})
 target_compile_definitions(curltool PUBLIC "CURL_STATICLIB" "UNITTESTS")
 target_link_libraries(curltool PUBLIC ${CURL_LIBS})
-set_target_properties(curltool PROPERTIES C_CLANG_TIDY "")
+set_target_properties(curltool PROPERTIES UNITY_BUILD ON C_CLANG_TIDY "")
 
 if(CURL_HAS_LTO)
   set_target_properties(${EXE_NAME} PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
+endif()
+if(CURL_CLANG_TIDY)
+  set_target_properties(${EXE_NAME} PROPERTIES UNITY_BUILD OFF)
 endif()
 
 if(ENABLE_UNICODE AND MINGW)

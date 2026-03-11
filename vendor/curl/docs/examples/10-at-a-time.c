@@ -107,7 +107,7 @@ int main(void)
   CURLM *multi;
 
   CURLcode result = curl_global_init(CURL_GLOBAL_ALL);
-  if(result)
+  if(result != CURLE_OK)
     return (int)result;
 
   multi = curl_multi_init();
@@ -131,7 +131,7 @@ int main(void)
       /* !checksrc! disable EQUALSNULL 1 */
       while((msg = curl_multi_info_read(multi, &msgs_left)) != NULL) {
         if(msg->msg == CURLMSG_DONE) {
-          char *url;
+          const char *url;
           CURL *curl = msg->easy_handle;
           curl_easy_getinfo(curl, CURLINFO_PRIVATE, &url);
           fprintf(stderr, "R: %d - %s <%s>\n",

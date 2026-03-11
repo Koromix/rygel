@@ -31,7 +31,7 @@
 #include <curl/curl.h>
 
 /*
- * Simply download two HTTP files!
+ * Download two HTTP files!
  */
 int main(void)
 {
@@ -39,7 +39,7 @@ int main(void)
   CURL *curl2;
 
   CURLcode result = curl_global_init(CURL_GLOBAL_ALL);
-  if(result)
+  if(result != CURLE_OK)
     return (int)result;
 
   curl = curl_easy_init();

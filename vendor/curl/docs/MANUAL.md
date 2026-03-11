@@ -96,8 +96,8 @@ or specify them with the `-u` flag like
 
 ### FTPS
 
-It is just like for FTP, but you may also want to specify and use SSL-specific
-options for certificates etc.
+It is like FTP, but you may also want to specify and use SSL-specific options
+for certificates etc.
 
 Note that using `FTPS://` as prefix is the *implicit* way as described in the
 standards while the recommended *explicit* way is done by using `FTP://` and
@@ -503,18 +503,18 @@ happening. The different fields in the output have the following meaning:
 
 From left-to-right:
 
- - `%`           - percentage completed of the whole transfer
- - `Total`       - total size of the whole expected transfer
- - `%`           - percentage completed of the download
- - `Received`    - currently downloaded amount of bytes
- - `%`           - percentage completed of the upload
- - `Xferd`       - currently uploaded amount of bytes
- - `Average Speed Dload` - the average transfer speed of the download
- - `Average Speed Upload` - the average transfer speed of the upload
- - `Time Total`  - expected time to complete the operation
- - `Time Current` - time passed since the invoke
- - `Time Left`   - expected time left to completion
- - `Curr.Speed`  - the average transfer speed the last 5 seconds (the first
+- `%`            - percentage completed of the whole transfer
+- `Total`        - total size of the whole expected transfer
+- `%`            - percentage completed of the download
+- `Received`     - currently downloaded amount of bytes
+- `%`            - percentage completed of the upload
+- `Xferd`        - currently uploaded amount of bytes
+- `Average Speed Dload` - the average transfer speed of the download
+- `Average Speed Upload` - the average transfer speed of the upload
+- `Time Total`   - expected time to complete the operation
+- `Time Current` - time passed since the invoke
+- `Time Left`    - expected time left to completion
+- `Curr.Speed`   - the average transfer speed the last 5 seconds (the first
                    5 seconds of a transfer is based on less time of course.)
 
 The `-#` option displays a totally different progress bar that does not need
@@ -594,7 +594,7 @@ line parameter, like:
 Force curl to get and display a local help page in case it is invoked without
 URL by making a config file similar to:
 
-    # default url to get
+    # default URL to get
     url = "https://help.with.curl.example.com/curlhelp.html"
 
 You can specify another config file to be read by using the `-K`/`--config`
@@ -660,7 +660,7 @@ incoming connections.
     curl ftp.example.com
 
 If the server, for example, is behind a firewall that does not allow
-connections on ports other than 21 (or if it just does not support the `PASV`
+connections on ports other than 21 (or if it does not support the `PASV`
 command), the other way to do it is to use the `PORT` command and instruct the
 server to connect to the client on the given IP number and port (as parameters
 to the PORT command).
@@ -855,8 +855,8 @@ therefore most Unix programs do not read this file unless it is only readable
 by yourself (curl does not care though).
 
 curl supports `.netrc` files if told to (using the `-n`/`--netrc` and
-`--netrc-optional` options). This is not restricted to just FTP, so curl can
-use it for all protocols where authentication is used.
+`--netrc-optional` options). This is not restricted to FTP, so curl can use it
+for all protocols where authentication is used.
 
 A simple `.netrc` file could look something like:
 
@@ -907,8 +907,8 @@ tell the server we use a vt100 terminal, try something like:
 
 Other interesting options for it `-t` include:
 
- - `XDISPLOC=<X display>` Sets the X display location.
- - `NEW_ENV=<var,val>` Sets an environment variable.
+- `XDISPLOC=<X display>` Sets the X display location.
+- `NEW_ENV=<var,val>` Sets an environment variable.
 
 NOTE: The telnet protocol does not specify any way to login with a specified
 user and password so curl cannot do that automatically. To do that, you need to
@@ -935,9 +935,9 @@ are persistent.
 ## Multiple Transfers With A Single Command Line
 
 As is mentioned above, you can download multiple files with one command line
-by simply adding more URLs. If you want those to get saved to a local file
-instead of just printed to stdout, you need to add one save option for each
-URL you specify. Note that this also goes for the `-O` option (but not
+by adding more URLs. If you want those to get saved to a local file
+instead of printed to stdout, you need to add one save option for each URL you
+specify. Note that this also goes for the `-O` option (but not
 `--remote-name-all`).
 
 For example: get two files and use `-O` for the first and a custom file

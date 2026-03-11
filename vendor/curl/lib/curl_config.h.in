@@ -8,6 +8,9 @@
 /* define "1" to use OpenSSL's built-in CA store */
 #undef CURL_CA_FALLBACK
 
+/* If native CA store is enabled */
+#undef CURL_CA_NATIVE
+
 /* Location of default ca path */
 #undef CURL_CA_PATH
 
@@ -145,9 +148,6 @@
 
 /* to disable TFTP */
 #undef CURL_DISABLE_TFTP
-
-/* to disable type checking */
-#undef CURL_DISABLE_TYPECHECK
 
 /* to disable verbose strings */
 #undef CURL_DISABLE_VERBOSE_STRINGS
@@ -433,9 +433,6 @@
 /* Define to 1 if you have a working localtime_r function. */
 #undef HAVE_LOCALTIME_R
 
-/* Define to 1 if the compiler supports the 'long long' data type. */
-#undef HAVE_LONGLONG
-
 /* Define to 1 if you have the `mach_absolute_time' function. */
 #undef HAVE_MACH_ABSOLUTE_TIME
 
@@ -444,9 +441,6 @@
 
 /* Define to 1 if you have the memrchr function or macro. */
 #undef HAVE_MEMRCHR
-
-/* Define to 1 if you have the MSG_NOSIGNAL flag. */
-#undef HAVE_MSG_NOSIGNAL
 
 /* Define to 1 if you have the <netdb.h> header file. */
 #undef HAVE_NETDB_H
@@ -557,9 +551,6 @@
 /* Define to 1 if you have the `setlocale' function. */
 #undef HAVE_SETLOCALE
 
-/* Define to 1 if you have the `setmode' function. */
-#undef HAVE_SETMODE
-
 /* Define to 1 if you have the `setrlimit' function. */
 #undef HAVE_SETRLIMIT
 
@@ -620,9 +611,6 @@
 
 /* Define to 1 if you have the strcmpi function. */
 #undef HAVE_STRCMPI
-
-/* Define to 1 if you have the strdup function. */
-#undef HAVE_STRDUP
 
 /* Define to 1 if you have the strerror_r function. */
 #undef HAVE_STRERROR_R
@@ -745,9 +733,6 @@
 /* Define to 1 if you have the <zstd.h> header file. */
 #undef HAVE_ZSTD_H
 
-/* Define to 1 if you have the `_setmode' function. */
-#undef HAVE__SETMODE
-
 /* Define to the sub-directory where libtool stores uninstalled libraries. */
 #undef LT_OBJDIR
 
@@ -795,9 +780,6 @@
 
 /* Size of long in number of bytes */
 #undef SIZEOF_LONG
-
-/* Size of long long in number of bytes */
-#undef SIZEOF_LONG_LONG
 
 /* Size of off_t in number of bytes */
 #undef SIZEOF_OFF_T
@@ -875,9 +857,6 @@
 
 /* if OpenSSL is in use */
 #undef USE_OPENSSL
-
-/* if openssl QUIC is in use */
-#undef USE_OPENSSL_QUIC
 
 /* if quiche is in use */
 #undef USE_QUICHE

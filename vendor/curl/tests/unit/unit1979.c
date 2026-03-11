@@ -84,6 +84,12 @@ static CURLcode test_unit1979(const char *arg)
       "/example%20space/"
     },
     {
+      "get-plus-normalized",
+      true,
+      "/example+space/",
+      "/example%2Bspace/"
+    },
+    {
       "get-slash-dot-slash-unnormalized",
       false,
       "/./",
@@ -109,7 +115,7 @@ static CURLcode test_unit1979(const char *arg)
     struct dynbuf canonical_path;
 
     char buffer[1024];
-    char *canonical_path_string;
+    const char *canonical_path_string;
     int result;
     int msnprintf_result;
 

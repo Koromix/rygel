@@ -28,7 +28,6 @@
 #include "tool_msgs.h"
 #include "tool_paramhlp.h"
 #include "tool_writeout_json.h"
-#include "tool_strdup.h"
 #include "var.h"
 
 #define MAX_EXPAND_CONTENT 10000000
@@ -60,7 +59,7 @@ static const struct tool_var *varcontent(const char *name, size_t nlen)
 
 #define ENDOFFUNC(x) (((x) == '}') || ((x) == ':'))
 #define FUNCMATCH(ptr, name, len)                   \
-  (!strncmp(ptr, name, len) && ENDOFFUNC(ptr[len]))
+  (!strncmp(ptr, name, len) && ENDOFFUNC((ptr)[len]))
 
 #define FUNC_TRIM      "trim"
 #define FUNC_TRIM_LEN  (sizeof(FUNC_TRIM) - 1)
@@ -75,7 +74,7 @@ static const struct tool_var *varcontent(const char *name, size_t nlen)
 
 static ParameterError varfunc(char *c, /* content */
                               size_t clen, /* content length */
-                              char *f, /* functions */
+                              const char *f, /* functions */
                               size_t flen, /* function string length */
                               struct dynbuf *out)
 {
@@ -190,7 +189,7 @@ static ParameterError varfunc(char *c, /* content */
       curlx_free(c);
 
     clen = curlx_dyn_len(out);
-    c = memdup0(curlx_dyn_ptr(out), clen);
+    c = curlx_memdup0(curlx_dyn_ptr(out), clen);
     if(!c) {
       err = PARAM_NO_MEM;
       break;
@@ -207,7 +206,7 @@ static ParameterError varfunc(char *c, /* content */
 ParameterError varexpand(const char *line, struct dynbuf *out, bool *replaced)
 {
   CURLcode result;
-  char *envp;
+  const char *envp;
   bool added = FALSE;
   const char *input = line;
   *replaced = FALSE;
@@ -232,8 +231,8 @@ ParameterError varexpand(const char *line, struct dynbuf *out, bool *replaced)
       char name[MAX_VAR_LEN];
       size_t nlen;
       size_t i;
-      char *funcp;
-      char *clp = strstr(envp, "}}");
+      const char *funcp;
+      const char *clp = strstr(envp, "}}");
       size_t prefix;
 
       if(!clp) {
@@ -304,7 +303,7 @@ ParameterError varexpand(const char *line, struct dynbuf *out, bool *replaced)
           if(value && vlen > 0) {
             /* A variable might contain null bytes. Such bytes cannot be shown
                using normal means, this is an error. */
-            char *nb = memchr(value, '\0', vlen);
+            const char *nb = memchr(value, '\0', vlen);
             if(nb) {
               errorf("variable contains null byte");
               return PARAM_EXPAND_ERROR;
@@ -357,7 +356,7 @@ static ParameterError addvariable(const char *name,
     memcpy(p->name, name, nlen);
     /* the null termination byte is already present from above */
 
-    p->content = contalloc ? content : memdup0(content, clen);
+    p->content = contalloc ? content : curlx_memdup0(content, clen);
     if(p->content) {
       p->clen = clen;
 
@@ -369,8 +368,6 @@ static ParameterError addvariable(const char *name,
   }
   return PARAM_NO_MEM;
 }
-
-#define MAX_FILENAME 10000
 
 ParameterError setvariable(const char *input)
 {

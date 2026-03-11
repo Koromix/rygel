@@ -36,9 +36,6 @@
  */
 #ifdef __GNUC__
 #pragma GCC diagnostic ignored "-Wsign-conversion"
-#ifdef __DJGPP__
-#pragma GCC diagnostic ignored "-Warith-conversion"
-#endif
 #elif defined(_MSC_VER)
 #pragma warning(disable:4127)  /* conditional expression is constant */
 #endif
@@ -84,7 +81,7 @@ int main(void)
   size_t request_len = strlen(request);
 
   CURLcode result = curl_global_init(CURL_GLOBAL_ALL);
-  if(result)
+  if(result != CURLE_OK)
     return (int)result;
 
   /* A general note of caution here: if you are using curl_easy_recv() or
@@ -128,7 +125,7 @@ int main(void)
       do {
         nsent = 0;
         result = curl_easy_send(curl, request + nsent_total,
-                             request_len - nsent_total, &nsent);
+                                request_len - nsent_total, &nsent);
         nsent_total += nsent;
 
         if(result == CURLE_AGAIN && !wait_on_socket(sockfd, 0, 60000L)) {

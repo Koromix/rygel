@@ -36,15 +36,14 @@ int main(void)
 
   /* In Windows, this inits the Winsock stuff */
   result = curl_global_init(CURL_GLOBAL_ALL);
-  if(result)
+  if(result != CURLE_OK)
     return (int)result;
 
   /* get a curl handle */
   curl = curl_easy_init();
   if(curl) {
     /* First set the URL that is about to receive our POST. This URL can
-       just as well be an https:// URL if that is what should receive the
-       data. */
+       be an https:// URL if that is what should receive the data. */
     curl_easy_setopt(curl, CURLOPT_URL, "http://postit.example.com/moo.cgi");
     /* Now specify the POST data */
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "name=daniel&project=curl");

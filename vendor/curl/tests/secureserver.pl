@@ -205,7 +205,7 @@ $certfile = abs_path($certfile);
 
 my $ssltext = uc($proto) ." SSL/TLS:";
 
-my $host_ip = ($ipvnum == 6)? '::1' : '127.0.0.1';
+my $host_ip = ($ipvnum == 6) ? '::1' : '127.0.0.1';
 
 #***************************************************************************
 # Find out version info for the given stunnel binary
@@ -261,7 +261,7 @@ if($stunnel_version < 400) {
     if($stunnel_version >= 319) {
         $socketopt = "-O a:SO_REUSEADDR=1";
     }
-    # TODO: we do not use $host_ip in this old version. I simply find
+    # TODO: we do not use $host_ip in this old version. I find
     # no documentation how to. But maybe ipv6 is not available anyway?
     $cmd  = "\"$stunnel\" -p $certfile -P $pidfile ";
     $cmd .= "-d $accept_port -r $target_port -f -D $loglevel ";
@@ -284,12 +284,19 @@ if($stunnel_version < 400) {
 #
 if($stunnel_version >= 400) {
     $socketopt = "a:SO_REUSEADDR=1";
-    if(($stunnel_version >= 534) && $tstunnel_windows) {
-        # SO_EXCLUSIVEADDRUSE is on by default on Vista or newer,
-        # but does not work together with SO_REUSEADDR being on.
-        $socketopt .= "\nsocket = a:SO_EXCLUSIVEADDRUSE=0";
+    my $conffile_cmdline;
+    if($tstunnel_windows) {
+        if($stunnel_version >= 534) {
+            # SO_EXCLUSIVEADDRUSE is on by default on Vista or newer,
+            # but does not work together with SO_REUSEADDR being on.
+            $socketopt .= "\nsocket = a:SO_EXCLUSIVEADDRUSE=0";
+        }
+        $conffile_cmdline = pathhelp::sys_native_abs_path($conffile);
     }
-    $cmd  = "\"$stunnel\" $conffile ";
+    else {
+        $conffile_cmdline = $conffile;
+    }
+    $cmd  = "\"$stunnel\" $conffile_cmdline ";
     $cmd .= ">$logfile 2>&1";
     # setup signal handler
     $SIG{INT} = \&exit_signal_handler;

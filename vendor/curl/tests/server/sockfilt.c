@@ -61,7 +61,7 @@
  * enough for the purpose of this program.
  *
  * For the above reason and the specific needs of this program signals SIGHUP,
- * SIGPIPE and SIGALRM will be simply ignored on systems where this can be
+ * SIGPIPE and SIGALRM will be ignored on systems where this can be
  * done.  If possible, signals SIGINT and SIGTERM will be handled by this
  * program as an indication to cleanup and finish execution as soon as
  * possible.  This will be achieved with a single signal handler
@@ -313,11 +313,11 @@ static bool write_stdout(const void *buffer, size_t nbytes)
   return TRUE;
 }
 
-static void lograw(unsigned char *buffer, ssize_t len)
+static void lograw(const unsigned char *buffer, ssize_t len)
 {
   char data[120];
   ssize_t i;
-  unsigned char *ptr = buffer;
+  const unsigned char *ptr = buffer;
   char *optr = data;
   ssize_t width = 0;
   int left = sizeof(data);
@@ -372,7 +372,7 @@ static bool read_data_block(unsigned char *buffer, ssize_t maxlen,
 
   buffer[5] = '\0';
 
-  endp = (char *)buffer;
+  endp = (const char *)buffer;
   if(curlx_str_hex(&endp, &value, 0xfffff)) {
     logmsg("Failed to decode buffer size");
     return FALSE;
@@ -526,7 +526,12 @@ static DWORD WINAPI select_ws_wait_thread(void *lpParameter)
         /* if the pipe has NOT been closed, sleep and continue waiting */
         ret = GetLastError();
         if(ret != ERROR_BROKEN_PIPE) {
-          logmsg("[select_ws_wait_thread] PeekNamedPipe error (%lu)", ret);
+          char buffer[WINAPI_ERROR_LEN];
+          curlx_winapi_strerror(ret, buffer, sizeof(buffer));
+          logmsg("[select_ws_wait_thread] PeekNamedPipe error: (0x%08lx) - %s",
+                 ret, buffer);
+          if(ret == ERROR_NOT_SUPPORTED)  /* avoid potential endless loop */
+             break;
           SleepEx(0, FALSE);
           continue;
         }
@@ -580,7 +585,7 @@ static HANDLE select_ws_wait(HANDLE handle, HANDLE signal, HANDLE abort)
 
 struct select_ws_data {
   int fd;                /* provided file descriptor  (indexed by nfd) */
-  long wsastate;         /* internal pre-select state (indexed by nfd) */
+  long wsastate;         /* internal preselect state  (indexed by nfd) */
   curl_socket_t wsasock; /* internal socket handle    (indexed by nws) */
   WSAEVENT wsaevent;     /* internal select event     (indexed by nws) */
   HANDLE signal;         /* internal thread signal    (indexed by nth) */
@@ -592,12 +597,10 @@ static int select_ws(int nfds, fd_set *readfds, fd_set *writefds,
 {
   DWORD timeout_ms, wait, nfd, nth, nws, i;
   HANDLE abort, signal, handle, *handles;
-  fd_set readsock, writesock, exceptsock;
   struct select_ws_data *data;
   WSANETWORKEVENTS wsaevents;
   curl_socket_t wsasock;
-  int error, ret, fd;
-  WSAEVENT wsaevent;
+  int ret, fd;
 
   /* check if the input value is valid */
   if(nfds < 0) {
@@ -648,6 +651,8 @@ static int select_ws(int nfds, fd_set *readfds, fd_set *writefds,
   nth = 0; /* number of internal waiting threads */
   nws = 0; /* number of handled Winsock sockets */
   for(fd = 0; fd < nfds; fd++) {
+    fd_set readsock, writesock, exceptsock;
+
     wsasock = (curl_socket_t)fd;
     wsaevents.lNetworkEvents = 0;
     handles[nfd] = 0;
@@ -700,19 +705,22 @@ static int select_ws(int nfds, fd_set *readfds, fd_set *writefds,
         nfd++;
       }
       else {
+        WSAEVENT wsaevent;
         wsaevent = WSACreateEvent();
         if(wsaevent != WSA_INVALID_EVENT) {
           if(wsaevents.lNetworkEvents & FD_WRITE) {
-            send(wsasock, NULL, 0, 0); /* reset FD_WRITE */
+            swrite(wsasock, NULL, 0); /* reset FD_WRITE */
           }
-          error = WSAEventSelect(wsasock, wsaevent, wsaevents.lNetworkEvents);
-          if(error != SOCKET_ERROR) {
+          if(WSAEventSelect(wsasock, wsaevent, wsaevents.lNetworkEvents)
+             == 0) {
             handles[nfd] = (HANDLE)wsaevent;
             data[nws].wsasock = wsasock;
             data[nws].wsaevent = wsaevent;
             data[nfd].wsastate = 0;
-            tv->tv_sec = 0;
-            tv->tv_usec = 0;
+            if(tv) {
+              tv->tv_sec = 0;
+              tv->tv_usec = 0;
+            }
             /* check if the socket is already ready */
             if(select(fd + 1, &readsock, &writesock, &exceptsock, tv) == 1) {
               logmsg("[select_ws] socket %d is ready", fd);
@@ -794,8 +802,7 @@ static int select_ws(int nfds, fd_set *readfds, fd_set *writefds,
       else {
         /* try to handle the event with the Winsock2 functions */
         wsaevents.lNetworkEvents = 0;
-        error = WSAEnumNetworkEvents(wsasock, handle, &wsaevents);
-        if(error != SOCKET_ERROR) {
+        if(WSAEnumNetworkEvents(wsasock, handle, &wsaevents) == 0) {
           /* merge result from pre-check using select */
           wsaevents.lNetworkEvents |= data[i].wsastate;
 
@@ -953,14 +960,7 @@ static bool juggle(curl_socket_t *sockfdp,
   FD_ZERO(&fds_write);
   FD_ZERO(&fds_err);
 
-#ifdef __DJGPP__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Warith-conversion"
-#endif
   FD_SET((curl_socket_t)fileno(stdin), &fds_read);
-#ifdef __DJGPP__
-#pragma GCC diagnostic pop
-#endif
 
   switch(*mode) {
 
@@ -969,35 +969,21 @@ static bool juggle(curl_socket_t *sockfdp,
     /* server mode */
     sockfd = listenfd;
     /* there is always a socket to wait for */
-#ifdef __DJGPP__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Warith-conversion"
-#endif
     FD_SET(sockfd, &fds_read);
-#ifdef __DJGPP__
-#pragma GCC diagnostic pop
-#endif
     maxfd = (int)sockfd;
     break;
 
   case PASSIVE_CONNECT:
 
     sockfd = *sockfdp;
-    if(CURL_SOCKET_BAD == sockfd) {
+    if(sockfd == CURL_SOCKET_BAD) {
       /* eeek, we are supposedly connected and then this cannot be -1 ! */
       logmsg("socket is -1! on %s:%d", __FILE__, __LINE__);
       maxfd = 0; /* stdin */
     }
     else {
       /* there is always a socket to wait for */
-#ifdef __DJGPP__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Warith-conversion"
-#endif
       FD_SET(sockfd, &fds_read);
-#ifdef __DJGPP__
-#pragma GCC diagnostic pop
-#endif
       maxfd = (int)sockfd;
     }
     break;
@@ -1006,15 +992,8 @@ static bool juggle(curl_socket_t *sockfdp,
 
     sockfd = *sockfdp;
     /* sockfd turns CURL_SOCKET_BAD when our connection has been closed */
-    if(CURL_SOCKET_BAD != sockfd) {
-#ifdef __DJGPP__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Warith-conversion"
-#endif
+    if(sockfd != CURL_SOCKET_BAD) {
       FD_SET(sockfd, &fds_read);
-#ifdef __DJGPP__
-#pragma GCC diagnostic pop
-#endif
       maxfd = (int)sockfd;
     }
     else {
@@ -1033,16 +1012,13 @@ static bool juggle(curl_socket_t *sockfdp,
   } /* switch(*mode) */
 
   do {
-
     /* select() blocking behavior call on blocking descriptors please */
-
     rc = SOCKFILT_select(maxfd + 1, &fds_read, &fds_write, &fds_err, &timeout);
 
     if(got_exit_signal) {
       logmsg("signalled to die, exiting...");
       return FALSE;
     }
-
   } while((rc == -1) && ((error = SOCKERRNO) == SOCKEINTR));
 
   if(rc < 0) {
@@ -1089,7 +1065,7 @@ static bool juggle(curl_socket_t *sockfdp,
          Replies to PORT with "IPv[num]/[port]" */
       snprintf((char *)buffer, sizeof(buffer), "%s/%hu\n",
                ipv_inuse, server_port);
-      buffer_len = (ssize_t)strlen((char *)buffer);
+      buffer_len = (ssize_t)strlen((const char *)buffer);
       snprintf(data, sizeof(data), "PORT\n%04x\n", (int)buffer_len);
       if(!write_stdout(data, 10))
         return FALSE;
@@ -1148,7 +1124,7 @@ static bool juggle(curl_socket_t *sockfdp,
       /* there is no stream set up yet, this is an indication that there is a
          client connecting. */
       curl_socket_t newfd = accept(sockfd, NULL, NULL);
-      if(CURL_SOCKET_BAD == newfd) {
+      if(newfd == CURL_SOCKET_BAD) {
         error = SOCKERRNO;
         logmsg("accept() failed with error (%d) %s",
                error, curlx_strerror(error, errbuf, sizeof(errbuf)));
@@ -1194,7 +1170,7 @@ static bool juggle(curl_socket_t *sockfdp,
   return TRUE;
 }
 
-static int test_sockfilt(int argc, char *argv[])
+static int test_sockfilt(int argc, const char *argv[])
 {
   srvr_sockaddr_union_t me;
   curl_socket_t sock = CURL_SOCKET_BAD;
@@ -1313,15 +1289,15 @@ static int test_sockfilt(int argc, char *argv[])
     }
   }
 
-  CURLX_SET_BINMODE(stdin);
-  CURLX_SET_BINMODE(stdout);
-  CURLX_SET_BINMODE(stderr);
+  CURL_BINMODE(stdin);
+  CURL_BINMODE(stdout);
+  CURL_BINMODE(stderr);
 
   install_signal_handlers(false);
 
   sock = socket(socket_domain, SOCK_STREAM, 0);
 
-  if(CURL_SOCKET_BAD == sock) {
+  if(sock == CURL_SOCKET_BAD) {
     error = SOCKERRNO;
     logmsg("Error creating socket (%d) %s",
            error, curlx_strerror(error, errbuf, sizeof(errbuf)));
@@ -1372,7 +1348,7 @@ static int test_sockfilt(int argc, char *argv[])
   else {
     /* passive daemon style */
     sock = sockdaemon(sock, &server_port, NULL, s_bind_only);
-    if(CURL_SOCKET_BAD == sock) {
+    if(sock == CURL_SOCKET_BAD) {
       write_stdout("FAIL\n", 5);
       goto sockfilt_cleanup;
     }

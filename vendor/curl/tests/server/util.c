@@ -33,38 +33,11 @@
 #include <share.h>
 #endif
 
-/* This function returns a pointer to STATIC memory. It converts the given
- * binary lump to a hex formatted string usable for output in logs or
- * whatever.
- */
-char *data_to_hex(char *data, size_t len)
-{
-  static char buf[256 * 3];
-  size_t i;
-  char *optr = buf;
-  char *iptr = data;
-
-  if(len > 255)
-    len = 255;
-
-  for(i = 0; i < len; i++) {
-    if((data[i] >= 0x20) && (data[i] < 0x7f))
-      *optr++ = *iptr++;
-    else {
-      snprintf(optr, 4, "%%%02x", (unsigned char)*iptr++);
-      optr += 3;
-    }
-  }
-  *optr = 0; /* in case no sprintf was used */
-
-  return buf;
-}
-
-void loghex(unsigned char *buffer, ssize_t len)
+void loghex(const unsigned char *buffer, ssize_t len)
 {
   char data[12000];
   ssize_t i;
-  unsigned char *ptr = buffer;
+  const unsigned char *ptr = buffer;
   char *optr = data;
   ssize_t width = 0;
   int left = sizeof(data);
@@ -111,13 +84,14 @@ void logmsg(const char *msg, ...)
            now.tm_hour, now.tm_min, now.tm_sec, (long)tv.tv_usec);
 
   va_start(ap, msg);
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wformat-nonliteral"
+/* Suppress for builds where CURL_PRINTF() is not set */
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-nonliteral"
 #endif
   vsnprintf(buffer, sizeof(buffer), msg, ap);
-#ifdef __clang__
-#pragma clang diagnostic pop
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic pop
 #endif
   va_end(ap);
 
@@ -140,17 +114,6 @@ void logmsg(const char *msg, ...)
 }
 
 #ifdef _WIN32
-/* use instead of perror() on generic Windows */
-static void win32_perror(const char *msg)
-{
-  char buf[512];
-  int err = SOCKERRNO;
-  curlx_winapi_strerror(err, buf, sizeof(buf));
-  if(msg)
-    fprintf(stderr, "%s: ", msg);
-  fprintf(stderr, "%s\n", buf);
-}
-
 static void win32_cleanup(void)
 {
 #ifdef USE_WINSOCK
@@ -169,12 +132,13 @@ int win32_init(void)
     WORD wVersionRequested;
     WSADATA wsaData;
     int err;
+    char buffer[STRERROR_LEN];
 
     wVersionRequested = MAKEWORD(2, 2);
     err = WSAStartup(wVersionRequested, &wsaData);
-
     if(err) {
-      win32_perror("Winsock init failed");
+      curlx_strerror(SOCKERRNO, buffer, sizeof(buffer));
+      fprintf(stderr, "Winsock init failed: %s\n", buffer);
       logmsg("Error initialising Winsock -- aborting");
       return 1;
     }
@@ -182,7 +146,8 @@ int win32_init(void)
     if(LOBYTE(wsaData.wVersion) != LOBYTE(wVersionRequested) ||
        HIBYTE(wsaData.wVersion) != HIBYTE(wVersionRequested)) {
       WSACleanup();
-      win32_perror("Winsock init failed");
+      curlx_strerror(SOCKERRNO, buffer, sizeof(buffer));
+      fprintf(stderr, "Winsock init failed: %s\n", buffer);
       logmsg("No suitable winsock.dll found -- aborting");
       return 1;
     }
@@ -289,10 +254,10 @@ void clear_advisor_read_lock(const char *filename)
   int res;
 
   /*
-  ** Log all removal failures. Even those due to file not existing.
-  ** This allows to detect if unexpectedly the file has already been
-  ** removed by a process different than the one that should do this.
-  */
+   * Log all removal failures. Even those due to file not existing.
+   * This allows to detect if unexpectedly the file has already been
+   * removed by a process different than the one that should do this.
+   */
 
   do {
     res = unlink(filename);
@@ -368,8 +333,8 @@ static void exit_signal_handler(int signum)
   else {
     int fd = -1;
 #ifdef _WIN32
-    if(!_sopen_s(&fd, serverlogfile, O_WRONLY | O_CREAT | O_APPEND,
-                 _SH_DENYNO, S_IREAD | S_IWRITE) &&
+    if(!_sopen_s(&fd, serverlogfile, _O_WRONLY | _O_CREAT | _O_APPEND,
+                 _SH_DENYNO, _S_IREAD | _S_IWRITE) &&
        fd != -1) {
 #else
     /* !checksrc! disable BANNEDFUNC 1 */
@@ -378,7 +343,7 @@ static void exit_signal_handler(int signum)
 #endif
       static const char msg[] = "exit_signal_handler: called\n";
       (void)!write(fd, msg, sizeof(msg) - 1);
-      close(fd);
+      curlx_close(fd);
     }
     else {
       static const char msg[] = "exit_signal_handler: failed opening ";
@@ -484,13 +449,17 @@ static DWORD WINAPI main_window_loop(void *lpParameter)
   WNDCLASS wc;
   BOOL ret;
   MSG msg;
+  DWORD err;
+  char buffer[WINAPI_ERROR_LEN];
 
   ZeroMemory(&wc, sizeof(wc));
   wc.lpfnWndProc = (WNDPROC)main_window_proc;
   wc.hInstance = (HINSTANCE)lpParameter;
   wc.lpszClassName = TEXT("MainWClass");
   if(!RegisterClass(&wc)) {
-    win32_perror("RegisterClass failed");
+    err = GetLastError();
+    curlx_winapi_strerror(err, buffer, sizeof(buffer));
+    fprintf(stderr, "RegisterClass failed: %s\n", buffer);
     return (DWORD)-1;
   }
 
@@ -502,14 +471,18 @@ static DWORD WINAPI main_window_loop(void *lpParameter)
                                       (HWND)NULL, (HMENU)NULL,
                                       wc.hInstance, NULL);
   if(!hidden_main_window) {
-    win32_perror("CreateWindowEx failed");
+    err = GetLastError();
+    curlx_winapi_strerror(err, buffer, sizeof(buffer));
+    fprintf(stderr, "CreateWindowEx failed: (0x%08lx) - %s\n", err, buffer);
     return (DWORD)-1;
   }
 
   do {
     ret = GetMessage(&msg, NULL, 0, 0);
     if(ret == -1) {
-      win32_perror("GetMessage failed");
+      err = GetLastError();
+      curlx_winapi_strerror(err, buffer, sizeof(buffer));
+      fprintf(stderr, "GetMessage failed: (0x%08lx) - %s\n", err, buffer);
       return (DWORD)-1;
     }
     else if(ret) {
@@ -686,7 +659,14 @@ int bind_unix_socket(curl_socket_t sock, const char *unix_socket,
   int error;
   char errbuf[STRERROR_LEN];
   int rc;
-  size_t len = strlen(unix_socket);
+  size_t len;
+
+  if(!unix_socket) {
+    logmsg("Unix socket domain path not specified.");
+    return -1;
+  }
+
+  len = strlen(unix_socket);
 
   memset(sau, 0, sizeof(struct sockaddr_un));
   sau->sun_family = AF_UNIX;
@@ -697,10 +677,10 @@ int bind_unix_socket(curl_socket_t sock, const char *unix_socket,
   curlx_strcopy(sau->sun_path, sizeof(sau->sun_path), unix_socket, len);
   rc = bind(sock, (struct sockaddr *)sau, sizeof(struct sockaddr_un));
   if(rc && SOCKERRNO == SOCKEADDRINUSE) {
-    struct_stat statbuf;
+    curlx_struct_stat statbuf;
     /* socket already exists. Perhaps it is stale? */
     curl_socket_t unixfd = socket(AF_UNIX, SOCK_STREAM, 0);
-    if(CURL_SOCKET_BAD == unixfd) {
+    if(unixfd == CURL_SOCKET_BAD) {
       logmsg("Failed to create socket at %s (%d) %s", unix_socket,
              SOCKERRNO, curlx_strerror(SOCKERRNO, errbuf, sizeof(errbuf)));
       return -1;
@@ -717,7 +697,7 @@ int bind_unix_socket(curl_socket_t sock, const char *unix_socket,
     /* socket server is not alive, now check if it was actually a socket. */
 #ifdef _WIN32
     /* Windows does not have lstat function. */
-    rc = curlx_win32_stat(unix_socket, &statbuf);
+    rc = curlx_stat(unix_socket, &statbuf);
 #else
     rc = lstat(unix_socket, &statbuf);
 #endif
@@ -861,13 +841,13 @@ curl_socket_t sockdaemon(curl_socket_t sock,
        port we actually got and update the listener port value with it. */
     curl_socklen_t la_size;
     srvr_sockaddr_union_t localaddr;
+    memset(&localaddr, 0, sizeof(localaddr));
 #ifdef USE_IPV6
     if(socket_domain == AF_INET6)
       la_size = sizeof(localaddr.sa6);
     else
 #endif
       la_size = sizeof(localaddr.sa4);
-    memset(&localaddr.sa, 0, (size_t)la_size);
     if(getsockname(sock, &localaddr.sa, &la_size) < 0) {
       error = SOCKERRNO;
       logmsg("getsockname() failed with error (%d) %s",

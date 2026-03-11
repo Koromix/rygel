@@ -25,11 +25,7 @@
 
 #include "testutil.h"
 
-#ifndef FD_SETSIZE
-#error "this test requires FD_SETSIZE"
-#endif
-
-#define T518_SAFETY_MARGIN (16)
+#define T518_SAFETY_MARGIN 16
 
 #define NUM_OPEN   (FD_SETSIZE + 10)
 #define NUM_NEEDED (NUM_OPEN + T518_SAFETY_MARGIN)
@@ -63,7 +59,7 @@ static void t518_close_file_descriptors(void)
       t518_num_open.rlim_cur < t518_num_open.rlim_max;
       t518_num_open.rlim_cur++)
     if(t518_testfd[t518_num_open.rlim_cur] > 0)
-      close(t518_testfd[t518_num_open.rlim_cur]);
+      curlx_close(t518_testfd[t518_num_open.rlim_cur]);
   curlx_free(t518_testfd);
   t518_testfd = NULL;
 }
@@ -333,7 +329,7 @@ static int t518_test_rlimit(int keep_open)
       for(t518_num_open.rlim_cur = 0;
           t518_testfd[t518_num_open.rlim_cur] >= 0;
           t518_num_open.rlim_cur++)
-        close(t518_testfd[t518_num_open.rlim_cur]);
+        curlx_close(t518_testfd[t518_num_open.rlim_cur]);
       curlx_free(t518_testfd);
       t518_testfd = NULL;
       curlx_free(memchunk);
@@ -345,7 +341,6 @@ static int t518_test_rlimit(int keep_open)
   curl_mfprintf(stderr, "%s file descriptors open\n", strbuff);
 
 #if !defined(HAVE_POLL) && !defined(USE_WINSOCK)
-
   /*
    * when using select() instead of poll() we cannot test
    * libcurl functionality with a socket number equal or
@@ -383,8 +378,7 @@ static int t518_test_rlimit(int keep_open)
       return -11;
     }
   }
-
-#endif /* using an FD_SETSIZE bound select() */
+#endif /* !HAVE_POLL && !USE_WINSOCK */
 
   /*
    * Old or 'backwards compatible' implementations of stdio do not allow
