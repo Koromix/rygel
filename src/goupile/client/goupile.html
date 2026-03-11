@@ -19,8 +19,10 @@
             // Version: {{ VERSION }}
             // Compiler: {{ COMPILER }}
 
-            var ENV = {{ ENV_JSON }};
-            var T = {};
+            Object.defineProperties(window, {
+                ENV: { value: {{ ENV_JSON }}, enumerable: true, writable: false },
+                T: { value: {}, enumerable: true, writable: false }
+            });
         </script>
         <script src="{{ STATIC_URL }}goupile.js" async></script>
         <link rel="stylesheet" href="{{ STATIC_URL }}goupile.css" async/>
