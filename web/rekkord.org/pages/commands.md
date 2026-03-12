@@ -172,7 +172,7 @@ But the goal is to reach performance similar to other commands once Rekkord 1.0 
 
 *New in Rekkord 0.97*
 
-Rekkord supports hooks, these are commands that are executed before and after some actions.
+Rekkord supports hooks, which are commands that are executed before and after some actions.
 
 To use hooks, you must set a directory for each type of hook in the configuration file. When Rekkord runs the corresponding command (such as `rekkord save` for save hooks), it will run the hooks it finds in alphabetical order.
 
