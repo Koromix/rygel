@@ -98,16 +98,14 @@ node tools/koffi.js test # Several options are available, use --help
 
 And be patient, this can be pretty slow for emulated machines. The Linux machines have and use ccache to build Koffi, so subsequent build steps will get much more tolerable.
 
-By default, machines are started and stopped for each test. But you can start the machines ahead of time and run the tests multiple times instead:
+Machines are started for each test if needed, and stay active until you stop them. You can start and stop them at any time with the following commands:
 
 ```sh
-node tools/koffi.js start # Start the machines
-node tools/koffi.js test # Test (without shutting down)
-node tools/koffi.js test # Test again
+node tools/koffi.js start # Start all available machines
 node tools/koffi.js stop # Stop everything
 ```
 
-You can also restrict the test to a subset of machines:
+You can also restrict these commands to a subset of machines:
 
 ```sh
 # Full test cycle
@@ -125,7 +123,7 @@ Finally, you can join a running machine with SSH with the following shortcut, if
 node tools/koffi.js ssh debian_i386
 ```
 
-Each machine is configured to run a VNC server available locally, which you can use to access the display, using KRDC or any other compatible viewer. Use the `info` command to get the VNC port.
+Each machine is configured to run a VNC server or SPICE, which you can use to access the display, using KRDC or any other compatible viewer. Use the `info` command to get the VNC or the SPICE port.
 
 ```sh
 node tools/koffi.js info debian_x64
