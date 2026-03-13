@@ -19,7 +19,7 @@ function build(form, meta) {
         <p>Si vous ne pensez à personne en particulier pour une question, indiquez « 0 », mais remplissez tout de même l’évaluation de satisfaction.
     `
 
-    let anonymes = new Map;
+    let anonymes = new Map
 
     // Reuse anonymized values from previous SSQ-6 forms
     for (let test in meta.data) {

@@ -27,7 +27,7 @@ function build(form) {
         form.enumButtons("q2a", "Combien de vos enfants voyez-vous ou avez-vous au téléphone au moins une fois toutes les deux semaines ?", [0, 1, 2, 3, 4, 5, 6, [7, "7 ou plus"]], { disabled: !values.q2 })
 
         if (values.q2 != null && values.q2a > values.q2)
-            form.error("q2a", incoherent);
+            form.error("q2a", incoherent)
     })
 
     form.section(() => {

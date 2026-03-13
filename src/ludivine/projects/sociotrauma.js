@@ -1,39 +1,39 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
-import { html } from 'vendor/lit-html/lit-html.bundle.js';
-import { PERSON_KINDS } from '../client/network/constants.js';
-import { ASSETS } from '../assets/assets.js';
+import { html } from 'vendor/lit-html/lit-html.bundle.js'
+import { PERSON_KINDS } from '../client/network/constants.js'
+import { ASSETS } from '../assets/assets.js'
 
-import adnm20 from './forms/adnm20.js';
-import adnm20s6 from './forms/adnm20s6.js';
-import cerq from './forms/cerq.js';
-import cfs from './forms/cfs.js';
-import cses from './forms/cses.js';
-import ctq from './forms/ctq.js';
-import evenement0 from './forms/evenement0.js';
-import evenements6 from './forms/evenements6.js';
-import gad7 from './forms/gad7.js';
-import isi from './forms/isi.js';
-import isrc from './forms/isrc.js';
-import lec5 from './forms/lec5.js';
-import mhqol from './forms/mhqol.js';
-import mini5s from './forms/mini5s.js';
-import nouveaus6 from './forms/nouveaus6.js';
-import pcl5 from './forms/pcl5.js';
-import pdeq from './forms/pdeq.js';
-import pensees6 from './forms/pensees6.js';
-import phq9 from './forms/phq9.js';
-import positif from './forms/positif.js';
-import sociodemo from './forms/sociodemo.js';
-import ptci from './forms/ptci.js';
-import rds from './forms/rds.js';
-import rdss6 from './forms/rdss6.js';
-import sni from './forms/sni.js';
-import sps10 from './forms/sps10.js';
-import ssi from './forms/ssi.js';
-import ssq6 from './forms/ssq6.js';
-import substance from './forms/substance.js';
+import adnm20 from './forms/adnm20.js'
+import adnm20s6 from './forms/adnm20s6.js'
+import cerq from './forms/cerq.js'
+import cfs from './forms/cfs.js'
+import cses from './forms/cses.js'
+import ctq from './forms/ctq.js'
+import evenement0 from './forms/evenement0.js'
+import evenements6 from './forms/evenements6.js'
+import gad7 from './forms/gad7.js'
+import isi from './forms/isi.js'
+import isrc from './forms/isrc.js'
+import lec5 from './forms/lec5.js'
+import mhqol from './forms/mhqol.js'
+import mini5s from './forms/mini5s.js'
+import nouveaus6 from './forms/nouveaus6.js'
+import pcl5 from './forms/pcl5.js'
+import pdeq from './forms/pdeq.js'
+import pensees6 from './forms/pensees6.js'
+import phq9 from './forms/phq9.js'
+import positif from './forms/positif.js'
+import sociodemo from './forms/sociodemo.js'
+import ptci from './forms/ptci.js'
+import rds from './forms/rds.js'
+import rdss6 from './forms/rdss6.js'
+import sni from './forms/sni.js'
+import sps10 from './forms/sps10.js'
+import ssi from './forms/ssi.js'
+import ssq6 from './forms/ssq6.js'
+import substance from './forms/substance.js'
 
 const consent = {
     text: html`
@@ -60,33 +60,33 @@ const consent = {
         ])
         form.binary("reutilisation", "J’accepte que mes données soient réutilisées dans le cadre d’autres études de Lignes de Vie :")
 
-        return (values.consentement == 1);
+        return (values.consentement == 1)
     }
-};
+}
 
 function init(build, start, values) {
     build.summary = html`
         <p>Pour rappel, cette étude s’adresse à <b>toute personne majeure (18 ans et plus) estimant avoir été exposée à un évènement potentiellement traumatique</b> au cours du mois précédent et n’étant pas actuellement sous mesure de protection de justice (sous tutelle, curatelle ou toute autre forme de protection judiciaire).
         <p>Commencez par faire votre bilan initial. Vous pouvez <b>arrêter à tout moment</b> et recommencer plus tard !
-    `;
+    `
 
     build.module('recueil', 'Recueil', mod => {
-        let anciennete = values.anciennete ?? 0;
+        let anciennete = values.anciennete ?? 0
 
         if (values.anciennete >= 5) {
             mod.help = html`
                 <p>L'étude SocioTrauma est actuellement limitée aux personnes ayant vécu un événement difficile au cours du dernier mois. Cette restriction est liée à l'objectif spécifique de l'étude, qui examine les changements <b>survenant immédiatement après un événement traumatisant</b> dans les relations sociales et la santé mentale.
                 <p>Si votre expérience remonte à plus d'un mois, <b>nous vous demandons de ne pas participer à cette étude</b>. Cela ne diminue en rien l'importance de votre vécu ou de votre souffrance. C’est tout simplement que le contenu de cette étude ne correspond plus à votre situation actuelle. SocioTrauma est conçue pour capturer les changements qu’une personne réalise dans ses relations à la suite immédiate à un évènement difficile.
                 <p>Nous vous encourageons à consulter les ressources disponibles sur le site du Centre national de ressources et de résilience (CN2R) pour obtenir de l'aide et du soutien. De plus, nous vous invitons à revenir régulièrement sur le site de Lignes de Vie car d’autres études arriveront prochainement. En fonction du profil de participants recherchés, vous pourrez y participer !
-            `;
+            `
 
-            return;
+            return
         }
 
-        let avance = -Math.max(0, anciennete - 1);
-        let debut = start.plus(avance * 7);
+        let avance = -Math.max(0, anciennete - 1)
+        let debut = start.plus(avance * 7)
 
-        mod.level = 'Temporalité';
+        mod.level = 'Temporalité'
         mod.help = (progress, total) => {
             if (progress == total) {
                 return html`
@@ -99,7 +99,7 @@ function init(build, start, values) {
                         <li>Écrire vos ressentis dans votre journal, accessible depuis votre page « Profil ».
                     </ul>
                     <p>Merci pour votre précieuse implication dans notre recherche !
-                `;
+                `
             }
 
             return html`
@@ -108,37 +108,37 @@ function init(build, start, values) {
                 <p>Vous êtes libre de compléter les questionnaires dans l’ordre qui vous convient. Toutefois, nous vous recommandons de <b>suivre l’ordre proposé</b>. Les transitions ont été pensées avec soin par notre équipe de recherche de Lignes de Vie afin d’accompagner votre cheminement de la manière la plus confortable possible.
                 <p>Nous vous invitons à <b>répondre à toutes les questions</b>, même si vous n'êtes pas certain de votre réponse. Il n’y a pas de bonne ou de mauvaise réponse, et même incertaines, elles sont importantes. Dans Lignes de Vie, on se donne le droit à l’erreur, à la bêtise, à l’ignorance… Et pour les chercheurs aussi !
                 <p>Dès lors, si une question <b>ne correspond pas à votre vécu</b> ou si vous souhaitez ajouter un commentaire, validez la page sans y répondre et apposez votre commentaire dans le champ qui apparait.
-            `;
+            `
         }
 
         build.module('sociodemo', 'Présentation', mod => {
-            build.form('sociodemo', 'Présentation', sociodemo);
-        });
+            build.form('sociodemo', 'Présentation', sociodemo)
+        })
 
         build.module('initial', 'Bilan initial', mod => {
-            mod.level = 'Module';
+            mod.level = 'Module'
             mod.help = html`
                 <p>Nous vous conseillons de répondre aux différents questionnaires <b>dans l’ordre</b> ci-dessus.
                 <p>Commencez par votre <b>entourage</b> puis abordez le module sur les <b>évènements</b>.
-            `;
+            `
             mod.step = html`
                 <p>Le bilan initial est réalisé <b>dans le mois</b> qui suit l'évènement.
                 <p>Retrouvez les <a href="/etudes#etude-sociotrauma">informations de cette étude</a> sur le site de Lignes de Vie.
-            `;
+            `
 
-            let options = { schedule: start };
+            let options = { schedule: start }
 
             build.module('entourage', 'Entourage', mod => {
                 mod.help = html`
                     <p>Dans ce module, nous visons à comprendre votre <b>environnement social</b> : À qui parlez-vous de manière régulière ? Qui est là pour vous ? Êtes-vous satisfaits du soutien que vous recevez ?
                     <p>À la fin de ce module, nous vous demanderons de décrire votre entourage précisément à l'aide d'un <abbr title="Outil permettant de représenter visuellement vos relations sociales">sociogramme</abbr> interactif.
-                `;
+                `
 
                 build.form('ssq6', 'Soutien social', ssq6, options)
                 build.form('sni', 'Interactions sociales', sni, options)
                 build.form('sps10', 'Disponibilité de votre entourage', sps10, options)
                 build.network('network', 'Sociogramme', options)
-            });
+            })
 
             build.module('evenement', 'Évènement', mod => {
                 mod.help = html`
@@ -178,11 +178,11 @@ function init(build, start, values) {
                     form.values = values.positif
                     positif(form, meta, 'l’évènement qui vous a amené ici')
                 }, options)
-            });
+            })
 
             build.module('qualite', 'Qualité de vie', () => {
                 build.form('mhqol', 'Qualité de vie', mhqol, options)
-            });
+            })
 
             build.module('divulgation', 'Communication', mod => {
                 mod.help = html`
@@ -191,22 +191,22 @@ function init(build, start, values) {
 
                 build.form('cses', 'Témoignage à l\'entourage', cses, options)
                 build.form('rds', 'Réactions des proches', rds, options)
-            });
-        });
+            })
+        })
 
         build.module('s6', '6 semaines', mod => {
-            mod.level = 'Module';
+            mod.level = 'Module'
             mod.help = html`
                 <p>Nous vous remercions d'avoir rempli le premier questionnaire. Pour compléter notre étude, nous avons besoin que vous répondiez à un <b>deuxième questionnaire</b> sur ce que vous avez ressenti suite à l'événement qui vous a amené ici.
                 <p>Vous remarquerez peut-être que certaines questions <b>semblent se répéter</b>. C'est normal et voulu ! Chaque question a son importance pour nous permettre d'analyser correctement les résultats.
                 <p>Nous vous sommes très reconnaissants pour votre temps et votre patience. Vos <b>réponses sont précieuses</b> pour notre recherche !
-            `;
+            `
             mod.step = html`
                 <p>Bienvenue dans ce <b>premier suivi</b> de SocioTrauma !
                 <p>À tout moment, vous pouvez arrêter l'étude ou la mettre en pause et y revenir plus tard. Vous avez également la possibilité de consulter les pages « Ressources » ou « Se détendre ».
-            `;
+            `
 
-            let options = { schedule: debut.plus(6 * 7) };
+            let options = { schedule: debut.plus(6 * 7) }
 
             build.module('evenement', 'Évènement', mod => {
                 mod.help = html`
@@ -253,7 +253,7 @@ function init(build, start, values) {
                     positif(form, meta, 'la fin du bilan initial')
                 }, options)
                 build.form('enfance', 'Enfance et adolescence', ctq, options)
-            });
+            })
 
             build.module('qualite', 'Qualité de vie', mod => {
                 mod.help = html`
@@ -295,13 +295,13 @@ function init(build, start, values) {
                     form.values = values.mini5s
                     mini5s(form, meta)
                 }, options)
-            });
+            })
 
             build.module('entourage', 'Entourage', mod => {
                 mod.help = html`
                     <p>Dans ce module, nous visons à comprendre votre <b>environnement social</b> : À qui parlez-vous de manière régulière ? Qui est là pour vous ? Êtes-vous satisfaits du soutien que vous recevez ?
                     <p>À la fin de ce module, nous vous demanderons de décrire votre entourage précisément à l'aide d'un <abbr title="Outil permettant de représenter visuellement vos relations sociales">sociogramme</abbr> interactif.
-                `;
+                `
 
                 build.form('ssq6', 'Soutien social', ssq6, { ...options, load: ['/recueil/initial/entourage/ssq6'] })
                 build.form('sni', 'Interactions sociales', sni, options)
@@ -323,7 +323,7 @@ function init(build, start, values) {
                     })
                 }, options)
                 build.network('network', 'Sociogramme', options)
-            });
+            })
 
             build.module('divulgation', 'Communication', mod => {
                 mod.help = html`
@@ -345,22 +345,22 @@ function init(build, start, values) {
                 build.form('rds', 'Réactions des proches', (form, meta) => {
                     rdss6(form, meta, `le bilan initial du ${start.toLocaleString()}`)
                 }, options)
-            });
-        });
+            })
+        })
 
         build.module('m3', '3 mois', mod => {
-            mod.level = 'Module';
+            mod.level = 'Module'
             mod.help = html`
                 <p>Nous vous remercions d'avoir rempli les questionnaires précédents. Pour compléter notre étude, nous avons besoin que vous répondiez à un <b>nouveau questionnaire</b> sur ce que vous avez ressenti suite à l'événement qui vous a amené ici.
                 <p>Vous remarquerez peut-être que certaines questions <b>semblent se répéter</b>. C'est normal et voulu ! Chaque question a son importance pour nous permettre d'analyser correctement les résultats.
                 <p>Nous vous sommes très reconnaissants pour votre temps et votre patience. Vos <b>réponses sont précieuses</b> pour notre recherche !
-            `;
+            `
             mod.step = html`
                 <p>Bienvenue dans ce <b>suivi à 3 mois</b> de SocioTrauma !
                 <p>À tout moment, vous pouvez arrêter l'étude ou la mettre en pause et y revenir plus tard. Vous avez également la possibilité de consulter les pages « Ressources » ou « Se détendre ».
-            `;
+            `
 
-            let options = { schedule: debut.plusMonths(3) };
+            let options = { schedule: debut.plusMonths(3) }
 
             build.module('evenement', 'Évènement', mod => {
                 mod.help = html`
@@ -407,7 +407,7 @@ function init(build, start, values) {
                     positif(form, meta, 'la fin du suivi à 6 semaines')
                 }, options)
                 build.form('enfance', 'Enfance et adolescence', ctq, options)
-            });
+            })
 
             build.module('qualite', 'Qualité de vie', mod => {
                 mod.help = html`
@@ -449,13 +449,13 @@ function init(build, start, values) {
                     form.values = values.mini5s
                     mini5s(form, meta)
                 }, options)
-            });
+            })
 
             build.module('entourage', 'Entourage', mod => {
                 mod.help = html`
                     <p>Dans ce module, nous visons à comprendre votre <b>environnement social</b> : À qui parlez-vous de manière régulière ? Qui est là pour vous ? Êtes-vous satisfaits du soutien que vous recevez ?
                     <p>À la fin de ce module, nous vous demanderons de décrire votre entourage précisément à l'aide d'un <abbr title="Outil permettant de représenter visuellement vos relations sociales">sociogramme</abbr> interactif.
-                `;
+                `
 
                 build.form('ssq6', 'Soutien social', ssq6, { ...options, load: ['/recueil/initial/entourage/ssq6',
                                                                                 '/recueil/s6/entourage/ssq6'] })
@@ -478,7 +478,7 @@ function init(build, start, values) {
                     })
                 }, options)
                 build.network('network', 'Sociogramme', options)
-            });
+            })
 
             build.module('divulgation', 'Communication', mod => {
                 mod.help = html`
@@ -500,22 +500,22 @@ function init(build, start, values) {
                 build.form('rds', 'Réactions des proches', (form, meta) => {
                     rdss6(form, meta, `le suivi du ${options.schedule.toLocaleString()}`)
                 }, options)
-            });
-        });
+            })
+        })
 
         build.module('m6', '6 mois', mod => {
-            mod.level = 'Module';
+            mod.level = 'Module'
             mod.help = html`
                 <p>Nous vous remercions d'avoir rempli les questionnaires précédents. Pour compléter notre étude, nous avons besoin que vous répondiez à un <b>nouveau questionnaire</b> sur ce que vous avez ressenti suite à l'événement qui vous a amené ici.
                 <p>Vous remarquerez peut-être que certaines questions <b>semblent se répéter</b>. C'est normal et voulu ! Chaque question a son importance pour nous permettre d'analyser correctement les résultats.
                 <p>Nous vous sommes très reconnaissants pour votre temps et votre patience. Vos <b>réponses sont précieuses</b> pour notre recherche !
-            `;
+            `
             mod.step = html`
                 <p>Bienvenue dans ce <b>suivi à 6 mois</b> de SocioTrauma !
                 <p>À tout moment, vous pouvez arrêter l'étude ou la mettre en pause et y revenir plus tard. Vous avez également la possibilité de consulter les pages « Ressources » ou « Se détendre ».
-            `;
+            `
 
-            let options = { schedule: debut.plusMonths(6) };
+            let options = { schedule: debut.plusMonths(6) }
 
             build.module('evenement', 'Évènement', mod => {
                 mod.help = html`
@@ -562,7 +562,7 @@ function init(build, start, values) {
                     positif(form, meta, 'la fin du suivi à 3 mois')
                 }, options)
                 build.form('enfance', 'Enfance et adolescence', ctq, options)
-            });
+            })
 
             build.module('qualite', 'Qualité de vie', mod => {
                 mod.help = html`
@@ -604,13 +604,13 @@ function init(build, start, values) {
                     form.values = values.mini5s
                     mini5s(form, meta)
                 }, options)
-            });
+            })
 
             build.module('entourage', 'Entourage', mod => {
                 mod.help = html`
                     <p>Dans ce module, nous visons à comprendre votre <b>environnement social</b> : À qui parlez-vous de manière régulière ? Qui est là pour vous ? Êtes-vous satisfaits du soutien que vous recevez ?
                     <p>À la fin de ce module, nous vous demanderons de décrire votre entourage précisément à l'aide d'un <abbr title="Outil permettant de représenter visuellement vos relations sociales">sociogramme</abbr> interactif.
-                `;
+                `
 
                 build.form('ssq6', 'Soutien social', ssq6, { ...options, load: ['/recueil/initial/entourage/ssq6',
                                                                                 '/recueil/s6/entourage/ssq6',
@@ -634,7 +634,7 @@ function init(build, start, values) {
                     })
                 }, options)
                 build.network('network', 'Sociogramme', options)
-            });
+            })
 
             build.module('divulgation', 'Communication', mod => {
                 mod.help = html`
@@ -656,22 +656,22 @@ function init(build, start, values) {
                 build.form('rds', 'Réactions des proches', (form, meta) => {
                     rdss6(form, meta, `le suivi du ${options.schedule.toLocaleString()}`)
                 }, options)
-            });
-        });
+            })
+        })
 
         build.module('m12', '1 an', mod => {
-            mod.level = 'Module';
+            mod.level = 'Module'
             mod.help = html`
                 <p>Nous vous remercions d'avoir rempli les questionnaires précédents. Pour compléter notre étude, nous avons besoin que vous répondiez à un <b>nouveau questionnaire</b> sur ce que vous avez ressenti suite à l'événement qui vous a amené ici.
                 <p>Vous remarquerez peut-être que certaines questions <b>semblent se répéter</b>. C'est normal et voulu ! Chaque question a son importance pour nous permettre d'analyser correctement les résultats.
                 <p>Nous vous sommes très reconnaissants pour votre temps et votre patience. Vos <b>réponses sont précieuses</b> pour notre recherche !
-            `;
+            `
             mod.step = html`
                 <p>Bienvenue dans ce <b>suivi à 1 an</b> de SocioTrauma !
                 <p>À tout moment, vous pouvez arrêter l'étude ou la mettre en pause et y revenir plus tard. Vous avez également la possibilité de consulter les pages « Ressources » ou « Se détendre ».
-            `;
+            `
 
-            let options = { schedule: debut.plusMonths(12) };
+            let options = { schedule: debut.plusMonths(12) }
 
             build.module('evenement', 'Évènement', mod => {
                 mod.help = html`
@@ -718,7 +718,7 @@ function init(build, start, values) {
                     positif(form, meta, 'la fin du suivi à 6 mois')
                 }, options)
                 build.form('enfance', 'Enfance et adolescence', ctq, options)
-            });
+            })
 
             build.module('qualite', 'Qualité de vie', mod => {
                 mod.help = html`
@@ -760,13 +760,13 @@ function init(build, start, values) {
                     form.values = values.mini5s
                     mini5s(form, meta)
                 }, options)
-            });
+            })
 
             build.module('entourage', 'Entourage', mod => {
                 mod.help = html`
                     <p>Dans ce module, nous visons à comprendre votre <b>environnement social</b> : À qui parlez-vous de manière régulière ? Qui est là pour vous ? Êtes-vous satisfaits du soutien que vous recevez ?
                     <p>À la fin de ce module, nous vous demanderons de décrire votre entourage précisément à l'aide d'un <abbr title="Outil permettant de représenter visuellement vos relations sociales">sociogramme</abbr> interactif.
-                `;
+                `
 
                 build.form('ssq6', 'Soutien social', ssq6, { ...options, load: ['/recueil/initial/entourage/ssq6',
                                                                                 '/recueil/s6/entourage/ssq6',
@@ -791,7 +791,7 @@ function init(build, start, values) {
                     })
                 }, options)
                 build.network('network', 'Sociogramme', options)
-            });
+            })
 
             build.module('divulgation', 'Communication', mod => {
                 mod.help = html`
@@ -813,9 +813,9 @@ function init(build, start, values) {
                 build.form('rds', 'Réactions des proches', (form, meta) => {
                     rdss6(form, meta, `le suivi du ${options.schedule.toLocaleString()}`)
                 }, options)
-            });
-        });
-    });
+            })
+        })
+    })
 }
 
 export {
