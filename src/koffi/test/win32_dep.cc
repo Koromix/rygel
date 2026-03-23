@@ -34,3 +34,19 @@ EXPORT int __cdecl DoDivideBySafe2(int a, int b)
 {
     return InnerDivide2(a, b);
 }
+
+static LONG WINAPI TestCrashFilter(EXCEPTION_POINTERS *)
+{
+    HANDLE h = GetStdHandle(STD_ERROR_HANDLE);
+    const char msg[] = "FILTER_CALLED";
+    DWORD written;
+    WriteFile(h, msg, sizeof(msg) - 1, &written, NULL);
+    ExitProcess(42);
+    return EXCEPTION_EXECUTE_HANDLER;
+}
+
+EXPORT void __cdecl DoSetCrashFilter(void)
+{
+    SetUnhandledExceptionFilter(TestCrashFilter);
+    SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX | SEM_NOOPENFILEERRORBOX);
+}

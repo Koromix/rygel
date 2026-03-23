@@ -41,8 +41,8 @@ SharedData shared;
 static thread_local CallData *exec_call;
 
 // Recent N-API functions are loaded dynamically
-static napi_status NAPI_CDECL (*node_api_create_property_key_utf8)(napi_env env, const char* str, size_t length, napi_value* result);
-static napi_status NAPI_CDECL (*node_api_post_finalizer)(node_api_basic_env env, napi_finalize finalize_cb, void* finalize_data, void* finalize_hint);
+static napi_status (NAPI_CDECL *node_api_create_property_key_utf8)(napi_env env, const char* str, size_t length, napi_value* result);
+static napi_status (NAPI_CDECL *node_api_post_finalizer)(node_api_basic_env env, napi_finalize finalize_cb, void* finalize_data, void* finalize_hint);
 
 static bool ChangeSize(const char *name, Napi::Value value, Size min_size, Size max_size, Size *out_size)
 {

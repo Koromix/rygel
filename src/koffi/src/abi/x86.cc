@@ -9,9 +9,25 @@
 #include "../util.hh"
 #if defined(_WIN32)
     #include "../win32.hh"
+    #include <windows.h>
 #endif
 
 #include <napi.h>
+
+#if defined(_WIN32)
+
+extern "C" EXCEPTION_DISPOSITION __cdecl SehHandler(
+    EXCEPTION_RECORD *rec, void *, CONTEXT *ctx, void *)
+{
+    if (!(rec->ExceptionFlags & (EXCEPTION_UNWINDING | EXCEPTION_EXIT_UNWIND))) {
+        EXCEPTION_POINTERS ep = { rec, ctx };
+        UnhandledExceptionFilter(&ep);
+        ExitProcess(rec->ExceptionCode);
+    }
+    return ExceptionContinueSearch;
+}
+
+#endif
 
 namespace K {
 
@@ -310,6 +326,14 @@ Napi::Value RunLoop(CallData *call, napi_value *args, uint32_t *base, const AbiI
             teb->LastErrorValue = call->instance->last_error; \
              \
             ADJUST_TEB(teb, call->mem->stack.ptr, call->mem->stack.end()); \
+             \
+            struct SehFrame { void *Next; void *Handler; }; \
+            SehFrame *seh = (SehFrame *)call->mem->stack.ptr; \
+            seh->Next = (void *)-1; \
+            seh->Handler = (void *)SehHandler; \
+            void *old_list = teb->ExceptionList; \
+            teb->ExceptionList = seh; \
+            K_DEFER { teb->ExceptionList = old_list; }; \
              \
             return (Expr); \
         }()
