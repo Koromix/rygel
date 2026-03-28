@@ -6,6 +6,7 @@ const koffi = require('../../koffi');
 const assert = require('assert');
 const path = require('path');
 const util = require('util');
+const { spawnSync } = require('child_process');
 const { cnoke } = require('./package.json');
 
 const CallThroughFunc1 = koffi.proto('int __stdcall CallThroughFunc1(int)');
@@ -89,5 +90,21 @@ async function test() {
         assert.equal(results[1], -42);
         assert.equal(results[2], -15);
         assert.equal(results[3], -42);
+    }
+
+    // Test that UnhandledExceptionFilter is called when a native function crashes.
+    // This must run in a child process because the crash terminates the process.
+    {
+        let child = spawnSync(process.execPath, ['-e', `
+            const koffi = require('..');
+            const lib = koffi.load('${cnoke.output}/win32.dll');
+            lib.func('void SetCrashFilter()')();
+            lib.func('void CrashNow()')();
+        `], { timeout: 10000 });
+
+        let stderr = child.stderr.toString();
+
+        assert.ok(stderr.includes('FILTER_CALLED'), 'UnhandledExceptionFilter was not called on crash');
+        assert.equal(child.status, 42);
     }
 }

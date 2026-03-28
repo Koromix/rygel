@@ -8,6 +8,7 @@
 
 IMPORT int __cdecl DoDivideBySafe1(int a, int b);
 IMPORT int __cdecl DoDivideBySafe2(int a, int b);
+IMPORT void __cdecl DoSetCrashFilter(void);
 
 EXPORT int DivideBySafe1(int a, int b)
 {
@@ -23,4 +24,14 @@ EXPORT int CallThrough(int (__stdcall *func)(int value), int value)
 {
     int ret = func(value);
     return ret;
+}
+
+EXPORT void SetCrashFilter(void)
+{
+    DoSetCrashFilter();
+}
+
+EXPORT void CrashNow(void)
+{
+    *(volatile int *)0 = 42;
 }
