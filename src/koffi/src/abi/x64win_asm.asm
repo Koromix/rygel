@@ -15,7 +15,24 @@ public ForwardCallGX
 public ForwardCallFX
 public ForwardCallDX
 
+extern SehHandler : PROC
+
 .code
+
+; InnerCall is a minimal wrapper around the native function call.
+; Its frame lives entirely on the custom stack, so its EstablisherFrame passes
+; the TEB stack bounds check. This ensures that SehHandler is found by
+; RtlDispatchException before it tries to cross back to the original stack
+; (through ForwardCall*), which would fail the bounds check and terminate.
+; After the native call returns, InnerCall restores the original stack via
+; RBP (non-volatile, preserved by native) and returns directly to the C++ caller.
+InnerCall proc frame:SehHandler
+    .endprolog
+    call rax
+    mov rsp, rbp
+    pop rbp
+    ret
+InnerCall endp
 
 ; Copy function pointer to RAX, in order to save it through argument forwarding.
 ; Also make a copy of the SP to CallData::old_sp because the callback system might need it.
@@ -32,14 +49,12 @@ prologue macro
     mov rsp, rdx
 endm
 
-; Call native function.
-; Once done, restore normal stack pointer and return.
+; Jump to InnerCall which calls the native function and handles the return.
+; Using jmp (not call) avoids pushing a return address that would overlap
+; with the native function's shadow space and get corrupted.
 ; The return value is passed untouched through RAX or XMM0.
 epilogue macro
-    call rax
-    mov rsp, rbp
-    pop rbp
-    ret
+    jmp InnerCall
 endm
 
 ; Prepare integer argument registers from array passed by caller.

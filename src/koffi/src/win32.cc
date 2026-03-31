@@ -180,7 +180,11 @@ int GetDllMachine(const wchar_t *filename)
     return GetFileMachine(h, true);
 }
 
+#if defined(__x86_64__) || defined(_M_AMD64)
+extern "C" int SehHandler(void *ptr, uint64_t, void *ctx, void *)
+#else
 extern "C" int __cdecl SehHandler(void *ptr, void *, void *ctx, void *)
+#endif
 {
     EXCEPTION_RECORD *rec = (EXCEPTION_RECORD *)ptr;
 

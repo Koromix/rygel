@@ -121,6 +121,10 @@ void *LoadWindowsLibrary(Napi::Env env, Span<const char> path); // Returns HANDL
 int GetSelfMachine();
 int GetDllMachine(const wchar_t *filename);
 
-extern "C" int __cdecl SehHandler(void *ptr, void *, void *ctx, void *);
+#if defined(__x86_64__) || defined(_M_AMD64)
+extern "C" int SehHandler(void *rec, uint64_t establisher_frame, void *ctx, void *dispatcher_ctx);
+#else
+extern "C" int __cdecl SehHandler(void *rec, void *establisher_frame, void *ctx, void *dispatcher_ctx);
+#endif
 
 }
