@@ -26,6 +26,13 @@ struct BackRegisters {
     int ret_pop;
 };
 
+#if defined(_WIN32)
+struct SehFrame {
+    void *Next;
+    void *Handler;
+};
+#endif
+
 extern "C" uint64_t ForwardCallG(const void *func, uint8_t *sp, uint8_t **out_old_sp);
 extern "C" float ForwardCallF(const void *func, uint8_t *sp, uint8_t **out_old_sp);
 extern "C" double ForwardCallD(const void *func, uint8_t *sp, uint8_t **out_old_sp);
@@ -319,7 +326,10 @@ void CallData::Execute(const FunctionInfo *func, void *native)
     };
 
     // Adjust stack limits so SEH works correctly
-    teb->ExceptionList = (void *)-1; // EXCEPTION_CHAIN_END
+    SehFrame *seh = (SehFrame *)mem->stack.ptr;
+    seh->Next = (void *)-1;
+    seh->Handler = (void *)SehHandler;
+    teb->ExceptionList = seh;
     teb->StackBase = mem->stack0.end();
     teb->StackLimit = mem->stack0.ptr;
     teb->DeallocationStack = mem->stack0.ptr;
