@@ -7,6 +7,13 @@
 
 ### Koffi 2.15
 
+#### Koffi 2.15.4
+
+*Released on 2026-04-03*
+
+- Fix ABI issue with variadic parameters that are passed on the stack on Apple ARM64 platforms
+- Remove erroneous assertion from debug builds
+
 #### Koffi 2.15.3
 
 *Released on 2026-04-03*
