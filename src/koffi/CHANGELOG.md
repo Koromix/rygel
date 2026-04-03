@@ -7,6 +7,14 @@
 
 ### Koffi 2.15
 
+#### Koffi 2.15.3
+
+*Released on 2026-04-03*
+
+- Fix *IsOnCentralStack()* assertion/crash when using callbacks in recent Node versions
+- Support SetUnhandledExceptionFilter on Windows x64 and x86 ([@longhun12346](https://github.com/longhun12346))
+- Fix incorrect stack alignment when relaying callbacks on 32-bit x86 platforms
+
 #### Koffi 2.15.2
 
 *Released on 2026-03-11*
