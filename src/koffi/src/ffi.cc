@@ -1713,45 +1713,41 @@ extern "C" void RelayCallback(Size idx, uint8_t *own_sp, uint8_t *caller_sp, Bac
 {
     CallData *call = exec_call;
 
-    if (call) {
-        InstanceData *instance = call->instance;
+    // Fast path: main thread and we are running a native call through Koffi
+    if (call && std::this_thread::get_id() == call->instance->main_thread_id) {
+        Napi::HandleScope scope(call->env);
+        call->Relay(idx, own_sp, caller_sp, true, out_reg);
 
-        if (std::this_thread::get_id() == instance->main_thread_id) {
-            Napi::HandleScope scope(call->env);
-            call->Relay(idx, own_sp, caller_sp, true, out_reg);
-        } else {
-            call->RelayAsync(idx, own_sp, caller_sp, out_reg);
-        }
+        return;
+    }
+
+    // Otherwise, we need to allocate memory to perform the callback.
+    // Since the necessary machinery live in CallData, just use a temporary instance.
+    // In some cases we would reuse the existing call (exec_call may be not null),
+    // but it is rare so let's ignore this for simplicity.
+
+    TrampolineInfo *trampoline = &shared.trampolines[idx];
+    Napi::Env env = trampoline->func.Env();
+    InstanceData *instance = env.GetInstanceData<InstanceData>();
+
+    InstanceMemory *mem = AllocateMemory(instance, instance->config.async_stack_size, instance->config.async_heap_size);
+    if (!mem) [[unlikely]] {
+        ThrowError<Napi::Error>(env, "Too many asynchronous calls are running");
+        return;
+    }
+
+    // Avoid triggering the "use callback beyond FFI" check
+    K_DEFER_C(generation = trampoline->generation) { trampoline->generation = generation; };
+    trampoline->generation = -1;
+
+    if (std::this_thread::get_id() == instance->main_thread_id) {
+        CallData call(env, instance, mem, nullptr, nullptr);
+
+        Napi::HandleScope scope(env);
+        call.Relay(idx, own_sp, caller_sp, false, out_reg);
     } else {
-        // This happens if the callback pointer is called outside a Koffi translated call,
-        // either from another thread (managed by the library itself) or Node itself, in
-        // which case it could be the main thread.
-        // Either way, we cannot reuse existing call memory!
-
-        TrampolineInfo *trampoline = &shared.trampolines[idx];
-
-        Napi::Env env = trampoline->func.Env();
-        InstanceData *instance = env.GetInstanceData<InstanceData>();
-
-        InstanceMemory *mem = AllocateMemory(instance, instance->config.async_stack_size, instance->config.async_heap_size);
-        if (!mem) [[unlikely]] {
-            ThrowError<Napi::Error>(env, "Too many asynchronous calls are running");
-            return;
-        }
-
-        // Avoid triggering the "use callback beyond FFI" check
-        K_DEFER_C(generation = trampoline->generation) { trampoline->generation = generation; };
-        trampoline->generation = -1;
-
-        if (std::this_thread::get_id() == instance->main_thread_id) {
-            CallData call(env, instance, mem, nullptr, nullptr);
-
-            Napi::HandleScope scope(env);
-            call.Relay(idx, own_sp, caller_sp, false, out_reg);
-        } else {
-            CallData call(env, instance, mem, nullptr, nullptr);
-            call.RelayAsync(idx, own_sp, caller_sp, out_reg);
-        }
+        CallData call(env, instance, mem, nullptr, nullptr);
+        call.RelayAsync(idx, own_sp, caller_sp, out_reg);
     }
 }
 
