@@ -1711,11 +1711,22 @@ Napi::Value TranslateAsyncCall(const Napi::CallbackInfo &info)
 
 extern "C" void RelayCallback(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegisters *out_reg)
 {
-    if (exec_call) [[likely]] {
-        exec_call->RelaySafe(idx, own_sp, caller_sp, false, out_reg);
+    CallData *call = exec_call;
+
+    if (call) {
+        InstanceData *instance = call->instance;
+
+        if (std::this_thread::get_id() == instance->main_thread_id) {
+            Napi::HandleScope scope(call->env);
+            call->Relay(idx, own_sp, caller_sp, true, out_reg);
+        } else {
+            call->RelayAsync(idx, own_sp, caller_sp, out_reg);
+        }
     } else {
-        // This happens if the callback pointer is called from a different thread
-        // than the one that runs the FFI call (sync or async).
+        // This happens if the callback pointer is called outside a Koffi translated call,
+        // either from another thread (managed by the library itself) or Node itself, in
+        // which case it could be the main thread.
+        // Either way, we cannot reuse existing call memory!
 
         TrampolineInfo *trampoline = &shared.trampolines[idx];
 
@@ -1732,9 +1743,15 @@ extern "C" void RelayCallback(Size idx, uint8_t *own_sp, uint8_t *caller_sp, Bac
         K_DEFER_C(generation = trampoline->generation) { trampoline->generation = generation; };
         trampoline->generation = -1;
 
-        // We set dispose_call to true so that the main thread will dispose of CallData itself
-        CallData call(env, instance, mem, nullptr, nullptr);
-        call.RelaySafe(idx, own_sp, caller_sp, true, out_reg);
+        if (std::this_thread::get_id() == instance->main_thread_id) {
+            CallData call(env, instance, mem, nullptr, nullptr);
+
+            Napi::HandleScope scope(env);
+            call.Relay(idx, own_sp, caller_sp, false, out_reg);
+        } else {
+            CallData call(env, instance, mem, nullptr, nullptr);
+            call.RelayAsync(idx, own_sp, caller_sp, out_reg);
+        }
     }
 }
 
@@ -2364,7 +2381,7 @@ bool InitAsyncBroker(Napi::Env env, InstanceData *instance)
         if (napi_create_threadsafe_function(env, nullptr, nullptr,
                                             Napi::String::New(env, "Koffi Async Callback Broker"),
                                             0, 1, nullptr, nullptr, nullptr,
-                                            CallData::RelayAsync, &instance->broker) != napi_ok) {
+                                            PerformAsyncRelay, &instance->broker) != napi_ok) {
             LogError("Failed to create async callback broker");
             return false;
         }

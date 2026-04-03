@@ -12,15 +12,14 @@ namespace K {
 
 struct RelayContext {
     CallData *call;
-    bool dispose_call;
 
     Size idx;
     uint8_t *own_sp;
     uint8_t *caller_sp;
     BackRegisters *out_reg;
 
-    std::mutex mutex;
-    std::condition_variable cv;
+    std::mutex mutex = {};
+    std::condition_variable cv = {};
     bool done = false;
 };
 
@@ -74,48 +73,26 @@ void CallData::Dispose()
     instance = nullptr;
 }
 
-void CallData::RelaySafe(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool outside_call, BackRegisters *out_reg)
+void CallData::RelayAsync(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegisters *out_reg)
 {
-    if (std::this_thread::get_id() != instance->main_thread_id) {
-        // JS/V8 is single-threaded, and runs on main_thread_id. Forward the call
-        // to the JS event loop.
+    // JS/V8 is single-threaded, and runs on main_thread_id. Forward the call
+    // to the JS event loop.
 
-        RelayContext ctx;
+    RelayContext ctx = {
+        .call = this,
+        .idx = idx,
+        .own_sp = own_sp,
+        .caller_sp = caller_sp,
+        .out_reg = out_reg
+    };
 
-        ctx.call = this;
-        ctx.dispose_call = outside_call;
-        ctx.idx = idx;
-        ctx.own_sp = own_sp;
-        ctx.caller_sp = caller_sp;
-        ctx.out_reg = out_reg;
+    napi_call_threadsafe_function(instance->broker, &ctx, napi_tsfn_blocking);
 
-        napi_call_threadsafe_function(instance->broker, &ctx, napi_tsfn_blocking);
-
-        // Wait until it executes
-        std::unique_lock<std::mutex> lock(ctx.mutex);
-        while (!ctx.done) {
-            ctx.cv.wait(lock);
-        }
-    } else {
-        Napi::HandleScope scope(env);
-        Relay(idx, own_sp, caller_sp, !outside_call, out_reg);
+    // Wait until it executes
+    std::unique_lock<std::mutex> lock(ctx.mutex);
+    while (!ctx.done) {
+        ctx.cv.wait(lock);
     }
-}
-
-void CallData::RelayAsync(napi_env, napi_value, void *, void *udata)
-{
-    RelayContext *ctx = (RelayContext *)udata;
-
-    ctx->call->Relay(ctx->idx, ctx->own_sp, ctx->caller_sp, false, ctx->out_reg);
-
-    if (ctx->dispose_call) {
-        ctx->call->Dispose();
-    }
-
-    // We're done!
-    std::lock_guard<std::mutex> lock(ctx->mutex);
-    ctx->done = true;
-    ctx->cv.notify_one();
 }
 
 bool CallData::PushString(Napi::Value value, int directions, const char **out_str)
@@ -1172,6 +1149,26 @@ void CallData::PopOutArguments()
             } break;
         }
     }
+}
+
+void PerformAsyncRelay(napi_env, napi_value, void *, void *udata)
+{
+    RelayContext *ctx = (RelayContext *)udata;
+    CallData *call = ctx->call;
+
+    call->Relay(ctx->idx, ctx->own_sp, ctx->caller_sp, false, ctx->out_reg);
+
+    if (!call->func) {
+        // Use func = nullptr as cue that this CallData was created artificially just to
+        // perform the callback. Which means the creator does not run on the main thread,
+        // and cannot properly destroy it, because some members are managed by Node.
+        call->Dispose();
+    }
+
+    // We're done!
+    std::lock_guard<std::mutex> lock(ctx->mutex);
+    ctx->done = true;
+    ctx->cv.notify_one();
 }
 
 void *GetTrampoline(int16_t idx)

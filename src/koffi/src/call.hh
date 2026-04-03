@@ -73,8 +73,7 @@ struct alignas(8) CallData {
     Napi::Value EndAsync();
 
     void Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_stack, BackRegisters *out_reg);
-    void RelaySafe(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool outside_call, BackRegisters *out_reg);
-    static void RelayAsync(napi_env, napi_value, void *, void *udata);
+    void RelayAsync(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegisters *out_reg);
 
     void DumpForward() const;
 
@@ -157,6 +156,8 @@ inline T *CallData::AllocHeap(Size size, Size align)
         return ptr;
     }
 }
+
+void PerformAsyncRelay(napi_env env, napi_value callback, void *ctx, void *udata);
 
 void *GetTrampoline(int16_t idx);
 
