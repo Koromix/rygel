@@ -106,7 +106,9 @@ ForwardCallDDDDX PROC
 
     EXPORT RelayCallback
     EXTERN RelayCallback
-    EXPORT CallSwitchStack
+    EXPORT SwitchAndRelay
+    EXPORT RelayDirect
+    EXTERN RelayDirect
 
     ; First, make a copy of the argument registers.
     ; Then call the C function RelayCallback with the following arguments:
@@ -129,8 +131,6 @@ ForwardCallDDDDX PROC
     stp d6, d7, [sp, 120]
     mov x0, $ID
     mov x1, sp
-    add x2, sp, #208
-    add x3, sp, #136
     bl RelayCallback
     ldp x0, x1, [sp, 136]
     ldp d0, d1, [sp, 152]
@@ -145,7 +145,7 @@ ForwardCallDDDDX PROC
 ; probably misdetect this as a "stack overflow". We have to restore the old
 ; stack pointer, call Node.js/V8 and go back to ours.
 ; The first three parameters (x0, x1, x2) are passed through untouched.
-CallSwitchStack PROC
+SwitchAndRelay PROC
     stp x29, x30, [sp, -16]!
     mov x29, sp
     ldr x9, [x4, 0]
@@ -153,7 +153,7 @@ CallSwitchStack PROC
     and x9, x9, #-16
     str x9, [x4, 8]
     mov sp, x3
-    blr x5
+    bl RelayDirect
     mov sp, x29
     ldp x29, x30, [sp], 16
     ret

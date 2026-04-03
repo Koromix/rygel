@@ -72,8 +72,8 @@ struct alignas(8) CallData {
     void ExecuteAsync();
     Napi::Value EndAsync();
 
-    void Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_stack, BackRegisters *out_reg);
-    void RelayAsync(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegisters *out_reg);
+    void Relay(Size idx, uint8_t *sp);
+    void RelayAsync(Size idx, uint8_t *sp);
 
     void DumpForward() const;
 

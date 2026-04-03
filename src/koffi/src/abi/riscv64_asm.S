@@ -129,7 +129,8 @@ ForwardCallXDD:
 # ----------------------------
 
 .global RelayCallback
-.global CallSwitchStack
+.global SwitchAndRelay
+.global RelayDirect
 
 # First, make a copy of argument registers.
 # Then call the C function RelayCallback with the following arguments:
@@ -157,8 +158,6 @@ ForwardCallXDD:
     fsd fa7, 128(sp)
     li a0, \id
     addi a1, sp, 8
-    addi a2, sp, 176
-    addi a3, sp, 136
     call RelayCallback
     ld ra, 0(sp)
     ld a0, 136(sp)
@@ -174,7 +173,7 @@ ForwardCallXDD:
 # probably misdetect this as a "stack overflow". We have to restore the old
 # stack pointer, call Node.js/V8 and go back to ours.
 # The first three parameters (a0, a1, a2) are passed through untouched.
-CallSwitchStack:
+SwitchAndRelay:
     addi sp, sp, -16
     sd ra, 0(sp)
     sd s1, 8(sp)
@@ -184,7 +183,7 @@ CallSwitchStack:
     andi t0, t0, -16
     sd t0, 8(a4)
     mv sp, a3
-    jalr a5
+    call RelayDirect
     mv sp, s1
     ld ra, 0(sp)
     ld s1, 8(sp)

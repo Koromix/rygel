@@ -146,7 +146,8 @@ SYMBOL(ForwardCallDDX):
 # ----------------------------
 
 .global SYMBOL(RelayCallback)
-.global SYMBOL(CallSwitchStack)
+.global SYMBOL(SwitchAndRelay)
+.global SYMBOL(RelayDirect)
 
 # First, make a copy of argument registers.
 # Then call the C function RelayCallback with the following arguments:
@@ -175,8 +176,6 @@ SYMBOL(ForwardCallDDX):
     movsd %xmm7, 104(%rsp)
     movq $\id, %rdi
     movq %rsp, %rsi
-    leaq 160(%rsp), %rdx
-    leaq 112(%rsp), %rcx
 #if defined(__linux__)
     call *RelayCallback@GOTPCREL(%rip)
 #else
@@ -197,7 +196,7 @@ SYMBOL(ForwardCallDDX):
 # probably misdetect this as a "stack overflow". We have to restore the old
 # stack pointer, call Node.js/V8 and go back to ours.
 # The first three parameters (rdi, rsi, rdx) are passed through untouched.
-SYMBOL(CallSwitchStack):
+SYMBOL(SwitchAndRelay):
     .cfi_startproc
     .cfi_def_cfa rsp, 8
     ENDBR64
@@ -210,7 +209,7 @@ SYMBOL(CallSwitchStack):
     movq %r10, 8(%r8)
     movq %rcx, %rsp
     .cfi_def_cfa rsp, 16
-    call *%r9
+    call SYMBOL(RelayDirect)
     mov %rbp, %rsp
     .cfi_def_cfa rsp, 16
     pop %rbp

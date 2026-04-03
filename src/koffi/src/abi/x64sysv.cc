@@ -48,10 +48,6 @@ extern "C" Xmm0RaxRet ForwardCallDGX(const void *func, uint8_t *sp, uint8_t **ou
 extern "C" RaxXmm0Ret ForwardCallGDX(const void *func, uint8_t *sp, uint8_t **out_old_sp);
 extern "C" Xmm0Xmm1Ret ForwardCallDDX(const void *func, uint8_t *sp, uint8_t **out_old_sp);
 
-extern "C" napi_value CallSwitchStack(Napi::Function *func, size_t argc, napi_value *argv,
-                                      uint8_t *saved_sp, Span<uint8_t> *new_stack,
-                                      napi_value (*call)(Napi::Function *func, size_t argc, napi_value *argv));
-
 enum class AbiOpcode : int16_t {
     #define PRIMITIVE(Name) Push ## Name,
     #include "../primitives.inc"
@@ -1170,8 +1166,12 @@ Napi::Value CallData::EndAsync()
     return RunLoop(this, nullptr, async_base, next);
 }
 
-void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_stack, BackRegisters *out_reg)
+void CallData::Relay(Size idx, uint8_t *sp)
 {
+    uint8_t *own_sp = sp;
+    uint8_t *caller_sp = sp + 160;
+    BackRegisters *out_reg = (BackRegisters *)(sp + 112);
+
     if (env.IsExceptionPending()) [[unlikely]]
         return;
 
@@ -1338,15 +1338,8 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
 
     const TypeInfo *type = proto->ret.type;
 
-    // Make the call
-    napi_value ret;
-    if (switch_stack) {
-        ret = CallSwitchStack(&func, (size_t)arguments.len, arguments.data, saved_sp, &mem->stack,
-                              [](Napi::Function *func, size_t argc, napi_value *argv) { return (napi_value)func->Call(argv[0], argc - 1, argv + 1); });
-    } else {
-        ret = (napi_value)func.Call(arguments[0], arguments.len - 1, arguments.data + 1);
-    }
-    Napi::Value value(env, ret);
+    // We're ready, make the call!
+    Napi::Value value = func.Call(arguments[0], arguments.len - 1, arguments.data + 1);
 
     if (env.IsExceptionPending()) [[unlikely]]
         return;

@@ -80,7 +80,8 @@ ForwardCallDR endp
 ; ----------------------------
 
 extern RelayCallback : PROC
-public CallSwitchStack
+public SwitchAndRelay
+extern RelayDirect : PROC
 
 ; Call the C function RelayCallback with the following arguments:
 ; static trampoline ID, the current stack pointer, a pointer to the stack arguments of this call,
@@ -97,10 +98,6 @@ trampoline macro ID
     sub esp, 44
     mov dword ptr [esp+0], ID
     mov dword ptr [esp+4], esp
-    lea eax, dword ptr [esp+48]
-    mov dword ptr [esp+8], eax
-    lea eax, dword ptr [esp+16]
-    mov dword ptr [esp+12], eax
     call RelayCallback
     mov edx, dword ptr [esp+44]
     mov ecx, dword ptr [esp+36]
@@ -128,11 +125,10 @@ endm
 ; The problem is that we're still running on the separate Koffi stack, and V8 will
 ; probably misdetect this as a "stack overflow". We have to restore the old
 ; stack pointer, call Node.js/V8 and go back to ours.
-CallSwitchStack proc
+SwitchAndRelay proc
     endbr32
     push ebp
     mov ebp, esp
-    mov edx, dword ptr [esp+28]
     mov ecx, dword ptr [esp+24]
     mov eax, esp
     sub eax, dword ptr [ecx+0]
@@ -146,11 +142,11 @@ CallSwitchStack proc
     mov dword ptr [esp+4], eax
     mov eax, dword ptr [ebp+16]
     mov dword ptr [esp+8], eax
-    call edx
+    call RelayDirect
     mov esp, ebp
     pop ebp
     ret
-CallSwitchStack endp
+SwitchAndRelay endp
 
 ; Trampolines
 ; ----------------------------

@@ -85,7 +85,8 @@ SYMBOL(ForwardCallDR):
 # ----------------------------
 
 .global SYMBOL(RelayCallback)
-.global SYMBOL(CallSwitchStack)
+.global SYMBOL(SwitchAndRelay)
+.global SYMBOL(RelayDirect)
 
 # Call the C function RelayCallback with the following arguments:
 # static trampoline ID, the current stack pointer, a pointer to the stack arguments of this call,
@@ -103,10 +104,6 @@ SYMBOL(ForwardCallDR):
     .cfi_def_cfa esp, 48
     movl $\id, 0(%esp)
     movl %esp, 4(%esp)
-    leal 48(%esp), %eax
-    movl %eax, 8(%esp)
-    leal 16(%esp), %eax
-    movl %eax, 12(%esp)
 #if defined(_WIN32)
     call _RelayCallback
 #else
@@ -140,17 +137,11 @@ SYMBOL(ForwardCallDR):
     .cfi_endproc
 .endm
 
-#if !defined(_WIN32)
-GetEIP:
-    movl (%esp), %ecx
-    ret
-#endif
-
 # When a callback is relayed, Koffi will call into Node.js and V8 to execute Javascript.
 # The problem is that we're still running on the separate Koffi stack, and V8 will
 # probably misdetect this as a "stack overflow". We have to restore the old
 # stack pointer, call Node.js/V8 and go back to ours.
-SYMBOL(CallSwitchStack):
+SYMBOL(SwitchAndRelay):
     .cfi_startproc
     .cfi_def_cfa esp, 4
     ENDBR32
@@ -158,7 +149,6 @@ SYMBOL(CallSwitchStack):
     .cfi_def_cfa esp, 8
     movl %esp, %ebp
     .cfi_def_cfa ebp, 8
-    movl 28(%esp), %edx
     movl 24(%esp), %ecx
     movl %esp, %eax
     subl 0(%ecx), %eax
@@ -172,13 +162,25 @@ SYMBOL(CallSwitchStack):
     movl %eax, 4(%esp)
     movl 16(%ebp), %eax
     movl %eax, 8(%esp)
-    call *%edx
+#if defined(_WIN32)
+    call _RelayDirect
+#else
+    call GetEIP
+    addl $_GLOBAL_OFFSET_TABLE_, %ecx
+    call *RelayDirect@GOT(%ecx)
+#endif
     mov %ebp, %esp
     .cfi_def_cfa esp, 8
     pop %ebp
     .cfi_def_cfa esp, 4
     ret
     .cfi_endproc
+
+#if !defined(_WIN32)
+GetEIP:
+    movl (%esp), %ecx
+    ret
+#endif
 
 # Trampolines
 # ----------------------------

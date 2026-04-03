@@ -44,6 +44,8 @@ static thread_local CallData *exec_call;
 static napi_status (NAPI_CDECL *node_api_create_property_key_utf8)(napi_env env, const char* str, size_t length, napi_value* result);
 static napi_status (NAPI_CDECL *node_api_post_finalizer)(node_api_basic_env env, napi_finalize finalize_cb, void* finalize_data, void* finalize_hint);
 
+extern "C" napi_value SwitchAndRelay(CallData *call, Size idx, uint8_t *sp, uint8_t *saved_sp, Span<uint8_t> *new_stack);
+
 static bool ChangeSize(const char *name, Napi::Value value, Size min_size, Size max_size, Size *out_size)
 {
     Napi::Env env = value.Env();
@@ -1709,15 +1711,15 @@ Napi::Value TranslateAsyncCall(const Napi::CallbackInfo &info)
     return TranslateAsyncCall(func, func->native, info, (Size)info.Length());
 }
 
-extern "C" void RelayCallback(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegisters *out_reg)
+extern "C" void RelayCallback(Size idx, uint8_t *sp)
 {
     CallData *call = exec_call;
 
-    // Fast path: main thread and we are running a native call through Koffi
+    // Fast path: main thread and we are running a native call through Koffi.
+    // But this means we are running on the custom Koffi stack, which could trip up
+    // Node and V8, so we need to stwich back to the normal/main stack.
     if (call && std::this_thread::get_id() == call->instance->main_thread_id) {
-        Napi::HandleScope scope(call->env);
-        call->Relay(idx, own_sp, caller_sp, true, out_reg);
-
+        SwitchAndRelay(call, idx, sp, call->saved_sp, &call->mem->stack);
         return;
     }
 
@@ -1744,11 +1746,17 @@ extern "C" void RelayCallback(Size idx, uint8_t *own_sp, uint8_t *caller_sp, Bac
         CallData call(env, instance, mem, nullptr, nullptr);
 
         Napi::HandleScope scope(env);
-        call.Relay(idx, own_sp, caller_sp, false, out_reg);
+        call.Relay(idx, sp);
     } else {
         CallData call(env, instance, mem, nullptr, nullptr);
-        call.RelayAsync(idx, own_sp, caller_sp, out_reg);
+        call.RelayAsync(idx, sp);
     }
+}
+
+extern "C" void RelayDirect(CallData *call, Size idx, uint8_t *sp)
+{
+    Napi::HandleScope scope(call->env);
+    call->Relay(idx, sp);
 }
 
 static Napi::Value FindLibraryFunction(const Napi::CallbackInfo &info)
