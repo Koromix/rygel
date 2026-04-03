@@ -26,6 +26,7 @@ mount --bind /dev/pts $TARGET/dev/pts
 mount --bind /proc $TARGET/proc
 mount --bind /sys $TARGET/sys
 mount --bind /run $TARGET/run
+chmod 0666 $TARGET/dev/null
 
 echo "$HOSTNAME" > $TARGET/etc/hostname
 echo "127.0.0.1 $HOSTNAME" >> $TARGET/etc/hosts
