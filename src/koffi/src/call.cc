@@ -165,7 +165,7 @@ Size CallData::PushStringValue(Napi::Value value, const char **out_str)
         K_ASSERT(status == napi_ok);
 
         len++;
-        buf = AllocateSpan<char>(&call_alloc, (Size)len);
+        buf = AllocateSpan<char>(&alloc, (Size)len);
 
         status = napi_get_value_string_utf8(env, value, buf.ptr, (size_t)buf.len, &len);
         K_ASSERT(status == napi_ok);
@@ -200,7 +200,7 @@ Size CallData::PushString16Value(Napi::Value value, const char16_t **out_str16)
         K_ASSERT(status == napi_ok);
 
         len++;
-        buf = AllocateSpan<char16_t>(&call_alloc, (Size)len);
+        buf = AllocateSpan<char16_t>(&alloc, (Size)len);
 
         status = napi_get_value_string_utf16(env, value, buf.ptr, (size_t)buf.len, &len);
         K_ASSERT(status == napi_ok);
@@ -231,7 +231,7 @@ Size CallData::PushString32Value(Napi::Value value, const char32_t **out_str32)
         mem->heap.ptr += buf16.len * 4;
         mem->heap.len -= buf16.len * 4;
     } else {
-        buf = AllocateSpan<char32_t>(&call_alloc, buf16.len);
+        buf = AllocateSpan<char32_t>(&alloc, buf16.len);
     }
 
     Size j = 0;

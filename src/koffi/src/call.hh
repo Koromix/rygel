@@ -53,7 +53,7 @@ struct alignas(8) CallData {
     LocalArray<int16_t, 16> used_trampolines;
     HeapArray<OutArgument> out_arguments;
 
-    BlockAllocator call_alloc;
+    BlockAllocator alloc;
 
     CallData(Napi::Env env, InstanceData *instance, InstanceMemory *mem, const FunctionInfo *func, void *native);
     ~CallData();
@@ -92,8 +92,6 @@ struct alignas(8) CallData {
     Size PushIndirectString(Napi::Array array, const TypeInfo *ref, void **out_ptr);
 
     void *ReserveTrampoline(const FunctionInfo *proto, Napi::Function func);
-
-    BlockAllocator *GetAllocator() { return &call_alloc; }
 
     template <typename T>
     T *AllocStack(Size size);
@@ -150,7 +148,7 @@ inline T *CallData::AllocHeap(Size size, Size align)
         int flags = 0;
 #endif
 
-        ptr = (uint8_t *)AllocateRaw(&call_alloc, size + align, flags);
+        ptr = (uint8_t *)AllocateRaw(&alloc, size + align, flags);
         ptr = AlignUp(ptr, align);
 
         return ptr;
