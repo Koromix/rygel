@@ -924,8 +924,8 @@ function createChannel(streamIn) {
     if (isFirstPacket) {
       isFirstPacket = false;
       let binaryVersion = String.fromCharCode(...bytes);
-      if (binaryVersion !== "0.27.5") {
-        throw new Error(`Cannot start service: Host version "${"0.27.5"}" does not match binary version ${quote(binaryVersion)}`);
+      if (binaryVersion !== "0.28.0") {
+        throw new Error(`Cannot start service: Host version "${"0.28.0"}" does not match binary version ${quote(binaryVersion)}`);
       }
       return;
     }
@@ -2060,7 +2060,7 @@ for your current platform.`);
         "node_modules",
         ".cache",
         "esbuild",
-        `pnpapi-${pkg.replace("/", "-")}-${"0.27.5"}-${path.basename(subpath)}`
+        `pnpapi-${pkg.replace("/", "-")}-${"0.28.0"}-${path.basename(subpath)}`
       );
       if (!fs.existsSync(binTargetPath)) {
         fs.mkdirSync(path.dirname(binTargetPath), { recursive: true });
@@ -2095,7 +2095,7 @@ if (process.env.ESBUILD_WORKER_THREADS !== "0") {
   }
 }
 var _a;
-var isInternalWorkerThread = ((_a = worker_threads == null ? void 0 : worker_threads.workerData) == null ? void 0 : _a.esbuildVersion) === "0.27.5";
+var isInternalWorkerThread = ((_a = worker_threads == null ? void 0 : worker_threads.workerData) == null ? void 0 : _a.esbuildVersion) === "0.28.0";
 var esbuildCommandAndArgs = () => {
   if ((!ESBUILD_BINARY_PATH || false) && (path2.basename(__filename) !== "main.js" || path2.basename(__dirname) !== "lib")) {
     throw new Error(
@@ -2162,7 +2162,7 @@ var fsAsync = {
     }
   }
 };
-var version = "0.27.5";
+var version = "0.28.0";
 var build = (options) => ensureServiceIsRunning().build(options);
 var context = (buildOptions) => ensureServiceIsRunning().context(buildOptions);
 var transform = (input, options) => ensureServiceIsRunning().transform(input, options);
@@ -2265,7 +2265,7 @@ var stopService;
 var ensureServiceIsRunning = () => {
   if (longLivedService) return longLivedService;
   let [command, args] = esbuildCommandAndArgs();
-  let child = child_process.spawn(command, args.concat(`--service=${"0.27.5"}`, "--ping"), {
+  let child = child_process.spawn(command, args.concat(`--service=${"0.28.0"}`, "--ping"), {
     windowsHide: true,
     stdio: ["pipe", "pipe", "inherit"],
     cwd: defaultWD
@@ -2369,7 +2369,7 @@ var runServiceSync = (callback) => {
     esbuild: node_exports
   });
   callback(service);
-  let stdout = child_process.execFileSync(command, args.concat(`--service=${"0.27.5"}`), {
+  let stdout = child_process.execFileSync(command, args.concat(`--service=${"0.28.0"}`), {
     cwd: defaultWD,
     windowsHide: true,
     input: stdin,
@@ -2389,7 +2389,7 @@ var workerThreadService = null;
 var startWorkerThreadService = (worker_threads2) => {
   let { port1: mainPort, port2: workerPort } = new worker_threads2.MessageChannel();
   let worker = new worker_threads2.Worker(__filename, {
-    workerData: { workerPort, defaultWD, esbuildVersion: "0.27.5" },
+    workerData: { workerPort, defaultWD, esbuildVersion: "0.28.0" },
     transferList: [workerPort],
     // From node's documentation: https://nodejs.org/api/worker_threads.html
     //

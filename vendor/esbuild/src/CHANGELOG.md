@@ -1,5 +1,64 @@
 # Changelog
 
+## 0.28.0
+
+* Add support for `with { type: 'text' }` imports ([#4435](https://github.com/evanw/esbuild/issues/4435))
+
+    The [import text](https://github.com/tc39/proposal-import-text) proposal has reached stage 3 in the TC39 process, which means that it's recommended for implementation. It has also already been implemented by [Deno](https://docs.deno.com/examples/importing_text/) and [Bun](https://bun.com/docs/guides/runtime/import-html). So with this release, esbuild also adds support for it. This behaves exactly the same as esbuild's existing [`text` loader](https://esbuild.github.io/content-types/#text). Here's an example:
+
+    ```js
+    import string from './example.txt' with { type: 'text' }
+    console.log(string)
+    ```
+
+* Add integrity checks to fallback download path ([#4343](https://github.com/evanw/esbuild/issues/4343))
+
+    Installing esbuild via npm is somewhat complicated with several different edge cases (see [esbuild's documentation](https://esbuild.github.io/getting-started/#additional-npm-flags) for details). If the regular installation of esbuild's platform-specific package fails, esbuild's install script attempts to download the platform-specific package itself (first with the `npm` command, and then with a HTTP request to `registry.npmjs.org` as a last resort).
+
+    This last resort path previously didn't have any integrity checks. With this release, esbuild will now verify that the hash of the downloaded binary matches the expected hash for the current release. This means the hashes for all of esbuild's platform-specific binary packages will now be embedded in the top-level `esbuild` package. Hopefully this should work without any problems. But just in case, this change is being done as a breaking change release.
+
+* Update the Go compiler from 1.25.7 to 1.26.1
+
+    This upgrade should not affect anything. However, there have been some significant internal changes to the Go compiler, so esbuild could potentially behave differently in certain edge cases:
+
+    - It now uses the [new garbage collector](https://go.dev/doc/go1.26#new-garbage-collector) that comes with Go 1.26.
+    - The Go compiler is now more aggressive with allocating memory on the stack.
+    - The executable format that the Go linker uses has undergone several changes.
+    - The WebAssembly build now unconditionally makes use of the sign extension and non-trapping floating-point to integer conversion instructions.
+
+    You can read the [Go 1.26 release notes](https://go.dev/doc/go1.26) for more information.
+
+## 0.27.7
+
+* Fix lowering of define semantics for TypeScript parameter properties ([#4421](https://github.com/evanw/esbuild/issues/4421))
+
+    The previous release incorrectly generated class fields for TypeScript parameter properties even when the configured target environment does not support class fields. With this release, the generated class fields will now be correctly lowered in this case:
+
+    ```ts
+    // Original code
+    class Foo {
+      constructor(public x = 1) {}
+      y = 2
+    }
+
+    // Old output (with --loader=ts --target=es2021)
+    class Foo {
+      constructor(x = 1) {
+        this.x = x;
+        __publicField(this, "y", 2);
+      }
+      x;
+    }
+
+    // New output (with --loader=ts --target=es2021)
+    class Foo {
+      constructor(x = 1) {
+        __publicField(this, "x", x);
+        __publicField(this, "y", 2);
+      }
+    }
+    ```
+
 ## 0.27.5
 
 * Fix for an async generator edge case ([#4401](https://github.com/evanw/esbuild/issues/4401), [#4417](https://github.com/evanw/esbuild/pull/4417))
