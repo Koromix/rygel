@@ -155,7 +155,7 @@ SYMBOL(SwitchAndRelay):
     andl $-16, %eax
     movl %eax, 4(%ecx)
     movl 20(%esp), %esp
-    subl $28, %esp
+    subl $24, %esp
     movl 8(%ebp), %eax
     movl %eax, 0(%esp)
     movl 12(%ebp), %eax

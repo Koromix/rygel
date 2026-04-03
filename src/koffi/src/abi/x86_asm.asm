@@ -135,7 +135,7 @@ SwitchAndRelay proc
     and eax, -16
     mov dword ptr [ecx+4], eax
     mov esp, dword ptr [esp+20]
-    sub esp, 28
+    sub esp, 24
     mov eax, dword ptr [ebp+8]
     mov dword ptr [esp+0], eax
     mov eax, dword ptr [ebp+12]
