@@ -18,7 +18,7 @@ int Main(int argc, char **argv)
     }
 
     // We need to call InitWindow before using anything else (such as fonts)
-    SetTraceLogLevel(LOG_WARNING);
+    SetTraceLogLevel(LOG_ERROR);
 #if !defined(RENDER)
     SetWindowState(FLAG_WINDOW_HIDDEN);
 #endif

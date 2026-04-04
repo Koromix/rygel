@@ -53,7 +53,7 @@ function run_cc(time) {
 
 function run_napi(time) {
     // We need to call InitWindow before using anything else (such as fonts)
-    r.SetTraceLogLevel(4); // Warnings
+    r.SetTraceLogLevel(5); // Errors
     r.SetWindowState(0x80); // Hidden
     r.InitWindow(800, 600, "Raylib Test");
 
@@ -159,7 +159,7 @@ function run_koffi(time) {
     const ExportImage = lib.func('ExportImage', 'bool', [Image, 'str']);
 
     // We need to call InitWindow before using anything else (such as fonts)
-    SetTraceLogLevel(4); // Warnings
+    SetTraceLogLevel(5); // Errors
     SetWindowState(0x80); // Hidden
     InitWindow(800, 600, "Raylib Test");
 
@@ -279,7 +279,7 @@ function run_node_ffi(time) {
     });
 
     // We need to call InitWindow before using anything else (such as fonts)
-    r.SetTraceLogLevel(4); // Warnings
+    r.SetTraceLogLevel(5); // Errors
     r.SetWindowState(0x80); // Hidden
     r.InitWindow(800, 600, "Raylib Test");
 
