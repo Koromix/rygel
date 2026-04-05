@@ -92,11 +92,14 @@ extern RelayDirect : PROC
 ; to BackRegisters::ret_pop before ret is issued.
 ; We need to branch at the end to avoid x87 stack imbalance.
 trampoline macro ID
-    local l0, l1, l2
-
     endbr32
+    mov eax, ID
+    jmp RelayTrampoline
+endm
+
+RelayTrampoline proc
     sub esp, 44
-    mov dword ptr [esp+0], ID
+    mov dword ptr [esp+0], eax
     mov dword ptr [esp+4], esp
     call RelayCallback
     mov edx, dword ptr [esp+44]
@@ -119,7 +122,7 @@ l2:
     fld qword ptr [esp+24]
     lea esp, dword ptr [esp+ecx+44]
     ret
-endm
+RelayTrampoline endp
 
 ; When a callback is relayed, Koffi will call into Node.js and V8 to execute Javascript.
 ; The problem is that we're still running on the separate Koffi stack, and V8 will

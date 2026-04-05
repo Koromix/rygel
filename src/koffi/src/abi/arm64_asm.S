@@ -123,6 +123,13 @@ SYMBOL(ForwardCallDDDDX):
 .macro trampoline id
     .cfi_startproc
     hint #34
+    mov x9, \id
+    b RelayTrampoline
+    .cfi_endproc
+.endm
+
+RelayTrampoline:
+    .cfi_startproc
     stp x29, x30, [sp, -16]!
     .cfi_def_cfa sp, 16
     .cfi_offset 29, 16
@@ -138,7 +145,7 @@ SYMBOL(ForwardCallDDDDX):
     stp d2, d3, [sp, 88]
     stp d4, d5, [sp, 104]
     stp d6, d7, [sp, 120]
-    mov x0, \id
+    mov x0, x9
     mov x1, sp
     bl SYMBOL(RelayCallback)
     ldp x0, x1, [sp, 136]
@@ -152,7 +159,6 @@ SYMBOL(ForwardCallDDDDX):
     .cfi_restore 29
     ret
     .cfi_endproc
-.endm
 
 # When a callback is relayed, Koffi will call into Node.js and V8 to execute Javascript.
 # The problem is that we're still running on the separate Koffi stack, and V8 will

@@ -118,6 +118,11 @@ ForwardCallDDDDX PROC
     MACRO
     trampoline $ID
 
+    mov x9, $ID
+    b RelayTrampoline
+    MEND
+
+RelayTrampoline PROC
     stp x29, x30, [sp, -16]!
     sub sp, sp, #192
     stp x0, x1, [sp, 0]
@@ -129,7 +134,7 @@ ForwardCallDDDDX PROC
     stp d2, d3, [sp, 88]
     stp d4, d5, [sp, 104]
     stp d6, d7, [sp, 120]
-    mov x0, $ID
+    mov x0, x9
     mov x1, sp
     bl RelayCallback
     ldp x0, x1, [sp, 136]
@@ -138,7 +143,7 @@ ForwardCallDDDDX PROC
     add sp, sp, #192
     ldp x29, x30, [sp], 16
     ret
-    MEND
+    ENDP
 
 ; When a callback is relayed, Koffi will call into Node.js and V8 to execute Javascript.
 ; The problem is that we're still running on the separate Koffi stack, and V8 will

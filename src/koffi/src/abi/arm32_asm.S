@@ -101,16 +101,22 @@ ForwardCallXDDDD:
 # After the call, simply load these registers from the output struct.
 .macro trampoline id
     .cfi_startproc
+    mov r12, \id
+    b RelayTrampoline
+    .cfi_endproc
+.endm
+
+RelayTrampoline:
+    .cfi_startproc
     push {fp, lr}
     .cfi_def_cfa sp, 8
     .cfi_offset 11, 4
     .cfi_offset 14, 8
-    sub sp, sp, #120
+    sub sp, sp, #40
+    stmdb sp!, {r0-r3}
+    vstmdb sp!, {d0-d7}
     .cfi_def_cfa sp, 128
-    mov r12, sp
-    vstmia r12!, {d0-d7}
-    stmia r12, {r0-r3}
-    mov r0, \id
+    mov r0, r12
     mov r1, sp
     bl RelayCallback
     add sp, sp, #80
@@ -123,7 +129,6 @@ ForwardCallXDDDD:
     .cfi_restore 14
     bx lr
     .cfi_endproc
-.endm
 
 # When a callback is relayed, Koffi will call into Node.js and V8 to execute Javascript.
 # The problem is that we're still running on the separate Koffi stack, and V8 will

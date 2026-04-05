@@ -117,7 +117,13 @@ extern RelayDirect : PROC
 ; arguments of this call, and a pointer to a struct that will contain the result registers.
 ; After the call, simply load these registers from the output struct.
 trampoline macro ID
+    .endprolog
     endbr64
+    mov rax, ID
+    jmp RelayTrampoline
+endm
+
+RelayTrampoline proc frame
     sub rsp, 120
     .allocstack 120
     .endprolog
@@ -129,14 +135,14 @@ trampoline macro ID
     movsd qword ptr [rsp+72], xmm1
     movsd qword ptr [rsp+80], xmm2
     movsd qword ptr [rsp+88], xmm3
-    mov rcx, ID
+    mov rcx, rax
     lea rdx, qword ptr [rsp+32]
     call RelayCallback
     mov rax, qword ptr [rsp+96]
     movsd xmm0, qword ptr [rsp+104]
     add rsp, 120
     ret
-endm
+RelayTrampoline endp
 
 ; When a callback is relayed, Koffi will call into Node.js and V8 to execute Javascript.
 ; The problem is that we're still running on the separate Koffi stack, and V8 will

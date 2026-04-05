@@ -98,11 +98,18 @@ SYMBOL(ForwardCallDR):
 # We need to branch at the end to avoid x87 stack imbalance.
 .macro trampoline id
     .cfi_startproc
-    .cfi_def_cfa esp, 4
     ENDBR32
+    movl $\id, %eax
+    jmp RelayTrampoline
+    .cfi_endproc
+.endm
+
+RelayTrampoline:
+    .cfi_startproc
+    .cfi_def_cfa esp, 4
     sub $44, %esp
     .cfi_def_cfa esp, 48
-    movl $\id, 0(%esp)
+    movl %eax, 0(%esp)
     movl %esp, 4(%esp)
 #if defined(_WIN32)
     call _RelayCallback
@@ -135,7 +142,6 @@ SYMBOL(ForwardCallDR):
     .cfi_def_cfa esp, 4
     ret
     .cfi_endproc
-.endm
 
 # When a callback is relayed, Koffi will call into Node.js and V8 to execute Javascript.
 # The problem is that we're still running on the separate Koffi stack, and V8 will

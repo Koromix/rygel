@@ -158,6 +158,14 @@ SYMBOL(ForwardCallDDX):
     .cfi_startproc
     .cfi_def_cfa rsp, 8
     ENDBR64
+    movq $\id, %rax
+    jmp RelayTrampoline
+    .cfi_endproc
+.endm
+
+RelayTrampoline:
+    .cfi_startproc
+    .cfi_def_cfa rsp, 8
     subq $152, %rsp
     .cfi_def_cfa rsp, 160
     movq %rdi, 0(%rsp)
@@ -174,7 +182,7 @@ SYMBOL(ForwardCallDDX):
     movsd %xmm5, 88(%rsp)
     movsd %xmm6, 96(%rsp)
     movsd %xmm7, 104(%rsp)
-    movq $\id, %rdi
+    movq %rax, %rdi
     movq %rsp, %rsi
 #if defined(__linux__)
     call *RelayCallback@GOTPCREL(%rip)
@@ -189,7 +197,6 @@ SYMBOL(ForwardCallDDX):
     .cfi_def_cfa rsp, 8
     ret
     .cfi_endproc
-.endm
 
 # When a callback is relayed, Koffi will call into Node.js and V8 to execute Javascript.
 # The problem is that we're still running on the separate Koffi stack, and V8 will
