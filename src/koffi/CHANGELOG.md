@@ -7,6 +7,15 @@
 
 ### Koffi 2.15
 
+#### Koffi 2.15.5
+
+*Released on 2026-04-05*
+
+- Reduce repeated trampoline code size:
+  * Use single set of trampolines to forward general and floating-point values
+  * Minimize trampoline size by jumping early to common handling code
+- This reduces decompressed Koffi package size from 85.9 MB to 41.4 MB
+
 #### Koffi 2.15.4
 
 *Released on 2026-04-03*
