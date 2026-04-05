@@ -112,7 +112,6 @@ ForwardCallDX:
 .endm
 
 RelayTrampoline:
-    endbr64
     subq $120, %rsp
     movq %rcx, 32(%rsp)
     movq %rdx, 40(%rsp)
