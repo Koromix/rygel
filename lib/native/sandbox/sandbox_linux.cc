@@ -264,6 +264,11 @@ static bool InitLandlock(unsigned int isolation, Span<const sb_RevealedPath> rev
 
         beneath.parent_fd = open(reveal.path, O_PATH | O_CLOEXEC);
         if (beneath.parent_fd < 0) {
+            if (errno == ENOENT) {
+                LogWarning("Ignoring non-existent sandbox path '%1'", reveal.path);
+                continue;
+            }
+
             LogError("Failed to open '%1': %2", reveal.path, strerror(errno));
             return false;
         }
@@ -552,13 +557,20 @@ static bool InitNamespaces(unsigned int isolation, Span<const sb_RevealedPath> r
                 continue;
             }
 
-            // Ensure destination exists
+            // Prepare destination file or directory
             {
-                FileInfo src_info;
-                if (StatFile(reveal.path, &src_info) != StatResult::Success)
-                    return false;
+                struct stat sb;
+                if (stat(reveal.path, &sb) < 0) {
+                    if (errno == ENOENT) {
+                        LogWarning("Ignoring non-existent sandbox path '%1'", reveal.path);
+                        continue;
+                    }
 
-                if (src_info.type == FileType::Directory) {
+                    LogError("Failed to stat '%1': %2", reveal.path, strerror(errno));
+                    return false;
+                }
+
+                if (S_ISDIR(sb.st_mode)) {
                     if (!MakeDirectoryRec(dest))
                         return false;
                 } else {
