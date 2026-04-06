@@ -79,7 +79,7 @@ static bool CreateLoginDocument(const char *title, const char *login, Allocator 
         Span<const uint8_t> buf = MakeSpan((const uint8_t *)data, (Size)len);
 
         ctx->out->Append(buf);
-        return (Size)len;
+        return (ssize_t)len;
     };
     const auto error = [](pdfio_file_t *, const char *msg, void *udata) {
         PdfContext *ctx = (PdfContext *)udata;
