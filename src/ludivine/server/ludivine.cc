@@ -43,9 +43,13 @@ static bool ApplySandbox(Span<const char *const> reveals)
     sb.RevealPaths(reveals, false);
 
 #if defined(__linux__)
+    // c-ares needs to access these files (or at least, try to)
     sb.RevealPaths({
         "/etc/resolv.conf",
-        "/etc/hosts"
+        "/etc/hosts",
+        "/etc/nsswitch.conf",
+        "/etc/netsvc.conf",
+        "/etc/svc.conf"
     }, true);
 
     sb.FilterSyscalls({
