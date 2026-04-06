@@ -660,7 +660,10 @@ Options:
             RemindLateUsers();
 
             LogDebug("Send mails");
-            SendMails();
+            if (!SendMails()) {
+                status = 1;
+                run = false;
+            }
         }
     }
 

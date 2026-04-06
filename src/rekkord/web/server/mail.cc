@@ -8,8 +8,9 @@
 
 namespace K {
 
-static const int64_t RetryDelay = 10 * 60000;
-static const int64_t MaxErrors = 10;
+static const int RetryDelay = 1 * 60000; // 1 minute
+static const int DropDelay = 20 * 60000; // 20 minutes
+static const int MaxErrors = 4;
 
 static smtp_Sender smtp;
 
@@ -55,9 +56,10 @@ bool PostMail(const char *to, const smtp_MailContent &content)
 
     const char *from = smtp.GetConfig().from;
     Span<const char> mail = smtp_BuildMail(from, to, content, &temp_alloc);
+    int64_t now = GetUnixTime();
 
-    if (!db.Run(R"(INSERT INTO mails (address, mail, sent, errors)
-                   VALUES (?1, ?2, 0, 0))", to, mail))
+    if (!db.Run(R"(INSERT INTO mails (address, mail, ctime, errors, timestamp)
+                   VALUES (?1, ?2, ?3, 0, ?3))", to, mail, now))
         return false;
 
     // Run pending tasks
@@ -73,9 +75,9 @@ bool SendMails()
     int64_t now = GetUnixTime();
 
     sq_Statement stmt;
-    if (!db.Prepare(R"(SELECT id, address, mail, sent, errors
+    if (!db.Prepare(R"(SELECT id, address, mail, ctime, errors, timestamp
                        FROM mails
-                       WHERE sent < ?1)", &stmt, now - RetryDelay))
+                       WHERE timestamp <= ?1)", &stmt, now))
         return false;
 
     Async async;
@@ -85,16 +87,19 @@ bool SendMails()
         const char *to = (const char *)sqlite3_column_text(stmt, 1);
         Span<const char> mail = MakeSpan((const char *)sqlite3_column_text(stmt, 2),
                                          sqlite3_column_bytes(stmt, 2));
-        int64_t sent = sqlite3_column_int64(stmt, 3);
+        int64_t ctime = sqlite3_column_int64(stmt, 3);
         int64_t errors = sqlite3_column_int64(stmt, 4);
+        int64_t timestamp = sqlite3_column_int64(stmt, 5);
 
         // Commit send task
         {
+            int64_t next = now + RetryDelay;
+
             sq_Statement stmt;
-            if (!db.Prepare(R"(UPDATE mails SET sent = ?3
-                               WHERE id = ?1 AND sent = ?2
+            if (!db.Prepare(R"(UPDATE mails SET timestamp = ?3
+                               WHERE id = ?1 AND timestamp = ?2
                                RETURNING id)",
-                            &stmt, id, sent, now))
+                            &stmt, id, timestamp, next))
                 return false;
 
             if (!stmt.Step()) {
@@ -108,15 +113,24 @@ bool SendMails()
         mail = DuplicateString(mail, &temp_alloc);
 
         async.Run([=]() {
-            bool done = smtp.Send(to, mail) || (errors + 1 >= MaxErrors);
+            if (!smtp.Send(to, mail)) {
+                bool persist = (errors + 1) < MaxErrors;
 
-            if (done) {
-                if (!db.Run("DELETE FROM mails WHERE id = ?1", id))
-                    return false;
-            } else {
-                if (!db.Run("UPDATE mails SET errors = errors + 1 WHERE id = ?1", id))
-                    return false;
+                if (now - ctime >= DropDelay) {
+                    if (!db.Run("DELETE FROM mails WHERE id = ?1", id))
+                        return false;
+                } else {
+                    int64_t next = persist ? (errors + 1) : 0;
+
+                    if (!db.Run("UPDATE mails SET errors = ?2 WHERE id = ?1", id, next))
+                        return false;
+                }
+
+                return persist;
             }
+
+            if (!db.Run("DELETE FROM mails WHERE id = ?1", id))
+                return false;
 
             return true;
         });

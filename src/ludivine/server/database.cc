@@ -7,7 +7,7 @@
 
 namespace K {
 
-static const int DatabaseVersion = 19;
+static const int DatabaseVersion = 20;
 
 int GetDatabaseVersion(sq_Database *db)
 {
@@ -429,9 +429,18 @@ bool MigrateDatabase(sq_Database *db, const char *vault_directory)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 19: {
+                bool success = db->RunMany(R"(
+                    ALTER TABLE mails RENAME COLUMN sent TO ctime;
+                    ALTER TABLE mails ADD COLUMN timestamp INTEGER NOT NULL;
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            static_assert(DatabaseVersion == 19);
+            static_assert(DatabaseVersion == 20);
         }
 
         if (!db->Run("INSERT INTO migrations (version, build, timestamp) VALUES (?, ?, ?)",
