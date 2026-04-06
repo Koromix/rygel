@@ -130,7 +130,9 @@ void sb_SandboxBuilder::RevealPaths(Span<const sb_RevealedPath> paths)
     for (sb_RevealedPath reveal: paths) {
         K_ASSERT(reveal.path[0] == '/');
 
-        reveal.path = DuplicateString(TrimStrRight(reveal.path, K_PATH_SEPARATORS), &str_alloc).ptr;
+        Span<const char> copy = TrimStrRight(reveal.path, K_PATH_SEPARATORS);
+
+        reveal.path = copy.len ? DuplicateString(copy, &str_alloc).ptr : "/";
         reveals.Append(reveal);
     }
 }
@@ -142,7 +144,9 @@ void sb_SandboxBuilder::RevealPaths(Span<const char *const> paths, bool readonly
 
         sb_RevealedPath reveal = {};
 
-        reveal.path = DuplicateString(TrimStrRight(path, K_PATH_SEPARATORS), &str_alloc).ptr;
+        Span<const char> copy = TrimStrRight(path, K_PATH_SEPARATORS);
+
+        reveal.path = copy.len ? DuplicateString(copy, &str_alloc).ptr : "/";
         reveal.readonly = readonly;
 
         reveals.Append(reveal);
