@@ -17,7 +17,7 @@ const my_string = lib.symbol('my_string', 'const char *');
 You cannot directly manipulate these variables, use:
 
 - [koffi.decode()](#decode-to-js-values) to read their value
-- [koffi.encode()](#encode-to-c-memory) to change their valuèe
+- [koffi.encode()](#encode-to-c-memory) to change their value
 
 # Decode to JS values
 
