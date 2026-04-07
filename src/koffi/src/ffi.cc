@@ -2390,11 +2390,6 @@ bool InitAsyncBroker(Napi::Env env, InstanceData *instance)
             return false;
         }
         napi_unref_threadsafe_function(env, instance->broker);
-
-        napi_add_env_cleanup_hook(env, [](void *udata) {
-            napi_threadsafe_function broker = (napi_threadsafe_function)udata;
-            napi_release_threadsafe_function(broker, napi_tsfn_abort);
-        }, instance->broker);
     }
 
     return true;
@@ -2680,6 +2675,17 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
     }
 
     exports.Set("version", Napi::String::New(env, K_STRINGIFY(VERSION)));
+
+    napi_add_env_cleanup_hook(env, [](void *udata) {
+        InstanceData *instance = (InstanceData *)udata;
+
+        if (instance->broker) {
+            // This deadlocks if we try to do this when the module is destroyed, when
+            // the InstanceData destructor runs, so run in the env cleanup hook instead,
+            // where it seems to go okay.
+            napi_release_threadsafe_function(instance->broker, napi_tsfn_abort);
+        }
+    }, instance);
 
     return exports;
 }
