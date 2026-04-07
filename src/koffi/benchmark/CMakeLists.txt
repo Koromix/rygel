@@ -41,6 +41,19 @@ else()
     target_link_libraries(rand_napi PRIVATE dl)
 endif()
 
+# ---- qsort ----
+
+add_node_addon(NAME qsort_napi SOURCES qsort_napi.cc ../../../lib/native/base/base.cc)
+target_include_directories(qsort_napi PRIVATE ../../.. ../../../vendor/node-addon-api)
+target_link_libraries(qsort_napi PRIVATE Threads::Threads)
+
+if(WIN32)
+    target_compile_definitions(qsort_napi PRIVATE _CRT_SECURE_NO_WARNINGS _CRT_NONSTDC_NO_DEPRECATE)
+    target_link_libraries(qsort_napi PRIVATE ws2_32)
+else()
+    target_link_libraries(qsort_napi PRIVATE dl)
+endif()
+
 # ---- memset ----
 
 add_node_addon(NAME memset_napi SOURCES memset_napi.cc ../../../lib/native/base/base.cc)
