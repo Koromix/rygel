@@ -7,6 +7,12 @@
 
 ### Koffi 2.15
 
+#### Koffi 2.15.6
+
+*Released on 2026-04-07*
+
+- Fix possile exit crash after using `koffi.reset()` (introduced in Koffi 2.15.2)
+
 #### Koffi 2.15.5
 
 *Released on 2026-04-05*
