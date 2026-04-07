@@ -144,7 +144,7 @@ void FmtRfc2047::Format(FunctionRef<void(Span<const char>)> append) const
     for (int c: str) {
         if (c == ' ') {
             append('_');
-        } else if (strchr("=?_", c) || IsAsciiControl(c)) {
+        } else if (strchr("=?_", c) || IsAsciiControl(c) || (uint8_t)c >= 128) {
             char encoded[3];
 
             encoded[0] = '=';
@@ -287,6 +287,7 @@ Span<const char> smtp_BuildMail(const char *from, const char *to, const smtp_Mai
     Fmt(&buf, "From: %1\r\n", from);
     Fmt(&buf, "To: %1\r\n", to);
     if (content.subject.len) {
+        K_ASSERT(IsValidUtf8(content.subject));
         Fmt(&buf, "Subject: %1\r\n", FmtRfc2047(content.subject));
     }
     Fmt(&buf, "MIME-version: 1.0\r\n");
