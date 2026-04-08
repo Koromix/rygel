@@ -207,10 +207,3 @@ randombytes_close(void)
     }
     return 0;
 }
-
-void
-randombytes(unsigned char * const buf, const unsigned long long buf_len)
-{
-    assert(buf_len <= SIZE_MAX);
-    randombytes_buf(buf, (size_t) buf_len);
-}

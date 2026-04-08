@@ -59,12 +59,6 @@ int randombytes_set_implementation(const randombytes_implementation *impl)
 SODIUM_EXPORT
 const char *randombytes_implementation_name(void);
 
-/* -- NaCl compatibility interface -- */
-
-SODIUM_EXPORT
-void randombytes(unsigned char * const buf, const unsigned long long buf_len)
-            __attribute__ ((nonnull));
-
 #ifdef __cplusplus
 }
 #endif
