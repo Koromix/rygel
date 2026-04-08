@@ -1,0 +1,8 @@
+# Copyright (c) The mlkem-native project authors
+# SPDX-License-Identifier: Apache-2.0
+
+ifndef MLKEM_K
+       $(warning MLKEM_K not set -- defaulting to MLKEM_K=3)
+endif
+
+MLKEM_K ?= 3

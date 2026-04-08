@@ -1,0 +1,163 @@
+[//]: # (SPDX-License-Identifier: CC-BY-4.0)
+
+# HOL Light proofs
+
+This directory contains proofs for all AArch64 and x86_64 assembly in mlkem-native.
+They are written in the [HOL Light](https://hol-light.github.io/) theorem prover, utilizing the assembly verification
+infrastructure from [s2n-bignum](https://github.com/awslabs/s2n-bignum).
+
+The proofs cover three properties:
+- **Functional correctness:** The assembly computes the right answer.
+- **Memory safety:** The assembly only accesses memory within the bounds of what is provided or allocated.
+- **Secret-independent timing (constant-time):** The assembly is free of secret-dependent control flow, memory access patterns, and variable-latency instructions.
+
+The one exception is rejection sampling (`mlkem_rej_uniform`), which only has a functional correctness specification.
+Rejection sampling is safely variable-time, so no constant-time proof is needed. Memory safety proofs for rejection
+sampling are not yet available ([#1596](https://github.com/pq-code-package/mlkem-native/issues/1596)).
+
+See [SOUNDNESS.md](../../SOUNDNESS.md) for a detailed analysis of the scope, assumptions and risks of the formal verification efforts.
+
+Each function is proved in a separate `.ml` file in [aarch64/proofs/](aarch64/proofs) and [x86_64/proofs/](x86_64/proofs). Each file
+contains the byte code being verified, as well as the specification that is being proved.
+
+## Primer
+
+Proofs are 'post-hoc' in the sense that HOL-Light/s2n-bignum operate on the final object code. In particular, the means by which the code was generated (including the [SLOTHY](https://github.com/slothy-optimizer/slothy/) superoptimizer) need not be trusted.
+
+Specifications are essentially [Hoare triples](https://en.wikipedia.org/wiki/Hoare_logic), with the noteworthy difference that the program is implicit as the content of memory at the PC; which is asserted to
+be the code under verification as part of the precondition. For example, the following is the specification of the aarch64 `poly_reduce` function:
+
+```ocaml
+ (* For all (abbreviated by `!` in HOL):
+    - a: Source pointer
+    - pc: Current value of Program Counter (PC)
+    - returnaddress: Return address in the link register *)
+`!a x pc returnaddress.
+    (* Assume that the program and the source pointer don't overlap *)
+    nonoverlapping (word pc,0x124) (a,512)
+    ==> ensures arm
+      (* Precondition *)
+      (\s. (* The memory at the current PC is the byte-code of poly_reduce() *)
+        aligned_bytes_loaded s (word pc) mlkem_poly_reduce_mc /\
+        read PC s = word pc /\
+        (* The return address is stored in the link register (LR) *)
+        read X30 s = returnaddress /\
+        (* The source pointer is in X0 *)
+        C_ARGUMENTS [a] s /\
+        (* Give a name to the memory contents at the source pointer *)
+        !i. i < 256
+            ==> read(memory :> bytes16(word_add a (word(2 * i)))) s = x i)
+      (* Postcondition: Eventually we reach a state where ... *)
+      (\s.
+        (* The PC is the original value of the link register *)
+        read PC s = returnaddress /\
+        (* The integers represented by the final memory contents
+         * are the unsigned canonical reductions mod 3329
+         * of the integers represented by the original memory contents. *)
+        !i. i < 256
+            ==> ival(read(memory :> bytes16 (word_add a (word(2 * i)))) s) =
+                ival(x i) rem &3329)
+      (* Footprint: The program may modify (only) the ABI permitted registers
+       * and flags, and the memory contents at the source pointer. *)
+      (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+       MAYCHANGE [memory :> bytes(a,512)])`
+```
+
+## Secret-independent timing
+
+The s2n-bignum formal model introduces the notion of *microarchitectural events* — flagging instructions that are
+known to exhibit variable timing or influence timing otherwise (e.g., through caches). Examples are branches,
+load/store instructions, or variable-time instructions such as divisions. The constant-time specifications then
+posit that the trace of microarchitectural events emitted by a program can be expressed as a function of public
+variables such as input/output pointers or pointers to constant tables. Conversely, and somewhat implicitly, the
+absence of the (possibly secret) _data_ behind those pointers as a parameter to the event-generating function
+implies that there are no secret-dependent branches, load/stores, etc.
+
+This formal notion does not and cannot guarantee that the hardware executes instructions in constant time:
+unmodeled microarchitectural effects such as speculative execution or Hertzbleed-style frequency scaling can still
+leak information. See [SOUNDNESS.md](../../SOUNDNESS.md) for a full discussion of the scope, assumptions, and
+limitations.
+
+## Reproducing the proofs
+
+To reproduce the proofs, enter the nix shell via
+
+```bash
+nix develop --experimental-features 'nix-command flakes'
+```
+
+from mlkem-native's base directory. Then
+
+```bash
+make -C proofs/hol_light/aarch64
+```
+or
+
+```bash
+make -C proofs/hol_light/x86_64
+```
+
+will build and run the proofs. Note that this make take hours even on powerful machines.
+
+For convenience, you can also use `tests hol_light` which wraps the `make` invocation above; see `tests hol_light --help`.
+
+## Interactive proof development
+
+For interactive proof development, start the HOL Light server:
+
+```bash
+hol-server [port]  # default port is 2012
+```
+
+Then use the [HOL Light extension for VS Code](https://marketplace.visualstudio.com/items?itemName=monadius.hol-light-simple)
+to connect and send commands interactively.
+
+Alternatively, send commands using netcat:
+
+```bash
+echo '1+1;;' | nc -w 5 127.0.0.1 2012
+```
+
+## What is covered?
+
+All AArch64 and x86_64 assembly routines used in mlkem-native are covered.
+
+### AArch64
+
+- ML-KEM Arithmetic:
+  * AArch64 forward NTT: [mlkem_ntt.S](aarch64/mlkem/mlkem_ntt.S)
+  * AArch64 inverse NTT: [mlkem_intt.S](aarch64/mlkem/mlkem_intt.S)
+  * AArch64 base multiplications: [mlkem_poly_basemul_acc_montgomery_cached_k2.S](aarch64/mlkem/mlkem_poly_basemul_acc_montgomery_cached_k2.S) [mlkem_poly_basemul_acc_montgomery_cached_k3.S](aarch64/mlkem/mlkem_poly_basemul_acc_montgomery_cached_k3.S) [mlkem_poly_basemul_acc_montgomery_cached_k4.S](aarch64/mlkem/mlkem_poly_basemul_acc_montgomery_cached_k4.S)
+  * AArch64 conversion to Montgomery form: [mlkem_poly_tomont.S](aarch64/mlkem/mlkem_poly_tomont.S)
+  * AArch64 modular reduction: [mlkem_poly_reduce.S](aarch64/mlkem/mlkem_poly_reduce.S)
+  * AArch64 'multiplication cache' computation: [mlkem_poly_mulcache_compute.S](aarch64/mlkem/mlkem_poly_mulcache_compute.S)
+  * AArch64 rejection sampling: [mlkem_rej_uniform.S](aarch64/mlkem/mlkem_rej_uniform.S)
+  * AArch64 polynomial compression: [mlkem_poly_tobytes.S](aarch64/mlkem/mlkem_poly_tobytes.S)
+- FIPS202:
+  * Keccak-F1600 using lazy rotations[^HYBRID]: [keccak_f1600_x1_scalar.S](aarch64/mlkem/keccak_f1600_x1_scalar.S)
+  * Keccak-F1600 using v8.4-A SHA3 instructions: [keccak_f1600_x1_v84a.S](aarch64/mlkem/keccak_f1600_x1_v84a.S)
+  * 2-fold Keccak-F1600 using v8.4-A SHA3 instructions: [keccak_f1600_x2_v84a.S](aarch64/mlkem/keccak_f1600_x2_v84a.S)
+  * 'Hybrid' 4-fold Keccak-F1600 using scalar and v8-A Neon instructions: [keccak_f1600_x4_v8a_scalar.S](aarch64/mlkem/keccak_f1600_x4_v8a_scalar.S)
+  * 'Triple hybrid' 4-fold Keccak-F1600 using scalar, v8-A Neon and v8.4-A+SHA3 Neon instructions:[keccak_f1600_x4_v8a_v84a_scalar.S](aarch64/mlkem/keccak_f1600_x4_v8a_v84a_scalar.S)
+
+The NTT and invNTT functions are super-optimized using [SLOTHY](https://github.com/slothy-optimizer/slothy/).
+
+### x86_64
+- ML-KEM Arithmetic:
+  * x86_64 forward NTT: [mlkem_ntt.S](x86_64/mlkem/mlkem_ntt.S)
+  * x86_64 inverse NTT: [mlkem_intt.S](x86_64/mlkem/mlkem_intt.S)
+  * x86_64 base multiplications: [mlkem_poly_basemul_acc_montgomery_cached_k2.S](x86_64/mlkem/mlkem_poly_basemul_acc_montgomery_cached_k2.S) [mlkem_poly_basemul_acc_montgomery_cached_k3.S](x86_64/mlkem/mlkem_poly_basemul_acc_montgomery_cached_k3.S) [mlkem_poly_basemul_acc_montgomery_cached_k4.S](x86_64/mlkem/mlkem_poly_basemul_acc_montgomery_cached_k4.S)
+  * x86_64 modular reduction: [mlkem_reduce.S](x86_64/mlkem/mlkem_reduce.S)
+  * x86_64 polynomial compression: [mlkem_tobytes.S](x86_64/mlkem/mlkem_tobytes.S) [mlkem_poly_compress_d4.S](x86_64/mlkem/mlkem_poly_compress_d4.S) [mlkem_poly_compress_d5.S](x86_64/mlkem/mlkem_poly_compress_d5.S) [mlkem_poly_compress_d10.S](x86_64/mlkem/mlkem_poly_compress_d10.S) [mlkem_poly_compress_d11.S](x86_64/mlkem/mlkem_poly_compress_d11.S)
+  * x86_64 rejection sampling: [mlkem_rej_uniform.S](x86_64/mlkem/mlkem_rej_uniform.S)
+  * x86_64 polynomial deserialization: [mlkem_frombytes.S](x86_64/mlkem/mlkem_frombytes.S)
+  * x86_64 conversion to Montgomery form: [mlkem_tomont.S](x86_64/mlkem/mlkem_tomont.S)
+  * x86_64 polynomial unpacking: [mlkem_unpack.S](x86_64/mlkem/mlkem_unpack.S)
+  * x86_64 'multiplication cache' computation: [mlkem_mulcache_compute.S](x86_64/mlkem/mlkem_mulcache_compute.S)
+  * x86_64 polynomial decompression: [mlkem_poly_decompress_d4.S](x86_64/mlkem/mlkem_poly_decompress_d4.S) [mlkem_poly_decompress_d5.S](x86_64/mlkem/mlkem_poly_decompress_d5.S) [mlkem_poly_decompress_d10.S](x86_64/mlkem/mlkem_poly_decompress_d10.S) [mlkem_poly_decompress_d11.S](x86_64/mlkem/mlkem_poly_decompress_d11.S)
+- FIPS202:
+  * 4-fold Keccak-F1600 using AVX2: [keccak_f1600_x4_avx2.S](x86_64/mlkem/keccak_f1600_x4_avx2.S)
+
+<!--- bibliography --->
+[^HYBRID]: Becker, Kannwischer: Hybrid scalar/vector implementations of Keccak and SPHINCS+ on AArch64, [https://eprint.iacr.org/2022/1243](https://eprint.iacr.org/2022/1243)
+[^SLOTHY]: Abdulrahman, Becker, Kannwischer, Klein: SLOTHY superoptimizer, [https://github.com/slothy-optimizer/slothy/](https://github.com/slothy-optimizer/slothy/)

@@ -1,0 +1,30 @@
+# Copyright (c) The mlkem-native project authors
+# SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT
+
+name: ML-KEM
+type: kem
+implementations:
+  - name: ML-KEM-512
+    claimed-nist-level: 1
+    claimed-security: IND-CCA2
+    length-public-key: 800
+    length-ciphertext: 768
+    length-secret-key: 1632
+    length-shared-secret: 32
+    kat-sha256: 0a2d61707a68c0cac7b2a5005def19994e4e2a25cf8dc512b1254cbaa25473c0
+  - name: ML-KEM-768
+    claimed-nist-level: 3
+    claimed-security: IND-CCA2
+    length-public-key: 1184
+    length-ciphertext: 1088
+    length-secret-key: 2400
+    length-shared-secret: 32
+    kat-sha256: 8cff42556667edbd0fec7d0b2666d7710d80db71b684f8b4852a37ece2a4c844
+  - name: ML-KEM-1024
+    claimed-nist-level: 5
+    claimed-security: IND-CCA2
+    length-public-key: 1568
+    length-ciphertext: 1568
+    length-secret-key: 3168
+    length-shared-secret: 32
+    kat-sha256: f9c6e424f4593cca818493cfe2424178ed0caa2a3945dc1a57cbb5d99e18ad2d
