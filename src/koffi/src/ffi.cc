@@ -38,7 +38,7 @@ namespace K {
 
 SharedData shared;
 
-static thread_local CallData *exec_call;
+static thread_local CallData *sync_call;
 
 // Recent N-API functions are loaded dynamically
 static napi_status (NAPI_CDECL *node_api_create_property_key_utf8)(napi_env env, const char* str, size_t length, napi_value* result);
@@ -1498,8 +1498,8 @@ static Napi::Value TranslateNormalCall(const FunctionInfo *func, void *native, c
     InstanceMemory *mem = instance->memories[0];
     CallData call(env, instance, mem, func, native);
 
-    K_DEFER_C(prev_call = exec_call) { exec_call = prev_call; };
-    exec_call = &call;
+    K_DEFER_C(prev_call = sync_call) { sync_call = prev_call; };
+    sync_call = &call;
 
     return call.Run(info);
 }
@@ -1602,8 +1602,8 @@ static Napi::Value TranslateVariadicCall(const FunctionInfo *func, void *native,
     InstanceMemory *mem = instance->memories[0];
     CallData call(env, instance, mem, variadic, native);
 
-    K_DEFER_C(prev_call = exec_call) { exec_call = prev_call; };
-    exec_call = &call;
+    K_DEFER_C(prev_call = sync_call) { sync_call = prev_call; };
+    sync_call = &call;
 
     Napi::Value ret = call.Run(info);
 
@@ -1654,9 +1654,6 @@ public:
 void AsyncCall::Execute()
 {
     if (prepared) [[likely]] {
-        K_DEFER_C(prev_call = exec_call) { exec_call = prev_call; };
-        exec_call = &call;
-
         call.ExecuteAsync();
     }
 }
@@ -1713,20 +1710,18 @@ Napi::Value TranslateAsyncCall(const Napi::CallbackInfo &info)
 
 extern "C" void RelayCallback(Size idx, uint8_t *sp)
 {
-    CallData *call = exec_call;
-
     // Fast path: main thread and we are running a native call through Koffi.
     // But this means we are running on the custom Koffi stack, which could trip up
     // Node and V8, so we need to stwich back to the normal/main stack.
-    if (call && std::this_thread::get_id() == call->instance->main_thread_id) {
+    if (CallData *call = sync_call; call) [[likely]] {
         SwitchAndRelay(call, idx, sp, call->saved_sp, &call->mem->stack);
         return;
     }
 
     // Otherwise, we need to allocate memory to perform the callback.
     // Since the necessary machinery live in CallData, just use a temporary instance.
-    // In some cases we would reuse the existing call (exec_call may be not null),
-    // but it is rare so let's ignore this for simplicity.
+    // In some cases we would reuse the existing call, but it is rare so let's ignore
+    // this for simplicity.
 
     TrampolineInfo *trampoline = &shared.trampolines[idx];
     Napi::Env env = trampoline->func.Env();
