@@ -4,7 +4,7 @@
 import { render, html, unsafeHTML } from 'vendor/lit-html/lit-html.bundle.js';
 import { Util, Log, Net, Mutex, LocalDate } from 'lib/web/base/base.js';
 import { Base64 } from 'lib/web/base/mixer.js';
-import * as Data from 'lib/web/ui/data.js';
+import * as Data from 'lib/web/base/data.js';
 import * as goupile from './goupile.js';
 import { profile } from './goupile.js';
 import * as UI from './ui.js';

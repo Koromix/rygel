@@ -3,7 +3,7 @@
 
 import { html, svg } from 'vendor/lit-html/lit-html.bundle.js';
 import { Util, Log } from 'lib/web/base/base.js';
-import * as Data from 'lib/web/ui/data.js';
+import * as Data from 'lib/web/base/data.js';
 
 // Create fake globals
 Object.defineProperties(globalThis, {

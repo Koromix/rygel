@@ -5,7 +5,7 @@ import { render, html, svg, unsafeHTML } from 'vendor/lit-html/lit-html.bundle.j
 import { Util, Log, Net, HttpError, LruMap, Mutex,
          LocalDate, LocalTime, FileReference } from 'lib/web/base/base.js';
 import * as mixer from 'lib/web/base/mixer.js';
-import * as Data from 'lib/web/ui/data.js';
+import * as Data from 'lib/web/base/data.js';
 import { EasyPager } from 'lib/web/widgets/easypager.js';
 import * as goupile from './goupile.js';
 import { profile } from './goupile.js';

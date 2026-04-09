@@ -8,7 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import sqlite3 from 'better-sqlite3';
 import { Util, LocalDate } from 'lib/web/base/base.js';
-import { wrap } from 'lib/web/ui/data.js';
+import { wrap } from 'lib/web/base/data.js';
 import { ProjectInfo, ProjectBuilder } from '../../client/core/project.js';
 
 let imports = new Map;
