@@ -2211,8 +2211,9 @@ async function buildScript(code, variables) {
         UI: UI,
         LocalDate: LocalDate,
         LocalTime: LocalTime,
-        crypto: mixer,
+        Crypto: mixer,
 
+        crypto: mixer, // Deprecated
         dates: LocalDate, // Deprecated
         times: LocalTime // Deprecated
     };
