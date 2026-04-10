@@ -1,5 +1,4 @@
 #include <assert.h>
-#include <ctype.h>
 #include <errno.h>
 #include <limits.h>
 #include <stddef.h>
@@ -125,8 +124,9 @@ b64_byte_to_char(unsigned int x)
 }
 
 static unsigned int
-b64_char_to_byte(int c)
+b64_char_to_byte(int c_)
 {
+    const unsigned int c = (unsigned char) c_;
     const unsigned int x =
         (GE(c, 'A') & LE(c, 'Z') & (c - 'A')) |
         (GE(c, 'a') & LE(c, 'z') & (c - ('a' - 26))) |
@@ -146,8 +146,9 @@ b64_byte_to_urlsafe_char(unsigned int x)
 }
 
 static unsigned int
-b64_urlsafe_char_to_byte(int c)
+b64_urlsafe_char_to_byte(int c_)
 {
+    const unsigned int c = (unsigned char) c_;
     const unsigned x =
         (GE(c, 'A') & LE(c, 'Z') & (c - 'A')) |
         (GE(c, 'a') & LE(c, 'z') & (c - ('a' - 26))) |
@@ -165,7 +166,7 @@ static void
 sodium_base64_check_variant(const int variant)
 {
     if ((((unsigned int) variant) & ~ 0x6U) != 0x1U) {
-        sodium_misuse();
+        sodium_misuse(); /* LCOV_EXCL_LINE */
     }
 }
 
@@ -174,6 +175,9 @@ sodium_base64_encoded_len(const size_t bin_len, const int variant)
 {
     sodium_base64_check_variant(variant);
 
+    if (bin_len / 3 > (SIZE_MAX - 5) / 4) {
+      sodium_misuse(); /* LCOV_EXCL_LINE */
+    }
     return sodium_base64_ENCODED_LEN(bin_len, variant);
 }
 
@@ -192,6 +196,9 @@ sodium_bin2base64(char * const b64, const size_t b64_maxlen,
 
     sodium_base64_check_variant(variant);
     nibbles = bin_len / 3;
+    if (nibbles > (SIZE_MAX - 5) / 4) {
+        sodium_misuse(); /* LCOV_EXCL_LINE */
+    }
     remainder = bin_len - 3 * nibbles;
     b64_len = nibbles * 4;
     if (remainder != 0) {
@@ -202,7 +209,7 @@ sodium_bin2base64(char * const b64, const size_t b64_maxlen,
         }
     }
     if (b64_maxlen <= b64_len) {
-        sodium_misuse();
+        sodium_misuse(); /* LCOV_EXCL_LINE */
     }
     if ((((unsigned int) variant) & VARIANT_URLSAFE_MASK) != 0U) {
         while (bin_pos < bin_len) {
@@ -474,31 +481,38 @@ parse_ipv6(const char *src, const char *end, unsigned char out[16])
 }
 
 int
-sodium_ip2bin(unsigned char bin[16], const char *ip, size_t ip_len)
+sodium_ip2bin(unsigned char bin[16], const char *ip,
+              size_t ip_len_) /* Some AIX versions define a macro named "ip_len" */
 {
-    const char   *ip_end = ip + ip_len;
-    const char   *end;
+    const char   *ip_end = ip + ip_len_;
+    const char   *end    = ip;
+    const char   *zone   = NULL;
     const char   *z;
     unsigned char v4[4];
+    int           is_ipv6;
 
-    for (end = ip; end < ip_end && *end != 0 && *end != '%'; end++) {
+    for (; end < ip_end && *end != 0; end++) {
         /* empty */
     }
-    if (end < ip_end && *end == '%') {
-        for (z = end + 1; z < ip_end && *z != 0; z++) {
-            if (isspace((unsigned char) *z)) {
+    zone = (const char *) memchr(ip, '%', (size_t) (end - ip));
+    if (zone != NULL) {
+        for (z = zone + 1; z < end; z++) {
+            if (!((*z >= '0' && *z <= '9') || (*z >= 'a' && *z <= 'z') ||
+                  (*z >= 'A' && *z <= 'Z') || *z == '-' || *z == '_' || *z == '.')) {
                 return -1;
             }
         }
-        if (z == end + 1) {
+        if (zone + 1 >= end) {
             return -1;
         }
+        end = zone;
     }
-    if (memchr(ip, ':', (size_t) (end - ip)) != NULL) {
-        return parse_ipv6(ip, end, bin) != 0 ? 0 : -1;
-    }
-    if (end < ip_end && *end == '%') {
+    is_ipv6 = memchr(ip, ':', (size_t) (end - ip)) != NULL;
+    if (zone != NULL && !is_ipv6) {
         return -1;
+    }
+    if (is_ipv6) {
+        return parse_ipv6(ip, end, bin) != 0 ? 0 : -1;
     }
     if (parse_ipv4(ip, end, v4) == 0) {
         return -1;

@@ -1,6 +1,7 @@
 
 #include <string.h>
 
+#include "core.h"
 #include "crypto_box_curve25519xchacha20poly1305.h"
 #include "crypto_generichash.h"
 #include "private/common.h"
@@ -35,6 +36,9 @@ crypto_box_curve25519xchacha20poly1305_seal(unsigned char *c, const unsigned cha
     unsigned char esk[crypto_box_curve25519xchacha20poly1305_SECRETKEYBYTES];
     int           ret;
 
+    if (mlen > crypto_box_curve25519xchacha20poly1305_MESSAGEBYTES_MAX) {
+        sodium_misuse(); /* LCOV_EXCL_LINE */
+    }
     if (crypto_box_curve25519xchacha20poly1305_keypair(epk, esk) != 0) {
         return -1; /* LCOV_EXCL_LINE */
     }
@@ -44,8 +48,6 @@ crypto_box_curve25519xchacha20poly1305_seal(unsigned char *c, const unsigned cha
          nonce, pk, esk);
     memcpy(c, epk, crypto_box_curve25519xchacha20poly1305_PUBLICKEYBYTES);
     sodium_memzero(esk, sizeof esk);
-    sodium_memzero(epk, sizeof epk);
-    sodium_memzero(nonce, sizeof nonce);
 
     return ret;
 }

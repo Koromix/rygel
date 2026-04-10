@@ -238,7 +238,8 @@ am_libarmcrypto_la_OBJECTS =  \
 	crypto_aead/aegis128l/libarmcrypto_la-aegis128l_armcrypto.lo \
 	crypto_aead/aegis256/libarmcrypto_la-aegis256_armcrypto.lo \
 	crypto_aead/aes256gcm/armcrypto/libarmcrypto_la-aead_aes256gcm_armcrypto.lo \
-	crypto_ipcrypt/libarmcrypto_la-ipcrypt_armcrypto.lo
+	crypto_ipcrypt/libarmcrypto_la-ipcrypt_armcrypto.lo \
+	crypto_pwhash/argon2/libarmcrypto_la-argon2-fill-block-neon.lo
 libarmcrypto_la_OBJECTS = $(am_libarmcrypto_la_OBJECTS)
 libarmcrypto_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
 	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
@@ -314,11 +315,16 @@ am__libsodium_la_SOURCES_DIST =  \
 	crypto_hash/sha256/cp/hash_sha256_cp.c \
 	crypto_hash/sha512/hash_sha512.c \
 	crypto_hash/sha512/cp/hash_sha512_cp.c \
-	crypto_ipcrypt/crypto_ipcrypt.c crypto_ipcrypt/ipcrypt_soft.c \
-	crypto_ipcrypt/ipcrypt_soft.h crypto_ipcrypt/implementations.h \
+	crypto_hash/sha3/hash_sha3.c crypto_ipcrypt/crypto_ipcrypt.c \
+	crypto_ipcrypt/ipcrypt_soft.c crypto_ipcrypt/ipcrypt_soft.h \
+	crypto_ipcrypt/implementations.h \
 	crypto_kdf/blake2b/kdf_blake2b.c crypto_kdf/crypto_kdf.c \
 	crypto_kdf/hkdf/kdf_hkdf_sha256.c \
-	crypto_kdf/hkdf/kdf_hkdf_sha512.c crypto_kx/crypto_kx.c \
+	crypto_kdf/hkdf/kdf_hkdf_sha512.c crypto_kem/crypto_kem.c \
+	crypto_kem/mlkem768/kem_mlkem768.c \
+	crypto_kem/mlkem768/ref/kem_mlkem768_ref.c \
+	crypto_kem/mlkem768/ref/kem_mlkem768_ref.h \
+	crypto_kem/xwing/kem_xwing.c crypto_kx/crypto_kx.c \
 	crypto_onetimeauth/crypto_onetimeauth.c \
 	crypto_onetimeauth/poly1305/onetimeauth_poly1305.c \
 	crypto_onetimeauth/poly1305/onetimeauth_poly1305.h \
@@ -500,12 +506,17 @@ am_libsodium_la_OBJECTS =  \
 	crypto_hash/sha256/cp/libsodium_la-hash_sha256_cp.lo \
 	crypto_hash/sha512/libsodium_la-hash_sha512.lo \
 	crypto_hash/sha512/cp/libsodium_la-hash_sha512_cp.lo \
+	crypto_hash/sha3/libsodium_la-hash_sha3.lo \
 	crypto_ipcrypt/libsodium_la-crypto_ipcrypt.lo \
 	crypto_ipcrypt/libsodium_la-ipcrypt_soft.lo \
 	crypto_kdf/blake2b/libsodium_la-kdf_blake2b.lo \
 	crypto_kdf/libsodium_la-crypto_kdf.lo \
 	crypto_kdf/hkdf/libsodium_la-kdf_hkdf_sha256.lo \
 	crypto_kdf/hkdf/libsodium_la-kdf_hkdf_sha512.lo \
+	crypto_kem/libsodium_la-crypto_kem.lo \
+	crypto_kem/mlkem768/libsodium_la-kem_mlkem768.lo \
+	crypto_kem/mlkem768/ref/libsodium_la-kem_mlkem768_ref.lo \
+	crypto_kem/xwing/libsodium_la-kem_xwing.lo \
 	crypto_kx/libsodium_la-crypto_kx.lo \
 	crypto_onetimeauth/libsodium_la-crypto_onetimeauth.lo \
 	crypto_onetimeauth/poly1305/libsodium_la-onetimeauth_poly1305.lo \
@@ -651,6 +662,7 @@ am__depfiles_remade = crypto_aead/aegis128l/$(DEPDIR)/libaesni_la-aegis128l_aesn
 	crypto_hash/$(DEPDIR)/libsodium_la-crypto_hash.Plo \
 	crypto_hash/sha256/$(DEPDIR)/libsodium_la-hash_sha256.Plo \
 	crypto_hash/sha256/cp/$(DEPDIR)/libsodium_la-hash_sha256_cp.Plo \
+	crypto_hash/sha3/$(DEPDIR)/libsodium_la-hash_sha3.Plo \
 	crypto_hash/sha512/$(DEPDIR)/libsodium_la-hash_sha512.Plo \
 	crypto_hash/sha512/cp/$(DEPDIR)/libsodium_la-hash_sha512_cp.Plo \
 	crypto_ipcrypt/$(DEPDIR)/libaesni_la-ipcrypt_aesni.Plo \
@@ -661,12 +673,17 @@ am__depfiles_remade = crypto_aead/aegis128l/$(DEPDIR)/libaesni_la-aegis128l_aesn
 	crypto_kdf/blake2b/$(DEPDIR)/libsodium_la-kdf_blake2b.Plo \
 	crypto_kdf/hkdf/$(DEPDIR)/libsodium_la-kdf_hkdf_sha256.Plo \
 	crypto_kdf/hkdf/$(DEPDIR)/libsodium_la-kdf_hkdf_sha512.Plo \
+	crypto_kem/$(DEPDIR)/libsodium_la-crypto_kem.Plo \
+	crypto_kem/mlkem768/$(DEPDIR)/libsodium_la-kem_mlkem768.Plo \
+	crypto_kem/mlkem768/ref/$(DEPDIR)/libsodium_la-kem_mlkem768_ref.Plo \
+	crypto_kem/xwing/$(DEPDIR)/libsodium_la-kem_xwing.Plo \
 	crypto_kx/$(DEPDIR)/libsodium_la-crypto_kx.Plo \
 	crypto_onetimeauth/$(DEPDIR)/libsodium_la-crypto_onetimeauth.Plo \
 	crypto_onetimeauth/poly1305/$(DEPDIR)/libsodium_la-onetimeauth_poly1305.Plo \
 	crypto_onetimeauth/poly1305/donna/$(DEPDIR)/libsodium_la-poly1305_donna.Plo \
 	crypto_onetimeauth/poly1305/sse2/$(DEPDIR)/libsse2_la-poly1305_sse2.Plo \
 	crypto_pwhash/$(DEPDIR)/libsodium_la-crypto_pwhash.Plo \
+	crypto_pwhash/argon2/$(DEPDIR)/libarmcrypto_la-argon2-fill-block-neon.Plo \
 	crypto_pwhash/argon2/$(DEPDIR)/libavx2_la-argon2-fill-block-avx2.Plo \
 	crypto_pwhash/argon2/$(DEPDIR)/libavx512f_la-argon2-fill-block-avx512f.Plo \
 	crypto_pwhash/argon2/$(DEPDIR)/libsodium_la-argon2-core.Plo \
@@ -1069,11 +1086,16 @@ libsodium_la_SOURCES = crypto_aead/aegis128l/aead_aegis128l.c \
 	crypto_hash/sha256/cp/hash_sha256_cp.c \
 	crypto_hash/sha512/hash_sha512.c \
 	crypto_hash/sha512/cp/hash_sha512_cp.c \
-	crypto_ipcrypt/crypto_ipcrypt.c crypto_ipcrypt/ipcrypt_soft.c \
-	crypto_ipcrypt/ipcrypt_soft.h crypto_ipcrypt/implementations.h \
+	crypto_hash/sha3/hash_sha3.c crypto_ipcrypt/crypto_ipcrypt.c \
+	crypto_ipcrypt/ipcrypt_soft.c crypto_ipcrypt/ipcrypt_soft.h \
+	crypto_ipcrypt/implementations.h \
 	crypto_kdf/blake2b/kdf_blake2b.c crypto_kdf/crypto_kdf.c \
 	crypto_kdf/hkdf/kdf_hkdf_sha256.c \
-	crypto_kdf/hkdf/kdf_hkdf_sha512.c crypto_kx/crypto_kx.c \
+	crypto_kdf/hkdf/kdf_hkdf_sha512.c crypto_kem/crypto_kem.c \
+	crypto_kem/mlkem768/kem_mlkem768.c \
+	crypto_kem/mlkem768/ref/kem_mlkem768_ref.c \
+	crypto_kem/mlkem768/ref/kem_mlkem768_ref.h \
+	crypto_kem/xwing/kem_xwing.c crypto_kx/crypto_kx.c \
 	crypto_onetimeauth/crypto_onetimeauth.c \
 	crypto_onetimeauth/poly1305/onetimeauth_poly1305.c \
 	crypto_onetimeauth/poly1305/onetimeauth_poly1305.h \
@@ -1190,7 +1212,9 @@ libarmcrypto_la_SOURCES = \
 	crypto_aead/aegis256/aegis256_armcrypto.h \
 	crypto_aead/aes256gcm/armcrypto/aead_aes256gcm_armcrypto.c \
 	crypto_ipcrypt/ipcrypt_armcrypto.c \
-	crypto_ipcrypt/ipcrypt_armcrypto.h
+	crypto_ipcrypt/ipcrypt_armcrypto.h \
+	crypto_pwhash/argon2/argon2-fill-block-neon.c \
+	crypto_pwhash/argon2/blamka-round-neon.h
 
 libaesni_la_LDFLAGS = $(libsodium_la_LDFLAGS)
 libaesni_la_CPPFLAGS = $(libsodium_la_CPPFLAGS) \
@@ -1394,6 +1418,15 @@ crypto_aead/aes256gcm/armcrypto/libarmcrypto_la-aead_aes256gcm_armcrypto.lo:  \
 crypto_ipcrypt/libarmcrypto_la-ipcrypt_armcrypto.lo:  \
 	crypto_ipcrypt/$(am__dirstamp) \
 	crypto_ipcrypt/$(DEPDIR)/$(am__dirstamp)
+crypto_pwhash/argon2/$(am__dirstamp):
+	@$(MKDIR_P) crypto_pwhash/argon2
+	@: >>crypto_pwhash/argon2/$(am__dirstamp)
+crypto_pwhash/argon2/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) crypto_pwhash/argon2/$(DEPDIR)
+	@: >>crypto_pwhash/argon2/$(DEPDIR)/$(am__dirstamp)
+crypto_pwhash/argon2/libarmcrypto_la-argon2-fill-block-neon.lo:  \
+	crypto_pwhash/argon2/$(am__dirstamp) \
+	crypto_pwhash/argon2/$(DEPDIR)/$(am__dirstamp)
 
 libarmcrypto.la: $(libarmcrypto_la_OBJECTS) $(libarmcrypto_la_DEPENDENCIES) $(EXTRA_libarmcrypto_la_DEPENDENCIES) 
 	$(AM_V_CCLD)$(libarmcrypto_la_LINK)  $(libarmcrypto_la_OBJECTS) $(libarmcrypto_la_LIBADD) $(LIBS)
@@ -1406,12 +1439,6 @@ crypto_generichash/blake2b/ref/$(DEPDIR)/$(am__dirstamp):
 crypto_generichash/blake2b/ref/libavx2_la-blake2b-compress-avx2.lo:  \
 	crypto_generichash/blake2b/ref/$(am__dirstamp) \
 	crypto_generichash/blake2b/ref/$(DEPDIR)/$(am__dirstamp)
-crypto_pwhash/argon2/$(am__dirstamp):
-	@$(MKDIR_P) crypto_pwhash/argon2
-	@: >>crypto_pwhash/argon2/$(am__dirstamp)
-crypto_pwhash/argon2/$(DEPDIR)/$(am__dirstamp):
-	@$(MKDIR_P) crypto_pwhash/argon2/$(DEPDIR)
-	@: >>crypto_pwhash/argon2/$(DEPDIR)/$(am__dirstamp)
 crypto_pwhash/argon2/libavx2_la-argon2-fill-block-avx2.lo:  \
 	crypto_pwhash/argon2/$(am__dirstamp) \
 	crypto_pwhash/argon2/$(DEPDIR)/$(am__dirstamp)
@@ -1703,6 +1730,15 @@ crypto_hash/sha512/cp/$(DEPDIR)/$(am__dirstamp):
 crypto_hash/sha512/cp/libsodium_la-hash_sha512_cp.lo:  \
 	crypto_hash/sha512/cp/$(am__dirstamp) \
 	crypto_hash/sha512/cp/$(DEPDIR)/$(am__dirstamp)
+crypto_hash/sha3/$(am__dirstamp):
+	@$(MKDIR_P) crypto_hash/sha3
+	@: >>crypto_hash/sha3/$(am__dirstamp)
+crypto_hash/sha3/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) crypto_hash/sha3/$(DEPDIR)
+	@: >>crypto_hash/sha3/$(DEPDIR)/$(am__dirstamp)
+crypto_hash/sha3/libsodium_la-hash_sha3.lo:  \
+	crypto_hash/sha3/$(am__dirstamp) \
+	crypto_hash/sha3/$(DEPDIR)/$(am__dirstamp)
 crypto_ipcrypt/libsodium_la-crypto_ipcrypt.lo:  \
 	crypto_ipcrypt/$(am__dirstamp) \
 	crypto_ipcrypt/$(DEPDIR)/$(am__dirstamp)
@@ -1738,6 +1774,41 @@ crypto_kdf/hkdf/libsodium_la-kdf_hkdf_sha256.lo:  \
 crypto_kdf/hkdf/libsodium_la-kdf_hkdf_sha512.lo:  \
 	crypto_kdf/hkdf/$(am__dirstamp) \
 	crypto_kdf/hkdf/$(DEPDIR)/$(am__dirstamp)
+crypto_kem/$(am__dirstamp):
+	@$(MKDIR_P) crypto_kem
+	@: >>crypto_kem/$(am__dirstamp)
+crypto_kem/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) crypto_kem/$(DEPDIR)
+	@: >>crypto_kem/$(DEPDIR)/$(am__dirstamp)
+crypto_kem/libsodium_la-crypto_kem.lo: crypto_kem/$(am__dirstamp) \
+	crypto_kem/$(DEPDIR)/$(am__dirstamp)
+crypto_kem/mlkem768/$(am__dirstamp):
+	@$(MKDIR_P) crypto_kem/mlkem768
+	@: >>crypto_kem/mlkem768/$(am__dirstamp)
+crypto_kem/mlkem768/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) crypto_kem/mlkem768/$(DEPDIR)
+	@: >>crypto_kem/mlkem768/$(DEPDIR)/$(am__dirstamp)
+crypto_kem/mlkem768/libsodium_la-kem_mlkem768.lo:  \
+	crypto_kem/mlkem768/$(am__dirstamp) \
+	crypto_kem/mlkem768/$(DEPDIR)/$(am__dirstamp)
+crypto_kem/mlkem768/ref/$(am__dirstamp):
+	@$(MKDIR_P) crypto_kem/mlkem768/ref
+	@: >>crypto_kem/mlkem768/ref/$(am__dirstamp)
+crypto_kem/mlkem768/ref/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) crypto_kem/mlkem768/ref/$(DEPDIR)
+	@: >>crypto_kem/mlkem768/ref/$(DEPDIR)/$(am__dirstamp)
+crypto_kem/mlkem768/ref/libsodium_la-kem_mlkem768_ref.lo:  \
+	crypto_kem/mlkem768/ref/$(am__dirstamp) \
+	crypto_kem/mlkem768/ref/$(DEPDIR)/$(am__dirstamp)
+crypto_kem/xwing/$(am__dirstamp):
+	@$(MKDIR_P) crypto_kem/xwing
+	@: >>crypto_kem/xwing/$(am__dirstamp)
+crypto_kem/xwing/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) crypto_kem/xwing/$(DEPDIR)
+	@: >>crypto_kem/xwing/$(DEPDIR)/$(am__dirstamp)
+crypto_kem/xwing/libsodium_la-kem_xwing.lo:  \
+	crypto_kem/xwing/$(am__dirstamp) \
+	crypto_kem/xwing/$(DEPDIR)/$(am__dirstamp)
 crypto_kx/$(am__dirstamp):
 	@$(MKDIR_P) crypto_kx
 	@: >>crypto_kx/$(am__dirstamp)
@@ -2359,6 +2430,8 @@ mostlyclean-compile:
 	-rm -f crypto_hash/sha256/*.lo
 	-rm -f crypto_hash/sha256/cp/*.$(OBJEXT)
 	-rm -f crypto_hash/sha256/cp/*.lo
+	-rm -f crypto_hash/sha3/*.$(OBJEXT)
+	-rm -f crypto_hash/sha3/*.lo
 	-rm -f crypto_hash/sha512/*.$(OBJEXT)
 	-rm -f crypto_hash/sha512/*.lo
 	-rm -f crypto_hash/sha512/cp/*.$(OBJEXT)
@@ -2371,6 +2444,14 @@ mostlyclean-compile:
 	-rm -f crypto_kdf/blake2b/*.lo
 	-rm -f crypto_kdf/hkdf/*.$(OBJEXT)
 	-rm -f crypto_kdf/hkdf/*.lo
+	-rm -f crypto_kem/*.$(OBJEXT)
+	-rm -f crypto_kem/*.lo
+	-rm -f crypto_kem/mlkem768/*.$(OBJEXT)
+	-rm -f crypto_kem/mlkem768/*.lo
+	-rm -f crypto_kem/mlkem768/ref/*.$(OBJEXT)
+	-rm -f crypto_kem/mlkem768/ref/*.lo
+	-rm -f crypto_kem/xwing/*.$(OBJEXT)
+	-rm -f crypto_kem/xwing/*.lo
 	-rm -f crypto_kx/*.$(OBJEXT)
 	-rm -f crypto_kx/*.lo
 	-rm -f crypto_onetimeauth/*.$(OBJEXT)
@@ -2526,6 +2607,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@crypto_hash/$(DEPDIR)/libsodium_la-crypto_hash.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@crypto_hash/sha256/$(DEPDIR)/libsodium_la-hash_sha256.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@crypto_hash/sha256/cp/$(DEPDIR)/libsodium_la-hash_sha256_cp.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@crypto_hash/sha3/$(DEPDIR)/libsodium_la-hash_sha3.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@crypto_hash/sha512/$(DEPDIR)/libsodium_la-hash_sha512.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@crypto_hash/sha512/cp/$(DEPDIR)/libsodium_la-hash_sha512_cp.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@crypto_ipcrypt/$(DEPDIR)/libaesni_la-ipcrypt_aesni.Plo@am__quote@ # am--include-marker
@@ -2536,12 +2618,17 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@crypto_kdf/blake2b/$(DEPDIR)/libsodium_la-kdf_blake2b.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@crypto_kdf/hkdf/$(DEPDIR)/libsodium_la-kdf_hkdf_sha256.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@crypto_kdf/hkdf/$(DEPDIR)/libsodium_la-kdf_hkdf_sha512.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@crypto_kem/$(DEPDIR)/libsodium_la-crypto_kem.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@crypto_kem/mlkem768/$(DEPDIR)/libsodium_la-kem_mlkem768.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@crypto_kem/mlkem768/ref/$(DEPDIR)/libsodium_la-kem_mlkem768_ref.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@crypto_kem/xwing/$(DEPDIR)/libsodium_la-kem_xwing.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@crypto_kx/$(DEPDIR)/libsodium_la-crypto_kx.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@crypto_onetimeauth/$(DEPDIR)/libsodium_la-crypto_onetimeauth.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@crypto_onetimeauth/poly1305/$(DEPDIR)/libsodium_la-onetimeauth_poly1305.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@crypto_onetimeauth/poly1305/donna/$(DEPDIR)/libsodium_la-poly1305_donna.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@crypto_onetimeauth/poly1305/sse2/$(DEPDIR)/libsse2_la-poly1305_sse2.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@crypto_pwhash/$(DEPDIR)/libsodium_la-crypto_pwhash.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@crypto_pwhash/argon2/$(DEPDIR)/libarmcrypto_la-argon2-fill-block-neon.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@crypto_pwhash/argon2/$(DEPDIR)/libavx2_la-argon2-fill-block-avx2.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@crypto_pwhash/argon2/$(DEPDIR)/libavx512f_la-argon2-fill-block-avx512f.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@crypto_pwhash/argon2/$(DEPDIR)/libsodium_la-argon2-core.Plo@am__quote@ # am--include-marker
@@ -2742,6 +2829,13 @@ crypto_ipcrypt/libarmcrypto_la-ipcrypt_armcrypto.lo: crypto_ipcrypt/ipcrypt_armc
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='crypto_ipcrypt/ipcrypt_armcrypto.c' object='crypto_ipcrypt/libarmcrypto_la-ipcrypt_armcrypto.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libarmcrypto_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o crypto_ipcrypt/libarmcrypto_la-ipcrypt_armcrypto.lo `test -f 'crypto_ipcrypt/ipcrypt_armcrypto.c' || echo '$(srcdir)/'`crypto_ipcrypt/ipcrypt_armcrypto.c
+
+crypto_pwhash/argon2/libarmcrypto_la-argon2-fill-block-neon.lo: crypto_pwhash/argon2/argon2-fill-block-neon.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libarmcrypto_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT crypto_pwhash/argon2/libarmcrypto_la-argon2-fill-block-neon.lo -MD -MP -MF crypto_pwhash/argon2/$(DEPDIR)/libarmcrypto_la-argon2-fill-block-neon.Tpo -c -o crypto_pwhash/argon2/libarmcrypto_la-argon2-fill-block-neon.lo `test -f 'crypto_pwhash/argon2/argon2-fill-block-neon.c' || echo '$(srcdir)/'`crypto_pwhash/argon2/argon2-fill-block-neon.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) crypto_pwhash/argon2/$(DEPDIR)/libarmcrypto_la-argon2-fill-block-neon.Tpo crypto_pwhash/argon2/$(DEPDIR)/libarmcrypto_la-argon2-fill-block-neon.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='crypto_pwhash/argon2/argon2-fill-block-neon.c' object='crypto_pwhash/argon2/libarmcrypto_la-argon2-fill-block-neon.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libarmcrypto_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o crypto_pwhash/argon2/libarmcrypto_la-argon2-fill-block-neon.lo `test -f 'crypto_pwhash/argon2/argon2-fill-block-neon.c' || echo '$(srcdir)/'`crypto_pwhash/argon2/argon2-fill-block-neon.c
 
 crypto_generichash/blake2b/ref/libavx2_la-blake2b-compress-avx2.lo: crypto_generichash/blake2b/ref/blake2b-compress-avx2.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libavx2_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT crypto_generichash/blake2b/ref/libavx2_la-blake2b-compress-avx2.lo -MD -MP -MF crypto_generichash/blake2b/ref/$(DEPDIR)/libavx2_la-blake2b-compress-avx2.Tpo -c -o crypto_generichash/blake2b/ref/libavx2_la-blake2b-compress-avx2.lo `test -f 'crypto_generichash/blake2b/ref/blake2b-compress-avx2.c' || echo '$(srcdir)/'`crypto_generichash/blake2b/ref/blake2b-compress-avx2.c
@@ -3023,6 +3117,13 @@ crypto_hash/sha512/cp/libsodium_la-hash_sha512_cp.lo: crypto_hash/sha512/cp/hash
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsodium_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o crypto_hash/sha512/cp/libsodium_la-hash_sha512_cp.lo `test -f 'crypto_hash/sha512/cp/hash_sha512_cp.c' || echo '$(srcdir)/'`crypto_hash/sha512/cp/hash_sha512_cp.c
 
+crypto_hash/sha3/libsodium_la-hash_sha3.lo: crypto_hash/sha3/hash_sha3.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsodium_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT crypto_hash/sha3/libsodium_la-hash_sha3.lo -MD -MP -MF crypto_hash/sha3/$(DEPDIR)/libsodium_la-hash_sha3.Tpo -c -o crypto_hash/sha3/libsodium_la-hash_sha3.lo `test -f 'crypto_hash/sha3/hash_sha3.c' || echo '$(srcdir)/'`crypto_hash/sha3/hash_sha3.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) crypto_hash/sha3/$(DEPDIR)/libsodium_la-hash_sha3.Tpo crypto_hash/sha3/$(DEPDIR)/libsodium_la-hash_sha3.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='crypto_hash/sha3/hash_sha3.c' object='crypto_hash/sha3/libsodium_la-hash_sha3.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsodium_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o crypto_hash/sha3/libsodium_la-hash_sha3.lo `test -f 'crypto_hash/sha3/hash_sha3.c' || echo '$(srcdir)/'`crypto_hash/sha3/hash_sha3.c
+
 crypto_ipcrypt/libsodium_la-crypto_ipcrypt.lo: crypto_ipcrypt/crypto_ipcrypt.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsodium_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT crypto_ipcrypt/libsodium_la-crypto_ipcrypt.lo -MD -MP -MF crypto_ipcrypt/$(DEPDIR)/libsodium_la-crypto_ipcrypt.Tpo -c -o crypto_ipcrypt/libsodium_la-crypto_ipcrypt.lo `test -f 'crypto_ipcrypt/crypto_ipcrypt.c' || echo '$(srcdir)/'`crypto_ipcrypt/crypto_ipcrypt.c
 @am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) crypto_ipcrypt/$(DEPDIR)/libsodium_la-crypto_ipcrypt.Tpo crypto_ipcrypt/$(DEPDIR)/libsodium_la-crypto_ipcrypt.Plo
@@ -3064,6 +3165,34 @@ crypto_kdf/hkdf/libsodium_la-kdf_hkdf_sha512.lo: crypto_kdf/hkdf/kdf_hkdf_sha512
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='crypto_kdf/hkdf/kdf_hkdf_sha512.c' object='crypto_kdf/hkdf/libsodium_la-kdf_hkdf_sha512.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsodium_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o crypto_kdf/hkdf/libsodium_la-kdf_hkdf_sha512.lo `test -f 'crypto_kdf/hkdf/kdf_hkdf_sha512.c' || echo '$(srcdir)/'`crypto_kdf/hkdf/kdf_hkdf_sha512.c
+
+crypto_kem/libsodium_la-crypto_kem.lo: crypto_kem/crypto_kem.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsodium_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT crypto_kem/libsodium_la-crypto_kem.lo -MD -MP -MF crypto_kem/$(DEPDIR)/libsodium_la-crypto_kem.Tpo -c -o crypto_kem/libsodium_la-crypto_kem.lo `test -f 'crypto_kem/crypto_kem.c' || echo '$(srcdir)/'`crypto_kem/crypto_kem.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) crypto_kem/$(DEPDIR)/libsodium_la-crypto_kem.Tpo crypto_kem/$(DEPDIR)/libsodium_la-crypto_kem.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='crypto_kem/crypto_kem.c' object='crypto_kem/libsodium_la-crypto_kem.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsodium_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o crypto_kem/libsodium_la-crypto_kem.lo `test -f 'crypto_kem/crypto_kem.c' || echo '$(srcdir)/'`crypto_kem/crypto_kem.c
+
+crypto_kem/mlkem768/libsodium_la-kem_mlkem768.lo: crypto_kem/mlkem768/kem_mlkem768.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsodium_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT crypto_kem/mlkem768/libsodium_la-kem_mlkem768.lo -MD -MP -MF crypto_kem/mlkem768/$(DEPDIR)/libsodium_la-kem_mlkem768.Tpo -c -o crypto_kem/mlkem768/libsodium_la-kem_mlkem768.lo `test -f 'crypto_kem/mlkem768/kem_mlkem768.c' || echo '$(srcdir)/'`crypto_kem/mlkem768/kem_mlkem768.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) crypto_kem/mlkem768/$(DEPDIR)/libsodium_la-kem_mlkem768.Tpo crypto_kem/mlkem768/$(DEPDIR)/libsodium_la-kem_mlkem768.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='crypto_kem/mlkem768/kem_mlkem768.c' object='crypto_kem/mlkem768/libsodium_la-kem_mlkem768.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsodium_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o crypto_kem/mlkem768/libsodium_la-kem_mlkem768.lo `test -f 'crypto_kem/mlkem768/kem_mlkem768.c' || echo '$(srcdir)/'`crypto_kem/mlkem768/kem_mlkem768.c
+
+crypto_kem/mlkem768/ref/libsodium_la-kem_mlkem768_ref.lo: crypto_kem/mlkem768/ref/kem_mlkem768_ref.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsodium_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT crypto_kem/mlkem768/ref/libsodium_la-kem_mlkem768_ref.lo -MD -MP -MF crypto_kem/mlkem768/ref/$(DEPDIR)/libsodium_la-kem_mlkem768_ref.Tpo -c -o crypto_kem/mlkem768/ref/libsodium_la-kem_mlkem768_ref.lo `test -f 'crypto_kem/mlkem768/ref/kem_mlkem768_ref.c' || echo '$(srcdir)/'`crypto_kem/mlkem768/ref/kem_mlkem768_ref.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) crypto_kem/mlkem768/ref/$(DEPDIR)/libsodium_la-kem_mlkem768_ref.Tpo crypto_kem/mlkem768/ref/$(DEPDIR)/libsodium_la-kem_mlkem768_ref.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='crypto_kem/mlkem768/ref/kem_mlkem768_ref.c' object='crypto_kem/mlkem768/ref/libsodium_la-kem_mlkem768_ref.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsodium_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o crypto_kem/mlkem768/ref/libsodium_la-kem_mlkem768_ref.lo `test -f 'crypto_kem/mlkem768/ref/kem_mlkem768_ref.c' || echo '$(srcdir)/'`crypto_kem/mlkem768/ref/kem_mlkem768_ref.c
+
+crypto_kem/xwing/libsodium_la-kem_xwing.lo: crypto_kem/xwing/kem_xwing.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsodium_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT crypto_kem/xwing/libsodium_la-kem_xwing.lo -MD -MP -MF crypto_kem/xwing/$(DEPDIR)/libsodium_la-kem_xwing.Tpo -c -o crypto_kem/xwing/libsodium_la-kem_xwing.lo `test -f 'crypto_kem/xwing/kem_xwing.c' || echo '$(srcdir)/'`crypto_kem/xwing/kem_xwing.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) crypto_kem/xwing/$(DEPDIR)/libsodium_la-kem_xwing.Tpo crypto_kem/xwing/$(DEPDIR)/libsodium_la-kem_xwing.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='crypto_kem/xwing/kem_xwing.c' object='crypto_kem/xwing/libsodium_la-kem_xwing.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsodium_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o crypto_kem/xwing/libsodium_la-kem_xwing.lo `test -f 'crypto_kem/xwing/kem_xwing.c' || echo '$(srcdir)/'`crypto_kem/xwing/kem_xwing.c
 
 crypto_kx/libsodium_la-crypto_kx.lo: crypto_kx/crypto_kx.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libsodium_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT crypto_kx/libsodium_la-crypto_kx.lo -MD -MP -MF crypto_kx/$(DEPDIR)/libsodium_la-crypto_kx.Tpo -c -o crypto_kx/libsodium_la-crypto_kx.lo `test -f 'crypto_kx/crypto_kx.c' || echo '$(srcdir)/'`crypto_kx/crypto_kx.c
@@ -3667,12 +3796,17 @@ clean-libtool:
 	-rm -rf crypto_hash/.libs crypto_hash/_libs
 	-rm -rf crypto_hash/sha256/.libs crypto_hash/sha256/_libs
 	-rm -rf crypto_hash/sha256/cp/.libs crypto_hash/sha256/cp/_libs
+	-rm -rf crypto_hash/sha3/.libs crypto_hash/sha3/_libs
 	-rm -rf crypto_hash/sha512/.libs crypto_hash/sha512/_libs
 	-rm -rf crypto_hash/sha512/cp/.libs crypto_hash/sha512/cp/_libs
 	-rm -rf crypto_ipcrypt/.libs crypto_ipcrypt/_libs
 	-rm -rf crypto_kdf/.libs crypto_kdf/_libs
 	-rm -rf crypto_kdf/blake2b/.libs crypto_kdf/blake2b/_libs
 	-rm -rf crypto_kdf/hkdf/.libs crypto_kdf/hkdf/_libs
+	-rm -rf crypto_kem/.libs crypto_kem/_libs
+	-rm -rf crypto_kem/mlkem768/.libs crypto_kem/mlkem768/_libs
+	-rm -rf crypto_kem/mlkem768/ref/.libs crypto_kem/mlkem768/ref/_libs
+	-rm -rf crypto_kem/xwing/.libs crypto_kem/xwing/_libs
 	-rm -rf crypto_kx/.libs crypto_kx/_libs
 	-rm -rf crypto_onetimeauth/.libs crypto_onetimeauth/_libs
 	-rm -rf crypto_onetimeauth/poly1305/.libs crypto_onetimeauth/poly1305/_libs
@@ -4000,6 +4134,8 @@ distclean-generic:
 	-$(am__rm_f) crypto_hash/sha256/$(am__dirstamp)
 	-$(am__rm_f) crypto_hash/sha256/cp/$(DEPDIR)/$(am__dirstamp)
 	-$(am__rm_f) crypto_hash/sha256/cp/$(am__dirstamp)
+	-$(am__rm_f) crypto_hash/sha3/$(DEPDIR)/$(am__dirstamp)
+	-$(am__rm_f) crypto_hash/sha3/$(am__dirstamp)
 	-$(am__rm_f) crypto_hash/sha512/$(DEPDIR)/$(am__dirstamp)
 	-$(am__rm_f) crypto_hash/sha512/$(am__dirstamp)
 	-$(am__rm_f) crypto_hash/sha512/cp/$(DEPDIR)/$(am__dirstamp)
@@ -4012,6 +4148,14 @@ distclean-generic:
 	-$(am__rm_f) crypto_kdf/blake2b/$(am__dirstamp)
 	-$(am__rm_f) crypto_kdf/hkdf/$(DEPDIR)/$(am__dirstamp)
 	-$(am__rm_f) crypto_kdf/hkdf/$(am__dirstamp)
+	-$(am__rm_f) crypto_kem/$(DEPDIR)/$(am__dirstamp)
+	-$(am__rm_f) crypto_kem/$(am__dirstamp)
+	-$(am__rm_f) crypto_kem/mlkem768/$(DEPDIR)/$(am__dirstamp)
+	-$(am__rm_f) crypto_kem/mlkem768/$(am__dirstamp)
+	-$(am__rm_f) crypto_kem/mlkem768/ref/$(DEPDIR)/$(am__dirstamp)
+	-$(am__rm_f) crypto_kem/mlkem768/ref/$(am__dirstamp)
+	-$(am__rm_f) crypto_kem/xwing/$(DEPDIR)/$(am__dirstamp)
+	-$(am__rm_f) crypto_kem/xwing/$(am__dirstamp)
 	-$(am__rm_f) crypto_kx/$(DEPDIR)/$(am__dirstamp)
 	-$(am__rm_f) crypto_kx/$(am__dirstamp)
 	-$(am__rm_f) crypto_onetimeauth/$(DEPDIR)/$(am__dirstamp)
@@ -4173,6 +4317,7 @@ distclean: distclean-recursive
 	-rm -f crypto_hash/$(DEPDIR)/libsodium_la-crypto_hash.Plo
 	-rm -f crypto_hash/sha256/$(DEPDIR)/libsodium_la-hash_sha256.Plo
 	-rm -f crypto_hash/sha256/cp/$(DEPDIR)/libsodium_la-hash_sha256_cp.Plo
+	-rm -f crypto_hash/sha3/$(DEPDIR)/libsodium_la-hash_sha3.Plo
 	-rm -f crypto_hash/sha512/$(DEPDIR)/libsodium_la-hash_sha512.Plo
 	-rm -f crypto_hash/sha512/cp/$(DEPDIR)/libsodium_la-hash_sha512_cp.Plo
 	-rm -f crypto_ipcrypt/$(DEPDIR)/libaesni_la-ipcrypt_aesni.Plo
@@ -4183,12 +4328,17 @@ distclean: distclean-recursive
 	-rm -f crypto_kdf/blake2b/$(DEPDIR)/libsodium_la-kdf_blake2b.Plo
 	-rm -f crypto_kdf/hkdf/$(DEPDIR)/libsodium_la-kdf_hkdf_sha256.Plo
 	-rm -f crypto_kdf/hkdf/$(DEPDIR)/libsodium_la-kdf_hkdf_sha512.Plo
+	-rm -f crypto_kem/$(DEPDIR)/libsodium_la-crypto_kem.Plo
+	-rm -f crypto_kem/mlkem768/$(DEPDIR)/libsodium_la-kem_mlkem768.Plo
+	-rm -f crypto_kem/mlkem768/ref/$(DEPDIR)/libsodium_la-kem_mlkem768_ref.Plo
+	-rm -f crypto_kem/xwing/$(DEPDIR)/libsodium_la-kem_xwing.Plo
 	-rm -f crypto_kx/$(DEPDIR)/libsodium_la-crypto_kx.Plo
 	-rm -f crypto_onetimeauth/$(DEPDIR)/libsodium_la-crypto_onetimeauth.Plo
 	-rm -f crypto_onetimeauth/poly1305/$(DEPDIR)/libsodium_la-onetimeauth_poly1305.Plo
 	-rm -f crypto_onetimeauth/poly1305/donna/$(DEPDIR)/libsodium_la-poly1305_donna.Plo
 	-rm -f crypto_onetimeauth/poly1305/sse2/$(DEPDIR)/libsse2_la-poly1305_sse2.Plo
 	-rm -f crypto_pwhash/$(DEPDIR)/libsodium_la-crypto_pwhash.Plo
+	-rm -f crypto_pwhash/argon2/$(DEPDIR)/libarmcrypto_la-argon2-fill-block-neon.Plo
 	-rm -f crypto_pwhash/argon2/$(DEPDIR)/libavx2_la-argon2-fill-block-avx2.Plo
 	-rm -f crypto_pwhash/argon2/$(DEPDIR)/libavx512f_la-argon2-fill-block-avx512f.Plo
 	-rm -f crypto_pwhash/argon2/$(DEPDIR)/libsodium_la-argon2-core.Plo
@@ -4355,6 +4505,7 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f crypto_hash/$(DEPDIR)/libsodium_la-crypto_hash.Plo
 	-rm -f crypto_hash/sha256/$(DEPDIR)/libsodium_la-hash_sha256.Plo
 	-rm -f crypto_hash/sha256/cp/$(DEPDIR)/libsodium_la-hash_sha256_cp.Plo
+	-rm -f crypto_hash/sha3/$(DEPDIR)/libsodium_la-hash_sha3.Plo
 	-rm -f crypto_hash/sha512/$(DEPDIR)/libsodium_la-hash_sha512.Plo
 	-rm -f crypto_hash/sha512/cp/$(DEPDIR)/libsodium_la-hash_sha512_cp.Plo
 	-rm -f crypto_ipcrypt/$(DEPDIR)/libaesni_la-ipcrypt_aesni.Plo
@@ -4365,12 +4516,17 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f crypto_kdf/blake2b/$(DEPDIR)/libsodium_la-kdf_blake2b.Plo
 	-rm -f crypto_kdf/hkdf/$(DEPDIR)/libsodium_la-kdf_hkdf_sha256.Plo
 	-rm -f crypto_kdf/hkdf/$(DEPDIR)/libsodium_la-kdf_hkdf_sha512.Plo
+	-rm -f crypto_kem/$(DEPDIR)/libsodium_la-crypto_kem.Plo
+	-rm -f crypto_kem/mlkem768/$(DEPDIR)/libsodium_la-kem_mlkem768.Plo
+	-rm -f crypto_kem/mlkem768/ref/$(DEPDIR)/libsodium_la-kem_mlkem768_ref.Plo
+	-rm -f crypto_kem/xwing/$(DEPDIR)/libsodium_la-kem_xwing.Plo
 	-rm -f crypto_kx/$(DEPDIR)/libsodium_la-crypto_kx.Plo
 	-rm -f crypto_onetimeauth/$(DEPDIR)/libsodium_la-crypto_onetimeauth.Plo
 	-rm -f crypto_onetimeauth/poly1305/$(DEPDIR)/libsodium_la-onetimeauth_poly1305.Plo
 	-rm -f crypto_onetimeauth/poly1305/donna/$(DEPDIR)/libsodium_la-poly1305_donna.Plo
 	-rm -f crypto_onetimeauth/poly1305/sse2/$(DEPDIR)/libsse2_la-poly1305_sse2.Plo
 	-rm -f crypto_pwhash/$(DEPDIR)/libsodium_la-crypto_pwhash.Plo
+	-rm -f crypto_pwhash/argon2/$(DEPDIR)/libarmcrypto_la-argon2-fill-block-neon.Plo
 	-rm -f crypto_pwhash/argon2/$(DEPDIR)/libavx2_la-argon2-fill-block-avx2.Plo
 	-rm -f crypto_pwhash/argon2/$(DEPDIR)/libavx512f_la-argon2-fill-block-avx512f.Plo
 	-rm -f crypto_pwhash/argon2/$(DEPDIR)/libsodium_la-argon2-core.Plo

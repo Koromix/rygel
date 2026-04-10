@@ -1,6 +1,6 @@
 #define RATE 32
 
-static void
+static inline void
 aegis128l_init(const uint8_t *key, const uint8_t *nonce, aes_block_t *const state)
 {
     static CRYPTO_ALIGN(AES_BLOCK_LENGTH)
@@ -32,7 +32,7 @@ aegis128l_init(const uint8_t *key, const uint8_t *nonce, aes_block_t *const stat
     }
 }
 
-static void
+static inline void
 aegis128l_mac(uint8_t *mac, size_t maclen, uint64_t adlen, uint64_t mlen, aes_block_t *const state)
 {
     aes_block_t tmp;
@@ -46,10 +46,12 @@ aegis128l_mac(uint8_t *mac, size_t maclen, uint64_t adlen, uint64_t mlen, aes_bl
     }
 
     if (maclen == 16) {
+        /* LCOV_EXCL_START */
         tmp = AES_BLOCK_XOR(state[6], AES_BLOCK_XOR(state[5], state[4]));
         tmp = AES_BLOCK_XOR(tmp, AES_BLOCK_XOR(state[3], state[2]));
         tmp = AES_BLOCK_XOR(tmp, AES_BLOCK_XOR(state[1], state[0]));
         AES_BLOCK_STORE(mac, tmp);
+        /* LCOV_EXCL_STOP */
     } else if (maclen == 32) {
         tmp = AES_BLOCK_XOR(state[3], state[2]);
         tmp = AES_BLOCK_XOR(tmp, AES_BLOCK_XOR(state[1], state[0]));
@@ -58,7 +60,7 @@ aegis128l_mac(uint8_t *mac, size_t maclen, uint64_t adlen, uint64_t mlen, aes_bl
         tmp = AES_BLOCK_XOR(tmp, AES_BLOCK_XOR(state[5], state[4]));
         AES_BLOCK_STORE(mac + 16, tmp);
     } else {
-        memset(mac, 0, maclen);
+        memset(mac, 0, maclen); /* LCOV_EXCL_LINE */
     }
 }
 
@@ -85,7 +87,7 @@ aegis128l_absorb2(const uint8_t *const src, aes_block_t *const state)
     aegis128l_update(state, msg2, msg3);
 }
 
-static void
+static inline void
 aegis128l_enc(uint8_t *const dst, const uint8_t *const src, aes_block_t *const state)
 {
     aes_block_t msg0, msg1;
@@ -105,7 +107,7 @@ aegis128l_enc(uint8_t *const dst, const uint8_t *const src, aes_block_t *const s
     aegis128l_update(state, msg0, msg1);
 }
 
-static void
+static inline void
 aegis128l_dec(uint8_t *const dst, const uint8_t *const src, aes_block_t *const state)
 {
     aes_block_t msg0, msg1;
@@ -124,7 +126,7 @@ aegis128l_dec(uint8_t *const dst, const uint8_t *const src, aes_block_t *const s
     aegis128l_update(state, msg0, msg1);
 }
 
-static void
+static inline void
 aegis128l_declast(uint8_t *const dst, const uint8_t *const src, size_t len,
                   aes_block_t *const state)
 {
@@ -237,7 +239,7 @@ decrypt_detached(uint8_t *m, const uint8_t *c, size_t clen, const uint8_t *mac, 
     aegis128l_mac(computed_mac, maclen, adlen, mlen, state);
     ret = -1;
     if (maclen == 16) {
-        ret = crypto_verify_16(computed_mac, mac);
+        ret = crypto_verify_16(computed_mac, mac); /* LCOV_EXCL_LINE */
     } else if (maclen == 32) {
         ret = crypto_verify_32(computed_mac, mac);
     }

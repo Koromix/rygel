@@ -1,5 +1,5 @@
 AC_PREREQ([2.69])
-AC_INIT([libsodium],[1.0.21],[https://github.com/jedisct1/libsodium/issues],[libsodium],[https://libsodium.org])
+AC_INIT([libsodium],[1.0.22],[https://github.com/jedisct1/libsodium/issues],[libsodium],[https://libsodium.org])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SRCDIR([src/libsodium/sodium/version.c])
@@ -13,9 +13,9 @@ AM_DEP_TRACK
 AC_SUBST(VERSION)
 
 SODIUM_LIBRARY_VERSION_MAJOR=26
-SODIUM_LIBRARY_VERSION_MINOR=3
+SODIUM_LIBRARY_VERSION_MINOR=4
 DLL_VERSION=26
-SODIUM_LIBRARY_VERSION=29:0:3
+SODIUM_LIBRARY_VERSION=30:0:4
 #                       | | |
 #                +------+ | +---+
 #                |        |     |
@@ -376,8 +376,8 @@ AX_CHECK_CATCHABLE_ABRT
 
 AS_IF([test "x$with_threads" = "xyes"], [
   AX_TLS([AC_MSG_RESULT(thread local storage is supported)
-          AX_CHECK_COMPILE_FLAG([-ftls-model=local-dynamic],
-            [CFLAGS="$CFLAGS -ftls-model=local-dynamic"])],
+          AX_CHECK_COMPILE_FLAG([-ftls-model=global-dynamic],
+            [CFLAGS="$CFLAGS -ftls-model=global-dynamic"])],
          [AC_MSG_RESULT(thread local storage is not supported)]) ])
 
 LT_INIT

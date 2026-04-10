@@ -13,7 +13,7 @@
 #include "runtime.h"
 #include "utils.h"
 
-#if defined(HAVE_ARMCRYPTO) && defined(__clang__) && defined(NATIVE_LITTLE_ENDIAN)
+#if defined(HAVE_ARMCRYPTO) && defined(NATIVE_LITTLE_ENDIAN)
 
 #if !defined(_MSC_VER) || _MSC_VER < 1800
 #define __vectorcall
@@ -47,49 +47,82 @@ typedef uint64x2_t BlockVec;
 #define STORE128(a, b) vst1q_u64((uint64_t *) (void *) (a), (b))
 #define AES_XENCRYPT(block_vec, rkey) \
     vreinterpretq_u64_u8(             \
-        vaesmcq_u8(vaeseq_u8(rkey, vreinterpretq_u8_u64(block_vec))))
+        vaesmcq_u8(vaeseq_u8(vreinterpretq_u8_u64(rkey), vreinterpretq_u8_u64(block_vec))))
 #define AES_XENCRYPTLAST(block_vec, rkey) \
-    vreinterpretq_u64_u8(vaeseq_u8(rkey, vreinterpretq_u8_u64(block_vec)))
+    vreinterpretq_u64_u8(vaeseq_u8(vreinterpretq_u8_u64(rkey), vreinterpretq_u8_u64(block_vec)))
 #define XOR128(a, b)  veorq_u64((a), (b))
 #define AND128(a, b)  vandq_u64((a), (b))
 #define OR128(a, b)   vorrq_u64((a), (b))
 #define SET64x2(a, b) vsetq_lane_u64((uint64_t) (a), vmovq_n_u64((uint64_t) (b)), 1)
-#define ZERO128       vmovq_n_u8(0)
+#define ZERO128       vmovq_n_u64(0)
 #define ONE128        SET64x2(0, 1)
 #define ADD64x2(a, b) vaddq_u64((a), (b))
 #define SUB64x2(a, b) vsubq_u64((a), (b))
 #define SHL64x2(a, b) vshlq_n_u64((a), (b))
 #define SHR64x2(a, b) vshrq_n_u64((a), (b))
-#define REV128(x)                                                                                  \
-    vreinterpretq_u64_u8(__builtin_shufflevector(vreinterpretq_u8_u64(x), vreinterpretq_u8_u64(x), \
-                                                 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2,   \
-                                                 1, 0))
-#define SHUFFLE32x4(x, a, b, c, d)                                          \
-    vreinterpretq_u64_u32(__builtin_shufflevector(vreinterpretq_u32_u64(x), \
-                                                  vreinterpretq_u32_u64(x), (a), (b), (c), (d)))
-#define BYTESHL128(a, b) vreinterpretq_u64_u8(vextq_s8(vdupq_n_s8(0), (int8x16_t) a, 16 - (b)))
-#define BYTESHR128(a, b) vreinterpretq_u64_u8(vextq_s8((int8x16_t) a, vdupq_n_s8(0), (b)))
+#define BYTESHL128(a, b) vreinterpretq_u64_u8(vextq_u8(vdupq_n_u8(0), vreinterpretq_u8_u64(a), 16 - (b)))
+#define BYTESHR128(a, b) vreinterpretq_u64_u8(vextq_u8(vreinterpretq_u8_u64(a), vdupq_n_u8(0), (b)))
 
 #define SHL128(a, b) OR128(SHL64x2((a), (b)), SHR64x2(BYTESHL128((a), 8), 64 - (b)))
-#define CLMULLO128(a, b) \
-    vreinterpretq_u64_p128(vmull_p64((poly64_t) vget_low_u64(a), (poly64_t) vget_low_u64(b)))
 #define CLMULHI128(a, b) \
-    vreinterpretq_u64_p128(vmull_high_p64(vreinterpretq_p64_s64(a), vreinterpretq_p64_s64(b)))
+    vreinterpretq_u64_p128(vmull_high_p64(vreinterpretq_p64_u64(a), vreinterpretq_p64_u64(b)))
+
+static inline uint64x2_t
+REV128_(uint64x2_t x)
+{
+    uint8x16_t t = vrev64q_u8(vreinterpretq_u8_u64(x));
+    return vreinterpretq_u64_u8(vextq_u8(t, t, 8));
+}
+#define REV128(x) REV128_(x)
+
+#define SHUFFLE32x4_2222(x) \
+    vreinterpretq_u64_u32(vdupq_laneq_u32(vreinterpretq_u32_u64(x), 2))
+#define SHUFFLE32x4_3333(x) \
+    vreinterpretq_u64_u32(vdupq_laneq_u32(vreinterpretq_u32_u64(x), 3))
+#define SWAP64HALVES(x) \
+    vreinterpretq_u64_u32(vextq_u32(vreinterpretq_u32_u64(x), \
+                                    vreinterpretq_u32_u64(x), 2))
+
+#ifdef _MSC_VER
+#define CLMULLO128(a, b) \
+    vreinterpretq_u64_p128(vmull_p64(vget_low_p64(vreinterpretq_p64_u64(a)), \
+                                     vget_low_p64(vreinterpretq_p64_u64(b))))
 #define CLMULLOHI128(a, b) \
-    vreinterpretq_u64_p128(vmull_p64((poly64_t) vget_low_u64(a), (poly64_t) vget_high_u64(b)))
+    vreinterpretq_u64_p128(vmull_p64(vget_low_p64(vreinterpretq_p64_u64(a)), \
+                                     vget_high_p64(vreinterpretq_p64_u64(b))))
 #define CLMULHILO128(a, b) \
-    vreinterpretq_u64_p128(vmull_p64((poly64_t) vget_high_u64(a), (poly64_t) vget_low_u64(b)))
+    vreinterpretq_u64_p128(vmull_p64(vget_high_p64(vreinterpretq_p64_u64(a)), \
+                                     vget_low_p64(vreinterpretq_p64_u64(b))))
+#else
+#define CLMULLO128(a, b) \
+    vreinterpretq_u64_p128(vmull_p64(vgetq_lane_p64(vreinterpretq_p64_u64(a), 0), \
+                                     vgetq_lane_p64(vreinterpretq_p64_u64(b), 0)))
+#define CLMULLOHI128(a, b) \
+    vreinterpretq_u64_p128(vmull_p64(vgetq_lane_p64(vreinterpretq_p64_u64(a), 0), \
+                                     vgetq_lane_p64(vreinterpretq_p64_u64(b), 1)))
+#define CLMULHILO128(a, b) \
+    vreinterpretq_u64_p128(vmull_p64(vgetq_lane_p64(vreinterpretq_p64_u64(a), 1), \
+                                     vgetq_lane_p64(vreinterpretq_p64_u64(b), 0)))
+#endif
+
+#if defined(__GNUC__) || defined(__clang__)
 #define PREFETCH_READ(x)  __builtin_prefetch((x), 0, 2)
-#define PREFETCH_WRITE(x) __builtin_prefetch((x), 1, 2);
+#define PREFETCH_WRITE(x) __builtin_prefetch((x), 1, 2)
+#else
+#define PREFETCH_READ(x)  ((void) 0)
+#define PREFETCH_WRITE(x) ((void) 0)
+#endif
 
 static inline BlockVec
 AES_KEYGEN(BlockVec block_vec, const int rc)
 {
-    uint8x16_t       a = vaeseq_u8(vreinterpretq_u8_u64(block_vec), vmovq_n_u8(0));
-    const uint8x16_t b =
-        __builtin_shufflevector(a, a, 4, 1, 14, 11, 1, 14, 11, 4, 12, 9, 6, 3, 9, 6, 3, 12);
+    static const uint8_t aes_keygen_shuffle[16] = {
+        4, 1, 14, 11, 1, 14, 11, 4, 12, 9, 6, 3, 9, 6, 3, 12
+    };
+    uint8x16_t       a = vaeseq_u8(vreinterpretq_u8_u64(block_vec), vdupq_n_u8(0));
+    const uint8x16_t b = vqtbl1q_u8(a, vld1q_u8(aes_keygen_shuffle));
     const uint64x2_t c = SET64x2((uint64_t) rc << 32, (uint64_t) rc << 32);
-    return XOR128(b, c);
+    return XOR128(vreinterpretq_u64_u8(b), c);
 }
 
 #define ROUNDS 14
@@ -123,14 +156,14 @@ static void __vectorcall expand256(const unsigned char key[KEYBYTES], BlockVec r
     s          = AES_KEYGEN(t2, RC);            \
     t1         = XOR128(t1, BYTESHL128(t1, 4)); \
     t1         = XOR128(t1, BYTESHL128(t1, 8)); \
-    t1         = XOR128(t1, SHUFFLE32x4(s, 3, 3, 3, 3));
+    t1         = XOR128(t1, SHUFFLE32x4_3333(s));
 
 #define EXPAND_KEY_2(RC)                        \
     rkeys[i++] = t1;                            \
     s          = AES_KEYGEN(t1, RC);            \
     t2         = XOR128(t2, BYTESHL128(t2, 4)); \
     t2         = XOR128(t2, BYTESHL128(t2, 8)); \
-    t2         = XOR128(t2, SHUFFLE32x4(s, 2, 2, 2, 2));
+    t2         = XOR128(t2, SHUFFLE32x4_2222(s));
 
     t1 = LOAD128(&key[0]);
     t2 = LOAD128(&key[16]);
@@ -268,9 +301,9 @@ static inline BlockVec __vectorcall gcm_reduce(const I256 x)
 
     const BlockVec p64 = SET64x2(0, 0xc200000000000000);
     const BlockVec a   = CLMULLO128(lo, p64);
-    const BlockVec b   = XOR128(SHUFFLE32x4(lo, 2, 3, 0, 1), a);
+    const BlockVec b   = XOR128(SWAP64HALVES(lo), a);
     const BlockVec c   = CLMULLO128(b, p64);
-    const BlockVec d   = XOR128(SHUFFLE32x4(b, 2, 3, 0, 1), c);
+    const BlockVec d   = XOR128(SWAP64HALVES(b), c);
 
     return XOR128(d, hi);
 }
@@ -300,7 +333,7 @@ static void __vectorcall precomp_for_block_count(Precomp             hx[PC_COUNT
     BlockVec       h0_shifted;
     BlockVec       h;
 
-    mask       = SHUFFLE32x4(mask, 3, 3, 3, 3);
+    mask       = SHUFFLE32x4_3333(mask);
     carry      = AND128(carry, mask);
     h0_shifted = SHL128(h0, 1);
     h          = XOR128(h0_shifted, carry);
@@ -988,6 +1021,7 @@ crypto_aead_aes256gcm_decrypt_detached(unsigned char *m, unsigned char *nsec,
                                        const unsigned char *k)
 {
     CRYPTO_ALIGN(16) crypto_aead_aes256gcm_state st;
+    int                                          ret;
 
     PREFETCH_WRITE(m);
     PREFETCH_READ(c);
@@ -995,8 +1029,11 @@ crypto_aead_aes256gcm_decrypt_detached(unsigned char *m, unsigned char *nsec,
 
     crypto_aead_aes256gcm_beforenm(&st, k);
 
-    return crypto_aead_aes256gcm_decrypt_detached_afternm(
+    ret = crypto_aead_aes256gcm_decrypt_detached_afternm(
         m, nsec, c, clen, mac, ad, adlen, npub, (const crypto_aead_aes256gcm_state *) &st);
+    sodium_memzero(&st, sizeof st);
+
+    return ret;
 }
 
 int

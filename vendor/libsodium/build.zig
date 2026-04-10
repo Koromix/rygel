@@ -228,7 +228,7 @@ pub fn build(b: *std.Build) !void {
     });
 
     // work out which libraries we are building
-    var libs = std.ArrayList(*Compile){};
+    var libs: std.ArrayListUnmanaged(*Compile) = .empty;
     defer libs.deinit(heap.page_allocator);
     if (build_static) {
         try libs.append(heap.page_allocator, static_lib);
@@ -241,17 +241,9 @@ pub fn build(b: *std.Build) !void {
     const version_file_path = "include/sodium/version.h";
 
     if (is_zig_16) {
-        src_dir.access(io, version_file_path, .{}) catch {
-            try Dir.copyFile(cwd, prebuilt_version_file_path, src_dir, version_file_path, io, .{});
-        };
-    } else if (@hasField(Dir.OpenOptions, "follow_symlinks")) {
-        src_dir.access(version_file_path, .{ .read = true }) catch {
-            try cwd.copyFile(prebuilt_version_file_path, src_dir, version_file_path, .{});
-        };
+        try Dir.copyFile(cwd, prebuilt_version_file_path, src_dir, version_file_path, io, .{});
     } else {
-        src_dir.access(version_file_path, .{ .mode = .read_only }) catch {
-            try cwd.copyFile(prebuilt_version_file_path, src_dir, version_file_path, .{});
-        };
+        try cwd.copyFile(prebuilt_version_file_path, src_dir, version_file_path, .{});
     }
 
     for (libs.items) |lib| {
@@ -339,7 +331,7 @@ pub fn build(b: *std.Build) !void {
                 .root_module = b.createModule(.{
                     .target = target,
                     .optimize = optimize,
-                    .strip = true,
+                    .strip = optimize != .Debug,
                     .link_libc = true,
                 }),
             });

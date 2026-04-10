@@ -1,0 +1,10 @@
+diff a/vendor/libsodium/src/libsodium/randombytes/internal/randombytes_internal_random.c b/vendor/libsodium/src/libsodium/randombytes/internal/randombytes_internal_random.c	(rejected hunks)
+@@ -98,7 +98,7 @@ BOOLEAN NTAPI RtlGenRandom(PVOID RandomBuffer, ULONG RandomBufferLength);
+ # define TLS _Thread_local
+ #endif
+ #ifndef TLS
+-# ifdef _WIN32
++# ifdef _MSC_VER
+ #  define TLS __declspec(thread)
+ # else
+ #  define TLS

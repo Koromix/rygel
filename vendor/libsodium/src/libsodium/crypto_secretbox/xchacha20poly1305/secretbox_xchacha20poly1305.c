@@ -79,7 +79,7 @@ crypto_secretbox_xchacha20poly1305_easy(unsigned char *c,
                                         const unsigned char *k)
 {
     if (mlen > crypto_secretbox_xchacha20poly1305_MESSAGEBYTES_MAX) {
-        sodium_misuse();
+        sodium_misuse(); /* LCOV_EXCL_LINE */
     }
     return crypto_secretbox_xchacha20poly1305_detached
         (c + crypto_secretbox_xchacha20poly1305_MACBYTES, c, m, mlen, n, k);
@@ -106,6 +106,8 @@ crypto_secretbox_xchacha20poly1305_open_detached(unsigned char *m,
         return -1;
     }
     if (m == NULL) {
+        sodium_memzero(subkey, sizeof subkey);
+        sodium_memzero(block0, sizeof block0);
         return 0;
     }
     ACQUIRE_FENCE;

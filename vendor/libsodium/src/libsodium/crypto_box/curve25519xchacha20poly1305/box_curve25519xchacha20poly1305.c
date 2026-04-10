@@ -48,7 +48,10 @@ crypto_box_curve25519xchacha20poly1305_beforenm(unsigned char *k,
     if (crypto_scalarmult_curve25519(s, sk, pk) != 0) {
         return -1;
     }
-    return crypto_core_hchacha20(k, zero, s, NULL);
+    crypto_core_hchacha20(k, zero, s, NULL);
+    sodium_memzero(s, sizeof s);
+
+    return 0;
 }
 
 int
@@ -88,7 +91,7 @@ crypto_box_curve25519xchacha20poly1305_easy_afternm(unsigned char *c,
                                                     const unsigned char *k)
 {
     if (mlen > crypto_box_curve25519xchacha20poly1305_MESSAGEBYTES_MAX) {
-        sodium_misuse();
+        sodium_misuse(); /* LCOV_EXCL_LINE */
     }
     return crypto_box_curve25519xchacha20poly1305_detached_afternm(
         c + crypto_box_curve25519xchacha20poly1305_MACBYTES, c, m, mlen, n, k);
@@ -100,7 +103,7 @@ crypto_box_curve25519xchacha20poly1305_easy(
     const unsigned char *n, const unsigned char *pk, const unsigned char *sk)
 {
     if (mlen > crypto_box_curve25519xchacha20poly1305_MESSAGEBYTES_MAX) {
-        sodium_misuse();
+        sodium_misuse(); /* LCOV_EXCL_LINE */
     }
     return crypto_box_curve25519xchacha20poly1305_detached(
         c + crypto_box_curve25519xchacha20poly1305_MACBYTES, c, m, mlen, n, pk,
