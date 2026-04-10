@@ -1169,7 +1169,14 @@ void PerformAsyncRelay(napi_env, napi_value, void *, void *udata)
 
 void *GetTrampoline(int16_t idx)
 {
-    return Trampolines[idx];
+    const Size size = (uint8_t *)&Trampoline1 - (uint8_t *)&Trampoline0;
+
+#if defined(K_DEBUG)
+    Size total = (uint8_t *)TrampolineLast - (uint8_t *)&Trampoline0 + size;
+    K_ASSERT(size * MaxTrampolines == total);
+#endif
+
+    return (uint8_t *)&Trampoline0 + size * idx;
 }
 
 }

@@ -20,18 +20,13 @@ def write_asm_trampolines(filename, comment_char, n, fmt_export, fmt_proc, end =
 
 def write_cxx_trampolines(filename, n):
     with open(filename, 'w') as f:
-        for i in range(0, n):
-            print('extern "C" int Trampoline{0};'.format(i), file = f)
-
+        print('extern "C" int Trampoline0;', file = f)
+        print('extern "C" int Trampoline1;', file = f)
+        print('extern "C" int Trampoline{0};'.format(n - 1), file = f)
         print('', file = f)
-        print('static void *const Trampolines[] = {', file = f)
-        for i in range(0, n):
-            if i + 1 < n:
-                print('    &Trampoline{0},'.format(i), file = f)
-            else:
-                print('    &Trampoline{0}'.format(i), file = f)
-        print('};', file = f)
-        print('static_assert(K_LEN(Trampolines) == MaxTrampolines);', file = f)
+        print('static const void *TrampolineLast = &Trampoline{0};'.format(n - 1), file = f)
+        print('', file = f)
+        print('static_assert(MaxTrampolines == {0});'.format(n), file = f)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description = 'Generate static trampolines')
