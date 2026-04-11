@@ -148,7 +148,8 @@ if(WIN32)
 endif()
 
 if(UNIX AND NOT APPLE)
-    target_compile_options(koffi PRIVATE -fno-semantic-interposition)
+    target_compile_options(koffi PRIVATE -fno-semantic-interposition -fvisibility=hidden -fdata-sections -ffunction-sections)
+    target_link_options(koffi PRIVATE -Wl,--gc-sections)
 endif()
 
 if(NOT MSVC OR CMAKE_C_COMPILER_ID MATCHES "[Cc]lang")
