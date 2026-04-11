@@ -147,6 +147,10 @@ if(WIN32)
     target_link_libraries(koffi PRIVATE ws2_32)
 endif()
 
+if(UNIX AND NOT APPLE)
+    target_compile_options(koffi PRIVATE -fno-semantic-interposition)
+endif()
+
 if(NOT MSVC OR CMAKE_C_COMPILER_ID MATCHES "[Cc]lang")
     # Restore C/C++ compiler sanity
 
