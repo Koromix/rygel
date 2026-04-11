@@ -61,7 +61,8 @@ add_custom_command(OUTPUT trampolines/gnu.inc
                           trampolines/prototypes.inc
                    COMMENT "Generate trampoline macros"
                    COMMAND "${NODE_JS_EXECPATH}"
-                   ARGS "${CMAKE_CURRENT_SOURCE_DIR}/tools/write_trampolines.js" "${CMAKE_CURRENT_BINARY_DIR}/trampolines" 8192)
+                   ARGS "${CMAKE_CURRENT_SOURCE_DIR}/tools/write_trampolines.js" "${CMAKE_CURRENT_BINARY_DIR}/trampolines" 8192
+                   DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/tools/write_trampolines.js")
 
 set(KOFFI_SRC
     src/call.cc
