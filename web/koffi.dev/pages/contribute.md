@@ -93,7 +93,7 @@ And now you can run the tests with:
 ```sh
 cd src/koffi
 
-node tools/vm.js test # Several options are available, use --help
+node tools/brew.js test # Several options are available, use --help
 ```
 
 And be patient, this can be pretty slow for emulated machines. The Linux machines have and use ccache to build Koffi, so subsequent build steps will get much more tolerable.
@@ -101,32 +101,32 @@ And be patient, this can be pretty slow for emulated machines. The Linux machine
 Machines are started for each test if needed, and stay active until you stop them. You can start and stop them at any time with the following commands:
 
 ```sh
-node tools/vm.js start # Start all available machines
-node tools/vm.js stop # Stop everything
+node tools/brew.js start # Start all available machines
+node tools/brew.js stop # Stop everything
 ```
 
 You can also restrict these commands to a subset of machines:
 
 ```sh
 # Full test cycle
-node tools/vm.js test debian_x64 debian_i386
+node tools/brew.js test debian_x64 debian_i386
 
 # Separate start, test, shutdown
-node tools/vm.js start debian_x64 debian_i386
-node tools/vm.js test debian_x64 debian_i386
-node tools/vm.js stop
+node tools/brew.js start debian_x64 debian_i386
+node tools/brew.js test debian_x64 debian_i386
+node tools/brew.js stop
 ```
 
 Finally, you can join a running machine with SSH with the following shortcut, if you need to do some debugging or any other manual procedure:
 
 ```sh
-node tools/vm.js ssh debian_i386
+node tools/brew.js ssh debian_i386
 ```
 
 Each machine is configured to run a VNC server or SPICE, which you can use to access the display, using KRDC or any other compatible viewer. Use the `info` command to get the VNC or the SPICE port.
 
 ```sh
-node tools/vm.js info debian_x64
+node tools/brew.js info debian_x64
 ```
 
 # Making a release
@@ -142,8 +142,8 @@ Once this is done, you can publish a new release with the following commands:
 ```sh
 cd src/koffi
 
-node tools/vm.js test # If not done before
-node tools/vm.js build
+node tools/brew.js test # If not done before
+node tools/brew.js build
 
 cd ../../bin/Koffi/package
 npm publish

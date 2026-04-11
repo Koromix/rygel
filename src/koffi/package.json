@@ -24,10 +24,10 @@
   "main": "./index.js",
   "types": "./index.d.ts",
   "scripts": {
-    "test": "node tools/vm.js test",
+    "test": "node tools/brew.js test",
     "prepack": "echo 'Use \"npm run package\" instead' && false",
     "prepublishOnly": "echo 'Use \"npm run package\" instead' && false",
-    "package": "node tools/vm.js build"
+    "package": "node tools/brew.js build"
   },
   "license": "MIT",
   "cnoke": {
