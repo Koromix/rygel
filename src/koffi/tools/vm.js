@@ -352,7 +352,10 @@ async function build() {
             'vendor/node-addon-api/napi-inl.deprecated.h',
             'vendor/node-addon-api/README.md',
             'vendor/node-addon-api/LICENSE.md',
-            'vendor/node-api-headers',
+            'vendor/node-api-headers/def',
+            'vendor/node-api-headers/include',
+            'vendor/node-api-headers/README.md',
+            'vendor/node-api-headers/LICENSE',
             'web/koffi.dev'
         ]));
 
