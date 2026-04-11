@@ -570,6 +570,9 @@ async function test() {
 
         ReverseBytes(arr16, arr16.byteLength);
         assert.deepEqual(arr16, Int16Array.from([1280, 1024, 768, 512, 256]));
+
+        ReverseBytes(koffi.address(arr8), arr8.byteLength);
+        assert.deepEqual(arr8, Uint8Array.from([1, 2, 3, 4, 5]));
     }
 
     // Endian-sensitive integer types
