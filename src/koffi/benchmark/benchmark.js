@@ -33,7 +33,7 @@ function benchmark(select) {
 
 function run(basename, ref) {
     let filename = path.join(__dirname, basename);
-    let proc = spawnSync(process.execPath, [filename]);
+    let proc = spawnSync(process.execPath, [...process.execArgv, filename]);
 
     if (proc.status == null)
         throw new Error(proc.error);
