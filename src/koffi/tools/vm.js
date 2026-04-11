@@ -50,7 +50,7 @@ async function main() {
     // Some code assumes we are working from the script directory
     process.chdir(script_dir);
 
-    let config = parse_arguments('koffi.js', process.argv.slice(2), ValidCommands);
+    let config = parse_arguments('vm.js', process.argv.slice(2), ValidCommands);
     if (config == null)
         return;
 
@@ -64,7 +64,7 @@ async function main() {
     // Load build registy
     let known_builds;
     {
-        let json = fs.readFileSync('./koffi.json', { encoding: 'utf-8' });
+        let json = fs.readFileSync('./vm.json', { encoding: 'utf-8' });
         known_builds = JSON.parse(json);
 
         for (let key in known_builds) {

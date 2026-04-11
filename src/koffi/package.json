@@ -24,10 +24,10 @@
   "main": "./index.js",
   "types": "./index.d.ts",
   "scripts": {
-    "test": "node tools/koffi.js test",
+    "test": "node tools/vm.js test",
     "prepack": "echo 'Use \"npm run package\" instead' && false",
     "prepublishOnly": "echo 'Use \"npm run package\" instead' && false",
-    "package": "node tools/koffi.js build"
+    "package": "node tools/vm.js build"
   },
   "license": "MIT",
   "cnoke": {
