@@ -40,7 +40,7 @@
     .cfi_def_cfa x29, 16
     str x29, [x2, 0]
     mov x9, x0
-    add sp, x1, #136
+    add sp, x1, #152
 .endm
 
 # Call native function.
@@ -136,21 +136,21 @@ RelayTrampoline:
     .cfi_offset 30, 8
     sub sp, sp, #192
     .cfi_def_cfa sp, 208
-    stp x0, x1, [sp, 0]
-    stp x2, x3, [sp, 16]
-    stp x4, x5, [sp, 32]
-    stp x6, x7, [sp, 48]
-    str x8, [sp, 64]
-    stp d0, d1, [sp, 72]
-    stp d2, d3, [sp, 88]
-    stp d4, d5, [sp, 104]
-    stp d6, d7, [sp, 120]
+    stp x0, x1, [sp, 48]
+    stp x2, x3, [sp, 64]
+    stp x4, x5, [sp, 80]
+    stp x6, x7, [sp, 96]
+    str x8, [sp, 112]
+    stp d0, d1, [sp, 120]
+    stp d2, d3, [sp, 136]
+    stp d4, d5, [sp, 152]
+    stp d6, d7, [sp, 168]
     mov x0, x9
     mov x1, sp
     bl SYMBOL(RelayCallback)
-    ldp x0, x1, [sp, 136]
-    ldp d0, d1, [sp, 152]
-    ldp d2, d3, [sp, 168]
+    ldp x0, x1, [sp, 0]
+    ldp d0, d1, [sp, 16]
+    ldp d2, d3, [sp, 32]
     add sp, sp, #192
     .cfi_def_cfa sp, 16
     ldp x29, x30, [sp], 16

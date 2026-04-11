@@ -168,10 +168,10 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
                 } else {
 #if defined(__APPLE__)
                     stack_offset = AlignLen(stack_offset, param.variadic ? 8 : param.type->align);
-                    param.abi.offset = 17 * 8 + stack_offset;
+                    param.abi.offset = 19 * 8 + stack_offset;
                     stack_offset += param.type->size;
 #else
-                    param.abi.offset = 17 * 8 + stack_offset;
+                    param.abi.offset = 19 * 8 + stack_offset;
                     stack_offset += 8;
 #endif
                 }
@@ -200,7 +200,7 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
                             param.abi.offset = gpr_index * 8;
                             gpr_index++;
                         } else {
-                            param.abi.offset = 17 * 8 + stack_offset;
+                            param.abi.offset = 19 * 8 + stack_offset;
                             stack_offset += 8;
                         }
 
@@ -229,7 +229,7 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
                             gpr_index = gpr_max;
 
                             stack_offset = AlignLen(stack_offset, param.type->align);
-                            param.abi.offset = 17 * 8 + stack_offset;
+                            param.abi.offset = 19 * 8 + stack_offset;
                             stack_offset += registers * 8;
                         }
 
@@ -242,7 +242,7 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
                             gpr_index++;
                         } else {
                             stack_offset = AlignLen(stack_offset, 8);
-                            param.abi.offset = 17 * 8 + stack_offset;
+                            param.abi.offset = 19 * 8 + stack_offset;
                             stack_offset += 8;
                         }
 
@@ -284,7 +284,7 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
 #if defined(__APPLE__)
                         stack_offset = AlignLen(stack_offset, param.type->align);
 #endif
-                        param.abi.offset = 17 * 8 + stack_offset;
+                        param.abi.offset = 19 * 8 + stack_offset;
                         stack_offset += 8;
 
                         func->sync.Append({ .code = AbiOpcode::PushAggregateReg, .a = param.offset, .b1 = (int16_t)param.abi.offset, .type = param.type });
@@ -305,7 +305,7 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
 #if defined(__APPLE__)
                         stack_offset = AlignLen(stack_offset, 8);
 #endif
-                        param.abi.offset = 17 * 8 + stack_offset;
+                        param.abi.offset = 19 * 8 + stack_offset;
                         stack_offset += registers * 8;
                     }
 
@@ -321,7 +321,7 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
 #if defined(__APPLE__)
                         stack_offset = AlignLen(stack_offset, 8);
 #endif
-                        param.abi.offset = 17 * 8 + stack_offset;
+                        param.abi.offset = 19 * 8 + stack_offset;
                         stack_offset += 8;
                     }
 
@@ -341,7 +341,7 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
                         param.abi.offset = gpr_index * 8;
                         gpr_index++;
                     } else {
-                        param.abi.offset = 17 * 8 + stack_offset;
+                        param.abi.offset = 19 * 8 + stack_offset;
                         stack_offset += 8;
                     }
 
@@ -359,10 +359,10 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
                 } else {
 #if defined(__APPLE__)
                     stack_offset = AlignLen(stack_offset, param.variadic ? 8 : 4);
-                    param.abi.offset = 17 * 8 + stack_offset;
+                    param.abi.offset = 19 * 8 + stack_offset;
                     stack_offset += 4;
 #else
-                    param.abi.offset = 17 * 8 + stack_offset;
+                    param.abi.offset = 19 * 8 + stack_offset;
                     stack_offset += 8;
 #endif
                 }
@@ -378,7 +378,7 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
                         param.abi.offset = gpr_index * 8;
                         gpr_index++;
                     } else {
-                        param.abi.offset = 17 * 8 + stack_offset;
+                        param.abi.offset = 19 * 8 + stack_offset;
                         stack_offset += 8;
                     }
 
@@ -397,7 +397,7 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
 #if defined(__APPLE__)
                     stack_offset = AlignLen(stack_offset, 8);
 #endif
-                    param.abi.offset = 17 * 8 + stack_offset;
+                    param.abi.offset = 19 * 8 + stack_offset;
                     stack_offset += 8;
                 }
 
@@ -409,7 +409,7 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
         }
     }
 
-    func->stk_size = AlignLen(17 * 8 + stack_offset, 16) + 8;
+    func->stk_size = AlignLen(19 * 8 + stack_offset, 16) + 8;
     func->forward_fp = vec_index;
 
     func->async.Append({ .code = AbiOpcode::Yield });
@@ -1155,7 +1155,7 @@ namespace {
     OP(SetVariadicRegisters) {
         uint64_t *gpr_ptr = (uint64_t *)base;
 
-        gpr_ptr[4] = (uint64_t)base + 17 * 8;
+        gpr_ptr[4] = (uint64_t)base + 19 * 8;
         gpr_ptr[5] = inst->b;
 
         NEXT();
@@ -1260,9 +1260,8 @@ Napi::Value CallData::EndAsync()
 
 void CallData::Relay(Size idx, uint8_t *sp)
 {
-    uint8_t *own_sp = sp;
-    uint8_t *caller_sp = sp + 208;
-    BackRegisters *out_reg = (BackRegisters *)(sp + 136);
+    uint8_t *in_ptr = sp + 48;
+    BackRegisters *out_reg = (BackRegisters *)sp;
 
     if (env.IsExceptionPending()) [[unlikely]]
         return;
@@ -1285,10 +1284,6 @@ void CallData::Relay(Size idx, uint8_t *sp)
     teb->DeallocationStack = instance->main_stack_min;
 #endif
 
-    // Account for the fact that the stack offsets are optimized for the forward call code,
-    // and they start after the GPR (6 registers) and the XMM (8 registers).
-    caller_sp -= 17 * 8;
-
     const TrampolineInfo &trampoline = shared.trampolines[idx];
 
     const FunctionInfo *proto = trampoline.proto;
@@ -1307,7 +1302,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
 
 #define POP_INTEGER(CType) \
         do { \
-            const uint8_t *src = (param.abi.regular ? own_sp : caller_sp) + param.abi.offset; \
+            const uint8_t *src = in_ptr + param.abi.offset; \
             CType v = *(const CType *)src; \
              \
             Napi::Value arg = NewInt(env, v); \
@@ -1315,7 +1310,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
         } while (false)
 #define POP_INTEGER_SWAP(CType) \
         do { \
-            const uint8_t *src = (param.abi.regular ? own_sp : caller_sp) + param.abi.offset; \
+            const uint8_t *src = in_ptr + param.abi.offset; \
             CType v = *(const CType *)src; \
              \
             Napi::Value arg = NewInt(env, ReverseBytes(v)); \
@@ -1331,7 +1326,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
             case PrimitiveKind::Void: { K_UNREACHABLE(); } break;
 
             case PrimitiveKind::Bool: {
-                const uint8_t *src = (param.abi.regular ? own_sp : caller_sp) + param.abi.offset;
+                const uint8_t *src = in_ptr + param.abi.offset;
                 bool b = *(bool *)src;
 
                 Napi::Value arg = Napi::Boolean::New(env, b);
@@ -1354,7 +1349,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
             case PrimitiveKind::UInt64S: { POP_INTEGER_SWAP(uint64_t); } break;
 
             case PrimitiveKind::String: {
-                const uint8_t *src = (param.abi.regular ? own_sp : caller_sp) + param.abi.offset;
+                const uint8_t *src = in_ptr + param.abi.offset;
                 const char *str = *(const char **)src;
 
                 Napi::Value arg = str ? Napi::String::New(env, str) : env.Null();
@@ -1365,7 +1360,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
                 }
             } break;
             case PrimitiveKind::String16: {
-                const uint8_t *src = (param.abi.regular ? own_sp : caller_sp) + param.abi.offset;
+                const uint8_t *src = in_ptr + param.abi.offset;
                 const char16_t *str16 = *(const char16_t **)src;
 
                 Napi::Value arg = str16 ? Napi::String::New(env, str16) : env.Null();
@@ -1376,7 +1371,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
                 }
             } break;
             case PrimitiveKind::String32: {
-                const uint8_t *src = (param.abi.regular ? own_sp : caller_sp) + param.abi.offset;
+                const uint8_t *src = in_ptr + param.abi.offset;
                 const char32_t *str32 = *(const char32_t **)src;
 
                 Napi::Value arg = str32 ? MakeStringFromUTF32(env, str32) : env.Null();
@@ -1384,7 +1379,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
             } break;
 
             case PrimitiveKind::Pointer: {
-                const uint8_t *src = (param.abi.regular ? own_sp : caller_sp) + param.abi.offset;
+                const uint8_t *src = in_ptr + param.abi.offset;
                 void *ptr2 = *(void **)src;
 
                 Napi::Value p = ptr2 ? WrapPointer(env, param.type->ref.type, ptr2) : env.Null();
@@ -1397,7 +1392,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
 
             case PrimitiveKind::Record:
             case PrimitiveKind::Union: {
-                uint8_t *ptr = (param.abi.regular ? own_sp : caller_sp) + param.abi.offset;
+                uint8_t *ptr = in_ptr + param.abi.offset;
                 uint8_t *src = param.abi.indirect ? *(uint8_t **)ptr : ptr;
 
                 CompactFloats(src, param.abi.hfa32);
@@ -1408,14 +1403,14 @@ void CallData::Relay(Size idx, uint8_t *sp)
             case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
 
             case PrimitiveKind::Float32: {
-                const uint8_t *src = (param.abi.regular ? own_sp : caller_sp) + param.abi.offset;
+                const uint8_t *src = in_ptr + param.abi.offset;
                 float f = *(float *)src;
 
                 Napi::Value arg = Napi::Number::New(env, (double)f);
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::Float64: {
-                const uint8_t *src = (param.abi.regular ? own_sp : caller_sp) + param.abi.offset;
+                const uint8_t *src = in_ptr + param.abi.offset;
                 double d = *(double *)src;
 
                 Napi::Value arg = Napi::Number::New(env, d);
@@ -1423,7 +1418,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
             } break;
 
             case PrimitiveKind::Callback: {
-                const uint8_t *src = (param.abi.regular ? own_sp : caller_sp) + param.abi.offset;
+                const uint8_t *src = in_ptr + param.abi.offset;
                 void *ptr2 = *(void **)src;
 
                 Napi::Value p = ptr2 ? WrapCallback(env, param.type->ref.type, ptr2) : env.Null();
@@ -1544,7 +1539,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
                     return;
                 ExpandFloats(dest, proto->ret.abi.hfa32);
             } else {
-                uint64_t *gpr_ptr = (uint64_t *)own_sp;
+                uint64_t *gpr_ptr = (uint64_t *)in_ptr;
                 uint8_t *dest = (uint8_t *)gpr_ptr[8]; // r8
 
                 if (!PushObject(obj, type, dest))
