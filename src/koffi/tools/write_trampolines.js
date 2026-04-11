@@ -85,6 +85,7 @@ extern "C" int Trampoline0;
 extern "C" int Trampoline1;
 extern "C" int Trampoline${n - 1};
 
+static const Size TrampolineSize = (uint8_t *)&Trampoline1 - (uint8_t *)&Trampoline0;
 static const void *const TrampolineLast = &Trampoline${n - 1};
 `;
 
