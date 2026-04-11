@@ -195,7 +195,4 @@ SwitchAndRelay:
     addi.d $sp, $sp, 16
     jr $ra
 
-# Trampolines
-# ----------------------------
-
-#include "../trampolines/gnu.inc"
+#include "gnu.inc"

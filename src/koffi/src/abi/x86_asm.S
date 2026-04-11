@@ -188,7 +188,4 @@ GetEIP:
     ret
 #endif
 
-# Trampolines
-# ----------------------------
-
-#include "../trampolines/gnu.inc"
+#include "gnu.inc"

@@ -151,9 +151,6 @@ SwitchAndRelay proc
     ret
 SwitchAndRelay endp
 
-; Trampolines
-; ----------------------------
-
 include masm32.inc
 
 end

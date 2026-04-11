@@ -188,7 +188,4 @@ SYMBOL(SwitchAndRelay):
     ret
     .cfi_endproc
 
-# Trampolines
-# ----------------------------
-
-#include "../trampolines/gnu.inc"
+#include "gnu.inc"

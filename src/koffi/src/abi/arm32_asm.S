@@ -162,7 +162,4 @@ RelayAndSwitch:
     bx lr
     .cfi_endproc
 
-# Trampolines
-# ----------------------------
-
-#include "../trampolines/gnu.inc"
+#include "gnu.inc"

@@ -168,9 +168,6 @@ SwitchAndRelay proc frame
     ret
 SwitchAndRelay endp
 
-; Trampolines
-; ----------------------------
-
 include masm64.inc
 
 end

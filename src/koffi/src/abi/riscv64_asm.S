@@ -194,7 +194,4 @@ SwitchAndRelay:
     addi sp, sp, 16
     ret
 
-# Trampolines
-# ----------------------------
-
-#include "../trampolines/gnu.inc"
+#include "gnu.inc"

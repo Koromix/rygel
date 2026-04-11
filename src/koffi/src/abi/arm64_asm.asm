@@ -164,9 +164,6 @@ SwitchAndRelay PROC
     ret
     ENDP
 
-; Trampolines
-; ----------------------------
-
-    INCLUDE ../trampolines/armasm.inc
+    INCLUDE armasm.inc
 
     END

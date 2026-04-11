@@ -346,6 +346,7 @@ async function build() {
             'src/koffi/LICENSE.txt',
             'src/koffi/package.json',
             'src/koffi/README.md',
+            'src/koffi/tools/write_trampolines.js',
             'vendor/node-addon-api/napi.h',
             'vendor/node-addon-api/napi-inl.h',
             'vendor/node-addon-api/napi-inl.deprecated.h',

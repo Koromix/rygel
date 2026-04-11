@@ -90,6 +90,8 @@ function Builder(config = {}) {
 
         retry &= fs.existsSync(work_dir + '/CMakeCache.txt');
 
+        args.push(`-DNODE_JS_EXECPATH=${process.execPath}`);
+
         // Download or use Node headers
         if (options.api == null) {
             let destname = `${cache_dir}/node-v${runtime_version}-headers.tar.gz`;
