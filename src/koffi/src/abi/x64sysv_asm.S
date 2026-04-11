@@ -40,7 +40,7 @@
     movq %rsp, (%rdx)
     movq %rsp, %rbp
     .cfi_def_cfa rbp, 16
-    leaq 112(%rsi), %rsp
+    leaq 128(%rsi), %rsp
 .endm
 
 # Call native function.
@@ -168,20 +168,20 @@ RelayTrampoline:
     .cfi_def_cfa rsp, 8
     subq $152, %rsp
     .cfi_def_cfa rsp, 160
-    movq %rdi, 0(%rsp)
-    movq %rsi, 8(%rsp)
-    movq %rdx, 16(%rsp)
-    movq %rcx, 24(%rsp)
-    movq %r8, 32(%rsp)
-    movq %r9, 40(%rsp)
-    movsd %xmm0, 48(%rsp)
-    movsd %xmm1, 56(%rsp)
-    movsd %xmm2, 64(%rsp)
-    movsd %xmm3, 72(%rsp)
-    movsd %xmm4, 80(%rsp)
-    movsd %xmm5, 88(%rsp)
-    movsd %xmm6, 96(%rsp)
-    movsd %xmm7, 104(%rsp)
+    movq %rdi, 32(%rsp)
+    movq %rsi, 40(%rsp)
+    movq %rdx, 48(%rsp)
+    movq %rcx, 56(%rsp)
+    movq %r8, 64(%rsp)
+    movq %r9, 72(%rsp)
+    movsd %xmm0, 80(%rsp)
+    movsd %xmm1, 88(%rsp)
+    movsd %xmm2, 96(%rsp)
+    movsd %xmm3, 104(%rsp)
+    movsd %xmm4, 112(%rsp)
+    movsd %xmm5, 120(%rsp)
+    movsd %xmm6, 128(%rsp)
+    movsd %xmm7, 136(%rsp)
     movq %rax, %rdi
     movq %rsp, %rsi
 #if defined(__linux__)
@@ -189,10 +189,10 @@ RelayTrampoline:
 #else
     call SYMBOL(RelayCallback)
 #endif
-    movq 112(%rsp), %rax
-    movq 120(%rsp), %rdx
-    movsd 128(%rsp), %xmm0
-    movsd 136(%rsp), %xmm1
+    movq 0(%rsp), %rax
+    movq 8(%rsp), %rdx
+    movsd 16(%rsp), %xmm0
+    movsd 24(%rsp), %xmm1
     addq $152, %rsp
     .cfi_def_cfa rsp, 8
     ret

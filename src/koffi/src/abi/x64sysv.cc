@@ -315,7 +315,7 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
             switch (ret.method) {
                 case AbiMethod::Stack: {
                     param.abi.regular = false;
-                    param.abi.offsets[0] = 14 * 8 + ret.stack_offset;
+                    param.abi.offsets[0] = 16 * 8 + ret.stack_offset;
                 } break;
                 case AbiMethod::Gpr: {
                     param.abi.regular = true;
@@ -363,7 +363,7 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
             }
         }
 
-        func->stk_size = AlignLen(14 * 8 + analyser.StackOffset(), 16);
+        func->stk_size = AlignLen(16 * 8 + analyser.StackOffset(), 16);
         func->forward_fp = analyser.XmmCount();
     }
 
@@ -1168,16 +1168,11 @@ Napi::Value CallData::EndAsync()
 
 void CallData::Relay(Size idx, uint8_t *sp)
 {
-    uint8_t *own_sp = sp;
-    uint8_t *caller_sp = sp + 160;
-    BackRegisters *out_reg = (BackRegisters *)(sp + 112);
+    uint8_t *in_ptr = sp + 32;
+    BackRegisters *out_reg = (BackRegisters *)sp;
 
     if (env.IsExceptionPending()) [[unlikely]]
         return;
-
-    // Account for the fact that the stack offsets are optimized for the forward call code,
-    // and they start after the GPR (6 registers) and the XMM (8 registers).
-    caller_sp -= 14 * 8;
 
     const TrampolineInfo &trampoline = shared.trampolines[idx];
 
@@ -1197,7 +1192,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
 
 #define POP_INTEGER(CType) \
         do { \
-            const uint8_t *src = (param.abi.regular ? own_sp : caller_sp) + param.abi.offsets[0]; \
+            const uint8_t *src = in_ptr + param.abi.offsets[0]; \
             CType v = *(const CType *)src; \
              \
             Napi::Value arg = NewInt(env, v); \
@@ -1205,7 +1200,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
         } while (false)
 #define POP_INTEGER_SWAP(CType) \
         do { \
-            const uint8_t *src = (param.abi.regular ? own_sp : caller_sp) + param.abi.offsets[0]; \
+            const uint8_t *src = in_ptr + param.abi.offsets[0]; \
             CType v = *(const CType *)src; \
              \
             Napi::Value arg = NewInt(env, ReverseBytes(v)); \
@@ -1221,7 +1216,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
             case PrimitiveKind::Void: { K_UNREACHABLE(); } break;
 
             case PrimitiveKind::Bool: {
-                const uint8_t *src = (param.abi.regular ? own_sp : caller_sp) + param.abi.offsets[0];
+                const uint8_t *src = in_ptr + param.abi.offsets[0];
                 bool b = *(bool *)src;
 
                 Napi::Value arg = Napi::Boolean::New(env, b);
@@ -1244,7 +1239,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
             case PrimitiveKind::UInt64S: { POP_INTEGER_SWAP(uint64_t); } break;
 
             case PrimitiveKind::String: {
-                const uint8_t *src = (param.abi.regular ? own_sp : caller_sp) + param.abi.offsets[0];
+                const uint8_t *src = in_ptr + param.abi.offsets[0];
                 const char *str = *(const char **)src;
 
                 Napi::Value arg = str ? Napi::String::New(env, str) : env.Null();
@@ -1255,7 +1250,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
                 }
             } break;
             case PrimitiveKind::String16: {
-                const uint8_t *src = (param.abi.regular ? own_sp : caller_sp) + param.abi.offsets[0];
+                const uint8_t *src = in_ptr + param.abi.offsets[0];
                 const char16_t *str16 = *(const char16_t **)src;
 
                 Napi::Value arg = str16 ? Napi::String::New(env, str16) : env.Null();
@@ -1266,7 +1261,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
                 }
             } break;
             case PrimitiveKind::String32: {
-                const uint8_t *src = (param.abi.regular ? own_sp : caller_sp) + param.abi.offsets[0];
+                const uint8_t *src = in_ptr + param.abi.offsets[0];
                 const char32_t *str32 = *(const char32_t **)src;
 
                 Napi::Value arg = str32 ? MakeStringFromUTF32(env, str32) : env.Null();
@@ -1274,7 +1269,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
             } break;
 
             case PrimitiveKind::Pointer: {
-                const uint8_t *src = (param.abi.regular ? own_sp : caller_sp) + param.abi.offsets[0];
+                const uint8_t *src = in_ptr + param.abi.offsets[0];
                 void *ptr2 = *(void **)src;
 
                 Napi::Value p = ptr2 ? WrapPointer(env, param.type->ref.type, ptr2) : env.Null();
@@ -1290,27 +1285,27 @@ void CallData::Relay(Size idx, uint8_t *sp)
                 if (param.abi.regular) {
                     uint64_t buf[2];
 
-                    buf[0] = *(uint64_t *)(own_sp + param.abi.offsets[0]);
-                    buf[1] = *(uint64_t *)(own_sp + param.abi.offsets[1]);
+                    buf[0] = *(uint64_t *)(in_ptr + param.abi.offsets[0]);
+                    buf[1] = *(uint64_t *)(in_ptr + param.abi.offsets[1]);
 
                     Napi::Object obj = DecodeObject(env, (const uint8_t *)buf, param.type);
                     arguments.Append(obj);
                 } else {
-                    Napi::Object obj = DecodeObject(env, caller_sp + param.abi.offsets[0], param.type);
+                    Napi::Object obj = DecodeObject(env, in_ptr + param.abi.offsets[0], param.type);
                     arguments.Append(obj);
                 }
             } break;
             case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
 
             case PrimitiveKind::Float32: {
-                const uint8_t *src = (param.abi.regular ? own_sp : caller_sp) + param.abi.offsets[0];
+                const uint8_t *src = in_ptr + param.abi.offsets[0];
                 float f = *(float *)src;
 
                 Napi::Value arg = Napi::Number::New(env, (double)f);
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::Float64: {
-                const uint8_t *src = (param.abi.regular ? own_sp : caller_sp) + param.abi.offsets[0];
+                const uint8_t *src = in_ptr + param.abi.offsets[0];
                 double d = *(double *)src;
 
                 Napi::Value arg = Napi::Number::New(env, d);
@@ -1318,7 +1313,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
             } break;
 
             case PrimitiveKind::Callback: {
-                const uint8_t *src = (param.abi.regular ? own_sp : caller_sp) + param.abi.offsets[0];
+                const uint8_t *src = in_ptr + param.abi.offsets[0];
                 void *ptr2 = *(void **)src;
 
                 Napi::Value p = ptr2 ? WrapCallback(env, param.type->ref.type, ptr2) : env.Null();
@@ -1434,7 +1429,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
             Napi::Object obj = value.As<Napi::Object>();
 
             if (proto->ret.abi.method == AbiMethod::Stack) {
-                uint64_t *gpr_ptr = (uint64_t *)own_sp;
+                uint64_t *gpr_ptr = (uint64_t *)in_ptr;
                 uint8_t *dest = (uint8_t *)gpr_ptr[0];
 
                 if (!PushObject(obj, type, dest))
