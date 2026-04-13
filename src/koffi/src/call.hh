@@ -40,22 +40,21 @@ struct alignas(8) CallData {
     Napi::Env env;
     InstanceData *instance;
     InstanceMemory *mem;
-    const FunctionInfo *func;
-    void *native;
 
-    Span<uint8_t> old_stack_mem;
-    Span<uint8_t> old_heap_mem;
+    Size prev_stack;
+    Span<uint8_t> prev_heap;
     uint8_t *saved_sp;
 
+    void *native;
     uint8_t *async_base;
     const AbiInstruction *async_ip;
 
-    LocalArray<int16_t, 16> used_trampolines;
-    HeapArray<OutArgument> out_arguments;
-
     BlockAllocator alloc;
 
-    CallData(Napi::Env env, InstanceData *instance, InstanceMemory *mem, const FunctionInfo *func, void *native);
+    LocalArray<int16_t, 16> used_trampolines;
+    LocalArray<OutArgument, MaxParameters> out_arguments;
+
+    CallData(Napi::Env env, InstanceData *instance, InstanceMemory *mem);
     ~CallData();
 
 #if defined(UNITY_BUILD) && (defined(__clang__) || defined(_MSC_VER))
@@ -66,16 +65,14 @@ struct alignas(8) CallData {
 
     void Dispose();
 
-    INLINE_IF_UNITY Napi::Value Run(const Napi::CallbackInfo &info);
+    INLINE_IF_UNITY Napi::Value Run(const Napi::CallbackInfo &info, const FunctionInfo *func, void *native);
 
-    bool PrepareAsync(const Napi::CallbackInfo &info);
-    void ExecuteAsync();
+    bool PrepareAsync(const Napi::CallbackInfo &info, const FunctionInfo *func);
+    void ExecuteAsync(void *native);
     Napi::Value EndAsync();
 
     void Relay(Size idx, uint8_t *sp);
     void RelayAsync(Size idx, uint8_t *sp);
-
-    void DumpForward() const;
 
     INLINE_IF_UNITY bool PushString(Napi::Value value, int directions, const char **out_str);
     INLINE_IF_UNITY bool PushString16(Napi::Value value, int directions, const char16_t **out_str16);

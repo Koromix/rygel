@@ -259,7 +259,6 @@ struct InstanceMemory {
 
     bool busy;
     bool temporary;
-    int depth;
 };
 
 struct InstanceData {

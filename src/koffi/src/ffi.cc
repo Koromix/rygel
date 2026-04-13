@@ -1468,13 +1468,6 @@ InstanceMemory *AllocateMemory(InstanceData *instance, Size stack_size, Size hea
 
 void ReleaseMemory(InstanceData *instance, InstanceMemory *mem)
 {
-    if (--mem->depth)
-        return;
-
-    // The first InstanceMemory is used for sync calls, no need to manage the async stuff
-    if (mem == instance->memories[0])
-        return;
-
     std::lock_guard<std::mutex> lock(instance->mem_mutex);
 
     if (mem->temporary) {
@@ -1496,12 +1489,15 @@ static Napi::Value TranslateNormalCall(const FunctionInfo *func, void *native, c
     }
 
     InstanceMemory *mem = instance->memories[0];
-    CallData call(env, instance, mem, func, native);
+    CallData call(env, instance, mem);
 
-    K_DEFER_C(prev_call = sync_call) { sync_call = prev_call; };
+    K_DEFER_C(prev_call = sync_call) {
+        call.Dispose();
+        sync_call = prev_call;
+    };
     sync_call = &call;
 
-    return call.Run(info);
+    return call.Run(info, func, native);
 }
 
 Napi::Value TranslateNormalCall(const Napi::CallbackInfo &info)
@@ -1600,12 +1596,15 @@ static Napi::Value TranslateVariadicCall(const FunctionInfo *func, void *native,
     }
 
     InstanceMemory *mem = instance->memories[0];
-    CallData call(env, instance, mem, variadic, native);
+    CallData call(env, instance, mem);
 
-    K_DEFER_C(prev_call = sync_call) { sync_call = prev_call; };
+    K_DEFER_C(prev_call = sync_call) {
+        call.Dispose();
+        sync_call = prev_call;
+    };
     sync_call = &call;
 
-    Napi::Value ret = call.Run(info);
+    Napi::Value ret = call.Run(info, variadic, native);
 
     if (variadic != instance->variadic_func) {
         err_guard.Disable();
@@ -1627,16 +1626,19 @@ class AsyncCall: public Napi::AsyncWorker {
     Napi::Env env;
 
     CallData call;
+    const FunctionInfo *func;
+    void *native;
+
     bool prepared = false;
 
 public:
-    AsyncCall(Napi::Env env, InstanceData *instance, const FunctionInfo *func,
-              void *native, InstanceMemory *mem, Napi::Function &callback)
-        : Napi::AsyncWorker(callback), env(env), call(env, instance, mem, func->Ref(), native) {}
-    ~AsyncCall() { call.func->Unref(); }
+    AsyncCall(Napi::Env env, InstanceData *instance, InstanceMemory *mem,
+              const FunctionInfo *func, void *native, Napi::Function &callback)
+        : Napi::AsyncWorker(callback), env(env), call(env, instance, mem), func(func->Ref()), native(native) {}
+    ~AsyncCall();
 
     bool Prepare(const Napi::CallbackInfo &info) {
-        prepared = call.PrepareAsync(info);
+        prepared = call.PrepareAsync(info, func);
 
         if (!prepared) [[unlikely]] {
             Napi::Error err = env.GetAndClearPendingException();
@@ -1645,16 +1647,23 @@ public:
 
         return prepared;
     }
-    void DumpForward() { call.DumpForward(); }
 
     void Execute() override;
     void OnOK() override;
 };
 
+AsyncCall::~AsyncCall()
+{
+    call.Dispose();
+    ReleaseMemory(call.instance, call.mem);
+
+    func->Unref();
+}
+
 void AsyncCall::Execute()
 {
     if (prepared) [[likely]] {
-        call.ExecuteAsync();
+        call.ExecuteAsync(native);
     }
 }
 
@@ -1694,7 +1703,7 @@ static Napi::Value TranslateAsyncCall(const FunctionInfo *func, void *native, co
         ThrowError<Napi::Error>(env, "Too many asynchronous calls are running");
         return env.Null();
     }
-    AsyncCall *async = new AsyncCall(env, instance, func, native, mem, callback);
+    AsyncCall *async = new AsyncCall(env, instance, mem, func, native, callback);
 
     async->Prepare(info);
     async->Queue();
@@ -1732,18 +1741,20 @@ extern "C" void RelayCallback(Size idx, uint8_t *sp)
         ThrowError<Napi::Error>(env, "Too many asynchronous calls are running");
         return;
     }
+    K_DEFER { ReleaseMemory(instance, mem); };
 
     // Avoid triggering the "use callback beyond FFI" check
     K_DEFER_C(generation = trampoline->generation) { trampoline->generation = generation; };
     trampoline->generation = -1;
 
     if (std::this_thread::get_id() == instance->main_thread_id) {
-        CallData call(env, instance, mem, nullptr, nullptr);
+        CallData call(env, instance, mem);
+        K_DEFER { call.Dispose(); };
 
         Napi::HandleScope scope(env);
         call.Relay(idx, sp);
     } else {
-        CallData call(env, instance, mem, nullptr, nullptr);
+        CallData call(env, instance, mem);
         call.RelayAsync(idx, sp);
     }
 }

@@ -23,20 +23,24 @@ struct RelayContext {
 
 #include "prototypes.inc"
 
-CallData::CallData(Napi::Env env, InstanceData *instance, InstanceMemory *mem, const FunctionInfo *func, void *native)
-    : env(env), instance(instance), mem(mem), func(func), native(native),
-      old_stack_mem(mem->stack), old_heap_mem(mem->heap)
+CallData::CallData(Napi::Env env, InstanceData *instance, InstanceMemory *mem)
+    : env(env), instance(instance), mem(mem),
+      prev_stack(mem->stack.len), prev_heap(mem->heap)
 {
-    mem->generation += !mem->depth;
-    mem->depth++;
+    mem->generation += (mem->stack.len == mem->stack0.len);
 }
 
 CallData::~CallData()
 {
-    if (!instance)
-        return;
+#if defined(K_DEBUG)
+    // K_ASSERT is already a noop if K_DEBUG is not defined, but let's guard it anyway
+    // for symmetry with the code in Dispose(), which only happens if K_DEBUG is defined.
+    K_ASSERT(!out_arguments.len);
+    K_ASSERT(!used_trampolines.len);
+#endif
 
-    Dispose();
+    mem->stack.len = prev_stack;
+    mem->heap = prev_heap;
 }
 
 void CallData::Dispose()
@@ -44,9 +48,6 @@ void CallData::Dispose()
     for (const OutArgument &out: out_arguments) {
         napi_delete_reference(env, out.ref);
     }
-
-    mem->stack = old_stack_mem;
-    mem->heap = old_heap_mem;
 
     if (used_trampolines.len) {
         std::lock_guard<std::mutex> lock(shared.mutex);
@@ -66,9 +67,10 @@ void CallData::Dispose()
         }
     }
 
-    ReleaseMemory(instance, mem);
-
-    instance = nullptr;
+#if defined(K_DEBUG)
+    out_arguments.len = 0;
+    used_trampolines.len = 0;
+#endif
 }
 
 void CallData::RelayAsync(Size idx, uint8_t *sp)
@@ -1001,26 +1003,6 @@ void *CallData::ReserveTrampoline(const FunctionInfo *proto, Napi::Function func
     return ptr;
 }
 
-void CallData::DumpForward() const
-{
-    PrintLn(StdErr, "%!..+---- %1 (%2) ----%!0", func->name, CallConventionNames[(int)func->convention]);
-
-    if (func->parameters.len) {
-        PrintLn(StdErr, "Parameters:");
-        for (Size i = 0; i < func->parameters.len; i++) {
-            const ParameterInfo &param = func->parameters[i];
-            PrintLn(StdErr, "  %1 = %2 (%3)", i, param.type->name, FmtMemSize(param.type->size));
-        }
-    }
-    PrintLn(StdErr, "Return: %1 (%2)", func->ret.type->name, FmtMemSize(func->ret.type->size));
-
-    Span<const uint8_t> stack = MakeSpan(mem->stack.end(), old_stack_mem.end() - mem->stack.end());
-    Span<const uint8_t> heap = MakeSpan(old_heap_mem.ptr, mem->heap.ptr - old_heap_mem.ptr);
-
-    DumpMemory("Stack", stack);
-    DumpMemory("Heap", heap);
-}
-
 bool CallData::CheckDynamicLength(Napi::Object obj, Size element, const char *countedby, Napi::Value value)
 {
     int64_t expected = -1;
@@ -1153,13 +1135,7 @@ void PerformAsyncRelay(napi_env, napi_value, void *, void *udata)
     CallData *call = ctx->call;
 
     call->Relay(ctx->idx, ctx->sp);
-
-    if (!call->func) {
-        // Use func = nullptr as cue that this CallData was created artificially just to
-        // perform the callback. Which means the creator does not run on the main thread,
-        // and cannot properly destroy it, because some members are managed by Node.
-        call->Dispose();
-    }
+    call->Dispose();
 
     // We're done!
     std::lock_guard<std::mutex> lock(ctx->mutex);
