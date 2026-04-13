@@ -30,6 +30,7 @@ static const char *const PrimitiveKindNames[] = {
     #include "primitives.inc"
 };
 
+struct InstanceData;
 struct TypeInfo;
 struct RecordMember;
 struct FunctionInfo;
@@ -215,12 +216,15 @@ struct ValueCast {
 struct FunctionInfo {
     mutable std::atomic_int refcount { 1 };
 
+    napi_env env;
+    InstanceData *instance;
+    const LibraryHolder *lib = nullptr;
+
     const char *name;
     const char *decorated_name; // Only set for some platforms/calling conventions
 #if defined(_WIN32)
     int ordinal_name = -1;
 #endif
-    const LibraryHolder *lib = nullptr;
 
     void *native;
     CallConvention convention;

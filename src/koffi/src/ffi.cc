@@ -1159,6 +1159,9 @@ static Napi::Value CreateFunctionType(const Napi::CallbackInfo &info)
     FunctionInfo *func = instance->callbacks.AppendDefault();
     K_DEFER_N(err_guard) { instance->callbacks.RemoveLast(1); };
 
+    func->env = env;
+    func->instance = instance;
+
     if (info.Length() >= 2) {
         if (!ParseClassicFunction(info, false, func))
             return env.Null();
@@ -1480,8 +1483,8 @@ void ReleaseMemory(InstanceData *instance, InstanceMemory *mem)
 
 static Napi::Value TranslateNormalCall(const FunctionInfo *func, void *native, const Napi::CallbackInfo &info, Size count)
 {
-    Napi::Env env = info.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
+    Napi::Env env = func->env;
+    InstanceData *instance = func->instance;
 
     if (count < func->required_parameters) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected %1 arguments, got %2", func->parameters.len, count);
@@ -1508,8 +1511,8 @@ Napi::Value TranslateNormalCall(const Napi::CallbackInfo &info)
 
 static Napi::Value TranslateVariadicCall(const FunctionInfo *func, void *native, const Napi::CallbackInfo &info, Size count)
 {
-    Napi::Env env = info.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
+    Napi::Env env = func->env;
+    InstanceData *instance = func->instance;
 
     FunctionInfo *variadic = nullptr;
     K_DEFER_N(err_guard) { delete variadic; };
@@ -1683,8 +1686,8 @@ static Napi::Value TranslateAsyncCall(const FunctionInfo *func, void *native, co
 {
     K_ASSERT(!func->variadic);
 
-    Napi::Env env = info.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
+    Napi::Env env = func->env;
+    InstanceData *instance = func->instance;
 
     if (count <= func->required_parameters) {
         ThrowError<Napi::TypeError>(env, "Expected %1 arguments, got %2", func->parameters.len + 1, count);
@@ -1774,6 +1777,8 @@ static Napi::Value FindLibraryFunction(const Napi::CallbackInfo &info)
     FunctionInfo *func = new FunctionInfo();
     K_DEFER { func->Unref(); };
 
+    func->env = env;
+    func->instance = instance;
     func->lib = lib->Ref();
 
     if (info.Length() >= 2) {
