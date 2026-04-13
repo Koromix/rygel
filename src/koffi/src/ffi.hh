@@ -259,6 +259,9 @@ struct InstanceMemory {
     Span<uint8_t> stack0;
     Span<uint8_t> heap;
 
+    // For big heap allocations
+    LinkedAllocator allocator;
+
     uint16_t generation; // Can wrap without risk
 
     bool busy;
@@ -302,8 +305,8 @@ struct InstanceData {
     uint32_t last_error = 0;
 #endif
 
-    BucketArray<BlockAllocator> encode_allocators;
-    HashMap<void *, BlockAllocator *> encode_map;
+    BucketArray<LinkedAllocator> encode_allocators;
+    HashMap<void *, LinkedAllocator *> encode_map;
 
     HashMap<void *, int16_t> trampolines_map;
 

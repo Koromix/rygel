@@ -1724,15 +1724,15 @@ bool Encode(Napi::Env env, uint8_t *origin, Napi::Value value, const TypeInfo *t
 #undef PUSH_INTEGER
 
     // Keep memory around if any was allocated
-    if (call.alloc.IsUsed()) {
-        BlockAllocator *copy = instance->encode_map.FindValue(origin, nullptr);
+    if (mem.allocator.IsUsed()) {
+        LinkedAllocator *copy = instance->encode_map.FindValue(origin, nullptr);
 
         if (!copy) {
             copy = instance->encode_allocators.AppendDefault();
             instance->encode_map.Set(origin, copy);
         }
 
-        std::swap(call.alloc, *copy);
+        std::swap(mem.allocator, *copy);
     }
 
     return true;

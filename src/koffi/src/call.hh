@@ -44,12 +44,11 @@ struct alignas(8) CallData {
     Size prev_stack;
     Span<uint8_t> prev_heap;
     uint8_t *saved_sp;
+    bool release_alloc = false;
 
     void *native;
     uint8_t *async_base;
     const AbiInstruction *async_ip;
-
-    BlockAllocator alloc;
 
     LocalArray<int16_t, 16> used_trampolines;
     LocalArray<OutArgument, MaxParameters> out_arguments;
@@ -145,8 +144,9 @@ inline T *CallData::AllocHeap(Size size, Size align)
         int flags = 0;
 #endif
 
-        ptr = (uint8_t *)AllocateRaw(&alloc, size + align, flags);
+        ptr = (uint8_t *)AllocateRaw(&mem->allocator, size + align, flags);
         ptr = AlignUp(ptr, align);
+        release_alloc |= (prev_stack == mem->stack.len);
 
         return ptr;
     }

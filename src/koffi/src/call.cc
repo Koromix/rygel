@@ -41,6 +41,14 @@ CallData::~CallData()
 
     mem->stack.len = prev_stack;
     mem->heap = prev_heap;
+
+    if (release_alloc) {
+        // We could check for prev_stack == mem->stack.len and call ReleaseAll() if true, but
+        // it is a virtual method. Which means it could be slow (unless devirtualized), and
+        // most of the time there's nothing to release.
+        // So instead, take note of the need to call ReleaseAll() when big chunks are allocated.
+        mem->allocator.ReleaseAll();
+    }
 }
 
 void CallData::Dispose()
@@ -163,7 +171,8 @@ Size CallData::PushStringValue(Napi::Value value, const char **out_str)
         K_ASSERT(status == napi_ok);
 
         len++;
-        buf = AllocateSpan<char>(&alloc, (Size)len);
+        buf = AllocateSpan<char>(&mem->allocator, (Size)len);
+        release_alloc |= (prev_stack == mem->stack.len);
 
         status = napi_get_value_string_utf8(env, value, buf.ptr, (size_t)buf.len, &len);
         K_ASSERT(status == napi_ok);
@@ -198,7 +207,8 @@ Size CallData::PushString16Value(Napi::Value value, const char16_t **out_str16)
         K_ASSERT(status == napi_ok);
 
         len++;
-        buf = AllocateSpan<char16_t>(&alloc, (Size)len);
+        buf = AllocateSpan<char16_t>(&mem->allocator, (Size)len);
+        release_alloc |= (prev_stack == mem->stack.len);
 
         status = napi_get_value_string_utf16(env, value, buf.ptr, (size_t)buf.len, &len);
         K_ASSERT(status == napi_ok);
@@ -229,7 +239,8 @@ Size CallData::PushString32Value(Napi::Value value, const char32_t **out_str32)
         mem->heap.ptr += buf16.len * 4;
         mem->heap.len -= buf16.len * 4;
     } else {
-        buf = AllocateSpan<char32_t>(&alloc, buf16.len);
+        buf = AllocateSpan<char32_t>(&mem->allocator, buf16.len);
+        release_alloc |= (prev_stack == mem->stack.len);
     }
 
     Size j = 0;
