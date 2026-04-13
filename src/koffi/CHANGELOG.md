@@ -11,7 +11,7 @@
 
 *Released on 2026-04-07*
 
-- Fix possile exit crash after using `koffi.reset()` (regression introduced in Koffi 2.15.2)
+- Fix possible exit crash after using `koffi.reset()` (regression introduced in Koffi 2.15.2)
 
 #### Koffi 2.15.5
 
