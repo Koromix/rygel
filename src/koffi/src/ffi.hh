@@ -276,8 +276,6 @@ struct InstanceData {
     BucketArray<FunctionInfo> callbacks;
     Size base_types_count;
 
-    bool debug;
-
     const TypeInfo *void_type;
     const TypeInfo *char_type;
     const TypeInfo *char16_type;

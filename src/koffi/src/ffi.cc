@@ -2499,8 +2499,6 @@ static InstanceData *CreateInstance()
 
     instance->main_thread_id = std::this_thread::get_id();
 
-    instance->debug = GetDebugFlag("DUMP_CALLS");
-
 #if defined(_WIN32)
     TEB *teb = GetTEB();
 
