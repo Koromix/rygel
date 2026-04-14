@@ -87,6 +87,11 @@ static_assert(offsetof(TEB, DeallocationStack) == 0xE0C);
 static_assert(offsetof(TEB, GuaranteedStackBytes) == 0x0F78);
 static_assert(offsetof(TEB, SameTebFlags) == 0xFCA);
 
+struct SehFrame {
+    void *Next;
+    void *Handler;
+};
+
 #endif
 
 static inline TEB *GetTEB()

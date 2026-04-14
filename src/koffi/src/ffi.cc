@@ -1447,6 +1447,18 @@ InstanceMemory *AllocateMemory(InstanceData *instance, Size stack_size, Size hea
     // Keep real stack limits intact, in case we need them
     mem->stack0 = mem->stack;
 
+#if defined(_WIN32) && !defined(_WIN64)
+    mem->stack.len -= K_SIZE(SehFrame);
+
+    // Prepare at the top SEH frame record
+    {
+        SehFrame *seh = (SehFrame *)mem->stack.end();
+
+        seh->Next = (void *)-1;
+        seh->Handler = (void *)SehHandler;
+    }
+#endif
+
     mem->heap.len = heap_size;
 #if defined(_WIN32)
     mem->heap.ptr = (uint8_t *)VirtualAlloc(nullptr, mem->heap.len, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);

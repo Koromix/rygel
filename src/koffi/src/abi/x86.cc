@@ -26,13 +26,6 @@ struct BackRegisters {
     int ret_pop;
 };
 
-#if defined(_WIN32)
-struct SehFrame {
-    void *Next;
-    void *Handler;
-};
-#endif
-
 extern "C" uint64_t ForwardCallG(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
 extern "C" float ForwardCallF(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
 extern "C" double ForwardCallD(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
@@ -308,15 +301,12 @@ Napi::Value RunLoop(CallData *call, napi_value *args, uint32_t *base, const AbiI
     #define WRAP(Expr) \
         [&]() { \
             TEB *teb = GetTEB(); \
-            SehFrame *seh = (SehFrame *)call->mem->stack.ptr; \
              \
             K_DEFER_C(list = teb->ExceptionList) { \
                 teb->ExceptionList = list; \
                 call->instance->last_error = teb->LastErrorValue; \
             }; \
-            seh->Next = (void *)-1; \
-            seh->Handler = (void *)SehHandler; \
-            teb->ExceptionList = seh; \
+            teb->ExceptionList = mem->stack0.end() - K_SIZE(SehFrame);; \
             teb->LastErrorValue = call->instance->last_error; \
              \
             ADJUST_TEB(teb, call->mem->stack0.ptr, call->mem->stack0.end()); \
