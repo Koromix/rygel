@@ -131,6 +131,7 @@ ForwardCallXDD:
 .global RelayCallback
 .global SwitchAndRelay
 .global RelayDirect
+.global TrampolineEnd
 
 # First, make a copy of argument registers.
 # Then call the C function RelayCallback with the following arguments:
@@ -197,3 +198,6 @@ SwitchAndRelay:
 
 .align 4
 #include "gnu.inc"
+
+TrampolineEnd:
+    ret

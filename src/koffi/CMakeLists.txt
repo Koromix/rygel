@@ -58,7 +58,6 @@ add_custom_command(OUTPUT trampolines/gnu.inc
                           trampolines/armasm.inc
                           trampolines/masm32.inc
                           trampolines/masm64.inc
-                          trampolines/prototypes.inc
                    COMMENT "Generate trampoline macros"
                    COMMAND "${NODE_JS_EXECPATH}"
                    ARGS "${CMAKE_CURRENT_SOURCE_DIR}/tools/write_trampolines.js" "${CMAKE_CURRENT_BINARY_DIR}/trampolines" 8192
@@ -131,7 +130,7 @@ elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
     endif()
 endif()
 
-add_node_addon(NAME koffi SOURCES ${KOFFI_SRC} trampolines/prototypes.inc)
+add_node_addon(NAME koffi SOURCES ${KOFFI_SRC} trampolines/gnu.inc)
 target_include_directories(koffi PRIVATE . ../.. ../../vendor/node-addon-api "${CMAKE_CURRENT_BINARY_DIR}/trampolines")
 
 if(WIN32)

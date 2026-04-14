@@ -151,6 +151,25 @@ SwitchAndRelay proc
     ret
 SwitchAndRelay endp
 
+align 16
+FindTrampolineStart proc
+    call GetEIP
+    add eax, 16
+    and eax, 0FFFFFFF0h
+    ret
+FindTrampolineStart endp
+align 16
+
 include masm32.inc
+
+FindTrampolineEnd proc
+    call GetEIP
+    ret
+FindTrampolineEnd endp
+
+GetEIP proc
+    mov eax, dword ptr [esp]
+    ret
+GetEIP endp
 
 end

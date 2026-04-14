@@ -93,6 +93,7 @@ ForwardCallXDDDD:
 .global RelayCallback
 .global SwitchAndRelay
 .global RelayDirect
+.global TrampolineEnd
 
 # First, make a copy of the argument registers.
 # Then call the C function RelayCallback with the following arguments:
@@ -163,3 +164,6 @@ RelayAndSwitch:
     .cfi_endproc
 
 #include "gnu.inc"
+
+TrampolineEnd:
+    bx lr

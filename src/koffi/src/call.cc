@@ -21,7 +21,11 @@ struct RelayContext {
     bool done = false;
 };
 
-#include "prototypes.inc"
+extern "C" void *FindTrampolineStart();
+extern "C" void *FindTrampolineEnd();
+
+static const uint8_t *TrampolineStart = (const uint8_t *)FindTrampolineStart();
+static const Size TrampolineSize = ((const uint8_t *)FindTrampolineEnd() - TrampolineStart) / MaxTrampolines;
 
 CallData::CallData(Napi::Env env, InstanceData *instance, InstanceMemory *mem)
     : env(env), instance(instance), mem(mem),
@@ -1156,12 +1160,7 @@ void PerformAsyncRelay(napi_env, napi_value, void *, void *udata)
 
 void *GetTrampoline(int idx)
 {
-#if defined(K_DEBUG)
-    Size total = (uint8_t *)TrampolineLast - (uint8_t *)&Trampoline0 + TrampolineSize;
-    K_ASSERT(TrampolineSize * MaxTrampolines == total);
-#endif
-
-    return (uint8_t *)&Trampoline0 + TrampolineSize * idx;
+    return (void *)(TrampolineStart + TrampolineSize * idx);
 }
 
 }

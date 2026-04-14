@@ -50,8 +50,6 @@ function run() {
         i => `public Trampoline${i}`,
         i => `Trampoline${i} proc\n    trampoline ${i}\nTrampoline${i} endp`
     );
-
-    writeCxxTrampolines(path.join(dest_dir, 'prototypes.inc'), n);
 }
 
 function writeAsmTrampolines(filename, n, fmt_export, fmt_proc, end = null) {
@@ -75,19 +73,5 @@ function writeAsmTrampolines(filename, n, fmt_export, fmt_proc, end = null) {
     }
 
     let content = lines.join('\n');
-    fs.writeFileSync(filename, content);
-}
-
-function writeCxxTrampolines(filename, n) {
-    let content = `static_assert(MaxTrampolines == ${n});
-
-extern "C" int Trampoline0;
-extern "C" int Trampoline1;
-extern "C" int Trampoline${n - 1};
-
-static const Size TrampolineSize = (uint8_t *)&Trampoline1 - (uint8_t *)&Trampoline0;
-static const void *const TrampolineLast = &Trampoline${n - 1};
-`;
-
     fs.writeFileSync(filename, content);
 }

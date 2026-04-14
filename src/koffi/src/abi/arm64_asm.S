@@ -114,6 +114,7 @@ SYMBOL(ForwardCallDDDDX):
 .global SYMBOL(RelayCallback)
 .global SYMBOL(SwitchAndRelay)
 .global SYMBOL(RelayDirect)
+.global SYMBOL(TrampolineEnd)
 
 # First, make a copy of the argument registers.
 # Then call the C function RelayCallback with the following arguments:
@@ -189,3 +190,6 @@ SYMBOL(SwitchAndRelay):
     .cfi_endproc
 
 #include "gnu.inc"
+
+SYMBOL(TrampolineEnd):
+    ret

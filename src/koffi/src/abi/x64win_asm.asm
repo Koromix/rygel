@@ -110,6 +110,8 @@ ForwardCallDX endp
 extern RelayCallback : PROC
 public SwitchAndRelay
 extern RelayDirect : PROC
+public FindTrampolineStart
+public FindTrampolineEnd
 
 ; First, make a copy of argument registers.
 ; Then call the C function RelayCallback with the following arguments:
@@ -168,6 +170,23 @@ SwitchAndRelay proc frame
     ret
 SwitchAndRelay endp
 
+align 16
+FindTrampolineStart:
+    call GetRIP
+    add rax, 16
+    and rax, 0FFFFFFFFFFFFFFF0h
+    ret
+align 16
+
 include masm64.inc
+
+FindTrampolineEnd:
+    call GetRIP
+    ret
+
+; I could not f*cking find how to use lea with RIP-relative addressing in MASM64. Oh well.
+GetRIP:
+    mov rax, qword ptr [rsp]
+    ret
 
 end
