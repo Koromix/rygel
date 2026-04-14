@@ -14,7 +14,7 @@
 - Support buffers and typed arrays in `koffi.address()`
 - Put x86 SEH record at the top of stack frame
 - Optimize Koffi binaries produced by GCC (with `-fno-semantic-interposition`)
-- Fix nonsensical addresses in Koffi call dumps (when using DUMP_CALLS=1 environement variable)
+- Fix nonsensical addresses in Koffi call dumps (when using DUMP_CALLS=1 environment variable)
 
 - Reduce Koffi package size even more:
   * Replace table of callback trampoline pointers with simple offset computation
