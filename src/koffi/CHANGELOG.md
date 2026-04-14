@@ -5,6 +5,25 @@
 
 ## Koffi 2
 
+### Koffi 2.16
+
+#### Koffi 2.16.0
+
+*Released on 2026-04-14*
+
+- Support buffers and typed arrays in `koffi.address()`
+- Put x86 SEH record at the top of stack frame
+- Optimize Koffi binaries produced by GCC (with `-fno-semantic-interposition`)
+- Fix nonsensical addresses in Koffi call dumps (when using DUMP_CALLS=1 environement variable)
+
+- Reduce Koffi package size even more:
+  * Replace table of callback trampoline pointers with simple offset computation
+  * Strip out unused data and functions from Koffi binaries
+  * Generate repeated trampoline source and macros at build time
+  * Remove files not needed to build from source: tests, scripts, etc.
+  * Maximize NPM tarball compression with Zopfli
+- This reduces decompressed Koffi package size from 41.4 MB to 28.7 MB
+
 ### Koffi 2.15
 
 #### Koffi 2.15.6
