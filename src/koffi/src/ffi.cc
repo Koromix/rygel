@@ -2492,24 +2492,6 @@ static inline PrimitiveKind GetBigEndianPrimitive(PrimitiveKind kind)
 #endif
 }
 
-static InstanceData *CreateInstance()
-{
-    InstanceData *instance = new InstanceData();
-    K_DEFER_N(err_guard) { delete instance; };
-
-    instance->main_thread_id = std::this_thread::get_id();
-
-#if defined(_WIN32)
-    TEB *teb = GetTEB();
-
-    instance->main_stack_max = teb->StackBase;
-    instance->main_stack_min = teb->DeallocationStack;
-#endif
-
-    err_guard.Disable();
-    return instance;
-}
-
 static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
 {
     // Load recent N-API functions (version >= 9) functions dynamically
@@ -2536,7 +2518,7 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
         });
     }
 
-    InstanceData *instance = CreateInstance();
+    InstanceData *instance = new InstanceData();
     K_CRITICAL(instance, "Failed to initialize Koffi");
 
     env.SetInstanceData(instance);
@@ -2696,6 +2678,17 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
     }
 
     exports.Set("version", Napi::String::New(env, K_STRINGIFY(VERSION)));
+
+#if defined(_WIN32)
+    {
+        TEB *teb = GetTEB();
+
+        instance->main_stack_max = teb->StackBase;
+        instance->main_stack_min = teb->DeallocationStack;
+    }
+#endif
+
+    instance->main_thread_id = std::this_thread::get_id();
 
     napi_add_env_cleanup_hook(env, [](void *udata) {
         InstanceData *instance = (InstanceData *)udata;
