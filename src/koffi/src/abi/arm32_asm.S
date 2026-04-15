@@ -146,10 +146,7 @@ RelayAndSwitch:
     .cfi_offset 14, 8
     mov fp, sp
     ldr r4, [sp, 16]
-    ldr r5, [r4, 0]
-    sub r5, sp, r5
-    and r5, r5, #-16
-    str r5, [r4, 4]
+    str fp, [r4, 4]
     mov sp, r3
     bl RelayDirect
     mov sp, fp

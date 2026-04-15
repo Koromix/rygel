@@ -306,10 +306,10 @@ Napi::Value RunLoop(CallData *call, napi_value *args, uint32_t *base, const AbiI
                 teb->ExceptionList = list; \
                 call->instance->last_error = teb->LastErrorValue; \
             }; \
-            teb->ExceptionList = mem->stack0.end() - K_SIZE(SehFrame);; \
+            teb->ExceptionList = call->mem->stack0.end - K_SIZE(SehFrame); \
             teb->LastErrorValue = call->instance->last_error; \
              \
-            ADJUST_TEB(teb, call->mem->stack0.ptr, call->mem->stack0.end()); \
+            ADJUST_TEB(teb, call->mem->stack0.ptr, call->mem->stack0.end); \
              \
             return (Expr); \
         }()

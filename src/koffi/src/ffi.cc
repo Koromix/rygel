@@ -42,7 +42,7 @@ SharedData shared;
 static napi_status (NAPI_CDECL *node_api_create_property_key_utf8)(napi_env env, const char* str, size_t length, napi_value* result);
 static napi_status (NAPI_CDECL *node_api_post_finalizer)(node_api_basic_env env, napi_finalize finalize_cb, void* finalize_data, void* finalize_hint);
 
-extern "C" napi_value SwitchAndRelay(CallData *call, Size idx, uint8_t *sp, uint8_t *saved_sp, Span<uint8_t> *new_stack);
+extern "C" napi_value SwitchAndRelay(CallData *call, Size idx, uint8_t *sp, uint8_t *saved_sp, MemoryRange<uint8_t> *new_stack);
 
 static bool ChangeSize(const char *name, Napi::Value value, Size min_size, Size max_size, Size *out_size)
 {
@@ -1422,44 +1422,48 @@ InstanceMemory *AllocateMemory(InstanceData *instance, Size stack_size, Size hea
 
 #if defined(_WIN32)
     // Allocate stack memory
-    mem->stack.len = stack_size;
-    mem->stack.ptr = (uint8_t *)VirtualAlloc(nullptr, mem->stack.len, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+    mem->stack.ptr = (uint8_t *)VirtualAlloc(nullptr, stack_size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+    mem->stack.end = mem->stack.ptr + stack_size;
 
-    K_CRITICAL(mem->stack.ptr, "Failed to allocate %1 of memory", mem->stack.len);
+    K_CRITICAL(mem->stack.ptr, "Failed to allocate %1 of memory", stack_size);
 #else
-    mem->stack.len = stack_size;
-    mem->stack.ptr = (uint8_t *)mmap(nullptr, mem->stack.len, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON | MAP_STACK, -1, 0);
+    mem->stack.ptr = (uint8_t *)mmap(nullptr, stack_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON | MAP_STACK, -1, 0);
+    mem->stack.end = mem->stack.ptr + stack_size;
 
-    K_CRITICAL(mem->stack.ptr, "Failed to allocate %1 of memory", mem->stack.len);
+    K_CRITICAL(mem->stack.ptr, "Failed to allocate %1 of memory", stack_size);
 #endif
 
 #if defined(__OpenBSD__)
     // Make sure the SP points inside the MAP_STACK area, or (void) functions may crash on OpenBSD i386
-    mem->stack.len -= 16;
+    mem->stack.end -= 16;
 #endif
 
     // Keep real stack limits intact, in case we need them
     mem->stack0 = mem->stack;
 
 #if defined(_WIN32) && !defined(_WIN64)
-    mem->stack.len -= K_SIZE(SehFrame);
+    mem->stack.end -= K_SIZE(SehFrame);
 
     // Prepare at the top SEH frame record
     {
-        SehFrame *seh = (SehFrame *)mem->stack.end();
+        SehFrame *seh = (SehFrame *)mem->stack.end;
 
         seh->Next = (void *)-1;
         seh->Handler = (void *)SehHandler;
     }
 #endif
 
-    mem->heap.len = heap_size;
 #if defined(_WIN32)
-    mem->heap.ptr = (uint8_t *)VirtualAlloc(nullptr, mem->heap.len, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+    mem->heap.ptr = (uint8_t *)VirtualAlloc(nullptr, heap_size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+    mem->heap.end = mem->heap.ptr + heap_size;
+
+    K_CRITICAL(mem->heap.ptr, "Failed to allocate %1 of memory", heap_size);
 #else
-    mem->heap.ptr = (uint8_t *)mmap(nullptr, mem->heap.len, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+    mem->heap.ptr = (uint8_t *)mmap(nullptr, heap_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+    mem->heap.end = mem->heap.ptr + heap_size;
+
+    K_CRITICAL(mem->heap.ptr, "Failed to allocate %1 of memory", heap_size);
 #endif
-    K_CRITICAL(mem->heap.ptr, "Failed to allocate %1 of memory", mem->heap.len);
 
     if (temporary) {
         instance->temporaries++;
@@ -1770,7 +1774,7 @@ extern "C" void RelayCallback(Size idx, uint8_t *sp)
     // Fast path: main thread and we are running a native call through Koffi.
     // But this means we are running on the custom Koffi stack, which could trip up
     // Node and V8, so we need to stwich back to the normal/main stack.
-    if (InstanceMemory *mem0 = instance->memories[0]; sp >= mem0->stack0.ptr && sp <= mem0->stack0.end()) {
+    if (InstanceMemory *mem0 = instance->memories[0]; sp >= mem0->stack0.ptr && sp <= mem0->stack0.end) {
         CallData *call = instance->sync_call;
 
         SwitchAndRelay(call, idx, sp, call->saved_sp, &call->mem->stack);
@@ -2440,10 +2444,10 @@ InstanceMemory::~InstanceMemory()
     }
 #else
     if (stack.ptr) {
-        munmap(stack.ptr, stack.len);
+        munmap(stack.ptr, stack.end - stack.ptr);
     }
     if (heap.ptr) {
-        munmap(heap.ptr, heap.len);
+        munmap(heap.ptr, heap.end - heap.ptr);
     }
 #endif
 }

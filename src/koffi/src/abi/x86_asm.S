@@ -109,7 +109,7 @@ SYMBOL(ForwardCallDR):
 RelayTrampoline:
     .cfi_startproc
     .cfi_def_cfa esp, 4
-    sub $44, %esp
+    subl $44, %esp
     .cfi_def_cfa esp, 48
     movl %eax, 0(%esp)
     movl %esp, 4(%esp)
@@ -120,8 +120,8 @@ RelayTrampoline:
     addl $_GLOBAL_OFFSET_TABLE_, %eax
     call *RelayCallback@GOT(%eax)
 #endif
-    movl 44(%esp), %edx
     movl 36(%esp), %ecx
+    movl 44(%esp), %edx
     movl %edx, 44(%esp, %ecx)
     cmpl $1, 32(%esp)
     je 1f
@@ -158,10 +158,7 @@ SYMBOL(SwitchAndRelay):
     movl %esp, %ebp
     .cfi_def_cfa ebp, 8
     movl 24(%esp), %ecx
-    movl %esp, %eax
-    subl 0(%ecx), %eax
-    andl $-16, %eax
-    movl %eax, 4(%ecx)
+    movl %esp, 4(%ecx)
     movl 20(%esp), %esp
     subl $24, %esp
     movl 8(%ebp), %eax

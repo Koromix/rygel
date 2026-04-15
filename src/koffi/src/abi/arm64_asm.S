@@ -174,10 +174,7 @@ SYMBOL(SwitchAndRelay):
     .cfi_offset 29, 16
     .cfi_offset 30, 8
     mov x29, sp
-    ldr x9, [x4, 0]
-    sub x9, sp, x9
-    and x9, x9, #-16
-    str x9, [x4, 8]
+    str x29, [x4, 8]
     mov sp, x3
     bl SYMBOL(RelayDirect)
     mov sp, x29

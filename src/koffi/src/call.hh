@@ -41,8 +41,8 @@ struct alignas(8) CallData {
     InstanceData *instance;
     InstanceMemory *mem;
 
-    Size prev_stack;
-    Span<uint8_t> prev_heap;
+    uint8_t *prev_stack;
+    uint8_t *prev_heap;
     uint8_t *saved_sp;
     bool release_alloc = false;
 
@@ -61,7 +61,7 @@ struct alignas(8) CallData {
 
     CallData(Napi::Env env, InstanceData *instance, InstanceMemory *mem)
         : env(env), instance(instance), mem(mem),
-          prev_stack(mem->stack.len), prev_heap(mem->heap) {}
+          prev_stack(mem->stack.end), prev_heap(mem->heap.ptr) {}
     INLINE_IF_UNITY ~CallData();
 
     INLINE_IF_UNITY Napi::Value Run(const FunctionInfo *func, void *native, napi_value *args);
@@ -104,20 +104,20 @@ struct alignas(8) CallData {
 template <typename T>
 inline T *CallData::AllocStack(Size size)
 {
-    uint8_t *ptr = AlignDown(mem->stack.end(), 16) - size;
-    Size delta = mem->stack.end() - ptr;
+    uint8_t *ptr = AlignDown(mem->stack.end, 16) - size;
 
     // Keep 512 bytes for redzone (required in some ABIs)
-    if (mem->stack.len - 512 < delta) [[unlikely]] {
+    if (ptr < mem->stack.ptr + 512) [[unlikely]] {
         ThrowError<Napi::Error>(env, "FFI call is taking up too much memory");
         return nullptr;
     }
 
 #if defined(K_DEBUG)
-    MemSet(ptr, 0, delta);
+    Size len = mem->stack.end - ptr;
+    MemSet(ptr, 0, len);
 #endif
 
-    mem->stack.len -= delta;
+    mem->stack.end = ptr;
 
     return (T *)ptr;
 }
@@ -126,15 +126,14 @@ template <typename T>
 inline T *CallData::AllocHeap(Size size, Size align)
 {
     uint8_t *ptr = AlignUp(mem->heap.ptr, align);
-    Size delta = size + (ptr - mem->heap.ptr);
+    uint8_t *end = ptr + size;
 
-    if (size < 4096 && delta <= mem->heap.len) [[likely]] {
+    if (size < 4096 && end <= mem->heap.end) [[likely]] {
 #if defined(K_DEBUG)
-        MemSet(mem->heap.ptr, 0, delta);
+        MemSet(ptr, 0, size);
 #endif
 
-        mem->heap.ptr += delta;
-        mem->heap.len -= delta;
+        mem->heap.ptr = end;
 
         return ptr;
     } else {
@@ -146,7 +145,7 @@ inline T *CallData::AllocHeap(Size size, Size align)
 
         ptr = (uint8_t *)AllocateRaw(&mem->allocator, size + align, flags);
         ptr = AlignUp(ptr, align);
-        release_alloc |= (prev_stack == mem->stack.len);
+        release_alloc |= (prev_stack == mem->stack.end);
 
         return ptr;
     }

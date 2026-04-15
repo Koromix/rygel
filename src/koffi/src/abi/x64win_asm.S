@@ -140,11 +140,8 @@ SwitchAndRelay:
     endbr64
     push %rbp
     movq %rsp, %rbp
-    movq %rsp, %r10
-    movq 48(%rsp), %r11
-    subq 0(%r11), %r10
-    andq $-16, %r10
-    movq %r10, 8(%r11)
+    movq 48(%rsp), %r10
+    movq %rsp, 8(%r10)
     leaq -32(%r9), %rsp
     call RelayDirect
     movq %rbp, %rsp

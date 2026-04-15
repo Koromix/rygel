@@ -211,10 +211,7 @@ SYMBOL(SwitchAndRelay):
     push %rbp
     .cfi_def_cfa rsp, 16
     movq %rsp, %rbp
-    movq %rsp, %r10
-    subq 0(%r8), %r10
-    andq $-16, %r10
-    movq %r10, 8(%r8)
+    movq %rsp, 8(%r8)
     movq %rcx, %rsp
     .cfi_def_cfa rsp, 16
     call SYMBOL(RelayDirect)

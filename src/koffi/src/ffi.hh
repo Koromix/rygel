@@ -251,12 +251,18 @@ struct FunctionInfo {
     void Unref() const;
 };
 
+template <typename T>
+struct MemoryRange {
+    T *ptr;
+    T *end;
+};
+
 struct InstanceMemory {
     ~InstanceMemory();
 
-    Span<uint8_t> stack;
-    Span<uint8_t> stack0;
-    Span<uint8_t> heap;
+    MemoryRange<uint8_t> stack;
+    MemoryRange<uint8_t> stack0;
+    MemoryRange<uint8_t> heap;
 
     // For big heap allocations
     LinkedAllocator allocator;
