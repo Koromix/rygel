@@ -6,8 +6,15 @@ const pkg = require('./package.json');
 const napi = require(pkg.cnoke.output + '/memset_napi.node');
 const koffi = require('../../koffi');
 const ctypes = require('node-ctypes');
+const ffi = (() => {
+    try {
+        return require('node:ffi');
+    } catch (err) {
+        return null;
+    }
+})();
 const ref = require('@napi-ffi/ref-napi');
-const ffi = require('@napi-ffi/ffi-napi');
+const node_ffi = require('@napi-ffi/ffi-napi');
 const struct = require('@napi-ffi/ref-struct-di')(ref);
 const { performance } = require('perf_hooks');
 
@@ -29,7 +36,8 @@ function main() {
         'koffi': run_koffi(time, true),
         'koffi (slow pointers)': run_koffi(time, false),
         'node-ctypes': run_node_ctypes(time),
-        'node-ffi-napi': run_node_ffi(time)
+        'node:ffi': ffi ? run_node_ffi(time) : undefined,
+        'node-ffi-napi': run_node_ffi_napi(time)
     }
 
     console.log(JSON.stringify(perf, null, 4));
@@ -98,7 +106,31 @@ function run_node_ctypes(time) {
 }
 
 function run_node_ffi(time) {
-    const lib = ffi.Library(process.platform == 'win32' ? 'msvcrt.dll' : null, {
+    const lib = new ffi.DynamicLibrary(process.platform == 'win32' ? 'msvcrt.dll' : 'libc.so.6');
+
+    const memset = lib.getFunction('memset', {
+        parameters: ['ptr', 'i32', 'uint64'],
+        result: 'ptr'
+    });
+
+    let buf = Buffer.alloc(2048);
+
+    let start = performance.now();
+    let iterations = 0;
+
+    while (performance.now() - start < time) {
+        for (let i = 0; i < 1000000; i++)
+            memset(buf, 32, BigInt(buf.length));
+
+        iterations += 1000000;
+    }
+
+    time = performance.now() - start;
+    return { iterations: iterations, time: Math.round(time) };
+}
+
+function run_node_ffi_napi(time) {
+    const lib = node_ffi.Library(process.platform == 'win32' ? 'msvcrt.dll' : null, {
         memset: ['void *', ['void *', 'int', 'size_t']]
     });
 
