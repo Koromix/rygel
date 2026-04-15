@@ -1508,7 +1508,7 @@ Napi::Value TranslateFastCall(const Napi::CallbackInfo &info)
 #endif
     instance->sync_call = &call;
 
-    return call.Run(info, func, func->native);
+    return call.Run(func, func->native, info.First());
 }
 
 static Napi::Value TranslateNormalCall(const FunctionInfo *func, void *native, const Napi::CallbackInfo &info, Size count)
@@ -1529,7 +1529,7 @@ static Napi::Value TranslateNormalCall(const FunctionInfo *func, void *native, c
 #endif
     instance->sync_call = &call;
 
-    Napi::Value ret = call.Run(info, func, native);
+    Napi::Value ret = call.Run(func, native, info.First());
     call.Finalize();
 
     return ret;
@@ -1635,7 +1635,7 @@ static Napi::Value TranslateVariadicCall(const FunctionInfo *func, void *native,
     };
     instance->sync_call = &call;
 
-    Napi::Value ret = call.Run(info, variadic, native);
+    Napi::Value ret = call.Run(variadic, native, info.First());
 
     if (variadic != instance->variadic_func) {
         err_guard.Disable();
@@ -1669,7 +1669,7 @@ public:
     ~AsyncCall();
 
     bool Prepare(const Napi::CallbackInfo &info) {
-        prepared = call.PrepareAsync(info, func);
+        prepared = call.PrepareAsync(func, info.First());
 
         if (!prepared) [[unlikely]] {
             Napi::Error err = env.GetAndClearPendingException();

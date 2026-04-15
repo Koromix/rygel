@@ -64,9 +64,9 @@ struct alignas(8) CallData {
           prev_stack(mem->stack.len), prev_heap(mem->heap) {}
     INLINE_IF_UNITY ~CallData();
 
-    INLINE_IF_UNITY Napi::Value Run(const Napi::CallbackInfo &info, const FunctionInfo *func, void *native);
+    INLINE_IF_UNITY Napi::Value Run(const FunctionInfo *func, void *native, napi_value *args);
 
-    bool PrepareAsync(const Napi::CallbackInfo &info, const FunctionInfo *func);
+    bool PrepareAsync(const FunctionInfo *func, napi_value *args);
     void ExecuteAsync(void *native);
     Napi::Value EndAsync();
 

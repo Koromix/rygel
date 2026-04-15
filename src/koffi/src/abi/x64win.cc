@@ -735,7 +735,7 @@ namespace {
     #pragma GCC diagnostic pop
 #endif
 
-Napi::Value CallData::Run(const Napi::CallbackInfo &info, const FunctionInfo *func, void *native)
+Napi::Value CallData::Run(const FunctionInfo *func, void *native, napi_value *args)
 {
     uint8_t *base = AllocStack<uint8_t>(func->stk_size);
     if (!base) [[unlikely]]
@@ -744,10 +744,10 @@ Napi::Value CallData::Run(const Napi::CallbackInfo &info, const FunctionInfo *fu
     this->native = native;
 
     const AbiInstruction *first = func->sync.ptr;
-    return RunLoop(this, info.First(), (uint64_t *)base, first);
+    return RunLoop(this, args, (uint64_t *)base, first);
 }
 
-bool CallData::PrepareAsync(const Napi::CallbackInfo &info, const FunctionInfo *func)
+bool CallData::PrepareAsync(const FunctionInfo *func, napi_value *args)
 {
     uint8_t *base = AllocStack<uint8_t>(func->stk_size);
     if (!base) [[unlikely]]
@@ -755,7 +755,7 @@ bool CallData::PrepareAsync(const Napi::CallbackInfo &info, const FunctionInfo *
     async_base = base;
 
     const AbiInstruction *first = func->async.ptr;
-    return RunLoop(this, info.First(), (uint64_t *)base, first);
+    return RunLoop(this, args, (uint64_t *)base, first);
 }
 
 void CallData::ExecuteAsync(void *native)
