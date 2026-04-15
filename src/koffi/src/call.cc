@@ -27,10 +27,6 @@ extern "C" void *FindTrampolineEnd();
 static const uint8_t *TrampolineStart = (const uint8_t *)FindTrampolineStart();
 static const Size TrampolineSize = ((const uint8_t *)FindTrampolineEnd() - TrampolineStart) / MaxTrampolines;
 
-CallData::CallData(Napi::Env env, InstanceData *instance, InstanceMemory *mem)
-    : env(env), instance(instance), mem(mem),
-      prev_stack(mem->stack.len), prev_heap(mem->heap) {}
-
 CallData::~CallData()
 {
 #if defined(K_DEBUG)
