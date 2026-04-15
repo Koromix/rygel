@@ -197,12 +197,12 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
 namespace {
 #if defined(MUST_TAIL)
     #define OP(Code) \
-            PRESERVE_NONE Napi::Value Handle ## Code(CallData *call, napi_value *args, uint64_t *base, const AbiInstruction *inst)
+        PRESERVE_NONE Napi::Value Handle ## Code(CallData *call, napi_value *args, uint64_t *base, const AbiInstruction *inst)
     #define NEXT() \
-            do { \
-                const AbiInstruction *next = inst + 1; \
-                MUST_TAIL return ForwardDispatch[(int)next->code](call, args, base, next); \
-            } while (false)
+        do { \
+            const AbiInstruction *next = inst + 1; \
+            MUST_TAIL return ForwardDispatch[(int)next->code](call, args, base, next); \
+        } while (false)
 
     PRESERVE_NONE typedef Napi::Value ForwardFunc(CallData *call, napi_value *args, uint64_t *base, const AbiInstruction *inst);
 
