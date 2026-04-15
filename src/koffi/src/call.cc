@@ -52,10 +52,94 @@ CallData::~CallData()
     }
 }
 
-void CallData::Dispose()
+static inline Napi::Value GetReferenceValue(Napi::Env env, napi_ref ref)
 {
-    for (const OutArgument &out: out_arguments) {
-        napi_delete_reference(env, out.ref);
+    napi_value value;
+
+    napi_status status = napi_get_reference_value(env, ref, &value);
+    K_ASSERT(status == napi_ok);
+
+    return Napi::Value(env, value);
+}
+
+void CallData::Finalize()
+{
+    if (out_arguments.len) {
+        if (!env.IsExceptionPending()) {
+            for (const OutArgument &out: out_arguments) {
+                Napi::Value value = GetReferenceValue(env, out.ref);
+                K_ASSERT(!value.IsEmpty());
+
+                switch (out.kind) {
+                    case OutArgument::Kind::Array: {
+                        K_ASSERT(value.IsArray());
+
+                        Napi::Array array(env, value);
+                        DecodeNormalArray(array, out.ptr, out.type);
+                    } break;
+
+                    case OutArgument::Kind::Buffer: {
+                        Span<uint8_t> buffer;
+
+                        bool success = TryBuffer(value, &buffer);
+                        K_ASSERT(success);
+
+                        DecodeBuffer(buffer, out.ptr, out.type);
+                    } break;
+
+                    case OutArgument::Kind::String: {
+                        Napi::Array array(env, value);
+
+                        K_ASSERT(array.IsArray());
+                        K_ASSERT(array.Length() == 1);
+
+                        Size len = strnlen((const char *)out.ptr, out.max_len);
+                        Napi::String str = Napi::String::New(env, (const char *)out.ptr, len);
+
+                        array.Set(0u, str);
+                    } break;
+
+                    case OutArgument::Kind::String16: {
+                        Napi::Array array(env, value);
+
+                        K_ASSERT(array.IsArray());
+                        K_ASSERT(array.Length() == 1);
+
+                        Size len = NullTerminatedLength((const char16_t *)out.ptr, out.max_len);
+                        Napi::String str = Napi::String::New(env, (const char16_t *)out.ptr, len);
+
+                        array.Set(0u, str);
+                    } break;
+
+                    case OutArgument::Kind::String32: {
+                        Napi::Array array(env, value);
+
+                        K_ASSERT(array.IsArray());
+                        K_ASSERT(array.Length() == 1);
+
+                        Size len = NullTerminatedLength((const char32_t *)out.ptr, out.max_len);
+                        Napi::String str = MakeStringFromUTF32(env, (const char32_t *)out.ptr, len);
+
+                        array.Set(0u, str);
+                    } break;
+
+                    case OutArgument::Kind::Object: {
+                        Napi::Object obj = value.As<Napi::Object>();
+
+                        if (CheckValueTag(value, &MagicUnionMarker)) {
+                            MagicUnion *u = MagicUnion::Unwrap(obj);
+                            u->SetRaw(out.ptr);
+                        } else {
+                            DecodeObject(obj, out.ptr, out.type);
+                        }
+                    } break;
+                }
+            }
+        }
+
+        for (const OutArgument &out: out_arguments) {
+            napi_delete_reference(env, out.ref);
+        }
     }
 
     if (used_trampolines.len) {
@@ -1057,96 +1141,13 @@ bool CallData::CheckDynamicLength(Napi::Object obj, Size element, const char *co
     return true;
 }
 
-static inline Napi::Value GetReferenceValue(Napi::Env env, napi_ref ref)
-{
-    napi_value value;
-
-    napi_status status = napi_get_reference_value(env, ref, &value);
-    K_ASSERT(status == napi_ok);
-
-    return Napi::Value(env, value);
-}
-
-void CallData::PopOutArguments()
-{
-    for (const OutArgument &out: out_arguments) {
-        Napi::Value value = GetReferenceValue(env, out.ref);
-        K_ASSERT(!value.IsEmpty());
-
-        switch (out.kind) {
-            case OutArgument::Kind::Array: {
-                K_ASSERT(value.IsArray());
-
-                Napi::Array array(env, value);
-                DecodeNormalArray(array, out.ptr, out.type);
-            } break;
-
-            case OutArgument::Kind::Buffer: {
-                Span<uint8_t> buffer;
-
-                bool success = TryBuffer(value, &buffer);
-                K_ASSERT(success);
-
-                DecodeBuffer(buffer, out.ptr, out.type);
-            } break;
-
-            case OutArgument::Kind::String: {
-                Napi::Array array(env, value);
-
-                K_ASSERT(array.IsArray());
-                K_ASSERT(array.Length() == 1);
-
-                Size len = strnlen((const char *)out.ptr, out.max_len);
-                Napi::String str = Napi::String::New(env, (const char *)out.ptr, len);
-
-                array.Set(0u, str);
-            } break;
-
-            case OutArgument::Kind::String16: {
-                Napi::Array array(env, value);
-
-                K_ASSERT(array.IsArray());
-                K_ASSERT(array.Length() == 1);
-
-                Size len = NullTerminatedLength((const char16_t *)out.ptr, out.max_len);
-                Napi::String str = Napi::String::New(env, (const char16_t *)out.ptr, len);
-
-                array.Set(0u, str);
-            } break;
-
-            case OutArgument::Kind::String32: {
-                Napi::Array array(env, value);
-
-                K_ASSERT(array.IsArray());
-                K_ASSERT(array.Length() == 1);
-
-                Size len = NullTerminatedLength((const char32_t *)out.ptr, out.max_len);
-                Napi::String str = MakeStringFromUTF32(env, (const char32_t *)out.ptr, len);
-
-                array.Set(0u, str);
-            } break;
-
-            case OutArgument::Kind::Object: {
-                Napi::Object obj = value.As<Napi::Object>();
-
-                if (CheckValueTag(value, &MagicUnionMarker)) {
-                    MagicUnion *u = MagicUnion::Unwrap(obj);
-                    u->SetRaw(out.ptr);
-                } else {
-                    DecodeObject(obj, out.ptr, out.type);
-                }
-            } break;
-        }
-    }
-}
-
 void PerformAsyncRelay(napi_env, napi_value, void *, void *udata)
 {
     RelayContext *ctx = (RelayContext *)udata;
     CallData *call = ctx->call;
 
     call->Relay(ctx->idx, ctx->sp);
-    call->Dispose();
+    call->Finalize();
 
     // We're done!
     std::lock_guard<std::mutex> lock(ctx->mutex);

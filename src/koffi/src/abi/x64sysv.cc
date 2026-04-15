@@ -735,13 +735,11 @@ namespace {
 #define INTEGER(Suffix, CType) \
         do { \
             uint64_t rax = ForwardCall ## Suffix(call->native, base, &call->saved_sp).rax; \
-            call->PopOutArguments(); \
             return NewInt(call->env, (CType)rax); \
         } while (false)
 #define INTEGER_SWAP(Suffix, CType) \
         do { \
             uint64_t rax = ForwardCall ## Suffix(call->native, base, &call->saved_sp).rax; \
-            call->PopOutArguments(); \
             return NewInt(call->env, ReverseBytes((CType)rax)); \
         } while (false)
 #define DISPOSE(Ptr) \
@@ -753,12 +751,10 @@ namespace {
 
     OP(RunVoid) {
         ForwardCallGG(call->native, base, &call->saved_sp);
-        call->PopOutArguments();
         return call->env.Undefined();
     }
     OP(RunBool) {
         uint64_t rax = ForwardCallGG(call->native, base, &call->saved_sp).rax;
-        call->PopOutArguments();
         return Napi::Boolean::New(call->env, rax & 0x1);
     }
     OP(RunInt8) { INTEGER(GG, int8_t); }
@@ -779,33 +775,28 @@ namespace {
         uint64_t rax = ForwardCallGG(call->native, base, &call->saved_sp).rax;
         Napi::Value value = rax ? Napi::String::New(call->env, (const char *)rax) : call->env.Null();
         DISPOSE((void *)rax);
-        call->PopOutArguments();
         return value;
     }
     OP(RunString16) {
         uint64_t rax = ForwardCallGG(call->native, base, &call->saved_sp).rax;
         Napi::Value value = rax ? Napi::String::New(call->env, (const char16_t *)rax) : call->env.Null();
         DISPOSE((void *)rax);
-        call->PopOutArguments();
         return value;
     }
     OP(RunString32) {
         uint64_t rax = ForwardCallGG(call->native, base, &call->saved_sp).rax;
         Napi::Value value = rax ? MakeStringFromUTF32(call->env, (const char32_t *)rax) : call->env.Null();
         DISPOSE((void *)rax);
-        call->PopOutArguments();
         return value;
     }
     OP(RunPointer) {
         uint64_t rax = ForwardCallGG(call->native, base, &call->saved_sp).rax;
         Napi::Value value = rax ? WrapPointer(call->env, inst->type, (void *)rax) : call->env.Null();
         DISPOSE((void *)rax);
-        call->PopOutArguments();
         return value;
     }
     OP(RunCallback) {
         uint64_t rax = ForwardCallGG(call->native, base, &call->saved_sp).rax;
-        call->PopOutArguments();
         return rax ? WrapCallback(call->env, inst->type, (void *)rax) : call->env.Null();
     }
     OP(RunRecord) { K_UNREACHABLE(); return call->env.Null(); }
@@ -813,49 +804,40 @@ namespace {
     OP(RunArray) { K_UNREACHABLE(); return call->env.Null(); }
     OP(RunFloat32) {
         float f = ForwardCallF(call->native, base, &call->saved_sp);
-        call->PopOutArguments();
         return Napi::Number::New(call->env, (double)f);
     }
     OP(RunFloat64) {
         double d = ForwardCallDD(call->native, base, &call->saved_sp).xmm0;
-        call->PopOutArguments();
         return Napi::Number::New(call->env, d);
     }
     OP(RunPrototype) { K_UNREACHABLE(); return call->env.Null(); }
     OP(RunAggregateGG) {
         auto ret = ForwardCallGG(call->native, base, &call->saved_sp);
-        call->PopOutArguments();
         return DecodeObject(call->env, (const uint8_t *)&ret, inst->type);
     }
     OP(RunAggregateDD) {
         auto ret = ForwardCallDD(call->native, base, &call->saved_sp);
-        call->PopOutArguments();
         return DecodeObject(call->env, (const uint8_t *)&ret, inst->type);
     }
     OP(RunAggregateGD) {
         auto ret = ForwardCallGD(call->native, base, &call->saved_sp);
-        call->PopOutArguments();
         return DecodeObject(call->env, (const uint8_t *)&ret, inst->type);
     }
     OP(RunAggregateDG) {
         auto ret = ForwardCallDG(call->native, base, &call->saved_sp);
-        call->PopOutArguments();
         return DecodeObject(call->env, (const uint8_t *)&ret, inst->type);
     }
     OP(RunAggregateStack) {
         *(uint8_t **)base = base + inst->b;
         uint64_t rax = ForwardCallGG(call->native, base, &call->saved_sp).rax;
-        call->PopOutArguments();
         return DecodeObject(call->env, (const uint8_t *)rax, inst->type);
     }
     OP(RunVoidX) {
         ForwardCallGGX(call->native, base, &call->saved_sp);
-        call->PopOutArguments();
         return call->env.Undefined();
     }
     OP(RunBoolX) {
         uint64_t rax = ForwardCallGGX(call->native, base, &call->saved_sp).rax;
-        call->PopOutArguments();
         return Napi::Boolean::New(call->env, rax & 0x1);
     }
     OP(RunInt8X) { INTEGER(GGX, int8_t); }
@@ -876,33 +858,28 @@ namespace {
         uint64_t rax = ForwardCallGGX(call->native, base, &call->saved_sp).rax;
         Napi::Value value = rax ? Napi::String::New(call->env, (const char *)rax) : call->env.Null();
         DISPOSE((void *)rax);
-        call->PopOutArguments();
         return value;
     }
     OP(RunString16X) {
         uint64_t rax = ForwardCallGGX(call->native, base, &call->saved_sp).rax;
         Napi::Value value = rax ? Napi::String::New(call->env, (const char16_t *)rax) : call->env.Null();
         DISPOSE((void *)rax);
-        call->PopOutArguments();
         return value;
     }
     OP(RunString32X) {
         uint64_t rax = ForwardCallGGX(call->native, base, &call->saved_sp).rax;
         Napi::Value value = rax ? MakeStringFromUTF32(call->env, (const char32_t *)rax) : call->env.Null();
         DISPOSE((void *)rax);
-        call->PopOutArguments();
         return value;
     }
     OP(RunPointerX) {
         uint64_t rax = ForwardCallGGX(call->native, base, &call->saved_sp).rax;
         Napi::Value value = rax ? WrapPointer(call->env, inst->type, (void *)rax) : call->env.Null();
         DISPOSE((void *)rax);
-        call->PopOutArguments();
         return value;
     }
     OP(RunCallbackX) {
         uint64_t rax = ForwardCallGGX(call->native, base, &call->saved_sp).rax;
-        call->PopOutArguments();
         return rax ? WrapCallback(call->env, inst->type, (void *)rax) : call->env.Null();
     }
     OP(RunRecordX) { K_UNREACHABLE(); return call->env.Null(); }
@@ -910,39 +887,32 @@ namespace {
     OP(RunArrayX) { K_UNREACHABLE(); return call->env.Null(); }
     OP(RunFloat32X) {
         float f = ForwardCallFX(call->native, base, &call->saved_sp);
-        call->PopOutArguments();
         return Napi::Number::New(call->env, (double)f);
     }
     OP(RunFloat64X) {
         double d = ForwardCallDDX(call->native, base, &call->saved_sp).xmm0;
-        call->PopOutArguments();
         return Napi::Number::New(call->env, d);
     }
     OP(RunPrototypeX) { K_UNREACHABLE(); return call->env.Null(); }
     OP(RunAggregateGGX) {
         auto ret = ForwardCallGGX(call->native, base, &call->saved_sp);
-        call->PopOutArguments();
         return DecodeObject(call->env, (const uint8_t *)&ret, inst->type);
     }
     OP(RunAggregateDDX) {
         auto ret = ForwardCallDDX(call->native, base, &call->saved_sp);
-        call->PopOutArguments();
         return DecodeObject(call->env, (const uint8_t *)&ret, inst->type);
     }
     OP(RunAggregateGDX) {
         auto ret = ForwardCallGDX(call->native, base, &call->saved_sp);
-        call->PopOutArguments();
         return DecodeObject(call->env, (const uint8_t *)&ret, inst->type);
     }
     OP(RunAggregateDGX) {
         auto ret = ForwardCallDGX(call->native, base, &call->saved_sp);
-        call->PopOutArguments();
         return DecodeObject(call->env, (const uint8_t *)&ret, inst->type);
     }
     OP(RunAggregateStackX) {
         *(uint8_t **)base = base + inst->b;
         uint64_t rax = ForwardCallGGX(call->native, base, &call->saved_sp).rax;
-        call->PopOutArguments();
         return DecodeObject(call->env, (const uint8_t *)rax, inst->type);
     }
 
@@ -965,13 +935,11 @@ namespace {
 #define INTEGER(CType) \
         do { \
             uint64_t rax = *(uint64_t *)base; \
-            call->PopOutArguments(); \
             return NewInt(call->env, (CType)rax); \
         } while (false)
 #define INTEGER_SWAP(CType) \
         do { \
             uint64_t rax = *(uint64_t *)base; \
-            call->PopOutArguments(); \
             return NewInt(call->env, ReverseBytes((CType)rax)); \
         } while (false)
 
@@ -1001,13 +969,9 @@ namespace {
         return call->env.Null();
     }
 
-    OP(ReturnVoid) {
-        call->PopOutArguments();
-        return call->env.Undefined();
-    }
+    OP(ReturnVoid) { return call->env.Undefined(); }
     OP(ReturnBool) {
         uint64_t rax = *(uint64_t *)base;
-        call->PopOutArguments();
         return Napi::Boolean::New(call->env, rax & 0x1);
     }
     OP(ReturnInt8) { INTEGER(int8_t); }
@@ -1026,35 +990,30 @@ namespace {
     OP(ReturnUInt64S) { INTEGER_SWAP(uint64_t); }
     OP(ReturnString) {
         uint64_t rax = *(uint64_t *)base;
-        call->PopOutArguments();
         Napi::Value value = rax ? Napi::String::New(call->env, (const char *)rax) : call->env.Null();
         DISPOSE();
         return value;
     }
     OP(ReturnString16) {
         uint64_t rax = *(uint64_t *)base;
-        call->PopOutArguments();
         Napi::Value value = rax ? Napi::String::New(call->env, (const char16_t *)rax) : call->env.Null();
         DISPOSE();
         return value;
     }
     OP(ReturnString32) {
         uint64_t rax = *(uint64_t *)base;
-        call->PopOutArguments();
         Napi::Value value = rax ? MakeStringFromUTF32(call->env, (const char32_t *)rax) : call->env.Null();
         DISPOSE();
         return value;
     }
     OP(ReturnPointer) {
         uint64_t rax = *(uint64_t *)base;
-        call->PopOutArguments();
         Napi::Value value = rax ? WrapPointer(call->env, inst->type, (void *)rax) : call->env.Null();
         DISPOSE();
         return value;
     }
     OP(ReturnCallback) {
         uint64_t rax = *(uint64_t *)base;
-        call->PopOutArguments();
         return rax ? WrapCallback(call->env, inst->type, (void *)rax) : call->env.Null();
     }
     OP(ReturnRecord) { K_UNREACHABLE(); return call->env.Null(); }
@@ -1062,18 +1021,15 @@ namespace {
     OP(ReturnArray) { K_UNREACHABLE(); return call->env.Null(); }
     OP(ReturnFloat32) {
         float f = *(float *)base;
-        call->PopOutArguments();
         return Napi::Number::New(call->env, (double)f);
     }
     OP(ReturnFloat64) {
         double d = *(double *)base;
-        call->PopOutArguments();
         return Napi::Number::New(call->env, d);
     }
     OP(ReturnPrototype) { K_UNREACHABLE(); return call->env.Null(); }
     OP(ReturnAggregate) {
         uint64_t rax = *(uint64_t *)base;
-        call->PopOutArguments();
         return DecodeObject(call->env, (const uint8_t *)rax, inst->type);
     }
 

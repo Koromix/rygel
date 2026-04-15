@@ -480,8 +480,6 @@ void CallData::Execute(const FunctionInfo *func, void *native)
 Napi::Value CallData::Complete(const FunctionInfo *func)
 {
     K_DEFER {
-       PopOutArguments();
-
         if (func->ret.type->dispose) {
             func->ret.type->dispose(env, func->ret.type, result.ptr);
         }

@@ -62,13 +62,13 @@ struct alignas(8) CallData {
     #define INLINE_IF_UNITY
 #endif
 
-    void Dispose();
-
     INLINE_IF_UNITY Napi::Value Run(const Napi::CallbackInfo &info, const FunctionInfo *func, void *native);
 
     bool PrepareAsync(const Napi::CallbackInfo &info, const FunctionInfo *func);
     void ExecuteAsync(void *native);
     Napi::Value EndAsync();
+
+    void Finalize();
 
     void Relay(Size idx, uint8_t *sp);
     void RelayAsync(Size idx, uint8_t *sp);
@@ -95,8 +95,6 @@ struct alignas(8) CallData {
     T *AllocHeap(Size size, Size align);
 
     bool CheckDynamicLength(Napi::Object obj, Size element, const char *countedby, Napi::Value value);
-
-    INLINE_IF_UNITY void PopOutArguments();
 
 #undef INLINE_IF_UNITY
 };

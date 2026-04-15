@@ -1505,7 +1505,7 @@ static Napi::Value TranslateNormalCall(const FunctionInfo *func, void *native, c
     CallData call(env, instance, mem);
 
     K_DEFER_C(prev_call = instance->sync_call) {
-        call.Dispose();
+        call.Finalize();
         instance->sync_call = prev_call;
     };
     instance->sync_call = &call;
@@ -1612,7 +1612,7 @@ static Napi::Value TranslateVariadicCall(const FunctionInfo *func, void *native,
     CallData call(env, instance, mem);
 
     K_DEFER_C(prev_call = instance->sync_call) {
-        call.Dispose();
+        call.Finalize();
         instance->sync_call = prev_call;
     };
     instance->sync_call = &call;
@@ -1663,13 +1663,12 @@ public:
 
     void Execute() override;
     void OnOK() override;
+    void OnError(const Napi::Error& err) override;
 };
 
 AsyncCall::~AsyncCall()
 {
-    call.Dispose();
     ReleaseMemory(call.instance, call.mem);
-
     func->Unref();
 }
 
@@ -1686,8 +1685,25 @@ void AsyncCall::OnOK()
 
     Napi::FunctionReference &callback = Callback();
 
+    Napi::Value ret = call.EndAsync();
+    call.Finalize();
+
     napi_value self = env.Null();
-    napi_value args[] = { env.Null(), call.EndAsync() };
+    napi_value args[] = { env.Null(), ret };
+
+    callback.Call(self, K_LEN(args), args);
+}
+
+void AsyncCall::OnError(const Napi::Error& err)
+{
+    K_ASSERT(prepared);
+
+    Napi::FunctionReference &callback = Callback();
+
+    call.Finalize();
+
+    napi_value self = env.Null();
+    napi_value args[] = { err.Value(), env.Undefined() };
 
     callback.Call(self, K_LEN(args), args);
 }
@@ -1772,7 +1788,7 @@ extern "C" void RelayCallback(Size idx, uint8_t *sp)
 
     if (is_main_thread) {
         CallData call(env, instance, mem);
-        K_DEFER { call.Dispose(); };
+        K_DEFER { call.Finalize(); };
 
         Napi::HandleScope scope(env);
         call.Relay(idx, sp);
