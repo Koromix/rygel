@@ -53,16 +53,16 @@ struct alignas(8) CallData {
     LocalArray<int16_t, 16> used_trampolines;
     LocalArray<OutArgument, MaxParameters> out_arguments;
 
-    CallData(Napi::Env env, InstanceData *instance, InstanceMemory *mem)
-        : env(env), instance(instance), mem(mem),
-          prev_stack(mem->stack.len), prev_heap(mem->heap) {}
-    ~CallData();
-
 #if defined(UNITY_BUILD) && (defined(__clang__) || defined(_MSC_VER))
     #define INLINE_IF_UNITY FORCE_INLINE
 #else
     #define INLINE_IF_UNITY
 #endif
+
+    CallData(Napi::Env env, InstanceData *instance, InstanceMemory *mem)
+        : env(env), instance(instance), mem(mem),
+          prev_stack(mem->stack.len), prev_heap(mem->heap) {}
+    INLINE_IF_UNITY ~CallData();
 
     INLINE_IF_UNITY Napi::Value Run(const Napi::CallbackInfo &info, const FunctionInfo *func, void *native);
 
