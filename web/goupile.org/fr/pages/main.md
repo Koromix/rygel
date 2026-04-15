@@ -20,7 +20,7 @@ Le menu principal correspond à la *barre noire en haut de la page*, celle-ci co
 Le panneau de suivi comporte deux éléments principaux :
 
 5. Le **bouton de création** d'enregistrement pour enregistrer de nouvelles données.
-6. La **liste des enregistrements** qui comprend plusieurs colonnes : un [identifiant séquentiel](identifiers#tid-et-sequence) d'enregistrement, la date de création et une colonne de statut par page.
+6. La **liste des enregistrements** qui comprend plusieurs colonnes : un [identifiant séquentiel](identifiers#tid-et-hid) d'enregistrement, la date de création et une colonne de statut par page.
 7. Les **boutons d'export** permettent de créer un nouvel export ou de récupérer les exports déjà réalisés.
 
 > [!NOTE]

@@ -20,7 +20,7 @@ The main menu corresponds to the *black bar at the top of the page*. It contains
 The data panel contains two main elements:
 
 5. The **record creation button** to enter new data.
-6. The **list of records**, which includes several columns: a [sequential identifier](identifiers#tid-and-sequence), the creation date, and a status column for each page.
+6. The **list of records**, which includes several columns: a [sequential identifier](identifiers#tid-and-hid), the creation date, and a status column for each page.
 7. The **export buttons**, which allow you to create a new export or retrieve previously generated exports.
 
 > [!NOTE]

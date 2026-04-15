@@ -29,7 +29,7 @@ With this simple structure, the project will be organised as shown in the screen
 <div class="screenshot"><img src="{{ ASSET static/help/instance/status.webp }}" alt=""/></div>
 
 > [!NOTE]
-> Each form page has its own data table, and these tables are linked by a [TID identifier](identifiers#tid-and-sequence), which is a unique random identifier.
+> Each form page has its own data table, and these tables are linked by a [TID identifier](identifiers#tid-and-hid), which is a unique random identifier.
 >
 > During export, data from the two pages will be exported into two separate tables (or two Excel sheets), which can be joined with the help of the `__TID` column.
 

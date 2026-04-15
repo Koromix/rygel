@@ -6,7 +6,7 @@ Chaque enregistrement alimente le tableau de suivi, accessible via le panneau de
 
 Le **tableau de suivi** comprend une ligne par enregistrement, ainsi que les colonnes suivantes :
 
-- Un [identifiant séquentiel](identifiers#tid-et-sequence) spécifique de chaque enregistrement
+- Un [identifiant HID](identifiers#tid-et-hid) spécifique de chaque enregistrement
 - La date de création de l'enregistrement
 - Une colonne par page, avec son statut de remplissage et éventuellement le [summary](identifiers#summary) (si il existe)
 
@@ -65,8 +65,9 @@ Chaque page est exportée dans un onglet séparé du fichier XLSX, dont le nom c
 
 Les colonnes de chaque onglet sont organisées comme suit :
 
-- Colonne `__tid` : [identifiant TID](identifiers#tid-et-sequence) de l'enregistrement
-- Colonne `__sequence` : [identifiant séquence](identifiers#tid-et-sequence) de l'enregistrement
+- Colonne `__tid` : [identifiant TID](identifiers#tid-et-hid) de l'enregistrement
+- Colonne `__sequence` : [identifiant séquence](identifiers#tid-et-hid) de l'enregistrement
+- Colonne `__hid` : [identifiant HID](identifiers#tid-et-hid) de l'enregistrement
 - Une colonne par variable, nommée à partir de la clé de la variable, en dehors des questions à choix multiples qui sont exportées dans plusieurs colonnes (une modalité par colonne nommée `variable.modalite`)
 
 <div class="screenshot"><img src="{{ ASSET static/help/data/export3.webp }}" alt=""/></div>

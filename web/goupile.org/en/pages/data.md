@@ -6,7 +6,7 @@ Each record feeds the data monitoring table, accessible via the data panel (high
 
 The **monitoring table** shows one row per record, along with the following columns:
 
-- A specific [sequential identifier](identifiers#tid-et-sequence) for each record
+- A specific [HID identifier](identifiers#tid-et-hid) for each record
 - The creation date of the record
 - One column per page, showing its completion status and possibly the [summary](identifiers#summary) (if it exists)
 
@@ -39,7 +39,7 @@ Collected data can be exported to an XLSX file that you can open in your spreads
 
 ## Creating an export
 
-Use the "Create export" button below the tracking table to export data in XLSX format.
+Use the "Create export" button below the monitoring table to export data in XLSX format.
 
 <div class="screenshot"><img src="{{ ASSET static/help/data/export1.webp }}" alt=""/></div>
 
@@ -65,8 +65,9 @@ Each page is exported to a separate sheet in the XLSX file, with the name corres
 
 The columns in each sheet are organized as follows:
 
-- Column `__tid`: [TID identifier](identifiers#tid-and-sequence) of the record
-- Column `__sequence`: [sequence identifier](identifiers#tid-and-sequence) of the record
+- Column `__tid`: [TID identifier](identifiers#tid-and-hid) of the record
+- Column `__sequence`: [sequence identifier](identifiers#tid-and-hid) of the record
+- Column `__hid`: [HID identifier](identifiers#tid-and-hid) of the record
 - One column per variable, named after the variable key, except for multiple-choice questions which are exported into several columns (one option per column named `variable.option`)
 
 <div class="screenshot"><img src="{{ ASSET static/help/data/export3.webp }}" alt=""/></div>

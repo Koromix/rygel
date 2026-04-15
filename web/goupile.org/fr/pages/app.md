@@ -29,7 +29,7 @@ Avec cette structure simple, le recueil sera structuré selon la capture ci-dess
 <div class="screenshot"><img src="{{ ASSET static/help/instance/status.webp }}" alt=""/></div>
 
 > [!NOTE]
-> Chaque page d'un formulaire dispose de sa propre table de données, ces tables sont reliées entre elles par un [identifiant TID](identifiers#tid-et-sequence), qui est un numéro d'enregistrement unique et aléatoire.
+> Chaque page d'un formulaire dispose de sa propre table de données, ces tables sont reliées entre elles par un [identifiant TID](identifiers#tid-et-hid), qui est un numéro d'enregistrement unique et aléatoire.
 >
 > Lors de l'export, les données des deux pages seront exportées dans deux tables séparées (deux onglets dans un export XLSX), qui pourront être reliées par la colonne `__TID`.
 

@@ -1,9 +1,10 @@
-# TID and sequence
+# TID and HID
 
-Each record in Goupile has two unique identifiers:
+Each record in Goupile has three unique identifiers:
 
 - A **TID identifier**, which is a 26-character string encoding the time of the record and a random part (e.g., *01K5EY3SCEM1D1NBABXXDZW7XP*).
 - A **sequence identifier**, which is an incremented number for each record, starting at 1.
+- A **HID identifier** (for Human IDentifier), qui correspond par défaut à l'identifiant séquentiel mais qui peut être personnalisé pour inclure d'autres éléments.
 
 Use the TID to join different tables in exported data. The TID value is available in the `__tid` column of each exported table.
 
@@ -81,9 +82,31 @@ To define a secret counter that is only available in the final export file, set 
 meta.randomize("group", 4, true)
 ```
 
-# Summary
+# Customizing identifiers
 
-For each form page, you can define an additional identifier called *summary*, which is displayed instead of the date in the data monitoring table of records (see screenshot below).
+## Custom HID
+
+The HID identifier displayed in the [monitoring table](data#monitoring-table) corresponds by default to the sequential ID generated for each record.
+
+However, you can customize it to include other elements (including the sequence number, if you wish). To do so, assign a value to `meta.hid` in the form script.
+
+The example below splits participants into two randomized groups and includes the selected group in the identifier, which takes the form `SEQUENCE-GROUP`.
+
+```js
+form.number("*age", "Age", {
+    min: 0,
+    max: 120
+})
+
+let rnd = meta.randomize('G', 4)
+let group = "AABB"[rnd - 1] // Index must be 0 to 3, but the random value is between 1 and 4
+
+meta.hid = thread.sequence + '-' + group
+```
+
+## Summary
+
+For each form page, you can define an additional identifier called *summary*, which is displayed instead of the date in the data monitoring table of records (see screenshot below), in the column corresponding to the page.
 
 To do so, assign a value to `meta.summary` in the form script. In the example below, the value displayed in the "Introduction" column is built based on the age entered in the corresponding variable:
 

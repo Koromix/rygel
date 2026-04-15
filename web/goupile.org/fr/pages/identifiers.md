@@ -1,9 +1,10 @@
-# TID et séquence
+# TID et HID
 
-Chaque enregistrement dans Goupile dispose de deux identifiants uniques :
+Chaque enregistrement dans Goupile dispose de trois identifiants uniques :
 
 - Un **identifiant TID**, qui est une chaîne de 26 caractères encodant le moment de l'enregistrement et une partie aléatoire (ex : *01K5EY3SCEM1D1NBABXXDZW7XP*).
 - Un **identifiant de séquence**, qui est un nombre incrémenté à chaque enregistrement, en commençant par 1.
+- Un **identifiant HID** (pour « Human IDentifier »), qui correspond par défaut à l'identifiant séquentiel mais qui peut être personnalisé pour inclure d'autres éléments.
 
 Utilisez le TID pour faire la jointure entre les différentes tables dans les données exportées. La valeur du TID est disponible dans la colonne `__tid` de chaque table.
 
@@ -81,9 +82,31 @@ Pour définir un compteur secret, qui ne sera disponible que dans le fichier d'e
 meta.randomize("groupe", 4, true)
 ```
 
-# Summary
+# Personnalisation des identifiants
 
-Pour chaque page du formulaire, il est possible de définir un identifiant supplémentaire dit *summary*, qui sera affiché à la place de la date dans le tableau récapitulatif des enregistrements (voir capture ci-dessous).
+## HID personnalisé
+
+L'identifiant HID qui est affiché dans le [tableau de suivi](data#suivi-de-remplissage) correspond par défaut à l'identifiant séquentiel qui est généré pour chaque enregistrement.
+
+Vous pouvez cependant le personnaliser pour inclure d'autres éléments (dont le numéro de séquence, si vous le souhaitez). Pour cela, assignez une valeur à `meta.hid` dans le script de formulaire.
+
+L'exemple ci-dessous répartit les inclusions en deux groupes randomisés, et inclut le groupe choisit dans l'identifiant qui prend la forme `SEQUENCE-GROUPE`.
+
+```js
+form.number("*age", "Âge", {
+    min: 0,
+    max: 120
+})
+
+let rnd = meta.randomize('G', 4)
+let groupe = "AABB"[rnd - 1] // Index must be 0 to 3, but the random value is between 1 and 4
+
+meta.hid = thread.sequence + '-' + groupe
+```
+
+## Summary
+
+Pour chaque page du formulaire, il est possible de définir une information supplémentaire dite *summary*, qui sera affichée à la place de la date dans le tableau récapitulatif des enregistrements (voir capture ci-dessous), dans la colonne correspondant à la page.
 
 Pour cela, assignez une valeur à `meta.summary` dans le script de formulaire. Dans l'exemple ci-dessous, la valeur affichée dans la colonne « Introduction » est construite en fonction de l'âge indiqué dans la variable correspondante :
 
