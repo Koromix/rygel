@@ -971,11 +971,6 @@ void CallData::Relay(Size idx, uint8_t *sp)
         out_reg->ret_pop = pop;
     };
 
-    if (trampoline.generation >= 0 && trampoline.generation != (int32_t)mem->generation) [[unlikely]] {
-        ThrowError<Napi::Error>(env, "Cannot use non-registered callback beyond FFI call");
-        return;
-    }
-
     LocalArray<napi_value, MaxParameters + 1> arguments;
 
     arguments.Append(!trampoline.recv.IsEmpty() ? trampoline.recv.Value() : env.Undefined());

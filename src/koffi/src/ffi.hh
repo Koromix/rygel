@@ -262,8 +262,6 @@ struct InstanceMemory {
     // For big heap allocations
     LinkedAllocator allocator;
 
-    uint16_t generation; // Can wrap without risk
-
     bool busy;
     bool temporary;
 };
@@ -295,6 +293,8 @@ struct InstanceData {
 
     std::thread::id main_thread_id;
     napi_threadsafe_function broker = nullptr;
+
+    CallData *sync_call = nullptr;
 
 #if defined(_WIN32)
     void *main_stack_max;
@@ -337,8 +337,6 @@ struct TrampolineInfo {
     const FunctionInfo *proto;
     Napi::FunctionReference func;
     Napi::Reference<Napi::Value> recv;
-
-    int32_t generation;
 };
 
 struct SharedData {

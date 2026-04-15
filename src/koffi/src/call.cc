@@ -29,10 +29,7 @@ static const Size TrampolineSize = ((const uint8_t *)FindTrampolineEnd() - Tramp
 
 CallData::CallData(Napi::Env env, InstanceData *instance, InstanceMemory *mem)
     : env(env), instance(instance), mem(mem),
-      prev_stack(mem->stack.len), prev_heap(mem->heap)
-{
-    mem->generation += (mem->stack.len == mem->stack0.len);
-}
+      prev_stack(mem->stack.len), prev_heap(mem->heap) {}
 
 CallData::~CallData()
 {
@@ -1011,7 +1008,6 @@ void *CallData::ReserveTrampoline(const FunctionInfo *proto, Napi::Function func
     trampoline->proto = proto;
     trampoline->func.Reset(func, 1);
     trampoline->recv.Reset();
-    trampoline->generation = (int32_t)mem->generation;
 
     void *ptr = GetTrampoline(idx);
 

@@ -845,11 +845,6 @@ void CallData::Relay(Size idx, uint8_t *sp)
 
     K_DEFER_N(err_guard) { memset(out_reg, 0, K_SIZE(*out_reg)); };
 
-    if (trampoline.generation >= 0 && trampoline.generation != (int32_t)mem->generation) [[unlikely]] {
-        ThrowError<Napi::Error>(env, "Cannot use non-registered callback beyond FFI call");
-        return;
-    }
-
     LocalArray<napi_value, MaxParameters + 1> arguments;
 
     arguments.Append(!trampoline.recv.IsEmpty() ? trampoline.recv.Value() : env.Undefined());

@@ -38,8 +38,6 @@ namespace K {
 
 SharedData shared;
 
-static thread_local CallData *sync_call;
-
 // Recent N-API functions are loaded dynamically
 static napi_status (NAPI_CDECL *node_api_create_property_key_utf8)(napi_env env, const char* str, size_t length, napi_value* result);
 static napi_status (NAPI_CDECL *node_api_post_finalizer)(node_api_basic_env env, napi_finalize finalize_cb, void* finalize_data, void* finalize_hint);
@@ -1506,11 +1504,11 @@ static Napi::Value TranslateNormalCall(const FunctionInfo *func, void *native, c
     InstanceMemory *mem = instance->memories[0];
     CallData call(env, instance, mem);
 
-    K_DEFER_C(prev_call = sync_call) {
+    K_DEFER_C(prev_call = instance->sync_call) {
         call.Dispose();
-        sync_call = prev_call;
+        instance->sync_call = prev_call;
     };
-    sync_call = &call;
+    instance->sync_call = &call;
 
     return call.Run(info, func, native);
 }
@@ -1613,11 +1611,11 @@ static Napi::Value TranslateVariadicCall(const FunctionInfo *func, void *native,
     InstanceMemory *mem = instance->memories[0];
     CallData call(env, instance, mem);
 
-    K_DEFER_C(prev_call = sync_call) {
+    K_DEFER_C(prev_call = instance->sync_call) {
         call.Dispose();
-        sync_call = prev_call;
+        instance->sync_call = prev_call;
     };
-    sync_call = &call;
+    instance->sync_call = &call;
 
     Napi::Value ret = call.Run(info, variadic, native);
 
@@ -1734,12 +1732,28 @@ Napi::Value TranslateAsyncCall(const Napi::CallbackInfo &info)
 
 extern "C" void RelayCallback(Size idx, uint8_t *sp)
 {
+    TrampolineInfo *trampoline = &shared.trampolines[idx];
+    InstanceData *instance = trampoline->instance;
+
+    if (!instance) [[unlikely]] {
+        Napi::Env env = trampoline->func.Env();
+
+        ThrowError<Napi::Error>(env, "Cannot use non-registered callback beyond FFI call");
+        return;
+    }
+
+    bool is_main_thread = (std::this_thread::get_id() == instance->main_thread_id);
+
     // Fast path: main thread and we are running a native call through Koffi.
     // But this means we are running on the custom Koffi stack, which could trip up
     // Node and V8, so we need to stwich back to the normal/main stack.
-    if (CallData *call = sync_call; call) [[likely]] {
-        SwitchAndRelay(call, idx, sp, call->saved_sp, &call->mem->stack);
-        return;
+    if (is_main_thread) {
+        CallData *call = instance->sync_call;
+
+        if (call) {
+            SwitchAndRelay(call, idx, sp, call->saved_sp, &call->mem->stack);
+            return;
+        }
     }
 
     // Otherwise, we need to allocate memory to perform the callback.
@@ -1747,9 +1761,7 @@ extern "C" void RelayCallback(Size idx, uint8_t *sp)
     // In some cases we would reuse the existing call, but it is rare so let's ignore
     // this for simplicity.
 
-    TrampolineInfo *trampoline = &shared.trampolines[idx];
     Napi::Env env = trampoline->func.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
 
     InstanceMemory *mem = AllocateMemory(instance, instance->config.async_stack_size, instance->config.async_heap_size);
     if (!mem) [[unlikely]] {
@@ -1758,11 +1770,7 @@ extern "C" void RelayCallback(Size idx, uint8_t *sp)
     }
     K_DEFER { ReleaseMemory(instance, mem); };
 
-    // Avoid triggering the "use callback beyond FFI" check
-    K_DEFER_C(generation = trampoline->generation) { trampoline->generation = generation; };
-    trampoline->generation = -1;
-
-    if (std::this_thread::get_id() == instance->main_thread_id) {
+    if (is_main_thread) {
         CallData call(env, instance, mem);
         K_DEFER { call.Dispose(); };
 
@@ -2046,7 +2054,6 @@ static Napi::Value RegisterCallback(const Napi::CallbackInfo &info)
     } else {
         trampoline->recv.Reset();
     }
-    trampoline->generation = -1;
 
     void *ptr = GetTrampoline(idx);
 
