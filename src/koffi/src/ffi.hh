@@ -361,6 +361,7 @@ extern SharedData shared;
 InstanceMemory *AllocateMemory(InstanceData *instance, Size stack_size, Size heap_size);
 void ReleaseMemory(InstanceData *instance, InstanceMemory *mem);
 
+Napi::Value TranslateFastCall(const Napi::CallbackInfo &info);
 Napi::Value TranslateNormalCall(const Napi::CallbackInfo &info);
 Napi::Value TranslateVariadicCall(const Napi::CallbackInfo &info);
 Napi::Value TranslateAsyncCall(const Napi::CallbackInfo &info);

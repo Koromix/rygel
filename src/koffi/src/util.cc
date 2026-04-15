@@ -1738,16 +1738,43 @@ bool Encode(Napi::Env env, uint8_t *origin, Napi::Value value, const TypeInfo *t
     return true;
 }
 
+static bool CanSkipCallFinalize(const FunctionInfo *func)
+{
+    // Fast calls basically skip CallData::Finalize(), which handles output arguments
+    // and temporary callback trampolines. If the function does not use any
+    // output argument and cannot accept callbacks (so no pointer or callback arguments),
+    // we can skip finalization!
+
+    for (const ParameterInfo &param: func->parameters) {
+        const TypeInfo *type = param.type;
+
+        if (param.directions & 2)
+            return false;
+
+        if (type->primitive == PrimitiveKind::Pointer)
+            return false;
+        if (type->primitive == PrimitiveKind::Callback)
+            return false;
+    }
+
+    return true;
+}
+
 Napi::Function WrapFunction(Napi::Env env, const FunctionInfo *func)
 {
     Napi::Function wrapper;
+
     if (func->variadic) {
         Napi::Function::Callback call = TranslateVariadicCall;
+        wrapper = Napi::Function::New(env, call, func->name, (void *)func->Ref());
+    } else if (CanSkipCallFinalize(func)) {
+        Napi::Function::Callback call = TranslateFastCall;
         wrapper = Napi::Function::New(env, call, func->name, (void *)func->Ref());
     } else {
         Napi::Function::Callback call = TranslateNormalCall;
         wrapper = Napi::Function::New(env, call, func->name, (void *)func->Ref());
     }
+
     wrapper.AddFinalizer([](Napi::Env, FunctionInfo *func) { func->Unref(); }, (FunctionInfo *)func);
 
     if (!func->variadic) {

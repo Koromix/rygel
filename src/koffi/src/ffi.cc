@@ -1491,6 +1491,28 @@ void ReleaseMemory(InstanceData *instance, InstanceMemory *mem)
     }
 }
 
+Napi::Value TranslateFastCall(const Napi::CallbackInfo &info)
+{
+    FunctionInfo *func = (FunctionInfo *)info.Data();
+    Size count = (Size)info.Length();
+
+    Napi::Env env = func->env;
+    InstanceData *instance = func->instance;
+
+    if (count < func->required_parameters) [[unlikely]] {
+        ThrowError<Napi::TypeError>(env, "Expected %1 arguments, got %2", func->parameters.len, count);
+        return env.Null();
+    }
+
+    InstanceMemory *mem = instance->memories[0];
+    CallData call(env, instance, mem);
+
+    K_DEFER_C(prev_call = instance->sync_call) { instance->sync_call = prev_call; };
+    instance->sync_call = &call;
+
+    return call.Run(info, func, func->native);
+}
+
 static Napi::Value TranslateNormalCall(const FunctionInfo *func, void *native, const Napi::CallbackInfo &info, Size count)
 {
     Napi::Env env = func->env;
