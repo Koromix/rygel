@@ -1503,7 +1503,9 @@ Napi::Value TranslateFastCall(const Napi::CallbackInfo &info)
     InstanceMemory *mem = instance->memories[0];
     CallData call(env, instance, mem);
 
+#if defined(K_DEBUG)
     K_DEFER_C(prev_call = instance->sync_call) { instance->sync_call = prev_call; };
+#endif
     instance->sync_call = &call;
 
     return call.Run(info, func, func->native);
@@ -1522,13 +1524,15 @@ static Napi::Value TranslateNormalCall(const FunctionInfo *func, void *native, c
     InstanceMemory *mem = instance->memories[0];
     CallData call(env, instance, mem);
 
-    K_DEFER_C(prev_call = instance->sync_call) {
-        call.Finalize();
-        instance->sync_call = prev_call;
-    };
+#if defined(K_DEBUG)
+    K_DEFER_C(prev_call = instance->sync_call) { instance->sync_call = prev_call; };
+#endif
     instance->sync_call = &call;
 
-    return call.Run(info, func, native);
+    Napi::Value ret = call.Run(info, func, native);
+    call.Finalize();
+
+    return ret;
 }
 
 Napi::Value TranslateNormalCall(const Napi::CallbackInfo &info)
@@ -1772,18 +1776,14 @@ extern "C" void RelayCallback(Size idx, uint8_t *sp)
         return;
     }
 
-    bool is_main_thread = (std::this_thread::get_id() == instance->main_thread_id);
-
     // Fast path: main thread and we are running a native call through Koffi.
     // But this means we are running on the custom Koffi stack, which could trip up
     // Node and V8, so we need to stwich back to the normal/main stack.
-    if (is_main_thread) {
+    if (InstanceMemory *mem0 = instance->memories[0]; sp >= mem0->stack0.ptr && sp <= mem0->stack0.end()) {
         CallData *call = instance->sync_call;
 
-        if (call) {
-            SwitchAndRelay(call, idx, sp, call->saved_sp, &call->mem->stack);
-            return;
-        }
+        SwitchAndRelay(call, idx, sp, call->saved_sp, &call->mem->stack);
+        return;
     }
 
     // Otherwise, we need to allocate memory to perform the callback.
@@ -1800,7 +1800,7 @@ extern "C" void RelayCallback(Size idx, uint8_t *sp)
     }
     K_DEFER { ReleaseMemory(instance, mem); };
 
-    if (is_main_thread) {
+    if (std::this_thread::get_id() == instance->main_thread_id) {
         CallData call(env, instance, mem);
         K_DEFER { call.Finalize(); };
 
