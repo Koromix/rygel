@@ -1134,10 +1134,6 @@ static bool ParseClassicFunction(const Napi::CallbackInfo &info, bool concrete, 
             ThrowError<Napi::TypeError>(env, "Functions cannot have more than %1 parameters", MaxParameters);
             return false;
         }
-        if ((param.directions & 2) && ++out_func->out_parameters >= MaxParameters) {
-            ThrowError<Napi::TypeError>(env, "Functions cannot have more than %1 output parameters", MaxParameters);
-            return false;
-        }
 
         param.offset = (int8_t)j;
 
@@ -1613,10 +1609,6 @@ static Napi::Value TranslateVariadicCall(const FunctionInfo *func, void *native,
             }
             if (variadic->parameters.len >= MaxParameters) [[unlikely]] {
                 ThrowError<Napi::TypeError>(env, "Functions cannot have more than %1 parameters", MaxParameters);
-                return env.Null();
-            }
-            if ((param.directions & 2) && ++variadic->out_parameters >= MaxParameters) [[unlikely]] {
-                ThrowError<Napi::TypeError>(env, "Functions cannot have more than %1 output parameters", MaxParameters);
                 return env.Null();
             }
 

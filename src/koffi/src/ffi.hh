@@ -232,7 +232,6 @@ struct FunctionInfo {
     ReturnInfo ret;
     HeapArray<ParameterInfo> parameters;
     int8_t required_parameters;
-    int8_t out_parameters;
     bool variadic;
 
     // ABI-specific part
