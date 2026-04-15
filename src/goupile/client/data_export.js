@@ -163,7 +163,7 @@ async function exportRecords(id, secret, stores, template = {}) {
 
         // Create worksheet
         let header = [
-            '__tid', '__sequence',
+            '__tid', '__sequence', '__hid',
             ...table.columns.map(column => column.name)
         ];
         let ws = XLSX.utils.aoa_to_sheet([header]);
@@ -184,7 +184,7 @@ async function exportRecords(id, secret, stores, template = {}) {
                 continue;
 
             let row = [
-                thread.tid, thread.sequence,
+                thread.tid, thread.sequence, thread.hid,
                 ...table.columns.map(column => {
                     let result = column.read(entry.data);
                     return result ?? 'NA';
