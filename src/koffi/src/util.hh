@@ -61,21 +61,21 @@ void ThrowError(Napi::Env env, const char *msg, Args... args)
     err.ThrowAsJavaScriptException();
 }
 
-static inline bool IsInteger(const TypeInfo *type)
+static FORCE_INLINE bool IsInteger(const TypeInfo *type)
 {
     bool integer = ((int)type->primitive >= (int)PrimitiveKind::Int8 &&
                     (int)type->primitive <= (int)PrimitiveKind::UInt64);
     return integer;
 }
 
-static inline bool IsFloat(const TypeInfo *type)
+static FORCE_INLINE bool IsFloat(const TypeInfo *type)
 {
     bool fp = (type->primitive == PrimitiveKind::Float32 ||
                type->primitive == PrimitiveKind::Float64);
     return fp;
 }
 
-static inline bool IsRegularSize(Size size, Size max)
+static FORCE_INLINE bool IsRegularSize(Size size, Size max)
 {
     bool regular = (size <= max && !(size & (size - 1)));
     return regular;
@@ -101,18 +101,18 @@ const char *GetValueType(const InstanceData *instance, Napi::Value value);
 void SetValueTag(Napi::Value value, const void *marker);
 bool CheckValueTag(Napi::Value value, const void *marker);
 
-static inline bool IsNullOrUndefined(Napi::Value value)
+static FORCE_INLINE bool IsNullOrUndefined(Napi::Value value)
 {
     return value.IsNull() || value.IsUndefined();
 }
 
-static inline bool IsObject(Napi::Value value)
+static FORCE_INLINE bool IsObject(Napi::Value value)
 {
     return value.IsObject() && !IsNullOrUndefined(value) && !value.IsArray();
 }
 
 template <typename T>
-bool TryNumber(Napi::Value value, T *out_value)
+static FORCE_INLINE bool TryNumber(Napi::Value value, T *out_value)
 {
     // Assume number first
     {
@@ -149,7 +149,7 @@ bool TryNumber(Napi::Value value, T *out_value)
     return false;
 }
 
-static inline bool TryPointer(Napi::Value value, void **out_ptr)
+static FORCE_INLINE bool TryPointer(Napi::Value value, void **out_ptr)
 {
     if (IsNullOrUndefined(value)) {
         *out_ptr = nullptr;
@@ -175,7 +175,7 @@ static inline bool TryPointer(Napi::Value value, void **out_ptr)
     return false;
 }
 
-static inline bool TryBuffer(Napi::Value value, Span<uint8_t> *out_buffer)
+static FORCE_INLINE bool TryBuffer(Napi::Value value, Span<uint8_t> *out_buffer)
 {
     // Before somewhere around Node 20.12, napi_get_buffer_info() would assert/crash
     // when used with something it did not support, instead of returning napi_invalid_arg.
@@ -238,21 +238,21 @@ Napi::Value Decode(Napi::Env env, const uint8_t *ptr, const TypeInfo *type, cons
 bool Encode(Napi::Value ref, Size offset, Napi::Value value, const TypeInfo *type, const Size *len = nullptr);
 bool Encode(Napi::Env env, uint8_t *ptr, Napi::Value value, const TypeInfo *type, const Size *len = nullptr);
 
-static inline Napi::Value NewInt(Napi::Env env, int8_t i)
+static FORCE_INLINE Napi::Value NewInt(Napi::Env env, int8_t i)
     { napi_value value; napi_create_int32(env, (int32_t)i, &value); return Napi::Value(env, value); }
-static inline Napi::Value NewInt(Napi::Env env, uint8_t i)
+static FORCE_INLINE Napi::Value NewInt(Napi::Env env, uint8_t i)
     { napi_value value; napi_create_uint32(env, (uint32_t)i, &value); return Napi::Value(env, value); }
-static inline Napi::Value NewInt(Napi::Env env, int16_t i)
+static FORCE_INLINE Napi::Value NewInt(Napi::Env env, int16_t i)
     { napi_value value; napi_create_int32(env, (int32_t)i, &value); return Napi::Value(env, value); }
-static inline Napi::Value NewInt(Napi::Env env, uint16_t i)
+static FORCE_INLINE Napi::Value NewInt(Napi::Env env, uint16_t i)
     { napi_value value; napi_create_uint32(env, (uint32_t)i, &value); return Napi::Value(env, value); }
-static inline Napi::Value NewInt(Napi::Env env, int32_t i)
+static FORCE_INLINE Napi::Value NewInt(Napi::Env env, int32_t i)
     { napi_value value; napi_create_int32(env, i, &value); return Napi::Value(env, value); }
-static inline Napi::Value NewInt(Napi::Env env, uint32_t i)
+static FORCE_INLINE Napi::Value NewInt(Napi::Env env, uint32_t i)
     { napi_value value; napi_create_uint32(env, i, &value); return Napi::Value(env, value); }
 
 template <typename T>
-Napi::Value NewInt(Napi::Env env, T i)
+static FORCE_INLINE Napi::Value NewInt(Napi::Env env, T i)
 {
     static_assert(sizeof(T) == 8);
 
@@ -273,7 +273,7 @@ Napi::Value NewInt(Napi::Env env, T i)
     return Napi::BigInt::New(env, i);
 }
 
-static inline Napi::Array GetOwnPropertyNames(Napi::Object obj)
+static FORCE_INLINE Napi::Array GetOwnPropertyNames(Napi::Object obj)
 {
     Napi::Env env = obj.Env();
 
