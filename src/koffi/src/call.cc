@@ -27,26 +27,15 @@ extern "C" void *FindTrampolineEnd();
 static const uint8_t *TrampolineStart = (const uint8_t *)FindTrampolineStart();
 static const Size TrampolineSize = ((const uint8_t *)FindTrampolineEnd() - TrampolineStart) / MaxTrampolines;
 
+#if defined(K_DEBUG)
 CallData::~CallData()
 {
-#if defined(K_DEBUG)
-    // K_ASSERT is already a noop if K_DEBUG is not defined, but let's guard it anyway
-    // for symmetry with the code in Dispose(), which only happens if K_DEBUG is defined.
+    K_ASSERT(mem->stack.end == prev_stack);
+    K_ASSERT(mem->heap.ptr == prev_heap);
     K_ASSERT(!out_arguments.len);
     K_ASSERT(!used_trampolines.len);
-#endif
-
-    mem->stack.end = prev_stack;
-    mem->heap.ptr = prev_heap;
-
-    if (release_alloc) {
-        // We could check for prev_stack == mem->stack.len and call ReleaseAll() if true, but
-        // it is a virtual method. Which means it could be slow (unless devirtualized), and
-        // most of the time there's nothing to release.
-        // So instead, take note of the need to call ReleaseAll() when big chunks are allocated.
-        mem->allocator.ReleaseAll();
-    }
 }
+#endif
 
 static inline Napi::Value GetReferenceValue(Napi::Env env, napi_ref ref)
 {
@@ -60,6 +49,8 @@ static inline Napi::Value GetReferenceValue(Napi::Env env, napi_ref ref)
 
 void CallData::Finalize()
 {
+    FinalizeFast();
+
     if (out_arguments.len) {
         if (!env.IsExceptionPending()) {
             for (const OutArgument &out: out_arguments) {
@@ -160,6 +151,25 @@ void CallData::Finalize()
     out_arguments.len = 0;
     used_trampolines.len = 0;
 #endif
+}
+
+void CallData::FinalizeFast()
+{
+#if defined(K_DEBUG)
+    K_ASSERT(!finalized);
+    K_DEFER { finalized = true; };
+#endif
+
+    mem->stack.end = prev_stack;
+    mem->heap.ptr = prev_heap;
+
+    if (release_alloc) {
+        // We could check for prev_stack == mem->stack.len and call ReleaseAll() if true, but
+        // it is a virtual method. Which means it could be slow (unless devirtualized), and
+        // most of the time there's nothing to release.
+        // So instead, take note of the need to call ReleaseAll() when big chunks are allocated.
+        mem->allocator.ReleaseAll();
+    }
 }
 
 void CallData::RelayAsync(Size idx, uint8_t *sp)

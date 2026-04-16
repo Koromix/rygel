@@ -1512,7 +1512,10 @@ Napi::Value TranslateFastCall(const Napi::CallbackInfo &info)
 #endif
     instance->sync_call = &call;
 
-    return call.Run(func, func->native, info.First());
+    Napi::Value ret = call.Run(func, func->native, info.First());
+    call.FinalizeFast();
+
+    return ret;
 }
 
 static Napi::Value TranslateNormalCall(const FunctionInfo *func, void *native, const Napi::CallbackInfo &info, Size count)
@@ -1633,13 +1636,13 @@ static Napi::Value TranslateVariadicCall(const FunctionInfo *func, void *native,
     InstanceMemory *mem = instance->memories[0];
     CallData call(env, instance, mem);
 
-    K_DEFER_C(prev_call = instance->sync_call) {
-        call.Finalize();
-        instance->sync_call = prev_call;
-    };
+#if defined(K_DEBUG)
+    K_DEFER_C(prev_call = instance->sync_call) { instance->sync_call = prev_call; };
+#endif
     instance->sync_call = &call;
 
     Napi::Value ret = call.Run(variadic, native, info.First());
+    call.Finalize();
 
     if (variadic != instance->variadic_func) {
         err_guard.Disable();
@@ -1690,9 +1693,11 @@ public:
 
 AsyncCall::~AsyncCall()
 {
+#if defined(K_DEBUG)
     call->~CallData();
-    ReleaseMemory(call->instance, call->mem);
+#endif
 
+    ReleaseMemory(call->instance, call->mem);
     func->Unref();
 }
 

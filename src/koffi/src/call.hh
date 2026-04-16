@@ -53,6 +53,10 @@ struct alignas(8) CallData {
     LocalArray<int16_t, 16> used_trampolines;
     LocalArray<OutArgument, MaxParameters> out_arguments;
 
+#if defined(K_DEBUG)
+    bool finalized = false;
+#endif
+
 #if defined(UNITY_BUILD) && (defined(__clang__) || defined(_MSC_VER))
     #define INLINE_IF_UNITY FORCE_INLINE
 #else
@@ -62,7 +66,9 @@ struct alignas(8) CallData {
     CallData(Napi::Env env, InstanceData *instance, InstanceMemory *mem)
         : env(env), instance(instance), mem(mem),
           prev_stack(mem->stack.end), prev_heap(mem->heap.ptr) {}
-    INLINE_IF_UNITY ~CallData();
+#if defined(K_DEBUG)
+    ~CallData();
+#endif
 
     INLINE_IF_UNITY Napi::Value Run(const FunctionInfo *func, void *native, napi_value *args);
 
@@ -70,7 +76,8 @@ struct alignas(8) CallData {
     void ExecuteAsync(void *native);
     Napi::Value EndAsync();
 
-    void Finalize();
+    INLINE_IF_UNITY void Finalize();
+    INLINE_IF_UNITY void FinalizeFast();
 
     void Relay(Size idx, uint8_t *sp);
     void RelayAsync(Size idx, uint8_t *sp);
