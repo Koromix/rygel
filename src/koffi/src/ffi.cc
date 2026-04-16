@@ -1767,13 +1767,6 @@ extern "C" void RelayCallback(Size idx, uint8_t *sp)
     TrampolineInfo *trampoline = &shared.trampolines[idx];
     InstanceData *instance = trampoline->instance;
 
-    if (!instance) [[unlikely]] {
-        Napi::Env env = trampoline->func.Env();
-
-        ThrowError<Napi::Error>(env, "Cannot use non-registered callback beyond FFI call");
-        return;
-    }
-
     // Fast path: main thread and we are running a native call through Koffi.
     // But this means we are running on the custom Koffi stack, which could trip up
     // Node and V8, so we need to stwich back to the normal/main stack.
@@ -1781,6 +1774,13 @@ extern "C" void RelayCallback(Size idx, uint8_t *sp)
         CallData *call = instance->sync_call;
 
         SwitchAndRelay(call, idx, sp, call->saved_sp, &call->mem->stack);
+        return;
+    }
+
+    if (!trampoline->used) [[unlikely]] {
+        Napi::Env env = trampoline->func.Env();
+
+        ThrowError<Napi::Error>(env, "Cannot use non-registered callback beyond FFI call");
         return;
     }
 
@@ -1812,6 +1812,15 @@ extern "C" void RelayCallback(Size idx, uint8_t *sp)
 
 extern "C" void RelayDirect(CallData *call, Size idx, uint8_t *sp)
 {
+    TrampolineInfo *trampoline = &shared.trampolines[idx];
+
+    if (!trampoline->used) [[unlikely]] {
+        Napi::Env env = trampoline->func.Env();
+
+        ThrowError<Napi::Error>(env, "Cannot use non-registered callback beyond FFI call");
+        return;
+    }
+
     Napi::HandleScope scope(call->env);
     call->Relay(idx, sp);
 }
@@ -2082,6 +2091,7 @@ static Napi::Value RegisterCallback(const Napi::CallbackInfo &info)
     } else {
         trampoline->recv.Reset();
     }
+    trampoline->used = true;
 
     void *ptr = GetTrampoline(idx);
 
@@ -2129,6 +2139,7 @@ static Napi::Value UnregisterCallback(const Napi::CallbackInfo &info)
 
         trampoline->func.Reset();
         trampoline->recv.Reset();
+        trampoline->used = false;
 
         shared.available.Append(idx);
     }
@@ -2758,6 +2769,7 @@ InstanceData::~InstanceData()
                 trampoline->instance = nullptr;
                 trampoline->func.Reset();
                 trampoline->recv.Reset();
+                trampoline->used = false;
             }
         }
     }

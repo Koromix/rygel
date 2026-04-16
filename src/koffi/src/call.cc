@@ -148,7 +148,7 @@ void CallData::Finalize()
             K_ASSERT(trampoline->instance == instance);
             K_ASSERT(!trampoline->func.IsEmpty());
 
-            trampoline->instance = nullptr;
+            trampoline->used = false;
             trampoline->func.Reset();
             trampoline->recv.Reset();
 
@@ -1088,6 +1088,7 @@ void *CallData::ReserveTrampoline(const FunctionInfo *proto, Napi::Function func
     trampoline->proto = proto;
     trampoline->func.Reset(func, 1);
     trampoline->recv.Reset();
+    trampoline->used = true;
 
     void *ptr = GetTrampoline(idx);
 

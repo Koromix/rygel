@@ -336,6 +336,8 @@ struct TrampolineInfo {
     const FunctionInfo *proto;
     Napi::FunctionReference func;
     Napi::Reference<Napi::Value> recv;
+
+    bool used;
 };
 
 struct SharedData {
