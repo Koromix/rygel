@@ -1660,7 +1660,7 @@ Napi::Value TranslateVariadicCall(const Napi::CallbackInfo &info)
 class AsyncCall: public Napi::AsyncWorker {
     Napi::Env env;
 
-    CallData call;
+    NoDestroy<CallData> call;
     const FunctionInfo *func;
     void *native;
 
@@ -1673,7 +1673,7 @@ public:
     ~AsyncCall();
 
     bool Prepare(const Napi::CallbackInfo &info) {
-        prepared = call.PrepareAsync(func, info.First());
+        prepared = call->PrepareAsync(func, info.First());
 
         if (!prepared) [[unlikely]] {
             Napi::Error err = env.GetAndClearPendingException();
@@ -1690,14 +1690,16 @@ public:
 
 AsyncCall::~AsyncCall()
 {
-    ReleaseMemory(call.instance, call.mem);
+    call->~CallData();
+    ReleaseMemory(call->instance, call->mem);
+
     func->Unref();
 }
 
 void AsyncCall::Execute()
 {
     if (prepared) [[likely]] {
-        call.ExecuteAsync(native);
+        call->ExecuteAsync(native);
     }
 }
 
@@ -1707,8 +1709,8 @@ void AsyncCall::OnOK()
 
     Napi::FunctionReference &callback = Callback();
 
-    Napi::Value ret = call.EndAsync();
-    call.Finalize();
+    Napi::Value ret = call->EndAsync();
+    call->Finalize();
 
     napi_value self = env.Null();
     napi_value args[] = { env.Null(), ret };
@@ -1720,7 +1722,7 @@ void AsyncCall::OnError(const Napi::Error& err)
 {
     Napi::FunctionReference &callback = Callback();
 
-    call.Finalize();
+    call->Finalize();
 
     napi_value self = env.Null();
     napi_value args[] = { err.Value(), env.Undefined() };
