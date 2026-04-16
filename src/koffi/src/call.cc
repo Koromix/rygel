@@ -237,7 +237,7 @@ Size CallData::PushStringValue(Napi::Value value, const char **out_str)
     napi_status status;
 
     buf.ptr = (char *)mem->heap.ptr;
-    buf.len = std::max((Size)0, mem->heap.end - mem->heap.ptr - Kibibytes(32));
+    buf.len = std::max((Size)0, (Size)(mem->heap.end - mem->heap.ptr) - Kibibytes(32));
 
     status = napi_get_value_string_utf8(env, value, buf.ptr, (size_t)buf.len, &len);
     K_ASSERT(status == napi_ok);
@@ -272,7 +272,7 @@ Size CallData::PushString16Value(Napi::Value value, const char16_t **out_str16)
 
     mem->heap.ptr = AlignUp(mem->heap.ptr, 2);
     buf.ptr = (char16_t *)mem->heap.ptr;
-    buf.len = std::max((Size)0, mem->heap.end - mem->heap.ptr - Kibibytes(32)) / 2;
+    buf.len = std::max((Size)0, (Size)(mem->heap.end - mem->heap.ptr) - Kibibytes(32)) / 2;
 
     status = napi_get_value_string_utf16(env, value, buf.ptr, (size_t)buf.len, &len);
     K_ASSERT(status == napi_ok);
@@ -312,7 +312,7 @@ Size CallData::PushString32Value(Napi::Value value, const char32_t **out_str32)
 
     mem->heap.ptr = AlignUp(mem->heap.ptr, 4);
     buf.ptr = (char32_t *)mem->heap.ptr;
-    buf.len = std::max((Size)0, mem->heap.end - mem->heap.ptr - Kibibytes(32)) / 4;
+    buf.len = std::max((Size)0, (Size)(mem->heap.end - mem->heap.ptr) - Kibibytes(32)) / 4;
 
     if (buf16.len < buf.len) [[likely]] {
         mem->heap.ptr += buf16.len * 4;
