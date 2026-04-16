@@ -767,7 +767,7 @@ namespace {
             return call->env.Null();
         }
 
-        uint8_t *ptr = call->AllocHeap(inst->type->size, 16);
+        uint8_t *ptr = call->AllocHeap(inst->type->size);
         *(uint8_t **)(base + inst->b1) = ptr;
 
         Napi::Object obj = value.As<Napi::Object>();
@@ -892,7 +892,7 @@ namespace {
         return DecodeObject(call->env, ptr, inst->type);
     }
     OP(RunAggregateStack) {
-        uint8_t *ptr = call->AllocHeap(inst->b, 16);
+        uint8_t *ptr = call->AllocHeap(inst->b);
         *(uint8_t **)(base + 8 * 8) = ptr; // x8
         WRAP(ForwardCallGG(call->native, base, &call->saved_sp));
         return DecodeObject(call->env, ptr, inst->type);
@@ -974,7 +974,7 @@ namespace {
         return DecodeObject(call->env, ptr, inst->type);
     }
     OP(RunAggregateStackX) {
-        uint8_t *ptr = call->AllocHeap(inst->b, 16);
+        uint8_t *ptr = call->AllocHeap(inst->b);
         *(uint8_t **)(base + 8 * 8) = ptr; // x8
         WRAP(ForwardCallGGX(call->native, base, &call->saved_sp));
         return DecodeObject(call->env, ptr, inst->type);
@@ -1020,7 +1020,7 @@ namespace {
     OP(CallF) { CALL(F); return call->env.Null(); }
     OP(CallDDDD) { CALL(DDDD); return call->env.Null(); }
     OP(CallStack) {
-        uint8_t *ptr = call->AllocHeap(inst->b, 16);
+        uint8_t *ptr = call->AllocHeap(inst->b);
         *(uint8_t **)(base + 8 * 8) = ptr; // x8
         CALL(GG);
         *(uint8_t **)base = ptr; // Store pointer for ReturnAggregateStack
@@ -1034,7 +1034,7 @@ namespace {
     OP(CallFX) { CALL(FX); return call->env.Null(); }
     OP(CallDDDDX) { CALL(DDDDX); return call->env.Null(); }
     OP(CallStackX) {
-        uint8_t *ptr = call->AllocHeap(inst->b, 16);
+        uint8_t *ptr = call->AllocHeap(inst->b);
         *(uint8_t **)(base + 8 * 8) = ptr; // x8
         CALL(GGX);
         *(uint8_t **)base = ptr; // Store pointer for ReturnAggregateStack

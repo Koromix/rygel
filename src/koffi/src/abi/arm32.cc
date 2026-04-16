@@ -217,7 +217,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
     if (!vec_ptr) [[unlikely]]
         return false;
     if (func->ret.use_memory) {
-        return_ptr = AllocHeap(func->ret.type->size, 16);
+        return_ptr = AllocHeap(func->ret.type->size);
         *(uint8_t **)(gpr_ptr++) = return_ptr;
     }
 
@@ -789,7 +789,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
                     if (param.type->size > gpr_size) {
                         // XXX: Expensive, can we do better?
                         // The problem is that the object is split between the GPRs and the caller stack.
-                        uint8_t *ptr = AllocHeap(param.type->size, 16);
+                        uint8_t *ptr = AllocHeap(param.type->size);
 
                         memcpy(ptr, gpr_ptr, gpr_size);
                         memcpy(ptr + gpr_size, args_ptr, param.type->size - gpr_size);

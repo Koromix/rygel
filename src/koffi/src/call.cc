@@ -245,7 +245,7 @@ Size CallData::PushStringValue(Napi::Value value, const char **out_str)
     len++;
 
     if (len < (size_t)buf.len) [[likely]] {
-        mem->heap.ptr += (Size)len;
+        mem->heap.ptr += (Size)AlignLen(len, 16);
     } else {
         status = napi_get_value_string_utf8(env, value, nullptr, 0, &len);
         K_ASSERT(status == napi_ok);
@@ -280,7 +280,7 @@ Size CallData::PushString16Value(Napi::Value value, const char16_t **out_str16)
     len++;
 
     if (len < (size_t)buf.len) [[likely]] {
-        mem->heap.ptr += (Size)len * 2;
+        mem->heap.ptr += (Size)AlignLen(len * 2, 16);
     } else {
         status = napi_get_value_string_utf16(env, value, nullptr, 0, &len);
         K_ASSERT(status == napi_ok);
@@ -315,7 +315,7 @@ Size CallData::PushString32Value(Napi::Value value, const char32_t **out_str32)
     buf.len = std::max((Size)0, (Size)(mem->heap.end - mem->heap.ptr) - Kibibytes(32)) / 4;
 
     if (buf16.len < buf.len) [[likely]] {
-        mem->heap.ptr += buf16.len * 4;
+        mem->heap.ptr += AlignLen(buf16.len * 4, 16);
     } else {
         buf = AllocateSpan<char32_t>(&mem->allocator, buf16.len);
         release_alloc |= (prev_stack == mem->stack.end);
@@ -901,7 +901,7 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
                 return false;
             }
 
-            ptr = AllocHeap(size, 16);
+            ptr = AllocHeap(size);
 
             if (directions & 1) {
                 if (!PushNormalArray(array, type, size, (uint8_t *)ptr))
@@ -932,7 +932,7 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
         Napi::Object obj = value.As<Napi::Object>();
         K_ASSERT(IsObject(value));
 
-        ptr = (void *)AllocHeap(ref->size, 16);
+        ptr = (void *)AllocHeap(ref->size);
 
         if (ref->primitive == PrimitiveKind::Union &&
                 (directions & 2) && !CheckValueTag(obj, &MagicUnionMarker)) [[unlikely]] {

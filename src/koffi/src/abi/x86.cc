@@ -604,7 +604,7 @@ Napi::Value RunLoop(CallData *call, napi_value *args, uint32_t *base, const AbiI
         return DecodeObject(call->env, (const uint8_t *)&ret, inst->type);
     }
     OP(RunAggregateStack) {
-        *(uint8_t **)base = call->AllocHeap(inst->b, 16);
+        *(uint8_t **)base = call->AllocHeap(inst->b);
         uint32_t eax = (uint32_t)WRAP(ForwardCallG(call->native, (uint8_t *)base, &call->saved_sp));
         return DecodeObject(call->env, (const uint8_t *)eax, inst->type);
     }
@@ -684,9 +684,9 @@ Napi::Value RunLoop(CallData *call, napi_value *args, uint32_t *base, const AbiI
     }
     OP(RunAggregateStackR) {
 #if defined(_WIN32)
-        *(uint8_t **)(base + 4) = call->AllocHeap(inst->b, 16);
+        *(uint8_t **)(base + 4) = call->AllocHeap(inst->b);
 #else
-        *(uint8_t **)base = call->AllocHeap(inst->b, 16);
+        *(uint8_t **)base = call->AllocHeap(inst->b);
 #endif
         uint32_t eax = (uint32_t)WRAP(ForwardCallGR(call->native, (uint8_t *)base, &call->saved_sp));
         return DecodeObject(call->env, (const uint8_t *)eax, inst->type);
@@ -740,7 +740,7 @@ Napi::Value RunLoop(CallData *call, napi_value *args, uint32_t *base, const AbiI
     OP(CallF) { CALL(F); return call->env.Null(); }
     OP(CallD) { CALL(D); return call->env.Null(); }
     OP(CallStack) {
-        *(uint8_t **)base = call->AllocHeap(inst->b, 16);
+        *(uint8_t **)base = call->AllocHeap(inst->b);
         CALL(G);
         return call->env.Null();
     }
@@ -749,9 +749,9 @@ Napi::Value RunLoop(CallData *call, napi_value *args, uint32_t *base, const AbiI
     OP(CallDR) { CALL(DR); return call->env.Null(); }
     OP(CallStackR) {
 #if defined(_WIN32)
-        *(uint8_t **)(base + 4) = call->AllocHeap(inst->b, 16);
+        *(uint8_t **)(base + 4) = call->AllocHeap(inst->b);
 #else
-        *(uint8_t **)base = call->AllocHeap(inst->b, 16);
+        *(uint8_t **)base = call->AllocHeap(inst->b);
 #endif
         CALL(GR);
         return call->env.Null();

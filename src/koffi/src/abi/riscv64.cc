@@ -166,7 +166,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
     if (!vec_ptr) [[unlikely]]
         return false;
     if (func->ret.use_memory) {
-        return_ptr = AllocHeap(func->ret.type->size, 16);
+        return_ptr = AllocHeap(func->ret.type->size);
         *(uint8_t **)(gpr_ptr++) = return_ptr;
     }
 
@@ -334,7 +334,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
                     args_ptr += (param.type->size + 7) / 8;
                 }
             } else {
-                uint8_t *ptr = AllocHeap(param.type->size, 16);
+                uint8_t *ptr = AllocHeap(param.type->size);
 
                 if (param.gpr_count) {
                     K_ASSERT(param.gpr_count == 1);

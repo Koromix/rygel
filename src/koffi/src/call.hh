@@ -94,7 +94,7 @@ struct alignas(8) CallData {
     template <typename T>
     T *AllocStack(Size size);
     template <typename T = uint8_t>
-    T *AllocHeap(Size size, Size align);
+    T *AllocHeap(Size size);
 
     bool CheckDynamicLength(Napi::Object obj, Size element, const char *countedby, Napi::Value value);
 
@@ -123,10 +123,12 @@ inline T *CallData::AllocStack(Size size)
 }
 
 template <typename T>
-inline T *CallData::AllocHeap(Size size, Size align)
+inline T *CallData::AllocHeap(Size size)
 {
-    uint8_t *ptr = AlignUp(mem->heap.ptr, align);
-    uint8_t *end = ptr + size;
+    K_ASSERT(AlignUp(mem->heap.ptr, 16) == mem->heap.ptr);
+
+    uint8_t *ptr = mem->heap.ptr;
+    uint8_t *end = AlignUp(ptr + size, 16);
 
     if (size < 4096 && end <= mem->heap.end) [[likely]] {
 #if defined(K_DEBUG)
@@ -143,8 +145,8 @@ inline T *CallData::AllocHeap(Size size, Size align)
         int flags = 0;
 #endif
 
-        ptr = (uint8_t *)AllocateRaw(&mem->allocator, size + align, flags);
-        ptr = AlignUp(ptr, align);
+        ptr = (uint8_t *)AllocateRaw(&mem->allocator, size + 16, flags);
+        ptr = AlignUp(ptr, 16);
         release_alloc |= (prev_stack == mem->stack.end);
 
         return ptr;
