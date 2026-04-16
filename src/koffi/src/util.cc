@@ -1738,6 +1738,24 @@ bool Encode(Napi::Env env, uint8_t *origin, Napi::Value value, const TypeInfo *t
     return true;
 }
 
+static bool CanTypeAcceptCallbacks(const TypeInfo *type)
+{
+    if (type->primitive == PrimitiveKind::Pointer)
+        return true;
+    if (type->primitive == PrimitiveKind::Callback)
+        return true;
+
+    if (type->primitive == PrimitiveKind::Record ||
+            type->primitive == PrimitiveKind::Union) {
+        for (const RecordMember &member: type->members) {
+            if (CanTypeAcceptCallbacks(member.type))
+                return false;
+        }
+    }
+
+    return true;
+}
+
 static bool CanSkipCallFinalize(const FunctionInfo *func)
 {
     // Fast calls basically skip CallData::Finalize(), which handles output arguments
@@ -1746,14 +1764,9 @@ static bool CanSkipCallFinalize(const FunctionInfo *func)
     // we can skip finalization!
 
     for (const ParameterInfo &param: func->parameters) {
-        const TypeInfo *type = param.type;
-
         if (param.directions & 2)
             return false;
-
-        if (type->primitive == PrimitiveKind::Pointer)
-            return false;
-        if (type->primitive == PrimitiveKind::Callback)
+        if (CanTypeAcceptCallbacks(param.type))
             return false;
     }
 
