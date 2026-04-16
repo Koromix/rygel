@@ -1714,8 +1714,6 @@ void AsyncCall::OnOK()
 
 void AsyncCall::OnError(const Napi::Error& err)
 {
-    K_ASSERT(prepared);
-
     Napi::FunctionReference &callback = Callback();
 
     call.Finalize();
