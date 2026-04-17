@@ -342,6 +342,12 @@ html.small #ins_tasks { display: flex; }
     border-color: white;
 }
 
+.ins_dot {
+    display: inline-block;
+    margin: -3px 0 0 1px;
+    vertical-align: middle;
+}
+
 /* -------------------- Misc -------------------- */
 
 #ins_develop {

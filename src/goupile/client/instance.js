@@ -748,7 +748,7 @@ function renderData() {
 
                                             if (tags.length) {
                                                 tooltip += '\nTags : ' + tags.map(tag => tag.label).join(', ');
-                                                dots = tags.map(tag => html` <span style=${'color: ' + tag.color + ';'}>⏺\uFE0E</span>`);
+                                                dots = tags.map(tag => html` <span class="ins_dot" style=${'color: ' + tag.color + ';'}>●\uFE0E</span>`);
                                             }
                                         }
 
