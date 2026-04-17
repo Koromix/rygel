@@ -7,6 +7,13 @@
 
 ### Koffi 2.16
 
+#### Koffi 2.16.1
+
+*Released on 2026-04-17*
+
+- Fix possible stack check crash when relaying callbacks on Windows
+- Improve exception handling inside callbacks
+
 #### Koffi 2.16.0
 
 *Released on 2026-04-14*
