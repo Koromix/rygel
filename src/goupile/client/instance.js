@@ -681,117 +681,119 @@ function renderData() {
                 ` : ''}
             </div>
 
-            <table class="ui_table fixed" id="ins_data"
-                   style=${'min-width: ' + (5 + 5 * data_columns.length) + 'em;'}>
-                <colgroup>
-                    <col style="width: 7em;" />
-                    <col style="width: 12em;"/>
-                    ${Util.mapRange(0, data_columns.length, () => html`<col/>`)}
-                    <col style="width: 2em;"/>
-                </colgroup>
+            <div>
+                <table class="ui_table fixed" id="ins_data"
+                       style=${'min-width: ' + (5 + 5 * data_columns.length) + 'em;'}>
+                    <colgroup>
+                        <col style="width: 7em;" />
+                        <col style="width: 12em;"/>
+                        ${Util.mapRange(0, data_columns.length, () => html`<col/>`)}
+                        <col style="width: 2em;"/>
+                    </colgroup>
 
-                <thead>
-                    ${data_groups.map((group, idx) => html`
-                        <tr>
-                            ${!idx ? html`
-                                <th class="group" rowspan=${data_groups.length}>${T.id}</th>
-                                <th class="group" rowspan=${data_groups.length}>${T.creation}</th>
-                            ` : ''}
-                            ${group.map(col => {
-                                let cls = '';
-                                let stats = '';
-                                let title = col.page.title;
-
-                                if (idx < data_groups.length - 1)
-                                    cls = 'group';
-                                if (col.count != null) {
-                                    stats = `${col.count} / ${data_rows.length}`;
-                                    title += `\n${T.available}${T._colon}${stats} ${data_rows.length > 1 ? T.rows.toLowerCase() : T.row.toLowerCase()}`;
-                                }
-
-                                return html`
-                                    <th class=${cls} rowspan=${col.rows} colspan=${col.columns} title=${title}>
-                                        ${col.page.title}
-                                        ${stats != null ? html`<br/><span style="font-size: 0.7em; font-weight: normal;">${stats}</span>` : ''}
-                                    </th>
-                                `;
-                            })}
-                        </tr>
-                    `)}
-                </thead>
-
-                <tbody>
-                    ${Util.mapRange(offset, end, idx => {
-                        let row = data_rows[idx];
-                        let active = (row.tid == route.tid);
-                        let cls = (row.hid == null ? 'ui_sub' : '') + (active ? ' active' : '');
-
-                        return html`
+                    <thead>
+                        ${data_groups.map((group, idx) => html`
                             <tr>
-                                <td class=${cls} title=${row.hid}>${row.hid ?? T.draft}</td>
-                                <td class=${active ? ' active' : ''} title=${row.ctime.toLocaleString()}>${row.ctime.toLocaleString()}</td>
-                                ${data_columns.map(col => {
-                                    let entry = row.entries[col.page.store.key];
+                                ${!idx ? html`
+                                    <th class="group" rowspan=${data_groups.length}>${T.id}</th>
+                                    <th class="group" rowspan=${data_groups.length}>${T.creation}</th>
+                                ` : ''}
+                                ${group.map(col => {
+                                    let cls = '';
+                                    let stats = '';
+                                    let title = col.page.title;
 
-                                    let status = computeStatus(col.page, row);
-                                    let url = col.page.url + `/${row.tid}`;
-                                    let highlight = active && route.page.chain.includes(col.page);
-
-                                    let tooltip = col.page.title;
-                                    let dots = '';
-                                    let cls = 'ui_tag';
-                                    let summary = entry?.summary;
-
-                                    if (entry != null) {
-                                        let tags = app.tags.filter(tag => entry.tags.includes(tag.key));
-
-                                        if (tags.length) {
-                                            tooltip += '\nTags : ' + tags.map(tag => tag.label).join(', ');
-                                            dots = tags.map(tag => html` <span style=${'color: ' + tag.color + ';'}>⏺\uFE0E</span>`);
-                                        }
+                                    if (idx < data_groups.length - 1)
+                                        cls = 'group';
+                                    if (col.count != null) {
+                                        stats = `${col.count} / ${data_rows.length}`;
+                                        title += `\n${T.available}${T._colon}${stats} ${data_rows.length > 1 ? T.rows.toLowerCase() : T.row.toLowerCase()}`;
                                     }
-
-                                    if (status.complete) {
-                                        if (summary == null)
-                                            summary = !dots ? '✓\uFE0E' : '⚠\uFE0E';
-                                        cls += !dots ? ' complete' : ' partial';
-                                    } else if (status.filled) {
-                                        if (summary == null) {
-                                            let progress = Math.floor(100 * status.filled / status.total);
-                                            summary = progress + '%';
-                                        }
-                                        cls += ' partial';
-                                    } else {
-                                        if (summary == null)
-                                            summary = '🖊\uFE0E';
-                                        cls += ' missing';
-                                    }
-                                    if (highlight)
-                                        cls += ' highlight';
 
                                     return html`
-                                        <td class=${active ? 'active' : ''} title=${tooltip}>
-                                            <a href=${url}><span class=${cls}>${summary}</span></a>
-                                            ${dots}
-                                        </td>
+                                        <th class=${cls} rowspan=${col.rows} colspan=${col.columns} title=${title}>
+                                            ${col.page.title}
+                                            ${stats != null ? html`<br/><span style="font-size: 0.7em; font-weight: normal;">${stats}</span>` : ''}
+                                        </th>
                                     `;
                                 })}
-                                ${row.locked ? html`<th>🔒</th>` : ''}
-                                ${goupile.hasPermission('data_delete') && !row.locked ?
-                                    html`<th><a @click=${UI.wrap(e => runDeleteRecordDialog(e, row))}>✕</a></th>` : ''}
                             </tr>
-                        `;
-                    })}
-                    ${recording_new ? html`
-                        <tr>
-                            <td class="active missing">NA</td>
-                            <td class="active missing">NA</td>
-                            <td class="missing" colspan=${data_columns.length}><a @click=${e => togglePanels(null, 'view')}>${T.new_record}</a></td>
-                        </tr>
-                    ` : ''}
-                    ${!data_rows.length && !recording_new ? html`<tr><td colspan=${2 + data_columns.length}>${T.no_row}</td></tr>` : ''}
-                </tbody>
-            </table>
+                        `)}
+                    </thead>
+
+                    <tbody>
+                        ${Util.mapRange(offset, end, idx => {
+                            let row = data_rows[idx];
+                            let active = (row.tid == route.tid);
+                            let cls = (row.hid == null ? 'ui_sub' : '') + (active ? ' active' : '');
+
+                            return html`
+                                <tr>
+                                    <td class=${cls} title=${row.hid}>${row.hid ?? T.draft}</td>
+                                    <td class=${active ? ' active' : ''} title=${row.ctime.toLocaleString()}>${row.ctime.toLocaleString()}</td>
+                                    ${data_columns.map(col => {
+                                        let entry = row.entries[col.page.store.key];
+
+                                        let status = computeStatus(col.page, row);
+                                        let url = col.page.url + `/${row.tid}`;
+                                        let highlight = active && route.page.chain.includes(col.page);
+
+                                        let tooltip = col.page.title;
+                                        let dots = '';
+                                        let cls = 'ui_tag';
+                                        let summary = entry?.summary;
+
+                                        if (entry != null) {
+                                            let tags = app.tags.filter(tag => entry.tags.includes(tag.key));
+
+                                            if (tags.length) {
+                                                tooltip += '\nTags : ' + tags.map(tag => tag.label).join(', ');
+                                                dots = tags.map(tag => html` <span style=${'color: ' + tag.color + ';'}>⏺\uFE0E</span>`);
+                                            }
+                                        }
+
+                                        if (status.complete) {
+                                            if (summary == null)
+                                                summary = !dots ? '✓\uFE0E' : '⚠\uFE0E';
+                                            cls += !dots ? ' complete' : ' partial';
+                                        } else if (status.filled) {
+                                            if (summary == null) {
+                                                let progress = Math.floor(100 * status.filled / status.total);
+                                                summary = progress + '%';
+                                            }
+                                            cls += ' partial';
+                                        } else {
+                                            if (summary == null)
+                                                summary = '🖊\uFE0E';
+                                            cls += ' missing';
+                                        }
+                                        if (highlight)
+                                            cls += ' highlight';
+
+                                        return html`
+                                            <td class=${active ? 'active' : ''} title=${tooltip}>
+                                                <a href=${url}><span class=${cls}>${summary}</span></a>
+                                                ${dots}
+                                            </td>
+                                        `;
+                                    })}
+                                    ${row.locked ? html`<th>🔒</th>` : ''}
+                                    ${goupile.hasPermission('data_delete') && !row.locked ?
+                                        html`<th><a @click=${UI.wrap(e => runDeleteRecordDialog(e, row))}>✕</a></th>` : ''}
+                                </tr>
+                            `;
+                        })}
+                        ${recording_new ? html`
+                            <tr>
+                                <td class="active missing">NA</td>
+                                <td class="active missing">NA</td>
+                                <td class="missing" colspan=${data_columns.length}><a @click=${e => togglePanels(null, 'view')}>${T.new_record}</a></td>
+                            </tr>
+                        ` : ''}
+                        ${!data_rows.length && !recording_new ? html`<tr><td colspan=${2 + data_columns.length}>${T.no_row}</td></tr>` : ''}
+                    </tbody>
+                </table>
+            </div>
 
             ${renderDataPages(data_offset, data_rows.length, app.table.count, (e, page) => {
                 data_offset = (page - 1) * app.table.count;
