@@ -148,12 +148,12 @@ SwitchAndRelay:
     pop %rbp
     ret
 
-.align 4
+.balign 16
 FindTrampolineStart:
     leaq 16(%rip), %rax
     andq $0xFFFFFFFFFFFFFFF0, %rax
     ret
-.align 4
+.balign 16
 
 #include "gnu.inc"
 

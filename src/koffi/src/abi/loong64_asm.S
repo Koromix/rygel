@@ -141,7 +141,7 @@ ForwardCallXDD:
 .macro trampoline id
     li.d $t0, \id
     b RelayTrampoline
-    .align 4
+    .balign 16
 .endm
 
 RelayTrampoline:
@@ -193,7 +193,7 @@ SwitchAndRelay:
     addi.d $sp, $sp, 16
     jr $ra
 
-.align 4
+.balign 16
 #include "gnu.inc"
 
 TrampolineEnd:
