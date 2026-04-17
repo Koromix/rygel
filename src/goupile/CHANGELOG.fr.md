@@ -2,6 +2,16 @@
 
 ## Goupile 3.12
 
+### Goupile 3.12.5
+
+*Sortie le 17/04/2026*
+
+* Correction de divers bugs d'affichage dans la table de suivi sur Chrome.
+* Ajout du HID dans les exports de données (colonne `__hid`).
+* Prise en charge du groupes de modalités dans enumRadio, enumRadio et multiCheck.
+* Prise en charge du préfixe de variable « ? » pour désactiver une saisie obligatoire.
+* Utilisation de c-ares pour la résolution des noms DNS.
+
 ### Goupile 3.12.4
 
 *Sortie le 21/03/2026*

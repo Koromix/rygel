@@ -2,6 +2,16 @@
 
 ## Goupile 3.12
 
+### Goupile 3.12.5
+
+*Released on 2026-04-17*
+
+- Fix various display bugs in monitoring table on Chrome.
+- Add HID to data exports (`__hid` column).
+- Support option groups in enumRadio, enumRadio and multiCheck.
+- Support '?' variable prefix to unset mandatory option.
+- Use c-ares to resolve DNS names.
+
 ### Goupile 3.12.4
 
 *Released on 2026-03-21*
