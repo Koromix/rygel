@@ -781,21 +781,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
     if (env.IsExceptionPending()) [[unlikely]]
         return;
 
-    TEB *teb = GetTEB();
-
-    K_DEFER_C(base = teb->StackBase,
-              limit = teb->StackLimit,
-              dealloc = teb->DeallocationStack) {
-        teb->StackBase = base;
-        teb->StackLimit = limit;
-        teb->DeallocationStack = dealloc;
-    };
-    teb->StackBase = instance->main_stack_max;
-    teb->StackLimit = instance->main_stack_min;
-    teb->DeallocationStack = instance->main_stack_min;
-
     const TrampolineInfo &trampoline = shared.trampolines[idx];
-
     const FunctionInfo *proto = trampoline.proto;
     Napi::Function func = trampoline.func.Value();
 

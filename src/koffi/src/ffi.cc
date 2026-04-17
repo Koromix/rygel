@@ -1825,6 +1825,25 @@ extern "C" void RelayDirect(CallData *call, Size idx, uint8_t *sp)
 {
     TrampolineInfo *trampoline = &shared.trampolines[idx];
 
+#if defined(_WIN32)
+    TEB *teb = GetTEB();
+    InstanceData *instance = trampoline->instance;
+
+    // Restore previous stack limits at the end
+    K_DEFER_C(base = teb->StackBase,
+              limit = teb->StackLimit,
+              dealloc = teb->DeallocationStack) {
+        teb->StackBase = base;
+        teb->StackLimit = limit;
+        teb->DeallocationStack = dealloc;
+    };
+
+    // Adjust stack limits so SEH works correctly
+    teb->StackBase = instance->main_stack_max;
+    teb->StackLimit = instance->main_stack_min;
+    teb->DeallocationStack = instance->main_stack_min;
+#endif
+
     if (!trampoline->used) [[unlikely]] {
         Napi::Env env = trampoline->func.Env();
 
