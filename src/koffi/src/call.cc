@@ -21,11 +21,23 @@ struct RelayContext {
     bool done = false;
 };
 
+#if defined(_WIN32)
+
 extern "C" void *FindTrampolineStart();
 extern "C" void *FindTrampolineEnd();
 
 static const uint8_t *TrampolineStart = (const uint8_t *)FindTrampolineStart();
 static const Size TrampolineSize = ((const uint8_t *)FindTrampolineEnd() - TrampolineStart) / MaxTrampolines;
+
+#else
+
+extern "C" uint8_t Trampoline0;
+extern "C" uint8_t TrampolineEnd;
+
+static const uint8_t *TrampolineStart = (const uint8_t *)&Trampoline0;
+static const Size TrampolineSize = ((const uint8_t *)&TrampolineEnd - TrampolineStart) / MaxTrampolines;
+
+#endif
 
 #if defined(K_DEBUG)
 CallData::~CallData()

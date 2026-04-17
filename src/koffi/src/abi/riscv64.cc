@@ -48,11 +48,6 @@ extern "C" Fa0A0Ret ForwardCallXDG(const void *func, uint8_t *sp, uint8_t **out_
 extern "C" A0Fa0Ret ForwardCallXGD(const void *func, uint8_t *sp, uint8_t **out_old_sp);
 extern "C" Fa0Fa1Ret ForwardCallXDD(const void *func, uint8_t *sp, uint8_t **out_old_sp);
 
-extern "C" uint8_t Trampoline0;
-extern "C" uint8_t TrampolineEnd;
-extern "C" void *FindTrampolineStart();
-extern "C" void *FindTrampolineEnd();
-
 enum class AbiOpcode : int8_t {
     #define PRIMITIVE(Name) Name,
     #include "../primitives.inc"
@@ -919,16 +914,6 @@ void CallData::Relay(Size idx, uint8_t *sp)
 #undef RETURN_INTEGER
 
     err_guard.Disable();
-}
-
-void *FindTrampolineStart()
-{
-    return &Trampoline0;
-}
-
-void *FindTrampolineEnd()
-{
-    return &TrampolineEnd;
 }
 
 }

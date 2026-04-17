@@ -87,8 +87,12 @@ SYMBOL(ForwardCallDR):
 .global SYMBOL(RelayCallback)
 .global SYMBOL(SwitchAndRelay)
 .global SYMBOL(RelayDirect)
+#if defined(_WIN32)
 .global SYMBOL(FindTrampolineStart)
 .global SYMBOL(FindTrampolineEnd)
+#else
+.global SYMBOL(TrampolineEnd)
+#endif
 
 # Call the C function RelayCallback with the following arguments:
 # static trampoline ID, the current stack pointer, a pointer to the stack arguments of this call,
@@ -181,6 +185,8 @@ SYMBOL(SwitchAndRelay):
     ret
     .cfi_endproc
 
+#if defined(_WIN32)
+
 .balign 16
 FindTrampolineStart:
     call GetEIP
@@ -194,6 +200,15 @@ FindTrampolineStart:
 FindTrampolineEnd:
     call GetEIP
     ret
+
+#else
+
+#include "gnu.inc"
+
+SYMBOL(TrampolineEnd):
+    ret
+
+#endif
 
 GetEIP:
     movl (%esp), %eax
