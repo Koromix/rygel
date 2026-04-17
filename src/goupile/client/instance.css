@@ -325,6 +325,7 @@ html.small #ins_tasks { display: flex; }
 #ins_data td:not(.active).partial a { color: #346bb8; }
 #ins_data td:not(.active).complete a { color: #298a6a; }
 #ins_data td:not(.active).disabled a { color: inherit; }
+#ins_data td.highlight { background: var(--active_color_n1); }
 
 #ins_data .ui_tag {
     font-size: 1.2em;
@@ -336,11 +337,6 @@ html.small #ins_tasks { display: flex; }
 }
 #ins_data .ui_tag.partial { background: #db0a0a; }
 #ins_data .ui_tag.complete { background: #2d8261; }
-#ins_data .ui_tag.highlight {
-    background: none !important;
-    color: white !important;
-    border-color: white;
-}
 
 .ins_dot {
     display: inline-block;

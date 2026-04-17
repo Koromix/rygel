@@ -740,8 +740,10 @@ function renderData() {
 
                                         let tooltip = col.page.title;
                                         let dots = '';
-                                        let cls = 'ui_tag';
                                         let summary = entry?.summary;
+
+                                        let cell_cls = '';
+                                        let tag_cls = 'ui_tag';
 
                                         if (entry != null) {
                                             let tags = app.tags.filter(tag => entry.tags.includes(tag.key));
@@ -752,27 +754,29 @@ function renderData() {
                                             }
                                         }
 
+                                        if (active)
+                                            cell_cls += ' active';
+                                        if (highlight)
+                                            cell_cls += ' highlight';
+
                                         if (status.complete) {
                                             if (summary == null)
                                                 summary = !dots ? '✓\uFE0E' : '⚠\uFE0E';
-                                            cls += !dots ? ' complete' : ' partial';
+                                            tag_cls += !dots ? ' complete' : ' partial';
                                         } else if (status.filled) {
                                             if (summary == null) {
                                                 let progress = Math.floor(100 * status.filled / status.total);
                                                 summary = progress + '%';
                                             }
-                                            cls += ' partial';
+                                            tag_cls += ' partial';
                                         } else {
                                             if (summary == null)
                                                 summary = '🖊\uFE0E';
-                                            cls += ' missing';
+                                            tag_cls += ' missing';
                                         }
-                                        if (highlight)
-                                            cls += ' highlight';
-
                                         return html`
-                                            <td class=${active ? 'active' : ''} title=${tooltip}>
-                                                <a href=${url}><span class=${cls}>${summary}</span></a>
+                                            <td class=${cell_cls} title=${tooltip}>
+                                                <a href=${url}><span class=${tag_cls}>${summary}</span></a>
                                                 ${dots}
                                             </td>
                                         `;
