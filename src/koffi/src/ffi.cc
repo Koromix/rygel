@@ -1832,7 +1832,10 @@ extern "C" void RelayCallback(Size idx, uint8_t *sp)
         CallData call(env, instance, mem);
         K_DEFER { call.Finalize(); };
 
-        Napi::HandleScope scope(env);
+        napi_handle_scope scope;
+        napi_open_handle_scope(env, &scope);
+        K_DEFER { napi_close_handle_scope(env, scope); };
+
         call.Relay(idx, sp);
     } else {
         CallData call(env, instance, mem);
@@ -1866,8 +1869,14 @@ extern "C" void RelayDirect(CallData *call, Size idx, uint8_t *sp)
     if (!CheckTrampolineStatus(trampoline))
         return;
 
-    Napi::HandleScope scope(call->env);
-    call->Relay(idx, sp);
+    // Relay the call
+    {
+        napi_handle_scope scope;
+        napi_open_handle_scope(call->env, &scope);
+        K_DEFER { napi_close_handle_scope(call->env, scope); };
+
+        call->Relay(idx, sp);
+    }
 }
 
 static Napi::Value FindLibraryFunction(const Napi::CallbackInfo &info)
