@@ -101,6 +101,8 @@ RelayTrampoline proc
     sub esp, 44
     mov dword ptr [esp+0], eax
     mov dword ptr [esp+4], esp
+    mov dword ptr [esp+32], 0
+    mov dword ptr [esp+36], 0
     call RelayCallback
     mov ecx, dword ptr [esp+36]
     mov edx, dword ptr [esp+44]

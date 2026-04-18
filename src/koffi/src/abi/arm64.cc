@@ -1220,21 +1220,22 @@ Napi::Value CallData::EndAsync()
 
 void CallData::Relay(Size idx, uint8_t *sp)
 {
+    TrampolineInfo *trampoline = &shared.trampolines[idx];
+
     uint8_t *in_ptr = sp + 48;
     BackRegisters *out_reg = (BackRegisters *)sp;
 
-    if (env.IsExceptionPending()) [[unlikely]]
-        return;
+    const FunctionInfo *proto = trampoline->proto;
+    Napi::Function func = trampoline->func.Value();
 
-    const TrampolineInfo &trampoline = shared.trampolines[idx];
-    const FunctionInfo *proto = trampoline.proto;
-    Napi::Function func = trampoline.func.Value();
-
-    K_DEFER_N(err_guard) { memset(out_reg, 0, K_SIZE(*out_reg)); };
+    K_DEFER_N(err_guard) {
+        trampoline->state = -1;
+        memset(out_reg, 0, K_SIZE(*out_reg));
+    };
 
     LocalArray<napi_value, MaxParameters + 1> arguments;
 
-    arguments.Append(!trampoline.recv.IsEmpty() ? trampoline.recv.Value() : env.Undefined());
+    arguments.Append(!trampoline->recv.IsEmpty() ? trampoline->recv.Value() : env.Undefined());
 
 #define POP_INTEGER(CType) \
         do { \

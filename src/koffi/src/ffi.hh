@@ -337,13 +337,12 @@ static_assert(DefaultMaxAsyncCalls >= DefaultResidentAsyncPools);
 static_assert(MaxAsyncCalls >= DefaultMaxAsyncCalls);
 
 struct TrampolineInfo {
-    InstanceData *instance;
+    int state;
 
+    InstanceData *instance;
     const FunctionInfo *proto;
     Napi::FunctionReference func;
     Napi::Reference<Napi::Value> recv;
-
-    bool used;
 };
 
 struct SharedData {

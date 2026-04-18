@@ -1773,6 +1773,29 @@ Napi::Value TranslateAsyncCall(const Napi::CallbackInfo &info)
     return TranslateAsyncCall(func, func->native, info, (Size)info.Length());
 }
 
+static FORCE_INLINE bool CheckTrampolineStatus(TrampolineInfo *trampoline)
+{
+    if (trampoline->state == 1) [[likely]]
+        return true;
+
+    Napi::Env env = trampoline->func.Env();
+
+    if (!trampoline->state) {
+        ThrowError<Napi::Error>(env, "Cannot use non-registered callback beyond FFI call");
+        trampoline->state = -1;
+    }
+
+    // We use trampoline->state < 0 as a signal than an exception has occured, because we want
+    // to avoid calling IsExceptionPending() in the happy path. But trampolines get reused, so
+    // there might not be an exception anymore!
+    if (!env.IsExceptionPending()) {
+        trampoline->state = 1;
+        return true;
+    }
+
+    return false;
+}
+
 extern "C" void RelayCallback(Size idx, uint8_t *sp)
 {
     TrampolineInfo *trampoline = &shared.trampolines[idx];
@@ -1788,12 +1811,8 @@ extern "C" void RelayCallback(Size idx, uint8_t *sp)
         return;
     }
 
-    if (!trampoline->used) [[unlikely]] {
-        Napi::Env env = trampoline->func.Env();
-
-        ThrowError<Napi::Error>(env, "Cannot use non-registered callback beyond FFI call");
+    if (!CheckTrampolineStatus(trampoline))
         return;
-    }
 
     // Otherwise, we need to allocate memory to perform the callback.
     // Since the necessary machinery live in CallData, just use a temporary instance.
@@ -1844,12 +1863,8 @@ extern "C" void RelayDirect(CallData *call, Size idx, uint8_t *sp)
     teb->DeallocationStack = instance->main_stack_min;
 #endif
 
-    if (!trampoline->used) [[unlikely]] {
-        Napi::Env env = trampoline->func.Env();
-
-        ThrowError<Napi::Error>(env, "Cannot use non-registered callback beyond FFI call");
+    if (!CheckTrampolineStatus(trampoline))
         return;
-    }
 
     Napi::HandleScope scope(call->env);
     call->Relay(idx, sp);
@@ -2113,6 +2128,7 @@ static Napi::Value RegisterCallback(const Napi::CallbackInfo &info)
 
     TrampolineInfo *trampoline = &shared.trampolines[idx];
 
+    trampoline->state = 1;
     trampoline->instance = instance;
     trampoline->proto = type->ref.proto;
     trampoline->func.Reset(func, 1);
@@ -2121,7 +2137,6 @@ static Napi::Value RegisterCallback(const Napi::CallbackInfo &info)
     } else {
         trampoline->recv.Reset();
     }
-    trampoline->used = true;
 
     void *ptr = GetTrampoline(idx);
 
@@ -2167,9 +2182,9 @@ static Napi::Value UnregisterCallback(const Napi::CallbackInfo &info)
         TrampolineInfo *trampoline = &shared.trampolines[idx];
         K_ASSERT(!trampoline->func.IsEmpty());
 
+        trampoline->state = 0;
         trampoline->func.Reset();
         trampoline->recv.Reset();
-        trampoline->used = false;
 
         shared.available.Append(idx);
     }
@@ -2799,7 +2814,7 @@ InstanceData::~InstanceData()
                 trampoline->instance = nullptr;
                 trampoline->func.Reset();
                 trampoline->recv.Reset();
-                trampoline->used = false;
+                trampoline->state = 0;
             }
         }
     }

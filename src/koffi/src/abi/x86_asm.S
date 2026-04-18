@@ -117,6 +117,8 @@ RelayTrampoline:
     .cfi_def_cfa esp, 48
     movl %eax, 0(%esp)
     movl %esp, 4(%esp)
+    movl $0, 32(%esp)
+    movl $0, 36(%esp)
 #if defined(_WIN32)
     call _RelayCallback
 #else

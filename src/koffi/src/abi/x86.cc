@@ -874,15 +874,13 @@ Napi::Value CallData::EndAsync()
 
 void CallData::Relay(Size idx, uint8_t *sp)
 {
+    TrampolineInfo *trampoline = &shared.trampolines[idx];
+
     uint8_t *caller_sp = sp + 48;
     BackRegisters *out_reg = (BackRegisters *)(sp + 16);
 
-    if (env.IsExceptionPending()) [[unlikely]]
-        return;
-
-    const TrampolineInfo &trampoline = shared.trampolines[idx];
-    const FunctionInfo *proto = trampoline.proto;
-    Napi::Function func = trampoline.func.Value();
+    const FunctionInfo *proto = trampoline->proto;
+    Napi::Function func = trampoline->func.Value();
 
     uint32_t *args_ptr = (uint32_t *)caller_sp;
 
@@ -900,6 +898,8 @@ void CallData::Relay(Size idx, uint8_t *sp)
     }
 
     K_DEFER_N(err_guard) {
+        trampoline->state = -1;
+
         int pop = out_reg->ret_pop;
         memset(out_reg, 0, K_SIZE(*out_reg));
         out_reg->ret_type = 0;
@@ -908,7 +908,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
 
     LocalArray<napi_value, MaxParameters + 1> arguments;
 
-    arguments.Append(!trampoline.recv.IsEmpty() ? trampoline.recv.Value() : env.Undefined());
+    arguments.Append(!trampoline->recv.IsEmpty() ? trampoline->recv.Value() : env.Undefined());
 
     // Convert to JS arguments
     for (Size i = 0; i < proto->parameters.len; i++) {
