@@ -82,7 +82,7 @@ async function main() {
                     throw new Error(`Missing value for ${arg}`);
 
                 config.toolchain = value;
-            } else if ((command == 'build' || command == 'configure') && (arg == '-c' || arg == '--config')) {
+            } else if (arg == '-c' || arg == '--config') {
                 if (value == null)
                     throw new Error(`Missing value for ${arg}`);
 
@@ -95,10 +95,18 @@ async function main() {
                         throw new Error(`Unknown value '${value}' for ${arg}`);
                     } break;
                 }
-            } else if ((command == 'build' || command == 'configure') && arg == '--debug') {
+            } else if (arg == '--debug') {
                 config.mode = 'Debug';
-            } else if ((command == 'build' || command == 'configure') && arg == '--release') {
+            } else if (arg == '--release') {
                 config.mode = 'Release';
+            } else if ((command == 'build' || command == 'configure') && arg == '--ccache') {
+                config.ccache = true;
+            } else if ((command == 'build' || command == 'configure') && (arg == '-d' || arg == '--define')) {
+                if (value == null)
+                    throw new Error(`Missing value for ${arg}`);
+
+                config.defines ??= [];
+                config.defines.push(value);
             } else if (command == 'build' && arg == '--prebuild') {
                 config.prebuild = true;
             } else if (command == 'build' && arg == '--target') {
@@ -149,6 +157,8 @@ Options:
                                          (default: ${cnoke.DefaultOptions.mode})
         --debug                          Shortcut for --config Debug
         --release                        Shortcut for --config Release
+
+        --ccache                         Use ccache if available
 
     -t, --toolchain <TOOLCHAIN>          Cross-compile for specific platform
         --runtime <VERSION>              Change node version

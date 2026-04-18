@@ -41,6 +41,7 @@ function Builder(config = {}) {
     let targets = config.targets || [];
     let verbose = config.verbose || false;
     let prebuild = config.prebuild || false;
+    let defines = config.defines || [];
 
     if (runtime_version == null)
         runtime_version = process.version;
@@ -155,7 +156,7 @@ function Builder(config = {}) {
             }
 
             // Use CCache if available
-            if (spawnSync('ccache', ['--version']).status === 0) {
+            if (config.ccache && spawnSync('ccache', ['--version']).status === 0) {
                 args.push('-DCMAKE_C_COMPILER_LAUNCHER=ccache');
                 args.push('-DCMAKE_CXX_COMPILER_LAUNCHER=ccache');
             }
@@ -249,6 +250,8 @@ function Builder(config = {}) {
             for (let suffix of ['', '_DEBUG', '_RELEASE', '_RELWITHDEBINFO'])
                 args.push(`-DCMAKE_${type}_OUTPUT_DIRECTORY${suffix}=${output_dir}`);
         }
+        for (let define of defines)
+            args.push(`-D${define}`);
         args.push('--no-warn-unused-cli');
 
         console.log('>> Running configuration');

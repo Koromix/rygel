@@ -168,4 +168,27 @@ if(NOT MSVC OR CMAKE_C_COMPILER_ID MATCHES "[Cc]lang")
     endif()
 endif()
 
-enable_unity_build(koffi EXCLUDE src/uv.cc)
+# ---- Optimization ----
+
+option(PGO_GENERATE "Build with PGO profile generation" "")
+option(PGO_USE "Optimize with PGO profile" "")
+
+if(PGO_GENERATE)
+    set_target_properties(koffi PROPERTIES INTERPROCEDURAL_OPTIMIZATION ON)
+    target_compile_options(koffi PRIVATE "-fprofile-generate=${PGO_GENERATE}")
+    target_link_options(koffi PRIVATE "-fprofile-generate=${PGO_GENERATE}")
+
+    message(STATUS "PGO: Building instrumented binary")
+elseif(PGO_PROFILE)
+    if(NOT EXISTS "${PGO_PROFILE}")
+        message(FATAL_ERROR "Profile data not found at '${PGO_PROFILE}'")
+    endif()
+
+    set_target_properties(koffi PROPERTIES INTERPROCEDURAL_OPTIMIZATION ON)
+    target_compile_options(koffi PRIVATE "-fprofile-use=${PGO_PROFILE}")
+    target_link_options(koffi PRIVATE "-fprofile-use=${PGO_PROFILE}")
+
+    message(STATUS "PGO: Building optimized binary with profile data")
+elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
+    enable_unity_build(koffi EXCLUDE src/uv.cc)
+endif()

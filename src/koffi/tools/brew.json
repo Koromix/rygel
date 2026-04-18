@@ -6,12 +6,12 @@
             "arch": "armhf",
             "machine": "debian_arm32",
             "directory": "/home/debian/luigi",
-            "build": "node ../cnoke/cnoke.js",
+            "build": "node ../cnoke/cnoke.js --ccache",
             "package": "linux-arm"
         },
 
         "test": {
-            "build": "node ../cnoke/cnoke.js -D test",
+            "build": "node ../cnoke/cnoke.js --cache -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
                 "Test Sync (slow pointers)": "node test/sync.js --slow_pointers",
@@ -32,12 +32,12 @@
             "arch": "arm64",
             "machine": "debian_arm64",
             "directory": "/home/debian/luigi",
-            "build": "CC=clang-21 CXX=clang++-21 node ../cnoke/cnoke.js",
+            "build": "CC=clang-21 CXX=clang++-21 node ../cnoke/cnoke.js --ccache",
             "package": "linux-arm64"
         },
 
         "test": {
-            "build": "CC=clang-21 CXX=clang++-21 node ../cnoke/cnoke.js -D test",
+            "build": "CC=clang-21 CXX=clang++-21 node ../cnoke/cnoke.js --ccache -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
                 "Test Sync (slow pointers)": "node test/sync.js --slow_pointers",
@@ -58,12 +58,12 @@
             "arch": "ia32",
             "machine": "debian_i386",
             "directory": "/home/debian/luigi",
-            "build": "node ../cnoke/cnoke.js",
+            "build": "node ../cnoke/cnoke.js --ccache",
             "package": "linux-ia32"
         },
 
         "test": {
-            "build": "node ../cnoke/cnoke.js -D test",
+            "build": "node ../cnoke/cnoke.js --ccache -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
                 "Test Sync (slow pointers)": "node test/sync.js --slow_pointers",
@@ -84,12 +84,12 @@
             "arch": "x64",
             "machine": "debian_x64",
             "directory": "/home/debian/luigi",
-            "build": "CC=clang-21 CXX=clang++-21 node ../cnoke/cnoke.js",
+            "build": "CC=clang-21 CXX=clang++-21 node ../cnoke/cnoke.js --ccache",
             "package": "linux-x64"
         },
 
         "test": {
-            "build": "CC=clang-21 CXX=clang++-21 node ../cnoke/cnoke.js -D test",
+            "build": "CC=clang-21 CXX=clang++-21 node ../cnoke/cnoke.js --ccache -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
                 "Test Sync (slow pointers)": "node test/sync.js --slow_pointers",
