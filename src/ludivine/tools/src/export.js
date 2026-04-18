@@ -6,7 +6,7 @@ import * as esbuild from '../../../../vendor/esbuild/native/lib/main.js';
 import * as XLSX from '../../../../vendor/sheetjs/XLSX.bundle.js';
 import fs from 'node:fs';
 import path from 'node:path';
-import sqlite3 from 'better-sqlite3';
+import { DatabaseSync } from 'node:sqlite';
 import { Util, LocalDate } from 'lib/web/base/base.js';
 import { wrap } from 'lib/web/base/data.js';
 import { ProjectInfo, ProjectBuilder } from '../../client/core/project.js';
@@ -50,7 +50,7 @@ async function run() {
     if (!options.destination)
         throw new Error('Missing destination argument');
 
-    let db = sqlite3(options.database, { fileMustExist: true, readonly: true });
+    let db = new DatabaseSync(options.database, { readOnly: true });
 
     let project = await buildProject(options.project);
 
