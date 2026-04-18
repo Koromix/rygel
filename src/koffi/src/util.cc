@@ -180,7 +180,7 @@ const TypeInfo *ResolveType(Napi::Value value, int *out_directions)
         }
 
         return type;
-    } else if (CheckValueTag(value, &TypeInfoMarker)) {
+    } else if (value.IsExternal() && CheckValueTag(value, &TypeInfoMarker)) {
         Napi::External<TypeInfo> external = value.As<Napi::External<TypeInfo>>();
         const TypeInfo *raw = external.Data();
 
@@ -522,18 +522,20 @@ bool CanStoreType(const TypeInfo *type)
 
 const char *GetValueType(const InstanceData *instance, Napi::Value value)
 {
-    if (CheckValueTag(value, &CastMarker)) {
-        Napi::External<ValueCast> external = value.As<Napi::External<ValueCast>>();
-        ValueCast *cast = external.Data();
+    if (value.IsExternal()) {
+        if (CheckValueTag(value, &CastMarker)) {
+            Napi::External<ValueCast> external = value.As<Napi::External<ValueCast>>();
+            ValueCast *cast = external.Data();
 
-        return cast->type->name;
-    }
+            return cast->type->name;
+        }
 
-    if (CheckValueTag(value, &TypeInfoMarker))
-        return "Type";
-    for (const TypeInfo &type: instance->types) {
-        if (type.ref.type && CheckValueTag(value, type.ref.type))
-            return type.name;
+        if (CheckValueTag(value, &TypeInfoMarker))
+            return "Type";
+        for (const TypeInfo &type: instance->types) {
+            if (type.ref.type && CheckValueTag(value, type.ref.type))
+                return type.name;
+        }
     }
 
     if (value.IsArray()) {
@@ -599,12 +601,12 @@ void SetValueTag(Napi::Value value, const void *marker)
 
 bool CheckValueTag(Napi::Value value, const void *marker)
 {
+    K_ASSERT(IsObject(value) || value.IsExternal());
+
     bool match = false;
 
-    if (!IsNullOrUndefined(value)) {
-        const napi_type_tag *tag = (const napi_type_tag *)marker;
-        napi_check_object_type_tag(value.Env(), value, tag, &match);
-    }
+    const napi_type_tag *tag = (const napi_type_tag *)marker;
+    napi_check_object_type_tag(value.Env(), value, tag, &match);
 
     return match;
 }

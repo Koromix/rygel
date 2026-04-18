@@ -270,6 +270,7 @@ async function test() {
     const GetVariadicIntFunction = lib.func('VariadicIntFunc *GetVariadicIntFunction(const char *name)');
     const FillBufferDirect = lib.func('void FillBufferDirect(BufferInfo info, int c)');
     const FillBufferIndirect = lib.func('void FillBufferIndirect(const BufferInfo *info, int c)');
+    const FillBuffer = lib.func('void FillBuffer(void *ptr, int c, size_t len)');
     const GetLatin1String = lib.func('const uint8_t *GetLatin1String()');
     const BoolToInt = lib.func('int BoolToInt(bool a)');
     const BoolToMask12 = lib.func('unsigned int BoolToMask12(bool a, bool b, bool c, bool d, bool e, bool f,' +
@@ -799,6 +800,10 @@ async function test() {
 
         assert.deepEqual(buf1.ptr, Uint8Array.from([42, 42, 42, 42, 42, 42, 0, 0]));
         assert.deepEqual(buf2.ptr, Uint8Array.from([24, 24, 24, 24, 24, 24, 24, 24, 24, 24]));
+
+        FillBuffer(buf1.ptr, 27, 5);
+        FillBuffer(koffi.address(buf1.ptr) + 1n, 89, 2);
+        assert.deepEqual(buf1.ptr, Uint8Array.from([27, 89, 89, 27, 27, 42, 0, 0]));
     }
 
     // Allow users to skip members

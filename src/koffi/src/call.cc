@@ -873,17 +873,6 @@ bool CallData::PushStringArray(Napi::Value obj, const TypeInfo *type, uint8_t *o
 
 bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directions, void **out_ptr)
 {
-    if (CheckValueTag(value, &CastMarker)) {
-        Napi::External<ValueCast> external = value.As<Napi::External<ValueCast>>();
-        ValueCast *cast = external.Data();
-
-        napi_value referenced;
-        napi_get_reference_value(value.Env(), cast->ref, &referenced);
-
-        value = Napi::Value(env, referenced);
-        type = cast->type;
-    }
-
     const TypeInfo *ref = type->ref.type;
 
     // In the past we were naively using napi_typeof() and a switch to "reduce" branching,
@@ -891,10 +880,25 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
     // and it turns out that napi_typeof() is made of successive type tests anyway so it
     // just made things worse. Oh, well.
 
-    if (void *ptr = nullptr; TryPointer(value, &ptr)) {
+    void *ptr = nullptr;
+
+    // Fast path
+    if (bool external = false; TryPointer(value, &ptr, &external)) {
+        if (external && CheckValueTag(value, &CastMarker)) {
+            Napi::External<ValueCast> external = value.As<Napi::External<ValueCast>>();
+            ValueCast *cast = external.Data();
+
+            napi_value referenced;
+            napi_get_reference_value(value.Env(), cast->ref, &referenced);
+
+            return PushPointer(Napi::Value(env, referenced), cast->type, directions, out_ptr);
+        }
+
         *out_ptr = ptr;
         return true;
-    } else if (value.IsArray()) {
+    }
+
+    if (value.IsArray()) {
         Napi::Array array = value.As<Napi::Array>();
         Size len = PushIndirectString(array, ref, &ptr);
 
@@ -1026,18 +1030,19 @@ unexpected:
 
 bool CallData::PushCallback(Napi::Value value, const TypeInfo *type, void **out_ptr)
 {
-    if (CheckValueTag(value, &CastMarker)) {
-        Napi::External<ValueCast> external = value.As<Napi::External<ValueCast>>();
-        ValueCast *cast = external.Data();
+    void *ptr = nullptr;
 
-        napi_value referenced;
-        napi_get_reference_value(value.Env(), cast->ref, &referenced);
+    if (bool external = false; TryPointer(value, &ptr, &external)) {
+        if (external && CheckValueTag(value, &CastMarker)) {
+            Napi::External<ValueCast> external = value.As<Napi::External<ValueCast>>();
+            ValueCast *cast = external.Data();
 
-        value = Napi::Value(env, referenced);
-        type = cast->type;
-    }
+            napi_value referenced;
+            napi_get_reference_value(value.Env(), cast->ref, &referenced);
 
-    if (void *ptr = nullptr; TryPointer(value, &ptr)) {
+            return PushCallback(Napi::Value(env, referenced), cast->type, out_ptr);
+        }
+
         *out_ptr = ptr;
         return true;
     } else if (value.IsFunction()) {

@@ -95,20 +95,40 @@ bool CanPassType(const TypeInfo *type, int directions);
 bool CanReturnType(const TypeInfo *type);
 bool CanStoreType(const TypeInfo *type);
 
+static FORCE_INLINE napi_valuetype GetValueType(Napi::Value value)
+{
+    napi_valuetype type = napi_undefined;
+    napi_typeof(value.Env(), value, &type);
+
+    return type;
+}
+
 // Can be slow, only use for error messages
 const char *GetValueType(const InstanceData *instance, Napi::Value value);
 
 void SetValueTag(Napi::Value value, const void *marker);
 bool CheckValueTag(Napi::Value value, const void *marker);
 
+static FORCE_INLINE bool IsNullOrUndefined(napi_valuetype type)
+{
+    return type == napi_null || type == napi_undefined;
+}
+
 static FORCE_INLINE bool IsNullOrUndefined(Napi::Value value)
 {
-    return value.IsNull() || value.IsUndefined();
+    napi_valuetype type = GetValueType(value);
+    return IsNullOrUndefined(type);
 }
 
 static FORCE_INLINE bool IsObject(Napi::Value value)
 {
-    return value.IsObject() && !IsNullOrUndefined(value) && !value.IsArray();
+    if (GetValueType(value) != napi_object)
+        return false;
+
+    bool array = false;
+    napi_is_array(value.Env(), value, &array);
+
+    return !array;
 }
 
 template <typename T>
@@ -151,16 +171,20 @@ static FORCE_INLINE bool TryNumber(Napi::Value value, T *out_value)
 
 static FORCE_INLINE bool TryPointer(Napi::Value value, void **out_ptr)
 {
-    if (IsNullOrUndefined(value)) {
-        *out_ptr = nullptr;
-        return true;
-    } else if (uintptr_t ptr = 0; TryNumber(value, &ptr)) {
+    if (uintptr_t ptr = 0; TryNumber(value, &ptr)) {
         *out_ptr = (void *)ptr;
+        return true;
+    }
+
+    napi_valuetype type = GetValueType(value);
+
+    if (IsNullOrUndefined(type)) {
+        *out_ptr = nullptr;
         return true;
     } else if (value.IsTypedArray()) {
         napi_get_typedarray_info(value.Env(), value, nullptr, nullptr, out_ptr, nullptr, nullptr);
         return true;
-    } else if (value.IsExternal()) {
+    } else if (type == napi_external) {
         Napi::External<void> external = value.As<Napi::External<void>>();
 
         *out_ptr = (void *)external.Data();
@@ -169,6 +193,47 @@ static FORCE_INLINE bool TryPointer(Napi::Value value, void **out_ptr)
         Napi::ArrayBuffer buffer = value.As<Napi::ArrayBuffer>();
 
         *out_ptr = (void *)buffer.Data();
+        return true;
+    }
+
+    return false;
+}
+
+
+static FORCE_INLINE bool TryPointer(Napi::Value value, void **out_ptr, bool *out_external)
+{
+    if (uintptr_t ptr = 0; TryNumber(value, &ptr)) {
+        *out_ptr = (void *)ptr;
+        *out_external = false;
+
+        return true;
+    }
+
+    napi_valuetype type = GetValueType(value);
+
+    if (IsNullOrUndefined(type)) {
+        *out_ptr = nullptr;
+        *out_external = false;
+
+        return true;
+    } else if (value.IsTypedArray()) {
+        napi_get_typedarray_info(value.Env(), value, nullptr, nullptr, out_ptr, nullptr, nullptr);
+        *out_external = false;
+
+        return true;
+    } else if (type == napi_external) {
+        Napi::External<void> external = value.As<Napi::External<void>>();
+
+        *out_ptr = (void *)external.Data();
+        *out_external = true;
+
+        return true;
+    } else if (value.IsArrayBuffer()) {
+        Napi::ArrayBuffer buffer = value.As<Napi::ArrayBuffer>();
+
+        *out_ptr = (void *)buffer.Data();
+        *out_external = false;
+
         return true;
     }
 

@@ -976,6 +976,11 @@ EXPORT void FillBufferIndirect(const BufferInfo *buf, int c)
     memset(buf->ptr, c, buf->len);
 }
 
+EXPORT void FillBuffer(void *ptr, int c, size_t len)
+{
+    memset(ptr, c, len);
+}
+
 EXPORT const char *GetLatin1String()
 {
     // ®²

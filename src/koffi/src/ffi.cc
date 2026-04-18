@@ -271,7 +271,7 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
 
     bool skip = (info.Length() > 1);
     bool named = skip && !IsNullOrUndefined(info[0]);
-    bool redefine = named && CheckValueTag(info[0], &TypeInfoMarker);
+    bool redefine = named && info[0].IsExternal() && CheckValueTag(info[0], &TypeInfoMarker);
 
     if (named && !info[0].IsString() && !redefine) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string", GetValueType(instance, info[0]));
@@ -460,7 +460,7 @@ static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
 
     bool skip = (info.Length() > 1);
     bool named = skip && !IsNullOrUndefined(info[0]);
-    bool redefine = named && CheckValueTag(info[0], &TypeInfoMarker);
+    bool redefine = named && info[0].IsExternal() && CheckValueTag(info[0], &TypeInfoMarker);
 
     if (named && !info[0].IsString() && !redefine) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string", GetValueType(instance, info[0]));
