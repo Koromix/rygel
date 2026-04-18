@@ -207,13 +207,12 @@ void CallData::RelayAsync(Size idx, uint8_t *sp)
 bool CallData::PushString(Napi::Value value, int directions, const char **out_str)
 {
     // Fast path
-    if (value.IsString()) {
+    if (PushStringValue(value, out_str) >= 0) {
         if (directions & 2) [[unlikely]] {
             ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected [string]", GetValueType(instance, value));
             return false;
         }
 
-        PushStringValue(value, out_str);
         return true;
     }
 
@@ -223,13 +222,12 @@ bool CallData::PushString(Napi::Value value, int directions, const char **out_st
 bool CallData::PushString16(Napi::Value value, int directions, const char16_t **out_str16)
 {
     // Fast path
-    if (value.IsString()) {
+    if (PushString16Value(value, out_str16) >= 0) {
         if (directions & 2) [[unlikely]] {
             ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected [string]", GetValueType(instance, value));
             return false;
         }
 
-        PushString16Value(value, out_str16);
         return true;
     }
 
@@ -239,13 +237,12 @@ bool CallData::PushString16(Napi::Value value, int directions, const char16_t **
 bool CallData::PushString32(Napi::Value value, int directions, const char32_t **out_str32)
 {
     // Fast path
-    if (value.IsString()) {
+    if (PushString32Value(value, out_str32) >= 0) {
         if (directions & 2) [[unlikely]] {
             ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected [string]", GetValueType(instance, value));
             return false;
         }
 
-        PushString32Value(value, out_str32);
         return true;
     }
 
@@ -262,6 +259,8 @@ Size CallData::PushStringValue(Napi::Value value, const char **out_str)
     buf.len = mem->heap.end - mem->heap.ptr;
 
     status = napi_get_value_string_utf8(env, value, buf.ptr, (size_t)buf.len, &len);
+    if (status == napi_string_expected)
+        return -1;
     K_ASSERT(status == napi_ok);
 
     len++;
@@ -296,6 +295,8 @@ Size CallData::PushString16Value(Napi::Value value, const char16_t **out_str16)
     buf.len = (mem->heap.end - mem->heap.ptr) / 2;
 
     status = napi_get_value_string_utf16(env, value, buf.ptr, (size_t)buf.len, &len);
+    if (status == napi_string_expected)
+        return -1;
     K_ASSERT(status == napi_ok);
 
     len++;
@@ -1060,9 +1061,6 @@ Size CallData::PushIndirectString(Napi::Array array, const TypeInfo *ref, void *
         return -1;
 
     Napi::Value value = array[0u];
-
-    if (!value.IsString())
-        return -1;
 
     if (ref == instance->void_type) {
         return PushStringValue(value, (const char **)out_ptr);
