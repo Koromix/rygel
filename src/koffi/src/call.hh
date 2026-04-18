@@ -85,9 +85,9 @@ struct alignas(8) CallData {
     INLINE_IF_UNITY bool PushString(Napi::Value value, int directions, const char **out_str);
     INLINE_IF_UNITY bool PushString16(Napi::Value value, int directions, const char16_t **out_str16);
     INLINE_IF_UNITY bool PushString32(Napi::Value value, int directions, const char32_t **out_str32);
-    Size PushStringValue(Napi::Value value, const char **out_str);
-    Size PushString16Value(Napi::Value value, const char16_t **out_str16);
-    Size PushString32Value(Napi::Value value, const char32_t **out_str32);
+    INLINE_IF_UNITY Size PushStringValue(Napi::Value value, const char **out_str);
+    INLINE_IF_UNITY Size PushString16Value(Napi::Value value, const char16_t **out_str16);
+    INLINE_IF_UNITY Size PushString32Value(Napi::Value value, const char32_t **out_str32);
     bool PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origin);
     bool PushNormalArray(Napi::Array array, const TypeInfo *type, Size size, uint8_t *origin);
     INLINE_IF_UNITY void PushBuffer(Span<const uint8_t> buffer, const TypeInfo *type, uint8_t *origin);
