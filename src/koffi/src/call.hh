@@ -137,7 +137,7 @@ inline T *CallData::AllocHeap(Size size)
     uint8_t *ptr = mem->heap.ptr;
     uint8_t *end = AlignUp(ptr + size, 16);
 
-    if (size < 4096 && end <= mem->heap.end) [[likely]] {
+    if (end <= mem->heap.end) [[likely]] {
 #if defined(K_DEBUG)
         MemSet(ptr, 0, size);
 #endif
