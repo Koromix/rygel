@@ -16,18 +16,22 @@ void ThrowError(Napi::Env env, const char *msg, Args... args)
     err.ThrowAsJavaScriptException();
 }
 
-static Napi::Value RunAtoi(const Napi::CallbackInfo &info)
+static napi_value RunAtoi(napi_env env, napi_callback_info info)
 {
-    Napi::Env env = info.Env();
+    napi_value args[6];
+    size_t count = 6;
 
-    if (info.Length() < 1) [[unlikely]] {
-        ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", info.Length());
-        return env.Null();
+    napi_status status = napi_get_cb_info(env, info, &count, args, nullptr, nullptr);
+    K_ASSERT(status == napi_ok);
+
+    if (count < 1) [[unlikely]] {
+        ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", count);
+        return Napi::Env(env).Null();
     }
 
     char str[64];
     {
-        napi_status status = napi_get_value_string_utf8(env, info[0], str, K_SIZE(str), nullptr);
+        napi_status status = napi_get_value_string_utf8(env, args[0], str, K_SIZE(str), nullptr);
 
         if (status != napi_ok) [[unlikely]] {
             if (status == napi_string_expected) {
@@ -35,7 +39,7 @@ static Napi::Value RunAtoi(const Napi::CallbackInfo &info)
             } else {
                 ThrowError<Napi::TypeError>(env, "Failed to read JS string");
             }
-            return env.Null();
+            return Napi::Env(env).Null();
         }
     }
 
@@ -44,13 +48,23 @@ static Napi::Value RunAtoi(const Napi::CallbackInfo &info)
     return Napi::Number::New(env, value);
 }
 
+static napi_value WrapFunction(napi_env env, const char *name, napi_callback func)
+{
+    napi_value value;
+
+    napi_status status = napi_create_function(env, name, NAPI_AUTO_LENGTH, func, nullptr, &value);
+    K_ASSERT(status == napi_ok);
+
+    return value;
+}
+
 }
 
 static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
 {
     using namespace K;
 
-    exports.Set("atoi", Napi::Function::New(env, RunAtoi));
+    exports.Set("atoi", WrapFunction(env, "atoi", RunAtoi));
 
     return exports;
 }

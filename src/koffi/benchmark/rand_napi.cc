@@ -16,32 +16,43 @@ void ThrowError(Napi::Env env, const char *msg, Args... args)
     err.ThrowAsJavaScriptException();
 }
 
-static Napi::Value RunSrand(const Napi::CallbackInfo &info)
+static napi_value RunSrand(napi_env env, napi_callback_info info)
 {
-    Napi::Env env = info.Env();
+    napi_value args[6];
+    size_t count = 6;
 
-    if (info.Length() < 1) [[unlikely]] {
-        ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", info.Length());
-        return env.Null();
+    napi_status status = napi_get_cb_info(env, info, &count, args, nullptr, nullptr);
+    K_ASSERT(status == napi_ok);
+
+    if (count < 1) [[unlikely]] {
+        ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", count);
+        return Napi::Env(env).Null();
     }
-    if (!info[0].IsNumber()) [[unlikely]] {
+    if (!Napi::Value(env, args[0]).IsNumber()) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Unexpected type for seed, expected number");
-        return env.Null();
+        return Napi::Env(env).Null();
     }
 
-    unsigned int seed = (info[0].As<Napi::Number>()).Uint32Value();
+    unsigned int seed = Napi::Number(env, args[0]).Uint32Value();
     srand(seed);
 
-    return env.Null();
+    return Napi::Env(env).Null();
 }
 
-static Napi::Value RunRand(const Napi::CallbackInfo &info)
+static napi_value RunRand(napi_env env, napi_callback_info info)
 {
-    Napi::Env env = info.Env();
-
     int rnd = rand();
-
     return Napi::Number::New(env, rnd);
+}
+
+static napi_value WrapFunction(napi_env env, const char *name, napi_callback func)
+{
+    napi_value value;
+
+    napi_status status = napi_create_function(env, name, NAPI_AUTO_LENGTH, func, nullptr, &value);
+    K_ASSERT(status == napi_ok);
+
+    return value;
 }
 
 }
@@ -50,8 +61,8 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
 {
     using namespace K;
 
-    exports.Set("srand", Napi::Function::New(env, RunSrand));
-    exports.Set("rand", Napi::Function::New(env, RunRand));
+    exports.Set("srand", WrapFunction(env, "srand", RunSrand));
+    exports.Set("rand", WrapFunction(env, "rand", RunRand));
 
     return exports;
 }
