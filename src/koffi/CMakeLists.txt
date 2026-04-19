@@ -189,6 +189,6 @@ elseif(PGO_PROFILE)
     target_link_options(koffi PRIVATE "-fprofile-use=${PGO_PROFILE}")
 
     message(STATUS "PGO: Building optimized binary with profile data")
-elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
+else()
     enable_unity_build(koffi EXCLUDE src/uv.cc)
 endif()
