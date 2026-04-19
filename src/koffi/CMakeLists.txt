@@ -151,6 +151,10 @@ if(UNIX AND NOT APPLE)
     target_link_options(koffi PRIVATE -Wl,--gc-sections)
 endif()
 
+if(MSVC AND (CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo"))
+    target_compile_options(koffi PRIVATE $<$<COMPILE_LANGUAGE:CXX>:/GS- /Ob3>)
+endif()
+
 if(NOT MSVC OR CMAKE_C_COMPILER_ID MATCHES "[Cc]lang")
     # Restore C/C++ compiler sanity
 
