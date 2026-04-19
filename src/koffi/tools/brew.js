@@ -164,6 +164,11 @@ async function build() {
         let needed_machines = new Set;
 
         for (let build of builds) {
+            if (build.info.package == null) {
+                ignore_builds.add(build);
+                continue;
+            }
+
             let machine = runner.machine(build.info.machine);
 
             let binary_filename = build_dir + `/qemu/${version}/${build.key}/koffi.node`;
@@ -209,11 +214,13 @@ async function build() {
             let src_dir = build.info.directory + `/bin/Koffi/${src_name}`;
             let dest_dir = build_dir + `/qemu/${version}/${build.key}`;
 
-            let artifact =  {
-                package: build.info.package,
-                build: dest_dir
-            };
-            artifacts.push(artifact);
+            if (build.info.package != null) {
+                let artifact =  {
+                    package: build.info.package,
+                    build: dest_dir
+                };
+                artifacts.push(artifact);
+            }
 
             if (runner.isIgnored(machine))
                 return;

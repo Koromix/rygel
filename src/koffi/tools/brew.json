@@ -7,7 +7,7 @@
             "machine": "debian_arm32",
             "directory": "/home/debian/luigi",
             "build": "node ../cnoke/cnoke.js --ccache",
-            "package": "linux-arm"
+            "package": null
         },
 
         "test": {
@@ -112,7 +112,7 @@
             "machine": "debian_riscv64",
             "directory": "/home/debian/luigi",
             "build": "node ../cnoke/cnoke.js",
-            "package": "linux-riscv64"
+            "package": null
         },
 
         "test": {
@@ -326,7 +326,7 @@
             "machine": "windows_x64",
             "directory": "C:/Users/windows/Desktop/luigi_arm64",
             "build": "C:\\Node64\\node64.cmd node ../cnoke/cnoke.js -t win32_arm64",
-            "package": "win32-arm64"
+            "package": null
         }
     },
 
@@ -399,7 +399,7 @@
             "machine": "debian_loong64",
             "directory": "/home/debian/luigi",
             "build": "node ../cnoke/cnoke.js",
-            "package": "linux-loong64"
+            "package": null
         },
 
         "test": {
