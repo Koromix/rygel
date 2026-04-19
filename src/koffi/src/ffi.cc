@@ -2702,7 +2702,10 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
         static std::once_flag flag;
 
         std::call_once(flag, [&]() {
-            DetermineCallbackBundleOffset(env);
+            // If DetermineCallbackBundleOffset() failed, it probably means we are in
+            // weird territory (maybe Bun), so back off!
+            if (!DetermineCallbackBundleOffset(env))
+                return;
 
             uv_lib_t lib = {};
 
