@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
+'use strict';
+
 const fs = require('fs');
 const path = require('path');
 const util = require('util');
@@ -23,23 +25,22 @@ function detect() {
     let arch = determine_arch();
 
     let pkg = `${process.platform}-${process.arch}`;
-    let triplet = `${process.platform}_${arch}`;
+    let triplets = [`${process.platform}_${arch}`];
 
-    return [pkg, triplet];
+    if (process.platform == 'linux')
+        triplets.push(`musl_${arch}`);
+
+    return [pkg, triplets];
 }
 
-function init(pkg, triplet, native) {
+function init(pkg, triplets, native) {
+    let err = null;
+
     if (native == null) {
         let roots = [path.join(__dirname, '..')];
-        let triplets = [triplet];
 
         if (process.resourcesPath != null)
             roots.push(process.resourcesPath);
-
-        if (triplet.startsWith('linux_')) {
-            let musl = triplet.replace(/^linux_/, 'musl_');
-            triplets.push(musl);
-        }
 
         let filenames = roots.flatMap(root => triplets.flatMap(triplet => [
             `${root}/@koromix/koffi-${pkg}/${triplet}/koffi.node`,
@@ -50,8 +51,6 @@ function init(pkg, triplet, native) {
             `${root}/../../bin/Koffi/${triplet}/koffi.node`
         ]));
 
-        let first_err = null;
-
         for (let filename of filenames) {
             if (!fs.existsSync(filename))
                 continue;
@@ -59,21 +58,17 @@ function init(pkg, triplet, native) {
             try {
                 // Trick so that webpack does not try to do anything with require() call
                 native = eval('require')(filename);
-            } catch (err) {
-                if (first_err == null)
-                    first_err = err;
-                continue;
+                break;
+            } catch (e) {
+                err ??= e;
             }
-
-            break;
         }
-
-        if (first_err != null)
-            throw first_err;
     }
 
-    if (native == null)
-        throw new Error('Cannot find the native Koffi module; did you bundle it correctly?');
+    if (native == null) {
+        err ??= new Error('Cannot find the native Koffi module; did you bundle it correctly?');
+        throw err;
+    }
     if (native.version != PACKAGE.version)
         throw new Error('Mismatched native Koffi modules');
 

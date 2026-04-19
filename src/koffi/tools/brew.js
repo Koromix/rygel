@@ -28,6 +28,7 @@ const CommandFunctions = {
 
 // Globals
 
+const MONOLITH = false;
 const BINARY_PREFIX = '@koromix/koffi-';
 
 let script_dir = null;
@@ -261,13 +262,11 @@ async function build() {
     console.log('>> Clean up previous packages');
     unlink_recursive(dist_dir);
 
-    console.log('>> Prepare binary packages');
+    console.log('>> Regroup package builds');
     {
         let map = new Map;
 
         for (let artifact of artifacts) {
-            let build = path.basename(artifact.build);
-
             let name = BINARY_PREFIX + artifact.package;
             let pkg = map.get(artifact.package);
 
@@ -283,17 +282,26 @@ async function build() {
                 packages.push(pkg);
             }
 
-            pkg.builds.push(build);
-
-            let binary_dir = pkg.path + '/' + build;
-
-            fs.mkdirSync(binary_dir, { mode: 0o755, recursive: true });
-            copy_recursive(artifact.build, binary_dir);
+            pkg.builds.push({
+                name: path.basename(artifact.build),
+                path: artifact.build
+            });
         }
+    }
+
+    if (!MONOLITH) {
+        console.log('>> Prepare binary packages');
 
         for (let pkg of packages) {
             let main = JSON.parse(json);
             let [os, cpu] = pkg.target.split('-');
+
+            for (let build of pkg.builds) {
+                let binary_dir = pkg.path + '/' + build.name;
+
+                fs.mkdirSync(binary_dir, { mode: 0o755, recursive: true });
+                copy_recursive(build.path, binary_dir);
+            }
 
             let binary = {
                 name: pkg.name,
@@ -316,7 +324,7 @@ async function build() {
                 ${pkg.builds.map(build => `
                     if (native == null) {
                         try {
-                            native = require('./${build}/koffi.node');
+                            native = require('./${build.name}/koffi.node');
                         } catch (e) {
                             err = e;
                         }
@@ -335,7 +343,7 @@ async function build() {
         }
     }
 
-    console.log('>> Prepare main package');
+    console.log(`>> Prepare ${MONOLITH ? 'monolithic' : 'main'} package`);
     {
         let pkg_dir = dist_dir + '/koffi';
         fs.mkdirSync(pkg_dir, { mode: 0o755, recursive: true });
@@ -372,20 +380,68 @@ async function build() {
             install: 'node src/cnoke/cnoke.js -P . -D src/koffi --prebuild'
         };
         main.cnoke.output = 'build/koffi/{{ platform }}_{{ arch }}';
+
+        if (MONOLITH) {
+            for (let artifact of artifacts) {
+                let build = path.basename(artifact.build);
+                let binary_dir = pkg_dir + '/build/koffi/' + build;
+
+                fs.mkdirSync(binary_dir, { mode: 0o755, recursive: true });
+                copy_recursive(artifact.build, binary_dir);
+            }
+        } else {
+            main.optionalDependencies = packages.reduce((obj, pkg) => { obj[pkg.name] = main.version; return obj; }, {});
+        }
         delete main.devDependencies;
 
-        main.optionalDependencies = packages.reduce((obj, pkg) => { obj[pkg.name] = main.version; return obj; }, {});
-
-        esbuild.buildSync({
+        await esbuild.build({
             entryPoints: [pkg_dir + '/src/koffi/index.js'],
             bundle: true,
             minify: false,
             write: true,
             external: [BINARY_PREFIX + '*'],
             platform: 'node',
-            outfile: pkg_dir + '/index.js'
+            outfile: pkg_dir + '/index.js',
+            plugins: [
+                {
+                    name: 'static',
+                    setup: build => {
+                        build.onLoad({ filter: /\/src\/static\.js$/ }, args => {
+                            let code = `
+                                function find(pkg) {
+                                    let native = null;
+
+                                    ${MONOLITH ? packages.flatMap(pkg => pkg.builds.map(build => `
+                                        if (native == null && pkg == '${pkg.target}') {
+                                            try {
+                                                native = require('./build/koffi/${build.name}/koffi.node');
+                                            } catch (err) {
+                                                // Go on
+                                            }
+                                        }
+                                    `)).join('') : ''}
+                                    ${!MONOLITH ? packages.flatMap(pkg => `
+                                        if (pkg == '${pkg.target}')
+                                            native = require('${pkg.name}');
+                                    `).join('') : ''}
+
+                                    return native;
+                                }
+
+                                module.exports = { find };
+                            `;
+
+                            return {
+                                contents: code,
+                                loader: 'js'
+                            };
+                        });
+                    }
+                }
+            ]
         });
-        esbuild.buildSync({
+
+        await esbuild.build({
             entryPoints: [pkg_dir + '/src/koffi/indirect.js'],
             bundle: true,
             minify: false,
@@ -398,6 +454,8 @@ async function build() {
         fs.unlinkSync(pkg_dir + '/src/koffi/package.json');
         fs.unlinkSync(pkg_dir + '/src/koffi/index.js');
         fs.unlinkSync(pkg_dir + '/src/koffi/indirect.js');
+        fs.unlinkSync(pkg_dir + '/src/koffi/src/init.js');
+        fs.unlinkSync(pkg_dir + '/src/koffi/src/static.js');
         fs.renameSync(pkg_dir + '/src/koffi/index.d.ts', pkg_dir + '/index.d.ts');
         fs.renameSync(pkg_dir + '/src/koffi/README.md', pkg_dir + '/README.md');
         fs.renameSync(pkg_dir + '/src/koffi/LICENSE.txt', pkg_dir + '/LICENSE.txt');

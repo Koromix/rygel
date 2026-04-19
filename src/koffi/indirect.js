@@ -5,7 +5,7 @@
 
 const { detect, init } = require('./src/init.js');
 
-let [pkg, triplet] = detect();
-let mod = init(pkg, triplet, null);
+let [pkg, triplets] = detect();
+let mod = init(pkg, triplets, null);
 
 module.exports = mod;
