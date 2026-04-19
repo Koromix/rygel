@@ -36,13 +36,15 @@
 
 namespace K {
 
+extern "C" napi_value SwitchAndRelay(CallData *call, Size idx, uint8_t *sp, uint8_t *saved_sp, MemoryRange<uint8_t> *new_stack);
+
 SharedData shared;
 
 // Recent N-API functions are loaded dynamically
 static napi_status (NAPI_CDECL *node_api_create_property_key_utf8)(napi_env env, const char* str, size_t length, napi_value* result);
 static napi_status (NAPI_CDECL *node_api_post_finalizer)(node_api_basic_env env, napi_finalize finalize_cb, void* finalize_data, void* finalize_hint);
 
-extern "C" napi_value SwitchAndRelay(CallData *call, Size idx, uint8_t *sp, uint8_t *saved_sp, MemoryRange<uint8_t> *new_stack);
+static Size cb_bundle_offset = -1;
 
 static bool ChangeSize(const char *name, Napi::Value value, Size min_size, Size max_size, Size *out_size)
 {
@@ -1491,6 +1493,36 @@ void ReleaseMemory(InstanceData *instance, InstanceMemory *mem)
     }
 }
 
+static FORCE_INLINE void *GetCallbackData(napi_callback_info info)
+{
+    K_ASSERT(cb_bundle_offset >= 0);
+
+    struct CallbackBundle {
+        napi_env env;
+        void *data;
+    };
+
+    CallbackBundle **ptr = (CallbackBundle **)((uint8_t *)info + cb_bundle_offset);
+    return (*ptr)->data;
+}
+
+napi_value TranslateZeroCall(napi_env env, napi_callback_info info)
+{
+    FunctionInfo *func = (FunctionInfo *)GetCallbackData(info);
+
+    InstanceData *instance = func->instance;
+    InstanceMemory *mem = instance->memories[0];
+    CallData call(env, instance, mem);
+
+    K_DEFER_C(prev_call = instance->sync_call) { instance->sync_call = prev_call; };
+    instance->sync_call = &call;
+
+    Napi::Value ret = call.Run(func, func->native, nullptr);
+    call.FinalizeFast();
+
+    return ret;
+}
+
 napi_value TranslateFastCall(napi_env env, napi_callback_info info)
 {
     napi_value args[6];
@@ -2625,6 +2657,44 @@ static inline PrimitiveKind GetBigEndianPrimitive(PrimitiveKind kind)
 #endif
 }
 
+static bool DetermineCallbackBundleOffset(Napi::Env env)
+{
+    static int BunTrap = 42;
+
+    Napi::Object self = Napi::Object::New(env);
+
+    napi_status status;
+    napi_value func;
+    napi_value ret;
+
+    status = napi_create_function(env, nullptr, 0, [](napi_env env, napi_callback_info info) {
+        napi_value self;
+        napi_get_cb_info(env, info, nullptr, nullptr, &self, nullptr);
+
+        void **ptr1 = (void **)info;
+        napi_value *ptr2 = (napi_value *)info;
+
+        if (ptr1[0] == &BunTrap || ptr1[1] == &BunTrap)
+            return self;
+
+        if (ptr2[0] == self) {
+            cb_bundle_offset = 32;
+        } else if (ptr2[1] == self) {
+            cb_bundle_offset = 40;
+        } else {
+            cb_bundle_offset = 8;
+        }
+
+        return self;
+    }, &BunTrap, &func);
+    K_ASSERT(status == napi_ok);
+
+    status = napi_call_function(env, self, func, 0, nullptr, &ret);
+    K_ASSERT(status == napi_ok);
+
+    return cb_bundle_offset >= 0;
+}
+
 static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
 {
     // Load recent N-API functions (version >= 9) functions dynamically
@@ -2632,6 +2702,8 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
         static std::once_flag flag;
 
         std::call_once(flag, [&]() {
+            DetermineCallbackBundleOffset(env);
+
             uv_lib_t lib = {};
 
 #if defined(_WIN32)
@@ -2654,6 +2726,7 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
     InstanceData *instance = new InstanceData();
     K_CRITICAL(instance, "Failed to initialize Koffi");
 
+    instance->cb_bundle_offset = cb_bundle_offset;
     env.SetInstanceData(instance);
 
 #if defined(__clang__)
