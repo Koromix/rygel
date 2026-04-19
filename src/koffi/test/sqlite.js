@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
-const koffi = require('../../koffi');
+const koffi = require('..');
 const crypto = require('crypto');
 const assert = require('assert');
 const fs = require('fs');

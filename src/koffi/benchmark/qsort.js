@@ -4,7 +4,7 @@
 
 const pkg = require('./package.json');
 const napi = require(pkg.cnoke.output + '/qsort_napi.node');
-const koffi = require('../../koffi');
+const koffi = require('..');
 const ctypes = require('node-ctypes');
 const { node_ffi, ref, struct } = (() => {
     if (process.platform == 'win32')

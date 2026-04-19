@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
-const koffi = require('../../koffi');
+const koffi = require('..');
 const assert = require('assert');
 const path = require('path');
 const { cnoke } = require('./package.json');

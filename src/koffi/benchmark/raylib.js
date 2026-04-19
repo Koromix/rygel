@@ -4,7 +4,7 @@
 
 const pkg = require('./package.json');
 const r = require('raylib');
-const koffi = require('../../koffi');
+const koffi = require('..');
 const { node_ffi, ref, struct } = (() => {
     if (process.platform == 'win32')
         return {};
