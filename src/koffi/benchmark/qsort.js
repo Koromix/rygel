@@ -6,9 +6,18 @@ const pkg = require('./package.json');
 const napi = require(pkg.cnoke.output + '/qsort_napi.node');
 const koffi = require('../../koffi');
 const ctypes = require('node-ctypes');
-const ref = require('@napi-ffi/ref-napi');
-const ffi = require('@napi-ffi/ffi-napi');
-const struct = require('@napi-ffi/ref-struct-di')(ref);
+const { node_ffi, ref, struct } = (() => {
+    if (process.platform == 'win32')
+        return {};
+    if (process.isBun)
+        return {};
+
+    const node_ffi = require('@napi-ffi/ffi-napi');
+    const ref = require('@napi-ffi/ref-napi');
+    const struct = require('@napi-ffi/ref-struct-di')(ref);
+
+    return { node_ffi, ref, struct };
+})();
 const { performance } = require('perf_hooks');
 
 const RandomArray = Array.from({ length: 200 }, () => Math.floor(Math.random() * 1000) + 1);
@@ -33,7 +42,7 @@ function main() {
         'node-ctypes': run_node_ctypes(time),
 
         // Crashes when it ends, for some reason
-        // 'node-ffi-napi': run_node_ffi(time) 
+        // 'node-ffi-napi': node_ffi ? run_node_ffi(time) : undefined
     }
 
     console.log(JSON.stringify(perf, null, 4));

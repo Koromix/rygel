@@ -13,9 +13,18 @@ const ffi = (() => {
         return null;
     }
 })();
-const ref = require('@napi-ffi/ref-napi');
-const node_ffi = require('@napi-ffi/ffi-napi');
-const struct = require('@napi-ffi/ref-struct-di')(ref);
+const { node_ffi, ref, struct } = (() => {
+    if (process.platform == 'win32')
+        return {};
+    if (process.isBun)
+        return {};
+
+    const node_ffi = require('@napi-ffi/ffi-napi');
+    const ref = require('@napi-ffi/ref-napi');
+    const struct = require('@napi-ffi/ref-struct-di')(ref);
+
+    return { node_ffi, ref, struct };
+})();
 const { performance } = require('perf_hooks');
 
 main();
@@ -37,7 +46,7 @@ function main() {
         'koffi (slow pointers)': run_koffi(time, false),
         'node-ctypes': run_node_ctypes(time),
         'node:ffi': ffi ? run_node_ffi(time) : undefined,
-        'node-ffi-napi': run_node_ffi_napi(time)
+        'node-ffi-napi': node_ffi ? run_node_ffi_napi(time) : undefined
     }
 
     console.log(JSON.stringify(perf, null, 4));

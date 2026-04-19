@@ -5,9 +5,18 @@
 const pkg = require('./package.json');
 const r = require('raylib');
 const koffi = require('../../koffi');
-const ref = require('@napi-ffi/ref-napi');
-const ffi = require('@napi-ffi/ffi-napi');
-const struct = require('@napi-ffi/ref-struct-di')(ref);
+const { node_ffi, ref, struct } = (() => {
+    if (process.platform == 'win32')
+        return {};
+    if (process.isBun)
+        return {};
+
+    const node_ffi = require('@napi-ffi/ffi-napi');
+    const ref = require('@napi-ffi/ref-napi');
+    const struct = require('@napi-ffi/ref-struct-di')(ref);
+
+    return { node_ffi, ref, struct };
+})();
 const { spawnSync } = require('child_process');
 const path = require('path');
 const { performance } = require('perf_hooks');
@@ -29,7 +38,7 @@ function main() {
         'cc': run_cc(time),
         'napi': run_napi(time),
         'koffi': run_koffi(time),
-        'node-ffi-napi': run_node_ffi(time)
+        'node-ffi-napi': node_ffi ? run_node_ffi(time) : undefined
     }
 
     console.log(JSON.stringify(perf, null, 4));
@@ -266,7 +275,7 @@ function run_node_ffi(time) {
 
     let lib_filename = path.join(__dirname, pkg.cnoke.output, 'raylib' + koffi.extension);
 
-    const r = ffi.Library(lib_filename, {
+    const r = node_ffi.Library(lib_filename, {
         InitWindow: ['void', ['int', 'int', 'string']],
         SetTraceLogLevel: ['void', ['int']],
         SetWindowState: ['void', ['uint']],
