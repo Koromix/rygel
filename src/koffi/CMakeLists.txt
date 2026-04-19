@@ -152,7 +152,15 @@ if(UNIX AND NOT APPLE)
 endif()
 
 if(MSVC AND (CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo"))
-    target_compile_options(koffi PRIVATE $<$<COMPILE_LANGUAGE:CXX>:/GS- /Ob3>)
+    target_compile_options(koffi PRIVATE $<$<COMPILE_LANGUAGE:CXX>:/GS- /Ob2>)
+
+    if(CMAKE_C_COMPILER_ID MATCHES "[Cc]lang")
+        set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /clang:-O3")
+    endif()
+
+    if(CMAKE_BUILD_TYPE STREQUAL "Release")
+        target_compile_options(koffi PRIVATE $<$<COMPILE_LANGUAGE:CXX>:/Oy->)
+    endif()
 endif()
 
 if(NOT MSVC OR CMAKE_C_COMPILER_ID MATCHES "[Cc]lang")
