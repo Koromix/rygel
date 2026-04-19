@@ -109,7 +109,7 @@ static Napi::Value GetSetConfig(const Napi::CallbackInfo &info)
             return env.Null();
         }
 
-        if (!info[0].IsObject()) {
+        if (!IsObject(env, info[0])) {
             ThrowError<Napi::TypeError>(env, "Unexpected %1 value for config, expected object", GetValueType(instance, info[0]));
             return env.Null();
         }
@@ -118,7 +118,7 @@ static Napi::Value GetSetConfig(const Napi::CallbackInfo &info)
         int max_async_calls = new_config.resident_async_pools + new_config.max_temporaries;
 
         Napi::Object obj = info[0].As<Napi::Object>();
-        Napi::Array keys = GetOwnPropertyNames(obj);
+        Napi::Array keys = GetOwnPropertyNames(env, obj);
 
         for (uint32_t i = 0; i < keys.Length(); i++) {
             std::string key = keys.Get(i).As<Napi::String>();
@@ -272,21 +272,21 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
     }
 
     bool skip = (info.Length() > 1);
-    bool named = skip && !IsNullOrUndefined(info[0]);
-    bool redefine = named && info[0].IsExternal() && CheckValueTag(info[0], &TypeInfoMarker);
+    bool named = skip && !IsNullOrUndefined(env, info[0]);
+    bool redefine = named && info[0].IsExternal() && CheckValueTag(env, info[0], &TypeInfoMarker);
 
     if (named && !info[0].IsString() && !redefine) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string", GetValueType(instance, info[0]));
         return env.Null();
     }
-    if (!IsObject(info[skip])) {
+    if (!IsObject(env, info[skip])) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for members, expected object", GetValueType(instance, info[1]));
         return env.Null();
     }
 
     Napi::String name = info[0].As<Napi::String>();
     Napi::Object obj = info[skip].As<Napi::Object>();
-    Napi::Array keys = GetOwnPropertyNames(obj);
+    Napi::Array keys = GetOwnPropertyNames(env, obj);
 
     K_DEFER_NC(err_guard, count = instance->types.count) {
         Size start = count + !skip;
@@ -461,21 +461,21 @@ static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
     }
 
     bool skip = (info.Length() > 1);
-    bool named = skip && !IsNullOrUndefined(info[0]);
-    bool redefine = named && info[0].IsExternal() && CheckValueTag(info[0], &TypeInfoMarker);
+    bool named = skip && !IsNullOrUndefined(env, info[0]);
+    bool redefine = named && info[0].IsExternal() && CheckValueTag(env, info[0], &TypeInfoMarker);
 
     if (named && !info[0].IsString() && !redefine) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string", GetValueType(instance, info[0]));
         return env.Null();
     }
-    if (!IsObject(info[skip])) {
+    if (!IsObject(env, info[skip])) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for members, expected object", GetValueType(instance, info[1]));
         return env.Null();
     }
 
     Napi::String name = info[0].As<Napi::String>();
     Napi::Object obj = info[skip].As<Napi::Object>();
-    Napi::Array keys = GetOwnPropertyNames(obj);
+    Napi::Array keys = GetOwnPropertyNames(env, obj);
 
     K_DEFER_NC(err_guard, count = instance->types.count) {
         Size start = count + !skip;
@@ -625,7 +625,7 @@ Napi::Value InstantiateUnion(const Napi::CallbackInfo &info)
     }
 
     Napi::Object wrapper = type->construct.New({}).As<Napi::Object>();
-    SetValueTag(wrapper, &MagicUnionMarker);
+    SetValueTag(env, wrapper, &MagicUnionMarker);
 
     return wrapper;
 }
@@ -635,7 +635,7 @@ static Napi::Value CreateOpaqueType(const Napi::CallbackInfo &info)
     Napi::Env env = info.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();
 
-    bool named = (info.Length() >= 1) && !IsNullOrUndefined(info[0]);
+    bool named = (info.Length() >= 1) && !IsNullOrUndefined(env, info[0]);
 
     if (named && !info[0].IsString()) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string", GetValueType(instance, info[0]));
@@ -673,7 +673,7 @@ static Napi::Value CreatePointerType(const Napi::CallbackInfo &info)
     }
 
     bool skip = (info.Length() > 1) && !info[1].IsNumber();
-    bool named = skip && !IsNullOrUndefined(info[0]);
+    bool named = skip && !IsNullOrUndefined(env, info[0]);
 
     if (named && !info[0].IsString()) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string", GetValueType(instance, info[0]));
@@ -786,7 +786,7 @@ static Napi::Value CreateDisposableType(const Napi::CallbackInfo &info)
     }
 
     bool skip = (info.Length() > 1) && !info[1].IsFunction();
-    bool named = skip && !IsNullOrUndefined(info[0]);
+    bool named = skip && !IsNullOrUndefined(env, info[0]);
 
     if (named && !info[0].IsString()) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string", GetValueType(instance, info[0]));
@@ -812,7 +812,7 @@ static Napi::Value CreateDisposableType(const Napi::CallbackInfo &info)
 
     DisposeFunc *dispose;
     Napi::Function dispose_func;
-    if (info.Length() >= 2u + skip && !IsNullOrUndefined(info[1 + skip])) {
+    if (info.Length() >= 2u + skip && !IsNullOrUndefined(env, info[1 + skip])) {
         Napi::Function func = info[1 + skip].As<Napi::Function>();
 
         if (!func.IsFunction()) {
@@ -869,11 +869,11 @@ static Napi::Value CreateDisposableType(const Napi::CallbackInfo &info)
     return WrapType(env, type);
 }
 
-static inline bool GetExternalPointer(Napi::Env env, Napi::Value value, void **out_ptr)
+static inline bool GetExternalPointer(napi_env env, napi_value value, void **out_ptr)
 {
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
+    if (!TryPointer(env, value, out_ptr)) {
+        InstanceData *instance = Napi::Env(env).GetInstanceData<InstanceData>();
 
-    if (!TryPointer(value, out_ptr)) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected pointer", GetValueType(instance, value));
         return false;
     }
@@ -1006,7 +1006,7 @@ static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
 
     TypeInfo *type = nullptr;
 
-    if (info.Length() >= 3u + dynamic && !IsNullOrUndefined(info[2 + dynamic])) {
+    if (info.Length() >= 3u + dynamic && !IsNullOrUndefined(env, info[2 + dynamic])) {
         if (!info[2 + dynamic].IsString()) {
             ThrowError<Napi::TypeError>(env, "Unexpected %1 value for hint, expected string", GetValueType(instance, info[2]));
             return env.Null();
@@ -1082,7 +1082,7 @@ static bool ParseClassicFunction(const Napi::CallbackInfo &info, bool concrete, 
         }
 #endif
         if (!name.IsString()) {
-            if (!concrete && IsNullOrUndefined(name)) {
+            if (!concrete && IsNullOrUndefined(env, name)) {
                 named = false;
             } else {
                 ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string or integer", GetValueType(instance, name));
@@ -1510,7 +1510,7 @@ static napi_value TranslateZeroCallNode(napi_env env, napi_callback_info info)
     K_DEFER_C(prev_call = instance->sync_call) { instance->sync_call = prev_call; };
     instance->sync_call = &call;
 
-    Napi::Value ret = call.Run(func, func->native, nullptr);
+    napi_value ret = call.Run(func, func->native, nullptr);
     call.FinalizeFast();
 
     return ret;
@@ -1527,7 +1527,7 @@ static napi_value TranslateZeroCallBun(napi_env env, napi_callback_info info)
     K_DEFER_C(prev_call = instance->sync_call) { instance->sync_call = prev_call; };
     instance->sync_call = &call;
 
-    Napi::Value ret = call.Run(func, func->native, nullptr);
+    napi_value ret = call.Run(func, func->native, nullptr);
     call.FinalizeFast();
 
     return ret;
@@ -1555,7 +1555,7 @@ napi_value TranslateFastCall(napi_env env, napi_callback_info info)
     K_DEFER_C(prev_call = instance->sync_call) { instance->sync_call = prev_call; };
     instance->sync_call = &call;
 
-    Napi::Value ret = call.Run(func, func->native, args);
+    napi_value ret = call.Run(func, func->native, args);
     call.FinalizeFast();
 
     return ret;
@@ -1578,7 +1578,7 @@ static FORCE_INLINE napi_value TranslateNormalCall(napi_env env, const FunctionI
     K_DEFER_C(prev_call = instance->sync_call) { instance->sync_call = prev_call; };
     instance->sync_call = &call;
 
-    Napi::Value ret = call.Run(func, native, args);
+    napi_value ret = call.Run(func, native, args);
     call.Finalize();
 
     return ret;
@@ -1695,7 +1695,7 @@ static napi_value TranslateVariadicCall(napi_env env, const FunctionInfo *func, 
     K_DEFER_C(prev_call = instance->sync_call) { instance->sync_call = prev_call; };
     instance->sync_call = &call;
 
-    Napi::Value ret = call.Run(variadic, native, args);
+    napi_value ret = call.Run(variadic, native, args);
     call.Finalize();
 
     if (variadic != instance->variadic_func) {
@@ -1780,7 +1780,7 @@ void AsyncCall::OnOK()
 
     Napi::FunctionReference &callback = Callback();
 
-    Napi::Value ret = call->EndAsync();
+    napi_value ret = call->EndAsync();
     call->Finalize();
 
     napi_value self = env.Null();
@@ -2075,11 +2075,11 @@ static Napi::Value LoadSharedLibrary(const Napi::CallbackInfo &info)
         ThrowError<Napi::TypeError>(env, "Expected 1 or 2 arguments, got %1", info.Length());
         return env.Null();
     }
-    if (!info[0].IsString() && !IsNullOrUndefined(info[0])) {
+    if (!info[0].IsString() && !IsNullOrUndefined(env, info[0])) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for filename, expected string or null", GetValueType(instance, info[0]));
         return env.Null();
     }
-    if (info.Length() >= 2 && !IsObject(info[1])) {
+    if (info.Length() >= 2 && !IsObject(env, info[1])) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for options, expected object", GetValueType(instance, info[1]));
         return env.Null();
     }
@@ -2214,7 +2214,7 @@ static Napi::Value RegisterCallback(const Napi::CallbackInfo &info)
     trampoline->instance = instance;
     trampoline->proto = type->ref.proto;
     trampoline->func.Reset(func, 1);
-    if (!IsNullOrUndefined(recv)) {
+    if (!IsNullOrUndefined(env, recv)) {
         trampoline->recv.Reset(recv, 1);
     } else {
         trampoline->recv.Reset();
@@ -2239,7 +2239,7 @@ static Napi::Value UnregisterCallback(const Napi::CallbackInfo &info)
     }
 
     void *ptr;
-    if (!TryPointer(info[0], &ptr)) {
+    if (!TryPointer(env, info[0], &ptr)) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for id, expected registered callback", GetValueType(instance, info[0]));
         return env.Null();
     }
@@ -2304,7 +2304,7 @@ static Napi::Value CastValue(const Napi::CallbackInfo &info)
     cast->type = type;
 
     Napi::External<ValueCast> external = Napi::External<ValueCast>::New(env, cast, [](Napi::Env, ValueCast *cast) { delete cast; });
-    SetValueTag(external, &CastMarker);
+    SetValueTag(env, external, &CastMarker);
 
     return external;
 }
@@ -2736,6 +2736,7 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
     InstanceData *instance = new InstanceData();
     K_CRITICAL(instance, "Failed to initialize Koffi");
 
+    instance->env = env;
     env.SetInstanceData(instance);
 
 #if defined(__clang__)

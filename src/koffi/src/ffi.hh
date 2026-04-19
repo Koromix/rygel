@@ -274,6 +274,8 @@ struct InstanceMemory {
 struct InstanceData {
     ~InstanceData();
 
+    napi_env env;
+
     BucketArray<TypeInfo> types;
     HashMap<const char *, const TypeInfo *> types_map;
     BucketArray<FunctionInfo> callbacks;

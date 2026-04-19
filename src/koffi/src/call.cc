@@ -80,7 +80,7 @@ void CallData::Finalize()
                     case OutArgument::Kind::Buffer: {
                         Span<uint8_t> buffer;
 
-                        bool success = TryBuffer(value, &buffer);
+                        bool success = TryBuffer(env, value, &buffer);
                         K_ASSERT(success);
 
                         DecodeBuffer(buffer, out.ptr, out.type);
@@ -125,7 +125,7 @@ void CallData::Finalize()
                     case OutArgument::Kind::Object: {
                         Napi::Object obj = value.As<Napi::Object>();
 
-                        if (CheckValueTag(value, &MagicUnionMarker)) {
+                        if (CheckValueTag(env, value, &MagicUnionMarker)) {
                             MagicUnion *u = MagicUnion::Unwrap(obj);
                             u->SetRaw(out.ptr);
                         } else {
@@ -204,7 +204,7 @@ void CallData::RelayAsync(Size idx, uint8_t *sp)
     }
 }
 
-bool CallData::PushString(Napi::Value value, int directions, const char **out_str)
+bool CallData::PushString(napi_value value, int directions, const char **out_str)
 {
     // Fast path
     if (PushStringValue(value, out_str) >= 0) {
@@ -219,7 +219,7 @@ bool CallData::PushString(Napi::Value value, int directions, const char **out_st
     return PushPointer(value, instance->str_type, directions, (void **)out_str);
 }
 
-bool CallData::PushString16(Napi::Value value, int directions, const char16_t **out_str16)
+bool CallData::PushString16(napi_value value, int directions, const char16_t **out_str16)
 {
     // Fast path
     if (PushString16Value(value, out_str16) >= 0) {
@@ -234,7 +234,7 @@ bool CallData::PushString16(Napi::Value value, int directions, const char16_t **
     return PushPointer(value, instance->str16_type, directions, (void **)out_str16);
 }
 
-bool CallData::PushString32(Napi::Value value, int directions, const char32_t **out_str32)
+bool CallData::PushString32(napi_value value, int directions, const char32_t **out_str32)
 {
     // Fast path
     if (PushString32Value(value, out_str32) >= 0) {
@@ -249,7 +249,7 @@ bool CallData::PushString32(Napi::Value value, int directions, const char32_t **
     return PushPointer(value, instance->str32_type, directions, (void **)out_str32);
 }
 
-Size CallData::PushStringValue(Napi::Value value, const char **out_str)
+Size CallData::PushStringValue(napi_value value, const char **out_str)
 {
     Span<char> buf;
     size_t len = 0;
@@ -285,7 +285,7 @@ Size CallData::PushStringValue(Napi::Value value, const char **out_str)
     return (Size)len;
 }
 
-Size CallData::PushString16Value(Napi::Value value, const char16_t **out_str16)
+Size CallData::PushString16Value(napi_value value, const char16_t **out_str16)
 {
     Span<char16_t> buf;
     size_t len = 0;
@@ -321,7 +321,7 @@ Size CallData::PushString16Value(Napi::Value value, const char16_t **out_str16)
     return (Size)len;
 }
 
-Size CallData::PushString32Value(Napi::Value value, const char32_t **out_str32)
+Size CallData::PushString32Value(napi_value value, const char32_t **out_str32)
 {
     static const char32_t ReplacementChar = 0x0000FFFD;
 
@@ -369,21 +369,25 @@ Size CallData::PushString32Value(Napi::Value value, const char32_t **out_str32)
     return j;
 }
 
-static inline Napi::Value GetMemberValue(Napi::Env env, Napi::Object obj, const RecordMember &member)
+static inline napi_value GetMemberValue(napi_env env, napi_value obj, const RecordMember &member)
 {
+    napi_value value = nullptr;
+
     if (member.key) {
         napi_value key = nullptr;
         napi_get_reference_value(env, member.key, &key);
 
-        return obj.Get(key);
+        napi_get_property(env, obj, key, &value);
     } else {
-        return obj.Get(member.name);
+        napi_get_named_property(env, obj, member.name, &value);
     }
+
+    return value;
 }
 
-bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origin)
+bool CallData::PushObject(napi_value obj, const TypeInfo *type, uint8_t *origin)
 {
-    K_ASSERT(IsObject(obj));
+    K_ASSERT(IsObject(env, obj));
     K_ASSERT(type->primitive == PrimitiveKind::Record ||
               type->primitive == PrimitiveKind::Union);
 
@@ -392,8 +396,8 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
     if (type->primitive == PrimitiveKind::Record) {
         members = type->members;
     } else if (type->primitive == PrimitiveKind::Union) {
-        if (CheckValueTag(obj, &MagicUnionMarker)) {
-            MagicUnion *u = MagicUnion::Unwrap(obj);
+        if (CheckValueTag(env, obj, &MagicUnionMarker)) {
+            MagicUnion *u = MagicUnion::Unwrap(Napi::Object(env, obj));
             const uint8_t *raw = u->GetRaw();
 
             if (u->GetType() != type) [[unlikely]] {
@@ -415,7 +419,7 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
                 return false;
             }
         } else {
-            Napi::Array properties = GetOwnPropertyNames(obj);
+            Napi::Array properties = GetOwnPropertyNames(env, obj);
 
             if (properties.Length() != 1 || !properties.Get(0u).IsString()) [[unlikely]] {
                 ThrowError<Napi::Error>(env, "Expected object with single property name for union");
@@ -442,7 +446,8 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
 #define PUSH_INTEGER(CType) \
         do { \
             CType v; \
-            if (!TryNumber(value, &v)) [[unlikely]] { \
+            if (!TryNumber(env, value, &v)) [[unlikely]] { \
+                abort(); \
                 ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value)); \
                 return false; \
             } \
@@ -452,7 +457,7 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
 #define PUSH_INTEGER_SWAP(CType) \
         do { \
             CType v; \
-            if (!TryNumber(value, &v)) [[unlikely]] { \
+            if (!TryNumber(env, value, &v)) [[unlikely]] { \
                 ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value)); \
                 return false; \
             } \
@@ -462,7 +467,10 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
 
     for (Size i = 0; i < members.len; i++) {
         const RecordMember &member = members[i];
-        Napi::Value value = GetMemberValue(env, obj, member);
+        napi_value value = GetMemberValue(env, obj, member);
+
+        if (GetKindOf(env, value) == napi_undefined)
+            continue;
 
         if (member.countedby >= 0) {
             const char *countedby = members[member.countedby].name;
@@ -470,9 +478,6 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
             if (!CheckDynamicLength(obj, member.type->ref.type->size, countedby, value)) [[unlikely]]
                 return false;
         }
-
-        if (value.IsUndefined())
-            continue;
 
         uint8_t *dest = origin + member.offset;
 
@@ -534,23 +539,22 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
             } break;
             case PrimitiveKind::Record:
             case PrimitiveKind::Union: {
-                if (!IsObject(value)) [[unlikely]] {
+                if (!IsObject(env, value)) [[unlikely]] {
                     ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected object", GetValueType(instance, value));
                     return false;
                 }
 
-                Napi::Object obj2 = value.As<Napi::Object>();
-                if (!PushObject(obj2, member.type, dest))
+                if (!PushObject(value, member.type, dest))
                     return false;
             } break;
             case PrimitiveKind::Array: {
-                if (value.IsArray()) {
-                    Napi::Array array = value.As<Napi::Array>();
+                if (IsArray(env, value)) {
+                    Napi::Array array = Napi::Array(env, value);
                     if (!PushNormalArray(array, member.type, member.type->size, dest))
                         return false;
-                } else if (Span<uint8_t> buffer = {}; TryBuffer(value, &buffer)) {
+                } else if (Span<uint8_t> buffer = {}; TryBuffer(env, value, &buffer)) {
                     PushBuffer(buffer, member.type, dest);
-                } else if (value.IsString()) {
+                } else if (GetKindOf(env, value) == napi_string) {
                     if (!PushStringArray(value, member.type, dest))
                         return false;
                 } else {
@@ -560,7 +564,7 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
             } break;
             case PrimitiveKind::Float32: {
                 float f;
-                if (!TryNumber(value, &f)) [[unlikely]] {
+                if (!TryNumber(env, value, &f)) [[unlikely]] {
                     ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
                     return false;
                 }
@@ -569,7 +573,7 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
             } break;
             case PrimitiveKind::Float64: {
                 double d;
-                if (!TryNumber(value, &d)) [[unlikely]] {
+                if (!TryNumber(env, value, &d)) [[unlikely]] {
                     ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
                     return false;
                 }
@@ -627,7 +631,7 @@ bool CallData::PushNormalArray(Napi::Array array, const TypeInfo *type, Size siz
         PUSH_ARRAY({ \
             CType v; \
              \
-            if (!TryNumber(value, &v)) [[unlikely]] { \
+            if (!TryNumber(env, value, &v)) [[unlikely]] { \
                 ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value)); \
                 return false; \
             } \
@@ -638,7 +642,7 @@ bool CallData::PushNormalArray(Napi::Array array, const TypeInfo *type, Size siz
         PUSH_ARRAY({ \
             CType v; \
              \
-            if (!TryNumber(value, &v)) [[unlikely]] { \
+            if (!TryNumber(env, value, &v)) [[unlikely]] { \
                 ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value)); \
                 return false; \
             } \
@@ -708,7 +712,7 @@ bool CallData::PushNormalArray(Napi::Array array, const TypeInfo *type, Size siz
         } break;
         case PrimitiveKind::Pointer: {
             PUSH_ARRAY({
-                if (!IsObject(value)) [[unlikely]] {
+                if (!IsObject(env, value)) [[unlikely]] {
                     ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected object", GetValueType(instance, value));
                     return false;
                 }
@@ -723,7 +727,7 @@ bool CallData::PushNormalArray(Napi::Array array, const TypeInfo *type, Size siz
         case PrimitiveKind::Record:
         case PrimitiveKind::Union: {
             PUSH_ARRAY({
-                if (!IsObject(value)) [[unlikely]] {
+                if (!IsObject(env, value)) [[unlikely]] {
                     ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected object", GetValueType(instance, value));
                     return false;
                 }
@@ -745,7 +749,7 @@ bool CallData::PushNormalArray(Napi::Array array, const TypeInfo *type, Size siz
                     Napi::Array array2 = value.As<Napi::Array>();
                     if (!PushNormalArray(array2, ref, (Size)ref->size, dest))
                         return false;
-                } else if (Span<uint8_t> buffer = {}; TryBuffer(value, &buffer)) {
+                } else if (Span<uint8_t> buffer = {}; TryBuffer(env, value, &buffer)) {
                     PushBuffer(buffer, ref, dest);
                 } else if (value.IsString()) {
                     if (!PushStringArray(value, ref, dest))
@@ -761,7 +765,7 @@ bool CallData::PushNormalArray(Napi::Array array, const TypeInfo *type, Size siz
         case PrimitiveKind::Float32: {
             PUSH_ARRAY({
                 float f;
-                if (!TryNumber(value, &f)) [[unlikely]] {
+                if (!TryNumber(env, value, &f)) [[unlikely]] {
                     ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
                     return false;
                 }
@@ -772,7 +776,7 @@ bool CallData::PushNormalArray(Napi::Array array, const TypeInfo *type, Size siz
         case PrimitiveKind::Float64: {
             PUSH_ARRAY({
                 double d;
-                if (!TryNumber(value, &d)) [[unlikely]] {
+                if (!TryNumber(env, value, &d)) [[unlikely]] {
                     ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
                     return false;
                 }
@@ -841,20 +845,20 @@ void CallData::PushBuffer(Span<const uint8_t> buffer, const TypeInfo *type, uint
 #undef SWAP
 }
 
-bool CallData::PushStringArray(Napi::Value obj, const TypeInfo *type, uint8_t *origin)
+bool CallData::PushStringArray(napi_value value, const TypeInfo *type, uint8_t *origin)
 {
-    K_ASSERT(obj.IsString());
+    K_ASSERT(GetKindOf(env, value) == napi_string);
     K_ASSERT(type->primitive == PrimitiveKind::Array);
 
     size_t encoded = 0;
 
     switch (type->ref.type->primitive) {
         case PrimitiveKind::Int8: {
-            napi_status status = napi_get_value_string_utf8(env, obj, (char *)origin, type->size, &encoded);
+            napi_status status = napi_get_value_string_utf8(env, value, (char *)origin, type->size, &encoded);
             K_ASSERT(status == napi_ok);
         } break;
         case PrimitiveKind::Int16: {
-            napi_status status = napi_get_value_string_utf16(env, obj, (char16_t *)origin, type->size / 2, &encoded);
+            napi_status status = napi_get_value_string_utf16(env, value, (char16_t *)origin, type->size / 2, &encoded);
             K_ASSERT(status == napi_ok);
 
             encoded *= 2;
@@ -871,7 +875,7 @@ bool CallData::PushStringArray(Napi::Value obj, const TypeInfo *type, uint8_t *o
     return true;
 }
 
-bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directions, void **out_ptr)
+bool CallData::PushPointer(napi_value value, const TypeInfo *type, int directions, void **out_ptr)
 {
     const TypeInfo *ref = type->ref.type;
 
@@ -883,13 +887,13 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
     void *ptr = nullptr;
 
     // Fast path
-    if (bool external = false; TryPointer(value, &ptr, &external)) {
-        if (external && CheckValueTag(value, &CastMarker)) {
-            Napi::External<ValueCast> external = value.As<Napi::External<ValueCast>>();
+    if (bool external = false; TryPointer(env, value, &ptr, &external)) {
+        if (external && CheckValueTag(env, value, &CastMarker)) {
+            Napi::External<ValueCast> external = Napi::External<ValueCast>(env, value);
             ValueCast *cast = external.Data();
 
             napi_value referenced;
-            napi_get_reference_value(value.Env(), cast->ref, &referenced);
+            napi_get_reference_value(env, cast->ref, &referenced);
 
             return PushPointer(Napi::Value(env, referenced), cast->type, directions, out_ptr);
         }
@@ -898,8 +902,8 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
         return true;
     }
 
-    if (value.IsArray()) {
-        Napi::Array array = value.As<Napi::Array>();
+    if (IsArray(env, value)) {
+        Napi::Array array = Napi::Array(env, value);
         Size len = PushIndirectString(array, ref, &ptr);
 
         OutArgument::Kind out_kind;
@@ -954,19 +958,18 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
         return true;
     } else if (ref->primitive == PrimitiveKind::Record ||
                ref->primitive == PrimitiveKind::Union) [[likely]] {
-        Napi::Object obj = value.As<Napi::Object>();
-        K_ASSERT(IsObject(value));
+        K_ASSERT(IsObject(env, value));
 
         ptr = (void *)AllocHeap(ref->size);
 
         if (ref->primitive == PrimitiveKind::Union &&
-                (directions & 2) && !CheckValueTag(obj, &MagicUnionMarker)) [[unlikely]] {
-            ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected union value", GetValueType(instance, obj));
+                (directions & 2) && !CheckValueTag(env, value, &MagicUnionMarker)) [[unlikely]] {
+            ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected union value", GetValueType(instance, value));
             return false;
         }
 
         if (directions & 1) {
-            if (!PushObject(obj, ref, (uint8_t *)ptr))
+            if (!PushObject(value, ref, (uint8_t *)ptr))
                 return false;
         } else {
             MemSet(ptr, 0, ref->size);
@@ -986,7 +989,7 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
 
         *out_ptr = ptr;
         return true;
-    } else if (value.IsString()) {
+    } else if (napi_valuetype kind = GetKindOf(env, value); kind == napi_string) {
         K_ASSERT(type->primitive == PrimitiveKind::Pointer);
 
         if (directions & 2) [[unlikely]]
@@ -1007,13 +1010,13 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
         } else {
             goto unexpected;
         }
-    } else if (value.IsFunction()) {
+    } else if (kind == napi_function) {
         if (type->primitive != PrimitiveKind::Callback) [[unlikely]] {
             ThrowError<Napi::TypeError>(env, "Cannot pass function to type %1", type->name);
             return false;
         }
 
-        Napi::Function func = value.As<Napi::Function>();
+        Napi::Function func = Napi::Function(env, value);
 
         ptr = ReserveTrampoline(type->ref.proto, func);
         if (!ptr) [[unlikely]]
@@ -1028,25 +1031,25 @@ unexpected:
     return false;
 }
 
-bool CallData::PushCallback(Napi::Value value, const TypeInfo *type, void **out_ptr)
+bool CallData::PushCallback(napi_value value, const TypeInfo *type, void **out_ptr)
 {
     void *ptr = nullptr;
 
-    if (bool external = false; TryPointer(value, &ptr, &external)) {
-        if (external && CheckValueTag(value, &CastMarker)) {
-            Napi::External<ValueCast> external = value.As<Napi::External<ValueCast>>();
+    if (bool external = false; TryPointer(env, value, &ptr, &external)) {
+        if (external && CheckValueTag(env, value, &CastMarker)) {
+            Napi::External<ValueCast> external = Napi::External<ValueCast>(env, value);
             ValueCast *cast = external.Data();
 
             napi_value referenced;
-            napi_get_reference_value(value.Env(), cast->ref, &referenced);
+            napi_get_reference_value(env, cast->ref, &referenced);
 
-            return PushCallback(Napi::Value(env, referenced), cast->type, out_ptr);
+            return PushCallback(referenced, cast->type, out_ptr);
         }
 
         *out_ptr = ptr;
         return true;
-    } else if (value.IsFunction()) {
-        Napi::Function func = value.As<Napi::Function>();
+    } else if (GetKindOf(env, value) == napi_function) {
+        Napi::Function func = Napi::Function(env, value);
 
         ptr = ReserveTrampoline(type->ref.proto, func);
         if (!ptr) [[unlikely]]
@@ -1115,16 +1118,17 @@ void *CallData::ReserveTrampoline(const FunctionInfo *proto, Napi::Function func
     return ptr;
 }
 
-bool CallData::CheckDynamicLength(Napi::Object obj, Size element, const char *countedby, Napi::Value value)
+bool CallData::CheckDynamicLength(napi_value obj, Size element, const char *countedby, napi_value value)
 {
     int64_t expected = -1;
     int64_t size = -1;
 
     // Get expected size
     {
-        Napi::Value by = obj.Get(countedby);
+        napi_value by;
+        napi_status status = napi_get_named_property(env, obj, countedby, &by);
 
-        if (!TryNumber(by, &expected)) [[unlikely]] {
+        if (status != napi_ok || !TryNumber(env, by, &expected)) [[unlikely]] {
             ThrowError<Napi::Error>(env, "Unexpected %1 value for dynamic length, expected number", GetValueType(instance, by));
             return false;
         }
@@ -1135,16 +1139,16 @@ bool CallData::CheckDynamicLength(Napi::Object obj, Size element, const char *co
     }
 
     // Get actual size
-    if (value.IsArray()) {
-        Napi::Array array = value.As<Napi::Array>();
+    if (IsArray(env, value)) {
+        Napi::Array array = Napi::Array(env, value);
         size = array.Length() * element;
-    } else if (value.IsTypedArray()) {
-        Napi::TypedArray typed = value.As<Napi::TypedArray>();
+    } else if (IsTypedArray(env, value)) {
+        Napi::TypedArray typed = Napi::TypedArray(env, value);
         size = typed.ByteLength();
-    } else if (value.IsArrayBuffer()) {
-        Napi::ArrayBuffer buffer = value.As<Napi::ArrayBuffer>();
+    } else if (IsArrayBuffer(env, value)) {
+        Napi::ArrayBuffer buffer = Napi::ArrayBuffer(env, value);
         size = buffer.ByteLength();
-    } else if (!IsNullOrUndefined(value)) {
+    } else if (!IsNullOrUndefined(env, value)) {
         size = element;
     } else {
         size = 0;

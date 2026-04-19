@@ -292,7 +292,7 @@ namespace {
     #define NEXT() \
         break
 
-Napi::Value RunLoop(CallData *call, napi_value *args, uint32_t *base, const AbiInstruction *inst)
+napi_value RunLoop(CallData *call, napi_value *args, uint32_t *base, const AbiInstruction *inst)
 {
     for (;; ++inst) {
         switch (inst->code) {
@@ -319,11 +319,9 @@ Napi::Value RunLoop(CallData *call, napi_value *args, uint32_t *base, const AbiI
 
 #define INTEGER32(CType) \
         do { \
-            Napi::Value value(call->env, args[inst->a]); \
-             \
             CType v; \
-            if (!TryNumber(value, &v)) [[unlikely]] { \
-                ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected number", GetValueType(call->instance, value)); \
+            if (!TryNumber(call->env, args[inst->a], &v)) [[unlikely]] { \
+                ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected number", GetValueType(call->instance, args[inst->a])); \
                 return call->env.Null(); \
             } \
              \
@@ -331,11 +329,9 @@ Napi::Value RunLoop(CallData *call, napi_value *args, uint32_t *base, const AbiI
         } while (false)
 #define INTEGER32_SWAP(CType) \
         do { \
-            Napi::Value value(call->env, args[inst->a]); \
-             \
             CType v; \
-            if (!TryNumber(value, &v)) [[unlikely]] { \
-                ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected number", GetValueType(call->instance, value)); \
+            if (!TryNumber(call->env, args[inst->a], &v)) [[unlikely]] { \
+                ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected number", GetValueType(call->instance, args[inst->a])); \
                 return call->env.Null(); \
             } \
              \
@@ -343,11 +339,9 @@ Napi::Value RunLoop(CallData *call, napi_value *args, uint32_t *base, const AbiI
         } while (false)
 #define INTEGER64(CType) \
         do { \
-            Napi::Value value(call->env, args[inst->a]); \
-             \
             CType v; \
-            if (!TryNumber(value, &v)) [[unlikely]] { \
-                ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected number", GetValueType(call->instance, value)); \
+            if (!TryNumber(call->env, args[inst->a], &v)) [[unlikely]] { \
+                ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected number", GetValueType(call->instance, args[inst->a])); \
                 return call->env.Null(); \
             } \
              \
@@ -355,11 +349,9 @@ Napi::Value RunLoop(CallData *call, napi_value *args, uint32_t *base, const AbiI
         } while (false)
 #define INTEGER64_SWAP(CType) \
         do { \
-            Napi::Value value(call->env, args[inst->a]); \
-             \
             CType v; \
-            if (!TryNumber(value, &v)) [[unlikely]] { \
-                ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected number", GetValueType(call->instance, value)); \
+            if (!TryNumber(call->env, args[inst->a], &v)) [[unlikely]] { \
+                ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected number", GetValueType(call->instance, args[inst->a])); \
                 return call->env.Null(); \
             } \
              \
@@ -369,11 +361,9 @@ Napi::Value RunLoop(CallData *call, napi_value *args, uint32_t *base, const AbiI
 
     OP(PushVoid) { K_UNREACHABLE(); return call->env.Null(); }
     OP(PushBool) {
-        Napi::Value value(call->env, args[inst->a]);
-
         bool b;
-        if (napi_get_value_bool(call->env, value, &b) != napi_ok) [[unlikely]] {
-            ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected boolean", GetValueType(call->instance, value));
+        if (napi_get_value_bool(call->env, args[inst->a], &b) != napi_ok) [[unlikely]] {
+            ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected boolean", GetValueType(call->instance, args[inst->a]));
             return call->env.Null();
         }
 
@@ -396,10 +386,8 @@ Napi::Value RunLoop(CallData *call, napi_value *args, uint32_t *base, const AbiI
     OP(PushUInt64) { INTEGER64(uint64_t); NEXT(); }
     OP(PushUInt64S) { INTEGER64_SWAP(uint64_t); NEXT(); }
     OP(PushString) {
-        Napi::Value value(call->env, args[inst->a]);
-
         const char *str;
-        if (!call->PushString(value, inst->b2, &str)) [[unlikely]]
+        if (!call->PushString(args[inst->a], inst->b2, &str)) [[unlikely]]
             return call->env.Null();
 
         *(const char **)(base + inst->b1) = str;
@@ -407,10 +395,8 @@ Napi::Value RunLoop(CallData *call, napi_value *args, uint32_t *base, const AbiI
         NEXT();
     }
     OP(PushString16) {
-        Napi::Value value(call->env, args[inst->a]);
-
         const char16_t *str16;
-        if (!call->PushString16(value, inst->b2, &str16)) [[unlikely]]
+        if (!call->PushString16(args[inst->a], inst->b2, &str16)) [[unlikely]]
             return call->env.Null();
 
         *(const char16_t **)(base + inst->b1) = str16;
@@ -418,10 +404,8 @@ Napi::Value RunLoop(CallData *call, napi_value *args, uint32_t *base, const AbiI
         NEXT();
     }
     OP(PushString32) {
-        Napi::Value value(call->env, args[inst->a]);
-
         const char32_t *str32;
-        if (!call->PushString32(value, inst->b2, &str32)) [[unlikely]]
+        if (!call->PushString32(args[inst->a], inst->b2, &str32)) [[unlikely]]
             return call->env.Null();
 
         *(const char32_t **)(base + inst->b1) = str32;
@@ -429,10 +413,8 @@ Napi::Value RunLoop(CallData *call, napi_value *args, uint32_t *base, const AbiI
         NEXT();
     }
     OP(PushPointer) {
-        Napi::Value value(call->env, args[inst->a]);
-
         void *ptr;
-        if (!call->PushPointer(value, inst->type, inst->b2, &ptr)) [[unlikely]]
+        if (!call->PushPointer(args[inst->a], inst->type, inst->b2, &ptr)) [[unlikely]]
             return call->env.Null();
 
         *(void **)(base + inst->b1) = ptr;
@@ -443,11 +425,9 @@ Napi::Value RunLoop(CallData *call, napi_value *args, uint32_t *base, const AbiI
     OP(PushUnion) { K_UNREACHABLE(); return call->env.Null(); }
     OP(PushArray) { K_UNREACHABLE(); return call->env.Null(); }
     OP(PushFloat32) {
-        Napi::Value value(call->env, args[inst->a]);
-
         float f;
-        if (!TryNumber(value, &f)) [[unlikely]] {
-            ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected number", GetValueType(call->instance, value));
+        if (!TryNumber(call->env, args[inst->a], &f)) [[unlikely]] {
+            ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected number", GetValueType(call->instance, args[inst->a]));
             return call->env.Null();
         }
 
@@ -456,11 +436,9 @@ Napi::Value RunLoop(CallData *call, napi_value *args, uint32_t *base, const AbiI
         NEXT();
     }
     OP(PushFloat64) {
-        Napi::Value value(call->env, args[inst->a]);
-
         double d;
-        if (!TryNumber(value, &d)) [[unlikely]] {
-            ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected number", GetValueType(call->instance, value));
+        if (!TryNumber(call->env, args[inst->a], &d)) [[unlikely]] {
+            ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected number", GetValueType(call->instance, args[inst->a]));
             return call->env.Null();
         }
 
@@ -469,10 +447,8 @@ Napi::Value RunLoop(CallData *call, napi_value *args, uint32_t *base, const AbiI
         NEXT();
     }
     OP(PushCallback) {
-        Napi::Value value(call->env, args[inst->a]);
-
         void *ptr;
-        if (!call->PushCallback(value, inst->type, &ptr)) [[unlikely]]
+        if (!call->PushCallback(args[inst->a], inst->type, &ptr)) [[unlikely]]
             return call->env.Null();
 
         *(void **)(base + inst->b1) = ptr;
@@ -481,17 +457,16 @@ Napi::Value RunLoop(CallData *call, napi_value *args, uint32_t *base, const AbiI
     }
     OP(PushPrototype) { K_UNREACHABLE(); return call->env.Null(); }
     OP(PushAggregate) {
-        Napi::Value value(call->env, args[inst->a]);
+        napi_value arg = args[inst->a];
 
-        if (!IsObject(value)) [[unlikely]] {
-            ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected object", GetValueType(call->instance, value));
+        if (!IsObject(call->env, arg)) [[unlikely]] {
+            ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected object", GetValueType(call->instance, arg));
             return call->env.Null();
         }
 
         uint8_t *ptr = (uint8_t *)(base + inst->b1);
 
-        Napi::Object obj = value.As<Napi::Object>();
-        if (!call->PushObject(obj, inst->type, ptr))
+        if (!call->PushObject(arg, inst->type, ptr))
             return call->env.Null();
 
         NEXT();
@@ -553,25 +528,25 @@ Napi::Value RunLoop(CallData *call, napi_value *args, uint32_t *base, const AbiI
     OP(RunUInt64S) { INTEGER64_SWAP(G, uint64_t); }
     OP(RunString) {
         uint32_t eax = (uint32_t)WRAP(ForwardCallG(call->native, (uint8_t *)base, &call->saved_sp));
-        Napi::Value value = eax ? Napi::String::New(call->env, (const char *)eax) : call->env.Null();
+        napi_value value = eax ? Napi::String::New(call->env, (const char *)eax) : call->env.Null();
         DISPOSE((void *)eax);
         return value;
     }
     OP(RunString16) {
         uint32_t eax = (uint32_t)WRAP(ForwardCallG(call->native, (uint8_t *)base, &call->saved_sp));
-        Napi::Value value = eax ? Napi::String::New(call->env, (const char16_t *)eax) : call->env.Null();
+        napi_value value = eax ? Napi::String::New(call->env, (const char16_t *)eax) : call->env.Null();
         DISPOSE((void *)eax);
         return value;
     }
     OP(RunString32) {
         uint32_t eax = (uint32_t)WRAP(ForwardCallG(call->native, (uint8_t *)base, &call->saved_sp));
-        Napi::Value value = eax ? MakeStringFromUTF32(call->env, (const char32_t *)eax) : call->env.Null();
+        napi_value value = eax ? MakeStringFromUTF32(call->env, (const char32_t *)eax) : call->env.Null();
         DISPOSE((void *)eax);
         return value;
     }
     OP(RunPointer) {
         uint32_t eax = (uint32_t)WRAP(ForwardCallG(call->native, (uint8_t *)base, &call->saved_sp));
-        Napi::Value value = eax ? WrapPointer(call->env, inst->type, (void *)eax) : call->env.Null();
+        napi_value value = eax ? WrapPointer(call->env, inst->type, (void *)eax) : call->env.Null();
         DISPOSE((void *)eax);
         return value;
     }
@@ -632,25 +607,25 @@ Napi::Value RunLoop(CallData *call, napi_value *args, uint32_t *base, const AbiI
     OP(RunUInt64SR) { INTEGER64_SWAP(GR, uint64_t); }
     OP(RunStringR) {
         uint32_t eax = (uint32_t)WRAP(ForwardCallGR(call->native, (uint8_t *)base, &call->saved_sp));
-        Napi::Value value = eax ? Napi::String::New(call->env, (const char *)eax) : call->env.Null();
+        napi_value value = eax ? Napi::String::New(call->env, (const char *)eax) : call->env.Null();
         DISPOSE((void *)eax);
         return value;
     }
     OP(RunString16R) {
         uint32_t eax = (uint32_t)WRAP(ForwardCallGR(call->native, (uint8_t *)base, &call->saved_sp));
-        Napi::Value value = eax ? Napi::String::New(call->env, (const char16_t *)eax) : call->env.Null();
+        napi_value value = eax ? Napi::String::New(call->env, (const char16_t *)eax) : call->env.Null();
         DISPOSE((void *)eax);
         return value;
     }
     OP(RunString32R) {
         uint32_t eax = (uint32_t)WRAP(ForwardCallGR(call->native, (uint8_t *)base, &call->saved_sp));
-        Napi::Value value = eax ? MakeStringFromUTF32(call->env, (const char32_t *)eax) : call->env.Null();
+        napi_value value = eax ? MakeStringFromUTF32(call->env, (const char32_t *)eax) : call->env.Null();
         DISPOSE((void *)eax);
         return value;
     }
     OP(RunPointerR) {
         uint32_t eax = (uint32_t)WRAP(ForwardCallGR(call->native, (uint8_t *)base, &call->saved_sp));
-        Napi::Value value = eax ? WrapPointer(call->env, inst->type, (void *)eax) : call->env.Null();
+        napi_value value = eax ? WrapPointer(call->env, inst->type, (void *)eax) : call->env.Null();
         DISPOSE((void *)eax);
         return value;
     }
@@ -778,25 +753,25 @@ Napi::Value RunLoop(CallData *call, napi_value *args, uint32_t *base, const AbiI
     OP(ReturnUInt64S) { INTEGER64_SWAP(uint64_t); }
     OP(ReturnString) {
         uint32_t eax = *(uint32_t *)base;
-        Napi::Value value = eax ? Napi::String::New(call->env, (const char *)eax) : call->env.Null();
+        napi_value value = eax ? Napi::String::New(call->env, (const char *)eax) : call->env.Null();
         DISPOSE();
         return value;
     }
     OP(ReturnString16) {
         uint32_t eax = *(uint32_t *)base;
-        Napi::Value value = eax ? Napi::String::New(call->env, (const char16_t *)eax) : call->env.Null();
+        napi_value value = eax ? Napi::String::New(call->env, (const char16_t *)eax) : call->env.Null();
         DISPOSE();
         return value;
     }
     OP(ReturnString32) {
         uint32_t eax = *(uint32_t *)base;
-        Napi::Value value = eax ? MakeStringFromUTF32(call->env, (const char32_t *)eax) : call->env.Null();
+        napi_value value = eax ? MakeStringFromUTF32(call->env, (const char32_t *)eax) : call->env.Null();
         DISPOSE();
         return value;
     }
     OP(ReturnPointer) {
         uint32_t eax = *(uint32_t *)base;
-        Napi::Value value = eax ? WrapPointer(call->env, inst->type, (void *)eax) : call->env.Null();
+        napi_value value = eax ? WrapPointer(call->env, inst->type, (void *)eax) : call->env.Null();
         DISPOSE();
         return value;
     }
@@ -835,7 +810,7 @@ Napi::Value RunLoop(CallData *call, napi_value *args, uint32_t *base, const AbiI
 #undef OP
 }
 
-Napi::Value CallData::Run(const FunctionInfo *func, void *native, napi_value *args)
+napi_value CallData::Run(const FunctionInfo *func, void *native, napi_value *args)
 {
     uint8_t *base = AllocStack<uint8_t>(func->stk_size);
     if (!base) [[unlikely]]
@@ -866,7 +841,7 @@ void CallData::ExecuteAsync(void *native)
     RunLoop(this, nullptr, (uint32_t *)async_base, next);
 }
 
-Napi::Value CallData::EndAsync()
+napi_value CallData::EndAsync()
 {
     const AbiInstruction *next = async_ip++;
     return RunLoop(this, nullptr, (uint32_t *)async_base, next);
@@ -1097,7 +1072,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
 #define RETURN_INTEGER_32(CType) \
         do { \
             CType v; \
-            if (!TryNumber(value, &v)) [[unlikely]] { \
+            if (!TryNumber(env, value, &v)) [[unlikely]] { \
                 ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value)); \
                 return; \
             } \
@@ -1108,7 +1083,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
 #define RETURN_INTEGER_32_SWAP(CType) \
         do { \
             CType v; \
-            if (!TryNumber(value, &v)) [[unlikely]] { \
+            if (!TryNumber(env, value, &v)) [[unlikely]] { \
                 ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value)); \
                 return; \
             } \
@@ -1119,7 +1094,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
 #define RETURN_INTEGER_64(CType) \
         do { \
             CType v; \
-            if (!TryNumber(value, &v)) [[unlikely]] { \
+            if (!TryNumber(env, value, &v)) [[unlikely]] { \
                 ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value)); \
                 return; \
             } \
@@ -1131,7 +1106,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
 #define RETURN_INTEGER_64_SWAP(CType) \
         do { \
             CType v; \
-            if (!TryNumber(value, &v)) [[unlikely]] { \
+            if (!TryNumber(env, value, &v)) [[unlikely]] { \
                 ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value)); \
                 return; \
             } \
@@ -1201,7 +1176,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
         } break;
         case PrimitiveKind::Record:
         case PrimitiveKind::Union: {
-            if (!IsObject(value)) [[unlikely]] {
+            if (!IsObject(env, value)) [[unlikely]] {
                 ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected object", GetValueType(instance, value));
                 return;
             }
@@ -1221,7 +1196,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
         case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
         case PrimitiveKind::Float32: {
             float f;
-            if (!TryNumber(value, &f)) [[unlikely]] {
+            if (!TryNumber(env, value, &f)) [[unlikely]] {
                 ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
                 return;
             }
@@ -1231,7 +1206,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
         } break;
         case PrimitiveKind::Float64: {
             double d;
-            if (!TryNumber(value, &d)) [[unlikely]] {
+            if (!TryNumber(env, value, &d)) [[unlikely]] {
                 ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
                 return;
             }

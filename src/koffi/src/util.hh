@@ -95,102 +95,140 @@ bool CanPassType(const TypeInfo *type, int directions);
 bool CanReturnType(const TypeInfo *type);
 bool CanStoreType(const TypeInfo *type);
 
-static FORCE_INLINE napi_valuetype GetValueType(Napi::Value value)
+static FORCE_INLINE napi_valuetype GetKindOf(napi_env env, napi_value value)
 {
-    napi_valuetype type = napi_undefined;
-    napi_typeof(value.Env(), value, &type);
+    napi_valuetype kind = napi_undefined;
+    napi_typeof(env, value, &kind);
 
-    return type;
+    return kind;
+}
+
+static FORCE_INLINE napi_valuetype GetKindOf(Napi::Value value)
+{
+    return GetKindOf(value.Env(), value);
 }
 
 // Can be slow, only use for error messages
-const char *GetValueType(const InstanceData *instance, Napi::Value value);
+const char *GetValueType(const InstanceData *instance, napi_value value);
 
-void SetValueTag(Napi::Value value, const void *marker);
-bool CheckValueTag(Napi::Value value, const void *marker);
+void SetValueTag(napi_env env, napi_value value, const void *marker);
+bool CheckValueTag(napi_env env, napi_value value, const void *marker);
 
-static FORCE_INLINE bool IsNullOrUndefined(napi_valuetype type)
+static FORCE_INLINE bool IsNullOrUndefined(napi_valuetype kind)
 {
-    return type == napi_null || type == napi_undefined;
+    return kind == napi_null || kind == napi_undefined;
 }
 
-static FORCE_INLINE bool IsNullOrUndefined(Napi::Value value)
+static FORCE_INLINE bool IsNullOrUndefined(napi_env env, napi_value value)
 {
-    napi_valuetype type = GetValueType(value);
-    return IsNullOrUndefined(type);
+    napi_valuetype kind = GetKindOf(env, value);
+    return IsNullOrUndefined(kind);
 }
 
-static FORCE_INLINE bool IsObject(Napi::Value value)
+static FORCE_INLINE bool IsArray(napi_env env, napi_value value)
 {
-    if (GetValueType(value) != napi_object)
+    bool array = false;
+    napi_is_array(env, value, &array);
+
+    return array;
+}
+
+static FORCE_INLINE bool IsObject(napi_env env, napi_value value)
+{
+    if (GetKindOf(env, value) != napi_object)
+        return false;
+    if (IsArray(env, value))
         return false;
 
-    bool array = false;
-    napi_is_array(value.Env(), value, &array);
+    return true;
+}
 
-    return !array;
+static FORCE_INLINE bool IsTypedArray(napi_env env, napi_value value)
+{
+    bool typedarray = false;
+    napi_is_typedarray(env, value, &typedarray);
+    return typedarray;
+}
+
+static FORCE_INLINE bool IsArrayBuffer(napi_env env, napi_value value)
+{
+    bool arraybuffer = false;
+    napi_is_arraybuffer(env, value, &arraybuffer);
+    return arraybuffer;
+}
+
+static FORCE_INLINE bool IsBuffer(napi_env env, napi_value value)
+{
+    bool buffer = false;
+    napi_is_buffer(env, value, &buffer);
+    return buffer;
 }
 
 template <typename T>
-static FORCE_INLINE bool TryNumber(Napi::Value value, T *out_value)
+static FORCE_INLINE bool TryNumber(napi_env env, napi_value value, T *out_value)
 {
+    T v;
+    napi_status status;
+
     // Assume number first
-    {
-        T v;
-        napi_status status;
-
-        if constexpr (std::is_same_v<T, double>) {
-            status = napi_get_value_double(value.Env(), value, &v);
-        } else if constexpr (std::is_same_v<T, float>) {
-            double d;
-            status = napi_get_value_double(value.Env(), value, &d);
-            v = (float)d;
-        } else {
-            int64_t i64;
-            status = napi_get_value_int64(value.Env(), value, &i64);
-            v = (T)i64;
-        }
-
-        if (status == napi_ok) [[likely]] {
-            *out_value = v;
-            return true;
-        }
+    if constexpr (std::is_same_v<T, double>) {
+        status = napi_get_value_double(env, value, &v);
+    } else if constexpr (std::is_same_v<T, float>) {
+        double d;
+        status = napi_get_value_double(env, value, &d);
+        v = (float)d;
+    } else {
+        int64_t i64;
+        status = napi_get_value_int64(env, value, &i64);
+        v = (T)i64;
+    }
+    if (status == napi_ok) [[likely]] {
+        *out_value = v;
+        return true;
     }
 
-    if (value.IsBigInt()) {
-        Napi::BigInt bigint = value.As<Napi::BigInt>();
-
+    // Maybe a BigInt?
+    if constexpr (std::is_signed_v<T>) {
+        int64_t i64;
         bool lossless;
-        *out_value = (T)bigint.Uint64Value(&lossless);
-
+        status = napi_get_value_bigint_int64(env, value, &i64, &lossless);
+        v = (T)i64;
+    } else {
+        uint64_t u64;
+        bool lossless;
+        status = napi_get_value_bigint_uint64(env, value, &u64, &lossless);
+        v = (T)u64;
+    }
+    if (status == napi_ok) {
+        *out_value = v;
         return true;
     }
 
     return false;
 }
 
-static FORCE_INLINE bool TryPointer(Napi::Value value, void **out_ptr)
+static FORCE_INLINE bool TryPointer(napi_env env, napi_value value, void **out_ptr)
 {
-    if (uintptr_t ptr = 0; TryNumber(value, &ptr)) {
+    if (uintptr_t ptr = 0; TryNumber(env, value, &ptr)) {
         *out_ptr = (void *)ptr;
         return true;
     }
 
-    napi_valuetype type = GetValueType(value);
+    napi_valuetype kind = GetKindOf(env, value);
 
-    if (IsNullOrUndefined(type)) {
+    if (IsNullOrUndefined(kind)) {
         *out_ptr = nullptr;
         return true;
-    } else if (value.IsTypedArray()) {
-        napi_get_typedarray_info(value.Env(), value, nullptr, nullptr, out_ptr, nullptr, nullptr);
+    } else if (IsTypedArray(env, value)) {
+        napi_get_typedarray_info(env, value, nullptr, nullptr, out_ptr, nullptr, nullptr);
         return true;
-    } else if (type == napi_external) {
-        Napi::External<void> external = value.As<Napi::External<void>>();
+    } else if (kind == napi_external) {
+        Napi::External<void> external = Napi::External<void>(env, value);
 
         *out_ptr = (void *)external.Data();
         return true;
-    } else if (value.IsArrayBuffer()) {
-        Napi::ArrayBuffer buffer = value.As<Napi::ArrayBuffer>();
+    } else if (IsArrayBuffer(env, value)) {
+        Napi::ArrayBuffer buffer = Napi::ArrayBuffer(env, value);
 
         *out_ptr = (void *)buffer.Data();
         return true;
@@ -199,37 +237,36 @@ static FORCE_INLINE bool TryPointer(Napi::Value value, void **out_ptr)
     return false;
 }
 
-
-static FORCE_INLINE bool TryPointer(Napi::Value value, void **out_ptr, bool *out_external)
+static FORCE_INLINE bool TryPointer(napi_env env, napi_value value, void **out_ptr, bool *out_external)
 {
-    if (uintptr_t ptr = 0; TryNumber(value, &ptr)) {
+    if (uintptr_t ptr = 0; TryNumber(env, value, &ptr)) {
         *out_ptr = (void *)ptr;
         *out_external = false;
 
         return true;
     }
 
-    napi_valuetype type = GetValueType(value);
+    napi_valuetype kind = GetKindOf(env, value);
 
-    if (IsNullOrUndefined(type)) {
+    if (IsNullOrUndefined(kind)) {
         *out_ptr = nullptr;
         *out_external = false;
 
         return true;
-    } else if (value.IsTypedArray()) {
-        napi_get_typedarray_info(value.Env(), value, nullptr, nullptr, out_ptr, nullptr, nullptr);
+    } else if (IsTypedArray(env, value)) {
+        napi_get_typedarray_info(env, value, nullptr, nullptr, out_ptr, nullptr, nullptr);
         *out_external = false;
 
         return true;
-    } else if (type == napi_external) {
-        Napi::External<void> external = value.As<Napi::External<void>>();
+    } else if (kind == napi_external) {
+        Napi::External<void> external = Napi::External<void>(env, value);
 
         *out_ptr = (void *)external.Data();
         *out_external = true;
 
         return true;
-    } else if (value.IsArrayBuffer()) {
-        Napi::ArrayBuffer buffer = value.As<Napi::ArrayBuffer>();
+    } else if (IsArrayBuffer(env, value)) {
+        Napi::ArrayBuffer buffer = Napi::ArrayBuffer(env, value);
 
         *out_ptr = (void *)buffer.Data();
         *out_external = false;
@@ -240,23 +277,23 @@ static FORCE_INLINE bool TryPointer(Napi::Value value, void **out_ptr, bool *out
     return false;
 }
 
-static FORCE_INLINE bool TryBuffer(Napi::Value value, Span<uint8_t> *out_buffer)
+static FORCE_INLINE bool TryBuffer(napi_env env, napi_value value, Span<uint8_t> *out_buffer)
 {
     // Before somewhere around Node 20.12, napi_get_buffer_info() would assert/crash
     // when used with something it did not support, instead of returning napi_invalid_arg.
     // So we need to call napi_is_buffer(), at least for now.
 
-    if (value.IsBuffer()) {
+    if (IsBuffer(env, value)) {
         void *ptr = nullptr;
         size_t length = 0;
 
         // Assume it works
-        napi_get_buffer_info(value.Env(), value, &ptr, &length);
+        napi_get_buffer_info(env, value, &ptr, &length);
 
         *out_buffer = MakeSpan((uint8_t *)ptr, (Size)length);
         return true;
-    } else if (value.IsArrayBuffer()) {
-        Napi::ArrayBuffer buffer = value.As<Napi::ArrayBuffer>();
+    } else if (IsArrayBuffer(env, value)) {
+        Napi::ArrayBuffer buffer = Napi::ArrayBuffer(env, value);
 
         *out_buffer = MakeSpan((uint8_t *)buffer.Data(), (Size)buffer.ByteLength());
         return true;
@@ -338,9 +375,9 @@ static FORCE_INLINE Napi::Value NewInt(Napi::Env env, T i)
     return Napi::BigInt::New(env, i);
 }
 
-static FORCE_INLINE Napi::Array GetOwnPropertyNames(Napi::Object obj)
+static FORCE_INLINE Napi::Array GetOwnPropertyNames(napi_env env, napi_value obj)
 {
-    Napi::Env env = obj.Env();
+    K_ASSERT(IsObject(env, obj));
 
     napi_value result;
     napi_status status = napi_get_all_property_names(env, obj, napi_key_own_only,

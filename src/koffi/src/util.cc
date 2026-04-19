@@ -180,8 +180,8 @@ const TypeInfo *ResolveType(Napi::Value value, int *out_directions)
         }
 
         return type;
-    } else if (value.IsExternal() && CheckValueTag(value, &TypeInfoMarker)) {
-        Napi::External<TypeInfo> external = value.As<Napi::External<TypeInfo>>();
+    } else if (GetKindOf(env, value) == napi_external && CheckValueTag(env, value, &TypeInfoMarker)) {
+        Napi::External<TypeInfo> external = Napi::External<TypeInfo>(env, value);
         const TypeInfo *raw = external.Data();
 
         const TypeInfo *type = AlignDown(raw, 4);
@@ -458,7 +458,7 @@ TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len, A
 Napi::External<TypeInfo> WrapType(Napi::Env env, const TypeInfo *type)
 {
     Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, (TypeInfo *)type);
-    SetValueTag(external, &TypeInfoMarker);
+    SetValueTag(env, external, &TypeInfoMarker);
 
     return external;
 }
@@ -520,28 +520,31 @@ bool CanStoreType(const TypeInfo *type)
     return true;
 }
 
-const char *GetValueType(const InstanceData *instance, Napi::Value value)
+const char *GetValueType(const InstanceData *instance, napi_value value)
 {
-    if (value.IsExternal()) {
-        if (CheckValueTag(value, &CastMarker)) {
-            Napi::External<ValueCast> external = value.As<Napi::External<ValueCast>>();
+    Napi::Env env = instance->env;
+    napi_valuetype kind = GetKindOf(env, value);
+
+    if (kind == napi_external) {
+        if (CheckValueTag(env, value, &CastMarker)) {
+            Napi::External<ValueCast> external = Napi::External<ValueCast>(env, value);
             ValueCast *cast = external.Data();
 
             return cast->type->name;
         }
 
-        if (CheckValueTag(value, &TypeInfoMarker))
+        if (CheckValueTag(env, value, &TypeInfoMarker))
             return "Type";
         for (const TypeInfo &type: instance->types) {
-            if (type.ref.type && CheckValueTag(value, type.ref.type))
+            if (type.ref.type && CheckValueTag(env, value, type.ref.type))
                 return type.name;
         }
     }
 
-    if (value.IsArray()) {
+    if (IsArray(env, value)) {
         return "Array";
-    } else if (value.IsTypedArray()) {
-        Napi::TypedArray array = value.As<Napi::TypedArray>();
+    } else if (IsTypedArray(env, value)) {
+        Napi::TypedArray array = Napi::TypedArray(env, value);
 
         switch (array.TypedArrayType()) {
             case napi_int8_array: return "Int8Array";
@@ -557,13 +560,13 @@ const char *GetValueType(const InstanceData *instance, Napi::Value value)
             case napi_bigint64_array: return "BigInt64Array";
             case napi_biguint64_array: return "BigUint64Array";
         }
-    } else if (value.IsArrayBuffer()) {
+    } else if (IsArrayBuffer(env, value)) {
         return "ArrayBuffer";
-    } else if (value.IsBuffer()) {
+    } else if (IsBuffer(env, value)) {
         return "Buffer";
     }
 
-    switch (value.Type()) {
+    switch (kind) {
         case napi_undefined: return "Undefined";
         case napi_null: return "Null";
         case napi_boolean: return "Boolean";
@@ -580,7 +583,7 @@ const char *GetValueType(const InstanceData *instance, Napi::Value value)
     return "Unknown";
 }
 
-void SetValueTag(Napi::Value value, const void *marker)
+void SetValueTag(napi_env env, napi_value value, const void *marker)
 {
     static_assert(K_SIZE(TypeInfo) >= 16);
 
@@ -595,18 +598,18 @@ void SetValueTag(Napi::Value value, const void *marker)
     // and the few other markers we use, such as CastMarker, are actual const napi_type_tag structs.
     const napi_type_tag *tag = (const napi_type_tag *)marker;
 
-    napi_status status = napi_type_tag_object(value.Env(), value, tag);
+    napi_status status = napi_type_tag_object(env, value, tag);
     K_ASSERT(status == napi_ok);
 }
 
-bool CheckValueTag(Napi::Value value, const void *marker)
+bool CheckValueTag(napi_env env, napi_value value, const void *marker)
 {
-    K_ASSERT(IsObject(value) || value.IsExternal());
+    K_ASSERT(IsObject(env, value) || GetKindOf(env, value) == napi_external);
 
     bool match = false;
 
     const napi_type_tag *tag = (const napi_type_tag *)marker;
-    napi_check_object_type_tag(value.Env(), value, tag, &match);
+    napi_check_object_type_tag(env, value, tag, &match);
 
     return match;
 }
@@ -664,7 +667,7 @@ Napi::Object DecodeObject(Napi::Env env, const uint8_t *origin, const TypeInfo *
     // We can't decode unions because we don't know which member is valid
     if (type->primitive == PrimitiveKind::Union) {
         Napi::Object wrapper = type->construct.New({}).As<Napi::Object>();
-        SetValueTag(wrapper, &MagicUnionMarker);
+        SetValueTag(env, wrapper, &MagicUnionMarker);
 
         MagicUnion *u = MagicUnion::Unwrap(wrapper);
         u->SetRaw(origin);
@@ -1343,7 +1346,7 @@ Napi::Value Decode(Napi::Value value, Size offset, const TypeInfo *type, const S
 
     const uint8_t *src = nullptr;
 
-    if (Span<uint8_t> buffer = {}; TryBuffer(value, &buffer)) {
+    if (Span<uint8_t> buffer = {}; TryBuffer(env, value, &buffer)) {
         if (offset < 0) [[unlikely]] {
             ThrowError<Napi::Error>(env, "Offset must be >= 0");
             return env.Null();
@@ -1355,7 +1358,7 @@ Napi::Value Decode(Napi::Value value, Size offset, const TypeInfo *type, const S
         }
 
         src = (const uint8_t *)buffer.ptr;
-    } else if (void *ptr = nullptr; TryPointer(value, &ptr)) {
+    } else if (void *ptr = nullptr; TryPointer(env, value, &ptr)) {
         src = (const uint8_t *)ptr;
     } else {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for variable, expected pointer", GetValueType(instance, value));
@@ -1540,7 +1543,7 @@ bool Encode(Napi::Value ref, Size offset, Napi::Value value, const TypeInfo *typ
 
     uint8_t *dest = nullptr;
 
-    if (Span<uint8_t> buffer = {}; TryBuffer(ref, &buffer)) {
+    if (Span<uint8_t> buffer = {}; TryBuffer(env, ref, &buffer)) {
         if (offset < 0) [[unlikely]] {
             ThrowError<Napi::Error>(env, "Offset must be >= 0");
             return env.Null();
@@ -1552,7 +1555,7 @@ bool Encode(Napi::Value ref, Size offset, Napi::Value value, const TypeInfo *typ
         }
 
         dest = (uint8_t *)buffer.ptr;
-    } else if (void *ptr = nullptr; TryPointer(ref, &ptr)) {
+    } else if (void *ptr = nullptr; TryPointer(env, ref, &ptr)) {
         dest = (uint8_t *)ptr;
     } else {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for reference, expected pointer", GetValueType(instance, ref));
@@ -1590,7 +1593,7 @@ bool Encode(Napi::Env env, uint8_t *origin, Napi::Value value, const TypeInfo *t
 #define PUSH_INTEGER(CType) \
         do { \
             CType v; \
-            if (!TryNumber(value, &v)) [[unlikely]] { \
+            if (!TryNumber(env, value, &v)) [[unlikely]] { \
                 ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value)); \
                 return false; \
             } \
@@ -1600,7 +1603,7 @@ bool Encode(Napi::Env env, uint8_t *origin, Napi::Value value, const TypeInfo *t
 #define PUSH_INTEGER_SWAP(CType) \
         do { \
             CType v; \
-            if (!TryNumber(value, &v)) [[unlikely]] { \
+            if (!TryNumber(env, value, &v)) [[unlikely]] { \
                 ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value)); \
                 return false; \
             } \
@@ -1662,7 +1665,7 @@ bool Encode(Napi::Env env, uint8_t *origin, Napi::Value value, const TypeInfo *t
         } break;
         case PrimitiveKind::Record:
         case PrimitiveKind::Union: {
-            if (!IsObject(value)) [[unlikely]] {
+            if (!IsObject(env, value)) [[unlikely]] {
                 ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected object", GetValueType(instance, value));
                 return false;
             }
@@ -1674,10 +1677,10 @@ bool Encode(Napi::Env env, uint8_t *origin, Napi::Value value, const TypeInfo *t
         } break;
         case PrimitiveKind::Array: {
             if (value.IsArray()) {
-                Napi::Array array = value.As<Napi::Array>();
+                Napi::Array array = Napi::Array(env, value);
                 if (!call.PushNormalArray(array, type, type->size, origin))
                     return false;
-            } else if (Span<uint8_t> buffer = {}; TryBuffer(value, &buffer)) {
+            } else if (Span<uint8_t> buffer = {}; TryBuffer(env, value, &buffer)) {
                 call.PushBuffer(buffer, type, origin);
             } else if (value.IsString()) {
                 if (!call.PushStringArray(value, type, origin))
@@ -1689,7 +1692,7 @@ bool Encode(Napi::Env env, uint8_t *origin, Napi::Value value, const TypeInfo *t
         } break;
         case PrimitiveKind::Float32: {
             float f;
-            if (!TryNumber(value, &f)) [[unlikely]] {
+            if (!TryNumber(env, value, &f)) [[unlikely]] {
                 ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
                 return false;
             }
@@ -1698,7 +1701,7 @@ bool Encode(Napi::Env env, uint8_t *origin, Napi::Value value, const TypeInfo *t
         } break;
         case PrimitiveKind::Float64: {
             double d;
-            if (!TryNumber(value, &d)) [[unlikely]] {
+            if (!TryNumber(env, value, &d)) [[unlikely]] {
                 ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
                 return false;
             }
@@ -1707,7 +1710,7 @@ bool Encode(Napi::Env env, uint8_t *origin, Napi::Value value, const TypeInfo *t
         } break;
         case PrimitiveKind::Callback: {
             void *ptr;
-            if (!TryPointer(value, &ptr)) [[unlikely]] {
+            if (!TryPointer(env, value, &ptr)) [[unlikely]] {
                 if (value.IsFunction()) {
                     ThrowError<Napi::Error>(env, "Cannot encode non-registered callback");
                 } else {

@@ -70,11 +70,11 @@ struct alignas(8) CallData {
     ~CallData();
 #endif
 
-    INLINE_IF_UNITY Napi::Value Run(const FunctionInfo *func, void *native, napi_value *args);
+    INLINE_IF_UNITY napi_value Run(const FunctionInfo *func, void *native, napi_value *args);
 
     bool PrepareAsync(const FunctionInfo *func, napi_value *args);
     void ExecuteAsync(void *native);
-    Napi::Value EndAsync();
+    napi_value EndAsync();
 
     INLINE_IF_UNITY void Finalize();
     INLINE_IF_UNITY void FinalizeFast();
@@ -82,18 +82,18 @@ struct alignas(8) CallData {
     void Relay(Size idx, uint8_t *sp);
     void RelayAsync(Size idx, uint8_t *sp);
 
-    INLINE_IF_UNITY bool PushString(Napi::Value value, int directions, const char **out_str);
-    INLINE_IF_UNITY bool PushString16(Napi::Value value, int directions, const char16_t **out_str16);
-    INLINE_IF_UNITY bool PushString32(Napi::Value value, int directions, const char32_t **out_str32);
-    INLINE_IF_UNITY Size PushStringValue(Napi::Value value, const char **out_str);
-    INLINE_IF_UNITY Size PushString16Value(Napi::Value value, const char16_t **out_str16);
-    INLINE_IF_UNITY Size PushString32Value(Napi::Value value, const char32_t **out_str32);
-    bool PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origin);
+    INLINE_IF_UNITY bool PushString(napi_value value, int directions, const char **out_str);
+    INLINE_IF_UNITY bool PushString16(napi_value value, int directions, const char16_t **out_str16);
+    INLINE_IF_UNITY bool PushString32(napi_value value, int directions, const char32_t **out_str32);
+    INLINE_IF_UNITY Size PushStringValue(napi_value value, const char **out_str);
+    INLINE_IF_UNITY Size PushString16Value(napi_value value, const char16_t **out_str16);
+    INLINE_IF_UNITY Size PushString32Value(napi_value value, const char32_t **out_str32);
+    bool PushObject(napi_value value, const TypeInfo *type, uint8_t *origin);
     bool PushNormalArray(Napi::Array array, const TypeInfo *type, Size size, uint8_t *origin);
     INLINE_IF_UNITY void PushBuffer(Span<const uint8_t> buffer, const TypeInfo *type, uint8_t *origin);
-    bool PushStringArray(Napi::Value value, const TypeInfo *type, uint8_t *origin);
-    INLINE_IF_UNITY bool PushPointer(Napi::Value value, const TypeInfo *type, int directions, void **out_ptr);
-    bool PushCallback(Napi::Value value, const TypeInfo *type, void **out_ptr);
+    bool PushStringArray(napi_value value, const TypeInfo *type, uint8_t *origin);
+    INLINE_IF_UNITY bool PushPointer(napi_value value, const TypeInfo *type, int directions, void **out_ptr);
+    bool PushCallback(napi_value value, const TypeInfo *type, void **out_ptr);
     Size PushIndirectString(Napi::Array array, const TypeInfo *ref, void **out_ptr);
 
     void *ReserveTrampoline(const FunctionInfo *proto, Napi::Function func);
@@ -103,7 +103,7 @@ struct alignas(8) CallData {
     template <typename T = uint8_t>
     T *AllocHeap(Size size);
 
-    bool CheckDynamicLength(Napi::Object obj, Size element, const char *countedby, Napi::Value value);
+    bool CheckDynamicLength(napi_value obj, Size element, const char *countedby, napi_value value);
 
 #undef INLINE_IF_UNITY
 };
