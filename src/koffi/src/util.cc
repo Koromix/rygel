@@ -1758,8 +1758,11 @@ static bool CanTypeAcceptCallbacks(const TypeInfo *type)
     return true;
 }
 
-static bool CanSkipCallFinalize(const FunctionInfo *func)
+static bool CanUseFastCall(const FunctionInfo *func)
 {
+    if (func->parameters.len > 6)
+        return false;
+
     // Fast calls basically skip CallData::Finalize(), which handles output arguments
     // and temporary callback trampolines. If the function does not use any
     // output argument and cannot accept callbacks (so no pointer or callback arguments),
@@ -1779,24 +1782,33 @@ Napi::Function WrapFunction(Napi::Env env, const FunctionInfo *func)
 {
     Napi::Function wrapper;
 
-    if (func->variadic) {
-        Napi::Function::Callback call = TranslateVariadicCall;
-        wrapper = Napi::Function::New(env, call, func->name, (void *)func->Ref());
-    } else if (CanSkipCallFinalize(func)) {
-        Napi::Function::Callback call = TranslateFastCall;
-        wrapper = Napi::Function::New(env, call, func->name, (void *)func->Ref());
-    } else {
-        Napi::Function::Callback call = TranslateNormalCall;
-        wrapper = Napi::Function::New(env, call, func->name, (void *)func->Ref());
+    // Pick appropriate wrapper
+    {
+        napi_value value;
+
+        if (func->variadic) {
+            napi_status status = napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateVariadicCall, (void *)func->Ref(), &value);
+            K_ASSERT(status == napi_ok);
+        } else if (CanUseFastCall(func)) {
+            napi_status status = napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateFastCall, (void *)func->Ref(), &value);
+            K_ASSERT(status == napi_ok);
+        } else {
+            napi_status status = napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateNormalCall, (void *)func->Ref(), &value);
+            K_ASSERT(status == napi_ok);
+        }
+
+        wrapper = Napi::Function(env, value);
+        wrapper.AddFinalizer([](Napi::Env, FunctionInfo *func) { func->Unref(); }, (FunctionInfo *)func);
     }
 
-    wrapper.AddFinalizer([](Napi::Env, FunctionInfo *func) { func->Unref(); }, (FunctionInfo *)func);
-
     if (!func->variadic) {
-        Napi::Function::Callback call = TranslateAsyncCall;
-        Napi::Function async = Napi::Function::New(env, call, func->name, (void *)func->Ref());
+        napi_value value;
+        napi_status status = napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateAsyncCall, (void *)func->Ref(), &value);
+        K_ASSERT(status == napi_ok);
 
+        Napi::Function async = Napi::Function(env, value);
         async.AddFinalizer([](Napi::Env, FunctionInfo *func) { func->Unref(); }, (FunctionInfo *)func);
+
         wrapper.Set("async", async);
     }
 

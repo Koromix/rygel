@@ -367,10 +367,10 @@ extern SharedData shared;
 InstanceMemory *AllocateMemory(InstanceData *instance, Size stack_size, Size heap_size);
 void ReleaseMemory(InstanceData *instance, InstanceMemory *mem);
 
-Napi::Value TranslateFastCall(const Napi::CallbackInfo &info);
-Napi::Value TranslateNormalCall(const Napi::CallbackInfo &info);
-Napi::Value TranslateVariadicCall(const Napi::CallbackInfo &info);
-Napi::Value TranslateAsyncCall(const Napi::CallbackInfo &info);
+napi_value TranslateFastCall(napi_env env, napi_callback_info info);
+napi_value TranslateNormalCall(napi_env env, napi_callback_info info);
+napi_value TranslateVariadicCall(napi_env env, napi_callback_info info);
+napi_value TranslateAsyncCall(napi_env env, napi_callback_info info);
 
 bool InitAsyncBroker(Napi::Env env, InstanceData *instance);
 

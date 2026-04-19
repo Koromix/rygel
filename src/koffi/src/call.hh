@@ -63,7 +63,7 @@ struct alignas(8) CallData {
     #define INLINE_IF_UNITY
 #endif
 
-    CallData(Napi::Env env, InstanceData *instance, InstanceMemory *mem)
+    CallData(napi_env env, InstanceData *instance, InstanceMemory *mem)
         : env(env), instance(instance), mem(mem),
           prev_stack(mem->stack.end), prev_heap(mem->heap.ptr) {}
 #if defined(K_DEBUG)
