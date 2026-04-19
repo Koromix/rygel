@@ -44,7 +44,7 @@ SharedData shared;
 static napi_status (NAPI_CDECL *node_api_create_property_key_utf8)(napi_env env, const char* str, size_t length, napi_value* result);
 static napi_status (NAPI_CDECL *node_api_post_finalizer)(node_api_basic_env env, napi_finalize finalize_cb, void* finalize_data, void* finalize_hint);
 
-static Size cb_bundle_offset = -1;
+static napi_value (*translate_zero_call)(napi_env env, napi_callback_info info);
 
 static bool ChangeSize(const char *name, Napi::Value value, Size min_size, Size max_size, Size *out_size)
 {
@@ -1493,22 +1493,32 @@ void ReleaseMemory(InstanceData *instance, InstanceMemory *mem)
     }
 }
 
-static FORCE_INLINE void *GetCallbackData(napi_callback_info info)
+static napi_value TranslateZeroCallNode(napi_env env, napi_callback_info info)
 {
-    K_ASSERT(cb_bundle_offset >= 0);
-
     struct CallbackBundle {
         napi_env env;
         void *data;
     };
 
-    CallbackBundle **ptr = (CallbackBundle **)((uint8_t *)info + cb_bundle_offset);
-    return (*ptr)->data;
+    CallbackBundle **ptr = (CallbackBundle **)((uint8_t *)info + K_SIZE(void *));
+    FunctionInfo *func = (FunctionInfo *)(*ptr)->data;
+
+    InstanceData *instance = func->instance;
+    InstanceMemory *mem = instance->memories[0];
+    CallData call(env, instance, mem);
+
+    K_DEFER_C(prev_call = instance->sync_call) { instance->sync_call = prev_call; };
+    instance->sync_call = &call;
+
+    Napi::Value ret = call.Run(func, func->native, nullptr);
+    call.FinalizeFast();
+
+    return ret;
 }
 
-napi_value TranslateZeroCall(napi_env env, napi_callback_info info)
+static napi_value TranslateZeroCallBun(napi_env env, napi_callback_info info)
 {
-    FunctionInfo *func = (FunctionInfo *)GetCallbackData(info);
+    FunctionInfo *func = *(FunctionInfo **)((uint8_t *)info + K_SIZE(void *));
 
     InstanceData *instance = func->instance;
     InstanceMemory *mem = instance->memories[0];
@@ -2657,7 +2667,7 @@ static inline PrimitiveKind GetBigEndianPrimitive(PrimitiveKind kind)
 #endif
 }
 
-static bool DetermineCallbackBundleOffset(Napi::Env env)
+static void PickTranslateZeroCallVariant(Napi::Env env)
 {
     static int BunTrap = 42;
 
@@ -2674,15 +2684,12 @@ static bool DetermineCallbackBundleOffset(Napi::Env env)
         void **ptr1 = (void **)info;
         napi_value *ptr2 = (napi_value *)info;
 
-        if (ptr1[0] == &BunTrap || ptr1[1] == &BunTrap)
-            return self;
-
-        if (ptr2[0] == self) {
-            cb_bundle_offset = 32;
-        } else if (ptr2[1] == self) {
-            cb_bundle_offset = 40;
+        if (ptr1[0] == &BunTrap || ptr1[1] == &BunTrap) {
+            translate_zero_call = TranslateZeroCallBun;
+        } else if (ptr2[0] != self && ptr2[1] != self) {
+            translate_zero_call = TranslateZeroCallNode;
         } else {
-            cb_bundle_offset = 8;
+            translate_zero_call = TranslateFastCall;
         }
 
         return self;
@@ -2691,8 +2698,6 @@ static bool DetermineCallbackBundleOffset(Napi::Env env)
 
     status = napi_call_function(env, self, func, 0, nullptr, &ret);
     K_ASSERT(status == napi_ok);
-
-    return cb_bundle_offset >= 0;
 }
 
 static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
@@ -2702,9 +2707,11 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
         static std::once_flag flag;
 
         std::call_once(flag, [&]() {
+            PickTranslateZeroCallVariant(env);
+
             // If DetermineCallbackBundleOffset() failed, it probably means we are in
             // weird territory (maybe Bun), so back off!
-            if (!DetermineCallbackBundleOffset(env))
+            if (translate_zero_call != TranslateZeroCallNode)
                 return;
 
             uv_lib_t lib = {};
@@ -2729,7 +2736,6 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
     InstanceData *instance = new InstanceData();
     K_CRITICAL(instance, "Failed to initialize Koffi");
 
-    instance->cb_bundle_offset = cb_bundle_offset;
     env.SetInstanceData(instance);
 
 #if defined(__clang__)
@@ -2897,6 +2903,7 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
     }
 #endif
 
+    instance->translate_zero_call = translate_zero_call;
     instance->main_thread_id = std::this_thread::get_id();
 
     napi_add_env_cleanup_hook(env, [](void *udata) {

@@ -1780,8 +1780,6 @@ static bool CanUseFastCall(const FunctionInfo *func)
 
 Napi::Function WrapFunction(Napi::Env env, const FunctionInfo *func)
 {
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
-
     Napi::Function wrapper;
 
     // Pick appropriate wrapper
@@ -1791,8 +1789,9 @@ Napi::Function WrapFunction(Napi::Env env, const FunctionInfo *func)
         if (func->variadic) {
             napi_status status = napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateVariadicCall, (void *)func->Ref(), &value);
             K_ASSERT(status == napi_ok);
-        } else if (!func->parameters.len && instance->cb_bundle_offset >= 0) {
-            napi_status status = napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateZeroCall, (void *)func->Ref(), &value);
+        } else if (!func->parameters.len) {
+            InstanceData *instance = env.GetInstanceData<InstanceData>();
+            napi_status status = napi_create_function(env, func->name, NAPI_AUTO_LENGTH, instance->translate_zero_call, (void *)func->Ref(), &value);
             K_ASSERT(status == napi_ok);
         } else if (CanUseFastCall(func)) {
             napi_status status = napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateFastCall, (void *)func->Ref(), &value);

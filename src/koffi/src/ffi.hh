@@ -287,7 +287,6 @@ struct InstanceData {
     const TypeInfo *str16_type;
     const TypeInfo *str32_type;
 
-    Size cb_bundle_offset;
     Napi::Reference<Napi::Symbol> active_symbol;
 
     std::mutex mem_mutex;
@@ -296,6 +295,8 @@ struct InstanceData {
 
     // Variadic cache
     FunctionInfo *variadic_func = nullptr;
+
+    napi_value (*translate_zero_call)(napi_env env, napi_callback_info info);
 
     std::thread::id main_thread_id;
     napi_threadsafe_function broker = nullptr;
@@ -368,7 +369,6 @@ extern SharedData shared;
 InstanceMemory *AllocateMemory(InstanceData *instance, Size stack_size, Size heap_size);
 void ReleaseMemory(InstanceData *instance, InstanceMemory *mem);
 
-napi_value TranslateZeroCall(napi_env env, napi_callback_info info);
 napi_value TranslateFastCall(napi_env env, napi_callback_info info);
 napi_value TranslateNormalCall(napi_env env, napi_callback_info info);
 napi_value TranslateVariadicCall(napi_env env, napi_callback_info info);
