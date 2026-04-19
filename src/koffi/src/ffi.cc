@@ -2369,21 +2369,21 @@ static Napi::Value CallPointerSync(const Napi::CallbackInfo &info)
     }
 
     void *ptr = nullptr;
-    if (!GetExternalPointer(env, info[info.Length() - 2], &ptr)) [[unlikely]]
+    if (!GetExternalPointer(env, info[0], &ptr)) [[unlikely]]
         return env.Null();
 
-    const TypeInfo *type = ResolveType(info[info.Length() - 1]);
+    const TypeInfo *type = ResolveType(info[1]);
     if (!type) [[unlikely]]
         return env.Null();
     if (type->primitive != PrimitiveKind::Prototype) [[unlikely]] {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for type, expected function type", GetValueType(instance, info[info.Length() - 1]));
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for type, expected function type", GetValueType(instance, info[1]));
         return env.Null();
     }
 
     const FunctionInfo *proto = type->ref.proto;
 
-    napi_value ret = proto->variadic ? TranslateVariadicCall(env, proto, ptr, info.First(), info.Length() - 2)
-                                     : TranslateNormalCall(env, proto, ptr, info.First(), info.Length() - 2);
+    napi_value ret = proto->variadic ? TranslateVariadicCall(env, proto, ptr, info.First() + 2, info.Length() - 2)
+                                     : TranslateNormalCall(env, proto, ptr, info.First() + 2, info.Length() - 2);
 
     return Napi::Value(env, ret);
 }
