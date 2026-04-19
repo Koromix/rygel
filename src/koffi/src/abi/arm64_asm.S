@@ -114,7 +114,12 @@ SYMBOL(ForwardCallDDDDX):
 .global SYMBOL(RelayCallback)
 .global SYMBOL(SwitchAndRelay)
 .global SYMBOL(RelayDirect)
+#if defined(_WIN32)
+.global SYMBOL(FindTrampolineStart)
+.global SYMBOL(FindTrampolineEnd)
+#else
 .global SYMBOL(TrampolineEnd)
+#endif
 
 # First, make a copy of the argument registers.
 # Then call the C function RelayCallback with the following arguments:
@@ -186,7 +191,26 @@ SYMBOL(SwitchAndRelay):
     ret
     .cfi_endproc
 
+#if defined(_WIN32)
+
+.balign 16
+SYMBOL(FindTrampolineStart):
+    adr x0, 16
+    and x0, x0, #-16
+    ret
+.balign 16
+
+#include "gnu.inc"
+
+SYMBOL(FindTrampolineEnd):
+    adr x0, 0
+    ret
+
+#else
+
 #include "gnu.inc"
 
 SYMBOL(TrampolineEnd):
     ret
+
+#endif

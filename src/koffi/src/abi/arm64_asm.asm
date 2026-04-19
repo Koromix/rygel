@@ -109,7 +109,8 @@ ForwardCallDDDDX PROC
     EXPORT SwitchAndRelay
     EXPORT RelayDirect
     EXTERN RelayDirect
-    EXPORT TrampolineEnd
+    EXPORT FindTrampolineStart
+    EXPORT FindTrampolineEnd
 
     ; First, make a copy of the argument registers.
     ; Then call the C function RelayCallback with the following arguments:
@@ -162,9 +163,18 @@ SwitchAndRelay PROC
     ret
     ENDP
 
+    ALIGN 16
+FindTrampolineStart PROC
+    adr x0, 16
+    and x0, x0, #-16
+    ret
+    ENDP
+    ALIGN 16
+
     INCLUDE armasm.inc
 
-TrampolineEnd PROC
+FindTrampolineEnd PROC
+    adr x0, 0
     ret
     ENDP
 
