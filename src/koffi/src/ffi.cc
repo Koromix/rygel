@@ -2667,6 +2667,14 @@ static inline PrimitiveKind GetBigEndianPrimitive(PrimitiveKind kind)
 #endif
 }
 
+static bool DetectBun(Napi::Env env)
+{
+    Napi::Value ret = env.RunScript("process.isBun");
+    Napi::Boolean b = ret.ToBoolean();
+
+    return b.Value();
+}
+
 static void PickTranslateZeroCallVariant(Napi::Env env)
 {
     static int BunTrap = 42;
@@ -2709,9 +2717,7 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
         std::call_once(flag, [&]() {
             PickTranslateZeroCallVariant(env);
 
-            // If DetermineCallbackBundleOffset() failed, it probably means we are in
-            // weird territory (maybe Bun), so back off!
-            if (translate_zero_call != TranslateZeroCallNode)
+            if (DetectBun(env))
                 return;
 
             uv_lib_t lib = {};
