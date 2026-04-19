@@ -28,9 +28,9 @@ extern const napi_type_tag CastMarker;
 extern const napi_type_tag MagicUnionMarker;
 
 class MagicUnion: public Napi::ObjectWrap<MagicUnion> {
+    InstanceData *instance;
     const TypeInfo *type;
 
-    Napi::Reference<Napi::Symbol> active_symbol;
     Size active_idx = -1;
 
     HeapArray<uint8_t> raw;
