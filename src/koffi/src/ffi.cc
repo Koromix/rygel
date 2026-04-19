@@ -1510,9 +1510,7 @@ napi_value TranslateFastCall(napi_env env, napi_callback_info info)
     InstanceMemory *mem = instance->memories[0];
     CallData call(env, instance, mem);
 
-#if defined(K_DEBUG)
     K_DEFER_C(prev_call = instance->sync_call) { instance->sync_call = prev_call; };
-#endif
     instance->sync_call = &call;
 
     Napi::Value ret = call.Run(func, func->native, args);
@@ -1535,9 +1533,7 @@ static FORCE_INLINE napi_value TranslateNormalCall(napi_env env, const FunctionI
     InstanceMemory *mem = instance->memories[0];
     CallData call(env, instance, mem);
 
-#if defined(K_DEBUG)
     K_DEFER_C(prev_call = instance->sync_call) { instance->sync_call = prev_call; };
-#endif
     instance->sync_call = &call;
 
     Napi::Value ret = call.Run(func, native, args);
@@ -1654,9 +1650,7 @@ static napi_value TranslateVariadicCall(napi_env env, const FunctionInfo *func, 
     InstanceMemory *mem = instance->memories[0];
     CallData call(env, instance, mem);
 
-#if defined(K_DEBUG)
     K_DEFER_C(prev_call = instance->sync_call) { instance->sync_call = prev_call; };
-#endif
     instance->sync_call = &call;
 
     Napi::Value ret = call.Run(variadic, native, args);
