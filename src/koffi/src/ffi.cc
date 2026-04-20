@@ -1505,12 +1505,12 @@ static napi_value TranslateZeroCallNode(napi_env env, napi_callback_info info)
 
     InstanceData *instance = func->instance;
     InstanceMemory *mem = instance->memories[0];
-    CallData call(env, instance, mem);
+    CallData call(env, instance, mem, func->native);
 
     K_DEFER_C(prev_call = instance->sync_call) { instance->sync_call = prev_call; };
     instance->sync_call = &call;
 
-    napi_value ret = call.Run(func, func->native, nullptr);
+    napi_value ret = call.Run(func, nullptr);
     call.FinalizeFast();
 
     return ret;
@@ -1522,12 +1522,12 @@ static napi_value TranslateZeroCallBun(napi_env env, napi_callback_info info)
 
     InstanceData *instance = func->instance;
     InstanceMemory *mem = instance->memories[0];
-    CallData call(env, instance, mem);
+    CallData call(env, instance, mem, func->native);
 
     K_DEFER_C(prev_call = instance->sync_call) { instance->sync_call = prev_call; };
     instance->sync_call = &call;
 
-    napi_value ret = call.Run(func, func->native, nullptr);
+    napi_value ret = call.Run(func, nullptr);
     call.FinalizeFast();
 
     return ret;
@@ -1550,12 +1550,12 @@ napi_value TranslateFastCall(napi_env env, napi_callback_info info)
     }
 
     InstanceMemory *mem = instance->memories[0];
-    CallData call(env, instance, mem);
+    CallData call(env, instance, mem, func->native);
 
     K_DEFER_C(prev_call = instance->sync_call) { instance->sync_call = prev_call; };
     instance->sync_call = &call;
 
-    napi_value ret = call.Run(func, func->native, args);
+    napi_value ret = call.Run(func, args);
     call.FinalizeFast();
 
     return ret;
@@ -1573,12 +1573,12 @@ static FORCE_INLINE napi_value TranslateNormalCall(napi_env env, const FunctionI
     }
 
     InstanceMemory *mem = instance->memories[0];
-    CallData call(env, instance, mem);
+    CallData call(env, instance, mem, native);
 
     K_DEFER_C(prev_call = instance->sync_call) { instance->sync_call = prev_call; };
     instance->sync_call = &call;
 
-    napi_value ret = call.Run(func, native, args);
+    napi_value ret = call.Run(func, args);
     call.Finalize();
 
     return ret;
@@ -1690,12 +1690,12 @@ static napi_value TranslateVariadicCall(napi_env env, const FunctionInfo *func, 
     }
 
     InstanceMemory *mem = instance->memories[0];
-    CallData call(env, instance, mem);
+    CallData call(env, instance, mem, native);
 
     K_DEFER_C(prev_call = instance->sync_call) { instance->sync_call = prev_call; };
     instance->sync_call = &call;
 
-    napi_value ret = call.Run(variadic, native, args);
+    napi_value ret = call.Run(variadic, args);
     call.Finalize();
 
     if (variadic != instance->variadic_func) {
@@ -1730,15 +1730,14 @@ napi_value TranslateVariadicCall(napi_env env, napi_callback_info info)
 class AsyncCall: public Napi::AsyncWorker {
     Napi::Env env;
 
-    NoDestroy<CallData> call;
     const FunctionInfo *func;
+    NoDestroy<CallData> call;
 
     bool prepared = false;
 
 public:
-    AsyncCall(Napi::Env env, InstanceData *instance, InstanceMemory *mem,
-              const FunctionInfo *func, Napi::Function &callback)
-        : Napi::AsyncWorker(callback), env(env), call(env, instance, mem), func(func->Ref()) {}
+    AsyncCall(Napi::Env env, InstanceData *instance, InstanceMemory *mem, const FunctionInfo *func, Napi::Function &callback)
+        : Napi::AsyncWorker(callback), env(env), func(func->Ref()), call(env, instance, mem, func->native) {}
     ~AsyncCall();
 
     bool Prepare(napi_value *args) {
@@ -1764,13 +1763,12 @@ AsyncCall::~AsyncCall()
 #endif
 
     ReleaseMemory(call->instance, call->mem);
-    func->Unref();
 }
 
 void AsyncCall::Execute()
 {
     if (prepared) [[likely]] {
-        call->ExecuteAsync(func->native);
+        call->ExecuteAsync();
     }
 }
 
@@ -1902,7 +1900,7 @@ extern "C" void RelayCallback(Size idx, uint8_t *sp)
     K_DEFER { ReleaseMemory(instance, mem); };
 
     if (std::this_thread::get_id() == instance->main_thread_id) {
-        CallData call(env, instance, mem);
+        CallData call(env, instance, mem, nullptr);
         K_DEFER { call.Finalize(); };
 
         napi_handle_scope scope;
@@ -1911,7 +1909,7 @@ extern "C" void RelayCallback(Size idx, uint8_t *sp)
 
         call.Relay(idx, sp);
     } else {
-        CallData call(env, instance, mem);
+        CallData call(env, instance, mem, nullptr);
         call.RelayAsync(idx, sp);
     }
 }

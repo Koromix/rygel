@@ -1586,7 +1586,7 @@ bool Encode(Napi::Env env, uint8_t *origin, Napi::Value value, const TypeInfo *t
     }
 
     InstanceMemory mem = {};
-    CallData call(env, instance, &mem);
+    CallData call(env, instance, &mem, nullptr);
 
 #define PUSH_INTEGER(CType) \
         do { \

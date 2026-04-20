@@ -1079,13 +1079,11 @@ namespace {
 
 #pragma GCC diagnostic pop
 
-napi_value CallData::Run(const FunctionInfo *func, void *native, napi_value *args)
+napi_value CallData::Run(const FunctionInfo *func, napi_value *args)
 {
     uint8_t *base = AllocStack<uint8_t>(func->stk_size);
     if (!base) [[unlikely]]
         return env.Null();
-
-    this->native = native;
 
     const AbiInstruction *first = func->sync.ptr;
     return RunLoop(this, args, base, first);
@@ -1102,10 +1100,8 @@ bool CallData::PrepareAsync(const FunctionInfo *func, napi_value *args)
     return RunLoop(this, args, base, first);
 }
 
-void CallData::ExecuteAsync(void *native)
+void CallData::ExecuteAsync()
 {
-    this->native = native;
-
     const AbiInstruction *next = async_ip++;
     RunLoop(this, nullptr, async_base, next);
 }
