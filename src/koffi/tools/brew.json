@@ -85,6 +85,7 @@
             "machine": "debian_x64",
             "directory": "/home/debian/luigi",
             "build": "CC=clang-21 CXX=clang++-21 node ../cnoke/cnoke.js --ccache",
+            "release": "CC=clang-21 CXX=clang++-21 LLVM_PROFDATA=llvm-profdata-21 sh ./tools/build_pgo.sh",
             "package": "linux-x64"
         },
 

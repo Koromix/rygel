@@ -204,7 +204,7 @@ async function build() {
             success &= await upload(snapshot_dir);
 
             console.log('>> Run build commands...');
-            await compile();
+            await compile(build => build.info.release ?? build.info.build);
         }
 
         console.log('>> Get build artifacts');
@@ -501,7 +501,7 @@ async function build() {
     return true;
 }
 
-async function compile(debug = false) {
+async function compile(command) {
     let success = true;
 
     await Promise.all(builds.map(async build => {
@@ -512,7 +512,7 @@ async function compile(debug = false) {
         if (runner.isIgnored(machine))
             return;
 
-        let cmd = build.info.build + (debug ? ' --debug' : ' --config release');
+        let cmd = command(build);
         let cwd = build.info.directory + '/src/koffi';
 
         let start = process.hrtime.bigint();
@@ -622,7 +622,7 @@ async function test(debug = false) {
     let ignored_machines = runner.ignoreCount;
 
     console.log('>> Run build commands...');
-    await compile(debug);
+    await compile(build => build.info.build + (debug ? ' --debug' : ' --release'));
 
     console.log('>> Run test commands...');
     await Promise.all(builds.map(async build => {
@@ -634,7 +634,7 @@ async function test(debug = false) {
             return;
 
         let commands = {
-            'Build tests': build.test.build + (debug ? ' --debug' : ' --config release'),
+            'Build tests': build.test.build + (debug ? ' --debug' : ' --release'),
             ...build.test.commands
         };
 
