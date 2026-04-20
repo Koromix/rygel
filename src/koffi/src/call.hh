@@ -57,12 +57,6 @@ struct alignas(8) CallData {
     bool finalized = false;
 #endif
 
-#if defined(UNITY_BUILD) && (defined(__clang__) || defined(_MSC_VER))
-    #define INLINE_IF_UNITY FORCE_INLINE
-#else
-    #define INLINE_IF_UNITY
-#endif
-
     CallData(napi_env env, InstanceData *instance, InstanceMemory *mem)
         : env(env), instance(instance), mem(mem),
           prev_stack(mem->stack.end), prev_heap(mem->heap.ptr) {}
@@ -93,7 +87,8 @@ struct alignas(8) CallData {
     INLINE_IF_UNITY void PushBuffer(Span<const uint8_t> buffer, const TypeInfo *type, uint8_t *origin);
     bool PushStringArray(napi_value value, const TypeInfo *type, uint8_t *origin);
     INLINE_IF_UNITY bool PushPointer(napi_value value, const TypeInfo *type, int directions, void **out_ptr);
-    bool PushCallback(napi_value value, const TypeInfo *type, void **out_ptr);
+    bool PushPointerSlow(napi_value value, const TypeInfo *type, int directions, void **out_ptr);
+    INLINE_IF_UNITY bool PushCallback(napi_value value, const TypeInfo *type, void **out_ptr);
     Size PushIndirectString(Napi::Array array, const TypeInfo *ref, void **out_ptr);
 
     void *ReserveTrampoline(const FunctionInfo *proto, Napi::Function func);
@@ -104,8 +99,6 @@ struct alignas(8) CallData {
     T *AllocHeap(Size size);
 
     bool CheckDynamicLength(napi_value obj, Size element, const char *countedby, napi_value value);
-
-#undef INLINE_IF_UNITY
 };
 
 template <typename T>

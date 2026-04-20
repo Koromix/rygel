@@ -877,8 +877,6 @@ bool CallData::PushStringArray(napi_value value, const TypeInfo *type, uint8_t *
 
 bool CallData::PushPointer(napi_value value, const TypeInfo *type, int directions, void **out_ptr)
 {
-    const TypeInfo *ref = type->ref.type;
-
     // In the past we were naively using napi_typeof() and a switch to "reduce" branching,
     // but it did not match the common types very well (so there was still various if tests),
     // and it turns out that napi_typeof() is made of successive type tests anyway so it
@@ -901,6 +899,15 @@ bool CallData::PushPointer(napi_value value, const TypeInfo *type, int direction
         *out_ptr = ptr;
         return true;
     }
+
+    return PushPointerSlow(value, type, directions, out_ptr);
+}
+
+bool CallData::PushPointerSlow(napi_value value, const TypeInfo *type, int directions, void **out_ptr)
+{
+    const TypeInfo *ref = type->ref.type;
+
+    void *ptr = nullptr;
 
     if (IsArray(env, value)) {
         Napi::Array array = Napi::Array(env, value);
