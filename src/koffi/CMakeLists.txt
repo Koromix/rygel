@@ -178,6 +178,10 @@ if(NOT MSVC OR CMAKE_C_COMPILER_ID MATCHES "[Cc]lang")
     if(use_no_finite_loops)
         target_compile_options(koffi PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-fno-finite-loops>)
     endif()
+
+    if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+        target_compile_options(koffi PRIVATE -fno-reorder-blocks-and-partition)
+    endif()
 endif()
 
 # ---- Optimization ----
