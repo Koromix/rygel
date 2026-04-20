@@ -204,7 +204,7 @@ async function build() {
             success &= await upload(snapshot_dir);
 
             console.log('>> Run build commands...');
-            await compile(build => build.info.release ?? build.info.build);
+            await compile(build => build.info.release ?? (build.info.build + ' --release'));
         }
 
         console.log('>> Get build artifacts');
