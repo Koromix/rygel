@@ -204,3 +204,19 @@ elseif(PGO_PROFILE)
 else()
     enable_unity_build(koffi EXCLUDE src/uv.cc)
 endif()
+
+if(APPLE)
+    add_custom_command(
+        TARGET koffi POST_BUILD
+        DEPENDS koffi
+        COMMAND $<$<CONFIG:release>:${CMAKE_STRIP}>
+        ARGS -x $<TARGET_FILE:koffi>
+    )
+elseif(UNIX)
+    add_custom_command(
+        TARGET koffi POST_BUILD
+        DEPENDS koffi
+        COMMAND $<$<CONFIG:release>:${CMAKE_STRIP}>
+        ARGS $<TARGET_FILE:koffi>
+    )
+endif()
