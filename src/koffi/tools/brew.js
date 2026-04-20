@@ -28,7 +28,7 @@ const CommandFunctions = {
 
 // Globals
 
-const MONOLITH = false;
+const MONOLITH = true;
 const BINARY_PREFIX = '@koromix/koffi-';
 
 let script_dir = null;
