@@ -15,10 +15,10 @@ namespace K {
 #else
     #define FORCE_INLINE __attribute__((always_inline)) inline
 #endif
-#if defined(UNITY_BUILD) && (defined(__clang__) || defined(_MSC_VER))
-    #define INLINE_IF_UNITY FORCE_INLINE
+#if defined(UNITY_BUILD)
+    #define INLINE_UNITY FORCE_INLINE
 #else
-    #define INLINE_IF_UNITY
+    #define INLINE_UNITY
 #endif
 
 #if defined(__GNUC__) || defined(__clang__)
@@ -395,8 +395,8 @@ static FORCE_INLINE Napi::Array GetOwnPropertyNames(napi_env env, napi_value obj
 
 Napi::Function WrapFunction(Napi::Env env, const FunctionInfo *func);
 
-Napi::Value INLINE_IF_UNITY WrapPointer(Napi::Env env, const TypeInfo *ref, void *ptr);
-Napi::Value INLINE_IF_UNITY WrapCallback(Napi::Env env, const TypeInfo *ref, void *ptr);
+Napi::Value INLINE_UNITY WrapPointer(Napi::Env env, const TypeInfo *ref, void *ptr);
+Napi::Value INLINE_UNITY WrapCallback(Napi::Env env, const TypeInfo *ref, void *ptr);
 
 bool DetectCallConvention(Span<const char> name, CallConvention *out_convention);
 

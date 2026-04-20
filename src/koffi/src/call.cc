@@ -884,16 +884,18 @@ bool CallData::PushPointer(napi_value value, const TypeInfo *type, int direction
 
     void *ptr = nullptr;
 
+restart:
+
     // Fast path
     if (bool external = false; TryPointer(env, value, &ptr, &external)) {
         if (external && CheckValueTag(env, value, &CastMarker)) {
             Napi::External<ValueCast> external = Napi::External<ValueCast>(env, value);
             ValueCast *cast = external.Data();
 
-            napi_value referenced;
-            napi_get_reference_value(env, cast->ref, &referenced);
+            napi_get_reference_value(env, cast->ref, &value);
+            type = cast->type;
 
-            return PushPointer(Napi::Value(env, referenced), cast->type, directions, out_ptr);
+            goto restart;
         }
 
         *out_ptr = ptr;
@@ -1042,15 +1044,17 @@ bool CallData::PushCallback(napi_value value, const TypeInfo *type, void **out_p
 {
     void *ptr = nullptr;
 
+restart:
+
     if (bool external = false; TryPointer(env, value, &ptr, &external)) {
         if (external && CheckValueTag(env, value, &CastMarker)) {
             Napi::External<ValueCast> external = Napi::External<ValueCast>(env, value);
             ValueCast *cast = external.Data();
 
-            napi_value referenced;
-            napi_get_reference_value(env, cast->ref, &referenced);
+            napi_get_reference_value(env, cast->ref, &value);
+            type = cast->type;
 
-            return PushCallback(referenced, cast->type, out_ptr);
+            goto restart;
         }
 
         *out_ptr = ptr;

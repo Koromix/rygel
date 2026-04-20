@@ -64,31 +64,31 @@ struct alignas(8) CallData {
     ~CallData();
 #endif
 
-    INLINE_IF_UNITY napi_value Run(const FunctionInfo *func, void *native, napi_value *args);
+    INLINE_UNITY napi_value Run(const FunctionInfo *func, void *native, napi_value *args);
 
     bool PrepareAsync(const FunctionInfo *func, napi_value *args);
     void ExecuteAsync(void *native);
     napi_value EndAsync();
 
-    INLINE_IF_UNITY void Finalize();
-    INLINE_IF_UNITY void FinalizeFast();
+    INLINE_UNITY void Finalize();
+    INLINE_UNITY void FinalizeFast();
 
     void Relay(Size idx, uint8_t *sp);
     void RelayAsync(Size idx, uint8_t *sp);
 
-    INLINE_IF_UNITY bool PushString(napi_value value, int directions, const char **out_str);
-    INLINE_IF_UNITY bool PushString16(napi_value value, int directions, const char16_t **out_str16);
-    INLINE_IF_UNITY bool PushString32(napi_value value, int directions, const char32_t **out_str32);
-    INLINE_IF_UNITY Size PushStringValue(napi_value value, const char **out_str);
-    INLINE_IF_UNITY Size PushString16Value(napi_value value, const char16_t **out_str16);
-    INLINE_IF_UNITY Size PushString32Value(napi_value value, const char32_t **out_str32);
+    INLINE_UNITY bool PushString(napi_value value, int directions, const char **out_str);
+    INLINE_UNITY bool PushString16(napi_value value, int directions, const char16_t **out_str16);
+    INLINE_UNITY bool PushString32(napi_value value, int directions, const char32_t **out_str32);
+    INLINE_UNITY Size PushStringValue(napi_value value, const char **out_str);
+    INLINE_UNITY Size PushString16Value(napi_value value, const char16_t **out_str16);
+    INLINE_UNITY Size PushString32Value(napi_value value, const char32_t **out_str32);
     bool PushObject(napi_value value, const TypeInfo *type, uint8_t *origin);
     bool PushNormalArray(Napi::Array array, const TypeInfo *type, Size size, uint8_t *origin);
-    INLINE_IF_UNITY void PushBuffer(Span<const uint8_t> buffer, const TypeInfo *type, uint8_t *origin);
+    INLINE_UNITY void PushBuffer(Span<const uint8_t> buffer, const TypeInfo *type, uint8_t *origin);
     bool PushStringArray(napi_value value, const TypeInfo *type, uint8_t *origin);
-    INLINE_IF_UNITY bool PushPointer(napi_value value, const TypeInfo *type, int directions, void **out_ptr);
+    INLINE_UNITY bool PushPointer(napi_value value, const TypeInfo *type, int directions, void **out_ptr);
     bool PushPointerSlow(napi_value value, const TypeInfo *type, int directions, void **out_ptr);
-    INLINE_IF_UNITY bool PushCallback(napi_value value, const TypeInfo *type, void **out_ptr);
+    INLINE_UNITY bool PushCallback(napi_value value, const TypeInfo *type, void **out_ptr);
     Size PushIndirectString(Napi::Array array, const TypeInfo *ref, void **out_ptr);
 
     void *ReserveTrampoline(const FunctionInfo *proto, Napi::Function func);
