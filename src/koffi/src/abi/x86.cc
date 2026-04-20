@@ -33,7 +33,7 @@ extern "C" uint64_t ForwardCallGR(const void *func, uint8_t *sp, uint8_t **out_s
 extern "C" float ForwardCallFR(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
 extern "C" double ForwardCallDR(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
 
-enum class AbiOpcode : int16_t {
+enum class AbiOpcode {
     #define PRIMITIVE(Name) Push ## Name,
     #include "../primitives.inc"
     PushAggregate,
@@ -62,6 +62,11 @@ enum class AbiOpcode : int16_t {
     #include "../primitives.inc"
     ReturnAggregate
 };
+
+static inline void *Code2Op(AbiOpcode code)
+{
+    return (void *)code;
+}
 
 bool AnalyseFunction(Napi::Env env, InstanceData *instance, FunctionInfo *func)
 {
@@ -113,14 +118,14 @@ bool AnalyseFunction(Napi::Env env, InstanceData *instance, FunctionInfo *func)
         }
 
         if (param.type->primitive == PrimitiveKind::Record || param.type->primitive == PrimitiveKind::Union) {
-            func->sync.Append({ .code = AbiOpcode::PushAggregate, .a = param.offset, .b1 = offset, .b2 = (int16_t)param.directions, .type = param.type });
-            func->async.Append({ .code = AbiOpcode::PushAggregate, .a = param.offset, .b1 = offset, .b2 = (int16_t)param.directions, .type = param.type });
+            func->sync.Append({ .op = Code2Op(AbiOpcode::PushAggregate), .a = param.offset, .b1 = offset, .b2 = (int16_t)param.directions, .type = param.type });
+            func->async.Append({ .op = Code2Op(AbiOpcode::PushAggregate), .a = param.offset, .b1 = offset, .b2 = (int16_t)param.directions, .type = param.type });
         } else {
             int delta = (int)AbiOpcode::PushVoid - (int)PrimitiveKind::Void;
             AbiOpcode code = (AbiOpcode)((int)param.type->primitive + delta);
 
-            func->sync.Append({ .code = code, .a = param.offset, .b1 = offset, .b2 = (int16_t)param.directions, .type = param.type });
-            func->async.Append({ .code = code, .a = param.offset, .b1 = offset, .b2 = (int16_t)param.directions, .type = param.type });
+            func->sync.Append({ .op = Code2Op(code), .a = param.offset, .b1 = offset, .b2 = (int16_t)param.directions, .type = param.type });
+            func->async.Append({ .op = Code2Op(code), .a = param.offset, .b1 = offset, .b2 = (int16_t)param.directions, .type = param.type });
         }
     }
 
@@ -128,7 +133,7 @@ bool AnalyseFunction(Napi::Env env, InstanceData *instance, FunctionInfo *func)
     func->ret_pop = (int)(4 * stk_offset);
     func->stk_size = stk_offset ? AlignLen(4 * stk_offset, 16) : 16;
 
-    func->async.Append({ .code = AbiOpcode::Yield });
+    func->async.Append({ .op = Code2Op(AbiOpcode::Yield) });
 
     switch (func->ret.type->primitive) {
         case PrimitiveKind::Void:
@@ -154,12 +159,12 @@ bool AnalyseFunction(Napi::Env env, InstanceData *instance, FunctionInfo *func)
                 int delta = (int)AbiOpcode::RunVoidR - (int)PrimitiveKind::Void;
                 AbiOpcode run = (AbiOpcode)((int)func->ret.type->primitive + delta);
 
-                func->sync.Append({ .code = run, .type = func->ret.type });
+                func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
             } else {
                 int delta = (int)AbiOpcode::RunVoid - (int)PrimitiveKind::Void;
                 AbiOpcode run = (AbiOpcode)((int)func->ret.type->primitive + delta);
 
-                func->sync.Append({ .code = run, .type = func->ret.type });
+                func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
             }
 
             // Async
@@ -168,8 +173,8 @@ bool AnalyseFunction(Napi::Env env, InstanceData *instance, FunctionInfo *func)
                 AbiOpcode call = fast ? AbiOpcode::CallGR : AbiOpcode::CallG;
                 AbiOpcode ret = (AbiOpcode)((int)func->ret.type->primitive + delta);
 
-                func->async.Append({ .code = call });
-                func->async.Append({ .code = ret, .type = func->ret.type });
+                func->async.Append({ .op = Code2Op(call) });
+                func->async.Append({ .op = Code2Op(ret), .type = func->ret.type });
             }
         } break;
 
@@ -177,17 +182,17 @@ bool AnalyseFunction(Napi::Env env, InstanceData *instance, FunctionInfo *func)
             AbiOpcode run = fast ? AbiOpcode::RunPointerR : AbiOpcode::RunPointer;
             AbiOpcode call = fast ? AbiOpcode::CallGR : AbiOpcode::CallG;
 
-            func->sync.Append({ .code = run, .type = func->ret.type->ref.type });
-            func->async.Append({ .code = call });
-            func->async.Append({ .code = AbiOpcode::ReturnPointer, .type = func->ret.type->ref.type });
+            func->sync.Append({ .op = Code2Op(run), .type = func->ret.type->ref.type });
+            func->async.Append({ .op = Code2Op(call) });
+            func->async.Append({ .op = Code2Op(AbiOpcode::ReturnPointer), .type = func->ret.type->ref.type });
         } break;
         case PrimitiveKind::Callback: {
             AbiOpcode run = fast ? AbiOpcode::RunCallbackR : AbiOpcode::RunCallback;
             AbiOpcode call = fast ? AbiOpcode::CallGR : AbiOpcode::CallG;
 
-            func->sync.Append({ .code = run, .type = func->ret.type });
-            func->async.Append({ .code = call });
-            func->async.Append({ .code = AbiOpcode::ReturnCallback, .type = func->ret.type });
+            func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
+            func->async.Append({ .op = Code2Op(call) });
+            func->async.Append({ .op = Code2Op(AbiOpcode::ReturnCallback), .type = func->ret.type });
         } break;
 
         case PrimitiveKind::Record:
@@ -200,18 +205,18 @@ bool AnalyseFunction(Napi::Env env, InstanceData *instance, FunctionInfo *func)
                     AbiOpcode run = fast ? AbiOpcode::RunAggregateFR : AbiOpcode::RunAggregateF;
                     AbiOpcode call = fast ? AbiOpcode::CallFR : AbiOpcode::CallF;
 
-                    func->sync.Append({ .code = run, .type = func->ret.type });
-                    func->async.Append({ .code = call });
-                    func->async.Append({ .code = AbiOpcode::ReturnAggregate, .type = func->ret.type });
+                    func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
+                    func->async.Append({ .op = Code2Op(call) });
+                    func->async.Append({ .op = Code2Op(AbiOpcode::ReturnAggregate), .type = func->ret.type });
 
                     break;
                 } else if (member.type->primitive == PrimitiveKind::Float64) {
                     AbiOpcode run = fast ? AbiOpcode::RunAggregateDR : AbiOpcode::RunAggregateD;
                     AbiOpcode call = fast ? AbiOpcode::CallDR : AbiOpcode::CallD;
 
-                    func->sync.Append({ .code = run, .type = func->ret.type });
-                    func->async.Append({ .code = call });
-                    func->async.Append({ .code = AbiOpcode::ReturnAggregate, .type = func->ret.type });
+                    func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
+                    func->async.Append({ .op = Code2Op(call) });
+                    func->async.Append({ .op = Code2Op(AbiOpcode::ReturnAggregate), .type = func->ret.type });
 
                     break;
                 }
@@ -222,16 +227,16 @@ bool AnalyseFunction(Napi::Env env, InstanceData *instance, FunctionInfo *func)
                 AbiOpcode run = fast ? AbiOpcode::RunAggregateGR : AbiOpcode::RunAggregateG;
                 AbiOpcode call = fast ? AbiOpcode::CallGR : AbiOpcode::CallG;
 
-                func->sync.Append({ .code = run, .type = func->ret.type });
-                func->async.Append({ .code = call });
-                func->async.Append({ .code = AbiOpcode::ReturnAggregate, .type = func->ret.type });
+                func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
+                func->async.Append({ .op = Code2Op(call) });
+                func->async.Append({ .op = Code2Op(AbiOpcode::ReturnAggregate), .type = func->ret.type });
             } else {
                 AbiOpcode run = fast ? AbiOpcode::RunAggregateStackR : AbiOpcode::RunAggregateStack;
                 AbiOpcode call = fast ? AbiOpcode::CallStackR : AbiOpcode::CallStack;
 
-                func->sync.Append({ .code = run, .b = (int32_t)func->ret.type->size, .type = func->ret.type });
-                func->async.Append({ .code = call, .b = (int32_t)func->ret.type->size });
-                func->async.Append({ .code = AbiOpcode::ReturnAggregate, .type = func->ret.type });
+                func->sync.Append({ .op = Code2Op(run), .a = (int32_t)func->ret.type->size, .type = func->ret.type });
+                func->async.Append({ .op = Code2Op(call), .a = (int32_t)func->ret.type->size });
+                func->async.Append({ .op = Code2Op(AbiOpcode::ReturnAggregate), .type = func->ret.type });
             }
         } break;
         case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
@@ -240,17 +245,17 @@ bool AnalyseFunction(Napi::Env env, InstanceData *instance, FunctionInfo *func)
             AbiOpcode run = fast ? AbiOpcode::RunFloat32R : AbiOpcode::RunFloat32;
             AbiOpcode call = fast ? AbiOpcode::CallFR : AbiOpcode::CallF;
 
-            func->sync.Append({ .code = run, .type = func->ret.type });
-            func->async.Append({ .code = call });
-            func->async.Append({ .code = AbiOpcode::ReturnFloat32, .type = func->ret.type });
+            func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
+            func->async.Append({ .op = Code2Op(call) });
+            func->async.Append({ .op = Code2Op(AbiOpcode::ReturnFloat32), .type = func->ret.type });
         } break;
         case PrimitiveKind::Float64: {
             AbiOpcode run = fast ? AbiOpcode::RunFloat64R : AbiOpcode::RunFloat64;
             AbiOpcode call = fast ? AbiOpcode::CallDR : AbiOpcode::CallD;
 
-            func->sync.Append({ .code = run, .type = func->ret.type });
-            func->async.Append({ .code = call });
-            func->async.Append({ .code = AbiOpcode::ReturnFloat64, .type = func->ret.type });
+            func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
+            func->async.Append({ .op = Code2Op(call) });
+            func->async.Append({ .op = Code2Op(AbiOpcode::ReturnFloat64), .type = func->ret.type });
         } break;
 
         case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;
@@ -288,14 +293,14 @@ bool AnalyseFunction(Napi::Env env, InstanceData *instance, FunctionInfo *func)
 
 namespace {
     #define OP(Code) \
-        case AbiOpcode::Code:
+        case (int)AbiOpcode::Code:
     #define NEXT() \
         break
 
 napi_value RunLoop(CallData *call, napi_value *args, uint32_t *base, const AbiInstruction *inst)
 {
     for (;; ++inst) {
-        switch (inst->code) {
+        switch ((intptr_t)inst->op) {
 
 #if defined(_WIN32)
     #define WRAP(Expr) \
@@ -579,7 +584,7 @@ napi_value RunLoop(CallData *call, napi_value *args, uint32_t *base, const AbiIn
         return DecodeObject(call->env, (const uint8_t *)&ret, inst->type);
     }
     OP(RunAggregateStack) {
-        *(uint8_t **)base = call->AllocHeap(inst->b);
+        *(uint8_t **)base = call->AllocHeap(inst->a);
         uint32_t eax = (uint32_t)WRAP(ForwardCallG(call->native, (uint8_t *)base, &call->saved_sp));
         return DecodeObject(call->env, (const uint8_t *)eax, inst->type);
     }
@@ -659,9 +664,9 @@ napi_value RunLoop(CallData *call, napi_value *args, uint32_t *base, const AbiIn
     }
     OP(RunAggregateStackR) {
 #if defined(_WIN32)
-        *(uint8_t **)(base + 4) = call->AllocHeap(inst->b);
+        *(uint8_t **)(base + 4) = call->AllocHeap(inst->a);
 #else
-        *(uint8_t **)base = call->AllocHeap(inst->b);
+        *(uint8_t **)base = call->AllocHeap(inst->a);
 #endif
         uint32_t eax = (uint32_t)WRAP(ForwardCallGR(call->native, (uint8_t *)base, &call->saved_sp));
         return DecodeObject(call->env, (const uint8_t *)eax, inst->type);
@@ -715,7 +720,7 @@ napi_value RunLoop(CallData *call, napi_value *args, uint32_t *base, const AbiIn
     OP(CallF) { CALL(F); return call->env.Null(); }
     OP(CallD) { CALL(D); return call->env.Null(); }
     OP(CallStack) {
-        *(uint8_t **)base = call->AllocHeap(inst->b);
+        *(uint8_t **)base = call->AllocHeap(inst->a);
         CALL(G);
         return call->env.Null();
     }
@@ -724,9 +729,9 @@ napi_value RunLoop(CallData *call, napi_value *args, uint32_t *base, const AbiIn
     OP(CallDR) { CALL(DR); return call->env.Null(); }
     OP(CallStackR) {
 #if defined(_WIN32)
-        *(uint8_t **)(base + 4) = call->AllocHeap(inst->b);
+        *(uint8_t **)(base + 4) = call->AllocHeap(inst->a);
 #else
-        *(uint8_t **)base = call->AllocHeap(inst->b);
+        *(uint8_t **)base = call->AllocHeap(inst->a);
 #endif
         CALL(GR);
         return call->env.Null();

@@ -120,28 +120,12 @@ static const char *const CallConventionNames[] = {
 };
 
 enum class AbiMethod : int;
-enum class AbiOpcode : int16_t;
 
 struct AbiInstruction {
-    AbiOpcode code;
-    int16_t a;
-#if defined(__GNUC__) && !defined(__clang__) && (__GNUC__ < 11 || (__GNUC__ == 11 && __GNUC_MINOR__ < 3))
-    // GCC < 11.3 fails when compiling designated initializers with anonymous struct nested inside anonymous
-    // union, and we want to support GCC 10, at least until Debian 11 is out. Probably in 2027.
-    // In the mean time, the easiest way to work around this problem is to separate b and b1/b2, which works
-    // even if the struct ends up a bit bigger.
-    int32_t b;
+    void *op;
+    int32_t a;
     int16_t b1;
     int16_t b2;
-#else
-    union {
-        int32_t b;
-        struct {
-            int16_t b1;
-            int16_t b2;
-        };
-    };
-#endif
     const TypeInfo *type;
 };
 
