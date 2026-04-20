@@ -180,7 +180,7 @@ if(NOT MSVC OR CMAKE_C_COMPILER_ID MATCHES "[Cc]lang")
     endif()
 
     if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
-        target_compile_options(koffi PRIVATE -fno-reorder-blocks-and-partition)
+        target_compile_options(koffi PRIVATE -fno-reorder-blocks-and-partition -Wno-maybe-musttail-local-addr)
     endif()
 endif()
 
