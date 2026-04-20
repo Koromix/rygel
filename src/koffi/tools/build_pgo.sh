@@ -4,9 +4,9 @@ cd "$(dirname $0)/.."
 
 PGO_DIR="$(pwd)/../../bin/Koffi/pgo"
 
-CC="${CC:-clang}"
-CXX="${CXX:-clang++}"
-LLVM_PROFDATA="${LLVM_PROFDATA:-llvm-profdata}"
+export CC="${CC:-clang}"
+export CXX="${CXX:-clang++}"
+export LLVM_PROFDATA="${LLVM_PROFDATA:-llvm-profdata}"
 
 rm -rf "$PGO_DIR"
 mkdir -p "$PGO_DIR"
