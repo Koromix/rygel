@@ -41,10 +41,9 @@ extern "C" napi_value SwitchAndRelay(CallData *call, Size idx, uint8_t *sp, uint
 SharedData shared;
 
 // Recent N-API functions are loaded dynamically
-static napi_status (NAPI_CDECL *node_api_create_property_key_utf8)(napi_env env, const char* str, size_t length, napi_value* result);
-static napi_status (NAPI_CDECL *node_api_post_finalizer)(node_api_basic_env env, napi_finalize finalize_cb, void* finalize_data, void* finalize_hint);
-
-static napi_value (*translate_zero_call)(napi_env env, napi_callback_info info);
+napi_status (NAPI_CDECL *node_api_create_property_key_utf8)(napi_env env, const char* str, size_t length, napi_value* result);
+napi_status (NAPI_CDECL *node_api_post_finalizer)(node_api_basic_env env, napi_finalize finalize_cb, void* finalize_data, void* finalize_hint);
+napi_value (*translate_zero_call)(napi_env env, napi_callback_info info);
 
 static bool ChangeSize(const char *name, Napi::Value value, Size min_size, Size max_size, Size *out_size)
 {

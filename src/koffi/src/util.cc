@@ -44,6 +44,22 @@ MagicUnion::MagicUnion(const Napi::CallbackInfo &info)
     instance = env.GetInstanceData<InstanceData>();
 }
 
+void MagicUnion::Finalize(Napi::BasicEnv env)
+{
+    napi_ref ref = (napi_ref)*this;
+
+    if (node_api_post_finalizer) {
+        node_api_post_finalizer(env, [](napi_env env, void *data, void *) {
+            napi_ref ref = (napi_ref)data;
+            napi_delete_reference(env, ref);
+        }, (void *)ref, nullptr);
+    } else {
+        napi_delete_reference(env, ref);
+    }
+
+    SuppressDestruct();
+}
+
 void MagicUnion::SetRaw(const uint8_t *ptr)
 {
     raw.RemoveFrom(0);

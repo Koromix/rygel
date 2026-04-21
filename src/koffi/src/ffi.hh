@@ -352,6 +352,11 @@ static_assert(MaxTrampolines <= INT16_MAX);
 
 extern SharedData shared;
 
+// Recent N-API functions are loaded dynamically
+extern napi_status (NAPI_CDECL *node_api_create_property_key_utf8)(napi_env env, const char* str, size_t length, napi_value* result);
+extern napi_status (NAPI_CDECL *node_api_post_finalizer)(node_api_basic_env env, napi_finalize finalize_cb, void* finalize_data, void* finalize_hint);
+extern napi_value (*translate_zero_call)(napi_env env, napi_callback_info info);
+
 InstanceMemory *AllocateMemory(InstanceData *instance, Size stack_size, Size heap_size);
 void ReleaseMemory(InstanceData *instance, InstanceMemory *mem);
 

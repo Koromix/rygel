@@ -49,6 +49,8 @@ public:
 
     MagicUnion(const Napi::CallbackInfo &info);
 
+    void Finalize(Napi::BasicEnv env) override;
+
     const TypeInfo *GetType() { return type; }
     const RecordMember *GetMember() const { return (active_idx >= 0) ? &type->members[active_idx] : nullptr; }
 
