@@ -204,6 +204,10 @@ elseif(PGO_PROFILE)
     target_compile_options(koffi PRIVATE "-fprofile-use=${PGO_PROFILE}")
     target_link_options(koffi PRIVATE "-fprofile-use=${PGO_PROFILE}")
 
+    if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+        target_compile_options(koffi PRIVATE -fprofile-correction)
+    endif()
+
     message(STATUS "PGO: Building optimized binary with profile data")
 else()
     enable_unity_build(koffi EXCLUDE src/uv.cc)
