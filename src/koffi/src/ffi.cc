@@ -2706,6 +2706,35 @@ static void PickTranslateZeroCallVariant(Napi::Env env)
     K_ASSERT(status == napi_ok);
 }
 
+static bool CanReferencePrimitiveValues(napi_env env)
+{
+    uint32_t version = 0;
+    napi_get_version(env, &version);
+
+    return version >= 10;
+}
+
+static bool CanDeleteReferenceInFinalizer(napi_env env)
+{
+    const napi_node_version *version = nullptr;
+    napi_get_node_version(env, &version);
+
+    if (version->major >= 24)
+        return true;
+
+    // Made by looking at the git history of each release branch
+    if (version->major == 23 && version->minor >= 5)
+        return true;
+    if (version->major == 22 && version->minor >= 13)
+        return true;
+    if (version->major == 20 && version->minor >= 19)
+        return true;
+    if (version->major == 20 && version->minor == 18 && version->patch >= 3)
+        return true;
+
+    return false;
+}
+
 static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
 {
     // Load recent N-API functions (version >= 9) functions dynamically
@@ -2727,13 +2756,18 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
             K_DEFER { uv_dlclose(&lib); };
 #endif
 
-            if (Napi::VersionManagement::GetNapiVersion(env) >= 10) {
+            if (CanReferencePrimitiveValues(env)) {
                 // We can't use optimized property keys in older versions because we need to create
                 // references to them, but napi_create_reference() was not usable with primitive values.
                 uv_dlsym(&lib, "node_api_create_property_key_utf8", (void **)&node_api_create_property_key_utf8);
             }
 
-            uv_dlsym(&lib, "node_api_post_finalizer", (void **)&node_api_post_finalizer);
+            if (!CanDeleteReferenceInFinalizer(env)) {
+                // napi_delete_reference cannot be safely used in older Node versions because it
+                // errors out (or even asserts) if it gets called in a finalizer. In this case,
+                // use experimental API to try to run it later.
+                uv_dlsym(&lib, "node_api_post_finalizer", (void **)&node_api_post_finalizer);
+            }
         });
     }
 
