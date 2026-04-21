@@ -4272,7 +4272,7 @@ bool FlushFile(int fd, const char *filename)
     if (!FlushFileBuffers(h)) {
         DWORD err = GetLastError();
 
-        if (err != ERROR_INVALID_HANDLE) {
+        if (err != ERROR_INVALID_FUNCTION && err != ERROR_INVALID_HANDLE) {
             LogError("Failed to sync '%1': %2", filename, GetWin32ErrorString(err));
             return false;
         }
