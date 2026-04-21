@@ -20,30 +20,36 @@ const { node_ffi, ref, struct } = (() => {
 })();
 const { performance } = require('perf_hooks');
 
-const RandomArray = Array.from({ length: 200 }, () => Math.floor(Math.random() * 1000) + 1);
+const TIME = 8000;
+
+const RANDOM_INTS = Array.from({ length: 200 }, () => Math.floor(Math.random() * 1000) + 1);
 
 main();
 
 function main() {
-    let time = 8000;
+    let args = process.argv.slice(2);
 
-    if (process.argv.length >= 3) {
-        time = parseFloat(process.argv[2]) * 1000;
-        if (Number.isNaN(time))
-            throw new Error('Not a valid number');
-        if (time < 0)
-            throw new Error('Time must be positive');
-    }
-
-    let perf = {
-        'napi': run_napi(time),
-        'koffi (JS array)': run_koffi_array(time),
-        'koffi (Buffer)': run_koffi_buffer(time),
-        'node-ctypes': run_node_ctypes(time),
+    let tests = {
+        'napi': time => run_napi(time),
+        'koffi (JS array)': time => run_koffi_array(time),
+        'koffi (Buffer)': time => run_koffi_buffer(time),
+        'node-ctypes': time => run_node_ctypes(time),
 
         // Crashes when it ends, for some reason
-        // 'node-ffi-napi': node_ffi ? run_node_ffi(time) : undefined
-    }
+        // 'node-ffi-napi': node_ffi ? time => run_node_ffi_napi(time) : undefined
+    };
+
+    let perf = Object.fromEntries(Object.keys(tests).map(key => {
+        let [engine] = key.split(' ');
+        let func = tests[key];
+
+        if (func == null)
+            return [key, undefined];
+        if (args.length && !args.includes(engine))
+            return [key, undefined];
+
+        return [key, func(TIME)];
+    }));
 
     console.log(JSON.stringify(perf, null, 4));
 }
@@ -61,7 +67,7 @@ function run_napi(time) {
 
     while (performance.now() - start < time) {
         for (let i = 0; i < 10000; i++) {
-            let array = new Int32Array(RandomArray);
+            let array = new Int32Array(RANDOM_INTS);
             napi.qsort(array, array.length, array.BYTES_PER_ELEMENT, cmp);
             let sorted = Array.from(array);
         }
@@ -94,7 +100,7 @@ function run_koffi_array(time) {
 
     while (performance.now() - start < time) {
         for (let i = 0; i < 10000; i++) {
-            let array = RandomArray.slice();
+            let array = RANDOM_INTS.slice();
             let cast = koffi.as(array, 'int *');
 
             qsort(cast, array.length, koffi.sizeof('int'), cmp);
@@ -130,7 +136,7 @@ function run_koffi_buffer(time) {
 
     while (performance.now() - start < time) {
         for (let i = 0; i < 10000; i++) {
-            let array = new Int32Array(RandomArray);
+            let array = new Int32Array(RANDOM_INTS);
             qsort(array, array.length, koffi.sizeof('int'), cmp);
             let sorted = Array.from(array);
         }
@@ -147,7 +153,7 @@ function run_koffi_buffer(time) {
 function run_node_ctypes(time) {
     let lib = new ctypes.CDLL(process.platform == 'win32' ? 'msvcrt.dll' : null);
 
-    const IntArray = ctypes.array(ctypes.c_int32, RandomArray.length);
+    const IntArray = ctypes.array(ctypes.c_int32, RANDOM_INTS.length);
     const qsort = lib.func('qsort', ctypes.c_void, [ctypes.c_void_p, ctypes.c_size_t, ctypes.c_size_t, ctypes.c_void_p]);
 
     const cmp = (ptr1, ptr2) => {
@@ -163,9 +169,9 @@ function run_node_ctypes(time) {
 
     while (performance.now() - start < time) {
         for (let i = 0; i < 10000; i++) {
-            let array = IntArray.create(RandomArray);
-            qsort(ctypes.byref(array), RandomArray.length, ctypes.sizeof(ctypes.c_int32), callback.pointer);
-            let sorted = Array.from({ length: RandomArray.length }, (_, i) => array[i]);
+            let array = IntArray.create(RANDOM_INTS);
+            qsort(ctypes.byref(array), RANDOM_INTS.length, ctypes.sizeof(ctypes.c_int32), callback.pointer);
+            let sorted = Array.from({ length: RANDOM_INTS.length }, (_, i) => array[i]);
         }
 
         iterations += 10000;
@@ -201,7 +207,7 @@ function run_node_ffi(time) {
 
     while (performance.now() - start < time) {
         for (let i = 0; i < 1000; i++) {
-            let array = new Int32Array(RandomArray);
+            let array = new Int32Array(RANDOM_INTS);
             lib.qsort(array, array.length, array.BYTES_PER_ELEMENT, cmp);
             let sorted = Array.from(array);
         }

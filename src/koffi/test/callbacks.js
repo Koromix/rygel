@@ -8,6 +8,8 @@ const path = require('path');
 const util = require('util');
 const { cnoke } = require('./package.json');
 
+let poll_sockets = !process.argv.slice(2).includes('--no_poll');
+
 // We need to change this on Windows because the DLL CRT might
 // not (probably not) match the one used by Node.js!
 let free_ptr = koffi.free;
@@ -336,7 +338,7 @@ async function test() {
     }
 
     // Watch file descriptor
-    {
+    if (poll_sockets) {
         let sockets = [null, null];
         SocketPair(sockets);
 

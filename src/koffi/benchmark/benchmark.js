@@ -9,31 +9,57 @@ const path = require('path');
 main();
 
 function main() {
+    process.chdir(__dirname);
+
     try {
-        let select = process.argv.slice(2);
-        benchmark(select);
+        let args = process.argv.slice(2);
+        benchmark(args);
     } catch (err) {
         console.error(err);
         process.exit(1);
     }
 }
 
-function benchmark(select) {
-    if (!select.length || select.includes('rand'))
-        format('rand', run('rand.js', 'napi'), 'ns');
-    if (!select.length || select.includes('atoi'))
-        format('atoi', run('atoi.js', 'napi'), 'ns');
-    if (!select.length || select.includes('qsort'))
-        format('qsort', run('qsort.js', 'napi'), 'ns');
-    if (!select.length || select.includes('memset'))
-        format('memset', run('memset.js', 'napi'), 'ns');
-    if (!select.length || select.includes('raylib'))
-        format('raylib', run('raylib.js', 'napi'), 'us');
+function benchmark(args) {
+    let tests = [];
+    let engines = [];
+
+    for (let arg of args) {
+        if (arg[0] == '-') {
+            switch (arg) {
+                case '--koffi': { engines.push('koffi'); } break;
+                default: throw new Error(`Unknown option ${arg}`);
+            }
+        } else {
+            tests.push(arg);
+        }
+    }
+
+    if (!tests.length) {
+        tests.push('rand', 'atoi', 'qsort', 'memset');
+
+        if (process.platform != 'darwin')
+            tests.push('raylib');
+    }
+
+    if (tests.includes('rand'))
+        format('rand', run('rand.js', 'napi', engines), 'ns');
+    if (tests.includes('atoi'))
+        format('atoi', run('atoi.js', 'napi', engines), 'ns');
+    if (tests.includes('qsort'))
+        format('qsort', run('qsort.js', 'napi', engines), 'ns');
+    if (tests.includes('memset'))
+        format('memset', run('memset.js', 'napi', engines), 'ns');
+    if (tests.includes('raylib'))
+        format('raylib', run('raylib.js', 'napi', engines), 'us');
 }
 
-function run(basename, ref) {
+function run(basename, ref, engines = []) {
+    if (engines.length)
+        engines = [ref, ...engines];
+
     let filename = path.join(__dirname, basename);
-    let proc = spawnSync(process.execPath, [...process.execArgv, filename]);
+    let proc = spawnSync(process.execPath, [...process.execArgv, filename, ...engines]);
 
     if (proc.status == null)
         throw new Error(proc.error);
@@ -72,7 +98,7 @@ function format(name, tests, unit) {
     console.log(`${name.padEnd(len0, ' ')} | Iteration time | Relative performance | Overhead`);
     console.log(`${'-'.padEnd(len0, '-')} | -------------- | -------------------- | --------`);
     for (let test of tests) {
-        let time = format_time(test.time / test.iterations, unit);
+        let time = formatTime(test.time / test.iterations, unit);
         let ratio = test.ratio.toFixed(test.ratio < 0.01 ? 3 : 2);
         let overhead = (typeof test.overhead == 'number') ? `${test.overhead >= 0 ? '+' : ''}${test.overhead}%` : test.overhead;
 
@@ -82,7 +108,7 @@ function format(name, tests, unit) {
     console.log('');
 }
 
-function format_time(time, unit) {
+function formatTime(time, unit) {
     switch (unit) {
         case 'ms': { return (time * 1).toFixed(1) + ' ms'; } break;
         case 'us': { return (time * 1000).toFixed(1) + ' µs'; } break;

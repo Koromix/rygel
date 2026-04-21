@@ -27,26 +27,32 @@ const { node_ffi, ref, struct } = (() => {
 })();
 const { performance } = require('perf_hooks');
 
+const TIME = 8000;
+
 main();
 
 function main() {
-    let time = 8000;
+    let args = process.argv.slice(2);
 
-    if (process.argv.length >= 3) {
-        time = parseFloat(process.argv[2]) * 1000;
-        if (Number.isNaN(time))
-            throw new Error('Not a valid number');
-        if (time < 0)
-            throw new Error('Time must be positive');
-    }
+    let tests = {
+        'napi': time => run_napi(time),
+        'koffi': time => run_koffi(time),
+        'node-ctypes': time => run_node_ctypes(time),
+        'node:ffi': ffi ? time => run_node_ffi(time) : undefined,
+        'node-ffi-napi': node_ffi ? time => run_node_ffi_napi(time) : undefined
+    };
 
-    let perf = {
-        'napi': run_napi(time),
-        'koffi': run_koffi(time),
-        'node-ctypes': run_node_ctypes(time),
-        'node:ffi': ffi ? run_node_ffi(time) : undefined,
-        'node-ffi-napi': node_ffi ? run_node_ffi_napi(time) : undefined
-    }
+    let perf = Object.fromEntries(Object.keys(tests).map(key => {
+        let [engine] = key.split(' ');
+        let func = tests[key];
+
+        if (func == null)
+            return [key, undefined];
+        if (args.length && !args.includes(engine))
+            return [key, undefined];
+
+        return [key, func(TIME)];
+    }));
 
     console.log(JSON.stringify(perf, null, 4));
 }
