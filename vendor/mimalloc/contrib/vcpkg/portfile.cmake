@@ -3,13 +3,13 @@ vcpkg_from_github(
   REPO microsoft/mimalloc
   HEAD_REF master
 
-  # The `REF` can be a commit hash, branch name (`dev3`), or a version (`v3.1.4`).
-  # Use `"v${VERSION}"` to use the version specified in `vcpkg.json`.
+  # The "REF" can be a commit hash, branch name (dev3), or a version (v3.3.1).
   REF "v${VERSION}"
   
   # The sha512 is the hash of the tar.gz bundle.
-  # (To get the sha512, run `vcpkg install "mimalloc[override]" --overlay-ports=./contrib/vcpkg` and copy the sha from the error message.)
-  SHA512 616351e549707318c1f8b164251141684a73d5bf8205b905736f48ab21fbb19bfaa4d52c4e63642fcb144345b6a5331944b6c8e0827925000553e46f2c2c31e9
+  # (To get the sha512, run `vcpkg install "mimalloc[override]" --overlay-ports=<dir of this file>` and copy the sha from the error message.)
+  # (and maybe `vcpkg remove mimalloc` first to remove any previous install)
+  SHA512 601bdf622d0bc7521edf0cc73d1caec9d976bcd1faa689ff48cc18a9a6a3b2294b571fc71d3266b38907bc5aad10a41d92d03d2cdde139a30b08357ee7bc25c5
 )
 
 vcpkg_check_features(OUT_FEATURE_OPTIONS FEATURE_OPTIONS

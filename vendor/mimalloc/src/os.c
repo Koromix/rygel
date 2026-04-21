@@ -106,11 +106,58 @@ void _mi_os_init(void) {
 bool _mi_os_decommit(void* addr, size_t size);
 bool _mi_os_commit(void* addr, size_t size, bool* is_zero);
 
-void* _mi_os_get_aligned_hint(size_t try_alignment, size_t size) {
-  MI_UNUSED(try_alignment); MI_UNUSED(size);
-  return NULL;
-}
+// On systems with enough virtual address bits, we can do efficient aligned allocation by using
+// the 2TiB to 30TiB area to allocate those. If we have at least 46 bits of virtual address
+// space (64TiB) we use this technique. (but see issue #939)
+#if (MI_INTPTR_SIZE >= 8) && !defined(MI_NO_ALIGNED_HINT) // && !defined(WIN32) && !defined(ANDROID)
 
+// Return a MI_HINT_ALIGN (4MiB) aligned address that is probably available.
+// If this returns NULL, the OS will determine the address but on some OS's that may not be
+// properly aligned which can be more costly as it needs to be adjusted afterwards.
+// For a size > 16GiB this always returns NULL in order to guarantee good ASLR randomization;
+// (otherwise an initial large allocation of say 2TiB has a 50% chance to include (known) addresses
+//  in the middle of the 2TiB - 6TiB address range (see issue #372))
+
+#define MI_HINT_ALIGN ((uintptr_t)4 << 20)  // 4MiB alignment
+#define MI_HINT_BASE  ((uintptr_t)2 << 40)  // 2TiB start
+#define MI_HINT_AREA  ((uintptr_t)4 << 40)  // upto (2+4) 6TiB  (since before win8 there is "only" 8TiB available to processes)
+#define MI_HINT_MAX   ((uintptr_t)30 << 40) // wrap after 30TiB (area after 32TiB is used for huge OS pages)
+
+void* _mi_os_get_aligned_hint(size_t try_alignment, size_t size)
+{
+  static mi_decl_cache_align _Atomic(uintptr_t) aligned_base; // = 0
+
+  // todo: perhaps only do alignment hints if THP is enabled?
+  if (try_alignment <= mi_os_mem_config.alloc_granularity || try_alignment > MI_HINT_ALIGN) return NULL;
+  if (mi_os_mem_config.virtual_address_bits < 46) return NULL;  // < 64TiB virtual address space
+  size = _mi_align_up(size, MI_HINT_ALIGN);
+  if (size > 16*MI_GiB) return NULL;  // guarantee the chance of fixed valid address is at least 1/(MI_HINT_AREA / 1<<34) 
+  size += MI_HINT_ALIGN;              // put in virtual gaps between hinted blocks; this splits VLA's but increases guarded areas.
+  
+  uintptr_t hint = mi_atomic_add_acq_rel(&aligned_base, size);
+  if (hint == 0 || hint > MI_HINT_MAX) {   // wrap or initialize
+    uintptr_t init = MI_HINT_BASE;
+    #if (MI_SECURE>=1 || defined(NDEBUG))  // security: randomize start of aligned allocations unless in debug mode
+    mi_theap_t* const theap = _mi_theap_default();     // don't use `mi_theap_get_default()` as that can cause allocation recursively (issue #1267)
+    if (!mi_theap_is_initialized(theap)) return NULL;  // no hint as we lack randomness at this point 
+    const uintptr_t r = _mi_theap_random_next(theap);
+    init = init + ((MI_HINT_ALIGN * ((r>>17) & 0xFFFFF)) % MI_HINT_AREA);  // (randomly 20 bits)*4MiB == 0 to 4TiB
+    #endif
+    uintptr_t expected = hint + size;
+    mi_atomic_cas_strong_acq_rel(&aligned_base, &expected, init);
+    hint = mi_atomic_add_acq_rel(&aligned_base, size); // this may still give 0 or > MI_HINT_MAX but that is ok, it is a hint after all
+  }
+  mi_assert_internal(hint%MI_HINT_ALIGN == 0);
+  if (hint%try_alignment != 0) return NULL;
+  return (void*)hint;
+}
+#else
+void* _mi_os_get_aligned_hint(size_t try_alignment, size_t size) {
+   MI_UNUSED(try_alignment); MI_UNUSED(size);
+   return NULL;
+}
+#endif
+ 
 
 /* -----------------------------------------------------------
   Guard page allocation
@@ -192,7 +239,7 @@ static void mi_os_prim_free(void* addr, size_t size, size_t commit_size, mi_subp
   if (err != 0) {
     _mi_warning_message("unable to free OS memory (error: %d (0x%x), size: 0x%zx bytes, address: %p)\n", err, err, size, addr);
   }
-  if (subproc == NULL) { subproc = _mi_subproc(); } // from `mi_arenas_unsafe_destroy` we pass subproc_main explicitly as we can no longer use the heap pointer
+  if (subproc == NULL) { subproc = _mi_subproc(); } // from `mi_arenas_unsafe_destroy` we pass subproc_main explicitly as we can no longer use the theap pointer
   if (commit_size > 0) {
     mi_subproc_stat_decrease(subproc, committed, commit_size);
   }
@@ -290,8 +337,8 @@ static void* mi_os_prim_alloc_aligned(size_t size, size_t alignment, bool commit
   if (!(alignment >= _mi_os_page_size() && ((alignment & (alignment - 1)) == 0))) return NULL;
   size = _mi_align_up(size, _mi_os_page_size());
 
-  // try a direct allocation if the alignment is below the default, or if larger than 1/8 fraction of the size.
-  const bool try_direct_alloc = (alignment <= mi_os_mem_config.alloc_granularity || alignment > size/8);
+  // try a direct allocation if the alignment is below the default, or less than or equal to 1/4 fraction of the size.
+  const bool try_direct_alloc = (alignment <= mi_os_mem_config.alloc_granularity || alignment <= size/4);
 
   void* p = NULL;
   if (try_direct_alloc) {
@@ -469,9 +516,9 @@ static void* mi_os_page_align_areax(bool conservative, void* addr, size_t size, 
 
   // page align conservatively within the range, or liberally straddling pages outside the range
   void* start = (conservative ? _mi_align_up_ptr(addr, _mi_os_page_size())
-    : mi_align_down_ptr(addr, _mi_os_page_size()));
-  void* end = (conservative ? mi_align_down_ptr((uint8_t*)addr + size, _mi_os_page_size())
-    : _mi_align_up_ptr((uint8_t*)addr + size, _mi_os_page_size()));
+                              : _mi_align_down_ptr(addr, _mi_os_page_size()));
+  void* end   = (conservative ? _mi_align_down_ptr((uint8_t*)addr + size, _mi_os_page_size())
+                              : _mi_align_up_ptr((uint8_t*)addr + size, _mi_os_page_size()));
   ptrdiff_t diff = (uint8_t*)end - (uint8_t*)start;
   if (diff <= 0) return NULL;
 
@@ -663,10 +710,16 @@ static uint8_t* mi_os_claim_huge_pages(size_t pages, size_t* total_size) {
     if (start == 0) {
       // Initialize the start address after the 32TiB area
       start = ((uintptr_t)8 << 40);   // 8TiB virtual start address
-    #if (MI_SECURE>0 || MI_DEBUG==0)  // security: randomize start of huge pages unless in debug mode
-      uintptr_t r = _mi_heap_random_next(mi_prim_get_default_heap());
-      start = start + ((uintptr_t)MI_HUGE_OS_PAGE_SIZE * ((r>>17) & 0x0FFF));  // (randomly 12bits)*1GiB == between 0 to 4TiB
-    #endif
+      #if (MI_SECURE>0 || MI_DEBUG==0)  // security: randomize start of huge pages unless in debug mode
+      mi_theap_t* const theap = _mi_theap_default();     // don't use `mi_theap_get_default()` as that can cause allocation recursively (issue #1267)
+      if (mi_theap_is_initialized(theap)) {              // todo: or no hint at all if we lack randomness?
+        const uintptr_t r = _mi_theap_random_next(theap);
+        start = start + ((uintptr_t)MI_HUGE_OS_PAGE_SIZE * ((r>>17) & 0x0FFF));  // (randomly 12bits)*1GiB == between 0 to 4TiB
+      }
+      else {
+        _mi_warning_message("failed to randomize the start address of huge pages allocation (%zu bytes at %p)", size, start);
+      }
+      #endif
     }
     end = start + size;
   } while (!mi_atomic_cas_weak_acq_rel(&mi_huge_start, &huge_start, end));
@@ -739,16 +792,17 @@ void* _mi_os_alloc_huge_os_pages(size_t pages, int numa_node, mi_msecs_t max_mse
       }
     }
   }
-  mi_assert_internal(page*MI_HUGE_OS_PAGE_SIZE <= size);
+  const size_t allocated = page * MI_HUGE_OS_PAGE_SIZE;
+  mi_assert_internal(allocated <= size);
   if (pages_reserved != NULL) { *pages_reserved = page; }
-  if (psize != NULL) { *psize = page * MI_HUGE_OS_PAGE_SIZE; }
+  if (psize != NULL) { *psize = allocated; }
   if (page != 0) {
     mi_assert(start != NULL);
-    *memid = _mi_memid_create_os(start, size, true /* is committed */, all_zero, true /* is_large */);
+    *memid = _mi_memid_create_os(start, allocated, true /* is committed */, all_zero, true /* is_large */);
     memid->memkind = MI_MEM_OS_HUGE;
     mi_assert(memid->is_pinned);
     #ifdef MI_TRACK_ASAN
-    if (all_zero) { mi_track_mem_defined(start,size); }
+    if (all_zero) { mi_track_mem_defined(start,allocated); }
     #endif
   }
   return (page == 0 ? NULL : start);
@@ -786,7 +840,7 @@ int _mi_os_numa_node_count(void) {
                             else { count = n; }
     }
     mi_atomic_store_release(&mi_numa_node_count, count); // save it
-    _mi_verbose_message("using %zd numa regions\n", count);
+    if (count>1) { _mi_verbose_message("using %zd numa regions\n", count); }
   }
   mi_assert_internal(count > 0 && count <= INT_MAX);
   return (int)count;
