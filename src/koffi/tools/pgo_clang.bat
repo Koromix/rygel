@@ -3,7 +3,7 @@ setlocal
 
 cd "%~dp0\.."
 
-set PGO_DIR="%cd%\..\..\bin\Koffi\pgo"
+set PGO_DIR="%cd%\..\..\bin\Koffi\pgo\clang"
 
 rmdir /S /Q "%PGO_DIR%" 2>NUL
 mkdir "%PGO_DIR%"
