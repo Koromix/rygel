@@ -1025,7 +1025,7 @@ static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
             hint = ArrayHint::Array;
         } else if (str == "String" || str == "string") {
             if (ref->primitive != PrimitiveKind::Int8 && ref->primitive != PrimitiveKind::Int16) {
-                ThrowError<Napi::Error>(env, "Array hint 'String' can only be used with 8 and 16-bit signed integer types");
+                ThrowError<Napi::Error>(env, "Array hint 'String' can only be used with 8, 16 and 32-bit signed integer types");
                 return env.Null();
             }
 
