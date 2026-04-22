@@ -175,6 +175,26 @@ static FORCE_INLINE bool IsBuffer(napi_env env, napi_value value)
     return buffer;
 }
 
+static FORCE_INLINE napi_value GetReferenceValue(napi_env env, napi_ref ref)
+{
+    napi_value value;
+
+    napi_status status = napi_get_reference_value(env, ref, &value);
+    K_ASSERT(status == napi_ok);
+
+    return value;
+}
+
+static FORCE_INLINE uint32_t GetArrayLength(napi_env env, napi_value array)
+{
+    uint32_t length = 0;
+
+    napi_status status = napi_get_array_length(env, array, &length);
+    K_ASSERT(status == napi_ok);
+
+    return length;
+}
+
 template <typename T>
 static FORCE_INLINE bool TryNumber(napi_env env, napi_value value, T *out_value)
 {
@@ -339,10 +359,10 @@ static inline Napi::String MakeStringFromUTF32(Napi::Env env, const char32_t *pt
     { return MakeStringFromUTF32(env, ptr, NullTerminatedLength(ptr)); }
 
 Napi::Object DecodeObject(Napi::Env env, const uint8_t *origin, const TypeInfo *type);
-void DecodeObject(Napi::Object obj, const uint8_t *origin, const TypeInfo *type);
-Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *type, uint32_t len);
+void DecodeObject(Napi::Env env, napi_value obj, const uint8_t *origin, const TypeInfo *type);
 Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *type);
-void DecodeNormalArray(Napi::Array array, const uint8_t *origin, const TypeInfo *ref);
+Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *type, uint32_t len);
+void DecodeElements(Napi::Env env, napi_value array, const uint8_t *origin, const TypeInfo *ref, uint32_t len);
 void DecodeBuffer(Span<uint8_t> buffer, const uint8_t *origin, const TypeInfo *ref);
 
 Napi::Value Decode(Napi::Value value, Size offset, const TypeInfo *type, const Size *len = nullptr);

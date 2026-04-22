@@ -49,16 +49,6 @@ CallData::~CallData()
 }
 #endif
 
-static inline Napi::Value GetReferenceValue(Napi::Env env, napi_ref ref)
-{
-    napi_value value;
-
-    napi_status status = napi_get_reference_value(env, ref, &value);
-    K_ASSERT(status == napi_ok);
-
-    return Napi::Value(env, value);
-}
-
 void CallData::Finalize()
 {
     FinalizeFast();
@@ -66,15 +56,14 @@ void CallData::Finalize()
     if (out_arguments.len) {
         if (!env.IsExceptionPending()) {
             for (const OutArgument &out: out_arguments) {
-                Napi::Value value = GetReferenceValue(env, out.ref);
-                K_ASSERT(!value.IsEmpty());
+                napi_value value = GetReferenceValue(env, out.ref);
 
                 switch (out.kind) {
                     case OutArgument::Kind::Array: {
-                        K_ASSERT(value.IsArray());
+                        K_ASSERT(IsArray(env, value));
 
-                        Napi::Array array(env, value);
-                        DecodeNormalArray(array, out.ptr, out.type);
+                        uint32_t len = GetArrayLength(env, value);
+                        DecodeElements(env, value, out.ptr, out.type, len);
                     } break;
 
                     case OutArgument::Kind::Buffer: {
@@ -87,49 +76,43 @@ void CallData::Finalize()
                     } break;
 
                     case OutArgument::Kind::String: {
-                        Napi::Array array(env, value);
-
-                        K_ASSERT(array.IsArray());
-                        K_ASSERT(array.Length() == 1);
+                        K_ASSERT(IsArray(env, value));
+                        K_ASSERT(GetArrayLength(env, value) == 1);
 
                         Size len = strnlen((const char *)out.ptr, out.max_len);
                         Napi::String str = Napi::String::New(env, (const char *)out.ptr, len);
 
-                        array.Set(0u, str);
+                        napi_set_element(env, value, 0, str);
                     } break;
 
                     case OutArgument::Kind::String16: {
-                        Napi::Array array(env, value);
-
-                        K_ASSERT(array.IsArray());
-                        K_ASSERT(array.Length() == 1);
+                        K_ASSERT(IsArray(env, value));
+                        K_ASSERT(GetArrayLength(env, value) == 1);
 
                         Size len = NullTerminatedLength((const char16_t *)out.ptr, out.max_len);
                         Napi::String str = Napi::String::New(env, (const char16_t *)out.ptr, len);
 
-                        array.Set(0u, str);
+                        napi_set_element(env, value, 0, str);
                     } break;
 
                     case OutArgument::Kind::String32: {
-                        Napi::Array array(env, value);
-
-                        K_ASSERT(array.IsArray());
-                        K_ASSERT(array.Length() == 1);
+                        K_ASSERT(IsArray(env, value));
+                        K_ASSERT(GetArrayLength(env, value) == 1);
 
                         Size len = NullTerminatedLength((const char32_t *)out.ptr, out.max_len);
                         Napi::String str = MakeStringFromUTF32(env, (const char32_t *)out.ptr, len);
 
-                        array.Set(0u, str);
+                        napi_set_element(env, value, 0, str);
                     } break;
 
                     case OutArgument::Kind::Object: {
-                        Napi::Object obj = value.As<Napi::Object>();
-
                         if (CheckValueTag(env, value, &UnionClassMarker)) {
+                            Napi::Object obj = Napi::Object(env, value);
+
                             UnionClass *u = UnionClass::Unwrap(obj);
                             u->SetRaw(out.ptr);
                         } else {
-                            DecodeObject(obj, out.ptr, out.type);
+                            DecodeObject(env, value, out.ptr, out.type);
                         }
                     } break;
                 }
