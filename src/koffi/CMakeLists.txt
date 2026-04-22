@@ -151,6 +151,11 @@ if(UNIX AND NOT APPLE)
     target_link_options(koffi PRIVATE -Wl,--gc-sections)
 endif()
 
+# ---- Optimization ----
+
+option(PGO_GENERATE "Build with PGO profile generation" "")
+option(PGO_USE "Optimize with PGO profile" "")
+
 if(MSVC AND (CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo"))
     target_compile_options(koffi PRIVATE $<$<COMPILE_LANGUAGE:CXX>:/GS- /Ob2>)
 
@@ -183,11 +188,6 @@ if(NOT MSVC OR CMAKE_C_COMPILER_ID MATCHES "[Cc]lang")
         target_compile_options(koffi PRIVATE -fno-reorder-blocks-and-partition -Wno-maybe-musttail-local-addr)
     endif()
 endif()
-
-# ---- Optimization ----
-
-option(PGO_GENERATE "Build with PGO profile generation" "")
-option(PGO_USE "Optimize with PGO profile" "")
 
 if(PGO_GENERATE)
     set_target_properties(koffi PROPERTIES INTERPROCEDURAL_OPTIMIZATION ON)
@@ -227,4 +227,19 @@ elseif(UNIX)
         COMMAND $<$<CONFIG:release>:${CMAKE_STRIP}>
         ARGS $<TARGET_FILE:koffi>
     )
+endif()
+
+# ---- Debug ----
+
+option(ASAN "Build with ASan" OFF)
+option(UBSAN "Build with UBSan" OFF)
+
+if(ASAN)
+    target_compile_options(koffi PRIVATE -fsanitize=address)
+    target_link_options(koffi BEFORE PRIVATE -fsanitize=address)
+endif()
+
+if(UBSAN)
+    target_compile_options(koffi PRIVATE -fsanitize=undefined)
+    target_link_options(koffi BEFORE PRIVATE -fsanitize=undefined)
 endif()
