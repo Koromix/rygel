@@ -169,67 +169,41 @@ void *MemMem(const void *src, Size src_len, const void *needle, Size needle_len)
 // Memory / Allocator
 // ------------------------------------------------------------------------
 
-// This Allocator design should allow efficient and mostly-transparent use of memory
-// arenas and simple pointer-bumping allocator. This will be implemented later, for
-// now it's just a doubly linked list of malloc() memory blocks.
-
-class MallocAllocator: public Allocator {
-protected:
-    void *Allocate(Size size, unsigned int flags) override
-    {
-        void *ptr = malloc((size_t)size);
-        K_CRITICAL(ptr, "Failed to allocate %1 of memory", FmtMemSize(size));
-
-        if (flags & (int)AllocFlag::Zero) {
-            MemSet(ptr, 0, size);
-        }
-
-        return ptr;
-    }
-
-    void *Resize(void *ptr, Size old_size, Size new_size, unsigned int flags) override
-    {
-        if (!new_size) {
-            Release(ptr, old_size);
-            ptr = nullptr;
-        } else {
-            void *new_ptr = realloc(ptr, (size_t)new_size);
-            K_CRITICAL(new_ptr || !new_size, "Failed to resize %1 memory block to %2",
-                                              FmtMemSize(old_size), FmtMemSize(new_size));
-
-            if ((flags & (int)AllocFlag::Zero) && new_size > old_size) {
-                MemSet((uint8_t *)new_ptr + old_size, 0, new_size - old_size);
-            }
-
-            ptr = new_ptr;
-        }
-
-        return ptr;
-    }
-
-    void Release(const void *ptr, Size) override
-    {
-        free((void *)ptr);
-    }
-};
-
-class NullAllocator: public Allocator {
-protected:
-    void *Allocate(Size, unsigned int) override { K_UNREACHABLE(); }
-    void *Resize(void *, Size, Size, unsigned int) override { K_UNREACHABLE(); }
-    void Release(const void *, Size) override {}
-};
-
-Allocator *GetDefaultAllocator()
+void *MallocAllocator::Allocate(Size size, unsigned int flags)
 {
-    static Allocator *default_allocator = new K_DEFAULT_ALLOCATOR;
-    return default_allocator;
+    void *ptr = malloc((size_t)size);
+    K_CRITICAL(ptr, "Failed to allocate %1 of memory", FmtMemSize(size));
+
+    if (flags & (int)AllocFlag::Zero) {
+        MemSet(ptr, 0, size);
+    }
+
+    return ptr;
 }
 
-Allocator *GetNullAllocator()
+void *MallocAllocator::Resize(void *ptr, Size old_size, Size new_size, unsigned int flags)
 {
-    static Allocator *null_allocator = new NullAllocator;
-    return null_allocator;
+    if (!new_size) {
+        Release(ptr, old_size);
+        ptr = nullptr;
+    } else {
+        void *new_ptr = realloc(ptr, (size_t)new_size);
+        K_CRITICAL(new_ptr || !new_size, "Failed to resize %1 memory block to %2",
+                                          FmtMemSize(old_size), FmtMemSize(new_size));
+
+        if ((flags & (int)AllocFlag::Zero) && new_size > old_size) {
+            MemSet((uint8_t *)new_ptr + old_size, 0, new_size - old_size);
+        }
+
+        ptr = new_ptr;
+    }
+
+    return ptr;
+}
+
+void MallocAllocator::Release(const void *ptr, Size)
+{
+    free((void *)ptr);
 }
 
 LinkedAllocator& LinkedAllocator::operator=(LinkedAllocator &&other)
@@ -501,6 +475,18 @@ void BlockAllocator::GiveTo(LinkedAllocator *alloc)
     last_alloc = nullptr;
 
     allocator.GiveTo(alloc);
+}
+
+K_DEFAULT_ALLOCATOR *GetDefaultAllocator()
+{
+    static K_DEFAULT_ALLOCATOR *default_allocator = new K_DEFAULT_ALLOCATOR;
+    return default_allocator;
+}
+
+Allocator *GetNullAllocator()
+{
+    static Allocator *null_allocator = new NullAllocator;
+    return null_allocator;
 }
 
 #if defined(_WIN32)

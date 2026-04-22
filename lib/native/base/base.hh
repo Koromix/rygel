@@ -1106,7 +1106,92 @@ public:
     virtual void Release(const void *ptr, Size size) = 0;
 };
 
-Allocator *GetDefaultAllocator();
+class MallocAllocator final: public Allocator {
+public:
+    void *Allocate(Size size, unsigned int flags) override;
+    void *Resize(void *ptr, Size old_size, Size new_size, unsigned int flags) override;
+    void Release(const void *ptr, Size) override;
+};
+
+class NullAllocator: public Allocator {
+public:
+    void *Allocate(Size, unsigned int) override { K_UNREACHABLE(); }
+    void *Resize(void *, Size, Size, unsigned int) override { K_UNREACHABLE(); }
+    void Release(const void *, Size) override {}
+};
+
+class LinkedAllocator final: public Allocator {
+    struct Bucket {
+        Bucket *prev;
+        Bucket *next;
+        uint8_t data[];
+    };
+
+    Allocator *allocator;
+
+    Bucket *list = nullptr;
+
+public:
+    LinkedAllocator(Allocator *alloc = nullptr) : allocator(alloc) {}
+    ~LinkedAllocator() override { ReleaseAll(); }
+
+    LinkedAllocator(LinkedAllocator &&other) { *this = std::move(other); }
+    LinkedAllocator& operator=(LinkedAllocator &&other);
+
+    void ReleaseAll();
+    void ReleaseAllExcept(void *ptr);
+
+    void *Allocate(Size size, unsigned int flags = 0) override;
+    void *Resize(void *ptr, Size old_size, Size new_size, unsigned int flags = 0) override;
+    void Release(const void *ptr, Size size) override;
+
+    bool IsUsed() const { return list; }
+
+    void GiveTo(LinkedAllocator *alloc);
+
+private:
+    static Bucket *PointerToBucket(void *ptr);
+};
+
+class BlockAllocator final: public Allocator {
+    struct Bucket {
+        Size used;
+        uint8_t data[];
+    };
+
+    LinkedAllocator allocator;
+    Size block_size;
+
+    Bucket *current_bucket = nullptr;
+    uint8_t *last_alloc = nullptr;
+
+public:
+    BlockAllocator(Size block_size = K_BLOCK_ALLOCATOR_DEFAULT_SIZE)
+        : block_size(block_size)
+    {
+        K_ASSERT(block_size > 0);
+    }
+
+    BlockAllocator(BlockAllocator &&other) { *this = std::move(other); }
+    BlockAllocator& operator=(BlockAllocator &&other);
+
+    void Reset();
+    void ReleaseAll();
+
+    void *Allocate(Size size, unsigned int flags = 0) override;
+    void *Resize(void *ptr, Size old_size, Size new_size, unsigned int flags = 0) override;
+    void Release(const void *ptr, Size size) override;
+
+    bool IsUsed() const { return allocator.IsUsed(); }
+
+    void GiveTo(LinkedAllocator *alloc);
+    void GiveTo(BlockAllocator *alloc) { GiveTo(&alloc->allocator); }
+
+private:
+    bool AllocateSeparately(Size aligned_size) const { return aligned_size > block_size / 2; }
+};
+
+K_DEFAULT_ALLOCATOR *GetDefaultAllocator();
 Allocator *GetNullAllocator();
 
 static inline void *AllocateRaw(Allocator *alloc, Size size, unsigned int flags = 0)
@@ -1209,77 +1294,6 @@ void ReleaseSpan(Allocator *alloc, Span<T> mem)
 
     alloc->Release((void *)mem.ptr, size);
 }
-
-class LinkedAllocator final: public Allocator {
-    struct Bucket {
-        Bucket *prev;
-        Bucket *next;
-        uint8_t data[];
-    };
-
-    Allocator *allocator;
-
-    Bucket *list = nullptr;
-
-public:
-    LinkedAllocator(Allocator *alloc = nullptr) : allocator(alloc) {}
-    ~LinkedAllocator() override { ReleaseAll(); }
-
-    LinkedAllocator(LinkedAllocator &&other) { *this = std::move(other); }
-    LinkedAllocator& operator=(LinkedAllocator &&other);
-
-    void ReleaseAll();
-    void ReleaseAllExcept(void *ptr);
-
-    void *Allocate(Size size, unsigned int flags = 0) override;
-    void *Resize(void *ptr, Size old_size, Size new_size, unsigned int flags = 0) override;
-    void Release(const void *ptr, Size size) override;
-
-    bool IsUsed() const { return list; }
-
-    void GiveTo(LinkedAllocator *alloc);
-
-private:
-    static Bucket *PointerToBucket(void *ptr);
-};
-
-class BlockAllocator: public Allocator {
-    struct Bucket {
-        Size used;
-        uint8_t data[];
-    };
-
-    LinkedAllocator allocator;
-    Size block_size;
-
-    Bucket *current_bucket = nullptr;
-    uint8_t *last_alloc = nullptr;
-
-public:
-    BlockAllocator(Size block_size = K_BLOCK_ALLOCATOR_DEFAULT_SIZE)
-        : block_size(block_size)
-    {
-        K_ASSERT(block_size > 0);
-    }
-
-    BlockAllocator(BlockAllocator &&other) { *this = std::move(other); }
-    BlockAllocator& operator=(BlockAllocator &&other);
-
-    void Reset();
-    void ReleaseAll();
-
-    void *Allocate(Size size, unsigned int flags = 0) override;
-    void *Resize(void *ptr, Size old_size, Size new_size, unsigned int flags = 0) override;
-    void Release(const void *ptr, Size size) override;
-
-    bool IsUsed() const { return allocator.IsUsed(); }
-
-    void GiveTo(LinkedAllocator *alloc);
-    void GiveTo(BlockAllocator *alloc) { GiveTo(&alloc->allocator); }
-
-private:
-    bool AllocateSeparately(Size aligned_size) const { return aligned_size > block_size / 2; }
-};
 
 void *AllocateSafe(Size len);
 void ReleaseSafe(void *ptr, Size len);

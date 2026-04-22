@@ -231,7 +231,7 @@ public:
     http_IO(http_Daemon *daemon) : daemon(daemon) { Rearm(-1); }
 
     const http_RequestInfo &Request() const { return request; }
-    K::BlockAllocator *Allocator() { return &allocator; }
+    BlockAllocator *Allocator() { return &allocator; }
 
     bool NegociateEncoding(CompressionType *out_encoding);
     bool NegociateEncoding(CompressionType preferred, CompressionType *out_encoding);
