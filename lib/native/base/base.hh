@@ -1090,8 +1090,7 @@ static constexpr inline Strider<T> MakeStrider(T (&arr)[N])
 }
 
 enum class AllocFlag {
-    Zero = 1,
-    Resizable = 2
+    Zero = 1
 };
 
 class Allocator {
