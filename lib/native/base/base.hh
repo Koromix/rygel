@@ -1089,10 +1089,6 @@ static constexpr inline Strider<T> MakeStrider(T (&arr)[N])
     return Strider<T>(arr, K_SIZE(T));
 }
 
-enum class AllocFlag {
-    Zero = 1
-};
-
 class Allocator {
     K_DELETE_COPY(Allocator)
 
@@ -1100,27 +1096,31 @@ public:
     Allocator() = default;
     virtual ~Allocator() = default;
 
-    virtual void *Allocate(Size size, unsigned int flags = 0) = 0;
-    virtual void *Resize(void *ptr, Size old_size, Size new_size, unsigned int flags = 0) = 0;
+    virtual void *Allocate(Size size) = 0;
+    virtual void *Resize(void *ptr, Size old_size, Size new_size) = 0;
     virtual void Release(const void *ptr, Size size) = 0;
 };
 
 class MallocAllocator final: public Allocator {
 public:
-    void *Allocate(Size size, unsigned int flags) override;
-    void *Resize(void *ptr, Size old_size, Size new_size, unsigned int flags) override;
+    void *Allocate(Size size) override;
+    void *Resize(void *ptr, Size old_size, Size new_size) override;
     void Release(const void *ptr, Size) override;
 };
 
 class NullAllocator: public Allocator {
 public:
-    void *Allocate(Size, unsigned int) override { K_UNREACHABLE(); }
-    void *Resize(void *, Size, Size, unsigned int) override { K_UNREACHABLE(); }
+    void *Allocate(Size) override { K_UNREACHABLE(); }
+    void *Resize(void *, Size, Size) override { K_UNREACHABLE(); }
     void Release(const void *, Size) override {}
 };
 
+K_DEFAULT_ALLOCATOR *GetDefaultAllocator();
+Allocator *GetNullAllocator();
+
 class LinkedAllocator final: public Allocator {
     struct Bucket {
+        Size size;
         Bucket *prev;
         Bucket *next;
         uint8_t data[];
@@ -1131,7 +1131,7 @@ class LinkedAllocator final: public Allocator {
     Bucket *list = nullptr;
 
 public:
-    LinkedAllocator(Allocator *alloc = nullptr) : allocator(alloc) {}
+    LinkedAllocator(Allocator *alloc = nullptr) : allocator(alloc ? alloc : GetDefaultAllocator()) {}
     ~LinkedAllocator() override { ReleaseAll(); }
 
     LinkedAllocator(LinkedAllocator &&other) { *this = std::move(other); }
@@ -1140,8 +1140,8 @@ public:
     void ReleaseAll();
     void ReleaseAllExcept(void *ptr);
 
-    void *Allocate(Size size, unsigned int flags = 0) override;
-    void *Resize(void *ptr, Size old_size, Size new_size, unsigned int flags = 0) override;
+    void *Allocate(Size size) override;
+    void *Resize(void *ptr, Size old_size, Size new_size) override;
     void Release(const void *ptr, Size size) override;
 
     bool IsUsed() const { return list; }
@@ -1165,11 +1165,13 @@ class BlockAllocator final: public Allocator {
     uint8_t *last_alloc = nullptr;
 
 public:
-    BlockAllocator(Size block_size = K_BLOCK_ALLOCATOR_DEFAULT_SIZE)
-        : block_size(block_size)
+    BlockAllocator(Allocator *alloc, Size block_size = K_BLOCK_ALLOCATOR_DEFAULT_SIZE)
+        : allocator(alloc), block_size(block_size)
     {
         K_ASSERT(block_size > 0);
     }
+    BlockAllocator(Size block_size = K_BLOCK_ALLOCATOR_DEFAULT_SIZE)
+        : BlockAllocator(nullptr, block_size) {}
 
     BlockAllocator(BlockAllocator &&other) { *this = std::move(other); }
     BlockAllocator& operator=(BlockAllocator &&other);
@@ -1177,8 +1179,8 @@ public:
     void Reset();
     void ReleaseAll();
 
-    void *Allocate(Size size, unsigned int flags = 0) override;
-    void *Resize(void *ptr, Size old_size, Size new_size, unsigned int flags = 0) override;
+    void *Allocate(Size size) override;
+    void *Resize(void *ptr, Size old_size, Size new_size) override;
     void Release(const void *ptr, Size size) override;
 
     bool IsUsed() const { return allocator.IsUsed(); }
@@ -1190,31 +1192,37 @@ private:
     bool AllocateSeparately(Size aligned_size) const { return aligned_size > block_size / 2; }
 };
 
-K_DEFAULT_ALLOCATOR *GetDefaultAllocator();
-Allocator *GetNullAllocator();
+enum class AllocFlag {
+    Zero = 1
+};
 
 static inline void *AllocateRaw(Allocator *alloc, Size size, unsigned int flags = 0)
 {
     K_ASSERT(size >= 0);
 
-    if (!alloc) {
-        alloc = GetDefaultAllocator();
+    alloc = alloc ? alloc : GetDefaultAllocator();
+
+    void *ptr = alloc->Allocate(size);
+
+    if (flags & (int)AllocFlag::Zero) {
+        MemSet(ptr, 0, size);
     }
 
-    void *ptr = alloc->Allocate(size, flags);
     return ptr;
 }
 
 template <typename T>
 T *AllocateOne(Allocator *alloc, unsigned int flags = 0)
 {
-    if (!alloc) {
-        alloc = GetDefaultAllocator();
-    }
+    alloc = alloc ? alloc : GetDefaultAllocator();
 
     Size size = K_SIZE(T);
+    T *ptr = (T *)alloc->Allocate(size);
 
-    T *ptr = (T *)alloc->Allocate(size, flags);
+    if (flags & (int)AllocFlag::Zero) {
+        MemSet(ptr, 0, size);
+    }
+
     return ptr;
 }
 
@@ -1222,14 +1230,17 @@ template <typename T>
 Span<T> AllocateSpan(Allocator *alloc, Size len, unsigned int flags = 0)
 {
     K_ASSERT(len >= 0);
+    K_ASSERT(len <= K_SIZE_MAX / K_SIZE(T));
 
-    if (!alloc) {
-        alloc = GetDefaultAllocator();
-    }
+    alloc = alloc ? alloc : GetDefaultAllocator();
 
     Size size = len * K_SIZE(T);
+    T *ptr = (T *)alloc->Allocate(size);
 
-    T *ptr = (T *)alloc->Allocate(size, flags);
+    if (flags & (int)AllocFlag::Zero) {
+        MemSet(ptr, 0, size);
+    }
+
     return MakeSpan(ptr, len);
 }
 
@@ -1238,11 +1249,14 @@ static inline void *ResizeRaw(Allocator *alloc, void *ptr, Size old_size, Size n
 {
     K_ASSERT(new_size >= 0);
 
-    if (!alloc) {
-        alloc = GetDefaultAllocator();
+    alloc = alloc ? alloc : GetDefaultAllocator();
+
+    ptr = alloc->Resize(ptr, old_size, new_size);
+
+    if ((flags & (int)AllocFlag::Zero) && new_size > old_size) {
+        MemSet((uint8_t *)ptr + old_size, 0, new_size - old_size);
     }
 
-    ptr = alloc->Resize(ptr, old_size, new_size, flags);
     return ptr;
 }
 
@@ -1251,43 +1265,39 @@ Span<T> ResizeSpan(Allocator *alloc, Span<T> mem, Size new_len,
                    unsigned int flags = 0)
 {
     K_ASSERT(new_len >= 0);
+    K_ASSERT(new_len <= K_SIZE_MAX / K_SIZE(T));
 
-    if (!alloc) {
-        alloc = GetDefaultAllocator();
-    }
+    alloc = alloc ? alloc : GetDefaultAllocator();
 
     Size old_size = mem.len * K_SIZE(T);
     Size new_size = new_len * K_SIZE(T);
 
-    mem.ptr = (T *)alloc->Resize(mem.ptr, old_size, new_size, flags);
+    mem.ptr = (T *)alloc->Resize(mem.ptr, old_size, new_size);
+
+    if ((flags & (int)AllocFlag::Zero) && new_size > old_size) {
+        MemSet((uint8_t *)mem.ptr + old_size, 0, new_size - old_size);
+    }
+
     return MakeSpan(mem.ptr, new_len);
 }
 
 static inline void ReleaseRaw(Allocator *alloc, const void *ptr, Size size)
 {
-    if (!alloc) {
-        alloc = GetDefaultAllocator();
-    }
-
+    alloc = alloc ? alloc : GetDefaultAllocator();
     alloc->Release(ptr, size);
 }
 
 template<typename T>
 void ReleaseOne(Allocator *alloc, T *ptr)
 {
-    if (!alloc) {
-        alloc = GetDefaultAllocator();
-    }
-
+    alloc = alloc ? alloc : GetDefaultAllocator();
     alloc->Release((void *)ptr, K_SIZE(T));
 }
 
 template<typename T>
 void ReleaseSpan(Allocator *alloc, Span<T> mem)
 {
-    if (!alloc) {
-        alloc = GetDefaultAllocator();
-    }
+    alloc = alloc ? alloc : GetDefaultAllocator();
 
     Size size = mem.len * K_SIZE(T);
 

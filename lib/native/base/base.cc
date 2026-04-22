@@ -172,19 +172,15 @@ void *MemMem(const void *src, Size src_len, const void *needle, Size needle_len)
 static K_DEFAULT_ALLOCATOR default_allocator;
 static NullAllocator null_allocator;
 
-void *MallocAllocator::Allocate(Size size, unsigned int flags)
+void *MallocAllocator::Allocate(Size size)
 {
     void *ptr = malloc((size_t)size);
     K_CRITICAL(ptr, "Failed to allocate %1 of memory", FmtMemSize(size));
 
-    if (flags & (int)AllocFlag::Zero) {
-        MemSet(ptr, 0, size);
-    }
-
     return ptr;
 }
 
-void *MallocAllocator::Resize(void *ptr, Size old_size, Size new_size, unsigned int flags)
+void *MallocAllocator::Resize(void *ptr, Size old_size, Size new_size)
 {
     if (!new_size) {
         Release(ptr, old_size);
@@ -193,10 +189,6 @@ void *MallocAllocator::Resize(void *ptr, Size old_size, Size new_size, unsigned 
         void *new_ptr = realloc(ptr, (size_t)new_size);
         K_CRITICAL(new_ptr || !new_size, "Failed to resize %1 memory block to %2",
                                           FmtMemSize(old_size), FmtMemSize(new_size));
-
-        if ((flags & (int)AllocFlag::Zero) && new_size > old_size) {
-            MemSet((uint8_t *)new_ptr + old_size, 0, new_size - old_size);
-        }
 
         ptr = new_ptr;
     }
@@ -207,6 +199,16 @@ void *MallocAllocator::Resize(void *ptr, Size old_size, Size new_size, unsigned 
 void MallocAllocator::Release(const void *ptr, Size)
 {
     free((void *)ptr);
+}
+
+K_DEFAULT_ALLOCATOR *GetDefaultAllocator()
+{
+    return &default_allocator;
+}
+
+Allocator *GetNullAllocator()
+{
+    return &null_allocator;
 }
 
 LinkedAllocator& LinkedAllocator::operator=(LinkedAllocator &&other)
@@ -227,7 +229,7 @@ void LinkedAllocator::ReleaseAll()
 
     do {
         Bucket *next = bucket->next;
-        ReleaseRaw(allocator, bucket, -1);
+        allocator->Release(bucket, bucket->size);
         bucket = next;
     } while (bucket != list);
 
@@ -243,7 +245,7 @@ void LinkedAllocator::ReleaseAllExcept(void *ptr)
 
     while (bucket != keep) {
         Bucket *next = bucket->next;
-        ReleaseRaw(allocator, bucket, -1);
+        allocator->Release(bucket, bucket->size);
         bucket = next;
     }
 
@@ -253,9 +255,12 @@ void LinkedAllocator::ReleaseAllExcept(void *ptr)
     keep->next = keep;
 }
 
-void *LinkedAllocator::Allocate(Size size, unsigned int flags)
+void *LinkedAllocator::Allocate(Size size)
 {
-    Bucket *bucket = (Bucket *)AllocateRaw(allocator, K_SIZE(Bucket) + size, flags);
+    K_ASSERT(size >= 0 && size <= K_SIZE_MAX - K_SIZE(Bucket));
+
+    Bucket *bucket = (Bucket *)allocator->Allocate(K_SIZE(Bucket) + size);
+    bucket->size = K_SIZE(Bucket) + size;
 
     bucket->prev = bucket;
     bucket->next = bucket;
@@ -270,10 +275,10 @@ void *LinkedAllocator::Allocate(Size size, unsigned int flags)
     return (void *)bucket->data;
 }
 
-void *LinkedAllocator::Resize(void *ptr, Size old_size, Size new_size, unsigned int flags)
+void *LinkedAllocator::Resize(void *ptr, Size old_size, Size new_size)
 {
     if (!ptr) {
-        ptr = Allocate(new_size, flags);
+        ptr = Allocate(new_size);
     } else if (!new_size) {
         Release(ptr, old_size);
         ptr = nullptr;
@@ -281,8 +286,12 @@ void *LinkedAllocator::Resize(void *ptr, Size old_size, Size new_size, unsigned 
         Bucket *bucket = PointerToBucket(ptr);
         bool single = (bucket->next == bucket);
 
-        bucket = (Bucket *)ResizeRaw(allocator, bucket, K_SIZE(Bucket) + old_size,
-                                                        K_SIZE(Bucket) + new_size, flags);
+        // Sanity check
+        K_ASSERT(K_SIZE(Bucket) + bucket->size == old_size);
+
+        bucket = (Bucket *)allocator->Resize(bucket, K_SIZE(Bucket) + old_size,
+                                                     K_SIZE(Bucket) + new_size);
+        bucket->size = K_SIZE(Bucket) + new_size;
 
         list = bucket;
 
@@ -308,12 +317,15 @@ void LinkedAllocator::Release(const void *ptr, Size size)
     Bucket *bucket = PointerToBucket((void *)ptr);
     bool single = (bucket->next == bucket);
 
+    // Sanity check
+    K_ASSERT(K_SIZE(Bucket) + bucket->size == size);
+
     list = single ? nullptr : bucket->next;
 
     bucket->prev->next = bucket->next;
     bucket->next->prev = bucket->prev;
 
-    ReleaseRaw(allocator, bucket, K_SIZE(Bucket) + size);
+    allocator->Release(bucket, size);
 }
 
 void LinkedAllocator::GiveTo(LinkedAllocator *alloc)
@@ -373,7 +385,7 @@ void BlockAllocator::ReleaseAll()
     allocator.ReleaseAll();
 }
 
-void *BlockAllocator::Allocate(Size size, unsigned int flags)
+void *BlockAllocator::Allocate(Size size)
 {
     K_ASSERT(size >= 0);
 
@@ -381,28 +393,23 @@ void *BlockAllocator::Allocate(Size size, unsigned int flags)
     Size aligned_size = AlignLen(size, 8);
 
     if (AllocateSeparately(aligned_size)) {
-        uint8_t *ptr = (uint8_t *)AllocateRaw(&allocator, size, flags);
+        uint8_t *ptr = (uint8_t *)allocator.Allocate(size);
         return ptr;
     } else {
         if (!current_bucket || (current_bucket->used + aligned_size) > block_size) {
-            current_bucket = (Bucket *)AllocateRaw(&allocator, K_SIZE(Bucket) + block_size,
-                                                   flags & ~(int)AllocFlag::Zero);
+            current_bucket = (Bucket *)allocator.Allocate(K_SIZE(Bucket) + block_size);
             current_bucket->used = 0;
         }
 
         uint8_t *ptr = current_bucket->data + current_bucket->used;
         current_bucket->used += aligned_size;
 
-        if (flags & (int)AllocFlag::Zero) {
-            MemSet(ptr, 0, size);
-        }
-
         last_alloc = ptr;
         return ptr;
     }
 }
 
-void *BlockAllocator::Resize(void *ptr, Size old_size, Size new_size, unsigned int flags)
+void *BlockAllocator::Resize(void *ptr, Size old_size, Size new_size)
 {
     K_ASSERT(old_size >= 0);
     K_ASSERT(new_size >= 0);
@@ -424,24 +431,13 @@ void *BlockAllocator::Resize(void *ptr, Size old_size, Size new_size, unsigned i
                 (current_bucket->used + aligned_delta) <= block_size &&
                 !AllocateSeparately(aligned_new_size)) {
             current_bucket->used += aligned_delta;
-
-            if ((flags & (int)AllocFlag::Zero) && new_size > old_size) {
-                MemSet((uint8_t *)ptr + old_size, 0, new_size - old_size);
-            }
         } else if (AllocateSeparately(aligned_old_size)) {
-            ptr = ResizeRaw(&allocator, ptr, old_size, new_size, flags);
+            ptr = allocator.Resize(ptr, old_size, new_size);
         } else {
-            void *new_ptr = Allocate(new_size, flags & ~(int)AllocFlag::Zero);
+            void *new_ptr = Allocate(new_size);
 
-            if (new_size > old_size) {
-                MemCpy(new_ptr, ptr, old_size);
-
-                if (flags & (int)AllocFlag::Zero) {
-                    MemSet((uint8_t *)ptr + old_size, 0, new_size - old_size);
-                }
-            } else {
-                MemCpy(new_ptr, ptr, new_size);
-            }
+            Size copy = std::min(old_size, new_size);
+            MemCpy(new_ptr, ptr, copy);
 
             ptr = new_ptr;
         }
@@ -461,13 +457,13 @@ void BlockAllocator::Release(const void *ptr, Size size)
             current_bucket->used -= aligned_size;
 
             if (!current_bucket->used) {
-                ReleaseRaw(&allocator, current_bucket, K_SIZE(Bucket) + block_size);
+                allocator.Release(current_bucket, K_SIZE(Bucket) + block_size);
                 current_bucket = nullptr;
             }
 
             last_alloc = nullptr;
         } else if (AllocateSeparately(aligned_size)) {
-            ReleaseRaw(&allocator, ptr, size);
+            allocator.Release(ptr, size);
         }
     }
 }
@@ -478,16 +474,6 @@ void BlockAllocator::GiveTo(LinkedAllocator *alloc)
     last_alloc = nullptr;
 
     allocator.GiveTo(alloc);
-}
-
-K_DEFAULT_ALLOCATOR *GetDefaultAllocator()
-{
-    return &default_allocator;
-}
-
-Allocator *GetNullAllocator()
-{
-    return &null_allocator;
 }
 
 #if defined(_WIN32)
