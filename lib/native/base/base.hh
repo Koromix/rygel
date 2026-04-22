@@ -1112,6 +1112,10 @@ class NullAllocator: public Allocator {
 public:
     void *Allocate(Size) override { K_UNREACHABLE(); }
     void *Resize(void *, Size, Size) override { K_UNREACHABLE(); }
+
+    // This is the only useful method, switch to the null allocator (call GetNullAllocator())
+    // when you want to keep container memory around when it is destroyed. This can be used
+    // to leak HeapArray memory without resetting it, for example.
     void Release(const void *, Size) override {}
 };
 
