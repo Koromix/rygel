@@ -49,7 +49,7 @@ struct PE_NT_HEADERS {
     // ... OptionalHeader;
 };
 
-#if _WIN64
+#if defined(_WIN64)
 
 struct TEB {
     void *ExceptionList;
@@ -107,17 +107,34 @@ static inline TEB *GetTEB()
     return teb;
 }
 
-#define ADJUST_TEB(Teb, Low, High) \
-    K_DEFER_C(base = (Teb)->StackBase, \
-              limit = (Teb)->StackLimit, \
-              dealloc = (Teb)->DeallocationStack) { \
-        (Teb)->StackBase = base; \
-        (Teb)->StackLimit = limit; \
-        (Teb)->DeallocationStack = dealloc; \
-    }; \
-    (Teb)->StackBase = (High); \
-    (Teb)->StackLimit = (Low); \
-    (Teb)->DeallocationStack = (Low);
+#if defined(_WIN64)
+    #define ADJUST_TEB(Teb, Low, High) \
+        K_DEFER_C(base = (Teb)->StackBase, \
+                  limit = (Teb)->StackLimit, \
+                  dealloc = (Teb)->DeallocationStack) { \
+            (Teb)->StackBase = base; \
+            (Teb)->StackLimit = limit; \
+            (Teb)->DeallocationStack = dealloc; \
+        }; \
+        (Teb)->StackBase = (High); \
+        (Teb)->StackLimit = (Low); \
+        (Teb)->DeallocationStack = (Low);
+#else
+    #define ADJUST_TEB(Teb, Low, High) \
+        K_DEFER_C(base = (Teb)->StackBase, \
+                  limit = (Teb)->StackLimit, \
+                  dealloc = (Teb)->DeallocationStack, \
+                  seh = (Teb)->ExceptionList) { \
+            (Teb)->StackBase = base; \
+            (Teb)->StackLimit = limit; \
+            (Teb)->DeallocationStack = dealloc; \
+            (Teb)->ExceptionList = seh; \
+        }; \
+        (Teb)->StackBase = (High); \
+        (Teb)->StackLimit = (Low); \
+        (Teb)->DeallocationStack = (Low); \
+        (Teb)->ExceptionList = (High) - K_SIZE(SehFrame);
+#endif
 
 extern const HashMap<int, const char *> WindowsMachineNames;
 
