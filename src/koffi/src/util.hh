@@ -34,9 +34,9 @@ namespace K {
 
 extern const napi_type_tag TypeInfoMarker;
 extern const napi_type_tag CastMarker;
-extern const napi_type_tag MagicUnionMarker;
+extern const napi_type_tag UnionClassMarker;
 
-class MagicUnion: public Napi::ObjectWrap<MagicUnion> {
+class UnionClass: public Napi::ObjectWrap<UnionClass> {
     InstanceData *instance;
     const TypeInfo *type;
 
@@ -47,7 +47,7 @@ class MagicUnion: public Napi::ObjectWrap<MagicUnion> {
 public:
     static Napi::Function InitClass(Napi::Env env, const TypeInfo *type);
 
-    MagicUnion(const Napi::CallbackInfo &info);
+    UnionClass(const Napi::CallbackInfo &info);
 
     void Finalize(Napi::BasicEnv env) override;
 

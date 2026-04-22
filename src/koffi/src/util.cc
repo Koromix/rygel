@@ -13,22 +13,22 @@ namespace K {
 // Value does not matter, the tag system uses memory addresses
 const napi_type_tag TypeInfoMarker = { 0x1cc449675b294374, 0xbb13a50e97dcb017 };
 const napi_type_tag CastMarker = { 0x77f459614a0a412f, 0x80b3dda1341dc8df };
-const napi_type_tag MagicUnionMarker = { 0x5eaf2245526a4c7d, 0x8c86c9ee2b96ffc8 };
+const napi_type_tag UnionClassMarker = { 0x5eaf2245526a4c7d, 0x8c86c9ee2b96ffc8 };
 
-Napi::Function MagicUnion::InitClass(Napi::Env env, const TypeInfo *type)
+Napi::Function UnionClass::InitClass(Napi::Env env, const TypeInfo *type)
 {
     K_ASSERT(type->primitive == PrimitiveKind::Union);
 
     // node-addon-api wants std::vector
-    std::vector<Napi::ClassPropertyDescriptor<MagicUnion>> properties;
+    std::vector<Napi::ClassPropertyDescriptor<UnionClass>> properties;
     properties.reserve(type->members.len);
 
     for (Size i = 0; i < type->members.len; i++) {
         const RecordMember &member = type->members[i];
 
         napi_property_attributes attr = (napi_property_attributes)(napi_writable | napi_enumerable);
-        Napi::ClassPropertyDescriptor<MagicUnion> prop = InstanceAccessor(member.name, &MagicUnion::Getter,
-                                                                          &MagicUnion::Setter, attr, (void *)i);
+        Napi::ClassPropertyDescriptor<UnionClass> prop = InstanceAccessor(member.name, &UnionClass::Getter,
+                                                                          &UnionClass::Setter, attr, (void *)i);
 
         properties.push_back(prop);
     }
@@ -37,14 +37,14 @@ Napi::Function MagicUnion::InitClass(Napi::Env env, const TypeInfo *type)
     return constructor;
 }
 
-MagicUnion::MagicUnion(const Napi::CallbackInfo &info)
-    : Napi::ObjectWrap<MagicUnion>(info), type((const TypeInfo *)info.Data())
+UnionClass::UnionClass(const Napi::CallbackInfo &info)
+    : Napi::ObjectWrap<UnionClass>(info), type((const TypeInfo *)info.Data())
 {
     Napi::Env env = info.Env();
     instance = env.GetInstanceData<InstanceData>();
 }
 
-void MagicUnion::Finalize(Napi::BasicEnv env)
+void UnionClass::Finalize(Napi::BasicEnv env)
 {
     napi_ref ref = (napi_ref)*this;
 
@@ -60,7 +60,7 @@ void MagicUnion::Finalize(Napi::BasicEnv env)
     SuppressDestruct();
 }
 
-void MagicUnion::SetRaw(const uint8_t *ptr)
+void UnionClass::SetRaw(const uint8_t *ptr)
 {
     raw.RemoveFrom(0);
     raw.Append(MakeSpan(ptr, type->size));
@@ -69,7 +69,7 @@ void MagicUnion::SetRaw(const uint8_t *ptr)
     active_idx = -1;
 }
 
-Napi::Value MagicUnion::Getter(const Napi::CallbackInfo &info)
+Napi::Value UnionClass::Getter(const Napi::CallbackInfo &info)
 {
     Size idx = (Size)info.Data();
     const RecordMember &member = type->members[idx];
@@ -96,7 +96,7 @@ Napi::Value MagicUnion::Getter(const Napi::CallbackInfo &info)
     return value;
 }
 
-void MagicUnion::Setter(const Napi::CallbackInfo &info, const Napi::Value &value)
+void UnionClass::Setter(const Napi::CallbackInfo &info, const Napi::Value &value)
 {
     Size idx = (Size)info.Data();
 
@@ -681,9 +681,9 @@ Napi::Object DecodeObject(Napi::Env env, const uint8_t *origin, const TypeInfo *
     // We can't decode unions because we don't know which member is valid
     if (type->primitive == PrimitiveKind::Union) {
         Napi::Object wrapper = type->construct.New({}).As<Napi::Object>();
-        SetValueTag(env, wrapper, &MagicUnionMarker);
+        SetValueTag(env, wrapper, &UnionClassMarker);
 
-        MagicUnion *u = MagicUnion::Unwrap(wrapper);
+        UnionClass *u = UnionClass::Unwrap(wrapper);
         u->SetRaw(origin);
 
         return wrapper;

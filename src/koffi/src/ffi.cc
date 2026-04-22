@@ -591,7 +591,7 @@ static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
     err_guard.Disable();
 
     // Union constructor
-    Napi::Function constructor = MagicUnion::InitClass(env, type);
+    Napi::Function constructor = UnionClass::InitClass(env, type);
     type->construct.Reset(constructor, 1);
 
     if (replace) {
@@ -624,7 +624,7 @@ Napi::Value InstantiateUnion(const Napi::CallbackInfo &info)
     }
 
     Napi::Object wrapper = type->construct.New({}).As<Napi::Object>();
-    SetValueTag(env, wrapper, &MagicUnionMarker);
+    SetValueTag(env, wrapper, &UnionClassMarker);
 
     return wrapper;
 }
