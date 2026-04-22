@@ -984,7 +984,7 @@ Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *ty
 
 Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *type, uint32_t len)
 {
-    K_ASSERT(type->primitive == PrimitiveKind::Array);
+    K_ASSERT(type->primitive == PrimitiveKind::Array || type->primitive == PrimitiveKind::Pointer);
 
     const TypeInfo *ref = type->ref.type;
 
