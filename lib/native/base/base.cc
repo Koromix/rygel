@@ -169,6 +169,9 @@ void *MemMem(const void *src, Size src_len, const void *needle, Size needle_len)
 // Memory / Allocator
 // ------------------------------------------------------------------------
 
+static K_DEFAULT_ALLOCATOR default_allocator;
+static NullAllocator null_allocator;
+
 void *MallocAllocator::Allocate(Size size, unsigned int flags)
 {
     void *ptr = malloc((size_t)size);
@@ -479,14 +482,12 @@ void BlockAllocator::GiveTo(LinkedAllocator *alloc)
 
 K_DEFAULT_ALLOCATOR *GetDefaultAllocator()
 {
-    static K_DEFAULT_ALLOCATOR *default_allocator = new K_DEFAULT_ALLOCATOR;
-    return default_allocator;
+    return &default_allocator;
 }
 
 Allocator *GetNullAllocator()
 {
-    static Allocator *null_allocator = new NullAllocator;
-    return null_allocator;
+    return &null_allocator;
 }
 
 #if defined(_WIN32)
