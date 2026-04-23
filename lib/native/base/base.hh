@@ -1124,7 +1124,9 @@ Allocator *GetNullAllocator();
 
 class LinkedAllocator final: public Allocator {
     struct Bucket {
+#if defined(K_DEBUG)
         Size size;
+#endif
         Bucket *prev;
         Bucket *next;
         alignas(16) uint8_t data[];

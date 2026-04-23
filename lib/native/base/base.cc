@@ -229,7 +229,7 @@ void LinkedAllocator::ReleaseAll()
 
     do {
         Bucket *next = bucket->next;
-        allocator->Release(bucket, bucket->size);
+        allocator->Release(bucket, -1);
         bucket = next;
     } while (bucket != list);
 
@@ -245,7 +245,7 @@ void LinkedAllocator::ReleaseAllExcept(void *ptr)
 
     while (bucket != keep) {
         Bucket *next = bucket->next;
-        allocator->Release(bucket, bucket->size);
+        allocator->Release(bucket, -1);
         bucket = next;
     }
 
@@ -260,7 +260,10 @@ void *LinkedAllocator::Allocate(Size size)
     K_ASSERT(size >= 0 && size <= K_SIZE_MAX - K_SIZE(Bucket));
 
     Bucket *bucket = (Bucket *)allocator->Allocate(K_SIZE(Bucket) + size);
-    bucket->size = K_SIZE(Bucket) + size;
+
+#if defined(K_DEBUG)
+    bucket->size = size;
+#endif
 
     bucket->prev = bucket;
     bucket->next = bucket;
@@ -286,12 +289,13 @@ void *LinkedAllocator::Resize(void *ptr, Size old_size, Size new_size)
         Bucket *bucket = PointerToBucket(ptr);
         bool single = (bucket->next == bucket);
 
-        // Sanity check
-        K_ASSERT(bucket->size == K_SIZE(Bucket) + old_size);
-
         bucket = (Bucket *)allocator->Resize(bucket, K_SIZE(Bucket) + old_size,
                                                      K_SIZE(Bucket) + new_size);
-        bucket->size = K_SIZE(Bucket) + new_size;
+
+#if defined(K_DEBUG)
+        K_ASSERT(bucket->size == old_size);
+        bucket->size = new_size;
+#endif
 
         list = bucket;
 
@@ -309,7 +313,7 @@ void *LinkedAllocator::Resize(void *ptr, Size old_size, Size new_size)
     return ptr;
 }
 
-void LinkedAllocator::Release(const void *ptr, Size size)
+void LinkedAllocator::Release(const void *ptr, [[maybe_unused]] Size size)
 {
     if (!ptr)
         return;
@@ -317,15 +321,16 @@ void LinkedAllocator::Release(const void *ptr, Size size)
     Bucket *bucket = PointerToBucket((void *)ptr);
     bool single = (bucket->next == bucket);
 
-    // Sanity check
-    K_ASSERT(bucket->size == K_SIZE(bucket) + size);
+#if defined(K_DEBUG)
+    K_ASSERT(bucket->size == size);
+#endif
 
     list = single ? nullptr : bucket->next;
 
     bucket->prev->next = bucket->next;
     bucket->next->prev = bucket->prev;
 
-    allocator->Release(bucket, bucket->size);
+    allocator->Release(bucket, -1);
 }
 
 void LinkedAllocator::GiveTo(LinkedAllocator *alloc)
