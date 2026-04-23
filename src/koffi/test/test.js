@@ -84,20 +84,20 @@ function run(action, title, args) {
         }
 
         let time = Number((process.hrtime.bigint() - start) / 1000000n);
-        console.log(`>> ${action} ${title} ${style_ansi('[' + (time / 1000).toFixed(2) + 's]', 'green bold')}`);
+        console.log(`>> ${action} ${title} ${styleAnsi('[' + (time / 1000).toFixed(2) + 's]', 'green bold')}`);
 
         return true;
     } catch (err) {
-        console.log(`>> ${action} ${title} ${style_ansi('[error]', 'red bold')}`);
+        console.log(`>> ${action} ${title} ${styleAnsi('[error]', 'red bold')}`);
 
-        let str = '\n' + style_ansi(err.message.replace(/^/gm, ' '.repeat(3)), '33');
+        let str = '\n' + styleAnsi(err.message.replace(/^/gm, ' '.repeat(3)), '33');
         console.log(str);
 
         return false;
     }
 }
 
-function style_ansi(text, styles = []) {
+function styleAnsi(text, styles = []) {
     if (!tty.isatty(process.stdout.fd))
         return text;
 

@@ -1,18 +1,16 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
-'use strict';
+import crypto from 'crypto';
+import fs from 'fs';
+import http from 'https';
+import path from 'path';
+import zlib from 'zlib';
 
-const crypto = require('crypto');
-const fs = require('fs');
-const http = require('https');
-const path = require('path');
-const zlib = require('zlib');
-
-async function download_http(url, dest) {
+async function downloadHttp(url, dest) {
     console.log('>> Downloading ' + url);
 
-    let [tmp_name, file] = open_temporary_stream(dest);
+    let [tmp_name, file] = openTemporaryStream(dest);
 
     try {
         await new Promise((resolve, reject) => {
@@ -57,7 +55,7 @@ async function download_http(url, dest) {
     }
 }
 
-function open_temporary_stream(prefix) {
+function openTemporaryStream(prefix) {
     let buf = Buffer.allocUnsafe(4);
 
     for (;;) {
@@ -76,7 +74,7 @@ function open_temporary_stream(prefix) {
     }
 }
 
-function extract_targz(filename, dest_dir, strip = 0) {
+function extractTarGz(filename, dest_dir, strip = 0) {
     let reader = fs.createReadStream(filename).pipe(zlib.createGunzip());
 
     return new Promise((resolve, reject) => {
@@ -116,9 +114,9 @@ function extract_targz(filename, dest_dir, strip = 0) {
                         header.filename = header.filename.replace(/\\/g, '/');
                         if (!header.filename.length)
                             throw new Error(`Insecure empty filename inside TAR archive`);
-                        if (path_is_absolute(header.filename[0]))
+                        if (pathIsAbsolute(header.filename[0]))
                             throw new Error(`Insecure filename starting with / inside TAR archive`);
-                        if (path_has_dotdot(header.filename))
+                        if (pathHasDotDot(header.filename))
                             throw new Error(`Insecure filename containing '..' inside TAR archive`);
 
                         for (let i = 0; i < strip; i++)
@@ -180,13 +178,13 @@ function extract_targz(filename, dest_dir, strip = 0) {
     });
 }
 
-function path_is_absolute(path) {
+function pathIsAbsolute(path) {
     if (process.platform == 'win32' && path.match(/^[a-zA-Z]:/))
         path = path.substr(2);
-    return is_path_separator(path[0]);
+    return isPathSeparator(path[0]);
 }
 
-function path_has_dotdot(path) {
+function pathHasDotDot(path) {
     let start = 0;
 
     for (;;) {
@@ -195,9 +193,9 @@ function path_has_dotdot(path) {
             break;
         start = offset + 2;
 
-        if (offset && !is_path_separator(path[offset - 1]))
+        if (offset && !isPathSeparator(path[offset - 1]))
             continue;
-        if (offset + 2 < path.length && !is_path_separator(path[offset + 2]))
+        if (offset + 2 < path.length && !isPathSeparator(path[offset + 2]))
             continue;
 
         return true;
@@ -206,7 +204,7 @@ function path_has_dotdot(path) {
     return false;
 }
 
-function is_path_separator(c) {
+function isPathSeparator(c) {
     if (c == '/')
         return true;
     if (process.platform == 'win32' && c == '\\')
@@ -215,7 +213,7 @@ function is_path_separator(c) {
     return false;
 }
 
-function sync_files(src_dir, dest_dir) {
+function syncFiles(src_dir, dest_dir) {
     let keep = new Set;
 
     // Copy source files
@@ -246,12 +244,12 @@ function sync_files(src_dir, dest_dir) {
     }
 }
 
-function determine_arch() {
+function determineArch() {
     let arch = process.arch;
 
     if (arch == 'riscv32' || arch == 'riscv64') {
-        let buf = read_file_header(process.execPath, 512);
-        let header = decode_elf_header(buf);
+        let buf = readFileHeader(process.execPath, 512);
+        let header = decodeElfHeader(buf);
         let float_abi = (header.e_flags & 0x6);
 
         switch (float_abi) {
@@ -261,8 +259,8 @@ function determine_arch() {
             case 6: { arch += 'q'; } break;
         }
     } else if (arch == 'arm') {
-        let buf = read_file_header(process.execPath, 512);
-        let header = decode_elf_header(buf);
+        let buf = readFileHeader(process.execPath, 512);
+        let header = decodeElfHeader(buf);
 
         if (header.e_flags & 0x400) {
             arch += 'hf';
@@ -276,7 +274,7 @@ function determine_arch() {
     return arch;
 }
 
-function read_file_header(filename, read) {
+function readFileHeader(filename, read) {
     let fd = null;
 
     try {
@@ -292,7 +290,7 @@ function read_file_header(filename, read) {
     }
 }
 
-function decode_elf_header(buf) {
+function decodeElfHeader(buf) {
     let header = {};
 
     if (buf.length < 16)
@@ -349,7 +347,7 @@ function decode_elf_header(buf) {
     return header;
 }
 
-function unlink_recursive(path) {
+function unlinkRecursive(path) {
     try {
         fs.rmSync(path, { recursive: true, maxRetries: process.platform == 'win32' ? 3 : 0 });
     } catch (err) {
@@ -358,7 +356,7 @@ function unlink_recursive(path) {
     }
 }
 
-function get_napi_version(napi, major) {
+function getNapiVersion(napi, major) {
     if (napi > 8)
         return null;
 
@@ -386,7 +384,7 @@ function get_napi_version(napi, major) {
 }
 
 // Ignores prerelease suffixes
-function cmp_version(ver1, ver2) {
+function compareVersions(ver1, ver2) {
     ver1 = String(ver1).replace(/-.*$/, '').split('.').reduce((acc, v, idx) => acc + parseInt(v, 10) * Math.pow(10, 2 * (5 - idx)), 0);
     ver2 = String(ver2).replace(/-.*$/, '').split('.').reduce((acc, v, idx) => acc + parseInt(v, 10) * Math.pow(10, 2 * (5 - idx)), 0);
 
@@ -394,14 +392,14 @@ function cmp_version(ver1, ver2) {
     return cmp;
 }
 
-module.exports = {
-    download_http,
-    extract_targz,
-    path_is_absolute,
-    path_has_dotdot,
-    sync_files,
-    determine_arch,
-    unlink_recursive,
-    get_napi_version,
-    cmp_version
-};
+export {
+    downloadHttp,
+    extractTarGz,
+    pathIsAbsolute,
+    pathHasDotDot,
+    syncFiles,
+    determineArch,
+    unlinkRecursive,
+    getNapiVersion,
+    compareVersions
+}

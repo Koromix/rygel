@@ -6,14 +6,14 @@
 const fs = require('fs');
 const path = require('path');
 const util = require('util');
-const { get_napi_version, determine_arch } = require('../../cnoke/src/tools.js');
+const { getNapiVersion, determineArch } = require('../../cnoke/src/tools.js');
 
 const PACKAGE = require('../package.json');
 
 function detect() {
     if (process.versions.napi == null || process.versions.napi < PACKAGE.cnoke.napi) {
         let major = parseInt(process.versions.node, 10);
-        let required = get_napi_version(PACKAGE.cnoke.napi, major);
+        let required = getNapiVersion(PACKAGE.cnoke.napi, major);
 
         if (required != null) {
             throw new Error(`This engine is based on Node ${process.versions.node}, but ${PACKAGE.name} requires Node >= ${required} in the Node ${major}.x branch (N-API >= ${PACKAGE.cnoke.napi})`);
@@ -22,7 +22,7 @@ function detect() {
         }
     }
 
-    let arch = determine_arch();
+    let arch = determineArch();
 
     let pkg = `${process.platform}-${process.arch}`;
     let triplets = [`${process.platform}_${arch}`];

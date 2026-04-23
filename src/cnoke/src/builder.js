@@ -1,14 +1,12 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
-'use strict';
-
-const fs = require('fs');
-const os = require('os');
-const path = require('path');
-const { spawnSync } = require('child_process');
-const tools = require('./tools.js');
-const TOOLCHAINS = require('../assets/toolchains.json');
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
+import { spawnSync } from 'child_process';
+import * as tools from './tools.js';
+import TOOLCHAINS from '../assets/toolchains.json' with { type: 'json' };
 
 const DefaultOptions = {
     mode: 'RelWithDebInfo'
@@ -17,20 +15,20 @@ const DefaultOptions = {
 function Builder(config = {}) {
     let self = this;
 
-    let host = `${process.platform}_${tools.determine_arch()}`;
+    let host = `${process.platform}_${tools.determineArch()}`;
 
     let app_dir = config.app_dir;
     let project_dir = config.project_dir;
     let package_dir = config.package_dir;
 
     if (app_dir == null)
-        app_dir = __dirname.replace(/\\/g, '/') + '/..';
+        app_dir = import.meta.dirname.replace(/\\/g, '/') + '/..';
     if (project_dir == null)
         project_dir = process.cwd();
     app_dir = app_dir.replace(/\\/g, '/');
     project_dir = project_dir.replace(/\\/g, '/');
     if (package_dir == null)
-        package_dir = find_parent_directory(project_dir, 'package.json');
+        package_dir = findParentDirectory(project_dir, 'package.json');
     if (package_dir != null)
         package_dir = package_dir.replace(/\\/g, '/');
 
@@ -53,16 +51,16 @@ function Builder(config = {}) {
 
     let options = null;
 
-    let cache_dir = get_cache_directory();
+    let cache_dir = getCacheDirectory();
     let build_dir = config.build_dir;
     let work_dir = null;
     let output_dir = null;
 
     if (build_dir == null) {
-        let options = read_cnoke_options();
+        let options = readCNokeOptions();
 
         if (options.output != null) {
-            build_dir = expand_path(options.output, options.directory);
+            build_dir = expandPath(options.output, options.directory);
         } else {
             build_dir = project_dir + '/build';
         }
@@ -74,12 +72,12 @@ function Builder(config = {}) {
     let cmake_bin = null;
 
     this.configure = async function(retry = true) {
-        let options = read_cnoke_options();
+        let options = readCNokeOptions();
 
         let args = [project_dir];
 
-        check_cmake();
-        check_compatibility();
+        checkCMake();
+        checkCompatibility();
 
         console.log(`>> Node: ${runtime_version}`);
         console.log(`>> Toolchain: ${toolchain ?? 'native'}`);
@@ -101,16 +99,16 @@ function Builder(config = {}) {
                 fs.mkdirSync(cache_dir, { recursive: true, mode: 0o755 });
 
                 let url = `https://nodejs.org/dist/v${runtime_version}/node-v${runtime_version}-headers.tar.gz`;
-                await tools.download_http(url, destname);
+                await tools.downloadHttp(url, destname);
             }
 
-            await tools.extract_targz(destname, work_dir + '/headers', 1);
+            await tools.extractTarGz(destname, work_dir + '/headers', 1);
 
             args.push(`-DNODE_JS_INCLUDE_DIRS=${work_dir}/headers/include/node`);
         } else {
             console.log(`>> Using local node-api headers`);
 
-            let api_dir = expand_path(options.api, project_dir);
+            let api_dir = expandPath(options.api, project_dir);
             args.push(`-DNODE_JS_INCLUDE_DIRS=${api_dir}/include`);
         }
 
@@ -133,13 +131,13 @@ function Builder(config = {}) {
                         fs.mkdirSync(cache_dir, { recursive: true, mode: 0o755 });
 
                         let url = `https://nodejs.org/dist/v${runtime_version}/${info.lib}/node.lib`;
-                        await tools.download_http(url, destname);
+                        await tools.downloadHttp(url, destname);
                     }
 
                     fs.copyFileSync(destname, work_dir + '/node.lib');
                     args.push(`-DNODE_JS_LINK_LIB=${work_dir}/node.lib`);
                 } else {
-                    let api_dir = expand_path(options.api, project_dir);
+                    let api_dir = expandPath(options.api, project_dir);
                     args.push(`-DNODE_JS_LINK_DEF=${api_dir}/def/node_api.def`);
                 }
             }
@@ -214,7 +212,7 @@ function Builder(config = {}) {
                 }
 
                 if (info.sysroot != null) {
-                    sysroot = expand_path(info.sysroot, __dirname + '/..');
+                    sysroot = expandPath(info.sysroot, import.meta.dirname + '/..');
                     if (!fs.existsSync(sysroot))
                         throw new Error(`Cross-compilation sysroot '${sysroot}' does not exist`);
 
@@ -223,7 +221,7 @@ function Builder(config = {}) {
 
                 if (info.variables != null) {
                     for (let key in info.variables) {
-                        let value = expand_string(info.variables[key], { sysroot: sysroot });
+                        let value = expandString(info.variables[key], { sysroot: sysroot });
                         values.push([key, value]);
                     }
                 }
@@ -258,7 +256,7 @@ function Builder(config = {}) {
 
         let proc = spawnSync(cmake_bin, args, { cwd: work_dir, stdio: 'inherit' });
         if (proc.status !== 0) {
-            tools.unlink_recursive(work_dir);
+            tools.unlinkRecursive(work_dir);
             if (retry)
                 return self.configure(false);
 
@@ -267,15 +265,15 @@ function Builder(config = {}) {
     };
 
     this.build = async function() {
-        check_compatibility();
+        checkCompatibility();
 
         if (prebuild) {
-            let valid = await check_prebuild();
+            let valid = await checkPrebuild();
             if (valid)
                 return;
         }
 
-        check_cmake();
+        checkCMake();
 
         if (!fs.existsSync(work_dir + '/CMakeCache.txt'))
             await self.configure();
@@ -303,21 +301,21 @@ function Builder(config = {}) {
 
         console.log('>> Copy target files');
 
-        tools.sync_files(output_dir, build_dir);
+        tools.syncFiles(output_dir, build_dir);
     };
 
-    async function check_prebuild() {
-        let options = read_cnoke_options();
+    async function checkPrebuild() {
+        let options = readCNokeOptions();
 
         if (options.prebuild != null) {
             fs.mkdirSync(build_dir, { recursive: true, mode: 0o755 });
 
-            let archive_filename = expand_path(options.prebuild, options.directory);
+            let archive_filename = expandPath(options.prebuild, options.directory);
 
             if (fs.existsSync(archive_filename)) {
                 try {
                     console.log('>> Extracting prebuilt binaries...');
-                    await tools.extract_targz(archive_filename, build_dir, 1);
+                    await tools.extractTarGz(archive_filename, build_dir, 1);
                 } catch (err) {
                     console.error('Failed to find prebuilt binary for your platform, building manually');
                 }
@@ -327,7 +325,7 @@ function Builder(config = {}) {
         }
 
         if (options.require != null) {
-            let require_filename = expand_path(options.require, options.directory);
+            let require_filename = expandPath(options.require, options.directory);
 
             if (fs.existsSync(require_filename)) {
                 let proc = spawnSync(process.execPath, ['-e', 'require(process.argv[1])', require_filename]);
@@ -342,10 +340,10 @@ function Builder(config = {}) {
     }
 
     this.clean = function() {
-        tools.unlink_recursive(build_dir);
+        tools.unlinkRecursive(build_dir);
     };
 
-    function find_parent_directory(dirname, basename) {
+    function findParentDirectory(dirname, basename) {
         if (process.platform == 'win32')
             dirname = dirname.replace(/\\/g, '/');
 
@@ -359,7 +357,7 @@ function Builder(config = {}) {
         return null;
     }
 
-    function get_cache_directory() {
+    function getCacheDirectory() {
         if (process.platform == 'win32') {
             let cache_dir = process.env['LOCALAPPDATA'] || process.env['APPDATA'];
             if (cache_dir == null)
@@ -383,7 +381,7 @@ function Builder(config = {}) {
         }
     }
 
-    function check_cmake() {
+    function checkCMake() {
         if (cmake_bin != null)
             return;
 
@@ -423,24 +421,24 @@ function Builder(config = {}) {
         console.log(`>> Using CMake binary: ${cmake_bin}`);
     }
 
-    function check_compatibility() {
-        let options = read_cnoke_options();
+    function checkCompatibility() {
+        let options = readCNokeOptions();
 
-        if (options.node != null && tools.cmp_version(runtime_version, options.node) < 0)
+        if (options.node != null && tools.compareVersions(runtime_version, options.node) < 0)
             throw new Error(`Project ${options.name} requires Node.js >= ${options.node}`);
 
         if (options.napi != null) {
             let major = parseInt(runtime_version, 10);
-            let required = tools.get_napi_version(options.napi, major);
+            let required = tools.getNapiVersion(options.napi, major);
 
             if (required == null)
                 throw new Error(`Project ${options.name} does not support the Node ${major}.x branch (old or missing N-API)`);
-            if (tools.cmp_version(runtime_version, required) < 0)
+            if (tools.compareVersions(runtime_version, required) < 0)
                 throw new Error(`Project ${options.name} requires Node >= ${required} in the Node ${major}.x branch (with N-API >= ${options.napi})`);
         }
     }
 
-    function read_cnoke_options() {
+    function readCNokeOptions() {
         if (options != null)
             return options;
 
@@ -474,11 +472,11 @@ function Builder(config = {}) {
         return options;
     }
 
-    function expand_string(str, values = {}) {
+    function expandString(str, values = {}) {
         let expanded = str.replace(/{{ *([a-zA-Z_][a-zA-Z_0-9]*) *}}/g, (match, p1) => {
             switch (p1) {
                 case 'version': {
-                    let options = read_cnoke_options();
+                    let options = readCNokeOptions();
                     return options.version || '';
                 } break;
 
@@ -497,10 +495,10 @@ function Builder(config = {}) {
         return expanded;
     }
 
-    function expand_path(str, root) {
-        let expanded = expand_string(str);
+    function expandPath(str, root) {
+        let expanded = expandString(str);
 
-        if (!tools.path_is_absolute(expanded))
+        if (!tools.pathIsAbsolute(expanded))
             expanded = path.join(root, expanded);
         expanded = path.normalize(expanded);
 
@@ -508,7 +506,7 @@ function Builder(config = {}) {
     }
 }
 
-module.exports = {
+export {
     Builder,
     DefaultOptions
-};
+}

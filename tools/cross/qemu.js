@@ -1,15 +1,13 @@
-#!/usr/bin/env node
+#!/usr/bin/env -S node --no-warnings
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
-'use strict';
-
-const process = require('process');
-const fs = require('fs');
-const path = require('path');
-const { spawn, spawnSync } = require('child_process');
-const tty = require('tty');
-const { NodeSSH } = require('../../vendor/node-ssh/node-ssh.bundle.js');
+import process from 'process';
+import fs from 'fs';
+import path from 'path';
+import { spawn, spawnSync } from 'child_process';
+import tty from 'tty';
+import { NodeSSH } from '../../vendor/node-ssh/node-ssh.bundle.js';
 
 const DefaultCommands = {
     'start': 'Start the machines but don\'t run anything',
@@ -25,11 +23,11 @@ let qemu_prefix = null;
 
 // Main
 
-if (require.main === module)
+if (import.meta.main)
     main();
 
 async function main() {
-    let config = parse_arguments('qemu.js', process.argv.slice(2), DefaultCommands);
+    let config = parseArguments('qemu.js', process.argv.slice(2), DefaultCommands);
     if (config == null)
         return;
 
@@ -45,7 +43,7 @@ async function main() {
         let machines = runner.machines;
 
         for (let pattern of config.patterns) {
-            let re = make_wildcard_pattern(pattern);
+            let re = makeWildcardPattern(pattern);
             let match = false;
 
             for (let machine of machines) {
@@ -71,7 +69,7 @@ async function main() {
     }
 }
 
-function print_usage(binary, commands) {
+function printUsage(binary, commands) {
     let help = `Usage: node ${binary} <command> [options...]
 
 Commands:
@@ -110,7 +108,7 @@ function QemuRunner(registry = null) {
     // Load registry
     {
         if (registry == null)
-            registry = __dirname + '/machines.json';
+            registry = import.meta.dirname + '/machines.json';
 
         let json = fs.readFileSync(registry, { encoding: 'utf-8' });
 
@@ -153,16 +151,16 @@ function QemuRunner(registry = null) {
         let success = true;
         let missing = 0;
 
-        check_qemu();
+        checkQemu();
 
         let machines = self.machines;
 
         console.log('>> Starting up machines...');
         await Promise.all(machines.map(async machine => {
-            let dirname = `${__dirname}/machines/${machine.key}`;
+            let dirname = `${import.meta.dirname}/machines/${machine.key}`;
 
             if (!fs.existsSync(dirname)) {
-                self.log(machine, 'Missing files', style_ansi('[ignore]', 'gray bold'));
+                self.log(machine, 'Missing files', styleAnsi('[ignore]', 'gray bold'));
 
                 ignore_machines.add(machine);
                 missing++;
@@ -176,7 +174,7 @@ function QemuRunner(registry = null) {
                 let version = fs.existsSync(filename) ? fs.readFileSync(filename).toString().trim() : null;
 
                 if (version != machine.qemu.version) {
-                    self.log(machine, 'Machine version mismatch', style_ansi('[ignore]', 'gray bold'));
+                    self.log(machine, 'Machine version mismatch', styleAnsi('[ignore]', 'gray bold'));
 
                     ignore_machines.add(machine);
                     success = false;
@@ -189,7 +187,7 @@ function QemuRunner(registry = null) {
                 let started = await boot(machine, dirname);
 
                 if (started) {
-                    let accelerator = get_machine_accelerator(machine);
+                    let accelerator = getMachineAccelerator(machine);
                     let action = `Start (${accelerator ?? 'emulated'})`;
 
                     self.logSuccess(machine, action);
@@ -235,7 +233,7 @@ function QemuRunner(registry = null) {
                 await new Promise(async (resolve, reject) => {
                     ssh.connection.on('close', resolve);
                     ssh.connection.on('end', resolve);
-                    wait_delay(60000).then(() => { reject(new Error('Timeout')) });
+                    waitDelay(60000).then(() => { reject(new Error('Timeout')) });
 
                     self.exec(machine, machine.qemu.shutdown);
                 });
@@ -251,13 +249,13 @@ function QemuRunner(registry = null) {
     }
 
     this.info = function() {
-        check_qemu();
+        checkQemu();
 
         let machines = self.machines;
 
         console.log('>> Machines:');
         for (let machine of machines) {
-            let [binary, args] = make_qemu_command(machine);
+            let [binary, args] = makeQemuCommand(machine);
             let cmd = [binary, ...args].map(v => String(v).match(/[^a-zA-Z0-9_\-=\:\.,]/) ? `"${v}"` : v).join(' ');
 
             console.log(`  - Machine: ${machine.title} (${machine.key})`);
@@ -305,7 +303,7 @@ function QemuRunner(registry = null) {
     };
 
     this.reset = async function() {
-        check_qemu();
+        checkQemu();
 
         let machines = self.machines;
 
@@ -313,11 +311,11 @@ function QemuRunner(registry = null) {
 
         console.log('>> Restoring snapshots...')
         await Promise.all(machines.map(machine => {
-            let dirname = `${__dirname}/machines/${machine.key}`;
+            let dirname = `${import.meta.dirname}/machines/${machine.key}`;
             let disk = dirname + '/' + machine.qemu.disk;
 
             if (!fs.existsSync(dirname)) {
-                self.log(machine, 'Missing files', style_ansi('[ignore]', 'gray bold'));
+                self.log(machine, 'Missing files', styleAnsi('[ignore]', 'gray bold'));
                 return;
             }
 
@@ -356,7 +354,7 @@ function QemuRunner(registry = null) {
                         throw new Error(`Failed to connect to ${machine.title}`);
 
                     // Try again... a few times
-                    await wait_delay(10 * 1000);
+                    await waitDelay(10 * 1000);
                 }
             }
 
@@ -431,11 +429,11 @@ function QemuRunner(registry = null) {
     };
 
     this.logSuccess = function(machine, action, message = 'ok') {
-        self.log(machine, action, style_ansi('[' + message + ']', 'green bold'));
+        self.log(machine, action, styleAnsi('[' + message + ']', 'green bold'));
     };
 
     this.logError = function(machine, action, message = 'error') {
-        self.log(machine, action, style_ansi('[' + message + ']', 'red bold'));
+        self.log(machine, action, styleAnsi('[' + message + ']', 'red bold'));
     };
 
     this.logOutput = function(machine, stdout, stderr) {
@@ -447,19 +445,19 @@ function QemuRunner(registry = null) {
 
         if (stdout) {
             let str = ' '.repeat(align) + 'Standard output:\n' +
-                      style_ansi(stdout.replace(/^/gm, ' '.repeat(align + 4)), 'yellow') + '\n';
+                      styleAnsi(stdout.replace(/^/gm, ' '.repeat(align + 4)), 'yellow') + '\n';
             console.error(str);
         }
 
         if (stderr) {
             let str = ' '.repeat(align) + 'Standard error:\n' +
-                      style_ansi(stderr.replace(/^/gm, ' '.repeat(align + 4)), 'yellow') + '\n';
+                      styleAnsi(stderr.replace(/^/gm, ' '.repeat(align + 4)), 'yellow') + '\n';
             console.error(str);
         }
     };
 
     async function boot(machine, dirname) {
-        let [binary, args] = make_qemu_command(machine);
+        let [binary, args] = makeQemuCommand(machine);
 
         try {
             let proc = spawn(binary, args, {
@@ -470,7 +468,7 @@ function QemuRunner(registry = null) {
             proc.unref();
 
             await new Promise((resolve, reject) => {
-                proc.on('spawn', () => wait_delay(2 * 1000).then(resolve));
+                proc.on('spawn', () => waitDelay(2 * 1000).then(resolve));
                 proc.on('error', reject);
                 proc.on('exit', reject);
             });
@@ -490,12 +488,12 @@ function QemuRunner(registry = null) {
 
 // Utility
 
-function parse_arguments(binary, args, commands) {
+function parseArguments(binary, args, commands) {
     let command = null;
     let patterns = [];
 
     if (args[0] == '--help') {
-        print_usage(binary, commands);
+        printUsage(binary, commands);
         return;
     }
     if (args.length < 1 || args[0][0] == '-')
@@ -526,7 +524,7 @@ function parse_arguments(binary, args, commands) {
         }
 
         if (arg == '--help') {
-            print_usage(binary, commands);
+            printUsage(binary, commands);
             return;
         } else if (arg[0] == '-') {
             throw new Error(`Unexpected argument '${arg}'`);
@@ -544,7 +542,7 @@ function parse_arguments(binary, args, commands) {
     };
 }
 
-function check_qemu() {
+function checkQemu() {
     if (qemu_prefix != null)
         return;
 
@@ -570,11 +568,11 @@ function check_qemu() {
         throw new Error('QEMU does not seem to be installed');
 }
 
-function make_qemu_command(machine) {
+function makeQemuCommand(machine) {
     let binary = qemu_prefix + machine.qemu.binary + (process.platform == 'win32' ? '.exe' : '');
     let args = machine.qemu.arguments.slice();
 
-    let accelerator = get_machine_accelerator(machine);
+    let accelerator = getMachineAccelerator(machine);
 
     if (accelerator != null)
         args.push('-accel', accelerator);
@@ -582,7 +580,7 @@ function make_qemu_command(machine) {
     return [binary, args];
 }
 
-function get_machine_accelerator(machine) {
+function getMachineAccelerator(machine) {
     if (machine.qemu.binary == 'qemu-system-x86_64' ||
             machine.qemu.binary == 'qemu-system-i386') {
         switch (process.platform) {
@@ -594,7 +592,7 @@ function get_machine_accelerator(machine) {
     return null;
 }
 
-function copy_recursive(src, dest, validate = filename => true) {
+function copyRecursive(src, dest, validate = filename => true) {
     let proc = spawnSync('git', ['ls-files', '-i', '-o', '--exclude-standard', '--directory'], { cwd: src });
     let ignored = new Set(proc.stdout.toString().split('\n').map(it => it.trim().replace(/[\\\/+]$/, '').replaceAll('\\', '/')).filter(it => it));
 
@@ -623,7 +621,7 @@ function copy_recursive(src, dest, validate = filename => true) {
     }
 }
 
-function unlink_recursive(path) {
+function unlinkRecursive(path) {
     try {
         if (fs.rmSync != null) {
             fs.rmSync(path, { recursive: true, maxRetries: process.platform == 'win32' ? 3 : 0 });
@@ -636,7 +634,7 @@ function unlink_recursive(path) {
     }
 }
 
-function make_path_filter(paths) {
+function makePathFilter(paths) {
     let map = new Map;
 
     for (let path of paths) {
@@ -676,7 +674,7 @@ function make_path_filter(paths) {
     return filter;
 }
 
-function make_wildcard_pattern(str) {
+function makeWildcardPattern(str) {
     str = str.replaceAll(/[\/\^\$\.\|\[\]\(\)\*\+\?\{\}]/g, c => {
         switch (c) {
             case '*': return '[^/]*';
@@ -691,7 +689,7 @@ function make_wildcard_pattern(str) {
     return re;
 }
 
-function style_ansi(text, styles = []) {
+function styleAnsi(text, styles = []) {
     if (!tty.isatty(process.stdout.fd))
         return text;
 
@@ -734,20 +732,19 @@ function style_ansi(text, styles = []) {
     return str;
 }
 
-function wait_delay(ms) {
+function waitDelay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-module.exports = {
+export {
     DefaultCommands,
-    parse_arguments,
-
     QemuRunner,
 
-    copy_recursive,
-    unlink_recursive,
-    make_path_filter,
-    make_wildcard_pattern,
-    style_ansi,
-    wait_delay
-};
+    parseArguments,
+    copyRecursive,
+    unlinkRecursive,
+    makePathFilter,
+    makeWildcardPattern,
+    styleAnsi,
+    waitDelay
+}

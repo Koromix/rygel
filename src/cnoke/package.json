@@ -18,6 +18,7 @@
     "email": "niels.martignene@protonmail.com",
     "url": "https://koromix.dev/"
   },
+  "type": "module",
   "index": "src/index.js",
   "bin": "cnoke.js",
   "license": "MIT"

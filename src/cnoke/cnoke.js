@@ -1,11 +1,9 @@
-#!/usr/bin/env node
+#!/usr/bin/env -S node --no-warnings
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
-'use strict';
-
-const fs = require('fs');
-const cnoke = require('./src/index.js');
+import fs from 'fs';
+import * as cnoke from './src/index.js';
 
 const VALID_COMMANDS = ['build', 'configure', 'clean'];
 

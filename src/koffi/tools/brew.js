@@ -1,17 +1,23 @@
-#!/usr/bin/env node
+#!/usr/bin/env -S node --no-warnings
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
-'use strict';
-
-const process = require('process');
-const fs = require('fs');
-const path = require('path');
-const { spawnSync } = require('child_process');
-const esbuild = require('../../../vendor/esbuild/native');
-const { DefaultCommands, parse_arguments, QemuRunner,
-        copy_recursive, unlink_recursive, make_path_filter,
-        make_wildcard_pattern, style_ansi, wait_delay } = require('../../../tools/cross/qemu.js');
+import process from 'process';
+import fs from 'fs';
+import path from 'path';
+import { spawnSync } from 'child_process';
+import esbuild from '../../../vendor/esbuild/native/lib/main.js';
+import {
+    DefaultCommands,
+    QemuRunner,
+    parseArguments,
+    copyRecursive,
+    unlinkRecursive,
+    makePathFilter,
+    makeWildcardPattern,
+    styleAnsi,
+    waitDelay
+} from '../../../tools/cross/qemu.js';
 
 const ValidCommands = {
     ...DefaultCommands,
@@ -45,13 +51,13 @@ let ignore_builds = new Set;
 main();
 
 async function main() {
-    script_dir = fs.realpathSync(__dirname);
+    script_dir = fs.realpathSync(import.meta.dirname);
     root_dir = fs.realpathSync(script_dir + '/../../..');
 
     // Some code assumes we are working from the script directory
     process.chdir(script_dir);
 
-    let config = parse_arguments('brew.js', process.argv.slice(2), ValidCommands);
+    let config = parseArguments('brew.js', process.argv.slice(2), ValidCommands);
     if (config == null)
         return;
 
@@ -95,7 +101,7 @@ async function main() {
         let use_machines = [];
 
         for (let pattern of config.patterns) {
-            let re = make_wildcard_pattern(pattern);
+            let re = makeWildcardPattern(pattern);
             let match = false;
 
             for (let key in known_builds) {
@@ -228,7 +234,7 @@ async function build() {
             if (ignore_builds.has(build))
                 return;
 
-            unlink_recursive(dest_dir);
+            unlinkRecursive(dest_dir);
             fs.mkdirSync(dest_dir, { mode: 0o755, recursive: true });
 
             try {
@@ -254,13 +260,13 @@ async function build() {
 
         if (!success) {
             console.log('');
-            console.log('>> Status: ' + style_ansi('FAILED', 'red bold'));
+            console.log('>> Status: ' + styleAnsi('FAILED', 'red bold'));
             return false;
         }
     }
 
     console.log('>> Clean up previous packages');
-    unlink_recursive(dist_dir);
+    unlinkRecursive(dist_dir);
 
     console.log('>> Regroup package builds');
     {
@@ -300,7 +306,7 @@ async function build() {
                 let binary_dir = pkg.path + '/' + build.name;
 
                 fs.mkdirSync(binary_dir, { mode: 0o755, recursive: true });
-                copy_recursive(build.path, binary_dir);
+                copyRecursive(build.path, binary_dir);
             }
 
             let binary = {
@@ -348,7 +354,7 @@ async function build() {
         let pkg_dir = dist_dir + '/koffi';
         fs.mkdirSync(pkg_dir, { mode: 0o755, recursive: true });
 
-        copy_recursive(snapshot_dir, pkg_dir, make_path_filter([
+        copyRecursive(snapshot_dir, pkg_dir, makePathFilter([
             'lib/native/base',
             'src/core',
             'src/cnoke',
@@ -386,7 +392,7 @@ async function build() {
                 let binary_dir = pkg_dir + '/build/koffi/' + build;
 
                 fs.mkdirSync(binary_dir, { mode: 0o755, recursive: true });
-                copy_recursive(artifact.build, binary_dir);
+                copyRecursive(artifact.build, binary_dir);
             }
         } else {
             main.optionalDependencies = packages.reduce((obj, pkg) => { obj[pkg.name] = main.version; return obj; }, {});
@@ -535,11 +541,11 @@ async function compile(command) {
 function snapshot() {
     let snapshot_dir = root_dir + '/bin/Koffi/snapshot';
 
-    unlink_recursive(snapshot_dir);
+    unlinkRecursive(snapshot_dir);
     fs.mkdirSync(snapshot_dir, { mode: 0o755, recursive: true });
 
     console.log('>> Snapshot code...');
-    copy_recursive(root_dir, snapshot_dir, make_path_filter([
+    copyRecursive(root_dir, snapshot_dir, makePathFilter([
         'lib/native/base',
         'src/cnoke',
         'src/koffi',
@@ -575,7 +581,7 @@ async function upload(snapshot_dir) {
             } catch (err) {
                 // Fails often on Windows (busy directory or whatever), but rarely a problem
 
-                await wait_delay(1000);
+                await waitDelay(1000);
                 continue;
             }
         }
@@ -664,9 +670,9 @@ async function test(debug = false) {
     success &= (runner.ignoreCount == ignored_machines);
 
     if (success) {
-        console.log('>> Status: ' + style_ansi('SUCCESS', 'green bold'));
+        console.log('>> Status: ' + styleAnsi('SUCCESS', 'green bold'));
     } else {
-        console.log('>> Status: ' + style_ansi('FAILED', 'red bold'));
+        console.log('>> Status: ' + styleAnsi('FAILED', 'red bold'));
     }
 
     return success;
