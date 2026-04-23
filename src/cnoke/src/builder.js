@@ -294,8 +294,12 @@ function Builder(config = {}) {
 
         if (prebuild) {
             let valid = await checkPrebuild();
-            if (valid)
+
+            if (valid) {
                 return;
+            } else {
+                console.error('Failed to load prebuilt binary, rebuilding from source');
+            }
         }
 
         checkCMake();
@@ -330,38 +334,8 @@ function Builder(config = {}) {
     };
 
     async function checkPrebuild() {
-        let options = readCNokeOptions();
-
-        if (options.prebuild != null) {
-            fs.mkdirSync(build_dir, { recursive: true, mode: 0o755 });
-
-            let archive_filename = expandPath(options.prebuild, options.directory);
-
-            if (fs.existsSync(archive_filename)) {
-                try {
-                    console.log('>> Extracting prebuilt binaries...');
-                    await extractTarGz(archive_filename, build_dir, 1);
-                } catch (err) {
-                    console.error('Failed to find prebuilt binary for your platform, building manually');
-                }
-            } else {
-                console.error('Cannot find local prebuilt archive');
-            }
-        }
-
-        if (options.require != null) {
-            let require_filename = expandPath(options.require, options.directory);
-
-            if (fs.existsSync(require_filename)) {
-                let proc = spawnSync(process.execPath, ['-e', 'require(process.argv[1])', require_filename]);
-                if (proc.status === 0)
-                    return true;
-            }
-
-            console.error('Failed to load prebuilt binary, rebuilding from source');
-        }
-
-        return false;
+        let proc = spawnSync(process.execPath, ['-e', 'require(process.argv[1])', package_dir]);
+        return (proc.status === 0);
     }
 
     this.clean = function() {

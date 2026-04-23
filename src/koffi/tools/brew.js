@@ -499,12 +499,8 @@ async function build() {
 
     console.log('>> Test prebuild');
     {
-        let pkg = JSON.parse(fs.readFileSync(dist_dir + '/koffi/package.json'));
-        let require_filename = path.join(dist_dir + '/koffi', pkg.cnoke.require);
-
-        let proc = spawnSync(process.execPath, ['-e', 'require(process.argv[1])', require_filename], {
-            env: { ...process.env, NODE_PATH: dist_dir }
-        });
+        let pkg_dir = dist_dir + '/koffi';
+        let proc = spawnSync(process.execPath, ['-e', 'require(process.argv[1])', pkg_dir], { cwd: pkg_dir });
 
         if (proc.status !== 0) {
             let stdout = proc.stdout.toString().trim();

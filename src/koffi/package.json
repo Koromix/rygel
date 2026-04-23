@@ -34,8 +34,7 @@
     "api": "../../vendor/node-api-headers",
     "output": "../../bin/Koffi/{{ toolchain }}",
     "node": 16,
-    "napi": 8,
-    "require": "./index.js"
+    "napi": 8
   },
   "funding": "https://liberapay.com/Koromix"
 }
