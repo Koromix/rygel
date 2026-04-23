@@ -237,9 +237,6 @@ namespace {
         [&]() { \
             TEB *teb = GetTEB(); \
              \
-            K_DEFER { call->instance->last_error = teb->LastErrorValue; }; \
-            teb->LastErrorValue = call->instance->last_error; \
-             \
             ADJUST_TEB(teb, call->mem->stack0.ptr, call->mem->stack0.end); \
              \
             return (Expr); \
