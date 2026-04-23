@@ -3,34 +3,34 @@
 
 import fs from 'fs';
 
-function determineArch() {
-    let arch = process.arch;
+function determineAbi() {
+    let abi = process.arch;
 
-    if (arch == 'riscv32' || arch == 'riscv64') {
+    if (abi == 'riscv32' || abi == 'riscv64') {
         let buf = readFileHeader(process.execPath, 512);
         let header = decodeElfHeader(buf);
         let float_abi = (header.e_flags & 0x6);
 
         switch (float_abi) {
             case 0: {} break;
-            case 2: { arch += 'f'; } break;
-            case 4: { arch += 'd'; } break;
-            case 6: { arch += 'q'; } break;
+            case 2: { abi += 'f'; } break;
+            case 4: { abi += 'd'; } break;
+            case 6: { abi += 'q'; } break;
         }
-    } else if (arch == 'arm') {
+    } else if (abi == 'arm') {
         let buf = readFileHeader(process.execPath, 512);
         let header = decodeElfHeader(buf);
 
         if (header.e_flags & 0x400) {
-            arch += 'hf';
+            abi += 'hf';
         } else if (header.e_flags & 0x200) {
-            arch += 'sf';
+            abi += 'sf';
         } else {
             throw new Error('Unknown ARM floating-point ABI');
         }
     }
 
-    return arch;
+    return abi;
 }
 
 function readFileHeader(filename, read) {
@@ -86,4 +86,4 @@ function decodeElfHeader(buf) {
     return header;
 }
 
-export { determineArch }
+export { determineAbi }

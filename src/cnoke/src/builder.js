@@ -5,7 +5,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { spawnSync } from 'child_process';
-import { determineArch } from './arch.js';
+import { determineAbi } from './abi.js';
 import {
     downloadHttp,
     extractTarGz,
@@ -25,7 +25,7 @@ const DefaultOptions = {
 function Builder(config = {}) {
     let self = this;
 
-    let host = `${process.platform}_${determineArch()}`;
+    let host = `${process.platform}_${determineAbi()}`;
 
     let project_dir = config.project_dir;
     let package_dir = config.package_dir;

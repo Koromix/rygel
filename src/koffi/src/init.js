@@ -6,7 +6,7 @@
 const fs = require('fs');
 const path = require('path');
 const util = require('util');
-const { determineArch } = require('../../cnoke/src/arch.js');
+const { determineAbi } = require('../../cnoke/src/abi.js');
 
 const PACKAGE = require('../package.json');
 
@@ -16,13 +16,13 @@ function detect() {
         throw new Error(`This engine is based on Node ${process.versions.node}, but ${PACKAGE.name} does not support the Node ${major}.x branch (N-API < ${PACKAGE.cnoke.napi})`);
     }
 
-    let arch = determineArch();
+    let abi = determineAbi();
 
     let pkg = `${process.platform}-${process.arch}`;
-    let triplets = [`${process.platform}_${arch}`];
+    let triplets = [`${process.platform}_${abi}`];
 
     if (process.platform == 'linux')
-        triplets.push(`musl_${arch}`);
+        triplets.push(`musl_${abi}`);
 
     return [pkg, triplets];
 }
