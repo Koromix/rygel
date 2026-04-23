@@ -18,7 +18,7 @@
                 "Test Union": "node test/union.js",
                 "Test Async": "node test/async.js",
                 "Test Callbacks": "node test/callbacks.js",
-                "Test Raylib": "xvfb-run node test/raylib.js",
+                "Test Raylib": "node test/raylib.js",
                 "Test SQLite": "node test/sqlite.js",
                 "Test POSIX": "node test/posix.js"
             }
@@ -44,7 +44,7 @@
                 "Test Union": "node test/union.js",
                 "Test Async": "node test/async.js",
                 "Test Callbacks": "node test/callbacks.js",
-                "Test Raylib": "xvfb-run node test/raylib.js",
+                "Test Raylib": "node test/raylib.js",
                 "Test SQLite": "node test/sqlite.js",
                 "Test POSIX": "node test/posix.js"
             }
@@ -70,7 +70,7 @@
                 "Test Union": "node test/union.js",
                 "Test Async": "node test/async.js",
                 "Test Callbacks": "node test/callbacks.js",
-                "Test Raylib": "xvfb-run node test/raylib.js",
+                "Test Raylib": "node test/raylib.js",
                 "Test SQLite": "node test/sqlite.js",
                 "Test POSIX": "node test/posix.js"
             }
@@ -85,7 +85,7 @@
             "machine": "debian_x64",
             "directory": "/home/debian/luigi",
             "build": "CC=clang-21 CXX=clang++-21 node ../cnoke/cnoke.js --ccache",
-            "release": "CC=clang-21 CXX=clang++-21 LLVM_PROFDATA=llvm-profdata-21 xvfb-run sh ./tools/pgo_clang.sh",
+            "release": "CC=clang-21 CXX=clang++-21 LLVM_PROFDATA=llvm-profdata-21 sh ./tools/pgo_clang.sh",
             "package": "linux-x64"
         },
 
@@ -97,7 +97,7 @@
                 "Test Union": "node test/union.js",
                 "Test Async": "node test/async.js",
                 "Test Callbacks": "node test/callbacks.js",
-                "Test Raylib": "xvfb-run node test/raylib.js",
+                "Test Raylib": "node test/raylib.js",
                 "Test SQLite": "node test/sqlite.js",
                 "Test POSIX": "node test/posix.js"
             }
@@ -124,7 +124,7 @@
                 "Test Union": "node test/union.js",
                 "Test Async": "node test/async.js",
                 "Test Callbacks": "node test/callbacks.js",
-                "Test Raylib": "xvfb-run node test/raylib.js",
+                "Test Raylib": "node test/raylib.js",
                 "Test SQLite": "node test/sqlite.js",
                 "Test POSIX": "node test/posix.js"
             }
@@ -150,7 +150,7 @@
                 "Test Union": "node test/union.js",
                 "Test Async": "node test/async.js",
                 "Test Callbacks": "node test/callbacks.js",
-                "Test Raylib": "xvfb-run node test/raylib.js",
+                "Test Raylib": "node test/raylib.js",
                 "Test SQLite": "node test/sqlite.js",
                 "Test POSIX": "node test/posix.js"
             }
@@ -176,7 +176,7 @@
                 "Test Union": "node test/union.js",
                 "Test Async": "node test/async.js",
                 "Test Callbacks": "node test/callbacks.js",
-                "Test Raylib": "xvfb-run node test/raylib.js",
+                "Test Raylib": "node test/raylib.js",
                 "Test SQLite": "node test/sqlite.js",
                 "Test POSIX": "node test/posix.js"
             }
@@ -202,7 +202,7 @@
                 "Test Union": "node test/union.js",
                 "Test Async": "node test/async.js",
                 "Test Callbacks": "node test/callbacks.js",
-                "Test Raylib": "xvfb-run node test/raylib.js",
+                "Test Raylib": "node test/raylib.js",
                 "Test SQLite": "node test/sqlite.js",
                 "Test POSIX": "node test/posix.js"
             }
@@ -228,7 +228,7 @@
                 "Test Union": "node test/union.js",
                 "Test Async": "node test/async.js",
                 "Test Callbacks": "node test/callbacks.js",
-                "Test Raylib": "xvfb-run node test/raylib.js",
+                "Test Raylib": "node test/raylib.js",
                 "Test SQLite": "node test/sqlite.js",
                 "Test POSIX": "node test/posix.js"
             }
@@ -254,7 +254,7 @@
                 "Test Union": "node test/union.js",
                 "Test Async": "node test/async.js",
                 "Test Callbacks": "node test/callbacks.js",
-                "Test Raylib": "xvfb-run node test/raylib.js",
+                "Test Raylib": "node test/raylib.js",
                 "Test SQLite": "node test/sqlite.js",
                 "Test POSIX": "node test/posix.js"
             }
@@ -280,7 +280,7 @@
                 "Test Union": "C:\\Node32\\node32.cmd node test/union.js",
                 "Test Async": "C:\\Node32\\node32.cmd node test/async.js",
                 "Test Callbacks": "C:\\Node32\\node32.cmd node test/callbacks.js",
-                "Test Raylib": "seatsh C:\\Node32\\node32.cmd node test/raylib.js",
+                "Test Raylib": "C:\\Node32\\node32.cmd node test/raylib.js",
                 "Test SQLite": "C:\\Node32\\node32.cmd node test/sqlite.js",
                 "Test Win32": {
                     "command": "C:\\Node32\\node32.cmd node test/win32.js",
@@ -309,7 +309,7 @@
                 "Test Union": "C:\\Node64\\node64.cmd node test/union.js",
                 "Test Async": "C:\\Node64\\node64.cmd node test/async.js",
                 "Test Callbacks": "C:\\Node64\\node64.cmd node test/callbacks.js",
-                "Test Raylib": "seatsh C:\\Node64\\node64.cmd node test/raylib.js",
+                "Test Raylib": "C:\\Node64\\node64.cmd node test/raylib.js",
                 "Test SQLite": "C:\\Node64\\node64.cmd node test/sqlite.js",
                 "Test Win32": {
                     "command": "C:\\Node64\\node64.cmd node test/win32.js",
@@ -350,6 +350,7 @@
                 "Test Union": "PATH=/usr/local/bin:/usr/bin:/bin node test/union.js",
                 "Test Async": "PATH=/usr/local/bin:/usr/bin:/bin node test/async.js",
                 "Test Callbacks": "PATH=/usr/local/bin:/usr/bin:/bin node test/callbacks.js",
+                "Test Raylib": "PATH=/usr/local/bin:/usr/bin:/bin node test/raylib.js",
                 "Test SQLite": "PATH=/usr/local/bin:/usr/bin:/bin node test/sqlite.js"
             }
         }
@@ -386,7 +387,7 @@
                 "Test Union": "node test/union.js",
                 "Test Async": "node test/async.js",
                 "Test Callbacks": "node test/callbacks.js",
-                "Test Raylib": "xvfb-run node test/raylib.js",
+                "Test Raylib": "node test/raylib.js",
                 "Test SQLite": "node test/sqlite.js"
             }
         }
@@ -411,7 +412,7 @@
                 "Test Union": "node test/union.js",
                 "Test Async": "node test/async.js",
                 "Test Callbacks": "node test/callbacks.js",
-                "Test Raylib": "xvfb-run node test/raylib.js",
+                "Test Raylib": "node test/raylib.js",
                 "Test SQLite": "node test/sqlite.js",
                 "Test POSIX": "node test/posix.js"
             }
@@ -437,6 +438,7 @@
                 "Test Union": "node test/union.js",
                 "Test Async": "node test/async.js",
                 "Test Callbacks": "node test/callbacks.js",
+                "Test Raylib": "node test/sqlite.js",
                 "Test SQLite": "node test/sqlite.js"
             }
         }

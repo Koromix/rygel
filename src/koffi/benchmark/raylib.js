@@ -69,7 +69,6 @@ function run_cxx(time) {
 function run_napi(time) {
     // We need to call InitWindow before using anything else (such as fonts)
     r.SetTraceLogLevel(5); // Errors
-    r.SetWindowState(0x80); // Hidden
     r.InitWindow(800, 600, "Raylib Test");
 
     let img = r.GenImageColor(800, 600, { r: 0, g: 0, b: 0, a: 255 });
@@ -165,7 +164,6 @@ function run_koffi(time) {
 
     const InitWindow = lib.func('InitWindow', 'void', ['int', 'int', 'str']);
     const SetTraceLogLevel = lib.func('SetTraceLogLevel', 'void', ['int']);
-    const SetWindowState = lib.func('SetWindowState', 'void', ['uint']);
     const GenImageColor = lib.func('GenImageColor', Image, ['int', 'int', Color]);
     const GetFontDefault = lib.func('GetFontDefault', Font, []);
     const MeasureTextEx = lib.func('MeasureTextEx', Vector2, [Font, 'str', 'float', 'float']);
@@ -175,7 +173,6 @@ function run_koffi(time) {
 
     // We need to call InitWindow before using anything else (such as fonts)
     SetTraceLogLevel(5); // Errors
-    SetWindowState(0x80); // Hidden
     InitWindow(800, 600, "Raylib Test");
 
     let img = GenImageColor(800, 600, { r: 0, g: 0, b: 0, a: 255 });
@@ -284,7 +281,6 @@ function run_node_ffi(time) {
     const r = node_ffi.Library(lib_filename, {
         InitWindow: ['void', ['int', 'int', 'string']],
         SetTraceLogLevel: ['void', ['int']],
-        SetWindowState: ['void', ['uint']],
         GenImageColor: [Image, ['int', 'int', Color]],
         GetFontDefault: [Font, []],
         MeasureTextEx: [Vector2, [Font, 'string', 'float', 'float']],
@@ -295,7 +291,6 @@ function run_node_ffi(time) {
 
     // We need to call InitWindow before using anything else (such as fonts)
     r.SetTraceLogLevel(5); // Errors
-    r.SetWindowState(0x80); // Hidden
     r.InitWindow(800, 600, "Raylib Test");
 
     let img = r.GenImageColor(800, 600, new Color({ r: 0, g: 0, b: 0, a: 255 }));

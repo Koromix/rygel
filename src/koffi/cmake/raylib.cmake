@@ -7,13 +7,10 @@ add_library(raylib SHARED
     ../../../vendor/raylib/src/rtextures.c
     ../../../vendor/raylib/src/rtext.c
     ../../../vendor/raylib/src/rmodels.c
-    ../../../vendor/raylib/src/utils.c
-    ../../../vendor/raylib/src/rglfw.c
-    ../../../vendor/raylib/src/raudio.c
 )
 set_target_properties(raylib PROPERTIES PREFIX "")
 target_include_directories(raylib PRIVATE ../../../vendor/raylib/src/external/glfw/include)
-target_compile_definitions(raylib PRIVATE PLATFORM_DESKTOP GRAPHICS_API_OPENGL_21 BUILD_LIBTYPE_SHARED NDEBUG)
+target_compile_definitions(raylib PRIVATE PLATFORM_MEMORY GRAPHICS_API_OPENGL_SOFTWARE BUILD_LIBTYPE_SHARED NDEBUG)
 
 if(MSVC)
     target_compile_options(raylib PRIVATE /wd4244 /wd4305)
@@ -80,6 +77,5 @@ if(UNIX AND NOT APPLE)
         message(FATAL_ERROR "Missing X11 development files: ${missing_xlib_str}")
     endif()
 
-    target_compile_definitions(raylib PRIVATE _GLFW_X11)
     target_include_directories(raylib PRIVATE ${XLIB_INCLUDE_DIRS})
 endif()

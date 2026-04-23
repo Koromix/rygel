@@ -65,32 +65,20 @@ main();
 
 async function main() {
     try {
-        let display = false;
-
-        for (let i = 2; i < process.argv.length; i++) {
-            let arg = process.argv[i];
-
-            if (arg == '-d' || arg == '--display') {
-                display = true;
-            } else if (arg[0] == '-') {
-                throw new Error(`Unknown option '${process.argv[i]}'`)
-            }
-        }
-
-        await test(display);
+        await test();
+        console.log('Success!');
     } catch (err) {
         console.error(err);
         process.exit(1);
     }
 }
 
-async function test(display) {
+async function test() {
     let lib_filename = path.join(__dirname, cnoke.output, 'raylib' + koffi.extension);
     let lib = koffi.load(lib_filename);
 
     const InitWindow = lib.func('InitWindow', 'void', ['int', 'int', 'str']);
     const SetTraceLogLevel = lib.func('SetTraceLogLevel', 'void', ['int']);
-    const SetWindowState = lib.func('SetWindowState', 'void', ['uint']);
     const GenImageColor = lib.func('GenImageColor', Image, ['int', 'int', Color]);
     const GetFontDefault = lib.func('GetFontDefault', Font, []);
     const MeasureTextEx = lib.func('MeasureTextEx', Vector2, [Font, 'str', 'float', 'float']);
@@ -107,8 +95,6 @@ async function test(display) {
 
     // We need to call InitWindow before using anything else (such as fonts)
     SetTraceLogLevel(4); // Warnings
-    if (!display)
-        SetWindowState(0x80); // Hidden
     InitWindow(800, 600, "Raylib Test");
 
     let img = GenImageColor(800, 600, { r: 0, g: 0, b: 0, a: 255 });
@@ -131,17 +117,6 @@ async function test(display) {
         };
 
         ImageDrawTextEx(img, font, text, pos, 10, 1, color);
-    }
-
-    if (display) {
-        BeginDrawing();
-        ClearBackground({ r: 0, g: 0, b: 0, a: 255 });
-        let tex = LoadTextureFromImage(img);
-        DrawTexture(tex, 0, 0, { r: 255, g: 255, b: 255, a: 255 });
-        EndDrawing();
-
-        while (!WindowShouldClose())
-            PollInputEvents();
     }
 
     // In theory we could directly checksum the image data, but we can't do it easily right now
