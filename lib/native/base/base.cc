@@ -287,7 +287,7 @@ void *LinkedAllocator::Resize(void *ptr, Size old_size, Size new_size)
         bool single = (bucket->next == bucket);
 
         // Sanity check
-        K_ASSERT(K_SIZE(Bucket) + bucket->size == old_size);
+        K_ASSERT(bucket->size == K_SIZE(Bucket) + old_size);
 
         bucket = (Bucket *)allocator->Resize(bucket, K_SIZE(Bucket) + old_size,
                                                      K_SIZE(Bucket) + new_size);
@@ -318,14 +318,14 @@ void LinkedAllocator::Release(const void *ptr, Size size)
     bool single = (bucket->next == bucket);
 
     // Sanity check
-    K_ASSERT(K_SIZE(Bucket) + bucket->size == size);
+    K_ASSERT(bucket->size == K_SIZE(bucket) + size);
 
     list = single ? nullptr : bucket->next;
 
     bucket->prev->next = bucket->next;
     bucket->next->prev = bucket->prev;
 
-    allocator->Release(bucket, size);
+    allocator->Release(bucket, bucket->size);
 }
 
 void LinkedAllocator::GiveTo(LinkedAllocator *alloc)

@@ -1127,7 +1127,7 @@ class LinkedAllocator final: public Allocator {
         Size size;
         Bucket *prev;
         Bucket *next;
-        uint8_t data[];
+        alignas(16) uint8_t data[];
     };
 
     Allocator *allocator;
