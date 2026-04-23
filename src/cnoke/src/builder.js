@@ -5,8 +5,18 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { spawnSync } from 'child_process';
-import * as tools from './tools.js';
-import TOOLCHAINS from '../assets/toolchains.json' with { type: 'json' };
+import {
+    determineArch,
+    downloadHttp,
+    extractTarGz,
+    unlinkRecursive,
+    syncFiles,
+    compareVersions,
+    getNapiVersion,
+    pathIsAbsolute
+} from './util.js';
+import { FIND_CNOKE_CMAKE, WIN_DELAY_HOOK_C } from './assets.js';
+import TOOLCHAINS from './toolchains.json' with { type: 'json' };
 
 const DefaultOptions = {
     mode: 'RelWithDebInfo'
@@ -15,17 +25,13 @@ const DefaultOptions = {
 function Builder(config = {}) {
     let self = this;
 
-    let host = `${process.platform}_${tools.determineArch()}`;
+    let host = `${process.platform}_${determineArch()}`;
 
-    let app_dir = config.app_dir;
     let project_dir = config.project_dir;
     let package_dir = config.package_dir;
 
-    if (app_dir == null)
-        app_dir = import.meta.dirname.replace(/\\/g, '/') + '/..';
     if (project_dir == null)
         project_dir = process.cwd();
-    app_dir = app_dir.replace(/\\/g, '/');
     project_dir = project_dir.replace(/\\/g, '/');
     if (package_dir == null)
         package_dir = findParentDirectory(project_dir, 'package.json');
@@ -99,10 +105,10 @@ function Builder(config = {}) {
                 fs.mkdirSync(cache_dir, { recursive: true, mode: 0o755 });
 
                 let url = `https://nodejs.org/dist/v${runtime_version}/node-v${runtime_version}-headers.tar.gz`;
-                await tools.downloadHttp(url, destname);
+                await downloadHttp(url, destname);
             }
 
-            await tools.extractTarGz(destname, work_dir + '/headers', 1);
+            await extractTarGz(destname, work_dir + '/headers', 1);
 
             args.push(`-DNODE_JS_INCLUDE_DIRS=${work_dir}/headers/include/node`);
         } else {
@@ -112,7 +118,8 @@ function Builder(config = {}) {
             args.push(`-DNODE_JS_INCLUDE_DIRS=${api_dir}/include`);
         }
 
-        args.push(`-DCMAKE_MODULE_PATH=${app_dir}/assets`);
+        fs.writeFileSync(work_dir + '/FindCNoke.cmake', FIND_CNOKE_CMAKE);
+        args.push(`-DCMAKE_MODULE_PATH=${work_dir}`);
 
         let win32 = (toolchain ?? host).startsWith('win32_');
         let mingw = (process.platform == 'win32' && process.env.MSYSTEM != null);
@@ -131,7 +138,7 @@ function Builder(config = {}) {
                         fs.mkdirSync(cache_dir, { recursive: true, mode: 0o755 });
 
                         let url = `https://nodejs.org/dist/v${runtime_version}/${info.lib}/node.lib`;
-                        await tools.downloadHttp(url, destname);
+                        await downloadHttp(url, destname);
                     }
 
                     fs.copyFileSync(destname, work_dir + '/node.lib');
@@ -142,7 +149,7 @@ function Builder(config = {}) {
                 }
             }
 
-            fs.copyFileSync(`${app_dir}/assets/win_delay_hook.c`, work_dir + '/win_delay_hook.c');
+            fs.writeFileSync(work_dir + '/win_delay_hook.c', WIN_DELAY_HOOK_C);
             args.push(`-DNODE_JS_SOURCES=${work_dir}/win_delay_hook.c`);
         }
 
@@ -256,7 +263,7 @@ function Builder(config = {}) {
 
         let proc = spawnSync(cmake_bin, args, { cwd: work_dir, stdio: 'inherit' });
         if (proc.status !== 0) {
-            tools.unlinkRecursive(work_dir);
+            unlinkRecursive(work_dir);
             if (retry)
                 return self.configure(false);
 
@@ -301,7 +308,7 @@ function Builder(config = {}) {
 
         console.log('>> Copy target files');
 
-        tools.syncFiles(output_dir, build_dir);
+        syncFiles(output_dir, build_dir);
     };
 
     async function checkPrebuild() {
@@ -315,7 +322,7 @@ function Builder(config = {}) {
             if (fs.existsSync(archive_filename)) {
                 try {
                     console.log('>> Extracting prebuilt binaries...');
-                    await tools.extractTarGz(archive_filename, build_dir, 1);
+                    await extractTarGz(archive_filename, build_dir, 1);
                 } catch (err) {
                     console.error('Failed to find prebuilt binary for your platform, building manually');
                 }
@@ -340,7 +347,7 @@ function Builder(config = {}) {
     }
 
     this.clean = function() {
-        tools.unlinkRecursive(build_dir);
+        unlinkRecursive(build_dir);
     };
 
     function findParentDirectory(dirname, basename) {
@@ -424,16 +431,16 @@ function Builder(config = {}) {
     function checkCompatibility() {
         let options = readCNokeOptions();
 
-        if (options.node != null && tools.compareVersions(runtime_version, options.node) < 0)
+        if (options.node != null && compareVersions(runtime_version, options.node) < 0)
             throw new Error(`Project ${options.name} requires Node.js >= ${options.node}`);
 
         if (options.napi != null) {
             let major = parseInt(runtime_version, 10);
-            let required = tools.getNapiVersion(options.napi, major);
+            let required = getNapiVersion(options.napi, major);
 
             if (required == null)
                 throw new Error(`Project ${options.name} does not support the Node ${major}.x branch (old or missing N-API)`);
-            if (tools.compareVersions(runtime_version, required) < 0)
+            if (compareVersions(runtime_version, required) < 0)
                 throw new Error(`Project ${options.name} requires Node >= ${required} in the Node ${major}.x branch (with N-API >= ${options.napi})`);
         }
     }
@@ -498,7 +505,7 @@ function Builder(config = {}) {
     function expandPath(str, root) {
         let expanded = expandString(str);
 
-        if (!tools.pathIsAbsolute(expanded))
+        if (!pathIsAbsolute(expanded))
             expanded = path.join(root, expanded);
         expanded = path.normalize(expanded);
 

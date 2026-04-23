@@ -6,7 +6,7 @@
 const fs = require('fs');
 const path = require('path');
 const util = require('util');
-const { getNapiVersion, determineArch } = require('../../cnoke/src/tools.js');
+const { getNapiVersion, determineArch } = require('../../cnoke/src/util.js');
 
 const PACKAGE = require('../package.json');
 
