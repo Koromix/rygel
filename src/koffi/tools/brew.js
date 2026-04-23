@@ -384,7 +384,7 @@ async function build() {
         main.scripts = {
             install: 'node src/cnoke.js -P . -D src/koffi --prebuild'
         };
-        main.cnoke.output = 'build/koffi/{{ platform }}_{{ arch }}';
+        main.cnoke.output = 'build/koffi/{{ toolchain }}';
 
         if (MONOLITH) {
             for (let artifact of artifacts) {
