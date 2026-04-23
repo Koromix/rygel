@@ -1,0 +1,31 @@
+diff --git a/vendor/sqlite3mc/ext/base64.c b/vendor/sqlite3mc/ext/base64.c
+index 3334222f71..c30097cf9c 100644
+--- a/vendor/sqlite3mc/ext/base64.c
++++ b/vendor/sqlite3mc/ext/base64.c
+@@ -112,7 +112,6 @@ static const char b64Numerals[64+1]
+ ** encoded group lengths to B64_DARK_MAX or to terminate the last group.
+ */
+ static char* toBase64( u8 *pIn, int nbIn, char *pOut ){
+-  int nCol = 0;
+   while( nbIn >= 3 ){
+     /* Do the bit-shuffle, exploiting unsigned input to avoid masking. */
+     pOut[0] = BX_NUMERAL(pIn[0]>>2);
+@@ -122,10 +121,6 @@ static char* toBase64( u8 *pIn, int nbIn, char *pOut ){
+     pOut += 4;
+     nbIn -= 3;
+     pIn += 3;
+-    if( (nCol += 4)>=B64_DARK_MAX || nbIn<=0 ){
+-      *pOut++ = '\n';
+-      nCol = 0;
+-    }
+   }
+   if( nbIn > 0 ){
+     signed char nco = nbIn+1;
+@@ -141,7 +136,6 @@ static char* toBase64( u8 *pIn, int nbIn, char *pOut ){
+       pOut[nbe] = ce;
+     }
+     pOut += 4;
+-    *pOut++ = '\n';
+   }
+   *pOut = 0;
+   return pOut;

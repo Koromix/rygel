@@ -4,6 +4,7 @@
 #include "lib/native/base/base.hh"
 #include "sqlite.hh"
 
+extern "C" int sqlite3_base64_init(sqlite3 *db, char **pzErrMsg, const sqlite3_api_routines *pApi);
 extern "C" int sqlite3_uuid_init(sqlite3 *db, char **pzErrMsg, const sqlite3_api_routines *pApi);
 
 namespace K {
@@ -14,8 +15,24 @@ K_INIT(SQLite)
     K_CRITICAL(ret == SQLITE_OK, "Failed to initialize SQLite");
 
 #if defined(SQLITE_EXTENSIONS)
+    sqlite3_auto_extension((void(*)())sqlite3_base64_init);
     sqlite3_auto_extension((void(*)())sqlite3_uuid_init);
 #endif
+}
+
+static void RndSafe(sqlite3_context *ctx, int, sqlite3_value **argv)
+{
+    int len = (sqlite3_value_type(argv[0]) == SQLITE_INTEGER) ? sqlite3_value_int(argv[0]) : -1;
+
+    if (len < 0) {
+        sqlite3_result_error(ctx, "Unexpected length argument, expected positive integer value", -1);
+        return;
+    }
+
+    uint8_t *buf = (uint8_t *)AllocateRaw(nullptr, len);
+    FillRandomSafe(buf, len);
+
+    sqlite3_result_blob(ctx, buf, len, [](void *ptr) { ReleaseRaw(nullptr, ptr, -1); });
 }
 
 static int NatsortCollateFunc(void *, int len1, const void *key1, int len2, const void *key2)
@@ -28,6 +45,11 @@ static int NatsortCollateFunc(void *, int len1, const void *key1, int len2, cons
 
 static bool ExtendConnection(sqlite3 *db)
 {
+    if (sqlite3_create_function(db, "rnd_safe", 1, SQLITE_UTF8, nullptr, RndSafe, nullptr, nullptr) != SQLITE_OK) {
+        LogError("SQLite failed to add rnd_safe() function");
+        return false;
+    }
+
     if (sqlite3_create_collation(db, "natsort", SQLITE_UTF8, nullptr, NatsortCollateFunc) != SQLITE_OK) {
         LogError("SQLite failed to add natural collation");
         return false;
