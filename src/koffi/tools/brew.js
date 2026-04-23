@@ -406,6 +406,7 @@ async function build() {
             write: true,
             platform: 'node',
             outfile: pkg_dir + '/src/cnoke.js',
+            dropLabels: ['FULL'],
             plugins: [
                 {
                     name: 'dirname',

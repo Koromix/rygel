@@ -52,8 +52,10 @@ function Builder(config = {}) {
     if (runtime_version.startsWith('v'))
         runtime_version = runtime_version.substr(1);
 
-    if (toolchain != null && !Object.hasOwn(TOOLCHAINS, toolchain))
-        throw new Error(`Unknown cross-compilation toolchain '${toolchain}'`);
+    FULL: (() => {
+        if (toolchain != null && !Object.hasOwn(TOOLCHAINS, toolchain))
+            throw new Error(`Unknown cross-compilation toolchain '${toolchain}'`);
+    })();
 
     let options = null;
 
@@ -99,18 +101,26 @@ function Builder(config = {}) {
 
         // Download or use Node headers
         if (options.api == null) {
-            let destname = `${cache_dir}/node-v${runtime_version}-headers.tar.gz`;
+            let downloaded = false;
 
-            if (!fs.existsSync(destname)) {
-                fs.mkdirSync(cache_dir, { recursive: true, mode: 0o755 });
+            FULL: await (async () => {
+                let destname = `${cache_dir}/node-v${runtime_version}-headers.tar.gz`;
 
-                let url = `https://nodejs.org/dist/v${runtime_version}/node-v${runtime_version}-headers.tar.gz`;
-                await downloadHttp(url, destname);
-            }
+                if (!fs.existsSync(destname)) {
+                    fs.mkdirSync(cache_dir, { recursive: true, mode: 0o755 });
 
-            await extractTarGz(destname, work_dir + '/headers', 1);
+                    let url = `https://nodejs.org/dist/v${runtime_version}/node-v${runtime_version}-headers.tar.gz`;
+                    await downloadHttp(url, destname);
+                }
 
-            args.push(`-DNODE_JS_INCLUDE_DIRS=${work_dir}/headers/include/node`);
+                await extractTarGz(destname, work_dir + '/headers', 1);
+                downloaded = true;
+
+                args.push(`-DNODE_JS_INCLUDE_DIRS=${work_dir}/headers/include/node`);
+            })();
+
+            if (!downloaded)
+                throw new Error('Cannot download API headers');
         } else {
             console.log(`>> Using local node-api headers`);
 
@@ -129,20 +139,28 @@ function Builder(config = {}) {
             if (mingw) {
                 args.push(`-DNODE_JS_LINK_LIB=node.dll`);
             } else {
-                let info = TOOLCHAINS[toolchain ?? host];
-
                 if (options.api == null) {
-                    let destname = `${cache_dir}/node_v${runtime_version}_${toolchain ?? host}.lib`;
+                    let downloaded = false;
 
-                    if (!fs.existsSync(destname)) {
-                        fs.mkdirSync(cache_dir, { recursive: true, mode: 0o755 });
+                    FULL: await (async () => {
+                        let info = TOOLCHAINS[toolchain ?? host];
+                        let destname = `${cache_dir}/node_v${runtime_version}_${toolchain ?? host}.lib`;
 
-                        let url = `https://nodejs.org/dist/v${runtime_version}/${info.lib}/node.lib`;
-                        await downloadHttp(url, destname);
-                    }
+                        if (!fs.existsSync(destname)) {
+                            fs.mkdirSync(cache_dir, { recursive: true, mode: 0o755 });
 
-                    fs.copyFileSync(destname, work_dir + '/node.lib');
-                    args.push(`-DNODE_JS_LINK_LIB=${work_dir}/node.lib`);
+                            let url = `https://nodejs.org/dist/v${runtime_version}/${info.lib}/node.lib`;
+                            await downloadHttp(url, destname);
+                        }
+
+                        fs.copyFileSync(destname, work_dir + '/node.lib');
+                        args.push(`-DNODE_JS_LINK_LIB=${work_dir}/node.lib`);
+
+                        downloaded = true;
+                    })();
+
+                    if (!downloaded)
+                        throw new Error('Cannot download Node import library');
                 } else {
                     let api_dir = expandPath(options.api, project_dir);
                     args.push(`-DNODE_JS_LINK_DEF=${api_dir}/def/node_api.def`);
@@ -168,7 +186,7 @@ function Builder(config = {}) {
         }
 
         // Handle toolchain flags and cross-compilation
-        {
+        FULL: (() => {
             let info = TOOLCHAINS[toolchain ?? host];
 
             if (info != null) {
@@ -239,7 +257,7 @@ function Builder(config = {}) {
                 fs.writeFileSync(filename, text);
                 args.push(`-DCMAKE_TOOLCHAIN_FILE=${filename}`);
             }
-        }
+        })();
 
         if (prefer_clang) {
             if (process.platform == 'win32' && !mingw) {
