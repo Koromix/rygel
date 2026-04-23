@@ -49,7 +49,7 @@ async function main() {
             }
 
             if (arg == '--help') {
-                print_usage();
+                printUsage();
                 return;
             } else if (arg == '-D' || arg == '--directory') {
                 if (value == null)
@@ -133,7 +133,7 @@ async function main() {
     }
 }
 
-function print_usage() {
+function printUsage() {
     let help = `Usage: cnoke [command] [options...]
 
 Commands:
