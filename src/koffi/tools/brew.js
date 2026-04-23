@@ -382,7 +382,7 @@ async function build() {
         let main = JSON.parse(json);
 
         main.scripts = {
-            install: 'node src/cnoke.js -P . -D src/koffi --prebuild'
+            install: 'node src/cnoke.js -P . -D src/koffi --prebuild --release'
         };
         main.cnoke.output = 'build/koffi/{{ toolchain }}';
 
