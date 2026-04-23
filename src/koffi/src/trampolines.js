@@ -20,7 +20,7 @@ function run() {
     let args = process.argv.slice(2);
 
     if (args.length < 2)
-        throw new Error('Usage: write_trampolines.js DIRECTORY N');
+        throw new Error('Usage: trampolines.js DIRECTORY N');
 
     let dest_dir = args[0]?.trim?.();
     let n = parseInt(args[1], 10);
