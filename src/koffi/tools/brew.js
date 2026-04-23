@@ -382,7 +382,7 @@ async function build() {
         let main = JSON.parse(json);
 
         main.scripts = {
-            install: 'node src/cnoke/cnoke.js -P . -D src/koffi --prebuild'
+            install: 'node src/cnoke.js -P . -D src/koffi --prebuild'
         };
         main.cnoke.output = 'build/koffi/{{ platform }}_{{ arch }}';
 
@@ -398,6 +398,31 @@ async function build() {
             main.optionalDependencies = packages.reduce((obj, pkg) => { obj[pkg.name] = main.version; return obj; }, {});
         }
         delete main.devDependencies;
+
+        await esbuild.build({
+            entryPoints: [pkg_dir + '/src/cnoke/cnoke.js'],
+            bundle: true,
+            minify: false,
+            write: true,
+            platform: 'node',
+            outfile: pkg_dir + '/src/cnoke.js',
+            plugins: [
+                {
+                    name: 'dirname',
+                    setup: build => {
+                        build.onLoad({ filter: /.*\.js$/ }, args => {
+                            let js = fs.readFileSync(args.path, 'utf-8');
+                            let patched = js.replaceAll('import.meta.dirname', '__dirname');
+
+                            return {
+                                contents: patched,
+                                loader: 'js'
+                            }
+                        });
+                    }
+                }
+            ]
+        });
 
         await esbuild.build({
             entryPoints: [pkg_dir + '/src/koffi/index.js'],
@@ -456,6 +481,7 @@ async function build() {
         });
 
         fs.writeFileSync(pkg_dir + '/package.json', JSON.stringify(main, null, 4));
+        fs.rmSync(pkg_dir + '/src/cnoke', { recursive: true });
         fs.unlinkSync(pkg_dir + '/src/koffi/package.json');
         fs.unlinkSync(pkg_dir + '/src/koffi/index.js');
         fs.unlinkSync(pkg_dir + '/src/koffi/indirect.js');
