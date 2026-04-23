@@ -61,27 +61,7 @@ function decodeElfHeader(buf) {
     if (buf[5] != 1)
         throw new Error('Big-endian architectures are not supported');
 
-    let machine = buf.readUInt16LE(18);
-
-    switch (machine) {
-        case 3: { header.e_machine = 'ia32'; } break;
-        case 40: { header.e_machine = 'arm'; } break;
-        case 62: { header.e_machine = 'amd64'; } break;
-        case 183: { header.e_machine = 'arm64'; } break;
-        case 243: {
-            switch (buf[4]) {
-                case 1: { header.e_machine = 'riscv32'; } break;
-                case 2: { header.e_machine = 'riscv64'; } break;
-            }
-        } break;
-        case 248: {
-            switch (buf[4]) {
-                case 1: { header.e_machine = 'loong32'; } break;
-                case 2: { header.e_machine = 'loong64'; } break;
-            }
-        } break;
-        default: throw new Error('Unknown ELF machine type');
-    }
+    header.e_machine = buf.readUInt16LE(18);
 
     switch (buf[4]) {
         case 1: { // 32 bit
