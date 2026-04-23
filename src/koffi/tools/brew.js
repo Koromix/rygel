@@ -160,7 +160,7 @@ async function build() {
     let build_dir = root_dir + '/bin/Koffi';
     let dist_dir = build_dir + '/packages';
 
-    let snapshot_dir = snapshot();
+    let snapshot_dir = await snapshot();
 
     let json = fs.readFileSync(root_dir + '/src/koffi/package.json', { encoding: 'utf-8' });
     let version = JSON.parse(json).version;
@@ -357,13 +357,10 @@ async function build() {
         copyRecursive(snapshot_dir, pkg_dir, makePathFilter([
             'lib/native/base',
             'src/core',
-            'src/cnoke',
             'src/koffi/src',
             'src/koffi/CHANGELOG.md',
             'src/koffi/CMakeLists.txt',
             'src/koffi/index.d.ts',
-            'src/koffi/index.js',
-            'src/koffi/indirect.js',
             'src/koffi/LICENSE.txt',
             'src/koffi/package.json',
             'src/koffi/README.md',
@@ -399,119 +396,14 @@ async function build() {
         }
         delete main.devDependencies;
 
-        await esbuild.build({
-            entryPoints: [pkg_dir + '/src/cnoke/cnoke.js'],
-            bundle: true,
-            minify: false,
-            write: true,
-            platform: 'node',
-            outfile: pkg_dir + '/src/build.js',
-            dropLabels: ['FULL'],
-            plugins: [
-                {
-                    name: 'dirname',
-                    setup: build => {
-                        build.onLoad({ filter: /.*\.js$/ }, args => {
-                            let js = fs.readFileSync(args.path, 'utf-8');
-                            let patched = js.replaceAll('import.meta.dirname', '__dirname');
-
-                            return {
-                                contents: patched,
-                                loader: 'js'
-                            }
-                        });
-                    }
-                }
-            ]
-        });
-
-        await esbuild.build({
-            entryPoints: [pkg_dir + '/src/koffi/index.js'],
-            bundle: true,
-            minify: false,
-            write: true,
-            external: [BINARY_PREFIX + '*'],
-            platform: 'node',
-            outfile: pkg_dir + '/index.js',
-            plugins: [
-                {
-                    name: 'package.json',
-                    setup: build => {
-                        build.onResolve({ filter: /^\.\.\/package.json$/ }, args => {
-                            return {
-                                path: './package.json',
-                                external: true
-                            }
-                        });
-                    }
-                },
-                {
-                    name: 'static',
-                    setup: build => {
-                        build.onLoad({ filter: /\/src\/static\.js$/ }, args => {
-                            let code = `
-                                function find(pkg) {
-                                    let native = null;
-
-                                    ${MONOLITH ? packages.flatMap(pkg => pkg.builds.map(build => `
-                                        if (native == null && pkg == '${pkg.target}') {
-                                            try {
-                                                native = require('./build/koffi/${build.name}/koffi.node');
-                                            } catch (err) {
-                                                // Go on
-                                            }
-                                        }
-                                    `)).join('') : ''}
-                                    ${!MONOLITH ? packages.flatMap(pkg => `
-                                        if (pkg == '${pkg.target}')
-                                            native = require('${pkg.name}');
-                                    `).join('') : ''}
-
-                                    return native;
-                                }
-
-                                module.exports = { find };
-                            `;
-
-                            return {
-                                contents: code,
-                                loader: 'js'
-                            };
-                        });
-                    }
-                }
-            ]
-        });
-
-        await esbuild.build({
-            entryPoints: [pkg_dir + '/src/koffi/indirect.js'],
-            bundle: true,
-            minify: false,
-            write: true,
-            platform: 'node',
-            outfile: pkg_dir + '/indirect.js',
-            plugins: [
-                {
-                    name: 'package.json',
-                    setup: build => {
-                        build.onResolve({ filter: /^\.\.\/package.json$/ }, args => {
-                            return {
-                                path: './package.json',
-                                external: true
-                            }
-                        });
-                    }
-                }
-            ]
-        });
+        await bundleScripts(pkg_dir, packages);
 
         fs.writeFileSync(pkg_dir + '/package.json', JSON.stringify(main, null, 4));
-        fs.rmSync(pkg_dir + '/src/cnoke', { recursive: true });
         fs.unlinkSync(pkg_dir + '/src/koffi/package.json');
-        fs.unlinkSync(pkg_dir + '/src/koffi/index.js');
-        fs.unlinkSync(pkg_dir + '/src/koffi/indirect.js');
         fs.unlinkSync(pkg_dir + '/src/koffi/src/init.js');
         fs.unlinkSync(pkg_dir + '/src/koffi/src/static.js');
+        fs.writeFileSync(pkg_dir + '/index.js', 'module.exports = require("./src/koffi/index.js");');
+        fs.writeFileSync(pkg_dir + '/indirect.js', 'module.exports = require("./src/koffi/indirect.js");');
         fs.renameSync(pkg_dir + '/src/koffi/index.d.ts', pkg_dir + '/index.d.ts');
         fs.renameSync(pkg_dir + '/src/koffi/README.md', pkg_dir + '/README.md');
         fs.renameSync(pkg_dir + '/src/koffi/LICENSE.txt', pkg_dir + '/LICENSE.txt');
@@ -521,16 +413,22 @@ async function build() {
         fs.rmSync(pkg_dir + '/web', { recursive: true });
     }
 
-    console.log('>> Test prebuild');
+    console.log('>> Test package');
     {
         let pkg_dir = dist_dir + '/koffi';
-        let proc = spawnSync(process.execPath, ['-e', 'require(process.argv[1])', pkg_dir], { cwd: pkg_dir });
+        let proc = spawnSync(process.execPath, ['-e', 'require(process.argv[1])', pkg_dir], {
+            cwd: pkg_dir,
+            env: {
+                ...process.env,
+                NODE_PATH: dist_dir
+            }
+        });
 
         if (proc.status !== 0) {
             let stdout = proc.stdout.toString().trim();
             let stderr = proc.stderr.toString().trim();
 
-            throw new Error('Failed to use prebuild:\n' + (stderr || stdout));
+            throw new Error('Failed to import package:\n' + (stderr || stdout));
         }
     }
 
@@ -585,13 +483,14 @@ async function compile(command) {
     return success;
 }
 
-function snapshot() {
+async function snapshot() {
     let snapshot_dir = root_dir + '/bin/Koffi/snapshot';
 
     unlinkRecursive(snapshot_dir);
     fs.mkdirSync(snapshot_dir, { mode: 0o755, recursive: true });
 
     console.log('>> Snapshot code...');
+
     copyRecursive(root_dir, snapshot_dir, makePathFilter([
         'lib/native/base',
         'src/cnoke',
@@ -604,7 +503,105 @@ function snapshot() {
         'web/koffi.dev'
     ]));
 
+    await bundleScripts(snapshot_dir, []);
+
     return snapshot_dir;
+}
+
+async function bundleScripts(dest_dir, packages) {
+    await esbuild.build({
+        entryPoints: [root_dir + '/src/koffi/index.js'],
+        bundle: true,
+        minify: false,
+        write: true,
+        external: [BINARY_PREFIX + '*'],
+        platform: 'node',
+        outfile: dest_dir + '/src/koffi/index.js',
+        plugins: [
+            {
+                name: 'static',
+                setup: build => {
+                    build.onLoad({ filter: /\/src\/static\.js$/ }, args => {
+                        let code = `
+                            function find(pkg) {
+                                let native = null;
+
+                                ${MONOLITH ? packages.flatMap(pkg => pkg.builds.map(build => `
+                                    if (native == null && pkg == '${pkg.target}') {
+                                        try {
+                                            native = require('../../build/koffi/${build.name}/koffi.node');
+                                        } catch (err) {
+                                            // Go on
+                                        }
+                                    }
+                                `)).join('') : ''}
+                                ${!MONOLITH ? packages.flatMap(pkg => `
+                                    if (pkg == '${pkg.target}')
+                                        native = require('${pkg.name}');
+                                `).join('') : ''}
+
+                                return native;
+                            }
+
+                            module.exports = { find };
+                        `;
+
+                        return {
+                            contents: code,
+                            loader: 'js'
+                        };
+                    });
+                }
+            }
+        ]
+    });
+
+    await esbuild.build({
+        entryPoints: [root_dir + '/src/koffi/indirect.js'],
+        bundle: true,
+        minify: false,
+        write: true,
+        platform: 'node',
+        outfile: dest_dir + '/src/koffi/indirect.js',
+        plugins: [
+            {
+                name: 'package.json',
+                setup: build => {
+                    build.onResolve({ filter: /^\.\.\/package.json$/ }, args => {
+                        return {
+                            path: './package.json',
+                            external: true
+                        }
+                    });
+                }
+            }
+        ]
+    });
+
+    await esbuild.build({
+        entryPoints: [root_dir + '/src/cnoke/cnoke.js'],
+        bundle: true,
+        minify: false,
+        write: true,
+        platform: 'node',
+        outfile: dest_dir + '/src/build.js',
+        plugins: [
+            {
+                name: 'dirname',
+                setup: build => {
+                    build.onLoad({ filter: /.*\.js$/ }, args => {
+                        let js = fs.readFileSync(args.path, 'utf-8');
+                        let patched = js.replaceAll('import.meta.dirname', '__dirname');
+
+                        return {
+                            contents: patched,
+                            loader: 'js'
+                        }
+                    });
+                }
+            }
+        ]
+    });
 }
 
 async function upload(snapshot_dir) {
@@ -657,7 +654,7 @@ async function debug() {
 }
 
 async function test(debug = false) {
-    let snapshot_dir = snapshot();
+    let snapshot_dir = await snapshot();
 
     let success = true;
 

@@ -27,22 +27,20 @@ function detect() {
     return [pkg, triplets];
 }
 
-function init(pkg, triplets, native) {
+function init(root, pkg, triplets, native) {
     let err = null;
 
     if (native == null) {
-        let roots = [path.join(__dirname, '..')];
+        let roots = [root];
 
         if (process.resourcesPath != null)
             roots.push(process.resourcesPath);
 
-        let filenames = roots.flatMap(root => triplets.flatMap(triplet => [
-            `${root}/@koromix/koffi-${pkg}/${triplet}/koffi.node`,
-            `${root}/koffi/build/koffi/${triplet}/koffi.node`,
-            `${root}/build/koffi/${triplet}/koffi.node`,
-            `${root}/koffi/${triplet}/koffi.node`,
-            `${root}/node_modules/koffi/build/koffi/${triplet}/koffi.node`,
-            `${root}/../../bin/Koffi/${triplet}/koffi.node`
+        let filenames = roots.flatMap(dir => triplets.flatMap(triplet => [
+            `${dir}/build/koffi/${triplet}/koffi.node`,
+            `${dir}/bin/Koffi/${triplet}/koffi.node`,
+            `${dir}/node_modules/koffi/build/koffi/${triplet}/koffi.node`,
+            `${dir}/../@koromix/koffi-${pkg}/${triplet}/koffi.node`
         ]));
 
         for (let filename of filenames) {

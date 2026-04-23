@@ -8,6 +8,6 @@ const { find } = require('./src/static.js');
 
 let [pkg, triplets] = detect();
 let native = find(pkg);
-let mod = init(pkg, triplets, native);
+let mod = init(__dirname + '/../..', pkg, triplets, native);
 
 module.exports = mod;

@@ -6,12 +6,12 @@
             "arch": "armhf",
             "machine": "debian_arm32",
             "directory": "/home/debian/luigi",
-            "build": "node ../cnoke/cnoke.js --ccache",
+            "build": "node ../build.js --ccache",
             "package": null
         },
 
         "test": {
-            "build": "node ../cnoke/cnoke.js --cache -D test",
+            "build": "node ../build.js --cache -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
                 "Test Sync (slow pointers)": "node test/sync.js --slow_pointers",
@@ -32,12 +32,12 @@
             "arch": "arm64",
             "machine": "debian_arm64",
             "directory": "/home/debian/luigi",
-            "build": "CC=clang-21 CXX=clang++-21 node ../cnoke/cnoke.js --ccache",
+            "build": "CC=clang-21 CXX=clang++-21 node ../build.js --ccache",
             "package": "linux-arm64"
         },
 
         "test": {
-            "build": "CC=clang-21 CXX=clang++-21 node ../cnoke/cnoke.js --ccache -D test",
+            "build": "CC=clang-21 CXX=clang++-21 node ../build.js --ccache -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
                 "Test Sync (slow pointers)": "node test/sync.js --slow_pointers",
@@ -58,12 +58,12 @@
             "arch": "ia32",
             "machine": "debian_i386",
             "directory": "/home/debian/luigi",
-            "build": "node ../cnoke/cnoke.js --ccache",
+            "build": "node ../build.js --ccache",
             "package": "linux-ia32"
         },
 
         "test": {
-            "build": "node ../cnoke/cnoke.js --ccache -D test",
+            "build": "node ../build.js --ccache -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
                 "Test Sync (slow pointers)": "node test/sync.js --slow_pointers",
@@ -84,13 +84,13 @@
             "arch": "x64",
             "machine": "debian_x64",
             "directory": "/home/debian/luigi",
-            "build": "CC=clang-21 CXX=clang++-21 node ../cnoke/cnoke.js --ccache",
+            "build": "CC=clang-21 CXX=clang++-21 node ../build.js --ccache",
             "release": "CC=clang-21 CXX=clang++-21 LLVM_PROFDATA=llvm-profdata-21 sh ./tools/pgo_clang.sh",
             "package": "linux-x64"
         },
 
         "test": {
-            "build": "CC=clang-21 CXX=clang++-21 node ../cnoke/cnoke.js --ccache -D test",
+            "build": "CC=clang-21 CXX=clang++-21 node ../build.js --ccache -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
                 "Test Sync (slow pointers)": "node test/sync.js --slow_pointers",
@@ -112,12 +112,12 @@
             "arch": "riscv64d",
             "machine": "debian_riscv64",
             "directory": "/home/debian/luigi",
-            "build": "node ../cnoke/cnoke.js",
+            "build": "node ../build.js",
             "package": null
         },
 
         "test": {
-            "build": "node ../cnoke/cnoke.js -D test",
+            "build": "node ../build.js -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
                 "Test Sync (slow pointers)": "node test/sync.js --slow_pointers",
@@ -138,12 +138,12 @@
             "arch": "ia32",
             "machine": "freebsd_i386",
             "directory": "/home/freebsd/luigi",
-            "build": "node ../cnoke/cnoke.js",
+            "build": "node ../build.js",
             "package": "freebsd-ia32"
         },
 
         "test": {
-            "build": "node ../cnoke/cnoke.js -D test",
+            "build": "node ../build.js -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
                 "Test Sync (slow pointers)": "node test/sync.js --slow_pointers",
@@ -164,12 +164,12 @@
             "arch": "x64",
             "machine": "freebsd_x64",
             "directory": "/home/freebsd/luigi",
-            "build": "node ../cnoke/cnoke.js",
+            "build": "node ../build.js",
             "package": "freebsd-x64"
         },
 
         "test": {
-            "build": "node ../cnoke/cnoke.js -D test",
+            "build": "node ../build.js -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
                 "Test Sync (slow pointers)": "node test/sync.js --slow_pointers",
@@ -190,12 +190,12 @@
             "arch": "arm64",
             "machine": "freebsd_arm64",
             "directory": "/home/freebsd/luigi",
-            "build": "node ../cnoke/cnoke.js",
+            "build": "node ../build.js",
             "package": "freebsd-arm64"
         },
 
         "test": {
-            "build": "node ../cnoke/cnoke.js -D test",
+            "build": "node ../build.js -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
                 "Test Sync (slow pointers)": "node test/sync.js --slow_pointers",
@@ -216,12 +216,12 @@
             "arch": "ia32",
             "machine": "openbsd_i386",
             "directory": "/home/openbsd/luigi",
-            "build": "node ../cnoke/cnoke.js",
+            "build": "node ../build.js",
             "package": "openbsd-ia32"
         },
 
         "test": {
-            "build": "node ../cnoke/cnoke.js -D test",
+            "build": "node ../build.js -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
                 "Test Sync (slow pointers)": "node test/sync.js --slow_pointers",
@@ -242,12 +242,12 @@
             "arch": "x64",
             "machine": "openbsd_x64",
             "directory": "/home/openbsd/luigi",
-            "build": "node ../cnoke/cnoke.js",
+            "build": "node ../build.js",
             "package": "openbsd-x64"
         },
 
         "test": {
-            "build": "node ../cnoke/cnoke.js -D test",
+            "build": "node ../build.js -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
                 "Test Sync (slow pointers)": "node test/sync.js --slow_pointers",
@@ -268,12 +268,12 @@
             "arch": "ia32",
             "machine": "windows_x64",
             "directory": "C:/Users/windows/Desktop/luigi_ia32",
-            "build": "C:\\Node32\\node32.cmd node ../cnoke/cnoke.js",
+            "build": "C:\\Node32\\node32.cmd node ../build.js",
             "package": "win32-ia32"
         },
 
         "test": {
-            "build": "C:\\Node32\\node32.cmd node ../cnoke/cnoke.js -D test",
+            "build": "C:\\Node32\\node32.cmd node ../build.js -D test",
             "commands": {
                 "Test Sync": "C:\\Node32\\node32.cmd node test/sync.js",
                 "Test Sync (slow pointers)": "C:\\Node32\\node32.cmd node test/sync.js --slow_pointers",
@@ -297,12 +297,12 @@
             "arch": "x64",
             "machine": "windows_x64",
             "directory": "C:/Users/windows/Desktop/luigi_x64",
-            "build": "C:\\Node64\\node64.cmd node ../cnoke/cnoke.js",
+            "build": "C:\\Node64\\node64.cmd node ../build.js",
             "package": "win32-x64"
         },
 
         "test": {
-            "build": "C:\\Node64\\node64.cmd node ../cnoke/cnoke.js -D test",
+            "build": "C:\\Node64\\node64.cmd node ../build.js -D test",
             "commands": {
                 "Test Sync": "C:\\Node64\\node64.cmd node test/sync.js",
                 "Test Sync (slow pointers)": "C:\\Node64\\node64.cmd node test/sync.js --slow_pointers",
@@ -326,7 +326,7 @@
             "arch": "arm64",
             "machine": "windows_x64",
             "directory": "C:/Users/windows/Desktop/luigi_arm64",
-            "build": "C:\\Node64\\node64.cmd node ../cnoke/cnoke.js -t win32_arm64",
+            "build": "C:\\Node64\\node64.cmd node ../build.js -t win32_arm64",
             "package": null
         }
     },
@@ -338,12 +338,12 @@
             "arch": "x64",
             "machine": "macos_x64",
             "directory": "/Users/macos/luigi",
-            "build": "PATH=/usr/local/bin:/usr/bin:/bin SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX11.3.sdk node ../cnoke/cnoke.js",
+            "build": "PATH=/usr/local/bin:/usr/bin:/bin SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX11.3.sdk node ../build.js",
             "package": "darwin-x64"
         },
 
         "test": {
-            "build": "PATH=/usr/local/bin:/usr/bin:/bin SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX11.3.sdk node ../cnoke/cnoke.js -D test",
+            "build": "PATH=/usr/local/bin:/usr/bin:/bin SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX11.3.sdk node ../build.js -D test",
             "commands": {
                 "Test Sync": "PATH=/usr/local/bin:/usr/bin:/bin node test/sync.js",
                 "Test Sync (slow pointers)": "PATH=/usr/local/bin:/usr/bin:/bin node test/sync.js --slow_pointers",
@@ -363,7 +363,7 @@
             "arch": "arm64",
             "machine": "macos_x64",
             "directory": "/Users/macos/luigi_arm64",
-            "build": "PATH=/usr/local/bin:/usr/bin:/bin SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX11.3.sdk node ../cnoke/cnoke.js -t darwin_arm64",
+            "build": "PATH=/usr/local/bin:/usr/bin:/bin SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX11.3.sdk node ../build.js -t darwin_arm64",
             "package": "darwin-arm64"
         }
     },
@@ -375,12 +375,12 @@
             "arch": "x64",
             "machine": "alpine_x64",
             "directory": "/home/alpine/luigi",
-            "build": "node ../cnoke/cnoke.js",
+            "build": "node ../build.js",
             "package": "linux-x64"
         },
 
         "test": {
-            "build": "node ../cnoke/cnoke.js -D test",
+            "build": "node ../build.js -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
                 "Test Sync (slow pointers)": "node test/sync.js --slow_pointers",
@@ -400,12 +400,12 @@
             "arch": "loong64",
             "machine": "debian_loong64",
             "directory": "/home/debian/luigi",
-            "build": "node ../cnoke/cnoke.js",
+            "build": "node ../build.js",
             "package": null
         },
 
         "test": {
-            "build": "node ../cnoke/cnoke.js -D test",
+            "build": "node ../build.js -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
                 "Test Sync (slow pointers)": "node test/sync.js --slow_pointers",
@@ -426,12 +426,12 @@
             "arch": "arm64",
             "machine": "alpine_arm64",
             "directory": "/home/alpine/luigi",
-            "build": "node ../cnoke/cnoke.js",
+            "build": "node ../build.js",
             "package": "linux-arm64"
         },
 
         "test": {
-            "build": "node ../cnoke/cnoke.js -D test",
+            "build": "node ../build.js -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
                 "Test Sync (slow pointers)": "node test/sync.js --slow_pointers",

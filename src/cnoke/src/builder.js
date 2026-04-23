@@ -52,7 +52,8 @@ function Builder(config = {}) {
     if (runtime_version.startsWith('v'))
         runtime_version = runtime_version.substr(1);
 
-    FULL: (() => {
+    // The code behind UNSAFE labels is dropped when bundling CNoke for use inside package
+    UNSAFE: (() => {
         if (toolchain != null && !Object.hasOwn(TOOLCHAINS, toolchain))
             throw new Error(`Unknown cross-compilation toolchain '${toolchain}'`);
     })();
@@ -103,7 +104,7 @@ function Builder(config = {}) {
         if (options.api == null) {
             let downloaded = false;
 
-            FULL: await (async () => {
+            UNSAFE: await (async () => {
                 let destname = `${cache_dir}/node-v${runtime_version}-headers.tar.gz`;
 
                 if (!fs.existsSync(destname)) {
@@ -142,7 +143,7 @@ function Builder(config = {}) {
                 if (options.api == null) {
                     let downloaded = false;
 
-                    FULL: await (async () => {
+                    UNSAFE: await (async () => {
                         let info = TOOLCHAINS[toolchain ?? host];
                         let destname = `${cache_dir}/node_v${runtime_version}_${toolchain ?? host}.lib`;
 
@@ -186,7 +187,7 @@ function Builder(config = {}) {
         }
 
         // Handle toolchain flags and cross-compilation
-        FULL: (() => {
+        UNSAFE: (() => {
             let info = TOOLCHAINS[toolchain ?? host];
 
             if (info != null) {
