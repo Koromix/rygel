@@ -435,6 +435,17 @@ async function build() {
             outfile: pkg_dir + '/index.js',
             plugins: [
                 {
+                    name: 'package.json',
+                    setup: build => {
+                        build.onResolve({ filter: /^\.\.\/package.json$/ }, args => {
+                            return {
+                                path: './package.json',
+                                external: true
+                            }
+                        });
+                    }
+                },
+                {
                     name: 'static',
                     setup: build => {
                         build.onLoad({ filter: /\/src\/static\.js$/ }, args => {
@@ -478,7 +489,20 @@ async function build() {
             minify: false,
             write: true,
             platform: 'node',
-            outfile: pkg_dir + '/indirect.js'
+            outfile: pkg_dir + '/indirect.js',
+            plugins: [
+                {
+                    name: 'package.json',
+                    setup: build => {
+                        build.onResolve({ filter: /^\.\.\/package.json$/ }, args => {
+                            return {
+                                path: './package.json',
+                                external: true
+                            }
+                        });
+                    }
+                }
+            ]
         });
 
         fs.writeFileSync(pkg_dir + '/package.json', JSON.stringify(main, null, 4));

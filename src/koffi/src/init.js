@@ -6,20 +6,14 @@
 const fs = require('fs');
 const path = require('path');
 const util = require('util');
-const { getNapiVersion, determineArch } = require('../../cnoke/src/util.js');
+const { determineArch } = require('../../cnoke/src/arch.js');
 
 const PACKAGE = require('../package.json');
 
 function detect() {
     if (process.versions.napi == null || process.versions.napi < PACKAGE.cnoke.napi) {
         let major = parseInt(process.versions.node, 10);
-        let required = getNapiVersion(PACKAGE.cnoke.napi, major);
-
-        if (required != null) {
-            throw new Error(`This engine is based on Node ${process.versions.node}, but ${PACKAGE.name} requires Node >= ${required} in the Node ${major}.x branch (N-API >= ${PACKAGE.cnoke.napi})`);
-        } else {
-            throw new Error(`This engine is based on Node ${process.versions.node}, but ${PACKAGE.name} does not support the Node ${major}.x branch (N-API < ${PACKAGE.cnoke.napi})`);
-        }
+        throw new Error(`This engine is based on Node ${process.versions.node}, but ${PACKAGE.name} does not support the Node ${major}.x branch (N-API < ${PACKAGE.cnoke.napi})`);
     }
 
     let arch = determineArch();
