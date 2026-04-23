@@ -1,8 +1,8 @@
 diff --git a/vendor/sqlite3mc/sqlite3.c b/vendor/sqlite3mc/sqlite3.c
-index 03d65b6282..c12551e5df 100644
+index 91db04a9ec..275017dcb3 100644
 --- a/vendor/sqlite3mc/sqlite3.c
 +++ b/vendor/sqlite3mc/sqlite3.c
-@@ -39626,19 +39626,19 @@ static struct unix_syscall {
+@@ -40564,19 +40564,19 @@ static struct unix_syscall {
    sqlite3_syscall_ptr pDefault; /* Default value */
  } aSyscall[] = {
    { "open",         (sqlite3_syscall_ptr)posixOpen,  0  },
@@ -27,7 +27,7 @@ index 03d65b6282..c12551e5df 100644
  
  /*
  ** The DJGPP compiler environment looks mostly like Unix, but it
-@@ -39651,54 +39651,56 @@ static struct unix_syscall {
+@@ -40589,54 +40589,56 @@ static struct unix_syscall {
  #define osFstat(a,b,c)    0
  #else
    { "fstat",        (sqlite3_syscall_ptr)fstat,      0  },
@@ -96,7 +96,7 @@ index 03d65b6282..c12551e5df 100644
  #else
    { "fchmod",       (sqlite3_syscall_ptr)0,               0  },
  #define osFchmod(FID,MODE) 0
-@@ -39706,88 +39708,97 @@ static struct unix_syscall {
+@@ -40644,88 +40646,97 @@ static struct unix_syscall {
  
  #if defined(HAVE_POSIX_FALLOCATE) && HAVE_POSIX_FALLOCATE
    { "fallocate",    (sqlite3_syscall_ptr)posix_fallocate,  0 },
@@ -210,10 +210,10 @@ index 03d65b6282..c12551e5df 100644
  #else
    { "ioctl",         (sqlite3_syscall_ptr)0,              0 },
 diff --git a/vendor/sqlite3mc/sqlite3mc.c b/vendor/sqlite3mc/sqlite3mc.c
-index de02f31f2e..7a4ee9a973 100644
+index b6e95d5c3f..448dbc764c 100644
 --- a/vendor/sqlite3mc/sqlite3mc.c
 +++ b/vendor/sqlite3mc/sqlite3mc.c
-@@ -39773,19 +39773,19 @@ static struct unix_syscall {
+@@ -40711,19 +40711,19 @@ static struct unix_syscall {
    sqlite3_syscall_ptr pDefault; /* Default value */
  } aSyscall[] = {
    { "open",         (sqlite3_syscall_ptr)posixOpen,  0  },
@@ -238,7 +238,7 @@ index de02f31f2e..7a4ee9a973 100644
  
  /*
  ** The DJGPP compiler environment looks mostly like Unix, but it
-@@ -39798,54 +39798,56 @@ static struct unix_syscall {
+@@ -40736,54 +40736,56 @@ static struct unix_syscall {
  #define osFstat(a,b,c)    0
  #else
    { "fstat",        (sqlite3_syscall_ptr)fstat,      0  },
@@ -307,7 +307,7 @@ index de02f31f2e..7a4ee9a973 100644
  #else
    { "fchmod",       (sqlite3_syscall_ptr)0,               0  },
  #define osFchmod(FID,MODE) 0
-@@ -39853,88 +39855,97 @@ static struct unix_syscall {
+@@ -40791,88 +40793,97 @@ static struct unix_syscall {
  
  #if defined(HAVE_POSIX_FALLOCATE) && HAVE_POSIX_FALLOCATE
    { "fallocate",    (sqlite3_syscall_ptr)posix_fallocate,  0 },

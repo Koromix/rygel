@@ -1,4 +1,4 @@
-/*
+/* @preserve
   2022-09-16
 
   The author disclaims copyright to this source code.  In place of a
@@ -46,10 +46,19 @@
   theFunc().then(...) is not compatible with the change to
   synchronous, but we do do not use those APIs that way. i.e. we don't
   _need_ to change anything for this, but at some point (after Chrome
-  versions (approximately) 104-107 are extinct) should change our
+  versions (approximately) 104-107 are extinct) we should change our
   usage of those methods to remove the "await".
 */
+
 "use strict";
+const urlParams = new URL(globalThis.location.href).searchParams;
+const vfsName = urlParams.get('vfs');
+if( !vfsName ){
+  throw new Error("Expecting vfs=opfs|opfs-wl URL argument for this worker");
+}
+
+const workerId = (Math.random() * 10000000) | 0;
+const isWebLocker = 'opfs-wl'===urlParams.get('vfs');
 const wPost = (type,...args)=>postMessage({type, payload:args});
 const installAsyncProxy = function(){
   const toss = function(...args){throw new Error(args.join(' '))};
@@ -64,6 +73,110 @@ const installAsyncProxy = function(){
   const state = Object.create(null);
 
   
+const initS11n = function(){
+  
+  if(state.s11n) return state.s11n;
+  const textDecoder = new TextDecoder(),
+        textEncoder = new TextEncoder('utf-8'),
+        viewU8 = new Uint8Array(state.sabIO, state.sabS11nOffset, state.sabS11nSize),
+        viewDV = new DataView(state.sabIO, state.sabS11nOffset, state.sabS11nSize);
+  state.s11n = Object.create(null);
+  
+  const TypeIds = Object.create(null);
+  TypeIds.number  = { id: 1, size: 8, getter: 'getFloat64', setter: 'setFloat64' };
+  TypeIds.bigint  = { id: 2, size: 8, getter: 'getBigInt64', setter: 'setBigInt64' };
+  TypeIds.boolean = { id: 3, size: 4, getter: 'getInt32', setter: 'setInt32' };
+  TypeIds.string =  { id: 4 };
+
+  const getTypeId = (v)=>(
+    TypeIds[typeof v]
+      || toss("Maintenance required: this value type cannot be serialized.",v)
+  );
+  const getTypeIdById = (tid)=>{
+    switch(tid){
+      case TypeIds.number.id: return TypeIds.number;
+      case TypeIds.bigint.id: return TypeIds.bigint;
+      case TypeIds.boolean.id: return TypeIds.boolean;
+      case TypeIds.string.id: return TypeIds.string;
+      default: toss("Invalid type ID:",tid);
+    }
+  };
+
+  
+  state.s11n.deserialize = function(clear=false){
+    const t = performance.now();
+    const argc = viewU8[0];
+    const rc = argc ? [] : null;
+    if(argc){
+      const typeIds = [];
+      let offset = 1, i, n, v;
+      for(i = 0; i < argc; ++i, ++offset){
+        typeIds.push(getTypeIdById(viewU8[offset]));
+      }
+      for(i = 0; i < argc; ++i){
+        const t = typeIds[i];
+        if(t.getter){
+          v = viewDV[t.getter](offset, state.littleEndian);
+          offset += t.size;
+        }else{
+          n = viewDV.getInt32(offset, state.littleEndian);
+          offset += 4;
+          v = textDecoder.decode(viewU8.slice(offset, offset+n));
+          offset += n;
+        }
+        rc.push(v);
+      }
+    }
+    if(clear) viewU8[0] = 0;
+    
+    return rc;
+  };
+
+  
+  state.s11n.serialize = function(...args){
+    const t = performance.now();
+    if(args.length){
+      
+      const typeIds = [];
+      let i = 0, offset = 1;
+      viewU8[0] = args.length & 0xff ;
+      for(; i < args.length; ++i, ++offset){
+        
+        typeIds.push(getTypeId(args[i]));
+        viewU8[offset] = typeIds[i].id;
+      }
+      for(i = 0; i < args.length; ++i) {
+        
+        const t = typeIds[i];
+        if(t.setter){
+          viewDV[t.setter](offset, args[i], state.littleEndian);
+          offset += t.size;
+        }else{
+          const s = textEncoder.encode(args[i]);
+          viewDV.setInt32(offset, s.byteLength, state.littleEndian);
+          offset += 4;
+          viewU8.set(s, offset);
+          offset += s.byteLength;
+        }
+      }
+      
+    }else{
+      viewU8[0] = 0;
+    }
+  };
+
+  state.s11n.storeException = state.asyncS11nExceptions
+    ? ((priority,e)=>{
+      if(priority<=state.asyncS11nExceptions){
+        state.s11n.serialize([e.name,': ',e.message].join(""));
+      }
+    })
+    : ()=>{};
+
+  return state.s11n;
+};
+
+  
   state.verbose = 1;
 
   const loggers = {
@@ -72,7 +185,7 @@ const installAsyncProxy = function(){
     2:console.log.bind(console)
   };
   const logImpl = (level,...args)=>{
-    if(state.verbose>level) loggers[level]("OPFS asyncer:",...args);
+    if(state.verbose>level) loggers[level](vfsName+' async-proxy',workerId+":",...args);
   };
   const log =    (...args)=>logImpl(2, ...args);
   const warn =   (...args)=>logImpl(1, ...args);
@@ -175,12 +288,12 @@ const installAsyncProxy = function(){
   };
 
   
-  const getSyncHandle = async (fh,opName)=>{
+  const getSyncHandle = async (fh, opName, baseWaitTime, maxTries = 6)=>{
     if(!fh.syncHandle){
       const t = performance.now();
       log("Acquiring sync handle for",fh.filenameAbs);
-      const maxTries = 6,
-            msBase = state.asyncIdleWaitTime * 2;
+      const msBase = baseWaitTime ?? (state.asyncIdleWaitTime * 2);
+      maxTries ??= 6;
       let i = 1, ms = msBase;
       for(; true; ms = msBase * ++i){
         try {
@@ -309,24 +422,7 @@ const installAsyncProxy = function(){
       await releaseImplicitLock(fh);
       storeAndNotify('xFileSize', rc);
     },
-    xLock: async function(fid,
-                          lockType){
-      const fh = __openFiles[fid];
-      let rc = 0;
-      const oldLockType = fh.xLock;
-      fh.xLock = lockType;
-      if( !fh.syncHandle ){
-        try {
-          await getSyncHandle(fh,'xLock');
-          __implicitLocks.delete(fid);
-        }catch(e){
-          state.s11n.storeException(1,e);
-          rc = GetSyncHandleError.convertRc(e,state.sq3Codes.SQLITE_IOERR_LOCK);
-          fh.xLock = oldLockType;
-        }
-      }
-      storeAndNotify('xLock',rc);
-    },
+    
     xOpen: async function(fid, filename,
                           flags,
                           opfsFlags){
@@ -384,7 +480,7 @@ const installAsyncProxy = function(){
           rc = state.sq3Codes.SQLITE_IOERR_SHORT_READ;
         }
       }catch(e){
-        error("xRead() failed",e,fh);
+        
         state.s11n.storeException(1,e);
         rc = GetSyncHandleError.convertRc(e,state.sq3Codes.SQLITE_IOERR_READ);
       }
@@ -411,27 +507,12 @@ const installAsyncProxy = function(){
         affirmNotRO('xTruncate', fh);
         await (await getSyncHandle(fh,'xTruncate')).truncate(size);
       }catch(e){
-        error("xTruncate():",e,fh);
+        
         state.s11n.storeException(2,e);
         rc = GetSyncHandleError.convertRc(e,state.sq3Codes.SQLITE_IOERR_TRUNCATE);
       }
       await releaseImplicitLock(fh);
       storeAndNotify('xTruncate',rc);
-    },
-    xUnlock: async function(fid,
-                            lockType){
-      let rc = 0;
-      const fh = __openFiles[fid];
-      if( fh.syncHandle
-          && state.sq3Codes.SQLITE_LOCK_NONE===lockType
-           ){
-        try { await closeSyncHandle(fh) }
-        catch(e){
-          state.s11n.storeException(1,e);
-          rc = state.sq3Codes.SQLITE_IOERR_UNLOCK;
-        }
-      }
-      storeAndNotify('xUnlock',rc);
     },
     xWrite: async function(fid,n,offset64){
       let rc;
@@ -444,7 +525,7 @@ const installAsyncProxy = function(){
                    {at: Number(offset64)})
         ) ? 0 : state.sq3Codes.SQLITE_IOERR_WRITE;
       }catch(e){
-        error("xWrite():",e,fh);
+        
         state.s11n.storeException(1,e);
         rc = GetSyncHandleError.convertRc(e,state.sq3Codes.SQLITE_IOERR_WRITE);
       }
@@ -453,131 +534,201 @@ const installAsyncProxy = function(){
     }
   };
 
-  const initS11n = ()=>{
+  if( isWebLocker ){
     
-    if(state.s11n) return state.s11n;
-    const textDecoder = new TextDecoder(),
-          textEncoder = new TextEncoder('utf-8'),
-          viewU8 = new Uint8Array(state.sabIO, state.sabS11nOffset, state.sabS11nSize),
-          viewDV = new DataView(state.sabIO, state.sabS11nOffset, state.sabS11nSize);
-    state.s11n = Object.create(null);
-    const TypeIds = Object.create(null);
-    TypeIds.number  = { id: 1, size: 8, getter: 'getFloat64', setter: 'setFloat64' };
-    TypeIds.bigint  = { id: 2, size: 8, getter: 'getBigInt64', setter: 'setBigInt64' };
-    TypeIds.boolean = { id: 3, size: 4, getter: 'getInt32', setter: 'setInt32' };
-    TypeIds.string =  { id: 4 };
-    const getTypeId = (v)=>(
-      TypeIds[typeof v]
-        || toss("Maintenance required: this value type cannot be serialized.",v)
-    );
-    const getTypeIdById = (tid)=>{
-      switch(tid){
-          case TypeIds.number.id: return TypeIds.number;
-          case TypeIds.bigint.id: return TypeIds.bigint;
-          case TypeIds.boolean.id: return TypeIds.boolean;
-          case TypeIds.string.id: return TypeIds.string;
-          default: toss("Invalid type ID:",tid);
-      }
-    };
-    state.s11n.deserialize = function(clear=false){
-      const argc = viewU8[0];
-      const rc = argc ? [] : null;
-      if(argc){
-        const typeIds = [];
-        let offset = 1, i, n, v;
-        for(i = 0; i < argc; ++i, ++offset){
-          typeIds.push(getTypeIdById(viewU8[offset]));
-        }
-        for(i = 0; i < argc; ++i){
-          const t = typeIds[i];
-          if(t.getter){
-            v = viewDV[t.getter](offset, state.littleEndian);
-            offset += t.size;
-          }else{
-            n = viewDV.getInt32(offset, state.littleEndian);
-            offset += 4;
-            v = textDecoder.decode(viewU8.slice(offset, offset+n));
-            offset += n;
-          }
-          rc.push(v);
-        }
-      }
-      if(clear) viewU8[0] = 0;
+    
+    const __activeWebLocks = Object.create(null);
+
+    vfsAsyncImpls.xLock = async function(fid,
+                                         lockType,
+                                         isFromUnlock){
+      const whichOp = isFromUnlock ? 'xUnlock' : 'xLock';
+      const fh = __openFiles[fid];
       
+      const requestedMode = (lockType >= state.sq3Codes.SQLITE_LOCK_RESERVED)
+            ? 'exclusive' : 'shared';
+      const existing = __activeWebLocks[fid];
+      if( existing ){
+        if( existing.mode === requestedMode
+            || (existing.mode === 'exclusive'
+                && requestedMode === 'shared') ) {
+          fh.xLock = lockType;
+          storeAndNotify(whichOp, 0);
+          
+          return 0 ;
+        }
+        
+        await closeSyncHandle(fh);
+        existing.resolveRelease();
+        delete __activeWebLocks[fid];
+      }
+
+      const lockName = "sqlite3-vfs-opfs:" + fh.filenameAbs;
+      const oldLockType = fh.xLock;
+      return new Promise((resolveWaitLoop) => {
+        
+        navigator.locks.request(lockName, { mode: requestedMode }, async (lock) => {
+          
+          __implicitLocks.delete(fid);
+          let rc = 0;
+          try{
+            fh.xLock = lockType;
+            await getSyncHandle(fh, 'xLock', state.asyncIdleWaitTime, 5);
+          }catch(e){
+            fh.xLock = oldLockType;
+            state.s11n.storeException(1, e);
+            rc = GetSyncHandleError.convertRc(e, state.sq3Codes.SQLITE_BUSY);
+          }
+          const releasePromise = rc
+                ? undefined
+                : new Promise((resolveRelease) => {
+                  __activeWebLocks[fid] = { mode: requestedMode, resolveRelease };
+                });
+          storeAndNotify(whichOp, rc) ;
+          resolveWaitLoop(0) ;
+          await releasePromise ;
+        });
+      });
+    };
+
+    
+    const wlCloseHandle = async(fh)=>{
+      let rc = 0;
+      try{
+        
+        await closeSyncHandle(fh);
+      }catch(e){
+        state.s11n.storeException(1,e);
+        rc = state.sq3Codes.SQLITE_IOERR_UNLOCK;
+      }
       return rc;
     };
-    state.s11n.serialize = function(...args){
-      if(args.length){
-        
-        const typeIds = [];
-        let i = 0, offset = 1;
-        viewU8[0] = args.length & 0xff ;
-        for(; i < args.length; ++i, ++offset){
-          
-          typeIds.push(getTypeId(args[i]));
-          viewU8[offset] = typeIds[i].id;
-        }
-        for(i = 0; i < args.length; ++i) {
-          
-          const t = typeIds[i];
-          if(t.setter){
-            viewDV[t.setter](offset, args[i], state.littleEndian);
-            offset += t.size;
-          }else{
-            const s = textEncoder.encode(args[i]);
-            viewDV.setInt32(offset, s.byteLength, state.littleEndian);
-            offset += 4;
-            viewU8.set(s, offset);
-            offset += s.byteLength;
-          }
-        }
-        
-      }else{
-        viewU8[0] = 0;
+
+    vfsAsyncImpls.xUnlock = async function(fid,
+                                           lockType){
+      const fh = __openFiles[fid];
+      const existing = __activeWebLocks[fid];
+      if( !existing ){
+        const rc = await wlCloseHandle(fh);
+        storeAndNotify('xUnlock', rc);
+        return rc;
       }
+      
+      let rc = 0;
+      if( lockType === state.sq3Codes.SQLITE_LOCK_NONE ){
+        
+        rc = await wlCloseHandle(fh);
+        existing.resolveRelease();
+        delete __activeWebLocks[fid];
+        fh.xLock = lockType;
+      }else if( lockType === state.sq3Codes.SQLITE_LOCK_SHARED
+                && existing.mode === 'exclusive' ){
+        
+        rc = await wlCloseHandle(fh);
+        if( 0===rc ){
+          fh.xLock = lockType;
+          existing.resolveRelease();
+          delete __activeWebLocks[fid];
+          return vfsAsyncImpls.xLock(fid, lockType, true);
+        }
+      }else{
+        
+        error("xUnlock() unhandled condition", fh);
+      }
+      storeAndNotify('xUnlock', rc);
+      return 0;
+    }
+
+  }else{
+    
+
+    vfsAsyncImpls.xLock = async function(fid,
+                                         lockType){
+      const fh = __openFiles[fid];
+      let rc = 0;
+      const oldLockType = fh.xLock;
+      fh.xLock = lockType;
+      if( !fh.syncHandle ){
+        try {
+          await getSyncHandle(fh,'xLock');
+          __implicitLocks.delete(fid);
+        }catch(e){
+          state.s11n.storeException(1,e);
+          rc = GetSyncHandleError.convertRc(e,state.sq3Codes.SQLITE_IOERR_LOCK);
+          fh.xLock = oldLockType;
+        }
+      }
+      storeAndNotify('xLock',rc);
     };
 
-    state.s11n.storeException = state.asyncS11nExceptions
-      ? ((priority,e)=>{
-        if(priority<=state.asyncS11nExceptions){
-          state.s11n.serialize([e.name,': ',e.message].join(""));
+    vfsAsyncImpls.xUnlock = async function(fid,
+                                           lockType){
+      let rc = 0;
+      const fh = __openFiles[fid];
+      if( fh.syncHandle
+          && state.sq3Codes.SQLITE_LOCK_NONE===lockType
+           ){
+        try { await closeSyncHandle(fh) }
+        catch(e){
+          state.s11n.storeException(1,e);
+          rc = state.sq3Codes.SQLITE_IOERR_UNLOCK;
         }
-      })
-      : ()=>{};
+      }
+      storeAndNotify('xUnlock',rc);
+    }
 
-    return state.s11n;
-  };
+  }
 
   const waitLoop = async function f(){
-    const opHandlers = Object.create(null);
-    for(let k of Object.keys(state.opIds)){
-      const vi = vfsAsyncImpls[k];
-      if(!vi) continue;
-      const o = Object.create(null);
-      opHandlers[state.opIds[k]] = o;
-      o.key = k;
-      o.f = vi;
+    if( !f.inited ){
+      f.inited = true;
+      f.opHandlers = Object.create(null);
+      for(let k of Object.keys(state.opIds)){
+        const vi = vfsAsyncImpls[k];
+        if(!vi) continue;
+        const o = Object.create(null);
+        f.opHandlers[state.opIds[k]] = o;
+        o.key = k;
+        o.f = vi;
+      }
     }
+    const opIds = state.opIds;
+    const opView = state.sabOPView;
+    const slotWhichOp = opIds.whichOp;
+    const idleWaitTime = state.asyncIdleWaitTime;
+    const hasWaitAsync = !!Atomics.waitAsync;
     while(!flagAsyncShutdown){
       try {
-        if('not-equal'!==Atomics.wait(
-          state.sabOPView, state.opIds.whichOp, 0, state.asyncIdleWaitTime
-        )){
+        let opId;
+        if( hasWaitAsync ){
+          opId = Atomics.load(opView, slotWhichOp);
+          if( 0===opId ){
+            const rv = Atomics.waitAsync(opView, slotWhichOp, 0,
+                                         idleWaitTime);
+            if( rv.async ) await rv.value;
+            await releaseImplicitLocks();
+            continue;
+          }
+        }else{
           
-          await releaseImplicitLocks();
-          continue;
+          if('not-equal'!==Atomics.wait(
+            state.sabOPView, slotWhichOp, 0, state.asyncIdleWaitTime
+          )){
+            
+            await releaseImplicitLocks();
+            continue;
+          }
+          opId = Atomics.load(state.sabOPView, slotWhichOp);
         }
-        const opId = Atomics.load(state.sabOPView, state.opIds.whichOp);
-        Atomics.store(state.sabOPView, state.opIds.whichOp, 0);
-        const hnd = opHandlers[opId] ?? toss("No waitLoop handler for whichOp #",opId);
+        Atomics.store(opView, slotWhichOp, 0);
+        const hnd = f.opHandlers[opId]?.f ?? toss("No waitLoop handler for whichOp #",opId);
         const args = state.s11n.deserialize(
           true 
         ) || [];
         
-        if(hnd.f) await hnd.f(...args);
-        else error("Missing callback for opId",opId);
+        await hnd(...args);
       }catch(e){
-        error('in waitLoop():',e);
+        error('in waitLoop():', e);
       }
     }
   };
@@ -585,6 +736,7 @@ const installAsyncProxy = function(){
   navigator.storage.getDirectory().then(function(d){
     state.rootDir = d;
     globalThis.onmessage = function({data}){
+      
       switch(data.type){
           case 'opfs-async-init':{
             
@@ -600,6 +752,7 @@ const installAsyncProxy = function(){
               }
             });
             initS11n();
+            
             log("init state",state);
             wPost('opfs-async-inited');
             waitLoop();
@@ -611,22 +764,27 @@ const installAsyncProxy = function(){
               flagAsyncShutdown = false;
               waitLoop();
             }
-            break;
+          break;
       }
     };
     wPost('opfs-async-loaded');
   }).catch((e)=>error("error initializing OPFS asyncer:",e));
 };
-if(!globalThis.SharedArrayBuffer){
+if(globalThis.window === globalThis){
+  wPost('opfs-unavailable',
+        "This code cannot run from the main thread.",
+        "Load it as a Worker from a separate Worker.");
+}else if(!globalThis.SharedArrayBuffer){
   wPost('opfs-unavailable', "Missing SharedArrayBuffer API.",
         "The server must emit the COOP/COEP response headers to enable that.");
 }else if(!globalThis.Atomics){
   wPost('opfs-unavailable', "Missing Atomics API.",
         "The server must emit the COOP/COEP response headers to enable that.");
+}else if(isWebLocker && !globalThis.Atomics.waitAsync){
+  wPost('opfs-unavailable',"Missing required Atomics.waitSync() for "+vfsName);
 }else if(!globalThis.FileSystemHandle ||
          !globalThis.FileSystemDirectoryHandle ||
-         !globalThis.FileSystemFileHandle ||
-         !globalThis.FileSystemFileHandle.prototype.createSyncAccessHandle ||
+         !globalThis.FileSystemFileHandle?.prototype?.createSyncAccessHandle ||
          !navigator?.storage?.getDirectory){
   wPost('opfs-unavailable',"Missing required OPFS APIs.");
 }else{

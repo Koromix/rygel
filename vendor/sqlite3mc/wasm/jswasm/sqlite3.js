@@ -1,4 +1,5 @@
-/*
+/* @preserve
+**
 ** LICENSE for the sqlite3 WebAssembly/JavaScript APIs.
 **
 ** This bundle (typically released as sqlite3.js or sqlite3.mjs)
@@ -23,15 +24,14 @@
 ** *   May you find forgiveness for yourself and forgive others.
 ** *   May you share freely, never taking more than you give.
 */
-/*
+/* @preserve
 ** This code was built from sqlite3 version...
 **
-** SQLITE_VERSION "3.51.3"
-** SQLITE_VERSION_NUMBER 3051003
-** SQLITE_SOURCE_ID "2026-03-13 10:38:09 737ae4a34738ffa0c3ff7f9bb18df914dd1cad163f28fd6b6e114a344fe6d618"
+** SQLITE_VERSION "3.53.0"
+** SQLITE_VERSION_NUMBER 3053000
+** SQLITE_SOURCE_ID "2026-04-09 11:41:38 4525003a53a7fc63ca75c59b22c79608659ca12f0131f52c18637f829977f20b"
 **
 ** Emscripten SDK: 4.0.10
-**
 */
 var sqlite3InitModule = (() => {
   var _scriptName = typeof document != 'undefined' ? document.currentScript?.src : undefined;
@@ -70,12 +70,14 @@ var ENVIRONMENT_IS_SHELL = !ENVIRONMENT_IS_WEB && !ENVIRONMENT_IS_NODE && !ENVIR
 
 
 
+
 (function(Module){
   const sIMS =
         globalThis.sqlite3InitModuleState
         || Object.assign(Object.create(null),{
-          debugModule: ()=>{
-            console.warn("globalThis.sqlite3InitModuleState is missing");
+          
+          debugModule: function(){
+            console.warn("globalThis.sqlite3InitModuleState is missing",arguments);
           }
         });
   delete globalThis.sqlite3InitModuleState;
@@ -83,6 +85,10 @@ var ENVIRONMENT_IS_SHELL = !ENVIRONMENT_IS_WEB && !ENVIRONMENT_IS_NODE && !ENVIR
 
   
   Module['locateFile'] = function(path, prefix) {
+    if( this.emscriptenLocateFile instanceof Function ){
+      
+      return this.emscriptenLocateFile(path, prefix);
+    }
     'use strict';
     let theFile;
     const up = this.urlParams;
@@ -106,6 +112,10 @@ var ENVIRONMENT_IS_SHELL = !ENVIRONMENT_IS_WEB && !ENVIRONMENT_IS_NODE && !ENVIR
 
   
   Module['instantiateWasm'] = function callee(imports,onSuccess){
+    if( this.emscriptenInstantiateWasm instanceof Function ){
+      
+      return this.emscriptenInstantiateWasm(imports, onSuccess);
+    }
     const sims = this;
     const uri = Module.locateFile(
       sims.wasmFilename, (
@@ -4142,6 +4152,7 @@ var _sqlite3_status64,
   _sqlite3_bind_null,
   _sqlite3_bind_pointer,
   _sqlite3_bind_text,
+  _sqlite3_bind_zeroblob,
   _sqlite3_bind_parameter_count,
   _sqlite3_bind_parameter_name,
   _sqlite3_bind_parameter_index,
@@ -4150,6 +4161,7 @@ var _sqlite3_status64,
   _sqlite3_stmt_isexplain,
   _sqlite3_stmt_explain,
   _sqlite3_stmt_busy,
+  _sqlite3_next_stmt,
   _sqlite3_stmt_status,
   _sqlite3_sql,
   _sqlite3_expanded_sql,
@@ -4299,7 +4311,7 @@ var _sqlite3_status64,
   _sqlite3__wasm_db_serialize,
   _sqlite3__wasm_vfs_create_file,
   _sqlite3__wasm_posix_create_file,
-  _sqlite3__wasm_kvvfsMakeKeyOnPstack,
+  _sqlite3__wasm_kvvfsMakeKey,
   _sqlite3__wasm_kvvfs_methods,
   _sqlite3__wasm_vtab_config,
   _sqlite3__wasm_db_config_ip,
@@ -4309,6 +4321,8 @@ var _sqlite3_status64,
   _sqlite3__wasm_config_ii,
   _sqlite3__wasm_config_j,
   _sqlite3__wasm_qfmt_token,
+  _sqlite3__wasm_kvvfs_decode,
+  _sqlite3__wasm_kvvfs_encode,
   _sqlite3__wasm_init_wasmfs,
   _sqlite3__wasm_test_intptr,
   _sqlite3__wasm_test_voidptr,
@@ -4417,6 +4431,7 @@ function assignWasmExports(wasmExports) {
   Module['_sqlite3_bind_null'] = _sqlite3_bind_null = wasmExports['sqlite3_bind_null'];
   Module['_sqlite3_bind_pointer'] = _sqlite3_bind_pointer = wasmExports['sqlite3_bind_pointer'];
   Module['_sqlite3_bind_text'] = _sqlite3_bind_text = wasmExports['sqlite3_bind_text'];
+  Module['_sqlite3_bind_zeroblob'] = _sqlite3_bind_zeroblob = wasmExports['sqlite3_bind_zeroblob'];
   Module['_sqlite3_bind_parameter_count'] = _sqlite3_bind_parameter_count = wasmExports['sqlite3_bind_parameter_count'];
   Module['_sqlite3_bind_parameter_name'] = _sqlite3_bind_parameter_name = wasmExports['sqlite3_bind_parameter_name'];
   Module['_sqlite3_bind_parameter_index'] = _sqlite3_bind_parameter_index = wasmExports['sqlite3_bind_parameter_index'];
@@ -4425,6 +4440,7 @@ function assignWasmExports(wasmExports) {
   Module['_sqlite3_stmt_isexplain'] = _sqlite3_stmt_isexplain = wasmExports['sqlite3_stmt_isexplain'];
   Module['_sqlite3_stmt_explain'] = _sqlite3_stmt_explain = wasmExports['sqlite3_stmt_explain'];
   Module['_sqlite3_stmt_busy'] = _sqlite3_stmt_busy = wasmExports['sqlite3_stmt_busy'];
+  Module['_sqlite3_next_stmt'] = _sqlite3_next_stmt = wasmExports['sqlite3_next_stmt'];
   Module['_sqlite3_stmt_status'] = _sqlite3_stmt_status = wasmExports['sqlite3_stmt_status'];
   Module['_sqlite3_sql'] = _sqlite3_sql = wasmExports['sqlite3_sql'];
   Module['_sqlite3_expanded_sql'] = _sqlite3_expanded_sql = wasmExports['sqlite3_expanded_sql'];
@@ -4574,7 +4590,7 @@ function assignWasmExports(wasmExports) {
   Module['_sqlite3__wasm_db_serialize'] = _sqlite3__wasm_db_serialize = wasmExports['sqlite3__wasm_db_serialize'];
   Module['_sqlite3__wasm_vfs_create_file'] = _sqlite3__wasm_vfs_create_file = wasmExports['sqlite3__wasm_vfs_create_file'];
   Module['_sqlite3__wasm_posix_create_file'] = _sqlite3__wasm_posix_create_file = wasmExports['sqlite3__wasm_posix_create_file'];
-  Module['_sqlite3__wasm_kvvfsMakeKeyOnPstack'] = _sqlite3__wasm_kvvfsMakeKeyOnPstack = wasmExports['sqlite3__wasm_kvvfsMakeKeyOnPstack'];
+  Module['_sqlite3__wasm_kvvfsMakeKey'] = _sqlite3__wasm_kvvfsMakeKey = wasmExports['sqlite3__wasm_kvvfsMakeKey'];
   Module['_sqlite3__wasm_kvvfs_methods'] = _sqlite3__wasm_kvvfs_methods = wasmExports['sqlite3__wasm_kvvfs_methods'];
   Module['_sqlite3__wasm_vtab_config'] = _sqlite3__wasm_vtab_config = wasmExports['sqlite3__wasm_vtab_config'];
   Module['_sqlite3__wasm_db_config_ip'] = _sqlite3__wasm_db_config_ip = wasmExports['sqlite3__wasm_db_config_ip'];
@@ -4584,6 +4600,8 @@ function assignWasmExports(wasmExports) {
   Module['_sqlite3__wasm_config_ii'] = _sqlite3__wasm_config_ii = wasmExports['sqlite3__wasm_config_ii'];
   Module['_sqlite3__wasm_config_j'] = _sqlite3__wasm_config_j = wasmExports['sqlite3__wasm_config_j'];
   Module['_sqlite3__wasm_qfmt_token'] = _sqlite3__wasm_qfmt_token = wasmExports['sqlite3__wasm_qfmt_token'];
+  Module['_sqlite3__wasm_kvvfs_decode'] = _sqlite3__wasm_kvvfs_decode = wasmExports['sqlite3__wasm_kvvfs_decode'];
+  Module['_sqlite3__wasm_kvvfs_encode'] = _sqlite3__wasm_kvvfs_encode = wasmExports['sqlite3__wasm_kvvfs_encode'];
   Module['_sqlite3__wasm_init_wasmfs'] = _sqlite3__wasm_init_wasmfs = wasmExports['sqlite3__wasm_init_wasmfs'];
   Module['_sqlite3__wasm_test_intptr'] = _sqlite3__wasm_test_intptr = wasmExports['sqlite3__wasm_test_intptr'];
   Module['_sqlite3__wasm_test_voidptr'] = _sqlite3__wasm_test_voidptr = wasmExports['sqlite3__wasm_test_voidptr'];
@@ -4747,8 +4765,8 @@ run();
 
 
 
-Module.runSQLite3PostLoadInit = function(
-  sqlite3InitScriptInfo ,
+Module.runSQLite3PostLoadInit = async function(
+  sqlite3InitScriptInfo,
   EmscriptenModule,
   sqlite3IsUnderTest
 ){
@@ -4773,7 +4791,8 @@ globalThis.sqlite3ApiBootstrap = async function sqlite3ApiBootstrap(
     );
     return sqlite3ApiBootstrap.sqlite3;
   }
-  const config = Object.assign(Object.create(null),{
+  const nu = (...obj)=>Object.assign(Object.create(null),...obj);
+  const config = nu({
     exports: undefined,
     memory: undefined,
     bigIntEnabled: !!globalThis.BigInt64Array,
@@ -4784,7 +4803,7 @@ globalThis.sqlite3ApiBootstrap = async function sqlite3ApiBootstrap(
     wasmfsOpfsDir: '/opfs',
     
     useStdAlloc: false
-  }, apiConfig || {});
+  }, apiConfig);
 
   Object.assign(config, {
     allocExportName: config.useStdAlloc ? 'malloc' : 'sqlite3_malloc',
@@ -4803,13 +4822,9 @@ globalThis.sqlite3ApiBootstrap = async function sqlite3ApiBootstrap(
   });
 
   
-  delete globalThis.sqlite3ApiConfig;
-  delete sqlite3ApiBootstrap.defaultConfig;
-
+  const capi = nu();
   
-  const capi = Object.create(null);
-  
-  const wasm = Object.create(null);
+  const wasm = nu();
 
   
   const __rcStr = (rc)=>{
@@ -4989,6 +5004,12 @@ globalThis.sqlite3ApiBootstrap = async function sqlite3ApiBootstrap(
     toss: function(...args){throw new Error(args.join(' '))},
     toss3,
     typedArrayPart: wasm.typedArrayPart,
+    nu,
+    assert: function(arg,msg){
+      if( !arg ){
+        util.toss("Assertion failed:",msg);
+      }
+    },
     
     affirmDbHeader: function(bytes){
       if(bytes instanceof ArrayBuffer) bytes = new Uint8Array(bytes);
@@ -5015,11 +5036,6 @@ globalThis.sqlite3ApiBootstrap = async function sqlite3ApiBootstrap(
 
   
   Object.assign(wasm, {
-    
-    pointerIR: config.wasmPtrIR,
-
-    
-    bigIntEnabled: !!config.bigIntEnabled,
 
     
     exports: config.exports
@@ -5031,6 +5047,12 @@ globalThis.sqlite3ApiBootstrap = async function sqlite3ApiBootstrap(
       || toss3("API config object requires a WebAssembly.Memory object",
               "in either config.exports.memory (exported)",
               "or config.memory (imported)."),
+
+    
+    pointerSize: ('number'===typeof config.exports.sqlite3_libversion()) ? 4 : 8,
+
+    
+    bigIntEnabled: !!config.bigIntEnabled,
 
     
     functionTable: config.functionTable,
@@ -5080,7 +5102,8 @@ globalThis.sqlite3ApiBootstrap = async function sqlite3ApiBootstrap(
     };
     wasm.realloc.impl = wasm.exports[keyRealloc];
     wasm.dealloc = function f(m){
-      f.impl(wasm.ptr.coerce(m));
+      f.impl(wasm.ptr.coerce(m))
+      ;
     };
     wasm.dealloc.impl = wasm.exports[keyDealloc];
   }
@@ -5098,7 +5121,7 @@ globalThis.sqlite3ApiBootstrap = async function sqlite3ApiBootstrap(
           rv[1] = m ? (f._rxInt.test(m[2]) ? +m[2] : m[2]) : true;
         };
       }
-      const rc = Object.create(null), ov = [0,0];
+      const rc = nu(), ov = [0,0];
       let i = 0, k;
       while((k = capi.sqlite3_compileoption_get(i++))){
         f._opt(k,ov);
@@ -5106,7 +5129,7 @@ globalThis.sqlite3ApiBootstrap = async function sqlite3ApiBootstrap(
       }
       return f._result = rc;
     }else if(Array.isArray(optName)){
-      const rc = Object.create(null);
+      const rc = nu();
       optName.forEach((v)=>{
         rc[v] = capi.sqlite3_compileoption_used(v);
       });
@@ -5123,7 +5146,7 @@ globalThis.sqlite3ApiBootstrap = async function sqlite3ApiBootstrap(
   };
 
   
-  wasm.pstack = Object.assign(Object.create(null),{
+  wasm.pstack = nu({
     
     restore: wasm.exports.sqlite3__wasm_pstack_restore,
 
@@ -5188,6 +5211,7 @@ globalThis.sqlite3ApiBootstrap = async function sqlite3ApiBootstrap(
     }
   });
 
+  
   capi.sqlite3_randomness = (...args)=>{
     if(1===args.length
        && util.isTypedArray(args[0])
@@ -5223,10 +5247,8 @@ globalThis.sqlite3ApiBootstrap = async function sqlite3ApiBootstrap(
   };
 
   
-  let __wasmfsOpfsDir = undefined;
-  
   capi.sqlite3_wasmfs_opfs_dir = function(){
-    if(undefined !== __wasmfsOpfsDir) return __wasmfsOpfsDir;
+    if(undefined !== this.dir) return this.dir;
     
     const pdir = config.wasmfsOpfsDir;
     if(!pdir
@@ -5234,21 +5256,21 @@ globalThis.sqlite3ApiBootstrap = async function sqlite3ApiBootstrap(
        || !globalThis.FileSystemDirectoryHandle
        || !globalThis.FileSystemFileHandle
        || !wasm.exports.sqlite3__wasm_init_wasmfs){
-      return __wasmfsOpfsDir = "";
+      return this.dir = "";
     }
     try{
       if(pdir && 0===wasm.xCallWrapped(
         'sqlite3__wasm_init_wasmfs', 'i32', ['string'], pdir
       )){
-        return __wasmfsOpfsDir = pdir;
+        return this.dir = pdir;
       }else{
-        return __wasmfsOpfsDir = "";
+        return this.dir = "";
       }
     }catch(e){
       
-      return __wasmfsOpfsDir = "";
+      return this.dir = "";
     }
-  };
+  }.bind(nu());
 
   
   capi.sqlite3_wasmfs_filename_is_persistent = function(name){
@@ -5275,7 +5297,7 @@ globalThis.sqlite3ApiBootstrap = async function sqlite3ApiBootstrap(
   
   capi.sqlite3_js_vfs_list = function(){
     const rc = [];
-    let pVfs = capi.sqlite3_vfs_find(wasm.ptr.coerce(0));
+    let pVfs = capi.sqlite3_vfs_find(wasm.ptr.null);
     while(pVfs){
       const oVfs = new capi.sqlite3_vfs(pVfs);
       rc.push(wasm.cstrToJs(oVfs.$zName));
@@ -5320,7 +5342,7 @@ globalThis.sqlite3ApiBootstrap = async function sqlite3ApiBootstrap(
 
   
   capi.sqlite3_js_db_vfs =
-    (dbPointer, dbName=0)=>util.sqlite3__wasm_db_vfs(dbPointer, dbName);
+    (dbPointer, dbName=wasm.ptr.null)=>util.sqlite3__wasm_db_vfs(dbPointer, dbName);
 
   
   capi.sqlite3_js_aggregate_context = (pCtx, n)=>{
@@ -5402,55 +5424,6 @@ globalThis.sqlite3ApiBootstrap = async function sqlite3ApiBootstrap(
     return x===v ? undefined : x;
   }
 
-  if( util.isUIThread() ){
-    
-
-    
-    const __kvvfsInfo = function(which){
-      const rc = Object.create(null);
-      rc.prefix = 'kvvfs-'+which;
-      rc.stores = [];
-      if('session'===which || ""===which) rc.stores.push(globalThis.sessionStorage);
-      if('local'===which || ""===which) rc.stores.push(globalThis.localStorage);
-      return rc;
-    };
-
-    
-    capi.sqlite3_js_kvvfs_clear = function(which=""){
-      let rc = 0;
-      const kvinfo = __kvvfsInfo(which);
-      kvinfo.stores.forEach((s)=>{
-        const toRm = [] ;
-        let i;
-        for( i = 0; i < s.length; ++i ){
-          const k = s.key(i);
-          if(k.startsWith(kvinfo.prefix)) toRm.push(k);
-        }
-        toRm.forEach((kk)=>s.removeItem(kk));
-        rc += toRm.length;
-      });
-      return rc;
-    };
-
-    
-    capi.sqlite3_js_kvvfs_size = function(which=""){
-      let sz = 0;
-      const kvinfo = __kvvfsInfo(which);
-      kvinfo.stores.forEach((s)=>{
-        let i;
-        for(i = 0; i < s.length; ++i){
-          const k = s.key(i);
-          if(k.startsWith(kvinfo.prefix)){
-            sz += k.length;
-            sz += s.getItem(k).length;
-          }
-        }
-      });
-      return sz * 2 ;
-    };
-
-  }
-
   
   capi.sqlite3_db_config = function(pDb, op, ...args){
     switch(op){
@@ -5475,6 +5448,7 @@ globalThis.sqlite3ApiBootstrap = async function sqlite3ApiBootstrap(
       case capi.SQLITE_DBCONFIG_ENABLE_ATTACH_CREATE:
       case capi.SQLITE_DBCONFIG_ENABLE_ATTACH_WRITE:
       case capi.SQLITE_DBCONFIG_ENABLE_COMMENTS:
+      case capi.SQLITE_DBCONFIG_FP_DIGITS:
         if( !this.ip ){
           this.ip = wasm.xWrap('sqlite3__wasm_db_config_ip','int',
                                ['sqlite3*', 'int', 'int', '*']);
@@ -5496,7 +5470,7 @@ globalThis.sqlite3ApiBootstrap = async function sqlite3ApiBootstrap(
       default:
         return capi.SQLITE_MISUSE;
     }
-  }.bind(Object.create(null));
+  }.bind(nu());
 
   
   capi.sqlite3_value_to_js = function(pVal,throwIfCannotConvert=true){
@@ -5635,34 +5609,64 @@ globalThis.sqlite3ApiBootstrap = async function sqlite3ApiBootstrap(
     return (0===v) ? undefined : capi.sqlite3_value_to_js(v, throwIfCannotConvert);
   };
 
-  
-  const __newOldValue = function(pObj, iCol, impl){
-    impl = capi[impl];
-    if(!this.ptr) this.ptr = wasm.allocPtr();
-    else wasm.pokePtr(this.ptr, 0);
-    const rc = impl(pObj, iCol, this.ptr);
-    if(rc) return SQLite3Error.toss(rc,arguments[2]+"() failed with code "+rc);
-    const pv = wasm.peekPtr(this.ptr);
-    return pv ? capi.sqlite3_value_to_js( pv, true ) : undefined;
-  }.bind(Object.create(null));
+  if( true ){ 
+    
+    const __newOldValue = function(pObj, iCol, impl){
+      impl = capi[impl];
+      if(!this.ptr) this.ptr = wasm.allocPtr();
+      else wasm.pokePtr(this.ptr, 0);
+      const rc = impl(pObj, iCol, this.ptr);
+      if(rc) return SQLite3Error.toss(rc,arguments[2]+"() failed with code "+rc);
+      const pv = wasm.peekPtr(this.ptr);
+      return pv ? capi.sqlite3_value_to_js( pv, true ) : undefined;
+    }.bind(nu());
+
+    
+    capi.sqlite3_preupdate_new_js =
+      (pDb, iCol)=>__newOldValue(pDb, iCol, 'sqlite3_preupdate_new');
+
+    
+    capi.sqlite3_preupdate_old_js =
+      (pDb, iCol)=>__newOldValue(pDb, iCol, 'sqlite3_preupdate_old');
+
+    
+    capi.sqlite3changeset_new_js =
+      (pChangesetIter, iCol) => __newOldValue(pChangesetIter, iCol,
+                                              'sqlite3changeset_new');
+
+    
+    capi.sqlite3changeset_old_js =
+      (pChangesetIter, iCol)=>__newOldValue(pChangesetIter, iCol,
+                                            'sqlite3changeset_old');
+  }
 
   
-  capi.sqlite3_preupdate_new_js =
-    (pDb, iCol)=>__newOldValue(pDb, iCol, 'sqlite3_preupdate_new');
-
-  
-  capi.sqlite3_preupdate_old_js =
-    (pDb, iCol)=>__newOldValue(pDb, iCol, 'sqlite3_preupdate_old');
-
-  
-  capi.sqlite3changeset_new_js =
-    (pChangesetIter, iCol) => __newOldValue(pChangesetIter, iCol,
-                                            'sqlite3changeset_new');
-
-  
-  capi.sqlite3changeset_old_js =
-    (pChangesetIter, iCol)=>__newOldValue(pChangesetIter, iCol,
-                                          'sqlite3changeset_old');
+  capi.sqlite3_js_retry_busy = function(maxTimes, callback, beforeRetry){
+    for(let n = 1; n <= maxTimes; ++n){
+      try{
+        if( beforeRetry && n>1 ) beforeRetry(n);
+        const rc = callback();
+        if( capi.SQLITE_BUSY===rc ){
+          if( n===maxTimes ){
+            throw new SQLite3Error(rc, [
+              "sqlite3_js_retry_busy() max retry attempts (",
+              maxTimes,
+              ") reached."
+            ].join(''));
+          }
+          continue;
+        }
+        return rc;
+      }catch(e){
+        if( n<maxTimes
+            && (e instanceof SQLite3Error)
+            && e.resultCode===capi.SQLITE_BUSY ){
+          continue;
+        }
+        throw e;
+      }
+    }
+  };
 
   
   const sqlite3 = {
@@ -5673,7 +5677,7 @@ globalThis.sqlite3ApiBootstrap = async function sqlite3ApiBootstrap(
     wasm,
     config,
     
-    version: Object.create(null),
+    version: nu(),
 
     
     client: undefined,
@@ -5681,14 +5685,14 @@ globalThis.sqlite3ApiBootstrap = async function sqlite3ApiBootstrap(
     
     asyncPostInit: async function ff(){
       if(ff.isReady instanceof Promise) return ff.isReady;
-      let lia = sqlite3ApiBootstrap.initializersAsync;
-      delete sqlite3ApiBootstrap.initializersAsync;
+      let lia = this.initializersAsync;
+      delete this.initializersAsync;
       const postInit = async ()=>{
         if(!sqlite3.__isUnderTest){
           
           delete sqlite3.util;
-          
           delete sqlite3.StructBinder;
+          delete sqlite3.opfs;
         }
         return sqlite3;
       };
@@ -5706,10 +5710,13 @@ globalThis.sqlite3ApiBootstrap = async function sqlite3ApiBootstrap(
       let p = Promise.resolve(sqlite3);
       while(lia.length) p = p.then(lia.shift());
       return ff.isReady = p.catch(catcher);
-    },
+    }.bind(sqlite3ApiBootstrap),
     
     scriptInfo: undefined
   };
+  if( 'undefined'!==typeof sqlite3IsUnderTest ){
+    sqlite3.__isUnderTest = !!sqlite3IsUnderTest;
+  }
   try{
     sqlite3ApiBootstrap.initializers.forEach((f)=>{
       f(sqlite3);
@@ -5721,16 +5728,19 @@ globalThis.sqlite3ApiBootstrap = async function sqlite3ApiBootstrap(
   }
   delete sqlite3ApiBootstrap.initializers;
   sqlite3ApiBootstrap.sqlite3 = sqlite3;
-  delete globalThis.sqlite3ApiBootstrap;
-  delete globalThis.sqlite3ApiConfig;
-  sqlite3InitScriptInfo.debugModule(
-    "sqlite3ApiBootstrap() complete", sqlite3
-  );
-  sqlite3.scriptInfo  =
-    sqlite3InitScriptInfo ;
-  if( (sqlite3.__isUnderTest = sqlite3IsUnderTest ) ){
-    sqlite3.config.emscripten = EmscriptenModule;
-    const iw = sqlite3InitScriptInfo.instantiateWasm;
+  if( 'undefined'!==typeof sqlite3InitScriptInfo ){
+    sqlite3InitScriptInfo.debugModule(
+      "sqlite3ApiBootstrap() complete", sqlite3
+    );
+    sqlite3.scriptInfo
+     = sqlite3InitScriptInfo;
+  }
+  if( sqlite3.__isUnderTest ){
+    if( 'undefined'!==typeof EmscriptenModule ){
+      sqlite3.config.emscripten = EmscriptenModule;
+    }
+    
+    const iw = sqlite3.scriptInfo?.instantiateWasm;
     if( iw ){
       
       sqlite3.wasm.module = iw.module;
@@ -5738,10 +5748,17 @@ globalThis.sqlite3ApiBootstrap = async function sqlite3ApiBootstrap(
       sqlite3.wasm.imports = iw.imports;
     }
   }
+
+  
+  delete globalThis.sqlite3ApiConfig;
+  delete globalThis.sqlite3ApiBootstrap;
+  delete sqlite3ApiBootstrap.defaultConfig;
   return sqlite3.asyncPostInit().then((s)=>{
-    sqlite3InitScriptInfo.debugModule(
-      "sqlite3.asyncPostInit() complete", sqlite3
-    );
+    if( 'undefined'!==typeof sqlite3InitScriptInfo ){
+      sqlite3InitScriptInfo.debugModule(
+        "sqlite3.asyncPostInit() complete", s
+      );
+    }
     delete s.asyncPostInit;
     delete s.scriptInfo;
     delete s.emscripten;
@@ -5760,9 +5777,14 @@ globalThis.sqlite3ApiBootstrap.defaultConfig = Object.create(null);
 
 
 globalThis.sqlite3ApiBootstrap.sqlite3 = undefined;
+globalThis.sqlite3ApiBootstrap.initializers.push(function(sqlite3){
+  sqlite3.version = {"libVersion": "3.53.0", "libVersionNumber": 3053000, "sourceId": "2026-04-09 11:41:38 4525003a53a7fc63ca75c59b22c79608659ca12f0131f52c18637f829977f20b","downloadVersion": 3530000,"scm":{ "sha3-256": "4525003a53a7fc63ca75c59b22c79608659ca12f0131f52c18637f829977f20b","branch": "trunk","tags": "release major-release version-3.53.0","datetime": "2026-04-09T11:41:38.498Z"}};
+});
 
 
-globalThis.WhWasmUtilInstaller = function(target){
+'use strict';
+globalThis.WhWasmUtilInstaller =
+function WhWasmUtilInstaller(target){
   'use strict';
   if(undefined===target.bigIntEnabled){
     target.bigIntEnabled = !!globalThis['BigInt64Array'];
@@ -5770,6 +5792,14 @@ globalThis.WhWasmUtilInstaller = function(target){
 
   
   const toss = (...args)=>{throw new Error(args.join(' '))};
+
+  if( !target.pointerSize && !target.pointerIR
+      && target.alloc && target.dealloc ){
+    
+    const ptr = target.alloc(1);
+    target.pointerSize = ('bigint'===typeof ptr ? 8 : 4);
+    target.dealloc(ptr);
+  }
 
   
   if( target.pointerSize && !target.pointerIR ){
@@ -6057,12 +6087,13 @@ globalThis.WhWasmUtilInstaller = function(target){
     const ft = target.functionTable();
     const oldLen = __asPtrType(ft.length);
     let ptr;
-    while(cache.freeFuncIndexes.length){
-      ptr = cache.freeFuncIndexes.pop();
-      if(ft.get(ptr)){ 
+    while( (ptr = cache.freeFuncIndexes.pop()) ){
+      if(ft.get(ptr)){
+        
         ptr = null;
         continue;
       }else{
+        
         break;
       }
     }
@@ -6105,10 +6136,10 @@ globalThis.WhWasmUtilInstaller = function(target){
 
   
   target.uninstallFunction = function(ptr){
-    if(!ptr && 0!==ptr) return undefined;
-    const fi = cache.freeFuncIndexes;
+    if(!ptr && __NullPtr!==ptr) return undefined;
+
     const ft = target.functionTable();
-    fi.push(ptr);
+    cache.freeFuncIndexes.push(ptr);
     const rc = ft.get(ptr);
     ft.set(ptr, null);
     return rc;
@@ -6230,7 +6261,7 @@ globalThis.WhWasmUtilInstaller = function(target){
     const h = heapWrappers().HEAP8U;
     let pos = ptr;
     for( ; h[pos] !== 0; ++pos ){}
-    return Number(pos - ptr);
+    return pos - ptr;
   };
 
   
@@ -6847,7 +6878,9 @@ globalThis.WhWasmUtilInstaller = function(target){
 };
 
 
-globalThis.WhWasmUtilInstaller.yawl = function(config){
+globalThis.WhWasmUtilInstaller
+.yawl = function yawl(config){
+  'use strict';
   const wfetch = ()=>fetch(config.uri, {credentials: 'same-origin'});
   const wui = this;
   const finalThen = function(arg){
@@ -6868,7 +6901,7 @@ globalThis.WhWasmUtilInstaller.yawl = function(config){
         tgt.alloc = function(n){
           return exports.malloc(n) || toss("Allocation of",n,"bytes failed.");
         };
-        tgt.dealloc = function(m){exports.free(m)};
+        tgt.dealloc = function(m){m && exports.free(m)};
       }
       wui(tgt);
     }
@@ -6886,44 +6919,65 @@ globalThis.WhWasmUtilInstaller.yawl = function(config){
         .then(finalThen)
   ;
   return loadWasm;
-}.bind(globalThis.WhWasmUtilInstaller);
+}.bind(
+globalThis.WhWasmUtilInstaller
+);
 
 'use strict';
-globalThis.Jaccwabyt = function StructBinderFactory(config){
+globalThis.Jaccwabyt =
+function StructBinderFactory(config){
+  'use strict';
 
 
   
   const toss = (...args)=>{throw new Error(args.join(' '))};
 
-  if(!(config.heap instanceof WebAssembly.Memory)
-     && !(config.heap instanceof Function)){
-    toss("config.heap must be WebAssembly.Memory instance or a function.");
+  {
+    let h = config.heap;
+    if( h instanceof WebAssembly.Memory ){
+      h = function(){return new Uint8Array(this.buffer)}.bind(h);
+    }else if( !(h instanceof Function) ){
+      
+      toss("config.heap must be WebAssembly.Memory instance or",
+           "a function which returns one.");
+    }
+    config.heap = h;
   }
   ['alloc','dealloc'].forEach(function(k){
     (config[k] instanceof Function) ||
       toss("Config option '"+k+"' must be a function.");
   });
-  const __heap = config.heap;
   const SBF = StructBinderFactory;
-  const heap = __heap ? __heap : ()=>new Uint8Array(__heap.buffer),
+  const heap = config.heap,
         alloc = config.alloc,
         dealloc = config.dealloc,
+        realloc = (config.realloc || function(){
+          toss("This StructBinderFactory was configured without realloc()");
+          
+        }),
         log = config.log || console.debug.bind(console),
         memberPrefix = (config.memberPrefix || ""),
         memberSuffix = (config.memberSuffix || ""),
         BigInt = globalThis['BigInt'],
         BigInt64Array = globalThis['BigInt64Array'],
-        bigIntEnabled = config.bigIntEnabled ?? !!BigInt64Array,
-        ptrIR = config.pointerIR
-        || config.ptrIR
-        || 'i32',
-        
-        ptrSize = config.ptrSize
-        || ('i32'===ptrIR ? 4 : 8)
-  ;
+        bigIntEnabled = config.bigIntEnabled ?? !!BigInt64Array;
 
-  if(ptrIR!=='i32' && ptrIR!=='i64') toss("Invalid pointer representation:",ptrIR);
+  
+  let ptr;
+  const ptrSize = config.pointerSize
+        || config.ptrSize
+        || ('bigint'===typeof (ptr = alloc(1)) ? 8 : 4);
+  const ptrIR = config.pointerIR
+        || config.ptrIR
+        || (4===ptrSize ? 'i32' : 'i64');
+  if( ptr ){
+    dealloc(ptr);
+    ptr = undefined;
+  }
+  
+
   if(ptrSize!==4 && ptrSize!==8) toss("Invalid pointer size:",ptrSize);
+  if(ptrIR!=='i32' && ptrIR!=='i64') toss("Invalid pointer representation:",ptrIR);
 
   
   const __BigInt = (bigIntEnabled && BigInt)
@@ -6939,6 +6993,10 @@ globalThis.Jaccwabyt = function StructBinderFactory(config){
       rc += __asPtrType(args[i]);
     }
     return rc;
+  };
+
+  const __ptrAddSelf = function(...args){
+    return __ptrAdd(this.pointer,...args);
   };
 
   if(!SBF.debugFlags){
@@ -6970,22 +7028,23 @@ globalThis.Jaccwabyt = function StructBinderFactory(config){
     SBF.debugFlags = SBF.__makeDebugFlags();
   }
 
-  const isLittleEndian = (function() {
+  const isLittleEndian = true || (function() {
     const buffer = new ArrayBuffer(2);
     new DataView(buffer).setInt16(0, 256, true );
     
     return new Int16Array(buffer)[0] === 256;
-  })();
+  })() ;
 
   
 
   
   const isFuncSig = (s)=>'('===s[1];
   
-  const isPtrSig = (s)=>'p'===s || 'P'===s;
+  const isPtrSig = (s)=>'p'===s || 'P'===s || 's'===s;
   const isAutoPtrSig = (s)=>'P'===s ;
   
-  const sigLetter = (s)=>isFuncSig(s) ? 'p' : s[0];
+  const sigLetter = (s)=>s ? (isFuncSig(s) ? 'p' : s[0]) : undefined;
+
   
   const sigIR = function(s){
     switch(sigLetter(s)){
@@ -6999,8 +7058,22 @@ globalThis.Jaccwabyt = function StructBinderFactory(config){
     toss("Unhandled signature IR:",s);
   };
 
+  
+  const sigSize = function(s){
+    switch(sigLetter(s)){
+        case 'c': case 'C': return 1;
+        case 'i': return 4;
+        case 'p': case 'P': case 's': return ptrSize;
+        case 'j': return 8;
+        case 'f': return 4;
+        case 'd': return 8;
+    }
+    toss("Unhandled signature sizeof:",s);
+  };
+
   const affirmBigIntArray = BigInt64Array
         ? ()=>true : ()=>toss('BigInt64Array is not available.');
+
   
   const sigDVGetter = function(s){
     switch(sigLetter(s)) {
@@ -7020,6 +7093,7 @@ globalThis.Jaccwabyt = function StructBinderFactory(config){
     }
     toss("Unhandled DataView getter for signature:",s);
   };
+
   
   const sigDVSetter = function(s){
     switch(sigLetter(s)){
@@ -7063,10 +7137,27 @@ globalThis.Jaccwabyt = function StructBinderFactory(config){
   };
 
   
-  const __instancePointerMap = new WeakMap();
+  const getInstanceHandle = function f(obj, create=true){
+    let ii = f.map.get(obj);
+    if( !ii && create ){
+      f.map.set(obj, (ii=f.create(obj)));
+    }
+    return ii;
+  };
+  getInstanceHandle.map = new WeakMap;
+  getInstanceHandle.create = (forObj)=>{
+    return Object.assign(Object.create(null),{
+      o: forObj,
+      p: undefined,
+      ownsPointer: false,
+      zod: false,
+      xb: 0
+    });
+  };
 
   
-  const xPtrPropName = '(pointer-is-external)';
+  const rmInstanceHandle = (obj)=>getInstanceHandle.map.delete(obj)
+    ;
 
   const __isPtr32 = (ptr)=>('number'===typeof ptr && (ptr===(ptr|0)) && ptr>=0);
   const __isPtr64 = (ptr)=>(
@@ -7076,80 +7167,186 @@ globalThis.Jaccwabyt = function StructBinderFactory(config){
   
   const __isPtr = (4===ptrSize) ? __isPtr32 : __isPtr64;
 
+  const __isNonNullPtr = (v)=>__isPtr(v) && (v>0);
+
   
   const __freeStruct = function(ctor, obj, m){
-    if(!m) m = __instancePointerMap.get(obj);
-    if(m) {
-      __instancePointerMap.delete(obj);
-      if(Array.isArray(obj.ondispose)){
-        let x;
-        while((x = obj.ondispose.shift())){
-          try{
-            if(x instanceof Function) x.call(obj);
-            else if(x instanceof StructType) x.dispose();
-            else if(__isPtr(x)) dealloc(x);
-            
-            
-          }catch(e){
-            console.warn("ondispose() for",ctor.structName,'@',
-                         m,'threw. NOT propagating it.',e);
-          }
-        }
-      }else if(obj.ondispose instanceof Function){
-        try{obj.ondispose()}
-        catch(e){
+    const ii = getInstanceHandle(obj, false);
+    if( !ii ) return;
+    rmInstanceHandle(obj);
+    if( !m && !(m = ii.p) ){
+      console.warn("Cannot(?) happen: __freeStruct() found no instanceInfo");
+      return;
+    }
+    if(Array.isArray(obj.ondispose)){
+      let x;
+      while((x = obj.ondispose.pop())){
+        try{
+          if(x instanceof Function) x.call(obj);
+          else if(x instanceof StructType) x.dispose();
+          else if(__isPtr(x)) dealloc(x);
           
+          
+        }catch(e){
           console.warn("ondispose() for",ctor.structName,'@',
                        m,'threw. NOT propagating it.',e);
         }
       }
-      delete obj.ondispose;
-      if(ctor.debugFlags.__flags.dealloc){
-        log("debug.dealloc:",(obj[xPtrPropName]?"EXTERNAL":""),
-            ctor.structName,"instance:",
-            ctor.structInfo.sizeof,"bytes @"+m);
+    }else if(obj.ondispose instanceof Function){
+      try{obj.ondispose()}
+      catch(e){
+        
+        console.warn("ondispose() for",ctor.structName,'@',
+                     m,'threw. NOT propagating it.',e);
       }
-      if(!obj[xPtrPropName]) dealloc(m);
+    }
+    delete obj.ondispose;
+    if(ctor.debugFlags.__flags.dealloc){
+      log("debug.dealloc:",(ii.ownsPointer?"":"EXTERNAL"),
+          ctor.structName,"instance:",
+          ctor.structInfo.sizeof,"bytes @"+m);
+    }
+    if(ii.ownsPointer){
+      if( ii.zod || ctor.structInfo.zeroOnDispose ){
+        heap().fill(0, Number(m),
+                    Number(m) + ctor.structInfo.sizeof + ii.xb);
+      }
+      dealloc(m);
     }
   };
 
   
-  const rop = (v)=>{return {configurable: false, writable: false,
-                            iterable: false, value: v}};
+  const rop0 = ()=>{return {configurable: false, writable: false,
+                            iterable: false}};
 
   
-  const __allocStruct = function(ctor, obj, m){
-    let fill = !m;
-    if(m) Object.defineProperty(obj, xPtrPropName, rop(m));
-    else{
-      m = alloc(ctor.structInfo.sizeof);
-      if(!m) toss("Allocation of",ctor.structName,"structure failed.");
+  const rop = (v)=>{return {...rop0(), value: v}};
+
+  
+  const __allocStruct = function f(ctor, obj, xm){
+    let opt;
+    const checkPtr = (ptr)=>{
+      __isNonNullPtr(ptr) ||
+        toss("Invalid pointer value",arguments[0],"for",ctor.structName,"constructor.");
+    };
+    if( arguments.length>=3 ){
+      if( xm && ('object'===typeof xm) ){
+        opt = xm;
+        xm = opt?.wrap;
+      }else{
+        checkPtr(xm);
+        opt = {wrap: xm};
+      }
+    }else{
+      opt = {}
+    }
+
+    const fill = !xm ;
+    let nAlloc = 0;
+    let ownsPointer = false;
+    if(xm){
+      
+      checkPtr(xm);
+      ownsPointer = !!opt?.takeOwnership;
+    }else{
+      const nX = opt?.extraBytes ?? 0;
+      if( nX<0 || (nX!==(nX|0)) ){
+        toss("Invalid extraBytes value:",opt?.extraBytes);
+      }
+      nAlloc = ctor.structInfo.sizeof + nX;
+      xm = alloc(nAlloc)
+        || toss("Allocation of",ctor.structName,"structure failed.");
+      ownsPointer = true;
     }
     try {
+      if( opt?.debugFlags ){
+        
+        obj.debugFlags(opt.debugFlags);
+      }
       if(ctor.debugFlags.__flags.alloc){
         log("debug.alloc:",(fill?"":"EXTERNAL"),
             ctor.structName,"instance:",
-            ctor.structInfo.sizeof,"bytes @"+m);
+            ctor.structInfo.sizeof,"bytes @"+xm);
       }
       if(fill){
-        heap().fill(0, Number(m), Number(m) + ctor.structInfo.sizeof);
+        heap().fill(0, Number(xm), Number(xm) + nAlloc);
       }
-      __instancePointerMap.set(obj, m);
+      const ii = getInstanceHandle(obj);
+      ii.p = xm;
+      ii.ownsPointer = ownsPointer;
+      ii.xb = nAlloc ? (nAlloc-ctor.structInfo.sizeof) : 0;
+      ii.zod = !!opt?.zeroOnDispose;
+      if( opt?.ondispose && opt.ondispose!==xm ){
+        obj.addOnDispose( opt.ondispose );
+      }
     }catch(e){
-      __freeStruct(ctor, obj, m);
+      __freeStruct(ctor, obj, xm);
       throw e;
     }
   };
+
   
-  const __memoryDump = function(){
-    const p = this.pointer;
-    return p
-      ? new Uint8Array(heap().slice(Number(p), Number(p) + this.structInfo.sizeof))
-      : null;
+  const looksLikeASig = function f(sig){
+    f.rxSig1 ??= /^[ipPsjfdcC]$/;
+    f.rxSig2 ??= /^[vipPsjfdcC]\([ipPsjfdcC]*\)$/;
+    return f.rxSig1.test(sig) || f.rxSig2.test(sig);
+  };
+
+  
+  const __adaptorsFor = function(who){
+    let x = this.get(who);
+    if( !x ){
+      x = [ Object.create(null), Object.create(null), Object.create(null) ];
+      this.set(who, x);
+    }
+    return x;
+  }.bind(new WeakMap);
+
+  
+  const __adaptor = function(who, which, key, proxy){
+    const a = __adaptorsFor(who)[which];
+    if(3===arguments.length) return a[key];
+    if( proxy ) return a[key] = proxy;
+    return delete a[key];
+  };
+
+  const noopAdapter = (x)=>x;
+
+  
+  const __adaptGet = function(key, ...args){
+    return __adaptor(this, 0, key, ...args);
+  };
+
+  const __affirmNotASig = function(ctx,key){
+    looksLikeASig(key) &&
+      toss(ctx,"(",key,") collides with a data type signature.");
+  };
+
+  
+  const __adaptSet = function(key, ...args){
+    __affirmNotASig('Setter adaptor',key);
+    return __adaptor(this, 1, key, ...args);
+  };
+
+  
+  const __adaptStruct = function(key, ...args){
+    __affirmNotASig('Struct adaptor',key);
+    return __adaptor(this, 2, key, ...args);
+  };
+
+  
+  const __adaptStruct2 = function(who,key){
+    const si = ('string'===typeof key)
+          ? __adaptor(who, 2, key) : key;
+    if( 'object'!==typeof si ){
+      toss("Invalid struct mapping object. Arg =",key,JSON.stringify(si));
+    }
+    return si;
   };
 
   const __memberKey = (k)=>memberPrefix + k + memberSuffix;
   const __memberKeyProp = rop(__memberKey);
+  
 
   
   const __lookupMember = function(structInfo, memberName, tossIfNotFound=true){
@@ -7160,7 +7357,8 @@ globalThis.Jaccwabyt = function StructBinderFactory(config){
         if(v.key===memberName){ m = v; break; }
       }
       if(!m && tossIfNotFound){
-        toss(sPropName(structInfo.name,memberName),'is not a mapped struct member.');
+        toss(sPropName(structInfo.name || structInfo.structName, memberName),
+             'is not a mapped struct member.');
       }
     }
     return m;
@@ -7171,15 +7369,6 @@ globalThis.Jaccwabyt = function StructBinderFactory(config){
     if(!f._) f._ = (x)=>x.replace(/[^vipPsjrdcC]/g,"").replace(/[pPscC]/g,'i');
     const m = __lookupMember(obj.structInfo, memberName, true);
     return emscriptenFormat ? f._(m.signature) : m.signature;
-  };
-
-  const __ptrPropDescriptor = {
-    configurable: false, enumerable: false,
-    get: function(){return __instancePointerMap.get(this)},
-    set: ()=>toss("Cannot assign the 'pointer' property of a struct.")
-    
-    
-    
   };
 
   
@@ -7275,7 +7464,7 @@ globalThis.Jaccwabyt = function StructBinderFactory(config){
   };
 
   
-  const StructType = function ctor(structName, structInfo){
+  const StructType = function StructType(structName, structInfo){
     if(arguments[2]!==rop){
       toss("Do not call the StructType constructor",
            "from client-level code.");
@@ -7304,8 +7493,31 @@ globalThis.Jaccwabyt = function StructBinderFactory(config){
     memberSignature: rop(function(memberName, emscriptenFormat=false){
       return __memberSignature(this, memberName, emscriptenFormat);
     }),
-    memoryDump: rop(__memoryDump),
-    pointer: __ptrPropDescriptor,
+    memoryDump: rop(function(){
+      const p = this.pointer;
+      return p
+        ? new Uint8Array(heap().slice(Number(p), Number(p) + this.structInfo.sizeof))
+        : null;
+    }),
+    extraBytes: {
+      configurable: false, enumerable: false,
+      get: function(){return getInstanceHandle(this, false)?.xb ?? 0;}
+    },
+    zeroOnDispose: {
+      configurable: false, enumerable: false,
+      get: function(){
+        return getInstanceHandle(this, false)?.zod
+          ?? !!this.structInfo.zeroOnDispose;
+      }
+    },
+    pointer: {
+      configurable: false, enumerable: false,
+      get: function(){return getInstanceHandle(this, false)?.p},
+      set: ()=>toss("Cannot assign the 'pointer' property of a struct.")
+      
+      
+      
+    },
     setMemberCString: rop(function(memberName, str){
       return __setMemberCString(this, memberName, str);
     })
@@ -7322,166 +7534,308 @@ globalThis.Jaccwabyt = function StructBinderFactory(config){
   Object.defineProperties(StructType, {
     allocCString: rop(__allocCString),
     isA: rop((v)=>v instanceof StructType),
-    hasExternalPointer: rop((v)=>(v instanceof StructType) && !!v[xPtrPropName]),
+    hasExternalPointer: rop((v)=>{
+      const ii = getInstanceHandle(v, false);
+      return !!(ii?.p && !ii?.ownsPointer);
+    }),
     memberKey: __memberKeyProp
+    
   });
 
   
-  const makeMemberWrapper = function f(ctor,name, descr){
-    if(!f._){
+  const memberGetterProxy = function(si){
+    return si.get || (si.adaptGet
+                      ? StructBinder.adaptGet(si.adaptGet)
+                      : undefined);
+  };
+
+  
+  const memberSetterProxy = function(si){
+    return si.set || (si.adaptSet
+                      ? StructBinder.adaptSet(si.adaptSet)
+                      : undefined);
+  };
+
+  
+  const makeMemberStructWrapper = function callee(ctor, name, si){
+    
+    const __innerStructs = (callee.innerStructs ??= new Map());
+    const key = ctor.memberKey(name);
+    if( undefined!==si.signature ){
+      toss("'signature' cannot be used on an embedded struct (",
+           ctor.structName,".",key,").");
+    }
+    if( memberSetterProxy(si) ){
+      toss("'set' and 'adaptSet' are not permitted for nested struct members.");
+    }
+    
+    si.structName ??= ctor.structName+'::'+name;
+    si.key = key;
+    si.name = name;
+    si.constructor = this.call(this, si.structName, si);
+    
+    
+    const getterProxy = memberGetterProxy(si);
+    const prop = Object.assign(Object.create(null),{
+      configurable: false,
+      enumerable: false,
+      set: __propThrowOnSet(ctor.structName, key),
+      get: function(){
+        const dbg = this.debugFlags.__flags;
+        const p = this.pointer;
+        const k = p+'.'+key;
+        let s = __innerStructs.get(k);
+        if(dbg.getter){ log("debug.getter: k =",k); }
+        if( !s ){
+          s = new si.constructor(__ptrAdd(p, si.offset));
+          __innerStructs.set(k, s);
+          this.addOnDispose(()=>s.dispose());
+          s.addOnDispose(()=>__innerStructs.delete(k));
+          
+        }
+        if(getterProxy) s = getterProxy.apply(this,[s,key]);
+        if(dbg.getter) log("debug.getter: result =",s);
+        return s;
+      }
+    });
+    Object.defineProperty(ctor.prototype, key, prop);
+  };
+
+  
+  const makeMemberWrapper = function f(ctor, name, si){
+    si = __adaptStruct2(this, si);
+    if( si.members ){
+      return makeMemberStructWrapper.call(this, ctor, name, si);
+    }
+
+    if(!f.cache){
       
-      f._ = {getters: {}, setters: {}, sw:{}};
+      f.cache = {getters: {}, setters: {}, sw:{}};
       const a = ['i','c','C','p','P','s','f','d','v()'];
       if(bigIntEnabled) a.push('j');
       a.forEach(function(v){
-        
-        f._.getters[v] = sigDVGetter(v) ;
-        f._.setters[v] = sigDVSetter(v) ;
-        f._.sw[v] = sigDVSetWrapper(v)  ;
+        f.cache.getters[v] = sigDVGetter(v) ;
+        f.cache.setters[v] = sigDVSetter(v) ;
+        f.cache.sw[v] = sigDVSetWrapper(v)  ;
       });
-      const rxSig1 = /^[ipPsjfdcC]$/,
-            rxSig2 = /^[vipPsjfdcC]\([ipPsjfdcC]*\)$/;
       f.sigCheck = function(obj, name, key,sig){
         if(Object.prototype.hasOwnProperty.call(obj, key)){
           toss(obj.structName,'already has a property named',key+'.');
         }
-        rxSig1.test(sig) || rxSig2.test(sig)
+        looksLikeASig(sig)
           || toss("Malformed signature for",
                   sPropName(obj.structName,name)+":",sig);
       };
     }
     const key = ctor.memberKey(name);
-    f.sigCheck(ctor.prototype, name, key, descr.signature);
-    descr.key = key;
-    descr.name = name;
-    const sigGlyph = sigLetter(descr.signature);
-    const xPropName = sPropName(ctor.prototype.structName,key);
-    const dbg = ctor.prototype.debugFlags.__flags;
+    f.sigCheck(ctor.prototype, name, key, si.signature);
+    si.key = key;
+    si.name = name;
+    const sigGlyph = sigLetter(si.signature);
+    const xPropName = sPropName(ctor.structName,key);
+    const dbg = ctor.debugFlags.__flags;
     
+    const getterProxy = memberGetterProxy(si);
     const prop = Object.create(null);
     prop.configurable = false;
     prop.enumerable = false;
     prop.get = function(){
+      
       if(dbg.getter){
-        log("debug.getter:",f._.getters[sigGlyph],"for", sigIR(sigGlyph),
-            xPropName,'@', this.pointer,'+',descr.offset,'sz',descr.sizeof);
+        log("debug.getter:",f.cache.getters[sigGlyph],"for", sigIR(sigGlyph),
+            xPropName,'@', this.pointer,'+',si.offset,'sz',si.sizeof);
       }
       let rc = (
-        new DataView(heap().buffer, Number(this.pointer) + descr.offset, descr.sizeof)
-      )[f._.getters[sigGlyph]](0, isLittleEndian);
+        new DataView(heap().buffer, Number(this.pointer) + si.offset, si.sizeof)
+      )[f.cache.getters[sigGlyph]](0, isLittleEndian);
+
+      if(getterProxy) rc = getterProxy.apply(this,[key,rc]);
       if(dbg.getter) log("debug.getter:",xPropName,"result =",rc);
       return rc;
     };
-    if(descr.readOnly){
+    if(si.readOnly){
       prop.set = __propThrowOnSet(ctor.prototype.structName,key);
     }else{
+      const setterProxy = memberSetterProxy(si);
       prop.set = function(v){
+        
         if(dbg.setter){
-          log("debug.setter:",f._.setters[sigGlyph],"for", sigIR(sigGlyph),
-              xPropName,'@', this.pointer,'+',descr.offset,'sz',descr.sizeof, v);
+          log("debug.setter:",f.cache.setters[sigGlyph],"for", sigIR(sigGlyph),
+              xPropName,'@', this.pointer,'+',si.offset,'sz',si.sizeof, v);
         }
         if(!this.pointer){
-          toss("Cannot set struct property on disposed instance.");
+          toss("Cannot set native property on a disposed",
+               this.structName,"instance.");
         }
-        if(null===v) v = __NullPtr;
-        else while(!__isPtr(v)){
-          if(isAutoPtrSig(descr.signature) && (v instanceof StructType)){
+        if( setterProxy ) v = setterProxy.apply(this,[key,v]);
+        if( null===v || undefined===v ) v = __NullPtr;
+        else if( isPtrSig(si.signature) && !__isPtr(v) ){
+          if(isAutoPtrSig(si.signature) && (v instanceof StructType)){
             
             v = v.pointer || __NullPtr;
             if(dbg.setter) log("debug.setter:",xPropName,"resolved to",v);
-            break;
+          }else{
+            toss("Invalid value for pointer-type",xPropName+'.');
           }
-          toss("Invalid value for pointer-type",xPropName+'.');
         }
         (
-          new DataView(heap().buffer, Number(this.pointer) + descr.offset,
-                       descr.sizeof)
-        )[f._.setters[sigGlyph]](0, f._.sw[sigGlyph](v), isLittleEndian);
+          new DataView(heap().buffer, Number(this.pointer) + si.offset,
+                       si.sizeof)
+        )[f.cache.setters[sigGlyph]](0, f.cache.sw[sigGlyph](v), isLittleEndian);
       };
     }
     Object.defineProperty(ctor.prototype, key, prop);
   };
 
   
-  const StructBinder = function StructBinder(structName, structInfo){
-    if(1===arguments.length){
-      structInfo = structName;
-      structName = structInfo.name;
-    }else if(!structInfo.name){
-      structInfo.name = structName;
-    }
-    if(!structName) toss("Struct name is required.");
-    let lastMember = false;
-    Object.keys(structInfo.members).forEach((k)=>{
-      
-      const m = structInfo.members[k];
-      if(!m.sizeof) toss(structName,"member",k,"is missing sizeof.");
-      else if(m.sizeof===1){
-        (m.signature === 'c' || m.signature === 'C') ||
-          toss("Unexpected sizeof==1 member",
-               sPropName(structInfo.name,k),
-               "with signature",m.signature);
-      }else{
-        
-        
-        if(0!==(m.sizeof%4)){
-          console.warn("Invalid struct member description =",m,"from",structInfo);
-          toss(structName,"member",k,"sizeof is not aligned. sizeof="+m.sizeof);
-        }
-        if(0!==(m.offset%4)){
-          console.warn("Invalid struct member description =",m,"from",structInfo);
-          toss(structName,"member",k,"offset is not aligned. offset="+m.offset);
-        }
-      }
-      if(!lastMember || lastMember.offset < m.offset) lastMember = m;
-    });
-    if(!lastMember) toss("No member property descriptions found.");
-    else if(structInfo.sizeof < lastMember.offset+lastMember.sizeof){
-      toss("Invalid struct config:",structName,
-           "max member offset ("+lastMember.offset+") ",
-           "extends past end of struct (sizeof="+structInfo.sizeof+").");
-    }
-    const debugFlags = rop(SBF.__makeDebugFlags(StructBinder.debugFlags));
+  const StructBinderImpl = function StructBinderImpl(
+    structName, si, opt = Object.create(null)
+  ){
     
-    const zeroAsPtr = __asPtrType(0);
-    const StructCtor = function StructCtor(externalMemory){
-      externalMemory = __asPtrType(externalMemory);
+    const StructCtor = function StructCtor(arg){
       
       if(!(this instanceof StructCtor)){
         toss("The",structName,"constructor may only be called via 'new'.");
-      }else if(arguments.length){
-        if(Number.isNaN(externalMemory) || externalMemory<=zeroAsPtr){
-          toss("Invalid pointer value",arguments[0],"for",structName,"constructor.");
-        }
-        __allocStruct(StructCtor, this, externalMemory);
-      }else{
-        __allocStruct(StructCtor, this);
       }
+      __allocStruct(StructCtor, this, ...arguments);
     };
+    const self = this;
+    
+    const ads = (x)=>{
+      
+      return (('string'===typeof x) && looksLikeASig(x))
+        ? {signature: x} : __adaptStruct2(self,x);
+    };
+    if(1===arguments.length){
+      si = ads(structName);
+      structName = si.structName || si.name;
+    }else if(2===arguments.length){
+      si = ads(si);
+      si.name ??= structName;
+    }else{
+      si = ads(si);
+    }
+    structName ??= si.structName;
+    
+    structName ??= opt.structName;
+    if( !structName ) toss("One of 'name' or 'structName' are required.");
+    if( si.adapt ){
+      
+      Object.keys(si.adapt.struct||{}).forEach((k)=>{
+        __adaptStruct.call(StructBinderImpl, k, si.adapt.struct[k]);
+      });
+      Object.keys(si.adapt.set||{}).forEach((k)=>{
+        __adaptSet.call(StructBinderImpl, k, si.adapt.set[k]);
+      });
+      Object.keys(si.adapt.get||{}).forEach((k)=>{
+        __adaptGet.call(StructBinderImpl, k, si.adapt.get[k]);
+      });
+    }
+    if(!si.members && !si.sizeof){
+      si.sizeof = sigSize(si.signature);
+    }
+
+    const debugFlags = rop(SBF.__makeDebugFlags(StructBinder.debugFlags));
     Object.defineProperties(StructCtor,{
       debugFlags: debugFlags,
       isA: rop((v)=>v instanceof StructCtor),
       memberKey: __memberKeyProp,
       memberKeys: __structMemberKeys,
-      methodInfoForKey: rop(function(mKey){
-      }),
-      structInfo: rop(structInfo),
-      structName: rop(structName)
+      
+      structInfo: rop(si),
+      structName: rop(structName),
+      ptrAdd: rop(__ptrAdd)
     });
-    StructCtor.prototype = new StructType(structName, structInfo, rop);
+    StructCtor.prototype = new StructType(structName, si, rop);
     Object.defineProperties(StructCtor.prototype,{
       debugFlags: debugFlags,
       constructor: rop(StructCtor)
+      ,
+      ptrAdd: rop(__ptrAddSelf)
+    });
+    let lastMember = false;
+    let offset = 0;
+    const autoCalc = !!si.autoCalcSizeOffset;
+    
+    if( !autoCalc ){
+      if( !si.sizeof ){
+        toss(structName,"description is missing its sizeof property.");
+      }
+      
+      si.offset ??= 0;
+    }else{
+      si.offset ??= 0;
+    }
+    Object.keys(si.members || {}).forEach((k)=>{
+      
+      let m = ads(si.members[k]);
+      if(!m.members && !m.sizeof){
+        
+        m.sizeof = sigSize(m.signature);
+        if(!m.sizeof){
+          toss(sPropName(structName,k), "is missing a sizeof property.",m);
+        }
+      }
+      if( undefined===m.offset ){
+        if( autoCalc ) m.offset = offset;
+        else{
+          toss(sPropName(structName,k),"is missing its offset.",
+               JSON.stringify(m));
+        }
+        
+      }
+      si.members[k] = m ;
+      if(!lastMember || lastMember.offset < m.offset) lastMember = m;
+      const oldAutoCalc = !!m.autoCalc;
+      if( autoCalc ) m.autoCalcSizeOffset = true;
+      makeMemberWrapper.call(self, StructCtor, k, m);
+      if( oldAutoCalc ) m.autoCalcSizeOffset = true;
+      else delete m.autoCalcSizeOffset;
+      offset += m.sizeof;
       
     });
-    Object.keys(structInfo.members).forEach(
-      (name)=>makeMemberWrapper(StructCtor, name, structInfo.members[name])
-    );
+
+    if( !lastMember ) toss("No member property descriptions found.");
+    if( !si.sizeof ) si.sizeof = offset;
+    if(si.sizeof===1){
+      (si.signature === 'c' || si.signature === 'C') ||
+        toss("Unexpected sizeof==1 member",
+             sPropName(structName,k),
+             "with signature",si.signature);
+    }else{
+      
+      
+      if(0!==(si.sizeof%4)){
+        console.warn("Invalid struct member description",si);
+        toss(structName,"sizeof is not aligned. sizeof="+si.sizeof);
+      }
+      if(0!==(si.offset%4)){
+        console.warn("Invalid struct member description",si);
+        toss(structName,"offset is not aligned. offset="+si.offset);
+      }
+    }
+    if( si.sizeof < offset ){
+      console.warn("Suspect struct description:",si,"offset =",offset);
+      toss("Mismatch in the calculated vs. the provided sizeof/offset info.",
+           "Expected sizeof",offset,"but got",si.sizeof,"for",si);
+      
+    }
+    delete si.autoCalcSizeOffset;
     return StructCtor;
+  };
+
+  const StructBinder = function StructBinder(structName, structInfo){
+    return (1==arguments.length)
+      ? StructBinderImpl.call(StructBinder, structName)
+      : StructBinderImpl.call(StructBinder, structName, structInfo);
   };
   StructBinder.StructType = StructType;
   StructBinder.config = config;
   StructBinder.allocCString = __allocCString;
+  StructBinder.adaptGet = __adaptGet;
+  StructBinder.adaptSet = __adaptSet;
+  StructBinder.adaptStruct = __adaptStruct;
+  StructBinder.ptrAdd = __ptrAdd;
   if(!StructBinder.debugFlags){
     StructBinder.debugFlags = SBF.__makeDebugFlags(SBF.debugFlags);
   }
@@ -7528,6 +7882,8 @@ globalThis.sqlite3ApiBootstrap.initializers.push(function(sqlite3){
       ["sqlite3_bind_parameter_name", "string", "sqlite3_stmt*", "int"],
       ["sqlite3_bind_pointer", "int",
        "sqlite3_stmt*", "int", "*", "string:static", "*"],
+      
+      ["sqlite3_bind_zeroblob", "int", "sqlite3_stmt*", "int", "int"],
       ["sqlite3_busy_handler","int", [
         "sqlite3*",
         new wasm.xWrap.FuncPtrAdapter({
@@ -7549,7 +7905,6 @@ globalThis.sqlite3ApiBootstrap.initializers.push(function(sqlite3){
       ["sqlite3_column_double","f64", "sqlite3_stmt*", "int"],
       ["sqlite3_column_int","int", "sqlite3_stmt*", "int"],
       ["sqlite3_column_name","string", "sqlite3_stmt*", "int"],
-      ["sqlite3_column_text","string", "sqlite3_stmt*", "int"],
       ["sqlite3_column_type","int", "sqlite3_stmt*", "int"],
       ["sqlite3_column_value","sqlite3_value*", "sqlite3_stmt*", "int"],
       ["sqlite3_commit_hook", "void*", [
@@ -7616,6 +7971,7 @@ globalThis.sqlite3ApiBootstrap.initializers.push(function(sqlite3){
       ["sqlite3_libversion_number", "int"],
       ["sqlite3_limit", "int", ["sqlite3*", "int", "int"]],
       ["sqlite3_malloc", "*","int"],
+      ["sqlite3_next_stmt", "sqlite3_stmt*", ["sqlite3*","sqlite3_stmt*"]],
       ["sqlite3_open", "int", "string", "*"],
       ["sqlite3_open_v2", "int", "string", "*", "int", "string"],
       
@@ -7700,7 +8056,6 @@ globalThis.sqlite3ApiBootstrap.initializers.push(function(sqlite3){
       ["sqlite3_value_numeric_type", "int", "sqlite3_value*"],
       ["sqlite3_value_pointer", "*", "sqlite3_value*", "string:static"],
       ["sqlite3_value_subtype", "int", "sqlite3_value*"],
-      ["sqlite3_value_text", "string", "sqlite3_value*"],
       ["sqlite3_value_type", "int", "sqlite3_value*"],
       ["sqlite3_vfs_find", "*", "string"],
       ["sqlite3_vfs_register", "int", "sqlite3_vfs*", "int"],
@@ -7836,7 +8191,6 @@ globalThis.sqlite3ApiBootstrap.initializers.push(function(sqlite3){
       ["sqlite3mc_vfs_create", "int", "string", "int"],
       ["sqlite3mc_vfs_destroy", undefined, "string"],
       ["sqlite3mc_vfs_shutdown", undefined]
-
     );
   }
 
@@ -8233,10 +8587,8 @@ globalThis.sqlite3ApiBootstrap.initializers.push(function(sqlite3){
            "entry SQLITE_WASM_DEALLOC (=="+capi.SQLITE_WASM_DEALLOC+").");
     }
     const __rcMap = Object.create(null);
-    for(const t of ['resultCodes']){
-      for(const e of Object.entries(wasm.ctype[t])){
-        __rcMap[e[1]] = e[0];
-      }
+    for(const e of Object.entries(wasm.ctype['resultCodes'])){
+      __rcMap[e[1]] = e[0];
     }
     
     capi.sqlite3_js_rc_str = (rc)=>__rcMap[rc];
@@ -8245,8 +8597,6 @@ globalThis.sqlite3ApiBootstrap.initializers.push(function(sqlite3){
     const notThese = Object.assign(Object.create(null),{
       
       WasmTestStruct: true,
-      
-      sqlite3_kvvfs_methods: !util.isUIThread(),
       
       sqlite3_index_info: !wasm.bigIntEnabled,
       sqlite3_index_constraint: !wasm.bigIntEnabled,
@@ -8805,6 +9155,30 @@ globalThis.sqlite3ApiBootstrap.initializers.push(function(sqlite3){
 
   }
 
+  if(!capi.sqlite3_column_text){
+    
+    const argStmt  = wasm.xWrap.argAdapter('sqlite3_stmt*'),
+          argInt   = wasm.xWrap.argAdapter('int'),
+          argValue = wasm.xWrap.argAdapter('sqlite3_value*'),
+          newStr   =
+          (cstr,n)=>wasm.typedArrayToString(wasm.heap8u(),
+                                           Number(cstr), Number(cstr)+n)
+    capi.sqlite3_column_text = function(stmt, colIndex){
+      const a0 = argStmt(stmt), a1 = argInt(colIndex);
+      const cstr = wasm.exports.sqlite3_column_text(a0, a1);
+      return cstr
+        ? newStr(cstr,wasm.exports.sqlite3_column_bytes(a0, a1))
+        : null;
+    };
+    capi.sqlite3_value_text = function(val){
+      const a0 = argValue(val);
+      const cstr = wasm.exports.sqlite3_value_text(a0);
+      return cstr
+        ? newStr(cstr,wasm.exports.sqlite3_value_bytes(a0))
+        : null;
+    };
+  }
+
   {
     
     capi.sqlite3_config = function(op, ...args){
@@ -8878,96 +9252,6 @@ globalThis.sqlite3ApiBootstrap.initializers.push(function(sqlite3){
     };
   }
 
-  const pKvvfs = capi.sqlite3_vfs_find("kvvfs");
-  if( pKvvfs ){
-    if(util.isUIThread()){
-      const kvvfsMethods = new capi.sqlite3_kvvfs_methods(
-        wasm.exports.sqlite3__wasm_kvvfs_methods()
-      );
-      delete capi.sqlite3_kvvfs_methods;
-
-      const kvvfsMakeKey = wasm.exports.sqlite3__wasm_kvvfsMakeKeyOnPstack,
-            pstack = wasm.pstack;
-
-      const kvvfsStorage = (zClass)=>
-            ((115===wasm.peek(zClass))
-             ? sessionStorage : localStorage);
-
-      
-      const kvvfsImpls = {
-        xRead: (zClass, zKey, zBuf, nBuf)=>{
-          const stack = pstack.pointer,
-                astack = wasm.scopedAllocPush();
-          try {
-            const zXKey = kvvfsMakeKey(zClass,zKey);
-            if(!zXKey) return -3;
-            const jKey = wasm.cstrToJs(zXKey);
-            const jV = kvvfsStorage(zClass).getItem(jKey);
-            if(!jV) return -1;
-            const nV = jV.length ;
-            if(nBuf<=0) return nV;
-            else if(1===nBuf){
-              wasm.poke(zBuf, 0);
-              return nV;
-            }
-            const zV = wasm.scopedAllocCString(jV);
-            if(nBuf > nV + 1) nBuf = nV + 1;
-            wasm.heap8u().copyWithin(
-              Number(zBuf), Number(zV), wasm.ptr.addn(zV, nBuf,- 1)
-            );
-            wasm.poke(wasm.ptr.add(zBuf, nBuf, -1), 0);
-            return nBuf - 1;
-          }catch(e){
-            sqlite3.config.error("kvstorageRead()",e);
-            return -2;
-          }finally{
-            pstack.restore(stack);
-            wasm.scopedAllocPop(astack);
-          }
-        },
-        xWrite: (zClass, zKey, zData)=>{
-          const stack = pstack.pointer;
-          try {
-            const zXKey = kvvfsMakeKey(zClass,zKey);
-            if(!zXKey) return 1;
-            const jKey = wasm.cstrToJs(zXKey);
-            kvvfsStorage(zClass).setItem(jKey, wasm.cstrToJs(zData));
-            return 0;
-          }catch(e){
-            sqlite3.config.error("kvstorageWrite()",e);
-            return capi.SQLITE_IOERR;
-          }finally{
-            pstack.restore(stack);
-          }
-        },
-        xDelete: (zClass, zKey)=>{
-          const stack = pstack.pointer;
-          try {
-            const zXKey = kvvfsMakeKey(zClass,zKey);
-            if(!zXKey) return 1;
-            kvvfsStorage(zClass).removeItem(wasm.cstrToJs(zXKey));
-            return 0;
-          }catch(e){
-            sqlite3.config.error("kvstorageDelete()",e);
-            return capi.SQLITE_IOERR;
-          }finally{
-            pstack.restore(stack);
-          }
-        }
-      };
-      for(const k of Object.keys(kvvfsImpls)){
-        kvvfsMethods[kvvfsMethods.memberKey(k)] =
-          wasm.installFunction(
-            kvvfsMethods.memberSignature(k),
-            kvvfsImpls[k]
-          );
-      }
-    }else{
-      
-      capi.sqlite3_vfs_unregister(pKvvfs);
-    }
-  }
-
   
   wasm.xWrap.FuncPtrAdapter.warnOnUse = true;
 
@@ -9027,7 +9311,7 @@ globalThis.sqlite3ApiBootstrap.initializers.push(function(sqlite3){
       }
       tgt[memKey] = fProxy;
     }else{
-      const pFunc = wasm.installFunction(fProxy, tgt.memberSignature(name));
+      const pFunc = wasm.installFunction(fProxy, sigN);
       tgt[memKey] = pFunc;
       if(!tgt.ondispose || !tgt.ondispose.__removeFuncList){
         tgt.addOnDispose('ondispose.__removeFuncList handler',
@@ -9076,15 +9360,26 @@ globalThis.sqlite3ApiBootstrap.initializers.push(function(sqlite3){
   };
 
 });
-globalThis.sqlite3ApiBootstrap.initializers.push(function(sqlite3){
-  sqlite3.version = {"libVersion": "3.51.3", "libVersionNumber": 3051003, "sourceId": "2026-03-13 10:38:09 737ae4a34738ffa0c3ff7f9bb18df914dd1cad163f28fd6b6e114a344fe6d618","downloadVersion": 3510300,"scm":{ "sha3-256": "737ae4a34738ffa0c3ff7f9bb18df914dd1cad163f28fd6b6e114a344fe6d618","branch": "branch-3.51","tags": "release version-3.51.3","datetime": "2026-03-13T10:38:09.694Z"}};
-});
 
 globalThis.sqlite3ApiBootstrap.initializers.push(function(sqlite3){
   const toss3 = (...args)=>{throw new sqlite3.SQLite3Error(...args)};
 
   const capi = sqlite3.capi, wasm = sqlite3.wasm, util = sqlite3.util;
   
+
+  const outWrapper = function(f){
+    return (...args)=>f("sqlite3.oo1:",...args);
+  };
+
+  const debug = sqlite3.__isUnderTest
+        ? outWrapper(console.debug.bind(console))
+        : outWrapper(sqlite3.config.debug);
+  const warn = sqlite3.__isUnderTest
+        ? outWrapper(console.warn.bind(console))
+        : outWrapper(sqlite3.config.warn);
+  const error = sqlite3.__isUnderTest
+        ? outWrapper(console.error.bind(console))
+        : outWrapper(sqlite3.config.error);
 
   
   const __ptrMap = new WeakMap();
@@ -9119,7 +9414,8 @@ globalThis.sqlite3ApiBootstrap.initializers.push(function(sqlite3){
         wasm.installFunction('i(ippp)', function(t,c,p,x){
           if(capi.SQLITE_TRACE_STMT===t){
             
-            console.log("SQL TRACE #"+(++this.counter)+' via sqlite3@'+c+':',
+            console.log("SQL TRACE #"+(++this.counter),
+                        'via sqlite3@'+c+'['+capi.sqlite3_db_filename(c,null)+']',
                         wasm.cstrToJs(x));
           }
         }.bind({counter: 0}));
@@ -9207,19 +9503,6 @@ globalThis.sqlite3ApiBootstrap.initializers.push(function(sqlite3){
 
   
   const dbCtorHelper = function ctor(...args){
-    if(!ctor._name2vfs){
-      
-      ctor._name2vfs = Object.create(null);
-      const isWorkerThread = ('function'===typeof importScripts)
-            ? (n)=>toss3("The VFS for",n,"is only available in the main window thread.")
-            : false;
-      ctor._name2vfs[':localStorage:'] = {
-        vfs: 'kvvfs', filename: isWorkerThread || (()=>'local')
-      };
-      ctor._name2vfs[':sessionStorage:'] = {
-        vfs: 'kvvfs', filename: isWorkerThread || (()=>'session')
-      };
-    }
     const opt = ctor.normalizeArgs(...args);
     
     let pDb;
@@ -9238,12 +9521,6 @@ globalThis.sqlite3ApiBootstrap.initializers.push(function(sqlite3){
           || (vfsName && ('string'!==typeof vfsName && !wasm.isPtr(vfsName))) ){
         sqlite3.config.error("Invalid DB ctor args",opt,arguments);
         toss3("Invalid arguments for DB constructor:", arguments, "opts:", opt);
-      }
-      let fnJs = wasm.isPtr(fn) ? wasm.cstrToJs(fn) : fn;
-      const vfsCheck = ctor._name2vfs[fnJs];
-      if(vfsCheck){
-        vfsName = vfsCheck.vfs;
-        fn = fnJs = vfsCheck.filename(fnJs);
       }
       let oflags = 0;
       if( flagsStr.indexOf('c')>=0 ){
@@ -9269,7 +9546,9 @@ globalThis.sqlite3ApiBootstrap.initializers.push(function(sqlite3){
       }finally{
         wasm.pstack.restore(stack);
       }
-      this.filename = fnJs;
+      this.filename =
+         wasm.isPtr(fn) ? wasm.cstrToJs(fn) : fn;
+
     }
     __ptrMap.set(this, pDb);
     __stmtMap.set(this, Object.create(null));
@@ -9596,8 +9875,8 @@ globalThis.sqlite3ApiBootstrap.initializers.push(function(sqlite3){
         const pSqlEnd = wasm.ptr.add(pSql, sqlByteLen);
         if(isTA) wasm.heap8().set(arg.sql, pSql);
         else wasm.jstrcpy(arg.sql, wasm.heap8(), pSql, sqlByteLen, false);
-        wasm.poke(wasm.ptr.add(pSql, sqlByteLen), 0);
-        while(pSql && wasm.peek(pSql, 'i8')
+        wasm.poke8(wasm.ptr.add(pSql, sqlByteLen), 0);
+        while(pSql && wasm.peek8(pSql)
                ){
           wasm.pokePtr([ppStmt, pzTail], 0);
           DB.checkRc(this, capi.sqlite3_prepare_v3(
@@ -9656,6 +9935,7 @@ globalThis.sqlite3ApiBootstrap.initializers.push(function(sqlite3){
       }
       return arg.returnVal();
     },
+
 
     
     createFunction: function f(name, xFunc, opt){
@@ -10266,33 +10546,6 @@ globalThis.sqlite3ApiBootstrap.initializers.push(function(sqlite3){
     Stmt
   };
 
-  if(util.isUIThread()){
-    
-    sqlite3.oo1.JsStorageDb = function(storageName='session'){
-      const opt = dbCtorHelper.normalizeArgs(...arguments);
-      storageName = opt.filename;
-      if('session'!==storageName && 'local'!==storageName){
-        toss3("JsStorageDb db name must be one of 'session' or 'local'.");
-      }
-      opt.vfs = 'kvvfs';
-      dbCtorHelper.call(this, opt);
-    };
-    const jdb = sqlite3.oo1.JsStorageDb;
-    jdb.prototype = Object.create(DB.prototype);
-    
-    jdb.clearStorage = capi.sqlite3_js_kvvfs_clear;
-    
-    jdb.prototype.clearStorage = function(){
-      return jdb.clearStorage(affirmDbOpen(this).filename);
-    };
-    
-    jdb.storageSize = capi.sqlite3_js_kvvfs_size;
-    
-    jdb.prototype.storageSize = function(){
-      return jdb.storageSize(affirmDbOpen(this).filename);
-    };
-  }
-
 });
 
 
@@ -10685,10 +10938,7 @@ globalThis.sqlite3ApiBootstrap.initializers.push(function(sqlite3){
       
       unget: (pCObj)=>__xWrap(pCObj,true),
       
-      dispose: (pCObj)=>{
-        const o = __xWrap(pCObj,true);
-        if(o) o.dispose();
-      }
+      dispose: (pCObj)=>__xWrap(pCObj,true)?.dispose?.()
     });
   };
 
@@ -10807,88 +11057,1576 @@ globalThis.sqlite3ApiBootstrap.initializers.push(function(sqlite3){
   };
 });
 
-'use strict';
-globalThis.sqlite3ApiBootstrap.initializers.push(function(sqlite3){
 
-const installOpfsVfs = function callee(options){
-  if(!globalThis.SharedArrayBuffer
-    || !globalThis.Atomics){
-    return Promise.reject(
-      new Error("Cannot install OPFS: Missing SharedArrayBuffer and/or Atomics. "+
-                "The server must emit the COOP/COEP response headers to enable those. "+
-                "See https://sqlite.org/wasm/doc/trunk/persistence.md#coop-coep")
-    );
-  }else if('undefined'===typeof WorkerGlobalScope){
-    return Promise.reject(
-      new Error("The OPFS sqlite3_vfs cannot run in the main thread "+
-                "because it requires Atomics.wait().")
-    );
-  }else if(!globalThis.FileSystemHandle ||
-           !globalThis.FileSystemDirectoryHandle ||
-           !globalThis.FileSystemFileHandle ||
-           !globalThis.FileSystemFileHandle.prototype.createSyncAccessHandle ||
-           !navigator?.storage?.getDirectory){
-    return Promise.reject(
-      new Error("Missing required OPFS APIs.")
-    );
+
+globalThis.sqlite3ApiBootstrap.initializers.push(function(sqlite3){
+  if( sqlite3.config.disable?.vfs?.kvvfs ){
+    return;
   }
-  if(!options || 'object'!==typeof options){
-    options = Object.create(null);
-  }
-  const urlParams = new URL(globalThis.location.href).searchParams;
-  if(urlParams.has('opfs-disable')){
+  'use strict';
+  const capi = sqlite3.capi,
+        sqlite3_kvvfs_methods = capi.sqlite3_kvvfs_methods,
+        KVVfsFile = capi.KVVfsFile,
+        pKvvfs = sqlite3.capi.sqlite3_vfs_find("kvvfs")
+
+  
+  delete capi.sqlite3_kvvfs_methods;
+  delete capi.KVVfsFile;
+
+  if( !pKvvfs ) return ;
+  if( 0 ){
     
-    return Promise.resolve(sqlite3);
+    capi.sqlite3_vfs_register(pKvvfs, 1);
   }
-  if(undefined===options.verbose){
-    options.verbose = urlParams.has('opfs-verbose')
-      ? (+urlParams.get('opfs-verbose') || 2) : 1;
+
+  const util = sqlite3.util,
+        wasm = sqlite3.wasm,
+        toss3 = util.toss3,
+        hop = (o,k)=>Object.prototype.hasOwnProperty.call(o,k);
+
+  const kvvfsMethods = new sqlite3_kvvfs_methods(
+    
+    wasm.exports.sqlite3__wasm_kvvfs_methods()
+  );
+  util.assert( 32<=kvvfsMethods.$nKeySize, "unexpected kvvfsMethods.$nKeySize: "+kvvfsMethods.$nKeySize);
+
+  
+  const cache = Object.assign(Object.create(null),{
+    
+    rxJournalSuffix: /-journal$/,
+    
+    zKeyJrnl: wasm.allocCString("jrnl"),
+    
+    zKeySz: wasm.allocCString("sz"),
+    
+    keySize: kvvfsMethods.$nKeySize,
+    
+    buffer: Object.assign(Object.create(null),{
+      
+      n: kvvfsMethods.$nBufferSize,
+      
+      pool: Object.create(null)
+    })
+  });
+
+  
+  cache.memBuffer = (id=0)=>cache.buffer.pool[id] ??= wasm.alloc(cache.buffer.n);
+
+  
+  cache.memBufferFree = (id)=>{
+    const b = cache.buffer.pool[id];
+    if( b ){
+      wasm.dealloc(b);
+      delete cache.buffer.pool[id];
+    }
+  };
+
+  const noop = ()=>{};
+  const debug = sqlite3.__isUnderTest
+        ? (...args)=>sqlite3.config.debug?.("kvvfs:", ...args)
+        : noop;
+  const warn = (...args)=>sqlite3.config.warn?.("kvvfs:", ...args);
+  const error = (...args)=>sqlite3.config.error?.("kvvfs:", ...args);
+
+  
+  class KVVfsStorage {
+    #map = Object.create(null);
+    #keys = null;
+    #size = 0;
+
+    constructor(){
+      this.clear();
+    }
+
+    #getKeys(){
+      return this.#keys ??= Object.keys(this.#map);
+    }
+
+    key(n){
+      if(n < 0 || n >= this.#size) return null;
+      return this.#getKeys()[n];
+    }
+
+    getItem(k){
+      return this.#map[k] ?? null;
+    }
+
+    setItem(k,v){
+      if( !(k in this.#map) ){
+        ++this.#size;
+        this.#keys = null;
+      }
+      this.#map[k] = ''+v;
+    }
+
+    removeItem(k){
+      if( k in this.#map ){
+        delete this.#map[k];
+        --this.#size;
+        this.#keys = null;
+      }
+    }
+
+    clear(){
+      this.#map = Object.create(null);
+      this.#keys = null;
+      this.#size = 0;
+    }
+
+    get length() {
+      return this.#size;
+    }
+  };
+
+  
+  const kvvfsIsPersistentName = (v)=>'local'===v || 'session'===v;
+
+  
+  const kvvfsKeyPrefix = (v)=>kvvfsIsPersistentName(v) ? 'kvvfs-'+v+'-' : '';
+
+  
+  const validateStorageName = function(n,mayBeJournal=false){
+    if( kvvfsIsPersistentName(n) ) return;
+    const len = (new Blob([n])).size;
+    if( !len ) toss3(capi.SQLITE_MISUSE, "Empty name is not permitted.");
+    let maxLen = cache.keySize - 1;
+    if( cache.rxJournalSuffix.test(n) ){
+      if( !mayBeJournal ){
+        toss3(capi.SQLITE_MISUSE,
+              "Storage names may not have a '-journal' suffix.");
+      }
+    }else if( ['-wal','-shm'].filter(v=>n.endsWith(v)).length ){
+      toss3(capi.SQLITE_MISUSE,
+            "Storage names may not have a -wal or -shm suffix.");
+    }else{
+      maxLen -= 8 ;
+    }
+    if( len > maxLen ){
+      toss3(capi.SQLITE_RANGE, "Storage name is too long. Limit =", maxLen);
+    }
+    let i;
+    for( i = 0; i < len; ++i ){
+      const ch = n.codePointAt(i);
+      if( ch<32 ){
+        toss3(capi.SQLITE_RANGE,
+              "Illegal character ("+ch+"d) in storage name:",n);
+      }
+    }
+  };
+
+  
+  const newStorageObj = (name,storage=undefined)=>Object.assign(Object.create(null),{
+    
+    jzClass: name,
+    
+    refc: 1,
+    
+    deleteAtRefc0: false,
+    
+    storage: storage || new KVVfsStorage,
+    
+    keyPrefix: kvvfsKeyPrefix(name),
+    
+    files: [],
+    
+    listeners: undefined
+  });
+
+  
+  const kvvfs = sqlite3.kvvfs = Object.create(null);
+  if( sqlite3.__isUnderTest ){
+    
+    kvvfs.log = Object.assign(Object.create(null),{
+      xOpen: false,
+      xClose: false,
+      xWrite: false,
+      xRead: false,
+      xSync: false,
+      xAccess: false,
+      xFileControl: false,
+      xRcrdRead: false,
+      xRcrdWrite: false,
+      xRcrdDelete: false,
+    });
   }
-  if(undefined===options.sanityChecks){
-    options.sanityChecks = urlParams.has('opfs-sanity-check');
+
+  
+  const deleteStorage = function(store){
+    const other = cache.rxJournalSuffix.test(store.jzClass)
+          ? store.jzClass.replace(cache.rxJournalSuffix,'')
+          : store.jzClass+'-journal';
+    kvvfs?.log?.xClose
+      && debug("cleaning up storage handles [", store.jzClass, other,"]",store);
+    delete cache.storagePool[store.jzClass];
+    delete cache.storagePool[other];
+    if( !sqlite3.__isUnderTest ){
+      
+      delete store.storage;
+      delete store.refc;
+    }
+  };
+
+  
+  const installStorageAndJournal = (store)=>
+        cache.storagePool[store.jzClass] =
+        cache.storagePool[store.jzClass+'-journal'] = store;
+
+  
+  const nameOfThisThreadStorage = '.';
+
+  
+  cache.storagePool = Object.assign(Object.create(null),{
+    
+    [nameOfThisThreadStorage]: newStorageObj(nameOfThisThreadStorage)
+  });
+
+  if( globalThis.Storage ){
+    
+    if( globalThis.localStorage instanceof globalThis.Storage ){
+      cache.storagePool.local = newStorageObj('local', globalThis.localStorage);
+    }
+    if( globalThis.sessionStorage instanceof globalThis.Storage ){
+      cache.storagePool.session = newStorageObj('session', globalThis.sessionStorage);
+    }
   }
-  if(undefined===options.proxyUri){
-    options.proxyUri = callee.defaultProxyUri;
+
+  cache.builtinStorageNames = Object.keys(cache.storagePool);
+
+  const isBuiltinName = (n)=>cache.builtinStorageNames.indexOf(n)>-1;
+
+  
+  for(const k of Object.keys(cache.storagePool)){
+    
+    const orig = cache.storagePool[k];
+    cache.storagePool[k+'-journal'] = orig;
+  }
+
+  cache.setError = (e=undefined, dfltErrCode=capi.SQLITE_ERROR)=>{
+    if( e ){
+      cache.lastError = e;
+      return (e.resultCode | 0) || dfltErrCode;
+    }
+    delete cache.lastError;
+    return 0;
+  };
+
+  cache.popError = ()=>{
+    const e = cache.lastError;
+    delete cache.lastError;
+    return e;
+  };
+
+  
+  const catchForNotify = (e)=>{
+    warn("kvvfs.listener handler threw:",e);
+  };
+
+  const kvvfsDecode = wasm.exports.sqlite3__wasm_kvvfs_decode;
+  const kvvfsEncode = wasm.exports.sqlite3__wasm_kvvfs_encode;
+
+  
+  const notifyListeners = async function(eventName,store,...args){
+    try{
+      
+      if( store.keyPrefix && args[0] ){
+        args[0] = args[0].replace(store.keyPrefix,'');
+      }
+      let u8enc, z0, z1, wcache;
+      for(const ear of store.listeners){
+        const ev = Object.create(null);
+        ev.storageName = store.jzClass;
+        ev.type = eventName;
+        const decodePages = ear.decodePages;
+        const f = ear.events[eventName];
+        if( f ){
+          if( !ear.includeJournal && args[0]==='jrnl' ){
+            continue;
+          }
+          if( 'write'===eventName && ear.decodePages && +args[0]>0 ){
+            
+            ev.data = [args[0]];
+            if( wcache?.[args[0]] ){
+              ev.data[1] = wcache[args[0]];
+              continue;
+            }
+            u8enc ??= new TextEncoder('utf-8');
+            z0 ??= cache.memBuffer(10);
+            z1 ??= cache.memBuffer(11);
+            const u = u8enc.encode(args[1]);
+            const heap = wasm.heap8u();
+            heap.set(u, Number(z0));
+            heap[wasm.ptr.addn(z0, u.length)] = 0;
+            const rc = kvvfsDecode(z0, z1, cache.buffer.n);
+            if( rc>0 ){
+              wcache ??= Object.create(null);
+              wcache[args[0]]
+                = ev.data[1]
+                = heap.slice(Number(z1), wasm.ptr.addn(z1,rc));
+            }else{
+              continue;
+            }
+          }else{
+            ev.data = args.length
+              ? ((args.length===1) ? args[0] : args)
+              : undefined;
+          }
+          try{f(ev)?.catch?.(catchForNotify)}
+          catch(e){
+            warn("notifyListeners [",store.jzClass,"]",eventName,e);
+          }
+        }
+      }
+    }catch(e){
+      catchForNotify(e);
+    }
+  };
+
+  
+  const storageForZClass = (zClass)=>
+        'string'===typeof zClass
+        ? cache.storagePool[zClass]
+        : cache.storagePool[wasm.cstrToJs(zClass)];
+
+
+  const kvvfsMakeKey = wasm.exports.sqlite3__wasm_kvvfsMakeKey;
+  
+  const zKeyForStorage = (store, zClass, zKey)=>{
+    
+    return (zClass && store.keyPrefix) ? kvvfsMakeKey(zClass, zKey) : zKey;
+  };
+
+  const jsKeyForStorage = (store,zClass,zKey)=>
+        wasm.cstrToJs(zKeyForStorage(store, zClass, zKey));
+
+  const storageGetDbSize = (store)=>+store.storage.getItem(store.keyPrefix + "sz");
+
+  
+  const pFileHandles = new Map();
+
+  
+  const originalMethods = {
+    vfs: Object.create(null),
+    ioDb: Object.create(null),
+    ioJrnl: Object.create(null)
+  };
+
+  
+  const originalIoMethods = (kvvfsFile)=>
+        originalMethods[kvvfsFile.$isJournal ? 'ioJrnl' : 'ioDb'];
+
+  const pVfs = new capi.sqlite3_vfs(kvvfsMethods.$pVfs);
+  const pIoDb = new capi.sqlite3_io_methods(kvvfsMethods.$pIoDb);
+  const pIoJrnl = new capi.sqlite3_io_methods(kvvfsMethods.$pIoJrnl);
+  const recordHandler =
+        Object.create(null);
+  const kvvfsInternal = Object.assign(Object.create(null),{
+    pFileHandles,
+    cache,
+    storageForZClass,
+    KVVfsStorage,
+    
+    disablePageSizeChange: true
+  });
+  if( kvvfs.log ){
+    
+    kvvfs.internal = kvvfsInternal;
+  }
+
+  
+  const methodOverrides = {
+
+    
+    recordHandler: {
+      xRcrdRead: (zClass, zKey, zBuf, nBuf)=>{
+        try{
+          const jzClass = wasm.cstrToJs(zClass);
+          const store = storageForZClass(jzClass);
+          if( !store ) return -1;
+          const jXKey = jsKeyForStorage(store, zClass, zKey);
+          kvvfs?.log?.xRcrdRead && warn("xRcrdRead", jzClass, jXKey, nBuf, store );
+          const jV = store.storage.getItem(jXKey);
+          if(null===jV) return -1;
+          const nV = jV.length ;
+          if( 0 ){
+            debug("xRcrdRead", jXKey, store, jV);
+          }
+          if(nBuf<=0) return nV;
+          else if(1===nBuf){
+            wasm.poke(zBuf, 0);
+            return nV;
+          }
+          if( nBuf+1<nV ){
+            toss3(capi.SQLITE_RANGE,
+                  "xRcrdRead()",jzClass,jXKey,
+                  "input buffer is too small: need",
+                  nV,"but have",nBuf);
+          }
+          if( 0 ){
+            debug("xRcrdRead", nBuf, zClass, wasm.cstrToJs(zClass),
+                  wasm.cstrToJs(zKey), nV, jV, store);
+          }
+          const zV = cache.memBuffer(0);
+          
+          const heap = wasm.heap8();
+          let i;
+          for(i = 0; i < nV; ++i){
+            heap[wasm.ptr.add(zV,i)] = jV.codePointAt(i) & 0xFF;
+          }
+          heap.copyWithin(
+            Number(zBuf), Number(zV), wasm.ptr.addn(zV, i)
+          );
+          heap[wasm.ptr.add(zBuf, nV)] = 0;
+          return nBuf;
+        }catch(e){
+          error("kvrecordRead()",e);
+          cache.setError(e);
+          return -2;
+        }
+      },
+
+      xRcrdWrite: (zClass, zKey, zData)=>{
+        try {
+          const store = storageForZClass(zClass);
+          const jxKey = jsKeyForStorage(store, zClass, zKey);
+          const jData = wasm.cstrToJs(zData);
+          kvvfs?.log?.xRcrdWrite && warn("xRcrdWrite",jxKey, store);
+          store.storage.setItem(jxKey, jData);
+          store.listeners && notifyListeners('write', store, jxKey, jData);
+          return 0;
+        }catch(e){
+          error("kvrecordWrite()",e);
+          return cache.setError(e, capi.SQLITE_IOERR);
+        }
+      },
+
+      xRcrdDelete: (zClass, zKey)=>{
+        try {
+          const store = storageForZClass(zClass);
+          const jxKey = jsKeyForStorage(store, zClass, zKey);
+          kvvfs?.log?.xRcrdDelete && warn("xRcrdDelete",jxKey, store);
+          store.storage.removeItem(jxKey);
+          store.listeners && notifyListeners('delete', store, jxKey);
+          return 0;
+        }catch(e){
+          error("kvrecordDelete()",e);
+          return cache.setError(e, capi.SQLITE_IOERR);
+        }
+      }
+    },
+
+    
+    vfs:{
+      
+      xOpen: function(pProtoVfs,zName,pProtoFile,flags,pOutFlags){
+        cache.popError();
+        let zToFree ;
+        if( 0 ){
+          
+          flags |= capi.SQLITE_OPEN_CREATE;
+        }
+        try{
+          if( !zName ){
+            zToFree = wasm.allocCString(""+pProtoFile+"."
+                                        +(Math.random() * 100000 | 0));
+            zName = zToFree;
+          }
+          const jzClass = wasm.cstrToJs(zName);
+          kvvfs?.log?.xOpen && debug("xOpen",jzClass,"flags =",flags);
+          validateStorageName(jzClass, true);
+          if( (flags & (capi.SQLITE_OPEN_MAIN_DB
+                        | capi.SQLITE_OPEN_TEMP_DB
+                        | capi.SQLITE_OPEN_TRANSIENT_DB))
+              && cache.rxJournalSuffix.test(jzClass) ){
+            toss3(capi.SQLITE_ERROR,
+                  "DB files may not have a '-journal' suffix.");
+          }
+          let s = storageForZClass(jzClass);
+          if( !s && !(flags & capi.SQLITE_OPEN_CREATE) ){
+            toss3(capi.SQLITE_ERROR, "Storage not found:", jzClass);
+          }
+          const rc = originalMethods.vfs.xOpen(pProtoVfs, zName, pProtoFile,
+                                               flags, pOutFlags);
+          if( rc ) return rc;
+          let deleteAt0 = !!(capi.SQLITE_OPEN_DELETEONCLOSE & flags);
+          if(wasm.isPtr(arguments[1])){
+            if(capi.sqlite3_uri_boolean(zName, "delete-on-close", 0)){
+              deleteAt0 = true;
+            }
+          }
+          const f = new KVVfsFile(pProtoFile);
+          util.assert(f.$zClass, "Missing f.$zClass");
+          f.addOnDispose(zToFree);
+          zToFree = undefined;
+          
+          if( s ){
+            ++s.refc;
+            
+            s.files.push(f);
+            wasm.poke32(pOutFlags, flags);
+          }else{
+            wasm.poke32(pOutFlags, flags | capi.SQLITE_OPEN_CREATE);
+            util.assert( !f.$isJournal, "Opening a journal before its db? "+jzClass );
+            
+            const nm = jzClass.replace(cache.rxJournalSuffix,'');
+            s = newStorageObj(nm);
+            installStorageAndJournal(s);
+            s.files.push(f);
+            s.deleteAtRefc0 = deleteAt0;
+            kvvfs?.log?.xOpen
+              && debug("xOpen installed storage handle [",nm, nm+"-journal","]", s);
+          }
+          pFileHandles.set(pProtoFile, {store: s, file: f, jzClass});
+          s.listeners && notifyListeners('open', s, s.files.length);
+          return 0;
+        }catch(e){
+          warn("xOpen:",e);
+          return cache.setError(e);
+        }finally{
+          zToFree && wasm.dealloc(zToFree);
+        }
+      },
+
+      xDelete: function(pVfs, zName, iSyncFlag){
+        cache.popError();
+        try{
+          const jzName = wasm.cstrToJs(zName);
+          if( cache.rxJournalSuffix.test(jzName) ){
+            recordHandler.xRcrdDelete(zName, cache.zKeyJrnl);
+          }
+          return 0;
+        }catch(e){
+          warn("xDelete",e);
+          return cache.setError(e);
+        }
+      },
+
+      xAccess: function(pProtoVfs, zPath, flags, pResOut){
+        cache.popError();
+        try{
+          const s = storageForZClass(zPath);
+          const jzPath = s?.jzClass || wasm.cstrToJs(zPath);
+          if( kvvfs?.log?.xAccess ){
+            debug("xAccess",jzPath,"flags =",
+                  flags,"*pResOut =",wasm.peek32(pResOut),
+                  "store =",s);
+          }
+          if( !s ){
+            
+            
+            
+            try{validateStorageName(jzPath)}
+            catch(e){
+              
+              wasm.poke32(pResOut, 0);
+              return 0;
+            }
+          }
+          if( s ){
+            const key = s.keyPrefix+
+                  (cache.rxJournalSuffix.test(jzPath) ? "jrnl" : "1");
+            const res = s.storage.getItem(key) ? 0 : 1;
+            
+            
+            wasm.poke32(pResOut, res);
+          }else{
+            wasm.poke32(pResOut, 0);
+          }
+          return 0;
+        }catch(e){
+          error('xAccess',e);
+          return cache.setError(e);
+        }
+      },
+
+      xRandomness: function(pVfs, nOut, pOut){
+        const heap = wasm.heap8u();
+        let i = 0;
+        const npOut = Number(pOut);
+        for(; i < nOut; ++i) heap[npOut + i] = (Math.random()*255000) & 0xFF;
+        return nOut;
+      },
+
+      xGetLastError: function(pVfs,nOut,pOut){
+        const e = cache.popError();
+        debug('xGetLastError',e);
+        if(e){
+          const scope = wasm.scopedAllocPush();
+          try{
+            const [cMsg, n] = wasm.scopedAllocCString(e.message, true);
+            wasm.cstrncpy(pOut, cMsg, nOut);
+            if(n > nOut) wasm.poke8(wasm.ptr.add(pOut,nOut,-1), 0);
+            debug("set xGetLastError",e.message);
+            return (e.resultCode | 0) || capi.SQLITE_IOERR;
+          }catch(e){
+            return capi.SQLITE_NOMEM;
+          }finally{
+            wasm.scopedAllocPop(scope);
+          }
+        }
+        return 0;
+      }
+
+    },
+
+    
+    ioDb:{
+      
+      xClose: function(pFile){
+        cache.popError();
+        try{
+          const h = pFileHandles.get(pFile);
+          kvvfs?.log?.xClose && debug("xClose", pFile, h);
+          if( h ){
+            pFileHandles.delete(pFile);
+            const s = h.store;
+            s.files = s.files.filter((v)=>v!==h.file);
+            if( --s.refc<=0 && s.deleteAtRefc0 ){
+              deleteStorage(s);
+            }
+            originalMethods.ioDb.xClose(pFile);
+            h.file.dispose();
+            s.listeners && notifyListeners('close', s, s.files.length);
+          }else{
+            
+          }
+          return 0;
+        }catch(e){
+          error("xClose",e);
+          return cache.setError(e);
+        }
+      },
+
+      xFileControl: function(pFile, opId, pArg){
+        cache.popError();
+        try{
+          const h = pFileHandles.get(pFile);
+          util.assert(h, "Missing KVVfsFile handle");
+          kvvfs?.log?.xFileControl && debug("xFileControl",h,'op =',opId);
+          if( opId===capi.SQLITE_FCNTL_PRAGMA
+              && kvvfsInternal.disablePageSizeChange ){
+            
+            
+            const zName = wasm.peekPtr(wasm.ptr.add(pArg, wasm.ptr.size));
+            if( "page_size"===wasm.cstrToJs(zName) ){
+              kvvfs?.log?.xFileControl
+                && debug("xFileControl pragma",wasm.cstrToJs(zName));
+              const zVal = wasm.peekPtr(wasm.ptr.add(pArg, 2*wasm.ptr.size));
+              if( zVal ){
+                
+                kvvfs?.log?.xFileControl
+                  && warn("xFileControl pragma", h,
+                          "NOT setting page size to", wasm.cstrToJs(zVal));
+                h.file.$szPage = -1;
+                return 0;
+              }else if( h.file.$szPage>0 ){
+                kvvfs?.log?.xFileControl &&
+                  warn("xFileControl", h, "getting page size",h.file.$szPage);
+                wasm.pokePtr(pArg, wasm.allocCString(""+h.file.$szPage)
+                             );
+                return 0;
+              }
+            }
+          }
+          const rc = originalMethods.ioDb.xFileControl(pFile, opId, pArg);
+          if( 0==rc && capi.SQLITE_FCNTL_SYNC===opId ){
+            h.store.listeners && notifyListeners('sync', h.store, false);
+          }
+          return rc;
+        }catch(e){
+          error("xFileControl",e);
+          return cache.setError(e);
+        }
+      },
+
+      xSync: function(pFile,flags){
+        cache.popError();
+        try{
+          const h = pFileHandles.get(pFile);
+          kvvfs?.log?.xSync && debug("xSync", h);
+          util.assert(h, "Missing KVVfsFile handle");
+          const rc = originalMethods.ioDb.xSync(pFile, flags);
+          if( 0==rc && h.store.listeners ) notifyListeners('sync', h.store, true);
+          return rc;
+        }catch(e){
+          error("xSync",e);
+          return cache.setError(e);
+        }
+      },
+
+
+    },
+
+    ioJrnl:{
+      
+      xClose: true,
+    }
+  };
+
+
+  try {
+    util.assert( cache.buffer.n>1024*129, "Heap buffer is not large enough"
+                  );
+    for(const e of Object.entries(methodOverrides.recordHandler)){
+      
+      const k = e[0], f = e[1];
+      recordHandler[k] = f;
+      if( 0 ){
+        
+        kvvfsMethods.installMethod(k, f);
+      }else{
+        kvvfsMethods[kvvfsMethods.memberKey(k)] =
+          wasm.installFunction(kvvfsMethods.memberSignature(k), f);
+      }
+    }
+    for(const e of Object.entries(methodOverrides.vfs)){
+      
+      const k = e[0], f = e[1], km = pVfs.memberKey(k),
+            member = pVfs.structInfo.members[k]
+            || util.toss("Missing pVfs.structInfo[",k,"]");
+      originalMethods.vfs[k] = wasm.functionEntry(pVfs[km]);
+      pVfs[km] = wasm.installFunction(member.signature, f);
+    }
+    for(const e of Object.entries(methodOverrides.ioDb)){
+      
+      const k = e[0], f = e[1], km = pIoDb.memberKey(k);
+      originalMethods.ioDb[k] = wasm.functionEntry(pIoDb[km])
+        || util.toss("Missing native pIoDb[",km,"]");
+      pIoDb[km] = wasm.installFunction(pIoDb.memberSignature(k), f);
+    }
+    for(const e of Object.entries(methodOverrides.ioJrnl)){
+      
+      const k = e[0], f = e[1], km = pIoJrnl.memberKey(k);
+      originalMethods.ioJrnl[k] = wasm.functionEntry(pIoJrnl[km])
+        || util.toss("Missing native pIoJrnl[",km,"]");
+      if( true===f ){
+        
+        pIoJrnl[km] = pIoDb[km] || util.toss("Missing copied pIoDb[",km,"]");
+      }else{
+        pIoJrnl[km] = wasm.installFunction(pIoJrnl.memberSignature(k), f);
+      }
+    }
+  }finally{
+    kvvfsMethods.dispose();
+    pVfs.dispose();
+    pIoDb.dispose();
+    pIoJrnl.dispose();
   }
 
   
 
-  if('function' === typeof options.proxyUri){
-    options.proxyUri = options.proxyUri();
+  
+  const sqlite3_js_kvvfs_clear = function callee(which){
+    if( ''===which ){
+      return callee('local') + callee('session');
+    }
+    const store = storageForZClass(which);
+    if( !store ) return 0;
+    if( store.files.length ){
+      if( globalThis.localStorage===store.storage
+          || globalThis.sessionStorage===store.storage ){
+        
+      }else{
+        
+        toss3(capi.SQLITE_ACCESS,
+              "Cannot clear in-use database storage.");
+      }
+    }
+    const s = store.storage;
+    const toRm = [] ;
+    let i, n = s.length;
+    
+    for( i = 0; i < n; ++i ){
+      const k = s.key(i);
+      
+      if(!store.keyPrefix || k.startsWith(store.keyPrefix)) toRm.push(k);
+    }
+    toRm.forEach((kk)=>s.removeItem(kk));
+    
+    return toRm.length;
+  };
+
+  
+  const sqlite3_js_kvvfs_size = function callee(which){
+    if( ''===which ){
+      return callee('local') + callee('session');
+    }
+    const store = storageForZClass(which);
+    if( !store ) return 0;
+    const s = store.storage;
+    let i, sz = 0;
+    for(i = 0; i < s.length; ++i){
+      const k = s.key(i);
+      if(!store.keyPrefix || k.startsWith(store.keyPrefix)){
+        sz += k.length;
+        sz += s.getItem(k).length;
+      }
+    }
+    return sz * 2 ;
+  };
+
+  
+  const sqlite3_js_kvvfs_export = function callee(...args){
+    let opt;
+    if( 1===args.length && 'object'===typeof args[0] ){
+      opt = args[0];
+    }else if(args.length){
+      opt = Object.assign(Object.create(null),{
+        name: args[0],
+        
+      });
+    }
+    const store = opt ? storageForZClass(opt.name) : null;
+    if( !store ){
+      toss3(capi.SQLITE_NOTFOUND,
+            "There is no kvvfs storage named",opt?.name);
+    }
+    
+    const s = store.storage;
+    const rc = Object.assign(Object.create(null),{
+      name: store.jzClass,
+      timestamp: Date.now(),
+      pages: []
+    });
+    const pages = Object.create(null);
+    let xpages;
+    const keyPrefix = store.keyPrefix;
+    const rxTail = keyPrefix
+          ? /^kvvfs-[^-]+-(\w+)/ 
+          : undefined;
+    let i = 0, n = s.length;
+    for( ; i < n; ++i ){
+      const k = s.key(i);
+      if( !keyPrefix || k.startsWith(keyPrefix) ){
+        let kk = (keyPrefix ? rxTail.exec(k) : undefined)?.[1] ?? k;
+        switch( kk ){
+          case 'jrnl':
+            if( opt.includeJournal ) rc.journal = s.getItem(k);
+            break;
+          case 'sz':
+            rc.size = +s.getItem(k);
+            break;
+          default:
+            kk = +kk ;
+            if( !util.isInt32(kk) || kk<=0 ){
+              toss3(capi.SQLITE_RANGE, "Malformed kvvfs key: "+k);
+            }
+            if( opt.decodePages ){
+              const spg = s.getItem(k),
+                    n = spg.length,
+                    z = cache.memBuffer(0),
+                    zDec = cache.memBuffer(1),
+                    heap = wasm.heap8u();
+              let i = 0;
+              for( ; i < n; ++i ){
+                heap[wasm.ptr.add(z, i)] = spg.codePointAt(i) & 0xff;
+              }
+              heap[wasm.ptr.add(z, i)] = 0;
+              
+              const nDec = kvvfsDecode(
+                z, zDec, cache.buffer.n
+              );
+              
+              pages[kk] = heap.slice(Number(zDec), wasm.ptr.addn(zDec, nDec));
+            }else{
+              pages[kk] = s.getItem(k);
+            }
+            break;
+        }
+      }
+    }
+    if( opt.decodePages ) cache.memBufferFree(1);
+    
+    Object.keys(pages).map((v)=>+v).sort().forEach(
+      (v)=>rc.pages.push(pages[v])
+    );
+    return rc;
+  };
+
+  
+  const sqlite3_js_kvvfs_import = function(exp, overwrite=false){
+    if( !exp?.timestamp
+        || !exp.name
+        || undefined===exp.size
+        || !Array.isArray(exp.pages) ){
+      toss3(capi.SQLITE_MISUSE, "Malformed export object.");
+    }else if( !exp.size
+              || (exp.size !== (exp.size | 0))
+              
+              || exp.size>=0x7fffffff ){
+      toss3(capi.SQLITE_RANGE, "Invalid db size: "+exp.size);
+    }
+
+    validateStorageName(exp.name);
+    let store = storageForZClass(exp.name);
+    const isNew = !store;
+    if( store ){
+      if( !overwrite ){
+        
+        toss3(capi.SQLITE_ACCESS,
+              "Storage '"+exp.name+"' already exists and",
+              "overwrite was not specified.");
+      }else if( !store.files || !store.jzClass ){
+        toss3(capi.SQLITE_ERROR,
+              "Internal storage object", exp.name,"seems to be malformed.");
+      }else if( store.files.length ){
+        toss3(capi.SQLITE_IOERR_ACCESS,
+              "Cannot import db storage while it is in use.");
+      }
+      sqlite3_js_kvvfs_clear(exp.name);
+    }else{
+      store = newStorageObj(exp.name);
+      
+    }
+    
+    
+    const keyPrefix = kvvfsKeyPrefix(exp.name);
+    let zEnc;
+    try{
+      ;
+      const s = store.storage;
+      s.setItem(keyPrefix+'sz', exp.size);
+      if( exp.journal ) s.setItem(keyPrefix+'jrnl', exp.journal);
+      if( exp.pages[0] instanceof Uint8Array ){
+        
+        
+        exp.pages.forEach((u,ndx)=>{
+          const n = u.length;
+          if( 0 && cache.fixedPageSize !== n ){
+            util.toss3(capi.SQLITE_RANGE,"Unexpected page size:", n);
+          }
+          zEnc ??= cache.memBuffer(1);
+          const zBin = cache.memBuffer(0),
+                heap = wasm.heap8u();
+          
+          heap.set(u, Number(zBin));
+          heap[wasm.ptr.addn(zBin,n)] = 0;
+          const rc = kvvfsEncode(zBin, n, zEnc);
+          util.assert( rc < cache.buffer.n,
+                       "Impossibly long output - possibly smashed the heap" );
+          util.assert( 0===wasm.peek8(wasm.ptr.add(zEnc,rc)),
+                       "Expecting NUL-terminated encoded output" );
+          const jenc = wasm.cstrToJs(zEnc);
+          
+          s.setItem(keyPrefix+(ndx+1), jenc);
+        });
+      }else if( exp.pages[0] ){
+        
+        exp.pages.forEach((v,ndx)=>s.setItem(keyPrefix+(ndx+1), v));
+      }
+      if( isNew ) installStorageAndJournal(store);
+    }catch{
+      if( !isNew ){
+        try{sqlite3_js_kvvfs_clear(exp.name);}catch(ee){}
+      }
+    }finally{
+      if( zEnc ) cache.memBufferFree(1);
+    }
+    return this;
+  };
+
+  
+  const sqlite3_js_kvvfs_reserve = function(name){
+    let store = storageForZClass(name);
+    if( store ){
+      ++store.refc;
+      return;
+    }
+    validateStorageName(name);
+    installStorageAndJournal(newStorageObj(name));
+  };
+
+  
+  const sqlite3_js_kvvfs_unlink = function(name){
+    const store = storageForZClass(name);
+    if( !store
+        || kvvfsIsPersistentName(store.jzClass)
+        || isBuiltinName(store.jzClass)
+        || cache.rxJournalSuffix.test(name) ) return false;
+    if( store.refc > store.files.length || 0===store.files.length ){
+      if( --store.refc<=0 ){
+        
+        deleteStorage(store);
+      }
+      return true;
+    }
+    return false;
+  };
+
+  
+  const sqlite3_js_kvvfs_listen = function(opt){
+    if( !opt || 'object'!==typeof opt ){
+      toss3(capi.SQLITE_MISUSE, "Expecting a listener object.");
+    }
+    let store = storageForZClass(opt.storage);
+    if( !store ){
+      if( opt.storage && opt.reserve ){
+        sqlite3_js_kvvfs_reserve(opt.storage);
+        store = storageForZClass(opt.storage);
+        util.assert(store,
+                    "Unexpectedly cannot fetch reserved storage "
+                    +opt.storage);
+      }else{
+        toss3(capi.SQLITE_NOTFOUND,"No such storage:",opt.storage);
+      }
+    }
+    if( opt.events ){
+      (store.listeners ??= []).push(opt);
+    }
+  };
+
+  
+  const sqlite3_js_kvvfs_unlisten = function(opt){
+    const store = storageForZClass(opt?.storage);
+    if( store?.listeners && opt.events ){
+      const n = store.listeners.length;
+      store.listeners = store.listeners.filter((v)=>v!==opt);
+      const rc = n>store.listeners.length;
+      if( !store.listeners.length ){
+        
+        store.listeners = undefined;
+      }
+      return rc;
+    }
+    return false;
+  };
+
+  sqlite3.kvvfs.reserve =  sqlite3_js_kvvfs_reserve;
+  sqlite3.kvvfs.import =   sqlite3_js_kvvfs_import;
+  sqlite3.kvvfs.export =   sqlite3_js_kvvfs_export;
+  sqlite3.kvvfs.unlink =   sqlite3_js_kvvfs_unlink;
+  sqlite3.kvvfs.listen =   sqlite3_js_kvvfs_listen;
+  sqlite3.kvvfs.unlisten = sqlite3_js_kvvfs_unlisten;
+  sqlite3.kvvfs.exists =   (name)=>!!storageForZClass(name);
+  sqlite3.kvvfs.estimateSize = sqlite3_js_kvvfs_size;
+  sqlite3.kvvfs.clear =    sqlite3_js_kvvfs_clear;
+
+
+  if( globalThis.Storage ){
+    
+    capi.sqlite3_js_kvvfs_size = (which="")=>sqlite3_js_kvvfs_size(which);
+    capi.sqlite3_js_kvvfs_clear = (which="")=>sqlite3_js_kvvfs_clear(which);
   }
-  const thePromise = new Promise(function(promiseResolve_, promiseReject_){
+
+  if(sqlite3.oo1?.DB){
+    
+    const DB = sqlite3.oo1.DB;
+    sqlite3.oo1.JsStorageDb = function(
+      storageName = sqlite3.oo1.JsStorageDb.defaultStorageName
+    ){
+      const opt = DB.dbCtorHelper.normalizeArgs(...arguments);
+      opt.vfs = 'kvvfs';
+      if( 0 ){
+        
+        if( opt.flags ) opt.flags = 'cw'+opt.flags;
+        else opt.flags = 'cw';
+      }
+      switch( opt.filename ){
+          
+        case ":sessionStorage:": opt.filename = 'session'; break;
+        case ":localStorage:": opt.filename = 'local'; break;
+      }
+      const m = /(file:(\/\/)?)([^?]+)/.exec(opt.filename);
+      validateStorageName( m ? m[3] : opt.filename);
+      DB.dbCtorHelper.call(this, opt);
+    };
+    sqlite3.oo1.JsStorageDb.defaultStorageName
+      = cache.storagePool.session ? 'session' : nameOfThisThreadStorage;
+    const jdb = sqlite3.oo1.JsStorageDb;
+    jdb.prototype = Object.create(DB.prototype);
+    jdb.clearStorage = sqlite3_js_kvvfs_clear;
+    
+    jdb.prototype.clearStorage = function(){
+      return jdb.clearStorage(this.affirmOpen().dbFilename(), true);
+    };
+    
+    jdb.storageSize = sqlite3_js_kvvfs_size;
+    
+    jdb.prototype.storageSize = function(){
+      return jdb.storageSize(this.affirmOpen().dbFilename(), true);
+    };
+  }
+
+  if( sqlite3.__isUnderTest && sqlite3.vtab ){
+    
+    const cols = Object.assign(Object.create(null),{
+      rowid:       {type: 'INTEGER'},
+      name:        {type: 'TEXT'},
+      nRef:        {type: 'INTEGER'},
+      nOpen:       {type: 'INTEGER'},
+      isTransient: {type: 'INTEGER'},
+      dbSize:      {type: 'INTEGER'}
+    });
+    Object.keys(cols).forEach((v,i)=>cols[v].colId = i);
+
+    const VT = sqlite3.vtab;
+    const ProtoCursor = Object.assign(Object.create(null),{
+      row: function(){
+        return cache.storagePool[this.names[this.rowid]];
+      }
+    });
+    Object.assign(Object.create(ProtoCursor),{
+      rowid: 0,
+      names: Object.keys(cache.storagePool)
+        .filter(v=>!cache.rxJournalSuffix.test(v))
+    });
+    const cursorState = function(cursor, reset){
+      const o = (cursor instanceof capi.sqlite3_vtab_cursor)
+            ? cursor
+            : VT.xCursor.get(cursor);
+      if( reset || !o.vTabState ){
+        o.vTabState = Object.assign(Object.create(ProtoCursor),{
+          rowid: 0,
+          names: Object.keys(cache.storagePool)
+            .filter(v=>!cache.rxJournalSuffix.test(v))
+        });
+      }
+      return o.vTabState;
+    };
+
+    const dbg = 1 ? ()=>{} : (...args)=>debug("vtab",...args);
+
+    const theModule = function f(){
+      return f.mod ??= new sqlite3.capi.sqlite3_module().setupModule({
+        catchExceptions: true,
+        methods: {
+          xConnect: function(pDb, pAux, argc, argv, ppVtab, pzErr){
+            dbg("xConnect");
+            try{
+              const xcol = [];
+              Object.keys(cols).forEach((k)=>{
+                xcol.push(k+" "+cols[k].type);
+              });
+              const rc = capi.sqlite3_declare_vtab(
+                pDb, "CREATE TABLE ignored("+xcol.join(',')+")"
+              );
+              if(0===rc){
+                const t = VT.xVtab.create(ppVtab);
+                util.assert(
+                  (t === VT.xVtab.get(wasm.peekPtr(ppVtab))),
+                  "output pointer check failed"
+                );
+              }
+              return rc;
+            }catch(e){
+              return VT.xError('xConnect', e, capi.SQLITE_ERROR);
+            }
+          },
+          xCreate: wasm.ptr.null, 
+          
+          xDisconnect: function(pVtab){
+            dbg("xDisconnect",...arguments);
+            VT.xVtab.dispose(pVtab);
+            return 0;
+          },
+          xOpen: function(pVtab, ppCursor){
+            dbg("xOpen",...arguments);
+            VT.xCursor.create(ppCursor);
+            return 0;
+          },
+          xClose: function(pCursor){
+            dbg("xClose",...arguments);
+            const c = VT.xCursor.unget(pCursor);
+            delete c.vTabState;
+            c.dispose();
+            return 0;
+          },
+          xNext: function(pCursor){
+            dbg("xNext",...arguments);
+            const c = VT.xCursor.get(pCursor);
+            ++cursorState(c).rowid;
+            return 0;
+          },
+          xColumn: function(pCursor, pCtx, iCol){
+            dbg("xColumn",...arguments);
+            
+            const st = cursorState(pCursor);
+            const store = st.row();
+            util.assert(store, "Unexpected xColumn call");
+            switch(iCol){
+              case cols.rowid.colId:
+                capi.sqlite3_result_int(pCtx, st.rowid);
+                break;
+              case cols.name.colId:
+                capi.sqlite3_result_text(pCtx, store.jzClass, -1, capi.SQLITE_TRANSIENT);
+                break;
+              case cols.nRef.colId:
+                capi.sqlite3_result_int(pCtx, store.refc);
+                break;
+              case cols.nOpen.colId:
+                capi.sqlite3_result_int(pCtx, store.files.length);
+                break;
+              case cols.isTransient.colId:
+                capi.sqlite3_result_int(pCtx, !!store.deleteAtRefc0);
+                break;
+              case cols.dbSize.colId:
+                capi.sqlite3_result_int(pCtx, storageGetDbSize(store));
+                break;
+              default:
+                capi.sqlite3_result_error(pCtx, "Invalid column id: "+iCol);
+                return capi.SQLITE_RANGE;
+            }
+            return 0;
+          },
+          xRowid: function(pCursor, ppRowid64){
+            dbg("xRowid",...arguments);
+            const st = cursorState(pCursor);
+            VT.xRowid(ppRowid64, st.rowid);
+            return 0;
+          },
+          xEof: function(pCursor){
+            const st = cursorState(pCursor);
+            dbg("xEof?="+(!st.row()),...arguments);
+            return !st.row();
+          },
+          xFilter: function(pCursor, idxNum, idxCStr,
+                            argc, argv){
+            dbg("xFilter",...arguments);
+            const st = cursorState(pCursor, true);
+            return 0;
+          },
+          xBestIndex: function(pVtab, pIdxInfo){
+            dbg("xBestIndex",...arguments);
+            
+            const pii = new capi.sqlite3_index_info(pIdxInfo);
+            pii.$estimatedRows = cache.storagePool.size;
+            pii.$estimatedCost = 1.0;
+            pii.dispose();
+            return 0;
+          }
+        }
+      });
+    };
+
+    sqlite3.kvvfs.create_module = function(pDb, name="sqlite_kvvfs"){
+      return capi.sqlite3_create_module(pDb, name, theModule(),
+                                        wasm.ptr.null);
+    };
+
+  }
+
+
+});
+
+globalThis.sqlite3ApiBootstrap.initializers.push(function(sqlite3){
+  'use strict';
+  if( sqlite3.config.disable?.vfs?.opfs &&
+      sqlite3.config.disable.vfs['opfs-vfs'] ){
+    return;
+  }
+  const toss = sqlite3.util.toss,
+        capi = sqlite3.capi,
+        util = sqlite3.util,
+        wasm = sqlite3.wasm;
+
+  
+  const opfsUtil = sqlite3.opfs = Object.create(null);
+
+  
+  opfsUtil.thisThreadHasOPFS = ()=>{
+    return globalThis.FileSystemHandle &&
+      globalThis.FileSystemDirectoryHandle &&
+      globalThis.FileSystemFileHandle &&
+      globalThis.FileSystemFileHandle.prototype.createSyncAccessHandle &&
+      navigator?.storage?.getDirectory;
+  };
+
+  
+  opfsUtil.getRootDir = async function f(){
+    return f.promise ??= navigator.storage.getDirectory().then(d=>{
+      opfsUtil.rootDirectory = d;
+      return d;
+    }).catch(e=>{
+      delete f.promise;
+      throw e;
+    });
+  };
+
+  
+  opfsUtil.getResolvedPath = function(filename,splitIt){
+    const p = new URL(filename, "file://irrelevant").pathname;
+    return splitIt ? p.split('/').filter((v)=>!!v) : p;
+  };
+
+  
+  opfsUtil.getDirForFilename = async function f(absFilename, createDirs = false){
+    const path = opfsUtil.getResolvedPath(absFilename, true);
+    const filename = path.pop();
+    let dh = await opfsUtil.getRootDir();
+    for(const dirName of path){
+      if(dirName){
+        dh = await dh.getDirectoryHandle(dirName, {create: !!createDirs});
+      }
+    }
+    return [dh, filename];
+  };
+
+  
+  opfsUtil.mkdir = async function(absDirName){
+    try {
+      await opfsUtil.getDirForFilename(absDirName+"/filepart", true);
+      return true;
+    }catch(e){
+      
+      return false;
+    }
+  };
+
+  
+  opfsUtil.entryExists = async function(fsEntryName){
+    try {
+      const [dh, fn] = await opfsUtil.getDirForFilename(fsEntryName);
+      await dh.getFileHandle(fn);
+      return true;
+    }catch(e){
+      return false;
+    }
+  };
+
+  
+  opfsUtil.randomFilename = function f(len=16){
+    if(!f._chars){
+      f._chars = "abcdefghijklmnopqrstuvwxyz"+
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"+
+        "012346789";
+      f._n = f._chars.length;
+    }
+    const a = [];
+    let i = 0;
+    for( ; i < len; ++i){
+      const ndx = Math.random() * (f._n * 64) % f._n | 0;
+      a[i] = f._chars[ndx];
+    }
+    return a.join("");
+    
+  };
+
+  
+  opfsUtil.treeList = async function(){
+    const doDir = async function callee(dirHandle,tgt){
+      tgt.name = dirHandle.name;
+      tgt.dirs = [];
+      tgt.files = [];
+      for await (const handle of dirHandle.values()){
+        if('directory' === handle.kind){
+          const subDir = Object.create(null);
+          tgt.dirs.push(subDir);
+          await callee(handle, subDir);
+        }else{
+          tgt.files.push(handle.name);
+        }
+      }
+    };
+    const root = Object.create(null);
+    const dir = await opfsUtil.getRootDir();
+    await doDir(dir, root);
+    return root;
+  };
+
+  
+  opfsUtil.rmfr = async function(){
+    const rd = await opfsUtil.getRootDir();
+    const dir = rd, opt = {recurse: true};
+    for await (const handle of dir.values()){
+      dir.removeEntry(handle.name, opt);
+    }
+  };
+
+  
+  opfsUtil.unlink = async function(fsEntryName, recursive = false,
+                                   throwOnError = false){
+    try {
+      const [hDir, filenamePart] =
+            await opfsUtil.getDirForFilename(fsEntryName, false);
+      await hDir.removeEntry(filenamePart, {recursive});
+      return true;
+    }catch(e){
+      if(throwOnError){
+        throw new Error("unlink(",arguments[0],") failed: "+e.message,{
+          cause: e
+        });
+      }
+      return false;
+    }
+  };
+
+  
+  opfsUtil.traverse = async function(opt){
+    const defaultOpt = {
+      recursive: true,
+      directory: await opfsUtil.getRootDir()
+    };
+    if('function'===typeof opt){
+      opt = {callback:opt};
+    }
+    opt = Object.assign(defaultOpt, opt||{});
+    const doDir = async function callee(dirHandle, depth){
+      for await (const handle of dirHandle.values()){
+        if(false === opt.callback(handle, dirHandle, depth)) return false;
+        else if(opt.recursive && 'directory' === handle.kind){
+          if(false === await callee(handle, depth + 1)) break;
+        }
+      }
+    };
+    doDir(opt.directory, 0);
+  };
+
+  
+  const importDbChunked = async function(filename, callback){
+    const [hDir, fnamePart] = await opfsUtil.getDirForFilename(filename, true);
+    const hFile = await hDir.getFileHandle(fnamePart, {create:true});
+    let sah = await hFile.createSyncAccessHandle();
+    let nWrote = 0, chunk, checkedHeader = false, err = false;
+    try{
+      sah.truncate(0);
+      while( undefined !== (chunk = await callback()) ){
+        if(chunk instanceof ArrayBuffer) chunk = new Uint8Array(chunk);
+        if( !checkedHeader && 0===nWrote && chunk.byteLength>=15 ){
+          util.affirmDbHeader(chunk);
+          checkedHeader = true;
+        }
+        sah.write(chunk, {at: nWrote});
+        nWrote += chunk.byteLength;
+      }
+      if( nWrote < 512 || 0!==nWrote % 512 ){
+        toss("Input size",nWrote,"is not correct for an SQLite database.");
+      }
+      if( !checkedHeader ){
+        const header = new Uint8Array(20);
+        sah.read( header, {at: 0} );
+        util.affirmDbHeader( header );
+      }
+      sah.write(new Uint8Array([1,1]), {at: 18});
+      return nWrote;
+    }catch(e){
+      await sah.close();
+      sah = undefined;
+      await hDir.removeEntry( fnamePart ).catch(()=>{});
+      throw e;
+    }finally {
+      if( sah ) await sah.close();
+    }
+  };
+
+  
+  opfsUtil.importDb = async function(filename, bytes){
+    if( bytes instanceof Function ){
+      return importDbChunked(filename, bytes);
+    }
+    if(bytes instanceof ArrayBuffer) bytes = new Uint8Array(bytes);
+    util.affirmIsDb(bytes);
+    const n = bytes.byteLength;
+    const [hDir, fnamePart] = await opfsUtil.getDirForFilename(filename, true);
+    let sah, err, nWrote = 0;
+    try {
+      const hFile = await hDir.getFileHandle(fnamePart, {create:true});
+      sah = await hFile.createSyncAccessHandle();
+      sah.truncate(0);
+      nWrote = sah.write(bytes, {at: 0});
+      if(nWrote != n){
+        toss("Expected to write "+n+" bytes but wrote "+nWrote+".");
+      }
+      sah.write(new Uint8Array([1,1]), {at: 18}) ;
+      return nWrote;
+    }catch(e){
+      if( sah ){ await sah.close(); sah = undefined; }
+      await hDir.removeEntry( fnamePart ).catch(()=>{});
+      throw e;
+    }finally{
+      if( sah ) await sah.close();
+    }
+  };
+
+  
+  opfsUtil.vfsInstallationFeatureCheck = function(vfsName){
+    if( !globalThis.SharedArrayBuffer || !globalThis.Atomics ){
+      toss("Cannot install OPFS: Missing SharedArrayBuffer and/or Atomics.",
+           "The server must emit the COOP/COEP response headers to enable those.",
+           "See https://sqlite.org/wasm/doc/trunk/persistence.md#coop-coep");
+    }else if( 'undefined'===typeof WorkerGlobalScope ){
+      toss("The OPFS sqlite3_vfs cannot run in the main thread",
+           "because it requires Atomics.wait().");
+    }else if( !globalThis.FileSystemHandle ||
+              !globalThis.FileSystemDirectoryHandle ||
+              !globalThis.FileSystemFileHandle?.prototype?.createSyncAccessHandle ||
+              !navigator?.storage?.getDirectory ){
+      toss("Missing required OPFS APIs.");
+    }else if( 'opfs-wl'===vfsName && !globalThis.Atomics.waitAsync ){
+      toss('The',vfsName,'VFS requires Atomics.waitAsync(), which is not available.');
+    }
+  };
+
+  
+  opfsUtil.initOptions = function callee(vfsName, options){
+    const urlParams = new URL(globalThis.location.href).searchParams;
+    if( urlParams.has(vfsName+'-disable') ){
+      
+      return;
+    }
+    try{
+      opfsUtil.vfsInstallationFeatureCheck(vfsName);
+    }catch(e){
+      return;
+    }
+    options = util.nu(options);
+    options.vfsName = vfsName;
+    options.verbose ??= urlParams.has('opfs-verbose')
+      ? +urlParams.get('opfs-verbose') : 1;
+    options.sanityChecks ??= urlParams.has('opfs-sanity-check');
+
+    if( !opfsUtil.proxyUri ){
+      opfsUtil.proxyUri = "sqlite3-opfs-async-proxy.js";
+      if( sqlite3.scriptInfo?.sqlite3Dir ){
+        
+        opfsUtil.proxyUri = (
+          sqlite3.scriptInfo.sqlite3Dir + opfsUtil.proxyUri
+        );
+      }
+    }
+    options.proxyUri ??= opfsUtil.proxyUri;
+    if('function' === typeof options.proxyUri){
+      options.proxyUri = options.proxyUri();
+    }
+    
+    return opfsUtil.options = options;
+  };
+
+  
+  opfsUtil.createVfsState = function(){
+    const state = util.nu();
+    const options = opfsUtil.options;
+    state.verbose = options.verbose;
+
     const loggers = [
       sqlite3.config.error,
       sqlite3.config.warn,
       sqlite3.config.log
     ];
+    const vfsName = options.vfsName
+          || toss("Maintenance required: missing VFS name");
     const logImpl = (level,...args)=>{
-      if(options.verbose>level) loggers[level]("OPFS syncer:",...args);
+      if(state.verbose>level) loggers[level](vfsName+":",...args);
     };
-    const log =    (...args)=>logImpl(2, ...args);
-    const warn =   (...args)=>logImpl(1, ...args);
-    const error =  (...args)=>logImpl(0, ...args);
-    const toss = sqlite3.util.toss;
-    const capi = sqlite3.capi;
-    const util = sqlite3.util;
-    const wasm = sqlite3.wasm;
-    const sqlite3_vfs = capi.sqlite3_vfs;
-    const sqlite3_file = capi.sqlite3_file;
-    const sqlite3_io_methods = capi.sqlite3_io_methods;
-    
-    const opfsUtil = Object.create(null);
+    const log   = (...args)=>logImpl(2, ...args),
+          warn  = (...args)=>logImpl(1, ...args),
+          error = (...args)=>logImpl(0, ...args),
+          capi  = sqlite3.capi,
+          wasm  = sqlite3.wasm;
 
-    
-    const thisThreadHasOPFS = ()=>{
-      return globalThis.FileSystemHandle &&
-        globalThis.FileSystemDirectoryHandle &&
-        globalThis.FileSystemFileHandle &&
-        globalThis.FileSystemFileHandle.prototype.createSyncAccessHandle &&
-        navigator?.storage?.getDirectory;
-    };
+    const opfsVfs = state.vfs = new capi.sqlite3_vfs();
+    const opfsIoMethods = opfsVfs.ioMethods = new capi.sqlite3_io_methods();
 
-    
-    opfsUtil.metrics = {
+    opfsIoMethods.$iVersion = 1;
+    opfsVfs.$iVersion = 2;
+    opfsVfs.$szOsFile = capi.sqlite3_file.structInfo.sizeof;
+    opfsVfs.$mxPathname = 1024;
+    opfsVfs.$zName = wasm.allocCString(vfsName);
+    opfsVfs.addOnDispose(
+      '$zName', opfsVfs.$zName, opfsIoMethods
+      
+    );
+
+    opfsVfs.metrics = util.nu({
+      counters: util.nu(),
       dump: function(){
         let k, n = 0, t = 0, w = 0;
         for(k in state.opIds){
@@ -10903,77 +12641,24 @@ const installOpfsVfs = function callee(options){
                     "metrics for",globalThis.location.href,":",metrics,
                     "\nTotal of",n,"op(s) for",t,
                     "ms (incl. "+w+" ms of waiting on the async side)");
-        sqlite3.config.log("Serialization metrics:",metrics.s11n);
-        W.postMessage({type:'opfs-async-metrics'});
+        sqlite3.config.log("Serialization metrics:",opfsVfs.metrics.counters.s11n);
+        opfsVfs.worker?.postMessage?.({type:'opfs-async-metrics'});
       },
       reset: function(){
         let k;
         const r = (m)=>(m.count = m.time = m.wait = 0);
+        const m = opfsVfs.metrics.counters;
         for(k in state.opIds){
-          r(metrics[k] = Object.create(null));
+          r(m[k] = Object.create(null));
         }
-        let s = metrics.s11n = Object.create(null);
+        let s = m.s11n = Object.create(null);
         s = s.serialize = Object.create(null);
         s.count = s.time = 0;
-        s = metrics.s11n.deserialize = Object.create(null);
+        s = m.s11n.deserialize = Object.create(null);
         s.count = s.time = 0;
       }
-    };
-    const opfsIoMethods = new sqlite3_io_methods();
-    const opfsVfs = new sqlite3_vfs()
-          .addOnDispose( ()=>opfsIoMethods.dispose());
-    let promiseWasRejected = undefined;
-    const promiseReject = (err)=>{
-      promiseWasRejected = true;
-      opfsVfs.dispose();
-      return promiseReject_(err);
-    };
-    const promiseResolve = ()=>{
-      promiseWasRejected = false;
-      return promiseResolve_(sqlite3);
-    };
-    const W =
-    new Worker(options.proxyUri);
-    setTimeout(()=>{
-      
-      if(undefined===promiseWasRejected){
-        promiseReject(
-          new Error("Timeout while waiting for OPFS async proxy worker.")
-        );
-      }
-    }, 4000);
-    W._originalOnError = W.onerror ;
-    W.onerror = function(err){
-      
-      
-      error("Error initializing OPFS asyncer:",err);
-      promiseReject(new Error("Loading OPFS async Worker failed for unknown reasons."));
-    };
-    const pDVfs = capi.sqlite3_vfs_find(null);
-    const dVfs = pDVfs
-          ? new sqlite3_vfs(pDVfs)
-          : null ;
-    opfsIoMethods.$iVersion = 1;
-    opfsVfs.$iVersion = 2;
-    opfsVfs.$szOsFile = capi.sqlite3_file.structInfo.sizeof;
-    opfsVfs.$mxPathname = 1024;
-    opfsVfs.$zName = wasm.allocCString("opfs");
-    
-    opfsVfs.$xDlOpen = opfsVfs.$xDlError = opfsVfs.$xDlSym = opfsVfs.$xDlClose = null;
-    opfsVfs.addOnDispose(
-      '$zName', opfsVfs.$zName,
-      'cleanup default VFS wrapper', ()=>(dVfs ? dVfs.dispose() : null)
-    );
-    
-    
-    const state = Object.create(null);
-    state.verbose = options.verbose;
-    state.littleEndian = (()=>{
-      const buffer = new ArrayBuffer(2);
-      new DataView(buffer).setInt16(0, 256, true );
-      
-      return new Int16Array(buffer)[0] === 256;
-    })();
+    });
+
     
     state.asyncIdleWaitTime = 150;
 
@@ -10989,8 +12674,9 @@ const installOpfsVfs = function callee(options){
       state.fileBufferSize
       + state.sabS11nSize
     );
+
+    
     state.opIds = Object.create(null);
-    const metrics = Object.create(null);
     {
       
       let i = 0;
@@ -11012,18 +12698,18 @@ const installOpfsVfs = function callee(options){
       state.opIds.xTruncate = i++;
       state.opIds.xUnlock = i++;
       state.opIds.xWrite = i++;
-      state.opIds.mkdir = i++;
+      state.opIds.mkdir = i++ ;
+      
       state.opIds['opfs-async-metrics'] = i++;
       state.opIds['opfs-async-shutdown'] = i++;
       
       state.opIds.retry = i++;
       state.sabOP = new SharedArrayBuffer(
         i * 4);
-      opfsUtil.metrics.reset();
     }
     
     state.sq3Codes = Object.create(null);
-    [
+    for(const k of [
       'SQLITE_ACCESS_EXISTS',
       'SQLITE_ACCESS_READWRITE',
       'SQLITE_BUSY',
@@ -11051,12 +12737,17 @@ const installOpfsVfs = function callee(options){
       'SQLITE_OPEN_CREATE',
       'SQLITE_OPEN_DELETEONCLOSE',
       'SQLITE_OPEN_MAIN_DB',
-      'SQLITE_OPEN_READONLY'
-    ].forEach((k)=>{
-      if(undefined === (state.sq3Codes[k] = capi[k])){
-        toss("Maintenance required: not found:",k);
-      }
-    });
+      'SQLITE_OPEN_READONLY',
+      'SQLITE_LOCK_NONE',
+      'SQLITE_LOCK_SHARED',
+      'SQLITE_LOCK_RESERVED',
+      'SQLITE_LOCK_PENDING',
+      'SQLITE_LOCK_EXCLUSIVE'
+    ]){
+      state.sq3Codes[k] =
+        capi[k] ?? toss("Maintenance required: not found:",k);
+    }
+
     state.opfsFlags = Object.assign(Object.create(null),{
       
       OPFS_UNLOCK_ASAP: 0x01,
@@ -11066,9 +12757,12 @@ const installOpfsVfs = function callee(options){
       defaultUnlockAsap: false
     });
 
+    opfsVfs.metrics.reset();
+    const metrics = opfsVfs.metrics.counters;
+
     
-    const opRun = (op,...args)=>{
-      const opNdx = state.opIds[op] || toss("Invalid op ID:",op);
+    const opRun = opfsVfs.opRun = (op,...args)=>{
+      const opNdx = state.opIds[op] || toss(opfsVfs.vfsName+": Invalid op ID:",op);
       state.s11n.serialize(...args);
       Atomics.store(state.sabOPView, state.opIds.rc, -1);
       Atomics.store(state.sabOPView, state.opIds.whichOp, opNdx);
@@ -11088,151 +12782,23 @@ const installOpfsVfs = function callee(options){
       return rc;
     };
 
-    
-    opfsUtil.debug = {
-      asyncShutdown: ()=>{
-        warn("Shutting down OPFS async listener. The OPFS VFS will no longer work.");
-        opRun('opfs-async-shutdown');
-      },
-      asyncRestart: ()=>{
-        warn("Attempting to restart OPFS VFS async listener. Might work, might not.");
-        W.postMessage({type: 'opfs-async-restart'});
-      }
-    };
-
-    const initS11n = ()=>{
-      
-      if(state.s11n) return state.s11n;
-      const textDecoder = new TextDecoder(),
-            textEncoder = new TextEncoder('utf-8'),
-            viewU8 = new Uint8Array(state.sabIO, state.sabS11nOffset, state.sabS11nSize),
-            viewDV = new DataView(state.sabIO, state.sabS11nOffset, state.sabS11nSize);
-      state.s11n = Object.create(null);
-      
-      const TypeIds = Object.create(null);
-      TypeIds.number  = { id: 1, size: 8, getter: 'getFloat64', setter: 'setFloat64' };
-      TypeIds.bigint  = { id: 2, size: 8, getter: 'getBigInt64', setter: 'setBigInt64' };
-      TypeIds.boolean = { id: 3, size: 4, getter: 'getInt32', setter: 'setInt32' };
-      TypeIds.string =  { id: 4 };
-
-      const getTypeId = (v)=>(
-        TypeIds[typeof v]
-          || toss("Maintenance required: this value type cannot be serialized.",v)
-      );
-      const getTypeIdById = (tid)=>{
-        switch(tid){
-            case TypeIds.number.id: return TypeIds.number;
-            case TypeIds.bigint.id: return TypeIds.bigint;
-            case TypeIds.boolean.id: return TypeIds.boolean;
-            case TypeIds.string.id: return TypeIds.string;
-            default: toss("Invalid type ID:",tid);
-        }
-      };
-
-      
-      state.s11n.deserialize = function(clear=false){
-        ++metrics.s11n.deserialize.count;
-        const t = performance.now();
-        const argc = viewU8[0];
-        const rc = argc ? [] : null;
-        if(argc){
-          const typeIds = [];
-          let offset = 1, i, n, v;
-          for(i = 0; i < argc; ++i, ++offset){
-            typeIds.push(getTypeIdById(viewU8[offset]));
-          }
-          for(i = 0; i < argc; ++i){
-            const t = typeIds[i];
-            if(t.getter){
-              v = viewDV[t.getter](offset, state.littleEndian);
-              offset += t.size;
-            }else{
-              n = viewDV.getInt32(offset, state.littleEndian);
-              offset += 4;
-              v = textDecoder.decode(viewU8.slice(offset, offset+n));
-              offset += n;
-            }
-            rc.push(v);
-          }
-        }
-        if(clear) viewU8[0] = 0;
-        
-        metrics.s11n.deserialize.time += performance.now() - t;
-        return rc;
-      };
-
-      
-      state.s11n.serialize = function(...args){
-        const t = performance.now();
-        ++metrics.s11n.serialize.count;
-        if(args.length){
-          
-          const typeIds = [];
-          let i = 0, offset = 1;
-          viewU8[0] = args.length & 0xff ;
-          for(; i < args.length; ++i, ++offset){
-            
-            typeIds.push(getTypeId(args[i]));
-            viewU8[offset] = typeIds[i].id;
-          }
-          for(i = 0; i < args.length; ++i) {
-            
-            const t = typeIds[i];
-            if(t.setter){
-              viewDV[t.setter](offset, args[i], state.littleEndian);
-              offset += t.size;
-            }else{
-              const s = textEncoder.encode(args[i]);
-              viewDV.setInt32(offset, s.byteLength, state.littleEndian);
-              offset += 4;
-              viewU8.set(s, offset);
-              offset += s.byteLength;
-            }
-          }
-          
-        }else{
-          viewU8[0] = 0;
-        }
-        metrics.s11n.serialize.time += performance.now() - t;
-      };
-      return state.s11n;
-    };
-
-    
-    const randomFilename = function f(len=16){
-      if(!f._chars){
-        f._chars = "abcdefghijklmnopqrstuvwxyz"+
-          "ABCDEFGHIJKLMNOPQRSTUVWXYZ"+
-          "012346789";
-        f._n = f._chars.length;
-      }
-      const a = [];
-      let i = 0;
-      for( ; i < len; ++i){
-        const ndx = Math.random() * (f._n * 64) % f._n | 0;
-        a[i] = f._chars[ndx];
-      }
-      return a.join("");
-      
-    };
-
-    
-    const __openFiles = Object.create(null);
-
     const opTimer = Object.create(null);
     opTimer.op = undefined;
     opTimer.start = undefined;
-    const mTimeStart = (op)=>{
+    const mTimeStart = opfsVfs.mTimeStart = (op)=>{
       opTimer.start = performance.now();
       opTimer.op = op;
       ++metrics[op].count;
     };
-    const mTimeEnd = ()=>(
+    const mTimeEnd = opfsVfs.mTimeEnd = ()=>(
       metrics[opTimer.op].time += performance.now() - opTimer.start
     );
 
     
-    const ioSyncWrappers = {
+    const __openFiles = opfsVfs.__openFiles = Object.create(null);
+
+    
+    const ioSyncWrappers = opfsVfs.ioSyncWrappers = util.nu({
       xCheckReservedLock: function(pFile,pOut){
         
         wasm.poke(pOut, 0, 'i32');
@@ -11272,22 +12838,8 @@ const installOpfsVfs = function callee(options){
         mTimeEnd();
         return rc;
       },
-      xLock: function(pFile,lockType){
-        mTimeStart('xLock');
-        const f = __openFiles[pFile];
-        let rc = 0;
-        
-        if( !f.lockType ) {
-          rc = opRun('xLock', pFile, lockType);
-          if( 0===rc ) f.lockType = lockType;
-        }else{
-          f.lockType = lockType;
-        }
-        mTimeEnd();
-        return rc;
-      },
       xRead: function(pFile,pDest,n,offset64){
-        mTimeStart('xRead');
+       mTimeStart('xRead');
         const f = __openFiles[pFile];
         let rc;
         try {
@@ -11305,7 +12857,6 @@ const installOpfsVfs = function callee(options){
       },
       xSync: function(pFile,flags){
         mTimeStart('xSync');
-        ++metrics.xSync.count;
         const rc = opRun('xSync', pFile, flags);
         mTimeEnd();
         return rc;
@@ -11313,18 +12864,6 @@ const installOpfsVfs = function callee(options){
       xTruncate: function(pFile,sz64){
         mTimeStart('xTruncate');
         const rc = opRun('xTruncate', pFile, Number(sz64));
-        mTimeEnd();
-        return rc;
-      },
-      xUnlock: function(pFile,lockType){
-        mTimeStart('xUnlock');
-        const f = __openFiles[pFile];
-        let rc = 0;
-        if( capi.SQLITE_LOCK_NONE === lockType
-          && f.lockType ){
-          rc = opRun('xUnlock', pFile, lockType);
-        }
-        if( 0===rc ) f.lockType = lockType;
         mTimeEnd();
         return rc;
       },
@@ -11344,19 +12883,18 @@ const installOpfsVfs = function callee(options){
         mTimeEnd();
         return rc;
       }
-    };
+    });
 
     
-    const vfsSyncWrappers = {
+    const vfsSyncWrappers = opfsVfs.vfsSyncWrappers = {
       xAccess: function(pVfs,zName,flags,pOut){
-        mTimeStart('xAccess');
+       mTimeStart('xAccess');
         const rc = opRun('xAccess', wasm.cstrToJs(zName));
         wasm.poke( pOut, (rc ? 0 : 1), 'i32' );
         mTimeEnd();
         return 0;
       },
       xCurrentTime: function(pVfs,pOut){
-        
         wasm.poke(pOut, 2440587.5 + (new Date().getTime()/86400000),
                   'double');
         return 0;
@@ -11380,15 +12918,17 @@ const installOpfsVfs = function callee(options){
       },
       xGetLastError: function(pVfs,nOut,pOut){
         
-        warn("OPFS xGetLastError() has nothing sensible to return.");
+        sqlite3.config.warn("OPFS xGetLastError() has nothing sensible to return.");
         return 0;
       },
       
       xOpen: function f(pVfs, zName, pFile, flags, pOutFlags){
         mTimeStart('xOpen');
         let opfsFlags = 0;
-        if(0===zName){
-          zName = randomFilename();
+        let jzName, zToFree;
+        if( !zName ){
+          jzName = opfsUtil.randomFilename();
+          zName = zToFree = wasm.allocCString(jzName);
         }else if(wasm.isPtr(zName)){
           if(capi.sqlite3_uri_boolean(zName, "opfs-unlock-asap", 0)){
             
@@ -11397,25 +12937,32 @@ const installOpfsVfs = function callee(options){
           if(capi.sqlite3_uri_boolean(zName, "delete-before-open", 0)){
             opfsFlags |= state.opfsFlags.OPFS_UNLINK_BEFORE_OPEN;
           }
-          zName = wasm.cstrToJs(zName);
+          jzName = wasm.cstrToJs(zName);
           
+        }else{
+          sqlite3.config.error("Impossible zName value in xOpen?", zName);
+          return capi.SQLITE_CANTOPEN;
         }
-        const fh = Object.create(null);
-        fh.fid = pFile;
-        fh.filename = zName;
-        fh.sab = new SharedArrayBuffer(state.fileBufferSize);
-        fh.flags = flags;
-        fh.readOnly = !(sqlite3.SQLITE_OPEN_CREATE & flags)
-          && !!(flags & capi.SQLITE_OPEN_READONLY);
-        const rc = opRun('xOpen', pFile, zName, flags, opfsFlags);
-        if(!rc){
+        const fh = util.nu({
+          fid: pFile,
+          filename: jzName,
+          sab: new SharedArrayBuffer(state.fileBufferSize),
+          flags: flags,
+          readOnly: !(capi.SQLITE_OPEN_CREATE & flags)
+            && !!(flags & capi.SQLITE_OPEN_READONLY)
+        });
+        const rc = opRun('xOpen', pFile, jzName, flags, opfsFlags);
+        if(rc){
+          if( zToFree ) wasm.dealloc(zToFree);
+        }else{
           
           if(fh.readOnly){
             wasm.poke(pOutFlags, capi.SQLITE_OPEN_READONLY, 'i32');
           }
           __openFiles[pFile] = fh;
           fh.sabView = state.sabFileBufView;
-          fh.sq3File = new sqlite3_file(pFile);
+          fh.sq3File = new capi.sqlite3_file(pFile);
+          if( zToFree ) fh.sq3File.addOnDispose(zToFree);
           fh.sq3File.$pMethods = opfsIoMethods.pointer;
           fh.lockType = capi.SQLITE_LOCK_NONE;
         }
@@ -11424,13 +12971,16 @@ const installOpfsVfs = function callee(options){
       }
     };
 
-    if(dVfs){
+    const pDVfs = capi.sqlite3_vfs_find(null);
+    if(pDVfs){
+      const dVfs = new capi.sqlite3_vfs(pDVfs);
       opfsVfs.$xRandomness = dVfs.$xRandomness;
       opfsVfs.$xSleep = dVfs.$xSleep;
+      dVfs.dispose();
     }
     if(!opfsVfs.$xRandomness){
       
-      vfsSyncWrappers.xRandomness = function(pVfs, nOut, pOut){
+      opfsVfs.vfsSyncWrappers.xRandomness = function(pVfs, nOut, pOut){
         const heap = wasm.heap8u();
         let i = 0;
         const npOut = Number(pOut);
@@ -11440,356 +12990,383 @@ const installOpfsVfs = function callee(options){
     }
     if(!opfsVfs.$xSleep){
       
-      vfsSyncWrappers.xSleep = function(pVfs,ms){
+      opfsVfs.vfsSyncWrappers.xSleep = function(pVfs,ms){
+        mTimeStart('xSleep');
         Atomics.wait(state.sabOPView, state.opIds.xSleep, 0, ms);
+        mTimeEnd();
         return 0;
       };
     }
 
-    
-    opfsUtil.getResolvedPath = function(filename,splitIt){
-      const p = new URL(filename, "file://irrelevant").pathname;
-      return splitIt ? p.split('/').filter((v)=>!!v) : p;
-    };
+const initS11n = function(){
+  
+  if(state.s11n) return state.s11n;
+  const textDecoder = new TextDecoder(),
+        textEncoder = new TextEncoder('utf-8'),
+        viewU8 = new Uint8Array(state.sabIO, state.sabS11nOffset, state.sabS11nSize),
+        viewDV = new DataView(state.sabIO, state.sabS11nOffset, state.sabS11nSize);
+  state.s11n = Object.create(null);
+  
+  const TypeIds = Object.create(null);
+  TypeIds.number  = { id: 1, size: 8, getter: 'getFloat64', setter: 'setFloat64' };
+  TypeIds.bigint  = { id: 2, size: 8, getter: 'getBigInt64', setter: 'setBigInt64' };
+  TypeIds.boolean = { id: 3, size: 4, getter: 'getInt32', setter: 'setInt32' };
+  TypeIds.string =  { id: 4 };
 
-    
-    opfsUtil.getDirForFilename = async function f(absFilename, createDirs = false){
-      const path = opfsUtil.getResolvedPath(absFilename, true);
-      const filename = path.pop();
-      let dh = opfsUtil.rootDirectory;
-      for(const dirName of path){
-        if(dirName){
-          dh = await dh.getDirectoryHandle(dirName, {create: !!createDirs});
-        }
+  const getTypeId = (v)=>(
+    TypeIds[typeof v]
+      || toss("Maintenance required: this value type cannot be serialized.",v)
+  );
+  const getTypeIdById = (tid)=>{
+    switch(tid){
+      case TypeIds.number.id: return TypeIds.number;
+      case TypeIds.bigint.id: return TypeIds.bigint;
+      case TypeIds.boolean.id: return TypeIds.boolean;
+      case TypeIds.string.id: return TypeIds.string;
+      default: toss("Invalid type ID:",tid);
+    }
+  };
+
+  
+  state.s11n.deserialize = function(clear=false){
+    const t = performance.now();
+    const argc = viewU8[0];
+    const rc = argc ? [] : null;
+    if(argc){
+      const typeIds = [];
+      let offset = 1, i, n, v;
+      for(i = 0; i < argc; ++i, ++offset){
+        typeIds.push(getTypeIdById(viewU8[offset]));
       }
-      return [dh, filename];
-    };
-
+      for(i = 0; i < argc; ++i){
+        const t = typeIds[i];
+        if(t.getter){
+          v = viewDV[t.getter](offset, state.littleEndian);
+          offset += t.size;
+        }else{
+          n = viewDV.getInt32(offset, state.littleEndian);
+          offset += 4;
+          v = textDecoder.decode(viewU8.slice(offset, offset+n));
+          offset += n;
+        }
+        rc.push(v);
+      }
+    }
+    if(clear) viewU8[0] = 0;
     
-    opfsUtil.mkdir = async function(absDirName){
-      try {
-        await opfsUtil.getDirForFilename(absDirName+"/filepart", true);
-        return true;
-      }catch(e){
+    return rc;
+  };
+
+  
+  state.s11n.serialize = function(...args){
+    const t = performance.now();
+    if(args.length){
+      
+      const typeIds = [];
+      let i = 0, offset = 1;
+      viewU8[0] = args.length & 0xff ;
+      for(; i < args.length; ++i, ++offset){
         
-        return false;
+        typeIds.push(getTypeId(args[i]));
+        viewU8[offset] = typeIds[i].id;
       }
-    };
-    
-    opfsUtil.entryExists = async function(fsEntryName){
-      try {
-        const [dh, fn] = await opfsUtil.getDirForFilename(fsEntryName);
-        await dh.getFileHandle(fn);
-        return true;
-      }catch(e){
-        return false;
+      for(i = 0; i < args.length; ++i) {
+        
+        const t = typeIds[i];
+        if(t.setter){
+          viewDV[t.setter](offset, args[i], state.littleEndian);
+          offset += t.size;
+        }else{
+          const s = textEncoder.encode(args[i]);
+          viewDV.setInt32(offset, s.byteLength, state.littleEndian);
+          offset += 4;
+          viewU8.set(s, offset);
+          offset += s.byteLength;
+        }
       }
-    };
+      
+    }else{
+      viewU8[0] = 0;
+    }
+  };
+
+
+  return state.s11n;
+};
+    opfsVfs.initS11n = initS11n;
 
     
-    opfsUtil.randomFilename = randomFilename;
-
-    
-    opfsUtil.treeList = async function(){
-      const doDir = async function callee(dirHandle,tgt){
-        tgt.name = dirHandle.name;
-        tgt.dirs = [];
-        tgt.files = [];
-        for await (const handle of dirHandle.values()){
-          if('directory' === handle.kind){
-            const subDir = Object.create(null);
-            tgt.dirs.push(subDir);
-            await callee(handle, subDir);
-          }else{
-            tgt.files.push(handle.name);
+    opfsVfs.bindVfs = function(ioMethods, callback){
+      Object.assign(opfsVfs.ioSyncWrappers, ioMethods);
+      const thePromise = new Promise(function(promiseResolve_, promiseReject_){
+        let promiseWasRejected = undefined;
+        const promiseReject = (err)=>{
+          promiseWasRejected = true;
+          opfsVfs.dispose();
+          return promiseReject_(err);
+        };
+        const promiseResolve = ()=>{
+          try{
+            callback(sqlite3, opfsVfs);
+          }catch(e){
+            return promiseReject(e);
           }
-        }
-      };
-      const root = Object.create(null);
-      await doDir(opfsUtil.rootDirectory, root);
-      return root;
-    };
-
-    
-    opfsUtil.rmfr = async function(){
-      const dir = opfsUtil.rootDirectory, opt = {recurse: true};
-      for await (const handle of dir.values()){
-        dir.removeEntry(handle.name, opt);
-      }
-    };
-
-    
-    opfsUtil.unlink = async function(fsEntryName, recursive = false,
-                                     throwOnError = false){
-      try {
-        const [hDir, filenamePart] =
-              await opfsUtil.getDirForFilename(fsEntryName, false);
-        await hDir.removeEntry(filenamePart, {recursive});
-        return true;
-      }catch(e){
-        if(throwOnError){
-          throw new Error("unlink(",arguments[0],") failed: "+e.message,{
-            cause: e
-          });
-        }
-        return false;
-      }
-    };
-
-    
-    opfsUtil.traverse = async function(opt){
-      const defaultOpt = {
-        recursive: true,
-        directory: opfsUtil.rootDirectory
-      };
-      if('function'===typeof opt){
-        opt = {callback:opt};
-      }
-      opt = Object.assign(defaultOpt, opt||{});
-      const doDir = async function callee(dirHandle, depth){
-        for await (const handle of dirHandle.values()){
-          if(false === opt.callback(handle, dirHandle, depth)) return false;
-          else if(opt.recursive && 'directory' === handle.kind){
-            if(false === await callee(handle, depth + 1)) break;
+          promiseWasRejected = false;
+          return promiseResolve_(sqlite3);
+        };
+        const options = opfsUtil.options;
+        let proxyUri = options.proxyUri +(
+          (options.proxyUri.indexOf('?')<0) ? '?' : '&'
+        )+'vfs='+vfsName;
+        
+        const W = opfsVfs.worker =
+        new Worker(proxyUri);
+        let zombieTimer = setTimeout(()=>{
+          
+          if(undefined===promiseWasRejected){
+            promiseReject(
+              new Error("Timeout while waiting for OPFS async proxy worker.")
+            );
           }
-        }
-      };
-      doDir(opt.directory, 0);
-    };
+        }, 4000);
+        W._originalOnError = W.onerror ;
+        W.onerror = function(err){
+          
+          
+          error("Error initializing OPFS asyncer:",err);
+          promiseReject(new Error("Loading OPFS async Worker failed for unknown reasons."));
+        };
 
-    
-    const importDbChunked = async function(filename, callback){
-      const [hDir, fnamePart] = await opfsUtil.getDirForFilename(filename, true);
-      const hFile = await hDir.getFileHandle(fnamePart, {create:true});
-      let sah = await hFile.createSyncAccessHandle();
-      let nWrote = 0, chunk, checkedHeader = false, err = false;
-      try{
-        sah.truncate(0);
-        while( undefined !== (chunk = await callback()) ){
-          if(chunk instanceof ArrayBuffer) chunk = new Uint8Array(chunk);
-          if( !checkedHeader && 0===nWrote && chunk.byteLength>=15 ){
-            util.affirmDbHeader(chunk);
-            checkedHeader = true;
+        const opRun = opfsVfs.opRun;
+
+        const sanityCheck = function(){
+          const scope = wasm.scopedAllocPush();
+          const sq3File = new capi.sqlite3_file();
+          try{
+            const fid = sq3File.pointer;
+            const openFlags = capi.SQLITE_OPEN_CREATE
+                  | capi.SQLITE_OPEN_READWRITE
+            
+                  | capi.SQLITE_OPEN_MAIN_DB;
+            const pOut = wasm.scopedAlloc(8);
+            const dbFile = "/sanity/check/file"+randomFilename(8);
+            const zDbFile = wasm.scopedAllocCString(dbFile);
+            let rc;
+            state.s11n.serialize("This is ä string.");
+            rc = state.s11n.deserialize();
+            log("deserialize() says:",rc);
+            if("This is ä string."!==rc[0]) toss("String d13n error.");
+            opfsVfs.vfsSyncWrappers.xAccess(opfsVfs.pointer, zDbFile, 0, pOut);
+            rc = wasm.peek(pOut,'i32');
+            log("xAccess(",dbFile,") exists ?=",rc);
+            rc = opfsVfs.vfsSyncWrappers.xOpen(opfsVfs.pointer, zDbFile,
+                                               fid, openFlags, pOut);
+            log("open rc =",rc,"state.sabOPView[xOpen] =",
+                state.sabOPView[state.opIds.xOpen]);
+            if(0!==rc){
+              error("open failed with code",rc);
+              return;
+            }
+            opfsVfs.vfsSyncWrappers.xAccess(opfsVfs.pointer, zDbFile, 0, pOut);
+            rc = wasm.peek(pOut,'i32');
+            if(!rc) toss("xAccess() failed to detect file.");
+            rc = opfsVfs.ioSyncWrappers.xSync(sq3File.pointer, 0);
+            if(rc) toss('sync failed w/ rc',rc);
+            rc = opfsVfs.ioSyncWrappers.xTruncate(sq3File.pointer, 1024);
+            if(rc) toss('truncate failed w/ rc',rc);
+            wasm.poke(pOut,0,'i64');
+            rc = opfsVfs.ioSyncWrappers.xFileSize(sq3File.pointer, pOut);
+            if(rc) toss('xFileSize failed w/ rc',rc);
+            log("xFileSize says:",wasm.peek(pOut, 'i64'));
+            rc = opfsVfs.ioSyncWrappers.xWrite(sq3File.pointer, zDbFile, 10, 1);
+            if(rc) toss("xWrite() failed!");
+            const readBuf = wasm.scopedAlloc(16);
+            rc = opfsVfs.ioSyncWrappers.xRead(sq3File.pointer, readBuf, 6, 2);
+            wasm.poke(readBuf+6,0);
+            let jRead = wasm.cstrToJs(readBuf);
+            log("xRead() got:",jRead);
+            if("sanity"!==jRead) toss("Unexpected xRead() value.");
+            if(opfsVfs.vfsSyncWrappers.xSleep){
+              log("xSleep()ing before close()ing...");
+              opfsVfs.vfsSyncWrappers.xSleep(opfsVfs.pointer,2000);
+              log("waking up from xSleep()");
+            }
+            rc = opfsVfs.ioSyncWrappers.xClose(fid);
+            log("xClose rc =",rc,"sabOPView =",state.sabOPView);
+            log("Deleting file:",dbFile);
+            opfsVfs.vfsSyncWrappers.xDelete(opfsVfs.pointer, zDbFile, 0x1234);
+            opfsVfs.vfsSyncWrappers.xAccess(opfsVfs.pointer, zDbFile, 0, pOut);
+            rc = wasm.peek(pOut,'i32');
+            if(rc) toss("Expecting 0 from xAccess(",dbFile,") after xDelete().");
+            warn("End of OPFS sanity checks.");
+          }finally{
+            sq3File.dispose();
+            wasm.scopedAllocPop(scope);
           }
-          sah.write(chunk, {at: nWrote});
-          nWrote += chunk.byteLength;
-        }
-        if( nWrote < 512 || 0!==nWrote % 512 ){
-          toss("Input size",nWrote,"is not correct for an SQLite database.");
-        }
-        if( !checkedHeader ){
-          const header = new Uint8Array(20);
-          sah.read( header, {at: 0} );
-          util.affirmDbHeader( header );
-        }
-        sah.write(new Uint8Array([1,1]), {at: 18});
-        return nWrote;
-      }catch(e){
-        await sah.close();
-        sah = undefined;
-        await hDir.removeEntry( fnamePart ).catch(()=>{});
-        throw e;
-      }finally {
-        if( sah ) await sah.close();
-      }
+        };
+
+        W.onmessage = function({data}){
+          
+          switch(data.type){
+            case 'opfs-unavailable':
+              
+              promiseReject(new Error(data.payload.join(' ')));
+              break;
+            case 'opfs-async-loaded':
+              
+              delete state.vfs;
+              W.postMessage({type: 'opfs-async-init', args: util.nu(state)});
+              break;
+            case 'opfs-async-inited': {
+              
+              if(true===promiseWasRejected){
+                break ;
+              }
+              clearTimeout(zombieTimer);
+              zombieTimer = null;
+              try {
+                sqlite3.vfs.installVfs({
+                  io: {struct: opfsVfs.ioMethods, methods: opfsVfs.ioSyncWrappers},
+                  vfs: {struct: opfsVfs, methods: opfsVfs.vfsSyncWrappers}
+                });
+                state.sabOPView = new Int32Array(state.sabOP);
+                state.sabFileBufView = new Uint8Array(state.sabIO, 0, state.fileBufferSize);
+                state.sabS11nView = new Uint8Array(state.sabIO, state.sabS11nOffset, state.sabS11nSize);
+                opfsVfs.initS11n();
+                delete opfsVfs.initS11n;
+                if(options.sanityChecks){
+                  warn("Running sanity checks because of opfs-sanity-check URL arg...");
+                  sanityCheck();
+                }
+                if(opfsUtil.thisThreadHasOPFS()){
+                  opfsUtil.getRootDir().then((d)=>{
+                    W.onerror = W._originalOnError;
+                    delete W._originalOnError;
+                    log("End of OPFS sqlite3_vfs setup.", opfsVfs);
+                    promiseResolve();
+                  }).catch(promiseReject);
+                }else{
+                  promiseResolve();
+                }
+              }catch(e){
+                error(e);
+                promiseReject(e);
+              }
+              break;
+            }
+            case 'debug':
+              warn("debug message from worker:",data);
+              break;
+            default: {
+              const errMsg = (
+                "Unexpected message from the OPFS async worker: " +
+                  JSON.stringify(data)
+              );
+              error(errMsg);
+              promiseReject(new Error(errMsg));
+              break;
+            }
+          }
+        };
+      });
+      return thePromise;
     };
 
+    return state;
+  };
+
+});
+
+'use strict';
+globalThis.sqlite3ApiBootstrap.initializers.push(function(sqlite3){
+  if( !sqlite3.opfs || sqlite3.config.disable?.vfs?.opfs ){
+    return;
+  }
+  const util = sqlite3.util,
+        opfsUtil = sqlite3.opfs || sqlite3.util.toss("Missing sqlite3.opfs");
+  
+const installOpfsVfs = async function(options){
+  options = opfsUtil.initOptions('opfs',options);
+  if( !options ) return sqlite3;
+  const capi = sqlite3.capi,
+        state = opfsUtil.createVfsState(),
+        opfsVfs = state.vfs,
+        metrics = opfsVfs.metrics.counters,
+        mTimeStart = opfsVfs.mTimeStart,
+        mTimeEnd = opfsVfs.mTimeEnd,
+        opRun = opfsVfs.opRun,
+        debug = (...args)=>sqlite3.config.debug("opfs:",...args),
+        warn = (...args)=>sqlite3.config.warn("opfs:",...args),
+        __openFiles = opfsVfs.__openFiles;
+
+  
+  
+  return opfsVfs.bindVfs(util.nu({
+    xLock: function(pFile,lockType){
+      mTimeStart('xLock');
+      ++metrics.xLock.count;
+      const f = __openFiles[pFile];
+      let rc = 0;
+      
+      if( f.lockType ) {
+        f.lockType = lockType;
+      }else{
+        rc = opRun('xLock', pFile, lockType);
+        if( 0===rc ) f.lockType = lockType;
+      }
+      mTimeEnd();
+      return rc;
+    },
+    xUnlock: function(pFile,lockType){
+      mTimeStart('xUnlock');
+      ++metrics.xUnlock.count;
+      const f = __openFiles[pFile];
+      let rc = 0;
+      if( capi.SQLITE_LOCK_NONE === lockType
+          && f.lockType ){
+        rc = opRun('xUnlock', pFile, lockType);
+      }
+      if( 0===rc ) f.lockType = lockType;
+      mTimeEnd();
+      return rc;
+    }
+  }), function(sqlite3, vfs){
     
-    opfsUtil.importDb = async function(filename, bytes){
-      if( bytes instanceof Function ){
-        return importDbChunked(filename, bytes);
-      }
-      if(bytes instanceof ArrayBuffer) bytes = new Uint8Array(bytes);
-      util.affirmIsDb(bytes);
-      const n = bytes.byteLength;
-      const [hDir, fnamePart] = await opfsUtil.getDirForFilename(filename, true);
-      let sah, err, nWrote = 0;
-      try {
-        const hFile = await hDir.getFileHandle(fnamePart, {create:true});
-        sah = await hFile.createSyncAccessHandle();
-        sah.truncate(0);
-        nWrote = sah.write(bytes, {at: 0});
-        if(nWrote != n){
-          toss("Expected to write "+n+" bytes but wrote "+nWrote+".");
-        }
-        sah.write(new Uint8Array([1,1]), {at: 18}) ;
-        return nWrote;
-      }catch(e){
-        if( sah ){ await sah.close(); sah = undefined; }
-        await hDir.removeEntry( fnamePart ).catch(()=>{});
-        throw e;
-      }finally{
-        if( sah ) await sah.close();
-      }
-    };
-
     if(sqlite3.oo1){
       const OpfsDb = function(...args){
         const opt = sqlite3.oo1.DB.dbCtorHelper.normalizeArgs(...args);
-        opt.vfs = opfsVfs.$zName;
+        opt.vfs = vfs.$zName;
         sqlite3.oo1.DB.dbCtorHelper.call(this, opt);
       };
       OpfsDb.prototype = Object.create(sqlite3.oo1.DB.prototype);
       sqlite3.oo1.OpfsDb = OpfsDb;
       OpfsDb.importDb = opfsUtil.importDb;
-      sqlite3.oo1.DB.dbCtorHelper.setVfsPostOpenCallback(
-        opfsVfs.pointer,
-        function(oo1Db, sqlite3){
-          
-          sqlite3.capi.sqlite3_busy_timeout(oo1Db, 10000);
-        }
-      );
-    }
-
-    const sanityCheck = function(){
-      const scope = wasm.scopedAllocPush();
-      const sq3File = new sqlite3_file();
-      try{
-        const fid = sq3File.pointer;
-        const openFlags = capi.SQLITE_OPEN_CREATE
-              | capi.SQLITE_OPEN_READWRITE
+      if( true ){
         
-              | capi.SQLITE_OPEN_MAIN_DB;
-        const pOut = wasm.scopedAlloc(8);
-        const dbFile = "/sanity/check/file"+randomFilename(8);
-        const zDbFile = wasm.scopedAllocCString(dbFile);
-        let rc;
-        state.s11n.serialize("This is ä string.");
-        rc = state.s11n.deserialize();
-        log("deserialize() says:",rc);
-        if("This is ä string."!==rc[0]) toss("String d13n error.");
-        vfsSyncWrappers.xAccess(opfsVfs.pointer, zDbFile, 0, pOut);
-        rc = wasm.peek(pOut,'i32');
-        log("xAccess(",dbFile,") exists ?=",rc);
-        rc = vfsSyncWrappers.xOpen(opfsVfs.pointer, zDbFile,
-                                   fid, openFlags, pOut);
-        log("open rc =",rc,"state.sabOPView[xOpen] =",
-            state.sabOPView[state.opIds.xOpen]);
-        if(0!==rc){
-          error("open failed with code",rc);
-          return;
-        }
-        vfsSyncWrappers.xAccess(opfsVfs.pointer, zDbFile, 0, pOut);
-        rc = wasm.peek(pOut,'i32');
-        if(!rc) toss("xAccess() failed to detect file.");
-        rc = ioSyncWrappers.xSync(sq3File.pointer, 0);
-        if(rc) toss('sync failed w/ rc',rc);
-        rc = ioSyncWrappers.xTruncate(sq3File.pointer, 1024);
-        if(rc) toss('truncate failed w/ rc',rc);
-        wasm.poke(pOut,0,'i64');
-        rc = ioSyncWrappers.xFileSize(sq3File.pointer, pOut);
-        if(rc) toss('xFileSize failed w/ rc',rc);
-        log("xFileSize says:",wasm.peek(pOut, 'i64'));
-        rc = ioSyncWrappers.xWrite(sq3File.pointer, zDbFile, 10, 1);
-        if(rc) toss("xWrite() failed!");
-        const readBuf = wasm.scopedAlloc(16);
-        rc = ioSyncWrappers.xRead(sq3File.pointer, readBuf, 6, 2);
-        wasm.poke(readBuf+6,0);
-        let jRead = wasm.cstrToJs(readBuf);
-        log("xRead() got:",jRead);
-        if("sanity"!==jRead) toss("Unexpected xRead() value.");
-        if(vfsSyncWrappers.xSleep){
-          log("xSleep()ing before close()ing...");
-          vfsSyncWrappers.xSleep(opfsVfs.pointer,2000);
-          log("waking up from xSleep()");
-        }
-        rc = ioSyncWrappers.xClose(fid);
-        log("xClose rc =",rc,"sabOPView =",state.sabOPView);
-        log("Deleting file:",dbFile);
-        vfsSyncWrappers.xDelete(opfsVfs.pointer, zDbFile, 0x1234);
-        vfsSyncWrappers.xAccess(opfsVfs.pointer, zDbFile, 0, pOut);
-        rc = wasm.peek(pOut,'i32');
-        if(rc) toss("Expecting 0 from xAccess(",dbFile,") after xDelete().");
-        warn("End of OPFS sanity checks.");
-      }finally{
-        sq3File.dispose();
-        wasm.scopedAllocPop(scope);
-      }
-    };
-
-    W.onmessage = function({data}){
-      
-      switch(data.type){
-          case 'opfs-unavailable':
+        sqlite3.oo1.DB.dbCtorHelper.setVfsPostOpenCallback(
+          opfsVfs.pointer,
+          function(oo1Db, sqlite3){
             
-            promiseReject(new Error(data.payload.join(' ')));
-            break;
-          case 'opfs-async-loaded':
-            
-            W.postMessage({type: 'opfs-async-init',args: state});
-            break;
-          case 'opfs-async-inited': {
-            
-            if(true===promiseWasRejected){
-              break ;
-            }
-            try {
-              sqlite3.vfs.installVfs({
-                io: {struct: opfsIoMethods, methods: ioSyncWrappers},
-                vfs: {struct: opfsVfs, methods: vfsSyncWrappers}
-              });
-              state.sabOPView = new Int32Array(state.sabOP);
-              state.sabFileBufView = new Uint8Array(state.sabIO, 0, state.fileBufferSize);
-              state.sabS11nView = new Uint8Array(state.sabIO, state.sabS11nOffset, state.sabS11nSize);
-              initS11n();
-              if(options.sanityChecks){
-                warn("Running sanity checks because of opfs-sanity-check URL arg...");
-                sanityCheck();
-              }
-              if(thisThreadHasOPFS()){
-                navigator.storage.getDirectory().then((d)=>{
-                  W.onerror = W._originalOnError;
-                  delete W._originalOnError;
-                  sqlite3.opfs = opfsUtil;
-                  opfsUtil.rootDirectory = d;
-                  log("End of OPFS sqlite3_vfs setup.", opfsVfs);
-                  promiseResolve();
-                }).catch(promiseReject);
-              }else{
-                promiseResolve();
-              }
-            }catch(e){
-              error(e);
-              promiseReject(e);
-            }
-            break;
+            sqlite3.capi.sqlite3_busy_timeout(oo1Db, 10000);
           }
-          default: {
-            const errMsg = (
-              "Unexpected message from the OPFS async worker: " +
-              JSON.stringify(data)
-            );
-            error(errMsg);
-            promiseReject(new Error(errMsg));
-            break;
-          }
+        );
       }
-    };
-  });
-  return thePromise;
-};
-installOpfsVfs.defaultProxyUri =
-  "sqlite3-opfs-async-proxy.js";
-globalThis.sqlite3ApiBootstrap.initializersAsync.push(async (sqlite3)=>{
-  try{
-    let proxyJs = installOpfsVfs.defaultProxyUri;
-    if(sqlite3.scriptInfo.sqlite3Dir){
-      installOpfsVfs.defaultProxyUri =
-        sqlite3.scriptInfo.sqlite3Dir + proxyJs;
-      
     }
-    return installOpfsVfs().catch((e)=>{
-      sqlite3.config.warn("Ignoring inability to install OPFS sqlite3_vfs:",e.message);
-    });
-  }catch(e){
-    sqlite3.config.error("installOpfsVfs() exception:",e);
-    return Promise.reject(e);
-  }
+  });
+};
+globalThis.sqlite3ApiBootstrap.initializersAsync.push(async (sqlite3)=>{
+  return installOpfsVfs().catch((e)=>{
+    sqlite3.config.warn("Ignoring inability to install 'opfs' sqlite3_vfs:",e);
+  })
 });
 });
 
 globalThis.sqlite3ApiBootstrap.initializers.push(function(sqlite3){
   'use strict';
+  if( sqlite3.config.disable?.vfs?.['opfs-sahpool'] ){
+    return;
+  }
+
   const toss = sqlite3.util.toss;
   const toss3 = sqlite3.util.toss3;
   const initPromises = Object.create(null) ;
@@ -12038,7 +13615,7 @@ globalThis.sqlite3ApiBootstrap.initializers.push(function(sqlite3){
         try{
           const [cMsg, n] = wasm.scopedAllocCString(e.message, true);
           wasm.cstrncpy(pOut, cMsg, nOut);
-          if(n > nOut) wasm.poke8(pOut + nOut - 1, 0);
+          if(n > nOut) wasm.poke8(wasm.ptr.add(pOut,nOut,-1), 0);
         }catch(e){
           return capi.SQLITE_NOMEM;
         }finally{
@@ -12698,17 +14275,77 @@ globalThis.sqlite3ApiBootstrap.initializers.push(function(sqlite3){
 });
 
 'use strict';
-if( 'undefined' === typeof EmscriptenModule ){
-  console.warn("This is not running in the context of Module.runSQLite3PostLoadInit()");
-  throw new Error("sqlite3-api-cleanup.js expects to be running in the "+
-                  "context of its Emscripten module loader.");
-}
+globalThis.sqlite3ApiBootstrap.initializers.push(function(sqlite3){
+  if( !sqlite3.opfs || sqlite3.config.disable?.vfs?.['opfs-wl'] ){
+    return;
+  }
+  const util = sqlite3.util,
+        toss  = sqlite3.util.toss;
+  const opfsUtil = sqlite3.opfs;
+  const vfsName = 'opfs-wl';
+
+const installOpfsWlVfs = async function(options){
+  options = opfsUtil.initOptions(vfsName,options);
+  if( !options ) return sqlite3;
+  const capi = sqlite3.capi,
+        state = opfsUtil.createVfsState(),
+        opfsVfs = state.vfs,
+        metrics = opfsVfs.metrics.counters,
+        mTimeStart = opfsVfs.mTimeStart,
+        mTimeEnd = opfsVfs.mTimeEnd,
+        opRun = opfsVfs.opRun,
+        debug = (...args)=>sqlite3.config.debug(vfsName+":",...args),
+        warn = (...args)=>sqlite3.config.warn(vfsName+":",...args),
+        __openFiles = opfsVfs.__openFiles;
+
+  
+  
+  return opfsVfs.bindVfs(util.nu({
+    xLock: function(pFile,lockType){
+      mTimeStart('xLock');
+      
+      const f = __openFiles[pFile];
+      const rc = opRun('xLock', pFile, lockType);
+      if( !rc ) f.lockType = lockType;
+      mTimeEnd();
+      return rc;
+    },
+    xUnlock: function(pFile,lockType){
+      mTimeStart('xUnlock');
+      const f = __openFiles[pFile];
+      const rc = opRun('xUnlock', pFile, lockType);
+      if( !rc ) f.lockType = lockType;
+      mTimeEnd();
+      return rc;
+    }
+  }), function(sqlite3, vfs){
+    
+    if(sqlite3.oo1){
+      const OpfsWlDb = function(...args){
+        const opt = sqlite3.oo1.DB.dbCtorHelper.normalizeArgs(...args);
+        opt.vfs = vfs.$zName;
+        sqlite3.oo1.DB.dbCtorHelper.call(this, opt);
+      };
+      OpfsWlDb.prototype = Object.create(sqlite3.oo1.DB.prototype);
+      sqlite3.oo1.OpfsWlDb = OpfsWlDb;
+      OpfsWlDb.importDb = opfsUtil.importDb;
+      
+    }
+  });
+};
+globalThis.sqlite3ApiBootstrap.initializersAsync.push(async (sqlite3)=>{
+  return installOpfsWlVfs().catch((e)=>{
+    sqlite3.config.warn("Ignoring inability to install the",vfsName,"sqlite3_vfs:",e);
+  });
+});
+});
+
 try{
+  
+
   
   const bootstrapConfig = Object.assign(
     Object.create(null),
-    globalThis.sqlite3ApiBootstrap.defaultConfig, 
-    globalThis.sqlite3ApiConfig || {}, 
     
     {
       memory: ('undefined'!==typeof wasmMemory)
@@ -12719,15 +14356,12 @@ try{
         : (Object.prototype.hasOwnProperty.call(EmscriptenModule,'wasmExports')
            ? EmscriptenModule['wasmExports']
            : EmscriptenModule['asm'])
-    }
+    },
+    globalThis.sqlite3ApiBootstrap.defaultConfig, 
+    globalThis.sqlite3ApiConfig || {} 
   );
 
-  
-  bootstrapConfig.wasmPtrIR =
-    'number'===(typeof bootstrapConfig.exports.sqlite3_libversion())
-    ?  'i32' :'i64';
-  const sIMS = sqlite3InitScriptInfo;
-  sIMS.debugModule("Bootstrapping lib config", sIMS);
+  sqlite3InitScriptInfo.debugModule("Bootstrapping lib config", bootstrapConfig);
 
   
   const p = globalThis.sqlite3ApiBootstrap(bootstrapConfig);
@@ -12737,7 +14371,7 @@ try{
   console.error("sqlite3ApiBootstrap() error:",e);
   throw e;
 }
-throw new Error("Maintenance required: this line should never be reached");
+
 
 };
 
@@ -12782,7 +14416,7 @@ if (typeof exports === 'object' && typeof module === 'object') {
   
   const originalInit = sqlite3InitModule;
   if(!originalInit){
-    throw new Error("Expecting globalThis.sqlite3InitModule to be defined by the Emscripten build.");
+    throw new Error("Expecting sqlite3InitModule to be defined by the Emscripten build.");
   }
   
   const sIMS = globalThis.sqlite3InitModuleState = Object.assign(Object.create(null),{
@@ -12810,6 +14444,8 @@ if (typeof exports === 'object' && typeof module === 'object') {
 
   const sIM = globalThis.sqlite3InitModule = function ff(...args){
     
+    sIMS.emscriptenLocateFile = args[0]?.locateFile ;
+    sIMS.emscriptenInstantiateWasm = args[0]?.instantiateWasm ;
     return originalInit(...args).then((EmscriptenModule)=>{
       sIMS.debugModule("sqlite3InitModule() sIMS =",sIMS);
       sIMS.debugModule("sqlite3InitModule() EmscriptenModule =",EmscriptenModule);
