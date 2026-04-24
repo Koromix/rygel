@@ -1196,11 +1196,7 @@ private:
     bool AllocateSeparately(Size aligned_size) const { return aligned_size > block_size / 2; }
 };
 
-enum class AllocFlag {
-    Zero = 1
-};
-
-static inline void *AllocateRaw(Allocator *alloc, Size size, unsigned int flags = 0)
+static inline void *AllocateRaw(Allocator *alloc, Size size)
 {
     K_ASSERT(size >= 0);
 
@@ -1208,30 +1204,22 @@ static inline void *AllocateRaw(Allocator *alloc, Size size, unsigned int flags 
 
     void *ptr = alloc->Allocate(size);
 
-    if (flags & (int)AllocFlag::Zero) {
-        MemSet(ptr, 0, size);
-    }
-
     return ptr;
 }
 
 template <typename T>
-T *AllocateOne(Allocator *alloc, unsigned int flags = 0)
+T *AllocateOne(Allocator *alloc)
 {
     alloc = alloc ? alloc : GetDefaultAllocator();
 
     Size size = K_SIZE(T);
     T *ptr = (T *)alloc->Allocate(size);
 
-    if (flags & (int)AllocFlag::Zero) {
-        MemSet(ptr, 0, size);
-    }
-
     return ptr;
 }
 
 template <typename T>
-Span<T> AllocateSpan(Allocator *alloc, Size len, unsigned int flags = 0)
+Span<T> AllocateSpan(Allocator *alloc, Size len)
 {
     K_ASSERT(len >= 0);
     K_ASSERT(len <= K_SIZE_MAX / K_SIZE(T));
@@ -1241,15 +1229,10 @@ Span<T> AllocateSpan(Allocator *alloc, Size len, unsigned int flags = 0)
     Size size = len * K_SIZE(T);
     T *ptr = (T *)alloc->Allocate(size);
 
-    if (flags & (int)AllocFlag::Zero) {
-        MemSet(ptr, 0, size);
-    }
-
     return MakeSpan(ptr, len);
 }
 
-static inline void *ResizeRaw(Allocator *alloc, void *ptr, Size old_size, Size new_size,
-                              unsigned int flags = 0)
+static inline void *ResizeRaw(Allocator *alloc, void *ptr, Size old_size, Size new_size)
 {
     K_ASSERT(new_size >= 0);
 
@@ -1257,16 +1240,11 @@ static inline void *ResizeRaw(Allocator *alloc, void *ptr, Size old_size, Size n
 
     ptr = alloc->Resize(ptr, old_size, new_size);
 
-    if ((flags & (int)AllocFlag::Zero) && new_size > old_size) {
-        MemSet((uint8_t *)ptr + old_size, 0, new_size - old_size);
-    }
-
     return ptr;
 }
 
 template <typename T>
-Span<T> ResizeSpan(Allocator *alloc, Span<T> mem, Size new_len,
-                   unsigned int flags = 0)
+Span<T> ResizeSpan(Allocator *alloc, Span<T> mem, Size new_len)
 {
     K_ASSERT(new_len >= 0);
     K_ASSERT(new_len <= K_SIZE_MAX / K_SIZE(T));
@@ -1277,10 +1255,6 @@ Span<T> ResizeSpan(Allocator *alloc, Span<T> mem, Size new_len,
     Size new_size = new_len * K_SIZE(T);
 
     mem.ptr = (T *)alloc->Resize(mem.ptr, old_size, new_size);
-
-    if ((flags & (int)AllocFlag::Zero) && new_size > old_size) {
-        MemSet((uint8_t *)mem.ptr + old_size, 0, new_size - old_size);
-    }
 
     return MakeSpan(mem.ptr, new_len);
 }
@@ -3034,14 +3008,16 @@ private:
         Size old_capacity = capacity;
 
         if (new_capacity) {
-            used = (size_t *)AllocateRaw(allocator,
-                                         (new_capacity + (K_SIZE(size_t) * 8) - 1) / K_SIZE(size_t),
-                                         (int)AllocFlag::Zero);
+            Size used_size = (new_capacity + (K_SIZE(size_t) * 8) - 1) / K_SIZE(size_t);
+
+            used = (size_t *)AllocateRaw(allocator, used_size);
             data = (ValueType *)AllocateRaw(allocator, new_capacity * K_SIZE(ValueType));
+            capacity = new_capacity;
+
             for (Size i = 0; i < new_capacity; i++) {
                 new (&data[i]) ValueType();
             }
-            capacity = new_capacity;
+            MemSet(used, 0, used_size);
 
             for (Size i = 0; i < old_capacity; i++) {
                 if (!IsEmpty(old_used, i)) {

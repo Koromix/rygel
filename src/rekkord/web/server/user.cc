@@ -219,7 +219,8 @@ static RetainPtr<SessionInfo> CreateUserSession(int64_t userid, bool authorize, 
     Size username_bytes = strlen(username) + 1;
     Size session_bytes = K_SIZE(SessionInfo) + username_bytes;
 
-    SessionInfo *session = (SessionInfo *)AllocateRaw(nullptr, session_bytes, (int)AllocFlag::Zero);
+    SessionInfo *session = (SessionInfo *)AllocateRaw(nullptr, session_bytes);
+    MemSet(session, 0, session_bytes);
 
     new (session) SessionInfo;
     RetainPtr<SessionInfo> ptr(session, [](SessionInfo *session) {

@@ -139,15 +139,13 @@ inline T *CallData::AllocHeap(Size size)
 
         return ptr;
     } else {
-#if defined(K_DEBUG)
-        int flags = (int)AllocFlag::Zero;
-#else
-        int flags = 0;
-#endif
-
-        ptr = (uint8_t *)AllocateRaw(&mem->allocator, size + 16, flags);
+        ptr = (uint8_t *)AllocateRaw(&mem->allocator, size + 16);
         ptr = AlignUp(ptr, 16);
         release_alloc |= (prev_stack == mem->stack.end);
+
+#if defined(K_DEBUG)
+        MemSet(ptr, 0, size);
+#endif
 
         return ptr;
     }
