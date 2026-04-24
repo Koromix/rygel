@@ -763,7 +763,6 @@ SWAPI void swGetFramebufferAttachmentParameteriv(SWattachment attachment, SWatta
 
 // Simple log system to avoid printf() calls if required
 // NOTE: Avoiding those calls, also avoids const strings memory usage
-#define SW_SUPPORT_LOG_INFO
 #if defined(SW_SUPPORT_LOG_INFO) //&& defined(_DEBUG)      // WARNING: LOG() output required for this tool
     #include <stdio.h>
     #define SW_LOG(...) printf(__VA_ARGS__)
