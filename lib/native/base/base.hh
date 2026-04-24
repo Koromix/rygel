@@ -107,18 +107,8 @@ extern StreamReader *const StdIn;
 extern StreamWriter *const StdOut;
 extern StreamWriter *const StdErr;
 
-#if defined(__x86_64__) || defined(_M_X64) || defined(__aarch64__) || defined(_M_ARM64) || __riscv_xlen == 64 || defined(__loongarch64)
-    typedef int64_t Size;
-    #define K_SIZE_MAX INT64_MAX
-#elif defined(_WIN32) || defined(__APPLE__) || defined(__unix__)
-    typedef int32_t Size;
-    #define K_SIZE_MAX INT32_MAX
-#elif defined(__thumb__) || defined(__arm__) || defined(__wasm32__)
-    typedef int32_t Size;
-    #define K_SIZE_MAX INT32_MAX
-#else
-    #error Machine architecture not supported
-#endif
+typedef intptr_t Size;
+#define K_SIZE_MAX INTPTR_MAX
 
 #if defined(_MSC_VER) || __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
     // Sane platform
@@ -135,6 +125,7 @@ extern StreamWriter *const StdErr;
     #error This code base is not designed to support non-64-bits long long types
 #endif
 static_assert(sizeof(double) == 8, "This code base is not designed to support single-precision double floats");
+static_assert(sizeof(intptr_t) == sizeof(size_t), "This code base assumes that intptr_t and size_t are the same size");
 
 #define K_STRINGIFY_(a) #a
 #define K_STRINGIFY(a) K_STRINGIFY_(a)
