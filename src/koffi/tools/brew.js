@@ -434,15 +434,34 @@ async function build() {
 
     console.log('>> Write publish script');
     {
+        let names = !MONOLITH ? packages.map(pkg => pkg.name) : [];
+        names.push('koffi');
+
+        let packs = names.map(name => ({
+            name: name,
+            filename: name.replace(/^@/, '').replace('/', '-') + `-${version}`
+        }));
+
         let code = '#!/bin/sh -e\n\n';
 
-        for (let pkg of packages) {
-            code += `cd ${dist_dir}/${pkg.name}\n`;
-            code += 'npm publish --access public $*\n\n';
+        for (let pack of packs)
+            code += `npm pack --pack-destination "${dist_dir}" "${dist_dir}/${pack.name}"\n`;
+        code += '\n';
+
+        code += 'echo "Unzipping packages"\n';
+        for (let pack of packs)
+            code += `gunzip ${pack.filename}.tgz\n`;
+        code += '\n';
+
+        for (let pack of packs) {
+            code += `echo "Recompressing ${pack.name} with zopfli"\n`;
+            code += `zopfli ${pack.filename}.tar\n`;
+            code += `mv ${pack.filename}.tar.gz ${pack.filename}.tgz\n`;
+            code += `rm ${pack.filename}.tar\n\n`;
         }
 
-        code += `cd ${dist_dir}/koffi\n`;
-        code += 'npm publish --access public $*\n';
+        for (let pack of packs)
+            code += `npm publish --access public ${pack.filename}.tgz $*\n`;
 
         let script = dist_dir + '/publish.sh';
         fs.writeFileSync(script, code, { mode: 0o755 });
