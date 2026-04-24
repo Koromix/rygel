@@ -69,6 +69,7 @@ function run_cxx(time) {
 function run_napi(time) {
     // We need to call InitWindow before using anything else (such as fonts)
     r.SetTraceLogLevel(5); // Errors
+    r.SetWindowState(0x80); // Hidden
     r.InitWindow(800, 600, "Raylib Test");
 
     let img = r.GenImageColor(800, 600, { r: 0, g: 0, b: 0, a: 255 });
