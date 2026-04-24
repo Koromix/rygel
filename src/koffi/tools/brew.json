@@ -11,7 +11,7 @@
         },
 
         "test": {
-            "build": "node ../build.js --cache -D test",
+            "build": "node ../build.js --ccache -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
                 "Test Sync (slow pointers)": "node test/sync.js --slow_pointers",
@@ -112,12 +112,12 @@
             "arch": "riscv64d",
             "machine": "debian_riscv64",
             "directory": "/home/debian/luigi",
-            "build": "node ../build.js",
+            "build": "node ../build.js --ccache",
             "package": null
         },
 
         "test": {
-            "build": "node ../build.js -D test",
+            "build": "node ../build.js --ccache -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
                 "Test Sync (slow pointers)": "node test/sync.js --slow_pointers",
@@ -138,12 +138,12 @@
             "arch": "ia32",
             "machine": "freebsd_i386",
             "directory": "/home/freebsd/luigi",
-            "build": "node ../build.js",
+            "build": "node ../build.js --ccache",
             "package": "freebsd-ia32"
         },
 
         "test": {
-            "build": "node ../build.js -D test",
+            "build": "node ../build.js --ccache -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
                 "Test Sync (slow pointers)": "node test/sync.js --slow_pointers",
@@ -164,12 +164,12 @@
             "arch": "x64",
             "machine": "freebsd_x64",
             "directory": "/home/freebsd/luigi",
-            "build": "node ../build.js",
+            "build": "node ../build.js --ccache",
             "package": "freebsd-x64"
         },
 
         "test": {
-            "build": "node ../build.js -D test",
+            "build": "node ../build.js --ccache -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
                 "Test Sync (slow pointers)": "node test/sync.js --slow_pointers",
@@ -190,12 +190,12 @@
             "arch": "arm64",
             "machine": "freebsd_arm64",
             "directory": "/home/freebsd/luigi",
-            "build": "node ../build.js",
+            "build": "node ../build.js --ccache",
             "package": "freebsd-arm64"
         },
 
         "test": {
-            "build": "node ../build.js -D test",
+            "build": "node ../build.js --ccache -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
                 "Test Sync (slow pointers)": "node test/sync.js --slow_pointers",
@@ -216,12 +216,12 @@
             "arch": "ia32",
             "machine": "openbsd_i386",
             "directory": "/home/openbsd/luigi",
-            "build": "node ../build.js",
+            "build": "node ../build.js --ccache",
             "package": "openbsd-ia32"
         },
 
         "test": {
-            "build": "node ../build.js -D test",
+            "build": "node ../build.js --ccache -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
                 "Test Sync (slow pointers)": "node test/sync.js --slow_pointers",
@@ -242,12 +242,12 @@
             "arch": "x64",
             "machine": "openbsd_x64",
             "directory": "/home/openbsd/luigi",
-            "build": "node ../build.js",
+            "build": "node ../build.js --ccache",
             "package": "openbsd-x64"
         },
 
         "test": {
-            "build": "node ../build.js -D test",
+            "build": "node ../build.js --ccache -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
                 "Test Sync (slow pointers)": "node test/sync.js --slow_pointers",
@@ -338,12 +338,12 @@
             "arch": "x64",
             "machine": "macos_x64",
             "directory": "/Users/macos/luigi",
-            "build": "PATH=/usr/local/bin:/usr/bin:/bin SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX11.3.sdk node ../build.js",
+            "build": "PATH=/usr/local/bin:/usr/bin:/bin SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX11.3.sdk node ../build.js --ccache",
             "package": "darwin-x64"
         },
 
         "test": {
-            "build": "PATH=/usr/local/bin:/usr/bin:/bin SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX11.3.sdk node ../build.js -D test",
+            "build": "PATH=/usr/local/bin:/usr/bin:/bin SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX11.3.sdk node ../build.js --ccache -D test",
             "commands": {
                 "Test Sync": "PATH=/usr/local/bin:/usr/bin:/bin node test/sync.js",
                 "Test Sync (slow pointers)": "PATH=/usr/local/bin:/usr/bin:/bin node test/sync.js --slow_pointers",
@@ -363,7 +363,7 @@
             "arch": "arm64",
             "machine": "macos_x64",
             "directory": "/Users/macos/luigi_arm64",
-            "build": "PATH=/usr/local/bin:/usr/bin:/bin SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX11.3.sdk node ../build.js -t darwin_arm64",
+            "build": "PATH=/usr/local/bin:/usr/bin:/bin SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX11.3.sdk node ../build.js --ccache -t darwin_arm64",
             "package": "darwin-arm64"
         }
     },
@@ -375,12 +375,12 @@
             "arch": "x64",
             "machine": "alpine_x64",
             "directory": "/home/alpine/luigi",
-            "build": "node ../build.js",
+            "build": "node ../build.js --ccache",
             "package": "linux-x64"
         },
 
         "test": {
-            "build": "node ../build.js -D test",
+            "build": "node ../build.js --ccache -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
                 "Test Sync (slow pointers)": "node test/sync.js --slow_pointers",
@@ -400,12 +400,12 @@
             "arch": "loong64",
             "machine": "debian_loong64",
             "directory": "/home/debian/luigi",
-            "build": "node ../build.js",
+            "build": "node ../build.js --ccache",
             "package": null
         },
 
         "test": {
-            "build": "node ../build.js -D test",
+            "build": "node ../build.js --ccache -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
                 "Test Sync (slow pointers)": "node test/sync.js --slow_pointers",
@@ -426,12 +426,12 @@
             "arch": "arm64",
             "machine": "alpine_arm64",
             "directory": "/home/alpine/luigi",
-            "build": "node ../build.js",
+            "build": "node ../build.js --ccache",
             "package": "linux-arm64"
         },
 
         "test": {
-            "build": "node ../build.js -D test",
+            "build": "node ../build.js --ccache -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
                 "Test Sync (slow pointers)": "node test/sync.js --slow_pointers",
