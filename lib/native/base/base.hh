@@ -107,8 +107,15 @@ extern StreamReader *const StdIn;
 extern StreamWriter *const StdOut;
 extern StreamWriter *const StdErr;
 
-typedef intptr_t Size;
-#define K_SIZE_MAX INTPTR_MAX
+#if INTPTR_MAX == INT64_MAX
+    typedef int64_t Size;
+    #define K_SIZE_MAX INT64_MAX
+#elif INTPTR_MAX == INT32_MAX
+    typedef int32_t Size;
+    #define K_SIZE_MAX INT64_MAX
+#else
+    #error This code base is not designed to support non-32-or-64-bit platforms
+#endif
 
 #if defined(_MSC_VER) || __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
     // Sane platform
