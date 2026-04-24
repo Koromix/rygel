@@ -2,7 +2,9 @@
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
 #include "base.hh"
-#include "crc.inc"
+#if __has_include("crc.inc")
+    #include "crc.inc"
+#endif
 #include "unicode.inc"
 
 #if __has_include("vendor/dragonbox/include/dragonbox/dragonbox.h")
@@ -10696,6 +10698,8 @@ const char *PromptPath(const char *prompt, const char *default_path, Span<const 
 // Mime types
 // ------------------------------------------------------------------------
 
+#if __has_include("mimetypes.inc")
+
 const char *GetMimeType(Span<const char> extension, const char *default_type)
 {
     static const HashMap<Span<const char>, const char *> mimetypes = {
@@ -10771,6 +10775,8 @@ bool CanCompressFile(const char *filename)
     return true;
 }
 
+#endif
+
 // ------------------------------------------------------------------------
 // Unicode
 // ------------------------------------------------------------------------
@@ -10791,6 +10797,8 @@ bool IsValidUtf8(Span<const char> str)
 
     return i == str.len;
 }
+
+#if __has_include("unicode.inc")
 
 static bool TestUnicodeTable(Span<const int32_t> table, int32_t uc)
 {
@@ -10862,9 +10870,13 @@ bool IsXidContinue(int32_t uc)
     return false;
 }
 
+#endif
+
 // ------------------------------------------------------------------------
 // CRC
 // ------------------------------------------------------------------------
+
+#if __has_include("crc.inc")
 
 uint32_t CRC32(uint32_t state, Span<const uint8_t> buf)
 {
@@ -10989,5 +11001,7 @@ uint64_t CRC64nvme(uint64_t state, Span<const uint8_t> buf)
 
     return ~state;
 }
+
+#endif
 
 }

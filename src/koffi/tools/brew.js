@@ -355,8 +355,9 @@ async function build() {
         fs.mkdirSync(pkg_dir, { mode: 0o755, recursive: true });
 
         copyRecursive(snapshot_dir, pkg_dir, makePathFilter([
-            'lib/native/base',
-            'src/core',
+            'lib/native/base/base.cc',
+            'lib/native/base/base.hh',
+            'lib/native/base/unicode.inc',
             'src/koffi/src',
             'src/koffi/CHANGELOG.md',
             'src/koffi/CMakeLists.txt',

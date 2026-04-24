@@ -5893,9 +5893,13 @@ static inline const char *PromptPath(const char *prompt, Allocator *alloc)
 // Mime types
 // ------------------------------------------------------------------------
 
+#if __has_include("mimetypes.inc")
+
 const char *GetMimeType(Span<const char> extension, const char *default_type = "application/octet-stream");
 
 bool CanCompressFile(const char *filename);
+
+#endif
 
 // ------------------------------------------------------------------------
 // Unicode
@@ -6012,19 +6016,27 @@ static inline Size EncodeUtf8(int32_t c, char out_buf[4])
 
 bool IsValidUtf8(Span<const char> str);
 
+#if __has_include("unicode.inc")
+
 int ComputeUnicodeWidth(Span<const char> str);
 
 bool IsXidStart(int32_t uc);
 bool IsXidContinue(int32_t uc);
 
+#endif
+
 // ------------------------------------------------------------------------
 // CRC
 // ------------------------------------------------------------------------
+
+#if __has_include("crc.inc")
 
 uint32_t CRC32(uint32_t state, Span<const uint8_t> buf);
 uint32_t CRC32C(uint32_t state, Span<const uint8_t> buf);
 
 uint64_t CRC64xz(uint64_t state, Span<const uint8_t> buf);
 uint64_t CRC64nvme(uint64_t state, Span<const uint8_t> buf);
+
+#endif
 
 }
