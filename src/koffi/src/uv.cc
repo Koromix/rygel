@@ -3,8 +3,6 @@
 #include "uv.hh"
 #include "util.hh"
 
-#include <uv.h>
-
 namespace K {
 
 Napi::Function PollHandle::Define(Napi::Env env)

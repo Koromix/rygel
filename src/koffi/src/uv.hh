@@ -6,8 +6,66 @@
 
 #include <napi.h>
 
-struct uv_poll_s;
+extern "C" {
+
+// The uv headers are not included in node-api-headers, but we only use a few
+// uv types and functions, so just declare them here.
+
+struct uv_loop_s;
+struct uv_handle_s;
+
+struct uv_poll_s {
+    void *data;
+
+    // The definition depends on the OS, and may involve windows.h
+    // Beyond data, we don't care, we just need something big enough.
+    void *dummy[23];
+};
+
+typedef struct uv_loop_s uv_loop_t;
+typedef struct uv_handle_s uv_handle_t;
 typedef struct uv_poll_s uv_poll_t;
+
+typedef void (*uv_close_cb)(uv_handle_t *handle);
+typedef void (*uv_poll_cb)(uv_poll_t *handle, int status, int events);
+
+typedef struct {
+    void *handle; // HMODULE on Windows
+    char *errmsg;
+} uv_lib_t;
+
+enum uv_poll_event {
+    UV_READABLE = 1,
+    UV_WRITABLE = 2,
+    UV_DISCONNECT = 4,
+    UV_PRIORITIZED = 8
+};
+
+#if defined(_WIN32)
+    typedef uintptr_t uv_os_sock_t; // SOCKET
+    #define IMPORT __declspec(dllimport)
+#else
+    typedef int uv_os_sock_t;
+    #define IMPORT
+#endif
+
+IMPORT void uv_ref(uv_handle_t *handle);
+IMPORT void uv_unref(uv_handle_t *handle);
+IMPORT void uv_close(uv_handle_t *handle, uv_close_cb close_cb);
+
+IMPORT int uv_poll_init(uv_loop_t *loop, uv_poll_t *handle, int fd);
+IMPORT int uv_poll_init_socket(uv_loop_t *loop, uv_poll_t *handle, uv_os_sock_t socket);
+IMPORT int uv_poll_start(uv_poll_t *handle, int events, uv_poll_cb cb);
+IMPORT int uv_poll_stop(uv_poll_t *handle);
+
+IMPORT int uv_dlopen(const char *filename, uv_lib_t *lib);
+IMPORT void uv_dlclose(uv_lib_t *lib);
+IMPORT int uv_dlsym(uv_lib_t *lib, const char *name, void **ptr);
+IMPORT const char *uv_strerror(int err);
+
+#undef IMPORT
+
+};
 
 namespace K {
 

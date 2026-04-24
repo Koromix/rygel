@@ -32,7 +32,6 @@
 #include <wchar.h>
 
 #include <napi.h>
-#include <uv.h>
 
 namespace K {
 
