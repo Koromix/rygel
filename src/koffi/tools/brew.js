@@ -415,9 +415,8 @@ async function build() {
 
     console.log('>> Test package');
     {
-        let pkg_dir = dist_dir + '/koffi';
-        let proc = spawnSync(process.execPath, ['-e', 'require(process.argv[1])', pkg_dir], {
-            cwd: pkg_dir,
+        let proc = spawnSync(process.execPath, ['-e', 'require("koffi")'], {
+            cwd: dist_dir,
             env: {
                 ...process.env,
                 NODE_PATH: dist_dir
