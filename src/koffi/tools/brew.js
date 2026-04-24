@@ -396,7 +396,7 @@ async function build() {
         }
         delete main.devDependencies;
 
-        await bundleScripts(pkg_dir, packages);
+        await bundleScripts(pkg_dir, packages, true);
 
         fs.writeFileSync(pkg_dir + '/package.json', JSON.stringify(main, null, 4));
         fs.unlinkSync(pkg_dir + '/src/koffi/package.json');
@@ -522,12 +522,12 @@ async function snapshot() {
         'web/koffi.dev'
     ]));
 
-    await bundleScripts(snapshot_dir, []);
+    await bundleScripts(snapshot_dir, [], false);
 
     return snapshot_dir;
 }
 
-async function bundleScripts(dest_dir, packages) {
+async function bundleScripts(dest_dir, packages, drop) {
     await esbuild.build({
         entryPoints: [root_dir + '/src/koffi/index.js'],
         bundle: true,
@@ -604,6 +604,7 @@ async function bundleScripts(dest_dir, packages) {
         write: true,
         platform: 'node',
         outfile: dest_dir + '/src/build.js',
+        dropLabels: drop ? ['UNSAFE'] : [],
         plugins: [
             {
                 name: 'dirname',
