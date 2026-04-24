@@ -48,8 +48,7 @@ function init(root, pkg, triplets, native) {
                 continue;
 
             try {
-                // Trick so that webpack does not try to do anything with require() call
-                native = eval('require')(filename);
+                native = require(filename);
                 break;
             } catch (e) {
                 err ??= e;
