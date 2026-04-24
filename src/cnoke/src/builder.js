@@ -15,8 +15,11 @@ import {
     getNapiVersion,
     pathIsAbsolute
 } from './util.js';
-import { FIND_CNOKE_CMAKE, WIN_DELAY_HOOK_C } from './assets.js';
-import TOOLCHAINS from './toolchains.json' with { type: 'json' };
+import {
+    TOOLCHAINS,
+    FIND_CNOKE_CMAKE,
+    WIN_DELAY_HOOK_C
+} from './assets.js';
 
 const DefaultOptions = {
     mode: 'RelWithDebInfo'
