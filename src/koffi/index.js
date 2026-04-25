@@ -55,10 +55,6 @@ const _types = native.types;
 const _node = native.node;
 const _version = native.version;
 
-// Deprecated functions
-const handle = util.deprecate(_opaque, 'The koffi.handle() function was deprecated in Koffi 2.1, use koffi.opaque() instead', 'KOFFI001');
-const callback = util.deprecate(_proto, 'The koffi.callback() function was deprecated in Koffi 2.4, use koffi.proto() instead', 'KOFFI002');
-
 function load(...args) {
     let lib = _load(...args);
 
@@ -108,7 +104,5 @@ export {
     _extension as extension,
     _types as types,
     _node as node,
-    _version as version,
-    handle,
-    callback
+    _version as version
 }
