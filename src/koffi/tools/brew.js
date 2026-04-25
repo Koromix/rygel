@@ -580,6 +580,22 @@ async function bundleScripts(dest_dir, packages, drop) {
                     {
                         name: 'static',
                         setup: build => {
+                            build.onLoad({ filter: /package\.json$/ }, args => {
+                                let json = fs.readFileSync(args.path);
+                                let pkg = JSON.parse(json);
+
+                                let info = {
+                                    name: pkg.name,
+                                    version: pkg.version,
+                                    cnoke: pkg.cnoke
+                                };
+
+                                return {
+                                    contents: JSON.stringify(info),
+                                    loader: 'json'
+                                };
+                            });
+
                             build.onLoad({ filter: /\/src\/static\.js$/ }, args => {
                                 let code = `
                                     ${format == 'esm' ? `
