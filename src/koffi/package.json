@@ -21,7 +21,8 @@
     "email": "niels.martignene@protonmail.com",
     "url": "https://koromix.dev/"
   },
-  "main": "./index.js",
+  "main": "./index.cjs",
+  "module": "./index.js",
   "types": "./index.d.ts",
   "scripts": {
     "test": "node tools/brew.js test",

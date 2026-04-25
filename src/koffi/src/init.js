@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
+import util from 'util';
 import fs from 'fs';
 import path from 'path';
 import { createRequire } from 'node:module';
@@ -62,7 +63,23 @@ function loadDynamic(root, pkg, triplets) {
     return native;
 }
 
+function wrapNative(native) {
+    let load = native.load;
+
+    native.load = (...args) => {
+        let lib = load(...args);
+
+        lib.cdecl = util.deprecate((...args) => lib.func('__cdecl', ...args), 'The koffi.cdecl() function was deprecated in Koffi 2.7, use koffi.func(...) instead', 'KOFFI003');
+        lib.stdcall = util.deprecate((...args) => lib.func('__stdcall', ...args), 'The koffi.stdcall() function was deprecated in Koffi 2.7, use koffi.func("__stdcall", ...) instead', 'KOFFI004');
+        lib.fastcall = util.deprecate((...args) => lib.func('__fastcall', ...args), 'The koffi.fastcall() function was deprecated in Koffi 2.7, use koffi.func("__fastcall", ...) instead', 'KOFFI005');
+        lib.thiscall = util.deprecate((...args) => lib.func('__thiscall', ...args), 'The koffi.thiscall() function was deprecated in Koffi 2.7, use koffi.func("__thiscall", ...) instead', 'KOFFI006');
+
+        return lib;
+    };
+}
+
 export {
     detectPlatform,
-    loadDynamic
+    loadDynamic,
+    wrapNative
 }

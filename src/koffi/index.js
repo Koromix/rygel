@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
-import util from 'util';
-import { detectPlatform, loadDynamic } from './src/init.js';
+import { detectPlatform, loadDynamic, wrapNative } from './src/init.js';
 import { loadStatic } from './src/static.js';
 
 let [version, pkg, triplets] = detectPlatform();
@@ -14,6 +13,8 @@ if (native == null)
     native = loadDynamic(import.meta.dirname + '/../..', pkg, triplets);
 if (native.version != version)
     throw new Error('Mismatched native Koffi modules');
+
+wrapNative(native);
 
 // Yeah that's ugly, I know
 const _config = native.config;
@@ -55,17 +56,6 @@ const _types = native.types;
 const _node = native.node;
 const _version = native.version;
 
-function load(...args) {
-    let lib = _load(...args);
-
-    lib.cdecl = util.deprecate((...args) => lib.func('__cdecl', ...args), 'The koffi.cdecl() function was deprecated in Koffi 2.7, use koffi.func(...) instead', 'KOFFI003');
-    lib.stdcall = util.deprecate((...args) => lib.func('__stdcall', ...args), 'The koffi.stdcall() function was deprecated in Koffi 2.7, use koffi.func("__stdcall", ...) instead', 'KOFFI004');
-    lib.fastcall = util.deprecate((...args) => lib.func('__fastcall', ...args), 'The koffi.fastcall() function was deprecated in Koffi 2.7, use koffi.func("__fastcall", ...) instead', 'KOFFI005');
-    lib.thiscall = util.deprecate((...args) => lib.func('__thiscall', ...args), 'The koffi.thiscall() function was deprecated in Koffi 2.7, use koffi.func("__thiscall", ...) instead', 'KOFFI006');
-
-    return lib;
-}
-
 export {
     _config as config,
     _stats as stats,
@@ -83,7 +73,7 @@ export {
     _offsetof as offsetof,
     _resolve as resolve,
     _introspect as introspect,
-    load,
+    _load as load,
     _in as in,
     _out as out,
     _inout as inout,
