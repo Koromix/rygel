@@ -562,7 +562,7 @@ async function bundleScripts(dest_dir, packages, drop) {
 
         for (let variant in variants) {
             await esbuild.build({
-                entryPoints: [root_dir + '/src/koffi/index.js'],
+                entryPoints: [root_dir + '/src/koffi/index' + ext],
                 bundle: true,
                 minify: false,
                 write: true,
