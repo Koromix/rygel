@@ -5194,10 +5194,6 @@ inline void ObjectWrap<T>::FinalizeCallback(node_addon_api_basic_env env,
 
   // If class overrides the basic finalizer, execute it.
   if constexpr (details::HasBasicFinalizer<T>::value) {
-#ifndef NODE_API_EXPERIMENTAL_HAS_POST_FINALIZER
-    HandleScope scope(env);
-#endif
-
     instance->Finalize(Napi::BasicEnv(env));
   }
 
