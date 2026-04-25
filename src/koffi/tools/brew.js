@@ -410,8 +410,8 @@ async function build() {
         fs.rmSync(pkg_dir + '/src/koffi/package.json');
         fs.rmSync(pkg_dir + '/src/koffi/src/init.js');
         fs.rmSync(pkg_dir + '/src/koffi/src/static.js');
-        fs.writeFileSync(pkg_dir + '/index.js', 'export koffi from "./src/koffi/index.js";');
-        fs.writeFileSync(pkg_dir + '/indirect.js', 'export koffi from "./src/koffi/indirect.js";');
+        fs.writeFileSync(pkg_dir + '/index.js', 'export { default } from "./src/koffi/index.js";');
+        fs.writeFileSync(pkg_dir + '/indirect.js', 'export { default } from "./src/koffi/indirect.js";');
         fs.writeFileSync(pkg_dir + '/index.cjs', 'module.exports = require("./src/koffi/index.cjs");');
         fs.writeFileSync(pkg_dir + '/indirect.cjs', 'module.exports = require("./src/koffi/indirect.cjs");');
         fs.renameSync(pkg_dir + '/src/koffi/index.d.ts', pkg_dir + '/index.d.ts');
@@ -435,13 +435,18 @@ async function build() {
         fs.symlinkSync(dist_dir + '/koffi', dist_dir + '/node_modules/koffi');
 
         let methods = [
-            'require("koffi")',
-            'require("./koffi/index.cjs")',
-            '(await import("koffi"))'
+            'const koffi = require("koffi");',
+            'const koffi = require("./koffi/index.cjs");',
+            'import koffi from "koffi";',
+            'import koffi from "./koffi/index.js";'
         ];
 
         for (let method of methods) {
-            let proc = spawnSync(process.execPath, ['-e', method + '.config({ fast_pointers: false })'], { cwd: dist_dir });
+            let code = method + '\nkoffi.config({ fast_pointers: false });\n';
+
+            fs.writeFileSync(dist_dir + '/test.js', code);
+
+            let proc = spawnSync(process.execPath, ['./test.js'], { cwd: dist_dir });
 
             if (proc.status !== 0) {
                 let stdout = proc.stdout.toString().trim();
