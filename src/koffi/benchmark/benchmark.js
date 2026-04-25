@@ -73,21 +73,26 @@ function run(basename, ref, engines = []) {
     let results = JSON.parse(proc.stdout.toString('utf-8'));
     let tests = Object.keys(results).map(name => ({ name: name, ...results[name] }));
 
-    if (!Object.hasOwn(results, ref))
-        throw new Error('Failed to find reference test');
-    ref = results[ref];
+    if (Object.hasOwn(results, ref)) {
+        let base = results[ref];
 
-    for (let test of tests) {
-        test.ratio = (ref.time / ref.iterations) / (test.time / test.iterations);
+        for (let test of tests) {
+            test.ratio = (base.time / base.iterations) / (test.time / test.iterations);
 
-        if (test != ref) {
-            test.overhead = Math.round((1 / test.ratio - 1) * 100);
-        } else {
-            test.overhead = '(ref)';
+            if (test != base) {
+                test.overhead = Math.round((1 / test.ratio - 1) * 100);
+            } else {
+                test.overhead = '(ref)';
+            }
+        }
+
+        tests.sort((test1, test2) => test2.ratio - test1.ratio);
+    } else {
+        for (let test of tests) {
+            test.ratio = '-';
+            test.overhead = '-';
         }
     }
-
-    tests.sort((test1, test2) => test2.ratio - test1.ratio);
 
     return tests;
 }
@@ -99,10 +104,10 @@ function format(name, tests, unit) {
     console.log(`${'-'.padEnd(len0, '-')} | -------------- | -------------------- | --------`);
     for (let test of tests) {
         let time = formatTime(test.time / test.iterations, unit);
-        let ratio = test.ratio.toFixed(test.ratio < 0.01 ? 3 : 2);
+        let ratio = (typeof test.ratio == 'number') ? 'x' + test.ratio.toFixed(test.ratio < 0.01 ? 3 : 2) : '(no ref)';
         let overhead = (typeof test.overhead == 'number') ? `${test.overhead >= 0 ? '+' : ''}${test.overhead}%` : test.overhead;
 
-        console.log(`${test.name.padEnd(len0, ' ')} | ${('' + time).padEnd(14, ' ')} | x${('' + ratio).padEnd(19, ' ')} | ${overhead}`);
+        console.log(`${test.name.padEnd(len0, ' ')} | ${('' + time).padEnd(14, ' ')} | ${('' + ratio).padEnd(20, ' ')} | ${overhead}`);
     }
 
     console.log('');

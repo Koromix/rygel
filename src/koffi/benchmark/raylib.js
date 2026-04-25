@@ -3,20 +3,13 @@
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
 const pkg = require('./package.json');
-const r = require('raylib');
 const koffi = require('..');
-const { node_ffi, ref, struct } = (() => {
-    if (process.platform == 'win32')
-        return {};
-    if (process.isBun)
-        return {};
-
-    const node_ffi = require('@napi-ffi/ffi-napi');
-    const ref = require('@napi-ffi/ref-napi');
-    const struct = require('@napi-ffi/ref-struct-di')(ref);
-
-    return { node_ffi, ref, struct };
-})();
+const r = optional('raylib');
+const ctypes = optional('node-ctypes');
+const ffi = optional('node:ffi');
+const ffi_napi = optional('@napi-ffi/ffi-napi');
+const ref = optional('@napi-ffi/ref-napi');
+const struct = optional('@napi-ffi/ref-struct-di')?.(ref);
 const { spawnSync } = require('child_process');
 const path = require('path');
 const { performance } = require('perf_hooks');
@@ -30,9 +23,9 @@ function main() {
 
     let tests = {
         'cxx': time => run_cxx(time),
-        'napi': time => run_napi(time),
+        'napi': time => r ? run_napi(time) : undefined,
         'koffi': time => run_koffi(time),
-        'node-ffi-napi': node_ffi ? time => run_node_ffi(time) : undefined
+        'node-ffi-napi': ffi_napi ? time => run_node_ffi_napi(time) : undefined
     };
 
     let perf = Object.fromEntries(Object.keys(tests).map(key => {
@@ -211,7 +204,7 @@ function run_koffi(time) {
     return { iterations: iterations, time: Math.round(time) };
 }
 
-function run_node_ffi(time) {
+function run_node_ffi_napi(time) {
     const Color = struct({
         r: 'uchar',
         g: 'uchar',
@@ -279,7 +272,7 @@ function run_node_ffi(time) {
 
     let lib_filename = path.join(__dirname, pkg.cnoke.output, 'raylib' + koffi.extension);
 
-    const r = node_ffi.Library(lib_filename, {
+    const r = ffi_napi.Library(lib_filename, {
         InitWindow: ['void', ['int', 'int', 'string']],
         SetTraceLogLevel: ['void', ['int']],
         GenImageColor: [Image, ['int', 'int', Color]],
@@ -328,4 +321,12 @@ function run_node_ffi(time) {
 
     time = performance.now() - start;
     return { iterations: iterations, time: Math.round(time) };
+}
+
+function optional(mod) {
+    try {
+        return require(mod);
+    } catch (err) {
+        return null;
+    }
 }

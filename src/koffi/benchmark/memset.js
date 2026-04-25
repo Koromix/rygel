@@ -5,26 +5,11 @@
 const pkg = require('./package.json');
 const napi = require(pkg.cnoke.output + '/memset_napi.node');
 const koffi = require('..');
-const ctypes = require('node-ctypes');
-const ffi = (() => {
-    try {
-        return require('node:ffi');
-    } catch (err) {
-        return null;
-    }
-})();
-const { node_ffi, ref, struct } = (() => {
-    if (process.platform == 'win32')
-        return {};
-    if (process.isBun)
-        return {};
-
-    const node_ffi = require('@napi-ffi/ffi-napi');
-    const ref = require('@napi-ffi/ref-napi');
-    const struct = require('@napi-ffi/ref-struct-di')(ref);
-
-    return { node_ffi, ref, struct };
-})();
+const ctypes = optional('node-ctypes');
+const ffi = optional('node:ffi');
+const ffi_napi = optional('@napi-ffi/ffi-napi');
+const ref = optional('@napi-ffi/ref-napi');
+const struct = optional('@napi-ffi/ref-struct-di')?.(ref);
 const { performance } = require('perf_hooks');
 
 const TIME = 8000;
@@ -38,9 +23,9 @@ function main() {
         'napi': time => run_napi(time),
         'koffi': time => run_koffi(time, true),
         'koffi (slow pointers)': time => run_koffi(time, false),
-        'node-ctypes': time => run_node_ctypes(time),
+        'node-ctypes': ctypes ? time => run_node_ctypes(time) : undefined,
         'node:ffi': ffi ? time => run_node_ffi(time) : undefined,
-        'node-ffi-napi': node_ffi ? time => run_node_ffi_napi(time) : undefined
+        'node-ffi-napi': ffi_napi ? time => run_node_ffi_napi(time) : undefined
     };
 
     let perf = Object.fromEntries(Object.keys(tests).map(key => {
@@ -145,7 +130,7 @@ function run_node_ffi(time) {
 }
 
 function run_node_ffi_napi(time) {
-    const lib = node_ffi.Library(process.platform == 'win32' ? 'msvcrt.dll' : null, {
+    const lib = ffi_napi.Library(process.platform == 'win32' ? 'msvcrt.dll' : null, {
         memset: ['void *', ['void *', 'int', 'size_t']]
     });
 
@@ -163,4 +148,12 @@ function run_node_ffi_napi(time) {
 
     time = performance.now() - start;
     return { iterations: iterations, time: Math.round(time) };
+}
+
+function optional(mod) {
+    try {
+        return require(mod);
+    } catch (err) {
+        return null;
+    }
 }

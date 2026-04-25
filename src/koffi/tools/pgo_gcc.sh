@@ -17,7 +17,11 @@ node ../cnoke/cnoke.js -D benchmark --release -v
 node ../cnoke/cnoke.js -D test --release -v
 
 echo "Running tests and benchmarks to generate profile data..."
-node benchmark/benchmark.js --koffi >/dev/null
+node benchmark/rand.js koffi >/dev/null
+node benchmark/atoi.js koffi >/dev/null
+node benchmark/memset.js koffi >/dev/null
+node benchmark/qsort.js koffi >/dev/null
+node benchmark/raylib.js koffi >/dev/null
 for x in {1..100}; do
     node test/sync.js >/dev/null
 done
