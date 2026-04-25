@@ -379,11 +379,6 @@ async function build() {
 
         let main = JSON.parse(json);
 
-        main.scripts = {
-            install: 'node src/build.js -P . -D src/koffi --prebuild --release'
-        };
-        main.cnoke.output = 'build/koffi/{{ toolchain }}';
-
         if (MONOLITH) {
             for (let artifact of artifacts) {
                 let build = path.basename(artifact.build);
@@ -395,16 +390,30 @@ async function build() {
         } else {
             main.optionalDependencies = packages.reduce((obj, pkg) => { obj[pkg.name] = main.version; return obj; }, {});
         }
+
         delete main.devDependencies;
+        delete main.main;
+        delete main.types;
+
+        main.main = './index.cjs';
+        main.module = './index.js';
+        main.types = './index.d.ts';
+
+        main.scripts = {
+            install: 'node src/build.js -P . -D src/koffi --prebuild --release'
+        };
+        main.cnoke.output = 'build/koffi/{{ toolchain }}';
 
         await bundleScripts(pkg_dir, packages, true);
 
         fs.writeFileSync(pkg_dir + '/package.json', JSON.stringify(main, null, 4));
-        fs.unlinkSync(pkg_dir + '/src/koffi/package.json');
-        fs.unlinkSync(pkg_dir + '/src/koffi/src/init.js');
-        fs.unlinkSync(pkg_dir + '/src/koffi/src/static.js');
-        fs.writeFileSync(pkg_dir + '/index.js', 'module.exports = require("./src/koffi/index.js");');
-        fs.writeFileSync(pkg_dir + '/indirect.js', 'module.exports = require("./src/koffi/indirect.js");');
+        fs.rmSync(pkg_dir + '/src/koffi/package.json');
+        fs.rmSync(pkg_dir + '/src/koffi/src/init.js');
+        fs.rmSync(pkg_dir + '/src/koffi/src/static.js');
+        fs.writeFileSync(pkg_dir + '/index.js', 'export koffi from "./src/koffi/index.js";');
+        fs.writeFileSync(pkg_dir + '/indirect.js', 'export koffi from "./src/koffi/indirect.js";');
+        fs.writeFileSync(pkg_dir + '/index.cjs', 'module.exports = require("./src/koffi/index.cjs");');
+        fs.writeFileSync(pkg_dir + '/indirect.cjs', 'module.exports = require("./src/koffi/indirect.cjs");');
         fs.renameSync(pkg_dir + '/src/koffi/index.d.ts', pkg_dir + '/index.d.ts');
         fs.renameSync(pkg_dir + '/src/koffi/README.md', pkg_dir + '/README.md');
         fs.renameSync(pkg_dir + '/src/koffi/LICENSE.txt', pkg_dir + '/LICENSE.txt');
@@ -415,21 +424,31 @@ async function build() {
         fs.rmSync(pkg_dir + '/web', { recursive: true });
     }
 
-    console.log('>> Test package');
+    console.log('>> Test packages');
     {
-        let proc = spawnSync(process.execPath, ['-e', 'require("koffi")'], {
-            cwd: dist_dir,
-            env: {
-                ...process.env,
-                NODE_PATH: dist_dir
+        fs.mkdirSync(dist_dir + '/node_modules');
+
+        if (!MONOLITH) {
+            for (let pkg of packages)
+                fs.symlinkSync(dist_dir + `/${pkg.name}`, dist_dir + `/node_modules/${pkg.name}`);
+        }
+        fs.symlinkSync(dist_dir + '/koffi', dist_dir + '/node_modules/koffi');
+
+        let methods = [
+            'require("koffi")',
+            'require("./koffi/index.cjs")',
+            '(await import("koffi"))'
+        ];
+
+        for (let method of methods) {
+            let proc = spawnSync(process.execPath, ['-e', method + '.config({ fast_pointers: false })'], { cwd: dist_dir });
+
+            if (proc.status !== 0) {
+                let stdout = proc.stdout.toString().trim();
+                let stderr = proc.stderr.toString().trim();
+
+                throw new Error(`Failed to import package with '${method}' :\n` + (stderr || stdout));
             }
-        });
-
-        if (proc.status !== 0) {
-            let stdout = proc.stdout.toString().trim();
-            let stderr = proc.stderr.toString().trim();
-
-            throw new Error('Failed to import package:\n' + (stderr || stdout));
         }
     }
 
@@ -529,74 +548,82 @@ async function snapshot() {
 }
 
 async function bundleScripts(dest_dir, packages, drop) {
-    await esbuild.build({
-        entryPoints: [root_dir + '/src/koffi/index.js'],
-        bundle: true,
-        minify: false,
-        write: true,
-        external: [BINARY_PREFIX + '*'],
-        platform: 'node',
-        outfile: dest_dir + '/src/koffi/index.js',
-        plugins: [
-            {
-                name: 'static',
-                setup: build => {
-                    build.onLoad({ filter: /\/src\/static\.js$/ }, args => {
-                        let code = `
-                            function find(pkg) {
-                                let native = null;
+    let variants = {
+        index: [],
+        indirect: ['STATIC']
+    };
+    let formats = {
+        esm: '.js',
+        cjs: '.cjs'
+    };
 
-                                ${MONOLITH ? packages.flatMap(pkg => pkg.builds.map(build => `
-                                    if (native == null && pkg == '${pkg.target}') {
-                                        try {
-                                            native = require('../../build/koffi/${build.name}/koffi.node');
-                                        } catch (err) {
-                                            // Go on
-                                        }
+    for (let format in formats) {
+        let ext = formats[format];
+
+        for (let variant in variants) {
+            await esbuild.build({
+                entryPoints: [root_dir + '/src/koffi/index.js'],
+                bundle: true,
+                minify: false,
+                write: true,
+                external: [BINARY_PREFIX + '*'],
+                platform: 'node',
+                format: format,
+                dropLabels: variants[variant],
+                outfile: dest_dir + '/src/koffi/' + variant + ext,
+                plugins: [
+                    {
+                        name: 'static',
+                        setup: build => {
+                            build.onLoad({ filter: /\/src\/static\.js$/ }, args => {
+                                let code = `
+                                    ${format == 'esm' ? `
+                                        import { createRequire } from 'node:module';
+
+                                        const requireNative = createRequire(import.meta.dirname);
+                                    ` : ''}
+                                    ${format != 'esm' ? `
+                                        const { createRequire } = require('node:module');
+
+                                        const requireNative = createRequire(__dirname);
+                                    ` : ''}
+
+                                    function loadStatic(pkg) {
+                                        let native = null;
+
+                                        ${MONOLITH ? packages.flatMap(pkg => pkg.builds.map(build => `
+                                            if (native == null && pkg == '${pkg.target}') {
+                                                try {
+                                                    native = requireNative('../../build/koffi/${build.name}/koffi.node');
+                                                } catch (err) {
+                                                    // Go on
+                                                }
+                                            }
+                                        `)).join('') : ''}
+                                        ${!MONOLITH ? packages.flatMap(pkg => `
+                                            if (pkg == '${pkg.target}')
+                                                native = requireNative('${pkg.name}');
+                                        `).join('') : ''}
+
+                                        return native;
                                     }
-                                `)).join('') : ''}
-                                ${!MONOLITH ? packages.flatMap(pkg => `
-                                    if (pkg == '${pkg.target}')
-                                        native = require('${pkg.name}');
-                                `).join('') : ''}
 
-                                return native;
-                            }
+                                    ${format == 'esm' ? 'export { loadStatic }' : 'module.exports = { loadStatic };'}
+                                `;
 
-                            module.exports = { find };
-                        `;
-
-                        return {
-                            contents: code,
-                            loader: 'js'
-                        };
-                    });
-                }
-            }
-        ]
-    });
-
-    await esbuild.build({
-        entryPoints: [root_dir + '/src/koffi/indirect.js'],
-        bundle: true,
-        minify: false,
-        write: true,
-        platform: 'node',
-        outfile: dest_dir + '/src/koffi/indirect.js',
-        plugins: [
-            {
-                name: 'package.json',
-                setup: build => {
-                    build.onResolve({ filter: /^\.\.\/package.json$/ }, args => {
-                        return {
-                            path: './package.json',
-                            external: true
+                                return {
+                                    contents: code,
+                                    loader: 'js'
+                                };
+                            });
                         }
-                    });
-                }
-            }
-        ]
-    });
+                    },
+
+                    makeDirnamePlugin(format)
+                ]
+            });
+        }
+    }
 
     await esbuild.build({
         entryPoints: [root_dir + '/src/cnoke/cnoke.js'],
@@ -604,24 +631,9 @@ async function bundleScripts(dest_dir, packages, drop) {
         minify: false,
         write: true,
         platform: 'node',
-        outfile: dest_dir + '/src/build.js',
         dropLabels: drop ? ['UNSAFE'] : [],
-        plugins: [
-            {
-                name: 'dirname',
-                setup: build => {
-                    build.onLoad({ filter: /.*\.js$/ }, args => {
-                        let js = fs.readFileSync(args.path, 'utf-8');
-                        let patched = js.replaceAll('import.meta.dirname', '__dirname');
-
-                        return {
-                            contents: patched,
-                            loader: 'js'
-                        }
-                    });
-                }
-            }
-        ]
+        outfile: dest_dir + '/src/build.js',
+        plugins: [makeDirnamePlugin('cjs')]
     });
 }
 
@@ -741,4 +753,28 @@ async function test(debug = false) {
     }
 
     return success;
+}
+
+function makeDirnamePlugin(format) {
+    let plugin = {
+        name: 'dirname',
+        setup: build => {
+            build.onLoad({ filter: /.*\.js$/ }, args => {
+                let js = fs.readFileSync(args.path, 'utf-8');
+
+                if (format == 'esm') {
+                    js = js.replaceAll('__dirname', 'import.meta.dirname');
+                } else {
+                    js = js.replaceAll('import.meta.dirname', '__dirname');
+                }
+
+                return {
+                    contents: js,
+                    loader: 'js'
+                }
+            });
+        }
+    };
+
+    return plugin;
 }

@@ -3,10 +3,8 @@
 
 // Dummy, it gets replaced in package builds ;)
 
-'use strict';
-
-function find(pkg) {
+function loadStatic(pkg) {
     return null;
 }
 
-module.exports = { find };
+export { loadStatic }
