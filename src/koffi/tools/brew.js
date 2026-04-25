@@ -429,8 +429,13 @@ async function build() {
         fs.mkdirSync(dist_dir + '/node_modules');
 
         if (!MONOLITH) {
-            for (let pkg of packages)
-                fs.symlinkSync(dist_dir + `/${pkg.name}`, dist_dir + `/node_modules/${pkg.name}`);
+            for (let pkg of packages) {
+                let linkname = dist_dir + `/node_modules/${pkg.name}`;
+                let dirname = path.dirname(linkname);
+
+                fs.mkdirSync(dirname, { recursive: true });
+                fs.symlinkSync(dist_dir + `/${pkg.name}`, linkname);
+            }
         }
         fs.symlinkSync(dist_dir + '/koffi', dist_dir + '/node_modules/koffi');
 
