@@ -427,6 +427,7 @@ async function build() {
     console.log('>> Test packages');
     {
         fs.mkdirSync(dist_dir + '/node_modules');
+        fs.mkdirSync(dist_dir + '/load');
 
         if (!MONOLITH) {
             for (let pkg of packages) {
@@ -439,25 +440,31 @@ async function build() {
         }
         fs.symlinkSync(dist_dir + '/koffi', dist_dir + '/node_modules/koffi');
 
-        let methods = [
-            'const koffi = require("koffi");',
-            'const koffi = require("./koffi/index.cjs");',
-            'import koffi from "koffi";',
-            'import koffi from "./koffi/index.js";'
+        let tests = [
+            ['const koffi = require("koffi");', '.js'],
+            ['const koffi = require("../koffi/index.cjs");', '.js'],
+            ['import koffi from "koffi";', '.mjs'],
+            ['import koffi from "../koffi/index.js"', '.mjs']
         ];
 
-        for (let method of methods) {
-            let code = method + '\nkoffi.config({ fast_pointers: false });\n';
+        for (let i = 0; i < tests.length; i++) {
+            let [method, ext] = tests[i];
 
-            fs.writeFileSync(dist_dir + '/test.js', code);
+            let filename = dist_dir + `/load/${i}${ext}`;
+            let code = method + `\nkoffi.config({ fast_pointers: false });\nconsole.log("     [Method ${i + 1}] Version " + koffi.version)`;
 
-            let proc = spawnSync(process.execPath, ['./test.js'], { cwd: dist_dir });
+            fs.writeFileSync(filename, code);
+
+            let proc = spawnSync(process.execPath, ['--no-warnings', filename], {
+                cwd: dist_dir,
+                stdio: 'inherit'
+            });
 
             if (proc.status !== 0) {
                 let stdout = proc.stdout.toString().trim();
                 let stderr = proc.stderr.toString().trim();
 
-                throw new Error(`Failed to import package with '${method}' :\n` + (stderr || stdout));
+                throw new Error(`Failed to import package with '${filename}' :\n` + (stderr || stdout));
             }
         }
     }
