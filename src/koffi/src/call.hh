@@ -87,7 +87,7 @@ struct alignas(8) CallData {
     INLINE_UNITY void PushBuffer(Span<const uint8_t> buffer, const TypeInfo *type, uint8_t *origin);
     bool PushStringArray(napi_value value, const TypeInfo *type, uint8_t *origin);
     INLINE_UNITY bool PushPointer(napi_value value, const TypeInfo *type, int directions, void **out_ptr);
-    bool PushPointerSlow(napi_value value, const TypeInfo *type, int directions, void **out_ptr);
+    bool PushPointerSlow(napi_value value, napi_valuetype kind, const TypeInfo *type, int directions, void **out_ptr);
     INLINE_UNITY bool PushCallback(napi_value value, const TypeInfo *type, void **out_ptr);
     Size PushIndirectString(Napi::Array array, const TypeInfo *ref, void **out_ptr);
 

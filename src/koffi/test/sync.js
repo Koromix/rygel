@@ -671,8 +671,8 @@ async function test() {
         UpperToInternalBuffer1('HeLlO WoRlD', ptr1);
         UpperToInternalBuffer2('BoNjOuR MoNdE', ptr2);
 
-        assert.equal(ptr1[0], 'HELLO WORLD')
-        assert.ok(typeof ptr2[0] == 'bigint');
+        assert.equal(ptr1[0], 'HELLO WORLD');
+        assert.ok(typeof ptr2[0] == 'bigint' || util.types.isExternal(ptr2[0]));
         assert.equal(koffi.decode(ptr2[0], 'char', -1), 'BONJOUR MONDE');
 
         let view = Buffer.from(koffi.view(ptr2[0], 7));

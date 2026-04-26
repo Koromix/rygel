@@ -10,8 +10,7 @@
 
 namespace K {
 
-// #define EXTERNAL_DATA_POINTERS
-// #define EXTERNAL_CALLBACK_POINTERS
+// #define EXTERNAL_POINTERS
 
 #if defined(_MSC_VER)
     #define FORCE_INLINE __forceinline
@@ -246,6 +245,9 @@ static FORCE_INLINE bool TryPointer(napi_env env, napi_value value, void **out_p
     if (uintptr_t ptr = 0; TryNumber(env, value, &ptr)) {
         *out_ptr = (void *)ptr;
         return true;
+    } else if (IsTypedArray(env, value)) {
+        napi_get_typedarray_info(env, value, nullptr, nullptr, out_ptr, nullptr, nullptr);
+        return true;
     }
 
     napi_valuetype kind = GetKindOf(env, value);
@@ -253,14 +255,13 @@ static FORCE_INLINE bool TryPointer(napi_env env, napi_value value, void **out_p
     if (IsNullOrUndefined(kind)) {
         *out_ptr = nullptr;
         return true;
-    } else if (IsTypedArray(env, value)) {
-        napi_get_typedarray_info(env, value, nullptr, nullptr, out_ptr, nullptr, nullptr);
-        return true;
+#if defined(EXTERNAL_POINTERS)
     } else if (kind == napi_external) {
         Napi::External<void> external = Napi::External<void>(env, value);
 
         *out_ptr = (void *)external.Data();
         return true;
+#endif
     } else if (IsArrayBuffer(env, value)) {
         Napi::ArrayBuffer buffer = Napi::ArrayBuffer(env, value);
 
@@ -271,11 +272,17 @@ static FORCE_INLINE bool TryPointer(napi_env env, napi_value value, void **out_p
     return false;
 }
 
-static FORCE_INLINE bool TryPointer(napi_env env, napi_value value, void **out_ptr, bool *out_external)
+// The output value type is not accurate: napi_number instead of napi_bing, napi_null instead of napi_undefined
+static FORCE_INLINE bool TryPointer(napi_env env, napi_value value, void **out_ptr, napi_valuetype *out_kind)
 {
     if (uintptr_t ptr = 0; TryNumber(env, value, &ptr)) {
         *out_ptr = (void *)ptr;
-        *out_external = false;
+        *out_kind = napi_number;
+
+        return true;
+    } else if (IsTypedArray(env, value)) {
+        napi_get_typedarray_info(env, value, nullptr, nullptr, out_ptr, nullptr, nullptr);
+        *out_kind = napi_object;
 
         return true;
     }
@@ -284,30 +291,28 @@ static FORCE_INLINE bool TryPointer(napi_env env, napi_value value, void **out_p
 
     if (IsNullOrUndefined(kind)) {
         *out_ptr = nullptr;
-        *out_external = false;
+        *out_kind = napi_null;
 
         return true;
-    } else if (IsTypedArray(env, value)) {
-        napi_get_typedarray_info(env, value, nullptr, nullptr, out_ptr, nullptr, nullptr);
-        *out_external = false;
-
-        return true;
+#if defined(EXTERNAL_POINTERS)
     } else if (kind == napi_external) {
         Napi::External<void> external = Napi::External<void>(env, value);
 
         *out_ptr = (void *)external.Data();
-        *out_external = true;
+        *out_kind = napi_external;
 
         return true;
+#endif
     } else if (IsArrayBuffer(env, value)) {
         Napi::ArrayBuffer buffer = Napi::ArrayBuffer(env, value);
 
         *out_ptr = (void *)buffer.Data();
-        *out_external = false;
+        *out_kind = napi_object;
 
         return true;
     }
 
+    *out_kind = kind;
     return false;
 }
 
@@ -426,7 +431,7 @@ Napi::Function WrapFunction(Napi::Env env, const FunctionInfo *func);
 
 static FORCE_INLINE Napi::Value WrapPointer(Napi::Env env, const TypeInfo *ref, void *ptr)
 {
-#if defined(EXTERNAL_DATA_POINTERS)
+#if defined(EXTERNAL_POINTERS)
     Napi::External<void> external = Napi::External<void>::New(env, ptr);
     return external;
 #else
@@ -437,7 +442,7 @@ static FORCE_INLINE Napi::Value WrapPointer(Napi::Env env, const TypeInfo *ref, 
 
 static FORCE_INLINE Napi::Value WrapCallback(Napi::Env env, const TypeInfo *ref, void *ptr)
 {
-#if defined(EXTERNAL_CALLBACK_POINTERS)
+#if defined(EXTERNAL_POINTERS)
     Napi::External<void> external = Napi::External<void>::New(env, ptr);
     return external;
 #else

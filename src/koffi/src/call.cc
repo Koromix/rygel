@@ -866,12 +866,13 @@ bool CallData::PushPointer(napi_value value, const TypeInfo *type, int direction
     // just made things worse. Oh, well.
 
     void *ptr = nullptr;
+    napi_valuetype kind = napi_undefined;
 
 restart:
 
-    // Fast path
-    if (bool external = false; TryPointer(env, value, &ptr, &external)) {
-        if (external && CheckValueTag(env, value, &CastMarker)) {
+    if (TryPointer(env, value, &ptr, &kind)) {
+#if defined(EXTERNAL_POINTERS)
+        if (kind == napi_external && CheckValueTag(env, value, &CastMarker)) {
             Napi::External<ValueCast> external = Napi::External<ValueCast>(env, value);
             ValueCast *cast = external.Data();
 
@@ -880,21 +881,55 @@ restart:
 
             goto restart;
         }
+#endif
 
         *out_ptr = ptr;
         return true;
     }
 
-    return PushPointerSlow(value, type, directions, out_ptr);
+#if !defined(EXTERNAL_POINTERS)
+    if (kind == napi_external && CheckValueTag(env, value, &CastMarker)) {
+        Napi::External<ValueCast> external = Napi::External<ValueCast>(env, value);
+        ValueCast *cast = external.Data();
+
+        napi_get_reference_value(env, cast->ref, &value);
+        type = cast->type;
+
+        goto restart;
+    }
+#endif
+
+    return PushPointerSlow(value, kind, type, directions, out_ptr);
 }
 
-bool CallData::PushPointerSlow(napi_value value, const TypeInfo *type, int directions, void **out_ptr)
+bool CallData::PushPointerSlow(napi_value value, napi_valuetype kind, const TypeInfo *type, int directions, void **out_ptr)
 {
     const TypeInfo *ref = type->ref.type;
 
     void *ptr = nullptr;
 
-    if (IsArray(env, value)) {
+    if (kind == napi_string) {
+        K_ASSERT(type->primitive == PrimitiveKind::Pointer);
+
+        if (directions & 2) [[unlikely]]
+            goto unexpected;
+
+        if (ref == instance->void_type) {
+            PushStringValue(value, (const char **)out_ptr);
+            return true;
+        } else if (ref->primitive == PrimitiveKind::Int8) {
+            PushStringValue(value, (const char **)out_ptr);
+            return true;
+        } else if (ref->primitive == PrimitiveKind::Int16) {
+            PushString16Value(value, (const char16_t **)out_ptr);
+            return true;
+        } else if (ref->primitive == PrimitiveKind::Int32) {
+            PushString32Value(value, (const char32_t **)out_ptr);
+            return true;
+        } else {
+            goto unexpected;
+        }
+    } else if (IsArray(env, value)) {
         Napi::Array array = Napi::Array(env, value);
         Size len = PushIndirectString(array, ref, &ptr);
 
@@ -981,27 +1016,6 @@ bool CallData::PushPointerSlow(napi_value value, const TypeInfo *type, int direc
 
         *out_ptr = ptr;
         return true;
-    } else if (napi_valuetype kind = GetKindOf(env, value); kind == napi_string) {
-        K_ASSERT(type->primitive == PrimitiveKind::Pointer);
-
-        if (directions & 2) [[unlikely]]
-            goto unexpected;
-
-        if (ref == instance->void_type) {
-            PushStringValue(value, (const char **)out_ptr);
-            return true;
-        } else if (ref->primitive == PrimitiveKind::Int8) {
-            PushStringValue(value, (const char **)out_ptr);
-            return true;
-        } else if (ref->primitive == PrimitiveKind::Int16) {
-            PushString16Value(value, (const char16_t **)out_ptr);
-            return true;
-        } else if (ref->primitive == PrimitiveKind::Int32) {
-            PushString32Value(value, (const char32_t **)out_ptr);
-            return true;
-        } else {
-            goto unexpected;
-        }
     } else if (kind == napi_function) {
         if (type->primitive != PrimitiveKind::Callback) [[unlikely]] {
             ThrowError<Napi::TypeError>(env, "Cannot pass function to type %1", type->name);
@@ -1026,11 +1040,13 @@ unexpected:
 bool CallData::PushCallback(napi_value value, const TypeInfo *type, void **out_ptr)
 {
     void *ptr = nullptr;
+    napi_valuetype kind = napi_undefined;
 
 restart:
 
-    if (bool external = false; TryPointer(env, value, &ptr, &external)) {
-        if (external && CheckValueTag(env, value, &CastMarker)) {
+    if (TryPointer(env, value, &ptr, &kind)) {
+#if defined(EXTERNAL_POINTERS)
+        if (kind == napi_external && CheckValueTag(env, value, &CastMarker)) {
             Napi::External<ValueCast> external = Napi::External<ValueCast>(env, value);
             ValueCast *cast = external.Data();
 
@@ -1039,10 +1055,13 @@ restart:
 
             goto restart;
         }
+#endif
 
         *out_ptr = ptr;
         return true;
-    } else if (GetKindOf(env, value) == napi_function) {
+    }
+
+    if (kind == napi_function) {
         Napi::Function func = Napi::Function(env, value);
 
         ptr = ReserveTrampoline(type->ref.proto, func);
@@ -1051,6 +1070,16 @@ restart:
 
         *out_ptr = ptr;
         return true;
+#if !defined(EXTERNAL_POINTERS)
+    } else if (kind == napi_external && CheckValueTag(env, value, &CastMarker)) {
+        Napi::External<ValueCast> external = Napi::External<ValueCast>(env, value);
+        ValueCast *cast = external.Data();
+
+        napi_get_reference_value(env, cast->ref, &value);
+        type = cast->type;
+
+        goto restart;
+#endif
     }
 
     ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected %2", GetValueType(instance, value), type->name);
