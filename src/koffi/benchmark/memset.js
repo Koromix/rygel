@@ -44,14 +44,14 @@ function main() {
 }
 
 function run_napi(time) {
-    let buf = Buffer.alloc(2048);
+    let buf = Buffer.alloc(8192);
 
     let start = performance.now();
     let iterations = 0;
 
     while (performance.now() - start < time) {
         for (let i = 0; i < 1000000; i++)
-            napi.memset(buf, 32, buf.length);
+            napi.memset(buf, 42, buf.length);
 
         iterations += 1000000;
     }
@@ -68,7 +68,7 @@ function run_koffi(time, fast_pointers) {
 
     const memset = lib.func('memset', 'void *', ['void *', 'int', 'size_t']);
 
-    let buf = Buffer.alloc(2048);
+    let buf = Buffer.alloc(8192);
 
     let start = performance.now();
     let iterations = 0;
@@ -89,7 +89,7 @@ function run_node_ctypes(time) {
 
     const memset = lib.func('memset', ctypes.c_void_p, [ctypes.c_void_p, ctypes.c_int32, ctypes.c_size_t]);
 
-    let buf = Buffer.alloc(2048);
+    let buf = Buffer.alloc(8192);
 
     let start = performance.now();
     let iterations = 0;
@@ -113,14 +113,14 @@ function run_node_ffi(time) {
         result: 'ptr'
     });
 
-    let buf = Buffer.alloc(2048);
+    let buf = Buffer.alloc(8192);
 
     let start = performance.now();
     let iterations = 0;
 
     while (performance.now() - start < time) {
         for (let i = 0; i < 1000000; i++)
-            memset(buf, 32, BigInt(buf.length));
+            memset(buf, 42, BigInt(buf.length));
 
         iterations += 1000000;
     }
@@ -134,14 +134,14 @@ function run_node_ffi_napi(time) {
         memset: ['void *', ['void *', 'int', 'size_t']]
     });
 
-    let buf = Buffer.alloc(2048);
+    let buf = Buffer.alloc(8192);
 
     let start = performance.now();
     let iterations = 0;
 
     while (performance.now() - start < time) {
         for (let i = 0; i < 1000000; i++)
-            lib.memset(buf, 32, buf.length);
+            lib.memset(buf, 42, buf.length);
 
         iterations += 1000000;
     }

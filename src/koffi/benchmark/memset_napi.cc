@@ -28,25 +28,25 @@ static napi_value RunMemset(napi_env env, napi_callback_info info)
         ThrowError<Napi::TypeError>(env, "Expected 3 arguments, got %1", count);
         return Napi::Env(env).Null();
     }
-    if (!Napi::Value(env, args[0]).IsTypedArray()) [[unlikely]] {
+
+    void *ptr = nullptr;
+    int value = 0;
+    int64_t len = 0;
+
+    if (napi_get_typedarray_info(env, args[0], nullptr, nullptr, &ptr, nullptr, nullptr) != napi_ok) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected TypedArray pointer");
         return Napi::Env(env).Null();
     }
-    if (!Napi::Value(env, args[1]).IsNumber()) [[unlikely]] {
+    if (napi_get_value_int32(env, args[1], &value) != napi_ok) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected number for value");
         return Napi::Env(env).Null();
     }
-    if (!Napi::Value(env, args[2]).IsNumber()) [[unlikely]] {
-        ThrowError<Napi::TypeError>(env, "Expected number for length");
+    if (napi_get_value_int64(env, args[2], &len) != napi_ok || len < 0) [[unlikely]] {
+        ThrowError<Napi::TypeError>(env, "Expected positive number for length");
         return Napi::Env(env).Null();
     }
 
-    Napi::TypedArray buf = Napi::TypedArray(env, args[0]);
-    int value = Napi::Number(env, args[1]).Int32Value();
-    size_t len = (size_t)Napi::Number(env, args[2]).Int64Value();
-
-    void *ptr = (uint8_t *)buf.ArrayBuffer().Data() + buf.ByteOffset();
-    void *ret = memset(ptr, value, len);
+    void *ret = memset(ptr, value, (size_t)len);
 
     return Napi::BigInt::New(env, (uint64_t)(uintptr_t)ret);
 }
