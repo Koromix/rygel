@@ -392,7 +392,7 @@ async function build() {
         }
 
         main.scripts = {
-            install: 'node ./build.js -P . -D src/koffi --prebuild --release'
+            install: 'node ./build.cjs -P . -D src/koffi --prebuild --release'
         };
         main.cnoke.output = 'bin/koffi/{{ toolchain }}';
 
@@ -685,7 +685,7 @@ async function bundleScripts(dest_dir, packages, drop) {
         write: true,
         platform: 'node',
         dropLabels: drop ? ['UNSAFE'] : [],
-        outfile: dest_dir + '/build.js',
+        outfile: dest_dir + '/build.cjs',
         plugins: [makeDirnamePlugin('cjs')]
     });
 }

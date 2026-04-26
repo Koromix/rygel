@@ -6,12 +6,12 @@
             "arch": "armhf",
             "machine": "debian_arm32",
             "directory": "/home/debian/luigi",
-            "build": "node ../../build.js --ccache",
+            "build": "node ../../build.cjs --ccache",
             "package": null
         },
 
         "test": {
-            "build": "node ../../build.js --ccache -D test",
+            "build": "node ../../build.cjs --ccache -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
                 "Test Union": "node test/union.js",
@@ -31,12 +31,12 @@
             "arch": "arm64",
             "machine": "debian_arm64",
             "directory": "/home/debian/luigi",
-            "build": "CC=clang-21 CXX=clang++-21 node ../../build.js --ccache",
+            "build": "CC=clang-21 CXX=clang++-21 node ../../build.cjs --ccache",
             "package": "linux-arm64"
         },
 
         "test": {
-            "build": "CC=clang-21 CXX=clang++-21 node ../../build.js --ccache -D test",
+            "build": "CC=clang-21 CXX=clang++-21 node ../../build.cjs --ccache -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
                 "Test Union": "node test/union.js",
@@ -56,12 +56,12 @@
             "arch": "ia32",
             "machine": "debian_i386",
             "directory": "/home/debian/luigi",
-            "build": "node ../../build.js --ccache",
+            "build": "node ../../build.cjs --ccache",
             "package": "linux-ia32"
         },
 
         "test": {
-            "build": "node ../../build.js --ccache -D test",
+            "build": "node ../../build.cjs --ccache -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
                 "Test Union": "node test/union.js",
@@ -81,13 +81,13 @@
             "arch": "x64",
             "machine": "debian_x64",
             "directory": "/home/debian/luigi",
-            "build": "CC=clang-21 CXX=clang++-21 node ../../build.js --ccache",
+            "build": "CC=clang-21 CXX=clang++-21 node ../../build.cjs --ccache",
             "release": "CC=clang-21 CXX=clang++-21 LLVM_PROFDATA=llvm-profdata-21 sh ./tools/pgo_clang.sh",
             "package": "linux-x64"
         },
 
         "test": {
-            "build": "CC=clang-21 CXX=clang++-21 node ../../build.js --ccache -D test",
+            "build": "CC=clang-21 CXX=clang++-21 node ../../build.cjs --ccache -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
                 "Test Union": "node test/union.js",
@@ -108,12 +108,12 @@
             "arch": "riscv64d",
             "machine": "debian_riscv64",
             "directory": "/home/debian/luigi",
-            "build": "node ../../build.js --ccache",
+            "build": "node ../../build.cjs --ccache",
             "package": null
         },
 
         "test": {
-            "build": "node ../../build.js --ccache -D test",
+            "build": "node ../../build.cjs --ccache -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
                 "Test Union": "node test/union.js",
@@ -133,12 +133,12 @@
             "arch": "ia32",
             "machine": "freebsd_i386",
             "directory": "/home/freebsd/luigi",
-            "build": "node ../../build.js --ccache",
+            "build": "node ../../build.cjs --ccache",
             "package": "freebsd-ia32"
         },
 
         "test": {
-            "build": "node ../../build.js --ccache -D test",
+            "build": "node ../../build.cjs --ccache -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
                 "Test Union": "node test/union.js",
@@ -158,12 +158,12 @@
             "arch": "x64",
             "machine": "freebsd_x64",
             "directory": "/home/freebsd/luigi",
-            "build": "node ../../build.js --ccache",
+            "build": "node ../../build.cjs --ccache",
             "package": "freebsd-x64"
         },
 
         "test": {
-            "build": "node ../../build.js --ccache -D test",
+            "build": "node ../../build.cjs --ccache -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
                 "Test Union": "node test/union.js",
@@ -183,12 +183,12 @@
             "arch": "arm64",
             "machine": "freebsd_arm64",
             "directory": "/home/freebsd/luigi",
-            "build": "node ../../build.js --ccache",
+            "build": "node ../../build.cjs --ccache",
             "package": "freebsd-arm64"
         },
 
         "test": {
-            "build": "node ../../build.js --ccache -D test",
+            "build": "node ../../build.cjs --ccache -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
                 "Test Union": "node test/union.js",
@@ -208,12 +208,12 @@
             "arch": "ia32",
             "machine": "openbsd_i386",
             "directory": "/home/openbsd/luigi",
-            "build": "node ../../build.js --ccache",
+            "build": "node ../../build.cjs --ccache",
             "package": "openbsd-ia32"
         },
 
         "test": {
-            "build": "node ../../build.js --ccache -D test",
+            "build": "node ../../build.cjs --ccache -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
                 "Test Union": "node test/union.js",
@@ -233,12 +233,12 @@
             "arch": "x64",
             "machine": "openbsd_x64",
             "directory": "/home/openbsd/luigi",
-            "build": "node ../../build.js --ccache",
+            "build": "node ../../build.cjs --ccache",
             "package": "openbsd-x64"
         },
 
         "test": {
-            "build": "node ../../build.js --ccache -D test",
+            "build": "node ../../build.cjs --ccache -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
                 "Test Union": "node test/union.js",
@@ -258,12 +258,12 @@
             "arch": "ia32",
             "machine": "windows_x64",
             "directory": "C:/Users/windows/Desktop/luigi_ia32",
-            "build": "C:\\Node32\\node32.cmd node ../../build.js",
+            "build": "C:\\Node32\\node32.cmd node ../../build.cjs",
             "package": "win32-ia32"
         },
 
         "test": {
-            "build": "C:\\Node32\\node32.cmd node ../../build.js -D test",
+            "build": "C:\\Node32\\node32.cmd node ../../build.cjs -D test",
             "commands": {
                 "Test Sync": "C:\\Node32\\node32.cmd node test/sync.js",
                 "Test Union": "C:\\Node32\\node32.cmd node test/union.js",
@@ -286,12 +286,12 @@
             "arch": "x64",
             "machine": "windows_x64",
             "directory": "C:/Users/windows/Desktop/luigi_x64",
-            "build": "C:\\Node64\\node64.cmd node ../../build.js",
+            "build": "C:\\Node64\\node64.cmd node ../../build.cjs",
             "package": "win32-x64"
         },
 
         "test": {
-            "build": "C:\\Node64\\node64.cmd node ../../build.js -D test",
+            "build": "C:\\Node64\\node64.cmd node ../../build.cjs -D test",
             "commands": {
                 "Test Sync": "C:\\Node64\\node64.cmd node test/sync.js",
                 "Test Union": "C:\\Node64\\node64.cmd node test/union.js",
@@ -314,7 +314,7 @@
             "arch": "arm64",
             "machine": "windows_x64",
             "directory": "C:/Users/windows/Desktop/luigi_arm64",
-            "build": "C:\\Node64\\node64.cmd node ../../build.js -t win32_arm64",
+            "build": "C:\\Node64\\node64.cmd node ../../build.cjs -t win32_arm64",
             "package": null
         }
     },
@@ -326,12 +326,12 @@
             "arch": "x64",
             "machine": "macos_x64",
             "directory": "/Users/macos/luigi",
-            "build": "PATH=/usr/local/bin:/usr/bin:/bin SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX11.3.sdk node ../../build.js --ccache",
+            "build": "PATH=/usr/local/bin:/usr/bin:/bin SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX11.3.sdk node ../../build.cjs --ccache",
             "package": "darwin-x64"
         },
 
         "test": {
-            "build": "PATH=/usr/local/bin:/usr/bin:/bin SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX11.3.sdk node ../../build.js --ccache -D test",
+            "build": "PATH=/usr/local/bin:/usr/bin:/bin SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX11.3.sdk node ../../build.cjs --ccache -D test",
             "commands": {
                 "Test Sync": "PATH=/usr/local/bin:/usr/bin:/bin node test/sync.js",
                 "Test Union": "PATH=/usr/local/bin:/usr/bin:/bin node test/union.js",
@@ -350,7 +350,7 @@
             "arch": "arm64",
             "machine": "macos_x64",
             "directory": "/Users/macos/luigi_arm64",
-            "build": "PATH=/usr/local/bin:/usr/bin:/bin SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX11.3.sdk node ../../build.js --ccache -t darwin_arm64",
+            "build": "PATH=/usr/local/bin:/usr/bin:/bin SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX11.3.sdk node ../../build.cjs --ccache -t darwin_arm64",
             "package": "darwin-arm64"
         }
     },
@@ -362,12 +362,12 @@
             "arch": "x64",
             "machine": "alpine_x64",
             "directory": "/home/alpine/luigi",
-            "build": "node ../../build.js --ccache",
+            "build": "node ../../build.cjs --ccache",
             "package": "linux-x64"
         },
 
         "test": {
-            "build": "node ../../build.js --ccache -D test",
+            "build": "node ../../build.cjs --ccache -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
                 "Test Union": "node test/union.js",
@@ -386,12 +386,12 @@
             "arch": "loong64",
             "machine": "debian_loong64",
             "directory": "/home/debian/luigi",
-            "build": "node ../../build.js --ccache",
+            "build": "node ../../build.cjs --ccache",
             "package": null
         },
 
         "test": {
-            "build": "node ../../build.js --ccache -D test",
+            "build": "node ../../build.cjs --ccache -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
                 "Test Union": "node test/union.js",
@@ -411,12 +411,12 @@
             "arch": "arm64",
             "machine": "alpine_arm64",
             "directory": "/home/alpine/luigi",
-            "build": "node ../../build.js --ccache",
+            "build": "node ../../build.cjs --ccache",
             "package": "linux-arm64"
         },
 
         "test": {
-            "build": "node ../../build.js --ccache -D test",
+            "build": "node ../../build.cjs --ccache -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
                 "Test Union": "node test/union.js",
