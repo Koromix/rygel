@@ -469,7 +469,7 @@ async function build() {
         }
     }
 
-    console.log('>> Write compress and publish scripts');
+    console.log('>> Write prepare and publish scripts');
     {
         let names = !MONOLITH ? packages.map(pkg => pkg.name) : [];
         names.push('koffi');
@@ -479,29 +479,32 @@ async function build() {
             filename: name.replace(/^@/, '').replace('/', '-') + `-${version}`
         }));
 
-        let compress = '#!/bin/sh -e\n\n';
+        let prepare = '#!/bin/sh -e\n\n';
         let publish = '#!/bin/sh -e\n\n';
 
         for (let pack of packs)
-            compress += `npm pack --pack-destination "${dist_dir}" "${dist_dir}/${pack.name}"\n`;
-        compress += '\n';
+            prepare += `npm pack --pack-destination "${dist_dir}" "${dist_dir}/${pack.name}"\n`;
+        prepare += '\n';
 
-        compress += 'echo "Unzipping packages"\n';
+        prepare += 'echo "Unzipping packages"\n';
         for (let pack of packs)
-            compress += `gunzip ${pack.filename}.tgz\n`;
-        compress += '\n';
+            prepare += `gunzip ${pack.filename}.tgz\n`;
+        prepare += '\n';
 
+        prepare += 'echo "Recompressing packages with zopfli"\n';
+        prepare += `parallel zopfli -- ${packs.map(pack => pack.filename + '.tar').join(' ')}\n\n`;
+
+        prepare += 'echo "Cleaning up"\n';
         for (let pack of packs) {
-            compress += `echo "Recompressing ${pack.name} with zopfli"\n`;
-            compress += `zopfli ${pack.filename}.tar\n`;
-            compress += `mv ${pack.filename}.tar.gz ${pack.filename}.tgz\n`;
-            compress += `rm ${pack.filename}.tar\n\n`;
+            prepare += `mv ${pack.filename}.tar.gz ${pack.filename}.tgz\n`;
+            prepare += `rm ${pack.filename}.tar\n`;
         }
 
+        publish += 'npm login \n\n';
         for (let pack of packs)
             publish += `npm publish --access public ${pack.filename}.tgz $*\n`;
 
-        fs.writeFileSync(dist_dir + '/compress.sh', compress, { mode: 0o755 });
+        fs.writeFileSync(dist_dir + '/prepare.sh', prepare, { mode: 0o755 });
         fs.writeFileSync(dist_dir + '/publish.sh', publish, { mode: 0o755 });
     }
 
