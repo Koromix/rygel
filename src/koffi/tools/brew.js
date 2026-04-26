@@ -391,18 +391,30 @@ async function build() {
             main.optionalDependencies = packages.reduce((obj, pkg) => { obj[pkg.name] = main.version; return obj; }, {});
         }
 
-        delete main.devDependencies;
-        delete main.main;
-        delete main.types;
-
-        main.main = './index.cjs';
-        main.module = './index.js';
-        main.types = './index.d.ts';
-
         main.scripts = {
             install: 'node src/build.js -P . -D src/koffi --prebuild --release'
         };
         main.cnoke.output = 'build/koffi/{{ toolchain }}';
+
+        delete main.devDependencies;
+        delete main.module;
+        delete main.main;
+        delete main.types;
+
+        main.type = 'module';
+        main.main = './index.cjs';
+        main.module = './index.js';
+        main.exports = {
+            '.': {
+                import: './index.js',
+                require: './index.cjs'
+            },
+            './indirect': {
+                import: './indirect.js',
+                require: './indirect.cjs'
+            }
+        };
+        main.types = './index.d.ts';
 
         await bundleScripts(pkg_dir, packages, true);
 
@@ -441,26 +453,30 @@ async function build() {
         fs.symlinkSync(dist_dir + '/koffi', dist_dir + '/node_modules/koffi');
 
         let tests = [
-            ['const koffi = require("koffi");', '.js'],
-            ['const koffi = require("../koffi/index.cjs");', '.js'],
-            ['import koffi from "koffi";', '.mjs'],
-            ['import koffi from "../koffi/index.js"', '.mjs']
+            ['CJS koffi', 'const koffi = require("koffi");', '.js'],
+            ['CJS index.cjs', 'const koffi = require("../koffi/index.cjs");', '.js'],
+            ['ESM koffi', 'import koffi from "koffi";', '.mjs'],
+            ['ESM index.js', 'import koffi from "../koffi/index.js"', '.mjs'],
+            ['CJS koffi/indirect', 'const koffi = require("koffi/indirect");', '.js'],
+            ['ESM koffi/indirect', 'import koffi from "koffi/indirect";', '.mjs']
         ];
 
         for (let i = 0; i < tests.length; i++) {
-            let [method, ext] = tests[i];
+            let [title, method, ext] = tests[i];
 
             let filename = dist_dir + `/load/${i}${ext}`;
-            let code = method + `\nkoffi.config({ fast_pointers: false });\nconsole.log("     [Method ${i + 1}] Version " + koffi.version)`;
+            let code = method + `\nkoffi.config({ fast_pointers: false });\nconsole.log(koffi.version)`;
 
             fs.writeFileSync(filename, code);
 
-            let proc = spawnSync(process.execPath, ['--no-warnings', filename], {
-                cwd: dist_dir,
-                stdio: 'inherit'
-            });
+            let proc = spawnSync(process.execPath, ['--no-warnings', filename], { cwd: dist_dir });
 
-            if (proc.status !== 0) {
+            if (proc.status === 0) {
+                let version = proc.stdout.toString().trim();
+                let align = Math.max(...tests.map(test => test[0].length)) - title.length;
+
+                console.log(`     [${title}]${' '.repeat(align + 34)}  ${version}`);
+            } else {
                 let stdout = proc.stdout.toString().trim();
                 let stderr = proc.stderr.toString().trim();
 
