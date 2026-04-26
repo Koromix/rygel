@@ -28,7 +28,6 @@ function test() {
     let success = true;
 
     scripts['Sync'] = ['sync.js'];
-    scripts['Sync (slow pointers)'] = ['sync.js', '--slow_pointers'];
     scripts['Async'] = ['async.js'];
     scripts['Callbacks'] = ['callbacks.js'];
     scripts['Union'] = ['union.js'];

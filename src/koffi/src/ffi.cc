@@ -143,20 +143,6 @@ static Napi::Value GetSetConfig(const Napi::CallbackInfo &info)
             } else if (key == "max_type_size") {
                 if (!ChangeSize(key.c_str(), value, 32, Mebibytes(512), &new_config.max_type_size))
                     return env.Null();
-            } else if (key == "fast_pointers") {
-                if (!value.IsBoolean()) {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for '%2', expected boolean", GetValueType(instance, value), key.c_str());
-                    return env.Null();
-                }
-
-                new_config.fast_pointers = value.As<Napi::Boolean>();
-            } else if (key == "fast_callbacks") {
-                if (!value.IsBoolean()) {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value for '%2', expected boolean", GetValueType(instance, value), key.c_str());
-                    return env.Null();
-                }
-
-                new_config.fast_callbacks = value.As<Napi::Boolean>();
             } else {
                 ThrowError<Napi::Error>(env, "Unexpected config member '%1'", key.c_str());
                 return env.Null();
@@ -181,8 +167,6 @@ static Napi::Value GetSetConfig(const Napi::CallbackInfo &info)
     obj.Set("resident_async_pools", instance->config.resident_async_pools);
     obj.Set("max_async_calls", instance->config.resident_async_pools + instance->config.max_temporaries);
     obj.Set("max_type_size", instance->config.max_type_size);
-    obj.Set("fast_pointers", instance->config.fast_pointers);
-    obj.Set("fast_callbacks", instance->config.fast_callbacks);
 
     return obj;
 }

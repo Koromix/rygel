@@ -152,8 +152,6 @@ type KoffiConfig = {
     resident_async_pools?: number;
     max_async_calls?: number;
     max_type_size?: number;
-    fast_pointers?: boolean;
-    fast_callbacks?: boolean;
 };
 type KoffiStats = {
     disposed: number

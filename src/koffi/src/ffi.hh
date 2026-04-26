@@ -309,9 +309,6 @@ struct InstanceData {
         int resident_async_pools = DefaultResidentAsyncPools;
         int max_temporaries = DefaultMaxAsyncCalls - DefaultResidentAsyncPools;
         Size max_type_size = DefaultMaxTypeSize;
-
-        bool fast_pointers = true;
-        bool fast_callbacks = true;
     } config;
 
     struct {

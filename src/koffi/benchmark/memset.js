@@ -21,8 +21,7 @@ function main() {
 
     let tests = {
         'napi': time => run_napi(time),
-        'koffi': time => run_koffi(time, true),
-        'koffi (slow pointers)': time => run_koffi(time, false),
+        'koffi': time => run_koffi(time),
         'node-ctypes': ctypes ? time => run_node_ctypes(time) : undefined,
         'node:ffi': ffi ? time => run_node_ffi(time) : undefined,
         'node-ffi-napi': ffi_napi ? time => run_node_ffi_napi(time) : undefined
@@ -60,10 +59,7 @@ function run_napi(time) {
     return { iterations: iterations, time: Math.round(time) };
 }
 
-function run_koffi(time, fast_pointers) {
-    koffi.reset();
-    koffi.config({ fast_pointers: fast_pointers });
-
+function run_koffi(time) {
     let lib = koffi.load(process.platform == 'win32' ? 'msvcrt.dll' : null);
 
     const memset = lib.func('memset', 'void *', ['void *', 'int', 'size_t']);

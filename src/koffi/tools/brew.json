@@ -14,7 +14,6 @@
             "build": "node ../../build.js --ccache -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
-                "Test Sync (slow pointers)": "node test/sync.js --slow_pointers",
                 "Test Union": "node test/union.js",
                 "Test Async": "node test/async.js",
                 "Test Callbacks": "node test/callbacks.js",
@@ -40,7 +39,6 @@
             "build": "CC=clang-21 CXX=clang++-21 node ../../build.js --ccache -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
-                "Test Sync (slow pointers)": "node test/sync.js --slow_pointers",
                 "Test Union": "node test/union.js",
                 "Test Async": "node test/async.js",
                 "Test Callbacks": "node test/callbacks.js",
@@ -66,7 +64,6 @@
             "build": "node ../../build.js --ccache -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
-                "Test Sync (slow pointers)": "node test/sync.js --slow_pointers",
                 "Test Union": "node test/union.js",
                 "Test Async": "node test/async.js",
                 "Test Callbacks": "node test/callbacks.js",
@@ -93,7 +90,6 @@
             "build": "CC=clang-21 CXX=clang++-21 node ../../build.js --ccache -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
-                "Test Sync (slow pointers)": "node test/sync.js --slow_pointers",
                 "Test Union": "node test/union.js",
                 "Test Async": "node test/async.js",
                 "Test Callbacks": "node test/callbacks.js",
@@ -120,7 +116,6 @@
             "build": "node ../../build.js --ccache -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
-                "Test Sync (slow pointers)": "node test/sync.js --slow_pointers",
                 "Test Union": "node test/union.js",
                 "Test Async": "node test/async.js",
                 "Test Callbacks": "node test/callbacks.js",
@@ -146,7 +141,6 @@
             "build": "node ../../build.js --ccache -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
-                "Test Sync (slow pointers)": "node test/sync.js --slow_pointers",
                 "Test Union": "node test/union.js",
                 "Test Async": "node test/async.js",
                 "Test Callbacks": "node test/callbacks.js",
@@ -172,7 +166,6 @@
             "build": "node ../../build.js --ccache -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
-                "Test Sync (slow pointers)": "node test/sync.js --slow_pointers",
                 "Test Union": "node test/union.js",
                 "Test Async": "node test/async.js",
                 "Test Callbacks": "node test/callbacks.js",
@@ -198,7 +191,6 @@
             "build": "node ../../build.js --ccache -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
-                "Test Sync (slow pointers)": "node test/sync.js --slow_pointers",
                 "Test Union": "node test/union.js",
                 "Test Async": "node test/async.js",
                 "Test Callbacks": "node test/callbacks.js",
@@ -224,7 +216,6 @@
             "build": "node ../../build.js --ccache -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
-                "Test Sync (slow pointers)": "node test/sync.js --slow_pointers",
                 "Test Union": "node test/union.js",
                 "Test Async": "node test/async.js",
                 "Test Callbacks": "node test/callbacks.js",
@@ -250,7 +241,6 @@
             "build": "node ../../build.js --ccache -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
-                "Test Sync (slow pointers)": "node test/sync.js --slow_pointers",
                 "Test Union": "node test/union.js",
                 "Test Async": "node test/async.js",
                 "Test Callbacks": "node test/callbacks.js",
@@ -276,7 +266,6 @@
             "build": "C:\\Node32\\node32.cmd node ../../build.js -D test",
             "commands": {
                 "Test Sync": "C:\\Node32\\node32.cmd node test/sync.js",
-                "Test Sync (slow pointers)": "C:\\Node32\\node32.cmd node test/sync.js --slow_pointers",
                 "Test Union": "C:\\Node32\\node32.cmd node test/union.js",
                 "Test Async": "C:\\Node32\\node32.cmd node test/async.js",
                 "Test Callbacks": "C:\\Node32\\node32.cmd node test/callbacks.js",
@@ -305,7 +294,6 @@
             "build": "C:\\Node64\\node64.cmd node ../../build.js -D test",
             "commands": {
                 "Test Sync": "C:\\Node64\\node64.cmd node test/sync.js",
-                "Test Sync (slow pointers)": "C:\\Node64\\node64.cmd node test/sync.js --slow_pointers",
                 "Test Union": "C:\\Node64\\node64.cmd node test/union.js",
                 "Test Async": "C:\\Node64\\node64.cmd node test/async.js",
                 "Test Callbacks": "C:\\Node64\\node64.cmd node test/callbacks.js",
@@ -346,7 +334,6 @@
             "build": "PATH=/usr/local/bin:/usr/bin:/bin SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX11.3.sdk node ../../build.js --ccache -D test",
             "commands": {
                 "Test Sync": "PATH=/usr/local/bin:/usr/bin:/bin node test/sync.js",
-                "Test Sync (slow pointers)": "PATH=/usr/local/bin:/usr/bin:/bin node test/sync.js --slow_pointers",
                 "Test Union": "PATH=/usr/local/bin:/usr/bin:/bin node test/union.js",
                 "Test Async": "PATH=/usr/local/bin:/usr/bin:/bin node test/async.js",
                 "Test Callbacks": "PATH=/usr/local/bin:/usr/bin:/bin node test/callbacks.js",
@@ -383,7 +370,6 @@
             "build": "node ../../build.js --ccache -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
-                "Test Sync (slow pointers)": "node test/sync.js --slow_pointers",
                 "Test Union": "node test/union.js",
                 "Test Async": "node test/async.js",
                 "Test Callbacks": "node test/callbacks.js",
@@ -408,7 +394,6 @@
             "build": "node ../../build.js --ccache -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
-                "Test Sync (slow pointers)": "node test/sync.js --slow_pointers",
                 "Test Union": "node test/union.js",
                 "Test Async": "node test/async.js",
                 "Test Callbacks": "node test/callbacks.js",
@@ -434,7 +419,6 @@
             "build": "node ../../build.js --ccache -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
-                "Test Sync (slow pointers)": "node test/sync.js --slow_pointers",
                 "Test Union": "node test/union.js",
                 "Test Async": "node test/async.js",
                 "Test Callbacks": "node test/callbacks.js",

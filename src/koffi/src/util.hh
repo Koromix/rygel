@@ -10,6 +10,9 @@
 
 namespace K {
 
+// #define EXTERNAL_DATA_POINTERS
+// #define EXTERNAL_CALLBACK_POINTERS
+
 #if defined(_MSC_VER)
     #define FORCE_INLINE __forceinline
 #else
@@ -420,6 +423,28 @@ static FORCE_INLINE Napi::Array GetOwnPropertyNames(napi_env env, napi_value obj
 }
 
 Napi::Function WrapFunction(Napi::Env env, const FunctionInfo *func);
+
+static FORCE_INLINE Napi::Value WrapPointer(Napi::Env env, const TypeInfo *ref, void *ptr)
+{
+#if defined(EXTERNAL_DATA_POINTERS)
+    Napi::External<void> external = Napi::External<void>::New(env, ptr);
+    return external;
+#else
+    Napi::BigInt big = Napi::BigInt::New(env, (uint64_t)(uintptr_t)ptr);
+    return big;
+#endif
+}
+
+static FORCE_INLINE Napi::Value WrapCallback(Napi::Env env, const TypeInfo *ref, void *ptr)
+{
+#if defined(EXTERNAL_CALLBACK_POINTERS)
+    Napi::External<void> external = Napi::External<void>::New(env, ptr);
+    return external;
+#else
+    Napi::BigInt big = Napi::BigInt::New(env, (uint64_t)(uintptr_t)ptr);
+    return big;
+#endif
+}
 
 Napi::Value INLINE_UNITY WrapPointer(Napi::Env env, const TypeInfo *ref, void *ptr);
 Napi::Value INLINE_UNITY WrapCallback(Napi::Env env, const TypeInfo *ref, void *ptr);

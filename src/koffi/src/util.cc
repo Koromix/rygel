@@ -1768,32 +1768,6 @@ Napi::Function WrapFunction(Napi::Env env, const FunctionInfo *func)
     return wrapper;
 }
 
-Napi::Value WrapPointer(Napi::Env env, const TypeInfo *ref, void *ptr)
-{
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
-
-    if (instance->config.fast_pointers) {
-        Napi::BigInt big = Napi::BigInt::New(env, (uint64_t)(uintptr_t)ptr);
-        return big;
-    } else {
-        Napi::External<void> external = Napi::External<void>::New(env, ptr);
-        return external;
-    }
-}
-
-Napi::Value WrapCallback(Napi::Env env, const TypeInfo *ref, void *ptr)
-{
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
-
-    if (instance->config.fast_callbacks) {
-        Napi::BigInt big = Napi::BigInt::New(env, (uint64_t)(uintptr_t)ptr);
-        return big;
-    } else {
-        Napi::External<void> external = Napi::External<void>::New(env, ptr);
-        return external;
-    }
-}
-
 bool DetectCallConvention(Span<const char> name, CallConvention *out_convention)
 {
     if (name == "__cdecl") {

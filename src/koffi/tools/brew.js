@@ -465,7 +465,7 @@ async function build() {
             let [title, method, ext] = tests[i];
 
             let filename = dist_dir + `/load/${i}${ext}`;
-            let code = method + `\nkoffi.config({ fast_pointers: false });\nconsole.log(koffi.version)`;
+            let code = method + `\nkoffi.config({ max_type_size: 1024 });\nconsole.log(koffi.version)`;
 
             fs.writeFileSync(filename, code);
 
