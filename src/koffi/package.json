@@ -33,7 +33,7 @@
   "license": "MIT",
   "cnoke": {
     "api": "../../vendor/node-api-headers",
-    "output": "../../bin/Koffi/{{ toolchain }}",
+    "output": "../../bin/koffi/{{ toolchain }}",
     "node": 16,
     "napi": 8
   },

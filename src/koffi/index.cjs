@@ -2,10 +2,15 @@
 // SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
 
 const { detectPlatform, loadDynamic, wrapNative } = require('./src/init.js');
+const { loadStatic } = require('./src/static.js');
 
 let [version, pkg, triplets] = detectPlatform();
-let native = loadDynamic(__dirname + '/../..', pkg, triplets);
+let native = null;
 
+STATIC: native = loadStatic(pkg);
+
+if (native == null)
+    native = loadDynamic(__dirname + '/../..', pkg, triplets);
 if (native.version != version)
     throw new Error('Mismatched native Koffi modules');
 

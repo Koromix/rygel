@@ -11,7 +11,7 @@ Koffi uses native modules to work. The NPM package contains binaries for various
 
 In theory, the **packagers/bundlers should be able to find all native modules** because they are explictly listed in the Javascript file (as static strings) and package them somehow.
 
-If that is not the case, you can manually arrange to copy the `node_modules/koffi/build/koffi` directory next to your bundled script.
+If that is not the case, you can manually arrange to copy the `node_modules/koffi/bin/koffi` directory next to your bundled script.
 
 Here is an example that would work:
 

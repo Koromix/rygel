@@ -145,8 +145,10 @@ cd src/koffi
 node tools/brew.js test # If not done before
 node tools/brew.js build
 
-cd ../../bin/Koffi/package
-npm publish
+cd ../../bin/koffi/packages
+
+./prepare.sh
+./publish.sh
 ```
 
 Some platforms are emulated so this can take a few minutes until the pre-built binaries are ready. Go grab a cup of coffee, come back and execute the `npm publish` command!

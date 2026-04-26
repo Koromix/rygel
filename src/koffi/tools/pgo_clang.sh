@@ -2,7 +2,7 @@
 
 cd "$(dirname $0)/.."
 
-PGO_DIR="$(pwd)/../../bin/Koffi/pgo/clang"
+PGO_DIR="$(pwd)/../../bin/koffi/pgo/clang"
 
 export CC="${CC:-clang}"
 export CXX="${CXX:-clang++}"

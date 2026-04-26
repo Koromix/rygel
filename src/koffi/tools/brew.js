@@ -32,10 +32,10 @@ const CommandFunctions = {
     build: build
 };
 
-// Globals
-
 const MONOLITH = true;
 const BINARY_PREFIX = '@koromix/koffi-';
+
+// Globals
 
 let script_dir = null;
 let root_dir = null;
@@ -157,7 +157,7 @@ async function main() {
 // Commands
 
 async function build() {
-    let build_dir = root_dir + '/bin/Koffi';
+    let build_dir = root_dir + '/bin/koffi';
     let dist_dir = build_dir + '/packages';
 
     let snapshot_dir = await snapshot();
@@ -218,7 +218,7 @@ async function build() {
             let machine = runner.machine(build.info.machine);
 
             let src_name = machine.platform + '_' + build.info.arch;
-            let src_dir = build.info.directory + `/bin/Koffi/${src_name}`;
+            let src_dir = build.info.directory + `/bin/koffi/${src_name}`;
             let dest_dir = build_dir + `/qemu/${version}/${build.key}`;
 
             if (build.info.package != null) {
@@ -382,7 +382,7 @@ async function build() {
         if (MONOLITH) {
             for (let artifact of artifacts) {
                 let build = path.basename(artifact.build);
-                let binary_dir = pkg_dir + '/build/koffi/' + build;
+                let binary_dir = pkg_dir + '/bin/koffi/' + build;
 
                 fs.mkdirSync(binary_dir, { mode: 0o755, recursive: true });
                 copyRecursive(artifact.build, binary_dir);
@@ -392,9 +392,9 @@ async function build() {
         }
 
         main.scripts = {
-            install: 'node src/build.js -P . -D src/koffi --prebuild --release'
+            install: 'node ./build.js -P . -D src/koffi --prebuild --release'
         };
-        main.cnoke.output = 'build/koffi/{{ toolchain }}';
+        main.cnoke.output = 'bin/koffi/{{ toolchain }}';
 
         delete main.devDependencies;
         delete main.module;
@@ -560,7 +560,7 @@ async function compile(command) {
 }
 
 async function snapshot() {
-    let snapshot_dir = root_dir + '/bin/Koffi/snapshot';
+    let snapshot_dir = root_dir + '/bin/koffi/snapshot';
 
     unlinkRecursive(snapshot_dir);
     fs.mkdirSync(snapshot_dir, { mode: 0o755, recursive: true });
@@ -647,7 +647,7 @@ async function bundleScripts(dest_dir, packages, drop) {
                                         ${MONOLITH ? packages.flatMap(pkg => pkg.builds.map(build => `
                                             if (native == null && pkg == '${pkg.target}') {
                                                 try {
-                                                    native = requireNative('../../build/koffi/${build.name}/koffi.node');
+                                                    native = requireNative('../../bin/koffi/${build.name}/koffi.node');
                                                 } catch (err) {
                                                     // Go on
                                                 }
@@ -685,7 +685,7 @@ async function bundleScripts(dest_dir, packages, drop) {
         write: true,
         platform: 'node',
         dropLabels: drop ? ['UNSAFE'] : [],
-        outfile: dest_dir + '/src/build.js',
+        outfile: dest_dir + '/build.js',
         plugins: [makeDirnamePlugin('cjs')]
     });
 }

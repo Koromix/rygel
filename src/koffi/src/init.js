@@ -33,22 +33,19 @@ function loadDynamic(root, pkg, triplets) {
     let native = null;
     let err = null;
 
-    if (process.resourcesPath != null)
+    if (process.resourcesPath != null) {
         roots.push(process.resourcesPath);
+        roots.push(process.resourcesPath + '/node_modules/koffi');
+    }
 
-    let filenames = roots.flatMap(dir => triplets.flatMap(triplet => [
-        `${dir}/build/koffi/${triplet}/koffi.node`,
-        `${dir}/bin/Koffi/${triplet}/koffi.node`,
-        `${dir}/node_modules/koffi/build/koffi/${triplet}/koffi.node`,
-        `${dir}/../@koromix/koffi-${pkg}/${triplet}/koffi.node`
-    ]));
+    let names = [
+        `@koromix/koffi-${pkg}`,
+        ...triplets.flatMap(triplet => roots.map(dir => `${dir}/bin/koffi/${triplet}/koffi.node`))
+    ]
 
-    for (let filename of filenames) {
-        if (!fs.existsSync(filename))
-            continue;
-
+    for (let name of names) {
         try {
-            native = requireNative(filename);
+            native = requireNative(name);
             break;
         } catch (e) {
             err ??= e;
