@@ -292,6 +292,8 @@ struct InstanceData {
 #if defined(_WIN32)
     void *main_stack_max;
     void *main_stack_min;
+
+    uint32_t last_error = 0;
 #endif
 
     BucketArray<LinkedAllocator> encode_allocators;
