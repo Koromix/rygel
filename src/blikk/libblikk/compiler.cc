@@ -128,8 +128,8 @@ private:
     StackSlot ParseExpression(unsigned int flags = 0, const bk_TypeInfo *hint = nullptr);
     bool ParseExpression(const bk_TypeInfo *type);
     void ProduceOperator(const PendingOperator &op);
-    bool EmitOperator1(bk_PrimitiveKind in_primitive, bk_Opcode code, const bk_TypeInfo *out_type);
-    bool EmitOperator2(bk_PrimitiveKind in_primitive, bk_Opcode code, const bk_TypeInfo *out_type);
+    bool EmitOperator1(bk_PrimitiveKind in_primitive, bk_Opcode code, const bk_TypeInfo *ret_type);
+    bool EmitOperator2(bk_PrimitiveKind in_primitive, bk_Opcode code, const bk_TypeInfo *ret_type);
     bk_VariableInfo *FindVariable(const char *name);
     const bk_FunctionTypeInfo *ParseFunctionType();
     const bk_ArrayTypeInfo *ParseArrayType();
@@ -142,7 +142,7 @@ private:
 
     const bk_TypeInfo *ParseType();
 
-    bool FoldInstruction(Size count, const bk_TypeInfo *out_type);
+    bool FoldInstruction(Size args, const bk_TypeInfo *ret_type);
     bool FoldCommutativeInt(bk_Opcode code1, bk_Opcode code2, int64_t neutral);
     bool FoldCommutativeInt(bk_Opcode code, int64_t neutral) { return FoldCommutativeInt(code, code, neutral); }
     bool FoldMultiplyInt();
@@ -2379,15 +2379,15 @@ void bk_Parser::ProduceOperator(const PendingOperator &op)
     }
 }
 
-bool bk_Parser::EmitOperator1(bk_PrimitiveKind in_primitive, bk_Opcode code, const bk_TypeInfo *out_type)
+bool bk_Parser::EmitOperator1(bk_PrimitiveKind in_primitive, bk_Opcode code, const bk_TypeInfo *ret_type)
 {
     const bk_TypeInfo *type = stack[stack.len - 1].type;
 
     if (type->primitive == in_primitive) {
         Emit(code);
-        FoldInstruction(1, out_type);
+        FoldInstruction(1, ret_type);
 
-        stack[stack.len - 1] = { out_type };
+        stack[stack.len - 1] = { ret_type };
 
         return true;
     } else {
@@ -2395,7 +2395,7 @@ bool bk_Parser::EmitOperator1(bk_PrimitiveKind in_primitive, bk_Opcode code, con
     }
 }
 
-bool bk_Parser::EmitOperator2(bk_PrimitiveKind in_primitive, bk_Opcode code, const bk_TypeInfo *out_type)
+bool bk_Parser::EmitOperator2(bk_PrimitiveKind in_primitive, bk_Opcode code, const bk_TypeInfo *ret_type)
 {
     const bk_TypeInfo *type1 = stack[stack.len - 2].type;
     const bk_TypeInfo *type2 = stack[stack.len - 1].type;
@@ -2403,7 +2403,7 @@ bool bk_Parser::EmitOperator2(bk_PrimitiveKind in_primitive, bk_Opcode code, con
     if (type1->primitive == in_primitive && type1 == type2) {
         Emit(code);
 
-        if (!FoldInstruction(2, out_type)) {
+        if (!FoldInstruction(2, ret_type)) {
             // We lose the ability to fold by running the instruction if a mutable value was
             // involved earlier, such as when doing x * 2 * 4 (where x is mutable).
             // But we can fold most of these by detecting Push / Operator / Push / Operator
@@ -2422,7 +2422,7 @@ bool bk_Parser::EmitOperator2(bk_PrimitiveKind in_primitive, bk_Opcode code, con
             }
         }
 
-        stack[--stack.len - 1] = { out_type };
+        stack[--stack.len - 1] = { ret_type };
 
         return true;
     } else {
@@ -3007,13 +3007,13 @@ const bk_TypeInfo *bk_Parser::ParseType()
     return type;
 }
 
-bool bk_Parser::FoldInstruction(Size count, const bk_TypeInfo *out_type)
+bool bk_Parser::FoldInstruction(Size args, const bk_TypeInfo *ret_type)
 {
     Size addr = IR.len - 1;
 
     // Make sure only constant data instructions are in use and skip them
     {
-        Size remain = count;
+        Size remain = args;
 
         while (remain) {
             addr--;
@@ -3042,7 +3042,7 @@ bool bk_Parser::FoldInstruction(Size count, const bk_TypeInfo *out_type)
         }
     }
 
-    Emit(bk_Opcode::End, out_type->size);
+    Emit(bk_Opcode::End, ret_type->size);
 
     folder.frames.RemoveFrom(1);
     folder.frames[0].func = current_func;
@@ -3054,12 +3054,12 @@ bool bk_Parser::FoldInstruction(Size count, const bk_TypeInfo *out_type)
     if (folded) {
         TrimInstructions(addr);
 
-        if (out_type->size == 1) {
+        if (ret_type->size == 1) {
             bk_PrimitiveValue value = folder.stack[folder.stack.len - 1];
-            bk_PrimitiveKind primitive = out_type->primitive;
+            bk_PrimitiveKind primitive = ret_type->primitive;
 
             Emit(bk_Opcode::Push, { .primitive = primitive }, value);
-        } else if (out_type->size) {
+        } else if (ret_type->size) {
             Size ptr = program->ro.len;
 
             program->ro.Append(folder.stack);
