@@ -276,10 +276,12 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
 
                 HfaInfo hfa = IsHFA(param.type);
 
+#if defined(_WIN32)
                 if (param.variadic) {
                     // Windows ignores HFA optimization for variadic parameters
                     hfa.count = 0;
                 }
+#endif
 
                 if (hfa.count) {
                     if (hfa.count <= vec_max - vec_index) {
