@@ -494,7 +494,7 @@ async function build() {
         testPackage(install_dir);
     }
 
-    console.log('>> Write prepare and publish scripts');
+    console.log(`>> Write prepare and publish scripts in '${dist_dir}'`);
     {
         let names = !MONOLITH ? packages.map(pkg => pkg.name) : [];
         names.push('koffi');

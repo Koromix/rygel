@@ -151,7 +151,7 @@ cd ../../bin/koffi/packages
 ./publish.sh
 ```
 
-Some platforms are emulated so this can take a few minutes until the pre-built binaries are ready. Go grab a cup of coffee, come back and execute the `npm publish` command!
+Some platforms are emulated so this can take a few minutes until the pre-built binaries are ready. You might want to go grab a cup of coffee :)
 
 # Code style
 
