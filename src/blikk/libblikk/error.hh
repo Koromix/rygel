@@ -76,7 +76,7 @@ void bk_ReportDiagnostic(bk_DiagnosticType type, Span<const char> code, const ch
             LocalArray<char, 2048> msg_buf;
             msg_buf.len += Fmt(msg_buf.TakeAvailable(), StdErr->IsVt100(), "%!..+").len;
             msg_buf.len += Fmt(msg_buf.TakeAvailable(), StdErr->IsVt100(), fmt, args...).len;
-            msg_buf.len += Fmt(msg_buf.TakeAvailable(), StdErr->IsVt100(), "\n%1 |%!0  %2%!D..%3%!0", FmtInt(line, 7), extract, comment).len;
+            msg_buf.len += Fmt(msg_buf.TakeAvailable(), StdErr->IsVt100(), "\n%1 |%!0  %2%!D..%3%!0", FmtInt(line, 7, ' '), extract, comment).len;
             msg_buf.len += Fmt(msg_buf.TakeAvailable(), StdErr->IsVt100(), "\n        |  %1%2%!M..^%!0", align, FmtRepeat(" ", align_more)).len;
 
             Log(LogLevel::Error, ctx, "%1", FmtArg(msg_buf));
@@ -89,7 +89,7 @@ void bk_ReportDiagnostic(bk_DiagnosticType type, Span<const char> code, const ch
             LocalArray<char, 2048> msg_buf;
             msg_buf.len += Fmt(msg_buf.TakeAvailable(), StdErr->IsVt100(), "%!..+").len;
             msg_buf.len += Fmt(msg_buf.TakeAvailable(), StdErr->IsVt100(), fmt, args...).len;
-            msg_buf.len += Fmt(msg_buf.TakeAvailable(), StdErr->IsVt100(), "\n    %1 |%!0  %2%!D..%3%!0", FmtInt(line, 7), extract, comment).len;
+            msg_buf.len += Fmt(msg_buf.TakeAvailable(), StdErr->IsVt100(), "\n    %1 |%!0  %2%!D..%3%!0", FmtInt(line, 7, ' '), extract, comment).len;
             msg_buf.len += Fmt(msg_buf.TakeAvailable(), StdErr->IsVt100(), "\n            |  %1%2%!D..^%!0", align, FmtRepeat(" ", align_more)).len;
 
             Log(LogLevel::Info, ctx, "%1", FmtArg(msg_buf));
