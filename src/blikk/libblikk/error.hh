@@ -79,7 +79,7 @@ void bk_ReportDiagnostic(bk_DiagnosticType type, Span<const char> code, const ch
             msg_buf.len += Fmt(msg_buf.TakeAvailable(), StdErr->IsVt100(), "\n%1 |%!0  %2%!D..%3%!0", FmtInt(line, 7), extract, comment).len;
             msg_buf.len += Fmt(msg_buf.TakeAvailable(), StdErr->IsVt100(), "\n        |  %1%2%!M..^%!0", align, FmtRepeat(" ", align_more)).len;
 
-            Log(LogLevel::Error, ctx, "%1", msg_buf.data);
+            Log(LogLevel::Error, ctx, "%1", FmtArg(msg_buf));
         } break;
 
         case bk_DiagnosticType::Hint: {
@@ -92,7 +92,7 @@ void bk_ReportDiagnostic(bk_DiagnosticType type, Span<const char> code, const ch
             msg_buf.len += Fmt(msg_buf.TakeAvailable(), StdErr->IsVt100(), "\n    %1 |%!0  %2%!D..%3%!0", FmtInt(line, 7), extract, comment).len;
             msg_buf.len += Fmt(msg_buf.TakeAvailable(), StdErr->IsVt100(), "\n            |  %1%2%!D..^%!0", align, FmtRepeat(" ", align_more)).len;
 
-            Log(LogLevel::Info, ctx, "%1", msg_buf.data);
+            Log(LogLevel::Info, ctx, "%1", FmtArg(msg_buf));
         } break;
     }
 }
@@ -108,7 +108,7 @@ void bk_ReportDiagnostic(bk_DiagnosticType type, const char *fmt, Args... args)
             msg_buf.len += Fmt(msg_buf.TakeAvailable(), StdErr->IsVt100(), fmt, args...).len;
             msg_buf.len += Fmt(msg_buf.TakeAvailable(), StdErr->IsVt100(), "%!0").len;
 
-            Log(LogLevel::Error, "Error: ", "%1", msg_buf.data);
+            Log(LogLevel::Error, "Error: ", "%1", FmtArg(msg_buf));
         } break;
 
         case bk_DiagnosticType::Hint: {
@@ -117,7 +117,7 @@ void bk_ReportDiagnostic(bk_DiagnosticType type, const char *fmt, Args... args)
             msg_buf.len += Fmt(msg_buf.TakeAvailable(), StdErr->IsVt100(), fmt, args...).len;
             msg_buf.len += Fmt(msg_buf.TakeAvailable(), StdErr->IsVt100(), "%!0").len;
 
-            Log(LogLevel::Info, "    Hint: ", "%1", msg_buf.data);
+            Log(LogLevel::Info, "    Hint: ", "%1", FmtArg(msg_buf));
         } break;
     }
 }
