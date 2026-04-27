@@ -142,7 +142,10 @@ private:
 
     const bk_TypeInfo *ParseType();
 
-    void FoldInstruction(Size count, const bk_TypeInfo *out_type);
+    bool FoldInstruction(Size count, const bk_TypeInfo *out_type);
+    bool FoldCommutativeInt(bk_Opcode code1, bk_Opcode code2, int64_t neutral);
+    bool FoldCommutativeInt(bk_Opcode code, int64_t neutral) { return FoldCommutativeInt(code, code, neutral); }
+    bool FoldMultiplyInt();
     void DiscardResult(Size discard);
     bool CopyBigConstant(Size size);
 
@@ -2399,7 +2402,25 @@ bool bk_Parser::EmitOperator2(bk_PrimitiveKind in_primitive, bk_Opcode code, con
 
     if (type1->primitive == in_primitive && type1 == type2) {
         Emit(code);
-        FoldInstruction(2, out_type);
+
+        if (!FoldInstruction(2, out_type)) {
+            // We lose the ability to fold by running the instruction if a mutable value was
+            // involved earlier, such as when doing x * 2 * 4 (where x is mutable).
+            // But we can fold most of these by detecting Push / Operator / Push / Operator
+            // instruction sequences.
+
+            switch (code) {
+                case bk_Opcode::AddInt: { FoldCommutativeInt(bk_Opcode::AddInt, bk_Opcode::SubstractInt, 0); } break;
+                case bk_Opcode::SubstractInt: { FoldCommutativeInt(bk_Opcode::AddInt, bk_Opcode::SubstractInt, 0); } break;
+                case bk_Opcode::MultiplyInt: { FoldMultiplyInt(); } break;
+
+                case bk_Opcode::OrInt: { FoldCommutativeInt(bk_Opcode::OrInt, 0); } break;
+                case bk_Opcode::AndInt: { FoldCommutativeInt(bk_Opcode::AndInt, -1); } break;
+                case bk_Opcode::XorInt: { FoldCommutativeInt(bk_Opcode::XorInt, 0); } break;
+
+                default: {} break;
+            }
+        }
 
         stack[--stack.len - 1] = { out_type };
 
@@ -2986,7 +3007,7 @@ const bk_TypeInfo *bk_Parser::ParseType()
     return type;
 }
 
-void bk_Parser::FoldInstruction(Size count, const bk_TypeInfo *out_type)
+bool bk_Parser::FoldInstruction(Size count, const bk_TypeInfo *out_type)
 {
     Size addr = IR.len - 1;
 
@@ -3007,17 +3028,17 @@ void bk_Parser::FoldInstruction(Size count, const bk_TypeInfo *out_type)
                     break;
             } else if (code == bk_Opcode::Fetch) {
                 if (IR[addr].u1.i > remain)
-                    return;
+                    return false;
                 remain -= IR[addr].u1.i;
 
                 if (!remain)
                     break;
             } else {
-                return;
+                return false;
             }
 
             if (addr <= 1) [[unlikely]]
-                return;
+                return false;
         }
     }
 
@@ -3048,6 +3069,89 @@ void bk_Parser::FoldInstruction(Size count, const bk_TypeInfo *out_type)
     } else {
         IR.len--;
     }
+
+    return folded;
+}
+
+bool bk_Parser::FoldCommutativeInt(bk_Opcode code1, bk_Opcode code2, int64_t neutral)
+{
+    Size addr = IR.len - 4;
+
+    if (IR[addr + 2].code != bk_Opcode::Push)
+        return false;
+
+    if (IR[addr + 2].u2.i == neutral) {
+        TrimInstructions(IR.len - 2);
+        return true;
+    }
+
+    if (addr < 0) [[unlikely]]
+        return false;
+
+    if (IR[addr].code == bk_Opcode::Push) {
+        bk_Opcode first = IR[addr + 1].code;
+        bk_Opcode second = IR[addr + 3].code;
+
+        if (first != code1 && first != code2)
+            return false;
+
+        IR[addr + 1] = IR[addr + 2];
+        IR[addr + 2].code = (second == first) ? code1 : code2;
+        TrimInstructions(addr);
+        IR.len += 3;
+
+        bool folded = FoldInstruction(2,  bk_IntType);
+
+        K_ASSERT(folded);
+        K_ASSERT(IR[IR.len - 1].code == bk_Opcode::Push);
+
+        if (IR[IR.len - 1].u2.i != neutral) {
+            Emit(first);
+        } else {
+            TrimInstructions(IR.len - 1);
+        }
+
+        return true;
+    }
+
+    return false;
+}
+
+bool bk_Parser::FoldMultiplyInt()
+{
+    for (;;) {
+        Size addr = IR.len - 4;
+
+        if (IR[addr + 2].code != bk_Opcode::Push)
+            return false;
+
+        // Simplify x * 1
+        if (IR[addr + 2].u2.i == 1) {
+            TrimInstructions(IR.len - 2);
+            continue;
+        }
+
+        // Eliminate x * 0
+        if (addr >= 0 && IR[addr + 1].code == bk_Opcode::MultiplyInt && IR[addr + 2].u2.i == 0) {
+            if (IR[addr].code == bk_Opcode::Push ||
+                    IR[addr].code == bk_Opcode::Fetch ||
+                    IR[addr].code == bk_Opcode::Load ||
+                    IR[addr].code == bk_Opcode::LoadLocal) {
+                TrimInstructions(addr);
+
+                Emit(bk_Opcode::Push, { .primitive = bk_PrimitiveKind::Integer }, { .i = 0 });
+                Emit(bk_Opcode::MultiplyInt);
+
+                FoldInstruction(2,  bk_IntType);
+
+                continue;
+            }
+        }
+
+        break;
+    }
+
+    return false;
 }
 
 void bk_Parser::DiscardResult(Size size)
