@@ -8,7 +8,7 @@ import { createRequire } from 'node:module';
 import { determineAbi } from '../../cnoke/src/abi.js';
 import PACKAGE from '../package.json' with { type: 'json' };
 
-const requireNative = createRequire(import.meta.dirname);
+const requireNative = createRequire(import.meta.url);
 
 function detectPlatform() {
     if (process.versions.napi == null || process.versions.napi < PACKAGE.cnoke.napi) {
@@ -39,7 +39,7 @@ function loadDynamic(root, pkg, triplets) {
     }
 
     let names = [
-        `@koromix/koffi-${pkg}`,
+        `../../../@koromix/koffi-${pkg}`,
         ...triplets.flatMap(triplet => roots.map(dir => `${dir}/bin/koffi/${triplet}/koffi.node`))
     ]
 

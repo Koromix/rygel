@@ -7,6 +7,7 @@ import fs from 'fs';
 import path from 'path';
 import { spawnSync } from 'child_process';
 import esbuild from '../../../vendor/esbuild/native/lib/main.js';
+import { determineAbi } from '../../cnoke/src/abi.js';
 import {
     DefaultCommands,
     QemuRunner,
@@ -436,53 +437,61 @@ async function build() {
         fs.rmSync(pkg_dir + '/web', { recursive: true });
     }
 
-    console.log('>> Test packages');
+    console.log('>> Test binary install');
     {
-        fs.mkdirSync(dist_dir + '/node_modules');
-        fs.mkdirSync(dist_dir + '/load');
+        let install_dir = dist_dir + '/binary';
 
-        if (!MONOLITH) {
-            for (let pkg of packages) {
-                let linkname = dist_dir + `/node_modules/${pkg.name}`;
-                let dirname = path.dirname(linkname);
+        fs.mkdirSync(install_dir, { recursive: true });
 
-                fs.mkdirSync(dirname, { recursive: true });
-                fs.symlinkSync(dist_dir + `/${pkg.name}`, linkname);
+        // Install it first
+        {
+            let directories = [];
+
+            if (!MONOLITH) {
+                let pkg = BINARY_PREFIX + `${process.platform}-${determineAbi()}`;
+                directories.push('../' + pkg);
+            }
+            directories.push('../koffi');
+
+            for (let dir of directories) {
+                let proc = spawnSync('npm', ['install', '--ignore-scripts', dir], { cwd: install_dir });
+
+                if (proc.status !== 0) {
+                    console.log(proc);
+                    let stdout = proc.stdout?.toString()?.trim();
+                    let stderr = proc.stderr?.toString()?.trim();
+
+                    throw new Error(`Failed to install 'koffi' :\n` + (stderr || stdout || proc.error));
+                }
             }
         }
-        fs.symlinkSync(dist_dir + '/koffi', dist_dir + '/node_modules/koffi');
 
-        let tests = [
-            ['CJS koffi', 'const koffi = require("koffi");', '.js'],
-            ['CJS index.cjs', 'const koffi = require("../koffi/index.cjs");', '.js'],
-            ['ESM koffi', 'import koffi from "koffi";', '.mjs'],
-            ['ESM index.js', 'import koffi from "../koffi/index.js"', '.mjs'],
-            ['CJS koffi/indirect', 'const koffi = require("koffi/indirect");', '.js'],
-            ['ESM koffi/indirect', 'import koffi from "koffi/indirect";', '.mjs']
-        ];
+        testPackage(install_dir);
+    }
 
-        for (let i = 0; i < tests.length; i++) {
-            let [title, method, ext] = tests[i];
+    console.log('>> Test source install');
+    {
+        let install_dir = dist_dir + '/source';
 
-            let filename = dist_dir + `/load/${i}${ext}`;
-            let code = method + `\nkoffi.config({ max_type_size: 1024 });\nconsole.log(koffi.version)`;
+        fs.mkdirSync(install_dir, { recursive: true });
+        fs.mkdirSync(install_dir + '/pkg', { recursive: true });
 
-            fs.writeFileSync(filename, code);
+        // Install it first
+        {
+            copyRecursive(dist_dir + '/koffi', install_dir + '/pkg', filename => !filename.startsWith('bin/'));
 
-            let proc = spawnSync(process.execPath, ['--no-warnings', filename], { cwd: dist_dir });
+            let proc = spawnSync('npm', ['install', '--omit=optional', install_dir + '/pkg'], { cwd: install_dir });
 
-            if (proc.status === 0) {
-                let version = proc.stdout.toString().trim();
-                let align = Math.max(...tests.map(test => test[0].length)) - title.length;
+            if (proc.status !== 0) {
+                console.log(proc);
+                let stdout = proc.stdout?.toString()?.trim();
+                let stderr = proc.stderr?.toString()?.trim();
 
-                console.log(`     [${title}]${' '.repeat(align + 34)}  ${version}`);
-            } else {
-                let stdout = proc.stdout.toString().trim();
-                let stderr = proc.stderr.toString().trim();
-
-                throw new Error(`Failed to import package with '${filename}' :\n` + (stderr || stdout));
+                throw new Error(`Failed to install 'koffi' :\n` + (stderr || stdout || proc.error));
             }
         }
+
+        testPackage(install_dir);
     }
 
     console.log('>> Write prepare and publish scripts');
@@ -525,6 +534,40 @@ async function build() {
     }
 
     return true;
+}
+
+function testPackage(install_dir) {
+    let tests = [
+        ['CJS koffi', 'const koffi = require("koffi");', '.cjs'],
+        ['CJS index.cjs', 'const koffi = require("../koffi/index.cjs");', '.cjs'],
+        ['ESM koffi', 'import koffi from "koffi";', '.mjs'],
+        ['ESM index.js', 'import koffi from "../koffi/index.js"', '.mjs'],
+        ['CJS koffi/indirect', 'const koffi = require("koffi/indirect");', '.cjs'],
+        ['ESM koffi/indirect', 'import koffi from "koffi/indirect";', '.mjs']
+    ];
+
+    for (let i = 0; i < tests.length; i++) {
+        let [title, method, ext] = tests[i];
+
+        let filename = install_dir + `/${i}${ext}`;
+        let code = method + `\nkoffi.config({ max_type_size: 1024 });\nconsole.log(koffi.version)`;
+
+        fs.writeFileSync(filename, code);
+
+        let proc = spawnSync(process.execPath, ['--no-warnings', filename], { cwd: install_dir });
+
+        if (proc.status === 0) {
+            let version = proc.stdout.toString().trim();
+            let align = Math.max(...tests.map(test => test[0].length)) - title.length;
+
+            console.log(`     [${title}]${' '.repeat(align + 34)}  ${version}`);
+        } else {
+            let stdout = proc.stdout.toString().trim();
+            let stderr = proc.stderr.toString().trim();
+
+            throw new Error(`Failed to import package with '${filename}' :\n` + (stderr || stdout));
+        }
+    }
 }
 
 async function compile(command) {
@@ -632,13 +675,14 @@ async function bundleScripts(dest_dir, packages, drop) {
                                 let code = `
                                     ${format == 'esm' ? `
                                         import { createRequire } from 'node:module';
+                                        import { fileURLToPath } from 'url';
 
-                                        const requireNative = createRequire(import.meta.dirname);
+                                        const requireNative = createRequire(import.meta.url);
                                     ` : ''}
                                     ${format != 'esm' ? `
                                         const { createRequire } = require('node:module');
 
-                                        const requireNative = createRequire(__dirname);
+                                        const requireNative = createRequire(__filename);
                                     ` : ''}
 
                                     function loadStatic(pkg) {
@@ -654,8 +698,12 @@ async function bundleScripts(dest_dir, packages, drop) {
                                             }
                                         `)).join('') : ''}
                                         ${!MONOLITH ? packages.flatMap(pkg => `
-                                            if (pkg == '${pkg.target}')
-                                                native = requireNative('${pkg.name}');
+                                            try {
+                                                if (pkg == '${pkg.target}')
+                                                    native = requireNative('../../../${pkg.name}');
+                                            } catch (err) {
+                                                // Go on
+                                            }
                                         `).join('') : ''}
 
                                         return native;
@@ -672,7 +720,7 @@ async function bundleScripts(dest_dir, packages, drop) {
                         }
                     },
 
-                    makeDirnamePlugin(format)
+                    makeImportMetaPlugin(format)
                 ]
             });
         }
@@ -686,7 +734,7 @@ async function bundleScripts(dest_dir, packages, drop) {
         platform: 'node',
         dropLabels: drop ? ['UNSAFE'] : [],
         outfile: dest_dir + '/build.cjs',
-        plugins: [makeDirnamePlugin('cjs')]
+        plugins: [makeImportMetaPlugin('cjs')]
     });
 }
 
@@ -808,17 +856,19 @@ async function test(debug = false) {
     return success;
 }
 
-function makeDirnamePlugin(format) {
+function makeImportMetaPlugin(format) {
     let plugin = {
-        name: 'dirname',
+        name: 'import.meta',
         setup: build => {
             build.onLoad({ filter: /.*\.js$/ }, args => {
                 let js = fs.readFileSync(args.path, 'utf-8');
 
                 if (format == 'esm') {
                     js = js.replaceAll('__dirname', 'import.meta.dirname');
+                    js = js.replaceAll('__filename', 'import.meta.url');
                 } else {
                     js = js.replaceAll('import.meta.dirname', '__dirname');
+                    js = js.replaceAll('import.meta.url', '__filename');
                 }
 
                 return {
