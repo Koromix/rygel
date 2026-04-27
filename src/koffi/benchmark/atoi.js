@@ -6,6 +6,7 @@ const pkg = require('./package.json');
 const napi = require(pkg.cnoke.output + '/atoi_napi.node');
 const koffi = require('..');
 const ctypes = optional('node-ctypes');
+const ffi_rs = optional('ffi-rs');
 const ffi = optional('node:ffi');
 const ffi_napi = optional('@napi-ffi/ffi-napi');
 const ref = optional('@napi-ffi/ref-napi');
@@ -29,6 +30,7 @@ function main() {
         'napi': time => run_napi(time),
         'koffi': time => run_koffi(time),
         'node-ctypes': ctypes ? time => run_node_ctypes(time) : undefined,
+        'ffi-rs': ffi_rs ? time => run_ffi_rs(time) : undefined,
         'node:ffi': ffi ? time => run_node_ffi(time) : undefined,
         'node-ffi-napi': ffi_napi ? time => run_node_ffi_napi(time) : undefined
     };
@@ -93,6 +95,34 @@ function run_node_ctypes(time) {
     while (performance.now() - start < time) {
         for (let i = 0; i < 1000000; i++)
             atoi(STRINGS[i % STRINGS.length]);
+
+        iterations += 1000000;
+    }
+
+    time = performance.now() - start;
+    return { iterations: iterations, time: Math.round(time) };
+}
+
+function run_ffi_rs(time) {
+    ffi_rs.open({
+        library: 'libc',
+        path: process.platform == 'win32' ? 'msvcrt.dll' : ''
+    });
+
+    const lib = ffi_rs.define({
+        atoi: {
+            library: 'libc',
+            retType: ffi_rs.DataType.I32,
+            paramsType: [ffi_rs.DataType.String]
+        }
+    });
+
+    let start = performance.now();
+    let iterations = 0;
+
+    while (performance.now() - start < time) {
+        for (let i = 0; i < 1000000; i++)
+            lib.atoi([STRINGS[i % STRINGS.length]]);
 
         iterations += 1000000;
     }

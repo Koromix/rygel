@@ -6,6 +6,7 @@ const pkg = require('./package.json');
 const napi = require(pkg.cnoke.output + '/memset_napi.node');
 const koffi = require('..');
 const ctypes = optional('node-ctypes');
+const ffi_rs = optional('ffi-rs');
 const ffi = optional('node:ffi');
 const ffi_napi = optional('@napi-ffi/ffi-napi');
 const ref = optional('@napi-ffi/ref-napi');
@@ -23,6 +24,7 @@ function main() {
         'napi': time => run_napi(time),
         'koffi': time => run_koffi(time),
         'node-ctypes': ctypes ? time => run_node_ctypes(time) : undefined,
+        'ffi-rs': ffi_rs ? time => run_ffi_rs(time) : undefined,
         'node:ffi': ffi ? time => run_node_ffi(time) : undefined,
         'node-ffi-napi': ffi_napi ? time => run_node_ffi_napi(time) : undefined
     };
@@ -93,6 +95,40 @@ function run_node_ctypes(time) {
     while (performance.now() - start < time) {
         for (let i = 0; i < 1000000; i++)
             memset(buf, 42, buf.length);
+
+        iterations += 1000000;
+    }
+
+    time = performance.now() - start;
+    return { iterations: iterations, time: Math.round(time) };
+}
+
+function run_ffi_rs(time) {
+    ffi_rs.open({
+        library: 'libc',
+        path: process.platform == 'win32' ? 'msvcrt.dll' : ''
+    });
+
+    // I could not figure out how to simply pass a Buffer to a function that expects a pointer,
+    // or how node-ffi-rs pointers are supposed to work. I did not try for long.
+    // Instead, just use BigInt for the pointers, and use koffi.address() to get the address
+    // from the buffer.
+    const lib = ffi_rs.define({
+        memset: {
+            library: 'libc',
+            retType: ffi_rs.DataType.BigInt,
+            paramsType: [ffi_rs.DataType.BigInt, ffi_rs.DataType.I32, ffi_rs.DataType.U64]
+        }
+    });
+
+    let buf = Buffer.alloc(8192);
+
+    let start = performance.now();
+    let iterations = 0;
+
+    while (performance.now() - start < time) {
+        for (let i = 0; i < 1000000; i++)
+            lib.memset([koffi.address(buf), 42, buf.length]);
 
         iterations += 1000000;
     }

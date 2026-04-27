@@ -1,6 +1,7 @@
 {
   "optionalDependencies": {
     "node-ctypes": "^1.0.2",
+    "ffi-rs": "^1.3.2",
     "raylib": "^0.14.0",
     "@napi-ffi/ffi-napi": "^4.0.3",
     "@napi-ffi/ref-array-di": "^1.2.2",
