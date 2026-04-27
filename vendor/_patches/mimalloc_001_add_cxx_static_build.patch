@@ -1,0 +1,8 @@
+diff --git a/vendor/mimalloc/src/static.cc b/vendor/mimalloc/src/static.cc
+new file mode 100644
+index 0000000000..c0d5528f1f
+--- /dev/null
++++ b/vendor/mimalloc/src/static.cc
+@@ -0,0 +1 @@
++#include "static.c"
+\ No newline at end of file
