@@ -320,6 +320,34 @@ var SHA256_IV = /* @__PURE__ */ Uint32Array.from([
   528734635,
   1541459225
 ]);
+var SHA224_IV = /* @__PURE__ */ Uint32Array.from([
+  3238371032,
+  914150663,
+  812702999,
+  4144912697,
+  4290775857,
+  1750603025,
+  1694076839,
+  3204075428
+]);
+var SHA384_IV = /* @__PURE__ */ Uint32Array.from([
+  3418070365,
+  3238371032,
+  1654270250,
+  914150663,
+  2438529370,
+  812702999,
+  355462360,
+  4144912697,
+  1731405415,
+  4290775857,
+  2394180231,
+  1750603025,
+  3675008525,
+  1694076839,
+  1203062813,
+  3204075428
+]);
 var SHA512_IV = /* @__PURE__ */ Uint32Array.from([
   1779033703,
   4089235720,
@@ -1465,6 +1493,19 @@ var _SHA256 = class extends SHA2_32B {
     super(32);
   }
 };
+var _SHA224 = class extends SHA2_32B {
+  A = SHA224_IV[0] | 0;
+  B = SHA224_IV[1] | 0;
+  C = SHA224_IV[2] | 0;
+  D = SHA224_IV[3] | 0;
+  E = SHA224_IV[4] | 0;
+  F = SHA224_IV[5] | 0;
+  G = SHA224_IV[6] | 0;
+  H = SHA224_IV[7] | 0;
+  constructor() {
+    super(28);
+  }
+};
 var K512 = /* @__PURE__ */ (() => split([
   "0x428a2f98d728ae22",
   "0x7137449123ef65cd",
@@ -1668,13 +1709,128 @@ var _SHA512 = class extends SHA2_64B {
     super(64);
   }
 };
+var _SHA384 = class extends SHA2_64B {
+  Ah = SHA384_IV[0] | 0;
+  Al = SHA384_IV[1] | 0;
+  Bh = SHA384_IV[2] | 0;
+  Bl = SHA384_IV[3] | 0;
+  Ch = SHA384_IV[4] | 0;
+  Cl = SHA384_IV[5] | 0;
+  Dh = SHA384_IV[6] | 0;
+  Dl = SHA384_IV[7] | 0;
+  Eh = SHA384_IV[8] | 0;
+  El = SHA384_IV[9] | 0;
+  Fh = SHA384_IV[10] | 0;
+  Fl = SHA384_IV[11] | 0;
+  Gh = SHA384_IV[12] | 0;
+  Gl = SHA384_IV[13] | 0;
+  Hh = SHA384_IV[14] | 0;
+  Hl = SHA384_IV[15] | 0;
+  constructor() {
+    super(48);
+  }
+};
+var T224_IV = /* @__PURE__ */ Uint32Array.from([
+  2352822216,
+  424955298,
+  1944164710,
+  2312950998,
+  502970286,
+  855612546,
+  1738396948,
+  1479516111,
+  258812777,
+  2077511080,
+  2011393907,
+  79989058,
+  1067287976,
+  1780299464,
+  286451373,
+  2446758561
+]);
+var T256_IV = /* @__PURE__ */ Uint32Array.from([
+  573645204,
+  4230739756,
+  2673172387,
+  3360449730,
+  596883563,
+  1867755857,
+  2520282905,
+  1497426621,
+  2519219938,
+  2827943907,
+  3193839141,
+  1401305490,
+  721525244,
+  746961066,
+  246885852,
+  2177182882
+]);
+var _SHA512_224 = class extends SHA2_64B {
+  Ah = T224_IV[0] | 0;
+  Al = T224_IV[1] | 0;
+  Bh = T224_IV[2] | 0;
+  Bl = T224_IV[3] | 0;
+  Ch = T224_IV[4] | 0;
+  Cl = T224_IV[5] | 0;
+  Dh = T224_IV[6] | 0;
+  Dl = T224_IV[7] | 0;
+  Eh = T224_IV[8] | 0;
+  El = T224_IV[9] | 0;
+  Fh = T224_IV[10] | 0;
+  Fl = T224_IV[11] | 0;
+  Gh = T224_IV[12] | 0;
+  Gl = T224_IV[13] | 0;
+  Hh = T224_IV[14] | 0;
+  Hl = T224_IV[15] | 0;
+  constructor() {
+    super(28);
+  }
+};
+var _SHA512_256 = class extends SHA2_64B {
+  Ah = T256_IV[0] | 0;
+  Al = T256_IV[1] | 0;
+  Bh = T256_IV[2] | 0;
+  Bl = T256_IV[3] | 0;
+  Ch = T256_IV[4] | 0;
+  Cl = T256_IV[5] | 0;
+  Dh = T256_IV[6] | 0;
+  Dl = T256_IV[7] | 0;
+  Eh = T256_IV[8] | 0;
+  El = T256_IV[9] | 0;
+  Fh = T256_IV[10] | 0;
+  Fl = T256_IV[11] | 0;
+  Gh = T256_IV[12] | 0;
+  Gl = T256_IV[13] | 0;
+  Hh = T256_IV[14] | 0;
+  Hl = T256_IV[15] | 0;
+  constructor() {
+    super(32);
+  }
+};
 var sha256 = /* @__PURE__ */ createHasher(
   () => new _SHA256(),
   /* @__PURE__ */ oidNist(1)
 );
+var sha224 = /* @__PURE__ */ createHasher(
+  () => new _SHA224(),
+  /* @__PURE__ */ oidNist(4)
+);
 var sha512 = /* @__PURE__ */ createHasher(
   () => new _SHA512(),
   /* @__PURE__ */ oidNist(3)
+);
+var sha384 = /* @__PURE__ */ createHasher(
+  () => new _SHA384(),
+  /* @__PURE__ */ oidNist(2)
+);
+var sha512_256 = /* @__PURE__ */ createHasher(
+  () => new _SHA512_256(),
+  /* @__PURE__ */ oidNist(6)
+);
+var sha512_224 = /* @__PURE__ */ createHasher(
+  () => new _SHA512_224(),
+  /* @__PURE__ */ oidNist(5)
 );
 
 // node_modules/@noble/hashes/scrypt.js
@@ -4318,6 +4474,12 @@ function cryptoSignVerifyDetached({ signature, message, publicKey }) {
 }
 export {
   _BLAKE3,
+  _SHA224,
+  _SHA256,
+  _SHA384,
+  _SHA512,
+  _SHA512_224,
+  _SHA512_256,
   blake3,
   cryptoBoxEasy,
   cryptoBoxKeyPair,
@@ -4334,7 +4496,13 @@ export {
   crypto_sign_PUBLICKEYBYTES,
   crypto_sign_SECRETKEYBYTES,
   scrypt,
-  scryptAsync
+  scryptAsync,
+  sha224,
+  sha256,
+  sha384,
+  sha512,
+  sha512_224,
+  sha512_256
 };
 /*! Bundled license information:
 
