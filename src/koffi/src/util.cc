@@ -157,7 +157,7 @@ const TypeInfo *ResolveType(Napi::Value value, int *out_directions)
         // Quick path for known types (int, float *, etc.)
         const TypeInfo *type = instance->types_map.FindValue(remain.ptr, nullptr);
 
-        if (!type || (type->flags & (int)TypeFlag::IsIncomplete)) {
+        if (!type) {
             if (out_directions) {
                 Span<const char> prefix = SplitIdentifier(remain);
                 int directions = ResolveDirections(prefix);
@@ -358,8 +358,8 @@ const TypeInfo *ResolveType(Napi::Env env, Span<const char> str)
         Size len = arrays[i];
 
         if (len > 0) {
-            if (type->flags & (int)TypeFlag::IsIncomplete) [[unlikely]] {
-                ThrowError<Napi::TypeError>(env, "Cannot make array of incomplete type");
+            if (type->primitive == PrimitiveKind::Void) [[unlikely]] {
+                ThrowError<Napi::TypeError>(env, "Cannot make array of empty or incomplete type");
                 return nullptr;
             }
 
@@ -376,11 +376,6 @@ const TypeInfo *ResolveType(Napi::Env env, Span<const char> str)
             type = MakePointerType(instance, type);
             K_ASSERT(type);
         }
-    }
-
-    if (type->flags & (int)TypeFlag::IsIncomplete) [[unlikely]] {
-        ThrowError<Napi::TypeError>(env, "Cannot directly use incomplete type");
-        return nullptr;
     }
 
     return type;

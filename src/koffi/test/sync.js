@@ -864,7 +864,7 @@ async function test() {
         () => { koffi.struct('SelfRef2', { self: 'SelfRef2' }); },
         {
             name: 'TypeError',
-            message: 'Cannot directly use incomplete type'
+            message: /Type SelfRef2 cannot be used as a member/
         }
     );
     assert.doesNotThrow(() => { koffi.union('SelfRef3', { self: 'SelfRef3 *' }); });
@@ -872,7 +872,7 @@ async function test() {
         () => { koffi.struct('SelfRef4', { self: 'SelfRef4' }); },
         {
             name: 'TypeError',
-            message: 'Cannot directly use incomplete type'
+            message: /Type SelfRef4 cannot be used as a member/
         }
     );
 

@@ -220,8 +220,10 @@ static bool MapType(Napi::Env env, InstanceData *instance, const TypeInfo *type,
     return true;
 }
 
-static bool FinalizeCompositeType(Napi::Env env, TypeInfo *type, Size size)
+static bool FinalizeCompositeType(Napi::Env env, TypeInfo *type, PrimitiveKind primitive, Size size)
 {
+    type->primitive = primitive;
+
     if (node_api_create_property_key_utf8) {
         for (RecordMember &member: type->members) {
             napi_value key = nullptr;
@@ -237,8 +239,6 @@ static bool FinalizeCompositeType(Napi::Env env, TypeInfo *type, Size size)
         return false;
     }
     type->size = (int32_t)size;
-
-    type->flags &= ~(int)TypeFlag::IsIncomplete;
 
     return true;
 }
@@ -308,9 +308,8 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
         type->name = Fmt(&instance->str_alloc, "<anonymous_%1>", instance->types.count).ptr;
     }
 
-    type->primitive = PrimitiveKind::Record;
+    type->primitive = PrimitiveKind::Void;
     type->align = 1;
-    type->flags = (int)TypeFlag::IsIncomplete;
 
     HashSet<const char *> members;
     Size size = 0;
@@ -410,7 +409,7 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
         }
     }
 
-    if (!FinalizeCompositeType(env, type, size))
+    if (!FinalizeCompositeType(env, type, PrimitiveKind::Record, size))
         return env.Null();
     err_guard.Disable();
 
@@ -497,9 +496,8 @@ static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
         type->name = Fmt(&instance->str_alloc, "<anonymous_%1>", instance->types.count).ptr;
     }
 
-    type->primitive = PrimitiveKind::Union;
+    type->primitive = PrimitiveKind::Void;
     type->align = 1;
-    type->flags = (int)TypeFlag::IsIncomplete;
 
     HashSet<const char *> members;
     int32_t size = 0;
@@ -569,7 +567,7 @@ static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
         type->members.Append(member);
     }
 
-    if (!FinalizeCompositeType(env, type, size))
+    if (!FinalizeCompositeType(env, type, PrimitiveKind::Union, size))
         return env.Null();
     err_guard.Disable();
 
