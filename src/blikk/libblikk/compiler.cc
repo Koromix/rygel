@@ -143,9 +143,10 @@ private:
     const bk_TypeInfo *ParseType();
 
     bool FoldInstruction(Size args, const bk_TypeInfo *ret_type);
-    bool FoldCommutativeInt(bk_Opcode code1, bk_Opcode code2, int64_t neutral);
-    bool FoldCommutativeInt(bk_Opcode code, int64_t neutral) { return FoldCommutativeInt(code, code, neutral); }
+    bool FoldOperatorInt2(bk_Opcode code1, bk_Opcode code2, int64_t neutral);
+    bool FoldOperatorInt2(bk_Opcode code, int64_t neutral) { return FoldOperatorInt2(code, code, neutral); }
     bool FoldMultiplyInt();
+    bool FoldDivideInt();
     void DiscardResult(Size discard);
     bool CopyBigConstant(Size size);
 
@@ -2410,13 +2411,17 @@ bool bk_Parser::EmitOperator2(bk_PrimitiveKind in_primitive, bk_Opcode code, con
             // instruction sequences.
 
             switch (code) {
-                case bk_Opcode::AddInt: { FoldCommutativeInt(bk_Opcode::AddInt, bk_Opcode::SubstractInt, 0); } break;
-                case bk_Opcode::SubstractInt: { FoldCommutativeInt(bk_Opcode::AddInt, bk_Opcode::SubstractInt, 0); } break;
-                case bk_Opcode::MultiplyInt: { FoldMultiplyInt(); } break;
+                case bk_Opcode::AddInt: { FoldOperatorInt2(bk_Opcode::AddInt, bk_Opcode::SubstractInt, 0); } break;
+                case bk_Opcode::SubstractInt: { FoldOperatorInt2(bk_Opcode::AddInt, bk_Opcode::SubstractInt, 0); } break;
+                case bk_Opcode::MultiplyInt: {
+                    FoldOperatorInt2(bk_Opcode::MultiplyInt, bk_Opcode::MultiplyInt, 1);
+                    FoldMultiplyInt();
+                } break;
+                case bk_Opcode::DivideInt: { FoldDivideInt(); } break;
 
-                case bk_Opcode::OrInt: { FoldCommutativeInt(bk_Opcode::OrInt, 0); } break;
-                case bk_Opcode::AndInt: { FoldCommutativeInt(bk_Opcode::AndInt, -1); } break;
-                case bk_Opcode::XorInt: { FoldCommutativeInt(bk_Opcode::XorInt, 0); } break;
+                case bk_Opcode::OrInt: { FoldOperatorInt2(bk_Opcode::OrInt, 0); } break;
+                case bk_Opcode::AndInt: { FoldOperatorInt2(bk_Opcode::AndInt, -1); } break;
+                case bk_Opcode::XorInt: { FoldOperatorInt2(bk_Opcode::XorInt, 0); } break;
 
                 default: {} break;
             }
@@ -3073,7 +3078,7 @@ bool bk_Parser::FoldInstruction(Size args, const bk_TypeInfo *ret_type)
     return folded;
 }
 
-bool bk_Parser::FoldCommutativeInt(bk_Opcode code1, bk_Opcode code2, int64_t neutral)
+bool bk_Parser::FoldOperatorInt2(bk_Opcode code1, bk_Opcode code2, int64_t neutral)
 {
     Size addr = IR.len - 4;
 
@@ -3119,17 +3124,11 @@ bool bk_Parser::FoldCommutativeInt(bk_Opcode code1, bk_Opcode code2, int64_t neu
 
 bool bk_Parser::FoldMultiplyInt()
 {
-    for (;;) {
+    while (IR[IR.len - 1].code == bk_Opcode::MultiplyInt) {
         Size addr = IR.len - 4;
 
         if (IR[addr + 2].code != bk_Opcode::Push)
             return false;
-
-        // Simplify x * 1
-        if (IR[addr + 2].u2.i == 1) {
-            TrimInstructions(IR.len - 2);
-            continue;
-        }
 
         // Eliminate x * 0
         if (addr >= 0 && IR[addr + 1].code == bk_Opcode::MultiplyInt && IR[addr + 2].u2.i == 0) {
@@ -3149,6 +3148,16 @@ bool bk_Parser::FoldMultiplyInt()
         }
 
         break;
+    }
+
+    return false;
+}
+
+bool bk_Parser::FoldDivideInt()
+{
+    if (IR[IR.len - 2].code == bk_Opcode::Push && IR[IR.len - 2].u2.i == 1) {
+        TrimInstructions(IR.len - 2);
+        return true;
     }
 
     return false;
