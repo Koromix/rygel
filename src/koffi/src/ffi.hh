@@ -272,6 +272,7 @@ struct InstanceData {
     const TypeInfo *str16_type;
     const TypeInfo *str32_type;
 
+    Napi::FunctionReference construct_type;
     Napi::Reference<Napi::Symbol> active_symbol;
 
     std::mutex mem_mutex;

@@ -35,8 +35,21 @@ namespace K {
 #endif
 
 extern const napi_type_tag TypeInfoMarker;
-extern const napi_type_tag CastMarker;
 extern const napi_type_tag UnionClassMarker;
+extern const napi_type_tag CastMarker;
+
+class TypeClass: public Napi::ObjectWrap<TypeClass> {
+    const TypeInfo *type;
+
+    mutable Napi::Object members;
+
+public:
+    static Napi::Function InitClass(Napi::Env env);
+
+    TypeClass(const Napi::CallbackInfo &info);
+
+    const TypeInfo *GetType() { return type; }
+};
 
 class UnionClass: public Napi::ObjectWrap<UnionClass> {
     InstanceData *instance;
@@ -102,7 +115,7 @@ TypeInfo *MakePointerType(InstanceData *instance, const TypeInfo *ref, int count
 TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len);
 TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len, ArrayHint hint);
 
-Napi::External<TypeInfo> WrapType(Napi::Env env, const TypeInfo *type);
+Napi::Object WrapType(Napi::Env env, const TypeInfo *type);
 
 bool CanPassType(const TypeInfo *type, int directions);
 bool CanReturnType(const TypeInfo *type);

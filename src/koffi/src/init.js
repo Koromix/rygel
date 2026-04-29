@@ -63,6 +63,10 @@ function loadDynamic(root, pkg, triplets) {
 function wrapNative(native) {
     let load = native.load;
 
+    // Deprecated functions
+    native.resolve = util.deprecate(native.type, 'The koffi.resolve() function was deprecated in Koffi 3.0, use koffi.type() instead', 'KOFFI007');
+    native.introspect = util.deprecate(native.type, 'The koffi.introspect() function was deprecated in Koffi 3.0, use koffi.type() instead', 'KOFFI008');
+
     native.load = (...args) => {
         let lib = load(...args);
 

@@ -12,8 +12,24 @@ namespace K {
 
 // Value does not matter, the tag system uses memory addresses
 const napi_type_tag TypeInfoMarker = { 0x1cc449675b294374, 0xbb13a50e97dcb017 };
-const napi_type_tag CastMarker = { 0x77f459614a0a412f, 0x80b3dda1341dc8df };
 const napi_type_tag UnionClassMarker = { 0x5eaf2245526a4c7d, 0x8c86c9ee2b96ffc8 };
+const napi_type_tag CastMarker = { 0x77f459614a0a412f, 0x80b3dda1341dc8df };
+
+Napi::Function TypeClass::InitClass(Napi::Env env)
+{
+    Napi::Function constructor = DefineClass(env, "Type", {});
+    return constructor;
+}
+
+TypeClass::TypeClass(const Napi::CallbackInfo &info)
+    : Napi::ObjectWrap<TypeClass>(info)
+{
+    K_ASSERT(info.Length() >= 1);
+    K_ASSERT(info[0u].IsExternal());
+
+    Napi::External<TypeInfo> external = info[0u].As<Napi::External<TypeInfo>>();
+    type = external.Data();
+}
 
 Napi::Function UnionClass::InitClass(Napi::Env env, const TypeInfo *type)
 {
@@ -194,22 +210,34 @@ const TypeInfo *ResolveType(Napi::Value value, int *out_directions)
         }
 
         return type;
-    } else if (GetKindOf(env, value) == napi_external && CheckValueTag(env, value, &TypeInfoMarker)) {
-        Napi::External<TypeInfo> external = Napi::External<TypeInfo>(env, value);
-        const TypeInfo *raw = external.Data();
-
-        const TypeInfo *type = AlignDown(raw, 4);
-        K_ASSERT(type);
-
-        if (out_directions) {
-            Size delta = (uint8_t *)raw - (uint8_t *)type;
-            *out_directions = 1 + (int)delta;
-        }
-
-        return type;
     } else {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value as type specifier, expected string or type", GetValueType(instance, value));
-        return nullptr;
+        napi_valuetype kind = GetKindOf(env, value);
+
+        if (kind == napi_external && CheckValueTag(env, value, &TypeInfoMarker)) {
+            Napi::External<TypeInfo> external = Napi::External<TypeInfo>(env, value);
+            const TypeInfo *raw = external.Data();
+
+            const TypeInfo *type = AlignDown(raw, 4);
+            K_ASSERT(type);
+
+            if (out_directions) {
+                Size delta = (uint8_t *)raw - (uint8_t *)type;
+                *out_directions = 1 + (int)delta;
+            }
+
+            return type;
+        } else if (kind == napi_object && CheckValueTag(env, value, &TypeInfoMarker)) {
+            Napi::Object obj = value.As<Napi::Object>();
+            TypeClass *defn = TypeClass::Unwrap(obj);
+
+            if (out_directions) {
+                *out_directions = 1;
+            }
+            return defn->GetType();
+        } else {
+            ThrowError<Napi::TypeError>(env, "Unexpected %1 value as type specifier, expected string or type", GetValueType(instance, value));
+            return nullptr;
+        }
     }
 }
 
@@ -342,6 +370,7 @@ const TypeInfo *ResolveType(Napi::Env env, Span<const char> str)
             memcpy((void *)copy, (const void *)type, K_SIZE(*type));
             copy->name = Fmt(&instance->str_alloc, "<anonymous_%1>", instance->types.count).ptr;
             copy->members.allocator = GetNullAllocator();
+            memset(&copy->defn, 0, K_SIZE(copy->defn));
 
             copy->dispose = [](Napi::Env env, const TypeInfo *, const void *ptr) {
                 InstanceData *instance = env.GetInstanceData<InstanceData>();
@@ -464,12 +493,81 @@ TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len, A
     return MakeArrayType(instance, ref, len, hint, false);
 }
 
-Napi::External<TypeInfo> WrapType(Napi::Env env, const TypeInfo *type)
+Napi::Object WrapType(Napi::Env env, const TypeInfo *type)
 {
-    Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, (TypeInfo *)type);
-    SetValueTag(env, external, &TypeInfoMarker);
+    if (type->defn.IsEmpty()) {
+        InstanceData *instance = env.GetInstanceData<InstanceData>();
 
-    return external;
+        Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, (TypeInfo *)type);
+        Napi::Object defn = instance->construct_type.New({ external });
+
+        defn.Set("name", Napi::String::New(env, type->name));
+        defn.Set("primitive", PrimitiveKindNames[(int)type->primitive]);
+        defn.Set("size", Napi::Number::New(env, (double)type->size));
+        defn.Set("alignment", Napi::Number::New(env, (double)type->align));
+        defn.Set("disposable", Napi::Boolean::New(env, !!type->dispose));
+
+        // Assign before to avoid possible recursion crash
+        type->defn.Reset(defn, 1);
+
+        switch (type->primitive) {
+            case PrimitiveKind::Void:
+            case PrimitiveKind::Bool:
+            case PrimitiveKind::Int8:
+            case PrimitiveKind::UInt8:
+            case PrimitiveKind::Int16:
+            case PrimitiveKind::Int16S:
+            case PrimitiveKind::UInt16:
+            case PrimitiveKind::UInt16S:
+            case PrimitiveKind::Int32:
+            case PrimitiveKind::Int32S:
+            case PrimitiveKind::UInt32:
+            case PrimitiveKind::UInt32S:
+            case PrimitiveKind::Int64:
+            case PrimitiveKind::Int64S:
+            case PrimitiveKind::UInt64:
+            case PrimitiveKind::UInt64S:
+            case PrimitiveKind::String:
+            case PrimitiveKind::String16:
+            case PrimitiveKind::String32:
+            case PrimitiveKind::Float32:
+            case PrimitiveKind::Float64:
+            case PrimitiveKind::Prototype:
+            case PrimitiveKind::Callback: {} break;
+
+            case PrimitiveKind::Array: {
+                uint32_t len = type->size / type->ref.type->size;
+                defn.Set("length", Napi::Number::New(env, (double)len));
+                defn.Set("hint", ArrayHintNames[(int)type->hint]);
+            } [[fallthrough]];
+            case PrimitiveKind::Pointer: {
+                Napi::Value value = WrapType(env, type->ref.type);
+                defn.Set("ref", value);
+            } break;
+            case PrimitiveKind::Record:
+            case PrimitiveKind::Union: {
+                Napi::Object members = Napi::Object::New(env);
+
+                for (const RecordMember &member: type->members) {
+                    Napi::Object obj = Napi::Object::New(env);
+
+                    obj.Set("name", member.name);
+                    obj.Set("type", WrapType(env, member.type));
+                    obj.Set("offset", member.offset);
+
+                    members.Set(member.name, obj);
+                }
+
+                members.Freeze();
+                defn.Set("members", members);
+            } break;
+        }
+
+        defn.Freeze();
+        SetValueTag(env, defn, &TypeInfoMarker);
+    }
+
+    return type->defn.Value();
 }
 
 bool CanPassType(const TypeInfo *type, int directions)
@@ -1449,8 +1547,7 @@ Napi::Value Decode(Napi::Env env, const uint8_t *ptr, const TypeInfo *type, cons
             func->sync = proto->sync;
             func->async = proto->async;
 
-            Napi::Function wrapper = WrapFunction(env, func);
-            return wrapper;
+            return WrapFunction(env, func);
         } break;
     }
 
