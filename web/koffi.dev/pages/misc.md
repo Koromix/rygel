@@ -1,19 +1,17 @@
 # Types
 
-## Introspection
+## Type specifiers
 
-*New in Koffi 2.0: `koffi.resolve()`, new in Koffi 2.2: `koffi.offsetof()`*
+*Changed in Koffi 3.0*
 
 > [!NOTE]
-> The value returned by `introspect()` has **changed in version 2.0 and in version 2.2**.
->
-> In Koffi 1.x, it could only be used with struct types and returned the object passed to koffi.struct() with the member names and types.
->
-> Starting in Koffi 2.2, each record member is exposed as an object containing the name, the type and the offset within the record.
+> In Koffi 2.0, types were External values, you had to use `koffi.introspect()` to get type information. In Koffi 3.0, this information is directly available in type objects, and this function is deprecated.
 >
 > Consult the [migration guide](migration) for more information.
 
-Use `koffi.introspect(type)` to get detailed information about a type: name, primitive, size, alignment, members (record types), reference type (array, pointer) and length (array).
+You can use strings or type objects to give type information to Koffi (when declaring functions, structs, and so on). Use `koffi.type(spec)` to resolve all accepted type values (strings and type objects) to type objects.
+
+You can inspect the type object for information: name, primitive, size, alignment, members (record types), reference type (array, pointer), length (array), arguments and return type (prototypes).
 
 ```js
 const FoobarType = koffi.struct('FoobarType', {
@@ -22,7 +20,7 @@ const FoobarType = koffi.struct('FoobarType', {
     c: 'double'
 });
 
-console.log(koffi.introspect(FoobarType));
+console.log(FoobarType);
 
 // Expected result on 64-bit machines:
 // {
@@ -30,10 +28,11 @@ console.log(koffi.introspect(FoobarType));
 //     primitive: 'Record',
 //     size: 24,
 //     alignment: 8,
+//     disposable: false,
 //     members: {
-//         a: { name: 'a', type: [External: 4b28a60], offset: 0 },
-//         b: { name: 'b', type: [External: 4b292e0], offset: 8 },
-//         c: { name: 'c', type: [External: 4b29260], offset: 16 }
+//         a: { name: 'a', type: [Type], offset: 0 },
+//         b: { name: 'b', type: [Type], offset: 8 },
+//         c: { name: 'c', type: [Type], offset: 16 }
 //     }
 // }
 ```
@@ -43,7 +42,7 @@ Koffi also exposes a few more utility functions to get a subset of this informat
 - `koffi.sizeof(type)` to get the size of a type
 - `koffi.alignof(type)` to get the alignment of a type
 - `koffi.offsetof(type, member_name)` to get the offset of a record member
-- `koffi.resolve(type)` to get the resolved type object from a type string
+- `koffi.type(type)` to get the resolved type object from a type string
 
 Just like before, you can refer to primitive types by their name or through `koffi.types`:
 
