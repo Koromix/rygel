@@ -4,11 +4,7 @@
 
 #include <stdint.h>
 
-#if defined(__x86_64__) || defined(_M_X64) || defined(__aarch64__)
-typedef int64_t Size;
-#elif defined(__i386__) || defined(_M_IX86) || defined(__arm__) || defined(__EMSCRIPTEN__)
-typedef int32_t Size;
-#endif
+typedef intptr_t Size;
 
 #if defined(EXPORT)
     #if defined(_WIN32)
