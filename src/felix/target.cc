@@ -23,6 +23,7 @@ struct TargetConfig {
     const char *name;
     TargetType type;
     unsigned int platforms;
+    unsigned int architectures;
     bool enable_by_default;
 
     const char *title;
@@ -246,9 +247,11 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
             target_config.name = DuplicateString(prop.section, &set.str_alloc).ptr;
             target_config.type = TargetType::Executable;
             target_config.platforms = ParseSupportedPlatforms("Desktop");
-            K_ASSERT(target_config.platforms);
+            target_config.architectures = UINT_MAX;
             target_config.title = target_config.name;
             target_config.version_tag = target_config.name;
+
+            K_ASSERT(target_config.platforms);
 
             // Don't reuse target names
             if (!known_targets.InsertOrFail(target_config.name)) {
@@ -281,6 +284,13 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
 
                     if (!target_config.platforms) {
                         LogError("Unknown platform or platform family '%1'", prop.value);
+                        valid = false;
+                    }
+                } else if (prop.key == "Architectures") {
+                    target_config.architectures = ParseSupportedArchitectures(prop.value);
+
+                    if (!target_config.architectures) {
+                        LogError("Unknown architecture or list '%1'", prop.value);
                         valid = false;
                     }
                 } else {
@@ -470,6 +480,7 @@ const TargetInfo *TargetSetBuilder::CreateTarget(const char *root_directory, Tar
     target->name = target_config->name;
     target->type = target_config->type;
     target->platforms = target_config->platforms;
+    target->architectures = target_config->architectures;
     target->enable_by_default = target_config->enable_by_default;
     target->title = target_config->title;
     target->version_tag = target_config->version_tag;
@@ -698,6 +709,29 @@ bool TargetSetBuilder::MatchPropertySuffix(Span<const char> str, bool *out_match
     return true;
 }
 
+bool ParseArchitecture(Span<const char> str, HostArchitecture *out_architecture)
+{
+    if (OptionToEnumI(HostArchitectureNames, str, out_architecture))
+        return true;
+
+    // Alternatives
+    if (TestStrI(str, "amd64")) {
+        *out_architecture = HostArchitecture::x86_64;
+        return true;
+    } else if (TestStrI(str, "i386")) {
+        *out_architecture = HostArchitecture::x86;
+        return true;
+    } else if (TestStrI(str, "aarch64")) {
+        *out_architecture = HostArchitecture::ARM64;
+        return true;
+    } else if (TestStrI(str, "armhf")) {
+        *out_architecture = HostArchitecture::ARM32;
+        return true;
+    }
+
+    return false;
+}
+
 unsigned int ParseSupportedPlatforms(Span<const char> str)
 {
     unsigned int platforms = 0;
@@ -733,27 +767,26 @@ unsigned int ParseSupportedPlatforms(Span<const char> str)
     return platforms;
 }
 
-bool ParseArchitecture(Span<const char> str, HostArchitecture *out_architecture)
+unsigned int ParseSupportedArchitectures(Span<const char> str)
 {
-    if (OptionToEnumI(HostArchitectureNames, str, out_architecture))
-        return true;
+    unsigned int architectures = 0;
+    bool valid = true;
 
-    // Alternatives
-    if (TestStrI(str, "amd64")) {
-        *out_architecture = HostArchitecture::x86_64;
-        return true;
-    } else if (TestStrI(str, "i386")) {
-        *out_architecture = HostArchitecture::x86;
-        return true;
-    } else if (TestStrI(str, "aarch64")) {
-        *out_architecture = HostArchitecture::ARM64;
-        return true;
-    } else if (TestStrI(str, "armhf")) {
-        *out_architecture = HostArchitecture::ARM32;
-        return true;
+    Span<const char> remain = str;
+    while (remain.len) {
+        Span<const char> part = SplitStr(remain, ' ', &remain);
+
+        if (part.len) {
+            HostArchitecture architecture;
+            if (ParseArchitecture(part, &architecture)) {
+                architectures |= (int)architecture << 1;
+            } else {
+                valid = false;
+            }
+        }
     }
 
-    return false;
+    return valid ? architectures : 0;
 }
 
 bool LoadTargetSet(Span<const char *const> filenames, const Compiler *compiler, uint32_t features, TargetSet *out_set)

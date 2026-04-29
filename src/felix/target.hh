@@ -16,6 +16,7 @@ struct alignas(8) TargetInfo {
     const char *name;
     TargetType type;
     unsigned int platforms;
+    unsigned int architectures;
     bool enable_by_default;
 
     const char *title;
@@ -60,6 +61,7 @@ struct alignas(8) TargetInfo {
     }
 
     bool TestPlatforms(HostPlatform platform) const { return platforms & (1 << (int)platform); }
+    bool TestArchitectures(HostArchitecture architecture) const { return architectures & (1 << (int)architecture); }
 
     K_HASHTABLE_HANDLER(TargetInfo, name);
 };
@@ -128,8 +130,10 @@ private:
     bool MatchPropertySuffix(Span<const char> str, bool *out_match);
 };
 
-unsigned int ParseSupportedPlatforms(Span<const char> str);
 bool ParseArchitecture(Span<const char> str, HostArchitecture *out_architecture);
+
+unsigned int ParseSupportedPlatforms(Span<const char> str);
+unsigned int ParseSupportedArchitectures(Span<const char> str);
 
 bool LoadTargetSet(Span<const char *const> filenames, const Compiler *compiler, uint32_t features, TargetSet *out_set);
 

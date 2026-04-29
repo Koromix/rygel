@@ -663,6 +663,11 @@ For help about those commands, type: %!..+%1 command --help%!0)", FelixTarget);
                                      target.name, HostPlatformNames[(int)compiler->platform]);
                             valid = false;
                         }
+                        if (!target.TestArchitectures(compiler->architecture)) {
+                            LogError("Cannot build '%1' for architecture '%2'",
+                                     target.name, HostArchitectureNames[(int)compiler->architecture]);
+                            valid = false;
+                        }
 
                         enabled_targets.Append({ &target });
                     }
@@ -677,13 +682,18 @@ For help about those commands, type: %!..+%1 command --help%!0)", FelixTarget);
                     bool inserted = handled_set.InsertOrFail(src.filename);
 
                     if (inserted) {
-                        if (src.target->TestPlatforms(compiler->platform)) {
-                            enabled_sources.Append(&src);
-                        } else {
+                        if (!src.target->TestPlatforms(compiler->platform)) {
                             LogError("Cannot build '%1' for platform '%2'",
                                      src.filename, HostPlatformNames[(int)compiler->platform]);
                             valid = false;
                         }
+                        if (!src.target->TestArchitectures(compiler->architecture)) {
+                            LogError("Cannot build '%1' for architecture '%2'",
+                                     src.filename, HostArchitectureNames[(int)compiler->architecture]);
+                            valid = false;
+                        }
+
+                        enabled_sources.Append(&src);
                     }
 
                     match = true;
@@ -706,6 +716,8 @@ For help about those commands, type: %!..+%1 command --help%!0)", FelixTarget);
             if (!target.enable_by_default)
                 continue;
             if (!target.TestPlatforms(compiler->platform))
+                continue;
+            if (!target.TestArchitectures(compiler->architecture))
                 continue;
 
             if (target.qt_components.len) {
