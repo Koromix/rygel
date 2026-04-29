@@ -46,8 +46,8 @@ By default libcurl allows HTTP, HTTPS, FTP and FTPS on redirects (since
 These are the available protocols:
 
 DICT, FILE, FTP, FTPS, GOPHER, GOPHERS, HTTP, HTTPS, IMAP, IMAPS, LDAP, LDAPS,
-MQTT, MQTTS, POP3, POP3S, RTMP, RTMPE, RTMPS, RTMPT, RTMPTE, RTMPTS, RTSP,
-SCP, SFTP, SMB, SMBS, SMTP, SMTPS, TELNET, TFTP, WS, WSS
+MQTT, MQTTS, POP3, POP3S, RTSP, SCP, SFTP, SMB, SMBS, SMTP, SMTPS, TELNET,
+TFTP, WS, WSS
 
 You can set "ALL" as a short-cut to enable all protocols. Note that by setting
 all, you may enable protocols that were not supported the day you write this
@@ -75,6 +75,7 @@ int main(int argc, char **argv)
 {
   CURL *curl = curl_easy_init();
   if(curl) {
+    CURLcode result;
     /* pass in the URL from an external source */
     curl_easy_setopt(curl, CURLOPT_URL, argv[1]);
 
@@ -82,7 +83,8 @@ int main(int argc, char **argv)
     curl_easy_setopt(curl, CURLOPT_REDIR_PROTOCOLS_STR, "http,https");
 
     /* Perform the request */
-    curl_easy_perform(curl);
+    result = curl_easy_perform(curl);
+    curl_easy_cleanup(curl);
   }
 }
 ~~~

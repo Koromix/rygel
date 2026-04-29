@@ -23,7 +23,7 @@
 #
 ###########################################################################
 
-# For documentation, run `man ./runtests.1` and see README.md.
+# For documentation, see docs/runtests.md and README.md.
 
 # Experimental hooks are available to run tests remotely on machines that
 # are able to run curl but are unable to run the test harness.
@@ -206,7 +206,7 @@ sub logmsg {
             # use \r\n for WSL shell
             $line =~ s/\r?\n$/\r\n/g;
         }
-        print "$line";
+        print $line;
     }
 }
 
@@ -359,7 +359,7 @@ sub cleardir {
         # Do not clear the $PIDDIR or $LOCKDIR since those need to live beyond
         # one test
         if(($file !~ /^(\.|\.\.)\z/) &&
-            "$file" ne $PIDDIR && "$file" ne $LOCKDIR) {
+            $file ne $PIDDIR && $file ne $LOCKDIR) {
             if(-d "$dir/$file") {
                 if(!cleardir("$dir/$file")) {
                     $done = 0;
@@ -370,7 +370,7 @@ sub cleardir {
             }
             else {
                 # Ignore stunnel since we cannot do anything about its locks
-                if(!unlink("$dir/$file") && "$file" !~ /_stunnel\.log$/) {
+                if(!unlink("$dir/$file") && $file !~ /_stunnel\.log$/) {
                     $done = 0;
                 }
             }
@@ -389,7 +389,7 @@ sub showdiff {
     my $file1="$logdir/check-generated";
     my $file2="$logdir/check-expected";
 
-    open(my $temp, ">", "$file1") || die "Failure writing diff file";
+    open(my $temp, ">", $file1) || die "Failure writing diff file";
     for(@$firstref) {
         my $l = $_;
         $l =~ s/\r/[CR]/g;
@@ -400,7 +400,7 @@ sub showdiff {
     }
     close($temp) || die "Failure writing diff file";
 
-    open($temp, ">", "$file2") || die "Failure writing diff file";
+    open($temp, ">", $file2) || die "Failure writing diff file";
     for(@$secondref) {
         my $l = $_;
         $l =~ s/\r/[CR]/g;
@@ -530,7 +530,7 @@ sub checksystemfeatures {
     $ENV{'SOURCE_DATE_EPOCH'} = $current_time;
     $DATE = strftime "%Y-%m-%d", gmtime($current_time);
 
-    open(my $versout, "<", "$curlverout");
+    open(my $versout, "<", $curlverout);
     @version = <$versout>;
     close($versout);
 
@@ -627,9 +627,13 @@ sub checksystemfeatures {
             }
             if($libcurl =~ /libssh2/i) {
                 $feature{"libssh2"} = 1;
+                $feature{"sshkeyalgo"} = ($ENV{'CURL_TEST_SSH_KEYALGO'} and
+                    $ENV{'CURL_TEST_SSH_KEYALGO'} =~ /^(?:rsa|ecdsa|ed25519)$/) ? $ENV{'CURL_TEST_SSH_KEYALGO'} : 'rsa';
             }
             if($libcurl =~ /libssh\/([0-9.]*)\//i) {
                 $feature{"libssh"} = 1;
+                $feature{"sshkeyalgo"} = ($ENV{'CURL_TEST_SSH_KEYALGO'} and
+                    $ENV{'CURL_TEST_SSH_KEYALGO'} =~ /^(?:rsa|ecdsa|ed25519)$/) ? $ENV{'CURL_TEST_SSH_KEYALGO'} : 'rsa';
                 # Detect simple cases of default libssh configuration files ending up
                 # setting `StrictHostKeyChecking no`. include files, quoted values,
                 # '=value' format not implemented.
@@ -657,9 +661,9 @@ sub checksystemfeatures {
             $feat = $1;
 
             # built with memory tracking support (--enable-debug); may be disabled later
-            $feature{"TrackMemory"} = $feat =~ /Debug/i;
+            $feature{"TrackMemory"} = $feat =~ /\bDebug/;
             # curl was built with --enable-debug
-            $feature{"Debug"} = $feat =~ /Debug/i;
+            $feature{"Debug"} = $feat =~ /\bDebug/;
             # ssl enabled
             $feature{"SSL"} = $feat =~ /SSL/i;
             # multiple ssl backends available.
@@ -771,9 +775,9 @@ sub checksystemfeatures {
             logmsg sprintf("command exited with value %d \n", $versretval >> 8);
         }
         logmsg "contents of $curlverout: \n";
-        displaylogcontent("$curlverout");
+        displaylogcontent($curlverout);
         logmsg "contents of $curlvererr: \n";
-        displaylogcontent("$curlvererr");
+        displaylogcontent($curlvererr);
         die "Could not get curl's version";
     }
 
@@ -1260,7 +1264,7 @@ sub singletest_check {
 
     my $loadfile = $hash{'loadfile'};
     if($loadfile) {
-        open(my $tmp, "<", "$loadfile") || die "Cannot open file $loadfile: $!";
+        open(my $tmp, "<", $loadfile) || die "Cannot open file $loadfile: $!";
         @validstdout = <$tmp>;
         close($tmp);
 
@@ -1269,6 +1273,8 @@ sub singletest_check {
     }
 
     if(@validstdout) {
+        $validstdout[0] =~ s/^%EMPTY[\r\n]*//;
+
         # verify redirected stdout
         my @actual = loadarray(stdoutfilename($logdir, $testnum));
 
@@ -1856,7 +1862,7 @@ sub singletest_check {
     }
     if($valgrind) {
         if($usedvalgrind) {
-            if(!opendir(DIR, "$logdir")) {
+            if(!opendir(DIR, $logdir)) {
                 logmsg "ERROR: unable to read $logdir\n";
                 # timestamp test result verification end
                 $timevrfyend{$testnum} = Time::HiRes::time();
@@ -2674,7 +2680,7 @@ if($valgrind) {
         if(($? >> 8)) {
             $valgrind_tool="";
         }
-        open(my $curlh, "<", "$CURL");
+        open(my $curlh, "<", $CURL);
         my $l = <$curlh>;
         if($l =~ /^\#\!/) {
             # A shell script. This is typically when built with libtool,
@@ -2700,7 +2706,7 @@ if($valgrind) {
 
 if($gdbthis) {
     # open the executable curl and read the first 4 bytes of it
-    open(my $check, "<", "$CURL");
+    open(my $check, "<", $CURL);
     my $c;
     sysread $check, $c, 4;
     close($check);
@@ -2779,7 +2785,7 @@ sub disabledtests {
     my ($file) = @_;
     my @input;
 
-    if(open(my $disabledh, "<", "$file")) {
+    if(open(my $disabledh, "<", $file)) {
         while(<$disabledh>) {
             if(/^ *\#/) {
                 # allow comments
@@ -2885,7 +2891,7 @@ if($scrambleorder) {
 # and excessively long files are elided
 sub displaylogcontent {
     my ($file)=@_;
-    if(open(my $single, "<", "$file")) {
+    if(open(my $single, "<", $file)) {
         my $linecount = 0;
         my $truncate;
         my @tail;
@@ -2924,7 +2930,7 @@ sub displaylogcontent {
 sub displaylogs {
     my ($runnerid, $testnum)=@_;
     my $logdir = getrunnerlogdir($runnerid);
-    opendir(DIR, "$logdir") ||
+    opendir(DIR, $logdir) ||
         die "cannot open dir: $!";
     my @logs = readdir(DIR);
     closedir(DIR);

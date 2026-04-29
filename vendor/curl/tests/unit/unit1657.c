@@ -24,7 +24,6 @@
 #include "unitcheck.h"
 
 #if defined(USE_GNUTLS) || defined(USE_SCHANNEL) || defined(USE_MBEDTLS)
-
 #include "vtls/x509asn1.h"
 
 struct test1657_spec {
@@ -67,6 +66,7 @@ static bool do_test1657(const struct test1657_spec *spec, size_t i,
   CURLcode result;
   struct Curl_asn1Element elem;
   const char *in;
+  const char *ptr;
 
   memset(&elem, 0, sizeof(elem));
   curlx_dyn_reset(buf);
@@ -76,7 +76,8 @@ static bool do_test1657(const struct test1657_spec *spec, size_t i,
     return FALSE;
   }
   in = curlx_dyn_ptr(buf);
-  result = Curl_x509_getASN1Element(&elem, in, in + curlx_dyn_len(buf));
+  ptr = getASN1Element(&elem, in, in + curlx_dyn_len(buf));
+  result = ptr ? CURLE_OK : CURLE_BAD_FUNCTION_ARGUMENT;
   if(result != spec->result_exp) {
     curl_mfprintf(stderr, "test %zu: expect result %d, got %d\n",
                   i, spec->result_exp, result);
@@ -93,18 +94,18 @@ static CURLcode test_unit1657(const char *arg)
   bool all_ok = TRUE;
   struct dynbuf dbuf;
 
-  curlx_dyn_init(&dbuf, 32 * 1024);
-
   if(curl_global_init(CURL_GLOBAL_ALL) != CURLE_OK) {
     curl_mfprintf(stderr, "curl_global_init() failed\n");
     return TEST_ERR_MAJOR_BAD;
   }
 
+  curlx_dyn_init(&dbuf, 32 * 1024);
+
   for(i = 0; i < CURL_ARRAYSIZE(test1657_specs); ++i) {
     if(!do_test1657(&test1657_specs[i], i, &dbuf))
       all_ok = FALSE;
   }
-  fail_unless(all_ok, "some tests of Curl_x509_getASN1Element() fails");
+  fail_unless(all_ok, "some tests of getASN1Element() fails");
 
   curlx_dyn_free(&dbuf);
   curl_global_cleanup();
@@ -117,7 +118,7 @@ static CURLcode test_unit1657(const char *arg)
 static CURLcode test_unit1657(const char *arg)
 {
   UNITTEST_BEGIN_SIMPLE
-  puts("not tested since Curl_x509_getASN1Element() is not built in");
+  puts("not tested since getASN1Element() is not built in");
   UNITTEST_END_SIMPLE
 }
 

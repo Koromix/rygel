@@ -24,13 +24,12 @@
 #include "unitcheck.h"
 
 #ifndef CURL_DISABLE_NETRC
-
 #include "netrc.h"
 
 static void t1304_stop(char **password, char **login)
 {
-  Curl_safefree(*password);
-  Curl_safefree(*login);
+  curlx_safefree(*password);
+  curlx_safefree(*login);
 }
 
 static CURLcode test_unit1304(const char *arg)

@@ -23,8 +23,7 @@
  ***************************************************************************/
 #include "first.h"
 
-#ifdef HAVE_PTHREAD_H
-#include <pthread.h>
+#ifdef HAVE_THREADS_POSIX
 
 #define CONN_NUM                3
 #define TIME_BETWEEN_START_SECS 2
@@ -130,7 +129,7 @@ static CURLcode test_lib1565(const char *URL)
       }
       else {
         curl_mfprintf(stderr,
-                      "%s:%d Got an unexpected message from curl: %i\n",
+                      "%s:%d Got an unexpected message from curl: %d\n",
                       __FILE__, __LINE__, message->msg);
         result = TEST_ERR_MAJOR_BAD;
         goto test_cleanup;

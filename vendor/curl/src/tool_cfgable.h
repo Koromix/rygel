@@ -33,12 +33,6 @@
 
 #define checkprefix(a, b) curl_strnequal(b, STRCONST(a))
 
-#define tool_safefree(ptr) \
-  do {                     \
-    curlx_free(ptr);       \
-    (ptr) = NULL;          \
-  } while(0)
-
 extern struct GlobalConfig *global;
 
 struct State {
@@ -191,8 +185,8 @@ struct OperationConfig {
   long httpversion;
   unsigned long socks5_auth;/* auth bitmask for socks5 proxies */
   long req_retry;           /* number of retries */
-  long retry_delay_ms;      /* delay between retries (in milliseconds),
-                               0 means increase exponentially */
+  uint32_t retry_delay_ms; /* delay between retries (in milliseconds), 0 means
+                              increase exponentially */
   long retry_maxtime_ms;    /* maximum time to keep retrying */
 
   unsigned long mime_options; /* Mime option flags. */
@@ -214,7 +208,7 @@ struct OperationConfig {
                         by using the default behavior for -o, -O, and -J.
                         If those options would have overwritten files, like
                         -o and -O would, then overwrite them. In the case of
-                        -J, this will not overwrite any files. */
+                        -J, this does not overwrite any files. */
     CLOBBER_NEVER, /* If the file exists, always fail */
     CLOBBER_ALWAYS /* If the file exists, always overwrite it */
   } file_clobber_mode;

@@ -40,11 +40,7 @@
 
 #include <curl/curl.h>
 
-#if defined(__GNUC__) || defined(__clang__)
-#pragma GCC diagnostic ignored "-Woverlength-strings"
-#endif
-
-static size_t write_cb(void *ptr, size_t size, size_t nmemb, void *stream)
+static size_t write_cb(char *ptr, size_t size, size_t nmemb, void *stream)
 {
   fwrite(ptr, size, nmemb, (FILE *)stream);
   return nmemb * size;

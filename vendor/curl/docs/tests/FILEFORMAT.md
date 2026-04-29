@@ -202,6 +202,7 @@ Available substitute variables include:
 - `%SRCDIR` - Full path to the source dir
 - `%SCP_PWD` - Current directory friendly for the SSH server for the scp:// protocol
 - `%SFTP_PWD` - Current directory friendly for the SSH server for the sftp:// protocol
+- `%SSHKEYALGO` - SSH host and client key algorithm, e.g. `ssh-rsa` or `ssh-ed25519`
 - `%SSHPORT` - Port number of the SCP/SFTP server
 - `%SSHSRVMD5` - MD5 of SSH server's public key
 - `%SSHSRVSHA256` - SHA256 of SSH server's public key
@@ -259,7 +260,7 @@ similar.
 
 ## `<reply>`
 
-### `<data [nocheck="yes"] [sendzero="yes"] [hex="yes"] [nonewline="yes"] [crlf="yes|headers"]>`
+### `<data [nocheck="yes"] [sendzero="yes"] [nonewline="yes"] [crlf="yes|headers"]>`
 
 data to be sent to the client on its request and later verified that it
 arrived safely. Set `nocheck="yes"` to prevent the test script from verifying
@@ -274,15 +275,12 @@ the HTTP server overrides the part number response returned for a subsequent
 request made by the same test to `previous part number + 1`. For example, if a
 test makes a request which causes the server to return `<data>` that contains
 keyword `swsbounce` then for the next response it ignores the requested part
-number and instead returns `<data1>`. And if `<data1>` contains keyword
+number and instead returns `<data1>`. If `<data1>` contains keyword
 `swsbounce` then the next response is `<data2>` and so on. This is useful for
 auth tests and similar.
 
 `sendzero=yes` means that the (FTP) server "sends" the data even if the size
 is zero bytes. Used to verify curl's behavior on zero bytes transfers.
-
-`hex=yes` means that the data is a sequence of hex pairs. It gets decoded and
-used as "raw" data.
 
 `nonewline=yes` means that the last byte (the trailing newline character)
 should be cut off from the data before sending or comparing it.
@@ -636,7 +634,7 @@ parameter is the not negative integer number of seconds for the delay. This
 'delay' attribute is intended for specific test cases, and normally not
 needed.
 
-### `<file name="%LOGDIR/filename" [nonewline="yes"][crlf="yes"]>`
+### `<file name="%LOGDIR/filename" [options]>`
 This creates the named file with this content before the test case is run,
 which is useful if the test case needs a file to act on.
 
@@ -645,6 +643,9 @@ off.
 
 `crlf=yes` forces the newlines to become CRLF even if not written so in the
 test.
+
+`mode="text"` normalizes the line endings to make them compare as text on all
+platforms.
 
 ### `<file1>`
 1 to 4 can be appended to 'file' to create more files.
@@ -750,6 +751,9 @@ in the source file. Note that this makes runtests.pl parse and "guess" what is
 a header and what is not in order to apply the CRLF line endings appropriately.
 
 `loadfile="filename"` makes loading the data from an external file.
+
+To verify that there was nothing sent to stdout, put `%EMPTY` as the only
+content.
 
 ### `<limit>`
 

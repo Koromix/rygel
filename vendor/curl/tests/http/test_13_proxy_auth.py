@@ -27,10 +27,9 @@
 import logging
 import os
 import re
+
 import pytest
-
-from testenv import Env, CurlClient, ExecResult
-
+from testenv import CurlClient, Env, ExecResult
 
 log = logging.getLogger(__name__)
 
@@ -104,7 +103,7 @@ class TestProxyAuth:
         r = curl.http_download(urls=[url], alpn_proto='http/1.1', with_stats=True,
                                extra_args=xargs)
         # expect "COULD_NOT_CONNECT"
-        r.check_response(exitcode=56, http_status=None)
+        r.check_response(exitcode=7, http_status=None)
 
     def test_13_06_tunnel_http_auth(self, env: Env, httpd, configures_httpd):
         self.httpd_configure(env, httpd)
@@ -133,7 +132,7 @@ class TestProxyAuth:
         r = curl.http_download(urls=[url], alpn_proto=proto, with_stats=True,
                                extra_args=xargs)
         # expect "COULD_NOT_CONNECT"
-        r.check_response(exitcode=56, http_status=None)
+        r.check_response(exitcode=7, http_status=None)
         assert self.get_tunnel_proto_used(r) == tunnel
 
     @pytest.mark.skipif(condition=not Env.have_nghttpx(), reason="no nghttpx available")

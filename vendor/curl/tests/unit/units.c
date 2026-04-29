@@ -32,6 +32,9 @@
 #include "unit1615.c"
 #include "unit1616.c"
 #include "unit1620.c"
+#include "unit1625.c"
+#include "unit1626.c"
+#include "unit1627.c"
 #include "unit1636.c"
 #include "unit1650.c"
 #include "unit1651.c"
@@ -46,6 +49,12 @@
 #include "unit1661.c"
 #include "unit1663.c"
 #include "unit1664.c"
+#include "unit1666.c"
+#include "unit1667.c"
+#include "unit1668.c"
+#include "unit1669.c"
+#include "unit1674.c"
+#include "unit1675.c"
 #include "unit1979.c"
 #include "unit1980.c"
 #include "unit2600.c"
@@ -61,6 +70,9 @@
 #include "unit3213.c"
 #include "unit3214.c"
 #include "unit3216.c"
+#include "unit3219.c"
+#include "unit3300.c"
+#include "unit3301.c"
 
 const struct entry_s s_entries[] = {
   {"unit1300", test_unit1300},
@@ -93,6 +105,9 @@ const struct entry_s s_entries[] = {
   {"unit1615", test_unit1615},
   {"unit1616", test_unit1616},
   {"unit1620", test_unit1620},
+  {"unit1625", test_unit1625},
+  {"unit1626", test_unit1626},
+  {"unit1627", test_unit1627},
   {"unit1636", test_unit1636},
   {"unit1650", test_unit1650},
   {"unit1651", test_unit1651},
@@ -107,6 +122,12 @@ const struct entry_s s_entries[] = {
   {"unit1661", test_unit1661},
   {"unit1663", test_unit1663},
   {"unit1664", test_unit1664},
+  {"unit1666", test_unit1666},
+  {"unit1667", test_unit1667},
+  {"unit1668", test_unit1668},
+  {"unit1669", test_unit1669},
+  {"unit1674", test_unit1674},
+  {"unit1675", test_unit1675},
   {"unit1979", test_unit1979},
   {"unit1980", test_unit1980},
   {"unit2600", test_unit2600},
@@ -122,6 +143,9 @@ const struct entry_s s_entries[] = {
   {"unit3213", test_unit3213},
   {"unit3214", test_unit3214},
   {"unit3216", test_unit3216},
+  {"unit3219", test_unit3219},
+  {"unit3300", test_unit3300},
+  {"unit3301", test_unit3301},
   {NULL, NULL}
 };
 

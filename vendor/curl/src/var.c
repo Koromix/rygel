@@ -153,7 +153,7 @@ static ParameterError varfunc(char *c, /* content */
         /* put it in the output */
         if(curlx_dyn_addn(out, enc, elen))
           err = PARAM_NO_MEM;
-        curl_free(enc);
+        curlx_free(enc);
         if(err)
           break;
       }
@@ -173,7 +173,7 @@ static ParameterError varfunc(char *c, /* content */
         else {
           if(curlx_dyn_addn(out, enc, elen))
             err = PARAM_NO_MEM;
-          curl_free(enc);
+          curlx_free(enc);
         }
         if(err)
           break;
@@ -213,6 +213,8 @@ ParameterError varexpand(const char *line, struct dynbuf *out, bool *replaced)
   curlx_dyn_init(out, MAX_EXPAND_CONTENT);
   do {
     envp = strstr(line, "{{");
+    if(!envp)
+      break;
     if((envp > line) && envp[-1] == '\\') {
       /* preceding backslash, we want this verbatim */
 
@@ -227,7 +229,7 @@ ParameterError varexpand(const char *line, struct dynbuf *out, bool *replaced)
         return PARAM_NO_MEM;
       line = &envp[2];
     }
-    else if(envp) {
+    else {
       char name[MAX_VAR_LEN];
       size_t nlen;
       size_t i;
@@ -320,8 +322,7 @@ ParameterError varexpand(const char *line, struct dynbuf *out, bool *replaced)
       }
       line = &clp[2];
     }
-
-  } while(envp);
+  } while(1);
   if(added && *line) {
     /* add the "suffix" as well */
     result = curlx_dyn_add(out, line);
@@ -393,7 +394,7 @@ ParameterError setvariable(const char *input)
     line++;
   nlen = line - name;
   if(!nlen || (nlen >= MAX_VAR_LEN)) {
-    warnf("Bad variable name length (%zd), skipping", nlen);
+    warnf("Bad variable name length (%zu), skipping", nlen);
     return PARAM_OK;
   }
   if(import) {

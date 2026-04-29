@@ -47,7 +47,6 @@ LIB_CURLX_CFILES =      \
 LIB_CURLX_HFILES =      \
   curlx/base64.h        \
   curlx/basename.h      \
-  curlx/curlx.h         \
   curlx/dynbuf.h        \
   curlx/fopen.h         \
   curlx/inet_ntop.h     \
@@ -150,6 +149,7 @@ LIB_CFILES =         \
   asyn-thrdd.c       \
   bufq.c             \
   bufref.c           \
+  cf-dns.c           \
   cf-h1-proxy.c      \
   cf-h2-proxy.c      \
   cf-haproxy.c       \
@@ -172,7 +172,6 @@ LIB_CFILES =         \
   curl_memrchr.c     \
   curl_ntlm_core.c   \
   curl_range.c       \
-  curl_rtmp.c        \
   curl_sasl.c        \
   curl_sha512_256.c  \
   curl_share.c       \
@@ -182,6 +181,7 @@ LIB_CFILES =         \
   cw-out.c           \
   cw-pause.c         \
   dict.c             \
+  dnscache.c         \
   doh.c              \
   dynhds.c           \
   easy.c             \
@@ -236,6 +236,7 @@ LIB_CFILES =         \
   pingpong.c         \
   pop3.c             \
   progress.c         \
+  protocol.c         \
   psl.c              \
   rand.c             \
   ratelimit.c        \
@@ -259,6 +260,8 @@ LIB_CFILES =         \
   system_win32.c     \
   telnet.c           \
   tftp.c             \
+  thrdpool.c         \
+  thrdqueue.c        \
   transfer.c         \
   uint-bset.c        \
   uint-hash.c        \
@@ -276,6 +279,7 @@ LIB_HFILES =         \
   asyn.h             \
   bufq.h             \
   bufref.h           \
+  cf-dns.h           \
   cf-h1-proxy.h      \
   cf-h2-proxy.h      \
   cf-haproxy.h       \
@@ -304,7 +308,6 @@ LIB_HFILES =         \
   curl_ntlm_core.h   \
   curl_printf.h      \
   curl_range.h       \
-  curl_rtmp.h        \
   curl_sasl.h        \
   curl_setup.h       \
   curl_sha256.h      \
@@ -316,6 +319,7 @@ LIB_HFILES =         \
   cw-out.h           \
   cw-pause.h         \
   dict.h             \
+  dnscache.h         \
   doh.h              \
   dynhds.h           \
   easy_lock.h        \
@@ -327,6 +331,7 @@ LIB_HFILES =         \
   fileinfo.h         \
   formdata.h         \
   ftp.h              \
+  ftp-int.h          \
   ftplistparser.h    \
   functypes.h        \
   getinfo.h          \
@@ -362,6 +367,7 @@ LIB_HFILES =         \
   pingpong.h         \
   pop3.h             \
   progress.h         \
+  protocol.h         \
   psl.h              \
   rand.h             \
   ratelimit.h        \
@@ -386,6 +392,8 @@ LIB_HFILES =         \
   system_win32.h     \
   telnet.h           \
   tftp.h             \
+  thrdpool.h         \
+  thrdqueue.h        \
   transfer.h         \
   uint-bset.h        \
   uint-hash.h        \

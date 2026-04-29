@@ -160,7 +160,7 @@ static struct tool_mime *tool_mime_new_filedata(struct tool_mime *parent,
     }
     m = tool_mime_new(parent, TOOLMIME_STDIN);
     if(!m)
-      tool_safefree(data);
+      curlx_safefree(data);
     else {
       m->data = data;
       m->origin = origin;
@@ -181,11 +181,11 @@ void tool_mime_free(struct tool_mime *mime)
       tool_mime_free(mime->subparts);
     if(mime->prev)
       tool_mime_free(mime->prev);
-    tool_safefree(mime->name);
-    tool_safefree(mime->filename);
-    tool_safefree(mime->type);
-    tool_safefree(mime->encoder);
-    tool_safefree(mime->data);
+    curlx_safefree(mime->name);
+    curlx_safefree(mime->filename);
+    curlx_safefree(mime->type);
+    curlx_safefree(mime->encoder);
+    curlx_safefree(mime->data);
     curl_slist_free_all(mime->headers);
     curlx_free(mime);
   }
@@ -464,6 +464,10 @@ static int read_field_headers(FILE *fp, struct curl_slist **pheaders)
       break;
     }
   }
+  if(error && !err) {
+    errorf("Failed to read field headers");
+    err = -1;
+  }
   curlx_dyn_free(&line);
   return err;
 }
@@ -690,14 +694,14 @@ static int get_param_part(char endchar,
  * 'name=foo;headers=@headerfile' or why not
  * 'name=@filemame;headers=@headerfile'
  *
- * To upload a file, but to fake the filename that will be included in the
+ * To upload a file, but to fake the filename that is included in the
  * formpost, do like this:
  *
  * 'name=@filename;filename=/dev/null' or quote the faked filename like:
  * 'name=@filename;filename="play, play, and play.txt"'
  *
  * If filename/path contains ',' or ';', it must be quoted by double-quotes,
- * else curl will fail to figure out the correct filename. if the filename
+ * else curl fails to figure out the correct filename. if the filename
  * tobe quoted contains '"' or '\', '"' and '\' must be escaped by backslash.
  *
  ***************************************************************************/
@@ -716,8 +720,8 @@ int formparse(const char *input,
               struct tool_mime **mimecurrent,
               bool literal_value)
 {
-  /* input MUST be a string in the format 'name=contents' and we will
-     build a linked list with the info */
+  /* input MUST be a string in the format 'name=contents' and we build
+     a linked list with the info */
   char *name = NULL;
   char *contents = NULL;
   char *contp;
@@ -813,7 +817,7 @@ int formparse(const char *input,
             warnf("error while reading standard input");
             goto fail;
           }
-          tool_safefree(part->data);
+          curlx_safefree(part->data);
           part->size = -1;
           result = CURLE_OK;
         }
@@ -846,7 +850,7 @@ int formparse(const char *input,
             warnf("error while reading standard input");
             goto fail;
           }
-          tool_safefree(part->data);
+          curlx_safefree(part->data);
           part->size = -1;
           result = CURLE_OK;
         }
@@ -887,7 +891,7 @@ int formparse(const char *input,
   }
   err = 0;
 fail:
-  tool_safefree(contents);
+  curlx_safefree(contents);
   curl_slist_free_all(headers);
   return err;
 }

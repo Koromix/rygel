@@ -81,7 +81,7 @@ sub scanenum {
 
 sub scanheader {
     my ($f)=@_;
-    open my $h, "<", "$f";
+    open(my $h, "<", $f);
     while(<$h>) {
         if(/^#define ((LIB|)CURL[A-Za-z0-9_]*)/) {
             push @syms, $1;
@@ -105,17 +105,22 @@ sub scanallheaders {
 sub checkmanpage {
     my ($m) = @_;
 
-    open(my $mh, "<", "$m");
+    # detect global-looking 'CURL[BLABLA]_*' symbols
+    my $global_pat = '\W(CURL(AUTH|E|H|MOPT|OPT|SHOPT|UE|M|SSH|SSLBACKEND|HEADER|FORM|FTP|PIPE|MIMEOPT|GSSAPI|' .
+        'ALTSVC|PROTO|PROXY|UPART|USESSL|_READFUNC|_WRITEFUNC|_CSELECT|_FORMADD|_IPRESOLVE|_REDIR|_RTSPREQ|'.
+        '_TIMECOND|_VERSION)_[a-zA-Z0-9_]+)';
+    my $global_re = qr/$global_pat/;
+
+    open(my $mh, "<", $m);
     my $line = 1;
     while(<$mh>) {
         # strip off formatting
         $_ =~ s/(^|[^A-Z0-9])[*_]+/ /;
-        # detect global-looking 'CURL[BLABLA]_*' symbols
-        while(s/\W(CURL(AUTH|E|H|MOPT|OPT|SHOPT|UE|M|SSH|SSLBACKEND|HEADER|FORM|FTP|PIPE|MIMEOPT|GSSAPI|ALTSVC|PROTO|PROXY|UPART|USESSL|_READFUNC|_WRITEFUNC|_CSELECT|_FORMADD|_IPRESOLVE|_REDIR|_RTSPREQ|_TIMECOND|_VERSION)_[a-zA-Z0-9_]+)//) {
+        while(s/$global_re//) {
             my $s = $1;
             # skip two "special" ones
             if($s !~ /(^(CURLE_OBSOLETE|CURLOPT_TEMPLATE))|_$/) {
-                push @manrefs, "$1:$m:$line";
+                push @manrefs, "$s:$m:$line";
             }
         }
         $line++;
@@ -138,7 +143,7 @@ scanallheaders();
 scanman_md_dir("$root/docs/libcurl");
 scanman_md_dir("$root/docs/libcurl/opts");
 
-open my $s, "<", "$root/docs/libcurl/symbols-in-versions";
+open(my $s, "<", "$root/docs/libcurl/symbols-in-versions");
 while(<$s>) {
     if(/(^[^ \n]+) +(.*)/) {
         my ($sym, $rest)=($1, $2);

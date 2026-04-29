@@ -1,9 +1,9 @@
-diff --git a/vendor/curl/lib/config-emscripten.h b/vendor/curl/lib/config-emscripten.h
+diff --git b/vendor/curl/lib/config-emscripten.h a/vendor/curl/lib/config-emscripten.h
 new file mode 100644
-index 0000000000..9818942f1a
+index 0000000000..25dd373ead
 --- /dev/null
-+++ b/vendor/curl/lib/config-emscripten.h
-@@ -0,0 +1,996 @@
++++ a/vendor/curl/lib/config-emscripten.h
+@@ -0,0 +1,993 @@
 +/* lib/curl_config.h.  Generated from curl_config.h.in by configure.  */
 +/* lib/curl_config.h.in.  Generated from configure.ac by autoheader.  */
 +
@@ -103,8 +103,8 @@ index 0000000000..9818942f1a
 +/* disable netrc parsing */
 +/* #undef CURL_DISABLE_NETRC */
 +
-+/* to disable NTLM support */
-+/* #undef CURL_DISABLE_NTLM */
++/* to enable NTLM support */
++/* #undef CURL_ENABLE_NTLM */
 +
 +/* if the OpenSSL configuration won't be loaded automatically */
 +/* #undef CURL_DISABLE_OPENSSL_AUTO_LOAD_CONFIG */
@@ -127,8 +127,8 @@ index 0000000000..9818942f1a
 +/* disable DNS shuffling */
 +/* #undef CURL_DISABLE_SHUFFLE_DNS */
 +
-+/* to disable SMB/CIFS */
-+/* #undef CURL_DISABLE_SMB */
++/* to enable SMB/CIFS */
++/* #undef CURL_ENABLE_SMB */
 +
 +/* to disable SMTP */
 +/* #undef CURL_DISABLE_SMTP */
@@ -248,9 +248,6 @@ index 0000000000..9818942f1a
 +
 +/* fsetxattr() takes 6 args */
 +/* #undef HAVE_FSETXATTR_6 */
-+
-+/* Define to 1 if you have the ftruncate function. */
-+#define HAVE_FTRUNCATE 1
 +
 +/* Define to 1 if you have a working getaddrinfo function. */
 +#define HAVE_GETADDRINFO 1
@@ -532,7 +529,7 @@ index 0000000000..9818942f1a
 +/* #undef HAVE_PROTO_BSDSOCKET_H */
 +
 +/* if you have <pthread.h> */
-+#define HAVE_PTHREAD_H 1
++#define HAVE_THREADS_POSIX 1
 +
 +/* Define to 1 if you have the <pwd.h> header file. */
 +#define HAVE_PWD_H 1
@@ -584,9 +581,6 @@ index 0000000000..9818942f1a
 +
 +/* Define to 1 if you have the sigsetjmp function or macro. */
 +#define HAVE_SIGSETJMP 1
-+
-+/* Define to 1 if you have the `snprintf' function. */
-+#define HAVE_SNPRINTF 1
 +
 +/* Define to 1 if struct sockaddr_in6 has the sin6_scope_id member */
 +#define HAVE_SOCKADDR_IN6_SIN6_SCOPE_ID 1
@@ -927,8 +921,11 @@ index 0000000000..9818942f1a
 +/* enable Secure Transport */
 +/* #undef USE_SECTRANSP */
 +
-+/* if you want POSIX threaded DNS lookup */
-+#define USE_THREADS_POSIX 1
++/* Define if you want to enable c-ares DNS lookup */
++/* #undef USE_RESOLV_ARES */
++
++/* Define if you want to enable threaded DNS lookup */
++/* #undef USE_RESOLV_THREADED */
 +
 +/* if you want Win32 threaded DNS lookup */
 +/* #undef USE_THREADS_WIN32 */
@@ -1000,12 +997,12 @@ index 0000000000..9818942f1a
 +
 +/* the signed version of size_t */
 +/* #undef ssize_t */
-diff --git a/vendor/curl/lib/config-freebsd.h b/vendor/curl/lib/config-freebsd.h
+diff --git b/vendor/curl/lib/config-freebsd.h a/vendor/curl/lib/config-freebsd.h
 new file mode 100644
-index 0000000000..e0996cb46e
+index 0000000000..c6d653feca
 --- /dev/null
-+++ b/vendor/curl/lib/config-freebsd.h
-@@ -0,0 +1,1074 @@
++++ a/vendor/curl/lib/config-freebsd.h
+@@ -0,0 +1,1068 @@
 +/* lib/curl_config.h.  Generated from curl_config.h.in by configure.  */
 +/* lib/curl_config.h.in.  Generated from configure.ac by autoheader.  */
 +
@@ -1081,8 +1078,8 @@ index 0000000000..e0996cb46e
 +/* disable netrc parsing */
 +/* #undef CURL_DISABLE_NETRC */
 +
-+/* to disable NTLM support */
-+/* #undef CURL_DISABLE_NTLM */
++/* to enable NTLM support */
++/* #undef CURL_ENABLE_NTLM */
 +
 +/* if the OpenSSL configuration won't be loaded automatically */
 +/* #undef CURL_DISABLE_OPENSSL_AUTO_LOAD_CONFIG */
@@ -1105,8 +1102,8 @@ index 0000000000..e0996cb46e
 +/* disable DNS shuffling */
 +/* #undef CURL_DISABLE_SHUFFLE_DNS */
 +
-+/* to disable SMB/CIFS */
-+/* #undef CURL_DISABLE_SMB */
++/* to enable SMB/CIFS */
++/* #undef CURL_ENABLE_SMB */
 +
 +/* to disable SMTP */
 +/* #undef CURL_DISABLE_SMTP */
@@ -1234,9 +1231,6 @@ index 0000000000..e0996cb46e
 +
 +/* fsetxattr() takes 6 args */
 +/* #undef HAVE_FSETXATTR_6 */
-+
-+/* Define to 1 if you have the ftruncate function. */
-+#define HAVE_FTRUNCATE 1
 +
 +/* Define to 1 if you have a working getaddrinfo function. */
 +#define HAVE_GETADDRINFO 1
@@ -1535,7 +1529,7 @@ index 0000000000..e0996cb46e
 +/* #undef HAVE_PROTO_BSDSOCKET_H */
 +
 +/* if you have <pthread.h> */
-+#define HAVE_PTHREAD_H 1
++#define HAVE_THREADS_POSIX 1
 +
 +/* Define to 1 if you have the <pwd.h> header file. */
 +#define HAVE_PWD_H 1
@@ -1593,9 +1587,6 @@ index 0000000000..e0996cb46e
 +
 +/* Define to 1 if you have the sigsetjmp function or macro. */
 +#define HAVE_SIGSETJMP 1
-+
-+/* Define to 1 if you have the `snprintf' function. */
-+#define HAVE_SNPRINTF 1
 +
 +/* Define to 1 if struct sockaddr_in6 has the sin6_scope_id member */
 +#define HAVE_SOCKADDR_IN6_SIN6_SCOPE_ID 1
@@ -2007,11 +1998,11 @@ index 0000000000..e0996cb46e
 +/* enable Secure Transport */
 +/* #undef USE_SECTRANSP */
 +
-+/* if you want POSIX threaded DNS lookup */
-+/* #undef USE_THREADS_POSIX */
++/* Define if you want to enable c-ares DNS lookup */
++/* #undef USE_RESOLV_ARES */
 +
-+/* if you want Win32 threaded DNS lookup */
-+/* #undef USE_THREADS_WIN32 */
++/* Define if you want to enable threaded DNS lookup */
++/* #undef USE_RESOLV_THREADED */
 +
 +/* Use TLS-SRP authentication */
 +/* #undef USE_TLS_SRP */
@@ -2080,12 +2071,12 @@ index 0000000000..e0996cb46e
 +
 +/* the signed version of size_t */
 +/* #undef ssize_t */
-diff --git a/vendor/curl/lib/config-linux.h b/vendor/curl/lib/config-linux.h
+diff --git b/vendor/curl/lib/config-linux.h a/vendor/curl/lib/config-linux.h
 new file mode 100644
-index 0000000000..b7876ce6d4
+index 0000000000..6b46124574
 --- /dev/null
-+++ b/vendor/curl/lib/config-linux.h
-@@ -0,0 +1,1038 @@
++++ a/vendor/curl/lib/config-linux.h
+@@ -0,0 +1,1035 @@
 +/* lib/curl_config.h.  Generated from curl_config.h.in by configure.  */
 +/* lib/curl_config.h.in.  Generated from configure.ac by autoheader.  */
 +
@@ -2149,6 +2140,9 @@ index 0000000000..b7876ce6d4
 +/* disable netrc parsing */
 +/* #undef CURL_DISABLE_NETRC */
 +
++/* to enable NTLM support */
++/* #undef CURL_ENABLE_NTLM */
++
 +/* if the OpenSSL configuration won't be loaded automatically */
 +/* #undef CURL_DISABLE_OPENSSL_AUTO_LOAD_CONFIG */
 +
@@ -2170,8 +2164,8 @@ index 0000000000..b7876ce6d4
 +/* disable DNS shuffling */
 +/* #undef CURL_DISABLE_SHUFFLE_DNS */
 +
-+/* to disable SMB/CIFS */
-+/* #undef CURL_DISABLE_SMB */
++/* to enable SMB/CIFS */
++/* #undef CURL_ENABLE_SMB */
 +
 +/* to disable SMTP */
 +/* #undef CURL_DISABLE_SMTP */
@@ -2298,9 +2292,6 @@ index 0000000000..b7876ce6d4
 +
 +/* fsetxattr() takes 6 args */
 +/* #undef HAVE_FSETXATTR_6 */
-+
-+/* Define to 1 if you have the ftruncate function. */
-+#define HAVE_FTRUNCATE 1
 +
 +/* Define to 1 if you have the gai_strerror function. */
 +#define HAVE_GAI_STRERROR 1
@@ -2606,7 +2597,7 @@ index 0000000000..b7876ce6d4
 +/* #undef HAVE_PROTO_BSDSOCKET_H */
 +
 +/* if you have <pthread.h> */
-+#define HAVE_PTHREAD_H 1
++#define HAVE_THREADS_POSIX 1
 +
 +/* Define to 1 if you have the <pwd.h> header file. */
 +#define HAVE_PWD_H 1
@@ -2655,9 +2646,6 @@ index 0000000000..b7876ce6d4
 +
 +/* Define to 1 if you have the sigsetjmp function or macro. */
 +#define HAVE_SIGSETJMP 1
-+
-+/* Define to 1 if you have the `snprintf' function. */
-+#define HAVE_SNPRINTF 1
 +
 +/* Define to 1 if sig_atomic_t is an available typedef. */
 +#define HAVE_SIG_ATOMIC_T 1
@@ -3058,11 +3046,11 @@ index 0000000000..b7876ce6d4
 +/* enable Secure Transport */
 +/* #undef USE_SECTRANSP */
 +
-+/* if you want POSIX threaded DNS lookup */
-+/* #undef USE_THREADS_POSIX */
++/* Define if you want to enable c-ares DNS lookup */
++/* #undef USE_RESOLV_ARES */
 +
-+/* if you want Win32 threaded DNS lookup */
-+/* #undef USE_THREADS_WIN32 */
++/* Define if you want to enable threaded DNS lookup */
++/* #undef USE_RESOLV_THREADED */
 +
 +/* Use TLS-SRP authentication */
 +/* #undef USE_TLS_SRP */
@@ -3124,12 +3112,12 @@ index 0000000000..b7876ce6d4
 +
 +/* the signed version of size_t */
 +/* #undef ssize_t */
-diff --git a/vendor/curl/lib/config-macos.h b/vendor/curl/lib/config-macos.h
+diff --git b/vendor/curl/lib/config-macos.h a/vendor/curl/lib/config-macos.h
 new file mode 100644
-index 0000000000..6aba01a730
+index 0000000000..0a5ef50373
 --- /dev/null
-+++ b/vendor/curl/lib/config-macos.h
-@@ -0,0 +1,1038 @@
++++ a/vendor/curl/lib/config-macos.h
+@@ -0,0 +1,1035 @@
 +/* lib/curl_config.h.  Generated from curl_config.h.in by configure.  */
 +/* lib/curl_config.h.in.  Generated from configure.ac by autoheader.  */
 +
@@ -3193,6 +3181,9 @@ index 0000000000..6aba01a730
 +/* disable netrc parsing */
 +/* #undef CURL_DISABLE_NETRC */
 +
++/* to enable NTLM support */
++/* #undef CURL_ENABLE_NTLM */
++
 +/* if the OpenSSL configuration won't be loaded automatically */
 +/* #undef CURL_DISABLE_OPENSSL_AUTO_LOAD_CONFIG */
 +
@@ -3214,8 +3205,8 @@ index 0000000000..6aba01a730
 +/* disable DNS shuffling */
 +/* #undef CURL_DISABLE_SHUFFLE_DNS */
 +
-+/* to disable SMB/CIFS */
-+/* #undef CURL_DISABLE_SMB */
++/* to enable SMB/CIFS */
++/* #undef CURL_ENABLE_SMB */
 +
 +/* to disable SMTP */
 +/* #undef CURL_DISABLE_SMTP */
@@ -3342,9 +3333,6 @@ index 0000000000..6aba01a730
 +
 +/* fsetxattr() takes 6 args */
 +/* #undef HAVE_FSETXATTR_6 */
-+
-+/* Define to 1 if you have the ftruncate function. */
-+#define HAVE_FTRUNCATE 1
 +
 +/* Define to 1 if you have the gai_strerror function. */
 +#define HAVE_GAI_STRERROR 1
@@ -3650,7 +3638,7 @@ index 0000000000..6aba01a730
 +/* #undef HAVE_PROTO_BSDSOCKET_H */
 +
 +/* if you have <pthread.h> */
-+#define HAVE_PTHREAD_H 1
++#define HAVE_THREADS_POSIX 1
 +
 +/* Define to 1 if you have the <pwd.h> header file. */
 +#define HAVE_PWD_H 1
@@ -3699,9 +3687,6 @@ index 0000000000..6aba01a730
 +
 +/* Define to 1 if you have the sigsetjmp function or macro. */
 +#define HAVE_SIGSETJMP 1
-+
-+/* Define to 1 if you have the `snprintf' function. */
-+#define HAVE_SNPRINTF 1
 +
 +/* Define to 1 if sig_atomic_t is an available typedef. */
 +#define HAVE_SIG_ATOMIC_T 1
@@ -4102,11 +4087,11 @@ index 0000000000..6aba01a730
 +/* enable Secure Transport */
 +/* #undef USE_SECTRANSP */
 +
-+/* if you want POSIX threaded DNS lookup */
-+#define USE_THREADS_POSIX 1
++/* Define if you want to enable c-ares DNS lookup */
++/* #undef USE_RESOLV_ARES */
 +
-+/* if you want Win32 threaded DNS lookup */
-+/* #undef USE_THREADS_WIN32 */
++/* Define if you want to enable threaded DNS lookup */
++/* #undef USE_RESOLV_THREADED */
 +
 +/* Use TLS-SRP authentication */
 +/* #undef USE_TLS_SRP */
@@ -4168,12 +4153,12 @@ index 0000000000..6aba01a730
 +
 +/* the signed version of size_t */
 +/* #undef ssize_t */
-diff --git a/vendor/curl/lib/config-openbsd.h b/vendor/curl/lib/config-openbsd.h
+diff --git b/vendor/curl/lib/config-openbsd.h a/vendor/curl/lib/config-openbsd.h
 new file mode 100644
-index 0000000000..2ae6f39770
+index 0000000000..502e87a699
 --- /dev/null
-+++ b/vendor/curl/lib/config-openbsd.h
-@@ -0,0 +1,1080 @@
++++ a/vendor/curl/lib/config-openbsd.h
+@@ -0,0 +1,1074 @@
 +/* lib/curl_config.h.  Generated from curl_config.h.in by configure.  */
 +/* lib/curl_config.h.in.  Generated from configure.ac by autoheader.  */
 +
@@ -4249,8 +4234,8 @@ index 0000000000..2ae6f39770
 +/* disable netrc parsing */
 +/* #undef CURL_DISABLE_NETRC */
 +
-+/* to disable NTLM support */
-+/* #undef CURL_DISABLE_NTLM */
++/* to enable NTLM support */
++/* #undef CURL_ENABLE_NTLM */
 +
 +/* if the OpenSSL configuration won't be loaded automatically */
 +/* #undef CURL_DISABLE_OPENSSL_AUTO_LOAD_CONFIG */
@@ -4273,8 +4258,8 @@ index 0000000000..2ae6f39770
 +/* disable DNS shuffling */
 +/* #undef CURL_DISABLE_SHUFFLE_DNS */
 +
-+/* to disable SMB/CIFS */
-+/* #undef CURL_DISABLE_SMB */
++/* to enable SMB/CIFS */
++/* #undef CURL_ENABLE_SMB */
 +
 +/* to disable SMTP */
 +/* #undef CURL_DISABLE_SMTP */
@@ -4402,9 +4387,6 @@ index 0000000000..2ae6f39770
 +
 +/* fsetxattr() takes 6 args */
 +/* #undef HAVE_FSETXATTR_6 */
-+
-+/* Define to 1 if you have the ftruncate function. */
-+#define HAVE_FTRUNCATE 1
 +
 +/* Define to 1 if you have a working getaddrinfo function. */
 +#define HAVE_GETADDRINFO 1
@@ -4706,7 +4688,7 @@ index 0000000000..2ae6f39770
 +/* #undef HAVE_PROTO_BSDSOCKET_H */
 +
 +/* if you have <pthread.h> */
-+#define HAVE_PTHREAD_H 1
++#define HAVE_THREADS_POSIX 1
 +
 +/* Define to 1 if you have the <pwd.h> header file. */
 +#define HAVE_PWD_H 1
@@ -4764,9 +4746,6 @@ index 0000000000..2ae6f39770
 +
 +/* Define to 1 if you have the sigsetjmp function or macro. */
 +#define HAVE_SIGSETJMP 1
-+
-+/* Define to 1 if you have the `snprintf' function. */
-+#define HAVE_SNPRINTF 1
 +
 +/* Define to 1 if struct sockaddr_in6 has the sin6_scope_id member */
 +#define HAVE_SOCKADDR_IN6_SIN6_SCOPE_ID 1
@@ -5181,11 +5160,11 @@ index 0000000000..2ae6f39770
 +/* enable Secure Transport */
 +/* #undef USE_SECTRANSP */
 +
-+/* if you want POSIX threaded DNS lookup */
-+/* #undef USE_THREADS_POSIX */
++/* Define if you want to enable c-ares DNS lookup */
++/* #undef USE_RESOLV_ARES */
 +
-+/* if you want Win32 threaded DNS lookup */
-+/* #undef USE_THREADS_WIN32 */
++/* Define if you want to enable threaded DNS lookup */
++/* #undef USE_RESOLV_THREADED */
 +
 +/* Use TLS-SRP authentication */
 +/* #undef USE_TLS_SRP */

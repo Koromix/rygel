@@ -85,12 +85,12 @@ void logmsg(const char *msg, ...)
 
   va_start(ap, msg);
 /* Suppress for builds where CURL_PRINTF() is not set */
-#if defined(__GNUC__) || defined(__clang__)
+#ifdef CURL_HAVE_DIAG
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wformat-nonliteral"
 #endif
   vsnprintf(buffer, sizeof(buffer), msg, ap);
-#if defined(__GNUC__) || defined(__clang__)
+#ifdef CURL_HAVE_DIAG
 #pragma GCC diagnostic pop
 #endif
   va_end(ap);
@@ -436,7 +436,7 @@ static LRESULT CALLBACK main_window_proc(HWND hwnd, UINT uMsg,
       break;
     }
     if(signum) {
-      logmsg("main_window_proc: %d -> %d", uMsg, signum);
+      logmsg("main_window_proc: %u -> %d", uMsg, signum);
       raise(signum);
     }
   }
@@ -671,7 +671,7 @@ int bind_unix_socket(curl_socket_t sock, const char *unix_socket,
   memset(sau, 0, sizeof(struct sockaddr_un));
   sau->sun_family = AF_UNIX;
   if(len >= sizeof(sau->sun_path) - 1) {
-    logmsg("Too long unix socket domain path (%zd)", len);
+    logmsg("Too long unix socket domain path (%zu)", len);
     return -1;
   }
   curlx_strcopy(sau->sun_path, sizeof(sau->sun_path), unix_socket, len);

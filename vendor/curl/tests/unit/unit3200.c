@@ -31,7 +31,7 @@ static CURLcode test_unit3200(const char *arg)
 #if !defined(CURL_DISABLE_COOKIES) || !defined(CURL_DISABLE_ALTSVC) || \
   !defined(CURL_DISABLE_HSTS) || !defined(CURL_DISABLE_NETRC)
 
-#if defined(CURL_GNUC_DIAG) || defined(__clang__)
+#ifdef CURL_HAVE_DIAG
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Woverlength-strings"
 #endif
@@ -70,7 +70,7 @@ static CURLcode test_unit3200(const char *arg)
     "LINE1\x1aTEST"
   };
 
-#if defined(CURL_GNUC_DIAG) || defined(__clang__)
+#ifdef CURL_HAVE_DIAG
 #pragma GCC diagnostic pop
 #endif
 
@@ -92,7 +92,7 @@ static CURLcode test_unit3200(const char *arg)
     fp = curlx_fopen(arg, "rb");
     abort_unless(fp != NULL, "Cannot open testfile");
 
-    curl_mfprintf(stderr, "Test %zd...", i);
+    curl_mfprintf(stderr, "Test %zu...", i);
     switch(i) {
     case 0:
       result = Curl_get_line(&buf, fp, &eof);

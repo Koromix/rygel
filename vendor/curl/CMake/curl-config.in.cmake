@@ -23,6 +23,8 @@
 ###########################################################################
 @PACKAGE_INIT@
 
+option(CURL_USE_CMAKECONFIG "Enable detecting @PROJECT_NAME@ dependencies via CMake Config. Default: @CURL_USE_CMAKECONFIG@"
+  "@CURL_USE_CMAKECONFIG@")
 option(CURL_USE_PKGCONFIG "Enable pkg-config to detect @PROJECT_NAME@ dependencies. Default: @CURL_USE_PKGCONFIG@"
   "@CURL_USE_PKGCONFIG@")
 
@@ -33,6 +35,10 @@ endif()
 
 include(CMakeFindDependencyMacro)
 
+if("@HAVE_THREADS_POSIX@" OR "@HAVE_THREADS_POSIX_BORINGSSL@")
+  find_dependency(Threads)  # for Threads::Threads
+endif()
+
 if("@USE_OPENSSL@")
   if("@OPENSSL_VERSION_MAJOR@")
     find_dependency(OpenSSL "@OPENSSL_VERSION_MAJOR@")
@@ -42,8 +48,7 @@ if("@USE_OPENSSL@")
   # Define lib duplicate to fixup lib order for GCC binutils ld in static builds
   if(TARGET OpenSSL::Crypto AND NOT TARGET CURL::OpenSSL_Crypto)
     add_library(CURL::OpenSSL_Crypto INTERFACE IMPORTED)
-    get_target_property(_curl_libname OpenSSL::Crypto LOCATION)
-    set_target_properties(CURL::OpenSSL_Crypto PROPERTIES INTERFACE_LINK_LIBRARIES "${_curl_libname}")
+    set_target_properties(CURL::OpenSSL_Crypto PROPERTIES INTERFACE_LINK_LIBRARIES OpenSSL::Crypto)
   endif()
 endif()
 if("@HAVE_LIBZ@")
@@ -51,13 +56,12 @@ if("@HAVE_LIBZ@")
   # Define lib duplicate to fixup lib order for GCC binutils ld in static builds
   if(TARGET ZLIB::ZLIB AND NOT TARGET CURL::ZLIB)
     add_library(CURL::ZLIB INTERFACE IMPORTED)
-    get_target_property(_curl_libname ZLIB::ZLIB LOCATION)
-    set_target_properties(CURL::ZLIB PROPERTIES INTERFACE_LINK_LIBRARIES "${_curl_libname}")
+    set_target_properties(CURL::ZLIB PROPERTIES INTERFACE_LINK_LIBRARIES ZLIB::ZLIB)
   endif()
 endif()
 
 set(_curl_cmake_module_path_save ${CMAKE_MODULE_PATH})
-set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR} ${CMAKE_MODULE_PATH})
+list(PREPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
 
 set(_curl_libs "")
 
@@ -92,10 +96,6 @@ endif()
 if("@USE_LIBPSL@")
   find_dependency(Libpsl MODULE)
   list(APPEND _curl_libs CURL::libpsl)
-endif()
-if("@USE_LIBRTMP@")
-  find_dependency(Librtmp MODULE)
-  list(APPEND _curl_libs CURL::librtmp)
 endif()
 if("@USE_LIBSSH@")
   find_dependency(Libssh MODULE)
@@ -160,33 +160,7 @@ include("${CMAKE_CURRENT_LIST_DIR}/@TARGETS_EXPORT_NAME@.cmake")
 
 # Alias for either shared or static library
 if(NOT TARGET @PROJECT_NAME@::@LIB_NAME@)
-  if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.11 AND CMAKE_VERSION VERSION_LESS 3.18)
-    set_target_properties(@PROJECT_NAME@::@LIB_SELECTED@ PROPERTIES IMPORTED_GLOBAL TRUE)
-  endif()
   add_library(@PROJECT_NAME@::@LIB_NAME@ ALIAS @PROJECT_NAME@::@LIB_SELECTED@)
-endif()
-
-if(TARGET @PROJECT_NAME@::@LIB_STATIC@)
-  # CMake before CMP0099 (CMake 3.17 2020-03-20) did not propagate libdirs to
-  # targets. It expected libs to have an absolute filename. As a workaround,
-  # manually apply dependency libdirs, for CMake consumers without this policy.
-  if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.17)
-    cmake_policy(GET CMP0099 _has_CMP0099)  # https://cmake.org/cmake/help/latest/policy/CMP0099.html
-  endif()
-  if(NOT _has_CMP0099 AND CMAKE_VERSION VERSION_GREATER_EQUAL 3.13 AND _curl_libs)
-    set(_curl_libdirs "")
-    foreach(_curl_lib IN LISTS _curl_libs)
-      if(TARGET "${_curl_lib}")
-        get_target_property(_curl_libdir "${_curl_lib}" INTERFACE_LINK_DIRECTORIES)
-        if(_curl_libdir)
-          list(APPEND _curl_libdirs "${_curl_libdir}")
-        endif()
-      endif()
-    endforeach()
-    if(_curl_libdirs)
-      target_link_directories(@PROJECT_NAME@::@LIB_STATIC@ INTERFACE ${_curl_libdirs})
-    endif()
-  endif()
 endif()
 
 # For compatibility with CMake's FindCURL.cmake

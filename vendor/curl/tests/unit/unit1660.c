@@ -24,7 +24,6 @@
 #include "unitcheck.h"
 
 #if !defined(CURL_DISABLE_HTTP) && !defined(CURL_DISABLE_HSTS)
-
 #include "urldata.h"
 #include "hsts.h"
 
@@ -133,7 +132,7 @@ static CURLcode test_unit1660(const char *arg)
         continue;
       }
       else if(result) {
-        curl_mprintf("Input %u: error %d\n", i, (int)result);
+        curl_mprintf("Input %d: error %d\n", i, (int)result);
         continue;
       }
     }

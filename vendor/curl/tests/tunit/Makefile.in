@@ -440,7 +440,8 @@ TESTS_C = \
   tool1604.c \
   tool1621.c \
   tool1622.c \
-  tool1623.c
+  tool1623.c \
+  tool1720.c
 
 
 # Get BUNDLE, FIRST_C, TESTS_C variables
@@ -756,11 +757,8 @@ uninstall-am:
 @BUILD_UNITTESTS_TRUE@$(BUNDLE).c: $(top_srcdir)/scripts/mk-unity.pl Makefile.inc $(FIRST_C) $(TESTS_C)
 @BUILD_UNITTESTS_TRUE@	@PERL@ $(top_srcdir)/scripts/mk-unity.pl --test $(TESTS_C) > $(BUNDLE).c
 
-# ignore generated C files since they play by slightly different rules!
 checksrc:
-	$(CHECKSRC)(@PERL@ $(top_srcdir)/scripts/checksrc.pl -D$(srcdir) \
-	  -W$(srcdir)/$(BUNDLE).c \
-	  $(srcdir)/*.[ch])
+	$(CHECKSRC)(@PERL@ $(top_srcdir)/scripts/checksrc.pl -D$(srcdir) -W$(srcdir)/$(BUNDLE).c $(TESTS_C))
 
 @NOT_CURL_CI_TRUE@all-local: checksrc
 

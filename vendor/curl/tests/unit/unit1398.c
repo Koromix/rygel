@@ -23,7 +23,7 @@
  ***************************************************************************/
 #include "unitcheck.h"
 
-#if defined(CURL_GNUC_DIAG) || defined(__clang__)
+#ifdef CURL_HAVE_DIAG
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wformat"
 #endif
@@ -39,6 +39,31 @@ static CURLcode test_unit1398(const char *arg)
   char output[130];
 
 /* #define curl_msnprintf snprintf */
+
+  /* negative precision is treated as if omitted */
+  rc = curl_msnprintf(output, sizeof(output), "%.*s", -1, str);
+  fail_unless(rc == 3, "return code should be 3");
+  fail_unless(!strcmp(output, "bug"), "wrong output");
+
+  rc = curl_msnprintf(output, sizeof(output), "%.*s", -1, "0123456789");
+  fail_unless(rc == 10, "return code should be 10");
+  fail_unless(!strcmp(output, "0123456789"), "wrong output");
+
+  rc = curl_msnprintf(output, sizeof(output), "%.*s", 0, "0123456789");
+  fail_unless(rc == 0, "return code should be 0");
+  fail_unless(!strcmp(output, ""), "wrong output");
+
+  rc = curl_msnprintf(output, sizeof(output), "%.*s", -2, str);
+  fail_unless(rc == 3, "return code should be 3");
+  fail_unless(!strcmp(output, "bug"), "wrong output");
+
+  rc = curl_msnprintf(output, sizeof(output), "%.*d", -3, 10000);
+  fail_unless(rc == 5, "return code should be 5");
+  fail_unless(!strcmp(output, "10000"), "wrong output");
+
+  rc = curl_msnprintf(output, sizeof(output), "%.*d", 0, 1234567);
+  fail_unless(rc == 7, "return code should be 0");
+  fail_unless(!strcmp(output, "1234567"), "wrong output");
 
   /* without a trailing zero */
   rc = curl_msnprintf(output, 4, "%.*s", width, buf);
@@ -195,6 +220,6 @@ static CURLcode test_unit1398(const char *arg)
   UNITTEST_END_SIMPLE
 }
 
-#if defined(CURL_GNUC_DIAG) || defined(__clang__)
+#ifdef CURL_HAVE_DIAG
 #pragma GCC diagnostic pop
 #endif

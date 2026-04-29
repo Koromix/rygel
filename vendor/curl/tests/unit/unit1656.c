@@ -24,7 +24,6 @@
 #include "unitcheck.h"
 
 #if defined(USE_GNUTLS) || defined(USE_SCHANNEL) || defined(USE_MBEDTLS)
-
 #include "vtls/x509asn1.h"
 
 struct test_spec {
@@ -40,7 +39,7 @@ static bool do_test(const struct test_spec *spec, size_t i,
   const char *in = spec->input;
 
   curlx_dyn_reset(dbuf);
-  result = Curl_x509_GTime2str(dbuf, in, in + strlen(in));
+  result = GTime2str(dbuf, in, in + strlen(in));
   if(result != spec->result_exp) {
     curl_mfprintf(stderr, "test %zu: expect result %d, got %d\n",
                   i, spec->result_exp, result);
@@ -95,12 +94,12 @@ static CURLcode test_unit1656(const char *arg)
   struct dynbuf dbuf;
   bool all_ok = TRUE;
 
-  curlx_dyn_init(&dbuf, 32 * 1024);
-
   if(curl_global_init(CURL_GLOBAL_ALL) != CURLE_OK) {
     curl_mfprintf(stderr, "curl_global_init() failed\n");
     return TEST_ERR_MAJOR_BAD;
   }
+
+  curlx_dyn_init(&dbuf, 32 * 1024);
 
   for(i = 0; i < CURL_ARRAYSIZE(test_specs); ++i) {
     if(!do_test(&test_specs[i], i, &dbuf))

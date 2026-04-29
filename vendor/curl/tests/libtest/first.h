@@ -43,18 +43,19 @@ extern const struct entry_s s_entries[];
 
 extern int unitfail; /* for unittests */
 
-#include <curlx/curlx.h>
+#include "curlx/base64.h" /* for curlx_base64* */
+#include "curlx/dynbuf.h" /* for curlx_dyn_*() */
+#include "curlx/fopen.h" /* for curlx_f*() */
+#include "curlx/strcopy.h" /* for curlx_strcopy() */
+#include "curlx/strerr.h" /* for curlx_strerror() */
+#include "curlx/strparse.h" /* for curlx_str_* parsing functions */
+#include "curlx/timediff.h" /* for timediff_t type and related functions */
+#include "curlx/timeval.h" /* for curlx_now type and related functions */
+#include "curlx/wait.h" /* for curlx_wait_ms() */
 
 #ifdef HAVE_SYS_SELECT_H
 /* since so many tests use select(), we can just as well include it here */
 #include <sys/select.h>
-#endif
-
-/* GCC <4.6 does not support '#pragma GCC diagnostic push' and
-   does not support 'pragma GCC diagnostic' inside functions. */
-#if (defined(__GNUC__) && \
-  ((__GNUC__ > 4) || ((__GNUC__ == 4) && (__GNUC_MINOR__ >= 6))))
-#define CURL_GNUC_DIAG
 #endif
 
 #define test_setopt(A, B, C)            \

@@ -43,20 +43,6 @@ that is apart from the source tree.
 For the full list of CMake build configuration variables see
 [the corresponding section](#cmake-build-options).
 
-### Fallback for CMake before version 3.13
-
-CMake before version 3.13 does not support the `-B` option. In that case,
-you must create the build directory yourself, `cd` to it and run `cmake`
-from there:
-
-    $ mkdir ../curl-build
-    $ cd ../curl-build
-    $ cmake ../curl
-
-If you want to build in the source tree, it is enough to do this:
-
-    $ cmake .
-
 ### Build system generator selection
 
 You can override CMake's default by using `-G <generator-name>`. For example
@@ -242,6 +228,7 @@ target_link_libraries(my_target PRIVATE CURL::libcurl)
                                             `wolfssl`, `gnutls`, `mbedtls`, `openssl`, `schannel`, `rustls`
 - `CURL_DROP_UNUSED`:                       Drop unused code and data from built binaries. Default: `OFF`
 - `CURL_ENABLE_EXPORT_TARGET`:              Enable CMake export target. Default: `ON`
+- `CURL_GCC_ANALYZER`:                      Enable GCC `--analyzer` option. Default: `OFF`
 - `CURL_HIDDEN_SYMBOLS`:                    Hide libcurl internal symbols (=hide all symbols that are not officially external). Default: `ON`
 - `CURL_LIBCURL_SOVERSION`:                 Enable libcurl SOVERSION. Default: `ON` for supported platforms
 - `CURL_LIBCURL_VERSIONED_SYMBOLS`:         Enable libcurl versioned symbols. Default: `OFF`
@@ -260,27 +247,33 @@ target_link_libraries(my_target PRIVATE CURL::libcurl)
 - `SHARE_LIB_OBJECT`:                       Build shared and static libcurl in a single pass (requires CMake 3.12 or newer). Default: `ON` for Windows
 - `STATIC_LIB_SUFFIX`:                      Static library suffix. Default: (empty)
 
-## CA bundle options
+## Root CA options
 
 - `CURL_CA_BUNDLE`:                         Absolute path to the CA bundle. Set `none` to disable or `auto` for auto-detection. Default: `auto`
 - `CURL_CA_EMBED`:                          Absolute path to the CA bundle to embed in the curl tool. Default: (disabled)
 - `CURL_CA_FALLBACK`:                       Use built-in CA store of OpenSSL. Default: `OFF`
 - `CURL_CA_NATIVE`:                         Use native CA store. Default: `OFF`
                                             Supported by GnuTLS, OpenSSL (including forks) on Windows, wolfSSL.
-- `CURL_CA_PATH`:                           Absolute path to a directory containing CA certificates stored individually. Set `none` to disable or `auto` for auto-detection. Default: `auto`
+- `CURL_CA_PATH`:                           Absolute path to a directory containing CA certificates stored individually.
+                                            Set `none` to disable or `auto` for auto-detection. Default: `auto`
 - `CURL_CA_SEARCH_SAFE`:                    Enable safe CA bundle search (within the curl tool directory) on Windows. Default: `OFF`
+- `USE_APPLE_SECTRUST`:                     Use Apple OS-native certificate verification. Default: `OFF`
 
 ## Enabling features
 
+- `CURL_ENABLE_NTLM`:                       Enable NTLM support. Default: `OFF`
 - `CURL_ENABLE_SSL`:                        Enable SSL support. Default: `ON`
 - `CURL_WINDOWS_SSPI`:                      Enable SSPI on Windows. Default: =`CURL_USE_SCHANNEL`
 - `ENABLE_IPV6`:                            Enable IPv6 support. Default: `ON` if target supports IPv6.
 - `ENABLE_THREADED_RESOLVER`:               Enable threaded DNS lookup. Default: `ON` if c-ares is not enabled and target supports threading.
 - `ENABLE_UNICODE`:                         Use the Unicode version of the Windows API functions. Default: `OFF`
 - `ENABLE_UNIX_SOCKETS`:                    Enable Unix domain sockets support. Default: `ON`
+- `USE_APPLE_IDN`:                          Use Apple built-in IDN support. Default: `OFF`
 - `USE_ECH`:                                Enable ECH support. Default: `OFF`
 - `USE_HTTPSRR`:                            Enable HTTPS RR support. Default: `OFF`
 - `USE_SSLS_EXPORT`:                        Enable experimental SSL session import/export. Default: `OFF`
+- `USE_WIN32_IDN`:                          Use WinIDN for IDN support. Default: `OFF`
+- `USE_WIN32_LDAP`:                         Use Windows LDAP implementation. Default: `ON`
 
 ## Disabling features
 
@@ -314,7 +307,6 @@ target_link_libraries(my_target PRIVATE CURL::libcurl)
 - `CURL_DISABLE_MQTT`:                      Disable MQTT. Default: `OFF`
 - `CURL_DISABLE_NEGOTIATE_AUTH`:            Disable negotiate authentication. Default: `OFF`
 - `CURL_DISABLE_NETRC`:                     Disable netrc parser. Default: `OFF`
-- `CURL_DISABLE_NTLM`:                      Disable NTLM support. Default: `OFF`
 - `CURL_DISABLE_OPENSSL_AUTO_LOAD_CONFIG`:  Disable automatic loading of OpenSSL configuration. Default: `OFF`
 - `CURL_DISABLE_PARSEDATE`:                 Disable date parsing. Default: `OFF`
 - `CURL_DISABLE_POP3`:                      Disable POP3. Default: `OFF`
@@ -323,7 +315,7 @@ target_link_libraries(my_target PRIVATE CURL::libcurl)
 - `CURL_DISABLE_RTSP`:                      Disable RTSP. Default: `OFF`
 - `CURL_DISABLE_SHA512_256`:                Disable SHA-512/256 hash algorithm. Default: `OFF`
 - `CURL_DISABLE_SHUFFLE_DNS`:               Disable shuffle DNS feature. Default: `OFF`
-- `CURL_DISABLE_SMB`:                       Disable SMB. Default: `OFF`
+- `CURL_ENABLE_SMB`:                        Enable SMB. Default: `OFF`
 - `CURL_DISABLE_SMTP`:                      Disable SMTP. Default: `OFF`
 - `CURL_DISABLE_SOCKETPAIR`:                Disable use of socketpair for curl_multi_poll(). Default: `OFF`
 - `CURL_DISABLE_SRP`:                       Disable TLS-SRP support. Default: `OFF`
@@ -360,43 +352,50 @@ Details via CMake
 ## Dependencies
 
 - `CURL_BROTLI`:                            Use brotli (`ON`, `OFF` or `AUTO`). Default: `AUTO`
+- `CURL_USE_CMAKECONFIG`:                   Enable detecting dependencies via CMake Config.
+                                            Default: `ON` for MSVC (except under vcpkg), if not cross-compiling. (experimental)
 - `CURL_USE_GNUTLS`:                        Enable GnuTLS for SSL/TLS. Default: `OFF`
 - `CURL_USE_GSASL`:                         Use libgsasl. Default: `OFF`
 - `CURL_USE_GSSAPI`:                        Use GSSAPI implementation. Default: `OFF`
-- `CURL_USE_LIBBACKTRACE`:                  Use [libbacktrace](https://github.com/ianlancetaylor/libbacktrace). Requires debug-enabled build and DWARF debug information. Default: `OFF`
+- `CURL_USE_LIBBACKTRACE`:                  Use [libbacktrace](https://github.com/ianlancetaylor/libbacktrace).
+                                            Requires debug-enabled build and DWARF debug information. Default: `OFF`
 - `CURL_USE_LIBPSL`:                        Use libpsl. Default: `ON`
 - `CURL_USE_LIBSSH2`:                       Use libssh2. Default: `ON`
 - `CURL_USE_LIBSSH`:                        Use libssh. Default: `OFF`
 - `CURL_USE_LIBUV`:                         Use libuv for event-based tests. Default: `OFF`
 - `CURL_USE_MBEDTLS`:                       Enable mbedTLS for SSL/TLS. Default: `OFF`
 - `CURL_USE_OPENSSL`:                       Enable OpenSSL for SSL/TLS. Default: `ON` if no other TLS backend was enabled.
-- `CURL_USE_PKGCONFIG`:                     Enable `pkg-config` to detect dependencies. Default: `ON` for Unix (except Android, Apple devices), vcpkg, MinGW if not cross-compiling.
+- `CURL_USE_PKGCONFIG`:                     Enable `pkg-config` to detect dependencies.
+                                            Default: `ON` for Unix (except Android, Apple devices), vcpkg, MinGW if not cross-compiling.
 - `CURL_USE_RUSTLS`:                        Enable Rustls for SSL/TLS. Default: `OFF`
 - `CURL_USE_SCHANNEL`:                      Enable Windows native SSL/TLS (Schannel). Default: `OFF`
 - `CURL_USE_WOLFSSL`:                       Enable wolfSSL for SSL/TLS. Default: `OFF`
 - `CURL_ZLIB`:                              Use zlib (`ON`, `OFF` or `AUTO`). Default: `AUTO`
 - `CURL_ZSTD`:                              Use zstd (`ON`, `OFF` or `AUTO`). Default: `AUTO`
 - `ENABLE_ARES`:                            Enable c-ares support. Default: `OFF`
-- `USE_APPLE_IDN`:                          Use Apple built-in IDN support. Default: `OFF`
-- `USE_APPLE_SECTRUST`:                     Use Apple OS-native certificate verification. Default: `OFF`
 - `USE_LIBIDN2`:                            Use libidn2 for IDN support. Default: `ON`
-- `USE_LIBRTMP`:                            Enable librtmp from rtmpdump. Default: `OFF`
 - `USE_NGHTTP2`:                            Use nghttp2 library. Default: `ON`
 - `USE_NGTCP2`:                             Use ngtcp2 and nghttp3 libraries for HTTP/3 support. Default: `OFF`
 - `USE_QUICHE`:                             Use quiche library for HTTP/3 support. Default: `OFF`
-- `USE_WIN32_IDN`:                          Use WinIDN for IDN support. Default: `OFF`
-- `USE_WIN32_LDAP`:                         Use Windows LDAP implementation. Default: `ON`
 
 ## Dependency options (via CMake)
 
 - `OPENSSL_ROOT_DIR`:                       Absolute path to the root installation of OpenSSL (and forks).
 - `OPENSSL_INCLUDE_DIR`:                    Absolute path to OpenSSL include directory.
-- `OPENSSL_SSL_LIBRARY`:                    Absolute path to `ssl` library. With MSVC, CMake uses variables `SSL_EAY_DEBUG`/`SSL_EAY_RELEASE` instead.
-- `OPENSSL_CRYPTO_LIBRARY`:                 Absolute path to `crypto` library. With MSVC, CMake uses variables `LIB_EAY_DEBUG`/`LIB_EAY_RELEASE` instead.
+- `OPENSSL_SSL_LIBRARY`:                    Absolute path to `ssl` library.
+                                            With MSVC, CMake uses variables `SSL_EAY_DEBUG`/`SSL_EAY_RELEASE` instead.
+- `OPENSSL_CRYPTO_LIBRARY`:                 Absolute path to `crypto` library.
+                                            With MSVC, CMake uses variables `LIB_EAY_DEBUG`/`LIB_EAY_RELEASE` instead.
 - `OPENSSL_USE_STATIC_LIBS`:                Look for static OpenSSL libraries.
 - `ZLIB_INCLUDE_DIR`:                       Absolute path to zlib include directory.
 - `ZLIB_LIBRARY`:                           Absolute path to `zlib` library.
 - `ZLIB_USE_STATIC_LIBS`:                   Look for static `zlib` library (requires CMake v3.24).
+- `<PackageName>_DIR`:                      Absolute path to `<PackageName>` CMake Config directory where `*.cmake` files reside.
+                                            Used when `CURL_USE_CMAKECONFIG` is enabled.
+                                            `<PackageName>` may be:
+                                            `c-ares`, `Libssh2`, `MbedTLS`, `NGHTTP2`, `NGHTTP3`,
+                                            `NGTCP2` for 1.19.0+ (with non-fork OpenSSL only),
+                                            `wolfssl` for 5.2.1+, `Zstd` for 1.4.5+.
 
 ## Dependency options (tools)
 
@@ -431,8 +430,6 @@ Details via CMake
 - `LIBIDN2_LIBRARY`:                        Absolute path to `libidn2` library.
 - `LIBPSL_INCLUDE_DIR`:                     Absolute path to libpsl include directory.
 - `LIBPSL_LIBRARY`:                         Absolute path to `libpsl` library.
-- `LIBRTMP_INCLUDE_DIR`:                    Absolute path to librtmp include directory.
-- `LIBRTMP_LIBRARY`:                        Absolute path to `librtmp` library.
 - `LIBSSH_INCLUDE_DIR`:                     Absolute path to libssh include directory.
 - `LIBSSH_LIBRARY`:                         Absolute path to `libssh` library.
 - `LIBSSH_USE_STATIC_LIBS`:                 Configure for static libssh libraries. (experimental)
@@ -538,11 +535,11 @@ Available variables:
 - `HAVE_WOLFSSL_BIO_NEW`:                   `wolfSSL_BIO_new` present in wolfSSL.
 - `HAVE_WOLFSSL_BIO_SET_SHUTDOWN`:          `wolfSSL_BIO_set_shutdown` present in wolfSSL.
 - `HAVE_WOLFSSL_CTX_GENERATEECHCONFIG`:     `wolfSSL_CTX_GenerateEchConfig` present in wolfSSL.
-- `HAVE_WOLFSSL_DES_ECB_ENCRYPT`:           `wolfSSL_DES_ecb_encrypt` present in wolfSSL.
 - `HAVE_WOLFSSL_GET_PEER_CERTIFICATE`:      `wolfSSL_get_peer_certificate` present in wolfSSL.
 - `HAVE_WOLFSSL_SET_QUIC_USE_LEGACY_CODEPOINT`:
                                             `wolfSSL_set_quic_use_legacy_codepoint` present in wolfSSL.
 - `HAVE_WOLFSSL_USEALPN`:                   `wolfSSL_UseALPN` present in wolfSSL.
+- `HAVE_WC_DES_ECBENCRYPT`:                 `wc_Des_EcbEncrypt` present in wolfSSL.
 
 For each of the above variables, if the variable is *defined* (either to `ON`
 or `OFF`), the symbol detection is skipped. If the variable is *not defined*,

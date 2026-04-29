@@ -61,6 +61,9 @@
 /* disable netrc parsing */
 /* #undef CURL_DISABLE_NETRC */
 
+/* to enable NTLM support */
+/* #undef CURL_ENABLE_NTLM */
+
 /* if the OpenSSL configuration won't be loaded automatically */
 /* #undef CURL_DISABLE_OPENSSL_AUTO_LOAD_CONFIG */
 
@@ -82,8 +85,8 @@
 /* disable DNS shuffling */
 /* #undef CURL_DISABLE_SHUFFLE_DNS */
 
-/* to disable SMB/CIFS */
-/* #undef CURL_DISABLE_SMB */
+/* to enable SMB/CIFS */
+/* #undef CURL_ENABLE_SMB */
 
 /* to disable SMTP */
 /* #undef CURL_DISABLE_SMTP */
@@ -210,9 +213,6 @@
 
 /* fsetxattr() takes 6 args */
 /* #undef HAVE_FSETXATTR_6 */
-
-/* Define to 1 if you have the ftruncate function. */
-#define HAVE_FTRUNCATE 1
 
 /* Define to 1 if you have the gai_strerror function. */
 #define HAVE_GAI_STRERROR 1
@@ -518,7 +518,7 @@
 /* #undef HAVE_PROTO_BSDSOCKET_H */
 
 /* if you have <pthread.h> */
-#define HAVE_PTHREAD_H 1
+#define HAVE_THREADS_POSIX 1
 
 /* Define to 1 if you have the <pwd.h> header file. */
 #define HAVE_PWD_H 1
@@ -567,9 +567,6 @@
 
 /* Define to 1 if you have the sigsetjmp function or macro. */
 #define HAVE_SIGSETJMP 1
-
-/* Define to 1 if you have the `snprintf' function. */
-#define HAVE_SNPRINTF 1
 
 /* Define to 1 if sig_atomic_t is an available typedef. */
 #define HAVE_SIG_ATOMIC_T 1
@@ -970,11 +967,11 @@
 /* enable Secure Transport */
 /* #undef USE_SECTRANSP */
 
-/* if you want POSIX threaded DNS lookup */
-/* #undef USE_THREADS_POSIX */
+/* Define if you want to enable c-ares DNS lookup */
+/* #undef USE_RESOLV_ARES */
 
-/* if you want Win32 threaded DNS lookup */
-/* #undef USE_THREADS_WIN32 */
+/* Define if you want to enable threaded DNS lookup */
+/* #undef USE_RESOLV_THREADED */
 
 /* Use TLS-SRP authentication */
 /* #undef USE_TLS_SRP */

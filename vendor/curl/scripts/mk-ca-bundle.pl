@@ -60,7 +60,7 @@ $opt_d = 'release';
 # If the OpenSSL commandline is not in search path you can configure it here!
 my $openssl = 'openssl';
 
-my $version = '1.31';
+my $version = '1.33';
 
 $opt_w = 76; # default base64 encoded lines length
 
@@ -166,14 +166,16 @@ sub HELP_MESSAGE() {
     print "\t-b\tbackup an existing version of ca-bundle.crt\n";
     print "\t-d\tspecify Mozilla tree to pull certdata.txt or custom URL\n";
     print "\t\t  Valid names are:\n";
-    print "\t\t    ", join(", ", map { ($_ =~ m/$opt_d/) ? "$_ (default)" : "$_" } sort keys %urls), "\n";
+    print "\t\t    ", join(", ", map { ($_ =~ m/$opt_d/) ? "$_ (default)" : $_ } sort keys %urls), "\n";
     print "\t-f\tforce rebuild even if certdata.txt is current\n";
     print "\t-i\tprint version info about used modules\n";
     print "\t-k\tallow URLs other than HTTPS, enable HTTP fallback (insecure)\n";
     print "\t-l\tprint license info about certdata.txt\n";
     print "\t-m\tinclude meta data in output\n";
     print "\t-n\tno download of certdata.txt (to use existing)\n";
-    print wrap("\t","\t\t", "-p\tlist of Mozilla trust purposes and levels for certificates to include in output. Takes the form of a comma separated list of purposes, a colon, and a comma separated list of levels. (default: $default_mozilla_trust_purposes:$default_mozilla_trust_levels)"), "\n";
+    print wrap("\t","\t\t", "-p\tlist of Mozilla trust purposes and levels for certificates to include in output. " .
+          "Takes the form of a comma separated list of purposes, a colon, and a comma separated list of levels. " .
+          "(default: $default_mozilla_trust_purposes:$default_mozilla_trust_levels)"), "\n";
     print "\t\t  Valid purposes are:\n";
     print wrap("\t\t    ","\t\t    ", join(", ", "ALL", @valid_mozilla_trust_purposes)), "\n";
     print "\t\t  Valid levels are:\n";
@@ -302,6 +304,7 @@ my $oldhash = oldhash($crt);
 report "SHA256 of old file: $oldhash";
 
 if(!$opt_n) {
+    report "Using URL: $url";
     report "Downloading $txt ...";
 
     # If we have an HTTPS URL then use curl
@@ -439,7 +442,7 @@ my @precert;
 my $cka_value;
 my $valid = 0;
 
-open(TXT,"$txt") or die "Could not open $txt: $!\n";
+open(TXT, $txt) or die "Could not open $txt: $!\n";
 while(<TXT>) {
     if(/\*\*\*\*\* BEGIN LICENSE BLOCK \*\*\*\*\*/) {
         print CRT;
@@ -654,6 +657,7 @@ while(<TXT>) {
 }
 close(TXT) or die "Could not close $txt: $!\n";
 close(CRT) or die "Could not close $crt.~: $!\n";
+utime($filedate, $filedate, "$crt.~");
 unless($stdout) {
     if($opt_b && -e $crt) {
         my $bk = 1;

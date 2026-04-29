@@ -25,7 +25,6 @@
 
 /* DoH + HTTPSRR are required */
 #if !defined(CURL_DISABLE_DOH) && defined(USE_HTTPSRR)
-
 #include "doh.h"
 #include "httpsrr.h"
 
@@ -36,12 +35,6 @@ static CURLcode t1658_setup(void)
   return CURLE_OK;
 }
 
-extern CURLcode doh_resp_decode_httpsrr(struct Curl_easy *data,
-                                        const unsigned char *cp, size_t len,
-                                        struct Curl_https_rrinfo **hrr);
-extern void doh_print_httpsrr(struct Curl_easy *data,
-                              struct Curl_https_rrinfo *hrr);
-
 /*
  * The idea here is that we pass one DNS packet at the time to the decoder. we
  * then generate a string output with the results and compare if it matches
@@ -49,11 +42,11 @@ extern void doh_print_httpsrr(struct Curl_easy *data,
  */
 
 static char rrbuffer[256];
-static void rrresults(struct Curl_https_rrinfo *rr, CURLcode res)
+static void rrresults(struct Curl_https_rrinfo *rr, CURLcode result)
 {
   char *p = rrbuffer;
   const char *pend = rrbuffer + sizeof(rrbuffer);
-  curl_msnprintf(rrbuffer, sizeof(rrbuffer), "r:%d|", (int)res);
+  curl_msnprintf(rrbuffer, sizeof(rrbuffer), "r:%d|", (int)result);
   p += strlen(rrbuffer);
 
   if(rr) {
@@ -72,7 +65,7 @@ static void rrresults(struct Curl_https_rrinfo *rr, CURLcode res)
       curl_msnprintf(p, pend - p, "no-def-alpn|");
       p += strlen(p);
     }
-    if(rr->port >= 0) {
+    if(rr->port_set) {
       curl_msnprintf(p, pend - p, "port:%d|", rr->port);
       p += strlen(p);
     }

@@ -40,6 +40,10 @@
 #include "tool_helpers.h"
 #include "tool_version.h"
 
+#ifdef HAVE_NETINET_IN_H
+#include <netinet/in.h> /* IPPROTO_IPV6 */
+#endif
+
 #define BUFFER_SIZE 102400L
 
 #ifdef IP_TOS
@@ -204,13 +208,20 @@ static CURLcode ssh_setopts(struct OperationConfig *config, CURL *curl,
 
   if(!config->insecure_ok) {
     char *known = config->knownhosts;
-    if(!known)
-      known = findfile(".ssh/known_hosts", FALSE);
+    if(!known) {
+      char *found = findfile(".ssh/known_hosts", FALSE);
+      if(found) {
+        known = curlx_strdup(found);
+        curl_free(found);
+        if(!known)
+          return CURLE_OUT_OF_MEMORY;
+      }
+    }
     if(known) {
       result = my_setopt_str(curl, CURLOPT_SSH_KNOWNHOSTS, known);
       if(result) {
         config->knownhosts = NULL;
-        curl_free(known);
+        curlx_free(known);
         return result;
       }
       /* store it in global to avoid repeated checks */
@@ -291,10 +302,11 @@ static CURLcode ssl_ca_setopts(struct OperationConfig *config, CURL *curl)
     MY_SETOPT_STR(curl, CURLOPT_PROXY_CAPATH,
                   (config->proxy_capath ? config->proxy_capath :
                    config->capath));
-    if(result && config->proxy_capath) {
+    if((result == CURLE_NOT_BUILT_IN) || (result == CURLE_UNKNOWN_OPTION)) {
       warnf("ignoring %s, not supported by libcurl with %s",
-            config->proxy_capath ? "--proxy-capath" : "--capath",
+            "setting the CA path for the proxy",
             ssl_backend());
+      result = CURLE_OK;
     }
   }
   if(result)
@@ -507,7 +519,7 @@ static CURLcode cookie_setopts(struct OperationConfig *config, CURL *curl)
                                 ISBLANK(cl->data[0]) ? "" : " ", cl->data);
       if(result) {
         warnf("skipped provided cookie, the cookie header "
-              "would go over %u bytes", MAX_COOKIE_LINE);
+              "would go over %d bytes", MAX_COOKIE_LINE);
         return result;
       }
     }
@@ -843,16 +855,17 @@ CURLcode config2setopts(struct OperationConfig *config,
   if(result)
     return result;
 
-#ifndef DEBUGBUILD
-  /* On most modern OSes, exiting works thoroughly,
-     we will clean everything up via exit(), so do not bother with
-     slow cleanups. Crappy ones might need to skip this.
-     Note: avoid having this setopt added to the --libcurl source
-     output. */
-  result = curl_easy_setopt(curl, CURLOPT_QUICK_EXIT, 1L);
-  if(result)
-    return result;
+  if(TRUE
+#ifdef DEBUGBUILD
+    && getenv("CURL_QUICK_EXIT")
 #endif
+    ) {
+    /* QUICK_EXIT allows for running threads to be detached and not
+     * joined. Preferably in non-debug runs. */
+    result = curl_easy_setopt(curl, CURLOPT_QUICK_EXIT, 1L);
+    if(result)
+      return result;
+  }
 
   gen_trace_setopts(config, curl);
 

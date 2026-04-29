@@ -22,11 +22,9 @@
  *
  ***************************************************************************/
 #include "unitcheck.h"
-
 #include "urldata.h"
 #include "uint-spbset.h"
 #include "curl_trc.h"
-#include "unitprotos.h"
 
 static void check_spbset(const char *name, const uint32_t *s, size_t slen)
 {
@@ -38,7 +36,7 @@ static void check_spbset(const char *name, const uint32_t *s, size_t slen)
 
   Curl_uint32_spbset_init(&bset);
 
-  Curl_uint32_spbset_clear(&bset);
+  uint32_spbset_clear(&bset);
   c = Curl_uint32_spbset_count(&bset);
   fail_unless(c == 0, "set count is not 0");
 
@@ -77,7 +75,7 @@ static void check_spbset(const char *name, const uint32_t *s, size_t slen)
   c = Curl_uint32_spbset_count(&bset);
   fail_unless(c == slen / 2, "set count is wrong");
 
-  Curl_uint32_spbset_clear(&bset);
+  uint32_spbset_clear(&bset);
   c = Curl_uint32_spbset_count(&bset);
   fail_unless(c == 0, "set count is not 0");
   for(i = 0; i < slen; i++) { /* none present any longer */

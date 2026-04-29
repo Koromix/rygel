@@ -40,20 +40,12 @@ set(CURL_TEST_DEFINES "")  # Initialize global variable
 # Return result in variable: CURL_TEST_OUTPUT
 macro(curl_internal_test _curl_test)
   if(NOT DEFINED "${_curl_test}")
-    string(REPLACE ";" " " _cmake_required_definitions "${CMAKE_REQUIRED_DEFINITIONS}")
-    set(_curl_test_add_libraries "")
-    if(CMAKE_REQUIRED_LIBRARIES)
-      set(_curl_test_add_libraries
-        "-DLINK_LIBRARIES:STRING=${CMAKE_REQUIRED_LIBRARIES}")
-    endif()
-
     message(STATUS "Performing Test ${_curl_test}")
     try_compile(${_curl_test}
       ${PROJECT_BINARY_DIR}
       "${CMAKE_CURRENT_SOURCE_DIR}/CMake/CurlTests.c"
-      CMAKE_FLAGS
-        "-DCOMPILE_DEFINITIONS:STRING=-D${_curl_test} ${CURL_TEST_DEFINES} ${CMAKE_REQUIRED_FLAGS} ${_cmake_required_definitions}"
-        "${_curl_test_add_libraries}"
+      COMPILE_DEFINITIONS "-D${_curl_test}" ${CURL_TEST_DEFINES} ${CMAKE_REQUIRED_FLAGS} ${CMAKE_REQUIRED_DEFINITIONS}
+      LINK_LIBRARIES "${CMAKE_REQUIRED_LIBRARIES}"
       OUTPUT_VARIABLE CURL_TEST_OUTPUT)
     if(${_curl_test})
       set(${_curl_test} 1 CACHE INTERNAL "curl test")
@@ -252,3 +244,35 @@ function(curl_add_clang_tidy_test_target _target_clang_tidy _target)
     add_dependencies(tests-clang-tidy ${_target_clang_tidy})
   endif()
 endfunction()
+
+# Internal: Recurse into interface targets and collect their libraries
+# and library paths.
+macro(curl_collect_target_link_options _target)
+  get_target_property(_val ${_target} INTERFACE_LINK_DIRECTORIES)
+  if(_val)
+    list(APPEND _libdirs ${_val})
+  endif()
+  get_target_property(_val ${_target} IMPORTED)
+  if(_val)
+    # LOCATION is empty for interface library targets and safe to ignore.
+    # Explicitly skip this query to avoid CMake v3.18 and older erroring out.
+    get_target_property(_val ${_target} TYPE)
+    if(NOT "${_val}" STREQUAL "INTERFACE_LIBRARY")
+      get_target_property(_val ${_target} LOCATION)
+      if(_val)
+        list(APPEND _libs ${_val})
+      endif()
+    endif()
+  endif()
+  get_target_property(_val ${_target} INTERFACE_LINK_LIBRARIES)
+  if(_val)
+    foreach(_lib IN LISTS _val)
+      if(TARGET "${_lib}")
+        curl_collect_target_link_options(${_lib})
+      else()
+        list(APPEND _libs ${_lib})
+      endif()
+    endforeach()
+  endif()
+  unset(_val)
+endmacro()
