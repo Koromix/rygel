@@ -3645,7 +3645,14 @@ static inline int64_t GetCoreCycles()
 {
     uint64_t counter;
     __asm__ __volatile__ ("mrs %0, cntvct_el0" : "=r" (counter));
-    return counter;
+    return (int64_t)counter;
+}
+#elif defined(__riscv)
+static inline int64_t GetCoreCycles()
+{
+    uint64_t counter;
+    __asm__ __volatile__("csrr %0, mcycle" : "=r"(counter));
+    return (int64_t)counter;
 }
 #endif
 
