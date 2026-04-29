@@ -36,6 +36,7 @@ type TypeInfo = {
     ref?: TypeInfo;
     members?: Record<string, { name: string, type: TypeInfo, offset: number }>;
     proto?: PrototypeInfo;
+    values?: Record<string, number | bigint>;
 };
 type TypeSpec = string | TypeInfo | IKoffiCType;
 type TypeSpecWithAlignment = TypeSpec | [number, TypeSpec];
@@ -84,6 +85,9 @@ export class Union {
     constructor(type: TypeSpec);
     [s: string]: any;
 }
+
+export function enumeration(name: string | null | undefined, def: Record<string, number | bigint>, storage?: TypeSpec | null) : TypeInfo;
+export function enumeration(def: Record<string, number | bigint>, storage?: TypeSpec | null) : TypeInfo;
 
 export function array(ref: TypeSpec, len: number, hint?: ArrayHint | null): TypeInfo;
 export function array(ref: TypeSpec, countedBy: string, maxLen: number, hint?: ArrayHint | null): TypeInfo;

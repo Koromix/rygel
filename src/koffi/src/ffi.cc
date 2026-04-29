@@ -1199,7 +1199,7 @@ static Napi::Value CreateEnumType(const Napi::CallbackInfo &info)
     }
 
     bool named = (info.Length() >= 2 && !info[0].IsObject());
-    bool typed = (info.Length() >= 2u + named);
+    bool typed = (info.Length() >= 2u + named && !IsNullOrUndefined(env, info[1 + named]));
 
     if (named && !info[0].IsString()) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string", GetValueType(instance, info[0]));
