@@ -61,7 +61,7 @@ function run(basename, ref, engines = []) {
     let filename = path.join(__dirname, basename);
     let proc = spawnSync(process.execPath, [...process.execArgv, filename, ...engines]);
 
-    if (proc.status == null)
+    if (proc.status === null)
         throw new Error(proc.error);
     if (proc.status != 0) {
         let output = proc.stderr?.toString?.('utf-8')?.trim?.() ||

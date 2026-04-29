@@ -191,6 +191,9 @@ function run_node_ffi_napi(time) {
 }
 
 function optional(mod) {
+    if (process.isBun && mod.startsWith('@napi-ffi/'))
+        return null;
+
     try {
         return require(mod);
     } catch (err) {
