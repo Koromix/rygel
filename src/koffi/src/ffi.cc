@@ -1377,72 +1377,6 @@ static Napi::Value CreateTypeAlias(const Napi::CallbackInfo &info)
     return WrapType(env, type);
 }
 
-static Napi::Value GetTypeSize(const Napi::CallbackInfo &info)
-{
-    Napi::Env env = info.Env();
-
-    if (info.Length() < 1) {
-        ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", info.Length());
-        return env.Null();
-    }
-
-    const TypeInfo *type = ResolveType(info[0]);
-    if (!type)
-        return env.Null();
-
-    return NewInt(env, type->size);
-}
-
-static Napi::Value GetTypeAlign(const Napi::CallbackInfo &info)
-{
-    Napi::Env env = info.Env();
-
-    if (info.Length() < 1) {
-        ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", info.Length());
-        return env.Null();
-    }
-
-    const TypeInfo *type = ResolveType(info[0]);
-    if (!type)
-        return env.Null();
-
-    return NewInt(env, type->align);
-}
-
-static Napi::Value GetMemberOffset(const Napi::CallbackInfo &info)
-{
-    Napi::Env env = info.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
-
-    if (info.Length() < 2) {
-        ThrowError<Napi::TypeError>(env, "Expected 2 arguments, got %1", info.Length());
-        return env.Null();
-    }
-    if (!info[1].IsString()) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for member, expected string", GetValueType(instance, info[1]));
-        return env.Null();
-    }
-
-    const TypeInfo *type = ResolveType(info[0]);
-    if (!type)
-        return env.Null();
-    if (type->primitive != PrimitiveKind::Record) {
-        ThrowError<Napi::TypeError>(env, "The offsetof() function can only be used with record types");
-        return env.Null();
-    }
-
-    std::string name = info[1].As<Napi::String>();
-
-    const RecordMember *member = std::find_if(type->members.begin(), type->members.end(),
-        [&](const RecordMember &member) { return TestStr(member.name, name.c_str()); });
-    if (member == type->members.end()) {
-        ThrowError<Napi::Error>(env, "Record type %1 does not have member '%2'", type->name, name.c_str());
-        return env.Null();
-    }
-
-    return NewInt(env, member->offset);
-}
-
 static Napi::Value GetResolvedType(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
@@ -2860,9 +2794,6 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
     exports.Set("alias", Napi::Function::New(env, CreateTypeAlias, "alias"));
     exports.Set("enumeration", Napi::Function::New(env, CreateEnumType, "enumeration"));
 
-    exports.Set("sizeof", Napi::Function::New(env, GetTypeSize, "sizeof"));
-    exports.Set("alignof", Napi::Function::New(env, GetTypeAlign, "alignof"));
-    exports.Set("offsetof", Napi::Function::New(env, GetMemberOffset, "offsetof"));
     exports.Set("type", Napi::Function::New(env, GetResolvedType, "type"));
 
     exports.Set("load", Napi::Function::New(env, LoadSharedLibrary, "load"));

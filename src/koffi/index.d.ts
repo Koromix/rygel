@@ -135,10 +135,10 @@ export function encode(ref: any, offset: number, type: TypeSpec, value: any): vo
 export function encode(ref: any, offset: number, type: TypeSpec, value: any, len: number): void;
 export function view(ref: any, len: number): ArrayBuffer;
 
+export function type(type: TypeSpec): TypeInfo;
 export function sizeof(type: TypeSpec): number;
 export function alignof(type: TypeSpec): number;
 export function offsetof(type: TypeSpec, member_name: string): number;
-export function type(type: TypeSpec): TypeInfo;
 /** @deprecated */ export function resolve(type: TypeSpec): TypeInfo;
 /** @deprecated */ export function introspect(type: TypeSpec): TypeInfo;
 

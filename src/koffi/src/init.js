@@ -63,6 +63,23 @@ function loadDynamic(root, pkg, triplets) {
 function wrapNative(native) {
     let load = native.load;
 
+    native.sizeof = (spec) => native.type(spec).size;
+    native.alignof = (spec) => native.type(spec).alignment;
+
+    native.offsetof = (spec, name) => {
+        let type = native.type(spec);
+
+        if (type.primitive != 'Record')
+            throw new TypeError('The offsetof() function can only be used with record types');
+
+        let member = type.members[name];
+
+        if (member == null)
+            throw new Error(`Record type ${type.name} does not have member '${name}'`);
+
+        return member.offset;
+    };
+
     // Deprecated functions
     native.resolve = util.deprecate(native.type, 'The koffi.resolve() function was deprecated in Koffi 3.0, use koffi.type() instead', 'KOFFI007');
     native.introspect = util.deprecate(native.type, 'The koffi.introspect() function was deprecated in Koffi 3.0, use koffi.type() instead', 'KOFFI008');
