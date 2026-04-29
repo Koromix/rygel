@@ -532,9 +532,7 @@ Napi::Object WrapType(Napi::Env env, const TypeInfo *type)
             case PrimitiveKind::String16:
             case PrimitiveKind::String32:
             case PrimitiveKind::Float32:
-            case PrimitiveKind::Float64:
-            case PrimitiveKind::Prototype:
-            case PrimitiveKind::Callback: {} break;
+            case PrimitiveKind::Float64: {} break;
 
             case PrimitiveKind::Array: {
                 uint32_t len = type->size / type->ref.type->size;
@@ -561,6 +559,11 @@ Napi::Object WrapType(Napi::Env env, const TypeInfo *type)
 
                 members.Freeze();
                 defn.Set("members", members);
+            } break;
+
+            case PrimitiveKind::Prototype:
+            case PrimitiveKind::Callback: {
+                defn.Set("proto", DescribeFunction(env, type->ref.proto));
             } break;
         }
 
@@ -1803,7 +1806,7 @@ static bool CanUseFastCall(const FunctionInfo *func)
     return true;
 }
 
-Napi::Function WrapFunction(Napi::Env env, const FunctionInfo *func)
+Napi::Object DescribeFunction(Napi::Env env, const FunctionInfo *func)
 {
     static const char *const DirectionNames[] = {
         nullptr,
@@ -1812,6 +1815,30 @@ Napi::Function WrapFunction(Napi::Env env, const FunctionInfo *func)
         "Input/Output"
     };
 
+    Napi::Object meta = Napi::Object::New(env);
+    Napi::Array arguments = Napi::Array::New(env, func->parameters.len);
+
+    meta.Set("name", Napi::String::New(env, func->name));
+    meta.Set("arguments", arguments);
+    meta.Set("result", WrapType(env, func->ret.type));
+
+    for (Size i = 0; i < func->parameters.len; i++) {
+        const ParameterInfo &param = func->parameters[i];
+        Napi::Object obj = Napi::Object::New(env);
+
+        obj.Set("type", WrapType(env, param.type));
+        obj.Set("direction", Napi::String::New(env, DirectionNames[param.directions]));
+
+        arguments.Set((uint32_t)i, obj);
+    }
+
+    meta.Freeze();
+
+    return meta;
+}
+
+Napi::Function WrapFunction(Napi::Env env, const FunctionInfo *func)
+{
     Napi::Function wrapper;
 
     // Pick appropriate wrapper
@@ -1848,29 +1875,8 @@ Napi::Function WrapFunction(Napi::Env env, const FunctionInfo *func)
         wrapper.Set("async", async);
     }
 
-    // Create info object
-    {
-        Napi::Object meta = Napi::Object::New(env);
-        Napi::Array arguments = Napi::Array::New(env, func->parameters.len);
-
-        meta.Set("name", Napi::String::New(env, func->name));
-        meta.Set("arguments", arguments);
-        meta.Set("result", WrapType(env, func->ret.type));
-
-        for (Size i = 0; i < func->parameters.len; i++) {
-            const ParameterInfo &param = func->parameters[i];
-            K_ASSERT(param.directions >= 1 && param.directions <= 3);
-
-            Napi::Object obj = Napi::Object::New(env);
-
-            obj.Set("type", WrapType(env, param.type));
-            obj.Set("direction", Napi::String::New(env, DirectionNames[param.directions]));
-
-            arguments.Set((uint32_t)i, obj);
-        }
-
-        wrapper.Set("info", meta);
-    }
+    Napi::Object meta = DescribeFunction(env, func);
+    wrapper.Set("info", meta);
 
     return wrapper;
 }

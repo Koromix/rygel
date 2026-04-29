@@ -19,6 +19,12 @@ type PrimitiveKind = 'Void' | 'Bool' | 'Int8' | 'UInt8' | 'Int16' | 'Int16S' | '
                      'Prototype' | 'Callback';
 type ArrayHint = 'Array' | 'Typed' | 'String';
 
+type PrototypeInfo = {
+    name: string;
+    arguments: TypeInfo[];
+    result: TypeInfo
+};
+
 type TypeInfo = {
     name: string;
     primitive: PrimitiveKind;
@@ -29,6 +35,7 @@ type TypeInfo = {
     hint?: ArrayHint;
     ref?: TypeInfo;
     members?: Record<string, { name: string, type: TypeInfo, offset: number }>;
+    proto?: PrototypeInfo;
 };
 type TypeSpec = string | TypeInfo | IKoffiCType;
 type TypeSpecWithAlignment = TypeSpec | [number, TypeSpec];
@@ -36,19 +43,11 @@ type TypeSpecWithAlignment = TypeSpec | [number, TypeSpec];
 type KoffiFunction = {
     (...args: any[]) : any;
     async: (...args: any[]) => any;
-    info: {
-        name: string,
-        arguments: TypeInfo[],
-        result: TypeInfo
-    };
+    info: PrototypeInfo;
 };
 export type KoffiFunc<T extends (...args: any) => any> = T & {
    async: (...args: [...Parameters<T>, (err: any, result: ReturnType<T>) => void]) => void;
-   info: {
-      name: string;
-      arguments: TypeInfo[];
-      result: TypeInfo;
-   };
+   info: PrototypeInfo;
 };
 
 export interface IKoffiLib {
