@@ -3,6 +3,36 @@
 > [!NOTE]
 > Consult the [migration guide](migration) to migrate between major Koffi versions.
 
+## Koffi 3
+
+### Koffi 3.0
+
+#### Koffi 3.0.0 (WIP)
+
+**Main changes:**
+
+- Replace use of externals with type objects:
+  * Use `koffi.type()` to resolve type specifiers (strings or objects) to type objects
+  * Access type information directly on type variables without `koffi.introspect()`
+- Replace use of externals with BigInt pointers
+- Rewrite call preparation and execution for vastly improved performance
+
+**Other changes:**
+
+- Add `koffi.enumeration()` to create [enum types](input#enum-types)
+
+**Newly deprecated functions:**
+
+- Deprecate `koffi.resolve()` function, replace with `koffi.type()`
+- Deprecate `koffi.introspect()` function, replace with `koffi.type()`
+
+**Removed deprecated functions:**
+
+- Remove `koffi.callback()` long replaced with `koffi.proto()`
+- Remove `koffi.handle()` long replaced with `koffi.opaque()`
+
+Consult the [migration guide](migration) for more information.
+
 ## Koffi 2
 
 ### Koffi 2.16
