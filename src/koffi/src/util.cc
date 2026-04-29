@@ -494,7 +494,7 @@ TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len, A
     return MakeArrayType(instance, ref, len, hint, false);
 }
 
-Napi::Object WrapType(Napi::Env env, const TypeInfo *type)
+Napi::Object WrapType(Napi::Env env, const TypeInfo *type, bool freeze)
 {
     if (type->defn.IsEmpty()) {
         InstanceData *instance = env.GetInstanceData<InstanceData>();
@@ -567,8 +567,11 @@ Napi::Object WrapType(Napi::Env env, const TypeInfo *type)
             } break;
         }
 
-        defn.Freeze();
         SetValueTag(env, defn, &TypeInfoMarker);
+
+        if (freeze) {
+            defn.Freeze();
+        }
     }
 
     return type->defn.Value();

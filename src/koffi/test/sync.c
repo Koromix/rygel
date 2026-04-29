@@ -189,6 +189,12 @@ typedef struct DynamicArray {
     int *ptr;
 } DynamicArray;
 
+typedef enum Enum1 { Enum1_A = 0, Enum1_B = 42 } Enum1;
+typedef enum Enum2 { Enum2_A = -1, Enum2_B = 2147483647 } Enum2;
+typedef enum Enum3 { Enum3_A = -1, Enum3_B = 2147483648u } Enum3;
+typedef enum Enum4 { Enum4_A = 0, Enum4_B = 2147483648u } Enum4;
+typedef enum Enum5 { Enum5_A = 0, Enum5_B = 9223372036854775808ull } Enum5;
+
 EXPORT int sym_int = 0;
 EXPORT const char *sym_str = NULL;
 EXPORT int sym_int3[3] = { 0, 0, 0 };
@@ -1111,3 +1117,24 @@ EXPORT void InitDynamicArray(DynamicArray *arr, int start, int step)
         arr->ptr[i] = start + i * step;
     }
 }
+
+int ReturnEnumValue(Enum1 e)
+{
+    return (int)e;
+}
+
+#define ENUM_PRIMITIVE(Type) \
+    _Generic((Type)0, \
+        int: "Int32", \
+        unsigned int: "UInt32", \
+        int64_t: "Int64", \
+        uint64_t: "UInt64" \
+    )
+
+const char *GetEnumPrimitive1() { return ENUM_PRIMITIVE(Enum1); }
+const char *GetEnumPrimitive2() { return ENUM_PRIMITIVE(Enum2); }
+const char *GetEnumPrimitive3() { return ENUM_PRIMITIVE(Enum3); }
+const char *GetEnumPrimitive4() { return ENUM_PRIMITIVE(Enum4); }
+const char *GetEnumPrimitive5() { return ENUM_PRIMITIVE(Enum5); }
+
+#undef ENUM_PRIMITIVE

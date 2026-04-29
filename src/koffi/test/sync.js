@@ -154,6 +154,12 @@ const DynamicArray = koffi.struct('DynamicArray', {
     ptr: koffi.pointer(null, 'int', 'len')
 });
 
+const Enum1 = koffi.enumeration('Enum1', { A: 0, B: 42 });
+const Enum2 = koffi.enumeration('Enum2', { A: -1, B: 2147483647 });
+const Enum3 = koffi.enumeration('Enum3', { A: -1, B: 2147483648 });
+const Enum4 = koffi.enumeration('Enum4', { A: 0, B: 2147483648 });
+const Enum5 = koffi.enumeration('Enum5', { A: 0, B: 9223372036854775808n });
+
 main();
 
 async function main() {
@@ -292,6 +298,13 @@ async function test() {
     const InitDynamicArray = lib.func('void InitDynamicArray(_Inout_ DynamicArray *arr, int start, int step)');
 
     free_ptr = CallFree;
+
+    const ReturnEnumValue = lib.func('int ReturnEnumValue(Enum1 e)');
+    const GetEnumPrimitive1 = lib.func('const char *GetEnumPrimitive1()');
+    const GetEnumPrimitive2 = lib.func('const char *GetEnumPrimitive2()');
+    const GetEnumPrimitive3 = lib.func('const char *GetEnumPrimitive3()');
+    const GetEnumPrimitive4 = lib.func('const char *GetEnumPrimitive4()');
+    const GetEnumPrimitive5 = lib.func('const char *GetEnumPrimitive5()');
 
     // Simple signed value returns
     assert.equal(GetMinusOne1(), -1);
@@ -1024,6 +1037,15 @@ async function test() {
     // Make sure obvious dynamic-length errors get caught
     assert.throws(() => koffi.struct('InvalidStruct', { count: 'int', values: koffi.array('int', 'len', 16) }), /Record type InvalidStruct does not have member 'len'/);
     assert.throws(() => koffi.struct('InvalidStruct', { len: 'str', values: koffi.array('int', 'len', 16) }), /Dynamic length member len is not an integer/);
+
+    // Test enums
+    assert.equal(ReturnEnumValue(Enum1.values.A), 0);
+    assert.equal(ReturnEnumValue(Enum1.values.B), 42);
+    assert.equal(GetEnumPrimitive1(), Enum1.primitive);
+    assert.equal(GetEnumPrimitive2(), Enum2.primitive);
+    assert.equal(GetEnumPrimitive3(), Enum3.primitive);
+    assert.equal(GetEnumPrimitive4(), Enum4.primitive);
+    assert.equal(GetEnumPrimitive5(), Enum5.primitive);
 
     lib.unload();
 }
