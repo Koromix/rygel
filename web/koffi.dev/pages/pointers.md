@@ -49,6 +49,8 @@ const GetHandleInformation = lib.func('bool __stdcall GetHandleInformation(HANDL
 const CloseHandle = lib.func('bool __stdcall CloseHandle(HANDLE h)');
 ```
 
+Koffi uses BigInt numbers to represent opaque pointers.
+
 ## Pointer to primitive types
 
 In javascript, it is not possible to pass a primitive value by reference to another function. This means that you cannot call a function and expect it to modify the value of one of its number or string parameter.
@@ -322,7 +324,3 @@ function write(filename, str) {
     }
 }
 ```
-
-# Unwrap pointers
-
-You can use `koffi.address(ptr)` on a pointer to get the numeric value as a [BigInt object](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/BigInt).

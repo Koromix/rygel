@@ -23,7 +23,7 @@ You cannot directly manipulate these variables, use:
 
 *New in Koffi 2.2, changed in Koffi 2.3*
 
-Use `koffi.decode()` to decode C pointers, wrapped as external objects or as simple numbers.
+Use `koffi.decode()` to decode C pointers, represented by BigInt numbers.
 
 Some arguments are optional and this function can be called in several ways:
 
@@ -66,12 +66,12 @@ console.log(koffi.decode(my_string, 'const char *', 3)) // Prints "foo"
 
 *New in Koffi 2.6*
 
-Use `koffi.encode()` to encode JS values into C symbols or pointers, wrapped as external objects or as simple numbers.
+Use `koffi.encode()` to encode JS values into C symbols or pointers, which are represented by BigInt numbers.
 
 Some arguments are optional and this function can be called in several ways:
 
-- `koffi.encode(ref, type, value)`: no offset
-- `koffi.encode(ref, offset, type, value)`: explicit offset to add to the pointer before encoding
+- `koffi.encode(ptr, type, value)`: no offset
+- `koffi.encode(ptr, offset, type, value)`: explicit offset to add to the pointer before encoding
 
 We'll reuse the examples shown above and change the variable values with `koffi.encode()`.
 

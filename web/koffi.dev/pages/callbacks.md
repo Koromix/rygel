@@ -162,7 +162,7 @@ let cb2 = koffi.register(store, store.get, 'IntCallback *'); // However in this 
 
 *New in Koffi 2.2, changed in Koffi 2.3*
 
-Koffi does not have enough information to convert callback pointer arguments to an appropriate JS value. In this case, your JS function will receive an opaque *External* object.
+Koffi does not have enough information to convert callback pointer arguments to an appropriate JS value. In this case, your JS function will receive a *BigInt* value with the pointer address.
 
 You can pass this value through to another C function that expects a pointer of the same type, or you can use [koffi.decode()](variables#decode-to-js-values) function to decode pointer arguments.
 
