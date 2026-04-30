@@ -457,7 +457,6 @@ async function build() {
                 let proc = spawnSync('npm', ['install', '--ignore-scripts', dir], { cwd: install_dir });
 
                 if (proc.status !== 0) {
-                    console.log(proc);
                     let stdout = proc.stdout?.toString()?.trim();
                     let stderr = proc.stderr?.toString()?.trim();
 
@@ -483,7 +482,6 @@ async function build() {
             let proc = spawnSync('npm', ['install', '--omit=optional', install_dir + '/pkg'], { cwd: install_dir });
 
             if (proc.status !== 0) {
-                console.log(proc);
                 let stdout = proc.stdout?.toString()?.trim();
                 let stderr = proc.stderr?.toString()?.trim();
 
