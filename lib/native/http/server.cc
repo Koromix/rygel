@@ -669,10 +669,12 @@ bool http_IO::OpenForWrite(int status, CompressionType encoding, int64_t len, St
     request.keepalive &= (len >= 0 || request.version >= 11);
 
     Span<const char> intro = PrepareResponse(status, encoding, len);
-    const auto write = [this](Span<const uint8_t> buf) { return WriteDirect(buf); };
 
+    if (!WriteDirect(intro.As<const uint8_t>()))
+        return false;
+
+    const auto write = [this](Span<const uint8_t> buf) { return WriteDirect(buf); };
     out_st->Open(write, "<http>");
-    out_st->Write(intro);
 
     if (len >= 0) {
         if (encoding == CompressionType::None)
