@@ -3,8 +3,13 @@
 
 // Dummy, it gets replaced in package builds ;)
 
+const BINARY_ROOT = import.meta.dirname + '/../../../bin/Koffi';
+
 function loadStatic(pkg) {
     return null;
 }
 
-export { loadStatic }
+export {
+    BINARY_ROOT,
+    loadStatic
+}

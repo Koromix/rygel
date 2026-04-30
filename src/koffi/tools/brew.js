@@ -158,7 +158,7 @@ async function main() {
 // Commands
 
 async function build() {
-    let build_dir = root_dir + '/bin/koffi';
+    let build_dir = root_dir + '/bin/Koffi';
     let dist_dir = build_dir + '/packages';
 
     let snapshot_dir = await snapshot();
@@ -219,7 +219,7 @@ async function build() {
             let machine = runner.machine(build.info.machine);
 
             let src_name = machine.platform + '_' + build.info.arch;
-            let src_dir = build.info.directory + `/bin/koffi/${src_name}`;
+            let src_dir = build.info.directory + `/bin/Koffi/${src_name}`;
             let dest_dir = build_dir + `/qemu/${version}/${build.key}`;
 
             if (build.info.package != null) {
@@ -383,7 +383,7 @@ async function build() {
         if (MONOLITH) {
             for (let artifact of artifacts) {
                 let build = path.basename(artifact.build);
-                let binary_dir = pkg_dir + '/bin/koffi/' + build;
+                let binary_dir = pkg_dir + '/build/koffi/' + build;
 
                 fs.mkdirSync(binary_dir, { mode: 0o755, recursive: true });
                 copyRecursive(artifact.build, binary_dir);
@@ -393,9 +393,9 @@ async function build() {
         }
 
         main.scripts = {
-            install: 'node ./build.cjs -P . -D src/koffi --prebuild --release'
+            install: 'node ./cnoke.cjs -P . -D src/koffi --prebuild --release'
         };
-        main.cnoke.output = 'bin/koffi/{{ toolchain }}';
+        main.cnoke.output = 'build/koffi/{{ toolchain }}';
 
         delete main.devDependencies;
         delete main.module;
@@ -478,7 +478,7 @@ async function build() {
 
         // Install it first
         {
-            copyRecursive(dist_dir + '/koffi', install_dir + '/pkg', filename => !filename.startsWith('bin/'));
+            copyRecursive(dist_dir + '/koffi', install_dir + '/pkg', filename => !filename.startsWith('build/'));
 
             let proc = spawnSync('npm', ['install', '--omit=optional', install_dir + '/pkg'], { cwd: install_dir });
 
@@ -603,7 +603,7 @@ async function compile(command) {
 }
 
 async function snapshot() {
-    let snapshot_dir = root_dir + '/bin/koffi/snapshot';
+    let snapshot_dir = root_dir + '/bin/Koffi/snapshot';
 
     unlinkRecursive(snapshot_dir);
     fs.mkdirSync(snapshot_dir, { mode: 0o755, recursive: true });
@@ -678,11 +678,15 @@ async function bundleScripts(dest_dir, packages, drop) {
                                         import { fileURLToPath } from 'url';
 
                                         const requireNative = createRequire(import.meta.url);
+
+                                        const BINARY_ROOT = import.meta.dirname + '/../../build/koffi';
                                     ` : ''}
                                     ${format != 'esm' ? `
                                         const { createRequire } = require('node:module');
 
                                         const requireNative = createRequire(__filename);
+
+                                        const BINARY_ROOT = __dirname + '/../../build/koffi';
                                     ` : ''}
 
                                     function loadStatic(pkg) {
@@ -691,7 +695,7 @@ async function bundleScripts(dest_dir, packages, drop) {
                                         ${MONOLITH ? packages.flatMap(pkg => pkg.builds.map(build => `
                                             if (native == null && pkg == '${pkg.target}') {
                                                 try {
-                                                    native = requireNative('../../bin/koffi/${build.name}/koffi.node');
+                                                    native = requireNative('../../build/koffi/${build.name}/koffi.node');
                                                 } catch (err) {
                                                     // Go on
                                                 }
@@ -709,7 +713,18 @@ async function bundleScripts(dest_dir, packages, drop) {
                                         return native;
                                     }
 
-                                    ${format == 'esm' ? 'export { loadStatic }' : 'module.exports = { loadStatic };'}
+                                    ${format == 'esm' ? `
+                                        export {
+                                            BINARY_ROOT,
+                                            loadStatic
+                                        }
+                                    ` : ''}
+                                    ${format != 'esm' ? `
+                                        module.exports = {
+                                            BINARY_ROOT,
+                                            loadStatic
+                                        };
+                                    ` : ''}
                                 `;
 
                                 return {
@@ -733,7 +748,7 @@ async function bundleScripts(dest_dir, packages, drop) {
         write: true,
         platform: 'node',
         dropLabels: drop ? ['UNSAFE'] : [],
-        outfile: dest_dir + '/build.cjs',
+        outfile: dest_dir + '/cnoke.cjs',
         plugins: [makeImportMetaPlugin('cjs')]
     });
 }

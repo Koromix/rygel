@@ -40,8 +40,8 @@ function loadDynamic(root, pkg, triplets) {
 
     let names = [
         `../../../@koromix/koffi-${pkg}`,
-        ...triplets.flatMap(triplet => roots.map(dir => `${dir}/bin/koffi/${triplet}/koffi.node`))
-    ]
+        ...triplets.flatMap(triplet => roots.map(dir => `${dir}/${triplet}/koffi.node`))
+    ];
 
     for (let name of names) {
         try {

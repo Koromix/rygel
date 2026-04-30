@@ -9,6 +9,6 @@
     "@napi-ffi/ref-struct-di": "^1.1.1"
   },
   "cnoke": {
-    "output": "../../../bin/koffi/benchmark"
+    "output": "../../../bin/Koffi/benchmark"
   }
 }
