@@ -46,7 +46,7 @@ async function runSend() {
             </div>
 
             <div class="actions">
-                <button type="submit" ?disabled=${send == null}>${T.send}</button>
+                <button type="submit" ?disabled=${send_file == null}>${T.send}</button>
             </div>
         </form>
     `);
