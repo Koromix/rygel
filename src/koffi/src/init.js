@@ -44,6 +44,9 @@ function loadDynamic(root, pkg, triplets) {
     ];
 
     for (let name of names) {
+        if (!fs.existsSync(name))
+            continue;
+
         try {
             native = requireNative(name);
             break;
