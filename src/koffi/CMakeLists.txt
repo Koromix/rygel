@@ -140,7 +140,7 @@ if(WIN32)
     target_link_libraries(koffi PRIVATE ${UV_LINK_LIB})
 endif()
 
-target_compile_definitions(koffi PRIVATE FELIX_TARGET=koffi NAPI_DISABLE_CPP_EXCEPTIONS NAPI_VERSION=NAPI_VERSION_EXPERIMENTAL CORE_NO_STATX)
+target_compile_definitions(koffi PRIVATE FELIX_TARGET=koffi NAPI_DISABLE_CPP_EXCEPTIONS NAPI_VERSION=NAPI_VERSION_EXPERIMENTAL)
 if(WIN32)
     target_compile_definitions(koffi PRIVATE _CRT_SECURE_NO_WARNINGS _CRT_NONSTDC_NO_DEPRECATE)
     target_link_libraries(koffi PRIVATE ws2_32)
