@@ -997,7 +997,7 @@ namespace {
 
     OP(Yield) {
         call->async_ip = inst + 1;
-        return call->env.Null();
+        return nullptr;
     }
 
     OP(CallGG) {
@@ -1192,7 +1192,7 @@ bool CallData::PrepareAsync(const FunctionInfo *func, napi_value *args)
     async_base = base;
 
     const AbiInstruction *first = func->async.ptr;
-    return RunLoop(this, args, base, first);
+    return !RunLoop(this, args, base, first); // Yield returns nullptr
 }
 
 void CallData::ExecuteAsync()
