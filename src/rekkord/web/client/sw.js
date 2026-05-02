@@ -40,29 +40,35 @@ self.addEventListener('fetch', e => {
             let stream = new ReadableStream({
                 pull: async (controller) => {
                     let url = Util.pasteURL('/api/drop/fragment', { kid: kid, fragment: fragment });
-                    let response = await fetch(url);
 
-                    if (!response.ok) {
-                        controller.error(new Error('Failed to download fragment with status ' + response.status));
-                        return;
-                    }
+                    try {
+                        let response = await fetch(url);
 
-                    let buf = await response.bytes();
+                        if (!response.ok) {
+                            controller.error(new Error('Failed to download fragment with status ' + response.status));
+                            controller.close();
+                            return;
+                        }
 
-                    downloaded += buf.length;
-                    fragment++;
+                        let buf = await response.bytes();
 
-                    controller.enqueue(buf);
+                        downloaded += buf.length;
+                        fragment++;
 
-                    if (downloaded == info.size)
+                        controller.enqueue(buf);
+
+                        if (downloaded == info.size)
+                            controller.close();
+                    } catch (err) {
+                        controller.error(err);
                         controller.close();
+                    }
                 }
             });
 
             return new Response(stream, options);
         }
 
-        let response = await fetch(e.request);
-        return response;
+        return await fetch(e.request);
     }());
 });
