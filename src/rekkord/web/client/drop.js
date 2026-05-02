@@ -14,6 +14,7 @@ import {
 import { ASSETS } from '../assets/assets.js';
 
 const EXPIRATION_DAYS = [1, 7, 30, 90];
+const DEFAULT_EXPIRATION = 7;
 const FRAGMENT_SIZE = 2097152;
 
 let send_file = null;
@@ -31,7 +32,8 @@ async function runSend() {
                 <label>
                     <span>${T.expiration}</span>
                     <select name="expiration">
-                        ${EXPIRATION_DAYS.map(days => html`<option value=${days}>${T.count(T.expiration_delay, days)}</option>`)}
+                        ${EXPIRATION_DAYS.map(days =>
+                            html`<option value=${days} ?selected=${days == DEFAULT_EXPIRATION}>${T.count(T.expiration_delay, days)}</option>`)}
                     </select>
                 </label>
                 <div class="sub">${T.drag_or_browse_file}</div>
