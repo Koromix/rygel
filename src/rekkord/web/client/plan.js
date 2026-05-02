@@ -9,9 +9,14 @@ import * as App from './main.js';
 import { route, cache } from './main.js';
 import * as UserMod from './user.js';
 import { runChannel } from './repository.js';
+import {
+    DAYS,
+    formatDays,
+    formatClock,
+    parseClock,
+    writeClipboard
+} from './common.js';
 import { ASSETS } from '../assets/assets.js';
-
-const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
 async function runPlans() {
     if (!App.isLogged())
@@ -443,38 +448,6 @@ async function deletePlan(id) {
 
     if (route.plan == id)
         route.plan = null;
-}
-
-function formatDays(days) {
-    let parts = [];
-
-    for (let i = 0; i < DAYS.length; i++) {
-        if (days & (1 << i)) {
-            let prefix = T.day_names[DAYS[i]].substr(0, 3);
-            parts.push(prefix);
-        }
-    }
-
-    return parts.join(', ');
-}
-
-function formatClock(clock) {
-    let hh = Math.floor(clock / 100).toString().padStart(2, '0');
-    let mm = Math.floor(clock % 100).toString().padStart(2, '0');
-
-    return `${hh}:${mm}`;
-}
-
-function parseClock(clock) {
-    let [hh, mm] = (clock ?? '').split(':').map(value => parseInt(value, 10));
-    return hh * 100 + mm;
-}
-
-async function writeClipboard(label, text) {
-    await navigator.clipboard.writeText(text);
-
-    let msg = T.message(`{1} copied to clipboard`, label);
-    Log.info(msg);
 }
 
 export {

@@ -598,3 +598,16 @@ form {
     &.missing::-webkit-slider-thumb { visibility: hidden; }
     &.missing::-moz-range-thumb { visibility: hidden; }
 }
+
+progress[value] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 300px;
+    height: 20px;
+    background: white;
+    border: 1px solid var(--input_color);
+    border-radius: var(--input_radius);
+
+    &::-webkit-progress-bar { background: white; }
+    &::-moz-progress-bar, &::-webkit-progress-value { background: var(--button_color); }
+}

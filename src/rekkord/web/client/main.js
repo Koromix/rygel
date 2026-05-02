@@ -10,6 +10,7 @@ import { deploy } from 'lib/web/flat/static.js';
 import * as UserMod from './user.js';
 import * as PlanMod from './plan.js';
 import * as RepositoryMod from './repository.js';
+import * as DropMod from './drop.js';
 import { ASSETS } from '../assets/assets.js';
 
 import en from '../../i18n/en.json';
@@ -25,22 +26,19 @@ const MODES = {
     recover: { run: UserMod.runRecover },
     reset: { run: UserMod.runReset },
     link: { run: UserMod.runLink },
-    account: { run: UserMod.runAccount },
-
-    repositories: { run: RepositoryMod.runRepositories },
-    repository: { run: RepositoryMod.runRepository, path: [{ key: 'repository', type: 'integer' }]},
-
-    plans: { run: PlanMod.runPlans },
-    plan: { run: PlanMod.runPlan, path: [{ key: 'plan', type: 'integer' }]},
+    account: { run: UserMod.runAccount }
 };
-const DEFAULT_MODE = 'repositories';
+const DEFAULT_MODES = ['repositories', 'send'];
 
 let languages = {};
+
+let sw = null;
 
 let route = {
     mode: null,
     repository: null,
-    plan: null
+    plan: null,
+    drop: null
 };
 let route_url = null;
 let poisoned = false;
@@ -56,7 +54,8 @@ let cache = {
     repositories: [],
     repository: null,
     plans: [],
-    plan: null
+    plan: null,
+    drop: null
 };
 
 // ------------------------------------------------------------------------
@@ -77,6 +76,28 @@ async function start() {
     }
 
     UI.init(run, renderApp);
+
+    // Init backup modes
+    if (ENV.backup) {
+        Object.assign(MODES, {
+            repositories: { run: RepositoryMod.runRepositories },
+            repository: { run: RepositoryMod.runRepository, path: [{ key: 'repository', type: 'integer' }]},
+
+            plans: { run: PlanMod.runPlans },
+            plan: { run: PlanMod.runPlan, path: [{ key: 'plan', type: 'integer' }]}
+        });
+    }
+
+    // Init drops
+    if (ENV.drop) {
+        Object.assign(MODES, {
+            send: { run: DropMod.runSend },
+            drop: { run: DropMod.runDrop, path: [{ key: 'drop', type: 'string' }] }
+        });
+
+        navigator.serviceWorker.register('/sw.js');
+        sw = await navigator.serviceWorker.ready.then(registration => registration.active);
+    }
 
     // Handle internal links
     Util.interceptLocalAnchors((e, href) => {
@@ -137,7 +158,7 @@ function go(url = null, push = true) {
     switch (mode) {
         case 'login': {
             if (isLogged()) {
-                changes.mode = DEFAULT_MODE;
+                changes.mode = DEFAULT_MODES.find(mode => Object.hasOwn(MODES, mode));
             } else {
                 changes.mode = 'login';
             }
@@ -152,7 +173,7 @@ function go(url = null, push = true) {
             let info = MODES[mode];
 
             if (info == null) {
-                mode = DEFAULT_MODE;
+                mode = DEFAULT_MODES.find(mode => Object.hasOwn(MODES, mode));
                 info = MODES[mode];
             }
 
@@ -207,7 +228,7 @@ async function run(changes = {}, push = false) {
                 return;
             }
 
-            let info = MODES[route.mode] ?? MODES[DEFAULT_MODE];
+            let info = MODES[route.mode] ?? MODES[DEFAULT_MODES.find(mode => Object.hasOwn(MODES, mode))];
             await info.run();
 
             // Update URL
@@ -262,17 +283,21 @@ function renderApp(el) {
 
     let in_repositories = ['repositories', 'repository'].includes(route.mode);
     let in_plans = ['plans', 'plan'].includes(route.mode);
+    let in_drop = ['send', 'drop'].includes(route.mode);
 
     render(html`
         <nav id="top">
             <div @click=${deploy}></div>
             <menu>
                 <a id="logo" href="/"><img src=${ASSETS['main/logo']} alt=${'Logo ' + ENV.title} /></a>
-                ${isLogged() ? html`
+                ${isLogged() && ENV.backup ? html`
                     <li><a href=${!in_repositories && route.repository != null ? makeURL({ mode: 'repository' }) : '/repositories'}
                            class=${in_repositories ? 'active' : ''}>${T.repositories}</a></li>
                     <li><a href=${!in_plans && route.plan != null ? makeURL({ mode: 'plan' }) : '/plans'}
                            class=${in_plans ? 'active' : ''}>${T.machines}</a></li>
+                ` : ''}
+                ${isLogged() && ENV.drop ? html`
+                    <li><a href="/send" class=${in_drop ? 'active' : ''}>${T.send}</a></li>
                 ` : ''}
                 <div style="flex: 1;"></div>
                 ${isLogged() ? html`
@@ -373,6 +398,7 @@ async function oidc(code, state) {
 export {
     route,
     cache,
+    sw,
 
     start,
 
@@ -387,5 +413,5 @@ export {
     confirm,
     logout,
     sso,
-    oidc,
+    oidc
 }

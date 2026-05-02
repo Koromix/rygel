@@ -8,6 +8,7 @@ import * as UI from 'lib/web/ui/ui.js';
 import * as App from './main.js';
 import { route, cache } from './main.js';
 import * as UserMod from './user.js';
+import { formatSize } from './common.js';
 import { ASSETS } from '../assets/assets.js';
 
 async function runRepositories() {
@@ -352,29 +353,6 @@ async function runChannel(repo, channel) {
             `;
         }
     });
-}
-
-function formatSize(size) {
-    if (size >= 999950000) {
-        let value = size / 1000000000;
-        let prec = 1 + (value < 9.9995) + (value < 99.995);
-
-        return value.toFixed(prec) + ' ' + T.size_units.gb;
-    } else if (size >= 999950) {
-        let value = size / 1000000;
-        let prec = 1 + (value < 9.9995) + (value < 99.995);
-
-        return value.toFixed(prec) + ' ' + T.size_units.mb;
-    } else if (size >= 999.95) {
-        let value = size / 1000;
-        let prec = 1 + (value < 9.9995) + (value < 99.995);
-
-        return value.toFixed(prec) + ' ' + T.size_units.kb;
-    } else if (size > 1) {
-        return T.format(T.size_units.x_b, size);
-    } else {
-        return size ? T.size_units.one : T.size_units.zero;
-    }
 }
 
 export {
