@@ -851,7 +851,7 @@ namespace {
     }
     OP(RunCallback) {
         uint64_t x0 = WRAP(ForwardCallGG(call->native, base, &call->saved_sp)).x0;
-        return x0 ? WrapCallback(call->env, inst->type, (void *)x0) : call->env.Null();
+        return x0 ? WrapPointer(call->env, inst->type, (void *)x0) : call->env.Null();
     }
     OP(RunRecord) { K_UNREACHABLE(); return call->env.Null(); }
     OP(RunUnion) { K_UNREACHABLE(); return call->env.Null(); }
@@ -933,7 +933,7 @@ namespace {
     }
     OP(RunCallbackX) {
         uint64_t x0 = WRAP(ForwardCallGGX(call->native, base, &call->saved_sp)).x0;
-        return x0 ? WrapCallback(call->env, inst->type, (void *)x0) : call->env.Null();
+        return x0 ? WrapPointer(call->env, inst->type, (void *)x0) : call->env.Null();
     }
     OP(RunRecordX) { K_UNREACHABLE(); return call->env.Null(); }
     OP(RunUnionX) { K_UNREACHABLE(); return call->env.Null(); }
@@ -1074,7 +1074,7 @@ namespace {
     }
     OP(ReturnCallback) {
         uint64_t x0 = *(uint64_t *)base;
-        return x0 ? WrapCallback(call->env, inst->type, (void *)x0) : call->env.Null();
+        return x0 ? WrapPointer(call->env, inst->type, (void *)x0) : call->env.Null();
     }
     OP(ReturnRecord) { K_UNREACHABLE(); return call->env.Null(); }
     OP(ReturnUnion) { K_UNREACHABLE(); return call->env.Null(); }
@@ -1347,7 +1347,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
                 const uint8_t *src = in_ptr + param.abi.offset;
                 void *ptr2 = *(void **)src;
 
-                Napi::Value p = ptr2 ? WrapCallback(env, param.type->ref.type, ptr2) : env.Null();
+                Napi::Value p = ptr2 ? WrapPointer(env, param.type->ref.type, ptr2) : env.Null();
                 arguments.Append(p);
 
                 if (param.type->dispose) {

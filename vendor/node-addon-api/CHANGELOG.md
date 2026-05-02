@@ -734,7 +734,7 @@ conditions of `Napi::AsyncProgressWorker`.
 - Added `Napi::Addon` to help handle the loading of a native add-on into
 multiple threads and or multiple times in the same thread.
 - Concentrate callbacks provided to core N-API.
-- Make sure wrapcallback is used.
+- Make sure WrapPointer is used.
 
 #### Documentation
 

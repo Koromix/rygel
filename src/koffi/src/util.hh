@@ -471,19 +471,8 @@ static FORCE_INLINE Napi::Value WrapPointer(Napi::Env env, const TypeInfo *ref, 
 #endif
 }
 
-static FORCE_INLINE Napi::Value WrapCallback(Napi::Env env, const TypeInfo *ref, void *ptr)
-{
-#if defined(EXTERNAL_POINTERS)
-    Napi::External<void> external = Napi::External<void>::New(env, ptr);
-    return external;
-#else
-    Napi::BigInt big = Napi::BigInt::New(env, (uint64_t)(uintptr_t)ptr);
-    return big;
-#endif
-}
-
 Napi::Value INLINE_UNITY WrapPointer(Napi::Env env, const TypeInfo *ref, void *ptr);
-Napi::Value INLINE_UNITY WrapCallback(Napi::Env env, const TypeInfo *ref, void *ptr);
+Napi::Value INLINE_UNITY WrapPointer(Napi::Env env, const TypeInfo *ref, void *ptr);
 
 bool DetectCallConvention(Span<const char> name, CallConvention *out_convention);
 

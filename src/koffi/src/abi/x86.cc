@@ -553,7 +553,7 @@ napi_value RunLoop(CallData *call, napi_value *args, uint32_t *base, const AbiIn
     }
     OP(RunCallback) {
         uint32_t eax = (uint32_t)WRAP(ForwardCallG(call->native, (uint8_t *)base, &call->saved_sp));
-        return eax ? WrapCallback(call->env, inst->type, (void *)eax) : call->env.Null();
+        return eax ? WrapPointer(call->env, inst->type, (void *)eax) : call->env.Null();
     }
     OP(RunRecord) { K_UNREACHABLE(); return call->env.Null(); }
     OP(RunUnion) { K_UNREACHABLE(); return call->env.Null(); }
@@ -632,7 +632,7 @@ napi_value RunLoop(CallData *call, napi_value *args, uint32_t *base, const AbiIn
     }
     OP(RunCallbackR) {
         uint32_t eax = (uint32_t)WRAP(ForwardCallGR(call->native, (uint8_t *)base, &call->saved_sp));
-        return eax ? WrapCallback(call->env, inst->type, (void *)eax) : call->env.Null();
+        return eax ? WrapPointer(call->env, inst->type, (void *)eax) : call->env.Null();
     }
     OP(RunRecordR) { K_UNREACHABLE(); return call->env.Null(); }
     OP(RunUnionR) { K_UNREACHABLE(); return call->env.Null(); }
@@ -778,7 +778,7 @@ napi_value RunLoop(CallData *call, napi_value *args, uint32_t *base, const AbiIn
     }
     OP(ReturnCallback) {
         uint32_t eax = *(uint32_t *)base;
-        return eax ? WrapCallback(call->env, inst->type, (void *)eax) : call->env.Null();
+        return eax ? WrapPointer(call->env, inst->type, (void *)eax) : call->env.Null();
     }
     OP(ReturnRecord) { K_UNREACHABLE(); return call->env.Null(); }
     OP(ReturnUnion) { K_UNREACHABLE(); return call->env.Null(); }
@@ -1023,7 +1023,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
             case PrimitiveKind::Callback: {
                 void *ptr2 = *(void **)(args_ptr++);
 
-                Napi::Value p = ptr2 ? WrapCallback(env, param.type->ref.type, ptr2) : env.Null();
+                Napi::Value p = ptr2 ? WrapPointer(env, param.type->ref.type, ptr2) : env.Null();
                 arguments.Append(p);
 
                 if (param.type->dispose) {

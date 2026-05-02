@@ -565,7 +565,7 @@ Napi::Value CallData::Complete(const FunctionInfo *func)
         case PrimitiveKind::String16: return result.ptr ? Napi::String::New(env, (const char16_t *)result.ptr) : env.Null();
         case PrimitiveKind::String32: return result.ptr ? MakeStringFromUTF32(env, (const char32_t *)result.ptr) : env.Null();
         case PrimitiveKind::Pointer: return result.ptr ? WrapPointer(env, func->ret.type->ref.type, result.ptr) : env.Null();
-        case PrimitiveKind::Callback: return result.ptr ? WrapCallback(env, func->ret.type->ref.type, result.ptr) : env.Null();
+        case PrimitiveKind::Callback: return result.ptr ? WrapPointer(env, func->ret.type->ref.type, result.ptr) : env.Null();
         case PrimitiveKind::Record:
         case PrimitiveKind::Union: {
             const uint8_t *ptr = return_ptr ? (const uint8_t *)return_ptr
@@ -760,7 +760,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
             case PrimitiveKind::Callback: {
                 void *ptr2 = *(void **)((param.gpr_count ? gpr_ptr : args_ptr)++);
 
-                Napi::Value p = ptr2 ? WrapCallback(env, param.type->ref.type, ptr2) : env.Null();
+                Napi::Value p = ptr2 ? WrapPointer(env, param.type->ref.type, ptr2) : env.Null();
                 arguments.Append(p);
 
                 if (param.type->dispose) {

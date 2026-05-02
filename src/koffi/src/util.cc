@@ -1059,7 +1059,7 @@ void DecodeObject(Napi::Env env, napi_value obj, const uint8_t *origin, const Ty
                 void *ptr2;
                 memcpy(&ptr2, src, K_SIZE(void *));
 
-                Napi::Value p = ptr2 ? WrapCallback(env, member.type->ref.type, ptr2) : env.Null();
+                Napi::Value p = ptr2 ? WrapPointer(env, member.type->ref.type, ptr2) : env.Null();
                 SetMemberValue(env, obj, member, p);
 
                 if (member.type->dispose) {
@@ -1325,7 +1325,7 @@ void DecodeElements(Napi::Env env, napi_value array, const uint8_t *origin, cons
             POP_ARRAY({
                 void *ptr2 = *(void **)src;
 
-                Napi::Value p = ptr2 ? WrapCallback(env, ref->ref.type, ptr2) : env.Null();
+                Napi::Value p = ptr2 ? WrapPointer(env, ref->ref.type, ptr2) : env.Null();
                 napi_set_element(env, array, i, p);
 
                 if (ref->dispose) {
@@ -1541,7 +1541,7 @@ Napi::Value Decode(Napi::Env env, const uint8_t *ptr, const TypeInfo *type, cons
         } break;
         case PrimitiveKind::Callback: {
             void *ptr2 = *(void **)ptr;
-            return ptr2 ? WrapCallback(env, type->ref.type, ptr2) : env.Null();
+            return ptr2 ? WrapPointer(env, type->ref.type, ptr2) : env.Null();
         } break;
         case PrimitiveKind::Record:
         case PrimitiveKind::Union: {
