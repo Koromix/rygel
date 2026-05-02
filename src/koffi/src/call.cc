@@ -106,10 +106,10 @@ void CallData::Finalize()
                     } break;
 
                     case OutArgument::Kind::Object: {
-                        if (CheckValueTag(env, value, &UnionClassMarker)) {
+                        if (CheckValueTag(env, value, &UnionObjectMarker)) {
                             Napi::Object obj = Napi::Object(env, value);
 
-                            UnionClass *u = UnionClass::Unwrap(obj);
+                            UnionObject *u = UnionObject::Unwrap(obj);
                             u->SetRaw(out.ptr);
                         } else {
                             DecodeObject(env, value, out.ptr, out.type);
@@ -379,8 +379,8 @@ bool CallData::PushObject(napi_value obj, const TypeInfo *type, uint8_t *origin)
     if (type->primitive == PrimitiveKind::Record) {
         members = type->members;
     } else if (type->primitive == PrimitiveKind::Union) {
-        if (CheckValueTag(env, obj, &UnionClassMarker)) {
-            UnionClass *u = UnionClass::Unwrap(Napi::Object(env, obj));
+        if (CheckValueTag(env, obj, &UnionObjectMarker)) {
+            UnionObject *u = UnionObject::Unwrap(Napi::Object(env, obj));
             const uint8_t *raw = u->GetRaw();
 
             if (u->GetType() != type) [[unlikely]] {
@@ -990,7 +990,7 @@ bool CallData::PushPointerSlow(napi_value value, napi_valuetype kind, const Type
         ptr = (void *)AllocHeap(ref->size);
 
         if (ref->primitive == PrimitiveKind::Union &&
-                (directions & 2) && !CheckValueTag(env, value, &UnionClassMarker)) [[unlikely]] {
+                (directions & 2) && !CheckValueTag(env, value, &UnionObjectMarker)) [[unlikely]] {
             ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected union value", GetValueType(instance, value));
             return false;
         }

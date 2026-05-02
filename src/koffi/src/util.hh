@@ -34,12 +34,12 @@ namespace K {
     #endif
 #endif
 
-extern const napi_type_tag TypeInfoMarker;
+extern const napi_type_tag TypeObjectMarker;
 extern const napi_type_tag DirectionMarker;
-extern const napi_type_tag UnionClassMarker;
+extern const napi_type_tag UnionObjectMarker;
 extern const napi_type_tag CastMarker;
 
-class TypeClass: public Napi::ObjectWrap<TypeClass> {
+class TypeObject: public Napi::ObjectWrap<TypeObject> {
     const TypeInfo *type;
 
     mutable Napi::Object members;
@@ -47,12 +47,12 @@ class TypeClass: public Napi::ObjectWrap<TypeClass> {
 public:
     static Napi::Function InitClass(Napi::Env env);
 
-    TypeClass(const Napi::CallbackInfo &info);
+    TypeObject(const Napi::CallbackInfo &info);
 
     const TypeInfo *GetType() { return type; }
 };
 
-class UnionClass: public Napi::ObjectWrap<UnionClass> {
+class UnionObject: public Napi::ObjectWrap<UnionObject> {
     InstanceData *instance;
     const TypeInfo *type;
 
@@ -63,7 +63,7 @@ class UnionClass: public Napi::ObjectWrap<UnionClass> {
 public:
     static Napi::Function InitClass(Napi::Env env, const TypeInfo *type);
 
-    UnionClass(const Napi::CallbackInfo &info);
+    UnionObject(const Napi::CallbackInfo &info);
 
     void Finalize(Napi::BasicEnv env) override;
 

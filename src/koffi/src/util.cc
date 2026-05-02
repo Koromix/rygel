@@ -11,19 +11,19 @@
 namespace K {
 
 // Value does not matter, the tag system uses memory addresses
-const napi_type_tag TypeInfoMarker = { 0x1cc449675b294374, 0xbb13a50e97dcb017 };
+const napi_type_tag TypeObjectMarker = { 0x1cc449675b294374, 0xbb13a50e97dcb017 };
 const napi_type_tag DirectionMarker = { 0xf9c306238b480580, 0xc2e168524a0823f5 };
-const napi_type_tag UnionClassMarker = { 0x5eaf2245526a4c7d, 0x8c86c9ee2b96ffc8 };
+const napi_type_tag UnionObjectMarker = { 0x5eaf2245526a4c7d, 0x8c86c9ee2b96ffc8 };
 const napi_type_tag CastMarker = { 0x77f459614a0a412f, 0x80b3dda1341dc8df };
 
-Napi::Function TypeClass::InitClass(Napi::Env env)
+Napi::Function TypeObject::InitClass(Napi::Env env)
 {
     Napi::Function constructor = DefineClass(env, "Type", {});
     return constructor;
 }
 
-TypeClass::TypeClass(const Napi::CallbackInfo &info)
-    : Napi::ObjectWrap<TypeClass>(info)
+TypeObject::TypeObject(const Napi::CallbackInfo &info)
+    : Napi::ObjectWrap<TypeObject>(info)
 {
     K_ASSERT(info.Length() >= 1);
     K_ASSERT(info[0u].IsExternal());
@@ -32,20 +32,20 @@ TypeClass::TypeClass(const Napi::CallbackInfo &info)
     type = external.Data();
 }
 
-Napi::Function UnionClass::InitClass(Napi::Env env, const TypeInfo *type)
+Napi::Function UnionObject::InitClass(Napi::Env env, const TypeInfo *type)
 {
     K_ASSERT(type->primitive == PrimitiveKind::Union);
 
     // node-addon-api wants std::vector
-    std::vector<Napi::ClassPropertyDescriptor<UnionClass>> properties;
+    std::vector<Napi::ClassPropertyDescriptor<UnionObject>> properties;
     properties.reserve(type->members.len);
 
     for (Size i = 0; i < type->members.len; i++) {
         const RecordMember &member = type->members[i];
 
         napi_property_attributes attr = (napi_property_attributes)(napi_writable | napi_enumerable);
-        Napi::ClassPropertyDescriptor<UnionClass> prop = InstanceAccessor(member.name, &UnionClass::Getter,
-                                                                          &UnionClass::Setter, attr, (void *)i);
+        Napi::ClassPropertyDescriptor<UnionObject> prop = InstanceAccessor(member.name, &UnionObject::Getter,
+                                                                          &UnionObject::Setter, attr, (void *)i);
 
         properties.push_back(prop);
     }
@@ -54,14 +54,14 @@ Napi::Function UnionClass::InitClass(Napi::Env env, const TypeInfo *type)
     return constructor;
 }
 
-UnionClass::UnionClass(const Napi::CallbackInfo &info)
-    : Napi::ObjectWrap<UnionClass>(info), type((const TypeInfo *)info.Data())
+UnionObject::UnionObject(const Napi::CallbackInfo &info)
+    : Napi::ObjectWrap<UnionObject>(info), type((const TypeInfo *)info.Data())
 {
     Napi::Env env = info.Env();
     instance = env.GetInstanceData<InstanceData>();
 }
 
-void UnionClass::Finalize(Napi::BasicEnv env)
+void UnionObject::Finalize(Napi::BasicEnv env)
 {
     napi_ref ref = (napi_ref)*this;
 
@@ -77,7 +77,7 @@ void UnionClass::Finalize(Napi::BasicEnv env)
     SuppressDestruct();
 }
 
-void UnionClass::SetRaw(const uint8_t *ptr)
+void UnionObject::SetRaw(const uint8_t *ptr)
 {
     raw.RemoveFrom(0);
     raw.Append(MakeSpan(ptr, type->size));
@@ -86,7 +86,7 @@ void UnionClass::SetRaw(const uint8_t *ptr)
     active_idx = -1;
 }
 
-Napi::Value UnionClass::Getter(const Napi::CallbackInfo &info)
+Napi::Value UnionObject::Getter(const Napi::CallbackInfo &info)
 {
     Size idx = (Size)info.Data();
     const RecordMember &member = type->members[idx];
@@ -113,7 +113,7 @@ Napi::Value UnionClass::Getter(const Napi::CallbackInfo &info)
     return value;
 }
 
-void UnionClass::Setter(const Napi::CallbackInfo &info, const Napi::Value &value)
+void UnionObject::Setter(const Napi::CallbackInfo &info, const Napi::Value &value)
 {
     Size idx = (Size)info.Data();
 
@@ -227,9 +227,9 @@ const TypeInfo *ResolveType(Napi::Value value, int *out_directions)
             }
 
             return type;
-        } else if (kind == napi_object && CheckValueTag(env, value, &TypeInfoMarker)) {
+        } else if (kind == napi_object && CheckValueTag(env, value, &TypeObjectMarker)) {
             Napi::Object obj = value.As<Napi::Object>();
-            TypeClass *defn = TypeClass::Unwrap(obj);
+            TypeObject *defn = TypeObject::Unwrap(obj);
 
             if (out_directions) {
                 *out_directions = 1;
@@ -567,7 +567,7 @@ Napi::Object WrapType(Napi::Env env, const TypeInfo *type, bool freeze)
             } break;
         }
 
-        SetValueTag(env, defn, &TypeInfoMarker);
+        SetValueTag(env, defn, &TypeObjectMarker);
 
         if (freeze) {
             defn.Freeze();
@@ -647,7 +647,7 @@ const char *GetValueType(const InstanceData *instance, napi_value value)
             return cast->type->name;
         }
 
-        if (CheckValueTag(env, value, &TypeInfoMarker))
+        if (CheckValueTag(env, value, &TypeObjectMarker))
             return "Type";
         for (const TypeInfo &type: instance->types) {
             if (type.ref.type && CheckValueTag(env, value, type.ref.type))
@@ -781,9 +781,9 @@ Napi::Object DecodeObject(Napi::Env env, const uint8_t *origin, const TypeInfo *
     // We can't decode unions because we don't know which member is valid
     if (type->primitive == PrimitiveKind::Union) {
         Napi::Object wrapper = type->construct.New({}).As<Napi::Object>();
-        SetValueTag(env, wrapper, &UnionClassMarker);
+        SetValueTag(env, wrapper, &UnionObjectMarker);
 
-        UnionClass *u = UnionClass::Unwrap(wrapper);
+        UnionObject *u = UnionObject::Unwrap(wrapper);
         u->SetRaw(origin);
 
         return wrapper;

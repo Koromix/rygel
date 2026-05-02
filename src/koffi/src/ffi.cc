@@ -255,7 +255,7 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
 
     bool skip = (info.Length() > 1);
     bool named = skip && !IsNullOrUndefined(env, info[0]);
-    bool redefine = named && info[0].IsObject() && CheckValueTag(env, info[0], &TypeInfoMarker);
+    bool redefine = named && info[0].IsObject() && CheckValueTag(env, info[0], &TypeObjectMarker);
 
     if (named && !info[0].IsString() && !redefine) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string", GetValueType(instance, info[0]));
@@ -289,7 +289,7 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
     TypeInfo *replace = nullptr;
 
     if (redefine) {
-        TypeClass *defn = TypeClass::Unwrap(name.As<Napi::Object>());
+        TypeObject *defn = TypeObject::Unwrap(name.As<Napi::Object>());
 
         replace = (TypeInfo *)defn->GetType();
         type->name = replace->name;
@@ -442,7 +442,7 @@ static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
 
     bool skip = (info.Length() > 1);
     bool named = skip && !IsNullOrUndefined(env, info[0]);
-    bool redefine = named && info[0].IsObject() && CheckValueTag(env, info[0], &TypeInfoMarker);
+    bool redefine = named && info[0].IsObject() && CheckValueTag(env, info[0], &TypeObjectMarker);
 
     if (named && !info[0].IsString() && !redefine) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string", GetValueType(instance, info[0]));
@@ -476,7 +476,7 @@ static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
     TypeInfo *replace = nullptr;
 
     if (redefine) {
-        TypeClass *defn = TypeClass::Unwrap(name.As<Napi::Object>());
+        TypeObject *defn = TypeObject::Unwrap(name.As<Napi::Object>());
 
         replace = (TypeInfo *)defn->GetType();
         type->name = replace->name;
@@ -570,7 +570,7 @@ static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
     err_guard.Disable();
 
     // Union constructor
-    Napi::Function constructor = UnionClass::InitClass(env, type);
+    Napi::Function constructor = UnionObject::InitClass(env, type);
     type->construct.Reset(constructor, 1);
 
     if (replace) {
@@ -603,7 +603,7 @@ Napi::Value InstantiateUnion(const Napi::CallbackInfo &info)
     }
 
     Napi::Object wrapper = type->construct.New({}).As<Napi::Object>();
-    SetValueTag(env, wrapper, &UnionClassMarker);
+    SetValueTag(env, wrapper, &UnionObjectMarker);
 
     return wrapper;
 }
@@ -1312,7 +1312,7 @@ static Napi::Value CreateEnumType(const Napi::CallbackInfo &info)
             values.Set(key, value);
         }
 
-        // The rules are implementation-defined, but tend to be the same 
+        // The rules are implementation-defined, but tend to be the same
         if (max <= UINT_MAX && !negative) {
             type->primitive = PrimitiveKind::UInt32;
             type->size = 4;
@@ -2844,7 +2844,7 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
 
     // Init various references
     {
-        Napi::Function construct_type = TypeClass::InitClass(env);
+        Napi::Function construct_type = TypeObject::InitClass(env);
         Napi::Symbol symbol = Napi::Symbol::New(env, "active");
 
         instance->construct_type.Reset(construct_type, 1);
