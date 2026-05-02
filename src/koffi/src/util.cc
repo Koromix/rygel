@@ -435,6 +435,8 @@ const TypeInfo *ResolveType(Napi::Env env, Span<const char> str)
             copy->members.allocator = GetNullAllocator();
             memset(&copy->defn, 0, K_SIZE(copy->defn));
 
+            static_assert(!std::is_polymorphic_v<Napi::ObjectReference>);
+
             copy->dispose = [](Napi::Env env, const TypeInfo *, const void *ptr) {
                 InstanceData *instance = env.GetInstanceData<InstanceData>();
 

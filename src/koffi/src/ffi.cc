@@ -694,6 +694,8 @@ static Napi::Value CreatePointerType(const Napi::CallbackInfo &info)
         copy->name = named ? DuplicateString(name.c_str(), &instance->str_alloc).ptr : copy->name;
         memset(&copy->defn, 0, K_SIZE(copy->defn));
 
+        static_assert(!std::is_polymorphic_v<Napi::ObjectReference>);
+
         if (!countedby.IsEmpty()) {
             Napi::String str = countedby.As<Napi::String>();
             copy->countedby = DuplicateString(str.Utf8Value().c_str(), &instance->str_alloc).ptr;
@@ -830,6 +832,8 @@ static Napi::Value CreateDisposableType(const Napi::CallbackInfo &info)
     memcpy((void *)type, (const void *)src, K_SIZE(*src));
     type->members.allocator = GetNullAllocator();
     memset(&type->defn, 0, K_SIZE(type->defn));
+
+    static_assert(!std::is_polymorphic_v<Napi::ObjectReference>);
 
     type->name = named ? DuplicateString(name.Utf8Value().c_str(), &instance->str_alloc).ptr
                        : Fmt(&instance->str_alloc, "<anonymous_%1>", instance->types.count).ptr;
