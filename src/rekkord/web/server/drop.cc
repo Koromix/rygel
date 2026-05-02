@@ -172,6 +172,8 @@ void HandleDropUpload(http_IO *io)
         return;
     }
 
+    io->ExtendTimeout(30000);
+
     StreamReader reader;
     if (!io->OpenForRead(-1, &reader))
         return;
@@ -378,6 +380,8 @@ void HandleDropFragment(http_IO *io)
         io->SendError(422);
         return;
     }
+
+    io->ExtendTimeout(30000);
 
     StreamWriter writer;
     if (!io->OpenForWrite(200, expected, &writer))
