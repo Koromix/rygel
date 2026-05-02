@@ -21,6 +21,8 @@ struct PlanItem {
 
 void HandlePlanList(http_IO *io)
 {
+    K_ASSERT(config.backup);
+
     RetainPtr<const SessionInfo> session = GetNormalSession(io);
 
     if (!session) {
@@ -149,6 +151,8 @@ static bool DumpItems(json_Writer *json, int64_t id, bool details)
 
 void HandlePlanGet(http_IO *io)
 {
+    K_ASSERT(config.backup);
+
     const http_RequestInfo &request = io->Request();
     RetainPtr<const SessionInfo> session = GetNormalSession(io);
 
@@ -216,6 +220,8 @@ void HandlePlanGet(http_IO *io)
 
 void HandlePlanSave(http_IO *io)
 {
+    K_ASSERT(config.backup);
+
     RetainPtr<const SessionInfo> session = GetNormalSession(io);
 
     if (!session) {
@@ -420,6 +426,8 @@ void HandlePlanSave(http_IO *io)
 
 void HandlePlanDelete(http_IO *io)
 {
+    K_ASSERT(config.backup);
+
     RetainPtr<const SessionInfo> session = GetNormalSession(io);
 
     if (!session) {
@@ -469,6 +477,8 @@ void HandlePlanDelete(http_IO *io)
 
 void HandlePlanKey(http_IO *io)
 {
+    K_ASSERT(config.backup);
+
     RetainPtr<const SessionInfo> session = GetNormalSession(io);
 
     if (!session) {
@@ -561,6 +571,8 @@ void HandlePlanKey(http_IO *io)
 
 void HandlePlanFetch(http_IO *io)
 {
+    K_ASSERT(config.backup);
+
     int64_t plan = ValidateApiKey(io);
     if (plan < 0)
         return;

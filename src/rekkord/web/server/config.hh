@@ -6,6 +6,7 @@
 #include "lib/native/base/base.hh"
 #include "lib/native/http/http.hh"
 #include "lib/native/request/smtp.hh"
+#include "lib/native/request/s3.hh"
 #include "lib/native/sso/oidc.hh"
 
 namespace K {
@@ -14,12 +15,20 @@ struct Config {
     const char *title = nullptr;
     const char *url = nullptr;
 
+    bool backup = true;
+    bool drop = false;
+
     const char *database_filename = nullptr;
     const char *tmp_directory = nullptr;
 
     int64_t stale_delay = 30 * 3600000;
     int64_t mail_delay = 1 * 3600000;
     int64_t repeat_delay = 24 * 3600000;
+
+    struct {
+        s3_Config remote;
+        const char *drop_path = "drops";
+    } s3;
 
     http_Config http { 8891 };
 

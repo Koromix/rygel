@@ -19,6 +19,8 @@ bool Config::Validate() const
         valid = false;
     }
 
+    valid &= !drop || s3.remote.Validate();
+
     valid &= http.Validate();
     valid &= smtp.Validate();
 
@@ -60,6 +62,15 @@ bool LoadConfig(StreamReader *st, Config *out_config)
                     LogError("Unknown attribute '%1'", prop.key);
                     valid = false;
                 }
+            } else if (prop.section == "Services") {
+                if (prop.key == "Backup") {
+                    valid &= ParseBool(prop.value, &config.backup);
+                } else if (prop.key == "Drop") {
+                    valid &= ParseBool(prop.value, &config.drop);
+                } else {
+                    LogError("Unknown attribute '%1'", prop.key);
+                    valid = false;
+                }
             } else if (prop.section == "Data") {
                 bool first = true;
 
@@ -92,6 +103,12 @@ bool LoadConfig(StreamReader *st, Config *out_config)
                 } else {
                     LogError("Unknown attribute '%1'", prop.key);
                     valid = false;
+                }
+            } else if (prop.section == "S3") {
+                if (prop.key == "DropPath") {
+                    config.s3.drop_path = DuplicateString(prop.value, &config.str_alloc).ptr;
+                } else {
+                    valid &= config.s3.remote.SetProperty(prop.key, prop.value, root_directory);
                 }
             } else if (prop.section == "HTTP") {
                 valid &= config.http.SetProperty(prop.key.ptr, prop.value.ptr, root_directory);

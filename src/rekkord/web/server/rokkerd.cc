@@ -6,6 +6,7 @@
 #include "alert.hh"
 #include "config.hh"
 #include "database.hh"
+#include "drop.hh"
 #include "link.hh"
 #include "mail.hh"
 #include "plan.hh"
@@ -232,6 +233,8 @@ static void InitAssets()
         if (TestStr(asset.name, "src/rekkord/web/client/index.html")) {
             asset_index = &asset;
             asset_map.Set("/", &asset);
+        } else if (TestStr(asset.name, "src/rekkord/web/client/sw.js")) {
+            asset_map.Set("/sw.js", &asset);
         } else if (TestStr(asset.name, "src/rekkord/web/assets/main/rekkord.webp")) {
             asset_map.Set("/favicon.webp", &asset);
         } else {
@@ -356,30 +359,40 @@ static void HandleRequest(http_IO *io)
             HandlePictureSave(io);
         } else if (url == "/api/picture/delete" && method == http_RequestMethod::Post) {
             HandlePictureDelete(io);
-        } else if (url == "/api/repository/list" && method == http_RequestMethod::Get) {
+        } else if (config.backup && url == "/api/repository/list" && method == http_RequestMethod::Get) {
             HandleRepositoryList(io);
-        } else if (url == "/api/repository/get" && method == http_RequestMethod::Get) {
+        } else if (config.backup && url == "/api/repository/get" && method == http_RequestMethod::Get) {
             HandleRepositoryGet(io);
-        } else if (url == "/api/repository/save" && method == http_RequestMethod::Post) {
+        } else if (config.backup && url == "/api/repository/save" && method == http_RequestMethod::Post) {
             HandleRepositorySave(io);
-        } else if (url == "/api/repository/delete" && method == http_RequestMethod::Post) {
+        } else if (config.backup && url == "/api/repository/delete" && method == http_RequestMethod::Post) {
             HandleRepositoryDelete(io);
-        } else if (url == "/api/repository/snapshots" && method == http_RequestMethod::Get) {
+        } else if (config.backup && url == "/api/repository/snapshots" && method == http_RequestMethod::Get) {
             HandleRepositorySnapshots(io);
-        } else if (url == "/api/plan/list" && method == http_RequestMethod::Get) {
+        } else if (config.backup && url == "/api/plan/list" && method == http_RequestMethod::Get) {
             HandlePlanList(io);
-        } else if (url == "/api/plan/get" && method == http_RequestMethod::Get) {
+        } else if (config.backup && url == "/api/plan/get" && method == http_RequestMethod::Get) {
             HandlePlanGet(io);
-        } else if (url == "/api/plan/save" && method == http_RequestMethod::Post) {
+        } else if (config.backup && url == "/api/plan/save" && method == http_RequestMethod::Post) {
             HandlePlanSave(io);
-        } else if (url == "/api/plan/delete" && method == http_RequestMethod::Post) {
+        } else if (config.backup && url == "/api/plan/delete" && method == http_RequestMethod::Post) {
             HandlePlanDelete(io);
-        } else if (url == "/api/plan/key" && method == http_RequestMethod::Post) {
+        } else if (config.backup && url == "/api/plan/key" && method == http_RequestMethod::Post) {
             HandlePlanKey(io);
-        } else if (url == "/api/plan/fetch" && method == http_RequestMethod::Get) {
+        } else if (config.backup && url == "/api/plan/fetch" && method == http_RequestMethod::Get) {
             HandlePlanFetch(io);
-        } else if (url == "/api/link/snapshot" && method == http_RequestMethod::Post) {
+        } else if (config.backup && url == "/api/link/snapshot" && method == http_RequestMethod::Post) {
             HandleLinkSnapshot(io);
+        } else if (config.drop && url == "/api/drop/create" && method == http_RequestMethod::Post) {
+            HandleDropCreate(io);
+        } else if (config.drop && url == "/api/drop/upload" && method == http_RequestMethod::Put) {
+            HandleDropUpload(io);
+        } else if (config.drop && url == "/api/drop/mark" && method == http_RequestMethod::Post) {
+            HandleDropMark(io);
+        } else if (config.drop && url == "/api/drop/info" && method == http_RequestMethod::Get) {
+            HandleDropInfo(io);
+        } else if (config.drop && url == "/api/drop/fragment" && method == http_RequestMethod::Get) {
+            HandleDropFragment(io);
         } else {
             io->SendError(404);
         }
@@ -431,6 +444,9 @@ static void HandleRequest(http_IO *io)
 
                     json.Key("title"); json.String(config.title);
                     json.Key("url"); json.String(config.url);
+
+                    json.Key("backup"); json.Bool(config.backup);
+                    json.Key("drop"); json.Bool(config.drop);
 
                     json.Key("auth"); json.StartObject();
                     json.Key("internal"); json.Bool(config.internal_auth);
@@ -573,6 +589,8 @@ Options:
         return 1;
     if (!db.SetWAL(true))
         return 1;
+    if (!AddDatabaseFunctions(&db))
+        return 1;
     if (!MigrateDatabase(&db))
         return 1;
     if (!MakeDirectory(config.tmp_directory, false))
@@ -584,6 +602,9 @@ Options:
 
     LogInfo("Init assets");
     InitAssets();
+
+    if (config.drop && !InitDrop())
+        return 1;
 
     // Run!
     LogInfo("Init HTTP server");

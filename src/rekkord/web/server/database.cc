@@ -4,10 +4,71 @@
 #include "lib/native/base/base.hh"
 #include "config.hh"
 #include "database.hh"
+#include "kid.hh"
 
 namespace K {
 
-const int DatabaseVersion = 35;
+const int DatabaseVersion = 36;
+
+static void KidGenFunc(sqlite3_context *ctx, int, sqlite3_value **argv)
+{
+    if (sqlite3_value_type(argv[0]) != SQLITE_INTEGER) [[unlikely]] {
+        sqlite3_result_error(ctx, "Invalid type passed to kid_gen()", -1);
+        return;
+    }
+
+    int type = sqlite3_value_int(argv[0]);
+
+    if (type < 0 || type >= K_LEN(KIDTypeNames)) {
+        sqlite3_result_error(ctx, "Invalid type passed to kid_gen()", -1);
+        return;
+    }
+
+    KID kid;
+    FillKID((KIDType)type, &kid);
+
+    sqlite3_result_blob(ctx, kid.raw, K_SIZE(kid.raw), SQLITE_TRANSIENT);
+}
+
+static void KidStrFunc(sqlite3_context *ctx, int, sqlite3_value **argv)
+{
+    switch (sqlite3_value_type(argv[0])) {
+        case SQLITE_NULL: { sqlite3_result_null(ctx); } break;
+
+        case SQLITE_BLOB: {
+            if (sqlite3_value_bytes(argv[0]) != K_SIZE(KID::raw)) [[unlikely]] {
+                sqlite3_result_error(ctx, "BLOB size does not match KID size", -1);
+                return;
+            }
+
+            KID kid;
+            {
+                const uint8_t *ptr = (const uint8_t *)sqlite3_value_blob(argv[0]);
+                MemCpy(&kid.raw, ptr, K_SIZE(kid.raw));
+            }
+
+            FmtArg arg = (FmtArg)kid;
+            sqlite3_result_text(ctx, arg.u.buf, -1, SQLITE_TRANSIENT);
+        } break;
+
+        default: { sqlite3_result_error(ctx, "Cannot format non-blob KID value", -1); } break;
+    }
+}
+
+bool AddDatabaseFunctions(sq_Database *db)
+{
+    if (sqlite3_create_function(*db, "kid_gen", 1, SQLITE_UTF8, nullptr, KidGenFunc, nullptr, nullptr) != SQLITE_OK) {
+        LogError("SQLite failed to add kid_gen() function");
+        return false;
+    }
+
+    if (sqlite3_create_function(*db, "kid_str", 1, SQLITE_UTF8 | SQLITE_DETERMINISTIC, nullptr, KidStrFunc, nullptr, nullptr) != SQLITE_OK) {
+        LogError("SQLite failed to add kid_str() function");
+        return false;
+    }
+
+    return true;
+}
 
 int GetDatabaseVersion(sq_Database *db)
 {
@@ -719,9 +780,34 @@ bool MigrateDatabase(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 35: {
+                bool success = db->RunMany(R"(
+                    ALTER TABLE users ADD COLUMN ckey BLOB;
+                    UPDATE users SET ckey = rnd_safe(32);
+                    ALTER TABLE users ALTER ckey SET NOT NULL;
+
+                    CREATE TABLE drops (
+                        id INTEGER PRIMARY KEY NOT NULL,
+                        owner INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+                        kid BLOB NOT NULL,
+                        name TEXT NOT NULL,
+                        size INTEGER NOT NULL,
+                        expire INTEGER,
+                        chunk INTEGER NOT NULL,
+                        uploaded INTEGER NOT NULL,
+                        resume TEXT
+                    );
+
+                    CREATE UNIQUE INDEX drops_k ON drops (kid);
+                    CREATE INDEX drops_o ON drops (owner);
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            static_assert(DatabaseVersion == 35);
+            static_assert(DatabaseVersion == 36);
         }
 
         if (!db->Run("INSERT INTO migrations (version, build, timestamp) VALUES (?, ?, ?)",

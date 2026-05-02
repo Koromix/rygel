@@ -13,6 +13,8 @@ namespace K {
 
 void HandleRepositoryList(http_IO *io)
 {
+    K_ASSERT(config.backup);
+
     RetainPtr<const SessionInfo> session = GetNormalSession(io);
 
     if (!session) {
@@ -66,6 +68,8 @@ void HandleRepositoryList(http_IO *io)
 
 void HandleRepositoryGet(http_IO *io)
 {
+    K_ASSERT(config.backup);
+
     const http_RequestInfo &request = io->Request();
     RetainPtr<const SessionInfo> session = GetNormalSession(io);
 
@@ -166,6 +170,8 @@ void HandleRepositoryGet(http_IO *io)
 
 void HandleRepositorySave(http_IO *io)
 {
+    K_ASSERT(config.backup);
+
     RetainPtr<const SessionInfo> session = GetNormalSession(io);
 
     if (!session) {
@@ -233,6 +239,8 @@ void HandleRepositorySave(http_IO *io)
 
 void HandleRepositoryDelete(http_IO *io)
 {
+    K_ASSERT(config.backup);
+
     RetainPtr<const SessionInfo> session = GetNormalSession(io);
 
     if (!session) {
@@ -282,6 +290,8 @@ void HandleRepositoryDelete(http_IO *io)
 
 void HandleRepositorySnapshots(http_IO *io)
 {
+    K_ASSERT(config.backup);
+
     const http_RequestInfo &request = io->Request();
     RetainPtr<const SessionInfo> session = GetNormalSession(io);
 

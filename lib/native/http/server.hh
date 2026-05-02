@@ -172,6 +172,8 @@ public:
     const char *GetHeaderValue(const char *key) const;
     const char *GetCookieValue(const char *key) const;
 
+    int64_t GetBodyLength() const { return body_len; }
+
     friend class http_IO;
 };
 
