@@ -35,6 +35,7 @@ namespace K {
 #endif
 
 extern const napi_type_tag TypeObjectMarker;
+extern const napi_type_tag CallbackObjectMarker;
 extern const napi_type_tag DirectionMarker;
 extern const napi_type_tag UnionObjectMarker;
 extern const napi_type_tag CastMarker;
@@ -50,6 +51,21 @@ public:
     TypeObject(const Napi::CallbackInfo &info);
 
     const TypeInfo *GetType() { return type; }
+};
+
+class CallbackObject: public Napi::ObjectWrap<CallbackObject> {
+    int16_t idx;
+    void *native;
+
+public:
+    static Napi::Function InitClass(Napi::Env env);
+
+    CallbackObject(const Napi::CallbackInfo &info);
+
+    Size GetIndex() const { return idx; }
+    void *GetNative() const { return native; }
+
+    void Invalidate();
 };
 
 class UnionObject: public Napi::ObjectWrap<UnionObject> {

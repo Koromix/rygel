@@ -2213,10 +2213,16 @@ static Napi::Value RegisterCallback(const Napi::CallbackInfo &info)
 
     void *ptr = GetTrampoline(idx);
 
-    // Cache index for fast unregistration
-    instance->trampolines_map.Set(ptr, idx);
+    Napi::Object obj;
+    {
+        Napi::Number number = Napi::Number::New(env, idx);
+        Napi::External<void> external = Napi::External<void>::New(env, ptr);
 
-    return WrapCallback(env, type->ref.type, ptr);
+        obj = instance->construct_callback.New({ number, external });
+        SetValueTag(env, obj, &CallbackObjectMarker);
+    }
+
+    return obj;
 }
 
 static Napi::Value UnregisterCallback(const Napi::CallbackInfo &info)
@@ -2228,24 +2234,17 @@ static Napi::Value UnregisterCallback(const Napi::CallbackInfo &info)
         ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", info.Length());
         return env.Null();
     }
-
-    void *ptr;
-    if (!TryPointer(env, info[0], &ptr)) {
+    if (!info[0].IsObject() || !CheckValueTag(env, info[0], &CallbackObjectMarker)) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for id, expected registered callback", GetValueType(instance, info[0]));
         return env.Null();
     }
 
-    int16_t idx;
-    {
-        int16_t *it = instance->trampolines_map.Find(ptr);
+    CallbackObject *obj = CallbackObject::Unwrap(info[0].As<Napi::Object>());
+    int16_t idx = obj->GetIndex();
 
-        if (!it) [[unlikely]] {
-            ThrowError<Napi::Error>(env, "Could not find matching registered callback");
-            return env.Null();
-        }
-
-        idx = *it;
-        instance->trampolines_map.Remove(it);
+    if (idx < 0) {
+        ThrowError<Napi::Error>(env, "This callback has already been unregistered");
+        return env.Null();
     }
 
     // Release shared trampoline safely
@@ -2261,6 +2260,8 @@ static Napi::Value UnregisterCallback(const Napi::CallbackInfo &info)
 
         shared.available.Append(idx);
     }
+
+    obj->Invalidate();
 
     return env.Undefined();
 }
@@ -2845,9 +2846,11 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
     // Init various references
     {
         Napi::Function construct_type = TypeObject::InitClass(env);
+        Napi::Function construct_callback = CallbackObject::InitClass(env);
         Napi::Symbol symbol = Napi::Symbol::New(env, "active");
 
         instance->construct_type.Reset(construct_type, 1);
+        instance->construct_callback.Reset(construct_callback, 1);
         instance->active_symbol.Reset(symbol, 1);
     }
 

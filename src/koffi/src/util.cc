@@ -13,6 +13,7 @@ namespace K {
 // Value does not matter, the tag system uses memory addresses
 const napi_type_tag TypeObjectMarker = { 0x1cc449675b294374, 0xbb13a50e97dcb017 };
 const napi_type_tag DirectionMarker = { 0xf9c306238b480580, 0xc2e168524a0823f5 };
+const napi_type_tag CallbackObjectMarker = { 0xcc2a9d3b2d3fc2b2, 0x6db38f7af965b5ec };
 const napi_type_tag UnionObjectMarker = { 0x5eaf2245526a4c7d, 0x8c86c9ee2b96ffc8 };
 const napi_type_tag CastMarker = { 0x77f459614a0a412f, 0x80b3dda1341dc8df };
 
@@ -30,6 +31,32 @@ TypeObject::TypeObject(const Napi::CallbackInfo &info)
 
     Napi::External<TypeInfo> external = info[0u].As<Napi::External<TypeInfo>>();
     type = external.Data();
+}
+
+Napi::Function CallbackObject::InitClass(Napi::Env env)
+{
+    Napi::Function constructor = DefineClass(env, "Callback", {});
+    return constructor;
+}
+
+CallbackObject::CallbackObject(const Napi::CallbackInfo &info)
+    : Napi::ObjectWrap<CallbackObject>(info)
+{
+    K_ASSERT(info.Length() >= 2);
+    K_ASSERT(info[0u].IsNumber());
+    K_ASSERT(info[1u].IsExternal());
+
+    Napi::Number number = info[0u].As<Napi::Number>();
+    Napi::External<void> external = info[1u].As<Napi::External<void>>();
+
+    idx = (int16_t)number.Int32Value();
+    native = external.Data();
+}
+
+void CallbackObject::Invalidate()
+{
+    idx = -1;
+    native = nullptr;
 }
 
 Napi::Function UnionObject::InitClass(Napi::Env env, const TypeInfo *type)
@@ -639,7 +666,7 @@ const char *GetValueType(const InstanceData *instance, napi_value value)
     Napi::Env env = instance->env;
     napi_valuetype kind = GetKindOf(env, value);
 
-    if (kind == napi_external) {
+    if (kind == napi_external || kind == napi_object) {
         if (CheckValueTag(env, value, &CastMarker)) {
             Napi::External<ValueCast> external = Napi::External<ValueCast>(env, value);
             ValueCast *cast = external.Data();
@@ -647,8 +674,11 @@ const char *GetValueType(const InstanceData *instance, napi_value value)
             return cast->type->name;
         }
 
+        if (CheckValueTag(env, value, &CallbackObjectMarker))
+            return "Callback";
         if (CheckValueTag(env, value, &TypeObjectMarker))
             return "Type";
+
         for (const TypeInfo &type: instance->types) {
             if (type.ref.type && CheckValueTag(env, value, type.ref.type))
                 return type.name;

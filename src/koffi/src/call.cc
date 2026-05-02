@@ -1061,7 +1061,13 @@ restart:
         return true;
     }
 
-    if (kind == napi_function) {
+    if (kind == napi_object && CheckValueTag(env, value, &CallbackObjectMarker)) {
+        CallbackObject *obj = nullptr;
+        napi_unwrap(env, value, (void **)&obj);
+
+        *out_ptr = obj->GetNative();
+        return true;
+    } else if (kind == napi_function) {
         Napi::Function func = Napi::Function(env, value);
 
         ptr = ReserveTrampoline(type->ref.proto, func);

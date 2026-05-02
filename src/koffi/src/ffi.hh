@@ -273,6 +273,7 @@ struct InstanceData {
     const TypeInfo *str32_type;
 
     Napi::FunctionReference construct_type;
+    Napi::FunctionReference construct_callback;
     Napi::Reference<Napi::Symbol> active_symbol;
 
     std::mutex mem_mutex;
@@ -298,8 +299,6 @@ struct InstanceData {
 
     BucketArray<LinkedAllocator> encode_allocators;
     HashMap<void *, LinkedAllocator *> encode_map;
-
-    HashMap<void *, int16_t> trampolines_map;
 
     BlockAllocator str_alloc;
 
