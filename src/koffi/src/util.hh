@@ -65,7 +65,10 @@ public:
     Size GetIndex() const { return idx; }
     void *GetNative() const { return native; }
 
-    void Invalidate();
+    void Unregister();
+
+private:
+    Napi::Value Dispose(const Napi::CallbackInfo &info);
 };
 
 class UnionObject: public Napi::ObjectWrap<UnionObject> {

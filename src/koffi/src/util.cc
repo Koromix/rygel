@@ -35,7 +35,15 @@ TypeObject::TypeObject(const Napi::CallbackInfo &info)
 
 Napi::Function CallbackObject::InitClass(Napi::Env env)
 {
-    Napi::Function constructor = DefineClass(env, "Callback", {});
+    // node-addon-api wants std::vector
+    std::vector<Napi::ClassPropertyDescriptor<CallbackObject>> properties;
+
+    if (Napi::Value dispose = env.RunScript("Symbol.dispose"); !IsNullOrUndefined(env, dispose)) {
+        Napi::ClassPropertyDescriptor<CallbackObject> prop = InstanceMethod(dispose.As<Napi::Symbol>(), &CallbackObject::Dispose);
+        properties.push_back(prop);
+    }
+
+    Napi::Function constructor = DefineClass(env, "Callback", properties);
     return constructor;
 }
 
@@ -53,10 +61,37 @@ CallbackObject::CallbackObject(const Napi::CallbackInfo &info)
     native = external.Data();
 }
 
-void CallbackObject::Invalidate()
+void CallbackObject::Unregister()
 {
+    K_ASSERT(idx >= 0);
+
+    // Release shared trampoline safely
+    {
+        std::lock_guard<std::mutex> lock(shared.mutex);
+
+        TrampolineInfo *trampoline = &shared.trampolines[idx];
+        K_ASSERT(!trampoline->func.IsEmpty());
+
+        trampoline->state = 0;
+        trampoline->func.Reset();
+        trampoline->recv.Reset();
+
+        shared.available.Append(idx);
+    }
+
     idx = -1;
     native = nullptr;
+}
+
+Napi::Value CallbackObject::Dispose(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+
+    if (idx >= 0) {
+        Unregister();
+    }
+
+    return env.Undefined();
 }
 
 Napi::Function UnionObject::InitClass(Napi::Env env, const TypeInfo *type)

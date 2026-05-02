@@ -197,7 +197,49 @@ async function test() {
         assert.equal(CallIndirect(27), -27);
 
         assert.equal(koffi.unregister(cb), null);
-        assert.throws(() => koffi.unregister(cb));
+        assert.throws(() => koffi.unregister(cb), /registered/);
+    }
+
+    // Automatic dispose of registered callback
+    // Use eval to support older Node versions without using keyword.
+    {
+        let has_using = false;
+
+        try {
+            eval (`
+                {
+                    class Resource {
+                        dummy() {}
+                        [Symbol.dispose]() {}
+                    }
+                    using res = new Resource;
+                    res.dummy();
+                }
+            `);
+            has_using = true;
+        } catch (err) {
+            console.log('Cannot test callack dispose / using (not supported)');
+            // Go on
+        }
+
+        if (has_using) {
+            eval(`
+                let reg = null;
+
+                {
+                    SetIndirect(x => -x);
+                    assert.throws(() => CallIndirect(27), { message: /non-registered callback/ });
+
+                    using cb = koffi.register(x => -x, koffi.pointer(IntCallback));
+                    reg = cb;
+
+                    SetIndirect(cb);
+                    assert.equal(CallIndirect(27), -27);
+                }
+
+                assert.throws(() => koffi.unregister(reg), /registered/);
+            `);
+        }
     }
 
     // Register with binding

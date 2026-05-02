@@ -2247,21 +2247,7 @@ static Napi::Value UnregisterCallback(const Napi::CallbackInfo &info)
         return env.Null();
     }
 
-    // Release shared trampoline safely
-    {
-        std::lock_guard<std::mutex> lock(shared.mutex);
-
-        TrampolineInfo *trampoline = &shared.trampolines[idx];
-        K_ASSERT(!trampoline->func.IsEmpty());
-
-        trampoline->state = 0;
-        trampoline->func.Reset();
-        trampoline->recv.Reset();
-
-        shared.available.Append(idx);
-    }
-
-    obj->Invalidate();
+    obj->Unregister();
 
     return env.Undefined();
 }
@@ -2847,11 +2833,11 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
     {
         Napi::Function construct_type = TypeObject::InitClass(env);
         Napi::Function construct_callback = CallbackObject::InitClass(env);
-        Napi::Symbol symbol = Napi::Symbol::New(env, "active");
+        Napi::Symbol active = Napi::Symbol::New(env, "active");
 
         instance->construct_type.Reset(construct_type, 1);
         instance->construct_callback.Reset(construct_callback, 1);
-        instance->active_symbol.Reset(symbol, 1);
+        instance->active_symbol.Reset(active, 1);
     }
 
     // Init base types
