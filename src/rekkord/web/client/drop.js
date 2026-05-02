@@ -29,17 +29,18 @@ async function runSend() {
         <form style="text-align: center;" @submit=${UI.wrap(submit)}>
             <div class="block" style="align-items: center;">
                 <label>
-                    <span>${T.file}</span>
-                    <input type="file" name="file" style="display: none;" @change=${change} />
-                    <button type="button" @click=${e => { e.target.parentNode.click(); e.preventDefault(); }}>${T.browse_for_file}</button>
-                </label>
-                ${send_file != null ? html`<div class="sub">${send_file.name} (${formatSize(send_file.size)})` : ''}
-                <label>
                     <span>${T.expiration}</span>
                     <select name="expiration">
                         ${EXPIRATION_DAYS.map(days => html`<option value=${days}>${T.count(T.expiration_delay, days)}</option>`)}
                     </select>
                 </label>
+                <div class="sub">${T.drag_or_browse_file}</div>
+                <label>
+                    <span>${T.file}</span>
+                    <input type="file" name="file" style="display: none;" @change=${change} />
+                    <button type="button" @click=${e => { e.target.parentNode.click(); e.preventDefault(); }}>${T.browse_for_file}</button>
+                </label>
+                ${send_file != null ? html`<div class="sub">${send_file.name} (${formatSize(send_file.size)})` : ''}
             </div>
 
             <div class="actions">
@@ -47,6 +48,11 @@ async function runSend() {
             </div>
         </form>
     `);
+
+    // UI.main() resets these each time
+    window.ondragenter = (e) => e.preventDefault();
+    window.ondragover = drop;
+    window.ondrop = drop;
 
     async function change(e) {
         send_file = e.target.files[0];
@@ -87,6 +93,36 @@ async function runSend() {
     function progress(drop, uploaded) {
         drop.uploaded = uploaded;
         App.go();
+    }
+
+    function drop(e) {
+        let dt = e.dataTransfer || e.clipboardData;
+
+        let src = null;
+        let found = false;
+
+        for (let i = 0; i < dt.items.length; i++) {
+            let item = dt.items[i];
+
+            if (item.kind == 'file') {
+                let file = item.getAsFile();
+
+                if (file != null)
+                    src = file;
+
+                found = true;
+                break;
+            }
+        }
+
+        if (e.type == 'dragover') {
+            dt.dropEffect = found ? 'move' : 'none';
+        } else if (e.type == 'drop' && src != null) {
+            send_file = src;
+            App.go();
+        }
+
+        e.preventDefault();
     }
 }
 

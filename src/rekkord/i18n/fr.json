@@ -60,6 +60,7 @@
         "dissociate": "Dissocier",
         "download": "Télécharger",
         "download_link": "Lien de téléchargement",
+        "drag_or_browse_file": "Déposez un fichier ou utilisez le bouton « Parcourir »",
         "drag_paste_or_browse_image": "Déposez une image, copier-collez la ou utilisez le bouton « Parcourir »",
         "edit_machine": "Modifier la machine",
         "edit_repository": "Modifier le dépôt",
