@@ -10568,13 +10568,15 @@ Size PromptEnum(const char *prompt, Span<const char *const> strings, Size value)
 
 int PromptYN(const char *prompt)
 {
-    const char *yes = T("Yes");
-    const char *no = T("No");
-
     const char *shortcuts = T("yn");
     K_ASSERT(strlen(shortcuts) == 2);
 
-    Size ret = PromptEnum(prompt, {{ yes, shortcuts[0] }, { no, shortcuts[1] }});
+    const PromptChoice choices[] = {
+        { T("Yes"), shortcuts[0] },
+        { T("No"), shortcuts[1] }
+    };
+
+    Size ret = PromptEnum(prompt, choices);
     if (ret < 0)
         return -1;
 
