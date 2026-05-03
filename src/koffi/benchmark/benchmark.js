@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // SPDX-License-Identifier: MIT
-// SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
+// SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
 const { spawnSync } = require('child_process');
 const fs = require('fs');

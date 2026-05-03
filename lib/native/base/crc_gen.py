@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-# SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
+# SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
 # This script uses the database of mimetypes distributed here: https://github.com/jshttp/mime-db
 # to produce the X-header file mimetypes.inc
@@ -14,7 +14,7 @@ CRC64_XZ_POLY = 0xC96C5795D7870F42
 CRC64_NVME_POLY = 0x9A6C9329AC4BC9B5
 
 LICENSE_HEADER = """// SPDX-License-Identifier: MIT
-// SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>"""
+// SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>"""
 
 def write_crc32_table(f, name, poly):
     f.write(f'static const uint32_t {name}[256] = {{')

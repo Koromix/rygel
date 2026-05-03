@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 # SPDX-License-Identifier: GPL-3.0-or-later
-# SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
+# SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
 library(optparse)
 

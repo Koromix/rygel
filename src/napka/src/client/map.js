@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
+// SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
 import { render, html, unsafeHTML } from 'vendor/lit-html/lit-html.bundle.js';
 import MarkdownIt from '../../node_modules/markdown-it/dist/markdown-it.js';

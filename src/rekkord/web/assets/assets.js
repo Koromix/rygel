@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
+// SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
 import asset0 from './main/logo.webp';
 import asset1 from './main/rekkord.webp';

@@ -1,6 +1,6 @@
 #!/usr/bin/env -S node --no-warnings
 // SPDX-License-Identifier: MIT
-// SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
+// SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
 import process from 'process';
 import fs from 'fs';

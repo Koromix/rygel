@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
+// SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
 // I'd prefer to keep these assets in separate files but until import attributes
 // have landed and been in Node for long enough... it's more compatible this way!
@@ -132,7 +132,7 @@ const TOOLCHAINS = {
 };
 
 const FIND_CNOKE_CMAKE = `# SPDX-License-Identifier: MIT
-# SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
+# SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
 if(CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo" OR
    CMAKE_BUILD_TYPE STREQUAL "MinSizeRel")
@@ -261,7 +261,7 @@ endif()
 `;
 
 const WIN_DELAY_HOOK_C = `// SPDX-License-Identifier: MIT
-// SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
+// SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
 #include <stdlib.h>
 #if !defined(NOMINMAX)

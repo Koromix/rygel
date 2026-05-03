@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
+// SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
 const { detectPlatform, loadDynamic, wrapNative } = require('./src/init.js');
 const { BINARY_ROOT, loadStatic } = require('./src/static.js');

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // SPDX-License-Identifier: GPL-3.0-or-later
-// SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
+// SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
 import * as esbuild from '../../../../vendor/esbuild/native/lib/main.js';
 import * as XLSX from '../../../../vendor/sheetjs/XLSX.bundle.js';

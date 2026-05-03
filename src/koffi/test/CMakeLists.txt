@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-# SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
+# SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
 cmake_minimum_required(VERSION 3.11)
 project(koffi_test C CXX)

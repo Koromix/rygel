@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-# SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
+# SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
 # This script uses the database of mimetypes distributed here: https://github.com/jshttp/mime-db
 # to produce the X-header file mimetypes.inc

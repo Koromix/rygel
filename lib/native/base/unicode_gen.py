@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
-# SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
+# SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
 import sys
 import re
@@ -12,7 +12,7 @@ from collections import namedtuple
 DEFAULT_URL = 'https://unicode.org/Public/16.0.0'
 
 LICENSE_HEADER = """// SPDX-License-Identifier: MIT
-// SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>"""
+// SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>"""
 
 WcWidthResult = namedtuple('WcWidthResult', ['null', 'wide'])
 XidResult = namedtuple('XidResult', ['id_start', 'id_continue'])

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
+// SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
 function cleanURL(url) {
     let m = url ? url.match(/(https?:\/\/)?(?:www\.)?(?:[a-zA-Z0-9-]+\.)+[a-z]+(?:[^ ]+\/)*/) : null;

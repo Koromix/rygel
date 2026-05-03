@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-# SPDX-FileCopyrightText: 2025 Niels Martignène <niels.martignene@protonmail.com>
+# SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
 add_library(sqlite3 SHARED ../../../vendor/sqlite3mc/sqlite3.c)
 set_target_properties(sqlite3 PROPERTIES PREFIX "")
