@@ -391,7 +391,7 @@ void HandleDropFragment(http_IO *io)
 
     int64_t downloaded = s3.GetObject(key, [&](int64_t offset, Span<const uint8_t> buf) {
         if (offset != writer.GetRawWritten()) {
-            LogError("Transient S3 download error, please retry: %1 -- %2", offset, writer.GetRawWritten());
+            LogError("Transient S3 download error, please retry");
             return false;
         }
 

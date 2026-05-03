@@ -39,29 +39,48 @@ self.addEventListener('fetch', e => {
 
             let stream = new ReadableStream({
                 pull: async (controller) => {
+                    if (fragment == null)
+                        return;
+
                     let url = Util.pasteURL('/api/drop/fragment', { kid: kid, fragment: fragment });
+                    let expected = Math.min(info.size - fragment * info.chunk, info.chunk);
 
-                    try {
-                        let response = await fetch(url);
+                    let buf = null;
 
-                        if (!response.ok) {
-                            controller.error(new Error('Failed to download fragment with status ' + response.status));
-                            controller.close();
-                            return;
+                    for (let i = 0; i < 4; i++) {
+                        try {
+                            let response = await fetch(url);
+
+                            if (response.ok)
+                                buf = await response.bytes();
+                        } catch (err) {
+                            console.error(err);
                         }
 
-                        let buf = await response.bytes();
+                        if (buf?.length == expected)
+                            break;
 
-                        downloaded += buf.length;
-                        fragment++;
+                        // Transient S3 errors will result in truncated output, but a 200 status because the server
+                        // streams the response. Retry if buffer is shorter than expected!
+                        await Util.waitFor(1000 + i * 2000);
+                    }
 
-                        controller.enqueue(buf);
-
-                        if (downloaded == info.size)
-                            controller.close();
-                    } catch (err) {
-                        controller.error(err);
+                    if (buf?.length != expected) {
+                        controller.error(new Error('Failed to download file fragment'));
                         controller.close();
+                        fragment = null;
+
+                        return;
+                    }
+
+                    downloaded += buf.length;
+                    fragment++;
+
+                    controller.enqueue(buf);
+
+                    if (downloaded == info.size) {
+                        controller.close();
+                        fragment = null;
                     }
                 }
             });
