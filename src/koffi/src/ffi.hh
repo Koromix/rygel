@@ -94,15 +94,25 @@ struct RecordMember {
 
 struct LibraryHolder {
     void *module = nullptr; // HMODULE on Windows
-    mutable std::atomic_int refcount { 1 };
+    mutable int refcount = 1;
 
     LibraryHolder(void *module) : module(module) {}
     ~LibraryHolder() { Unload(); }
 
     void Unload();
 
-    const LibraryHolder *Ref() const;
-    void Unref() const;
+    const LibraryHolder *Ref() const
+    {
+        refcount++;
+        return this;
+    }
+
+    void Unref() const
+    {
+        if (--refcount)
+            return;
+        delete this;
+    }
 };
 
 class LibraryObject: public Napi::ObjectWrap<LibraryObject> {
@@ -213,7 +223,7 @@ struct ValueCast {
 
 // Also used for callbacks, even though many members are not used in this case
 struct FunctionInfo {
-    mutable std::atomic_int refcount { 1 };
+    mutable int refcount = 1;
 
     napi_env env;
     InstanceData *instance;
@@ -246,8 +256,18 @@ struct FunctionInfo {
 
     ~FunctionInfo();
 
-    const FunctionInfo *Ref() const;
-    void Unref() const;
+    const FunctionInfo *Ref() const
+    {
+        refcount++;
+        return this;
+    }
+
+    void Unref() const
+    {
+        if (--refcount)
+            return;
+        delete this;
+    }
 };
 
 template <typename T>

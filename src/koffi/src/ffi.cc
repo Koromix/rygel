@@ -2504,19 +2504,6 @@ void LibraryHolder::Unload()
     module = nullptr;
 }
 
-const LibraryHolder *LibraryHolder::Ref() const
-{
-    refcount++;
-    return this;
-}
-
-void LibraryHolder::Unref() const
-{
-    if (!--refcount) {
-        delete this;
-    }
-}
-
 ValueCast::~ValueCast()
 {
     if (node_api_post_finalizer) {
@@ -2533,19 +2520,6 @@ FunctionInfo::~FunctionInfo()
 {
     if (lib) {
         lib->Unref();
-    }
-}
-
-const FunctionInfo *FunctionInfo::Ref() const
-{
-    refcount++;
-    return this;
-}
-
-void FunctionInfo::Unref() const
-{
-    if (!--refcount) {
-        delete this;
     }
 }
 
