@@ -692,7 +692,7 @@ static Napi::Value CreatePointerType(const Napi::CallbackInfo &info)
 
         memcpy((void *)copy, type, K_SIZE(*type));
         copy->name = named ? DuplicateString(name.c_str(), &instance->str_alloc).ptr : copy->name;
-        memset(&copy->defn, 0, K_SIZE(copy->defn));
+        memset((void *)&copy->defn, 0, K_SIZE(copy->defn));
 
         static_assert(!std::is_polymorphic_v<Napi::ObjectReference>);
 
@@ -831,7 +831,7 @@ static Napi::Value CreateDisposableType(const Napi::CallbackInfo &info)
 
     memcpy((void *)type, (const void *)src, K_SIZE(*src));
     type->members.allocator = GetNullAllocator();
-    memset(&type->defn, 0, K_SIZE(type->defn));
+    memset((void *)&type->defn, 0, K_SIZE(type->defn));
 
     static_assert(!std::is_polymorphic_v<Napi::ObjectReference>);
 
