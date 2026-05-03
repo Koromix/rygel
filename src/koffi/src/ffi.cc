@@ -1763,6 +1763,7 @@ AsyncCall::~AsyncCall()
 #endif
 
     ReleaseMemory(call->instance, call->mem);
+    func->Unref();
 }
 
 void AsyncCall::Execute()
