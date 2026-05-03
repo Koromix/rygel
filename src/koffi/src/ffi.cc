@@ -1953,12 +1953,19 @@ extern "C" void RelayDirect(CallData *call, Size idx, uint8_t *sp)
 
 Napi::Function LibraryObject::InitClass(Napi::Env env)
 {
-    Napi::Function constructor = DefineClass(env, "Library", {
+    // node-addon-api wants std::vector
+    std::vector<Napi::ClassPropertyDescriptor<LibraryObject>> properties = {
         InstanceMethod("func", &LibraryObject::Func),
         InstanceMethod("symbol", &LibraryObject::Symbol),
         InstanceMethod("unload", &LibraryObject::Unload)
-    });
+    };
 
+    if (Napi::Value dispose = env.RunScript("Symbol.dispose"); !IsNullOrUndefined(env, dispose)) {
+        Napi::ClassPropertyDescriptor<LibraryObject> prop = InstanceMethod(dispose.As<Napi::Symbol>(), &LibraryObject::Unload);
+        properties.push_back(prop);
+    }
+
+    Napi::Function constructor = DefineClass(env, "Library", properties);
     return constructor;
 }
 
