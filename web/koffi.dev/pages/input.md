@@ -278,8 +278,8 @@ const char *ConcatBuild(Concat *c)
 ```
 
 ```js
-// ES6 syntax: import koffi from 'koffi';
-const koffi = require('koffi');
+import koffi from 'koffi';
+// CJS: const koffi = require('koffi');
 
 const lib = koffi.load('./handles.so');
 
@@ -348,8 +348,8 @@ Koffi applies the following conversion rules when passing arrays to/from C:
 See the example below:
 
 ```js
-// ES6 syntax: import koffi from 'koffi';
-const koffi = require('koffi');
+import koffi from 'koffi';
+// CJS: const koffi = require('koffi');
 
 // Those two structs are exactly the same, only the array conversion hint is different
 const Foo1 = koffi.struct('Foo1', {
@@ -438,8 +438,8 @@ void AppendValues(struct FlexibleArray *arr, size_t count, int start, int step)
 ```
 
 ```js
-// ES6 syntax: import koffi from 'koffi';
-const koffi = require('koffi');
+import koffi from 'koffi';
+// CJS: const koffi = require('koffi');
 
 const lib = koffi.load('./flexible.so');
 

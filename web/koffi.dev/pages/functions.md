@@ -3,8 +3,8 @@
 To declare functions, start by loading the shared library with `koffi.load(filename)`.
 
 ```js
-// ES6 syntax: import koffi from 'koffi';
-const koffi = require('koffi');
+import koffi from 'koffi';
+// CJS: const koffi = require('koffi');
 
 const lib = koffi.load('/path/to/shared/library'); // File extension depends on platforms: .so, .dll, .dylib, etc.
 ```
@@ -105,8 +105,8 @@ You can safely use these on non-x86 platforms, they are simply ignored.
 Below you can find a small example showing how to use a non-default calling convention, with the two syntaxes:
 
 ```js
-// ES6 syntax: import koffi from 'koffi';
-const koffi = require('koffi');
+import koffi from 'koffi';
+// CJS: const koffi = require('koffi');
 
 const lib = koffi.load('user32.dll');
 
@@ -142,8 +142,8 @@ printf('Integer %d, double %g, str %s', 'int', 6, 'double', 8.5, 'str', 'THE END
 You can issue asynchronous calls by calling the function through its async member. In this case, you need to provide a callback function as the last argument, with `(err, res)` parameters.
 
 ```js
-// ES6 syntax: import koffi from 'koffi';
-const koffi = require('koffi');
+import koffi from 'koffi';
+// CJS: const koffi = require('koffi');
 
 const lib = koffi.load('libc.so.6');
 

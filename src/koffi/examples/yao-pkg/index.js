@@ -1,2 +1,2 @@
-const koffi = require('koffi');
+import koffi from 'koffi';
 console.log(koffi.config());

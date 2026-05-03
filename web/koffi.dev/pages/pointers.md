@@ -14,8 +14,8 @@ In C, pointer arguments are used for differenty purposes. It is important to dis
 The following Win32 example uses `GetCursorPos()` (with an output parameter) to retrieve and show the current cursor position.
 
 ```js
-// ES6 syntax: import koffi from 'koffi';
-const koffi = require('koffi');
+import koffi from 'koffi';
+// CJS: const koffi = require('koffi');
 
 const lib = koffi.load('user32.dll');
 
@@ -117,8 +117,8 @@ int64_t ComputeTotalLength(const char **strings)
 ```
 
 ```js
-// ES6 syntax: import koffi from 'koffi';
-const koffi = require('koffi');
+import koffi from 'koffi';
+// CJS: const koffi = require('koffi');
 
 const lib = koffi.load('./length.so');
 
@@ -146,8 +146,8 @@ Koffi provides two features to deal with this:
 The example below shows the use of `koffi.as()` to read the header of a PNG file with `fread()` directly to a JS object.
 
 ```js
-// ES6 syntax: import koffi from 'koffi';
-const koffi = require('koffi');
+import koffi from 'koffi';
+// CJS: const koffi = require('koffi');
 
 const lib = koffi.load('libc.so.6');
 
@@ -218,8 +218,8 @@ const ExplicitFree = koffi.disposable('HeapStr16', 'str16', koffi.free); // You 
 The following example illustrates the use of a disposable type derived from *str*.
 
 ```js
-// ES6 syntax: import koffi from 'koffi';
-const koffi = require('koffi');
+import koffi from 'koffi';
+// CJS: const koffi = require('koffi');
 
 const lib = koffi.load('libc.so.6');
 
@@ -233,8 +233,8 @@ console.log(copy); // Prints Hello!
 When you declare functions with the [prototype-like syntax](functions#definition-syntax), you can either use named disposable types or use the '!' shortcut qualifier with compatibles types, as shown in the example below. This qualifier creates an anonymous disposable type that calls `koffi.free(ptr)`.
 
 ```js
-// ES6 syntax: import koffi from 'koffi';
-const koffi = require('koffi');
+import koffi from 'koffi';
+// CJS: const koffi = require('koffi');
 
 const lib = koffi.load('libc.so.6');
 
@@ -262,8 +262,8 @@ You can access unmanaged memory with `koffi.view(ptr, len)`. This function takes
 The following Linux example writes the string "Hello World!" to a file named "hello.txt" through mmaped memory, to demontrate the use of `koffi.view()`:
 
 ```js
-// ES6 syntax: import koffi from 'koffi';
-const koffi = require('koffi');
+import koffi from 'koffi';
+// CJS: const koffi = require('koffi');
 
 const libc = koffi.load('libc.so.6');
 

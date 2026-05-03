@@ -5,8 +5,8 @@
 In order to pass a JS function to a C function expecting a callback, you must first create a callback type with the expected return type and parameters. The syntax is similar to the one used to load functions from a shared library.
 
 ```js
-// ES6 syntax: import koffi from 'koffi';
-const koffi = require('koffi');
+import koffi from 'koffi';
+// CJS: const koffi = require('koffi');
 
 // With the classic syntax, this callback expects an integer and returns nothing
 const ExampleCallback = koffi.proto('ExampleCallback', 'void', ['int']);
@@ -71,8 +71,8 @@ int TransferToJS(const char *name, int age, int (*cb)(const char *str, int age))
 ```
 
 ```js
-// ES6 syntax: import koffi from 'koffi';
-const koffi = require('koffi');
+import koffi from 'koffi';
+// CJS: const koffi = require('koffi');
 
 const lib = koffi.load('./callbacks.so'); // Fake path
 
@@ -121,8 +121,8 @@ void SayIt(const char *name)
 ```
 
 ```js
-// ES6 syntax: import koffi from 'koffi';
-const koffi = require('koffi');
+import koffi from 'koffi';
+// CJS: const koffi = require('koffi');
 
 const lib = koffi.load('./callbacks.so'); // Fake path
 
@@ -169,8 +169,8 @@ You can pass this value through to another C function that expects a pointer of 
 The following examples uses it to sort an array of strings in-place with the standard C function `qsort()`:
 
 ```js
-// ES6 syntax: import koffi from 'koffi';
-const koffi = require('koffi');
+import koffi from 'koffi';
+// CJS: const koffi = require('koffi');
 
 const lib = koffi.load('libc.so.6');
 

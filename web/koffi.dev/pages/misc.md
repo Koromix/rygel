@@ -151,8 +151,8 @@ The standard POSIX error codes are available in `koffi.os.errno`, as shown below
 ```js
 const assert = require('assert');
 
-// ES6 syntax: import koffi from 'koffi';
-const koffi = require('koffi');
+import koffi from 'koffi';
+// CJS: const koffi = require('koffi');
 
 const lib = koffi.load('libc.so.6');
 

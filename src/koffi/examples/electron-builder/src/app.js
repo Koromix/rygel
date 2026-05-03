@@ -1,5 +1,5 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
-const koffi = require('koffi');
+import { app, BrowserWindow, ipcMain } from 'electron';
+import koffi from 'koffi';
 
 app.whenReady().then(() => {
     ipcMain.handle('koffi:config', (e, ...args) => koffi.config(...args));

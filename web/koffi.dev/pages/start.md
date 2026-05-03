@@ -30,8 +30,8 @@ This is a small example for Linux systems, which uses `gettimeofday()`, `localti
 It illustrates the use of output parameters.
 
 ```js
-// ES6 syntax: import koffi from 'koffi';
-const koffi = require('koffi');
+import koffi from 'koffi';
+// CJS: const koffi = require('koffi');
 
 // Load the shared library
 const lib = koffi.load('libc.so.6');
@@ -81,8 +81,8 @@ This is a small example targeting the Win32 API, using `MessageBox()` to show a 
 It illustrates the use of the x86 stdcall calling convention, and the use of UTF-8 and UTF-16 string arguments.
 
 ```js
-// ES6 syntax: import koffi from 'koffi';
-const koffi = require('koffi');
+import koffi from 'koffi';
+// CJS: const koffi = require('koffi');
 
 // Load the shared library
 const lib = koffi.load('user32.dll');

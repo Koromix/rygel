@@ -1,6 +1,6 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
-const path = require('path');
-const koffi = require('koffi');
+import { app, BrowserWindow, ipcMain } from 'electron';
+import path from 'path';
+import koffi from 'koffi';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) {

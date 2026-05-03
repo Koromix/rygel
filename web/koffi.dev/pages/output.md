@@ -29,8 +29,8 @@ The same can be done when declaring a function with a C-like prototype string, w
 This Windows example enumerate all Chrome windows along with their PID and their title. The `GetWindowThreadProcessId()` function illustrates how to get a primitive value from an output argument.
 
 ```js
-// ES6 syntax: import koffi from 'koffi';
-const koffi = require('koffi');
+import koffi from 'koffi';
+// CJS: const koffi = require('koffi');
 
 const user32 = koffi.load('user32.dll');
 
@@ -87,8 +87,8 @@ for (let hwnd = null;;) {
 This example calls the POSIX function `gettimeofday()`, and uses the prototype-like syntax.
 
 ```js
-// ES6 syntax: import koffi from 'koffi';
-const koffi = require('koffi');
+import koffi from 'koffi';
+// CJS: const koffi = require('koffi');
 
 const lib = koffi.load('libc.so.6');
 
@@ -115,8 +115,8 @@ console.log(tv);
 Many Win32 functions that use struct outputs require you to set a size member (often named `cbSize`). These functions won't work with `_Out_` because the size value must be copied from JS to C, use `_Inout_` in this case.
 
 ```js
-// ES6 syntax: import koffi from 'koffi';
-const koffi = require('koffi');
+import koffi from 'koffi';
+// CJS: const koffi = require('koffi');
 
 const user32 = koffi.load('user32.dll');
 
@@ -137,8 +137,8 @@ console.log(success, info);
 This example opens an in-memory SQLite database, and uses the node-ffi-style function declaration syntax.
 
 ```js
-// ES6 syntax: import koffi from 'koffi';
-const koffi = require('koffi');
+import koffi from 'koffi';
+// CJS: const koffi = require('koffi');
 
 const lib = koffi.load('sqlite3.so');
 
@@ -215,8 +215,8 @@ You can use buffers and typed arrays for output (and input/output) pointer param
 Once the native function returns, you can decode the content with `koffi.decode(value, type)` as in the following example:
 
 ```js
-// ES6 syntax: import koffi from 'koffi';
-const koffi = require('koffi');
+import koffi from 'koffi';
+// CJS: const koffi = require('koffi');
 
 const lib = koffi.load('libc.so.6');
 
