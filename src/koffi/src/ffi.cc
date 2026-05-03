@@ -289,7 +289,8 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
     TypeInfo *replace = nullptr;
 
     if (redefine) {
-        TypeObject *defn = TypeObject::Unwrap(name.As<Napi::Object>());
+        TypeObject *defn = nullptr;
+        napi_unwrap(env, name, (void **)&defn);
 
         replace = (TypeInfo *)defn->GetType();
         type->name = replace->name;
@@ -476,7 +477,8 @@ static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
     TypeInfo *replace = nullptr;
 
     if (redefine) {
-        TypeObject *defn = TypeObject::Unwrap(name.As<Napi::Object>());
+        TypeObject *defn = nullptr;
+        napi_unwrap(env, name, (void **)&defn);
 
         replace = (TypeInfo *)defn->GetType();
         type->name = replace->name;
@@ -2243,7 +2245,9 @@ static Napi::Value UnregisterCallback(const Napi::CallbackInfo &info)
         return env.Null();
     }
 
-    CallbackObject *obj = CallbackObject::Unwrap(info[0].As<Napi::Object>());
+    CallbackObject *obj = nullptr;
+    napi_unwrap(env, info[0], (void **)&obj);
+
     int16_t idx = obj->GetIndex();
 
     if (idx < 0) {

@@ -107,9 +107,9 @@ void CallData::Finalize()
 
                     case OutArgument::Kind::Object: {
                         if (CheckValueTag(env, value, &UnionObjectMarker)) {
-                            Napi::Object obj = Napi::Object(env, value);
+                            UnionObject *u = nullptr;
+                            napi_unwrap(env, value, (void **)&u);
 
-                            UnionObject *u = UnionObject::Unwrap(obj);
                             u->SetRaw(out.ptr);
                         } else {
                             DecodeObject(env, value, out.ptr, out.type);
@@ -380,7 +380,9 @@ bool CallData::PushObject(napi_value obj, const TypeInfo *type, uint8_t *origin)
         members = type->members;
     } else if (type->primitive == PrimitiveKind::Union) {
         if (CheckValueTag(env, obj, &UnionObjectMarker)) {
-            UnionObject *u = UnionObject::Unwrap(Napi::Object(env, obj));
+            UnionObject *u = nullptr;
+            napi_unwrap(env, obj, (void **)&u);
+
             const uint8_t *raw = u->GetRaw();
 
             if (u->GetType() != type) [[unlikely]] {

@@ -121,6 +121,13 @@ UnionObject::UnionObject(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
     instance = env.GetInstanceData<InstanceData>();
+
+    if (info.Length() >= 1) {
+        Napi::External<void> external = info[0].As<Napi::External<void>>();
+        const uint8_t *ptr = (const uint8_t *)external.Data();
+
+        SetRaw(ptr);
+    }
 }
 
 void UnionObject::Finalize(Napi::BasicEnv env)
@@ -290,8 +297,8 @@ const TypeInfo *ResolveType(Napi::Value value, int *out_directions)
 
             return type;
         } else if (kind == napi_object && CheckValueTag(env, value, &TypeObjectMarker)) {
-            Napi::Object obj = value.As<Napi::Object>();
-            TypeObject *defn = TypeObject::Unwrap(obj);
+            TypeObject *defn = nullptr;
+            napi_unwrap(env, value, (void **)&defn);
 
             if (out_directions) {
                 *out_directions = 1;
@@ -847,11 +854,10 @@ Napi::Object DecodeObject(Napi::Env env, const uint8_t *origin, const TypeInfo *
 {
     // We can't decode unions because we don't know which member is valid
     if (type->primitive == PrimitiveKind::Union) {
-        Napi::Object wrapper = type->construct.New({}).As<Napi::Object>();
-        SetValueTag(env, wrapper, &UnionObjectMarker);
+        Napi::External<void> external = Napi::External<void>::New(env, (void *)origin);
+        Napi::Object wrapper = type->construct.New({ external }).As<Napi::Object>();
 
-        UnionObject *u = UnionObject::Unwrap(wrapper);
-        u->SetRaw(origin);
+        SetValueTag(env, wrapper, &UnionObjectMarker);
 
         return wrapper;
     }
