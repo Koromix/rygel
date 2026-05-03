@@ -280,7 +280,7 @@ ssh_session ssh_Connect(const ssh_Config &config)
             case SSH_KNOWN_HOSTS_NOT_FOUND:
             case SSH_KNOWN_HOSTS_UNKNOWN: {
                 char base64[256] = {};
-                K_ASSERT(sodium_base64_ENCODED_LEN(hash.len, sodium_base64_VARIANT_ORIGINAL_NO_PADDING) < K_SIZE(base64));
+                K_ASSERT(sodium_base64_encoded_len((size_t)hash.len, sodium_base64_VARIANT_ORIGINAL_NO_PADDING) < K_SIZE(base64));
 
                 CopyString("SHA256:", base64);
                 sodium_bin2base64(base64 + 7, K_SIZE(base64) - 7, hash.ptr, hash.len, sodium_base64_VARIANT_ORIGINAL_NO_PADDING);

@@ -56,7 +56,7 @@ static Size EncodePEM(Span<const uint8_t> key, Span<uint8_t> out_buf)
 
     LocalArray<char, EncodedLimit> base64;
     {
-        Size encoded = sodium_base64_ENCODED_LEN(key.len, sodium_base64_VARIANT_ORIGINAL);
+        Size encoded = sodium_base64_encoded_len((size_t)key.len, sodium_base64_VARIANT_ORIGINAL);
         if (encoded > K_SIZE(base64))
             goto error;
         base64.len = encoded - 1;

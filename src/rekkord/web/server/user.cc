@@ -1556,7 +1556,7 @@ void HandleTotpSecret(http_IO *io)
         qr_ExportPng(qr, 0, &png);
 
         Span<const char> prefix = "data:image/png;base64,";
-        Size needed = prefix.len + (Size)sodium_base64_encoded_len(png.len, sodium_base64_VARIANT_ORIGINAL);
+        Size needed = prefix.len + (Size)sodium_base64_encoded_len((size_t)png.len, sodium_base64_VARIANT_ORIGINAL);
         Span<char> buf = AllocateSpan<char>(io->Allocator(), needed);
 
         CopyString(prefix, buf);

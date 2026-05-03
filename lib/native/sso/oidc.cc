@@ -268,7 +268,7 @@ void oidc_PrepareAuthorization(const oidc_Provider &provider, const char *scopes
 
         crypto_secretbox_easy(cypher.ptr + crypto_secretbox_NONCEBYTES, (const uint8_t *)secret.ptr, secret.len, cypher.ptr, key);
 
-        Size needed = (Size)sodium_base64_encoded_len(cypher.len, sodium_base64_VARIANT_ORIGINAL);
+        Size needed = (Size)sodium_base64_encoded_len((size_t)cypher.len, sodium_base64_VARIANT_ORIGINAL);
         Span<char> base64 = AllocateSpan<char>(alloc, needed);
         sodium_bin2base64(base64.ptr, base64.len, cypher.ptr, (size_t)cypher.len, sodium_base64_VARIANT_ORIGINAL);
 

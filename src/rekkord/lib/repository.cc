@@ -742,7 +742,7 @@ bool rk_Repository::WriteTag(const rk_ObjectID &oid, Span<const uint8_t> payload
 
         Fmt(&buf, "tags/P/%1_%2_", FmtHex(prefix), FmtInt(i, 2));
         sodium_bin2base64(buf.end(), buf.Available(), cypher, frag_len + crypto_secretbox_MACBYTES, sodium_base64_VARIANT_URLSAFE_NO_PADDING);
-        buf.len += sodium_base64_encoded_len(frag_len + crypto_secretbox_MACBYTES, sodium_base64_VARIANT_URLSAFE_NO_PADDING) - 1;
+        buf.len += sodium_base64_encoded_len((size_t)frag_len + crypto_secretbox_MACBYTES, sodium_base64_VARIANT_URLSAFE_NO_PADDING) - 1;
 
         Span<const char> path = buf.Leak();
         paths.Append(path.ptr);
