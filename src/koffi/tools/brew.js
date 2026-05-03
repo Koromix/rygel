@@ -417,7 +417,7 @@ async function build() {
         };
         main.types = './index.d.ts';
 
-        await bundleScripts(pkg_dir, packages, true);
+        await bundleScripts(pkg_dir, packages, 'build/koffi', true);
 
         fs.writeFileSync(pkg_dir + '/package.json', JSON.stringify(main, null, 4));
         fs.rmSync(pkg_dir + '/src/koffi/package.json');
@@ -620,12 +620,12 @@ async function snapshot() {
         'web/koffi.dev'
     ]));
 
-    await bundleScripts(snapshot_dir, [], false);
+    await bundleScripts(snapshot_dir, [], 'bin/Koffi', false);
 
     return snapshot_dir;
 }
 
-async function bundleScripts(dest_dir, packages, drop) {
+async function bundleScripts(dest_dir, packages, build_dir, drop) {
     let variants = {
         index: [],
         indirect: ['STATIC']
@@ -677,14 +677,14 @@ async function bundleScripts(dest_dir, packages, drop) {
 
                                         const requireNative = createRequire(import.meta.url);
 
-                                        const BINARY_ROOT = import.meta.dirname + '/../../build/koffi';
+                                        const BINARY_ROOT = import.meta.dirname + '/../../${build_dir}';
                                     ` : ''}
                                     ${format != 'esm' ? `
                                         const { createRequire } = require('node:module');
 
                                         const requireNative = createRequire(__filename);
 
-                                        const BINARY_ROOT = __dirname + '/../../build/koffi';
+                                        const BINARY_ROOT = __dirname + '/../../${build_dir}';
                                     ` : ''}
 
                                     function loadStatic(pkg) {
@@ -693,7 +693,7 @@ async function bundleScripts(dest_dir, packages, drop) {
                                         ${MONOLITH ? packages.flatMap(pkg => pkg.builds.map(build => `
                                             if (native == null && pkg == '${pkg.target}') {
                                                 try {
-                                                    native = requireNative('../../build/koffi/${build.name}/koffi.node');
+                                                    native = requireNative('../../${build_dir}/${build.name}/koffi.node');
                                                 } catch (err) {
                                                     // Go on
                                                 }
