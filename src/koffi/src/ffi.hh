@@ -105,6 +105,22 @@ struct LibraryHolder {
     void Unref() const;
 };
 
+class LibraryObject: public Napi::ObjectWrap<LibraryObject> {
+    LibraryHolder *lib = nullptr;
+
+public:
+    static Napi::Function InitClass(Napi::Env env);
+
+    LibraryObject(const Napi::CallbackInfo &info);
+
+    void Finalize(Napi::BasicEnv env) override;
+
+private:
+    Napi::Value Func(const Napi::CallbackInfo &info);
+    Napi::Value Symbol(const Napi::CallbackInfo &info);
+    Napi::Value Unload(const Napi::CallbackInfo &info);
+};
+
 enum class CallConvention {
     Cdecl,
     Stdcall,
@@ -272,6 +288,7 @@ struct InstanceData {
     const TypeInfo *str16_type;
     const TypeInfo *str32_type;
 
+    Napi::FunctionReference construct_lib;
     Napi::FunctionReference construct_type;
     Napi::FunctionReference construct_callback;
     Napi::Reference<Napi::Symbol> active_symbol;

@@ -1950,11 +1950,36 @@ extern "C" void RelayDirect(CallData *call, Size idx, uint8_t *sp)
     }
 }
 
-static Napi::Value FindLibraryFunction(const Napi::CallbackInfo &info)
+Napi::Function LibraryObject::InitClass(Napi::Env env)
+{
+    Napi::Function constructor = DefineClass(env, "Library", {
+        InstanceMethod("func", &LibraryObject::Func),
+        InstanceMethod("symbol", &LibraryObject::Symbol),
+        InstanceMethod("unload", &LibraryObject::Unload)
+    });
+
+    return constructor;
+}
+
+LibraryObject::LibraryObject(const Napi::CallbackInfo &info)
+    : Napi::ObjectWrap<LibraryObject>(info)
+{
+    K_ASSERT(info.Length() == 1);
+    K_ASSERT(info[0].IsExternal());
+
+    Napi::External<void> external = info[0].As<Napi::External<void>>();
+    lib = (LibraryHolder *)external.Data();
+}
+
+void LibraryObject::Finalize(Napi::BasicEnv)
+{
+    lib->Unref();
+}
+
+Napi::Value LibraryObject::Func(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();
-    LibraryHolder *lib = (LibraryHolder *)info.Data();
 
     FunctionInfo *func = new FunctionInfo();
     K_DEFER { func->Unref(); };
@@ -2019,11 +2044,10 @@ static Napi::Value FindLibraryFunction(const Napi::CallbackInfo &info)
     return WrapFunction(env, func);
 }
 
-static Napi::Value FindSymbol(const Napi::CallbackInfo &info)
+Napi::Value LibraryObject::Symbol(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();
-    LibraryHolder *lib = (LibraryHolder *)info.Data();
 
     if (info.Length() < 2) {
         ThrowError<Napi::TypeError>(env, "Expected 2, got %1", info.Length());
@@ -2053,10 +2077,9 @@ static Napi::Value FindSymbol(const Napi::CallbackInfo &info)
     return WrapPointer(env, type, ptr);
 }
 
-static Napi::Value UnloadLibrary(const Napi::CallbackInfo &info)
+Napi::Value LibraryObject::Unload(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
-    LibraryHolder *lib = (LibraryHolder *)info.Data();
 
     lib->Unload();
 
@@ -2140,25 +2163,10 @@ static Napi::Value LoadSharedLibrary(const Napi::CallbackInfo &info)
 #endif
 
     LibraryHolder *lib = new LibraryHolder(module);
-    K_DEFER { lib->Unref(); };
 
-    Napi::Object obj = Napi::Object::New(env);
-
-#define ADD_METHOD(Name, Call) \
-        do { \
-            const auto wrapper = [](const Napi::CallbackInfo &info) { return Call; }; \
-            Napi::Function func = Napi::Function::New(env, wrapper, (Name), (void *)lib->Ref()); \
-            func.AddFinalizer([](Napi::Env, LibraryHolder *lib) { lib->Unref(); }, lib); \
-            obj.Set((Name), func); \
-        } while (false)
-
-    ADD_METHOD("func", FindLibraryFunction(info));
-    ADD_METHOD("symbol", FindSymbol(info));
-
-    // We can't unref the library after unload, obviously
-    obj.Set("unload", Napi::Function::New(env, UnloadLibrary, "unload", (void *)lib->Ref()));
-
-#undef ADD_METHOD
+    Napi::External<void> external = Napi::External<void>::New(env, lib);
+    Napi::Object obj = instance->construct_lib.New({ external }).As<Napi::Object>();
+    SetValueTag(env, obj, &LibraryObjectMarker);
 
     return obj;
 }
@@ -2829,12 +2837,14 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
     exports.Set("extension", Napi::String::New(env, ".so"));
 #endif
 
-    // Init various references
+    // Init object classes and symbols
     {
+        Napi::Function construct_lib = LibraryObject::InitClass(env);
         Napi::Function construct_type = TypeObject::InitClass(env);
         Napi::Function construct_callback = CallbackObject::InitClass(env);
         Napi::Symbol active = Napi::Symbol::New(env, "active");
 
+        instance->construct_lib.Reset(construct_lib, 1);
         instance->construct_type.Reset(construct_type, 1);
         instance->construct_callback.Reset(construct_callback, 1);
         instance->active_symbol.Reset(active, 1);

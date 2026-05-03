@@ -34,6 +34,7 @@ namespace K {
     #endif
 #endif
 
+extern const napi_type_tag LibraryObjectMarker;
 extern const napi_type_tag TypeObjectMarker;
 extern const napi_type_tag CallbackObjectMarker;
 extern const napi_type_tag DirectionMarker;

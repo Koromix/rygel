@@ -11,6 +11,7 @@
 namespace K {
 
 // Value does not matter, the tag system uses memory addresses
+const napi_type_tag LibraryObjectMarker = { 0xdb9b066e6f700474, 0x0aecd7e4c63fbda9 };
 const napi_type_tag TypeObjectMarker = { 0x1cc449675b294374, 0xbb13a50e97dcb017 };
 const napi_type_tag DirectionMarker = { 0xf9c306238b480580, 0xc2e168524a0823f5 };
 const napi_type_tag CallbackObjectMarker = { 0xcc2a9d3b2d3fc2b2, 0x6db38f7af965b5ec };
@@ -717,10 +718,12 @@ const char *GetValueType(const InstanceData *instance, napi_value value)
             return cast->type->name;
         }
 
-        if (CheckValueTag(env, value, &CallbackObjectMarker))
-            return "Callback";
+        if (CheckValueTag(env, value, &LibraryObjectMarker))
+            return "Library";
         if (CheckValueTag(env, value, &TypeObjectMarker))
             return "Type";
+        if (CheckValueTag(env, value, &CallbackObjectMarker))
+            return "Callback";
 
         for (const TypeInfo &type: instance->types) {
             if (type.ref.type && CheckValueTag(env, value, type.ref.type))
