@@ -293,13 +293,15 @@ EXPORT void SetIdle(napi_env env, IdleCallback *cb)
         assert(status == napi_ok);
     }
 
-    uv_unref((uv_handle_t *)&idle_async);
-
     if (cb) {
         int ret = uv_async_init(idle_loop, &idle_async, RunIdle);
         assert(!ret);
 
+        uv_unref((uv_handle_t *)&idle_async);
+
         idle_async.data = cb;
+    } else {
+        uv_close((uv_handle_t *)&idle_async, NULL);
     }
 }
 
