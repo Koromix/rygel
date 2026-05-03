@@ -147,11 +147,8 @@ async function test() {
         console.log('Expected: ' + expected);
         console.log('');
 
-        if (sha256 == expected) {
-            console.log('Success!');
-        } else {
+        if (sha256 != expected)
             throw new Error('Image mismatch');
-        }
     } finally {
         fs.rmSync(tmp_dir, { recursive: true });
     }
