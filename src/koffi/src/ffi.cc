@@ -2219,14 +2219,10 @@ static Napi::Value RegisterCallback(const Napi::CallbackInfo &info)
 
     void *ptr = GetTrampoline(idx);
 
-    Napi::Object obj;
-    {
-        Napi::Number number = Napi::Number::New(env, idx);
-        Napi::External<void> external = Napi::External<void>::New(env, ptr);
-
-        obj = instance->construct_callback.New({ number, external });
-        SetValueTag(env, obj, &CallbackObjectMarker);
-    }
+    Napi::Number number = Napi::Number::New(env, idx);
+    Napi::External<void> external = Napi::External<void>::New(env, ptr);
+    Napi::Object obj = instance->construct_callback.New({ number, external });
+    SetValueTag(env, obj, &CallbackObjectMarker);
 
     return obj;
 }
@@ -2770,10 +2766,6 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
     // in clang-cl builds. I don't like this... but this fixes it, somehow ><
     Napi::Number::New(env, 0.0);
 #endif
-
-
-    exports.Set("config", Napi::Function::New(env, GetSetConfig));
-    exports.Set("stats", Napi::Function::New(env, GetStats));
 
     exports.Set("config", Napi::Function::New(env, GetSetConfig, "config"));
     exports.Set("stats", Napi::Function::New(env, GetStats, "stats"));

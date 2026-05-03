@@ -572,6 +572,7 @@ Napi::Object WrapType(Napi::Env env, const TypeInfo *type, bool freeze)
 
         Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, (TypeInfo *)type);
         Napi::Object defn = instance->construct_type.New({ external });
+        SetValueTag(env, defn, &TypeObjectMarker);
 
         defn.Set("name", Napi::String::New(env, type->name));
         defn.Set("primitive", PrimitiveKindNames[(int)type->primitive]);
@@ -637,8 +638,6 @@ Napi::Object WrapType(Napi::Env env, const TypeInfo *type, bool freeze)
                 defn.Set("proto", DescribeFunction(env, type->ref.proto));
             } break;
         }
-
-        SetValueTag(env, defn, &TypeObjectMarker);
 
         if (freeze) {
             defn.Freeze();
@@ -856,7 +855,6 @@ Napi::Object DecodeObject(Napi::Env env, const uint8_t *origin, const TypeInfo *
     if (type->primitive == PrimitiveKind::Union) {
         Napi::External<void> external = Napi::External<void>::New(env, (void *)origin);
         Napi::Object wrapper = type->construct.New({ external }).As<Napi::Object>();
-
         SetValueTag(env, wrapper, &UnionObjectMarker);
 
         return wrapper;
