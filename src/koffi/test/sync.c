@@ -1118,25 +1118,22 @@ EXPORT void InitDynamicArray(DynamicArray *arr, int start, int step)
     }
 }
 
-int ReturnEnumValue(Enum1 e)
+EXPORT int ReturnEnumValue(Enum1 e)
 {
     return (int)e;
 }
 
 #define ENUM_PRIMITIVE(Type) \
-    _Generic((Type)0, \
-        int: "Int32", \
-        unsigned int: "UInt32", \
-        long: "Int64", \
-        unsigned long: "UInt64", \
-        long long: "Int64", \
-        unsigned long long: "UInt64" \
-    )
+    (sizeof(Type) == 8 && (Type)0 >= 0 && ~(Type)0 >= 0 ? "UInt64" : \
+     sizeof(Type) == 8 ? "Int64" : \
+     sizeof(Type) == 4 && (Type)0 >= 0 && ~(Type)0 >= 0 ? "UInt32" : \
+     sizeof(Type) == 4 ? "Int32" : \
+     "Unknown")
 
-const char *GetEnumPrimitive1() { return ENUM_PRIMITIVE(Enum1); }
-const char *GetEnumPrimitive2() { return ENUM_PRIMITIVE(Enum2); }
-const char *GetEnumPrimitive3() { return ENUM_PRIMITIVE(Enum3); }
-const char *GetEnumPrimitive4() { return ENUM_PRIMITIVE(Enum4); }
-const char *GetEnumPrimitive5() { return ENUM_PRIMITIVE(Enum5); }
+EXPORT const char *GetEnumPrimitive1() { return ENUM_PRIMITIVE(Enum1); }
+EXPORT const char *GetEnumPrimitive2() { return ENUM_PRIMITIVE(Enum2); }
+EXPORT const char *GetEnumPrimitive3() { return ENUM_PRIMITIVE(Enum3); }
+EXPORT const char *GetEnumPrimitive4() { return ENUM_PRIMITIVE(Enum4); }
+EXPORT const char *GetEnumPrimitive5() { return ENUM_PRIMITIVE(Enum5); }
 
 #undef ENUM_PRIMITIVE
