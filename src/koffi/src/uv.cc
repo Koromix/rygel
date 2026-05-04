@@ -5,15 +5,17 @@
 
 namespace K {
 
-Napi::Function PollHandle::Define(Napi::Env env)
+Napi::Function PollHandle::InitClass(Napi::Env env)
 {
-    return DefineClass(env, "PollHandle", {
+    Napi::Function constructor = DefineClass(env, "PollHandle", {
         InstanceMethod("start", &PollHandle::Start),
         InstanceMethod("stop", &PollHandle::Stop),
         InstanceMethod("close", &PollHandle::Close),
         InstanceMethod("unref", &PollHandle::Unref),
         InstanceMethod("ref", &PollHandle::Ref)
     });
+
+    return constructor;
 }
 
 PollHandle::PollHandle(const Napi::CallbackInfo &info)
@@ -79,7 +81,7 @@ void PollHandle::Start(const Napi::CallbackInfo &info)
         events = UV_READABLE;
     }
 
-    callback.Reset(cb, 1);
+    callback = Napi::Persistent(cb);
 
     if (int ret = uv_poll_start(handle, events, &PollHandle::OnPoll); ret != 0) {
         callback.Reset();
@@ -176,8 +178,7 @@ Napi::Value Poll(const Napi::CallbackInfo &info)
 
     int fd = info[0].As<Napi::Number>().Int32Value();
 
-    Napi::Function ctor = PollHandle::Define(env);
-    Napi::Object inst = ctor.New({ NewInt(env, (int32_t)fd) });
+    Napi::Object inst = instance->construct_poll.New({ NewInt(env, (int32_t)fd) });
     Napi::Function start = inst.Get("start").As<Napi::Function>();
 
     if (env.IsExceptionPending()) [[unlikely]]

@@ -571,9 +571,7 @@ static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
         return env.Null();
     err_guard.Disable();
 
-    // Union constructor
-    Napi::Function constructor = UnionObject::InitClass(env, type);
-    type->construct.Reset(constructor, 1);
+    type->construct = Napi::Persistent(UnionObject::InitClass(env, type));
 
     if (replace) {
         std::swap(*type, *replace);
@@ -2229,9 +2227,9 @@ static Napi::Value RegisterCallback(const Napi::CallbackInfo &info)
     trampoline->state = 1;
     trampoline->instance = instance;
     trampoline->proto = type->ref.proto;
-    trampoline->func.Reset(func, 1);
+    trampoline->func = Napi::Persistent(func);
     if (!IsNullOrUndefined(env, recv)) {
-        trampoline->recv.Reset(recv, 1);
+        trampoline->recv = Napi::Persistent(recv);
     } else {
         trampoline->recv.Reset();
     }
@@ -2816,17 +2814,11 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
 #endif
 
     // Init object classes and symbols
-    {
-        Napi::Function construct_lib = LibraryObject::InitClass(env);
-        Napi::Function construct_type = TypeObject::InitClass(env);
-        Napi::Function construct_callback = CallbackObject::InitClass(env);
-        Napi::Symbol active = Napi::Symbol::New(env, "active");
-
-        instance->construct_lib.Reset(construct_lib, 1);
-        instance->construct_type.Reset(construct_type, 1);
-        instance->construct_callback.Reset(construct_callback, 1);
-        instance->active_symbol.Reset(active, 1);
-    }
+    instance->construct_lib = Napi::Persistent(LibraryObject::InitClass(env));
+    instance->construct_type = Napi::Persistent(TypeObject::InitClass(env));
+    instance->construct_callback = Napi::Persistent(CallbackObject::InitClass(env));
+    instance->construct_poll = Napi::Persistent(PollHandle::InitClass(env));
+    instance->active_symbol = Napi::Persistent(Napi::Symbol::New(env, "active"));
 
     // Init base types
     {
@@ -2905,7 +2897,7 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
         node.Set("env", WrapPointer(env, instance->void_type, (napi_env)env));
 
         node.Set("poll", Napi::Function::New(env, &Poll, "poll"));
-        node.Set("PollHandle", PollHandle::Define(env));
+        node.Set("PollHandle", instance->construct_poll.Value());
     }
 
     exports.Set("version", Napi::String::New(env, K_STRINGIFY(VERSION)));

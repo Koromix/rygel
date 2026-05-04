@@ -76,7 +76,7 @@ class PollHandle: public Napi::ObjectWrap<PollHandle> {
     Napi::FunctionReference callback;
 
 public:
-    static Napi::Function Define(Napi::Env env);
+    static Napi::Function InitClass(Napi::Env env);
 
     PollHandle(const Napi::CallbackInfo &info);
 

@@ -1141,7 +1141,7 @@ void *CallData::ReserveTrampoline(const FunctionInfo *proto, Napi::Function func
     trampoline->state = 1;
     trampoline->instance = instance;
     trampoline->proto = proto;
-    trampoline->func.Reset(func, 1);
+    trampoline->func = Napi::Persistent(func);
     trampoline->recv.Reset();
 
     void *ptr = GetTrampoline(idx);

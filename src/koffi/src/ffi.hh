@@ -311,6 +311,7 @@ struct InstanceData {
     Napi::FunctionReference construct_lib;
     Napi::FunctionReference construct_type;
     Napi::FunctionReference construct_callback;
+    Napi::FunctionReference construct_poll;
     Napi::Reference<Napi::Symbol> active_symbol;
 
     std::mutex mem_mutex;

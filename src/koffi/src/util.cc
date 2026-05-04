@@ -584,7 +584,7 @@ Napi::Object WrapType(Napi::Env env, const TypeInfo *type, bool freeze)
         defn.Set("disposable", Napi::Boolean::New(env, !!type->dispose));
 
         // Assign before to avoid possible recursion crash
-        type->defn.Reset(defn, 1);
+        type->defn = Napi::Persistent(defn);
 
         switch (type->primitive) {
             case PrimitiveKind::Void:
