@@ -27,8 +27,12 @@ Napi::Function TypeObject::InitClass(Napi::Env env)
 TypeObject::TypeObject(const Napi::CallbackInfo &info)
     : Napi::ObjectWrap<TypeObject>(info)
 {
-    K_ASSERT(info.Length() >= 1);
-    K_ASSERT(info[0u].IsExternal());
+    Napi::Env env = info.Env();
+
+    if (info.Length() < 1 || !info[0u].IsExternal()) [[unlikely]] {
+        ThrowError<Napi::Error>(env, "Type objects cannot be constructed manually");
+        return;
+    }
 
     Napi::External<TypeInfo> external = info[0u].As<Napi::External<TypeInfo>>();
     type = external.Data();
@@ -57,9 +61,12 @@ Napi::Function CallbackObject::InitClass(Napi::Env env)
 CallbackObject::CallbackObject(const Napi::CallbackInfo &info)
     : Napi::ObjectWrap<CallbackObject>(info)
 {
-    K_ASSERT(info.Length() >= 2);
-    K_ASSERT(info[0u].IsNumber());
-    K_ASSERT(info[1u].IsExternal());
+    Napi::Env env = info.Env();
+
+    if (info.Length() < 2 || !info[0].IsNumber() || !info[1].IsExternal()) [[unlikely]] {
+        ThrowError<Napi::Error>(env, "Callback objects cannot be constructed manually");
+        return;
+    }
 
     Napi::Number number = info[0u].As<Napi::Number>();
     Napi::External<void> external = info[1u].As<Napi::External<void>>();
@@ -136,6 +143,11 @@ UnionObject::UnionObject(const Napi::CallbackInfo &info)
     instance = env.GetInstanceData<InstanceData>();
 
     if (info.Length() >= 1) {
+        if (!info[0].IsExternal()) [[unlikely]] {
+            ThrowError<Napi::Error>(env, "Union objects cannot be constructed manually");
+            return;
+        }
+
         Napi::External<void> external = info[0].As<Napi::External<void>>();
         const uint8_t *ptr = (const uint8_t *)external.Data();
 

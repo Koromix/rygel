@@ -21,18 +21,13 @@ Napi::Function PollHandle::InitClass(Napi::Env env)
 PollHandle::PollHandle(const Napi::CallbackInfo &info)
     : Napi::ObjectWrap<PollHandle>(info), env(info.Env())
 {
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
-
-    if (info.Length() < 1 || !info[0].IsNumber()) {
-        ThrowError<Napi::Error>(env, "Expected 1 argument, got %1", info.Length());
-        return;
-    }
-    if (!info[0].IsNumber()) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for descriptor, expected number", GetValueType(instance, info[0]));
+    if (info.Length() < 1 || !info[0].IsExternal()) {
+        ThrowError<Napi::Error>(env, "Poll handles cannot be constructed manually");
         return;
     }
 
-    int fd = info[0].As<Napi::Number>().Int32Value();
+    Napi::External<void> external = info[0].As<Napi::External<void>>();
+    int fd = (int)(intptr_t)external.Data();
 
     uv_loop_t *loop = nullptr;
     if (napi_get_uv_event_loop(env, &loop) != napi_ok || !loop) {
@@ -178,7 +173,8 @@ Napi::Value Poll(const Napi::CallbackInfo &info)
 
     int fd = info[0].As<Napi::Number>().Int32Value();
 
-    Napi::Object inst = instance->construct_poll.New({ NewInt(env, (int32_t)fd) });
+    Napi::External<void> external = Napi::External<void>::New(env, (void *)(intptr_t)fd);
+    Napi::Object inst = instance->construct_poll.New({ external });
     Napi::Function start = inst.Get("start").As<Napi::Function>();
 
     if (env.IsExceptionPending()) [[unlikely]]

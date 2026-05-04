@@ -1970,8 +1970,12 @@ Napi::Function LibraryObject::InitClass(Napi::Env env)
 LibraryObject::LibraryObject(const Napi::CallbackInfo &info)
     : Napi::ObjectWrap<LibraryObject>(info)
 {
-    K_ASSERT(info.Length() == 1);
-    K_ASSERT(info[0].IsExternal());
+    Napi::Env env = info.Env();
+
+    if (info.Length() < 1 || !info[0].IsExternal()) [[unlikely]] {
+        ThrowError<Napi::Error>(env, "Library objects cannot be constructed manually");
+        return;
+    }
 
     Napi::External<void> external = info[0].As<Napi::External<void>>();
     lib = (LibraryHolder *)external.Data();
