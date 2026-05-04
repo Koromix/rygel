@@ -7,14 +7,21 @@ namespace K {
 
 Napi::Function PollHandle::InitClass(Napi::Env env)
 {
-    Napi::Function constructor = DefineClass(env, "PollHandle", {
+    // node-addon-api wants std::vector
+    std::vector<Napi::ClassPropertyDescriptor<PollHandle>> properties = {
         InstanceMethod("start", &PollHandle::Start),
         InstanceMethod("stop", &PollHandle::Stop),
         InstanceMethod("close", &PollHandle::Close),
         InstanceMethod("unref", &PollHandle::Unref),
         InstanceMethod("ref", &PollHandle::Ref)
-    });
+    };
 
+    if (Napi::Value dispose = env.RunScript("Symbol.dispose"); !IsNullOrUndefined(env, dispose)) {
+        Napi::ClassPropertyDescriptor<PollHandle> prop = InstanceMethod(dispose.As<Napi::Symbol>(), &PollHandle::Close);
+        properties.push_back(prop);
+    }
+
+    Napi::Function constructor = DefineClass(env, "PollHandle", properties);
     return constructor;
 }
 
