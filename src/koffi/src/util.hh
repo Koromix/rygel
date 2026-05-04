@@ -51,6 +51,8 @@ public:
 
     TypeObject(const Napi::CallbackInfo &info);
 
+    void Finalize(Napi::BasicEnv env) override;
+
     const TypeInfo *GetType() { return type; }
 };
 
@@ -62,6 +64,8 @@ public:
     static Napi::Function InitClass(Napi::Env env);
 
     CallbackObject(const Napi::CallbackInfo &info);
+
+    void Finalize(Napi::BasicEnv env) override;
 
     Size GetIndex() const { return idx; }
     void *GetNative() const { return native; }
@@ -160,6 +164,8 @@ const char *GetValueType(const InstanceData *instance, napi_value value);
 
 void SetValueTag(napi_env env, napi_value value, const void *marker);
 bool CheckValueTag(napi_env env, napi_value value, const void *marker);
+
+void DeleteReferenceSafe(napi_env env, napi_ref ref);
 
 static FORCE_INLINE bool IsNullOrUndefined(napi_valuetype kind)
 {

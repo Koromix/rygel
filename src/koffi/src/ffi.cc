@@ -1979,8 +1979,11 @@ LibraryObject::LibraryObject(const Napi::CallbackInfo &info)
     lib = (LibraryHolder *)external.Data();
 }
 
-void LibraryObject::Finalize(Napi::BasicEnv)
+void LibraryObject::Finalize(Napi::BasicEnv env)
 {
+    DeleteReferenceSafe(env, *this);
+    SuppressDestruct();
+
     lib->Unref();
 }
 
@@ -2513,14 +2516,7 @@ void LibraryHolder::Unload()
 
 ValueCast::~ValueCast()
 {
-    if (node_api_post_finalizer) {
-        node_api_post_finalizer(env, [](napi_env env, void *data, void *) {
-            napi_ref ref = (napi_ref)data;
-            napi_delete_reference(env, ref);
-        }, (void *)ref, nullptr);
-    } else {
-        napi_delete_reference(env, ref);
-    }
+    DeleteReferenceSafe(env, ref);
 }
 
 FunctionInfo::~FunctionInfo()

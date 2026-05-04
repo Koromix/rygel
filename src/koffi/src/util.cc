@@ -34,6 +34,12 @@ TypeObject::TypeObject(const Napi::CallbackInfo &info)
     type = external.Data();
 }
 
+void TypeObject::Finalize(Napi::BasicEnv env)
+{
+    DeleteReferenceSafe(env, *this);
+    SuppressDestruct();
+}
+
 Napi::Function CallbackObject::InitClass(Napi::Env env)
 {
     // node-addon-api wants std::vector
@@ -60,6 +66,12 @@ CallbackObject::CallbackObject(const Napi::CallbackInfo &info)
 
     idx = (int16_t)number.Int32Value();
     native = external.Data();
+}
+
+void CallbackObject::Finalize(Napi::BasicEnv env)
+{
+    DeleteReferenceSafe(env, *this);
+    SuppressDestruct();
 }
 
 void CallbackObject::Unregister()
@@ -133,17 +145,7 @@ UnionObject::UnionObject(const Napi::CallbackInfo &info)
 
 void UnionObject::Finalize(Napi::BasicEnv env)
 {
-    napi_ref ref = (napi_ref)*this;
-
-    if (node_api_post_finalizer) {
-        node_api_post_finalizer(env, [](napi_env env, void *data, void *) {
-            napi_ref ref = (napi_ref)data;
-            napi_delete_reference(env, ref);
-        }, (void *)ref, nullptr);
-    } else {
-        napi_delete_reference(env, ref);
-    }
-
+    DeleteReferenceSafe(env, *this);
     SuppressDestruct();
 }
 
@@ -802,6 +804,18 @@ bool CheckValueTag(napi_env env, napi_value value, const void *marker)
     napi_check_object_type_tag(env, value, tag, &match);
 
     return match;
+}
+
+void DeleteReferenceSafe(napi_env env, napi_ref ref)
+{
+    if (node_api_post_finalizer) {
+        node_api_post_finalizer(env, [](napi_env env, void *data, void *) {
+            napi_ref ref = (napi_ref)data;
+            napi_delete_reference(env, ref);
+        }, (void *)ref, nullptr);
+    } else {
+        napi_delete_reference(env, ref);
+    }
 }
 
 int GetTypedArrayType(const TypeInfo *type)
