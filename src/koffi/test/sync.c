@@ -1128,7 +1128,9 @@ int ReturnEnumValue(Enum1 e)
         int: "Int32", \
         unsigned int: "UInt32", \
         long: "Int64", \
-        unsigned long: "UInt64" \
+        unsigned long: "UInt64", \
+        long long: "Int64", \
+        unsigned long long: "UInt64" \
     )
 
 const char *GetEnumPrimitive1() { return ENUM_PRIMITIVE(Enum1); }
