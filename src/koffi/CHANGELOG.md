@@ -13,10 +13,10 @@
 
 - Replace use of externals with type objects:
   * Use `koffi.type()` to resolve type specifiers (strings or objects) to type objects
-  * Access type information directly on type variables without `koffi.introspect()`
+  * Access type information directly on type objects without `koffi.introspect()`
 - Replace use of externals with BigInt pointers
-- Rewrite call preparation and execution for vastly improved performance
 - Support ESM and CJS module types
+- Rewrite call preparation and execution for vastly improved performance
 
 **Other changes:**
 
@@ -24,7 +24,7 @@
 - Use proper types for various objects and handles:
   * Use *LibraryHandle* objects for loaded libraries
   * Use *CallbackHandle* objects for registered callbacks
-  * Use *PollHandle* for socket poll handlers
+  * Use *PollHandle* for socket poll handles
 - Add `Symbol.dispose` on library objects and registered callbacks
 - Prefer types to interfaces in TypeScript declaration file
 - Fix various bugs and small leaks (such as library handles)
