@@ -16,10 +16,18 @@
   * Access type information directly on type variables without `koffi.introspect()`
 - Replace use of externals with BigInt pointers
 - Rewrite call preparation and execution for vastly improved performance
+- Support ESM and CJS module types
 
 **Other changes:**
 
 - Add `koffi.enumeration()` to create [enum types](input#enum-types)
+- Use proper types for various objects and handles:
+  * Use *LibraryHandle* objects for loaded libraries
+  * Use *CallbackHandle* objects for registered callbacks
+  * Use *PollHandle* for socket poll handlers
+- Add `Symbol.dispose` on library objects and registered callbacks
+- Prefer types to interfaces in TypeScript declaration file
+- Fix various bugs and small leaks (such as library handles)
 
 **Newly deprecated functions:**
 
