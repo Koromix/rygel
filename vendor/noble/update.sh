@@ -1,9 +1,16 @@
 #!/bin/sh -e
 
+VERSION=$1
+
+if [ -z "$VERSION" ]; then
+    echo "Missing version argument" >&2
+    exit 1
+fi
+
 cd "$(dirname $0)"
 
-npm install @noble/hashes
-npm install @serenity-kit/noble-sodium
+npm install "@noble/ciphers@$VERSION"
+npm install "@noble/hashes@$VERSION"
 
 npx esbuild --bundle --platform=browser --format=esm noble.js --outfile=noble.bundle.js
 
