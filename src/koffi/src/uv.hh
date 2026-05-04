@@ -79,7 +79,8 @@ public:
     static Napi::Function Define(Napi::Env env);
 
     PollHandle(const Napi::CallbackInfo &info);
-    ~PollHandle() { Close(); }
+
+    void Finalize(Napi::BasicEnv env) override;
 
     void Start(const Napi::CallbackInfo &info);
     void Stop(const Napi::CallbackInfo &info);

@@ -87,16 +87,22 @@ void PollHandle::Start(const Napi::CallbackInfo &info)
     }
 }
 
+void PollHandle::Finalize(Napi::BasicEnv env)
+{
+    DeleteReferenceSafe(env, *this);
+    SuppressDestruct();
+
+    Close();
+}
+
 void PollHandle::Stop(const Napi::CallbackInfo &)
 {
     uv_poll_stop(handle);
-    callback.Reset();
 }
 
 void PollHandle::Close(const Napi::CallbackInfo &)
 {
     Close();
-    callback.Reset();
 }
 
 void PollHandle::Ref(const Napi::CallbackInfo &)
@@ -121,6 +127,8 @@ void PollHandle::Close()
 
     uv_poll_stop(handle);
     uv_close((uv_handle_t *)handle, release);
+
+    callback.Reset();
 
     handle = nullptr;
 }
