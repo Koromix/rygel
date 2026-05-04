@@ -34,11 +34,11 @@ namespace K {
     #endif
 #endif
 
-extern const napi_type_tag LibraryObjectMarker;
+extern const napi_type_tag LibraryHandleMarker;
 extern const napi_type_tag TypeObjectMarker;
-extern const napi_type_tag CallbackObjectMarker;
+extern const napi_type_tag CallbackHandleMarker;
 extern const napi_type_tag DirectionMarker;
-extern const napi_type_tag UnionObjectMarker;
+extern const napi_type_tag UnionValueMarker;
 extern const napi_type_tag CastMarker;
 
 class TypeObject: public Napi::ObjectWrap<TypeObject> {
@@ -56,14 +56,14 @@ public:
     const TypeInfo *GetType() { return type; }
 };
 
-class CallbackObject: public Napi::ObjectWrap<CallbackObject> {
+class CallbackHandle: public Napi::ObjectWrap<CallbackHandle> {
     int16_t idx;
     void *native;
 
 public:
     static Napi::Function InitClass(Napi::Env env);
 
-    CallbackObject(const Napi::CallbackInfo &info);
+    CallbackHandle(const Napi::CallbackInfo &info);
 
     void Finalize(Napi::BasicEnv env) override;
 
@@ -76,7 +76,7 @@ private:
     Napi::Value Dispose(const Napi::CallbackInfo &info);
 };
 
-class UnionObject: public Napi::ObjectWrap<UnionObject> {
+class UnionValue: public Napi::ObjectWrap<UnionValue> {
     InstanceData *instance;
     const TypeInfo *type;
 
@@ -87,7 +87,7 @@ class UnionObject: public Napi::ObjectWrap<UnionObject> {
 public:
     static Napi::Function InitClass(Napi::Env env, const TypeInfo *type);
 
-    UnionObject(const Napi::CallbackInfo &info);
+    UnionValue(const Napi::CallbackInfo &info);
 
     void Finalize(Napi::BasicEnv env) override;
 

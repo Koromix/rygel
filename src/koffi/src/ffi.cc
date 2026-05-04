@@ -571,7 +571,7 @@ static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
         return env.Null();
     err_guard.Disable();
 
-    type->construct = Napi::Persistent(UnionObject::InitClass(env, type));
+    type->construct = Napi::Persistent(UnionValue::InitClass(env, type));
 
     if (replace) {
         std::swap(*type, *replace);
@@ -603,7 +603,7 @@ Napi::Value InstantiateUnion(const Napi::CallbackInfo &info)
     }
 
     Napi::Object wrapper = type->construct.New({}).As<Napi::Object>();
-    SetValueTag(env, wrapper, &UnionObjectMarker);
+    SetValueTag(env, wrapper, &UnionValueMarker);
 
     return wrapper;
 }
@@ -1949,26 +1949,26 @@ extern "C" void RelayDirect(CallData *call, Size idx, uint8_t *sp)
     }
 }
 
-Napi::Function LibraryObject::InitClass(Napi::Env env)
+Napi::Function LibraryHandle::InitClass(Napi::Env env)
 {
     // node-addon-api wants std::vector
-    std::vector<Napi::ClassPropertyDescriptor<LibraryObject>> properties = {
-        InstanceMethod("func", &LibraryObject::Func),
-        InstanceMethod("symbol", &LibraryObject::Symbol),
-        InstanceMethod("unload", &LibraryObject::Unload)
+    std::vector<Napi::ClassPropertyDescriptor<LibraryHandle>> properties = {
+        InstanceMethod("func", &LibraryHandle::Func),
+        InstanceMethod("symbol", &LibraryHandle::Symbol),
+        InstanceMethod("unload", &LibraryHandle::Unload)
     };
 
     if (Napi::Value dispose = env.RunScript("Symbol.dispose"); !IsNullOrUndefined(env, dispose)) {
-        Napi::ClassPropertyDescriptor<LibraryObject> prop = InstanceMethod(dispose.As<Napi::Symbol>(), &LibraryObject::Unload);
+        Napi::ClassPropertyDescriptor<LibraryHandle> prop = InstanceMethod(dispose.As<Napi::Symbol>(), &LibraryHandle::Unload);
         properties.push_back(prop);
     }
 
-    Napi::Function constructor = DefineClass(env, "Library", properties);
+    Napi::Function constructor = DefineClass(env, "LibraryHandle", properties);
     return constructor;
 }
 
-LibraryObject::LibraryObject(const Napi::CallbackInfo &info)
-    : Napi::ObjectWrap<LibraryObject>(info)
+LibraryHandle::LibraryHandle(const Napi::CallbackInfo &info)
+    : Napi::ObjectWrap<LibraryHandle>(info)
 {
     Napi::Env env = info.Env();
 
@@ -1981,7 +1981,7 @@ LibraryObject::LibraryObject(const Napi::CallbackInfo &info)
     lib = (LibraryHolder *)external.Data();
 }
 
-void LibraryObject::Finalize(Napi::BasicEnv env)
+void LibraryHandle::Finalize(Napi::BasicEnv env)
 {
     DeleteReferenceSafe(env, *this);
     SuppressDestruct();
@@ -1989,7 +1989,7 @@ void LibraryObject::Finalize(Napi::BasicEnv env)
     lib->Unref();
 }
 
-Napi::Value LibraryObject::Func(const Napi::CallbackInfo &info)
+Napi::Value LibraryHandle::Func(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();
@@ -2057,7 +2057,7 @@ Napi::Value LibraryObject::Func(const Napi::CallbackInfo &info)
     return WrapFunction(env, func);
 }
 
-Napi::Value LibraryObject::Symbol(const Napi::CallbackInfo &info)
+Napi::Value LibraryHandle::Symbol(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();
@@ -2090,7 +2090,7 @@ Napi::Value LibraryObject::Symbol(const Napi::CallbackInfo &info)
     return WrapPointer(env, type, ptr);
 }
 
-Napi::Value LibraryObject::Unload(const Napi::CallbackInfo &info)
+Napi::Value LibraryHandle::Unload(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
 
@@ -2179,7 +2179,7 @@ static Napi::Value LoadSharedLibrary(const Napi::CallbackInfo &info)
 
     Napi::External<void> external = Napi::External<void>::New(env, lib);
     Napi::Object obj = instance->construct_lib.New({ external }).As<Napi::Object>();
-    SetValueTag(env, obj, &LibraryObjectMarker);
+    SetValueTag(env, obj, &LibraryHandleMarker);
 
     return obj;
 }
@@ -2243,7 +2243,7 @@ static Napi::Value RegisterCallback(const Napi::CallbackInfo &info)
     Napi::Number number = Napi::Number::New(env, idx);
     Napi::External<void> external = Napi::External<void>::New(env, ptr);
     Napi::Object obj = instance->construct_callback.New({ number, external });
-    SetValueTag(env, obj, &CallbackObjectMarker);
+    SetValueTag(env, obj, &CallbackHandleMarker);
 
     return obj;
 }
@@ -2257,12 +2257,12 @@ static Napi::Value UnregisterCallback(const Napi::CallbackInfo &info)
         ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", info.Length());
         return env.Null();
     }
-    if (!info[0].IsObject() || !CheckValueTag(env, info[0], &CallbackObjectMarker)) {
+    if (!info[0].IsObject() || !CheckValueTag(env, info[0], &CallbackHandleMarker)) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for id, expected registered callback", GetValueType(instance, info[0]));
         return env.Null();
     }
 
-    CallbackObject *obj = nullptr;
+    CallbackHandle *obj = nullptr;
     napi_unwrap(env, info[0], (void **)&obj);
 
     int16_t idx = obj->GetIndex();
@@ -2818,11 +2818,17 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
 #endif
 
     // Init object classes and symbols
-    instance->construct_lib = Napi::Persistent(LibraryObject::InitClass(env));
-    instance->construct_type = Napi::Persistent(TypeObject::InitClass(env));
-    instance->construct_callback = Napi::Persistent(CallbackObject::InitClass(env));
-    instance->construct_poll = Napi::Persistent(PollHandle::InitClass(env));
-    instance->active_symbol = Napi::Persistent(Napi::Symbol::New(env, "active"));
+    {
+        instance->construct_lib = Napi::Persistent(LibraryHandle::InitClass(env));
+        instance->construct_type = Napi::Persistent(TypeObject::InitClass(env));
+        instance->construct_callback = Napi::Persistent(CallbackHandle::InitClass(env));
+        instance->construct_poll = Napi::Persistent(PollHandle::InitClass(env));
+        instance->active_symbol = Napi::Persistent(Napi::Symbol::New(env, "active"));
+
+        exports.Set("LibraryHandle", instance->construct_lib.Value());
+        exports.Set("TypeObject", instance->construct_type.Value());
+        exports.Set("CallbackHandle", instance->construct_callback.Value());
+    }
 
     // Init base types
     {

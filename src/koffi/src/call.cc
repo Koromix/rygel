@@ -106,8 +106,8 @@ void CallData::Finalize()
                     } break;
 
                     case OutArgument::Kind::Object: {
-                        if (CheckValueTag(env, value, &UnionObjectMarker)) {
-                            UnionObject *u = nullptr;
+                        if (CheckValueTag(env, value, &UnionValueMarker)) {
+                            UnionValue *u = nullptr;
                             napi_unwrap(env, value, (void **)&u);
 
                             u->SetRaw(out.ptr);
@@ -379,8 +379,8 @@ bool CallData::PushObject(napi_value obj, const TypeInfo *type, uint8_t *origin)
     if (type->primitive == PrimitiveKind::Record) {
         members = type->members;
     } else if (type->primitive == PrimitiveKind::Union) {
-        if (CheckValueTag(env, obj, &UnionObjectMarker)) {
-            UnionObject *u = nullptr;
+        if (CheckValueTag(env, obj, &UnionValueMarker)) {
+            UnionValue *u = nullptr;
             napi_unwrap(env, obj, (void **)&u);
 
             const uint8_t *raw = u->GetRaw();
@@ -992,7 +992,7 @@ bool CallData::PushPointerSlow(napi_value value, napi_valuetype kind, const Type
         ptr = (void *)AllocHeap(ref->size);
 
         if (ref->primitive == PrimitiveKind::Union &&
-                (directions & 2) && !CheckValueTag(env, value, &UnionObjectMarker)) [[unlikely]] {
+                (directions & 2) && !CheckValueTag(env, value, &UnionValueMarker)) [[unlikely]] {
             ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected union value", GetValueType(instance, value));
             return false;
         }
@@ -1063,8 +1063,8 @@ restart:
         return true;
     }
 
-    if (kind == napi_object && CheckValueTag(env, value, &CallbackObjectMarker)) {
-        CallbackObject *obj = nullptr;
+    if (kind == napi_object && CheckValueTag(env, value, &CallbackHandleMarker)) {
+        CallbackHandle *obj = nullptr;
         napi_unwrap(env, value, (void **)&obj);
 
         *out_ptr = obj->GetNative();

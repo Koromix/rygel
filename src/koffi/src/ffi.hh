@@ -115,13 +115,13 @@ struct LibraryHolder {
     }
 };
 
-class LibraryObject: public Napi::ObjectWrap<LibraryObject> {
+class LibraryHandle: public Napi::ObjectWrap<LibraryHandle> {
     LibraryHolder *lib = nullptr;
 
 public:
     static Napi::Function InitClass(Napi::Env env);
 
-    LibraryObject(const Napi::CallbackInfo &info);
+    LibraryHandle(const Napi::CallbackInfo &info);
 
     void Finalize(Napi::BasicEnv env) override;
 
