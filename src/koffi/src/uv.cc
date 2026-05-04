@@ -45,7 +45,12 @@ PollHandle::PollHandle(const Napi::CallbackInfo &info)
     // We would store it inside the class, but the definition of uv_poll_t involves windows.h...
     // and we won't want that on Windows. Heap allocation it is!
     // Also, it may have to outlive the object, because uv_close() is asynchronous.
-    handle = new uv_poll_t();
+    {
+        size_t size = uv_handle_size(UV_POLL);
+
+        handle = (uv_poll_t *)AllocateRaw(nullptr, size);
+        MemSet(handle, 0, size);
+    }
 
     if (int ret = uv_poll_init_socket(loop, handle, (uv_os_sock_t)fd); ret != 0) {
         ThrowError<Napi::Error>(env, "Failed to init UV poll: %1", uv_strerror(ret));
@@ -126,7 +131,7 @@ void PollHandle::Close()
 
     const auto release = [](uv_handle_t *ptr) {
         uv_poll_t *handle = (uv_poll_t *)ptr;
-        delete handle;
+        ReleaseRaw(nullptr, handle, -1);
     };
 
     uv_poll_stop(handle);

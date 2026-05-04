@@ -16,15 +16,34 @@ struct uv_handle_s;
 
 struct uv_poll_s {
     void *data;
-
-    // The definition depends on the OS, and may involve windows.h
-    // Beyond data, we don't care, we just need something big enough.
-    void *dummy[23];
+    // Kinda opaque struct, use uv_handle_size() to allocate enough memory
 };
 
 typedef struct uv_loop_s uv_loop_t;
 typedef struct uv_handle_s uv_handle_t;
 typedef struct uv_poll_s uv_poll_t;
+
+typedef enum {
+    UV_UNKNOWN_HANDLE = 0,
+    UV_ASYNC,
+    UV_CHECK,
+    UV_FS_EVENT,
+    UV_FS_POLL,
+    UV_HANDLE,
+    UV_IDLE,
+    UV_NAMED_PIPE,
+    UV_POLL,
+    UV_PREPARE,
+    UV_PROCESS,
+    UV_STREAM,
+    UV_TCP,
+    UV_TIMER,
+    UV_TTY,
+    UV_UDP,
+    UV_SIGNAL,
+    UV_FILE,
+    UV_HANDLE_TYPE_MAX
+} uv_handle_type;
 
 typedef void (*uv_close_cb)(uv_handle_t *handle);
 typedef void (*uv_poll_cb)(uv_poll_t *handle, int status, int events);
@@ -52,6 +71,7 @@ enum uv_poll_event {
 IMPORT void uv_ref(uv_handle_t *handle);
 IMPORT void uv_unref(uv_handle_t *handle);
 IMPORT void uv_close(uv_handle_t *handle, uv_close_cb close_cb);
+IMPORT size_t uv_handle_size(uv_handle_type type);
 
 IMPORT int uv_poll_init(uv_loop_t *loop, uv_poll_t *handle, int fd);
 IMPORT int uv_poll_init_socket(uv_loop_t *loop, uv_poll_t *handle, uv_os_sock_t socket);
