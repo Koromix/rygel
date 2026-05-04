@@ -96,8 +96,6 @@ export function array(ref: TypeSpec, countedBy: string, maxLen: number, hint?: A
 
 export function opaque(name: string | null | undefined): TypeObject;
 export function opaque(): TypeObject;
-/** @deprecated */ export function handle(name: string | null | undefined): TypeObject;
-/** @deprecated */ export function handle(): TypeObject;
 
 export function pointer(ref: TypeSpec): TypeObject;
 export function pointer(ref: TypeSpec, count: number): TypeObject;
@@ -117,11 +115,6 @@ export function proto(result: TypeSpec, arguments: TypeSpec[]): TypeObject;
 export function proto(convention: string, result: TypeSpec, arguments: TypeSpec[]): TypeObject;
 export function proto(name: string | null | undefined, result: TypeSpec, arguments: TypeSpec[]): TypeObject;
 export function proto(convention: string, name: string | null | undefined, result: TypeSpec, arguments: TypeSpec[]): TypeObject;
-/** @deprecated */ export function callback(definition: string): TypeObject;
-/** @deprecated */ export function callback(result: TypeSpec, arguments: TypeSpec[]): TypeObject;
-/** @deprecated */ export function callback(convention: string, result: TypeSpec, arguments: TypeSpec[]): TypeObject;
-/** @deprecated */ export function callback(name: string | null | undefined, result: TypeSpec, arguments: TypeSpec[]): TypeObject;
-/** @deprecated */ export function callback(convention: string, name: string | null | undefined, result: TypeSpec, arguments: TypeSpec[]): TypeObject;
 
 export function register(callback: Function, type: TypeSpec): CallbackHandle;
 export function register(thisValue: any, callback: Function, type: TypeSpec): CallbackHandle;
