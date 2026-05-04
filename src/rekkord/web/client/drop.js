@@ -18,7 +18,7 @@ const DEFAULT_EXPIRATION = 7;
 const FRAGMENT_SIZE = 2097152;
 
 let send_file = null;
-let uploads = new LruMap(4);
+let send_drops = new LruMap(4);
 
 async function runSend() {
     if (!App.isLogged())
@@ -78,8 +78,8 @@ async function runSend() {
             error: null
         };
 
-        uploads.set(kid, drop);
         send_file = null;
+        send_drops.set(kid, drop);
 
         let url = App.makeURL({ mode: 'drop', drop: kid });
         App.go(url);
@@ -227,7 +227,7 @@ async function runDrop() {
     let cached = false;
 
     if (route.drop != null) {
-        cache.drop = uploads.get(route.drop);
+        cache.drop = send_drops.get(route.drop);
         cached = (cache.drop != null);
 
         if (!cached) {
