@@ -261,13 +261,13 @@ export const types: Record<PrimitiveTypes, TypeObject>;
 export namespace node {
     export const env: { __brand: 'IKoffiNodeEnv' };
 
-    export type PollOptions = {
+    type PollOptions = {
         readable?: boolean;
         writable?: boolean;
         disconnect?: boolean;
     };
 
-    export type PollEvents = {
+    type PollEvents = {
         readable: boolean;
         writable: boolean;
         disconnect: boolean;
