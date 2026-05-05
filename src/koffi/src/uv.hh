@@ -48,11 +48,6 @@ typedef enum {
 typedef void (*uv_close_cb)(uv_handle_t *handle);
 typedef void (*uv_poll_cb)(uv_poll_t *handle, int status, int events);
 
-typedef struct {
-    void *handle; // HMODULE on Windows
-    char *errmsg;
-} uv_lib_t;
-
 enum uv_poll_event {
     UV_READABLE = 1,
     UV_WRITABLE = 2,
@@ -78,9 +73,6 @@ IMPORT int uv_poll_init_socket(uv_loop_t *loop, uv_poll_t *handle, uv_os_sock_t 
 IMPORT int uv_poll_start(uv_poll_t *handle, int events, uv_poll_cb cb);
 IMPORT int uv_poll_stop(uv_poll_t *handle);
 
-IMPORT int uv_dlopen(const char *filename, uv_lib_t *lib);
-IMPORT void uv_dlclose(uv_lib_t *lib);
-IMPORT int uv_dlsym(uv_lib_t *lib, const char *name, void **ptr);
 IMPORT const char *uv_strerror(int err);
 
 #undef IMPORT

@@ -9,6 +9,3 @@ uv_poll_init
 uv_poll_init_socket
 uv_poll_start
 uv_poll_stop
-uv_dlopen
-uv_dlclose
-uv_dlsym

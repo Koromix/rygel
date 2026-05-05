@@ -2719,27 +2719,28 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
             if (DetectBun(env))
                 return;
 
-            uv_lib_t lib = {};
-
 #if defined(_WIN32)
-            lib.handle = GetModuleHandle(nullptr);
+            HMODULE h = GetModuleHandle(nullptr);
+    #define SYMBOL(Symbol) ((decltype(Symbol))GetProcAddress(h, K_STRINGIFY(Symbol)))
 #else
-            uv_dlopen(nullptr, &lib);
-            K_DEFER { uv_dlclose(&lib); };
+            void *h = RTLD_DEFAULT;
+    #define SYMBOL(Symbol) ((decltype(Symbol))dlsym(h, K_STRINGIFY(Symbol)))
 #endif
 
             if (CanReferencePrimitiveValues(env)) {
                 // We can't use optimized property keys in older versions because we need to create
                 // references to them, but napi_create_reference() was not usable with primitive values.
-                uv_dlsym(&lib, "node_api_create_property_key_utf8", (void **)&node_api_create_property_key_utf8);
+                node_api_create_property_key_utf8 = SYMBOL(node_api_create_property_key_utf8);
             }
 
             if (!CanDeleteReferenceInFinalizer(env)) {
                 // napi_delete_reference cannot be safely used in older Node versions because it
                 // errors out (or even asserts) if it gets called in a finalizer. In this case,
                 // use experimental API to try to run it later.
-                uv_dlsym(&lib, "node_api_post_finalizer", (void **)&node_api_post_finalizer);
+                node_api_post_finalizer = SYMBOL(node_api_post_finalizer);
             }
+
+#undef SYMBOL
         });
     }
 
