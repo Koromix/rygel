@@ -19,15 +19,6 @@ function handleMessage(e) {
     }
 }
 
-async function wrapAsync(client, id, func, args) {
-    try {
-        let ret = await func(...args);
-        client.postMessage({ id: id, type: 'success', value: ret });
-    } catch (err) {
-        client.postMessage({ id: id, type: 'error', value: err });
-    }
-}
-
 // Quick SW activation after update
 self.addEventListener('install', e => {
     self.skipWaiting();
@@ -70,10 +61,11 @@ function startDownload(kid) {
                     resolve();
                 }
             } catch (err) {
-                console.error(err);
-
                 controller.error(err);
                 controller.close();
+
+                console.error(err);
+                info.client.postMessage({ type: 'error', args: [err] });
 
                 reject(err);
             }
@@ -140,7 +132,7 @@ async function *downloadFragments(info) {
         downloaded += buf.length;
         fragment++;
 
-        info.client.postMessage({ type: 'ping' });
+        info.client.postMessage({ type: 'progress', args: [info.kid, downloaded, info.size] });
         findDrop(info.kid); // Reset expiration timer
 
         yield buf;
@@ -195,6 +187,15 @@ function expireDrops() {
         let timeout = Math.max(0, first.expire - performance.now());
 
         clear_timer = setTimeout(expireDrops, timeout);
+    }
+}
+
+async function wrapAsync(client, id, func, args) {
+    try {
+        let ret = await func(...args);
+        client.postMessage({ type: 'return', args: [id, true, ret] });
+    } catch (err) {
+        client.postMessage({ type: 'return', args: [id, false, err] });
     }
 }
 

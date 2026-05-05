@@ -8,12 +8,9 @@ import { Base64 } from 'lib/web/base/mixer.js';
 import * as UI from 'lib/web/ui/ui.js';
 import * as App from './main.js';
 import { route, cache } from './main.js';
-import { sendDrop } from './relay.js';
+import { sendDrop, getProgress } from './relay.js';
 import * as UserMod from './user.js';
-import {
-    formatSize,
-    writeClipboard
-} from './common.js';
+import { formatSize, writeClipboard } from './common.js';
 import { ASSETS } from '../assets/assets.js';
 
 const EXPIRATION_DAYS = [1, 7, 30, 90];
@@ -283,14 +280,12 @@ async function runDrop() {
     }
 
     if (cache.drop.uploaded < cache.drop.size) {
-        let progress = Math.floor(cache.drop.uploaded / cache.drop.size * 100);
-
         UI.main(html`
             <div class="header">${T.send_file}</div>
 
             <div class="block" style="align-items: center;">
                 <p>${cache.drop.name}</p>
-                <progress id="uploading" value=${cache.drop.uploaded} max=${cache.drop.size}>${progress}%</progress>
+                <progress value=${cache.drop.uploaded} max=${cache.drop.size}></progress>
                 ${cache.drop.error != null ? html`
                     <p style="color: red;">
                         ${T.error_has_occured}<br>
@@ -305,17 +300,26 @@ async function runDrop() {
 
         window.location.hash = hash;
 
+        let progress = getProgress(cache.drop.kid);
+
+        if (progress && progress.value == progress.max)
+            progress = null;
+
         UI.main(html`
             <div class="header">${cache.drop.name}</div>
 
             <div class="block" style="align-items: center;">
                 <div>${formatSize(cache.drop.size)}</div>
                 ${cached ? html`<input id="link" type="text" style="width: 60em; text-align: center;" readonly value=${ENV.url + url} />` : ''}
+                ${progress != null ? html`
+                    <progress value=${progress.value} max=${progress.max}></progress>
+                    <div class="sub">${T.keep_tab_open_during_download}</div>
+                ` : ''}
             </div>
 
             <div class="actions">
                 ${cached ? html`<button @click=${UI.wrap(e => writeClipboard(T.download_link, ENV.url + url))}>${T.copy_download_link}</button>` : ''}
-                ${!cached ? html`<button @click=${UI.wrap(e => download(cache.drop, key))}>${T.download}</button>` : ''}
+                ${!cached ? html`<button ?disabled=${progress != null} @click=${UI.wrap(e => download(cache.drop, key))}>${T.download}</button>` : ''}
             </div>
         `);
     }

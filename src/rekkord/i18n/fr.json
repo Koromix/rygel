@@ -75,6 +75,7 @@
         "external_identities": "Identifiants externes",
         "file": "Fichier",
         "finalize_account": "Finaliser le compte",
+        "keep_tab_open_during_download": "Gardez cet onglet ouvert pendant le téléchargement !",
         "key_prefix": "Préfixe de clé",
         "language": "Langage",
         "last_run": "Dernière exécution",
