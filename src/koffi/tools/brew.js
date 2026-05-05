@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
-import process from 'process';
-import fs from 'fs';
-import path from 'path';
-import { spawnSync } from 'child_process';
+import process from 'node:process';
+import fs from 'node:fs';
+import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 import esbuild from '../../../vendor/esbuild/native/lib/main.js';
 import { determineAbi } from '../../cnoke/src/abi.js';
 import {

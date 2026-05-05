@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
-import crypto from 'crypto';
-import fs from 'fs';
-import http from 'https';
-import path from 'path';
-import zlib from 'zlib';
+import crypto from 'node:crypto';
+import fs from 'node:fs';
+import http from 'node:https';
+import path from 'node:path';
+import zlib from 'node:zlib';
 
 async function downloadHttp(url, dest) {
     console.log('>> Downloading ' + url);

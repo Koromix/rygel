@@ -3,8 +3,8 @@
 // SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
 const koffi = require('..');
-const assert = require('assert');
-const path = require('path');
+const assert = require('node:assert');
+const path = require('node:path');
 const { cnoke } = require('./package.json');
 
 const PackedBFG = koffi.pack('PackedBFG', {

@@ -3,10 +3,10 @@
 // SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
 const koffi = require('..');
-const assert = require('assert');
-const path = require('path');
-const util = require('util');
-const { spawnSync } = require('child_process');
+const assert = require('node:assert');
+const path = require('node:path');
+const util = require('node:util');
+const { spawnSync } = require('node:child_process');
 const { cnoke } = require('./package.json');
 
 const CallThroughFunc1 = koffi.proto('int __stdcall CallThroughFunc1(int)');

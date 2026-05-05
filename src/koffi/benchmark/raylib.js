@@ -10,9 +10,9 @@ const ffi = optional('node:ffi');
 const ffi_napi = optional('@napi-ffi/ffi-napi');
 const ref = optional('@napi-ffi/ref-napi');
 const struct = optional('@napi-ffi/ref-struct-di')?.(ref);
-const { spawnSync } = require('child_process');
-const path = require('path');
-const { performance } = require('perf_hooks');
+const { spawnSync } = require('node:child_process');
+const path = require('node:path');
+const { performance } = require('node:perf_hooks');
 
 const TIME = 8000;
 

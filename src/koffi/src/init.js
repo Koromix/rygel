@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
-import util from 'util';
-import fs from 'fs';
-import path from 'path';
+import util from 'node:util';
+import fs from 'node:fs';
+import path from 'node:path';
 import { createRequire } from 'node:module';
 import { determineAbi } from '../../cnoke/src/abi.js';
 import PACKAGE from '../package.json' with { type: 'json' };

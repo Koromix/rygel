@@ -3,11 +3,11 @@
 // SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
 const koffi = require('..');
-const crypto = require('crypto');
-const assert = require('assert');
-const fs = require('fs');
-const os = require('os');
-const path = require('path');
+const crypto = require('node:crypto');
+const assert = require('node:assert');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
 const { cnoke } = require('./package.json');
 
 const sqlite3 = koffi.opaque('sqlite3');

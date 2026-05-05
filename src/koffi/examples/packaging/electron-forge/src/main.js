@@ -1,5 +1,5 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
-import path from 'path';
+import path from 'node:path';
 import koffi from 'koffi';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.

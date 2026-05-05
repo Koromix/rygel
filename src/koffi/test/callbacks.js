@@ -3,9 +3,9 @@
 // SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
 const koffi = require('..');
-const assert = require('assert');
-const path = require('path');
-const util = require('util');
+const assert = require('node:assert');
+const path = require('node:path');
+const util = require('node:util');
 const { cnoke } = require('./package.json');
 
 let poll_sockets = !process.argv.slice(2).includes('--no_poll');

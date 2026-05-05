@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
-import process from 'process';
-import fs from 'fs';
-import path from 'path';
-import { spawn, spawnSync } from 'child_process';
-import tty from 'tty';
+import process from 'node:process';
+import fs from 'node:fs';
+import path from 'node:path';
+import { spawn, spawnSync } from 'node:child_process';
+import tty from 'node:tty';
 import { NodeSSH } from '../../vendor/node-ssh/node-ssh.bundle.js';
 
 const DefaultCommands = {

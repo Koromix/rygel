@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
-import fs from 'fs';
+import fs from 'node:fs';
 
 function determineAbi() {
     let abi = process.arch;

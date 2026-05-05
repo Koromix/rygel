@@ -1,10 +1,10 @@
 #!/bin/env node
 
-const fs = require('fs');
-const path = require('path');
-const { spawnSync } = require('child_process');
+const fs = require('node:fs');
+const path = require('node:path');
+const { spawnSync } = require('node:child_process');
 const { Readable } = require('node:stream');
-const zlib = require('zlib');
+const zlib = require('node:zlib');
 
 const PLATFORMS = [
     'darwin-arm64',

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
-import fs from 'fs';
+import fs from 'node:fs';
 import * as cnoke from './src/index.js';
 
 const VALID_COMMANDS = ['build', 'configure', 'clean'];
