@@ -3,8 +3,6 @@
 
 import { Util, Log, Net } from 'lib/web/base/base.js';
 
-const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-
 let sw = null;
 
 let next_message = 0;
