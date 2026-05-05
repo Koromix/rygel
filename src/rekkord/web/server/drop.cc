@@ -31,6 +31,16 @@ bool InitDrop()
     return s3.Open(config.s3.remote);
 }
 
+bool PruneDrops()
+{
+    int64_t now = GetUnixTime();
+
+    if (!db.Run("DELETE FROM drops WHERE expire <= ?1", now))
+        return false;
+
+    return true;
+}
+
 void HandleDropCreate(http_IO *io)
 {
     K_ASSERT(config.drop);

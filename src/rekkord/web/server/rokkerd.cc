@@ -675,6 +675,11 @@ Options:
             LogDebug("Prune sessions");
             PruneSessions();
 
+            if (config.drop) {
+                LogDebug("Prune drops");
+                PruneDrops();
+            }
+
             LogDebug("Detect alerts");
             DetectAlerts();
 

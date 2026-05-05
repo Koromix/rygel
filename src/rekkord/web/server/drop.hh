@@ -7,11 +7,11 @@ namespace K {
 
 bool InitDrop();
 
-void HandleDropCreate(http_IO *io);
+bool PruneDrops();
 
+void HandleDropCreate(http_IO *io);
 void HandleDropUpload(http_IO *io);
 void HandleDropMark(http_IO *io);
-
 void HandleDropInfo(http_IO *io);
 void HandleDropFragment(http_IO *io);
 
