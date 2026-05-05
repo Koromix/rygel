@@ -17,8 +17,8 @@ async function initRelay() {
     sw = await navigator.serviceWorker.ready.then(registration => registration.active);
 }
 
-async function sendKey(kid, key) {
-    await callWorker('key', kid, key);
+async function sendDrop(info, key) {
+    await callWorker('drop', info, key);
 }
 
 async function callWorker(type, ...args) {
@@ -57,5 +57,5 @@ function handleMessage(e) {
 
 export {
     initRelay,
-    sendKey
+    sendDrop
 }

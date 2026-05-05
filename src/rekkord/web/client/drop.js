@@ -8,7 +8,7 @@ import { Base64 } from 'lib/web/base/mixer.js';
 import * as UI from 'lib/web/ui/ui.js';
 import * as App from './main.js';
 import { route, cache } from './main.js';
-import { sendKey } from './relay.js';
+import { sendDrop } from './relay.js';
 import * as UserMod from './user.js';
 import {
     formatSize,
@@ -315,15 +315,15 @@ async function runDrop() {
 
             <div class="actions">
                 ${cached ? html`<button @click=${UI.wrap(e => writeClipboard(T.download_link, ENV.url + url))}>${T.copy_download_link}</button>` : ''}
-                ${!cached ? html`<button @click=${UI.wrap(e => download(cache.drop.kid, key))}>${T.download}</button>` : ''}
+                ${!cached ? html`<button @click=${UI.wrap(e => download(cache.drop, key))}>${T.download}</button>` : ''}
             </div>
         `);
     }
 }
 
-async function download(kid, key) {
-    await sendKey(kid, key);
-    window.location.href = '/api/drop/download/' + kid;
+async function download(info, key) {
+    await sendDrop(info, key);
+    window.location.href = '/api/drop/download/' + info.kid;
 }
 
 export {
