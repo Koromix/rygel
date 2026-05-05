@@ -1491,7 +1491,7 @@ void ReleaseMemory(InstanceData *instance, InstanceMemory *mem)
     }
 }
 
-static napi_value TranslateZeroCallNode(napi_env env, napi_callback_info info)
+static napi_value TranslateZeroCall(napi_env env, napi_callback_info info)
 {
     struct CallbackBundle {
         napi_env env;
@@ -1500,23 +1500,6 @@ static napi_value TranslateZeroCallNode(napi_env env, napi_callback_info info)
 
     CallbackBundle **ptr = (CallbackBundle **)((uint8_t *)info + K_SIZE(void *));
     FunctionInfo *func = (FunctionInfo *)(*ptr)->data;
-
-    InstanceData *instance = func->instance;
-    InstanceMemory *mem = instance->memories[0];
-    CallData call(env, instance, mem, func->native);
-
-    K_DEFER_C(prev_call = instance->sync_call) { instance->sync_call = prev_call; };
-    instance->sync_call = &call;
-
-    napi_value ret = call.Run(func, nullptr);
-    call.FinalizeFast();
-
-    return ret;
-}
-
-static napi_value TranslateZeroCallBun(napi_env env, napi_callback_info info)
-{
-    FunctionInfo *func = *(FunctionInfo **)((uint8_t *)info + K_SIZE(void *));
 
     InstanceData *instance = func->instance;
     InstanceMemory *mem = instance->memories[0];
@@ -2637,6 +2620,14 @@ static inline PrimitiveKind GetBigEndianPrimitive(PrimitiveKind kind)
 #endif
 }
 
+static bool DetectDeno(Napi::Env env)
+{
+    Napi::Value ret = env.RunScript("typeof Deno != 'undefined'");
+    Napi::Boolean b = ret.ToBoolean();
+
+    return b.Value();
+}
+
 static bool DetectBun(Napi::Env env)
 {
     Napi::Value ret = env.RunScript("process.isBun");
@@ -2647,7 +2638,10 @@ static bool DetectBun(Napi::Env env)
 
 static void PickTranslateZeroCallVariant(Napi::Env env)
 {
-    static int BunTrap = 42;
+    if (DetectDeno(env) || DetectBun(env)) {
+        translate_zero_call = TranslateFastCall;
+        return;
+    }
 
     Napi::Object self = Napi::Object::New(env);
 
@@ -2659,19 +2653,16 @@ static void PickTranslateZeroCallVariant(Napi::Env env)
         napi_value self;
         napi_get_cb_info(env, info, nullptr, nullptr, &self, nullptr);
 
-        void **ptr1 = (void **)info;
-        napi_value *ptr2 = (napi_value *)info;
+        napi_value *ptr = (napi_value *)info;
 
-        if (ptr1[0] == &BunTrap || ptr1[1] == &BunTrap) {
-            translate_zero_call = TranslateZeroCallBun;
-        } else if (ptr2[0] != self && ptr2[1] != self) {
-            translate_zero_call = TranslateZeroCallNode;
+        if (ptr[0] != self && ptr[1] != self) {
+            translate_zero_call = TranslateZeroCall;
         } else {
             translate_zero_call = TranslateFastCall;
         }
 
         return self;
-    }, &BunTrap, &func);
+    }, nullptr, &func);
     K_ASSERT(status == napi_ok);
 
     status = napi_call_function(env, self, func, 0, nullptr, &ret);
@@ -2715,9 +2706,6 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
 
         std::call_once(flag, [&]() {
             PickTranslateZeroCallVariant(env);
-
-            if (DetectBun(env))
-                return;
 
 #if defined(_WIN32)
             HMODULE h = GetModuleHandle(nullptr);
