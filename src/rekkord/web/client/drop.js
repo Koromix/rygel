@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
-import { render, html, live, unsafeHTML } from 'vendor/lit-html/lit-html.bundle.js';
+import { render, html, live, svg } from 'vendor/lit-html/lit-html.bundle.js';
+import QRC from 'vendor/qrcodegen/js/qrcodegen.js';
 import { xsalsa20poly1305 } from 'vendor/noble/noble.bundle.js';
 import { Util, LruMap, Log, Net, HttpError } from 'lib/web/base/base.js';
 import { Base64 } from 'lib/web/base/mixer.js';
@@ -294,12 +295,26 @@ async function runDrop() {
                 ` : ''}
             </div>
         `);
-    } else {
+    } else if (cached) {
         let hash = `#${Base64.toBase64Url(key)}`;
         let url = App.makeURL({ mode: 'drop', drop: cache.drop.kid }, hash);
 
         window.location.hash = hash;
 
+        UI.main(html`
+            <div class="header">${cache.drop.name}</div>
+
+            <div class="block" style="align-items: center;">
+                <div>${formatSize(cache.drop.size)}</div>
+                <input id="link" type="text" style="width: 60em; text-align: center;" readonly value=${ENV.url + url} />
+                ${makeQrCodeSvg(ENV.url + url)}
+            </div>
+
+            <div class="actions">
+                <button @click=${UI.wrap(e => writeClipboard(T.download_link, ENV.url + url))}>${T.copy_download_link}</button>
+            </div>
+        `);
+    } else {
         let progress = getProgress(cache.drop.kid);
 
         if (progress && progress.value == progress.max)
@@ -310,7 +325,6 @@ async function runDrop() {
 
             <div class="block" style="align-items: center;">
                 <div>${formatSize(cache.drop.size)}</div>
-                ${cached ? html`<input id="link" type="text" style="width: 60em; text-align: center;" readonly value=${ENV.url + url} />` : ''}
                 ${progress != null ? html`
                     <progress value=${progress.value} max=${progress.max}></progress>
                     <div class="sub">${T.keep_tab_open_during_download}</div>
@@ -318,8 +332,7 @@ async function runDrop() {
             </div>
 
             <div class="actions">
-                ${cached ? html`<button @click=${UI.wrap(e => writeClipboard(T.download_link, ENV.url + url))}>${T.copy_download_link}</button>` : ''}
-                ${!cached ? html`<button ?disabled=${progress != null} @click=${UI.wrap(e => download(cache.drop, key))}>${T.download}</button>` : ''}
+                <button ?disabled=${progress != null} @click=${UI.wrap(e => download(cache.drop, key))}>${T.download}</button>
             </div>
         `);
     }
@@ -328,6 +341,27 @@ async function runDrop() {
 async function download(info, key) {
     await sendDrop(info, key);
     window.location.href = '/api/drop/download/' + info.kid;
+}
+
+function makeQrCodeSvg(text) {
+    let qr = QRC.QrCode.encodeText(text, QRC.QrCode.Ecc.MEDIUM);
+
+    let border = 2;
+    let parts = [];
+
+	for (let y = 0; y < qr.size; y++) {
+		for (let x = 0; x < qr.size; x++) {
+			if (qr.getModule(x, y))
+				parts.push(`M${x + border},${y + border}h1v1h-1z`);
+		}
+	}
+	return svg`
+        <svg width=${400 + border * 2} height=${400 + border * 2} style="margin: 1em;"
+             viewBox="0 0 ${qr.size + border * 2} ${qr.size + border * 2}" stroke="none">
+       	    <rect width="100%" height="100%" fill="#FFFFFF"/>
+           	<path d="${parts.join(" ")}" fill="#000000"/>
+        </svg>
+    `;
 }
 
 export {
