@@ -28,6 +28,14 @@ async function wrapAsync(client, id, func, args) {
     }
 }
 
+// Quick SW activation after update
+self.addEventListener('install', e => {
+    self.skipWaiting();
+})
+self.addEventListener('activate', e => {
+    e.waitUntil(clients.claim());
+});
+
 self.addEventListener('fetch', e => {
     e.respondWith(async function() {
         let url = new URL(e.request.url);
