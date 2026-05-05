@@ -11,7 +11,7 @@
 
 namespace K {
 
-static const int64_t MaxSize = Megabytes(1000);
+static const int64_t MaxSize = Megabytes(4000);
 static const int64_t MaxExpiration = 90 * 86400000ull;
 static bool AllowNoExpiration = true;
 
