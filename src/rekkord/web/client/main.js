@@ -7,6 +7,7 @@ import { Util, Mutex, Log, Net, HttpError } from 'lib/web/base/base.js';
 import { Base64 } from 'lib/web/base/mixer.js';
 import * as UI from 'lib/web/ui/ui.js';
 import { deploy } from 'lib/web/flat/static.js';
+import { initRelay } from './relay.js';
 import * as UserMod from './user.js';
 import * as PlanMod from './plan.js';
 import * as RepositoryMod from './repository.js';
@@ -31,8 +32,6 @@ const MODES = {
 const DEFAULT_MODES = ['repositories', 'send'];
 
 let languages = {};
-
-let sw = null;
 
 let route = {
     mode: null,
@@ -95,8 +94,7 @@ async function start() {
             drop: { run: DropMod.runDrop, path: [{ key: 'drop', type: 'string' }] }
         });
 
-        navigator.serviceWorker.register('/sw.js');
-        sw = await navigator.serviceWorker.ready.then(registration => registration.active);
+        await initRelay();
     }
 
     // Handle internal links
@@ -398,7 +396,6 @@ async function oidc(code, state) {
 export {
     route,
     cache,
-    sw,
 
     start,
 

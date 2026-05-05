@@ -586,7 +586,7 @@ async function run(changes = {}, push = false) {
         window.scrollTo(0, 0);
 }
 
-function makeURL(changes = {}) {
+function makeURL(changes = {}, hash = null) {
     let path = '/';
 
     let values = Object.assign({}, route, changes);
@@ -620,8 +620,11 @@ function makeURL(changes = {}) {
         case 'ignore': { path += 'rappels'; } break;
     }
 
-    if (path == window.location.pathname && window.location.hash)
+    if (hash != null) {
+        path += hash;
+    } else if (path == window.location.pathname && window.location.hash) {
         path += window.location.hash;
+    }
 
     return path;
 }

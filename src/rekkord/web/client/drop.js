@@ -2,10 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
 import { render, html, live, unsafeHTML } from 'vendor/lit-html/lit-html.bundle.js';
+import { xsalsa20poly1305 } from 'vendor/noble/noble.bundle.js';
 import { Util, LruMap, Log, Net, HttpError } from 'lib/web/base/base.js';
+import { Base64 } from 'lib/web/base/mixer.js';
 import * as UI from 'lib/web/ui/ui.js';
 import * as App from './main.js';
-import { route, cache, sw } from './main.js';
+import { route, cache } from './main.js';
+import { sendKey } from './relay.js';
 import * as UserMod from './user.js';
 import {
     formatSize,
@@ -70,10 +73,14 @@ async function runSend() {
 
         let kid = await prepare(file, expiration);
 
+        let key = new Uint8Array(32)
+        crypto.getRandomValues(key);
+
         let drop = {
             kid: kid,
             name: file.name,
             size: file.size,
+            key: key,
             uploaded: 0,
             error: null
         };
@@ -85,7 +92,7 @@ async function runSend() {
         App.go(url);
 
         try {
-            await send(kid, file, uploaded => progress(drop, uploaded));
+            await send(kid, key, file, uploaded => progress(drop, uploaded));
         } catch (err) {
             drop.error = err;
             throw err;
@@ -138,7 +145,7 @@ async function prepare(file, expiration) {
     return info.kid;
 }
 
-async function send(kid, file, progress = () => {}) {
+async function send(kid, key, file, progress = () => {}) {
     let stream = file.stream();
     let reader = stream.getReader();
 
@@ -192,13 +199,25 @@ async function send(kid, file, progress = () => {}) {
                     }
                 }
 
+                let cipher = null;
+
+                // Encrypt fragment
+                {
+                    let nonce = new Uint8Array(24);
+                    (new DataView(nonce.buffer)).setUint32(0, fragment, true);
+
+                    let salsa = xsalsa20poly1305(key, nonce);
+
+                    cipher = salsa.encrypt(buf.slice(0, offset));
+                }
+
                 // Upload fragment
                 {
                     let url = Util.pasteURL('/api/drop/upload', { kid: kid, fragment: fragment });
 
                     let response = await Net.fetch(url, {
                         method: 'PUT',
-                        body: buf.slice(0, offset),
+                        body: cipher,
                         timeout: 30000
                     });
                     if (!response.ok) {
@@ -225,12 +244,15 @@ async function send(kid, file, progress = () => {}) {
 
 async function runDrop() {
     let cached = false;
+    let key = null;
 
     if (route.drop != null) {
         cache.drop = send_drops.get(route.drop);
         cached = (cache.drop != null);
 
-        if (!cached) {
+        if (cached) {
+            key = cache.drop.key;
+        } else {
             try {
                 let url = Util.pasteURL('/api/drop/info', { kid: route.drop });
                 cache.drop = await Net.cache('drop', url);
@@ -240,6 +262,14 @@ async function runDrop() {
 
                 cache.drop = null;
             }
+
+            if (!window.location.hash)
+                throw new Error('Missing decryption key');
+
+            key = Base64.toBytesUrl(window.location.hash.substr(1));
+
+            if (key?.length != 32)
+                throw new Error('Invalid decryption key length');
         }
     } else {
         cache.drop = null;
@@ -270,7 +300,10 @@ async function runDrop() {
             </div>
         `);
     } else {
-        let url = App.makeURL({ mode: 'drop', drop: cache.drop.kid });
+        let hash = `#${Base64.toBase64Url(key)}`;
+        let url = App.makeURL({ mode: 'drop', drop: cache.drop.kid }, hash);
+
+        window.location.hash = hash;
 
         UI.main(html`
             <div class="header">${cache.drop.name}</div>
@@ -282,10 +315,15 @@ async function runDrop() {
 
             <div class="actions">
                 ${cached ? html`<button @click=${UI.wrap(e => writeClipboard(T.download_link, ENV.url + url))}>${T.copy_download_link}</button>` : ''}
-                ${!cached ? html`<button @click=${e => window.location.href = '/api/drop/download/' + cache.drop.kid}>${T.download}</button>` : ''}
+                ${!cached ? html`<button @click=${UI.wrap(e => download(cache.drop.kid, key))}>${T.download}</button>` : ''}
             </div>
         `);
     }
+}
+
+async function download(kid, key) {
+    await sendKey(kid, key);
+    window.location.href = '/api/drop/download/' + kid;
 }
 
 export {

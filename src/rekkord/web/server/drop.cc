@@ -17,9 +17,10 @@ static bool AllowNoExpiration = true;
 
 static const int64_t ChunkSize = Mebibytes(2);
 static const Size ChunkSplit = Kibibytes(64);
-static const int64_t ChunkExtra = 0; // (ChunkSize / ChunkSplit) * 16;
+static const int64_t ChunkExtra = 16;
 
 static_assert(ChunkSize % ChunkSplit == 0);
+static_assert(crypto_secretbox_xsalsa20poly1305_NONCEBYTES == 24);
 static_assert(crypto_secretbox_xsalsa20poly1305_MACBYTES == 16);
 
 static s3_Client s3;
