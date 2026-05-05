@@ -45,11 +45,20 @@ async function callWorker(type, ...args) {
 
 function handleMessage(e) {
     let msg = e.data;
-    let handler = msg_handlers.get(msg.id);
 
     switch (msg.type) {
-        case 'success': { handler.resolve(msg.value); } break;
-        case 'error': { handler.reject(msg.value); } break;
+        case 'success': {
+            let handler = msg_handlers.get(msg.id);
+            handler.resolve(msg.value);
+            msg_handlers.delete(msg.id);
+        } break;
+        case 'error': { 
+            let handler = msg_handlers.get(msg.id);
+            handler.reject(msg.value);
+            msg_handlers.delete(msg.id);
+        } break;
+
+        case 'ping': { sw.postMessage({ type: 'pong' });  } break;
     }
 
     msg_handlers.delete(msg.id);

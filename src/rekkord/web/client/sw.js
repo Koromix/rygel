@@ -15,7 +15,7 @@ function handleMessage(e) {
     let msg = e.data;
 
     switch (msg.type) {
-        case 'drop': { wrapAsync(e.source, msg.id, updateDrop, msg.args); } break;
+        case 'drop': { wrapAsync(e.source, msg.id, updateDrop, [e.source, ...msg.args]); } break;
     }
 }
 
@@ -62,9 +62,6 @@ function startDownload(kid) {
         pull: async (controller) => {
             try {
                 let { done, value } = await fragments.next();
-
-                // Reset expiration timer
-                findDrop(kid);
 
                 if (!done) {
                     controller.enqueue(value);
@@ -140,19 +137,24 @@ async function *downloadFragments(info) {
             buf = salsa.decrypt(cipher);
         }
 
-        yield buf;
-
         downloaded += buf.length;
         fragment++;
+
+        info.client.postMessage({ type: 'ping' });
+        findDrop(info.kid); // Reset expiration timer
+
+        yield buf;
     }
 
     fragment = null;
 }
 
-function updateDrop(info, key) {
+function updateDrop(client, info, key) {
     drops.delete(info.kid);
 
     drops.set(info.kid, {
+        client: client,
+
         ...info,
 
         key: key,
