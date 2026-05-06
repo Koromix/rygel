@@ -355,6 +355,7 @@ function makeQrCodeSvg(text, size, border = 2) {
 				parts.push(`M${x + border},${y + border}h1v1h-1z`);
 		}
 	}
+
 	return svg`
         <svg width=${size + border * 2} height=${size + border * 2} style="margin: 1em;"
              viewBox="0 0 ${qr.size + border * 2} ${qr.size + border * 2}" stroke="none">

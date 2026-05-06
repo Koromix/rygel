@@ -46,7 +46,7 @@ li + .picture { margin-left: -1em; }
 
 #top {
     font-size: 1.1em;
-        color: white;
+    color: white;
 
     & menu {
         gap: 2em;
