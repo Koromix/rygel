@@ -611,3 +611,10 @@ progress[value] {
     &::-webkit-progress-bar { background: white; }
     &::-moz-progress-bar, &::-webkit-progress-value { background: var(--button_color); }
 }
+
+.link {
+    width: 60em;
+    max-width: 90%;
+    text-align: center;
+    text-overflow: ellipsis;
+}

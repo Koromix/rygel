@@ -306,8 +306,9 @@ async function runDrop() {
 
             <div class="block" style="align-items: center;">
                 <div>${formatSize(cache.drop.size)}</div>
-                <input id="link" type="text" style="width: 60em; text-align: center;" readonly value=${ENV.url + url} />
-                ${makeQrCodeSvg(ENV.url + url)}
+                <input class="link" type="text" readonly value=${ENV.url + url}
+                       @click=${e => e.target.select()} />
+                ${makeQrCodeSvg(ENV.url + url, 200)}
             </div>
 
             <div class="actions">
@@ -343,10 +344,9 @@ async function download(info, key) {
     window.location.href = '/api/drop/download/' + info.kid;
 }
 
-function makeQrCodeSvg(text) {
+function makeQrCodeSvg(text, size, border = 2) {
     let qr = QRC.QrCode.encodeText(text, QRC.QrCode.Ecc.MEDIUM);
 
-    let border = 2;
     let parts = [];
 
 	for (let y = 0; y < qr.size; y++) {
@@ -356,7 +356,7 @@ function makeQrCodeSvg(text) {
 		}
 	}
 	return svg`
-        <svg width=${400 + border * 2} height=${400 + border * 2} style="margin: 1em;"
+        <svg width=${size + border * 2} height=${size + border * 2} style="margin: 1em;"
              viewBox="0 0 ${qr.size + border * 2} ${qr.size + border * 2}" stroke="none">
        	    <rect width="100%" height="100%" fill="#FFFFFF"/>
            	<path d="${parts.join(" ")}" fill="#000000"/>
