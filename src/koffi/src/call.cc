@@ -253,7 +253,7 @@ Size CallData::PushStringValue(napi_value value, const char **out_str)
     // This was the cause of a truncation bug (see https://github.com/Koromix/koffi/issues/266),
     // which went unnoticed for a long time.
     // We don't want to query the length beforehand, because it's slow. Instead, check that the
-    // returned lengfth is much shorter than the available buffer capacity, and if so, we know
+    // returned length is much shorter than the available buffer capacity, and if so, we know
     // we're okay because V8 flattens strings ~32 KiB at a time.
 
     if ((Size)len < buf.len - Kibibytes(64)) [[likely]] {
