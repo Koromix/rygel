@@ -312,7 +312,7 @@ function renderApp(el) {
         ${el}
 
         <footer>
-            <div>${ENV.title} © 2025</div>
+            <div>${ENV.title} © 2026</div>
             <div style="font-size: 0.8em;">
                 Niels Martignène (<a href="https://koromix.dev/" target="_blank">Koromix</a>)<br>
                 <a href="mailto:niels.martignene@protonmail.com" style="font-weight: bold; color: inherit;">niels.martignene@protonmail.com</a>

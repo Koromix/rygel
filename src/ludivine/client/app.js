@@ -686,7 +686,7 @@ function renderApp(el, fullscreen) {
 
             <footer>
                 <div style="text-align: right;">
-                    ${ENV.title} © 2025
+                    ${ENV.title} © 2026
                     <a class="legal" href="/mentions">Mentions légales</a>
                 </div>
                 <img src=${ASSETS['main/footer']} alt="" width="79" height="64">
