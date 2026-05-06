@@ -182,7 +182,7 @@ table tbody tr:hover > td {
 #log {
     position: fixed;
     left: 50%;
-    top: 1em;
+    top: calc(var(--top_height) + 1em);
     width: calc(100vw - 2em);
     max-width: 600px;
     z-index: 99999;
