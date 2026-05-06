@@ -68,6 +68,7 @@ static bool ApplySandbox(Span<const char *const> reveals)
     sb.RevealPaths({
         "/etc/resolv.conf",
         "/etc/hosts",
+        "/etc/hostname",
         "/etc/nsswitch.conf",
         "/etc/netsvc.conf",
         "/etc/svc.conf"
