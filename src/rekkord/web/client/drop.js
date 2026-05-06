@@ -357,7 +357,7 @@ function makeQrCodeSvg(text, size, border = 2) {
 	}
 
 	return svg`
-        <svg width=${size + border * 2} height=${size + border * 2} style="margin: 1em;"
+        <svg width=${size + border * 2} height=${size + border * 2} style="margin: 0.5em;"
              viewBox="0 0 ${qr.size + border * 2} ${qr.size + border * 2}" stroke="none">
        	    <rect width="100%" height="100%" fill="#FFFFFF"/>
            	<path d="${parts.join(" ")}" fill="#000000"/>
