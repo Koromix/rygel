@@ -634,7 +634,7 @@ bool RecordExporter::Export(const char *filename)
 
         const Column *it = table.first_column;
 
-        while (it) {
+        while (it && table.ordered_columns.len < 1536) {
             if (it->valued) {
                 table.ordered_columns.Append(it);
             }
