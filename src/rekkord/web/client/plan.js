@@ -68,9 +68,9 @@ async function runPlans() {
                     ${!plans.length ? html`<tr><td colspan="4" style="text-align: center;">${T.no_machine}</td></tr>` : ''}
                 </tbody>
             </table>
-            <div class="actions">
-                <button type="button" @click=${UI.wrap(e => configurePlan(null))}>${T.add_machine}</button>
-            </div>
+        </div>
+        <div class="actions">
+            <button type="button" @click=${UI.wrap(e => configurePlan(null))}>${T.add_machine}</button>
         </div>
     `);
 }
