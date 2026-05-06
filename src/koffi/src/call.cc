@@ -151,14 +151,22 @@ Size CallData::PushStringValue(Napi::Value value, const char **out_str)
     napi_status status;
 
     buf.ptr = (char *)mem->heap.ptr;
-    buf.len = std::max((Size)0, mem->heap.len - Kibibytes(32));
+    buf.len = mem->heap.len;
 
     status = napi_get_value_string_utf8(env, value, buf.ptr, (size_t)buf.len, &len);
     K_ASSERT(status == napi_ok);
 
     len++;
 
-    if (len < (size_t)buf.len) [[likely]] {
+    // V8 can truncate the string and return a length that is less than the real string
+    // length in several cases, such as when it flattens string ropes.
+    // This was the cause of a truncation bug (see https://github.com/Koromix/koffi/issues/266),
+    // which went unnoticed for a long time.
+    // We don't want to query the length beforehand, because it's slow. Instead, check that the
+    // returned lengfth is much shorter than the available buffer capacity, and if so, we know
+    // we're okay because V8 flattens strings ~32 KiB at a time.
+
+    if ((Size)len < buf.len - Kibibytes(64)) [[likely]] {
         mem->heap.ptr += (Size)len;
         mem->heap.len -= (Size)len;
     } else {
@@ -186,14 +194,14 @@ Size CallData::PushString16Value(Napi::Value value, const char16_t **out_str16)
 
     mem->heap.ptr = AlignUp(mem->heap.ptr, 2);
     buf.ptr = (char16_t *)mem->heap.ptr;
-    buf.len = std::max((Size)0, mem->heap.len - Kibibytes(32)) / 2;
+    buf.len = mem->heap.len / 2;
 
     status = napi_get_value_string_utf16(env, value, buf.ptr, (size_t)buf.len, &len);
     K_ASSERT(status == napi_ok);
 
     len++;
 
-    if (len < (size_t)buf.len) [[likely]] {
+    if ((Size)len < buf.len - Kibibytes(64) / 2) [[likely]] {
         mem->heap.ptr += (Size)len * 2;
         mem->heap.len -= (Size)len * 2;
     } else {
@@ -226,7 +234,7 @@ Size CallData::PushString32Value(Napi::Value value, const char32_t **out_str32)
 
     mem->heap.ptr = AlignUp(mem->heap.ptr, 4);
     buf.ptr = (char32_t *)mem->heap.ptr;
-    buf.len = std::max((Size)0, mem->heap.len - Kibibytes(32)) / 4;
+    buf.len = mem->heap.len / 4;
 
     if (buf16.len < buf.len) [[likely]] {
         mem->heap.ptr += buf16.len * 4;
