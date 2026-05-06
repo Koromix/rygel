@@ -288,6 +288,8 @@ async function test() {
     const InitVariableArray = lib.func('void InitVariableArray(_Out_ VariableArray *arr, int len, int start, int step)');
     const MultArray = lib.func('void MultArray(_Inout_ VariableArray *arr, int mult)');
     const InitDynamicArray = lib.func('void InitDynamicArray(_Inout_ DynamicArray *arr, int start, int step)');
+    const StringLength = lib.func('size_t StringLength(const char *str)');
+    const StringLength16 = lib.func('size_t StringLength16(const char16_t *str)');
 
     free_ptr = CallFree;
 
@@ -1016,6 +1018,26 @@ async function test() {
     // Make sure obvious dynamic-length errors get caught
     assert.throws(() => koffi.struct('InvalidStruct', { count: 'int', values: koffi.array('int', 'len', 16) }), /Record type InvalidStruct does not have member 'len'/);
     assert.throws(() => koffi.struct('InvalidStruct', { len: 'str', values: koffi.array('int', 'len', 16) }), /Dynamic length member len is not an integer/);
+
+    // Test boundary conditions between fast and slow string handling paths
+    {
+        let pattern = '👉🫠👉🫠🫠👉🫠🫠';
+        let heap_size = koffi.config().sync_heap_size;
+
+        for (let i = 0; i < heap_size / 4; i += 2048) {
+            let str = pattern.repeat(i);
+            let expected = Buffer.from(str, 'utf8').length;
+
+            assert.equal(StringLength(str), expected);
+        }
+
+        for (let i = 0; i < heap_size / 8; i += 2048) {
+            let str = pattern.repeat(i);
+            let expected = Buffer.from(str, 'utf16le').length;
+
+            assert.equal(StringLength16(str) * 2, expected);
+        }
+    }
 
     lib.unload();
 }

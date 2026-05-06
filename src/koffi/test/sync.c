@@ -844,12 +844,17 @@ EXPORT void UpperToInternalBuffer(const char *str, char **ptr)
     *ptr = buf;
 }
 
-EXPORT int ComputeLengthUntilNul(const void *ptr)
+EXPORT size_t StringLength(const char *str)
 {
-    return (int)strlen(ptr);
+    return strlen(str);
 }
 
-static size_t StringLength16(const char16_t *str16)
+EXPORT int ComputeLengthUntilNul(const void *ptr)
+{
+    return (int)StringLength((const char *)ptr);
+}
+
+EXPORT size_t StringLength16(const char16_t *str16)
 {
     size_t len = 0;
 
