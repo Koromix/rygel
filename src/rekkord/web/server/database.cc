@@ -8,7 +8,7 @@
 
 namespace K {
 
-const int DatabaseVersion = 36;
+const int DatabaseVersion = 37;
 
 static void KidGenFunc(sqlite3_context *ctx, int, sqlite3_value **argv)
 {
@@ -805,9 +805,17 @@ bool MigrateDatabase(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 36: {
+                bool success = db->RunMany(R"(
+                    CREATE INDEX plans_o ON plans (owner);
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            static_assert(DatabaseVersion == 36);
+            static_assert(DatabaseVersion == 37);
         }
 
         if (!db->Run("INSERT INTO migrations (version, build, timestamp) VALUES (?, ?, ?)",
