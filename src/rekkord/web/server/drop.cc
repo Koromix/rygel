@@ -12,8 +12,9 @@
 namespace K {
 
 static const int64_t MaxSize = Megabytes(4000);
-static const int64_t MaxExpiration = 90 * 86400000ull;
+static const int64_t MaxExpiration = 90 * 86400000ull; // 90 days
 static bool AllowNoExpiration = true;
+static const int64_t StaleDelay = 7 * 86400000ull; // 7 days;
 
 static const int64_t ChunkSize = Mebibytes(2);
 static const Size ChunkSplit = Kibibytes(64);
@@ -35,10 +36,60 @@ bool PruneDrops()
 {
     int64_t now = GetUnixTime();
 
-    if (!db.Run("DELETE FROM drops WHERE expire <= ?1", now))
+    if (!db.Run("DELETE FROM drops WHERE expire <= ?1", now - StaleDelay))
         return false;
 
     return true;
+}
+
+void HandleDropList(http_IO *io)
+{
+    K_ASSERT(config.drop);
+
+    RetainPtr<const SessionInfo> session = GetNormalSession(io);
+
+    if (!session) {
+        LogError("User is not logged in");
+        io->SendError(401);
+        return;
+    }
+
+    sq_Statement stmt;
+    if (!db.Prepare(R"(SELECT kid_str(kid), name, size, IFNULL(expire, -1),
+                              IIF(uploaded = size, 1, 0) AS complete
+                       FROM drops
+                       WHERE owner = ?1)", &stmt, session->userid))
+        return;
+
+    http_SendJson(io, 200, [&](json_Writer *json) {
+        json->StartArray();
+
+        while (stmt.Step()) {
+            const char *kid = (const char *)sqlite3_column_text(stmt, 0);
+            const char *name = (const char *)sqlite3_column_text(stmt, 1);
+            int64_t size = sqlite3_column_int64(stmt, 2);
+            int64_t expire = sqlite3_column_int64(stmt, 3);
+            bool complete = sqlite3_column_int(stmt, 4);
+
+            json->StartObject();
+
+            json->Key("kid"); json->String(kid);
+            json->Key("name"); json->String(name);
+            json->Key("size"); json->Int64(size);
+            if (expire >= 0) {
+                json->Key("expire"); json->Int64(expire);
+            } else {
+                json->Key("expire"); json->Null();
+            }
+            json->Key("complete"); json->Bool(complete);
+
+            json->EndObject();
+        }
+        if (!stmt.IsValid())
+            return;
+
+        json->EndArray();
+    });
 }
 
 void HandleDropCreate(http_IO *io)
@@ -116,6 +167,55 @@ void HandleDropCreate(http_IO *io)
 
     Span<const char> json = Fmt(io->Allocator(), "{\"kid\": \"%1\", \"chunk\": %2}", kid, ChunkSize);
     io->SendText(200, json, "application/json");
+}
+
+void HandleDropDelete(http_IO *io)
+{
+    K_ASSERT(config.drop);
+
+    RetainPtr<const SessionInfo> session = GetNormalSession(io);
+
+    if (!session) {
+        LogError("User is not logged in");
+        io->SendError(401);
+        return;
+    }
+
+    KID kid;
+    {
+        bool success = http_ParseJson(io, Kibibytes(1), [&](json_Parser *json) {
+            const char *str = nullptr;
+            bool valid = true;
+
+            for (json->ParseObject(); json->InObject(); ) {
+                Span<const char> key = json->ParseKey();
+
+                if (key == "kid") {
+                    json->ParseString(&str);
+                } else {
+                    json->UnexpectedKey(key);
+                    valid = false;
+                }
+            }
+            valid &= json->IsValid();
+
+            if (valid) {
+                valid &= ParseKID(str, KIDType::Drop, &kid);
+            }
+
+            return valid;
+        });
+
+        if (!success) {
+            io->SendError(422);
+            return;
+        }
+    }
+
+    if (!db.Run("DELETE FROM drops WHERE kid = ?1 AND owner = ?2", sq_Binding(kid.raw), session->userid))
+        return;
+
+    io->SendText(200, "{}", "application/json");
 }
 
 void HandleDropUpload(http_IO *io)

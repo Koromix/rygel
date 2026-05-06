@@ -29,7 +29,7 @@ const MODES = {
     link: { run: UserMod.runLink },
     account: { run: UserMod.runAccount }
 };
-const DEFAULT_MODES = ['repositories', 'send'];
+const DEFAULT_MODES = ['repositories', 'drops'];
 
 let languages = {};
 
@@ -54,6 +54,7 @@ let cache = {
     repository: null,
     plans: [],
     plan: null,
+    drops: [],
     drop: null
 };
 
@@ -90,8 +91,9 @@ async function start() {
     // Init drops
     if (ENV.drop) {
         Object.assign(MODES, {
-            send: { run: DropMod.runSend },
-            drop: { run: DropMod.runDrop, path: [{ key: 'drop', type: 'string' }] }
+            drops: { run: DropMod.runDrops },
+            drop: { run: DropMod.runDrop, path: [{ key: 'drop', type: 'string' }] },
+            send: { run: DropMod.runSend }
         });
 
         await initRelay();
@@ -281,7 +283,7 @@ function renderApp(el) {
 
     let in_repositories = ['repositories', 'repository'].includes(route.mode);
     let in_plans = ['plans', 'plan'].includes(route.mode);
-    let in_drop = ['send', 'drop'].includes(route.mode);
+    let in_drops = ['drops', 'drop', 'send'].includes(route.mode);
 
     render(html`
         <nav id="top">
@@ -295,7 +297,7 @@ function renderApp(el) {
                            class=${in_plans ? 'active' : ''}>${T.machines}</a></li>
                 ` : ''}
                 ${isLogged() && ENV.drop ? html`
-                    <li><a href="/send" class=${in_drop ? 'active' : ''}>${T.send}</a></li>
+                    <li><a href="/drops" class=${in_drops ? 'active' : ''}>${T.files}</a></li>
                 ` : ''}
                 <div style="flex: 1;"></div>
                 ${isLogged() ? html`

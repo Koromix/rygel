@@ -384,8 +384,12 @@ static void HandleRequest(http_IO *io)
             HandlePlanFetch(io);
         } else if (config.backup && url == "/api/link/snapshot" && method == http_RequestMethod::Post) {
             HandleLinkSnapshot(io);
+        } else if (config.drop && url == "/api/drop/list" && method == http_RequestMethod::Get) {
+            HandleDropList(io);
         } else if (config.drop && url == "/api/drop/create" && method == http_RequestMethod::Post) {
             HandleDropCreate(io);
+        } else if (config.drop && url == "/api/drop/delete" && method == http_RequestMethod::Post) {
+            HandleDropDelete(io);
         } else if (config.drop && url == "/api/drop/upload" && method == http_RequestMethod::Put) {
             HandleDropUpload(io);
         } else if (config.drop && url == "/api/drop/mark" && method == http_RequestMethod::Post) {

@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
 import { render, html, live, svg } from 'vendor/lit-html/lit-html.bundle.js';
+import dayjs from 'vendor/dayjs/dayjs.bundle.js';
 import QRC from 'vendor/qrcodegen/js/qrcodegen.js';
 import { xsalsa20poly1305 } from 'vendor/noble/noble.bundle.js';
 import { Util, LruMap, Log, Net, HttpError } from 'lib/web/base/base.js';
@@ -20,6 +21,184 @@ const FRAGMENT_SIZE = 2097152;
 
 let send_file = null;
 let send_drops = new LruMap(4);
+
+async function runDrops() {
+    if (!App.isLogged())
+        return UserMod.runLogin();
+
+    cache.drops = await Net.cache('drops', '/api/drop/list');
+
+    let drops = UI.tableValues('drops', cache.drops, 'name');
+    let now = (new Date).valueOf();
+
+    UI.main(html`
+        <div class="header">${T.files}</div>
+
+        <div class="block">
+            <table style="table-layout: fixed; width: 100%;">
+                <colgroup>
+                    <col></col>
+                    <col style="width: 200px;"></col>
+                    <col style="width: 120px;"></col>
+                    <col style="width: 60px;"/>
+                </colgroup>
+                <thead>
+                    <tr>
+                        ${UI.tableHeader('drops', 'name', T.name)}
+                        ${UI.tableHeader('drops', 'expire', T.expiration)}
+                        ${UI.tableHeader('drops', 'size', T.size)}
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${drops.map(drop => html`
+                        <tr>
+                            <td>${drop.name}</td>
+                            <td>
+                                ${drop.expire != null && drop.expire > now ? dayjs(drop.expire).format('lll') : ''}
+                                ${drop.expire != null && drop.expire <= now ? T.expired : ''}
+                                ${drop.expire == null ? T.never : ''}
+                            </td>
+                            <td style="text-align: right;">
+                                ${formatSize(drop.size)}
+                                ${!drop.complete ? html`<span class="sub" style="color: red;">${T.incomplete}</span>` : ''}
+                            </td>
+                            <td class="center">
+                                <button type="button" class="small"
+                                        @click=${UI.wrap(e => deleteDrop(drop.kid))}><img src=${ASSETS['ui/delete']} alt=${T.delete} /></button>
+                            </td>
+                        </tr>
+                    `)}
+                    ${!drops.length ? html`<tr><td colspan="4" style="text-align: center;">${T.no_file}</td></tr>` : ''}
+                </tbody>
+            </table>
+        </div>
+        <div class="actions">
+            <button type="button" @click=${UI.wrap(e => App.go('/send'))}>${T.send_file}</button>
+        </div>
+    `);
+}
+
+async function deleteDrop(kid) {
+    await UI.dialog((render, close) => html`
+        <div class="title">${T.delete_file}</div>
+        <div class="main">${T.confirm_not_reversible}</div>
+        <div class="footer">
+            <button type="button" class="secondary" @click=${UI.wrap(close)}>${T.cancel}</button>
+            <button type="submit">${T.confirm}</button>
+        </div>
+    `);
+
+    await Net.post('/api/drop/delete', { kid: kid });
+    Net.invalidate('drops');
+
+    if (route.drop == kid)
+        route.drop = null;
+}
+
+async function runDrop() {
+    let cached = false;
+    let key = null;
+
+    if (route.drop != null) {
+        cache.drop = send_drops.get(route.drop);
+        cached = (cache.drop != null);
+
+        if (cached) {
+            key = cache.drop.key;
+        } else {
+            try {
+                let url = Util.pasteURL('/api/drop/info', { kid: route.drop });
+                cache.drop = await Net.cache('drop', url);
+            } catch (err) {
+                if (err.status != 404 && err.status != 422)
+                    throw err;
+
+                cache.drop = null;
+            }
+
+            if (!window.location.hash)
+                throw new Error('Missing decryption key');
+
+            key = Base64.toBytesUrl(window.location.hash.substr(1));
+
+            if (key?.length != 32)
+                throw new Error('Invalid decryption key length');
+        }
+    } else {
+        cache.drop = null;
+    }
+
+    route.drop = cache.drop?.kid;
+
+    if (cache.drop == null) {
+        App.go('/send');
+        return;
+    }
+
+    if (cache.drop.uploaded < cache.drop.size) {
+        UI.main(html`
+            <div class="header">${T.send_file}</div>
+
+            <div class="block" style="align-items: center;">
+                <p>${cache.drop.name}</p>
+                <progress value=${cache.drop.uploaded} max=${cache.drop.size}></progress>
+                ${cache.drop.error != null ? html`
+                    <p style="color: red;">
+                        ${T.error_has_occured}<br>
+                        ${cache.drop.error.message}
+                    </p>
+                ` : ''}
+            </div>
+        `);
+    } else if (cached) {
+        let hash = `#${Base64.toBase64Url(key)}`;
+        let url = App.makeURL({ mode: 'drop', drop: cache.drop.kid }, hash);
+
+        window.location.hash = hash;
+
+        UI.main(html`
+            <div class="header">${cache.drop.name}</div>
+
+            <div class="block" style="align-items: center;">
+                <div>${formatSize(cache.drop.size)}</div>
+                <input class="link" type="text" readonly value=${ENV.url + url}
+                       @click=${e => e.target.select()} />
+                ${makeQrCodeSvg(ENV.url + url, 200)}
+            </div>
+
+            <div class="actions">
+                <button @click=${UI.wrap(e => writeClipboard(T.download_link, ENV.url + url))}>${T.copy_download_link}</button>
+            </div>
+        `);
+    } else {
+        let progress = getProgress(cache.drop.kid);
+
+        if (progress && progress.value == progress.max)
+            progress = null;
+
+        UI.main(html`
+            <div class="header">${cache.drop.name}</div>
+
+            <div class="block" style="align-items: center;">
+                <div>${formatSize(cache.drop.size)}</div>
+                ${progress != null ? html`
+                    <progress value=${progress.value} max=${progress.max}></progress>
+                    <div class="sub">${T.keep_tab_open_during_download}</div>
+                ` : ''}
+            </div>
+
+            <div class="actions">
+                <button ?disabled=${progress != null} @click=${UI.wrap(e => download(cache.drop, key))}>${T.download}</button>
+            </div>
+        `);
+    }
+}
+
+async function download(info, key) {
+    await sendDrop(info, key);
+    window.location.href = '/api/drop/download/' + info.kid;
+}
 
 async function runSend() {
     if (!App.isLogged())
@@ -140,6 +319,8 @@ async function prepare(file, expiration) {
         expiration: expiration
     });
 
+    Net.invalidate('drops');
+
     return info.kid;
 }
 
@@ -238,110 +419,8 @@ async function send(kid, key, file, progress = () => {}) {
             }
         } while (!complete);
     }
-}
 
-async function runDrop() {
-    let cached = false;
-    let key = null;
-
-    if (route.drop != null) {
-        cache.drop = send_drops.get(route.drop);
-        cached = (cache.drop != null);
-
-        if (cached) {
-            key = cache.drop.key;
-        } else {
-            try {
-                let url = Util.pasteURL('/api/drop/info', { kid: route.drop });
-                cache.drop = await Net.cache('drop', url);
-            } catch (err) {
-                if (err.status != 404 && err.status != 422)
-                    throw err;
-
-                cache.drop = null;
-            }
-
-            if (!window.location.hash)
-                throw new Error('Missing decryption key');
-
-            key = Base64.toBytesUrl(window.location.hash.substr(1));
-
-            if (key?.length != 32)
-                throw new Error('Invalid decryption key length');
-        }
-    } else {
-        cache.drop = null;
-    }
-
-    route.drop = cache.drop?.kid;
-
-    if (cache.drop == null) {
-        App.go('/send');
-        return;
-    }
-
-    if (cache.drop.uploaded < cache.drop.size) {
-        UI.main(html`
-            <div class="header">${T.send_file}</div>
-
-            <div class="block" style="align-items: center;">
-                <p>${cache.drop.name}</p>
-                <progress value=${cache.drop.uploaded} max=${cache.drop.size}></progress>
-                ${cache.drop.error != null ? html`
-                    <p style="color: red;">
-                        ${T.error_has_occured}<br>
-                        ${cache.drop.error.message}
-                    </p>
-                ` : ''}
-            </div>
-        `);
-    } else if (cached) {
-        let hash = `#${Base64.toBase64Url(key)}`;
-        let url = App.makeURL({ mode: 'drop', drop: cache.drop.kid }, hash);
-
-        window.location.hash = hash;
-
-        UI.main(html`
-            <div class="header">${cache.drop.name}</div>
-
-            <div class="block" style="align-items: center;">
-                <div>${formatSize(cache.drop.size)}</div>
-                <input class="link" type="text" readonly value=${ENV.url + url}
-                       @click=${e => e.target.select()} />
-                ${makeQrCodeSvg(ENV.url + url, 200)}
-            </div>
-
-            <div class="actions">
-                <button @click=${UI.wrap(e => writeClipboard(T.download_link, ENV.url + url))}>${T.copy_download_link}</button>
-            </div>
-        `);
-    } else {
-        let progress = getProgress(cache.drop.kid);
-
-        if (progress && progress.value == progress.max)
-            progress = null;
-
-        UI.main(html`
-            <div class="header">${cache.drop.name}</div>
-
-            <div class="block" style="align-items: center;">
-                <div>${formatSize(cache.drop.size)}</div>
-                ${progress != null ? html`
-                    <progress value=${progress.value} max=${progress.max}></progress>
-                    <div class="sub">${T.keep_tab_open_during_download}</div>
-                ` : ''}
-            </div>
-
-            <div class="actions">
-                <button ?disabled=${progress != null} @click=${UI.wrap(e => download(cache.drop, key))}>${T.download}</button>
-            </div>
-        `);
-    }
-}
-
-async function download(info, key) {
-    await sendDrop(info, key);
-    window.location.href = '/api/drop/download/' + info.kid;
+    Net.invalidate('drops');
 }
 
 function makeQrCodeSvg(text, size, border = 2) {
@@ -366,6 +445,7 @@ function makeQrCodeSvg(text, size, border = 2) {
 }
 
 export {
-    runSend,
-    runDrop
+    runDrops,
+    runDrop,
+    runSend
 }
