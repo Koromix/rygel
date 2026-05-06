@@ -256,20 +256,26 @@ Size CallData::PushStringValue(napi_value value, const char **out_str)
     // returned length is much shorter than the available buffer capacity, and if so, we know
     // we're okay because V8 flattens strings ~32 KiB at a time.
 
-    if ((Size)len < buf.len - Kibibytes(64)) [[likely]] {
+    if ((Size)len < buf.len - 65536) [[likely]] {
         mem->heap.ptr += (Size)AlignLen(len, 16);
     } else {
         status = napi_get_value_string_utf8(env, value, nullptr, 0, &len);
         K_ASSERT(status == napi_ok);
 
         len++;
-        buf = AllocateSpan<char>(&mem->allocator, (Size)len);
-        release_alloc |= (prev_stack == mem->stack.end);
 
-        status = napi_get_value_string_utf8(env, value, buf.ptr, (size_t)buf.len, &len);
-        K_ASSERT(status == napi_ok);
+        if ((Size)len <= buf.len) {
+            status = napi_get_value_string_utf8(env, value, buf.ptr, len, nullptr);
+            K_ASSERT(status == napi_ok);
 
-        len++;
+            mem->heap.ptr += (Size)AlignLen(len, 16);
+        } else {
+            buf = AllocateSpan<char>(&mem->allocator, (Size)len);
+            release_alloc |= (prev_stack == mem->stack.end);
+
+            status = napi_get_value_string_utf8(env, value, buf.ptr, (size_t)buf.len, nullptr);
+            K_ASSERT(status == napi_ok);
+        }
     }
 
     *out_str = buf.ptr;
@@ -292,20 +298,26 @@ Size CallData::PushString16Value(napi_value value, const char16_t **out_str16)
 
     len++;
 
-    if ((Size)len < buf.len - Kibibytes(64)) [[likely]] {
+    if ((Size)len < buf.len - 65536) [[likely]] {
         mem->heap.ptr += (Size)AlignLen(len * 2, 16);
     } else {
         status = napi_get_value_string_utf16(env, value, nullptr, 0, &len);
         K_ASSERT(status == napi_ok);
 
         len++;
-        buf = AllocateSpan<char16_t>(&mem->allocator, (Size)len);
-        release_alloc |= (prev_stack == mem->stack.end);
 
-        status = napi_get_value_string_utf16(env, value, buf.ptr, (size_t)buf.len, &len);
-        K_ASSERT(status == napi_ok);
+        if ((Size)len <= buf.len) {
+            status = napi_get_value_string_utf16(env, value, buf.ptr, len, nullptr);
+            K_ASSERT(status == napi_ok);
 
-        len++;
+            mem->heap.ptr += (Size)AlignLen(len * 2, 16);
+        } else {
+            buf = AllocateSpan<char16_t>(&mem->allocator, (Size)len);
+            release_alloc |= (prev_stack == mem->stack.end);
+
+            status = napi_get_value_string_utf16(env, value, buf.ptr, (size_t)buf.len, nullptr);
+            K_ASSERT(status == napi_ok);
+        }
     }
 
     *out_str16 = buf.ptr;
