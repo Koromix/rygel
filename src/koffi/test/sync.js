@@ -293,15 +293,16 @@ async function test() {
     const InitVariableArray = lib.func('void InitVariableArray(_Out_ VariableArray *arr, int len, int start, int step)');
     const MultArray = lib.func('void MultArray(_Inout_ VariableArray *arr, int mult)');
     const InitDynamicArray = lib.func('void InitDynamicArray(_Inout_ DynamicArray *arr, int start, int step)');
-
-    free_ptr = CallFree;
-
     const ReturnEnumValue = lib.func('int ReturnEnumValue(Enum1 e)');
     const GetEnumPrimitive1 = lib.func('const char *GetEnumPrimitive1()');
     const GetEnumPrimitive2 = lib.func('const char *GetEnumPrimitive2()');
     const GetEnumPrimitive3 = lib.func('const char *GetEnumPrimitive3()');
     const GetEnumPrimitive4 = lib.func('const char *GetEnumPrimitive4()');
     const GetEnumPrimitive5 = lib.func('const char *GetEnumPrimitive5()');
+    const StringLength = lib.func('size_t StringLength(const char *str)');
+    const StringLength16 = lib.func('size_t StringLength16(const char16_t *str)');
+
+    free_ptr = CallFree;
 
     // Simple signed value returns
     assert.equal(GetMinusOne1(), -1);
@@ -1063,6 +1064,26 @@ async function test() {
     assert.equal(koffi.enumeration('EnumX', {}, 'uint64_t').primitive, 'UInt64');
     assert.equal(koffi.enumeration('EnumY', {}, 'short').primitive, 'Int16');
     assert.throws(() => koffi.enumeration({}, 'float'), /Expected integer type for underlying enum storage type/);
+
+    // Test boundary conditions between fast and slow string handling paths
+    {
+        let pattern = '👉🫠👉🫠🫠👉🫠🫠';
+        let heap_size = koffi.config().sync_heap_size;
+
+        for (let i = 0; i < heap_size / 4; i += 2048) {
+            let str = pattern.repeat(i);
+            let expected = Buffer.from(str, 'utf8').length;
+
+            assert.equal(StringLength(str), expected);
+        }
+
+        for (let i = 0; i < heap_size / 8; i += 2048) {
+            let str = pattern.repeat(i);
+            let expected = Buffer.from(str, 'utf16le').length;
+
+            assert.equal(StringLength16(str) * 2, expected);
+        }
+    }
 
     lib.unload();
 }
