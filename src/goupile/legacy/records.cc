@@ -642,110 +642,116 @@ bool RecordExporter::Export(const char *filename)
         }
     }
 
-    // Project information
-    {
-        bool success = db.RunMany(R"(
-            CREATE TABLE _goupile (
-                key TEXT NOT NULL,
-                value BLOB
-           );
-        )");
-        if (!success)
-            return false;
-
-
-        const char *sql = "INSERT INTO _goupile (key, value) VALUES (?1, ?2)";
-
-        if (!db.Run(sql, "instance", instance_key))
-            return false;
-        if (!db.Run(sql, "project", project))
-            return false;
-        if (!db.Run(sql, "center", center))
-            return false;
-        if (!db.Run(sql, "schema", schema))
-            return false;
-        if (!db.Run(sql, "date", mtime))
-            return false;
-    }
-
-    // Create tables
-    for (const Table &table: tables) {
-        HeapArray<char> sql(&str_alloc);
-
-        Fmt(&sql, "CREATE TABLE "); EncodeSqlName(table.name, &sql); Fmt(&sql, " (__ROOT TEXT, __ULID TEXT,");
-        if (table.root) {
-            Fmt(&sql, "__HID, ");
-        }
-        Fmt(&sql, "__CTIME, __MTIME, ");
-        for (const Column *col: table.ordered_columns) {
-            EncodeSqlName(col->name, &sql);
-            switch (col->type) {
-                case Type::Unknown: { Fmt(&sql, ", "); } break;
-                case Type::Integer: { Fmt(&sql, " INTEGER, "); } break;
-                case Type::Double: { Fmt(&sql, " REAL, "); } break;
-                case Type::String: { Fmt(&sql, " TEXT, "); } break;
-            }
-        }
-        sql.len -= 2;
-        Fmt(&sql, ")");
-
-        if (!db.Run(sql.ptr))
-            return false;
-    }
-
-    // Import data
-    HashSet<const void *> used_tables;
-    for (const Table &table: tables) {
-        HeapArray<char> sql(&str_alloc);
-
-        Fmt(&sql, "INSERT INTO "); EncodeSqlName(table.name, &sql); Fmt(&sql, " VALUES (?1, ?2");
-        if (table.root) {
-            Fmt(&sql, ", ?3, ?4, ?5");
-        } else {
-            Fmt(&sql, ", ?3, ?4");
-        }
-        for (Size i = 0; i < table.ordered_columns.len; i++) {
-            Fmt(&sql, ", ?%1", i + 5 + table.root);
-        }
-        Fmt(&sql, ")");
-
-        sq_Statement stmt;
-        if (!db.Prepare(sql.ptr, &stmt))
-            return false;
-
-        for (Size i = 0; i < table.rows.count; i++) {
-            stmt.Reset();
-
-            sqlite3_bind_text(stmt, 1, table.rows[i].root_ulid, -1, SQLITE_STATIC);
-            sqlite3_bind_text(stmt, 2, table.rows[i].ulid, -1, SQLITE_STATIC);
-            if (table.root) {
-                sqlite3_bind_text(stmt, 3, table.rows[i].hid, -1, SQLITE_STATIC);
-            }
-            sqlite3_bind_text(stmt, 3 + table.root, table.rows[i].ctime, -1, SQLITE_STATIC);
-            sqlite3_bind_text(stmt, 4 + table.root, table.rows[i].mtime, -1, SQLITE_STATIC);
-            for (Size j = 0; j < table.ordered_columns.len; j++) {
-                const Column *col = table.ordered_columns[j];
-                sqlite3_bind_text(stmt, (int)j + 5 + table.root, col->values[i], -1, SQLITE_STATIC);
-            }
-
-            if (!stmt.Run())
+    bool success = db.Transaction([&]() {
+        // Project information
+        {
+            bool success = db.RunMany(R"(
+                CREATE TABLE _goupile (
+                    key TEXT NOT NULL,
+                    value BLOB
+               );
+            )");
+            if (!success)
                 return false;
 
-            used_tables.Set(&table);
-        }
-    }
 
-    // Delete unused tables
-    for (const Table &table: tables) {
-        if (!used_tables.Find(&table)) {
+            const char *sql = "INSERT INTO _goupile (key, value) VALUES (?1, ?2)";
+
+            if (!db.Run(sql, "instance", instance_key))
+                return false;
+            if (!db.Run(sql, "project", project))
+                return false;
+            if (!db.Run(sql, "center", center))
+                return false;
+            if (!db.Run(sql, "schema", schema))
+                return false;
+            if (!db.Run(sql, "date", mtime))
+                return false;
+        }
+
+        // Create tables
+        for (const Table &table: tables) {
             HeapArray<char> sql(&str_alloc);
 
-            Fmt(&sql, "DROP TABLE "); EncodeSqlName(table.name, &sql);
+            Fmt(&sql, "CREATE TABLE "); EncodeSqlName(table.name, &sql); Fmt(&sql, " (__ROOT TEXT, __ULID TEXT,");
+            if (table.root) {
+                Fmt(&sql, "__HID, ");
+            }
+            Fmt(&sql, "__CTIME, __MTIME, ");
+            for (const Column *col: table.ordered_columns) {
+                EncodeSqlName(col->name, &sql);
+                switch (col->type) {
+                    case Type::Unknown: { Fmt(&sql, ", "); } break;
+                    case Type::Integer: { Fmt(&sql, " INTEGER, "); } break;
+                    case Type::Double: { Fmt(&sql, " REAL, "); } break;
+                    case Type::String: { Fmt(&sql, " TEXT, "); } break;
+                }
+            }
+            sql.len -= 2;
+            Fmt(&sql, ")");
 
             if (!db.Run(sql.ptr))
                 return false;
         }
-    }
+
+        // Import data
+        HashSet<const void *> used_tables;
+        for (const Table &table: tables) {
+            HeapArray<char> sql(&str_alloc);
+
+            Fmt(&sql, "INSERT INTO "); EncodeSqlName(table.name, &sql); Fmt(&sql, " VALUES (?1, ?2");
+            if (table.root) {
+                Fmt(&sql, ", ?3, ?4, ?5");
+            } else {
+                Fmt(&sql, ", ?3, ?4");
+            }
+            for (Size i = 0; i < table.ordered_columns.len; i++) {
+                Fmt(&sql, ", ?%1", i + 5 + table.root);
+            }
+            Fmt(&sql, ")");
+
+            sq_Statement stmt;
+            if (!db.Prepare(sql.ptr, &stmt))
+                return false;
+
+            for (Size i = 0; i < table.rows.count; i++) {
+                stmt.Reset();
+
+                sqlite3_bind_text(stmt, 1, table.rows[i].root_ulid, -1, SQLITE_STATIC);
+                sqlite3_bind_text(stmt, 2, table.rows[i].ulid, -1, SQLITE_STATIC);
+                if (table.root) {
+                    sqlite3_bind_text(stmt, 3, table.rows[i].hid, -1, SQLITE_STATIC);
+                }
+                sqlite3_bind_text(stmt, 3 + table.root, table.rows[i].ctime, -1, SQLITE_STATIC);
+                sqlite3_bind_text(stmt, 4 + table.root, table.rows[i].mtime, -1, SQLITE_STATIC);
+                for (Size j = 0; j < table.ordered_columns.len; j++) {
+                    const Column *col = table.ordered_columns[j];
+                    sqlite3_bind_text(stmt, (int)j + 5 + table.root, col->values[i], -1, SQLITE_STATIC);
+                }
+
+                if (!stmt.Run())
+                    return false;
+
+                used_tables.Set(&table);
+            }
+        }
+
+        // Delete unused tables
+        for (const Table &table: tables) {
+            if (!used_tables.Find(&table)) {
+                HeapArray<char> sql(&str_alloc);
+
+                Fmt(&sql, "DROP TABLE "); EncodeSqlName(table.name, &sql);
+
+                if (!db.Run(sql.ptr))
+                    return false;
+            }
+        }
+
+        return true;
+    });
+    if (!success)
+        return false;
 
     if (!db.Close())
         return false;
