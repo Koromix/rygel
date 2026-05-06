@@ -6,8 +6,6 @@ import * as App from './main.js';
 
 const PROGRESS_EXPIRATION = 2 * 60000;
 
-let sw = null;
-
 let next_message = 0;
 let msg_handlers = new Map;
 
@@ -17,7 +15,7 @@ async function initRelay() {
     navigator.serviceWorker.register('/sw.js');
     navigator.serviceWorker.addEventListener('message', handleMessage);
 
-    sw = await navigator.serviceWorker.ready.then(registration => registration.active);
+    await navigator.serviceWorker.ready;
 }
 
 async function sendDrop(info, key) {
@@ -39,6 +37,7 @@ async function callWorker(type, ...args) {
             args: args
         };
 
+        let sw = navigator.serviceWorker.controller;
         sw.postMessage(msg);
     });
 
@@ -75,6 +74,7 @@ function handleMessage(e) {
             App.run();
 
             // Try to keep the service worker alive, especially on Firefox!
+            let sw = navigator.serviceWorker.controller;
             sw.postMessage({ type: 'alive', args: [] });
         } break;
 
