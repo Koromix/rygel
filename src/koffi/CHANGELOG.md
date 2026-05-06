@@ -7,6 +7,12 @@
 
 ### Koffi 2.16
 
+#### Koffi 2.16.2
+
+*Released on 2026-05-06*
+
+- Fix string truncation bugs when passing some kinds of long V8 strings (see [Koromix/koffi#266](https://github.com/Koromix/koffi/issues/266))
+
 #### Koffi 2.16.1
 
 *Released on 2026-04-17*
