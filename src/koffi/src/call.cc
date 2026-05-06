@@ -248,7 +248,15 @@ Size CallData::PushStringValue(napi_value value, const char **out_str)
 
     len++;
 
-    if (len < (size_t)buf.len) [[likely]] {
+    // V8 can truncate the string and return a length that is less than the real string
+    // length in several cases, such as when it flattens string ropes.
+    // This was the cause of a truncation bug (see https://github.com/Koromix/koffi/issues/266),
+    // which went unnoticed for a long time.
+    // We don't want to query the length beforehand, because it's slow. Instead, check that the
+    // returned lengfth is much shorter than the available buffer capacity, and if so, we know
+    // we're okay because V8 flattens strings ~32 KiB at a time.
+
+    if ((Size)len < buf.len - Kibibytes(64)) [[likely]] {
         mem->heap.ptr += (Size)AlignLen(len, 16);
     } else {
         status = napi_get_value_string_utf8(env, value, nullptr, 0, &len);
@@ -284,7 +292,7 @@ Size CallData::PushString16Value(napi_value value, const char16_t **out_str16)
 
     len++;
 
-    if (len < (size_t)buf.len) [[likely]] {
+    if ((Size)len < buf.len - Kibibytes(64)) [[likely]] {
         mem->heap.ptr += (Size)AlignLen(len * 2, 16);
     } else {
         status = napi_get_value_string_utf16(env, value, nullptr, 0, &len);
