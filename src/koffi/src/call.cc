@@ -234,49 +234,54 @@ bool CallData::PushString32(napi_value value, int directions, const char32_t **o
 
 Size CallData::PushStringValue(napi_value value, const char **out_str)
 {
-    Span<char> buf;
-    size_t len = 0;
+    size_t len;
     napi_status status;
 
-    buf.ptr = (char *)mem->heap.ptr;
-    buf.len = mem->heap.end - mem->heap.ptr;
+    size_t available = (size_t)(mem->heap.end - mem->heap.ptr);
+    char *ptr = (char *)mem->heap.ptr;
 
-    status = napi_get_value_string_utf8(env, value, buf.ptr, (size_t)buf.len, &len);
-    if (status == napi_string_expected)
-        return -1;
-    K_ASSERT(status == napi_ok);
+    // Fast path for small strings
+    if (available >= 4096) [[likely]] {
+        char *ptr = (char *)mem->heap.ptr;
 
-    len++;
-
-    // V8 can truncate the string and return a length that is less than the real string
-    // length in several cases, such as when it flattens string ropes.
-    // This was the cause of a truncation bug (see https://github.com/Koromix/koffi/issues/266),
-    // which went unnoticed for a long time.
-    // We don't want to query the length beforehand, because it's slow. Instead, check that the
-    // returned length is much shorter than the available buffer capacity, and if so, we know
-    // we're okay because V8 flattens strings ~32 KiB at a time.
-
-    if ((Size)len < buf.len - 65536) [[likely]] {
-        mem->heap.ptr += (Size)AlignLen(len, 16);
-    } else {
-        status = napi_get_value_string_utf8(env, value, nullptr, 0, &len);
+        status = napi_get_value_string_utf8(env, value, ptr, 4096, &len);
+        if (status == napi_string_expected)
+            return -1;
         K_ASSERT(status == napi_ok);
 
         len++;
 
-        if ((Size)len <= buf.len) {
+        if ((Size)len < 4096 - 32) [[likely]] {
             mem->heap.ptr += (Size)AlignLen(len, 16);
-        } else {
-            buf = AllocateSpan<char>(&mem->allocator, (Size)len);
-            release_alloc |= (prev_stack == mem->stack.end);
 
-            status = napi_get_value_string_utf8(env, value, buf.ptr, (size_t)buf.len, nullptr);
-            K_ASSERT(status == napi_ok);
+            *out_str = ptr;
+            return (Size)len;
         }
     }
 
-    *out_str = buf.ptr;
-    return (Size)len;
+    status = napi_get_value_string_utf8(env, value, nullptr, 0, &len);
+    K_ASSERT(status == napi_ok);
+
+    len++;
+
+    if (len <= available) {
+        status = napi_get_value_string_utf8(env, value, ptr, len, nullptr);
+        K_ASSERT(status == napi_ok);
+
+        mem->heap.ptr += (Size)AlignLen(len, 16);
+
+        *out_str = ptr;
+        return (Size)len;
+    } else {
+        Span<char> buf = AllocateSpan<char>(&mem->allocator, (Size)len);
+        release_alloc |= (prev_stack == mem->stack.end);
+
+        status = napi_get_value_string_utf8(env, value, buf.ptr, len, nullptr);
+        K_ASSERT(status == napi_ok);
+
+        *out_str = buf.ptr;
+        return (Size)len;
+    }
 }
 
 Size CallData::PushString16Value(napi_value value, const char16_t **out_str16)
@@ -295,7 +300,7 @@ Size CallData::PushString16Value(napi_value value, const char16_t **out_str16)
     buf.ptr = (char16_t *)mem->heap.ptr;
     buf.len = (mem->heap.end - mem->heap.ptr) / 2;
 
-    if (len <= buf.len) {
+    if (len <= (size_t)buf.len) {
         status = napi_get_value_string_utf16(env, value, buf.ptr, len, nullptr);
         K_ASSERT(status == napi_ok);
 

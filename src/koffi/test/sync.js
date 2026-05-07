@@ -1074,7 +1074,13 @@ async function test() {
 
         let heap_size = koffi.config().sync_heap_size;
 
-        for (let i = heap_size - 98304; i < heap_size + 1024; i += 32) {
+        for (let i = 2048; i < 8192; i++) {
+            let str = pattern.repeat(i / bytes8);
+            let expected = Buffer.from(str, 'utf8').length;
+
+            assert.equal(StringLength(str), expected);
+        }
+        for (let i = heap_size - 256; i < heap_size + 256; i++) {
             let str = pattern.repeat(i / bytes8);
             let expected = Buffer.from(str, 'utf8').length;
 
