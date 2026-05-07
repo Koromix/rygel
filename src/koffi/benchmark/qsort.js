@@ -6,6 +6,7 @@ const pkg = require('./package.json');
 const napi = require(pkg.cnoke.output + '/qsort_napi.node');
 const koffi = require('..');
 const ctypes = optional('node-ctypes');
+const ffi = optional('node:ffi');
 const ffi_napi = optional('@napi-ffi/ffi-napi');
 const ref = optional('@napi-ffi/ref-napi');
 const struct = optional('@napi-ffi/ref-struct-di')?.(ref);
@@ -25,6 +26,7 @@ function main() {
         'koffi (JS array)': time => run_koffi_array(time),
         'koffi (Buffer)': time => run_koffi_buffer(time),
         'node-ctypes': ctypes ? time => run_node_ctypes(time) : undefined,
+        'node:ffi': ffi ? time => run_node_ffi(time) : undefined,
 
         // Crashes when it ends, for some reason
         // 'node-ffi-napi': ffi_napi ? time => run_node_ffi_napi(time) : undefined
@@ -169,6 +171,43 @@ function run_node_ctypes(time) {
     }
 
     callback.release();
+
+    time = performance.now() - start;
+    return { iterations: iterations, time: Math.round(time) };
+}
+
+function run_node_ffi(time) {
+    let lib = new ffi.DynamicLibrary(process.platform == 'win32' ? 'msvcrt.dll' : null);
+
+    const qsort = lib.getFunction('qsort', {
+        parameters: ['ptr', 'u64', 'u64', 'ptr'],
+        result: 'void'
+    });
+
+    const cmp = (ptr1, ptr2) => {
+        let a = ffi.getInt32(ptr1);
+        let b = ffi.getInt32(ptr2);
+
+        return a - b;
+    };
+    const callback = lib.registerCallback({ result: 'i32', parameters: ['ptr', 'ptr'] }, cmp);
+
+    let start = performance.now();
+    let iterations = 0;
+
+    while (performance.now() - start < time) {
+        let items = BigInt(RANDOM_INTS.length);
+
+        for (let i = 0; i < 10000; i++) {
+            let array = new Int32Array(RANDOM_INTS);
+            qsort(array, items, 4n, callback);
+            let sorted = Array.from({ length: RANDOM_INTS.length }, (_, i) => array[i]);
+        }
+
+        iterations += 10000;
+    }
+
+    lib.unregisterCallback(callback);
 
     time = performance.now() - start;
     return { iterations: iterations, time: Math.round(time) };
