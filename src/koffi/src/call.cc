@@ -251,7 +251,11 @@ Size CallData::PushStringValue(napi_value value, const char **out_str)
 
         len++;
 
-        if ((Size)len < 4096 - 32) [[likely]] {
+        // UTF-8 can take up to 4 bytes for a codepoint, so truncation may
+        // result in a value that is several bytes less than the buffer size.
+        // So len < 4096 - 4 should be enough, but exagerate a bit "just in case" :)
+
+        if ((Size)len < 4096 - 8) {
             mem->heap.ptr += (Size)AlignLen(len, 16);
 
             *out_str = ptr;
