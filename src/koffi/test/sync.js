@@ -1068,20 +1068,24 @@ async function test() {
     // Test boundary conditions between fast and slow string handling paths
     {
         let pattern = '👉🫠👉🫠🫠👉🫠🫠';
+
+        let bytes8 = Buffer.from(pattern, 'utf8').length;
+        let bytes16 = Buffer.from(pattern, 'utf16le').length;
+
         let heap_size = koffi.config().sync_heap_size;
 
-        for (let i = 0; i < heap_size / 4; i += 2048) {
-            let str = pattern.repeat(i);
+        for (let i = heap_size - 98304; i < heap_size + 1024; i += 32) {
+            let str = pattern.repeat(i / bytes8);
             let expected = Buffer.from(str, 'utf8').length;
 
             assert.equal(StringLength(str), expected);
         }
 
-        for (let i = 0; i < heap_size / 8; i += 2048) {
-            let str = pattern.repeat(i);
-            let expected = Buffer.from(str, 'utf16le').length;
+        for (let i = heap_size / 2 - 1024; i < heap_size / 2 + 1024; i += 32) {
+            let str = pattern.repeat(i / bytes16);
+            let expected = Buffer.from(str, 'utf16le').length / 2;
 
-            assert.equal(StringLength16(str) * 2, expected);
+            assert.equal(StringLength16(str), expected);
         }
     }
 
