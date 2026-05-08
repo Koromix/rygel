@@ -153,6 +153,15 @@ inline T *CallData::AllocHeap(Size size)
     }
 }
 
+void InitTranslateZeroCall(Napi::Env env);
+
+napi_value TranslateFastCall(napi_env env, napi_callback_info info);
+napi_value TranslateNormalCall(napi_env env, napi_callback_info info);
+napi_value TranslateVariadicCall(napi_env env, napi_callback_info info);
+napi_value TranslateAsyncCall(napi_env env, napi_callback_info info);
+
+napi_value CallPointer(napi_env env, const FunctionInfo *proto, void *native, napi_value *args, Size count);
+
 void PerformAsyncRelay(napi_env env, napi_value callback, void *ctx, void *udata);
 
 void *GetTrampoline(int idx);

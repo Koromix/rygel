@@ -398,11 +398,6 @@ extern napi_value (*translate_zero_call)(napi_env env, napi_callback_info info);
 InstanceMemory *AllocateMemory(InstanceData *instance, Size stack_size, Size heap_size);
 void ReleaseMemory(InstanceData *instance, InstanceMemory *mem);
 
-napi_value TranslateFastCall(napi_env env, napi_callback_info info);
-napi_value TranslateNormalCall(napi_env env, napi_callback_info info);
-napi_value TranslateVariadicCall(napi_env env, napi_callback_info info);
-napi_value TranslateAsyncCall(napi_env env, napi_callback_info info);
-
 bool InitAsyncBroker(Napi::Env env, InstanceData *instance);
 
 }

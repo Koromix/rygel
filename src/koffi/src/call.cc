@@ -21,6 +21,8 @@ struct RelayContext {
     bool done = false;
 };
 
+extern "C" napi_value SwitchAndRelay(CallData *call, Size idx, uint8_t *sp, uint8_t *saved_sp, MemoryRange<uint8_t> *new_stack);
+
 #if defined(_WIN32)
 
 extern "C" void *FindTrampolineStart();
@@ -1220,6 +1222,505 @@ bool CallData::CheckDynamicLength(napi_value obj, Size element, const char *coun
     }
 
     return true;
+}
+
+static napi_value TranslateZeroCall(napi_env env, napi_callback_info info)
+{
+    struct CallbackBundle {
+        napi_env env;
+        void *data;
+    };
+
+    CallbackBundle **ptr = (CallbackBundle **)((uint8_t *)info + K_SIZE(void *));
+    FunctionInfo *func = (FunctionInfo *)(*ptr)->data;
+
+    InstanceData *instance = func->instance;
+    InstanceMemory *mem = instance->memories[0];
+    CallData call(env, instance, mem, func->native);
+
+    K_DEFER_C(prev_call = instance->sync_call) { instance->sync_call = prev_call; };
+    instance->sync_call = &call;
+
+    napi_value ret = call.Run(func, nullptr);
+    call.FinalizeFast();
+
+    return ret;
+}
+
+static bool DetectDeno(Napi::Env env)
+{
+    Napi::Value ret = env.RunScript("typeof Deno != 'undefined'");
+    Napi::Boolean b = ret.ToBoolean();
+
+    return b.Value();
+}
+
+static bool DetectBun(Napi::Env env)
+{
+    Napi::Value ret = env.RunScript("process.isBun");
+    Napi::Boolean b = ret.ToBoolean();
+
+    return b.Value();
+}
+
+void InitTranslateZeroCall(Napi::Env env)
+{
+    if (DetectDeno(env) || DetectBun(env)) {
+        translate_zero_call = TranslateFastCall;
+        return;
+    }
+
+    Napi::Object self = Napi::Object::New(env);
+
+    napi_status status;
+    napi_value func;
+    napi_value ret;
+
+    status = napi_create_function(env, nullptr, 0, [](napi_env env, napi_callback_info info) {
+        napi_value self;
+        napi_get_cb_info(env, info, nullptr, nullptr, &self, nullptr);
+
+        napi_value *ptr = (napi_value *)info;
+
+        if (ptr[0] != self && ptr[1] != self) {
+            translate_zero_call = TranslateZeroCall;
+        } else {
+            translate_zero_call = TranslateFastCall;
+        }
+
+        return self;
+    }, nullptr, &func);
+    K_ASSERT(status == napi_ok);
+
+    status = napi_call_function(env, self, func, 0, nullptr, &ret);
+    K_ASSERT(status == napi_ok);
+}
+
+napi_value TranslateFastCall(napi_env env, napi_callback_info info)
+{
+    napi_value args[6];
+    size_t count = 6;
+    FunctionInfo *func;
+
+    napi_status status = napi_get_cb_info(env, info, &count, args, nullptr, (void **)&func);
+    K_ASSERT(status == napi_ok);
+
+    InstanceData *instance = func->instance;
+
+    if (count < (size_t)func->required_parameters) [[unlikely]] {
+        ThrowError<Napi::TypeError>(env, "Expected %1 arguments, got %2", func->parameters.len, count);
+        return Napi::Env(env).Null();
+    }
+
+    InstanceMemory *mem = instance->memories[0];
+    CallData call(env, instance, mem, func->native);
+
+    K_DEFER_C(prev_call = instance->sync_call) { instance->sync_call = prev_call; };
+    instance->sync_call = &call;
+
+    napi_value ret = call.Run(func, args);
+    call.FinalizeFast();
+
+    return ret;
+}
+
+static FORCE_INLINE napi_value TranslateNormalCall(napi_env env, const FunctionInfo *func, void *native, napi_value *args, Size count)
+{
+    static_assert(MaxParameters >= 6);
+
+    InstanceData *instance = func->instance;
+
+    if (count < func->required_parameters) [[unlikely]] {
+        ThrowError<Napi::TypeError>(env, "Expected %1 arguments, got %2", func->parameters.len, count);
+        return Napi::Env(env).Null();
+    }
+
+    InstanceMemory *mem = instance->memories[0];
+    CallData call(env, instance, mem, native);
+
+    K_DEFER_C(prev_call = instance->sync_call) { instance->sync_call = prev_call; };
+    instance->sync_call = &call;
+
+    napi_value ret = call.Run(func, args);
+    call.Finalize();
+
+    return ret;
+}
+
+napi_value TranslateNormalCall(napi_env env, napi_callback_info info)
+{
+    napi_value args[MaxParameters];
+    size_t count = 6;
+    FunctionInfo *func;
+
+    napi_status status = napi_get_cb_info(env, info, &count, args, nullptr, (void **)&func);
+    K_ASSERT(status == napi_ok);
+
+    if (count > 6) {
+        napi_status status = napi_get_cb_info(env, info, &count, args, nullptr, nullptr);
+        K_ASSERT(status == napi_ok);
+
+        count = std::min(count, (size_t)MaxParameters);
+    }
+
+    return TranslateNormalCall(env, func, func->native, args, (Size)count);
+}
+
+static napi_value TranslateVariadicCall(napi_env env, const FunctionInfo *func, void *native, napi_value *args, Size count)
+{
+    static_assert(MaxParameters >= 6);
+
+    InstanceData *instance = func->instance;
+
+    FunctionInfo *variadic = nullptr;
+    K_DEFER_N(err_guard) { delete variadic; };
+
+    // Try cached function
+    {
+        FunctionInfo *prev = instance->variadic_func;
+
+        if (prev && prev->native == native) {
+            Size specified = (count - prev->required_parameters);
+            Size processed = (prev->parameters.len - prev->required_parameters) * 2;
+
+            if (specified == processed) {
+                bool match = true;
+
+                for (Size i = prev->required_parameters, j = prev->required_parameters; i < (Size)count; i += 2, j++) {
+                    int directions;
+                    const TypeInfo *type = ResolveType(Napi::Value(env, args[i]), &directions);
+
+                    if (type != prev->parameters[j].type || directions != prev->parameters[j].directions) [[unlikely]] {
+                        match = false;
+                        break;
+                    }
+                }
+
+                if (match) [[likely]] {
+                    variadic = prev;
+
+                    // If an error happens it'll get destroyed, so don't keep it around
+                    instance->variadic_func = nullptr;
+                }
+            }
+        }
+    }
+
+    if (!variadic) {
+        variadic = new FunctionInfo();
+
+        memcpy((void *)variadic, func, K_SIZE(*func));
+        memset((void *)&variadic->parameters, 0, K_SIZE(variadic->parameters));
+        memset((void *)&variadic->sync, 0, K_SIZE(variadic->sync));
+        memset((void *)&variadic->async, 0, K_SIZE(variadic->async));
+
+        variadic->parameters = func->parameters;
+        variadic->lib = nullptr;
+
+        if (count < variadic->required_parameters) [[unlikely]] {
+            ThrowError<Napi::TypeError>(env, "Expected %1 arguments or more, got %2", variadic->parameters.len, count);
+            return Napi::Env(env).Null();
+        }
+        if ((count - variadic->required_parameters) % 2) [[unlikely]] {
+            ThrowError<Napi::Error>(env, "Missing value argument for variadic call");
+            return Napi::Env(env).Null();
+        }
+
+        for (Size i = variadic->required_parameters; i < count; i += 2) {
+            ParameterInfo param = {};
+
+            param.type = ResolveType(Napi::Value(env, args[i]), &param.directions);
+
+            if (!param.type) [[unlikely]]
+                return Napi::Env(env).Null();
+            if (!CanPassType(param.type, param.directions)) [[unlikely]] {
+                ThrowError<Napi::TypeError>(env, "Type %1 cannot be used as a parameter", param.type->name);
+                return Napi::Env(env).Null();
+            }
+            if (variadic->parameters.len >= MaxParameters) [[unlikely]] {
+                ThrowError<Napi::TypeError>(env, "Functions cannot have more than %1 parameters", MaxParameters);
+                return Napi::Env(env).Null();
+            }
+
+            param.variadic = true;
+            param.offset = (int8_t)(i + 1);
+
+            variadic->parameters.Append(param);
+        }
+
+        if (!AnalyseFunction(env, instance, variadic)) [[unlikely]]
+            return Napi::Env(env).Null();
+    }
+
+    InstanceMemory *mem = instance->memories[0];
+    CallData call(env, instance, mem, native);
+
+    K_DEFER_C(prev_call = instance->sync_call) { instance->sync_call = prev_call; };
+    instance->sync_call = &call;
+
+    napi_value ret = call.Run(variadic, args);
+    call.Finalize();
+
+    if (variadic != instance->variadic_func) {
+        err_guard.Disable();
+
+        delete instance->variadic_func;
+        instance->variadic_func = variadic;
+    }
+
+    return ret;
+}
+
+napi_value TranslateVariadicCall(napi_env env, napi_callback_info info)
+{
+    napi_value args[MaxParameters];
+    size_t count = 6;
+    FunctionInfo *func;
+
+    napi_status status = napi_get_cb_info(env, info, &count, args, nullptr, (void **)&func);
+    K_ASSERT(status == napi_ok);
+
+    if (count > 6) {
+        napi_status status = napi_get_cb_info(env, info, &count, args, nullptr, nullptr);
+        K_ASSERT(status == napi_ok);
+
+        count = std::min(count, (size_t)MaxParameters);
+    }
+
+    return TranslateVariadicCall(env, func, func->native, args, (Size)count);
+}
+
+class AsyncCall: public Napi::AsyncWorker {
+    Napi::Env env;
+
+    const FunctionInfo *func;
+    NoDestroy<CallData> call;
+
+    bool prepared = false;
+
+public:
+    AsyncCall(Napi::Env env, InstanceData *instance, InstanceMemory *mem, const FunctionInfo *func, Napi::Function &callback)
+        : Napi::AsyncWorker(callback), env(env), func(func->Ref()), call(env, instance, mem, func->native) {}
+    ~AsyncCall();
+
+    bool Prepare(napi_value *args) {
+        prepared = call->PrepareAsync(func, args);
+
+        if (!prepared) [[unlikely]] {
+            Napi::Error err = env.GetAndClearPendingException();
+            SetError(err.Message());
+        }
+
+        return prepared;
+    }
+
+    void Execute() override;
+    void OnOK() override;
+    void OnError(const Napi::Error& err) override;
+};
+
+AsyncCall::~AsyncCall()
+{
+#if defined(K_DEBUG)
+    call->~CallData();
+#endif
+
+    ReleaseMemory(call->instance, call->mem);
+    func->Unref();
+}
+
+void AsyncCall::Execute()
+{
+    if (prepared) [[likely]] {
+        call->ExecuteAsync();
+    }
+}
+
+void AsyncCall::OnOK()
+{
+    K_ASSERT(prepared);
+
+    Napi::FunctionReference &callback = Callback();
+
+    napi_value ret = call->EndAsync();
+    call->Finalize();
+
+    napi_value self = env.Null();
+    napi_value args[] = { env.Null(), ret };
+
+    callback.Call(self, K_LEN(args), args);
+}
+
+void AsyncCall::OnError(const Napi::Error& err)
+{
+    Napi::FunctionReference &callback = Callback();
+
+    call->Finalize();
+
+    napi_value self = env.Null();
+    napi_value args[] = { err.Value(), env.Undefined() };
+
+    callback.Call(self, K_LEN(args), args);
+}
+
+napi_value TranslateAsyncCall(napi_env env, napi_callback_info info)
+{
+    static_assert(MaxParameters >= 6);
+
+    napi_value args[MaxParameters];
+    size_t count = 6;
+    FunctionInfo *func;
+
+    napi_status status = napi_get_cb_info(env, info, &count, args, nullptr, (void **)&func);
+    K_ASSERT(status == napi_ok);
+
+    if (count > 6) {
+        napi_status status = napi_get_cb_info(env, info, &count, args, nullptr, nullptr);
+        K_ASSERT(status == napi_ok);
+
+        count = std::min(count, (size_t)MaxParameters);
+    }
+
+    InstanceData *instance = func->instance;
+
+    if (count <= (size_t)func->required_parameters) {
+        ThrowError<Napi::TypeError>(env, "Expected %1 arguments, got %2", func->required_parameters + 1, count);
+        return Napi::Env(env).Null();
+    }
+
+    Napi::Function callback = Napi::Value(env, args[func->required_parameters]).As<Napi::Function>();
+
+    if (!callback.IsFunction()) {
+        ThrowError<Napi::TypeError>(env, "Expected callback function as last argument, got %1", GetValueType(instance, callback));
+        return Napi::Env(env).Null();
+    }
+
+    InstanceMemory *mem = AllocateMemory(instance, instance->config.async_stack_size, instance->config.async_heap_size);
+    if (!mem) [[unlikely]] {
+        ThrowError<Napi::Error>(env, "Too many asynchronous calls are running");
+        return Napi::Env(env).Null();
+    }
+    AsyncCall *async = new AsyncCall(env, instance, mem, func, callback);
+
+    async->Prepare(args);
+    async->Queue();
+
+    return Napi::Env(env).Undefined();
+}
+
+static FORCE_INLINE bool CheckTrampolineStatus(TrampolineInfo *trampoline)
+{
+    if (trampoline->state == 1) [[likely]]
+        return true;
+
+    Napi::Env env = trampoline->env;
+
+    if (!trampoline->state) {
+        ThrowError<Napi::Error>(env, "Cannot use non-registered callback beyond FFI call");
+        trampoline->state = -1;
+    }
+
+    // We use trampoline->state < 0 as a signal than an exception has occured, because we want
+    // to avoid calling IsExceptionPending() in the happy path. But trampolines get reused, so
+    // there might not be an exception anymore!
+    if (!env.IsExceptionPending()) {
+        trampoline->state = 1;
+        return true;
+    }
+
+    return false;
+}
+
+extern "C" void RelayCallback(Size idx, uint8_t *sp)
+{
+    TrampolineInfo *trampoline = &shared.trampolines[idx];
+    InstanceData *instance = trampoline->instance;
+
+    // Fast path: main thread and we are running a native call through Koffi.
+    // But this means we are running on the custom Koffi stack, which could trip up
+    // Node and V8, so we need to switch back to the normal/main stack.
+    if (sp >= trampoline->stack0.ptr && sp <= trampoline->stack0.end) [[likely]] {
+        CallData *call = instance->sync_call;
+
+        SwitchAndRelay(call, idx, sp, call->saved_sp, &call->mem->stack);
+        return;
+    }
+
+    if (!CheckTrampolineStatus(trampoline))
+        return;
+
+    // Otherwise, we need to allocate memory to perform the callback.
+    // Since the necessary machinery live in CallData, just use a temporary instance.
+    // In some cases we would reuse the existing call, but it is rare so let's ignore
+    // this for simplicity.
+
+    Napi::Env env = trampoline->env;
+
+    InstanceMemory *mem = AllocateMemory(instance, instance->config.async_stack_size, instance->config.async_heap_size);
+    if (!mem) [[unlikely]] {
+        ThrowError<Napi::Error>(env, "Too many asynchronous calls are running");
+        return;
+    }
+    K_DEFER { ReleaseMemory(instance, mem); };
+
+    if (std::this_thread::get_id() == instance->main_thread_id) {
+        CallData call(env, instance, mem, nullptr);
+        K_DEFER { call.Finalize(); };
+
+        napi_handle_scope scope;
+        napi_open_handle_scope(env, &scope);
+        K_DEFER { napi_close_handle_scope(env, scope); };
+
+        call.Relay(idx, sp);
+    } else {
+        CallData call(env, instance, mem, nullptr);
+        call.RelayAsync(idx, sp);
+    }
+}
+
+extern "C" void RelayDirect(CallData *call, Size idx, uint8_t *sp)
+{
+    TrampolineInfo *trampoline = &shared.trampolines[idx];
+
+#if defined(_WIN32)
+    TEB *teb = GetTEB();
+    InstanceData *instance = trampoline->instance;
+
+    // Restore previous stack limits at the end
+    K_DEFER_C(base = teb->StackBase,
+              limit = teb->StackLimit,
+              dealloc = teb->DeallocationStack) {
+        teb->StackBase = base;
+        teb->StackLimit = limit;
+        teb->DeallocationStack = dealloc;
+    };
+
+    // Adjust stack limits so SEH works correctly
+    teb->StackBase = instance->main_stack_max;
+    teb->StackLimit = instance->main_stack_min;
+    teb->DeallocationStack = instance->main_stack_min;
+#endif
+
+    if (!CheckTrampolineStatus(trampoline))
+        return;
+
+    // Relay the call
+    {
+        napi_handle_scope scope;
+        napi_open_handle_scope(call->env, &scope);
+        K_DEFER { napi_close_handle_scope(call->env, scope); };
+
+        call->Relay(idx, sp);
+    }
+}
+
+napi_value CallPointer(napi_env env, const FunctionInfo *proto, void *native, napi_value *args, Size count)
+{
+    if (proto->variadic) {
+        return TranslateVariadicCall(env, proto, native, args, count);
+    } else {
+        return TranslateNormalCall(env, proto, native, args, count);
+    }
 }
 
 void PerformAsyncRelay(napi_env, napi_value, void *, void *udata)
