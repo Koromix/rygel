@@ -763,13 +763,11 @@ napi_value CallData::EndAsync()
 void CallData::Relay(Size idx, uint8_t *sp)
 {
     TrampolineInfo *trampoline = &shared.trampolines[idx];
+    const FunctionInfo *proto = trampoline->proto;
 
     uint8_t *own_sp = sp;
     uint8_t *caller_sp = sp + 128;
     BackRegisters *out_reg = (BackRegisters *)(sp + 64);
-
-    const FunctionInfo *proto = trampoline->proto;
-    Napi::Function func = trampoline->func.Value();
 
     uint64_t *gpr_ptr = (uint64_t *)own_sp;
     uint64_t *xmm_ptr = gpr_ptr + 4;
@@ -782,9 +780,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
         memset(out_reg, 0, K_SIZE(*out_reg));
     };
 
-    LocalArray<napi_value, MaxParameters + 1> arguments;
-
-    arguments.Append(!trampoline->recv.IsEmpty() ? trampoline->recv.Value() : env.Undefined());
+    napi_value arguments[MaxParameters];
 
     // Convert to JS arguments
     for (Size i = 0, j = !!return_ptr; i < proto->parameters.len; i++, j++) {
@@ -798,113 +794,97 @@ void CallData::Relay(Size idx, uint8_t *sp)
                 bool b = *(bool *)(j < 4 ? gpr_ptr + j : stk_ptr);
                 stk_ptr += (j >= 4);
 
-                Napi::Value arg = Napi::Boolean::New(env, b);
-                arguments.Append(arg);
+                arguments[i] = Napi::Boolean::New(env, b);
             } break;
             case PrimitiveKind::Int8: {
                 int8_t v = *(int8_t *)(j < 4 ? gpr_ptr + j : stk_ptr);
                 stk_ptr += (j >= 4);
 
-                Napi::Value arg = NewInt(env, v);
-                arguments.Append(arg);
+                arguments[i] = NewInt(env, v);
             } break;
             case PrimitiveKind::UInt8: {
                 uint8_t v = *(uint8_t *)(j < 4 ? gpr_ptr + j : stk_ptr);
                 stk_ptr += (j >= 4);
 
-                Napi::Value arg = NewInt(env, v);
-                arguments.Append(arg);
+                arguments[i] = NewInt(env, v);
             } break;
             case PrimitiveKind::Int16: {
                 int16_t v = *(int16_t *)(j < 4 ? gpr_ptr + j : stk_ptr);
                 stk_ptr += (j >= 4);
 
-                Napi::Value arg = NewInt(env, v);
-                arguments.Append(arg);
+                arguments[i] = NewInt(env, v);
             } break;
             case PrimitiveKind::Int16S: {
                 int16_t v = *(int16_t *)(j < 4 ? gpr_ptr + j : stk_ptr);
                 stk_ptr += (j >= 4);
 
-                Napi::Value arg = NewInt(env, ReverseBytes(v));
-                arguments.Append(arg);
+                arguments[i] = NewInt(env, ReverseBytes(v));
             } break;
             case PrimitiveKind::UInt16: {
                 uint16_t v = *(uint16_t *)(j < 4 ? gpr_ptr + j : stk_ptr);
                 stk_ptr += (j >= 4);
 
-                Napi::Value arg = NewInt(env, v);
-                arguments.Append(arg);
+                arguments[i] = NewInt(env, v);
             } break;
             case PrimitiveKind::UInt16S: {
                 uint16_t v = *(uint16_t *)(j < 4 ? gpr_ptr + j : stk_ptr);
                 stk_ptr += (j >= 4);
 
-                Napi::Value arg = NewInt(env, ReverseBytes(v));
-                arguments.Append(arg);
+                arguments[i] = NewInt(env, ReverseBytes(v));
             } break;
             case PrimitiveKind::Int32: {
                 int32_t v = *(int32_t *)(j < 4 ? gpr_ptr + j : stk_ptr);
                 stk_ptr += (j >= 4);
 
-                Napi::Value arg = NewInt(env, v);
-                arguments.Append(arg);
+                arguments[i] = NewInt(env, v);
             } break;
             case PrimitiveKind::Int32S: {
                 int32_t v = *(int32_t *)(j < 4 ? gpr_ptr + j : stk_ptr);
                 stk_ptr += (j >= 4);
 
-                Napi::Value arg = NewInt(env, ReverseBytes(v));
-                arguments.Append(arg);
+                arguments[i] = NewInt(env, ReverseBytes(v));
             } break;
             case PrimitiveKind::UInt32: {
                 uint32_t v = *(uint32_t *)(j < 4 ? gpr_ptr + j : stk_ptr);
                 stk_ptr += (j >= 4);
 
-                Napi::Value arg = NewInt(env, v);
-                arguments.Append(arg);
+                arguments[i] = NewInt(env, v);
             } break;
             case PrimitiveKind::UInt32S: {
                 uint32_t v = *(uint32_t *)(j < 4 ? gpr_ptr + j : stk_ptr);
                 stk_ptr += (j >= 4);
 
-                Napi::Value arg = NewInt(env, ReverseBytes(v));
-                arguments.Append(arg);
+                arguments[i] = NewInt(env, ReverseBytes(v));
             } break;
             case PrimitiveKind::Int64: {
                 int64_t v = *(int64_t *)(j < 4 ? gpr_ptr + j : stk_ptr);
                 stk_ptr += (j >= 4);
 
-                Napi::Value arg = NewInt(env, v);
-                arguments.Append(arg);
+                arguments[i] = NewInt(env, v);
             } break;
             case PrimitiveKind::Int64S: {
                 int64_t v = *(int64_t *)(j < 4 ? gpr_ptr + j : stk_ptr);
                 stk_ptr += (j >= 4);
 
-                Napi::Value arg = NewInt(env, ReverseBytes(v));
-                arguments.Append(arg);
+                arguments[i] = NewInt(env, ReverseBytes(v));
             } break;
             case PrimitiveKind::UInt64: {
                 uint64_t v = *(uint64_t *)(j < 4 ? gpr_ptr + j : stk_ptr);
                 stk_ptr += (j >= 4);
 
-                Napi::Value arg = NewInt(env, v);
-                arguments.Append(arg);
+                arguments[i] = NewInt(env, v);
             } break;
             case PrimitiveKind::UInt64S: {
                 uint64_t v = *(uint64_t *)(j < 4 ? gpr_ptr + j : stk_ptr);
                 stk_ptr += (j >= 4);
 
-                Napi::Value arg = NewInt(env, ReverseBytes(v));
-                arguments.Append(arg);
+                arguments[i] = NewInt(env, ReverseBytes(v));
             } break;
             case PrimitiveKind::String: {
                 const char *str = *(const char **)(j < 4 ? gpr_ptr + j : stk_ptr);
                 stk_ptr += (j >= 4);
 
-                Napi::Value arg = str ? Napi::String::New(env, str) : env.Null();
-                arguments.Append(arg);
+                arguments[i] = str ? Napi::String::New(env, str) : env.Null();
 
                 if (param.type->dispose) {
                     param.type->dispose(env, param.type, str);
@@ -914,8 +894,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
                 const char16_t *str16 = *(const char16_t **)(j < 4 ? gpr_ptr + j : stk_ptr);
                 stk_ptr += (j >= 4);
 
-                Napi::Value arg = str16 ? Napi::String::New(env, str16) : env.Null();
-                arguments.Append(arg);
+                arguments[i] = str16 ? Napi::String::New(env, str16) : env.Null();
 
                 if (param.type->dispose) {
                     param.type->dispose(env, param.type, str16);
@@ -925,15 +904,17 @@ void CallData::Relay(Size idx, uint8_t *sp)
                 const char32_t *str32 = *(const char32_t **)(j < 4 ? gpr_ptr + j : stk_ptr);
                 stk_ptr += (j >= 4);
 
-                Napi::Value arg = str32 ? MakeStringFromUTF32(env, str32) : env.Null();
-                arguments.Append(arg);
+                arguments[i] = str32 ? MakeStringFromUTF32(env, str32) : env.Null();
+
+                if (param.type->dispose) {
+                    param.type->dispose(env, param.type, str32);
+                }
             } break;
             case PrimitiveKind::Pointer: {
                 void *ptr2 = *(void **)(j < 4 ? gpr_ptr + j : stk_ptr);
                 stk_ptr += (j >= 4);
 
-                Napi::Value p = ptr2 ? WrapPointer(env, param.type->ref.type, ptr2) : env.Null();
-                arguments.Append(p);
+                arguments[i] = ptr2 ? WrapPointer(env, param.type->ref.type, ptr2) : env.Null();
 
                 if (param.type->dispose) {
                     param.type->dispose(env, param.type, ptr2);
@@ -943,8 +924,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
                 void *ptr2 = *(void **)(j < 4 ? gpr_ptr + j : stk_ptr);
                 stk_ptr += (j >= 4);
 
-                Napi::Value p = ptr2 ? WrapPointer(env, param.type->ref.type, ptr2) : env.Null();
-                arguments.Append(p);
+                arguments[i] = ptr2 ? WrapPointer(env, param.type->ref.type, ptr2) : env.Null();
 
                 if (param.type->dispose) {
                     param.type->dispose(env, param.type, ptr2);
@@ -960,23 +940,20 @@ void CallData::Relay(Size idx, uint8_t *sp)
                 }
                 stk_ptr += (j >= 4);
 
-                Napi::Object obj2 = DecodeObject(env, ptr, param.type);
-                arguments.Append(obj2);
+                arguments[i] = DecodeObject(env, ptr, param.type);
             } break;
             case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
             case PrimitiveKind::Float32: {
                 float f = *(float *)(j < 4 ? xmm_ptr + j : stk_ptr);
                 stk_ptr += (j >= 4);
 
-                Napi::Value arg = Napi::Number::New(env, (double)f);
-                arguments.Append(arg);
+                arguments[i] = Napi::Number::New(env, (double)f);
             } break;
             case PrimitiveKind::Float64: {
                 double d = *(double *)(j < 4 ? xmm_ptr + j : stk_ptr);
                 stk_ptr += (j >= 4);
 
-                Napi::Value arg = Napi::Number::New(env, d);
-                arguments.Append(arg);
+                arguments[i] = Napi::Number::New(env, d);
             } break;
 
             case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;
@@ -985,10 +962,10 @@ void CallData::Relay(Size idx, uint8_t *sp)
 
     const TypeInfo *type = proto->ret.type;
 
-    // Make the call!
-    Napi::Value value = func.Call(arguments[0], arguments.len - 1, arguments.data + 1);
+    // We're ready, make the call!
+    napi_value value = CallCallback(trampoline, arguments, proto->parameters.len);
 
-    if (env.IsExceptionPending()) [[unlikely]]
+    if (!value) [[unlikely]]
         return;
 
 #define RETURN_INTEGER(CType) \
@@ -1072,14 +1049,12 @@ void CallData::Relay(Size idx, uint8_t *sp)
                 return;
             }
 
-            Napi::Object obj = value.As<Napi::Object>();
-
             if (return_ptr) {
-                if (!PushObject(obj, type, return_ptr))
+                if (!PushObject(value, type, return_ptr))
                     return;
                 out_reg->rax = (uint64_t)return_ptr;
             } else {
-                PushObject(obj, type, (uint8_t *)&out_reg->rax);
+                PushObject(value, type, (uint8_t *)&out_reg->rax);
             }
         } break;
         case PrimitiveKind::Array: { K_UNREACHABLE(); } break;

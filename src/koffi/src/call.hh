@@ -76,6 +76,8 @@ struct alignas(8) CallData {
     void Relay(Size idx, uint8_t *sp);
     void RelayAsync(Size idx, uint8_t *sp);
 
+    INLINE_UNITY napi_value CallCallback(const TrampolineInfo *trampoline, const napi_value *args, Size count);
+
     INLINE_UNITY bool PushString(napi_value value, int directions, const char **out_str);
     INLINE_UNITY bool PushString16(napi_value value, int directions, const char16_t **out_str16);
     INLINE_UNITY bool PushString32(napi_value value, int directions, const char32_t **out_str32);

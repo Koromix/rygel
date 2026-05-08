@@ -361,10 +361,12 @@ static_assert(MaxAsyncCalls >= DefaultMaxAsyncCalls);
 struct TrampolineInfo {
     int state;
 
+    napi_env env;
     InstanceData *instance;
+    MemoryRange<uint8_t> stack0;
+
     const FunctionInfo *proto;
-    Napi::FunctionReference func;
-    Napi::Reference<Napi::Value> recv;
+    napi_ref func;
 };
 
 struct SharedData {

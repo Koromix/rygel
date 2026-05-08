@@ -65,6 +65,7 @@ function loadDynamic(root, pkg, triplets) {
 
 function wrapNative(native) {
     let load = native.load;
+    let register = native.register;
 
     native.sizeof = (spec) => native.type(spec).size;
     native.alignof = (spec) => native.type(spec).alignment;
@@ -81,6 +82,17 @@ function wrapNative(native) {
             throw new Error(`Record type ${type.name} does not have member '${name}'`);
 
         return member.offset;
+    };
+
+    native.register = (...args) => {
+        if (args.length >= 3 && typeof args[1] == 'function') {
+            process.emitWarning('Using koffi.register() with a custom this value was deprecated in Koffi 3.0, use function.bind() instead', 'Warning', 'KOFFI009');
+
+            args[1] = args[1].bind(args[0]);
+            args = args.slice(1);
+        }
+
+        return register(...args);
     };
 
     // Deprecated functions

@@ -132,11 +132,10 @@ void CallData::Finalize()
             TrampolineInfo *trampoline = &shared.trampolines[idx];
 
             K_ASSERT(trampoline->instance == instance);
-            K_ASSERT(!trampoline->func.IsEmpty());
 
             trampoline->state = 0;
-            trampoline->func.Reset();
-            trampoline->recv.Reset();
+            napi_delete_reference(env, trampoline->func);
+            trampoline->func = nullptr;
 
             shared.available.Append(idx);
         }
@@ -185,6 +184,23 @@ void CallData::RelayAsync(Size idx, uint8_t *sp)
     while (!ctx.done) {
         ctx.cv.wait(lock);
     }
+}
+
+napi_value CallData::CallCallback(const TrampolineInfo *trampoline, const napi_value *args, Size count)
+{
+    napi_value recv;
+    napi_value func;
+    napi_value value;
+
+    napi_get_undefined(env, &recv);
+    napi_get_reference_value(env, trampoline->func, &func);
+
+    napi_status status = napi_call_function(env, recv, func, (size_t)count, args, &value);
+    if (status == napi_pending_exception) [[unlikely]]
+        return nullptr;
+    K_ASSERT(status == napi_ok);
+
+    return value;
 }
 
 bool CallData::PushString(napi_value value, int directions, const char **out_str)
@@ -1156,10 +1172,11 @@ void *CallData::ReserveTrampoline(const FunctionInfo *proto, Napi::Function func
     TrampolineInfo *trampoline = &shared.trampolines[idx];
 
     trampoline->state = 1;
+    trampoline->env = env;
     trampoline->instance = instance;
+    trampoline->stack0 = instance->memories[0]->stack0;
     trampoline->proto = proto;
-    trampoline->func = Napi::Persistent(func);
-    trampoline->recv.Reset();
+    napi_create_reference(env, func, 1, &trampoline->func);
 
     void *ptr = GetTrampoline(idx);
 

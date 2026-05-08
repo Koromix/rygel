@@ -1210,37 +1210,31 @@ napi_value CallData::EndAsync()
 void CallData::Relay(Size idx, uint8_t *sp)
 {
     TrampolineInfo *trampoline = &shared.trampolines[idx];
+    const FunctionInfo *proto = trampoline->proto;
 
     uint8_t *in_ptr = sp + 48;
     BackRegisters *out_reg = (BackRegisters *)sp;
-
-    const FunctionInfo *proto = trampoline->proto;
-    Napi::Function func = trampoline->func.Value();
 
     K_DEFER_N(err_guard) {
         trampoline->state = -1;
         memset(out_reg, 0, K_SIZE(*out_reg));
     };
 
-    LocalArray<napi_value, MaxParameters + 1> arguments;
-
-    arguments.Append(!trampoline->recv.IsEmpty() ? trampoline->recv.Value() : env.Undefined());
+    napi_value arguments[MaxParameters];
 
 #define POP_INTEGER(CType) \
         do { \
             const uint8_t *src = in_ptr + param.abi.offset; \
             CType v = *(const CType *)src; \
              \
-            Napi::Value arg = NewInt(env, v); \
-            arguments.Append(arg); \
+            arguments[i] = NewInt(env, v); \
         } while (false)
 #define POP_INTEGER_SWAP(CType) \
         do { \
             const uint8_t *src = in_ptr + param.abi.offset; \
             CType v = *(const CType *)src; \
              \
-            Napi::Value arg = NewInt(env, ReverseBytes(v)); \
-            arguments.Append(arg); \
+            arguments[i] = NewInt(env, ReverseBytes(v)); \
         } while (false)
 
     // Convert to JS arguments
@@ -1255,8 +1249,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
                 const uint8_t *src = in_ptr + param.abi.offset;
                 bool b = *(bool *)src;
 
-                Napi::Value arg = Napi::Boolean::New(env, b);
-                arguments.Append(arg);
+                arguments[i] = Napi::Boolean::New(env, b);
             } break;
 
             case PrimitiveKind::Int8: { POP_INTEGER(int8_t); } break;
@@ -1278,8 +1271,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
                 const uint8_t *src = in_ptr + param.abi.offset;
                 const char *str = *(const char **)src;
 
-                Napi::Value arg = str ? Napi::String::New(env, str) : env.Null();
-                arguments.Append(arg);
+                arguments[i] = str ? Napi::String::New(env, str) : env.Null();
 
                 if (param.type->dispose) {
                     param.type->dispose(env, param.type, str);
@@ -1289,8 +1281,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
                 const uint8_t *src = in_ptr + param.abi.offset;
                 const char16_t *str16 = *(const char16_t **)src;
 
-                Napi::Value arg = str16 ? Napi::String::New(env, str16) : env.Null();
-                arguments.Append(arg);
+                arguments[i] = str16 ? Napi::String::New(env, str16) : env.Null();
 
                 if (param.type->dispose) {
                     param.type->dispose(env, param.type, str16);
@@ -1300,16 +1291,18 @@ void CallData::Relay(Size idx, uint8_t *sp)
                 const uint8_t *src = in_ptr + param.abi.offset;
                 const char32_t *str32 = *(const char32_t **)src;
 
-                Napi::Value arg = str32 ? MakeStringFromUTF32(env, str32) : env.Null();
-                arguments.Append(arg);
+                arguments[i] = str32 ? MakeStringFromUTF32(env, str32) : env.Null();
+
+                if (param.type->dispose) {
+                    param.type->dispose(env, param.type, str32);
+                }
             } break;
 
             case PrimitiveKind::Pointer: {
                 const uint8_t *src = in_ptr + param.abi.offset;
                 void *ptr2 = *(void **)src;
 
-                Napi::Value p = ptr2 ? WrapPointer(env, param.type->ref.type, ptr2) : env.Null();
-                arguments.Append(p);
+                arguments[i] = ptr2 ? WrapPointer(env, param.type->ref.type, ptr2) : env.Null();
 
                 if (param.type->dispose) {
                     param.type->dispose(env, param.type, ptr2);
@@ -1323,8 +1316,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
 
                 CompactFloats(src, param.abi.hfa32);
 
-                Napi::Object obj = DecodeObject(env, src, param.type);
-                arguments.Append(obj);
+                arguments[i] = DecodeObject(env, src, param.type);
             } break;
             case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
 
@@ -1332,23 +1324,20 @@ void CallData::Relay(Size idx, uint8_t *sp)
                 const uint8_t *src = in_ptr + param.abi.offset;
                 float f = *(float *)src;
 
-                Napi::Value arg = Napi::Number::New(env, (double)f);
-                arguments.Append(arg);
+                arguments[i] = Napi::Number::New(env, (double)f);
             } break;
             case PrimitiveKind::Float64: {
                 const uint8_t *src = in_ptr + param.abi.offset;
                 double d = *(double *)src;
 
-                Napi::Value arg = Napi::Number::New(env, d);
-                arguments.Append(arg);
+                arguments[i] = Napi::Number::New(env, d);
             } break;
 
             case PrimitiveKind::Callback: {
                 const uint8_t *src = in_ptr + param.abi.offset;
                 void *ptr2 = *(void **)src;
 
-                Napi::Value p = ptr2 ? WrapPointer(env, param.type->ref.type, ptr2) : env.Null();
-                arguments.Append(p);
+                arguments[i] = ptr2 ? WrapPointer(env, param.type->ref.type, ptr2) : env.Null();
 
                 if (param.type->dispose) {
                     param.type->dispose(env, param.type, ptr2);
@@ -1364,10 +1353,10 @@ void CallData::Relay(Size idx, uint8_t *sp)
 
     const TypeInfo *type = proto->ret.type;
 
-    // Make the call!
-    Napi::Value value = func.Call(arguments[0], arguments.len - 1, arguments.data + 1);
+    // We're ready, make the call!
+    napi_value value = CallCallback(trampoline, arguments, proto->parameters.len);
 
-    if (env.IsExceptionPending()) [[unlikely]]
+    if (!value) [[unlikely]]
         return;
 
 #define RETURN_INTEGER(CType) \
@@ -1457,18 +1446,16 @@ void CallData::Relay(Size idx, uint8_t *sp)
                 return;
             }
 
-            Napi::Object obj = value.As<Napi::Object>();
-
             if (proto->ret.abi.regular) {
                 uint8_t *dest = (uint8_t *)&out_reg + proto->ret.abi.offset;
-                if (!PushObject(obj, type, dest))
+                if (!PushObject(value, type, dest))
                     return;
                 ExpandFloats(dest, proto->ret.abi.hfa32);
             } else {
                 uint64_t *gpr_ptr = (uint64_t *)in_ptr;
                 uint8_t *dest = (uint8_t *)gpr_ptr[8]; // r8
 
-                if (!PushObject(obj, type, dest))
+                if (!PushObject(value, type, dest))
                     return;
             }
         } break;

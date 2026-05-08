@@ -59,10 +59,8 @@ Napi::Function CallbackHandle::InitClass(Napi::Env env)
 }
 
 CallbackHandle::CallbackHandle(const Napi::CallbackInfo &info)
-    : Napi::ObjectWrap<CallbackHandle>(info)
+    : Napi::ObjectWrap<CallbackHandle>(info), env(info.Env())
 {
-    Napi::Env env = info.Env();
-
     if (info.Length() < 2 || !info[0].IsNumber() || !info[1].IsExternal()) [[unlikely]] {
         ThrowError<Napi::Error>(env, "Callback objects cannot be constructed manually");
         return;
@@ -75,7 +73,7 @@ CallbackHandle::CallbackHandle(const Napi::CallbackInfo &info)
     native = external.Data();
 }
 
-void CallbackHandle::Finalize(Napi::BasicEnv env)
+void CallbackHandle::Finalize(Napi::BasicEnv)
 {
     DeleteReferenceSafe(env, *this);
     SuppressDestruct();
@@ -90,11 +88,11 @@ void CallbackHandle::Unregister()
         std::lock_guard<std::mutex> lock(shared.mutex);
 
         TrampolineInfo *trampoline = &shared.trampolines[idx];
-        K_ASSERT(!trampoline->func.IsEmpty());
+        K_ASSERT(trampoline->func);
 
         trampoline->state = 0;
-        trampoline->func.Reset();
-        trampoline->recv.Reset();
+        napi_delete_reference(env, trampoline->func);
+        trampoline->func = nullptr;
 
         shared.available.Append(idx);
     }
@@ -105,8 +103,6 @@ void CallbackHandle::Unregister()
 
 Napi::Value CallbackHandle::Dispose(const Napi::CallbackInfo &info)
 {
-    Napi::Env env = info.Env();
-
     if (idx >= 0) {
         Unregister();
     }
@@ -1553,12 +1549,12 @@ Napi::Value Decode(Napi::Env env, const uint8_t *ptr, const TypeInfo *type, cons
 #define RETURN_INT(Type, NewCall) \
         do { \
             Type v = *(Type *)ptr; \
-            return NewCall(env, v); \
+            return Napi::Value(env, NewCall(env, v)); \
         } while (false)
 #define RETURN_INT_SWAP(Type, NewCall) \
         do { \
             Type v = ReverseBytes(*(Type *)ptr); \
-            return NewCall(env, v); \
+            return Napi::Value(env, NewCall(env, v)); \
         } while (false)
 
     switch (type->primitive) {

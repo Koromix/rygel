@@ -57,6 +57,8 @@ public:
 };
 
 class CallbackHandle: public Napi::ObjectWrap<CallbackHandle> {
+    Napi::Env env;
+
     int16_t idx;
     void *native;
 
@@ -436,21 +438,21 @@ Napi::Value Decode(Napi::Env env, const uint8_t *ptr, const TypeInfo *type, cons
 bool Encode(Napi::Value ref, Size offset, Napi::Value value, const TypeInfo *type, const Size *len = nullptr);
 bool Encode(Napi::Env env, uint8_t *ptr, Napi::Value value, const TypeInfo *type, const Size *len = nullptr);
 
-static FORCE_INLINE Napi::Value NewInt(Napi::Env env, int8_t i)
-    { napi_value value; napi_create_int32(env, (int32_t)i, &value); return Napi::Value(env, value); }
-static FORCE_INLINE Napi::Value NewInt(Napi::Env env, uint8_t i)
-    { napi_value value; napi_create_uint32(env, (uint32_t)i, &value); return Napi::Value(env, value); }
-static FORCE_INLINE Napi::Value NewInt(Napi::Env env, int16_t i)
-    { napi_value value; napi_create_int32(env, (int32_t)i, &value); return Napi::Value(env, value); }
-static FORCE_INLINE Napi::Value NewInt(Napi::Env env, uint16_t i)
-    { napi_value value; napi_create_uint32(env, (uint32_t)i, &value); return Napi::Value(env, value); }
-static FORCE_INLINE Napi::Value NewInt(Napi::Env env, int32_t i)
-    { napi_value value; napi_create_int32(env, i, &value); return Napi::Value(env, value); }
-static FORCE_INLINE Napi::Value NewInt(Napi::Env env, uint32_t i)
-    { napi_value value; napi_create_uint32(env, i, &value); return Napi::Value(env, value); }
+static FORCE_INLINE napi_value NewInt(Napi::Env env, int8_t i)
+    { napi_value value; napi_create_int32(env, (int32_t)i, &value); return value; }
+static FORCE_INLINE napi_value NewInt(Napi::Env env, uint8_t i)
+    { napi_value value; napi_create_uint32(env, (uint32_t)i, &value); return value; }
+static FORCE_INLINE napi_value NewInt(Napi::Env env, int16_t i)
+    { napi_value value; napi_create_int32(env, (int32_t)i, &value); return value; }
+static FORCE_INLINE napi_value NewInt(Napi::Env env, uint16_t i)
+    { napi_value value; napi_create_uint32(env, (uint32_t)i, &value); return value; }
+static FORCE_INLINE napi_value NewInt(Napi::Env env, int32_t i)
+    { napi_value value; napi_create_int32(env, i, &value); return value; }
+static FORCE_INLINE napi_value NewInt(Napi::Env env, uint32_t i)
+    { napi_value value; napi_create_uint32(env, i, &value); return value; }
 
 template <typename T>
-static FORCE_INLINE Napi::Value NewInt(Napi::Env env, T i)
+static FORCE_INLINE napi_value NewInt(Napi::Env env, T i)
 {
     static_assert(sizeof(T) == 8);
 

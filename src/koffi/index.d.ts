@@ -121,7 +121,7 @@ export function proto(name: string | null | undefined, result: TypeSpec, argumen
 export function proto(convention: string, name: string | null | undefined, result: TypeSpec, arguments: TypeSpec[]): TypeObject;
 
 export function register(callback: Function, type: TypeSpec): CallbackHandle;
-export function register(thisValue: any, callback: Function, type: TypeSpec): CallbackHandle;
+/** @deprecated */ export function register(thisValue: any, callback: Function, type: TypeSpec): CallbackHandle;
 export function unregister(callback: CallbackHandle): void;
 
 export function as(value: any, type: TypeSpec): IKoffiPointerCast;

@@ -948,7 +948,8 @@ static Napi::Value GetOrSetErrNo(const Napi::CallbackInfo &info)
         errno = value;
     }
 
-    return NewInt(env, (int32_t)errno);
+    napi_value ret = NewInt(env, (int32_t)errno);
+    return Napi::Value(env, ret);
 }
 
 static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
@@ -1831,7 +1832,7 @@ static FORCE_INLINE bool CheckTrampolineStatus(TrampolineInfo *trampoline)
     if (trampoline->state == 1) [[likely]]
         return true;
 
-    Napi::Env env = trampoline->func.Env();
+    Napi::Env env = trampoline->env;
 
     if (!trampoline->state) {
         ThrowError<Napi::Error>(env, "Cannot use non-registered callback beyond FFI call");
@@ -1856,8 +1857,8 @@ extern "C" void RelayCallback(Size idx, uint8_t *sp)
 
     // Fast path: main thread and we are running a native call through Koffi.
     // But this means we are running on the custom Koffi stack, which could trip up
-    // Node and V8, so we need to stwich back to the normal/main stack.
-    if (InstanceMemory *mem0 = instance->memories[0]; sp >= mem0->stack0.ptr && sp <= mem0->stack0.end) {
+    // Node and V8, so we need to switch back to the normal/main stack.
+    if (sp >= trampoline->stack0.ptr && sp <= trampoline->stack0.end) [[likely]] {
         CallData *call = instance->sync_call;
 
         SwitchAndRelay(call, idx, sp, call->saved_sp, &call->mem->stack);
@@ -1872,7 +1873,7 @@ extern "C" void RelayCallback(Size idx, uint8_t *sp)
     // In some cases we would reuse the existing call, but it is rare so let's ignore
     // this for simplicity.
 
-    Napi::Env env = trampoline->func.Env();
+    Napi::Env env = trampoline->env;
 
     InstanceMemory *mem = AllocateMemory(instance, instance->config.async_stack_size, instance->config.async_heap_size);
     if (!mem) [[unlikely]] {
@@ -2175,21 +2176,18 @@ static Napi::Value RegisterCallback(const Napi::CallbackInfo &info)
     if (!InitAsyncBroker(env, instance)) [[unlikely]]
         return env.Null();
 
-    bool has_recv = (info.Length() >= 3 && info[1].IsFunction());
-
-    if (info.Length() < 2u + has_recv) {
-        ThrowError<Napi::TypeError>(env, "Expected 2 or 3 arguments, got %1", info.Length());
+    if (info.Length() < 2u) {
+        ThrowError<Napi::TypeError>(env, "Expected 2, got %1", info.Length());
         return env.Null();
     }
-    if (!info[0u + has_recv].IsFunction()) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for func, expected function", GetValueType(instance, info[0 + has_recv]));
+    if (!info[0u].IsFunction()) {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for func, expected function", GetValueType(instance, info[0]));
         return env.Null();
     }
 
-    Napi::Value recv = has_recv ? info[0] : env.Undefined();
-    Napi::Function func = info[0u + has_recv].As<Napi::Function>();
+    Napi::Function func = info[0].As<Napi::Function>();
 
-    const TypeInfo *type = ResolveType(info[1u + has_recv]);
+    const TypeInfo *type = ResolveType(info[1]);
     if (!type)
         return env.Null();
     if (type->primitive != PrimitiveKind::Callback) {
@@ -2212,14 +2210,11 @@ static Napi::Value RegisterCallback(const Napi::CallbackInfo &info)
     TrampolineInfo *trampoline = &shared.trampolines[idx];
 
     trampoline->state = 1;
+    trampoline->env = env;
     trampoline->instance = instance;
+    trampoline->stack0 = instance->memories[0]->stack0;
     trampoline->proto = type->ref.proto;
-    trampoline->func = Napi::Persistent(func);
-    if (!IsNullOrUndefined(env, recv)) {
-        trampoline->recv = Napi::Persistent(recv);
-    } else {
-        trampoline->recv.Reset();
-    }
+    napi_create_reference(env, func, 1, &trampoline->func);
 
     void *ptr = GetTrampoline(idx);
 
@@ -2944,8 +2939,10 @@ InstanceData::~InstanceData()
 
             if (trampoline->instance == this) {
                 trampoline->instance = nullptr;
-                trampoline->func.Reset();
-                trampoline->recv.Reset();
+                if (trampoline->func) {
+                    napi_delete_reference(env, trampoline->func);
+                    trampoline->func = nullptr;
+                }
                 trampoline->state = 0;
             }
         }
