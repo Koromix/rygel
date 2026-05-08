@@ -20,7 +20,7 @@ node benchmark/atoi.js koffi >NUL
 node benchmark/memset.js koffi >NUL
 node benchmark/qsort.js koffi >NUL
 node benchmark/raylib.js koffi >NUL
-for /l %%x in (1, 1, 100) do node test/sync.js >NUL
+for /l %%x in (1, 1, 100) do node test/sync.js --no_slow >NUL
 for /l %%x in (1, 1, 100) do node test/callbacks.js --no_poll >NUL
 
 node ../cnoke/cnoke.js -D benchmark --release -v

@@ -23,7 +23,7 @@ node benchmark/memset.js koffi >/dev/null
 node benchmark/qsort.js koffi >/dev/null
 node benchmark/raylib.js koffi >/dev/null
 for x in {1..100}; do
-    node test/sync.js >/dev/null
+    node test/sync.js --no_slow >/dev/null
 done
 for x in {1..100}; do
     node test/callbacks.js --no_poll >/dev/null

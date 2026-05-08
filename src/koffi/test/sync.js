@@ -8,6 +8,8 @@ const path = require('node:path');
 const util = require('node:util');
 const { cnoke } = require('./package.json');
 
+let allow_slow = !process.argv.slice(2).includes('--no_slow');
+
 // We need to change this on Windows because the DLL CRT might
 // not (probably not) match the one used by Node.js!
 let free_ptr = koffi.free;
@@ -1066,7 +1068,7 @@ async function test() {
     assert.throws(() => koffi.enumeration({}, 'float'), /Expected integer type for underlying enum storage type/);
 
     // Test boundary conditions between fast and slow string handling paths
-    {
+    if (allow_slow) {
         let pattern = '👉🫠👉🫠🫠👉🫠🫠';
 
         let bytes8 = Buffer.from(pattern, 'utf8').length;
