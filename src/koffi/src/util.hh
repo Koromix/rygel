@@ -282,10 +282,19 @@ static FORCE_INLINE bool TryNumber(napi_env env, napi_value value, T *out_value)
 
 static FORCE_INLINE bool TryPointer(napi_env env, napi_value value, void **out_ptr)
 {
-    if (uintptr_t ptr = 0; TryNumber(env, value, &ptr)) {
-        *out_ptr = (void *)ptr;
-        return true;
-    } else if (IsTypedArray(env, value)) {
+    // Fast path for BigInt
+    {
+        uint64_t u64;
+        bool lossless;
+        napi_status status = napi_get_value_bigint_uint64(env, value, &u64, &lossless);
+
+        if (status == napi_ok) {
+            *out_ptr = (void *)(uintptr_t)u64;
+            return true;
+        }
+    }
+
+    if (IsTypedArray(env, value)) {
         napi_get_typedarray_info(env, value, nullptr, nullptr, out_ptr, nullptr, nullptr);
         return true;
     }
@@ -312,15 +321,23 @@ static FORCE_INLINE bool TryPointer(napi_env env, napi_value value, void **out_p
     return false;
 }
 
-// The output value type is not accurate: napi_number instead of napi_bing, napi_null instead of napi_undefined
 static FORCE_INLINE bool TryPointer(napi_env env, napi_value value, void **out_ptr, napi_valuetype *out_kind)
 {
-    if (uintptr_t ptr = 0; TryNumber(env, value, &ptr)) {
-        *out_ptr = (void *)ptr;
-        *out_kind = napi_number;
+    // Fast path for BigInt
+    {
+        uint64_t u64;
+        bool lossless;
+        napi_status status = napi_get_value_bigint_uint64(env, value, &u64, &lossless);
 
-        return true;
-    } else if (IsTypedArray(env, value)) {
+        if (status == napi_ok) {
+            *out_ptr = (void *)(uintptr_t)u64;
+            *out_kind = napi_bigint;
+
+            return true;
+        }
+    }
+
+    if (IsTypedArray(env, value)) {
         napi_get_typedarray_info(env, value, nullptr, nullptr, out_ptr, nullptr, nullptr);
         *out_kind = napi_object;
 
@@ -331,7 +348,7 @@ static FORCE_INLINE bool TryPointer(napi_env env, napi_value value, void **out_p
 
     if (IsNullOrUndefined(kind)) {
         *out_ptr = nullptr;
-        *out_kind = napi_null;
+        *out_kind = kind;
 
         return true;
 #if defined(EXTERNAL_POINTERS)
