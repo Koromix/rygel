@@ -2218,12 +2218,10 @@ static Napi::Value RegisterCallback(const Napi::CallbackInfo &info)
 
     void *ptr = GetTrampoline(idx);
 
-    Napi::Number number = Napi::Number::New(env, idx);
-    Napi::External<void> external = Napi::External<void>::New(env, ptr);
-    Napi::Object obj = instance->construct_callback.New({ number, external });
-    SetValueTag(env, obj, &CallbackHandleMarker);
+    // Cache index for fast unregistration
+    instance->trampolines_map.Set(ptr, idx);
 
-    return obj;
+    return WrapPointer(env, type->ref.type, ptr);
 }
 
 static Napi::Value UnregisterCallback(const Napi::CallbackInfo &info)
@@ -2235,22 +2233,39 @@ static Napi::Value UnregisterCallback(const Napi::CallbackInfo &info)
         ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", info.Length());
         return env.Null();
     }
-    if (!info[0].IsObject() || !CheckValueTag(env, info[0], &CallbackHandleMarker)) {
+
+    void *ptr;
+    if (!TryPointer(env, info[0], &ptr)) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for id, expected registered callback", GetValueType(instance, info[0]));
         return env.Null();
     }
 
-    CallbackHandle *obj = nullptr;
-    napi_unwrap(env, info[0], (void **)&obj);
+    int16_t idx;
+    {
+        int16_t *it = instance->trampolines_map.Find(ptr);
 
-    int16_t idx = obj->GetIndex();
+        if (!it) [[unlikely]] {
+            ThrowError<Napi::Error>(env, "Could not find matching registered callback");
+            return env.Null();
+        }
 
-    if (idx < 0) {
-        ThrowError<Napi::Error>(env, "This callback has already been unregistered");
-        return env.Null();
+        idx = *it;
+        instance->trampolines_map.Remove(it);
     }
 
-    obj->Unregister();
+    // Release shared trampoline safely
+    {
+        std::lock_guard<std::mutex> lock(shared.mutex);
+
+        TrampolineInfo *trampoline = &shared.trampolines[idx];
+        K_ASSERT(trampoline->func);
+
+        trampoline->state = 0;
+        napi_delete_reference(env, trampoline->func);
+        trampoline->func = nullptr;
+
+        shared.available.Append(idx);
+    }
 
     return env.Undefined();
 }
@@ -2805,13 +2820,11 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
     {
         instance->construct_lib = Napi::Persistent(LibraryHandle::InitClass(env));
         instance->construct_type = Napi::Persistent(TypeObject::InitClass(env));
-        instance->construct_callback = Napi::Persistent(CallbackHandle::InitClass(env));
         instance->construct_poll = Napi::Persistent(PollHandle::InitClass(env));
         instance->active_symbol = Napi::Persistent(Napi::Symbol::New(env, "active"));
 
         exports.Set("LibraryHandle", instance->construct_lib.Value());
         exports.Set("TypeObject", instance->construct_type.Value());
-        exports.Set("CallbackHandle", instance->construct_callback.Value());
     }
 
     // Init base types

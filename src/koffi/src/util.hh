@@ -36,7 +36,6 @@ namespace K {
 
 extern const napi_type_tag LibraryHandleMarker;
 extern const napi_type_tag TypeObjectMarker;
-extern const napi_type_tag CallbackHandleMarker;
 extern const napi_type_tag DirectionMarker;
 extern const napi_type_tag UnionValueMarker;
 extern const napi_type_tag CastMarker;
@@ -54,28 +53,6 @@ public:
     void Finalize(Napi::BasicEnv env) override;
 
     const TypeInfo *GetType() { return type; }
-};
-
-class CallbackHandle: public Napi::ObjectWrap<CallbackHandle> {
-    Napi::Env env;
-
-    int16_t idx;
-    void *native;
-
-public:
-    static Napi::Function InitClass(Napi::Env env);
-
-    CallbackHandle(const Napi::CallbackInfo &info);
-
-    void Finalize(Napi::BasicEnv env) override;
-
-    Size GetIndex() const { return idx; }
-    void *GetNative() const { return native; }
-
-    void Unregister();
-
-private:
-    Napi::Value Dispose(const Napi::CallbackInfo &info);
 };
 
 class UnionValue: public Napi::ObjectWrap<UnionValue> {

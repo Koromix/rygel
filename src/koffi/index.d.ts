@@ -43,10 +43,6 @@ export type KoffiFunc<T extends (...args: any) => any> = T & {
    info: PrototypeInfo;
 };
 
-export type CallbackHandle = {
-    [Symbol.dispose](): void;
-};
-
 type LoadOptions = {
     lazy?: boolean,
     global?: boolean,
@@ -120,9 +116,9 @@ export function proto(convention: string, result: TypeSpec, arguments: TypeSpec[
 export function proto(name: string | null | undefined, result: TypeSpec, arguments: TypeSpec[]): TypeObject;
 export function proto(convention: string, name: string | null | undefined, result: TypeSpec, arguments: TypeSpec[]): TypeObject;
 
-export function register(callback: Function, type: TypeSpec): CallbackHandle;
-/** @deprecated */ export function register(thisValue: any, callback: Function, type: TypeSpec): CallbackHandle;
-export function unregister(callback: CallbackHandle): void;
+export function register(callback: Function, type: TypeSpec): bigint;
+/** @deprecated */ export function register(thisValue: any, callback: Function, type: TypeSpec): bigint;
+export function unregister(callback: bigint): void;
 
 export function as(value: any, type: TypeSpec): IKoffiPointerCast;
 export function decode(value: any, type: TypeSpec): any;

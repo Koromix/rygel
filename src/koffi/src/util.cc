@@ -14,7 +14,6 @@ namespace K {
 const napi_type_tag LibraryHandleMarker = { 0xdb9b066e6f700474, 0x0aecd7e4c63fbda9 };
 const napi_type_tag TypeObjectMarker = { 0x1cc449675b294374, 0xbb13a50e97dcb017 };
 const napi_type_tag DirectionMarker = { 0xf9c306238b480580, 0xc2e168524a0823f5 };
-const napi_type_tag CallbackHandleMarker = { 0xcc2a9d3b2d3fc2b2, 0x6db38f7af965b5ec };
 const napi_type_tag UnionValueMarker = { 0x5eaf2245526a4c7d, 0x8c86c9ee2b96ffc8 };
 const napi_type_tag CastMarker = { 0x77f459614a0a412f, 0x80b3dda1341dc8df };
 
@@ -42,72 +41,6 @@ void TypeObject::Finalize(Napi::BasicEnv env)
 {
     DeleteReferenceSafe(env, *this);
     SuppressDestruct();
-}
-
-Napi::Function CallbackHandle::InitClass(Napi::Env env)
-{
-    // node-addon-api wants std::vector
-    std::vector<Napi::ClassPropertyDescriptor<CallbackHandle>> properties;
-
-    if (Napi::Value dispose = env.RunScript("Symbol.dispose"); !IsNullOrUndefined(env, dispose)) {
-        Napi::ClassPropertyDescriptor<CallbackHandle> prop = InstanceMethod(dispose.As<Napi::Symbol>(), &CallbackHandle::Dispose);
-        properties.push_back(prop);
-    }
-
-    Napi::Function constructor = DefineClass(env, "CallbackHandle", properties);
-    return constructor;
-}
-
-CallbackHandle::CallbackHandle(const Napi::CallbackInfo &info)
-    : Napi::ObjectWrap<CallbackHandle>(info), env(info.Env())
-{
-    if (info.Length() < 2 || !info[0].IsNumber() || !info[1].IsExternal()) [[unlikely]] {
-        ThrowError<Napi::Error>(env, "Callback objects cannot be constructed manually");
-        return;
-    }
-
-    Napi::Number number = info[0u].As<Napi::Number>();
-    Napi::External<void> external = info[1u].As<Napi::External<void>>();
-
-    idx = (int16_t)number.Int32Value();
-    native = external.Data();
-}
-
-void CallbackHandle::Finalize(Napi::BasicEnv)
-{
-    DeleteReferenceSafe(env, *this);
-    SuppressDestruct();
-}
-
-void CallbackHandle::Unregister()
-{
-    K_ASSERT(idx >= 0);
-
-    // Release shared trampoline safely
-    {
-        std::lock_guard<std::mutex> lock(shared.mutex);
-
-        TrampolineInfo *trampoline = &shared.trampolines[idx];
-        K_ASSERT(trampoline->func);
-
-        trampoline->state = 0;
-        napi_delete_reference(env, trampoline->func);
-        trampoline->func = nullptr;
-
-        shared.available.Append(idx);
-    }
-
-    idx = -1;
-    native = nullptr;
-}
-
-Napi::Value CallbackHandle::Dispose(const Napi::CallbackInfo &info)
-{
-    if (idx >= 0) {
-        Unregister();
-    }
-
-    return env.Undefined();
 }
 
 Napi::Function UnionValue::InitClass(Napi::Env env, const TypeInfo *type)
@@ -720,7 +653,7 @@ const char *GetValueType(const InstanceData *instance, napi_value value)
     Napi::Env env = instance->env;
     napi_valuetype kind = GetKindOf(env, value);
 
-    if (kind == napi_external || kind == napi_object) {
+    if (kind == napi_external) {
         if (CheckValueTag(env, value, &CastMarker)) {
             Napi::External<ValueCast> external = Napi::External<ValueCast>(env, value);
             ValueCast *cast = external.Data();
@@ -732,8 +665,6 @@ const char *GetValueType(const InstanceData *instance, napi_value value)
             return "LibraryHandle";
         if (CheckValueTag(env, value, &TypeObjectMarker))
             return "TypeObject";
-        if (CheckValueTag(env, value, &CallbackHandleMarker))
-            return "CallbackHandle";
 
         if (CheckValueTag(env, value, &UnionValueMarker)) {
             UnionValue *u = nullptr;

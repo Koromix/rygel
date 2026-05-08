@@ -132,6 +132,7 @@ void CallData::Finalize()
             TrampolineInfo *trampoline = &shared.trampolines[idx];
 
             K_ASSERT(trampoline->instance == instance);
+            K_ASSERT(trampoline->func);
 
             trampoline->state = 0;
             napi_delete_reference(env, trampoline->func);
@@ -1096,13 +1097,7 @@ restart:
         return true;
     }
 
-    if (kind == napi_object && CheckValueTag(env, value, &CallbackHandleMarker)) {
-        CallbackHandle *obj = nullptr;
-        napi_unwrap(env, value, (void **)&obj);
-
-        *out_ptr = obj->GetNative();
-        return true;
-    } else if (kind == napi_function) {
+    if (kind == napi_function) {
         Napi::Function func = Napi::Function(env, value);
 
         ptr = ReserveTrampoline(type->ref.proto, func);
