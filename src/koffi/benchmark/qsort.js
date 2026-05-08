@@ -94,7 +94,7 @@ function run_koffi_array(time) {
             let array = RANDOM_INTS.slice();
             let cast = koffi.as(array, 'int *');
 
-            qsort(cast, array.length, koffi.sizeof('int'), cmp);
+            qsort(cast, array.length, koffi.sizeof('int'), callback);
         }
 
         iterations += 10000;
@@ -128,7 +128,7 @@ function run_koffi_buffer(time) {
     while (performance.now() - start < time) {
         for (let i = 0; i < 10000; i++) {
             let array = new Int32Array(RANDOM_INTS);
-            qsort(array, array.length, koffi.sizeof('int'), cmp);
+            qsort(array, array.length, koffi.sizeof('int'), callback);
             let sorted = Array.from(array);
         }
 
