@@ -13,6 +13,7 @@
 #include <sys/mman.h>
 #include <sys/mount.h>
 #include <sys/types.h>
+#include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/prctl.h>
 #include <sys/syscall.h>
@@ -748,6 +749,8 @@ static bool InitSeccomp(Span<const sb_SyscallFilter> filters)
                         if (ret < 0)
                             break;
                     }
+                    if (ret < 0)
+                        break;
                 }
             } else if (TestStr(filter.name, "mmap/shared")) {
                 int syscall = seccomp_syscall_resolve_name("mmap");
@@ -799,6 +802,46 @@ static bool InitSeccomp(Span<const sb_SyscallFilter> filters)
                 for (unsigned int flags: combinations) {
                     ret = seccomp_rule_add(ctx, translate_action(filter.action), syscall, 1,
                                            SCMP_A1(SCMP_CMP_MASKED_EQ, mask, flags));
+                    if (ret < 0)
+                        break;
+                }
+            } else if (TestStr(filter.name, "socket/unix")) {
+                int syscall = seccomp_syscall_resolve_name("socket");
+                K_ASSERT(syscall != __NR_SCMP_ERROR);
+
+                unsigned int types[] = {
+                    SOCK_DGRAM,
+                    SOCK_STREAM
+                };
+
+                for (unsigned int type: types) {
+                    ret = seccomp_rule_add(ctx, translate_action(filter.action), syscall, 2,
+                                           SCMP_A0(SCMP_CMP_EQ, AF_UNIX, 0),
+                                           SCMP_A1(SCMP_CMP_MASKED_EQ, type, 0xF));
+                    if (ret < 0)
+                        break;
+                }
+            } else if (TestStr(filter.name, "socket/inet")) {
+                int syscall = seccomp_syscall_resolve_name("socket");
+                K_ASSERT(syscall != __NR_SCMP_ERROR);
+
+                unsigned int domains[] = {
+                    AF_INET,
+                    AF_INET6
+                };
+                unsigned int types[] = {
+                    SOCK_DGRAM,
+                    SOCK_STREAM
+                };
+
+                for (unsigned int domain: domains) {
+                    for (unsigned int type: types) {
+                        ret = seccomp_rule_add(ctx, translate_action(filter.action), syscall, 2,
+                                               SCMP_A0(SCMP_CMP_EQ, domain, 0),
+                                               SCMP_A1(SCMP_CMP_MASKED_EQ, type, 0xF));
+                        if (ret < 0)
+                            break;
+                    }
                     if (ret < 0)
                         break;
                 }
