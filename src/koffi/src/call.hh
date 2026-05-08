@@ -73,7 +73,7 @@ struct alignas(8) CallData {
     INLINE_UNITY void Finalize();
     INLINE_UNITY void FinalizeFast();
 
-    void Relay(Size idx, uint8_t *sp);
+    INLINE_UNITY void Relay(Size idx, uint8_t *sp);
     void RelayAsync(Size idx, uint8_t *sp);
 
     INLINE_UNITY napi_value CallCallback(const TrampolineInfo *trampoline, const napi_value *args, Size count);
