@@ -6,9 +6,9 @@
 
 namespace K {
 
-static thread_local Napi::ArrayBuffer cmp_buffer;
-static thread_local int cmp_size;
-static thread_local Napi::Function cmp_func;
+static thread_local napi_env cmp_env;
+static thread_local napi_value cmp_func;
+static thread_local napi_value cmp_recv;
 
 template <typename T, typename... Args>
 void ThrowError(Napi::Env env, const char *msg, Args... args)
@@ -22,19 +22,20 @@ void ThrowError(Napi::Env env, const char *msg, Args... args)
 
 static int RunCompareFunction(const void *ptr1, const void *ptr2)
 {
-    Napi::ArrayBuffer buffer = cmp_buffer;
-    int size = cmp_size;
-    Napi::Function cmp = cmp_func;
+    napi_env env = cmp_env;
+    napi_value cmp = cmp_func;
+    napi_value recv = cmp_recv;
 
-    Napi::Env env = buffer.Env();
+    napi_value args[2];
+    napi_create_bigint_uint64(env, (uint64_t)(uintptr_t)ptr1, &args[0]);
+    napi_create_bigint_uint64(env, (uint64_t)(uintptr_t)ptr2, &args[1]);
 
-    napi_value args[] = {
-        Napi::DataView::New(env, cmp_buffer, (uint8_t *)ptr1 - (uint8_t *)cmp_buffer.Data(), size),
-        Napi::DataView::New(env, cmp_buffer, (uint8_t *)ptr2 - (uint8_t *)cmp_buffer.Data(), size)
-    };
+    napi_value ret;
+    napi_status status = napi_call_function(env, recv, cmp, K_LEN(args), args, &ret);
+    K_ASSERT(status == napi_ok);
 
-    Napi::Value ret = cmp.Call(K_LEN(args), args);
-    int ret32 = ret.As<Napi::Number>().Int32Value();
+    int ret32;
+    napi_get_value_int32(env, ret, &ret32);
 
     return ret32;
 }
@@ -71,9 +72,9 @@ static Napi::Value RunQsort(const Napi::CallbackInfo &info)
 
     uint8_t *base = (uint8_t *)array.ArrayBuffer().Data() + array.ByteOffset();
 
-    cmp_buffer = array.ArrayBuffer();
-    cmp_size = size;
+    cmp_env = env;
     cmp_func = cmp;
+    cmp_recv = env.Undefined();
 
     qsort(base, nmemb, size, RunCompareFunction);
 
