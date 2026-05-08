@@ -148,10 +148,11 @@ enum class AbiMethod : int;
 
 struct AbiInstruction {
     void *op;
-    int32_t a;
-    int16_t b1;
-    int16_t b2;
-    const TypeInfo *type;
+
+    int32_t a = 0;
+    int16_t b1 = 0;
+    int16_t b2 = 0;
+    const TypeInfo *type = nullptr;
 };
 
 struct ParameterInfo {
