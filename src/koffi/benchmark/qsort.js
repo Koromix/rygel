@@ -81,8 +81,8 @@ function run_koffi_array(time) {
     const qsort = lib.func('void qsort(_Inout_ void *array, size_t count, size_t size, SortCallback *cb)');
 
     const cmp = (ptr1, ptr2) => {
-        let a = koffi.decode(ptr1, 'int');
-        let b = koffi.decode(ptr2, 'int');
+        let a = koffi.decode.int(ptr1);
+        let b = koffi.decode.int(ptr2);
 
         return a - b;
     };
@@ -117,8 +117,8 @@ function run_koffi_buffer(time) {
     const qsort = lib.func('void qsort(_Inout_ void *array, size_t count, size_t size, SortCallback *cb)');
 
     const cmp = (ptr1, ptr2) => {
-        let a = koffi.decode(ptr1, 'int');
-        let b = koffi.decode(ptr2, 'int');
+        let a = koffi.decode.int(ptr1);
+        let b = koffi.decode.int(ptr2);
 
         return a - b;
     };

@@ -415,18 +415,17 @@ Napi::Value Decode(Napi::Env env, const uint8_t *ptr, const TypeInfo *type, cons
 bool Encode(Napi::Value ref, Size offset, Napi::Value value, const TypeInfo *type, const Size *len = nullptr);
 bool Encode(Napi::Env env, uint8_t *ptr, Napi::Value value, const TypeInfo *type, const Size *len = nullptr);
 
-static FORCE_INLINE napi_value NewInt(Napi::Env env, int8_t i)
-    { napi_value value; napi_create_int32(env, (int32_t)i, &value); return value; }
-static FORCE_INLINE napi_value NewInt(Napi::Env env, uint8_t i)
-    { napi_value value; napi_create_uint32(env, (uint32_t)i, &value); return value; }
-static FORCE_INLINE napi_value NewInt(Napi::Env env, int16_t i)
-    { napi_value value; napi_create_int32(env, (int32_t)i, &value); return value; }
-static FORCE_INLINE napi_value NewInt(Napi::Env env, uint16_t i)
-    { napi_value value; napi_create_uint32(env, (uint32_t)i, &value); return value; }
-static FORCE_INLINE napi_value NewInt(Napi::Env env, int32_t i)
-    { napi_value value; napi_create_int32(env, i, &value); return value; }
-static FORCE_INLINE napi_value NewInt(Napi::Env env, uint32_t i)
-    { napi_value value; napi_create_uint32(env, i, &value); return value; }
+static FORCE_INLINE napi_value NewInt(Napi::Env env, char i) { napi_value value; napi_create_int32(env, (int32_t)i, &value); return value; }
+static FORCE_INLINE napi_value NewInt(Napi::Env env, signed char i) { napi_value value; napi_create_int32(env, (int32_t)i, &value); return value; }
+static FORCE_INLINE napi_value NewInt(Napi::Env env, unsigned char i) { napi_value value; napi_create_uint32(env, (uint32_t)i, &value); return value; }
+static FORCE_INLINE napi_value NewInt(Napi::Env env, short i) { napi_value value; napi_create_int32(env, (int32_t)i, &value); return value; }
+static FORCE_INLINE napi_value NewInt(Napi::Env env, unsigned short i) { napi_value value; napi_create_uint32(env, (uint32_t)i, &value); return value; }
+static FORCE_INLINE napi_value NewInt(Napi::Env env, int i) { napi_value value; napi_create_int32(env, (int32_t)i, &value); return value; }
+static FORCE_INLINE napi_value NewInt(Napi::Env env, unsigned int i) { napi_value value; napi_create_uint32(env, (uint32_t)i, &value); return value; }
+#if defined(_WIN32)
+static FORCE_INLINE napi_value NewInt(Napi::Env env, long i) { napi_value value; napi_create_int32(env, (int32_t)i, &value); return value; }
+static FORCE_INLINE napi_value NewInt(Napi::Env env, unsigned long i) { napi_value value; napi_create_uint32(env, (uint32_t)i, &value); return value; }
+#endif
 
 template <typename T>
 static FORCE_INLINE napi_value NewInt(Napi::Env env, T i)
@@ -439,15 +438,17 @@ static FORCE_INLINE napi_value NewInt(Napi::Env env, T i)
             napi_create_int64(env, (int64_t)i, &value);
             return Napi::Value(env, value);
         }
+
+        return Napi::BigInt::New(env, (int64_t)i);
     } else {
         if (i <= 9007199254740992ull) {
             napi_value value;
             napi_create_int64(env, (int64_t)i, &value);
             return Napi::Value(env, value);
         }
-    }
 
-    return Napi::BigInt::New(env, i);
+        return Napi::BigInt::New(env, (uint64_t)i);
+    }
 }
 
 static FORCE_INLINE Napi::Array GetOwnPropertyNames(napi_env env, napi_value obj)

@@ -2335,6 +2335,34 @@ static Napi::Value DecodeValue(const Napi::CallbackInfo &info)
     }
 }
 
+template <typename T>
+static FORCE_INLINE napi_value DecodeInteger(napi_env env, napi_callback_info info)
+{
+    napi_value arg;
+    size_t count = 1;
+
+    napi_status status = napi_get_cb_info(env, info, &count, &arg, nullptr, nullptr);
+    K_ASSERT(status == napi_ok);
+
+    if (count < 1) [[unlikely]] {
+        ThrowError<Napi::TypeError>(env, "Expected 1 arguments, got %1", count);
+        return Napi::Env(env).Null();
+    }
+
+    void *ptr = nullptr;
+    if (!TryPointer(env, arg, &ptr)) [[unlikely]] {
+        InstanceData *instance = Napi::Env(env).GetInstanceData<InstanceData>();
+
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected pointer", GetValueType(instance, arg));
+        return Napi::Env(env).Null();
+    }
+
+    T i;
+    memcpy(&i, ptr, K_SIZE(i));
+
+    return NewInt(env, i);
+}
+
 static Napi::Value GetPointerAddress(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
@@ -2708,6 +2736,16 @@ static bool CanDeleteReferenceInFinalizer(napi_env env)
     return false;
 }
 
+static napi_value CreateFunction(napi_env env, napi_callback native, const char *name = nullptr)
+{
+    napi_value func;
+
+    napi_status status = napi_create_function(env, name, NAPI_AUTO_LENGTH, native, nullptr, &func);
+    K_ASSERT(status == napi_ok);
+
+    return func;
+}
+
 static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
 {
     // Load recent N-API functions (version >= 9) functions dynamically
@@ -2784,11 +2822,35 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
     exports.Set("unregister", Napi::Function::New(env, UnregisterCallback, "unregister"));
 
     exports.Set("as", Napi::Function::New(env, CastValue, "as"));
-    exports.Set("decode", Napi::Function::New(env, DecodeValue, "decode"));
     exports.Set("address", Napi::Function::New(env, GetPointerAddress, "address"));
     exports.Set("call", Napi::Function::New(env, CallPointerSync, "call"));
     exports.Set("encode", Napi::Function::New(env, EncodeValue, "encode"));
     exports.Set("view", Napi::Function::New(env, CreateView, "view"));
+
+    {
+        Napi::Function decode = Napi::Function::New(env, DecodeValue, "decode");
+
+        decode.Set("char", CreateFunction(env, [](napi_env env, napi_callback_info info) { return DecodeInteger<char>(env, info); }, "char"));
+        decode.Set("uchar", CreateFunction(env, [](napi_env env, napi_callback_info info) { return DecodeInteger<unsigned char>(env, info); }, "uchar"));
+        decode.Set("short", CreateFunction(env, [](napi_env env, napi_callback_info info) { return DecodeInteger<short>(env, info); }, "short"));
+        decode.Set("ushort", CreateFunction(env, [](napi_env env, napi_callback_info info) { return DecodeInteger<unsigned short>(env, info); }, "ushort"));
+        decode.Set("int", CreateFunction(env, [](napi_env env, napi_callback_info info) { return DecodeInteger<int>(env, info); }, "int"));
+        decode.Set("uint", CreateFunction(env, [](napi_env env, napi_callback_info info) { return DecodeInteger<unsigned int>(env, info); }, "uint"));
+        decode.Set("long", CreateFunction(env, [](napi_env env, napi_callback_info info) { return DecodeInteger<long>(env, info); }, "long"));
+        decode.Set("ulong", CreateFunction(env, [](napi_env env, napi_callback_info info) { return DecodeInteger<unsigned long>(env, info); }, "ulong"));
+        decode.Set("longlong", CreateFunction(env, [](napi_env env, napi_callback_info info) { return DecodeInteger<long long>(env, info); }, "longlong"));
+        decode.Set("ulonglong", CreateFunction(env, [](napi_env env, napi_callback_info info) { return DecodeInteger<unsigned long long>(env, info); }, "ulonglong"));
+        decode.Set("int8", CreateFunction(env, [](napi_env env, napi_callback_info info) { return DecodeInteger<int8_t>(env, info); }, "int8"));
+        decode.Set("uint8", CreateFunction(env, [](napi_env env, napi_callback_info info) { return DecodeInteger<uint8_t>(env, info); }, "uint8"));
+        decode.Set("int16", CreateFunction(env, [](napi_env env, napi_callback_info info) { return DecodeInteger<int16_t>(env, info); }, "int16"));
+        decode.Set("uint16", CreateFunction(env, [](napi_env env, napi_callback_info info) { return DecodeInteger<uint16_t>(env, info); }, "uint16"));
+        decode.Set("int32", CreateFunction(env, [](napi_env env, napi_callback_info info) { return DecodeInteger<int32_t>(env, info); }, "int32"));
+        decode.Set("uint32", CreateFunction(env, [](napi_env env, napi_callback_info info) { return DecodeInteger<uint32_t>(env, info); }, "uint32"));
+        decode.Set("int64", CreateFunction(env, [](napi_env env, napi_callback_info info) { return DecodeInteger<int64_t>(env, info); }, "int64"));
+        decode.Set("uint64", CreateFunction(env, [](napi_env env, napi_callback_info info) { return DecodeInteger<uint64_t>(env, info); }, "uint64"));
+
+        exports.Set("decode", decode);
+    }
 
     exports.Set("reset", Napi::Function::New(env, ResetKoffi, "reset"));
 
