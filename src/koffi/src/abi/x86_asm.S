@@ -190,7 +190,7 @@ SYMBOL(SwitchAndRelay):
 #if defined(_WIN32)
 
 .balign 16
-FindTrampolineStart:
+SYMBOL(FindTrampolineStart):
     call GetEIP
     addl $16, %eax
     andl $0xFFFFFFF0, %eax
@@ -199,7 +199,7 @@ FindTrampolineStart:
 
 #include "gnu.inc"
 
-FindTrampolineEnd:
+SYMBOL(FindTrampolineEnd):
     call GetEIP
     ret
 
