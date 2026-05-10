@@ -507,7 +507,7 @@ napi_value RunLoop(CallData *call, napi_value *args, uint32_t *base, const AbiIn
 
     OP(RunVoid) {
         WRAP(ForwardCallG(call->native, (uint8_t *)base, &call->saved_sp));
-        return call->env.Undefined();
+        return nullptr;
     }
     OP(RunBool) {
         uint32_t eax = (uint32_t)WRAP(ForwardCallG(call->native, (uint8_t *)base, &call->saved_sp));
@@ -586,7 +586,7 @@ napi_value RunLoop(CallData *call, napi_value *args, uint32_t *base, const AbiIn
     }
     OP(RunVoidR) {
         WRAP(ForwardCallGR(call->native, (uint8_t *)base, &call->saved_sp));
-        return call->env.Undefined();
+        return nullptr;
     }
     OP(RunBoolR) {
         uint32_t eax = (uint32_t)WRAP(ForwardCallGR(call->native, (uint8_t *)base, &call->saved_sp));
@@ -733,7 +733,7 @@ napi_value RunLoop(CallData *call, napi_value *args, uint32_t *base, const AbiIn
         return call->env.Null();
     }
 
-    OP(ReturnVoid) { return call->env.Undefined(); }
+    OP(ReturnVoid) { return nullptr; }
     OP(ReturnBool) {
         uint32_t eax = *(uint32_t *)base;
         return Napi::Boolean::New(call->env, eax & 0x1);

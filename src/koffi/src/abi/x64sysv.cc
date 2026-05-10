@@ -736,7 +736,7 @@ namespace {
 
     OP(RunVoid) {
         ForwardCallGG(call->native, base, &call->saved_sp);
-        return call->env.Undefined();
+        return nullptr;
     }
     OP(RunBool) {
         uint64_t rax = ForwardCallGG(call->native, base, &call->saved_sp).rax;
@@ -819,7 +819,7 @@ namespace {
     }
     OP(RunVoidX) {
         ForwardCallGGX(call->native, base, &call->saved_sp);
-        return call->env.Undefined();
+        return nullptr;
     }
     OP(RunBoolX) {
         uint64_t rax = ForwardCallGGX(call->native, base, &call->saved_sp).rax;
@@ -954,7 +954,7 @@ namespace {
         return call->env.Null();
     }
 
-    OP(ReturnVoid) { return call->env.Undefined(); }
+    OP(ReturnVoid) { return nullptr; }
     OP(ReturnBool) {
         uint64_t rax = *(uint64_t *)base;
         return Napi::Boolean::New(call->env, rax & 0x1);
