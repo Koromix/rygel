@@ -753,8 +753,7 @@ bool CallData::PushNormalArray(Napi::Array array, const TypeInfo *type, Size siz
                     return false;
                 }
 
-                Napi::Object obj2 = value.As<Napi::Object>();
-                if (!PushObject(obj2, ref, dest))
+                if (!PushObject(value, ref, dest))
                     return false;
             });
         } break;
