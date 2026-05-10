@@ -1224,29 +1224,6 @@ bool CallData::CheckDynamicLength(napi_value obj, Size element, const char *coun
     return true;
 }
 
-static napi_value TranslateZeroCall(napi_env env, napi_callback_info info)
-{
-    struct CallbackBundle {
-        napi_env env;
-        void *data;
-    };
-
-    CallbackBundle **ptr = (CallbackBundle **)((uint8_t *)info + K_SIZE(void *));
-    FunctionInfo *func = (FunctionInfo *)(*ptr)->data;
-
-    InstanceData *instance = func->instance;
-    InstanceMemory *mem = instance->memories[0];
-    CallData call(env, instance, mem, func->native);
-
-    K_DEFER_C(prev_call = instance->sync_call) { instance->sync_call = prev_call; };
-    instance->sync_call = &call;
-
-    napi_value ret = call.Run(func, nullptr);
-    call.FinalizeFast();
-
-    return ret;
-}
-
 static bool DetectDeno(Napi::Env env)
 {
     Napi::Value ret = env.RunScript("typeof Deno != 'undefined'");
@@ -1294,6 +1271,45 @@ void InitTranslateZeroCall(Napi::Env env)
 
     status = napi_call_function(env, self, func, 0, nullptr, &ret);
     K_ASSERT(status == napi_ok);
+}
+
+bool InitAsyncBroker(Napi::Env env, InstanceData *instance)
+{
+    if (!instance->broker) {
+        if (napi_create_threadsafe_function(env, nullptr, nullptr,
+                                            Napi::String::New(env, "Koffi Async Callback Broker"),
+                                            0, 1, nullptr, nullptr, nullptr,
+                                            PerformAsyncRelay, &instance->broker) != napi_ok) {
+            LogError("Failed to create async callback broker");
+            return false;
+        }
+        napi_unref_threadsafe_function(env, instance->broker);
+    }
+
+    return true;
+}
+
+napi_value TranslateZeroCall(napi_env env, napi_callback_info info)
+{
+    struct CallbackBundle {
+        napi_env env;
+        void *data;
+    };
+
+    CallbackBundle **ptr = (CallbackBundle **)((uint8_t *)info + K_SIZE(void *));
+    FunctionInfo *func = (FunctionInfo *)(*ptr)->data;
+
+    InstanceData *instance = func->instance;
+    InstanceMemory *mem = instance->memories[0];
+    CallData call(env, instance, mem, func->native);
+
+    K_DEFER_C(prev_call = instance->sync_call) { instance->sync_call = prev_call; };
+    instance->sync_call = &call;
+
+    napi_value ret = call.Run(func, nullptr);
+    call.FinalizeFast();
+
+    return ret;
 }
 
 napi_value TranslateFastCall(napi_env env, napi_callback_info info)

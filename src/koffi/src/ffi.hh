@@ -398,6 +398,4 @@ extern napi_value (*translate_zero_call)(napi_env env, napi_callback_info info);
 InstanceMemory *AllocateMemory(InstanceData *instance, Size stack_size, Size heap_size);
 void ReleaseMemory(InstanceData *instance, InstanceMemory *mem);
 
-bool InitAsyncBroker(Napi::Env env, InstanceData *instance);
-
 }

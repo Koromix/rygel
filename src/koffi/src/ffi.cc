@@ -2283,22 +2283,6 @@ InstanceMemory::~InstanceMemory()
 #endif
 }
 
-bool InitAsyncBroker(Napi::Env env, InstanceData *instance)
-{
-    if (!instance->broker) {
-        if (napi_create_threadsafe_function(env, nullptr, nullptr,
-                                            Napi::String::New(env, "Koffi Async Callback Broker"),
-                                            0, 1, nullptr, nullptr, nullptr,
-                                            PerformAsyncRelay, &instance->broker) != napi_ok) {
-            LogError("Failed to create async callback broker");
-            return false;
-        }
-        napi_unref_threadsafe_function(env, instance->broker);
-    }
-
-    return true;
-}
-
 static void RegisterPrimitiveType(Napi::Env env, Napi::Object map, std::initializer_list<const char *> names,
                                   PrimitiveKind primitive, int32_t size, int16_t align, const char *ref = nullptr)
 {
