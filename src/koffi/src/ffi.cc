@@ -1902,7 +1902,7 @@ static FORCE_INLINE napi_value DecodeInteger(napi_env env, napi_callback_info in
     K_ASSERT(status == napi_ok);
 
     if (count < 1) [[unlikely]] {
-        ThrowError<Napi::TypeError>(env, "Expected 1 arguments, got %1", count);
+        ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", count);
         return Napi::Env(env).Null();
     }
 
