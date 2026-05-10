@@ -1974,6 +1974,114 @@ static napi_value DecodeDouble(napi_env env, napi_callback_info info)
     return Napi::Number::New(env, d);
 }
 
+static napi_value DecodeString(napi_env env, napi_callback_info info)
+{
+    napi_value args[2];
+    size_t count = 2;
+
+    napi_status status = napi_get_cb_info(env, info, &count, args, nullptr, nullptr);
+    K_ASSERT(status == napi_ok);
+
+    if (count < 1) [[unlikely]] {
+        ThrowError<Napi::TypeError>(env, "Expected 1 to 2 arguments, got %1", count);
+        return Napi::Env(env).Null();
+    }
+
+    void *ptr = nullptr;
+    if (!TryPointer(env, args[0], &ptr)) [[unlikely]] {
+        InstanceData *instance = Napi::Env(env).GetInstanceData<InstanceData>();
+
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected pointer", GetValueType(instance, args[0]));
+        return Napi::Env(env).Null();
+    }
+
+    if (count >= 2) {
+        Size len;
+        if (!TryNumber(env, args[1], &len)) [[unlikely]] {
+            InstanceData *instance = Napi::Env(env).GetInstanceData<InstanceData>();
+
+            ThrowError<Napi::TypeError>(env, "Unexpected %1 value for length, expected number", GetValueType(instance, args[1]));
+            return Napi::Env(env).Null();
+        }
+
+        return Napi::String::New(env, (const char *)ptr, (size_t)len);
+    } else {
+        return Napi::String::New(env, (const char *)ptr);
+    }
+}
+
+static napi_value DecodeString16(napi_env env, napi_callback_info info)
+{
+    napi_value args[2];
+    size_t count = 2;
+
+    napi_status status = napi_get_cb_info(env, info, &count, args, nullptr, nullptr);
+    K_ASSERT(status == napi_ok);
+
+    if (count < 1) [[unlikely]] {
+        ThrowError<Napi::TypeError>(env, "Expected 1 to 2 arguments, got %1", count);
+        return Napi::Env(env).Null();
+    }
+
+    void *ptr = nullptr;
+    if (!TryPointer(env, args[0], &ptr)) [[unlikely]] {
+        InstanceData *instance = Napi::Env(env).GetInstanceData<InstanceData>();
+
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected pointer", GetValueType(instance, args[0]));
+        return Napi::Env(env).Null();
+    }
+
+    if (count >= 2) {
+        Size len;
+        if (!TryNumber(env, args[1], &len)) [[unlikely]] {
+            InstanceData *instance = Napi::Env(env).GetInstanceData<InstanceData>();
+
+            ThrowError<Napi::TypeError>(env, "Unexpected %1 value for length, expected number", GetValueType(instance, args[1]));
+            return Napi::Env(env).Null();
+        }
+
+        return Napi::String::New(env, (const char16_t *)ptr, (size_t)len);
+    } else {
+        return Napi::String::New(env, (const char16_t *)ptr);
+    }
+}
+
+static napi_value DecodeString32(napi_env env, napi_callback_info info)
+{
+    napi_value args[2];
+    size_t count = 2;
+
+    napi_status status = napi_get_cb_info(env, info, &count, args, nullptr, nullptr);
+    K_ASSERT(status == napi_ok);
+
+    if (count < 1) [[unlikely]] {
+        ThrowError<Napi::TypeError>(env, "Expected 1 to 2 arguments, got %1", count);
+        return Napi::Env(env).Null();
+    }
+
+    void *ptr = nullptr;
+    if (!TryPointer(env, args[0], &ptr)) [[unlikely]] {
+        InstanceData *instance = Napi::Env(env).GetInstanceData<InstanceData>();
+
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected pointer", GetValueType(instance, args[0]));
+        return Napi::Env(env).Null();
+    }
+
+    if (count >= 2) {
+        Size len;
+        if (!TryNumber(env, args[1], &len)) [[unlikely]] {
+            InstanceData *instance = Napi::Env(env).GetInstanceData<InstanceData>();
+
+            ThrowError<Napi::TypeError>(env, "Unexpected %1 value for length, expected number", GetValueType(instance, args[1]));
+            return Napi::Env(env).Null();
+        }
+
+        return MakeStringFromUTF32(env, (const char32_t *)ptr, len);
+    } else {
+        return MakeStringFromUTF32(env, (const char32_t *)ptr);
+    }
+}
+
 static Napi::Value GetPointerAddress(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
@@ -2408,6 +2516,9 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
         decode.Set("uint64", CreateFunction(env, [](napi_env env, napi_callback_info info) { return DecodeInteger<uint64_t>(env, info); }, "uint64"));
         decode.Set("float", CreateFunction(env, DecodeFloat, "float"));
         decode.Set("double", CreateFunction(env, DecodeDouble, "double"));
+        decode.Set("string", CreateFunction(env, DecodeString, "string"));
+        decode.Set("string16", CreateFunction(env, DecodeString16, "string16"));
+        decode.Set("string32", CreateFunction(env, DecodeString32, "string32"));
 
         exports.Set("decode", decode);
     }
