@@ -854,18 +854,6 @@ static Napi::Value CreateDisposableType(const Napi::CallbackInfo &info)
     return WrapType(env, type);
 }
 
-static inline bool GetExternalPointer(napi_env env, napi_value value, void **out_ptr)
-{
-    if (!TryPointer(env, value, out_ptr)) {
-        InstanceData *instance = Napi::Env(env).GetInstanceData<InstanceData>();
-
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected pointer", GetValueType(instance, value));
-        return false;
-    }
-
-    return true;
-}
-
 static Napi::Value CallAlloc(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
@@ -922,8 +910,12 @@ static Napi::Value CallFree(const Napi::CallbackInfo &info)
     }
 
     void *ptr = nullptr;
-    if (!GetExternalPointer(env, info[0], &ptr))
+    if (!TryPointer(env, info[0], &ptr)) {
+        InstanceData *instance = Napi::Env(env).GetInstanceData<InstanceData>();
+
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected pointer", GetValueType(instance, info[0]));
         return env.Null();
+    }
 
     free(ptr);
 
@@ -2092,8 +2084,12 @@ static Napi::Value GetPointerAddress(const Napi::CallbackInfo &info)
     }
 
     void *ptr = nullptr;
-    if (!GetExternalPointer(env, info[0], &ptr))
+    if (!TryPointer(env, info[0], &ptr)) {
+        InstanceData *instance = Napi::Env(env).GetInstanceData<InstanceData>();
+
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected pointer", GetValueType(instance, info[0]));
         return env.Null();
+    }
 
     uint64_t ptr64 = (uint64_t)(uintptr_t)ptr;
     Napi::BigInt bigint = Napi::BigInt::New(env, ptr64);
@@ -2104,7 +2100,6 @@ static Napi::Value GetPointerAddress(const Napi::CallbackInfo &info)
 static Napi::Value CallPointerSync(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
 
     if (info.Length() < 2) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected 2 or more arguments, got %1", info.Length());
@@ -2112,13 +2107,19 @@ static Napi::Value CallPointerSync(const Napi::CallbackInfo &info)
     }
 
     void *ptr = nullptr;
-    if (!GetExternalPointer(env, info[0], &ptr)) [[unlikely]]
+    if (!TryPointer(env, info[0], &ptr)) {
+        InstanceData *instance = Napi::Env(env).GetInstanceData<InstanceData>();
+
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected pointer", GetValueType(instance, info[0]));
         return env.Null();
+    }
 
     const TypeInfo *type = ResolveType(info[1]);
     if (!type) [[unlikely]]
         return env.Null();
     if (type->primitive != PrimitiveKind::Prototype) [[unlikely]] {
+        InstanceData *instance = env.GetInstanceData<InstanceData>();
+
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for type, expected function type", GetValueType(instance, info[1]));
         return env.Null();
     }
@@ -2163,28 +2164,34 @@ static Napi::Value EncodeValue(const Napi::CallbackInfo &info)
 static Napi::Value CreateView(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
 
     if (info.Length() < 1) {
         ThrowError<Napi::TypeError>(env, "Expected 2 arguments, got %1", info.Length());
         return env.Null();
     }
     if (!info[1].IsNumber()) {
+        InstanceData *instance = env.GetInstanceData<InstanceData>();
+
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for length, expected integer", GetValueType(instance, info[1]));
         return env.Null();
     }
 
     void *ptr = nullptr;
-    if (!GetExternalPointer(env, info[0], &ptr))
-        return env.Null();
-    Size len = (Size)info[1].As<Napi::Number>().Int64Value();
+    if (!TryPointer(env, info[0], &ptr)) {
+        InstanceData *instance = Napi::Env(env).GetInstanceData<InstanceData>();
 
-    if (len < 0) {
-        ThrowError<Napi::TypeError>(env, "Array length must be positive and non-zero");
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected pointer", GetValueType(instance, info[0]));
         return env.Null();
     }
 
+    Size len = (Size)info[1].As<Napi::Number>().Int64Value();
+
     if (len) {
+        if (len < 0) [[unlikely]] {
+            ThrowError<Napi::TypeError>(env, "Array length must be positive and non-zero");
+            return env.Null();
+        }
+
         Napi::ArrayBuffer view = Napi::ArrayBuffer::New(env, ptr, (size_t)len);
 
         if (!view.ByteLength()) {
