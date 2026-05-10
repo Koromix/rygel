@@ -283,6 +283,13 @@ static FORCE_INLINE bool TryPointer(napi_env env, napi_value value, void **out_p
     if (IsNullOrUndefined(kind)) {
         *out_ptr = nullptr;
         return true;
+    } else if (kind == napi_number) {
+        int64_t i;
+        napi_status status = napi_get_value_int64(env, value, &i);
+        K_ASSERT(status == napi_ok);
+
+        *out_ptr = (void *)(uintptr_t)i;
+        return true;
 #if defined(EXTERNAL_POINTERS)
     } else if (kind == napi_external) {
         Napi::External<void> external = Napi::External<void>(env, value);
@@ -328,6 +335,15 @@ static FORCE_INLINE bool TryPointer(napi_env env, napi_value value, void **out_p
     if (IsNullOrUndefined(kind)) {
         *out_ptr = nullptr;
         *out_kind = kind;
+
+        return true;
+    } else if (kind == napi_number) {
+        int64_t i;
+        napi_status status = napi_get_value_int64(env, value, &i);
+        K_ASSERT(status == napi_ok);
+
+        *out_ptr = (void *)(uintptr_t)i;
+        *out_kind = napi_number;
 
         return true;
 #if defined(EXTERNAL_POINTERS)
