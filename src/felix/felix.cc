@@ -750,7 +750,7 @@ For help about those commands, type: %!..+%1 command --help%!0)", FelixTarget);
     // Find and check target used with --run
     const TargetInfo *run_target = nullptr;
     if (run_target_name) {
-        if (compiler->platform != NativePlatform) {
+        if (compiler->platform != NativePlatform || compiler->architecture != NativeArchitecture) {
             LogError("Cannot use --run when cross-compiling");
             return 1;
         }
