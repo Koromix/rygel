@@ -240,6 +240,7 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
 
                 continue;
             }
+
             valid &= CheckTargetName(prop.section);
 
             TargetConfig target_config = {};
