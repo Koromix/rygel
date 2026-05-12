@@ -5,6 +5,9 @@
 #include "call.hh"
 #include "ffi.hh"
 #include "util.hh"
+#if defined(_WIN32)
+    #include "win32.hh"
+#endif
 
 #include <napi.h>
 
