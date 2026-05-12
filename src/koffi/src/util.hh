@@ -438,7 +438,7 @@ static FORCE_INLINE napi_value NewInt(Napi::Env env, short i) { napi_value value
 static FORCE_INLINE napi_value NewInt(Napi::Env env, unsigned short i) { napi_value value; napi_create_uint32(env, (uint32_t)i, &value); return value; }
 static FORCE_INLINE napi_value NewInt(Napi::Env env, int i) { napi_value value; napi_create_int32(env, (int32_t)i, &value); return value; }
 static FORCE_INLINE napi_value NewInt(Napi::Env env, unsigned int i) { napi_value value; napi_create_uint32(env, (uint32_t)i, &value); return value; }
-#if defined(_WIN32)
+#if LONG_MAX == INT32_MAX
 static FORCE_INLINE napi_value NewInt(Napi::Env env, long i) { napi_value value; napi_create_int32(env, (int32_t)i, &value); return value; }
 static FORCE_INLINE napi_value NewInt(Napi::Env env, unsigned long i) { napi_value value; napi_create_uint32(env, (uint32_t)i, &value); return value; }
 #endif
