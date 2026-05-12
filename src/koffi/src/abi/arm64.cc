@@ -609,10 +609,11 @@ namespace {
              \
             ADJUST_TEB(teb, call->mem->stack0.ptr, call->mem->stack0.end); \
              \
+            call->DebugForward(); \
             return (Expr); \
         }()
 #else
-    #define WRAP(Expr) (Expr)
+    #define WRAP(Expr) (call->DebugForward(), (Expr))
 #endif
 
 #define INTEGER(CType) \

@@ -101,6 +101,14 @@ struct alignas(8) CallData {
     T *AllocHeap(Size size);
 
     bool CheckDynamicLength(napi_value obj, Size element, const char *countedby, napi_value value);
+
+#if defined(K_DEBUG)
+    void DebugCall(const FunctionInfo *func);
+    void DebugForward();
+#else
+    FORCE_INLINE void DebugCall(const FunctionInfo *) {}
+    FORCE_INLINE void DebugForward() {}
+#endif
 };
 
 template <typename T>

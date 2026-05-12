@@ -1223,6 +1223,46 @@ bool CallData::CheckDynamicLength(napi_value obj, Size element, const char *coun
     return true;
 }
 
+#if defined(K_DEBUG)
+
+static bool IsDebugEnabled()
+{
+    static bool debug = GetDebugFlag("DEBUG_CALLS");
+    return debug;
+}
+
+void CallData::DebugCall(const FunctionInfo *func)
+{
+    if (!IsDebugEnabled())
+        return;
+
+    PrintLn(StdErr, "%!..+---- %1 (%2) ----%!0", func->name, CallConventionNames[(int)func->convention]);
+
+    if (func->parameters.len) {
+        PrintLn(StdErr, "Parameters:");
+        for (Size i = 0; i < func->parameters.len; i++) {
+            const ParameterInfo &param = func->parameters[i];
+            PrintLn(StdErr, "  %1 = %2 (%3)", i, param.type->name, FmtMemSize(param.type->size));
+        }
+    }
+
+    PrintLn(StdErr, "Return: %1 (%2)", func->ret.type->name, FmtMemSize(func->ret.type->size));
+}
+
+void CallData::DebugForward()
+{
+    if (!IsDebugEnabled())
+        return;
+
+    Span<const uint8_t> stack = MakeSpan(mem->stack.end, prev_stack - mem->stack.end);
+    Span<const uint8_t> heap = MakeSpan(prev_heap, mem->heap.ptr - prev_heap);
+
+    DumpMemory("Stack", stack);
+    DumpMemory("Heap", heap);
+}
+
+#endif
+
 static bool DetectDeno(Napi::Env env)
 {
     Napi::Value ret = env.RunScript("typeof Deno != 'undefined'");
@@ -1305,6 +1345,8 @@ napi_value TranslateZeroCall(napi_env env, napi_callback_info info)
     K_DEFER_C(prev_call = instance->sync_call) { instance->sync_call = prev_call; };
     instance->sync_call = &call;
 
+    call.DebugCall(func);
+
     napi_value ret = call.Run(func, nullptr);
     call.FinalizeFast();
 
@@ -1333,6 +1375,8 @@ napi_value TranslateFastCall(napi_env env, napi_callback_info info)
     K_DEFER_C(prev_call = instance->sync_call) { instance->sync_call = prev_call; };
     instance->sync_call = &call;
 
+    call.DebugCall(func);
+
     napi_value ret = call.Run(func, args);
     call.FinalizeFast();
 
@@ -1355,6 +1399,8 @@ static FORCE_INLINE napi_value TranslateNormalCall(napi_env env, const FunctionI
 
     K_DEFER_C(prev_call = instance->sync_call) { instance->sync_call = prev_call; };
     instance->sync_call = &call;
+
+    call.DebugCall(func);
 
     napi_value ret = call.Run(func, args);
     call.Finalize();
@@ -1472,6 +1518,8 @@ static napi_value TranslateVariadicCall(napi_env env, const FunctionInfo *func, 
 
     K_DEFER_C(prev_call = instance->sync_call) { instance->sync_call = prev_call; };
     instance->sync_call = &call;
+
+    call.DebugCall(func);
 
     napi_value ret = call.Run(variadic, args);
     call.Finalize();

@@ -312,10 +312,11 @@ napi_value RunLoop(CallData *call, napi_value *args, uint32_t *base, const AbiIn
              \
             ADJUST_TEB(teb, call->mem->stack0.ptr, call->mem->stack0.end); \
              \
+            call->DebugForward(); \
             return (Expr); \
         }()
 #else
-    #define WRAP(Expr) (Expr)
+    #define WRAP(Expr) (call->DebugForward(), (Expr))
 #endif
 
 #define INTEGER32(CType) \

@@ -242,6 +242,7 @@ namespace {
              \
             ADJUST_TEB(teb, call->mem->stack0.ptr, call->mem->stack0.end); \
              \
+            call->DebugForward(); \
             return (Expr); \
         }()
 
