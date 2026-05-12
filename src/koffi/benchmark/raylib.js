@@ -4,7 +4,9 @@
 
 const pkg = require('./package.json');
 const koffi = require('..');
+const koffi2 = optional('koffi');
 const r = optional('raylib');
+const koffi2 = optional('koffi');
 const ctypes = optional('node-ctypes');
 const ffi = optional('node:ffi');
 const ffi_napi = optional('@napi-ffi/ffi-napi');
@@ -24,7 +26,8 @@ function main() {
     let tests = {
         'cxx': time => run_cxx(time),
         'napi': time => r ? run_napi(time) : undefined,
-        'koffi': time => run_koffi(time),
+        'koffi': time => run_koffi(koffi, time),
+        'koffi2': time => koffi2 ? run_koffi(koffi2, time) : undefined,
         'node-ffi-napi': ffi_napi ? time => run_node_ffi_napi(time) : undefined
     };
 
@@ -100,7 +103,7 @@ function run_napi(time) {
     return { iterations: iterations, time: Math.round(time) };
 }
 
-function run_koffi(time) {
+function run_koffi(koffi, time) {
     const Color = koffi.struct('Color', {
         r: 'uchar',
         g: 'uchar',

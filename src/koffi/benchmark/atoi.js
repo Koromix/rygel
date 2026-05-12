@@ -5,6 +5,7 @@
 const pkg = require('./package.json');
 const napi = require(pkg.cnoke.output + '/atoi_napi.node');
 const koffi = require('..');
+const koffi2 = optional('koffi');
 const ctypes = optional('node-ctypes');
 const ffi_rs = optional('ffi-rs');
 const ffi = optional('node:ffi');
@@ -28,7 +29,8 @@ function main() {
 
     let tests = {
         'napi': time => run_napi(time),
-        'koffi': time => run_koffi(time),
+        'koffi': time => run_koffi(koffi, time),
+        'koffi2': time => koffi2 ? run_koffi(koffi2, time) : undefined,
         'node-ctypes': ctypes ? time => run_node_ctypes(time) : undefined,
         'ffi-rs': ffi_rs ? time => run_ffi_rs(time) : undefined,
         'node:ffi': ffi ? time => run_node_ffi(time) : undefined,
@@ -65,7 +67,7 @@ function run_napi(time) {
     return { iterations: iterations, time: Math.round(time) };
 }
 
-function run_koffi(time) {
+function run_koffi(koffi, time) {
     let lib = koffi.load(process.platform == 'win32' ? 'msvcrt.dll' : null);
 
     const atoi = lib.func('atoi', 'int', ['str']);
