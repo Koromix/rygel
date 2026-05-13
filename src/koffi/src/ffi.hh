@@ -186,11 +186,11 @@ struct ParameterInfo {
         int offset;
     } abi;
 #elif __riscv_xlen == 64 || defined(__loongarch64)
-    bool use_memory;
-    int8_t gpr_count;
-    int8_t vec_count;
-    bool gpr_first; // Only for structs
-    int8_t reg_size[2];
+    struct {
+        AbiMethod method;
+        int offsets[2];
+        int shape;
+    } abi;
 #endif
 };
 
@@ -214,11 +214,11 @@ struct ReturnInfo {
 #elif defined(__i386__) || defined(_M_IX86)
     bool trivial;
 #elif __riscv_xlen == 64 || defined(__loongarch64)
-    bool use_memory;
-    int8_t gpr_count;
-    int8_t vec_count;
-    bool gpr_first; // Only for structs
-    int8_t reg_size[2];
+    struct {
+        AbiMethod method;
+        int offsets[2];
+        int shape;
+    } abi;
 #endif
 };
 

@@ -15,11 +15,11 @@
 .global ForwardCallDD
 
 # The X variants are slightly slower, and are used when FA arguments must be forwarded.
-.global ForwardCallXGG
-.global ForwardCallXF
-.global ForwardCallXDG
-.global ForwardCallXGD
-.global ForwardCallXDD
+.global ForwardCallGGX
+.global ForwardCallFX
+.global ForwardCallDGX
+.global ForwardCallGDX
+.global ForwardCallDDX
 
 # Copy function pointer to t0, in order to save it through argument forwarding.
 # Also make a copy of the SP to CallData::old_sp because the callback system might need it.
@@ -31,7 +31,7 @@
     sd s1, 8(sp)
     mv s1, sp
     sd sp, 0(a2)
-    addi sp, a1, 128
+    addi sp, a1, 144
 .endm
 
 # Call native function.
@@ -48,26 +48,26 @@
 
 # Prepare general purpose argument registers from array passed by caller.
 .macro forward_gpr
-    ld a7, 120(a1)
-    ld a6, 112(a1)
-    ld a5, 104(a1)
-    ld a4, 96(a1)
-    ld a3, 88(a1)
-    ld a2, 80(a1)
-    ld a0, 64(a1)
-    ld a1, 72(a1)
+    ld a7, 56(a1)
+    ld a6, 48(a1)
+    ld a5, 40(a1)
+    ld a4, 32(a1)
+    ld a3, 24(a1)
+    ld a2, 16(a1)
+    ld a0, 0(a1)
+    ld a1, 8(a1)
 .endm
 
 # Prepare vector argument registers from array passed by caller.
 .macro forward_vec
-    fld fa7, 56(a1)
-    fld fa6, 48(a1)
-    fld fa5, 40(a1)
-    fld fa4, 32(a1)
-    fld fa3, 24(a1)
-    fld fa2, 16(a1)
-    fld fa1, 8(a1)
-    fld fa0, 0(a1)
+    fld fa7, 120(a1)
+    fld fa6, 112(a1)
+    fld fa5, 104(a1)
+    fld fa4, 96(a1)
+    fld fa3, 88(a1)
+    fld fa2, 80(a1)
+    fld fa1, 72(a1)
+    fld fa0, 64(a1)
 .endm
 
 ForwardCallGG:
@@ -95,31 +95,31 @@ ForwardCallDD:
     forward_gpr
     epilogue
 
-ForwardCallXGG:
+ForwardCallGGX:
     prologue
     forward_vec
     forward_gpr
     epilogue
 
-ForwardCallXF:
+ForwardCallFX:
     prologue
     forward_vec
     forward_gpr
     epilogue
 
-ForwardCallXDG:
+ForwardCallDGX:
     prologue
     forward_vec
     forward_gpr
     epilogue
 
-ForwardCallXGD:
+ForwardCallGDX:
     prologue
     forward_vec
     forward_gpr
     epilogue
 
-ForwardCallXDD:
+ForwardCallDDX:
     prologue
     forward_vec
     forward_gpr
@@ -145,33 +145,33 @@ ForwardCallXDD:
 .endm
 
 RelayTrampoline:
-    addi sp, sp, -176
+    addi sp, sp, -192
     sd ra, 0(sp)
-    sd a0, 8(sp)
-    sd a1, 16(sp)
-    sd a2, 24(sp)
-    sd a3, 32(sp)
-    sd a4, 40(sp)
-    sd a5, 48(sp)
-    sd a6, 56(sp)
-    sd a7, 64(sp)
-    fsd fa0, 72(sp)
-    fsd fa1, 80(sp)
-    fsd fa2, 88(sp)
-    fsd fa3, 96(sp)
-    fsd fa4, 104(sp)
-    fsd fa5, 112(sp)
-    fsd fa6, 120(sp)
-    fsd fa7, 128(sp)
+    sd a0, 56(sp)
+    sd a1, 64(sp)
+    sd a2, 72(sp)
+    sd a3, 80(sp)
+    sd a4, 88(sp)
+    sd a5, 96(sp)
+    sd a6, 104(sp)
+    sd a7, 112(sp)
+    fsd fa0, 120(sp)
+    fsd fa1, 128(sp)
+    fsd fa2, 136(sp)
+    fsd fa3, 144(sp)
+    fsd fa4, 152(sp)
+    fsd fa5, 160(sp)
+    fsd fa6, 168(sp)
+    fsd fa7, 176(sp)
     mv a0, t0
-    addi a1, sp, 8
+    addi a1, sp, 16
     call RelayCallback
     ld ra, 0(sp)
-    ld a0, 136(sp)
-    ld a1, 144(sp)
-    fld fa0, 152(sp)
-    fld fa1, 160(sp)
-    addi sp, sp, 176
+    ld a0, 16(sp)
+    ld a1, 24(sp)
+    fld fa0, 32(sp)
+    fld fa1, 40(sp)
+    addi sp, sp, 192
     ret
 
 # When a callback is relayed, Koffi will call into Node.js and V8 to execute Javascript.
