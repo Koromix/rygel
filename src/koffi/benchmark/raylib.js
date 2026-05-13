@@ -6,7 +6,6 @@ const pkg = require('./package.json');
 const koffi = require('..');
 const koffi2 = optional('koffi');
 const r = optional('raylib');
-const koffi2 = optional('koffi');
 const ctypes = optional('node-ctypes');
 const ffi = optional('node:ffi');
 const ffi_napi = optional('@napi-ffi/ffi-napi');
