@@ -109,7 +109,7 @@
             "machine": "debian_riscv64",
             "directory": "/home/debian/luigi",
             "build": "node ../../cnoke.cjs --ccache",
-            "package": null
+            "package": "linux-riscv64d"
         },
 
         "test": {
@@ -387,7 +387,7 @@
             "machine": "debian_loong64",
             "directory": "/home/debian/luigi",
             "build": "node ../../cnoke.cjs --ccache",
-            "package": null
+            "package": "linux-loong64"
         },
 
         "test": {
