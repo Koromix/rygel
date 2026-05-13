@@ -243,7 +243,7 @@ Size ClassAnalyser::Classify(Span<RegisterClass> classes, const TypeInfo *type, 
                 return 1;
             }
 
-            for (const RecordMember &member: type->members) {
+            for (const RecordMember &member: type->shapes[0].members) {
                 Size member_offset = offset + member.offset;
                 Size start = member_offset / 8;
                 Classify(classes.Take(start, classes.len - start), member.type, member_offset % 8);
@@ -258,7 +258,7 @@ Size ClassAnalyser::Classify(Span<RegisterClass> classes, const TypeInfo *type, 
                 return 1;
             }
 
-            for (const RecordMember &member: type->members) {
+            for (const RecordMember &member: type->shapes[0].members) {
                 Size start = offset / 8;
                 Classify(classes.Take(start, classes.len - start), member.type, offset % 8);
             }

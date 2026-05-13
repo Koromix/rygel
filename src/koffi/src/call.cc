@@ -407,17 +407,17 @@ static inline napi_value GetMemberValue(napi_env env, napi_value obj, const Reco
     return value;
 }
 
-bool CallData::PushObject(napi_value obj, const TypeInfo *type, uint8_t *origin)
+bool CallData::PushObject(napi_value obj, const TypeInfo *type, int shape_idx, uint8_t *origin)
 {
     K_ASSERT(IsObject(env, obj));
     K_ASSERT(type->primitive == PrimitiveKind::Record ||
-              type->primitive == PrimitiveKind::Union);
+             type->primitive == PrimitiveKind::Union);
+    K_ASSERT(type->shapes[shape_idx].members.len == type->shapes[0].members.len);
 
-    Span<const RecordMember> members = {};
+    const RecordShape &shape = type->shapes[shape_idx];
+    Span<const RecordMember> members = shape.members;
 
-    if (type->primitive == PrimitiveKind::Record) {
-        members = type->members;
-    } else if (type->primitive == PrimitiveKind::Union) {
+    if (type->primitive == PrimitiveKind::Union) {
         if (CheckValueTag(env, obj, &UnionValueMarker)) {
             UnionValue *u = nullptr;
             napi_unwrap(env, obj, (void **)&u);
@@ -452,20 +452,20 @@ bool CallData::PushObject(napi_value obj, const TypeInfo *type, uint8_t *origin)
 
             std::string property = properties.Get(0u).As<Napi::String>();
 
-            members.ptr = std::find_if(type->members.begin(), type->members.end(),
-                                       [&](const RecordMember &member) { return TestStr(property.c_str(), member.name); });
-            members.len = 1;
+            const RecordMember *member = std::find_if(members.begin(), members.end(),
+                                                      [&](const RecordMember &member) { return TestStr(property.c_str(), member.name); });
 
-            if (members.ptr == type->members.end()) [[unlikely]] {
+            if (member == members.end()) [[unlikely]] {
                 ThrowError<Napi::Error>(env, "Unknown member %1 in union type %2", property.c_str(), type->name);
                 return false;
             }
+
+            members.ptr = member;
+            members.len = 1;
         }
-    } else {
-        K_UNREACHABLE();
     }
 
-    MemSet(origin, 0, type->size);
+    MemSet(origin, shape.fill, shape.size);
 
 #define PUSH_INTEGER(CType) \
         do { \
@@ -568,7 +568,7 @@ bool CallData::PushObject(napi_value obj, const TypeInfo *type, uint8_t *origin)
                     return false;
                 }
 
-                if (!PushObject(value, member.type, dest))
+                if (!PushObject(value, member.type, shape_idx, dest))
                     return false;
             } break;
             case PrimitiveKind::Array: {
@@ -1388,8 +1388,6 @@ napi_value TranslateFastCall(napi_env env, napi_callback_info info)
 
 static FORCE_INLINE napi_value TranslateNormalCall(napi_env env, const FunctionInfo *func, void *native, napi_value *args, Size count)
 {
-    static_assert(MaxParameters >= 6);
-
     InstanceData *instance = func->instance;
 
     if (count < func->required_parameters) [[unlikely]] {
@@ -1413,14 +1411,16 @@ static FORCE_INLINE napi_value TranslateNormalCall(napi_env env, const FunctionI
 
 napi_value TranslateNormalCall(napi_env env, napi_callback_info info)
 {
+    static_assert(MaxParameters >= 8);
+
     napi_value args[MaxParameters];
-    size_t count = 6;
+    size_t count = 8;
     FunctionInfo *func;
 
     napi_status status = napi_get_cb_info(env, info, &count, args, nullptr, (void **)&func);
     K_ASSERT(status == napi_ok);
 
-    if (count > 6) {
+    if (count > 8) {
         napi_status status = napi_get_cb_info(env, info, &count, args, nullptr, nullptr);
         K_ASSERT(status == napi_ok);
 
@@ -1432,8 +1432,6 @@ napi_value TranslateNormalCall(napi_env env, napi_callback_info info)
 
 static napi_value TranslateVariadicCall(napi_env env, const FunctionInfo *func, void *native, napi_value *args, Size count)
 {
-    static_assert(MaxParameters >= 6);
-
     InstanceData *instance = func->instance;
 
     FunctionInfo *variadic = nullptr;
@@ -1539,14 +1537,16 @@ static napi_value TranslateVariadicCall(napi_env env, const FunctionInfo *func, 
 
 napi_value TranslateVariadicCall(napi_env env, napi_callback_info info)
 {
+    static_assert(MaxParameters >= 8);
+
     napi_value args[MaxParameters];
-    size_t count = 6;
+    size_t count = 8;
     FunctionInfo *func;
 
     napi_status status = napi_get_cb_info(env, info, &count, args, nullptr, (void **)&func);
     K_ASSERT(status == napi_ok);
 
-    if (count > 6) {
+    if (count > 8) {
         napi_status status = napi_get_cb_info(env, info, &count, args, nullptr, nullptr);
         K_ASSERT(status == napi_ok);
 
@@ -1570,6 +1570,8 @@ public:
     ~AsyncCall();
 
     bool Prepare(napi_value *args) {
+        call->DebugCall(func);
+
         prepared = call->PrepareAsync(func, args);
 
         if (!prepared) [[unlikely]] {

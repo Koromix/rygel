@@ -54,6 +54,20 @@ static const char *const ArrayHintNames[] = {
     "String"
 };
 
+struct RecordMember {
+    const char *name;
+    napi_ref key;
+    const TypeInfo *type;
+    int32_t offset;
+    Size countedby;
+};
+
+struct RecordShape {
+    HeapArray<RecordMember> members;
+    int32_t size;
+    int fill;
+};
+
 struct TypeInfo {
     const char *name;
 
@@ -70,7 +84,9 @@ struct TypeInfo {
     DisposeFunc *dispose;
     Napi::FunctionReference dispose_ref;
 
-    HeapArray<RecordMember> members; // Record only
+    // The first shape does not change but others might, so we need
+    // mutable or a const-away cast. Pick your poison.
+    mutable RecordShape shapes[2]; // Record or Union
     union {
         const TypeInfo *type; // Pointer or array
         const FunctionInfo *proto; // Callback only
@@ -82,14 +98,6 @@ struct TypeInfo {
     mutable Napi::ObjectReference defn;
 
     K_HASHTABLE_HANDLER(TypeInfo, name);
-};
-
-struct RecordMember {
-    const char *name;
-    napi_ref key;
-    const TypeInfo *type;
-    int32_t offset;
-    Size countedby;
 };
 
 struct LibraryHolder {

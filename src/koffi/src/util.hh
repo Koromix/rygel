@@ -71,7 +71,15 @@ public:
     void Finalize(Napi::BasicEnv env) override;
 
     const TypeInfo *GetType() { return type; }
-    const RecordMember *GetMember() const { return (active_idx >= 0) ? &type->members[active_idx] : nullptr; }
+
+    const RecordMember *GetMember() const
+    {
+        if (active_idx < 0)
+            return nullptr;
+
+        const RecordShape &shape0 = type->shapes[0];
+        return &shape0.members[active_idx];
+    }
 
     void SetRaw(const uint8_t *ptr);
     const uint8_t *GetRaw() const { return raw.ptr; }
@@ -418,8 +426,8 @@ Napi::String MakeStringFromUTF32(Napi::Env env, const char32_t *ptr, Size len);
 static inline Napi::String MakeStringFromUTF32(Napi::Env env, const char32_t *ptr)
     { return MakeStringFromUTF32(env, ptr, NullTerminatedLength(ptr)); }
 
-Napi::Object DecodeObject(Napi::Env env, const uint8_t *origin, const TypeInfo *type);
-void DecodeObject(Napi::Env env, napi_value obj, const uint8_t *origin, const TypeInfo *type);
+Napi::Object DecodeObject(Napi::Env env, const uint8_t *origin, const TypeInfo *type, int shape_idx = 0);
+void DecodeObject(Napi::Env env, napi_value obj, const uint8_t *origin, const TypeInfo *type, int shape_idx = 0);
 Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *type);
 Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *type, uint32_t len);
 void DecodeElements(Napi::Env env, napi_value array, const uint8_t *origin, const TypeInfo *ref, uint32_t len);

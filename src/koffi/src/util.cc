@@ -47,12 +47,14 @@ Napi::Function UnionValue::InitClass(Napi::Env env, const TypeInfo *type)
 {
     K_ASSERT(type->primitive == PrimitiveKind::Union);
 
+    const RecordShape &shape0 = type->shapes[0];
+
     // node-addon-api wants std::vector
     std::vector<Napi::ClassPropertyDescriptor<UnionValue>> properties;
-    properties.reserve(type->members.len);
+    properties.reserve(shape0.members.len);
 
-    for (Size i = 0; i < type->members.len; i++) {
-        const RecordMember &member = type->members[i];
+    for (Size i = 0; i < shape0.members.len; i++) {
+        const RecordMember &member = shape0.members[i];
 
         napi_property_attributes attr = (napi_property_attributes)(napi_writable | napi_enumerable);
         Napi::ClassPropertyDescriptor<UnionValue> prop = InstanceAccessor(member.name, &UnionValue::Getter,
@@ -102,7 +104,7 @@ void UnionValue::SetRaw(const uint8_t *ptr)
 Napi::Value UnionValue::Getter(const Napi::CallbackInfo &info)
 {
     Size idx = (Size)info.Data();
-    const RecordMember &member = type->members[idx];
+    const RecordMember &member = type->shapes[0].members[idx];
 
     Napi::Value value;
 
@@ -383,7 +385,8 @@ const TypeInfo *ResolveType(Napi::Env env, Span<const char> str)
 
             memcpy((void *)copy, (const void *)type, K_SIZE(*type));
             copy->name = Fmt(&instance->str_alloc, "<anonymous_%1>", instance->types.count).ptr;
-            copy->members.allocator = GetNullAllocator();
+            copy->shapes[0].members.allocator = GetNullAllocator();
+            copy->shapes[1].members.allocator = GetNullAllocator();
             memset((void *)&copy->defn, 0, K_SIZE(copy->defn));
 
             static_assert(!std::is_polymorphic_v<Napi::ObjectReference>);
@@ -563,7 +566,7 @@ Napi::Object WrapType(Napi::Env env, const TypeInfo *type, bool freeze)
             case PrimitiveKind::Union: {
                 Napi::Object members = Napi::Object::New(env);
 
-                for (const RecordMember &member: type->members) {
+                for (const RecordMember &member: type->shapes[0].members) {
                     Napi::Object obj = Napi::Object::New(env);
 
                     obj.Set("name", member.name);
@@ -812,7 +815,7 @@ Napi::String MakeStringFromUTF32(Napi::Env env, const char32_t *ptr, Size len)
     return str;
 }
 
-Napi::Object DecodeObject(Napi::Env env, const uint8_t *origin, const TypeInfo *type)
+Napi::Object DecodeObject(Napi::Env env, const uint8_t *origin, const TypeInfo *type, int shape_idx)
 {
     // We can't decode unions because we don't know which member is valid
     if (type->primitive == PrimitiveKind::Union) {
@@ -824,7 +827,7 @@ Napi::Object DecodeObject(Napi::Env env, const uint8_t *origin, const TypeInfo *
     }
 
     Napi::Object obj = Napi::Object::New(env);
-    DecodeObject(env, obj, origin, type);
+    DecodeObject(env, obj, origin, type, shape_idx);
 
     return obj;
 }
@@ -935,11 +938,15 @@ static inline void SetMemberValue(napi_env env, napi_value obj, const RecordMemb
     }
 }
 
-void DecodeObject(Napi::Env env, napi_value obj, const uint8_t *origin, const TypeInfo *type)
+void DecodeObject(Napi::Env env, napi_value obj, const uint8_t *origin, const TypeInfo *type, int shape_idx)
 {
     K_ASSERT(type->primitive == PrimitiveKind::Record);
+    K_ASSERT(type->shapes[shape_idx].members.len == type->shapes[0].members.len);
 
-    for (const RecordMember &member: type->members) {
+    const RecordShape &shape = type->shapes[shape_idx];
+    Span<const RecordMember> members = shape.members;
+
+    for (const RecordMember &member: members) {
         const uint8_t *src = origin + member.offset;
 
         switch (member.type->primitive) {
@@ -1045,7 +1052,7 @@ void DecodeObject(Napi::Env env, napi_value obj, const uint8_t *origin, const Ty
                 memcpy(&ptr2, src, K_SIZE(void *));
 
                 if (member.countedby >= 0) {
-                    const RecordMember &by = type->members[member.countedby];
+                    const RecordMember &by = members[member.countedby];
                     uint32_t len = DecodeDynamicLength(origin, by);
 
                     Napi::Value value = DecodeArray(env, (const uint8_t *)ptr2, member.type, len);
@@ -1072,12 +1079,12 @@ void DecodeObject(Napi::Env env, napi_value obj, const uint8_t *origin, const Ty
             } break;
             case PrimitiveKind::Record:
             case PrimitiveKind::Union: {
-                Napi::Object obj2 = DecodeObject(env, src, member.type);
+                Napi::Object obj2 = DecodeObject(env, src, member.type, shape_idx);
                 SetMemberValue(env, obj, member, obj2);
             } break;
             case PrimitiveKind::Array: {
                 if (member.countedby >= 0) {
-                    const RecordMember &by = type->members[member.countedby];
+                    const RecordMember &by = members[member.countedby];
 
                     uint32_t len = DecodeDynamicLength(origin, by);
                     uint32_t max = member.type->size / member.type->ref.type->size;
@@ -1814,7 +1821,7 @@ static bool CanTypeAcceptCallbacks(const TypeInfo *type)
 
     if (type->primitive == PrimitiveKind::Record ||
             type->primitive == PrimitiveKind::Union) {
-        for (const RecordMember &member: type->members) {
+        for (const RecordMember &member: type->shapes[0].members) {
             if (CanTypeAcceptCallbacks(member.type))
                 return false;
         }
@@ -1941,13 +1948,13 @@ static int AnalyseFlatRec(const TypeInfo *type, int offset, int count, FunctionR
 {
     if (type->primitive == PrimitiveKind::Record) {
         for (int i = 0; i < count; i++) {
-            for (const RecordMember &member: type->members) {
+            for (const RecordMember &member: type->shapes[0].members) {
                 offset = AnalyseFlatRec(member.type, offset, 1, func);
             }
         }
     } else if (type->primitive == PrimitiveKind::Union) {
         for (int i = 0; i < count; i++) {
-            for (const RecordMember &member: type->members) {
+            for (const RecordMember &member: type->shapes[0].members) {
                 AnalyseFlatRec(member.type, offset, 1, func);
             }
         }
