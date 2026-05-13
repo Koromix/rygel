@@ -64,8 +64,8 @@ struct RecordMember {
 
 struct RecordShape {
     HeapArray<RecordMember> members;
-    int32_t size;
     int fill;
+    int32_t size;
 };
 
 struct TypeInfo {

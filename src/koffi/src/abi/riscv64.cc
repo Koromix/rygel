@@ -227,35 +227,38 @@ ClassResult ClassAnalyser::Analyse(const TypeInfo *type, bool variadic)
     return ret;
 }
 
-static void InitRegisterShape(const TypeInfo *type)
+static int InitRegisterShape(const TypeInfo *type)
 {
     const RecordShape &shape0 = type->shapes[0];
     RecordShape *shape1 = &type->shapes[1];
 
     if (shape1->members.len) {
         K_ASSERT(shape1->members.len == shape0.members.len);
-        return;
+        return shape1->size;
     }
 
     if (type->primitive == PrimitiveKind::Record) {
         shape1->members = shape0.members;
+        shape1->fill = 0xFF;
 
-        for (Size i = 0; i < shape1->members.len; i++) {
-            K_ASSERT(shape1->members[i].offset <= i * 8);
-            shape1->members[i].offset = i * 8;
+        for (RecordMember &member: shape1->members) {
+            member.offset = shape1->size;
+            shape1->size += InitRegisterShape(member.type);
         }
 
-        shape1->size = 8 * shape0.members.len;
-        shape1->fill = 0xFF;
-    } else {
-        K_ASSERT(type->primitive == PrimitiveKind::Union || !shape0.members.len);
-
+        return shape1->size;
+    } else if (type->primitive == PrimitiveKind::Union) {
         shape1->members = shape0.members;
         shape1->size = shape0.size;
-    }
 
-    for (const RecordMember &member: shape1->members) {
-        InitRegisterShape(member.type);
+        for (const RecordMember &member: shape1->members) {
+            InitRegisterShape(member.type);
+        }
+
+        return shape1->size;
+    } else {
+        K_ASSERT(type->size <= 8);
+        return 8;
     }
 }
 
@@ -694,7 +697,7 @@ namespace {
             return call->env.Null();
         }
 
-        uint64_t buf[2] = { 0xFFFFFFFFFFFFFFFFull, 0xFFFFFFFFFFFFFFFFull };
+        uint64_t buf[2];
         if (!call->PushObject(arg, inst->type, 1, (uint8_t *)buf))
             return call->env.Null();
 
@@ -1368,7 +1371,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
             if (proto->ret.abi.method != AbiMethod::Memory) {
                 int shape = proto->ret.abi.shape;
 
-                uint64_t buf[2] = { shape * 0xFFFFFFFFFFFFFFFFull, shape * 0xFFFFFFFFFFFFFFFFull };
+                uint64_t buf[2];
                 if (!PushObject(value, type, shape, (uint8_t *)buf))
                     return;
 
