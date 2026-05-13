@@ -47,14 +47,12 @@ Napi::Function UnionValue::InitClass(Napi::Env env, const TypeInfo *type)
 {
     K_ASSERT(type->primitive == PrimitiveKind::Union);
 
-    const RecordShape &shape0 = type->shapes[0];
-
     // node-addon-api wants std::vector
     std::vector<Napi::ClassPropertyDescriptor<UnionValue>> properties;
-    properties.reserve(shape0.members.len);
+    properties.reserve(type->members.len);
 
-    for (Size i = 0; i < shape0.members.len; i++) {
-        const RecordMember &member = shape0.members[i];
+    for (Size i = 0; i < type->members.len; i++) {
+        const RecordMember &member = type->members[i];
 
         napi_property_attributes attr = (napi_property_attributes)(napi_writable | napi_enumerable);
         Napi::ClassPropertyDescriptor<UnionValue> prop = InstanceAccessor(member.name, &UnionValue::Getter,
@@ -104,7 +102,7 @@ void UnionValue::SetRaw(const uint8_t *ptr)
 Napi::Value UnionValue::Getter(const Napi::CallbackInfo &info)
 {
     Size idx = (Size)info.Data();
-    const RecordMember &member = type->shapes[0].members[idx];
+    const RecordMember &member = type->members[idx];
 
     Napi::Value value;
 
@@ -385,8 +383,8 @@ const TypeInfo *ResolveType(Napi::Env env, Span<const char> str)
 
             memcpy((void *)copy, (const void *)type, K_SIZE(*type));
             copy->name = Fmt(&instance->str_alloc, "<anonymous_%1>", instance->types.count).ptr;
-            copy->shapes[0].members.allocator = GetNullAllocator();
-            copy->shapes[1].members.allocator = GetNullAllocator();
+            copy->members.allocator = GetNullAllocator();
+            copy->members.allocator = GetNullAllocator();
             memset((void *)&copy->defn, 0, K_SIZE(copy->defn));
 
             static_assert(!std::is_polymorphic_v<Napi::ObjectReference>);
@@ -450,12 +448,14 @@ TypeInfo *MakePointerType(InstanceData *instance, const TypeInfo *ref, int count
                 type->size = K_SIZE(void *);
                 type->align = K_SIZE(void *);
                 type->ref.type = ref;
+                type->ref.stride = ref->size;
                 type->hint = (ref->flags & (int)TypeFlag::HasTypedArray) ? ArrayHint::Typed : ArrayHint::Array;
             } else {
                 type->primitive = PrimitiveKind::Callback;
                 type->size = K_SIZE(void *);
                 type->align = K_SIZE(void *);
-                type->ref.proto = ref->ref.proto;
+                type->ref.type = instance->void_type; // Dummy
+                type->proto = ref->proto;
             }
 
             bucket->key = type->name;
@@ -481,6 +481,7 @@ static TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size
     type->align = ref->align;
     type->size = (int32_t)(len * ref->size);
     type->ref.type = ref;
+    type->ref.stride = ref->size;
     type->hint = hint;
 
     if (insert) {
@@ -566,7 +567,7 @@ Napi::Object WrapType(Napi::Env env, const TypeInfo *type, bool freeze)
             case PrimitiveKind::Union: {
                 Napi::Object members = Napi::Object::New(env);
 
-                for (const RecordMember &member: type->shapes[0].members) {
+                for (const RecordMember &member: type->members) {
                     Napi::Object obj = Napi::Object::New(env);
 
                     obj.Set("name", member.name);
@@ -582,7 +583,7 @@ Napi::Object WrapType(Napi::Env env, const TypeInfo *type, bool freeze)
 
             case PrimitiveKind::Prototype:
             case PrimitiveKind::Callback: {
-                defn.Set("proto", DescribeFunction(env, type->ref.proto));
+                defn.Set("proto", DescribeFunction(env, type->proto));
             } break;
         }
 
@@ -592,6 +593,58 @@ Napi::Object WrapType(Napi::Env env, const TypeInfo *type, bool freeze)
     }
 
     return type->defn.Value();
+}
+
+const TypeInfo *ReshapeType(InstanceData *instance, const TypeInfo *type, int32_t stride, uint16_t flags)
+{
+    K_ASSERT(!type->defn.IsEmpty());
+
+    if (!type->reshaped) {
+        TypeInfo *reshaped = nullptr;
+
+        switch (type->primitive) {
+            case PrimitiveKind::Record: {
+                reshaped = instance->types.AppendDefault();
+
+                memcpy((void *)reshaped, (const void *)type, K_SIZE(*type));
+                memset((void *)&reshaped->members, 0, K_SIZE(reshaped->members));
+                reshaped->members.Reserve(type->members.len);
+                reshaped->size = 0;
+                reshaped->flags |= flags;
+                memset((void *)&reshaped->defn, 0, K_SIZE(reshaped->defn));
+
+                Napi::Object defn = type->defn.Value();
+                reshaped->defn = Napi::Persistent(defn);
+
+                for (RecordMember member: type->members) {
+                    member.offset = reshaped->size;
+                    member.type = ReshapeType(instance, member.type, stride, flags);
+
+                    reshaped->members.Append(member);
+                    reshaped->size += AlignLen(member.type->size, stride);
+                }
+            } break;
+
+            case PrimitiveKind::Array: {
+                reshaped = instance->types.AppendDefault();
+
+                memcpy((void *)reshaped, (const void *)type, K_SIZE(*type));
+                reshaped->ref.stride = stride;
+                reshaped->size = (type->size / type->ref.stride) * stride;
+                memset((void *)&reshaped->defn, 0, K_SIZE(reshaped->defn));
+                reshaped->flags |= flags;
+
+                Napi::Object defn = type->defn.Value();
+                reshaped->defn = Napi::Persistent(defn);
+            } break;
+
+            default: { reshaped = (TypeInfo *)type; } break;
+        }
+
+        type->reshaped = reshaped;
+    }
+
+    return type->reshaped;
 }
 
 bool CanPassType(const TypeInfo *type, int directions)
@@ -617,7 +670,7 @@ bool CanPassType(const TypeInfo *type, int directions)
             return false;
         if (type->primitive == PrimitiveKind::Prototype)
             return false;
-        if (type->primitive == PrimitiveKind::Callback && type->ref.proto->variadic)
+        if (type->primitive == PrimitiveKind::Callback && type->proto->variadic)
             return false;
 
         return true;
@@ -645,7 +698,7 @@ bool CanStoreType(const TypeInfo *type)
         return false;
     if (type->primitive == PrimitiveKind::Prototype)
         return false;
-    if (type->primitive == PrimitiveKind::Callback && type->ref.proto->variadic)
+    if (type->primitive == PrimitiveKind::Callback && type->proto->variadic)
         return false;
 
     return true;
@@ -815,7 +868,7 @@ Napi::String MakeStringFromUTF32(Napi::Env env, const char32_t *ptr, Size len)
     return str;
 }
 
-Napi::Object DecodeObject(Napi::Env env, const uint8_t *origin, const TypeInfo *type, int shape_idx)
+Napi::Object DecodeObject(Napi::Env env, const uint8_t *origin, const TypeInfo *type)
 {
     // We can't decode unions because we don't know which member is valid
     if (type->primitive == PrimitiveKind::Union) {
@@ -827,7 +880,7 @@ Napi::Object DecodeObject(Napi::Env env, const uint8_t *origin, const TypeInfo *
     }
 
     Napi::Object obj = Napi::Object::New(env);
-    DecodeObject(env, obj, origin, type, shape_idx);
+    DecodeObject(env, obj, origin, type);
 
     return obj;
 }
@@ -938,13 +991,11 @@ static inline void SetMemberValue(napi_env env, napi_value obj, const RecordMemb
     }
 }
 
-void DecodeObject(Napi::Env env, napi_value obj, const uint8_t *origin, const TypeInfo *type, int shape_idx)
+void DecodeObject(Napi::Env env, napi_value obj, const uint8_t *origin, const TypeInfo *type)
 {
     K_ASSERT(type->primitive == PrimitiveKind::Record);
-    K_ASSERT(type->shapes[shape_idx].members.len == type->shapes[0].members.len);
 
-    const RecordShape &shape = type->shapes[shape_idx];
-    Span<const RecordMember> members = shape.members;
+    Span<const RecordMember> members = type->members;
 
     for (const RecordMember &member: members) {
         const uint8_t *src = origin + member.offset;
@@ -1079,7 +1130,7 @@ void DecodeObject(Napi::Env env, napi_value obj, const uint8_t *origin, const Ty
             } break;
             case PrimitiveKind::Record:
             case PrimitiveKind::Union: {
-                Napi::Object obj2 = DecodeObject(env, src, member.type, shape_idx);
+                Napi::Object obj2 = DecodeObject(env, src, member.type);
                 SetMemberValue(env, obj, member, obj2);
             } break;
             case PrimitiveKind::Array: {
@@ -1119,7 +1170,7 @@ Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *ty
 {
     K_ASSERT(type->primitive == PrimitiveKind::Array);
 
-    uint32_t len = type->size / type->ref.type->size;
+    uint32_t len = type->size / type->ref.stride;
     return DecodeArray(env, origin, type, len);
 }
 
@@ -1128,6 +1179,7 @@ Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *ty
     K_ASSERT(type->primitive == PrimitiveKind::Array || type->primitive == PrimitiveKind::Pointer);
 
     const TypeInfo *ref = type->ref.type;
+    int32_t stride = type->ref.stride;
 
     if (type->hint == ArrayHint::Typed) {
 #define POP_TYPEDARRAY(TypedArrayType, CType) \
@@ -1135,7 +1187,7 @@ Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *ty
                 Napi::TypedArrayType array = Napi::TypedArrayType::New(env, len); \
                 Span<uint8_t> buffer = MakeSpan((uint8_t *)array.ArrayBuffer().Data(), (Size)len * K_SIZE(CType)); \
                  \
-                DecodeBuffer(buffer, origin, ref); \
+                DecodeBuffer(buffer, origin, type); \
                  \
                 return array; \
             } while (false)
@@ -1173,6 +1225,8 @@ Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *ty
 
 #undef POP_TYPEDARRAY
     } else if (type->hint == ArrayHint::String) {
+        K_ASSERT(stride == ref->size);
+
         switch (ref->primitive) {
             case PrimitiveKind::Int8: {
                 const char *ptr = (const char *)origin;
@@ -1225,7 +1279,7 @@ Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *ty
         K_ASSERT(type->hint == ArrayHint::Array);
 
         Napi::Array array = Napi::Array::New(env);
-        DecodeElements(env, array, origin, type->ref.type, len);
+        DecodeElements(env, array, origin, type, len);
 
         return array;
     }
@@ -1233,22 +1287,21 @@ Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *ty
     K_UNREACHABLE();
 }
 
-void DecodeElements(Napi::Env env, napi_value array, const uint8_t *origin, const TypeInfo *ref, uint32_t len)
+void DecodeElements(Napi::Env env, napi_value array, const uint8_t *origin, const TypeInfo *type, uint32_t len)
 {
     K_ASSERT(IsArray(env, array));
+
+    const TypeInfo *ref = type->ref.type;
+    int32_t stride = type->ref.stride;
 
     Size offset = 0;
 
 #define POP_ARRAY(SetCode) \
         do { \
             for (uint32_t i = 0; i < len; i++) { \
-                offset = AlignLen(offset, ref->align); \
-                 \
                 const uint8_t *src = origin + offset; \
-                 \
                 SetCode \
-                 \
-                offset += ref->size; \
+                offset += stride; \
             } \
         } while (false)
 
@@ -1383,10 +1436,24 @@ void DecodeElements(Napi::Env env, napi_value array, const uint8_t *origin, cons
 #undef POP_ARRAY
 }
 
-void DecodeBuffer(Span<uint8_t> buffer, const uint8_t *origin, const TypeInfo *ref)
+void DecodeBuffer(Span<uint8_t> buffer, const uint8_t *origin, const TypeInfo *type)
 {
-    // Go fast brrrrr!
-    MemCpy(buffer.ptr, origin, (size_t)buffer.len);
+    const TypeInfo *ref = type->ref.type;
+    int32_t stride = type->ref.stride;
+
+    // Go fast if possible. Brrrrr!
+    if (stride == ref->size) {
+        MemCpy(buffer.ptr, origin, (size_t)buffer.len);
+    } else {
+        Size len = buffer.len / ref->size;
+
+        for (Size i = 0; i < len; i++) {
+            const uint8_t *src = origin + i * stride;
+            uint8_t *dest = buffer.ptr + i * ref->size;
+
+            memcpy(dest, src, ref->size);
+        }
+    }
 
 #define SWAP(CType) \
         do { \
@@ -1577,7 +1644,7 @@ Napi::Value Decode(Napi::Env env, const uint8_t *ptr, const TypeInfo *type, cons
         } break;
 
         case PrimitiveKind::Prototype: {
-            const FunctionInfo *proto = type->ref.proto;
+            const FunctionInfo *proto = type->proto;
             K_ASSERT(!proto->variadic);
             K_ASSERT(!proto->lib);
 
@@ -1821,7 +1888,7 @@ static bool CanTypeAcceptCallbacks(const TypeInfo *type)
 
     if (type->primitive == PrimitiveKind::Record ||
             type->primitive == PrimitiveKind::Union) {
-        for (const RecordMember &member: type->shapes[0].members) {
+        for (const RecordMember &member: type->members) {
             if (CanTypeAcceptCallbacks(member.type))
                 return false;
         }
@@ -1948,13 +2015,13 @@ static int AnalyseFlatRec(const TypeInfo *type, int offset, int count, FunctionR
 {
     if (type->primitive == PrimitiveKind::Record) {
         for (int i = 0; i < count; i++) {
-            for (const RecordMember &member: type->shapes[0].members) {
+            for (const RecordMember &member: type->members) {
                 offset = AnalyseFlatRec(member.type, offset, 1, func);
             }
         }
     } else if (type->primitive == PrimitiveKind::Union) {
         for (int i = 0; i < count; i++) {
-            for (const RecordMember &member: type->shapes[0].members) {
+            for (const RecordMember &member: type->members) {
                 AnalyseFlatRec(member.type, offset, 1, func);
             }
         }

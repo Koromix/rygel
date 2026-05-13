@@ -243,7 +243,7 @@ Size ClassAnalyser::Classify(Span<RegisterClass> classes, const TypeInfo *type, 
                 return 1;
             }
 
-            for (const RecordMember &member: type->shapes[0].members) {
+            for (const RecordMember &member: type->members) {
                 Size member_offset = offset + member.offset;
                 Size start = member_offset / 8;
                 Classify(classes.Take(start, classes.len - start), member.type, member_offset % 8);
@@ -258,7 +258,7 @@ Size ClassAnalyser::Classify(Span<RegisterClass> classes, const TypeInfo *type, 
                 return 1;
             }
 
-            for (const RecordMember &member: type->shapes[0].members) {
+            for (const RecordMember &member: type->members) {
                 Size start = offset / 8;
                 Classify(classes.Take(start, classes.len - start), member.type, offset % 8);
             }
@@ -687,7 +687,7 @@ namespace {
             return call->env.Null();
         }
 
-        uint64_t buf[2] = {};
+        uint64_t buf[2];
         if (!call->PushObject(arg, inst->type, (uint8_t *)buf))
             return call->env.Null();
 
@@ -1222,7 +1222,6 @@ void CallData::Relay(Size idx, uint8_t *sp)
             case PrimitiveKind::Union: {
                 if (param.abi.regular) {
                     uint64_t buf[2];
-
                     buf[0] = *(uint64_t *)(in_ptr + param.abi.offsets[0]);
                     buf[1] = *(uint64_t *)(in_ptr + param.abi.offsets[1]);
 

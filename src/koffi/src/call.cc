@@ -117,7 +117,7 @@ void CallData::Finalize()
 
                             u->SetRaw(out.ptr);
                         } else {
-                            DecodeObject(env, value, out.ptr, out.type);
+                            DecodeObject(env, value, out.ptr, out.type->ref.type);
                         }
                     } break;
                 }
@@ -407,15 +407,13 @@ static inline napi_value GetMemberValue(napi_env env, napi_value obj, const Reco
     return value;
 }
 
-bool CallData::PushObject(napi_value obj, const TypeInfo *type, int shape_idx, uint8_t *origin)
+bool CallData::PushObject(napi_value obj, const TypeInfo *type, uint8_t *origin)
 {
     K_ASSERT(IsObject(env, obj));
     K_ASSERT(type->primitive == PrimitiveKind::Record ||
              type->primitive == PrimitiveKind::Union);
-    K_ASSERT(type->shapes[shape_idx].members.len == type->shapes[0].members.len);
 
-    const RecordShape &shape = type->shapes[shape_idx];
-    Span<const RecordMember> members = shape.members;
+    Span<const RecordMember> members = type->members;
 
     if (type->primitive == PrimitiveKind::Union) {
         if (CheckValueTag(env, obj, &UnionValueMarker)) {
@@ -465,7 +463,8 @@ bool CallData::PushObject(napi_value obj, const TypeInfo *type, int shape_idx, u
         }
     }
 
-    MemSet(origin, shape.fill, shape.size);
+    int fill = (type->flags & (int)TypeFlag::FillWithOnes) ? 0xFF : 0;
+    MemSet(origin, fill, type->size);
 
 #define PUSH_INTEGER(CType) \
         do { \
@@ -568,7 +567,7 @@ bool CallData::PushObject(napi_value obj, const TypeInfo *type, int shape_idx, u
                     return false;
                 }
 
-                if (!PushObject(value, member.type, shape_idx, dest))
+                if (!PushObject(value, member.type, dest))
                     return false;
             } break;
             case PrimitiveKind::Array: {
@@ -627,28 +626,37 @@ bool CallData::PushNormalArray(Napi::Array array, const TypeInfo *type, Size siz
     K_ASSERT(array.IsArray());
 
     const TypeInfo *ref = type->ref.type;
+    int32_t stride = type->ref.stride;
+
+    // We can't rely on type->size because type might be a pointer
     Size len = (Size)array.Length();
-    Size available = len * ref->size;
+    Size available = len * stride;
 
     if (available > size) {
-        len = size / ref->size;
+        len = size / stride;
+
+        if (stride != ref->size) {
+            int fill = (type->flags & (int)TypeFlag::FillWithOnes) ? 0xFF : 0;
+            MemSet(origin, fill, size);
+        }
+    } else if (stride == ref->size) {
+        int fill = (type->flags & (int)TypeFlag::FillWithOnes) ? 0xFF : 0;
+        MemSet(origin + available, fill, size - available);
     } else {
-        MemSet(origin + available, 0, size - available);
+        int fill = (type->flags & (int)TypeFlag::FillWithOnes) ? 0xFF : 0;
+        MemSet(origin, fill, size);
     }
 
     Size offset = 0;
 
-#define PUSH_ARRAY(Code) \
+#define PUSH_ARRAY(SetCode) \
         do { \
             for (Size i = 0; i < len; i++) { \
                 Napi::Value value = array[(uint32_t)i]; \
                  \
-                offset = AlignLen(offset, ref->align); \
                 uint8_t *dest = origin + offset; \
-                 \
-                Code \
-                 \
-                offset += ref->size; \
+                SetCode \
+                offset += stride; \
             } \
         } while (false)
 #define PUSH_INTEGERS(CType) \
@@ -764,8 +772,6 @@ bool CallData::PushNormalArray(Napi::Array array, const TypeInfo *type, Size siz
             for (Size i = 0; i < len; i++) {
                 Napi::Value value = array[(uint32_t)i];
 
-                offset = AlignLen(offset, ref->align);
-
                 uint8_t *dest = origin + offset;
 
                 if (value.IsArray()) {
@@ -782,7 +788,7 @@ bool CallData::PushNormalArray(Napi::Array array, const TypeInfo *type, Size siz
                     return false;
                 }
 
-                offset += ref->size;
+                offset += stride;
             }
         } break;
         case PrimitiveKind::Float32: {
@@ -811,8 +817,6 @@ bool CallData::PushNormalArray(Napi::Array array, const TypeInfo *type, Size siz
             for (Size i = 0; i < len; i++) {
                 Napi::Value value = array[(uint32_t)i];
 
-                offset = AlignLen(offset, ref->align);
-
                 uint8_t *dest = origin + offset;
 
                 void *ptr;
@@ -821,7 +825,7 @@ bool CallData::PushNormalArray(Napi::Array array, const TypeInfo *type, Size siz
 
                 *(void **)dest = ptr;
 
-                offset += ref->size;
+                offset += stride;
             }
         } break;
 
@@ -839,23 +843,35 @@ void CallData::PushBuffer(Span<const uint8_t> buffer, const TypeInfo *type, uint
 {
     buffer.len = std::min(buffer.len, (Size)type->size);
 
-    // Go fast brrrrrrr :)
-    MemCpy(origin, buffer.ptr, buffer.len);
-    MemSet(origin + buffer.len, 0, (Size)type->size - buffer.len);
+    const TypeInfo *ref = type->ref.type;
+    int32_t stride = type->ref.stride;
+
+    // Go fast if possible brrrrrrr :)
+    if (stride == ref->size) {
+        MemCpy(origin, buffer.ptr, buffer.len);
+        MemSet(origin + buffer.len, 0, (Size)type->size - buffer.len);
+    } else {
+        Size len = buffer.len / ref->size;
+
+        for (Size i = 0; i < len; i++) {
+            const uint8_t *src = buffer.ptr + i * ref->size;
+            uint8_t *dest = origin + i * stride;
+
+            memcpy(dest, src, ref->size);
+        }
+    }
 
 #define SWAP(CType) \
         do { \
-            CType *data = (CType *)origin; \
             Size len = buffer.len / K_SIZE(CType); \
              \
             for (Size i = 0; i < len; i++) { \
-                data[i] = ReverseBytes(data[i]); \
+                CType *ptr = (CType *)(origin + i * stride); \
+                *ptr = ReverseBytes(*ptr); \
             } \
         } while (false)
 
     if (type->primitive == PrimitiveKind::Array || type->primitive == PrimitiveKind::Pointer) {
-        const TypeInfo *ref = type->ref.type;
-
         if (ref->primitive == PrimitiveKind::Int16S || ref->primitive == PrimitiveKind::UInt16S) {
             SWAP(uint16_t);
         } else if (ref->primitive == PrimitiveKind::Int32S || ref->primitive == PrimitiveKind::UInt32S) {
@@ -872,6 +888,7 @@ bool CallData::PushStringArray(napi_value value, const TypeInfo *type, uint8_t *
 {
     K_ASSERT(GetKindOf(env, value) == napi_string);
     K_ASSERT(type->primitive == PrimitiveKind::Array);
+    K_ASSERT(type->ref.stride == type->ref.type->size);
 
     size_t encoded = 0;
 
@@ -1017,7 +1034,7 @@ bool CallData::PushPointerSlow(napi_value value, napi_valuetype kind, const Type
 
             out->kind = out_kind;
             out->ptr = (const uint8_t *)ptr;
-            out->type = ref;
+            out->type = type;
             out->max_len = out_max_len;
         }
 
@@ -1050,7 +1067,7 @@ bool CallData::PushPointerSlow(napi_value value, napi_valuetype kind, const Type
 
             out->kind = OutArgument::Kind::Object;
             out->ptr = (const uint8_t *)ptr;
-            out->type = ref;
+            out->type = type;
             out->max_len = -1;
         }
 
@@ -1064,7 +1081,7 @@ bool CallData::PushPointerSlow(napi_value value, napi_valuetype kind, const Type
 
         Napi::Function func = Napi::Function(env, value);
 
-        ptr = ReserveTrampoline(type->ref.proto, func);
+        ptr = ReserveTrampoline(type->proto, func);
         if (!ptr) [[unlikely]]
             return false;
 
@@ -1104,7 +1121,7 @@ restart:
     if (kind == napi_function) {
         Napi::Function func = Napi::Function(env, value);
 
-        ptr = ReserveTrampoline(type->ref.proto, func);
+        ptr = ReserveTrampoline(type->proto, func);
         if (!ptr) [[unlikely]]
             return false;
 

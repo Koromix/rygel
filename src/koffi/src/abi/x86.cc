@@ -198,10 +198,8 @@ bool AnalyseFunction(Napi::Env env, InstanceData *instance, FunctionInfo *func)
         case PrimitiveKind::Record:
         case PrimitiveKind::Union: {
 #if defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__DragonFly__)
-            const RecordShape &shape0 = func->ret.type->shapes[0];
-
-            if (shape0.members.len == 1) {
-                const RecordMember &member = shape0.members[0];
+            if (func->ret.type->members.len == 1) {
+                const RecordMember &member = func->ret.type->members[0];
 
                 if (member.type->primitive == PrimitiveKind::Float32) {
                     AbiOpcode run = fast ? AbiOpcode::RunAggregateFR : AbiOpcode::RunAggregateF;

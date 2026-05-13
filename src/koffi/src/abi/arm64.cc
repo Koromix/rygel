@@ -54,18 +54,15 @@ enum class AbiOpcode {
     #include "../primitives.inc"
     PushAggregateReg,
     PushAggregateStack,
-    PushHfa32,
     #define PRIMITIVE(Name) Run ## Name,
     #include "../primitives.inc"
     RunAggregateGG,
     RunAggregateDDDD,
-    RunHfa32,
     RunAggregateStack,
     #define PRIMITIVE(Name) Run ## Name ## X,
     #include "../primitives.inc"
     RunAggregateGGX,
     RunAggregateDDDDX,
-    RunHfa32X,
     RunAggregateStackX,
     Yield,
     CallGG,
@@ -80,7 +77,6 @@ enum class AbiOpcode {
     #include "../primitives.inc"
     ReturnAggregateReg,
     ReturnAggregateStack,
-    ReturnHfa32,
 #if defined(_M_ARM64EC)
     SetVariadicRegisters
 #endif
@@ -134,7 +130,7 @@ static HfaInfo IsHFA(const TypeInfo *type)
     return info;
 }
 
-bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
+bool AnalyseFunction(Napi::Env, InstanceData *instance, FunctionInfo *func)
 {
     Size gpr_index = 0;
     Size vec_index = 0;
@@ -290,14 +286,11 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
                         vec_index += hfa.count;
 
                         if (hfa.float32) {
-                            param.abi.hfa32 = hfa.count;
-
-                            func->sync.Append({ .op = Code2Op(AbiOpcode::PushHfa32), .a = param.offset, .b1 = (int16_t)param.abi.offset, .b2 = (int16_t)hfa.count, .type = param.type });
-                            func->async.Append({ .op = Code2Op(AbiOpcode::PushHfa32), .a = param.offset, .b1 = (int16_t)param.abi.offset, .b2 = (int16_t)hfa.count, .type = param.type });
-                        } else {
-                            func->sync.Append({ .op = Code2Op(AbiOpcode::PushAggregateReg), .a = param.offset, .b1 = (int16_t)param.abi.offset, .type = param.type });
-                            func->async.Append({ .op = Code2Op(AbiOpcode::PushAggregateReg), .a = param.offset, .b1 = (int16_t)param.abi.offset, .type = param.type });
+                            param.type = ReshapeType(instance, param.type, 8, 0);
                         }
+
+                        func->sync.Append({ .op = Code2Op(AbiOpcode::PushAggregateReg), .a = param.offset, .b1 = (int16_t)param.abi.offset, .type = param.type });
+                        func->async.Append({ .op = Code2Op(AbiOpcode::PushAggregateReg), .a = param.offset, .b1 = (int16_t)param.abi.offset, .type = param.type });
                     } else {
                         vec_index = vec_max;
 
@@ -490,20 +483,13 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
         case PrimitiveKind::Union: {
             HfaInfo hfa = IsHFA(func->ret.type);
 
-            if (hfa.count && hfa.float32) {
+            if (hfa.count) {
                 func->ret.abi.regular = true;
                 func->ret.abi.offset = offsetof(BackRegisters, d0);
-                func->ret.abi.hfa32 = hfa.count;
 
-                AbiOpcode run = func->forward_fp ? AbiOpcode::RunHfa32X : AbiOpcode::RunHfa32;
-                AbiOpcode call = func->forward_fp ? AbiOpcode::CallDDDDX : AbiOpcode::CallDDDD;
-
-                func->sync.Append({ .op = Code2Op(run), .a = hfa.count, .type = func->ret.type });
-                func->async.Append({ .op = Code2Op(call) });
-                func->async.Append({ .op = Code2Op(AbiOpcode::ReturnHfa32), .a = hfa.count, .type = func->ret.type });
-            } else if (hfa.count) {
-                func->ret.abi.regular = true;
-                func->ret.abi.offset = offsetof(BackRegisters, d0);
+                if (hfa.float32) {
+                    func->ret.type = ReshapeType(instance, func->ret.type, 8, 0);
+                }
 
                 AbiOpcode run = func->forward_fp ? AbiOpcode::RunAggregateDDDDX : AbiOpcode::RunAggregateDDDD;
                 AbiOpcode call = func->forward_fp ? AbiOpcode::CallDDDDX : AbiOpcode::CallDDDD;
@@ -553,26 +539,6 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
     }
 
     return true;
-}
-
-static inline void ExpandFloats(uint8_t *ptr, Size len)
-{
-    for (Size i = len - 1; i >= 0; i--) {
-        const uint8_t *src = ptr + i * 4;
-        uint8_t *dest = ptr + i * 8;
-
-        memmove(dest, src, 4);
-    }
-}
-
-static inline void CompactFloats(uint8_t *ptr, Size len)
-{
-    for (Size i = 0; i < len; i++) {
-        const uint8_t *src = ptr + i * 8;
-        uint8_t *dest = ptr + i * 4;
-
-        memmove(dest, src, 4);
-    }
 }
 
 #pragma GCC diagnostic push
@@ -766,23 +732,6 @@ namespace {
 
         NEXT();
     }
-    OP(PushHfa32) {
-        napi_value arg = args[inst->a];
-
-        if (!IsObject(call->env, arg)) [[unlikely]] {
-            ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected object", GetValueType(call->instance, arg));
-            return call->env.Null();
-        }
-
-        uint8_t *ptr = base + inst->b1;
-
-        if (!call->PushObject(arg, inst->type, ptr))
-            return call->env.Null();
-
-        ExpandFloats(ptr, inst->b2);
-
-        NEXT();
-    }
 
 #undef INTEGER_SWAP
 #undef INTEGER
@@ -874,12 +823,6 @@ namespace {
         auto ret = WRAP(ForwardCallDDDD(call->native, base, &call->saved_sp));
         return DecodeObject(call->env, (const uint8_t *)&ret, inst->type);
     }
-    OP(RunHfa32) {
-        auto ret = WRAP(ForwardCallDDDD(call->native, base, &call->saved_sp));
-        uint8_t *ptr = (uint8_t *)&ret;
-        CompactFloats(ptr, inst->a);
-        return DecodeObject(call->env, ptr, inst->type);
-    }
     OP(RunAggregateStack) {
         uint8_t *ptr = call->AllocHeap(inst->a);
         *(uint8_t **)(base + 8 * 8) = ptr; // x8
@@ -955,12 +898,6 @@ namespace {
     OP(RunAggregateDDDDX) {
         auto ret = WRAP(ForwardCallDDDDX(call->native, base, &call->saved_sp));
         return DecodeObject(call->env, (const uint8_t *)&ret, inst->type);
-    }
-    OP(RunHfa32X) {
-        auto ret = WRAP(ForwardCallDDDDX(call->native, base, &call->saved_sp));
-        uint8_t *ptr = (uint8_t *)&ret;
-        CompactFloats(ptr, inst->a);
-        return DecodeObject(call->env, ptr, inst->type);
     }
     OP(RunAggregateStackX) {
         uint8_t *ptr = call->AllocHeap(inst->a);
@@ -1089,16 +1026,10 @@ namespace {
         return Napi::Number::New(call->env, d);
     }
     OP(ReturnPrototype) { K_UNREACHABLE(); return call->env.Null(); }
-    OP(ReturnAggregateReg) {
-        return DecodeObject(call->env, base, inst->type);
-    }
+    OP(ReturnAggregateReg) { return DecodeObject(call->env, base, inst->type); }
     OP(ReturnAggregateStack) {
         const uint8_t *ptr = *(const uint8_t **)base;
         return DecodeObject(call->env, ptr, inst->type);
-    }
-    OP(ReturnHfa32) {
-        CompactFloats(base, inst->a);
-        return DecodeObject(call->env, base, inst->type);
     }
 
 #if defined(_M_ARM64EC)
@@ -1123,18 +1054,15 @@ namespace {
         #include "../primitives.inc"
         HandlePushAggregateReg,
         HandlePushAggregateStack,
-        HandlePushHfa32,
         #define PRIMITIVE(Name) HandleRun ## Name,
         #include "../primitives.inc"
         HandleRunAggregateGG,
         HandleRunAggregateDDDD,
-        HandleRunHfa32,
         HandleRunAggregateStack,
         #define PRIMITIVE(Name) HandleRun ## Name ## X,
         #include "../primitives.inc"
         HandleRunAggregateGGX,
         HandleRunAggregateDDDDX,
-        HandleRunHfa32X,
         HandleRunAggregateStackX,
         HandleYield,
         HandleCallGG,
@@ -1149,7 +1077,6 @@ namespace {
         #include "../primitives.inc"
         HandleReturnAggregateReg,
         HandleReturnAggregateStack,
-        HandleReturnHfa32,
 #if defined(_M_ARM64EC)
         HandleSetVariadicRegisters
 #endif
@@ -1315,8 +1242,6 @@ void CallData::Relay(Size idx, uint8_t *sp)
                 uint8_t *ptr = in_ptr + param.abi.offset;
                 uint8_t *src = param.abi.indirect ? *(uint8_t **)ptr : ptr;
 
-                CompactFloats(src, param.abi.hfa32);
-
                 arguments[i] = DecodeObject(env, src, param.type);
             } break;
             case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
@@ -1447,18 +1372,11 @@ void CallData::Relay(Size idx, uint8_t *sp)
                 return;
             }
 
-            if (proto->ret.abi.regular) {
-                uint8_t *dest = (uint8_t *)&out_reg + proto->ret.abi.offset;
-                if (!PushObject(value, type, dest))
-                    return;
-                ExpandFloats(dest, proto->ret.abi.hfa32);
-            } else {
-                uint64_t *gpr_ptr = (uint64_t *)in_ptr;
-                uint8_t *dest = (uint8_t *)gpr_ptr[8]; // x8
+            uint64_t *gpr_ptr = (uint64_t *)in_ptr;
+            uint8_t *dest = proto->ret.abi.regular ? (uint8_t *)&out_reg + proto->ret.abi.offset : (uint8_t *)gpr_ptr[8]; // x8
 
-                if (!PushObject(value, type, dest))
-                    return;
-            }
+            if (!PushObject(value, type, dest))
+                return;
         } break;
         case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
 

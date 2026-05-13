@@ -84,12 +84,13 @@ struct alignas(8) CallData {
     INLINE_UNITY Size PushStringValue(napi_value value, const char **out_str);
     INLINE_UNITY Size PushString16Value(napi_value value, const char16_t **out_str16);
     INLINE_UNITY Size PushString32Value(napi_value value, const char32_t **out_str32);
-    FORCE_INLINE bool PushObject(napi_value value, const TypeInfo *type, uint8_t *origin)
-        { return PushObject(value, type, 0, origin); }
-    bool PushObject(napi_value value, const TypeInfo *type, int shape_idx, uint8_t *origin);
+
+    bool PushObject(napi_value value, const TypeInfo *type, uint8_t *origin);
+
     bool PushNormalArray(Napi::Array array, const TypeInfo *type, Size size, uint8_t *origin);
     INLINE_UNITY void PushBuffer(Span<const uint8_t> buffer, const TypeInfo *type, uint8_t *origin);
     bool PushStringArray(napi_value value, const TypeInfo *type, uint8_t *origin);
+
     INLINE_UNITY bool PushPointer(napi_value value, const TypeInfo *type, int directions, void **out_ptr);
     bool PushPointerSlow(napi_value value, napi_valuetype kind, const TypeInfo *type, int directions, void **out_ptr);
     INLINE_UNITY bool PushCallback(napi_value value, const TypeInfo *type, void **out_ptr);

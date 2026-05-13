@@ -42,6 +42,12 @@ const Float3 = koffi.struct('Float3', {
     a: 'float',
     b: 'float[2]'
 });
+const Float2B = koffi.struct('Float2B', {
+    ff: koffi.array('float', 2, 'Array')
+});
+const Float2C = koffi.struct('Float2C', {
+    ff: koffi.array('float', 2, 'Typed')
+});
 
 const Double2 = koffi.struct('Double2', {
     a: 'double',
@@ -196,6 +202,10 @@ async function test() {
     const ThroughFloat2Odd = lib.func('Float2 ThroughFloat2Odd(float a, float b, float c, float d, float e, float f, float g, float h, float i, Float2 f2)');
     const PackFloat3 = lib.func('Float3 PackFloat3(float a, float b, float c, _Out_ Float3 *out)');
     const ThroughFloat3 = lib.func('Float3 ThroughFloat3(Float3 f3)');
+    const PackFloat2B = lib.func('Float2B PackFloat2B(float a, float b, _Out_ Float2B *out)');
+    const ThroughFloat2B = lib.func('Float2B ThroughFloat2B(Float2B f2)');
+    const PackFloat2C = lib.func('Float2C PackFloat2B(float a, float b, _Out_ Float2C *out)');
+    const ThroughFloat2C = lib.func('Float2C ThroughFloat2B(Float2C f2)');
     const PackDouble2 = lib.func('Double2 PackDouble2(double a, double b, _Out_ Double2 *out)');
     const PackDouble3 = lib.func('Double3 PackDouble3(double a, double b, double c, _Out_ Double3 *out)');
     const ReverseFloatInt = lib.func('IntFloat ReverseFloatInt(FloatInt sfi)');
@@ -371,6 +381,20 @@ async function test() {
         assert.deepEqual(ThroughFloat2(f2), f2);
         assert.deepEqual(ThroughFloat2Odd(1, 2, 3, 4, 5, 6, 7, 8, 9, { a: 1.5, b: 3.0 }), f2);
         assert.deepEqual(ThroughFloat2Odd(7, 8, 9, 10, 11, 12, 13, 14, 15, f2), f2);
+
+        let f2bp = {};
+        let f2b = PackFloat2B(1.5, 3.0, f2bp);
+        assert.deepEqual(f2b, { ff: [1.5, 3.0] });
+        assert.deepEqual(f2b, f2bp);
+        assert.deepEqual(ThroughFloat2B({ ff: [1.5, 3.0] }), f2b);
+        assert.deepEqual(ThroughFloat2B(f2b), f2b);
+
+        let f2cp = {};
+        let f2c = PackFloat2C(1.5, 3.0, f2cp);
+        assert.deepEqual(f2c, { ff: Float32Array.from([1.5, 3.0]) });
+        assert.deepEqual(f2c, f2cp);
+        assert.deepEqual(ThroughFloat2C({ ff: [1.5, 3.0] }), f2c);
+        assert.deepEqual(ThroughFloat2C(f2c), f2c);
 
         let f3p = {};
         let f3 = PackFloat3(20.0, 30.0, 40.0, f3p);

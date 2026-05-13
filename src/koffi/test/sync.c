@@ -70,6 +70,9 @@ typedef struct Float3 {
     float a;
     float b[2];
 } Float3;
+typedef struct Float2B {
+    float ff[2];
+} Float2B;
 
 typedef struct Double2 {
     double a;
@@ -356,6 +359,22 @@ EXPORT Float3 PackFloat3(float a, float b, float c, Float3 *out)
 EXPORT Float3 ThroughFloat3(Float3 f3)
 {
     return f3;
+}
+
+EXPORT Float2B PackFloat2B(float a, float b, Float2B *out)
+{
+    Float2B ret;
+
+    ret.ff[0] = a;
+    ret.ff[1] = b;
+    *out = ret;
+
+    return ret;
+}
+
+EXPORT Float2B ThroughFloat2B(Float2B f2)
+{
+    return f2;
 }
 
 EXPORT Double2 PackDouble2(double a, double b, Double2 *out)

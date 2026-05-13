@@ -40,7 +40,8 @@ typedef void DisposeFunc (Napi::Env env, const TypeInfo *type, const void *ptr);
 
 enum class TypeFlag {
     HasTypedArray = 1 << 0,
-    IsCharLike = 1 << 1
+    IsCharLike = 1 << 1,
+    FillWithOnes = 1 << 2
 };
 
 enum class ArrayHint {
@@ -62,12 +63,6 @@ struct RecordMember {
     Size countedby;
 };
 
-struct RecordShape {
-    HeapArray<RecordMember> members;
-    int fill;
-    int32_t size;
-};
-
 struct TypeInfo {
     const char *name;
 
@@ -84,18 +79,19 @@ struct TypeInfo {
     DisposeFunc *dispose;
     Napi::FunctionReference dispose_ref;
 
-    // The first shape does not change but others might, so we need
-    // mutable or a const-away cast. Pick your poison.
-    mutable RecordShape shapes[2]; // Record or Union
-    union {
+    HeapArray<RecordMember> members; // Record or Union
+    struct {
         const TypeInfo *type; // Pointer or array
-        const FunctionInfo *proto; // Callback only
+        int32_t stride; // Array only
     } ref;
+    const FunctionInfo *proto; // Callback only
     ArrayHint hint; // Array only
     const char *countedby; // Pointer or array
 
     mutable Napi::FunctionReference construct; // Union only
     mutable Napi::ObjectReference defn;
+
+    mutable const TypeInfo *reshaped;
 
     K_HASHTABLE_HANDLER(TypeInfo, name);
 };
@@ -182,14 +178,12 @@ struct ParameterInfo {
     struct {
         bool regular;
         bool indirect;
-        int hfa32;
         int offset;
     } abi;
 #elif __riscv_xlen == 64 || defined(__loongarch64)
     struct {
         AbiMethod method;
         int offsets[2];
-        int shape;
     } abi;
 #endif
 };
@@ -208,7 +202,6 @@ struct ReturnInfo {
 #elif defined(__arm__) || defined(__aarch64__) || defined(_M_ARM64)
     struct {
         bool regular;
-        int hfa32;
         int offset;
     } abi;
 #elif defined(__i386__) || defined(_M_IX86)
@@ -217,7 +210,6 @@ struct ReturnInfo {
     struct {
         AbiMethod method;
         int offsets[2];
-        int shape;
     } abi;
 #endif
 };

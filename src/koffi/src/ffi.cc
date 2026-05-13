@@ -223,7 +223,7 @@ static bool FinalizeCompositeType(Napi::Env env, TypeInfo *type, PrimitiveKind p
     type->primitive = primitive;
 
     if (node_api_create_property_key_utf8) {
-        for (RecordMember &member: type->shapes[0].members) {
+        for (RecordMember &member: type->members) {
             napi_value key = nullptr;
             node_api_create_property_key_utf8(env, member.name, NAPI_AUTO_LENGTH, &key);
 
@@ -237,8 +237,6 @@ static bool FinalizeCompositeType(Napi::Env env, TypeInfo *type, PrimitiveKind p
         return false;
     }
     type->size = (int32_t)size;
-
-    type->shapes[0].size = type->size;
 
     return true;
 }
@@ -314,8 +312,6 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
     HashSet<const char *> members;
     Size size = 0;
 
-    RecordShape *shape0 = &type->shapes[0];
-
     for (uint32_t i = 0; i < keys.Length(); i++) {
         RecordMember member = {};
 
@@ -383,18 +379,18 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
             return env.Null();
         }
 
-        shape0->members.Append(member);
+        type->members.Append(member);
     }
 
-    for (Size i = 0; i < shape0->members.len; i++) {
-        RecordMember *member = &shape0->members[i];
+    for (Size i = 0; i < type->members.len; i++) {
+        RecordMember *member = &type->members[i];
         const char *countedby = member->type->countedby;
 
         if (countedby) {
-            const RecordMember *by = std::find_if(shape0->members.begin(), shape0->members.end(),
+            const RecordMember *by = std::find_if(type->members.begin(), type->members.end(),
                 [&](const RecordMember &member) { return TestStr(member.name, countedby); });
 
-            if (by == shape0->members.end()) {
+            if (by == type->members.end()) {
                 ThrowError<Napi::Error>(env, "Record type %1 does not have member '%2'", type->name, countedby);
                 return env.Null();
             }
@@ -402,12 +398,12 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
                 ThrowError<Napi::Error>(env, "Dynamic length member %1 is not an integer", countedby);
                 return env.Null();
             }
-            if (member->type->primitive == PrimitiveKind::Array && i < shape0->members.len - 1) {
+            if (member->type->primitive == PrimitiveKind::Array && i < type->members.len - 1) {
                 ThrowError<Napi::Error>(env, "Flexible array '%1' is not the last member of struct", member->name);
                 return env.Null();
             }
 
-            member->countedby = by - shape0->members.ptr;
+            member->countedby = by - type->members.ptr;
         }
     }
 
@@ -504,8 +500,6 @@ static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
     HashSet<const char *> members;
     int32_t size = 0;
 
-    RecordShape *shape0 = &type->shapes[0];
-
     for (uint32_t i = 0; i < keys.Length(); i++) {
         RecordMember member = {};
 
@@ -568,7 +562,7 @@ static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
             return env.Null();
         }
 
-        shape0->members.Append(member);
+        type->members.Append(member);
     }
 
     if (!FinalizeCompositeType(env, type, PrimitiveKind::Union, size))
@@ -834,8 +828,8 @@ static Napi::Value CreateDisposableType(const Napi::CallbackInfo &info)
     K_DEFER_N(err_guard) { instance->types.RemoveLast(1); };
 
     memcpy((void *)type, (const void *)src, K_SIZE(*src));
-    type->shapes[0].members.allocator = GetNullAllocator();
-    type->shapes[1].members.allocator = GetNullAllocator();
+    type->members.allocator = GetNullAllocator();
+    type->members.allocator = GetNullAllocator();
     memset((void *)&type->defn, 0, K_SIZE(type->defn));
 
     static_assert(!std::is_polymorphic_v<Napi::ObjectReference>);
@@ -1183,7 +1177,7 @@ static Napi::Value CreateFunctionType(const Napi::CallbackInfo &info)
     type->primitive = PrimitiveKind::Prototype;
     type->align = alignof(void *);
     type->size = K_SIZE(void *);
-    type->ref.proto = func;
+    type->proto = func;
 
     instance->types_map.Set(type->name, type);
 
@@ -1769,7 +1763,7 @@ static Napi::Value RegisterCallback(const Napi::CallbackInfo &info)
     trampoline->env = env;
     trampoline->instance = instance;
     trampoline->stack0 = instance->memories[0]->stack0;
-    trampoline->proto = type->ref.proto;
+    trampoline->proto = type->proto;
     napi_create_reference(env, func, 1, &trampoline->func);
 
     void *ptr = GetTrampoline(idx);
@@ -2131,7 +2125,7 @@ static Napi::Value CallPointerSync(const Napi::CallbackInfo &info)
         return env.Null();
     }
 
-    napi_value ret = CallPointer(env, type->ref.proto, ptr, info.First() + 2, info.Length() - 2);
+    napi_value ret = CallPointer(env, type->proto, ptr, info.First() + 2, info.Length() - 2);
     return Napi::Value(env, ret);
 }
 

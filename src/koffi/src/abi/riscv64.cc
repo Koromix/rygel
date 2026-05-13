@@ -52,7 +52,6 @@ enum class AbiOpcode {
     #define PRIMITIVE(Name) Push ## Name,
     #include "../primitives.inc"
     PushAggregateReg,
-    PushAggregateSplit,
     PushAggregateStack,
     #define PRIMITIVE(Name) Run ## Name,
     #include "../primitives.inc"
@@ -227,42 +226,7 @@ ClassResult ClassAnalyser::Analyse(const TypeInfo *type, bool variadic)
     return ret;
 }
 
-static int InitRegisterShape(const TypeInfo *type)
-{
-    const RecordShape &shape0 = type->shapes[0];
-    RecordShape *shape1 = &type->shapes[1];
-
-    if (shape1->members.len) {
-        K_ASSERT(shape1->members.len == shape0.members.len);
-        return shape1->size;
-    }
-
-    if (type->primitive == PrimitiveKind::Record) {
-        shape1->members = shape0.members;
-        shape1->fill = 0xFF;
-
-        for (RecordMember &member: shape1->members) {
-            member.offset = shape1->size;
-            shape1->size += InitRegisterShape(member.type);
-        }
-
-        return shape1->size;
-    } else if (type->primitive == PrimitiveKind::Union) {
-        shape1->members = shape0.members;
-        shape1->size = shape0.size;
-
-        for (const RecordMember &member: shape1->members) {
-            InitRegisterShape(member.type);
-        }
-
-        return shape1->size;
-    } else {
-        K_ASSERT(type->size <= 8);
-        return 8;
-    }
-}
-
-bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
+bool AnalyseFunction(Napi::Env, InstanceData *instance, FunctionInfo *func)
 {
     // Handle return value
     {
@@ -288,22 +252,19 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
                 func->ret.abi.offsets[0] = offsetof(BackRegisters, fa0);
                 func->ret.abi.offsets[1] = offsetof(BackRegisters, fa1);
 
-                InitRegisterShape(func->ret.type);
-                func->ret.abi.shape = 1;
+                func->ret.type = ReshapeType(instance, func->ret.type, 8, (int)TypeFlag::FillWithOnes);
             } break;
             case AbiMethod::GprVec: {
                 func->ret.abi.offsets[0] = offsetof(BackRegisters, a0);
                 func->ret.abi.offsets[1] = offsetof(BackRegisters, fa0);
 
-                InitRegisterShape(func->ret.type);
-                func->ret.abi.shape = 1;
+                func->ret.type = ReshapeType(instance, func->ret.type, 8, (int)TypeFlag::FillWithOnes);
             } break;
             case AbiMethod::VecGpr: {
                 func->ret.abi.offsets[0] = offsetof(BackRegisters, fa0);
                 func->ret.abi.offsets[1] = offsetof(BackRegisters, a0);
 
-                InitRegisterShape(func->ret.type);
-                func->ret.abi.shape = 1;
+                func->ret.type = ReshapeType(instance, func->ret.type, 8, (int)TypeFlag::FillWithOnes);
             } break;
 
             case AbiMethod::GprStack: { K_UNREACHABLE(); } break;
@@ -320,7 +281,7 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
 
             param.abi.method = ret.method;
 
-            switch (ret.method) {
+            switch (param.abi.method) {
                 case AbiMethod::Memory: {
                     param.abi.offsets[0] = 8 * (0 + ret.gpr_index);
                 } break;
@@ -338,25 +299,22 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
                     param.abi.offsets[1] = 8 * (8 + ret.vec_index);
                 } break;
                 case AbiMethod::VecVec: {
+                    param.type = ReshapeType(instance, param.type, 8, (int)TypeFlag::FillWithOnes);
+
                     param.abi.offsets[0] = 8 * (8 + ret.vec_index);
                     param.abi.offsets[1] = 8 * (9 + ret.vec_index);
-
-                    InitRegisterShape(param.type);
-                    param.abi.shape = 1;
                 } break;
                 case AbiMethod::GprVec: {
+                    param.type = ReshapeType(instance, param.type, 8, (int)TypeFlag::FillWithOnes);
+
                     param.abi.offsets[0] = 8 * (0 + ret.gpr_index);
                     param.abi.offsets[1] = 8 * (8 + ret.vec_index);
-
-                    InitRegisterShape(param.type);
-                    param.abi.shape = 1;
                 } break;
                 case AbiMethod::VecGpr: {
+                    param.type = ReshapeType(instance, param.type, 8, (int)TypeFlag::FillWithOnes);
+
                     param.abi.offsets[0] = 8 * (8 + ret.vec_index);
                     param.abi.offsets[1] = 8 * (0 + ret.gpr_index);
-
-                    InitRegisterShape(param.type);
-                    param.abi.shape = 1;
                 } break;
                 case AbiMethod::GprStack: {
                     param.abi.offsets[0] = 8 * (0 + ret.gpr_index);
@@ -365,15 +323,10 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
             }
 
             if (param.type->primitive == PrimitiveKind::Record || param.type->primitive == PrimitiveKind::Union) {
-                if (param.abi.method == AbiMethod::Memory) {
-                    func->sync.Append({ .op = Code2Op(AbiOpcode::PushAggregateStack), .a = param.offset, .b1 = (int16_t)param.abi.offsets[0], .type = param.type });
-                    func->async.Append({ .op = Code2Op(AbiOpcode::PushAggregateStack), .a = param.offset, .b1 = (int16_t)param.abi.offsets[0], .type = param.type });
-                } else {
-                    AbiOpcode code = param.abi.shape ? AbiOpcode::PushAggregateSplit : AbiOpcode::PushAggregateReg;
+                AbiOpcode code = (param.abi.method != AbiMethod::Memory) ? AbiOpcode::PushAggregateReg : AbiOpcode::PushAggregateStack;
 
-                    func->sync.Append({ .op = Code2Op(code), .a = param.offset, .b1 = (int16_t)param.abi.offsets[0], .b2 = (int16_t)param.abi.offsets[1], .type = param.type });
-                    func->async.Append({ .op = Code2Op(code), .a = param.offset, .b1 = (int16_t)param.abi.offsets[0], .b2 = (int16_t)param.abi.offsets[1], .type = param.type });
-                }
+                func->sync.Append({ .op = Code2Op(code), .a = param.offset, .b1 = (int16_t)param.abi.offsets[0], .b2 = (int16_t)param.abi.offsets[1], .type = param.type });
+                func->async.Append({ .op = Code2Op(code), .a = param.offset, .b1 = (int16_t)param.abi.offsets[0], .b2 = (int16_t)param.abi.offsets[1], .type = param.type });
             } else {
                 int delta = (int)AbiOpcode::PushVoid - (int)PrimitiveKind::Void;
                 AbiOpcode code = (AbiOpcode)((int)param.type->primitive + delta);
@@ -467,34 +420,34 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
                     AbiOpcode run = func->forward_fp ? AbiOpcode::RunAggregateGGX : AbiOpcode::RunAggregateGG;
                     AbiOpcode call = func->forward_fp ? AbiOpcode::CallGGX : AbiOpcode::CallGG;
 
-                    func->sync.Append({ .op = Code2Op(run), .a = func->ret.abi.shape, .type = func->ret.type });
+                    func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
                     func->async.Append({ .op = Code2Op(call) });
-                    func->async.Append({ .op = Code2Op(AbiOpcode::ReturnAggregate), .a = func->ret.abi.shape, .type = func->ret.type });
+                    func->async.Append({ .op = Code2Op(AbiOpcode::ReturnAggregate), .type = func->ret.type });
                 } break;
                 case AbiMethod::Vec:
                 case AbiMethod::VecVec: {
                     AbiOpcode run = func->forward_fp ? AbiOpcode::RunAggregateDDX : AbiOpcode::RunAggregateDD;
                     AbiOpcode call = func->forward_fp ? AbiOpcode::CallDDX : AbiOpcode::CallDD;
 
-                    func->sync.Append({ .op = Code2Op(run), .a = func->ret.abi.shape, .type = func->ret.type });
+                    func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
                     func->async.Append({ .op = Code2Op(call) });
-                    func->async.Append({ .op = Code2Op(AbiOpcode::ReturnAggregate), .a = func->ret.abi.shape, .type = func->ret.type });
+                    func->async.Append({ .op = Code2Op(AbiOpcode::ReturnAggregate), .type = func->ret.type });
                 } break;
                 case AbiMethod::GprVec: {
                     AbiOpcode run = func->forward_fp ? AbiOpcode::RunAggregateGDX : AbiOpcode::RunAggregateGD;
                     AbiOpcode call = func->forward_fp ? AbiOpcode::CallGDX : AbiOpcode::CallGD;
 
-                    func->sync.Append({ .op = Code2Op(run), .a = func->ret.abi.shape, .type = func->ret.type });
+                    func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
                     func->async.Append({ .op = Code2Op(call) });
-                    func->async.Append({ .op = Code2Op(AbiOpcode::ReturnAggregate), .a = func->ret.abi.shape, .type = func->ret.type });
+                    func->async.Append({ .op = Code2Op(AbiOpcode::ReturnAggregate), .type = func->ret.type });
                 } break;
                 case AbiMethod::VecGpr: {
                     AbiOpcode run = func->forward_fp ? AbiOpcode::RunAggregateDGX : AbiOpcode::RunAggregateDG;
                     AbiOpcode call = func->forward_fp ? AbiOpcode::CallDGX : AbiOpcode::CallDG;
 
-                    func->sync.Append({ .op = Code2Op(run), .a = func->ret.abi.shape, .type = func->ret.type });
+                    func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
                     func->async.Append({ .op = Code2Op(call) });
-                    func->async.Append({ .op = Code2Op(AbiOpcode::ReturnAggregate), .a = func->ret.abi.shape, .type = func->ret.type });
+                    func->async.Append({ .op = Code2Op(AbiOpcode::ReturnAggregate), .type = func->ret.type });
                 } break;
             }
         } break;
@@ -689,23 +642,6 @@ namespace {
 
         NEXT();
     }
-    OP(PushAggregateSplit) {
-        napi_value arg = args[inst->a];
-
-        if (!IsObject(call->env, arg)) [[unlikely]] {
-            ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected object", GetValueType(call->instance, arg));
-            return call->env.Null();
-        }
-
-        uint64_t buf[2];
-        if (!call->PushObject(arg, inst->type, 1, (uint8_t *)buf))
-            return call->env.Null();
-
-        *(uint64_t *)(base + inst->b1) = buf[0];
-        *(uint64_t *)(base + inst->b2) = buf[1];
-
-        NEXT();
-    }
     OP(PushAggregateStack) {
         napi_value arg = args[inst->a];
 
@@ -809,19 +745,19 @@ namespace {
     OP(RunPrototype) { K_UNREACHABLE(); return call->env.Null(); }
     OP(RunAggregateGG) {
         auto ret = WRAP(ForwardCallGG(call->native, base, &call->saved_sp));
-        return DecodeObject(call->env, (const uint8_t *)&ret, inst->type, inst->a);
+        return DecodeObject(call->env, (const uint8_t *)&ret, inst->type);
     }
     OP(RunAggregateDD) {
         auto ret = WRAP(ForwardCallDD(call->native, base, &call->saved_sp));
-        return DecodeObject(call->env, (const uint8_t *)&ret, inst->type, inst->a);
+        return DecodeObject(call->env, (const uint8_t *)&ret, inst->type);
     }
     OP(RunAggregateGD) {
         auto ret = WRAP(ForwardCallGD(call->native, base, &call->saved_sp));
-        return DecodeObject(call->env, (const uint8_t *)&ret, inst->type, inst->a);
+        return DecodeObject(call->env, (const uint8_t *)&ret, inst->type);
     }
     OP(RunAggregateDG) {
         auto ret = WRAP(ForwardCallDG(call->native, base, &call->saved_sp));
-        return DecodeObject(call->env, (const uint8_t *)&ret, inst->type, inst->a);
+        return DecodeObject(call->env, (const uint8_t *)&ret, inst->type);
     }
     OP(RunAggregateStack) {
         uint8_t *ptr = call->AllocHeap(inst->a);
@@ -893,19 +829,19 @@ namespace {
     OP(RunPrototypeX) { K_UNREACHABLE(); return call->env.Null(); }
     OP(RunAggregateGGX) {
         auto ret = WRAP(ForwardCallGGX(call->native, base, &call->saved_sp));
-        return DecodeObject(call->env, (const uint8_t *)&ret, inst->type, inst->a);
+        return DecodeObject(call->env, (const uint8_t *)&ret, inst->type);
     }
     OP(RunAggregateDDX) {
         auto ret = WRAP(ForwardCallDDX(call->native, base, &call->saved_sp));
-        return DecodeObject(call->env, (const uint8_t *)&ret, inst->type, inst->a);
+        return DecodeObject(call->env, (const uint8_t *)&ret, inst->type);
     }
     OP(RunAggregateGDX) {
         auto ret = WRAP(ForwardCallGDX(call->native, base, &call->saved_sp));
-        return DecodeObject(call->env, (const uint8_t *)&ret, inst->type, inst->a);
+        return DecodeObject(call->env, (const uint8_t *)&ret, inst->type);
     }
     OP(RunAggregateDGX) {
         auto ret = WRAP(ForwardCallDGX(call->native, base, &call->saved_sp));
-        return DecodeObject(call->env, (const uint8_t *)&ret, inst->type, inst->a);
+        return DecodeObject(call->env, (const uint8_t *)&ret, inst->type);
     }
     OP(RunAggregateStackX) {
         uint8_t *ptr = call->AllocHeap(inst->a);
@@ -1030,7 +966,7 @@ namespace {
     OP(ReturnPrototype) { K_UNREACHABLE(); return call->env.Null(); }
     OP(ReturnAggregate) {
         uint64_t a0 = *(uint64_t *)base;
-        return DecodeObject(call->env, (const uint8_t *)a0, inst->type, inst->a);
+        return DecodeObject(call->env, (const uint8_t *)a0, inst->type);
     }
 
 #undef INTEGER_SWAP
@@ -1043,7 +979,6 @@ namespace {
         #define PRIMITIVE(Name) HandlePush ## Name,
         #include "../primitives.inc"
         HandlePushAggregateReg,
-        HandlePushAggregateSplit,
         HandlePushAggregateStack,
         #define PRIMITIVE(Name) HandleRun ## Name,
         #include "../primitives.inc"
@@ -1239,7 +1174,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
                     memcpy(buf, in_ptr + param.abi.offsets[0], 8);
                     memcpy(buf + 8, in_ptr + param.abi.offsets[1], 8);
 
-                    arguments[i] = DecodeObject(env, buf, param.type, param.abi.shape);
+                    arguments[i] = DecodeObject(env, buf, param.type);
                 } else {
                     uint8_t *ptr = *(uint8_t **)(in_ptr + param.abi.offsets[0]);
                     arguments[i] = DecodeObject(env, ptr, param.type);
@@ -1369,10 +1304,8 @@ void CallData::Relay(Size idx, uint8_t *sp)
             }
 
             if (proto->ret.abi.method != AbiMethod::Memory) {
-                int shape = proto->ret.abi.shape;
-
                 uint64_t buf[2];
-                if (!PushObject(value, type, shape, (uint8_t *)buf))
+                if (!PushObject(value, type, (uint8_t *)buf))
                     return;
 
                 memcpy((uint8_t *)&out_reg + proto->ret.abi.offsets[0], (const uint8_t *)buf, 8);
