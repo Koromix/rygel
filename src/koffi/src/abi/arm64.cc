@@ -1004,30 +1004,30 @@ namespace {
     OP(CallGG) {
         *(uint8_t **)(base + 8 * 8) = base; // x8
         CALL(GG);
-        return call->env.Null();
+        return nullptr;
     }
-    OP(CallF) { CALL(F); return call->env.Null(); }
-    OP(CallDDDD) { CALL(DDDD); return call->env.Null(); }
+    OP(CallF) { CALL(F); return nullptr; }
+    OP(CallDDDD) { CALL(DDDD); return nullptr; }
     OP(CallStack) {
         uint8_t *ptr = call->AllocHeap(inst->a);
         *(uint8_t **)(base + 8 * 8) = ptr; // x8
         CALL(GG);
         *(uint8_t **)base = ptr; // Store pointer for ReturnAggregateStack
-        return call->env.Null();
+        return nullptr;
     }
     OP(CallGGX) {
         *(uint8_t **)(base + 8 * 8) = base; // x8
         CALL(GGX);
-        return call->env.Null();
+        return nullptr;
     }
-    OP(CallFX) { CALL(FX); return call->env.Null(); }
-    OP(CallDDDDX) { CALL(DDDDX); return call->env.Null(); }
+    OP(CallFX) { CALL(FX); return nullptr; }
+    OP(CallDDDDX) { CALL(DDDDX); return nullptr; }
     OP(CallStackX) {
         uint8_t *ptr = call->AllocHeap(inst->a);
         *(uint8_t **)(base + 8 * 8) = ptr; // x8
         CALL(GGX);
         *(uint8_t **)base = ptr; // Store pointer for ReturnAggregateStack
-        return call->env.Null();
+        return nullptr;
     }
 
     OP(ReturnVoid) { return nullptr; }
@@ -1454,7 +1454,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
                 ExpandFloats(dest, proto->ret.abi.hfa32);
             } else {
                 uint64_t *gpr_ptr = (uint64_t *)in_ptr;
-                uint8_t *dest = (uint8_t *)gpr_ptr[8]; // r8
+                uint8_t *dest = (uint8_t *)gpr_ptr[8]; // x8
 
                 if (!PushObject(value, type, dest))
                     return;

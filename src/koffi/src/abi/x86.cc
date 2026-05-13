@@ -715,17 +715,17 @@ napi_value RunLoop(CallData *call, napi_value *args, uint32_t *base, const AbiIn
         return nullptr;
     }
 
-    OP(CallG) { CALL(G); return call->env.Null(); }
-    OP(CallF) { CALL(F); return call->env.Null(); }
-    OP(CallD) { CALL(D); return call->env.Null(); }
+    OP(CallG) { CALL(G); return nullptr; }
+    OP(CallF) { CALL(F); return nullptr; }
+    OP(CallD) { CALL(D); return nullptr; }
     OP(CallStack) {
         *(uint8_t **)base = call->AllocHeap(inst->a);
         CALL(G);
-        return call->env.Null();
+        return nullptr;
     }
-    OP(CallGR) { CALL(GR); return call->env.Null(); }
-    OP(CallFR) { CALL(FR); return call->env.Null(); }
-    OP(CallDR) { CALL(DR); return call->env.Null(); }
+    OP(CallGR) { CALL(GR); return nullptr; }
+    OP(CallFR) { CALL(FR); return nullptr; }
+    OP(CallDR) { CALL(DR); return nullptr; }
     OP(CallStackR) {
 #if defined(_WIN32)
         *(uint8_t **)(base + 4) = call->AllocHeap(inst->a);
@@ -733,7 +733,7 @@ napi_value RunLoop(CallData *call, napi_value *args, uint32_t *base, const AbiIn
         *(uint8_t **)base = call->AllocHeap(inst->a);
 #endif
         CALL(GR);
-        return call->env.Null();
+        return nullptr;
     }
 
     OP(ReturnVoid) { return nullptr; }

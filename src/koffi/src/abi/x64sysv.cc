@@ -935,25 +935,25 @@ namespace {
         return nullptr;
     }
 
-    OP(CallGG) { CALL(GG); return call->env.Null(); }
-    OP(CallF) { CALL(F); return call->env.Null(); }
-    OP(CallDG) { CALL(DG); return call->env.Null(); }
-    OP(CallGD) { CALL(GD); return call->env.Null(); }
-    OP(CallDD) { CALL(DD); return call->env.Null(); }
+    OP(CallGG) { CALL(GG); return nullptr; }
+    OP(CallF) { CALL(F); return nullptr; }
+    OP(CallDG) { CALL(DG); return nullptr; }
+    OP(CallGD) { CALL(GD); return nullptr; }
+    OP(CallDD) { CALL(DD); return nullptr; }
     OP(CallStack) {
         *(uint8_t **)base = base + inst->a;
         CALL(GG);
-        return call->env.Null();
+        return nullptr;
     }
-    OP(CallGGX) { CALL(GGX); return call->env.Null(); }
-    OP(CallFX) { CALL(FX); return call->env.Null(); }
-    OP(CallDGX) { CALL(DGX); return call->env.Null(); }
-    OP(CallGDX) { CALL(GDX); return call->env.Null(); }
-    OP(CallDDX) { CALL(DDX); return call->env.Null(); }
+    OP(CallGGX) { CALL(GGX); return nullptr; }
+    OP(CallFX) { CALL(FX); return nullptr; }
+    OP(CallDGX) { CALL(DGX); return nullptr; }
+    OP(CallGDX) { CALL(GDX); return nullptr; }
+    OP(CallDDX) { CALL(DDX); return nullptr; }
     OP(CallStackX) {
         *(uint8_t **)base = base + inst->a;
         CALL(GGX);
-        return call->env.Null();
+        return nullptr;
     }
 
     OP(ReturnVoid) { return nullptr; }

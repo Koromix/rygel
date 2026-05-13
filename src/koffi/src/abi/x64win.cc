@@ -592,21 +592,21 @@ namespace {
         return nullptr;
     }
 
-    OP(CallG) { CALL(G); return call->env.Null(); }
-    OP(CallF) { CALL(F); return call->env.Null(); }
-    OP(CallD) { CALL(D); return call->env.Null(); }
+    OP(CallG) { CALL(G); return nullptr; }
+    OP(CallF) { CALL(F); return nullptr; }
+    OP(CallD) { CALL(D); return nullptr; }
     OP(CallStack) {
         *(uint8_t **)base = call->AllocHeap(inst->a);
         CALL(G);
-        return call->env.Null();
+        return nullptr;
     }
-    OP(CallGX) { CALL(GX); return call->env.Null(); }
-    OP(CallFX) { CALL(FX); return call->env.Null(); }
-    OP(CallDX) { CALL(DX); return call->env.Null(); }
+    OP(CallGX) { CALL(GX); return nullptr; }
+    OP(CallFX) { CALL(FX); return nullptr; }
+    OP(CallDX) { CALL(DX); return nullptr; }
     OP(CallStackX) {
         *(uint8_t **)base = call->AllocHeap(inst->a);
         CALL(GX);
-        return call->env.Null();
+        return nullptr;
     }
 
     OP(ReturnVoid) { return nullptr; }
