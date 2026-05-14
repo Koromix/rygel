@@ -23,13 +23,13 @@ function main() {
     let args = process.argv.slice(2);
 
     let tests = {
-        'napi': time => run_napi(time),
-        'koffi (JS array)': time => run_koffi_array(koffi, time),
-        'koffi (Buffer)': time => run_koffi_buffer(koffi, time),
-        'koffi2 (JS array)': time => koffi2 ? run_koffi_array(koffi2, time) : undefined,
-        'koffi2 (Buffer)': time => koffi2 ? run_koffi_buffer(koffi2, time) : undefined,
-        'node-ctypes': ctypes ? time => run_node_ctypes(time) : undefined,
-        'node:ffi': ffi ? time => run_node_ffi(time) : undefined
+        'napi': time => runNapi(time),
+        'koffi (JS array)': time => runKoffiArray(koffi, time),
+        'koffi (Buffer)': time => runKoffiBuffer(koffi, time),
+        'koffi2 (JS array)': time => koffi2 ? runKoffiArray(koffi2, time) : undefined,
+        'koffi2 (Buffer)': time => koffi2 ? runKoffiBuffer(koffi2, time) : undefined,
+        'node-ctypes': ctypes ? time => runNodeCTypes(time) : undefined,
+        'node:ffi': ffi ? time => runNodeFfi(time) : undefined
     };
 
     let perf = Object.fromEntries(Object.keys(tests).map(key => {
@@ -47,7 +47,7 @@ function main() {
     console.log(JSON.stringify(perf, null, 4));
 }
 
-function run_napi(time) {
+function runNapi(time) {
     let start = performance.now();
     let iterations = 0;
 
@@ -72,7 +72,7 @@ function run_napi(time) {
     return { iterations: iterations, time: Math.round(time) };
 }
 
-function run_koffi_array(koffi, time) {
+function runKoffiArray(koffi, time) {
     koffi.reset();
 
     let lib = koffi.load(process.platform == 'win32' ? 'msvcrt.dll' : null);
@@ -108,7 +108,7 @@ function run_koffi_array(koffi, time) {
     return { iterations: iterations, time: Math.round(time) };
 }
 
-function run_koffi_buffer(koffi, time) {
+function runKoffiBuffer(koffi, time) {
     koffi.reset();
 
     let lib = koffi.load(process.platform == 'win32' ? 'msvcrt.dll' : null);
@@ -143,7 +143,7 @@ function run_koffi_buffer(koffi, time) {
     return { iterations: iterations, time: Math.round(time) };
 }
 
-function run_node_ctypes(time) {
+function runNodeCTypes(time) {
     let lib = new ctypes.CDLL(process.platform == 'win32' ? 'msvcrt.dll' : null);
 
     const IntArray = ctypes.array(ctypes.c_int32, RANDOM_INTS.length);
@@ -176,7 +176,7 @@ function run_node_ctypes(time) {
     return { iterations: iterations, time: Math.round(time) };
 }
 
-function run_node_ffi(time) {
+function runNodeFfi(time) {
     let lib = new ffi.DynamicLibrary(process.platform == 'win32' ? 'msvcrt.dll' : null);
 
     const qsort = lib.getFunction('qsort', {

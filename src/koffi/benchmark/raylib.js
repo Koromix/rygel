@@ -23,11 +23,11 @@ function main() {
     let args = process.argv.slice(2);
 
     let tests = {
-        'cxx': time => run_cxx(time),
-        'napi': time => r ? run_napi(time) : undefined,
-        'koffi': time => run_koffi(koffi, time),
-        'koffi2': time => koffi2 ? run_koffi(koffi2, time) : undefined,
-        'node-ffi-napi': ffi_napi ? time => run_node_ffi_napi(time) : undefined
+        'cxx': time => runCxx(time),
+        'napi': time => r ? runNapi(time) : undefined,
+        'koffi': time => runKoffi(koffi, time),
+        'koffi2': time => koffi2 ? runKoffi(koffi2, time) : undefined,
+        'ffi-napi': ffi_napi ? time => runFfiNapi(time) : undefined
     };
 
     let perf = Object.fromEntries(Object.keys(tests).map(key => {
@@ -45,7 +45,7 @@ function main() {
     console.log(JSON.stringify(perf, null, 4));
 }
 
-function run_cxx(time) {
+function runCxx(time) {
     let filename = path.join(__dirname, pkg.cnoke.output, 'raylib_cc' + (process.platform == 'win32' ? '.exe' : ''));
     let proc = spawnSync(filename, [time]);
 
@@ -61,7 +61,7 @@ function run_cxx(time) {
     return JSON.parse(proc.stdout);
 }
 
-function run_napi(time) {
+function runNapi(time) {
     // We need to call InitWindow before using anything else (such as fonts)
     r.SetTraceLogLevel(5); // Errors
     r.SetWindowState(0x80); // Hidden
@@ -102,7 +102,7 @@ function run_napi(time) {
     return { iterations: iterations, time: Math.round(time) };
 }
 
-function run_koffi(koffi, time) {
+function runKoffi(koffi, time) {
     const Color = koffi.struct('Color', {
         r: 'uchar',
         g: 'uchar',
@@ -206,7 +206,7 @@ function run_koffi(koffi, time) {
     return { iterations: iterations, time: Math.round(time) };
 }
 
-function run_node_ffi_napi(time) {
+function runFfiNapi(time) {
     const Color = struct({
         r: 'uchar',
         g: 'uchar',
