@@ -390,6 +390,8 @@ static_assert(MaxTrampolines <= INT16_MAX);
 
 extern SharedData shared;
 
+extern uint32_t napi_version;
+
 // Recent N-API functions are loaded dynamically
 extern napi_status (NAPI_CDECL *node_api_create_property_key_utf8)(napi_env env, const char* str, size_t length, napi_value* result);
 extern napi_status (NAPI_CDECL *node_api_post_finalizer)(node_api_basic_env env, napi_finalize finalize_cb, void* finalize_data, void* finalize_hint);

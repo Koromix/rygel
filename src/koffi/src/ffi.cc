@@ -37,6 +37,8 @@ namespace K {
 
 SharedData shared;
 
+uint32_t napi_version;
+
 // Recent N-API functions are loaded dynamically
 napi_status (NAPI_CDECL *node_api_create_property_key_utf8)(napi_env env, const char* str, size_t length, napi_value* result);
 napi_status (NAPI_CDECL *node_api_post_finalizer)(node_api_basic_env env, napi_finalize finalize_cb, void* finalize_data, void* finalize_hint);
@@ -2411,6 +2413,8 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
         static std::once_flag flag;
 
         std::call_once(flag, [&]() {
+            napi_get_version(env, &napi_version);
+
             InitTranslateZeroCall(env);
 
 #if defined(_WIN32)

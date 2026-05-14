@@ -198,6 +198,19 @@ static FORCE_INLINE bool IsBuffer(napi_env env, napi_value value)
     return buffer;
 }
 
+// Before somewhere around Node 20.12, napi_get_buffer_info() would assert/crash
+// when used with something it did not support, instead of returning napi_invalid_arg.
+// So we need to call napi_is_buffer() for old versions before trying napi_get_buffer_info().
+static FORCE_INLINE bool MayBeBuffer(napi_env env, napi_value value)
+{
+    if (napi_version >= 10)
+        return true;
+    if (IsBuffer(env, value))
+        return true;
+
+    return false;
+}
+
 static FORCE_INLINE napi_value GetReferenceValue(napi_env env, napi_ref ref)
 {
     napi_value value;
@@ -275,10 +288,8 @@ static FORCE_INLINE bool TryPointer(napi_env env, napi_value value, void **out_p
         }
     }
 
-    if (IsTypedArray(env, value)) {
-        napi_get_typedarray_info(env, value, nullptr, nullptr, out_ptr, nullptr, nullptr);
+    if (MayBeBuffer(env, value) && napi_get_buffer_info(env, value, out_ptr, nullptr) == napi_ok)
         return true;
-    }
 
     napi_valuetype kind = GetKindOf(env, value);
 
@@ -299,12 +310,10 @@ static FORCE_INLINE bool TryPointer(napi_env env, napi_value value, void **out_p
         *out_ptr = (void *)external.Data();
         return true;
 #endif
-    } else if (IsArrayBuffer(env, value)) {
-        Napi::ArrayBuffer buffer = Napi::ArrayBuffer(env, value);
-
-        *out_ptr = (void *)buffer.Data();
-        return true;
     }
+
+    if (napi_get_arraybuffer_info(env, value, out_ptr, nullptr) == napi_ok)
+        return true;
 
     return false;
 }
@@ -325,10 +334,8 @@ static FORCE_INLINE bool TryPointer(napi_env env, napi_value value, void **out_p
         }
     }
 
-    if (IsTypedArray(env, value)) {
-        napi_get_typedarray_info(env, value, nullptr, nullptr, out_ptr, nullptr, nullptr);
+    if (MayBeBuffer(env, value) && napi_get_buffer_info(env, value, out_ptr, nullptr) == napi_ok) {
         *out_kind = napi_object;
-
         return true;
     }
 
@@ -357,12 +364,10 @@ static FORCE_INLINE bool TryPointer(napi_env env, napi_value value, void **out_p
 
         return true;
 #endif
-    } else if (IsArrayBuffer(env, value)) {
-        Napi::ArrayBuffer buffer = Napi::ArrayBuffer(env, value);
+    }
 
-        *out_ptr = (void *)buffer.Data();
+    if (napi_get_arraybuffer_info(env, value, out_ptr, nullptr) == napi_ok) {
         *out_kind = napi_object;
-
         return true;
     }
 
@@ -374,21 +379,16 @@ static FORCE_INLINE bool TryBuffer(napi_env env, napi_value value, Span<uint8_t>
 {
     // Before somewhere around Node 20.12, napi_get_buffer_info() would assert/crash
     // when used with something it did not support, instead of returning napi_invalid_arg.
-    // So we need to call napi_is_buffer(), at least for now.
+    // So we need to call napi_is_buffer() for old versions.
 
-    if (IsBuffer(env, value)) {
-        void *ptr = nullptr;
-        size_t length = 0;
+    void *ptr = nullptr;
+    size_t len = 0;
 
-        // Assume it works
-        napi_get_buffer_info(env, value, &ptr, &length);
-
-        *out_buffer = MakeSpan((uint8_t *)ptr, (Size)length);
+    if (MayBeBuffer(env, value) && napi_get_buffer_info(env, value, &ptr, &len) == napi_ok) {
+        *out_buffer = MakeSpan((uint8_t *)ptr, (Size)len);
         return true;
-    } else if (IsArrayBuffer(env, value)) {
-        Napi::ArrayBuffer buffer = Napi::ArrayBuffer(env, value);
-
-        *out_buffer = MakeSpan((uint8_t *)buffer.Data(), (Size)buffer.ByteLength());
+    } else if (napi_get_arraybuffer_info(env, value, &ptr, &len) == napi_ok) {
+        *out_buffer = MakeSpan((uint8_t *)ptr, (Size)len);
         return true;
     }
 

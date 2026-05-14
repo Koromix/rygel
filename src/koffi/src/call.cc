@@ -1220,15 +1220,12 @@ bool CallData::CheckDynamicLength(napi_value obj, Size element, const char *coun
     }
 
     // Get actual size
-    if (IsArray(env, value)) {
-        Napi::Array array = Napi::Array(env, value);
-        size = array.Length() * element;
-    } else if (IsTypedArray(env, value)) {
-        Napi::TypedArray typed = Napi::TypedArray(env, value);
-        size = typed.ByteLength();
-    } else if (IsArrayBuffer(env, value)) {
-        Napi::ArrayBuffer buffer = Napi::ArrayBuffer(env, value);
-        size = buffer.ByteLength();
+    if (uint32_t len = 0; napi_get_array_length(env, value, &len) == napi_ok) {
+        size = (int64_t)len * element;
+    } else if (size_t len = 0; MayBeBuffer(env, value) && napi_get_buffer_info(env, value, nullptr, &len) == napi_ok) {
+        size = (int64_t)len;
+    } else if (size_t len = 0; napi_get_arraybuffer_info(env, value, nullptr, &len) == napi_ok) {
+        size = (int64_t)len;
     } else if (!IsNullOrUndefined(env, value)) {
         size = element;
     } else {
