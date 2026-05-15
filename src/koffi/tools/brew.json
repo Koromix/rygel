@@ -223,8 +223,8 @@
         "test": {
             "build": "node ../../cnoke.cjs --ccache -D test",
             "commands": {
-                "Test Sync": "node test/sync.js",
-                "Test Sync (debug async)": "node test/sync.js --debug_async",
+                "Test Sync": "node test/sync.js --no_slow",
+                "Test Sync (debug async)": "node test/sync.js --no_slow --debug_async",
                 "Test Union": "node test/union.js",
                 "Test Async": "node test/async.js",
                 "Test Callbacks": "node test/callbacks.js",
