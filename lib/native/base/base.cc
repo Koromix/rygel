@@ -2082,6 +2082,9 @@ bool GetDebugFlag(const char *name)
         if (!ParseBool(debug, &ret, K_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log)) {
             LogError("Environment variable '%1' is not a boolean", name);
         }
+        if (ret) {
+            LogWarning("Debug flag '%1' is in effect", name);
+        }
         return ret;
     } else {
         return false;
