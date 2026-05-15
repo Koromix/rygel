@@ -210,7 +210,7 @@ elseif(PGO_PROFILE)
 
     message(STATUS "PGO: Building optimized binary with profile data")
 else()
-    enable_unity_build(koffi EXCLUDE src/uv.cc)
+    enable_unity_build(koffi)
 endif()
 
 if(APPLE)
