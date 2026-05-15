@@ -1948,6 +1948,12 @@ Napi::Object DescribeFunction(Napi::Env env, const FunctionInfo *func)
     return meta;
 }
 
+static bool IsDebugAsyncEnabled()
+{
+    static bool debug = GetDebugFlag("DEBUG_ASYNC");
+    return debug;
+}
+
 Napi::Function WrapFunction(Napi::Env env, const FunctionInfo *func)
 {
     Napi::Function wrapper;
@@ -1958,6 +1964,9 @@ Napi::Function WrapFunction(Napi::Env env, const FunctionInfo *func)
 
         if (func->variadic) {
             napi_status status = napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateVariadicCall, (void *)func->Ref(), &value);
+            K_ASSERT(status == napi_ok);
+        } else if (IsDebugAsyncEnabled()) {
+            napi_status status = napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateNormalCallDebugAsync, (void *)func->Ref(), &value);
             K_ASSERT(status == napi_ok);
         } else if (!func->parameters.len) {
             InstanceData *instance = env.GetInstanceData<InstanceData>();

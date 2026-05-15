@@ -28,6 +28,7 @@ function test() {
     let success = true;
 
     scripts['Sync'] = ['sync.js'];
+    scripts['Sync (debug async)'] = ['sync.js', '--debug_async'];
     scripts['Async'] = ['async.js'];
     scripts['Callbacks'] = ['callbacks.js'];
     scripts['Union'] = ['union.js'];
@@ -44,7 +45,7 @@ function test() {
         let args = scripts[key].slice(1);
 
         let filename = path.join(__dirname, script);
-        success &= run('Test', key, [filename, ...args]);
+        success &= run('Test', key, ['--no-deprecation', filename, ...args]);
     }
 
     // Make sure tests compile in TypeScript mode
@@ -82,14 +83,21 @@ function run(action, title, args) {
             throw new Error(stderr || stdout);
         }
 
+        let stderr = proc.stderr.toString().trim();
+
         let time = Number((process.hrtime.bigint() - start) / 1000000n);
         console.log(`>> ${action} ${title} ${styleAnsi('[' + (time / 1000).toFixed(2) + 's]', 'green bold')}`);
+
+        if (stderr) {
+            let str = styleAnsi(stderr.replace(/^/gm, ' '.repeat(3)), '33');
+            console.log(str);
+        }
 
         return true;
     } catch (err) {
         console.log(`>> ${action} ${title} ${styleAnsi('[error]', 'red bold')}`);
 
-        let str = '\n' + styleAnsi(err.message.replace(/^/gm, ' '.repeat(3)), '33');
+        let str = styleAnsi(err.message.replace(/^/gm, ' '.repeat(3)), '33');
         console.log(str);
 
         return false;

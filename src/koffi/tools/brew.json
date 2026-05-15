@@ -14,6 +14,7 @@
             "build": "node ../../cnoke.cjs --ccache -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
+                "Test Sync (debug async)": "node test/sync.js --debug_async",
                 "Test Union": "node test/union.js",
                 "Test Async": "node test/async.js",
                 "Test Callbacks": "node test/callbacks.js",
@@ -39,6 +40,7 @@
             "build": "CC=clang-21 CXX=clang++-21 node ../../cnoke.cjs --ccache -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
+                "Test Sync (debug async)": "node test/sync.js --debug_async",
                 "Test Union": "node test/union.js",
                 "Test Async": "node test/async.js",
                 "Test Callbacks": "node test/callbacks.js",
@@ -64,6 +66,7 @@
             "build": "node ../../cnoke.cjs --ccache -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
+                "Test Sync (debug async)": "node test/sync.js --debug_async",
                 "Test Union": "node test/union.js",
                 "Test Async": "node test/async.js",
                 "Test Callbacks": "node test/callbacks.js",
@@ -90,6 +93,7 @@
             "build": "CC=clang-21 CXX=clang++-21 node ../../cnoke.cjs --ccache -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
+                "Test Sync (debug async)": "node test/sync.js --debug_async",
                 "Test Union": "node test/union.js",
                 "Test Async": "node test/async.js",
                 "Test Callbacks": "node test/callbacks.js",
@@ -116,6 +120,7 @@
             "build": "node ../../cnoke.cjs --ccache -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
+                "Test Sync (debug async)": "node test/sync.js --debug_async",
                 "Test Union": "node test/union.js",
                 "Test Async": "node test/async.js",
                 "Test Callbacks": "node test/callbacks.js",
@@ -141,6 +146,7 @@
             "build": "node ../../cnoke.cjs --ccache -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
+                "Test Sync (debug async)": "node test/sync.js --debug_async",
                 "Test Union": "node test/union.js",
                 "Test Async": "node test/async.js",
                 "Test Callbacks": "node test/callbacks.js",
@@ -166,6 +172,7 @@
             "build": "node ../../cnoke.cjs --ccache -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
+                "Test Sync (debug async)": "node test/sync.js --debug_async",
                 "Test Union": "node test/union.js",
                 "Test Async": "node test/async.js",
                 "Test Callbacks": "node test/callbacks.js",
@@ -191,6 +198,7 @@
             "build": "node ../../cnoke.cjs --ccache -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
+                "Test Sync (debug async)": "node test/sync.js --debug_async",
                 "Test Union": "node test/union.js",
                 "Test Async": "node test/async.js",
                 "Test Callbacks": "node test/callbacks.js",
@@ -216,6 +224,7 @@
             "build": "node ../../cnoke.cjs --ccache -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
+                "Test Sync (debug async)": "node test/sync.js --debug_async",
                 "Test Union": "node test/union.js",
                 "Test Async": "node test/async.js",
                 "Test Callbacks": "node test/callbacks.js",
@@ -241,6 +250,7 @@
             "build": "node ../../cnoke.cjs --ccache -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
+                "Test Sync (debug async)": "node test/sync.js --debug_async",
                 "Test Union": "node test/union.js",
                 "Test Async": "node test/async.js",
                 "Test Callbacks": "node test/callbacks.js",
@@ -266,6 +276,7 @@
             "build": "C:\\Node32\\node32.cmd node ../../cnoke.cjs -D test",
             "commands": {
                 "Test Sync": "C:\\Node32\\node32.cmd node test/sync.js",
+                "Test Sync (debug async)": "C:\\Node32\\node32.cmd node test/sync.js --debug_async",
                 "Test Union": "C:\\Node32\\node32.cmd node test/union.js",
                 "Test Async": "C:\\Node32\\node32.cmd node test/async.js",
                 "Test Callbacks": "C:\\Node32\\node32.cmd node test/callbacks.js",
@@ -294,6 +305,7 @@
             "build": "C:\\Node64\\node64.cmd node ../../cnoke.cjs -D test",
             "commands": {
                 "Test Sync": "C:\\Node64\\node64.cmd node test/sync.js",
+                "Test Sync (debug async)": "C:\\Node64\\node64.cmd node test/sync.js --debug_async",
                 "Test Union": "C:\\Node64\\node64.cmd node test/union.js",
                 "Test Async": "C:\\Node64\\node64.cmd node test/async.js",
                 "Test Callbacks": "C:\\Node64\\node64.cmd node test/callbacks.js",
@@ -334,6 +346,7 @@
             "build": "PATH=/usr/local/bin:/usr/bin:/bin SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX11.3.sdk node ../../cnoke.cjs --ccache -D test",
             "commands": {
                 "Test Sync": "PATH=/usr/local/bin:/usr/bin:/bin node test/sync.js",
+                "Test Sync (debug async)": "PATH=/usr/local/bin:/usr/bin:/bin node test/sync.js --debug_async",
                 "Test Union": "PATH=/usr/local/bin:/usr/bin:/bin node test/union.js",
                 "Test Async": "PATH=/usr/local/bin:/usr/bin:/bin node test/async.js",
                 "Test Callbacks": "PATH=/usr/local/bin:/usr/bin:/bin node test/callbacks.js",
@@ -370,6 +383,7 @@
             "build": "node ../../cnoke.cjs --ccache -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
+                "Test Sync (debug async)": "node test/sync.js --debug_async",
                 "Test Union": "node test/union.js",
                 "Test Async": "node test/async.js",
                 "Test Callbacks": "node test/callbacks.js",
@@ -394,6 +408,7 @@
             "build": "node ../../cnoke.cjs --ccache -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
+                "Test Sync (debug async)": "node test/sync.js --debug_async",
                 "Test Union": "node test/union.js",
                 "Test Async": "node test/async.js",
                 "Test Callbacks": "node test/callbacks.js",
@@ -419,6 +434,7 @@
             "build": "node ../../cnoke.cjs --ccache -D test",
             "commands": {
                 "Test Sync": "node test/sync.js",
+                "Test Sync (debug async)": "node test/sync.js --debug_async",
                 "Test Union": "node test/union.js",
                 "Test Async": "node test/async.js",
                 "Test Callbacks": "node test/callbacks.js",

@@ -1242,7 +1242,7 @@ bool CallData::CheckDynamicLength(napi_value obj, Size element, const char *coun
 
 #if defined(K_DEBUG)
 
-static bool IsDebugEnabled()
+static bool IsDebugCallsEnabled()
 {
     static bool debug = GetDebugFlag("DEBUG_CALLS");
     return debug;
@@ -1250,7 +1250,7 @@ static bool IsDebugEnabled()
 
 void CallData::DebugCall(const FunctionInfo *func)
 {
-    if (!IsDebugEnabled())
+    if (!IsDebugCallsEnabled())
         return;
 
     PrintLn(StdErr, "%!..+---- %1 (%2) ----%!0", func->name, CallConventionNames[(int)func->convention]);
@@ -1268,7 +1268,7 @@ void CallData::DebugCall(const FunctionInfo *func)
 
 void CallData::DebugForward()
 {
-    if (!IsDebugEnabled())
+    if (!IsDebugCallsEnabled())
         return;
 
     Span<const uint8_t> stack = MakeSpan(mem->stack.end, prev_stack - mem->stack.end);
@@ -1379,13 +1379,12 @@ napi_value TranslateFastCall(napi_env env, napi_callback_info info)
     napi_status status = napi_get_cb_info(env, info, &count, args, nullptr, (void **)&func);
     K_ASSERT(status == napi_ok);
 
-    InstanceData *instance = func->instance;
-
     if (count < (size_t)func->required_parameters) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected %1 arguments, got %2", func->parameters.len, count);
         return Napi::Env(env).Null();
     }
 
+    InstanceData *instance = func->instance;
     InstanceMemory *mem = instance->memories[0];
     CallData call(env, instance, mem, func->native);
 
@@ -1402,13 +1401,12 @@ napi_value TranslateFastCall(napi_env env, napi_callback_info info)
 
 static FORCE_INLINE napi_value TranslateNormalCall(napi_env env, const FunctionInfo *func, void *native, napi_value *args, Size count)
 {
-    InstanceData *instance = func->instance;
-
     if (count < func->required_parameters) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected %1 arguments, got %2", func->parameters.len, count);
         return Napi::Env(env).Null();
     }
 
+    InstanceData *instance = func->instance;
     InstanceMemory *mem = instance->memories[0];
     CallData call(env, instance, mem, native);
 
@@ -1444,12 +1442,67 @@ napi_value TranslateNormalCall(napi_env env, napi_callback_info info)
     return TranslateNormalCall(env, func, func->native, args, (Size)count);
 }
 
+static FORCE_INLINE napi_value TranslateNormalCallDebugAsync(napi_env env, const FunctionInfo *func, void *native, napi_value *args, Size count)
+{
+    if (count < func->required_parameters) [[unlikely]] {
+        ThrowError<Napi::TypeError>(env, "Expected %1 arguments, got %2", func->parameters.len, count);
+        return Napi::Env(env).Null();
+    }
+
+    InstanceData *instance = func->instance;
+    InstanceMemory *mem = instance->memories[0];
+    CallData call(env, instance, mem, native);
+
+    K_DEFER_C(prev_call = instance->sync_call) { instance->sync_call = prev_call; };
+    instance->sync_call = &call;
+
+    call.DebugCall(func);
+
+    // The async call code partly works differently, with Yield and Return instructions which do not
+    // get used for normal sync calls. To exercise them, we also run the sync tests using async
+    // instructions, by setting DEBUG_ASYNC=1.
+
+    napi_value ret;
+    if (call.PrepareAsync(func, args)) {
+        call.ExecuteAsync();
+        ret = call.EndAsync();
+    } else {
+        ret = Napi::Env(env).Null();
+    }
+    call.Finalize();
+
+    return ret;
+}
+
+napi_value TranslateNormalCallDebugAsync(napi_env env, napi_callback_info info)
+{
+    static_assert(MaxParameters >= 8);
+
+    napi_value args[MaxParameters];
+    size_t count = 8;
+    FunctionInfo *func;
+
+    napi_status status = napi_get_cb_info(env, info, &count, args, nullptr, (void **)&func);
+    K_ASSERT(status == napi_ok);
+
+    if (count > 8) {
+        napi_status status = napi_get_cb_info(env, info, &count, args, nullptr, nullptr);
+        K_ASSERT(status == napi_ok);
+
+        count = std::min(count, (size_t)MaxParameters);
+    }
+
+    return TranslateNormalCallDebugAsync(env, func, func->native, args, count);
+}
+
 static napi_value TranslateVariadicCall(napi_env env, const FunctionInfo *func, void *native, napi_value *args, Size count)
 {
-    InstanceData *instance = func->instance;
-
     FunctionInfo *variadic = nullptr;
     K_DEFER_N(err_guard) { delete variadic; };
+
+    InstanceData *instance = func->instance;
+    InstanceMemory *mem = instance->memories[0];
+    CallData call(env, instance, mem, native);
 
     // Try cached function
     {
@@ -1527,9 +1580,6 @@ static napi_value TranslateVariadicCall(napi_env env, const FunctionInfo *func, 
         if (!AnalyseFunction(env, instance, variadic)) [[unlikely]]
             return Napi::Env(env).Null();
     }
-
-    InstanceMemory *mem = instance->memories[0];
-    CallData call(env, instance, mem, native);
 
     K_DEFER_C(prev_call = instance->sync_call) { instance->sync_call = prev_call; };
     instance->sync_call = &call;

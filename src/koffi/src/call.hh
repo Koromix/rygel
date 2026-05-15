@@ -170,6 +170,7 @@ bool InitAsyncBroker(Napi::Env env, InstanceData *instance);
 napi_value TranslateZeroCall(napi_env env, napi_callback_info info);
 napi_value TranslateFastCall(napi_env env, napi_callback_info info);
 napi_value TranslateNormalCall(napi_env env, napi_callback_info info);
+napi_value TranslateNormalCallDebugAsync(napi_env env, napi_callback_info info);
 napi_value TranslateVariadicCall(napi_env env, napi_callback_info info);
 napi_value TranslateAsyncCall(napi_env env, napi_callback_info info);
 

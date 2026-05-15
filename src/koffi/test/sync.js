@@ -9,6 +9,7 @@ const util = require('node:util');
 const { cnoke } = require('./package.json');
 
 let allow_slow = !process.argv.slice(2).includes('--no_slow');
+let debug_async = process.argv.slice(2).includes('--debug_async');
 
 // We need to change this on Windows because the DLL CRT might
 // not (probably not) match the one used by Node.js!
@@ -178,6 +179,9 @@ async function main() {
 }
 
 async function test() {
+    if (debug_async)
+        process.env.DEBUG_ASYNC = '1';
+
     let lib_filename = path.join(__dirname, cnoke.output, 'sync' + koffi.extension);
     let lib = koffi.load(lib_filename);
 
