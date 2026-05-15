@@ -715,6 +715,7 @@ async function test() {
         assert.equal(ptr1[0], 'HELLO WORLD');
         assert.ok(typeof ptr2[0] == 'bigint' || util.types.isExternal(ptr2[0]));
         assert.equal(koffi.decode(ptr2[0], 'char', -1), 'BONJOUR MONDE');
+        assert.equal(koffi.decode.string(ptr2[0]), 'BONJOUR MONDE');
 
         let view = Buffer.from(koffi.view(ptr2[0], 7));
         assert.equal(view.toString(), 'BONJOUR');
@@ -931,7 +932,7 @@ async function test() {
         WriteConfigure16(ptr, 9);
 
         WriteString16('Hello');
-        assert.equal(koffi.decode(ptr, 'char16_t', -1), 'Hello');
+        assert.equal(koffi.decode.string16(ptr), 'Hello');
 
         WriteString16('Hello World!');
         assert.equal(koffi.decode(ptr, 'char16_t', -1), 'Hello Wo');
@@ -946,7 +947,7 @@ async function test() {
         WriteConfigure32(ptr, 8);
 
         WriteString32('Hello');
-        assert.equal(koffi.decode(ptr, 'char32_t', -1), 'Hello');
+        assert.equal(koffi.decode.string32(ptr), 'Hello');
 
         WriteString32('Hello World!');
         assert.equal(koffi.decode(ptr, 'char32_t', -1), 'Hello W');
@@ -1094,6 +1095,18 @@ async function test() {
     assert.equal(koffi.enumeration('EnumX', {}, 'uint64_t').primitive, 'UInt64');
     assert.equal(koffi.enumeration('EnumY', {}, 'short').primitive, 'Int16');
     assert.throws(() => koffi.enumeration({}, 'float'), /Expected integer type for underlying enum storage type/);
+
+    // Test fast decode functions
+    assert.equal(koffi.decode.int8(Int8Array.from([7])), 7);
+    assert.equal(koffi.decode.int16(Int16Array.from([8])), 8);
+    assert.equal(koffi.decode.int32(Int32Array.from([9])), 9);
+    assert.equal(koffi.decode.int64(BigInt64Array.from([90071992547409910n])), 90071992547409910n);
+    assert.equal(koffi.decode.uint8(Uint8Array.from([142])), 142);
+    assert.equal(koffi.decode.uint16(Uint16Array.from([42424])), 42424);
+    assert.equal(koffi.decode.uint32(Uint32Array.from([12])), 12);
+    assert.equal(koffi.decode.uint64(BigUint64Array.from([90071992547409911n])), 90071992547409911n);
+    assert.equal(koffi.decode.float(Float32Array.from([42])), 42);
+    assert.equal(koffi.decode.double(Float64Array.from([24])), 24);
 
     // Test boundary conditions between fast and slow string handling paths
     if (allow_slow) {
