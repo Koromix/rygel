@@ -5,7 +5,6 @@
 const pkg = require('./package.json');
 const napi = require(pkg.cnoke.output + '/qsort_napi.node');
 const koffi = require('..');
-const koffi2 = optional('koffi2');
 const ctypes = optional('node-ctypes');
 const ffi = optional('node:ffi');
 const { performance } = require('perf_hooks');
@@ -24,10 +23,8 @@ function main() {
 
     let tests = {
         'napi': time => runNapi(time),
-        'koffi (JS array)': time => runKoffiArray(koffi, time),
-        'koffi (Buffer)': time => runKoffiBuffer(koffi, time),
-        'koffi2 (JS array)': time => koffi2 ? runKoffiArray(koffi2, time) : undefined,
-        'koffi2 (Buffer)': time => koffi2 ? runKoffiBuffer(koffi2, time) : undefined,
+        'koffi (JS array)': time => runKoffiArray(time),
+        'koffi (Buffer)': time => runKoffiBuffer(time),
         'node-ctypes': ctypes ? time => runNodeCTypes(time) : undefined,
         'node:ffi': ffi ? time => runNodeFfi(time) : undefined
     };
@@ -72,7 +69,7 @@ function runNapi(time) {
     return { iterations: iterations, time: Math.round(time) };
 }
 
-function runKoffiArray(koffi, time) {
+function runKoffiArray(time) {
     koffi.reset();
 
     let lib = koffi.load(process.platform == 'win32' ? 'msvcrt.dll' : null);
@@ -108,7 +105,7 @@ function runKoffiArray(koffi, time) {
     return { iterations: iterations, time: Math.round(time) };
 }
 
-function runKoffiBuffer(koffi, time) {
+function runKoffiBuffer(time) {
     koffi.reset();
 
     let lib = koffi.load(process.platform == 'win32' ? 'msvcrt.dll' : null);
