@@ -121,18 +121,49 @@ export function register(callback: Function, type: TypeSpec): bigint;
 export function unregister(callback: bigint): void;
 
 export function as(value: any, type: TypeSpec): IKoffiPointerCast;
-export function decode(value: any, type: TypeSpec): any;
-export function decode(value: any, type: TypeSpec, len: number): any;
-export function decode(value: any, offset: number, type: TypeSpec): any;
-export function decode(value: any, offset: number, type: TypeSpec, len: number): any;
 export function address(value: any): bigint;
 export function call(value: any, type: TypeSpec, ...args: any[]): any;
+export function view(ref: any, len: number): ArrayBuffer;
+
+export const decode: {
+    (value: any, type: TypeSpec): any;
+    (value: any, type: TypeSpec, len: number): any;
+    (value: any, offset: number, type: TypeSpec): any;
+    (value: any, offset: number, type: TypeSpec, len: number): any;
+
+    char(ptr: any): number;
+    short(ptr: any): number;
+    int(ptr: any): number;
+    long(ptr: any): number | bigint;
+    longlong(ptr: any): number | bigint;
+    uchar(ptr: any): number;
+    ushort(ptr: any): number;
+    uint(ptr: any): number;
+    ulong(ptr: any): number | bigint;
+    ulonglong(ptr: any): number | bigint;
+
+    int8(ptr: any): number;
+    int16(ptr: any): number;
+    int32(ptr: any): number;
+    int64(ptr: any): number | bigint;
+    uint8(ptr: any): number;
+    uint16(ptr: any): number;
+    uint32(ptr: any): number;
+    uint64(ptr: any): number | bigint;
+
+    float(ptr: any): number;
+    double(ptr: any): number;
+
+    string(ptr: any, length?: number | bigint | null): string;
+    string16(ptr: any, length?: number | bigint | null): string;
+    string32(ptr: any, length?: number | bigint | null): string;
+};
+
 export function encode(ref: any, type: TypeSpec, value: any): void;
 export function encode(ref: any, type: TypeSpec, value: any, len: number): void;
 export function encode(ref: any, offset: number, type: TypeSpec): void;
 export function encode(ref: any, offset: number, type: TypeSpec, value: any): void;
 export function encode(ref: any, offset: number, type: TypeSpec, value: any, len: number): void;
-export function view(ref: any, len: number): ArrayBuffer;
 
 export function type(type: TypeSpec): TypeObject;
 export function sizeof(type: TypeSpec): number;
