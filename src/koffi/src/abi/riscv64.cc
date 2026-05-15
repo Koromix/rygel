@@ -82,7 +82,8 @@ enum class AbiOpcode {
     CallStackX,
     #define PRIMITIVE(Name) Return ## Name,
     #include "../primitives.inc"
-    ReturnAggregate
+    ReturnAggregateReg,
+    ReturnAggregateStack
 };
 
 enum class AbiMethod {
@@ -411,7 +412,7 @@ bool AnalyseFunction(Napi::Env, InstanceData *instance, FunctionInfo *func)
 
                     func->sync.Append({ .op = Code2Op(run), .a = (int32_t)func->ret.type->size, .type = func->ret.type });
                     func->async.Append({ .op = Code2Op(call), .a = (int32_t)func->ret.type->size });
-                    func->async.Append({ .op = Code2Op(AbiOpcode::ReturnAggregate), .type = func->ret.type });
+                    func->async.Append({ .op = Code2Op(AbiOpcode::ReturnAggregateStack), .type = func->ret.type });
                 } break;
 
                 case AbiMethod::Gpr:
@@ -422,7 +423,7 @@ bool AnalyseFunction(Napi::Env, InstanceData *instance, FunctionInfo *func)
 
                     func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
                     func->async.Append({ .op = Code2Op(call) });
-                    func->async.Append({ .op = Code2Op(AbiOpcode::ReturnAggregate), .type = func->ret.type });
+                    func->async.Append({ .op = Code2Op(AbiOpcode::ReturnAggregateReg), .type = func->ret.type });
                 } break;
                 case AbiMethod::Vec:
                 case AbiMethod::VecVec: {
@@ -431,7 +432,7 @@ bool AnalyseFunction(Napi::Env, InstanceData *instance, FunctionInfo *func)
 
                     func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
                     func->async.Append({ .op = Code2Op(call) });
-                    func->async.Append({ .op = Code2Op(AbiOpcode::ReturnAggregate), .type = func->ret.type });
+                    func->async.Append({ .op = Code2Op(AbiOpcode::ReturnAggregateReg), .type = func->ret.type });
                 } break;
                 case AbiMethod::GprVec: {
                     AbiOpcode run = func->forward_fp ? AbiOpcode::RunAggregateGDX : AbiOpcode::RunAggregateGD;
@@ -439,7 +440,7 @@ bool AnalyseFunction(Napi::Env, InstanceData *instance, FunctionInfo *func)
 
                     func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
                     func->async.Append({ .op = Code2Op(call) });
-                    func->async.Append({ .op = Code2Op(AbiOpcode::ReturnAggregate), .type = func->ret.type });
+                    func->async.Append({ .op = Code2Op(AbiOpcode::ReturnAggregateReg), .type = func->ret.type });
                 } break;
                 case AbiMethod::VecGpr: {
                     AbiOpcode run = func->forward_fp ? AbiOpcode::RunAggregateDGX : AbiOpcode::RunAggregateDG;
@@ -447,7 +448,7 @@ bool AnalyseFunction(Napi::Env, InstanceData *instance, FunctionInfo *func)
 
                     func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
                     func->async.Append({ .op = Code2Op(call) });
-                    func->async.Append({ .op = Code2Op(AbiOpcode::ReturnAggregate), .type = func->ret.type });
+                    func->async.Append({ .op = Code2Op(AbiOpcode::ReturnAggregateReg), .type = func->ret.type });
                 } break;
             }
         } break;
@@ -964,7 +965,8 @@ namespace {
         return Napi::Number::New(call->env, d);
     }
     OP(ReturnPrototype) { K_UNREACHABLE(); return call->env.Null(); }
-    OP(ReturnAggregate) {
+    OP(ReturnAggregateReg) { return DecodeObject(call->env, (const uint8_t *)base, inst->type); }
+    OP(ReturnAggregateStack) {
         uint64_t a0 = *(uint64_t *)base;
         return DecodeObject(call->env, (const uint8_t *)a0, inst->type);
     }
@@ -1009,7 +1011,8 @@ namespace {
         HandleCallStackX,
         #define PRIMITIVE(Name) HandleReturn ## Name,
         #include "../primitives.inc"
-        HandleReturnAggregate
+        HandleReturnAggregateReg,
+        HandleReturnAggregateStack
     };
 
     FORCE_INLINE napi_value RunLoop(CallData *call, napi_value *args, uint8_t *base, const AbiInstruction *inst)

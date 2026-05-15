@@ -82,7 +82,8 @@ enum class AbiOpcode {
     CallStackX,
     #define PRIMITIVE(Name) Return ## Name,
     #include "../primitives.inc"
-    ReturnAggregate
+    ReturnAggregateReg,
+    ReturnAggregateStack
 };
 
 enum class AbiMethod {
@@ -456,7 +457,7 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
 
                     func->sync.Append({ .op = Code2Op(run), .a = (int32_t)func->stk_size, .type = func->ret.type });
                     func->async.Append({ .op = Code2Op(call), .a = (int32_t)func->stk_size });
-                    func->async.Append({ .op = Code2Op(AbiOpcode::ReturnAggregate), .type = func->ret.type });
+                    func->async.Append({ .op = Code2Op(AbiOpcode::ReturnAggregateStack), .type = func->ret.type });
 
                     // Allocate stack space for return value
                     func->stk_size += AlignLen(func->ret.type->size, 16);
@@ -467,7 +468,7 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
 
                     func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
                     func->async.Append({ .op = Code2Op(call) });
-                    func->async.Append({ .op = Code2Op(AbiOpcode::ReturnAggregate), .type = func->ret.type });
+                    func->async.Append({ .op = Code2Op(AbiOpcode::ReturnAggregateReg), .type = func->ret.type });
                 } break;
                 case AbiMethod::GprGpr: {
                     AbiOpcode run = func->forward_fp ? AbiOpcode::RunAggregateGGX : AbiOpcode::RunAggregateGG;
@@ -475,7 +476,7 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
 
                     func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
                     func->async.Append({ .op = Code2Op(call) });
-                    func->async.Append({ .op = Code2Op(AbiOpcode::ReturnAggregate), .type = func->ret.type });
+                    func->async.Append({ .op = Code2Op(AbiOpcode::ReturnAggregateReg), .type = func->ret.type });
                 } break;
                 case AbiMethod::Xmm: {
                     AbiOpcode run = func->forward_fp ? AbiOpcode::RunAggregateDDX : AbiOpcode::RunAggregateDD;
@@ -483,7 +484,7 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
 
                     func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
                     func->async.Append({ .op = Code2Op(call) });
-                    func->async.Append({ .op = Code2Op(AbiOpcode::ReturnAggregate), .type = func->ret.type });
+                    func->async.Append({ .op = Code2Op(AbiOpcode::ReturnAggregateReg), .type = func->ret.type });
                 } break;
                 case AbiMethod::XmmXmm: {
                     AbiOpcode run = func->forward_fp ? AbiOpcode::RunAggregateDDX : AbiOpcode::RunAggregateDD;
@@ -491,7 +492,7 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
 
                     func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
                     func->async.Append({ .op = Code2Op(call) });
-                    func->async.Append({ .op = Code2Op(AbiOpcode::ReturnAggregate), .type = func->ret.type });
+                    func->async.Append({ .op = Code2Op(AbiOpcode::ReturnAggregateReg), .type = func->ret.type });
                 } break;
                 case AbiMethod::GprXmm: {
                     AbiOpcode run = func->forward_fp ? AbiOpcode::RunAggregateGDX : AbiOpcode::RunAggregateGD;
@@ -499,7 +500,7 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
 
                     func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
                     func->async.Append({ .op = Code2Op(call) });
-                    func->async.Append({ .op = Code2Op(AbiOpcode::ReturnAggregate), .type = func->ret.type });
+                    func->async.Append({ .op = Code2Op(AbiOpcode::ReturnAggregateReg), .type = func->ret.type });
                 } break;
                 case AbiMethod::XmmGpr: {
                     AbiOpcode run = func->forward_fp ? AbiOpcode::RunAggregateDGX : AbiOpcode::RunAggregateDG;
@@ -507,7 +508,7 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
 
                     func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
                     func->async.Append({ .op = Code2Op(call) });
-                    func->async.Append({ .op = Code2Op(AbiOpcode::ReturnAggregate), .type = func->ret.type });
+                    func->async.Append({ .op = Code2Op(AbiOpcode::ReturnAggregateReg), .type = func->ret.type });
                 } break;
             }
         } break;
@@ -1015,7 +1016,8 @@ namespace {
         return Napi::Number::New(call->env, d);
     }
     OP(ReturnPrototype) { K_UNREACHABLE(); return call->env.Null(); }
-    OP(ReturnAggregate) {
+    OP(ReturnAggregateReg) { return DecodeObject(call->env, base, inst->type); }
+    OP(ReturnAggregateStack) {
         uint64_t rax = *(uint64_t *)base;
         return DecodeObject(call->env, (const uint8_t *)rax, inst->type);
     }
@@ -1060,7 +1062,8 @@ namespace {
         HandleCallStackX,
         #define PRIMITIVE(Name) HandleReturn ## Name,
         #include "../primitives.inc"
-        HandleReturnAggregate
+        HandleReturnAggregateReg,
+        HandleReturnAggregateStack
     };
 
     FORCE_INLINE napi_value RunLoop(CallData *call, napi_value *args, uint8_t *base, const AbiInstruction *inst)

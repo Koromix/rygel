@@ -49,7 +49,8 @@ enum class AbiOpcode {
     CallStackX,
     #define PRIMITIVE(Name) Return ## Name,
     #include "../primitives.inc"
-    ReturnAggregate
+    ReturnAggregateReg,
+    ReturnAggregateStack
 };
 
 namespace {
@@ -172,14 +173,14 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
 
                 func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
                 func->async.Append({ .op = Code2Op(call) });
-                func->async.Append({ .op = Code2Op(AbiOpcode::ReturnAggregate), .type = func->ret.type });
+                func->async.Append({ .op = Code2Op(AbiOpcode::ReturnAggregateReg), .type = func->ret.type });
             } else {
                 AbiOpcode run = func->forward_fp ? AbiOpcode::RunAggregateStackX : AbiOpcode::RunAggregateStack;
                 AbiOpcode call = func->forward_fp ? AbiOpcode::CallStackX : AbiOpcode::CallStack;
 
                 func->sync.Append({ .op = Code2Op(run), .a = (int32_t)func->ret.type->size, .type = func->ret.type });
                 func->async.Append({ .op = Code2Op(call), .a = (int32_t)func->ret.type->size });
-                func->async.Append({ .op = Code2Op(AbiOpcode::ReturnAggregate), .type = func->ret.type });
+                func->async.Append({ .op = Code2Op(AbiOpcode::ReturnAggregateStack), .type = func->ret.type });
             }
         } break;
         case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
@@ -597,7 +598,7 @@ namespace {
     OP(CallD) { CALL(D); return nullptr; }
     OP(CallStack) {
         *(uint8_t **)base = call->AllocHeap(inst->a);
-        CALL(G);
+        WRAP(ForwardCallG(call->native, (uint8_t *)base, &call->saved_sp));
         return nullptr;
     }
     OP(CallGX) { CALL(GX); return nullptr; }
@@ -605,7 +606,7 @@ namespace {
     OP(CallDX) { CALL(DX); return nullptr; }
     OP(CallStackX) {
         *(uint8_t **)base = call->AllocHeap(inst->a);
-        CALL(GX);
+        WRAP(ForwardCallGX(call->native, (uint8_t *)base, &call->saved_sp));
         return nullptr;
     }
 
@@ -668,7 +669,8 @@ namespace {
         return Napi::Number::New(call->env, d);
     }
     OP(ReturnPrototype) { K_UNREACHABLE(); return call->env.Null(); }
-    OP(ReturnAggregate) {
+    OP(ReturnAggregateReg) { return DecodeObject(call->env, (const uint8_t *)base, inst->type); }
+    OP(ReturnAggregateStack) {
         uint64_t rax = *(uint64_t *)base;
         return DecodeObject(call->env, (const uint8_t *)rax, inst->type);
     }
@@ -703,7 +705,8 @@ namespace {
         HandleCallStackX,
         #define PRIMITIVE(Name) HandleReturn ## Name,
         #include "../primitives.inc"
-        HandleReturnAggregate
+        HandleReturnAggregateReg,
+        HandleReturnAggregateStack
     };
 
     FORCE_INLINE napi_value RunLoop(CallData *call, napi_value *args, uint64_t *base, const AbiInstruction *inst)

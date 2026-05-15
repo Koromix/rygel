@@ -948,8 +948,8 @@ namespace {
     OP(CallStack) {
         uint8_t *ptr = call->AllocHeap(inst->a);
         *(uint8_t **)(base + 8 * 8) = ptr; // x8
-        CALL(GG);
-        *(uint8_t **)base = ptr; // Store pointer for ReturnAggregateStack
+        WRAP(ForwardCallGG(call->native, base, &call->saved_sp));
+        *(uint8_t **)base = ptr;
         return nullptr;
     }
     OP(CallGGX) {
@@ -962,8 +962,8 @@ namespace {
     OP(CallStackX) {
         uint8_t *ptr = call->AllocHeap(inst->a);
         *(uint8_t **)(base + 8 * 8) = ptr; // x8
-        CALL(GGX);
-        *(uint8_t **)base = ptr; // Store pointer for ReturnAggregateStack
+        WRAP(ForwardCallGGX(call->native, base, &call->saved_sp));
+        *(uint8_t **)base = ptr;
         return nullptr;
     }
 
