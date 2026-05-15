@@ -23,11 +23,12 @@
 **Other changes:**
 
 - Add `koffi.enumeration()` to create [enum types](input#enum-types)
+- Add fast decode functions for integers, floats and strings
 - Use proper types for various objects and handles:
   * Use *LibraryHandle* objects for loaded libraries
-  * Use *CallbackHandle* objects for registered callbacks
+  * Use *TypeObject* objects for Koffi types
   * Use *PollHandle* for socket poll handles
-- Add `Symbol.dispose` on library objects and registered callbacks
+- Add `Symbol.dispose` on library objects and and poll handles
 - Prefer types to interfaces in TypeScript declaration file
 - Fix various bugs and small leaks (such as library handles)
 
