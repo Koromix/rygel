@@ -37,9 +37,8 @@ namespace K {
 
 SharedData shared;
 
-uint32_t napi_version;
-
-// Recent N-API functions are loaded dynamically
+// Some N-API functions are loaded dynamically to work around bugs or because they are recent
+napi_status (NAPI_CDECL *node_api_get_buffer_info)(napi_env env, napi_value value, void **data, size_t *length);
 napi_status (NAPI_CDECL *node_api_create_property_key_utf8)(napi_env env, const char* str, size_t length, napi_value* result);
 napi_status (NAPI_CDECL *node_api_post_finalizer)(node_api_basic_env env, napi_finalize finalize_cb, void* finalize_data, void* finalize_hint);
 napi_value (*translate_zero_call)(napi_env env, napi_callback_info info);
@@ -2367,30 +2366,40 @@ static inline PrimitiveKind GetBigEndianPrimitive(PrimitiveKind kind)
 #endif
 }
 
-static bool CanReferencePrimitiveValues(napi_env env)
+static bool CanCallNapiGetBufferInfoDirectly(const napi_node_version &node, uint32_t napi)
 {
-    uint32_t version = 0;
-    napi_get_version(env, &version);
-
-    return version >= 10;
-}
-
-static bool CanDeleteReferenceInFinalizer(napi_env env)
-{
-    const napi_node_version *version = nullptr;
-    napi_get_node_version(env, &version);
-
-    if (version->major >= 24)
+    if (napi >= 10)
+        return true;
+    if (node.major >= 22)
         return true;
 
     // Made by looking at the git history of each release branch
-    if (version->major == 23 && version->minor >= 5)
+    if (node.major == 21 && node.minor >= 7)
         return true;
-    if (version->major == 22 && version->minor >= 13)
+    if (node.major == 20 && node.minor >= 12)
         return true;
-    if (version->major == 20 && version->minor >= 19)
+
+    return false;
+}
+
+static bool CanReferencePrimitiveValues(const napi_node_version &node, uint32_t napi)
+{
+    return napi >= 10;
+}
+
+static bool CanDeleteReferenceInFinalizer(const napi_node_version &node, uint32_t napi)
+{
+    if (node.major >= 24)
         return true;
-    if (version->major == 20 && version->minor == 18 && version->patch >= 3)
+
+    // Made by looking at the git history of each release branch
+    if (node.major == 23 && node.minor >= 5)
+        return true;
+    if (node.major == 22 && node.minor >= 13)
+        return true;
+    if (node.major == 20 && node.minor >= 19)
+        return true;
+    if (node.major == 20 && node.minor == 18 && node.patch >= 3)
         return true;
 
     return false;
@@ -2413,8 +2422,6 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
         static std::once_flag flag;
 
         std::call_once(flag, [&]() {
-            napi_get_version(env, &napi_version);
-
             InitTranslateZeroCall(env);
 
 #if defined(_WIN32)
@@ -2425,13 +2432,32 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
     #define SYMBOL(Symbol) ((decltype(Symbol))dlsym(h, K_STRINGIFY(Symbol)))
 #endif
 
-            if (CanReferencePrimitiveValues(env)) {
+            const napi_node_version *node_version = nullptr;
+            uint32_t napi_version = 0;
+            napi_get_node_version(env, &node_version);
+            napi_get_version(env, &napi_version);
+
+            if (CanCallNapiGetBufferInfoDirectly(*node_version, napi_version)) {
+                node_api_get_buffer_info = napi_get_buffer_info;
+            } else {
+                // Before Node 20.12, napi_get_buffer_info() would assert/crash
+                // when used with something it did not support, instead of returning napi_invalid_arg.
+                // So we need to call napi_is_buffer() for old versions before trying napi_get_buffer_info().
+
+                node_api_get_buffer_info = [](napi_env env, napi_value value, void **data, size_t *length) {
+                    if (!IsBuffer(env, value))
+                        return napi_invalid_arg;
+                    return napi_get_buffer_info(env, value, data, length);
+                };
+            }
+
+            if (CanReferencePrimitiveValues(*node_version, napi_version)) {
                 // We can't use optimized property keys in older versions because we need to create
                 // references to them, but napi_create_reference() was not usable with primitive values.
                 node_api_create_property_key_utf8 = SYMBOL(node_api_create_property_key_utf8);
             }
 
-            if (!CanDeleteReferenceInFinalizer(env)) {
+            if (!CanDeleteReferenceInFinalizer(*node_version, napi_version)) {
                 // napi_delete_reference cannot be safely used in older Node versions because it
                 // errors out (or even asserts) if it gets called in a finalizer. In this case,
                 // use experimental API to try to run it later.

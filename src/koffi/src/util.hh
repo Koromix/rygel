@@ -198,19 +198,6 @@ static FORCE_INLINE bool IsBuffer(napi_env env, napi_value value)
     return buffer;
 }
 
-// Before somewhere around Node 20.12, napi_get_buffer_info() would assert/crash
-// when used with something it did not support, instead of returning napi_invalid_arg.
-// So we need to call napi_is_buffer() for old versions before trying napi_get_buffer_info().
-static FORCE_INLINE bool MayBeBuffer(napi_env env, napi_value value)
-{
-    if (napi_version >= 10)
-        return true;
-    if (IsBuffer(env, value))
-        return true;
-
-    return false;
-}
-
 static FORCE_INLINE napi_value GetReferenceValue(napi_env env, napi_ref ref)
 {
     napi_value value;
@@ -288,7 +275,7 @@ static FORCE_INLINE bool TryPointer(napi_env env, napi_value value, void **out_p
         }
     }
 
-    if (MayBeBuffer(env, value) && napi_get_buffer_info(env, value, out_ptr, nullptr) == napi_ok)
+    if (node_api_get_buffer_info(env, value, out_ptr, nullptr) == napi_ok)
         return true;
 
     napi_valuetype kind = GetKindOf(env, value);
@@ -334,7 +321,7 @@ static FORCE_INLINE bool TryPointer(napi_env env, napi_value value, void **out_p
         }
     }
 
-    if (MayBeBuffer(env, value) && napi_get_buffer_info(env, value, out_ptr, nullptr) == napi_ok) {
+    if (node_api_get_buffer_info(env, value, out_ptr, nullptr) == napi_ok) {
         *out_kind = napi_object;
         return true;
     }
@@ -377,14 +364,10 @@ static FORCE_INLINE bool TryPointer(napi_env env, napi_value value, void **out_p
 
 static FORCE_INLINE bool TryBuffer(napi_env env, napi_value value, Span<uint8_t> *out_buffer)
 {
-    // Before somewhere around Node 20.12, napi_get_buffer_info() would assert/crash
-    // when used with something it did not support, instead of returning napi_invalid_arg.
-    // So we need to call napi_is_buffer() for old versions.
-
     void *ptr = nullptr;
     size_t len = 0;
 
-    if (MayBeBuffer(env, value) && napi_get_buffer_info(env, value, &ptr, &len) == napi_ok) {
+    if (node_api_get_buffer_info(env, value, &ptr, &len) == napi_ok) {
         *out_buffer = MakeSpan((uint8_t *)ptr, (Size)len);
         return true;
     } else if (napi_get_arraybuffer_info(env, value, &ptr, &len) == napi_ok) {
