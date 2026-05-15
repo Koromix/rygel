@@ -598,7 +598,7 @@ namespace {
     OP(CallD) { CALL(D); return nullptr; }
     OP(CallStack) {
         *(uint8_t **)base = call->AllocHeap(inst->a);
-        WRAP(ForwardCallG(call->native, (uint8_t *)base, &call->saved_sp));
+        *(uint64_t *)base = WRAP(ForwardCallG(call->native, (uint8_t *)base, &call->saved_sp));
         return nullptr;
     }
     OP(CallGX) { CALL(GX); return nullptr; }
@@ -606,7 +606,7 @@ namespace {
     OP(CallDX) { CALL(DX); return nullptr; }
     OP(CallStackX) {
         *(uint8_t **)base = call->AllocHeap(inst->a);
-        WRAP(ForwardCallGX(call->native, (uint8_t *)base, &call->saved_sp));
+        *(uint64_t *)base = WRAP(ForwardCallGX(call->native, (uint8_t *)base, &call->saved_sp));
         return nullptr;
     }
 
