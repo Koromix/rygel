@@ -28,7 +28,7 @@
   * Use *LibraryHandle* objects for loaded libraries
   * Use *TypeObject* objects for Koffi types
   * Use *PollHandle* for socket poll handles
-- Add `Symbol.dispose` on library objects and and poll handles
+- Add `Symbol.dispose` on library objects and poll handles
 - Prefer types to interfaces in TypeScript declaration file
 - Fix various bugs and small leaks (such as library handles)
 
