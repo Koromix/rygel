@@ -796,11 +796,7 @@ napi_value RunLoop(CallData *call, napi_value *args, uint32_t *base, const AbiIn
     OP(ReturnPrototype) { K_UNREACHABLE(); return call->env.Null(); }
     OP(ReturnAggregateReg) { return DecodeObject(call->env, (const uint8_t *)base, inst->type); }
     OP(ReturnAggregateStack) {
-#if defined(_WIN32)
-        uint32_t eax = *(uint32_t *)(base + 4);
-#else
         uint32_t eax = *(uint32_t *)base;
-#endif
         return DecodeObject(call->env, (const uint8_t *)eax, inst->type);
     }
 
