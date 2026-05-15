@@ -455,8 +455,8 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
                     AbiOpcode run = func->forward_fp ? AbiOpcode::RunAggregateStackX : AbiOpcode::RunAggregateStack;
                     AbiOpcode call = func->forward_fp ? AbiOpcode::CallStackX : AbiOpcode::CallStack;
 
-                    func->sync.Append({ .op = Code2Op(run), .a = (int32_t)func->stk_size, .type = func->ret.type });
-                    func->async.Append({ .op = Code2Op(call), .a = (int32_t)func->stk_size });
+                    func->sync.Append({ .op = Code2Op(run), .a = (int32_t)func->ret.type->size, .type = func->ret.type });
+                    func->async.Append({ .op = Code2Op(call), .a = (int32_t)func->ret.type->size });
                     func->async.Append({ .op = Code2Op(AbiOpcode::ReturnAggregateStack), .type = func->ret.type });
 
                     // Allocate stack space for return value
@@ -816,9 +816,10 @@ namespace {
         return DecodeObject(call->env, (const uint8_t *)&ret, inst->type);
     }
     OP(RunAggregateStack) {
-        *(uint8_t **)base = base + inst->a;
-        uint64_t rax = WRAP(ForwardCallGG(call->native, base, &call->saved_sp).rax);
-        return DecodeObject(call->env, (const uint8_t *)rax, inst->type);
+        uint8_t *ptr = call->AllocHeap(inst->a);
+        *(uint8_t **)base = ptr;
+        WRAP(ForwardCallGG(call->native, base, &call->saved_sp).rax);
+        return DecodeObject(call->env, ptr, inst->type);
     }
     OP(RunVoidX) {
         WRAP(ForwardCallGGX(call->native, base, &call->saved_sp));
@@ -899,9 +900,10 @@ namespace {
         return DecodeObject(call->env, (const uint8_t *)&ret, inst->type);
     }
     OP(RunAggregateStackX) {
-        *(uint8_t **)base = base + inst->a;
-        uint64_t rax = WRAP(ForwardCallGGX(call->native, base, &call->saved_sp).rax);
-        return DecodeObject(call->env, (const uint8_t *)rax, inst->type);
+        uint8_t *ptr = call->AllocHeap(inst->a);
+        *(uint8_t **)base = ptr;
+        WRAP(ForwardCallGGX(call->native, base, &call->saved_sp).rax);
+        return DecodeObject(call->env, ptr, inst->type);
     }
 
 #undef DISPOSE
@@ -942,7 +944,8 @@ namespace {
     OP(CallGD) { CALL(GD); return nullptr; }
     OP(CallDD) { CALL(DD); return nullptr; }
     OP(CallStack) {
-        *(uint8_t **)base = base + inst->a;
+        uint8_t *ptr = call->AllocHeap(inst->a);
+        *(uint8_t **)base = ptr;
         CALL(GG);
         return nullptr;
     }
@@ -952,7 +955,8 @@ namespace {
     OP(CallGDX) { CALL(GDX); return nullptr; }
     OP(CallDDX) { CALL(DDX); return nullptr; }
     OP(CallStackX) {
-        *(uint8_t **)base = base + inst->a;
+        uint8_t *ptr = call->AllocHeap(inst->a);
+        *(uint8_t **)base = ptr;
         CALL(GGX);
         return nullptr;
     }
