@@ -185,11 +185,7 @@ RelayTrampoline:
     movsd %xmm7, 136(%rsp)
     movq %rax, %rdi
     movq %rsp, %rsi
-#if defined(__linux__)
-    call *RelayCallback@GOTPCREL(%rip)
-#else
     call SYMBOL(RelayCallback)
-#endif
     movq 0(%rsp), %rax
     movq 8(%rsp), %rdx
     movsd 16(%rsp), %xmm0
