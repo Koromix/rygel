@@ -5,6 +5,7 @@
 const koffi = require('..');
 const assert = require('node:assert');
 const path = require('node:path');
+const { promisify } = require('node:util');
 const { cnoke } = require('./package.json');
 
 const PackedBFG = koffi.pack('PackedBFG', {
@@ -47,17 +48,11 @@ async function test() {
 
     // Issue several async calls
     for (let i = 0; i < 32; i++) {
-        let p = new Promise((resolve, reject) => {
-            try {
-                ConcatenateToInt1.async(5, 6, 1, 2, 3, 9, 4, 4, 0, 6, 8, 7, (err, res) => {
-                    assert.equal(err, null);
-                    assert.equal(res, 561239440687n);
-                });
-                resolve();
-            } catch (err) {
-                reject(err);
-            }
-        });
+        let p = (async () => {
+            let res = await promisify(ConcatenateToInt1.async)(5, 6, 1, 2, 3, 9, 4, 4, 0, 6, 8, 7);
+            assert.equal(res, 561239440687n);
+        })();
+
         promises.push(p);
     }
 
@@ -69,17 +64,12 @@ async function test() {
     // Async complex call
     {
         let out = {};
-        let p = new Promise((resolve, reject) => {
-            try {
-                MakePackedBFG.async(2, 7, out, '__Hello123456789++++foobarFOOBAR!__', (err, res) => {
-                    assert.deepEqual(res, { a: 2, b: 4, c: -25, d: 'X/__Hello123456789++++foobarFOOBAR!__/X', e: 54, inner: { f: 14, g: 5 } });
-                    assert.deepEqual(out, res);
-                });
-                resolve();
-            } catch (err) {
-                reject(err);
-            }
-        });
+        let p = (async () => {
+            let res = await promisify(MakePackedBFG.async)(2, 7, out, '__Hello123456789++++foobarFOOBAR!__');
+
+            assert.deepEqual(res, { a: 2, b: 4, c: -25, d: 'X/__Hello123456789++++foobarFOOBAR!__/X', e: 54, inner: { f: 14, g: 5 } });
+            assert.deepEqual(out, res);
+        })();
         promises.push(p);
     }
 
@@ -91,20 +81,13 @@ async function test() {
         test_binary('divide', 100, 2, 50);
 
         function test_binary(type, a, b, expected) {
-            let p = new Promise((resolve, reject) => {
-                try {
-                    let ptr = GetBinaryIntFunction(type);
-                    let func = koffi.decode(ptr, BinaryIntFunc);
+            let p = (async () => {
+                let ptr = GetBinaryIntFunction(type);
+                let func = koffi.decode(ptr, BinaryIntFunc);
 
-                    func.async(a, b, (err, res) => {
-                        assert.equal(res, expected);
-                    });
-
-                    resolve();
-                } catch (err) {
-                    reject(err);
-                }
-            });
+                let res = await promisify(func.async)(a, b)
+                assert.equal(res, expected);
+            })();
             promises.push(p);
         }
     }
