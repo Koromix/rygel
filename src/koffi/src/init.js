@@ -39,7 +39,7 @@ function loadDynamic(root, pkg, triplets) {
     }
 
     let names = [
-        `../../../@koromix/koffi-${pkg}`,
+        `${import.meta.dirname}/../../../@koromix/koffi-${pkg}`,
         ...triplets.flatMap(triplet => roots.map(dir => `${dir}/${triplet}/koffi.node`))
     ];
 
