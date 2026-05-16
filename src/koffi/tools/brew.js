@@ -433,7 +433,6 @@ async function build() {
         fs.renameSync(pkg_dir + '/src/koffi/CHANGELOG.md', pkg_dir + '/CHANGELOG.md');
         fs.renameSync(pkg_dir + '/web/koffi.dev/pages', pkg_dir + '/doc');
         fs.rmSync(pkg_dir + '/doc/404.md');
-        fs.rmSync(pkg_dir + '/doc/benchmarks.xlsx');
         fs.rmSync(pkg_dir + '/web', { recursive: true });
     }
 

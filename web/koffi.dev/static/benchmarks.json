@@ -1,0 +1,240 @@
+{
+    "linux_x64": {
+        "title": "Linux x64 (Intel® Core™ Ultra 9 185H)",
+        "results": {
+            "rand": {
+                "N-API": {
+                    "time": 8019,
+                    "iterations": 381000000,
+                    "ratio": 1,
+                    "overhead": 0
+                },
+                "Koffi 3": {
+                    "time": 8002,
+                    "iterations": 308000000,
+                    "ratio": 0.8101163685456588,
+                    "overhead": 0.2343905626733911
+                },
+                "Koffi 2": {
+                    "time": 8028,
+                    "iterations": 190000000,
+                    "ratio": 0.49812859715405533,
+                    "overhead": 1.0075137338295233
+                },
+                "node-ctypes": {
+                    "time": 8078,
+                    "iterations": 101000000,
+                    "ratio": 0.2631556887278172,
+                    "overhead": 2.8000318550373553
+                },
+                "ffi-rs": {
+                    "time": 8922,
+                    "iterations": 8000000,
+                    "ratio": 0.018872220663069438,
+                    "overhead": 51.987934904601566
+                },
+                "ffi-napi": {
+                    "time": 8779,
+                    "iterations": 5000000,
+                    "ratio": 0.01198726739633682,
+                    "overhead": 82.421848110737
+                }
+            },
+            "atoi": {
+                "N-API": {
+                    "time": 8026,
+                    "iterations": 234000000,
+                    "ratio": 1,
+                    "overhead": 0
+                },
+                "Koffi 3": {
+                    "time": 8028,
+                    "iterations": 196000000,
+                    "ratio": 0.8373981662471945,
+                    "overhead": 0.1941750535250235
+                },
+                "Koffi 2": {
+                    "time": 8024,
+                    "iterations": 131000000,
+                    "ratio": 0.5599685984780701,
+                    "overhead": 0.7858144237335527
+                },
+                "node-ctypes": {
+                    "time": 8111,
+                    "iterations": 62000000,
+                    "ratio": 0.26218061996634306,
+                    "overhead": 2.814164449410384
+                },
+                "ffi-rs": {
+                    "time": 8213,
+                    "iterations": 5000000,
+                    "ratio": 0.020881008948706502,
+                    "overhead": 46.890406179915274
+                },
+                "ffi-napi": {
+                    "time": 13607,
+                    "iterations": 2000000,
+                    "ratio": 0.005041397119004233,
+                    "overhead": 197.3577124345876
+                }
+            },
+            "memset": {
+                "N-API": {
+                    "time": 8057,
+                    "iterations": 117000000,
+                    "ratio": 1,
+                    "overhead": 0
+                },
+                "Koffi 3": {
+                    "time": 8020,
+                    "iterations": 94000000,
+                    "ratio": 0.8071253490206108,
+                    "overhead": 0.238964928078927
+                },
+                "node-ctypes": {
+                    "time": 8170,
+                    "iterations": 37000000,
+                    "ratio": 0.3118653820000209,
+                    "overhead": 2.2065117121589757
+                },
+                "Koffi 2": {
+                    "time": 8255,
+                    "iterations": 28000000,
+                    "ratio": 0.2335761284277335,
+                    "overhead": 3.281259419493254
+                },
+                "ffi-rs": {
+                    "time": 9726,
+                    "iterations": 4000000,
+                    "ratio": 0.028321302843202906,
+                    "overhead": 34.30911009060444
+                },
+                "ffi-napi": {
+                    "time": 12348,
+                    "iterations": 1000000,
+                    "ratio": 0.005576874624493673,
+                    "overhead": 178.31190269331015
+                }
+            }
+        }
+    },
+    "win32_x64": {
+        "title": "Windows x64 (Intel® Core™ Ultra 9 185H)",
+        "results": {
+            "rand": {
+                "N-API": {
+                    "time": 8003,
+                    "iterations": 431000000,
+                    "ratio": 1,
+                    "overhead": 0
+                },
+                "Koffi 3": {
+                    "time": 8001,
+                    "iterations": 286000000,
+                    "ratio": 0.6637389583842622,
+                    "overhead": 0.5066163999688928
+                },
+                "Koffi 2": {
+                    "time": 8056,
+                    "iterations": 138000000,
+                    "ratio": 0.31807913054096953,
+                    "overhead": 2.143871772722911
+                },
+                "node-ctypes": {
+                    "time": 8089,
+                    "iterations": 88000000,
+                    "ratio": 0.20200558806479768,
+                    "overhead": 3.9503581043472336
+                },
+                "ffi-rs": {
+                    "time": 9212,
+                    "iterations": 5000000,
+                    "ratio": 0.01007840071408926,
+                    "overhead": 98.22209171560664
+                },
+                "ffi-napi": {
+                    "time": 9758,
+                    "iterations": 5000000,
+                    "ratio": 0.009514472984032614,
+                    "overhead": 104.1030363613645
+                }
+            },
+            "atoi": {
+                "N-API": {
+                    "time": 8011,
+                    "iterations": 191000000,
+                    "ratio": 1,
+                    "overhead": 0
+                },
+                "Koffi 3": {
+                    "time": 8020,
+                    "iterations": 143000000,
+                    "ratio": 0.7478509224321395,
+                    "overhead": 0.33716489477318357
+                },
+                "Koffi 2": {
+                    "time": 8041,
+                    "iterations": 90000000,
+                    "ratio": 0.46944618255524206,
+                    "overhead": 1.1301696278727862
+                },
+                "node-ctypes": {
+                    "time": 8040,
+                    "iterations": 50000000,
+                    "ratio": 0.2608358729910656,
+                    "overhead": 2.8338284858319813
+                },
+                "ffi-rs": {
+                    "time": 8539,
+                    "iterations": 3000000,
+                    "ratio": 0.0147355925905715,
+                    "overhead": 66.86289685016436
+                },
+                "ffi-napi": {
+                    "time": 16380,
+                    "iterations": 2000000,
+                    "ratio": 0.005121173184000409,
+                    "overhead": 194.26775683435275
+                }
+            },
+            "memset": {
+                "N-API": {
+                    "time": 8071,
+                    "iterations": 101000000,
+                    "ratio": 1,
+                    "overhead": 0
+                },
+                "Koffi 3": {
+                    "time": 8117,
+                    "iterations": 66000000,
+                    "ratio": 0.6497620810497953,
+                    "overhead": 0.5390248664316313
+                },
+                "node-ctypes": {
+                    "time": 8228,
+                    "iterations": 24000000,
+                    "ratio": 0.23308961912234005,
+                    "overhead": 3.2901953496055834
+                },
+                "Koffi 2": {
+                    "time": 8163,
+                    "iterations": 15000000,
+                    "ratio": 0.1468410347098657,
+                    "overhead": 5.810085491265022
+                },
+                "ffi-rs": {
+                    "time": 11612,
+                    "iterations": 2000000,
+                    "ratio": 0.013763501737703911,
+                    "overhead": 71.65592863337876
+                },
+                "ffi-napi": {
+                    "time": 22378,
+                    "iterations": 1000000,
+                    "ratio": 0.00357095768563361,
+                    "overhead": 279.03692231445916
+                }
+            }
+        }
+    }
+}

@@ -9,3 +9,10 @@ html {
     --button_color: #ec7400;
     --anchor_color: #ec7400;
 }
+
+.benchmark.chart {
+    width: 600px;
+    max-width: 95%;
+    height: 680px;
+    margin: 1em auto;
+}
