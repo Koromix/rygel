@@ -324,6 +324,14 @@ async function build() {
                 cpu: [cpu]
             };
 
+            let readme = `# ${pkg.name}
+
+This contains the ${pkg.target} binaries for [Koffi](https://koffi.dev), a fast and and easy-to-use C FFI (foreign function interface) module for Node.js.
+
+> [!NOTE]
+> Do not install this package directly, use \`npm install koffi\` instead.
+`;
+
             let code = `
                 let native = null;
                 let err = null;
@@ -345,6 +353,7 @@ async function build() {
             `;
             code = esbuild.transformSync(code, { loader: 'js' }).code;
 
+            fs.writeFileSync(pkg.path + '/README.md', readme);
             fs.writeFileSync(pkg.path + '/index.js', code);
             fs.writeFileSync(pkg.path + '/package.json', JSON.stringify(binary, null, 4));
         }
