@@ -2075,12 +2075,12 @@ const char *GetEnv(const char *name)
 
 bool GetDebugFlag(const char *name)
 {
-    const char *debug = GetEnv(name);
+    Span<const char> str = TrimStr(GetEnv(name));
 
-    if (debug) {
+    if (str.len) {
         bool ret = false;
-        if (!ParseBool(debug, &ret, K_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log)) {
-            LogError("Environment variable '%1' is not a boolean", name);
+        if (!ParseBool(str, &ret, K_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log)) {
+            LogError("Environment variable '%1=%2' is not a boolean", name, str);
         }
         if (ret) {
             LogWarning("Debug flag '%1' is in effect", name);

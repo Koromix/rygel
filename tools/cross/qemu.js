@@ -437,8 +437,12 @@ function QemuRunner(registry = null) {
     };
 
     this.logOutput = function(machine, stdout, stderr) {
+        stdout = stdout?.trim?.();
+        stderr = stderr?.trim?.();
+
         if (!stdout && !stderr)
             return;
+
         console.error('');
 
         let align = log_align + 9;

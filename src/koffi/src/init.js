@@ -86,7 +86,7 @@ function wrapNative(native) {
 
     native.register = (...args) => {
         if (args.length >= 3 && typeof args[1] == 'function') {
-            process.emitWarning('Using koffi.register() with a custom this value was deprecated in Koffi 3.0, use function.bind() instead', 'Warning', 'KOFFI009');
+            process.emitWarning('Using koffi.register() with a custom this value was deprecated in Koffi 3.0, use function.bind() instead', 'DeprecationWarning', 'KOFFI009');
 
             args[1] = args[1].bind(args[0]);
             args = args.slice(1);

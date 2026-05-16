@@ -588,6 +588,7 @@ async function compile(command) {
 
         if (ret.code == 0) {
             runner.logSuccess(machine, `${build.title} > Build`, (time / 1000).toFixed(2) + 's');
+            runner.logOutput(ret.stdout, ret.stderr);
         } else {
             runner.logError(machine, `${build.title} > Build`);
             runner.logOutput(ret.stdout, ret.stderr);
@@ -844,6 +845,7 @@ async function test(debug = false) {
 
             if (ret.code === 0) {
                 runner.logSuccess(machine, `${build.title} > ${name}`, (time / 1000).toFixed(2) + 's');
+                runner.logOutput(ret.stdout, ret.stderr);
             } else {
                 runner.logError(machine, `${build.title} > ${name}`);
                 runner.logOutput(ret.stdout, ret.stderr);

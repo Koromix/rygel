@@ -27,25 +27,26 @@ function test() {
     let scripts = {};
     let success = true;
 
-    scripts['Sync'] = ['sync.js'];
-    scripts['Sync (debug async)'] = ['sync.js', '--debug_async'];
-    scripts['Async'] = ['async.js'];
-    scripts['Callbacks'] = ['callbacks.js'];
-    scripts['Union'] = ['union.js'];
+    scripts['Sync'] = { script: 'sync.js' };
+    scripts['Sync (debug async)'] = { script: 'sync.js', env: { DEBUG_ASYNC: '1' } };
+    scripts['Async'] = { script: 'async.js' };
+    scripts['Callbacks'] = { script: 'callbacks.js' };
+    scripts['Union'] = { script: 'union.js' };
     if (process.platform != 'win32' && process.platform != 'darwin')
-        scripts['POSIX'] = ['posix.js'];
+        scripts['POSIX'] = { script: 'posix.js' };
     if (process.platform == 'win32' && process.env.MSYSTEM == null)
-        scripts['Win32'] = ['win32.js'];
+        scripts['Win32'] = { script: 'win32.js' };
     if (process.platform != 'darwin')
-        scripts['Raylib'] = ['raylib.js'];
-    scripts['SQLite'] = ['sqlite.js'];
+        scripts['Raylib'] = { script: 'raylib.js' };
+    scripts['SQLite'] = { script: 'sqlite.js' };
 
     for (let key in scripts) {
-        let script = scripts[key][0];
-        let args = scripts[key].slice(1);
+        let script = scripts[key].script;
+        let args = scripts[key].args ?? [];
+        let env = scripts[key].env ?? {}
 
         let filename = path.join(__dirname, script);
-        success &= run('Test', key, ['--no-deprecation', filename, ...args]);
+        success &= run('Test', key, ['--no-deprecation', filename, ...args], env);
     }
 
     // Make sure tests compile in TypeScript mode
@@ -53,7 +54,7 @@ function test() {
         let tested = new Set;
 
         for (let key in scripts) {
-            let script = scripts[key][0];
+            let script = scripts[key].script;
 
             if (tested.has(script))
                 continue;
@@ -69,9 +70,11 @@ function test() {
     return success;
 }
 
-function run(action, title, args) {
+function run(action, title, args, env) {
+    env = { ...process.env, ...env };
+
     let start = process.hrtime.bigint();
-    let proc = spawnSync(process.execPath, args);
+    let proc = spawnSync(process.execPath, args, { env: env });
 
     try {
         if (proc.status == null)
