@@ -43,15 +43,15 @@ function benchmark(args) {
     }
 
     if (tests.includes('rand'))
-        format('rand', run('rand.js', 'napi', engines), 'ns');
+        dump('rand', run('rand.js', 'N-API', engines), 'ns');
     if (tests.includes('atoi'))
-        format('atoi', run('atoi.js', 'napi', engines), 'ns');
+        dump('atoi', run('atoi.js', 'N-API', engines), 'ns');
     if (tests.includes('qsort'))
-        format('qsort', run('qsort.js', 'napi', engines), 'ns');
+        dump('qsort', run('qsort.js', 'N-API', engines), 'ns');
     if (tests.includes('memset'))
-        format('memset', run('memset.js', 'napi', engines), 'ns');
+        dump('memset', run('memset.js', 'N-API', engines), 'ns');
     if (tests.includes('raylib'))
-        format('raylib', run('raylib.js', 'napi', engines), 'us');
+        dump('raylib', run('raylib.js', 'N-API', engines), 'us');
 }
 
 function run(basename, ref, engines = []) {
@@ -80,7 +80,7 @@ function run(basename, ref, engines = []) {
             test.ratio = (base.time / base.iterations) / (test.time / test.iterations);
 
             if (test != base) {
-                test.overhead = Math.round((1 / test.ratio - 1) * 100);
+                test.overhead = 1 / test.ratio - 1;
             } else {
                 test.overhead = '(ref)';
             }
@@ -97,7 +97,26 @@ function run(basename, ref, engines = []) {
     return tests;
 }
 
-function format(name, tests, unit) {
+function dump(name, tests, unit) {
+    dumpJson(name, tests);
+    dumpTable(name, tests, unit);
+}
+
+function dumpJson(name, tests) {
+    let results = Object.fromEntries(tests.map(test => [test.name, {
+        time: test.time,
+        iterations: test.iterations,
+        ratio: test.ratio,
+        overhead: test.overhead
+    }]));
+
+    let str = JSON.stringify(name) + ': ' + JSON.stringify(results, null, 4);
+
+    console.log(str);
+    console.log('');
+}
+
+function dumpTable(name, tests, unit) {
     let len0 = Math.max(name.length, ...tests.map(test => test.name.length));
 
     console.log(`${name.padEnd(len0, ' ')} | Iteration time | Relative performance | Overhead`);
@@ -105,7 +124,7 @@ function format(name, tests, unit) {
     for (let test of tests) {
         let time = formatTime(test.time / test.iterations, unit);
         let ratio = (typeof test.ratio == 'number') ? 'x' + test.ratio.toFixed(test.ratio < 0.01 ? 3 : 2) : '(no ref)';
-        let overhead = (typeof test.overhead == 'number') ? `${test.overhead >= 0 ? '+' : ''}${test.overhead}%` : test.overhead;
+        let overhead = (typeof test.overhead == 'number') ? `${test.overhead >= 0 ? '+' : ''}${Math.round(test.overhead * 100)}%` : test.overhead;
 
         console.log(`${test.name.padEnd(len0, ' ')} | ${('' + time).padEnd(14, ' ')} | ${('' + ratio).padEnd(20, ' ')} | ${overhead}`);
     }
