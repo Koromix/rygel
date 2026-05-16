@@ -7,18 +7,22 @@
 
 ### Koffi 3.0
 
-#### Koffi 3.0.0 (WIP)
+#### Koffi 3.0.0
 
-*Not yet released*
+*Released on 2026-05-16*
 
-**Main changes:**
+**Highlights:**
+
+- Rewrite call preparation and execution for **vastly improved performance**
+- Distribute prebuilt binaries in **separate subpackages**
+
+**Breaking changes:**
 
 - Replace use of externals with type objects:
   * Use `koffi.type()` to resolve type specifiers (strings or objects) to type objects
   * Access type information directly on type objects without `koffi.introspect()`
 - Replace use of externals with BigInt pointers
 - Support ESM and CJS module types
-- Rewrite call preparation and execution for vastly improved performance
 
 **Other changes:**
 

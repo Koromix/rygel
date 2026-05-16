@@ -33,7 +33,7 @@ const CommandFunctions = {
     build: build
 };
 
-const MONOLITH = true;
+const MONOLITH = false;
 const BINARY_PREFIX = '@koromix/koffi-';
 
 // Globals
