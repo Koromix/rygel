@@ -1,20 +1,16 @@
 # Overview
 
-Here is a quick overview of the execution time of Koffi calls on three benchmarks, where it is compared to a theoretical ideal FFI implementation (approximated with pre-compiled static N-API glue code):
+This pages presents the execution time of Koffi calls on three benchmarks, where it is compared to a theoretical ideal FFI implementation (approximated with pre-compiled static N-API glue code), and other FFI implementations:
 
 - The first benchmark is based on `rand()` calls
 - The second benchmark is based on `atoi()` calls
 - The third benchmark is based on `memset()` calls
 
-<div class="benchmark chart" data-platform="linux_x64"></div>
-<div class="benchmark chart" data-platform="darwin_arm64"></div>
-<div class="benchmark chart" data-platform="win32_x64"></div>
-
-These results are detailed and explained below, and compared to node-ffi/node-ffi-napi.
-
 # Linux x86_64
 
 The results presented below were measured on my x86_64 Linux machine (Intel® Core™ Ultra 9 185H).
+
+<div class="benchmark chart" data-platform="linux_x64"></div>
 
 ## rand results
 
@@ -40,6 +36,8 @@ This test is based around repeated calls to the standard C function `memset`. Al
 
 The results presented below were measured on an Apple Mac mini M2 hosted by Scaleway.
 
+<div class="benchmark chart" data-platform="darwin_arm64"></div>
+
 ## rand results
 
 This test is based around repeated calls to a simple standard C function `rand`, which takes no parameter and returns a 32-bit integer.
@@ -63,6 +61,8 @@ This test is based around repeated calls to the standard C function `memset`. Al
 # Windows x86_64
 
 The results presented below were measured on my x86_64 Windows machine (Intel® Core™ i5-4460).
+
+<div class="benchmark chart" data-platform="win32_x64"></div>
 
 ## rand results
 
