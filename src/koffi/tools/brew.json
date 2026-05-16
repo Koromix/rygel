@@ -271,12 +271,12 @@
             "arch": "x64",
             "machine": "windows_x64",
             "directory": "C:/Users/windows/Desktop/luigi_x64",
-            "build": "C:\\Node64\\node64.cmd node ../../cnoke.cjs",
+            "build": "C:\\Node64\\node64.cmd node ../../cnoke.cjs --clang",
             "package": "win32-x64"
         },
 
         "test": {
-            "build": "C:\\Node64\\node64.cmd node ../../cnoke.cjs -D test",
+            "build": "C:\\Node64\\node64.cmd node ../../cnoke.cjs --clang -D test",
             "commands": {
                 "Test Sync": "C:\\Node64\\node64.cmd node --no-deprecation test/sync.js",
                 "Test Sync (debug async)": "set DEBUG_ASYNC=1 && C:\\Node64\\node64.cmd node --no-deprecation test/sync.js",
