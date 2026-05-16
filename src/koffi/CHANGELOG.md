@@ -31,6 +31,7 @@
 - Add `Symbol.dispose` on library objects and poll handles
 - Prefer types to interfaces in TypeScript declaration file
 - Fix various bugs and small leaks (such as library handles)
+- The ARM32 backend has been temporarily removed
 
 **Newly deprecated functions:**
 

@@ -21,16 +21,14 @@ ISA / OS           | Windows | Linux/glibc | Linux/musl | macOS | FreeBSD | Open
 ------------------ | ------- | ----------- | ---------- | ----- | ------- | -------
 x86 (IA32) [^1]    | ✅      | ✅          | 🟨         | ⬜️    | ✅      | ✅
 x86_64 (AMD64)     | ✅      | ✅          | ✅         | ✅    | ✅      | ✅
-ARM32 LE [^2]      | ⬜️      | ✅          | 🟨         | ⬜️    | 🟨      | 🟨
 ARM64 (AArch64) LE | ✅      | ✅          | ✅         | ✅    | ✅      | 🟨
-RISC-V 64 [^3]     | ⬜️      | ✅          | 🟨         | ⬜️    | 🟨      | 🟨
+RISC-V 64 [^2]     | ⬜️      | ✅          | 🟨         | ⬜️    | 🟨      | 🟨
 LoongArch64        | ⬜️      | ✅          | 🟨         | ⬜️    | 🟨      | 🟨
 
 <div class="legend">✅ Yes | 🟨 Probably | ⬜️ Not applicable</div>
 
 [^1]: The following call conventions are supported for forward calls: cdecl, stdcall, MS fastcall, thiscall. Only cdecl and stdcall can be used for C to JS callbacks.
-[^2]: The prebuilt binary uses the hard float ABI and expects a VFP coprocessor. Build from source to use Koffi with a different ABI (softfp, soft).
-[^3]: The prebuilt binary uses the LP64D (double-precision float) ABI. The LP64 ABI is supported in theory if you build Koffi from source (untested), the LP64F ABI is not supported.
+[^2]: The prebuilt binary uses the LP64D (double-precision float) ABI. The LP64 ABI is supported in theory if you build Koffi from source (untested), the LP64F ABI is not supported.
 
 # License
 
