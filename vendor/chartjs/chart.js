@@ -73,4 +73,5 @@ function adaptDayjs(dayjs) {
 }
 
 export * from 'chart.js/auto';
+export { default as ChartDataLabels } from 'chartjs-plugin-datalabels';
 export { adaptDayjs };
