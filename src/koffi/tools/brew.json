@@ -82,12 +82,11 @@
         "title": "Linux/glibc RISCV-64",
 
         "info": {
-            "platform": "linux",
             "arch": "riscv64d",
             "machine": "debian_riscv64",
             "directory": "/home/debian/luigi",
             "build": "node ../../cnoke.cjs --ccache",
-            "package": "linux-riscv64d"
+            "package": "linux-riscv64"
         },
 
         "test": {
