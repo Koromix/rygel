@@ -9,13 +9,13 @@
                     "ratio": 1,
                     "overhead": 0
                 },
-                "Koffi 3": {
+                "Koffi v3": {
                     "time": 8002,
                     "iterations": 308000000,
                     "ratio": 0.8101163685456588,
                     "overhead": 0.2343905626733911
                 },
-                "Koffi 2": {
+                "Koffi v2": {
                     "time": 8028,
                     "iterations": 190000000,
                     "ratio": 0.49812859715405533,
@@ -47,13 +47,13 @@
                     "ratio": 1,
                     "overhead": 0
                 },
-                "Koffi 3": {
+                "Koffi v3": {
                     "time": 8028,
                     "iterations": 196000000,
                     "ratio": 0.8373981662471945,
                     "overhead": 0.1941750535250235
                 },
-                "Koffi 2": {
+                "Koffi v2": {
                     "time": 8024,
                     "iterations": 131000000,
                     "ratio": 0.5599685984780701,
@@ -85,7 +85,7 @@
                     "ratio": 1,
                     "overhead": 0
                 },
-                "Koffi 3": {
+                "Koffi v3": {
                     "time": 8020,
                     "iterations": 94000000,
                     "ratio": 0.8071253490206108,
@@ -97,7 +97,7 @@
                     "ratio": 0.3118653820000209,
                     "overhead": 2.2065117121589757
                 },
-                "Koffi 2": {
+                "Koffi v2": {
                     "time": 8255,
                     "iterations": 28000000,
                     "ratio": 0.2335761284277335,
@@ -128,13 +128,13 @@
                     "ratio": 1,
                     "overhead": 0
                 },
-                "Koffi 3": {
+                "Koffi v3": {
                     "time": 8001,
                     "iterations": 286000000,
                     "ratio": 0.6637389583842622,
                     "overhead": 0.5066163999688928
                 },
-                "Koffi 2": {
+                "Koffi v2": {
                     "time": 8056,
                     "iterations": 138000000,
                     "ratio": 0.31807913054096953,
@@ -166,13 +166,13 @@
                     "ratio": 1,
                     "overhead": 0
                 },
-                "Koffi 3": {
+                "Koffi v3": {
                     "time": 8020,
                     "iterations": 143000000,
                     "ratio": 0.7478509224321395,
                     "overhead": 0.33716489477318357
                 },
-                "Koffi 2": {
+                "Koffi v2": {
                     "time": 8041,
                     "iterations": 90000000,
                     "ratio": 0.46944618255524206,
@@ -204,7 +204,7 @@
                     "ratio": 1,
                     "overhead": 0
                 },
-                "Koffi 3": {
+                "Koffi v3": {
                     "time": 8117,
                     "iterations": 66000000,
                     "ratio": 0.6497620810497953,
@@ -216,7 +216,7 @@
                     "ratio": 0.23308961912234005,
                     "overhead": 3.2901953496055834
                 },
-                "Koffi 2": {
+                "Koffi v2": {
                     "time": 8163,
                     "iterations": 15000000,
                     "ratio": 0.1468410347098657,
@@ -247,13 +247,13 @@
                     "ratio": 1,
                     "overhead": 0
                 },
-                "Koffi 3": {
+                "Koffi v3": {
                     "time": 8005,
                     "iterations": 556000000,
                     "ratio": 0.7177778404626141,
                     "overhead": 0.393188732819463
                 },
-                "Koffi 2": {
+                "Koffi v2": {
                     "time": 8019,
                     "iterations": 257000000,
                     "ratio": 0.3311993692399905,
@@ -285,13 +285,13 @@
                     "ratio": 1,
                     "overhead": 0
                 },
-                "Koffi 3": {
+                "Koffi v3": {
                     "time": 8010,
                     "iterations": 197000000,
                     "ratio": 0.8454935622317598,
                     "overhead": 0.18274111675126892
                 },
-                "Koffi 2": {
+                "Koffi v2": {
                     "time": 8022,
                     "iterations": 126000000,
                     "ratio": 0.5399635979596882,
@@ -323,7 +323,7 @@
                     "ratio": 1,
                     "overhead": 0
                 },
-                "Koffi 3": {
+                "Koffi v3": {
                     "time": 8012,
                     "iterations": 65000000,
                     "ratio": 0.9440277988813881,
@@ -335,7 +335,7 @@
                     "ratio": 0.4733090745395206,
                     "overhead": 1.11278433859079
                 },
-                "Koffi 2": {
+                "Koffi v2": {
                     "time": 8093,
                     "iterations": 26000000,
                     "ratio": 0.373831742228478,

@@ -5,7 +5,7 @@ import { render, html } from '../../../vendor/lit-html/lit-html.bundle.js';
 import { Chart, ChartDataLabels } from '../../../vendor/chartjs/chart.bundle.js';
 import RESULTS from './benchmarks.json' with { type: 'json' };
 
-const ENGINES = ['N-API', 'Koffi 3', 'Koffi 2', 'node-ctypes', 'ffi-rs', 'ffi-napi'];
+const ENGINES = ['N-API', 'Koffi v3', 'Koffi v2', 'node-ctypes', 'ffi-rs', 'ffi-napi'];
 const COLORS = ['#E63946', '#F4A261', '#E9C46A', '#2A9D8F', '#457B9D', '#6A4C93', '#FF006E'];
 
 initCharts();
