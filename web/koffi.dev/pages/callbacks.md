@@ -142,19 +142,10 @@ koffi.unregister(cb1);
 koffi.unregister(cb2);
 ```
 
-Starting *with Koffi 2.2*, you can optionally specify the `this` value for the function as the first argument.
-
-```js
-class ValueStore {
-    constructor(value) { this.value = value; }
-    get() { return this.value; }
-}
-
-let store = new ValueStore(42);
-
-let cb1 = koffi.register(store.get, 'IntCallback *'); // If a C function calls cb1 it will fail because this will be undefined
-let cb2 = koffi.register(store, store.get, 'IntCallback *'); // However in this case, this will match the store object
-```
+> [!NOTE]
+> In Koffi 2.x (starting with Koffi 2.2), you could bind a specific `this` value to the callback function, by giving an object as the first argument to `koffi.register()`.
+>
+> This feature has been deprecated in Koffi 3 and will eventually be removed. Replace with an explicit call to `function.bind()` instead.
 
 # Special considerations
 

@@ -1,3 +1,103 @@
+# Koffi 2.x to 3.x
+
+Most programs should work as-is with Koffi 3.x.
+
+However, some changes could impact your code:
+
+- Koffi is now distributed in [split packages](#split-packages) to reduce install size/bloat.
+- Pointers are now [BigInt values](#bigint-pointers) instead of opaque V8 external values.
+- Types created by koffi are now [type objects](#type-objects) insted of opaque V8 external values.
+- Using `koffi.register()` with a [receiver value](#registered-callback-binding) is deprecated.
+- Several old [deprecated functions](#removed-functions) have been removed.
+
+## Split packages
+
+The main koffi package does not contain native code any longer. Instead, it depends on platform-specific packages (such as `@koromix/koffi-linux-x64`) for platform support, specified through `optionalDependencies`.
+
+Your package manager should automatically install the binary package relevant to your platform. Importing koffi should work transparently, just as before.
+
+However, if you redistribute software that uses Koffi, you will probably **need to change your packaging system** or configure your bundler differently.
+
+## BigInt pointers
+
+For performance reasons, Koffi now uses BigInt numbers for pointers instead of V8 external objects.
+
+Most code should work without any change, but there are two cases where this might impact you:
+
+- If you use a **type system**, for example in TypeScript code (e.g. for parameters), you may need to accept BigInt values now if you pass pointer values around.
+- BigInt pointers **do not carry the C type around**. In Koffi 2.x, trying to pass a pointer to an integer to a `void Myfunc(MyStruct *)` function would have triggerd an exception, but in Koffi 3.x this will "work" (and probably crash).
+
+## Type objects
+
+Type functions, such as `koffi.struct()`, now create *TypeObject* objects, and type information is directly available without `koffi.introspect()`.
+
+You can resolve type strings to type objects with `koffi.type()`. This function replaces `koffi.resolve()`, which is now a deprecated alias for `koffi.type()`.
+
+> [!NOTE]
+> For compatibility reasons, both `koffi.resolve()` and `koffi.introspect()` still exist, as aliases for `koffi.type()`. Using them will emit a deprecation warning.
+
+Read the documentation about [type specifiers](migration#type-specifiers) for more information.
+
+The two versions below illustrate the API difference between Koffi 2.x and Koffi 3.x:
+
+```js
+// Koffi 2.x
+
+const MyStruct = koffi.struct('MyStruct', {
+    a: 'int',
+    b: 'int'
+});
+
+console.log(koffi.introspect(MyStruct).members); // Prints MyStruct members
+console.log(koffi.introspect('MyStruct').members); // Prints MyStruct members
+
+console.log(koffi.introspect(koffi.types.int).alignment); // Prints MyStruct members
+console.log(koffi.introspect('int').alignment); // Prints alignment of int type
+
+// Koffi 3.x
+
+const MyStruct = koffi.struct('MyStruct', {
+    a: 'int',
+    b: 'int'
+});
+
+console.log(MyStruct.members); // Prints MyStruct members
+console.log(koffi.type('MyStruct').members); // Prints MyStruct members
+
+console.log(koffi.types.int.alignment); // Prints alignment of int type
+console.log(koffi.type('int').alignment); // Prints alignment of int type
+```
+
+## Registered callback binding
+
+In Koffi 2.x, it was possible possible bind a specific `this` value to a callback function when using `koffi.register()`, by specificy an object as the first argument. This feature has been deprecated, it still works but will emit a warning.
+
+You should replace these calls with an explicit bind using standard JS:
+
+```js
+class ValueStore {
+    constructor(value) { this.value = value; }
+    get() { return this.value; }
+}
+
+let store = new ValueStore(42);
+
+// Koffi 2.x
+
+let cb = koffi.register(store, store.get, 'IntCallback *');
+
+// Koffi 3.x
+
+let cb = koffi.register(store.get.bind(store), 'IntCallback *');
+```
+
+## Removed functions
+
+Two deprecated functions have been removed:
+
+- Function `koffi.callback()` has finally been removed. If you still use it, replace with `koffi.proto()`.
+- Function `koffi.handle()` has finally been removed. If you still use it, replace with `koffi.opaque()`.
+
 # Koffi 1.x to 2.x
 
 The API was changed in 2.x in a few ways, in order to reduce some excessively "magic" behavior and reduce the syntax differences between C and the C-like prototypes.
