@@ -112,7 +112,9 @@ Please read the [dedicated page](packaging) for information about bundling and p
 
 # Build manually
 
-Follow the [build instrutions](contribute#build-from-source) if you want to build the native Koffi code yourself.
+Follow the [build instructions](contribute#build-from-source) if you want to build the native Koffi code yourself.
 
 > [!NOTE]
-> This is only needed if you want to hack on Koffi. The official NPM package provide prebuilt binaries and you don't need to compile anything if you only want to use Koffi in Node.js.
+> This is only needed if you want to hack on Koffi. The official NPM package provides prebuilt binaries and you don't need to compile anything if you only want to use Koffi in Node.js.
+>
+> Just run `npm install koffi`!
