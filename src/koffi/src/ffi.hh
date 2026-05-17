@@ -309,6 +309,7 @@ struct InstanceData {
     const TypeInfo *str16_type;
     const TypeInfo *str32_type;
 
+    Napi::ObjectReference object_constructor;
     Napi::FunctionReference construct_lib;
     Napi::FunctionReference construct_type;
     Napi::FunctionReference construct_poll;
@@ -394,6 +395,8 @@ extern SharedData shared;
 extern napi_status (NAPI_CDECL *node_api_get_buffer_info)(napi_env env, napi_value value, void **data, size_t *length);
 extern napi_status (NAPI_CDECL *node_api_create_property_key_utf8)(napi_env env, const char* str, size_t length, napi_value* result);
 extern napi_status (NAPI_CDECL *node_api_post_finalizer)(node_api_basic_env env, napi_finalize finalize_cb, void* finalize_data, void* finalize_hint);
+extern napi_status (NAPI_CDECL *node_api_create_object_with_properties)(napi_env env, napi_value prototype_or_null, const napi_value *property_names,
+                                                                        const napi_value *property_values, size_t property_count, napi_value *result);
 extern napi_value (*translate_zero_call)(napi_env env, napi_callback_info info);
 
 InstanceMemory *AllocateMemory(InstanceData *instance, Size stack_size, Size heap_size);

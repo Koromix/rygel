@@ -41,6 +41,8 @@ SharedData shared;
 napi_status (NAPI_CDECL *node_api_get_buffer_info)(napi_env env, napi_value value, void **data, size_t *length);
 napi_status (NAPI_CDECL *node_api_create_property_key_utf8)(napi_env env, const char* str, size_t length, napi_value* result);
 napi_status (NAPI_CDECL *node_api_post_finalizer)(node_api_basic_env env, napi_finalize finalize_cb, void* finalize_data, void* finalize_hint);
+napi_status (NAPI_CDECL *node_api_create_object_with_properties)(napi_env env, napi_value prototype_or_null, const napi_value *property_names,
+                                                                 const napi_value *property_values, size_t property_count, napi_value *result);
 napi_value (*translate_zero_call)(napi_env env, napi_callback_info info);
 
 static bool ChangeSize(const char *name, Napi::Value value, Size min_size, Size max_size, Size *out_size)
@@ -2464,6 +2466,8 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
                 node_api_post_finalizer = SYMBOL(node_api_post_finalizer);
             }
 
+            node_api_create_object_with_properties = SYMBOL(node_api_create_object_with_properties);
+
 #undef SYMBOL
         });
     }
@@ -2573,6 +2577,7 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
 
     // Init object classes and symbols
     {
+        instance->object_constructor = Napi::Persistent(env.RunScript("Object.prototype").As<Napi::Object>());
         instance->construct_lib = Napi::Persistent(LibraryHandle::InitClass(env));
         instance->construct_type = Napi::Persistent(TypeObject::InitClass(env));
         instance->construct_poll = Napi::Persistent(PollHandle::InitClass(env));

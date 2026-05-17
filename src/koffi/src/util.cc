@@ -868,23 +868,6 @@ Napi::String MakeStringFromUTF32(Napi::Env env, const char32_t *ptr, Size len)
     return str;
 }
 
-Napi::Object DecodeObject(Napi::Env env, const uint8_t *origin, const TypeInfo *type)
-{
-    // We can't decode unions because we don't know which member is valid
-    if (type->primitive == PrimitiveKind::Union) {
-        Napi::External<void> external = Napi::External<void>::New(env, (void *)origin);
-        Napi::Object wrapper = type->construct.New({ external }).As<Napi::Object>();
-        SetValueTag(env, wrapper, &UnionValueMarker);
-
-        return wrapper;
-    }
-
-    Napi::Object obj = Napi::Object::New(env);
-    DecodeObject(env, obj, origin, type);
-
-    return obj;
-}
-
 static uint32_t DecodeDynamicLength(const uint8_t *origin, const RecordMember &by)
 {
     const uint8_t *src = origin + by.offset;
@@ -977,27 +960,15 @@ static uint32_t DecodeDynamicLength(const uint8_t *origin, const RecordMember &b
     K_UNREACHABLE();
 }
 
-static inline void SetMemberValue(napi_env env, napi_value obj, const RecordMember &member, napi_value value)
-{
-    if (member.key) {
-        napi_value key = nullptr;
-        napi_get_reference_value(env, member.key, &key);
-
-        napi_status status = napi_set_property(env, obj, key, value);
-        K_ASSERT(status == napi_ok);
-    } else {
-        napi_status status = napi_set_named_property(env, obj, member.name, value);
-        K_ASSERT(status == napi_ok);
-    }
-}
-
-void DecodeObject(Napi::Env env, napi_value obj, const uint8_t *origin, const TypeInfo *type)
+template <typename SetFunc>
+static FORCE_INLINE void DecodeObject(Napi::Env env, const uint8_t *origin, const TypeInfo *type, SetFunc set)
 {
     K_ASSERT(type->primitive == PrimitiveKind::Record);
 
     Span<const RecordMember> members = type->members;
 
-    for (const RecordMember &member: members) {
+    for (Size i = 0; i < members.len; i++) {
+        const RecordMember &member = members[i];
         const uint8_t *src = origin + member.offset;
 
         switch (member.type->primitive) {
@@ -1005,80 +976,80 @@ void DecodeObject(Napi::Env env, napi_value obj, const uint8_t *origin, const Ty
 
             case PrimitiveKind::Bool: {
                 bool b = *(bool *)src;
-                SetMemberValue(env, obj, member, Napi::Boolean::New(env, b));
+                set(i, member, Napi::Boolean::New(env, b));
             } break;
             case PrimitiveKind::Int8: {
-                int8_t i = *(int8_t *)src;
-                SetMemberValue(env, obj, member, NewInt(env, i));
+                int8_t v = *(int8_t *)src;
+                set(i, member, NewInt(env, v));
             } break;
             case PrimitiveKind::UInt8: {
-                uint8_t u = *(uint8_t *)src;
-                SetMemberValue(env, obj, member, NewInt(env, u));
+                uint8_t v = *(uint8_t *)src;
+                set(i, member, NewInt(env, v));
             } break;
             case PrimitiveKind::Int16: {
-                int16_t i;
-                memcpy(&i, src, 2);
-                SetMemberValue(env, obj, member, NewInt(env, i));
+                int16_t v;
+                memcpy(&v, src, 2);
+                set(i, member, NewInt(env, v));
             } break;
             case PrimitiveKind::Int16S: {
-                int16_t i;
-                memcpy(&i, src, 2);
-                SetMemberValue(env, obj, member, NewInt(env, ReverseBytes(i)));
+                int16_t v;
+                memcpy(&v, src, 2);
+                set(i, member, NewInt(env, ReverseBytes(v)));
             } break;
             case PrimitiveKind::UInt16: {
-                uint16_t u;
-                memcpy(&u, src, 2);
-                SetMemberValue(env, obj, member, NewInt(env, u));
+                uint16_t v;
+                memcpy(&v, src, 2);
+                set(i, member, NewInt(env, v));
             } break;
             case PrimitiveKind::UInt16S: {
-                uint16_t u;
-                memcpy(&u, src, 2);
-                SetMemberValue(env, obj, member, NewInt(env, ReverseBytes(u)));
+                uint16_t v;
+                memcpy(&v, src, 2);
+                set(i, member, NewInt(env, ReverseBytes(v)));
             } break;
             case PrimitiveKind::Int32: {
-                int32_t i;
-                memcpy(&i, src, 4);
-                SetMemberValue(env, obj, member, NewInt(env, i));
+                int32_t v;
+                memcpy(&v, src, 4);
+                set(i, member, NewInt(env, v));
             } break;
             case PrimitiveKind::Int32S: {
-                int32_t i;
-                memcpy(&i, src, 4);
-                SetMemberValue(env, obj, member, NewInt(env, ReverseBytes(i)));
+                int32_t v;
+                memcpy(&v, src, 4);
+                set(i, member, NewInt(env, ReverseBytes(v)));
             } break;
             case PrimitiveKind::UInt32: {
-                uint32_t u;
-                memcpy(&u, src, 4);
-                SetMemberValue(env, obj, member, NewInt(env, u));
+                uint32_t v;
+                memcpy(&v, src, 4);
+                set(i, member, NewInt(env, v));
             } break;
             case PrimitiveKind::UInt32S: {
-                uint32_t u;
-                memcpy(&u, src, 4);
-                SetMemberValue(env, obj, member, NewInt(env, ReverseBytes(u)));
+                uint32_t v;
+                memcpy(&v, src, 4);
+                set(i, member, NewInt(env, ReverseBytes(v)));
             } break;
             case PrimitiveKind::Int64: {
-                int64_t i;
-                memcpy(&i, src, 8);
-                SetMemberValue(env, obj, member, NewInt(env, i));
+                int64_t v;
+                memcpy(&v, src, 8);
+                set(i, member, NewInt(env, v));
             } break;
             case PrimitiveKind::Int64S: {
-                int64_t i;
-                memcpy(&i, src, 8);
-                SetMemberValue(env, obj, member, NewInt(env, ReverseBytes(i)));
+                int64_t v;
+                memcpy(&v, src, 8);
+                set(i, member, NewInt(env, ReverseBytes(v)));
             } break;
             case PrimitiveKind::UInt64: {
-                uint64_t u;
-                memcpy(&u, src, 8);
-                SetMemberValue(env, obj, member, NewInt(env, u));
+                uint64_t v;
+                memcpy(&v, src, 8);
+                set(i, member, NewInt(env, v));
             } break;
             case PrimitiveKind::UInt64S: {
-                uint64_t u;
-                memcpy(&u, src, 8);
-                SetMemberValue(env, obj, member, NewInt(env, ReverseBytes(u)));
+                uint64_t v;
+                memcpy(&v, src, 8);
+                set(i, member, NewInt(env, ReverseBytes(v)));
             } break;
             case PrimitiveKind::String: {
                 const char *str;
                 memcpy(&str, src, K_SIZE(void *));
-                SetMemberValue(env, obj, member, str ? Napi::String::New(env, str) : env.Null());
+                set(i, member, str ? Napi::String::New(env, str) : env.Null());
 
                 if (member.type->dispose) {
                     member.type->dispose(env, member.type, str);
@@ -1087,7 +1058,7 @@ void DecodeObject(Napi::Env env, napi_value obj, const uint8_t *origin, const Ty
             case PrimitiveKind::String16: {
                 const char16_t *str16;
                 memcpy(&str16, src, K_SIZE(void *));
-                SetMemberValue(env, obj, member, str16 ? Napi::String::New(env, str16) : env.Null());
+                set(i, member, str16 ? Napi::String::New(env, str16) : env.Null());
 
                 if (member.type->dispose) {
                     member.type->dispose(env, member.type, str16);
@@ -1096,7 +1067,7 @@ void DecodeObject(Napi::Env env, napi_value obj, const uint8_t *origin, const Ty
             case PrimitiveKind::String32: {
                 const char32_t *str32;
                 memcpy(&str32, src, K_SIZE(void *));
-                SetMemberValue(env, obj, member, str32 ? MakeStringFromUTF32(env, str32) : env.Null());
+                set(i, member, str32 ? MakeStringFromUTF32(env, str32) : env.Null());
             } break;
             case PrimitiveKind::Pointer: {
                 void *ptr2;
@@ -1107,10 +1078,10 @@ void DecodeObject(Napi::Env env, napi_value obj, const uint8_t *origin, const Ty
                     uint32_t len = DecodeDynamicLength(origin, by);
 
                     Napi::Value value = DecodeArray(env, (const uint8_t *)ptr2, member.type, len);
-                    SetMemberValue(env, obj, member, value);
+                    set(i, member, value);
                 } else {
                     Napi::Value p = ptr2 ? WrapPointer(env, member.type->ref.type, ptr2) : env.Null();
-                    SetMemberValue(env, obj, member, p);
+                    set(i, member, p);
                 }
 
                 if (member.type->dispose) {
@@ -1122,7 +1093,7 @@ void DecodeObject(Napi::Env env, napi_value obj, const uint8_t *origin, const Ty
                 memcpy(&ptr2, src, K_SIZE(void *));
 
                 Napi::Value p = ptr2 ? WrapPointer(env, member.type->ref.type, ptr2) : env.Null();
-                SetMemberValue(env, obj, member, p);
+                set(i, member, p);
 
                 if (member.type->dispose) {
                     member.type->dispose(env, member.type, ptr2);
@@ -1131,7 +1102,7 @@ void DecodeObject(Napi::Env env, napi_value obj, const uint8_t *origin, const Ty
             case PrimitiveKind::Record:
             case PrimitiveKind::Union: {
                 Napi::Object obj2 = DecodeObject(env, src, member.type);
-                SetMemberValue(env, obj, member, obj2);
+                set(i, member, obj2);
             } break;
             case PrimitiveKind::Array: {
                 if (member.countedby >= 0) {
@@ -1144,25 +1115,81 @@ void DecodeObject(Napi::Env env, napi_value obj, const uint8_t *origin, const Ty
                     len = std::min(len, max);
 
                     Napi::Value value = DecodeArray(env, src, member.type, len);
-                    SetMemberValue(env, obj, member, value);
+                    set(i, member, value);
                 } else {
                     Napi::Value value = DecodeArray(env, src, member.type);
-                    SetMemberValue(env, obj, member, value);
+                    set(i, member, value);
                 }
             } break;
             case PrimitiveKind::Float32: {
                 float f;
                 memcpy(&f, src, 4);
-                SetMemberValue(env, obj, member, Napi::Number::New(env, (double)f));
+                set(i, member, Napi::Number::New(env, (double)f));
             } break;
             case PrimitiveKind::Float64: {
                 double d;
                 memcpy(&d, src, 8);
-                SetMemberValue(env, obj, member, Napi::Number::New(env, d));
+                set(i, member, Napi::Number::New(env, d));
             } break;
 
             case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;
         }
+    }
+}
+
+Napi::Object DecodeObject(Napi::Env env, const uint8_t *origin, const TypeInfo *type)
+{
+    // We can't decode unions because we don't know which member is valid
+    if (type->primitive == PrimitiveKind::Union) {
+        Napi::External<void> external = Napi::External<void>::New(env, (void *)origin);
+        Napi::Object wrapper = type->construct.New({ external }).As<Napi::Object>();
+        SetValueTag(env, wrapper, &UnionValueMarker);
+
+        return wrapper;
+    }
+
+    // Only supported in recent Node versions, and still experimental at this time
+    if (node_api_create_object_with_properties && type->members.len <= 256) {
+        InstanceData *instance = env.GetInstanceData<InstanceData>();
+
+        napi_value properties[256];
+        napi_value values[256];
+
+        DecodeObject(env, origin, type, [&](Size i, const RecordMember &member, napi_value value) {
+            napi_status status = napi_get_reference_value(env, member.key, &properties[i]);
+            K_ASSERT(status == napi_ok);
+
+            values[i] = value;
+        });
+
+        napi_value obj;
+        napi_status status = node_api_create_object_with_properties(env, instance->object_constructor.Value(), properties, values, type->members.len, &obj);
+        K_ASSERT(status == napi_ok);
+
+        return Napi::Object(env, obj);
+    }
+
+    Napi::Object obj = Napi::Object::New(env);
+    DecodeObject(env, obj, origin, type);
+
+    return obj;
+}
+
+void DecodeObject(Napi::Env env, napi_value obj, const uint8_t *origin, const TypeInfo *type)
+{
+    if (node_api_create_property_key_utf8) {
+        DecodeObject(env, origin, type, [&](Size i, const RecordMember &member, napi_value value) {
+            napi_value key = nullptr;
+            napi_get_reference_value(env, member.key, &key);
+
+            napi_status status = napi_set_property(env, obj, key, value);
+            K_ASSERT(status == napi_ok);
+        });
+    } else {
+        DecodeObject(env, origin, type, [&](Size i, const RecordMember &member, napi_value value) {
+            napi_status status = napi_set_named_property(env, obj, member.name, value);
+            K_ASSERT(status == napi_ok);
+        });
     }
 }
 
