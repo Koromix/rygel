@@ -48,7 +48,7 @@
 <div class="project">
     <img src="{{ ASSET static/rekkord/logo.webp }}" width="260" alt="" />
     <div>
-        <p>Rekkord is a multi-platform <b>backup tool with deduplication and asymmetric encryption</b>, with support for local and remote storage back-ends.
+        <p>Rekkord is a multi-platform <b>backup tool with deduplication and asymmetric encryption</b>, with support for local and remote storage backends.
         <p>Find out more on the <a href="rekkord">page dedicated to Rekkord</a>.
     </div>
 </div>

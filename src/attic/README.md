@@ -94,7 +94,7 @@ felix -pFast seatsh
 
 After that, the binary will be available in the `bin/Fast` directory.
 
-Put it somewhere pratical, ideally in the PATH (so you can use it easily), and install the service by running the commands given at the end by `seatsh --help` from a *command prompt with administrative privileges*.
+Put it somewhere practical, ideally in the PATH (so you can use it easily), and install the service by running the commands given at the end by `seatsh --help` from a *command prompt with administrative privileges*.
 
 # Hodler
 
