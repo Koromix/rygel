@@ -6,7 +6,7 @@ Please note that the source code is not in this repository, instead it lives in 
 
 # Build from source
 
-We provide prebuilt binaries, packaged in the NPM archive, so in most cases it should be as simple as `npm install koffi`. If you want to hack Koffi or use a specific platform, follow the instructions below.
+We provide prebuilt binaries, packaged in NPM packages, so in most cases it should be as simple as `npm install koffi`. If you want to hack Koffi or use a specific platform, follow the instructions below.
 
 Start by cloning the repository with [Git](https://git-scm.com/):
 
@@ -25,7 +25,7 @@ First, make sure the following dependencies are met:
 - [CMake meta build system](https://cmake.org/)
 - [Node.js](https://nodejs.org/) 16 or later
 
-Once this is done, run this command _from the test or the benchmark directory_ (depending on what you want to build):
+Once this is done, run this command from the _src/koffi_ directory:
 
 ```sh
 cd src/koffi
@@ -44,7 +44,7 @@ Make sure the following dependencies are met:
 - [CMake meta build system](https://cmake.org/)
 - [Node.js](https://nodejs.org/) 16 or later
 
-Once this is done, run this command _from the test or the benchmark directory_ (depending on what you want to build):
+Once this is done, run this command from the _src/koffi_ directory:
 
 ```sh
 cd src/koffi
