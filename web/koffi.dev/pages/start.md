@@ -9,11 +9,11 @@ npm install koffi
 Once you have installed Koffi, you can start by loading it:
 
 ```js
-// CommonJS syntax
-const koffi = require('koffi');
-
 // ES6 modules
 import koffi from 'koffi';
+
+// CommonJS syntax
+const koffi = require('koffi');
 ```
 
 # Simple examples
