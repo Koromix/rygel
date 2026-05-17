@@ -746,25 +746,25 @@ namespace {
     OP(RunPrototype) { K_UNREACHABLE(); return call->env.Null(); }
     OP(RunAggregateGG) {
         auto ret = WRAP(ForwardCallGG(call->native, base, &call->saved_sp));
-        return DecodeObject(call->env, (const uint8_t *)&ret, inst->type);
+        return DecodeObject(call->instance, (const uint8_t *)&ret, inst->type);
     }
     OP(RunAggregateDD) {
         auto ret = WRAP(ForwardCallDD(call->native, base, &call->saved_sp));
-        return DecodeObject(call->env, (const uint8_t *)&ret, inst->type);
+        return DecodeObject(call->instance, (const uint8_t *)&ret, inst->type);
     }
     OP(RunAggregateGD) {
         auto ret = WRAP(ForwardCallGD(call->native, base, &call->saved_sp));
-        return DecodeObject(call->env, (const uint8_t *)&ret, inst->type);
+        return DecodeObject(call->instance, (const uint8_t *)&ret, inst->type);
     }
     OP(RunAggregateDG) {
         auto ret = WRAP(ForwardCallDG(call->native, base, &call->saved_sp));
-        return DecodeObject(call->env, (const uint8_t *)&ret, inst->type);
+        return DecodeObject(call->instance, (const uint8_t *)&ret, inst->type);
     }
     OP(RunAggregateStack) {
         uint8_t *ptr = call->AllocHeap(inst->a);
         *(uint8_t **)base = ptr;
         WRAP(ForwardCallGG(call->native, base, &call->saved_sp));
-        return DecodeObject(call->env, ptr, inst->type);
+        return DecodeObject(call->instance, ptr, inst->type);
     }
     OP(RunVoidX) {
         WRAP(ForwardCallGGX(call->native, base, &call->saved_sp));
@@ -830,25 +830,25 @@ namespace {
     OP(RunPrototypeX) { K_UNREACHABLE(); return call->env.Null(); }
     OP(RunAggregateGGX) {
         auto ret = WRAP(ForwardCallGGX(call->native, base, &call->saved_sp));
-        return DecodeObject(call->env, (const uint8_t *)&ret, inst->type);
+        return DecodeObject(call->instance, (const uint8_t *)&ret, inst->type);
     }
     OP(RunAggregateDDX) {
         auto ret = WRAP(ForwardCallDDX(call->native, base, &call->saved_sp));
-        return DecodeObject(call->env, (const uint8_t *)&ret, inst->type);
+        return DecodeObject(call->instance, (const uint8_t *)&ret, inst->type);
     }
     OP(RunAggregateGDX) {
         auto ret = WRAP(ForwardCallGDX(call->native, base, &call->saved_sp));
-        return DecodeObject(call->env, (const uint8_t *)&ret, inst->type);
+        return DecodeObject(call->instance, (const uint8_t *)&ret, inst->type);
     }
     OP(RunAggregateDGX) {
         auto ret = WRAP(ForwardCallDGX(call->native, base, &call->saved_sp));
-        return DecodeObject(call->env, (const uint8_t *)&ret, inst->type);
+        return DecodeObject(call->instance, (const uint8_t *)&ret, inst->type);
     }
     OP(RunAggregateStackX) {
         uint8_t *ptr = call->AllocHeap(inst->a);
         *(uint8_t **)base = ptr;
         WRAP(ForwardCallGGX(call->native, base, &call->saved_sp));
-        return DecodeObject(call->env, ptr, inst->type);
+        return DecodeObject(call->instance, ptr, inst->type);
     }
 
 #undef DISPOSE
@@ -965,10 +965,10 @@ namespace {
         return Napi::Number::New(call->env, d);
     }
     OP(ReturnPrototype) { K_UNREACHABLE(); return call->env.Null(); }
-    OP(ReturnAggregateReg) { return DecodeObject(call->env, (const uint8_t *)base, inst->type); }
+    OP(ReturnAggregateReg) { return DecodeObject(call->instance, (const uint8_t *)base, inst->type); }
     OP(ReturnAggregateStack) {
         uint64_t a0 = *(uint64_t *)base;
-        return DecodeObject(call->env, (const uint8_t *)a0, inst->type);
+        return DecodeObject(call->instance, (const uint8_t *)a0, inst->type);
     }
 
 #undef INTEGER_SWAP
@@ -1177,10 +1177,10 @@ void CallData::Relay(Size idx, uint8_t *sp)
                     memcpy(buf, in_ptr + param.abi.offsets[0], 8);
                     memcpy(buf + 8, in_ptr + param.abi.offsets[1], 8);
 
-                    arguments[i] = DecodeObject(env, buf, param.type);
+                    arguments[i] = DecodeObject(instance, buf, param.type);
                 } else {
                     uint8_t *ptr = *(uint8_t **)(in_ptr + param.abi.offsets[0]);
-                    arguments[i] = DecodeObject(env, ptr, param.type);
+                    arguments[i] = DecodeObject(instance, ptr, param.type);
                 }
             } break;
             case PrimitiveKind::Array: { K_UNREACHABLE(); } break;

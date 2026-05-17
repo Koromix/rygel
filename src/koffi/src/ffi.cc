@@ -1880,11 +1880,11 @@ static Napi::Value DecodeValue(const Napi::CallbackInfo &info)
     if (has_len) {
         Size len = info[2 + has_offset].As<Napi::Number>();
 
-        Napi::Value ret = Decode(value, (Size)offset, type, &len);
-        return ret;
+        napi_value ret = Decode(value, (Size)offset, type, &len);
+        return Napi::Value(env, ret);
     } else {
-        Napi::Value ret = Decode(value, (Size)offset, type);
-        return ret;
+        napi_value ret = Decode(value, (Size)offset, type);
+        return Napi::Value(env, ret);
     }
 }
 

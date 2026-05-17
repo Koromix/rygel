@@ -104,7 +104,7 @@ Napi::Value UnionValue::Getter(const Napi::CallbackInfo &info)
     Size idx = (Size)info.Data();
     const RecordMember &member = type->members[idx];
 
-    Napi::Value value;
+    napi_value value = nullptr;
 
     if (idx == active_idx) {
         value = Value().Get(instance->active_symbol.Value());
@@ -116,14 +116,14 @@ Napi::Value UnionValue::Getter(const Napi::CallbackInfo &info)
             return env.Null();
         }
 
-        value = Decode(env, raw.ptr, member.type);
+        value = Decode(instance, raw.ptr, member.type);
 
         Value().Set(instance->active_symbol.Value(), value);
         active_idx = idx;
     }
 
-    K_ASSERT(!value.IsEmpty());
-    return value;
+    K_ASSERT(value);
+    return Napi::Value(info.Env(), value);
 }
 
 void UnionValue::Setter(const Napi::CallbackInfo &info, const Napi::Value &value)
@@ -961,10 +961,11 @@ static uint32_t DecodeDynamicLength(const uint8_t *origin, const RecordMember &b
 }
 
 template <typename SetFunc>
-static FORCE_INLINE void DecodeObject(Napi::Env env, const uint8_t *origin, const TypeInfo *type, SetFunc set)
+static FORCE_INLINE void DecodeObject(InstanceData *instance, const uint8_t *origin, const TypeInfo *type, SetFunc set)
 {
     K_ASSERT(type->primitive == PrimitiveKind::Record);
 
+    Napi::Env env = instance->env;
     Span<const RecordMember> members = type->members;
 
     for (Size i = 0; i < members.len; i++) {
@@ -1077,10 +1078,10 @@ static FORCE_INLINE void DecodeObject(Napi::Env env, const uint8_t *origin, cons
                     const RecordMember &by = members[member.countedby];
                     uint32_t len = DecodeDynamicLength(origin, by);
 
-                    Napi::Value value = DecodeArray(env, (const uint8_t *)ptr2, member.type, len);
+                    napi_value value = DecodeArray(instance, (const uint8_t *)ptr2, member.type, len);
                     set(i, member, value);
                 } else {
-                    Napi::Value p = ptr2 ? WrapPointer(env, member.type->ref.type, ptr2) : env.Null();
+                    napi_value p = ptr2 ? WrapPointer(env, member.type->ref.type, ptr2) : env.Null();
                     set(i, member, p);
                 }
 
@@ -1092,7 +1093,7 @@ static FORCE_INLINE void DecodeObject(Napi::Env env, const uint8_t *origin, cons
                 void *ptr2;
                 memcpy(&ptr2, src, K_SIZE(void *));
 
-                Napi::Value p = ptr2 ? WrapPointer(env, member.type->ref.type, ptr2) : env.Null();
+                napi_value p = ptr2 ? WrapPointer(env, member.type->ref.type, ptr2) : env.Null();
                 set(i, member, p);
 
                 if (member.type->dispose) {
@@ -1101,7 +1102,7 @@ static FORCE_INLINE void DecodeObject(Napi::Env env, const uint8_t *origin, cons
             } break;
             case PrimitiveKind::Record:
             case PrimitiveKind::Union: {
-                Napi::Object obj2 = DecodeObject(env, src, member.type);
+                napi_value obj2 = DecodeObject(instance, src, member.type);
                 set(i, member, obj2);
             } break;
             case PrimitiveKind::Array: {
@@ -1114,10 +1115,10 @@ static FORCE_INLINE void DecodeObject(Napi::Env env, const uint8_t *origin, cons
                     // Silently truncate result
                     len = std::min(len, max);
 
-                    Napi::Value value = DecodeArray(env, src, member.type, len);
+                    napi_value value = DecodeArray(instance, src, member.type, len);
                     set(i, member, value);
                 } else {
-                    Napi::Value value = DecodeArray(env, src, member.type);
+                    napi_value value = DecodeArray(instance, src, member.type);
                     set(i, member, value);
                 }
             } break;
@@ -1137,8 +1138,10 @@ static FORCE_INLINE void DecodeObject(Napi::Env env, const uint8_t *origin, cons
     }
 }
 
-Napi::Object DecodeObject(Napi::Env env, const uint8_t *origin, const TypeInfo *type)
+napi_value DecodeObject(InstanceData *instance, const uint8_t *origin, const TypeInfo *type)
 {
+    Napi::Env env = instance->env;
+
     // We can't decode unions because we don't know which member is valid
     if (type->primitive == PrimitiveKind::Union) {
         Napi::External<void> external = Napi::External<void>::New(env, (void *)origin);
@@ -1150,12 +1153,10 @@ Napi::Object DecodeObject(Napi::Env env, const uint8_t *origin, const TypeInfo *
 
     // Only supported in recent Node versions, and still experimental at this time
     if (node_api_create_object_with_properties && type->members.len <= 256) {
-        InstanceData *instance = env.GetInstanceData<InstanceData>();
-
         napi_value properties[256];
         napi_value values[256];
 
-        DecodeObject(env, origin, type, [&](Size i, const RecordMember &member, napi_value value) {
+        DecodeObject(instance, origin, type, [&](Size i, const RecordMember &member, napi_value value) {
             napi_status status = napi_get_reference_value(env, member.key, &properties[i]);
             K_ASSERT(status == napi_ok);
 
@@ -1166,19 +1167,21 @@ Napi::Object DecodeObject(Napi::Env env, const uint8_t *origin, const TypeInfo *
         napi_status status = node_api_create_object_with_properties(env, instance->object_constructor.Value(), properties, values, type->members.len, &obj);
         K_ASSERT(status == napi_ok);
 
-        return Napi::Object(env, obj);
+        return obj;
     }
 
     Napi::Object obj = Napi::Object::New(env);
-    DecodeObject(env, obj, origin, type);
+    DecodeObject(instance, obj, origin, type);
 
     return obj;
 }
 
-void DecodeObject(Napi::Env env, napi_value obj, const uint8_t *origin, const TypeInfo *type)
+void DecodeObject(InstanceData *instance, napi_value obj, const uint8_t *origin, const TypeInfo *type)
 {
+    Napi::Env env = instance->env;
+
     if (node_api_create_property_key_utf8) {
-        DecodeObject(env, origin, type, [&](Size i, const RecordMember &member, napi_value value) {
+        DecodeObject(instance, origin, type, [&](Size i, const RecordMember &member, napi_value value) {
             napi_value key = nullptr;
             napi_get_reference_value(env, member.key, &key);
 
@@ -1186,25 +1189,26 @@ void DecodeObject(Napi::Env env, napi_value obj, const uint8_t *origin, const Ty
             K_ASSERT(status == napi_ok);
         });
     } else {
-        DecodeObject(env, origin, type, [&](Size i, const RecordMember &member, napi_value value) {
+        DecodeObject(instance, origin, type, [&](Size i, const RecordMember &member, napi_value value) {
             napi_status status = napi_set_named_property(env, obj, member.name, value);
             K_ASSERT(status == napi_ok);
         });
     }
 }
 
-Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *type)
+napi_value DecodeArray(InstanceData *instance, const uint8_t *origin, const TypeInfo *type)
 {
     K_ASSERT(type->primitive == PrimitiveKind::Array);
 
     uint32_t len = type->size / type->ref.stride;
-    return DecodeArray(env, origin, type, len);
+    return DecodeArray(instance, origin, type, len);
 }
 
-Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *type, uint32_t len)
+napi_value DecodeArray(InstanceData *instance, const uint8_t *origin, const TypeInfo *type, uint32_t len)
 {
     K_ASSERT(type->primitive == PrimitiveKind::Array || type->primitive == PrimitiveKind::Pointer);
 
+    Napi::Env env = instance->env;
     const TypeInfo *ref = type->ref.type;
     int32_t stride = type->ref.stride;
 
@@ -1306,7 +1310,7 @@ Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *ty
         K_ASSERT(type->hint == ArrayHint::Array);
 
         Napi::Array array = Napi::Array::New(env);
-        DecodeElements(env, array, origin, type, len);
+        DecodeElements(instance, array, origin, type, len);
 
         return array;
     }
@@ -1314,10 +1318,11 @@ Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *ty
     K_UNREACHABLE();
 }
 
-void DecodeElements(Napi::Env env, napi_value array, const uint8_t *origin, const TypeInfo *type, uint32_t len)
+void DecodeElements(InstanceData *instance, napi_value array, const uint8_t *origin, const TypeInfo *type, uint32_t len)
 {
-    K_ASSERT(IsArray(env, array));
+    K_ASSERT(IsArray(instance->env, array));
 
+    Napi::Env env = instance->env;
     const TypeInfo *ref = type->ref.type;
     int32_t stride = type->ref.stride;
 
@@ -1404,7 +1409,7 @@ void DecodeElements(Napi::Env env, napi_value array, const uint8_t *origin, cons
             POP_ARRAY({
                 void *ptr2 = *(void **)src;
 
-                Napi::Value p = ptr2 ? WrapPointer(env, ref->ref.type, ptr2) : env.Null();
+                napi_value p = ptr2 ? WrapPointer(env, ref->ref.type, ptr2) : env.Null();
                 napi_set_element(env, array, i, p);
 
                 if (ref->dispose) {
@@ -1416,7 +1421,7 @@ void DecodeElements(Napi::Env env, napi_value array, const uint8_t *origin, cons
             POP_ARRAY({
                 void *ptr2 = *(void **)src;
 
-                Napi::Value p = ptr2 ? WrapPointer(env, ref->ref.type, ptr2) : env.Null();
+                napi_value p = ptr2 ? WrapPointer(env, ref->ref.type, ptr2) : env.Null();
                 napi_set_element(env, array, i, p);
 
                 if (ref->dispose) {
@@ -1427,13 +1432,13 @@ void DecodeElements(Napi::Env env, napi_value array, const uint8_t *origin, cons
         case PrimitiveKind::Record:
         case PrimitiveKind::Union: {
             POP_ARRAY({
-                Napi::Object obj = DecodeObject(env, src, ref);
+                napi_value obj = DecodeObject(instance, src, ref);
                 napi_set_element(env, array, i, obj);
             });
         } break;
         case PrimitiveKind::Array: {
             POP_ARRAY({
-                Napi::Value value = DecodeArray(env, src, ref);
+                napi_value value = DecodeArray(instance, src, ref);
                 napi_set_element(env, array, i, value);
             });
         } break;
@@ -1503,7 +1508,7 @@ void DecodeBuffer(Span<uint8_t> buffer, const uint8_t *origin, const TypeInfo *t
 #undef SWAP
 }
 
-Napi::Value Decode(Napi::Value value, Size offset, const TypeInfo *type, const Size *len)
+napi_value Decode(Napi::Value value, Size offset, const TypeInfo *type, const Size *len)
 {
     Napi::Env env = value.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();
@@ -1533,13 +1538,12 @@ Napi::Value Decode(Napi::Value value, Size offset, const TypeInfo *type, const S
         return env.Null();
     src += offset;
 
-    Napi::Value ret = Decode(env, src, type, len);
-    return ret;
+    return Decode(instance, src, type, len);
 }
 
-Napi::Value Decode(Napi::Env env, const uint8_t *ptr, const TypeInfo *type, const Size *len)
+napi_value Decode(InstanceData *instance, const uint8_t *ptr, const TypeInfo *type, const Size *len)
 {
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
+    Napi::Env env = instance->env;
 
     if (len && type->primitive != PrimitiveKind::String &&
                type->primitive != PrimitiveKind::String16 &&
@@ -1581,12 +1585,12 @@ Napi::Value Decode(Napi::Env env, const uint8_t *ptr, const TypeInfo *type, cons
 #define RETURN_INT(Type, NewCall) \
         do { \
             Type v = *(Type *)ptr; \
-            return Napi::Value(env, NewCall(env, v)); \
+            return NewCall(env, v); \
         } while (false)
 #define RETURN_INT_SWAP(Type, NewCall) \
         do { \
             Type v = ReverseBytes(*(Type *)ptr); \
-            return Napi::Value(env, NewCall(env, v)); \
+            return NewCall(env, v); \
         } while (false)
 
     switch (type->primitive) {
@@ -1649,12 +1653,9 @@ Napi::Value Decode(Napi::Env env, const uint8_t *ptr, const TypeInfo *type, cons
             return ptr2 ? WrapPointer(env, type->ref.type, ptr2) : env.Null();
         } break;
         case PrimitiveKind::Record:
-        case PrimitiveKind::Union: {
-            Napi::Object obj = DecodeObject(env, ptr, type);
-            return obj;
-        } break;
+        case PrimitiveKind::Union: { return DecodeObject(instance, ptr, type); } break;
         case PrimitiveKind::Array: {
-            Napi::Value array = DecodeArray(env, ptr, type);
+            napi_value array = DecodeArray(instance, ptr, type);
             return array;
         } break;
         case PrimitiveKind::Float32: {
@@ -1731,12 +1732,12 @@ bool Encode(Napi::Value ref, Size offset, Napi::Value value, const TypeInfo *typ
     }
     dest += offset;
 
-    return Encode(env, dest, value, type, len);
+    return Encode(instance, dest, value, type, len);
 }
 
-bool Encode(Napi::Env env, uint8_t *origin, Napi::Value value, const TypeInfo *type, const Size *len)
+bool Encode(InstanceData *instance, uint8_t *origin, Napi::Value value, const TypeInfo *type, const Size *len)
 {
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
+    Napi::Env env = instance->env;
 
     if (len && type->primitive != PrimitiveKind::String &&
                type->primitive != PrimitiveKind::String16 &&

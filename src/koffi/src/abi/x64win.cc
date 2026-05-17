@@ -482,12 +482,12 @@ namespace {
     OP(RunPrototype) { K_UNREACHABLE(); return call->env.Null(); }
     OP(RunAggregateReg) {
         auto ret = WRAP(ForwardCallG(call->native, (uint8_t *)base, &call->saved_sp));
-        return DecodeObject(call->env, (const uint8_t *)&ret, inst->type);
+        return DecodeObject(call->instance, (const uint8_t *)&ret, inst->type);
     }
     OP(RunAggregateStack) {
         *(uint8_t **)base = call->AllocHeap(inst->a);
         uint64_t rax = WRAP(ForwardCallG(call->native, (uint8_t *)base, &call->saved_sp));
-        return DecodeObject(call->env, (const uint8_t *)rax, inst->type);
+        return DecodeObject(call->instance, (const uint8_t *)rax, inst->type);
     }
     OP(RunVoidX) {
         WRAP(ForwardCallGX(call->native, (uint8_t *)base, &call->saved_sp));
@@ -553,12 +553,12 @@ namespace {
     OP(RunPrototypeX) { K_UNREACHABLE(); return call->env.Null(); }
     OP(RunAggregateRegX) {
         auto ret = WRAP(ForwardCallGX(call->native, (uint8_t *)base, &call->saved_sp));
-        return DecodeObject(call->env, (const uint8_t *)&ret, inst->type);
+        return DecodeObject(call->instance, (const uint8_t *)&ret, inst->type);
     }
     OP(RunAggregateStackX) {
         *(uint8_t **)base = call->AllocHeap(inst->a);
         uint64_t rax = WRAP(ForwardCallGX(call->native, (uint8_t *)base, &call->saved_sp));
-        return DecodeObject(call->env, (const uint8_t *)rax, inst->type);
+        return DecodeObject(call->instance, (const uint8_t *)rax, inst->type);
     }
 
 #undef DISPOSE
@@ -669,10 +669,10 @@ namespace {
         return Napi::Number::New(call->env, d);
     }
     OP(ReturnPrototype) { K_UNREACHABLE(); return call->env.Null(); }
-    OP(ReturnAggregateReg) { return DecodeObject(call->env, (const uint8_t *)base, inst->type); }
+    OP(ReturnAggregateReg) { return DecodeObject(call->instance, (const uint8_t *)base, inst->type); }
     OP(ReturnAggregateStack) {
         uint64_t rax = *(uint64_t *)base;
-        return DecodeObject(call->env, (const uint8_t *)rax, inst->type);
+        return DecodeObject(call->instance, (const uint8_t *)rax, inst->type);
     }
 
 #undef INTEGER_SWAP
@@ -944,7 +944,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
                 }
                 stk_ptr += (j >= 4);
 
-                arguments[i] = DecodeObject(env, ptr, param.type);
+                arguments[i] = DecodeObject(instance, ptr, param.type);
             } break;
             case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
             case PrimitiveKind::Float32: {

@@ -68,7 +68,7 @@ void CallData::Finalize()
                         K_ASSERT(IsArray(env, value));
 
                         uint32_t len = GetArrayLength(env, value);
-                        DecodeElements(env, value, out.ptr, out.type, len);
+                        DecodeElements(instance, value, out.ptr, out.type, len);
                     } break;
 
                     case OutArgument::Kind::Buffer: {
@@ -117,7 +117,7 @@ void CallData::Finalize()
 
                             u->SetRaw(out.ptr);
                         } else {
-                            DecodeObject(env, value, out.ptr, out.type->ref.type);
+                            DecodeObject(instance, value, out.ptr, out.type->ref.type);
                         }
                     } break;
                 }

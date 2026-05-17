@@ -571,20 +571,20 @@ napi_value RunLoop(CallData *call, napi_value *args, uint32_t *base, const AbiIn
     OP(RunPrototype) { K_UNREACHABLE(); return call->env.Null(); }
     OP(RunAggregateG) {
         auto ret = WRAP(ForwardCallG(call->native, (uint8_t *)base, &call->saved_sp));
-        return DecodeObject(call->env, (const uint8_t *)&ret, inst->type);
+        return DecodeObject(call->instance, (const uint8_t *)&ret, inst->type);
     }
     OP(RunAggregateF) {
         auto ret = WRAP(ForwardCallF(call->native, (uint8_t *)base, &call->saved_sp));
-        return DecodeObject(call->env, (const uint8_t *)&ret, inst->type);
+        return DecodeObject(call->instance, (const uint8_t *)&ret, inst->type);
     }
     OP(RunAggregateD) {
         auto ret = WRAP(ForwardCallD(call->native, (uint8_t *)base, &call->saved_sp));
-        return DecodeObject(call->env, (const uint8_t *)&ret, inst->type);
+        return DecodeObject(call->instance, (const uint8_t *)&ret, inst->type);
     }
     OP(RunAggregateStack) {
         *(uint8_t **)base = call->AllocHeap(inst->a);
         uint32_t eax = (uint32_t)WRAP(ForwardCallG(call->native, (uint8_t *)base, &call->saved_sp));
-        return DecodeObject(call->env, (const uint8_t *)eax, inst->type);
+        return DecodeObject(call->instance, (const uint8_t *)eax, inst->type);
     }
     OP(RunVoidR) {
         WRAP(ForwardCallGR(call->native, (uint8_t *)base, &call->saved_sp));
@@ -650,15 +650,15 @@ napi_value RunLoop(CallData *call, napi_value *args, uint32_t *base, const AbiIn
     OP(RunPrototypeR) { K_UNREACHABLE(); return call->env.Null(); }
     OP(RunAggregateGR) {
         auto ret = WRAP(ForwardCallGR(call->native, (uint8_t *)base, &call->saved_sp));
-        return DecodeObject(call->env, (const uint8_t *)&ret, inst->type);
+        return DecodeObject(call->instance, (const uint8_t *)&ret, inst->type);
     }
     OP(RunAggregateFR) {
         auto ret = WRAP(ForwardCallFR(call->native, (uint8_t *)base, &call->saved_sp));
-        return DecodeObject(call->env, (const uint8_t *)&ret, inst->type);
+        return DecodeObject(call->instance, (const uint8_t *)&ret, inst->type);
     }
     OP(RunAggregateDR) {
         auto ret = WRAP(ForwardCallDR(call->native, (uint8_t *)base, &call->saved_sp));
-        return DecodeObject(call->env, (const uint8_t *)&ret, inst->type);
+        return DecodeObject(call->instance, (const uint8_t *)&ret, inst->type);
     }
     OP(RunAggregateStackR) {
 #if defined(_WIN32)
@@ -667,7 +667,7 @@ napi_value RunLoop(CallData *call, napi_value *args, uint32_t *base, const AbiIn
         *(uint8_t **)base = call->AllocHeap(inst->a);
 #endif
         uint32_t eax = (uint32_t)WRAP(ForwardCallGR(call->native, (uint8_t *)base, &call->saved_sp));
-        return DecodeObject(call->env, (const uint8_t *)eax, inst->type);
+        return DecodeObject(call->instance, (const uint8_t *)eax, inst->type);
     }
 
 #undef DISPOSE
@@ -794,10 +794,10 @@ napi_value RunLoop(CallData *call, napi_value *args, uint32_t *base, const AbiIn
         return Napi::Number::New(call->env, d);
     }
     OP(ReturnPrototype) { K_UNREACHABLE(); return call->env.Null(); }
-    OP(ReturnAggregateReg) { return DecodeObject(call->env, (const uint8_t *)base, inst->type); }
+    OP(ReturnAggregateReg) { return DecodeObject(call->instance, (const uint8_t *)base, inst->type); }
     OP(ReturnAggregateStack) {
         uint32_t eax = *(uint32_t *)base;
-        return DecodeObject(call->env, (const uint8_t *)eax, inst->type);
+        return DecodeObject(call->instance, (const uint8_t *)eax, inst->type);
     }
 
 #undef DISPOSE
@@ -1000,7 +1000,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
             case PrimitiveKind::Record:
             case PrimitiveKind::Union: {
                 uint8_t *ptr = (uint8_t *)args_ptr;
-                arguments[i] = DecodeObject(env, ptr, param.type);
+                arguments[i] = DecodeObject(instance, ptr, param.type);
 
                 args_ptr = (uint32_t *)AlignUp(ptr + param.type->size, 4);
             } break;

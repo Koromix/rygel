@@ -817,17 +817,17 @@ namespace {
     OP(RunPrototype) { K_UNREACHABLE(); return call->env.Null(); }
     OP(RunAggregateGG) {
         auto ret = WRAP(ForwardCallGG(call->native, base, &call->saved_sp));
-        return DecodeObject(call->env, (const uint8_t *)&ret, inst->type);
+        return DecodeObject(call->instance, (const uint8_t *)&ret, inst->type);
     }
     OP(RunAggregateDDDD) {
         auto ret = WRAP(ForwardCallDDDD(call->native, base, &call->saved_sp));
-        return DecodeObject(call->env, (const uint8_t *)&ret, inst->type);
+        return DecodeObject(call->instance, (const uint8_t *)&ret, inst->type);
     }
     OP(RunAggregateStack) {
         uint8_t *ptr = call->AllocHeap(inst->a);
         *(uint8_t **)(base + 8 * 8) = ptr; // x8
         WRAP(ForwardCallGG(call->native, base, &call->saved_sp));
-        return DecodeObject(call->env, ptr, inst->type);
+        return DecodeObject(call->instance, ptr, inst->type);
     }
     OP(RunVoidX) {
         WRAP(ForwardCallGGX(call->native, base, &call->saved_sp));
@@ -893,17 +893,17 @@ namespace {
     OP(RunPrototypeX) { K_UNREACHABLE(); return call->env.Null(); }
     OP(RunAggregateGGX) {
         auto ret = WRAP(ForwardCallGGX(call->native, base, &call->saved_sp));
-        return DecodeObject(call->env, (const uint8_t *)&ret, inst->type);
+        return DecodeObject(call->instance, (const uint8_t *)&ret, inst->type);
     }
     OP(RunAggregateDDDDX) {
         auto ret = WRAP(ForwardCallDDDDX(call->native, base, &call->saved_sp));
-        return DecodeObject(call->env, (const uint8_t *)&ret, inst->type);
+        return DecodeObject(call->instance, (const uint8_t *)&ret, inst->type);
     }
     OP(RunAggregateStackX) {
         uint8_t *ptr = call->AllocHeap(inst->a);
         *(uint8_t **)(base + 8 * 8) = ptr; // x8
         WRAP(ForwardCallGGX(call->native, base, &call->saved_sp));
-        return DecodeObject(call->env, ptr, inst->type);
+        return DecodeObject(call->instance, ptr, inst->type);
     }
 
 #undef DISPOSE
@@ -1026,10 +1026,10 @@ namespace {
         return Napi::Number::New(call->env, d);
     }
     OP(ReturnPrototype) { K_UNREACHABLE(); return call->env.Null(); }
-    OP(ReturnAggregateReg) { return DecodeObject(call->env, base, inst->type); }
+    OP(ReturnAggregateReg) { return DecodeObject(call->instance, base, inst->type); }
     OP(ReturnAggregateStack) {
         const uint8_t *ptr = *(const uint8_t **)base;
-        return DecodeObject(call->env, ptr, inst->type);
+        return DecodeObject(call->instance, ptr, inst->type);
     }
 
 #if defined(_M_ARM64EC)
@@ -1242,7 +1242,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
                 uint8_t *ptr = in_ptr + param.abi.offset;
                 uint8_t *src = param.abi.indirect ? *(uint8_t **)ptr : ptr;
 
-                arguments[i] = DecodeObject(env, src, param.type);
+                arguments[i] = DecodeObject(instance, src, param.type);
             } break;
             case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
 

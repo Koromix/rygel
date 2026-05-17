@@ -403,19 +403,19 @@ Napi::String MakeStringFromUTF32(Napi::Env env, const char32_t *ptr, Size len);
 static inline Napi::String MakeStringFromUTF32(Napi::Env env, const char32_t *ptr)
     { return MakeStringFromUTF32(env, ptr, NullTerminatedLength(ptr)); }
 
-Napi::Object DecodeObject(Napi::Env env, const uint8_t *origin, const TypeInfo *type);
-void DecodeObject(Napi::Env env, napi_value obj, const uint8_t *origin, const TypeInfo *type);
+napi_value DecodeObject(InstanceData *instance, const uint8_t *origin, const TypeInfo *type);
+void DecodeObject(InstanceData *instance, napi_value obj, const uint8_t *origin, const TypeInfo *type);
 
-Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *type);
-Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *type, uint32_t len);
-void DecodeElements(Napi::Env env, napi_value array, const uint8_t *origin, const TypeInfo *type, uint32_t len);
+napi_value DecodeArray(InstanceData *instance, const uint8_t *origin, const TypeInfo *type);
+napi_value DecodeArray(InstanceData *instance, const uint8_t *origin, const TypeInfo *type, uint32_t len);
+void DecodeElements(InstanceData *instance, napi_value array, const uint8_t *origin, const TypeInfo *type, uint32_t len);
 INLINE_UNITY void DecodeBuffer(Span<uint8_t> buffer, const uint8_t *origin, const TypeInfo *type);
 
-Napi::Value Decode(Napi::Value value, Size offset, const TypeInfo *type, const Size *len = nullptr);
-Napi::Value Decode(Napi::Env env, const uint8_t *ptr, const TypeInfo *type, const Size *len = nullptr);
+napi_value Decode(Napi::Value value, Size offset, const TypeInfo *type, const Size *len = nullptr);
+napi_value Decode(InstanceData *instance, const uint8_t *ptr, const TypeInfo *type, const Size *len = nullptr);
 
 bool Encode(Napi::Value ref, Size offset, Napi::Value value, const TypeInfo *type, const Size *len = nullptr);
-bool Encode(Napi::Env env, uint8_t *ptr, Napi::Value value, const TypeInfo *type, const Size *len = nullptr);
+bool Encode(InstanceData *instance, uint8_t *ptr, Napi::Value value, const TypeInfo *type, const Size *len = nullptr);
 
 static FORCE_INLINE napi_value NewInt(Napi::Env env, char i) { napi_value value; napi_create_int32(env, (int32_t)i, &value); return value; }
 static FORCE_INLINE napi_value NewInt(Napi::Env env, signed char i) { napi_value value; napi_create_int32(env, (int32_t)i, &value); return value; }
