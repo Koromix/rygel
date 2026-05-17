@@ -15,11 +15,11 @@ node ../cnoke/cnoke.js -D benchmark --release -v
 node ../cnoke/cnoke.js -D test --release -v
 
 echo Running tests and benchmarks to generate profile data...
-node benchmark/rand.js koffi >NUL
-node benchmark/atoi.js koffi >NUL
-node benchmark/memset.js koffi >NUL
-node benchmark/qsort.js koffi >NUL
-node benchmark/raylib.js koffi >NUL
+node benchmark/rand.js Koffi >NUL
+node benchmark/atoi.js Koffi >NUL
+node benchmark/memset.js Koffi >NUL
+node benchmark/qsort.js Koffi >NUL
+node benchmark/raylib.js Koffi >NUL
 for /l %%x in (1, 1, 100) do node test/sync.js --no_slow >NUL
 for /l %%x in (1, 1, 100) do node test/callbacks.js --no_poll >NUL
 
