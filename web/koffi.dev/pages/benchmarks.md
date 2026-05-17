@@ -2,9 +2,8 @@
 
 This pages presents the execution time of Koffi calls on three benchmarks, where it is compared to a theoretical ideal FFI implementation (approximated with pre-compiled static N-API glue code), and other FFI implementations:
 
-- The first benchmark is based on `rand()` calls
-- The second benchmark is based on `atoi()` calls
-- The third benchmark is based on `memset()` calls
+- The first benchmark is based on `atoi()` calls
+- The second benchmark is based on `memset()` calls
 
 # Linux x86_64
 
@@ -12,17 +11,9 @@ The results presented below were measured on my x86_64 Linux machine (Intel® Co
 
 <div class="benchmark chart" data-platform="linux_x64"></div>
 
-## rand results for Linux x86_64 ^ rand results
-
-This test is based around repeated calls to a simple standard C function `rand`, which takes no parameter and returns a 32-bit integer.
-
-<div class="benchmark table" data-platform="linux_x64" data-benchmark="rand"></div>
-
-Because rand is a pretty small function, the FFI overhead is clearly visible.
-
 ## atoi results for Linux x86_64 ^ atoi results
 
-This test is similar to the rand one, but it is based on `atoi`, which takes a string parameter. Javascript (V8) to C string conversion is relatively slow and heavy.
+This test is based on `atoi`, which takes a string parameter. Javascript (V8) to C string conversion is relatively slow and heavy.
 
 <div class="benchmark table" data-platform="linux_x64" data-benchmark="atoi"></div>
 
@@ -38,17 +29,9 @@ The results presented below were measured on an Apple Mac mini M2 hosted by Scal
 
 <div class="benchmark chart" data-platform="darwin_arm64"></div>
 
-## rand results for macOS ARM64 ^ rand results
-
-This test is based around repeated calls to a simple standard C function `rand`, which takes no parameter and returns a 32-bit integer.
-
-<div class="benchmark table" data-platform="darwin_arm64" data-benchmark="rand"></div>
-
-Because rand is a pretty small function, the FFI overhead is clearly visible.
-
 ## atoi results for macOS ARM64 ^ atoi results
 
-This test is similar to the rand one, but it is based on `atoi`, which takes a string parameter. Javascript (V8) to C string conversion is relatively slow and heavy.
+This test is based on `atoi`, which takes a string parameter. Javascript (V8) to C string conversion is relatively slow and heavy.
 
 <div class="benchmark table" data-platform="darwin_arm64" data-benchmark="atoi"></div>
 
@@ -64,15 +47,9 @@ The results presented below were measured on my x86_64 Windows machine (Intel® 
 
 <div class="benchmark chart" data-platform="win32_x64"></div>
 
-## rand results for Windows x86_64 ^ rand results
-
-This test is based around repeated calls to a simple standard C function `rand`, which takes no parameter and returns a 32-bit integer.
-
-<div class="benchmark table" data-platform="win32_x64" data-benchmark="rand"></div>
-
 ## atoi results for Windows x86_64 ^ atoi results
 
-This test is similar to the rand one, but it is based on `atoi`, which takes a string parameter. Javascript (V8) to C string conversion is relatively slow and heavy.
+This test is based on `atoi`, which takes a string parameter. Javascript (V8) to C string conversion is relatively slow and heavy.
 
 <div class="benchmark table" data-platform="win32_x64" data-benchmark="atoi"></div>
 

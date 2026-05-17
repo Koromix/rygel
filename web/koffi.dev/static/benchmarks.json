@@ -2,44 +2,6 @@
     "linux_x64": {
         "title": "Linux x64 (Intel® Core™ Ultra 9 185H)",
         "results": {
-            "rand": {
-                "N-API": {
-                    "time": 8019,
-                    "iterations": 381000000,
-                    "ratio": 1,
-                    "overhead": 0
-                },
-                "Koffi v3": {
-                    "time": 8002,
-                    "iterations": 308000000,
-                    "ratio": 0.8101163685456588,
-                    "overhead": 0.2343905626733911
-                },
-                "Koffi v2": {
-                    "time": 8028,
-                    "iterations": 190000000,
-                    "ratio": 0.49812859715405533,
-                    "overhead": 1.0075137338295233
-                },
-                "node-ctypes": {
-                    "time": 8078,
-                    "iterations": 101000000,
-                    "ratio": 0.2631556887278172,
-                    "overhead": 2.8000318550373553
-                },
-                "ffi-rs": {
-                    "time": 8922,
-                    "iterations": 8000000,
-                    "ratio": 0.018872220663069438,
-                    "overhead": 51.987934904601566
-                },
-                "ffi-napi": {
-                    "time": 8779,
-                    "iterations": 5000000,
-                    "ratio": 0.01198726739633682,
-                    "overhead": 82.421848110737
-                }
-            },
             "atoi": {
                 "N-API": {
                     "time": 8026,
@@ -121,44 +83,6 @@
     "win32_x64": {
         "title": "Windows x64 (Intel® Core™ Ultra 9 185H)",
         "results": {
-            "rand": {
-                "N-API": {
-                    "time": 8003,
-                    "iterations": 431000000,
-                    "ratio": 1,
-                    "overhead": 0
-                },
-                "Koffi v3": {
-                    "time": 8001,
-                    "iterations": 286000000,
-                    "ratio": 0.6637389583842622,
-                    "overhead": 0.5066163999688928
-                },
-                "Koffi v2": {
-                    "time": 8056,
-                    "iterations": 138000000,
-                    "ratio": 0.31807913054096953,
-                    "overhead": 2.143871772722911
-                },
-                "node-ctypes": {
-                    "time": 8089,
-                    "iterations": 88000000,
-                    "ratio": 0.20200558806479768,
-                    "overhead": 3.9503581043472336
-                },
-                "ffi-rs": {
-                    "time": 9212,
-                    "iterations": 5000000,
-                    "ratio": 0.01007840071408926,
-                    "overhead": 98.22209171560664
-                },
-                "ffi-napi": {
-                    "time": 9758,
-                    "iterations": 5000000,
-                    "ratio": 0.009514472984032614,
-                    "overhead": 104.1030363613645
-                }
-            },
             "atoi": {
                 "N-API": {
                     "time": 8011,
@@ -240,44 +164,6 @@
     "darwin_arm64": {
         "title": "macOS ARM64 (Apple M2)",
         "results": {
-            "rand": {
-                "N-API": {
-                    "time": 8009,
-                    "iterations": 775000000,
-                    "ratio": 1,
-                    "overhead": 0
-                },
-                "Koffi v3": {
-                    "time": 8005,
-                    "iterations": 556000000,
-                    "ratio": 0.7177778404626141,
-                    "overhead": 0.393188732819463
-                },
-                "Koffi v2": {
-                    "time": 8019,
-                    "iterations": 257000000,
-                    "ratio": 0.3311993692399905,
-                    "overhead": 2.019329421715745
-                },
-                "node-ctypes": {
-                    "time": 8043,
-                    "iterations": 108000000,
-                    "ratio": 0.13876574701303077,
-                    "overhead": 6.206389339770536
-                },
-                "ffi-napi": {
-                    "time": 8741,
-                    "iterations": 10000000,
-                    "ratio": 0.011822667370308999,
-                    "overhead": 83.58328130852792
-                },
-                "ffi-rs": {
-                    "time": 8359,
-                    "iterations": 7000000,
-                    "ratio": 0.008654068051047934,
-                    "overhead": 114.55259261901789
-                }
-            },
             "atoi": {
                 "N-API": {
                     "time": 8010,
