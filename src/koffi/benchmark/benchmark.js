@@ -27,7 +27,7 @@ function benchmark(args) {
     for (let arg of args) {
         if (arg[0] == '-') {
             switch (arg) {
-                case '--koffi': { engines.push('koffi'); } break;
+                case '--koffi': { engines.push('Koffi'); } break;
                 default: throw new Error(`Unknown option ${arg}`);
             }
         } else {
