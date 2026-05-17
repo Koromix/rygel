@@ -12,7 +12,7 @@ The results presented below were measured on my x86_64 Linux machine (Intel® Co
 
 <div class="benchmark chart" data-platform="linux_x64"></div>
 
-## rand results
+## rand results for Linux x86_64 ^ rand results
 
 This test is based around repeated calls to a simple standard C function `rand`, which takes no parameter and returns a 32-bit integer.
 
@@ -20,13 +20,13 @@ This test is based around repeated calls to a simple standard C function `rand`,
 
 Because rand is a pretty small function, the FFI overhead is clearly visible.
 
-## atoi results
+## atoi results for Linux x86_64 ^ atoi results
 
 This test is similar to the rand one, but it is based on `atoi`, which takes a string parameter. Javascript (V8) to C string conversion is relatively slow and heavy.
 
 <div class="benchmark table" data-platform="linux_x64" data-benchmark="atoi"></div>
 
-## memset results
+## memset results for Linux x86_64 ^ memset results
 
 This test is based around repeated calls to the standard C function `memset`. All implementations pass a Node.js Buffer for the pointer argument.
 
@@ -38,7 +38,7 @@ The results presented below were measured on an Apple Mac mini M2 hosted by Scal
 
 <div class="benchmark chart" data-platform="darwin_arm64"></div>
 
-## rand results
+## rand results for macOS ARM64 ^ rand results
 
 This test is based around repeated calls to a simple standard C function `rand`, which takes no parameter and returns a 32-bit integer.
 
@@ -46,13 +46,13 @@ This test is based around repeated calls to a simple standard C function `rand`,
 
 Because rand is a pretty small function, the FFI overhead is clearly visible.
 
-## atoi results
+## atoi results for macOS ARM64 ^ atoi results
 
 This test is similar to the rand one, but it is based on `atoi`, which takes a string parameter. Javascript (V8) to C string conversion is relatively slow and heavy.
 
 <div class="benchmark table" data-platform="darwin_arm64" data-benchmark="atoi"></div>
 
-## memset results
+## memset results for macOS ARM64 ^ memset results
 
 This test is based around repeated calls to the standard C function `memset`. All implementations pass a Node.js Buffer for the pointer argument.
 
@@ -64,19 +64,19 @@ The results presented below were measured on my x86_64 Windows machine (Intel® 
 
 <div class="benchmark chart" data-platform="win32_x64"></div>
 
-## rand results
+## rand results for Windows x86_64 ^ rand results
 
 This test is based around repeated calls to a simple standard C function `rand`, which takes no parameter and returns a 32-bit integer.
 
 <div class="benchmark table" data-platform="win32_x64" data-benchmark="rand"></div>
 
-## atoi results
+## atoi results for Windows x86_64 ^ atoi results
 
 This test is similar to the rand one, but it is based on `atoi`, which takes a string parameter. Javascript (V8) to C string conversion is relatively slow and heavy.
 
 <div class="benchmark table" data-platform="win32_x64" data-benchmark="atoi"></div>
 
-## memset results
+## memset results for Windows x86_64 ^ memset results
 
 This test is based around repeated calls to the standard C function `memset`. All implementations pass a Node.js Buffer for the pointer argument.
 
