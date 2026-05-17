@@ -70,9 +70,9 @@ console.log(koffi.type('int').alignment); // Prints alignment of int type
 
 ## Registered callback binding
 
-In Koffi 2.x, it was possible possible bind a specific `this` value to a callback function when using `koffi.register()`, by specificy an object as the first argument. This feature has been deprecated, it still works but will emit a warning.
+In Koffi 2.x, it was possible to bind a specific `this` value to the callback function when using `koffi.register()`, by passing an object as the first argument. This feature has been deprecated, it still works but will emit a warning.
 
-You should replace these calls with an explicit bind using standard JS:
+You should replace these calls with an explicit call to the `bind()` method:
 
 ```js
 class ValueStore {
@@ -95,8 +95,8 @@ let cb = koffi.register(store.get.bind(store), 'IntCallback *');
 
 Two deprecated functions have been removed:
 
-- Function `koffi.callback()` has finally been removed. If you still use it, replace with `koffi.proto()`.
-- Function `koffi.handle()` has finally been removed. If you still use it, replace with `koffi.opaque()`.
+- `koffi.callback()`: if you still use it, replace with `koffi.proto()`.
+- `koffi.handle()`: if you still use it, replace with `koffi.opaque()`.
 
 # Koffi 1.x to 2.x
 
