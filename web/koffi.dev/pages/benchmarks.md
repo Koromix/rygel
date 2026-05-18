@@ -43,7 +43,7 @@ This test is based around repeated calls to the standard C function `memset`. Al
 
 # Windows x86_64
 
-The results presented below were measured on my x86_64 Windows machine (Intel® Core™ i5-4460).
+The results presented below were measured on my x86_64 Windows machine (AMD Ryzen™ 5 2600).
 
 <div class="benchmark chart" data-platform="win32_x64"></div>
 

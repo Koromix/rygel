@@ -81,7 +81,7 @@
         }
     },
     "win32_x64": {
-        "title": "Windows x64 (Intel® Core™ Ultra 9 185H)",
+        "title": "Windows x64 (AMD Ryzen™ 5 2600)",
         "results": {
             "atoi": {
                 "N-API": {
