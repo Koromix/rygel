@@ -137,6 +137,7 @@ if(WIN32)
 endif()
 
 target_compile_definitions(koffi PRIVATE FELIX_TARGET=koffi NAPI_DISABLE_CPP_EXCEPTIONS NAPI_VERSION=NAPI_VERSION_EXPERIMENTAL)
+
 if(WIN32)
     target_compile_definitions(koffi PRIVATE _CRT_SECURE_NO_WARNINGS _CRT_NONSTDC_NO_DEPRECATE)
     target_link_libraries(koffi PRIVATE ws2_32)
@@ -152,27 +153,33 @@ endif()
 option(PGO_GENERATE "Build with PGO profile generation" "")
 option(PGO_USE "Optimize with PGO profile" "")
 
-if(MSVC AND (CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo"))
-    target_compile_options(koffi PRIVATE $<$<COMPILE_LANGUAGE:CXX>:/GS- /Ob2>)
-
-    if(CMAKE_C_COMPILER_ID MATCHES "[Cc]lang")
-        set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /clang:-O3")
+if(MSVC)
+    if (NOT CMAKE_C_COMPILER_ID MATCHES "[Cc]lang")
+        target_compile_options(koffi PRIVATE $<$<COMPILE_LANGUAGE:CXX>:/EHsc>)
     endif()
 
-    if(CMAKE_BUILD_TYPE STREQUAL "Release")
-        target_compile_options(koffi PRIVATE $<$<COMPILE_LANGUAGE:CXX>:/Oy->)
+    if(CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
+        target_compile_options(koffi PRIVATE $<$<COMPILE_LANGUAGE:CXX>:/GS- /Ob2>)
+
+        if(CMAKE_C_COMPILER_ID MATCHES "[Cc]lang")
+            set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /clang:-O3")
+        endif()
+
+        if(CMAKE_BUILD_TYPE STREQUAL "Release")
+            target_compile_options(koffi PRIVATE $<$<COMPILE_LANGUAGE:CXX>:/Oy->)
+        endif()
     endif()
 endif()
 
 if(NOT MSVC OR CMAKE_C_COMPILER_ID MATCHES "[Cc]lang")
     # Restore C/C++ compiler sanity
 
-    if(NOT MSVC)
-        target_compile_options(koffi PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-fno-strict-aliasing -fwrapv
-                                                                       -fno-delete-null-pointer-checks>)
+    target_compile_options(koffi PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions -fno-rtti -fno-strict-aliasing
+                                                                   -fno-delete-null-pointer-checks>)
+    if(MSVC)
+        target_compile_options(koffi PRIVATE $<$<COMPILE_LANGUAGE:CXX>:/clang:-fwrapv>)
     else()
-        target_compile_options(koffi PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-fno-strict-aliasing /clang:-fwrapv
-                                                                       -fno-delete-null-pointer-checks>)
+        target_compile_options(koffi PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-fwrapv>)
     endif()
 
     check_cxx_compiler_flag(-fno-finite-loops use_no_finite_loops)
