@@ -482,9 +482,6 @@ static FORCE_INLINE Napi::Value WrapPointer(Napi::Env env, const TypeInfo *ref, 
 #endif
 }
 
-Napi::Value INLINE_UNITY WrapPointer(Napi::Env env, const TypeInfo *ref, void *ptr);
-Napi::Value INLINE_UNITY WrapPointer(Napi::Env env, const TypeInfo *ref, void *ptr);
-
 bool DetectCallConvention(Span<const char> name, CallConvention *out_convention);
 
 int AnalyseFlat(const TypeInfo *type, FunctionRef<void(const TypeInfo *type, int offset, int count)> func);
