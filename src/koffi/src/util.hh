@@ -10,8 +10,6 @@
 
 namespace K {
 
-// #define EXTERNAL_POINTERS
-
 #if defined(_MSC_VER)
     #define FORCE_INLINE __forceinline
 #else
@@ -40,6 +38,8 @@ extern const napi_type_tag DirectionMarker;
 extern const napi_type_tag UnionValueMarker;
 extern const napi_type_tag CastMarker;
 
+#if !defined(EXTERNAL_TYPES)
+
 class TypeObject: public Napi::ObjectWrap<TypeObject> {
     const TypeInfo *type;
 
@@ -54,6 +54,8 @@ public:
 
     const TypeInfo *GetType() { return type; }
 };
+
+#endif
 
 class UnionValue: public Napi::ObjectWrap<UnionValue> {
     InstanceData *instance;
@@ -119,7 +121,7 @@ TypeInfo *MakePointerType(InstanceData *instance, const TypeInfo *ref, int count
 TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len);
 TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len, ArrayHint hint);
 
-Napi::Object WrapType(Napi::Env env, const TypeInfo *type, bool freeze = true);
+Napi::Value WrapType(Napi::Env env, const TypeInfo *type, bool freeze = true);
 
 const TypeInfo *ReshapeType(InstanceData *instance, const TypeInfo *type, int32_t stride, uint16_t flags);
 

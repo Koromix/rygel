@@ -17,6 +17,8 @@ const napi_type_tag DirectionMarker = { 0xf9c306238b480580, 0xc2e168524a0823f5 }
 const napi_type_tag UnionValueMarker = { 0x5eaf2245526a4c7d, 0x8c86c9ee2b96ffc8 };
 const napi_type_tag CastMarker = { 0x77f459614a0a412f, 0x80b3dda1341dc8df };
 
+#if !defined(EXTERNAL_TYPES)
+
 Napi::Function TypeObject::InitClass(Napi::Env env)
 {
     Napi::Function constructor = DefineClass(env, "TypeObject", {});
@@ -42,6 +44,8 @@ void TypeObject::Finalize(Napi::BasicEnv env)
     DeleteReferenceSafe(env, *this);
     SuppressDestruct();
 }
+
+#endif
 
 Napi::Function UnionValue::InitClass(Napi::Env env, const TypeInfo *type)
 {
@@ -240,6 +244,18 @@ const TypeInfo *ResolveType(Napi::Value value, int *out_directions)
             }
 
             return type;
+#if defined(EXTERNAL_TYPES)
+        } else if (kind == napi_external && CheckValueTag(env, value, &TypeObjectMarker)) {
+            Napi::External<TypeInfo> external = Napi::External<TypeInfo>(env, value);
+            const TypeInfo *type = external.Data();
+
+            if (out_directions) {
+                Size delta = (uint8_t *)raw - (uint8_t *)type;
+                *out_directions = 1 + (int)delta;
+            }
+
+            return type;
+#else
         } else if (kind == napi_object && CheckValueTag(env, value, &TypeObjectMarker)) {
             TypeObject *defn = nullptr;
             napi_unwrap(env, value, (void **)&defn);
@@ -248,6 +264,7 @@ const TypeInfo *ResolveType(Napi::Value value, int *out_directions)
                 *out_directions = 1;
             }
             return defn->GetType();
+#endif
         } else {
             ThrowError<Napi::TypeError>(env, "Unexpected %1 value as type specifier, expected string or type", GetValueType(instance, value));
             return nullptr;
@@ -513,14 +530,18 @@ TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len, A
     return MakeArrayType(instance, ref, len, hint, false);
 }
 
-Napi::Object WrapType(Napi::Env env, const TypeInfo *type, bool freeze)
+Napi::Value WrapType(Napi::Env env, const TypeInfo *type, bool freeze)
 {
     if (type->defn.IsEmpty()) {
+#if defined(EXTERNAL_TYPES)
+        Napi::Object defn = Napi::Object::New(env);
+#else
         InstanceData *instance = env.GetInstanceData<InstanceData>();
 
         Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, (TypeInfo *)type);
         Napi::Object defn = instance->construct_type.New({ external });
         SetValueTag(env, defn, &TypeObjectMarker);
+#endif
 
         defn.Set("name", Napi::String::New(env, type->name));
         defn.Set("primitive", PrimitiveKindNames[(int)type->primitive]);
@@ -592,7 +613,14 @@ Napi::Object WrapType(Napi::Env env, const TypeInfo *type, bool freeze)
         }
     }
 
+#if defined(EXTERNAL_TYPES)
+    Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, (TypeInfo *)type);
+    SetValueTag(env, external, &TypeObjectMarker);
+
+    return external;
+#else
     return type->defn.Value();
+#endif
 }
 
 const TypeInfo *ReshapeType(InstanceData *instance, const TypeInfo *type, int32_t stride, uint16_t flags)

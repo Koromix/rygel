@@ -9,6 +9,9 @@
 
 namespace K {
 
+// #define EXTERNAL_POINTERS
+// #define EXTERNAL_TYPES
+
 static const Size DefaultSyncStackSize = Mebibytes(1);
 static const Size DefaultSyncHeapSize = Mebibytes(2);
 static const Size DefaultAsyncStackSize = Kibibytes(128);
@@ -306,7 +309,9 @@ struct InstanceData {
 
     Napi::ObjectReference object_constructor;
     Napi::FunctionReference construct_lib;
+#if !defined(EXTERNAL_TYPES)
     Napi::FunctionReference construct_type;
+#endif
     Napi::FunctionReference construct_poll;
     Napi::Reference<Napi::Symbol> active_symbol;
 
