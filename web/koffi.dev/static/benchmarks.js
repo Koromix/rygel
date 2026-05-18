@@ -46,7 +46,7 @@ function initCharts() {
                 responsive: true,
                 scales: {
                     x: {
-                        max: 1.2,
+                        max: 1.4,
                         ticks: {
                             font: {
                                 family: 'Open Sans',
