@@ -15,11 +15,11 @@ ISA / OS           | Windows     | Linux/glibc | Linux/musl  | macOS       | Fre
 x86 (IA32) [^1]    | ✅ Yes      | ✅ Yes      | 🟨 Probably | ⬜️ *N/A*    | ✅ Yes      | ✅ Yes
 x86_64 (AMD64)     | ✅ Yes      | ✅ Yes      | ✅ Yes      | ✅ Yes      | ✅ Yes      | ✅ Yes
 ARM64 (AArch64) LE | ✅ Yes      | ✅ Yes      | ✅ Yes      | ✅ Yes      | ✅ Yes      | 🟨 Probably
-RISC-V 64 [^3]     | ⬜️ *N/A*    | ✅ Yes      | 🟨 Probably | ⬜️ *N/A*    | 🟨 Probably | 🟨 Probably
+RISC-V 64 [^2]     | ⬜️ *N/A*    | ✅ Yes      | 🟨 Probably | ⬜️ *N/A*    | 🟨 Probably | 🟨 Probably
 LoongArch64        | ⬜️ *N/A*    | ✅ Yes      | 🟨 Probably | ⬜️ *N/A*    | 🟨 Probably | 🟨 Probably
 
 [^1]: The following call conventions are supported: cdecl, stdcall, MS fastcall, thiscall.
-[^3]: The prebuilt binary uses the LP64D (double-precision float) ABI. The LP64 ABI is supported in theory if you build Koffi from source but this is untested. The LP64F ABI is not supported.
+[^2]: The prebuilt binary uses the LP64D (double-precision float) ABI. The LP64 ABI is supported in theory if you build Koffi from source but this is untested. The LP64F ABI is not supported.
 
 Go to the web site for more information: https://koffi.dev/
 
