@@ -3324,10 +3324,13 @@ body.ck-fullscreen {
   display: flow-root;
 }
 .ck-content hr {
+  vertical-align: middle;
   background: #dedede;
   border: 0;
+  width: 100%;
   height: 4px;
   margin: 15px 0;
+  display: inline-block;
 }
 :root {
   --ck-html-embed-content-width: calc(100% - 1.5 * var(--ck-icon-size));
@@ -4753,78 +4756,18 @@ div.ck.ck-balloon-panel.ck-mention-balloon {
   --ck-show-blocks-label-ltr: var(--ck-show-blocks-label-figcaption-ltr);
   --ck-show-blocks-label-rtl: var(--ck-show-blocks-label-figcaption-rtl);
 }
-.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget) address,
-.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget) aside,
-.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget) blockquote,
-.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget) details,
-.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget) div:not(.ck-widget, .ck-widget *),
-.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget) footer,
-.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget) h1,
-.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget) h2,
-.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget) h3,
-.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget) h4,
-.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget) h5,
-.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget) h6,
-.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget) header,
-.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget) main,
-.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget) nav,
-.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget) pre,
-.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget) ol,
-.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget) ul,
-.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget) p,
-.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget) section,
-.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget) :where(figure.image, figure.table) figcaption {
+.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget) :where(address, aside, blockquote, details, div:not(.ck-widget, .ck-widget *), footer, h1, h2, h3, h4, h5, h6, header, main, nav, pre, ol, ul, p, section, :where(figure.image, figure.table) figcaption) {
   background-repeat: no-repeat;
   padding-top: 15px;
 }
-:is(.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget) address, .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget) aside, .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget) blockquote, .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget) details, .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget) div:not(.ck-widget, .ck-widget *), .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget) footer, .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget) h1, .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget) h2, .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget) h3, .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget) h4, .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget) h5, .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget) h6, .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget) header, .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget) main, .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget) nav, .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget) pre, .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget) ol, .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget) ul, .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget) p, .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget) section, .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget) :where(figure.image, figure.table) figcaption):where(:not(.ck-widget_selected):not(.ck-widget:hover)) {
+.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget) :where(address, aside, blockquote, details, div:not(.ck-widget, .ck-widget *), footer, h1, h2, h3, h4, h5, h6, header, main, nav, pre, ol, ul, p, section, :where(figure.image, figure.table) figcaption):where(:not(.ck-widget_selected):not(.ck-widget:hover)) {
   outline: 1px dashed var(--ck-show-blocks-border-color);
 }
-:is(.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)[dir=ltr], [dir=ltr] .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)) address,
-:is(.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)[dir=ltr], [dir=ltr] .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)) aside,
-:is(.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)[dir=ltr], [dir=ltr] .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)) blockquote,
-:is(.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)[dir=ltr], [dir=ltr] .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)) details,
-:is(.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)[dir=ltr], [dir=ltr] .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)) div:not(.ck-widget, .ck-widget *),
-:is(.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)[dir=ltr], [dir=ltr] .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)) footer,
-:is(.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)[dir=ltr], [dir=ltr] .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)) h1,
-:is(.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)[dir=ltr], [dir=ltr] .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)) h2,
-:is(.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)[dir=ltr], [dir=ltr] .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)) h3,
-:is(.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)[dir=ltr], [dir=ltr] .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)) h4,
-:is(.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)[dir=ltr], [dir=ltr] .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)) h5,
-:is(.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)[dir=ltr], [dir=ltr] .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)) h6,
-:is(.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)[dir=ltr], [dir=ltr] .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)) header,
-:is(.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)[dir=ltr], [dir=ltr] .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)) main,
-:is(.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)[dir=ltr], [dir=ltr] .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)) nav,
-:is(.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)[dir=ltr], [dir=ltr] .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)) pre,
-:is(.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)[dir=ltr], [dir=ltr] .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)) ol,
-:is(.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)[dir=ltr], [dir=ltr] .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)) ul,
-:is(.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)[dir=ltr], [dir=ltr] .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)) p,
-:is(.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)[dir=ltr], [dir=ltr] .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)) section,
-:is(.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)[dir=ltr], [dir=ltr] .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)) :where(figure.image, figure.table) figcaption {
+.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget):dir(ltr) :where(address, aside, blockquote, details, div:not(.ck-widget, .ck-widget *), footer, h1, h2, h3, h4, h5, h6, header, main, nav, pre, ol, ul, p, section, :where(figure.image, figure.table) figcaption) {
   background-image: var(--ck-show-blocks-label-ltr);
   background-position: 1px 1px;
 }
-:is(.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)[dir=rtl], [dir=rtl] .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)) address,
-:is(.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)[dir=rtl], [dir=rtl] .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)) aside,
-:is(.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)[dir=rtl], [dir=rtl] .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)) blockquote,
-:is(.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)[dir=rtl], [dir=rtl] .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)) details,
-:is(.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)[dir=rtl], [dir=rtl] .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)) div:not(.ck-widget, .ck-widget *),
-:is(.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)[dir=rtl], [dir=rtl] .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)) footer,
-:is(.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)[dir=rtl], [dir=rtl] .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)) h1,
-:is(.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)[dir=rtl], [dir=rtl] .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)) h2,
-:is(.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)[dir=rtl], [dir=rtl] .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)) h3,
-:is(.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)[dir=rtl], [dir=rtl] .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)) h4,
-:is(.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)[dir=rtl], [dir=rtl] .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)) h5,
-:is(.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)[dir=rtl], [dir=rtl] .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)) h6,
-:is(.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)[dir=rtl], [dir=rtl] .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)) header,
-:is(.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)[dir=rtl], [dir=rtl] .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)) main,
-:is(.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)[dir=rtl], [dir=rtl] .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)) nav,
-:is(.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)[dir=rtl], [dir=rtl] .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)) pre,
-:is(.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)[dir=rtl], [dir=rtl] .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)) ol,
-:is(.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)[dir=rtl], [dir=rtl] .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)) ul,
-:is(.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)[dir=rtl], [dir=rtl] .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)) p,
-:is(.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)[dir=rtl], [dir=rtl] .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)) section,
-:is(.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)[dir=rtl], [dir=rtl] .ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget)) :where(figure.image, figure.table) figcaption {
+.ck.ck-editor__editable.ck-editor__editable_inline.ck-show-blocks:not(.ck-widget):dir(rtl) :where(address, aside, blockquote, details, div:not(.ck-widget, .ck-widget *), footer, h1, h2, h3, h4, h5, h6, header, main, nav, pre, ol, ul, p, section, :where(figure.image, figure.table) figcaption) {
   background-image: var(--ck-show-blocks-label-rtl);
   background-position: calc(100% - 1px) 1px;
 }
@@ -5637,27 +5580,26 @@ div.ck.ck-balloon-panel.ck-mention-balloon {
 :root {
   --ck-table-selected-cell-background: #9ecffa4d;
 }
-.ck.ck-editor__editable .table table td.ck-editor__editable_selected,
-.ck.ck-editor__editable .table table th.ck-editor__editable_selected {
+.ck.ck-editor__editable .table table :where(td, th).ck-editor__editable_selected {
   caret-color: #0000;
   box-shadow: unset;
   position: relative;
 }
-:is(.ck.ck-editor__editable .table table td.ck-editor__editable_selected, .ck.ck-editor__editable .table table th.ck-editor__editable_selected):after {
+.ck.ck-editor__editable .table table :where(td, th).ck-editor__editable_selected:after {
   content: "";
   pointer-events: none;
   background-color: var(--ck-table-selected-cell-background);
   position: absolute;
   inset: 0;
 }
-:is(.ck.ck-editor__editable .table table td.ck-editor__editable_selected, .ck.ck-editor__editable .table table th.ck-editor__editable_selected) ::selection,
-:is(.ck.ck-editor__editable .table table td.ck-editor__editable_selected, .ck.ck-editor__editable .table table th.ck-editor__editable_selected):focus {
+.ck.ck-editor__editable .table table :where(td, th).ck-editor__editable_selected ::selection,
+.ck.ck-editor__editable .table table :where(td, th).ck-editor__editable_selected:focus {
   background-color: #0000;
 }
-:is(.ck.ck-editor__editable .table table td.ck-editor__editable_selected, .ck.ck-editor__editable .table table th.ck-editor__editable_selected) .ck-widget {
+.ck.ck-editor__editable .table table :where(td, th).ck-editor__editable_selected .ck-widget {
   outline: unset;
 }
-:is(.ck.ck-editor__editable .table table td.ck-editor__editable_selected, .ck.ck-editor__editable .table table th.ck-editor__editable_selected) .ck-widget > .ck-widget__selection-handle {
+.ck.ck-editor__editable .table table :where(td, th).ck-editor__editable_selected .ck-widget > .ck-widget__selection-handle {
   display: none;
 }
 :root {
