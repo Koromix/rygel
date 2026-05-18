@@ -80,7 +80,7 @@ function initCharts() {
                         anchor: 'end',
                         font: {
                             family: 'Open Sans',
-                            size: 14
+                            size: 13
                         },
                         formatter: (value, ctx) => {
                             let prefix = ctx.dataset.label;
