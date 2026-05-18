@@ -36,6 +36,7 @@
         <ul>
             <li>Low-overhead compared to a static Node-API implementation (see <a href="https://koffi.dev/benchmarks">benchmarks</a>)
             <li>Support for primitive and aggregate data types (structs and fixed-size arrays), both by reference (pointer) and by value
+            <li>Support for synchronous and asynchronous calls
             <li>Javascript functions can be used as C callbacks
             <li>Well-tested code base for popular OS/architecture combinations
         </ul>
