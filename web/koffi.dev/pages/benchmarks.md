@@ -1,6 +1,6 @@
 # Overview
 
-This pages presents the execution time of Koffi calls on three benchmarks, where it is compared to a theoretical ideal FFI implementation (approximated with pre-compiled static N-API glue code), and other FFI implementations:
+This pages presents the execution time of Koffi calls on three benchmarks, where it is compared to a theoretical ideal FFI implementation (approximated with pre-compiled static Node-API glue code), and other FFI implementations:
 
 - The first benchmark is based on `atoi()` calls
 - The second benchmark is based on `memset()` calls

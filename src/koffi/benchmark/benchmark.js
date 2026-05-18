@@ -43,15 +43,15 @@ function benchmark(args) {
     }
 
     if (tests.includes('rand'))
-        dump('rand', run('rand.js', 'N-API', engines), 'ns');
+        dump('rand', run('rand.js', 'Node-API', engines), 'ns');
     if (tests.includes('atoi'))
-        dump('atoi', run('atoi.js', 'N-API', engines), 'ns');
+        dump('atoi', run('atoi.js', 'Node-API', engines), 'ns');
     if (tests.includes('qsort'))
-        dump('qsort', run('qsort.js', 'N-API', engines), 'ns');
+        dump('qsort', run('qsort.js', 'Node-API', engines), 'ns');
     if (tests.includes('memset'))
-        dump('memset', run('memset.js', 'N-API', engines), 'ns');
+        dump('memset', run('memset.js', 'Node-API', engines), 'ns');
     if (tests.includes('raylib'))
-        dump('raylib', run('raylib.js', 'N-API', engines), 'us');
+        dump('raylib', run('raylib.js', 'Node-API', engines), 'us');
 }
 
 function run(basename, ref, engines = []) {

@@ -37,7 +37,7 @@ namespace K {
 
 SharedData shared;
 
-// Some N-API functions are loaded dynamically to work around bugs or because they are recent
+// Some Node-API functions are loaded dynamically to work around bugs or because they are recent
 napi_status (NAPI_CDECL *node_api_get_buffer_info)(napi_env env, napi_value value, void **data, size_t *length);
 napi_status (NAPI_CDECL *node_api_create_property_key_utf8)(napi_env env, const char* str, size_t length, napi_value* result);
 napi_status (NAPI_CDECL *node_api_post_finalizer)(node_api_basic_env env, napi_finalize finalize_cb, void* finalize_data, void* finalize_hint);
@@ -2419,7 +2419,7 @@ static napi_value CreateFunction(napi_env env, napi_callback native, const char 
 
 static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
 {
-    // Load recent N-API functions (version >= 9) functions dynamically
+    // Load recent Node-API functions (version >= 9) functions dynamically
     {
         static std::once_flag flag;
 

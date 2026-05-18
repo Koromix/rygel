@@ -24,7 +24,7 @@ function main() {
 
     let tests = {
         'C++': time => runCxx(time),
-        'N-API': time => r ? runNapi(time) : undefined,
+        'Node-API': time => r ? runNapi(time) : undefined,
         'Koffi v3': time => runKoffi(koffi, time),
         'Koffi v2': time => koffi2 ? runKoffi(koffi2, time) : undefined,
         'ffi-napi': ffi_napi ? time => runFfiNapi(time) : undefined

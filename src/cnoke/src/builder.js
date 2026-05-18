@@ -435,9 +435,9 @@ function Builder(config = {}) {
             let required = getNapiVersion(options.napi, major);
 
             if (required == null)
-                throw new Error(`Project ${options.name} does not support the Node ${major}.x branch (old or missing N-API)`);
+                throw new Error(`Project ${options.name} does not support the Node ${major}.x branch (old or missing Node-API)`);
             if (compareVersions(runtime_version, required) < 0)
-                throw new Error(`Project ${options.name} requires Node >= ${required} in the Node ${major}.x branch (with N-API >= ${options.napi})`);
+                throw new Error(`Project ${options.name} requires Node >= ${required} in the Node ${major}.x branch (with Node-API >= ${options.napi})`);
         }
     }
 

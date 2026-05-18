@@ -5,7 +5,7 @@
     #error Please define PRIMITIVE() before including primitives.inc
 #endif
 
-// Void is explictly not first so that it is not 0, for reasons related to N-API type tags.
+// Void is explictly not first so that it is not 0, for reasons related to Node-API type tags.
 // Look at TypeInfo definition for more information!
 
 PRIMITIVE(Bool)

@@ -66,8 +66,8 @@ struct RecordMember {
 struct TypeInfo {
     const char *name;
 
-    // Make sure primitive ends up as the upper N-API tag value when we cast TypeInfo pointers to
-    // napi_type_tag pointers. Yes, I want to do this. We don't do strict aliasing here.
+    // Make sure primitive ends up as the upper Node-API tag value when we cast TypeInfo pointers
+    // to napi_type_tag pointers. Yes, I want to do this. We don't do strict aliasing here.
     // N.B. Some node versions don't like when one of the two tag values is 0, so make sure
     // this does not happen! It would happen if primitive is 0 and size is 0. To avoid this
     // situation, PrimitiveKind::Void (the only type with size 0) is explictly not 0.
@@ -391,7 +391,7 @@ static_assert(MaxTrampolines <= INT16_MAX);
 
 extern SharedData shared;
 
-// Some N-API functions are loaded dynamically to work around bugs or because they are recent
+// Some Node-API functions are loaded dynamically to work around bugs or because they are recent
 extern napi_status (NAPI_CDECL *node_api_get_buffer_info)(napi_env env, napi_value value, void **data, size_t *length);
 extern napi_status (NAPI_CDECL *node_api_create_property_key_utf8)(napi_env env, const char* str, size_t length, napi_value* result);
 extern napi_status (NAPI_CDECL *node_api_post_finalizer)(node_api_basic_env env, napi_finalize finalize_cb, void* finalize_data, void* finalize_hint);

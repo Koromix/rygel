@@ -3,7 +3,7 @@
         "title": "Linux x64 (Intel® Core™ Ultra 9 185H)",
         "results": {
             "atoi": {
-                "N-API": {
+                "Node-API": {
                     "time": 8026,
                     "iterations": 234000000,
                     "ratio": 1,
@@ -41,7 +41,7 @@
                 }
             },
             "memset": {
-                "N-API": {
+                "Node-API": {
                     "time": 8057,
                     "iterations": 117000000,
                     "ratio": 1,
@@ -84,7 +84,7 @@
         "title": "Windows x64 (AMD Ryzen™ 5 2600)",
         "results": {
             "atoi": {
-                "N-API": {
+                "Node-API": {
                     "time": 8038,
                     "iterations": 80000000,
                     "ratio": 1,
@@ -122,7 +122,7 @@
                 }
             },
             "memset": {
-                "N-API": {
+                "Node-API": {
                     "time": 8062,
                     "iterations": 37000000,
                     "ratio": 1,
@@ -165,7 +165,7 @@
         "title": "macOS ARM64 (Apple M2)",
         "results": {
             "atoi": {
-                "N-API": {
+                "Node-API": {
                     "time": 8010,
                     "iterations": 233000000,
                     "ratio": 1,
@@ -203,7 +203,7 @@
                 }
             },
             "memset": {
-                "N-API": {
+                "Node-API": {
                     "time": 8029,
                     "iterations": 69000000,
                     "ratio": 1,

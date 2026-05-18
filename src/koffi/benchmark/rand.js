@@ -22,7 +22,7 @@ function main() {
     let args = process.argv.slice(2);
 
     let tests = {
-        'N-API': time => runNapi(time),
+        'Node-API': time => runNapi(time),
         'Koffi v3': time => runKoffi(koffi, time),
         'Koffi v2': time => koffi2 ? runKoffi(koffi2, time) : undefined,
         'node-ctypes': time => ctypes ? runNodeCTypes(time) : undefined,

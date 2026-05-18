@@ -13,7 +13,7 @@ const requireNative = createRequire(import.meta.url);
 function detectPlatform() {
     if (process.versions.napi == null || process.versions.napi < PACKAGE.cnoke.napi) {
         let major = parseInt(process.versions.node, 10);
-        throw new Error(`This engine is based on Node ${process.versions.node}, but ${PACKAGE.name} does not support the Node ${major}.x branch (N-API < ${PACKAGE.cnoke.napi})`);
+        throw new Error(`This engine is based on Node ${process.versions.node}, but ${PACKAGE.name} does not support the Node ${major}.x branch (Node-API < ${PACKAGE.cnoke.napi})`);
     }
 
     let abi = determineAbi();
