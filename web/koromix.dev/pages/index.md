@@ -32,9 +32,9 @@
 <div class="project" style="flex-direction: row-reverse;">
     <img src="{{ ASSET static/koffi/logo.webp }}" width="180" alt="" />
     <div>
-        <p>Koffi is a <b>fast and easy-to-use JS to C FFI module</b> for <a href="https://nodejs.org/">Node.js</a>, featuring:
+        <p>Koffi is a <b>fast and easy-to-use dynamic JS to C FFI module</b> for <a href="https://nodejs.org/">Node.js</a>, featuring:
         <ul>
-            <li>Low-overhead and fast performance (see <a href="https://koffi.dev/benchmarks">benchmarks</a>)
+            <li>Low-overhead compared to a static N-API implementation (see <a href="https://koffi.dev/benchmarks">benchmarks</a>)
             <li>Support for primitive and aggregate data types (structs and fixed-size arrays), both by reference (pointer) and by value
             <li>Javascript functions can be used as C callbacks
             <li>Well-tested code base for popular OS/architecture combinations
