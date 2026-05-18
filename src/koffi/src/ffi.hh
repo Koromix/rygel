@@ -66,11 +66,6 @@ struct RecordMember {
 struct TypeInfo {
     const char *name;
 
-    // Make sure primitive ends up as the upper Node-API tag value when we cast TypeInfo pointers
-    // to napi_type_tag pointers. Yes, I want to do this. We don't do strict aliasing here.
-    // N.B. Some node versions don't like when one of the two tag values is 0, so make sure
-    // this does not happen! It would happen if primitive is 0 and size is 0. To avoid this
-    // situation, PrimitiveKind::Void (the only type with size 0) is explictly not 0.
     alignas(8) PrimitiveKind primitive;
     int32_t size;
     int16_t align;
