@@ -36,19 +36,19 @@ extern "C" double ForwardCallDR(const void *func, uint8_t *sp, uint8_t **out_sav
 enum class AbiOpcode {
     #define PRIMITIVE(Name) Push ## Name,
     #include "../primitives.inc"
-    PushAggregate,
+    PushAggregateStack,
     #define PRIMITIVE(Name) Run ## Name,
     #include "../primitives.inc"
     RunAggregateG,
     RunAggregateF,
     RunAggregateD,
-    RunAggregateStack,
+    RunAggregateMem,
     #define PRIMITIVE(Name) Run ## Name ## R,
     #include "../primitives.inc"
     RunAggregateGR,
     RunAggregateFR,
     RunAggregateDR,
-    RunAggregateStackR,
+    RunAggregateMemR,
     Yield,
     CallG,
     CallF,
@@ -61,7 +61,7 @@ enum class AbiOpcode {
     #define PRIMITIVE(Name) Return ## Name,
     #include "../primitives.inc"
     ReturnAggregateReg,
-    ReturnAggregateStack
+    ReturnAggregateMem
 };
 
 static inline void *Code2Op(AbiOpcode code)
@@ -119,8 +119,8 @@ bool AnalyseFunction(Napi::Env env, InstanceData *instance, FunctionInfo *func)
         }
 
         if (param.type->primitive == PrimitiveKind::Record || param.type->primitive == PrimitiveKind::Union) {
-            func->sync.Append({ .op = Code2Op(AbiOpcode::PushAggregate), .a = param.offset, .b1 = (int16_t)(offset * 4), .b2 = (int16_t)param.directions, .type = param.type });
-            func->async.Append({ .op = Code2Op(AbiOpcode::PushAggregate), .a = param.offset, .b1 = (int16_t)(offset * 4), .b2 = (int16_t)param.directions, .type = param.type });
+            func->sync.Append({ .op = Code2Op(AbiOpcode::PushAggregateStack), .a = param.offset, .b1 = (int16_t)(offset * 4), .b2 = (int16_t)param.directions, .type = param.type });
+            func->async.Append({ .op = Code2Op(AbiOpcode::PushAggregateStack), .a = param.offset, .b1 = (int16_t)(offset * 4), .b2 = (int16_t)param.directions, .type = param.type });
         } else {
             int delta = (int)AbiOpcode::PushVoid - (int)PrimitiveKind::Void;
             AbiOpcode code = (AbiOpcode)((int)param.type->primitive + delta);
@@ -232,12 +232,12 @@ bool AnalyseFunction(Napi::Env env, InstanceData *instance, FunctionInfo *func)
                 func->async.Append({ .op = Code2Op(call) });
                 func->async.Append({ .op = Code2Op(AbiOpcode::ReturnAggregateReg), .type = func->ret.type });
             } else {
-                AbiOpcode run = fast ? AbiOpcode::RunAggregateStackR : AbiOpcode::RunAggregateStack;
+                AbiOpcode run = fast ? AbiOpcode::RunAggregateMemR : AbiOpcode::RunAggregateMem;
                 AbiOpcode call = fast ? AbiOpcode::CallStackR : AbiOpcode::CallStack;
 
                 func->sync.Append({ .op = Code2Op(run), .a = (int32_t)func->ret.type->size, .type = func->ret.type });
                 func->async.Append({ .op = Code2Op(call), .a = (int32_t)func->ret.type->size });
-                func->async.Append({ .op = Code2Op(AbiOpcode::ReturnAggregateStack), .type = func->ret.type });
+                func->async.Append({ .op = Code2Op(AbiOpcode::ReturnAggregateMem), .type = func->ret.type });
             }
         } break;
         case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
@@ -459,7 +459,7 @@ napi_value RunLoop(CallData *call, napi_value *args, uint8_t *base, const AbiIns
         NEXT();
     }
     OP(PushPrototype) { K_UNREACHABLE(); return call->env.Null(); }
-    OP(PushAggregate) {
+    OP(PushAggregateStack) {
         napi_value arg = args[inst->a];
 
         if (!IsObject(call->env, arg)) [[unlikely]] {
@@ -581,7 +581,7 @@ napi_value RunLoop(CallData *call, napi_value *args, uint8_t *base, const AbiIns
         auto ret = WRAP(ForwardCallD(call->native, base, &call->saved_sp));
         return DecodeObject(call->instance, (const uint8_t *)&ret, inst->type);
     }
-    OP(RunAggregateStack) {
+    OP(RunAggregateMem) {
         *(uint8_t **)base = call->AllocHeap(inst->a);
         uint32_t eax = (uint32_t)WRAP(ForwardCallG(call->native, base, &call->saved_sp));
         return DecodeObject(call->instance, (const uint8_t *)eax, inst->type);
@@ -660,7 +660,7 @@ napi_value RunLoop(CallData *call, napi_value *args, uint8_t *base, const AbiIns
         auto ret = WRAP(ForwardCallDR(call->native, base, &call->saved_sp));
         return DecodeObject(call->instance, (const uint8_t *)&ret, inst->type);
     }
-    OP(RunAggregateStackR) {
+    OP(RunAggregateMemR) {
 #if defined(_WIN32)
         *(uint8_t **)(base + 16) = call->AllocHeap(inst->a);
 #else
@@ -711,6 +711,7 @@ napi_value RunLoop(CallData *call, napi_value *args, uint8_t *base, const AbiIns
 
     OP(Yield) {
         call->async_ip = inst + 1;
+        call->async_base = base;
         return nullptr;
     }
 
@@ -795,7 +796,7 @@ napi_value RunLoop(CallData *call, napi_value *args, uint8_t *base, const AbiIns
     }
     OP(ReturnPrototype) { K_UNREACHABLE(); return call->env.Null(); }
     OP(ReturnAggregateReg) { return DecodeObject(call->instance, (const uint8_t *)base, inst->type); }
-    OP(ReturnAggregateStack) {
+    OP(ReturnAggregateMem) {
         uint32_t eax = *(uint32_t *)base;
         return DecodeObject(call->instance, (const uint8_t *)eax, inst->type);
     }

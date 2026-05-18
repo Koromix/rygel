@@ -59,14 +59,14 @@ enum class AbiOpcode {
     RunAggregateDD,
     RunAggregateGD,
     RunAggregateDG,
-    RunAggregateStack,
+    RunAggregateMem,
     #define PRIMITIVE(Name) Run ## Name ## X,
     #include "../primitives.inc"
     RunAggregateGGX,
     RunAggregateDDX,
     RunAggregateGDX,
     RunAggregateDGX,
-    RunAggregateStackX,
+    RunAggregateMemX,
     Yield,
     CallGG,
     CallF,
@@ -83,7 +83,7 @@ enum class AbiOpcode {
     #define PRIMITIVE(Name) Return ## Name,
     #include "../primitives.inc"
     ReturnAggregateReg,
-    ReturnAggregateStack
+    ReturnAggregateMem
 };
 
 enum class AbiMethod {
@@ -452,12 +452,12 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
         case PrimitiveKind::Union: {
             switch (func->ret.abi.method) {
                 case AbiMethod::Stack: {
-                    AbiOpcode run = func->forward_fp ? AbiOpcode::RunAggregateStackX : AbiOpcode::RunAggregateStack;
+                    AbiOpcode run = func->forward_fp ? AbiOpcode::RunAggregateMemX : AbiOpcode::RunAggregateMem;
                     AbiOpcode call = func->forward_fp ? AbiOpcode::CallStackX : AbiOpcode::CallStack;
 
                     func->sync.Append({ .op = Code2Op(run), .a = (int32_t)func->ret.type->size, .type = func->ret.type });
                     func->async.Append({ .op = Code2Op(call), .a = (int32_t)func->ret.type->size });
-                    func->async.Append({ .op = Code2Op(AbiOpcode::ReturnAggregateStack), .type = func->ret.type });
+                    func->async.Append({ .op = Code2Op(AbiOpcode::ReturnAggregateMem), .type = func->ret.type });
 
                     // Allocate stack space for return value
                     func->stk_size += AlignLen(func->ret.type->size, 16);
@@ -815,7 +815,7 @@ namespace {
         auto ret = WRAP(ForwardCallDG(call->native, base, &call->saved_sp));
         return DecodeObject(call->instance, (const uint8_t *)&ret, inst->type);
     }
-    OP(RunAggregateStack) {
+    OP(RunAggregateMem) {
         uint8_t *ptr = call->AllocHeap(inst->a);
         *(uint8_t **)base = ptr;
         WRAP(ForwardCallGG(call->native, base, &call->saved_sp).rax);
@@ -899,7 +899,7 @@ namespace {
         auto ret = WRAP(ForwardCallDGX(call->native, base, &call->saved_sp));
         return DecodeObject(call->instance, (const uint8_t *)&ret, inst->type);
     }
-    OP(RunAggregateStackX) {
+    OP(RunAggregateMemX) {
         uint8_t *ptr = call->AllocHeap(inst->a);
         *(uint8_t **)base = ptr;
         WRAP(ForwardCallGGX(call->native, base, &call->saved_sp).rax);
@@ -1021,7 +1021,7 @@ namespace {
     }
     OP(ReturnPrototype) { K_UNREACHABLE(); return call->env.Null(); }
     OP(ReturnAggregateReg) { return DecodeObject(call->instance, base, inst->type); }
-    OP(ReturnAggregateStack) {
+    OP(ReturnAggregateMem) {
         uint64_t rax = *(uint64_t *)base;
         return DecodeObject(call->instance, (const uint8_t *)rax, inst->type);
     }
@@ -1043,14 +1043,14 @@ namespace {
         HandleRunAggregateDD,
         HandleRunAggregateGD,
         HandleRunAggregateDG,
-        HandleRunAggregateStack,
+        HandleRunAggregateMem,
         #define PRIMITIVE(Name) HandleRun ## Name ## X,
         #include "../primitives.inc"
         HandleRunAggregateGGX,
         HandleRunAggregateDDX,
         HandleRunAggregateGDX,
         HandleRunAggregateDGX,
-        HandleRunAggregateStackX,
+        HandleRunAggregateMemX,
         HandleYield,
         HandleCallGG,
         HandleCallF,
@@ -1067,7 +1067,7 @@ namespace {
         #define PRIMITIVE(Name) HandleReturn ## Name,
         #include "../primitives.inc"
         HandleReturnAggregateReg,
-        HandleReturnAggregateStack
+        HandleReturnAggregateMem
     };
 
     FORCE_INLINE napi_value RunLoop(CallData *call, napi_value *args, uint8_t *base, const AbiInstruction *inst)
