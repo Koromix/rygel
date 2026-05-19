@@ -66,27 +66,28 @@ function loadDynamic(root, pkg, triplets) {
 function wrapNative(native) {
     let load = native.load;
     let register = native.register;
+    let introspect = native.introspect ?? native.type;
 
-    native.sizeof = (spec) => native.type(spec).size;
-    native.alignof = (spec) => native.type(spec).alignment;
-
+    // Introspection shortcuts
+    native.sizeof = (spec) => introspect(spec).size;
+    native.alignof = (spec) => introspect(spec).alignment;
     native.offsetof = (spec, name) => {
-        let type = native.type(spec);
+        let info = introspect(spec);
 
-        if (type.primitive != 'Record')
+        if (info.primitive != 'Record')
             throw new TypeError('The offsetof() function can only be used with record types');
 
-        let member = type.members[name];
+        let member = info.members[name];
 
         if (member == null)
-            throw new Error(`Record type ${type.name} does not have member '${name}'`);
+            throw new Error(`Record type ${info.name} does not have member '${name}'`);
 
         return member.offset;
     };
 
     native.register = (...args) => {
         if (args.length >= 3 && typeof args[1] == 'function') {
-            process.emitWarning('Using koffi.register() with a custom this value was deprecated in Koffi 3.0, use function.bind() instead', 'DeprecationWarning', 'KOFFI009');
+            process.emitWarning('Using koffi.register() with a custom this value was deprecated in Koffi 2.17, use function.bind() instead', 'DeprecationWarning', 'KOFFI009');
 
             args[1] = args[1].bind(args[0]);
             args = args.slice(1);
@@ -94,10 +95,6 @@ function wrapNative(native) {
 
         return register(...args);
     };
-
-    // Deprecated functions
-    native.resolve = util.deprecate(native.type, 'The koffi.resolve() function was deprecated in Koffi 3.0, use koffi.type() instead', 'KOFFI007');
-    native.introspect = util.deprecate(native.type, 'The koffi.introspect() function was deprecated in Koffi 3.0, use koffi.type() instead', 'KOFFI008');
 
     native.load = (...args) => {
         let lib = load(...args);
@@ -109,6 +106,13 @@ function wrapNative(native) {
 
         return lib;
     };
+
+    if (native.introspect == null) {
+        native.resolve = util.deprecate(native.type, 'The koffi.resolve() function was deprecated in Koffi 3.0, use koffi.type() instead', 'KOFFI007');
+        native.introspect = util.deprecate(native.type, 'The koffi.introspect() function was deprecated in Koffi 3.0, use koffi.type() instead', 'KOFFI008');
+    } else {
+        native.resolve = native.type;
+    }
 }
 
 export {

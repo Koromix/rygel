@@ -1413,6 +1413,29 @@ static Napi::Value GetResolvedType(const Napi::CallbackInfo &info)
     return WrapType(env, type);
 }
 
+#if defined(EXTERNAL_TYPES)
+
+static Napi::Value GetTypeDefinition(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+
+    if (info.Length() < 1) {
+        ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", info.Length());
+        return env.Null();
+    }
+
+    const TypeInfo *type = ResolveType(info[0]);
+    if (!type)
+        return env.Null();
+
+    // Make sure definition is available
+    WrapType(env, type);
+
+    return type->defn.Value();
+}
+
+#endif
+
 InstanceMemory *AllocateMemory(InstanceData *instance, Size stack_size, Size heap_size)
 {
     std::lock_guard<std::mutex> lock(instance->mem_mutex);
@@ -2520,6 +2543,9 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
     exports.Set("enumeration", Napi::Function::New(env, CreateEnumType, "enumeration"));
 
     exports.Set("type", Napi::Function::New(env, GetResolvedType, "type"));
+#if defined(EXTERNAL_TYPES)
+    exports.Set("introspect", Napi::Function::New(env, GetTypeDefinition, "introspect"));
+#endif
 
     exports.Set("load", Napi::Function::New(env, LoadSharedLibrary, "load"));
 

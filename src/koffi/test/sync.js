@@ -8,6 +8,8 @@ const path = require('node:path');
 const util = require('node:util');
 const { cnoke } = require('./package.json');
 
+const KOFFI2 = (parseInt(koffi.version, 10) == 2);
+
 let allow_slow = !process.argv.slice(2).includes('--no_slow');
 
 // We need to change this on Windows because the DLL CRT might
@@ -490,7 +492,8 @@ async function test() {
     {
         let disposed = koffi.stats().disposed;
 
-        assert.ok(Concat16.info.result.disposable);
+        if (!KOFFI2)
+            assert.ok(Concat16.info.result.disposable);
         assert.ok(koffi.introspect(Concat16.info.result).disposable);
 
         let str = Concat16('Hello ', 'World!');
@@ -1063,8 +1066,8 @@ async function test() {
     assert.throws(() => koffi.struct('InvalidStruct', { count: 'int', values: koffi.array('int', 'len', 16) }), /Record type InvalidStruct does not have member 'len'/);
     assert.throws(() => koffi.struct('InvalidStruct', { len: 'str', values: koffi.array('int', 'len', 16) }), /Dynamic length member len is not an integer/);
 
-    // Test enums with implicit types
-    {
+    // Test enums with implicit types (only if Koffi 3.x)
+    if (!KOFFI2) {
         assert.equal(ReturnEnumValue(Enum1.values.A), 0);
         assert.equal(ReturnEnumValue(Enum1.values.B), 42);
         assert.equal(GetEnumPrimitive1(), Enum1.primitive);
@@ -1085,12 +1088,14 @@ async function test() {
         }
     }
 
-    // Test enums with explicit storage
-    assert.equal(koffi.enumeration({}, 'uint64_t').primitive, 'UInt64');
-    assert.equal(koffi.enumeration({}, 'int').primitive, 'Int32');
-    assert.equal(koffi.enumeration('EnumX', {}, 'uint64_t').primitive, 'UInt64');
-    assert.equal(koffi.enumeration('EnumY', {}, 'short').primitive, 'Int16');
-    assert.throws(() => koffi.enumeration({}, 'float'), /Expected integer type for underlying enum storage type/);
+    // Test enums with explicit storage (only if Koffi 3.x)
+    if (!KOFFI2) {
+        assert.equal(koffi.enumeration({}, 'uint64_t').primitive, 'UInt64');
+        assert.equal(koffi.enumeration({}, 'int').primitive, 'Int32');
+        assert.equal(koffi.enumeration('EnumX', {}, 'uint64_t').primitive, 'UInt64');
+        assert.equal(koffi.enumeration('EnumY', {}, 'short').primitive, 'Int16');
+        assert.throws(() => koffi.enumeration({}, 'float'), /Expected integer type for underlying enum storage type/);
+    }
 
     // Test fast decode functions
     assert.equal(koffi.decode.int8(Int8Array.from([7])), 7);

@@ -22,10 +22,10 @@
   * Use `koffi.type()` to resolve type specifiers (strings or objects) to type objects
   * Access type information directly on type objects without `koffi.introspect()`
 - Replace use of externals with BigInt pointers
-- Support ESM and CJS module types
 
 **Other changes:**
 
+- Support ESM and CJS module types
 - Add `koffi.enumeration()` to create [enum types](input#enum-types)
 - Add fast decode functions for integers, floats and strings
 - Use proper types for various objects and handles:
