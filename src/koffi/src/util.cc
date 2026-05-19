@@ -250,10 +250,8 @@ const TypeInfo *ResolveType(Napi::Value value, int *out_directions)
             const TypeInfo *type = external.Data();
 
             if (out_directions) {
-                Size delta = (uint8_t *)raw - (uint8_t *)type;
-                *out_directions = 1 + (int)delta;
+                *out_directions = 1;
             }
-
             return type;
 #else
         } else if (kind == napi_object && CheckValueTag(env, value, &TypeObjectMarker)) {
