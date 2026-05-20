@@ -7,6 +7,14 @@
 
 ### Koffi 3.0
 
+#### Koffi 3.0.1
+
+*Released on 2026-05-20*
+
+- Fix error when importing default koffi module from TypeScript
+- Optimize creation of new JS objects for return values
+- Adjust build flags for performance
+
 #### Koffi 3.0.0
 
 *Released on 2026-05-16*
