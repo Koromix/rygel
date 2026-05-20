@@ -67,8 +67,6 @@ declare module "koffi" {
         symbol(name: string, type: TypeSpec): any;
 
         unload(): void;
-
-        [Symbol.dispose](): void;
     };
 
     export function load(path: string | null, options?: LoadOptions): LibraryHandle;
@@ -314,8 +312,6 @@ declare module "koffi" {
 
             unref(): void;
             ref(): void;
-
-            [Symbol.dispose](): void;
         }
 
         export function poll(fd: number, opts: PollOptions, callback: (ev: PollEvents) => void): PollHandle;
