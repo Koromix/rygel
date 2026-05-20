@@ -36,6 +36,8 @@ const CommandFunctions = {
 const MONOLITH = false;
 const BINARY_PREFIX = '@koromix/koffi-';
 
+const TSC_OPTIONS = '--target es2020'.split(' ');
+
 // Globals
 
 let script_dir = null;
@@ -406,6 +408,7 @@ This contains the ${pkg.target} binaries for [Koffi](https://koffi.dev), a fast 
         };
         main.cnoke.output = 'build/koffi/{{ toolchain }}';
 
+        delete main.dependencies;
         delete main.devDependencies;
         delete main.module;
         delete main.main;
@@ -417,11 +420,13 @@ This contains the ${pkg.target} binaries for [Koffi](https://koffi.dev), a fast 
         main.exports = {
             '.': {
                 import: './index.js',
-                require: './index.cjs'
+                require: './index.cjs',
+                types: './index.d.ts'
             },
             './indirect': {
                 import: './indirect.js',
-                require: './indirect.cjs'
+                require: './indirect.cjs',
+                types: './indirect.d.ts'
             }
         };
         main.types = './index.d.ts';
@@ -432,17 +437,30 @@ This contains the ${pkg.target} binaries for [Koffi](https://koffi.dev), a fast 
         fs.rmSync(pkg_dir + '/src/koffi/package.json');
         fs.rmSync(pkg_dir + '/src/koffi/src/init.js');
         fs.rmSync(pkg_dir + '/src/koffi/src/static.js');
-        fs.writeFileSync(pkg_dir + '/index.js', 'export { default } from "./src/koffi/index.js";');
-        fs.writeFileSync(pkg_dir + '/indirect.js', 'export { default } from "./src/koffi/indirect.js";');
+        fs.writeFileSync(pkg_dir + '/index.js', 'export { default } from "./src/koffi/index.js";\nexport * from "./src/koffi/index.js";');
+        fs.writeFileSync(pkg_dir + '/indirect.js', 'export { default } from "./src/koffi/indirect.js";\nexport * from "./src/koffi/indirect.js";');
         fs.writeFileSync(pkg_dir + '/index.cjs', 'module.exports = require("./src/koffi/index.cjs");');
         fs.writeFileSync(pkg_dir + '/indirect.cjs', 'module.exports = require("./src/koffi/indirect.cjs");');
         fs.renameSync(pkg_dir + '/src/koffi/index.d.ts', pkg_dir + '/index.d.ts');
+        fs.cpSync(pkg_dir + '/index.d.ts', pkg_dir + '/indirect.d.ts');
         fs.renameSync(pkg_dir + '/src/koffi/README.md', pkg_dir + '/README.md');
         fs.renameSync(pkg_dir + '/src/koffi/LICENSE.txt', pkg_dir + '/LICENSE.txt');
         fs.renameSync(pkg_dir + '/src/koffi/CHANGELOG.md', pkg_dir + '/CHANGELOG.md');
         fs.renameSync(pkg_dir + '/web/koffi.dev/pages', pkg_dir + '/doc');
         fs.rmSync(pkg_dir + '/doc/404.md');
         fs.rmSync(pkg_dir + '/web', { recursive: true });
+
+        // Edit module name in indirect.d.ts
+        {
+            let proc = spawnSync('sed', ['-i', 's/module "koffi"/module "koffi\\/indirect"/', pkg_dir + '/indirect.d.ts']);
+
+            if (proc.status !== 0) {
+                let stdout = proc.stdout?.toString?.()?.trim();
+                let stderr = proc.stderr?.toString?.()?.trim();
+
+                throw new Error(`Failed to run sed for indirect.d.ts :\n` + (stderr || stdout || proc.error));
+            }
+        }
     }
 
     console.log('>> Test binary install');
@@ -465,8 +483,8 @@ This contains the ${pkg.target} binaries for [Koffi](https://koffi.dev), a fast 
                 let proc = spawnSync('npm', ['install', '--ignore-scripts', dir], { cwd: install_dir });
 
                 if (proc.status !== 0) {
-                    let stdout = proc.stdout?.toString()?.trim();
-                    let stderr = proc.stderr?.toString()?.trim();
+                    let stdout = proc.stdout?.toString?.()?.trim();
+                    let stderr = proc.stderr?.toString?.()?.trim();
 
                     throw new Error(`Failed to install 'koffi' :\n` + (stderr || stdout || proc.error));
                 }
@@ -490,8 +508,8 @@ This contains the ${pkg.target} binaries for [Koffi](https://koffi.dev), a fast 
             let proc = spawnSync('npm', ['install', '--omit=optional', install_dir + '/pkg'], { cwd: install_dir });
 
             if (proc.status !== 0) {
-                let stdout = proc.stdout?.toString()?.trim();
-                let stderr = proc.stderr?.toString()?.trim();
+                let stdout = proc.stdout?.toString?.()?.trim();
+                let stderr = proc.stderr?.toString?.()?.trim();
 
                 throw new Error(`Failed to install 'koffi' :\n` + (stderr || stdout || proc.error));
             }
@@ -549,7 +567,9 @@ function testPackage(install_dir) {
         ['ESM koffi', 'import koffi from "koffi";', '.mjs'],
         ['ESM index.js', 'import koffi from "../koffi/index.js"', '.mjs'],
         ['CJS koffi/indirect', 'const koffi = require("koffi/indirect");', '.cjs'],
-        ['ESM koffi/indirect', 'import koffi from "koffi/indirect";', '.mjs']
+        ['ESM koffi/indirect', 'import koffi from "koffi/indirect";', '.mjs'],
+        ['TS koffi', 'import koffi from "koffi";', '.ts'],
+        ['TS koffi/indirect', 'import koffi from "koffi/indirect";', '.ts']
     ];
 
     for (let i = 0; i < tests.length; i++) {
@@ -559,6 +579,59 @@ function testPackage(install_dir) {
         let code = method + `\nkoffi.config({ max_type_size: 1024 });\nconsole.log(koffi.version)`;
 
         fs.writeFileSync(filename, code);
+    }
+
+    // Adjust module type
+    {
+        let pkg = JSON.parse(fs.readFileSync(install_dir + '/package.json'));
+
+        pkg.type = 'module';
+
+        fs.writeFileSync(install_dir + '/package.json', JSON.stringify(pkg, null, 4));
+    }
+
+    // Run TypeScript compiler
+    {
+        let tsconfig = {
+            compilerOptions: {
+                module: "nodenext",
+                target: "esnext",
+                types: [],
+
+                sourceMap: true,
+                declaration: true,
+                declarationMap: true,
+
+                noUncheckedIndexedAccess: true,
+                exactOptionalPropertyTypes: true,
+                strict: true,
+                verbatimModuleSyntax: true,
+                isolatedModules: true,
+                noUncheckedSideEffectImports: true,
+                moduleDetection: 'force',
+                skipLibCheck: true
+              }
+        };
+
+        fs.writeFileSync(install_dir + '/tsconfig.json', JSON.stringify(tsconfig, null, 4));
+
+        let proc = spawnSync(import.meta.dirname + '/../../../vendor/typescript/tsc', { cwd: install_dir });
+
+        if (proc.status !== 0) {
+            let stdout = proc.stdout?.toString?.()?.trim();
+            let stderr = proc.stderr?.toString?.()?.trim();
+
+            throw new Error(`Failed to build TypeScript files:\n` + (stderr || stdout || proc.error));
+        }
+    }
+
+    for (let i = 0; i < tests.length; i++) {
+        let [title, method, ext] = tests[i];
+
+        if (ext == '.ts')
+            ext = '.js';
+
+        let filename = install_dir + `/${i}${ext}`;
 
         let proc = spawnSync(process.execPath, ['--no-warnings', filename], { cwd: install_dir });
 

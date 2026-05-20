@@ -4,7 +4,7 @@
 import fs from 'node:fs';
 
 function determineAbi() {
-    let abi = process.arch;
+    let abi = process.arch.toString();
 
     if (abi == 'riscv32' || abi == 'riscv64') {
         let buf = readFileHeader(process.execPath, 512);

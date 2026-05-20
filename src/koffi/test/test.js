@@ -61,7 +61,7 @@ function test() {
             tested.add(script);
 
             let filename = path.join(__dirname, script);
-            let args = ['../../../vendor/typescript/tsc', ...TSC_OPTIONS, filename];
+            let args = ['../../../vendor/typescript/tscli', ...TSC_OPTIONS, filename];
 
             success &= run('TypeScript', key, args);
         }

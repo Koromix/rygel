@@ -16,4 +16,50 @@ if (native.version != version)
 
 wrapNative(native);
 
-module.exports = native;
+module.exports = {
+    default: native,
+
+    'LibraryHandle': native['LibraryHandle'],
+    'TypeObject': native['TypeObject'],
+    'Union': native['Union'],
+
+    'address': native['address'],
+    'alias': native['alias'],
+    'alignof': native['alignof'],
+    'alloc': native['alloc'],
+    'array': native['array'],
+    'as': native['as'],
+    'call': native['call'],
+    'config': native['config'],
+    'decode': native['decode'],
+    'disposable': native['disposable'],
+    'encode': native['encode'],
+    'enumeration': native['enumeration'],
+    'errno': native['errno'],
+    'extension': native['extension'],
+    'free': native['free'],
+    'in': native['in'],
+    'inout': native['inout'],
+    'introspect': native['introspect'],
+    'load': native['load'],
+    'node': native['node'],
+    'offsetof': native['offsetof'],
+    'opaque': native['opaque'],
+    'os': native['os'],
+    'out': native['out'],
+    'pack': native['pack'],
+    'pointer': native['pointer'],
+    'proto': native['proto'],
+    'register': native['register'],
+    'reset': native['reset'],
+    'resolve': native['resolve'],
+    'sizeof': native['sizeof'],
+    'stats': native['stats'],
+    'struct': native['struct'],
+    'type': native['type'],
+    'types': native['types'],
+    'union': native['union'],
+    'unregister': native['unregister'],
+    'version': native['version'],
+    'view': native['view']
+};

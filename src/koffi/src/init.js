@@ -33,9 +33,9 @@ function loadDynamic(root, pkg, triplets) {
     let native = null;
     let err = null;
 
-    if (process.resourcesPath != null) {
-        roots.push(process.resourcesPath);
-        roots.push(process.resourcesPath + '/node_modules/koffi');
+    if (process['resourcesPath'] != null) {
+        roots.push(process['resourcesPath']);
+        roots.push(process['resourcesPath'] + '/node_modules/koffi');
     }
 
     let names = [
