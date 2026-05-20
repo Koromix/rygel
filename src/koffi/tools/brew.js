@@ -426,7 +426,7 @@ This contains the ${pkg.target} binaries for [Koffi](https://koffi.dev), a fast 
             './indirect': {
                 import: './indirect.js',
                 require: './indirect.cjs',
-                types: './indirect.d.ts'
+                types: './index.d.ts'
             }
         };
         main.types = './index.d.ts';
@@ -442,25 +442,12 @@ This contains the ${pkg.target} binaries for [Koffi](https://koffi.dev), a fast 
         fs.writeFileSync(pkg_dir + '/index.cjs', 'module.exports = require("./src/koffi/index.cjs");');
         fs.writeFileSync(pkg_dir + '/indirect.cjs', 'module.exports = require("./src/koffi/indirect.cjs");');
         fs.renameSync(pkg_dir + '/src/koffi/index.d.ts', pkg_dir + '/index.d.ts');
-        fs.cpSync(pkg_dir + '/index.d.ts', pkg_dir + '/indirect.d.ts');
         fs.renameSync(pkg_dir + '/src/koffi/README.md', pkg_dir + '/README.md');
         fs.renameSync(pkg_dir + '/src/koffi/LICENSE.txt', pkg_dir + '/LICENSE.txt');
         fs.renameSync(pkg_dir + '/src/koffi/CHANGELOG.md', pkg_dir + '/CHANGELOG.md');
         fs.renameSync(pkg_dir + '/web/koffi.dev/pages', pkg_dir + '/doc');
         fs.rmSync(pkg_dir + '/doc/404.md');
         fs.rmSync(pkg_dir + '/web', { recursive: true });
-
-        // Edit module name in indirect.d.ts
-        {
-            let proc = spawnSync('sed', ['-i', 's/module "koffi"/module "koffi\\/indirect"/', pkg_dir + '/indirect.d.ts']);
-
-            if (proc.status !== 0) {
-                let stdout = proc.stdout?.toString?.()?.trim();
-                let stderr = proc.stderr?.toString?.()?.trim();
-
-                throw new Error(`Failed to run sed for indirect.d.ts :\n` + (stderr || stdout || proc.error));
-            }
-        }
     }
 
     console.log('>> Test binary install');
