@@ -34,8 +34,14 @@ function loadDynamic(root, pkg, triplets) {
     let err = null;
 
     if (process['resourcesPath'] != null) {
-        roots.push(process['resourcesPath']);
-        roots.push(process['resourcesPath'] + '/node_modules/koffi');
+        let suffixes = [
+            '/koffi',
+            '/koffi/build',
+            '/node_modules/koffi/build'
+        ];
+
+        for (let suffix of suffixes)
+            roots.push(process['resourcesPath'] + suffix);
     }
 
     let names = [
