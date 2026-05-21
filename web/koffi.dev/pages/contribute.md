@@ -145,7 +145,7 @@ cd src/koffi
 node tools/brew.js test # If not done before
 node tools/brew.js build
 
-cd ../../bin/koffi/packages
+cd ../../bin/Koffi/packages
 
 ./prepare.sh
 ./publish.sh

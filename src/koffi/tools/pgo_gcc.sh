@@ -2,7 +2,7 @@
 
 cd "$(dirname $0)/.."
 
-PGO_DIR="$(pwd)/../../bin/koffi/pgo/gcc"
+PGO_DIR="$(pwd)/../../bin/Koffi/pgo/gcc"
 
 export CC="${CC:-gcc}"
 export CXX="${CXX:-g++}"
