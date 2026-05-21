@@ -2,10 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
 import { detectPlatform, loadDynamic, wrapNative } from './src/init.js';
-import { loadStatic } from './src/static.js';
 
 let [version, pkg, triplets] = detectPlatform();
-let native = loadStatic(pkg) ?? loadDynamic(import.meta.dirname, pkg, triplets);
+let native = loadDynamic(import.meta.dirname, pkg, triplets);
 
 wrapNative(native, version);
 

@@ -7,4 +7,4 @@ function loadStatic(pkg) {
     return null;
 }
 
-export { loadStatic }
+module.exports = { loadStatic };

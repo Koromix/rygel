@@ -8,7 +8,7 @@ import { createRequire } from 'node:module';
 import { determineAbi } from '../../cnoke/src/abi.js';
 import PACKAGE from '../package.json' with { type: 'json' };
 
-const requireNative = createRequire(import.meta.url);
+const require = createRequire(import.meta.url);
 
 function detectPlatform() {
     if (process.versions.napi == null || process.versions.napi < PACKAGE.cnoke.napi) {
@@ -27,7 +27,11 @@ function detectPlatform() {
     return [PACKAGE.version, pkg, triplets];
 }
 
-function loadDynamic(root, pkg, triplets) {
+function loadDynamic(dirname, pkg, triplets) {
+    let suffix = '/../../build/koffi';
+    REPOSITORY: suffix = '/../../bin/Koffi';
+
+    let root = dirname + suffix;
     let roots = [root];
 
     let native = null;
@@ -54,22 +58,25 @@ function loadDynamic(root, pkg, triplets) {
             continue;
 
         try {
-            native = requireNative(name);
+            native = require(name);
             break;
         } catch (e) {
             err ??= e;
         }
     }
 
-    if (native == null) {
-        err ??= new Error('Cannot find the native Koffi module; did you bundle it correctly?');
+    if (native == null && err != null)
         throw err;
-    }
 
     return native;
 }
 
-function wrapNative(native) {
+function wrapNative(native, version) {
+    if (native == null)
+        throw new Error('Cannot find the native Koffi module; did you bundle it correctly?');
+    if (native.version != version)
+        throw new Error('Mismatched native Koffi modules');
+
     let load = native.load;
     let register = native.register;
     let introspect = native.introspect ?? native.type;

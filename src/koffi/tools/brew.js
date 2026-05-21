@@ -298,6 +298,95 @@ async function build() {
         }
     }
 
+    console.log(`>> Prepare ${MONOLITH ? 'monolithic' : 'main'} package`);
+    {
+        let pkg_dir = dist_dir + '/koffi';
+        fs.mkdirSync(pkg_dir, { mode: 0o755, recursive: true });
+
+        copyRecursive(snapshot_dir, pkg_dir, makePathFilter([
+            'lib/native/base/base.cc',
+            'lib/native/base/base.hh',
+            'lib/native/base/unicode.inc',
+            'src/koffi/src',
+            'src/koffi/CHANGELOG.md',
+            'src/koffi/CMakeLists.txt',
+            'src/koffi/index.d.ts',
+            'src/koffi/LICENSE.txt',
+            'src/koffi/package.json',
+            'src/koffi/README.md',
+            'vendor/node-addon-api/napi.h',
+            'vendor/node-addon-api/napi-inl.h',
+            'vendor/node-addon-api/napi-inl.deprecated.h',
+            'vendor/node-addon-api/README.md',
+            'vendor/node-addon-api/LICENSE.md',
+            'vendor/node-api-headers/def',
+            'vendor/node-api-headers/include',
+            'vendor/node-api-headers/README.md',
+            'vendor/node-api-headers/LICENSE',
+            'web/koffi.dev'
+        ]));
+        fs.mkdirSync(pkg_dir + '/tools');
+
+        let main = JSON.parse(json);
+
+        if (MONOLITH) {
+            for (let artifact of artifacts) {
+                let build = path.basename(artifact.build);
+                let binary_dir = pkg_dir + '/build/koffi/' + build;
+
+                fs.mkdirSync(binary_dir, { mode: 0o755, recursive: true });
+                copyRecursive(artifact.build, binary_dir);
+            }
+        } else {
+            main.optionalDependencies = packages.reduce((obj, pkg) => { obj[pkg.name] = main.version; return obj; }, {});
+        }
+
+        main.scripts = {
+            install: 'node ./cnoke.cjs -P . -D src/koffi --prebuild --release'
+        };
+        main.cnoke.output = 'build/koffi/{{ toolchain }}';
+
+        delete main.dependencies;
+        delete main.devDependencies;
+        delete main.module;
+        delete main.main;
+        delete main.types;
+
+        main.type = 'module';
+        main.main = './index.cjs';
+        main.module = './index.js';
+        main.exports = {
+            '.': {
+                import: './index.js',
+                require: './index.cjs',
+                types: './index.d.ts'
+            },
+            './indirect': {
+                import: './indirect.js',
+                require: './indirect.cjs',
+                types: './index.d.ts'
+            }
+        };
+        main.types = './index.d.ts';
+
+        await bundleScripts(pkg_dir, packages, 'build/koffi', true);
+
+        fs.writeFileSync(pkg_dir + '/package.json', JSON.stringify(main, null, 4));
+        fs.rmSync(pkg_dir + '/src/koffi/package.json');
+        fs.rmSync(pkg_dir + '/src/koffi/src/init.js');
+        fs.writeFileSync(pkg_dir + '/index.js', 'export { default } from "./src/koffi/index.js";\nexport * from "./src/koffi/index.js";');
+        fs.writeFileSync(pkg_dir + '/indirect.js', 'export { default } from "./src/koffi/indirect.js";\nexport * from "./src/koffi/indirect.js";');
+        fs.writeFileSync(pkg_dir + '/index.cjs', 'module.exports = require("./src/koffi/index.cjs");');
+        fs.writeFileSync(pkg_dir + '/indirect.cjs', 'module.exports = require("./src/koffi/indirect.cjs");');
+        fs.renameSync(pkg_dir + '/src/koffi/index.d.ts', pkg_dir + '/index.d.ts');
+        fs.renameSync(pkg_dir + '/src/koffi/README.md', pkg_dir + '/README.md');
+        fs.renameSync(pkg_dir + '/src/koffi/LICENSE.txt', pkg_dir + '/LICENSE.txt');
+        fs.renameSync(pkg_dir + '/src/koffi/CHANGELOG.md', pkg_dir + '/CHANGELOG.md');
+        fs.renameSync(pkg_dir + '/web/koffi.dev/pages', pkg_dir + '/doc');
+        fs.rmSync(pkg_dir + '/doc/404.md');
+        fs.rmSync(pkg_dir + '/web', { recursive: true });
+    }
+
     if (!MONOLITH) {
         console.log('>> Prepare binary packages');
 
@@ -359,95 +448,6 @@ This contains the ${pkg.target} binaries for [Koffi](https://koffi.dev), a fast 
             fs.writeFileSync(pkg.path + '/index.js', code);
             fs.writeFileSync(pkg.path + '/package.json', JSON.stringify(binary, null, 4));
         }
-    }
-
-    console.log(`>> Prepare ${MONOLITH ? 'monolithic' : 'main'} package`);
-    {
-        let pkg_dir = dist_dir + '/koffi';
-        fs.mkdirSync(pkg_dir, { mode: 0o755, recursive: true });
-
-        copyRecursive(snapshot_dir, pkg_dir, makePathFilter([
-            'lib/native/base/base.cc',
-            'lib/native/base/base.hh',
-            'lib/native/base/unicode.inc',
-            'src/koffi/src',
-            'src/koffi/CHANGELOG.md',
-            'src/koffi/CMakeLists.txt',
-            'src/koffi/index.d.ts',
-            'src/koffi/LICENSE.txt',
-            'src/koffi/package.json',
-            'src/koffi/README.md',
-            'vendor/node-addon-api/napi.h',
-            'vendor/node-addon-api/napi-inl.h',
-            'vendor/node-addon-api/napi-inl.deprecated.h',
-            'vendor/node-addon-api/README.md',
-            'vendor/node-addon-api/LICENSE.md',
-            'vendor/node-api-headers/def',
-            'vendor/node-api-headers/include',
-            'vendor/node-api-headers/README.md',
-            'vendor/node-api-headers/LICENSE',
-            'web/koffi.dev'
-        ]));
-
-        let main = JSON.parse(json);
-
-        if (MONOLITH) {
-            for (let artifact of artifacts) {
-                let build = path.basename(artifact.build);
-                let binary_dir = pkg_dir + '/build/koffi/' + build;
-
-                fs.mkdirSync(binary_dir, { mode: 0o755, recursive: true });
-                copyRecursive(artifact.build, binary_dir);
-            }
-        } else {
-            main.optionalDependencies = packages.reduce((obj, pkg) => { obj[pkg.name] = main.version; return obj; }, {});
-        }
-
-        main.scripts = {
-            install: 'node ./cnoke.cjs -P . -D src/koffi --prebuild --release'
-        };
-        main.cnoke.output = 'build/koffi/{{ toolchain }}';
-
-        delete main.dependencies;
-        delete main.devDependencies;
-        delete main.module;
-        delete main.main;
-        delete main.types;
-
-        main.type = 'module';
-        main.main = './index.cjs';
-        main.module = './index.js';
-        main.exports = {
-            '.': {
-                import: './index.js',
-                require: './index.cjs',
-                types: './index.d.ts'
-            },
-            './indirect': {
-                import: './indirect.js',
-                require: './indirect.cjs',
-                types: './index.d.ts'
-            }
-        };
-        main.types = './index.d.ts';
-
-        await bundleScripts(pkg_dir, packages, 'build/koffi', true);
-
-        fs.writeFileSync(pkg_dir + '/package.json', JSON.stringify(main, null, 4));
-        fs.rmSync(pkg_dir + '/src/koffi/package.json');
-        fs.rmSync(pkg_dir + '/src/koffi/src/init.js');
-        fs.rmSync(pkg_dir + '/src/koffi/src/static.js');
-        fs.writeFileSync(pkg_dir + '/index.js', 'export { default } from "./src/koffi/index.js";\nexport * from "./src/koffi/index.js";');
-        fs.writeFileSync(pkg_dir + '/indirect.js', 'export { default } from "./src/koffi/indirect.js";\nexport * from "./src/koffi/indirect.js";');
-        fs.writeFileSync(pkg_dir + '/index.cjs', 'module.exports = require("./src/koffi/index.cjs");');
-        fs.writeFileSync(pkg_dir + '/indirect.cjs', 'module.exports = require("./src/koffi/indirect.cjs");');
-        fs.renameSync(pkg_dir + '/src/koffi/index.d.ts', pkg_dir + '/index.d.ts');
-        fs.renameSync(pkg_dir + '/src/koffi/README.md', pkg_dir + '/README.md');
-        fs.renameSync(pkg_dir + '/src/koffi/LICENSE.txt', pkg_dir + '/LICENSE.txt');
-        fs.renameSync(pkg_dir + '/src/koffi/CHANGELOG.md', pkg_dir + '/CHANGELOG.md');
-        fs.renameSync(pkg_dir + '/web/koffi.dev/pages', pkg_dir + '/doc');
-        fs.rmSync(pkg_dir + '/doc/404.md');
-        fs.rmSync(pkg_dir + '/web', { recursive: true });
     }
 
     console.log('>> Test binary install');
@@ -695,10 +695,7 @@ async function snapshot() {
 }
 
 async function bundleScripts(dest_dir, packages, build_dir, drop) {
-    let variants = {
-        index: [],
-        indirect: ['STATIC']
-    };
+    let variants = ['index', 'indirect'];
     let formats = {
         esm: '.js',
         cjs: '.cjs'
@@ -707,16 +704,62 @@ async function bundleScripts(dest_dir, packages, build_dir, drop) {
     for (let format in formats) {
         let ext = formats[format];
 
-        for (let variant in variants) {
+        {
+            let fragments = [];
+
+            fragments.push('// SPDX-License-Identifier: MIT\n' +
+                           '// SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>');
+
+            fragments.push('function loadStatic(pkg) {\n' +
+                           '    let native = null;');
+
+            if (MONOLITH) {
+                for (let pkg of packages) {
+                    for (let build of pkg.builds) {
+                        fragments.push(`    if (native == null && pkg == "${pkg.target}") {\n` +
+                                       `        try {\n` +
+                                       `            native = require("../../../${build_dir}/${build.name}/koffi.node");\n` +
+                                       `        } catch (err) {\n` +
+                                       `            // Go on\n` +
+                                       `        }\n` +
+                                       `    }`);
+                    }
+                }
+            } else {
+                for (let pkg of packages) {
+                    fragments.push(`    if (pkg == '${pkg.target}') {\n` +
+                                   `        try {\n` +
+                                   `            native = require('${pkg.name}');\n` +
+                                   `        } catch (err) {\n` +
+                                   `            // Go on\n` +
+                                   `        }\n` +
+                                   `    }`);
+                }
+            }
+
+            fragments.push('    return native;\n' +
+                           '}');
+
+            if (format == 'esm') {
+                fragments.push('export { loadStatic }');
+            } else {
+                fragments.push('module.exports = { loadStatic };');
+            }
+
+            let code = fragments.join('\n\n') + '\n';
+            fs.writeFileSync(dest_dir + '/src/koffi/src/static' + ext, code);
+        }
+
+        for (let variant of variants) {
             await esbuild.build({
-                entryPoints: [root_dir + '/src/koffi/index' + ext],
+                entryPoints: [root_dir + '/src/koffi/' + variant + ext],
                 bundle: true,
                 minify: false,
                 write: true,
-                external: [BINARY_PREFIX + '*'],
+                external: [BINARY_PREFIX + '*', './src/static' + ext],
                 platform: 'node',
                 format: format,
-                dropLabels: variants[variant],
+                dropLabels: drop ? ['REPOSITORY'] : [],
                 outfile: dest_dir + '/src/koffi/' + variant + ext,
                 plugins: [
                     {
@@ -735,68 +778,6 @@ async function bundleScripts(dest_dir, packages, build_dir, drop) {
                                 return {
                                     contents: JSON.stringify(info),
                                     loader: 'json'
-                                };
-                            });
-
-                            build.onLoad({ filter: /\/src\/static\.js$/ }, args => {
-                                let code = `
-                                    ${format == 'esm' ? `
-                                        import { createRequire } from 'node:module';
-                                        import { fileURLToPath } from 'url';
-
-                                        const requireNative = createRequire(import.meta.url);
-
-                                        const BINARY_ROOT = import.meta.dirname + '/../../${build_dir}';
-                                    ` : ''}
-                                    ${format != 'esm' ? `
-                                        const { createRequire } = require('node:module');
-
-                                        const requireNative = createRequire(__filename);
-
-                                        const BINARY_ROOT = __dirname + '/../../${build_dir}';
-                                    ` : ''}
-
-                                    function loadStatic(pkg) {
-                                        let native = null;
-
-                                        ${MONOLITH ? packages.flatMap(pkg => pkg.builds.map(build => `
-                                            if (native == null && pkg == '${pkg.target}') {
-                                                try {
-                                                    native = requireNative('../../${build_dir}/${build.name}/koffi.node');
-                                                } catch (err) {
-                                                    // Go on
-                                                }
-                                            }
-                                        `)).join('') : ''}
-                                        ${!MONOLITH ? packages.flatMap(pkg => `
-                                            try {
-                                                if (pkg == '${pkg.target}')
-                                                    native = requireNative('../../../${pkg.name}');
-                                            } catch (err) {
-                                                // Go on
-                                            }
-                                        `).join('') : ''}
-
-                                        return native;
-                                    }
-
-                                    ${format == 'esm' ? `
-                                        export {
-                                            BINARY_ROOT,
-                                            loadStatic
-                                        }
-                                    ` : ''}
-                                    ${format != 'esm' ? `
-                                        module.exports = {
-                                            BINARY_ROOT,
-                                            loadStatic
-                                        };
-                                    ` : ''}
-                                `;
-
-                                return {
-                                    contents: code,
-                                    loader: 'js'
                                 };
                             });
                         }

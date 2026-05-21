@@ -2,10 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
 const { detectPlatform, loadDynamic, wrapNative } = require('./src/init.js');
-const { loadStatic } = require('./src/static.cjs');
 
 let [version, pkg, triplets] = detectPlatform();
-let native = loadStatic(pkg) ?? loadDynamic(__dirname, pkg, triplets);
+let native = loadDynamic(__dirname, pkg, triplets);
 
 wrapNative(native, version);
 
