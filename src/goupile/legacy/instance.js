@@ -963,11 +963,6 @@ function renderPage() {
             model.actions = [];
 
             if (nav_sequence.prev != null || nav_sequence.next != null) {
-                form_builder.action('Précédent', {disabled: nav_sequence.prev == null}, async e => {
-                    let url = nav_sequence.prev;
-                    go(e, url);
-                });
-
                 if (nav_sequence.next != null) {
                     form_builder.action('Continuer', {color: '#2d8261', always: true}, async e => {
                         let url = nav_sequence.next;
@@ -977,6 +972,13 @@ function renderPage() {
                             await saveRecord(e, form_record, new_hid, form_values, route.page, { stay: false });
                         }
 
+                        go(e, url);
+                    });
+                }
+
+                if (!route.form.multi) {
+                    form_builder.action('Précédent', {disabled: nav_sequence.prev == null}, async e => {
+                        let url = nav_sequence.prev;
                         go(e, url);
                     });
                 }
