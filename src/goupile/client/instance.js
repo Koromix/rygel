@@ -1212,6 +1212,9 @@ function selectNextPage(page, thread, edit) {
     }
 
     if (Array.isArray(sequence)) {
+        // Remove duplicates to avoid loops
+        sequence = Array.from(new Set(sequence));
+
         let idx = sequence.indexOf(page.key);
 
         if (idx < 0) {

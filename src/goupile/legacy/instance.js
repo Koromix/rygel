@@ -838,6 +838,9 @@ function renderPage() {
                 }).map(page => page.key);
             }
 
+            // Remove duplicates to avoid loops
+            sequence = Array.from(new Set(sequence));
+
             nav_sequence = {
                 prev: null,
                 next: null
