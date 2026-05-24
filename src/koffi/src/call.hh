@@ -21,7 +21,6 @@ struct alignas(8) CallData {
     struct OutArgument {
         enum class Kind {
             Array,
-            Buffer,
             String,
             String16,
             String32,

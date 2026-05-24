@@ -71,15 +71,6 @@ void CallData::Finalize()
                         DecodeElements(instance, value, out.ptr, out.type, len);
                     } break;
 
-                    case OutArgument::Kind::Buffer: {
-                        Span<uint8_t> buffer;
-
-                        bool success = TryBuffer(env, value, &buffer);
-                        K_ASSERT(success);
-
-                        DecodeBuffer(buffer, out.ptr, out.type);
-                    } break;
-
                     case OutArgument::Kind::String: {
                         K_ASSERT(IsArray(env, value));
                         K_ASSERT(GetArrayLength(env, value) == 1);
