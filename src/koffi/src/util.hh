@@ -32,6 +32,12 @@ namespace K {
     #endif
 #endif
 
+#define NAPI_OK(Call) \
+    do { \
+        napi_status status = (Call); \
+        K_ASSERT(status == napi_ok); \
+    } while (false)
+
 extern const napi_type_tag LibraryHandleMarker;
 extern const napi_type_tag TypeObjectMarker;
 extern const napi_type_tag DirectionMarker;
@@ -132,7 +138,7 @@ bool CanStoreType(const TypeInfo *type);
 static FORCE_INLINE napi_valuetype GetKindOf(napi_env env, napi_value value)
 {
     napi_valuetype kind = napi_undefined;
-    napi_typeof(env, value, &kind);
+    NAPI_OK(napi_typeof(env, value, &kind));
 
     return kind;
 }
@@ -203,9 +209,7 @@ static FORCE_INLINE bool IsBuffer(napi_env env, napi_value value)
 static FORCE_INLINE napi_value GetReferenceValue(napi_env env, napi_ref ref)
 {
     napi_value value;
-
-    napi_status status = napi_get_reference_value(env, ref, &value);
-    K_ASSERT(status == napi_ok);
+    NAPI_OK(napi_get_reference_value(env, ref, &value));
 
     return value;
 }
@@ -213,9 +217,7 @@ static FORCE_INLINE napi_value GetReferenceValue(napi_env env, napi_ref ref)
 static FORCE_INLINE uint32_t GetArrayLength(napi_env env, napi_value array)
 {
     uint32_t length = 0;
-
-    napi_status status = napi_get_array_length(env, array, &length);
-    K_ASSERT(status == napi_ok);
+    NAPI_OK(napi_get_array_length(env, array, &length));
 
     return length;
 }
@@ -439,16 +441,18 @@ static FORCE_INLINE napi_value NewInt(Napi::Env env, T i)
     if constexpr (std::is_signed_v<T>) {
         if (i <= 9007199254740992ll && i >= -9007199254740992ll) {
             napi_value value;
-            napi_create_int64(env, (int64_t)i, &value);
-            return Napi::Value(env, value);
+            NAPI_OK(napi_create_int64(env, (int64_t)i, &value));
+
+            return value;
         }
 
         return Napi::BigInt::New(env, (int64_t)i);
     } else {
         if (i <= 9007199254740992ull) {
             napi_value value;
-            napi_create_int64(env, (int64_t)i, &value);
-            return Napi::Value(env, value);
+            NAPI_OK(napi_create_int64(env, (int64_t)i, &value));
+
+            return value;
         }
 
         return Napi::BigInt::New(env, (uint64_t)i);

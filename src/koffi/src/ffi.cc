@@ -228,9 +228,9 @@ static bool FinalizeCompositeType(Napi::Env env, TypeInfo *type, PrimitiveKind p
     if (node_api_create_property_key_utf8) {
         for (RecordMember &member: type->members) {
             napi_value key = nullptr;
-            node_api_create_property_key_utf8(env, member.name, NAPI_AUTO_LENGTH, &key);
 
-            napi_create_reference(env, key, 1, &member.key);
+            NAPI_OK(node_api_create_property_key_utf8(env, member.name, NAPI_AUTO_LENGTH, &key));
+            NAPI_OK(napi_create_reference(env, key, 1, &member.key));
         }
     }
 
@@ -299,7 +299,7 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
         replace = external.Data();
 #else
         TypeObject *defn = nullptr;
-        napi_unwrap(env, name, (void **)&defn);
+        NAPI_OK(napi_unwrap(env, name, (void **)&defn));
 
         replace = (TypeInfo *)defn->GetType();
 #endif
@@ -497,7 +497,7 @@ static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
         replace = external.Data();
 #else
         TypeObject *defn = nullptr;
-        napi_unwrap(env, name, (void **)&defn);
+        NAPI_OK(napi_unwrap(env, name, (void **)&defn));
 
         replace = (TypeInfo *)defn->GetType();
 #endif
@@ -1820,7 +1820,7 @@ static Napi::Value RegisterCallback(const Napi::CallbackInfo &info)
     trampoline->instance = instance;
     trampoline->stack0 = instance->memories[0]->stack0;
     trampoline->proto = type->proto;
-    napi_create_reference(env, func, 1, &trampoline->func);
+    NAPI_OK(napi_create_reference(env, func, 1, &trampoline->func));
 
     void *ptr = GetTrampoline(idx);
 
@@ -1902,7 +1902,7 @@ static Napi::Value CastValue(const Napi::CallbackInfo &info)
     ValueCast *cast = new ValueCast();
 
     cast->env = env;
-    napi_create_reference(env, value, 1, &cast->ref);
+    NAPI_OK(napi_create_reference(env, value, 1, &cast->ref));
     cast->type = type;
 
     Napi::External<ValueCast> external = Napi::External<ValueCast>::New(env, cast, [](Napi::Env, ValueCast *cast) { delete cast; });
@@ -1947,8 +1947,7 @@ static FORCE_INLINE napi_value DecodeInteger(napi_env env, napi_callback_info in
     napi_value arg;
     size_t count = 1;
 
-    napi_status status = napi_get_cb_info(env, info, &count, &arg, nullptr, nullptr);
-    K_ASSERT(status == napi_ok);
+    NAPI_OK(napi_get_cb_info(env, info, &count, &arg, nullptr, nullptr));
 
     if (count < 1) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", count);
@@ -1974,8 +1973,7 @@ static napi_value DecodeFloat(napi_env env, napi_callback_info info)
     napi_value arg;
     size_t count = 1;
 
-    napi_status status = napi_get_cb_info(env, info, &count, &arg, nullptr, nullptr);
-    K_ASSERT(status == napi_ok);
+    NAPI_OK(napi_get_cb_info(env, info, &count, &arg, nullptr, nullptr));
 
     if (count < 1) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", count);
@@ -2001,8 +1999,7 @@ static napi_value DecodeDouble(napi_env env, napi_callback_info info)
     napi_value arg;
     size_t count = 1;
 
-    napi_status status = napi_get_cb_info(env, info, &count, &arg, nullptr, nullptr);
-    K_ASSERT(status == napi_ok);
+    NAPI_OK(napi_get_cb_info(env, info, &count, &arg, nullptr, nullptr));
 
     if (count < 1) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", count);
@@ -2028,8 +2025,7 @@ static napi_value DecodeString(napi_env env, napi_callback_info info)
     napi_value args[2];
     size_t count = 2;
 
-    napi_status status = napi_get_cb_info(env, info, &count, args, nullptr, nullptr);
-    K_ASSERT(status == napi_ok);
+    NAPI_OK(napi_get_cb_info(env, info, &count, args, nullptr, nullptr));
 
     if (count < 1) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected 1 to 2 arguments, got %1", count);
@@ -2064,8 +2060,7 @@ static napi_value DecodeString16(napi_env env, napi_callback_info info)
     napi_value args[2];
     size_t count = 2;
 
-    napi_status status = napi_get_cb_info(env, info, &count, args, nullptr, nullptr);
-    K_ASSERT(status == napi_ok);
+    NAPI_OK(napi_get_cb_info(env, info, &count, args, nullptr, nullptr));
 
     if (count < 1) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected 1 to 2 arguments, got %1", count);
@@ -2100,8 +2095,7 @@ static napi_value DecodeString32(napi_env env, napi_callback_info info)
     napi_value args[2];
     size_t count = 2;
 
-    napi_status status = napi_get_cb_info(env, info, &count, args, nullptr, nullptr);
-    K_ASSERT(status == napi_ok);
+    NAPI_OK(napi_get_cb_info(env, info, &count, args, nullptr, nullptr));
 
     if (count < 1) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected 1 to 2 arguments, got %1", count);
@@ -2463,9 +2457,7 @@ static bool CanDeleteReferenceInFinalizer(const napi_node_version &node, uint32_
 static napi_value CreateFunction(napi_env env, napi_callback native, const char *name = nullptr)
 {
     napi_value func;
-
-    napi_status status = napi_create_function(env, name, NAPI_AUTO_LENGTH, native, nullptr, &func);
-    K_ASSERT(status == napi_ok);
+    NAPI_OK(napi_create_function(env, name, NAPI_AUTO_LENGTH, native, nullptr, &func));
 
     return func;
 }

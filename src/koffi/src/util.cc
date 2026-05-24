@@ -256,7 +256,7 @@ const TypeInfo *ResolveType(Napi::Value value, int *out_directions)
 #else
         } else if (kind == napi_object && CheckValueTag(env, value, &TypeObjectMarker)) {
             TypeObject *defn = nullptr;
-            napi_unwrap(env, value, (void **)&defn);
+            NAPI_OK(napi_unwrap(env, value, (void **)&defn));
 
             if (out_directions) {
                 *out_directions = 1;
@@ -818,8 +818,7 @@ void SetValueTag(napi_env env, napi_value value, const void *marker)
     // and the few other markers we use, such as CastMarker, are actual const napi_type_tag structs.
     const napi_type_tag *tag = (const napi_type_tag *)marker;
 
-    napi_status status = napi_type_tag_object(env, value, tag);
-    K_ASSERT(status == napi_ok);
+    NAPI_OK(napi_type_tag_object(env, value, tag));
 }
 
 bool CheckValueTag(napi_env env, napi_value value, const void *marker)
@@ -1183,15 +1182,12 @@ napi_value DecodeObject(InstanceData *instance, const uint8_t *origin, const Typ
         napi_value values[256];
 
         DecodeObject(instance, origin, type, [&](Size i, const RecordMember &member, napi_value value) {
-            napi_status status = napi_get_reference_value(env, member.key, &properties[i]);
-            K_ASSERT(status == napi_ok);
-
+            NAPI_OK(napi_get_reference_value(env, member.key, &properties[i]));
             values[i] = value;
         });
 
         napi_value obj;
-        napi_status status = node_api_create_object_with_properties(env, instance->object_constructor.Value(), properties, values, type->members.len, &obj);
-        K_ASSERT(status == napi_ok);
+        NAPI_OK(node_api_create_object_with_properties(env, instance->object_constructor.Value(), properties, values, type->members.len, &obj));
 
         return obj;
     }
@@ -1211,13 +1207,11 @@ void DecodeObject(InstanceData *instance, napi_value obj, const uint8_t *origin,
             napi_value key = nullptr;
             napi_get_reference_value(env, member.key, &key);
 
-            napi_status status = napi_set_property(env, obj, key, value);
-            K_ASSERT(status == napi_ok);
+            NAPI_OK(napi_set_property(env, obj, key, value));
         });
     } else {
         DecodeObject(instance, origin, type, [&](Size i, const RecordMember &member, napi_value value) {
-            napi_status status = napi_set_named_property(env, obj, member.name, value);
-            K_ASSERT(status == napi_ok);
+            NAPI_OK(napi_set_named_property(env, obj, member.name, value));
         });
     }
 }
@@ -1244,13 +1238,9 @@ napi_value DecodeArray(InstanceData *instance, const uint8_t *origin, const Type
                 napi_value buffer = nullptr; \
                 napi_value array = nullptr; \
                 void *data; \
-                napi_status status; \
                  \
-                status = napi_create_arraybuffer(env, (size_t)len * K_SIZE(CType), &data, &buffer); \
-                K_ASSERT(status == napi_ok); \
-                 \
-                status = napi_create_typedarray(env, (TypedArrayType), (size_t)len, buffer, 0, &array); \
-                K_ASSERT(status == napi_ok); \
+                NAPI_OK(napi_create_arraybuffer(env, (size_t)len * K_SIZE(CType), &data, &buffer)); \
+                NAPI_OK(napi_create_typedarray(env, (TypedArrayType), (size_t)len, buffer, 0, &array)); \
                  \
                 Span<uint8_t> view = MakeSpan((uint8_t *)data, (Size)len * K_SIZE(CType)); \
                 DecodeBuffer(view, origin, type); \
@@ -1294,8 +1284,7 @@ napi_value DecodeArray(InstanceData *instance, const uint8_t *origin, const Type
         napi_value buffer;
         void *data;
 
-        napi_status status = napi_create_buffer(env, (size_t)len * ref->size, &data, &buffer);
-        K_ASSERT(status == napi_ok);
+        NAPI_OK(napi_create_buffer(env, (size_t)len * ref->size, &data, &buffer));
 
         Span<uint8_t> view = MakeSpan((uint8_t *)data, (Size)len * ref->size);
         DecodeBuffer(view, origin, type);
@@ -2037,21 +2026,16 @@ Napi::Function WrapFunction(Napi::Env env, const FunctionInfo *func)
         napi_value value;
 
         if (func->variadic) {
-            napi_status status = napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateVariadicCall, (void *)func->Ref(), &value);
-            K_ASSERT(status == napi_ok);
+            NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateVariadicCall, (void *)func->Ref(), &value));
         } else if (IsDebugAsyncEnabled()) {
-            napi_status status = napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateNormalCallDebugAsync, (void *)func->Ref(), &value);
-            K_ASSERT(status == napi_ok);
+            NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateNormalCallDebugAsync, (void *)func->Ref(), &value));
         } else if (!func->parameters.len) {
             InstanceData *instance = env.GetInstanceData<InstanceData>();
-            napi_status status = napi_create_function(env, func->name, NAPI_AUTO_LENGTH, instance->translate_zero_call, (void *)func->Ref(), &value);
-            K_ASSERT(status == napi_ok);
+            NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, instance->translate_zero_call, (void *)func->Ref(), &value));
         } else if (CanUseFastCall(func)) {
-            napi_status status = napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateFastCall, (void *)func->Ref(), &value);
-            K_ASSERT(status == napi_ok);
+            NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateFastCall, (void *)func->Ref(), &value));
         } else {
-            napi_status status = napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateNormalCall, (void *)func->Ref(), &value);
-            K_ASSERT(status == napi_ok);
+            NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateNormalCall, (void *)func->Ref(), &value));
         }
 
         wrapper = Napi::Function(env, value);
@@ -2060,8 +2044,7 @@ Napi::Function WrapFunction(Napi::Env env, const FunctionInfo *func)
 
     if (!func->variadic) {
         napi_value value;
-        napi_status status = napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateAsyncCall, (void *)func->Ref(), &value);
-        K_ASSERT(status == napi_ok);
+        NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateAsyncCall, (void *)func->Ref(), &value));
 
         Napi::Function async = Napi::Function(env, value);
         async.AddFinalizer([](Napi::Env, FunctionInfo *func) { func->Unref(); }, (FunctionInfo *)func);

@@ -113,7 +113,7 @@ void CallData::Finalize()
                     case OutArgument::Kind::Object: {
                         if (CheckValueTag(env, value, &UnionValueMarker)) {
                             UnionValue *u = nullptr;
-                            napi_unwrap(env, value, (void **)&u);
+                            NAPI_OK(napi_unwrap(env, value, (void **)&u));
 
                             u->SetRaw(out.ptr);
                         } else {
@@ -183,7 +183,7 @@ void CallData::RelayAsync(Size idx, uint8_t *sp)
         .sp = sp
     };
 
-    napi_call_threadsafe_function(instance->broker, &ctx, napi_tsfn_blocking);
+    NAPI_OK(napi_call_threadsafe_function(instance->broker, &ctx, napi_tsfn_blocking));
 
     // Wait until it executes
     std::unique_lock<std::mutex> lock(ctx.mutex);
@@ -198,8 +198,8 @@ napi_value CallData::CallCallback(const TrampolineInfo *trampoline, const napi_v
     napi_value func;
     napi_value value;
 
-    napi_get_undefined(env, &recv);
-    napi_get_reference_value(env, trampoline->func, &func);
+    NAPI_OK(napi_get_undefined(env, &recv));
+    NAPI_OK(napi_get_reference_value(env, trampoline->func, &func));
 
     napi_status status = napi_call_function(env, recv, func, (size_t)count, args, &value);
     if (status == napi_pending_exception) [[unlikely]]
@@ -257,7 +257,6 @@ bool CallData::PushString32(napi_value value, int directions, const char32_t **o
 Size CallData::PushStringValue(napi_value value, const char **out_str)
 {
     size_t len;
-    napi_status status;
 
     size_t available = (size_t)(mem->heap.end - mem->heap.ptr);
     char *ptr = (char *)mem->heap.ptr;
@@ -266,7 +265,7 @@ Size CallData::PushStringValue(napi_value value, const char **out_str)
     if (available >= 4096) [[likely]] {
         char *ptr = (char *)mem->heap.ptr;
 
-        status = napi_get_value_string_utf8(env, value, ptr, 4096, &len);
+        napi_status status = napi_get_value_string_utf8(env, value, ptr, 4096, &len);
         if (status == napi_string_expected)
             return -1;
         K_ASSERT(status == napi_ok);
@@ -285,14 +284,12 @@ Size CallData::PushStringValue(napi_value value, const char **out_str)
         }
     }
 
-    status = napi_get_value_string_utf8(env, value, nullptr, 0, &len);
-    K_ASSERT(status == napi_ok);
+    NAPI_OK(napi_get_value_string_utf8(env, value, nullptr, 0, &len));
 
     len++;
 
     if (len <= available) {
-        status = napi_get_value_string_utf8(env, value, ptr, len, nullptr);
-        K_ASSERT(status == napi_ok);
+        NAPI_OK(napi_get_value_string_utf8(env, value, ptr, len, nullptr));
 
         mem->heap.ptr += (Size)AlignLen(len, 16);
 
@@ -302,8 +299,7 @@ Size CallData::PushStringValue(napi_value value, const char **out_str)
         Span<char> buf = AllocateSpan<char>(&mem->allocator, (Size)len);
         release_alloc |= (prev_stack == mem->stack.end);
 
-        status = napi_get_value_string_utf8(env, value, buf.ptr, len, nullptr);
-        K_ASSERT(status == napi_ok);
+        NAPI_OK(napi_get_value_string_utf8(env, value, buf.ptr, len, nullptr));
 
         *out_str = buf.ptr;
         return (Size)len;
@@ -314,9 +310,8 @@ Size CallData::PushString16Value(napi_value value, const char16_t **out_str16)
 {
     size_t len = 0;
     Span<char16_t> buf;
-    napi_status status;
 
-    status = napi_get_value_string_utf16(env, value, nullptr, 0, &len);
+    napi_status status = napi_get_value_string_utf16(env, value, nullptr, 0, &len);
     if (status == napi_string_expected)
         return -1;
     K_ASSERT(status == napi_ok);
@@ -327,16 +322,14 @@ Size CallData::PushString16Value(napi_value value, const char16_t **out_str16)
     buf.len = (mem->heap.end - mem->heap.ptr) / 2;
 
     if (len <= (size_t)buf.len) {
-        status = napi_get_value_string_utf16(env, value, buf.ptr, len, nullptr);
-        K_ASSERT(status == napi_ok);
+        NAPI_OK(napi_get_value_string_utf16(env, value, buf.ptr, len, nullptr));
 
         mem->heap.ptr += (Size)AlignLen(len * 2, 16);
     } else {
         buf = AllocateSpan<char16_t>(&mem->allocator, (Size)len);
         release_alloc |= (prev_stack == mem->stack.end);
 
-        status = napi_get_value_string_utf16(env, value, buf.ptr, len, nullptr);
-        K_ASSERT(status == napi_ok);
+        NAPI_OK(napi_get_value_string_utf16(env, value, buf.ptr, len, nullptr));
     }
 
     *out_str16 = buf.ptr;
@@ -893,14 +886,9 @@ bool CallData::PushStringArray(napi_value value, const TypeInfo *type, uint8_t *
     size_t encoded = 0;
 
     switch (type->ref.type->primitive) {
-        case PrimitiveKind::Int8: {
-            napi_status status = napi_get_value_string_utf8(env, value, (char *)origin, type->size, &encoded);
-            K_ASSERT(status == napi_ok);
-        } break;
+        case PrimitiveKind::Int8: { NAPI_OK(napi_get_value_string_utf8(env, value, (char *)origin, type->size, &encoded)); } break;
         case PrimitiveKind::Int16: {
-            napi_status status = napi_get_value_string_utf16(env, value, (char16_t *)origin, type->size / 2, &encoded);
-            K_ASSERT(status == napi_ok);
-
+            NAPI_OK(napi_get_value_string_utf16(env, value, (char16_t *)origin, type->size / 2, &encoded));
             encoded *= 2;
         } break;
 
@@ -933,7 +921,7 @@ restart:
             Napi::External<ValueCast> external = Napi::External<ValueCast>(env, value);
             ValueCast *cast = external.Data();
 
-            napi_get_reference_value(env, cast->ref, &value);
+            NAPI_OK(napi_get_reference_value(env, cast->ref, &value));
             type = cast->type;
 
             goto restart;
@@ -1029,8 +1017,7 @@ bool CallData::PushPointerSlow(napi_value value, napi_valuetype kind, const Type
         if (directions & 2) {
             OutArgument *out = out_arguments.AppendDefault();
 
-            napi_status status = napi_create_reference(env, value, 1, &out->ref);
-            K_ASSERT(status == napi_ok);
+            NAPI_OK(napi_create_reference(env, value, 1, &out->ref));
 
             out->kind = out_kind;
             out->ptr = (const uint8_t *)ptr;
@@ -1062,8 +1049,7 @@ bool CallData::PushPointerSlow(napi_value value, napi_valuetype kind, const Type
         if (directions & 2) {
             OutArgument *out = out_arguments.AppendDefault();
 
-            napi_status status = napi_create_reference(env, value, 1, &out->ref);
-            K_ASSERT(status == napi_ok);
+            NAPI_OK(napi_create_reference(env, value, 1, &out->ref));
 
             out->kind = OutArgument::Kind::Object;
             out->ptr = (const uint8_t *)ptr;
@@ -1107,7 +1093,7 @@ restart:
             Napi::External<ValueCast> external = Napi::External<ValueCast>(env, value);
             ValueCast *cast = external.Data();
 
-            napi_get_reference_value(env, cast->ref, &value);
+            NAPI_OK(napi_get_reference_value(env, cast->ref, &value));
             type = cast->type;
 
             goto restart;
@@ -1132,7 +1118,7 @@ restart:
         Napi::External<ValueCast> external = Napi::External<ValueCast>(env, value);
         ValueCast *cast = external.Data();
 
-        napi_get_reference_value(env, cast->ref, &value);
+        NAPI_OK(napi_get_reference_value(env, cast->ref, &value));
         type = cast->type;
 
         goto restart;
@@ -1192,7 +1178,7 @@ void *CallData::ReserveTrampoline(const FunctionInfo *proto, Napi::Function func
     trampoline->instance = instance;
     trampoline->stack0 = instance->memories[0]->stack0;
     trampoline->proto = proto;
-    napi_create_reference(env, func, 1, &trampoline->func);
+    NAPI_OK(napi_create_reference(env, func, 1, &trampoline->func));
 
     void *ptr = GetTrampoline(idx);
 
@@ -1305,13 +1291,12 @@ void InitTranslateZeroCall(Napi::Env env)
 
     Napi::Object self = Napi::Object::New(env);
 
-    napi_status status;
     napi_value func;
     napi_value ret;
 
-    status = napi_create_function(env, nullptr, 0, [](napi_env env, napi_callback_info info) {
+    auto cb = [](napi_env env, napi_callback_info info) {
         napi_value self;
-        napi_get_cb_info(env, info, nullptr, nullptr, &self, nullptr);
+        NAPI_OK(napi_get_cb_info(env, info, nullptr, nullptr, &self, nullptr));
 
         napi_value *ptr = (napi_value *)info;
 
@@ -1322,11 +1307,10 @@ void InitTranslateZeroCall(Napi::Env env)
         }
 
         return self;
-    }, nullptr, &func);
-    K_ASSERT(status == napi_ok);
+    };
 
-    status = napi_call_function(env, self, func, 0, nullptr, &ret);
-    K_ASSERT(status == napi_ok);
+    NAPI_OK(napi_create_function(env, nullptr, 0, cb, nullptr, &func));
+    NAPI_OK(napi_call_function(env, self, func, 0, nullptr, &ret));
 }
 
 bool InitAsyncBroker(Napi::Env env, InstanceData *instance)
@@ -1339,7 +1323,8 @@ bool InitAsyncBroker(Napi::Env env, InstanceData *instance)
             LogError("Failed to create async callback broker");
             return false;
         }
-        napi_unref_threadsafe_function(env, instance->broker);
+
+        NAPI_OK(napi_unref_threadsafe_function(env, instance->broker));
     }
 
     return true;
@@ -1376,8 +1361,7 @@ napi_value TranslateFastCall(napi_env env, napi_callback_info info)
     size_t count = 6;
     FunctionInfo *func;
 
-    napi_status status = napi_get_cb_info(env, info, &count, args, nullptr, (void **)&func);
-    K_ASSERT(status == napi_ok);
+    NAPI_OK(napi_get_cb_info(env, info, &count, args, nullptr, (void **)&func));
 
     if (count < (size_t)func->required_parameters) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected %1 arguments, got %2", func->parameters.len, count);
@@ -1429,13 +1413,10 @@ napi_value TranslateNormalCall(napi_env env, napi_callback_info info)
     size_t count = 8;
     FunctionInfo *func;
 
-    napi_status status = napi_get_cb_info(env, info, &count, args, nullptr, (void **)&func);
-    K_ASSERT(status == napi_ok);
+    NAPI_OK(napi_get_cb_info(env, info, &count, args, nullptr, (void **)&func));
 
     if (count > 8) {
-        napi_status status = napi_get_cb_info(env, info, &count, args, nullptr, nullptr);
-        K_ASSERT(status == napi_ok);
-
+        NAPI_OK(napi_get_cb_info(env, info, &count, args, nullptr, nullptr));
         count = std::min(count, (size_t)MaxParameters);
     }
 
@@ -1482,13 +1463,10 @@ napi_value TranslateNormalCallDebugAsync(napi_env env, napi_callback_info info)
     size_t count = 8;
     FunctionInfo *func;
 
-    napi_status status = napi_get_cb_info(env, info, &count, args, nullptr, (void **)&func);
-    K_ASSERT(status == napi_ok);
+    NAPI_OK(napi_get_cb_info(env, info, &count, args, nullptr, (void **)&func));
 
     if (count > 8) {
-        napi_status status = napi_get_cb_info(env, info, &count, args, nullptr, nullptr);
-        K_ASSERT(status == napi_ok);
-
+        NAPI_OK(napi_get_cb_info(env, info, &count, args, nullptr, nullptr));
         count = std::min(count, (size_t)MaxParameters);
     }
 
@@ -1607,13 +1585,10 @@ napi_value TranslateVariadicCall(napi_env env, napi_callback_info info)
     size_t count = 8;
     FunctionInfo *func;
 
-    napi_status status = napi_get_cb_info(env, info, &count, args, nullptr, (void **)&func);
-    K_ASSERT(status == napi_ok);
+    NAPI_OK(napi_get_cb_info(env, info, &count, args, nullptr, (void **)&func));
 
     if (count > 8) {
-        napi_status status = napi_get_cb_info(env, info, &count, args, nullptr, nullptr);
-        K_ASSERT(status == napi_ok);
-
+        NAPI_OK(napi_get_cb_info(env, info, &count, args, nullptr, nullptr));
         count = std::min(count, (size_t)MaxParameters);
     }
 
@@ -1703,13 +1678,10 @@ napi_value TranslateAsyncCall(napi_env env, napi_callback_info info)
     size_t count = 6;
     FunctionInfo *func;
 
-    napi_status status = napi_get_cb_info(env, info, &count, args, nullptr, (void **)&func);
-    K_ASSERT(status == napi_ok);
+    NAPI_OK(napi_get_cb_info(env, info, &count, args, nullptr, (void **)&func));
 
     if (count > 6) {
-        napi_status status = napi_get_cb_info(env, info, &count, args, nullptr, nullptr);
-        K_ASSERT(status == napi_ok);
-
+        NAPI_OK(napi_get_cb_info(env, info, &count, args, nullptr, nullptr));
         count = std::min(count, (size_t)MaxParameters);
     }
 
@@ -1800,7 +1772,7 @@ extern "C" void RelayCallback(Size idx, uint8_t *sp)
         K_DEFER { call.Finalize(); };
 
         napi_handle_scope scope;
-        napi_open_handle_scope(env, &scope);
+        NAPI_OK(napi_open_handle_scope(env, &scope));
         K_DEFER { napi_close_handle_scope(env, scope); };
 
         call.Relay(idx, sp);
@@ -1839,7 +1811,7 @@ extern "C" void RelayDirect(CallData *call, Size idx, uint8_t *sp)
     // Relay the call
     {
         napi_handle_scope scope;
-        napi_open_handle_scope(call->env, &scope);
+        NAPI_OK(napi_open_handle_scope(call->env, &scope));
         K_DEFER { napi_close_handle_scope(call->env, scope); };
 
         call->Relay(idx, sp);
