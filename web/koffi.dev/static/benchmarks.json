@@ -1,81 +1,81 @@
 {
     "linux_x64": {
-        "title": "Linux x64 (Intel® Core™ Ultra 9 185H)",
+        "title": "Linux x64 (AMD Ryzen™ 5 2600)",
         "results": {
             "atoi": {
                 "Node-API": {
-                    "time": 8026,
-                    "iterations": 234000000,
+                    "time": 8044,
+                    "iterations": 103000000,
                     "ratio": 1,
                     "overhead": 0
                 },
                 "Koffi v3": {
-                    "time": 8028,
-                    "iterations": 196000000,
-                    "ratio": 0.8373981662471945,
-                    "overhead": 0.1941750535250235
+                    "time": 8055,
+                    "iterations": 89000000,
+                    "ratio": 0.8628976755678497,
+                    "overhead": 0.1588859586878908
                 },
                 "Koffi v2": {
-                    "time": 8024,
-                    "iterations": 131000000,
-                    "ratio": 0.5599685984780701,
-                    "overhead": 0.7858144237335527
+                    "time": 8038,
+                    "iterations": 61000000,
+                    "ratio": 0.5926750846102373,
+                    "overhead": 0.6872651237863878
                 },
                 "node-ctypes": {
-                    "time": 8111,
-                    "iterations": 62000000,
-                    "ratio": 0.26218061996634306,
-                    "overhead": 2.814164449410384
+                    "time": 8007,
+                    "iterations": 28000000,
+                    "ratio": 0.27310084258797823,
+                    "overhead": 2.6616510975349863
                 },
                 "ffi-rs": {
-                    "time": 8213,
-                    "iterations": 5000000,
-                    "ratio": 0.020881008948706502,
-                    "overhead": 46.890406179915274
+                    "time": 11056,
+                    "iterations": 3000000,
+                    "ratio": 0.02119132255209138,
+                    "overhead": 46.18912647107575
                 },
                 "ffi-napi": {
-                    "time": 13607,
-                    "iterations": 2000000,
-                    "ratio": 0.005041397119004233,
-                    "overhead": 197.3577124345876
+                    "time": 11058,
+                    "iterations": 1000000,
+                    "ratio": 0.007062496597815227,
+                    "overhead": 140.59298856290403
                 }
             },
             "memset": {
                 "Node-API": {
-                    "time": 8057,
-                    "iterations": 117000000,
+                    "time": 8159,
+                    "iterations": 38000000,
                     "ratio": 1,
                     "overhead": 0
                 },
                 "Koffi v3": {
-                    "time": 8020,
-                    "iterations": 94000000,
-                    "ratio": 0.8071253490206108,
-                    "overhead": 0.238964928078927
+                    "time": 8040,
+                    "iterations": 35000000,
+                    "ratio": 0.934685126996596,
+                    "overhead": 0.06987901178365696
                 },
                 "node-ctypes": {
-                    "time": 8170,
-                    "iterations": 37000000,
-                    "ratio": 0.3118653820000209,
-                    "overhead": 2.2065117121589757
+                    "time": 8037,
+                    "iterations": 14000000,
+                    "ratio": 0.3740136081150992,
+                    "overhead": 1.6736995079929264
                 },
                 "Koffi v2": {
-                    "time": 8255,
-                    "iterations": 28000000,
-                    "ratio": 0.2335761284277335,
-                    "overhead": 3.281259419493254
+                    "time": 8129,
+                    "iterations": 10000000,
+                    "ratio": 0.2641290765356003,
+                    "overhead": 2.7860276994729745
                 },
                 "ffi-rs": {
-                    "time": 9726,
-                    "iterations": 4000000,
-                    "ratio": 0.028321302843202906,
-                    "overhead": 34.30911009060444
+                    "time": 10170,
+                    "iterations": 2000000,
+                    "ratio": 0.042224292294157216,
+                    "overhead": 22.683049393308007
                 },
                 "ffi-napi": {
-                    "time": 12348,
+                    "time": 20681,
                     "iterations": 1000000,
-                    "ratio": 0.005576874624493673,
-                    "overhead": 178.31190269331015
+                    "ratio": 0.010382018583037061,
+                    "overhead": 95.3203823998039
                 }
             }
         }
