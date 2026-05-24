@@ -7,6 +7,17 @@
 
 ### Koffi 3.0
 
+#### Koffi 3.0.2
+
+*Released on 2026-05-26*
+
+- Fix unexpected type error when passing array of pointers (see [Koromix/koffi#269](https://github.com/Koromix/koffi/issues/269))
+- Search more native addons directories under process.resourcesPath
+- Rearrange Koffi loading to use require() for static packages
+- Fix error when using 'String' array hint with String32 type
+- Add Buffer array hint to create Node Buffer objects
+- Reduce overhead of various Koffi functions
+
 #### Koffi 3.0.1
 
 *Released on 2026-05-20*
