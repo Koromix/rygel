@@ -3,6 +3,7 @@
 #pragma once
 
 #include "lib/native/base/base.hh"
+#include "ffi.hh"
 
 #include <napi.h>
 
@@ -88,7 +89,7 @@ class PollHandle: public Napi::ObjectWrap<PollHandle> {
     Napi::FunctionReference callback;
 
 public:
-    static Napi::Function InitClass(Napi::Env env);
+    static Napi::Function InitClass(InstanceData *instance);
 
     PollHandle(const Napi::CallbackInfo &info);
 

@@ -645,7 +645,7 @@ bool CallData::PushNormalArray(Napi::Array array, const TypeInfo *type, Size siz
 #define PUSH_ARRAY(SetCode) \
         do { \
             for (Size i = 0; i < len; i++) { \
-                Napi::Value value = array[(uint32_t)i]; \
+                napi_value value = array[(uint32_t)i].AsValue(); \
                  \
                 uint8_t *dest = origin + offset; \
                 SetCode \
@@ -763,17 +763,17 @@ bool CallData::PushNormalArray(Napi::Array array, const TypeInfo *type, Size siz
         } break;
         case PrimitiveKind::Array: {
             for (Size i = 0; i < len; i++) {
-                Napi::Value value = array[(uint32_t)i];
+                napi_value value = array[(uint32_t)i].AsValue();
 
                 uint8_t *dest = origin + offset;
 
-                if (value.IsArray()) {
-                    Napi::Array array2 = value.As<Napi::Array>();
-                    if (!PushNormalArray(array2, ref, (Size)ref->size, dest))
+                if (IsArray(env, value)) {
+                    Napi::Array array = Napi::Array(env, value);
+                    if (!PushNormalArray(array, ref, (Size)ref->size, dest))
                         return false;
                 } else if (Span<uint8_t> buffer = {}; TryBuffer(env, value, &buffer)) {
                     PushBuffer(buffer, ref, dest);
-                } else if (value.IsString()) {
+                } else if (GetKindOf(env, value) == napi_string) {
                     if (!PushStringArray(value, ref, dest))
                         return false;
                 } else {
@@ -808,7 +808,7 @@ bool CallData::PushNormalArray(Napi::Array array, const TypeInfo *type, Size siz
         } break;
         case PrimitiveKind::Callback: {
             for (Size i = 0; i < len; i++) {
-                Napi::Value value = array[(uint32_t)i];
+                napi_value value = array[(uint32_t)i].AsValue();
 
                 uint8_t *dest = origin + offset;
 
@@ -1134,7 +1134,7 @@ Size CallData::PushIndirectString(Napi::Array array, const TypeInfo *ref, void *
     if (array.Length() != 1)
         return -1;
 
-    Napi::Value value = array[0u];
+    napi_value value = array[0u].AsValue();
 
     if (ref == instance->void_type) {
         return PushStringValue(value, (const char **)out_ptr);
@@ -1495,7 +1495,7 @@ static napi_value TranslateVariadicCall(napi_env env, const FunctionInfo *func, 
 
                 for (Size i = prev->required_parameters, j = prev->required_parameters; i < (Size)count; i += 2, j++) {
                     int directions;
-                    const TypeInfo *type = ResolveType(Napi::Value(env, args[i]), &directions);
+                    const TypeInfo *type = ResolveType(instance, args[i], &directions);
 
                     if (type != prev->parameters[j].type || directions != prev->parameters[j].directions) [[unlikely]] {
                         match = false;
@@ -1536,7 +1536,7 @@ static napi_value TranslateVariadicCall(napi_env env, const FunctionInfo *func, 
         for (Size i = variadic->required_parameters; i < count; i += 2) {
             ParameterInfo param = {};
 
-            param.type = ResolveType(Napi::Value(env, args[i]), &param.directions);
+            param.type = ResolveType(instance, args[i], &param.directions);
 
             if (!param.type) [[unlikely]]
                 return Napi::Env(env).Null();

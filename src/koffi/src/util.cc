@@ -19,9 +19,11 @@ const napi_type_tag CastMarker = { 0x77f459614a0a412f, 0x80b3dda1341dc8df };
 
 #if !defined(EXTERNAL_TYPES)
 
-Napi::Function TypeObject::InitClass(Napi::Env env)
+Napi::Function TypeObject::InitClass(InstanceData *instance)
 {
-    Napi::Function constructor = DefineClass(env, "TypeObject", {});
+    Napi::Env env = instance->env;
+    Napi::Function constructor = DefineClass(env, "TypeObject", {}, instance);
+
     return constructor;
 }
 
@@ -47,9 +49,11 @@ void TypeObject::Finalize(Napi::BasicEnv env)
 
 #endif
 
-Napi::Function UnionValue::InitClass(Napi::Env env, const TypeInfo *type)
+Napi::Function UnionValue::InitClass(InstanceData *instance, const TypeInfo *type)
 {
     K_ASSERT(type->primitive == PrimitiveKind::Union);
+
+    Napi::Env env = instance->env;
 
     // node-addon-api wants std::vector
     std::vector<Napi::ClassPropertyDescriptor<UnionValue>> properties;
@@ -73,6 +77,7 @@ UnionValue::UnionValue(const Napi::CallbackInfo &info)
     : Napi::ObjectWrap<UnionValue>(info), type((const TypeInfo *)info.Data())
 {
     Napi::Env env = info.Env();
+
     instance = env.GetInstanceData<InstanceData>();
 
     if (info.Length() >= 1) {
@@ -179,100 +184,106 @@ int ResolveDirections(Span<const char> str)
     }
 }
 
-const TypeInfo *ResolveType(Napi::Value value, int *out_directions)
+const TypeInfo *ResolveType(InstanceData *instance, napi_value value, int *out_directions)
 {
-    Napi::Env env = value.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
+    Napi::Env env = instance->env;
 
-    if (value.IsString()) {
-        std::string str = value.As<Napi::String>();
-        Span<const char> remain = str.c_str();
+    // String?
+    {
+        char str[1024];
+        size_t len;
 
-        // Quick path for known types (int, float *, etc.)
-        const TypeInfo *type = instance->types_map.FindValue(remain.ptr, nullptr);
+        napi_status status = napi_get_value_string_utf8(env, value, str, K_SIZE(str), &len);
 
-        if (!type) {
-            if (out_directions) {
-                Span<const char> prefix = SplitIdentifier(remain);
-                int directions = ResolveDirections(prefix);
+        if (status == napi_ok) {
+            Span<const char> remain = MakeSpan(str, (Size)len);
 
-                if (directions) {
-                    remain = remain.Take(prefix.len, remain.len - prefix.len);
-                    remain = TrimStrLeft(remain);
-
-                    *out_directions = directions;
-                } else {
-                    *out_directions = 1;
-                }
-            }
-
-            type = ResolveType(env, remain.ptr);
+            // Quick path for known types (int, float *, etc.)
+            const TypeInfo *type = instance->types_map.FindValue(remain.ptr, nullptr);
 
             if (!type) {
-                if (!env.IsExceptionPending()) {
-                    ThrowError<Napi::TypeError>(env, "Unknown or invalid type name '%1'", str.c_str());
+                if (out_directions) {
+                    Span<const char> prefix = SplitIdentifier(remain);
+                    int directions = ResolveDirections(prefix);
+
+                    if (directions) {
+                        remain = remain.Take(prefix.len, remain.len - prefix.len);
+                        remain = TrimStrLeft(remain);
+
+                        *out_directions = directions;
+                    } else {
+                        *out_directions = 1;
+                    }
                 }
-                return nullptr;
+
+                type = ResolveType(instance, remain.ptr);
+
+                if (!type) {
+                    if (!env.IsExceptionPending()) {
+                        ThrowError<Napi::TypeError>(env, "Unknown or invalid type name '%1'", str);
+                    }
+                    return nullptr;
+                }
+
+                // Cache for quick future access
+                bool inserted;
+                auto bucket = instance->types_map.InsertOrGetDefault(remain.ptr, &inserted);
+
+                if (inserted) {
+                    bucket->key = DuplicateString(remain, &instance->str_alloc).ptr;
+                    bucket->value = type;
+                }
+            } else if (out_directions) {
+                *out_directions = 1;
             }
 
-            // Cache for quick future access
-            bool inserted;
-            auto bucket = instance->types_map.InsertOrGetDefault(remain.ptr, &inserted);
+            return type;
+        }
+    }
 
-            if (inserted) {
-                bucket->key = DuplicateString(remain, &instance->str_alloc).ptr;
-                bucket->value = type;
-            }
-        } else if (out_directions) {
-            *out_directions = 1;
+    napi_valuetype kind = GetKindOf(env, value);
+
+    if (kind == napi_external && CheckValueTag(env, value, &DirectionMarker)) {
+        Napi::External<TypeInfo> external = Napi::External<TypeInfo>(env, value);
+        const TypeInfo *raw = external.Data();
+
+        const TypeInfo *type = AlignDown(raw, 4);
+        K_ASSERT(type);
+
+        if (out_directions) {
+            Size delta = (uint8_t *)raw - (uint8_t *)type;
+            *out_directions = 1 + (int)delta;
         }
 
         return type;
-    } else {
-        napi_valuetype kind = GetKindOf(env, value);
-
-        if (kind == napi_external && CheckValueTag(env, value, &DirectionMarker)) {
-            Napi::External<TypeInfo> external = Napi::External<TypeInfo>(env, value);
-            const TypeInfo *raw = external.Data();
-
-            const TypeInfo *type = AlignDown(raw, 4);
-            K_ASSERT(type);
-
-            if (out_directions) {
-                Size delta = (uint8_t *)raw - (uint8_t *)type;
-                *out_directions = 1 + (int)delta;
-            }
-
-            return type;
 #if defined(EXTERNAL_TYPES)
-        } else if (kind == napi_external && CheckValueTag(env, value, &TypeObjectMarker)) {
-            Napi::External<TypeInfo> external = Napi::External<TypeInfo>(env, value);
-            const TypeInfo *type = external.Data();
+    } else if (kind == napi_external && CheckValueTag(env, value, &TypeObjectMarker)) {
+        Napi::External<TypeInfo> external = Napi::External<TypeInfo>(env, value);
+        const TypeInfo *type = external.Data();
 
-            if (out_directions) {
-                *out_directions = 1;
-            }
-            return type;
-#else
-        } else if (kind == napi_object && CheckValueTag(env, value, &TypeObjectMarker)) {
-            TypeObject *defn = nullptr;
-            NAPI_OK(napi_unwrap(env, value, (void **)&defn));
-
-            if (out_directions) {
-                *out_directions = 1;
-            }
-            return defn->GetType();
-#endif
-        } else {
-            ThrowError<Napi::TypeError>(env, "Unexpected %1 value as type specifier, expected string or type", GetValueType(instance, value));
-            return nullptr;
+        if (out_directions) {
+            *out_directions = 1;
         }
+        return type;
+#else
+    } else if (kind == napi_object && CheckValueTag(env, value, &TypeObjectMarker)) {
+        TypeObject *defn = nullptr;
+        NAPI_OK(napi_unwrap(env, value, (void **)&defn));
+
+        if (out_directions) {
+            *out_directions = 1;
+        }
+        return defn->GetType();
+#endif
+    } else {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value as type specifier, expected string or type", GetValueType(instance, value));
+        return nullptr;
     }
 }
 
-const TypeInfo *ResolveType(Napi::Env env, Span<const char> str)
+const TypeInfo *ResolveType(InstanceData *instance, Span<const char> str)
 {
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
+    Napi::Env env = instance->env;
 
     // Each item can be > 0 for array or 0 for a pointer
     LocalArray<Size, 8> arrays;

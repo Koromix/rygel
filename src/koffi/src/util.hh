@@ -52,7 +52,7 @@ class TypeObject: public Napi::ObjectWrap<TypeObject> {
     mutable Napi::Object members;
 
 public:
-    static Napi::Function InitClass(Napi::Env env);
+    static Napi::Function InitClass(InstanceData *instance);
 
     TypeObject(const Napi::CallbackInfo &info);
 
@@ -72,7 +72,7 @@ class UnionValue: public Napi::ObjectWrap<UnionValue> {
     HeapArray<uint8_t> raw;
 
 public:
-    static Napi::Function InitClass(Napi::Env env, const TypeInfo *type);
+    static Napi::Function InitClass(InstanceData *instance, const TypeInfo *type);
 
     UnionValue(const Napi::CallbackInfo &info);
 
@@ -120,8 +120,8 @@ static FORCE_INLINE bool IsRegularSize(Size size, Size max)
 }
 
 int ResolveDirections(Span<const char> str);
-const TypeInfo *ResolveType(Napi::Value value, int *out_directions = nullptr);
-const TypeInfo *ResolveType(Napi::Env env, Span<const char> str);
+const TypeInfo *ResolveType(InstanceData *instance, napi_value value, int *out_directions = nullptr);
+const TypeInfo *ResolveType(InstanceData *instance, Span<const char> str);
 
 TypeInfo *MakePointerType(InstanceData *instance, const TypeInfo *ref, int count = 1);
 TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len);

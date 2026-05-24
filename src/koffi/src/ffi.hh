@@ -123,7 +123,7 @@ class LibraryHandle: public Napi::ObjectWrap<LibraryHandle> {
     LibraryHolder *lib = nullptr;
 
 public:
-    static Napi::Function InitClass(Napi::Env env);
+    static Napi::Function InitClass(InstanceData *instance);
 
     LibraryHandle(const Napi::CallbackInfo &info);
 

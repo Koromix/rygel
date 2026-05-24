@@ -45,13 +45,11 @@ napi_status (NAPI_CDECL *node_api_create_object_with_properties)(napi_env env, n
                                                                  const napi_value *property_values, size_t property_count, napi_value *result);
 napi_value (*translate_zero_call)(napi_env env, napi_callback_info info);
 
-static bool ChangeSize(const char *name, Napi::Value value, Size min_size, Size max_size, Size *out_size)
+static bool ChangeSize(InstanceData *instance, const char *name, Napi::Value value, Size min_size, Size max_size, Size *out_size)
 {
-    Napi::Env env = value.Env();
+    Napi::Env env = instance->env;
 
     if (!value.IsNumber()) {
-        InstanceData *instance = env.GetInstanceData<InstanceData>();
-
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for '%2', expected number", GetValueType(instance, value), name);
         return false;
     }
@@ -67,21 +65,19 @@ static bool ChangeSize(const char *name, Napi::Value value, Size min_size, Size 
     return true;
 }
 
-static bool ChangeMemorySize(const char *name, Napi::Value value, Size *out_size)
+static bool ChangeMemorySize(InstanceData *instance, const char *name, Napi::Value value, Size *out_size)
 {
     const Size MinSize = Kibibytes(1);
     const Size MaxSize = Mebibytes(16);
 
-    return ChangeSize(name, value, MinSize, MaxSize, out_size);
+    return ChangeSize(instance, name, value, MinSize, MaxSize, out_size);
 }
 
-static bool ChangeAsyncLimit(const char *name, Napi::Value value, int max, int *out_limit)
+static bool ChangeAsyncLimit(InstanceData *instance, const char *name, Napi::Value value, int max, int *out_limit)
 {
     Napi::Env env = value.Env();
 
     if (!value.IsNumber()) {
-        InstanceData *instance = env.GetInstanceData<InstanceData>();
-
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for '%2', expected number", GetValueType(instance, value), name);
         return false;
     }
@@ -100,7 +96,7 @@ static bool ChangeAsyncLimit(const char *name, Napi::Value value, int max, int *
 static Napi::Value GetSetConfig(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
+    InstanceData *instance = (InstanceData *)info.Data();
 
     if (info.Length()) {
         if (instance->memories.len) {
@@ -124,25 +120,25 @@ static Napi::Value GetSetConfig(const Napi::CallbackInfo &info)
             Napi::Value value = obj[key];
 
             if (key == "sync_stack_size") {
-                if (!ChangeMemorySize(key.c_str(), value, &new_config.sync_stack_size))
+                if (!ChangeMemorySize(instance, key.c_str(), value, &new_config.sync_stack_size))
                     return env.Null();
             } else if (key == "sync_heap_size") {
-                if (!ChangeMemorySize(key.c_str(), value, &new_config.sync_heap_size))
+                if (!ChangeMemorySize(instance, key.c_str(), value, &new_config.sync_heap_size))
                     return env.Null();
             } else if (key == "async_stack_size") {
-                if (!ChangeMemorySize(key.c_str(), value, &new_config.async_stack_size))
+                if (!ChangeMemorySize(instance, key.c_str(), value, &new_config.async_stack_size))
                     return env.Null();
             } else if (key == "async_heap_size") {
-                if (!ChangeMemorySize(key.c_str(), value, &new_config.async_heap_size))
+                if (!ChangeMemorySize(instance, key.c_str(), value, &new_config.async_heap_size))
                     return env.Null();
             } else if (key == "resident_async_pools") {
-                if (!ChangeAsyncLimit(key.c_str(), value, K_LEN(instance->memories.data) - 1, &new_config.resident_async_pools))
+                if (!ChangeAsyncLimit(instance, key.c_str(), value, K_LEN(instance->memories.data) - 1, &new_config.resident_async_pools))
                     return env.Null();
             } else if (key == "max_async_calls") {
-                if (!ChangeAsyncLimit(key.c_str(), value, MaxAsyncCalls, &max_async_calls))
+                if (!ChangeAsyncLimit(instance, key.c_str(), value, MaxAsyncCalls, &max_async_calls))
                     return env.Null();
             } else if (key == "max_type_size") {
-                if (!ChangeSize(key.c_str(), value, 32, Mebibytes(512), &new_config.max_type_size))
+                if (!ChangeSize(instance, key.c_str(), value, 32, Mebibytes(512), &new_config.max_type_size))
                     return env.Null();
             } else {
                 ThrowError<Napi::Error>(env, "Unexpected config member '%1'", key.c_str());
@@ -175,7 +171,7 @@ static Napi::Value GetSetConfig(const Napi::CallbackInfo &info)
 static Napi::Value GetStats(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
+    InstanceData *instance = (InstanceData *)info.Data();
 
     Napi::Object obj = Napi::Object::New(env);
 
@@ -247,7 +243,7 @@ static bool FinalizeCompositeType(Napi::Env env, TypeInfo *type, PrimitiveKind p
 static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
 {
     Napi::Env env = info.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
+    InstanceData *instance = (InstanceData *)info.Data();
 
     if (info.Length() < 1) {
         ThrowError<Napi::TypeError>(env, "Expected 1 or 2 arguments, got %1", info.Length());
@@ -353,7 +349,7 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
             align = (int16_t)align64;
         }
 
-        member.type = ResolveType(value);
+        member.type = ResolveType(instance, value);
         if (!member.type)
             return env.Null();
         if (!CanStoreType(member.type)) {
@@ -445,7 +441,7 @@ static Napi::Value CreatePackedStructType(const Napi::CallbackInfo &info)
 static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
+    InstanceData *instance = (InstanceData *)info.Data();
 
     if (info.Length() < 1) {
         ThrowError<Napi::TypeError>(env, "Expected 1 or 2 arguments, got %1", info.Length());
@@ -551,7 +547,7 @@ static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
             align = (int16_t)align64;
         }
 
-        member.type = ResolveType(value);
+        member.type = ResolveType(instance, value);
         if (!member.type)
             return env.Null();
         if (!CanStoreType(member.type)) {
@@ -592,7 +588,7 @@ static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
         return env.Null();
     err_guard.Disable();
 
-    type->construct = Napi::Persistent(UnionValue::InitClass(env, type));
+    type->construct = Napi::Persistent(UnionValue::InitClass(instance, type));
 
     if (replace) {
         std::swap(*type, *replace);
@@ -605,6 +601,7 @@ static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
 Napi::Value InstantiateUnion(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
+    InstanceData *instance = (InstanceData *)info.Data();
 
     if (!info.IsConstructCall()) {
         ThrowError<Napi::TypeError>(env, "This function is a constructor and must be called with new");
@@ -615,7 +612,7 @@ Napi::Value InstantiateUnion(const Napi::CallbackInfo &info)
         return env.Null();
     }
 
-    const TypeInfo *type = ResolveType(info[0]);
+    const TypeInfo *type = ResolveType(instance, info[0]);
     if (!type)
         return env.Null();
     if (type->primitive != PrimitiveKind::Union) {
@@ -632,7 +629,7 @@ Napi::Value InstantiateUnion(const Napi::CallbackInfo &info)
 static Napi::Value CreateOpaqueType(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
+    InstanceData *instance = (InstanceData *)info.Data();
 
     bool named = (info.Length() >= 1) && !IsNullOrUndefined(env, info[0]);
 
@@ -664,7 +661,7 @@ static Napi::Value CreateOpaqueType(const Napi::CallbackInfo &info)
 static Napi::Value CreatePointerType(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
+    InstanceData *instance = (InstanceData *)info.Data();
 
     if (info.Length() < 1) {
         ThrowError<Napi::TypeError>(env, "Expected 1 to 3 arguments, got %1", info.Length());
@@ -681,7 +678,7 @@ static Napi::Value CreatePointerType(const Napi::CallbackInfo &info)
 
     std::string name = named ? info[0].As<Napi::String>() : std::string();
 
-    const TypeInfo *ref = ResolveType(info[skip]);
+    const TypeInfo *ref = ResolveType(instance, info[skip]);
     if (!ref)
         return env.Null();
 
@@ -738,13 +735,14 @@ static Napi::Value EncodePointerDirection(const Napi::CallbackInfo &info, int di
     K_ASSERT(directions >= 1 && directions <= 3);
 
     Napi::Env env = info.Env();
+    InstanceData *instance = (InstanceData *)info.Data();
 
     if (info.Length() < 1) {
         ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", info.Length());
         return env.Null();
     }
 
-    const TypeInfo *type = ResolveType(info[0]);
+    const TypeInfo *type = ResolveType(instance, info[0]);
     if (!type)
         return env.Null();
 
@@ -783,7 +781,7 @@ static Napi::Value MarkInOut(const Napi::CallbackInfo &info)
 static Napi::Value CreateDisposableType(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
+    InstanceData *instance = (InstanceData *)info.Data();
 
     if (info.Length() < 1) {
         ThrowError<Napi::TypeError>(env, "Expected 1 or 2 arguments, got %1", info.Length());
@@ -800,7 +798,7 @@ static Napi::Value CreateDisposableType(const Napi::CallbackInfo &info)
 
     Napi::String name = info[0].As<Napi::String>();
 
-    const TypeInfo *src = ResolveType(info[skip]);
+    const TypeInfo *src = ResolveType(instance, info[skip]);
     if (!src)
         return env.Null();
     if (src->primitive != PrimitiveKind::Pointer &&
@@ -881,7 +879,7 @@ static Napi::Value CreateDisposableType(const Napi::CallbackInfo &info)
 static Napi::Value CallAlloc(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
+    InstanceData *instance = (InstanceData *)info.Data();
 
     if (info.Length() < 2) {
         ThrowError<Napi::TypeError>(env, "Expected 2 arguments, got %1", info.Length());
@@ -892,7 +890,7 @@ static Napi::Value CallAlloc(const Napi::CallbackInfo &info)
         return env.Null();
     }
 
-    const TypeInfo *type = ResolveType(info[0]);
+    const TypeInfo *type = ResolveType(instance, info[0]);
     if (!type)
         return env.Null();
 
@@ -927,6 +925,7 @@ static Napi::Value CallAlloc(const Napi::CallbackInfo &info)
 static Napi::Value CallFree(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
+    InstanceData *instance = (InstanceData *)info.Data();
 
     if (info.Length() < 1) {
         ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", info.Length());
@@ -935,8 +934,6 @@ static Napi::Value CallFree(const Napi::CallbackInfo &info)
 
     void *ptr = nullptr;
     if (!TryPointer(env, info[0], &ptr)) {
-        InstanceData *instance = Napi::Env(env).GetInstanceData<InstanceData>();
-
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected pointer", GetValueType(instance, info[0]));
         return env.Null();
     }
@@ -949,7 +946,7 @@ static Napi::Value CallFree(const Napi::CallbackInfo &info)
 static Napi::Value GetOrSetErrNo(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
+    InstanceData *instance = (InstanceData *)info.Data();
 
     if (info.Length() >= 1) {
         Napi::Number value = info[0].As<Napi::Number>();
@@ -969,14 +966,14 @@ static Napi::Value GetOrSetErrNo(const Napi::CallbackInfo &info)
 static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
+    InstanceData *instance = (InstanceData *)info.Data();
 
     if (info.Length() < 2) {
         ThrowError<Napi::TypeError>(env, "Expected 2 to 4 arguments, got %1", info.Length());
         return env.Null();
     }
 
-    const TypeInfo *ref = ResolveType(info[0]);
+    const TypeInfo *ref = ResolveType(instance, info[0]);
     if (!ref)
         return env.Null();
 
@@ -1065,7 +1062,7 @@ static bool ParseClassicFunction(const Napi::CallbackInfo &info, bool concrete, 
     K_ASSERT(info.Length() >= 2);
 
     Napi::Env env = info.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
+    InstanceData *instance = (InstanceData *)info.Data();
 
     Napi::String name = info[0u].As<Napi::String>();
     Napi::Value ret = info[1u];
@@ -1108,7 +1105,7 @@ static bool ParseClassicFunction(const Napi::CallbackInfo &info, bool concrete, 
     // Leave anonymous naming responsibility to caller
     out_func->name = named ? DuplicateString(name.Utf8Value().c_str(), &instance->str_alloc).ptr : nullptr;
 
-    out_func->ret.type = ResolveType(ret);
+    out_func->ret.type = ResolveType(instance, ret);
     if (!out_func->ret.type)
         return false;
     if (!CanReturnType(out_func->ret.type)) {
@@ -1135,7 +1132,7 @@ static bool ParseClassicFunction(const Napi::CallbackInfo &info, bool concrete, 
     for (uint32_t j = 0; j < parameters_len; j++) {
         ParameterInfo param = {};
 
-        param.type = ResolveType(parameters[j], &param.directions);
+        param.type = ResolveType(instance, parameters[j].AsValue(), &param.directions);
 
         if (!param.type)
             return false;
@@ -1161,7 +1158,7 @@ static bool ParseClassicFunction(const Napi::CallbackInfo &info, bool concrete, 
 static Napi::Value CreateFunctionType(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
+    InstanceData *instance = (InstanceData *)info.Data();
 
     FunctionInfo *func = instance->callbacks.AppendDefault();
     K_DEFER_N(err_guard) { instance->callbacks.RemoveLast(1); };
@@ -1219,7 +1216,7 @@ static Napi::Value CreateFunctionType(const Napi::CallbackInfo &info)
 static Napi::Value CreateEnumType(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
+    InstanceData *instance = (InstanceData *)info.Data();
 
     if (info.Length() < 1) {
         ThrowError<Napi::TypeError>(env, "Expected 1 or 2 arguments, got %1", info.Length());
@@ -1252,7 +1249,7 @@ static Napi::Value CreateEnumType(const Napi::CallbackInfo &info)
 
     // Determine needed storage type
     if (typed) {
-        const TypeInfo *storage = ResolveType(info[1 + named]);
+        const TypeInfo *storage = ResolveType(instance, info[1 + named]);
         if (!storage)
             return env.Null();
 
@@ -1381,7 +1378,7 @@ static Napi::Value CreateEnumType(const Napi::CallbackInfo &info)
 static Napi::Value CreateTypeAlias(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
+    InstanceData *instance = (InstanceData *)info.Data();
 
     if (info.Length() < 2) {
         ThrowError<Napi::TypeError>(env, "Expected 2 arguments, got %1", info.Length());
@@ -1395,7 +1392,7 @@ static Napi::Value CreateTypeAlias(const Napi::CallbackInfo &info)
     std::string name = info[0].As<Napi::String>();
     const char *alias = DuplicateString(name.c_str(), &instance->str_alloc).ptr;
 
-    const TypeInfo *type = ResolveType(info[1]);
+    const TypeInfo *type = ResolveType(instance, info[1]);
     if (!type)
         return env.Null();
 
@@ -1409,13 +1406,14 @@ static Napi::Value CreateTypeAlias(const Napi::CallbackInfo &info)
 static Napi::Value GetResolvedType(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
+    InstanceData *instance = (InstanceData *)info.Data();
 
     if (info.Length() < 1) {
         ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", info.Length());
         return env.Null();
     }
 
-    const TypeInfo *type = ResolveType(info[0]);
+    const TypeInfo *type = ResolveType(instance, info[0]);
     if (!type)
         return env.Null();
 
@@ -1433,7 +1431,7 @@ static Napi::Value GetTypeDefinition(const Napi::CallbackInfo &info)
         return env.Null();
     }
 
-    const TypeInfo *type = ResolveType(info[0]);
+    const TypeInfo *type = ResolveType(instance, info[0]);
     if (!type)
         return env.Null();
 
@@ -1539,13 +1537,15 @@ void ReleaseMemory(InstanceData *instance, InstanceMemory *mem)
     }
 }
 
-Napi::Function LibraryHandle::InitClass(Napi::Env env)
+Napi::Function LibraryHandle::InitClass(InstanceData *instance)
 {
+    Napi::Env env = instance->env;
+
     // node-addon-api wants std::vector
     std::vector<Napi::ClassPropertyDescriptor<LibraryHandle>> properties = {
-        InstanceMethod("func", &LibraryHandle::Func),
-        InstanceMethod("symbol", &LibraryHandle::Symbol),
-        InstanceMethod("unload", &LibraryHandle::Unload)
+        InstanceMethod("func", &LibraryHandle::Func, napi_default, instance),
+        InstanceMethod("symbol", &LibraryHandle::Symbol, napi_default, instance),
+        InstanceMethod("unload", &LibraryHandle::Unload, napi_default, instance)
     };
 
     if (Napi::Value dispose = env.RunScript("Symbol.dispose"); !IsNullOrUndefined(env, dispose)) {
@@ -1582,7 +1582,7 @@ void LibraryHandle::Finalize(Napi::BasicEnv env)
 Napi::Value LibraryHandle::Func(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
+    InstanceData *instance = (InstanceData *)info.Data();
 
     FunctionInfo *func = new FunctionInfo();
     K_DEFER { func->Unref(); };
@@ -1650,7 +1650,7 @@ Napi::Value LibraryHandle::Func(const Napi::CallbackInfo &info)
 Napi::Value LibraryHandle::Symbol(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
+    InstanceData *instance = (InstanceData *)info.Data();
 
     if (info.Length() < 2) {
         ThrowError<Napi::TypeError>(env, "Expected 2, got %1", info.Length());
@@ -1663,7 +1663,7 @@ Napi::Value LibraryHandle::Symbol(const Napi::CallbackInfo &info)
 
     std::string name = info[0].As<Napi::String>();
 
-    const TypeInfo *type = ResolveType(info[1]);
+    const TypeInfo *type = ResolveType(instance, info[1]);
     if (!type)
         return env.Null();
 
@@ -1692,7 +1692,7 @@ Napi::Value LibraryHandle::Unload(const Napi::CallbackInfo &info)
 static Napi::Value LoadSharedLibrary(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
+    InstanceData *instance = (InstanceData *)info.Data();
 
     if (info.Length() < 1) {
         ThrowError<Napi::TypeError>(env, "Expected 1 or 2 arguments, got %1", info.Length());
@@ -1777,7 +1777,7 @@ static Napi::Value LoadSharedLibrary(const Napi::CallbackInfo &info)
 static Napi::Value RegisterCallback(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
+    InstanceData *instance = (InstanceData *)info.Data();
 
     if (!InitAsyncBroker(env, instance)) [[unlikely]]
         return env.Null();
@@ -1793,7 +1793,7 @@ static Napi::Value RegisterCallback(const Napi::CallbackInfo &info)
 
     Napi::Function func = info[0].As<Napi::Function>();
 
-    const TypeInfo *type = ResolveType(info[1]);
+    const TypeInfo *type = ResolveType(instance, info[1]);
     if (!type)
         return env.Null();
     if (type->primitive != PrimitiveKind::Callback) {
@@ -1833,7 +1833,7 @@ static Napi::Value RegisterCallback(const Napi::CallbackInfo &info)
 static Napi::Value UnregisterCallback(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
+    InstanceData *instance = (InstanceData *)info.Data();
 
     if (info.Length() < 1) {
         ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", info.Length());
@@ -1879,6 +1879,7 @@ static Napi::Value UnregisterCallback(const Napi::CallbackInfo &info)
 static Napi::Value CastValue(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
+    InstanceData *instance = (InstanceData *)info.Data();
 
     if (info.Length() < 2) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected 2 arguments, got %1", info.Length());
@@ -1887,7 +1888,7 @@ static Napi::Value CastValue(const Napi::CallbackInfo &info)
 
     Napi::Value value = info[0];
 
-    const TypeInfo *type = ResolveType(info[1]);
+    const TypeInfo *type = ResolveType(instance, info[1]);
     if (!type) [[unlikely]]
         return env.Null();
     if (type->primitive != PrimitiveKind::Pointer &&
@@ -1914,6 +1915,7 @@ static Napi::Value CastValue(const Napi::CallbackInfo &info)
 static Napi::Value DecodeValue(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
+    InstanceData *instance = (InstanceData *)info.Data();
 
     bool has_offset = (info.Length() >= 2 && info[1].IsNumber());
     bool has_len = (info.Length() >= 3u + has_offset && info[2 + has_offset].IsNumber());
@@ -1923,7 +1925,7 @@ static Napi::Value DecodeValue(const Napi::CallbackInfo &info)
         return env.Null();
     }
 
-    const TypeInfo *type = ResolveType(info[1u + has_offset]);
+    const TypeInfo *type = ResolveType(instance, info[1u + has_offset]);
     if (!type) [[unlikely]]
         return env.Null();
 
@@ -2128,6 +2130,7 @@ static napi_value DecodeString32(napi_env env, napi_callback_info info)
 static Napi::Value GetPointerAddress(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
+    InstanceData *instance = (InstanceData *)info.Data();
 
     if (info.Length() < 1) {
         ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", info.Length());
@@ -2136,8 +2139,6 @@ static Napi::Value GetPointerAddress(const Napi::CallbackInfo &info)
 
     void *ptr = nullptr;
     if (!TryPointer(env, info[0], &ptr)) {
-        InstanceData *instance = Napi::Env(env).GetInstanceData<InstanceData>();
-
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected pointer", GetValueType(instance, info[0]));
         return env.Null();
     }
@@ -2151,6 +2152,7 @@ static Napi::Value GetPointerAddress(const Napi::CallbackInfo &info)
 static Napi::Value CallPointerSync(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
+    InstanceData *instance = (InstanceData *)info.Data();
 
     if (info.Length() < 2) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected 2 or more arguments, got %1", info.Length());
@@ -2159,18 +2161,14 @@ static Napi::Value CallPointerSync(const Napi::CallbackInfo &info)
 
     void *ptr = nullptr;
     if (!TryPointer(env, info[0], &ptr)) {
-        InstanceData *instance = Napi::Env(env).GetInstanceData<InstanceData>();
-
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected pointer", GetValueType(instance, info[0]));
         return env.Null();
     }
 
-    const TypeInfo *type = ResolveType(info[1]);
+    const TypeInfo *type = ResolveType(instance, info[1]);
     if (!type) [[unlikely]]
         return env.Null();
     if (type->primitive != PrimitiveKind::Prototype) [[unlikely]] {
-        InstanceData *instance = env.GetInstanceData<InstanceData>();
-
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for type, expected function type", GetValueType(instance, info[1]));
         return env.Null();
     }
@@ -2182,6 +2180,7 @@ static Napi::Value CallPointerSync(const Napi::CallbackInfo &info)
 static Napi::Value EncodeValue(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
+    InstanceData *instance = (InstanceData *)info.Data();
 
     bool has_offset = (info.Length() >= 2 && info[1].IsNumber());
     bool has_len = (info.Length() >= 4u + has_offset && info[3 + has_offset].IsNumber());
@@ -2191,7 +2190,7 @@ static Napi::Value EncodeValue(const Napi::CallbackInfo &info)
         return env.Null();
     }
 
-    const TypeInfo *type = ResolveType(info[1u + has_offset]);
+    const TypeInfo *type = ResolveType(instance, info[1u + has_offset]);
     if (!type) [[unlikely]]
         return env.Null();
 
@@ -2215,22 +2214,19 @@ static Napi::Value EncodeValue(const Napi::CallbackInfo &info)
 static Napi::Value CreateView(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
+    InstanceData *instance = (InstanceData *)info.Data();
 
     if (info.Length() < 1) {
         ThrowError<Napi::TypeError>(env, "Expected 2 arguments, got %1", info.Length());
         return env.Null();
     }
     if (!info[1].IsNumber()) {
-        InstanceData *instance = env.GetInstanceData<InstanceData>();
-
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for length, expected integer", GetValueType(instance, info[1]));
         return env.Null();
     }
 
     void *ptr = nullptr;
     if (!TryPointer(env, info[0], &ptr)) {
-        InstanceData *instance = Napi::Env(env).GetInstanceData<InstanceData>();
-
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected pointer", GetValueType(instance, info[0]));
         return env.Null();
     }
@@ -2259,7 +2255,7 @@ static Napi::Value CreateView(const Napi::CallbackInfo &info)
 static Napi::Value ResetKoffi(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
+    InstanceData *instance = (InstanceData *)info.Data();
 
     if (instance->broker) {
         napi_release_threadsafe_function(instance->broker, napi_tsfn_abort);
@@ -2341,13 +2337,13 @@ InstanceMemory::~InstanceMemory()
 #endif
 }
 
-static void RegisterPrimitiveType(Napi::Env env, Napi::Object map, std::initializer_list<const char *> names,
+static void RegisterPrimitiveType(InstanceData *instance, Napi::Object map, std::initializer_list<const char *> names,
                                   PrimitiveKind primitive, int32_t size, int16_t align, const char *ref = nullptr)
 {
     K_ASSERT(names.size() > 0);
     K_ASSERT(align <= size);
 
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
+    Napi::Env env = instance->env;
 
     TypeInfo *type = instance->types.AppendDefault();
 
@@ -2454,10 +2450,12 @@ static bool CanDeleteReferenceInFinalizer(const napi_node_version &node, uint32_
     return false;
 }
 
-static napi_value CreateFunction(napi_env env, napi_callback native, const char *name = nullptr)
+static napi_value CreateFunction(InstanceData *instance, napi_callback native, const char *name = nullptr)
 {
+    Napi::Env env = instance->env;
+
     napi_value func;
-    NAPI_OK(napi_create_function(env, name, NAPI_AUTO_LENGTH, native, nullptr, &func));
+    NAPI_OK(napi_create_function(env, name, NAPI_AUTO_LENGTH, native, instance, &func));
 
     return func;
 }
@@ -2529,77 +2527,77 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
     Napi::Number::New(env, 0.0);
 #endif
 
-    exports.Set("config", Napi::Function::New(env, GetSetConfig, "config"));
-    exports.Set("stats", Napi::Function::New(env, GetStats, "stats"));
+    exports.Set("config", Napi::Function::New(env, GetSetConfig, "config", instance));
+    exports.Set("stats", Napi::Function::New(env, GetStats, "stats", instance));
 
-    exports.Set("struct", Napi::Function::New(env, CreatePaddedStructType, "struct"));
-    exports.Set("pack", Napi::Function::New(env, CreatePackedStructType, "pack"));
-    exports.Set("union", Napi::Function::New(env, CreateUnionType, "union"));
-    exports.Set("Union", Napi::Function::New(env, InstantiateUnion, "Union"));
-    exports.Set("opaque", Napi::Function::New(env, CreateOpaqueType, "opaque"));
-    exports.Set("pointer", Napi::Function::New(env, CreatePointerType, "pointer"));
-    exports.Set("array", Napi::Function::New(env, CreateArrayType, "array"));
-    exports.Set("proto", Napi::Function::New(env, CreateFunctionType, "proto"));
-    exports.Set("alias", Napi::Function::New(env, CreateTypeAlias, "alias"));
-    exports.Set("enumeration", Napi::Function::New(env, CreateEnumType, "enumeration"));
+    exports.Set("struct", Napi::Function::New(env, CreatePaddedStructType, "struct", instance));
+    exports.Set("pack", Napi::Function::New(env, CreatePackedStructType, "pack", instance));
+    exports.Set("union", Napi::Function::New(env, CreateUnionType, "union", instance));
+    exports.Set("Union", Napi::Function::New(env, InstantiateUnion, "Union", instance));
+    exports.Set("opaque", Napi::Function::New(env, CreateOpaqueType, "opaque", instance));
+    exports.Set("pointer", Napi::Function::New(env, CreatePointerType, "pointer", instance));
+    exports.Set("array", Napi::Function::New(env, CreateArrayType, "array", instance));
+    exports.Set("proto", Napi::Function::New(env, CreateFunctionType, "proto", instance));
+    exports.Set("alias", Napi::Function::New(env, CreateTypeAlias, "alias", instance));
+    exports.Set("enumeration", Napi::Function::New(env, CreateEnumType, "enumeration", instance));
 
-    exports.Set("type", Napi::Function::New(env, GetResolvedType, "type"));
+    exports.Set("type", Napi::Function::New(env, GetResolvedType, "type", instance));
 #if defined(EXTERNAL_TYPES)
-    exports.Set("introspect", Napi::Function::New(env, GetTypeDefinition, "introspect"));
+    exports.Set("introspect", Napi::Function::New(env, GetTypeDefinition, "introspect", instance));
 #endif
 
-    exports.Set("load", Napi::Function::New(env, LoadSharedLibrary, "load"));
+    exports.Set("load", Napi::Function::New(env, LoadSharedLibrary, "load", instance));
 
-    exports.Set("in", Napi::Function::New(env, MarkIn, "in"));
-    exports.Set("out", Napi::Function::New(env, MarkOut, "out"));
-    exports.Set("inout", Napi::Function::New(env, MarkInOut, "inout"));
+    exports.Set("in", Napi::Function::New(env, MarkIn, "in", instance));
+    exports.Set("out", Napi::Function::New(env, MarkOut, "out", instance));
+    exports.Set("inout", Napi::Function::New(env, MarkInOut, "inout", instance));
 
-    exports.Set("disposable", Napi::Function::New(env, CreateDisposableType, "disposable"));
-    exports.Set("alloc", Napi::Function::New(env, CallAlloc, "alloc"));
-    exports.Set("free", Napi::Function::New(env, CallFree, "free"));
+    exports.Set("disposable", Napi::Function::New(env, CreateDisposableType, "disposable", instance));
+    exports.Set("alloc", Napi::Function::New(env, CallAlloc, "alloc", instance));
+    exports.Set("free", Napi::Function::New(env, CallFree, "free", instance));
 
-    exports.Set("register", Napi::Function::New(env, RegisterCallback, "register"));
-    exports.Set("unregister", Napi::Function::New(env, UnregisterCallback, "unregister"));
+    exports.Set("register", Napi::Function::New(env, RegisterCallback, "register", instance));
+    exports.Set("unregister", Napi::Function::New(env, UnregisterCallback, "unregister", instance));
 
-    exports.Set("as", Napi::Function::New(env, CastValue, "as"));
-    exports.Set("address", Napi::Function::New(env, GetPointerAddress, "address"));
-    exports.Set("call", Napi::Function::New(env, CallPointerSync, "call"));
-    exports.Set("encode", Napi::Function::New(env, EncodeValue, "encode"));
-    exports.Set("view", Napi::Function::New(env, CreateView, "view"));
+    exports.Set("as", Napi::Function::New(env, CastValue, "as", instance));
+    exports.Set("address", Napi::Function::New(env, GetPointerAddress, "address", instance));
+    exports.Set("call", Napi::Function::New(env, CallPointerSync, "call", instance));
+    exports.Set("encode", Napi::Function::New(env, EncodeValue, "encode", instance));
+    exports.Set("view", Napi::Function::New(env, CreateView, "view", instance));
 
     {
-        Napi::Function decode = Napi::Function::New(env, DecodeValue, "decode");
+        Napi::Function decode = Napi::Function::New(env, DecodeValue, "decode", instance);
 
-        decode.Set("char", CreateFunction(env, [](napi_env env, napi_callback_info info) { return DecodeInteger<char>(env, info); }, "char"));
-        decode.Set("uchar", CreateFunction(env, [](napi_env env, napi_callback_info info) { return DecodeInteger<unsigned char>(env, info); }, "uchar"));
-        decode.Set("short", CreateFunction(env, [](napi_env env, napi_callback_info info) { return DecodeInteger<short>(env, info); }, "short"));
-        decode.Set("ushort", CreateFunction(env, [](napi_env env, napi_callback_info info) { return DecodeInteger<unsigned short>(env, info); }, "ushort"));
-        decode.Set("int", CreateFunction(env, [](napi_env env, napi_callback_info info) { return DecodeInteger<int>(env, info); }, "int"));
-        decode.Set("uint", CreateFunction(env, [](napi_env env, napi_callback_info info) { return DecodeInteger<unsigned int>(env, info); }, "uint"));
-        decode.Set("long", CreateFunction(env, [](napi_env env, napi_callback_info info) { return DecodeInteger<long>(env, info); }, "long"));
-        decode.Set("ulong", CreateFunction(env, [](napi_env env, napi_callback_info info) { return DecodeInteger<unsigned long>(env, info); }, "ulong"));
-        decode.Set("longlong", CreateFunction(env, [](napi_env env, napi_callback_info info) { return DecodeInteger<long long>(env, info); }, "longlong"));
-        decode.Set("ulonglong", CreateFunction(env, [](napi_env env, napi_callback_info info) { return DecodeInteger<unsigned long long>(env, info); }, "ulonglong"));
-        decode.Set("int8", CreateFunction(env, [](napi_env env, napi_callback_info info) { return DecodeInteger<int8_t>(env, info); }, "int8"));
-        decode.Set("uint8", CreateFunction(env, [](napi_env env, napi_callback_info info) { return DecodeInteger<uint8_t>(env, info); }, "uint8"));
-        decode.Set("int16", CreateFunction(env, [](napi_env env, napi_callback_info info) { return DecodeInteger<int16_t>(env, info); }, "int16"));
-        decode.Set("uint16", CreateFunction(env, [](napi_env env, napi_callback_info info) { return DecodeInteger<uint16_t>(env, info); }, "uint16"));
-        decode.Set("int32", CreateFunction(env, [](napi_env env, napi_callback_info info) { return DecodeInteger<int32_t>(env, info); }, "int32"));
-        decode.Set("uint32", CreateFunction(env, [](napi_env env, napi_callback_info info) { return DecodeInteger<uint32_t>(env, info); }, "uint32"));
-        decode.Set("int64", CreateFunction(env, [](napi_env env, napi_callback_info info) { return DecodeInteger<int64_t>(env, info); }, "int64"));
-        decode.Set("uint64", CreateFunction(env, [](napi_env env, napi_callback_info info) { return DecodeInteger<uint64_t>(env, info); }, "uint64"));
-        decode.Set("float", CreateFunction(env, DecodeFloat, "float"));
-        decode.Set("double", CreateFunction(env, DecodeDouble, "double"));
-        decode.Set("string", CreateFunction(env, DecodeString, "string"));
-        decode.Set("string16", CreateFunction(env, DecodeString16, "string16"));
-        decode.Set("string32", CreateFunction(env, DecodeString32, "string32"));
+        decode.Set("char", CreateFunction(instance, [](napi_env env, napi_callback_info info) { return DecodeInteger<char>(env, info); }, "char"));
+        decode.Set("uchar", CreateFunction(instance, [](napi_env env, napi_callback_info info) { return DecodeInteger<unsigned char>(env, info); }, "uchar"));
+        decode.Set("short", CreateFunction(instance, [](napi_env env, napi_callback_info info) { return DecodeInteger<short>(env, info); }, "short"));
+        decode.Set("ushort", CreateFunction(instance, [](napi_env env, napi_callback_info info) { return DecodeInteger<unsigned short>(env, info); }, "ushort"));
+        decode.Set("int", CreateFunction(instance, [](napi_env env, napi_callback_info info) { return DecodeInteger<int>(env, info); }, "int"));
+        decode.Set("uint", CreateFunction(instance, [](napi_env env, napi_callback_info info) { return DecodeInteger<unsigned int>(env, info); }, "uint"));
+        decode.Set("long", CreateFunction(instance, [](napi_env env, napi_callback_info info) { return DecodeInteger<long>(env, info); }, "long"));
+        decode.Set("ulong", CreateFunction(instance, [](napi_env env, napi_callback_info info) { return DecodeInteger<unsigned long>(env, info); }, "ulong"));
+        decode.Set("longlong", CreateFunction(instance, [](napi_env env, napi_callback_info info) { return DecodeInteger<long long>(env, info); }, "longlong"));
+        decode.Set("ulonglong", CreateFunction(instance, [](napi_env env, napi_callback_info info) { return DecodeInteger<unsigned long long>(env, info); }, "ulonglong"));
+        decode.Set("int8", CreateFunction(instance, [](napi_env env, napi_callback_info info) { return DecodeInteger<int8_t>(env, info); }, "int8"));
+        decode.Set("uint8", CreateFunction(instance, [](napi_env env, napi_callback_info info) { return DecodeInteger<uint8_t>(env, info); }, "uint8"));
+        decode.Set("int16", CreateFunction(instance, [](napi_env env, napi_callback_info info) { return DecodeInteger<int16_t>(env, info); }, "int16"));
+        decode.Set("uint16", CreateFunction(instance, [](napi_env env, napi_callback_info info) { return DecodeInteger<uint16_t>(env, info); }, "uint16"));
+        decode.Set("int32", CreateFunction(instance, [](napi_env env, napi_callback_info info) { return DecodeInteger<int32_t>(env, info); }, "int32"));
+        decode.Set("uint32", CreateFunction(instance, [](napi_env env, napi_callback_info info) { return DecodeInteger<uint32_t>(env, info); }, "uint32"));
+        decode.Set("int64", CreateFunction(instance, [](napi_env env, napi_callback_info info) { return DecodeInteger<int64_t>(env, info); }, "int64"));
+        decode.Set("uint64", CreateFunction(instance, [](napi_env env, napi_callback_info info) { return DecodeInteger<uint64_t>(env, info); }, "uint64"));
+        decode.Set("float", CreateFunction(instance, DecodeFloat, "float"));
+        decode.Set("double", CreateFunction(instance, DecodeDouble, "double"));
+        decode.Set("string", CreateFunction(instance, DecodeString, "string"));
+        decode.Set("string16", CreateFunction(instance, DecodeString16, "string16"));
+        decode.Set("string32", CreateFunction(instance, DecodeString32, "string32"));
 
         exports.Set("decode", decode);
     }
 
-    exports.Set("reset", Napi::Function::New(env, ResetKoffi, "reset"));
+    exports.Set("reset", Napi::Function::New(env, ResetKoffi, "reset", instance));
 
-    exports.Set("errno", Napi::Function::New(env, GetOrSetErrNo, "errno"));
+    exports.Set("errno", Napi::Function::New(env, GetOrSetErrNo, "errno", instance));
 
     // Export useful OS info
     {
@@ -2626,11 +2624,11 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
     // Init object classes and symbols
     {
         instance->object_constructor = Napi::Persistent(env.RunScript("Object.prototype").As<Napi::Object>());
-        instance->construct_lib = Napi::Persistent(LibraryHandle::InitClass(env));
+        instance->construct_lib = Napi::Persistent(LibraryHandle::InitClass(instance));
 #if !defined(EXTERNAL_TYPES)
-        instance->construct_type = Napi::Persistent(TypeObject::InitClass(env));
+        instance->construct_type = Napi::Persistent(TypeObject::InitClass(instance));
 #endif
-        instance->construct_poll = Napi::Persistent(PollHandle::InitClass(env));
+        instance->construct_poll = Napi::Persistent(PollHandle::InitClass(instance));
         instance->active_symbol = Napi::Persistent(Napi::Symbol::New(env, "active"));
 
         exports.Set("LibraryHandle", instance->construct_lib.Value());
@@ -2644,57 +2642,57 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
         Napi::Object types = Napi::Object::New(env);
         exports.Set("types", types);
 
-        RegisterPrimitiveType(env, types, {"void"}, PrimitiveKind::Void, 0, 0);
-        RegisterPrimitiveType(env, types, {"bool"}, PrimitiveKind::Bool, K_SIZE(bool), alignof(bool));
-        RegisterPrimitiveType(env, types, {"int8_t", "int8"}, PrimitiveKind::Int8, 1, 1);
-        RegisterPrimitiveType(env, types, {"uint8_t", "uint8"}, PrimitiveKind::UInt8, 1, 1);
-        RegisterPrimitiveType(env, types, {"char"}, PrimitiveKind::Int8, 1, 1);
-        RegisterPrimitiveType(env, types, {"unsigned char", "uchar"}, PrimitiveKind::UInt8, 1, 1);
-        RegisterPrimitiveType(env, types, {"char16_t", "char16"}, PrimitiveKind::Int16, 2, 2);
-        RegisterPrimitiveType(env, types, {"char32_t", "char32"}, PrimitiveKind::Int32, 4, 4);
+        RegisterPrimitiveType(instance, types, {"void"}, PrimitiveKind::Void, 0, 0);
+        RegisterPrimitiveType(instance, types, {"bool"}, PrimitiveKind::Bool, K_SIZE(bool), alignof(bool));
+        RegisterPrimitiveType(instance, types, {"int8_t", "int8"}, PrimitiveKind::Int8, 1, 1);
+        RegisterPrimitiveType(instance, types, {"uint8_t", "uint8"}, PrimitiveKind::UInt8, 1, 1);
+        RegisterPrimitiveType(instance, types, {"char"}, PrimitiveKind::Int8, 1, 1);
+        RegisterPrimitiveType(instance, types, {"unsigned char", "uchar"}, PrimitiveKind::UInt8, 1, 1);
+        RegisterPrimitiveType(instance, types, {"char16_t", "char16"}, PrimitiveKind::Int16, 2, 2);
+        RegisterPrimitiveType(instance, types, {"char32_t", "char32"}, PrimitiveKind::Int32, 4, 4);
         if (K_SIZE(wchar_t) == 2) {
-            RegisterPrimitiveType(env, types, {"wchar_t", "wchar"}, PrimitiveKind::Int16, 2, 2);
+            RegisterPrimitiveType(instance, types, {"wchar_t", "wchar"}, PrimitiveKind::Int16, 2, 2);
         } else if (K_SIZE(wchar_t) == 4) {
-            RegisterPrimitiveType(env, types, {"wchar_t", "wchar"}, PrimitiveKind::Int32, 4, 4);
+            RegisterPrimitiveType(instance, types, {"wchar_t", "wchar"}, PrimitiveKind::Int32, 4, 4);
         }
-        RegisterPrimitiveType(env, types, {"int16_t", "int16"}, PrimitiveKind::Int16, 2, 2);
-        RegisterPrimitiveType(env, types, {"int16_le_t", "int16_le"}, GetLittleEndianPrimitive(PrimitiveKind::Int16), 2, 2);
-        RegisterPrimitiveType(env, types, {"int16_be_t", "int16_be"}, GetBigEndianPrimitive(PrimitiveKind::Int16), 2, 2);
-        RegisterPrimitiveType(env, types, {"uint16_t", "uint16"}, PrimitiveKind::UInt16, 2, 2);
-        RegisterPrimitiveType(env, types, {"uint16_le_t", "uint16_le"}, GetLittleEndianPrimitive(PrimitiveKind::UInt16), 2, 2);
-        RegisterPrimitiveType(env, types, {"uint16_be_t", "uint16_be"}, GetBigEndianPrimitive(PrimitiveKind::UInt16), 2, 2);
-        RegisterPrimitiveType(env, types, {"short"}, PrimitiveKind::Int16, 2, 2);
-        RegisterPrimitiveType(env, types, {"unsigned short", "ushort"}, PrimitiveKind::UInt16, 2, 2);
-        RegisterPrimitiveType(env, types, {"int32_t", "int32"}, PrimitiveKind::Int32, 4, 4);
-        RegisterPrimitiveType(env, types, {"int32_le_t", "int32_le"}, GetLittleEndianPrimitive(PrimitiveKind::Int32), 4, 4);
-        RegisterPrimitiveType(env, types, {"int32_be_t", "int32_be"}, GetBigEndianPrimitive(PrimitiveKind::Int32), 4, 4);
-        RegisterPrimitiveType(env, types, {"uint32_t", "uint32"}, PrimitiveKind::UInt32, 4, 4);
-        RegisterPrimitiveType(env, types, {"uint32_le_t", "uint32_le"}, GetLittleEndianPrimitive(PrimitiveKind::UInt32), 4, 4);
-        RegisterPrimitiveType(env, types, {"uint32_be_t", "uint32_be"}, GetBigEndianPrimitive(PrimitiveKind::UInt32), 4, 4);
-        RegisterPrimitiveType(env, types, {"int"}, PrimitiveKind::Int32, 4, 4);
-        RegisterPrimitiveType(env, types, {"unsigned int", "uint"}, PrimitiveKind::UInt32, 4, 4);
-        RegisterPrimitiveType(env, types, {"int64_t", "int64"}, PrimitiveKind::Int64, 8, alignof(int64_t));
-        RegisterPrimitiveType(env, types, {"int64_le_t", "int64_le"}, GetLittleEndianPrimitive(PrimitiveKind::Int64), 8, alignof(int64_t));
-        RegisterPrimitiveType(env, types, {"int64_be_t", "int64_be"}, GetBigEndianPrimitive(PrimitiveKind::Int64), 8, alignof(int64_t));
-        RegisterPrimitiveType(env, types, {"uint64_t", "uint64"}, PrimitiveKind::UInt64, 8, alignof(int64_t));
-        RegisterPrimitiveType(env, types, {"uint64_le_t", "uint64_le"}, GetLittleEndianPrimitive(PrimitiveKind::UInt64), 8, alignof(int64_t));
-        RegisterPrimitiveType(env, types, {"uint64_be_t", "uint64_be"}, GetBigEndianPrimitive(PrimitiveKind::UInt64), 8, alignof(int64_t));
-        RegisterPrimitiveType(env, types, {"intptr_t", "intptr"}, GetSignPrimitive(K_SIZE(intptr_t), true), K_SIZE(intptr_t), alignof(intptr_t));
-        RegisterPrimitiveType(env, types, {"uintptr_t", "uintptr"}, GetSignPrimitive(K_SIZE(intptr_t), false), K_SIZE(intptr_t), alignof(intptr_t));
-        RegisterPrimitiveType(env, types, {"size_t"}, GetSignPrimitive(K_SIZE(size_t), false), K_SIZE(size_t), alignof(size_t));
-        RegisterPrimitiveType(env, types, {"long"}, GetSignPrimitive(K_SIZE(long), true), K_SIZE(long), alignof(long));
-        RegisterPrimitiveType(env, types, {"unsigned long", "ulong"}, GetSignPrimitive(K_SIZE(long), false), K_SIZE(long), alignof(long));
-        RegisterPrimitiveType(env, types, {"long long", "longlong"}, PrimitiveKind::Int64, K_SIZE(int64_t), alignof(int64_t));
-        RegisterPrimitiveType(env, types, {"unsigned long long", "ulonglong"}, PrimitiveKind::UInt64, K_SIZE(uint64_t), alignof(uint64_t));
-        RegisterPrimitiveType(env, types, {"float", "float32"}, PrimitiveKind::Float32, 4, alignof(float));
-        RegisterPrimitiveType(env, types, {"double", "float64"}, PrimitiveKind::Float64, 8, alignof(double));
-        RegisterPrimitiveType(env, types, {"char *", "str", "string"}, PrimitiveKind::String, K_SIZE(void *), alignof(void *), "char");
-        RegisterPrimitiveType(env, types, {"char16_t *", "char16 *", "str16", "string16"}, PrimitiveKind::String16, K_SIZE(void *), alignof(void *), "char16_t");
-        RegisterPrimitiveType(env, types, {"char32_t *", "char32 *", "str32", "string32"}, PrimitiveKind::String32, K_SIZE(void *), alignof(void *), "char32_t");
+        RegisterPrimitiveType(instance, types, {"int16_t", "int16"}, PrimitiveKind::Int16, 2, 2);
+        RegisterPrimitiveType(instance, types, {"int16_le_t", "int16_le"}, GetLittleEndianPrimitive(PrimitiveKind::Int16), 2, 2);
+        RegisterPrimitiveType(instance, types, {"int16_be_t", "int16_be"}, GetBigEndianPrimitive(PrimitiveKind::Int16), 2, 2);
+        RegisterPrimitiveType(instance, types, {"uint16_t", "uint16"}, PrimitiveKind::UInt16, 2, 2);
+        RegisterPrimitiveType(instance, types, {"uint16_le_t", "uint16_le"}, GetLittleEndianPrimitive(PrimitiveKind::UInt16), 2, 2);
+        RegisterPrimitiveType(instance, types, {"uint16_be_t", "uint16_be"}, GetBigEndianPrimitive(PrimitiveKind::UInt16), 2, 2);
+        RegisterPrimitiveType(instance, types, {"short"}, PrimitiveKind::Int16, 2, 2);
+        RegisterPrimitiveType(instance, types, {"unsigned short", "ushort"}, PrimitiveKind::UInt16, 2, 2);
+        RegisterPrimitiveType(instance, types, {"int32_t", "int32"}, PrimitiveKind::Int32, 4, 4);
+        RegisterPrimitiveType(instance, types, {"int32_le_t", "int32_le"}, GetLittleEndianPrimitive(PrimitiveKind::Int32), 4, 4);
+        RegisterPrimitiveType(instance, types, {"int32_be_t", "int32_be"}, GetBigEndianPrimitive(PrimitiveKind::Int32), 4, 4);
+        RegisterPrimitiveType(instance, types, {"uint32_t", "uint32"}, PrimitiveKind::UInt32, 4, 4);
+        RegisterPrimitiveType(instance, types, {"uint32_le_t", "uint32_le"}, GetLittleEndianPrimitive(PrimitiveKind::UInt32), 4, 4);
+        RegisterPrimitiveType(instance, types, {"uint32_be_t", "uint32_be"}, GetBigEndianPrimitive(PrimitiveKind::UInt32), 4, 4);
+        RegisterPrimitiveType(instance, types, {"int"}, PrimitiveKind::Int32, 4, 4);
+        RegisterPrimitiveType(instance, types, {"unsigned int", "uint"}, PrimitiveKind::UInt32, 4, 4);
+        RegisterPrimitiveType(instance, types, {"int64_t", "int64"}, PrimitiveKind::Int64, 8, alignof(int64_t));
+        RegisterPrimitiveType(instance, types, {"int64_le_t", "int64_le"}, GetLittleEndianPrimitive(PrimitiveKind::Int64), 8, alignof(int64_t));
+        RegisterPrimitiveType(instance, types, {"int64_be_t", "int64_be"}, GetBigEndianPrimitive(PrimitiveKind::Int64), 8, alignof(int64_t));
+        RegisterPrimitiveType(instance, types, {"uint64_t", "uint64"}, PrimitiveKind::UInt64, 8, alignof(int64_t));
+        RegisterPrimitiveType(instance, types, {"uint64_le_t", "uint64_le"}, GetLittleEndianPrimitive(PrimitiveKind::UInt64), 8, alignof(int64_t));
+        RegisterPrimitiveType(instance, types, {"uint64_be_t", "uint64_be"}, GetBigEndianPrimitive(PrimitiveKind::UInt64), 8, alignof(int64_t));
+        RegisterPrimitiveType(instance, types, {"intptr_t", "intptr"}, GetSignPrimitive(K_SIZE(intptr_t), true), K_SIZE(intptr_t), alignof(intptr_t));
+        RegisterPrimitiveType(instance, types, {"uintptr_t", "uintptr"}, GetSignPrimitive(K_SIZE(intptr_t), false), K_SIZE(intptr_t), alignof(intptr_t));
+        RegisterPrimitiveType(instance, types, {"size_t"}, GetSignPrimitive(K_SIZE(size_t), false), K_SIZE(size_t), alignof(size_t));
+        RegisterPrimitiveType(instance, types, {"long"}, GetSignPrimitive(K_SIZE(long), true), K_SIZE(long), alignof(long));
+        RegisterPrimitiveType(instance, types, {"unsigned long", "ulong"}, GetSignPrimitive(K_SIZE(long), false), K_SIZE(long), alignof(long));
+        RegisterPrimitiveType(instance, types, {"long long", "longlong"}, PrimitiveKind::Int64, K_SIZE(int64_t), alignof(int64_t));
+        RegisterPrimitiveType(instance, types, {"unsigned long long", "ulonglong"}, PrimitiveKind::UInt64, K_SIZE(uint64_t), alignof(uint64_t));
+        RegisterPrimitiveType(instance, types, {"float", "float32"}, PrimitiveKind::Float32, 4, alignof(float));
+        RegisterPrimitiveType(instance, types, {"double", "float64"}, PrimitiveKind::Float64, 8, alignof(double));
+        RegisterPrimitiveType(instance, types, {"char *", "str", "string"}, PrimitiveKind::String, K_SIZE(void *), alignof(void *), "char");
+        RegisterPrimitiveType(instance, types, {"char16_t *", "char16 *", "str16", "string16"}, PrimitiveKind::String16, K_SIZE(void *), alignof(void *), "char16_t");
+        RegisterPrimitiveType(instance, types, {"char32_t *", "char32 *", "str32", "string32"}, PrimitiveKind::String32, K_SIZE(void *), alignof(void *), "char32_t");
         if (K_SIZE(wchar_t) == 2) {
-            RegisterPrimitiveType(env, types, {"wchar_t *", "wchar *"}, PrimitiveKind::String16, K_SIZE(void *), alignof(void *), "wchar_t");
+            RegisterPrimitiveType(instance, types, {"wchar_t *", "wchar *"}, PrimitiveKind::String16, K_SIZE(void *), alignof(void *), "wchar_t");
         } else if (K_SIZE(wchar_t) == 4) {
-            RegisterPrimitiveType(env, types, {"wchar_t *", "wchar *"}, PrimitiveKind::String32, K_SIZE(void *), alignof(void *), "wchar_t");
+            RegisterPrimitiveType(instance, types, {"wchar_t *", "wchar *"}, PrimitiveKind::String32, K_SIZE(void *), alignof(void *), "wchar_t");
         }
 
         instance->void_type = instance->types_map.FindValue("void", nullptr);
@@ -2715,7 +2713,7 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
 
         node.Set("env", WrapPointer(env, instance->void_type, (napi_env)env));
 
-        node.Set("poll", Napi::Function::New(env, &Poll, "poll"));
+        node.Set("poll", Napi::Function::New(env, &Poll, "poll", instance));
         node.Set("PollHandle", instance->construct_poll.Value());
     }
 

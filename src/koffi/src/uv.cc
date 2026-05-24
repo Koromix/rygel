@@ -5,15 +5,17 @@
 
 namespace K {
 
-Napi::Function PollHandle::InitClass(Napi::Env env)
+Napi::Function PollHandle::InitClass(InstanceData *instance)
 {
+    Napi::Env env = instance->env;
+
     // node-addon-api wants std::vector
     std::vector<Napi::ClassPropertyDescriptor<PollHandle>> properties = {
-        InstanceMethod("start", &PollHandle::Start),
-        InstanceMethod("stop", &PollHandle::Stop),
-        InstanceMethod("close", &PollHandle::Close),
-        InstanceMethod("unref", &PollHandle::Unref),
-        InstanceMethod("ref", &PollHandle::Ref)
+        InstanceMethod("start", &PollHandle::Start, napi_default, instance),
+        InstanceMethod("stop", &PollHandle::Stop, napi_default, instance),
+        InstanceMethod("close", &PollHandle::Close, napi_default, instance),
+        InstanceMethod("unref", &PollHandle::Unref, napi_default, instance),
+        InstanceMethod("ref", &PollHandle::Ref, napi_default, instance)
     };
 
     if (Napi::Value dispose = env.RunScript("Symbol.dispose"); !IsNullOrUndefined(env, dispose)) {
@@ -21,7 +23,7 @@ Napi::Function PollHandle::InitClass(Napi::Env env)
         properties.push_back(prop);
     }
 
-    Napi::Function constructor = DefineClass(env, "PollHandle", properties);
+    Napi::Function constructor = DefineClass(env, "PollHandle", properties, instance);
     return constructor;
 }
 
@@ -62,7 +64,7 @@ PollHandle::PollHandle(const Napi::CallbackInfo &info)
 
 void PollHandle::Start(const Napi::CallbackInfo &info)
 {
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
+    InstanceData *instance = (InstanceData *)info.Data();
 
     bool has_opts = (info.Length() >= 2 && info[0].IsObject());
 
@@ -165,7 +167,7 @@ void PollHandle::OnPoll(uv_poll_t *h, int status, int events)
 Napi::Value Poll(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
+    InstanceData *instance = (InstanceData *)info.Data();
 
     bool has_opts = (info.Length() >= 3 && info[1].IsObject());
 
