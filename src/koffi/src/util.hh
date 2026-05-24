@@ -127,7 +127,7 @@ TypeInfo *MakePointerType(InstanceData *instance, const TypeInfo *ref, int count
 TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len);
 TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len, ArrayHint hint);
 
-Napi::Value WrapType(Napi::Env env, const TypeInfo *type, bool freeze = true);
+napi_value WrapType(Napi::Env env, const TypeInfo *type, bool freeze = true);
 
 const TypeInfo *ReshapeType(InstanceData *instance, const TypeInfo *type, int32_t stride, uint16_t flags);
 
@@ -141,11 +141,6 @@ static FORCE_INLINE napi_valuetype GetKindOf(napi_env env, napi_value value)
     NAPI_OK(napi_typeof(env, value, &kind));
 
     return kind;
-}
-
-static FORCE_INLINE napi_valuetype GetKindOf(Napi::Value value)
-{
-    return GetKindOf(value.Env(), value);
 }
 
 // Can be slow, only use for error messages
@@ -309,6 +304,62 @@ static FORCE_INLINE bool TryPointer(napi_env env, napi_value value, void **out_p
     return false;
 }
 
+static FORCE_INLINE bool TryPointer(napi_env env, napi_value value, void **out_ptr, Size *out_len)
+{
+    // Fast path for BigInt
+    {
+        uint64_t u64;
+        bool lossless;
+        napi_status status = napi_get_value_bigint_uint64(env, value, &u64, &lossless);
+
+        if (status == napi_ok) {
+            *out_ptr = (void *)(uintptr_t)u64;
+            *out_len = -1;
+
+            return true;
+        }
+    }
+
+    if (size_t len = 0; node_api_get_buffer_info(env, value, out_ptr, &len) == napi_ok) {
+        *out_len = (Size)len;
+        return true;
+    }
+
+    napi_valuetype kind = GetKindOf(env, value);
+
+    if (IsNullOrUndefined(kind)) {
+        *out_ptr = nullptr;
+        *out_len = -1;
+
+        return true;
+    } else if (kind == napi_number) {
+        int64_t i;
+        napi_status status = napi_get_value_int64(env, value, &i);
+        K_ASSERT(status == napi_ok);
+
+        *out_ptr = (void *)(uintptr_t)i;
+        *out_len = -1;
+
+        return true;
+#if defined(EXTERNAL_POINTERS)
+    } else if (kind == napi_external) {
+        Napi::External<void> external = Napi::External<void>(env, value);
+
+        *out_ptr = (void *)external.Data();
+        *out_len = -1;
+
+        return true;
+#endif
+    }
+
+    if (size_t len = 0; napi_get_arraybuffer_info(env, value, out_ptr, &len) == napi_ok) {
+        *out_len = (Size)len;
+        return true;
+    }
+
+    return false;
+}
+
 static FORCE_INLINE bool TryPointer(napi_env env, napi_value value, void **out_ptr, napi_valuetype *out_kind)
 {
     // Fast path for BigInt
@@ -415,11 +466,8 @@ napi_value DecodeArray(InstanceData *instance, const uint8_t *origin, const Type
 void DecodeElements(InstanceData *instance, napi_value array, const uint8_t *origin, const TypeInfo *type, uint32_t len);
 INLINE_UNITY void DecodeBuffer(Span<uint8_t> buffer, const uint8_t *origin, const TypeInfo *type);
 
-napi_value Decode(Napi::Value value, Size offset, const TypeInfo *type, const Size *len = nullptr);
-napi_value Decode(InstanceData *instance, const uint8_t *ptr, const TypeInfo *type, const Size *len = nullptr);
-
-bool Encode(Napi::Value ref, Size offset, Napi::Value value, const TypeInfo *type, const Size *len = nullptr);
-bool Encode(InstanceData *instance, uint8_t *ptr, Napi::Value value, const TypeInfo *type, const Size *len = nullptr);
+napi_value Decode(InstanceData *instance, const uint8_t *ptr, const TypeInfo *type);
+bool Encode(InstanceData *instance, uint8_t *ptr, napi_value value, const TypeInfo *type);
 
 static FORCE_INLINE napi_value NewInt(Napi::Env env, char i) { napi_value value; napi_create_int32(env, (int32_t)i, &value); return value; }
 static FORCE_INLINE napi_value NewInt(Napi::Env env, signed char i) { napi_value value; napi_create_int32(env, (int32_t)i, &value); return value; }
@@ -438,24 +486,24 @@ static FORCE_INLINE napi_value NewInt(Napi::Env env, T i)
 {
     static_assert(sizeof(T) == 8);
 
+    napi_value value;
+
     if constexpr (std::is_signed_v<T>) {
         if (i <= 9007199254740992ll && i >= -9007199254740992ll) {
-            napi_value value;
             NAPI_OK(napi_create_int64(env, (int64_t)i, &value));
-
             return value;
         }
 
-        return Napi::BigInt::New(env, (int64_t)i);
+        NAPI_OK(napi_create_bigint_int64(env, (int64_t)i, &value));
+        return value;
     } else {
         if (i <= 9007199254740992ull) {
-            napi_value value;
             NAPI_OK(napi_create_int64(env, (int64_t)i, &value));
-
             return value;
         }
 
-        return Napi::BigInt::New(env, (uint64_t)i);
+        NAPI_OK(napi_create_bigint_uint64(env, (uint64_t)i, &value));
+        return value;
     }
 }
 
@@ -472,18 +520,20 @@ static FORCE_INLINE Napi::Array GetOwnPropertyNames(napi_env env, napi_value obj
     return Napi::Array(env, result);
 }
 
-Napi::Object DescribeFunction(Napi::Env env, const FunctionInfo *func);
-Napi::Function WrapFunction(Napi::Env env, const FunctionInfo *func);
+napi_value DescribeFunction(Napi::Env env, const FunctionInfo *func);
+napi_value WrapFunction(Napi::Env env, const FunctionInfo *func);
 
-static FORCE_INLINE Napi::Value WrapPointer(Napi::Env env, const TypeInfo *ref, void *ptr)
+static FORCE_INLINE napi_value WrapPointer(Napi::Env env, const TypeInfo *ref, void *ptr)
 {
+    napi_value value;
+
 #if defined(EXTERNAL_POINTERS)
-    Napi::External<void> external = Napi::External<void>::New(env, ptr);
-    return external;
+    NAPI_OK(napi_create_external(env, ptr, nullptr, nullptr, &value));
 #else
-    Napi::BigInt big = Napi::BigInt::New(env, (uint64_t)(uintptr_t)ptr);
-    return big;
+    NAPI_OK(napi_create_bigint_uint64(env, (uint64_t)(uintptr_t)ptr, &value));
 #endif
+
+    return value;
 }
 
 bool DetectCallConvention(Span<const char> name, CallConvention *out_convention);

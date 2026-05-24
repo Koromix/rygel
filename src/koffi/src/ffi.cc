@@ -425,7 +425,8 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
         type = replace;
     }
 
-    return WrapType(env, type);
+    napi_value wrapper = WrapType(env, type);
+    return Napi::Value(env, wrapper);
 }
 
 static Napi::Value CreatePaddedStructType(const Napi::CallbackInfo &info)
@@ -595,7 +596,8 @@ static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
         type = replace;
     }
 
-    return WrapType(env, type);
+    napi_value wrapper = WrapType(env, type);
+    return Napi::Value(env, wrapper);
 }
 
 Napi::Value InstantiateUnion(const Napi::CallbackInfo &info)
@@ -655,7 +657,8 @@ static Napi::Value CreateOpaqueType(const Napi::CallbackInfo &info)
         return env.Null();
     err_guard.Disable();
 
-    return WrapType(env, type);
+    napi_value wrapper = WrapType(env, type);
+    return Napi::Value(env, wrapper);
 }
 
 static Napi::Value CreatePointerType(const Napi::CallbackInfo &info)
@@ -727,7 +730,8 @@ static Napi::Value CreatePointerType(const Napi::CallbackInfo &info)
         type = copy;
     }
 
-    return WrapType(env, type);
+    napi_value wrapper = WrapType(env, type);
+    return Napi::Value(env, wrapper);
 }
 
 static Napi::Value EncodePointerDirection(const Napi::CallbackInfo &info, int directions)
@@ -827,12 +831,10 @@ static Napi::Value CreateDisposableType(const Napi::CallbackInfo &info)
             InstanceData *instance = env.GetInstanceData<InstanceData>();
             const Napi::FunctionReference &ref = type->dispose_ref;
 
-            Napi::Value p = WrapPointer(env, type->ref.type, (void *)ptr);
-
             napi_value self = env.Null();
-            napi_value args[] = { p };
+            napi_value wrapper = WrapPointer(env, type->ref.type, (void *)ptr);
 
-            ref.Call(self, K_LEN(args), args);
+            ref.Call(self, 1, &wrapper);
             instance->stats.disposed++;
         };
         dispose_func = func;
@@ -873,7 +875,8 @@ static Napi::Value CreateDisposableType(const Napi::CallbackInfo &info)
     }
     err_guard.Disable();
 
-    return WrapType(env, type);
+    napi_value wrapper = WrapType(env, type);
+    return Napi::Value(env, wrapper);
 }
 
 static Napi::Value CallAlloc(const Napi::CallbackInfo &info)
@@ -919,7 +922,8 @@ static Napi::Value CallAlloc(const Napi::CallbackInfo &info)
         return env.Null();
     }
 
-    return WrapPointer(env, type, ptr);
+    napi_value wrapper = WrapPointer(env, type, ptr);
+    return Napi::Value(env, wrapper);
 }
 
 static Napi::Value CallFree(const Napi::CallbackInfo &info)
@@ -1054,7 +1058,8 @@ static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
         type->countedby = DuplicateString(str.Utf8Value().c_str(), &instance->str_alloc).ptr;
     }
 
-    return WrapType(env, type);
+    napi_value wrapper = WrapType(env, type);
+    return Napi::Value(env, wrapper);
 }
 
 static bool ParseClassicFunction(const Napi::CallbackInfo &info, bool concrete, FunctionInfo *out_func)
@@ -1210,7 +1215,8 @@ static Napi::Value CreateFunctionType(const Napi::CallbackInfo &info)
 
     instance->types_map.Set(type->name, type);
 
-    return WrapType(env, type);
+    napi_value wrapper = WrapType(env, type);
+    return Napi::Value(env, wrapper);
 }
 
 static Napi::Value CreateEnumType(const Napi::CallbackInfo &info)
@@ -1366,13 +1372,13 @@ static Napi::Value CreateEnumType(const Napi::CallbackInfo &info)
         return env.Null();
     err_guard.Disable();
 
-    Napi::Value wrapper = WrapType(env, type, false);
+    napi_value wrapper = WrapType(env, type, false);
     Napi::Object defn = type->defn.Value();
 
     defn.Set("values", values);
     defn.Freeze();
 
-    return wrapper;
+    return Napi::Value(env, wrapper);
 }
 
 static Napi::Value CreateTypeAlias(const Napi::CallbackInfo &info)
@@ -1400,7 +1406,8 @@ static Napi::Value CreateTypeAlias(const Napi::CallbackInfo &info)
     if (!MapType(env, instance, type, alias))
         return env.Null();
 
-    return WrapType(env, type);
+    napi_value wrapper = WrapType(env, type);
+    return Napi::Value(env, wrapper);
 }
 
 static Napi::Value GetResolvedType(const Napi::CallbackInfo &info)
@@ -1417,7 +1424,8 @@ static Napi::Value GetResolvedType(const Napi::CallbackInfo &info)
     if (!type)
         return env.Null();
 
-    return WrapType(env, type);
+    napi_value wrapper = WrapType(env, type);
+    return Napi::Value(env, wrapper);
 }
 
 #if defined(EXTERNAL_TYPES)
@@ -1644,7 +1652,8 @@ Napi::Value LibraryHandle::Func(const Napi::CallbackInfo &info)
         return env.Null();
     }
 
-    return WrapFunction(env, func);
+    napi_value wrapper = WrapFunction(env, func);
+    return Napi::Value(env, wrapper);
 }
 
 Napi::Value LibraryHandle::Symbol(const Napi::CallbackInfo &info)
@@ -1677,7 +1686,8 @@ Napi::Value LibraryHandle::Symbol(const Napi::CallbackInfo &info)
         return env.Null();
     }
 
-    return WrapPointer(env, type, ptr);
+    napi_value wrapper = WrapPointer(env, type, ptr);
+    return Napi::Value(env, wrapper);
 }
 
 Napi::Value LibraryHandle::Unload(const Napi::CallbackInfo &info)
@@ -1827,7 +1837,8 @@ static Napi::Value RegisterCallback(const Napi::CallbackInfo &info)
     // Cache index for fast unregistration
     instance->trampolines_map.Set(ptr, idx);
 
-    return WrapPointer(env, type->ref.type, ptr);
+    napi_value wrapper = WrapPointer(env, type->ref.type, ptr);
+    return Napi::Value(env, wrapper);
 }
 
 static Napi::Value UnregisterCallback(const Napi::CallbackInfo &info)
@@ -1929,18 +1940,74 @@ static Napi::Value DecodeValue(const Napi::CallbackInfo &info)
     if (!type) [[unlikely]]
         return env.Null();
 
-    Napi::Value value = info[0];
+    napi_value ref = info[0];
     int64_t offset = has_offset ? info[1].As<Napi::Number>().Int64Value() : 0;
+
+    const void *src = nullptr;
+    Size len = 0;
+
+    if (!TryPointer(env, ref, (void **)&src, &len)) {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for reference, expected pointer", GetValueType(instance, ref));
+        return env.Null();
+    }
+
+    if (len >= 0) {
+        if (offset < 0) [[unlikely]] {
+            ThrowError<Napi::Error>(env, "Offset must be >= 0");
+            return env.Null();
+        }
+        if (len - offset < type->size) [[unlikely]] {
+            ThrowError<Napi::Error>(env, "Expected buffer with size superior or equal to type %1 (%2 bytes)",
+                                    type->name, type->size + offset);
+            return env.Null();
+        }
+    }
+
+    if (!src) [[unlikely]] {
+        ThrowError<Napi::Error>(env, "Cannot encode data in NULL pointer");
+        return env.Null();
+    }
+
+    src = (const void *)((const uint8_t *)src + offset);
 
     if (has_len) {
         Size len = info[2 + has_offset].As<Napi::Number>();
 
-        napi_value ret = Decode(value, (Size)offset, type, &len);
-        return Napi::Value(env, ret);
-    } else {
-        napi_value ret = Decode(value, (Size)offset, type);
-        return Napi::Value(env, ret);
+        if (len >= 0) {
+            type = MakeArrayType(instance, type, len);
+        } else {
+            switch (type->primitive) {
+                case PrimitiveKind::Int8:
+                case PrimitiveKind::UInt8: {
+                    Size count = strlen((const char *)src);
+                    type = MakeArrayType(instance, type, count);
+                } break;
+                case PrimitiveKind::Int16:
+                case PrimitiveKind::UInt16: {
+                    Size count = NullTerminatedLength((const char16_t *)src);
+                    type = MakeArrayType(instance, type, count);
+                } break;
+                case PrimitiveKind::Int32:
+                case PrimitiveKind::UInt32: {
+                    Size count = NullTerminatedLength((const char32_t *)src);
+                    type = MakeArrayType(instance, type, count);
+                } break;
+
+                case PrimitiveKind::Pointer: {
+                    Size count = NullTerminatedLength((const void **)src);
+                    type = MakeArrayType(instance, type, count);
+                } break;
+
+                default: {
+                    ThrowError<Napi::TypeError>(env, "Cannot determine null-terminated length for type %1", type->name);
+                    return env.Null();
+                } break;
+            }
+        }
     }
+
+    napi_value ret = Decode(instance, (const uint8_t *)src, type);
+    return Napi::Value(env, ret);
 }
 
 template <typename T>
@@ -2198,15 +2265,51 @@ static Napi::Value EncodeValue(const Napi::CallbackInfo &info)
     int64_t offset = has_offset ? info[1].As<Napi::Number>().Int64Value() : 0;
     Napi::Value value = info[2 + has_offset];
 
+    void *dest = nullptr;
+    Size len = 0;
+
+    if (!TryPointer(env, ref, &dest, &len)) {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for reference, expected pointer", GetValueType(instance, ref));
+        return env.Null();
+    }
+
+    if (len >= 0) {
+        if (offset < 0) [[unlikely]] {
+            ThrowError<Napi::Error>(env, "Offset must be >= 0");
+            return env.Null();
+        }
+        if (len - offset < type->size) [[unlikely]] {
+            ThrowError<Napi::Error>(env, "Expected buffer with size superior or equal to type %1 (%2 bytes)",
+                                    type->name, type->size + offset);
+            return env.Null();
+        }
+    }
+
+    if (!dest) [[unlikely]] {
+        ThrowError<Napi::Error>(env, "Cannot encode data in NULL pointer");
+        return env.Null();
+    }
+
+    dest = (void *)((uint8_t *)dest + offset);
+
     if (has_len) {
         Size len = info[3 + has_offset].As<Napi::Number>();
 
-        if (!Encode(ref, (Size)offset, value, type, &len))
-            return env.Null();
-    } else {
-        if (!Encode(ref, (Size)offset, value, type))
-            return env.Null();
+        if (type->primitive != PrimitiveKind::String &&
+                type->primitive != PrimitiveKind::String16 &&
+                type->primitive != PrimitiveKind::String32 &&
+                type->primitive != PrimitiveKind::Prototype) {
+            if (len < 0) [[unlikely]] {
+                ThrowError<Napi::TypeError>(env, "Automatic (negative) length is only supported when decoding");
+                return env.Null();
+            }
+
+            type = MakeArrayType(instance, type, len);
+        }
     }
+
+    if (!Encode(instance, (uint8_t *)dest, value, type))
+        return env.Null();
 
     return env.Undefined();
 }
@@ -2368,7 +2471,7 @@ static void RegisterPrimitiveType(InstanceData *instance, Napi::Object map, std:
         K_ASSERT(type->ref.type);
     }
 
-    Napi::Value wrapper = WrapType(env, type);
+    napi_value wrapper = WrapType(env, type);
 
     for (const char *name: names) {
         bool inserted;
