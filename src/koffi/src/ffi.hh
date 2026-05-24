@@ -50,11 +50,13 @@ enum class TypeFlag {
 enum class ArrayHint {
     Array,
     Typed,
+    Buffer,
     String
 };
 static const char *const ArrayHintNames[] = {
     "Array",
     "Typed",
+    "Buffer",
     "String"
 };
 

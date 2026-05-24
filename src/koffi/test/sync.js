@@ -102,6 +102,9 @@ const FixedString = koffi.struct('FixedString', {
 const FixedString2 = koffi.struct('FixedString2', {
     buf: koffi.array('char', 64)
 });
+const FixedString3 = koffi.struct('FixedString3', {
+    buf: koffi.array('int8', 64, 'Buffer')
+});
 
 const FixedWide = koffi.struct('FixedWide', {
     buf: koffi.array('char16', 64, 'Typed')
@@ -231,6 +234,7 @@ async function test() {
     const Concat16Out2 = lib.func('Concat16Out', 'void', [koffi.pointer('char16_t'), koffi.pointer('char16_t'), koffi.out(koffi.pointer(Str16Free))]);
     const ReturnFixedStr = lib.func('FixedString ReturnFixedStr(FixedString str)');
     const ReturnFixedStr2 = lib.func('FixedString2 ReturnFixedStr(FixedString2 str)');
+    const ReturnFixedStr3 = lib.func('FixedString3 ReturnFixedStr(FixedString3 str)');
     const ReturnFixedWide = lib.func('FixedWide ReturnFixedWide(FixedWide str)');
     const ReturnFixedWide2 = lib.func('FixedWide2 ReturnFixedWide(FixedWide2 str)');
     const ThroughUInt32UU = lib.func('uint32_t ThroughUInt32UU(uint32_t v)');
@@ -521,6 +525,7 @@ async function test() {
         let str = { buf: 'Hello!' };
         assert.deepEqual(ReturnFixedStr(str), { buf: Int8Array.from([72, 101, 108, 108, 111, 33, ...Array(58).fill(0)]) });
         assert.deepEqual(ReturnFixedStr2(str), { buf: 'Hello!' });
+        assert.deepEqual(ReturnFixedStr3(str), { buf: Buffer.from([72, 101, 108, 108, 111, 33, ...Array(58).fill(0)]) });
         assert.deepEqual(ReturnFixedWide(str), { buf: Int16Array.from([72, 101, 108, 108, 111, 33, ...Array(58).fill(0)]) });
         assert.deepEqual(ReturnFixedWide2(str), { buf: 'Hello!' });
     }

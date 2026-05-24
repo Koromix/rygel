@@ -1024,6 +1024,13 @@ static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
             }
 
             hint = ArrayHint::Typed;
+        } else if (str == "Buffer" || str == "buffer") {
+            if (!(ref->flags & (int)TypeFlag::HasTypedArray)) {
+                ThrowError<Napi::Error>(env, "Array hint 'Buffer' cannot be used with type %1", ref->name);
+                return env.Null();
+            }
+
+            hint = ArrayHint::Buffer;
         } else if (str == "Array" || str == "array") {
             hint = ArrayHint::Array;
         } else if (str == "String" || str == "string") {

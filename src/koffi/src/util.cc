@@ -1290,6 +1290,17 @@ napi_value DecodeArray(InstanceData *instance, const uint8_t *origin, const Type
         }
 
 #undef POP_TYPEDARRAY
+    } else if (type->hint == ArrayHint::Buffer) {
+        napi_value buffer;
+        void *data;
+
+        napi_status status = napi_create_buffer(env, (size_t)len * ref->size, &data, &buffer);
+        K_ASSERT(status == napi_ok);
+
+        Span<uint8_t> view = MakeSpan((uint8_t *)data, (Size)len * ref->size);
+        DecodeBuffer(view, origin, type);
+
+        return buffer;
     } else if (type->hint == ArrayHint::String) {
         K_ASSERT(stride == ref->size);
 
