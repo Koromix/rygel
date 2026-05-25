@@ -10,59 +10,6 @@
 
 namespace K {
 
-#if defined(_MSC_VER)
-    #define FORCE_INLINE __forceinline
-#else
-    #define FORCE_INLINE __attribute__((always_inline)) inline
-#endif
-#if defined(UNITY_BUILD)
-    #define INLINE_UNITY FORCE_INLINE
-#else
-    #define INLINE_UNITY
-#endif
-
-#if defined(__GNUC__) || defined(__clang__)
-    #if  __has_attribute(musttail) && __has_attribute(preserve_none)
-        #define MUST_TAIL __attribute__((musttail))
-        #define PRESERVE_NONE __attribute__((preserve_none))
-    #elif  __has_attribute(musttail) && !defined(__clang__)
-        // GCC regalloc seems better, so the generated code is not too bad even without preserve_none
-        #define MUST_TAIL __attribute__((musttail))
-        #define PRESERVE_NONE
-    #endif
-#endif
-
-#define NAPI_OK(Call) \
-    do { \
-        napi_status status = (Call); \
-        K_ASSERT(status == napi_ok); \
-    } while (false)
-
-extern const napi_type_tag LibraryHandleMarker;
-extern const napi_type_tag TypeObjectMarker;
-extern const napi_type_tag DirectionMarker;
-extern const napi_type_tag UnionValueMarker;
-extern const napi_type_tag CastMarker;
-
-#if !defined(EXTERNAL_TYPES)
-
-class TypeObject: public Napi::ObjectWrap<TypeObject> {
-    const TypeInfo *type;
-
-    mutable Napi::Object members;
-
-public:
-    static Napi::Function InitClass(InstanceData *instance);
-
-    TypeObject(const Napi::CallbackInfo &info);
-
-    void Finalize(Napi::BasicEnv env) override;
-
-    const TypeInfo *GetType() { return type; }
-};
-
-#endif
-
 class UnionValue: public Napi::ObjectWrap<UnionValue> {
     InstanceData *instance;
     const TypeInfo *type;
@@ -99,42 +46,6 @@ void ThrowError(Napi::Env env, const char *msg, Args... args)
     err.ThrowAsJavaScriptException();
 }
 
-static FORCE_INLINE bool IsInteger(const TypeInfo *type)
-{
-    bool integer = ((int)type->primitive >= (int)PrimitiveKind::Int8 &&
-                    (int)type->primitive <= (int)PrimitiveKind::UInt64);
-    return integer;
-}
-
-static FORCE_INLINE bool IsFloat(const TypeInfo *type)
-{
-    bool fp = (type->primitive == PrimitiveKind::Float32 ||
-               type->primitive == PrimitiveKind::Float64);
-    return fp;
-}
-
-static FORCE_INLINE bool IsRegularSize(Size size, Size max)
-{
-    bool regular = (size <= max && !(size & (size - 1)));
-    return regular;
-}
-
-int ResolveDirections(Span<const char> str);
-const TypeInfo *ResolveType(InstanceData *instance, napi_value value, int *out_directions = nullptr);
-const TypeInfo *ResolveType(InstanceData *instance, Span<const char> str);
-
-TypeInfo *MakePointerType(InstanceData *instance, const TypeInfo *ref, int count = 1);
-TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len);
-TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len, ArrayHint hint);
-
-napi_value WrapType(Napi::Env env, const TypeInfo *type, bool freeze = true);
-
-const TypeInfo *ReshapeType(InstanceData *instance, const TypeInfo *type, int32_t stride, uint16_t flags);
-
-bool CanPassType(const TypeInfo *type, int directions);
-bool CanReturnType(const TypeInfo *type);
-bool CanStoreType(const TypeInfo *type);
-
 static FORCE_INLINE napi_valuetype GetKindOf(napi_env env, napi_value value)
 {
     napi_valuetype kind = napi_undefined;
@@ -142,9 +53,6 @@ static FORCE_INLINE napi_valuetype GetKindOf(napi_env env, napi_value value)
 
     return kind;
 }
-
-// Can be slow, only use for error messages
-const char *GetValueType(const InstanceData *instance, napi_value value);
 
 void SetValueTag(napi_env env, napi_value value, const void *marker);
 bool CheckValueTag(napi_env env, napi_value value, const void *marker);

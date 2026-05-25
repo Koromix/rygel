@@ -4,6 +4,7 @@
 #include "lib/native/base/base.hh"
 #include "call.hh"
 #include "ffi.hh"
+#include "type.hh"
 #include "util.hh"
 #if defined(_WIN32)
     #include "win32.hh"

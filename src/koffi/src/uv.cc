@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: MIT
 
-#include "uv.hh"
+#include "lib/native/base/base.hh"
+#include "type.hh"
 #include "util.hh"
+#include "uv.hh"
+
+#include <napi.h>
 
 namespace K {
 

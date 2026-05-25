@@ -5,6 +5,7 @@
 #include "ffi.hh"
 #include "call.hh"
 #include "parser.hh"
+#include "type.hh"
 #include "util.hh"
 #include "uv.hh"
 #if defined(_WIN32)
@@ -34,6 +35,13 @@
 #include <napi.h>
 
 namespace K {
+
+// Value does not matter, the tag system uses memory addresses
+const napi_type_tag LibraryHandleMarker = { 0xdb9b066e6f700474, 0x0aecd7e4c63fbda9 };
+const napi_type_tag TypeObjectMarker = { 0x1cc449675b294374, 0xbb13a50e97dcb017 };
+const napi_type_tag DirectionMarker = { 0xf9c306238b480580, 0xc2e168524a0823f5 };
+const napi_type_tag UnionValueMarker = { 0x5eaf2245526a4c7d, 0x8c86c9ee2b96ffc8 };
+const napi_type_tag CastMarker = { 0x77f459614a0a412f, 0x80b3dda1341dc8df };
 
 SharedData shared;
 

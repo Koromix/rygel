@@ -12,6 +12,34 @@ namespace K {
 // #define EXTERNAL_POINTERS
 // #define EXTERNAL_TYPES
 
+#if defined(_MSC_VER)
+    #define FORCE_INLINE __forceinline
+#else
+    #define FORCE_INLINE __attribute__((always_inline)) inline
+#endif
+#if defined(UNITY_BUILD)
+    #define INLINE_UNITY FORCE_INLINE
+#else
+    #define INLINE_UNITY
+#endif
+
+#if defined(__GNUC__) || defined(__clang__)
+    #if  __has_attribute(musttail) && __has_attribute(preserve_none)
+        #define MUST_TAIL __attribute__((musttail))
+        #define PRESERVE_NONE __attribute__((preserve_none))
+    #elif  __has_attribute(musttail) && !defined(__clang__)
+        // GCC regalloc seems better, so the generated code is not too bad even without preserve_none
+        #define MUST_TAIL __attribute__((musttail))
+        #define PRESERVE_NONE
+    #endif
+#endif
+
+#define NAPI_OK(Call) \
+    do { \
+        napi_status status = (Call); \
+        K_ASSERT(status == napi_ok); \
+    } while (false)
+
 static const Size DefaultSyncStackSize = Mebibytes(1);
 static const Size DefaultSyncHeapSize = Mebibytes(2);
 static const Size DefaultAsyncStackSize = Kibibytes(128);
@@ -390,6 +418,12 @@ struct SharedData {
     }
 };
 static_assert(MaxTrampolines <= INT16_MAX);
+
+extern const napi_type_tag LibraryHandleMarker;
+extern const napi_type_tag TypeObjectMarker;
+extern const napi_type_tag DirectionMarker;
+extern const napi_type_tag UnionValueMarker;
+extern const napi_type_tag CastMarker;
 
 extern SharedData shared;
 

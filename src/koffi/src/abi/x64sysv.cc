@@ -6,6 +6,7 @@
 #include "lib/native/base/base.hh"
 #include "../ffi.hh"
 #include "../call.hh"
+#include "../type.hh"
 #include "../util.hh"
 
 #include <napi.h>

@@ -67,6 +67,7 @@ set(KOFFI_SRC
     src/call.cc
     src/ffi.cc
     src/parser.cc
+    src/type.cc
     src/util.cc
     src/uv.cc
     src/win32.cc
