@@ -179,4 +179,6 @@ void PerformAsyncRelay(napi_env env, napi_value callback, void *ctx, void *udata
 
 void *GetTrampoline(int idx);
 
+bool Encode(InstanceData *instance, uint8_t *ptr, napi_value value, const TypeInfo *type);
+
 }

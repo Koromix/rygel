@@ -375,7 +375,6 @@ void DecodeElements(InstanceData *instance, napi_value array, const uint8_t *ori
 INLINE_UNITY void DecodeBuffer(Span<uint8_t> buffer, const uint8_t *origin, const TypeInfo *type);
 
 napi_value Decode(InstanceData *instance, const uint8_t *ptr, const TypeInfo *type);
-bool Encode(InstanceData *instance, uint8_t *ptr, napi_value value, const TypeInfo *type);
 
 static FORCE_INLINE napi_value NewInt(Napi::Env env, char i) { napi_value value; napi_create_int32(env, (int32_t)i, &value); return value; }
 static FORCE_INLINE napi_value NewInt(Napi::Env env, signed char i) { napi_value value; napi_create_int32(env, (int32_t)i, &value); return value; }
