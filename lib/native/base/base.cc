@@ -10728,7 +10728,7 @@ const char *GetMimeType(Span<const char> extension, const char *default_type)
     const char *mimetype = mimetypes.FindValue(lower, nullptr);
 
     if (!mimetype) {
-        LogError("Unknown MIME type for extension '%1'", extension);
+        LogDebug("Unknown MIME type for extension '%1'", extension);
         mimetype = default_type;
     }
 
