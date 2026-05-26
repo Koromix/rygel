@@ -30,7 +30,7 @@ Features = +ASan +UBSan
 Features = ?PCH, ?Ccache, Warnings, DebugInfo, Optimize
 
 [LTO]
-Features = Warnings, DebugInfo, Optimize, LTO
+Features = ?PCH, ?Ccache, Warnings, DebugInfo, Optimize, LTO
 
 [Paranoid]
 Host = :clang:lld
