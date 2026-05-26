@@ -319,6 +319,8 @@ async function test() {
     const GetEnumPrimitive5 = lib.func('const char *GetEnumPrimitive5()');
     const StringLength = lib.func('size_t StringLength(const char *str)');
     const StringLength16 = lib.func('size_t StringLength16(const char16_t *str)');
+    const ConcatMany1 = lib.func('const char *! ConcatMany(const char **strings, size_t count)');
+    const ConcatMany2 = lib.func('const char *! ConcatMany(void **strings, size_t count)');
 
     free_ptr = CallFree;
 
@@ -1113,6 +1115,15 @@ async function test() {
     assert.equal(koffi.decode.uint64(BigUint64Array.from([90071992547409911n])), 90071992547409911n);
     assert.equal(koffi.decode.float(Float32Array.from([42])), 42);
     assert.equal(koffi.decode.double(Float64Array.from([24])), 24);
+
+    // Concatenate array of strings
+    {
+        let strings = ['Hello', ' World,', ' HOW YA DOIN?'];
+        let expected = 'Hello World, HOW YA DOIN?';
+
+        assert.equal(ConcatMany1(strings, strings.length), expected);
+        assert.equal(ConcatMany2(strings, strings.length), expected);
+    }
 
     // Test boundary conditions between fast and slow string handling paths
     if (allow_slow) {

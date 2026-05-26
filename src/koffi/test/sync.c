@@ -1161,3 +1161,25 @@ EXPORT const char *GetEnumPrimitive4() { return ENUM_PRIMITIVE(Enum4); }
 EXPORT const char *GetEnumPrimitive5() { return ENUM_PRIMITIVE(Enum5); }
 
 #undef ENUM_PRIMITIVE
+
+EXPORT const char *ConcatMany(const char **strings, size_t count)
+{
+    size_t needed = 1;
+
+    for (size_t i = 0; i < count; i++) {
+        needed += strlen(strings[i]);
+    }
+
+    char *str = (char *)malloc(needed);
+    char *ptr = str;
+
+    for (size_t i = 0; i < count; i++) {
+        size_t len = strlen(strings[i]);
+        memcpy(ptr, strings[i], len);
+        ptr += len;
+    }
+
+    *ptr = 0;
+
+    return str;
+}
