@@ -626,13 +626,8 @@ namespace {
     OP(PushAggregateReg) {
         napi_value arg = args[inst->a];
 
-        if (!IsObject(call->env, arg)) [[unlikely]] {
-            ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected object", GetValueType(call->instance, arg));
-            return call->env.Null();
-        }
-
         uint64_t buf[2] = {};
-        if (!call->PushObject(arg, inst->type, (uint8_t *)buf))
+        if (!call->PushObject(arg, inst->type, (uint8_t *)buf)) [[unlikely]]
             return call->env.Null();
 
         // The second part might be useless (if object fits in one register), in
@@ -647,15 +642,10 @@ namespace {
     OP(PushAggregateMem) {
         napi_value arg = args[inst->a];
 
-        if (!IsObject(call->env, arg)) [[unlikely]] {
-            ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected object", GetValueType(call->instance, arg));
-            return call->env.Null();
-        }
-
         uint8_t *ptr = call->AllocHeap(inst->type->size);
         *(uint8_t **)(base + inst->b1) = ptr;
 
-        if (!call->PushObject(arg, inst->type, ptr))
+        if (!call->PushObject(arg, inst->type, ptr)) [[unlikely]]
             return call->env.Null();
 
         NEXT();
@@ -1302,14 +1292,9 @@ void CallData::Relay(Size idx, uint8_t *sp)
         } break;
         case PrimitiveKind::Record:
         case PrimitiveKind::Union: {
-            if (!IsObject(env, value)) [[unlikely]] {
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected object", GetValueType(instance, value));
-                return;
-            }
-
             if (proto->ret.abi.method != AbiMethod::Memory) {
                 uint64_t buf[2];
-                if (!PushObject(value, type, (uint8_t *)buf))
+                if (!PushObject(value, type, (uint8_t *)buf)) [[unlikely]]
                     return;
 
                 memcpy((uint8_t *)&out_reg + proto->ret.abi.offsets[0], (const uint8_t *)buf, 8);
@@ -1318,7 +1303,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
                 uint64_t *gpr_ptr = (uint64_t *)in_ptr;
                 uint8_t *dest = (uint8_t *)gpr_ptr[0]; // a0
 
-                if (!PushObject(value, type, dest))
+                if (!PushObject(value, type, dest)) [[unlikely]]
                     return;
             }
         } break;

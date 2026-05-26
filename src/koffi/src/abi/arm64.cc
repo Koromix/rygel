@@ -705,14 +705,9 @@ namespace {
     OP(PushAggregateReg) {
         napi_value arg = args[inst->a];
 
-        if (!IsObject(call->env, arg)) [[unlikely]] {
-            ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected object", GetValueType(call->instance, arg));
-            return call->env.Null();
-        }
-
         uint8_t *ptr = base + inst->b1;
 
-        if (!call->PushObject(arg, inst->type, ptr))
+        if (!call->PushObject(arg, inst->type, ptr)) [[unlikely]]
             return call->env.Null();
 
         NEXT();
@@ -720,15 +715,10 @@ namespace {
     OP(PushAggregateMem) {
         napi_value arg = args[inst->a];
 
-        if (!IsObject(call->env, arg)) [[unlikely]] {
-            ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected object", GetValueType(call->instance, arg));
-            return call->env.Null();
-        }
-
         uint8_t *ptr = call->AllocHeap(inst->type->size);
         *(uint8_t **)(base + inst->b1) = ptr;
 
-        if (!call->PushObject(arg, inst->type, ptr))
+        if (!call->PushObject(arg, inst->type, ptr)) [[unlikely]]
             return call->env.Null();
 
         NEXT();
@@ -1368,15 +1358,10 @@ void CallData::Relay(Size idx, uint8_t *sp)
 
         case PrimitiveKind::Record:
         case PrimitiveKind::Union: {
-            if (!IsObject(env, value)) [[unlikely]] {
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected object", GetValueType(instance, value));
-                return;
-            }
-
             uint64_t *gpr_ptr = (uint64_t *)in_ptr;
             uint8_t *dest = proto->ret.abi.regular ? (uint8_t *)&out_reg + proto->ret.abi.offset : (uint8_t *)gpr_ptr[8]; // x8
 
-            if (!PushObject(value, type, dest))
+            if (!PushObject(value, type, dest)) [[unlikely]]
                 return;
         } break;
         case PrimitiveKind::Array: { K_UNREACHABLE(); } break;

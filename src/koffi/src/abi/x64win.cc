@@ -370,14 +370,9 @@ namespace {
     OP(PushAggregateReg) {
         napi_value arg = args[inst->a];
 
-        if (!IsObject(call->env, arg)) [[unlikely]] {
-            ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected object", GetValueType(call->instance, arg));
-            return call->env.Null();
-        }
-
         uint8_t *ptr = (uint8_t *)(base + inst->b1);
 
-        if (!call->PushObject(arg, inst->type, ptr))
+        if (!call->PushObject(arg, inst->type, ptr)) [[unlikely]]
             return call->env.Null();
 
         NEXT();
@@ -385,15 +380,10 @@ namespace {
     OP(PushAggregateMem) {
         napi_value arg = args[inst->a];
 
-        if (!IsObject(call->env, arg)) [[unlikely]] {
-            ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected object", GetValueType(call->instance, arg));
-            return call->env.Null();
-        }
-
         uint8_t *ptr = call->AllocHeap(inst->type->size);
         *(uint8_t **)(base + inst->b1) = ptr;
 
-        if (!call->PushObject(arg, inst->type, ptr))
+        if (!call->PushObject(arg, inst->type, ptr)) [[unlikely]]
             return call->env.Null();
 
         NEXT();
@@ -1049,17 +1039,13 @@ void CallData::Relay(Size idx, uint8_t *sp)
         } break;
         case PrimitiveKind::Record:
         case PrimitiveKind::Union: {
-            if (!IsObject(env, value)) [[unlikely]] {
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected object", GetValueType(instance, value));
-                return;
-            }
-
             if (return_ptr) {
-                if (!PushObject(value, type, return_ptr))
+                if (!PushObject(value, type, return_ptr)) [[unlikely]]
                     return;
                 out_reg->rax = (uint64_t)return_ptr;
             } else {
-                PushObject(value, type, (uint8_t *)&out_reg->rax);
+                if (!PushObject(value, type, (uint8_t *)&out_reg->rax)) [[unlikely]]
+                    return;
             }
         } break;
         case PrimitiveKind::Array: { K_UNREACHABLE(); } break;

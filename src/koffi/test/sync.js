@@ -427,6 +427,9 @@ async function test() {
         let sif = { i: 4, f: 2.0 };
         assert.deepEqual(ReverseIntFloat(sif), { i: 2, f: 4 });
         assert.deepEqual(ReverseFloatInt(sif), { i: 2, f: 4 });
+
+        assert.throws(() => ReverseFloatInt(null), /expected object/);
+        assert.throws(() => ReverseFloatInt(12), /expected object/);
     }
 
     // Many parameters

@@ -684,13 +684,8 @@ namespace {
     OP(PushAggregateReg) {
         napi_value arg = args[inst->a];
 
-        if (!IsObject(call->env, arg)) [[unlikely]] {
-            ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected object", GetValueType(call->instance, args[inst->a]));
-            return call->env.Null();
-        }
-
         uint64_t buf[2];
-        if (!call->PushObject(arg, inst->type, (uint8_t *)buf))
+        if (!call->PushObject(arg, inst->type, (uint8_t *)buf)) [[unlikely]]
             return call->env.Null();
 
         // The second part might be useless (if object fits in one register), in
@@ -705,12 +700,7 @@ namespace {
     OP(PushAggregateStack) {
         napi_value arg = args[inst->a];
 
-        if (!IsObject(call->env, arg)) [[unlikely]] {
-            ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected object", GetValueType(call->instance, arg));
-            return call->env.Null();
-        }
-
-        if (!call->PushObject(arg, inst->type, base + inst->b1))
+        if (!call->PushObject(arg, inst->type, base + inst->b1)) [[unlikely]]
             return call->env.Null();
 
         NEXT();
@@ -1361,16 +1351,11 @@ void CallData::Relay(Size idx, uint8_t *sp)
 
         case PrimitiveKind::Record:
         case PrimitiveKind::Union: {
-            if (!IsObject(env, value)) [[unlikely]] {
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected object", GetValueType(instance, value));
-                return;
-            }
-
             if (proto->ret.abi.method == AbiMethod::Stack) {
                 uint64_t *gpr_ptr = (uint64_t *)in_ptr;
                 uint8_t *dest = (uint8_t *)gpr_ptr[0];
 
-                if (!PushObject(value, type, dest))
+                if (!PushObject(value, type, dest)) [[unlikely]]
                     return;
 
                 out_reg->rax = (uint64_t)dest;
@@ -1378,7 +1363,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
                 K_ASSERT(type->size <= 16);
 
                 uint8_t buf[16] = {};
-                if (!PushObject(value, type, buf))
+                if (!PushObject(value, type, buf)) [[unlikely]]
                     return;
 
                 switch (proto->ret.abi.method) {

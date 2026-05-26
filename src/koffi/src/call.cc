@@ -376,17 +376,16 @@ Size CallData::PushString32Value(napi_value value, const char32_t **out_str32)
     return j;
 }
 
-static inline napi_value GetMemberValue(napi_env env, napi_value obj, const RecordMember &member)
+static FORCE_INLINE napi_value GetMemberValue(napi_env env, napi_value obj, const RecordMember &member)
 {
-    napi_value value = nullptr;
+    napi_value value;
 
     if (member.key) {
-        napi_value key = nullptr;
-        napi_get_reference_value(env, member.key, &key);
-
-        napi_get_property(env, obj, key, &value);
+        napi_value key;
+        NAPI_OK(napi_get_reference_value(env, member.key, &key));
+        NAPI_OK(napi_get_property(env, obj, key, &value));
     } else {
-        napi_get_named_property(env, obj, member.name, &value);
+        NAPI_OK(napi_get_named_property(env, obj, member.name, &value));
     }
 
     return value;
@@ -394,9 +393,13 @@ static inline napi_value GetMemberValue(napi_env env, napi_value obj, const Reco
 
 bool CallData::PushObject(napi_value obj, const TypeInfo *type, uint8_t *origin)
 {
-    K_ASSERT(IsObject(env, obj));
     K_ASSERT(type->primitive == PrimitiveKind::Record ||
              type->primitive == PrimitiveKind::Union);
+
+    if (GetKindOf(env, obj) != napi_object) [[unlikely]] {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected object", GetValueType(instance, obj));
+        return false;
+    }
 
     Span<const RecordMember> members = type->members;
 
@@ -547,12 +550,7 @@ bool CallData::PushObject(napi_value obj, const TypeInfo *type, uint8_t *origin)
             } break;
             case PrimitiveKind::Record:
             case PrimitiveKind::Union: {
-                if (!IsObject(env, value)) [[unlikely]] {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected object", GetValueType(instance, value));
-                    return false;
-                }
-
-                if (!PushObject(value, member.type, dest))
+                if (!PushObject(value, member.type, dest)) [[unlikely]]
                     return false;
             } break;
             case PrimitiveKind::Array: {
@@ -739,12 +737,7 @@ bool CallData::PushNormalArray(Napi::Array array, const TypeInfo *type, Size siz
         case PrimitiveKind::Record:
         case PrimitiveKind::Union: {
             PUSH_ARRAY({
-                if (!IsObject(env, value)) [[unlikely]] {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected object", GetValueType(instance, value));
-                    return false;
-                }
-
-                if (!PushObject(value, ref, dest))
+                if (!PushObject(value, ref, dest)) [[unlikely]]
                     return false;
             });
         } break;
@@ -1010,8 +1003,6 @@ bool CallData::PushPointerSlow(napi_value value, napi_valuetype kind, const Type
         return true;
     } else if (ref->primitive == PrimitiveKind::Record ||
                ref->primitive == PrimitiveKind::Union) [[likely]] {
-        K_ASSERT(IsObject(env, value));
-
         ptr = (void *)AllocHeap(ref->size);
 
         if (ref->primitive == PrimitiveKind::Union &&
@@ -1021,9 +1012,12 @@ bool CallData::PushPointerSlow(napi_value value, napi_valuetype kind, const Type
         }
 
         if (directions & 1) {
-            if (!PushObject(value, ref, (uint8_t *)ptr))
+            if (!PushObject(value, ref, (uint8_t *)ptr)) [[unlikely]]
                 return false;
         } else {
+            if (kind != napi_object) [[unlikely]]
+                return false;
+
             MemSet(ptr, 0, ref->size);
         }
 
@@ -1909,12 +1903,7 @@ bool Encode(InstanceData *instance, uint8_t *origin, napi_value value, const Typ
         } break;
         case PrimitiveKind::Record:
         case PrimitiveKind::Union: {
-            if (!IsObject(env, value)) [[unlikely]] {
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected object", GetValueType(instance, value));
-                return false;
-            }
-
-            if (!call.PushObject(value, type, origin))
+            if (!call.PushObject(value, type, origin)) [[unlikely]]
                 return false;
         } break;
         case PrimitiveKind::Array: {
