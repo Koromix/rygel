@@ -799,19 +799,13 @@ bool CallData::PushNormalArray(Napi::Array array, const TypeInfo *type, Size siz
             });
         } break;
         case PrimitiveKind::Callback: {
-            for (Size i = 0; i < len; i++) {
-                napi_value value = array[(uint32_t)i].AsValue();
-
-                uint8_t *dest = origin + offset;
-
+            PUSH_ARRAY({
                 void *ptr;
                 if (!PushCallback(value, ref, &ptr))
                     return false;
 
-                *(void **)dest = ptr;
-
-                offset += stride;
-            }
+                *(const void **)dest = ptr;
+            });
         } break;
 
         case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;
