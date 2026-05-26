@@ -108,7 +108,7 @@ You may need to change your code if you use:
 - Opaque types
 - `koffi.introspect()`
 
-## Callback type changes
+## Callback types
 
 In Koffi 1.x, callbacks were defined in a way that made them usable directly as parameter and return types, obscuring the underlying pointer. Now, you must use them through a pointer: `void CallIt(CallbackType func)` in Koffi 1.x becomes `void CallIt(CallbackType *func)` in version 2.0 and newer.
 
@@ -161,7 +161,7 @@ console.log(ret);
 
 Koffi 1.x only supported [transient callbacks](callbacks#javascript-callbacks), you must use Koffi 2.x for registered callbacks.
 
-## Opaque type changes
+## Opaque types
 
 In Koffi 1.x, opaque handles were defined in a way that made them usable directly as parameter and return types, obscuring the underlying pointer. Now, in Koffi 2.0, you must use them through a pointer, and use an array for output parameters.
 
