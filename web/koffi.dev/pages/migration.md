@@ -6,7 +6,7 @@ However, some changes could impact your code:
 
 - Koffi is now distributed in [split packages](#split-packages) to reduce install size/bloat.
 - Pointers are now [BigInt values](#bigint-pointers) instead of opaque V8 external values.
-- Types created by koffi are now [type objects](#type-objects) insted of opaque V8 external values.
+- Types created by koffi are now [type objects](#type-objects) instead of opaque V8 external values.
 - Using `koffi.register()` with a [receiver value](#registered-callback-binding) is deprecated.
 - Several old [deprecated functions](#removed-functions) have been removed.
 
