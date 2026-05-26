@@ -1,7 +1,5 @@
 # Callback types
 
-*Changed in Koffi 2.7*
-
 In order to pass a JS function to a C function expecting a callback, you must first create a callback type with the expected return type and parameters. The syntax is similar to the one used to load functions from a shared library.
 
 ```js
@@ -14,8 +12,6 @@ const ExampleCallback = koffi.proto('ExampleCallback', 'void', ['int']);
 // With the prototype parser, this callback expects a double and float, and returns the sum as a double
 const AddDoubleFloat = koffi.proto('double AddDoubleFloat(double d, float f)');
 ```
-> [!NOTE]
-> The function `koffi.proto()` was introduced in Koffi 2.4, it was called `koffi.callback()` in earlier versions.
 
 For alternative [calling conventions](functions#calling-conventions) (such as `stdcall` on Windows x86 32-bit), you can specify as the first argument with the classic syntax, or after the return type in prototype strings, like this:
 
@@ -30,19 +26,8 @@ const EnumWindowsProc = koffi.proto('__stdcall', 'EnumWindowsProc', 'bool', ['HW
 
 > [!WARNING]
 > You have to make sure you **get the calling convention right** (such as specifying __stdcall for a Windows API callback), or your code will crash on Windows 32-bit.
->
-> Before Koffi 2.7, it was *impossible to use an alternative callback calling convention with the classic syntax*. Use a prototype string or *upgrade to Koffi 2.7* to solve this limitation.
 
 Once your callback type is declared, you can use a pointer to it in struct definitions, as function parameters and/or return types, or to call/decode function pointers.
-
-> [!NOTE]
-> Callbacks **have changed in version 2.0**.
->
-> In Koffi 1.x, callbacks were defined in a way that made them usable directly as parameter and return types, obscuring the underlying pointer.
->
-> Now, you must use them through a pointer: `void CallIt(CallbackType func)` in Koffi 1.x becomes `void CallIt(CallbackType *func)` in version 2.0 and newer.
->
-> Consult the [migration guide](migration) for more information.
 
 # Transient and registered callbacks
 
@@ -95,7 +80,7 @@ console.log(ret);
 
 ## Registered callbacks
 
-*New in Koffi 2.0 (explicit this binding in Koffi 2.2)*
+*Changed in Koffi 3.0*
 
 Use registered callbacks when the function needs to be called at a later time (e.g. log handler, event handler, `fopencookie/funopen`). Call `koffi.register(func, type)` to register a callback function, with two arguments: the JS function, and the callback type.
 
@@ -143,15 +128,13 @@ koffi.unregister(cb2);
 ```
 
 > [!NOTE]
-> In Koffi 2.x (starting with Koffi 2.2), you could bind a specific `this` value to the callback function, by giving an object as the first argument to `koffi.register()`.
+> In Koffi 2.2, you could bind a specific `this` value to the callback function, by giving an object as the first argument to `koffi.register()`.
 >
 > This feature has been deprecated in Koffi 3 and will eventually be removed. Replace with an explicit call to `function.bind()` instead.
 
 # Special considerations
 
 ## Decoding pointer arguments
-
-*New in Koffi 2.2, changed in Koffi 2.3*
 
 Koffi does not have enough information to convert callback pointer arguments to an appropriate JS value. In this case, your JS function will receive a *BigInt* value with the pointer address.
 
@@ -181,8 +164,6 @@ console.log(array); // Prints ['123', 'bar', 'foo', 'foobar']
 ```
 
 ## Asynchronous callbacks
-
-*New in Koffi 2.2.2*
 
 JS execution is inherently single-threaded, so JS callbacks must run on the main thread. There are two ways you may want to call a callback function from another thread:
 

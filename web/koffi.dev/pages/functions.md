@@ -11,14 +11,12 @@ const lib = koffi.load('/path/to/shared/library'); // File extension depends on 
 
 This library will be automatically unloaded once all references to it are gone (including all the functions that use it, as described below).
 
-Starting with *Koffi 2.3.20*, you can explicitly unload a library by calling `lib.unload()`. Any attempt to find or call a function from this library after unloading it will crash.
+Use `lib.unload()` to can explicitly unload a library. Any attempt to find or call a function from this library after unloading it will crash.
 
 > [!NOTE]
 > On some platforms (such as with the [musl C library on Linux](https://wiki.musl-libc.org/functional-differences-from-glibc.html#Unloading-libraries)), shared libraries cannot be unloaded, so the library will remain loaded and memory mapped after the call to `lib.unload()`.
 
 # Loading options
-
-*New in Koffi 2.6, changed in Koffi 2.8.2 and Koffi 2.8.6*
 
 The `load` function can take an optional object argument, with the following options:
 
@@ -82,8 +80,6 @@ On x86 platforms, only the Cdecl convention can be used for variadic functions.
 
 ## Calling conventions
 
-*Changed in Koffi 2.7*
-
 By default, calling a C function happens synchronously.
 
 Most architectures only support one procedure call standard per process. The 32-bit x86 platform is an exception to this, and Koffi supports several x86 conventions:
@@ -96,11 +92,6 @@ Most architectures only support one procedure call standard per process. The 32-
  **Thiscall** | `koffi.func('__thiscall', name, ret, params)` | __thiscall     | Rarely used, uses ECX for first parameter
 
 You can safely use these on non-x86 platforms, they are simply ignored.
-
-> [!NOTE]
-> Support for specifying the convention as the first argument of the classic form was introduced in Koffi 2.7.
->
-> In earlier versions, you had to use `koffi.stdcall()` and similar functions. These functions are still supported but deprecated, and will be removed in Koffi 3.0.
 
 Below you can find a small example showing how to use a non-default calling convention, with the two syntaxes:
 
@@ -171,8 +162,6 @@ Variadic functions cannot be called asynchronously.
 > Callbacks must be called from the main thread, or more precisely from the same thread as the V8 intepreter. Calling a callback from another thread is undefined behavior, and will likely lead to a crash or a big mess. You've been warned!
 
 # Function pointers
-
-*New in Koffi 2.4*
 
 You can call a function pointer in two ways:
 

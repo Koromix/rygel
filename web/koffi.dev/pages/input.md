@@ -59,8 +59,6 @@ let struct2 = koffi.struct({ dummy: koffi.types.long });
 
 ## Endian-sensitive integers
 
-*New in Koffi 2.1*
-
 Koffi defines a bunch of endian-sensitive types, which can be used when dealing with binary data (network payloads, binary file formats, etc.).
 
 C type                 | Bytes | Signedness | Endianness
@@ -144,17 +142,6 @@ const Function2 = lib.func('Function', A, [A]);
 Many C libraries use some kind of object-oriented API, with a pair of functions dedicated to create and delete objects. An obvious example of this can be found in stdio.h, with the opaque `FILE *` pointer. You can open and close files with `fopen()` and `fclose()`, and manipule the opaque pointer with other functions such as `fread()` or `ftell()`.
 
 In Koffi, you can manage this with opaque types. Declare the opaque type with `koffi.opaque(name)`, and use a pointer to this type either as a return type or some kind of [output parameter](output) (with a double pointer).
-
-> [!NOTE]
-> Opaque types **have changed in version 2.0, and again in version 2.1**.
->
-> In Koffi 1.x, opaque handles were defined in a way that made them usable directly as parameter and return types, obscuring the underlying pointer.
->
-> Now, you must use them through a pointer, and use an array for output parameters. This is shown in the example below (look for the call to `ConcatNewOut` in the JS part), and is described in the section on [output parameters](output).
->
-> In addition to this, you should use `koffi.opaque()` (introduced in Koffi 2.1) instead of `koffi.handle()` which is deprecated, and will be removed eventually in Koffi 3.0.
->
-> Consult the [migration guide](migration) for more information.
 
 The full example below implements an iterative string builder (concatenator) in C, and uses it from Javascript to output a mix of Hello World and FizzBuzz. The builder is hidden behind an opaque type, and is created and destroyed using a pair of C functions: `ConcatNew` (or `ConcatNewOut`) and `ConcatFree`.
 
@@ -336,8 +323,6 @@ try {
 
 ## Fixed-size C arrays
 
-*Changed in Koffi 2.7.1*
-
 Fixed-size arrays are declared with `koffi.array(type, length)`. Just like in C, they cannot be passed as functions parameters (they degenerate to pointers), or returned by value. You can however embed them in struct types.
 
 Koffi applies the following conversion rules when passing arrays to/from C:
@@ -378,12 +363,7 @@ const StructType = koffi.struct('StructType', {
 });
 ```
 
-> [!NOTE]
-> The short C-like syntax was introduced in Koffi 2.7.1, use `koffi.array()` for older versions.
-
 ## Fixed-size string buffers
-
-*Changed in Koffi 2.9.0*
 
 Koffi can also convert JS strings to fixed-sized arrays in the following cases:
 
@@ -391,14 +371,9 @@ Koffi can also convert JS strings to fixed-sized arrays in the following cases:
 - **char16 (or char16_t) arrays** are filled with the UTF-16 encoded string, truncated if needed. The buffer is always NUL-terminated.
 - **char32 (or char32_t) arrays** are filled with the UTF-32 encoded string, truncated if needed. The buffer is always NUL-terminated.
 
-> [!NOTE]
-> Support for UTF-32 and wchar_t (wide) strings was introduced in Koffi 2.9.0.
-
 The reverse case is also true, Koffi can convert a C fixed-size buffer to a JS string. This happens by default for char, char16_t and char32_t arrays, but you can also explicitly ask for this with the `String` array hint (e.g. `koffi.array('char', 8, 'String')`).
 
 ## Flexible arrays
-
-*Added in Koffi 2.14.0*
 
 C structs ending with a flexible array member are often used for variable-sized structs, and are generally paired with dynamic memory allocation. In many cases, the number of elements is described by another struct member.
 
@@ -468,7 +443,7 @@ In C, dynamically-sized arrays are usually passed around as pointers. Read more 
 
 # Enum types
 
-*Added in Koffi 3.0*
+*New in Koffi 3.0*
 
 C enumeration values are stored as integers. The underlying integer type is implementation-defined but Koffi tries to match usual platform behavior.
 

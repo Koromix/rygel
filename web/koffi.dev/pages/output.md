@@ -161,8 +161,6 @@ sqlite3_close_v2(db);
 
 ## String buffer example
 
-*New in Koffi 2.2*
-
 This example calls a C function to concatenate two strings to a pre-allocated string buffer. Since JS strings are immutable, you must pass an array with a single string instead.
 
 ```c
@@ -208,8 +206,6 @@ In most cases, you can use buffers and typed arrays to provide output buffers. T
 
 ## Transient pointers
 
-*New in Koffi 2.3*
-
 You can use buffers and typed arrays for output (and input/output) pointer parameters. Simply pass the buffer as an argument and the native function will receive a pointer to its contents.
 
 Once the native function returns, you can decode the content with `koffi.decode(value, type)` as in the following example:
@@ -251,8 +247,6 @@ console.log(vec2); // { x: 1, y: 2, z: 3 }
 See [decoding variables](variables#decode-to-js-values) for more information about the decode function.
 
 ## Stable pointers
-
-*New in Koffi 2.8*
 
 In some cases, the native code may need to change the output buffer at a later time, maybe during a later call or from another thread.
 

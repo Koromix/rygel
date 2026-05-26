@@ -1,7 +1,5 @@
 # Variable definitions
 
-*New in Koffi 2.6*
-
 To find an exported and  declare a variable, use `lib.symbol(name, type)`. You need to specify its name and its type.
 
 ```c
@@ -20,8 +18,6 @@ You cannot directly manipulate these variables, use:
 - [koffi.encode()](#encode-to-c-memory) to change their value
 
 # Decode to JS values
-
-*New in Koffi 2.2, changed in Koffi 2.3*
 
 Use `koffi.decode()` to decode C pointers, represented by BigInt numbers.
 
@@ -59,12 +55,7 @@ The example below will decode the symbol `my_string` defined above but only the 
 console.log(koffi.decode(my_string, 'const char *', 3)) // Prints "foo"
 ```
 
-> [!NOTE]
-> In Koffi 2.2 and earlier versions, the length argument is only used to decode strings and is ignored otherwise.
-
 # Encode to C memory
-
-*New in Koffi 2.6*
 
 Use `koffi.encode()` to encode JS values into C symbols or pointers, which are represented by BigInt numbers.
 
@@ -97,6 +88,3 @@ console.log(koffi.decode(my_string, 'const char *')) // Prints "Hello World!"
 When encoding strings (either directly or embedded in arrays or structs), the memory will be bound to the raw pointer value and managed by Koffi. You can assign to the same string again and again without any leak or risk of use-after-free.
 
 There is also an optional ending `length` argument that you can use to encode an array. For example, here is how you can encode an array with 3 float values: `koffi.encode(symbol, 'float', [1, 2, 3], 3)`. This is equivalent to `koffi.encode(symbol, koffi.array('float', 3), [1, 2, 3])`.
-
-> [!NOTE]
-> The length argument did not work correctly before Koffi 2.6.11.

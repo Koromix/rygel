@@ -54,13 +54,9 @@ console.log(koffi.sizeof(koffi.types.long));
 
 ## Aliases
 
-*New in Koffi 2.0*
-
 You can alias a type with `koffi.alias(name, type)`. Aliased types are completely equivalent.
 
 ## Circular references
-
-*New in Koffi 2.10.0*
 
 In some cases, composite types can point to each other and thus depend on each other. This can also happen when a function takes a pointer to a struct that also contains a function pointer.
 
@@ -122,8 +118,6 @@ Async calls run on worker threads, the number of which depends on the number of 
 
 ## Default settings
 
-*Changed in Koffi 2.15*
-
 Setting              | Default | Maximum | Description
 -------------------- | ------- | ------- | ----------------------------------------------------
 sync_stack_size      | 1 MiB   | 16 MiB  | Stack size for synchronous calls
@@ -136,13 +130,9 @@ max_type_size        | 64 MiB  | 512 MiB | Maximum size of Koffi types (for arra
 
 # Usage statistics
 
-*New in Koffi 2.3.2*
-
 You can use `koffi.stats()` to get a few statistics related to Koffi.
 
 # POSIX error codes
-
-*New in Koffi 2.3.14*
 
 You can use `koffi.errno()` to get the current errno value, and `koffi.errno(value)` to change it.
 
@@ -165,8 +155,6 @@ console.log('close() with invalid FD is POSIX compliant!');
 ```
 
 # Reset internal state
-
-*New in Koffi 2.5.19*
 
 You can use `koffi.reset()` to clear some Koffi internal state such as:
 

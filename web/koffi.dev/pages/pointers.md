@@ -37,8 +37,6 @@ console.log(pos);
 
 ## Opaque pointers
 
-*New in Koffi 2.0*
-
 Some C libraries use handles, which behave as pointers to opaque structs. An example of this is the HANDLE type in the Win32 API. If you want to reproduce this behavior, you can define a **named pointer type** to an opaque type, like so:
 
 ```js
@@ -134,8 +132,6 @@ By default, just like for objects, array arguments are copied from JS to C but n
 
 # Handling void pointers
 
-*New in Koffi 2.1*
-
 Many C functions use `void *` parameters in order to pass polymorphic objects and arrays, meaning that the data format changes can change depending on one other argument, or on some kind of struct tag member.
 
 Koffi provides two features to deal with this:
@@ -197,8 +193,6 @@ console.log('PNG header:', hdr);
 
 # Disposable types
 
-*New in Koffi 2.0*
-
 Disposable types allow you to register a function that will automatically called after each C to JS conversion performed by Koffi. This can be used to avoid leaking heap-allocated strings, for example.
 
 Some C functions return heap-allocated values directly or through output parameters. While Koffi automatically converts values from C to JS (to a string or an object), it does not know when something needs to be freed, or how.
@@ -251,8 +245,6 @@ Disposable types can only be created from pointer or string types.
 > Be careful on Windows: if your shared library uses a different CRT (such as msvcrt), the memory could have been allocated by a different malloc/free implementation or heap, resulting in undefined behavior if you use `koffi.free()`.
 
 # External buffers (views)
-
-*New in Koffi 2.11.0*
 
 You can access unmanaged memory with `koffi.view(ptr, len)`. This function takes a pointer and a length, and creates an ArrayBuffer through which you can access the underlying memory without copy.
 
