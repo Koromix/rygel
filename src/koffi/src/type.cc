@@ -2,9 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
 #include "lib/native/base/base.hh"
+#include "call.hh"
 #include "ffi.hh"
 #include "type.hh"
-#include "util.hh"
 
 #include <napi.h>
 

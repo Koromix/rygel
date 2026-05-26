@@ -164,19 +164,14 @@ inline T *CallData::AllocHeap(Size size)
 }
 
 void InitTranslateZeroCall(Napi::Env env);
-bool InitAsyncBroker(Napi::Env env, InstanceData *instance);
 
-napi_value TranslateZeroCall(napi_env env, napi_callback_info info);
-napi_value TranslateFastCall(napi_env env, napi_callback_info info);
-napi_value TranslateNormalCall(napi_env env, napi_callback_info info);
-napi_value TranslateNormalCallDebugAsync(napi_env env, napi_callback_info info);
-napi_value TranslateVariadicCall(napi_env env, napi_callback_info info);
-napi_value TranslateAsyncCall(napi_env env, napi_callback_info info);
+napi_value DescribeFunction(Napi::Env env, const FunctionInfo *func);
+napi_value WrapFunction(Napi::Env env, const FunctionInfo *func);
+bool DetectCallConvention(Span<const char> name, CallConvention *out_convention);
 
 napi_value CallPointer(napi_env env, const FunctionInfo *proto, void *native, napi_value *args, Size count);
 
-void PerformAsyncRelay(napi_env env, napi_value callback, void *ctx, void *udata);
-
+bool InitAsyncBroker(Napi::Env env, InstanceData *instance);
 void *GetTrampoline(int idx);
 
 bool Encode(InstanceData *instance, uint8_t *ptr, napi_value value, const TypeInfo *type);

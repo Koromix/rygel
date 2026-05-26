@@ -51,7 +51,6 @@ napi_status (NAPI_CDECL *node_api_create_property_key_utf8)(napi_env env, const 
 napi_status (NAPI_CDECL *node_api_post_finalizer)(node_api_basic_env env, napi_finalize finalize_cb, void* finalize_data, void* finalize_hint);
 napi_status (NAPI_CDECL *node_api_create_object_with_properties)(napi_env env, napi_value prototype_or_null, const napi_value *property_names,
                                                                  const napi_value *property_values, size_t property_count, napi_value *result);
-napi_value (*translate_zero_call)(napi_env env, napi_callback_info info);
 
 static bool ChangeSize(InstanceData *instance, const char *name, Napi::Value value, Size min_size, Size max_size, Size *out_size)
 {
@@ -2839,7 +2838,6 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
     }
 #endif
 
-    instance->translate_zero_call = translate_zero_call;
     instance->main_thread_id = std::this_thread::get_id();
 
     napi_add_env_cleanup_hook(env, [](void *udata) {

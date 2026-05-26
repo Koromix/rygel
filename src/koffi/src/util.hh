@@ -427,9 +427,6 @@ static FORCE_INLINE Napi::Array GetOwnPropertyNames(napi_env env, napi_value obj
     return Napi::Array(env, result);
 }
 
-napi_value DescribeFunction(Napi::Env env, const FunctionInfo *func);
-napi_value WrapFunction(Napi::Env env, const FunctionInfo *func);
-
 static FORCE_INLINE napi_value WrapPointer(Napi::Env env, const TypeInfo *ref, void *ptr)
 {
     napi_value value;
@@ -442,8 +439,6 @@ static FORCE_INLINE napi_value WrapPointer(Napi::Env env, const TypeInfo *ref, v
 
     return value;
 }
-
-bool DetectCallConvention(Span<const char> name, CallConvention *out_convention);
 
 int AnalyseFlat(const TypeInfo *type, FunctionRef<void(const TypeInfo *type, int offset, int count)> func);
 

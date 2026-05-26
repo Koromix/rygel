@@ -45,6 +45,8 @@ static const Size TrampolineSize = ((const uint8_t *)&TrampolineEnd - Trampoline
 
 #endif
 
+static napi_value (*translate_zero_call)(napi_env env, napi_callback_info info);
+
 #if defined(K_DEBUG)
 CallData::~CallData()
 {
@@ -1241,71 +1243,7 @@ void CallData::DebugForward()
 
 #endif
 
-static bool DetectDeno(Napi::Env env)
-{
-    Napi::Value ret = env.RunScript("typeof Deno != 'undefined'");
-    Napi::Boolean b = ret.ToBoolean();
-
-    return b.Value();
-}
-
-static bool DetectBun(Napi::Env env)
-{
-    Napi::Value ret = env.RunScript("process.isBun");
-    Napi::Boolean b = ret.ToBoolean();
-
-    return b.Value();
-}
-
-void InitTranslateZeroCall(Napi::Env env)
-{
-    if (DetectDeno(env) || DetectBun(env)) {
-        translate_zero_call = TranslateFastCall;
-        return;
-    }
-
-    Napi::Object self = Napi::Object::New(env);
-
-    napi_value func;
-    napi_value ret;
-
-    auto cb = [](napi_env env, napi_callback_info info) {
-        napi_value self;
-        NAPI_OK(napi_get_cb_info(env, info, nullptr, nullptr, &self, nullptr));
-
-        napi_value *ptr = (napi_value *)info;
-
-        if (ptr[0] != self && ptr[1] != self) {
-            translate_zero_call = TranslateZeroCall;
-        } else {
-            translate_zero_call = TranslateFastCall;
-        }
-
-        return self;
-    };
-
-    NAPI_OK(napi_create_function(env, nullptr, 0, cb, nullptr, &func));
-    NAPI_OK(napi_call_function(env, self, func, 0, nullptr, &ret));
-}
-
-bool InitAsyncBroker(Napi::Env env, InstanceData *instance)
-{
-    if (!instance->broker) {
-        if (napi_create_threadsafe_function(env, nullptr, nullptr,
-                                            Napi::String::New(env, "Koffi Async Callback Broker"),
-                                            0, 1, nullptr, nullptr, nullptr,
-                                            PerformAsyncRelay, &instance->broker) != napi_ok) {
-            LogError("Failed to create async callback broker");
-            return false;
-        }
-
-        NAPI_OK(napi_unref_threadsafe_function(env, instance->broker));
-    }
-
-    return true;
-}
-
-napi_value TranslateZeroCall(napi_env env, napi_callback_info info)
+static napi_value TranslateZeroCall(napi_env env, napi_callback_info info)
 {
     struct CallbackBundle {
         napi_env env;
@@ -1380,7 +1318,7 @@ static FORCE_INLINE napi_value TranslateNormalCall(napi_env env, const FunctionI
     return ret;
 }
 
-napi_value TranslateNormalCall(napi_env env, napi_callback_info info)
+static napi_value TranslateNormalCall(napi_env env, napi_callback_info info)
 {
     static_assert(MaxParameters >= 8);
 
@@ -1430,7 +1368,7 @@ static FORCE_INLINE napi_value TranslateNormalCallDebugAsync(napi_env env, const
     return ret;
 }
 
-napi_value TranslateNormalCallDebugAsync(napi_env env, napi_callback_info info)
+static napi_value TranslateNormalCallDebugAsync(napi_env env, napi_callback_info info)
 {
     static_assert(MaxParameters >= 8);
 
@@ -1552,7 +1490,7 @@ static napi_value TranslateVariadicCall(napi_env env, const FunctionInfo *func, 
     return ret;
 }
 
-napi_value TranslateVariadicCall(napi_env env, napi_callback_info info)
+static napi_value TranslateVariadicCall(napi_env env, napi_callback_info info)
 {
     static_assert(MaxParameters >= 8);
 
@@ -1645,7 +1583,7 @@ void AsyncCall::OnError(const Napi::Error& err)
     callback.Call(self, K_LEN(args), args);
 }
 
-napi_value TranslateAsyncCall(napi_env env, napi_callback_info info)
+static napi_value TranslateAsyncCall(napi_env env, napi_callback_info info)
 {
     static_assert(MaxParameters >= 6);
 
@@ -1685,6 +1623,213 @@ napi_value TranslateAsyncCall(napi_env env, napi_callback_info info)
     async->Queue();
 
     return Napi::Env(env).Undefined();
+}
+
+static bool DetectDeno(Napi::Env env)
+{
+    Napi::Value ret = env.RunScript("typeof Deno != 'undefined'");
+    Napi::Boolean b = ret.ToBoolean();
+
+    return b.Value();
+}
+
+static bool DetectBun(Napi::Env env)
+{
+    Napi::Value ret = env.RunScript("process.isBun");
+    Napi::Boolean b = ret.ToBoolean();
+
+    return b.Value();
+}
+
+void InitTranslateZeroCall(Napi::Env env)
+{
+    if (DetectDeno(env) || DetectBun(env)) {
+        translate_zero_call = TranslateFastCall;
+        return;
+    }
+
+    Napi::Object self = Napi::Object::New(env);
+
+    napi_value func;
+    napi_value ret;
+
+    auto cb = [](napi_env env, napi_callback_info info) {
+        napi_value self;
+        NAPI_OK(napi_get_cb_info(env, info, nullptr, nullptr, &self, nullptr));
+
+        napi_value *ptr = (napi_value *)info;
+
+        if (ptr[0] != self && ptr[1] != self) {
+            translate_zero_call = TranslateZeroCall;
+        } else {
+            translate_zero_call = TranslateFastCall;
+        }
+
+        return self;
+    };
+
+    NAPI_OK(napi_create_function(env, nullptr, 0, cb, nullptr, &func));
+    NAPI_OK(napi_call_function(env, self, func, 0, nullptr, &ret));
+}
+
+napi_value CallPointer(napi_env env, const FunctionInfo *proto, void *native, napi_value *args, Size count)
+{
+    if (proto->variadic) {
+        return TranslateVariadicCall(env, proto, native, args, count);
+    } else {
+        return TranslateNormalCall(env, proto, native, args, count);
+    }
+}
+
+static void PerformAsyncRelay(napi_env, napi_value, void *, void *udata)
+{
+    RelayContext *ctx = (RelayContext *)udata;
+    CallData *call = ctx->call;
+
+    call->Relay(ctx->idx, ctx->sp);
+    call->Finalize();
+
+    // We're done!
+    std::lock_guard<std::mutex> lock(ctx->mutex);
+    ctx->done = true;
+    ctx->cv.notify_one();
+}
+
+bool InitAsyncBroker(Napi::Env env, InstanceData *instance)
+{
+    if (!instance->broker) {
+        if (napi_create_threadsafe_function(env, nullptr, nullptr,
+                                            Napi::String::New(env, "Koffi Async Callback Broker"),
+                                            0, 1, nullptr, nullptr, nullptr,
+                                            PerformAsyncRelay, &instance->broker) != napi_ok) {
+            LogError("Failed to create async callback broker");
+            return false;
+        }
+
+        NAPI_OK(napi_unref_threadsafe_function(env, instance->broker));
+    }
+
+    return true;
+}
+
+void *GetTrampoline(int idx)
+{
+    return (void *)(TrampolineStart + TrampolineSize * idx);
+}
+
+static bool CanTypeAcceptCallbacks(const TypeInfo *type)
+{
+    if (type->primitive == PrimitiveKind::Pointer)
+        return true;
+    if (type->primitive == PrimitiveKind::Callback)
+        return true;
+
+    if (type->primitive == PrimitiveKind::Record ||
+            type->primitive == PrimitiveKind::Union) {
+        for (const RecordMember &member: type->members) {
+            if (CanTypeAcceptCallbacks(member.type))
+                return false;
+        }
+    }
+
+    return true;
+}
+
+static bool CanUseFastCall(const FunctionInfo *func)
+{
+    if (func->parameters.len > 6)
+        return false;
+
+    // Fast calls basically skip CallData::Finalize(), which handles output arguments
+    // and temporary callback trampolines. If the function does not use any
+    // output argument and cannot accept callbacks (so no pointer or callback arguments),
+    // we can skip finalization!
+
+    for (const ParameterInfo &param: func->parameters) {
+        if (param.directions & 2)
+            return false;
+        if (CanTypeAcceptCallbacks(param.type))
+            return false;
+    }
+
+    return true;
+}
+
+napi_value DescribeFunction(Napi::Env env, const FunctionInfo *func)
+{
+    static const char *const DirectionNames[] = {
+        nullptr,
+        "Input",
+        "Output",
+        "Input/Output"
+    };
+
+    Napi::Object meta = Napi::Object::New(env);
+    Napi::Array arguments = Napi::Array::New(env, func->parameters.len);
+
+    meta.Set("name", Napi::String::New(env, func->name));
+    meta.Set("arguments", arguments);
+    meta.Set("result", WrapType(env, func->ret.type));
+
+    for (Size i = 0; i < func->parameters.len; i++) {
+        const ParameterInfo &param = func->parameters[i];
+        Napi::Object obj = Napi::Object::New(env);
+
+        obj.Set("type", WrapType(env, param.type));
+        obj.Set("direction", Napi::String::New(env, DirectionNames[param.directions]));
+
+        arguments.Set((uint32_t)i, obj);
+    }
+
+    meta.Freeze();
+
+    return meta;
+}
+
+static bool IsDebugAsyncEnabled()
+{
+    static bool debug = GetDebugFlag("DEBUG_ASYNC");
+    return debug;
+}
+
+napi_value WrapFunction(Napi::Env env, const FunctionInfo *func)
+{
+    Napi::Function wrapper;
+
+    // Pick appropriate wrapper
+    {
+        napi_value value;
+
+        if (func->variadic) {
+            NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateVariadicCall, (void *)func->Ref(), &value));
+        } else if (IsDebugAsyncEnabled()) {
+            NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateNormalCallDebugAsync, (void *)func->Ref(), &value));
+        } else if (!func->parameters.len) {
+            NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, translate_zero_call, (void *)func->Ref(), &value));
+        } else if (CanUseFastCall(func)) {
+            NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateFastCall, (void *)func->Ref(), &value));
+        } else {
+            NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateNormalCall, (void *)func->Ref(), &value));
+        }
+
+        wrapper = Napi::Function(env, value);
+        wrapper.AddFinalizer([](Napi::Env, FunctionInfo *func) { func->Unref(); }, (FunctionInfo *)func);
+    }
+
+    if (!func->variadic) {
+        napi_value value;
+        NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateAsyncCall, (void *)func->Ref(), &value));
+
+        Napi::Function async = Napi::Function(env, value);
+        async.AddFinalizer([](Napi::Env, FunctionInfo *func) { func->Unref(); }, (FunctionInfo *)func);
+
+        wrapper.Set("async", async);
+    }
+
+    napi_value meta = DescribeFunction(env, func);
+    wrapper.Set("info", meta);
+
+    return wrapper;
 }
 
 static FORCE_INLINE bool CheckTrampolineStatus(TrampolineInfo *trampoline)
@@ -1791,34 +1936,6 @@ extern "C" void RelayDirect(CallData *call, Size idx, uint8_t *sp)
 
         call->Relay(idx, sp);
     }
-}
-
-napi_value CallPointer(napi_env env, const FunctionInfo *proto, void *native, napi_value *args, Size count)
-{
-    if (proto->variadic) {
-        return TranslateVariadicCall(env, proto, native, args, count);
-    } else {
-        return TranslateNormalCall(env, proto, native, args, count);
-    }
-}
-
-void PerformAsyncRelay(napi_env, napi_value, void *, void *udata)
-{
-    RelayContext *ctx = (RelayContext *)udata;
-    CallData *call = ctx->call;
-
-    call->Relay(ctx->idx, ctx->sp);
-    call->Finalize();
-
-    // We're done!
-    std::lock_guard<std::mutex> lock(ctx->mutex);
-    ctx->done = true;
-    ctx->cv.notify_one();
-}
-
-void *GetTrampoline(int idx)
-{
-    return (void *)(TrampolineStart + TrampolineSize * idx);
 }
 
 bool Encode(InstanceData *instance, uint8_t *origin, napi_value value, const TypeInfo *type)
