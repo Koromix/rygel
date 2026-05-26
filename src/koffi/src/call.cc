@@ -729,11 +729,6 @@ bool CallData::PushNormalArray(Napi::Array array, const TypeInfo *type, Size siz
         } break;
         case PrimitiveKind::Pointer: {
             PUSH_ARRAY({
-                if (!IsObject(env, value)) [[unlikely]] {
-                    ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected object", GetValueType(instance, value));
-                    return false;
-                }
-
                 void *ptr;
                 if (!PushPointer(value, ref, 1, &ptr)) [[unlikely]]
                     return false;
