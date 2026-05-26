@@ -499,7 +499,7 @@ napi_value RunLoop(CallData *call, napi_value *args, uint8_t *base, const AbiIns
 #define DISPOSE(Ptr) \
         do { \
             if (inst->type->dispose) { \
-                inst->type->dispose(call->env, inst->type, (Ptr)); \
+                inst->type->dispose(call->instance, inst->type, (Ptr)); \
             } \
         } while (false)
 
@@ -681,7 +681,7 @@ napi_value RunLoop(CallData *call, napi_value *args, uint8_t *base, const AbiIns
         do { \
             if (inst->type->dispose) { \
                 void *ptr = *(void **)base; \
-                inst->type->dispose(call->env, inst->type, ptr); \
+                inst->type->dispose(call->instance, inst->type, ptr); \
             } \
         } while (false)
 #define INTEGER32(CType) \
@@ -959,7 +959,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
                 arguments[i] = str ? Napi::String::New(env, str) : env.Null();
 
                 if (param.type->dispose) {
-                    param.type->dispose(env, param.type, str);
+                    param.type->dispose(instance, param.type, str);
                 }
             } break;
             case PrimitiveKind::String16: {
@@ -967,7 +967,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
                 arguments[i] = str16 ? Napi::String::New(env, str16) : env.Null();
 
                 if (param.type->dispose) {
-                    param.type->dispose(env, param.type, str16);
+                    param.type->dispose(instance, param.type, str16);
                 }
             } break;
             case PrimitiveKind::String32: {
@@ -975,7 +975,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
                 arguments[i] = str32 ? MakeStringFromUTF32(env, str32) : env.Null();
 
                 if (param.type->dispose) {
-                    param.type->dispose(env, param.type, str32);
+                    param.type->dispose(instance, param.type, str32);
                 }
             } break;
             case PrimitiveKind::Pointer: {
@@ -983,7 +983,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
                 arguments[i] = ptr2 ? WrapPointer(env, param.type->ref.type, ptr2) : env.Null();
 
                 if (param.type->dispose) {
-                    param.type->dispose(env, param.type, ptr2);
+                    param.type->dispose(instance, param.type, ptr2);
                 }
             } break;
             case PrimitiveKind::Callback: {
@@ -991,7 +991,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
                 arguments[i] = ptr2 ? WrapPointer(env, param.type->ref.type, ptr2) : env.Null();
 
                 if (param.type->dispose) {
-                    param.type->dispose(env, param.type, ptr2);
+                    param.type->dispose(instance, param.type, ptr2);
                 }
             } break;
             case PrimitiveKind::Record:

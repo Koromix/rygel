@@ -382,7 +382,7 @@ static FORCE_INLINE void DecodeObject(InstanceData *instance, const uint8_t *ori
                 set(i, member, str ? Napi::String::New(env, str) : env.Null());
 
                 if (member.type->dispose) {
-                    member.type->dispose(env, member.type, str);
+                    member.type->dispose(instance, member.type, str);
                 }
             } break;
             case PrimitiveKind::String16: {
@@ -391,7 +391,7 @@ static FORCE_INLINE void DecodeObject(InstanceData *instance, const uint8_t *ori
                 set(i, member, str16 ? Napi::String::New(env, str16) : env.Null());
 
                 if (member.type->dispose) {
-                    member.type->dispose(env, member.type, str16);
+                    member.type->dispose(instance, member.type, str16);
                 }
             } break;
             case PrimitiveKind::String32: {
@@ -415,7 +415,7 @@ static FORCE_INLINE void DecodeObject(InstanceData *instance, const uint8_t *ori
                 }
 
                 if (member.type->dispose) {
-                    member.type->dispose(env, member.type, ptr2);
+                    member.type->dispose(instance, member.type, ptr2);
                 }
             } break;
             case PrimitiveKind::Callback: {
@@ -426,7 +426,7 @@ static FORCE_INLINE void DecodeObject(InstanceData *instance, const uint8_t *ori
                 set(i, member, p);
 
                 if (member.type->dispose) {
-                    member.type->dispose(env, member.type, ptr2);
+                    member.type->dispose(instance, member.type, ptr2);
                 }
             } break;
             case PrimitiveKind::Record:
@@ -720,7 +720,7 @@ void DecodeElements(InstanceData *instance, napi_value array, const uint8_t *ori
                 napi_set_element(env, array, i, str ? Napi::String::New(env, str) : env.Null());
 
                 if (ref->dispose) {
-                    ref->dispose(env, ref, str);
+                    ref->dispose(instance, ref, str);
                 }
             });
         } break;
@@ -730,7 +730,7 @@ void DecodeElements(InstanceData *instance, napi_value array, const uint8_t *ori
                 napi_set_element(env, array, i, str16 ? Napi::String::New(env, str16) : env.Null());
 
                 if (ref->dispose) {
-                    ref->dispose(env, ref, str16);
+                    ref->dispose(instance, ref, str16);
                 }
             });
         } break;
@@ -740,7 +740,7 @@ void DecodeElements(InstanceData *instance, napi_value array, const uint8_t *ori
                 napi_set_element(env, array, i, str32 ? MakeStringFromUTF32(env, str32) : env.Null());
 
                 if (ref->dispose) {
-                    ref->dispose(env, ref, str32);
+                    ref->dispose(instance, ref, str32);
                 }
             });
         } break;
@@ -752,7 +752,7 @@ void DecodeElements(InstanceData *instance, napi_value array, const uint8_t *ori
                 napi_set_element(env, array, i, p);
 
                 if (ref->dispose) {
-                    ref->dispose(env, ref, ptr2);
+                    ref->dispose(instance, ref, ptr2);
                 }
             });
         } break;
@@ -764,7 +764,7 @@ void DecodeElements(InstanceData *instance, napi_value array, const uint8_t *ori
                 napi_set_element(env, array, i, p);
 
                 if (ref->dispose) {
-                    ref->dispose(env, ref, ptr2);
+                    ref->dispose(instance, ref, ptr2);
                 }
             });
         } break;
@@ -944,7 +944,7 @@ napi_value Decode(InstanceData *instance, const uint8_t *ptr, const TypeInfo *ty
             func->sync = proto->sync;
             func->async = proto->async;
 
-            return WrapFunction(env, func);
+            return WrapFunction(instance, func);
         } break;
     }
 

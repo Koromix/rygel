@@ -67,7 +67,7 @@ struct RecordMember;
 struct FunctionInfo;
 struct CallData;
 
-typedef void DisposeFunc (Napi::Env env, const TypeInfo *type, const void *ptr);
+typedef void DisposeFunc (InstanceData *instance, const TypeInfo *type, const void *ptr);
 
 enum class TypeFlag {
     HasTypedArray = 1 << 0,

@@ -740,7 +740,7 @@ namespace {
 #define DISPOSE(Ptr) \
         do { \
             if (inst->type->dispose) { \
-                inst->type->dispose(call->env, inst->type, (Ptr)); \
+                inst->type->dispose(call->instance, inst->type, (Ptr)); \
             } \
         } while (false)
 
@@ -910,7 +910,7 @@ namespace {
         do { \
             if (inst->type->dispose) { \
                 void *ptr = *(void **)base; \
-                inst->type->dispose(call->env, inst->type, ptr); \
+                inst->type->dispose(call->instance, inst->type, ptr); \
             } \
         } while (false)
 #define INTEGER(CType) \
@@ -1193,7 +1193,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
                 arguments[i] = str ? Napi::String::New(env, str) : env.Null();
 
                 if (param.type->dispose) {
-                    param.type->dispose(env, param.type, str);
+                    param.type->dispose(instance, param.type, str);
                 }
             } break;
             case PrimitiveKind::String16: {
@@ -1203,7 +1203,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
                 arguments[i] = str16 ? Napi::String::New(env, str16) : env.Null();
 
                 if (param.type->dispose) {
-                    param.type->dispose(env, param.type, str16);
+                    param.type->dispose(instance, param.type, str16);
                 }
             } break;
             case PrimitiveKind::String32: {
@@ -1213,7 +1213,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
                 arguments[i] = str32 ? MakeStringFromUTF32(env, str32) : env.Null();
 
                 if (param.type->dispose) {
-                    param.type->dispose(env, param.type, str32);
+                    param.type->dispose(instance, param.type, str32);
                 }
             } break;
 
@@ -1224,7 +1224,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
                 arguments[i] = ptr2 ? WrapPointer(env, param.type->ref.type, ptr2) : env.Null();
 
                 if (param.type->dispose) {
-                    param.type->dispose(env, param.type, ptr2);
+                    param.type->dispose(instance, param.type, ptr2);
                 }
             } break;
 
@@ -1257,7 +1257,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
                 arguments[i] = ptr2 ? WrapPointer(env, param.type->ref.type, ptr2) : env.Null();
 
                 if (param.type->dispose) {
-                    param.type->dispose(env, param.type, ptr2);
+                    param.type->dispose(instance, param.type, ptr2);
                 }
             } break;
 

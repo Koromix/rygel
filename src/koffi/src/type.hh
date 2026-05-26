@@ -57,7 +57,7 @@ TypeInfo *MakePointerType(InstanceData *instance, const TypeInfo *ref, int count
 TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len);
 TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len, ArrayHint hint);
 
-napi_value WrapType(Napi::Env env, const TypeInfo *type, bool freeze = true);
+napi_value WrapType(InstanceData *instance, const TypeInfo *type, bool freeze = true);
 
 const TypeInfo *ReshapeType(InstanceData *instance, const TypeInfo *type, int32_t stride, uint16_t flags);
 

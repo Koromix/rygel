@@ -165,11 +165,11 @@ inline T *CallData::AllocHeap(Size size)
 
 void InitTranslateZeroCall(Napi::Env env);
 
-napi_value DescribeFunction(Napi::Env env, const FunctionInfo *func);
-napi_value WrapFunction(Napi::Env env, const FunctionInfo *func);
+napi_value DescribeFunction(InstanceData *instance, const FunctionInfo *func);
+napi_value WrapFunction(InstanceData *instance, const FunctionInfo *func);
 bool DetectCallConvention(Span<const char> name, CallConvention *out_convention);
 
-napi_value CallPointer(napi_env env, const FunctionInfo *proto, void *native, napi_value *args, Size count);
+napi_value CallPointer(Napi::Env env, const FunctionInfo *proto, void *native, napi_value *args, Size count);
 
 bool InitAsyncBroker(Napi::Env env, InstanceData *instance);
 void *GetTrampoline(int idx);

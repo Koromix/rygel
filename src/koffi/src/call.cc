@@ -1672,7 +1672,7 @@ void InitTranslateZeroCall(Napi::Env env)
     NAPI_OK(napi_call_function(env, self, func, 0, nullptr, &ret));
 }
 
-napi_value CallPointer(napi_env env, const FunctionInfo *proto, void *native, napi_value *args, Size count)
+napi_value CallPointer(Napi::Env env, const FunctionInfo *proto, void *native, napi_value *args, Size count)
 {
     if (proto->variadic) {
         return TranslateVariadicCall(env, proto, native, args, count);
@@ -1755,7 +1755,7 @@ static bool CanUseFastCall(const FunctionInfo *func)
     return true;
 }
 
-napi_value DescribeFunction(Napi::Env env, const FunctionInfo *func)
+napi_value DescribeFunction(InstanceData *instance, const FunctionInfo *func)
 {
     static const char *const DirectionNames[] = {
         nullptr,
@@ -1764,18 +1764,20 @@ napi_value DescribeFunction(Napi::Env env, const FunctionInfo *func)
         "Input/Output"
     };
 
+    Napi::Env env = instance->env;
+
     Napi::Object meta = Napi::Object::New(env);
     Napi::Array arguments = Napi::Array::New(env, func->parameters.len);
 
     meta.Set("name", Napi::String::New(env, func->name));
     meta.Set("arguments", arguments);
-    meta.Set("result", WrapType(env, func->ret.type));
+    meta.Set("result", WrapType(instance, func->ret.type));
 
     for (Size i = 0; i < func->parameters.len; i++) {
         const ParameterInfo &param = func->parameters[i];
         Napi::Object obj = Napi::Object::New(env);
 
-        obj.Set("type", WrapType(env, param.type));
+        obj.Set("type", WrapType(instance, param.type));
         obj.Set("direction", Napi::String::New(env, DirectionNames[param.directions]));
 
         arguments.Set((uint32_t)i, obj);
@@ -1792,11 +1794,11 @@ static bool IsDebugAsyncEnabled()
     return debug;
 }
 
-napi_value WrapFunction(Napi::Env env, const FunctionInfo *func)
+napi_value WrapFunction(InstanceData *instance, const FunctionInfo *func)
 {
-    Napi::Function wrapper;
+    Napi::Env env = instance->env;
 
-    // Pick appropriate wrapper
+    Napi::Function wrapper;
     {
         napi_value value;
 
@@ -1826,7 +1828,7 @@ napi_value WrapFunction(Napi::Env env, const FunctionInfo *func)
         wrapper.Set("async", async);
     }
 
-    napi_value meta = DescribeFunction(env, func);
+    napi_value meta = DescribeFunction(instance, func);
     wrapper.Set("info", meta);
 
     return wrapper;

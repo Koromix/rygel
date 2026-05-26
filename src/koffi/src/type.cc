@@ -312,9 +312,7 @@ const TypeInfo *ResolveType(InstanceData *instance, Span<const char> str)
 
             static_assert(!std::is_polymorphic_v<Napi::ObjectReference>);
 
-            copy->dispose = [](Napi::Env env, const TypeInfo *, const void *ptr) {
-                InstanceData *instance = env.GetInstanceData<InstanceData>();
-
+            copy->dispose = [](InstanceData *instance, const TypeInfo *, const void *ptr) {
                 free((void *)ptr);
                 instance->stats.disposed++;
             };
@@ -436,14 +434,14 @@ TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len, A
     return MakeArrayType(instance, ref, len, hint, false);
 }
 
-napi_value WrapType(Napi::Env env, const TypeInfo *type, bool freeze)
+napi_value WrapType(InstanceData *instance, const TypeInfo *type, bool freeze)
 {
     if (type->defn.IsEmpty()) {
+        Napi::Env env = instance->env;
+
 #if defined(EXTERNAL_TYPES)
         Napi::Object defn = Napi::Object::New(env);
 #else
-        InstanceData *instance = env.GetInstanceData<InstanceData>();
-
         Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, (TypeInfo *)type);
         Napi::Object defn = instance->construct_type.New({ external });
         SetValueTag(env, defn, &TypeObjectMarker);
@@ -487,8 +485,8 @@ napi_value WrapType(Napi::Env env, const TypeInfo *type, bool freeze)
                 defn.Set("hint", ArrayHintNames[(int)type->hint]);
             } [[fallthrough]];
             case PrimitiveKind::Pointer: {
-                napi_value value = WrapType(env, type->ref.type);
-                defn.Set("ref", value);
+                napi_value ref = WrapType(instance, type->ref.type);
+                defn.Set("ref", ref);
             } break;
             case PrimitiveKind::Record:
             case PrimitiveKind::Union: {
@@ -498,7 +496,7 @@ napi_value WrapType(Napi::Env env, const TypeInfo *type, bool freeze)
                     Napi::Object obj = Napi::Object::New(env);
 
                     obj.Set("name", member.name);
-                    obj.Set("type", WrapType(env, member.type));
+                    obj.Set("type", WrapType(instance, member.type));
                     obj.Set("offset", member.offset);
 
                     members.Set(member.name, obj);
@@ -510,7 +508,7 @@ napi_value WrapType(Napi::Env env, const TypeInfo *type, bool freeze)
 
             case PrimitiveKind::Prototype:
             case PrimitiveKind::Callback: {
-                napi_value meta = DescribeFunction(env, type->proto);
+                napi_value meta = DescribeFunction(instance, type->proto);
                 defn.Set("proto", meta);
             } break;
         }
@@ -521,6 +519,8 @@ napi_value WrapType(Napi::Env env, const TypeInfo *type, bool freeze)
     }
 
 #if defined(EXTERNAL_TYPES)
+    Napi::Env env = instance->env;
+
     Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, (TypeInfo *)type);
     SetValueTag(env, external, &TypeObjectMarker);
 

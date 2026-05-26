@@ -432,7 +432,7 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
         type = replace;
     }
 
-    napi_value wrapper = WrapType(env, type);
+    napi_value wrapper = WrapType(instance, type);
     return Napi::Value(env, wrapper);
 }
 
@@ -603,7 +603,7 @@ static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
         type = replace;
     }
 
-    napi_value wrapper = WrapType(env, type);
+    napi_value wrapper = WrapType(instance, type);
     return Napi::Value(env, wrapper);
 }
 
@@ -664,7 +664,7 @@ static Napi::Value CreateOpaqueType(const Napi::CallbackInfo &info)
         return env.Null();
     err_guard.Disable();
 
-    napi_value wrapper = WrapType(env, type);
+    napi_value wrapper = WrapType(instance, type);
     return Napi::Value(env, wrapper);
 }
 
@@ -737,7 +737,7 @@ static Napi::Value CreatePointerType(const Napi::CallbackInfo &info)
         type = copy;
     }
 
-    napi_value wrapper = WrapType(env, type);
+    napi_value wrapper = WrapType(instance, type);
     return Napi::Value(env, wrapper);
 }
 
@@ -834,10 +834,10 @@ static Napi::Value CreateDisposableType(const Napi::CallbackInfo &info)
             return env.Null();
         }
 
-        dispose = [](Napi::Env env, const TypeInfo *type, const void *ptr) {
-            InstanceData *instance = env.GetInstanceData<InstanceData>();
-            const Napi::FunctionReference &ref = type->dispose_ref;
+        dispose = [](InstanceData *instance, const TypeInfo *type, const void *ptr) {
+            Napi::Env env = instance->env;
 
+            const Napi::FunctionReference &ref = type->dispose_ref;
             napi_value self = env.Null();
             napi_value wrapper = WrapPointer(env, type->ref.type, (void *)ptr);
 
@@ -846,9 +846,7 @@ static Napi::Value CreateDisposableType(const Napi::CallbackInfo &info)
         };
         dispose_func = func;
     } else {
-        dispose = [](Napi::Env env, const TypeInfo *, const void *ptr) {
-            InstanceData *instance = env.GetInstanceData<InstanceData>();
-
+        dispose = [](InstanceData *instance, const TypeInfo *, const void *ptr) {
             free((void *)ptr);
             instance->stats.disposed++;
         };
@@ -882,7 +880,7 @@ static Napi::Value CreateDisposableType(const Napi::CallbackInfo &info)
     }
     err_guard.Disable();
 
-    napi_value wrapper = WrapType(env, type);
+    napi_value wrapper = WrapType(instance, type);
     return Napi::Value(env, wrapper);
 }
 
@@ -1065,7 +1063,7 @@ static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
         type->countedby = DuplicateString(str.Utf8Value().c_str(), &instance->str_alloc).ptr;
     }
 
-    napi_value wrapper = WrapType(env, type);
+    napi_value wrapper = WrapType(instance, type);
     return Napi::Value(env, wrapper);
 }
 
@@ -1222,7 +1220,7 @@ static Napi::Value CreateFunctionType(const Napi::CallbackInfo &info)
 
     instance->types_map.Set(type->name, type);
 
-    napi_value wrapper = WrapType(env, type);
+    napi_value wrapper = WrapType(instance, type);
     return Napi::Value(env, wrapper);
 }
 
@@ -1379,7 +1377,7 @@ static Napi::Value CreateEnumType(const Napi::CallbackInfo &info)
         return env.Null();
     err_guard.Disable();
 
-    napi_value wrapper = WrapType(env, type, false);
+    napi_value wrapper = WrapType(instance, type, false);
     Napi::Object defn = type->defn.Value();
 
     defn.Set("values", values);
@@ -1413,7 +1411,7 @@ static Napi::Value CreateTypeAlias(const Napi::CallbackInfo &info)
     if (!MapType(env, instance, type, alias))
         return env.Null();
 
-    napi_value wrapper = WrapType(env, type);
+    napi_value wrapper = WrapType(instance, type);
     return Napi::Value(env, wrapper);
 }
 
@@ -1431,7 +1429,7 @@ static Napi::Value GetResolvedType(const Napi::CallbackInfo &info)
     if (!type)
         return env.Null();
 
-    napi_value wrapper = WrapType(env, type);
+    napi_value wrapper = WrapType(instance, type);
     return Napi::Value(env, wrapper);
 }
 
@@ -1440,6 +1438,7 @@ static Napi::Value GetResolvedType(const Napi::CallbackInfo &info)
 static Napi::Value GetTypeDefinition(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
+    InstanceData *instance = (InstanceData *)info.Data();
 
     if (info.Length() < 1) {
         ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", info.Length());
@@ -1451,7 +1450,7 @@ static Napi::Value GetTypeDefinition(const Napi::CallbackInfo &info)
         return env.Null();
 
     // Make sure definition is available
-    WrapType(env, type);
+    WrapType(instance, type);
 
     return type->defn.Value();
 }
@@ -1659,7 +1658,7 @@ Napi::Value LibraryHandle::Func(const Napi::CallbackInfo &info)
         return env.Null();
     }
 
-    napi_value wrapper = WrapFunction(env, func);
+    napi_value wrapper = WrapFunction(instance, func);
     return Napi::Value(env, wrapper);
 }
 
@@ -2478,7 +2477,7 @@ static void RegisterPrimitiveType(InstanceData *instance, Napi::Object map, std:
         K_ASSERT(type->ref.type);
     }
 
-    napi_value wrapper = WrapType(env, type);
+    napi_value wrapper = WrapType(instance, type);
 
     for (const char *name: names) {
         bool inserted;
