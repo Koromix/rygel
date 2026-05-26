@@ -12,10 +12,11 @@
 *Released on 2026-05-26*
 
 - Fix unexpected type error when passing array of pointers (see [Koromix/koffi#269](https://github.com/Koromix/koffi/issues/269))
-- Search more native addons directories under process.resourcesPath
-- Rearrange Koffi loading to use require() for static packages
-- Fix error when using 'String' array hint with String32 type
-- Add Buffer array hint to create Node Buffer objects
+- Search more native addon directories under `process.resourcesPath`
+- Rearrange Koffi loading to use `require()` for static packages
+- Avoid declare module syntax in TypeScript definition file
+- Fix error when using *String* array hint with UTF-32 string types (`const char32_t *`)
+- Add *Buffer* array hint to convert arrays and pointers to Node Buffer objects
 - Reduce overhead of various Koffi functions
 
 #### Koffi 3.0.1
