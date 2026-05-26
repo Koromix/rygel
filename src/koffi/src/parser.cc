@@ -209,9 +209,9 @@ bool PrototypeParser::IsIdentifier(Span<const char> tok) const
     return IsAsciiAlpha(tok[0]) || tok[0] == '_';
 }
 
-bool ParsePrototype(Napi::Env env, const char *str, bool concrete, FunctionInfo *out_func)
+bool ParsePrototype(InstanceData *instance, const char *str, bool concrete, FunctionInfo *out_func)
 {
-    PrototypeParser parser(env);
+    PrototypeParser parser(instance);
     return parser.Parse(str, concrete, out_func);
 }
 

@@ -24,7 +24,7 @@ class PrototypeParser {
     bool valid;
 
 public:
-    PrototypeParser(Napi::Env env) : env(env), instance(env.GetInstanceData<InstanceData>()) {}
+    PrototypeParser(InstanceData *instance) : env(instance->env), instance(instance) {}
 
     bool Parse(const char *str, bool concrete, FunctionInfo *out_func);
 
@@ -49,6 +49,6 @@ private:
     }
 };
 
-bool ParsePrototype(Napi::Env env, const char *str, bool concrete, FunctionInfo *out_func);
+bool ParsePrototype(InstanceData *instance, const char *str, bool concrete, FunctionInfo *out_func);
 
 }

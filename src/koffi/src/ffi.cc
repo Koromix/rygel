@@ -1188,7 +1188,7 @@ static Napi::Value CreateFunctionType(const Napi::CallbackInfo &info)
         }
 
         std::string proto = info[0u].As<Napi::String>();
-        if (!ParsePrototype(env, proto.c_str(), false, func))
+        if (!ParsePrototype(instance, proto.c_str(), false, func))
             return env.Null();
     } else {
         ThrowError<Napi::TypeError>(env, "Expected 1 to 4 arguments, got %1", info.Length());
@@ -1616,7 +1616,7 @@ Napi::Value LibraryHandle::Func(const Napi::CallbackInfo &info)
         }
 
         std::string proto = info[0u].As<Napi::String>();
-        if (!ParsePrototype(env, proto.c_str(), true, func))
+        if (!ParsePrototype(instance, proto.c_str(), true, func))
             return env.Null();
     } else {
         ThrowError<Napi::TypeError>(env, "Expected 1 to 4 arguments, got %1", info.Length());
