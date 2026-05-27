@@ -728,11 +728,11 @@ namespace {
     OP(RunArray) { K_UNREACHABLE(); return call->env.Null(); }
     OP(RunFloat32) {
         float f = WRAP(ForwardCallF(call->native, base, &call->saved_sp));
-        return Napi::Number::New(call->env, (double)f);
+        return NewFloat(call->env, f);
     }
     OP(RunFloat64) {
         double d = WRAP(ForwardCallDD(call->native, base, &call->saved_sp).fa0);
-        return Napi::Number::New(call->env, d);
+        return NewFloat(call->env, d);
     }
     OP(RunPrototype) { K_UNREACHABLE(); return call->env.Null(); }
     OP(RunAggregateGG) {
@@ -812,11 +812,11 @@ namespace {
     OP(RunArrayX) { K_UNREACHABLE(); return call->env.Null(); }
     OP(RunFloat32X) {
         float f = WRAP(ForwardCallFX(call->native, base, &call->saved_sp));
-        return Napi::Number::New(call->env, (double)f);
+        return NewFloat(call->env, f);
     }
     OP(RunFloat64X) {
         double d = WRAP(ForwardCallDDX(call->native, base, &call->saved_sp).fa0);
-        return Napi::Number::New(call->env, d);
+        return NewFloat(call->env, d);
     }
     OP(RunPrototypeX) { K_UNREACHABLE(); return call->env.Null(); }
     OP(RunAggregateGGX) {
@@ -949,11 +949,11 @@ namespace {
     OP(ReturnArray) { K_UNREACHABLE(); return call->env.Null(); }
     OP(ReturnFloat32) {
         float f = *(float *)base;
-        return Napi::Number::New(call->env, (double)f);
+        return NewFloat(call->env, f);
     }
     OP(ReturnFloat64) {
         double d = *(double *)base;
-        return Napi::Number::New(call->env, d);
+        return NewFloat(call->env, d);
     }
     OP(ReturnPrototype) { K_UNREACHABLE(); return call->env.Null(); }
     OP(ReturnAggregateReg) { return DecodeObject(call->instance, (const uint8_t *)base, inst->type); }
@@ -1180,13 +1180,13 @@ void CallData::Relay(Size idx, uint8_t *sp)
                 const uint8_t *src = in_ptr + param.abi.offsets[0];
                 float f = *(float *)src;
 
-                arguments[i] = Napi::Number::New(env, (double)f);
+                arguments[i] = NewFloat(env, f);
             } break;
             case PrimitiveKind::Float64: {
                 const uint8_t *src = in_ptr + param.abi.offsets[0];
                 double d = *(double *)src;
 
-                arguments[i] = Napi::Number::New(env, d);
+                arguments[i] = NewFloat(env, d);
             } break;
 
             case PrimitiveKind::Callback: {

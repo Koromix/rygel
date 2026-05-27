@@ -465,12 +465,12 @@ static FORCE_INLINE void DecodeObject(InstanceData *instance, const uint8_t *ori
             case PrimitiveKind::Float32: {
                 float f;
                 memcpy(&f, src, 4);
-                set(i, member, Napi::Number::New(env, (double)f));
+                set(i, member, NewFloat(env, f));
             } break;
             case PrimitiveKind::Float64: {
                 double d;
                 memcpy(&d, src, 8);
-                set(i, member, Napi::Number::New(env, d));
+                set(i, member, NewFloat(env, d));
             } break;
 
             case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;
@@ -802,7 +802,7 @@ void DecodeElements(InstanceData *instance, napi_value array, const uint8_t *ori
                 float f;
                 memcpy(&f, src, 4);
 
-                napi_set_element(env, array, i, Napi::Number::New(env, (double)f));
+                napi_set_element(env, array, i, NewFloat(env, f));
             });
         } break;
         case PrimitiveKind::Float64: {
@@ -810,7 +810,7 @@ void DecodeElements(InstanceData *instance, napi_value array, const uint8_t *ori
                 double d;
                 memcpy(&d, src, 8);
 
-                napi_set_element(env, array, i, Napi::Number::New(env, d));
+                napi_set_element(env, array, i, NewFloat(env, d));
             });
         } break;
 
@@ -932,13 +932,13 @@ napi_value Decode(InstanceData *instance, const uint8_t *ptr, const TypeInfo *ty
             float f;
             memcpy(&f, ptr, 4);
 
-            return Napi::Number::New(env, (double)f);
+            return NewFloat(env, f);
         } break;
         case PrimitiveKind::Float64: {
             double d;
             memcpy(&d, ptr, 8);
 
-            return Napi::Number::New(env, d);
+            return NewFloat(env, d);
         } break;
 
         case PrimitiveKind::Prototype: {

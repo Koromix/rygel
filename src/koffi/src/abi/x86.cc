@@ -558,11 +558,11 @@ napi_value RunLoop(CallData *call, napi_value *args, uint8_t *base, const AbiIns
     OP(RunArray) { K_UNREACHABLE(); return call->env.Null(); }
     OP(RunFloat32) {
         float f = WRAP(ForwardCallF(call->native, base, &call->saved_sp));
-        return Napi::Number::New(call->env, (double)f);
+        return NewFloat(call->env, f);
     }
     OP(RunFloat64) {
         double d = WRAP(ForwardCallD(call->native, base, &call->saved_sp));
-        return Napi::Number::New(call->env, d);
+        return NewFloat(call->env, d);
     }
     OP(RunPrototype) { K_UNREACHABLE(); return call->env.Null(); }
     OP(RunAggregateG) {
@@ -637,11 +637,11 @@ napi_value RunLoop(CallData *call, napi_value *args, uint8_t *base, const AbiIns
     OP(RunArrayR) { K_UNREACHABLE(); return call->env.Null(); }
     OP(RunFloat32R) {
         float f = WRAP(ForwardCallFR(call->native, base, &call->saved_sp));
-        return Napi::Number::New(call->env, (double)f);
+        return NewFloat(call->env, f);
     }
     OP(RunFloat64R) {
         double d = WRAP(ForwardCallDR(call->native, base, &call->saved_sp));
-        return Napi::Number::New(call->env, d);
+        return NewFloat(call->env, d);
     }
     OP(RunPrototypeR) { K_UNREACHABLE(); return call->env.Null(); }
     OP(RunAggregateGR) {
@@ -784,11 +784,11 @@ napi_value RunLoop(CallData *call, napi_value *args, uint8_t *base, const AbiIns
     OP(ReturnArray) { K_UNREACHABLE(); return call->env.Null(); }
     OP(ReturnFloat32) {
         float f = *(float *)base;
-        return Napi::Number::New(call->env, (double)f);
+        return NewFloat(call->env, f);
     }
     OP(ReturnFloat64) {
         double d = *(double *)base;
-        return Napi::Number::New(call->env, d);
+        return NewFloat(call->env, d);
     }
     OP(ReturnPrototype) { K_UNREACHABLE(); return call->env.Null(); }
     OP(ReturnAggregateReg) { return DecodeObject(call->instance, (const uint8_t *)base, inst->type); }
@@ -1004,13 +1004,13 @@ void CallData::Relay(Size idx, uint8_t *sp)
             case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
             case PrimitiveKind::Float32: {
                 float f = *(float *)(args_ptr++);
-                arguments[i] = Napi::Number::New(env, (double)f);
+                arguments[i] = NewFloat(env, f);
             } break;
             case PrimitiveKind::Float64: {
                 double d = *(double *)args_ptr;
                 args_ptr += 2;
 
-                arguments[i] = Napi::Number::New(env, d);
+                arguments[i] = NewFloat(env, d);
             } break;
 
             case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;

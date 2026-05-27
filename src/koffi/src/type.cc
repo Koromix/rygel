@@ -449,8 +449,8 @@ napi_value WrapType(InstanceData *instance, const TypeInfo *type, bool freeze)
 
         defn.Set("name", NewString(env, type->name));
         defn.Set("primitive", PrimitiveKindNames[(int)type->primitive]);
-        defn.Set("size", Napi::Number::New(env, (double)type->size));
-        defn.Set("alignment", Napi::Number::New(env, (double)type->align));
+        defn.Set("size", NewInt(env, type->size));
+        defn.Set("alignment", NewInt(env, type->align));
         defn.Set("disposable", Napi::Boolean::New(env, !!type->dispose));
 
         // Assign before to avoid possible recursion crash
@@ -481,7 +481,7 @@ napi_value WrapType(InstanceData *instance, const TypeInfo *type, bool freeze)
 
             case PrimitiveKind::Array: {
                 uint32_t len = type->size / type->ref.type->size;
-                defn.Set("length", Napi::Number::New(env, (double)len));
+                defn.Set("length", NewInt(env, len));
                 defn.Set("hint", ArrayHintNames[(int)type->hint]);
             } [[fallthrough]];
             case PrimitiveKind::Pointer: {

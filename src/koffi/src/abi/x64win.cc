@@ -464,11 +464,11 @@ namespace {
     OP(RunArray) { K_UNREACHABLE(); return call->env.Null(); }
     OP(RunFloat32) {
         float f = WRAP(ForwardCallF(call->native, base, &call->saved_sp));
-        return Napi::Number::New(call->env, (double)f);
+        return NewFloat(call->env, f);
     }
     OP(RunFloat64) {
         double d = WRAP(ForwardCallD(call->native, base, &call->saved_sp));
-        return Napi::Number::New(call->env, d);
+        return NewFloat(call->env, d);
     }
     OP(RunPrototype) { K_UNREACHABLE(); return call->env.Null(); }
     OP(RunAggregateReg) {
@@ -535,11 +535,11 @@ namespace {
     OP(RunArrayX) { K_UNREACHABLE(); return call->env.Null(); }
     OP(RunFloat32X) {
         float f = WRAP(ForwardCallFX(call->native, base, &call->saved_sp));
-        return Napi::Number::New(call->env, (double)f);
+        return NewFloat(call->env, f);
     }
     OP(RunFloat64X) {
         double d = WRAP(ForwardCallDX(call->native, base, &call->saved_sp));
-        return Napi::Number::New(call->env, d);
+        return NewFloat(call->env, d);
     }
     OP(RunPrototypeX) { K_UNREACHABLE(); return call->env.Null(); }
     OP(RunAggregateRegX) {
@@ -653,11 +653,11 @@ namespace {
     OP(ReturnArray) { K_UNREACHABLE(); return call->env.Null(); }
     OP(ReturnFloat32) {
         float f = *(float *)base;
-        return Napi::Number::New(call->env, (double)f);
+        return NewFloat(call->env, f);
     }
     OP(ReturnFloat64) {
         double d = *(double *)base;
-        return Napi::Number::New(call->env, d);
+        return NewFloat(call->env, d);
     }
     OP(ReturnPrototype) { K_UNREACHABLE(); return call->env.Null(); }
     OP(ReturnAggregateReg) { return DecodeObject(call->instance, base, inst->type); }
@@ -942,13 +942,13 @@ void CallData::Relay(Size idx, uint8_t *sp)
                 float f = *(float *)(j < 4 ? xmm_ptr + j : stk_ptr);
                 stk_ptr += (j >= 4);
 
-                arguments[i] = Napi::Number::New(env, (double)f);
+                arguments[i] = NewFloat(env, f);
             } break;
             case PrimitiveKind::Float64: {
                 double d = *(double *)(j < 4 ? xmm_ptr + j : stk_ptr);
                 stk_ptr += (j >= 4);
 
-                arguments[i] = Napi::Number::New(env, d);
+                arguments[i] = NewFloat(env, d);
             } break;
 
             case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;

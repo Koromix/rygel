@@ -379,6 +379,9 @@ static FORCE_INLINE napi_value NewInt(Napi::Env env, T i)
     }
 }
 
+static FORCE_INLINE napi_value NewFloat(Napi::Env env, float f) { napi_value value; napi_create_double(env, (double)f, &value); return value; }
+static FORCE_INLINE napi_value NewFloat(Napi::Env env, double d) { napi_value value; napi_create_double(env, d, &value); return value; }
+
 template <typename T>
 Size NullTerminatedLength(const T *ptr)
 {

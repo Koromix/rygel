@@ -2116,7 +2116,7 @@ static napi_value DecodeFloat(napi_env env, napi_callback_info info)
     float f;
     memcpy(&f, ptr, K_SIZE(f));
 
-    return Napi::Number::New(env, (double)f);
+    return NewFloat(env, f);
 }
 
 static napi_value DecodeDouble(napi_env env, napi_callback_info info)
@@ -2141,7 +2141,7 @@ static napi_value DecodeDouble(napi_env env, napi_callback_info info)
     double d;
     memcpy(&d, ptr, K_SIZE(d));
 
-    return Napi::Number::New(env, d);
+    return NewFloat(env, d);
 }
 
 static napi_value DecodeString(napi_env env, napi_callback_info info)
@@ -2686,7 +2686,7 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
 #if defined(__clang__)
     // First call to napi_create_double() does some weird stuff I can't explain
     // in clang-cl builds. I don't like this... but this fixes it, somehow ><
-    Napi::Number::New(env, 0.0);
+    NewFloat(env, 0.0);
 #endif
 
     exports.Set("config", Napi::Function::New(env, GetSetConfig, "config", instance));
