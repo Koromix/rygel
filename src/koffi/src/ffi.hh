@@ -90,22 +90,30 @@ static const char *const ArrayHintNames[] = {
 
 struct RecordMember {
     const char *name;
-    napi_ref key;
     const TypeInfo *type;
     int32_t offset;
     Size countedby;
+
+    napi_ref key = nullptr;
+
+#if defined(K_DEBUG)
+    ~RecordMember() { K_ASSERT(!key); }
+#endif
 };
 
 struct TypeInfo {
-    const char *name;
+    K_DELETE_COPY(TypeInfo)
 
+    InstanceData *instance = nullptr;
+
+    const char *name;
     alignas(8) PrimitiveKind primitive;
     int32_t size;
     int16_t align;
     uint16_t flags;
 
-    DisposeFunc *dispose;
-    Napi::FunctionReference dispose_ref;
+    DisposeFunc *dispose = nullptr;
+    napi_ref dispose_ref = nullptr;
 
     HeapArray<RecordMember> members; // Record or Union
     struct {
@@ -116,15 +124,23 @@ struct TypeInfo {
     ArrayHint hint; // Array only
     const char *countedby; // Pointer or array
 
-    mutable Napi::FunctionReference construct; // Union only
-    mutable Napi::ObjectReference defn;
+    mutable napi_ref construct = nullptr; // Union only
+    mutable napi_ref defn = nullptr;
 
-    mutable const TypeInfo *reshaped;
+    mutable const TypeInfo *reshaped = nullptr;
+
+    TypeInfo() = default;
+    ~TypeInfo();
+
+    TypeInfo(TypeInfo &&other) = default;
+    TypeInfo &operator=(TypeInfo &&other) = default;
 
     K_HASHTABLE_HANDLER(TypeInfo, name);
 };
 
 struct LibraryHolder {
+    K_DELETE_COPY(LibraryHolder)
+
     void *module = nullptr; // HMODULE on Windows
     mutable int refcount = 1;
 

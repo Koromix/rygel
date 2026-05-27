@@ -40,7 +40,8 @@ UnionValue::UnionValue(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
 
-    instance = env.GetInstanceData<InstanceData>();
+    K_ASSERT(type->instance);
+    instance = type->instance;
 
     if (info.Length() >= 1) {
         if (!info[0].IsExternal()) [[unlikely]] {
@@ -473,8 +474,16 @@ napi_value DecodeObject(InstanceData *instance, const uint8_t *origin, const Typ
 
     // We can't decode unions because we don't know which member is valid
     if (type->primitive == PrimitiveKind::Union) {
+        Napi::Function construct;
+        {
+            napi_value value;
+            NAPI_OK(napi_get_reference_value(env, type->construct, &value));
+
+            construct = Napi::Function(env, value);
+        }
+
         Napi::External<void> external = Napi::External<void>::New(env, (void *)origin);
-        Napi::Object wrapper = type->construct.New({ external }).As<Napi::Object>();
+        Napi::Object wrapper = construct.New({ external }).As<Napi::Object>();
         SetValueTag(env, wrapper, &UnionValueMarker);
 
         return wrapper;

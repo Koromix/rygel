@@ -307,6 +307,7 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
         replace = (TypeInfo *)defn->GetType();
 #endif
 
+        type->instance = instance;
         type->name = replace->name;
 
         if (replace->primitive != PrimitiveKind::Void || replace == instance->void_type) {
@@ -314,11 +315,13 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
             return env.Null();
         }
     } else if (named) {
+        type->instance = instance;
         type->name = DuplicateString(name.Utf8Value().c_str(), &instance->str_alloc).ptr;
 
         if (!MapType(env, instance, type, type->name))
             return env.Null();
     } else {
+        type->instance = instance;
         type->name = Fmt(&instance->str_alloc, "<anonymous_%1>", instance->types.count).ptr;
     }
 
@@ -428,7 +431,7 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
     err_guard.Disable();
 
     if (replace) {
-        std::swap(*type, *replace);
+        *replace = std::move(*type);
         type = replace;
     }
 
@@ -506,6 +509,7 @@ static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
         replace = (TypeInfo *)defn->GetType();
 #endif
 
+        type->instance = instance;
         type->name = replace->name;
 
         if (replace->primitive != PrimitiveKind::Void || replace == instance->void_type) {
@@ -513,11 +517,13 @@ static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
             return env.Null();
         }
     } else if (named) {
+        type->instance = instance;
         type->name = DuplicateString(name.Utf8Value().c_str(), &instance->str_alloc).ptr;
 
         if (!MapType(env, instance, type, type->name))
             return env.Null();
     } else {
+        type->instance = instance;
         type->name = Fmt(&instance->str_alloc, "<anonymous_%1>", instance->types.count).ptr;
     }
 
@@ -596,10 +602,11 @@ static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
         return env.Null();
     err_guard.Disable();
 
-    type->construct = Napi::Persistent(UnionValue::InitClass(instance, type));
+    Napi::Object construct = UnionValue::InitClass(instance, type);
+    NAPI_OK(napi_create_reference(env, construct, 1, &type->construct));
 
     if (replace) {
-        std::swap(*type, *replace);
+        *replace = std::move(*type);
         type = replace;
     }
 
@@ -629,7 +636,15 @@ Napi::Value InstantiateUnion(const Napi::CallbackInfo &info)
         return env.Null();
     }
 
-    Napi::Object wrapper = type->construct.New({}).As<Napi::Object>();
+    Napi::Function construct;
+    {
+        napi_value value;
+        NAPI_OK(napi_get_reference_value(env, type->construct, &value));
+
+        construct = Napi::Function(env, value);
+    }
+
+    Napi::Object wrapper = construct.New({}).As<Napi::Object>();
     SetValueTag(env, wrapper, &UnionValueMarker);
 
     return wrapper;
@@ -652,6 +667,7 @@ static Napi::Value CreateOpaqueType(const Napi::CallbackInfo &info)
     TypeInfo *type = instance->types.AppendDefault();
     K_DEFER_N(err_guard) { instance->types.RemoveLast(1); };
 
+    type->instance = instance;
     type->name = named ? DuplicateString(name.Utf8Value().c_str(), &instance->str_alloc).ptr
                        : Fmt(&instance->str_alloc, "<anonymous_%1>", instance->types.count).ptr;
 
@@ -720,7 +736,7 @@ static Napi::Value CreatePointerType(const Napi::CallbackInfo &info)
 
         memcpy((void *)copy, type, K_SIZE(*type));
         copy->name = named ? DuplicateString(name.c_str(), &instance->str_alloc).ptr : copy->name;
-        memset((void *)&copy->defn, 0, K_SIZE(copy->defn));
+        copy->defn = nullptr;
 
         static_assert(!std::is_polymorphic_v<Napi::ObjectReference>);
 
@@ -837,11 +853,13 @@ static Napi::Value CreateDisposableType(const Napi::CallbackInfo &info)
         dispose = [](InstanceData *instance, const TypeInfo *type, const void *ptr) {
             Napi::Env env = instance->env;
 
-            const Napi::FunctionReference &ref = type->dispose_ref;
+            napi_value func;
+            NAPI_OK(napi_get_reference_value(env, type->dispose_ref, &func));
+
             napi_value self = env.Null();
             napi_value wrapper = WrapPointer(env, type->ref.type, (void *)ptr);
 
-            ref.Call(self, 1, &wrapper);
+            NAPI_OK(napi_call_function(env, self, func, 1, &wrapper, nullptr));
             instance->stats.disposed++;
         };
         dispose_func = func;
@@ -858,7 +876,7 @@ static Napi::Value CreateDisposableType(const Napi::CallbackInfo &info)
     memcpy((void *)type, (const void *)src, K_SIZE(*src));
     type->members.allocator = GetNullAllocator();
     type->members.allocator = GetNullAllocator();
-    memset((void *)&type->defn, 0, K_SIZE(type->defn));
+    type->defn = nullptr;
 
     static_assert(!std::is_polymorphic_v<Napi::ObjectReference>);
 
@@ -866,7 +884,7 @@ static Napi::Value CreateDisposableType(const Napi::CallbackInfo &info)
                        : Fmt(&instance->str_alloc, "<anonymous_%1>", instance->types.count).ptr;
 
     type->dispose = dispose;
-    type->dispose_ref = Napi::Persistent(dispose_func);
+    NAPI_OK(napi_create_reference(env, dispose_func, 1, &type->dispose_ref));
 
     // If the insert succeeds, we cannot fail anymore
     if (named) {
@@ -1211,6 +1229,7 @@ static Napi::Value CreateFunctionType(const Napi::CallbackInfo &info)
 
     TypeInfo *type = instance->types.AppendDefault();
 
+    type->instance = instance;
     type->name = func->name;
 
     type->primitive = PrimitiveKind::Prototype;
@@ -1253,6 +1272,7 @@ static Napi::Value CreateEnumType(const Napi::CallbackInfo &info)
     TypeInfo *type = instance->types.AppendDefault();
     K_DEFER_N(err_guard) { instance->types.RemoveLast(1); };
 
+    type->instance = instance;
     type->name = named ? DuplicateString(name.Utf8Value().c_str(), &instance->str_alloc).ptr
                        : Fmt(&instance->str_alloc, "<anonymous_%1>", instance->types.count).ptr;
 
@@ -1378,7 +1398,18 @@ static Napi::Value CreateEnumType(const Napi::CallbackInfo &info)
     err_guard.Disable();
 
     napi_value wrapper = WrapType(instance, type, false);
-    Napi::Object defn = type->defn.Value();
+
+#if defined(EXTERNAL_TYPES)
+    Napi::Object defn;
+    {
+        napi_value value;
+        NAPI_OK(napi_get_reference_value(env, type->defn, &defn));
+
+        defn = Napi::Object(env, value);
+    }
+#else
+    Napi::Object defn(env, wrapper);
+#endif
 
     defn.Set("values", values);
     defn.Freeze();
@@ -1452,7 +1483,10 @@ static Napi::Value GetTypeDefinition(const Napi::CallbackInfo &info)
     // Make sure definition is available
     WrapType(instance, type);
 
-    return type->defn.Value();
+    napi_value defn;
+    NAPI_OK(napi_get_reference_value(env, instance->defn, &defn));
+
+    return defn;
 }
 
 #endif
@@ -1549,6 +1583,23 @@ void ReleaseMemory(InstanceData *instance, InstanceMemory *mem)
     } else {
         mem->busy = false;
     }
+}
+
+TypeInfo::~TypeInfo()
+{
+    if (!instance)
+        return;
+
+    Napi::Env env = instance->env;
+
+    for (RecordMember &member: members) {
+        DeleteReferenceSafe(env, member.key);
+        member.key = nullptr;
+    }
+
+    DeleteReferenceSafe(env, dispose_ref);
+    DeleteReferenceSafe(env, construct);
+    DeleteReferenceSafe(env, defn);
 }
 
 Napi::Function LibraryHandle::InitClass(InstanceData *instance)
@@ -1884,7 +1935,7 @@ static Napi::Value UnregisterCallback(const Napi::CallbackInfo &info)
         K_ASSERT(trampoline->func);
 
         trampoline->state = 0;
-        napi_delete_reference(env, trampoline->func);
+        DeleteReferenceSafe(env, trampoline->func);
         trampoline->func = nullptr;
 
         shared.available.Append(idx);
@@ -2021,8 +2072,9 @@ static FORCE_INLINE napi_value DecodeInteger(napi_env env, napi_callback_info in
 {
     napi_value arg;
     size_t count = 1;
+    InstanceData *instance;
 
-    NAPI_OK(napi_get_cb_info(env, info, &count, &arg, nullptr, nullptr));
+    NAPI_OK(napi_get_cb_info(env, info, &count, &arg, nullptr, (void **)&instance));
 
     if (count < 1) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", count);
@@ -2031,8 +2083,6 @@ static FORCE_INLINE napi_value DecodeInteger(napi_env env, napi_callback_info in
 
     void *ptr = nullptr;
     if (!TryPointer(env, arg, &ptr)) [[unlikely]] {
-        InstanceData *instance = Napi::Env(env).GetInstanceData<InstanceData>();
-
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected pointer", GetValueType(instance, arg));
         return Napi::Env(env).Null();
     }
@@ -2047,8 +2097,9 @@ static napi_value DecodeFloat(napi_env env, napi_callback_info info)
 {
     napi_value arg;
     size_t count = 1;
+    InstanceData *instance;
 
-    NAPI_OK(napi_get_cb_info(env, info, &count, &arg, nullptr, nullptr));
+    NAPI_OK(napi_get_cb_info(env, info, &count, &arg, nullptr, (void **)&instance));
 
     if (count < 1) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", count);
@@ -2057,8 +2108,6 @@ static napi_value DecodeFloat(napi_env env, napi_callback_info info)
 
     void *ptr = nullptr;
     if (!TryPointer(env, arg, &ptr)) [[unlikely]] {
-        InstanceData *instance = Napi::Env(env).GetInstanceData<InstanceData>();
-
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected pointer", GetValueType(instance, arg));
         return Napi::Env(env).Null();
     }
@@ -2073,8 +2122,9 @@ static napi_value DecodeDouble(napi_env env, napi_callback_info info)
 {
     napi_value arg;
     size_t count = 1;
+    InstanceData *instance;
 
-    NAPI_OK(napi_get_cb_info(env, info, &count, &arg, nullptr, nullptr));
+    NAPI_OK(napi_get_cb_info(env, info, &count, &arg, nullptr, (void **)&instance));
 
     if (count < 1) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", count);
@@ -2083,8 +2133,6 @@ static napi_value DecodeDouble(napi_env env, napi_callback_info info)
 
     void *ptr = nullptr;
     if (!TryPointer(env, arg, &ptr)) [[unlikely]] {
-        InstanceData *instance = Napi::Env(env).GetInstanceData<InstanceData>();
-
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected pointer", GetValueType(instance, arg));
         return Napi::Env(env).Null();
     }
@@ -2099,8 +2147,9 @@ static napi_value DecodeString(napi_env env, napi_callback_info info)
 {
     napi_value args[2];
     size_t count = 2;
+    InstanceData *instance;
 
-    NAPI_OK(napi_get_cb_info(env, info, &count, args, nullptr, nullptr));
+    NAPI_OK(napi_get_cb_info(env, info, &count, args, nullptr, (void **)&instance));
 
     if (count < 1) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected 1 to 2 arguments, got %1", count);
@@ -2109,8 +2158,6 @@ static napi_value DecodeString(napi_env env, napi_callback_info info)
 
     void *ptr = nullptr;
     if (!TryPointer(env, args[0], &ptr)) [[unlikely]] {
-        InstanceData *instance = Napi::Env(env).GetInstanceData<InstanceData>();
-
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected pointer", GetValueType(instance, args[0]));
         return Napi::Env(env).Null();
     }
@@ -2118,8 +2165,6 @@ static napi_value DecodeString(napi_env env, napi_callback_info info)
     if (count >= 2) {
         Size len;
         if (!TryNumber(env, args[1], &len)) [[unlikely]] {
-            InstanceData *instance = Napi::Env(env).GetInstanceData<InstanceData>();
-
             ThrowError<Napi::TypeError>(env, "Unexpected %1 value for length, expected number", GetValueType(instance, args[1]));
             return Napi::Env(env).Null();
         }
@@ -2134,8 +2179,9 @@ static napi_value DecodeString16(napi_env env, napi_callback_info info)
 {
     napi_value args[2];
     size_t count = 2;
+    InstanceData *instance;
 
-    NAPI_OK(napi_get_cb_info(env, info, &count, args, nullptr, nullptr));
+    NAPI_OK(napi_get_cb_info(env, info, &count, args, nullptr, (void **)&instance));
 
     if (count < 1) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected 1 to 2 arguments, got %1", count);
@@ -2144,8 +2190,6 @@ static napi_value DecodeString16(napi_env env, napi_callback_info info)
 
     void *ptr = nullptr;
     if (!TryPointer(env, args[0], &ptr)) [[unlikely]] {
-        InstanceData *instance = Napi::Env(env).GetInstanceData<InstanceData>();
-
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected pointer", GetValueType(instance, args[0]));
         return Napi::Env(env).Null();
     }
@@ -2153,8 +2197,6 @@ static napi_value DecodeString16(napi_env env, napi_callback_info info)
     if (count >= 2) {
         Size len;
         if (!TryNumber(env, args[1], &len)) [[unlikely]] {
-            InstanceData *instance = Napi::Env(env).GetInstanceData<InstanceData>();
-
             ThrowError<Napi::TypeError>(env, "Unexpected %1 value for length, expected number", GetValueType(instance, args[1]));
             return Napi::Env(env).Null();
         }
@@ -2169,8 +2211,9 @@ static napi_value DecodeString32(napi_env env, napi_callback_info info)
 {
     napi_value args[2];
     size_t count = 2;
+    InstanceData *instance;
 
-    NAPI_OK(napi_get_cb_info(env, info, &count, args, nullptr, nullptr));
+    NAPI_OK(napi_get_cb_info(env, info, &count, args, nullptr, (void **)&instance));
 
     if (count < 1) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected 1 to 2 arguments, got %1", count);
@@ -2179,8 +2222,6 @@ static napi_value DecodeString32(napi_env env, napi_callback_info info)
 
     void *ptr = nullptr;
     if (!TryPointer(env, args[0], &ptr)) [[unlikely]] {
-        InstanceData *instance = Napi::Env(env).GetInstanceData<InstanceData>();
-
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected pointer", GetValueType(instance, args[0]));
         return Napi::Env(env).Null();
     }
@@ -2188,8 +2229,6 @@ static napi_value DecodeString32(napi_env env, napi_callback_info info)
     if (count >= 2) {
         Size len;
         if (!TryNumber(env, args[1], &len)) [[unlikely]] {
-            InstanceData *instance = Napi::Env(env).GetInstanceData<InstanceData>();
-
             ThrowError<Napi::TypeError>(env, "Unexpected %1 value for length, expected number", GetValueType(instance, args[1]));
             return Napi::Env(env).Null();
         }
@@ -2456,6 +2495,7 @@ static void RegisterPrimitiveType(InstanceData *instance, Napi::Object map, std:
 
     TypeInfo *type = instance->types.AppendDefault();
 
+    type->instance = instance;
     type->name = *names.begin();
 
     type->primitive = primitive;
@@ -2871,7 +2911,7 @@ InstanceData::~InstanceData()
             if (trampoline->instance == this) {
                 trampoline->instance = nullptr;
                 if (trampoline->func) {
-                    napi_delete_reference(env, trampoline->func);
+                    DeleteReferenceSafe(env, trampoline->func);
                     trampoline->func = nullptr;
                 }
                 trampoline->state = 0;

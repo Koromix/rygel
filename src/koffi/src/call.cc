@@ -119,7 +119,7 @@ void CallData::Finalize()
         }
 
         for (const OutArgument &out: out_arguments) {
-            napi_delete_reference(env, out.ref);
+            DeleteReferenceSafe(env, out.ref);
         }
     }
 
@@ -134,7 +134,7 @@ void CallData::Finalize()
             K_ASSERT(trampoline->func);
 
             trampoline->state = 0;
-            napi_delete_reference(env, trampoline->func);
+            DeleteReferenceSafe(env, trampoline->func);
             trampoline->func = nullptr;
 
             shared.available.Append(idx);

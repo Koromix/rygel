@@ -436,9 +436,9 @@ TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len, A
 
 napi_value WrapType(InstanceData *instance, const TypeInfo *type, bool freeze)
 {
-    if (type->defn.IsEmpty()) {
-        Napi::Env env = instance->env;
+    Napi::Env env = instance->env;
 
+    if (!type->defn) {
 #if defined(EXTERNAL_TYPES)
         Napi::Object defn = Napi::Object::New(env);
 #else
@@ -454,7 +454,7 @@ napi_value WrapType(InstanceData *instance, const TypeInfo *type, bool freeze)
         defn.Set("disposable", Napi::Boolean::New(env, !!type->dispose));
 
         // Assign before to avoid possible recursion crash
-        type->defn = Napi::Persistent(defn);
+        NAPI_OK(napi_create_reference(env, defn, 1, &type->defn));
 
         switch (type->primitive) {
             case PrimitiveKind::Void:
@@ -519,26 +519,32 @@ napi_value WrapType(InstanceData *instance, const TypeInfo *type, bool freeze)
     }
 
 #if defined(EXTERNAL_TYPES)
-    Napi::Env env = instance->env;
-
     Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, (TypeInfo *)type);
     SetValueTag(env, external, &TypeObjectMarker);
 
     return external;
 #else
-    return type->defn.Value();
+    napi_value defn;
+    NAPI_OK(napi_get_reference_value(env, type->defn, &defn));
+
+    return defn;
 #endif
 }
 
 const TypeInfo *ReshapeType(InstanceData *instance, const TypeInfo *type, int32_t stride, uint16_t flags)
 {
-    K_ASSERT(!type->defn.IsEmpty());
+    K_ASSERT(type->defn);
 
     if (!type->reshaped) {
+        Napi::Env env = instance->env;
+
         TypeInfo *reshaped = nullptr;
 
         switch (type->primitive) {
             case PrimitiveKind::Record: {
+                napi_value defn;
+                NAPI_OK(napi_get_reference_value(env, type->defn, &defn));
+
                 reshaped = instance->types.AppendDefault();
 
                 memcpy((void *)reshaped, (const void *)type, K_SIZE(*type));
@@ -546,10 +552,7 @@ const TypeInfo *ReshapeType(InstanceData *instance, const TypeInfo *type, int32_
                 reshaped->members.Reserve(type->members.len);
                 reshaped->size = 0;
                 reshaped->flags |= flags;
-                memset((void *)&reshaped->defn, 0, K_SIZE(reshaped->defn));
-
-                Napi::Object defn = type->defn.Value();
-                reshaped->defn = Napi::Persistent(defn);
+                NAPI_OK(napi_create_reference(env, defn, 1, &reshaped->defn));
 
                 for (RecordMember member: type->members) {
                     member.offset = reshaped->size;
@@ -563,14 +566,14 @@ const TypeInfo *ReshapeType(InstanceData *instance, const TypeInfo *type, int32_
             case PrimitiveKind::Array: {
                 reshaped = instance->types.AppendDefault();
 
+                napi_value defn;
+                NAPI_OK(napi_get_reference_value(env, type->defn, &defn));
+
                 memcpy((void *)reshaped, (const void *)type, K_SIZE(*type));
                 reshaped->ref.stride = stride;
                 reshaped->size = (type->size / type->ref.stride) * stride;
-                memset((void *)&reshaped->defn, 0, K_SIZE(reshaped->defn));
                 reshaped->flags |= flags;
-
-                Napi::Object defn = type->defn.Value();
-                reshaped->defn = Napi::Persistent(defn);
+                NAPI_OK(napi_create_reference(env, defn, 1, &reshaped->defn));
             } break;
 
             default: { reshaped = (TypeInfo *)type; } break;
