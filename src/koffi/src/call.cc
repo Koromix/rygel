@@ -119,7 +119,7 @@ void CallData::Finalize()
         }
 
         for (const OutArgument &out: out_arguments) {
-            DeleteReferenceSafe(env, out.ref);
+            node_api_delete_reference(env, out.ref);
         }
     }
 
@@ -134,7 +134,7 @@ void CallData::Finalize()
             K_ASSERT(trampoline->func);
 
             trampoline->state = 0;
-            DeleteReferenceSafe(env, trampoline->func);
+            node_api_delete_reference(env, trampoline->func);
             trampoline->func = nullptr;
 
             shared.available.Append(idx);

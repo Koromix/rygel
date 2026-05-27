@@ -46,6 +46,7 @@ const napi_type_tag CastMarker = { 0x77f459614a0a412f, 0x80b3dda1341dc8df };
 SharedData shared;
 
 // Some Node-API functions are loaded dynamically to work around bugs or because they are recent
+napi_status (NAPI_CDECL *node_api_delete_reference)(node_api_basic_env env, napi_ref ref);
 napi_status (NAPI_CDECL *node_api_get_buffer_info)(napi_env env, napi_value value, void **data, size_t *length);
 napi_status (NAPI_CDECL *node_api_create_property_key_utf8)(napi_env env, const char* str, size_t length, napi_value* result);
 napi_status (NAPI_CDECL *node_api_post_finalizer)(node_api_basic_env env, napi_finalize finalize_cb, void* finalize_data, void* finalize_hint);
@@ -1593,13 +1594,13 @@ TypeInfo::~TypeInfo()
     Napi::Env env = instance->env;
 
     for (RecordMember &member: members) {
-        DeleteReferenceSafe(env, member.key);
+        node_api_delete_reference(env, member.key);
         member.key = nullptr;
     }
 
-    DeleteReferenceSafe(env, dispose_ref);
-    DeleteReferenceSafe(env, construct);
-    DeleteReferenceSafe(env, defn);
+    node_api_delete_reference(env, dispose_ref);
+    node_api_delete_reference(env, construct);
+    node_api_delete_reference(env, defn);
 }
 
 Napi::Function LibraryHandle::InitClass(InstanceData *instance)
@@ -1638,7 +1639,7 @@ LibraryHandle::LibraryHandle(const Napi::CallbackInfo &info)
 
 void LibraryHandle::Finalize(Napi::BasicEnv env)
 {
-    DeleteReferenceSafe(env, *this);
+    node_api_delete_reference(env, *this);
     SuppressDestruct();
 
     lib->Unref();
@@ -1935,7 +1936,7 @@ static Napi::Value UnregisterCallback(const Napi::CallbackInfo &info)
         K_ASSERT(trampoline->func);
 
         trampoline->state = 0;
-        DeleteReferenceSafe(env, trampoline->func);
+        node_api_delete_reference(env, trampoline->func);
         trampoline->func = nullptr;
 
         shared.available.Append(idx);
@@ -2456,7 +2457,7 @@ void LibraryHolder::Unload()
 
 ValueCast::~ValueCast()
 {
-    DeleteReferenceSafe(env, ref);
+    node_api_delete_reference(env, ref);
 }
 
 FunctionInfo::~FunctionInfo()
@@ -2490,8 +2491,6 @@ static void RegisterPrimitiveType(InstanceData *instance, Napi::Object map, std:
 {
     K_ASSERT(names.size() > 0);
     K_ASSERT(align <= size);
-
-    Napi::Env env = instance->env;
 
     TypeInfo *type = instance->types.AppendDefault();
 
@@ -2656,6 +2655,21 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
                 // errors out (or even asserts) if it gets called in a finalizer. In this case,
                 // use experimental API to try to run it later.
                 node_api_post_finalizer = SYMBOL(node_api_post_finalizer);
+
+                if (node_api_post_finalizer) {
+                    node_api_delete_reference = [](node_api_basic_env env, napi_ref ref) {
+                        node_api_post_finalizer((napi_env)env, [](napi_env env, void *data, void *) {
+                            napi_ref ref = (napi_ref)data;
+                            napi_delete_reference(env, ref);
+                        }, (void *)ref, nullptr);
+
+                        return napi_ok;
+                    };
+                } else {
+                    node_api_delete_reference = napi_delete_reference;
+                }
+            } else {
+                node_api_delete_reference = napi_delete_reference;
             }
 
             node_api_create_object_with_properties = SYMBOL(node_api_create_object_with_properties);
@@ -2910,7 +2924,7 @@ InstanceData::~InstanceData()
             if (trampoline->instance == this) {
                 trampoline->instance = nullptr;
                 if (trampoline->func) {
-                    DeleteReferenceSafe(env, trampoline->func);
+                    node_api_delete_reference(env, trampoline->func);
                     trampoline->func = nullptr;
                 }
                 trampoline->state = 0;

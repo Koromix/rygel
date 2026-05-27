@@ -104,7 +104,7 @@ void PollHandle::Start(const Napi::CallbackInfo &info)
 
 void PollHandle::Finalize(Napi::BasicEnv env)
 {
-    DeleteReferenceSafe(env, *this);
+    node_api_delete_reference(env, *this);
     SuppressDestruct();
 
     Close();

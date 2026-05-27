@@ -36,7 +36,7 @@ TypeObject::TypeObject(const Napi::CallbackInfo &info)
 
 void TypeObject::Finalize(Napi::BasicEnv env)
 {
-    DeleteReferenceSafe(env, *this);
+    node_api_delete_reference(env, *this);
     SuppressDestruct();
 }
 

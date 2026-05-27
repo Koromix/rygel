@@ -57,8 +57,6 @@ static FORCE_INLINE napi_valuetype GetKindOf(napi_env env, napi_value value)
 void SetValueTag(napi_env env, napi_value value, const void *marker);
 bool CheckValueTag(napi_env env, napi_value value, const void *marker);
 
-void DeleteReferenceSafe(napi_env env, napi_ref ref);
-
 static FORCE_INLINE bool IsNullOrUndefined(napi_valuetype kind)
 {
     return kind == napi_null || kind == napi_undefined;
