@@ -2668,7 +2668,6 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
     K_CRITICAL(instance, "Failed to initialize Koffi");
 
     instance->env = env;
-    env.SetInstanceData(instance);
 
 #if defined(__clang__)
     // First call to napi_create_double() does some weird stuff I can't explain
