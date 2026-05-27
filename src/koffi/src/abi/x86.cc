@@ -527,19 +527,19 @@ napi_value RunLoop(CallData *call, napi_value *args, uint8_t *base, const AbiIns
     OP(RunUInt64S) { INTEGER64_SWAP(G, uint64_t); }
     OP(RunString) {
         uint32_t eax = (uint32_t)WRAP(ForwardCallG(call->native, base, &call->saved_sp));
-        napi_value value = eax ? Napi::String::New(call->env, (const char *)eax) : call->env.Null();
+        napi_value value = NewString(call->env, (const char *)eax);
         DISPOSE((void *)eax);
         return value;
     }
     OP(RunString16) {
         uint32_t eax = (uint32_t)WRAP(ForwardCallG(call->native, base, &call->saved_sp));
-        napi_value value = eax ? Napi::String::New(call->env, (const char16_t *)eax) : call->env.Null();
+        napi_value value = NewString(call->env, (const char16_t *)eax);
         DISPOSE((void *)eax);
         return value;
     }
     OP(RunString32) {
         uint32_t eax = (uint32_t)WRAP(ForwardCallG(call->native, base, &call->saved_sp));
-        napi_value value = eax ? MakeStringFromUTF32(call->env, (const char32_t *)eax) : call->env.Null();
+        napi_value value = NewString(call->env, (const char32_t *)eax);
         DISPOSE((void *)eax);
         return value;
     }
@@ -606,19 +606,19 @@ napi_value RunLoop(CallData *call, napi_value *args, uint8_t *base, const AbiIns
     OP(RunUInt64SR) { INTEGER64_SWAP(GR, uint64_t); }
     OP(RunStringR) {
         uint32_t eax = (uint32_t)WRAP(ForwardCallGR(call->native, base, &call->saved_sp));
-        napi_value value = eax ? Napi::String::New(call->env, (const char *)eax) : call->env.Null();
+        napi_value value = NewString(call->env, (const char *)eax);
         DISPOSE((void *)eax);
         return value;
     }
     OP(RunString16R) {
         uint32_t eax = (uint32_t)WRAP(ForwardCallGR(call->native, base, &call->saved_sp));
-        napi_value value = eax ? Napi::String::New(call->env, (const char16_t *)eax) : call->env.Null();
+        napi_value value = NewString(call->env, (const char16_t *)eax);
         DISPOSE((void *)eax);
         return value;
     }
     OP(RunString32R) {
         uint32_t eax = (uint32_t)WRAP(ForwardCallGR(call->native, base, &call->saved_sp));
-        napi_value value = eax ? MakeStringFromUTF32(call->env, (const char32_t *)eax) : call->env.Null();
+        napi_value value = NewString(call->env, (const char32_t *)eax);
         DISPOSE((void *)eax);
         return value;
     }
@@ -753,19 +753,19 @@ napi_value RunLoop(CallData *call, napi_value *args, uint8_t *base, const AbiIns
     OP(ReturnUInt64S) { INTEGER64_SWAP(uint64_t); }
     OP(ReturnString) {
         uint32_t eax = *(uint32_t *)base;
-        napi_value value = eax ? Napi::String::New(call->env, (const char *)eax) : call->env.Null();
+        napi_value value = NewString(call->env, (const char *)eax);
         DISPOSE();
         return value;
     }
     OP(ReturnString16) {
         uint32_t eax = *(uint32_t *)base;
-        napi_value value = eax ? Napi::String::New(call->env, (const char16_t *)eax) : call->env.Null();
+        napi_value value = NewString(call->env, (const char16_t *)eax);
         DISPOSE();
         return value;
     }
     OP(ReturnString32) {
         uint32_t eax = *(uint32_t *)base;
-        napi_value value = eax ? MakeStringFromUTF32(call->env, (const char32_t *)eax) : call->env.Null();
+        napi_value value = NewString(call->env, (const char32_t *)eax);
         DISPOSE();
         return value;
     }
@@ -956,7 +956,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
             } break;
             case PrimitiveKind::String: {
                 const char *str = *(const char **)(args_ptr++);
-                arguments[i] = str ? Napi::String::New(env, str) : env.Null();
+                arguments[i] = NewString(env, str);
 
                 if (param.type->dispose) {
                     param.type->dispose(instance, param.type, str);
@@ -964,7 +964,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
             } break;
             case PrimitiveKind::String16: {
                 const char16_t *str16 = *(const char16_t **)(args_ptr++);
-                arguments[i] = str16 ? Napi::String::New(env, str16) : env.Null();
+                arguments[i] = NewString(env, str16);
 
                 if (param.type->dispose) {
                     param.type->dispose(instance, param.type, str16);
@@ -972,7 +972,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
             } break;
             case PrimitiveKind::String32: {
                 const char32_t *str32 = *(const char32_t **)(args_ptr++);
-                arguments[i] = str32 ? MakeStringFromUTF32(env, str32) : env.Null();
+                arguments[i] = NewString(env, str32);
 
                 if (param.type->dispose) {
                     param.type->dispose(instance, param.type, str32);

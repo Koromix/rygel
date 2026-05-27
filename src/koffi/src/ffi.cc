@@ -2169,9 +2169,9 @@ static napi_value DecodeString(napi_env env, napi_callback_info info)
             return Napi::Env(env).Null();
         }
 
-        return Napi::String::New(env, (const char *)ptr, (size_t)len);
+        return NewString(env, (const char *)ptr, (size_t)len);
     } else {
-        return Napi::String::New(env, (const char *)ptr);
+        return NewString(env, (const char *)ptr);
     }
 }
 
@@ -2201,9 +2201,9 @@ static napi_value DecodeString16(napi_env env, napi_callback_info info)
             return Napi::Env(env).Null();
         }
 
-        return Napi::String::New(env, (const char16_t *)ptr, (size_t)len);
+        return NewString(env, (const char16_t *)ptr, (size_t)len);
     } else {
-        return Napi::String::New(env, (const char16_t *)ptr);
+        return NewString(env, (const char16_t *)ptr);
     }
 }
 
@@ -2233,9 +2233,9 @@ static napi_value DecodeString32(napi_env env, napi_callback_info info)
             return Napi::Env(env).Null();
         }
 
-        return MakeStringFromUTF32(env, (const char32_t *)ptr, len);
+        return NewString(env, (const char32_t *)ptr, len);
     } else {
-        return MakeStringFromUTF32(env, (const char32_t *)ptr);
+        return NewString(env, (const char32_t *)ptr);
     }
 }
 
@@ -2762,11 +2762,11 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
     }
 
 #if defined(_WIN32)
-    exports.Set("extension", Napi::String::New(env, ".dll"));
+    exports.Set("extension", NewString(env, ".dll"));
 #elif defined(__APPLE__)
-    exports.Set("extension", Napi::String::New(env, ".dylib"));
+    exports.Set("extension", NewString(env, ".dylib"));
 #else
-    exports.Set("extension", Napi::String::New(env, ".so"));
+    exports.Set("extension", NewString(env, ".so"));
 #endif
 
     // Init object classes and symbols
@@ -2865,7 +2865,7 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
         node.Set("PollHandle", instance->construct_poll.Value());
     }
 
-    exports.Set("version", Napi::String::New(env, K_STRINGIFY(VERSION)));
+    exports.Set("version", NewString(env, K_STRINGIFY(VERSION)));
 
 #if defined(_WIN32)
     {

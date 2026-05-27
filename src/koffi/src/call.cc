@@ -79,7 +79,7 @@ void CallData::Finalize()
                         K_ASSERT(GetArrayLength(env, value) == 1);
 
                         Size len = strnlen((const char *)out.ptr, out.max_len);
-                        Napi::String str = Napi::String::New(env, (const char *)out.ptr, len);
+                        napi_value str = NewString(env, (const char *)out.ptr, len);
 
                         napi_set_element(env, value, 0, str);
                     } break;
@@ -89,7 +89,7 @@ void CallData::Finalize()
                         K_ASSERT(GetArrayLength(env, value) == 1);
 
                         Size len = NullTerminatedLength((const char16_t *)out.ptr, out.max_len);
-                        Napi::String str = Napi::String::New(env, (const char16_t *)out.ptr, len);
+                        napi_value str = NewString(env, (const char16_t *)out.ptr, len);
 
                         napi_set_element(env, value, 0, str);
                     } break;
@@ -99,7 +99,7 @@ void CallData::Finalize()
                         K_ASSERT(GetArrayLength(env, value) == 1);
 
                         Size len = NullTerminatedLength((const char32_t *)out.ptr, out.max_len);
-                        Napi::String str = MakeStringFromUTF32(env, (const char32_t *)out.ptr, len);
+                        napi_value str = NewString(env, (const char32_t *)out.ptr, len);
 
                         napi_set_element(env, value, 0, str);
                     } break;
@@ -1699,7 +1699,7 @@ bool InitAsyncBroker(Napi::Env env, InstanceData *instance)
 {
     if (!instance->broker) {
         if (napi_create_threadsafe_function(env, nullptr, nullptr,
-                                            Napi::String::New(env, "Koffi Async Callback Broker"),
+                                            NewString(env, "Koffi Async Callback Broker"),
                                             0, 1, nullptr, nullptr, nullptr,
                                             PerformAsyncRelay, &instance->broker) != napi_ok) {
             LogError("Failed to create async callback broker");
@@ -1769,7 +1769,7 @@ napi_value DescribeFunction(InstanceData *instance, const FunctionInfo *func)
     Napi::Object meta = Napi::Object::New(env);
     Napi::Array arguments = Napi::Array::New(env, func->parameters.len);
 
-    meta.Set("name", Napi::String::New(env, func->name));
+    meta.Set("name", NewString(env, func->name));
     meta.Set("arguments", arguments);
     meta.Set("result", WrapType(instance, func->ret.type));
 
@@ -1778,7 +1778,7 @@ napi_value DescribeFunction(InstanceData *instance, const FunctionInfo *func)
         Napi::Object obj = Napi::Object::New(env);
 
         obj.Set("type", WrapType(instance, param.type));
-        obj.Set("direction", Napi::String::New(env, DirectionNames[param.directions]));
+        obj.Set("direction", NewString(env, DirectionNames[param.directions]));
 
         arguments.Set((uint32_t)i, obj);
     }

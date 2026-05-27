@@ -447,7 +447,7 @@ napi_value WrapType(InstanceData *instance, const TypeInfo *type, bool freeze)
         SetValueTag(env, defn, &TypeObjectMarker);
 #endif
 
-        defn.Set("name", Napi::String::New(env, type->name));
+        defn.Set("name", NewString(env, type->name));
         defn.Set("primitive", PrimitiveKindNames[(int)type->primitive]);
         defn.Set("size", Napi::Number::New(env, (double)type->size));
         defn.Set("alignment", Napi::Number::New(env, (double)type->align));

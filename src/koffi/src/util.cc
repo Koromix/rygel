@@ -168,7 +168,7 @@ int GetTypedArrayType(const TypeInfo *type)
     K_UNREACHABLE();
 }
 
-Napi::String MakeStringFromUTF32(Napi::Env env, const char32_t *ptr, Size len)
+static FORCE_INLINE napi_value NewStringUTF32(Napi::Env env, const char32_t *ptr, Size len)
 {
     static const char16_t ReplacementChar = 0xFFFD;
 
@@ -194,8 +194,30 @@ Napi::String MakeStringFromUTF32(Napi::Env env, const char32_t *ptr, Size len)
         }
     }
 
-    Napi::String str = Napi::String::New(env, buf.ptr, buf.len);
-    return str;
+    return NewString(env, buf.ptr, buf.len);
+}
+
+napi_value NewString(Napi::Env env, const char32_t *ptr, Size len)
+{
+    if (ptr) {
+        return NewStringUTF32(env, ptr, len);
+    } else {
+        napi_value value;
+        NAPI_OK(napi_get_null(env, &value));
+        return value;
+    }
+}
+
+napi_value NewString(Napi::Env env, const char32_t *ptr)
+{
+    if (ptr) {
+        Size len =  NullTerminatedLength(ptr);
+        return NewStringUTF32(env, ptr, len);
+    } else {
+        napi_value value;
+        NAPI_OK(napi_get_null(env, &value));
+        return value;
+    }
 }
 
 static uint32_t DecodeDynamicLength(const uint8_t *origin, const RecordMember &by)
@@ -380,7 +402,7 @@ static FORCE_INLINE void DecodeObject(InstanceData *instance, const uint8_t *ori
             case PrimitiveKind::String: {
                 const char *str;
                 memcpy(&str, src, K_SIZE(void *));
-                set(i, member, str ? Napi::String::New(env, str) : env.Null());
+                set(i, member, NewString(env, str));
 
                 if (member.type->dispose) {
                     member.type->dispose(instance, member.type, str);
@@ -389,7 +411,7 @@ static FORCE_INLINE void DecodeObject(InstanceData *instance, const uint8_t *ori
             case PrimitiveKind::String16: {
                 const char16_t *str16;
                 memcpy(&str16, src, K_SIZE(void *));
-                set(i, member, str16 ? Napi::String::New(env, str16) : env.Null());
+                set(i, member, NewString(env, str16));
 
                 if (member.type->dispose) {
                     member.type->dispose(instance, member.type, str16);
@@ -398,7 +420,7 @@ static FORCE_INLINE void DecodeObject(InstanceData *instance, const uint8_t *ori
             case PrimitiveKind::String32: {
                 const char32_t *str32;
                 memcpy(&str32, src, K_SIZE(void *));
-                set(i, member, str32 ? MakeStringFromUTF32(env, str32) : env.Null());
+                set(i, member, NewString(env, str32));
             } break;
             case PrimitiveKind::Pointer: {
                 void *ptr2;
@@ -611,22 +633,19 @@ napi_value DecodeArray(InstanceData *instance, const uint8_t *origin, const Type
                 const char *ptr = (const char *)origin;
                 size_t count = strnlen(ptr, (size_t)len);
 
-                Napi::String str = Napi::String::New(env, ptr, count);
-                return str;
+                return NewString(env, ptr, count);
             } break;
             case PrimitiveKind::Int16: {
                 const char16_t *ptr = (const char16_t *)origin;
                 Size count = NullTerminatedLength(ptr, len);
 
-                Napi::String str = Napi::String::New(env, ptr, count);
-                return str;
+                return NewString(env, ptr, count);
             } break;
             case PrimitiveKind::Int32: {
                 const char32_t *ptr = (const char32_t *)origin;
                 Size count = NullTerminatedLength(ptr, len);
 
-                Napi::String str = MakeStringFromUTF32(env, ptr, count);
-                return str;
+                return NewString(env, ptr, count);
             } break;
 
             case PrimitiveKind::Void:
@@ -726,7 +745,7 @@ void DecodeElements(InstanceData *instance, napi_value array, const uint8_t *ori
         case PrimitiveKind::String: {
             POP_ARRAY({
                 const char *str = *(const char **)src;
-                napi_set_element(env, array, i, str ? Napi::String::New(env, str) : env.Null());
+                napi_set_element(env, array, i, NewString(env, str));
 
                 if (ref->dispose) {
                     ref->dispose(instance, ref, str);
@@ -736,7 +755,7 @@ void DecodeElements(InstanceData *instance, napi_value array, const uint8_t *ori
         case PrimitiveKind::String16: {
             POP_ARRAY({
                 const char16_t *str16 = *(const char16_t **)src;
-                napi_set_element(env, array, i, str16 ? Napi::String::New(env, str16) : env.Null());
+                napi_set_element(env, array, i, NewString(env, str16));
 
                 if (ref->dispose) {
                     ref->dispose(instance, ref, str16);
@@ -746,7 +765,7 @@ void DecodeElements(InstanceData *instance, napi_value array, const uint8_t *ori
         case PrimitiveKind::String32: {
             POP_ARRAY({
                 const char32_t *str32 = *(const char32_t **)src;
-                napi_set_element(env, array, i, str32 ? MakeStringFromUTF32(env, str32) : env.Null());
+                napi_set_element(env, array, i, NewString(env, str32));
 
                 if (ref->dispose) {
                     ref->dispose(instance, ref, str32);
@@ -897,15 +916,15 @@ napi_value Decode(InstanceData *instance, const uint8_t *ptr, const TypeInfo *ty
         case PrimitiveKind::UInt64S: { RETURN_INT_SWAP(uint64_t, NewInt); } break;
         case PrimitiveKind::String: {
             const char *str = *(const char **)ptr;
-            return str ? Napi::String::New(env, str) : env.Null();
+            return NewString(env, str);
         } break;
         case PrimitiveKind::String16: {
             const char16_t *str16 = *(const char16_t **)ptr;
-            return str16 ? Napi::String::New(env, str16) : env.Null();
+            return NewString(env, str16);
         } break;
         case PrimitiveKind::String32: {
             const char32_t *str32 = *(const char32_t **)ptr;
-            return str32 ? MakeStringFromUTF32(env, str32) : env.Null();
+            return NewString(env, str32);
         } break;
         case PrimitiveKind::Pointer: {
             void *ptr2 = *(void **)ptr;

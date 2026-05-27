@@ -697,19 +697,19 @@ namespace {
     OP(RunUInt64S) { INTEGER_SWAP(GG, uint64_t); }
     OP(RunString) {
         uint64_t a0 = WRAP(ForwardCallGG(call->native, base, &call->saved_sp).a0);
-        napi_value value = a0 ? Napi::String::New(call->env, (const char *)a0) : call->env.Null();
+        napi_value value = NewString(call->env, (const char *)a0);
         DISPOSE((void *)a0);
         return value;
     }
     OP(RunString16) {
         uint64_t a0 = WRAP(ForwardCallGG(call->native, base, &call->saved_sp).a0);
-        napi_value value = a0 ? Napi::String::New(call->env, (const char16_t *)a0) : call->env.Null();
+        napi_value value = NewString(call->env, (const char16_t *)a0);
         DISPOSE((void *)a0);
         return value;
     }
     OP(RunString32) {
         uint64_t a0 = WRAP(ForwardCallGG(call->native, base, &call->saved_sp).a0);
-        napi_value value = a0 ? MakeStringFromUTF32(call->env, (const char32_t *)a0) : call->env.Null();
+        napi_value value = NewString(call->env, (const char32_t *)a0);
         DISPOSE((void *)a0);
         return value;
     }
@@ -781,19 +781,19 @@ namespace {
     OP(RunUInt64SX) { INTEGER_SWAP(GGX, uint64_t); }
     OP(RunStringX) {
         uint64_t a0 = WRAP(ForwardCallGGX(call->native, base, &call->saved_sp).a0);
-        napi_value value = a0 ? Napi::String::New(call->env, (const char *)a0) : call->env.Null();
+        napi_value value = NewString(call->env, (const char *)a0);
         DISPOSE((void *)a0);
         return value;
     }
     OP(RunString16X) {
         uint64_t a0 = WRAP(ForwardCallGGX(call->native, base, &call->saved_sp).a0);
-        napi_value value = a0 ? Napi::String::New(call->env, (const char16_t *)a0) : call->env.Null();
+        napi_value value = NewString(call->env, (const char16_t *)a0);
         DISPOSE((void *)a0);
         return value;
     }
     OP(RunString32X) {
         uint64_t a0 = WRAP(ForwardCallGGX(call->native, base, &call->saved_sp).a0);
-        napi_value value = a0 ? MakeStringFromUTF32(call->env, (const char32_t *)a0) : call->env.Null();
+        napi_value value = NewString(call->env, (const char32_t *)a0);
         DISPOSE((void *)a0);
         return value;
     }
@@ -918,19 +918,19 @@ namespace {
     OP(ReturnUInt64S) { INTEGER_SWAP(uint64_t); }
     OP(ReturnString) {
         uint64_t a0 = *(uint64_t *)base;
-        napi_value value = a0 ? Napi::String::New(call->env, (const char *)a0) : call->env.Null();
+        napi_value value = NewString(call->env, (const char *)a0);
         DISPOSE();
         return value;
     }
     OP(ReturnString16) {
         uint64_t a0 = *(uint64_t *)base;
-        napi_value value = a0 ? Napi::String::New(call->env, (const char16_t *)a0) : call->env.Null();
+        napi_value value = NewString(call->env, (const char16_t *)a0);
         DISPOSE();
         return value;
     }
     OP(ReturnString32) {
         uint64_t a0 = *(uint64_t *)base;
-        napi_value value = a0 ? MakeStringFromUTF32(call->env, (const char32_t *)a0) : call->env.Null();
+        napi_value value = NewString(call->env, (const char32_t *)a0);
         DISPOSE();
         return value;
     }
@@ -1123,7 +1123,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
                 const uint8_t *src = in_ptr + param.abi.offsets[0];
                 const char *str = *(const char **)src;
 
-                arguments[i] = str ? Napi::String::New(env, str) : env.Null();
+                arguments[i] = NewString(env, str);
 
                 if (param.type->dispose) {
                     param.type->dispose(instance, param.type, str);
@@ -1133,7 +1133,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
                 const uint8_t *src = in_ptr + param.abi.offsets[0];
                 const char16_t *str16 = *(const char16_t **)src;
 
-                arguments[i] = str16 ? Napi::String::New(env, str16) : env.Null();
+                arguments[i] = NewString(env, str16);
 
                 if (param.type->dispose) {
                     param.type->dispose(instance, param.type, str16);
@@ -1143,7 +1143,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
                 const uint8_t *src = in_ptr + param.abi.offsets[0];
                 const char32_t *str32 = *(const char32_t **)src;
 
-                arguments[i] = str32 ? MakeStringFromUTF32(env, str32) : env.Null();
+                arguments[i] = NewString(env, str32);
 
                 if (param.type->dispose) {
                     param.type->dispose(instance, param.type, str32);

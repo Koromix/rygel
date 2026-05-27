@@ -343,39 +343,6 @@ static FORCE_INLINE bool TryBuffer(napi_env env, napi_value value, Span<uint8_t>
 
 int GetTypedArrayType(const TypeInfo *type);
 
-template <typename T>
-Size NullTerminatedLength(const T *ptr)
-{
-    Size len = 0;
-    while (ptr[len]) {
-        len++;
-    }
-    return len;
-}
-template <typename T>
-Size NullTerminatedLength(const T *ptr, Size max)
-{
-    Size len = 0;
-    while (len < max && ptr[len]) {
-        len++;
-    }
-    return len;
-}
-
-Napi::String MakeStringFromUTF32(Napi::Env env, const char32_t *ptr, Size len);
-static inline Napi::String MakeStringFromUTF32(Napi::Env env, const char32_t *ptr)
-    { return MakeStringFromUTF32(env, ptr, NullTerminatedLength(ptr)); }
-
-napi_value DecodeObject(InstanceData *instance, const uint8_t *origin, const TypeInfo *type);
-void DecodeObject(InstanceData *instance, napi_value obj, const uint8_t *origin, const TypeInfo *type);
-
-napi_value DecodeArray(InstanceData *instance, const uint8_t *origin, const TypeInfo *type);
-napi_value DecodeArray(InstanceData *instance, const uint8_t *origin, const TypeInfo *type, uint32_t len);
-void DecodeElements(InstanceData *instance, napi_value array, const uint8_t *origin, const TypeInfo *type, uint32_t len);
-INLINE_UNITY void DecodeBuffer(Span<uint8_t> buffer, const uint8_t *origin, const TypeInfo *type);
-
-napi_value Decode(InstanceData *instance, const uint8_t *ptr, const TypeInfo *type);
-
 static FORCE_INLINE napi_value NewInt(Napi::Env env, char i) { napi_value value; napi_create_int32(env, (int32_t)i, &value); return value; }
 static FORCE_INLINE napi_value NewInt(Napi::Env env, signed char i) { napi_value value; napi_create_int32(env, (int32_t)i, &value); return value; }
 static FORCE_INLINE napi_value NewInt(Napi::Env env, unsigned char i) { napi_value value; napi_create_uint32(env, (uint32_t)i, &value); return value; }
@@ -413,6 +380,80 @@ static FORCE_INLINE napi_value NewInt(Napi::Env env, T i)
         return value;
     }
 }
+
+template <typename T>
+Size NullTerminatedLength(const T *ptr)
+{
+    Size len = 0;
+    while (ptr[len]) {
+        len++;
+    }
+    return len;
+}
+template <typename T>
+Size NullTerminatedLength(const T *ptr, Size max)
+{
+    Size len = 0;
+    while (len < max && ptr[len]) {
+        len++;
+    }
+    return len;
+}
+
+static FORCE_INLINE napi_value NewString(Napi::Env env, const char *ptr, Size len)
+{
+    napi_value value;
+    if (ptr) {
+        NAPI_OK(napi_create_string_utf8(env, ptr, (size_t)len, &value));
+    } else {
+        NAPI_OK(napi_get_null(env, &value));
+    }
+    return value;
+}
+static FORCE_INLINE napi_value NewString(Napi::Env env, const char *ptr)
+{
+    napi_value value;
+    if (ptr) {
+        NAPI_OK(napi_create_string_utf8(env, ptr, NAPI_AUTO_LENGTH, &value));
+    } else {
+        NAPI_OK(napi_get_null(env, &value));
+    }
+    return value;
+}
+
+static FORCE_INLINE napi_value NewString(Napi::Env env, const char16_t *ptr, Size len)
+{
+    napi_value value;
+    if (ptr) {
+        NAPI_OK(napi_create_string_utf16(env, ptr, (size_t)len, &value));
+    } else {
+        NAPI_OK(napi_get_null(env, &value));
+    }
+    return value;
+}
+static FORCE_INLINE napi_value NewString(Napi::Env env, const char16_t *ptr)
+{
+    napi_value value;
+    if (ptr) {
+        NAPI_OK(napi_create_string_utf16(env, ptr, NAPI_AUTO_LENGTH, &value));
+    } else {
+        NAPI_OK(napi_get_null(env, &value));
+    }
+    return value;
+}
+
+napi_value NewString(Napi::Env env, const char32_t *ptr, Size len);
+napi_value NewString(Napi::Env env, const char32_t *ptr);
+
+napi_value DecodeObject(InstanceData *instance, const uint8_t *origin, const TypeInfo *type);
+void DecodeObject(InstanceData *instance, napi_value obj, const uint8_t *origin, const TypeInfo *type);
+
+napi_value DecodeArray(InstanceData *instance, const uint8_t *origin, const TypeInfo *type);
+napi_value DecodeArray(InstanceData *instance, const uint8_t *origin, const TypeInfo *type, uint32_t len);
+void DecodeElements(InstanceData *instance, napi_value array, const uint8_t *origin, const TypeInfo *type, uint32_t len);
+INLINE_UNITY void DecodeBuffer(Span<uint8_t> buffer, const uint8_t *origin, const TypeInfo *type);
+
+napi_value Decode(InstanceData *instance, const uint8_t *ptr, const TypeInfo *type);
 
 static FORCE_INLINE Napi::Array GetOwnPropertyNames(napi_env env, napi_value obj)
 {
