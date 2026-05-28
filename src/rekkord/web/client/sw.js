@@ -113,7 +113,7 @@ async function *downloadFragments(info) {
         }
 
         if (queue.length) {
-            let [idx, buf] = await Promise.any(queue.map(it => it.download));
+            let [idx, buf] = await Promise.race(queue.map(it => it.download));
 
             queue = queue.filter(it => it.idx != idx);
             buffers.set(idx, buf);
