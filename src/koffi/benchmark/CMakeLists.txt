@@ -18,7 +18,7 @@ include (../cmake/raylib.cmake)
 # ---- atoi ----
 
 add_node_addon(NAME atoi_napi SOURCES atoi_napi.cc ../../../lib/native/base/base.cc)
-target_compile_definitions(atoi_napi PRIVATE NAPI_DISABLE_CPP_EXCEPTIONS)
+target_compile_definitions(atoi_napi PRIVATE NODE_ADDON_API_DISABLE_CPP_EXCEPTIONS)
 target_include_directories(atoi_napi PRIVATE ../../.. ../../../vendor/node-addon-api)
 target_link_libraries(atoi_napi PRIVATE Threads::Threads)
 
@@ -32,7 +32,7 @@ endif()
 # ---- rand ----
 
 add_node_addon(NAME rand_napi SOURCES rand_napi.cc ../../../lib/native/base/base.cc)
-target_compile_definitions(rand_napi PRIVATE NAPI_DISABLE_CPP_EXCEPTIONS)
+target_compile_definitions(rand_napi PRIVATE NODE_ADDON_API_DISABLE_CPP_EXCEPTIONS)
 target_include_directories(rand_napi PRIVATE ../../.. ../../../vendor/node-addon-api)
 target_link_libraries(rand_napi PRIVATE Threads::Threads)
 
@@ -46,7 +46,7 @@ endif()
 # ---- qsort ----
 
 add_node_addon(NAME qsort_napi SOURCES qsort_napi.cc ../../../lib/native/base/base.cc)
-target_compile_definitions(qsort_napi PRIVATE NAPI_DISABLE_CPP_EXCEPTIONS)
+target_compile_definitions(qsort_napi PRIVATE NODE_ADDON_API_DISABLE_CPP_EXCEPTIONS)
 target_include_directories(qsort_napi PRIVATE ../../.. ../../../vendor/node-addon-api)
 target_link_libraries(qsort_napi PRIVATE Threads::Threads)
 
@@ -60,7 +60,7 @@ endif()
 # ---- memset ----
 
 add_node_addon(NAME memset_napi SOURCES memset_napi.cc ../../../lib/native/base/base.cc)
-target_compile_definitions(memset_napi PRIVATE NAPI_DISABLE_CPP_EXCEPTIONS)
+target_compile_definitions(memset_napi PRIVATE NODE_ADDON_API_DISABLE_CPP_EXCEPTIONS)
 target_include_directories(memset_napi PRIVATE ../../.. ../../../vendor/node-addon-api)
 target_link_libraries(memset_napi PRIVATE Threads::Threads)
 
