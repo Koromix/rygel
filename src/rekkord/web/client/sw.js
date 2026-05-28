@@ -132,10 +132,13 @@ async function *downloadFragments(info) {
             buf = salsa.decrypt(cipher);
         }
 
-        yield buf;
-
         downloaded += expected;
         idx++;
+
+        info.client.postMessage({ type: 'progress', args: [info.kid, downloaded, info.size] });
+        findDrop(info.kid); // Reset expiration timer
+
+        yield buf;
     }
 }
 
