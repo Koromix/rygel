@@ -50,7 +50,7 @@ function startDownload(kid) {
     let info = findDrop(kid);
 
     let [wait, resolve, reject] = createPromise();
-    let fragments = downloadFragments(info);
+    let fragments = Util.parallelize(downloadFragments(info), DOWNLOAD_QUEUE_SIZE, DOWNLOAD_AHEAD_LIMIT);
 
     let stream = new ReadableStream({
         pull: async (controller) => {
@@ -91,92 +91,52 @@ function startDownload(kid) {
 
 async function *downloadFragments(info) {
     let downloaded = 0;
-    let fragment = 0;
-    let queue = [];
+    let idx = 0;
 
-    let buffers = new Map;
-    let yields = 0;
+    while (downloaded < info.size) {
+        let url = Util.pasteURL('/api/drop/fragment', { kid: info.kid, fragment: idx });
+        let expected = Math.min(info.size - idx * info.chunk, info.chunk) + 16;
 
-    while (downloaded < info.size || queue.length) {
-        if (buffers.size < DOWNLOAD_AHEAD_LIMIT) {
-            while (downloaded < info.size && queue.length < DOWNLOAD_QUEUE_SIZE) {
-                let expected = Math.min(info.size - fragment * info.chunk, info.chunk) + 16;
+        let cipher = null;
 
-                queue.push({
-                    idx: fragment,
-                    download: downloadFragment(info, fragment, expected)
-                });
+        for (let i = 0; i < 4; i++) {
+            try {
+                let response = await fetch(url);
 
-                downloaded += expected;
-                fragment++;
+                if (response.ok)
+                    cipher = await response.bytes();
+            } catch (err) {
+                console.error(err);
             }
+
+            if (cipher?.length == expected)
+                break;
+
+            // Transient S3 errors will result in truncated output, but a 200 status because the server
+            // streams the response. Retry if buffer is shorter than expected!
+            await Util.waitFor(1000 + i * 2000);
         }
 
-        if (queue.length) {
-            let [idx, buf] = await Promise.race(queue.map(it => it.download));
+        if (cipher?.length != expected)
+            throw new Error('Failed to download file fragment');
 
-            queue = queue.filter(it => it.idx != idx);
-            buffers.set(idx, buf);
+        let buf = null;
 
-            let next = buffers.get(yields);
+        // Decrypt fragment
+        {
+            let nonce = new Uint8Array(24);
+            (new DataView(nonce.buffer)).setUint32(0, idx, true);
 
-            if (next != null) {
-                buffers.delete(yields);
-                yields++;
+            let salsa = xsalsa20poly1305(info.key, nonce);
 
-                yield next;
-            }
-        }
-    }
-
-    while (buffers.size) {
-        let next = buffers.get(yields);
-
-        buffers.delete(yields);
-        yields++;
-
-        yield next;
-    }
-}
-
-async function downloadFragment(info, idx, expected) {
-    let url = Util.pasteURL('/api/drop/fragment', { kid: info.kid, fragment: idx });
-    let cipher = null;
-
-    for (let i = 0; i < 4; i++) {
-        try {
-            let response = await fetch(url);
-
-            if (response.ok)
-                cipher = await response.bytes();
-        } catch (err) {
-            console.error(err);
+            buf = salsa.decrypt(cipher);
         }
 
-        if (cipher?.length == expected)
-            break;
+        yield buf;
 
-        // Transient S3 errors will result in truncated output, but a 200 status because the server
-        // streams the response. Retry if buffer is shorter than expected!
-        await Util.waitFor(1000 + i * 2000);
+        downloaded += expected;
+        idx++;
     }
-
-    if (cipher?.length != expected)
-        throw new Error('Failed to download file fragment');
-
-    let buf = null;
-
-    // Decrypt fragment
-    {
-        let nonce = new Uint8Array(24);
-        (new DataView(nonce.buffer)).setUint32(0, idx, true);
-
-        let salsa = xsalsa20poly1305(info.key, nonce);
-
-        buf = salsa.decrypt(cipher);
-    }
-
-    return [idx, buf];
 }
 
 function updateDrop(client, info, key) {
