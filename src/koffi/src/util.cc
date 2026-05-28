@@ -421,7 +421,7 @@ static FORCE_INLINE void DecodeObject(InstanceData *instance, const uint8_t *ori
                     napi_value value = DecodeArray(instance, (const uint8_t *)ptr2, member.type, len);
                     set(i, member, value);
                 } else {
-                    napi_value p = ptr2 ? WrapPointer(env, member.type->ref.type, ptr2) : env.Null();
+                    napi_value p = WrapPointer(env, member.type->ref.type, ptr2);
                     set(i, member, p);
                 }
 
@@ -433,7 +433,7 @@ static FORCE_INLINE void DecodeObject(InstanceData *instance, const uint8_t *ori
                 void *ptr2;
                 memcpy(&ptr2, src, K_SIZE(void *));
 
-                napi_value p = ptr2 ? WrapPointer(env, member.type->ref.type, ptr2) : env.Null();
+                napi_value p = WrapPointer(env, member.type->ref.type, ptr2);
                 set(i, member, p);
 
                 if (member.type->dispose) {
@@ -764,7 +764,7 @@ void DecodeElements(InstanceData *instance, napi_value array, const uint8_t *ori
             POP_ARRAY({
                 void *ptr2 = *(void **)src;
 
-                napi_value p = ptr2 ? WrapPointer(env, ref->ref.type, ptr2) : env.Null();
+                napi_value p = WrapPointer(env, ref->ref.type, ptr2);
                 napi_set_element(env, array, i, p);
 
                 if (ref->dispose) {
@@ -776,7 +776,7 @@ void DecodeElements(InstanceData *instance, napi_value array, const uint8_t *ori
             POP_ARRAY({
                 void *ptr2 = *(void **)src;
 
-                napi_value p = ptr2 ? WrapPointer(env, ref->ref.type, ptr2) : env.Null();
+                napi_value p = WrapPointer(env, ref->ref.type, ptr2);
                 napi_set_element(env, array, i, p);
 
                 if (ref->dispose) {
@@ -916,11 +916,11 @@ napi_value Decode(InstanceData *instance, const uint8_t *ptr, const TypeInfo *ty
         } break;
         case PrimitiveKind::Pointer: {
             void *ptr2 = *(void **)ptr;
-            return ptr2 ? WrapPointer(env, type->ref.type, ptr2) : env.Null();
+            return WrapPointer(env, type->ref.type, ptr2);
         } break;
         case PrimitiveKind::Callback: {
             void *ptr2 = *(void **)ptr;
-            return ptr2 ? WrapPointer(env, type->ref.type, ptr2) : env.Null();
+            return WrapPointer(env, type->ref.type, ptr2);
         } break;
         case PrimitiveKind::Record:
         case PrimitiveKind::Union: { return DecodeObject(instance, ptr, type); } break;

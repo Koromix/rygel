@@ -473,11 +473,15 @@ static FORCE_INLINE napi_value WrapPointer(Napi::Env env, const TypeInfo *ref, v
 {
     napi_value value;
 
+    if (ptr) {
 #if defined(EXTERNAL_POINTERS)
-    NAPI_OK(napi_create_external(env, ptr, nullptr, nullptr, &value));
+        NAPI_OK(napi_create_external(env, ptr, nullptr, nullptr, &value));
 #else
-    NAPI_OK(napi_create_bigint_uint64(env, (uint64_t)(uintptr_t)ptr, &value));
+        NAPI_OK(napi_create_bigint_uint64(env, (uint64_t)(uintptr_t)ptr, &value));
 #endif
+    } else {
+        NAPI_OK(napi_get_null(env, &value));
+    }
 
     return value;
 }
