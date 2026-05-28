@@ -26,6 +26,8 @@ const EnumWindowsProc = koffi.proto('__stdcall', 'EnumWindowsProc', 'bool', ['HW
 
 > [!WARNING]
 > You have to make sure you **get the calling convention right** (such as specifying __stdcall for a Windows API callback), or your code will crash on Windows 32-bit.
+>
+> Only *cdecl* and *stdcall* callbacks are supported.
 
 Once your callback type is declared, you can use a pointer to it in struct definitions, as function parameters and/or return types, or to call/decode function pointers.
 
@@ -35,10 +37,8 @@ Koffi only uses predefined static trampolines, and does not need to generate cod
 
 Thus, Koffi distinguishes two callback modes:
 
-- [Transient callbacks](#transient-callbacks) can only be called while the C function they are passed to is running, and are invalidated when it returns. If the C function calls the callback later, the behavior is undefined, though Koffi tries to detect such cases. If it does, an exception will be thrown, but this is no guaranteed. However, they are simple to use, and don't require any special handling.
+- [Transient callbacks](#transient-callbacks) can only be called while the C function they are passed to is running, and are invalidated when it returns. If the C function calls the callback later, the behavior is undefined, though Koffi tries to detect such cases. If it does, an exception will be thrown, but this is not guaranteed. However, they are simple to use, and don't require any special handling.
 - [Registered callbacks](#registered-callbacks) can be called at any time, but they must be manually registered and unregistered. A limited number of registered callbacks can exist at the same time.
-
-You need to specify the correct [calling convention](functions#calling-conventions) on x86 platforms, or the behavior is undefined (Node will probably crash). Only *cdecl* and *stdcall* callbacks are supported.
 
 ## Transient callbacks
 
@@ -80,7 +80,7 @@ console.log(ret);
 
 ## Registered callbacks
 
-*Changed in Koffi 3.0*
+*Changed in Koffi 3.0 (see note below)*
 
 Use registered callbacks when the function needs to be called at a later time (e.g. log handler, event handler, `fopencookie/funopen`). Call `koffi.register(func, type)` to register a callback function, with two arguments: the JS function, and the callback type.
 
@@ -128,7 +128,7 @@ koffi.unregister(cb2);
 ```
 
 > [!NOTE]
-> In Koffi 2.2, you could bind a specific `this` value to the callback function, by giving an object as the first argument to `koffi.register()`.
+> In Koffi 2.2, you could bind a specific `this` value to the callback function, by giving an object as the first argument: `koffi.register(object, func)`.
 >
 > This feature has been deprecated in Koffi 3 and will eventually be removed. Replace with an explicit call to `function.bind()` instead.
 
@@ -136,7 +136,7 @@ koffi.unregister(cb2);
 
 ## Decoding pointer arguments
 
-Koffi does not have enough information to convert callback pointer arguments to an appropriate JS value. In this case, your JS function will receive a *BigInt* value with the pointer address.
+Koffi does not have enough information to convert callback pointer arguments to an appropriate JS value. In this case, your JS function will receive a *BigInt* value with the pointer address (or *null* is the pointer is null).
 
 You can pass this value through to another C function that expects a pointer of the same type, or you can use [koffi.decode()](variables#decode-to-js-values) function to decode pointer arguments.
 
