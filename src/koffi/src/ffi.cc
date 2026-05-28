@@ -1975,7 +1975,7 @@ static Napi::Value CastValue(const Napi::CallbackInfo &info)
     NAPI_OK(napi_create_reference(env, value, 1, &cast->ref));
     cast->type = type;
 
-    Napi::External<ValueCast> external = Napi::External<ValueCast>::New(env, cast, [](Napi::Env, ValueCast *cast) { delete cast; });
+    Napi::External<ValueCast> external = Napi::External<ValueCast>::New(env, cast, [](Napi::BasicEnv, ValueCast *cast) { delete cast; });
     SetValueTag(env, external, &CastMarker);
 
     return external;

@@ -1815,7 +1815,7 @@ napi_value WrapFunction(InstanceData *instance, const FunctionInfo *func)
         }
 
         wrapper = Napi::Function(env, value);
-        wrapper.AddFinalizer([](Napi::Env, FunctionInfo *func) { func->Unref(); }, (FunctionInfo *)func);
+        wrapper.AddFinalizer([](Napi::BasicEnv, FunctionInfo *func) { func->Unref(); }, (FunctionInfo *)func);
     }
 
     if (!func->variadic) {
@@ -1823,7 +1823,7 @@ napi_value WrapFunction(InstanceData *instance, const FunctionInfo *func)
         NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateAsyncCall, (void *)func->Ref(), &value));
 
         Napi::Function async = Napi::Function(env, value);
-        async.AddFinalizer([](Napi::Env, FunctionInfo *func) { func->Unref(); }, (FunctionInfo *)func);
+        async.AddFinalizer([](Napi::BasicEnv, FunctionInfo *func) { func->Unref(); }, (FunctionInfo *)func);
 
         wrapper.Set("async", async);
     }
