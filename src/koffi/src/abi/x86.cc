@@ -81,10 +81,10 @@ bool AnalyseFunction(Napi::Env env, InstanceData *instance, FunctionInfo *func)
     if (func->ret.type->primitive != PrimitiveKind::Record &&
             func->ret.type->primitive != PrimitiveKind::Union) {
         K_ASSERT(IsRegularSize(func->ret.type->size, 8));
-        func->ret.trivial = true;
+        func->ret.abi.regular = true;
 #if defined(_WIN32) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__DragonFly__)
     } else {
-        func->ret.trivial = IsRegularSize(func->ret.type->size, 8);
+        func->ret.abi.regular = IsRegularSize(func->ret.type->size, 8);
 #endif
     }
 
@@ -95,7 +95,7 @@ bool AnalyseFunction(Napi::Env env, InstanceData *instance, FunctionInfo *func)
     Size fast_offset = 0;
     Size stk_offset = fast ? 4 : 0;
 
-    if (!func->ret.trivial) {
+    if (!func->ret.abi.regular) {
 #if defined(_WIN32)
         stk_offset++;
 #else
@@ -225,7 +225,7 @@ bool AnalyseFunction(Napi::Env env, InstanceData *instance, FunctionInfo *func)
             }
 #endif
 
-            if (func->ret.trivial) {
+            if (func->ret.abi.regular) {
                 AbiOpcode run = fast ? AbiOpcode::RunAggregateGR : AbiOpcode::RunAggregateG;
                 AbiOpcode call = fast ? AbiOpcode::CallGR : AbiOpcode::CallG;
 
@@ -270,13 +270,13 @@ bool AnalyseFunction(Napi::Env env, InstanceData *instance, FunctionInfo *func)
         case CallConvention::Stdcall: {
             K_ASSERT(!func->variadic);
 
-            Size suffix = (stk_offset - !func->ret.trivial) * 4;
+            Size suffix = (stk_offset - !func->ret.abi.regular) * 4;
             func->decorated_name = Fmt(&instance->str_alloc, "_%1@%2", func->name, suffix).ptr;
         } break;
         case CallConvention::Fastcall: {
             K_ASSERT(!func->variadic);
 
-            Size suffix = (fast_offset + stk_offset - 4 - !func->ret.trivial) * 4;
+            Size suffix = (fast_offset + stk_offset - 4 - !func->ret.abi.regular) * 4;
             func->decorated_name = Fmt(&instance->str_alloc, "@%1@%2", func->name, suffix).ptr;
         } break;
         case CallConvention::Thiscall: {
@@ -854,8 +854,8 @@ void CallData::Relay(Size idx, uint8_t *sp)
 
     uint32_t *args_ptr = (uint32_t *)caller_sp;
 
-    uint8_t *return_ptr = !proto->ret.trivial ? (uint8_t *)args_ptr[0] : nullptr;
-    args_ptr += !proto->ret.trivial;
+    uint8_t *return_ptr = !proto->ret.abi.regular ? (uint8_t *)args_ptr[0] : nullptr;
+    args_ptr += !proto->ret.abi.regular;
 
     if (proto->convention == CallConvention::Stdcall) {
         out_reg->ret_pop = (int)proto->ret_pop;

@@ -74,16 +74,16 @@ inline void *Code2Op(AbiOpcode code)
 
 bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
 {
-    func->ret.regular = IsRegularSize(func->ret.type->size, 8);
+    func->ret.abi.regular = IsRegularSize(func->ret.type->size, 8);
 
     for (Size i = 0; i < func->parameters.len; i++) {
-        int16_t arg = (int16_t)(!func->ret.regular + i);
+        int16_t arg = (int16_t)(!func->ret.abi.regular + i);
         ParameterInfo &param = func->parameters[i];
 
-        param.regular = IsRegularSize(param.type->size, 8);
+        param.abi.regular = IsRegularSize(param.type->size, 8);
 
         if (param.type->primitive == PrimitiveKind::Record || param.type->primitive == PrimitiveKind::Union) {
-            AbiOpcode code = param.regular ? AbiOpcode::PushAggregateReg : AbiOpcode::PushAggregateMem;
+            AbiOpcode code = param.abi.regular ? AbiOpcode::PushAggregateReg : AbiOpcode::PushAggregateMem;
 
             func->sync.Append({ .op = Code2Op(code), .a = param.offset, .b1 = (int16_t)(arg * 8), .b2 = (int16_t)param.directions, .type = param.type });
             func->async.Append({ .op = Code2Op(code), .a = param.offset, .b1 = (int16_t)(arg * 8), .b2 = (int16_t)param.directions, .type = param.type });
@@ -100,7 +100,7 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
 
     // At least 4 parameter registers
     {
-        Size count = std::max((Size)4, func->parameters.len + !func->ret.regular);
+        Size count = std::max((Size)4, func->parameters.len + !func->ret.abi.regular);
         func->stk_size = AlignLen(8 * count, 16);
     }
 
@@ -168,7 +168,7 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
 
         case PrimitiveKind::Record:
         case PrimitiveKind::Union: {
-            if (func->ret.regular) {
+            if (func->ret.abi.regular) {
                 AbiOpcode run = func->forward_fp ? AbiOpcode::RunAggregateRegX : AbiOpcode::RunAggregateReg;
                 AbiOpcode call = func->forward_fp ? AbiOpcode::CallGX : AbiOpcode::CallG;
 
@@ -768,7 +768,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
     uint64_t *xmm_ptr = gpr_ptr + 4;
     uint64_t *stk_ptr = (uint64_t *)caller_sp;
 
-    uint8_t *return_ptr = !proto->ret.regular ? (uint8_t *)gpr_ptr[0] : nullptr;
+    uint8_t *return_ptr = !proto->ret.abi.regular ? (uint8_t *)gpr_ptr[0] : nullptr;
 
     K_DEFER_N(err_guard) {
         trampoline->state = -1;
@@ -924,7 +924,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
             case PrimitiveKind::Record:
             case PrimitiveKind::Union: {
                 uint8_t *ptr;
-                if (param.regular) {
+                if (param.abi.regular) {
                     ptr = (uint8_t *)(j < 4 ? gpr_ptr + j : stk_ptr);
                 } else {
                     ptr = *(uint8_t **)(j < 4 ? gpr_ptr + j : stk_ptr);

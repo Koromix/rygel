@@ -212,7 +212,9 @@ struct ParameterInfo {
     // ABI-specific part
 
 #if defined(_M_X64)
-    bool regular; // Used for structs and unions
+    struct {
+        bool regular; // Used for structs and unions
+    } abi;
 #elif defined(__x86_64__)
     struct {
         bool regular;
@@ -238,7 +240,9 @@ struct ReturnInfo {
     // ABI-specific part
 
 #if defined(_M_X64)
-    bool regular;
+    struct {
+        bool regular;
+    } abi;
 #elif defined(__x86_64__)
     struct {
         AbiMethod method;
@@ -249,7 +253,9 @@ struct ReturnInfo {
         int offset;
     } abi;
 #elif defined(__i386__) || defined(_M_IX86)
-    bool trivial;
+    struct {
+        bool regular;
+    } abi;
 #elif __riscv_xlen == 64 || defined(__loongarch64)
     struct {
         AbiMethod method;
