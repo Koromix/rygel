@@ -4,6 +4,9 @@
 import { Util, Log, Net } from 'lib/web/base/base.js';
 import { xsalsa20poly1305 } from 'vendor/noble/noble.bundle.js';
 
+const DOWNLOAD_QUEUE_SIZE = 2;
+const DOWNLOAD_AHEAD_LIMIT = 4;
+
 const EXPIRATION_DELAY = 5 * 60000; // 5 minutes
 
 let drops = new Map;
@@ -87,58 +90,93 @@ function startDownload(kid) {
 }
 
 async function *downloadFragments(info) {
-    let fragment = 0;
     let downloaded = 0;
+    let fragment = 0;
+    let queue = [];
 
-    while (downloaded < info.size) {
-        let url = Util.pasteURL('/api/drop/fragment', { kid: info.kid, fragment: fragment });
-        let expected = Math.min(info.size - fragment * info.chunk, info.chunk) + 16;
+    let buffers = new Map;
+    let yields = 0;
 
-        let cipher = null;
+    while (downloaded < info.size || queue.length) {
+        if (buffers.size < DOWNLOAD_AHEAD_LIMIT) {
+            while (downloaded < info.size && queue.length < DOWNLOAD_QUEUE_SIZE) {
+                let expected = Math.min(info.size - fragment * info.chunk, info.chunk) + 16;
 
-        for (let i = 0; i < 4; i++) {
-            try {
-                let response = await fetch(url);
+                queue.push({
+                    idx: fragment,
+                    download: downloadFragment(info, fragment, expected)
+                });
 
-                if (response.ok)
-                    cipher = await response.bytes();
-            } catch (err) {
-                console.error(err);
+                downloaded += expected;
+                fragment++;
             }
-
-            if (cipher?.length == expected)
-                break;
-
-            // Transient S3 errors will result in truncated output, but a 200 status because the server
-            // streams the response. Retry if buffer is shorter than expected!
-            await Util.waitFor(1000 + i * 2000);
         }
 
-        if (cipher?.length != expected)
-            throw new Error('Failed to download file fragment');
+        if (queue.length) {
+            let [idx, buf] = await Promise.any(queue.map(it => it.download));
 
-        let buf = null;
+            queue = queue.filter(it => it.idx != idx);
+            buffers.set(idx, buf);
 
-        // Decrypt fragment
-        {
-            let nonce = new Uint8Array(24);
-            (new DataView(nonce.buffer)).setUint32(0, fragment, true);
+            let next = buffers.get(yields);
 
-            let salsa = xsalsa20poly1305(info.key, nonce);
+            if (next != null) {
+                buffers.delete(yields);
+                yields++;
 
-            buf = salsa.decrypt(cipher);
+                yield next;
+            }
         }
-
-        downloaded += buf.length;
-        fragment++;
-
-        info.client.postMessage({ type: 'progress', args: [info.kid, downloaded, info.size] });
-        findDrop(info.kid); // Reset expiration timer
-
-        yield buf;
     }
 
-    fragment = null;
+    while (buffers.size) {
+        let next = buffers.get(yields);
+
+        buffers.delete(yields);
+        yields++;
+
+        yield next;
+    }
+}
+
+async function downloadFragment(info, idx, expected) {
+    let url = Util.pasteURL('/api/drop/fragment', { kid: info.kid, fragment: idx });
+    let cipher = null;
+
+    for (let i = 0; i < 4; i++) {
+        try {
+            let response = await fetch(url);
+
+            if (response.ok)
+                cipher = await response.bytes();
+        } catch (err) {
+            console.error(err);
+        }
+
+        if (cipher?.length == expected)
+            break;
+
+        // Transient S3 errors will result in truncated output, but a 200 status because the server
+        // streams the response. Retry if buffer is shorter than expected!
+        await Util.waitFor(1000 + i * 2000);
+    }
+
+    if (cipher?.length != expected)
+        throw new Error('Failed to download file fragment');
+
+    let buf = null;
+
+    // Decrypt fragment
+    {
+        let nonce = new Uint8Array(24);
+        (new DataView(nonce.buffer)).setUint32(0, idx, true);
+
+        let salsa = xsalsa20poly1305(info.key, nonce);
+
+        buf = salsa.decrypt(cipher);
+    }
+
+    return [idx, buf];
 }
 
 function updateDrop(client, info, key) {
