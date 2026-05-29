@@ -158,8 +158,6 @@ Variadic functions cannot be called asynchronously.
 
 > [!WARNING]
 > Asynchronous functions run on worker threads. You need to deal with thread safety issues if you share data between threads.
->
-> Callbacks must be called from the main thread, or more precisely from the same thread as the V8 intepreter. Calling a callback from another thread is undefined behavior, and will likely lead to a crash or a big mess. You've been warned!
 
 # Function pointers
 
