@@ -2,10 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
 import { Util, Log, Net } from 'lib/web/base/base.js';
-import { xsalsa20poly1305 } from 'vendor/noble/noble.bundle.js';
-
-const DOWNLOAD_QUEUE_SIZE = 2;
-const DOWNLOAD_AHEAD_LIMIT = 4;
+import { download } from './file.js';
 
 const EXPIRATION_DELAY = 5 * 60000; // 5 minutes
 
@@ -35,7 +32,7 @@ self.addEventListener('fetch', e => {
 
     if (e.request.method == 'GET' && url.pathname.startsWith('/api/drop/download/')) {
         let kid = url.pathname.substr(19);
-        let [response, wait] = startDownload(kid);
+        let [response, wait] = createDownloadStream(kid);
 
         e.waitUntil(wait);
         e.respondWith(response);
@@ -46,19 +43,27 @@ self.addEventListener('fetch', e => {
     e.respondWith(fetch(e.request));
 });
 
-function startDownload(kid) {
-    let info = findDrop(kid);
+function createDownloadStream(kid) {
+    let [info, key, client] = findDrop(kid);
 
     let [wait, resolve, reject] = createPromise();
-    let fragments = Util.parallelize(downloadFragments(info), DOWNLOAD_QUEUE_SIZE, DOWNLOAD_AHEAD_LIMIT);
+
+    let fragments = download(info, key);
+    let downloaded = 0;
 
     let stream = new ReadableStream({
         pull: async (controller) => {
             try {
-                let { done, value } = await fragments.next();
+                let { value: frag, done } = await fragments.next();
+
+                // Reset expiration timer
+                findDrop(info.kid);
 
                 if (!done) {
-                    controller.enqueue(value);
+                    downloaded += frag.length;
+                    client.postMessage({ type: 'progress', args: [info.kid, downloaded, info.size] });
+
+                    controller.enqueue(frag);
                 } else {
                     controller.close();
                     resolve();
@@ -89,68 +94,15 @@ function startDownload(kid) {
     return [response, wait];
 }
 
-async function *downloadFragments(info) {
-    let downloaded = 0;
-    let idx = 0;
-
-    while (downloaded < info.size) {
-        let url = Util.pasteURL('/api/drop/fragment', { kid: info.kid, fragment: idx });
-        let expected = Math.min(info.size - idx * info.chunk, info.chunk) + 16;
-
-        let cipher = null;
-
-        for (let i = 0; i < 4; i++) {
-            try {
-                let response = await fetch(url);
-
-                if (response.ok)
-                    cipher = await response.bytes();
-            } catch (err) {
-                console.error(err);
-            }
-
-            if (cipher?.length == expected)
-                break;
-
-            // Transient S3 errors will result in truncated output, but a 200 status because the server
-            // streams the response. Retry if buffer is shorter than expected!
-            await Util.waitFor(1000 + i * 2000);
-        }
-
-        if (cipher?.length != expected)
-            throw new Error('Failed to download file fragment');
-
-        let buf = null;
-
-        // Decrypt fragment
-        {
-            let nonce = new Uint8Array(24);
-            (new DataView(nonce.buffer)).setUint32(0, idx, true);
-
-            let salsa = xsalsa20poly1305(info.key, nonce);
-
-            buf = salsa.decrypt(cipher);
-        }
-
-        downloaded += expected;
-        idx++;
-
-        info.client.postMessage({ type: 'progress', args: [info.kid, downloaded, info.size] });
-        findDrop(info.kid); // Reset expiration timer
-
-        yield buf;
-    }
-}
-
 function updateDrop(client, info, key) {
     drops.delete(info.kid);
 
     drops.set(info.kid, {
         client: client,
 
-        ...info,
-
+        info: info,
         key: key,
+
         expire: performance.now() + EXPIRATION_DELAY
     });
 
@@ -158,25 +110,25 @@ function updateDrop(client, info, key) {
 }
 
 function findDrop(kid) {
-    let info = drops.get(kid);
+    let drop = drops.get(kid);
 
-    if (info == null)
+    if (drop == null)
         throw new Error('Missing or stale file drop information');
 
     // Keep at the the end of entries, so expiration times are sorted
     drops.delete(kid);
-    drops.set(kid, info);
+    drops.set(kid, drop);
 
     expireDrops();
 
-    return info;
+    return [drop.info, drop.key, drop.client];
 }
 
 function expireDrops() {
     let now = performance.now();
 
-    for (let [kid, info] of drops.entries()) {
-        if (info.expire > now)
+    for (let [kid, drop] of drops.entries()) {
+        if (drop.expire > now)
             break;
         drops.delete(kid);
     }

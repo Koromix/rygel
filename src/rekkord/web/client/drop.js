@@ -4,7 +4,6 @@
 import { render, html, live, svg } from 'vendor/lit-html/lit-html.bundle.js';
 import dayjs from 'vendor/dayjs/dayjs.bundle.js';
 import QRC from 'vendor/qrcodegen/js/qrcodegen.js';
-import { xsalsa20poly1305 } from 'vendor/noble/noble.bundle.js';
 import { Util, LruMap, Log, Net, HttpError } from 'lib/web/base/base.js';
 import { Base64 } from 'lib/web/base/mixer.js';
 import * as UI from 'lib/web/ui/ui.js';
@@ -13,6 +12,7 @@ import { route, cache } from './main.js';
 import { sendDrop, getProgress } from './relay.js';
 import * as UserMod from './user.js';
 import { formatSize, writeClipboard } from './common.js';
+import { upload } from './file.js';
 import { ASSETS } from '../assets/assets.js';
 
 const EXPIRATION_DAYS = [1, 7, 30, 90];
@@ -248,13 +248,13 @@ async function runSend() {
         let file = send_file;
         let expiration = parseInt(elements.expiration.value, 10) * 86400000;
 
-        let kid = await prepare(file, expiration);
+        let info = await createDrop(file, expiration);
 
         let key = new Uint8Array(32)
         crypto.getRandomValues(key);
 
         let drop = {
-            kid: kid,
+            kid: info.kid,
             name: file.name,
             size: file.size,
             key: key,
@@ -263,13 +263,13 @@ async function runSend() {
         };
 
         send_file = null;
-        send_drops.set(kid, drop);
+        send_drops.set(info.kid, drop);
 
-        let url = App.makeURL({ mode: 'drop', drop: kid });
+        let url = App.makeURL({ mode: 'drop', drop: info.kid });
         App.go(url);
 
         try {
-            await send(kid, key, file, uploaded => progress(drop, uploaded));
+            await uploadFile(info, key, file, uploaded => progress(drop, uploaded));
         } catch (err) {
             drop.error = err;
             throw err;
@@ -312,7 +312,7 @@ async function runSend() {
     }
 }
 
-async function prepare(file, expiration) {
+async function createDrop(file, expiration) {
     let info = await Net.post('/api/drop/create', {
         name: file.name,
         size: file.size,
@@ -321,106 +321,35 @@ async function prepare(file, expiration) {
 
     Net.invalidate('drops');
 
-    return info.kid;
+    return info;
 }
 
-async function send(kid, key, file, progress = () => {}) {
+async function uploadFile(info, key, file, progress = () => {}) {
     let stream = file.stream();
-    let reader = stream.getReader();
+    let chunks = readChunks(stream);
 
-    // Upload fragments
-    {
-        let chunks = [];
-        let available = 0;
-        let complete = false;
+    let fragments = upload(info, key, chunks);
+    let uploaded = 0;
 
-        let fragment = 0;
-
-        do {
-            while (!complete && available < FRAGMENT_SIZE) {
-                let { value, done } = await reader.read();
-
-                if (done) {
-                    complete = true;
-                    break;
-                }
-
-                chunks.push(value);
-                available += value.length;
-            }
-
-            while (available >= FRAGMENT_SIZE || complete) {
-                let buf = new Uint8Array(FRAGMENT_SIZE);
-                let offset = 0;
-
-                if (!available)
-                    break;
-
-                while (available && offset < buf.length) {
-                    let chunk = chunks[0];
-                    let remain = buf.length - offset;
-
-                    if (chunk.length <= remain) {
-                        buf.set(chunk, offset);
-
-                        offset += chunk.length;
-                        available -= chunk.length;
-
-                        chunks.shift();
-                    } else {
-                        buf.set(chunk.slice(0, remain), offset);
-
-                        offset += remain;
-                        available -= remain;
-
-                        chunks[0] = chunk.slice(remain);
-                        break;
-                    }
-                }
-
-                let cipher = null;
-
-                // Encrypt fragment
-                {
-                    let nonce = new Uint8Array(24);
-                    (new DataView(nonce.buffer)).setUint32(0, fragment, true);
-
-                    let salsa = xsalsa20poly1305(key, nonce);
-
-                    cipher = salsa.encrypt(buf.slice(0, offset));
-                }
-
-                // Upload fragment
-                {
-                    let url = Util.pasteURL('/api/drop/upload', { kid: kid, fragment: fragment });
-
-                    let response = await Net.fetch(url, {
-                        method: 'PUT',
-                        body: cipher,
-                        timeout: 30000
-                    });
-                    if (!response.ok) {
-                        let msg = await Net.readError(response);
-                        throw new HttpError(response.status, msg);
-                    }
-                }
-
-                let uploaded = Math.min((fragment + 1) * FRAGMENT_SIZE, file.size);
-
-                // Mark progress
-                {
-                    let url = Util.pasteURL('/api/drop/mark', { kid: kid });
-                    await Net.post(url, { uploaded: uploaded });
-                }
-
-                progress(uploaded);
-
-                fragment++;
-            }
-        } while (!complete);
+    for await (let frag of fragments) {
+        uploaded += frag.length;
+        progress(uploaded);
     }
 
     Net.invalidate('drops');
+}
+
+async function* readChunks(stream) {
+    let reader = stream.getReader();
+
+    for (;;) {
+        let { value, done } = await reader.read();
+
+        if (done)
+            break;
+
+        yield value;
+    }
 }
 
 function makeQrCodeSvg(text, size, border = 2) {
