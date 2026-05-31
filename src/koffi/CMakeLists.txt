@@ -176,12 +176,11 @@ endif()
 if(NOT MSVC OR CMAKE_C_COMPILER_ID MATCHES "[Cc]lang")
     # Restore C/C++ compiler sanity
 
-    target_compile_options(koffi PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions -fno-rtti -fno-strict-aliasing
-                                                                   -fno-delete-null-pointer-checks>)
+    target_compile_options(koffi PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-fno-strict-aliasing -fno-delete-null-pointer-checks>)
     if(MSVC)
-        target_compile_options(koffi PRIVATE $<$<COMPILE_LANGUAGE:CXX>:/clang:-fwrapv>)
+        target_compile_options(koffi PRIVATE $<$<COMPILE_LANGUAGE:CXX>:/clang:-fwrapv /clang:-fno-exceptions /clang:-fno-rtti>)
     else()
-        target_compile_options(koffi PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-fwrapv>)
+        target_compile_options(koffi PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-fwrapv -fno-exceptions -fno-rtti>)
     endif()
 
     check_cxx_compiler_flag(-fno-finite-loops use_no_finite_loops)
