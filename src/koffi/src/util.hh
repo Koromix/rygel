@@ -469,7 +469,7 @@ static FORCE_INLINE Napi::Array GetOwnPropertyNames(napi_env env, napi_value obj
     return Napi::Array(env, result);
 }
 
-static FORCE_INLINE napi_value WrapPointer(Napi::Env env, const TypeInfo *ref, void *ptr)
+static FORCE_INLINE napi_value WrapPointer(Napi::Env env, const TypeInfo *, void *ptr)
 {
     napi_value value;
 

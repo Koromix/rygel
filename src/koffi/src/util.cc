@@ -526,14 +526,14 @@ void DecodeObject(InstanceData *instance, napi_value obj, const uint8_t *origin,
     Napi::Env env = instance->env;
 
     if (node_api_create_property_key_utf8) {
-        DecodeObject(instance, origin, type, [&](Size i, const RecordMember &member, napi_value value) {
+        DecodeObject(instance, origin, type, [&](Size, const RecordMember &member, napi_value value) {
             napi_value key = nullptr;
             napi_get_reference_value(env, member.key, &key);
 
             NAPI_OK(napi_set_property(env, obj, key, value));
         });
     } else {
-        DecodeObject(instance, origin, type, [&](Size i, const RecordMember &member, napi_value value) {
+        DecodeObject(instance, origin, type, [&](Size, const RecordMember &member, napi_value value) {
             NAPI_OK(napi_set_named_property(env, obj, member.name, value));
         });
     }

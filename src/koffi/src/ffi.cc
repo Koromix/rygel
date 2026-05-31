@@ -2575,12 +2575,12 @@ static bool CanCallNapiGetBufferInfoDirectly(const napi_node_version &node, uint
     return false;
 }
 
-static bool CanReferencePrimitiveValues(const napi_node_version &node, uint32_t napi)
+static bool CanReferencePrimitiveValues(const napi_node_version &, uint32_t napi)
 {
     return napi >= 10;
 }
 
-static bool CanDeleteReferenceInFinalizer(const napi_node_version &node, uint32_t napi)
+static bool CanDeleteReferenceInFinalizer(const napi_node_version &node, uint32_t)
 {
     if (node.major >= 24)
         return true;
