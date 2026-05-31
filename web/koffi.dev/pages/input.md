@@ -477,14 +477,13 @@ const Int64Limits = koffi.enumeration('Int64Limits', {
 });
 ```
 
-```{warning}
-This behavior may not match your compiler:
-
-- POSIX platforms: GCC and Clang support will use a short integer type if `-fshort-enums` is specified and the enumeration values fit in `short` or `unsigned short`
-- Windows: MSVC (and Clang) always use `int` even if some values do not fit, which matches what Koffi does... unless the compiler flag `/Zc:enumTypes` is set, maybe.
-
-Use an explicit type specifier to work around these problems, as shown below.
-```
+> [!WARNING]
+> This behavior may not match your compiler:
+>
+> - POSIX platforms: GCC and Clang will use a short integer type if `-fshort-enums` is specified and the enumeration values fit in `short` or `unsigned short`.
+> - Windows: MSVC (and Clang) always use `int` even if some values do not fit, which matches what Koffi does... unless the compiler flag `/Zc:enumTypes` is set, maybe.
+>
+> Use an explicit type specifier to work around these problems, as shown below.
 
 You can access the constants in `values` member of the type object.
 
@@ -496,8 +495,7 @@ console.log(RelativePosition.values.Left); // Prints -1
 You can specify the storage type explicitly as the last argument to `koffi.enumeration(name, values, type)`.
 
 ```js
-// This one explictly uses int64_t as the underlying type,
-// despite the fact that the values fit inside an int.
+// This one explictly uses int64_t as the underlying type, despite the fact that the values fit inside an int.
 const ExplicitEnum = koffi.enumeration('ExplicitEnum', {
     Zero: 0,
     One: 1,
