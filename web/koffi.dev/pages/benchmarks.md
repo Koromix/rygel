@@ -25,7 +25,7 @@ This test is based around repeated calls to the standard C function `memset`. Al
 
 # macOS ARM64
 
-The results presented below were measured on an Apple Mac mini M2 hosted by Scaleway.
+The results presented below were measured on an Apple Mac mini M1 hosted by Scaleway.
 
 <div class="benchmark chart" data-platform="darwin_arm64"></div>
 
