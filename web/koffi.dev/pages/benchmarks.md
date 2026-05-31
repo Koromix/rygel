@@ -7,7 +7,7 @@ This pages presents the execution time of Koffi calls on three benchmarks, where
 
 # Linux x86_64
 
-The results presented below were measured on my x86_64 Linux machine (AMD Ryzen™ 5 2600).
+The results presented below were measured on my x86_64 Linux machine (Intel® Core™ Ultra 9 185H).
 
 <div class="benchmark chart" data-platform="linux_x64"></div>
 
