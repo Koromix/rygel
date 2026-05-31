@@ -134,7 +134,7 @@ function runFfiRs(time) {
 }
 
 function runNodeFfi(time) {
-    const lib = new ffi.DynamicLibrary(process.platform == 'win32' ? 'msvcrt.dll' : 'libc.so.6');
+    const lib = new ffi.DynamicLibrary(process.platform == 'win32' ? 'msvcrt.dll' : null);
 
     const atoi = lib.getFunction('atoi', {
         parameters: ['string'],
