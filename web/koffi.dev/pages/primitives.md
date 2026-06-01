@@ -54,7 +54,7 @@ let struct2 = koffi.struct({ dummy: koffi.types.long });
 
 # String types
 
-Koffi can converts JS strings to and from UTF-8, UTF-16 or UTF-32 strings.
+Koffi can convert JS strings to and from UTF-8, UTF-16 or UTF-32.
 
 Type name                      | Aliases         | JS type | Conversion / encoding
 ------------------------------ | --------------- | ------- | ---------------------
