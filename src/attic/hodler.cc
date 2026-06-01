@@ -735,7 +735,7 @@ static Size RenderMenu(const char *base, Span<const PageData> pages, Size active
 
     for (Size i = 0; i <= depth; i++) {
         Span<const char> remain = title;
-        Span<const char> frag = TrimStr(SplitStr(remain, '/', &remain));
+        Span<const char> frag = TrimStr(SplitStr(remain, '>', &remain));
 
         if (!remain.len) {
             category = {};
@@ -758,7 +758,7 @@ static Size RenderMenu(const char *base, Span<const PageData> pages, Size active
             Span<const char> new_category = {};
 
             for (int k = 0; k <= depth; k++) {
-                new_category = TrimStr(SplitStr(remain, '/', &remain));
+                new_category = TrimStr(SplitStr(remain, '>', &remain));
             }
 
             if (new_category != category)
@@ -786,7 +786,7 @@ static Size RenderMenu(const char *base, Span<const PageData> pages, Size active
 
             for (Size i = 0; i <= depth; i++) {
                 Span<const char> remain = menu;
-                TrimStr(SplitStr(remain, '/', &remain));
+                TrimStr(SplitStr(remain, '>', &remain));
 
                 if (!remain.len)
                     break;
