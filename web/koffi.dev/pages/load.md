@@ -166,7 +166,7 @@ Among other thing, in the the following pages you will learn more about:
 
 # Variables
 
-*Changed in Koffi 3.0.3*
+*Changed in Koffi 3.1.0*
 
 To find an exported variable symbol, use `lib.symbol(name, type)`. You need to specify its name and its type.
 
@@ -186,6 +186,6 @@ This function returns a pointer (a BigInt value in Koffi 3). To read or change t
 - [koffi.encode()](values#encode-to-c-memory) to change the value
 
 > [!NOTE]
-> Until Koffi 3.0.3, the `symbol()` function required you to give a type, even though it did nothing with this information. This was a leftover from Koffi 2.
+> Until Koffi 3.1.0, the `symbol()` function required you to give a type, even though it did nothing with this information. This was a leftover from Koffi 2.
 > 
 > For compatibility, you can still call `lib.symbol(name, type)`, but this is deprecated.

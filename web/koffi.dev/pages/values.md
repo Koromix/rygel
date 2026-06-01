@@ -1,13 +1,13 @@
 # Decode to JS values
 
-## Standard types
+## Decode numbers
 
-*New in Koffi 3.0*
+*New in Koffi 3.1.0*
 
 Use these functions to decode numeric values from a pointer. These functions match the [number types](primitives#number-types) of Koffi:
 
 Type      | Function                     | Result
---------- | ---------------------------- | ----------------
+--------- | ---------------------------- | ------------------------------------
 char      | `koffi.decode.char(ptr)`     | Number
 uchar     | `koffi.decode.uchar(ptr)`    | Number
 short     | `koffi.decode.short(ptr)`    | Number
@@ -28,6 +28,25 @@ int64     | `koffi.decode.int64(ptr)`    | Number or BigInt
 uint64    | `koffi.decode.uint64(ptr)`   | Number or BigInt
 float     | `koffi.decode.float(ptr)`    | Number
 double    | `koffi.decode.double(ptr)`   | Number
+
+You can also decode [endian-sensitive integers](primitives#endian-sensitive-integers) with these functions:
+
+Type      | Function                     | Endianness    | Result
+--------- | ---------------------------- | ------------- | ----------------
+int16_le  | `koffi.decode.int16le(ptr)`  | Little Endian | Number
+uint16_le | `koffi.decode.uint16le(ptr)` | Little Endian | Number
+int32_le  | `koffi.decode.int32le(ptr)`  | Little Endian | Number
+uint32_le | `koffi.decode.uint32le(ptr)` | Little Endian | Number
+int64_le  | `koffi.decode.int64le(ptr)`  | Little Endian | Number or BigInt
+uint64_le | `koffi.decode.uint64le(ptr)` | Little Endian | Number or BigInt
+int16_be  | `koffi.decode.int16be(ptr)`  | Big Endian    | Number
+uint16_be | `koffi.decode.uint16be(ptr)` | Big Endian    | Number
+int32_be  | `koffi.decode.int32be(ptr)`  | Big Endian    | Number
+uint32_be | `koffi.decode.uint32be(ptr)` | Big Endian    | Number
+int64_be  | `koffi.decode.int64be(ptr)`  | Big Endian    | Number or BigInt
+uint64_be | `koffi.decode.uint64be(ptr)` | Big Endian    | Number or BigInt
+
+## Decode strings
 
 You can also decode strings, NUL-terminated or with an explicit length:
 

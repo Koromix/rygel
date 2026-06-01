@@ -2105,6 +2105,48 @@ static FORCE_INLINE napi_value DecodeInteger(napi_env env, napi_callback_info in
     return NewInt(env, i);
 }
 
+template <typename T>
+static FORCE_INLINE napi_value DecodeIntegerSwap(napi_env env, napi_callback_info info)
+{
+    napi_value arg;
+    size_t count = 1;
+    InstanceData *instance;
+
+    NAPI_OK(napi_get_cb_info(env, info, &count, &arg, nullptr, (void **)&instance));
+
+    if (count < 1) [[unlikely]] {
+        ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", count);
+        return Napi::Env(env).Null();
+    }
+
+    void *ptr = nullptr;
+    if (!TryPointer(env, arg, &ptr)) [[unlikely]] {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected pointer", GetValueType(instance, arg));
+        return Napi::Env(env).Null();
+    }
+
+    T i;
+    memcpy(&i, ptr, K_SIZE(i));
+
+    return NewInt(env, ReverseBytes(i));
+}
+
+#if defined(K_BIG_ENDIAN)
+
+template <typename T>
+static FORCE_INLINE napi_value DecodeIntegerLE(napi_env env, napi_callback_info info) { return DecodeIntegerSwap<T>(env, info); }
+template <typename T>
+static FORCE_INLINE napi_value DecodeIntegerBE(napi_env env, napi_callback_info info) { return DecodeInteger<T>(env, info); }
+
+#else
+
+template <typename T>
+static FORCE_INLINE napi_value DecodeIntegerLE(napi_env env, napi_callback_info info) { return DecodeInteger<T>(env, info); }
+template <typename T>
+static FORCE_INLINE napi_value DecodeIntegerBE(napi_env env, napi_callback_info info) { return DecodeIntegerSwap<T>(env, info); }
+
+#endif
+
 static napi_value DecodeFloat(napi_env env, napi_callback_info info)
 {
     napi_value arg;
@@ -2754,11 +2796,23 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
         decode.Set("int8", CreateFunction(instance, [](napi_env env, napi_callback_info info) { return DecodeInteger<int8_t>(env, info); }, "int8"));
         decode.Set("uint8", CreateFunction(instance, [](napi_env env, napi_callback_info info) { return DecodeInteger<uint8_t>(env, info); }, "uint8"));
         decode.Set("int16", CreateFunction(instance, [](napi_env env, napi_callback_info info) { return DecodeInteger<int16_t>(env, info); }, "int16"));
+        decode.Set("int16le", CreateFunction(instance, [](napi_env env, napi_callback_info info) { return DecodeIntegerLE<int16_t>(env, info); }, "int16le"));
+        decode.Set("int16be", CreateFunction(instance, [](napi_env env, napi_callback_info info) { return DecodeIntegerBE<int16_t>(env, info); }, "int16be"));
         decode.Set("uint16", CreateFunction(instance, [](napi_env env, napi_callback_info info) { return DecodeInteger<uint16_t>(env, info); }, "uint16"));
+        decode.Set("uint16le", CreateFunction(instance, [](napi_env env, napi_callback_info info) { return DecodeIntegerLE<uint16_t>(env, info); }, "uint16le"));
+        decode.Set("uint16be", CreateFunction(instance, [](napi_env env, napi_callback_info info) { return DecodeIntegerBE<uint16_t>(env, info); }, "uint16be"));
         decode.Set("int32", CreateFunction(instance, [](napi_env env, napi_callback_info info) { return DecodeInteger<int32_t>(env, info); }, "int32"));
+        decode.Set("int32le", CreateFunction(instance, [](napi_env env, napi_callback_info info) { return DecodeIntegerLE<int32_t>(env, info); }, "int32le"));
+        decode.Set("int32be", CreateFunction(instance, [](napi_env env, napi_callback_info info) { return DecodeIntegerBE<int32_t>(env, info); }, "int32be"));
         decode.Set("uint32", CreateFunction(instance, [](napi_env env, napi_callback_info info) { return DecodeInteger<uint32_t>(env, info); }, "uint32"));
+        decode.Set("uint32le", CreateFunction(instance, [](napi_env env, napi_callback_info info) { return DecodeIntegerLE<uint32_t>(env, info); }, "uint32le"));
+        decode.Set("uint32be", CreateFunction(instance, [](napi_env env, napi_callback_info info) { return DecodeIntegerBE<uint32_t>(env, info); }, "uint32be"));
         decode.Set("int64", CreateFunction(instance, [](napi_env env, napi_callback_info info) { return DecodeInteger<int64_t>(env, info); }, "int64"));
+        decode.Set("int64le", CreateFunction(instance, [](napi_env env, napi_callback_info info) { return DecodeIntegerLE<int64_t>(env, info); }, "int64le"));
+        decode.Set("int64be", CreateFunction(instance, [](napi_env env, napi_callback_info info) { return DecodeIntegerBE<int64_t>(env, info); }, "int64be"));
         decode.Set("uint64", CreateFunction(instance, [](napi_env env, napi_callback_info info) { return DecodeInteger<uint64_t>(env, info); }, "uint64"));
+        decode.Set("uint64le", CreateFunction(instance, [](napi_env env, napi_callback_info info) { return DecodeIntegerLE<uint64_t>(env, info); }, "uint64le"));
+        decode.Set("uint64be", CreateFunction(instance, [](napi_env env, napi_callback_info info) { return DecodeIntegerBE<uint64_t>(env, info); }, "uint64be"));
         decode.Set("float", CreateFunction(instance, DecodeFloat, "float"));
         decode.Set("double", CreateFunction(instance, DecodeDouble, "double"));
         decode.Set("string", CreateFunction(instance, DecodeString, "string"));

@@ -150,6 +150,23 @@ export const decode: {
     uint32(ptr: any): number;
     uint64(ptr: any): number | bigint;
 
+    int8le(ptr: any): number;
+    int8be(ptr: any): number;
+    int16le(ptr: any): number;
+    int16be(ptr: any): number;
+    int32le(ptr: any): number;
+    int32be(ptr: any): number;
+    int64le(ptr: any): number | bigint;
+    int64be(ptr: any): number | bigint;
+    uint8le(ptr: any): number;
+    uint8be(ptr: any): number;
+    uint16le(ptr: any): number;
+    uint16be(ptr: any): number;
+    uint32le(ptr: any): number;
+    uint32be(ptr: any): number;
+    uint64le(ptr: any): number | bigint;
+    uint64be(ptr: any): number | bigint;
+
     float(ptr: any): number;
     double(ptr: any): number;
 
