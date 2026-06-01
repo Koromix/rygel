@@ -5,13 +5,15 @@ In C, pointer arguments are used for differenty purposes. It is important to dis
 - **Struct pointers**: Use of struct pointers by C libraries fall in two cases: avoid (potentially) expensive copies, and to let the function change struct contents (output or input/output arguments).
 - **Opaque pointers**: the library does not expose the contents of the structs, and only provides you with a pointer to it (e.g. `FILE *`). Only the functions provided by the library can do something with this pointer, in Koffi we call this an opaque type. This is usually done for ABI-stability reason, and to prevent library users from messing directly with library internals.
 - **Pointers to primitive types**: This is more rare, and generally used for output or input/output arguments. The Win32 API has a lot of these.
-- **Arrays**: in C, you dynamically-sized arrays are usually passed to functions with pointers, either NULL-terminated (or any other sentinel value) or with an additional length argument.
+- **Arrays**: in C, dynamically-sized arrays are usually passed to functions with pointers, either NULL-terminated (or any other sentinel value) or with an additional length argument.
 
-# Pointer types
+Koffi uses BigInt numbers to represent pointers.
+
+# Data pointers
 
 ## Struct pointers
 
-The following Win32 example uses `GetCursorPos()` (with an output parameter) to retrieve and show the current cursor position.
+The following Win32 example uses `GetCursorPos()` (with an [output parameter](output)) to retrieve and show the current cursor position.
 
 ```js
 import koffi from 'koffi';
@@ -47,11 +49,9 @@ const GetHandleInformation = lib.func('bool __stdcall GetHandleInformation(HANDL
 const CloseHandle = lib.func('bool __stdcall CloseHandle(HANDLE h)');
 ```
 
-Koffi uses BigInt numbers to represent opaque pointers.
-
 ## Pointer to primitive types
 
-In javascript, it is not possible to pass a primitive value by reference to another function. This means that you cannot call a function and expect it to modify the value of one of its number or string parameter.
+In Javascript, it is not possible to pass a primitive value by reference to another function. This means that you cannot call a function and expect it to modify the value of one of its number or string parameter.
 
 However, arrays and objects (among others) are reference type values. Assigning an array or an object from one variable to another does not invole any copy. Instead, as the following example illustrates, the new variable references the same array as the first:
 
@@ -66,7 +66,7 @@ console.log(list1); // Prints [1, 42]
 
 All of this means that C functions that are expected to modify their primitive output values (such as an `int *` parameter) cannot be used directly. However, thanks to Koffi's transparent array support, you can use Javascript arrays to approximate reference semantics with single-element arrays.
 
-Below, you can find an example of an addition function where the result is stored in an `int *` input/output parameter and how to use this function from Koffi.
+Below, you can find an example of an addition function where the result is stored in an `int *` [input/output parameter](output) and how to use this function from Koffi.
 
 ```c
 void AddInt(int *dest, int add)
@@ -130,6 +130,73 @@ console.log(total); // Prints 14
 
 By default, just like for objects, array arguments are copied from JS to C but not vice-versa. You can however change the direction as documented in the section on [output parameters](output).
 
+# Function pointers
+
+You can call a function pointer in two ways:
+
+- Directly call the function pointer with `koffi.call(ptr, type, ...)`
+- Decode the function pointer to an actual function with `koffi.decode(ptr, type)`
+
+The example below shows how to call an `int (*)(int, int)` C function pointer both ways, based on the following native C library:
+
+```c
+typedef int BinaryIntFunc(int a, int b);
+
+static int AddInt(int a, int b) { return a + b; }
+static int SubstractInt(int a, int b) { return a - b; }
+
+BinaryIntFunc *GetBinaryIntFunction(const char *type)
+{
+    if (!strcmp(type, "add")) {
+        return AddInt;
+    } else if (!strcmp(type, "substract")) {
+        return SubstractInt;
+    } else {
+        return NULL;
+    }
+}
+```
+
+## Call pointer directly
+
+Use `koffi.call(ptr, type, ...)` to call a function pointer. The first two arguments are the pointer itself and the type of the function you are trying to call (declared with `koffi.proto()` as shown below), and the remaining arguments are used for the call.
+
+```js
+// Declare function type
+const BinaryIntFunc = koffi.proto('int BinaryIntFunc(int a, int b)');
+
+const GetBinaryIntFunction = lib.func('BinaryIntFunc *GetBinaryIntFunction(const char *name)');
+
+const add_ptr = GetBinaryIntFunction('add');
+const substract_ptr = GetBinaryIntFunction('substract');
+
+let sum = koffi.call(add_ptr, BinaryIntFunc, 4, 5);
+let delta = koffi.call(substract_ptr, BinaryIntFunc, 100, 58);
+
+console.log(sum, delta); // Prints 9 and 42
+```
+
+## Decode pointer to function
+
+Use `koffi.decode(ptr, type)` to get back a JS function, which you can then use like any other Koffi function.
+
+```js
+// Declare function type
+const BinaryIntFunc = koffi.proto('int BinaryIntFunc(int a, int b)');
+
+const GetBinaryIntFunction = lib.func('BinaryIntFunc *GetBinaryIntFunction(const char *name)');
+
+const add = koffi.decode(GetBinaryIntFunction('add'), BinaryIntFunc);
+const substract = koffi.decode(GetBinaryIntFunction('substract'), BinaryIntFunc);
+
+let sum = add(4, 5);
+let delta = substract(100, 58);
+
+console.log(sum, delta); // Prints 9 and 42
+```
+
+This method also allows you to perform an [asynchronous call](load#asynchronous-calls) with the async member of the decoded function.
+
 # Handling void pointers
 
 Many C functions use `void *` parameters in order to pass polymorphic objects and arrays, meaning that the data format changes can change depending on one other argument, or on some kind of struct tag member.
@@ -139,7 +206,7 @@ Koffi provides two features to deal with this:
 - You can use `koffi.as(value, type)` to tell Koffi what kind of type is actually expected, as shown in the example below.
 - Buffers and typed JS arrays can be used as values in place everywhere a pointer is expected. See [dynamic arrays](#dynamic-arrays) for more information, for input or output.
 
-The example below shows the use of `koffi.as()` to read the header of a PNG file with `fread()` directly to a JS object.
+The example below shows the use of `koffi.as()` to read the header of a PNG file with `fread()` directly to a JS object. It also uses [endian-sensitive integers](primitives#endian-sensitive-integers) to decode PNG header values:
 
 ```js
 import koffi from 'koffi';
@@ -224,7 +291,7 @@ let copy = strdup('Hello!');
 console.log(copy); // Prints Hello!
 ```
 
-When you declare functions with the [prototype-like syntax](functions#definition-syntax), you can either use named disposable types or use the '!' shortcut qualifier with compatibles types, as shown in the example below. This qualifier creates an anonymous disposable type that calls `koffi.free(ptr)`.
+When you declare functions with the [prototype-like syntax](load#definition-syntax), you can either use named disposable types or use the '!' shortcut qualifier with compatibles types, as shown in the example below. This qualifier creates an anonymous disposable type that calls `koffi.free(ptr)`.
 
 ```js
 import koffi from 'koffi';

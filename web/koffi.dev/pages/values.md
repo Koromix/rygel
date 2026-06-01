@@ -1,29 +1,3 @@
-# Variable definitions
-
-*Changed in Koffi 3.0.3*
-
-To find an exported and  declare a variable, use `lib.symbol(name, type)`. You need to specify its name and its type.
-
-```c
-int my_int = 42;
-const char *my_string = NULL;
-```
-
-```js
-const my_int = lib.symbol('my_int');
-const my_string = lib.symbol('my_string');
-```
-
-This function returns a pointer (a BigInt value in Koffi 3). To read or change the value of the variable, you can use:
-
-- [koffi.decode()](#decode-to-js-values) to read the value
-- [koffi.encode()](#encode-to-c-memory) to change the value
-
-> [!NOTE]
-> Until Koffi 3.0.3, the `symbol()` function required you to give a type, even though it did nothing with this information. This was a leftover from Koffi 2.
-> 
-> For compatibility, you can still call `lib.symbol(name, type)`, but this will emit a deprecation warning.
-
 # Decode to JS values
 
 Use `koffi.decode()` to decode C pointers, represented by BigInt numbers.

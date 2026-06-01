@@ -412,7 +412,7 @@ Consult the [migration guide](migration) for more information.
 *Released on 2023-12-05*
 
 - Speed up resolving simple and often used type names
-- Fix use of optional length argument with [koffi.encode()](variables#encode-to-c-memory)
+- Fix use of optional length argument with [koffi.encode()](values#encode-to-c-memory)
 
 #### Koffi 2.6.10
 
@@ -473,8 +473,8 @@ Consult the [migration guide](migration) for more information.
 
 **New features:**
 
-- Use [koffi.symbol()](variables#variable-definitions) to make pointers to exported variables (or other symbols)
-- Use [koffi.encode()](variables#encode-to-c-memory) to explictly encode data from JS to C memory
+- Use [koffi.symbol()](values#variable-definitions) to make pointers to exported variables (or other symbols)
+- Use [koffi.encode()](values#encode-to-c-memory) to explictly encode data from JS to C memory
 - Use shared library [lazy-loading](functions#loading-options) (RTLD_LAZY) on POSIX platforms
 
 **Other changes:**

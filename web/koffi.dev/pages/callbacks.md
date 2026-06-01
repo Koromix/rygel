@@ -13,7 +13,7 @@ const ExampleCallback = koffi.proto('ExampleCallback', 'void', ['int']);
 const AddDoubleFloat = koffi.proto('double AddDoubleFloat(double d, float f)');
 ```
 
-For alternative [calling conventions](functions#calling-conventions) (such as `stdcall` on Windows x86 32-bit), you can specify as the first argument with the classic syntax, or after the return type in prototype strings, like this:
+For alternative [calling conventions](load#calling-conventions) (such as `stdcall` on Windows x86 32-bit), you can specify as the first argument with the classic syntax, or after the return type in prototype strings, like this:
 
 ```js
 const HANDLE = koffi.pointer('HANDLE', koffi.opaque());
@@ -138,7 +138,7 @@ koffi.unregister(cb2);
 
 Koffi does not have enough information to convert callback pointer arguments to an appropriate JS value. In this case, your JS function will receive a *BigInt* value with the pointer address (or *null* is the pointer is null).
 
-You can pass this value through to another C function that expects a pointer of the same type, or you can use [koffi.decode()](variables#decode-to-js-values) function to decode pointer arguments.
+You can pass this value through to another C function that expects a pointer of the same type, or you can use [koffi.decode()](values#decode-to-js-values) function to decode pointer arguments.
 
 The following examples uses it to sort an array of strings in-place with the standard C function `qsort()`:
 

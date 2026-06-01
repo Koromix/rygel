@@ -1,81 +1,3 @@
-# Primitive types
-
-## Standard types
-
-While the C standard allows for variation in the size of most integer types, Koffi enforces the same definition for most primitive types, listed below:
-
-C type                        | JS type          | Bytes | Signedness | Note
------------------------------ | ---------------- | ----- | ---------- | ---------------------------
-void                          | Undefined        | 0     |            | Only valid as a return type
-int8, int8_t                  | Number (integer) | 1     | Signed     |
-uint8, uint8_t                | Number (integer) | 1     | Unsigned   |
-char                          | Number (integer) | 1     | Signed     |
-uchar, unsigned char          | Number (integer) | 1     | Unsigned   |
-char16, char16_t              | Number (integer) | 2     | Signed     |
-int16, int16_t                | Number (integer) | 2     | Signed     |
-uint16, uint16_t              | Number (integer) | 2     | Unsigned   |
-short                         | Number (integer) | 2     | Signed     |
-ushort, unsigned short        | Number (integer) | 2     | Unsigned   |
-char32, char32_t              | Number (integer) | 4     | Signed     |
-int32, int32_t                | Number (integer) | 4     | Signed     |
-uint32, uint32_t              | Number (integer) | 4     | Unsigned   |
-int                           | Number (integer) | 4     | Signed     |
-uint, unsigned int            | Number (integer) | 4     | Unsigned   |
-int64, int64_t                | Number (integer) | 8     | Signed     |
-uint64, uint64_t              | Number (integer) | 8     | Unsigned   |
-longlong, long long           | Number (integer) | 8     | Signed     |
-ulonglong, unsigned long long | Number (integer) | 8     | Unsigned   |
-float32                       | Number (float)   | 4     |            |
-float64                       | Number (float)   | 8     |            |
-float                         | Number (float)   | 4     |            |
-double                        | Number (float)   | 8     |            |
-
-Koffi also accepts BigInt values when converting from JS to C integers. If the value exceeds the range of the C type, Koffi will convert the number to an undefined value. In the reverse direction, BigInt values are automatically used when needed for big 64-bit integers.
-
-Koffi defines a few more types that can change size depending on the OS and the architecture:
-
-C type           | JS type          | Signedness  | Note
----------------- | ---------------- | ----------- | ------------------------------------------------
-bool             | Boolean          |             | Usually one byte
-long             | Number (integer) | Signed      | 4 or 8 bytes depending on platform (LP64, LLP64)
-ulong            | Number (integer) | Unsigned    | 4 or 8 bytes depending on platform (LP64, LLP64)
-unsigned long    | Number (integer) | Unsigned    | 4 or 8 bytes depending on platform (LP64, LLP64)
-intptr           | Number (integer) | Signed      | 4 or 8 bytes depending on register width
-intptr_t         | Number (integer) | Signed      | 4 or 8 bytes depending on register width
-uintptr          | Number (integer) | Unsigned    | 4 or 8 bytes depending on register width
-uintptr_t        | Number (integer) | Unsigned    | 4 or 8 bytes depending on register width
-wchar_t          | Number (integer) | *Undefined* | 2 bytes on Windows, 4 bytes Linux, macOS and BSD
-str, string      | String           |             | JS strings are converted to and from UTF-8
-str16, string16  | String           |             | JS strings are converted to and from UTF-16 (LE)
-str32, string32  | String           |             | JS strings are converted to and from UTF-32 (LE)
-
-Primitive types can be specified by name (in a string) or through `koffi.types`:
-
-```js
-// These two lines do the same:
-let struct1 = koffi.struct({ dummy: 'long' });
-let struct2 = koffi.struct({ dummy: koffi.types.long });
-```
-
-## Endian-sensitive integers
-
-Koffi defines a bunch of endian-sensitive types, which can be used when dealing with binary data (network payloads, binary file formats, etc.).
-
-C type                 | Bytes | Signedness | Endianness
----------------------- | ----- | ---------- | -------------
-int16_le, int16_le_t   | 2     | Signed     | Little Endian
-int16_be, int16_be_t   | 2     | Signed     | Big Endian
-uint16_le, uint16_le_t | 2     | Unsigned   | Little Endian
-uint16_be, uint16_be_t | 2     | Unsigned   | Big Endian
-int32_le, int32_le_t   | 4     | Signed     | Little Endian
-int32_be, int32_be_t   | 4     | Signed     | Big Endian
-uint32_le, uint32_le_t | 4     | Unsigned   | Little Endian
-uint32_be, uint32_be_t | 4     | Unsigned   | Big Endian
-int64_le, int64_le_t   | 8     | Signed     | Little Endian
-int64_be, int64_be_t   | 8     | Signed     | Big Endian
-uint64_le, uint64_le_t | 8     | Unsigned   | Little Endian
-uint64_be, uint64_be_t | 8     | Unsigned   | Big Endian
-
 # Struct types
 
 ## Struct definition
@@ -441,68 +363,187 @@ console.log(array); // Prints { count: 8, numbers: [1, 2, 3, 4, 5, 10, 12, 14] }
 
 In C, dynamically-sized arrays are usually passed around as pointers. Read more about [array pointers](pointers#dynamic-arrays) in the relevant section.
 
-# Enum types
+# Unions
 
-*New in Koffi 3.0*
+You can declare unions with a syntax similar to structs, but with the `koffi.union()` function. This function takes two arguments: the first one is the name of the type, and the second one is an object containing the union member names and types. You can omit the first argument to declare an anonymous union.
 
-C enumeration values are stored as integers. The underlying integer type is implementation-defined but Koffi tries to match usual platform behavior.
+The following example illustrates how to declare the same union in C and in JS with Koffi:
 
-On POSIX platforms, Koffi follows the following rules:
-
-- If no negative value exists: `unsigned int` by default, `uint64_t` if needed
-- If any negative value exists: `int` by default, `int64_t` if needed
-
-On Windows, things are simpler, and `int` is used all the time. Koffi will throw an error if any enumeration value does not fit in a 32-bit integer.
+```c
+typedef union IntOrDouble {
+    int64_t i;
+    double d;
+} IntOrDouble;
+```
 
 ```js
-// For OpenResult, the underlying type will be unsigned int on POSIX, int on Windows
-const OpenResult = koffi.enumeration('OpenResult', {
-    Success: 0,
-    MissingFile: 1,
-    AccessDenied: 2,
-    OtherError: 3
-});
-
-// For RelativePosition, the underlying type will be int everywhere
-const RelativePosition = koffi.enumeration('RelativePosition', {
-    Left: -1,
-    Center: 0,
-    Right: 1
-});
-
-// For IntLimits, the underlying type will be int64_t on POSIX, and fail on Windows
-const Int64Limits = koffi.enumeration('Int64Limits', {
-    Min: -9223372036854775808n,
-    Max: 9223372036854775807n
+const IntOrDouble = koffi.union('IntOrDouble', {
+    i: 'int64_t',
+    d: 'double'
 });
 ```
 
-> [!WARNING]
-> This behavior may not match your compiler:
->
-> - On POSIX platforms, GCC and Clang will use a short integer type if `-fshort-enums` is specified and the enumeration values fit in `short` or `unsigned short`.
-> - On Windows, MSVC (and Clang) always use `int` even if some values do not fit, which matches what Koffi does... unless the compiler flag `/Zc:enumTypes` is set, maybe.
->
-> Use an explicit type specifier to work around these problems, as shown below.
+## Input unions
 
-You can access the constants in `values` member of the type object.
+### Passing union values to C
+
+You can instantiate an union object with `koffi.Union(type)`. This will create a special object that contains at most one active member.
+
+Once you have created an instance of your union, you can simply set the member with the dot operator as you would with a basic object. Then, simply pass your union value to the C function you wish.
 
 ```js
-console.log(OpenResult.values.MissingFile); // Prints 1
-console.log(RelativePosition.values.Left); // Prints -1
+const U = koffi.union('U', { i: 'int', str: 'char *' });
+
+const DoSomething = lib.func('void DoSomething(const char *type, U u)');
+
+const u1 = new koffi.Union('U'); u1.i = 42;
+const u2 = new koffi.Union('U'); u2.str = 'Hello!';
+
+DoSomething('int', u1);
+DoSomething('string', u2);
 ```
 
-You can specify the storage type explicitly as the last argument: `koffi.enumeration(name, values, type)`.
+For simplicity, Koffi also accepts object literals with one property (no more, no less) setting the corresponding union member. The example belows uses this to simplify the code shown above:
 
 ```js
-// This one explictly uses int64_t as the underlying type, despite the fact that the values fit inside an int.
-const ExplicitEnum = koffi.enumeration('ExplicitEnum', {
-    Zero: 0,
-    One: 1,
-    Two: 2
-}, 'int64_t');
+const U = koffi.union('U', { i: 'int', str: 'char *' });
+
+const DoSomething = lib.func('void DoSomething(const char *type, U u)');
+
+DoSomething('int', { i: 42 });
+DoSomething('string', { str: 'Hello!' });
 ```
 
-# Union types
+### Win32 example
 
-The declaration and use of [union types](unions) will be explained in a later section, they are only briefly mentioned here if you need them.
+The following example uses the [SendInput](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-sendinput) Win32 API to emit the Win+D shortcut and hide windows (show the desktop).
+
+```js
+import koffi from 'koffi';
+// CJS: const koffi = require('koffi');
+
+// Win32 type and functions
+
+const user32 = koffi.load('user32.dll');
+
+const INPUT_MOUSE = 0;
+const INPUT_KEYBOARD = 1;
+const INPUT_HARDWARE = 2;
+
+const KEYEVENTF_KEYUP = 0x2;
+const KEYEVENTF_SCANCODE = 0x8;
+
+const VK_LWIN = 0x5B;
+const VK_D = 0x44;
+
+const MOUSEINPUT = koffi.struct('MOUSEINPUT', {
+    dx: 'long',
+    dy: 'long',
+    mouseData: 'uint32_t',
+    dwFlags: 'uint32_t',
+    time: 'uint32_t',
+    dwExtraInfo: 'uintptr_t'
+});
+const KEYBDINPUT = koffi.struct('KEYBDINPUT', {
+    wVk: 'uint16_t',
+    wScan: 'uint16_t',
+    dwFlags: 'uint32_t',
+    time: 'uint32_t',
+    dwExtraInfo: 'uintptr_t'
+});
+const HARDWAREINPUT = koffi.struct('HARDWAREINPUT', {
+    uMsg: 'uint32_t',
+    wParamL: 'uint16_t',
+    wParamH: 'uint16_t'
+});
+
+const INPUT = koffi.struct('INPUT', {
+    type: 'uint32_t',
+    u: koffi.union({
+        mi: MOUSEINPUT,
+        ki: KEYBDINPUT,
+        hi: HARDWAREINPUT
+    })
+});
+
+const SendInput = user32.func('unsigned int __stdcall SendInput(unsigned int cInputs, INPUT *pInputs, int cbSize)');
+
+// Show/hide desktop with Win+D shortcut
+
+let events = [
+    make_keyboard_event(VK_LWIN, true),
+    make_keyboard_event(VK_D, true),
+    make_keyboard_event(VK_D, false),
+    make_keyboard_event(VK_LWIN, false)
+];
+
+SendInput(events.length, events, koffi.sizeof(INPUT));
+
+// Utility
+
+function make_keyboard_event(vk, down) {
+    let event = {
+        type: INPUT_KEYBOARD,
+        u: {
+            ki: {
+                wVk: vk,
+                wScan: 0,
+                dwFlags: down ? 0 : KEYEVENTF_KEYUP,
+                time: 0,
+                dwExtraInfo: 0
+            }
+        }
+    };
+
+    return event;
+}
+```
+
+## Output unions
+
+Unlike structs, Koffi does not know which union member is valid, and it cannot decode it automatically. You can however use special `koffi.Union` objects for output parameters, and decode the memory after the call.
+
+To decode an output union pointer parameter, create a placeholder object with `new koffi.Union(type)` and pass the resulting object to the function.
+
+After the call, you can dereference the member value you want on this object and Koffi will decode it at this moment.
+
+The following example illustrates the use of `koffi.Union()` to decode output unions after the call.
+
+```c
+#include <stdint.h>
+
+typedef union IntOrDouble {
+    int64_t i;
+    double d;
+} IntOrDouble;
+
+void SetUnionInt(int64_t i, IntOrDouble *out)
+{
+    out->i = i;
+}
+
+void SetUnionDouble(double d, IntOrDouble *out)
+{
+    out->d = d;
+}
+```
+
+```js
+const IntOrDouble = koffi.union('IntOrDouble', {
+    i: 'int64_t',
+    d: 'double',
+    raw: koffi.array('uint8_t', 8)
+});
+
+const SetUnionInt = lib.func('void SetUnionInt(int64_t i, _Out_ IntOrDouble *out)');
+const SetUnionDouble = lib.func('void SetUnionDouble(double d, _Out_ IntOrDouble *out)');
+
+let u1 = new koffi.Union('IntOrDouble');
+let u2 = new koffi.Union('IntOrDouble');
+
+SetUnionInt(123, u1);
+SetUnionDouble(123, u2);
+
+console.log(u1.i, '---', u1.raw); // Prints 123 --- Uint8Array(8) [123, 0, 0, 0, 0, 0, 0, 0]
+console.log(u2.d, '---', u2.raw); // Prints 123 --- Uint8Array(8) [0, 0, 0, 0, 0, 0, 69, 64]
+```

@@ -36,7 +36,7 @@ You can resolve type strings to type objects with `koffi.type()`. This function 
 > [!NOTE]
 > For compatibility reasons, both `koffi.resolve()` and `koffi.introspect()` still exist, as aliases for `koffi.type()`. Using them will emit a deprecation warning.
 
-Read the documentation about [type specifiers](misc#type-specifiers) for more information.
+Read the documentation about [type specifiers](types#type-specifiers) for more information.
 
 The two versions below illustrate the API difference between Koffi 2.x and Koffi 3.x:
 

@@ -2,9 +2,9 @@
 
 For simplicity, and because Javascript only has value semantics for primitive types, Koffi can marshal out (or in/out) multiple types of parameters:
 
-- [Structs](input#struct-types) (to/from JS objects)
-- [Unions](unions)
-- [Opaque types](input#opaque-types)
+- [Structs](composites#structs) (to/from JS objects)
+- [Unions](composites#unions)
+- [Opaque types](composites#opaque-types)
 - String buffers
 
 In order to change an argument from input-only to output or input/output, use the following functions:
@@ -244,7 +244,7 @@ console.log(vec1); // { x: 3, y: 2, z: 1 }
 console.log(vec2); // { x: 1, y: 2, z: 3 }
 ```
 
-See [decoding variables](variables#decode-to-js-values) for more information about the decode function.
+See [decoding variables](values#decode-to-js-values) for more information about the decode function.
 
 ## Stable pointers
 
@@ -252,7 +252,7 @@ In some cases, the native code may need to change the output buffer at a later t
 
 In this case, it is **not safe to use buffers or typed arrays**! 
 
-However, you can use `koffi.alloc(type, len)` to allocate memory and get a pointer that won't move, and can be safely used at any time by the native code. Use [koffi.decode()](variables#decode-to-js-values) to read data from the pointer when needed.
+However, you can use `koffi.alloc(type, len)` to allocate memory and get a pointer that won't move, and can be safely used at any time by the native code. Use [koffi.decode()](values#decode-to-js-values) to read data from the pointer when needed.
 
 The example below sets up some memory to be used as an output buffer where a concatenation function appends a string on each call.
 

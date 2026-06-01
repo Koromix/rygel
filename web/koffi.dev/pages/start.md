@@ -16,6 +16,9 @@ import koffi from 'koffi';
 const koffi = require('koffi');
 ```
 
+> [!NOTE]
+> Follow the [build instructions](contribute#build-from-source) if you want to build the native Koffi code yourself, to fix something or simply to study the code.
+
 # Simple examples
 
 Below you can find two examples:
@@ -105,16 +108,3 @@ let ret = MessageBoxA(null, 'Do you want another message box?', 'Koffi', MB_YESN
 if (ret == IDYES)
     MessageBoxW(null, 'Hello World!', 'Koffi', MB_ICONINFORMATION);
 ```
-
-# Bundling Koffi
-
-Please read the [dedicated page](packaging) for information about bundling and packaging applications using Koffi.
-
-# Build manually
-
-Follow the [build instructions](contribute#build-from-source) if you want to build the native Koffi code yourself.
-
-> [!NOTE]
-> This is only needed if you want to hack on Koffi. The official NPM package provides prebuilt binaries and you don't need to compile anything if you only want to use Koffi in Node.js.
->
-> Just run `npm install koffi`!
