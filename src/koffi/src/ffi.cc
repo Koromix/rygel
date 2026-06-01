@@ -2764,11 +2764,12 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
         decode.Set("string", CreateFunction(instance, DecodeString, "string"));
         decode.Set("string16", CreateFunction(instance, DecodeString16, "string16"));
         decode.Set("string32", CreateFunction(instance, DecodeString32, "string32"));
-        if (K_SIZE(wchar_t) == 2) {
+        if constexpr (K_SIZE(wchar_t) == 2) {
             decode.Set("wstring", CreateFunction(instance, DecodeString16, "wstring"));
-        } else if (K_SIZE(wchar_t) == 4) {
+        } else if constexpr (K_SIZE(wchar_t) == 4) {
             decode.Set("wstring", CreateFunction(instance, DecodeString32, "wstring"));
         }
+        static_assert(K_SIZE(wchar_t) == 2 || K_SIZE(wchar_t) == 4);
 
         exports.Set("decode", decode);
     }
@@ -2828,9 +2829,9 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
         RegisterPrimitiveType(instance, types, {"unsigned char", "uchar"}, PrimitiveKind::UInt8, 1, 1);
         RegisterPrimitiveType(instance, types, {"char16_t", "char16"}, PrimitiveKind::Int16, 2, 2);
         RegisterPrimitiveType(instance, types, {"char32_t", "char32"}, PrimitiveKind::Int32, 4, 4);
-        if (K_SIZE(wchar_t) == 2) {
+        if constexpr (K_SIZE(wchar_t) == 2) {
             RegisterPrimitiveType(instance, types, {"wchar_t", "wchar"}, PrimitiveKind::Int16, 2, 2);
-        } else if (K_SIZE(wchar_t) == 4) {
+        } else if constexpr (K_SIZE(wchar_t) == 4) {
             RegisterPrimitiveType(instance, types, {"wchar_t", "wchar"}, PrimitiveKind::Int32, 4, 4);
         }
         RegisterPrimitiveType(instance, types, {"int16_t", "int16"}, PrimitiveKind::Int16, 2, 2);
@@ -2867,11 +2868,12 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
         RegisterPrimitiveType(instance, types, {"char *", "str", "string"}, PrimitiveKind::String, K_SIZE(void *), alignof(void *), "char");
         RegisterPrimitiveType(instance, types, {"char16_t *", "char16 *", "str16", "string16"}, PrimitiveKind::String16, K_SIZE(void *), alignof(void *), "char16_t");
         RegisterPrimitiveType(instance, types, {"char32_t *", "char32 *", "str32", "string32"}, PrimitiveKind::String32, K_SIZE(void *), alignof(void *), "char32_t");
-        if (K_SIZE(wchar_t) == 2) {
+        if constexpr (K_SIZE(wchar_t) == 2) {
             RegisterPrimitiveType(instance, types, {"wchar_t *", "wchar *", "wstring"}, PrimitiveKind::String16, K_SIZE(void *), alignof(void *), "wchar_t");
-        } else if (K_SIZE(wchar_t) == 4) {
+        } else if constexpr (K_SIZE(wchar_t) == 4) {
             RegisterPrimitiveType(instance, types, {"wchar_t *", "wchar *", "wstring"}, PrimitiveKind::String32, K_SIZE(void *), alignof(void *), "wchar_t");
         }
+        static_assert(K_SIZE(wchar_t) == 2 || K_SIZE(wchar_t) == 4);
 
         instance->void_type = instance->types_map.FindValue("void", nullptr);
         instance->char_type = instance->types_map.FindValue("char", nullptr);
