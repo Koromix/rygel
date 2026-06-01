@@ -153,10 +153,10 @@ export const decode: {
     float(ptr: any): number;
     double(ptr: any): number;
 
-    string(ptr: any, length?: number | bigint | null): string;
-    string16(ptr: any, length?: number | bigint | null): string;
-    string32(ptr: any, length?: number | bigint | null): string;
-    wstring(ptr: any, length?: number | bigint | null): string;
+    string(ptr: any, length?: number | bigint): string;
+    string16(ptr: any, length?: number | bigint): string;
+    string32(ptr: any, length?: number | bigint): string;
+    wstring(ptr: any, length?: number | bigint): string;
 };
 
 export function encode(ref: any, type: TypeSpec, value: any): void;
