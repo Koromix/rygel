@@ -131,11 +131,12 @@ node tools/brew.js info debian_x64
 
 # Making a release
 
-First, you must update the code in three steps:
+First, you must update the code in four steps:
 
 - Change the version number in `package.json`
 - Add an entry to `CHANGELOG` to summarize the changes since last release
 - Commit theses changes with the message *Bump Koffi to X.Y.Z*
+- Create a signed tag on this commit with `git tag -s koffi/X.Y.Z -m 'Koffi X.Y.Z'`
 
 Once this is done, you can publish a new release with the following commands:
 
