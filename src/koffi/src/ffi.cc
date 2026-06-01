@@ -1719,20 +1719,31 @@ Napi::Value LibraryHandle::Symbol(const Napi::CallbackInfo &info)
     Napi::Env env = info.Env();
     InstanceData *instance = (InstanceData *)info.Data();
 
+#if defined(EXTERNAL_POINTERS)
     if (info.Length() < 2) {
-        ThrowError<Napi::TypeError>(env, "Expected 2, got %1", info.Length());
+        ThrowError<Napi::TypeError>(env, "Expected 2 arguments, got %1", info.Length());
         return env.Null();
     }
-     if (!info[0].IsString()) {
+#else
+    if (info.Length() < 1) {
+        ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", info.Length());
+        return env.Null();
+    }
+#endif
+    if (!info[0].IsString()) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string", GetValueType(instance, info[0]));
         return env.Null();
     }
 
     std::string name = info[0].As<Napi::String>();
 
+#if defined(EXTERNAL_POINTERS)
     const TypeInfo *type = ResolveType(instance, info[1]);
     if (!type)
         return env.Null();
+#else
+    const TypeInfo *type = nullptr;
+#endif
 
 #if defined(_WIN32)
     void *ptr = (void *)GetProcAddress((HMODULE)lib->module, name.c_str());

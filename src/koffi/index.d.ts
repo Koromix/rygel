@@ -63,7 +63,8 @@ export type LibraryHandle = {
     /** @deprecated */ thiscall(definition: string): KoffiFunction;
     /** @deprecated */ thiscall(name: string | number, result: TypeSpec, arguments: TypeSpec[]): KoffiFunction;
 
-    symbol(name: string, type: TypeSpec): any;
+    symbol(name: string): any;
+    /** @deprecated */ symbol(name: string, type: TypeSpec): any;
 
     unload(): void;
 };

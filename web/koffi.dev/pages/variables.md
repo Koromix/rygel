@@ -1,5 +1,7 @@
 # Variable definitions
 
+*Changed in Koffi 3.0.3*
+
 To find an exported and  declare a variable, use `lib.symbol(name, type)`. You need to specify its name and its type.
 
 ```c
@@ -8,14 +10,19 @@ const char *my_string = NULL;
 ```
 
 ```js
-const my_int = lib.symbol('my_int', 'int');
-const my_string = lib.symbol('my_string', 'const char *');
+const my_int = lib.symbol('my_int');
+const my_string = lib.symbol('my_string');
 ```
 
-You cannot directly manipulate these variables, use:
+This function returns a pointer (a BigInt value in Koffi 3). To read or change the value of the variable, you can use:
 
-- [koffi.decode()](#decode-to-js-values) to read their value
-- [koffi.encode()](#encode-to-c-memory) to change their value
+- [koffi.decode()](#decode-to-js-values) to read the value
+- [koffi.encode()](#encode-to-c-memory) to change the value
+
+> [!NOTE]
+> Until Koffi 3.0.3, the `symbol()` function required you to give a type, even though it did nothing with this information. This was a leftover from Koffi 2.
+> 
+> For compatibility, you can still call `lib.symbol(name, type)`, but this will emit a deprecation warning.
 
 # Decode to JS values
 
@@ -36,8 +43,8 @@ const char *my_string = "foobar";
 ```
 
 ```js
-const my_int = lib.symbol('my_int', 'int');
-const my_string = lib.symbol('my_string', 'const char *');
+const my_int = lib.symbol('my_int');
+const my_string = lib.symbol('my_string');
 
 console.log(koffi.decode(my_int, 'int')) // Prints 42
 console.log(koffi.decode(my_string, 'const char *')) // Prints "foobar"
@@ -72,8 +79,8 @@ const char *my_string = NULL;
 ```
 
 ```js
-const my_int = lib.symbol('my_int', 'int');
-const my_string = lib.symbol('my_string', 'const char *');
+const my_int = lib.symbol('my_int');
+const my_string = lib.symbol('my_string');
 
 console.log(koffi.decode(my_int, 'int')) // Prints 42
 console.log(koffi.decode(my_string, 'const char *')) // Prints null
