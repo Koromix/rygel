@@ -2764,6 +2764,11 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
         decode.Set("string", CreateFunction(instance, DecodeString, "string"));
         decode.Set("string16", CreateFunction(instance, DecodeString16, "string16"));
         decode.Set("string32", CreateFunction(instance, DecodeString32, "string32"));
+        if (K_SIZE(wchar_t) == 2) {
+            decode.Set("wstring", CreateFunction(instance, DecodeString16, "wstring"));
+        } else if (K_SIZE(wchar_t) == 4) {
+            decode.Set("wstring", CreateFunction(instance, DecodeString32, "wstring"));
+        }
 
         exports.Set("decode", decode);
     }
