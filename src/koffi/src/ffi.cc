@@ -2863,9 +2863,9 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
         RegisterPrimitiveType(instance, types, {"char16_t *", "char16 *", "str16", "string16"}, PrimitiveKind::String16, K_SIZE(void *), alignof(void *), "char16_t");
         RegisterPrimitiveType(instance, types, {"char32_t *", "char32 *", "str32", "string32"}, PrimitiveKind::String32, K_SIZE(void *), alignof(void *), "char32_t");
         if (K_SIZE(wchar_t) == 2) {
-            RegisterPrimitiveType(instance, types, {"wchar_t *", "wchar *"}, PrimitiveKind::String16, K_SIZE(void *), alignof(void *), "wchar_t");
+            RegisterPrimitiveType(instance, types, {"wchar_t *", "wchar *", "wstring"}, PrimitiveKind::String16, K_SIZE(void *), alignof(void *), "wchar_t");
         } else if (K_SIZE(wchar_t) == 4) {
-            RegisterPrimitiveType(instance, types, {"wchar_t *", "wchar *"}, PrimitiveKind::String32, K_SIZE(void *), alignof(void *), "wchar_t");
+            RegisterPrimitiveType(instance, types, {"wchar_t *", "wchar *", "wstring"}, PrimitiveKind::String32, K_SIZE(void *), alignof(void *), "wchar_t");
         }
 
         instance->void_type = instance->types_map.FindValue("void", nullptr);
