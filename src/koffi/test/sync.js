@@ -725,6 +725,7 @@ async function test() {
         assert.ok(typeof ptr2[0] == 'bigint' || util.types.isExternal(ptr2[0]));
         assert.equal(koffi.decode(ptr2[0], 'char', -1), 'BONJOUR MONDE');
         assert.equal(koffi.decode.string(ptr2[0]), 'BONJOUR MONDE');
+        assert.equal(koffi.decode.string(ptr2[0], 7), 'BONJOUR');
 
         let view = Buffer.from(koffi.view(ptr2[0], 7));
         assert.equal(view.toString(), 'BONJOUR');
@@ -942,6 +943,7 @@ async function test() {
 
         WriteString16('Hello');
         assert.equal(koffi.decode.string16(ptr), 'Hello');
+        assert.equal(koffi.decode.string16(ptr, 4), 'Hell');
 
         WriteString16('Hello World!');
         assert.equal(koffi.decode(ptr, 'char16_t', -1), 'Hello Wo');
@@ -957,6 +959,7 @@ async function test() {
 
         WriteString32('Hello');
         assert.equal(koffi.decode.string32(ptr), 'Hello');
+        assert.equal(koffi.decode.string32(ptr, 4), 'Hell');
 
         WriteString32('Hello World!');
         assert.equal(koffi.decode(ptr, 'char32_t', -1), 'Hello W');
