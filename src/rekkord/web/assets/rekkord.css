@@ -67,6 +67,7 @@ li + .picture { margin-left: -1em; }
 }
 
 footer {
+    position: relative;
     font-size: 1.1em;
 
     & .legal {
