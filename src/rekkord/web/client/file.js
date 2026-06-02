@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
-import { scrypt, hkdf, sha256, chacha20poly1305 } from 'vendor/noble/noble.bundle.js';
+import { scryptAsync, hkdf, sha256, chacha20poly1305 } from 'vendor/noble/noble.bundle.js';
 import { Util, Log, Net, HttpError } from 'lib/web/base/base.js';
 import { Base64 } from 'lib/web/base/mixer.js';
 
@@ -17,7 +17,7 @@ const UPLOAD_MARK_DELAY = 5000;
 const DOWNLOAD_QUEUE_SIZE = 2;
 const DOWNLOAD_AHEAD_LIMIT = 4;
 
-function createKey(password = null) {
+async function createKey(password = null) {
     let master = new Uint8Array(16);
     crypto.getRandomValues(master);
 
@@ -43,7 +43,7 @@ function createKey(password = null) {
         password = '/' + password;
 
     let n = 2 ** WORK_FACTOR_LOG2;
-    let wrap = scrypt(passphrase + password, SALT_PREFIX + salt, { N: n, r: 8, p: 1, dkLen: 32 });
+    let wrap = await scryptAsync(passphrase + password, SALT_PREFIX + salt, { N: n, r: 8, p: 1, dkLen: 32 });
     let chacha = chacha20poly1305(wrap, new Uint8Array(12));
     let body = chacha.encrypt(master);
 
@@ -61,7 +61,7 @@ function createKey(password = null) {
     };
 }
 
-function deriveKey(salt, body, nonce, passphrase, password = null) {
+async function deriveKey(salt, body, nonce, passphrase, password = null) {
     if (password == null)
         password = '';
     if (password)
@@ -71,7 +71,7 @@ function deriveKey(salt, body, nonce, passphrase, password = null) {
     nonce = Base64.toBytes(nonce);
 
     let n = 2 ** WORK_FACTOR_LOG2;
-    let wrap = scrypt(passphrase + password, SALT_PREFIX + salt, { N: n, r: 8, p: 1, dkLen: 32 });
+    let wrap = await scryptAsync(passphrase + password, SALT_PREFIX + salt, { N: n, r: 8, p: 1, dkLen: 32 });
     let chacha = chacha20poly1305(wrap, new Uint8Array(12));
     let master = chacha.decrypt(body);
 

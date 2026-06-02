@@ -213,16 +213,17 @@ async function runDrop() {
 async function download(info, passphrase, password) {
     let key = null;
 
+    // The scrypt code in deriveKey blocks for some time, repaint the UI before
+    await Util.waitFor(0);
+
     try {
-        key = deriveKey(info.salt, info.body, info.nonce, passphrase, password);
+        key = await deriveKey(info.salt, info.body, info.nonce, passphrase, password);
     } catch (err) {
         console.error(err);
 
-        if (info.protect) {
-            Log.error(T.message(`Invalid decryption key or password`));
-        } else {
-            Log.Error(T.message(`Invalid decryption key`));
-        }
+        let msg = info.protect ? T.message(`Invalid decryption key or password`)
+                               : T.message(`Invalid decryption key`);
+        throw new Error(msg);
     }
 
     await sendDrop(info, key);
@@ -283,7 +284,10 @@ async function runSend() {
         let expiration = parseInt(elements.expiration.value, 10) * 86400000;
         let password = elements.password.value.trim();
 
-        let { salt, body, nonce, passphrase, key } = createKey(password);
+        // The scrypt code in createKey blocks for some time, repaint the UI before
+        await Util.waitFor(0);
+
+        let { salt, body, nonce, passphrase, key } = await createKey(password);
         let info = await createDrop(file, expiration, salt, body, nonce, !!password);
 
         let drop = {
