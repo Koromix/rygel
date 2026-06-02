@@ -109,6 +109,7 @@
         "not_used": "Not used",
         "nothing_to_do": "Nothing to do",
         "object": "Object",
+        "optional": "Optional",
         "optional_repository_name": "Repository name (optional)",
         "password": "Password",
         "password_reset_successful": "Your password has been changed, please login to continue.",

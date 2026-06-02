@@ -12,7 +12,7 @@ import { route, cache } from './main.js';
 import { sendDrop, getProgress } from './relay.js';
 import * as UserMod from './user.js';
 import { formatSize, writeClipboard } from './common.js';
-import { upload } from './file.js';
+import { createKey, deriveKey, upload } from './file.js';
 import { ASSETS } from '../assets/assets.js';
 
 const EXPIRATION_DAYS = [1, 7, 30, 90];
@@ -20,7 +20,7 @@ const DEFAULT_EXPIRATION = 7;
 const FRAGMENT_SIZE = 2097152;
 
 let send_file = null;
-let send_drops = new LruMap(4);
+let new_drops = new LruMap(4);
 
 async function runDrops() {
     if (!App.isLogged())
@@ -97,15 +97,15 @@ async function deleteDrop(kid) {
 }
 
 async function runDrop() {
-    let cached = false;
-    let key = null;
+    let is_new = false;
+    let passphrase = null;
 
     if (route.drop != null) {
-        cache.drop = send_drops.get(route.drop);
-        cached = (cache.drop != null);
+        cache.drop = new_drops.get(route.drop);
+        is_new = (cache.drop != null);
 
-        if (cached) {
-            key = cache.drop.key;
+        if (is_new) {
+            passphrase = cache.drop.passphrase;
         } else {
             try {
                 let url = Util.pasteURL('/api/drop/info', { kid: route.drop });
@@ -118,12 +118,9 @@ async function runDrop() {
             }
 
             if (!window.location.hash)
-                throw new Error('Missing decryption key');
+                throw new Error('Missing decryption passphrase');
 
-            key = Base64.toBytesUrl(window.location.hash.substr(1));
-
-            if (key?.length != 32)
-                throw new Error('Invalid decryption key length');
+            passphrase = window.location.hash.substr(1);
         }
     } else {
         cache.drop = null;
@@ -151,8 +148,8 @@ async function runDrop() {
                 ` : ''}
             </div>
         `);
-    } else if (cached) {
-        let hash = `#${Base64.toBase64Url(key)}`;
+    } else if (is_new) {
+        let hash = `#${passphrase}`;
         let url = App.makeURL({ mode: 'drop', drop: cache.drop.kid }, hash);
 
         window.location.hash = hash;
@@ -180,22 +177,42 @@ async function runDrop() {
         UI.main(html`
             <div class="header">${cache.drop.name}</div>
 
-            <div class="block" style="align-items: center;">
-                <div>${formatSize(cache.drop.size)}</div>
-                ${progress != null ? html`
-                    <progress value=${progress.value} max=${progress.max}></progress>
-                    <div class="sub">${T.keep_tab_open_during_download}</div>
-                ` : ''}
-            </div>
+            <form @submit=${UI.wrap(submit)}>
+                <div class="block" style="align-items: center;">
+                    <div>${formatSize(cache.drop.size)}</div>
+                    ${cache.drop.protect && progress == null ? html`
+                        <label>
+                            <span>${T.password}</span>
+                            <input type="password" name="password" />
+                        </label>
+                    ` : ''}
+                    ${progress != null ? html`
+                        <progress value=${progress.value} max=${progress.max}></progress>
+                        <div class="sub">${T.keep_tab_open_during_download}</div>
+                    ` : ''}
+                </div>
 
-            <div class="actions">
-                <button ?disabled=${progress != null} @click=${UI.wrap(e => download(cache.drop, key))}>${T.download}</button>
-            </div>
+                <div class="actions">
+                    <button type="submit" ?disabled=${progress != null}>${T.download}</button>
+                </div>
+            </form>
         `);
+
+        async function submit(e) {
+            if (progress != null)
+                return;
+
+            let form = e.currentTarget;
+            let password = form.elements.password?.value?.trim?.();
+
+            await download(cache.drop, passphrase, password);
+        }
     }
 }
 
-async function download(info, key) {
+async function download(info, passphrase, password) {
+    let key = deriveKey(info.salt, passphrase, password);
+
     await sendDrop(info, key);
     window.location.href = '/api/drop/download/' + info.kid;
 }
@@ -207,7 +224,7 @@ async function runSend() {
     UI.main(html`
         <div class="header">${T.send_file}</div>
 
-        <form style="text-align: center;" @submit=${UI.wrap(submit)}>
+        <form @submit=${UI.wrap(submit)}>
             <div class="block" style="align-items: center;">
                 <label>
                     <span>${T.expiration}</span>
@@ -215,6 +232,11 @@ async function runSend() {
                         ${EXPIRATION_DAYS.map(days =>
                             html`<option value=${days} ?selected=${days == DEFAULT_EXPIRATION}>${T.count(T.expiration_delay, days)}</option>`)}
                     </select>
+                </label>
+                <label>
+                    <span>${T.password}</span>
+                    <input type="password" name="password" />
+                    <span class="sub">${T.optional}</span>
                 </label>
                 <div class="sub">${T.drag_or_browse_file}</div>
                 <label>
@@ -247,23 +269,23 @@ async function runSend() {
 
         let file = send_file;
         let expiration = parseInt(elements.expiration.value, 10) * 86400000;
+        let password = elements.password.value.trim();
 
-        let info = await createDrop(file, expiration);
-
-        let key = new Uint8Array(32)
-        crypto.getRandomValues(key);
+        let { salt, passphrase, key } = createKey(password);
+        let info = await createDrop(file, expiration, salt, !!password);
 
         let drop = {
             kid: info.kid,
             name: file.name,
             size: file.size,
-            key: key,
+            salt: salt,
+            passphrase: passphrase,
             uploaded: 0,
             error: null
         };
 
         send_file = null;
-        send_drops.set(info.kid, drop);
+        new_drops.set(info.kid, drop);
 
         let url = App.makeURL({ mode: 'drop', drop: info.kid });
         App.go(url);
@@ -312,11 +334,13 @@ async function runSend() {
     }
 }
 
-async function createDrop(file, expiration) {
+async function createDrop(file, expiration, salt, protect) {
     let info = await Net.post('/api/drop/create', {
         name: file.name,
         size: file.size,
-        expiration: expiration
+        expiration: expiration,
+        salt: salt,
+        protect: protect
     });
 
     Net.invalidate('drops');

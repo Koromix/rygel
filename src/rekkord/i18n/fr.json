@@ -118,6 +118,7 @@
         "machine": "Machine",
         "machines": "Machines",
         "open_download_page": "Ouvrir la page de téléchargement",
+        "optional": "Optionnel",
         "optional_repository_name": "Nom du dépot (optionnel)",
         "please_copy_api_key": "Veuillez copier cette clé, vous ne pourrez pas la récupérer plus tard !",
         "provider": "Fournisseur",

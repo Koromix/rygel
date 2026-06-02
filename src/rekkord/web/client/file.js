@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
-import { xsalsa20poly1305 } from 'vendor/noble/noble.bundle.js';
+import { scrypt, xsalsa20poly1305 } from 'vendor/noble/noble.bundle.js';
 import { Util, Log, Net, HttpError } from 'lib/web/base/base.js';
+import { Base64 } from 'lib/web/base/mixer.js';
+
+const WORK_FACTOR_LOG2 = 18;
 
 const UPLOAD_QUEUE_SIZE = 2;
 const UPLOAD_AHEAD_LIMIT = 3;
@@ -10,6 +13,50 @@ const UPLOAD_MARK_DELAY = 5000;
 
 const DOWNLOAD_QUEUE_SIZE = 2;
 const DOWNLOAD_AHEAD_LIMIT = 4;
+
+function createKey(password = null) {
+    let passphrase;
+    {
+        let key = new Uint8Array(32);
+        crypto.getRandomValues(key);
+
+        passphrase = Base64.toBase64Url(key);
+    }
+
+    let salt;
+    {
+        let rnd = new Uint8Array(16);
+        crypto.getRandomValues(rnd);
+
+        salt = Base64.toBase64(rnd);
+    }
+
+    if (password == null)
+        password = '';
+    if (password)
+        password = '/' + password;
+
+    let n = 2 ** WORK_FACTOR_LOG2;
+    let key = scrypt(passphrase + password, 'age-encryption.org/v1/scrypt' + salt, { N: n, r: 8, p: 1, dkLen: 32 });
+
+    return {
+        key: key,
+        passphrase: passphrase,
+        salt: salt
+    };
+}
+
+function deriveKey(salt, passphrase, password = null) {
+    if (password == null)
+        password = '';
+    if (password)
+        password = '/' + password;
+
+    let n = 2 ** WORK_FACTOR_LOG2;
+    let key = scrypt(passphrase + password, 'age-encryption.org/v1/scrypt' + salt, { N: n, r: 8, p: 1, dkLen: 32 });
+
+    return key;
+}
 
 async function* upload(info, key, iter) {
     let timer = null;
@@ -216,6 +263,9 @@ async function* parallelize(iter, parallel, ahead) {
 }
 
 export {
+    createKey,
+    deriveKey,
+
     upload,
     download
 }

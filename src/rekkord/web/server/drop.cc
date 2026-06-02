@@ -107,6 +107,8 @@ void HandleDropCreate(http_IO *io)
     const char *name = nullptr;
     int64_t size = -1;
     int64_t expiration = -1;
+    const char *salt = nullptr;
+    bool protect = false;
     {
         bool success = http_ParseJson(io, Kibibytes(4), [&](json_Parser *json) {
             bool valid = true;
@@ -120,6 +122,10 @@ void HandleDropCreate(http_IO *io)
                     json->ParseInt(&size);
                 } else if (key == "expiration") {
                     json->SkipNull() || json->ParseInt(&expiration);
+                } else if (key == "salt") {
+                    json->ParseString(&salt);
+                } else if (key == "protect") {
+                    json->ParseBool(&protect);
                 } else {
                     json->UnexpectedKey(key);
                     valid = false;
@@ -143,6 +149,10 @@ void HandleDropCreate(http_IO *io)
                     LogError("Excessive expiration time, max is approximately %1 days", MaxExpiration / 86400000);
                     valid = false;
                 }
+                if (!IsStringValid(salt)) {
+                    LogError("Invalid 'salt' parameter");
+                    valid = false;
+                }
             }
 
             return valid;
@@ -160,9 +170,9 @@ void HandleDropCreate(http_IO *io)
     KID kid;
     FillKID(KIDType::Drop, &kid);
 
-    if (!db.Run(R"(INSERT INTO drops (kid, owner, name, size, expire, chunk, uploaded)
-                   VALUES (?1, ?2, ?3, ?4, ?5, ?6, 0))",
-                sq_Binding(kid.raw), session->userid, name, size, expire, ChunkSize))
+    if (!db.Run(R"(INSERT INTO drops (kid, owner, name, size, expire, salt, protect, chunk, uploaded)
+                   VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 0))",
+                sq_Binding(kid.raw), session->userid, name, size, expire, salt, 0 + protect, ChunkSize))
         return;
 
     Span<const char> json = Fmt(io->Allocator(), "{\"kid\": \"%1\", \"chunk\": %2}", kid, ChunkSize);
@@ -408,7 +418,7 @@ void HandleDropInfo(http_IO *io)
     int64_t now = GetUnixTime();
 
     sq_Statement stmt;
-    if (!db.Prepare(R"(SELECT kid_str(kid), name, size, chunk
+    if (!db.Prepare(R"(SELECT kid_str(kid), name, size, salt, protect, chunk
                        FROM drops WHERE kid = ?1 AND
                                         IIF(expire IS NOT NULL, expire > ?2, 1) AND
                                         uploaded = size)",
@@ -426,7 +436,9 @@ void HandleDropInfo(http_IO *io)
     const char *id = (const char *)sqlite3_column_text(stmt, 0);
     const char *name = (const char *)sqlite3_column_text(stmt, 1);
     int64_t size = sqlite3_column_int64(stmt, 2);
-    int64_t chunk = sqlite3_column_int64(stmt, 3);
+    const char *salt = (const char *)sqlite3_column_text(stmt, 3);
+    bool protect = sqlite3_column_int(stmt, 4);
+    int64_t chunk = sqlite3_column_int64(stmt, 5);
 
     http_SendJson(io, 200, [&](json_Writer *json) {
         json->StartObject();
@@ -434,6 +446,8 @@ void HandleDropInfo(http_IO *io)
         json->Key("kid"); json->String(id);
         json->Key("name"); json->String(name);
         json->Key("size"); json->Int64(size);
+        json->Key("salt"); json->StringOrNull(salt);
+        json->Key("protect"); json->Bool(protect);
         json->Key("chunk"); json->Int64(chunk);
 
         json->EndObject();
