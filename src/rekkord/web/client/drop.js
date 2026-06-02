@@ -246,11 +246,6 @@ async function runSend() {
                             html`<option value=${days} ?selected=${days == DEFAULT_EXPIRATION}>${T.count(T.expiration_delay, days)}</option>`)}
                     </select>
                 </label>
-                <label>
-                    <span>${T.password}</span>
-                    <input type="password" name="password" />
-                    <span class="sub">${T.optional}</span>
-                </label>
                 <div class="sub">${T.drag_or_browse_file}</div>
                 <label>
                     <span>${T.file}</span>
@@ -258,6 +253,10 @@ async function runSend() {
                     <button type="button" @click=${e => { e.target.parentNode.click(); e.preventDefault(); }}>${T.browse_for_file}</button>
                 </label>
                 ${send_file != null ? html`<div class="sub">${send_file.name} (${formatSize(send_file.size)})` : ''}
+                <label>
+                    <span>${T.password} <span class="sub">(${T.optional.toLowerCase()})</span></span>
+                    <input type="password" name="password" />
+                </label>
             </div>
 
             <div class="actions">

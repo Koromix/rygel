@@ -444,8 +444,12 @@ form {
         gap: 0.43em;
         align-items: start;
         height: 2em;
+        min-width: 400px;
 
-        & > span:first-child { width: 180px; }
+        & > span:first-child {
+            width: 180px;
+            flex: 1;
+        }
     }
     & label:has(> :only-child) { justify-content: center; }
     & label:empty { display: none; }
