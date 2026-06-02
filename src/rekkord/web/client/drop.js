@@ -2,13 +2,15 @@
 // SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
 import { render, html, live, svg } from 'vendor/lit-html/lit-html.bundle.js';
+import { xsalsa20poly1305 } from 'vendor/noble/noble.bundle.js';
 import dayjs from 'vendor/dayjs/dayjs.bundle.js';
 import QRC from 'vendor/qrcodegen/js/qrcodegen.js';
 import { Util, LruMap, Log, Net, HttpError } from 'lib/web/base/base.js';
+import * as IDB from 'lib/web/base/indexeddb.js';
 import { Base64 } from 'lib/web/base/mixer.js';
 import * as UI from 'lib/web/ui/ui.js';
 import * as App from './main.js';
-import { route, cache } from './main.js';
+import { route, cache, session } from './main.js';
 import { sendDrop, getProgress } from './relay.js';
 import * as UserMod from './user.js';
 import { formatSize, writeClipboard } from './common.js';
@@ -31,6 +33,9 @@ async function runDrops() {
     let drops = UI.tableValues('drops', cache.drops, 'name');
     let now = (new Date).valueOf();
 
+    let db = await openLocalDB();
+    let passphrases = new Set(await db.list('passphrases'));
+
     UI.main(html`
         <div class="header">${T.files}</div>
 
@@ -51,24 +56,31 @@ async function runDrops() {
                     </tr>
                 </thead>
                 <tbody>
-                    ${drops.map(drop => html`
-                        <tr>
-                            <td>${drop.name}</td>
-                            <td>
-                                ${drop.expire != null && drop.expire > now ? dayjs(drop.expire).format('lll') : ''}
-                                ${drop.expire != null && drop.expire <= now ? T.expired : ''}
-                                ${drop.expire == null ? T.never : ''}
-                            </td>
-                            <td style="text-align: right;">
-                                ${formatSize(drop.size)}
-                                ${!drop.complete ? html`<span class="sub" style="color: red;">${T.incomplete}</span>` : ''}
-                            </td>
-                            <td class="center">
-                                <button type="button" class="small"
-                                        @click=${UI.wrap(e => deleteDrop(drop.kid))}><img src=${ASSETS['ui/delete']} alt=${T.delete} /></button>
-                            </td>
-                        </tr>
-                    `)}
+                    ${drops.map(drop => {
+                        let passphrase = passphrases.has(drop.kid);
+
+                        return html`
+                            <tr>
+                                <td>
+                                    ${passphrase ? html`<a href=${App.makeURL({ mode: 'drop', drop: drop.kid })}>${drop.name}</a>` : ''}
+                                    ${!passphrase ? drop.name : ''}
+                                </td>
+                                <td>
+                                    ${drop.expire != null && drop.expire > now ? dayjs(drop.expire).format('lll') : ''}
+                                    ${drop.expire != null && drop.expire <= now ? T.expired : ''}
+                                    ${drop.expire == null ? T.never : ''}
+                                </td>
+                                <td style="text-align: right;">
+                                    ${formatSize(drop.size)}
+                                    ${!drop.complete ? html`<span class="sub" style="color: red;">${T.incomplete}</span>` : ''}
+                                </td>
+                                <td class="center">
+                                    <button type="button" class="small"
+                                            @click=${UI.wrap(e => deleteDrop(drop.kid))}><img src=${ASSETS['ui/delete']} alt=${T.delete} /></button>
+                                </td>
+                            </tr>
+                        `;
+                    })}
                     ${!drops.length ? html`<tr><td colspan="4" style="text-align: center;">${T.no_file}</td></tr>` : ''}
                 </tbody>
             </table>
@@ -102,9 +114,9 @@ async function runDrop() {
 
     if (route.drop != null) {
         cache.drop = new_drops.get(route.drop);
-        is_new = (cache.drop != null);
 
-        if (is_new) {
+        if (cache.drop != null) {
+            is_new = true;
             passphrase = cache.drop.passphrase;
         } else {
             try {
@@ -117,10 +129,28 @@ async function runDrop() {
                 cache.drop = null;
             }
 
-            if (!window.location.hash)
-                throw new Error('Missing decryption passphrase');
+            // Try to find key locally
+            {
+                let db = await openLocalDB();
+                let obj = await db.load('passphrases', cache.drop.kid);
 
-            passphrase = window.location.hash.substr(1);
+                if (obj != null) {
+                    let key = Base64.toBytes(session.ckey);
+                    let nonce = Base64.toBytes(obj.nonce);
+                    let cipher = Base64.toBytes(obj.cipher);
+
+                    let salsa = xsalsa20poly1305(key, nonce);
+                    let encoded = salsa.decrypt(cipher);
+
+                    is_new = true;
+                    passphrase = (new TextDecoder).decode(encoded);
+                }
+            }
+
+            if (passphrase == null && window.location.hash)
+                passphrase = window.location.hash.substr(1);
+            if (!passphrase)
+                throw new Error(T.message(`Missing decryption passphrase`));
         }
     } else {
         cache.drop = null;
@@ -152,7 +182,7 @@ async function runDrop() {
         let hash = `#${passphrase}`;
         let url = App.makeURL({ mode: 'drop', drop: cache.drop.kid }, hash);
 
-        window.location.hash = hash;
+        setTimeout(() => { window.location.hash = hash; }, 0);
 
         UI.main(html`
             <div class="header">${cache.drop.name}</div>
@@ -289,6 +319,23 @@ async function runSend() {
         let { salt, body, nonce, passphrase, key } = await createKey(password);
         let info = await createDrop(file, expiration, salt, body, nonce, !!password);
 
+        // Encrypt and save passphrase locally
+        {
+            let db = await openLocalDB();
+
+            let key = Base64.toBytes(session.ckey);
+            let nonce = new Uint8Array(24);
+            let salsa = xsalsa20poly1305(key, nonce);
+
+            let encoded = (new TextEncoder).encode(passphrase);
+            let cipher = salsa.encrypt(encoded);
+
+            await db.saveWithKey('passphrases', info.kid, {
+                nonce: Base64.toBase64(nonce),
+                cipher: Base64.toBase64(cipher)
+            }); 
+        }
+
         let drop = {
             kid: info.kid,
             name: file.name,
@@ -412,6 +459,20 @@ function makeQrCodeSvg(text, size, border = 2) {
            	<path d="${parts.join(" ")}" fill="#000000"/>
         </svg>
     `;
+}
+
+async function openLocalDB() {
+    let db_name = 'rokkerd:drops';
+
+    let db = await IDB.open(db_name, 1, (db, old_version) => {
+        switch (old_version) {
+            case null: {
+                db.createStore('passphrases');
+            } // fallthrough
+        }
+    });
+
+    return db;
 }
 
 export {
