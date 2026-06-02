@@ -211,7 +211,7 @@ async function runDrop() {
 }
 
 async function download(info, passphrase, password) {
-    let key = deriveKey(info.salt, passphrase, password);
+    let key = deriveKey(info.salt, info.body, info.nonce, passphrase, password);
 
     await sendDrop(info, key);
     window.location.href = '/api/drop/download/' + info.kid;
@@ -271,8 +271,8 @@ async function runSend() {
         let expiration = parseInt(elements.expiration.value, 10) * 86400000;
         let password = elements.password.value.trim();
 
-        let { salt, passphrase, key } = createKey(password);
-        let info = await createDrop(file, expiration, salt, !!password);
+        let { salt, body, nonce, passphrase, key } = createKey(password);
+        let info = await createDrop(file, expiration, salt, body, nonce, !!password);
 
         let drop = {
             kid: info.kid,
@@ -334,12 +334,14 @@ async function runSend() {
     }
 }
 
-async function createDrop(file, expiration, salt, protect) {
+async function createDrop(file, expiration, salt, body, nonce, protect) {
     let info = await Net.post('/api/drop/create', {
         name: file.name,
         size: file.size,
         expiration: expiration,
         salt: salt,
+        body: body,
+        nonce: nonce,
         protect: protect
     });
 

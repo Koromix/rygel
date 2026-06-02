@@ -3831,6 +3831,46 @@ async function scryptAsync(password, salt, opts) {
   swap32IfBE2(B32);
   return scryptOutput(password, dkLen, B, V, tmp);
 }
+
+// node_modules/@noble/hashes/hkdf.js
+function extract(hash, ikm, salt) {
+  ahash(hash);
+  if (salt === void 0)
+    salt = new Uint8Array(hash.outputLen);
+  return hmac(hash, salt, ikm);
+}
+var HKDF_COUNTER = /* @__PURE__ */ Uint8Array.of(0);
+var EMPTY_BUFFER = /* @__PURE__ */ Uint8Array.of();
+function expand(hash, prk, info, length = 32) {
+  ahash(hash);
+  anumber2(length, "length");
+  abytes2(prk, void 0, "prk");
+  const olen = hash.outputLen;
+  if (prk.length < olen)
+    throw new Error('"prk" must be at least HashLen octets');
+  if (length > 255 * olen)
+    throw new Error("Length must be <= 255*HashLen");
+  const blocks = Math.ceil(length / olen);
+  if (info === void 0)
+    info = EMPTY_BUFFER;
+  else
+    abytes2(info, void 0, "info");
+  const okm = new Uint8Array(blocks * olen);
+  const HMAC = hmac.create(hash, prk);
+  const HMACTmp = HMAC._cloneInto();
+  const T = new Uint8Array(HMAC.outputLen);
+  for (let counter = 0; counter < blocks; counter++) {
+    HKDF_COUNTER[0] = counter + 1;
+    HMACTmp.update(counter === 0 ? EMPTY_BUFFER : T).update(info).update(HKDF_COUNTER).digestInto(T);
+    okm.set(T, olen * counter);
+    HMAC._cloneInto(HMACTmp);
+  }
+  HMAC.destroy();
+  HMACTmp.destroy();
+  clean2(T, HKDF_COUNTER);
+  return okm.slice(0, length);
+}
+var hkdf = (hash, ikm, salt, info, length) => expand(hash, extract(hash, ikm, salt), info, length);
 export {
   _BLAKE3,
   _SHA224,
@@ -3854,9 +3894,12 @@ export {
   cmac,
   ctr,
   ecb,
+  expand,
+  extract,
   gcm,
   gcmsiv,
   hchacha,
+  hkdf,
   hsalsa,
   managedNonce,
   rngAesCtrDrbg128,

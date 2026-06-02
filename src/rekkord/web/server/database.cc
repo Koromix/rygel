@@ -8,7 +8,7 @@
 
 namespace K {
 
-const int DatabaseVersion = 38;
+const int DatabaseVersion = 39;
 
 static void KidGenFunc(sqlite3_context *ctx, int, sqlite3_value **argv)
 {
@@ -824,9 +824,34 @@ bool MigrateDatabase(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 38: {
+                bool success = db->RunMany(R"(
+                    DROP TABLE drops;
+
+                    CREATE TABLE drops (
+                        id INTEGER PRIMARY KEY NOT NULL,
+                        owner INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+                        kid BLOB NOT NULL,
+                        name TEXT NOT NULL,
+                        size INTEGER NOT NULL,
+                        expire INTEGER,
+                        salt TEXT NOT NULL,
+                        body TEXT NOT NULL,
+                        nonce TEXT NOT NULL,
+                        protect INTEGER CHECK(protect IN (0, 1)) NOT NULL,
+                        split INTEGER NOT NULL,
+                        uploaded INTEGER NOT NULL
+                    );
+                    CREATE UNIQUE INDEX drops_k ON drops (kid);
+                    CREATE INDEX drops_o ON drops (owner);
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            static_assert(DatabaseVersion == 38);
+            static_assert(DatabaseVersion == 39);
         }
 
         if (!db->Run("INSERT INTO migrations (version, build, timestamp) VALUES (?, ?, ?)",

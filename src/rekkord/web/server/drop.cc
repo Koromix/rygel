@@ -16,11 +16,10 @@ static const int64_t MaxExpiration = 90 * 86400000ull; // 90 days
 static bool AllowNoExpiration = true;
 static const int64_t StaleDelay = 7 * 86400000ull; // 7 days;
 
-static const int64_t ChunkSize = Mebibytes(2);
-static const Size ChunkSplit = Kibibytes(64);
-static const int64_t ChunkExtra = 16;
+static const int64_t FragmentSize = Mebibytes(2);
+static const Size ChunkSize = Kibibytes(64);
 
-static_assert(ChunkSize % ChunkSplit == 0);
+static_assert(FragmentSize % ChunkSize == 0);
 static_assert(crypto_secretbox_xsalsa20poly1305_NONCEBYTES == 24);
 static_assert(crypto_secretbox_xsalsa20poly1305_MACBYTES == 16);
 
@@ -107,7 +106,9 @@ void HandleDropCreate(http_IO *io)
     const char *name = nullptr;
     int64_t size = -1;
     int64_t expiration = -1;
-    const char *salt = nullptr;
+    Span<const char> salt = {};
+    Span<const char> body = {};
+    Span<const char> nonce = {};
     bool protect = false;
     {
         bool success = http_ParseJson(io, Kibibytes(4), [&](json_Parser *json) {
@@ -124,6 +125,10 @@ void HandleDropCreate(http_IO *io)
                     json->SkipNull() || json->ParseInt(&expiration);
                 } else if (key == "salt") {
                     json->ParseString(&salt);
+                } else if (key == "body") {
+                    json->ParseString(&body);
+                } else if (key == "nonce") {
+                    json->ParseString(&nonce);
                 } else if (key == "protect") {
                     json->ParseBool(&protect);
                 } else {
@@ -153,6 +158,10 @@ void HandleDropCreate(http_IO *io)
                     LogError("Invalid 'salt' parameter");
                     valid = false;
                 }
+                if (!IsStringValid(body)) {
+                    LogError("Invalid 'body' parameter");
+                    valid = false;
+                }
             }
 
             return valid;
@@ -170,12 +179,14 @@ void HandleDropCreate(http_IO *io)
     KID kid;
     FillKID(KIDType::Drop, &kid);
 
-    if (!db.Run(R"(INSERT INTO drops (kid, owner, name, size, expire, salt, protect, chunk, uploaded)
-                   VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 0))",
-                sq_Binding(kid.raw), session->userid, name, size, expire, salt, 0 + protect, ChunkSize))
+    if (!db.Run(R"(INSERT INTO drops (kid, owner, name, size, expire,
+                                      salt, body, nonce, protect, split, uploaded)
+                   VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, 0))",
+                sq_Binding(kid.raw), session->userid, name, size, expire,
+                salt, body, nonce, 0 + protect, FragmentSize))
         return;
 
-    Span<const char> json = Fmt(io->Allocator(), "{\"kid\": \"%1\", \"chunk\": %2}", kid, ChunkSize);
+    Span<const char> json = Fmt(io->Allocator(), "{\"kid\": \"%1\", \"split\": %2}", kid, FragmentSize);
     io->SendText(200, json, "application/json");
 }
 
@@ -260,7 +271,7 @@ void HandleDropUpload(http_IO *io)
     int64_t now = GetUnixTime();
 
     sq_Statement stmt;
-    if (!db.Prepare(R"(SELECT size, chunk
+    if (!db.Prepare(R"(SELECT size, split
                        FROM drops WHERE kid = ?1 AND
                                         owner = ?2 AND
                                         IIF(expire IS NOT NULL, expire > ?3, 1) AND
@@ -277,18 +288,19 @@ void HandleDropUpload(http_IO *io)
     }
 
     int64_t size = sqlite3_column_int64(stmt, 0);
-    int64_t chunk = sqlite3_column_int64(stmt, 1);
+    int64_t split = sqlite3_column_int64(stmt, 1);
 
-    int64_t fragments = (size + chunk - 1) / chunk;
-    int64_t expected = std::min(size - fragment * chunk, chunk) + ChunkExtra;
+    int64_t fragments = (size + split - 1) / split;
+    int64_t expected = std::min(size - fragment * split, split);
+    int64_t extra = (expected + ChunkSize - 1) / ChunkSize * 16;
 
     if (fragment >= fragments) {
         LogError("Excessive fragment index %1", fragment);
         io->SendError(422);
         return;
     }
-    if (expected != request.GetBodyLength()) {
-        LogError("Unexpected fragment size, expected %1", FmtMemSize(expected));
+    if (request.GetBodyLength() != expected + extra) {
+        LogError("Unexpected fragment size, expected %1", FmtMemSize(expected + extra));
         io->SendError(422);
         return;
     }
@@ -301,7 +313,7 @@ void HandleDropUpload(http_IO *io)
 
     Span<const char> key = Fmt(io->Allocator(), "%1/%2/%3", config.s3.drop_path, kid, fragment);
 
-    s3_PutResult ret = s3.PutObject(key, expected, [&](int64_t offset, Span<uint8_t> buf) {
+    s3_PutResult ret = s3.PutObject(key, expected + extra, [&](int64_t offset, Span<uint8_t> buf) {
         if (offset != reader.GetRawRead()) {
             LogError("Transient S3 upload error, please retry");
             return (Size)-1;
@@ -418,7 +430,8 @@ void HandleDropInfo(http_IO *io)
     int64_t now = GetUnixTime();
 
     sq_Statement stmt;
-    if (!db.Prepare(R"(SELECT kid_str(kid), name, size, salt, protect, chunk
+    if (!db.Prepare(R"(SELECT kid_str(kid), name, size, salt, body,
+                              nonce, protect, split
                        FROM drops WHERE kid = ?1 AND
                                         IIF(expire IS NOT NULL, expire > ?2, 1) AND
                                         uploaded = size)",
@@ -437,8 +450,10 @@ void HandleDropInfo(http_IO *io)
     const char *name = (const char *)sqlite3_column_text(stmt, 1);
     int64_t size = sqlite3_column_int64(stmt, 2);
     const char *salt = (const char *)sqlite3_column_text(stmt, 3);
-    bool protect = sqlite3_column_int(stmt, 4);
-    int64_t chunk = sqlite3_column_int64(stmt, 5);
+    const char *body = (const char *)sqlite3_column_text(stmt, 4);
+    const char *nonce = (const char *)sqlite3_column_text(stmt, 5);
+    bool protect = sqlite3_column_int(stmt, 6);
+    int64_t split = sqlite3_column_int64(stmt, 7);
 
     http_SendJson(io, 200, [&](json_Writer *json) {
         json->StartObject();
@@ -446,9 +461,11 @@ void HandleDropInfo(http_IO *io)
         json->Key("kid"); json->String(id);
         json->Key("name"); json->String(name);
         json->Key("size"); json->Int64(size);
-        json->Key("salt"); json->StringOrNull(salt);
+        json->Key("salt"); json->String(salt);
+        json->Key("body"); json->String(body);
+        json->Key("nonce"); json->String(nonce);
         json->Key("protect"); json->Bool(protect);
-        json->Key("chunk"); json->Int64(chunk);
+        json->Key("split"); json->Int64(split);
 
         json->EndObject();
     });
@@ -479,7 +496,7 @@ void HandleDropFragment(http_IO *io)
     int64_t now = GetUnixTime();
 
     sq_Statement stmt;
-    if (!db.Prepare(R"(SELECT size, chunk
+    if (!db.Prepare(R"(SELECT size, split
                        FROM drops WHERE kid = ?1 AND
                                         IIF(expire IS NOT NULL, expire > ?2, 1) AND
                                         uploaded = size)",
@@ -495,10 +512,11 @@ void HandleDropFragment(http_IO *io)
     }
 
     int64_t size = sqlite3_column_int64(stmt, 0);
-    int64_t chunk = sqlite3_column_int64(stmt, 1);
+    int64_t split = sqlite3_column_int64(stmt, 1);
 
-    int64_t fragments = (size + chunk - 1) / chunk;
-    int64_t expected = std::min(size - fragment * chunk, chunk) + ChunkExtra;
+    int64_t fragments = (size + split - 1) / split;
+    int64_t expected = std::min(size - fragment * split, split);
+    int64_t extra = (expected + ChunkSize - 1) / ChunkSize * 16;
 
     if (fragment >= fragments) {
         LogError("Excessive fragment index %1", fragment);
@@ -509,7 +527,7 @@ void HandleDropFragment(http_IO *io)
     io->ExtendTimeout(30000);
 
     StreamWriter writer;
-    if (!io->OpenForWrite(200, expected, &writer))
+    if (!io->OpenForWrite(200, expected + extra, &writer))
         return;
 
     Span<const char> key = Fmt(io->Allocator(), "%1/%2/%3", config.s3.drop_path, kid, fragment);

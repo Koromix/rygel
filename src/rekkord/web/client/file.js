@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
-import { scrypt, xsalsa20poly1305 } from 'vendor/noble/noble.bundle.js';
+import { scrypt, hkdf, sha256, chacha20poly1305 } from 'vendor/noble/noble.bundle.js';
 import { Util, Log, Net, HttpError } from 'lib/web/base/base.js';
 import { Base64 } from 'lib/web/base/mixer.js';
 
+// Use scrypt for age compatibility
 const WORK_FACTOR_LOG2 = 18;
+const BODY_CHUNK_SIZE = 65536;
+const SALT_PREFIX = 'age-encryption.org/v1/scrypt';
 
 const UPLOAD_QUEUE_SIZE = 2;
 const UPLOAD_AHEAD_LIMIT = 3;
@@ -15,12 +18,15 @@ const DOWNLOAD_QUEUE_SIZE = 2;
 const DOWNLOAD_AHEAD_LIMIT = 4;
 
 function createKey(password = null) {
+    let master = new Uint8Array(16);
+    crypto.getRandomValues(master);
+
     let passphrase;
     {
-        let key = new Uint8Array(32);
-        crypto.getRandomValues(key);
+        let rnd = new Uint8Array(32);
+        crypto.getRandomValues(rnd);
 
-        passphrase = Base64.toBase64Url(key);
+        passphrase = Base64.toBase64Url(rnd);
     }
 
     let salt;
@@ -37,23 +43,40 @@ function createKey(password = null) {
         password = '/' + password;
 
     let n = 2 ** WORK_FACTOR_LOG2;
-    let key = scrypt(passphrase + password, 'age-encryption.org/v1/scrypt' + salt, { N: n, r: 8, p: 1, dkLen: 32 });
+    let wrap = scrypt(passphrase + password, SALT_PREFIX + salt, { N: n, r: 8, p: 1, dkLen: 32 });
+    let chacha = chacha20poly1305(wrap, new Uint8Array(12));
+    let body = chacha.encrypt(master);
+
+    let nonce = new Uint8Array(16);
+    crypto.getRandomValues(nonce);
+    let info = (new TextEncoder).encode('payload');
+    let key = hkdf(sha256, master, nonce, info, 32);
 
     return {
         key: key,
         passphrase: passphrase,
-        salt: salt
+        salt: salt,
+        body: Base64.toBase64(body),
+        nonce: Base64.toBase64(nonce)
     };
 }
 
-function deriveKey(salt, passphrase, password = null) {
+function deriveKey(salt, body, nonce, passphrase, password = null) {
     if (password == null)
         password = '';
     if (password)
         password = '/' + password;
 
+    body = Base64.toBytes(body);
+    nonce = Base64.toBytes(nonce);
+
     let n = 2 ** WORK_FACTOR_LOG2;
-    let key = scrypt(passphrase + password, 'age-encryption.org/v1/scrypt' + salt, { N: n, r: 8, p: 1, dkLen: 32 });
+    let wrap = scrypt(passphrase + password, SALT_PREFIX + salt, { N: n, r: 8, p: 1, dkLen: 32 });
+    let chacha = chacha20poly1305(wrap, new Uint8Array(12));
+    let master = chacha.decrypt(body);
+
+    let info = (new TextEncoder).encode('payload');
+    let key = hkdf(sha256, master, nonce, info, 32);
 
     return key;
 }
@@ -83,23 +106,44 @@ async function* upload(info, key, iter) {
 async function* uploadFragments(info, key, iter) {
     let uploaded = 0;
     let idx = 0;
+    let counter = 0n;
 
-    let fragments = pumpChunks(iter, info.chunk);
+    let fragments = pump(iter, info.split);
+    let { value: next, done } = await fragments.next();
 
-    for await (let frag of fragments) {
+    while (!done) {
+        let frag = next;
+
+        // We need to know when the last fragment comes
+        {
+            let it = await fragments.next();
+
+            next = it.value;
+            done = it.done;
+        }
+
         let url = Util.pasteURL('/api/drop/upload', { kid: info.kid, fragment: idx });
 
-        let cipher = null;
+        let extra = Math.floor((frag.length + BODY_CHUNK_SIZE - 1) / BODY_CHUNK_SIZE) * 16;
+        let cipher = new Uint8Array(frag.length + extra);
 
-        // Encrypt fragment
-        {
-            let nonce = new Uint8Array(24);
-            (new DataView(nonce.buffer)).setUint32(0, idx, true);
+        // Encrypt chunks
+        for (let i = 0, j = 0; i < frag.length; i += BODY_CHUNK_SIZE, j += BODY_CHUNK_SIZE + 16) {
+            let nonce = new Uint8Array(12);
+            let last = done && (i + BODY_CHUNK_SIZE >= frag.length);
 
-            let salsa = xsalsa20poly1305(key, nonce);
+            (new DataView(nonce.buffer)).setBigUint64(3, counter++, false);
+            nonce[11] = last ? 1 : 0;
 
-            cipher = salsa.encrypt(frag);
+            let chacha = chacha20poly1305(key, nonce);
+            let sub = frag.subarray(i, Math.min(i + BODY_CHUNK_SIZE, frag.length));
+            let buf = chacha.encrypt(sub);
+
+            cipher.set(buf, j);
         }
+
+        uploaded += frag.length;
+        idx++;
 
         // Upload fragment
         {
@@ -114,9 +158,6 @@ async function* uploadFragments(info, key, iter) {
                 throw new HttpError(response.status, msg);
             }
         }
-
-        uploaded += frag.length;
-        idx++;
 
         yield frag;
     }
@@ -134,10 +175,13 @@ function download(info, key) {
 async function* downloadFragments(info, key) {
     let downloaded = 0;
     let idx = 0;
+    let counter = 0n;
 
     while (downloaded < info.size) {
         let url = Util.pasteURL('/api/drop/fragment', { kid: info.kid, fragment: idx });
-        let expected = Math.min(info.size - idx * info.chunk, info.chunk) + 16;
+
+        let expected = Math.min(info.size - idx * info.split, info.split);
+        let extra = Math.floor((expected + BODY_CHUNK_SIZE - 1) / BODY_CHUNK_SIZE) * 16;
 
         let cipher = null;
 
@@ -151,7 +195,7 @@ async function* downloadFragments(info, key) {
                 console.error(err);
             }
 
-            if (cipher?.length == expected)
+            if (cipher?.length == expected + extra)
                 break;
 
             // Transient S3 errors will result in truncated output, but a 200 status because the server
@@ -159,39 +203,47 @@ async function* downloadFragments(info, key) {
             await Util.waitFor(1000 + i * 2000);
         }
 
-        if (cipher?.length != expected)
+        if (cipher?.length != expected + extra)
             throw new Error('Failed to download file fragment');
-
-        let buf = null;
-
-        // Decrypt fragment
-        {
-            let nonce = new Uint8Array(24);
-            (new DataView(nonce.buffer)).setUint32(0, idx, true);
-
-            let salsa = xsalsa20poly1305(key, nonce);
-
-            buf = salsa.decrypt(cipher);
-        }
 
         downloaded += expected;
         idx++;
 
-        yield buf;
+        let frag = new Uint8Array(expected);
+
+        // Decrypt chunks
+        for (let i = 0, j = 0; i < cipher.length; i += BODY_CHUNK_SIZE + 16, j += BODY_CHUNK_SIZE) {
+            let nonce = new Uint8Array(12);
+            let last = (downloaded == info.size) && (i + BODY_CHUNK_SIZE + 16 >= cipher.length);
+
+            (new DataView(nonce.buffer)).setBigUint64(3, counter++, false);
+            nonce[11] = last ? 1 : 0;
+
+            let chacha = chacha20poly1305(key, nonce);
+            let sub = cipher.subarray(i, Math.min(i + BODY_CHUNK_SIZE + 16, cipher.length));
+            let buf = chacha.decrypt(sub);
+
+            frag.set(buf, j);
+        }
+
+        yield frag;
     }
 }
 
-async function* pumpChunks(iter, split) {
+async function* pump(iter, split) {
+    let buf = new Uint8Array(split);
+
     for (;;) {
-        let buf = new Uint8Array(split);
         let offset = 0;
 
         while (offset < split) {
             let { value: chunk, done } = await iter.next();
 
             if (done) {
-                if (offset)
+                if (offset) {
                     yield buf.subarray(0, offset);
+                    buf = new Uint8Array(split);
+                }
                 return;
             }
 
@@ -199,6 +251,7 @@ async function* pumpChunks(iter, split) {
                 buf.set(chunk.subarray(0, split - offset), offset);
 
                 yield buf;
+                buf = new Uint8Array(split);
 
                 chunk = chunk.subarray(split - offset);
                 offset = 0;
@@ -209,6 +262,7 @@ async function* pumpChunks(iter, split) {
         }
 
         yield buf;
+        buf = new Uint8Array(split);
     }
 }
 
