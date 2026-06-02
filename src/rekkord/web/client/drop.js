@@ -211,7 +211,19 @@ async function runDrop() {
 }
 
 async function download(info, passphrase, password) {
-    let key = deriveKey(info.salt, info.body, info.nonce, passphrase, password);
+    let key = null;
+
+    try {
+        key = deriveKey(info.salt, info.body, info.nonce, passphrase, password);
+    } catch (err) {
+        console.error(err);
+
+        if (info.protect) {
+            Log.error(T.message(`Invalid decryption key or password`));
+        } else {
+            Log.Error(T.message(`Invalid decryption key`));
+        }
+    }
 
     await sendDrop(info, key);
     window.location.href = '/api/drop/download/' + info.kid;

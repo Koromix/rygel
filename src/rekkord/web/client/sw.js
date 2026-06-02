@@ -69,9 +69,6 @@ function createDownloadStream(kid) {
                     resolve();
                 }
             } catch (err) {
-                if (err.message == 'invalid tag')
-                    err = new Error('Invalid decryption key or password');
-
                 controller.error(err);
 
                 console.error(err);
