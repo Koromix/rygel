@@ -76,7 +76,7 @@ koffi.struct(Type1, {
 ```
 
 > [!NOTE]
-> You must use a proper type object when you redefine the type. If you only have the name, use `koffi.resolve()` to get a type object from a type string.
+> You must use a proper type object when you redefine the type. If you only have the name, use `koffi.type()` to get a type object from a type string.
 >
 > ```js
 > const MyType = koffi.opaque('MyType');
