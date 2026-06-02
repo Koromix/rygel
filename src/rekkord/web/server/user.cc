@@ -1175,7 +1175,7 @@ void HandleSsoOidc(http_IO *io)
                 if (!db.Prepare(R"(INSERT INTO users (mail, username, creation, confirmed, version, ckey)
                                    VALUES (?1, ?2, ?3, ?4, 1, rnd_safe(32))
                                    ON CONFLICT DO UPDATE SET confirmed = confirmed
-                                   RETURNING id, creation, blob64(ckey))",
+                                   RETURNING id, creation, base64(ckey))",
                                 &stmt, identity.email, identity.email, now, 0 + verified))
                     return false;
 
