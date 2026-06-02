@@ -14,13 +14,6 @@
 #include "user.hh"
 #include "lib/native/sandbox/sandbox.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
-#if !defined(_WIN32)
-    #include <signal.h>
-    #include <sys/time.h>
-    #include <sys/types.h>
-    #include <sys/socket.h>
-    #include <netdb.h>
-#endif
 
 namespace K {
 
