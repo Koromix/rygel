@@ -13,7 +13,7 @@ import * as App from './main.js';
 import { route, cache, session } from './main.js';
 import { sendDrop, getProgress } from './relay.js';
 import * as UserMod from './user.js';
-import { formatSize, writeClipboard } from './common.js';
+import { formatSize, formatDuration, ProgressMeter, writeClipboard } from './common.js';
 import { createKey, deriveKey, upload } from './file.js';
 import { ASSETS } from '../assets/assets.js';
 
@@ -164,12 +164,18 @@ async function runDrop() {
     }
 
     if (cache.drop.uploaded < cache.drop.size) {
+        let progress = cache.drop.progress.measure();
+
         UI.main(html`
             <div class="header">${T.send_file}</div>
 
             <div class="block" style="align-items: center;">
                 <p>${cache.drop.name}</p>
                 <progress value=${cache.drop.uploaded} max=${cache.drop.size}></progress>
+                <div class="sub" style="text-align: center;">
+                    ${T.speed}${T._colon}${progress.rate != null ? formatSize(progress.rate * 1000) + '/s' : '-'}<br>
+                    ${T.remaining_time}${T._colon}${progress.remaining != null ? formatDuration(progress.remaining) : '-'}
+                </div>
                 ${cache.drop.error != null ? html`
                     <p style="color: red;">
                         ${T.error_has_occured}<br>
@@ -218,7 +224,11 @@ async function runDrop() {
                     ` : ''}
                     ${progress != null ? html`
                         <progress value=${progress.value} max=${progress.max}></progress>
-                        <div class="sub">${T.keep_tab_open_during_download}</div>
+                        <div class="sub" style="text-align: center;">
+                            ${T.speed}${T._colon}${progress.rate != null ? formatSize(progress.rate * 1000) + '/s' : '-'}<br>
+                            ${T.remaining_time}${T._colon}${progress.remaining != null ? formatDuration(progress.remaining) : '-'}
+                        </div>
+                        <div>${T.keep_tab_open_during_download}</div>
                     ` : ''}
                 </div>
 
@@ -343,6 +353,7 @@ async function runSend() {
             salt: salt,
             passphrase: passphrase,
             uploaded: 0,
+            progress: new ProgressMeter(file.size),
             error: null
         };
 
@@ -362,6 +373,8 @@ async function runSend() {
 
     function progress(drop, uploaded) {
         drop.uploaded = uploaded;
+        drop.progress.add(uploaded);
+
         App.go();
     }
 

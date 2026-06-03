@@ -53,6 +53,88 @@ function parseClock(clock) {
     return hh * 100 + mm;
 }
 
+function formatDuration(duration) {
+    duration = Math.round(duration / 1000);
+
+    if (duration < 5) {
+        return T.a_few_seconds;
+    } else if (duration < 60) {
+        return T.count(T.second_units, duration);
+    } else if (duration < 300) {
+        let minutes = Math.floor(duration / 60);
+        let seconds = duration % 60;
+
+        return T.count(T.minute_units, minutes) + ' ' + T.count(T.second_units, seconds);
+    } else if (duration < 3600) {
+        let minutes = Math.floor(duration / 60);
+        return T.count(T.minute_units, minutes);
+    } else if (duration < 5 * 3600) {
+        let hours = Math.floor(duration / 3600);
+        let minutes = Math.floor((duration % 3600) / 60);
+
+        return T.count(T.hour_units, hours) + ' ' + T.count(T.minute_units, minutes);
+    } else {
+        let hours = Math.floor(duration / 3600);
+        return T.count(T.hour_units, hours);
+    }
+}
+
+function ProgressMeter(max, duration = 10000) {
+    let self = this;
+
+    let points = [];
+
+    let stat = {
+        max: max,
+        value: null,
+        time: null,
+        rate: null,
+        remaining: null
+    };
+
+    this.add = function(value) {
+        let now = performance.now();
+
+        points.push({
+            value: value,
+            time: now
+        });
+
+        stat.value = value;
+        stat.time = now;
+
+        collect(now);
+    };
+
+    this.measure = function () {
+        let now = performance.now();
+
+        collect(now);
+
+        let first = points[0];
+        let last = points[points.length - 1];
+
+        if (last?.time - first?.time >= 1000) {
+            stat.rate = (last.value - first.value) / (now - first.time);
+            stat.remaining = (max - last.value) / stat.rate;
+        } else {
+            stat.rate = null;
+            stat.remaining = null;
+        }
+
+        return stat;
+    }
+
+    function collect(now) {
+        let j = 0;
+        for (let i = 0; i < points.length; i++) {
+            points[j] = points[i];
+            j += (points[i].time >= now - duration);
+        }
+        points.length = j;
+    }
+}
+
 async function writeClipboard(label, text) {
     await navigator.clipboard.writeText(text);
 
@@ -67,6 +149,9 @@ export {
     formatDays,
     formatClock,
     parseClock,
+    formatDuration,
+
+    ProgressMeter,
 
     writeClipboard
 }

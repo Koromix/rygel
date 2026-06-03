@@ -1,5 +1,7 @@
 {
     "keys": {
+        "_colon": " : ",
+        "a_few_seconds": "Quelques secondes",
         "account": "Compte",
         "account_is_ready": "Votre compte est prêt, veuillez vous connecter pour continuer.",
         "account_link": "Liaison de compte",
@@ -80,6 +82,11 @@
         "files": "Fichiers",
         "finalize_account": "Finaliser le compte",
         "incomplete": "Incomplet",
+        "hour_units": {
+            "1": "1 heure",
+            "even": "{1} heures",
+            "odd": "{1} heures"
+        },
         "keep_tab_open_during_download": "Gardez cet onglet ouvert pendant le téléchargement !",
         "key_prefix": "Préfixe de clé",
         "language": "Langage",
@@ -93,6 +100,11 @@
         "manual_snapshots": "Instantanés manuels",
         "maybe_create_account": "Créer un nouveau compte ?",
         "maybe_lost_password": "Mot de passe perdu ?",
+        "minute_units": {
+            "1": "1 minute",
+            "even": "{1} minutes",
+            "odd": "{1} minutes"
+        },
         "move": "Déplacer",
         "name": "Nom",
         "never": "Jamais",
@@ -127,6 +139,7 @@
         "renew_key": "Renouveler la clé",
         "repositories": "Dépôts",
         "repository": "Dépôt",
+        "remaining_time": "Temps restant estimé",
         "reset_password": "Réinitialiser le mot de passe",
         "run_daily_scans": "Exécuter des analyses quotidiennes du dépôt à partir de cette machine",
         "run_snapshot_item": "Exécuter 1 item",
@@ -135,6 +148,12 @@
         "scan_repository_at_x": "Analyser le dépôt à {1}",
         "scan_safety_warning": "Cette machine a besoin de la clé principale pour exécuter des analyses périodiques, assurez-vous qu'elle est sécurisée !",
         "scan_time": "Heure",
+        "second_units": {
+            "1": "1 seconde",
+            "even": "{1} secondes",
+            "odd": "{1} secondes"
+        },
+        "seconds": "Secondes",
         "send": "Envoyer",
         "send_file": "Envoyer un fichier",
         "set_password": "Définir le mot de passe",
@@ -148,6 +167,7 @@
             "zero": "0"
         },
         "snapshot_items": "Items de l'instantané",
+        "speed": "Vitesse",
         "status": "Statut",
         "stored": "Stockage",
         "success": "Terminé",

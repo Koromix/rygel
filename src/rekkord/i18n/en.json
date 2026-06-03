@@ -1,5 +1,7 @@
 {
     "keys": {
+        "_colon": ": ",
+        "a_few_seconds": "A few seconds",
         "account": "Account",
         "account_is_ready": "Your account is now ready, please login to continue.",
         "account_link": "Account link",
@@ -79,6 +81,11 @@
         "files": "Files",
         "finalize_account": "Finalize account",
         "incomplete": "Incomplete",
+        "hour_units": {
+            "1": "1 hour",
+            "even": "{1} hours",
+            "odd": "{1} hours"
+        },
         "keep_tab_open_during_download": "Keep this tab open until download is complete!",
         "key_prefix": "Key prefix",
         "language": "Language",
@@ -92,6 +99,11 @@
         "manual_snapshots": "Manual snapshots",
         "maybe_create_account": "Create a new account?",
         "maybe_lost_password": "Lost your password?",
+        "minute_units": {
+            "1": "1 minute",
+            "even": "{1} minutes",
+            "odd": "{1} minutes"
+        },
         "move": "Move",
         "name": "Name",
         "never": "Never",
@@ -126,6 +138,7 @@
         "renew_key": "Renew key",
         "repositories": "Repositories",
         "repository": "Repository",
+        "remaining_time": "Remaining time",
         "reset_password": "Reset password",
         "run_daily_scans": "Run daily repository scans from this machine",
         "run_snapshot_item": "Run 1 snapshot item",
@@ -134,6 +147,12 @@
         "scan_repository_at_x": "Scan repository at {1}",
         "scan_safety_warning": "This machine needs the master key to run periodic scans, make sure it is safe!",
         "scan_time": "Scan time",
+        "second_units": {
+            "1": "1 second",
+            "even": "{1} seconds",
+            "odd": "{1} seconds"
+        },
+        "seconds": "Seconds",
         "send": "Send",
         "send_file": "Send file",
         "set_password": "Set password",
@@ -147,6 +166,7 @@
             "zero": "0"
         },
         "snapshot_items": "Snapshot items",
+        "speed": "Speed",
         "status": "Status",
         "stored": "Stored",
         "success": "Success",

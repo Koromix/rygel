@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
 import { Util, Log, Net } from 'lib/web/base/base.js';
+import { ProgressMeter } from './common.js';
 import * as App from './main.js';
 
 const PROGRESS_EXPIRATION = 2 * 60000;
@@ -65,11 +66,8 @@ function handleMessage(e) {
         case 'progress': {
             let [kid, value, max] = msg.args;
 
-            progress_map.set(kid, {
-                time: performance.now(),
-                value: value,
-                max: max
-            });
+            let meter = progress_map.getOrInsertComputed(kid, () => new ProgressMeter(max));
+            meter.add(value);
 
             App.run();
 
@@ -88,21 +86,19 @@ function handleMessage(e) {
 }
 
 function getProgress(kid) {
-    let info = progress_map.get(kid);
+    let meter = progress_map.get(kid);
 
-    if (info == null)
+    if (meter == null)
         return null;
-    if (performance.now() >= info.time + PROGRESS_EXPIRATION) {
+
+    let stat = meter.measure();
+
+    if (performance.now() >= stat.time + PROGRESS_EXPIRATION) {
         progress_map.delete(kid);
         return null;
     }
 
-    let progress = {
-        value: info.value,
-        max: info.max
-    };
-
-    return progress;
+    return stat;
 }
 
 export {
