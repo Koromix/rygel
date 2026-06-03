@@ -92,7 +92,7 @@ function ProgressMeter(max, duration = 10000) {
         remaining: null
     };
 
-    this.add = function(value) {
+    this.add = function (value) {
         let now = performance.now();
 
         points.push({
