@@ -10768,8 +10768,10 @@ bool CanCompressFile(const char *filename)
     if (TestStrI(extension, ".db") || TestStrI(extension, ".sqlite3"))
         return false;
 
-    const char *mimetype = GetMimeType(extension);
+    const char *mimetype = GetMimeType(extension, nullptr);
 
+    if (!mimetype)
+        return false;
     if (StartsWith(mimetype, "video/"))
         return false;
     if (StartsWith(mimetype, "audio/"))
