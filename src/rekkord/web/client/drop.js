@@ -130,7 +130,7 @@ async function runDrop() {
             }
 
             // Try to find key locally
-            {
+            if (cache.drop != null) {
                 let db = await openLocalDB();
                 let obj = await db.load('passphrases', cache.drop.kid);
 
