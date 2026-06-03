@@ -29,13 +29,8 @@ async function createKey(password = null) {
         passphrase = Base64.toBase64Url(rnd);
     }
 
-    let salt;
-    {
-        let rnd = new Uint8Array(16);
-        crypto.getRandomValues(rnd);
-
-        salt = Base64.toBase64(rnd);
-    }
+    let salt = new Uint8Array(16);
+    crypto.getRandomValues(salt);
 
     if (password == null)
         password = '';
@@ -43,7 +38,7 @@ async function createKey(password = null) {
         password = '/' + password;
 
     let n = 2 ** WORK_FACTOR_LOG2;
-    let wrap = await scryptAsync(passphrase + password, SALT_PREFIX + salt, { N: n, r: 8, p: 1, dkLen: 32 });
+    let wrap = await scryptAsync(passphrase + password, makeSaltBuffer(salt), { N: n, r: 8, p: 1, dkLen: 32 });
     let chacha = chacha20poly1305(wrap, new Uint8Array(12));
     let body = chacha.encrypt(master);
 
@@ -55,7 +50,7 @@ async function createKey(password = null) {
     return {
         key: key,
         passphrase: passphrase,
-        salt: salt,
+        salt: Base64.toBase64(salt),
         body: Base64.toBase64(body),
         nonce: Base64.toBase64(nonce)
     };
@@ -67,11 +62,12 @@ async function deriveKey(salt, body, nonce, passphrase, password = null) {
     if (password)
         password = '/' + password;
 
+    salt = Base64.toBytes(salt);
     body = Base64.toBytes(body);
     nonce = Base64.toBytes(nonce);
 
     let n = 2 ** WORK_FACTOR_LOG2;
-    let wrap = await scryptAsync(passphrase + password, SALT_PREFIX + salt, { N: n, r: 8, p: 1, dkLen: 32 });
+    let wrap = await scryptAsync(passphrase + password, makeSaltBuffer(salt), { N: n, r: 8, p: 1, dkLen: 32 });
     let chacha = chacha20poly1305(wrap, new Uint8Array(12));
     let master = chacha.decrypt(body);
 
@@ -79,6 +75,15 @@ async function deriveKey(salt, body, nonce, passphrase, password = null) {
     let key = hkdf(sha256, master, nonce, info, 32);
 
     return key;
+}
+
+function makeSaltBuffer(salt) {
+    let buf = new Uint8Array(SALT_PREFIX.length + salt.length);
+
+    buf.set((new TextEncoder).encode(SALT_PREFIX), 0);
+    buf.set(salt, SALT_PREFIX.length);
+
+    return buf;
 }
 
 async function* upload(info, key, iter) {
