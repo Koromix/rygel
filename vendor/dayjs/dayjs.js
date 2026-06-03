@@ -10,6 +10,7 @@ import quarterOfYear from 'dayjs/plugin/quarterOfYear';
 import advancedFormat from 'dayjs/plugin/advancedFormat';
 import localizedFormat from 'dayjs/plugin/localizedFormat';
 import isoWeek from 'dayjs/plugin/isoWeek';
+import relativeTime from 'dayjs/plugin/relativeTime';
 
 dayjs.locale('en');
 
@@ -20,5 +21,6 @@ dayjs.extend(quarterOfYear);
 dayjs.extend(advancedFormat);
 dayjs.extend(localizedFormat);
 dayjs.extend(isoWeek);
+dayjs.extend(relativeTime);
 
 export default dayjs;

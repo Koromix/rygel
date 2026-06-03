@@ -31,7 +31,7 @@ var require_dayjs_min = __commonJS({
       "object" == typeof exports && "undefined" != typeof module ? module.exports = e() : "function" == typeof define && define.amd ? define(e) : (t = "undefined" != typeof globalThis ? globalThis : t || self).dayjs = e();
     })(exports, (function() {
       "use strict";
-      var t = 1e3, e = 6e4, n = 36e5, r = "millisecond", i = "second", s = "minute", u = "hour", a = "day", o = "week", c = "month", f = "quarter", h = "year", d = "date", l = "Invalid Date", $ = /^(\d{4})[-/]?(\d{1,2})?[-/]?(\d{0,2})[Tt\s]*(\d{1,2})?:?(\d{1,2})?:?(\d{1,2})?[.:]?(\d+)?$/, y = /\[([^\]]+)]|Y{1,4}|M{1,4}|D{1,2}|d{1,4}|H{1,2}|h{1,2}|a|A|m{1,2}|s{1,2}|Z{1,2}|SSS/g, M = { name: "en", weekdays: "Sunday_Monday_Tuesday_Wednesday_Thursday_Friday_Saturday".split("_"), months: "January_February_March_April_May_June_July_August_September_October_November_December".split("_"), ordinal: function(t2) {
+      var t = 1e3, e = 6e4, n = 36e5, r = "millisecond", i = "second", s = "minute", u = "hour", a = "day", o = "week", c = "month", f = "quarter", h = "year", d = "date", l = "Invalid Date", $ = /^(\d{4})[-/]?(\d{1,2})?[-/]?(\d{0,2})[Tt\s]*(\d{1,2})?:?(\d{1,2})?:?(\d{1,2})?[.:]?(\d+)?$/, y = /\[([^\]]+)]|YYYY|YY|M{1,4}|D{1,2}|d{1,4}|H{1,2}|h{1,2}|a|A|m{1,2}|s{1,2}|Z{1,2}|SSS/g, M = { name: "en", weekdays: "Sunday_Monday_Tuesday_Wednesday_Thursday_Friday_Saturday".split("_"), months: "January_February_March_April_May_June_July_August_September_October_November_December".split("_"), ordinal: function(t2) {
         var e2 = ["th", "st", "nd", "rd"], n2 = t2 % 100;
         return "[" + t2 + (e2[(n2 - 20) % 10] || e2[n2] || e2[0]) + "]";
       } }, m = function(t2, e2, n2) {
@@ -290,9 +290,9 @@ var require_dayjs_min = __commonJS({
         }, m2.toString = function() {
           return this.$d.toUTCString();
         }, M2;
-      })(), k = _.prototype;
-      return O.prototype = k, [["$ms", r], ["$s", i], ["$m", s], ["$H", u], ["$W", a], ["$M", c], ["$y", h], ["$D", d]].forEach((function(t2) {
-        k[t2[1]] = function(e2) {
+      })(), Y = _.prototype;
+      return O.prototype = Y, [["$ms", r], ["$s", i], ["$m", s], ["$H", u], ["$W", a], ["$M", c], ["$y", h], ["$D", d]].forEach((function(t2) {
+        Y[t2[1]] = function(e2) {
           return this.$g(e2, t2[0], t2[1]);
         };
       })), O.extend = function(t2, e2) {
@@ -747,6 +747,52 @@ var require_isoWeek = __commonJS({
   }
 });
 
+// node_modules/dayjs/plugin/relativeTime.js
+var require_relativeTime = __commonJS({
+  "node_modules/dayjs/plugin/relativeTime.js"(exports, module) {
+    !(function(r, e) {
+      "object" == typeof exports && "undefined" != typeof module ? module.exports = e() : "function" == typeof define && define.amd ? define(e) : (r = "undefined" != typeof globalThis ? globalThis : r || self).dayjs_plugin_relativeTime = e();
+    })(exports, (function() {
+      "use strict";
+      return function(r, e, t) {
+        r = r || {};
+        var n = e.prototype, o = { future: "in %s", past: "%s ago", s: "a few seconds", m: "a minute", mm: "%d minutes", h: "an hour", hh: "%d hours", d: "a day", dd: "%d days", M: "a month", MM: "%d months", y: "a year", yy: "%d years" };
+        function i(r2, e2, t2, o2) {
+          return n.fromToBase(r2, e2, t2, o2);
+        }
+        t.en.relativeTime = o, n.fromToBase = function(e2, n2, i2, d2, u) {
+          for (var f, a, s, l = i2.$locale().relativeTime || o, h = r.thresholds || [{ l: "s", r: 44, d: "second" }, { l: "m", r: 89 }, { l: "mm", r: 44, d: "minute" }, { l: "h", r: 89 }, { l: "hh", r: 21, d: "hour" }, { l: "d", r: 35 }, { l: "dd", r: 25, d: "day" }, { l: "M", r: 45 }, { l: "MM", r: 10, d: "month" }, { l: "y", r: 17 }, { l: "yy", d: "year" }], m = h.length, c = 0; c < m; c += 1) {
+            var y = h[c];
+            y.d && (f = d2 ? t(e2).diff(i2, y.d, true) : i2.diff(e2, y.d, true));
+            var p = (r.rounding || Math.round)(Math.abs(f));
+            if (s = f > 0, p <= y.r || !y.r) {
+              p <= 1 && c > 0 && (y = h[c - 1]);
+              var v = l[y.l];
+              u && (p = u("" + p)), a = "string" == typeof v ? v.replace("%d", p) : v(p, n2, y.l, s);
+              break;
+            }
+          }
+          if (n2) return a;
+          var M = s ? l.future : l.past;
+          return "function" == typeof M ? M(a) : M.replace("%s", a);
+        }, n.to = function(r2, e2) {
+          return i(r2, e2, this, true);
+        }, n.from = function(r2, e2) {
+          return i(r2, e2, this);
+        };
+        var d = function(r2) {
+          return r2.$u ? t.utc() : t();
+        };
+        n.toNow = function(r2) {
+          return this.to(d(this), r2);
+        }, n.fromNow = function(r2) {
+          return this.from(d(this), r2);
+        };
+      };
+    }));
+  }
+});
+
 // dayjs.js
 var import_dayjs = __toESM(require_dayjs_min());
 var import_en = __toESM(require_en());
@@ -758,6 +804,7 @@ var import_quarterOfYear = __toESM(require_quarterOfYear());
 var import_advancedFormat = __toESM(require_advancedFormat());
 var import_localizedFormat = __toESM(require_localizedFormat());
 var import_isoWeek = __toESM(require_isoWeek());
+var import_relativeTime = __toESM(require_relativeTime());
 import_dayjs.default.locale("en");
 import_dayjs.default.extend(import_utc.default);
 import_dayjs.default.extend(import_timezone.default);
@@ -766,6 +813,7 @@ import_dayjs.default.extend(import_quarterOfYear.default);
 import_dayjs.default.extend(import_advancedFormat.default);
 import_dayjs.default.extend(import_localizedFormat.default);
 import_dayjs.default.extend(import_isoWeek.default);
+import_dayjs.default.extend(import_relativeTime.default);
 var dayjs_default = import_dayjs.default;
 export {
   dayjs_default as default
