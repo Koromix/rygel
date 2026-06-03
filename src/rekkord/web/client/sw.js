@@ -19,14 +19,6 @@ function handleMessage(e) {
     }
 }
 
-// Quick SW activation after update
-self.addEventListener('install', e => {
-    self.skipWaiting();
-})
-self.addEventListener('activate', e => {
-    e.waitUntil(clients.claim());
-});
-
 self.addEventListener('fetch', e => {
     let url = new URL(e.request.url);
 
