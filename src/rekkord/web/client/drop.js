@@ -33,7 +33,7 @@ async function runDrops() {
     let drops = UI.tableValues('drops', cache.drops, 'name');
     let now = (new Date).valueOf();
 
-    let db = await openLocalDB();
+    let db = await openLocalDB(session.userid);
     let passphrases = new Set(await db.list('passphrases'));
 
     UI.main(html`
@@ -130,20 +130,25 @@ async function runDrop() {
             }
 
             // Try to find key locally
-            if (cache.drop != null) {
-                let db = await openLocalDB();
+            if (session != null && cache.drop != null) {
+                let db = await openLocalDB(session.userid);
                 let obj = await db.load('passphrases', cache.drop.kid);
 
                 if (obj != null) {
-                    let key = Base64.toBytes(session.ckey);
-                    let nonce = Base64.toBytes(obj.nonce);
-                    let cipher = Base64.toBytes(obj.cipher);
+                    try {
+                        let key = Base64.toBytes(session.ckey);
+                        let nonce = Base64.toBytes(obj.nonce);
+                        let cipher = Base64.toBytes(obj.cipher);
 
-                    let salsa = xsalsa20poly1305(key, nonce);
-                    let encoded = salsa.decrypt(cipher);
+                        let salsa = xsalsa20poly1305(key, nonce);
+                        let encoded = salsa.decrypt(cipher);
 
-                    is_new = true;
-                    passphrase = (new TextDecoder).decode(encoded);
+                        is_new = true;
+                        passphrase = (new TextDecoder).decode(encoded);
+                    } catch (err) {
+                        // Best effort
+                        console.error(err);
+                    }
                 }
             }
 
@@ -330,8 +335,8 @@ async function runSend() {
         let info = await createDrop(file, expiration, salt, body, nonce, !!password);
 
         // Encrypt and save passphrase locally
-        {
-            let db = await openLocalDB();
+        if (session != null) {
+            let db = await openLocalDB(session.userid);
 
             let key = Base64.toBytes(session.ckey);
             let nonce = new Uint8Array(24);
@@ -474,8 +479,8 @@ function makeQrCodeSvg(text, size, border = 2) {
     `;
 }
 
-async function openLocalDB() {
-    let db_name = 'rokkerd:drops';
+async function openLocalDB(id) {
+    let db_name = `rokkerd:${id}:drops` ;
 
     let db = await IDB.open(db_name, 1, (db, old_version) => {
         switch (old_version) {
