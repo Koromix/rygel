@@ -365,7 +365,7 @@ async function generateExportKey(e) {
             d.refresh();
         });
 
-        d.action(T.copy_to_clipboard, { disabled: api_key == null }, () => writeClipboard(T.api_key, api_key));
+        d.action(T.copy_to_clipboard, { disabled: api_key == null }, () => Util.writeClipboard(T.api_key, api_key));
     });
 }
 
@@ -406,13 +406,6 @@ function renderDropItem(meta, item) {
             ${status ? html`<div>&nbsp;✓\uFE0E</div>` : ''}
        </button>
     `;
-}
-
-async function writeClipboard(label, text) {
-    await navigator.clipboard.writeText(text);
-
-    let msg = T.message(`{1} copied to clipboard`, label);
-    Log.info(msg);
 }
 
 async function togglePanels(left, right) {

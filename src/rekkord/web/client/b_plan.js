@@ -5,17 +5,16 @@ import { render, html, live, unsafeHTML } from 'vendor/lit-html/lit-html.bundle.
 import dayjs from 'vendor/dayjs/dayjs.bundle.js';
 import { Util, Log, Net } from 'lib/web/base/base.js';
 import * as UI from 'lib/web/ui/ui.js';
-import * as App from './main.js';
-import { route, cache } from './main.js';
-import * as UserMod from './user.js';
-import { runChannel } from './repository.js';
+import * as App from './m_main.js';
+import { route, cache } from './m_main.js';
+import * as UserMod from './m_user.js';
+import { runChannel } from './b_repository.js';
 import {
     DAYS,
     formatDays,
     formatClock,
     parseClock,
-    writeClipboard
-} from './common.js';
+} from './m_format.js';
 import { ASSETS } from '../assets/assets.js';
 
 async function runPlans() {
@@ -416,7 +415,7 @@ async function showKey(plan, key, secret) {
                     <label>
                         <span>${T.api_key}</span>
                         <input type="text" style="width: 40em;" readonly value=${full} />
-                        <button type="button" class="small" @click=${UI.wrap(e => writeClipboard(T.api_key, full))}>${T.copy}</button>
+                        <button type="button" class="small" @click=${UI.wrap(e => Util.writeClipboard(T.api_key, full))}>${T.copy}</button>
                     </label>
 
                     <div style="color: red; font-style: italic; text-align: center">${T.please_copy_api_key}</div>

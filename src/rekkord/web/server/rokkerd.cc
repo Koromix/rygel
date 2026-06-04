@@ -228,7 +228,7 @@ static void InitAssets()
         if (TestStr(asset.name, "src/rekkord/web/client/index.html")) {
             asset_index = &asset;
             asset_map.Set("/", &asset);
-        } else if (TestStr(asset.name, "src/rekkord/web/client/sw.js")) {
+        } else if (TestStr(asset.name, "src/rekkord/web/client/d_sw.js")) {
             asset_map.Set("/sw.js", &asset);
         } else if (TestStr(asset.name, "src/rekkord/web/assets/main/rekkord.webp")) {
             asset_map.Set("/favicon.webp", &asset);
@@ -242,9 +242,9 @@ static void InitAssets()
                 const char *url = Fmt(&asset_alloc, "/static/%1/%2", shared_etag, name).ptr;
                 asset_map.Set(url, &asset);
 
-                if (name == "main.js") {
+                if (name == "m_main.js") {
                     asset_js = url;
-                } else if (name == "main.css") {
+                } else if (name == "m_main.css") {
                     asset_css = url;
                 } else if (EndsWith(name, ".js")) {
                     asset_bundles.Append(url);

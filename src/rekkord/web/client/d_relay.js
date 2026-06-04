@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
-import { Util, Log, Net } from 'lib/web/base/base.js';
-import { ProgressMeter } from './common.js';
-import * as App from './main.js';
+import { Util, Log, Net, ProgressMeter } from 'lib/web/base/base.js';
+import * as App from './m_main.js';
 
 const PROGRESS_EXPIRATION = 2 * 60000;
 

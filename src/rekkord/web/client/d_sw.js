@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
 import { Util, Log, Net } from 'lib/web/base/base.js';
-import { download } from './file.js';
+import { download } from './d_file.js';
 
 const EXPIRATION_DELAY = 5 * 60000; // 5 minutes
 

@@ -79,69 +79,6 @@ function formatDuration(duration) {
     }
 }
 
-function ProgressMeter(max, duration = 10000) {
-    let self = this;
-
-    let points = [];
-
-    let stat = {
-        max: max,
-        value: null,
-        time: null,
-        rate: null,
-        remaining: null
-    };
-
-    this.add = function (value) {
-        let now = performance.now();
-
-        points.push({
-            value: value,
-            time: now
-        });
-
-        stat.value = value;
-        stat.time = now;
-
-        collect(now);
-    };
-
-    this.measure = function () {
-        let now = performance.now();
-
-        collect(now);
-
-        let first = points[0];
-        let last = points[points.length - 1];
-
-        if (last?.time - first?.time >= 1000) {
-            stat.rate = (last.value - first.value) / (now - first.time);
-            stat.remaining = (max - last.value) / stat.rate;
-        } else {
-            stat.rate = null;
-            stat.remaining = null;
-        }
-
-        return stat;
-    }
-
-    function collect(now) {
-        let j = 0;
-        for (let i = 0; i < points.length; i++) {
-            points[j] = points[i];
-            j += (points[i].time >= now - duration);
-        }
-        points.length = j;
-    }
-}
-
-async function writeClipboard(label, text) {
-    await navigator.clipboard.writeText(text);
-
-    let msg = T.message(`{1} copied to clipboard`, label);
-    Log.info(msg);
-}
-
 export {
     DAYS,
 
@@ -150,8 +87,4 @@ export {
     formatClock,
     parseClock,
     formatDuration,
-
-    ProgressMeter,
-
-    writeClipboard
 }

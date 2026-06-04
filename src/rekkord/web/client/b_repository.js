@@ -5,10 +5,10 @@ import { render, html, live, unsafeHTML } from 'vendor/lit-html/lit-html.bundle.
 import dayjs from 'vendor/dayjs/dayjs.bundle.js';
 import { Util, Log, Net } from 'lib/web/base/base.js';
 import * as UI from 'lib/web/ui/ui.js';
-import * as App from './main.js';
-import { route, cache } from './main.js';
-import * as UserMod from './user.js';
-import { formatSize } from './common.js';
+import * as App from './m_main.js';
+import { route, cache } from './m_main.js';
+import * as UserMod from './m_user.js';
+import { formatSize } from './m_format.js';
 import { ASSETS } from '../assets/assets.js';
 
 async function runRepositories() {

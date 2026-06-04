@@ -5,16 +5,23 @@ import { render, html, live, svg } from 'vendor/lit-html/lit-html.bundle.js';
 import { xsalsa20poly1305 } from 'vendor/noble/noble.bundle.js';
 import dayjs from 'vendor/dayjs/dayjs.bundle.js';
 import QRC from 'vendor/qrcodegen/js/qrcodegen.js';
-import { Util, LruMap, Log, Net, HttpError } from 'lib/web/base/base.js';
+import { Util, LruMap, Log, Net, HttpError, ProgressMeter } from 'lib/web/base/base.js';
 import * as IDB from 'lib/web/base/indexeddb.js';
 import { Base64 } from 'lib/web/base/mixer.js';
 import * as UI from 'lib/web/ui/ui.js';
-import * as App from './main.js';
-import { route, cache, session } from './main.js';
-import { sendDrop, getProgress } from './relay.js';
-import * as UserMod from './user.js';
-import { formatSize, formatDuration, ProgressMeter, writeClipboard } from './common.js';
-import { createKey, deriveKey, upload } from './file.js';
+import * as App from './m_main.js';
+import { route, cache, session } from './m_main.js';
+import * as UserMod from './m_user.js';
+import {
+    formatSize,
+    formatDuration
+} from './m_format.js';
+import { sendDrop, getProgress } from './d_relay.js';
+import {
+    createKey,
+    deriveKey,
+    upload
+} from './d_file.js';
 import { ASSETS } from '../assets/assets.js';
 
 const EXPIRATION_DAYS = [1, 7, 30, 90];
@@ -206,7 +213,7 @@ async function runDrop() {
             </div>
 
             <div class="actions">
-                <button @click=${UI.wrap(e => writeClipboard(T.download_link, ENV.url + url))}>${T.copy_download_link}</button>
+                <button @click=${UI.wrap(e => Util.writeClipboard(T.download_link, ENV.url + url))}>${T.copy_download_link}</button>
             </div>
         `);
     } else {
