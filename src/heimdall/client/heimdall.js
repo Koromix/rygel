@@ -24,6 +24,7 @@ const MARK_OFFSET = 36;
 const ALIGN_WIDTH = 16;
 
 const DEFAULT_SETTINGS = {
+    time: 1,
     tree: 300,
     interpolation: 'linear',
     view: null,
@@ -31,6 +32,14 @@ const DEFAULT_SETTINGS = {
     warning: false,
     filter: false,
     highlight: false
+};
+
+const TIME_UNITS = {
+    s: 1,
+    m: 60,
+    h: 3600,
+    d: 86400,
+    y: 365 * 86400
 };
 
 // Assets
@@ -1086,6 +1095,17 @@ async function runSettings() {
                     </div>
 
                     <div class="main">
+                        <div class="section">${T.data}</div>
+                        <label>
+                            <span>${T.time_unit}</span>
+                            <select name="time">
+                                ${Object.keys(TIME_UNITS).map(key => {
+                                    let value = TIME_UNITS[key];
+                                    return html`<option value=${value} ?selected=${settings.time == value}>${T.time_units[key]}</option>`;
+                                })}
+                            </select>
+                        </label>
+
                         <div class="section">${T.display_options}</div>
                         <label>
                             <span>${T.language}</span>
@@ -1129,6 +1149,7 @@ async function runSettings() {
                 settings.filter = elements.filter.checked;
                 settings.highlight = elements.highlight.checked;
                 settings.interpolation = elements.interpolation.value;
+                settings.time = parseInt(elements.time.value, 10);
 
                 saveState();
             }
@@ -1627,11 +1648,13 @@ function draw() {
         ctx.strokeStyle = 'white';
         ctx.lineWidth = 1;
 
+        let [factor, unit] = pickTimeUnit(position.zoom);
+
         let relative = !!settings.align;
-        let scale = zoomToScale(position.zoom);
+        let scale = zoomToScale(position.zoom) * factor;
         let start = Math.floor(position.x / scale);
         let end = Math.ceil((position.x + layout.time.width) / scale);
-        let chars = Math.max(countDigits(start, relative), countDigits(end, relative));
+        let chars = Math.max(countDigits(start, relative), countDigits(end, relative)) + unit.length;
         let height = 8 * window.devicePixelRatio;
 
         let step1 = Math.ceil(height / scale);
@@ -1653,7 +1676,7 @@ function draw() {
 
         for (let time = start2; time < end; time += step2) {
             let x = time * scale - position.x;
-            let text = (relative && time > 0 ? '+' : '') + time;
+            let text = (relative && time > 0 ? '+' : '') + time + unit;
 
             runner.text(x, height * 3, text, { align: 8 });
         }
@@ -1682,6 +1705,19 @@ function draw() {
                    ` | Entities : ${world.entities.length}`;
         runner.text(layout.main.left + 12, layout.main.top + 8, text, { align: 7, background: '#ffffffcc' });
     }
+}
+
+function pickTimeUnit(zoom) {
+    let factors = Object.values(TIME_UNITS);
+    let suffixes = Object.keys(TIME_UNITS).map(key => T.time_suffixes[key]);
+
+    let scale = zoomToScale(zoom) / settings.time;
+    let idx = 0;
+
+    while (idx + 1 < factors.length && scale * factors[idx] < 1)
+        idx++;
+
+    return [factors[idx] / settings.time, suffixes[idx]];
 }
 
 function countDigits(value, relative) {

@@ -19,6 +19,7 @@
         "cancel": "Annuler",
         "comment": "Commentaire",
         "concepts": "Concepts",
+        "data": "Données",
         "display_options": "Options d'affichage",
         "filter_empty_entities": "Cacher les entités filtrées",
         "help": "Aide",
@@ -48,6 +49,21 @@
             "negative": "Négatif",
             "positive": "Positif",
             "wip": "Non décidé"
+        },
+        "time_suffixes": {
+            "s": "s",
+            "m": "m",
+            "h": "h",
+            "d": "j",
+            "y": "a"
+        },
+        "time_unit": "Unité de temps",
+        "time_units": {
+            "s": "Secondes (s)",
+            "m": "Minutes (m)",
+            "h": "Heures (h)",
+            "d": "Jours (j)",
+            "y": "Années (a)"
         },
         "tree_area": "Arbre / panneau gauche",
         "view": "Vue",
