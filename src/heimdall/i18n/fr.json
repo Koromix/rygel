@@ -55,6 +55,7 @@
             "m": "m",
             "h": "h",
             "d": "j",
+            "M": "M",
             "y": "a"
         },
         "time_unit": "Unité de temps",
@@ -63,6 +64,7 @@
             "m": "Minutes (m)",
             "h": "Heures (h)",
             "d": "Jours (j)",
+            "M": "Mois (M)",
             "y": "Années (a)"
         },
         "tree_area": "Arbre / panneau gauche",

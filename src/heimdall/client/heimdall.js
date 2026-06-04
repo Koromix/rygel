@@ -35,11 +35,12 @@ const DEFAULT_SETTINGS = {
 };
 
 const TIME_UNITS = {
-    s: 1,
-    m: 60,
-    h: 3600,
-    d: 86400,
-    y: 365 * 86400
+    s: { factor: 1, step: 60 },
+    m: { factor: 60, step: 60 },
+    h: { factor: 3600, step: 24 },
+    d: { factor: 86400, step: 7 },
+    M: { factor: 28 * 86400, step: 12 },
+    y: { factor: 365 * 86400, step: 10 }
 };
 
 // Assets
@@ -1649,16 +1650,17 @@ function draw() {
         ctx.lineWidth = 1;
 
         let [factor, unit] = pickTimeUnit(position.zoom);
+        let suffix = T.time_suffixes[unit];
 
         let relative = !!settings.align;
         let scale = zoomToScale(position.zoom) * factor;
         let start = Math.floor(position.x / scale);
         let end = Math.ceil((position.x + layout.time.width) / scale);
-        let chars = Math.max(countDigits(start, relative), countDigits(end, relative)) + unit.length;
+        let chars = Math.max(countDigits(start, relative), countDigits(end, relative)) + suffix.length;
         let height = 8 * window.devicePixelRatio;
 
         let step1 = Math.ceil(height / scale);
-        let step2 = Math.ceil(1.4 * height * chars / scale);
+        let step2 = pickTimeStep(unit, Math.ceil(height * chars / scale));
 
         // Stabilize chosen start values to go through 0
         let start1 = start - start % step1 - step1;
@@ -1676,7 +1678,7 @@ function draw() {
 
         for (let time = start2; time < end; time += step2) {
             let x = time * scale - position.x;
-            let text = (relative && time > 0 ? '+' : '') + time + unit;
+            let text = (relative && time > 0 ? '+' : '') + time + suffix;
 
             runner.text(x, height * 3, text, { align: 8 });
         }
@@ -1708,16 +1710,26 @@ function draw() {
 }
 
 function pickTimeUnit(zoom) {
-    let factors = Object.values(TIME_UNITS);
-    let suffixes = Object.keys(TIME_UNITS).map(key => T.time_suffixes[key]);
+    let factors = Object.values(TIME_UNITS).map(it => it.factor);
+    let units = Object.keys(TIME_UNITS);
 
     let scale = zoomToScale(zoom) / settings.time;
     let idx = 0;
 
-    while (idx + 1 < factors.length && scale * factors[idx] < 1)
+    while (idx + 1 < factors.length && scale * factors[idx] < 10)
         idx++;
 
-    return [factors[idx] / settings.time, suffixes[idx]];
+    return [factors[idx] / settings.time, units[idx]];
+}
+
+function pickTimeStep(unit, value) {
+    if (value == 1)
+        return value;
+
+    let step = TIME_UNITS[unit].step;
+    let next = Math.floor((value + step - 1) / step) * step;
+
+    return next;
 }
 
 function countDigits(value, relative) {

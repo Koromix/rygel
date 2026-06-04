@@ -55,6 +55,7 @@
             "m": "m",
             "h": "h",
             "d": "d",
+            "M": "M",
             "y": "y"
         },
         "time_unit": "Time unit",
@@ -63,6 +64,7 @@
             "m": "Minutes (m)",
             "h": "Hours (h)",
             "d": "Days (d)",
+            "M": "Months (M)",
             "y": "Years (y)"
         },
         "tree_area": "Tree area / left panel",
