@@ -35,7 +35,12 @@ async function initRelay() {
 }
 
 function updateController() {
-    sw = navigator.serviceWorker.controller;
+    if (sw != null && navigator.serviceWorker.controller != sw) {
+        sw = navigator.serviceWorker.controller;
+        restartCalls();
+    } else {
+        sw = navigator.serviceWorker.controller;
+    }
 
     if (sw_resolve != null) {
         sw_resolve();
@@ -90,6 +95,8 @@ async function callWorker(type, ...args) {
         let id = ++next_message;
 
         msg_handlers.set(id, {
+            type: type,
+            args: args,
             resolve: resolve,
             reject: reject
         });
@@ -105,6 +112,31 @@ async function callWorker(type, ...args) {
 
     let ret = await p;
     return ret;
+}
+
+function restartCalls() {
+    let handlers = Array.from(msg_handlers.values());
+
+    msg_handlers.clear();
+
+    for (let handler of handlers) {
+        let id = ++next_message;
+
+        let msg = {
+            id: id,
+            type: handler.type,
+            args: handler.args
+        };
+
+        msg_handlers.set(id, {
+            type: handler.type,
+            args: handler.args,
+            resolve: handler.resolve,
+            reject: handler.reject
+        });
+
+        sw.postMessage(msg);
+    }
 }
 
 function getProgress(kid) {
