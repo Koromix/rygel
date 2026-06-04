@@ -17,14 +17,32 @@ self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
 self.addEventListener('fetch', e => {
     let url = new URL(e.request.url);
 
-    if (e.request.method == 'GET' && url.pathname.startsWith('/api/drop/download/')) {
+    if (url.pathname.startsWith('/api/drop/download/')) {
         let kid = url.pathname.substr(19);
-        let [response, wait] = createDownloadStream(kid);
 
-        e.waitUntil(wait);
-        e.respondWith(response);
+        if (e.request.method == 'HEAD') {
+            try {
+                let [info] = findDrop(kid);
 
-        return;
+                let response = new Response('', {
+                    status: 200,
+                    headers: prepareHeaders(info)
+                });
+                e.respondWith(response);
+
+                return;
+            } catch (err) {
+                console.error(err);
+                // Unknown drop, go on and fail hard (with server relay)
+            }
+        } else if (e.request.method == 'GET') {
+            let [response, wait] = createDownloadStream(kid);
+
+            e.waitUntil(wait);
+            e.respondWith(response);
+
+            return;
+        }
     }
 
     e.respondWith(fetch(e.request));
@@ -68,16 +86,22 @@ function createDownloadStream(kid) {
 
     let options = {
         status: 200,
-        headers: {
-            'Content-Type': 'application/octet-stream',
-            'Content-Disposition': `attachment; filename="${info.name}"`,
-            'Content-Length': info.size
-        }
+        headers: prepareHeaders(info)
     };
 
     let response = new Response(stream, options);
 
     return [response, wait];
+}
+
+function prepareHeaders(info) {
+    let headers = {
+        'Content-Type': 'application/octet-stream',
+        'Content-Disposition': `attachment; filename="${info.name}"`,
+        'Content-Length': info.size
+    };
+
+    return headers;
 }
 
 function handleMessage(e) {

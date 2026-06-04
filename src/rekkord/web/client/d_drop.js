@@ -279,6 +279,13 @@ async function download(info, passphrase, password) {
     }
 
     await sendDrop(info, key);
+
+    let url = '/api/drop/download/' + info.kid;
+    let response = await Net.fetch(url, { method: 'HEAD' });
+
+    if (!response.ok)
+        throw new Error(T.message(`Failed to initiate service worker download, refresh the page`));
+
     window.location.href = '/api/drop/download/' + info.kid;
 }
 
