@@ -9,7 +9,7 @@
 
         <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1" />
 
-        <style>
+        <style nonce="{{ NONCE }}">
             body {
                 display: flex;
                 flex-direction: column;
@@ -61,7 +61,7 @@
             }
         </style>
 
-        <script>
+        <script nonce="{{ NONCE }}">
             // Version: {{ VERSION }}
             // Compiler: {{ COMPILER }}
         </script>

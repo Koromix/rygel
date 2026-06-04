@@ -9,7 +9,7 @@
 
         <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1" />
 
-        <style>
+        <style nonce="{{ NONCE }}">
             html { height: 100%; }
 
             body {
@@ -65,7 +65,7 @@
             }
         </style>
 
-        <script>
+        <script nonce="{{ NONCE }}">
             // Version: {{ VERSION }}
             // Compiler: {{ COMPILER }}
 
@@ -85,30 +85,33 @@
                 <span style="color: red;">⚠&#xFE0E; <b>Cette application nécessite un navigateur récent et Javascript</b></span><br/><br/>
                 Nous vous recommandons <u>l'un de ces navigateurs</u> :<br/><br/>
                 <b>Mozilla Firefox</b> <span class="version">(version ≥ 116)</span><br/>
-                <b>Google Chrome</b> <span class="version">(version ≥ 87)</span><br/>
-                <b>Microsoft Edge</b> <span class="version">(version ≥ 87)</span><br/>
-                <b>Apple Safari</b> <span class="version">(version ≥ 15)</span>
+                <b>Google Chrome</b> <span class="version">(version ≥ 108)</span><br/>
+                <b>Microsoft Edge</b> <span class="version">(version ≥ 108)</span><br/>
+                <b>Apple Safari</b> <span class="version">(version ≥ 16.4)</span>
             </div></div>
         </noscript>
-        <script>
-            var SUPPORTED_BROWSERS =
+        <script nonce="{{ NONCE }}">
+            BROWSERS =
+                '<div id="fatal"><div>' +
+                    '<span style="color: red;"><b>Ce navigateur n\'est pas supporté, ou il s\'agit d\'une version trop ancienne</b></span><br/><br/>' +
                     'Nous vous recommandons <u>l\'un de ces navigateurs</u> :<br/><br/>' +
                     '<b>Mozilla Firefox</b> <span class="browser">(version ≥ 116)</span><br/>' +
-                    '<b>Google Chrome</b> <span class="browser">(version ≥ 87)</span><br/>' +
-                    '<b>Microsoft Edge</b> <span class="browser">(version ≥ 87)</span><br/>' +
-                    '<b>Apple Safari</b> <span class="browser">(version ≥ 15)</span>';
+                    '<b>Google Chrome</b> <span class="browser">(version ≥ 108)</span><br/>' +
+                    '<b>Microsoft Edge</b> <span class="browser">(version ≥ 108)</span><br/>' +
+                    '<b>Apple Safari</b> <span class="browser">(version ≥ 16.4)</span>' +
+                '</div></div>';
         </script>
         <script nomodule>
             document.body.innerHTML +=
                 '<div id="fatal"><div>' +
                     '<span style="color: red;">⚠\uFE0E <b>Ce navigateur n\'est pas supporté, ou il s\'agit d\'une version trop ancienne</b></span><br/><br/>' +
-                    SUPPORTED_BROWSERS +
+                    BROWSERS +
                 '</div></div>';
         </script>
 
         <main></main>
 
-        <script type="module">
+        <script nonce="{{ NONCE }}" type="module">
             document.body.classList.add('loading');
 
             import { load, start } from '{{ JS }}';
@@ -133,7 +136,7 @@
                         '<div id="fatal"><div>' +
                             '<span style="color: red;">⚠\uFE0E <b>Une erreur est survenue pendant le chargement</b></span><br/>' +
                             err.message + '<br/><br/>' +
-                            window.SUPPORTED_BROWSERS +
+                            window.BROWSERS +
                         '</div></div>';
                 } finally {
                     document.body.classList.remove('loading');

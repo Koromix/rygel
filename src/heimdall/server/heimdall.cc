@@ -24,10 +24,13 @@ struct StaticRoute {
 
 Config config;
 
-static HashTable<const char *, StaticRoute> assets_map;
-static AssetInfo assets_index;
-static AssetInfo assets_root;
-static BlockAllocator assets_alloc;
+static HashTable<const char *, StaticRoute> asset_map;
+static const AssetInfo *asset_root = nullptr;
+static const AssetInfo *asset_index = nullptr;
+static const char *asset_js = nullptr;
+static const char *asset_css = nullptr;
+static HeapArray<const char *> asset_bundles;
+static BlockAllocator asset_alloc;
 static char shared_etag[17];
 
 static int RunMigrate(Span<const char *> arguments)
@@ -247,8 +250,12 @@ static bool NameContainsHash(Span<const char> name)
 
 static void InitAssets()
 {
-    assets_map.Clear();
-    assets_alloc.ReleaseAll();
+    asset_map.Clear();
+    asset_index = nullptr;
+    asset_js = nullptr;
+    asset_css = nullptr;
+    asset_bundles.Clear();
+    asset_alloc.ReleaseAll();
 
     // Update ETag
     {
@@ -257,89 +264,48 @@ static void InitAssets()
         Fmt(shared_etag, "%1", FmtHex(buf, 16));
     }
 
-    HeapArray<const char *> bundles;
-    const char *js = nullptr;
-    const char *css = nullptr;
-
     for (const AssetInfo &asset: GetEmbedAssets()) {
-        if (TestStr(asset.name, "src/heimdall/client/index.html")) {
-            assets_index = asset;
-        } else if (TestStr(asset.name, "src/heimdall/client/root.html")) {
-            assets_root = asset;
+        if (TestStr(asset.name, "src/heimdall/client/root.html")) {
+            asset_root = &asset;
+        } else if (TestStr(asset.name, "src/heimdall/client/index.html")) {
+            asset_index = &asset;
         } else {
             Span<const char> name = SplitStrReverseAny(asset.name, K_PATH_SEPARATORS);
 
             if (NameContainsHash(name)) {
-                const char *url = Fmt(&assets_alloc, "/static/%1", name).ptr;
+                const char *url = Fmt(&asset_alloc, "/static/%1", name).ptr;
                 StaticRoute route = { url, &asset, nullptr };
 
-                assets_map.Set(route);
+                asset_map.Set(route);
             } else {
-                const char *url = Fmt(&assets_alloc, "/static/%1/%2", shared_etag, name).ptr;
+                const char *url = Fmt(&asset_alloc, "/static/%1/%2", shared_etag, name).ptr;
                 StaticRoute route = { url, &asset, nullptr };
 
                 if (EndsWith(name, ".js") || EndsWith(name, ".css")) {
-                    const char *sourcemap = Fmt(&assets_alloc, "%1.map", asset.name).ptr;
+                    const char *sourcemap = Fmt(&asset_alloc, "%1.map", asset.name).ptr;
 
                     if (FindEmbedAsset(sourcemap)) {
-                        route.sourcemap = Fmt(&assets_alloc, "%1.map", name).ptr;
+                        route.sourcemap = Fmt(&asset_alloc, "%1.map", name).ptr;
                     }
                 }
 
-                assets_map.Set(route);
+                asset_map.Set(route);
 
                 if (name == "heimdall.js") {
-                    js = url;
+                    asset_js = url;
                 } else if (name == "heimdall.css") {
-                    css = url;
-                } else if (EndsWith(name, ".js")) {
-                    bundles.Append(url);
+                    asset_css = url;
+                } else {
+                    asset_bundles.Append(url);
                 }
             }
         }
     }
 
-    K_ASSERT(js);
-    K_ASSERT(css);
-
-    assets_index.data = PatchFile(assets_index, &assets_alloc, [&](Span<const char> expr, StreamWriter *writer) {
-        Span<const char> key = TrimStr(expr);
-
-        if (key == "VERSION") {
-            writer->Write(FelixVersion);
-        } else if (key == "COMPILER") {
-            writer->Write(FelixCompiler);
-        } else if (key == "JS") {
-            writer->Write(js);
-        } else if (key == "CSS") {
-            writer->Write(css);
-        }  else if (key == "BUNDLES") {
-            json_CompactWriter json(writer);
-
-            json.StartObject();
-            for (const char *bundle: bundles) {
-                const char *name = SplitStrReverseAny(bundle, K_PATH_SEPARATORS).ptr;
-                json.Key(name); json.String(bundle);
-            }
-            json.EndObject();
-        } else {
-            Print(writer, "{{%1}}", expr);
-        }
-    });
-
-    assets_root.data = PatchFile(assets_root, &assets_alloc, [&](Span<const char> expr, StreamWriter *writer) {
-        Span<const char> key = TrimStr(expr);
-
-        if (key == "VERSION") {
-            writer->Write(FelixVersion);
-        } else if (key == "COMPILER") {
-            writer->Write(FelixCompiler);
-        } else if (key == "CSS") {
-            writer->Write(css);
-        } else {
-            Print(writer, "{{%1}}", expr);
-        }
-    });
+    K_ASSERT(asset_root);
+    K_ASSERT(asset_index);
+    K_ASSERT(asset_js);
+    K_ASSERT(asset_css);
 }
 
 static void AttachStatic(http_IO *io, const AssetInfo &asset, const char *sourcemap, int64_t max_age)
@@ -361,7 +327,7 @@ static void AttachStatic(http_IO *io, const AssetInfo &asset, const char *source
     }
 }
 
-static void HandleIndex(http_IO *io)
+static void HandleRoot(http_IO *io)
 {
     HeapArray<const char *> names;
 
@@ -382,10 +348,29 @@ static void HandleIndex(http_IO *io)
 
     std::sort(names.begin(), names.end(), [](const char *str1, const char *str2) { return CmpStr(str1, str2) < 0; });
 
-    Span<const uint8_t> root = PatchFile(assets_root, io->Allocator(), [&](Span<const char> expr, StreamWriter *writer) {
+    Span<const char> nonce = Fmt(io->Allocator(), "%1", FmtRandom(16));
+    Span<const char> csp = Fmt(io->Allocator(), "base-uri 'none'; "
+                                                "default-src 'self'; "
+                                                "script-src 'self' 'nonce-%1'; "
+                                                "style-src 'self' 'unsafe-inline'; "
+                                                "img-src 'self' data:; "
+                                                "frame-ancestors 'none'; "
+                                                "form-action 'none'", nonce);
+    io->AddHeader("Content-Security-Policy", csp);
+    io->AddHeader("X-Content-Type-Options", "nosniff");
+
+    Span<const uint8_t> root = PatchFile(*asset_root, io->Allocator(), [&](Span<const char> expr, StreamWriter *writer) {
         Span<const char> key = TrimStr(expr);
 
-        if (key == "PROJECTS") {
+        if (key == "VERSION") {
+            writer->Write(FelixVersion);
+        } else if (key == "COMPILER") {
+            writer->Write(FelixCompiler);
+        } else if (key == "CSS") {
+            writer->Write(asset_css);
+        } else if (key == "NONCE") {
+            writer->Write(nonce);
+        } else if (key == "PROJECTS") {
             for (const char *name: names) {
                 Print(writer, "<a href=\"/%1\">%2</a>\n", FmtUrlSafe(name, "-._~"), FmtHtmlSafe(name));
             }
@@ -394,7 +379,50 @@ static void HandleIndex(http_IO *io)
         }
     });
 
-    io->SendAsset(200, root, "text/html", assets_root.compression_type);
+    io->SendAsset(200, root, "text/html", asset_root->compression_type);
+}
+
+static void HandleIndex(http_IO *io)
+{
+    Span<const char> nonce = Fmt(io->Allocator(), "%1", FmtRandom(16));
+    Span<const char> csp = Fmt(io->Allocator(), "base-uri 'none'; "
+                                                "default-src 'self'; "
+                                                "script-src 'self' 'nonce-%1'; "
+                                                "style-src 'self' 'unsafe-inline'; "
+                                                "img-src 'self' data:; "
+                                                "frame-ancestors 'none'; "
+                                                "form-action 'none'", nonce);
+    io->AddHeader("Content-Security-Policy", csp);
+    io->AddHeader("X-Content-Type-Options", "nosniff");
+
+    Span<const uint8_t> root = PatchFile(*asset_index, io->Allocator(), [&](Span<const char> expr, StreamWriter *writer) {
+        Span<const char> key = TrimStr(expr);
+
+        if (key == "VERSION") {
+            writer->Write(FelixVersion);
+        } else if (key == "COMPILER") {
+            writer->Write(FelixCompiler);
+        } else if (key == "JS") {
+            writer->Write(asset_js);
+        } else if (key == "CSS") {
+            writer->Write(asset_css);
+        }  else if (key == "BUNDLES") {
+            json_CompactWriter json(writer);
+
+            json.StartObject();
+            for (const char *bundle: asset_bundles) {
+                const char *name = SplitStrReverseAny(bundle, K_PATH_SEPARATORS).ptr;
+                json.Key(name); json.String(bundle);
+            }
+            json.EndObject();
+        } else if (key == "NONCE") {
+            writer->Write(nonce);
+        } else {
+            Print(writer, "{{%1}}", expr);
+        }
+    });
+
+    io->SendAsset(200, root, "text/html", asset_root->compression_type);
 }
 
 static void HandleRequest(http_IO *io)
@@ -437,7 +465,7 @@ static void HandleRequest(http_IO *io)
     io->AddHeader("Permissions-Policy", "interest-cohort=()");
 
     if (url == "/") {
-        HandleIndex(io);
+        HandleRoot(io);
         return;
     }
 
@@ -487,10 +515,10 @@ static void HandleRequest(http_IO *io)
                 return;
             }
 
-            AttachStatic(io, assets_index, nullptr, 0);
+            HandleIndex(io);
             return;
         } else {
-            const StaticRoute *route = assets_map.Find(request.path);
+            const StaticRoute *route = asset_map.Find(request.path);
 
             if (route) {
                 int64_t max_age = StartsWith(url, "/static/") ? (28ll * 86400000) : 0;
