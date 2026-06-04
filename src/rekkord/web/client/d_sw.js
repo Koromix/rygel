@@ -11,13 +11,8 @@ let clear_timer = null;
 
 onmessage = handleMessage;
 
-function handleMessage(e) {
-    let msg = e.data;
-
-    switch (msg.type) {
-        case 'drop': { wrapAsync(e.source, msg.id, updateDrop, [e.source, ...msg.args]); } break;
-    }
-}
+self.addEventListener('install', e => e.waitUntil(self.skipWaiting()));
+self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
 
 self.addEventListener('fetch', e => {
     let url = new URL(e.request.url);
@@ -83,6 +78,14 @@ function createDownloadStream(kid) {
     let response = new Response(stream, options);
 
     return [response, wait];
+}
+
+function handleMessage(e) {
+    let msg = e.data;
+
+    switch (msg.type) {
+        case 'drop': { wrapAsync(e.source, msg.id, updateDrop, [e.source, ...msg.args]); } break;
+    }
 }
 
 function updateDrop(client, info, key) {

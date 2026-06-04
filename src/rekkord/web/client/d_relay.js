@@ -6,6 +6,9 @@ import * as App from './m_main.js';
 
 const PROGRESS_EXPIRATION = 2 * 60000;
 
+let sw = null;
+let sw_resolve = null;
+
 let next_message = 0;
 let msg_handlers = new Map;
 
@@ -13,36 +16,31 @@ let progress_map = new Map;
 
 async function initRelay() {
     navigator.serviceWorker.register('/sw.js');
+    navigator.serviceWorker.addEventListener('controllerchange', updateController);
     navigator.serviceWorker.addEventListener('message', handleMessage);
 
     await navigator.serviceWorker.ready;
-}
 
-async function sendDrop(info, key) {
-    await callWorker('drop', info, key);
-}
+    sw = navigator.serviceWorker.controller;
 
-async function callWorker(type, ...args) {
-    let p = new Promise((resolve, reject) => {
-        let id = ++next_message;
-
-        msg_handlers.set(id, {
-            resolve: resolve,
-            reject: reject
+    if (sw == null) {
+        await new Promise((resolve, reject) => {
+            sw_resolve = resolve;
+            setTimeout(updateController, 10000);
         });
 
-        let msg = {
-            id: id,
-            type: type,
-            args: args
-        };
+        if (sw == null)
+            throw new Error('Failed to register service worker');
+    }
+}
 
-        let sw = navigator.serviceWorker.controller;
-        sw.postMessage(msg);
-    });
+function updateController() {
+    sw = navigator.serviceWorker.controller;
 
-    let ret = await p;
-    return ret;
+    if (sw_resolve != null) {
+        sw_resolve();
+        sw_resolve = null;
+    }
 }
 
 function handleMessage(e) {
@@ -71,7 +69,6 @@ function handleMessage(e) {
             App.run();
 
             // Try to keep the service worker alive, especially on Firefox!
-            let sw = navigator.serviceWorker.controller;
             sw.postMessage({ type: 'alive', args: [] });
         } break;
 
@@ -82,6 +79,32 @@ function handleMessage(e) {
     }
 
     msg_handlers.delete(msg.id);
+}
+
+async function sendDrop(info, key) {
+    await callWorker('drop', info, key);
+}
+
+async function callWorker(type, ...args) {
+    let p = new Promise((resolve, reject) => {
+        let id = ++next_message;
+
+        msg_handlers.set(id, {
+            resolve: resolve,
+            reject: reject
+        });
+
+        let msg = {
+            id: id,
+            type: type,
+            args: args
+        };
+
+        sw.postMessage(msg);
+    });
+
+    let ret = await p;
+    return ret;
 }
 
 function getProgress(kid) {
