@@ -584,6 +584,8 @@ function combine(entities, idx, levels, align) {
         for (let evt of entity.events) {
             if (align.warning && !evt.warning)
                 continue;
+            if (align.warning && !levels[0].concepts.has(evt.concept))
+                continue;
             if (align.concepts.size && !align.concepts.has(evt.concept))
                 continue;
 
@@ -592,6 +594,8 @@ function combine(entities, idx, levels, align) {
         for (let period of entity.periods) {
             if (align.warning)
                 continue;
+            if (align.warning && !levels[0].concepts.has(period.concept))
+                continue;
             if (align.concepts.size && !align.concepts.has(period.concept))
                 continue;
 
@@ -599,6 +603,8 @@ function combine(entities, idx, levels, align) {
         }
         for (let value of entity.values) {
             if (align.warning && !value.warning)
+                continue;
+            if (align.warning && !levels[0].concepts.has(value.concept))
                 continue;
             if (align.concepts.size && !align.concepts.has(value.concept))
                 continue;
