@@ -133,9 +133,9 @@ static HfaInfo IsHFA(const TypeInfo *type)
 
 bool AnalyseFunction(Napi::Env, InstanceData *instance, FunctionInfo *func)
 {
-    Size gpr_index = 0;
-    Size vec_index = 0;
-    Size stack_offset = 0;
+    int gpr_index = 0;
+    int vec_index = 0;
+    int stack_offset = 0;
 
 #if defined(_M_ARM64EC)
     int gpr_max = func->variadic ? 4 : 8;
@@ -542,8 +542,10 @@ bool AnalyseFunction(Napi::Env, InstanceData *instance, FunctionInfo *func)
     return true;
 }
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-parameter"
+#if defined(__GNUC__) || defined(__clang__)
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Wunused-parameter"
+#endif
 
 namespace {
 #if defined(MUST_TAIL)
@@ -1091,7 +1093,9 @@ namespace {
 #undef OP
 }
 
-#pragma GCC diagnostic pop
+#if defined(__GNUC__) || defined(__clang__)
+    #pragma GCC diagnostic pop
+#endif
 
 napi_value CallData::Run(const FunctionInfo *func, napi_value *args)
 {

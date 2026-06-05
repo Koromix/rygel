@@ -559,7 +559,7 @@ const TypeInfo *ReshapeType(InstanceData *instance, const TypeInfo *type, int32_
                     member.type = ReshapeType(instance, member.type, stride, flags);
 
                     reshaped->members.Append(member);
-                    reshaped->size += AlignLen(member.type->size, stride);
+                    reshaped->size += (int)AlignLen(member.type->size, stride);
                 }
             } break;
 

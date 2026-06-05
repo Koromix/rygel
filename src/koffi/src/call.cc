@@ -257,8 +257,6 @@ Size CallData::PushStringValue(napi_value value, const char **out_str)
 
     // Fast path for small strings
     if (available >= 4096) [[likely]] {
-        char *ptr = (char *)mem->heap.ptr;
-
         napi_status status = napi_get_value_string_utf8(env, value, ptr, 4096, &len);
         if (status == napi_string_expected)
             return -1;

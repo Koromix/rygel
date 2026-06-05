@@ -36,8 +36,8 @@ namespace K {
 
 #define NAPI_OK(Call) \
     do { \
-        napi_status status = (Call); \
-        K_ASSERT(status == napi_ok); \
+        napi_status _status = (Call); \
+        K_ASSERT(_status == napi_ok); \
     } while (false)
 
 static const Size DefaultSyncStackSize = Mebibytes(1);
