@@ -1101,7 +1101,7 @@ async function runSettings() {
                             <span>${T.time_unit}</span>
                             <select name="time">
                                 ${Object.keys(TIME_UNITS).map(key => {
-                                    let value = TIME_UNITS[key];
+                                    let value = TIME_UNITS[key].factor;
                                     return html`<option value=${value} ?selected=${settings.time == value}>${T.time_units[key]}</option>`;
                                 })}
                             </select>
