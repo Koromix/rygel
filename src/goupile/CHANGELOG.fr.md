@@ -8,7 +8,7 @@
 
 * Correction de divers bugs d'affichage dans la table de suivi sur Chrome.
 * Ajout du HID dans les exports de données (colonne `__hid`).
-* Prise en charge du groupes de modalités dans enumRadio, enumRadio et multiCheck.
+* Prise en charge des groupes de modalités dans enumRadio, enumRadio et multiCheck.
 * Prise en charge du préfixe de variable « ? » pour désactiver une saisie obligatoire.
 * Utilisation de c-ares pour la résolution des noms DNS.
 
