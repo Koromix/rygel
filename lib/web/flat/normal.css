@@ -256,8 +256,6 @@ th {
     background: #f8f8f8;
     font-variant: small-caps;
     text-align: left;
-    user-select: none;
-    -webkit-user-select: none;
 }
 td {
     background: white;
