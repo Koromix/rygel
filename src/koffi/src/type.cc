@@ -620,7 +620,7 @@ bool CanReturnType(const TypeInfo *type)
     if (type->countedby)
         return false;
 
-    if (type->primitive == PrimitiveKind::Void && !TestStr(type->name, "void"))
+    if (type->primitive == PrimitiveKind::Void && type != type->instance->void_type)
         return false;
     if (type->primitive == PrimitiveKind::Array)
         return false;
