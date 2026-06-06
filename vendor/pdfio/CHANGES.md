@@ -2,6 +2,13 @@ Changes in PDFio
 ================
 
 
+v1.6.4 - 2026-06-05
+-------------------
+
+- Fixed `pdfioPageCopy` implementation to not force a CropBox value (Issue #166)
+- Fixed AES padding (Issue #167, Issue #169, Issue #170)
+
+
 v1.6.3 - 2026-04-30
 -------------------
 

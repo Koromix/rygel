@@ -109,9 +109,6 @@ pdfioPageCopy(pdfio_file_t *pdf,	// I - PDF file
   while (parent != NULL && depth < PDFIO_MAX_DEPTH);
 
   // Make sure the page dictionary has all of the required keys...
-  if (!_pdfioDictGetValue(dstdict, "CropBox"))
-    pdfioDictSetRect(dstdict, "CropBox", &srcpage->pdf->crop_box);
-
   if (!_pdfioDictGetValue(dstdict, "MediaBox"))
     pdfioDictSetRect(dstdict, "MediaBox", &srcpage->pdf->media_box);
 
