@@ -597,7 +597,7 @@ public:
 
         switch (architecture) {
             case HostArchitecture::x86_64: {
-                Fmt(&buf, " -mpopcnt -msse4.1 -msse4.2 -mssse3 -mcx16");
+                Fmt(&buf, " -march=x86-64-v2");
 
                 if (features & (int)CompileFeature::AESNI) {
                     Fmt(&buf, " -maes -mpclmul");
@@ -1303,7 +1303,7 @@ public:
         // Architecture flags
         switch (architecture)  {
             case HostArchitecture::x86_64: {
-                Fmt(&buf, " -mpopcnt -msse4.1 -msse4.2 -mssse3 -mcx16");
+                Fmt(&buf, " -march=x86-64-v2");
 
                 if (features & (int)CompileFeature::AESNI) {
                     Fmt(&buf, " -maes -mpclmul");
