@@ -12,9 +12,9 @@ TODO
 
 TODO
 
-# Restrict keyfiles
+# Restricted keyfiles
 
-The master key can do everything. It is possible to create restricted keyfiles with limited capabilities; these keyfiles only contain the encryption keys needed to perform the correspond action, and nothing else.
+The master key can do everything. It is possible to create restricted keyfiles with limited capabilities; these keyfiles only contain the encryption keys needed to perform the corresponding action, and nothing else.
 
 At the moment, Rekkord supports three kinds of restricted keyfiles:
 
