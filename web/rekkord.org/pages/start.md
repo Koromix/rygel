@@ -83,7 +83,7 @@ To help you form a valid URL, here are a few examples for common S3 providers:
 | Backblaze B2                   | `https://s3.<region>.backblazeb2.com/<bucket>`       | No                 |
 | Cloudflare R2                  | `https://<userid>.r2.cloudflarestorage.com/<bucket>` | Yes                |
 | Exoscale Object Storage        | `https://sos-<region>.exo.io/<bucket>`               | Yes                |
-| Scaleway Object Storage        | `https://<bucket>.s3.<region>.scw.cloud`             | No                 |
+| Scaleway Object Storage        | `https://<bucket>.s3.<region>.scw.cloud`             | Yes                |
 
 > [!NOTE]
 > Rekkord may issue ListObjects API calls to reduce blob overwrites on hosts without conditional write support, which may incur additional cost.
