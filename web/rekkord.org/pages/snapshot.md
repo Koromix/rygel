@@ -9,7 +9,7 @@ rekkord save <channel> <path1> <path2> ...
 
 The command will give you the object ID (OID) of the snapshot once it finishes. You can retrieve the OID later with [rekkord snapshots](#list-snapshots).
 
-# Hooks
+# Save hooks
 
 *New in Rekkord 0.97*
 
@@ -44,7 +44,7 @@ As stated before, if any command fails, the save will not happen and Rekkord exi
 
 These hooks run after a snapshot been created by `rekkord save`.
 
-Set the directory where pre-save hook commands exist with `PreSaveDirectory` in the `Hooks` section of the config file, as shown in the example below:
+Set the directory where post-save hook commands exist with `PostSaveDirectory` in the `Hooks` section of the config file, as shown in the example below:
 
 ```ini
 # ...
