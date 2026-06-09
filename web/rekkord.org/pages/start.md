@@ -57,11 +57,9 @@ For simple use cases, you can simply use the master key for everything. However,
 - Each restricted keyfile can have limited capabilities: *ReadWrite, WriteOnly or LogOnly*
 - Snapshots are signed with each keyfile-specific signing key, this can be used to detect cross-server tampering during repository checks
 
-# Advanced topics
+# Manual configuration
 
-## Manual configuration
-
-### S3 storage
+## S3 storage
 
 To create a repository stored on an S3-compatible server, create an INI file (name it how you want) with the following configuration:
 
@@ -94,7 +92,7 @@ You can omit the `SecretKey` value, in which case a prompt will ask you the acce
 
 Once this is done, use [rekkord init -C config.ini](#initialize-repository) to create the repository.
 
-### SFTP server
+## SFTP server
 
 To create a repository stored on an SFTP host, create an INI file (name it how you want) with the following configuration:
 
@@ -122,7 +120,7 @@ Fingerprint = SHA256:Y9pmJfkaok8t0dFJrfi8/LLUNhOYwAZGHUNGsYAiJUM
 
 Once this is done, use [rekkord -C config.ini init](#initialize-repository) to create the repository.
 
-### Local filesystem
+## Local filesystem
 
 To create a repository in a local directory, create an INI file (name it how you want) with the following configuration:
 
@@ -132,6 +130,8 @@ URL = /path/to/repository
 ```
 
 Once this is done, use [rekkord -C config.ini init](#initialize-repository) to create the repository.
+
+# Secure configuration
 
 ## Restricted keys
 
