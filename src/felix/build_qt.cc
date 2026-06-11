@@ -77,7 +77,7 @@ const char *Builder::AddQtResource(const TargetInfo &target, Span<const char *> 
         return nullptr;
 
     if (!cpp_filename) {
-        cpp_filename = Fmt(&str_alloc, "%1%/%2_qrc.cc", cache_directory, target.name).ptr;
+        cpp_filename = Fmt(&str_alloc, "%1%/%2_qrc.cc", aux_directory, target.name).ptr;
 
         Command cmd = {};
 
@@ -397,7 +397,7 @@ R"(#include <QtCore/QtPlugin>
         }
     }
 
-    const char *src_filename = Fmt(&str_alloc, "%1%/Misc%/%2_qt.cc", cache_directory, target.name).ptr;
+    const char *src_filename = Fmt(&str_alloc, "%1%/%2_qt.cc", aux_directory, target.name).ptr;
     const char *obj_filename = Fmt(&str_alloc, "%1%2", src_filename, build.compiler->GetObjectExtension()).ptr;
 
     if (!TestFile(src_filename) && !WriteFile(code, src_filename))
