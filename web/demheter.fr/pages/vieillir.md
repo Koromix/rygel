@@ -1,11 +1,3 @@
-<div class="tel_3114">
-    <img src="{{ ASSET static/misc/3114.webp }}" width="183" height="86" style="float: left;" alt="" />
-    <div>
-        <p>Le <a href="https://3114.fr/">3114</a> est le numéro national de prévention de suicide. Consultez le site pour plus d'informations sur la prévention du suicide.
-        <p>Si vous êtes en <b>détresse et/ou avez des pensées suicidaires, ou si vous voulez aider une personne en souffrance</b>, vous pouvez contacter le numéro national de prévention du suicide, le <a href="tel:3114">3114</a>.
-    </div>
-</div>
-
 # Vieillir avec un trouble de l'humeur
 
 Les membres du Clubhouse de Lille ont partagé quelques-unes de leurs **interrogations et de leurs appréhensions** face à l’idée de vieillir avec un trouble de l’humeur.
@@ -96,6 +88,14 @@ Avec l’âge, les troubles de l’humeur peuvent être **plus sévères ou phar
 <img src="{{ ASSET static/clubhouse/people3.png }}" class="inline right" width="131" height="121" alt="" />
 
 Cependant, une <u>bonne hygiène de vie</u> (sommeil, alimentation équilibrée, activité physique régulière et adaptée à vos capacités physiques) associée à un suivi et à une prise en charge adaptée participent à stabiliser un trouble de l’humeur.
+
+<div class="tel_3114">
+    <img src="{{ ASSET static/misc/3114.webp }}" width="183" height="86" style="float: left;" alt="" />
+    <div>
+        <p>Le <a href="https://3114.fr/">3114</a> est le numéro national de prévention de suicide. Consultez le site pour plus d'informations sur la prévention du suicide.
+        <p>Si vous êtes en <b>détresse et/ou avez des pensées suicidaires, ou si vous voulez aider une personne en souffrance</b>, vous pouvez contacter le numéro national de prévention du suicide, le <a href="tel:3114">3114</a>.
+    </div>
+</div>
 
 # Références
 

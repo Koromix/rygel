@@ -1,11 +1,3 @@
-<div class="tel_3114">
-    <img src="{{ ASSET static/misc/3114.webp }}" width="183" height="86" style="float: left;" alt="" />
-    <div>
-        <p>Le <a href="https://3114.fr/">3114</a> est le numéro national de prévention de suicide. Consultez le site pour plus d'informations sur la prévention du suicide.
-        <p>Si vous êtes en <b>détresse et/ou avez des pensées suicidaires, ou si vous voulez aider une personne en souffrance</b>, vous pouvez contacter le numéro national de prévention du suicide, le <a href="tel:3114">3114</a>.
-    </div>
-</div>
-
 # La peur de consulter un professionnel de santé
 
 Lors de cet atelier, les membres du Clubhouse de Lille ont fait part de leurs **réticences à consulter un professionnel de la santé mentale** (psychiatres, psychologues) et ont partagé quelques conseils pour celles et ceux qui souhaiteraient franchir le pas.
@@ -100,3 +92,11 @@ Lors de cet atelier, les membres du Clubhouse de Lille ont fait part de leurs **
     .circles.tips > div:nth-child(2n) { background: #3c8ebb; }
     .circles.tips > div:nth-child(2n + 1) { background: #383838; }
 </style>
+
+<div class="tel_3114">
+    <img src="{{ ASSET static/misc/3114.webp }}" width="183" height="86" style="float: left;" alt="" />
+    <div>
+        <p>Le <a href="https://3114.fr/">3114</a> est le numéro national de prévention de suicide. Consultez le site pour plus d'informations sur la prévention du suicide.
+        <p>Si vous êtes en <b>détresse et/ou avez des pensées suicidaires, ou si vous voulez aider une personne en souffrance</b>, vous pouvez contacter le numéro national de prévention du suicide, le <a href="tel:3114">3114</a>.
+    </div>
+</div>

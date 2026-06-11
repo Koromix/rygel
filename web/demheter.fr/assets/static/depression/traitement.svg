@@ -454,7 +454,7 @@
        d="m 63.75,84.02 h 84.5 v 0.96 h -84.5 z"
        id="path133" />
     <text
-       font-family="Play"
+       font-family="Open Sans"
        font-style="normal"
        font-weight="normal"
        font-stretch="normal"
@@ -494,7 +494,7 @@
          font-family="Open Sans"
          font-stretch="normal"
          font-size="12px"
-         id="tspan145">Si FDR de récurrence (ATCD</tspan><tspan
+         id="tspan145">Si FdR de récurrence (ATCD</tspan><tspan
          xml:space="preserve"
          x="167.3"
          y="25.702118"
@@ -721,7 +721,7 @@
      id="g221"
      style="shape-rendering:crispEdges;text-rendering:geometricPrecision">
     <text
-       font-family="Play"
+       font-family="Open Sans"
        font-style="normal"
        font-weight="normal"
        font-stretch="normal"
@@ -739,7 +739,7 @@
      id="g227"
      style="shape-rendering:crispEdges;text-rendering:geometricPrecision">
     <text
-       font-family="Play"
+       font-family="Open Sans"
        font-style="normal"
        font-weight="normal"
        font-stretch="normal"
@@ -757,7 +757,7 @@
      id="g233"
      style="shape-rendering:crispEdges;text-rendering:geometricPrecision">
     <text
-       font-family="Play"
+       font-family="Open Sans"
        font-style="normal"
        font-weight="normal"
        font-stretch="normal"
@@ -775,7 +775,7 @@
      id="g239"
      style="shape-rendering:crispEdges;text-rendering:geometricPrecision">
     <text
-       font-family="Play"
+       font-family="Open Sans"
        font-style="normal"
        font-weight="normal"
        font-stretch="normal"
@@ -793,7 +793,7 @@
      id="g249"
      style="shape-rendering:crispEdges;text-rendering:geometricPrecision">
     <text
-       font-family="Play"
+       font-family="Open Sans"
        font-style="normal"
        font-weight="normal"
        font-stretch="normal"
@@ -818,7 +818,7 @@
      id="g255"
      style="shape-rendering:crispEdges;text-rendering:geometricPrecision">
     <text
-       font-family="Play"
+       font-family="Open Sans"
        font-style="normal"
        font-weight="normal"
        font-stretch="normal"
@@ -836,7 +836,7 @@
      id="g261"
      style="shape-rendering:crispEdges;text-rendering:geometricPrecision">
     <text
-       font-family="Play"
+       font-family="Open Sans"
        font-style="normal"
        font-weight="normal"
        font-stretch="normal"
@@ -1302,9 +1302,9 @@
          x="163.36681"
          y="11.302116"
          id="tspan407"> </tspan><tspan
-         x="39.241806"
+         x="34.241806"
          y="25.702118"
-         id="tspan409">résistance (échec à deux</tspan><tspan
+         id="tspan409">de résistance (échec à deux</tspan><tspan
          xml:space="preserve"
          x="175.74181"
          y="25.702118"
@@ -1338,7 +1338,7 @@
      id="g445"
      style="text-rendering:geometricPrecision">
     <text
-       font-family="'Noto Serif KR'"
+       font-family="Open Sans"
        font-style="normal"
        font-weight="normal"
        font-stretch="normal"

@@ -143,9 +143,10 @@ span[title] { border-bottom: 1px dotted #383838; }
 }
 
 .tel_3114 {
+    clear: both;
     display: flex;
     max-width: 600px;
-    margin: 0 auto 1em auto;
+    margin: 2em auto 1em auto;
     padding: 1em;
     align-items: center;
     gap: 20px;

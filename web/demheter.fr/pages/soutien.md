@@ -1,11 +1,3 @@
-<div class="tel_3114">
-    <img src="{{ ASSET static/misc/3114.webp }}" width="183" height="86" style="float: left;" alt="" />
-    <div>
-        <p>Le <a href="https://3114.fr/">3114</a> est le numéro national de prévention de suicide. Consultez le site pour plus d'informations sur la prévention du suicide.
-        <p>Si vous êtes en <b>détresse et/ou avez des pensées suicidaires, ou si vous voulez aider une personne en souffrance</b>, vous pouvez contacter le numéro national de prévention du suicide, le <a href="tel:3114">3114</a>.
-    </div>
-</div>
-
 # Accompagnement des proches
 
 ## UNAFAM
@@ -47,3 +39,23 @@ D'autres annuaires sont disponibles, notamment :
 
 - [Site de l’association Etoile Bipolaire](http://etoilebipolaire.nordblogs.com/)
 - [Trouver un Groupe d’Entraide Mutuelle](https://www.psycom.org/sorienter/les-groupes-dentraide-mutuelle/) (GEM)
+
+## Fiches Clubhouse
+
+Les contenus de cet onglet ont été élaborés avec les **membres du Clubhouse de Lille** lors d'ateliers dédiés.L'**UNAFAM et la FNAPSY** ont également contribué à ces ateliers.
+
+L'équipe de DEMHETER remercie la Directrice du Clubhouse de Lille, **Nathalie LANCIAL**, d'avoir accepté d'organiser ces ateliers au sein du Clubhouse, les chargés d'insertion et de co-gestion du Clubhouse **Jade BEUSCART et Pierre Loyens** et bien sûr les **membres du Clubhouse de Lille** pour leurs précieuses contributions. Nous remercions également **Laurence TROUILLER et Pierre COUBELLE** pour leur participation.
+
+<div class="links">
+    <a href="/consulter">La peur de consulter un professionnel de santé</a>
+    <a href="/annonce">L'importance de l'annonce diagnostique</a>
+    <a href="/vieillir">Vieillir avec un trouble de l'humeur</a>
+</div>
+
+<div class="tel_3114">
+    <img src="{{ ASSET static/misc/3114.webp }}" width="183" height="86" style="float: left;" alt="" />
+    <div>
+        <p>Le <a href="https://3114.fr/">3114</a> est le numéro national de prévention de suicide. Consultez le site pour plus d'informations sur la prévention du suicide.
+        <p>Si vous êtes en <b>détresse et/ou avez des pensées suicidaires, ou si vous voulez aider une personne en souffrance</b>, vous pouvez contacter le numéro national de prévention du suicide, le <a href="tel:3114">3114</a>.
+    </div>
+</div>

@@ -1,4 +1,4 @@
-# Objectifs de l'ETP
+# Objectifs de l'éducation thérapeutique du patient ^ Objectifs de l'ETP
 
 L'éducation thérapeutique du patient (ETP) vise à aider les patients à acquérir ou maintenir des compétences d’adaptation ainsi que des compétences d’auto soins pour gérer leur vie avec une maladie chronique de manière optimale [^1]. Pour développer les compétences d'auto-soins, il est important d’apprendre à gérer les symptômes liés à la pathologie, à ajuster ses traitements, et modifier son mode de vie. Quant aux compétences d'adaptation, il s’agit de développer la capacité à s'auto-observer et s'auto-évaluer au quotidien.
 
@@ -17,19 +17,19 @@ L'ETP DEMHETER se déroule en plusieurs étapes décrites ci-dessous :
 <div class="pills">
     <div>
         <div style="background: #c973c3;">Première consultation</div>
-        <div style="background: #d38cce;"><ul><li>L'<b>équipe médicale de DEMHETER</b> évalue le patient et peut orienter le patient vers l’un des programmes d'éducation thérapeutique.</li><li>Le patient est reçu en bilan initial ultérieurement.</li></ul></div>
+        <div style="background: #d38cce;"><ul><li>L'<b>équipe médicale de DEMHETER</b> évalue le patient et peut orienter le patient vers l’un des programmes d'ETP.</li><li>Le patient est reçu en bilan initial ultérieurement.</li></ul></div>
     </div>
     <div>
         <div style="background: #c15fba;">Bilan initial<br><span class="sub">(individuel)</span></div>
-        <div style="background: #cc7cc7;"><ul><li>Le patient est reçu par une psychologue en <b>rendez-vous individuel</b>.</li><li>Les <b>critères d'inclusion au groupe</b> sont vérifiés, une anamnèse est réalisée et des objectifs thérapeutiques préprogrammés sont établis.</li><li>Des <b>questionnaires</b> sont également proposés pour évaluer l'humeur, l'intensité des symptômes, l'anxiété, le sentiment d'efficacité et la qualité de vie.</li></ul></div>
+        <div style="background: #cc7cc7;"><ul><li>Le patient est reçu par le ou la psychologue en <b>rendez-vous individuel</b>.</li><li>Les <b>critères d'inclusion au groupe</b> sont vérifiés, une anamnèse est réalisée et des objectifs thérapeutiques préprogrammés sont établis.</li><li>Des <b>questionnaires</b> sont également proposés pour évaluer l'humeur, l'intensité des symptômes, l'anxiété, le sentiment d'efficacité et la qualité de vie.</li></ul></div>
     </div>
     <div>
         <div style="background: #b94bb1;">Séances<br><span class="sub">(groupe)</span></div>
-        <div style="background: #c66cbf;"><ul><li>Chaque séance se déroule au sein d'un <b>groupe de huit patients</b> partageant la même pathologie.<li>Lors de la première séance, les patients signent une <b>charte d’engagement</b> et de respect du groupe.</li><li>Les séances ont lieu une fois par semaine, pendant deux heures.</li><li>Chaque séance est animée par <b>un psychiatre avec un psychologue, un pharmacien ou un patient</b>.</li><li>À la fin de chaque séance, une évaluation est réalisée pour mesurer la <b>satisfaction</b> des participants et leur compréhension des notions abordées.</li></div>
+        <div style="background: #c66cbf;"><ul><li>Chaque séance se déroule au sein d'un <b>groupe de huit patients</b> partageant la même pathologie.<li>Lors de la première séance, les patients signent une <b>charte d’engagement</b> et de respect du groupe.</li><li>Les séances ont lieu une fois par semaine, pendant deux heures.</li><li>Chaque séance est animée par <b>un ou une psychiatre avec un ou une psychologue, un pharmacien ou un patient expert</b>.</li><li>À la fin de chaque séance, une évaluation est réalisée pour mesurer la <b>satisfaction</b> des participants et leur compréhension des notions abordées.</li></div>
     </div>
     <div>
         <div style="background: #b237a9;">É͘valuation de fin de programme<br><span class="sub">(individuel)</span></div>
-        <div style="background: #c05bb9;"><ul><li>Il s'agit d'un <b>rendez-vous individuel</b> avec le psychologue.</li><li>Ce bilan permet d’une part d’évaluer <b>l’expérience du patient</b> dans le groupe (satisfaction, ressentie), d’autre part, d’évaluer les <b>compétences acquises</b> et d’envisager des perspectives thérapeutiques.</li></ul></div>
+        <div style="background: #c05bb9;"><ul><li>Il s'agit d'un <b>rendez-vous individuel</b> avec le ou la psychologue.</li><li>Ce bilan permet d’une part d’évaluer <b>l’expérience du patient</b> dans le groupe (satisfaction, ressentie), d’autre part, d’évaluer les <b>compétences acquises</b> et d’envisager des perspectives thérapeutiques.</li></ul></div>
     </div>
 </div>
 

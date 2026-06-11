@@ -1,11 +1,3 @@
-<div class="tel_3114">
-    <img src="{{ ASSET static/misc/3114.webp }}" width="183" height="86" style="float: left;" alt="" />
-    <div>
-        <p>Le <a href="https://3114.fr/">3114</a> est le numéro national de prévention de suicide. Consultez le site pour plus d'informations sur la prévention du suicide.
-        <p>Si vous êtes en <b>détresse et/ou avez des pensées suicidaires, ou si vous voulez aider une personne en souffrance</b>, vous pouvez contacter le numéro national de prévention du suicide, le <a href="tel:3114">3114</a>.
-    </div>
-</div>
-
 # L'importance de l'annonce
 
 Les témoignages présentés ici sur l’annonce diagnostique ont pu être recueillis grâce aux contributions de *Martine, Alyx, Pierre, Juliette, Victoria, Mathieu et Aymie*, membres du Clubhouse de Lille. **UN GRAND MERCI À EUX !**
@@ -75,3 +67,11 @@ Le médecin peut en effet jouer le **rôle d’intermédiaire** entre la personn
 <style>
     .links { text-transform: uppercase; }
 </style>
+
+<div class="tel_3114">
+    <img src="{{ ASSET static/misc/3114.webp }}" width="183" height="86" style="float: left;" alt="" />
+    <div>
+        <p>Le <a href="https://3114.fr/">3114</a> est le numéro national de prévention de suicide. Consultez le site pour plus d'informations sur la prévention du suicide.
+        <p>Si vous êtes en <b>détresse et/ou avez des pensées suicidaires, ou si vous voulez aider une personne en souffrance</b>, vous pouvez contacter le numéro national de prévention du suicide, le <a href="tel:3114">3114</a>.
+    </div>
+</div>
