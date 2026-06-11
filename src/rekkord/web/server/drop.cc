@@ -4,7 +4,6 @@
 #include "lib/native/base/base.hh"
 #include "lib/native/sqlite/sqlite.hh"
 #include "rokkerd.hh"
-#include "kid.hh"
 #include "user.hh"
 #include "utility.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"

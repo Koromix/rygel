@@ -37,7 +37,7 @@ KID::operator FmtArg() const
     return arg;
 }
 
-void FillKID(KIDType type, KID *out_kid)
+void FillKID(int8_t type, KID *out_kid)
 {
     FillRandomSafe(out_kid->raw);
     out_kid->type = type;
@@ -159,7 +159,7 @@ bool ParseKID(Span<const char> str, KID *out_kid)
 #undef DECODE
 
     static_assert(std::is_unsigned_v<typeof(kid.raw[0])>);
-    valid &= (kid.raw[0] < K_LEN(KIDTypeNames));
+    valid &= (kid.raw[0] <= 0x7F);
 
     if (!valid) {
         LogError("Failed to decode KID");
@@ -170,12 +170,12 @@ bool ParseKID(Span<const char> str, KID *out_kid)
     return true;
 }
 
-bool ParseKID(Span<const char> str, KIDType type, KID *out_kid)
+bool ParseKID(Span<const char> str, int8_t type, KID *out_kid)
 {
     if (!ParseKID(str, out_kid))
         return false;
 
-    if (out_kid->type != type) {
+    if (out_kid->type != (int8_t)type) {
         LogError("Unexpected KID type");
         return false;
     }
