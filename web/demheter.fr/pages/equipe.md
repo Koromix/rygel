@@ -16,9 +16,9 @@
         <img src="{{ ASSET static/equipe/briac_batailley.jpg }}" alt="" />
         <div class="title">Psychiatre</div>
         <div class="mission">Coordinateur médical</div>
+        <div class="mission">Consultations troubles de l'humeur résistantes</div>
         <div class="mission">Formation des médecins du réseau</div>
         <div class="mission">Télé-expertise</div>
-        <div class="mission">Participation aux RCP</div>
     </div>
 </div>
 
