@@ -332,15 +332,14 @@ bool PackAssets(Span<const EmbedAsset> assets, unsigned int flags, const char *o
     }
 
     StreamWriter c;
-    StreamWriter bin;
     if (output_path) {
         if (!c.Open(output_path))
             return false;
 
         if (flags & (int)EmbedFlag::UseEmbed) {
-            const char *bin_filename = Fmt(&temp_alloc, "%1.bin", output_path).ptr;
+            const char *bin_dirname = Fmt(&temp_alloc, "%1.d", output_path).ptr;
 
-            if (!bin.Open(bin_filename))
+            if (!MakeDirectory(bin_dirname, false))
                 return false;
         }
     } else {
@@ -357,53 +356,69 @@ bool PackAssets(Span<const EmbedAsset> assets, unsigned int flags, const char *o
 
     PrintLn(&c, CodePrefix);
 
-    // Work around the ridiculousness of C++ not liking empty arrays
     HeapArray<BlobInfo> blobs;
-    if (assets.len) {
-        std::function<void(Span<const uint8_t>)> print;
+    blobs.Reserve(assets.len);
 
-        PrintLn(&c, R"(
-static const uint8_t raw_data[] = {)");
+    if (assets.len) {
+        PrintLn(&c);
 
         if (flags & (int)EmbedFlag::UseEmbed) {
-            PrintLn(&c, "    #embed \"%1.bin\"", output_path);
-            print = [&](Span<const uint8_t> buf) { bin.Write(buf); };
-        } else if (flags & (int)EmbedFlag::UseLiterals) {
-            print = [&](Span<const uint8_t> buf) { PrintAsLiterals(buf, &c); };
-        } else {
-            print = [&](Span<const uint8_t> buf) { PrintAsArray(buf, &c); };
-        }
+            Async async;
 
-        // Embed assets and source maps
-        for (const EmbedAsset &asset: assets) {
-            BlobInfo blob = {};
+            for (Size i = 0; i < assets.len; i++) {
+                const EmbedAsset &asset = assets[i];
+                BlobInfo *blob = blobs.AppendDefault();
 
-            blob.name = asset.name;
-            blob.compression_type = asset.compression_type;
+                blob->name = asset.name;
+                blob->compression_type = asset.compression_type;
 
-            if (flags & (int)EmbedFlag::UseEmbed) {
-                blob.len = WriteAsset(asset, speed, print);
-                if (blob.len < 0)
-                    return false;
+                const char *bin_filename = Fmt(&temp_alloc, "%1.d/%2.bin", output_path, i).ptr;
 
-                // Put NUL byte at the end to make it a valid C string
-                print(0);
-            } else {
-                PrintLn(&c, "    // %1", blob.name);
-                Print(&c, "    ");
-                blob.len = WriteAsset(asset, speed, print);
-                if (blob.len < 0)
-                    return false;
+                async.Run([=]() {
+                    StreamWriter writer(bin_filename);
 
-                // Put NUL byte at the end to make it a valid C string
-                print(0);
-                PrintLn(&c);
+                    auto print = [&](Span<const uint8_t> buf) { writer.Write(buf); };
+                    blob->len = WriteAsset(asset, speed, print);
+
+                    // Put NUL byte at the end to make it a valid C string
+                    print(0);
+
+                    if (blob->len < 0)
+                        return false;
+                    if (!writer.Close())
+                        return false;
+
+                    return true;
+                });
+
+                PrintLn(&c, "static const uint8_t raw%1[] = {\n    #embed \"%2\"\n};", i, bin_filename);
             }
 
-            blobs.Append(blob);
-        }
+            if (!async.Sync())
+                return false;
+        } else {
+            auto func = (flags & (int)EmbedFlag::UseLiterals) ? PrintAsLiterals : PrintAsArray;
+            auto print = [&](Span<const uint8_t> buf) { func(buf, &c); };
 
-        PrintLn(&c, "};");
+            for (Size i = 0; i < assets.len; i++) {
+                const EmbedAsset &asset = assets[i];
+                BlobInfo *blob = blobs.AppendDefault();
+
+                blob->name = asset.name;
+                blob->compression_type = asset.compression_type;
+
+                Print(&c, "static const uint8_t raw%1[] = {\n    // %2\n    ", i, blob->name);
+
+                blob->len = WriteAsset(asset, speed, print);
+                if (blob->len < 0)
+                    return false;
+
+                // Put NUL byte at the end to make it a valid C string
+                print(0);
+
+                PrintLn(&c, "\n};");
+            }
+        }
     }
 
     if (!(flags & (int)EmbedFlag::NoArray)) {
@@ -414,13 +429,11 @@ static const uint8_t raw_data[] = {)");
             PrintLn(&c, "static AssetInfo assets[%1] = {", blobs.len);
 
             // Write asset table
-            for (Size i = 0, raw_offset = 0; i < blobs.len; i++) {
+            for (Size i = 0; i < blobs.len; i++) {
                 const BlobInfo &blob = blobs[i];
 
-                PrintLn(&c, "    { \"%1\", %2, { raw_data + %3, %4 } },",
-                             blob.name, (int)blob.compression_type, raw_offset, blob.len);
-
-                raw_offset += blob.len + 1;
+                PrintLn(&c, "    { \"%1\", %2, { raw%3, %4 } },",
+                             blob.name, (int)blob.compression_type, i, blob.len);
             }
 
             PrintLn(&c, "};");
@@ -431,21 +444,17 @@ static const uint8_t raw_data[] = {)");
     if (!(flags & (int)EmbedFlag::NoSymbols)) {
         PrintLn(&c);
 
-        for (Size i = 0, raw_offset = 0; i < blobs.len; i++) {
+        for (Size i = 0; i < blobs.len; i++) {
             const BlobInfo &blob = blobs[i];
             const char *var = MakeVariableName(blob.name, &temp_alloc);
 
             PrintLn(&c, "EXPORT_SYMBOL EXTERN const AssetInfo %1;", var);
-            PrintLn(&c, "const AssetInfo %1 = { \"%2\", %3, { raw_data + %4, %5 } };",
-                         var, blob.name, (int)blob.compression_type, raw_offset, blob.len);
-
-            raw_offset += blob.len + 1;
+            PrintLn(&c, "const AssetInfo %1 = { \"%2\", %3, { raw%4, %5 } };",
+                         var, blob.name, (int)blob.compression_type, i, blob.len);
         }
     }
 
     if (!c.Close())
-        return false;
-    if ((flags & (int)EmbedFlag::UseEmbed) && !bin.Close())
         return false;
 
     return true;
