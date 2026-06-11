@@ -25,8 +25,8 @@ struct Config {
     const char *database_filename = nullptr;
     const char *vault_directory = nullptr;
     const char *tmp_directory = nullptr;
-    const char *static_directory = nullptr;
 
+    const char *static_directory = nullptr;
     bool static_gzip = false;
     bool static_brotli = false;
 
