@@ -1,6 +1,6 @@
 # Comprendre et s'orienter
 
-Si vous désirez en savoir plus sur les troubles de l'humeur et sur les pensées suicidaires :
+Le site de [Psycom](https://www.psycom.org/) peut vous aider à vous orienter et fournit des outils pratiques. Si vous désirez en savoir plus sur les troubles de l'humeur et sur les pensées suicidaires :
 
 <div class="links">
     <a href="https://www.psycom.org/sorienter/" target="_blank">Ressources pour s'orienter</a>
