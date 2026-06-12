@@ -5171,7 +5171,7 @@ bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
 
     // Read and write standard process streams
     {
-        bool running = true;
+        bool running = in_func.IsValid() || out_func.IsValid();
 
         PendingIO proc_in;
         Span<const uint8_t> write_buf = {};
@@ -5201,6 +5201,7 @@ bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
                         }
                     } else {
                         CloseHandleSafe(&in_pipe[1]);
+                        running &= out_func.IsValid();
                     }
                 }
 
