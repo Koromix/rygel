@@ -42,15 +42,15 @@ D'autres annuaires sont disponibles, notamment :
 
 ## Fiches Clubhouse
 
-Les contenus de cet onglet ont été élaborés avec les **membres du Clubhouse de Lille** lors d'ateliers dédiés.L'**UNAFAM et la FNAPSY** ont également contribué à ces ateliers.
-
-L'équipe de DEMHETER remercie la Directrice du Clubhouse de Lille, **Nathalie LANCIAL**, d'avoir accepté d'organiser ces ateliers au sein du Clubhouse, les chargés d'insertion et de co-gestion du Clubhouse **Jade BEUSCART et Pierre Loyens** et bien sûr les **membres du Clubhouse de Lille** pour leurs précieuses contributions. Nous remercions également **Laurence TROUILLER et Pierre COUBELLE** pour leur participation.
+Les contenus de cet onglet ont été élaborés avec les **membres du Clubhouse de Lille** lors d'ateliers dédiés. L'**UNAFAM et la FNAPSY** ont également contribué à ces ateliers.
 
 <div class="links">
     <a href="/consulter">La peur de consulter un professionnel de santé</a>
     <a href="/annonce">L'importance de l'annonce diagnostique</a>
     <a href="/vieillir">Vieillir avec un trouble de l'humeur</a>
 </div>
+
+*L'équipe de DEMHETER remercie la Directrice du Clubhouse de Lille, **Nathalie LANCIAL**, d'avoir accepté d'organiser ces ateliers au sein du Clubhouse, les chargés d'insertion et de co-gestion du Clubhouse **Jade BEUSCART et Pierre Loyens** et bien sûr les **membres du Clubhouse de Lille** pour leurs précieuses contributions. Nous remercions également **Laurence TROUILLER et Pierre COUBELLE** pour leur participation.*
 
 <div class="tel_3114">
     <img src="{{ ASSET static/misc/3114.webp }}" width="183" height="86" style="float: left;" alt="" />
