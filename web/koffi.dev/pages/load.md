@@ -168,7 +168,7 @@ Among other thing, in the the following pages you will learn more about:
 
 *Changed in Koffi 3.1.0*
 
-To find an exported variable symbol, use `lib.symbol(name, type)`. You need to specify its name and its type.
+To find an exported variable symbol, use `lib.symbol(name)`. You need to specify its name and its type.
 
 ```c
 int my_int = 42;
