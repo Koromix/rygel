@@ -2104,6 +2104,77 @@ for (const minify of [[], ['--minify']]) {
         export let async = async () => { if (42 !== await B()) throw 'fail' }
       `,
     }, { async: true }),
+
+    // https://github.com/evanw/esbuild/issues/4461
+    test(['--bundle', 'in.js', '--outfile=node.js', '--format=esm'].concat(minify), {
+      'in.js': `export let async = async () => {
+        let error
+        for (let i = 0; i < 3; i++) {
+          try {
+            await import('./foo')
+            throw new Error('Expected an error')
+          } catch (e) {
+            if (!e || e.message !== 'stop') throw 'fail ' + i + ': ' + e
+            if (i > 0 && e !== error) throw 'fail ' + i + ': wrong object'
+            error = e
+          }
+        }
+      }`,
+      'foo.js': `
+        export let foo
+        throw new Error('stop')
+      `,
+    }, { async: true }),
+    test(['--bundle', 'in.js', '--outfile=node.js', '--format=esm'].concat(minify), {
+      'in.js': `export let async = async () => {
+        for (let i = 0; i < 3; i++) {
+          try {
+            await import('./foo')
+            throw new Error('Expected an error')
+          } catch (e) {
+            if (e !== null) throw 'fail ' + i + ': ' + e
+          }
+        }
+      }`,
+      'foo.js': `
+        export let foo
+        throw null
+      `,
+    }, { async: true }),
+    test(['--bundle', 'in.js', '--outfile=node.js'].concat(minify), {
+      'in.js': `
+        let errors = []
+        for (let i = 0; i < 3; i++) {
+          try {
+            require('./foo')
+            throw new Error('Expected an error')
+          } catch (e) {
+            if (e.message !== 'stop1') throw 'fail ' + i + ': ' + e
+            if (errors.includes(e)) throw 'fail ' + i + ': wrong object'
+            errors.push(e)
+          }
+        }
+      `,
+      'foo.js': `
+        exports.counter = (exports.counter | 0) + 1
+        throw new Error('stop' + exports.counter)
+      `,
+    }),
+    test(['--bundle', 'in.js', '--outfile=node.js'].concat(minify), {
+      'in.js': `
+        for (let i = 0; i < 3; i++) {
+          try {
+            require('./foo')
+            throw new Error('Expected an error')
+          } catch (e) {
+            if (e !== null) throw 'fail ' + i + ': ' + e
+          }
+        }
+      `,
+      'foo.js': `
+        throw null
+      `,
+    }),
   )
 }
 
@@ -3034,6 +3105,39 @@ tests.push(
   test(['in.js', '--outfile=node.js', '--minify', '--bundle'], {
     'in.js': `
       return import('./in.js')
+    `,
+  }),
+)
+
+// These edge cases shouldn't be printed incorrectly
+// https://github.com/evanw/esbuild/issues/4477
+tests.push(
+  test(['in.js', '--outfile=node.js'], {
+    'in.js': `
+      class Foo {
+        constructor(x) {
+          this.x = x
+        }
+      }
+      var foo1 = () => Foo
+      var foo2 = () => () => Foo
+      if ((new (foo1\`bar\`)(1)).x !== 1) throw 'fail 1'
+      if ((new (foo2()\`bar\`)(2)).x !== 2) throw 'fail 2'
+    `,
+  }),
+  test(['in.js', '--outfile=node.js'], {
+    'in.js': `
+      class Foo {
+        constructor(x) {
+          this.x = x
+        }
+      }
+      var foo0 = { bar: Foo }
+      var foo1 = () => ({ bar: Foo })
+      if ((new (foo0?.bar)(1)).x !== 1) throw 'fail 1'
+      if ((new (foo1()?.bar)(2)).x !== 2) throw 'fail 2'
+      if ((new (foo0?.['bar'])(3)).x !== 3) throw 'fail 3'
+      if ((new (foo1()?.['bar'])(4)).x !== 4) throw 'fail 4'
     `,
   }),
 )

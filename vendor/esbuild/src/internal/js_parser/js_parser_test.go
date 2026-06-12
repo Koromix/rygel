@@ -2686,6 +2686,13 @@ func TestTemplate(t *testing.T) {
 	expectPrinted(t, "tag`${x}\\unicode`", "tag`${x}\\unicode`;\n")
 	expectPrinted(t, "tag`\\u{10FFFFF}`", "tag`\\u{10FFFFF}`;\n")
 
+	expectPrinted(t, "new foo`bar`()", "new foo`bar`();\n")
+	expectPrinted(t, "new (foo`bar`)()", "new foo`bar`();\n")
+	expectPrinted(t, "(new foo)`bar`()", "new foo()`bar`();\n")
+	expectPrinted(t, "new foo()`bar`()", "new foo()`bar`();\n")
+	expectPrinted(t, "(new foo())`bar`()", "new foo()`bar`();\n")
+	expectPrinted(t, "new (foo()`bar`)()", "new (foo())`bar`();\n")
+
 	expectPrinted(t, "tag``", "tag``;\n")
 	expectPrinted(t, "(a?.b)``", "(a?.b)``;\n")
 	expectPrinted(t, "(a?.(b))``", "(a?.(b))``;\n")
@@ -5258,6 +5265,8 @@ func TestMangleInlineLocals(t *testing.T) {
 	check("var x = 1; return x", "var x = 1;\nreturn x;")
 	check("let x = 1; return x", "return 1;")
 	check("const x = 1; return x", "return 1;")
+	check("using x = 1; return x", "using x = 1;\nreturn x;")
+	check("return async () => { await using x = 1; return x }", "return async () => {\n  await using x = 1;\n  return x;\n};")
 
 	check("let x = 1; if (false) x++; return x", "return 1;")
 	check("let x = 1; if (true) x++; return x", "let x = 1;\nreturn x++, x;")
@@ -6121,6 +6130,7 @@ func TestPreserveOptionalChainParentheses(t *testing.T) {
 	expectPrinted(t, "(a?.b)[c]", "(a?.b)[c];\n")
 	expectPrinted(t, "a?.b(c)", "a?.b(c);\n")
 	expectPrinted(t, "(a?.b)(c)", "(a?.b)(c);\n")
+	expectPrinted(t, "new (a?.b)", "new (a?.b)();\n")
 
 	expectPrinted(t, "a?.[b][c]", "a?.[b][c];\n")
 	expectPrinted(t, "(a?.[b])[c]", "(a?.[b])[c];\n")
@@ -6130,6 +6140,7 @@ func TestPreserveOptionalChainParentheses(t *testing.T) {
 	expectPrinted(t, "(a?.[b]).c", "(a?.[b]).c;\n")
 	expectPrinted(t, "a?.[b](c)", "a?.[b](c);\n")
 	expectPrinted(t, "(a?.[b])(c)", "(a?.[b])(c);\n")
+	expectPrinted(t, "new (a?.[b])", "new (a?.[b])();\n")
 
 	expectPrinted(t, "a?.(b)(c)", "a?.(b)(c);\n")
 	expectPrinted(t, "(a?.(b))(c)", "(a?.(b))(c);\n")
@@ -6139,6 +6150,22 @@ func TestPreserveOptionalChainParentheses(t *testing.T) {
 	expectPrinted(t, "(a?.(b)).c", "(a?.(b)).c;\n")
 	expectPrinted(t, "a?.(b)[c]", "a?.(b)[c];\n")
 	expectPrinted(t, "(a?.(b))[c]", "(a?.(b))[c];\n")
+	expectPrinted(t, "new (a?.(b))", "new (a?.(b))();\n")
+
+	expectPrinted(t, "new a()?.b", "new a()?.b;\n")
+	expectPrinted(t, "new a()?.[b]", "new a()?.[b];\n")
+	expectPrinted(t, "new a()?.(b)", "new a()?.(b);\n")
+	expectPrinted(t, "new a.b()?.c", "new a.b()?.c;\n")
+	expectPrinted(t, "new a.b()?.[c]", "new a.b()?.[c];\n")
+	expectPrinted(t, "new a.b()?.(c)", "new a.b()?.(c);\n")
+
+	err := "<stdin>: ERROR: Cannot use an unparenthesized optional chain inside the target of \"new\"\n"
+	expectParseError(t, "new a?.b", err)
+	expectParseError(t, "new a?.[b]", err)
+	expectParseError(t, "new a?.(b)", err)
+	expectParseError(t, "new a.b?.c", err)
+	expectParseError(t, "new a.b?.[c]", err)
+	expectParseError(t, "new a.b?.(c)", err)
 }
 
 func TestPrivateIdentifiers(t *testing.T) {

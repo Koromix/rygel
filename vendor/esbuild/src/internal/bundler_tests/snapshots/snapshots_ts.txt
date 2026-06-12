@@ -872,7 +872,7 @@ __decorateClass([
 ], Foo2, _a, 2);
 Foo2 = __decorateClass([
   x?.[_ + "y"](),
-  new y?.[_ + "x"]()
+  new y()?.[_ + "x"]()
 ], Foo2);
 
 // a.ts
@@ -1606,7 +1606,7 @@ console.log(a, b, c, d, e, real);
 ================================================================================
 TestTSMinifiedBundleCommonJS
 ---------- /out.js ----------
-var t=e(r=>{r.foo=function(){return 123}});var n=e((l,c)=>{c.exports={test:!0}});var{foo:f}=t();console.log(f(),n());
+var t=e(r=>{r.foo=function(){return 123}});var n=e((q,f)=>{f.exports={test:!0}});var{foo:i}=t();console.log(i(),n());
 
 ================================================================================
 TestTSMinifiedBundleES6
@@ -2080,10 +2080,10 @@ var Foo = class {
 };
 new Foo(foo(objFoo));
 if (nested) {
-  let bar = function(x = this) {
+  let bar2 = function(x = this) {
     console.log(this);
   };
-  bar2 = bar;
+  bar = bar2;
   const objBar = {
     foo(x = this) {
       console.log(this);
@@ -2103,9 +2103,9 @@ if (nested) {
       console.log(this);
     }
   }
-  new Bar(bar(objBar));
+  new Bar(bar2(objBar));
 }
-var bar2;
+var bar;
 
 ================================================================================
 TestThisInsideFunctionTSNoBundle
@@ -2229,10 +2229,10 @@ var Foo = class {
 };
 new Foo(foo(objFoo));
 if (nested) {
-  let bar = function(x = this) {
+  let bar2 = function(x = this) {
     console.log(this);
   };
-  bar2 = bar;
+  bar = bar2;
   const objBar = {
     foo(x = this) {
       console.log(this);
@@ -2248,6 +2248,6 @@ if (nested) {
       console.log(this);
     }
   }
-  new Bar(bar(objBar));
+  new Bar(bar2(objBar));
 }
-var bar2;
+var bar;

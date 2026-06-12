@@ -1,5 +1,80 @@
 # Changelog
 
+## 0.28.1
+
+* Disallow `\\` in local development server HTTP requests ([GHSA-g7r4-m6w7-qqqr](https://github.com/evanw/esbuild/security/advisories/GHSA-g7r4-m6w7-qqqr))
+
+    This release fixes a security issue where HTTP requests to esbuild's local development server could traverse outside of the serve directory on Windows using a `\\` backslash character. It happened due to the use of Go's `path.Clean()` function, which only handles Unix-style `/` characters. HTTP requests with paths containing `\\` are no longer allowed.
+
+    Thanks to [@dellalibera](https://github.com/dellalibera) for reporting this issue.
+
+* Add integrity checks to the Deno API ([GHSA-gv7w-rqvm-qjhr](https://github.com/evanw/esbuild/security/advisories/GHSA-gv7w-rqvm-qjhr))
+
+    The previous release of esbuild added integrity checks to esbuild's npm install script. This release also adds integrity checks to esbuild's Deno install script. Now esbuild's Deno API will also fail with an error if the downloaded esbuild binary contains something other than the expected content.
+
+    Note that esbuild's Deno API installs from `registry.npmjs.org` by default, but allows the `NPM_CONFIG_REGISTRY` environment variable to override this with a custom package registry. This change means that the esbuild executable served by `NPM_CONFIG_REGISTRY` must now match the expected content.
+
+    Thanks to [@sondt99](https://github.com/sondt99) for reporting this issue.
+
+* Avoid inlining `using` and `await using` declarations ([#4482](https://github.com/evanw/esbuild/issues/4482))
+
+    Previously esbuild's minifier sometimes incorrectly inlined `using` and `await using` declarations into subsequent uses of that declaration, which then fails to dispose of the resource correctly. This bug happened because inlining was done for `let` and `const` declarations by avoiding doing it for `var` declarations, which no longer worked when more declaration types were added. Here's an example:
+
+    ```js
+    // Original code
+    {
+      using x = new Resource()
+      x.activate()
+    }
+
+    // Old output (with --minify)
+    new Resource().activate();
+
+    // New output (with --minify)
+    {using e=new Resource;e.activate()}
+    ```
+
+* Fix module evaluation when an error is thrown ([#4461](https://github.com/evanw/esbuild/issues/4461), [#4467](https://github.com/evanw/esbuild/pull/4467))
+
+    If an error is thrown during module evaluation, esbuild previously didn't preserve the state of the module for subsequent module references. This was observable if `import()` or `require()` is used to import a module multiple times. The thrown error is supposed to be thrown by every call to `import()` or `require()`, not just the first. With this release, esbuild will now throw the same error every time you call `import()` or `require()` on a module that throws during its evaluation.
+
+* Fix some edge cases around the `new` operator ([#4477](https://github.com/evanw/esbuild/issues/4477))
+
+    Previously esbuild incorrectly printed certain edge cases involving complex expressions inside the target of a `new` expression (specifically an optional chain and/or a tagged template literal). The generated code for the `new` target was not correctly wrapped with parentheses, and either contained a syntax error or had different semantics. These edge cases have been fixed so that they now correctly wrap the `new` target in parentheses. Here is an example of some affected code:
+
+    ```js
+    // Original code
+    new (foo()`bar`)()
+    new (foo()?.bar)()
+
+    // Old output
+    new foo()`bar`();
+    new (foo())?.bar();
+
+    // New output
+    new (foo())`bar`();
+    new (foo()?.bar)();
+    ```
+
+* Fix renaming of nested `var` declarations ([#4471](https://github.com/evanw/esbuild/issues/4471))
+
+    This release fixes a bug where `var` declarations in nested scopes that are hoisted up to module scope were not correctly being renamed during bundling. That could previously lead to name collisions when minification was disabled, which could potentially cause a behavior change. The bug has been fixed so that these hoisted declarations are now considered to be module-level symbols during the name collision avoidance pass.
+
+* Emit `var` instead of `const` for certain TypeScript-only constructs for ES5 ([#4448](https://github.com/evanw/esbuild/issues/4448))
+
+    While esbuild doesn't generally support converting `const` to `var` for ES5 due to nested scoping rules (which is currently a build-time error), esbuild previously incorrectly converted TypeScript-only `import` assignment constructs into a `const` declaration even when targeting ES5. With this release, esbuild will now use `var` for this case instead:
+
+    ```js
+    // Original code
+    import x = require('y')
+
+    // Old output (with --target=es5)
+    const x = require("y");
+
+    // New output (with --target=es5)
+    var x = require("y");
+    ```
+
 ## 0.28.0
 
 * Add support for `with { type: 'text' }` imports ([#4435](https://github.com/evanw/esbuild/issues/4435))
