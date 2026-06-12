@@ -875,9 +875,8 @@ static Napi::Value CreateDisposableType(const Napi::CallbackInfo &info)
     K_DEFER_N(err_guard) { instance->types.RemoveLast(1); };
 
     memcpy((void *)type, (const void *)src, K_SIZE(*src));
-    type->members.allocator = GetNullAllocator();
-    type->members.allocator = GetNullAllocator();
     type->defn = nullptr;
+    K_ASSERT(!type->members.len);
 
     static_assert(!std::is_polymorphic_v<Napi::ObjectReference>);
 

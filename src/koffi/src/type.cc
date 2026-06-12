@@ -306,9 +306,8 @@ const TypeInfo *ResolveType(InstanceData *instance, Span<const char> str)
 
             memcpy((void *)copy, (const void *)type, K_SIZE(*type));
             copy->name = Fmt(&instance->str_alloc, "<anonymous_%1>", instance->types.count).ptr;
-            copy->members.allocator = GetNullAllocator();
-            copy->members.allocator = GetNullAllocator();
-            memset((void *)&copy->defn, 0, K_SIZE(copy->defn));
+            copy->defn = nullptr;
+            K_ASSERT(!type->members.len);
 
             static_assert(!std::is_polymorphic_v<Napi::ObjectReference>);
 
