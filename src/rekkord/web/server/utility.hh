@@ -10,6 +10,6 @@ namespace K {
 bool IsMailValid(Span<const char> str);
 
 bool IsEnumValid(Span<const char> str, Span<const char *const> values);
-bool IsStringValid(Span<const char> str);
+bool IsStringValid(Span<const char> str, const char *allowed = "");
 
 }

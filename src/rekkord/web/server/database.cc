@@ -8,7 +8,7 @@
 
 namespace K {
 
-const int DatabaseVersion = 40;
+const int DatabaseVersion = 41;
 
 bool AddDatabaseFunctions(sq_Database *db)
 {
@@ -810,9 +810,37 @@ bool MigrateDatabase(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 40: {
+                bool success = db->RunMany(R"(
+                    DROP TABLE drops;
+
+                    CREATE TABLE drops (
+                        id INTEGER PRIMARY KEY NOT NULL,
+                        owner INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+                        kid BLOB NOT NULL,
+                        name TEXT NOT NULL,
+                        size INTEGER NOT NULL,
+                        expire INTEGER,
+                        protect INTEGER CHECK(protect IN (0, 1)) NOT NULL,
+                        header TEXT NOT NULL,
+                        nonce TEXT NOT NULL,
+                        split INTEGER NOT NULL,
+                        uploaded INTEGER NOT NULL,
+                        deleted INTEGER CHECK(deleted IN (0, 1)) NOT NULL
+                    );
+
+                    CREATE UNIQUE INDEX drops_k ON drops (kid);
+                    CREATE INDEX drops_o ON drops (owner);
+                    CREATE INDEX drops_e ON drops (expire);
+                    CREATE INDEX drops_d ON drops (deleted);
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            static_assert(DatabaseVersion == 40);
+            static_assert(DatabaseVersion == 41);
         }
 
         if (!db->Run("INSERT INTO migrations (version, build, timestamp) VALUES (?, ?, ?)",

@@ -3873,6 +3873,7 @@ function expand(hash, prk, info, length = 32) {
 var hkdf = (hash, ikm, salt, info, length) => expand(hash, extract(hash, ikm, salt), info, length);
 export {
   _BLAKE3,
+  _HMAC,
   _SHA224,
   _SHA256,
   _SHA384,
@@ -3900,8 +3901,10 @@ export {
   gcmsiv,
   hchacha,
   hkdf,
+  hmac,
   hsalsa,
   managedNonce,
+  randomBytes,
   rngAesCtrDrbg128,
   rngAesCtrDrbg256,
   rngChacha20,

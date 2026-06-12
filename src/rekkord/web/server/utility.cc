@@ -32,9 +32,9 @@ bool IsEnumValid(Span<const char> str, Span<const char *const> values)
     return false;
 }
 
-bool IsStringValid(Span<const char> str)
+bool IsStringValid(Span<const char> str, const char *allowed)
 {
-    const auto test_char = [](char c) { return !IsAsciiControl(c); };
+    const auto test_char = [&](char c) { return !IsAsciiControl(c) || strchr(allowed, c); };
 
     if (!str.len)
         return false;

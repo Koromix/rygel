@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
-import { scryptAsync, hkdf, sha256, chacha20poly1305 } from 'vendor/noble/noble.bundle.js';
+import { scryptAsync, hkdf, hmac, sha256, chacha20poly1305, randomBytes } from 'vendor/noble/noble.bundle.js';
 import { Util, Log, Net, HttpError } from 'lib/web/base/base.js';
 import { Base64 } from 'lib/web/base/mixer.js';
 
 // Use scrypt for age compatibility
 const WORK_FACTOR_LOG2 = 18;
 const BODY_CHUNK_SIZE = 65536;
+const HEADER_SIGNATURE = 'age-encryption.org/v1';
+const HEADER_LENGTH = 149;
 const SALT_PREFIX = 'age-encryption.org/v1/scrypt';
 
 const UPLOAD_QUEUE_SIZE = 2;
@@ -17,67 +19,127 @@ const UPLOAD_MARK_DELAY = 5000;
 const DOWNLOAD_QUEUE_SIZE = 2;
 const DOWNLOAD_AHEAD_LIMIT = 4;
 
-async function createKey(password = null) {
-    let master = new Uint8Array(16);
-    crypto.getRandomValues(master);
-
-    let passphrase;
-    {
-        let rnd = new Uint8Array(32);
-        crypto.getRandomValues(rnd);
-
-        passphrase = Base64.toBase64Url(rnd);
-    }
-
-    let salt = new Uint8Array(16);
-    crypto.getRandomValues(salt);
-
+async function createHeader(password = null) {
     if (password == null)
         password = '';
     if (password)
         password = '/' + password;
 
+    let master = randomBytes(16);
+    let passphrase = Base64.toBase64Url(randomBytes(32));
+    let salt = randomBytes(16);
+    let nonce = randomBytes(16);
+
     let n = 2 ** WORK_FACTOR_LOG2;
-    let wrap = await scryptAsync(passphrase + password, makeSaltBuffer(salt), { N: n, r: 8, p: 1, dkLen: 32 });
+    let wrap = await scryptAsync(passphrase + password, encodeSalt(salt), { N: 2 ** WORK_FACTOR_LOG2, r: 8, p: 1, dkLen: 32 });
     let chacha = chacha20poly1305(wrap, new Uint8Array(12));
     let body = chacha.encrypt(master);
 
-    let nonce = new Uint8Array(16);
-    crypto.getRandomValues(nonce);
     let info = (new TextEncoder).encode('payload');
     let key = hkdf(sha256, master, nonce, info, 32);
 
+    let headers = [
+        HEADER_SIGNATURE,
+        `-> scrypt ${Base64.toBase64(salt, false)} 18`,
+        Base64.toBase64(body, false),
+        '---'
+    ];
+
+    // Append header MAC
+    {
+        let mkey = hkdf(sha256, master, undefined, (new TextEncoder).encode('header'), 32);
+        let mac = hmac(sha256, mkey, (new TextEncoder).encode(headers.join('\n')));
+
+        headers[headers.length - 1] = '--- ' + Base64.toBase64(mac, false);
+    }
+
     return {
-        key: key,
         passphrase: passphrase,
-        salt: Base64.toBase64(salt),
-        body: Base64.toBase64(body),
-        nonce: Base64.toBase64(nonce)
+        header: headers.join('\n'),
+        nonce: Base64.toBase64(nonce),
+        key: key
     };
 }
 
-async function deriveKey(salt, body, nonce, passphrase, password = null) {
+async function decodeHeader(header, nonce, passphrase, password = null) {
     if (password == null)
         password = '';
     if (password)
         password = '/' + password;
 
-    salt = Base64.toBytes(salt);
-    body = Base64.toBytes(body);
-    nonce = Base64.toBytes(nonce);
+    if (header.length != HEADER_LENGTH)
+        throw new Error('Invalid header length');
 
-    let n = 2 ** WORK_FACTOR_LOG2;
-    let wrap = await scryptAsync(passphrase + password, makeSaltBuffer(salt), { N: n, r: 8, p: 1, dkLen: 32 });
+    let headers = header.split('\n');
+
+    try {
+        header = parseHeaders(headers);
+        nonce = Base64.toBytes(nonce);
+    } catch (err) {
+        console.error(err);
+        throw new Error('Invalid age-v1 header or nonce');
+    }
+
+    let n = 2 ** header.factor;
+    let wrap = await scryptAsync(passphrase + password, encodeSalt(header.salt), { N: n, r: 8, p: 1, dkLen: 32 });
     let chacha = chacha20poly1305(wrap, new Uint8Array(12));
-    let master = chacha.decrypt(body);
+    let master = chacha.decrypt(header.body);
 
-    let info = (new TextEncoder).encode('payload');
-    let key = hkdf(sha256, master, nonce, info, 32);
+    // Check header MAC
+    {
+        headers[3] = '---';
+
+        let mkey = hkdf(sha256, master, undefined, (new TextEncoder).encode('header'), 32);
+        let mac = hmac(sha256, mkey, (new TextEncoder).encode(headers.join('\n')));
+
+        if (!compareBuffers(mac, header.mac))
+            throw new Error('Corrupt age-v1 header MAC');
+    }
+
+    let key = hkdf(sha256, master, nonce, (new TextEncoder).encode('payload'), 32);
 
     return key;
 }
 
-function makeSaltBuffer(salt) {
+function compareBuffers(a, b) {
+    if (a.length != b.length)
+        return false;
+
+    for (let i = 0; i < a.length; i++) {
+        if (a[i] != b[i])
+            return false;
+    }
+
+    return true;
+}
+
+function parseHeaders(headers) {
+    if (headers.length != 4)
+        throw new Error('Invalid encryption header format');
+    if (headers[0] != HEADER_SIGNATURE)
+        throw new Error('Invalid encryption header signature');
+    if (!headers[1].startsWith('-> scrypt '))
+        throw new Error('Invalid or unsupported recipient');
+    if (!headers[3].startsWith('--- '))
+        throw new Error('Invalid header MAC prefix');
+
+    let salt = Base64.toBytes(headers[1].substr(10, 22), false);
+    let factor = parseInt(headers[1].substr(33), 10);
+    let body = Base64.toBytes(headers[2], false);
+    let mac = Base64.toBytes(headers[3].substr(4), false);
+
+    if (Number.isNaN(factor))
+        throw new Error('Invalid work factor value');
+
+    return {
+        salt: salt,
+        factor: factor,
+        body: body,
+        mac: mac
+    };
+}
+
+function encodeSalt(salt) {
     let buf = new Uint8Array(SALT_PREFIX.length + salt.length);
 
     buf.set((new TextEncoder).encode(SALT_PREFIX), 0);
@@ -322,8 +384,8 @@ async function* parallelize(iter, parallel, ahead) {
 }
 
 export {
-    createKey,
-    deriveKey,
+    createHeader,
+    decodeHeader,
 
     upload,
     download

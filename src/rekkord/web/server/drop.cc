@@ -16,6 +16,7 @@ static bool AllowNoExpiration = true;
 static const int64_t StaleDelay = 7 * 86400000ull; // 7 days
 static const int64_t CleanupDelay = 6 * 3600000ull; // 6 hours
 
+static const int64_t HeaderLength = 149;
 static const int64_t FragmentSize = Mebibytes(2);
 static const Size ChunkSize = Kibibytes(64);
 
@@ -172,10 +173,9 @@ void HandleDropCreate(http_IO *io)
     const char *name = nullptr;
     int64_t size = -1;
     int64_t expiration = -1;
-    Span<const char> salt = {};
-    Span<const char> body = {};
-    Span<const char> nonce = {};
     bool protect = false;
+    Span<const char> header = {};
+    Span<const char> nonce = {};
     {
         bool success = http_ParseJson(io, Kibibytes(4), [&](json_Parser *json) {
             bool valid = true;
@@ -189,14 +189,12 @@ void HandleDropCreate(http_IO *io)
                     json->ParseInt(&size);
                 } else if (key == "expiration") {
                     json->SkipNull() || json->ParseInt(&expiration);
-                } else if (key == "salt") {
-                    json->ParseString(&salt);
-                } else if (key == "body") {
-                    json->ParseString(&body);
-                } else if (key == "nonce") {
-                    json->ParseString(&nonce);
                 } else if (key == "protect") {
                     json->ParseBool(&protect);
+                } else if (key == "header") {
+                    json->ParseString(&header);
+                } else if (key == "nonce") {
+                    json->ParseString(&nonce);
                 } else {
                     json->UnexpectedKey(key);
                     valid = false;
@@ -220,12 +218,12 @@ void HandleDropCreate(http_IO *io)
                     LogError("Excessive expiration time, max is approximately %1 days", MaxExpiration / 86400000);
                     valid = false;
                 }
-                if (!IsStringValid(salt)) {
-                    LogError("Invalid 'salt' parameter");
+                if (header.len != HeaderLength || !IsStringValid(header, "\n")) {
+                    LogError("Invalid 'header' parameter");
                     valid = false;
                 }
-                if (!IsStringValid(body)) {
-                    LogError("Invalid 'body' parameter");
+                if (!IsStringValid(nonce)) {
+                    LogError("Invalid 'nonce' parameter");
                     valid = false;
                 }
             }
@@ -245,11 +243,11 @@ void HandleDropCreate(http_IO *io)
     KID kid;
     FillKID(KIDType::Drop, &kid);
 
-    if (!db.Run(R"(INSERT INTO drops (kid, owner, name, size, expire, deleted,
-                                      salt, body, nonce, protect, split, uploaded)
-                   VALUES (?1, ?2, ?3, ?4, ?5, 0, ?6, ?7, ?8, ?9, ?10, 0))",
+    if (!db.Run(R"(INSERT INTO drops (kid, owner, name, size, expire, protect,
+                                      header, nonce, split, uploaded, deleted)
+                   VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, 0, 0))",
                 sq_Binding(kid.raw), session->userid, name, size, expire,
-                salt, body, nonce, 0 + protect, FragmentSize))
+                0 + protect, header, nonce, FragmentSize))
         return;
 
     Span<const char> json = Fmt(io->Allocator(), "{\"kid\": \"%1\", \"split\": %2}", kid, FragmentSize);
@@ -497,8 +495,7 @@ void HandleDropInfo(http_IO *io)
     int64_t now = GetUnixTime();
 
     sq_Statement stmt;
-    if (!db.Prepare(R"(SELECT kid_str(kid), name, size, salt, body,
-                              nonce, protect, split
+    if (!db.Prepare(R"(SELECT kid_str(kid), name, size, protect, header, nonce, split
                        FROM drops WHERE kid = ?1 AND
                                         IIF(expire IS NOT NULL, expire > ?2, 1) AND
                                         deleted = 0 AND
@@ -517,11 +514,10 @@ void HandleDropInfo(http_IO *io)
     const char *id = (const char *)sqlite3_column_text(stmt, 0);
     const char *name = (const char *)sqlite3_column_text(stmt, 1);
     int64_t size = sqlite3_column_int64(stmt, 2);
-    const char *salt = (const char *)sqlite3_column_text(stmt, 3);
-    const char *body = (const char *)sqlite3_column_text(stmt, 4);
+    bool protect = sqlite3_column_int(stmt, 3);
+    const char *header = (const char *)sqlite3_column_text(stmt, 4);
     const char *nonce = (const char *)sqlite3_column_text(stmt, 5);
-    bool protect = sqlite3_column_int(stmt, 6);
-    int64_t split = sqlite3_column_int64(stmt, 7);
+    int64_t split = sqlite3_column_int64(stmt, 6);
 
     http_SendJson(io, 200, [&](json_Writer *json) {
         json->StartObject();
@@ -529,10 +525,9 @@ void HandleDropInfo(http_IO *io)
         json->Key("kid"); json->String(id);
         json->Key("name"); json->String(name);
         json->Key("size"); json->Int64(size);
-        json->Key("salt"); json->String(salt);
-        json->Key("body"); json->String(body);
-        json->Key("nonce"); json->String(nonce);
         json->Key("protect"); json->Bool(protect);
+        json->Key("header"); json->String(header);
+        json->Key("nonce"); json->String(nonce);
         json->Key("split"); json->Int64(split);
 
         json->EndObject();

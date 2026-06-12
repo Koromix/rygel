@@ -18,8 +18,8 @@ import {
 } from './m_format.js';
 import { sendDrop, getProgress } from './d_relay.js';
 import {
-    createKey,
-    deriveKey,
+    createHeader,
+    decodeHeader,
     upload
 } from './d_file.js';
 import { ASSETS } from '../assets/assets.js';
@@ -265,11 +265,11 @@ async function runDrop() {
 async function download(info, passphrase, password) {
     let key = null;
 
-    // The scrypt code in deriveKey blocks for some time, repaint the UI before
+    // The scrypt code in decodeHeader blocks for some time, repaint the UI before
     await Util.waitFor(0);
 
     try {
-        key = await deriveKey(info.salt, info.body, info.nonce, passphrase, password);
+        key = await decodeHeader(info.header, info.nonce, passphrase, password);
     } catch (err) {
         console.error(err);
 
@@ -342,11 +342,11 @@ async function runSend() {
         let expiration = parseInt(elements.expiration.value, 10) * 86400000;
         let password = elements.password.value.trim();
 
-        // The scrypt code in createKey blocks for some time, repaint the UI before
+        // The scrypt code in createHeader blocks for some time, repaint the UI before
         await Util.waitFor(0);
 
-        let { salt, body, nonce, passphrase, key } = await createKey(password);
-        let info = await createDrop(file, expiration, salt, body, nonce, !!password);
+        let { passphrase, header, nonce, key } = await createHeader(password);
+        let info = await createDrop(file, expiration, !!password, header, nonce);
 
         // Encrypt and save passphrase locally
         if (session != null) {
@@ -369,7 +369,6 @@ async function runSend() {
             kid: info.kid,
             name: file.name,
             size: file.size,
-            salt: salt,
             passphrase: passphrase,
             uploaded: 0,
             progress: new ProgressMeter(file.size),
@@ -428,15 +427,14 @@ async function runSend() {
     }
 }
 
-async function createDrop(file, expiration, salt, body, nonce, protect) {
+async function createDrop(file, expiration, protect, header, nonce) {
     let info = await Net.post('/api/drop/create', {
         name: file.name,
         size: file.size,
         expiration: expiration,
-        salt: salt,
-        body: body,
-        nonce: nonce,
-        protect: protect
+        protect: protect,
+        header: header,
+        nonce: nonce
     });
 
     Net.invalidate('drops');
