@@ -217,18 +217,20 @@ else()
     enable_unity_build(koffi)
 endif()
 
-if(APPLE)
-    add_custom_command(
-        TARGET koffi POST_BUILD
-        COMMAND $<$<CONFIG:release>:${CMAKE_STRIP}>
-        ARGS -x $<TARGET_FILE:koffi>
-    )
-elseif(UNIX)
-    add_custom_command(
-        TARGET koffi POST_BUILD
-        COMMAND $<$<CONFIG:release>:${CMAKE_STRIP}>
-        ARGS $<TARGET_FILE:koffi>
-    )
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+    if(APPLE)
+        add_custom_command(
+            TARGET koffi POST_BUILD
+            COMMAND ${CMAKE_STRIP}
+            ARGS -x $<TARGET_FILE:koffi>
+        )
+    elseif(UNIX)
+        add_custom_command(
+            TARGET koffi POST_BUILD
+            COMMAND ${CMAKE_STRIP}
+            ARGS $<TARGET_FILE:koffi>
+        )
+    endif()
 endif()
 
 # ---- Debug ----
