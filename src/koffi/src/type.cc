@@ -557,8 +557,16 @@ const TypeInfo *ReshapeType(InstanceData *instance, const TypeInfo *type, int32_
                     member.offset = reshaped->size;
                     member.type = ReshapeType(instance, member.type, stride, flags);
 
+                    if (member.key) {
+                        napi_value key;
+                        NAPI_OK(napi_get_reference_value(env, member.key, &key));
+                        NAPI_OK(napi_create_reference(env, key, 1, &member.key));
+                    }
+
                     reshaped->members.Append(member);
                     reshaped->size += (int)AlignLen(member.type->size, stride);
+
+                    member.key = nullptr;
                 }
             } break;
 
