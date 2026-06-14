@@ -44,6 +44,7 @@ struct rk_SaveInfo {
 };
 
 struct rk_SnapshotInfo {
+    uint8_t kid[16];
     const char *tag;
     rk_ObjectID oid;
 

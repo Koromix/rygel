@@ -961,6 +961,7 @@ bool rk_ListSnapshots(rk_Repository *repo, Allocator *alloc, HeapArray<rk_Snapsh
             MemCpy(&header, tag.payload.ptr, tag.payload.len);
             header.channel[K_SIZE(header.channel) - 1] = 0;
 
+            MemCpy(snapshot.kid, tag.kid, K_SIZE(tag.kid));
             snapshot.tag = DuplicateString(tag.name, alloc).ptr;
             snapshot.oid = tag.oid;
             snapshot.channel = DuplicateString(header.channel, alloc).ptr;

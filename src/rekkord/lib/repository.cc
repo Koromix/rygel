@@ -28,6 +28,52 @@ static_assert(crypto_sign_ed25519_BYTES == 64);
 static_assert(crypto_kdf_blake2b_KEYBYTES == crypto_box_PUBLICKEYBYTES);
 static_assert(crypto_pwhash_argon2id_SALTBYTES == 16);
 
+static inline int ParseHexadecimalChar(char c)
+{
+    if (c >= '0' && c <= '9') {
+        return c - '0';
+    } else if (c >= 'A' && c <= 'F') {
+        return c - 'A' + 10;
+    } else if (c >= 'a' && c <= 'f') {
+        return c - 'a' + 10;
+    } else {
+        return -1;
+    }
+}
+
+bool rk_ParseOID(Span<const char> str, rk_ObjectID *out_oid)
+{
+    if (str.len != 65)
+        return false;
+
+    rk_ObjectID oid = {};
+
+    // Decode prefix
+    {
+        const auto ptr = std::find(std::begin(rk_BlobCatalogNames), std::end(rk_BlobCatalogNames), str[0]);
+
+        if (ptr == std::end(rk_BlobCatalogNames))
+            return false;
+
+        oid.catalog = (rk_BlobCatalog)(ptr - rk_BlobCatalogNames);
+    }
+
+    for (Size i = 2, j = 0; i < 66; i += 2, j++) {
+        int high = ParseHexadecimalChar(str[i - 1]);
+        int low = ParseHexadecimalChar(str[i]);
+
+        if (high < 0 || low < 0)
+            return false;
+
+        oid.hash.raw[j] = (uint8_t)((high << 4) | low);
+    }
+
+    if (out_oid) {
+        *out_oid = oid;
+    }
+    return true;
+}
+
 // This is basically the same as crypto_box_seal(), but this version lets the caller pick the ephemeral secret key.
 // We need this for out blob key resealing check: we will make the seal twice and do a memcmp() check.
 static bool SealBox(Span<const uint8_t> m, const uint8_t *esk, const unsigned char *pk, uint8_t *out_c)
@@ -818,6 +864,17 @@ bool rk_Repository::ListTags(Allocator *alloc, HeapArray<rk_TagInfo> *out_tags)
 
         if (main.len <= 33 && main[32] != '/')
             continue;
+
+        for (Size i = 0; i < 32; i += 2) {
+            int high = ParseHexadecimalChar(main[i]);
+            int low = ParseHexadecimalChar(main[i + 1]);
+
+            if (high < 0 || low < 0)
+                return false;
+
+            tag.kid[i] = (uint8_t)((high << 4) | low);
+        }
+
         main = main.Take(33, main.len - 33);
 
         LocalArray<uint8_t, 255> cypher;
@@ -1067,51 +1124,4 @@ std::unique_ptr<rk_Repository> rk_OpenRepository(rk_Disk *disk, const rk_Config 
 
     return repo;
 }
-
-static inline int ParseHexadecimalChar(char c)
-{
-    if (c >= '0' && c <= '9') {
-        return c - '0';
-    } else if (c >= 'A' && c <= 'F') {
-        return c - 'A' + 10;
-    } else if (c >= 'a' && c <= 'f') {
-        return c - 'a' + 10;
-    } else {
-        return -1;
-    }
-}
-
-bool rk_ParseOID(Span<const char> str, rk_ObjectID *out_oid)
-{
-    if (str.len != 65)
-        return false;
-
-    rk_ObjectID oid = {};
-
-    // Decode prefix
-    {
-        const auto ptr = std::find(std::begin(rk_BlobCatalogNames), std::end(rk_BlobCatalogNames), str[0]);
-
-        if (ptr == std::end(rk_BlobCatalogNames))
-            return false;
-
-        oid.catalog = (rk_BlobCatalog)(ptr - rk_BlobCatalogNames);
-    }
-
-    for (Size i = 2, j = 0; i < 66; i += 2, j++) {
-        int high = ParseHexadecimalChar(str[i - 1]);
-        int low = ParseHexadecimalChar(str[i]);
-
-        if (high < 0 || low < 0)
-            return false;
-
-        oid.hash.raw[j] = (uint8_t)((high << 4) | low);
-    }
-
-    if (out_oid) {
-        *out_oid = oid;
-    }
-    return true;
-}
-
 }

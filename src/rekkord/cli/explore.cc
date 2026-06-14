@@ -205,6 +205,7 @@ Available sort orders: %!..+%3%!0)"),
                     PrintLn(T("  + Added: %!..+%1%!0"), FmtDiskSize(snapshot.added));
 
                     if (verbose >= 1) {
+                        PrintLn(T("  + Key: %!D..%1%!0"), FmtHex(snapshot.kid));
                         PrintLn(T("  + Tag: %!D..%1%!0"), snapshot.tag);
                     }
                 }
@@ -221,7 +222,9 @@ Available sort orders: %!..+%3%!0)"),
                 json.StartObject();
 
                 char oid[128];
+                char kid[128];
                 Fmt(oid, "%1", snapshot.oid);
+                Fmt(kid, "%1", FmtHex(snapshot.kid));
 
                 char time[64];
                 {
@@ -235,6 +238,7 @@ Available sort orders: %!..+%3%!0)"),
                 json.Key("size"); json.Int64(snapshot.size);
                 json.Key("stored"); json.Int64(snapshot.stored);
                 json.Key("added"); json.Int64(snapshot.added);
+                json.Key("key"); json.String(kid);
                 json.Key("tag"); json.String(snapshot.tag);
 
                 json.EndObject();
@@ -253,7 +257,9 @@ Available sort orders: %!..+%3%!0)"),
                 pugi::xml_node element = root.append_child("Snapshot");
 
                 char oid[128];
+                char kid[128];
                 Fmt(oid, "%1", snapshot.oid);
+                Fmt(kid, "%1", FmtHex(snapshot.kid));
 
                 char time[64];
                 {
@@ -267,6 +273,7 @@ Available sort orders: %!..+%3%!0)"),
                 element.append_attribute("Size") = snapshot.size;
                 element.append_attribute("Stored") = snapshot.stored;
                 element.append_attribute("Added") = snapshot.added;
+                element.append_attribute("Key") = kid;
                 element.append_attribute("Tag") = snapshot.tag;
             }
 

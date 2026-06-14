@@ -72,6 +72,9 @@ struct rk_ObjectID {
 };
 static_assert(K_SIZE(rk_ObjectID) == 33);
 
+// Does not log anything
+bool rk_ParseOID(Span<const char> str, rk_ObjectID *out_oid = nullptr);
+
 enum class rk_SaltKind {
     BlobHash = 0,
     SplitterSeed = 1
@@ -79,6 +82,7 @@ enum class rk_SaltKind {
 
 struct rk_TagInfo {
     const char *name;
+    uint8_t kid[16];
     const char *prefix;
     rk_ObjectID oid;
     Span<const uint8_t> payload;
@@ -152,8 +156,5 @@ private:
 };
 
 std::unique_ptr<rk_Repository> rk_OpenRepository(rk_Disk *disk, const rk_Config &config, bool authenticate);
-
-// Does not log anything
-bool rk_ParseOID(Span<const char> str, rk_ObjectID *out_oid = nullptr);
 
 }
