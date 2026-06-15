@@ -11,6 +11,9 @@ namespace K {
 class S3Disk: public rk_Disk {
     s3_Client s3;
 
+    s3_StorageClass meta_storage;
+    s3_StorageClass data_storage;
+
     s3_LockMode lock;
     rk_ChecksumType checksum;
 
@@ -36,7 +39,7 @@ public:
 };
 
 S3Disk::S3Disk(const rk_S3Config &config)
-    : lock(config.lock), checksum(config.checksum)
+    : meta_storage(config.meta_storage), data_storage(config.data_storage), lock(config.lock), checksum(config.checksum)
 {
     if (!s3.Open(config.remote))
         return;
@@ -88,6 +91,7 @@ rk_WriteResult S3Disk::WriteFile(const char *path, Span<const uint8_t> buf, cons
     s3_PutSettings put;
 
     put.conditional = settings.conditional;
+    put.storage = StartsWith(path, "blobs/R/") ? data_storage : meta_storage;
 
     if (settings.retain) {
         put.retain = GetUnixTime() + settings.retain;

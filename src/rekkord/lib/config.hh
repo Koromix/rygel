@@ -24,6 +24,9 @@ static const char *const rk_DiskTypeNames[] = {
 struct rk_S3Config {
     s3_Config remote;
 
+    s3_StorageClass meta_storage = s3_StorageClass::STANDARD;
+    s3_StorageClass data_storage = s3_StorageClass::STANDARD;
+
     s3_LockMode lock = s3_LockMode::Governance;
     rk_ChecksumType checksum = rk_ChecksumType::CRC64nvme;
 };

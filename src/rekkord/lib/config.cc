@@ -301,7 +301,17 @@ bool rk_LoadConfig(StreamReader *st, rk_Config *out_config)
                     valid = false;
                 }
             } else if (prop.section == "S3") {
-                if (prop.key == "LockMode") {
+                if (prop.key == "MetaStorage") {
+                    if (!OptionToEnumI(s3_StorageClassNames, prop.value, &config.s3.meta_storage)) {
+                        LogError("Invalid storage class '%1'", prop.value);
+                        valid = false;
+                    }
+                } else if (prop.key == "DataStorage") {
+                    if (!OptionToEnumI(s3_StorageClassNames, prop.value, &config.s3.data_storage)) {
+                        LogError("Invalid storage class '%1'", prop.value);
+                        valid = false;
+                    }
+                } else if (prop.key == "LockMode") {
                     if (!OptionToEnumI(s3_LockModeNames, prop.value, &config.s3.lock)) {
                         LogError("Invalid lock mode '%1'", prop.value);
                         valid = false;
