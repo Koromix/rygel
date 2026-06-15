@@ -18,7 +18,7 @@ function build(form) {
     form.section(() => {
         q(11, "J’ai des personnes proches de moi qui me procurent un sentiment de sécurité affective et de bien-être :")
         q(12, "Il y a quelqu’un avec qui je pourrais discuter de décisions importantes qui concernent ma vie :")
-        q(13, "J’ai des relations où sont reconnus ma compétence et mon savoir-faire (confirmation de sa valeur) :")
+        q(13, "J’ai des relations où sont reconnus ma compétence et mon savoir-faire :")
     })
 
     form.section(() => {
