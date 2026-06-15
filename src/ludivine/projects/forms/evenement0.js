@@ -32,6 +32,34 @@ function build(form) {
             if (values.q1a == 99)
                 form.text("?q1b", "Précisez si vous le souhaitez :", { help: "Non obligatoire" })
         }
+
+        if (values.q1 == 0) {
+            form.enumRadio("?q1c", "Sélectionnez la catégorie qui correspond le mieux à l'évènement qui vous a amené(e) ici ?", [
+                [1, "Catastrophe naturelle (inondation, ouragan, tornade, tremblement de terre, etc.)"],
+                [2, "Incendie ou explosion"],
+                [3, "Accident de la route (accident de voiture ou de bateau, déraillement de train, écrasement d’avion, etc.)"],
+                [4, "Accident grave au travail, à domicile ou pendant des occupations de loisirs"],
+                [5, "Exposition à une substance toxique (produits chimiques dangereux, radiation, etc.)"],
+                [6, "Agression physique (avoir été attaqué, frappé, poignardé, battu, reçu des coups de pieds, etc.)"],
+                [7, "Attaque à main armée (avoir été menacé ou blessé par une arme à feu, un couteau, une bombe, etc.)"],
+                [8, "Agression sexuelle (viol, tentative de viol, accomplir tout acte sexuel par la force ou sous menaces)"],
+                [9, "Autre expérience sexuelle non désirée et désagréable (abus sexuel dans l’enfance)"],
+                [10, "Participation à un conflit armé ou présence dans une zone de guerre (dans l’armée ou comme civil)"],
+                [11, "Captivité, kidnapping ou prise d'otage"],
+                [12, "Maladie ou blessure mettant ma vie ou celle d'autrui en danger"],
+                [13, "Souffrances humaines intenses"],
+                [14, "Souffrances animales intenses"],
+                [15, "Mort violente (homicide, suicide, etc.)"],
+                [16, "Mort soudaine accidentelle"],
+                [17, "Blessure grave, dommage ou mort causé par vous à quelqu’un"],
+                [18, "Tout autre évènement ou expérience très stressant"]
+            ], {
+                help: html`Non obligatoire. Cela peut être difficile, n’hésitez pas à appuyer sur le <b>bouton « SOS »</b> si vous en avez besoin, ou rapprochez-vous d’une personne ressource.`
+            })
+
+            if (values.q1c == 18)
+                form.text("?q1d", "Précisez si vous le souhaitez :", { help: "Non obligatoire" })
+        }
     })
 
     form.section(() => {
