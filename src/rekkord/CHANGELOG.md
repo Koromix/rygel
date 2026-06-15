@@ -10,7 +10,7 @@
 
 *Released on 2026-06-15*
 
-- Support reading repository key from command output
+- Support reading keyfile from command output
 - Support custom S3 storage classes
 - Show snapshot owner key ID with `rekkord snapshots -v`
 
