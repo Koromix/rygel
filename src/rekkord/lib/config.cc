@@ -230,7 +230,12 @@ bool rk_LoadConfig(StreamReader *st, rk_Config *out_config)
                         valid = false;
                     }
                 } else if (prop.key == "KeyFile") {
-                    config.key_filename = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
+                    if (prop.value.len && prop.value[0] == '!') {
+                        // If it starts with '!' it is a command
+                        config.key_filename = DuplicateString(prop.value, &config.str_alloc).ptr;
+                    } else {
+                        config.key_filename = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
+                    }
                 } else {
                     LogError("Unknown attribute '%1'", prop.key);
                     valid = false;

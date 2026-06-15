@@ -4675,8 +4675,17 @@ static inline bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &i
                               (HeapArray<uint8_t> *)out_buf, out_code);
 }
 
-Size ReadCommandOutput(const char *cmd_line, Span<char> out_output);
-bool ReadCommandOutput(const char *cmd_line, HeapArray<char> *out_output);
+Size ReadCommandOutput(const char *cmd_line, Span<uint8_t> out_output);
+bool ReadCommandOutput(const char *cmd_line, HeapArray<uint8_t> *out_output);
+
+// Char variants
+static inline Size ReadCommandOutput(const char *cmd_line, Span<char> out_output)
+    { return ReadCommandOutput(cmd_line, out_output.As<uint8_t>()); }
+static inline bool ReadCommandOutput(const char *cmd_line, HeapArray<char> *out_output)
+{
+    HeapArray<uint8_t> *out = (HeapArray<uint8_t> *)out_output;
+    return ReadCommandOutput(cmd_line, out);
+}
 
 #endif
 

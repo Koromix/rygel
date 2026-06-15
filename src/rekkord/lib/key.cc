@@ -86,7 +86,12 @@ Size rk_ReadRawKey(const char *filename, Span<uint8_t> out_raw)
     Span<uint8_t> buf = MakeSpan((uint8_t *)AllocateSafe(rk_MaximumKeySize), rk_MaximumKeySize);
     K_DEFER_C(len = buf.len) { ReleaseSafe(buf.ptr, len); };
 
-    buf.len = ReadFile(filename, buf);
+    if (filename[0] == '!') {
+        const char *cmd = TrimStrLeft(filename + 1).ptr;
+        buf.len = ReadCommandOutput(cmd, buf);
+    } else {
+        buf.len = ReadFile(filename, buf);
+    }
     if (buf.len < 0)
         return -1;
 

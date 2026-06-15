@@ -5633,7 +5633,7 @@ bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
     return true;
 }
 
-Size ReadCommandOutput(const char *cmd_line, Span<char> out_output)
+Size ReadCommandOutput(const char *cmd_line, Span<uint8_t> out_output)
 {
     static ExecuteInfo::KeyValue variables[] = {
         { "LANG", "C" },
@@ -5662,7 +5662,7 @@ Size ReadCommandOutput(const char *cmd_line, Span<char> out_output)
     return total_len;
 }
 
-bool ReadCommandOutput(const char *cmd_line, HeapArray<char> *out_output)
+bool ReadCommandOutput(const char *cmd_line, HeapArray<uint8_t> *out_output)
 {
     static ExecuteInfo::KeyValue variables[] = {
         { "LANG", "C" },
