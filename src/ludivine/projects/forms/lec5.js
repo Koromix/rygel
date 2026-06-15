@@ -38,7 +38,7 @@ function build(form) {
         15: "Mort violente (homicide, suicide, etc.)",
         16: "Mort soudaine accidentelle",
         17: "Blessure grave, dommage ou mort causé par vous à quelqu’un",
-        18: "Toute autre évènement ou expérience très stressant"
+        18: "Tout autre évènement ou expérience très stressant"
     }
     let indices = Object.keys(catastrophes)
 
