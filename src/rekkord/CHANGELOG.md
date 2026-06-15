@@ -6,6 +6,14 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.98
+
+*Released on 2026-06-15*
+
+- Support reading repository key from command output
+- Support custom S3 storage classes
+- Show snapshot owner key ID with `rekkord snapshots -v`
+
 ### Rekkord 0.97
 
 *Released on 2026-03-10*
