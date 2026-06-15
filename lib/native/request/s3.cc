@@ -720,6 +720,8 @@ s3_PutResult s3_Client::PutObject(Span<const char> key, int64_t size,
             headers.Append({ "x-amz-object-lock-retain-until-date", until });
         }
 
+        headers.Append({ "x-amz-storage-class", s3_StorageClassNames[(int)settings.storage] });
+
         PrepareRequest(curl, date, "PUT", key, {}, headers, &temp_alloc);
 
         // Handle restart

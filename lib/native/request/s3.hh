@@ -33,6 +33,21 @@ struct s3_Config {
 bool s3_DecodeURL(Span<const char> url, s3_Config *out_config);
 const char *s3_MakeURL(const s3_Config &config, Allocator *alloc);
 
+enum class s3_StorageClass {
+    STANDARD,
+    REDUCED_REDUNDANCY,
+    STANDARD_IA,
+    ONEZONE_IA,
+    INTELLIGENT_TIERING
+};
+static const char *const s3_StorageClassNames[] = {
+    "STANDARD",
+    "REDUCED_REDUNDANCY",
+    "STANDARD_IA",
+    "ONEZONE_IA",
+    "INTELLIGENT_TIERING"
+};
+
 enum class s3_LockMode {
     Governance,
     Compliance
@@ -53,7 +68,9 @@ enum class s3_ChecksumType {
 
 struct s3_PutSettings {
     const char *mimetype = nullptr;
+
     bool conditional = false;
+    s3_StorageClass storage = s3_StorageClass::STANDARD;
 
     int64_t retain = 0;
     s3_LockMode lock = s3_LockMode::Governance;
