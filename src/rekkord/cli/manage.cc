@@ -60,7 +60,7 @@ retry:
     return ret;
 }
 
-static bool CheckEndpoint(const char *url)
+static bool CheckEndpoint(const char *url, bool *out_vhost = nullptr)
 {
     CURLU *h = curl_url();
     K_DEFER { curl_url_cleanup(h); };
@@ -84,6 +84,15 @@ static bool CheckEndpoint(const char *url)
     if (path && !TestStr(path, "/")) {
         LogError("Endpoint URL must not include path");
         return false;
+    }
+
+    if (out_vhost) {
+        char *host = nullptr;
+        if (curl_url_get(h, CURLUPART_HOST, &host, 0) == CURLUE_OUT_OF_MEMORY)
+            K_BAD_ALLOC();
+        K_DEFER { curl_free(host); };
+
+        *out_vhost = (strstr(host, ".s3.") > host);
     }
 
     return true;
@@ -274,7 +283,8 @@ reenter:
 
         case rk_DiskType::S3: {
             const char *endpoint = nullptr;
-            const char *bucket = nullptr;
+            bool vhost = false;
+            const char *bucket = "";
             const char *key_id = nullptr;
             const char *secret_key = nullptr;
 
@@ -282,10 +292,12 @@ reenter:
                 endpoint = PromptNonEmpty(T("S3 endpoint URL:"), &temp_alloc);
                 if (!endpoint)
                     return 1;
-            } while (!CheckEndpoint(endpoint));
-            bucket = PromptNonEmpty(T("Bucket name:"), &temp_alloc);
-            if (!bucket)
-                return 1;
+            } while (!CheckEndpoint(endpoint, &vhost));
+            if (!vhost) {
+                bucket = PromptNonEmpty(T("Bucket name:"), &temp_alloc);
+                if (!bucket)
+                    return 1;
+            }
             key_id = PromptNonEmpty(T("S3 access key ID:"), &temp_alloc);
             if (!key_id)
                 return 1;
