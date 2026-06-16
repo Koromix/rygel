@@ -335,6 +335,14 @@ static int RunBuild(Span<const char *> arguments)
     Span<const char *> run_arguments = {};
     bool run_here = false;
 
+    if (const char *str = GetEnv("FELIX_CONFIG_FILE"); str) {
+        if (PathIsAbsolute(str)) {
+            config_filename = str;
+        } else {
+            LogWarning("Ignoring FELIX_CONFIG_FILE because it does not contain an absolute path");
+        }
+    }
+
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
 R"(Usage: %!..+%1 build [option...] [target...]
