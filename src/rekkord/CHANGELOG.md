@@ -6,6 +6,12 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.100
+
+*Released on 2026-06-16*
+
+- Fix possible memory use explosion when backing up directories with many big files
+
 ### Rekkord 0.99
 
 *Released on 2026-06-16*
