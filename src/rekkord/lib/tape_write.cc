@@ -51,8 +51,7 @@ class PutContext {
     std::atomic_int64_t put_written { 0 };
     std::atomic_int64_t put_entries { 0 };
 
-    Async dir_tasks;
-    Async file_tasks;
+    Async tasks;
 
     std::atomic_int big_semaphore { FileBigLimit };
 
@@ -115,8 +114,7 @@ static void PackExtended(const char *filename,  Span<const XAttrInfo> xattrs, He
 }
 
 PutContext::PutContext(rk_Repository *repo, rk_Cache *cache, const rk_SaveSettings &settings)
-    : repo(repo), cache(cache), settings(settings),
-      dir_tasks(repo->GetAsync()), file_tasks(repo->GetAsync())
+    : repo(repo), cache(cache), settings(settings), tasks(repo->GetAsync())
 {
     repo->MakeSalt(rk_SaltKind::BlobHash, salt32);
 
@@ -147,7 +145,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow, rk_Hash
         rk_Hash hash = {};
     };
 
-    Async async(&dir_tasks);
+    Async async(&tasks);
     bool success = true;
 
     // Reuse for performance
@@ -554,7 +552,7 @@ PutResult PutContext::PutFile(const char *src_filename, bool fake, rk_Hash *out_
         }
 
         do {
-            Async async(&file_tasks);
+            Async async(&tasks);
 
             // Fill buffer
             Size read = st.Read(buf.TakeAvailable());
