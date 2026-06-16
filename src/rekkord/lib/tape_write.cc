@@ -21,7 +21,7 @@ static const Size ChunkAverage = Kibibytes(2048);
 static const Size ChunkMin = Kibibytes(1024);
 static const Size ChunkMax = Kibibytes(8192);
 
-static const Size FileBigSize = Mebibytes(64);
+static const Size FileBigSize = Mebibytes(128);
 static const Size FileDefaultSize = 2 * ChunkMax;
 static const int FileBigLimit = 4;
 
@@ -542,13 +542,12 @@ PutResult PutContext::PutFile(const char *src_filename, bool fake, rk_Hash *out_
         K_DEFER { big_semaphore++; };
 
         HeapArray<uint8_t> buf;
-        if (use_big_buffer) {
-            Size needed = (st.ComputeRawLen() >= 0) ? st.ComputeRawLen() : FileDefaultSize;
-            needed = std::clamp(needed, ChunkMax, FileBigSize);
+        {
+            int64_t size = st.ComputeRawLen();
+            int64_t max = use_big_buffer ? FileBigSize : FileDefaultSize;
 
+            Size needed = (Size)std::min(size >= 0 ? size : (int64_t)FileDefaultSize, max);
             buf.SetCapacity(needed);
-        } else {
-            buf.SetCapacity(FileDefaultSize);
         }
 
         do {
