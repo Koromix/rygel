@@ -1511,7 +1511,7 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
             append(FormatUnsignedToDecimal((uint64_t)arg.u.date.st.day, buf));
         } break;
 
-        case FmtType::TimeISO: {
+        case FmtType::TimeBasic: {
             const TimeSpec &spec = arg.u.time.spec;
 
             LocalArray<char, 128> buf;
@@ -1541,6 +1541,43 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                               FmtInt(spec.min, 2), FmtInt(spec.sec, 2), FmtInt(spec.msec, 3)).len;
             } else {
                 buf.len = Fmt(buf.data, "%1%2%3T%4%5%6Z",
+                              FmtInt(spec.year, 2), FmtInt(spec.month, 2),
+                              FmtInt(spec.day, 2), FmtInt(spec.hour, 2),
+                              FmtInt(spec.min, 2), FmtInt(spec.sec, 2)).len;
+            }
+
+            append(buf);
+        } break;
+        case FmtType::TimeIso: {
+            const TimeSpec &spec = arg.u.time.spec;
+
+            LocalArray<char, 128> buf;
+
+            if (spec.offset && arg.u.time.ms) {
+                int offset_h = spec.offset / 60;
+                int offset_m = spec.offset % 60;
+
+                buf.len = Fmt(buf.data, "%1-%2-%3T%4:%5:%6.%7%8%9%10",
+                              FmtInt(spec.year, 2), FmtInt(spec.month, 2),
+                              FmtInt(spec.day, 2), FmtInt(spec.hour, 2),
+                              FmtInt(spec.min, 2), FmtInt(spec.sec, 2), FmtInt(spec.msec, 3),
+                              offset_h >= 0 ? "+" : "", FmtInt(offset_h, 2), FmtInt(offset_m, 2)).len;
+            } else if (spec.offset) {
+                int offset_h = spec.offset / 60;
+                int offset_m = spec.offset % 60;
+
+                buf.len = Fmt(buf.data, "%1-%2-%3T%4:%5:%6%7%8%9",
+                              FmtInt(spec.year, 2), FmtInt(spec.month, 2),
+                              FmtInt(spec.day, 2), FmtInt(spec.hour, 2),
+                              FmtInt(spec.min, 2), FmtInt(spec.sec, 2),
+                              offset_h >= 0 ? "+" : "", FmtInt(offset_h, 2), FmtInt(offset_m, 2)).len;
+            } else if (arg.u.time.ms) {
+                buf.len = Fmt(buf.data, "%1-%2-%3T%4:%5:%6.%7Z",
+                              FmtInt(spec.year, 2), FmtInt(spec.month, 2),
+                              FmtInt(spec.day, 2), FmtInt(spec.hour, 2),
+                              FmtInt(spec.min, 2), FmtInt(spec.sec, 2), FmtInt(spec.msec, 3)).len;
+            } else {
+                buf.len = Fmt(buf.data, "%1-%2-%3T%4:%5:%6Z",
                               FmtInt(spec.year, 2), FmtInt(spec.month, 2),
                               FmtInt(spec.day, 2), FmtInt(spec.hour, 2),
                               FmtInt(spec.min, 2), FmtInt(spec.sec, 2)).len;

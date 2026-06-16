@@ -229,7 +229,7 @@ Available sort orders: %!..+%3%!0)"),
                 char time[64];
                 {
                     TimeSpec spec = DecomposeTimeUTC(snapshot.time);
-                    Fmt(time, "%1", FmtTimeISO(spec, true));
+                    Fmt(time, "%1", FmtTimeIso(spec, true));
                 }
 
                 json.Key("channel"); json.String(snapshot.channel);
@@ -264,7 +264,7 @@ Available sort orders: %!..+%3%!0)"),
                 char time[64];
                 {
                     TimeSpec spec = DecomposeTimeUTC(snapshot.time);
-                    Fmt(time, "%1", FmtTimeISO(spec, true));
+                    Fmt(time, "%1", FmtTimeIso(spec, true));
                 }
 
                 element.append_attribute("Channel") = snapshot.channel;
@@ -383,7 +383,7 @@ Available output formats: %!..+%2%!0)"),
                 char time[64];
                 {
                     TimeSpec spec = DecomposeTimeUTC(channel.time);
-                    Fmt(time, "%1", FmtTimeISO(spec, true));
+                    Fmt(time, "%1", FmtTimeIso(spec, true));
                 }
 
                 json.Key("channel"); json.String(channel.name);
@@ -413,7 +413,7 @@ Available output formats: %!..+%2%!0)"),
                 char time[64];
                 {
                     TimeSpec spec = DecomposeTimeUTC(channel.time);
-                    Fmt(time, "%1", FmtTimeISO(spec, true));
+                    Fmt(time, "%1", FmtTimeIso(spec, true));
                 }
 
                 element.append_attribute("Name") = channel.name;
@@ -486,7 +486,7 @@ static void ListObjectJson(json_PrettyWriter *json, const rk_ObjectInfo &obj)
 
     const auto format_time = [&](int64_t time) {
         TimeSpec spec = DecomposeTimeUTC(time);
-        Fmt(buf, "%1", FmtTimeISO(spec, true));
+        Fmt(buf, "%1", FmtTimeIso(spec, true));
         return buf;
     };
 
@@ -538,7 +538,7 @@ pugi::xml_node ListObjectXml(T *ptr, const rk_ObjectInfo &obj)
 
     const auto format_time = [&](int64_t time) {
         TimeSpec spec = DecomposeTimeUTC(time);
-        Fmt(buf, "%1", FmtTimeISO(spec, true));
+        Fmt(buf, "%1", FmtTimeIso(spec, true));
         return buf;
     };
 

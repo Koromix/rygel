@@ -40,7 +40,7 @@ static void HandleRequest(http_IO *io)
 
         int64_t now = GetUnixTime();
         TimeSpec spec = DecomposeTimeLocal(now);
-        const char *filename = Fmt(io->Allocator(), "%1%/%2.webm", dest_directory, FmtTimeISO(spec)).ptr;
+        const char *filename = Fmt(io->Allocator(), "%1%/%2.webm", dest_directory, FmtTimeIso(spec)).ptr;
 
         StreamReader reader;
         StreamWriter writer;

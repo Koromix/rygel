@@ -710,11 +710,11 @@ s3_PutResult s3_Client::PutObject(Span<const char> key, int64_t size,
 
         // PrepareRequest() does not try to mess with custom headers, to avoid sorting issues
         headers.Append({ "x-amz-content-sha256", "UNSIGNED-PAYLOAD" });
-        headers.Append({ "x-amz-date", Fmt(&temp_alloc, "%1", FmtTimeISO(date)).ptr });
+        headers.Append({ "x-amz-date", Fmt(&temp_alloc, "%1", FmtTimeBasic(date)).ptr });
 
         if (settings.retain) {
             TimeSpec spec = DecomposeTimeUTC(settings.retain);
-            const char *until = Fmt(&temp_alloc, "%1", FmtTimeISO(spec)).ptr;
+            const char *until = Fmt(&temp_alloc, "%1", FmtTimeIso(spec)).ptr;
 
             headers.Append({ "x-amz-object-lock-mode", GetLockModeString(settings.lock) });
             headers.Append({ "x-amz-object-lock-retain-until-date", until });
@@ -811,7 +811,7 @@ bool s3_Client::RetainObject(Span<const char> key, int64_t until, s3_LockMode mo
 )";
 
     TimeSpec spec = DecomposeTimeUTC(until);
-    Span<const char> body = Fmt(&temp_alloc, xml, FmtTimeISO(spec), GetLockModeString(mode));
+    Span<const char> body = Fmt(&temp_alloc, xml, FmtTimeBasic(spec), GetLockModeString(mode));
 
     int status = RunSafe("retain S3 object", 5, [&](CURL *curl, int) {
         int64_t now = GetUnixTime();
@@ -1066,7 +1066,7 @@ void s3_Client::PrepareRequest(CURL *curl, const TimeSpec &date, const char *met
 {
     const KeyValue headers[] = {
         { "x-amz-content-sha256", "UNSIGNED-PAYLOAD" },
-        { "x-amz-date", Fmt(alloc, "%1", FmtTimeISO(date)).ptr }
+        { "x-amz-date", Fmt(alloc, "%1", FmtTimeBasic(date)).ptr }
     };
 
     PrepareRequest(curl, date, method, key, params, headers, alloc);
@@ -1119,7 +1119,7 @@ void s3_Client::PrepareRequest(CURL *curl, const TimeSpec &date, const char *met
         list.Append({ (char *)authorization, nullptr });
 
         for (const KeyValue &header: headers) {
-            const char *str = Fmt(alloc, "%1: %2", header.key, FmtUrlSafe(header.value, "-._~*$+/=")).ptr;
+            const char *str = Fmt(alloc, "%1: %2", header.key, FmtUrlSafe(header.value, "-._~*$+/=:")).ptr;
             list.Append({ (char *)str, nullptr });
         }
 
@@ -1231,7 +1231,7 @@ const char *s3_Client::MakeAuthorization(const TimeSpec &date, const char *metho
         }
         Fmt(&buf, "\nhost:%1\n", host);
         for (const KeyValue &header: headers) {
-            Fmt(&buf, "%1:%2\n", FmtLowerAscii(header.key), FmtUrlSafe(header.value, "-._~*$+/="));
+            Fmt(&buf, "%1:%2\n", FmtLowerAscii(header.key), FmtUrlSafe(header.value, "-._~*$+/=:"));
         }
         Fmt(&buf, "\nhost");
         for (const KeyValue &header: headers) {
@@ -1251,7 +1251,7 @@ const char *s3_Client::MakeAuthorization(const TimeSpec &date, const char *metho
         crypto_hash_sha256(hash, (const uint8_t *)canonical.ptr, (size_t)canonical.len);
 
         Fmt(&buf, "AWS4-HMAC-SHA256\n");
-        Fmt(&buf, "%1\n", FmtTimeISO(date));
+        Fmt(&buf, "%1\n", FmtTimeBasic(date));
         Fmt(&buf, "%1/%2/s3/aws4_request\n", FormatYYYYMMDD(date), region);
         Fmt(&buf, "%1", FormatSha256(hash));
 

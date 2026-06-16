@@ -3683,7 +3683,8 @@ enum class FmtType {
     MemorySize,
     DiskSize,
     Date,
-    TimeISO,
+    TimeBasic,
+    TimeIso,
     TimeNice,
     List,
     FlagNames,
@@ -3938,10 +3939,19 @@ static inline FmtArg FmtDiskSize(int64_t size)
     return arg;
 }
 
-static inline FmtArg FmtTimeISO(TimeSpec spec, bool ms = false)
+static inline FmtArg FmtTimeBasic(TimeSpec spec, bool ms = false)
 {
     FmtArg arg;
-    arg.type = FmtType::TimeISO;
+    arg.type = FmtType::TimeBasic;
+    arg.u.time.spec = spec;
+    arg.u.time.ms = ms;
+    return arg;
+}
+
+static inline FmtArg FmtTimeIso(TimeSpec spec, bool ms = false)
+{
+    FmtArg arg;
+    arg.type = FmtType::TimeIso;
     arg.u.time.spec = spec;
     arg.u.time.ms = ms;
     return arg;
