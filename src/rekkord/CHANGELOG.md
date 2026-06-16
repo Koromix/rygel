@@ -6,6 +6,13 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.99
+
+*Released on 2026-06-16*
+
+- Fix error 400 when using object lock with Scaleway Object Storage
+- Don't ask for bucket name for virtual-host-like endpoints in `rekkord setup`
+
 ### Rekkord 0.98
 
 *Released on 2026-06-15*
