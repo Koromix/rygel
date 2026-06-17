@@ -39,6 +39,7 @@ class smtp_Sender {
 public:
     bool Init(const smtp_Config &config);
 
+    bool IsValid() const { return config.url; }
     const smtp_Config &GetConfig() const { return config; }
 
     bool Send(const char *to, const smtp_MailContent &content);
