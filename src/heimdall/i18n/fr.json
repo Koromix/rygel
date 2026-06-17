@@ -60,12 +60,12 @@
         },
         "time_unit": "Unité de temps",
         "time_units": {
-            "s": "Secondes (s)",
-            "m": "Minutes (m)",
-            "h": "Heures (h)",
-            "d": "Jours (j)",
-            "M": "Mois (M)",
-            "y": "Années (a)"
+            "s": "Secondes",
+            "m": "Minutes",
+            "h": "Heures",
+            "d": "Jours",
+            "M": "Mois",
+            "y": "Années"
         },
         "tree_area": "Arbre / panneau gauche",
         "view": "Vue",
