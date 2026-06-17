@@ -5053,6 +5053,10 @@ void CloseSocket(int fd);
 // Tasks
 // ------------------------------------------------------------------------
 
+enum class AsyncFlag {
+    Selfish = 1 << 0
+};
+
 class Async {
     K_DELETE_COPY(Async)
 
@@ -5061,20 +5065,21 @@ class Async {
     std::atomic_int remaining_tasks { 0 };
 
     class AsyncPool *pool;
+
+    Async *only = nullptr;
 #else
     bool success = true;
 #endif
 
 public:
-    Async(int threads = -1);
-    Async(Async *parent);
+    Async(int threads = -1, unsigned int flags = 0);
+    Async(Async *parent, unsigned int flags = 0);
     ~Async();
 
     void Run(const std::function<bool()> &f);
     void Run(int worker, const std::function<bool()> &f);
 
     bool Sync();
-    bool SyncSoon();
     bool Wait(int timeout);
     bool IsSuccess() const { return success; }
 

@@ -7443,7 +7443,7 @@ public:
     void AddTask(Async *async, int worker_idx, const std::function<bool()> &func);
 
     void RunWorker(int worker_idx);
-    void SyncOn(Async *async, bool soon);
+    void SyncOn(Async *async, Async *only);
     bool WaitOn(Async *async, int timeout);
 
     void RunTasks(int worker_idx, Async *only);
@@ -7457,7 +7457,7 @@ static thread_local AsyncPool *async_running_pool = nullptr;
 static thread_local int async_running_worker_idx;
 static thread_local bool async_running_task = false;
 
-Async::Async(int threads)
+Async::Async(int threads, unsigned int flags)
 {
     K_ASSERT(threads);
 
@@ -7479,14 +7479,22 @@ Async::Async(int threads)
     }
 
     pool->RegisterAsync();
+
+    if (flags & (int)AsyncFlag::Selfish) {
+        only = this;
+    }
 }
 
-Async::Async(Async *parent)
+Async::Async(Async *parent, unsigned int flags)
 {
     K_ASSERT(parent);
 
     pool = parent->pool;
     pool->RegisterAsync();
+
+    if (flags & (int)AsyncFlag::Selfish) {
+        only = this;
+    }
 }
 
 Async::~Async()
@@ -7509,13 +7517,7 @@ void Async::Run(int worker, const std::function<bool()> &func)
 
 bool Async::Sync()
 {
-    pool->SyncOn(this, false);
-    return success;
-}
-
-bool Async::SyncSoon()
-{
-    pool->SyncOn(this, true);
+    pool->SyncOn(this, only);
     return success;
 }
 
@@ -7651,7 +7653,7 @@ void AsyncPool::AddTask(Async *async, int worker_idx, const std::function<bool()
         int worker_idx = async_running_worker_idx;
 
         do {
-            RunTasks(worker_idx, nullptr);
+            RunTasks(worker_idx, async->only);
         } while (pending_tasks >= K_ASYNC_MAX_PENDING_TASKS);
     } else if (!prev_pending) {
         std::lock_guard<std::mutex> lock_pool(pool_mutex);
@@ -7685,7 +7687,7 @@ void AsyncPool::RunWorker(int worker_idx)
     }
 }
 
-void AsyncPool::SyncOn(Async *async, bool soon)
+void AsyncPool::SyncOn(Async *async, Async *only)
 {
     K_DEFER_C(pool = async_running_pool,
                worker_idx = async_running_worker_idx) {
@@ -7697,7 +7699,7 @@ void AsyncPool::SyncOn(Async *async, bool soon)
     async_running_worker_idx = 0;
 
     while (async->remaining_tasks) {
-        RunTasks(0, soon ? async : nullptr);
+        RunTasks(0, only);
 
         std::unique_lock<std::mutex> lock_sync(pool_mutex);
         sync_cv.wait(lock_sync, [&]() { return pending_tasks || !async->remaining_tasks; });
@@ -7777,12 +7779,12 @@ void AsyncPool::RunTask(Task *task)
 #else
 
 
-Async::Async(int threads)
+Async::Async(int threads, unsigned int)
 {
     K_ASSERT(threads);
 }
 
-Async::Async(Async *parent)
+Async::Async(Async *parent, unsigned int)
 {
     K_ASSERT(parent);
 }

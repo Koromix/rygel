@@ -551,7 +551,9 @@ PutResult PutContext::PutFile(const char *src_filename, bool fake, rk_Hash *out_
         }
 
         do {
-            Async async(&tasks);
+            // We don't want to run other file tasks because that could cause us to allocate way
+            // too much heap memory for the fill buffer.
+            Async async(&tasks, (int)AsyncFlag::Selfish);
 
             // Fill buffer
             Size read = st.Read(buf.TakeAvailable());
@@ -608,9 +610,7 @@ PutResult PutContext::PutFile(const char *src_filename, bool fake, rk_Hash *out_
                 remain.len -= processed;
             } while (remain.len);
 
-            // We don't want to run other file tasks because that could cause us to allocate way
-            // too much heap memory for the fill buffer.
-            if (!async.SyncSoon())
+            if (!async.Sync())
                 return PutResult::Error;
 
             MemMove(buf.ptr, remain.ptr, remain.len);

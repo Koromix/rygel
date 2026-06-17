@@ -663,7 +663,10 @@ int GetContext::GetFile(const rk_ObjectID &oid, bool chunked, Span<const uint8_t
         if (!settings.fake && !ResizeFile(fd, dest_filename, file_size))
             return -1;
 
-        Async async(&tasks);
+        // Only process tasks for this Async, a standard Sync would run other tasks (such as other file tasks)
+        // which could take a while and could provoke an accumulation of unfinished file tasks with many open
+        // file descriptors and the appearence of slow progress.
+        Async async(&tasks, (int)AsyncFlag::Selfish);
 
         for (const FileChunk &chunk: chunks) {
             async.Run([=, this]() {
@@ -694,10 +697,7 @@ int GetContext::GetFile(const rk_ObjectID &oid, bool chunked, Span<const uint8_t
             });
         }
 
-        // Only process tasks for this Async, a standard Sync would run other tasks (such as other file tasks)
-        // which could take a while and could provoke an accumulation of unfinished file tasks with many open
-        // file descriptors and the appearence of slow progress.
-        if (!async.SyncSoon())
+        if (!async.Sync())
             return -1;
 
         MakeProgress(1, 0);
