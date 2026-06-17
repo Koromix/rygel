@@ -7645,9 +7645,15 @@ void AsyncPool::AddTask(Async *async, int worker_idx, const std::function<bool()
 
     async->remaining_tasks++;
 
-    bool busy = pending_tasks++;
+    int prev_pending = pending_tasks++;
 
-    if (!busy) {
+    if (prev_pending >= K_ASYNC_MAX_PENDING_TASKS) {
+        int worker_idx = async_running_worker_idx;
+
+        do {
+            RunTasks(worker_idx, nullptr);
+        } while (pending_tasks >= K_ASYNC_MAX_PENDING_TASKS);
+    } else if (!prev_pending) {
         std::lock_guard<std::mutex> lock_pool(pool_mutex);
 
         pending_cv.notify_all();
