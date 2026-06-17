@@ -6,6 +6,12 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.101
+
+*Released on 2026-06-17*
+
+- Fix unbounded task queue causing stall and crash during `rekkord scan`
+
 ### Rekkord 0.100
 
 *Released on 2026-06-16*
