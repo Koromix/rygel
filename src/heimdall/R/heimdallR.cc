@@ -643,13 +643,18 @@ RcppExport SEXP hmR_ExportMarks(SEXP inst_xp, SEXP first_xp, SEXP limit_xp)
     {
         sq_Statement stmt;
         if (!inst->db.Prepare(R"(SELECT COUNT(*) FROM marks
-                                 WHERE entity IS NOT NULL AND mark >= IFNULL(?1, 0))", &stmt, first))
+                                 WHERE entity IS NOT NULL AND mark >= ?1)", &stmt, first))
             rcc_StopWithLastError();
         if (!stmt.GetSingleValue(&nrow))
             rcc_StopWithLastError();
     }
 
-    nrow = std::min(nrow, (int64_t)limit);
+    if (nrow > limit) {
+        if (Rf_isNull(first_xp)) {
+            LogWarning("Only %1 marks will be exported, consult documentation of hm_export_marks() for more", nrow);
+        }
+        nrow = limit;
+    }
 
     rcc_DataFrameBuilder df_builder(nrow);
     rcc_Vector<int> id = df_builder.Add<int>("id");
@@ -663,7 +668,7 @@ RcppExport SEXP hmR_ExportMarks(SEXP inst_xp, SEXP first_xp, SEXP limit_xp)
         sq_Statement stmt;
         if (!inst->db.Prepare(R"(SELECT mark, name, timestamp, status, comment
                                  FROM marks
-                                 WHERE entity IS NOT NULL AND mark >= IFNULL(?1, 0))", &stmt, first))
+                                 WHERE entity IS NOT NULL AND mark >= ?1)", &stmt, first))
             rcc_StopWithLastError();
 
         while (stmt.Step() && count < nrow) {
