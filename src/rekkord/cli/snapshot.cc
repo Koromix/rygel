@@ -103,7 +103,7 @@ int RunSave(Span<const char *> arguments)
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
 T(R"(Usage: %!..+%1 save [-C filename] [option...] channel path...%!0
-       %!..+%1 save [-C filename] [option...] --from file%!0%!0)"), FelixTarget);
+       %!..+%1 save [-C filename] [option...] --from file%!0)"), FelixTarget);
         PrintCommonOptions(st);
         PrintLn(st, T(R"(
 Save options:
