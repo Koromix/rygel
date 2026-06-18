@@ -1984,7 +1984,7 @@ void FmtUrlSafe::Format(FunctionRef<void(Span<const char>)> append) const
     }
 }
 
-void FmtHtmlSafe::Format(FunctionRef<void(Span<const char>)> append) const
+void FmtXmlSafe::Format(FunctionRef<void(Span<const char>)> append) const
 {
     for (char c: str) {
         switch (c) {

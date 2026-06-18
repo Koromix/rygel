@@ -4070,11 +4070,11 @@ public:
     operator FmtArg() const { return FmtCustom(*this); }
 };
 
-class FmtHtmlSafe {
+class FmtXmlSafe {
     Span<const char> str;
 
 public:
-    FmtHtmlSafe(Span<const char> str) : str(str) {}
+    FmtXmlSafe(Span<const char> str) : str(str) {}
 
     void Format(FunctionRef<void(Span<const char>)> append) const;
     operator FmtArg() const { return FmtCustom(*this); }

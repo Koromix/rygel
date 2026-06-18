@@ -372,7 +372,7 @@ static void HandleRoot(http_IO *io)
             writer->Write(nonce);
         } else if (key == "PROJECTS") {
             for (const char *name: names) {
-                Print(writer, "<a href=\"/%1\">%2</a>\n", FmtUrlSafe(name, "-._~"), FmtHtmlSafe(name));
+                Print(writer, "<a href=\"/%1\">%2</a>\n", FmtUrlSafe(name, "-._~"), FmtXmlSafe(name));
             }
         } else {
             Print(writer, "{{%1}}", expr);
