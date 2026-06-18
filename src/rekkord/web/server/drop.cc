@@ -14,6 +14,7 @@ static const int64_t MaxSize = Megabytes(4000);
 static const int64_t MaxExpiration = 90 * 86400000ull; // 90 days
 static bool AllowNoExpiration = true;
 static const int64_t StaleDelay = 7 * 86400000ull; // 7 days
+static const int64_t CleanupDelay = 6 * 3600000ull; // 6 hours
 
 static const int64_t FragmentSize = Mebibytes(2);
 static const Size ChunkSize = Kibibytes(64);
@@ -24,57 +25,83 @@ static_assert(crypto_secretbox_xsalsa20poly1305_MACBYTES == 16);
 
 static s3_Client s3;
 
-bool InitDrop()
+static int64_t last_cleanup = 0;
+static std::thread cleanup_thread;
+static bool cleanup_exit = false;
+
+bool InitDrops()
 {
     K_ASSERT(config.s3.remote.Validate());
     return s3.Open(config.s3.remote);
 }
 
-bool PruneDrops()
+void ExitDrops()
+{
+    if (cleanup_thread.joinable()) {
+        cleanup_exit = true;
+        cleanup_thread.join();
+    }
+}
+
+static void CleanupFragments(int64_t now)
 {
     BlockAllocator temp_alloc;
 
+    sq_Statement stmt;
+    if (!db.Prepare("SELECT kid, size, split FROM drops WHERE deleted = 1", &stmt, now - StaleDelay))
+        return;
+
+    while (stmt.Step() && !cleanup_exit) {
+        K_ASSERT(sqlite3_column_bytes(stmt, 0) == K_SIZE(KID));
+
+        KID kid;
+        memcpy(&kid, sqlite3_column_blob(stmt, 0), K_SIZE(KID));
+
+        int64_t size = sqlite3_column_int64(stmt, 1);
+        int64_t split = sqlite3_column_int64(stmt, 2);
+        int64_t fragments = (size + split - 1) / split;
+
+        bool success = true;
+
+        for (int64_t start = 0; start < fragments; start += 1000) {
+            LocalArray<const char *, 1000> keys;
+
+            int64_t end = std::min(start + 1000, fragments);
+
+            for (int64_t i = start; i < end; i++) {
+                const char *key = Fmt(&temp_alloc, "%1/%2/%3", config.s3.drop_path, kid, i).ptr;
+                keys.Append(key);
+            }
+
+            success &= s3.DeleteObjects(keys);
+        }
+
+        if (success) {
+            // Nothing should fail in this function, but if something goes wrong it will be logged
+            // and there's nothing else we can do about it, except retry later.
+            db.Run("DELETE FROM drops WHERE kid = ?1", sq_Binding(kid.raw));
+        }
+    }
+}
+
+bool PruneDrops()
+{
     int64_t now = GetUnixTime();
+    int64_t clock = GetMonotonicClock();
 
     if (!db.Run("UPDATE drops SET deleted = 1 WHERE expire <= ?1", now - StaleDelay))
         return false;
 
-    // Clean up deleted drops
-    {
-        sq_Statement stmt;
-        if (!db.Prepare("SELECT kid, size, split FROM drops WHERE deleted = 1", &stmt, now - StaleDelay))
-            return false;
-
-        while (stmt.Step()) {
-            K_ASSERT(sqlite3_column_bytes(stmt, 0) == K_SIZE(KID));
-
-            KID kid;
-            memcpy(&kid, sqlite3_column_blob(stmt, 0), K_SIZE(KID));
-
-            int64_t size = sqlite3_column_int64(stmt, 1);
-            int64_t split = sqlite3_column_int64(stmt, 2);
-            int64_t fragments = (size + split - 1) / split;
-
-            bool success = true;
-
-            for (int64_t start = 0; start < fragments; start += 1000) {
-                LocalArray<const char *, 1000> keys;
-
-                int64_t end = std::min(start + 1000, fragments);
-
-                for (int64_t i = start; i < end; i++) {
-                    const char *key = Fmt(&temp_alloc, "%1/%2/%3", config.s3.drop_path, kid, i).ptr;
-                    keys.Append(key);
-                }
-
-                success &= s3.DeleteObjects(keys);
-            }
-
-            if (success && !db.Run("DELETE FROM drops WHERE kid = ?1", sq_Binding(kid.raw)))
-                return false;
+    if (clock - last_cleanup >= CleanupDelay) {
+        if (cleanup_thread.joinable()) {
+            cleanup_exit = true;
+            cleanup_thread.join();
         }
-        if (!stmt.IsValid())
-            return false;
+
+        cleanup_exit = false;
+        cleanup_thread = std::thread(CleanupFragments, now);
+
+        last_cleanup = clock;
     }
 
     return true;

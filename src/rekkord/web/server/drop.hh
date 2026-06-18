@@ -6,7 +6,8 @@
 
 namespace K {
 
-bool InitDrop();
+bool InitDrops();
+void ExitDrops();
 
 bool PruneDrops();
 

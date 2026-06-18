@@ -602,8 +602,13 @@ Options:
     LogInfo("Init assets");
     InitAssets();
 
-    if (config.drop && !InitDrop())
-        return 1;
+    if (config.drop) {
+        LogInfo("Init drops");
+
+        if (!InitDrops())
+            return 1;
+    }
+    K_DEFER { ExitDrops(); };
 
     // Run!
     LogInfo("Init HTTP server");
