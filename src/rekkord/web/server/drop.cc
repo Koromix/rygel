@@ -13,7 +13,7 @@ namespace K {
 static const int64_t MaxSize = Megabytes(4000);
 static const int64_t MaxExpiration = 90 * 86400000ull; // 90 days
 static bool AllowNoExpiration = true;
-static const int64_t StaleDelay = 7 * 86400000ull; // 7 days;
+static const int64_t StaleDelay = 7 * 86400000ull; // 7 days
 
 static const int64_t FragmentSize = Mebibytes(2);
 static const Size ChunkSize = Kibibytes(64);
@@ -32,10 +32,50 @@ bool InitDrop()
 
 bool PruneDrops()
 {
+    BlockAllocator temp_alloc;
+
     int64_t now = GetUnixTime();
 
-    if (!db.Run("DELETE FROM drops WHERE expire <= ?1", now - StaleDelay))
+    if (!db.Run("UPDATE drops SET deleted = 1 WHERE expire <= ?1", now - StaleDelay))
         return false;
+
+    // Clean up deleted drops
+    {
+        sq_Statement stmt;
+        if (!db.Prepare("SELECT kid, size, split FROM drops WHERE deleted = 1", &stmt, now - StaleDelay))
+            return false;
+
+        while (stmt.Step()) {
+            K_ASSERT(sqlite3_column_bytes(stmt, 0) == K_SIZE(KID));
+
+            KID kid;
+            memcpy(&kid, sqlite3_column_blob(stmt, 0), K_SIZE(KID));
+
+            int64_t size = sqlite3_column_int64(stmt, 1);
+            int64_t split = sqlite3_column_int64(stmt, 2);
+            int64_t fragments = (size + split - 1) / split;
+
+            bool success = true;
+
+            for (int64_t start = 0; start < fragments; start += 1000) {
+                LocalArray<const char *, 1000> keys;
+
+                int64_t end = std::min(start + 1000, fragments);
+
+                for (int64_t i = start; i < end; i++) {
+                    const char *key = Fmt(&temp_alloc, "%1/%2/%3", config.s3.drop_path, kid, i).ptr;
+                    keys.Append(key);
+                }
+
+                success &= s3.DeleteObjects(keys);
+            }
+
+            if (success && !db.Run("DELETE FROM drops WHERE kid = ?1", sq_Binding(kid.raw)))
+                return false;
+        }
+        if (!stmt.IsValid())
+            return false;
+    }
 
     return true;
 }
@@ -56,7 +96,7 @@ void HandleDropList(http_IO *io)
     if (!db.Prepare(R"(SELECT kid_str(kid), name, size, IFNULL(expire, -1),
                               IIF(uploaded = size, 1, 0) AS complete
                        FROM drops
-                       WHERE owner = ?1)", &stmt, session->userid))
+                       WHERE owner = ?1 AND deleted = 0)", &stmt, session->userid))
         return;
 
     http_SendJson(io, 200, [&](json_Writer *json) {
@@ -178,9 +218,9 @@ void HandleDropCreate(http_IO *io)
     KID kid;
     FillKID(KIDType::Drop, &kid);
 
-    if (!db.Run(R"(INSERT INTO drops (kid, owner, name, size, expire,
+    if (!db.Run(R"(INSERT INTO drops (kid, owner, name, size, expire, deleted,
                                       salt, body, nonce, protect, split, uploaded)
-                   VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, 0))",
+                   VALUES (?1, ?2, ?3, ?4, ?5, 0, ?6, ?7, ?8, ?9, ?10, 0))",
                 sq_Binding(kid.raw), session->userid, name, size, expire,
                 salt, body, nonce, 0 + protect, FragmentSize))
         return;
@@ -232,7 +272,7 @@ void HandleDropDelete(http_IO *io)
         }
     }
 
-    if (!db.Run("DELETE FROM drops WHERE kid = ?1 AND owner = ?2", sq_Binding(kid.raw), session->userid))
+    if (!db.Run("UPDATE drops SET deleted = 1 WHERE kid = ?1 AND owner = ?2", sq_Binding(kid.raw), session->userid))
         return;
 
     io->SendText(200, "{}", "application/json");
@@ -274,6 +314,7 @@ void HandleDropUpload(http_IO *io)
                        FROM drops WHERE kid = ?1 AND
                                         owner = ?2 AND
                                         IIF(expire IS NOT NULL, expire > ?3, 1) AND
+                                        deleted = 0 AND
                                         uploaded < size)",
                     &stmt, sq_Binding(kid.raw), session->userid, now))
         return;
@@ -433,6 +474,7 @@ void HandleDropInfo(http_IO *io)
                               nonce, protect, split
                        FROM drops WHERE kid = ?1 AND
                                         IIF(expire IS NOT NULL, expire > ?2, 1) AND
+                                        deleted = 0 AND
                                         uploaded = size)",
                     &stmt, sq_Binding(kid.raw), now))
         return;
@@ -498,6 +540,7 @@ void HandleDropFragment(http_IO *io)
     if (!db.Prepare(R"(SELECT size, split
                        FROM drops WHERE kid = ?1 AND
                                         IIF(expire IS NOT NULL, expire > ?2, 1) AND
+                                        deleted = 0 AND
                                         uploaded = size)",
                     &stmt, sq_Binding(kid.raw), now))
         return;

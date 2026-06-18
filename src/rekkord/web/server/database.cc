@@ -8,7 +8,7 @@
 
 namespace K {
 
-const int DatabaseVersion = 39;
+const int DatabaseVersion = 40;
 
 bool AddDatabaseFunctions(sq_Database *db)
 {
@@ -797,9 +797,22 @@ bool MigrateDatabase(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 39: {
+                bool success = db->RunMany(R"(
+                    ALTER TABLE drops ADD COLUMN deleted INTEGER CHECK(deleted IN (0, 1));
+                    UPDATE drops SET deleted = 0;
+                    ALTER TABLE drops ALTER COLUMN deleted SET NOT NULL;
+
+                    CREATE INDEX drops_e ON drops (expire);
+                    CREATE INDEX drops_d ON drops (deleted);
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            static_assert(DatabaseVersion == 39);
+            static_assert(DatabaseVersion == 40);
         }
 
         if (!db->Run("INSERT INTO migrations (version, build, timestamp) VALUES (?, ?, ?)",
