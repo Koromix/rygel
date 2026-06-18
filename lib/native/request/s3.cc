@@ -799,38 +799,42 @@ bool s3_Client::DeleteObjects(Span<const char *const> keys)
 {
     BlockAllocator temp_alloc;
 
-    static const char *const begin =
+    static const char *const intro =
 R"(<?xml version="1.0" encoding="UTF-8"?>
 <Delete xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
 )";
-    static const char *const end = R"(
+    static const char *const outro = R"(
   <Quiet>true</Quiet>
 </Delete>
 )";
 
-    HeapArray<char> body(&temp_alloc);
+    for (Size start = 0; start < keys.len; start += 1000) {
+        Size end = std::min(start + 1000, keys.len);
 
-    body.Append(begin);
-    for (const char *key: keys) {
-        Fmt(&body, "  <Object><Key>%1</Key></Object>\n", FmtXmlSafe(key));
+        HeapArray<char> body(&temp_alloc);
+
+        body.Append(intro);
+        for (Size i = start; i < end; i++) {
+            Fmt(&body, "  <Object><Key>%1</Key></Object>\n", FmtXmlSafe(keys[i]));
+        }
+        body.Append(outro);
+
+        int status = RunSafe("delete S3 objects", 5, 200, [&](CURL *curl, int) {
+            int64_t now = GetUnixTime();
+            TimeSpec date = DecomposeTimeUTC(now);
+
+            const KeyValue params[] = {{ "delete", nullptr }};
+            PrepareRequest(curl, date, "POST", {}, params, &temp_alloc);
+
+            curl_easy_setopt(curl, CURLOPT_POST, 1L); // POST
+            curl_easy_setopt(curl, CURLOPT_POSTFIELDS, body.ptr);
+            curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE , (long)body.len);
+
+            return curl_Perform(curl, nullptr);
+        });
+        if (status != 200)
+            return false;
     }
-    body.Append(end);
-
-    int status = RunSafe("delete S3 objects", 5, 200, [&](CURL *curl, int) {
-        int64_t now = GetUnixTime();
-        TimeSpec date = DecomposeTimeUTC(now);
-
-        const KeyValue params[] = {{ "delete", nullptr }};
-        PrepareRequest(curl, date, "POST", {}, params, &temp_alloc);
-
-        curl_easy_setopt(curl, CURLOPT_POST, 1L); // POST
-        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, body.ptr);
-        curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE , (long)body.len);
-
-        return curl_Perform(curl, nullptr);
-    });
-    if (status != 200)
-        return false;
 
     return true;
 }
