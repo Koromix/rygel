@@ -795,6 +795,46 @@ bool s3_Client::DeleteObject(Span<const char> key)
     return true;
 }
 
+bool s3_Client::DeleteObjects(Span<const char *const> keys)
+{
+    BlockAllocator temp_alloc;
+
+    static const char *const begin =
+R"(<?xml version="1.0" encoding="UTF-8"?>
+<Delete xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+)";
+    static const char *const end = R"(
+  <Quiet>true</Quiet>
+</Delete>
+)";
+
+    HeapArray<char> body(&temp_alloc);
+
+    body.Append(begin);
+    for (const char *key: keys) {
+        Fmt(&body, "  <Object><Key>%1</Key></Object>\n", FmtXmlSafe(key));
+    }
+    body.Append(end);
+
+    int status = RunSafe("delete S3 objects", 5, 200, [&](CURL *curl, int) {
+        int64_t now = GetUnixTime();
+        TimeSpec date = DecomposeTimeUTC(now);
+
+        const KeyValue params[] = {{ "delete", nullptr }};
+        PrepareRequest(curl, date, "POST", {}, params, &temp_alloc);
+
+        curl_easy_setopt(curl, CURLOPT_POST, 1L); // POST
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, body.ptr);
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE , (long)body.len);
+
+        return curl_Perform(curl, nullptr);
+    });
+    if (status != 200)
+        return false;
+
+    return true;
+}
+
 bool s3_Client::RetainObject(Span<const char> key, int64_t until, s3_LockMode mode)
 {
     BlockAllocator temp_alloc;
@@ -803,7 +843,8 @@ bool s3_Client::RetainObject(Span<const char> key, int64_t until, s3_LockMode mo
         key = Fmt(&temp_alloc, "%1/%2", config.prefix, key);
     }
 
-    static const char *xml = R"(<?xml version="1.0" encoding="UTF-8"?>
+    static const char *const xml =
+R"(<?xml version="1.0" encoding="UTF-8"?>
 <Retention xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
   <RetainUntilDate>%1</RetainUntilDate>
   <Mode>%2</Mode>

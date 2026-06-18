@@ -309,11 +309,11 @@ static int RunDelete(Span<const char *> arguments)
 {
     // Options
     const char *url = nullptr;
-    const char *key = nullptr;
+    HeapArray<const char *> keys;
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 delete [option...] url key)", FelixTarget);
+R"(Usage: %!..+%1 delete [option...] url key...)", FelixTarget);
     };
 
     // Parse arguments
@@ -331,7 +331,7 @@ R"(Usage: %!..+%1 delete [option...] url key)", FelixTarget);
         }
 
         url = opt.ConsumeNonOption();
-        key = opt.ConsumeNonOption();
+        opt.ConsumeNonOptions(&keys);
 
         opt.LogUnusedArguments();
     }
@@ -340,8 +340,8 @@ R"(Usage: %!..+%1 delete [option...] url key)", FelixTarget);
         LogError("Missing S3 URL");
         return 1;
     }
-    if (!key) {
-        LogError("Missing object key");
+    if (!keys.len) {
+        LogError("Missing object keys");
         return 1;
     }
 
@@ -349,8 +349,13 @@ R"(Usage: %!..+%1 delete [option...] url key)", FelixTarget);
     if (!ConnectToS3(&s3, url))
         return 1;
 
-    if (!s3.DeleteObject(key))
-        return 1;
+    if (keys.len >= 2) {
+        if (!s3.DeleteObjects(keys))
+            return 1;
+    } else {
+        if (!s3.DeleteObject(keys[0]))
+            return 1;
+    }
 
     return 0;
 }

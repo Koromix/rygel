@@ -140,7 +140,9 @@ public:
 
     s3_PutResult PutObject(Span<const char> key, int64_t size, FunctionRef<Size(int64_t, Span<uint8_t>)> func, const s3_PutSettings &settings = {});
     s3_PutResult PutObject(Span<const char> key, Span<const uint8_t> data, const s3_PutSettings &settings = {});
+
     bool DeleteObject(Span<const char> key);
+    bool DeleteObjects(Span<const char *const> keys);
 
     bool RetainObject(Span<const char> key, int64_t until, s3_LockMode mode);
 
