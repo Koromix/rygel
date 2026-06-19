@@ -189,7 +189,7 @@ async function* uploadFragments(info, key, iter) {
             done = it.done;
         }
 
-        let url = Util.pasteURL('/api/drop/upload', { kid: info.kid, fragment: idx });
+        let url = Util.pasteURL('/api/drop/fragment', { kid: info.kid, fragment: idx });
 
         let extra = Math.floor((frag.length + BODY_CHUNK_SIZE - 1) / BODY_CHUNK_SIZE) * 16;
         let cipher = new Uint8Array(frag.length + extra);

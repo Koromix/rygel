@@ -158,6 +158,61 @@ void HandleDropList(http_IO *io)
     });
 }
 
+void HandleDropInfo(http_IO *io)
+{
+    K_ASSERT(config.drop);
+
+    const http_RequestInfo &request = io->Request();
+
+    KID kid;
+
+    if (const char *str = request.GetQueryValue("kid"); !ParseKID(str, KIDType::Drop, &kid)) {
+        io->SendError(422);
+        return;
+    }
+
+    int64_t now = GetUnixTime();
+
+    sq_Statement stmt;
+    if (!db.Prepare(R"(SELECT kid_str(kid), name, size, protect, header, nonce, split
+                       FROM drops WHERE kid = ?1 AND
+                                        IIF(expire IS NOT NULL, expire > ?2, 1) AND
+                                        deleted = 0 AND
+                                        uploaded = size)",
+                    &stmt, sq_Binding(kid.raw), now))
+        return;
+
+    if (!stmt.Step()) {
+        if (stmt.IsValid()) {
+            LogError("Unknown drop KID '%1'", kid);
+            io->SendError(404);
+        }
+        return;
+    }
+
+    const char *id = (const char *)sqlite3_column_text(stmt, 0);
+    const char *name = (const char *)sqlite3_column_text(stmt, 1);
+    int64_t size = sqlite3_column_int64(stmt, 2);
+    bool protect = sqlite3_column_int(stmt, 3);
+    const char *header = (const char *)sqlite3_column_text(stmt, 4);
+    const char *nonce = (const char *)sqlite3_column_text(stmt, 5);
+    int64_t split = sqlite3_column_int64(stmt, 6);
+
+    http_SendJson(io, 200, [&](json_Writer *json) {
+        json->StartObject();
+
+        json->Key("kid"); json->String(id);
+        json->Key("name"); json->String(name);
+        json->Key("size"); json->Int64(size);
+        json->Key("protect"); json->Bool(protect);
+        json->Key("header"); json->String(header);
+        json->Key("nonce"); json->String(nonce);
+        json->Key("split"); json->Int64(split);
+
+        json->EndObject();
+    });
+}
+
 void HandleDropCreate(http_IO *io)
 {
     K_ASSERT(config.drop);
@@ -303,7 +358,14 @@ void HandleDropDelete(http_IO *io)
     io->SendText(200, "{}", "application/json");
 }
 
-void HandleDropUpload(http_IO *io)
+template <typename T>
+static inline T ComputedEncryptedSize(T size)
+{
+    T extra = (size + ChunkSize - 1) / ChunkSize * 16;
+    return size + extra;
+}
+
+void HandleFragmentUpload(http_IO *io)
 {
     K_ASSERT(config.drop);
 
@@ -357,15 +419,14 @@ void HandleDropUpload(http_IO *io)
 
     int64_t fragments = (size + split - 1) / split;
     int64_t expected = std::min(size - fragment * split, split);
-    int64_t extra = (expected + ChunkSize - 1) / ChunkSize * 16;
 
     if (fragment >= fragments) {
         LogError("Excessive fragment index %1", fragment);
         io->SendError(422);
         return;
     }
-    if (request.GetBodyLength() != expected + extra) {
-        LogError("Unexpected fragment size, expected %1", FmtMemSize(expected + extra));
+    if (request.GetBodyLength() != ComputedEncryptedSize(expected)) {
+        LogError("Unexpected fragment size, expected %1", FmtMemSize(ComputedEncryptedSize(expected)));
         io->SendError(422);
         return;
     }
@@ -378,7 +439,7 @@ void HandleDropUpload(http_IO *io)
 
     Span<const char> key = Fmt(io->Allocator(), "%1/%2/%3", config.s3.drop_path, kid, fragment);
 
-    s3_PutResult ret = s3.PutObject(key, expected + extra, [&](int64_t offset, Span<uint8_t> buf) {
+    s3_PutResult ret = s3.PutObject(key, ComputedEncryptedSize(expected), [&](int64_t offset, Span<uint8_t> buf) {
         if (offset != reader.GetRawRead()) {
             LogError("Transient S3 upload error, please retry");
             return (Size)-1;
@@ -392,6 +453,80 @@ void HandleDropUpload(http_IO *io)
     }
 
     io->SendText(200, "{}", "application/json");
+}
+
+void HandleFragmentDownload(http_IO *io)
+{
+    K_ASSERT(config.drop);
+
+    const http_RequestInfo &request = io->Request();
+
+    KID kid;
+    int64_t fragment;
+
+    if (const char *str = request.GetQueryValue("kid"); !ParseKID(str, KIDType::Drop, &kid)) {
+        io->SendError(422);
+        return;
+    }
+    if (const char *str = request.GetQueryValue("fragment"); !ParseInt(str, &fragment)) {
+        io->SendError(422);
+        return;
+    } else if (fragment < 0) {
+        LogError("Invalid 'fragment' parameter");
+        io->SendError(422);
+        return;
+    }
+
+    int64_t now = GetUnixTime();
+
+    sq_Statement stmt;
+    if (!db.Prepare(R"(SELECT size, split
+                       FROM drops WHERE kid = ?1 AND
+                                        IIF(expire IS NOT NULL, expire > ?2, 1) AND
+                                        deleted = 0 AND
+                                        uploaded = size)",
+                    &stmt, sq_Binding(kid.raw), now))
+        return;
+
+    if (!stmt.Step()) {
+        if (stmt.IsValid()) {
+            LogError("Unknown drop KID '%1'", kid);
+            io->SendError(404);
+        }
+        return;
+    }
+
+    int64_t size = sqlite3_column_int64(stmt, 0);
+    int64_t split = sqlite3_column_int64(stmt, 1);
+    int64_t fragments = (size + split - 1) / split;
+    int64_t expected = std::min(size - fragment * split, split);
+
+    if (fragment >= fragments) {
+        LogError("Excessive fragment index %1", fragment);
+        io->SendError(422);
+        return;
+    }
+
+    io->ExtendTimeout(30000);
+
+    StreamWriter writer;
+    if (!io->OpenForWrite(200, ComputedEncryptedSize(expected), &writer))
+        return;
+
+    Span<const char> key = Fmt(io->Allocator(), "%1/%2/%3", config.s3.drop_path, kid, fragment);
+
+    int64_t downloaded = s3.GetObject(key, [&](int64_t offset, Span<const uint8_t> buf) {
+        if (offset != writer.GetRawWritten()) {
+            LogError("Transient S3 download error, please retry");
+            return false;
+        }
+
+        return writer.Write(buf);
+    });
+    if (downloaded < 0)
+        return;
+
+    writer.Close();
 }
 
 void HandleDropMark(http_IO *io)
@@ -479,7 +614,7 @@ void HandleDropMark(http_IO *io)
     io->SendText(200, "{}", "application/json");
 }
 
-void HandleDropInfo(http_IO *io)
+void HandleDropDownload(http_IO *io)
 {
     K_ASSERT(config.drop);
 
@@ -487,7 +622,7 @@ void HandleDropInfo(http_IO *io)
 
     KID kid;
 
-    if (const char *str = request.GetQueryValue("kid"); !ParseKID(str, KIDType::Drop, &kid)) {
+    if (Span<const char> str = SplitStrReverse(request.path, '/'); !ParseKID(str, KIDType::Drop, &kid)) {
         io->SendError(422);
         return;
     }
@@ -495,7 +630,7 @@ void HandleDropInfo(http_IO *io)
     int64_t now = GetUnixTime();
 
     sq_Statement stmt;
-    if (!db.Prepare(R"(SELECT kid_str(kid), name, size, protect, header, nonce, split
+    if (!db.Prepare(R"(SELECT name, size, header, base64(nonce), split
                        FROM drops WHERE kid = ?1 AND
                                         IIF(expire IS NOT NULL, expire > ?2, 1) AND
                                         deleted = 0 AND
@@ -511,101 +646,42 @@ void HandleDropInfo(http_IO *io)
         return;
     }
 
-    const char *id = (const char *)sqlite3_column_text(stmt, 0);
-    const char *name = (const char *)sqlite3_column_text(stmt, 1);
-    int64_t size = sqlite3_column_int64(stmt, 2);
-    bool protect = sqlite3_column_int(stmt, 3);
-    const char *header = (const char *)sqlite3_column_text(stmt, 4);
-    const char *nonce = (const char *)sqlite3_column_text(stmt, 5);
-    int64_t split = sqlite3_column_int64(stmt, 6);
-
-    http_SendJson(io, 200, [&](json_Writer *json) {
-        json->StartObject();
-
-        json->Key("kid"); json->String(id);
-        json->Key("name"); json->String(name);
-        json->Key("size"); json->Int64(size);
-        json->Key("protect"); json->Bool(protect);
-        json->Key("header"); json->String(header);
-        json->Key("nonce"); json->String(nonce);
-        json->Key("split"); json->Int64(split);
-
-        json->EndObject();
-    });
-}
-
-void HandleDropFragment(http_IO *io)
-{
-    K_ASSERT(config.drop);
-
-    const http_RequestInfo &request = io->Request();
-
-    KID kid;
-    int64_t fragment;
-
-    if (const char *str = request.GetQueryValue("kid"); !ParseKID(str, KIDType::Drop, &kid)) {
-        io->SendError(422);
-        return;
-    }
-    if (const char *str = request.GetQueryValue("fragment"); !ParseInt(str, &fragment)) {
-        io->SendError(422);
-        return;
-    } else if (fragment < 0) {
-        LogError("Invalid 'fragment' parameter");
-        io->SendError(422);
-        return;
-    }
-
-    int64_t now = GetUnixTime();
-
-    sq_Statement stmt;
-    if (!db.Prepare(R"(SELECT size, split
-                       FROM drops WHERE kid = ?1 AND
-                                        IIF(expire IS NOT NULL, expire > ?2, 1) AND
-                                        deleted = 0 AND
-                                        uploaded = size)",
-                    &stmt, sq_Binding(kid.raw), now))
-        return;
-
-    if (!stmt.Step()) {
-        if (stmt.IsValid()) {
-            LogError("Unknown drop KID '%1'", kid);
-            io->SendError(404);
-        }
-        return;
-    }
-
-    int64_t size = sqlite3_column_int64(stmt, 0);
-    int64_t split = sqlite3_column_int64(stmt, 1);
+    const char *name = (const char *)sqlite3_column_text(stmt, 0);
+    int64_t size = sqlite3_column_int64(stmt, 1);
+    Span<const char> header = MakeSpan((const char *)sqlite3_column_text(stmt, 2), sqlite3_column_bytes(stmt, 2));
+    Span<const uint8_t> nonce = MakeSpan((const uint8_t *)sqlite3_column_blob(stmt, 3), sqlite3_column_bytes(stmt, 3));
+    int64_t split = sqlite3_column_int64(stmt, 4);
 
     int64_t fragments = (size + split - 1) / split;
-    int64_t expected = std::min(size - fragment * split, split);
-    int64_t extra = (expected + ChunkSize - 1) / ChunkSize * 16;
-
-    if (fragment >= fragments) {
-        LogError("Excessive fragment index %1", fragment);
-        io->SendError(422);
-        return;
-    }
+    int64_t total = header.len + 1 + nonce.len + ComputedEncryptedSize(size);
 
     io->ExtendTimeout(30000);
 
+    const char *disposition = Fmt(io->Allocator(), "attachment; filename=\"%1.age\"", FmtEscape(name, '"')).ptr;
+    io->AddHeader("Content-Disposition", disposition);
+
     StreamWriter writer;
-    if (!io->OpenForWrite(200, expected + extra, &writer))
+    if (!io->OpenForWrite(200, total, &writer))
         return;
 
-    Span<const char> key = Fmt(io->Allocator(), "%1/%2/%3", config.s3.drop_path, kid, fragment);
+    writer.Write(header);
+    writer.Write('\n');
+    writer.Write(nonce);
 
-    int64_t downloaded = s3.GetObject(key, [&](int64_t offset, Span<const uint8_t> buf) {
-        if (offset != writer.GetRawWritten()) {
-            LogError("Transient S3 download error, please retry");
-            return false;
+    // Send encoded fragments
+    {
+        Span<uint8_t> buf = AllocateSpan<uint8_t>(io->Allocator(), ComputedEncryptedSize(size));
+
+        for (int64_t i = 0; i < fragments; i++) {
+            Span<const char> key = Fmt(io->Allocator(), "%1/%2/%3", config.s3.drop_path, kid, i);
+            Size downloaded = s3.GetObject(key, buf);
+
+            if (downloaded < 0)
+                return;
+
+            writer.Write(buf.ptr, downloaded);
         }
-
-        return writer.Write(buf);
-    });
-    if (downloaded < 0)
-        return;
+    }
 
     writer.Close();
 }

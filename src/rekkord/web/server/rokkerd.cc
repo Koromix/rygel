@@ -380,18 +380,20 @@ static void HandleRequest(http_IO *io)
             HandleLinkSnapshot(io);
         } else if (config.drop && url == "/api/drop/list" && method == http_RequestMethod::Get) {
             HandleDropList(io);
+        } else if (config.drop && url == "/api/drop/info" && method == http_RequestMethod::Get) {
+            HandleDropInfo(io);
         } else if (config.drop && url == "/api/drop/create" && method == http_RequestMethod::Post) {
             HandleDropCreate(io);
         } else if (config.drop && url == "/api/drop/delete" && method == http_RequestMethod::Post) {
             HandleDropDelete(io);
-        } else if (config.drop && url == "/api/drop/upload" && method == http_RequestMethod::Put) {
-            HandleDropUpload(io);
         } else if (config.drop && url == "/api/drop/mark" && method == http_RequestMethod::Post) {
             HandleDropMark(io);
-        } else if (config.drop && url == "/api/drop/info" && method == http_RequestMethod::Get) {
-            HandleDropInfo(io);
+        } else if (config.drop && url == "/api/drop/fragment" && method == http_RequestMethod::Put) {
+            HandleFragmentUpload(io);
         } else if (config.drop && url == "/api/drop/fragment" && method == http_RequestMethod::Get) {
-            HandleDropFragment(io);
+            HandleFragmentDownload(io);
+        } else if (config.drop && StartsWith(url, "/api/drop/download/") && method == http_RequestMethod::Get) {
+            HandleDropDownload(io);
         } else {
             io->SendError(404);
         }
