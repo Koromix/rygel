@@ -19,6 +19,12 @@ Source : https://www.la-depression.org/comprendre-la-depression/la-depression-en
 
 <object class="schema" type="image/svg+xml" data="{{ ASSET static/depression/differentiel.svg }}"></object>
 
+### Aides au diagnostic grâce à des questionnaires
+
+- <a href="https://www.psychiaclic.fr/ressources/ressource-lien" target="_blank">MADRS</a> : Échelle d'hétéroévaluation de la sémiologie dépressive en 10 items. C'est une échelle d'intensité.
+- <a href="https://www.psychiaclic.fr/ressources/ressource" target="_blank">HAD</a> : Auto-évaluation de la symptomatologie anxieuse et dépressive en 14 items. Il s'agit d'une échelle d'intensité et d'une échelle diagnostique.
+- <a href="https://www.psychiaclic.fr/ressources/mdq-mood-disorder-questionnaire" target="_blank">MDQ</a> : Auto-questionnaire de dépistage de symptômes du trouble bipolaire de type I ou II sur la vie entière.
+
 # Traitement
 
 ## Traitement initial
@@ -49,3 +55,16 @@ Effectuer les tests pertinents selon les indications de l’examen clinique :
 - ECG (patients âgés de plus de 40 ans)
 
 Ce bilan est établi d'après les [recommandations HAS 2017](https://www.has-sante.fr/upload/docs/application/pdf/2017-10/depression_adulte_argumentaire_diagnostic.pdf) (page 264).
+
+# Pour aller plus loin...
+
+## Ressources web
+
+- Le site <a href="https://www.psychiaclic.fr/troubles-psychiatriques/trouble-depressif" target="_blank">Psychiaclic</a> met à disposition des fiches synthétiques d'aide au diagnostic et à la prise en charge.
+- Le site de la <a href="https://www.fondation-fondamental.org/les-maladies-mentales/depression-resistante" target="_blank">Fondation FondaMental</a> pour en apprendre davantage sur la dépression résistante.
+
+## Fiche explicative
+
+<div class="shelf">
+    <a href="https://igorthiriez.com/portfolio/le-trouble-bipolaire/" target="_blank"><img src="{{ ASSET static/fiches/professionnels/bipolarite.png }}" alt="Le trouble bipolaire" height="420" /></a>
+</div>

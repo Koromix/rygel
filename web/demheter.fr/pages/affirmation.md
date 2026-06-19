@@ -1,3 +1,3 @@
-# Affirmation de soi
+# Présentation
 
 <object class="schema" type="image/svg+xml" data="{{ ASSET static/psycho/affirmation.svg }}"></object>

@@ -30,6 +30,18 @@ span[title] { border-bottom: 1px dotted #383838; }
 #logo { transition: filter 0.4s ease; }
 #top.border #logo { filter: saturate(0%) brightness(0); }
 
+.heading {
+    margin: 0 auto 1.5em auto;
+    padding: 5px 20px;
+    width: 50%;
+    font-size: 2em;
+    text-align: center;
+    text-transform: uppercase;
+    background: #3c7777;
+    border-radius: 20px;
+    color: white;
+}
+
 .actions {
     flex-direction: row;
     justify-content: center;
@@ -229,6 +241,11 @@ span[title] { border-bottom: 1px dotted #383838; }
 }
 
 @media screen and (max-width: 960px) {
+    .heading {
+        width: 80%;
+        font-size: 1.2em;
+    }
+
     .columns {
         flex-direction: column;
         align-items: center;

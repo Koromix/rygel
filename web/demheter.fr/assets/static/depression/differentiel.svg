@@ -2,11 +2,13 @@
 <svg
    version="1.1"
    class="slides-canvas"
-   viewBox="0 0 663.87998 342.64943"
-   preserveAspectRatio="xMidYMid meet"
+   viewBox="0 0 663.87998 204.33091"
+   preserveAspectRatio="xMidYMid"
    id="svg145"
    sodipodi:docname="differentiel.svg"
-   inkscape:version="1.2.2 (732a01da63, 2022-12-09)"
+   inkscape:version="1.2.2 (b0a8486541, 2022-12-01)"
+   width="663.88"
+   height="204.33092"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns="http://www.w3.org/2000/svg"
@@ -26,17 +28,18 @@
      fit-margin-right="0"
      fit-margin-bottom="0"
      inkscape:zoom="0.94722222"
-     inkscape:cx="400.1173"
-     inkscape:cy="242.81525"
+     inkscape:cx="400.64516"
+     inkscape:cy="244.39883"
      inkscape:window-width="1920"
-     inkscape:window-height="1017"
-     inkscape:window-x="1912"
-     inkscape:window-y="-8"
+     inkscape:window-height="1128"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
      inkscape:window-maximized="1"
      inkscape:current-layer="svg145"
      inkscape:showpageshadow="2"
      inkscape:deskcolor="#d1d1d1" />
-  <style>
+  <style
+     id="style3">
     @import url(&quot;/static/site.min.css&quot;);
   </style>
   <defs
@@ -76,13 +79,13 @@
      fill="#ee7f02"
      d="m 0,24.895 h 177.17 v 26.92 H 0 Z"
      id="path15"
-     style="text-rendering:geometricPrecision;fill:#ec9d36;fill-opacity:1" />
+     style="fill:#ec9d36;fill-opacity:1;text-rendering:geometricPrecision" />
   <g
      transform="translate(17.50632,30.1272)"
      id="g21"
      style="text-rendering:geometricPrecision">
     <text
-       font-family="Open Sans"
+       font-family="'Open Sans'"
        font-style="normal"
        font-weight="bold"
        font-stretch="normal"
@@ -113,7 +116,7 @@
      id="g31"
      style="text-rendering:geometricPrecision">
     <text
-       font-family="Open Sans"
+       font-family="'Open Sans'"
        font-style="normal"
        font-weight="bold"
        font-stretch="normal"
@@ -145,33 +148,33 @@
        xml:space="preserve"><tspan
          x="0"
          y="80.805534"
-         id="tspan1749"><tspan
+         id="tspan348"><tspan
    style="font-weight:normal;-inkscape-font-specification:'Open Sans'"
-   id="tspan1747">Toxique</tspan>
+   id="tspan346">Toxique</tspan>
 </tspan><tspan
          x="0"
          y="98.305536"
-         id="tspan1753"><tspan
+         id="tspan352"><tspan
    style="font-weight:normal;-inkscape-font-specification:'Open Sans'"
-   id="tspan1751">Neurologique</tspan>
+   id="tspan350">Neurologique</tspan>
 </tspan><tspan
          x="0"
          y="115.80554"
-         id="tspan1757"><tspan
+         id="tspan356"><tspan
            style="font-weight:normal;-inkscape-font-specification:'Open Sans'"
-           id="tspan1755">Endocrinien
+           id="tspan354">Endocrinien
 </tspan></tspan><tspan
          x="0"
          y="133.30554"
-         id="tspan1761"><tspan
+         id="tspan360"><tspan
            style="font-weight:normal;-inkscape-font-specification:'Open Sans'"
-           id="tspan1759">Métabolique
+           id="tspan358">Métabolique
 </tspan></tspan><tspan
          x="0"
          y="150.80554"
-         id="tspan1765"><tspan
+         id="tspan364"><tspan
            style="font-weight:normal;-inkscape-font-specification:'Open Sans'"
-           id="tspan1763">Iatrogénique</tspan></tspan></text>
+           id="tspan362">Iatrogénique</tspan></tspan></text>
   </g>
   <g
      transform="translate(455.2502,61.75342)"
@@ -187,35 +190,35 @@
        x="0"
        y="114.40553"
        id="text71"
-       style="-inkscape-font-specification:'Open Sans';font-family:'Open Sans';font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal"><tspan
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Open Sans';-inkscape-font-specification:'Open Sans'"><tspan
          x="0"
          y="13.605533"
          id="tspan55"
-         style="-inkscape-font-specification:'Open Sans';font-family:'Open Sans';font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal">Trouble bipolaire</tspan><tspan
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Open Sans';-inkscape-font-specification:'Open Sans'">Trouble bipolaire</tspan><tspan
          x="0"
          y="30.405533"
          id="tspan57"
-         style="-inkscape-font-specification:'Open Sans';font-family:'Open Sans';font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal">Trouble psychotique</tspan><tspan
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Open Sans';-inkscape-font-specification:'Open Sans'">Trouble psychotique</tspan><tspan
          x="0"
          y="47.205536"
          id="tspan59"
-         style="-inkscape-font-specification:'Open Sans';font-family:'Open Sans';font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal">Trouble de la personnalité</tspan><tspan
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Open Sans';-inkscape-font-specification:'Open Sans'">Trouble de la personnalité</tspan><tspan
          x="0"
          y="64.005539"
          id="tspan63"
-         style="-inkscape-font-specification:'Open Sans';font-family:'Open Sans';font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal">Trouble anxieux</tspan><tspan
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Open Sans';-inkscape-font-specification:'Open Sans'">Trouble anxieux</tspan><tspan
          x="0"
          y="80.805534"
          id="tspan65"
-         style="-inkscape-font-specification:'Open Sans';font-family:'Open Sans';font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal">Trouble de stress post-</tspan><tspan
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Open Sans';-inkscape-font-specification:'Open Sans'">Trouble de stress post-</tspan><tspan
          x="0"
          y="97.60553"
          id="tspan67"
-         style="-inkscape-font-specification:'Open Sans';font-family:'Open Sans';font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal">traumatique</tspan><tspan
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Open Sans';-inkscape-font-specification:'Open Sans'">traumatique</tspan><tspan
          x="0"
          y="114.40553"
          id="tspan69"
-         style="-inkscape-font-specification:'Open Sans';font-family:'Open Sans';font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal">Addictions</tspan></text>
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Open Sans';-inkscape-font-specification:'Open Sans'">Addictions</tspan></text>
   </g>
   <g
      transform="translate(69.81253,194.72156)"
@@ -234,56 +237,6 @@
          x="34.518234"
          y="7.6893535"
          id="tspan75">⚠ Penser à rechercher un antécédent d'épisode (hypo)maniaque à l'aide du questionnaire MDQ (Mood Disorder Questionnaire)</tspan></text>
-  </g>
-  <g
-     transform="translate(53.135225,234.4565)"
-     id="g135"
-     style="text-rendering:geometricPrecision">
-    <text
-       font-family="Open Sans"
-       font-style="normal"
-       font-weight="bold"
-       font-stretch="normal"
-       font-size="16px"
-       fill="#777777"
-       x="22.549999"
-       y="104.34918"
-       id="text133"><tspan
-         x="0"
-         y="15.549181"
-         id="tspan117">AIDE AU DIAGNOSTIC GRACE A DES QUESTIONNAIRES :</tspan><tspan
-         x="0"
-         y="46.749184"
-         font-weight="normal"
-         font-size="16.5px"
-         id="tspan119">-</tspan><tspan
-         x="22.549999"
-         y="46.749184"
-         font-weight="normal"
-         id="tspan121">MADRS : Echelle de dépression de Montgomery et Asberg (évalue l’intensité)</tspan><tspan
-         x="0"
-         y="65.949188"
-         font-weight="normal"
-         font-size="16.5px"
-         id="tspan123">-</tspan><tspan
-         x="22.549999"
-         y="65.949188"
-         font-weight="normal"
-         id="tspan125">HAD : Hospital anxiety and depression scale (évalue l’intensité et aide au</tspan><tspan
-         x="66"
-         y="85.149185"
-         font-weight="normal"
-         id="tspan127">diagnostic)</tspan><tspan
-         x="0"
-         y="104.34918"
-         font-weight="normal"
-         font-size="16.5px"
-         id="tspan129">-</tspan><tspan
-         x="22.549999"
-         y="104.34918"
-         font-weight="normal"
-         font-style="italic"
-         id="tspan131">MDQ : Antécédent d'épisode (hypo)maniaque</tspan></text>
   </g>
   <path
      stroke-width="0.75"

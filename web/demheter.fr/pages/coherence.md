@@ -1,4 +1,4 @@
-# Cohérence cardiaque
+# Présentation
 
 <object class="schema" type="image/svg+xml" data="{{ ASSET static/psycho/coherence.svg }}"></object>
 

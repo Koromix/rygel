@@ -1,5 +1,3 @@
-# Guide pour s'aider soi-même
-
 <div class="columns">
     <a href="static/guide/guide.pdf" target="_blank"><img src="{{ ASSET static/guide/guide.webp }}" height="410" alt="Guide pour s'aider soi-même" /></a>
     <div style="flex: 3;">

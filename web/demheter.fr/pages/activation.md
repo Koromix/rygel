@@ -1,4 +1,4 @@
-# Activation comportementale
+# Présentation
 
 <object class="schema" type="image/svg+xml" data="{{ ASSET static/psycho/activation1.svg }}"></object>
 

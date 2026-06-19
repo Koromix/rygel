@@ -14,7 +14,7 @@ Le **risque suicidaire est multiplié par 15** par rapport à la population gén
 
 Source : [« Troubles bipolaires : repérage et diagnostic en premier recours »](https://www.has-sante.fr/upload/docs/application/pdf/2014-06/troubles_bipolaires_reperage_et_diagnostic_en_premier_recours_-_note_de_cadrage_2014-06-13_10-53-16_714.pdf) (HAS 2014)
 
-# Diagnostic positif
+# Diagnostic
 
 ## Épisode maniaque
 
@@ -25,22 +25,36 @@ Source : [« Troubles bipolaires : repérage et diagnostic en premier recours »
 
 ## Épisode hypomaniaque
 
-- Sémiologie du **syndrome maniaque et <u>au moins un épisode dépressif caractérisé</u>**
+- Sémiologie du **syndrome hypomaniaque et <u>au moins un épisode dépressif caractérisé</u>**
 - Depuis **plus de 4 jours**
 - Associé à une **altération marquée du fonctionnement** professionnel, des activités sociales ou des relations interpersonnelles ou existence de caractéristiques psychotiques
 - **Absence de diagnostic différentiel** : absence d’autres pathologies ou prise de substances pouvant mieux expliquer la manie
 
-# Sémiologie
+# Différencier épisode dépressif et trouble bipolaire ^ Diagnostic différentiel
 
-## Syndrome maniaque
+Devant un épisode dépressif, plusieurs arguments peuvent vous faire évoquer un trouble bipolaire :
+
+- **Dépression avant 25 ans**
+- **Antécédents d'épisodes dépressifs multiples** (3 ou plus)
+- **Antécédents familiaux connus de trouble bipolaire**
+- **Épisode dépressif survenant dans le post-partum**
+- **Caractéristiques atypiques de l'épisode** (hyperphagie, hypersomnie)
+- **Caractéristiques psychotiques congruentes avec l'humeur**
+- **Réponse atypique à un traitement AD** (non-réponse, aggravation des symptômes, apparition d'une agitation, d'une hypomanie même brève)
+
+# Sémiologie du syndrome maniaque ^ Sémiologie
 
 <object class="schema" type="image/svg+xml" data="{{ ASSET static/bipolarite/syndrome_maniaque.svg }}"></object>
 
-## Syndrome dépressif
+# Pour aller plus loin...
 
-<object class="schema" type="image/svg+xml" data="{{ ASSET static/bipolarite/depression_et_bipolarite.svg }}"></object>
+## Ressources web
 
-<style>
-    #episode\_maniaque { background: #ec9d36; }
-    #episode\_hypomaniaque { background: #f8ca00; }
-</style>
+- Le site <a href="https://www.psychiaclic.fr/troubles-psychiatriques/trouble-bipolaire" target="_blank">Psychiaclic</a> met à disposition des fiches synthétiques d'aide au diagnostic et à la prise en charge.
+- Le site de la <a href="https://www.fondation-fondamental.org/les-maladies-mentales/les-troubles-bipolaires" target="_blank">Fondation FondaMental</a> pour en apprendre davantage sur le trouble bipolaire.
+
+## Fiche explicative
+
+<div class="shelf">
+    <a href="https://igorthiriez.com/portfolio/le-trouble-bipolaire/" target="_blank"><img src="{{ ASSET static/fiches/professionnels/bipolarite.png }}" alt="Le trouble bipolaire" height="420" /></a>
+</div>

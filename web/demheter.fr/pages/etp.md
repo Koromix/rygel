@@ -1,4 +1,4 @@
-# Objectifs de l'éducation thérapeutique du patient ^ Objectifs de l'ETP
+# Objectifs
 
 L'éducation thérapeutique du patient (ETP) vise à aider les patients à acquérir ou maintenir des compétences d’adaptation ainsi que des compétences d’auto soins pour gérer leur vie avec une maladie chronique de manière optimale [^1]. Pour développer les compétences d'auto-soins, il est important d’apprendre à gérer les symptômes liés à la pathologie, à ajuster ses traitements, et modifier son mode de vie. Quant aux compétences d'adaptation, il s’agit de développer la capacité à s'auto-observer et s'auto-évaluer au quotidien.
 
@@ -8,7 +8,7 @@ Les points clés de l’ETP :
 - Accroître **l'autonomie du patient** dans la gestion de sa pathologie. 
 - Encourager **l'adhérence aux traitements** médicamenteux et non médicamenteux proposés.
 
-# Déroulement des programmes
+# Déroulement des programmes ^ Déroulement
 
 L'Éducation Thérapeutique du Patient (ETP) peut être illustrée comme une boussole dans un voyage. A l’instar de la boussole qui guide un explorateur à travers des terrains inconnus, l'ETP aide les patients à naviguer à travers les défis inhérents à leur santé. L’ETP est un espace de partage de connaissances, de compétences et d’outils permettant de cheminer vers une meilleure compréhension de leur pathologie leur permettant de prendre des décisions éclairées.
 

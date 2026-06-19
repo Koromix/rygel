@@ -1,4 +1,4 @@
-# Thérapies familiales et de couple
+# Principes
 
 Les thérapies familiales et de couple sont des interventions thérapeutiques spécialisées qui permettent notamment d’aborder les troubles psychiatriques en se concentrant sur les systèmes relationnels (Miermont, 2010 [^1]).
 

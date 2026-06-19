@@ -20,8 +20,8 @@ Le site de [Psycom](https://www.psycom.org/) peut vous aider à vous orienter et
 # Livres
 
 <div class="shelf">
-    <a href="https://www.dunod.com/sciences-humaines-et-sociales/mieux-vivre-avec-un-trouble-bipolaire-comment-reconnaitre-et-traiter-0" target="_blank"><img src="{{ ASSET static/livres/usagers/mieux_vivre_avec_un_trouble_bipolaire.jpg }}" alt="Mieux vivre avec un trouble bipolaire - Comment le reconnaître et le traiter" height="380" /></a>
-    <a href="https://www.odilejacob.fr/catalogue/psychologie/psychiatrie/idees-noires-et-tentatives-de-suicide_9782738117250.php" target="_blank"><img src="{{ ASSET static/livres/usagers/idees_noires_et_tentatives_de_suicide.jpg }}" alt="Idées noires et tentatives de suicide - Réagir et faire face" height="380" /></a>
+    <a href="https://www.dunod.com/sciences-humaines-et-sociales/mieux-vivre-avec-un-trouble-bipolaire-comment-reconnaitre-et-traiter-0" target="_blank"><img src="{{ ASSET static/livres/mieux_vivre_avec_un_trouble_bipolaire.jpg }}" alt="Mieux vivre avec un trouble bipolaire - Comment le reconnaître et le traiter" height="380" /></a>
+    <a href="https://www.odilejacob.fr/catalogue/psychologie/psychiatrie/idees-noires-et-tentatives-de-suicide_9782738117250.php" target="_blank"><img src="{{ ASSET static/livres/idees_noires_et_tentatives_de_suicide.jpg }}" alt="Idées noires et tentatives de suicide - Réagir et faire face" height="380" /></a>
 </div>
 
 # Podcasts
@@ -36,9 +36,9 @@ Radiofrance propose différents podcasts sur les troubles bipolaires et sur la d
 # Romans graphiques
 
 <div class="shelf">
-    <a href="https://www.babelio.com/livres/Williams-Je-vais-mieux-merci--Vaincre-la-depression/1046824" target="_blank"><img src="{{ ASSET static/livres/usagers/je_vais_mieux_merci.jpg }}" alt="Je vais mieux merci : vaincre la dépression" height="380" /></a>
-    <a href="https://www.babelio.com/livres/Lubie-Goupil-ou-face/885488" target="_blank"><img src="{{ ASSET static/livres/usagers/goupil_ou_face.jpg }}" alt="Goupil ou face : comment apprivoiser sa cyclothymie" height="380" /></a>
-    <a href="https://www.babelio.com/livres/Forney-Une-case-en-moins--La-depression-Michel-Ange-et-m/538167" target="_blank"><img src="{{ ASSET static/livres/usagers/une_case_en_moins.jpg }}" alt="Une case en moins : la dépression, Michel-Ange et moi" height="380" /></a>
+    <a href="https://www.babelio.com/livres/Williams-Je-vais-mieux-merci--Vaincre-la-depression/1046824" target="_blank"><img src="{{ ASSET static/livres/je_vais_mieux_merci.jpg }}" alt="Je vais mieux merci : vaincre la dépression" height="380" /></a>
+    <a href="https://www.babelio.com/livres/Lubie-Goupil-ou-face/885488" target="_blank"><img src="{{ ASSET static/livres/goupil_ou_face.jpg }}" alt="Goupil ou face : comment apprivoiser sa cyclothymie" height="380" /></a>
+    <a href="https://www.babelio.com/livres/Forney-Une-case-en-moins--La-depression-Michel-Ange-et-m/538167" target="_blank"><img src="{{ ASSET static/livres/une_case_en_moins.jpg }}" alt="Une case en moins : la dépression, Michel-Ange et moi" height="380" /></a>
 </div>
 
 # Témoignages

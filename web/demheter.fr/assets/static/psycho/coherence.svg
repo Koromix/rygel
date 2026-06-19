@@ -6,7 +6,7 @@
    version="1.0"
    id="svg4821"
    sodipodi:docname="coherence.svg"
-   inkscape:version="1.1.2 (0a00cf5339, 2022-02-04)"
+   inkscape:version="1.2.2 (b0a8486541, 2022-12-01)"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns:xlink="http://www.w3.org/1999/xlink"
@@ -26,15 +26,18 @@
      fit-margin-right="0"
      fit-margin-bottom="0"
      inkscape:zoom="1.262963"
-     inkscape:cx="360.65983"
-     inkscape:cy="298.10851"
+     inkscape:cx="361.4516"
+     inkscape:cy="297.7126"
      inkscape:window-width="1920"
-     inkscape:window-height="1025"
-     inkscape:window-x="1920"
+     inkscape:window-height="1128"
+     inkscape:window-x="0"
      inkscape:window-y="0"
      inkscape:window-maximized="1"
-     inkscape:current-layer="svg4821" />
-  <style>
+     inkscape:current-layer="svg4821"
+     inkscape:showpageshadow="2"
+     inkscape:deskcolor="#d1d1d1" />
+  <style
+     id="style701">
     @import url(&quot;/static/site.min.css&quot;);
   </style>
   <defs
@@ -940,21 +943,36 @@
   </g>
   <text
      xml:space="preserve"
-     style="font-style:normal;font-weight:normal;font-size:16px;line-height:1.25;font-family:'Open Sans';white-space:pre;inline-size:617.63;fill:#383838;fill-opacity:1;stroke:none;-inkscape-font-specification:'Open Sans';font-stretch:normal;font-variant:normal"
+     style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:16px;line-height:0;font-family:'Open Sans';-inkscape-font-specification:'Open Sans';white-space:pre;inline-size:617.63;fill:#383838;fill-opacity:1;stroke:none"
      x="142.51389"
      y="-76.173576"
      id="text4512"
      transform="translate(-43.379346,105.21485)"><tspan
        x="142.51389"
        y="-76.173576"
-       id="tspan26233">Aussi appelée résonance cardiaque, désigne une technique de biofeedback </tspan><tspan
+       id="tspan1327"><tspan
+         style="line-height:1.25"
+         id="tspan1325">Aussi appelée résonance cardiaque, désigne une technique
+</tspan></tspan><tspan
        x="142.51389"
        y="-56.17358"
-       id="tspan26235">consistant à ralentir et à synchroniser les rythmes respiratoire et cardiaque.
-</tspan><tspan
+       id="tspan1333"><tspan
+         style="line-height:1.25"
+         id="tspan1329">consistant à ralentir et à synchroniser les rythmes respiratoire et cardiaque.</tspan><tspan
+         style="font-size:8px;line-height:1.25"
+         id="tspan1331">
+</tspan></tspan><tspan
        x="142.51389"
-       y="-36.17358"
-       id="tspan26237">Le but est de réduire le niveau de stress ressenti.</tspan></text>
+       y="-43.452581"
+       id="tspan1337"><tspan
+         style="font-size:8px;line-height:1.25"
+         id="tspan1335">
+</tspan></tspan><tspan
+       x="142.51389"
+       y="-26.17358"
+       id="tspan1341"><tspan
+         style="line-height:1.25"
+         id="tspan1339">Le but est de réduire le niveau de stress ressenti.</tspan></tspan></text>
   <text
      xml:space="preserve"
      style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:16px;line-height:1.25;font-family:'Open Sans';-inkscape-font-specification:'Open Sans Bold';text-align:center;text-anchor:middle;white-space:pre;inline-size:191.775;fill:#ec9d36;fill-opacity:1;stroke:none"
@@ -964,12 +982,12 @@
      transform="translate(-27.595258,252.69836)"><tspan
        x="362.3512"
        y="-114.90992"
-       id="tspan26239">Les bénéfices<tspan
+       id="tspan1343">Les bénéfices<tspan
    y="-114.90992"
-   id="tspan26241"> </tspan></tspan><tspan
+   id="tspan1345"> </tspan></tspan><tspan
        x="362.3512"
-       y="-94.909916"
-       id="tspan26243">immédiats</tspan></text>
+       y="-94.909923"
+       id="tspan1347">immédiats</tspan></text>
   <text
      xml:space="preserve"
      style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:16px;line-height:1.25;font-family:'Open Sans';-inkscape-font-specification:'Open Sans Bold';text-align:center;text-anchor:middle;white-space:pre;inline-size:136.154;fill:#f1b567;fill-opacity:1;stroke:none"
@@ -979,12 +997,12 @@
      transform="translate(-47.604047,369.70977)"><tspan
        x="382.35928"
        y="-91.677086"
-       id="tspan26245">Les bénéfices à<tspan
+       id="tspan1349">Les bénéfices à<tspan
    y="-91.677086"
-   id="tspan26247"> </tspan></tspan><tspan
+   id="tspan1351"> </tspan></tspan><tspan
        x="382.35928"
        y="-71.677089"
-       id="tspan26249">long terme</tspan></text>
+       id="tspan1353">long terme</tspan></text>
   <text
      xml:space="preserve"
      style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:16px;line-height:1.25;font-family:'Open Sans';-inkscape-font-specification:'Open Sans';white-space:pre;inline-size:189.633;fill:#ffffff;fill-opacity:1"
@@ -994,42 +1012,42 @@
      transform="translate(43.234134,-398.81571)"><tspan
        x="-1.1175715"
        y="538.41083"
-       id="tspan26251">La variabilité cardiaque </tspan><tspan
+       id="tspan1355">La variabilité cardiaque </tspan><tspan
        x="-1.1175715"
        y="558.41085"
-       id="tspan26253">mesure les petites </tspan><tspan
+       id="tspan1357">mesure les petites </tspan><tspan
        x="-1.1175715"
        y="578.41085"
-       id="tspan26255">variations de durées </tspan><tspan
+       id="tspan1359">variations de durées </tspan><tspan
        x="-1.1175715"
        y="598.41085"
-       id="tspan26257">entre deux battements </tspan><tspan
+       id="tspan1361">entre deux battements </tspan><tspan
        x="-1.1175715"
        y="618.41085"
-       id="tspan26259">cardiaques
+       id="tspan1363">cardiaques
 </tspan><tspan
        x="-1.1175715"
        y="638.41085"
-       id="tspan26261">
+       id="tspan1365">
 </tspan><tspan
        x="-1.1175715"
        y="658.41085"
-       id="tspan26263">Elle permet d'estimer </tspan><tspan
+       id="tspan1367">Elle permet d'estimer </tspan><tspan
        x="-1.1175715"
        y="678.41085"
-       id="tspan26265">l'activité sympathique
+       id="tspan1369">l'activité sympathique
 </tspan><tspan
        x="-1.1175715"
        y="698.41085"
-       id="tspan26267">(qui accélère le rythme)
+       id="tspan1371">(qui accélère le rythme)
 </tspan><tspan
        x="-1.1175715"
        y="718.41085"
-       id="tspan26269">et parasympathique
+       id="tspan1373">et parasympathique
 </tspan><tspan
        x="-1.1175715"
        y="738.41085"
-       id="tspan26271">(qui le réduit)</tspan></text>
+       id="tspan1375">(qui le réduit)</tspan></text>
   <text
      xml:space="preserve"
      style="font-size:16px;line-height:1.35;font-family:'Open Sans';white-space:pre;inline-size:297.933;fill:#ffffff;fill-opacity:1;-inkscape-font-specification:'Open Sans';font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal"
@@ -1039,26 +1057,26 @@
      transform="translate(90.272822,-192.90193)"><tspan
        x="367.10779"
        y="431.39011"
-       id="tspan26273">Diminue la tension artérielle
+       id="tspan1377">Diminue la tension artérielle
 </tspan><tspan
        x="367.10779"
-       y="452.99012"
-       id="tspan26275">Réduit le risque cardiovasculaire
+       y="452.99011"
+       id="tspan1379">Réduit le risque cardiovasculaire
 </tspan><tspan
        x="367.10779"
-       y="474.59013"
-       id="tspan26277">Améliore la concentration et la </tspan><tspan
+       y="474.59012"
+       id="tspan1381">Améliore la concentration et la </tspan><tspan
        x="367.10779"
        y="496.19013"
-       id="tspan26279">mémorisation
+       id="tspan1383">mémorisation
 </tspan><tspan
        x="367.10779"
-       y="517.79014"
-       id="tspan26281">Favorise un meilleur sommeil
+       y="517.79013"
+       id="tspan1385">Favorise un meilleur sommeil
 </tspan><tspan
        x="367.10779"
-       y="539.39012"
-       id="tspan26283">Réduit le risque de dépression</tspan></text>
+       y="539.39011"
+       id="tspan1387">Réduit le risque de dépression</tspan></text>
   <text
      xml:space="preserve"
      style="font-size:16px;line-height:1.35;font-family:'Open Sans';fill:#ffffff;fill-opacity:1;-inkscape-font-specification:'Open Sans';font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal"

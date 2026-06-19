@@ -1,4 +1,4 @@
-# Vieillir avec un trouble de l'humeur
+# Interrogations et appréhensions
 
 Les membres du Clubhouse de Lille ont partagé quelques-unes de leurs **interrogations et de leurs appréhensions** face à l’idée de vieillir avec un trouble de l’humeur.
 

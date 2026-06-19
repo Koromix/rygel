@@ -4,7 +4,7 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
-        <title>{{ TITLE }}</title>
+        <title>{{ TITLE }} | DEMHETER</title>
         <meta name="description" content="{{ DESCRIPTION }}">
         <link rel="icon" href="{{ ASSET favicon.png }}">
 
