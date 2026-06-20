@@ -70,7 +70,7 @@ static void CleanupFragments(int64_t now)
             int64_t end = std::min(start + 1000, fragments);
 
             for (int64_t i = start; i < end; i++) {
-                const char *key = Fmt(&temp_alloc, "%1/%2/%3", config.s3.drop_path, kid, i).ptr;
+                const char *key = Fmt(&temp_alloc, "%1%2/%3", config.s3.drop_path, kid, i).ptr;
                 keys.Append(key);
             }
 
@@ -437,7 +437,7 @@ void HandleFragmentUpload(http_IO *io)
     if (!io->OpenForRead(-1, &reader))
         return;
 
-    Span<const char> key = Fmt(io->Allocator(), "%1/%2/%3", config.s3.drop_path, kid, fragment);
+    Span<const char> key = Fmt(io->Allocator(), "%1%2/%3", config.s3.drop_path, kid, fragment);
 
     s3_PutResult ret = s3.PutObject(key, ComputedEncryptedSize(expected), [&](int64_t offset, Span<uint8_t> buf) {
         if (offset != reader.GetRawRead()) {
@@ -513,7 +513,7 @@ void HandleFragmentDownload(http_IO *io)
     if (!io->OpenForWrite(200, ComputedEncryptedSize(expected), &writer))
         return;
 
-    Span<const char> key = Fmt(io->Allocator(), "%1/%2/%3", config.s3.drop_path, kid, fragment);
+    Span<const char> key = Fmt(io->Allocator(), "%1%2/%3", config.s3.drop_path, kid, fragment);
 
     int64_t downloaded = s3.GetObject(key, [&](int64_t offset, Span<const uint8_t> buf) {
         if (offset != writer.GetRawWritten()) {
@@ -673,7 +673,7 @@ void HandleDropDownload(http_IO *io)
         Span<uint8_t> buf = AllocateSpan<uint8_t>(io->Allocator(), ComputedEncryptedSize(size));
 
         for (int64_t i = 0; i < fragments; i++) {
-            Span<const char> key = Fmt(io->Allocator(), "%1/%2/%3", config.s3.drop_path, kid, i);
+            Span<const char> key = Fmt(io->Allocator(), "%1%2/%3", config.s3.drop_path, kid, i);
             Size downloaded = s3.GetObject(key, buf);
 
             if (downloaded < 0)

@@ -27,7 +27,7 @@ struct Config {
 
     struct {
         s3_Config remote;
-        const char *drop_path = "drops";
+        const char *drop_path = "";
     } s3;
 
     http_Config http { 8891 };

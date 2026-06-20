@@ -19,7 +19,14 @@ bool Config::Validate() const
         valid = false;
     }
 
-    valid &= !drop || s3.remote.Validate();
+    if (drop) {
+        valid &= s3.remote.Validate();
+
+        if (s3.drop_path[0] && !EndsWith(s3.drop_path, "/")) {
+            LogError("S3 drop path must end with '/'");
+            valid = false;
+        }
+    }
 
     valid &= http.Validate();
     valid &= smtp.Validate();
@@ -106,7 +113,8 @@ bool LoadConfig(StreamReader *st, Config *out_config)
                 }
             } else if (prop.section == "S3") {
                 if (prop.key == "DropPath") {
-                    config.s3.drop_path = DuplicateString(prop.value, &config.str_alloc).ptr;
+                    const char * suffix = prop.value.len && !EndsWith(prop.value, "/") ? "/" : "";
+                    config.s3.drop_path = Fmt(&config.str_alloc, "%1%2", prop.value, suffix).ptr;
                 } else {
                     valid &= config.s3.remote.SetProperty(prop.key, prop.value, root_directory);
                 }
