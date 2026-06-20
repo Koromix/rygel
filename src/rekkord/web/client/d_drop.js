@@ -11,7 +11,7 @@ import { Base64 } from 'lib/web/base/mixer.js';
 import * as UI from 'lib/web/ui/ui.js';
 import * as App from './m_app.js';
 import { route, cache, session } from './m_app.js';
-import * as m_app.js from './u_user.js';
+import * as UserMod from './u_user.js';
 import {
     formatSize,
     formatDuration
