@@ -392,12 +392,14 @@ static void HandleRequest(http_IO *io)
             HandleFragmentUpload(io);
         } else if (config.drop && url == "/api/drop/fragment" && method == http_RequestMethod::Get) {
             HandleFragmentDownload(io);
-        } else if (config.drop && StartsWith(url, "/api/drop/download/") && method == http_RequestMethod::Get) {
-            HandleDropDownload(io);
         } else {
             io->SendError(404);
         }
 
+        return;
+    }
+    if (config.drop && StartsWith(url, "/drop/download/") && method == http_RequestMethod::Get) {
+        HandleDropDownload(io);
         return;
     }
 

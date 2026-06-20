@@ -17,8 +17,8 @@ self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
 self.addEventListener('fetch', e => {
     let url = new URL(e.request.url);
 
-    if (url.pathname.startsWith('/drop/download/')) {
-        let kid = url.pathname.substr(15);
+    if (url.pathname.startsWith('/drop/decrypt/')) {
+        let kid = url.pathname.substr(14);
 
         if (e.request.method == 'HEAD') {
             try {
