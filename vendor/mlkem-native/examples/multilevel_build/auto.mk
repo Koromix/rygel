@@ -1,1 +1,0 @@
-../../test/mk/auto.mk
