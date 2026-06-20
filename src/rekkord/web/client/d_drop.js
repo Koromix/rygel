@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
-import { render, html, live, svg } from 'vendor/lit-html/lit-html.bundle.js';
+import { render, html, live, svg, unsafeHTML } from 'vendor/lit-html/lit-html.bundle.js';
 import { xsalsa20poly1305, randomBytes } from 'vendor/noble/noble.bundle.js';
 import dayjs from 'vendor/dayjs/dayjs.bundle.js';
 import QRC from 'vendor/qrcodegen/js/qrcodegen.js';
@@ -262,6 +262,7 @@ async function runDrop() {
 
                 <div class="actions">
                     <button type="submit" ?disabled=${progress != null}>${T.download}</button>
+                    <a @click=${UI.wrap(e => otherDownloadOptions(cache.drop, passphrase))}>${T.show_other_download_options}</a>
                 </div>
             </form>
         `);
@@ -272,6 +273,9 @@ async function runDrop() {
 
             let form = e.currentTarget;
             let password = form.elements.password?.value?.trim?.();
+
+            if (cache.drop.protect && !password)
+                throw new Error(T.message(`Missing password`));
 
             await download(cache.drop, passphrase, password);
         }
@@ -303,6 +307,36 @@ async function download(info, passphrase, password) {
         throw new Error(T.message(`Failed to initiate service worker download, refresh the page`));
 
     window.location.href = '/drop/decrypt/' + info.kid;
+}
+
+async function otherDownloadOptions(info, passphrase) {
+    let commands = [
+        `curl -LOJ ${ENV.url}/drop/download/${info.kid}`,
+        `age -d -o '${info.name.replaceAll('\'', '\\\'')}' '${info.name.replaceAll('\'', '\\\'')}.age'`
+    ];
+    let suffix = info.protect ? html`/<span style="color: red;">${T.password_suffix}</span>` : '';
+
+    await UI.dialog((render, close) => html`
+        <div class="title">
+            ${T.format(T.download_x, info.name)}
+            <div style="flex: 1;"></div>
+            <button type="button" class="secondary" @click=${UI.insist(close)}>✖\uFE0E</button>
+        </div>
+
+        <div class="main">
+            <div class="section">${T.command_line}</div>
+            <div>
+                <p>${unsafeHTML(T.use_curl_and_age_to_download_and_decrypt)}</p>
+                <pre style="padding: 4px;">${commands.join('\n')}</pre>
+                <p>${T.use_passphrase_to_decrypt_with_age}</p>
+                <pre style="padding: 4px;">${passphrase}${suffix}</pre>
+            </div>
+        </div>
+
+        <div class="footer" style="justify-content: center;">
+            <button type="button" class="secondary" @click=${UI.wrap(close)}>${T.close}</button>
+        </div>
+    `);
 }
 
 async function runSend() {
