@@ -71,7 +71,7 @@ function handleMessage(e) {
             let meter = progress_map.getOrInsertComputed(kid, () => new ProgressMeter(max));
             meter.add(value);
 
-            m_app.jsrun();
+            App.run();
 
             // Try to keep the service worker alive, especially on Firefox!
             sw.postMessage({ type: 'alive', args: [] });

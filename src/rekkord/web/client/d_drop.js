@@ -33,7 +33,7 @@ let new_drops = new LruMap(4);
 
 async function runDrops() {
     if (!App.isLogged())
-        return m_app.js.runLogin();
+        return UserMod.runLogin();
 
     cache.drops = await Net.cache('drops', '/api/drop/list');
 
@@ -291,7 +291,7 @@ async function download(info, passphrase, password) {
 
 async function runSend() {
     if (!App.isLogged())
-        return m_app.js.runLogin();
+        return UserMod.runLogin();
 
     UI.main(html`
         <div class="header">${T.send_file}</div>
