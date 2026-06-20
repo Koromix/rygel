@@ -302,35 +302,7 @@ static void HandleRequest(http_IO *io)
     io->AddHeader("Referrer-Policy", "same-origin");
     io->AddHeader("Cross-Origin-Opener-Policy", "same-origin");
     io->AddHeader("Cross-Origin-Embedder-Policy", "require-corp");
-    io->AddHeader("X-Robots-Tag", "noindex");
     io->AddHeader("Permissions-Policy", "interest-cohort=()");
-
-    // API endpoint?
-    if (StartsWith(url, "/api/")) {
-        if (url == "/api/register" && method == http_RequestMethod::Post) {
-            HandleRegister(io);
-        } else if (url == "/api/token" && method == http_RequestMethod::Post) {
-            HandleToken(io);
-        } else if (url == "/api/protect" && method == http_RequestMethod::Post) {
-            HandleProtect(io);
-        } else if (url == "/api/password" && method == http_RequestMethod::Post) {
-            HandlePassword(io);
-        } else if (url == "/api/download" && method == http_RequestMethod::Get) {
-            HandleDownload(io);
-        } else if (url == "/api/upload" && method == http_RequestMethod::Put) {
-            HandleUpload(io);
-        } else if (url == "/api/remind" && method == http_RequestMethod::Post) {
-            HandleRemind(io);
-        } else if (url == "/api/ignore" && method == http_RequestMethod::Post) {
-            HandleIgnore(io);
-        } else if (url == "/api/publish" && method == http_RequestMethod::Post) {
-            HandlePublish(io);
-        } else {
-            io->SendError(404);
-        }
-
-        return;
-    }
 
     // External static asset?
     if (config.static_directory) {
@@ -403,6 +375,36 @@ static void HandleRequest(http_IO *io)
 
             return;
         }
+    }
+
+    // Don't block SEO on static site...
+    io->AddHeader("X-Robots-Tag", "noindex");
+
+    // API endpoint?
+    if (StartsWith(url, "/api/")) {
+        if (url == "/api/register" && method == http_RequestMethod::Post) {
+            HandleRegister(io);
+        } else if (url == "/api/token" && method == http_RequestMethod::Post) {
+            HandleToken(io);
+        } else if (url == "/api/protect" && method == http_RequestMethod::Post) {
+            HandleProtect(io);
+        } else if (url == "/api/password" && method == http_RequestMethod::Post) {
+            HandlePassword(io);
+        } else if (url == "/api/download" && method == http_RequestMethod::Get) {
+            HandleDownload(io);
+        } else if (url == "/api/upload" && method == http_RequestMethod::Put) {
+            HandleUpload(io);
+        } else if (url == "/api/remind" && method == http_RequestMethod::Post) {
+            HandleRemind(io);
+        } else if (url == "/api/ignore" && method == http_RequestMethod::Post) {
+            HandleIgnore(io);
+        } else if (url == "/api/publish" && method == http_RequestMethod::Post) {
+            HandlePublish(io);
+        } else {
+            io->SendError(404);
+        }
+
+        return;
     }
 
     // Embedded static asset?
