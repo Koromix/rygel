@@ -194,7 +194,7 @@
         "uploading_file_x": "Téléversement...",
         "url": "URL",
         "use_curl_and_age_to_download_and_decrypt": "Utilisez curl et <a href=\"https://github.com/FiloSottile/age\" target=\"_blank\">age</a> pour télécharger et déchiffrer le fichier :",
-        "use_passphrase_to_decrypt_with_age": "Utilisez la phrase de passe (passphrase) suivante quand la commande vous y invite :",
+        "use_passphrase_to_decrypt_with_age": "Collez la phrase de passe (passphrase) suivante quand la commande vous y invite :",
         "valid": "Valide",
         "x_snapshots": "Instantanés de {1}",
         "yes": "Oui",
