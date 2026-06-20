@@ -2817,7 +2817,7 @@ void HandleArchiveDownload(http_IO *io)
     }
 
     const char *filename = Fmt(io->Allocator(), "%1%/%2", gp_config.archive_directory, basename).ptr;
-    const char *disposition = Fmt(io->Allocator(), "attachment; filename=\"%1\"", basename).ptr;
+    const char *disposition = Fmt(io->Allocator(), "attachment; filename=\"%1\"", FmtEscape(basename, '"')).ptr;
 
     io->AddHeader("Content-Disposition", disposition);
     io->SendFile(200, filename);

@@ -105,7 +105,7 @@ bool ServeFile(http_IO *io, InstanceHolder *instance, const char *sha256, const 
     K_DEFER { sqlite3_blob_close(src_blob); };
 
     if (flags & (int)ServeFlag::Download) {
-        const char *disposition = Fmt(io->Allocator(), "attachment; filename=\"%1\"", FmtUrlSafe(filename, "")).ptr;
+        const char *disposition = Fmt(io->Allocator(), "attachment; filename=\"%1\"", FmtEscape(filename, '"')).ptr;
         io->AddHeader("Content-Disposition", disposition);
     }
 

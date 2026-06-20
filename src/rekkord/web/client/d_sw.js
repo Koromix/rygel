@@ -97,7 +97,7 @@ function createDownloadStream(kid) {
 function prepareHeaders(info) {
     let headers = {
         'Content-Type': 'application/octet-stream',
-        'Content-Disposition': `attachment; filename="${info.name}"`,
+        'Content-Disposition': `attachment; filename="${info.name.replaceAll('"', '\"')}"`,
         'Content-Length': info.size
     };
 
