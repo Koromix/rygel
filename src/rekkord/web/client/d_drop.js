@@ -9,9 +9,9 @@ import { Util, LruMap, Log, Net, HttpError, ProgressMeter } from 'lib/web/base/b
 import * as IDB from 'lib/web/base/indexeddb.js';
 import { Base64 } from 'lib/web/base/mixer.js';
 import * as UI from 'lib/web/ui/ui.js';
-import * as App from './m_main.js';
-import { route, cache, session } from './m_main.js';
-import * as UserMod from './m_user.js';
+import * as App from './m_app.js';
+import { route, cache, session } from './m_app.js';
+import * as m_app.js from './u_user.js';
 import {
     formatSize,
     formatDuration
@@ -33,7 +33,7 @@ let new_drops = new LruMap(4);
 
 async function runDrops() {
     if (!App.isLogged())
-        return UserMod.runLogin();
+        return m_app.js.runLogin();
 
     cache.drops = await Net.cache('drops', '/api/drop/list');
 
@@ -291,7 +291,7 @@ async function download(info, passphrase, password) {
 
 async function runSend() {
     if (!App.isLogged())
-        return UserMod.runLogin();
+        return m_app.js.runLogin();
 
     UI.main(html`
         <div class="header">${T.send_file}</div>

@@ -242,9 +242,9 @@ static void InitAssets()
                 const char *url = Fmt(&asset_alloc, "/static/%1/%2", shared_etag, name).ptr;
                 asset_map.Set(url, &asset);
 
-                if (name == "m_main.js") {
+                if (name == "m_app.js") {
                     asset_js = url;
-                } else if (name == "m_main.css") {
+                } else if (name == "m_app.css") {
                     asset_css = url;
                 } else if (EndsWith(name, ".js")) {
                     asset_bundles.Append(url);

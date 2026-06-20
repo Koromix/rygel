@@ -7,7 +7,7 @@ import { Util, Mutex, Log, Net, HttpError } from 'lib/web/base/base.js';
 import { Base64 } from 'lib/web/base/mixer.js';
 import * as UI from 'lib/web/ui/ui.js';
 import { deploy } from 'lib/web/flat/static.js';
-import * as UserMod from './m_user.js';
+import * as UserMod from './u_user.js';
 import * as PlanMod from './b_plan.js';
 import * as RepositoryMod from './b_repository.js';
 import { initRelay } from './d_relay.js';

@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
 import { Util, Log, Net, ProgressMeter } from 'lib/web/base/base.js';
-import * as App from './m_main.js';
+import * as App from './m_app.js';
 
 const PROGRESS_EXPIRATION = 2 * 60000;
 
@@ -71,7 +71,7 @@ function handleMessage(e) {
             let meter = progress_map.getOrInsertComputed(kid, () => new ProgressMeter(max));
             meter.add(value);
 
-            App.run();
+            m_app.jsrun();
 
             // Try to keep the service worker alive, especially on Firefox!
             sw.postMessage({ type: 'alive', args: [] });

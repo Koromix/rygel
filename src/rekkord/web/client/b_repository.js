@@ -5,9 +5,9 @@ import { render, html, live, unsafeHTML } from 'vendor/lit-html/lit-html.bundle.
 import dayjs from 'vendor/dayjs/dayjs.bundle.js';
 import { Util, Log, Net } from 'lib/web/base/base.js';
 import * as UI from 'lib/web/ui/ui.js';
-import * as App from './m_main.js';
-import { route, cache } from './m_main.js';
-import * as UserMod from './m_user.js';
+import * as App from './m_app.js';
+import { route, cache } from './m_app.js';
+import * as UserMod from './u_user.js';
 import { formatSize } from './m_format.js';
 import { ASSETS } from '../assets/assets.js';
 
