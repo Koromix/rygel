@@ -48,7 +48,7 @@ function initPicture() {
             render(html`
                 <div style="flex: 1;"></div>
                 <a href="/profil"><img class=${'avatar' + (url == null ? ' anonymous' : '')}
-                                       src=${url ?? ASSETS['ui/anonymous']} /></a>
+                                       src=${url ?? ASSETS['ui/anonymous']} alt="" /></a>
             `, menu);
         }
     }
