@@ -64,13 +64,15 @@ async function runDrops() {
                 </thead>
                 <tbody>
                     ${drops.map(drop => {
-                        let passphrase = passphrases.has(drop.kid);
+                        let recover = passphrases.has(drop.kid);
 
                         return html`
                             <tr>
                                 <td>
-                                    ${passphrase ? html`<a href=${App.makeURL({ mode: 'drop', drop: drop.kid })}>${drop.name}</a>` : ''}
-                                    ${!passphrase ? drop.name : ''}
+                                    ${drop.name}
+                                    <button type="button" class="small" style="float: right;"
+                                            ?disabled=${!recover} title=${!recover ? T.links_can_be_recovered_on_upload_machine : ''}
+                                            @click=${UI.wrap(e => recoverLink(drop))}>${T.recover_link}</button>
                                 </td>
                                 <td>
                                     ${drop.expire != null && drop.expire > now ? dayjs(drop.expire).format('lll') : ''}
@@ -96,6 +98,45 @@ async function runDrops() {
             <button type="button" @click=${UI.wrap(e => App.go('/send'))}>${T.send_file}</button>
         </div>
     `);
+}
+
+async function recoverLink(info) {
+    let passphrase = null;
+
+    // Find passphrase in local database
+    {
+        let db = await openLocalDB(session.userid);
+        let obj = await db.load('passphrases', info.kid);
+
+        try {
+            let key = Base64.toBytes(session.ckey);
+            let nonce = Base64.toBytes(obj.nonce);
+            let cipher = Base64.toBytes(obj.cipher);
+
+            let salsa = xsalsa20poly1305(key, nonce);
+            let encoded = salsa.decrypt(cipher);
+
+            passphrase = (new TextDecoder).decode(encoded);
+        } catch (err) {
+            if (obj != null)
+                console.error(err);
+            throw new Error(T.message(`Failed to recover link for this drop`));
+        }
+    }
+
+    let drop = {
+        kid: info.kid,
+        name: info.name,
+        size: info.size,
+        passphrase: passphrase,
+        uploaded: info.size,
+        error: null
+    };
+
+    new_drops.set(info.kid, drop);
+
+    let url = App.makeURL({ mode: 'drop', drop: info.kid }, passphrase);
+    App.go(url);
 }
 
 async function deleteDrop(kid) {
@@ -136,31 +177,8 @@ async function runDrop() {
                 cache.drop = null;
             }
 
-            // Try to find key locally
-            if (session != null && cache.drop != null) {
-                let db = await openLocalDB(session.userid);
-                let obj = await db.load('passphrases', cache.drop.kid);
+            passphrase = window.location.hash.substr(1);
 
-                if (obj != null) {
-                    try {
-                        let key = Base64.toBytes(session.ckey);
-                        let nonce = Base64.toBytes(obj.nonce);
-                        let cipher = Base64.toBytes(obj.cipher);
-
-                        let salsa = xsalsa20poly1305(key, nonce);
-                        let encoded = salsa.decrypt(cipher);
-
-                        is_new = true;
-                        passphrase = (new TextDecoder).decode(encoded);
-                    } catch (err) {
-                        // Best effort
-                        console.error(err);
-                    }
-                }
-            }
-
-            if (passphrase == null && window.location.hash)
-                passphrase = window.location.hash.substr(1);
             if (!passphrase)
                 throw new Error(T.message(`Missing decryption passphrase`));
         }
@@ -199,8 +217,6 @@ async function runDrop() {
     } else if (is_new) {
         let hash = `#${passphrase}`;
         let url = App.makeURL({ mode: 'drop', drop: cache.drop.kid }, hash);
-
-        setTimeout(() => { window.location.hash = hash; }, 0);
 
         UI.main(html`
             <div class="header">${cache.drop.name}</div>
@@ -378,7 +394,7 @@ async function runSend() {
         send_file = null;
         new_drops.set(info.kid, drop);
 
-        let url = App.makeURL({ mode: 'drop', drop: info.kid });
+        let url = App.makeURL({ mode: 'drop', drop: info.kid }, passphrase);
         App.go(url);
 
         try {

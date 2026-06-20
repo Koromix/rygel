@@ -144,7 +144,7 @@ async function start() {
 
 function go(url = null, push = true) {
     if (url == null)
-        return run({}, push);
+        return run({}, null, push);
 
     let changes = Object.assign({}, route);
 
@@ -199,10 +199,10 @@ function go(url = null, push = true) {
         } break;
     }
 
-    return run(changes, push);
+    return run(changes, url.hash, push);
 }
 
-async function run(changes = {}, push = false) {
+async function run(changes = {}, hash = null, push = false) {
     if (poisoned)
         return;
 
@@ -233,7 +233,7 @@ async function run(changes = {}, push = false) {
 
             // Update URL
             if (!run_pending) {
-                let url = makeURL();
+                let url = makeURL({}, hash);
 
                 if (url != route_url) {
                     if (push) {
@@ -254,7 +254,7 @@ async function run(changes = {}, push = false) {
     }
 }
 
-function makeURL(changes = {}) {
+function makeURL(changes = {}, hash = null) {
     let values = Object.assign({}, route, changes);
     let path = '/' + values.mode;
 
@@ -267,8 +267,13 @@ function makeURL(changes = {}) {
         }
     }
 
-    if (path == window.location.pathname && window.location.hash)
+    if (hash) {
+        if (!hash.startsWith('#'))
+            hash = '#' + hash;
+        path += hash;
+    } else if (path == window.location.pathname && window.location.hash) {
         path += window.location.hash;
+    }
 
     return path;
 }
@@ -360,8 +365,7 @@ async function login(mail, password) {
 
 async function confirm(code) {
     session = await Net.post('/api/totp/confirm', { code: code });
-
-    await run({}, false);
+    await run({}, null, false);
 }
 
 async function logout() {
@@ -403,7 +407,6 @@ export {
 
     makeURL,
     go,
-    run,
 
     session,
     isLogged,
