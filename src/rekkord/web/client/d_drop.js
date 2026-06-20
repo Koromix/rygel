@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
 import { render, html, live, svg } from 'vendor/lit-html/lit-html.bundle.js';
-import { xsalsa20poly1305 } from 'vendor/noble/noble.bundle.js';
+import { xsalsa20poly1305, randomBytes } from 'vendor/noble/noble.bundle.js';
 import dayjs from 'vendor/dayjs/dayjs.bundle.js';
 import QRC from 'vendor/qrcodegen/js/qrcodegen.js';
 import { Util, LruMap, Log, Net, HttpError, ProgressMeter } from 'lib/web/base/base.js';
@@ -353,7 +353,7 @@ async function runSend() {
             let db = await openLocalDB(session.userid);
 
             let key = Base64.toBytes(session.ckey);
-            let nonce = new Uint8Array(24);
+            let nonce = randomBytes(24);
             let salsa = xsalsa20poly1305(key, nonce);
 
             let encoded = (new TextEncoder).encode(passphrase);
