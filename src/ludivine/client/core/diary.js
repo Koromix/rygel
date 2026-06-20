@@ -38,10 +38,7 @@ function DiaryModule(app) {
         }
 
         if (editor == null) {
-            // We need the DOM node to instantiate CKEditor
-            self.render();
-
-            editor = await ClassicEditor.create(div.querySelector('#editor'), {
+            editor = await ClassicEditor.create({
                 toolbar: {
                     items: [
                         'fontSize',
@@ -129,8 +126,8 @@ function DiaryModule(app) {
                                @input=${data != null ? autoSave : null} @change=${save} />
                     </label>
                     <div class="widget">
-                        <label for="editor">Contenu de l'entrée</label>
-                        <div id="editor"></div>
+                        <label @click=${e => editor.focus()}>Contenu de l'entrée</label>
+                        ${editor.ui.element}
                     </div>
                 </form>
 
