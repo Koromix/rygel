@@ -6,6 +6,13 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.102
+
+*Released on 2026-06-21*
+
+- Fix object lock extension errors during `rekkord scan` with Scaleway Object Storage
+- Fix minor translation issues
+
 ### Rekkord 0.101
 
 *Released on 2026-06-17*
