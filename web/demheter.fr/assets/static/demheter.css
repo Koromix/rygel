@@ -32,9 +32,9 @@ span[title] { border-bottom: 1px dotted #383838; }
 
 .heading {
     margin: 0 auto 1.5em auto;
-    padding: 5px 20px;
+    padding: 4px 16px;
     width: 50%;
-    font-size: 2em;
+    font-size: 1.5em;
     text-align: center;
     text-transform: uppercase;
     background: #3c7777;
