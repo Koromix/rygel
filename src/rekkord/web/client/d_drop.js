@@ -50,17 +50,17 @@ async function runDrops() {
             <table style="table-layout: fixed; width: 100%;">
                 <colgroup>
                     <col/>
-                    <col style="width: 200px;" />
                     <col style="width: 120px;" />
                     <col style="width: 120px;" />
+                    <col style="width: 180px;" />
                     <col style="width: 60px;" />
                 </colgroup>
                 <thead>
                     <tr>
                         ${UI.tableHeader('drops', 'name', T.name)}
-                        ${UI.tableHeader('drops', 'expire', T.expiration)}
-                        ${UI.tableHeader('drops', 'protect', T.password)}
                         ${UI.tableHeader('drops', 'size', T.size)}
+                        ${UI.tableHeader('drops', 'protect', T.password)}
+                        ${UI.tableHeader('drops', 'expire', T.expiration)}
                         <th></th>
                     </tr>
                 </thead>
@@ -76,15 +76,15 @@ async function runDrops() {
                                             ?disabled=${!recover} title=${!recover ? T.links_can_be_recovered_on_upload_machine : ''}
                                             @click=${UI.wrap(e => recoverLink(drop))}>${T.recover_link}</button>
                                 </td>
-                                <td>
-                                    ${drop.expire != null && drop.expire > now ? dayjs(drop.expire).format('lll') : ''}
-                                    ${drop.expire != null && drop.expire <= now ? T.expired : ''}
-                                    ${drop.expire == null ? T.never : ''}
-                                </td>
-                                <td style="text-align: center;">${drop.protect ? T.yes : T.no}</td>
                                 <td style="text-align: right;">
                                     ${formatSize(drop.size)}
                                     ${!drop.complete ? html`<span class="sub" style="color: red;">${T.incomplete}</span>` : ''}
+                                </td>
+                                <td style="text-align: center;">${drop.protect ? T.yes : T.no}</td>
+                                <td style="text-align: right;">
+                                    ${drop.expire != null && drop.expire > now ? dayjs(drop.expire).format('lll') : ''}
+                                    ${drop.expire != null && drop.expire <= now ? T.expired : ''}
+                                    ${drop.expire == null ? T.never : ''}
                                 </td>
                                 <td class="center">
                                     <button type="button" class="small"
