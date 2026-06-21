@@ -71,6 +71,14 @@ main.dialog {
     z-index: 999999;
 }
 
+.command {
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+
+    & > pre { flex: 1; }
+}
+
 .actions {
     margin-top: 1.5em;
     gap: 0.5em;

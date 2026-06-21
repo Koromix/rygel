@@ -374,14 +374,17 @@ pre > code:not(.hljs) {
 }
 
 pre {
-    position: relative;
-    margin: 1em 20px;
-    padding: 0;
+    padding: 2px 4px;
     border: 1px solid #ebebeb;
     background: #ffffff;
     overflow: auto;
     font-size: 12px;
     z-index: 0;
+}
+pre:has(> code) {
+    position: relative;
+    margin: 1em 20px;
+    padding: 0;
 }
 .nojs pre { padding: 6px; }
 

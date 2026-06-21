@@ -9,6 +9,7 @@
         "account_security": "Sécurité du compte",
         "add_item": "Ajouter un item",
         "add_machine": "Ajouter une machine",
+        "add_password_after_passphrase": "Ce fichier est protégé par un mot de passe supplémentaire. Le bouton « Copier » n'inclut pas ce mot de passe, tapez le à la suite avant de valider.",
         "add_repository": "Ajouter un dépôt",
         "added": "Ajouté",
         "allowed": "Autorisé",
@@ -28,6 +29,7 @@
         "clock_time": "Heure",
         "close": "Fermer",
         "complete": "Complet",
+        "command": "Commande",
         "command_line": "Ligne de commande",
         "configure": "Configurer",
         "confirm": "Confirmer",
@@ -66,8 +68,8 @@
         "download": "Télécharger",
         "download_link": "Lien de téléchargement",
         "download_x": "Télécharger '{1}'",
-        "drag_or_browse_file": "Déposez un fichier ou utilisez le bouton « Parcourir »",
-        "drag_paste_or_browse_image": "Déposez une image, copier-collez la ou utilisez le bouton « Parcourir »",
+        "drag_or_browse_file": "Déposez un fichier ou utilisez le bouton « Parcourir »",
+        "drag_paste_or_browse_image": "Déposez une image, copier-collez la ou utilisez le bouton « Parcourir »",
         "edit_machine": "Modifier la machine",
         "edit_repository": "Modifier le dépôt",
         "enable_direct_login_with_password": "Je souhaite créer un mot de passe pour pouvoir me connecter directement",
@@ -125,6 +127,7 @@
         "not_used": "Non utilisé",
         "nothing_to_do": "Rien à faire",
         "object": "Objet",
+        "passphrase": "Phrase de passe",
         "password": "Mot de passe",
         "password_reset_successful": "Votre mot de passe a été modifié, veuillez vous connecter pour continuer.",
         "password_suffix": "MOT_DE_PASSE",
@@ -193,7 +196,8 @@
         "upload_image": "Choisir une image",
         "uploading_file_x": "Téléversement...",
         "url": "URL",
-        "use_curl_and_age_to_download_and_decrypt": "Utilisez curl et <a href=\"https://github.com/FiloSottile/age\" target=\"_blank\">age</a> pour télécharger et déchiffrer le fichier :",
+        "use_curl_to_download_encrypted_file": "Utilisez curl pour télécharger le fichier chiffré :",
+        "use_age_to_decrypt_the_file": "Déchiffrez le fichier <a href=\"https://github.com/FiloSottile/age\" target=\"_blank\">age</a> à l'aide de la commande suivante :",
         "use_passphrase_to_decrypt_with_age": "Collez la phrase de passe (passphrase) suivante quand la commande vous y invite :",
         "valid": "Valide",
         "x_snapshots": "Instantanés de {1}",
@@ -586,6 +590,6 @@
         "You should prefer write-only keys for this command": "Il est préférable d'utiliser des clés en écriture seule pour cette commande",
         "Your account has been created, but you must confirm your mail address. Consult the mail that has been sent to you to confirm it.": "Votre compte a été créé, mais vous devez confirmer votre adresse e-mail. Consultez le courrier qui vous a été envoyé pour la confirmer.",
         "lseek('<temp>') failed: %1": "lseek('<temp>') failed : %1",
-        "{1} copied to clipboard": "{1} copié dans le presse-papiers"
+        "{1} copied to clipboard": "{1} copié(e) dans le presse-papiers"
     }
 }

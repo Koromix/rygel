@@ -310,11 +310,9 @@ async function download(info, passphrase, password) {
 }
 
 async function otherDownloadOptions(info, passphrase) {
-    let commands = [
-        `curl -LOJ ${ENV.url}/drop/download/${info.kid}`,
-        `age -d -o '${info.name.replaceAll('\'', '\\\'')}' '${info.name.replaceAll('\'', '\\\'')}.age'`
-    ];
-    let suffix = info.protect ? html`/<span style="color: red;">${T.password_suffix}</span>` : '';
+    let curl = `curl -o ${quoteArgument(info.name)}.age ${ENV.url}/drop/download/${info.kid}`;
+    let age = `age -d -o ${quoteArgument(info.name)} ${quoteArgument(info.name)}.age`;
+    let suffix = info.protect ? html`<span style="color: red;">${T.password_suffix}</span>` : '';
 
     await UI.dialog((render, close) => html`
         <div class="title">
@@ -326,10 +324,22 @@ async function otherDownloadOptions(info, passphrase) {
         <div class="main">
             <div class="section">${T.command_line}</div>
             <div>
-                <p>${unsafeHTML(T.use_curl_and_age_to_download_and_decrypt)}</p>
-                <pre style="padding: 4px;">${commands.join('\n')}</pre>
+                <p>${unsafeHTML(T.use_curl_to_download_encrypted_file)}</p>
+                <div class="command">
+                    <pre>${curl}</pre>
+                    <button type="button" class="small" @click=${UI.wrap(e => Util.writeClipboard(T.command, curl))}>${T.copy}</button>
+                </div>
+                <p>${unsafeHTML(T.use_age_to_decrypt_the_file)}</p>
+                <div class="command">
+                    <pre>${age}</pre>
+                    <button type="button" class="small" @click=${UI.wrap(e => Util.writeClipboard(T.command, age))}>${T.copy}</button>
+                </div>
                 <p>${T.use_passphrase_to_decrypt_with_age}</p>
-                <pre style="padding: 4px;">${passphrase}${suffix}</pre>
+                <div class="command">
+                    <pre>${passphrase}${suffix ? '/' : ''}${suffix}</pre>
+                    <button type="button" class="small" @click=${UI.wrap(e => Util.writeClipboard(T.passphrase, passphrase + (suffix ? '/' : '')))}>${T.copy}</button>
+                </div>
+                ${info.protect ? html`<span class="sub" style="color: red;">${T.add_password_after_passphrase}</span>` : ''}
             </div>
         </div>
 
@@ -337,6 +347,11 @@ async function otherDownloadOptions(info, passphrase) {
             <button type="button" class="secondary" @click=${UI.wrap(close)}>${T.close}</button>
         </div>
     `);
+}
+
+function quoteArgument(str) {
+    let safe = str.match(/^[a-zA-Z0-9_\-\.]+$/);
+    return safe ? str : `'${str.replaceAll('\'', '\\\'')}'`;
 }
 
 async function runSend() {
