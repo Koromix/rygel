@@ -856,7 +856,7 @@ R"(<?xml version="1.0" encoding="UTF-8"?>
 )";
 
     TimeSpec spec = DecomposeTimeUTC(until);
-    Span<const char> body = Fmt(&temp_alloc, xml, FmtTimeBasic(spec), GetLockModeString(mode));
+    Span<const char> body = Fmt(&temp_alloc, xml, FmtTimeIso(spec), GetLockModeString(mode));
 
     int status = RunSafe("retain S3 object", 5, [&](CURL *curl, int) {
         int64_t now = GetUnixTime();
