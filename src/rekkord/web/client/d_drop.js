@@ -49,15 +49,17 @@ async function runDrops() {
         <div class="block">
             <table style="table-layout: fixed; width: 100%;">
                 <colgroup>
-                    <col></col>
-                    <col style="width: 200px;"></col>
-                    <col style="width: 120px;"></col>
-                    <col style="width: 60px;"/>
+                    <col/>
+                    <col style="width: 200px;" />
+                    <col style="width: 120px;" />
+                    <col style="width: 120px;" />
+                    <col style="width: 60px;" />
                 </colgroup>
                 <thead>
                     <tr>
                         ${UI.tableHeader('drops', 'name', T.name)}
                         ${UI.tableHeader('drops', 'expire', T.expiration)}
+                        ${UI.tableHeader('drops', 'protect', T.password)}
                         ${UI.tableHeader('drops', 'size', T.size)}
                         <th></th>
                     </tr>
@@ -79,6 +81,7 @@ async function runDrops() {
                                     ${drop.expire != null && drop.expire <= now ? T.expired : ''}
                                     ${drop.expire == null ? T.never : ''}
                                 </td>
+                                <td style="text-align: center;">${drop.protect ? T.yes : T.no}</td>
                                 <td style="text-align: right;">
                                     ${formatSize(drop.size)}
                                     ${!drop.complete ? html`<span class="sub" style="color: red;">${T.incomplete}</span>` : ''}
@@ -90,7 +93,7 @@ async function runDrops() {
                             </tr>
                         `;
                     })}
-                    ${!drops.length ? html`<tr><td colspan="4" style="text-align: center;">${T.no_file}</td></tr>` : ''}
+                    ${!drops.length ? html`<tr><td colspan="5" style="text-align: center;">${T.no_file}</td></tr>` : ''}
                 </tbody>
             </table>
         </div>

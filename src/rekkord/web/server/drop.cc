@@ -121,7 +121,7 @@ void HandleDropList(http_IO *io)
     }
 
     sq_Statement stmt;
-    if (!db.Prepare(R"(SELECT kid_str(kid), name, size, IFNULL(expire, -1),
+    if (!db.Prepare(R"(SELECT kid_str(kid), name, size, protect, IFNULL(expire, -1),
                               IIF(uploaded = size, 1, 0) AS complete
                        FROM drops
                        WHERE owner = ?1 AND deleted = 0)", &stmt, session->userid))
@@ -134,14 +134,16 @@ void HandleDropList(http_IO *io)
             const char *kid = (const char *)sqlite3_column_text(stmt, 0);
             const char *name = (const char *)sqlite3_column_text(stmt, 1);
             int64_t size = sqlite3_column_int64(stmt, 2);
-            int64_t expire = sqlite3_column_int64(stmt, 3);
-            bool complete = sqlite3_column_int(stmt, 4);
+            bool protect = sqlite3_column_int(stmt, 3);
+            int64_t expire = sqlite3_column_int64(stmt, 4);
+            bool complete = sqlite3_column_int(stmt, 5);
 
             json->StartObject();
 
             json->Key("kid"); json->String(kid);
             json->Key("name"); json->String(name);
             json->Key("size"); json->Int64(size);
+            json->Key("protect"); json->Bool(protect);
             if (expire >= 0) {
                 json->Key("expire"); json->Int64(expire);
             } else {
