@@ -431,8 +431,6 @@ void HandleFragmentUpload(http_IO *io)
         return;
     }
 
-    io->ExtendTimeout(30000);
-
     StreamReader reader;
     if (!io->OpenForRead(-1, &reader))
         return;
@@ -506,8 +504,6 @@ void HandleFragmentDownload(http_IO *io)
         io->SendError(422);
         return;
     }
-
-    io->ExtendTimeout(30000);
 
     StreamWriter writer;
     if (!io->OpenForWrite(200, ComputedEncryptedSize(expected), &writer))
@@ -654,8 +650,6 @@ void HandleDropDownload(http_IO *io)
 
     int64_t fragments = (size + split - 1) / split;
     int64_t total = header.len + 1 + nonce.len + ComputedEncryptedSize(size);
-
-    io->ExtendTimeout(30000);
 
     const char *disposition = Fmt(io->Allocator(), "attachment; filename=\"%1.age\"", FmtEscape(name, '"')).ptr;
     io->AddHeader("Content-Disposition", disposition);
