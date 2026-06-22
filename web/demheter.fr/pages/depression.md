@@ -66,5 +66,5 @@ Ce bilan est établi d'après les [recommandations HAS 2017](https://www.has-san
 ## Fiche explicative
 
 <div class="shelf">
-    <a href="https://igorthiriez.com/portfolio/la-depression-symptomes-et-sous-types/" target="_blank"><img src="{{ ASSET static/fiches/professionnels/depression.webp }}" alt="La dépression, symptômes et sous-types" height="512" /></a>
+    <a href="https://igorthiriez.com/portfolio/la-depression-symptomes-et-sous-types/" target="_blank"><img src="{{ ASSET static/fiches/professionnels/depression.webp }}" alt="La dépression, symptômes et sous-types" height="490" /></a>
 </div>
