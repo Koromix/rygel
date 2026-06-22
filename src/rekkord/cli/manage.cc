@@ -272,10 +272,18 @@ Options:
     }
 
     if (!force) {
-        if (TestFile(config_filename) && PromptYN(T("Do you want to overwrite existing config file?")) != 1)
-            return 1;
-        if (TestFile(key_filename) && PromptYN(T("Do you want to overwrite existing key file?")) != 1)
-            return 1;
+        if (TestFile(config_filename)) {
+            const char *prompt = Fmt(&temp_alloc, T("Do you want to overwrite config file '%1'?"), config_filename).ptr;
+
+            if (PromptYN(prompt) != 1)
+                return 1;
+        }
+        if (TestFile(key_filename)) {
+            const char *prompt = Fmt(&temp_alloc, T("Do you want to overwrite key file '%1'?"), config_filename).ptr;
+
+            if (PromptYN(prompt) != 1)
+                return 1;
+        }
     }
 
     StreamWriter st(config_filename, (int)StreamWriterFlag::Atomic);
