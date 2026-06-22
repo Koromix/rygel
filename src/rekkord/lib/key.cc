@@ -225,7 +225,7 @@ bool rk_LoadKeyFile(const char *filename, rk_KeySet *out_keys)
     return false;
 }
 
-bool rk_ExportKeyFile(const rk_KeySet &keys, rk_KeyType type, const char *filename, rk_KeySet *out_keys)
+bool rk_DeriveKeyFile(const rk_KeySet &keys, rk_KeyType type, const char *filename, rk_KeySet *out_keys)
 {
     K_ASSERT(keys.type == rk_KeyType::Master);
     K_ASSERT(keys.modes == UINT_MAX);

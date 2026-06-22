@@ -206,31 +206,67 @@ Options:
     }
 
     const char *import_filename = nullptr;
+    rk_KeyType import_type = rk_KeyType::Master;
     {
-        Size idx = PromptEnum(T("Do you want to import an existing key or should or do you want to create one?"), {
+        Size idx = PromptEnum(T("Do you want to create a new key or should we import or derive from an existing key?"), {
             T("Create new master key"),
-            T("Import key for existing repository")
+            T("Derive write-only key from master key"),
+            T("Import an existing key")
         });
         if (idx < 0)
             return 1;
 
         switch (idx) {
             case 0: { import_filename = nullptr; } break;
+
             case 1: {
-reimport:
-                import_filename = PromptPathNonEmpty(T("Path of existing key file:"), import_filename, GetWorkingDirectory(), &temp_alloc);
-                if (!import_filename)
-                    return 1;
+                bool valid = false;
 
-                // Make sure it's valid
-                {
-                    rk_KeySet *keyset = (rk_KeySet *)AllocateSafe(K_SIZE(rk_KeySet));
-                    K_DEFER { ReleaseSafe(keyset, K_SIZE(*keyset)); };
+                do {
+                    import_filename = PromptPathNonEmpty(T("Path of existing key file:"), import_filename, GetWorkingDirectory(), &temp_alloc);
+                    if (!import_filename)
+                        return 1;
+                    import_type = rk_KeyType::WriteOnly;
 
-                    if (!rk_LoadKeyFile(import_filename, keyset))
-                        goto reimport;
-                }
+                    // Make sure it's valid
+                    {
+                        rk_KeySet *keyset = (rk_KeySet *)AllocateSafe(K_SIZE(rk_KeySet));
+                        K_DEFER { ReleaseSafe(keyset, K_SIZE(*keyset)); };
+
+                        if (!rk_LoadKeyFile(import_filename, keyset))
+                            continue;
+                        if (!keyset->HasMode(rk_AccessMode::Config)) {
+                            LogError("Cannot derive keys with %1 key", rk_KeyTypeNames[(int)keyset->type]);
+                            continue;
+                        }
+                    }
+
+                    valid = true;
+                } while (!valid);
             } break;
+
+            case 2: {
+                bool valid = false;
+
+                do {
+                    import_filename = PromptPathNonEmpty(T("Path of existing key file:"), import_filename, GetWorkingDirectory(), &temp_alloc);
+                    if (!import_filename)
+                        return 1;
+                    import_type = rk_KeyType::Master;
+
+                    // Make sure it's valid
+                    {
+                        rk_KeySet *keyset = (rk_KeySet *)AllocateSafe(K_SIZE(rk_KeySet));
+                        K_DEFER { ReleaseSafe(keyset, K_SIZE(*keyset)); };
+
+                        if (!rk_LoadKeyFile(import_filename, keyset))
+                            continue;
+                    }
+
+                    valid = true;
+                } while (!valid);
+            } break;
+
             case -1: return 1;
         }
     }
@@ -379,10 +415,26 @@ reenter:
         } break;
     }
 
-    // Generate master key file
+    // Import of generate key file
     if (import_filename) {
-        if (!CopyFile(import_filename, key_filename))
-            return 1;
+        if (import_type == rk_KeyType::Master) {
+            if (!CopyFile(import_filename, key_filename))
+                return 1;
+        } else {
+            rk_KeySet *keyset = (rk_KeySet *)AllocateSafe(K_SIZE(rk_KeySet));
+            K_DEFER { ReleaseSafe(keyset, K_SIZE(*keyset)); };
+
+            // This should not fail (we have checked before) unless the file has changed since then
+            if (!rk_LoadKeyFile(import_filename, keyset))
+                return 1;
+            if (!keyset->HasMode(rk_AccessMode::Config)) {
+                LogError("Cannot derive keys with %1 key", rk_KeyTypeNames[(int)keyset->type]);
+                return 1;
+            }
+
+            if (!rk_DeriveKeyFile(*keyset, import_type, key_filename))
+                return 1;
+        }
     } else {
         Span<uint8_t> mkey = MakeSpan((uint8_t *)AllocateSafe(rk_MasterKeySize), rk_MasterKeySize);
         K_DEFER { ReleaseSafe(mkey.ptr, mkey.len); };
@@ -396,15 +448,24 @@ reenter:
     if (!st.Close())
         return 1;
 
+    const char *config_full = NormalizePath(config_filename, GetWorkingDirectory(), &temp_alloc).ptr;
+    const char *key_full = NormalizePath(key_filename, GetWorkingDirectory(), &temp_alloc).ptr;
+
     LogInfo();
-    LogInfo("Created config file '%1'", config_filename);
+    LogInfo("Created config file: %!..+%1%!0", config_full);
+
+    if (!import_filename) {
+        LogInfo("Created master key: %!..+%1%!0", key_full);
+    } else if (import_type == rk_KeyType::Master) {
+        LogInfo("Imported keyfile: %!..+%1%!0", key_full);
+    } else {
+        LogInfo("Derived keyfile: %!..+%1%!0 (%2)", key_full, rk_KeyTypeNames[(int)import_type]);
+    }
 
     if (custom_config) {
-        const char *fullpath = NormalizePath(config_filename, GetWorkingDirectory(), &temp_alloc).ptr;
-
         LogInfo();
         LogInfo("You have used a custom config path.");
-        LogInfo("Use %!..+export REKKORD_CONFIG_FILE=\"%1\"%!0 before you execute other commands.", FmtEscape(fullpath, '"'));
+        LogInfo("Use %!..+export REKKORD_CONFIG_FILE=\"%1\"%!0 before you execute other commands.", FmtEscape(config_full, '"'));
     }
 
     LogInfo();
@@ -647,7 +708,7 @@ Available key types: %!..+%1%!0)"), FmtList(types));
         }
     }
 
-    if (!rk_ExportKeyFile(*src, type, output_filename, dest))
+    if (!rk_DeriveKeyFile(*src, type, output_filename, dest))
         return 1;
 
     LogInfo("Key file: %!..+%1%!0", output_filename);

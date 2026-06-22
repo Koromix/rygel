@@ -65,6 +65,6 @@ bool rk_SaveRawKey(Span<const uint8_t> raw, const char *filename);
 
 bool rk_DeriveMasterKey(Span<const uint8_t> mkey, rk_KeySet *out_keys);
 bool rk_LoadKeyFile(const char *filename, rk_KeySet *out_keys);
-bool rk_ExportKeyFile(const rk_KeySet &keys, rk_KeyType type, const char *filename, rk_KeySet *out_keys = nullptr);
+bool rk_DeriveKeyFile(const rk_KeySet &keys, rk_KeyType type, const char *filename, rk_KeySet *out_keys = nullptr);
 
 }
