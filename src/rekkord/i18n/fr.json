@@ -512,6 +512,8 @@
         "Retain locks are only supported with S3 providers": "Les verrous de conservation ne sont pris en charge que par les fournisseurs S3.",
         "RootDirectory must be first of section": "RootDirectory doit être le premier réglage de la section",
         "Run %!..+rekkord init%!0 to initialize the repository.": "Exécutez %!..+rekkord init%!0 pour initialiser le dépôt.",
+        "Running post-save hooks...": "Exécution des hooks post-enregistrement...",
+        "Running pre-save hooks...": "Exécution des hooks pré-enregistrement...",
         "Running snapshot for '%1'": "Exécution de l'instantané pour '%1'",
         "S3 access key ID:": "ID de la clé d'accès S3 :",
         "S3 endpoint URL:": "URL du point de terminaison S3 :",
