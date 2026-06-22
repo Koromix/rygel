@@ -56,5 +56,5 @@ Devant un épisode dépressif, plusieurs arguments peuvent vous faire évoquer u
 ## Fiche explicative
 
 <div class="shelf">
-    <a href="https://igorthiriez.com/portfolio/le-trouble-bipolaire/" target="_blank"><img src="{{ ASSET static/fiches/professionnels/bipolarite.png }}" alt="Le trouble bipolaire" height="420" /></a>
+    <a href="https://igorthiriez.com/portfolio/le-trouble-bipolaire/" target="_blank"><img src="{{ ASSET static/fiches/professionnels/bipolarite.webp }}" alt="Le trouble bipolaire" height="512" /></a>
 </div>
