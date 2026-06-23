@@ -952,7 +952,7 @@ bool s3_Client::OpenAccess()
 
     // Authentification test, adjust region if needed
     {
-        int status = RunSafe("authenticate to S3 bucket", 3, 404, [&](CURL *curl, int) {
+        int status = RunSafe("authenticate to S3 bucket", 3, 403, [&](CURL *curl, int) {
             int64_t now = GetUnixTime();
             TimeSpec date = DecomposeTimeUTC(now);
 
@@ -983,8 +983,53 @@ bool s3_Client::OpenAccess()
             return status;
         });
 
-        if (status == 404) {
-            LogError("Unknown S3 bucket (error 404)");
+        if (status == 403) {
+            HeapArray<uint8_t> xml;
+
+            status = RunSafe("authenticate to S3 bucket", 3, 404, [&](CURL *curl, int) {
+                int64_t now = GetUnixTime();
+                TimeSpec date = DecomposeTimeUTC(now);
+
+                const KeyValue params[] = {{ "location", nullptr }};
+                PrepareRequest(curl, date, "GET", {}, params, &temp_alloc);
+
+                curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, +[](char *ptr, size_t, size_t nmemb, void *udata) {
+                    HeapArray<uint8_t> *xml = (HeapArray<uint8_t> *)udata;
+
+                    Span<const uint8_t> buf = MakeSpan((const uint8_t *)ptr, (Size)nmemb);
+                    xml->Append(buf);
+
+                    return nmemb;
+                });
+                curl_easy_setopt(curl, CURLOPT_WRITEDATA, &xml);
+
+                return curl_Perform(curl, nullptr);
+            });
+
+            if (status == 200 && !region) {
+                pugi::xml_document doc;
+                {
+                    pugi::xml_parse_result result = doc.load_buffer(xml.ptr, xml.len);
+
+                    if (!result) {
+                        LogError("Invalid XML returned by S3: %1", result.description());
+                        return false;
+                    }
+                }
+
+                Span<const char> location1 = doc.select_node("/Location/LocationConstraint").node().text().get();
+                Span<const char> location2 = doc.select_node("/LocationConstraint").node().text().get();
+
+                if (location1.len) {
+                    region = DuplicateString(location1, &config.str_alloc).ptr;
+                } else if (location2.len) {
+                    region = DuplicateString(location2, &config.str_alloc).ptr;
+                }
+            }
+        }
+
+        if (status == 403 || status == 404) {
+            LogError("Unknown or unauthorized S3 bucket (error %1)", status);
             return false;
         } else if (status != 200) {
             return false;
