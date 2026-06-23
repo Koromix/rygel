@@ -659,34 +659,8 @@ int64_t PutContext::WriteBlob(const rk_ObjectID &oid, int type, Span<const uint8
     int64_t size = -1;
 
     // Skip objects that already exist
-    // Check with repository for consistency for a random subset of objects
     switch (cache->TestBlob(oid, &size)) {
-        case StatResult::Success: {
-            bool check = (GetRandomInt(0, 100) < 2);
-
-            if (check) {
-                switch (repo->TestBlob(oid)) {
-                    case StatResult::Success: {} break;
-
-                    case StatResult::MissingPath: {
-                        cache->Reset(false);
-
-                        LogError("The local cache database was mismatched and could have resulted in missing data in the backup.");
-                        LogError("You must start over to fix this situation.");
-
-                        return -1;
-                    } break;
-
-                    case StatResult::AccessDenied:
-                    case StatResult::OtherError: return -1;
-                }
-            }
-
-            MakeProgress(size);
-
-            return size;
-        } break;
-
+        case StatResult::Success: return size;
         case StatResult::MissingPath: {} break;
 
         case StatResult::AccessDenied:
