@@ -76,7 +76,7 @@ To run `rekkord scan`, Rekkords needs to access all blobs. Enable the following 
 
 ### Example policy
 
-The following policy provides statements to create snapshots, to explore and restore snapshots, and to run periodic scans with `rekkord scan`. You will need to replaces the *Principal* values, and set the correct *BUCKET* names.
+The following policy provides statements to create snapshots, to explore and restore snapshots, and to run periodic scans with `rekkord scan`. You will need to replaces the *Principal* values, and set the correct *<bucket>* names.
 
 ```json
 {
@@ -92,8 +92,8 @@ The following policy provides statements to create snapshots, to explore and res
         "s3:GetObject"
       ],
       "Resource": [
-        "BUCKET",
-        "BUCKET/rekkord"
+        "<bucket>",
+        "<bucket>/rekkord"
       ]
     },
 
@@ -105,11 +105,11 @@ The following policy provides statements to create snapshots, to explore and res
       },
       "Action": "s3:PutObject",
       "Resource": [
-        "BUCKET",
-        "BUCKET/rekkord",
-        "BUCKET/blobs/*",
-        "BUCKET/tags/*",
-        "BUCKET/cw"
+        "<bucket>",
+        "<bucket>/rekkord",
+        "<bucket>/blobs/*",
+        "<bucket>/tags/*",
+        "<bucket>/cw"
       ]
     },
 
@@ -124,9 +124,9 @@ The following policy provides statements to create snapshots, to explore and res
         "s3:GetObject"
       ],
       "Resource": [
-        "BUCKET",
-        "BUCKET/rekkord",
-        "BUCKET/blobs/*"
+        "<bucket>",
+        "<bucket>/rekkord",
+        "<bucket>/blobs/*"
       ]
     },
 
@@ -143,8 +143,8 @@ The following policy provides statements to create snapshots, to explore and res
           "s3:PutObjectRetention"
         ],
         "Resource": [
-          "BUCKET",
-          "BUCKET/*"
+          "<bucket>",
+          "<bucket>/*"
         ]
       }
   ]
