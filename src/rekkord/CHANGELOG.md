@@ -6,6 +6,15 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.103
+
+*Released on 2026-06-23*
+
+- Fall back to GetBucketLocation to test connection without *s3:ListBucket* permission
+- Remove random blob existence checks to support *s3:PutObject*-only policy
+- Propose derivation of new write-only key during `rekkord setup`
+- Fix minor translation issues
+
 ### Rekkord 0.102
 
 *Released on 2026-06-21*
