@@ -1017,7 +1017,7 @@ bool s3_Client::OpenAccess()
                     }
                 }
 
-                Span<const char> location1 = doc.select_node("/Location/LocationConstraint").node().text().get();
+                Span<const char> location1 = doc.select_node("/LocationConstraint/LocationConstraint").node().text().get();
                 Span<const char> location2 = doc.select_node("/LocationConstraint").node().text().get();
 
                 if (location1.len) {
