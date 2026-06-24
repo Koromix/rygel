@@ -443,7 +443,7 @@ T(R"(Usage: %!..+%1 scan [-C filename] [option...]%!0
 
 Scan options:
 
-        %!..+--no_hooks%!0                 Skip pre-save and post-save hook commands)"), FelixTarget);
+        %!..+--no_hooks%!0                 Skip pre-scan and post-scan hook commands)"), FelixTarget);
         PrintCommonOptions(st);
     };
 
