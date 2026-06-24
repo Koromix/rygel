@@ -26,7 +26,7 @@
 #
 # Python3 program to print all combination of size r in an array of size n.
 # This is used to generate test lines in tests/ech_test.sh.
-# This will be discarded in the process of moving from experimental,
+# This is discarded in the process of moving from experimental,
 # but is worth preserving for the moment in case of changes to the
 # ECH command line args
 
@@ -65,7 +65,7 @@ def CombinationRepetitionUtil(chosen, arr, badarr, index,
     chosen[index] = arr[start]
 
     # Current is excluded, replace it
-    # with next (Note that i+1 is passed,
+    # with next (Note that i + 1 is passed,
     # but index is not changed)
     CombinationRepetitionUtil(chosen, arr, badarr, index + 1,
                               r, start, end)

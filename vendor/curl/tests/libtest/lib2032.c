@@ -30,7 +30,7 @@ static CURL *ntlm_curls[MAX_EASY_HANDLES];
 static curl_socket_t ntlm_sockets[MAX_EASY_HANDLES];
 static CURLcode ntlmcb_res = CURLE_OK;
 
-static size_t callback(char *ptr, size_t size, size_t nmemb, void *data)
+static size_t cb2032(char *ptr, size_t size, size_t nmemb, void *data)
 {
   ssize_t idx = ((CURL **)data) - ntlm_curls;
   curl_socket_t sock;
@@ -47,7 +47,7 @@ static size_t callback(char *ptr, size_t size, size_t nmemb, void *data)
   if(result != CURLE_OK) {
     curl_mfprintf(stderr, "%s:%d curl_easy_getinfo() failed, "
                   "with code %d (%s)\n",
-                  __FILE__, __LINE__, result, curl_easy_strerror(result));
+                  __FILE__, __LINE__, (int)result, curl_easy_strerror(result));
     ntlmcb_res = TEST_ERR_MAJOR_BAD;
     return failure;
   }
@@ -95,7 +95,7 @@ static CURLcode test_lib2032(const char *URL) /* libntlmconnect */
   start_test_timing();
 
   if(!full_url) {
-    curl_mfprintf(stderr, "Not enough memory for full url\n");
+    curl_mfprintf(stderr, "Not enough memory for full URL\n");
     return TEST_ERR_MAJOR_BAD;
   }
 
@@ -139,7 +139,7 @@ static CURLcode test_lib2032(const char *URL) /* libntlmconnect */
       easy_setopt(ntlm_curls[num_handles], CURLOPT_HTTPGET, 1L);
       easy_setopt(ntlm_curls[num_handles], CURLOPT_USERPWD,
                   "testuser:testpass");
-      easy_setopt(ntlm_curls[num_handles], CURLOPT_WRITEFUNCTION, callback);
+      easy_setopt(ntlm_curls[num_handles], CURLOPT_WRITEFUNCTION, cb2032);
       easy_setopt(ntlm_curls[num_handles], CURLOPT_WRITEDATA,
                   (void *)(ntlm_curls + num_handles));
       easy_setopt(ntlm_curls[num_handles], CURLOPT_HEADER, 1L);
@@ -153,7 +153,7 @@ static CURLcode test_lib2032(const char *URL) /* libntlmconnect */
     multi_perform(multi, &running);
 
     curl_mfprintf(stderr, "%s:%d running %d state %d\n",
-                  __FILE__, __LINE__, running, state);
+                  __FILE__, __LINE__, running, (int)state);
 
     abort_on_test_timeout();
 
@@ -177,7 +177,8 @@ static CURLcode test_lib2032(const char *URL) /* libntlmconnect */
       }
       state =
         num_handles < MAX_EASY_HANDLES ? ReadyForNewHandle : NoMoreHandles;
-      curl_mfprintf(stderr, "%s:%d new state %d\n", __FILE__, __LINE__, state);
+      curl_mfprintf(stderr, "%s:%d new state %d\n",
+                    __FILE__, __LINE__, (int)state);
     }
 
     multi_timeout(multi, &timeout);

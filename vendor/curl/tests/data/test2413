@@ -3,7 +3,7 @@
 <info>
 <keywords>
 unittest
-CURLOPT_RESOLVE
+Curl_peer
 </keywords>
 </info>
 
@@ -13,7 +13,7 @@ CURLOPT_RESOLVE
 unittest
 </features>
 <name>
-CURLOPT_RESOLVE parsing
+Curl_peer unit tests
 </name>
 </client>
 </testcase>

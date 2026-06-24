@@ -200,8 +200,8 @@ Available substitute variables include:
 - `%SOCKSPORT` - Port number of the SOCKS4/5 server
 - `%SOCKSUNIXPATH` - Path to the Unix socket of the SOCKS server
 - `%SRCDIR` - Full path to the source dir
-- `%SCP_PWD` - Current directory friendly for the SSH server for the scp:// protocol
-- `%SFTP_PWD` - Current directory friendly for the SSH server for the sftp:// protocol
+- `%SCP_PWD` - Current directory friendly for the SSH server for the `scp://` protocol
+- `%SFTP_PWD` - Current directory friendly for the SSH server for the `sftp://` protocol
 - `%SSHKEYALGO` - SSH host and client key algorithm, e.g. `ssh-rsa` or `ssh-ed25519`
 - `%SSHPORT` - Port number of the SCP/SFTP server
 - `%SSHSRVMD5` - MD5 of SSH server's public key
@@ -487,7 +487,7 @@ Features testable here are:
 - `brotli`
 - `c-ares` - c-ares is used for (all) name resolves
 - `CharConv`
-- `codeset-utf8`. If the running codeset is UTF-8 capable.
+- `codeset-utf8` - if the running codeset is UTF-8 capable.
 - `cookies`
 - `crypto`
 - `cygwin`
@@ -509,13 +509,13 @@ Features testable here are:
 - `IPv6`
 - `Kerberos`
 - `Largefile`
-- `large-time` (time_t is larger than 32-bit)
-- `large-size` (size_t is larger than 32-bit)
+- `large-time` - time_t is larger than 32-bit
+- `large-size` - size_t is larger than 32-bit
 - `libssh2`
 - `libssh`
-- `badlibssh` (libssh configuration incompatible with the test suite)
+- `badlibssh` - libssh configuration incompatible with the test suite
 - `libz`
-- `local-http`. The HTTP server runs on 127.0.0.1
+- `local-http` - the HTTP server runs on 127.0.0.1
 - `manual`
 - `mbedtls`
 - `Mime`
@@ -539,6 +539,7 @@ Features testable here are:
 - `SSPI`
 - `threaded-resolver`
 - `TLS-SRP`
+- `torture` - if runtests is running in memory test mode
 - `TrackMemory`
 - `typecheck`
 - `threadsafe`

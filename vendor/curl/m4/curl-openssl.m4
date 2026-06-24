@@ -33,7 +33,7 @@ AC_DEFUN([CURL_WITH_OPENSSL], [
 if test "x$OPT_OPENSSL" != "xno"; then
   ssl_msg=
 
-  dnl backup the pre-ssl variables
+  dnl backup the pre-detection variables
   CLEANLDFLAGS="$LDFLAGS"
   CLEANLDFLAGSPC="$LDFLAGSPC"
   CLEANCPPFLAGS="$CPPFLAGS"
@@ -80,7 +80,7 @@ if test "x$OPT_OPENSSL" != "xno"; then
       dnl the user told us to look
       OPENSSL_PCDIR="$OPT_OPENSSL/lib/pkgconfig"
       if test -f "$OPENSSL_PCDIR/openssl.pc"; then
-        AC_MSG_NOTICE([PKG_CONFIG_LIBDIR will be set to "$OPENSSL_PCDIR"])
+        AC_MSG_NOTICE([PKG_CONFIG_LIBDIR is set to "$OPENSSL_PCDIR"])
         PKGTEST="yes"
       fi
 
@@ -88,7 +88,7 @@ if test "x$OPT_OPENSSL" != "xno"; then
         dnl try lib64 instead
         OPENSSL_PCDIR="$OPT_OPENSSL/lib64/pkgconfig"
         if test -f "$OPENSSL_PCDIR/openssl.pc"; then
-          AC_MSG_NOTICE([PKG_CONFIG_LIBDIR will be set to "$OPENSSL_PCDIR"])
+          AC_MSG_NOTICE([PKG_CONFIG_LIBDIR is set to "$OPENSSL_PCDIR"])
           PKGTEST="yes"
         fi
       fi
@@ -220,33 +220,12 @@ if test "x$OPT_OPENSSL" != "xno"; then
 
     if test "$OPENSSL_ENABLED" != "1"; then
       LIBS="$CLEANLIBS"
-    fi
-
-    if test "x$OPT_OPENSSL" != "xoff" &&
-       test "$OPENSSL_ENABLED" != "1"; then
       AC_MSG_ERROR([OpenSSL libs and/or directories were not found where specified!])
     fi
   fi
 
   if test "$OPENSSL_ENABLED" = "1"; then
     dnl These can only exist if OpenSSL exists
-
-    AC_MSG_CHECKING([for BoringSSL])
-    AC_COMPILE_IFELSE([
-      AC_LANG_PROGRAM([[
-        #include <openssl/base.h>
-        ]],[[
-        #ifndef OPENSSL_IS_BORINGSSL
-        #error not boringssl
-        #endif
-      ]])
-    ],[
-      AC_MSG_RESULT([yes])
-      ssl_msg="BoringSSL"
-      OPENSSL_IS_BORINGSSL=1
-    ],[
-      AC_MSG_RESULT([no])
-    ])
 
     AC_MSG_CHECKING([for AWS-LC])
     AC_COMPILE_IFELSE([
@@ -261,6 +240,23 @@ if test "x$OPT_OPENSSL" != "xno"; then
       AC_MSG_RESULT([yes])
       ssl_msg="AWS-LC"
       OPENSSL_IS_AWSLC=1
+    ],[
+      AC_MSG_RESULT([no])
+    ])
+
+    AC_MSG_CHECKING([for BoringSSL])
+    AC_COMPILE_IFELSE([
+      AC_LANG_PROGRAM([[
+        #include <openssl/base.h>
+        ]],[[
+        #ifndef OPENSSL_IS_BORINGSSL
+        #error not BoringSSL
+        #endif
+      ]])
+    ],[
+      AC_MSG_RESULT([yes])
+      ssl_msg="BoringSSL"
+      OPENSSL_IS_BORINGSSL=1
     ],[
       AC_MSG_RESULT([no])
     ])
@@ -315,7 +311,7 @@ if test "x$OPT_OPENSSL" != "xno"; then
 
   if test "$OPENSSL_ENABLED" = "1"; then
     if test -n "$LIB_OPENSSL"; then
-      dnl when the ssl shared libs were found in a path that the runtime
+      dnl when the SSL shared libs were found in a path that the runtime
       dnl linker does not search through, we need to add it to CURL_LIBRARY_PATH
       dnl to prevent further configure tests to fail due to this
       if test "$cross_compiling" != "yes"; then
@@ -330,15 +326,14 @@ if test "x$OPT_OPENSSL" != "xno"; then
     fi
   fi
 
-  test -z "$ssl_msg" || ssl_backends="${ssl_backends:+$ssl_backends, }$ssl_msg"
-fi
+  if test "$OPENSSL_ENABLED" != "1"; then
+    AC_MSG_NOTICE([OPT_OPENSSL: $OPT_OPENSSL])
+    AC_MSG_NOTICE([OPENSSL_ENABLED: $OPENSSL_ENABLED])
+    AC_MSG_ERROR([--with-openssl was given but OpenSSL could not be detected])
+  fi
 
-if test "x$OPT_OPENSSL" != "xno" &&
-   test "$OPENSSL_ENABLED" != "1"; then
-  AC_MSG_NOTICE([OPT_OPENSSL: $OPT_OPENSSL])
-  AC_MSG_NOTICE([OPENSSL_ENABLED: $OPENSSL_ENABLED])
-  AC_MSG_ERROR([--with-openssl was given but OpenSSL could not be detected])
-fi
+  test -z "$ssl_msg" || ssl_backends="${ssl_backends:+$ssl_backends, }$ssl_msg"
+fi dnl OpenSSL not disabled
 
 if test "$OPENSSL_ENABLED" = "1"; then
   dnl ---
@@ -385,16 +380,15 @@ if test "$OPENSSL_ENABLED" = "1"; then
   ])
 
   dnl ---
-  dnl Whether the OpenSSL configuration will be loaded automatically
+  dnl Whether the OpenSSL configuration is loaded automatically
   dnl ---
   AC_ARG_ENABLE(openssl-auto-load-config,
 AS_HELP_STRING([--enable-openssl-auto-load-config],[Enable automatic loading of OpenSSL configuration])
 AS_HELP_STRING([--disable-openssl-auto-load-config],[Disable automatic loading of OpenSSL configuration]),
   [ if test "x$enableval" = "xno"; then
       AC_MSG_NOTICE([automatic loading of OpenSSL configuration disabled])
-      AC_DEFINE(CURL_DISABLE_OPENSSL_AUTO_LOAD_CONFIG, 1, [if the OpenSSL configuration will not be loaded automatically])
+      AC_DEFINE(CURL_DISABLE_OPENSSL_AUTO_LOAD_CONFIG, 1, [if the OpenSSL configuration is not loaded automatically])
     fi
   ])
-
 fi
 ])

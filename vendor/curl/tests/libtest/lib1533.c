@@ -98,7 +98,7 @@ static CURLcode perform_and_check_connections(CURL *curl,
 
   result = curl_easy_perform(curl);
   if(result != CURLE_OK) {
-    curl_mfprintf(stderr, "curl_easy_perform() failed with %d\n", result);
+    curl_mfprintf(stderr, "curl_easy_perform() failed with %d\n", (int)result);
     return TEST_ERR_MAJOR_BAD;
   }
 
@@ -139,15 +139,15 @@ static CURLcode test_lib1533(const char *URL)
 
   reset_data(&data, curl);
 
-  test_setopt(curl, CURLOPT_URL, URL);
-  test_setopt(curl, CURLOPT_POST, 1L);
-  test_setopt(curl, CURLOPT_POSTFIELDSIZE_LARGE,
+  easy_setopt(curl, CURLOPT_URL, URL);
+  easy_setopt(curl, CURLOPT_POST, 1L);
+  easy_setopt(curl, CURLOPT_POSTFIELDSIZE_LARGE,
               (curl_off_t)data.remaining_bytes);
-  test_setopt(curl, CURLOPT_VERBOSE, 1L);
-  test_setopt(curl, CURLOPT_READFUNCTION, t1533_read_cb);
-  test_setopt(curl, CURLOPT_READDATA, &data);
-  test_setopt(curl, CURLOPT_WRITEFUNCTION, t1533_write_cb);
-  test_setopt(curl, CURLOPT_WRITEDATA, &data);
+  easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+  easy_setopt(curl, CURLOPT_READFUNCTION, t1533_read_cb);
+  easy_setopt(curl, CURLOPT_READDATA, &data);
+  easy_setopt(curl, CURLOPT_WRITEFUNCTION, t1533_write_cb);
+  easy_setopt(curl, CURLOPT_WRITEDATA, &data);
 
   result =
     perform_and_check_connections(curl,
@@ -165,7 +165,7 @@ static CURLcode test_lib1533(const char *URL)
     goto test_cleanup;
   }
 
-  test_setopt(curl, CURLOPT_KEEP_SENDING_ON_ERROR, 1L);
+  easy_setopt(curl, CURLOPT_KEEP_SENDING_ON_ERROR, 1L);
 
   reset_data(&data, curl);
 

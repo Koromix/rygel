@@ -41,7 +41,7 @@ static CURLcode test_lib514(const char *URL)
   }
 
   /* First set the URL that is about to receive our POST. */
-  test_setopt(curl, CURLOPT_URL, URL);
+  easy_setopt(curl, CURLOPT_URL, URL);
 
   /* Based on a bug report by Niels van Tongeren on June 29, 2004:
 
@@ -52,21 +52,21 @@ static CURLcode test_lib514(const char *URL)
 
   */
 
-  test_setopt(curl, CURLOPT_POSTFIELDS, "moo");
-  test_setopt(curl, CURLOPT_POSTFIELDSIZE, 3L);
-  test_setopt(curl, CURLOPT_POST, 1L);
+  easy_setopt(curl, CURLOPT_POSTFIELDS, "moo");
+  easy_setopt(curl, CURLOPT_POSTFIELDSIZE, 3L);
+  easy_setopt(curl, CURLOPT_POST, 1L);
 
   /* this is where transfer 1 would take place, but skip that and change
      options right away instead */
 
-  test_setopt(curl, CURLOPT_NOBODY, 1L);
+  easy_setopt(curl, CURLOPT_NOBODY, 1L);
 
-  test_setopt(curl, CURLOPT_VERBOSE, 1L); /* show verbose for debug */
-  test_setopt(curl, CURLOPT_HEADER, 1L); /* include header */
+  easy_setopt(curl, CURLOPT_VERBOSE, 1L); /* show verbose for debug */
+  easy_setopt(curl, CURLOPT_HEADER, 1L); /* include header */
 
   /* Now, we should be making a fine HEAD request */
 
-  /* Perform the request 2, result will get the return code */
+  /* Perform the request 2, result gets the return code */
   result = curl_easy_perform(curl);
 
 test_cleanup:

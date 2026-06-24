@@ -70,19 +70,20 @@ class TestFtpsVsFTPD:
         if not os.path.exists(vsftpds.docs_dir):
             os.makedirs(vsftpds.docs_dir)
         self._make_docs_file(docs_dir=vsftpds.docs_dir, fname='data-1k', fsize=1024)
-        self._make_docs_file(docs_dir=vsftpds.docs_dir, fname='data-10k', fsize=10*1024)
-        self._make_docs_file(docs_dir=vsftpds.docs_dir, fname='data-1m', fsize=1024*1024)
-        self._make_docs_file(docs_dir=vsftpds.docs_dir, fname='data-10m', fsize=10*1024*1024)
+        self._make_docs_file(docs_dir=vsftpds.docs_dir, fname='data-10k', fsize=10 * 1024)
+        self._make_docs_file(docs_dir=vsftpds.docs_dir, fname='data-1m', fsize=1024 * 1024)
+        self._make_docs_file(docs_dir=vsftpds.docs_dir, fname='data-10m', fsize=10 * 1024 * 1024)
         env.make_data_file(indir=env.gen_dir, fname="upload-1k", fsize=1024)
-        env.make_data_file(indir=env.gen_dir, fname="upload-100k", fsize=100*1024)
-        env.make_data_file(indir=env.gen_dir, fname="upload-1m", fsize=1024*1024)
+        env.make_data_file(indir=env.gen_dir, fname="upload-100k", fsize=100 * 1024)
+        env.make_data_file(indir=env.gen_dir, fname="upload-1m", fsize=1024 * 1024)
 
     def test_32_01_list_dir(self, env: Env, vsftpds: VsFTPD):
         curl = CurlClient(env=env)
         url = f'ftps://{env.ftp_domain}:{vsftpds.port}/'
         r = curl.ftp_get(urls=[url], with_stats=True)
         r.check_stats(count=1, http_status=226)
-        lines = open(os.path.join(curl.run_dir, 'download_#1.data')).readlines()
+        with open(os.path.join(curl.run_dir, 'download_#1.data')) as fd:
+            lines = fd.readlines()
         assert len(lines) == 4, f'list: {lines}'
         r.check_stats_timelines()
 
@@ -166,7 +167,7 @@ class TestFtpsVsFTPD:
     @pytest.mark.skipif(condition=not Env.tcpdump(), reason="tcpdump not available")
     @pytest.mark.skipif(condition=not Env.curl_is_debug(), reason="needs curl debug")
     @pytest.mark.skipif(condition=not Env.curl_is_verbose(), reason="needs curl verbose strings")
-    def test_32_06_shutdownh_download(self, env: Env, vsftpds: VsFTPD):
+    def test_32_06_shutdown_download(self, env: Env, vsftpds: VsFTPD):
         docname = 'data-1k'
         curl = CurlClient(env=env)
         count = 1
@@ -183,7 +184,7 @@ class TestFtpsVsFTPD:
     @pytest.mark.skipif(condition=not Env.tcpdump(), reason="tcpdump not available")
     @pytest.mark.skipif(condition=not Env.curl_is_debug(), reason="needs curl debug")
     @pytest.mark.skipif(condition=not Env.curl_is_verbose(), reason="needs curl verbose strings")
-    def test_32_07_shutdownh_upload(self, env: Env, vsftpds: VsFTPD):
+    def test_32_07_shutdown_upload(self, env: Env, vsftpds: VsFTPD):
         docname = 'upload-1k'
         curl = CurlClient(env=env)
         srcfile = os.path.join(env.gen_dir, docname)
@@ -204,7 +205,7 @@ class TestFtpsVsFTPD:
         line_length = 21
         srcfile = os.path.join(env.gen_dir, docname)
         dstfile = os.path.join(vsftpds.docs_dir, docname)
-        env.make_data_file(indir=env.gen_dir, fname=docname, fsize=100*1024,
+        env.make_data_file(indir=env.gen_dir, fname=docname, fsize=100 * 1024,
                            line_length=line_length)
         srcsize = os.path.getsize(srcfile)
         self._rmf(dstfile)
@@ -216,7 +217,8 @@ class TestFtpsVsFTPD:
         r.check_stats(count=count, http_status=226)
         # expect the uploaded file to be number of converted newlines larger
         dstsize = os.path.getsize(dstfile)
-        newlines = len(open(srcfile).readlines())
+        with open(srcfile) as fd:
+            newlines = len(fd.readlines())
         assert (srcsize + newlines) == dstsize, \
             f'expected source with {newlines} lines to be that much larger,'\
             f'instead srcsize={srcsize}, upload size={dstsize}, diff={dstsize-srcsize}'
@@ -261,7 +263,8 @@ class TestFtpsVsFTPD:
         r = curl.ftp_upload(urls=[url], updata=indata, with_stats=True)
         r.check_stats(count=count, http_status=226)
         assert os.path.exists(dstfile)
-        destdata = open(dstfile).readlines()
+        with open(dstfile) as fd:
+            destdata = fd.readlines()
         expdata = [indata] if len(indata) else []
         assert expdata == destdata, f'expected: {expdata}, got: {destdata}'
 
@@ -289,8 +292,10 @@ class TestFtpsVsFTPD:
             dfile = client.download_file(i)
             assert os.path.exists(dfile)
             if complete and not filecmp.cmp(srcfile, dfile, shallow=False):
-                diff = "".join(difflib.unified_diff(a=open(srcfile).readlines(),
-                                                    b=open(dfile).readlines(),
+                with open(srcfile) as fa, open(dfile) as fb:
+                    a = fa.readlines()
+                    b = fb.readlines()
+                diff = "".join(difflib.unified_diff(a=a, b=b,
                                                     fromfile=srcfile,
                                                     tofile=dfile,
                                                     n=1))
@@ -302,8 +307,10 @@ class TestFtpsVsFTPD:
         assert os.path.exists(srcfile)
         assert os.path.exists(dstfile)
         if not filecmp.cmp(srcfile, dstfile, shallow=False):
-            diff = "".join(difflib.unified_diff(a=open(srcfile).readlines(),
-                                                b=open(dstfile).readlines(),
+            with open(srcfile) as fa, open(dstfile) as fb:
+                a = fa.readlines()
+                b = fb.readlines()
+            diff = "".join(difflib.unified_diff(a=a, b=b,
                                                 fromfile=srcfile,
                                                 tofile=dstfile,
                                                 n=1))

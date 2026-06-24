@@ -37,7 +37,7 @@ class TestAuth:
 
     @pytest.fixture(autouse=True, scope='class')
     def _class_scope(self, env, httpd, nghttpx):
-        env.make_data_file(indir=env.gen_dir, fname="data-10m", fsize=10*1024*1024)
+        env.make_data_file(indir=env.gen_dir, fname="data-10m", fsize=10 * 1024 * 1024)
 
     # download 1 file, not authenticated
     @pytest.mark.parametrize("proto", Env.http_protos())
@@ -95,7 +95,7 @@ class TestAuth:
         if proto == 'h3' and not env.curl_uses_lib('ngtcp2'):
             # See <https://github.com/cloudflare/quiche/issues/1573>
             pytest.skip("quiche has problems with large requests")
-        # just large enough that nghttp2 will submit
+        # large enough that nghttp2 will submit
         password = 'x' * (47 * 1024)
         fdata = os.path.join(env.gen_dir, 'data-10m')
         curl = CurlClient(env=env)

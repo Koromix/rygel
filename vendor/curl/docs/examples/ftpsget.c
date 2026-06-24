@@ -69,7 +69,7 @@ int main(void)
   if(curl) {
     /*
      * You better replace the URL with one that works! Note that we use an
-     * FTP:// URL with standard explicit FTPS. You can also do FTPS:// URLs if
+     * ftp:// URL with standard explicit FTPS. You can also do ftps:// URLs if
      * you want to do the rarer kind of transfers: implicit.
      */
     curl_easy_setopt(curl, CURLOPT_URL,
@@ -92,7 +92,7 @@ int main(void)
 
     if(result != CURLE_OK) {
       /* we failed */
-      fprintf(stderr, "curl told us %d\n", result);
+      fprintf(stderr, "curl told us %d\n", (int)result);
     }
   }
 

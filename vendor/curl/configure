@@ -1056,6 +1056,7 @@ DANTED
 HTTPD
 APXS
 VSFTPD
+H2O
 CADDY
 TEST_NGHTTPX
 PERL_FALSE
@@ -1177,6 +1178,7 @@ enable_rt
 enable_httpsrr
 enable_ech
 enable_ssls_export
+enable_proxy_http3
 enable_dependency_tracking
 with_schannel
 with_amissl
@@ -1189,6 +1191,7 @@ with_rustls
 with_apple_sectrust
 with_test_nghttpx
 with_test_caddy
+with_test_h2o
 with_test_vsftpd
 with_test_httpd
 with_test_danted
@@ -1950,12 +1953,14 @@ Optional Features:
   --enable-ares[=PATH]    Enable c-ares for DNS lookups
   --disable-ares          Disable c-ares for DNS lookups
   --disable-rt            disable dependency on -lrt
-  --enable-httpsrr        Enable HTTPSRR support
-  --disable-httpsrr       Disable HTTPSRR support
-  --enable-ech            Enable ECH support
-  --disable-ech           Disable ECH support
-  --enable-ssls-export    Enable SSL session export support
-  --disable-ssls-export   Disable SSL session export support
+  --enable-httpsrr        Enable HTTPSRR support (experimental)
+  --disable-httpsrr       Disable HTTPSRR support (experimental)
+  --enable-ech            Enable ECH support (experimental)
+  --disable-ech           Disable ECH support (experimental)
+  --enable-ssls-export    Enable SSL session export support (experimental)
+  --disable-ssls-export   Disable SSL session export support (experimental)
+  --enable-proxy-http3    Enable HTTP/3 proxy support (experimental)
+  --disable-proxy-http3   Disable HTTP/3 proxy support (experimental)
   --enable-dependency-tracking
                           do not reject slow dependency extractors
   --disable-dependency-tracking
@@ -2125,6 +2130,7 @@ Optional Packages:
   --with-test-nghttpx=PATH
                           where to find nghttpx for testing
   --with-test-caddy=PATH  where to find caddy for testing
+  --with-test-h2o=PATH    where to find h2o for testing
   --with-test-vsftpd=PATH where to find vsftpd for testing
   --with-test-httpd=PATH  where to find httpd/apache2 for testing
   --with-test-danted=PATH where to find danted socks daemon for testing
@@ -2211,8 +2217,8 @@ Optional Packages:
   --without-ngtcp2        Disable ngtcp2 usage
   --with-nghttp3=PATH     Enable nghttp3 usage
   --without-nghttp3       Disable nghttp3 usage
-  --with-quiche=PATH      Enable quiche usage
-  --without-quiche        Disable quiche usage
+  --with-quiche=PATH      Enable quiche usage (experimental)
+  --without-quiche        Disable quiche usage (experimental)
   --with-libuv=PATH       Enable libuv
   --without-libuv         Disable libuv
   --with-zsh-functions-dir=PATH
@@ -3891,6 +3897,36 @@ printf "%s\n" "yes" >&6; }
       ;;
   esac
 
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether to enable HTTP/3 proxy support" >&5
+printf %s "checking whether to enable HTTP/3 proxy support... " >&6; }
+OPT_PROXY_HTTP3="default"
+# Check whether --enable-proxy-http3 was given.
+if test ${enable_proxy_http3+y}
+then :
+  enableval=$enable_proxy_http3; OPT_PROXY_HTTP3=$enableval
+fi
+
+case "$OPT_PROXY_HTTP3" in
+  no)
+    want_proxy_http3="no"
+    curl_proxy_http3_msg="no      (--enable-proxy-http3)"
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+    ;;
+  default)
+    want_proxy_http3="no"
+    curl_proxy_http3_msg="no      (--enable-proxy-http3)"
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+    ;;
+  *)
+    want_proxy_http3="yes"
+    curl_proxy_http3_msg="enabled (--disable-proxy-http3)"
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+printf "%s\n" "yes" >&6; }
+    ;;
+esac
+USE_PROXY_HTTP3=0
 
 
 
@@ -6664,7 +6700,7 @@ then :
 fi
 
 
-OPT_APPLE_SECTRUST=$curl_cv_apple
+OPT_APPLE_SECTRUST=no
 
 # Check whether --with-apple-sectrust was given.
 if test ${with_apple_sectrust+y}
@@ -6759,6 +6795,26 @@ then :
   withval=$with_test_caddy; CADDY=$withval
   if test "x$CADDY" = "xno"; then
     CADDY=""
+  fi
+
+fi
+
+
+
+if test -x /usr/local/bin/h2o; then
+  H2O=/usr/local/bin/h2o
+elif test -x /usr/bin/h2o; then
+  H2O=/usr/bin/h2o
+elif test -x "`brew --prefix 2>/dev/null`/bin/h2o"; then
+  H2O=`brew --prefix`/bin/h2o
+fi
+
+# Check whether --with-test-h2o was given.
+if test ${with_test_h2o+y}
+then :
+  withval=$with_test_h2o; H2O=$withval
+  if test "x$H2O" = "xno"; then
+    H2O=""
   fi
 
 fi
@@ -16953,10 +17009,10 @@ CC=$lt_save_CC
 
 
 
-#
-# Verify if finally libtool shared libraries will be built
-#
 
+#
+# Verify if finally libtool shared libraries are built
+#
 case "x$enable_shared" in # ((
   xyes | xno)
     xc_lt_build_shared=$enable_shared
@@ -16967,9 +17023,8 @@ case "x$enable_shared" in # ((
 esac
 
 #
-# Verify if finally libtool static libraries will be built
+# Verify if finally libtool static libraries are built
 #
-
 case "x$enable_static" in # ((
   xyes | xno)
     xc_lt_build_static=$enable_static
@@ -17082,10 +17137,10 @@ printf "%s\n" "$xc_lt_build_static_with_pic" >&6; }
 
 
 
-#
-# Verify if libtool shared libraries will be built while static not built
-#
 
+#
+# Verify if libtool shared libraries are built while static not built
+#
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether to build shared libraries only" >&5
 printf %s "checking whether to build shared libraries only... " >&6; }
 if test "$xc_lt_build_shared" = "yes" &&
@@ -17098,9 +17153,8 @@ fi
 printf "%s\n" "$xc_lt_build_shared_only" >&6; }
 
 #
-# Verify if libtool static libraries will be built while shared not built
+# Verify if libtool static libraries are built while shared not built
 #
-
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether to build static libraries only" >&5
 printf %s "checking whether to build static libraries only... " >&6; }
 if test "$xc_lt_build_static" = "yes" &&
@@ -18493,11 +18547,11 @@ printf "%s\n" "no" >&6; }
 *** compiler you are using, relative to the flags required to enable or
 *** disable generation of debug info, optimization options or warnings.
 ***
-*** Whatever settings are present in CFLAGS will be used for this run.
+*** Whatever settings are present in CFLAGS are used for this run.
 ***
 *** If you wish to help the curl project to better support your compiler
 *** you can report this and the required info on the libcurl development
-*** mailing list: https://lists.haxx.selistinfo/curl-library/
+*** mailing list: https://lists.haxx.se/listinfo/curl-library/
 ***
 _EOF
   fi
@@ -20141,6 +20195,7 @@ printf "%s\n" "$as_me: WARNING: compiler options rejected: $tmp_options" >&2;}
   squeeze tmp_CFLAGS
 
           fi
+
                     if test "$compiler_num" -ge "301"; then
 
 
@@ -20238,6 +20293,7 @@ printf "%s\n" "$as_me: WARNING: compiler options rejected: $tmp_options" >&2;}
                 ;;
             esac
           fi
+
                     if test "$compiler_num" -ge "303"; then
             tmp_CFLAGS="$tmp_CFLAGS -Wno-documentation-unknown-command"
           fi
@@ -20362,6 +20418,7 @@ printf "%s\n" "$as_me: WARNING: compiler options rejected: $tmp_options" >&2;}
               tmp_CFLAGS="$tmp_CFLAGS -Wno-varargs"
             fi
           fi
+
                     if test "$compiler_num" -ge "700"; then
 
 
@@ -20406,6 +20463,7 @@ printf "%s\n" "$as_me: WARNING: compiler options rejected: $tmp_options" >&2;}
   squeeze tmp_CFLAGS
 
           fi
+
                     if test "$compiler_num" -ge "1000"; then
             tmp_CFLAGS="$tmp_CFLAGS -Wimplicit-fallthrough"  # we have silencing markup for clang 10.0 and above only
 
@@ -20430,6 +20488,7 @@ printf "%s\n" "$as_me: WARNING: compiler options rejected: $tmp_options" >&2;}
   squeeze tmp_CFLAGS
 
           fi
+
                     if test "$compiler_num" -ge "1300"; then
 
 
@@ -20475,9 +20534,11 @@ printf "%s\n" "$as_me: WARNING: compiler options rejected: $tmp_options" >&2;}
  # Keep it before -Wno-reserved-macro-identifier
             tmp_CFLAGS="$tmp_CFLAGS -Wno-reserved-macro-identifier"  # Sometimes such external macros need to be set
           fi
+
                     if test "$compiler_num" -ge "1600"; then
             tmp_CFLAGS="$tmp_CFLAGS -Wno-unsafe-buffer-usage"
           fi
+
                     if test "$compiler_num" -ge "1700"; then
 
 
@@ -20501,9 +20562,31 @@ printf "%s\n" "$as_me: WARNING: compiler options rejected: $tmp_options" >&2;}
   squeeze tmp_CFLAGS
   # with Apple clang it requires 16.0 or above
           fi
+
                     if test "$compiler_num" -ge "1901"; then
-            tmp_CFLAGS="$tmp_CFLAGS -Wno-format-signedness"
+
+
+  ac_var_added_warnings=""
+  for warning in format-signedness; do
+
+  ac_var_match_word="no"
+  for word1 in $CFLAGS; do
+    for word2 in -Wno-$warning -W$warning; do
+      if test "$word1" = "$word2"; then
+        ac_var_match_word="yes"
+      fi
+    done
+  done
+
+    if test "$ac_var_match_word" = "no"; then
+      ac_var_added_warnings="$ac_var_added_warnings -W$warning"
+    fi
+  done
+    tmp_CFLAGS="$tmp_CFLAGS $ac_var_added_warnings"
+  squeeze tmp_CFLAGS
+
           fi
+
                     if test "$compiler_num" -ge "2001"; then
 
 
@@ -20527,6 +20610,7 @@ printf "%s\n" "$as_me: WARNING: compiler options rejected: $tmp_options" >&2;}
   squeeze tmp_CFLAGS
 
           fi
+
                     if test "$compiler_num" -ge "2101"; then
 
 
@@ -20646,7 +20730,7 @@ printf "%s\n" "$as_me: WARNING: compiler options rejected: $tmp_options" >&2;}
                 tmp_CFLAGS="$tmp_CFLAGS -Wno-c99-extensions"  # Avoid: warning: '_Bool' is a C99 extension
               fi
               if test "$compiler_num" -ge "309"; then
-                tmp_CFLAGS="$tmp_CFLAGS -Wno-comma"  # Just silly
+                tmp_CFLAGS="$tmp_CFLAGS -Wno-comma"  # Silly
               fi
               ;;
           esac
@@ -21339,6 +21423,30 @@ printf "%s\n" "$as_me: WARNING: compiler options rejected: $tmp_options" >&2;}
                         tmp_CFLAGS="$tmp_CFLAGS -ftree-vrp"
           fi
 
+                    if test "$compiler_num" -ge "404"; then
+
+
+  ac_var_added_warnings=""
+  for warning in logical-op; do
+
+  ac_var_match_word="no"
+  for word1 in $CFLAGS; do
+    for word2 in -Wno-$warning -W$warning; do
+      if test "$word1" = "$word2"; then
+        ac_var_match_word="yes"
+      fi
+    done
+  done
+
+    if test "$ac_var_match_word" = "no"; then
+      ac_var_added_warnings="$ac_var_added_warnings -W$warning"
+    fi
+  done
+    tmp_CFLAGS="$tmp_CFLAGS $ac_var_added_warnings"
+  squeeze tmp_CFLAGS
+
+          fi
+
                     if test "$compiler_num" -ge "405"; then
 
 
@@ -21422,7 +21530,27 @@ printf "%s\n" "$as_me: WARNING: compiler options rejected: $tmp_options" >&2;}
 
                     if test "$compiler_num" -ge "500"; then
             tmp_CFLAGS="$tmp_CFLAGS -Warray-bounds=2"
-            tmp_CFLAGS="$tmp_CFLAGS -Wno-format-signedness"
+
+
+  ac_var_added_warnings=""
+  for warning in format-signedness; do
+
+  ac_var_match_word="no"
+  for word1 in $CFLAGS; do
+    for word2 in -Wno-$warning -W$warning; do
+      if test "$word1" = "$word2"; then
+        ac_var_match_word="yes"
+      fi
+    done
+  done
+
+    if test "$ac_var_match_word" = "no"; then
+      ac_var_added_warnings="$ac_var_added_warnings -W$warning"
+    fi
+  done
+    tmp_CFLAGS="$tmp_CFLAGS $ac_var_added_warnings"
+  squeeze tmp_CFLAGS
+
           fi
 
                     if test "$compiler_num" -ge "600"; then
@@ -22488,8 +22616,10 @@ printf "%s\n" "no" >&6; }
   esac
 
 
+curl_cv_android='no'
 curl_cv_apple='no'
 case $host in
+  *-*-android*) curl_cv_android='yes';;
   *-apple-*) curl_cv_apple='yes';;
 esac
 
@@ -22596,8 +22726,8 @@ printf "%s\n" "no" >&6; }
 fi
 
 if test -z "$PERL" && test "$want_unity" = "yes"; then
-  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: perl was not found. Will not enable unity." >&5
-printf "%s\n" "$as_me: WARNING: perl was not found. Will not enable unity." >&2;}
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: perl was not found. Cannot enable unity." >&5
+printf "%s\n" "$as_me: WARNING: perl was not found. Cannot enable unity." >&2;}
   want_unity='no'
 fi
  if test "$want_unity" = "yes"; then
@@ -23210,8 +23340,8 @@ printf "%s\n" "yes" >&6; }
 fi
 
 if test -z "$PERL" && test "$BUILD_DOCS" != "0"; then
-  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: perl was not found. Will not build documentation." >&5
-printf "%s\n" "$as_me: WARNING: perl was not found. Will not build documentation." >&2;}
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: perl was not found. Cannot build documentation." >&5
+printf "%s\n" "$as_me: WARNING: perl was not found. Cannot build documentation." >&2;}
   BUILD_DOCS=0
 fi
 
@@ -23993,8 +24123,8 @@ rm -f core conftest.err conftest.$ac_objext conftest.beam \
       X-unknown)
         { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: cannot find clock_gettime" >&5
 printf "%s\n" "cannot find clock_gettime" >&6; }
-        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: HAVE_CLOCK_GETTIME_MONOTONIC will not be defined" >&5
-printf "%s\n" "$as_me: WARNING: HAVE_CLOCK_GETTIME_MONOTONIC will not be defined" >&2;}
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: HAVE_CLOCK_GETTIME_MONOTONIC is not defined" >&5
+printf "%s\n" "$as_me: WARNING: HAVE_CLOCK_GETTIME_MONOTONIC is not defined" >&2;}
         curl_func_clock_gettime="no"
         ;;
       X-)
@@ -24004,8 +24134,8 @@ printf "%s\n" "no additional lib required" >&6; }
         ;;
       *)
         if test "$dontwant_rt" = "yes"; then
-          { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: needs -lrt but asked not to use it, HAVE_CLOCK_GETTIME_MONOTONIC will not be defined" >&5
-printf "%s\n" "$as_me: WARNING: needs -lrt but asked not to use it, HAVE_CLOCK_GETTIME_MONOTONIC will not be defined" >&2;}
+          { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: needs -lrt but asked not to use it, HAVE_CLOCK_GETTIME_MONOTONIC is not defined" >&5
+printf "%s\n" "$as_me: WARNING: needs -lrt but asked not to use it, HAVE_CLOCK_GETTIME_MONOTONIC is not defined" >&2;}
           curl_func_clock_gettime="no"
         else
           if test -z "$curl_cv_save_LIBS"; then
@@ -24067,8 +24197,8 @@ printf "%s\n" "yes" >&6; }
 else $as_nop
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
 printf "%s\n" "no" >&6; }
-        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: HAVE_CLOCK_GETTIME_MONOTONIC will not be defined" >&5
-printf "%s\n" "$as_me: WARNING: HAVE_CLOCK_GETTIME_MONOTONIC will not be defined" >&2;}
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: HAVE_CLOCK_GETTIME_MONOTONIC is not defined" >&5
+printf "%s\n" "$as_me: WARNING: HAVE_CLOCK_GETTIME_MONOTONIC is not defined" >&2;}
         curl_func_clock_gettime="no"
         LIBS="$curl_cv_save_LIBS"
 
@@ -24124,8 +24254,8 @@ printf "%s\n" "yes" >&6; }
 else $as_nop
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
 printf "%s\n" "no" >&6; }
-        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: HAVE_CLOCK_GETTIME_MONOTONIC will not be defined" >&5
-printf "%s\n" "$as_me: WARNING: HAVE_CLOCK_GETTIME_MONOTONIC will not be defined" >&2;}
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: HAVE_CLOCK_GETTIME_MONOTONIC is not defined" >&5
+printf "%s\n" "$as_me: WARNING: HAVE_CLOCK_GETTIME_MONOTONIC is not defined" >&2;}
         curl_func_clock_gettime="no"
         LIBS="$curl_cv_save_LIBS"
 
@@ -24627,7 +24757,9 @@ printf "%s\n" "#define HAVE_LIBZ 1" >>confdefs.h
         AMFIXLIB="1"
     { printf "%s\n" "$as_me:${as_lineno-$LINENO}: found both libz and libz.h header" >&5
 printf "%s\n" "$as_me: found both libz and libz.h header" >&6;}
-    LIBCURL_PC_REQUIRES_PRIVATE="$LIBCURL_PC_REQUIRES_PRIVATE zlib"
+        if test "$curl_cv_android" = "no"; then
+      LIBCURL_PC_REQUIRES_PRIVATE="$LIBCURL_PC_REQUIRES_PRIVATE zlib"
+    fi
     curl_zlib_msg="enabled"
   fi
 fi
@@ -25748,7 +25880,7 @@ int main(int argc, char **argv)
 {
 #ifdef _WIN32
   /* on Windows, writing to the argv does not hide the argument in
-     process lists so it can just be skipped */
+     process lists so it can be skipped */
   (void)argc;
   (void)argv;
   return 1;
@@ -25790,7 +25922,7 @@ int main(int argc, char **argv)
 {
 #ifdef _WIN32
   /* on Windows, writing to the argv does not hide the argument in
-     process lists so it can just be skipped */
+     process lists so it can be skipped */
   (void)argc;
   (void)argv;
   return 1;
@@ -27068,8 +27200,7 @@ esac
 printf %s "checking whether to enable Windows native SSL/TLS... " >&6; }
 if test "x$OPT_SCHANNEL" != "xno"; then
   ssl_msg=
-  if test "x$OPT_SCHANNEL" != "xno" &&
-     test "$curl_cv_native_windows" = "yes"; then
+  if test "$curl_cv_native_windows" = "yes"; then
     if test "$curl_cv_winuwp" = "yes"; then
       as_fn_error $? "UWP does not support Schannel." "$LINENO" 5
     fi
@@ -27192,7 +27323,6 @@ printf "%s\n" "no" >&6; }
 fi
 
 
-
 if test "x$OPT_OPENSSL" != "xno"; then
   ssl_msg=
 
@@ -27250,16 +27380,16 @@ rm -f core conftest.err conftest.$ac_objext conftest.beam \
 
                         OPENSSL_PCDIR="$OPT_OPENSSL/lib/pkgconfig"
       if test -f "$OPENSSL_PCDIR/openssl.pc"; then
-        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: PKG_CONFIG_LIBDIR will be set to \"$OPENSSL_PCDIR\"" >&5
-printf "%s\n" "$as_me: PKG_CONFIG_LIBDIR will be set to \"$OPENSSL_PCDIR\"" >&6;}
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: PKG_CONFIG_LIBDIR is set to \"$OPENSSL_PCDIR\"" >&5
+printf "%s\n" "$as_me: PKG_CONFIG_LIBDIR is set to \"$OPENSSL_PCDIR\"" >&6;}
         PKGTEST="yes"
       fi
 
       if test "$PKGTEST" != "yes"; then
                 OPENSSL_PCDIR="$OPT_OPENSSL/lib64/pkgconfig"
         if test -f "$OPENSSL_PCDIR/openssl.pc"; then
-          { printf "%s\n" "$as_me:${as_lineno-$LINENO}: PKG_CONFIG_LIBDIR will be set to \"$OPENSSL_PCDIR\"" >&5
-printf "%s\n" "$as_me: PKG_CONFIG_LIBDIR will be set to \"$OPENSSL_PCDIR\"" >&6;}
+          { printf "%s\n" "$as_me:${as_lineno-$LINENO}: PKG_CONFIG_LIBDIR is set to \"$OPENSSL_PCDIR\"" >&5
+printf "%s\n" "$as_me: PKG_CONFIG_LIBDIR is set to \"$OPENSSL_PCDIR\"" >&6;}
           PKGTEST="yes"
         fi
       fi
@@ -27808,50 +27938,11 @@ done
 
     if test "$OPENSSL_ENABLED" != "1"; then
       LIBS="$CLEANLIBS"
-    fi
-
-    if test "x$OPT_OPENSSL" != "xoff" &&
-       test "$OPENSSL_ENABLED" != "1"; then
       as_fn_error $? "OpenSSL libs and/or directories were not found where specified!" "$LINENO" 5
     fi
   fi
 
   if test "$OPENSSL_ENABLED" = "1"; then
-
-    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for BoringSSL" >&5
-printf %s "checking for BoringSSL... " >&6; }
-    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-
-        #include <openssl/base.h>
-
-int main(void)
-{
-
-        #ifndef OPENSSL_IS_BORINGSSL
-        #error not boringssl
-        #endif
-
-  return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"
-then :
-
-      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-printf "%s\n" "yes" >&6; }
-      ssl_msg="BoringSSL"
-      OPENSSL_IS_BORINGSSL=1
-
-else $as_nop
-
-      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
-printf "%s\n" "no" >&6; }
-
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
 
     { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for AWS-LC" >&5
 printf %s "checking for AWS-LC... " >&6; }
@@ -27879,6 +27970,41 @@ then :
 printf "%s\n" "yes" >&6; }
       ssl_msg="AWS-LC"
       OPENSSL_IS_AWSLC=1
+
+else $as_nop
+
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
+
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for BoringSSL" >&5
+printf %s "checking for BoringSSL... " >&6; }
+    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+
+        #include <openssl/base.h>
+
+int main(void)
+{
+
+        #ifndef OPENSSL_IS_BORINGSSL
+        #error not BoringSSL
+        #endif
+
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"
+then :
+
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+printf "%s\n" "yes" >&6; }
+      ssl_msg="BoringSSL"
+      OPENSSL_IS_BORINGSSL=1
 
 else $as_nop
 
@@ -28006,18 +28132,16 @@ printf "%s\n" "$as_me: Added $LIB_OPENSSL to CURL_LIBRARY_PATH" >&6;}
     fi
   fi
 
+  if test "$OPENSSL_ENABLED" != "1"; then
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: OPT_OPENSSL: $OPT_OPENSSL" >&5
+printf "%s\n" "$as_me: OPT_OPENSSL: $OPT_OPENSSL" >&6;}
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: OPENSSL_ENABLED: $OPENSSL_ENABLED" >&5
+printf "%s\n" "$as_me: OPENSSL_ENABLED: $OPENSSL_ENABLED" >&6;}
+    as_fn_error $? "--with-openssl was given but OpenSSL could not be detected" "$LINENO" 5
+  fi
+
   test -z "$ssl_msg" || ssl_backends="${ssl_backends:+$ssl_backends, }$ssl_msg"
 fi
-
-if test "x$OPT_OPENSSL" != "xno" &&
-   test "$OPENSSL_ENABLED" != "1"; then
-  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: OPT_OPENSSL: $OPT_OPENSSL" >&5
-printf "%s\n" "$as_me: OPT_OPENSSL: $OPT_OPENSSL" >&6;}
-  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: OPENSSL_ENABLED: $OPENSSL_ENABLED" >&5
-printf "%s\n" "$as_me: OPENSSL_ENABLED: $OPENSSL_ENABLED" >&6;}
-  as_fn_error $? "--with-openssl was given but OpenSSL could not be detected" "$LINENO" 5
-fi
-
 if test "$OPENSSL_ENABLED" = "1"; then
         { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for DES support in OpenSSL" >&5
 printf %s "checking for DES support in OpenSSL... " >&6; }
@@ -28111,22 +28235,19 @@ printf "%s\n" "#define CURL_DISABLE_OPENSSL_AUTO_LOAD_CONFIG 1" >>confdefs.h
 
 fi
 
-
 fi
 
 
 if test "x$OPT_GNUTLS" != "xno"; then
   ssl_msg=
 
-  if test "x$OPT_GNUTLS" != "xno"; then
+  addld=""
+  addlib=""
+  gtlslib=""
+  version=""
+  addcflags=""
 
-    addld=""
-    addlib=""
-    gtlslib=""
-    version=""
-    addcflags=""
-
-    if test "x$OPT_GNUTLS" = "xyes"; then
+  if test "x$OPT_GNUTLS" = "xyes"; then
 
   if test -n "$PKG_CONFIG"; then
     PKGCONFIG="$PKG_CONFIG"
@@ -28364,57 +28485,57 @@ ${trc}
   fi
 
 
-      if test "$PKGCONFIG" != "no"; then
-        addlib=`$PKGCONFIG --libs-only-l gnutls`
-        addld=`$PKGCONFIG --libs-only-L gnutls`
-        addcflags=`$PKGCONFIG --cflags-only-I gnutls`
-        version=`$PKGCONFIG --modversion gnutls`
-        gtlslib=`echo $addld | $SED -e 's/^-L//'`
-      else
-                        check=`libgnutls-config --version 2>/dev/null`
-        if test -n "$check"; then
-          addlib=`libgnutls-config --libs`
-          addcflags=`libgnutls-config --cflags`
-          version=`libgnutls-config --version`
-          gtlslib=`libgnutls-config --prefix`/lib$libsuff
-        fi
-      fi
+    if test "$PKGCONFIG" != "no"; then
+      addlib=`$PKGCONFIG --libs-only-l gnutls`
+      addld=`$PKGCONFIG --libs-only-L gnutls`
+      addcflags=`$PKGCONFIG --cflags-only-I gnutls`
+      version=`$PKGCONFIG --modversion gnutls`
+      gtlslib=`echo $addld | $SED -e 's/^-L//'`
     else
-                  cfg=$OPT_GNUTLS/bin/libgnutls-config
-      check=`$cfg --version 2>/dev/null`
+                  check=`libgnutls-config --version 2>/dev/null`
       if test -n "$check"; then
-        addlib=`$cfg --libs`
-        addcflags=`$cfg --cflags`
-        version=`$cfg --version`
-        gtlslib=`$cfg --prefix`/lib$libsuff
-      else
-                addlib=-lgnutls
-        addld=-L$OPT_GNUTLS/lib$libsuff
-        addcflags=-I$OPT_GNUTLS/include
-                version=""
-        gtlslib=$OPT_GNUTLS/lib$libsuff
+        addlib=`libgnutls-config --libs`
+        addcflags=`libgnutls-config --cflags`
+        version=`libgnutls-config --version`
+        gtlslib=`libgnutls-config --prefix`/lib$libsuff
       fi
     fi
+  else
+            cfg=$OPT_GNUTLS/bin/libgnutls-config
+    check=`$cfg --version 2>/dev/null`
+    if test -n "$check"; then
+      addlib=`$cfg --libs`
+      addcflags=`$cfg --cflags`
+      version=`$cfg --version`
+      gtlslib=`$cfg --prefix`/lib$libsuff
+    else
+            addlib=-lgnutls
+      addld=-L$OPT_GNUTLS/lib$libsuff
+      addcflags=-I$OPT_GNUTLS/include
+            version=""
+      gtlslib=$OPT_GNUTLS/lib$libsuff
+    fi
+  fi
 
-    if test -z "$version"; then
-            version="unknown"
+  if test -z "$version"; then
+        version="unknown"
+  fi
+
+  if test -n "$addlib"; then
+
+    CLEANLIBS="$LIBS"
+    CLEANCPPFLAGS="$CPPFLAGS"
+    CLEANLDFLAGS="$LDFLAGS"
+    CLEANLDFLAGSPC="$LDFLAGSPC"
+
+    LIBS="$addlib $LIBS"
+    LDFLAGS="$LDFLAGS $addld"
+    LDFLAGSPC="$LDFLAGSPC $addld"
+    if test "$addcflags" != "-I/usr/include"; then
+      CPPFLAGS="$CPPFLAGS $addcflags"
     fi
 
-    if test -n "$addlib"; then
-
-      CLEANLIBS="$LIBS"
-      CLEANCPPFLAGS="$CPPFLAGS"
-      CLEANLDFLAGS="$LDFLAGS"
-      CLEANLDFLAGSPC="$LDFLAGSPC"
-
-      LIBS="$addlib $LIBS"
-      LDFLAGS="$LDFLAGS $addld"
-      LDFLAGSPC="$LDFLAGSPC $addld"
-      if test "$addcflags" != "-I/usr/include"; then
-        CPPFLAGS="$CPPFLAGS $addcflags"
-      fi
-
-            { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for gnutls_x509_crt_get_dn2 in -lgnutls" >&5
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for gnutls_x509_crt_get_dn2 in -lgnutls" >&5
 printf %s "checking for gnutls_x509_crt_get_dn2 in -lgnutls... " >&6; }
 if test ${ac_cv_lib_gnutls_gnutls_x509_crt_get_dn2+y}
 then :
@@ -28454,47 +28575,45 @@ then :
 
 printf "%s\n" "#define USE_GNUTLS 1" >>confdefs.h
 
-        GNUTLS_ENABLED=1
-        USE_GNUTLS="yes"
-        ssl_msg="GnuTLS"
-        QUIC_ENABLED=yes
-        test "gnutls" != "$DEFAULT_SSL_BACKEND" || VALID_DEFAULT_SSL_BACKEND=yes
+      GNUTLS_ENABLED=1
+      USE_GNUTLS="yes"
+      ssl_msg="GnuTLS"
+      QUIC_ENABLED=yes
+      test "gnutls" != "$DEFAULT_SSL_BACKEND" || VALID_DEFAULT_SSL_BACKEND=yes
 
 else $as_nop
 
-        LIBS="$CLEANLIBS"
-        CPPFLAGS="$CLEANCPPFLAGS"
-        LDFLAGS="$CLEANLDFLAGS"
-        LDFLAGSPC="$CLEANLDFLAGSPC"
+      LIBS="$CLEANLIBS"
+      CPPFLAGS="$CLEANCPPFLAGS"
+      LDFLAGS="$CLEANLDFLAGS"
+      LDFLAGSPC="$CLEANLDFLAGSPC"
 
 fi
 
 
-      if test "$USE_GNUTLS" = "yes"; then
-        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: detected GnuTLS version $version" >&5
+    if test "$USE_GNUTLS" = "yes"; then
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: detected GnuTLS version $version" >&5
 printf "%s\n" "$as_me: detected GnuTLS version $version" >&6;}
-        check_for_ca_bundle=1
-        if test -n "$gtlslib"; then
-                                                  if test "$cross_compiling" != "yes"; then
-            CURL_LIBRARY_PATH="$CURL_LIBRARY_PATH:$gtlslib"
-            export CURL_LIBRARY_PATH
-            { printf "%s\n" "$as_me:${as_lineno-$LINENO}: Added $gtlslib to CURL_LIBRARY_PATH" >&5
+      check_for_ca_bundle=1
+      if test -n "$gtlslib"; then
+                                        if test "$cross_compiling" != "yes"; then
+          CURL_LIBRARY_PATH="$CURL_LIBRARY_PATH:$gtlslib"
+          export CURL_LIBRARY_PATH
+          { printf "%s\n" "$as_me:${as_lineno-$LINENO}: Added $gtlslib to CURL_LIBRARY_PATH" >&5
 printf "%s\n" "$as_me: Added $gtlslib to CURL_LIBRARY_PATH" >&6;}
-          fi
         fi
-        LIBCURL_PC_REQUIRES_PRIVATE="$LIBCURL_PC_REQUIRES_PRIVATE gnutls"
       fi
+      LIBCURL_PC_REQUIRES_PRIVATE="$LIBCURL_PC_REQUIRES_PRIVATE gnutls"
     fi
-
   fi
+
   test -z "$ssl_msg" || ssl_backends="${ssl_backends:+$ssl_backends, }$ssl_msg"
 fi
-
 if test "$GNUTLS_ENABLED" = "1"; then
   USE_GNUTLS_NETTLE=
-    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for nettle_MD5Init in -lgnutls" >&5
-printf %s "checking for nettle_MD5Init in -lgnutls... " >&6; }
-if test ${ac_cv_lib_gnutls_nettle_MD5Init+y}
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for nettle_md5_init in -lgnutls" >&5
+printf %s "checking for nettle_md5_init in -lgnutls... " >&6; }
+if test ${ac_cv_lib_gnutls_nettle_md5_init+y}
 then :
   printf %s "(cached) " >&6
 else $as_nop
@@ -28507,26 +28626,26 @@ cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 #ifdef __cplusplus
 extern "C"
 #endif
-char nettle_MD5Init ();
+char nettle_md5_init ();
 int main(void)
 {
-return nettle_MD5Init ();
+return nettle_md5_init ();
   return 0;
 }
 _ACEOF
 if ac_fn_c_try_link "$LINENO"
 then :
-  ac_cv_lib_gnutls_nettle_MD5Init=yes
+  ac_cv_lib_gnutls_nettle_md5_init=yes
 else $as_nop
-  ac_cv_lib_gnutls_nettle_MD5Init=no
+  ac_cv_lib_gnutls_nettle_md5_init=no
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
 LIBS=$ac_check_lib_save_LIBS
 fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_gnutls_nettle_MD5Init" >&5
-printf "%s\n" "$ac_cv_lib_gnutls_nettle_MD5Init" >&6; }
-if test "x$ac_cv_lib_gnutls_nettle_MD5Init" = xyes
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_gnutls_nettle_md5_init" >&5
+printf "%s\n" "$ac_cv_lib_gnutls_nettle_md5_init" >&6; }
+if test "x$ac_cv_lib_gnutls_nettle_md5_init" = xyes
 then :
    USE_GNUTLS_NETTLE=1
 fi
@@ -28792,9 +28911,9 @@ ${trc}
           CPPFLAGS="$CPPFLAGS $addcflags"
         fi
 
-        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for nettle_MD5Init in -lnettle" >&5
-printf %s "checking for nettle_MD5Init in -lnettle... " >&6; }
-if test ${ac_cv_lib_nettle_nettle_MD5Init+y}
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for nettle_md5_init in -lnettle" >&5
+printf %s "checking for nettle_md5_init in -lnettle... " >&6; }
+if test ${ac_cv_lib_nettle_nettle_md5_init+y}
 then :
   printf %s "(cached) " >&6
 else $as_nop
@@ -28807,26 +28926,26 @@ cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 #ifdef __cplusplus
 extern "C"
 #endif
-char nettle_MD5Init ();
+char nettle_md5_init ();
 int main(void)
 {
-return nettle_MD5Init ();
+return nettle_md5_init ();
   return 0;
 }
 _ACEOF
 if ac_fn_c_try_link "$LINENO"
 then :
-  ac_cv_lib_nettle_nettle_MD5Init=yes
+  ac_cv_lib_nettle_nettle_md5_init=yes
 else $as_nop
-  ac_cv_lib_nettle_nettle_MD5Init=no
+  ac_cv_lib_nettle_nettle_md5_init=no
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
 LIBS=$ac_check_lib_save_LIBS
 fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_nettle_nettle_MD5Init" >&5
-printf "%s\n" "$ac_cv_lib_nettle_nettle_MD5Init" >&6; }
-if test "x$ac_cv_lib_nettle_nettle_MD5Init" = xyes
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_nettle_nettle_md5_init" >&5
+printf "%s\n" "$ac_cv_lib_nettle_nettle_md5_init" >&6; }
+if test "x$ac_cv_lib_nettle_nettle_md5_init" = xyes
 then :
 
           USE_GNUTLS_NETTLE=1
@@ -28915,80 +29034,13 @@ if test "x$OPT_MBEDTLS" != "xno"; then
   _ldflagspc=$LDFLAGSPC
   ssl_msg=
 
-  if test "x$OPT_MBEDTLS" != "xno"; then
+  if test "x$OPT_MBEDTLS" = "xyes"; then
+    OPT_MBEDTLS=""
+  fi
 
-    if test "x$OPT_MBEDTLS" = "xyes"; then
-      OPT_MBEDTLS=""
-    fi
+  if test -z "$OPT_MBEDTLS"; then
 
-    if test -z "$OPT_MBEDTLS"; then
-
-      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for mbedtls_havege_init in -lmbedtls" >&5
-printf %s "checking for mbedtls_havege_init in -lmbedtls... " >&6; }
-if test ${ac_cv_lib_mbedtls_mbedtls_havege_init+y}
-then :
-  printf %s "(cached) " >&6
-else $as_nop
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lmbedtls -lmbedx509 -lmbedcrypto $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-
-#ifdef __cplusplus
-extern "C"
-#endif
-char mbedtls_havege_init ();
-int main(void)
-{
-return mbedtls_havege_init ();
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"
-then :
-  ac_cv_lib_mbedtls_mbedtls_havege_init=yes
-else $as_nop
-  ac_cv_lib_mbedtls_mbedtls_havege_init=no
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_mbedtls_mbedtls_havege_init" >&5
-printf "%s\n" "$ac_cv_lib_mbedtls_mbedtls_havege_init" >&6; }
-if test "x$ac_cv_lib_mbedtls_mbedtls_havege_init" = xyes
-then :
-
-
-printf "%s\n" "#define USE_MBEDTLS 1" >>confdefs.h
-
-        MBEDTLS_ENABLED=1
-        USE_MBEDTLS="yes"
-        ssl_msg="mbedTLS"
-        test "mbedtls" != "$DEFAULT_SSL_BACKEND" || VALID_DEFAULT_SSL_BACKEND=yes
-
-fi
-
-    fi
-
-    addld=""
-    addlib=""
-    addcflags=""
-    mbedtlslib=""
-
-    if test "$USE_MBEDTLS" != "yes"; then
-            addld=-L$OPT_MBEDTLS/lib$libsuff
-      addcflags=-I$OPT_MBEDTLS/include
-      mbedtlslib=$OPT_MBEDTLS/lib$libsuff
-
-      LDFLAGS="$LDFLAGS $addld"
-      LDFLAGSPC="$LDFLAGSPC $addld"
-      if test "$addcflags" != "-I/usr/include"; then
-        CPPFLAGS="$CPPFLAGS $addcflags"
-      fi
-
-      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for mbedtls_ssl_init in -lmbedtls" >&5
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for mbedtls_ssl_init in -lmbedtls" >&5
 printf %s "checking for mbedtls_ssl_init in -lmbedtls... " >&6; }
 if test ${ac_cv_lib_mbedtls_mbedtls_ssl_init+y}
 then :
@@ -29028,57 +29080,119 @@ then :
 
 printf "%s\n" "#define USE_MBEDTLS 1" >>confdefs.h
 
-        MBEDTLS_ENABLED=1
-        USE_MBEDTLS="yes"
-        ssl_msg="mbedTLS"
-        test "mbedtls" != "$DEFAULT_SSL_BACKEND" || VALID_DEFAULT_SSL_BACKEND=yes
-
-else $as_nop
-
-          CPPFLAGS=$_cppflags
-          LDFLAGS=$_ldflags
-          LDFLAGSPC=$_ldflagspc
+      MBEDTLS_ENABLED=1
+      USE_MBEDTLS="yes"
+      ssl_msg="mbedTLS"
+      test "mbedtls" != "$DEFAULT_SSL_BACKEND" || VALID_DEFAULT_SSL_BACKEND=yes
 
 fi
 
+  fi
+
+  addld=""
+  addlib=""
+  addcflags=""
+  mbedtlslib=""
+
+  if test "$USE_MBEDTLS" != "yes" && test -n "$OPT_MBEDTLS"; then
+        addld=-L$OPT_MBEDTLS/lib$libsuff
+    addcflags=-I$OPT_MBEDTLS/include
+    mbedtlslib=$OPT_MBEDTLS/lib$libsuff
+
+    LDFLAGS="$LDFLAGS $addld"
+    LDFLAGSPC="$LDFLAGSPC $addld"
+    if test "$addcflags" != "-I/usr/include"; then
+      CPPFLAGS="$CPPFLAGS $addcflags"
     fi
 
-    if test "$USE_MBEDTLS" = "yes"; then
-      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: detected mbedTLS" >&5
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for mbedtls_ssl_init in -lmbedtls" >&5
+printf %s "checking for mbedtls_ssl_init in -lmbedtls... " >&6; }
+if test ${ac_cv_lib_mbedtls_mbedtls_ssl_init+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lmbedtls -lmbedx509 -lmbedcrypto $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+
+#ifdef __cplusplus
+extern "C"
+#endif
+char mbedtls_ssl_init ();
+int main(void)
+{
+return mbedtls_ssl_init ();
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_lib_mbedtls_mbedtls_ssl_init=yes
+else $as_nop
+  ac_cv_lib_mbedtls_mbedtls_ssl_init=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_mbedtls_mbedtls_ssl_init" >&5
+printf "%s\n" "$ac_cv_lib_mbedtls_mbedtls_ssl_init" >&6; }
+if test "x$ac_cv_lib_mbedtls_mbedtls_ssl_init" = xyes
+then :
+
+
+printf "%s\n" "#define USE_MBEDTLS 1" >>confdefs.h
+
+      MBEDTLS_ENABLED=1
+      USE_MBEDTLS="yes"
+      ssl_msg="mbedTLS"
+      test "mbedtls" != "$DEFAULT_SSL_BACKEND" || VALID_DEFAULT_SSL_BACKEND=yes
+
+else $as_nop
+
+        CPPFLAGS=$_cppflags
+        LDFLAGS=$_ldflags
+        LDFLAGSPC=$_ldflagspc
+
+fi
+
+  fi
+
+  if test "$USE_MBEDTLS" = "yes"; then
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: detected mbedTLS" >&5
 printf "%s\n" "$as_me: detected mbedTLS" >&6;}
-      check_for_ca_bundle=1
+    check_for_ca_bundle=1
 
-      LIBS="-lmbedtls -lmbedx509 -lmbedcrypto $LIBS"
+    LIBS="-lmbedtls -lmbedx509 -lmbedcrypto $LIBS"
 
-      if test -n "$mbedtlslib"; then
-                                        if test "$cross_compiling" != "yes"; then
-          CURL_LIBRARY_PATH="$CURL_LIBRARY_PATH:$mbedtlslib"
-          export CURL_LIBRARY_PATH
-          { printf "%s\n" "$as_me:${as_lineno-$LINENO}: Added $mbedtlslib to CURL_LIBRARY_PATH" >&5
+    if test -n "$mbedtlslib"; then
+                              if test "$cross_compiling" != "yes"; then
+        CURL_LIBRARY_PATH="$CURL_LIBRARY_PATH:$mbedtlslib"
+        export CURL_LIBRARY_PATH
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: Added $mbedtlslib to CURL_LIBRARY_PATH" >&5
 printf "%s\n" "$as_me: Added $mbedtlslib to CURL_LIBRARY_PATH" >&6;}
-        fi
       fi
-            if false; then
-        LIBCURL_PC_REQUIRES_PRIVATE="$LIBCURL_PC_REQUIRES_PRIVATE mbedtls mbedx509 mbedcrypto"
-      fi
+    fi
+        if false; then
+      LIBCURL_PC_REQUIRES_PRIVATE="$LIBCURL_PC_REQUIRES_PRIVATE mbedtls mbedx509 mbedcrypto"
+    fi
 
-            ac_fn_c_check_func "$LINENO" "mbedtls_des_crypt_ecb" "ac_cv_func_mbedtls_des_crypt_ecb"
+        ac_fn_c_check_func "$LINENO" "mbedtls_des_crypt_ecb" "ac_cv_func_mbedtls_des_crypt_ecb"
 if test "x$ac_cv_func_mbedtls_des_crypt_ecb" = xyes
 then :
   printf "%s\n" "#define HAVE_MBEDTLS_DES_CRYPT_ECB 1" >>confdefs.h
 
 fi
 
-      if test "$ac_cv_func_mbedtls_des_crypt_ecb" = 'yes'; then
-        HAVE_MBEDTLS_DES_CRYPT_ECB=1
-      fi
+    if test "$ac_cv_func_mbedtls_des_crypt_ecb" = 'yes'; then
+      HAVE_MBEDTLS_DES_CRYPT_ECB=1
     fi
-
   fi
+
   test -z "$ssl_msg" || ssl_backends="${ssl_backends:+$ssl_backends, }$ssl_msg"
 fi
-
-
 
 
 case "$OPT_WOLFSSL" in
@@ -29097,11 +29211,9 @@ if test "$OPT_WOLFSSL" != "no"; then
 
   ssl_msg=
 
-  if test "$OPT_WOLFSSL" != "no"; then
-
-    if test "$OPT_WOLFSSL" = "yes"; then
-      OPT_WOLFSSL=""
-    fi
+  if test "$OPT_WOLFSSL" = "yes"; then
+    OPT_WOLFSSL=""
+  fi
 
 
   if test -n "$PKG_CONFIG"; then
@@ -29339,14 +29451,14 @@ ${trc}
     fi
   fi
 
-    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: Check directory $wolfpkg" >&5
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: Check directory $wolfpkg" >&5
 printf "%s\n" "$as_me: Check directory $wolfpkg" >&6;}
 
-    addld=""
-    addlib=""
-    addcflags=""
-    if test "$PKGCONFIG" != "no"; then
-      addlib=`
+  addld=""
+  addlib=""
+  addcflags=""
+  if test "$PKGCONFIG" != "no"; then
+    addlib=`
   if test -n "$wolfpkg"; then
     if test -n ""; then
             PKG_CONFIG_PATH="$wolfpkg${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
@@ -29357,8 +29469,8 @@ printf "%s\n" "$as_me: Check directory $wolfpkg" >&6;}
     fi
   fi
 
-        $PKGCONFIG --libs-only-l wolfssl`
-      addld=`
+      $PKGCONFIG --libs-only-l wolfssl`
+    addld=`
   if test -n "$wolfpkg"; then
     if test -n ""; then
             PKG_CONFIG_PATH="$wolfpkg${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
@@ -29369,8 +29481,8 @@ printf "%s\n" "$as_me: Check directory $wolfpkg" >&6;}
     fi
   fi
 
-        $PKGCONFIG --libs-only-L wolfssl`
-      addcflags=`
+      $PKGCONFIG --libs-only-L wolfssl`
+    addcflags=`
   if test -n "$wolfpkg"; then
     if test -n ""; then
             PKG_CONFIG_PATH="$wolfpkg${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
@@ -29381,8 +29493,8 @@ printf "%s\n" "$as_me: Check directory $wolfpkg" >&6;}
     fi
   fi
 
-        $PKGCONFIG --cflags-only-I wolfssl`
-      version=`
+      $PKGCONFIG --cflags-only-I wolfssl`
+    version=`
   if test -n "$wolfpkg"; then
     if test -n ""; then
             PKG_CONFIG_PATH="$wolfpkg${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
@@ -29393,54 +29505,54 @@ printf "%s\n" "$as_me: Check directory $wolfpkg" >&6;}
     fi
   fi
 
-        $PKGCONFIG --modversion wolfssl`
-      wolfssllibpath=`echo $addld | $SED -e 's/^-L//'`
-    else
-      addlib=-lwolfssl
-            if test -n "$OPT_WOLFSSL"; then
-        addld=-L$OPT_WOLFSSL/lib$libsuff
-        addcflags=-I$OPT_WOLFSSL/include
-        wolfssllibpath=$OPT_WOLFSSL/lib$libsuff
-      fi
+      $PKGCONFIG --modversion wolfssl`
+    wolfssllibpath=`echo $addld | $SED -e 's/^-L//'`
+  else
+    addlib=-lwolfssl
+        if test -n "$OPT_WOLFSSL"; then
+      addld=-L$OPT_WOLFSSL/lib$libsuff
+      addcflags=-I$OPT_WOLFSSL/include
+      wolfssllibpath=$OPT_WOLFSSL/lib$libsuff
     fi
+  fi
 
-    if test "$curl_cv_apple" = "yes"; then
-      addlib="$addlib -framework Security -framework CoreFoundation"
-    else
-      addlib="$addlib -lm"
-    fi
+  if test "$curl_cv_apple" = "yes"; then
+    addlib="$addlib -framework Security -framework CoreFoundation"
+  else
+    addlib="$addlib -lm"
+  fi
 
-    if test "$USE_WOLFSSL" != "yes"; then
-      CPPFLAGS="$CPPFLAGS -DWOLFSSL_OPTIONS_IGNORE_SYS"
+  if test "$USE_WOLFSSL" != "yes"; then
+    CPPFLAGS="$CPPFLAGS -DWOLFSSL_OPTIONS_IGNORE_SYS"
 
-      LDFLAGS="$LDFLAGS $addld"
-      LDFLAGSPC="$LDFLAGSPC $addld"
-      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: Add $addld to LDFLAGS" >&5
+    LDFLAGS="$LDFLAGS $addld"
+    LDFLAGSPC="$LDFLAGSPC $addld"
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: Add $addld to LDFLAGS" >&5
 printf "%s\n" "$as_me: Add $addld to LDFLAGS" >&6;}
-      if test "$addcflags" != "-I/usr/include"; then
-        CPPFLAGS="$CPPFLAGS $addcflags"
-        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: Add $addcflags to CPPFLAGS" >&5
+    if test "$addcflags" != "-I/usr/include"; then
+      CPPFLAGS="$CPPFLAGS $addcflags"
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: Add $addcflags to CPPFLAGS" >&5
 printf "%s\n" "$as_me: Add $addcflags to CPPFLAGS" >&6;}
-      fi
+    fi
 
-      my_ac_save_LIBS="$LIBS"
-      LIBS="$addlib $LIBS"
-      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: Add $addlib to LIBS" >&5
+    my_ac_save_LIBS="$LIBS"
+    LIBS="$addlib $LIBS"
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: Add $addlib to LIBS" >&5
 printf "%s\n" "$as_me: Add $addlib to LIBS" >&6;}
 
-      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for wolfSSL_Init in -lwolfssl" >&5
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for wolfSSL_Init in -lwolfssl" >&5
 printf %s "checking for wolfSSL_Init in -lwolfssl... " >&6; }
-      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
 
-          #include <wolfssl/options.h>
-          #include <wolfssl/ssl.h>
+        #include <wolfssl/options.h>
+        #include <wolfssl/ssl.h>
 
 int main(void)
 {
 
-          return wolfSSL_Init();
+        return wolfSSL_Init();
 
   return 0;
 }
@@ -29449,37 +29561,37 @@ _ACEOF
 if ac_fn_c_try_link "$LINENO"
 then :
 
-        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 printf "%s\n" "yes" >&6; }
 
 printf "%s\n" "#define USE_WOLFSSL 1" >>confdefs.h
 
-        WOLFSSL_ENABLED=1
-        USE_WOLFSSL="yes"
-        ssl_msg="wolfSSL"
-        test "wolfssl" != "$DEFAULT_SSL_BACKEND" || VALID_DEFAULT_SSL_BACKEND=yes
+      WOLFSSL_ENABLED=1
+      USE_WOLFSSL="yes"
+      ssl_msg="wolfSSL"
+      test "wolfssl" != "$DEFAULT_SSL_BACKEND" || VALID_DEFAULT_SSL_BACKEND=yes
 
 else $as_nop
 
-        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
 printf "%s\n" "no" >&6; }
-        CPPFLAGS=$_cppflags
-        LDFLAGS=$_ldflags
-        LDFLAGSPC=$_ldflagspc
-        wolfssllibpath=""
+      CPPFLAGS=$_cppflags
+      LDFLAGS=$_ldflags
+      LDFLAGSPC=$_ldflagspc
+      wolfssllibpath=""
 
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      LIBS="$my_ac_save_LIBS"
-    fi
+    LIBS="$my_ac_save_LIBS"
+  fi
 
-    if test "$USE_WOLFSSL" = "yes"; then
-      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: detected wolfSSL" >&5
+  if test "$USE_WOLFSSL" = "yes"; then
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: detected wolfSSL" >&5
 printf "%s\n" "$as_me: detected wolfSSL" >&6;}
-      check_for_ca_bundle=1
+    check_for_ca_bundle=1
 
-      LIBS="$addlib $LIBS"
+    LIBS="$addlib $LIBS"
 
 
   for ac_func in wolfSSL_set_quic_use_legacy_codepoint
@@ -29493,7 +29605,7 @@ fi
 
 done
 
-                        ac_fn_c_check_func "$LINENO" "wolfSSL_get_peer_certificate" "ac_cv_func_wolfSSL_get_peer_certificate"
+                ac_fn_c_check_func "$LINENO" "wolfSSL_get_peer_certificate" "ac_cv_func_wolfSSL_get_peer_certificate"
 if test "x$ac_cv_func_wolfSSL_get_peer_certificate" = xyes
 then :
   printf "%s\n" "#define HAVE_WOLFSSL_GET_PEER_CERTIFICATE 1" >>confdefs.h
@@ -29525,32 +29637,29 @@ then :
 fi
 
 
-                  if test "$ac_cv_func_wc_Des_EcbEncrypt" = "yes"; then
-        HAVE_WC_DES_ECBENCRYPT=1
-      fi
-
-            if test "$ac_cv_func_wolfSSL_BIO_new" = "yes"; then
-        HAVE_WOLFSSL_BIO_NEW=1
-      fi
-
-      if test -n "$wolfssllibpath"; then
-                                        if test "$cross_compiling" != "yes"; then
-          CURL_LIBRARY_PATH="$CURL_LIBRARY_PATH:$wolfssllibpath"
-          export CURL_LIBRARY_PATH
-          { printf "%s\n" "$as_me:${as_lineno-$LINENO}: Added $wolfssllibpath to CURL_LIBRARY_PATH" >&5
-printf "%s\n" "$as_me: Added $wolfssllibpath to CURL_LIBRARY_PATH" >&6;}
-        fi
-      fi
-      LIBCURL_PC_REQUIRES_PRIVATE="$LIBCURL_PC_REQUIRES_PRIVATE wolfssl"
-    else
-      as_fn_error $? "--with-wolfssl but wolfSSL was not found or does not work" "$LINENO" 5
+            if test "$ac_cv_func_wc_Des_EcbEncrypt" = "yes"; then
+      HAVE_WC_DES_ECBENCRYPT=1
     fi
 
+        if test "$ac_cv_func_wolfSSL_BIO_new" = "yes"; then
+      HAVE_WOLFSSL_BIO_NEW=1
+    fi
+
+    if test -n "$wolfssllibpath"; then
+                              if test "$cross_compiling" != "yes"; then
+        CURL_LIBRARY_PATH="$CURL_LIBRARY_PATH:$wolfssllibpath"
+        export CURL_LIBRARY_PATH
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: Added $wolfssllibpath to CURL_LIBRARY_PATH" >&5
+printf "%s\n" "$as_me: Added $wolfssllibpath to CURL_LIBRARY_PATH" >&6;}
+      fi
+    fi
+    LIBCURL_PC_REQUIRES_PRIVATE="$LIBCURL_PC_REQUIRES_PRIVATE wolfssl"
+  else
+    as_fn_error $? "--with-wolfssl but wolfSSL was not found or does not work" "$LINENO" 5
   fi
+
   test -z "$ssl_msg" || ssl_backends="${ssl_backends:+$ssl_backends, }$ssl_msg"
 fi
-
-
 
 
 if test "x$OPT_RUSTLS" != "xno"; then
@@ -29574,16 +29683,16 @@ if test "x$OPT_RUSTLS" != "xno"; then
 
       RUSTLS_PCDIR="$PREFIX_RUSTLS/lib/pkgconfig"
       if test -f "$RUSTLS_PCDIR/rustls.pc"; then
-        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: PKG_CONFIG_LIBDIR will be set to \"$RUSTLS_PCDIR\"" >&5
-printf "%s\n" "$as_me: PKG_CONFIG_LIBDIR will be set to \"$RUSTLS_PCDIR\"" >&6;}
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: PKG_CONFIG_LIBDIR is set to \"$RUSTLS_PCDIR\"" >&5
+printf "%s\n" "$as_me: PKG_CONFIG_LIBDIR is set to \"$RUSTLS_PCDIR\"" >&6;}
         PKGTEST="yes"
       fi
 
       if test "$PKGTEST" != "yes"; then
                 RUSTLS_PCDIR="$PREFIX_RUSTLS/lib64/pkgconfig"
         if test -f "$RUSTLS_PCDIR/rustls.pc"; then
-          { printf "%s\n" "$as_me:${as_lineno-$LINENO}: PKG_CONFIG_LIBDIR will be set to \"$RUSTLS_PCDIR\"" >&5
-printf "%s\n" "$as_me: PKG_CONFIG_LIBDIR will be set to \"$RUSTLS_PCDIR\"" >&6;}
+          { printf "%s\n" "$as_me:${as_lineno-$LINENO}: PKG_CONFIG_LIBDIR is set to \"$RUSTLS_PCDIR\"" >&5
+printf "%s\n" "$as_me: PKG_CONFIG_LIBDIR is set to \"$RUSTLS_PCDIR\"" >&6;}
           PKGTEST="yes"
         fi
       fi
@@ -30000,8 +30109,7 @@ fi
 
   test -z "$ssl_msg" || ssl_backends="${ssl_backends:+$ssl_backends, }$ssl_msg"
 
-  if test "x$OPT_RUSTLS" != "xno" &&
-    test "$RUSTLS_ENABLED" != "1"; then
+  if test "$RUSTLS_ENABLED" != "1"; then
     { printf "%s\n" "$as_me:${as_lineno-$LINENO}: OPT_RUSTLS: $OPT_RUSTLS" >&5
 printf "%s\n" "$as_me: OPT_RUSTLS: $OPT_RUSTLS" >&6;}
     { printf "%s\n" "$as_me:${as_lineno-$LINENO}: RUSTLS_ENABLED: $RUSTLS_ENABLED" >&5
@@ -30089,7 +30197,7 @@ printf "%s\n" "$as_me: built with one SSL backend" >&6;}
   xD)
         ;;
   xD*)
-    as_fn_error $? "--without-ssl has been set together with an explicit option to use an ssl library
+    as_fn_error $? "--without-ssl has been set together with an explicit option to use an SSL library
 (e.g. --with-openssl, --with-gnutls, --with-wolfssl, --with-mbedtls, --with-schannel, --with-amissl, --with-rustls).
 Since these are conflicting parameters, verify which is the desired one and drop the other." "$LINENO" 5
     ;;
@@ -30233,8 +30341,8 @@ fi
           fi
         done
       fi
-      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: want $want_capath ca $ca" >&5
-printf "%s\n" "$as_me: want $want_capath ca $ca" >&6;}
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: want $want_capath CA $ca" >&5
+printf "%s\n" "$as_me: want $want_capath CA $ca" >&6;}
       if test "x$want_capath" = "xunset"; then
         check_capath="/etc/ssl/certs"
       fi
@@ -30346,8 +30454,8 @@ printf "%s\n" "$want_ca_embed" >&6; }
     else
       { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
 printf "%s\n" "no" >&6; }
-      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: perl was not found. Will not do CA embed." >&5
-printf "%s\n" "$as_me: WARNING: perl was not found. Will not do CA embed." >&2;}
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: perl was not found. Cannot do CA embed." >&5
+printf "%s\n" "$as_me: WARNING: perl was not found. Cannot do CA embed." >&2;}
     fi
   else
     { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
@@ -32609,7 +32717,7 @@ if test "$CURL_DISABLE_LDAPS" != "1"; then
 fi
 
 
-versioned_symbols_flavour=
+versioned_symbols_flavor=
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether versioned symbols are wanted" >&5
 printf %s "checking whether versioned symbols are wanted... " >&6; }
 # Check whether --enable-versioned-symbols was given.
@@ -32635,21 +32743,21 @@ printf "%s\n" "$as_me: WARNING: You need an ld version supporting the --version-
       { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 printf "%s\n" "yes" >&6; }
       if test "x$enableval" != "xyes"; then
-        versioned_symbols_flavour="$enableval"
+        versioned_symbols_flavor="$enableval"
       elif test "$CURL_WITH_MULTI_SSL" = "1"; then
-        versioned_symbols_flavour="MULTISSL_"
+        versioned_symbols_flavor="MULTISSL_"
       elif test "$OPENSSL_ENABLED" = "1"; then
-        versioned_symbols_flavour="OPENSSL_"
+        versioned_symbols_flavor="OPENSSL_"
       elif test "$MBEDTLS_ENABLED" = "1"; then
-        versioned_symbols_flavour="MBEDTLS_"
+        versioned_symbols_flavor="MBEDTLS_"
       elif test "$WOLFSSL_ENABLED" = "1"; then
-        versioned_symbols_flavour="WOLFSSL_"
+        versioned_symbols_flavor="WOLFSSL_"
       elif test "$GNUTLS_ENABLED" = "1"; then
-        versioned_symbols_flavour="GNUTLS_"
+        versioned_symbols_flavor="GNUTLS_"
       elif test "$RUSTLS_ENABLED" = "1"; then
-        versioned_symbols_flavour="RUSTLS_"
+        versioned_symbols_flavor="RUSTLS_"
       else
-        versioned_symbols_flavour=""
+        versioned_symbols_flavor=""
       fi
       versioned_symbols="yes"
     fi
@@ -32666,7 +32774,7 @@ printf "%s\n" "no" >&6; }
 fi
 
 
-CURL_LIBCURL_VERSIONED_SYMBOLS_PREFIX="$versioned_symbols_flavour"
+CURL_LIBCURL_VERSIONED_SYMBOLS_PREFIX="$versioned_symbols_flavor"
 
 CURL_LIBCURL_VERSIONED_SYMBOLS_SONAME="4"
    if test "$versioned_symbols" = "yes"; then
@@ -37342,7 +37450,7 @@ do :
 if test "x$ac_cv_header_quiche_h" = xyes
 then :
   printf "%s\n" "#define HAVE_QUICHE_H 1" >>confdefs.h
- experimental="$experimental HTTP3"
+ experimental="$experimental Quiche"
           { printf "%s\n" "$as_me:${as_lineno-$LINENO}: HTTP3 support is experimental" >&5
 printf "%s\n" "$as_me: HTTP3 support is experimental" >&6;}
           curl_h3_msg="enabled (quiche)"
@@ -37797,8 +37905,8 @@ case "$OPT_ZSH_FPATH" in
     ;;
 esac
 if test -z "$PERL" && test -n "$ZSH_FUNCTIONS_DIR"; then
-  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: perl was not found. Will not install zsh completions." >&5
-printf "%s\n" "$as_me: WARNING: perl was not found. Will not install zsh completions." >&2;}
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: perl was not found. Cannot install zsh completions." >&5
+printf "%s\n" "$as_me: WARNING: perl was not found. Cannot install zsh completions." >&2;}
   ZSH_FUNCTIONS_DIR=''
 fi
  if test -n "$ZSH_FUNCTIONS_DIR"; then
@@ -38072,8 +38180,8 @@ ${trc}
     ;;
 esac
 if test -z "$PERL" && test -n "$FISH_FUNCTIONS_DIR"; then
-  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: perl was not found. Will not install fish completions." >&5
-printf "%s\n" "$as_me: WARNING: perl was not found. Will not install fish completions." >&2;}
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: perl was not found. Cannot install fish completions." >&5
+printf "%s\n" "$as_me: WARNING: perl was not found. Cannot install fish completions." >&2;}
   FISH_FUNCTIONS_DIR=''
 fi
  if test -n "$FISH_FUNCTIONS_DIR"; then
@@ -39408,7 +39516,6 @@ printf "%s\n" "#define SIZEOF_SIZE_T $r" >>confdefs.h
 
 
 
-
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking size of long" >&5
 printf %s "checking size of long... " >&6; }
   r=0
@@ -39457,7 +39564,6 @@ printf "%s\n" "$r" >&6; }
 
 
 printf "%s\n" "#define SIZEOF_LONG $r" >>confdefs.h
-
 
 
 
@@ -39516,7 +39622,6 @@ printf "%s\n" "#define SIZEOF_INT $r" >>confdefs.h
 
 
 
-
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking size of time_t" >&5
 printf %s "checking size of time_t... " >&6; }
   r=0
@@ -39570,7 +39675,6 @@ printf "%s\n" "#define SIZEOF_TIME_T $r" >>confdefs.h
 
 
 
-
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking size of off_t" >&5
 printf %s "checking size of off_t... " >&6; }
   r=0
@@ -39619,7 +39723,6 @@ printf "%s\n" "$r" >&6; }
 
 
 printf "%s\n" "#define SIZEOF_OFF_T $r" >>confdefs.h
-
 
 
 
@@ -39683,7 +39786,6 @@ printf "%s\n" "#define SIZEOF_CURL_OFF_T $r" >>confdefs.h
 
 
 
-
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking size of curl_socket_t" >&5
 printf %s "checking size of curl_socket_t... " >&6; }
   r=0
@@ -39734,7 +39836,6 @@ printf "%s\n" "$r" >&6; }
 
 
 printf "%s\n" "#define SIZEOF_CURL_SOCKET_T $r" >>confdefs.h
-
 
 
 CPPFLAGS=$o
@@ -40255,7 +40356,7 @@ printf %s "checking if alarm is compilable... " >&6; }
 int main(void)
 {
 
-        if(alarm(0) != 0)
+        if(alarm(0))
           return 1;
 
   return 0;
@@ -40463,7 +40564,7 @@ printf %s "checking if basename is compilable... " >&6; }
 int main(void)
 {
 
-        if(basename(0) != 0)
+        if(basename(0))
           return 1;
 
   return 0;
@@ -40538,7 +40639,7 @@ printf %s "checking if closesocket can be linked... " >&6; }
 int main(void)
 {
 
-      if(closesocket(0) != 0)
+      if(closesocket(0))
         return 1;
 
   return 0;
@@ -40602,7 +40703,7 @@ printf %s "checking if closesocket is compilable... " >&6; }
 int main(void)
 {
 
-        if(closesocket(0) != 0)
+        if(closesocket(0))
           return 1;
 
   return 0;
@@ -40697,7 +40798,7 @@ printf %s "checking if CloseSocket can be linked... " >&6; }
 int main(void)
 {
 
-      if(CloseSocket(0) != 0)
+      if(CloseSocket(0))
         return 1;
 
   return 0;
@@ -40734,7 +40835,7 @@ printf %s "checking if CloseSocket is compilable... " >&6; }
 int main(void)
 {
 
-        if(CloseSocket(0) != 0)
+        if(CloseSocket(0))
           return 1;
 
   return 0;
@@ -40918,7 +41019,7 @@ printf %s "checking if fcntl is compilable... " >&6; }
 int main(void)
 {
 
-        if(fcntl(0, 0, 0) != 0)
+        if(fcntl(0, 0, 0))
           return 1;
 
   return 0;
@@ -40992,7 +41093,7 @@ int main(void)
 {
 
         int flags = 0;
-        if(fcntl(0, F_SETFL, flags | O_NONBLOCK) != 0)
+        if(fcntl(0, F_SETFL, flags | O_NONBLOCK))
           return 1;
 
   return 0;
@@ -41407,7 +41508,7 @@ printf %s "checking if fsetxattr takes 5 args.... " >&6; }
 int main(void)
 {
 
-          if(fsetxattr(0, "", 0, 0, 0) != 0)
+          if(fsetxattr(0, "", 0, 0, 0))
             return 1;
 
   return 0;
@@ -41443,7 +41544,7 @@ printf %s "checking if fsetxattr takes 6 args.... " >&6; }
 int main(void)
 {
 
-          if(fsetxattr(0, 0, 0, 0, 0, 0) != 0)
+          if(fsetxattr(0, 0, 0, 0, 0, 0))
             return 1;
 
   return 0;
@@ -41567,7 +41668,7 @@ int main(void)
 {
 
       struct addrinfo *ai = 0;
-      if(getaddrinfo(0, 0, 0, &ai) != 0)
+      if(getaddrinfo(0, 0, 0, &ai))
         return 1;
 
   return 0;
@@ -41636,7 +41737,7 @@ int main(void)
 {
 
         struct addrinfo *ai = 0;
-        if(getaddrinfo(0, 0, 0, &ai) != 0)
+        if(getaddrinfo(0, 0, 0, &ai))
           return 1;
 
   return 0;
@@ -42006,7 +42107,7 @@ printf %s "checking if gethostbyname_r takes 3 args.... " >&6; }
 int main(void)
 {
 
-          if(gethostbyname_r(0, 0, 0) != 0)
+          if(gethostbyname_r(0, 0, 0))
             return 1;
 
   return 0;
@@ -42043,7 +42144,7 @@ printf %s "checking if gethostbyname_r takes 5 args.... " >&6; }
 int main(void)
 {
 
-          if(gethostbyname_r(0, 0, 0, 0, 0) != 0)
+          if(gethostbyname_r(0, 0, 0, 0, 0))
             return 1;
 
   return 0;
@@ -42080,7 +42181,7 @@ printf %s "checking if gethostbyname_r takes 6 args.... " >&6; }
 int main(void)
 {
 
-          if(gethostbyname_r(0, 0, 0, 0, 0, 0) != 0)
+          if(gethostbyname_r(0, 0, 0, 0, 0, 0))
             return 1;
 
   return 0;
@@ -42197,7 +42298,7 @@ int main(void)
 {
 
       char s[1];
-      if(gethostname((void *)s, 0) != 0)
+      if(gethostname((void *)s, 0))
         return 1;
 
   return 0;
@@ -42266,7 +42367,7 @@ int main(void)
 {
 
         char s[1];
-        if(gethostname((void *)s, 0) != 0)
+        if(gethostname((void *)s, 0))
           return 1;
 
   return 0;
@@ -42316,7 +42417,7 @@ int main(void)
 {
 
               char s[1];
-              if(gethostname(($tst_arg1)s, 0) != 0)
+              if(gethostname(($tst_arg1)s, 0))
                 return 1;
 
   return 0;
@@ -42508,7 +42609,7 @@ printf %s "checking if getifaddrs is compilable... " >&6; }
 int main(void)
 {
 
-        if(getifaddrs(0) != 0)
+        if(getifaddrs(0))
           return 1;
 
   return 0;
@@ -42705,7 +42806,7 @@ printf %s "checking if getpeername can be linked... " >&6; }
 int main(void)
 {
 
-      if(getpeername(0, (void *)0, (void *)0) != 0)
+      if(getpeername(0, (void *)0, (void *)0))
         return 1;
 
   return 0;
@@ -42773,7 +42874,7 @@ printf %s "checking if getpeername is compilable... " >&6; }
 int main(void)
 {
 
-        if(getpeername(0, (void *)0, (void *)0) != 0)
+        if(getpeername(0, (void *)0, (void *)0))
           return 1;
 
   return 0;
@@ -42853,7 +42954,7 @@ printf %s "checking if getsockname can be linked... " >&6; }
 int main(void)
 {
 
-      if(getsockname(0, (void *)0, (void *)0) != 0)
+      if(getsockname(0, (void *)0, (void *)0))
         return 1;
 
   return 0;
@@ -42921,7 +43022,7 @@ printf %s "checking if getsockname is compilable... " >&6; }
 int main(void)
 {
 
-        if(getsockname(0, (void *)0, (void *)0) != 0)
+        if(getsockname(0, (void *)0, (void *)0))
           return 1;
 
   return 0;
@@ -43408,7 +43509,7 @@ printf %s "checking if ioctl is compilable... " >&6; }
 int main(void)
 {
 
-        if(ioctl(0, 0, 0) != 0)
+        if(ioctl(0, 0, 0))
           return 1;
 
   return 0;
@@ -43473,7 +43574,7 @@ int main(void)
 {
 
         int flags = 0;
-        if(ioctl(0, FIONBIO, &flags) != 0)
+        if(ioctl(0, FIONBIO, &flags))
           return 1;
 
   return 0;
@@ -43546,7 +43647,7 @@ int main(void)
 {
 
         struct ifreq ifr;
-        if(ioctl(0, SIOCGIFADDR, &ifr) != 0)
+        if(ioctl(0, SIOCGIFADDR, &ifr))
           return 1;
 
   return 0;
@@ -43625,7 +43726,7 @@ printf %s "checking if ioctlsocket can be linked... " >&6; }
 int main(void)
 {
 
-      if(ioctlsocket(0, 0, 0) != 0)
+      if(ioctlsocket(0, 0, 0))
         return 1;
 
   return 0;
@@ -43689,7 +43790,7 @@ printf %s "checking if ioctlsocket is compilable... " >&6; }
 int main(void)
 {
 
-        if(ioctlsocket(0, 0, 0) != 0)
+        if(ioctlsocket(0, 0, 0))
           return 1;
 
   return 0;
@@ -43757,7 +43858,7 @@ int main(void)
 {
 
         unsigned long flags = 0;
-        if(ioctlsocket(0, FIONBIO, &flags) != 0)
+        if(ioctlsocket(0, FIONBIO, &flags))
           return 1;
 
   return 0;
@@ -43835,7 +43936,7 @@ printf %s "checking if IoctlSocket can be linked... " >&6; }
 int main(void)
 {
 
-      if(IoctlSocket(0, 0, 0) != 0)
+      if(IoctlSocket(0, 0, 0))
         return 1;
 
   return 0;
@@ -43871,7 +43972,7 @@ printf %s "checking if IoctlSocket is compilable... " >&6; }
 int main(void)
 {
 
-        if(IoctlSocket(0, 0, 0) != 0)
+        if(IoctlSocket(0, 0, 0))
           return 1;
 
   return 0;
@@ -43939,7 +44040,7 @@ int main(void)
 {
 
         long flags = 0;
-        if(IoctlSocket(0, FIONBIO, &flags) != 0)
+        if(IoctlSocket(0, FIONBIO, &flags))
           return 1;
 
   return 0;
@@ -44096,7 +44197,7 @@ int main(void)
 
         time_t clock = 1170352587;
         struct tm result;
-        if(localtime_r(&clock, &result) != 0)
+        if(localtime_r(&clock, &result))
           return 1;
         (void)result;
 
@@ -44334,7 +44435,7 @@ printf %s "checking if memrchr seems a macro... " >&6; }
 int main(void)
 {
 
-        if(memrchr("", 0, 0) != 0)
+        if(memrchr("", 0, 0))
           return 1;
 
   return 0;
@@ -44400,7 +44501,7 @@ printf %s "checking if memrchr is compilable... " >&6; }
 int main(void)
 {
 
-        if(memrchr("", 0, 0) != 0)
+        if(memrchr("", 0, 0))
           return 1;
 
   return 0;
@@ -44566,7 +44667,7 @@ printf %s "checking if sigaction is compilable... " >&6; }
 int main(void)
 {
 
-        if(sigaction(0, 0, 0) != 0)
+        if(sigaction(0, 0, 0))
           return 1;
 
   return 0;
@@ -44715,7 +44816,7 @@ printf %s "checking if siginterrupt is compilable... " >&6; }
 int main(void)
 {
 
-        if(siginterrupt(0, 0) != 0)
+        if(siginterrupt(0, 0))
           return 1;
 
   return 0;
@@ -44864,7 +44965,7 @@ printf %s "checking if signal is compilable... " >&6; }
 int main(void)
 {
 
-        if(signal(0, 0) != 0)
+        if(signal(0, 0))
           return 1;
 
   return 0;
@@ -45004,7 +45105,7 @@ int main(void)
 {
 
         sigjmp_buf env;
-        if(sigsetjmp(env, 0) != 0)
+        if(sigsetjmp(env, 0))
           return 1;
 
   return 0;
@@ -45071,7 +45172,7 @@ int main(void)
 {
 
         sigjmp_buf env;
-        if(sigsetjmp(env, 0) != 0)
+        if(sigsetjmp(env, 0))
           return 1;
 
   return 0;
@@ -45149,7 +45250,7 @@ printf %s "checking if socket can be linked... " >&6; }
 int main(void)
 {
 
-      if(socket(0, 0, 0) != 0)
+      if(socket(0, 0, 0))
         return 1;
 
   return 0;
@@ -45217,7 +45318,7 @@ printf %s "checking if socket is compilable... " >&6; }
 int main(void)
 {
 
-        if(socket(0, 0, 0) != 0)
+        if(socket(0, 0, 0))
           return 1;
 
   return 0;
@@ -45367,7 +45468,7 @@ int main(void)
 {
 
         int sv[2];
-        if(socketpair(0, 0, 0, sv) != 0)
+        if(socketpair(0, 0, 0, sv))
           return 1;
 
   return 0;
@@ -45524,7 +45625,7 @@ int main(void)
 {
 
         char s[1];
-        if(strerror_r(0, s, 0) != 0)
+        if(strerror_r(0, s, 0))
           return 1;
 
   return 0;
@@ -45565,7 +45666,7 @@ int main(void)
 {
 
             char s[1];
-            if(strerror_r(0, s, 0) != 0)
+            if(strerror_r(0, s, 0))
               return 1;
             (void)s;
 
@@ -45731,7 +45832,7 @@ int main(void)
 {
 
             char s[1];
-            if(strerror_r(0, s, 0) != 0)
+            if(strerror_r(0, s, 0))
               return 1;
             (void)s;
 
@@ -45945,7 +46046,6 @@ printf "%s\n" "no" >&6; }
     { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: cannot determine strerror_r() style: edit lib/curl_config.h manually." >&5
 printf "%s\n" "$as_me: WARNING: cannot determine strerror_r() style: edit lib/curl_config.h manually." >&2;}
   fi
-
 
 
 case $host in
@@ -46243,7 +46343,7 @@ int main(void)
 
         char ipv4res[sizeof("255.255.255.255")];
         unsigned char ipv4a[5] = "";
-        if(inet_ntop(0, ipv4a, ipv4res, 0) != 0)
+        if(inet_ntop(0, ipv4a, ipv4res, 0))
           return 1;
 
   return 0;
@@ -46312,7 +46412,7 @@ int main(void)
           return 1; /* fail */
         if(!ipv4ptr[0])
           return 1; /* fail */
-        if(memcmp(ipv4res, "192.168.100.1", 13) != 0)
+        if(memcmp(ipv4res, "192.168.100.1", 13))
           return 1; /* fail */
         /* - */
         ipv6res[0] = '\0';
@@ -46336,7 +46436,7 @@ int main(void)
           return 1; /* fail */
         if(!ipv6ptr[0])
           return 1; /* fail */
-        if(memcmp(ipv6res, "fe80::214:4fff:fe0b:76c8", 24) != 0)
+        if(memcmp(ipv6res, "fe80::214:4fff:fe0b:76c8", 24))
           return 1; /* fail */
         /* - */
         return 0;
@@ -46406,7 +46506,7 @@ int main(void)
           return 1; /* fail */
         if(!ipv4ptr[0])
           return 1; /* fail */
-        if(memcmp(ipv4res, "192.168.100.1", 13) != 0)
+        if(memcmp(ipv4res, "192.168.100.1", 13))
           return 1; /* fail */
         /* - */
         ipv6res[0] = '\0';
@@ -46430,7 +46530,7 @@ int main(void)
           return 1; /* fail */
         if(!ipv6ptr[0])
           return 1; /* fail */
-        if(memcmp(ipv6res, "fe80::214:4fff:fe0b:76c8", 24) != 0)
+        if(memcmp(ipv6res, "fe80::214:4fff:fe0b:76c8", 24))
           return 1; /* fail */
         /* - */
         return 0;
@@ -46594,7 +46694,7 @@ int main(void)
 
         unsigned char ipv4a[4 + 1] = "";
         const char *ipv4src = "192.168.100.1";
-        if(inet_pton(0, ipv4src, ipv4a) != 0)
+        if(inet_pton(0, ipv4src, ipv4a))
           return 1;
 
   return 0;
@@ -46926,7 +47026,7 @@ printf %s "checking if strcasecmp is compilable... " >&6; }
 int main(void)
 {
 
-        if(strcasecmp("", "") != 0)
+        if(strcasecmp("", ""))
           return 1;
 
   return 0;
@@ -47075,7 +47175,7 @@ printf %s "checking if strcmpi is compilable... " >&6; }
 int main(void)
 {
 
-        if(strcmpi(0, 0) != 0)
+        if(strcmpi(0, 0))
           return 1;
 
   return 0;
@@ -47224,7 +47324,7 @@ printf %s "checking if stricmp is compilable... " >&6; }
 int main(void)
 {
 
-        if(stricmp(0, 0) != 0)
+        if(stricmp(0, 0))
           return 1;
 
   return 0;
@@ -47280,6 +47380,166 @@ printf "%s\n" "no" >&6; }
     curl_cv_func_stricmp="no"
   fi
 
+
+
+
+
+  tst_links_memset_s="unknown"
+  tst_proto_memset_s="unknown"
+  tst_compi_memset_s="unknown"
+  tst_allow_memset_s="unknown"
+
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking if memset_s can be linked" >&5
+printf %s "checking if memset_s can be linked... " >&6; }
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+
+#define memset_s innocuous_memset_s
+#ifdef __STDC__
+#  include <limits.h>
+#else
+#  include <assert.h>
+#endif
+#undef memset_s
+#ifdef __cplusplus
+extern "C"
+#endif
+char memset_s ();
+#if defined __stub_memset_s || defined __stub___memset_s
+#error force compilation error
+#endif
+
+int main(void)
+{
+return memset_s ();
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+printf "%s\n" "yes" >&6; }
+    tst_links_memset_s="yes"
+
+else $as_nop
+
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+    tst_links_memset_s="no"
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+
+  if test "$tst_links_memset_s" = "yes"; then
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking if memset_s is prototyped" >&5
+printf %s "checking if memset_s is prototyped... " >&6; }
+    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+      $curl_includes_string
+
+_ACEOF
+if (eval "$ac_cpp conftest.$ac_ext") 2>&5 |
+  $EGREP "memset_s" >/dev/null 2>&1
+then :
+
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+printf "%s\n" "yes" >&6; }
+      tst_proto_memset_s="yes"
+
+else $as_nop
+
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+      tst_proto_memset_s="no"
+
+fi
+rm -rf conftest*
+
+  fi
+
+  if test "$tst_proto_memset_s" = "yes"; then
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking if memset_s is compilable" >&5
+printf %s "checking if memset_s is compilable... " >&6; }
+    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+
+        $curl_includes_string
+
+int main(void)
+{
+
+        char buf[2];
+        if(memset_s(buf, sizeof(buf), 0, sizeof(buf)))
+          return 1;
+
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"
+then :
+
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+printf "%s\n" "yes" >&6; }
+      tst_compi_memset_s="yes"
+
+else $as_nop
+
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+      tst_compi_memset_s="no"
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
+  fi
+
+  if test "$tst_compi_memset_s" = "yes"; then
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking if memset_s usage allowed" >&5
+printf %s "checking if memset_s usage allowed... " >&6; }
+    if test "x$curl_disallow_memset_s" != "xyes"; then
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+printf "%s\n" "yes" >&6; }
+      tst_allow_memset_s="yes"
+    else
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+      tst_allow_memset_s="no"
+    fi
+  fi
+
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking if memset_s might be used" >&5
+printf %s "checking if memset_s might be used... " >&6; }
+  if test "$tst_links_memset_s" = "yes" &&
+     test "$tst_proto_memset_s" = "yes" &&
+     test "$tst_compi_memset_s" = "yes" &&
+     test "$tst_allow_memset_s" = "yes"; then
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+printf "%s\n" "yes" >&6; }
+
+printf "%s\n" "#define HAVE_MEMSET_S 1" >>confdefs.h
+
+    curl_cv_func_memset_s="yes"
+  else
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+    curl_cv_func_memset_s="no"
+  fi
+
+  if test "$curl_cv_func_memset_s" = "no"; then
+    ac_fn_c_check_func "$LINENO" "memset_explicit" "ac_cv_func_memset_explicit"
+if test "x$ac_cv_func_memset_explicit" = xyes
+then :
+  printf "%s\n" "#define HAVE_MEMSET_EXPLICIT 1" >>confdefs.h
+
+fi
+
+  fi
 fi
 
 if test -z "$ssl_backends"; then
@@ -49238,9 +49498,32 @@ printf "%s\n" "\"SSL session im-/export enabled\"" >&6; }
   fi
 fi
 
+if test "$want_proxy_http3" = "yes"; then
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether HTTP/3 proxy support is available" >&5
+printf %s "checking whether HTTP/3 proxy support is available... " >&6; }
 
-  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether hiding of library internal symbols will actually happen" >&5
-printf %s "checking whether hiding of library internal symbols will actually happen... " >&6; }
+  if test "$CURL_DISABLE_PROXY" = "1"; then
+    as_fn_error $? "--enable-proxy-http3 requires proxy support" "$LINENO" 5
+  elif test "$CURL_DISABLE_HTTP" = "1"; then
+    as_fn_error $? "--enable-proxy-http3 requires HTTP support" "$LINENO" 5
+  elif test "$USE_NGTCP2_H3" != "1"; then
+    as_fn_error $? "--enable-proxy-http3 requires ngtcp2 + nghttp3" "$LINENO" 5
+  elif test "x$OPENSSL_ENABLED" != "x1"; then
+    as_fn_error $? "--enable-proxy-http3 currently requires OpenSSL" "$LINENO" 5
+  else
+
+printf "%s\n" "#define USE_PROXY_HTTP3 1" >>confdefs.h
+
+    USE_PROXY_HTTP3=1
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+printf "%s\n" "yes" >&6; }
+    experimental="$experimental proxy-HTTP3"
+  fi
+fi
+
+
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether hiding of library internal symbols does actually happen" >&5
+printf %s "checking whether hiding of library internal symbols does actually happen... " >&6; }
   CFLAG_CURL_SYMBOL_HIDING=""
   doing_symbol_hiding="no"
   if test "$want_symbol_hiding" = "yes" &&
@@ -49365,6 +49648,10 @@ fi
 
 if test "$curl_psl_msg" = "enabled"; then
   SUPPORT_FEATURES="$SUPPORT_FEATURES PSL"
+fi
+
+if test "$USE_PROXY_HTTP3" = "1"; then
+  SUPPORT_FEATURES="$SUPPORT_FEATURES proxy-HTTP3"
 fi
 
 if test "$curl_gsasl_msg" = "enabled"; then
@@ -52481,11 +52768,11 @@ SUPPORT_PROTOCOLS_LOWER=`echo "$SUPPORT_PROTOCOLS" | tr A-Z a-z`
   Verbose errors:   ${curl_verbose_msg}
   Code coverage:    ${curl_coverage_msg}
   SSPI:             ${curl_sspi_msg}
-  ca native:        ${ca_native}
-  ca cert bundle:   ${ca}${ca_warning}
-  ca cert path:     ${capath}${capath_warning}
-  ca cert embed:    ${CURL_CA_EMBED_msg}
-  ca fallback:      ${with_ca_fallback}
+  CA native:        ${ca_native}
+  CA cert bundle:   ${ca}${ca_warning}
+  CA cert path:     ${capath}${capath_warning}
+  CA cert embed:    ${CURL_CA_EMBED_msg}
+  CA fallback:      ${with_ca_fallback}
   LDAP:             ${curl_ldap_msg}
   LDAPS:            ${curl_ldaps_msg}
   IPFS/IPNS:        ${curl_ipfs_msg}
@@ -52497,6 +52784,7 @@ SUPPORT_PROTOCOLS_LOWER=`echo "$SUPPORT_PROTOCOLS" | tr A-Z a-z`
   HTTP1:            ${curl_h1_msg}
   HTTP2:            ${curl_h2_msg}
   HTTP3:            ${curl_h3_msg}
+  proxy-HTTP3:      ${curl_proxy_http3_msg}
   ECH:              ${curl_ech_msg}
   HTTPS RR:         ${curl_httpsrr_msg}
   SSLS-EXPORT:      ${curl_ssls_export_msg}
@@ -52536,11 +52824,11 @@ printf "%s\n" "$as_me: Configured to build curl/libcurl:
   Verbose errors:   ${curl_verbose_msg}
   Code coverage:    ${curl_coverage_msg}
   SSPI:             ${curl_sspi_msg}
-  ca native:        ${ca_native}
-  ca cert bundle:   ${ca}${ca_warning}
-  ca cert path:     ${capath}${capath_warning}
-  ca cert embed:    ${CURL_CA_EMBED_msg}
-  ca fallback:      ${with_ca_fallback}
+  CA native:        ${ca_native}
+  CA cert bundle:   ${ca}${ca_warning}
+  CA cert path:     ${capath}${capath_warning}
+  CA cert embed:    ${CURL_CA_EMBED_msg}
+  CA fallback:      ${with_ca_fallback}
   LDAP:             ${curl_ldap_msg}
   LDAPS:            ${curl_ldaps_msg}
   IPFS/IPNS:        ${curl_ipfs_msg}
@@ -52552,6 +52840,7 @@ printf "%s\n" "$as_me: Configured to build curl/libcurl:
   HTTP1:            ${curl_h1_msg}
   HTTP2:            ${curl_h2_msg}
   HTTP3:            ${curl_h3_msg}
+  proxy-HTTP3:      ${curl_proxy_http3_msg}
   ECH:              ${curl_ech_msg}
   HTTPS RR:         ${curl_httpsrr_msg}
   SSLS-EXPORT:      ${curl_ssls_export_msg}
@@ -52579,15 +52868,13 @@ fi
     *-*-*bsd*)
       curl_pflags="${curl_pflags} BSD";;
   esac
-  case $host in
-    *-*-android*)
-      curl_pflags="${curl_pflags} ANDROID"
-      ANDROID_PLATFORM_LEVEL=`echo "$host_os" | $SED -ne 's/.*android\([0-9]*\).*/\1/p'`
-      if test -n "${ANDROID_PLATFORM_LEVEL}"; then
-        curl_pflags="${curl_pflags}-${ANDROID_PLATFORM_LEVEL}"
-      fi
-      ;;
-  esac
+  if test "$curl_cv_android" = "yes"; then
+    curl_pflags="${curl_pflags} ANDROID"
+    ANDROID_PLATFORM_LEVEL=`echo "$host_os" | $SED -ne 's/.*android\([0-9]*\).*/\1/p'`
+    if test -n "${ANDROID_PLATFORM_LEVEL}"; then
+      curl_pflags="${curl_pflags}-${ANDROID_PLATFORM_LEVEL}"
+    fi
+  fi
   if test "$curl_cv_native_windows" = "yes"; then
     curl_pflags="${curl_pflags} WIN32"
   fi

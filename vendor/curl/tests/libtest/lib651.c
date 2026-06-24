@@ -53,7 +53,7 @@ static CURLcode test_lib651(const char *URL)
                         CURLFORM_COPYCONTENTS, testbuf,
                         CURLFORM_END);
   if(formrc)
-    curl_mprintf("curl_formadd(1) = %d\n", formrc);
+    curl_mprintf("curl_formadd(1) = %d\n", (int)formrc);
 
   curl = curl_easy_init();
   if(!curl) {
@@ -64,18 +64,18 @@ static CURLcode test_lib651(const char *URL)
   }
 
   /* First set the URL that is about to receive our POST. */
-  test_setopt(curl, CURLOPT_URL, URL);
+  easy_setopt(curl, CURLOPT_URL, URL);
 
   /* send a multi-part formpost */
-  test_setopt(curl, CURLOPT_HTTPPOST, formpost);
+  easy_setopt(curl, CURLOPT_HTTPPOST, formpost);
 
   /* get verbose debug output please */
-  test_setopt(curl, CURLOPT_VERBOSE, 1L);
+  easy_setopt(curl, CURLOPT_VERBOSE, 1L);
 
   /* include headers in the output */
-  test_setopt(curl, CURLOPT_HEADER, 1L);
+  easy_setopt(curl, CURLOPT_HEADER, 1L);
 
-  /* Perform the request, result will get the return code */
+  /* Perform the request, result gets the return code */
   result = curl_easy_perform(curl);
 
 test_cleanup:

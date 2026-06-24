@@ -64,7 +64,7 @@ class TestSSLUse:
 
     @pytest.fixture(autouse=True, scope='class')
     def _class_scope(self, env, httpd, nghttpx):
-        env.make_data_file(indir=httpd.docs_dir, fname="data-10k", fsize=10*1024)
+        env.make_data_file(indir=httpd.docs_dir, fname="data-10k", fsize=10 * 1024)
 
     def test_17_01_sslinfo_plain(self, env: Env, httpd):
         proto = 'http/1.1'
@@ -127,7 +127,7 @@ class TestSSLUse:
             # the SNI the server received is without trailing dot
             assert r.json['SSL_TLS_SNI'] == env.domain1, f'{r.json}'
 
-    # use hostname with double trailing dot, verify handshake
+    # use hostname with double trailing dot
     @pytest.mark.parametrize("proto", Env.http_protos())
     def test_17_04_double_dot(self, env: Env, proto, httpd, nghttpx):
         curl = CurlClient(env=env)
@@ -142,10 +142,8 @@ class TestSSLUse:
             if proto != 'h3':  # we proxy h3
                 assert r.json['SSL_TLS_SNI'] == env.domain1, f'{r.json}'
             assert False, f'should not have succeeded: {r.json}'
-        # 7 - Rustls rejects a servername with .. during setup
-        # 35 - LibreSSL rejects setting an SNI name with trailing dot
-        # 60 - peer name matching failed against certificate
-        assert r.exit_code in [7, 35, 60], f'{r}'
+        # 3 - not allowed in the URL
+        assert r.exit_code in [3], f'{r}'
 
     # use ip address for connect
     @pytest.mark.parametrize("proto", Env.http_protos())
@@ -245,10 +243,10 @@ class TestSSLUse:
                                succeed13, succeed12):
         # to test setting cipher suites, the AES 256 ciphers are disabled in the test server
         httpd.set_extra_config('base', [
-            'SSLCipherSuite SSL'
-            ' ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256'
+            'SSLCipherSuite SSL' +
+            ' ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256' +
             ':ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305',
-            'SSLCipherSuite TLSv1.3'
+            'SSLCipherSuite TLSv1.3' +
             ' TLS_AES_128_GCM_SHA256:TLS_CHACHA20_POLY1305_SHA256',
             f'SSLProtocol {tls_proto}'
         ])
@@ -527,10 +525,10 @@ class TestSSLUse:
     def test_17_18_gnutls_priority(self, env: Env, httpd, configures_httpd, priority, tls_proto, ciphers, success):
         # to test setting cipher suites, the AES 256 ciphers are disabled in the test server
         httpd.set_extra_config('base', [
-            'SSLCipherSuite SSL'
-            ' ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256'
+            'SSLCipherSuite SSL' +
+            ' ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256' +
             ':ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305',
-            'SSLCipherSuite TLSv1.3'
+            'SSLCipherSuite TLSv1.3' +
             ' TLS_AES_128_GCM_SHA256:TLS_CHACHA20_POLY1305_SHA256',
         ])
         httpd.reload_if_config_changed()

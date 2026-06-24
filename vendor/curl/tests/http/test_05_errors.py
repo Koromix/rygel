@@ -43,7 +43,7 @@ class TestErrors:
     @pytest.mark.parametrize("proto", Env.http_protos())
     def test_05_01_partial_1(self, env: Env, httpd, nghttpx, proto):
         if proto == 'h3' and env.curl_uses_lib('quiche') and \
-                not env.curl_lib_version_at_least('quiche', '0.24.8'):
+                not env.curl_lib_version_at_least('quiche', '0.29.0'):
             pytest.skip("quiche issue #2277 not fixed")
         count = 1
         curl = CurlClient(env=env)
@@ -64,7 +64,7 @@ class TestErrors:
     @pytest.mark.parametrize("proto", Env.http_mplx_protos())
     def test_05_02_partial_20(self, env: Env, httpd, nghttpx, proto):
         if proto == 'h3' and env.curl_uses_lib('quiche') and \
-                not env.curl_lib_version_at_least('quiche', '0.24.8'):
+                not env.curl_lib_version_at_least('quiche', '0.29.0'):
             pytest.skip("quiche issue #2277 not fixed")
         count = 20
         curl = CurlClient(env=env)
@@ -100,7 +100,7 @@ class TestErrors:
         assert r.stats[0]['http_version'] == '1.1', r.dump_logs()
 
     # On the URL used here, Apache is doing an "unclean" TLS shutdown,
-    # meaning it sends no shutdown notice and just closes TCP.
+    # meaning it sends no shutdown notice and closes TCP.
     # The HTTP response delivers a body without Content-Length. We expect:
     # - http/1.0 to fail since it relies on a clean connection close to
     #   detect the end of the body
@@ -197,6 +197,7 @@ class TestErrors:
                     conn.recv(1)  # wait for ClientHello
                     conn.close()
                 except Exception:
+                    # ignore expected socket error
                     pass
 
             t = threading.Thread(target=accept_and_close)

@@ -66,7 +66,7 @@ crypto
 digest
 </features>
 <name>
-HTTP PUT with --anyauth authorization (picking Digest)
+HTTP PUT with --anyauth, picking Digest. Persistent connection.
 </name>
 <command>
 http://%HOSTIP:%HTTPPORT/%TESTNUMBER -T %LOGDIR/put%TESTNUMBER -u testuser:testpass --anyauth

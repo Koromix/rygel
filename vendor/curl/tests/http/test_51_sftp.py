@@ -41,10 +41,10 @@ class TestSftp:
 
     @pytest.fixture(autouse=True, scope='class')
     def _class_scope(self, env, sshd):
-        env.make_data_file(indir=sshd.home_dir, fname="data-10k", fsize=10*1024)
-        env.make_data_file(indir=sshd.home_dir, fname="data-10m", fsize=10*1024*1024)
-        env.make_data_file(indir=env.gen_dir, fname="data-10k", fsize=10*1024)
-        env.make_data_file(indir=env.gen_dir, fname="data-10m", fsize=10*1024*1024)
+        env.make_data_file(indir=sshd.home_dir, fname="data-10k", fsize=10 * 1024)
+        env.make_data_file(indir=sshd.home_dir, fname="data-10m", fsize=10 * 1024 * 1024)
+        env.make_data_file(indir=env.gen_dir, fname="data-10k", fsize=10 * 1024)
+        env.make_data_file(indir=env.gen_dir, fname="data-10m", fsize=10 * 1024 * 1024)
 
     def test_51_01_insecure(self, env: Env, sshd: Sshd):
         curl = CurlClient(env=env)
@@ -191,8 +191,10 @@ class TestSftp:
             dfile = client.download_file(i)
             assert os.path.exists(dfile)
             if complete and not filecmp.cmp(srcfile, dfile, shallow=False):
-                diff = "".join(difflib.unified_diff(a=open(srcfile).readlines(),
-                                                    b=open(dfile).readlines(),
+                with open(srcfile) as fa, open(dfile) as fb:
+                    a = fa.readlines()
+                    b = fb.readlines()
+                diff = "".join(difflib.unified_diff(a=a, b=b,
                                                     fromfile=srcfile,
                                                     tofile=dfile,
                                                     n=1))
@@ -202,8 +204,10 @@ class TestSftp:
         assert os.path.exists(srcfile)
         assert os.path.exists(destfile)
         if not filecmp.cmp(srcfile, destfile, shallow=False):
-            diff = "".join(difflib.unified_diff(a=open(srcfile).readlines(),
-                                                b=open(destfile).readlines(),
+            with open(srcfile) as fa, open(destfile) as fb:
+                a = fa.readlines()
+                b = fb.readlines()
+            diff = "".join(difflib.unified_diff(a=a, b=b,
                                                 fromfile=srcfile,
                                                 tofile=destfile,
                                                 n=1))

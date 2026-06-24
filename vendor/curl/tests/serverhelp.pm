@@ -67,7 +67,7 @@ use testutil qw(
 our $logfile;  # server log filename, for logmsg
 
 #***************************************************************************
-# Just for convenience, test harness uses 'https' and 'httptls' literals as
+# For convenience, test harness uses 'https' and 'httptls' literals as
 # values for 'proto' variable in order to differentiate different servers.
 # 'https' literal is used for stunnel based https test servers, and 'httptls'
 # is used for non-stunnel https test servers.
@@ -77,8 +77,7 @@ our $logfile;  # server log filename, for logmsg
 #
 sub logmsg {
     my ($seconds, $usec) = Time::HiRes::gettimeofday();
-    my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) =
-        localtime($seconds);
+    my ($sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst) = localtime($seconds);
     my $now = sprintf("%02d:%02d:%02d.%06d ", $hour, $min, $sec, $usec);
     # we see warnings on Windows run that $logfile is used uninitialized
     # TODO: not found yet where this comes from

@@ -97,7 +97,7 @@ pending release:
 - Release candidate two (**rc2**) ships nine days later, sixteen days before
   the release. On a Monday. Tagged like `rc-7_34_0-2`.
 
-- Release candidate tree (**rc3**) ships nine days later, seven days before
+- Release candidate three (**rc3**) ships nine days later, seven days before
   the release. On a Wednesday. Tagged like `rc-7_34_0-3`.
 
 Release candidate tarballs are ephemeral and each such tarball is only kept
@@ -125,11 +125,9 @@ push for it.
 
 Based on the description above, here are some planned future release dates:
 
-- March 11, 2026
-- April 29, 2026
 - June 24, 2026
-- August 19, 2026
-- October 14, 2026
-- December 9, 2026
-- February 3, 2027
-- March 31, 2027
+- September 2, 2026
+- October 28, 2026
+- December 23, 2026
+- February 17, 2027
+- April 14, 2027

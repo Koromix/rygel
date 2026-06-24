@@ -41,16 +41,16 @@ sub errout {
 
 if($ARGV[0] eq "prepare") {
     my $dirname = $ARGV[1];
-    mkdir $dirname || errout "$!";
+    mkdir $dirname or errout "$!";
     chdir $dirname;
 
     # Create the files in alphabetical order, to increase the chances
     # of receiving a consistent set of directory contents regardless
     # of whether the server alphabetizes the results or not.
-    mkdir "asubdir" || errout "$!";
+    mkdir "asubdir" or errout "$!";
     chmod 0777, "asubdir";
 
-    open(FILE, ">plainfile.txt") || errout "$!";
+    open(FILE, ">plainfile.txt") or errout "$!";
     binmode FILE;
     print FILE "Test file to support curl test suite\n";
     close(FILE);
@@ -59,7 +59,7 @@ if($ARGV[0] eq "prepare") {
     utime time, timegm(0,0,12,1,0,100), "plainfile.txt";
     chmod 0666, "plainfile.txt";
 
-    open(FILE, ">emptyfile.txt") || errout "$!";
+    open(FILE, ">emptyfile.txt") or errout "$!";
     binmode FILE;
     close(FILE);
     # The mtime is specifically chosen to be an even number so that it can be
@@ -67,7 +67,7 @@ if($ARGV[0] eq "prepare") {
     utime time, timegm(0,0,12,1,0,100), "emptyfile.txt";
     chmod 0666, "emptyfile.txt";
 
-    open(FILE, ">rofile.txt") || errout "$!";
+    open(FILE, ">rofile.txt") or errout "$!";
     binmode FILE;
     print FILE "Read-only test file to support curl test suite\n";
     close(FILE);
@@ -94,7 +94,7 @@ elsif($ARGV[0] eq "postprocess") {
     unlink "$dirname/plainfile.txt";
     rmdir "$dirname/asubdir";
 
-    rmdir $dirname || die "$!";
+    rmdir $dirname or die "$!";
 
     if($#ARGV >= 3) {  # Verify mtime if requested
         my $checkfile = $ARGV[2];
@@ -120,7 +120,7 @@ elsif($ARGV[0] eq "postprocess") {
         # -r-?r-?r-?   12 U         U              47 Dec 31  2000 rofile.txt
 
         my @canondir;
-        open(IN, "<$logfile") || die "$!";
+        open(IN, "<$logfile") or die "$!";
         while(<IN>) {
             /^(.)(..).(..).(..).\s*(\S+)\s+\S+\s+\S+\s+(\S+)\s+(\S+\s+\S+\s+\S+)\s+(.*)$/;
             if($1 eq "d") {
@@ -140,7 +140,7 @@ elsif($ARGV[0] eq "postprocess") {
                 my $line = sprintf("%s%s???????%5d U         U %15d %s %s\n", $1,$2,$5,$6,$7,$8);
                 push @canondir, $line;
             } else {
-                # Unexpected format; just pass it through and let the test fail
+                # Unexpected format; pass it through and let the test fail
                 push @canondir, $_;
             }
         }
@@ -148,7 +148,7 @@ elsif($ARGV[0] eq "postprocess") {
 
         @canondir = sort {substr($a, 57) cmp substr($b, 57)} @canondir;
         my $newfile = $logfile . ".new";
-        open(OUT, ">$newfile") || die "$!";
+        open(OUT, ">$newfile") or die "$!";
         print OUT join('', @canondir);
         close(OUT);
 

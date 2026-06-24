@@ -134,7 +134,7 @@ $ write pdsc "   end if;"
 $!
 $write pdsc "   software VMSPORTS ''base' ZLIB ;"
 $write pdsc -
-    "   if (not <software VMSPORTS ''base' ZLIB version minimum V1.2-8>) ;"
+    "   if (not <software VMSPORTS ''base' ZLIB version minimum v1.2-8>) ;"
 $write pdsc "      error NEED_ZLIB;"
 $write pdsc "   end if;"
 $!
@@ -425,7 +425,7 @@ $           destname = "[gnv.beta" + destname - "[gnv.usr"
 $       endif
 $   endif
 $!
-$!  It should be just a directory then.
+$!  It should be a directory then.
 $!-------------------------------------
 $   filedir = f$edit(f$parse(filename,,,"DIRECTORY"), "lowercase")
 $!  If this is not a directory then start processing files.

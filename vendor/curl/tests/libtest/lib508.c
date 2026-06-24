@@ -36,13 +36,13 @@ static size_t t508_read_cb(char *ptr, size_t size, size_t nmemb, void *userp)
     return 0;
 
   if(pooh->sizeleft) {
-    *ptr = pooh->readptr[0]; /* copy one single byte */
-    pooh->readptr++;                 /* advance pointer */
-    pooh->sizeleft--;                /* less data left */
-    return 1;                        /* we return 1 byte at a time! */
+    *ptr = pooh->readptr[0];  /* copy one single byte */
+    pooh->readptr++;          /* advance pointer */
+    pooh->sizeleft--;         /* less data left */
+    return 1;                 /* we return 1 byte at a time! */
   }
 
-  return 0;                         /* no more data left to deliver */
+  return 0;                   /* no more data left to deliver */
 }
 
 static CURLcode test_lib508(const char *URL)
@@ -56,7 +56,7 @@ static CURLcode test_lib508(const char *URL)
   struct t508_WriteThis pooh;
 
   pooh.readptr = testdata;
-  pooh.sizeleft = strlen(testdata);
+  pooh.sizeleft = sizeof(testdata) - 1;
 
   if(curl_global_init(CURL_GLOBAL_ALL) != CURLE_OK) {
     curl_mfprintf(stderr, "curl_global_init() failed\n");
@@ -71,27 +71,27 @@ static CURLcode test_lib508(const char *URL)
   }
 
   /* First set the URL that is about to receive our POST. */
-  test_setopt(curl, CURLOPT_URL, URL);
+  easy_setopt(curl, CURLOPT_URL, URL);
 
   /* Now specify we want to POST data */
-  test_setopt(curl, CURLOPT_POST, 1L);
+  easy_setopt(curl, CURLOPT_POST, 1L);
 
   /* Set the expected POST size */
-  test_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)pooh.sizeleft);
+  easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)pooh.sizeleft);
 
   /* we want to use our own read function */
-  test_setopt(curl, CURLOPT_READFUNCTION, t508_read_cb);
+  easy_setopt(curl, CURLOPT_READFUNCTION, t508_read_cb);
 
   /* pointer to pass to our read function */
-  test_setopt(curl, CURLOPT_READDATA, &pooh);
+  easy_setopt(curl, CURLOPT_READDATA, &pooh);
 
   /* get verbose debug output please */
-  test_setopt(curl, CURLOPT_VERBOSE, 1L);
+  easy_setopt(curl, CURLOPT_VERBOSE, 1L);
 
   /* include headers in the output */
-  test_setopt(curl, CURLOPT_HEADER, 1L);
+  easy_setopt(curl, CURLOPT_HEADER, 1L);
 
-  /* Perform the request, result will get the return code */
+  /* Perform the request, result gets the return code */
   result = curl_easy_perform(curl);
 
 test_cleanup:

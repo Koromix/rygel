@@ -687,7 +687,7 @@ until [curl pull request 6021](https://github.com/curl/curl/pull/6021) brought
 the functionality with the libssh2 backend. Presumably, this support can/could
 be added for the libssh backend as well.
 
-## SFTP with `SCP://`
+## SFTP with `scp://`
 
 OpenSSH 9 switched their `scp` tool to speak SFTP under the hood. Going
 forward it might be worth having curl or libcurl attempt SFTP if SCP fails to
@@ -791,7 +791,7 @@ done, and thus maintain its connection pool, DNS cache and more.
 
 Consider a command line option that can make curl do multiple serial requests
 while acknowledging server specified [rate
-limits](https://datatracker.ietf.org/doc/draft-ietf-httpapi-ratelimit-headers/).
+limits](https://datatracker.ietf.org/doc/html/draft-ietf-httpapi-ratelimit-headers/).
 
 See [curl issue 5406](https://github.com/curl/curl/issues/5406)
 

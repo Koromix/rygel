@@ -370,6 +370,10 @@ static int Curl_gss_convert_in_place(OM_uint32 *minor_status, gss_buffer_t buf)
   return 0;
 }
 
+/* Max string input length is a precaution against abuse and to detect junk
+   input easier and better. */
+#define CURL_MAX_INPUT_LENGTH 8000000
+
 OM_uint32 Curl_gss_import_name_a(OM_uint32 *minor_status, gss_buffer_t in_name,
                                  gss_OID in_name_type, gss_name_t *out_name)
 {
@@ -381,7 +385,14 @@ OM_uint32 Curl_gss_import_name_a(OM_uint32 *minor_status, gss_buffer_t in_name,
     return gss_import_name(minor_status, in_name, in_name_type, out_name);
 
   memcpy((char *)&in, (char *)in_name, sizeof(in));
-  i = in.length;
+  if(in.length > CURL_MAX_INPUT_LENGTH) {
+    if(minor_status)
+      /* !checksrc! disable ERRNOVAR 1 */
+      *minor_status = ENOMEM;
+
+    return GSS_S_FAILURE;
+  }
+  i = (unsigned int)in.length;
 
   in.value = malloc(i + 1);
   if(!in.value) {
@@ -424,17 +435,17 @@ OM_uint32 Curl_gss_display_status_a(OM_uint32 *minor_status,
   return rc;
 }
 
-OM_uint32
-Curl_gss_init_sec_context_a(OM_uint32 *minor_status,
-                            gss_cred_id_t cred_handle,
-                            gss_ctx_id_t *context_handle,
-                            gss_name_t target_name, gss_OID mech_type,
-                            gss_flags_t req_flags, OM_uint32 time_req,
-                            gss_channel_bindings_t input_chan_bindings,
-                            gss_buffer_t input_token,
-                            gss_OID *actual_mech_type,
-                            gss_buffer_t output_token, gss_flags_t *ret_flags,
-                            OM_uint32 *time_rec)
+OM_uint32 Curl_gss_init_sec_context_a(
+  OM_uint32 *minor_status,
+  gss_cred_id_t cred_handle,
+  gss_ctx_id_t *context_handle,
+  gss_name_t target_name, gss_OID mech_type,
+  gss_flags_t req_flags, OM_uint32 time_req,
+  gss_channel_bindings_t input_chan_bindings,
+  gss_buffer_t input_token,
+  gss_OID *actual_mech_type,
+  gss_buffer_t output_token, gss_flags_t *ret_flags,
+  OM_uint32 *time_rec)
 {
   int rc;
   gss_buffer_desc in;
@@ -445,8 +456,15 @@ Curl_gss_init_sec_context_a(OM_uint32 *minor_status,
 
   if(inp) {
     if(inp->length && inp->value) {
-      unsigned int i = inp->length;
+      unsigned int i;
+      if(inp->length > CURL_MAX_INPUT_LENGTH) {
+        if(minor_status)
+          /* !checksrc! disable ERRNOVAR 1 */
+          *minor_status = ENOMEM;
 
+        return GSS_S_FAILURE;
+      }
+      i = (unsigned int)inp->length;
       in.value = malloc(i + 1);
       if(!in.value) {
         if(minor_status)

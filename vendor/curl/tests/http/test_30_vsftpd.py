@@ -64,20 +64,21 @@ class TestVsFTPD:
             os.makedirs(vsftpd.docs_dir)
         self._make_docs_file(docs_dir=vsftpd.docs_dir, fname='data-0k', fsize=0)
         self._make_docs_file(docs_dir=vsftpd.docs_dir, fname='data-1k', fsize=1024)
-        self._make_docs_file(docs_dir=vsftpd.docs_dir, fname='data-10k', fsize=10*1024)
-        self._make_docs_file(docs_dir=vsftpd.docs_dir, fname='data-1m', fsize=1024*1024)
-        self._make_docs_file(docs_dir=vsftpd.docs_dir, fname='data-10m', fsize=10*1024*1024)
+        self._make_docs_file(docs_dir=vsftpd.docs_dir, fname='data-10k', fsize=10 * 1024)
+        self._make_docs_file(docs_dir=vsftpd.docs_dir, fname='data-1m', fsize=1024 * 1024)
+        self._make_docs_file(docs_dir=vsftpd.docs_dir, fname='data-10m', fsize=10 * 1024 * 1024)
         env.make_data_file(indir=env.gen_dir, fname="upload-0k", fsize=0)
         env.make_data_file(indir=env.gen_dir, fname="upload-1k", fsize=1024)
-        env.make_data_file(indir=env.gen_dir, fname="upload-100k", fsize=100*1024)
-        env.make_data_file(indir=env.gen_dir, fname="upload-1m", fsize=1024*1024)
+        env.make_data_file(indir=env.gen_dir, fname="upload-100k", fsize=100 * 1024)
+        env.make_data_file(indir=env.gen_dir, fname="upload-1m", fsize=1024 * 1024)
 
     def test_30_01_list_dir(self, env: Env, vsftpd: VsFTPD):
         curl = CurlClient(env=env)
         url = f'ftp://{env.ftp_domain}:{vsftpd.port}/'
         r = curl.ftp_get(urls=[url], with_stats=True)
         r.check_stats(count=1, http_status=226)
-        lines = open(os.path.join(curl.run_dir, 'download_#1.data')).readlines()
+        with open(os.path.join(curl.run_dir, 'download_#1.data')) as fd:
+            lines = fd.readlines()
         assert len(lines) == 5, f'list: {lines}'
         r.check_stats_timelines()
 
@@ -148,7 +149,7 @@ class TestVsFTPD:
     @pytest.mark.skipif(condition=not Env.tcpdump(), reason="tcpdump not available")
     @pytest.mark.skipif(condition=not Env.curl_is_debug(), reason="needs curl debug")
     @pytest.mark.skipif(condition=not Env.curl_is_verbose(), reason="needs curl verbose strings")
-    def test_30_06_shutdownh_download(self, env: Env, vsftpd: VsFTPD):
+    def test_30_06_shutdown_download(self, env: Env, vsftpd: VsFTPD):
         docname = 'data-1k'
         curl = CurlClient(env=env)
         count = 1
@@ -166,7 +167,7 @@ class TestVsFTPD:
     @pytest.mark.skipif(condition=not Env.tcpdump(), reason="tcpdump not available")
     @pytest.mark.skipif(condition=not Env.curl_is_debug(), reason="needs curl debug")
     @pytest.mark.skipif(condition=not Env.curl_is_verbose(), reason="needs curl verbose strings")
-    def test_30_07_shutdownh_upload(self, env: Env, vsftpd: VsFTPD):
+    def test_30_07_shutdown_upload(self, env: Env, vsftpd: VsFTPD):
         docname = 'upload-1k'
         curl = CurlClient(env=env)
         srcfile = os.path.join(env.gen_dir, docname)
@@ -251,8 +252,10 @@ class TestVsFTPD:
             dfile = client.download_file(i)
             assert os.path.exists(dfile)
             if complete and not filecmp.cmp(srcfile, dfile, shallow=False):
-                diff = "".join(difflib.unified_diff(a=open(srcfile).readlines(),
-                                                    b=open(dfile).readlines(),
+                with open(srcfile) as fa, open(dfile) as fb:
+                    a = fa.readlines()
+                    b = fb.readlines()
+                diff = "".join(difflib.unified_diff(a=a, b=b,
                                                     fromfile=srcfile,
                                                     tofile=dfile,
                                                     n=1))
@@ -264,8 +267,10 @@ class TestVsFTPD:
         assert os.path.exists(srcfile)
         assert os.path.exists(dstfile)
         if not filecmp.cmp(srcfile, dstfile, shallow=False):
-            diff = "".join(difflib.unified_diff(a=open(srcfile).readlines(),
-                                                b=open(dstfile).readlines(),
+            with open(srcfile) as fa, open(dstfile) as fb:
+                a = fa.readlines()
+                b = fb.readlines()
+            diff = "".join(difflib.unified_diff(a=a, b=b,
                                                 fromfile=srcfile,
                                                 tofile=dstfile,
                                                 n=1))

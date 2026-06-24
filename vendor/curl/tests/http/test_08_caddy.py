@@ -59,12 +59,12 @@ class TestCaddy:
 
     @pytest.fixture(autouse=True, scope='class')
     def _class_scope(self, env, caddy):
-        self._make_docs_file(docs_dir=caddy.docs_dir, fname='data10k.data', fsize=10*1024)
-        self._make_docs_file(docs_dir=caddy.docs_dir, fname='data1.data', fsize=1024*1024)
-        self._make_docs_file(docs_dir=caddy.docs_dir, fname='data5.data', fsize=5*1024*1024)
-        self._make_docs_file(docs_dir=caddy.docs_dir, fname='data10.data', fsize=10*1024*1024)
-        self._make_docs_file(docs_dir=caddy.docs_dir, fname='data100.data', fsize=100*1024*1024)
-        env.make_data_file(indir=env.gen_dir, fname="data-10m", fsize=10*1024*1024)
+        self._make_docs_file(docs_dir=caddy.docs_dir, fname='data10k.data', fsize=10 * 1024)
+        self._make_docs_file(docs_dir=caddy.docs_dir, fname='data1.data', fsize=1024 * 1024)
+        self._make_docs_file(docs_dir=caddy.docs_dir, fname='data5.data', fsize=5 * 1024 * 1024)
+        self._make_docs_file(docs_dir=caddy.docs_dir, fname='data10.data', fsize=10 * 1024 * 1024)
+        self._make_docs_file(docs_dir=caddy.docs_dir, fname='data100.data', fsize=100 * 1024 * 1024)
+        env.make_data_file(indir=env.gen_dir, fname="data-10m", fsize=10 * 1024 * 1024)
 
     # download 1 file
     @pytest.mark.parametrize("proto", Env.http_protos())
@@ -151,7 +151,8 @@ class TestCaddy:
                              extra_args=['--parallel'])
         r.check_stats(count=count, http_status=200, exitcode=0)
         for i in range(count):
-            respdata = open(curl.response_file(i)).readlines()
+            with open(curl.response_file(i)) as fr:
+                respdata = fr.readlines()
             assert respdata == [data]
 
     # put large file, check that they length were echoed
@@ -166,7 +167,8 @@ class TestCaddy:
         exp_data = [f'{os.path.getsize(fdata)}']
         r.check_response(count=count, http_status=200)
         for i in range(count):
-            respdata = open(curl.response_file(i)).readlines()
+            with open(curl.response_file(i)) as fr:
+                respdata = fr.readlines()
             assert respdata == exp_data
 
     @pytest.mark.parametrize("proto", Env.http_protos())
@@ -210,8 +212,10 @@ class TestCaddy:
             dfile = client.download_file(i)
             assert os.path.exists(dfile)
             if complete and not filecmp.cmp(srcfile, dfile, shallow=False):
-                diff = "".join(difflib.unified_diff(a=open(srcfile).readlines(),
-                                                    b=open(dfile).readlines(),
+                with open(srcfile) as fa, open(dfile) as fb:
+                    a = fa.readlines()
+                    b = fb.readlines()
+                diff = "".join(difflib.unified_diff(a=a, b=b,
                                                     fromfile=srcfile,
                                                     tofile=dfile,
                                                     n=1))

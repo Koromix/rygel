@@ -43,10 +43,8 @@
 
 static ParameterError getstr(char **str, const char *val, bool allowblank)
 {
-  if(*str) {
-    curlx_free(*str);
-    *str = NULL;
-  }
+  if(*str)
+    curlx_safefree(*str);
   DEBUGASSERT(val);
   if(!allowblank && !val[0])
     return PARAM_BLANK_STRING;
@@ -61,10 +59,8 @@ static ParameterError getstr(char **str, const char *val, bool allowblank)
 static ParameterError getstrn(char **str, const char *val,
                               size_t len, bool allowblank)
 {
-  if(*str) {
-    curlx_free(*str);
-    *str = NULL;
-  }
+  if(*str)
+    curlx_safefree(*str);
   DEBUGASSERT(val);
   if(!allowblank && !val[0])
     return PARAM_BLANK_STRING;
@@ -254,6 +250,7 @@ static const struct LongShort aliases[]= {
   {"proxy-digest",               ARG_BOOL, ' ', C_PROXY_DIGEST},
   {"proxy-header",               ARG_STRG, ' ', C_PROXY_HEADER},
   {"proxy-http2",                ARG_BOOL, ' ', C_PROXY_HTTP2},
+  {"proxy-http3",                ARG_BOOL, ' ', C_PROXY_HTTP3},
   {"proxy-insecure",             ARG_BOOL, ' ', C_PROXY_INSECURE},
   {"proxy-key",                  ARG_FILE|ARG_TLS, ' ', C_PROXY_KEY},
   {"proxy-key-type",             ARG_STRG|ARG_TLS, ' ', C_PROXY_KEY_TYPE},
@@ -542,11 +539,11 @@ struct sizeunit {
 static const struct sizeunit *getunit(char unit)
 {
   static const struct sizeunit list[] = {
-    {'p', (curl_off_t)1125899906842624, 16 }, /* Peta */
-    {'t', (curl_off_t)1099511627776,    13 }, /* Tera */
-    {'g', 1073741824,                   10 }, /* Giga */
-    {'m', 1048576,                       7 }, /* Mega */
-    {'k', 1024,                          4 }, /* Kilo */
+    { 'p', (curl_off_t)1125899906842624, 16 }, /* Peta */
+    { 't', (curl_off_t)1099511627776,    13 }, /* Tera */
+    { 'g', 1073741824,                   10 }, /* Giga */
+    { 'm', 1048576,                       7 }, /* Mega */
+    { 'k', 1024,                          4 }, /* Kilo */
   };
 
   size_t i;
@@ -1452,7 +1449,7 @@ static ParameterError parse_range(struct OperationConfig *config,
      curlx_str_single(&nextarg, '-')) {
     /* Specifying a range WITHOUT A DASH does create an illegal HTTP range
        (and does not actually be range by definition). The man page previously
-       claimed that to be a good way, why this code is added to work-around
+       claimed that to be a good way, why this code is added to work around
        it. */
     char buffer[32];
     warnf("A specified range MUST include at least one dash (-). "
@@ -1630,12 +1627,12 @@ static ParameterError parse_time_cond(struct OperationConfig *config,
     config->timecond = CURL_TIMECOND_IFMODSINCE;
     break;
   case '-':
-    /* If-Unmodified-Since:  (section 14.24 in RFC2068) */
+    /* If-Unmodified-Since: (section 14.24 in RFC2068) */
     config->timecond = CURL_TIMECOND_IFUNMODSINCE;
     nextarg++;
     break;
   case '=':
-    /* Last-Modified:  (section 14.29 in RFC2068) */
+    /* Last-Modified: (section 14.29 in RFC2068) */
     config->timecond = CURL_TIMECOND_LASTMOD;
     nextarg++;
     break;
@@ -1911,6 +1908,10 @@ static ParameterError opt_bool(struct OperationConfig *config,
     if(config->ftp_ssl)
       warnf("--%s is an insecure option, consider --ssl-reqd instead",
             a->lname);
+    if(toggle && config->ftp_ssl_control) {
+      config->ftp_ssl_control = FALSE;
+      warnf("--%s overrides --ftp-ssl-control", a->lname);
+    }
     break;
   case C_FTP_SSL_CCC: /* --ftp-ssl-ccc */
     config->ftp_ssl_ccc = toggle;
@@ -1962,6 +1963,10 @@ static ParameterError opt_bool(struct OperationConfig *config,
     break;
   case C_FTP_SSL_CONTROL: /* --ftp-ssl-control */
     config->ftp_ssl_control = toggle;
+    if(toggle && config->ftp_ssl) {
+      config->ftp_ssl = FALSE;
+      warnf("--%s overrides --ssl", a->lname);
+    }
     break;
   case C_RAW: /* --raw */
     config->raw = toggle;
@@ -2027,6 +2032,18 @@ static ParameterError opt_bool(struct OperationConfig *config,
       return PARAM_LIBCURL_DOESNT_SUPPORT;
 
     config->proxyver = toggle ? CURLPROXY_HTTPS2 : CURLPROXY_HTTPS;
+    break;
+  case C_PROXY_HTTP3: /* --proxy-http3 */
+#ifndef USE_PROXY_HTTP3
+    if(toggle)
+      return PARAM_LIBCURL_DOESNT_SUPPORT;
+    config->proxyver = CURLPROXY_HTTPS;
+#else
+    if(!feature_httpsproxy || !feature_http3)
+      return PARAM_LIBCURL_DOESNT_SUPPORT;
+
+    config->proxyver = toggle ? CURLPROXY_HTTPS3 : CURLPROXY_HTTPS;
+#endif
     break;
   case C_APPEND: /* --append */
     config->ftp_append = toggle;
@@ -2768,10 +2785,7 @@ static ParameterError opt_string(struct OperationConfig *config,
     }
     break;
   case C_HOSTPUBSHA256: /* --hostpubsha256 */
-    if(!feature_libssh2)
-      err = PARAM_LIBCURL_DOESNT_SUPPORT;
-    else
-      err = getstr(&config->hostpubsha256, nextarg, DENY_BLANK);
+    err = getstr(&config->hostpubsha256, nextarg, DENY_BLANK);
     break;
   case C_TLSUSER: /* --tlsuser */
     if(!feature_tls_srp)
@@ -2902,7 +2916,8 @@ static ParameterError opt_string(struct OperationConfig *config,
   case C_PROXY: /* --proxy */
     /* --proxy */
     err = getstr(&config->proxy, nextarg, ALLOW_BLANK);
-    if(config->proxyver != CURLPROXY_HTTPS2)
+    if(config->proxyver != CURLPROXY_HTTPS2 &&
+                config->proxyver != CURLPROXY_HTTPS3)
       config->proxyver = CURLPROXY_HTTP;
     break;
   case C_REQUEST: /* --request */

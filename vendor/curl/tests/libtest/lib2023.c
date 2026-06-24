@@ -35,19 +35,19 @@ static CURLcode send_request(CURL *curl, const char *url, int seq,
   size_t len = strlen(url) + 4 + 1;
   char *full_url = curlx_malloc(len);
   if(!full_url) {
-    curl_mfprintf(stderr, "Not enough memory for full url\n");
+    curl_mfprintf(stderr, "Not enough memory for full URL\n");
     return CURLE_OUT_OF_MEMORY;
   }
 
   curl_msnprintf(full_url, len, "%s%04d", url, seq);
   curl_mfprintf(stderr, "Sending new request %d to %s with credential %s "
                 "(auth %ld)\n", seq, full_url, userpwd, auth_scheme);
-  test_setopt(curl, CURLOPT_URL, full_url);
-  test_setopt(curl, CURLOPT_VERBOSE, 1L);
-  test_setopt(curl, CURLOPT_HEADER, 1L);
-  test_setopt(curl, CURLOPT_HTTPGET, 1L);
-  test_setopt(curl, CURLOPT_USERPWD, userpwd);
-  test_setopt(curl, CURLOPT_HTTPAUTH, auth_scheme);
+  easy_setopt(curl, CURLOPT_URL, full_url);
+  easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+  easy_setopt(curl, CURLOPT_HEADER, 1L);
+  easy_setopt(curl, CURLOPT_HTTPGET, 1L);
+  easy_setopt(curl, CURLOPT_USERPWD, userpwd);
+  easy_setopt(curl, CURLOPT_HTTPAUTH, auth_scheme);
 
   result = curl_easy_perform(curl);
 

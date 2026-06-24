@@ -25,13 +25,6 @@
 
 #include "testtrace.h"
 
-static size_t sink2505(char *ptr, size_t size, size_t nmemb, void *ud)
-{
-  (void)ptr;
-  (void)ud;
-  return size * nmemb;
-}
-
 static CURLcode test_lib2505(const char *URL)
 {
   CURL *curl;
@@ -49,16 +42,16 @@ static CURLcode test_lib2505(const char *URL)
     return TEST_ERR_MAJOR_BAD;
   }
 
-  test_setopt(curl, CURLOPT_WRITEFUNCTION, sink2505);
-  test_setopt(curl, CURLOPT_AUTOREFERER, 1L);
-  test_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-  test_setopt(curl, CURLOPT_URL, URL);
+  easy_setopt(curl, CURLOPT_WRITEFUNCTION, tutil_throwaway_cb);
+  easy_setopt(curl, CURLOPT_AUTOREFERER, 1L);
+  easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+  easy_setopt(curl, CURLOPT_URL, URL);
 
   result = curl_easy_perform(curl);
   curl_mprintf("req1=%d\n", (int)result);
 
-  test_setopt(curl, CURLOPT_FOLLOWLOCATION, 0L);
-  test_setopt(curl, CURLOPT_URL, URL);
+  easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 0L);
+  easy_setopt(curl, CURLOPT_URL, URL);
 
   result = curl_easy_perform(curl);
   curl_mprintf("req2=%d\n", (int)result);

@@ -23,13 +23,13 @@
 ###########################################################################
 
 # This module contains entry points to run a single test. runner_init
-# determines whether they will run in a separate process or in the process of
-# the caller. The relevant interface is asynchronous so it will work in either
+# determines whether they run in a separate process or in the process of
+# the caller. The relevant interface is asynchronous so it works in either
 # case. Program arguments are marshalled and then written to the end of a pipe
 # (in controlleripccall) which is later read from and the arguments
 # unmarshalled (in ipcrecv) before the desired function is called normally.
 # The function return values are then marshalled and written into another pipe
-# (again in ipcrecv) when is later read from and unmarshalled (in runnerar)
+# (again in ipcrecv) which is later read from and unmarshalled (in runnerar)
 # before being returned to the caller.
 
 package runner;
@@ -241,8 +241,10 @@ sub runner_init {
     }
 
     $controllerw{$thisrunnerid} = $thiscontrollerw;
-    $runnerr = $thisrunnerr;
-    $runnerw = $thisrunnerw;
+    if(!$multiprocess) {
+        $runnerr = $thisrunnerr;
+        $runnerw = $thisrunnerw;
+    }
     $controllerr{$thisrunnerid} = $thiscontrollerr;
 
     return $thisrunnerid;
@@ -251,7 +253,7 @@ sub runner_init {
 #######################################################################
 # Loop to execute incoming IPC calls until the shutdown call
 sub event_loop {
-    while() {
+    while(1) {
         if(ipcrecv()) {
             last;
         }
@@ -647,11 +649,11 @@ sub singletest_preprocess {
     @entiretest = prepro($testnum, @entiretest);
 
     # save the new version
-    open(my $fulltesth, ">", $otest) || die "Failure writing test file";
+    open(my $fulltesth, ">", $otest) or die "Failure writing test file";
     foreach my $bytes (@entiretest) {
         print $fulltesth pack('a*', $bytes) or die "Failed to print '$bytes': $!";
     }
-    close($fulltesth) || die "Failure writing test file";
+    close($fulltesth) or die "Failure writing test file";
 
     # in case the process changed the file, reload it
     loadtest("$LOGDIR/test${testnum}");
@@ -666,7 +668,7 @@ sub singletest_setenv {
         if($s =~ /([^=]*)(.*)/) {
             my ($var, $content) = ($1, $2);
             # remember current setting, to restore it once test runs
-            $oldenv{$var} = ($ENV{$var}) ? "$ENV{$var}" : 'notset';
+            $oldenv{$var} = $ENV{$var} ? $ENV{$var} : 'notset';
 
             if($content =~ /^=(.*)/) {
                 # assign it
@@ -698,9 +700,9 @@ sub singletest_precheck {
         if($cmd) {
             my @p = split(/ /, $cmd);
             if($p[0] !~ /\//) {
-                # the first word, the command, does not contain a slash so
-                # we will scan the "improved" PATH to find the command to
-                # be able to run it
+                # the first word, the command, does not contain a slash so we
+                # scan the "improved" PATH to find the command to be able
+                # to run it
                 my $fullp = checktestcmd($p[0]);
 
                 if($fullp) {
@@ -709,7 +711,10 @@ sub singletest_precheck {
                 $cmd = join(" ", @p);
             }
 
-            my @o = `$cmd 2> $LOGDIR/precheck-$testnum`;
+            # provide an environment variable
+            $ENV{'CURL_TESTNUM'} = $testnum;
+
+            my @o = qx($cmd 2> $LOGDIR/precheck-$testnum);
             if($o[0]) {
                 $why = $o[0];
                 $why =~ s/[\r\n]//g;
@@ -993,17 +998,16 @@ sub singletest_run {
         logmsg "$CMDLINE\n";
     }
 
-    open(my $cmdlog, ">", "$LOGDIR/$CURLLOG") ||
-        die "Failure writing log file";
+    open(my $cmdlog, ">", "$LOGDIR/$CURLLOG") or die "Failure writing log file";
     print $cmdlog "$CMDLINE\n";
-    close($cmdlog) || die "Failure writing log file";
+    close($cmdlog) or die "Failure writing log file";
 
     my $dumped_core;
     my $cmdres;
 
     if($gdbthis) {
         my $gdbinit = "$TESTDIR/gdbinit$testnum";
-        open(my $gdbcmd, ">", "$LOGDIR/gdbcmd") || die "Failure writing gdb file";
+        open(my $gdbcmd, ">", "$LOGDIR/gdbcmd") or die "Failure writing gdb file";
         if($gdbthis == 1) {
             # gdb mode
             print $gdbcmd "set args $cmdargs\n";
@@ -1014,7 +1018,7 @@ sub singletest_run {
             # lldb mode
             print $gdbcmd "set args $cmdargs\n";
         }
-        close($gdbcmd) || die "Failure writing gdb file";
+        close($gdbcmd) or die "Failure writing gdb file";
     }
 
     # Flush output.
@@ -1078,9 +1082,9 @@ sub singletest_clean {
         logmsg "core dumped\n";
         if(0 && $gdb) {
             logmsg "running gdb for post-mortem analysis:\n";
-            open(my $gdbcmd, ">", "$LOGDIR/gdbcmd2") || die "Failure writing gdb file";
+            open(my $gdbcmd, ">", "$LOGDIR/gdbcmd2") or die "Failure writing gdb file";
             print $gdbcmd "bt\n";
-            close($gdbcmd) || die "Failure writing gdb file";
+            close($gdbcmd) or die "Failure writing gdb file";
             runclient("$gdb --directory libtest -x $LOGDIR/gdbcmd2 -batch " . shell_quote($DBGCURL) . " core ");
      #       unlink("$LOGDIR/gdbcmd2");
         }
@@ -1331,6 +1335,7 @@ sub controlleripccall {
     my $margs = freeze \@_;
 
     # Send IPC call via pipe
+    length($margs) < 1000 or die "A large IPC write risks blocking on some platforms";
     my $err;
     while(! defined ($err = syswrite($controllerw{$runnerid}, (pack "L", length($margs)) . $margs)) || $err <= 0) {
         if((!defined $err && ! $!{EINTR}) || (defined $err && $err == 0)) {
@@ -1401,11 +1406,11 @@ sub runnerar_ready {
             $maxfileno = $fd;
         }
     }
-    $maxfileno || die "Internal error: no runners are available to wait on\n";
+    $maxfileno or die "Internal error: no runners are available to wait on\n";
 
     # Wait for any pipe from any runner to be ready
     # This may be interrupted and return EINTR, but this is ignored and the
-    # caller will need to later call this function again.
+    # caller needs to later call this function again.
     # TODO: this is relatively slow with hundreds of fds
     my $e_in = $r_in;
     if(select(my $r_out = $r_in, undef, my $e_out = $e_in, $blocking) >= 1) {
@@ -1446,7 +1451,7 @@ sub ipcrecv {
         if((!defined $err && ! $!{EINTR}) || (defined $err && $err == 0)) {
             # pipe has closed; controller is gone and we must exit
             runnerabort();
-            # Special case: no response will be forthcoming
+            # Special case: no response is forthcoming
             return 1;
         }
         # system call was interrupted, probably by ^C; restart it so we stay in sync
@@ -1457,7 +1462,7 @@ sub ipcrecv {
         if((!defined $err && ! $!{EINTR}) || (defined $err && $err == 0)) {
             # pipe has closed; controller is gone and we must exit
             runnerabort();
-            # Special case: no response will be forthcoming
+            # Special case: no response is forthcoming
             return 1;
         }
         # system call was interrupted, probably by ^C; restart it so we stay in sync
@@ -1474,7 +1479,7 @@ sub ipcrecv {
     my @res;
     if($funcname eq "runner_shutdown") {
         runner_shutdown(@$argsarrayref);
-        # Special case: no response will be forthcoming
+        # Special case: no response is forthcoming
         return 1;
     }
     elsif($funcname eq "runner_stopservers") {
@@ -1497,7 +1502,7 @@ sub ipcrecv {
         if((!defined $err && ! $!{EINTR}) || (defined $err && $err == 0)) {
             # pipe has closed; controller is gone and we must exit
             runnerabort();
-            # Special case: no response will be forthcoming
+            # Special case: no response is forthcoming
             return 1;
         }
         # system call was interrupted, probably by ^C; restart it so we stay in sync

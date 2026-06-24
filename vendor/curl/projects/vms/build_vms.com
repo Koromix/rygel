@@ -38,7 +38,7 @@ $!              Always link a debug image.
 $!    NOIEEE    Do not use IEEE floating point.  (Alpha/I64)
 $!              VAX must always use DFLOAT
 $!    NOLARGE   Disable large-file support if large file support available.
-$!              (Non-VAX, VMS >= V7.2.)
+$!              (Non-VAX, VMS >= v7.2.)
 $!    NOLDAP    Disable LDAP support if LDAP is available.
 $!    NOKERBEROS   Disable Kerberos support if Kerberos is available.
 $!    LIST      Create C compiler listings and linker maps.
@@ -723,7 +723,7 @@ $   endif
 $   'vo_c' "   SSLLIB = ''ssllib'"
 $!
 $! TODO: Why are we translating the logical name?
-$! The logical aname used to find the shared image should just be used
+$! The logical aname used to find the shared image should be used
 $! as translating it could result in the wrong location at run time.
 $   if (openssl .eq. 1)
 $   then

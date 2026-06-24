@@ -55,8 +55,10 @@
 #include "unit1669.c"
 #include "unit1674.c"
 #include "unit1675.c"
+#include "unit1676.c"
 #include "unit1979.c"
 #include "unit1980.c"
+#include "unit2413.c"
 #include "unit2600.c"
 #include "unit2601.c"
 #include "unit2602.c"
@@ -73,6 +75,10 @@
 #include "unit3219.c"
 #include "unit3300.c"
 #include "unit3301.c"
+#include "unit3302.c"
+#include "unit3303.c"
+#include "unit3304.c"
+#include "unit3400.c"
 
 const struct entry_s s_entries[] = {
   {"unit1300", test_unit1300},
@@ -128,8 +134,10 @@ const struct entry_s s_entries[] = {
   {"unit1669", test_unit1669},
   {"unit1674", test_unit1674},
   {"unit1675", test_unit1675},
+  {"unit1676", test_unit1676},
   {"unit1979", test_unit1979},
   {"unit1980", test_unit1980},
+  {"unit2413", test_unit2413},
   {"unit2600", test_unit2600},
   {"unit2601", test_unit2601},
   {"unit2602", test_unit2602},
@@ -146,6 +154,10 @@ const struct entry_s s_entries[] = {
   {"unit3219", test_unit3219},
   {"unit3300", test_unit3300},
   {"unit3301", test_unit3301},
+  {"unit3302", test_unit3302},
+  {"unit3303", test_unit3303},
+  {"unit3304", test_unit3304},
+  {"unit3400", test_unit3400},
   {NULL, NULL}
 };
 

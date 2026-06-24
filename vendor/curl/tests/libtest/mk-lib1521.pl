@@ -42,6 +42,7 @@ my @bad_function_argument = (
     'CURLOPT_DNS_LOCAL_IP4',
     'CURLOPT_DNS_LOCAL_IP6',
     'CURLOPT_DNS_SERVERS',
+    'CURLOPT_ECH',
     'CURLOPT_PROXY_TLSAUTH_TYPE',
     'CURLOPT_SSLENGINE',
     'CURLOPT_TLSAUTH_TYPE',
@@ -243,20 +244,20 @@ static size_t readcb(char *buffer,
 static void errlongzero(const char *name, CURLcode result, int lineno)
 {
   curl_mprintf("%s set to 0 returned %d, \\"%s\\" on line %d\\n",
-               name, result, curl_easy_strerror(result), lineno);
+               name, (int)result, curl_easy_strerror(result), lineno);
 }
 
 static void errlong(const char *name, CURLcode result, int lineno)
 {
 $allowednumerrors
   curl_mprintf("%s set to non-zero returned %d, \\"%s\\" on line %d\\n",
-               name, result, curl_easy_strerror(result), lineno);
+               name, (int)result, curl_easy_strerror(result), lineno);
 }
 
 static void errneg(const char *name, CURLcode result, int lineno)
 {
   curl_mprintf("%s set to -1 returned %d, \\"%s\\" on line %d\\n",
-               name, result, curl_easy_strerror(result), lineno);
+               name, (int)result, curl_easy_strerror(result), lineno);
 }
 
 static void errstring(const char *name, CURLcode result, int lineno)
@@ -265,25 +266,25 @@ static void errstring(const char *name, CURLcode result, int lineno)
      when given a strange string input */
 $allowedstringerrors
   curl_mprintf("%s set to a string returned %d, \\"%s\\" on line %d\\n",
-               name, result, curl_easy_strerror(result), lineno);
+               name, (int)result, curl_easy_strerror(result), lineno);
 }
 
 static void err(const char *name, CURLcode result, int lineno)
 {
   curl_mprintf("%s returned %d, \\"%s\\" on line %d\\n",
-               name, result, curl_easy_strerror(result), lineno);
+               name, (int)result, curl_easy_strerror(result), lineno);
 }
 
 static void errnull(const char *name, CURLcode result, int lineno)
 {
   curl_mprintf("%s set to NULL returned %d, \\"%s\\" on line %d\\n",
-               name, result, curl_easy_strerror(result), lineno);
+               name, (int)result, curl_easy_strerror(result), lineno);
 }
 
 static void t1521_geterr(const char *name, CURLcode result, int lineno)
 {
   curl_mprintf("CURLINFO_%s returned %d, \\"%s\\" on line %d\\n",
-               name, result, curl_easy_strerror(result), lineno);
+               name, (int)result, curl_easy_strerror(result), lineno);
 }
 
 static curl_progress_callback progresscb;
@@ -441,10 +442,10 @@ while(<STDIN>) {
         next;
     }
     if($_ =~ /^CURLOPT(?:DEPRECATED)?\(([^ ]*), ([^ ]*), (\d*)[,)]/) {
-        my ($name, $type, $val)=($1, $2, $3);
-        my $w="  ";
-        my $w2="$w$w";
-        my $w3="$w$w$w";
+        my ($name, $type, $val) = ($1, $2, $3);
+        my $w = "  ";
+        my $w2 = "$w$w";
+        my $w3 = "$w$w$w";
         my $opt = $name;
         $opt =~ s/^CURLOPT_//;
         my $exists = "${w}{\n";
@@ -562,7 +563,7 @@ MOO
         }
         elsif($type eq "CURLOPTTYPE_FUNCTIONPOINT") {
             if($name =~ /([^ ]*)FUNCTION/) {
-                my $l=lc($1);
+                my $l = lc($1);
                 $l =~ s/^curlopt_//;
                 print $fh "${fpref}\n$i${l}cb);\n$fcheck";
             }
@@ -593,7 +594,7 @@ MOO
     }
     elsif($infomode &&
           ($_ =~ /^CURLINFO_([^ ]*) *= *CURLINFO_([^ ]*)/)) {
-       my ($info, $type)=($1, $2);
+       my ($info, $type) = ($1, $2);
        my $c = "  result = curl_easy_getinfo(curl, CURLINFO_$info,";
        my $check = "  if(result)\n    t1521_geterr(\"$info\", result, __LINE__);\n";
        if($type eq "STRING") {

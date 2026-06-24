@@ -69,7 +69,7 @@ use getpart;
 # This function is currently required to be here by servers.pm
 # This is copied from runtests.pl
 #
-my $uname_release = `uname -r`;
+my $uname_release = qx(uname -r);
 my $is_wsl = $uname_release =~ /Microsoft$/;
 sub logmsg {
     for(@_) {
@@ -94,7 +94,7 @@ sub parseprotocols {
     # Generate a "proto-ipv6" version of each protocol to match the
     # IPv6 <server> name and a "proto-unix" to match the variant which
     # uses Unix domain sockets. This works even if support is not
-    # compiled in because the <features> test will fail.
+    # compiled in because the <features> test fails.
     push @protocols, map(("$_-ipv6", "$_-unix"), @protocols);
 
     # 'http-proxy' is used in test cases to do CONNECT through
@@ -108,7 +108,7 @@ sub parseprotocols {
 # Initialize @protocols from the curl binary under test
 #
 sub init_protocols {
-    for (`$CURL -V 2>$dev_null`) {
+    for (qx($CURL -V 2>$dev_null)) {
         if(m/^Protocols: (.*)$/) {
             parseprotocols($1);
         }

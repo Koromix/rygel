@@ -24,7 +24,7 @@
 #***************************************************************************
 
 # This is the HTTPS, FTPS, POP3S, IMAPS, SMTPS, server used for curl test
-# harness. Actually just a layer that runs stunnel properly using the
+# harness. Actually a layer that runs stunnel properly using the
 # non-secure test harness servers.
 
 use strict;
@@ -48,9 +48,9 @@ use pathhelp;
 
 my $stunnel = "stunnel";
 
-my $verbose=0; # set to 1 for debugging
+my $verbose = 0; # set to 1 for debugging
 
-my $accept_port = 8991; # just our default, weird enough
+my $accept_port = 8991; # our default, weird enough
 my $target_port = 8999; # default test http-server port
 
 my $stuncert;
@@ -365,12 +365,12 @@ if($tstunnel_windows) {
 
     # Put an "exec" in front of the command so that the child process
     # keeps this child's process ID by being tied to the spawned shell.
-    exec("exec $cmd") || die "Cannot exec() $cmd: $!";
-    # exec() will create a new process, but ties the existence of the
+    exec("exec $cmd") or die "Cannot exec() $cmd: $!";
+    # exec() creates a new process, but ties the existence of the
     # new process to the parent waiting perl.exe and sh.exe processes.
 
     # exec() should never return back here to this process. We protect
-    # ourselves by calling die() just in case something goes really bad.
+    # ourselves by calling die() in case something goes really bad.
     die "error: exec() has returned";
 }
 

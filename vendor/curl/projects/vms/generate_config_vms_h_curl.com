@@ -67,7 +67,7 @@ $if f$locate(",nossl,", args_lower) .lt. args_len then nossl = 1
 $if .not. nossl
 $then
 $!
-$!  ssl$* logicals means HP ssl is present
+$!  ssl$* logicals means HP SSL is present
 $!----------------------------------------
 $   if f$trnlnm("ssl$root") .nes. ""
 $   then
@@ -96,7 +96,7 @@ $       nohpssl = 1
 $       hpssl = 0
 $   endif
 $!
-$!  Finally check to see if hp ssl has been specifically included.
+$!  Finally check to see if HP SSL has been specifically included.
 $!----------------------------------------------------------------
 $   if f$locate(",nohpssl,", args_lower) .lt. args_len
 $   then
@@ -215,7 +215,7 @@ $write cvh ""
 $!
 $! We are now setting this on the GNV build, so also do this
 $! for compatibility.
-$write cvh "/* Location of default ca path */"
+$write cvh "/* Location of default CA path */"
 $write cvh "#define curl_ca_path ""gnv$curl_ca_path"""
 $!
 $! The config_h.com finds a bunch of default disable commands in

@@ -616,7 +616,7 @@ static CURLcode post_check_result(struct per_transfer *per, CURLcode result)
   if(!config->synthetic_error && result &&
      (!global->silent || global->showerror)) {
     const char *msg = per->errorbuffer;
-    curl_mfprintf(tool_stderr, "curl: (%d) %s\n", result,
+    curl_mfprintf(tool_stderr, "curl: (%d) %s\n", (int)result,
                   msg[0] ? msg : curl_easy_strerror(result));
     if(result == CURLE_PEER_FAILED_VERIFICATION)
       fputs(CURL_CA_CERT_ERRORMSG, tool_stderr);
@@ -697,7 +697,7 @@ static CURLcode post_close_output(struct per_transfer *per,
     if(!result && rc) {
       /* something went wrong in the writing process */
       result = CURLE_WRITE_ERROR;
-      errorf("curl: (%d) Failed writing body", result);
+      errorf("curl: (%d) Failed writing body", (int)result);
     }
     if(result && config->rm_partial) {
       curlx_struct_stat st;
@@ -722,6 +722,7 @@ static CURLcode post_close_output(struct per_transfer *per,
   }
   return result;
 }
+
 /*
  * Call this after a transfer has completed.
  */
@@ -855,7 +856,7 @@ static CURLcode append2query(struct OperationConfig *config,
       if(uerr) {
         result = urlerr_cvt(uerr);
         errorf("(%d) Could not parse the URL, "
-               "failed to set query", result);
+               "failed to set query", (int)result);
         config->synthetic_error = TRUE;
       }
       else {
@@ -1052,11 +1053,13 @@ static CURLcode setup_outfile(struct OperationConfig *config,
       return result;
     }
   }
-  else if(glob_inuse(&state->urlglob)) {
-    /* fill '#1' ... '#9' terms from URL pattern */
+  else if(glob_inuse(&state->urlglob) || glob_inuse(&state->inglob)) {
+    /* expand '#1' ... '#9' references from URL pattern and named references
+       from the upload file glob */
     SANITIZEcode sc;
     CURLcode result =
-      glob_match_url(&per->outfile, u->outfile, &state->urlglob, &sc);
+      glob_match_url(&per->outfile, u->outfile, &state->urlglob,
+                     glob_inuse(&state->inglob) ? &state->inglob : NULL, &sc);
 
     if(sc) {
       if(sc == SANITIZE_ERR_OUT_OF_MEMORY)
@@ -1067,7 +1070,12 @@ static CURLcode setup_outfile(struct OperationConfig *config,
     }
     else if(result) {
       /* bad globbing */
-      warnf("bad output glob");
+      if(state->urlglob.error) {
+        glob_show_error(&state->urlglob, u->outfile, tool_stderr, result);
+        config->synthetic_error = TRUE;
+      }
+      else
+        warnf("bad output glob");
       return result;
     }
     if(!*per->outfile) {
@@ -1701,9 +1709,7 @@ static int cb_timeout(CURLM *multi, long timeout_ms, void *userp)
 static struct contextuv *create_context(curl_socket_t sockfd,
                                         struct datauv *uv)
 {
-  struct contextuv *c;
-
-  c = (struct contextuv *)curlx_malloc(sizeof(*c));
+  struct contextuv *c = curlx_malloc(sizeof(*c));
 
   c->sockfd = sockfd;
   c->uv = uv;
@@ -2452,7 +2458,7 @@ CURLcode operate(int argc, argv_item_t argv[])
     }
     else {
       if(global->libcurl) {
-        /* Initialise the libcurl source output */
+        /* Initialize the libcurl source output */
         result = easysrc_init();
       }
 

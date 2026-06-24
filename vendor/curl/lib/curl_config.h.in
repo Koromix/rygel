@@ -2,7 +2,7 @@
 
 /* !checksrc! disable COPYRIGHT all */
 
-/* Location of default ca bundle */
+/* Location of default CA bundle */
 #undef CURL_CA_BUNDLE
 
 /* define "1" to use OpenSSL's built-in CA store */
@@ -11,7 +11,7 @@
 /* If native CA store is enabled */
 #undef CURL_CA_NATIVE
 
-/* Location of default ca path */
+/* Location of default CA path */
 #undef CURL_CA_PATH
 
 /* If safe CA bundle search is enabled */
@@ -110,7 +110,7 @@
 /* disable netrc parsing */
 #undef CURL_DISABLE_NETRC
 
-/* if the OpenSSL configuration will not be loaded automatically */
+/* if the OpenSSL configuration is not loaded automatically */
 #undef CURL_DISABLE_OPENSSL_AUTO_LOAD_CONFIG
 
 /* disable date parsing */
@@ -438,6 +438,12 @@
 
 /* Define to 1 if you have the memrchr function or macro. */
 #undef HAVE_MEMRCHR
+
+/* Define to 1 if you have the `memset_explicit' function. */
+#undef HAVE_MEMSET_EXPLICIT
+
+/* Define to 1 if you have the memset_s function. */
+#undef HAVE_MEMSET_S
 
 /* Define to 1 if you have the <netdb.h> header file. */
 #undef HAVE_NETDB_H
@@ -848,6 +854,9 @@
 
 /* if OpenSSL is in use */
 #undef USE_OPENSSL
+
+/* if HTTP/3 proxy support is available */
+#undef USE_PROXY_HTTP3
 
 /* if quiche is in use */
 #undef USE_QUICHE

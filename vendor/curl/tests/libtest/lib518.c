@@ -23,7 +23,7 @@
  ***************************************************************************/
 #include "first.h"
 
-#include "testutil.h"
+#if defined(HAVE_GETRLIMIT) && defined(HAVE_SETRLIMIT)
 
 #define T518_SAFETY_MARGIN 16
 
@@ -35,8 +35,6 @@
 #else
 #define DEV_NULL "/dev/null"
 #endif
-
-#if defined(HAVE_GETRLIMIT) && defined(HAVE_SETRLIMIT)
 
 static int *t518_testfd = NULL;
 static struct rlimit t518_num_open;
@@ -60,8 +58,7 @@ static void t518_close_file_descriptors(void)
       t518_num_open.rlim_cur++)
     if(t518_testfd[t518_num_open.rlim_cur] > 0)
       curlx_close(t518_testfd[t518_num_open.rlim_cur]);
-  curlx_free(t518_testfd);
-  t518_testfd = NULL;
+  curlx_safefree(t518_testfd);
 }
 
 static int t518_fopen_works(void)
@@ -100,7 +97,7 @@ static int t518_test_rlimit(int keep_open)
 
   /* get initial open file limits */
 
-  if(getrlimit(RLIMIT_NOFILE, &rl) != 0) {
+  if(getrlimit(RLIMIT_NOFILE, &rl)) {
     t518_store_errmsg("getrlimit() failed", errno);
     curl_mfprintf(stderr, "%s\n", t518_msgbuff);
     return -1;
@@ -126,7 +123,7 @@ static int t518_test_rlimit(int keep_open)
    * limit. Due to some other system limit the soft limit
    * might not be raised up to the hard limit. So from this
    * point the resulting soft limit is our limit. Trying to
-   * open more than soft limit file descriptors will fail.
+   * open more than soft limit file descriptors does fail.
    */
 
   if(rl.rlim_cur != rl.rlim_max) {
@@ -136,8 +133,8 @@ static int t518_test_rlimit(int keep_open)
        (rl.rlim_cur < OPEN_MAX)) {
       curl_mfprintf(stderr, "raising soft limit up to OPEN_MAX\n");
       rl.rlim_cur = OPEN_MAX;
-      if(setrlimit(RLIMIT_NOFILE, &rl) != 0) {
-        /* on failure do not abort just issue a warning */
+      if(setrlimit(RLIMIT_NOFILE, &rl)) {
+        /* on failure do not abort, only issue a warning */
         t518_store_errmsg("setrlimit() failed", errno);
         curl_mfprintf(stderr, "%s\n", t518_msgbuff);
         t518_msgbuff[0] = '\0';
@@ -147,8 +144,8 @@ static int t518_test_rlimit(int keep_open)
 
     curl_mfprintf(stderr, "raising soft limit up to hard limit\n");
     rl.rlim_cur = rl.rlim_max;
-    if(setrlimit(RLIMIT_NOFILE, &rl) != 0) {
-      /* on failure do not abort just issue a warning */
+    if(setrlimit(RLIMIT_NOFILE, &rl)) {
+      /* on failure do not abort, only issue a warning */
       t518_store_errmsg("setrlimit() failed", errno);
       curl_mfprintf(stderr, "%s\n", t518_msgbuff);
       t518_msgbuff[0] = '\0';
@@ -156,7 +153,7 @@ static int t518_test_rlimit(int keep_open)
 
     /* get current open file limits */
 
-    if(getrlimit(RLIMIT_NOFILE, &rl) != 0) {
+    if(getrlimit(RLIMIT_NOFILE, &rl)) {
       t518_store_errmsg("getrlimit() failed", errno);
       curl_mfprintf(stderr, "%s\n", t518_msgbuff);
       return -3;
@@ -239,7 +236,7 @@ static int t518_test_rlimit(int keep_open)
   for(i = 0; i < nitems; i++)
     memchunk[i] = -1;
 
-  /* set the number of file descriptors we will try to open */
+  /* set the number of file descriptors we try to open */
 
   t518_num_open.rlim_max = NUM_OPEN;
 
@@ -289,8 +286,7 @@ static int t518_test_rlimit(int keep_open)
     curl_msnprintf(strbuff, sizeof(strbuff), "opening of %s failed", DEV_NULL);
     t518_store_errmsg(strbuff, errno);
     curl_mfprintf(stderr, "%s\n", t518_msgbuff);
-    curlx_free(t518_testfd);
-    t518_testfd = NULL;
+    curlx_safefree(t518_testfd);
     curlx_free(memchunk);
     return -8;
   }
@@ -330,8 +326,7 @@ static int t518_test_rlimit(int keep_open)
           t518_testfd[t518_num_open.rlim_cur] >= 0;
           t518_num_open.rlim_cur++)
         curlx_close(t518_testfd[t518_num_open.rlim_cur]);
-      curlx_free(t518_testfd);
-      t518_testfd = NULL;
+      curlx_safefree(t518_testfd);
       curlx_free(memchunk);
       return -9;
     }
@@ -347,7 +342,7 @@ static int t518_test_rlimit(int keep_open)
    * greater than FD_SETSIZE. In any case, macro VERIFY_SOCK
    * in lib/select.c enforces this check and protects libcurl
    * from a possible crash. The effect of this protection
-   * is that test 518 will always fail, since the actual
+   * is that test 518 always fails, since the actual
    * call to select() never takes place. We skip test 518
    * with an indication that select limit would be exceeded.
    */
@@ -452,8 +447,8 @@ static CURLcode test_lib518(const char *URL)
     return TEST_ERR_MAJOR_BAD;
   }
 
-  test_setopt(curl, CURLOPT_URL, URL);
-  test_setopt(curl, CURLOPT_HEADER, 1L);
+  easy_setopt(curl, CURLOPT_URL, URL);
+  easy_setopt(curl, CURLOPT_HEADER, 1L);
 
   result = curl_easy_perform(curl);
 

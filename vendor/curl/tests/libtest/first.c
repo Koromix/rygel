@@ -55,6 +55,7 @@ int select_wrapper(int nfds, fd_set *rd, fd_set *wr, fd_set *exc,
 const char *libtest_arg2 = NULL;
 const char *libtest_arg3 = NULL;
 const char *libtest_arg4 = NULL;
+const char *libtest_arg5 = NULL;
 int test_argc;
 const char **test_argv;
 int testnum;
@@ -78,7 +79,7 @@ int cgetopt(int argc, const char * const argv[], const char *optstring)
   }
 
   arg = argv[coptind];
-  if(arg && strcmp(arg, "--") == 0) {
+  if(arg && !strcmp(arg, "--")) {
     coptind++;
     return -1;
   }
@@ -168,7 +169,7 @@ CURLcode ws_send_ping(CURL *curl, const char *send_payload)
   CURLcode result = curl_ws_send(curl, send_payload, strlen(send_payload),
                                  &sent, 0, CURLWS_PING);
   curl_mfprintf(stderr, "ws: curl_ws_send returned %d, sent %zu\n",
-                result, sent);
+                (int)result, sent);
   return result;
 }
 
@@ -180,13 +181,13 @@ CURLcode ws_recv_pong(CURL *curl, const char *expected_payload)
   CURLcode result = curl_ws_recv(curl, buffer, sizeof(buffer), &rlen, &meta);
   if(result) {
     curl_mfprintf(stderr, "ws: curl_ws_recv returned %d, received %zu\n",
-                  result, rlen);
+                  (int)result, rlen);
     return result;
   }
 
   if(!(meta->flags & CURLWS_PONG)) {
     curl_mfprintf(stderr, "recv_pong: wrong frame, got %zu bytes rflags %x\n",
-                  rlen, meta->flags);
+                  rlen, (unsigned int)meta->flags);
     return CURLE_RECV_ERROR;
   }
 
@@ -200,13 +201,13 @@ CURLcode ws_recv_pong(CURL *curl, const char *expected_payload)
   return CURLE_RECV_ERROR;
 }
 
-/* just close the connection */
+/* close the connection */
 void ws_close(CURL *curl)
 {
   size_t sent;
   CURLcode result = curl_ws_send(curl, "", 0, &sent, 0, CURLWS_CLOSE);
   curl_mfprintf(stderr, "ws: curl_ws_send returned %d, sent %zu\n",
-                result, sent);
+                (int)result, sent);
 }
 #endif /* CURL_DISABLE_WEBSOCKETS */
 
@@ -247,7 +248,7 @@ int main(int argc, const char **argv)
   entry_name = argv[1];
   entry_func = NULL;
   for(tmp = 0; s_entries[tmp].ptr; ++tmp) {
-    if(strcmp(entry_name, s_entries[tmp].name) == 0) {
+    if(!strcmp(entry_name, s_entries[tmp].name)) {
       entry_func = s_entries[tmp].ptr;
       break;
     }
@@ -272,6 +273,9 @@ int main(int argc, const char **argv)
   if(argc > 5)
     libtest_arg4 = argv[5];
 
+  if(argc > 6)
+    libtest_arg5 = argv[6];
+
   testnum = 0;
   env = getenv("CURL_TESTNUM");
   if(env) {
@@ -285,7 +289,7 @@ int main(int argc, const char **argv)
 #endif
 
   result = entry_func(URL);
-  curl_mfprintf(stderr, "Test ended with result %d\n", result);
+  curl_mfprintf(stderr, "Test ended with result %d\n", (int)result);
 
 #ifdef _WIN32
   /* flush buffers of all streams regardless of mode */
@@ -294,5 +298,5 @@ int main(int argc, const char **argv)
 
   /* Regular program status codes are limited to 0..127 and 126 and 127 have
    * special meanings by the shell, so limit a normal return code to 125 */
-  return (int)result <= 125 ? (int)result : 125;
+  return result <= 125 ? result : 125;
 }

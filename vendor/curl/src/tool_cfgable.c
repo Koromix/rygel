@@ -219,7 +219,7 @@ void config_free(struct OperationConfig *config)
  * round to verify them.
  *
  * The main point is to make sure that what is returned is different than what
- * the regular memory functions return so that mixup will trigger problems.
+ * the regular memory functions return so that mixup does trigger problems.
  *
  * This test setup currently only works when building with a *shared* libcurl
  * and not static, as in the latter case the tool and the library share some of
@@ -316,7 +316,7 @@ CURLcode globalconf_init(void)
   _djstat_flags |= _STAT_INODE | _STAT_EXEC_MAGIC | _STAT_DIRSIZE;
 #endif
 
-  /* Initialise the global config */
+  /* Initialize the global config */
   global->showerror = FALSE;          /* show errors when silent */
   global->styled_output = TRUE;       /* enable detection */
   global->parallel_max = PARALLEL_DEFAULT;

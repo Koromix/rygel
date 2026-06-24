@@ -34,7 +34,7 @@ static bool is_chain_in_order(struct curl_certinfo *cert_info)
 
   /* Chains with only a single certificate are always in order */
   if(cert_info->num_of_certs <= 1)
-    return true;
+    return TRUE;
 
   /* Enumerate each certificate in the chain */
   for(cert = 0; cert < cert_info->num_of_certs; cert++) {
@@ -63,12 +63,12 @@ static bool is_chain_in_order(struct curl_certinfo *cert_info)
       if(last_issuer) {
         /* If the last certificate's issuer matches the current certificate's
          * subject, then the chain is in order */
-        if(strcmp(last_issuer, subject) != 0) {
+        if(strcmp(last_issuer, subject)) {
           curl_mfprintf(stderr,
                         "cert %d issuer does not match cert %d subject\n",
                         cert - 1, cert);
           curl_mfprintf(stderr, "certificate chain is not in order\n");
-          return false;
+          return FALSE;
         }
       }
     }
@@ -77,14 +77,7 @@ static bool is_chain_in_order(struct curl_certinfo *cert_info)
   }
 
   curl_mprintf("certificate chain is in order\n");
-  return true;
-}
-
-static size_t wrfu(char *ptr, size_t size, size_t nmemb, void *stream)
-{
-  (void)stream;
-  (void)ptr;
-  return size * nmemb;
+  return TRUE;
 }
 
 static CURLcode test_lib3102(const char *URL)
@@ -105,19 +98,19 @@ static CURLcode test_lib3102(const char *URL)
   }
 
   /* Set the HTTPS URL to retrieve. */
-  test_setopt(curl, CURLOPT_URL, URL);
+  easy_setopt(curl, CURLOPT_URL, URL);
 
   /* Capture certificate information */
-  test_setopt(curl, CURLOPT_CERTINFO, 1L);
+  easy_setopt(curl, CURLOPT_CERTINFO, 1L);
 
   /* Ignore output */
-  test_setopt(curl, CURLOPT_WRITEFUNCTION, wrfu);
+  easy_setopt(curl, CURLOPT_WRITEFUNCTION, tutil_throwaway_cb);
 
   /* No peer verify */
-  test_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
-  test_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
+  easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
+  easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
 
-  /* Perform the request, result will get the return code */
+  /* Perform the request, result gets the return code */
   result = curl_easy_perform(curl);
   if(!result || result == CURLE_GOT_NOTHING) {
     struct curl_certinfo *cert_info = NULL;

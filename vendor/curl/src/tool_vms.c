@@ -59,7 +59,7 @@ int is_vms_shell(void)
   }
 
   /* Have to make sure some one did not set shell to DCL */
-  if(strcmp(shell, "DCL") == 0) {
+  if(!strcmp(shell, "DCL")) {
     vms_shell = 1;
     return 1;
   }
@@ -154,7 +154,7 @@ static void decc_init(void)
   decc_init_done = 1;
 
   /* Loop through all items in the decc_feat_array[]. */
-  for(i = 0; decc_feat_array[i].name != NULL; i++) {
+  for(i = 0; decc_feat_array[i].name; i++) {
 
     /* Get the feature index. */
     feat_index = decc$feature_get_index(decc_feat_array[i].name);

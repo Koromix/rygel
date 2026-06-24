@@ -22,7 +22,7 @@
  *
  ***************************************************************************/
 /* <DESC>
- * Shows HTTPS usage with client certs and optional ssl engine use.
+ * Shows HTTPS usage with client certs and optional SSL engine use.
  * </DESC>
  */
 #include <assert.h>
@@ -54,7 +54,7 @@ int main(int argc, const char **argv)
 
     for(i = 0; list[i]; i++)
       printf("SSL backend #%d: '%s' (ID: %d)\n",
-             i, list[i]->name, list[i]->id);
+             i, list[i]->name, (int)list[i]->id);
 
     return 0;
   }

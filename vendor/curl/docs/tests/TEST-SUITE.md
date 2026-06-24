@@ -136,7 +136,7 @@ set to identify the IP address and port number of the DNS server to use.
   host information
 
 - curl built to use `getaddrinfo()` for resolving *and* is built with c-ares
-  1.26.0 or later, gets a special work-around. In such builds, when the
+  1.26.0 or later, gets a special workaround. In such builds, when the
   environment variable is set, curl instead invokes a getaddrinfo wrapper
   that emulates the function and acknowledges the DNS server environment
   variable. This way, the getaddrinfo-using code paths in curl are verified,
@@ -187,6 +187,9 @@ successive run. This tests the out of memory error handling code to ensure
 that memory leaks do not occur even in those situations. It can help to
 compile curl with `CPPFLAGS=-DMEMDEBUG_LOG_SYNC` when using this option, to
 ensure that the memory log file is properly written even if curl crashes.
+
+If a specific test takes a long time to run in memory test mode, you can
+disable it individually by adding `!torture` to its `<features>` section.
 
 ### Debug
 

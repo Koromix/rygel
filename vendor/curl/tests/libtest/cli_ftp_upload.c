@@ -71,7 +71,7 @@ static CURLcode test_cli_ftp_upload(const char *URL)
   CURL *curl_handle;
   int running_handles = 0;
   int max_fd = -1;
-  struct timeval timeout = { 1, 0 };
+  struct timeval timeout;
   fd_set fdread;
   fd_set fdwrite;
   fd_set fdexcep;
@@ -81,6 +81,9 @@ static CURLcode test_cli_ftp_upload(const char *URL)
   int ch;
   CURLcode result = CURLE_FAILED_INIT;
   curl_off_t uploadsize = -1;
+
+  timeout.tv_sec = 1;
+  timeout.tv_usec = 0;
 
   (void)URL;
   while((ch = cgetopt(test_argc, test_argv, "r:")) != -1) {
@@ -169,7 +172,7 @@ static CURLcode test_cli_ftp_upload(const char *URL)
   curl_global_cleanup();
   curl_slist_free_all(host);
 
-  curl_mfprintf(stderr, "transfer result: %d\n", result);
+  curl_mfprintf(stderr, "transfer result: %d\n", (int)result);
   return result;
 #else /* !CURL_DISABLE_FTP */
   (void)URL;

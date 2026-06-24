@@ -78,32 +78,32 @@ static CURLcode test_lib655(const char *URL)
   }
 
   /* Set the URL that is about to receive our first request. */
-  test_setopt(curl, CURLOPT_URL, URL);
-  test_setopt(curl, CURLOPT_DEBUGDATA, &debug_config);
-  test_setopt(curl, CURLOPT_DEBUGFUNCTION, libtest_debug_cb);
-  test_setopt(curl, CURLOPT_VERBOSE, 1L);
+  easy_setopt(curl, CURLOPT_URL, URL);
+  easy_setopt(curl, CURLOPT_DEBUGDATA, &debug_config);
+  easy_setopt(curl, CURLOPT_DEBUGFUNCTION, libtest_debug_cb);
+  easy_setopt(curl, CURLOPT_VERBOSE, 1L);
 
-  test_setopt(curl, CURLOPT_RESOLVER_START_DATA, TEST_DATA_STRING);
-  test_setopt(curl, CURLOPT_RESOLVER_START_FUNCTION, resolver_alloc_cb_fail);
+  easy_setopt(curl, CURLOPT_RESOLVER_START_DATA, TEST_DATA_STRING);
+  easy_setopt(curl, CURLOPT_RESOLVER_START_FUNCTION, resolver_alloc_cb_fail);
 
   /* this should fail */
   result = curl_easy_perform(curl);
   if(result != CURLE_ABORTED_BY_CALLBACK) {
     curl_mfprintf(stderr, "curl_easy_perform should have returned "
                   "CURLE_ABORTED_BY_CALLBACK but instead returned error %d\n",
-                  result);
+                  (int)result);
     if(result == CURLE_OK)
       result = TEST_ERR_FAILURE;
     goto test_cleanup;
   }
 
   /* Set the URL that receives our second request. */
-  test_setopt(curl, CURLOPT_URL, libtest_arg2);
-  test_setopt(curl, CURLOPT_DEBUGDATA, &debug_config);
-  test_setopt(curl, CURLOPT_DEBUGFUNCTION, libtest_debug_cb);
-  test_setopt(curl, CURLOPT_VERBOSE, 1L);
+  easy_setopt(curl, CURLOPT_URL, libtest_arg2);
+  easy_setopt(curl, CURLOPT_DEBUGDATA, &debug_config);
+  easy_setopt(curl, CURLOPT_DEBUGFUNCTION, libtest_debug_cb);
+  easy_setopt(curl, CURLOPT_VERBOSE, 1L);
 
-  test_setopt(curl, CURLOPT_RESOLVER_START_FUNCTION, resolver_alloc_cb_pass);
+  easy_setopt(curl, CURLOPT_RESOLVER_START_FUNCTION, resolver_alloc_cb_pass);
 
   /* this should succeed */
   result = curl_easy_perform(curl);

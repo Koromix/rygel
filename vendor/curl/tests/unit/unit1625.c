@@ -36,6 +36,8 @@ struct check1625 {
 
 static CURLcode test_unit1625(const char *arg)
 {
+  UNITTEST_BEGIN_SIMPLE
+
   size_t i;
   static const struct check1625 list[] = {
     /* basic case */
@@ -50,7 +52,7 @@ static CURLcode test_unit1625(const char *arg)
     { "Encoding: a, chunked, ninja", "Encoding:", "chunked", TRUE },
     /* empty incoming header */
     { "Encoding:", "Encoding:", "chunked", FALSE },
-    /* just spaces in header */
+    /* spaces in header */
     { "Encoding:   ", "Encoding:", "chunked", FALSE },
     /* last among several with no spaces */
     { "Encoding: ab,cd,ef,gh,ig,kl", "Encoding:", "kl", TRUE },
@@ -101,7 +103,6 @@ static CURLcode test_unit1625(const char *arg)
     /* hyphenated second token */
     { "Encoding: extra-good, super-nice", "Encoding:", "super-nice", TRUE },
   };
-  (void)arg;
 
   for(i = 0; i < CURL_ARRAYSIZE(list); i++) {
     bool check = Curl_compareheader(list[i].in,
@@ -123,12 +124,12 @@ static CURLcode test_unit1625(const char *arg)
   if(i != CURL_ARRAYSIZE(list))
     return CURLE_FAILED_INIT;
 
-  return CURLE_OK;
+  UNITTEST_END_SIMPLE
 }
 #else /* CURL_DISABLE_HTTP */
 static CURLcode test_unit1625(const char *arg)
 {
-  (void)arg;
-  return CURLE_OK;
+  UNITTEST_BEGIN_SIMPLE
+  UNITTEST_END_SIMPLE
 }
 #endif

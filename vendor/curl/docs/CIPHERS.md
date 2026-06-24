@@ -96,10 +96,10 @@ are NULL ciphers, offering no encryption whatsoever.)
 
 ### TLS 1.2 (1.1, 1.0) cipher suites
 
-Setting TLS 1.2 cipher suites is supported by curl with OpenSSL, LibreSSL,
-BoringSSL, mbedTLS (curl 8.8.0+), wolfSSL (curl 7.53.0+). Schannel does not
-support setting cipher suites directly, but does support setting algorithms
-(curl 7.61.0+), see Schannel notes below.
+Setting TLS 1.2 cipher suites is supported by curl with AWS-LC, BoringSSL,
+LibreSSL, mbedTLS (curl 8.8.0+), OpenSSL, wolfSSL (curl 7.53.0+). Schannel
+does not support setting cipher suites directly, but does support setting
+algorithms (curl 7.61.0+), see Schannel notes below.
 
 For TLS 1.2 cipher suites there are multiple naming schemes, the two most used
 are with OpenSSL names (e.g. `ECDHE-RSA-AES128-GCM-SHA256`) and IANA names
@@ -188,12 +188,13 @@ mbedTLS and wolfSSL.
 ```sh
 curl \
   --tlsv1.3 \
+  --tls-max 1.3 \
   --tls13-ciphers TLS_AES_128_GCM_SHA256:TLS_CHACHA20_POLY1305_SHA256 \
   https://example.com/
 ```
 
 Restrict to only TLS 1.3 with `aes128-gcm` and `chacha20` ciphers. Works with
-OpenSSL, LibreSSL, mbedTLS, wolfSSL and Schannel.
+OpenSSL, LibreSSL, mbedTLS and wolfSSL.
 
 ```sh
 curl \
@@ -238,7 +239,7 @@ other keywords that tweak its operations. Applications or a system
 may define new alias names for priority strings that can then be used here.
 
 Since the order of items in priority strings is significant, it makes no
-sense for curl to puzzle other ssl options somehow together. `--ciphers`
+sense for curl to puzzle other SSL options somehow together. `--ciphers`
 is the single way to change priority.
 
 ### Examples
@@ -269,10 +270,10 @@ Restrict to only TLS 1.2 with the `CAMELLIA-128-GCM` cipher.
 
 ## Further reading
 
-- [OpenSSL cipher suite names documentation](https://docs.openssl.org/master/man1/openssl-ciphers/#cipher-suite-names)
-- [wolfSSL cipher support documentation](https://www.wolfssl.com/documentation/manuals/wolfssl/chapter04.html#cipher-support)
-- [mbedTLS cipher suites reference](https://mbed-tls.readthedocs.io/projects/api/en/development/api/file/ssl__ciphersuites_8h/)
-- [Schannel cipher suites documentation](https://learn.microsoft.com/windows/win32/secauthn/cipher-suites-in-schannel)
-- [IANA cipher suites list](https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4)
-- [Wikipedia cipher suite article](https://en.wikipedia.org/wiki/Cipher_suite)
 - [GnuTLS Priority Strings](https://gnutls.org/manual/html_node/Priority-Strings.html)
+- [IANA cipher suites list](https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4)
+- [mbedTLS cipher suites reference](https://mbed-tls.readthedocs.io/projects/api/en/development/api/file/ssl__ciphersuites_8h/)
+- [OpenSSL cipher suite names documentation](https://docs.openssl.org/master/man1/openssl-ciphers/#cipher-suite-names)
+- [Schannel cipher suites documentation](https://learn.microsoft.com/windows/win32/secauthn/cipher-suites-in-schannel)
+- [Wikipedia cipher suite article](https://en.wikipedia.org/wiki/Cipher_suite)
+- [wolfSSL cipher support documentation](https://www.wolfssl.com/documentation/manuals/wolfssl/chapter04.html#cipher-support)

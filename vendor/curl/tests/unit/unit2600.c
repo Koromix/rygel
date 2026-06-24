@@ -46,6 +46,7 @@
 #include "cf-ip-happy.h"
 #include "multiif.h"
 #include "select.h"
+#include "sockaddr.h"
 #include "curl_addrinfo.h"
 #include "curl_trc.h"
 
@@ -113,7 +114,7 @@ static int test_idx;
 struct cf_test_ctx {
   int idx;
   int ai_family;
-  uint8_t transport;
+  uint8_t transport_peer;
   char id[16];
   struct curltime started;
   timediff_t fail_delay_ms;
@@ -159,15 +160,19 @@ static CURLcode cf_test_adjust_pollset(struct Curl_cfilter *cf,
                                        struct easy_pollset *ps)
 {
   struct cf_test_ctx *ctx = cf->ctx;
-  /* just for testing, give one socket with events back */
+  /* for testing, give one socket with events back */
   return Curl_pollset_set(data, ps, ctx->idx, TRUE, TRUE);
 }
 
 static CURLcode cf_test_create(struct Curl_cfilter **pcf,
                                struct Curl_easy *data,
+                               struct Curl_peer *origin,
+                               struct Curl_peer *peer,
+                               uint8_t transport_peer,
                                struct connectdata *conn,
                                struct Curl_sockaddr_ex *addr,
-                               uint8_t transport)
+                               struct Curl_peer *tunnel_peer,
+                               uint8_t transport_above)
 {
   static const struct Curl_cftype cft_test = {
     "TEST",
@@ -175,7 +180,6 @@ static CURLcode cf_test_create(struct Curl_cfilter **pcf,
     CURL_LOG_LVL_NONE,
     cf_test_destroy,
     cf_test_connect,
-    cf_def_close,
     Curl_cf_def_shutdown,
     cf_test_adjust_pollset,
     Curl_cf_def_data_pending,
@@ -193,7 +197,11 @@ static CURLcode cf_test_create(struct Curl_cfilter **pcf,
   CURLcode result;
 
   (void)data;
+  (void)origin;
+  (void)peer;
   (void)conn;
+  (void)tunnel_peer;
+  (void)transport_above;
   ctx = curlx_calloc(1, sizeof(*ctx));
   if(!ctx) {
     result = CURLE_OUT_OF_MEMORY;
@@ -201,7 +209,7 @@ static CURLcode cf_test_create(struct Curl_cfilter **pcf,
   }
   ctx->idx = test_idx++;
   ctx->ai_family = addr->family;
-  ctx->transport = transport;
+  ctx->transport_peer = transport_peer;
   ctx->started = curlx_now();
   current_tr->ongoing++;
   if(current_tr->ongoing > current_tr->max_concurrent)
@@ -256,7 +264,7 @@ static void check_result(const struct test_case *tc, struct test_result *tr)
     /* on CI we encounter the TIMEOUT result, since images get less CPU
      * and events are not as sharply timed. */
     curl_msprintf(msg, "%d: expected result %d but got %d",
-                  tc->id, tc->result_exp, tr->result);
+                  tc->id, (int)tc->result_exp, (int)tr->result);
     fail(msg);
   }
   if(tr->cf4.creations != tc->exp_cf4_creations) {
@@ -282,7 +290,7 @@ static void check_result(const struct test_case *tc, struct test_result *tr)
     fail(msg);
   }
   if(tr->cf6.creations && tr->cf4.creations && tc->pref_family) {
-    /* did ipv4 and ipv6 both, expect the preferred family to start right arway
+    /* did ipv4 and ipv6 both, expect the preferred family to start right away
      * with the other being delayed by the happy_eyeball_timeout */
     struct ai_family_stats *stats1 = !strcmp(tc->pref_family, "v6") ?
                                      &tr->cf6 : &tr->cf4;
@@ -357,7 +365,7 @@ static void test_connect(CURL *easy, const struct test_case *tc)
  * Max Duration checks needs to be conservative since CI jobs are not
  * as sharp.
  */
-#define TURL "http://test.com:123"
+#define TURL "http://abc.test:123"
 
 #define R_FAIL      CURLE_COULDNT_CONNECT
 /* timeout values accounting for low cpu resources in CI */
@@ -373,46 +381,46 @@ static CURLcode test_unit2600(const char *arg)
   static const struct test_case TEST_CASES[] = {
     /* TIMEOUT_MS,    FAIL_MS      CREATED    DURATION     Result, HE_PREF */
     /* CNCT   HE      v4    v6     v4 v6      MIN   MAX  MAX_CONCURRENT */
-    { 1, TURL, "test.com:123:192.0.2.1", CURL_IPRESOLVE_WHATEVER,
+    { 1, TURL, "abc.test:123:192.0.2.1", CURL_IPRESOLVE_WHATEVER,
       CNCT_TMOT, 150, 250,  250,    1,  0,      200,  TC_TMOT,  R_FAIL, NULL,
       1 },
     /* 1 ipv4, fails after ~200ms, reports COULDNT_CONNECT */
-    { 2, TURL, "test.com:123:192.0.2.1,192.0.2.2", CURL_IPRESOLVE_WHATEVER,
+    { 2, TURL, "abc.test:123:192.0.2.1,192.0.2.2", CURL_IPRESOLVE_WHATEVER,
       CNCT_TMOT, 150, 250,  250,    2,  0,      400,  TC_TMOT,  R_FAIL, NULL,
       2 },
     /* 2 ipv4, fails after ~400ms, reports COULDNT_CONNECT */
 #ifdef USE_IPV6
-    { 3, TURL, "test.com:123:::1", CURL_IPRESOLVE_WHATEVER,
+    { 3, TURL, "abc.test:123:::1", CURL_IPRESOLVE_WHATEVER,
       CNCT_TMOT, 150, 250,  250,    0,  1,      200,  TC_TMOT,  R_FAIL, NULL,
       1 },
     /* 1 ipv6, fails after ~200ms, reports COULDNT_CONNECT */
-    { 4, TURL, "test.com:123:::1,::2", CURL_IPRESOLVE_WHATEVER,
+    { 4, TURL, "abc.test:123:::1,::2", CURL_IPRESOLVE_WHATEVER,
       CNCT_TMOT, 150, 250,  250,    0,  2,      400,  TC_TMOT,  R_FAIL, NULL,
       2 },
     /* 2 ipv6, fails after ~400ms, reports COULDNT_CONNECT */
-    { 5, TURL, "test.com:123:192.0.2.1,::1", CURL_IPRESOLVE_WHATEVER,
+    { 5, TURL, "abc.test:123:192.0.2.1,::1", CURL_IPRESOLVE_WHATEVER,
       CNCT_TMOT, 150, 250, 250,     1,  1,      350,  TC_TMOT,  R_FAIL, "v6",
       2 },
     /* mixed ip4+6, v6 always first, v4 kicks in on HE, fails after ~350ms */
-    { 6, TURL, "test.com:123:::1,192.0.2.1", CURL_IPRESOLVE_WHATEVER,
+    { 6, TURL, "abc.test:123:::1,192.0.2.1", CURL_IPRESOLVE_WHATEVER,
       CNCT_TMOT, 150, 250, 250,     1,  1,      350,  TC_TMOT,  R_FAIL, "v6",
       2 },
     /* mixed ip6+4, v6 starts, v4 never starts due to high HE, TIMEOUT */
-    { 7, TURL, "test.com:123:192.0.2.1,::1", CURL_IPRESOLVE_V4,
+    { 7, TURL, "abc.test:123:192.0.2.1,::1", CURL_IPRESOLVE_V4,
       CNCT_TMOT, 150, 500, 500,     1,  0,      400,  TC_TMOT,  R_FAIL, NULL,
       1 },
     /* mixed ip4+6, but only use v4, check it uses full connect timeout,
        although another address of the 'wrong' family is available */
-    { 8, TURL, "test.com:123:::1,192.0.2.1", CURL_IPRESOLVE_V6,
+    { 8, TURL, "abc.test:123:::1,192.0.2.1", CURL_IPRESOLVE_V6,
       CNCT_TMOT, 150, 500, 500,     0,  1,      400,  TC_TMOT,  R_FAIL, NULL,
       1 },
     /* mixed ip4+6, but only use v6, check it uses full connect timeout,
        although another address of the 'wrong' family is available */
-    { 9, TURL, "test.com:123:::1,192.0.2.1,::2,::3", CURL_IPRESOLVE_WHATEVER,
+    { 9, TURL, "abc.test:123:::1,192.0.2.1,::2,::3", CURL_IPRESOLVE_WHATEVER,
       CNCT_TMOT, 50,  400,  400,    1,  3,      550,  TC_TMOT,  R_FAIL, NULL,
       4 },
     /* 1 v4, 3 v6, fails after (3*HE)+400ms, ~550ms, COULDNT_CONNECT */
-    { 10, TURL, "test.com:123:::1,192.0.2.1,::2,::3,::4,::5,::6,::7,::8",
+    { 10, TURL, "abc.test:123:::1,192.0.2.1,::2,::3,::4,::5,::6,::7,::8",
       CURL_IPRESOLVE_WHATEVER,
       CNCT_TMOT, 20,  500,  500,    1,  8,      550,  TC_TMOT,  R_FAIL, NULL,
       6 },

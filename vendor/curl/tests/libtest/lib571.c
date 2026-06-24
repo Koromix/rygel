@@ -33,8 +33,6 @@
 #include <arpa/inet.h>
 #endif
 
-#include "testutil.h"
-
 #define RTP_PKT_CHANNEL(p)   ((int)((unsigned char)((p)[1])))
 
 #define RTP_PKT_LENGTH(p)  ((((int)((unsigned char)((p)[2]))) << 8) | \
@@ -67,7 +65,7 @@ static size_t rtp_write(char *data, size_t size, size_t nmemb, void *stream)
   data += 4;
   for(i = 0; i < message_size; i += RTP_DATA_SIZE) {
     if(message_size - i > RTP_DATA_SIZE) {
-      if(memcmp(RTP_DATA, data + i, RTP_DATA_SIZE) != 0) {
+      if(memcmp(RTP_DATA, data + i, RTP_DATA_SIZE)) {
         curl_mprintf("RTP PAYLOAD CORRUPTED [%s]\n", data + i);
 #if 0
         return failure;
@@ -75,7 +73,7 @@ static size_t rtp_write(char *data, size_t size, size_t nmemb, void *stream)
       }
     }
     else {
-      if(memcmp(RTP_DATA, data + i, message_size - i) != 0) {
+      if(memcmp(RTP_DATA, data + i, message_size - i)) {
         curl_mprintf("RTP PAYLOAD END CORRUPTED (%d), [%s]\n",
                      message_size - i, data + i);
 #if 0
@@ -117,24 +115,24 @@ static CURLcode test_lib571(const char *URL)
     curl_global_cleanup();
     return TEST_ERR_MAJOR_BAD;
   }
-  test_setopt(curl, CURLOPT_URL, URL);
+  easy_setopt(curl, CURLOPT_URL, URL);
 
   stream_uri = tutil_suburl(URL, request++);
   if(!stream_uri) {
     result = TEST_ERR_MAJOR_BAD;
     goto test_cleanup;
   }
-  test_setopt(curl, CURLOPT_RTSP_STREAM_URI, stream_uri);
+  easy_setopt(curl, CURLOPT_RTSP_STREAM_URI, stream_uri);
   curl_free(stream_uri);
   stream_uri = NULL;
 
-  test_setopt(curl, CURLOPT_INTERLEAVEFUNCTION, rtp_write);
-  test_setopt(curl, CURLOPT_TIMEOUT, 30L);
-  test_setopt(curl, CURLOPT_VERBOSE, 1L);
-  test_setopt(curl, CURLOPT_WRITEDATA, protofile);
+  easy_setopt(curl, CURLOPT_INTERLEAVEFUNCTION, rtp_write);
+  easy_setopt(curl, CURLOPT_TIMEOUT, 30L);
+  easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+  easy_setopt(curl, CURLOPT_WRITEDATA, protofile);
 
-  test_setopt(curl, CURLOPT_RTSP_TRANSPORT, "RTP/AVP/TCP;interleaved=0-1");
-  test_setopt(curl, CURLOPT_RTSP_REQUEST, CURL_RTSPREQ_SETUP);
+  easy_setopt(curl, CURLOPT_RTSP_TRANSPORT, "RTP/AVP/TCP;interleaved=0-1");
+  easy_setopt(curl, CURLOPT_RTSP_REQUEST, CURL_RTSPREQ_SETUP);
 
   result = curl_easy_perform(curl);
   if(result)
@@ -146,25 +144,25 @@ static CURLcode test_lib571(const char *URL)
     result = TEST_ERR_MAJOR_BAD;
     goto test_cleanup;
   }
-  test_setopt(curl, CURLOPT_RTSP_STREAM_URI, stream_uri);
+  easy_setopt(curl, CURLOPT_RTSP_STREAM_URI, stream_uri);
   curl_free(stream_uri);
   stream_uri = NULL;
-  test_setopt(curl, CURLOPT_RTSP_REQUEST, CURL_RTSPREQ_PLAY);
+  easy_setopt(curl, CURLOPT_RTSP_REQUEST, CURL_RTSPREQ_PLAY);
 
   result = curl_easy_perform(curl);
   if(result)
     goto test_cleanup;
 
-  /* The DESCRIBE request will try to consume data after the Content */
+  /* The DESCRIBE request tries to consume data after the Content */
   stream_uri = tutil_suburl(URL, request++);
   if(!stream_uri) {
     result = TEST_ERR_MAJOR_BAD;
     goto test_cleanup;
   }
-  test_setopt(curl, CURLOPT_RTSP_STREAM_URI, stream_uri);
+  easy_setopt(curl, CURLOPT_RTSP_STREAM_URI, stream_uri);
   curl_free(stream_uri);
   stream_uri = NULL;
-  test_setopt(curl, CURLOPT_RTSP_REQUEST, CURL_RTSPREQ_DESCRIBE);
+  easy_setopt(curl, CURLOPT_RTSP_REQUEST, CURL_RTSPREQ_DESCRIBE);
 
   result = curl_easy_perform(curl);
   if(result)
@@ -175,10 +173,10 @@ static CURLcode test_lib571(const char *URL)
     result = TEST_ERR_MAJOR_BAD;
     goto test_cleanup;
   }
-  test_setopt(curl, CURLOPT_RTSP_STREAM_URI, stream_uri);
+  easy_setopt(curl, CURLOPT_RTSP_STREAM_URI, stream_uri);
   curl_free(stream_uri);
   stream_uri = NULL;
-  test_setopt(curl, CURLOPT_RTSP_REQUEST, CURL_RTSPREQ_PLAY);
+  easy_setopt(curl, CURLOPT_RTSP_REQUEST, CURL_RTSPREQ_PLAY);
 
   result = curl_easy_perform(curl);
   if(result)
@@ -189,7 +187,7 @@ static CURLcode test_lib571(const char *URL)
   /* Use Receive to get the rest of the data */
   while(!result && rtp_packet_count < 19) {
     curl_mfprintf(stderr, "LOOPY LOOP!\n");
-    test_setopt(curl, CURLOPT_RTSP_REQUEST, CURL_RTSPREQ_RECEIVE);
+    easy_setopt(curl, CURLOPT_RTSP_REQUEST, CURL_RTSPREQ_RECEIVE);
     result = curl_easy_perform(curl);
   }
 

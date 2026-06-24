@@ -45,9 +45,10 @@ static CURLcode t1609_setup(void)
      time request is made, it can get expired.  This happens because, when
      we set address using CURLOPT_RESOLVE,
      it usually marks as permanent (by setting timestamp to zero). However,
-     if address already exists
-     in the cache, then it does not mark it, but just leaves it as it is.
-     So we fixing this by timestamp to zero if address already exists too.
+     if address already exists in the cache, then it does not mark it, but
+     leaves it as it is.
+     We are fixing this by setting timestamp to zero if address already
+     exists too.
 
   Test:
 
@@ -97,7 +98,7 @@ static CURLcode test_unit1609(const char *arg)
   struct curl_slist *list = NULL;
 
   /* important: we setup cache outside of the loop
-     and also clean cache after the loop. In contrast,for example,
+     and also clean cache after the loop. In contrast, for example,
      test 1607 sets up and cleans cache on each iteration. */
 
   for(i = 0; i < CURL_ARRAYSIZE(tests); ++i) {
@@ -106,7 +107,7 @@ static CURLcode test_unit1609(const char *arg)
     struct Curl_addrinfo *addr;
     struct Curl_dns_entry *dns;
     void *entry_id;
-    bool problem = false;
+    bool problem = FALSE;
     easy = curl_easy_init();
     if(!easy) {
       curl_global_cleanup();
@@ -134,8 +135,7 @@ static CURLcode test_unit1609(const char *arg)
 
     dns = Curl_hash_pick(&multi->dnscache.entries,
                          entry_id, strlen(entry_id) + 1);
-    curlx_free(entry_id);
-    entry_id = NULL;
+    curlx_safefree(entry_id);
 
     addr = dns ? dns->addr : NULL;
 
@@ -146,12 +146,12 @@ static CURLcode test_unit1609(const char *arg)
       if(!addr && !tests[i].address[j])
         break;
 
-      if(addr && !Curl_addr2string(addr->ai_addr, addr->ai_addrlen,
-                                   ipaddress, &port)) {
+      if(addr && !sockaddr2string(addr->ai_addr, addr->ai_addrlen,
+                                  ipaddress, &port)) {
         curl_mfprintf(stderr,
                       "%s:%d tests[%zu] failed. Curl_addr2string failed.\n",
                       __FILE__, __LINE__, i);
-        problem = true;
+        problem = TRUE;
         break;
       }
 
@@ -159,7 +159,7 @@ static CURLcode test_unit1609(const char *arg)
         curl_mfprintf(stderr, "%s:%d tests[%zu] failed. the retrieved addr "
                       "is %s but tests[%zu].address[%zu] is NULL.\n",
                       __FILE__, __LINE__, i, ipaddress, i, j);
-        problem = true;
+        problem = TRUE;
         break;
       }
 
@@ -167,7 +167,7 @@ static CURLcode test_unit1609(const char *arg)
         curl_mfprintf(stderr, "%s:%d tests[%zu] failed. the retrieved addr "
                       "is NULL but tests[%zu].address[%zu] is %s.\n",
                       __FILE__, __LINE__, i, i, j, tests[i].address[j]);
-        problem = true;
+        problem = TRUE;
         break;
       }
 
@@ -176,7 +176,7 @@ static CURLcode test_unit1609(const char *arg)
                       "%s is not equal to tests[%zu].address[%zu] %s.\n",
                       __FILE__, __LINE__, i, ipaddress, i, j,
                       tests[i].address[j]);
-        problem = true;
+        problem = TRUE;
         break;
       }
 
@@ -185,7 +185,7 @@ static CURLcode test_unit1609(const char *arg)
                       "for tests[%zu].address[%zu] is %d "
                       "but tests[%zu].port is %d.\n",
                       __FILE__, __LINE__, i, i, j, port, i, tests[i].port);
-        problem = true;
+        problem = TRUE;
         break;
       }
 

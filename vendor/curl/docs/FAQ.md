@@ -33,7 +33,7 @@ platforms. The [internals document](https://curl.se/docs/install.html#Ports)
 lists more than 110 operating systems and 28 CPU architectures on which curl
 has been reported to run.
 
-libcurl is free, thread-safe, IPv6 compatible, feature rich, well supported
+libcurl is free, thread-safe, IPv6 compatible, feature-rich, well supported
 and fast.
 
 ### curl
@@ -176,7 +176,7 @@ fix and agree on a time schedule for publication etc. That way we produce a
 fix in a timely manner before the flaw is announced to the world, reducing the
 impact the problem risks having on existing users.
 
-Security issues can also be taking to the curl security team by emailing
+Security issues can also be taken to the curl security team by emailing
 security at curl.se (closed list of receivers, mails are not disclosed).
 
 ## Where do I buy commercial support for curl?
@@ -204,20 +204,20 @@ world wide.
 ## Why do you not update ca-bundle.crt
 
 In the curl project we have decided not to attempt to keep this file updated
-(or even present) since deciding what to add to a ca cert bundle is an
+(or even present) since deciding what to add to a CA cert bundle is an
 undertaking we have not been ready to accept, and the one we can get from
 Mozilla is perfectly fine so there is no need to duplicate that work.
 
 Today, with many services performed over HTTPS, every operating system should
-come with a default ca cert bundle that can be deemed somewhat trustworthy and
+come with a default CA cert bundle that can be deemed somewhat trustworthy and
 that collection (if reasonably updated) should be deemed to be a lot better
 than a private curl version.
 
-If you want the most recent collection of ca certs that Mozilla Firefox uses,
-we recommend that using our online [CA certificate
+If you want the most recent collection of CA certs that Mozilla Firefox uses,
+we recommend using our online [CA certificate
 service](https://curl.se/docs/caextract.html) setup for this purpose.
 
-## I have a problem who, can I chat with?
+## I have a problem, who can I chat with?
 
 There is a bunch of friendly people hanging out in the #curl channel on the
 IRC network libera.chat. If you are polite and nice, chances are good that you
@@ -253,7 +253,7 @@ to the curl-library mailing list. We are many subscribers there and there are
 lots of people who can review patches, comment on them and receive them
 properly.
 
-Lots of more details are found in the
+Many more details are found in the
 [contribute](https://curl.se/dev/contribute.html) and
 [internals](https://curl.se/dev/internals.html)
 documents.
@@ -276,7 +276,7 @@ You may find that configure fails to properly detect the entire dependency
 chain of libraries when you provide static versions of the libraries that
 configure checks for.
 
-The reason why static libraries is much harder to deal with is that for them
+The reason why static libraries are much harder to deal with is that for them
 we do not get any help but the script itself must know or check what more
 libraries that are needed (with shared libraries, that dependency chain is
 handled automatically). This is an error-prone process and one that also tends
@@ -294,10 +294,10 @@ curl has been written to use a generic SSL function layer internally, and
 that SSL functionality can then be provided by one out of many different SSL
 backends.
 
-curl can be built to use one of the following SSL alternatives: OpenSSL,
-LibreSSL, BoringSSL, AWS-LC, GnuTLS, wolfSSL, mbedTLS, Schannel (native
-Windows) or Rustls. They all have their pros and cons, and we maintain [a TLS
-library comparison](https://curl.se/docs/ssl-compared.html).
+curl can be built to use one of the following SSL alternatives: AWS-LC,
+BoringSSL, GnuTLS, LibreSSL, OpenSSL, mbedTLS, Rustls, Schannel (native
+Windows), or wolfSSL. They all have their pros and cons, and we maintain
+[a TLS library comparison](https://curl.se/docs/ssl-compared.html).
 
 ## How do I upgrade curl.exe in Windows?
 
@@ -368,7 +368,7 @@ transfer. Study the `-Q`/`--quote` option.
 Since curl is used for file transfers, you do not normally use curl to perform
 FTP commands without transferring anything. Therefore you must always specify
 a URL to transfer to/from even when doing custom FTP commands, or use `-I`
-which implies the *no body*" option sent to libcurl.
+which implies the *no body* option sent to libcurl.
 
 ## How can I disable the Accept: header?
 
@@ -634,7 +634,7 @@ does for you, you can override those request methods by specifying `-X
 `curl -X DELETE [URL]`.
 
 It is thus pointless to do `curl -XGET [URL]` as GET would be used anyway. In
-the same vein it is pointless to do `curl -X POST -d data [URL`. You can make
+the same vein it is pointless to do `curl -X POST -d data [URL]`. You can make
 a fun and somewhat rare request that sends a request-body in a GET request
 with something like `curl -X GET -d data [URL]`.
 
@@ -854,11 +854,11 @@ results and fetches the new URL.
 curl supports FTPS (sometimes known as FTP-SSL) both implicit and explicit
 mode.
 
-When a URL is used that starts with `FTPS://`, curl assumes implicit SSL on
+When a URL is used that starts with `ftps://`, curl assumes implicit SSL on
 the control connection and therefore immediately connects and tries to speak
-SSL. `FTPS://` connections default to port 990.
+SSL. `ftps://` connections default to port 990.
 
-To use explicit FTPS, you use an `FTP://` URL and the `--ssl-reqd` option (or
+To use explicit FTPS, you use an `ftp://` URL and the `--ssl-reqd` option (or
 one of its related flavors). This is the most common method, and the one
 mandated by RFC 4217. This kind of connection then of course uses the standard
 FTP port 21 by default.
@@ -893,7 +893,7 @@ software or similar that accepts the connection but does not actually do
 anything else. This makes (lib)curl to consider the connection connected
 and thus the connect timeout does not trigger.
 
-## file:// URLs containing drive letters (Windows, NetWare)
+## `file://` URLs containing drive letters (Windows, NetWare)
 
 When using curl to try to download a local file, one might use a URL in this
 format:
@@ -986,7 +986,7 @@ programs. libcurl uses thread-safe functions instead of non-safe ones if your
 system has such. Note that you must never share the same handle in multiple
 threads.
 
-There may be some exceptions to thread safety depending on how libcurl was
+There may be some exceptions to thread-safety depending on how libcurl was
 built. Please review [the guidelines for thread
 safety](https://curl.se/libcurl/c/threadsafe.html) to learn more.
 
@@ -1017,7 +1017,7 @@ WriteMemoryCallback(void *ptr, size_t size, size_t nmemb, void *data)
   size_t realsize = size * nmemb;
   struct MemoryStruct *mem = (struct MemoryStruct *)data;
 
-  mem->memory = (char *)realloc(mem->memory, mem->size + realsize + 1);
+  mem->memory = realloc(mem->memory, mem->size + realsize + 1);
   if(mem->memory) {
     memcpy(&(mem->memory[mem->size]), ptr, realsize);
     mem->size += realsize;

@@ -42,7 +42,7 @@
  * curl_multi "hiper" API.
  *
  * Thus, you can try a single URL:
- *   % echo http://www.yahoo.com > hiper.fifo
+ *   % echo http://www.example.com > hiper.fifo
  *
  * Or a whole bunch of them:
  *   % cat my-url-list > hiper.fifo
@@ -412,7 +412,7 @@ static int init_fifo(struct GlobalInfo *g)
   struct epoll_event epev;
 
   fprintf(MSG_OUT, "Creating named pipe \"%s\"\n", fifo);
-  if(lstat(fifo, &st) == 0) {
+  if(!lstat(fifo, &st)) {
     if((st.st_mode & S_IFMT) == S_IFREG) {
       errno = EEXIST;
       perror("lstat");

@@ -39,7 +39,7 @@ static const char *descr_flags(int flags)
     return "pong";
   if(flags & CURLWS_CLOSE)
     return "close";
-  assert(false);
+  assert(FALSE);
   return "";
 }
 
@@ -50,14 +50,14 @@ static CURLcode send_header(CURL *curl, int flags, size_t size)
 
 retry:
   result = curl_ws_send(curl, NULL, 0, &nsent, (curl_off_t)size,
-                     flags | CURLWS_OFFSET);
+                        flags | CURLWS_OFFSET);
   if(result == CURLE_AGAIN) {
     assert(nsent == 0);
     goto retry;
   }
   if(result) {
     curl_mfprintf(stderr, "%s:%d curl_ws_send() failed with code %d (%s)\n",
-                  __FILE__, __LINE__, result, curl_easy_strerror(result));
+                  __FILE__, __LINE__, (int)result, curl_easy_strerror(result));
     assert(nsent == 0);
     return result;
   }
@@ -86,13 +86,13 @@ retry:
   }
   if(result) {
     curl_mfprintf(stderr, "%s:%d curl_ws_recv() failed with code %d (%s)\n",
-                  __FILE__, __LINE__, result, curl_easy_strerror(result));
+                  __FILE__, __LINE__, (int)result, curl_easy_strerror(result));
     assert(nread == 0);
     return result;
   }
 
   assert(nread == 0);
-  assert(meta != NULL);
+  assert(meta);
   assert(meta->flags);
   assert(meta->offset == 0);
 
@@ -128,7 +128,7 @@ retry:
   }
   if(result) {
     curl_mfprintf(stderr, "%s:%d curl_ws_send() failed with code %d (%s)\n",
-                  __FILE__, __LINE__, result, curl_easy_strerror(result));
+                  __FILE__, __LINE__, (int)result, curl_easy_strerror(result));
     assert(nsent == 0);
     return result;
   }
@@ -157,13 +157,13 @@ retry:
   }
   if(result) {
     curl_mfprintf(stderr, "%s:%d curl_ws_recv() failed with code %d (%s)\n",
-                  __FILE__, __LINE__, result, curl_easy_strerror(result));
+                  __FILE__, __LINE__, (int)result, curl_easy_strerror(result));
     assert(nread == 0);
     return result;
   }
 
   assert(nread <= sizeof(buffer));
-  assert(meta != NULL);
+  assert(meta);
   assert(meta->flags == flags);
   assert(meta->offset == *offset);
   assert(meta->bytesleft == (*bytesleft - (curl_off_t)nread));
@@ -200,7 +200,7 @@ static CURLcode recv_frame(CURL *curl, bool *stop)
   }
 
   if(flags & CURLWS_CLOSE)
-    *stop = true;
+    *stop = TRUE;
 
   curl_mfprintf(stdout, "\n");
 
@@ -212,7 +212,7 @@ static CURLcode test_lib2700(const char *URL)
 {
 #ifndef CURL_DISABLE_WEBSOCKETS
   CURLcode result = CURLE_OK;
-  bool stop = false;
+  bool stop = FALSE;
   CURL *curl;
 
   global_init(CURL_GLOBAL_ALL);
@@ -234,7 +234,7 @@ static CURLcode test_lib2700(const char *URL)
   if(result) {
     curl_mfprintf(stderr,
                   "%s:%d curl_easy_perform() failed with code %d (%s)\n",
-                  __FILE__, __LINE__, result, curl_easy_strerror(result));
+                  __FILE__, __LINE__, (int)result, curl_easy_strerror(result));
     goto test_cleanup;
   }
 
@@ -249,6 +249,8 @@ test_cleanup:
   curl_global_cleanup();
   return result;
 #else
-  NO_SUPPORT_BUILT_IN
+  (void)URL;
+  curl_mfprintf(stderr, "Missing support\n");
+  return CURLE_UNSUPPORTED_PROTOCOL;
 #endif
 }

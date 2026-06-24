@@ -186,6 +186,7 @@
 #include "lib1582.c"
 #include "lib1587.c"
 #include "lib1588.c"
+#include "lib1589.c"
 #include "lib1591.c"
 #include "lib1592.c"
 #include "lib1593.c"
@@ -193,7 +194,11 @@
 #include "lib1597.c"
 #include "lib1598.c"
 #include "lib1599.c"
+#include "lib1647.c"
+#include "lib1648.c"
+#include "lib1649.c"
 #include "lib1662.c"
+#include "lib1686.c"
 #include "lib1900.c"
 #include "lib1901.c"
 #include "lib1902.c"
@@ -211,6 +216,8 @@
 #include "lib1918.c"
 #include "lib1919.c"
 #include "lib1920.c"
+#include "lib1921.c"
+#include "lib1922.c"
 #include "lib1933.c"
 #include "lib1934.c"
 #include "lib1935.c"
@@ -230,6 +237,7 @@
 #include "lib1960.c"
 #include "lib1964.c"
 #include "lib1965.c"
+#include "lib1967.c"
 #include "lib1970.c"
 #include "lib1971.c"
 #include "lib1972.c"
@@ -250,6 +258,7 @@
 #include "lib2402.c"
 #include "lib2404.c"
 #include "lib2405.c"
+#include "lib2412.c"
 #include "lib2502.c"
 #include "lib2504.c"
 #include "lib2505.c"
@@ -440,6 +449,7 @@ const struct entry_s s_entries[] = {
   {"lib1582", test_lib1582},
   {"lib1587", test_lib1587},
   {"lib1588", test_lib1588},
+  {"lib1589", test_lib1589},
   {"lib1591", test_lib1591},
   {"lib1592", test_lib1592},
   {"lib1593", test_lib1593},
@@ -447,7 +457,11 @@ const struct entry_s s_entries[] = {
   {"lib1597", test_lib1597},
   {"lib1598", test_lib1598},
   {"lib1599", test_lib1599},
+  {"lib1647", test_lib1647},
+  {"lib1648", test_lib1648},
+  {"lib1649", test_lib1649},
   {"lib1662", test_lib1662},
+  {"lib1686", test_lib1686},
   {"lib1900", test_lib1900},
   {"lib1901", test_lib1901},
   {"lib1902", test_lib1902},
@@ -465,6 +479,8 @@ const struct entry_s s_entries[] = {
   {"lib1918", test_lib1918},
   {"lib1919", test_lib1919},
   {"lib1920", test_lib1920},
+  {"lib1921", test_lib1921},
+  {"lib1922", test_lib1922},
   {"lib1933", test_lib1933},
   {"lib1934", test_lib1934},
   {"lib1935", test_lib1935},
@@ -484,6 +500,7 @@ const struct entry_s s_entries[] = {
   {"lib1960", test_lib1960},
   {"lib1964", test_lib1964},
   {"lib1965", test_lib1965},
+  {"lib1967", test_lib1967},
   {"lib1970", test_lib1970},
   {"lib1971", test_lib1971},
   {"lib1972", test_lib1972},
@@ -504,6 +521,7 @@ const struct entry_s s_entries[] = {
   {"lib2402", test_lib2402},
   {"lib2404", test_lib2404},
   {"lib2405", test_lib2405},
+  {"lib2412", test_lib2412},
   {"lib2502", test_lib2502},
   {"lib2504", test_lib2504},
   {"lib2505", test_lib2505},

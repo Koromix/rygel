@@ -76,7 +76,7 @@ struct rtspd_httprequest {
                      - skip bytes. */
   int rcmd;       /* doing a special command, see defines above */
   reqprot_t protocol; /* request protocol, HTTP or RTSP */
-  int prot_version;   /* HTTP or RTSP version (major*10 + minor) */
+  int prot_version;   /* HTTP or RTSP version (major * 10 + minor) */
   bool pipelining;    /* true if request is pipelined */
   char *rtp_buffer;
   size_t rtp_buffersize;
@@ -96,8 +96,8 @@ struct rtspd_httprequest {
 
 #define CMD_AUTH_REQUIRED "auth_required"
 
-/* 'idle' means that it will accept the request fine but never respond
-   any data. Just keep the connection alive. */
+/* 'idle' means that it accepts the request fine but never responds
+   any data. Keep the connection alive. */
 #define CMD_IDLE "idle"
 
 /* 'stream' means to send a never-ending stream of data */
@@ -372,7 +372,7 @@ static int rtspd_ProcessRequest(struct rtspd_httprequest *req)
           req->testno = DOCNUMBER_BADCONNECT;
         else if(!strncmp(doc, "test", 4)) {
           /* if the hostname starts with test, the port number used in the
-             CONNECT line will be used as test number! */
+             CONNECT line is used as test number! */
           const char *portp = strchr(doc, ':');
           if(portp && (*(portp + 1) != '\0') && ISDIGIT(*(portp + 1))) {
             pval = portp + 1;
@@ -424,7 +424,7 @@ static int rtspd_ProcessRequest(struct rtspd_httprequest *req)
     if((req->cl == 0) && !CURL_STRNICMP("Content-Length:", line, 15)) {
       /* If we do not ignore content-length, we read it and we read the whole
          request including the body before we return. If we have been told to
-         ignore the content-length, we will return as soon as all headers
+         ignore the content-length, we return as soon as all headers
          have been received */
       curl_off_t clen;
       const char *p = line + strlen("Content-Length:");
@@ -438,7 +438,7 @@ static int rtspd_ProcessRequest(struct rtspd_httprequest *req)
 
       logmsg("Found Content-Length: %zu in the request", (size_t)clen);
       if(req->skip)
-        logmsg("... but will abort after %zu bytes", req->cl);
+        logmsg("... but going to abort after %zu bytes", req->cl);
       break;
     }
     else if(!CURL_STRNICMP("Transfer-Encoding: chunked", line,
@@ -544,67 +544,10 @@ static int rtspd_ProcessRequest(struct rtspd_httprequest *req)
   return 1; /* done */
 }
 
-/* store the entire request in a file */
-static void rtspd_storerequest(const char *reqbuf, size_t totalsize)
-{
-  int res;
-  int error = 0;
-  char errbuf[STRERROR_LEN];
-  size_t written;
-  size_t writeleft;
-  FILE *dump;
-  char dumpfile[256];
-
-  snprintf(dumpfile, sizeof(dumpfile), "%s/%s", logdir, REQUEST_DUMP);
-
-  if(!reqbuf)
-    return;
-  if(totalsize == 0)
-    return;
-
-  do {
-    dump = curlx_fopen(dumpfile, "ab");
-    /* !checksrc! disable ERRNOVAR 1 */
-  } while(!dump && ((error = errno) == EINTR));
-  if(!dump) {
-    logmsg("Error opening file %s error (%d) %s", dumpfile,
-           error, curlx_strerror(error, errbuf, sizeof(errbuf)));
-    logmsg("Failed to write request input to %s", dumpfile);
-    return;
-  }
-
-  writeleft = totalsize;
-  do {
-    written = fwrite(&reqbuf[totalsize - writeleft], 1, writeleft, dump);
-    if(got_exit_signal)
-      goto storerequest_cleanup;
-    if(written > 0)
-      writeleft -= written;
-    error = errno;
-    /* !checksrc! disable ERRNOVAR 1 */
-  } while((writeleft > 0) && (error == EINTR));
-
-  if(writeleft == 0)
-    logmsg("Wrote request (%zu bytes) input to %s", totalsize, dumpfile);
-  else if(writeleft > 0) {
-    logmsg("Error writing file %s error (%d) %s", dumpfile,
-           error, curlx_strerror(error, errbuf, sizeof(errbuf)));
-    logmsg("Wrote only (%zu bytes) of (%zu bytes) request input to %s",
-           totalsize - writeleft, totalsize, dumpfile);
-  }
-
-storerequest_cleanup:
-
-  res = curlx_fclose(dump);
-  if(res)
-    logmsg("Error closing file %s error (%d) %s", dumpfile,
-           errno, curlx_strerror(errno, errbuf, sizeof(errbuf)));
-}
-
 /* return 0 on success, non-zero on failure */
 static int rtspd_get_request(curl_socket_t sock, struct rtspd_httprequest *req)
 {
-  int error;
+  int sockerr;
   char errbuf[STRERROR_LEN];
   int fail = 0;
   int done_processing = 0;
@@ -665,15 +608,15 @@ static int rtspd_get_request(curl_socket_t sock, struct rtspd_httprequest *req)
       fail = 1;
     }
     else if(got < 0) {
-      error = SOCKERRNO;
+      sockerr = SOCKERRNO;
       logmsg("recv() returned error (%d) %s",
-             error, curlx_strerror(error, errbuf, sizeof(errbuf)));
+             sockerr, curlx_strerror(sockerr, errbuf, sizeof(errbuf)));
       fail = 1;
     }
     if(fail) {
       /* dump the request received so far to the external file */
       reqbuf[req->offset] = '\0';
-      rtspd_storerequest(reqbuf, req->offset);
+      storerequest(reqbuf, req->offset, REQUEST_DUMP);
       return 1;
     }
 
@@ -708,7 +651,8 @@ static int rtspd_get_request(curl_socket_t sock, struct rtspd_httprequest *req)
     reqbuf[req->offset] = '\0';
 
   /* dump the request to an external file */
-  rtspd_storerequest(reqbuf, req->pipelining ? req->checkindex : req->offset);
+  storerequest(reqbuf, req->pipelining ? req->checkindex : req->offset,
+               REQUEST_DUMP);
   if(got_exit_signal)
     return 1;
 
@@ -730,7 +674,6 @@ static int rtspd_send_doc(curl_socket_t sock, struct rtspd_httprequest *req)
   size_t responsesize;
   int error = 0;
   char errbuf[STRERROR_LEN];
-  int res;
   static char weare[256];
   char responsedump[256];
 
@@ -863,7 +806,7 @@ static int rtspd_send_doc(curl_socket_t sock, struct rtspd_httprequest *req)
   }
 
   /* If the word 'swsclose' is present anywhere in the reply chunk, the
-     connection will be closed after the data has been sent to the requesting
+     connection is closed after the data has been sent to the requesting
      client... */
   if(strstr(buffer, "swsclose") || !count) {
     persistent = FALSE;
@@ -890,8 +833,8 @@ static int rtspd_send_doc(curl_socket_t sock, struct rtspd_httprequest *req)
 
   responsesize = count;
   do {
-    /* Ok, we send no more than 200 bytes at a time, just to make sure that
-       larger chunks are split up so that the client will need to do multiple
+    /* Ok, we send no more than 200 bytes at a time, to make sure that
+       larger chunks are split up so that the client needs to do multiple
        recv() calls to get it and thus we exercise that code better */
     size_t num = count;
     if(num > 200)
@@ -934,8 +877,7 @@ static int rtspd_send_doc(curl_socket_t sock, struct rtspd_httprequest *req)
     req->rtp_buffersize = 0;
   }
 
-  res = curlx_fclose(dump);
-  if(res)
+  if(curlx_fclose(dump))
     logmsg("Error closing file %s error (%d) %s", responsedump,
            errno, curlx_strerror(errno, errbuf, sizeof(errbuf)));
 
@@ -968,16 +910,13 @@ static int rtspd_send_doc(curl_socket_t sock, struct rtspd_httprequest *req)
         if(!strcmp("wait", command)) {
           logmsg("Told to sleep for %d seconds", num);
           quarters = num * 4;
-          while(quarters > 0) {
+          while((quarters > 0) && !got_exit_signal) {
             quarters--;
-            res = curlx_wait_ms(250);
-            if(got_exit_signal)
-              break;
-            if(res) {
+            if(curlx_wait_ms(250)) {
               /* should not happen */
-              error = SOCKERRNO;
+              int sockerr = SOCKERRNO;
               logmsg("curlx_wait_ms() failed with error (%d) %s",
-                     error, curlx_strerror(error, errbuf, sizeof(errbuf)));
+                     sockerr, curlx_strerror(sockerr, errbuf, sizeof(errbuf)));
               break;
             }
           }
@@ -1014,7 +953,7 @@ static int test_rtspd(int argc, const char *argv[])
   unsigned short port = 8999;
   struct rtspd_httprequest req;
   int rc;
-  int error;
+  int sockerr;
   char errbuf[STRERROR_LEN];
   int arg = 1;
 
@@ -1106,7 +1045,7 @@ static int test_rtspd(int argc, const char *argv[])
   snprintf(loglockfile, sizeof(loglockfile), "%s/%s/rtsp-%s.lock",
            logdir, SERVERLOGS_LOCKDIR, ipv_inuse);
 
-  install_signal_handlers(false);
+  install_signal_handlers(FALSE);
 
 #ifdef USE_IPV6
   if(!use_ipv6)
@@ -1118,17 +1057,17 @@ static int test_rtspd(int argc, const char *argv[])
 #endif
 
   if(sock == CURL_SOCKET_BAD) {
-    error = SOCKERRNO;
+    sockerr = SOCKERRNO;
     logmsg("Error creating socket (%d) %s",
-           error, curlx_strerror(error, errbuf, sizeof(errbuf)));
+           sockerr, curlx_strerror(sockerr, errbuf, sizeof(errbuf)));
     goto server_cleanup;
   }
 
   flag = 1;
   if(setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (void *)&flag, sizeof(flag))) {
-    error = SOCKERRNO;
+    sockerr = SOCKERRNO;
     logmsg("setsockopt(SO_REUSEADDR) failed with error (%d) %s",
-           error, curlx_strerror(error, errbuf, sizeof(errbuf)));
+           sockerr, curlx_strerror(sockerr, errbuf, sizeof(errbuf)));
     goto server_cleanup;
   }
 
@@ -1151,9 +1090,9 @@ static int test_rtspd(int argc, const char *argv[])
   }
 #endif /* USE_IPV6 */
   if(rc) {
-    error = SOCKERRNO;
+    sockerr = SOCKERRNO;
     logmsg("Error binding socket on port %hu (%d) %s", port,
-           error, curlx_strerror(error, errbuf, sizeof(errbuf)));
+           sockerr, curlx_strerror(sockerr, errbuf, sizeof(errbuf)));
     goto server_cleanup;
   }
 
@@ -1172,9 +1111,9 @@ static int test_rtspd(int argc, const char *argv[])
       la_size = sizeof(localaddr.sa6);
 #endif
     if(getsockname(sock, &localaddr.sa, &la_size) < 0) {
-      error = SOCKERRNO;
+      sockerr = SOCKERRNO;
       logmsg("getsockname() failed with error (%d) %s",
-             error, curlx_strerror(error, errbuf, sizeof(errbuf)));
+             sockerr, curlx_strerror(sockerr, errbuf, sizeof(errbuf)));
       sclose(sock);
       goto server_cleanup;
     }
@@ -1203,17 +1142,16 @@ static int test_rtspd(int argc, const char *argv[])
   logmsg("Running %s version on port %d", ipv_inuse, (int)port);
 
   /* start accepting connections */
-  rc = listen(sock, 5);
-  if(rc) {
-    error = SOCKERRNO;
+  if(listen(sock, 5)) {
+    sockerr = SOCKERRNO;
     logmsg("listen() failed with error (%d) %s",
-           error, curlx_strerror(error, errbuf, sizeof(errbuf)));
+           sockerr, curlx_strerror(sockerr, errbuf, sizeof(errbuf)));
     goto server_cleanup;
   }
 
   /*
-   * As soon as this server writes its pid file the test harness will
-   * attempt to connect to this server and initiate its verification.
+   * As soon as this server writes its pid file the test harness attempts
+   * to connect to this server and initiate its verification.
    */
 
   wrotepidfile = write_pidfile(pidname);
@@ -1232,9 +1170,9 @@ static int test_rtspd(int argc, const char *argv[])
     if(got_exit_signal)
       break;
     if(msgsock == CURL_SOCKET_BAD) {
-      error = SOCKERRNO;
+      sockerr = SOCKERRNO;
       logmsg("MAJOR ERROR, accept() failed with error (%d) %s",
-             error, curlx_strerror(error, errbuf, sizeof(errbuf)));
+             sockerr, curlx_strerror(sockerr, errbuf, sizeof(errbuf)));
       break;
     }
 
@@ -1343,7 +1281,7 @@ server_cleanup:
     clear_advisor_read_lock(loglockfile);
   }
 
-  restore_signal_handlers(false);
+  restore_signal_handlers(FALSE);
 
   if(got_exit_signal) {
     logmsg("========> %s rtspd (port: %d pid: %ld) exits with signal (%d)",

@@ -92,22 +92,22 @@ static int onetest(CURL *curl, const char *url, const struct testparams *p,
   if(p->flags & F_HTTP416)
     replyselector += 2;
   curl_msnprintf(urlbuf, sizeof(urlbuf), "%s%04u", url, replyselector);
-  test_setopt(curl, CURLOPT_URL, urlbuf);
-  test_setopt(curl, CURLOPT_VERBOSE, 1L);
-  test_setopt(curl, CURLOPT_RESUME_FROM, (p->flags & F_RESUME) ? 3L : 0L);
-  test_setopt(curl, CURLOPT_RANGE, !(p->flags & F_RESUME) ?
+  easy_setopt(curl, CURLOPT_URL, urlbuf);
+  easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+  easy_setopt(curl, CURLOPT_RESUME_FROM, (p->flags & F_RESUME) ? 3L : 0L);
+  easy_setopt(curl, CURLOPT_RANGE, !(p->flags & F_RESUME) ?
                                    "3-1000000" : (char *)NULL);
-  test_setopt(curl, CURLOPT_FAILONERROR, (p->flags & F_FAIL) ? 1L : 0L);
+  easy_setopt(curl, CURLOPT_FAILONERROR, (p->flags & F_FAIL) ? 1L : 0L);
   hasbody = 0;
   result = curl_easy_perform(curl);
   if(result != p->result) {
     curl_mprintf("%zu: bad error code (%d): resume=%s, fail=%s, http416=%s, "
-                 "content-range=%s, expected=%d\n", num, result,
+                 "content-range=%s, expected=%d\n", num, (int)result,
                  (p->flags & F_RESUME) ? "yes" : "no",
                  (p->flags & F_FAIL) ? "yes" : "no",
                  (p->flags & F_HTTP416) ? "yes" : "no",
                  (p->flags & F_CONTENTRANGE) ? "yes" : "no",
-                 p->result);
+                 (int)p->result);
     return 1;
   }
   if(hasbody && (p->flags & F_IGNOREBODY)) {
@@ -149,7 +149,7 @@ static CURLcode test_lib1156(const char *URL)
       return TEST_ERR_MAJOR_BAD;
     }
 
-    test_setopt(curl, CURLOPT_WRITEFUNCTION, writedata);
+    easy_setopt(curl, CURLOPT_WRITEFUNCTION, writedata);
 
 #ifdef SINGLETEST
     if(SINGLETEST == i)

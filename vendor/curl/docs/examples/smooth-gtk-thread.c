@@ -125,7 +125,7 @@ static void *create_thread(void *progress_bar)
   pthread_t tid[NUMT];
   int i;
 
-  /* Make sure I do not create more threads than urls. */
+  /* Make sure I do not create more threads than URLs. */
   for(i = 0; i < NUMT && i < num_urls; i++) {
     int error = pthread_create(&tid[i],
                                NULL, /* default attributes please */
@@ -210,7 +210,7 @@ int main(int argc, const char **argv)
   g_signal_connect(G_OBJECT(top_window), "delete-event",
                    G_CALLBACK(cb_delete), NULL);
 
-  if(!g_thread_create(&create_thread, progress_bar, FALSE, NULL) != 0)
+  if(!g_thread_create(&create_thread, progress_bar, FALSE, NULL))
     g_warning("cannot create the thread");
 
   gtk_main();

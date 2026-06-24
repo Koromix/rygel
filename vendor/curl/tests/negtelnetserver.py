@@ -84,7 +84,7 @@ class NegotiatingTelnetHandler(socketserver.BaseRequestHandler):
             neg.send_wont("NAWS")
 
             # Get the data passed through the negotiator
-            data = neg.recv(4*1024)
+            data = neg.recv(4 * 1024)
             log.debug("Incoming data: %r", data)
 
             if VERIFIED_REQ.encode('utf-8') in data:
@@ -106,7 +106,7 @@ class NegotiatingTelnetHandler(socketserver.BaseRequestHandler):
             # put some effort into making a clean socket shutdown
             # that does not give the client ECONNRESET
             self.request.settimeout(0.1)
-            self.request.recv(4*1024)
+            self.request.recv(4 * 1024)
             self.request.shutdown(socket.SHUT_RDWR)
 
         except IOError:
@@ -167,7 +167,7 @@ class Negotiator:
             log.debug("Starting negotiation (IAC)")
             self.state = self.START_NEG
         else:
-            # Just append the incoming byte to the buffer
+            # Append the incoming byte to the buffer
             buffer.append(byte_int)
 
     def start_neg(self, byte_int):

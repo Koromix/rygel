@@ -50,13 +50,13 @@ static void t1620_parse(const char *input,
 
   if(!unitfail) {
     fail_unless(!userstr || !exp_username ||
-                  strcmp(userstr, exp_username) == 0,
+                !strcmp(userstr, exp_username),
                 "userstr should be equal to exp_username");
     fail_unless(!passwdstr || !exp_password ||
-                  strcmp(passwdstr, exp_password) == 0,
+                !strcmp(passwdstr, exp_password),
                 "passwdstr should be equal to exp_password");
     fail_unless(!options || !exp_options ||
-                  strcmp(options, exp_options) == 0,
+                !strcmp(options, exp_options),
                 "options should be equal to exp_options");
   }
 
@@ -127,7 +127,7 @@ static CURLcode test_unit1620(const char *arg)
 
   Curl_freeset(empty);
   for(i = (enum dupstring)0; i < STRING_LAST; i++) {
-    fail_unless(empty->set.str[i] == NULL, "Curl_free() did not set to NULL");
+    fail_unless(!empty->set.str[i], "Curl_free() did not set to NULL");
   }
 
   result = Curl_close(&dupe);

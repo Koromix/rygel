@@ -24,7 +24,7 @@
 #include "first.h"
 
 /*
- * This example shows an FTP upload, with a rename of the file just after
+ * This example shows an FTP upload, with a rename of the file right after
  * a successful upload.
  *
  * Example based on source code provided by Erick Nuwendam. Thanks!
@@ -38,9 +38,8 @@ static CURLcode test_lib505(const char *URL)
   FILE *hd_src;
   int hd;
   curlx_struct_stat file_info;
-  struct curl_slist *hl;
-
-  struct curl_slist *headerlist = NULL;
+  struct curl_slist *headerlist;
+  struct curl_slist *temp;
 
   static const char *buf_1 = "RNFR 505";
   static const char *buf_2 = "RNTO 505-forreal";
@@ -92,42 +91,42 @@ static CURLcode test_lib505(const char *URL)
 
   /* build a list of commands to pass to libcurl */
 
-  hl = curl_slist_append(headerlist, buf_1);
-  if(!hl) {
-    curl_mfprintf(stderr, "curl_slist_append() failed\n");
-    curl_easy_cleanup(curl);
-    curl_global_cleanup();
-    curlx_fclose(hd_src);
-    return TEST_ERR_MAJOR_BAD;
-  }
-  headerlist = curl_slist_append(hl, buf_2);
+  headerlist = curl_slist_append(NULL, buf_1);
   if(!headerlist) {
     curl_mfprintf(stderr, "curl_slist_append() failed\n");
-    curl_slist_free_all(hl);
     curl_easy_cleanup(curl);
     curl_global_cleanup();
     curlx_fclose(hd_src);
     return TEST_ERR_MAJOR_BAD;
   }
-  headerlist = hl;
+  temp = curl_slist_append(headerlist, buf_2);
+  if(!temp) {
+    curl_mfprintf(stderr, "curl_slist_append() failed\n");
+    curl_slist_free_all(headerlist);
+    curl_easy_cleanup(curl);
+    curl_global_cleanup();
+    curlx_fclose(hd_src);
+    return TEST_ERR_MAJOR_BAD;
+  }
+  headerlist = temp;
 
   /* enable uploading */
-  test_setopt(curl, CURLOPT_UPLOAD, 1L);
+  easy_setopt(curl, CURLOPT_UPLOAD, 1L);
 
   /* enable verbose */
-  test_setopt(curl, CURLOPT_VERBOSE, 1L);
+  easy_setopt(curl, CURLOPT_VERBOSE, 1L);
 
   /* specify target */
-  test_setopt(curl, CURLOPT_URL, URL);
+  easy_setopt(curl, CURLOPT_URL, URL);
 
   /* pass in that last of FTP commands to run after the transfer */
-  test_setopt(curl, CURLOPT_POSTQUOTE, headerlist);
+  easy_setopt(curl, CURLOPT_POSTQUOTE, headerlist);
 
   /* now specify which file to upload */
-  test_setopt(curl, CURLOPT_READDATA, hd_src);
+  easy_setopt(curl, CURLOPT_READDATA, hd_src);
 
   /* and give the size of the upload (optional) */
-  test_setopt(curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t)file_info.st_size);
+  easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t)file_info.st_size);
 
   /* Now run off and do what you have been told! */
   result = curl_easy_perform(curl);

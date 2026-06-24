@@ -43,7 +43,7 @@ static CURLcode test_lib1911(const char *URL)
     return TEST_ERR_EASY_INIT;
   }
 
-  /* make it a null-terminated C string with just As */
+  /* make it a null-terminated C string with only As */
   memset(testbuf, 'A', MAX_INPUT_LENGTH + 1);
   testbuf[MAX_INPUT_LENGTH + 1] = 0;
 
@@ -78,7 +78,7 @@ static CURLcode test_lib1911(const char *URL)
       default:
         /* all other return codes are unexpected */
         curl_mfprintf(stderr, "curl_easy_setopt(%s...) returned %d\n",
-                      o->name, result);
+                      o->name, (int)result);
         error++;
         break;
       }

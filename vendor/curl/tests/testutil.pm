@@ -71,7 +71,7 @@ my @logmessages;  # array holding logged messages
 #
 # logmsg must only be called by one of the runner_* entry points and functions
 # called by them, or else logs risk being lost, since those are the only
-# functions that know about and will return buffered logs.
+# functions that know about and return buffered logs.
 sub logmsg {
     if(!scalar(@_)) {
         return;
@@ -86,7 +86,7 @@ sub logmsg {
 #######################################################################
 # Set the function to use for logging
 sub setlogfunc {
-    ($logfunc)=@_;
+    ($logfunc) = @_;
 }
 
 #######################################################################
@@ -164,7 +164,7 @@ sub subbase64 {
         # boundary. Then provide two alternatives.
         my $now = time();
         my $d = ($1 * 24 * 3600) + $now + 30;
-        $d = int($d/60) * 60;
+        $d = int($d / 60) * 60;
         my $d2 = $d + 60;
         $$thing =~ s/%%DAYS%%/%alternatives[$d,$d2]/;
     }
@@ -195,7 +195,7 @@ sub subnewlines {
     }
     else {
         if(($$thing =~ /^\n\z/) && $prevupdate) {
-            # if there is a blank link after a line we update, we hope it is
+            # if there is a blank line after a line we update, we hope it is
             # the empty line following headers
             $$thing =~ s/\x0a/\x0d\x0a/;
         }
@@ -207,7 +207,7 @@ sub subnewlines {
 # Run the application under test and return its return code
 #
 sub runclient {
-    my ($cmd)=@_;
+    my ($cmd) = @_;
     my $ret = system($cmd);
     print "CMD ($ret): $cmd\n" if($verbose && !$torture);
     return $ret;
@@ -222,11 +222,11 @@ sub runclient {
 # Run the application under test and return its stdout
 #
 sub runclientoutput {
-    my ($cmd)=@_;
-    return `$cmd 2>$dev_null`;
+    my ($cmd) = @_;
+    return qx($cmd 2>$dev_null);
 
 # This is one way to test curl on a remote machine
-#    my @out = `ssh $CLIENTIP cd \'$pwd\' \\; \'$cmd\'`;
+#    my @out = qx(ssh $CLIENTIP cd \'$pwd\' \\; \'$cmd\');
 #    sleep 2;    # time to allow the NFS server to be updated
 #    return @out;
 }

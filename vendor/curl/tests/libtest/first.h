@@ -31,6 +31,7 @@
    we need both of them in the include path), so that we get good in-depth
    knowledge about the system we are building this on */
 #include "curl_setup.h"
+#include "testutil.h"
 
 typedef CURLcode (*entry_func_t)(const char *);
 
@@ -54,27 +55,14 @@ extern int unitfail; /* for unittests */
 #include "curlx/wait.h" /* for curlx_wait_ms() */
 
 #ifdef HAVE_SYS_SELECT_H
-/* since so many tests use select(), we can just as well include it here */
+/* since so many tests use select(), we can as well include it here */
 #include <sys/select.h>
 #endif
-
-#define test_setopt(A, B, C)            \
-  do {                                  \
-    result = curl_easy_setopt(A, B, C); \
-    if(result != CURLE_OK)              \
-      goto test_cleanup;                \
-  } while(0)
-
-#define test_multi_setopt(A, B, C)       \
-  do {                                   \
-    result = curl_multi_setopt(A, B, C); \
-    if(result != CURLE_OK)               \
-      goto test_cleanup;                 \
-  } while(0)
 
 extern const char *libtest_arg2; /* set by first.c to the argv[2] or NULL */
 extern const char *libtest_arg3; /* set by first.c to the argv[3] or NULL */
 extern const char *libtest_arg4; /* set by first.c to the argv[4] or NULL */
+extern const char *libtest_arg5; /* set by first.c to the argv[5] or NULL */
 
 /* argc and argv as passed in to the main() function */
 extern int test_argc;
@@ -94,16 +82,15 @@ extern char *hexdump(const unsigned char *buf, size_t len);
 #ifndef CURL_DISABLE_WEBSOCKETS
 CURLcode ws_send_ping(CURL *curl, const char *send_payload);
 CURLcode ws_recv_pong(CURL *curl, const char *expected_payload);
-void ws_close(CURL *curl);  /* just close the connection */
+void ws_close(CURL *curl);  /* close the connection */
 #endif
 
 /*
- * TEST_ERR_* values must within the CURLcode range to not cause compiler
+ * TEST_ERR_* values must be within the CURLcode range to not cause compiler
  * errors.
  *
  * For portability reasons TEST_ERR_* values should be less than 127.
  */
-
 #define TEST_ERR_MAJOR_BAD    CURLE_OBSOLETE20
 #define TEST_ERR_RUNS_FOREVER CURLE_OBSOLETE24
 #define TEST_ERR_EASY_INIT    CURLE_OBSOLETE29
@@ -141,10 +128,11 @@ void ws_close(CURL *curl);  /* just close the connection */
  * should be immediately followed by checking if 'res' variable has been
  * set.
  *
- * 'res' variable when set will hold a CURLcode, CURLMcode, or any of the
+ * 'res' variable when set holds a CURLcode, CURLMcode, or any of the
  * TEST_ERR_* values defined above. It is advisable to return this value
  * as test result.
  */
+#ifndef UNITTESTS
 
 /* ---------------------------------------------------------------- */
 
@@ -196,16 +184,14 @@ void ws_close(CURL *curl);  /* just close the connection */
 
 /* ---------------------------------------------------------------- */
 
-#define exe_easy_setopt(A, B, C, Y, Z)                  \
-  do {                                                  \
-    CURLcode ec = curl_easy_setopt(A, B, C);            \
-    if(ec != CURLE_OK) {                                \
-      curl_mfprintf(stderr,                             \
-                    "%s:%d curl_easy_setopt() failed, " \
-                    "with code %d (%s)\n",              \
-                    Y, Z, ec, curl_easy_strerror(ec));  \
-      result = ec;                                      \
-    }                                                   \
+#define exe_easy_setopt(A, B, C, Y, Z)                              \
+  do {                                                              \
+    result = curl_easy_setopt(A, B, C);                             \
+    if(result)                                                      \
+      curl_mfprintf(stderr,                                         \
+                    "%s:%d curl_easy_setopt() failed, "             \
+                    "with code %d (%s)\n",                          \
+                    Y, Z, (int)result, curl_easy_strerror(result)); \
   } while(0)
 
 #define res_easy_setopt(A, B, C) \
@@ -234,9 +220,6 @@ void ws_close(CURL *curl);  /* just close the connection */
       result = TEST_ERR_MULTI;                           \
     }                                                    \
   } while(0)
-
-#define res_multi_setopt(A, B, C) \
-  exe_multi_setopt(A, B, C, __FILE__, __LINE__)
 
 #define chk_multi_setopt(A, B, C, Y, Z) \
   do {                                  \
@@ -288,9 +271,6 @@ void ws_close(CURL *curl);  /* just close the connection */
       result = TEST_ERR_MULTI;                                  \
     }                                                           \
   } while(0)
-
-#define res_multi_remove_handle(A, B) \
-  exe_multi_remove_handle(A, B, __FILE__, __LINE__)
 
 #define chk_multi_remove_handle(A, B, Y, Z) \
   do {                                      \
@@ -425,9 +405,6 @@ void ws_close(CURL *curl);  /* just close the connection */
     }                                                           \
   } while(0)
 
-#define res_multi_poll(A, B, C, D, E) \
-  exe_multi_poll(A, B, C, D, E, __FILE__, __LINE__)
-
 #define chk_multi_poll(A, B, C, D, E, Y, Z) \
   do {                                      \
     exe_multi_poll(A, B, C, D, E, Y, Z);    \
@@ -455,27 +432,17 @@ void ws_close(CURL *curl);  /* just close the connection */
 #define res_multi_wakeup(A) \
   exe_multi_wakeup(A, __FILE__, __LINE__)
 
-#define chk_multi_wakeup(A, Y, Z) \
-  do {                            \
-    exe_multi_wakeup(A, Y, Z);    \
-    if(result)                    \
-      goto test_cleanup;          \
-  } while(0)
-
-#define multi_wakeup(A) \
-  chk_multi_wakeup(A, __FILE__, __LINE__)
-
 /* ---------------------------------------------------------------- */
 
 #define exe_select_test(A, B, C, D, E, Y, Z)                             \
   do {                                                                   \
     if(select_wrapper(A, B, C, D, E) == -1) {                            \
-      int ec = SOCKERRNO;                                                \
-      char ecbuf[STRERROR_LEN];                                          \
+      int sockerr = SOCKERRNO;                                           \
+      char sockerrbuf[STRERROR_LEN];                                     \
       curl_mfprintf(stderr,                                              \
-                    "%s:%d select() failed, with "                       \
-                    "errno %d (%s)\n",                                   \
-                    Y, Z, ec, curlx_strerror(ec, ecbuf, sizeof(ecbuf))); \
+                    "%s:%d select() failed, with errno %d (%s)\n", Y, Z, \
+                    sockerr, curlx_strerror(sockerr, sockerrbuf,         \
+                                            sizeof(sockerrbuf)));        \
       result = TEST_ERR_SELECT;                                          \
     }                                                                    \
   } while(0)
@@ -517,9 +484,6 @@ void ws_close(CURL *curl);  /* just close the connection */
 #define res_test_timedout() \
   exe_test_timedout(TEST_HANG_TIMEOUT, __FILE__, __LINE__)
 
-#define res_test_timedout_custom(T) \
-  exe_test_timedout(T, __FILE__, __LINE__)
-
 #define chk_test_timedout(T, Y, Z) \
   do {                             \
     exe_test_timedout(T, Y, Z);    \
@@ -533,22 +497,26 @@ void ws_close(CURL *curl);  /* just close the connection */
 #define abort_on_test_timeout_custom(T) \
   chk_test_timedout(T, __FILE__, __LINE__)
 
-/* ---------------------------------------------------------------- */
-
-#define exe_global_init(A, Y, Z)                        \
-  do {                                                  \
-    CURLcode ec = curl_global_init(A);                  \
-    if(ec != CURLE_OK) {                                \
-      curl_mfprintf(stderr,                             \
-                    "%s:%d curl_global_init() failed, " \
-                    "with code %d (%s)\n",              \
-                    Y, Z, ec, curl_easy_strerror(ec));  \
-      result = ec;                                      \
-    }                                                   \
-  } while(0)
+#define NUM_HANDLES 4  /* global default */
 
 #define res_global_init(A) \
   exe_global_init(A, __FILE__, __LINE__)
+
+#endif /* !UNITTESTS */
+
+#if !defined(UNITTESTS) || defined(BUILDING_LIBCURL)
+
+/* ---------------------------------------------------------------- */
+
+#define exe_global_init(A, Y, Z)                                    \
+  do {                                                              \
+    result = curl_global_init(A);                                   \
+    if(result)                                                      \
+      curl_mfprintf(stderr,                                         \
+                    "%s:%d curl_global_init() failed, "             \
+                    "with code %d (%s)\n",                          \
+                    Y, Z, (int)result, curl_easy_strerror(result)); \
+  } while(0)
 
 #define chk_global_init(A, Y, Z) \
   do {                           \
@@ -563,13 +531,6 @@ void ws_close(CURL *curl);  /* just close the connection */
 #define global_init(A) \
   chk_global_init(A, __FILE__, __LINE__)
 
-#define NO_SUPPORT_BUILT_IN                     \
-  {                                             \
-    (void)URL;                                  \
-    curl_mfprintf(stderr, "Missing support\n"); \
-    return CURLE_UNSUPPORTED_PROTOCOL;          \
-  }
-
-#define NUM_HANDLES 4  /* global default */
+#endif /* !UNITTESTS || BUILDING_LIBCURL */
 
 #endif /* HEADER_LIBTEST_FIRST_H */

@@ -549,7 +549,7 @@ SANITIZEcode sanitize_file_name(char ** const sanitized, const char *file_name,
  *  4. Windows Directory (e.g. C:\Windows)
  *  5. all directories along %PATH%
  *
- * For WinXP and later search order actually depends on registry value:
+ * For Windows XP and later search order actually depends on registry value:
  * HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\SafeProcessSearchMode
  */
 CURLcode FindWin32CACert(struct OperationConfig *config,
@@ -639,7 +639,7 @@ static struct TerminalSettings {
   LONG valid;
 } TerminalSettings;
 
-/* Offered by mingw-w64 v7+. MS SDK ~10.16299/~VS2017+. */
+/* Offered by mingw-w64 v7+, MS SDK 10.0.10586.0/VS2015 Update 1+ */
 #ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
 #define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
 #endif
@@ -678,7 +678,7 @@ static void init_terminal(void)
     return;
 
   if((TerminalSettings.dwOutputMode & ENABLE_VIRTUAL_TERMINAL_PROCESSING))
-    tool_term_has_bold = true;
+    tool_term_has_bold = TRUE;
   else {
     /* The signal handler is set before attempting to change the console mode
        because otherwise a signal would not be caught after the change but
@@ -688,7 +688,7 @@ static void init_terminal(void)
       if(SetConsoleMode(TerminalSettings.hStdOut,
                         (TerminalSettings.dwOutputMode |
                          ENABLE_VIRTUAL_TERMINAL_PROCESSING))) {
-        tool_term_has_bold = true;
+        tool_term_has_bold = TRUE;
         atexit(restore_terminal);
       }
       else {
@@ -770,10 +770,10 @@ curl_socket_t win32_stdin_read_thread(void)
   static curl_socket_t socket_r = CURL_SOCKET_BAD;
 
   if(socket_r != CURL_SOCKET_BAD) {
-    assert(stdin_thread != NULL);
+    assert(stdin_thread);
     return socket_r;
   }
-  assert(stdin_thread == NULL);
+  assert(!stdin_thread);
 
   do {
     curl_socklen_t socksize = 0;
@@ -804,7 +804,7 @@ curl_socket_t win32_stdin_read_thread(void)
       break;
     }
 
-    /* Bind to any available loopback port */
+    /* Retrieve the assigned loopback port/address */
     if(getsockname(tdata->socket_l, (struct sockaddr *)&selfaddr, &socksize)) {
       errorf("getsockname error: %d", SOCKERRNO);
       break;

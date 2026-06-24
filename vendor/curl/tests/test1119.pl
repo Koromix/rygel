@@ -48,25 +48,25 @@ if(!$rc) {
 }
 
 # we may get the directory root pointed out
-my $root=$ARGV[0] || ".";
+my $root = $ARGV[0] || ".";
 
 # need an include directory when building out-of-tree
 my $i = ($ARGV[1]) ? "-I$ARGV[1] " : '';
 
-my $verbose=0;
-my $summary=0;
-my $misses=0;
+my $verbose = 0;
+my $summary = 0;
+my $misses = 0;
 
 my @manrefs;
 my @syms;
 my %doc;
 my %rem;
 
-# scanenum runs the preprocessor on curl.h so it will process all enums
+# scanenum runs the preprocessor on curl.h so it processes all enums
 # included by it, which *should* be all headers
 sub scanenum {
     my ($file) = @_;
-    open my $h_in, "-|", "$Cpreprocessor $i$file" || die "Cannot preprocess $file";
+    open my $h_in, "-|", "$Cpreprocessor $i$file" or die "Cannot preprocess $file";
     while(<$h_in>) {
         if(/enum\s+(\S+\s+)?{/ .. /}/) {
             s/^\s+//;
@@ -76,11 +76,11 @@ sub scanenum {
             push @syms, $_;
         }
     }
-    close $h_in || die "Error preprocessing $file";
+    close $h_in or die "Error preprocessing $file";
 }
 
 sub scanheader {
-    my ($f)=@_;
+    my ($f) = @_;
     open(my $h, "<", $f);
     while(<$h>) {
         if(/^#define ((LIB|)CURL[A-Za-z0-9_]*)/) {
@@ -92,8 +92,7 @@ sub scanheader {
 
 sub scanallheaders {
     my $d = "$root/include/curl";
-    opendir(my $dh, $d) ||
-        die "Cannot opendir: $!";
+    opendir(my $dh, $d) or die "Cannot opendir: $!";
     my @headers = grep { /.h\z/ } readdir($dh);
     closedir $dh;
     foreach my $h (@headers) {
@@ -130,8 +129,7 @@ sub checkmanpage {
 
 sub scanman_md_dir {
     my ($d) = @_;
-    opendir(my $dh, $d) ||
-        die "Cannot opendir: $!";
+    opendir(my $dh, $d) or die "Cannot opendir: $!";
     my @mans = grep { /.md\z/ } readdir($dh);
     closedir $dh;
     for my $m (@mans) {
@@ -146,26 +144,26 @@ scanman_md_dir("$root/docs/libcurl/opts");
 open(my $s, "<", "$root/docs/libcurl/symbols-in-versions");
 while(<$s>) {
     if(/(^[^ \n]+) +(.*)/) {
-        my ($sym, $rest)=($1, $2);
+        my ($sym, $rest) = ($1, $2);
         if($doc{$sym}) {
             print "Detected duplicate symbol: $sym\n";
             $misses++;
             next;
         }
-        $doc{$sym}=$sym;
-        my @a=split(/ +/, $rest);
+        $doc{$sym} = $sym;
+        my @a = split(/ +/, $rest);
         if($a[2]) {
             # this symbol is documented to have been present the last time
             # in this release
-            $rem{$sym}=$a[2];
+            $rem{$sym} = $a[2];
         }
     }
 }
 close $s;
 
-my $ignored=0;
+my $ignored = 0;
 for my $e (sort @syms) {
-    # OBSOLETE - names that are just placeholders for a position where we
+    # OBSOLETE - names that are placeholders for a position where we
     # previously had a name, that is now removed. The OBSOLETE names should
     # never be used for anything.
     #
@@ -176,7 +174,7 @@ for my $e (sort @syms) {
     #
     # CURL_TEMP_ - are defined and *undefined* again within the file
     #
-    # *_LAST and *_LASTENTRY are just suffix for the placeholders used for the
+    # *_LAST and *_LASTENTRY are suffix for the placeholders used for the
     # last entry in many enum series.
     #
 
@@ -188,7 +186,7 @@ for my $e (sort @syms) {
         if($verbose) {
             print $e."\n";
         }
-        $doc{$e}="used";
+        $doc{$e} = "used";
         next;
     }
     else {
@@ -223,7 +221,7 @@ for my $e (sort keys %doc) {
 my %warned;
 for my $r (@manrefs) {
     if($r =~ /^([^:]+):(.*)/) {
-        my ($sym, $file)=($1, $2);
+        my ($sym, $file) = ($1, $2);
         if(!$doc{$sym} && !$warned{$sym, $file}) {
             print "$file: $sym is not a public symbol\n";
             $warned{$sym, $file} = 1;

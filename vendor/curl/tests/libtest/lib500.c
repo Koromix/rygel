@@ -69,17 +69,17 @@ static CURLcode test_lib500(const char *URL)
     return TEST_ERR_MAJOR_BAD;
   }
 
-  test_setopt(curl, CURLOPT_URL, URL);
-  test_setopt(curl, CURLOPT_HEADER, 1L);
+  easy_setopt(curl, CURLOPT_URL, URL);
+  easy_setopt(curl, CURLOPT_HEADER, 1L);
 
   debug_config.nohex = TRUE;
   debug_config.tracetime = TRUE;
-  test_setopt(curl, CURLOPT_DEBUGDATA, &debug_config);
-  test_setopt(curl, CURLOPT_DEBUGFUNCTION, libtest_debug_cb);
-  test_setopt(curl, CURLOPT_VERBOSE, 1L);
+  easy_setopt(curl, CURLOPT_DEBUGDATA, &debug_config);
+  easy_setopt(curl, CURLOPT_DEBUGFUNCTION, libtest_debug_cb);
+  easy_setopt(curl, CURLOPT_VERBOSE, 1L);
 
   if(libtest_arg3 && !strcmp(libtest_arg3, "activeftp"))
-    test_setopt(curl, CURLOPT_FTPPORT, "-");
+    easy_setopt(curl, CURLOPT_FTPPORT, "-");
 
   if(testnum == 585 || testnum == 586 || testnum == 595 || testnum == 596)
     setupcallbacks(curl);
@@ -108,7 +108,7 @@ static CURLcode test_lib500(const char *URL)
                           &time_starttransfer);
         curl_easy_getinfo(curl, CURLINFO_TOTAL_TIME_T, &time_total);
 
-        /* since the timing will always vary we only compare relative
+        /* since the timing always varies we only compare relative
            differences between these 5 times */
         if(time_namelookup > time_connect) {
           curl_mfprintf(moo, "namelookup vs connect: %" CURL_FORMAT_CURL_OFF_T
@@ -127,10 +127,7 @@ static CURLcode test_lib500(const char *URL)
                         (time_pretransfer / 1000000),
                         (long)(time_pretransfer % 1000000));
         }
-        if(time_posttransfer > time_pretransfer) {
-          /* counter-intuitive: on a GET request, all bytes are sent *before*
-           * PRETRANSFER happens. Thus POSTTRANSFER has to be smaller.
-           * The reverse would be true for a POST/PUT. */
+        if(time_pretransfer > time_posttransfer) {
           curl_mfprintf(moo, "pretransfer vs posttransfer: %"
                         CURL_FORMAT_CURL_OFF_T
                         ".%06ld %" CURL_FORMAT_CURL_OFF_T ".%06ld\n",

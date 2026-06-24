@@ -3,13 +3,12 @@
 <info>
 <keywords>
 FTP
-FAILURE
 </keywords>
 </info>
 # Server-side
 <reply>
 <servercmd>
-REPLY PWD 257 "just one
+REPLY PWD 257 "Only one
 </servercmd>
 </reply>
 

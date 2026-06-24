@@ -5,7 +5,7 @@
  *                            | (__| |_| |  _ <| |___
  *                             \___|\___/|_| \_\_____|
  *
- * Copyright (C) Dmitry Karpov <dkarpov1970, 2025@gmail.com>
+ * Copyright (C) Dmitry Karpov <dkarpov1970@gmail.com>
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution. The terms
@@ -29,8 +29,8 @@
  *  HTTP1 amd HTTP2 (no multiplexing) two transfers (expected two descriptors),
  *  HTTP2 with multiplexing (expected one descriptors)
  *  Improper inputs to the API result in CURLM_BAD_FUNCTION_ARGUMENT.
- *  Sending an empty ufds, and size = 0 will return the number of fds needed.
- *  Sending a non-empty ufds, but smaller than the fds needed will result in a
+ *  Sending an empty ufds, and size = 0 returns the number of fds needed.
+ *  Sending a non-empty ufds, but smaller than the fds needed results in a
  *    CURLM_OUT_OF_MEMORY, and a number of fds that is >= to the number needed.
  *
  *  It is also expected that all transfers run by multi-handle should complete
@@ -43,7 +43,7 @@
 
 #define test_check(expected_fds)                                             \
   if(result != CURLE_OK) {                                                   \
-    curl_mfprintf(stderr, "test failed with code: %d\n", result);            \
+    curl_mfprintf(stderr, "test failed with code: %d\n", (int)result);       \
     goto test_cleanup;                                                       \
   }                                                                          \
   else if(fd_count != (expected_fds)) {                                      \
@@ -53,10 +53,10 @@
     goto test_cleanup;                                                       \
   }
 
-#define test_run_check(option, expected_fds)    \
-  do {                                          \
-    result = test_run(URL, option, &fd_count);  \
-    test_check(expected_fds);                   \
+#define test_run_check(option, expected_fds)   \
+  do {                                         \
+    result = test_run(URL, option, &fd_count); \
+    test_check(expected_fds);                  \
   } while(0)
 
 /* ---------------------------------------------------------------- */
@@ -66,13 +66,6 @@ enum {
   TEST_USE_HTTP2,
   TEST_USE_HTTP2_MPLEX
 };
-
-static size_t emptyWriteFunc(char *ptr, size_t size, size_t nmemb, void *data)
-{
-  (void)ptr;
-  (void)data;
-  return size * nmemb;
-}
 
 static CURLcode set_easy(const char *URL, CURL *curl, long option)
 {
@@ -110,7 +103,7 @@ static CURLcode set_easy(const char *URL, CURL *curl, long option)
   easy_setopt(curl, CURLOPT_HEADER, 1L);
 
   /* empty write function */
-  easy_setopt(curl, CURLOPT_WRITEFUNCTION, emptyWriteFunc);
+  easy_setopt(curl, CURLOPT_WRITEFUNCTION, tutil_throwaway_cb);
 
 test_cleanup:
   return result;

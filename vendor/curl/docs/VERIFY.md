@@ -36,9 +36,23 @@ script that generates a new curl release from source code and then compares
 this newly generated release tarball with the tarball file you downloaded from
 curl.se.
 
+For full verification, invoke the script inside an up-to-date curl source code
+git repository. Without a git repository present, it does a lighter check by
+rebuilding the release using the files in the tarball.
+
+Note: full verification mode checks out the release tag in your repository.
+Run it in a clean working tree (no local changes) or a dedicated clone.
+
 Invoke it like this:
 
+    git clone https://github.com/curl/curl
+    cd curl
+    mv [download-dir]/curl-8.19.0.tar.xz .
     ./scripts/verify-release curl-8.19.0.tar.xz
+
+A successful check ends up with a final output similar to:
+
+    curl-8.19.0.tar.xz: OK
 
 By verifying the release tarballs, you verify that Daniel does not infect the
 release on purpose or involuntarily because of anything malicious running in
@@ -65,14 +79,20 @@ gain trust is to verify and review our testing procedures.
 - we have a ceiling for complexity in functions to keep them easy to follow,
   read and understand (failing to do so causes errors)
 
-- we review all pull requests before merging, both with humans and with bots. We
-  link back commits to their origin pull requests in commit messages.
+- we review all pull requests before merging, both with humans and with bots.
+  We link back commits to their origin pull requests in commit messages.
 
 - we ban use of "binary blobs" in git to not provide means for malicious
   actors to bundle encrypted payloads (trying to include a blob causes errors)
 
+- every single file in the git repository has a clear copyright and license
+  statement. Complete knowledge and tracking of provenience.
+
 - we actively avoid base64 encoded chunks as they too could function as ways
   to obfuscate malicious contents
+
+- we forbid and prevent git force push on the master branch. History cannot be
+  rewritten.
 
 - we ban most uses of UTF-8 in code and documentation to avoid easily mixed
   up Unicode characters that look like other characters. (adding Unicode
@@ -92,6 +112,10 @@ gain trust is to verify and review our testing procedures.
   every commit and every PR. We do not merge commits that have unexplained
   test failures.
 
+- we run all tests as "torture tests", where each test case is rerun to have
+  every invoked fallible function call fail once each, to make sure curl
+  never leaks memory or crashes due to this.
+
 - we build curl in CI with the most picky compiler options enabled and we
   never allow compiler warnings to linger. We always use `-Werror` that
   converts warnings to errors and fail the builds.
@@ -100,9 +124,9 @@ gain trust is to verify and review our testing procedures.
   find and reduce the risk for memory problems, undefined behavior and
   similar
 
-- we run all tests as "torture tests", where each test case is rerun to have
-  every invoked fallible function call fail once each, to make sure curl
-  never leaks memory or crashes due to this.
+- we keep running static code analyzers on the code, both traditional ones
+  (clang-tidy, CodeSonar, Coverity) but also new generation AI powered ones
+  like Zeropath and Codex Security.
 
 - we run fuzzing on curl: non-stop as part of Google's OSS-Fuzz project, but
   also briefly as part of the CI setup for every commit and PR
@@ -114,6 +138,14 @@ gain trust is to verify and review our testing procedures.
 - we run `zizmor` and other code analyzer tools on the CI job config scripts
   to reduce the risk of us running or using insecure CI jobs.
 
+- we do reproducible releases to allow anyone to verify that the contents is
+  untainted
+
+- we digitally sign releases, git tags and git commits
+
+- there is a git backup on [codeberg](https://codeberg.org/curl/) for enhanced
+  resilience to infrastructure disturbance
+
 - we are committed to always fix reported vulnerabilities in the following
   release. Security problems never linger around once they have been
   reported.
@@ -121,11 +153,16 @@ gain trust is to verify and review our testing procedures.
 - we document everything and every detail about all curl vulnerabilities ever
   reported
 
+- our code has been audited several times by external security experts, and
+  the few issues that have been detected in those were immediately addressed
+
+- Strong two-factor authentication on GitHub is mandatory for all committers
+
 - our commitment to never breaking ABI or API allows all users to easily
   upgrade to new releases. This enables users to run recent security-fixed
   versions instead of legacy insecure versions.
 
-- our code has been audited several times by external security experts, and
-  the few issues that have been detected in those were immediately addressed
-
-- Two-factor authentication on GitHub is mandatory for all committers
+- we have a vulnerability disclosure program that allows researchers to submit
+  suspected vulnerabilities in a private and secure fashion, so that we can
+  work on fixing curl and announcing the flaw in a responsible manner to
+  minimize risks for users.

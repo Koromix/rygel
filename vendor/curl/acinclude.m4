@@ -25,11 +25,11 @@
 dnl CURL_CHECK_DEF (SYMBOL, [INCLUDES], [SILENT])
 dnl -------------------------------------------------
 dnl Use the C preprocessor to find out if the given object-style symbol
-dnl is defined and get its expansion. This macro will not use default
-dnl includes even if no INCLUDES argument is given. This macro will run
+dnl is defined and get its expansion. This macro does not use default
+dnl includes even if no INCLUDES argument is given. This macro runs
 dnl silently when invoked with three arguments. If the expansion would
-dnl result in a set of double-quoted strings the returned expansion will
-dnl actually be a single double-quoted string concatenating all them.
+dnl result in a set of double-quoted strings the returned expansion is
+dnl actually a single double-quoted string concatenating all them.
 
 AC_DEFUN([CURL_CHECK_DEF], [
   AC_REQUIRE([CURL_CPP_P])
@@ -79,9 +79,9 @@ AC_DEFUN([CURL_CHECK_DEF], [
 dnl CURL_CHECK_DEF_CC (SYMBOL, [INCLUDES], [SILENT])
 dnl -------------------------------------------------
 dnl Use the C compiler to find out only if the given symbol is defined
-dnl or not, this can not find out its expansion. This macro will not use
+dnl or not, this can not find out its expansion. This macro does not use
 dnl default includes even if no INCLUDES argument is given. This macro
-dnl will run silently when invoked with three arguments.
+dnl runs silently when invoked with three arguments.
 
 AC_DEFUN([CURL_CHECK_DEF_CC], [
   AS_VAR_PUSHDEF([ac_HaveDef], [curl_cv_have_def_$1])
@@ -860,7 +860,7 @@ AC_DEFUN([CURL_CHECK_LIBS_CLOCK_GETTIME_MONOTONIC], [
     case X-"$curl_cv_gclk_LIBS" in
       X-unknown)
         AC_MSG_RESULT([cannot find clock_gettime])
-        AC_MSG_WARN([HAVE_CLOCK_GETTIME_MONOTONIC will not be defined])
+        AC_MSG_WARN([HAVE_CLOCK_GETTIME_MONOTONIC is not defined])
         curl_func_clock_gettime="no"
         ;;
       X-)
@@ -869,7 +869,7 @@ AC_DEFUN([CURL_CHECK_LIBS_CLOCK_GETTIME_MONOTONIC], [
         ;;
       *)
         if test "$dontwant_rt" = "yes"; then
-          AC_MSG_WARN([needs -lrt but asked not to use it, HAVE_CLOCK_GETTIME_MONOTONIC will not be defined])
+          AC_MSG_WARN([needs -lrt but asked not to use it, HAVE_CLOCK_GETTIME_MONOTONIC is not defined])
           curl_func_clock_gettime="no"
         else
           if test -z "$curl_cv_save_LIBS"; then
@@ -908,7 +908,7 @@ AC_DEFUN([CURL_CHECK_LIBS_CLOCK_GETTIME_MONOTONIC], [
         AC_MSG_RESULT([yes])
       ],[
         AC_MSG_RESULT([no])
-        AC_MSG_WARN([HAVE_CLOCK_GETTIME_MONOTONIC will not be defined])
+        AC_MSG_WARN([HAVE_CLOCK_GETTIME_MONOTONIC is not defined])
         curl_func_clock_gettime="no"
         LIBS="$curl_cv_save_LIBS"
       ])
@@ -1028,7 +1028,7 @@ AC_DEFUN([CURL_CHECK_FUNC_SELECT], [
 dnl CURL_VERIFY_RUNTIMELIBS
 dnl -------------------------------------------------
 dnl Verify that the shared libs found so far can be used when running
-dnl programs, since otherwise the situation will create odd configure errors
+dnl programs, since otherwise the situation creates odd configure errors
 dnl that are misleading people.
 dnl
 dnl Make sure this test is run BEFORE the first test in the script that
@@ -1040,7 +1040,7 @@ AC_DEFUN([CURL_VERIFY_RUNTIMELIBS], [
   dnl this test is of course not sensible if we are cross-compiling!
   if test "$cross_compiling" != "yes"; then
 
-    dnl just run a program to verify that the libs checked for previous to this
+    dnl run a program to verify that the libs checked for previous to this
     dnl point also is available runtime!
     AC_MSG_CHECKING([runtime libs availability])
     CURL_RUN_IFELSE([
@@ -1063,7 +1063,7 @@ dnl CURL_CHECK_CA_BUNDLE
 dnl -------------------------------------------------
 dnl Check if a default ca-bundle should be used
 dnl
-dnl regarding the paths this will scan:
+dnl regarding the paths this scans:
 dnl /etc/ssl/certs/ca-certificates.crt Debian systems
 dnl /etc/pki/tls/certs/ca-bundle.crt Redhat and Mandriva
 dnl /usr/share/ssl/certs/ca-bundle.crt old(er) Redhat
@@ -1127,7 +1127,7 @@ AS_HELP_STRING([--without-ca-path], [Do not use a default CA path]),
     capath="$want_capath"
     ca="no"
   elif test "$ca_native" != "no"; then
-    dnl native ca configured, do not look further
+    dnl native CA configured, do not look further
     ca="no"
     capath="no"
   else
@@ -1161,7 +1161,7 @@ AS_HELP_STRING([--without-ca-path], [Do not use a default CA path]),
           fi
         done
       fi
-      AC_MSG_NOTICE([want $want_capath ca $ca])
+      AC_MSG_NOTICE([want $want_capath CA $ca])
       if test "x$want_capath" = "xunset"; then
         check_capath="/etc/ssl/certs"
       fi
@@ -1197,13 +1197,13 @@ AS_HELP_STRING([--without-ca-path], [Do not use a default CA path]),
 
   if test "x$ca" != "xno"; then
     CURL_CA_BUNDLE="$ca"
-    AC_DEFINE_UNQUOTED(CURL_CA_BUNDLE, "$ca", [Location of default ca bundle])
+    AC_DEFINE_UNQUOTED(CURL_CA_BUNDLE, "$ca", [Location of default CA bundle])
     AC_SUBST(CURL_CA_BUNDLE)
     AC_MSG_RESULT([$ca])
   fi
   if test "x$capath" != "xno"; then
     CURL_CA_PATH="\"$capath\""
-    AC_DEFINE_UNQUOTED(CURL_CA_PATH, "$capath", [Location of default ca path])
+    AC_DEFINE_UNQUOTED(CURL_CA_PATH, "$capath", [Location of default CA path])
     AC_MSG_RESULT([$capath (capath)])
   fi
   if test "x$ca" = "xno" && test "x$capath" = "xno"; then
@@ -1258,7 +1258,7 @@ AS_HELP_STRING([--without-ca-embed], [Do not embed a default CA bundle in the cu
       AC_MSG_RESULT([$want_ca_embed])
     else
       AC_MSG_RESULT([no])
-      AC_MSG_WARN([perl was not found. Will not do CA embed.])
+      AC_MSG_WARN([perl was not found. Cannot do CA embed.])
     fi
   else
     AC_MSG_RESULT([no])
@@ -1441,15 +1441,13 @@ AC_DEFUN([CURL_PREPARE_BUILDINFO], [
     *-*-*bsd*)
       curl_pflags="${curl_pflags} BSD";;
   esac
-  case $host in
-    *-*-android*)
-      curl_pflags="${curl_pflags} ANDROID"
-      ANDROID_PLATFORM_LEVEL=`echo "$host_os" | $SED -ne 's/.*android\(@<:@0-9@:>@*\).*/\1/p'`
-      if test -n "${ANDROID_PLATFORM_LEVEL}"; then
-        curl_pflags="${curl_pflags}-${ANDROID_PLATFORM_LEVEL}"
-      fi
-      ;;
-  esac
+  if test "$curl_cv_android" = "yes"; then
+    curl_pflags="${curl_pflags} ANDROID"
+    ANDROID_PLATFORM_LEVEL=`echo "$host_os" | $SED -ne 's/.*android\(@<:@0-9@:>@*\).*/\1/p'`
+    if test -n "${ANDROID_PLATFORM_LEVEL}"; then
+      curl_pflags="${curl_pflags}-${ANDROID_PLATFORM_LEVEL}"
+    fi
+  fi
   if test "$curl_cv_native_windows" = "yes"; then
     curl_pflags="${curl_pflags} WIN32"
   fi
@@ -1498,7 +1496,7 @@ dnl CURL_CPP_P
 dnl
 dnl Check if $cpp -P should be used for extract define values due to gcc 5
 dnl splitting up strings and defines between line outputs. gcc by default
-dnl (without -P) will show TEST EINVAL TEST as
+dnl (without -P) shows TEST EINVAL TEST as
 dnl
 dnl # 13 "conftest.c"
 dnl TEST

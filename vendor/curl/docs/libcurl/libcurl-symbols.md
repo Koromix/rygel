@@ -609,7 +609,7 @@ Introduced in 7.61.0. See CURLOPT_HTTPAUTH(3).
 Introduced in 7.10.6. See CURLOPT_HTTPAUTH(3).
 
 ## CURLAUTH_DIGEST_IE
-Introduced in 7.19.3. See CURLOPT_HTTPAUTH(3).
+Introduced in 7.19.3. Deprecated since 8.21.0.
 
 ## CURLAUTH_GSSAPI
 Introduced in 7.55.0. See CURLOPT_HTTPAUTH(3).
@@ -2640,10 +2640,10 @@ Introduced in 7.1. See CURLOPT_SSLVERSION(3).
 Introduced in 7.1. See CURLOPT_STDERR(3).
 
 ## CURLOPT_STREAM_DEPENDS
-Introduced in 7.46.0. See CURLOPT_STREAM_DEPENDS(3).
+Introduced in 7.46.0. Deprecated since 8.21.0.
 
 ## CURLOPT_STREAM_DEPENDS_E
-Introduced in 7.46.0. See CURLOPT_STREAM_DEPENDS_E(3).
+Introduced in 7.46.0. Deprecated since 8.21.0.
 
 ## CURLOPT_STREAM_WEIGHT
 Introduced in 7.46.0. See CURLOPT_STREAM_WEIGHT(3).
@@ -2971,6 +2971,9 @@ Introduced in 7.52.0. See CURLOPT_PROXYTYPE(3).
 
 ## CURLPROXY_HTTPS2
 Introduced in 8.1.0. See CURLOPT_PROXYTYPE(3).
+
+## CURLPROXY_HTTPS3
+Introduced in 8.21.0. See CURLOPT_PROXYTYPE(3).
 
 ## CURLPROXY_SOCKS4
 Introduced in 7.10. See CURLOPT_PROXYTYPE(3).

@@ -48,7 +48,7 @@ static void flush_data(struct ws_data *wd)
 
   curl_mprintf("\n");
   if(wd->has_meta)
-    curl_mprintf("RECFLAGS: %x\n", wd->meta_flags);
+    curl_mprintf("RECFLAGS: %x\n", (unsigned int)wd->meta_flags);
   else
     curl_mfprintf(stderr, "RECFLAGS: NULL\n");
   wd->blen = 0;
@@ -63,7 +63,7 @@ static size_t add_data(struct ws_data *wd, const char *buf, size_t blen,
      (meta && meta->flags != wd->meta_flags)) {
     if(wd->nwrites > 0)
       flush_data(wd);
-    wd->has_meta = (meta != NULL);
+    wd->has_meta = !!meta;
     wd->meta_flags = meta ? meta->flags : 0;
   }
 
@@ -102,7 +102,7 @@ static CURLcode test_lib2302(const char *URL)
   global_init(CURL_GLOBAL_ALL);
 
   memset(&ws_data, 0, sizeof(ws_data));
-  ws_data.buf = (char *)curlx_calloc(LIB2302_BUFSIZE, 1);
+  ws_data.buf = curlx_calloc(LIB2302_BUFSIZE, 1);
   if(ws_data.buf) {
     curl = curl_easy_init();
     if(curl) {
@@ -115,7 +115,7 @@ static CURLcode test_lib2302(const char *URL)
       curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, t2302_write_cb);
       curl_easy_setopt(curl, CURLOPT_WRITEDATA, &ws_data);
       result = curl_easy_perform(curl);
-      curl_mfprintf(stderr, "curl_easy_perform() returned %d\n", result);
+      curl_mfprintf(stderr, "curl_easy_perform() returned %d\n", (int)result);
       /* always cleanup */
       curl_easy_cleanup(curl);
       flush_data(&ws_data);
@@ -125,6 +125,8 @@ static CURLcode test_lib2302(const char *URL)
   curl_global_cleanup();
   return result;
 #else
-  NO_SUPPORT_BUILT_IN
+  (void)URL;
+  curl_mfprintf(stderr, "Missing support\n");
+  return CURLE_UNSUPPORTED_PROTOCOL;
 #endif
 }

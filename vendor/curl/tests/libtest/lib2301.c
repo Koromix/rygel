@@ -86,7 +86,7 @@ static CURLcode test_lib2301(const char *URL)
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, t2301_write_cb);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, curl);
     result = curl_easy_perform(curl);
-    curl_mfprintf(stderr, "curl_easy_perform() returned %d\n", result);
+    curl_mfprintf(stderr, "curl_easy_perform() returned %d\n", (int)result);
 #if 0
     if(result == CURLE_OK)
       t2301_websocket(curl);
@@ -97,6 +97,8 @@ static CURLcode test_lib2301(const char *URL)
   curl_global_cleanup();
   return result;
 #else
-  NO_SUPPORT_BUILT_IN
+  (void)URL;
+  curl_mfprintf(stderr, "Missing support\n");
+  return CURLE_UNSUPPORTED_PROTOCOL;
 #endif
 }

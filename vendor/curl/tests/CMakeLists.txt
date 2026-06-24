@@ -82,8 +82,8 @@ function(curl_add_runtests _targetname _test_flags)
   if(_setenvs)
     set(_setenvs "${CMAKE_COMMAND}" -E env ${_setenvs})
   endif()
-  # Use a special '$TFLAGS' placeholder as last argument which will be
-  # replaced by the contents of the environment variable in runtests.pl.
+  # Use a special '$TFLAGS' placeholder as last argument which is replaced
+  # by the contents of the environment variable in runtests.pl.
   # This is a workaround for CMake's limitation where commands executed by
   # 'make' or 'ninja' cannot portably reference environment variables.
   string(REPLACE " " ";" _test_flags_list "${_test_flags}")
@@ -110,7 +110,7 @@ function(curl_add_pytests _targetname _test_flags)
   endif()
   string(REPLACE " " ";" _test_flags_list "${_test_flags}")
   add_custom_target(${_targetname}
-    COMMAND pytest ${_test_flags_list} "${CMAKE_CURRENT_SOURCE_DIR}/http"
+    COMMAND pytest ${_test_flags_list} "${CMAKE_CURRENT_SOURCE_DIR}/http${_CURL_PYTEST}"
     DEPENDS "${_depends}"
     VERBATIM USES_TERMINAL
   )

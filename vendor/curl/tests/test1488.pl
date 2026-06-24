@@ -49,7 +49,7 @@ if(!$rc) {
 }
 
 # we may get the directory root pointed out
-my $root=$ARGV[0] || ".";
+my $root = $ARGV[0] || ".";
 
 # need an include directory when building out-of-tree
 my $i = ($ARGV[1]) ? "-I$ARGV[1] " : '';
@@ -97,8 +97,7 @@ sub checkmanpage {
 
 sub scanman_md_dir {
     my ($d) = @_;
-    opendir(my $dh, $d) ||
-        die "Cannot opendir: $!";
+    opendir(my $dh, $d) or die "Cannot opendir: $!";
     my @mans = grep { /.md\z/ } readdir($dh);
     closedir $dh;
     for my $m (@mans) {
@@ -116,10 +115,10 @@ open my $s, "<", "$root/docs/libcurl/symbols-in-versions";
 while(<$s>) {
     chomp;
     if(/^(\S+) +([0-9.]*)/) {
-        my ($sym, $ver)=($1, $2);
+        my ($sym, $ver) = ($1, $2);
         push @syms, $sym;
 
-        $symadded{$sym}=$ver;
+        $symadded{$sym} = $ver;
         if(!$pastversion{$ver}) {
             printf "SIV: says $sym was added in non-existing %s\n", $ver;
             $error++;
@@ -128,7 +127,7 @@ while(<$s>) {
 }
 close $s;
 
-my $ignored=0;
+my $ignored = 0;
 for my $e (sort @syms) {
     if($manpage{$e}) {
         if($manpage{$e} ne $symadded{$e}) {

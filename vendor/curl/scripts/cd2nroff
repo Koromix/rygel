@@ -100,27 +100,33 @@ sub outprotocols {
     my (@p) = @_;
     my $comma = 0;
     my @o;
+    my $tls = 0;
     push @o, ".SH PROTOCOLS\n";
 
-    if($p[0] eq "TLS") {
-        push @o, "This functionality affects all TLS based protocols: HTTPS, FTPS, IMAPS, POP3S, SMTPS etc.";
-    }
-    else {
-        my @s = sort @p;
-        push @o, "This functionality affects ";
-        for my $e (sort @s) {
+    my @s = sort @p;
+    push @o, "This functionality affects ";
+    for my $e (sort @s) {
+        if($e eq "TLS") {
+            $tls = 1;
+        }
+        else {
             push @o, sprintf "%s%s",
                 $comma ? (($e eq $s[-1]) ? " and " : ", "): "",
                 lc($e);
             $comma = 1;
         }
-        if($#s == 0) {
-            if($s[0] eq "All") {
-                push @o, " supported protocols";
-            }
-            else {
-                push @o, " only";
-            }
+    }
+    if($tls) {
+        push @o, sprintf
+            "%sall TLS based protocols: HTTPS, FTPS, IMAPS, POP3S, SMTPS etc.",
+            $comma ? " and ": " ";
+    }
+    if($#s == 0) {
+        if($s[0] eq "All") {
+            push @o, " supported protocols";
+        }
+        else {
+            push @o, " only";
         }
     }
     push @o, "\n";
@@ -199,7 +205,7 @@ sub single {
     my @proto;
     my @tls;
     my $d;
-    my ($f)=@_;
+    my ($f) = @_;
     my $copyright;
     my $errors = 0;
     my $fh;
@@ -234,13 +240,13 @@ sub single {
             next;
         }
         if(/^Title: *(.*)/i) {
-            $title=$1;
+            $title = $1;
         }
         elsif(/^Section: *(.*)/i) {
-            $section=$1;
+            $section = $1;
         }
         elsif(/^Source: *(.*)/i) {
-            $source=$1;
+            $source = $1;
         }
         elsif(/^See-also: +(.*)/i) {
             $list = 1; # 1 for see-also
@@ -260,7 +266,7 @@ sub single {
             $list = 3; # 3 for TLS backend
         }
         elsif(/^Added-in: *(.*)/i) {
-            $addedin=$1;
+            $addedin = $1;
             if(($addedin !~ /^[0-9.]+[0-9]\z/) &&
                ($addedin ne "n/a")) {
                 print STDERR "$f:$line:1:ERROR: invalid version number in Added-in line: $addedin\n";
@@ -285,10 +291,10 @@ sub single {
         }
         # REUSE-IgnoreStart
         elsif(/^C: (.*)/i) {
-            $copyright=$1;
+            $copyright = $1;
         }
         elsif(/^SPDX-License-Identifier: (.*)/i) {
-            $spdx=$1;
+            $spdx = $1;
         }
         # REUSE-IgnoreEnd
         elsif(/^---/) {
@@ -426,7 +432,7 @@ sub single {
             print STDERR "$f:$line:1:ERROR: un-escaped < or > used\n";
             $errors++;
         }
-        # convert backslash-'<' or '> to just the second character
+        # convert backslash-'<' or '> to the second character
         $d =~ s/\\([<>])/$1/g;
 
         # mentions of curl symbols with man pages use italics by default

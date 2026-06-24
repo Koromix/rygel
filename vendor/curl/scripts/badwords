@@ -5,7 +5,7 @@
 #
 # bad[:=]correct
 #
-# If separator is '=', the string will be compared case sensitively.
+# If separator is '=', the string is compared case sensitively.
 # If separator is ':', the check is done case insensitively.
 #
 # To add white listed uses of bad words that are removed before checking for
@@ -184,14 +184,14 @@ while(<CONFIG>) {
     if(/^---:([^:]*):(.*)/) {
         # whitelist file + word
         my $word = lc($2);
-        $wl{"$1:$word"}=1;
+        $wl{"$1:$word"} = 1;
     }
     elsif($_ =~ /^---(.+)/) {
         # whitelist word
         push @whitelist, $1;
     }
     elsif($_ =~ /^(.*)([:=])(.*)/) {
-        my ($bad, $sep, $better)=($1, $2, $3);
+        my ($bad, $sep, $better) = ($1, $2, $3);
         if($sep eq "=") {
             $alt{$bad} = $better;
             push @exact, $bad;
@@ -318,7 +318,7 @@ sub file {
 }
 
 my @filemasks = @ARGV;
-open(my $git_ls_files, '-|', 'git', 'ls-files', '--', @filemasks) or die "Failed running git ls-files: $!";
+open(my $git_ls_files, '-|', 'git', 'ls-files', '--', ":!:$file", @filemasks) or die "Failed running git ls-files: $!";
 my @files;
 while(my $each = <$git_ls_files>) {
     chomp $each;
