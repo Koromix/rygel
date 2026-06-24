@@ -11,7 +11,7 @@ rekkord setup
 This command only creates the configuration but it **does not initialize the repository**. Follow the next section to continue.
 
 > [!NOTE]
-> You can also [configure Rekkord manually](#manual-configuration) if you prefer.
+> You can also [configure Rekkord manually](config) if you prefer.
 
 # Initialize repository
 
