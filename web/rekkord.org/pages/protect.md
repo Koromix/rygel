@@ -32,7 +32,7 @@ This is all good and well, but this only applies to new blobs, **existing object
 > [!IMPORTANT]
 > It is essential to run periodic scans to detect errors and corrupted blobs, even if you choose to not use object locks!
 >
-> Please consult the [relevant documentation](maintenance#periodic-scans) for more information.
+> Please consult the [relevant documentation](maintain#periodic-scans) for more information.
 
 # Fine-grained S3 bucket policy ^ S3 permissions
 
@@ -170,7 +170,7 @@ It is thus possible to create write-only keyfiles and to use them to run `rekkor
 > [!NOTE]
 > This means that `rekkord save` cannot check that existing blobs are valid.
 >
-> You need to run [periodic scans](maintenance#periodic-scans) from a secure machine to detect errors and corrupted blobs!
+> You need to run [periodic scans](maintain#periodic-scans) from a secure machine to detect errors and corrupted blobs!
 
 You must use the master key to create write-only keyfiles. Use `rekkord derive` to create them, like this:
 
