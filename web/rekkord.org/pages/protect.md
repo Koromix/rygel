@@ -2,15 +2,13 @@
 
 Rekkord provides several ways to protect backups from leaks and tampering, especially when combined with an S3 backend:
 
-- [Object versioning and object locks](#object-versioning-and-object-locks) (S3)
+- [Object locks](#s3-object-locks) (S3)
 - [Fine-grained bucket policy/permissions](#fine-grained-s3-bucket-policy) (S3)
 - [Write-only repository keys](#write-only-keyfiles) (using asymmetric encryption)
 
 These features require additional configuration and are not enabled by default. Read the documentation below to enable them.
 
-# Object versioning and object locks ^ S3 object locks
-
-It is **strongly recommended** to enable object versioning and object locks for S3 repositories.
+# S3 object locks
 
 Rekkord does not use object locks by default, you need to configure them. To do so, set `RetainDuration = <duration>` inside the *Protection* section of the Rekkord config file, as shown below:
 
@@ -19,27 +17,29 @@ Rekkord does not use object locks by default, you need to configure them. To do 
 RetainDuration = 30d # 30 days
 
 [S3]
-LockMode = GOVERNANCE # Optional (defaults to GOVERNANCE if not set)
+LockMode = GOVERNANCE # Optional, defaults to GOVERNANCE if not set.
 ```
 
 With this setting, new blobs will be retained automatically when `rekkord save` runs.
 
 However, **existing object locks are not extended** when snapshots are created. You need to run periodic scans with `rekkord scan` from a dedicated machine. After the repository has been checked, this command will extend the locks of objects that are used by existing snapshots.
 
-> [!NOTE]
+> [!IMPORTANT]
 > It is essential to run periodic scans to detect errors and corrupted blobs, even if you choose to not use object locks!
 >
 > Please consult the [relevant documentation](maintenance#periodic-scans) for more information.
 
 # Fine-grained S3 bucket policy ^ S3 permissions
 
-The repository format is specifically designed to support the creation of snapshots without ever reading existing blobs. You should use a restictive S3 policy, especially for S3 keys used to create snapshots (except for the repository configuration inside the `rekkord` root object).
+The repository format is specifically designed to support the creation of snapshots without ever reading existing blobs (except for the repository configuration inside the `rekkord` root object).
+
+Follow the instructions below to set up your S3 bucket policy, especially for S3 keys used to create snapshots.
 
 ### Required permissions
 
 #### Create snapshots
 
-When Rekkord opens a repository to create a snapshot, it reads some config information from the `rekkord` object at the root of the repository. After that, `rekkord save` never reads any other blob. All it needs to is create new S3 objects, for blobs and tags.
+When Rekkord opens a repository to create a snapshot, it reads some config information from the `rekkord` object at the root of the repository. After that, `rekkord save` never reads any other blob. All it ever needs is to create new S3 objects, for blobs and tags.
 
 To create snapshots, Rekkord needs to access the following objects:
 
@@ -64,7 +64,7 @@ Object key   | Permission
 
 #### Perform scan and prune repositories
 
-To run `rekkord scan`, Rekkords needs to access all blobs. Enable the following S3 permissions:
+To run `rekkord scan`, Rekkords needs to **access all objects** and it needs the following S3 permissions:
 
 - *s3:GetObject*
 - *s3:ListBucket*
@@ -72,7 +72,7 @@ To run `rekkord scan`, Rekkords needs to access all blobs. Enable the following 
 - *s3:PutObjectRetention*
 
 > [!CAUTION]
-> An attacker with this access can severly damage the repository. Run `rekkord scan` from a secure machine!
+> This is much more than the permissions required to create backups. Run `rekkord scan` from a secure machine!
 
 ### Example policy
 

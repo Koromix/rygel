@@ -25,7 +25,7 @@ To help you form a valid URL, here are a few examples for common S3 providers:
 | Scaleway Object Storage        | `https://<bucket>.s3.<region>.scw.cloud`             | Yes                |
 
 > [!NOTE]
-> Rekkord may issue ListObjects API calls to reduce blob overwrites on hosts without conditional write support, which may incur additional cost.
+> Rekkord may issue ListObjects API calls to reduce blob overwrites on hosts without conditional write support, which may incur additional cost, and requires [broader S3 permissions](protect#fine-grained-s3-bucket-policy).
 >
 > It is recommended to use a provider **with support for conditional writes**!
 
@@ -112,7 +112,9 @@ Fingerprint = SHA256:<fingerprint>
 ```
 
 > [!TIP]
-> By default, `rekkord derive` tries to open the repository to make sure that the master key matches the repository. This requires a valid config file, and access to repository (with the S3 key and secret, for example). However, this is not strictly necessary; use the `--offline` argument to derive keyfiles without opening the repository.
+> By default, `rekkord derive` tries to open the repository to make sure that the master key matches the repository. This requires a valid config file, and access to repository (with the S3 key and secret, for example).
+>
+> However, this is not strictly necessary; use the `--offline` argument to derive keyfiles without accessing the repository:
 >
 > ```sh
 > rekkord derive -K master.key -t WriteOnly --offline -O write.key
