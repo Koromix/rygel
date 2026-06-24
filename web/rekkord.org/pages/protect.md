@@ -19,10 +19,13 @@ This is not enabled by default. To use object locks, set `RetainDuration = <dura
 RetainDuration = 30d # 30 days
 
 [S3]
-LockMode = GOVERNANCE # Optional, defaults to GOVERNANCE if not set.
+LockMode = GOVERNANCE # Optional, defaults to GOVERNANCE
 ```
 
 With this setting, new blobs will be retained automatically when `rekkord save` runs (for 30 days in the example above).
+
+> [!NOTE]
+> Rekkord uses *GOVERNANCE* by default, but you should use *COMPLIANCE* mode for maximum protection. Consult the relevant [Amazon S3 documentation](https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-lock.html#object-lock-overview) for more information.
 
 This is all good and well, but this only applies to new blobs, **existing object locks are not extended** when snapshots are created. You need to run periodic scans with `rekkord scan` from a dedicated machine. After the repository has been checked, this command will extend the locks of objects that are used by existing snapshots.
 
