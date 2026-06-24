@@ -283,6 +283,12 @@ bool rk_LoadConfig(StreamReader *st, rk_Config *out_config)
                 } else if (prop.key == "PostSaveDirectory") {
                     const char *dirname = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
                     valid &= EnumerateSortedFiles(dirname, &config.str_alloc, &config.hooks_postsave);
+                } else if (prop.key == "PreScanDirectory") {
+                    const char *dirname = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
+                    valid &= EnumerateSortedFiles(dirname, &config.str_alloc, &config.hooks_prescan);
+                } else if (prop.key == "PostScanDirectory") {
+                    const char *dirname = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
+                    valid &= EnumerateSortedFiles(dirname, &config.str_alloc, &config.hooks_postscan);
                 } else {
                     LogError("Unknown attribute '%1'", prop.key);
                     valid = false;

@@ -2,10 +2,6 @@
 
 Rekkord supports hooks, which are commands that are executed before and after some actions.
 
-# Save hooks
-
-*New in Rekkord 0.97*
-
 To use hooks, you must set a directory for each type of hook in the configuration file. When Rekkord runs the corresponding command (such as `rekkord save` for save hooks), it will run the hooks it finds in alphabetical order.
 
 For each command there are two hook phases:
@@ -15,6 +11,8 @@ For each command there are two hook phases:
 
 > [!NOTE]
 > All hook scripts run during the corresponding phase, even if one fails. Rekkord executes them all in order, before aborting if any of them has failed.
+
+# Save hooks
 
 ## Pre-save
 
@@ -47,6 +45,40 @@ Set the directory where post-save hook commands exist with `PostSaveDirectory` i
 
 [Hooks]
 PostSaveDirectory = /opt/rekkord/hooks/postsave
+```
+
+As stated before, if any command fails, Rekkord will exit with an error code.
+
+# Scan hooks
+
+*New in Rekkord 0.104*
+
+## Pre-scan
+
+These hooks run before `rekkord scan` runs.
+
+Set the directory where pre-scan hook commands exist with `PreScanDirectory` in the `Hooks` section of the config file, as shown in the example below:
+
+```ini
+# ...
+
+[Hooks]
+PreScanDirectory = /opt/rekkord/hooks/prescan
+```
+
+As stated before, if any command fails, the scan will not happen and Rekkord exits with an error code.
+
+## Post-scan
+
+These hooks run after a successful scan.
+
+Set the directory where post-scan hook commands exist with `PostScanDirectory` in the `Hooks` section of the config file, as shown in the example below:
+
+```ini
+# ...
+
+[Hooks]
+PostScanDirectory = /opt/rekkord/hooks/postscan
 ```
 
 As stated before, if any command fails, Rekkord will exit with an error code.

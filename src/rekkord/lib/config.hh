@@ -60,6 +60,8 @@ struct rk_Config {
 
     HeapArray<const char *> hooks_presave;
     HeapArray<const char *> hooks_postsave;
+    HeapArray<const char *> hooks_prescan;
+    HeapArray<const char *> hooks_postscan;
 
     BlockAllocator str_alloc;
 

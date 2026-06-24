@@ -432,9 +432,15 @@ int RunScan(Span<const char *> arguments)
 {
     BlockAllocator temp_alloc;
 
+    bool hooks = true;
+
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-T(R"(Usage: %!..+%1 scan [-C filename] [option...]%!0)"), FelixTarget);
+T(R"(Usage: %!..+%1 scan [-C filename] [option...]%!0
+
+Scan options:
+
+        %!..+--no_hooks%!0                 Skip pre-save and post-save hook commands)"), FelixTarget);
         PrintCommonOptions(st);
     };
 
@@ -446,6 +452,8 @@ T(R"(Usage: %!..+%1 scan [-C filename] [option...]%!0)"), FelixTarget);
             if (opt.Test("--help")) {
                 print_usage(StdOut);
                 return 0;
+            } else if (opt.Test("--no_hooks")) {
+                hooks = false;
             } else if (!HandleCommonOption(opt)) {
                 return 1;
             }
@@ -480,6 +488,13 @@ T(R"(Usage: %!..+%1 scan [-C filename] [option...]%!0)"), FelixTarget);
         return 0;
     }
 
+    if (hooks && rk_config.hooks_prescan.len) {
+        LogInfo("Running pre-scan hooks...");
+
+        if (!RunHookCommands(rk_config.hooks_prescan))
+            return 1;
+    }
+
     LogInfo("Checking snapshots...");
 
     HeapArray<Size> errors;
@@ -492,9 +507,14 @@ T(R"(Usage: %!..+%1 scan [-C filename] [option...]%!0)"), FelixTarget);
         LogError("Invalid content in snapshot '%1' (%2) from %3", snapshot.oid, snapshot.channel, FmtTimeNice(spec));
     }
 
-    if (valid) {
+    if (hooks && rk_config.hooks_postscan.len) {
+        LogInfo("Running post-scan hooks...");
+        valid &= RunHookCommands(rk_config.hooks_postscan);
+    }
+
+    if (!errors.len) {
         LogInfo("Checked %1 snapshots, all clear!", snapshots.len);
-        return 0;
+        return !valid;
     } else {
         LogInfo("Checked %1 snapshots, %2 are invalid", snapshots.len, errors.len);
         return 1;
