@@ -10,7 +10,9 @@ These features require additional configuration and are not enabled by default. 
 
 # S3 object locks
 
-Rekkord does not use object locks by default, you need to configure them. To do so, set `RetainDuration = <duration>` inside the *Protection* section of the Rekkord config file, as shown below:
+Rekkord can lock all S3 objects that are required to restore snapshots. Object locks are applied for a specific duration, and there is no way to delete the locked objects until the retention date has passed. These objects are protected from deletion even with your login credentials.
+
+This is not enabled by default. To use object locks, set `RetainDuration = <duration>` inside the *Protection* section of the Rekkord config file, as shown below:
 
 ```ini
 [Protection]
@@ -20,9 +22,9 @@ RetainDuration = 30d # 30 days
 LockMode = GOVERNANCE # Optional, defaults to GOVERNANCE if not set.
 ```
 
-With this setting, new blobs will be retained automatically when `rekkord save` runs.
+With this setting, new blobs will be retained automatically when `rekkord save` runs (for 30 days in the example above).
 
-However, **existing object locks are not extended** when snapshots are created. You need to run periodic scans with `rekkord scan` from a dedicated machine. After the repository has been checked, this command will extend the locks of objects that are used by existing snapshots.
+This is all good and well, but this only applies to new blobs, **existing object locks are not extended** when snapshots are created. You need to run periodic scans with `rekkord scan` from a dedicated machine. After the repository has been checked, this command will extend the locks of objects that are used by existing snapshots.
 
 > [!IMPORTANT]
 > It is essential to run periodic scans to detect errors and corrupted blobs, even if you choose to not use object locks!
