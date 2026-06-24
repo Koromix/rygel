@@ -42,7 +42,7 @@ Common options:
 
     %!..+-C, --config_file filename%!0     Set configuration file
 
-        %!..+--no_config%!0                Skip exisiting configuration files
+        %!..+--no_config%!0                Skip existing configuration files
 
     %!..+-R, --repository URL%!0           Set repository URL
     %!..+-K, --key_file filename%!0        Set file containing repository keys

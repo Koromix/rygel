@@ -876,7 +876,7 @@ void HandleDomainConfigure(http_IO *io)
                 return false;
 
             if (stmt.Step()) {
-                LogError("Cannot create default user on domain with exisiting users");
+                LogError("Cannot create default user on domain with existing users");
                 io->SendError(403);
                 return false;
             } else if (!stmt.IsValid()) {

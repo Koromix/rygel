@@ -105,7 +105,7 @@
 
 - The *BulkExport* permission can now be used without the *BulkDownload* permission to create an export and download it immediately. This combination allows users to generate new exports but not to download existing (previous) exports.
 
-- Add support for XLSX export templates, which can be used to integrate export data inside pe-exisiting XLSX file, in dedicated sheets.
+- Add support for XLSX export templates, which can be used to integrate export data inside pe-existing XLSX file, in dedicated sheets.
 
 - Improve dialog for API/export keys. A new code is generated only when the action is explicitly triggered, and a Copy button has been aded.
 
