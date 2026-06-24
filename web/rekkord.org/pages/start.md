@@ -57,6 +57,6 @@ For simple use cases, you can simply use the master key for everything. However,
 
 # Next steps
 
-Once your setup is ready, you can [create your first snapshot](snapshot#create-snapshots).
+Once your setup is ready, you can [create your first snapshot](snapshots#create-snapshots).
 
 You might also want to [secure your installation](protect) to protect your repository from data leaks, tampering and deletion.
