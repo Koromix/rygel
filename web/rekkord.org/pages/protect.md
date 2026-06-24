@@ -48,6 +48,7 @@ Object key   | Permission
 `rekkord`    | *s3:GetObject* (read-only)
 `cw`         | *s3:PutObject* (write-only)
 `blobs/*`    | *s3:PutObject* (write-only)
+`keys/*`     | *s3:PutObject* (write-only)
 `tags/*`     | *s3:PutObject* (write-only)
 
 That's it! Please see below for an [example S3 policy](#example-policy) that provides the ability to create snapshots.
@@ -108,6 +109,7 @@ The following policy provides statements to create snapshots, to explore and res
         "<bucket>",
         "<bucket>/rekkord",
         "<bucket>/blobs/*",
+        "<bucket>/keys/*",
         "<bucket>/tags/*",
         "<bucket>/cw"
       ]
