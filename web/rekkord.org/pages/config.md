@@ -59,7 +59,7 @@ KeyFile = /home/bar/.ssh/id_ed25519
 Fingerprint = SHA256:Y9pmJfkaok8t0dFJrfi8/LLUNhOYwAZGHUNGsYAiJUM
 ```
 
-Once this is done, use [rekkord -C config.ini init](#initialize-repository) to create the repository.
+Once this is done, use `rekkord -C config.ini init` to create the repository.
 
 ## Local filesystem
 
@@ -70,7 +70,7 @@ To create a repository in a local directory, create an INI file (name it how you
 URL = /path/to/repository
 ```
 
-Once this is done, use [rekkord -C config.ini init](#initialize-repository) to create the repository.
+Once this is done, use `rekkord -C config.ini init` to create the repository.
 
 # Restricted keyfiles
 
