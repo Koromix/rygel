@@ -847,9 +847,34 @@ static bool RenderTemplate(const char *base, const char *template_filename,
             for (Size i = 0; i < pages.len;) {
                 i = RenderMenu(base, pages, page_idx, i, pages.len, 0, writer);
             }
-        } else if (key == "TOC") {
+        } else if (key == "TOC" || StartsWith(key, "TOC ")) {
+            Span<const char> title = {};
+
+            // Parse flags
+            {
+                Span<const char> remain;
+                SplitStr(key, ' ', &remain);
+
+                while (remain.len) {
+                    Span<const char> part = TrimStr(SplitStr(remain, ' ', &remain));
+
+                    if (part == "title") {
+                        title = page.title;
+                    } else if (part == "menu") {
+                        Span<const char> src = page.menu;
+                        title = TrimStr(SplitStrReverse(src, '>'));
+                    } else if (part.len) {
+                        LogWarning("Unknown TITLE flag '%1'", part);
+                    }
+                }
+            }
+
             if (page.toc && page.sections.len > 1) {
                 PrintLn(writer, "<nav id=\"side\"><menu>");
+
+                if (title.len) {
+                    PrintLn(writer, "<div>%1</div>", title);
+                }
 
                 for (const PageSection &sec: page.sections) {
                     PrintLn(writer, "<li><a href=\"#%1\" class=\"lv%2\">%3</a></li>",

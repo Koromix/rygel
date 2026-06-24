@@ -1,4 +1,4 @@
-# Changelog
+# Version history
 
 ## Meestic 1.4
 

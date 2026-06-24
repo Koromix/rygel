@@ -1,4 +1,4 @@
-# Changelog
+# Version history
 
 ## Alpha versions
 

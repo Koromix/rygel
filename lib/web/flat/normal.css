@@ -160,6 +160,11 @@ a:has(> img) { text-decoration: none !important; }
     background: #fdfdfd;
     border: 2px solid #383838;
 }
+#side menu div {
+    margin-bottom: 1em;
+    text-align: center;
+    font-size: 0.9em;
+}
 #side li { list-style-type: none; }
 #side a {
     display: block;
