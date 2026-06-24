@@ -1,18 +1,31 @@
 # Create snapshots
 
-Each snapshot has a channel, which is a non-unique string that you choose when you call `rekkord save`. Please note that there is a *maximum snapshot channel length* (256 bytes).
+To create a snapshot, you must pick a channel name and the list of paths (one or more) you want to save, as shown below:
 
 ```sh
-export REKKORD_CONFIG_FILE=/path/to/config.ini
 rekkord save <channel> <path1> <path2> ...
 ```
 
-The command will give you the object ID (OID) of the snapshot once it finishes. You can retrieve the OID later with [rekkord snapshots](#list-snapshots).
+Channels are used to separate snapshots by source or purpose; for example, if you want to create backups of your personal data, you could use three channels:
+
+- photos
+- documents
+- music
+
+> [!TIP]
+> For this specific example, you could create your backups with the following commands:
+>
+> ```sh
+> rekkord save photos /home/john/photos
+> rekkord save documents /home/john/documents
+> rekkord save music /home/john/music
+> ```
+
+The command will give you the unique object ID (OID) of the snapshot once it finishes. You can retrieve the OID later with [rekkord snapshots](#list-snapshots).
 
 # List snapshots
 
 ```sh
-export REKKORD_CONFIG_FILE=/path/to/config.ini
 rekkord snapshots
 ```
 
@@ -53,7 +66,6 @@ Use `--format JSON` or `--format XML` to get this list in a JSON or XML format.
 You can list the directories and files in a snapshot with the `rekkord list` command. You can either use the unique [object ID](#list-snapshots), or provide a snapshot channel, in which case rekkord will use the most recent snapshot that matches it.
 
 ```sh
-export REKKORD_CONFIG_FILE=/path/to/config.ini
 rekkord list <identifier>
 ```
 
@@ -140,7 +152,6 @@ Use `--format JSON` or `--format XML` to get the file tree in a JSON or XML form
 Use the `rekkord restore` command to restore the files from a snapshot onto the local filesystem. You can either use the unique [object ID](#list-snapshots), or provide a snapshot channel, in which case rekkord will use the most recent snapshot that matches it.
 
 ```sh
-export REKKORD_CONFIG_FILE=/path/to/config.ini
 rekkord restore <identifier> <destination>
 ```
 
@@ -152,7 +163,6 @@ rekkord restore <identifier> <destination>
 You can also use `rekkord mount <identifier> <mountpoint>` to mount a snapshot or a directory as a read-only filesystem. You can either use the unique [object ID](#list-snapshots), or provide a snapshot channel, in which case rekkord will use the most recent snapshot that matches it.
 
 ```sh
-export REKKORD_CONFIG_FILE=/path/to/config.ini
 rekkord mount <identifier> <mountpoint>
 ```
 
