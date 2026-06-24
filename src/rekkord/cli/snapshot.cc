@@ -66,16 +66,19 @@ static bool LoadFromFile(const char *filename, Allocator *alloc, HeapArray<SaveR
     return true;
 }
 
-static bool RunHookCommands(Span<const char *const> commands)
+static bool RunHookCommands(Span<const char *const> commands, bool success)
 {
-    bool success = true;
-
     for (const char *cmd: commands) {
         Span<const char> basename = SplitStrReverseAny(cmd, K_PATH_SEPARATORS);
         LogInfo(("> %1"), basename);
 
+        ExecuteInfo::KeyValue variables[] = {
+            { "SUCCESS", success ? "1" : "0" }
+        };
+        ExecuteInfo info = { .env_variables = variables };
+
         int status = -1;
-        bool ret = ExecuteCommandLine(cmd, {}, &status);
+        bool ret = ExecuteCommandLine(cmd, info, &status);
 
         if (!ret) {
             success = false;
@@ -239,7 +242,7 @@ Available metadata save options:
     if (hooks && rk_config.hooks_presave.len) {
         LogInfo("Running pre-save hooks...");
 
-        if (!RunHookCommands(rk_config.hooks_presave))
+        if (!RunHookCommands(rk_config.hooks_presave, true))
             return 1;
     }
 
@@ -294,7 +297,7 @@ Available metadata save options:
 
     if (hooks && rk_config.hooks_postsave.len) {
         LogInfo("Running post-save hooks...");
-        complete &= RunHookCommands(rk_config.hooks_postsave);
+        complete &= RunHookCommands(rk_config.hooks_postsave, complete);
     }
 
     return !complete;
@@ -491,7 +494,7 @@ Scan options:
     if (hooks && rk_config.hooks_prescan.len) {
         LogInfo("Running pre-scan hooks...");
 
-        if (!RunHookCommands(rk_config.hooks_prescan))
+        if (!RunHookCommands(rk_config.hooks_prescan, true))
             return 1;
     }
 
@@ -509,12 +512,15 @@ Scan options:
 
     if (hooks && rk_config.hooks_postscan.len) {
         LogInfo("Running post-scan hooks...");
-        valid &= RunHookCommands(rk_config.hooks_postscan);
+        valid &= RunHookCommands(rk_config.hooks_postscan, valid);
     }
 
-    if (!errors.len) {
+    if (valid) {
         LogInfo("Checked %1 snapshots, all clear!", snapshots.len);
-        return !valid;
+        return 0;
+    } else if (!errors.len) {
+        LogInfo("Checked %1 snapshots, all clear, but one or more hooks failed!", snapshots.len);
+        return 1;
     } else {
         LogInfo("Checked %1 snapshots, %2 are invalid", snapshots.len, errors.len);
         return 1;

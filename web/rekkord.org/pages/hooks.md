@@ -7,10 +7,12 @@ To use hooks, you must set a directory for each type of hook in the configuratio
 For each command there are two hook phases:
 
 - The `pre` phase, these hooks run before the command takes place. If a `pre` phase hook fails to run or returns a non-zero exit code, the action will not run and Rekkord exit with a non-zero exit code.
-- The `post` phase, these hooks run after the command has succeeded. If a `post` hook fails, Rekkord will exit with a non-zero exit code.
+- The `post` phase, these hooks run after the command has finished, successfully or not. If a `post` hook fails, Rekkord will exit with a non-zero exit code.
 
 > [!NOTE]
 > All hook scripts run during the corresponding phase, even if one fails. Rekkord executes them all in order, before aborting if any of them has failed.
+
+Post hooks can use the *SUCCESS* environment variable to query whether the command has succeeded or failed. The value "1" will be one in case of success, or "0" if an error has happened. If one hook command fails, the value of *SUCCESS* is set to 0 in subsequent hooks.
 
 # Save hooks
 
@@ -27,7 +29,7 @@ Set the directory where pre-save hook commands exist with `PreSaveDirectory` in 
 PreSaveDirectory = /opt/rekkord/hooks/presave
 ```
 
-As stated before, if any command fails, the save will not happen and Rekkord exits with an error code.
+As stated before, if any hook fails, the save will not happen and Rekkord exits with an error code.
 
 > [!TIP]
 > Use pre-save hooks to dump databases, for example with mysqldump (MySQL or MariaDB), pg_dump (PostgreSQL) or make proper sqlite3 backups with `sqlite3 src.db '.backup copy.db'`.
@@ -36,7 +38,7 @@ As stated before, if any command fails, the save will not happen and Rekkord exi
 
 ## Post-save
 
-These hooks run after a snapshot been created by `rekkord save`.
+These hooks run after a snapshot been created by `rekkord save`, successfully or not.
 
 Set the directory where post-save hook commands exist with `PostSaveDirectory` in the `Hooks` section of the config file, as shown in the example below:
 
@@ -47,7 +49,10 @@ Set the directory where post-save hook commands exist with `PostSaveDirectory` i
 PostSaveDirectory = /opt/rekkord/hooks/postsave
 ```
 
-As stated before, if any command fails, Rekkord will exit with an error code.
+> [!TIP]
+> Use the *SUCCESS* environment variable to react to success or failure.
+
+As stated before, if any hook fails, Rekkord will exit with an error code.
 
 # Scan hooks
 
@@ -66,11 +71,11 @@ Set the directory where pre-scan hook commands exist with `PreScanDirectory` in 
 PreScanDirectory = /opt/rekkord/hooks/prescan
 ```
 
-As stated before, if any command fails, the scan will not happen and Rekkord exits with an error code.
+As stated before, if any hook fails, the scan will not happen and Rekkord exits with an error code.
 
 ## Post-scan
 
-These hooks run after a successful scan.
+These hooks run after a scan.
 
 Set the directory where post-scan hook commands exist with `PostScanDirectory` in the `Hooks` section of the config file, as shown in the example below:
 
@@ -81,4 +86,7 @@ Set the directory where post-scan hook commands exist with `PostScanDirectory` i
 PostScanDirectory = /opt/rekkord/hooks/postscan
 ```
 
-As stated before, if any command fails, Rekkord will exit with an error code.
+> [!TIP]
+> Use the *SUCCESS* environment variable to react to success or failure.
+
+As stated before, if any hook fails, Rekkord will exit with an error code.
