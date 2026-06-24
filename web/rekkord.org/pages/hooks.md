@@ -1,19 +1,10 @@
-# Create snapshots
+# Overview
 
-Each snapshot has a channel, which is a non-unique string that you choose when you call `rekkord save`. Please note that there is a *maximum snapshot channel length* (256 bytes).
-
-```sh
-export REKKORD_CONFIG_FILE=/path/to/config.ini
-rekkord save <channel> <path1> <path2> ...
-```
-
-The command will give you the object ID (OID) of the snapshot once it finishes. You can retrieve the OID later with [rekkord snapshots](#list-snapshots).
+Rekkord supports hooks, which are commands that are executed before and after some actions.
 
 # Save hooks
 
 *New in Rekkord 0.97*
-
-Rekkord supports hooks, which are commands that are executed before and after some actions.
 
 To use hooks, you must set a directory for each type of hook in the configuration file. When Rekkord runs the corresponding command (such as `rekkord save` for save hooks), it will run the hooks it finds in alphabetical order.
 
@@ -39,6 +30,11 @@ PreSaveDirectory = /opt/rekkord/hooks/presave
 ```
 
 As stated before, if any command fails, the save will not happen and Rekkord exits with an error code.
+
+> [!TIP]
+> Use pre-save hooks to dump databases, for example with mysqldump (MySQL or MariaDB), pg_dump (PostgreSQL) or make proper sqlite3 backups with `sqlite3 src.db '.backup copy.db'`.
+>
+> Do not compress these dumps (with gzip, for example) because it will reduce deduplication, and Rekkord uses its own compression. However, if you still want to compress your dump files, use `gzip --rsyncable` (or something equivalent).
 
 ## Post-save
 
