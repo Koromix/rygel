@@ -8,7 +8,7 @@ Run the following command to get started:
 rekkord setup
 ```
 
-This command only creates the configuration but it **does not initialize the repository**. Follow the next section to continue.
+This command creates the configuration and the master key but it **does not initialize the repository**. Follow the next section to continue.
 
 > [!NOTE]
 > You can also [configure Rekkord manually](config) if you prefer.
