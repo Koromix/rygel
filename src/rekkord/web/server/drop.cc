@@ -32,8 +32,8 @@ static bool cleanup_exit = false;
 
 bool InitDrops()
 {
-    K_ASSERT(config.s3.remote.Validate());
-    return s3.Open(config.s3.remote);
+    K_ASSERT(config.s3.Validate());
+    return s3.Open(config.s3);
 }
 
 void ExitDrops()
@@ -70,7 +70,7 @@ static void CleanupFragments(int64_t now)
             int64_t end = std::min(start + 1000, fragments);
 
             for (int64_t i = start; i < end; i++) {
-                const char *key = Fmt(&temp_alloc, "%1%2/%3", config.s3.drop_path, kid, FmtInt(i, 6)).ptr;
+                const char *key = Fmt(&temp_alloc, "%1%2/%3", config.drop_prefix, kid, FmtInt(i, 6)).ptr;
                 keys.Append(key);
             }
 
@@ -437,7 +437,7 @@ void HandleFragmentUpload(http_IO *io)
     if (!io->OpenForRead(-1, &reader))
         return;
 
-    Span<const char> key = Fmt(io->Allocator(), "%1%2/%3", config.s3.drop_path, kid, FmtInt(fragment, 6));
+    Span<const char> key = Fmt(io->Allocator(), "%1%2/%3", config.drop_prefix, kid, FmtInt(fragment, 6));
 
     s3_PutResult ret = s3.PutObject(key, ComputedEncryptedSize(expected), [&](int64_t offset, Span<uint8_t> buf) {
         if (offset != reader.GetRawRead()) {
@@ -511,7 +511,7 @@ void HandleFragmentDownload(http_IO *io)
     if (!io->OpenForWrite(200, ComputedEncryptedSize(expected), &writer))
         return;
 
-    Span<const char> key = Fmt(io->Allocator(), "%1%2/%3", config.s3.drop_path, kid, FmtInt(fragment, 6));
+    Span<const char> key = Fmt(io->Allocator(), "%1%2/%3", config.drop_prefix, kid, FmtInt(fragment, 6));
 
     int64_t downloaded = s3.GetObject(key, [&](int64_t offset, Span<const uint8_t> buf) {
         if (offset != writer.GetRawWritten()) {
@@ -669,7 +669,7 @@ void HandleDropDownload(http_IO *io)
         Span<uint8_t> buf = AllocateSpan<uint8_t>(io->Allocator(), ComputedEncryptedSize(size));
 
         for (int64_t i = 0; i < fragments; i++) {
-            Span<const char> key = Fmt(io->Allocator(), "%1%2/%3", config.s3.drop_path, kid, FmtInt(i, 6));
+            Span<const char> key = Fmt(io->Allocator(), "%1%2/%3", config.drop_prefix, kid, FmtInt(i, 6));
             Size downloaded = s3.GetObject(key, buf);
 
             if (downloaded < 0)

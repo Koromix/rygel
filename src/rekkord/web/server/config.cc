@@ -20,9 +20,9 @@ bool Config::Validate() const
     }
 
     if (drop) {
-        valid &= s3.remote.Validate();
+        valid &= s3.Validate();
 
-        if (s3.drop_path[0] && !EndsWith(s3.drop_path, "/")) {
+        if (drop_prefix[0] && !EndsWith(drop_prefix, "/")) {
             LogError("S3 drop path must end with '/'");
             valid = false;
         }
@@ -69,15 +69,6 @@ bool LoadConfig(StreamReader *st, Config *out_config)
                     LogError("Unknown attribute '%1'", prop.key);
                     valid = false;
                 }
-            } else if (prop.section == "Services") {
-                if (prop.key == "Backup") {
-                    valid &= ParseBool(prop.value, &config.backup);
-                } else if (prop.key == "Drop") {
-                    valid &= ParseBool(prop.value, &config.drop);
-                } else {
-                    LogError("Unknown attribute '%1'", prop.key);
-                    valid = false;
-                }
             } else if (prop.section == "Data") {
                 bool first = true;
 
@@ -100,8 +91,10 @@ bool LoadConfig(StreamReader *st, Config *out_config)
 
                     first = false;
                 } while (ini.NextInSection(&prop));
-            } else if (prop.section == "Alerts") {
-                if (prop.key == "StaleDelay") {
+            } else if (prop.section == "Backup") {
+                if (prop.key == "Enabled") {
+                    valid &= ParseBool(prop.value, &config.backup);
+                } else if (prop.key == "StaleDelay") {
                     valid &= ParseDuration(prop.value, &config.stale_delay);
                 } else if (prop.key == "MailDelay") {
                     valid &= ParseDuration(prop.value, &config.mail_delay);
@@ -111,13 +104,20 @@ bool LoadConfig(StreamReader *st, Config *out_config)
                     LogError("Unknown attribute '%1'", prop.key);
                     valid = false;
                 }
-            } else if (prop.section == "S3") {
-                if (prop.key == "DropPath") {
-                    const char * suffix = prop.value.len && !EndsWith(prop.value, "/") ? "/" : "";
-                    config.s3.drop_path = Fmt(&config.str_alloc, "%1%2", prop.value, suffix).ptr;
+            } else if (prop.section == "Drop") {
+                if (prop.key == "Enabled") {
+                    valid &= ParseBool(prop.value, &config.drop);
+                } else if (prop.key == "Quota") {
+                    valid &= ParseSize(prop.value, &config.drop_quota);
+                } else if (prop.key == "S3Path") {
+                    const char *suffix = prop.value.len && !EndsWith(prop.value, "/") ? "/" : "";
+                    config.drop_prefix = Fmt(&config.str_alloc, "%1%2", prop.value, suffix).ptr;
                 } else {
-                    valid &= config.s3.remote.SetProperty(prop.key, prop.value, root_directory);
+                    LogError("Unknown attribute '%1'", prop.key);
+                    valid = false;
                 }
+            } else if (prop.section == "S3") {
+                valid &= config.s3.SetProperty(prop.key, prop.value, root_directory);
             } else if (prop.section == "HTTP") {
                 valid &= config.http.SetProperty(prop.key.ptr, prop.value.ptr, root_directory);
             } else if (prop.section == "SMTP") {

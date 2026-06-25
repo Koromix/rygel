@@ -16,19 +16,18 @@ struct Config {
     const char *url = nullptr;
 
     bool backup = true;
-    bool drop = false;
-
-    const char *database_filename = nullptr;
-    const char *tmp_directory = nullptr;
-
     int64_t stale_delay = 30 * 3600000;
     int64_t mail_delay = 1 * 3600000;
     int64_t repeat_delay = 24 * 3600000;
 
-    struct {
-        s3_Config remote;
-        const char *drop_path = "";
-    } s3;
+    bool drop = false;
+    const char *drop_prefix = "";
+    int64_t drop_quota = Megabytes(1000);
+
+    const char *database_filename = nullptr;
+    const char *tmp_directory = nullptr;
+
+    s3_Config s3;
 
     http_Config http { 8891 };
 
