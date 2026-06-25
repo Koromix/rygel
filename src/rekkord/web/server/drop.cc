@@ -10,7 +10,6 @@
 
 namespace K {
 
-static const int64_t MaxSize = Megabytes(4000);
 static const int64_t MaxExpiration = 90 * 86400000ull; // 90 days
 static bool AllowNoExpiration = true;
 static const int64_t StaleDelay = 7 * 86400000ull; // 7 days
@@ -303,7 +302,7 @@ void HandleDropCreate(http_IO *io)
                     LogError("Invalid 'name' parameter");
                     valid = false;
                 }
-                if (size <= 0 || size > MaxSize) {
+                if (size <= 0) {
                     LogError("Invalid or excessive 'size' parameter");
                     valid = false;
                 }
