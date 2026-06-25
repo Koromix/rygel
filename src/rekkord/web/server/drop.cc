@@ -48,41 +48,49 @@ static void CleanupFragments(int64_t now)
 {
     BlockAllocator temp_alloc;
 
-    sq_Statement stmt;
-    if (!db.Prepare("SELECT kid, size, split FROM drops WHERE deleted = 1", &stmt, now - StaleDelay))
-        return;
+    // Clean up old S3 fragments
+    {
+        sq_Statement stmt;
+        if (!db.Prepare("SELECT kid, size, split FROM drops WHERE deleted = 1", &stmt, now - StaleDelay))
+            return;
 
-    while (stmt.Step() && !cleanup_exit) {
-        K_ASSERT(sqlite3_column_bytes(stmt, 0) == K_SIZE(KID));
+        while (stmt.Step() && !cleanup_exit) {
+            K_ASSERT(sqlite3_column_bytes(stmt, 0) == K_SIZE(KID));
 
-        KID kid;
-        memcpy(&kid, sqlite3_column_blob(stmt, 0), K_SIZE(KID));
+            KID kid;
+            memcpy(&kid, sqlite3_column_blob(stmt, 0), K_SIZE(KID));
 
-        int64_t size = sqlite3_column_int64(stmt, 1);
-        int64_t split = sqlite3_column_int64(stmt, 2);
-        int64_t fragments = (size + split - 1) / split;
+            int64_t size = sqlite3_column_int64(stmt, 1);
+            int64_t split = sqlite3_column_int64(stmt, 2);
+            int64_t fragments = (size + split - 1) / split;
 
-        bool success = true;
+            bool success = true;
 
-        for (int64_t start = 0; start < fragments; start += 1000) {
-            LocalArray<const char *, 1000> keys;
+            for (int64_t start = 0; start < fragments; start += 1000) {
+                LocalArray<const char *, 1000> keys;
 
-            int64_t end = std::min(start + 1000, fragments);
+                int64_t end = std::min(start + 1000, fragments);
 
-            for (int64_t i = start; i < end; i++) {
-                const char *key = Fmt(&temp_alloc, "%1%2/%3", config.drop_prefix, kid, FmtInt(i, 6)).ptr;
-                keys.Append(key);
+                for (int64_t i = start; i < end; i++) {
+                    const char *key = Fmt(&temp_alloc, "%1%2/%3", config.drop_prefix, kid, FmtInt(i, 6)).ptr;
+                    keys.Append(key);
+                }
+
+                success &= s3.DeleteObjects(keys);
             }
 
-            success &= s3.DeleteObjects(keys);
-        }
-
-        if (success) {
-            // Nothing should fail in this function, but if something goes wrong it will be logged
-            // and there's nothing else we can do about it, except retry later.
-            db.Run("DELETE FROM drops WHERE kid = ?1", sq_Binding(kid.raw));
+            if (success) {
+                // Nothing should fail in this function, but if something goes wrong it will be logged
+                // and there's nothing else we can do about it, except retry later.
+                db.Run("DELETE FROM drops WHERE kid = ?1", sq_Binding(kid.raw));
+            }
         }
     }
+
+    // Recompute per-user usage just in case
+    db.Run(R"(UPDATE quotas SET total = agg.total
+              FROM (SELECT owner AS user, SUM(size) AS total FROM drops WHERE deleted = 0 GROUP BY owner) AS agg
+              WHERE quotas.user = agg.user)");
 }
 
 bool PruneDrops()
@@ -90,8 +98,23 @@ bool PruneDrops()
     int64_t now = GetUnixTime();
     int64_t clock = GetMonotonicClock();
 
-    if (!db.Run("UPDATE drops SET deleted = 1 WHERE expire <= ?1", now - StaleDelay))
-        return false;
+    // Deleted expired drops
+    {
+        sq_Statement stmt;
+        if (!db.Prepare(R"(UPDATE drops SET deleted = 1
+                           WHERE expire <= ?1 AND deleted = 0
+                           RETURNING owner, size)",
+                        &stmt, now - StaleDelay))
+            return false;
+
+        while (stmt.Step()) {
+            int64_t userid = sqlite3_column_int64(stmt, 0);
+            int64_t size = sqlite3_column_int64(stmt, 1);
+
+            if (!db.Run("UPDATE quotas SET total = total - ?2 WHERE user = ?1", userid, size))
+                return false;
+        }
+    }
 
     if (clock >= next_cleanup) {
         if (cleanup_thread.joinable()) {
@@ -121,42 +144,58 @@ void HandleDropList(http_IO *io)
     }
 
     sq_Statement stmt;
-    if (!db.Prepare(R"(SELECT kid_str(kid), name, size, protect, IFNULL(expire, -1),
-                              IIF(uploaded = size, 1, 0) AS complete
-                       FROM drops
+    if (!db.Prepare(R"(SELECT kid_str(d.kid), d.name, d.size, d.protect, IFNULL(d.expire, -1),
+                              IIF(d.uploaded = d.size, 1, 0) AS complete,
+                              q.total
+                       FROM drops d
+                       LEFT JOIN quotas q ON (user = 1)
                        WHERE owner = ?1 AND deleted = 0)", &stmt, session->userid))
+        return;
+    if (!stmt.Run())
         return;
 
     http_SendJson(io, 200, [&](json_Writer *json) {
-        json->StartArray();
+        json->StartObject();
 
-        while (stmt.Step()) {
-            const char *kid = (const char *)sqlite3_column_text(stmt, 0);
-            const char *name = (const char *)sqlite3_column_text(stmt, 1);
-            int64_t size = sqlite3_column_int64(stmt, 2);
-            bool protect = sqlite3_column_int(stmt, 3);
-            int64_t expire = sqlite3_column_int64(stmt, 4);
-            bool complete = sqlite3_column_int(stmt, 5);
+        json->Key("quota"); json->Int64(config.drop_quota);
 
-            json->StartObject();
-
-            json->Key("kid"); json->String(kid);
-            json->Key("name"); json->String(name);
-            json->Key("size"); json->Int64(size);
-            json->Key("protect"); json->Bool(protect);
-            if (expire >= 0) {
-                json->Key("expire"); json->Int64(expire);
-            } else {
-                json->Key("expire"); json->Null();
-            }
-            json->Key("complete"); json->Bool(complete);
-
-            json->EndObject();
+        // User consumption
+        {
+            int64_t total = stmt.IsRow() ? sqlite3_column_int64(stmt, 6) : 0;
+            json->Key("total"); json->Int64(total);
         }
-        if (!stmt.IsValid())
-            return;
 
+        json->Key("drops"); json->StartArray();
+        if (stmt.IsRow()) {
+            do {
+                const char *kid = (const char *)sqlite3_column_text(stmt, 0);
+                const char *name = (const char *)sqlite3_column_text(stmt, 1);
+                int64_t size = sqlite3_column_int64(stmt, 2);
+                bool protect = sqlite3_column_int(stmt, 3);
+                int64_t expire = sqlite3_column_int64(stmt, 4);
+                bool complete = sqlite3_column_int(stmt, 5);
+
+                json->StartObject();
+
+                json->Key("kid"); json->String(kid);
+                json->Key("name"); json->String(name);
+                json->Key("size"); json->Int64(size);
+                json->Key("protect"); json->Bool(protect);
+                if (expire >= 0) {
+                    json->Key("expire"); json->Int64(expire);
+                } else {
+                    json->Key("expire"); json->Null();
+                }
+                json->Key("complete"); json->Bool(complete);
+
+                json->EndObject();
+            } while (stmt.Step());
+            if (!stmt.IsValid())
+                return;
+        }
         json->EndArray();
+
+        json->EndObject();
     });
 }
 
@@ -300,11 +339,42 @@ void HandleDropCreate(http_IO *io)
     KID kid;
     FillKID(KIDType::Drop, &kid);
 
-    if (!db.Run(R"(INSERT INTO drops (kid, owner, name, size, expire, protect,
-                                      header, nonce, split, uploaded, deleted)
-                   VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, 0, 0))",
-                sq_Binding(kid.raw), session->userid, name, size, expire,
-                0 + protect, header, nonce, FragmentSize))
+    bool success = db.Transaction([&]() {
+        sq_Statement stmt;
+        if (!db.Prepare(R"(INSERT INTO quotas (user, total) 
+                           VALUES (?1, ?2)
+                           ON CONFLICT DO UPDATE SET total = total + excluded.total
+                           RETURNING total)",
+                        &stmt, session->userid, size))
+            return false;
+
+        if (!stmt.Step()) {
+            K_ASSERT(!stmt.IsValid());
+            return false;
+        }
+
+        // Make sure we're not over quota
+        {
+            int64_t total = sqlite3_column_int64(stmt, 0);
+            int64_t remain = config.drop_quota - total;
+
+            if (remain < 0) {
+                LogError("Drop would exceed quota by %1 (max = %2)", FmtDiskSize(-remain), FmtDiskSize(config.drop_quota));
+                io->SendError(403);
+                return false;
+            }
+        }
+
+        if (!db.Run(R"(INSERT INTO drops (kid, owner, name, size, expire, protect,
+                                          header, nonce, split, uploaded, deleted)
+                       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, 0, 0))",
+                    sq_Binding(kid.raw), session->userid, name, size, expire,
+                    0 + protect, header, nonce, FragmentSize))
+            return false;
+
+        return true;
+    });
+    if (!success)
         return;
 
     Span<const char> json = Fmt(io->Allocator(), "{\"kid\": \"%1\", \"split\": %2}", kid, FragmentSize);
@@ -354,7 +424,26 @@ void HandleDropDelete(http_IO *io)
         }
     }
 
-    if (!db.Run("UPDATE drops SET deleted = 1 WHERE kid = ?1 AND owner = ?2", sq_Binding(kid.raw), session->userid))
+    bool success = db.Transaction([&]() {
+        sq_Statement stmt;
+        if (!db.Prepare(R"(UPDATE drops SET deleted = 1
+                           WHERE kid = ?1 AND owner = ?2 AND deleted = 0
+                           RETURNING size)",
+                        &stmt, sq_Binding(kid.raw), session->userid))
+            return false;
+
+        if (stmt.Step()) {
+            int64_t size = sqlite3_column_int64(stmt, 0);
+
+            if (!db.Run("UPDATE quotas SET total = total - ?2 WHERE user = ?1", session->userid, size))
+                return false;
+        } else if (!stmt.IsValid()) {
+            return false;
+        }
+
+        return true;
+    });
+    if (!success)
         return;
 
     io->SendText(200, "{}", "application/json");

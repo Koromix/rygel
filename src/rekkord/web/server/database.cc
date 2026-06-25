@@ -8,7 +8,7 @@
 
 namespace K {
 
-const int DatabaseVersion = 41;
+const int DatabaseVersion = 42;
 
 bool AddDatabaseFunctions(sq_Database *db)
 {
@@ -838,9 +838,21 @@ bool MigrateDatabase(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 41: {
+                bool success = db->RunMany(R"(
+                    CREATE TABLE quotas (
+                        user INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+                        total INTEGER NOT NULL
+                    );
+                    CREATE UNIQUE INDEX quotas_u ON quotas (user);
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            static_assert(DatabaseVersion == 41);
+            static_assert(DatabaseVersion == 42);
         }
 
         if (!db->Run("INSERT INTO migrations (version, build, timestamp) VALUES (?, ?, ?)",
