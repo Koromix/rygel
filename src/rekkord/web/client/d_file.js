@@ -212,18 +212,34 @@ async function* uploadFragments(info, key, iter) {
         uploaded += frag.length;
         idx++;
 
-        // Upload fragment
+        // Upload fragment with retry logic
         {
-            let response = await Net.fetch(url, {
-                method: 'PUT',
-                body: cipher,
-                timeout: 30000
-            });
+            let success = false;
 
-            if (!response.ok) {
-                let msg = await Net.readError(response);
-                throw new HttpError(response.status, msg);
+            for (let i = 0; i < 4; i++) {
+                try {
+                    let response = await Net.fetch(url, {
+                        method: 'PUT',
+                        body: cipher,
+                        timeout: 30000
+                    });
+
+                    if (!response.ok) {
+                        let msg = await Net.readError(response);
+                        throw new HttpError(response.status, msg);
+                    }
+
+                    success = true;
+                    break;
+                } catch (err) {
+                    console.error(err);
+                }
+
+                await Util.waitFor(1000 + i * 2000);
             }
+
+            if (!success)
+                throw new Error('Failed to upload file fragment');
         }
 
         yield frag;
@@ -252,26 +268,37 @@ async function* downloadFragments(info, key) {
 
         let cipher = null;
 
-        for (let i = 0; i < 4; i++) {
-            try {
-                let response = await fetch(url);
+        // Download fragment with retry logic
+        {
+            let success = false;
 
-                if (response.ok)
+            for (let i = 0; i < 4; i++) {
+                try {
+                    let response = await fetch(url);
+
+                    if (!response.ok) {
+                        let msg = await Net.readError(response);
+                        throw new HttpError(response.status, msg);
+                    }
+
                     cipher = await response.bytes();
-            } catch (err) {
-                console.error(err);
+
+                    if (cipher.length == expected + extra) {
+                        success = true;
+                        break;
+                    }
+                } catch (err) {
+                    console.error(err);
+                }
+
+                // Transient S3 errors will result in truncated output, but a 200 status because the server
+                // streams the response. Retry if buffer is shorter than expected!
+                await Util.waitFor(1000 + i * 2000);
             }
 
-            if (cipher?.length == expected + extra)
-                break;
-
-            // Transient S3 errors will result in truncated output, but a 200 status because the server
-            // streams the response. Retry if buffer is shorter than expected!
-            await Util.waitFor(1000 + i * 2000);
+            if (!success)
+                throw new Error('Failed to download file fragment');
         }
-
-        if (cipher?.length != expected + extra)
-            throw new Error('Failed to download file fragment');
 
         downloaded += expected;
         idx++;
