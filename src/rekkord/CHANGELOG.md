@@ -6,6 +6,15 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.104
+
+*Released on 2026-06-25*
+
+- Regroup object lock/retain settings in S3 section
+- Support pre-scan and post-scan hook commands
+- Communicate SUCCESS environment variable to command hooks
+- Fix minor translation issues
+
 ### Rekkord 0.103
 
 *Released on 2026-06-23*
