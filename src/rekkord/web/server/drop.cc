@@ -26,7 +26,7 @@ static_assert(crypto_secretbox_xsalsa20poly1305_MACBYTES == 16);
 
 static s3_Client s3;
 
-static int64_t last_cleanup = 0;
+static int64_t next_cleanup = 0;
 static std::thread cleanup_thread;
 static bool cleanup_exit = false;
 
@@ -93,7 +93,7 @@ bool PruneDrops()
     if (!db.Run("UPDATE drops SET deleted = 1 WHERE expire <= ?1", now - StaleDelay))
         return false;
 
-    if (clock - last_cleanup >= CleanupDelay) {
+    if (clock >= next_cleanup) {
         if (cleanup_thread.joinable()) {
             cleanup_exit = true;
             cleanup_thread.join();
@@ -102,7 +102,7 @@ bool PruneDrops()
         cleanup_exit = false;
         cleanup_thread = std::thread(CleanupFragments, now);
 
-        last_cleanup = clock;
+        next_cleanup = clock + CleanupDelay;
     }
 
     return true;
