@@ -35,20 +35,6 @@ LoongArch64        | ⬜️      | ✅          | 🟨         | ⬜️    | �
 
 For all fully supported platforms (green check marks), a prebuilt binary is included in the NPM package which means you can install Koffi without a C++ compiler.
 
-# Source code
-
-The source code is available here: https://codeberg.org/Koromix/rygel/ (in the *src/koffi* subdirectory).
-
-> [!NOTE]
-> Most of my projects live in a single repository (or monorepo), which have two killer features for me:
->
-> - Cross-project refactoring
-> - Simplified dependency management
->
-> You can find a more detailed rationale here: https://danluu.com/monorepo/
-
-New releases are frequent, look at the [changelog](changelog) for more information.
-
 # License
 
 This program is free software: you can redistribute it and/or modify it under the terms of the **MIT License**.
