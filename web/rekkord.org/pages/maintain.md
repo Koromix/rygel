@@ -3,7 +3,9 @@
 Rekkord deduplicates data by reusing existing blobs each time a new snapshot is created. It does not check the integrity oif these blobs. They could have been corrupted by bit-rot or a malveillant actor, or be outright missing.
 
 > [!NOTE]
-> This is by design: Rekkord uses an asymmetric encryption scheme which means the key used to create blobs cannot be used to read them back. In addition, Rekkord can create snapshots with write-only backends, for example when using a [PutObject-only S3 bucket policy](protect#fine-grained-s3-bucket-policy) for blobs and tags.
+> This is by design!
+>
+> Rekkord uses an asymmetric encryption scheme which means the key used to create blobs cannot be used to read them back. In addition, Rekkord can create snapshots with write-only backends, for example when using a [PutObject-only S3 bucket policy](protect#fine-grained-s3-bucket-policy) for blobs and tags.
 
 You must run periodic scans in order to:
 
