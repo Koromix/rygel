@@ -666,15 +666,9 @@ Options:
         LogInfo("Periodic timer set to %1 s", FmtDouble((double)timeout / 1000.0, 1));
 
         while (run) {
-            WaitResult ret = WaitEvents(timeout);
-
-            if (ret == WaitResult::Exit) {
-                LogInfo("Exit requested");
-                run = false;
-            } else if (ret == WaitResult::Interrupt) {
-                LogInfo("Process interrupted");
-                status = 1;
-                run = false;
+            if (config.drop) {
+                LogDebug("Prune drops");
+                PruneDrops();
             }
 
             LogDebug("Prune tokens");
@@ -683,16 +677,22 @@ Options:
             LogDebug("Prune sessions");
             PruneSessions();
 
-            if (config.drop) {
-                LogDebug("Prune drops");
-                PruneDrops();
-            }
-
             LogDebug("Detect alerts");
             DetectAlerts();
 
             LogDebug("Send mails");
             if (!SendMails()) {
+                status = 1;
+                run = false;
+            }
+
+            WaitResult ret = WaitEvents(timeout);
+
+            if (ret == WaitResult::Exit) {
+                LogInfo("Exit requested");
+                run = false;
+            } else if (ret == WaitResult::Interrupt) {
+                LogInfo("Process interrupted");
                 status = 1;
                 run = false;
             }
