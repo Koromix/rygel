@@ -37,7 +37,7 @@ For all fully supported platforms (green check marks), a prebuilt binary is incl
 
 # Source code
 
-The source code is available here: https://github.com/Koromix/rygel/ (in the *src/koffi* subdirectory).
+The source code is available here: https://codeberg.org/Koromix/rygel/ (in the *src/koffi* subdirectory).
 
 > [!NOTE]
 > Most of my projects live in a single repository (or monorepo), which have two killer features for me:
