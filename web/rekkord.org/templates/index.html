@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en" class="nojs">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <title>{{ TITLE }}</title>
+        <meta name="author" content="Niels Martignène">
+        <meta name="description" content="{{ DESCRIPTION }}">
+        <link rel="icon" href="{{ ASSET favicon.webp }}">
+
+        <meta name="theme-color" content="#6aa051">
+        <link rel="stylesheet" href="{{ ASSET static/site.min.css }}">
+
+        <script type="text/javascript" src="{{ ASSET static/site.min.js }}"></script>
+    </head>
+
+    <body>
+        <nav id="top">
+            <div class="deploy"></div>
+            <menu>
+                <a id="logo" href="/"><img src="{{ ASSET static/logo.webp }}" width="426" height="128" alt="" /></a>
+
+{{ LINKS }}
+
+                <div style="flex: 1;"></div>
+                <li><a href="https://codeberg.org/Koromix/rekkord" style="border-bottom-color: transparent; margin-top: 8px;"><img src="https://img.shields.io/badge/Codeberg-Rekkord-2185d0" alt="Codeberg"/></a></li>
+            </menu>
+        </nav>
+
+        <main>
+            {{ CONTENT }}
+        </main>
+
+        <footer>
+            <div>Rekkord © 2026</div>
+            <div style="font-size: 0.8em;">
+                Niels Martignène (<a href="https://koromix.dev/" target="_blank">Koromix</a>)<br>
+                <a href="mailto:niels.martignene@protonmail.com" style="font-weight: bold; color: inherit;">niels.martignene@protonmail.com</a>
+            </div>
+        </footer>
+    </body>
+</html>
