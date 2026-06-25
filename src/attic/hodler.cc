@@ -869,7 +869,7 @@ static bool RenderTemplate(const char *base, const char *template_filename,
                 }
             }
 
-            if (page.toc && page.sections.len > 1) {
+            if (page.sections.len > 1) {
                 PrintLn(writer, "<nav id=\"side\"><menu>");
 
                 if (title.len) {
@@ -961,7 +961,6 @@ static bool BuildAll(Span<const char> source_dir, const BuildSettings &build, co
             page.src_filename = NormalizePath(prop.section, source_dir, &temp_alloc).ptr;
             page.title = page.name;
             page.description = "";
-            page.toc = true;
 
             do {
                 if (prop.key == "URL") {
@@ -974,8 +973,6 @@ static bool BuildAll(Span<const char> source_dir, const BuildSettings &build, co
                     page.menu = DuplicateString(prop.value, &temp_alloc).ptr;
                 } else if (prop.key == "Description") {
                     page.description = DuplicateString(prop.value, &temp_alloc).ptr;
-                } else if (prop.key == "ToC") {
-                    valid &= ParseBool(prop.value, &page.toc);
                 } else if (prop.key == "Template") {
                     page.template_filename = NormalizePath(prop.value, source_dir, &temp_alloc).ptr;
                 } else {

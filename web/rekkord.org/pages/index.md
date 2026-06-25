@@ -1,4 +1,4 @@
-# Rekkord
+# Overview
 
 Rekkord is a **multi-platform backup tool**, with the following features:
 
