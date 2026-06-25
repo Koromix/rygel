@@ -27,8 +27,11 @@ struct rk_S3Config {
     s3_StorageClass meta_storage = s3_StorageClass::STANDARD;
     s3_StorageClass data_storage = s3_StorageClass::STANDARD;
 
-    s3_LockMode lock = s3_LockMode::Governance;
     rk_ChecksumType checksum = rk_ChecksumType::CRC64nvme;
+
+    int64_t retain_duration = 0;
+    bool retain_safety = true;
+    s3_RetainMode retain_mode = s3_RetainMode::Governance;
 };
 
 static const int64_t rk_MinimalRetention = 14 * 86400000ll; // 14 days
@@ -47,12 +50,9 @@ struct rk_Config {
     rk_S3Config s3;
     ssh_Config ssh;
 
-    bool ocd = true;
-    int64_t retain = 0;
-    bool safety = true;
-
     int threads = -1;
     int compression_level = 6;
+    bool ocd = true;
 
     const char *link_url = nullptr;
     const char *link_key = nullptr;

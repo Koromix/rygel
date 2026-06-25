@@ -107,7 +107,7 @@ static bool SealBox(Span<const uint8_t> m, const uint8_t *esk, const unsigned ch
 }
 
 rk_Repository::rk_Repository(rk_Disk *disk, const rk_Config &config)
-    : disk(disk), compression_level(config.compression_level), retain(config.retain), ocd(config.ocd),
+    : disk(disk), compression_level(config.compression_level), ocd(config.ocd),
       tasks(config.threads > 0 ? config.threads : disk->GetDefaultThreads())
 {
 }
@@ -270,6 +270,11 @@ void rk_Repository::Lock()
 const char *rk_Repository::GetURL() const
 {
     return disk->GetURL();
+}
+
+bool rk_Repository::CanRetain() const
+{
+    return disk->CanRetain();
 }
 
 void rk_Repository::MakeSalt(rk_SaltKind kind, Span<uint8_t> out_buf) const
@@ -575,7 +580,7 @@ rk_WriteResult rk_Repository::WriteBlob(const rk_ObjectID &oid, int type, Span<c
     rk_WriteSettings settings = {};
 
     settings.conditional = HasConditionalWrites();
-    settings.retain = retain;
+    settings.retain = true;
     settings.checksum = disk->GetChecksumType();
 
     switch (settings.checksum) {
@@ -684,13 +689,10 @@ rk_WriteResult rk_Repository::WriteBlob(const rk_ObjectID &oid, int type, Span<c
 
 bool rk_Repository::RetainBlob(const rk_ObjectID &oid)
 {
-    if (!retain)
-        return true;
-
     char path[256];
     Fmt(path, "blobs/%1/%2/%3", rk_BlobCatalogNames[(int)oid.catalog], GetBlobPrefix(oid.hash), oid.hash);
 
-    return disk->RetainFile(path, retain);
+    return disk->RetainFile(path);
 }
 
 StatResult rk_Repository::TestBlob(const rk_ObjectID &oid, int64_t *out_size)
@@ -802,7 +804,7 @@ bool rk_Repository::WriteTag(const rk_ObjectID &oid, Span<const uint8_t> payload
 
     // Create tag files
     for (const char *path: paths) {
-        rk_WriteSettings settings = { .retain = retain };
+        rk_WriteSettings settings = { .retain = true };
         rk_WriteResult ret = disk->WriteFile(path, {}, settings);
 
         if (ret != rk_WriteResult::Success)
@@ -814,7 +816,7 @@ bool rk_Repository::WriteTag(const rk_ObjectID &oid, Span<const uint8_t> payload
         char path[256];
         Fmt(path, "keys/%1", FmtHex(keyset->kid));
 
-        rk_WriteSettings settings = { .conditional = HasConditionalWrites(), .retain = retain };
+        rk_WriteSettings settings = { .conditional = HasConditionalWrites(), .retain = true };
         rk_WriteResult ret = disk->WriteFile(path, keyset->badge, settings);
 
         switch (ret) {

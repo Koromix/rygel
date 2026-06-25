@@ -14,14 +14,17 @@ class S3Disk: public rk_Disk {
     s3_StorageClass meta_storage;
     s3_StorageClass data_storage;
 
-    s3_LockMode lock;
     rk_ChecksumType checksum;
+
+    int64_t retain_duration;
+    s3_RetainMode retain_mode;
 
 public:
     S3Disk(const rk_S3Config &config);
     ~S3Disk() override;
 
-    rk_ChecksumType GetChecksumType() override;
+    rk_ChecksumType GetChecksumType() const override;
+    bool CanRetain() const override;
 
     bool CreateDirectory(const char *path) override;
     bool DeleteDirectory(const char *path) override;
@@ -32,14 +35,15 @@ public:
 
     rk_WriteResult WriteFile(const char *path, Span<const uint8_t> buf, const rk_WriteSettings &settings = {}) override;
     bool DeleteFile(const char *path) override;
-    bool RetainFile(const char *path, int64_t until) override;
+    bool RetainFile(const char *path) override;
 
     bool ListFiles(const char *path, FunctionRef<bool(const char *, int64_t)> func) override;
     StatResult TestFile(const char *path, int64_t *out_size) override;
 };
 
 S3Disk::S3Disk(const rk_S3Config &config)
-    : meta_storage(config.meta_storage), data_storage(config.data_storage), lock(config.lock), checksum(config.checksum)
+    : meta_storage(config.meta_storage), data_storage(config.data_storage), checksum(config.checksum),
+      retain_duration(config.retain_duration), retain_mode(config.retain_mode)
 {
     if (!s3.Open(config.remote))
         return;
@@ -53,9 +57,14 @@ S3Disk::~S3Disk()
 {
 }
 
-rk_ChecksumType S3Disk::GetChecksumType()
+rk_ChecksumType S3Disk::GetChecksumType() const
 {
     return checksum;
+}
+
+bool S3Disk::CanRetain() const
+{
+    return retain_duration;
 }
 
 bool S3Disk::CreateDirectory(const char *)
@@ -94,8 +103,8 @@ rk_WriteResult S3Disk::WriteFile(const char *path, Span<const uint8_t> buf, cons
     put.storage = StartsWith(path, "blobs/R/") ? data_storage : meta_storage;
 
     if (settings.retain) {
-        put.retain = GetUnixTime() + settings.retain;
-        put.lock = lock;
+        put.retain_until = GetUnixTime() + retain_duration;
+        put.retain_mode = retain_mode;
     }
 
     switch (settings.checksum) {
@@ -139,10 +148,13 @@ bool S3Disk::DeleteFile(const char *path)
     return s3.DeleteObject(path);
 }
 
-bool S3Disk::RetainFile(const char *path, int64_t retain)
+bool S3Disk::RetainFile(const char *path)
 {
-    int64_t until = GetUnixTime() + retain;
-    return s3.RetainObject(path, until, lock);
+    if (!retain_duration)
+        return true;
+
+    int64_t until = GetUnixTime() + retain_duration;
+    return s3.RetainObject(path, until, retain_mode);
 }
 
 bool S3Disk::ListFiles(const char *path, FunctionRef<bool(const char *, int64_t)> func)

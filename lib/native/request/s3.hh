@@ -48,11 +48,11 @@ static const char *const s3_StorageClassNames[] = {
     "INTELLIGENT_TIERING"
 };
 
-enum class s3_LockMode {
+enum class s3_RetainMode {
     Governance,
     Compliance
 };
-static const char *const s3_LockModeNames[] = {
+static const char *const s3_RetainModeNames[] = {
     "Governance",
     "Compliance"
 };
@@ -72,8 +72,8 @@ struct s3_PutSettings {
     bool conditional = false;
     s3_StorageClass storage = s3_StorageClass::STANDARD;
 
-    int64_t retain = 0;
-    s3_LockMode lock = s3_LockMode::Governance;
+    int64_t retain_until = 0;
+    s3_RetainMode retain_mode = s3_RetainMode::Governance;
 
     s3_ChecksumType checksum = s3_ChecksumType::None;
     union {
@@ -144,7 +144,7 @@ public:
     bool DeleteObject(Span<const char> key);
     bool DeleteObjects(Span<const char *const> keys);
 
-    bool RetainObject(Span<const char> key, int64_t until, s3_LockMode mode);
+    bool RetainObject(Span<const char> key, int64_t until, s3_RetainMode mode);
 
 private:
     bool OpenAccess();

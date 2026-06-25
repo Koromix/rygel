@@ -65,26 +65,23 @@ bool rk_Config::Validate(unsigned int flags) const
         }
     }
 
-    if (retain) {
-        if (safety) {
-            if (retain < rk_MinimalRetention) {
-                LogError("Retain duration is too low, disable DurationSafety to override");
-                valid = false;
-            } else if (retain > rk_MaximalRetention) {
-                LogError("Retain duration is too high, disable DurationSafety to override");
-                valid = false;
-            }
-        }
-
-        if (type != rk_DiskType::S3) {
-            LogError("Retain locks are only supported with S3 providers");
-            valid = false;
-        }
-    }
-
     switch (type) {
         case rk_DiskType::Local: {} break;
-        case rk_DiskType::S3: { valid &= s3.remote.Validate(); } break;
+        case rk_DiskType::S3: {
+            if (s3.retain_duration) {
+                if (s3.retain_safety) {
+                    if (s3.retain_duration < rk_MinimalRetention) {
+                        LogError("Retain duration is too low, disable DurationSafety to override");
+                        valid = false;
+                    } else if (s3.retain_duration > rk_MaximalRetention) {
+                        LogError("Retain duration is too high, disable DurationSafety to override");
+                        valid = false;
+                    }
+                }
+            }
+
+            valid &= s3.remote.Validate();
+        } break;
         case rk_DiskType::SFTP: { valid &= ssh.Validate(); } break;
     }
 
@@ -252,26 +249,8 @@ bool rk_LoadConfig(StreamReader *st, rk_Config *out_config)
                     }
                 } else if (prop.key == "CompressionLevel") {
                     valid &= ParseInt(prop.value, &config.compression_level);
-                } else {
-                    LogError("Unknown attribute '%1'", prop.key);
-                    valid = false;
-                }
-            } else if (prop.section == "Protection") {
-                if (prop.key == "TestWrites") {
+                } else if (prop.key == "TestWrites") {
                     valid &= ParseBool(prop.value, &config.ocd);
-                } else if (prop.key == "RetainDuration") {
-                    if (prop.value == "Disabled") {
-                        config.retain = 0;
-                    } else if (ParseDuration(prop.value, &config.retain)) {
-                        if (config.retain < 0) {
-                            LogError("Retain duration cannot be negative");
-                            valid = false;
-                        }
-                    } else {
-                        valid = false;
-                    }
-                } else if (prop.key == "DurationSafety") {
-                    valid &= ParseBool(prop.value, &config.safety);
                 } else {
                     LogError("Unknown attribute '%1'", prop.key);
                     valid = false;
@@ -322,14 +301,27 @@ bool rk_LoadConfig(StreamReader *st, rk_Config *out_config)
                         LogError("Invalid storage class '%1'", prop.value);
                         valid = false;
                     }
-                } else if (prop.key == "LockMode") {
-                    if (!OptionToEnumI(s3_LockModeNames, prop.value, &config.s3.lock)) {
-                        LogError("Invalid lock mode '%1'", prop.value);
-                        valid = false;
-                    }
                 } else if (prop.key == "ChecksumType") {
                     if (!OptionToEnumI(rk_ChecksumTypeNames, prop.value, &config.s3.checksum)) {
                         LogError("Invalid checksum type '%1'", prop.value);
+                        valid = false;
+                    }
+                } else if (prop.key == "RetainDuration") {
+                    if (prop.value == "Disabled") {
+                        config.s3.retain_duration = 0;
+                    } else if (ParseDuration(prop.value, &config.s3.retain_duration)) {
+                        if (config.s3.retain_duration < 0) {
+                            LogError("Retain duration cannot be negative");
+                            valid = false;
+                        }
+                    } else {
+                        valid = false;
+                    }
+                } else if (prop.key == "RetainSafety") {
+                    valid &= ParseBool(prop.value, &config.s3.retain_safety);
+                } else if (prop.key == "RetainMode") {
+                    if (!OptionToEnumI(s3_RetainModeNames, prop.value, &config.s3.retain_mode)) {
+                        LogError("Invalid retain mode '%1'", prop.value);
                         valid = false;
                     }
                 } else {

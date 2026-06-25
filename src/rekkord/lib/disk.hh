@@ -62,6 +62,9 @@ public:
 
     bool IsEmpty();
 
+    virtual bool CanRetain() const = 0;
+    virtual rk_ChecksumType GetChecksumType() const = 0;
+
     virtual bool CreateDirectory(const char *path) = 0;
     virtual bool DeleteDirectory(const char *path) = 0;
     virtual StatResult TestDirectory(const char *path) = 0;
@@ -72,13 +75,11 @@ public:
     // WriteResult::AlreadyExists must be silent, let the caller emit an error if relevant
     virtual rk_WriteResult WriteFile(const char *path, Span<const uint8_t> buf, const rk_WriteSettings &settings = {}) = 0;
     virtual bool DeleteFile(const char *path) = 0;
-    virtual bool RetainFile(const char *path, int64_t retain) = 0;
+    virtual bool RetainFile(const char *path) = 0;
 
     bool ListFiles(FunctionRef<bool(const char *, int64_t)> func) { return ListFiles(nullptr, func); }
     virtual bool ListFiles(const char *path, FunctionRef<bool(const char *, int64_t)> func) = 0;
     virtual StatResult TestFile(const char *path, int64_t *out_size = nullptr) = 0;
-
-    virtual rk_ChecksumType GetChecksumType() = 0;
 };
 
 std::unique_ptr<rk_Disk> rk_OpenDisk(const rk_Config &config);

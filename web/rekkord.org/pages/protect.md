@@ -12,14 +12,12 @@ These features require additional configuration and are not enabled by default. 
 
 Rekkord can lock all S3 objects that are required to restore snapshots. Object locks are applied for a specific duration, and there is no way to delete the locked objects until the retention date has passed. These objects are protected from deletion even with your login credentials.
 
-This is not enabled by default. To use object locks, set `RetainDuration = <duration>` inside the *Protection* section of the Rekkord config file, as shown below:
+This is not enabled by default. To use object locks, set `RetainDuration = <duration>` inside the *S3* section of the Rekkord config file, as shown below:
 
 ```ini
-[Protection]
-RetainDuration = 30d # 30 days
-
 [S3]
-LockMode = GOVERNANCE # Optional, defaults to GOVERNANCE
+RetainDuration = 30d # 30 days
+RetainMode = GOVERNANCE # Optional, defaults to GOVERNANCE
 ```
 
 With this setting, new blobs will be retained automatically when `rekkord save` runs (for 30 days in the example above).

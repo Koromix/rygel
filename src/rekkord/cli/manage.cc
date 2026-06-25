@@ -17,9 +17,6 @@ KeyFile = %2
 [Settings]
 # Threads =
 # CompressionLevel =
-
-[Protection]
-# RetainDuration =
 )";
 
 static const char *PromptNonEmpty(const char *prompt, const char *value, const char *mask, Allocator *alloc)
@@ -360,6 +357,8 @@ reenter:
             if (secret_key) {
                 PrintLn(&st, "SecretKey = %1", secret_key);
             }
+            PrintLn("# RetainDuration = 30d");
+            PrintLn("# RetainMode = GOVERNANCE");
         } break;
 
         case rk_DiskType::SFTP: {

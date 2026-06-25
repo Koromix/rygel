@@ -37,7 +37,8 @@ public:
     SftpDisk(const ssh_Config &config);
     ~SftpDisk() override;
 
-    rk_ChecksumType GetChecksumType() override;
+    rk_ChecksumType GetChecksumType() const override;
+    bool CanRetain() const override;
 
     bool CreateDirectory(const char *path) override;
     bool DeleteDirectory(const char *path) override;
@@ -48,7 +49,7 @@ public:
 
     rk_WriteResult WriteFile(const char *path, Span<const uint8_t> buf, const rk_WriteSettings &settings = {}) override;
     bool DeleteFile(const char *path) override;
-    bool RetainFile(const char *path, int64_t until) override;
+    bool RetainFile(const char *path) override;
 
     bool ListFiles(const char *path, FunctionRef<bool(const char *, int64_t)> func) override;
     StatResult TestFile(const char *path, int64_t *out_size = nullptr) override;
@@ -101,9 +102,14 @@ SftpDisk::~SftpDisk()
     }
 }
 
-rk_ChecksumType SftpDisk::GetChecksumType()
+rk_ChecksumType SftpDisk::GetChecksumType() const
 {
     return rk_ChecksumType::None;
+}
+
+bool SftpDisk::CanRetain() const
+{
+    return false;
 }
 
 bool SftpDisk::CreateDirectory(const char *path)
@@ -471,7 +477,7 @@ bool SftpDisk::DeleteFile(const char *path)
     return success;
 }
 
-bool SftpDisk::RetainFile(const char *, int64_t)
+bool SftpDisk::RetainFile(const char *)
 {
     LogError("Cannot retain files with SFTP backend");
     return false;
