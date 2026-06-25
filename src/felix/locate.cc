@@ -479,6 +479,8 @@ const char *FindArduinoSdk()
         { nullptr, "/usr/share/arduino" },
         { nullptr, "/usr/local/share/arduino" },
         { "HOME",  "/.local/share/arduino" },
+        { "HOME",  "/Arduino" },
+        { "HOME",  "/arduino" },
 #if defined(__APPLE__)
         { nullptr, "/Applications/Arduino.app/Contents/Java" }
 #endif
