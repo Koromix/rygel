@@ -135,7 +135,7 @@
         "paths": "Paths",
         "pending": "Pending",
         "periodic_scans": "Periodic scans",
-        "quota_x_of_x": "Usage: {1}/{2} ({3}%)",
+        "quota_x_of_x": "Usage: {1} / {2} ({3}%)",
         "machine": "Plan",
         "machines": "Plans",
         "open_download_page": "Open download link",

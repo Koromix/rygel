@@ -141,7 +141,7 @@
         "optional_repository_name": "Nom du dépot (optionnel)",
         "please_copy_api_key": "Veuillez copier cette clé, vous ne pourrez pas la récupérer plus tard !",
         "provider": "Fournisseur",
-        "quota_x_of_x": "Utilisation : {1}/{2} ({3}%)",
+        "quota_x_of_x": "Utilisation : {1} / {2} ({3}%)",
         "recover_account": "Récupérer un compte",
         "recover_link": "Récupérer le lien",
         "register": "S'inscrire",
