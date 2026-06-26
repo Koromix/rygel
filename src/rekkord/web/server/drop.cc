@@ -358,7 +358,7 @@ void HandleDropCreate(http_IO *io)
             int64_t remain = config.drop_quota - total;
 
             if (remain < 0) {
-                LogError("Drop would exceed quota by %1 (max = %2)", FmtDiskSize(-remain), FmtDiskSize(config.drop_quota));
+                LogError("These files would exceed total quota by %1 (max = %2)", FmtDiskSize(-remain), FmtDiskSize(config.drop_quota));
                 io->SendError(403);
                 return false;
             }
