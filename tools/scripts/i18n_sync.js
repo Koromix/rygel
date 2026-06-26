@@ -170,7 +170,7 @@ function detectJsKeys(filename) {
         ...code.matchAll(/T\.([a-zA-Z_0-9]+)/g).map(m => m[1])
     ];
 
-    return matches.filter(key => key != 'lang' && key != 'format' && key != 'message');
+    return matches.filter(key => key != 'lang' && key != 'format' && key != 'message' && key != 'count');
 }
 
 function detectJsMessages(filename) {
