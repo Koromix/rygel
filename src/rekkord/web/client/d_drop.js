@@ -318,8 +318,8 @@ async function download(info, passphrase, password) {
 }
 
 async function otherDownloadOptions(info, passphrase) {
-    let curl = `curl -o ${quoteArgument(info.name)}.age ${ENV.url}/drop/download/${info.kid}`;
-    let age = `age -d -o ${quoteArgument(info.name)} ${quoteArgument(info.name)}.age`;
+    let curl = `curl -o ${escapeShellArgument(info.name + '.age')} ${ENV.url}/drop/download/${info.kid}`;
+    let age = `age -d -o ${escapeShellArgument(info.name)} ${escapeShellArgument(info.name)}.age`;
     let suffix = info.protect ? html`<span style="color: red;">${T.password_suffix}</span>` : '';
 
     await UI.dialog((render, close) => html`
@@ -357,9 +357,9 @@ async function otherDownloadOptions(info, passphrase) {
     `);
 }
 
-function quoteArgument(str) {
+function escapeShellArgument(str) {
     let safe = str.match(/^[a-zA-Z0-9_\-\.]+$/);
-    return safe ? str : `'${str.replaceAll('\'', '\\\'')}'`;
+    return safe ? str : `"${str.replace(/([$`"\!~])/g, '\\$1')}"`;
 }
 
 async function runSend() {
