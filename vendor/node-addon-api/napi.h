@@ -17,7 +17,9 @@
 #if NAPI_HAS_THREADS
 #include <mutex>
 #endif  // NAPI_HAS_THREADS
+#include <chrono>
 #include <string>
+#include <string_view>
 #include <vector>
 
 // VS2015 RTM has bugs with constexpr, so require min of VS2015 Update 3 (known
@@ -359,10 +361,10 @@ class BasicEnv {
   // ... occurs when comparing foo.Env() == bar.Env() or foo.Env() == nullptr
   bool operator==(const BasicEnv& other) const {
     return _env == other._env;
-  };
+  }
   bool operator==(std::nullptr_t /*other*/) const {
     return _env == nullptr;
-  };
+  }
 
 #if NAPI_VERSION > 2
   template <typename Hook, typename Arg = void>
@@ -543,6 +545,9 @@ class Value {
   bool IsDataView() const;    ///< Tests if a value is a JavaScript data view.
   bool IsBuffer() const;      ///< Tests if a value is a Node buffer.
   bool IsExternal() const;  ///< Tests if a value is a pointer to external data.
+#ifdef NODE_API_EXPERIMENTAL_HAS_SHAREDARRAYBUFFER
+  bool IsSharedArrayBuffer() const;
+#endif
 
   /// Casts to another type of `Napi::Value`, when the actual type is known or
   /// assumed.
@@ -682,6 +687,12 @@ class Date : public Value {
                   double value   ///< Number value
   );
 
+  /// Creates a new Date value from a std::chrono::system_clock::time_point.
+  static Date New(
+      napi_env env,  ///< Node-API environment
+      std::chrono::system_clock::time_point time_point  ///< Time point value
+  );
+
   static void CheckCast(napi_env env, napi_value value);
 
   Date();  ///< Creates a new _empty_ Date instance.
@@ -713,6 +724,11 @@ class String : public Name {
   /// Creates a new String value from a UTF-16 encoded C++ string.
   static String New(napi_env env,                ///< Node-API environment
                     const std::u16string& value  ///< UTF-16 encoded C++ string
+  );
+
+  /// Creates a new String value from a UTF-8 encoded C++ string view.
+  static String New(napi_env env,           ///< Node-API environment
+                    std::string_view value  ///< UTF-8 encoded C++ string view
   );
 
   /// Creates a new String value from a UTF-8 encoded C string.
@@ -789,6 +805,13 @@ class Symbol : public Name {
   );
 
   /// Creates a new Symbol value with a description.
+  static Symbol New(
+      napi_env env,  ///< Node-API environment
+      std::string_view
+          description  ///< UTF-8 encoded C++ string view describing the symbol
+  );
+
+  /// Creates a new Symbol value with a description.
   static Symbol New(napi_env env,       ///< Node-API environment
                     String description  ///< String value describing the symbol
   );
@@ -804,6 +827,9 @@ class Symbol : public Name {
 
   // Create a symbol in the global registry, UTF-8 Encoded cpp string
   static MaybeOrValue<Symbol> For(napi_env env, const std::string& description);
+
+  // Create a symbol in the global registry, UTF-8 encoded cpp string view
+  static MaybeOrValue<Symbol> For(napi_env env, std::string_view description);
 
   // Create a symbol in the global registry, C style string (null terminated)
   static MaybeOrValue<Symbol> For(napi_env env, const char* description);
@@ -1115,6 +1141,12 @@ class Object : public TypeTaggable {
   /// https://tc39.es/ecma262/#sec-proxy-object-internal-methods-and-internal-slots-getprototypeof
   MaybeOrValue<bool> Seal() const;
 #endif  // NAPI_VERSION >= 8
+
+  MaybeOrValue<Object> GetPrototype() const;
+
+#ifdef NODE_API_EXPERIMENTAL_HAS_SET_PROTOTYPE
+  MaybeOrValue<bool> SetPrototype(const Object& value) const;
+#endif
 };
 
 template <typename T>
@@ -1201,6 +1233,21 @@ class Object::iterator {
   friend class Object;
 };
 #endif  // NODE_ADDON_API_CPP_EXCEPTIONS
+
+#ifdef NODE_API_EXPERIMENTAL_HAS_SHAREDARRAYBUFFER
+class SharedArrayBuffer : public Object {
+ public:
+  SharedArrayBuffer();
+  SharedArrayBuffer(napi_env env, napi_value value);
+
+  static SharedArrayBuffer New(napi_env env, size_t byteLength);
+
+  static void CheckCast(napi_env env, napi_value value);
+
+  void* Data();
+  size_t ByteLength();
+};
+#endif
 
 /// A JavaScript array buffer value.
 class ArrayBuffer : public Object {
@@ -1292,7 +1339,21 @@ class TypedArray : public Object {
 
   napi_typedarray_type TypedArrayType()
       const;  ///< Gets the type of this typed-array.
-  Napi::ArrayBuffer ArrayBuffer() const;  ///< Gets the backing array buffer.
+
+  // Gets the backing `ArrayBuffer`.
+  //
+  // If this `TypedArray` is not backed by an `ArrayBuffer`, this method will
+  // terminate the process with a fatal error when using
+  // `NODE_ADDON_API_ENABLE_TYPE_CHECK_ON_AS` or exhibit undefined behavior
+  // otherwise. Use `Buffer()` instead to get the backing buffer without
+  // assuming its type.
+  Napi::ArrayBuffer ArrayBuffer() const;
+
+  // Gets the backing buffer (an `ArrayBuffer` or `SharedArrayBuffer`).
+  //
+  // Use `IsArrayBuffer()` or `IsSharedArrayBuffer()` to check the type of the
+  // backing buffer prior to casting with `As<T>()`.
+  Napi::Value Buffer() const;
 
   uint8_t ElementSize()
       const;  ///< Gets the size in bytes of one element in the array.
@@ -1386,6 +1447,32 @@ class TypedArrayOf : public TypedArray {
       ///< template parameter T.
   );
 
+#ifdef NODE_API_EXPERIMENTAL_HAS_SHAREDARRAYBUFFER
+  /// Creates a new TypedArray instance over a provided SharedArrayBuffer.
+  ///
+  /// The array type parameter can normally be omitted (because it is inferred
+  /// from the template parameter T), except when creating a "clamped" array:
+  ///
+  ///     Uint8Array::New(env, length, buffer, 0, napi_uint8_clamped_array)
+  static TypedArrayOf New(
+      napi_env env,          ///< Node-API environment
+      size_t elementLength,  ///< Length of the created array, as a number of
+                             ///< elements
+      Napi::SharedArrayBuffer
+          arrayBuffer,      ///< Backing shared array buffer instance to use
+      size_t bufferOffset,  ///< Offset into the array buffer where the
+                            ///< typed-array starts
+#if defined(NAPI_HAS_CONSTEXPR)
+      napi_typedarray_type type =
+          TypedArray::TypedArrayTypeForPrimitiveType<T>()
+#else
+      napi_typedarray_type type
+#endif
+      ///< Type of array, if different from the default array type for the
+      ///< template parameter T.
+  );
+#endif
+
   static void CheckCast(napi_env env, napi_value value);
 
   TypedArrayOf();  ///< Creates a new _empty_ TypedArrayOf instance.
@@ -1432,13 +1519,37 @@ class DataView : public Object {
                       size_t byteOffset,
                       size_t byteLength);
 
+#ifdef NODE_API_EXPERIMENTAL_HAS_SHAREDARRAYBUFFER
+  static DataView New(napi_env env, Napi::SharedArrayBuffer arrayBuffer);
+  static DataView New(napi_env env,
+                      Napi::SharedArrayBuffer arrayBuffer,
+                      size_t byteOffset);
+  static DataView New(napi_env env,
+                      Napi::SharedArrayBuffer arrayBuffer,
+                      size_t byteOffset,
+                      size_t byteLength);
+#endif
+
   static void CheckCast(napi_env env, napi_value value);
 
   DataView();  ///< Creates a new _empty_ DataView instance.
   DataView(napi_env env,
            napi_value value);  ///< Wraps a Node-API value primitive.
 
-  Napi::ArrayBuffer ArrayBuffer() const;  ///< Gets the backing array buffer.
+  // Gets the backing `ArrayBuffer`.
+  //
+  // If this `DataView` is not backed by an `ArrayBuffer`, this method will
+  // terminate the process with a fatal error when using
+  // `NODE_ADDON_API_ENABLE_TYPE_CHECK_ON_AS` or exhibit undefined behavior
+  // otherwise. Use `Buffer()` instead to get the backing buffer without
+  // assuming its type.
+  Napi::ArrayBuffer ArrayBuffer() const;
+
+  // Gets the backing buffer (an `ArrayBuffer` or `SharedArrayBuffer`).
+  //
+  // Use `IsArrayBuffer()` or `IsSharedArrayBuffer()` to check the type of the
+  // backing buffer prior to casting with `As<T>()`.
+  Napi::Value Buffer() const;
   size_t ByteOffset()
       const;  ///< Gets the offset into the buffer where the array starts.
   size_t ByteLength() const;  ///< Gets the length of the array in bytes.
@@ -1715,7 +1826,7 @@ class ObjectReference : public Reference<Object> {
   MaybeOrValue<bool> Set(const std::string& utf8name, napi_value value) const;
   MaybeOrValue<bool> Set(const std::string& utf8name, Napi::Value value) const;
   MaybeOrValue<bool> Set(const std::string& utf8name,
-                         std::string& utf8value) const;
+                         const std::string& utf8value) const;
   MaybeOrValue<bool> Set(const std::string& utf8name, bool boolValue) const;
   MaybeOrValue<bool> Set(const std::string& utf8name, double numberValue) const;
 
@@ -3109,8 +3220,8 @@ class AsyncProgressWorkerBase : public AsyncWorker {
 
     AsyncProgressWorkerBase* asyncprogressworker() {
       return _asyncprogressworker;
-    };
-    DataType* data() { return _data; };
+    }
+    DataType* data() { return _data; }
 
    private:
     AsyncProgressWorkerBase* _asyncprogressworker;

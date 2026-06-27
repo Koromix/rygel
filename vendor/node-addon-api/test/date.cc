@@ -11,6 +11,11 @@ Value CreateDate(const CallbackInfo& info) {
   return Date::New(info.Env(), input);
 }
 
+Value CreateDateFromTimePoint(const CallbackInfo& info) {
+  auto input = std::chrono::system_clock::time_point{};
+  return Date::New(info.Env(), input);
+}
+
 Value IsDate(const CallbackInfo& info) {
   Date input = info[0].As<Date>();
 
@@ -35,6 +40,8 @@ Value OperatorValue(const CallbackInfo& info) {
 Object InitDate(Env env) {
   Object exports = Object::New(env);
   exports["CreateDate"] = Function::New(env, CreateDate);
+  exports["CreateDateFromTimePoint"] =
+      Function::New(env, CreateDateFromTimePoint);
   exports["IsDate"] = Function::New(env, IsDate);
   exports["ValueOf"] = Function::New(env, ValueOf);
   exports["OperatorValue"] = Function::New(env, OperatorValue);

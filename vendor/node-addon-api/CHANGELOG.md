@@ -1,5 +1,43 @@
 # node-addon-api Changelog
 
+## [8.9.0](https://github.com/nodejs/node-addon-api/compare/v8.8.0...v8.9.0) (2026-05-24)
+
+
+### Features
+
+* add support for SharedArrayBuffer in TypedArray and TypedArrayOf&lt;T&gt; ([#1731](https://github.com/nodejs/node-addon-api/issues/1731)) ([00b95ef](https://github.com/nodejs/node-addon-api/commit/00b95efea6522980e9661a729a59b926ecf5c6b6))
+
+## [8.8.0](https://github.com/nodejs/node-addon-api/compare/v8.7.0...v8.8.0) (2026-05-13)
+
+
+### Features
+
+* add std::string_view overload for Symbol::For ([#1722](https://github.com/nodejs/node-addon-api/issues/1722)) ([f65113b](https://github.com/nodejs/node-addon-api/commit/f65113b6ce54271b0a26f97fc624b5574b64a048))
+* add String::New overload for string_view ([#1706](https://github.com/nodejs/node-addon-api/issues/1706)) ([0add130](https://github.com/nodejs/node-addon-api/commit/0add1306f60b81432da94d13683aa0b06aa52925))
+
+## [8.7.0](https://github.com/nodejs/node-addon-api/compare/v8.6.0...v8.7.0) (2026-03-23)
+
+
+### Features
+
+* add Date::New overload for a std::chrono::system_clock::time_point ([#1705](https://github.com/nodejs/node-addon-api/issues/1705)) ([7fb063d](https://github.com/nodejs/node-addon-api/commit/7fb063d95ff5ef816d1616f9acf4afac854cfd4c))
+* add Object::GetPrototype and Object::SetPrototype ([#1715](https://github.com/nodejs/node-addon-api/issues/1715)) ([967bbd5](https://github.com/nodejs/node-addon-api/commit/967bbd5911c7e90b428d4769b9ab1b1a0cee4451)), closes [#1691](https://github.com/nodejs/node-addon-api/issues/1691)
+* add support for SharedArrayBuffer in DataViews ([#1714](https://github.com/nodejs/node-addon-api/issues/1714)) ([7b8d69e](https://github.com/nodejs/node-addon-api/commit/7b8d69e0ba912291aea0b337f7f1814b1032f7f0))
+
+
+### Bug Fixes
+
+* add missing const to ObjectReference::Set string parameter ([#1713](https://github.com/nodejs/node-addon-api/issues/1713)) ([845ba8e](https://github.com/nodejs/node-addon-api/commit/845ba8e4b0888ca20ed3f7c95f9d461cbce338c5))
+* fix -Wextra-semi ([#1718](https://github.com/nodejs/node-addon-api/issues/1718)) ([7fef973](https://github.com/nodejs/node-addon-api/commit/7fef9739166ebb89263459e9f4c3363678cd6367))
+
+## [8.6.0](https://github.com/nodejs/node-addon-api/compare/v8.5.0...v8.6.0) (2026-01-30)
+
+
+### Features
+
+* add SharedArrayBuffer ([#1688](https://github.com/nodejs/node-addon-api/issues/1688)) ([220bee2](https://github.com/nodejs/node-addon-api/commit/220bee244fae2e36405bf2bda33cb3985a846912))
+* silence a legitimate vfptr sanitizer warning that is on by default in Android NDK 29 ([#1692](https://github.com/nodejs/node-addon-api/issues/1692)) ([46673f4](https://github.com/nodejs/node-addon-api/commit/46673f403adf799cc73419427dd3cf166badff22))
+
 ## [8.5.0](https://github.com/nodejs/node-addon-api/compare/v8.4.0...v8.5.0) (2025-07-04)
 
 
@@ -734,7 +772,7 @@ conditions of `Napi::AsyncProgressWorker`.
 - Added `Napi::Addon` to help handle the loading of a native add-on into
 multiple threads and or multiple times in the same thread.
 - Concentrate callbacks provided to core N-API.
-- Make sure WrapPointer is used.
+- Make sure wrapcallback is used.
 
 #### Documentation
 

@@ -18,8 +18,15 @@
 #if NAPI_HAS_THREADS
 #include <mutex>
 #endif  // NAPI_HAS_THREADS
+#include <string_view>
 #include <type_traits>
 #include <utility>
+
+#if defined(__clang__) || defined(__GNUC__)
+#define NAPI_NO_SANITIZE_VPTR __attribute__((no_sanitize("vptr")))
+#else
+#define NAPI_NO_SANITIZE_VPTR
+#endif
 
 namespace Napi {
 
@@ -80,9 +87,9 @@ inline napi_status AttachData(napi_env env,
 // and rethrow them as JavaScript exceptions before returning from the callback.
 template <typename Callable>
 #ifdef NODE_ADDON_API_CPP_EXCEPTIONS_ALL
-inline napi_value WrapPointer(napi_env env, Callable callback) {
+inline napi_value WrapCallback(napi_env env, Callable callback) {
 #else
-inline napi_value WrapPointer(napi_env, Callable callback) {
+inline napi_value WrapCallback(napi_env, Callable callback) {
 #endif
 #ifdef NODE_ADDON_API_CPP_EXCEPTIONS
   try {
@@ -160,7 +167,7 @@ inline void WrapVoidCallback(napi_env, Callable callback) {
 template <typename Callable, typename Return>
 struct CallbackData {
   static inline napi_value Wrapper(napi_env env, napi_callback_info info) {
-    return details::WrapPointer(env, [&] {
+    return details::WrapCallback(env, [&] {
       CallbackInfo callbackInfo(env, info);
       CallbackData* callbackData =
           static_cast<CallbackData*>(callbackInfo.Data());
@@ -176,7 +183,7 @@ struct CallbackData {
 template <typename Callable>
 struct CallbackData<Callable, void> {
   static inline napi_value Wrapper(napi_env env, napi_callback_info info) {
-    return details::WrapPointer(env, [&] {
+    return details::WrapCallback(env, [&] {
       CallbackInfo callbackInfo(env, info);
       CallbackData* callbackData =
           static_cast<CallbackData*>(callbackInfo.Data());
@@ -193,7 +200,7 @@ struct CallbackData<Callable, void> {
 template <void (*Callback)(const CallbackInfo& info)>
 napi_value TemplatedVoidCallback(napi_env env,
                                  napi_callback_info info) NAPI_NOEXCEPT {
-  return details::WrapPointer(env, [&] {
+  return details::WrapCallback(env, [&] {
     CallbackInfo cbInfo(env, info);
     Callback(cbInfo);
     return nullptr;
@@ -203,7 +210,7 @@ napi_value TemplatedVoidCallback(napi_env env,
 template <Napi::Value (*Callback)(const CallbackInfo& info)>
 napi_value TemplatedCallback(napi_env env,
                              napi_callback_info info) NAPI_NOEXCEPT {
-  return details::WrapPointer(env, [&] {
+  return details::WrapCallback(env, [&] {
     CallbackInfo cbInfo(env, info);
     // MSVC requires to copy 'Callback' function pointer to a local variable
     // before invoking it.
@@ -213,23 +220,23 @@ napi_value TemplatedCallback(napi_env env,
 }
 
 template <typename T,
-          Napi::Value (T::*UnWrapPointer)(const CallbackInfo& info)>
+          Napi::Value (T::*UnwrapCallback)(const CallbackInfo& info)>
 napi_value TemplatedInstanceCallback(napi_env env,
                                      napi_callback_info info) NAPI_NOEXCEPT {
-  return details::WrapPointer(env, [&] {
+  return details::WrapCallback(env, [&] {
     CallbackInfo cbInfo(env, info);
     T* instance = T::Unwrap(cbInfo.This().As<Object>());
-    return instance ? (instance->*UnWrapPointer)(cbInfo) : Napi::Value();
+    return instance ? (instance->*UnwrapCallback)(cbInfo) : Napi::Value();
   });
 }
 
-template <typename T, void (T::*UnWrapPointer)(const CallbackInfo& info)>
+template <typename T, void (T::*UnwrapCallback)(const CallbackInfo& info)>
 napi_value TemplatedInstanceVoidCallback(napi_env env, napi_callback_info info)
     NAPI_NOEXCEPT {
-  return details::WrapPointer(env, [&] {
+  return details::WrapCallback(env, [&] {
     CallbackInfo cbInfo(env, info);
     T* instance = T::Unwrap(cbInfo.This().As<Object>());
-    if (instance) (instance->*UnWrapPointer)(cbInfo);
+    if (instance) (instance->*UnwrapCallback)(cbInfo);
     return nullptr;
   });
 }
@@ -444,7 +451,7 @@ template <typename Getter, typename Setter>
 struct AccessorCallbackData {
   static inline napi_value GetterWrapper(napi_env env,
                                          napi_callback_info info) {
-    return details::WrapPointer(env, [&] {
+    return details::WrapCallback(env, [&] {
       CallbackInfo callbackInfo(env, info);
       AccessorCallbackData* callbackData =
           static_cast<AccessorCallbackData*>(callbackInfo.Data());
@@ -455,7 +462,7 @@ struct AccessorCallbackData {
 
   static inline napi_value SetterWrapper(napi_env env,
                                          napi_callback_info info) {
-    return details::WrapPointer(env, [&] {
+    return details::WrapCallback(env, [&] {
       CallbackInfo callbackInfo(env, info);
       AccessorCallbackData* callbackData =
           static_cast<AccessorCallbackData*>(callbackInfo.Data());
@@ -546,7 +553,7 @@ class HasBasicFinalizer {
 inline napi_value RegisterModule(napi_env env,
                                  napi_value exports,
                                  ModuleRegisterCallback registerCallback) {
-  return details::WrapPointer(env, [&] {
+  return details::WrapCallback(env, [&] {
     return napi_value(
         registerCallback(Napi::Env(env), Napi::Object(env, exports)));
   });
@@ -934,6 +941,19 @@ inline bool Value::IsExternal() const {
   return Type() == napi_external;
 }
 
+#ifdef NODE_API_EXPERIMENTAL_HAS_SHAREDARRAYBUFFER
+inline bool Value::IsSharedArrayBuffer() const {
+  if (IsEmpty()) {
+    return false;
+  }
+
+  bool result;
+  napi_status status = node_api_is_sharedarraybuffer(_env, _value, &result);
+  NAPI_THROW_IF_FAILED(_env, status, false);
+  return result;
+}
+#endif
+
 template <typename T>
 inline T Value::As() const {
 #ifdef NODE_ADDON_API_ENABLE_TYPE_CHECK_ON_AS
@@ -1180,6 +1200,13 @@ inline Date Date::New(napi_env env, double val) {
   return Date(env, value);
 }
 
+inline Date Date::New(napi_env env, std::chrono::system_clock::time_point tp) {
+  using namespace std::chrono;
+  auto ms = static_cast<double>(
+      duration_cast<milliseconds>(tp.time_since_epoch()).count());
+  return Date::New(env, ms);
+}
+
 inline void Date::CheckCast(napi_env env, napi_value value) {
   NAPI_CHECK(value != nullptr, "Date::CheckCast", "empty value");
 
@@ -1234,6 +1261,10 @@ inline String String::New(napi_env env, const std::string& val) {
 
 inline String String::New(napi_env env, const std::u16string& val) {
   return String::New(env, val.c_str(), val.size());
+}
+
+inline String String::New(napi_env env, std::string_view val) {
+  return String::New(env, val.data(), val.size());
 }
 
 inline String String::New(napi_env env, const char* val) {
@@ -1345,6 +1376,11 @@ inline Symbol Symbol::New(napi_env env, const std::string& description) {
   return Symbol::New(env, descriptionValue);
 }
 
+inline Symbol Symbol::New(napi_env env, std::string_view description) {
+  napi_value descriptionValue = String::New(env, description);
+  return Symbol::New(env, descriptionValue);
+}
+
 inline Symbol Symbol::New(napi_env env, String description) {
   napi_value descriptionValue = description;
   return Symbol::New(env, descriptionValue);
@@ -1382,6 +1418,12 @@ inline MaybeOrValue<Symbol> Symbol::WellKnown(napi_env env,
 
 inline MaybeOrValue<Symbol> Symbol::For(napi_env env,
                                         const std::string& description) {
+  napi_value descriptionValue = String::New(env, description);
+  return Symbol::For(env, descriptionValue);
+}
+
+inline MaybeOrValue<Symbol> Symbol::For(napi_env env,
+                                        std::string_view description) {
   napi_value descriptionValue = String::New(env, description);
   return Symbol::For(env, descriptionValue);
 }
@@ -1947,6 +1989,19 @@ inline MaybeOrValue<bool> Object::Seal() const {
 }
 #endif  // NAPI_VERSION >= 8
 
+inline MaybeOrValue<Object> Object::GetPrototype() const {
+  napi_value result;
+  napi_status status = napi_get_prototype(_env, _value, &result);
+  NAPI_RETURN_OR_THROW_IF_FAILED(_env, status, Object(_env, result), Object);
+}
+
+#ifdef NODE_API_EXPERIMENTAL_HAS_SET_PROTOTYPE
+inline MaybeOrValue<bool> Object::SetPrototype(const Object& value) const {
+  napi_status status = node_api_set_prototype(_env, _value, value);
+  NAPI_RETURN_OR_THROW_IF_FAILED(_env, status, status == napi_ok, bool);
+}
+#endif
+
 ////////////////////////////////////////////////////////////////////////////////
 // External class
 ////////////////////////////////////////////////////////////////////////////////
@@ -2067,6 +2122,55 @@ inline uint32_t Array::Length() const {
   NAPI_THROW_IF_FAILED(_env, status, 0);
   return result;
 }
+
+#ifdef NODE_API_EXPERIMENTAL_HAS_SHAREDARRAYBUFFER
+////////////////////////////////////////////////////////////////////////////////
+// SharedArrayBuffer class
+////////////////////////////////////////////////////////////////////////////////
+
+inline SharedArrayBuffer::SharedArrayBuffer() : Object() {}
+
+inline SharedArrayBuffer::SharedArrayBuffer(napi_env env, napi_value value)
+    : Object(env, value) {}
+
+inline void SharedArrayBuffer::CheckCast(napi_env env, napi_value value) {
+  NAPI_CHECK(value != nullptr, "SharedArrayBuffer::CheckCast", "empty value");
+
+  bool result;
+  napi_status status = node_api_is_sharedarraybuffer(env, value, &result);
+  NAPI_CHECK(status == napi_ok,
+             "SharedArrayBuffer::CheckCast",
+             "node_api_is_sharedarraybuffer failed");
+  NAPI_CHECK(
+      result, "SharedArrayBuffer::CheckCast", "value is not sharedarraybuffer");
+}
+
+inline SharedArrayBuffer SharedArrayBuffer::New(napi_env env,
+                                                size_t byteLength) {
+  napi_value value;
+  void* data;
+  napi_status status =
+      node_api_create_sharedarraybuffer(env, byteLength, &data, &value);
+  NAPI_THROW_IF_FAILED(env, status, SharedArrayBuffer());
+
+  return SharedArrayBuffer(env, value);
+}
+
+inline void* SharedArrayBuffer::Data() {
+  void* data;
+  napi_status status = napi_get_arraybuffer_info(_env, _value, &data, nullptr);
+  NAPI_THROW_IF_FAILED(_env, status, nullptr);
+  return data;
+}
+
+inline size_t SharedArrayBuffer::ByteLength() {
+  size_t length;
+  napi_status status =
+      napi_get_arraybuffer_info(_env, _value, nullptr, &length);
+  NAPI_THROW_IF_FAILED(_env, status, 0);
+  return length;
+}
+#endif  // NODE_API_EXPERIMENTAL_HAS_SHAREDARRAYBUFFER
 
 ////////////////////////////////////////////////////////////////////////////////
 // ArrayBuffer class
@@ -2221,6 +2325,39 @@ inline DataView DataView::New(napi_env env,
   return DataView(env, value);
 }
 
+#ifdef NODE_API_EXPERIMENTAL_HAS_SHAREDARRAYBUFFER
+inline DataView DataView::New(napi_env env,
+                              Napi::SharedArrayBuffer arrayBuffer) {
+  return New(env, arrayBuffer, 0, arrayBuffer.ByteLength());
+}
+
+inline DataView DataView::New(napi_env env,
+                              Napi::SharedArrayBuffer arrayBuffer,
+                              size_t byteOffset) {
+  if (byteOffset > arrayBuffer.ByteLength()) {
+    NAPI_THROW(RangeError::New(
+                   env, "Start offset is outside the bounds of the buffer"),
+               DataView());
+  }
+  return New(
+      env, arrayBuffer, byteOffset, arrayBuffer.ByteLength() - byteOffset);
+}
+
+inline DataView DataView::New(napi_env env,
+                              Napi::SharedArrayBuffer arrayBuffer,
+                              size_t byteOffset,
+                              size_t byteLength) {
+  if (byteOffset + byteLength > arrayBuffer.ByteLength()) {
+    NAPI_THROW(RangeError::New(env, "Invalid DataView length"), DataView());
+  }
+  napi_value value;
+  napi_status status =
+      napi_create_dataview(env, byteLength, arrayBuffer, byteOffset, &value);
+  NAPI_THROW_IF_FAILED(env, status, DataView());
+  return DataView(env, value);
+}
+#endif  // NODE_API_EXPERIMENTAL_HAS_SHAREDARRAYBUFFER
+
 inline void DataView::CheckCast(napi_env env, napi_value value) {
   NAPI_CHECK(value != nullptr, "DataView::CheckCast", "empty value");
 
@@ -2244,6 +2381,10 @@ inline DataView::DataView(napi_env env, napi_value value) : Object(env, value) {
 }
 
 inline Napi::ArrayBuffer DataView::ArrayBuffer() const {
+  return Buffer().As<Napi::ArrayBuffer>();
+}
+
+inline Napi::Value DataView::Buffer() const {
   napi_value arrayBuffer;
   napi_status status = napi_get_dataview_info(_env,
                                               _value /* dataView */,
@@ -2251,8 +2392,8 @@ inline Napi::ArrayBuffer DataView::ArrayBuffer() const {
                                               nullptr /* data */,
                                               &arrayBuffer /* arrayBuffer */,
                                               nullptr /* byteOffset */);
-  NAPI_THROW_IF_FAILED(_env, status, Napi::ArrayBuffer());
-  return Napi::ArrayBuffer(_env, arrayBuffer);
+  NAPI_THROW_IF_FAILED(_env, status, Napi::Value());
+  return Napi::Value(_env, arrayBuffer);
 }
 
 inline size_t DataView::ByteOffset() const {
@@ -2453,6 +2594,14 @@ inline Napi::ArrayBuffer TypedArray::ArrayBuffer() const {
   return Napi::ArrayBuffer(_env, arrayBuffer);
 }
 
+inline Napi::Value TypedArray::Buffer() const {
+  napi_value arrayBuffer;
+  napi_status status = napi_get_typedarray_info(
+      _env, _value, nullptr, nullptr, nullptr, &arrayBuffer, nullptr);
+  NAPI_THROW_IF_FAILED(_env, status, Napi::Value());
+  return Napi::Value(_env, arrayBuffer);
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // TypedArrayOf<T> class
 ////////////////////////////////////////////////////////////////////////////////
@@ -2503,6 +2652,28 @@ inline TypedArrayOf<T> TypedArrayOf<T>::New(napi_env env,
       reinterpret_cast<T*>(reinterpret_cast<uint8_t*>(arrayBuffer.Data()) +
                            bufferOffset));
 }
+
+#ifdef NODE_API_EXPERIMENTAL_HAS_SHAREDARRAYBUFFER
+template <typename T>
+inline TypedArrayOf<T> TypedArrayOf<T>::New(napi_env env,
+                                            size_t elementLength,
+                                            Napi::SharedArrayBuffer arrayBuffer,
+                                            size_t bufferOffset,
+                                            napi_typedarray_type type) {
+  napi_value value;
+  napi_status status = napi_create_typedarray(
+      env, type, elementLength, arrayBuffer, bufferOffset, &value);
+  NAPI_THROW_IF_FAILED(env, status, TypedArrayOf<T>());
+
+  return TypedArrayOf<T>(
+      env,
+      value,
+      type,
+      elementLength,
+      reinterpret_cast<T*>(reinterpret_cast<uint8_t*>(arrayBuffer.Data()) +
+                           bufferOffset));
+}
+#endif
 
 template <typename T>
 inline TypedArrayOf<T>::TypedArrayOf() : TypedArray(), _data(nullptr) {}
@@ -3741,8 +3912,8 @@ inline MaybeOrValue<bool> ObjectReference::Set(const std::string& utf8name,
   return Value().Set(utf8name, value);
 }
 
-inline MaybeOrValue<bool> ObjectReference::Set(const std::string& utf8name,
-                                               std::string& utf8value) const {
+inline MaybeOrValue<bool> ObjectReference::Set(
+    const std::string& utf8name, const std::string& utf8value) const {
   HandleScope scope(_env);
   return Value().Set(utf8name, utf8value);
 }
@@ -4649,7 +4820,7 @@ inline ClassPropertyDescriptor<T> InstanceWrap<T>::InstanceValue(
 template <typename T>
 inline napi_value InstanceWrap<T>::InstanceVoidMethodCallbackWrapper(
     napi_env env, napi_callback_info info) {
-  return details::WrapPointer(env, [&] {
+  return details::WrapCallback(env, [&] {
     CallbackInfo callbackInfo(env, info);
     InstanceVoidMethodCallbackData* callbackData =
         reinterpret_cast<InstanceVoidMethodCallbackData*>(callbackInfo.Data());
@@ -4664,7 +4835,7 @@ inline napi_value InstanceWrap<T>::InstanceVoidMethodCallbackWrapper(
 template <typename T>
 inline napi_value InstanceWrap<T>::InstanceMethodCallbackWrapper(
     napi_env env, napi_callback_info info) {
-  return details::WrapPointer(env, [&] {
+  return details::WrapCallback(env, [&] {
     CallbackInfo callbackInfo(env, info);
     InstanceMethodCallbackData* callbackData =
         reinterpret_cast<InstanceMethodCallbackData*>(callbackInfo.Data());
@@ -4678,7 +4849,7 @@ inline napi_value InstanceWrap<T>::InstanceMethodCallbackWrapper(
 template <typename T>
 inline napi_value InstanceWrap<T>::InstanceGetterCallbackWrapper(
     napi_env env, napi_callback_info info) {
-  return details::WrapPointer(env, [&] {
+  return details::WrapCallback(env, [&] {
     CallbackInfo callbackInfo(env, info);
     InstanceAccessorCallbackData* callbackData =
         reinterpret_cast<InstanceAccessorCallbackData*>(callbackInfo.Data());
@@ -4692,7 +4863,7 @@ inline napi_value InstanceWrap<T>::InstanceGetterCallbackWrapper(
 template <typename T>
 inline napi_value InstanceWrap<T>::InstanceSetterCallbackWrapper(
     napi_env env, napi_callback_info info) {
-  return details::WrapPointer(env, [&] {
+  return details::WrapCallback(env, [&] {
     CallbackInfo callbackInfo(env, info);
     InstanceAccessorCallbackData* callbackData =
         reinterpret_cast<InstanceAccessorCallbackData*>(callbackInfo.Data());
@@ -4708,7 +4879,7 @@ template <typename T>
 template <typename InstanceWrap<T>::InstanceSetterCallback method>
 inline napi_value InstanceWrap<T>::WrappedMethod(
     napi_env env, napi_callback_info info) NAPI_NOEXCEPT {
-  return details::WrapPointer(env, [&] {
+  return details::WrapCallback(env, [&] {
     const CallbackInfo cbInfo(env, info);
     T* instance = T::Unwrap(cbInfo.This().As<Object>());
     if (instance) (instance->*method)(cbInfo, cbInfo[0]);
@@ -4721,7 +4892,8 @@ inline napi_value InstanceWrap<T>::WrappedMethod(
 ////////////////////////////////////////////////////////////////////////////////
 
 template <typename T>
-inline ObjectWrap<T>::ObjectWrap(const Napi::CallbackInfo& callbackInfo) {
+inline NAPI_NO_SANITIZE_VPTR ObjectWrap<T>::ObjectWrap(
+    const Napi::CallbackInfo& callbackInfo) {
   napi_env env = callbackInfo.Env();
   napi_value wrapper = callbackInfo.This();
   napi_status status;
@@ -4735,7 +4907,7 @@ inline ObjectWrap<T>::ObjectWrap(const Napi::CallbackInfo& callbackInfo) {
 }
 
 template <typename T>
-inline ObjectWrap<T>::~ObjectWrap() {
+inline NAPI_NO_SANITIZE_VPTR ObjectWrap<T>::~ObjectWrap() {
   // If the JS object still exists at this point, remove the finalizer added
   // through `napi_wrap()`.
   if (!IsEmpty() && !_finalized) {
@@ -4748,8 +4920,12 @@ inline ObjectWrap<T>::~ObjectWrap() {
   }
 }
 
+// with RTTI turned on, modern compilers check to see if virtual function
+// pointers are stripped of RTTI by void casts. this is intrinsic to how Unwrap
+// works, so we inject a compiler pragma to turn off that check just for the
+// affected methods. this compiler check is on by default in Android NDK 29.
 template <typename T>
-inline T* ObjectWrap<T>::Unwrap(Object wrapper) {
+inline NAPI_NO_SANITIZE_VPTR T* ObjectWrap<T>::Unwrap(Object wrapper) {
   void* unwrapped;
   napi_status status = napi_unwrap(wrapper.Env(), wrapper, &unwrapped);
   NAPI_THROW_IF_FAILED(wrapper.Env(), status, nullptr);
@@ -5102,11 +5278,11 @@ inline napi_value ObjectWrap<T>::ConstructorCallbackWrapper(
 
   bool isConstructCall = (new_target != nullptr);
   if (!isConstructCall) {
-    return details::WrapPointer(
+    return details::WrapCallback(
         env, [&] { return T::OnCalledAsFunction(CallbackInfo(env, info)); });
   }
 
-  napi_value wrapper = details::WrapPointer(env, [&] {
+  napi_value wrapper = details::WrapCallback(env, [&] {
     CallbackInfo callbackInfo(env, info);
     T* instance = new T(callbackInfo);
 #ifdef NODE_ADDON_API_CPP_EXCEPTIONS
@@ -5130,7 +5306,7 @@ inline napi_value ObjectWrap<T>::ConstructorCallbackWrapper(
 template <typename T>
 inline napi_value ObjectWrap<T>::StaticVoidMethodCallbackWrapper(
     napi_env env, napi_callback_info info) {
-  return details::WrapPointer(env, [&] {
+  return details::WrapCallback(env, [&] {
     CallbackInfo callbackInfo(env, info);
     StaticVoidMethodCallbackData* callbackData =
         reinterpret_cast<StaticVoidMethodCallbackData*>(callbackInfo.Data());
@@ -5143,7 +5319,7 @@ inline napi_value ObjectWrap<T>::StaticVoidMethodCallbackWrapper(
 template <typename T>
 inline napi_value ObjectWrap<T>::StaticMethodCallbackWrapper(
     napi_env env, napi_callback_info info) {
-  return details::WrapPointer(env, [&] {
+  return details::WrapCallback(env, [&] {
     CallbackInfo callbackInfo(env, info);
     StaticMethodCallbackData* callbackData =
         reinterpret_cast<StaticMethodCallbackData*>(callbackInfo.Data());
@@ -5155,7 +5331,7 @@ inline napi_value ObjectWrap<T>::StaticMethodCallbackWrapper(
 template <typename T>
 inline napi_value ObjectWrap<T>::StaticGetterCallbackWrapper(
     napi_env env, napi_callback_info info) {
-  return details::WrapPointer(env, [&] {
+  return details::WrapCallback(env, [&] {
     CallbackInfo callbackInfo(env, info);
     StaticAccessorCallbackData* callbackData =
         reinterpret_cast<StaticAccessorCallbackData*>(callbackInfo.Data());
@@ -5167,7 +5343,7 @@ inline napi_value ObjectWrap<T>::StaticGetterCallbackWrapper(
 template <typename T>
 inline napi_value ObjectWrap<T>::StaticSetterCallbackWrapper(
     napi_env env, napi_callback_info info) {
-  return details::WrapPointer(env, [&] {
+  return details::WrapCallback(env, [&] {
     CallbackInfo callbackInfo(env, info);
     StaticAccessorCallbackData* callbackData =
         reinterpret_cast<StaticAccessorCallbackData*>(callbackInfo.Data());
@@ -5238,7 +5414,7 @@ template <typename T>
 template <typename ObjectWrap<T>::StaticSetterCallback method>
 inline napi_value ObjectWrap<T>::WrappedMethod(
     napi_env env, napi_callback_info info) NAPI_NOEXCEPT {
-  return details::WrapPointer(env, [&] {
+  return details::WrapCallback(env, [&] {
     const CallbackInfo cbInfo(env, info);
     // MSVC requires to copy 'method' function pointer to a local variable
     // before invoking it.
@@ -5559,7 +5735,7 @@ inline void AsyncWorker::OnAsyncWorkComplete(napi_env env,
 inline void AsyncWorker::OnWorkComplete(Napi::Env env, napi_status status) {
   if (status != napi_cancelled) {
     HandleScope scope(_env);
-    details::WrapPointer(env, [&] {
+    details::WrapCallback(env, [&] {
       if (_error.size() == 0) {
         OnOK();
       } else {
@@ -7029,5 +7205,7 @@ inline void BasicEnv::PostFinalizer(FinalizerType finalizeCallback,
 #endif
 
 }  // namespace Napi
+
+#undef NAPI_NO_SANITIZE_VPTR
 
 #endif  // SRC_NAPI_INL_H_
