@@ -6,6 +6,13 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.105
+
+*Released on 2026-06-28*
+
+- Fix broken Windows build and support
+- Translate new error messages
+
 ### Rekkord 0.104
 
 *Released on 2026-06-25*
