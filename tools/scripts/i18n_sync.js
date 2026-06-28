@@ -157,7 +157,7 @@ function detectCxxMessages(filename) {
     let matches = [
         ...code.matchAll(/(?:LogError|LogWarning|LogInfo)\(\"(.+?)\"(?:, .*)?\)/g).map(m => unescapeLiteral(m[1])),
         ...code.matchAll(/T\(\"(.+?)\"\)/g).map(m => unescapeLiteral(m[1])),
-        ...code.matchAll(/T\(R\"\((.+?)\)\"\)/gs).map(m => m[1])
+        ...code.matchAll(/T\(R\"\((.+?)\)\"\)/gs).map(m => m[1].replaceAll('\r', ''))
     ];
 
     return matches;
