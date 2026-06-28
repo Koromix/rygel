@@ -20,7 +20,7 @@ static const char *const http_AddressModeNames[] = {
     "X-Real-IP"
 };
 
-extern K_CONSTINIT ConstMap<128, int, const char *> http_ErrorMessages;
+extern const HashMap<int, const char *> http_ErrorMessages;
 
 struct http_Config {
 #if defined(__OpenBSD__)

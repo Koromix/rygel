@@ -3146,44 +3146,17 @@ DEFINE_INTEGER_HASH_TRAITS_64(unsigned long long, constexpr);
 #undef DEFINE_INTEGER_HASH_TRAITS_64
 
 // MurmurHash2
-static constexpr inline uint64_t HashStr(Span<const char> str)
+static inline uint64_t HashStr(Span<const char> str)
 {
     const uint64_t Seed = 0;
     const uint64_t Mult = (((uint64_t)0xc6a4a793ull) << 32ull) + (uint64_t)0x5bd1e995ull;
 
     const auto unaligned_load =
-#if __cplusplus >= 202002L && (__GNUC__ >= 12 || __clang_major__ >= 16)
-        !std::is_constant_evaluated() ?
         [](const char *p) {
             uint64_t result;
-            __builtin_memcpy(&result, p, sizeof(result));
-            return result;
-        } :
-#endif
-        [](const char *p) {
-#if defined(K_BIG_ENDIAN)
-            uint64_t result = ((uint64_t)p[0] << 56) |
-                              ((uint64_t)p[1] << 48) |
-                              ((uint64_t)p[2] << 40) |
-                              ((uint64_t)p[3] << 32) |
-                              ((uint64_t)p[4] << 24) |
-                              ((uint64_t)p[5] << 16) |
-                              ((uint64_t)p[6] << 8) |
-                              ((uint64_t)p[7] << 0);
-#else
-            uint64_t result = ((uint64_t)p[0] << 0) |
-                              ((uint64_t)p[1] << 8) |
-                              ((uint64_t)p[2] << 16) |
-                              ((uint64_t)p[3] << 24) |
-                              ((uint64_t)p[4] << 32) |
-                              ((uint64_t)p[5] << 40) |
-                              ((uint64_t)p[6] << 48) |
-                              ((uint64_t)p[7] << 56);
-#endif
-
+            memcpy(&result, p, sizeof(result));
             return result;
         };
-
     const auto load_bytes = [](const char *p, int n) {
         uint64_t result = 0;
 
@@ -3216,7 +3189,7 @@ static constexpr inline uint64_t HashStr(Span<const char> str)
     return hash;
 }
 
-static constexpr inline uint64_t HashStr(const char *str)
+static inline uint64_t HashStr(const char *str)
 {
     Span<const char> span = str;
     return HashStr(span);
@@ -3401,101 +3374,6 @@ public:
     void Trim() { table.Trim(); }
 
 private:
-};
-
-// XXX: Switch to perfect hashing later on
-template <Size N, typename KeyType, typename ValueType>
-class ConstMap {
-public:
-    struct Bucket {
-        KeyType key;
-        ValueType value;
-    };
-
-    size_t used[(N + (K_SIZE(size_t) * 8) - 1) / K_SIZE(size_t)] = {};
-    Bucket data[N] = {};
-    Size count = 0;
-
-    constexpr ConstMap(std::initializer_list<Bucket> l)
-    {
-        K_CRITICAL(l.size() <= N, "ConstMap<%1> cannot store %2 values", N, l.size());
-
-        for (const Bucket &it: l) {
-            Bucket *bucket = Insert(it.key);
-
-            bucket->key = it.key;
-            bucket->value = it.value;
-        }
-    }
-
-    template <typename T = KeyType>
-    ValueType *Find(const T &key)
-        { return (ValueType *)((const ConstMap *)this)->Find(key); }
-    template <typename T = KeyType>
-    const ValueType *Find(const T &key) const
-    {
-        uint64_t hash = HashTraits<KeyType>::Hash(key);
-        Size idx = HashToIndex(hash);
-
-        const Bucket *bucket = Find(&idx, key);
-        return bucket ? &bucket->value : nullptr;
-    }
-
-    template <typename T = KeyType>
-    ValueType FindValue(const T &key, const ValueType &default_value)
-        { return (ValueType)((const ConstMap *)this)->FindValue(key, default_value); }
-    template <typename T = KeyType>
-    const ValueType FindValue(const T &key, const ValueType &default_value) const
-    {
-        const ValueType *it = Find(key);
-        return it ? *it : default_value;
-    }
-
-private:
-    template <typename T = KeyType>
-    constexpr Bucket *Find(Size *idx, const T &key)
-        { return (Bucket *)((const ConstMap *)this)->Find(idx, key); }
-    template <typename T = KeyType>
-    constexpr const Bucket *Find(Size *idx, const T &key) const
-    {
-        while (!IsEmpty(*idx)) {
-            if (HashTraits<KeyType>::Test(data[*idx].key, key))
-                return &data[*idx];
-            *idx = (*idx + 1) & (N - 1);
-        }
-        return nullptr;
-    }
-
-    constexpr Bucket *Insert(const KeyType &key)
-    {
-        uint64_t hash = HashTraits<KeyType>::Hash(key);
-        Size idx = HashToIndex(hash);
-        Bucket *it = Find(&idx, key);
-
-        if (!it) {
-            count++;
-            MarkUsed(idx);
-
-            return &data[idx];
-        } else {
-            return it;
-        }
-    }
-
-    constexpr void MarkUsed(Size idx)
-    {
-        used[idx / (K_SIZE(size_t) * 8)] |= (1ull << (idx % (K_SIZE(size_t) * 8)));
-    }
-    constexpr bool IsEmpty(Size idx) const
-    {
-        bool empty = !(used[idx / (K_SIZE(size_t) * 8)] & (1ull << (idx % (K_SIZE(size_t) * 8))));
-        return empty;
-    }
-
-    constexpr Size HashToIndex(uint64_t hash) const
-    {
-        return (Size)(hash & (uint64_t)(N - 1));
-    }
 };
 
 // ------------------------------------------------------------------------

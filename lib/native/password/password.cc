@@ -10,8 +10,9 @@ namespace K {
 // XXX: Should we try to detect date-like parts?
 // XXX: Use compact and RO-only data structure made for big dictionaries
 // XXX: Add proper names to dictionary, and automatically manage plurals
+// XXX: Compile-time hash table, maybe even perfect hash?
 
-static K_CONSTINIT ConstMap<128, int32_t, const char *> replacements = {
+static const HashMap<int32_t, const char *> replacements = {
     { DecodeUtf8("Ç"), "c" },
     { DecodeUtf8("È"), "e" },
     { DecodeUtf8("É"), "e" },

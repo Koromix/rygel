@@ -32,7 +32,7 @@
 
 namespace K {
 
-K_CONSTINIT ConstMap<128, int, const char *> http_ErrorMessages = {
+const HashMap<int, const char *> http_ErrorMessages = {
     { 100, "Continue" },
     { 101, "Switching Protocols" },
     { 102, "Processing" },
