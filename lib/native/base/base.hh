@@ -3074,8 +3074,8 @@ private:
 template <typename T>
 class HashTraits {
 public:
-    static constexpr uint64_t Hash(const T &key) { return key.Hash(); }
-    static constexpr bool Test(const T &key1, const T &key2) { return key1 == key2; }
+    static uint64_t Hash(const T &key) { return key.Hash(); }
+    static bool Test(const T &key1, const T &key2) { return key1 == key2; }
 };
 
 // Stole the Hash function from Thomas Wang (see here: https://gist.github.com/badboy/6267743)
@@ -3198,35 +3198,35 @@ static inline uint64_t HashStr(const char *str)
 template <>
 class HashTraits<const char *> {
 public:
-    static constexpr uint64_t Hash(Span<const char> key) { return HashStr(key); }
-    static constexpr uint64_t Hash(const char *key) { return HashStr(key); }
+    static uint64_t Hash(Span<const char> key) { return HashStr(key); }
+    static uint64_t Hash(const char *key) { return HashStr(key); }
 
-    static constexpr bool Test(const char *key1, const char *key2) { return TestStr(key1, key2); }
-    static constexpr bool Test(const char *key1, Span<const char> key2) { return key2 == key1; }
+    static bool Test(const char *key1, const char *key2) { return TestStr(key1, key2); }
+    static bool Test(const char *key1, Span<const char> key2) { return key2 == key1; }
 };
 
 template <>
 class HashTraits<Span<const char>> {
 public:
-    static constexpr uint64_t Hash(Span<const char> key) { return HashStr(key); }
-    static constexpr uint64_t Hash(const char *key) { return HashStr(key); }
+    static uint64_t Hash(Span<const char> key) { return HashStr(key); }
+    static uint64_t Hash(const char *key) { return HashStr(key); }
 
-    static constexpr bool Test(Span<const char> key1, Span<const char> key2) { return key1 == key2; }
-    static constexpr bool Test(Span<const char> key1, const char * key2) { return key1 == key2; }
+    static bool Test(Span<const char> key1, Span<const char> key2) { return key1 == key2; }
+    static bool Test(Span<const char> key1, const char * key2) { return key1 == key2; }
 };
 
 #define K_HASHTABLE_HANDLER_EX_N(Name, ValueType, KeyType, KeyMember, HashFunc, TestFunc) \
     class Name { \
     public: \
-        static constexpr KeyType GetKey(const ValueType &value) \
+        static KeyType GetKey(const ValueType &value) \
             { return (KeyType)(value.KeyMember); } \
-        static constexpr KeyType GetKey(const ValueType *value) \
+        static KeyType GetKey(const ValueType *value) \
             { return (KeyType)(value->KeyMember); } \
         template <typename TestKey> \
-        static constexpr uint64_t HashKey(TestKey key) \
+        static uint64_t HashKey(TestKey key) \
             { return HashFunc(key); } \
         template <typename TestKey> \
-        static constexpr bool TestKeys(KeyType key1, TestKey key2) \
+        static bool TestKeys(KeyType key1, TestKey key2) \
             { return TestFunc((key1), (key2)); } \
     }
 #define K_HASHTABLE_HANDLER_EX(ValueType, KeyType, KeyMember, HashFunc, TestFunc) \
@@ -3328,11 +3328,11 @@ template <typename ValueType>
 class HashSet {
     class Handler {
     public:
-        static constexpr ValueType GetKey(const ValueType &value) { return value; }
-        static constexpr ValueType GetKey(const ValueType *value) { return *value; }
-        static constexpr uint64_t HashKey(const ValueType &value)
+        static ValueType GetKey(const ValueType &value) { return value; }
+        static ValueType GetKey(const ValueType *value) { return *value; }
+        static uint64_t HashKey(const ValueType &value)
             { return HashTraits<ValueType>::Hash(value); }
-        static constexpr bool TestKeys(const ValueType &value1, const ValueType &value2)
+        static bool TestKeys(const ValueType &value1, const ValueType &value2)
             { return HashTraits<ValueType>::Test(value1, value2); }
     };
 
