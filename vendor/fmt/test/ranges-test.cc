@@ -10,7 +10,6 @@
 #include <array>
 #include <list>
 #include <map>
-#include <numeric>
 #include <queue>
 #include <stack>
 #include <string>
@@ -128,7 +127,7 @@ TEST(ranges_test, format_set) {
 
 // Models std::flat_set close enough to test if no ambiguous lookup of a
 // formatter happens due to the flat_set type matching is_set and
-// is_container_adaptor_like.
+// is_container_adaptor.
 template <typename T> class flat_set {
  public:
   using key_type = T;
@@ -272,6 +271,23 @@ TEST(ranges_test, disabled_range_formatting_of_path) {
             fmt::range_format::disabled);
 }
 
+template <typename T> struct optional_like {
+  auto begin() const -> const T*;
+  auto end() const -> const T*;
+
+  bool has_value() const noexcept;
+  T& value() &;
+  const T& value() const&;
+  T&& value() &&;
+  const T&& value() const&&;
+};
+
+TEST(ranges_test, disabled_range_formatting_of_optional) {
+  // (C++26) Has a range support for std::optional.
+  EXPECT_EQ((fmt::range_format_kind<optional_like<int>, char>::value),
+            fmt::range_format::disabled);
+}
+
 struct vector_string : std::vector<char> {
   using base = std::vector<char>;
   using base::base;
@@ -395,13 +411,6 @@ TEST(ranges_test, join) {
   EXPECT_EQ(fmt::format("{}", join(v4, " ")), "0 1 0");
 }
 
-#ifdef __cpp_lib_byte
-TEST(ranges_test, join_bytes) {
-  auto v = std::vector<std::byte>{std::byte(1), std::byte(2), std::byte(3)};
-  EXPECT_EQ(fmt::format("{}", fmt::join(v, ", ")), "1, 2, 3");
-}
-#endif
-
 TEST(ranges_test, join_tuple) {
   // Value tuple args.
   auto t1 = std::tuple<char, int, float>('a', 1, 2.0f);
@@ -438,12 +447,6 @@ TEST(ranges_test, join_tuple) {
   auto t7 = std::tuple<int, int&, const int&>(3, y, y);
   EXPECT_EQ(fmt::format("{:03}", fmt::join(t7, ", ")), "003, -01, -01");
 #endif
-}
-
-TEST(ranges_test, join_initializer_list) {
-  EXPECT_EQ(fmt::format("{}", fmt::join({1, 2, 3}, ", ")), "1, 2, 3");
-  EXPECT_EQ(fmt::format("{}", fmt::join({"fmt", "rocks", "!"}, " ")),
-            "fmt rocks !");
 }
 
 struct zstring_sentinel {};
@@ -608,12 +611,11 @@ TEST(ranges_test, vector_char) {
 
 TEST(ranges_test, container_adaptor) {
   {
-    using fmt::detail::is_container_adaptor_like;
     using T = std::nullptr_t;
-    static_assert(is_container_adaptor_like<std::stack<T>>::value, "");
-    static_assert(is_container_adaptor_like<std::queue<T>>::value, "");
-    static_assert(is_container_adaptor_like<std::priority_queue<T>>::value, "");
-    static_assert(!is_container_adaptor_like<std::vector<T>>::value, "");
+    static_assert(fmt::is_container_adaptor<std::stack<T>>::value, "");
+    static_assert(fmt::is_container_adaptor<std::queue<T>>::value, "");
+    static_assert(fmt::is_container_adaptor<std::priority_queue<T>>::value, "");
+    static_assert(!fmt::is_container_adaptor<std::vector<T>>::value, "");
   }
 
   {
@@ -724,10 +726,17 @@ struct codec_mask {
   int except = 0;
 };
 
+// A named functor instead of a lambda to avoid -Wsubobject-linkage: a lambda
+// gives the filter_view type internal linkage, which propagates to the
+// formatter base class via format_as.
+struct not_equal {
+  int value;
+  bool operator()(int c) const { return c != value; }
+};
+
 auto format_as(codec_mask mask) {
-  // Careful not to capture param by reference here, it will dangle.
   return codec_mask::codecs |
-         std::views::filter([mask](auto c) { return c != mask.except; });
+         std::views::filter(not_equal{mask.except});
 }
 }  // namespace views_filter_view_test
 
@@ -797,3 +806,23 @@ struct not_range {
   void end() const {}
 };
 static_assert(!fmt::is_formattable<not_range>{}, "");
+
+struct test_adaptor {
+  using container_type = std::vector<int>;
+  std::vector<int> c = {1, 2, 3};
+};
+
+namespace fmt {
+template <> struct is_container_adaptor<test_adaptor> : std::false_type {};
+
+template <> struct formatter<test_adaptor> : formatter<string_view> {
+  auto format(const test_adaptor&, format_context& ctx) const
+      -> format_context::iterator {
+    return formatter<string_view>::format("test", ctx);
+  }
+};
+}  // namespace fmt
+
+TEST(ranges_test, container_adaptor_opt_out) {
+  EXPECT_EQ(fmt::format("{}", test_adaptor()), "test");
+}

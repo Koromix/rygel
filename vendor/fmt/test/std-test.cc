@@ -1,6 +1,6 @@
 // Formatting library for C++ - tests of formatters for standard library types
 //
-// Copyright (c) 2012 - present, Victor Zverovich
+// Copyright (c) 2012 - present, Victor Zverovich and {fmt} contributors
 // All rights reserved.
 //
 // For the license information refer to format.h.
@@ -12,7 +12,7 @@
 #include <string>
 #include <vector>
 
-#include "fmt/os.h"       // fmt::system_category
+#include "fmt/os.h"  // fmt::system_category
 #include "fmt/ranges.h"
 #include "gtest-extra.h"  // StartsWith
 
@@ -39,13 +39,12 @@ TEST(std_test, path) {
   EXPECT_EQ(fmt::format("{}", path(L"\x0428\x0447\x0443\x0447\x044B\x043D\x0448"
                                    L"\x0447\x044B\x043D\x0430")),
             "Шчучыншчына");
-  EXPECT_EQ(fmt::format("{}", path(L"\xd800")), "�");
-  EXPECT_EQ(fmt::format("{}", path(L"HEAD \xd800 TAIL")), "HEAD � TAIL");
-  EXPECT_EQ(fmt::format("{}", path(L"HEAD \xD83D\xDE00 TAIL")),
-            "HEAD \xF0\x9F\x98\x80 TAIL");
-  EXPECT_EQ(fmt::format("{}", path(L"HEAD \xD83D\xD83D\xDE00 TAIL")),
-            "HEAD �\xF0\x9F\x98\x80 TAIL");
-  EXPECT_EQ(fmt::format("{:?}", path(L"\xd800")), "\"\\ud800\"");
+  EXPECT_EQ(fmt::format("{}", path(L"\xD800")), "\xED\xA0\x80");
+  EXPECT_EQ(fmt::format("{}", path(L"[\xD800]")), "[\xED\xA0\x80]");
+  EXPECT_EQ(fmt::format("{}", path(L"[\xD83D\xDE00]")), "[\xF0\x9F\x98\x80]");
+  EXPECT_EQ(fmt::format("{}", path(L"[\xD83D\xD83D\xDE00]")),
+            "[\xED\xA0\xBD\xF0\x9F\x98\x80]");
+  EXPECT_EQ(fmt::format("{:?}", path(L"\xD800")), "\"\\ud800\"");
 #  endif
 }
 
@@ -177,6 +176,14 @@ TEST(std_test, expected) {
       (fmt::is_formattable<std::expected<int, unformattable2>>::value));
   EXPECT_TRUE((fmt::is_formattable<std::expected<int, int>>::value));
   EXPECT_TRUE((fmt::is_formattable<std::expected<void, int>>::value));
+
+  EXPECT_EQ(fmt::format("{}", std::unexpected{1}), "unexpected(1)");
+  EXPECT_EQ(fmt::format("{}", std::unexpected<std::string>{"test"}),
+            "unexpected(\"test\")");
+
+  EXPECT_EQ(fmt::format("{}", std::unexpected<char>{'a'}), "unexpected('a')");
+
+  EXPECT_FALSE((fmt::is_formattable<std::unexpected<unformattable2>>::value));
 #endif
 }
 
@@ -404,6 +411,42 @@ TEST(std_test, type_info) {
 }
 #endif
 
+#if FMT_USE_BITINT
+FMT_PRAGMA_CLANG(diagnostic ignored "-Wbit-int-extension")
+
+TEST(std_test, bitint) {
+  using fmt::detail::bitint;
+  using fmt::detail::ubitint;
+
+  EXPECT_EQ(fmt::format("{}", ubitint<3>(7)), "7");
+  EXPECT_EQ(fmt::format("{}", bitint<7>()), "0");
+
+  EXPECT_EQ(fmt::format("{}", ubitint<15>(31000)), "31000");
+  EXPECT_EQ(fmt::format("{}", bitint<16>(INT16_MIN)), "-32768");
+  EXPECT_EQ(fmt::format("{}", bitint<16>(INT16_MAX)), "32767");
+
+  EXPECT_EQ(fmt::format("{}", ubitint<32>(4294967295)), "4294967295");
+
+  EXPECT_EQ(fmt::format("{}", ubitint<47>(140737488355327ULL)),
+            "140737488355327");
+  EXPECT_EQ(fmt::format("{}", bitint<47>(-40737488355327LL)),
+            "-40737488355327");
+
+  // Check lvalues and const
+  auto a = bitint<8>(0);
+  auto b = ubitint<32>(4294967295);
+  const auto c = bitint<7>(0);
+  const auto d = ubitint<32>(4294967295);
+  EXPECT_EQ(fmt::format("{}", a), "0");
+  EXPECT_EQ(fmt::format("{}", b), "4294967295");
+  EXPECT_EQ(fmt::format("{}", c), "0");
+  EXPECT_EQ(fmt::format("{}", d), "4294967295");
+
+  static_assert(fmt::is_formattable<bitint<64>, char>{}, "");
+  static_assert(fmt::is_formattable<ubitint<64>, char>{}, "");
+}
+#endif
+
 TEST(std_test, format_bit_reference) {
   std::bitset<2> bs(1);
   EXPECT_EQ(fmt::format("{} {}", bs[0], bs[1]), "true false");
@@ -424,6 +467,14 @@ TEST(std_test, format_bitset) {
   EXPECT_EQ(fmt::format("{:0>8}", bs), "00101010");
   EXPECT_EQ(fmt::format("{:-^12}", bs), "---101010---");
 }
+
+#ifdef __cpp_lib_byte
+TEST(base_test, format_byte) {
+  auto s = std::string();
+  fmt::format_to(std::back_inserter(s), "{}", std::byte(42));
+  EXPECT_EQ(s, "42");
+}
+#endif
 
 TEST(std_test, format_atomic) {
   std::atomic<bool> b(false);

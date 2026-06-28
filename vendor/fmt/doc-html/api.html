@@ -15,8 +15,11 @@
         <link rel="next" href="syntax.html">
       
       
+        
+      
+      
       <link rel="icon" href="assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.0, mkdocs-material-9.5.25">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.0">
     
     
       
@@ -24,7 +27,7 @@
       
     
     
-      <link rel="stylesheet" href="assets/stylesheets/main.6543a935.min.css">
+      <link rel="stylesheet" href="assets/stylesheets/main.618322db.min.css">
       
       
 
@@ -49,11 +52,10 @@
     
       <link rel="stylesheet" href="fmt.css">
     
-    <script>__md_scope=new URL(".",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL(".",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
-    
     
     
   </head>
@@ -89,12 +91,12 @@
     <a href="index.html" title="{fmt}" class="md-header__button md-logo" aria-label="{fmt}" data-md-component="logo">
       
   
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg>
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
       
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"/></svg>
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
     </label>
     <div class="md-header__title" data-md-component="header-title">
       <div class="md-header__ellipsis">
@@ -114,36 +116,38 @@
     </div>
     
     
-      <script>var media,input,key,value,palette=__md_get("__palette");if(palette&&palette.color){"(prefers-color-scheme)"===palette.color.media&&(media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']"),palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent"));for([key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
     
     
     
-      <label class="md-header__button md-icon" for="__search">
-        
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
-      </label>
-      <div class="md-search" data-md-component="search" role="dialog">
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
   <label class="md-search__overlay" for="__search"></label>
   <div class="md-search__inner" role="search">
     <form class="md-search__form" name="search">
       <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
       <label class="md-search__icon md-icon" for="__search">
         
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
         
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
       </label>
       <nav class="md-search__options" aria-label="Search">
         
         <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
           
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
         </button>
       </nav>
       
     </form>
     <div class="md-search__output">
-      <div class="md-search__scrollwrap" data-md-scrollfix>
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
         <div class="md-search-result" data-md-component="search-result">
           <div class="md-search-result__meta">
             Initializing search
@@ -154,13 +158,14 @@
     </div>
   </div>
 </div>
+      
     
     
       <div class="md-header__source">
         <a href="https://github.com/fmtlib/fmt" title="Go to repository" class="md-source" data-md-component="source">
   <div class="md-source__icon md-icon">
     
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.5.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
   </div>
   <div class="md-source__repository">
     GitHub
@@ -186,9 +191,11 @@
   
   
   
+  
     <li class="md-tabs__item">
       <a href="index.html" class="md-tabs__link">
         
+  
   
     
   
@@ -203,9 +210,11 @@
   
   
   
+  
     <li class="md-tabs__item">
       <a href="get-started.html" class="md-tabs__link">
         
+  
   
     
   
@@ -219,12 +228,14 @@
         
   
   
+  
     
   
   
     <li class="md-tabs__item md-tabs__item--active">
       <a href="api.html" class="md-tabs__link">
         
+  
   
     
   
@@ -239,9 +250,11 @@
   
   
   
+  
     <li class="md-tabs__item">
       <a href="syntax.html" class="md-tabs__link">
         
+  
   
     
   
@@ -279,7 +292,7 @@
     <a href="index.html" title="{fmt}" class="md-nav__button md-logo" aria-label="{fmt}" data-md-component="logo">
       
   
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg>
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
 
     </a>
     {fmt}
@@ -289,7 +302,7 @@
       <a href="https://github.com/fmtlib/fmt" title="Go to repository" class="md-source" data-md-component="source">
   <div class="md-source__icon md-icon">
     
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.5.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
   </div>
   <div class="md-source__repository">
     GitHub
@@ -309,9 +322,16 @@
       <a href="index.html" class="md-nav__link">
         
   
+  
   <span class="md-ellipsis">
+    
+  
     Home
+  
+
+    
   </span>
+  
   
 
       </a>
@@ -329,9 +349,16 @@
       <a href="get-started.html" class="md-nav__link">
         
   
+  
   <span class="md-ellipsis">
+    
+  
     Get Started
+  
+
+    
   </span>
+  
   
 
       </a>
@@ -358,9 +385,16 @@
         <label class="md-nav__link md-nav__link--active" for="__toc">
           
   
+  
   <span class="md-ellipsis">
+    
+  
     API
+  
+
+    
   </span>
+  
   
 
           <span class="md-nav__icon md-icon"></span>
@@ -369,9 +403,16 @@
       <a href="api.html" class="md-nav__link md-nav__link--active">
         
   
+  
   <span class="md-ellipsis">
+    
+  
     API
+  
+
+    
   </span>
+  
   
 
       </a>
@@ -392,9 +433,22 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#c-module-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        C++ Module API
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#base-api" class="md-nav__link">
     <span class="md-ellipsis">
-      Base API
+      
+        Base API
+      
     </span>
   </a>
   
@@ -404,7 +458,9 @@
           <li class="md-nav__item">
   <a href="#formatting-user-defined-types" class="md-nav__link">
     <span class="md-ellipsis">
-      Formatting User-Defined Types
+      
+        Formatting User-Defined Types
+      
     </span>
   </a>
   
@@ -413,7 +469,9 @@
           <li class="md-nav__item">
   <a href="#compile-time-checks" class="md-nav__link">
     <span class="md-ellipsis">
-      Compile-Time Checks
+      
+        Compile-Time Checks
+      
     </span>
   </a>
   
@@ -422,7 +480,9 @@
           <li class="md-nav__item">
   <a href="#type-erasure" class="md-nav__link">
     <span class="md-ellipsis">
-      Type Erasure
+      
+        Type Erasure
+      
     </span>
   </a>
   
@@ -431,7 +491,9 @@
           <li class="md-nav__item">
   <a href="#named-arguments" class="md-nav__link">
     <span class="md-ellipsis">
-      Named Arguments
+      
+        Named Arguments
+      
     </span>
   </a>
   
@@ -440,7 +502,9 @@
           <li class="md-nav__item">
   <a href="#compatibility" class="md-nav__link">
     <span class="md-ellipsis">
-      Compatibility
+      
+        Compatibility
+      
     </span>
   </a>
   
@@ -454,7 +518,9 @@
         <li class="md-nav__item">
   <a href="#format-api" class="md-nav__link">
     <span class="md-ellipsis">
-      Format API
+      
+        Format API
+      
     </span>
   </a>
   
@@ -464,7 +530,9 @@
           <li class="md-nav__item">
   <a href="#utilities" class="md-nav__link">
     <span class="md-ellipsis">
-      Utilities
+      
+        Utilities
+      
     </span>
   </a>
   
@@ -473,7 +541,9 @@
           <li class="md-nav__item">
   <a href="#system-errors" class="md-nav__link">
     <span class="md-ellipsis">
-      System Errors
+      
+        System Errors
+      
     </span>
   </a>
   
@@ -482,7 +552,9 @@
           <li class="md-nav__item">
   <a href="#custom-allocators" class="md-nav__link">
     <span class="md-ellipsis">
-      Custom Allocators
+      
+        Custom Allocators
+      
     </span>
   </a>
   
@@ -491,7 +563,9 @@
           <li class="md-nav__item">
   <a href="#locale" class="md-nav__link">
     <span class="md-ellipsis">
-      Locale
+      
+        Locale
+      
     </span>
   </a>
   
@@ -500,7 +574,9 @@
           <li class="md-nav__item">
   <a href="#legacy-compile-time-checks" class="md-nav__link">
     <span class="md-ellipsis">
-      Legacy Compile-Time Checks
+      
+        Legacy Compile-Time Checks
+      
     </span>
   </a>
   
@@ -514,7 +590,9 @@
         <li class="md-nav__item">
   <a href="#range-and-tuple-formatting" class="md-nav__link">
     <span class="md-ellipsis">
-      Range and Tuple Formatting
+      
+        Range and Tuple Formatting
+      
     </span>
   </a>
   
@@ -523,7 +601,9 @@
         <li class="md-nav__item">
   <a href="#date-and-time-formatting" class="md-nav__link">
     <span class="md-ellipsis">
-      Date and Time Formatting
+      
+        Date and Time Formatting
+      
     </span>
   </a>
   
@@ -532,7 +612,9 @@
         <li class="md-nav__item">
   <a href="#standard-library-types-formatting" class="md-nav__link">
     <span class="md-ellipsis">
-      Standard Library Types Formatting
+      
+        Standard Library Types Formatting
+      
     </span>
   </a>
   
@@ -542,7 +624,9 @@
           <li class="md-nav__item">
   <a href="#variants" class="md-nav__link">
     <span class="md-ellipsis">
-      Variants
+      
+        Variants
+      
     </span>
   </a>
   
@@ -556,7 +640,9 @@
         <li class="md-nav__item">
   <a href="#bit-fields-and-packed-structs" class="md-nav__link">
     <span class="md-ellipsis">
-      Bit-Fields and Packed Structs
+      
+        Bit-Fields and Packed Structs
+      
     </span>
   </a>
   
@@ -565,7 +651,9 @@
         <li class="md-nav__item">
   <a href="#compile-time-support" class="md-nav__link">
     <span class="md-ellipsis">
-      Compile-Time Support
+      
+        Compile-Time Support
+      
     </span>
   </a>
   
@@ -574,7 +662,9 @@
         <li class="md-nav__item">
   <a href="#terminal-colors-and-text-styles" class="md-nav__link">
     <span class="md-ellipsis">
-      Terminal Colors and Text Styles
+      
+        Terminal Colors and Text Styles
+      
     </span>
   </a>
   
@@ -583,7 +673,9 @@
         <li class="md-nav__item">
   <a href="#system-apis" class="md-nav__link">
     <span class="md-ellipsis">
-      System APIs
+      
+        System APIs
+      
     </span>
   </a>
   
@@ -592,7 +684,9 @@
         <li class="md-nav__item">
   <a href="#stdostream-support" class="md-nav__link">
     <span class="md-ellipsis">
-      std::ostream Support
+      
+        std::ostream Support
+      
     </span>
   </a>
   
@@ -601,7 +695,9 @@
         <li class="md-nav__item">
   <a href="#dynamic-argument-lists" class="md-nav__link">
     <span class="md-ellipsis">
-      Dynamic Argument Lists
+      
+        Dynamic Argument Lists
+      
     </span>
   </a>
   
@@ -610,7 +706,9 @@
         <li class="md-nav__item">
   <a href="#safe-printf" class="md-nav__link">
     <span class="md-ellipsis">
-      Safe printf
+      
+        Safe printf
+      
     </span>
   </a>
   
@@ -619,7 +717,9 @@
         <li class="md-nav__item">
   <a href="#wide-strings" class="md-nav__link">
     <span class="md-ellipsis">
-      Wide Strings
+      
+        Wide Strings
+      
     </span>
   </a>
   
@@ -628,7 +728,9 @@
         <li class="md-nav__item">
   <a href="#compatibility-with-c20-stdformat" class="md-nav__link">
     <span class="md-ellipsis">
-      Compatibility with C++20 std::format
+      
+        Compatibility with C++20 std::format
+      
     </span>
   </a>
   
@@ -637,7 +739,9 @@
         <li class="md-nav__item">
   <a href="#configuration-options" class="md-nav__link">
     <span class="md-ellipsis">
-      Configuration Options
+      
+        Configuration Options
+      
     </span>
   </a>
   
@@ -647,7 +751,9 @@
           <li class="md-nav__item">
   <a href="#cmake-options" class="md-nav__link">
     <span class="md-ellipsis">
-      CMake Options
+      
+        CMake Options
+      
     </span>
   </a>
   
@@ -656,7 +762,9 @@
           <li class="md-nav__item">
   <a href="#macros" class="md-nav__link">
     <span class="md-ellipsis">
-      Macros
+      
+        Macros
+      
     </span>
   </a>
   
@@ -665,7 +773,9 @@
           <li class="md-nav__item">
   <a href="#binary-size-optimization" class="md-nav__link">
     <span class="md-ellipsis">
-      Binary Size Optimization
+      
+        Binary Size Optimization
+      
     </span>
   </a>
   
@@ -694,9 +804,16 @@
       <a href="syntax.html" class="md-nav__link">
         
   
+  
   <span class="md-ellipsis">
+    
+  
     Syntax
+  
+
+    
   </span>
+  
   
 
       </a>
@@ -714,9 +831,11 @@
           
           
             <div class="md-content" data-md-component="content">
+              
               <article class="md-content__inner md-typeset">
                 
                   
+
 
   
   
@@ -742,6 +861,10 @@
 </ul>
 <p>All functions and types provided by the library reside in namespace <code>fmt</code>
 and macros have prefix <code>FMT_</code>.</p>
+<h2 id="c-module-api">C++ Module API</h2>
+<p>With the C++ module API, the headers listed above don't need to be included.
+You can use the <code>import fmt;</code> statement instead. All other functionality,
+listed below, remains the same.</p>
 <h2 id="base-api">Base API</h2>
 <p><code>fmt/base.h</code> defines the base API which provides main formatting functions
 for <code>char</code>/UTF-8 with C++20 compile-time checks. It has minimal include
@@ -749,7 +872,7 @@ dependencies for better compile times. This header is only beneficial when
 using {fmt} as a library (the default) and not in the header-only mode.
 It also provides <code>formatter</code> specializations for the following types:</p>
 <ul>
-<li><code>int</code>, <code>long long</code>,</li>
+<li><code>int</code>, <code>long long</code></li>
 <li><code>unsigned</code>, <code>unsigned long long</code></li>
 <li><code>float</code>, <code>double</code>, <code>long double</code></li>
 <li><code>bool</code></li>
@@ -777,7 +900,7 @@ specified otherwise.</p>
 <div class="docblock-desc">
 <p>Formats <code>args</code> according to specifications in <code>fmt</code> and writes the output to <code>stdout</code>.</p>
 <p><b>Example</b>: <pre><code class="language-cpp">fmt::print("The answer is {}.", 42);
-</code></pre> </p>
+</code> </pre></p>
         </div>
 </div>
 <div class="docblock">
@@ -788,7 +911,7 @@ specified otherwise.</p>
 <div class="docblock-desc">
 <p>Formats <code>args</code> according to specifications in <code>fmt</code> and writes the output to the file <code>f</code>.</p>
 <p><b>Example</b>: <pre><code class="language-cpp">fmt::print(stderr, "Don't {}!", "panic");
-</code></pre> </p>
+</code> </pre></p>
         </div>
 </div>
 <div class="docblock">
@@ -818,7 +941,7 @@ specified otherwise.</p>
 <p>Formats <code>args</code> according to specifications in <code>fmt</code>, writes the result to the output iterator <code>out</code> and returns the iterator past the end of the output range. <code>format_to</code> does not append a terminating null character.</p>
 <p><b>Example</b>: <pre><code class="language-cpp">auto out = std::vector&lt;char>();
 fmt::format_to(std::back_inserter(out), "{}", 42);
-</code></pre> </p>
+</code> </pre></p>
         </div>
 </div>
 <div class="docblock">
@@ -889,8 +1012,8 @@ auto format_as(film f) { return fmt::underlying(f); }
 int main() {
   fmt::print("{}\n", kevin_namespacy::film::se7en); // Output: 7
 }</code></pre>
-<p>Using specialization is more complex but gives you full control over
-parsing and formatting. To use this method specialize the <code>formatter</code>
+<p>Using a specialization is more complex, but gives you full control over
+parsing and formatting. To use this method, specialize the <code>formatter</code>
 struct template for your type and implement <code>parse</code> and <code>format</code>
 methods.</p>
 <p>The recommended way of defining a formatter is by reusing an existing
@@ -1036,7 +1159,7 @@ disallowed.</p>
 </a>
 <div class="docblock-desc">
 <div class="docblock">
-<pre><code class="language-cpp decl"><div></div><div>context(iterator out, format_args args, locale_ref loc);</div></code></pre>
+<pre><code class="language-cpp decl"><div></div><div>constexpr context(iterator out, format_args args, locale_ref loc);</div></code></pre>
 <div class="docblock-desc">
 <p>Constructs a <code>context</code> object. References to the arguments are stored in the object so make sure they have appropriate lifetimes. </p>
         </div>
@@ -1083,7 +1206,7 @@ bloat.</p>
 <p>Creates a runtime format string.</p>
 <p><b>Example</b>: <pre><code class="language-cpp">// Check format string at runtime instead of compile-time.
 fmt::print(fmt::runtime("{:d}"), "I am not a number");
-</code></pre> </p>
+</code> </pre></p>
         </div>
 </div>
 <h3 id="type-erasure">Type Erasure</h3>
@@ -1111,7 +1234,7 @@ compile times and reduces binary code size compared to a fully
 parameterized version.</p>
 <div class="docblock">
 <a id="make_format_args">
-<pre><code class="language-cpp decl"><div>template &lt;typename Context, typename...&nbsp;T, int&nbsp;NUM_ARGS, int&nbsp;NUM_NAMED_ARGS, unsigned long long&nbsp;DESC&gt;
+<pre><code class="language-cpp decl"><div>template &lt;typename Context, typename...&nbsp;T, int&nbsp;NUM_ARGS, int&nbsp;NUM_NAMED_ARGS, ullong&nbsp;DESC&gt;
 </div><div>constexpr auto make_format_args(T&... args) -&NoBreak;>&nbsp;detail::format_arg_store&lt;Context, NUM_ARGS, NUM_NAMED_ARGS, DESC>;</div></code></pre>
 </a>
 <div class="docblock-desc">
@@ -1126,7 +1249,7 @@ parameterized version.</p>
 <div class="docblock-desc">
 <p>A view of a collection of formatting arguments. To avoid lifetime issues it should only be used as a parameter type in type-erased functions such as <code>vformat</code>: <pre><code class="language-cpp">void vlog(fmt::string_view fmt, fmt::format_args args);  // OK
 fmt::format_args args = fmt::make_format_args();  // Dangling reference
-</code></pre> </p>
+</code> </pre></p>
     <div class="docblock">
 <pre><code class="language-cpp decl"><div></div><div>constexpr basic_format_args(const store&lt;NUM_ARGS, NUM_NAMED_ARGS, DESC>& s);</div></code></pre>
 <div class="docblock-desc">
@@ -1171,16 +1294,15 @@ fmt::format_args args = fmt::make_format_args();  // Dangling reference
 <h3 id="named-arguments">Named Arguments</h3>
 <div class="docblock">
 <a id="arg">
-<pre><code class="language-cpp decl"><div>template &lt;typename Char, typename T&gt;
-</div><div>auto arg(const Char* name, const T& arg) -&NoBreak;>&nbsp;detail::named_arg&lt;Char, T>;</div></code></pre>
+<pre><code class="language-cpp decl"><div>template &lt;typename T&gt;
+</div><div>auto arg(const char* name, const T& arg) -&NoBreak;>&nbsp;named_arg&lt;T>;</div></code></pre>
 </a>
 <div class="docblock-desc">
 <p>Returns a named argument to be used in a formatting function. It should only be used in a call to a formatting function.</p>
 <p><b>Example</b>: <pre><code class="language-cpp">fmt::print("The answer is {answer}.", fmt::arg("answer", 42));
-</code></pre> </p>
+</code> Named arguments passed with </pre><code>fmt::arg</code> are not supported in compile-time checks, but <code>"answer"_a=42</code> are compile-time checked in sufficiently new compilers. See <code>operator""_a()</code>. </p>
         </div>
 </div>
-<p>Named arguments are not supported in compile-time checks at the moment.</p>
 <h3 id="compatibility">Compatibility</h3>
 <div class="docblock">
 <a id="basic_string_view">
@@ -1188,38 +1310,8 @@ fmt::format_args args = fmt::make_format_args();  // Dangling reference
 </div><div>class basic_string_view;</div></code></pre>
 </a>
 <div class="docblock-desc">
-<p>An implementation of <code>std::basic_string_view</code> for pre-C++17. It provides a subset of the API. <code>fmt::basic_string_view</code> is used for format strings even if <code>std::basic_string_view</code> is available to prevent issues when a library is compiled with a different <code>-std</code> option than the client code (which is not recommended). </p>
-    <div class="docblock">
-<pre><code class="language-cpp decl"><div></div><div>constexpr basic_string_view(const Char* s, size_t count);</div></code></pre>
-<div class="docblock-desc">
-<p>Constructs a string view object from a C string and a size. </p>
-        </div>
-</div>
-<div class="docblock">
-<pre><code class="language-cpp decl"><div></div><div>basic_string_view(const Char* s);</div></code></pre>
-<div class="docblock-desc">
-<p>Constructs a string view object from a C string. </p>
-        </div>
-</div>
-<div class="docblock">
-<pre><code class="language-cpp decl"><div></div><div>basic_string_view(const S& s);</div></code></pre>
-<div class="docblock-desc">
-<p>Constructs a string view from a <code>std::basic_string</code> or a <code>std::basic_string_view</code> object. </p>
-        </div>
-</div>
-<div class="docblock">
-<pre><code class="language-cpp decl"><div></div><div>constexpr auto data() -&NoBreak;>&nbsp;const Char*;</div></code></pre>
-<div class="docblock-desc">
-<p>Returns a pointer to the string data. </p>
-        </div>
-</div>
-<div class="docblock">
-<pre><code class="language-cpp decl"><div></div><div>constexpr auto size() -&NoBreak;>&nbsp;size_t;</div></code></pre>
-<div class="docblock-desc">
-<p>Returns the string size. </p>
-        </div>
-</div>
-</div>
+<p>An implementation of <code>std::basic_string_view</code> for pre-C++17 providing a subset of the API. <code>fmt::basic_string_view</code> is used in the public API even if <code>std::basic_string_view</code> is available to prevent issues when a library is compiled with a different <code>-std</code> option than the client code (which is not recommended). </p>
+    </div>
 </div>
 <div class="docblock">
 <a id="string_view">
@@ -1242,7 +1334,7 @@ formatting functions and locale support.</p>
 <p>Formats <code>args</code> according to specifications in <code>fmt</code> and returns the result as a string.</p>
 <p><b>Example</b>: <pre><code class="language-cpp">#include &lt;fmt/format.h>
 std::string message = fmt::format("The answer is {}.", 42);
-</code></pre> </p>
+</code> </pre></p>
         </div>
 </div>
 <div class="docblock">
@@ -1258,7 +1350,11 @@ std::string message = fmt::format("The answer is {}.", 42);
 </div><div>constexpr auto operator""_a();</div></code></pre>
 </a>
 <div class="docblock-desc">
-</div>
+<p>User-defined literal equivalent of <code>fmt::arg</code>, but with compile-time checks.</p>
+<p><b>Example</b>: <pre><code class="language-cpp">using namespace fmt::literals;
+fmt::print("The answer is {answer}.", "answer"_a=42);
+</code> </pre></p>
+        </div>
 </div>
 <h3 id="utilities">Utilities</h3>
 <div class="docblock">
@@ -1269,7 +1365,7 @@ std::string message = fmt::format("The answer is {}.", 42);
 <div class="docblock-desc">
 <p>Converts <code>p</code> to <code>const void*</code> for pointer formatting.</p>
 <p><b>Example</b>: <pre><code class="language-cpp">auto s = fmt::format("{}", fmt::ptr(p));
-</code></pre> </p>
+</code> </pre></p>
         </div>
 </div>
 <div class="docblock">
@@ -1281,7 +1377,7 @@ std::string message = fmt::format("The answer is {}.", 42);
 <p>Converts <code>e</code> to the underlying type.</p>
 <p><b>Example</b>: <pre><code class="language-cpp">enum class color { red, green, blue };
 auto s = fmt::format("{}", fmt::underlying(color::red));  // s == "0"
-</code></pre> </p>
+</code> </pre></p>
         </div>
 </div>
 <div class="docblock">
@@ -1301,7 +1397,7 @@ auto s = fmt::format("{}", fmt::underlying(color::red));  // s == "0"
 <p>Returns a view that formats an integer value using ',' as a locale-independent thousands separator.</p>
 <p><b>Example</b>: <pre><code class="language-cpp">fmt::print("{}", fmt::group_digits(12345));
 // Output: "12,345"
-</code></pre> </p>
+</code> </pre></p>
         </div>
 </div>
 <div class="docblock">
@@ -1352,7 +1448,7 @@ auto s = fmt::format("{}", fmt::underlying(color::red));  // s == "0"
 <p>A dynamically growing memory buffer for trivially copyable/constructible types with the first <code>SIZE</code> elements stored in the object itself. Most commonly used via the <code>memory_buffer</code> alias for <code>char</code>.</p>
 <p><b>Example</b>: <pre><code class="language-cpp">auto out = fmt::memory_buffer();
 fmt::format_to(std::back_inserter(out), "The answer is {}.", 42);
-</code></pre> This will append "The answer is 42." to <code>out</code>. The buffer content can be converted to <code>std::string</code> with <code>to_string(out)</code>. </p>
+</code> This will append "The answer is 42." to </pre><code>out</code>. The buffer content can be converted to <code>std::string</code> with <code>to_string(out)</code>. </p>
     <div class="docblock">
 <pre><code class="language-cpp decl"><div></div><div>basic_memory_buffer(basic_memory_buffer&& other);</div></code></pre>
 <div class="docblock-desc">
@@ -1398,7 +1494,7 @@ const char* filename = "madeup";
 FILE* file = fopen(filename, "r");
 if (!file)
   throw fmt::system_error(errno, "cannot open file '{}'", filename);
-</code></pre> </p>
+</code> </pre></p>
         </div>
 </div>
 <div class="docblock">
@@ -1407,7 +1503,7 @@ if (!file)
 </a>
 <div class="docblock-desc">
 <p>Formats an error message for an error returned by an operating system or a language runtime, for example a file opening error, and writes it to <code>out</code>. The format is the same as the one used by <code>std::system_error(ec, message)</code> where <code>ec</code> is <code>std::error_code(error_code, std::generic_category())</code>. It is implementation-defined but normally looks like: <pre><code class="language-cpp">&lt;message>: &lt;system-message>
-</code></pre> where <code>&lt;message></code> is the passed message and <code>&lt;system-message></code> is the system message corresponding to the error code. <code>error_code</code> is a system error code as given by <code>errno</code>. </p>
+</code> where </pre><code>&lt;message></code> is the passed message and <code>&lt;system-message></code> is the system message corresponding to the error code. <code>error_code</code> is a system error code as given by <code>errno</code>. </p>
         </div>
 </div>
 <h3 id="custom-allocators">Custom Allocators</h3>
@@ -1485,7 +1581,7 @@ C++14 or later and is a no-op in C++11.</p>
 <p>Constructs a legacy compile-time format string from a string literal <code>s</code>.</p>
 <p><b>Example</b>: <pre><code class="language-cpp">// A compile-time error because 'd' is an invalid specifier for strings.
 std::string s = fmt::format(FMT_STRING("{:d}"), "foo");
-</code></pre> </p>
+</code> </pre></p>
         </div>
 </div>
 <p>To force the use of legacy compile-time checks, define the preprocessor
@@ -1514,9 +1610,9 @@ fmt::print("{}", fmt::join(t, ", "));
 <p><b>Example</b>: <pre><code class="language-cpp">auto v = std::vector&lt;int>{1, 2, 3};
 fmt::print("{}", fmt::join(v, ", "));
 // Output: 1, 2, 3
-</code></pre> <code>fmt::join</code> applies passed format specifiers to the range elements: <pre><code class="language-cpp">fmt::print("{:02}", fmt::join(v, ", "));
+</code> </pre><code>fmt::join</code> applies passed format specifiers to the range elements: <pre><code class="language-cpp">fmt::print("{:02}", fmt::join(v, ", "));
 // Output: 01, 02, 03
-</code></pre> </p>
+</code> </pre></p>
         </div>
 </div>
 <div class="docblock">
@@ -1537,7 +1633,7 @@ fmt::print("{}", fmt::join(v, ", "));
 <p>Returns an object that formats <code>std::initializer_list</code> with elements separated by <code>sep</code>.</p>
 <p><b>Example</b>: <pre><code class="language-cpp">fmt::print("{}", fmt::join({1, 2, 3}, ", "));
 // Output: "1, 2, 3"
-</code></pre> </p>
+</code> </pre></p>
         </div>
 </div>
 <p><a id="chrono-api"></a></p>
@@ -1608,7 +1704,7 @@ int main() {
 </div>
 </div>
 <h3 id="variants">Variants</h3>
-<p>A <code>std::variant</code> is only formattable if every variant alternative is
+<p>A <code>std::variant</code> can be formatted only if every alternative is
 formattable, and requires the <code>__cpp_lib_variant</code> <a href="https://en.cppreference.com/w/cpp/feature_test">library
 feature</a>.</p>
 <p><strong>Example</strong>:</p>
@@ -1694,7 +1790,7 @@ const char* cstr = s.c_str(); // Points the static string "(4, 2)".</code></pre>
 <p><b>Example</b>: <pre><code class="language-cpp">// Converts 42 into std::string using the most efficient method and no
 // runtime format string processing.
 std::string s = fmt::format(FMT_COMPILE("{}"), 42);
-</code></pre> </p>
+</code> </pre></p>
         </div>
 </div>
 <div class="docblock">
@@ -1707,7 +1803,7 @@ std::string s = fmt::format(FMT_COMPILE("{}"), 42);
 <p><b>Example</b>: <pre><code class="language-cpp">// Produces the static string "42" at compile time.
 static constexpr auto result = FMT_STATIC_FORMAT("{}", 42);
 const char* s = result.c_str();
-</code></pre> </p>
+</code> </pre></p>
         </div>
 </div>
 <p><a id="color-api"></a></p>
@@ -1722,7 +1818,7 @@ const char* s = result.c_str();
 <p>Formats a string and prints it to stdout using ANSI escape sequences to specify text formatting.</p>
 <p><b>Example</b>: <pre><code class="language-cpp">fmt::print(fmt::emphasis::bold | fg(fmt::color::red),
            "Elapsed time: {0:.2f} seconds", 1.23);
-</code></pre> </p>
+</code> </pre></p>
         </div>
 </div>
 <div class="docblock">
@@ -1751,7 +1847,7 @@ const char* s = result.c_str();
 <p><b>Example</b>: <pre><code class="language-cpp">fmt::print("Elapsed time: {0:.2f} seconds",
            fmt::styled(1.23, fmt::fg(fmt::color::green) |
                              fmt::bg(fmt::color::blue)));
-</code></pre> </p>
+</code> </pre></p>
         </div>
 </div>
 <p><a id="os-api"></a></p>
@@ -1771,13 +1867,30 @@ const char* s = result.c_str();
 </div>
 </div>
 <div class="docblock">
+<a id="output_file">
+<pre><code class="language-cpp decl"><div>template &lt;typename...&nbsp;T&gt;
+</div><div>auto output_file(cstring_view path, T... params) -&NoBreak;>&nbsp;ostream;</div></code></pre>
+</a>
+<div class="docblock-desc">
+<p>Opens a file for writing. Supported parameters passed in <code>params</code>:</p>
+<p><ul>
+<li><p><code>&lt;integer></code>: Flags passed to <a href="https://pubs.opengroup.org/onlinepubs/007904875/functions/open.html">open</a> (<code><a href="file::WRONLY">file::WRONLY</a> | <a href="file::CREATE">file::CREATE</a> | <a href="file::TRUNC">file::TRUNC</a></code> by default)</p>
+</li><li><p><code>buffer_size=&lt;integer></code>: Output buffer size</p>
+</li></ul>
+</p>
+<p><b>Example</b>: <pre><code class="language-cpp">auto out = fmt::output_file("guide.txt");
+out.print("Don't {}", "Panic");
+</code> </pre></p>
+        </div>
+</div>
+<div class="docblock">
 <a id="windows_error">
 <pre><code class="language-cpp decl"><div>template &lt;typename...&nbsp;T&gt;
 </div><div>auto windows_error(int error_code, string_view message, const T&... args) -&NoBreak;>&nbsp;std::system_error;</div></code></pre>
 </a>
 <div class="docblock-desc">
 <p>Constructs a <code>std::system_error</code> object with the description of the form <pre><code class="language-cpp">&lt;message>: &lt;system-message>
-</code></pre> where <code>&lt;message></code> is the formatted message and <code>&lt;system-message></code> is the system message corresponding to the error code. <code>error_code</code> is a Windows error code as given by <code>GetLastError</code>. If <code>error_code</code> is not a valid error code such as -1, the system message will look like "error -1".</p>
+</code> where </pre><code>&lt;message></code> is the formatted message and <code>&lt;system-message></code> is the system message corresponding to the error code. <code>error_code</code> is a Windows error code as given by <code>GetLastError</code>. If <code>error_code</code> is not a valid error code such as -1, the system message will look like "error -1".</p>
 <p><b>Example</b>: <pre><code class="language-cpp">// This throws a system_error with the description
 //   cannot open file 'foo': The system cannot find the file specified.
 // or similar (system message may vary) if the file doesn't exist.
@@ -1788,7 +1901,7 @@ if (file == HFILE_ERROR) {
   throw fmt::windows_error(GetLastError(),
                            "cannot open file '{}'", filename);
 }
-</code></pre> </p>
+</code> </pre></p>
         </div>
 </div>
 <p><a id="ostream-api"></a></p>
@@ -1821,7 +1934,7 @@ std::string s = fmt::format("The date is {}", date{2012, 12, 9});
 <p>Returns a view that formats <code>value</code> via an ostream <code>operator&lt;&lt;</code>.</p>
 <p><b>Example</b>: <pre><code class="language-cpp">fmt::print("Current thread id: {}\n",
            fmt::streamed(std::this_thread::get_id()));
-</code></pre> </p>
+</code> </pre></p>
         </div>
 </div>
 <div class="docblock">
@@ -1832,7 +1945,7 @@ std::string s = fmt::format("The date is {}", date{2012, 12, 9});
 <div class="docblock-desc">
 <p>Prints formatted data to the stream <code>os</code>.</p>
 <p><b>Example</b>: <pre><code class="language-cpp">fmt::print(cerr, "Don't {}!", "panic");
-</code></pre> </p>
+</code> </pre></p>
         </div>
 </div>
 <p><a id="args-api"></a></p>
@@ -1857,7 +1970,7 @@ store.push_back(42);
 store.push_back("abc");
 store.push_back(1.5f);
 std::string result = fmt::vformat("{} and {} and {}", store);
-</code></pre> </p>
+</code> </pre></p>
         </div>
 </div>
 <div class="docblock">
@@ -1870,11 +1983,11 @@ store.push_back(std::cref(band));
 band[9] = 'c'; // Changing str affects the output.
 std::string result = fmt::vformat("{}", store);
 // result == "Rolling Scones"
-</code></pre> </p>
+</code> </pre></p>
         </div>
 </div>
 <div class="docblock">
-<pre><code class="language-cpp decl"><div></div><div>void push_back(const detail::named_arg&lt;char_type, T>& arg);</div></code></pre>
+<pre><code class="language-cpp decl"><div></div><div>void push_back(const named_arg&lt;T, char_type>& arg);</div></code></pre>
 <div class="docblock-desc">
 <p>Adds named argument into the dynamic store for later passing to a formatting function. <code>std::reference_wrapper</code> is supported to avoid copying of the argument. The name is always copied into the store. </p>
         </div>
@@ -1926,7 +2039,7 @@ if an argument type doesn't match its format specification.</p>
 <div class="docblock-desc">
 <p>Formats <code>args</code> according to specifications in <code>fmt</code> and writes the output to <code>f</code>.</p>
 <p><b>Example</b>: <pre><code class="language-cpp">fmt::fprintf(stderr, "Don't %s!", "panic");
-</code></pre> </p>
+</code> </pre></p>
         </div>
 </div>
 <div class="docblock">
@@ -1935,9 +2048,9 @@ if an argument type doesn't match its format specification.</p>
 </div><div>auto sprintf(string_view fmt, const T&... args) -&NoBreak;>&nbsp;std::string;</div></code></pre>
 </a>
 <div class="docblock-desc">
-<p>Formats <code>args</code> according to specifications in <code>fmt</code> and returns the result as as string.</p>
+<p>Formats <code>args</code> according to specifications in <code>fmt</code> and returns the result as string.</p>
 <p><b>Example</b>: <pre><code class="language-cpp">std::string message = fmt::sprintf("The answer is %d", 42);
-</code></pre> </p>
+</code> </pre></p>
         </div>
 </div>
 <p><a id="xchar-api"></a></p>
@@ -1985,7 +2098,7 @@ following differences:</p>
   precision that provides round-trip guarantees similarly to other languages
   like Java and Python. <code>std::format</code> is currently specified in terms of
   <code>std::to_chars</code> which tries to generate the smallest number of characters
-  (ignoring redundant digits and sign in exponent) and may procude more
+  (ignoring redundant digits and sign in exponent) and may produce more
   decimal digits than necessary.</p>
 </li>
 </ul>
@@ -1997,7 +2110,7 @@ configuring CMake.</p>
 <h3 id="cmake-options">CMake Options</h3>
 <ul>
 <li><strong><code>FMT_OS</code></strong>: When set to <code>OFF</code>, disables OS-specific APIs (<code>fmt/os.h</code>).</li>
-<li><strong><code>FMT_UNICODE</code></strong>: When set of <code>OFF</code>, disables Unicode support on
+<li><strong><code>FMT_UNICODE</code></strong>: When set to <code>OFF</code>, disables Unicode support on
   Windows/MSVC. Unicode support is always enabled on other platforms.</li>
 </ul>
 <h3 id="macros">Macros</h3>
@@ -2031,7 +2144,7 @@ configuring CMake.</p>
 <li><code>0</code> - off (default)</li>
 <li><code>1</code> - disables locale support and applies some optimizations</li>
 <li><code>2</code> - disables some Unicode features, named arguments and applies more
-  aggresive optimizations</li>
+  aggressive optimizations</li>
 </ul>
 </li>
 </ul>
@@ -2071,7 +2184,7 @@ some features, you can use the following configuration:</p>
         
           <button type="button" class="md-top md-icon" data-md-component="top" hidden>
   
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12Z"/></svg>
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
   Back to top
 </button>
         
@@ -2096,10 +2209,13 @@ some features, you can use the following configuration:</p>
     </div>
     
     
-    <script id="__config" type="application/json">{"base": ".", "features": ["navigation.tabs", "navigation.top", "toc.integrate"], "search": "assets/javascripts/workers/search.b8dbb3d2.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": ".", "features": ["navigation.tabs", "navigation.top", "toc.integrate"], "search": "assets/javascripts/workers/search.7a47a382.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="assets/javascripts/bundle.081f42fc.min.js"></script>
+      <script src="assets/javascripts/bundle.e71a0d61.min.js"></script>
       
         <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/highlight.min.js"></script>
       
