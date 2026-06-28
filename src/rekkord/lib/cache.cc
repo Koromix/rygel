@@ -323,7 +323,7 @@ bool rk_Cache::ListChecks(FunctionRef<bool(const rk_ObjectID &, bool)> func)
 
     sq_Statement stmt;
     if (!main.Prepare(R"(SELECT oid, retained FROM checks WHERE valid = 1)", &stmt))
-        return -1;
+        return false;
 
     while (stmt.Step()) {
         Span<const uint8_t> raw = MakeSpan((const uint8_t *)sqlite3_column_blob(stmt, 0),
