@@ -158,7 +158,7 @@ bool ParseKID(Span<const char> str, KID *out_kid)
 
 #undef DECODE
 
-    static_assert(std::is_unsigned_v<typeof(kid.raw[0])>);
+    static_assert(std::is_unsigned_v<std::remove_reference<decltype(kid.raw[0])>::type>);
     valid &= (kid.raw[0] <= 0x7F);
 
     if (!valid) {
