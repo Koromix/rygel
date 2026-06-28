@@ -1,0 +1,30 @@
+diff --git a/vendor/libssh/include/libssh/priv.h b/vendor/libssh/include/libssh/priv.h
+index 56b84c5d5b..a9d499b523 100644
+--- a/vendor/libssh/include/libssh/priv.h
++++ b/vendor/libssh/include/libssh/priv.h
+@@ -373,7 +373,8 @@ int ssh_connector_remove_event(ssh_connector connector);
+ #elif defined(HAVE_MEMSET_S)
+ #define ssh_burn(ptr, len) memset_s((ptr), (len), '\0', (len))
+ #elif defined(HAVE_SECURE_ZERO_MEMORY)
+-#define ssh_burn(ptr, len) SecureZeroMemory((ptr), (len))
++void ssh_burn_win32(void *ptr, size_t cnt);
++#define ssh_burn(ptr, len) ssh_burn_win32((ptr), (len))
+ #else
+ #if defined(HAVE_GCC_VOLATILE_MEMORY_PROTECTION)
+ #define ssh_burn(ptr, len)                            \
+diff --git a/vendor/libssh/src/misc.c b/vendor/libssh/src/misc.c
+index 378ec8265e..e84ebddff7 100644
+--- a/vendor/libssh/src/misc.c
++++ b/vendor/libssh/src/misc.c
+@@ -2503,4 +2503,11 @@ FILE *ssh_strict_fopen(const char *filename, size_t max_file_size)
+     return f;
+ }
+ 
++#ifdef HAVE_SECURE_ZERO_MEMORY
++void ssh_burn_win32(void *ptr, size_t cnt)
++{
++    SecureZeroMemory(ptr, cnt);
++}
++#endif
++
+ /** @} */

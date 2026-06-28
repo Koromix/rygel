@@ -2503,4 +2503,11 @@ FILE *ssh_strict_fopen(const char *filename, size_t max_file_size)
     return f;
 }
 
+#ifdef HAVE_SECURE_ZERO_MEMORY
+void ssh_burn_win32(void *ptr, size_t cnt)
+{
+    SecureZeroMemory(ptr, cnt);
+}
+#endif
+
 /** @} */

@@ -373,7 +373,8 @@ int ssh_connector_remove_event(ssh_connector connector);
 #elif defined(HAVE_MEMSET_S)
 #define ssh_burn(ptr, len) memset_s((ptr), (len), '\0', (len))
 #elif defined(HAVE_SECURE_ZERO_MEMORY)
-#define ssh_burn(ptr, len) SecureZeroMemory((ptr), (len))
+void ssh_burn_win32(void *ptr, size_t cnt);
+#define ssh_burn(ptr, len) ssh_burn_win32((ptr), (len))
 #else
 #if defined(HAVE_GCC_VOLATILE_MEMORY_PROTECTION)
 #define ssh_burn(ptr, len)                            \
