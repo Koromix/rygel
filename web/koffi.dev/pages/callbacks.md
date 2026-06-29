@@ -9,7 +9,7 @@ import koffi from 'koffi';
 // With the classic syntax, this callback expects an integer and returns nothing
 const ExampleCallback = koffi.proto('ExampleCallback', 'void', ['int']);
 
-// With the prototype parser, this callback expects a double and float, and returns the sum as a double
+// With the prototype parser, this callback expects a double and float, and returns a double
 const AddDoubleFloat = koffi.proto('double AddDoubleFloat(double d, float f)');
 ```
 
