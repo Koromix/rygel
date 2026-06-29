@@ -467,21 +467,30 @@ constexpr T BigEndian(T v) { return ReverseBytes(v); }
 
 static inline Size AlignLen(Size len, Size align)
 {
-    Size aligned = (len + align - 1) / align * align;
+    K_ASSERT(align >= 1 && !((align - 1) & align));
+
+    // Compilers can optimize x / align * align... for unsigned types.
+    // It's pessimized for signed types, to handle len < 0.
+
+    Size aligned = (len + align - 1) & ~(align - 1);
     return aligned;
 }
 
 template <typename T>
 static inline T *AlignUp(T *ptr, Size align)
 {
-    uint8_t *aligned = (uint8_t *)(((uintptr_t)ptr + align - 1) / align * align);
+    K_ASSERT(align >= 1 && !((align - 1) & align));
+
+    uint8_t *aligned = (uint8_t *)(((uintptr_t)ptr + align - 1) & ~(align - 1));
     return (T *)aligned;
 }
 
 template <typename T>
 static inline T *AlignDown(T *ptr, Size align)
 {
-    uint8_t *aligned = (uint8_t *)((uintptr_t)ptr / align * align);
+    K_ASSERT(align >= 1 && !((align - 1) & align));
+
+    uint8_t *aligned = (uint8_t *)((uintptr_t)ptr & ~(align - 1));
     return (T *)aligned;
 }
 
