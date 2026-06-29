@@ -5,6 +5,23 @@
 
 ## Koffi 3
 
+### Koffi 3.1
+
+#### Koffi 3.1.0
+
+*Released on 2026-06-29*
+
+- Add endian-sensitive integer decoding functions
+- Drop required but useless type specifier from `lib.symbol()`
+- Add `wstring` type alias for wide strings
+- Add platform-dependent `koffi.decode.wstring()` function
+- Improve performance of various functions and value conversions
+- Optimize Windows build flags
+- Fix static native loading from the koffi ESM entry point ([@yibe](https://codeberg.org/yibe))
+- Fix minor memory and reference leaks on exit
+- Fix length argument types in TypeScript definition
+- Reorganize documentation pages
+
 ### Koffi 3.0
 
 #### Koffi 3.0.2
