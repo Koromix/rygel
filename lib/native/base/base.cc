@@ -5689,8 +5689,13 @@ Size ReadCommandOutput(const char *cmd_line, Span<uint8_t> out_output)
     };
 
     int exit_code;
-    if (!ExecuteCommandLine(cmd_line, info, MakeSpan((const uint8_t *)nullptr, 0), write, &exit_code))
+    if (!ExecuteCommandLine(cmd_line, info, MakeSpan((const uint8_t *)nullptr, 0), write, &exit_code)) {
+        if (out_output.len) {
+            Span<const char> output = out_output.As<const char>();
+            LogError("Command '%1' failed: %2", cmd_line, output);
+        }
         return -1;
+    }
     if (exit_code) {
         LogDebug("Command '%1' failed (exit code: %2)", cmd_line, exit_code);
         return -1;
@@ -5706,17 +5711,26 @@ bool ReadCommandOutput(const char *cmd_line, HeapArray<uint8_t> *out_output)
         { "LC_ALL", "C" }
     };
 
+    Size start_len = out_output->len;
+    K_DEFER_N(err_guard) { out_output->RemoveFrom(start_len); };
+
     ExecuteInfo info = {};
     info.env_variables = variables;
 
     int exit_code;
-    if (!ExecuteCommandLine(cmd_line, info, {}, Mebibytes(1), out_output, &exit_code))
+    if (!ExecuteCommandLine(cmd_line, info, {}, Mebibytes(1), out_output, &exit_code)) {
+        if (out_output->len > start_len) {
+            Span<const char> output = out_output->Take(start_len, out_output->len - start_len).As<const char>();
+            LogError("Command '%1' failed: %2", cmd_line, output);
+        }
         return false;
+    }
     if (exit_code) {
         LogDebug("Command '%1' failed (exit code: %2)", cmd_line, exit_code);
         return false;
     }
 
+    err_guard.Disable();
     return true;
 }
 
