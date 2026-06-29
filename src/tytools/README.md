@@ -25,11 +25,11 @@ Each tool is **independent** and you only need the one executable to use it. The
 
 ## Windows
 
-Download ready-to-use binaries here: https://download.koromix.dev/tytools/
+Download ready-to-use binaries here: https://download.koromix.dev/releases/tytools/
 
 ## macOS
 
-Download ready-to-use binaries here: https://download.koromix.dev/tytools/
+Download ready-to-use binaries here: https://download.koromix.dev/releases/tytools/
 
 ## Linux (Debian)
 

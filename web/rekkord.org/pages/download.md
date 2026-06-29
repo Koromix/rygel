@@ -3,14 +3,14 @@
 > [!IMPORTANT]
 > Rekkord is currently in active development, we recommend using **redundant backups**.
 
-Download ready-to-use binaries here: https://download.koromix.dev/rekkord
+Download ready-to-use binaries here: https://download.koromix.dev/releases/rekkord
 
 # macOS
 
 > [!IMPORTANT]
 > Rekkord is currently in active development, we recommend using **redundant backups**.
 
-Download ready-to-use binaries here: https://download.koromix.dev/rekkord
+Download ready-to-use binaries here: https://download.koromix.dev/releases/rekkord
 
 # Linux
 
