@@ -12,7 +12,7 @@
 *Released on 2026-06-29*
 
 - Add endian-sensitive integer decoding functions
-- Drop required but useless type specifier from `lib.symbol()`
+- Drop useless but required type specifier from `lib.symbol()`
 - Add `wstring` type alias for wide strings
 - Add platform-dependent `koffi.decode.wstring()` function
 - Improve performance of various functions and value conversions
@@ -20,7 +20,7 @@
 - Fix static native loading from the koffi ESM entry point ([@yibe](https://codeberg.org/yibe))
 - Fix minor memory and reference leaks on exit
 - Fix length argument types in TypeScript definition
-- Reorganize documentation pages
+- Reorganize documentation
 
 ### Koffi 3.0
 
