@@ -1166,15 +1166,11 @@ private:
 };
 
 class BlockAllocator final: public Allocator {
-    struct Bucket {
-        Size used;
-        uint8_t data[];
-    };
-
     LinkedAllocator allocator;
     Size block_size;
 
-    Bucket *current_bucket = nullptr;
+    uint8_t *bucket_ptr = nullptr;
+    uint8_t *bucket_end = nullptr;
     uint8_t *last_alloc = nullptr;
 
 public:
@@ -1200,9 +1196,6 @@ public:
 
     void GiveTo(LinkedAllocator *alloc);
     void GiveTo(BlockAllocator *alloc) { GiveTo(&alloc->allocator); }
-
-private:
-    bool AllocateSeparately(Size aligned_size) const { return aligned_size > block_size / 2; }
 };
 
 static inline void *AllocateRaw(Allocator *alloc, Size size)
