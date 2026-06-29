@@ -146,12 +146,12 @@ function runNodeFfi(time) {
     const lib = new ffi.DynamicLibrary(process.platform == 'win32' ? 'msvcrt.dll' : null);
 
     const srand =  lib.getFunction('srand', {
-        parameters: ['u32'],
-        result: 'void'
+        arguments: ['u32'],
+        return: 'void'
     });
     const rand =  lib.getFunction('rand', {
-        parameters: [],
-        result: 'i32'
+        arguments: [],
+        return: 'i32'
     });
 
     srand(42);

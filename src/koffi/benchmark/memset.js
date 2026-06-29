@@ -143,8 +143,8 @@ function runNodeFfi(time) {
     const lib = new ffi.DynamicLibrary(process.platform == 'win32' ? 'msvcrt.dll' : null);
 
     const memset = lib.getFunction('memset', {
-        parameters: ['ptr', 'i32', 'uint64'],
-        result: 'ptr'
+        arguments: ['ptr', 'i32', 'uint64'],
+        return: 'ptr'
     });
 
     let buf = Buffer.alloc(8192);

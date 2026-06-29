@@ -177,8 +177,8 @@ function runNodeFfi(time) {
     let lib = new ffi.DynamicLibrary(process.platform == 'win32' ? 'msvcrt.dll' : null);
 
     const qsort = lib.getFunction('qsort', {
-        parameters: ['ptr', 'u64', 'u64', 'ptr'],
-        result: 'void'
+        arguments: ['ptr', 'u64', 'u64', 'ptr'],
+        return: 'void'
     });
 
     const cmp = (ptr1, ptr2) => {
@@ -187,7 +187,7 @@ function runNodeFfi(time) {
 
         return a - b;
     };
-    const callback = lib.registerCallback({ result: 'i32', parameters: ['ptr', 'ptr'] }, cmp);
+    const callback = lib.registerCallback({ return: 'i32', arguments: ['ptr', 'ptr'] }, cmp);
 
     let start = performance.now();
     let iterations = 0;

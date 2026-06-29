@@ -137,8 +137,8 @@ function runNodeFfi(time) {
     const lib = new ffi.DynamicLibrary(process.platform == 'win32' ? 'msvcrt.dll' : null);
 
     const atoi = lib.getFunction('atoi', {
-        parameters: ['string'],
-        result: 'i32'
+        arguments: ['string'],
+        return: 'i32'
     });
 
     let start = performance.now();
