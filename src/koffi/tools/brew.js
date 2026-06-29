@@ -710,6 +710,11 @@ async function bundleScripts(dest_dir, packages, build_dir, drop) {
             fragments.push('// SPDX-License-Identifier: MIT\n' +
                            '// SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>');
 
+            if (format == 'esm') {
+                fragments.push('import { createRequire } from "node:module";\n' +
+                               'const require = createRequire(import.meta.url);');
+            }
+
             fragments.push('function loadStatic(pkg) {\n' +
                            '    let native = null;');
 
