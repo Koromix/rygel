@@ -363,10 +363,13 @@ BlockAllocator& BlockAllocator::operator=(BlockAllocator &&other)
     allocator.operator=(std::move(other.allocator));
 
     block_size = other.block_size;
-    current_bucket = other.current_bucket;
+
+    bucket_ptr = other.bucket_ptr;
+    bucket_end = other.bucket_end;
     last_alloc = other.last_alloc;
 
-    other.current_bucket = nullptr;
+    other.bucket_ptr = nullptr;
+    other.bucket_end = nullptr;
     other.last_alloc = nullptr;
 
     return *this;
@@ -376,9 +379,9 @@ void BlockAllocator::Reset()
 {
     last_alloc = nullptr;
 
-    if (current_bucket) {
-        current_bucket->used = 0;
-        allocator.ReleaseAllExcept(current_bucket);
+    if (bucket_ptr) {
+        bucket_ptr = bucket_end - block_size;
+        allocator.ReleaseAllExcept(bucket_ptr);
     } else {
         allocator.ReleaseAll();
     }
@@ -386,7 +389,8 @@ void BlockAllocator::Reset()
 
 void BlockAllocator::ReleaseAll()
 {
-    current_bucket = nullptr;
+    bucket_ptr = nullptr;
+    bucket_end = nullptr;
     last_alloc = nullptr;
 
     allocator.ReleaseAll();
@@ -396,88 +400,72 @@ void *BlockAllocator::Allocate(Size size)
 {
     K_ASSERT(size >= 0);
 
-    // Keep alignement requirements
-    Size aligned_size = AlignLen(size, 8);
+    uint8_t *ptr = bucket_ptr;
+    uint8_t *new_ptr = AlignUp(ptr + size, 8);
 
-    if (AllocateSeparately(aligned_size)) {
-        uint8_t *ptr = (uint8_t *)allocator.Allocate(size);
-        return ptr;
+    if (new_ptr <= bucket_end) [[likely]] {
+        bucket_ptr = new_ptr;
+    } else if (size <= block_size) {
+        bucket_ptr = (uint8_t *)allocator.Allocate(block_size);
+        bucket_end = bucket_ptr + block_size;
+
+        ptr = bucket_ptr;
+        bucket_ptr = AlignUp(ptr + size, 8);
     } else {
-        if (!current_bucket || (current_bucket->used + aligned_size) > block_size) {
-            current_bucket = (Bucket *)allocator.Allocate(K_SIZE(Bucket) + block_size);
-            current_bucket->used = 0;
-        }
-
-        uint8_t *ptr = current_bucket->data + current_bucket->used;
-        current_bucket->used += aligned_size;
-
-        last_alloc = ptr;
-        return ptr;
+        return allocator.Allocate(size);
     }
+
+    last_alloc = ptr;
+    return ptr;
 }
 
 void *BlockAllocator::Resize(void *ptr, Size old_size, Size new_size)
 {
     K_ASSERT(old_size >= 0);
     K_ASSERT(new_size >= 0);
+    K_ASSERT(ptr || !old_size);
 
     if (!new_size) {
         Release(ptr, old_size);
-        ptr = nullptr;
-    } else {
-        if (!ptr) {
-            old_size = 0;
-        }
-
-        Size aligned_old_size = AlignLen(old_size, 8);
-        Size aligned_new_size = AlignLen(new_size, 8);
-        Size aligned_delta = aligned_new_size - aligned_old_size;
-
-        // Try fast path
-        if (ptr && ptr == last_alloc &&
-                (current_bucket->used + aligned_delta) <= block_size &&
-                !AllocateSeparately(aligned_new_size)) {
-            current_bucket->used += aligned_delta;
-        } else if (AllocateSeparately(aligned_old_size)) {
-            ptr = allocator.Resize(ptr, old_size, new_size);
-        } else {
-            void *new_ptr = Allocate(new_size);
-
-            Size copy = std::min(old_size, new_size);
-            MemCpy(new_ptr, ptr, copy);
-
-            ptr = new_ptr;
-        }
+        return nullptr;
     }
 
-    return ptr;
+    // Let's be optimistic!
+    uint8_t *new_ptr = AlignUp((uint8_t *)ptr + new_size, 8);
+
+    if (ptr == last_alloc && new_ptr <= bucket_end) {
+        K_ASSERT(ptr);
+
+        bucket_ptr = new_ptr;
+        return ptr;
+    } else if (old_size <= block_size) {
+        uint8_t *copy_ptr = (uint8_t *)Allocate(new_size);
+        Size copy_len = std::min(old_size, new_size);
+
+        MemCpy(copy_ptr, ptr, copy_len);
+
+        return copy_ptr;
+    } else {
+        return allocator.Resize(ptr, old_size, new_size);
+    }
 }
 
 void BlockAllocator::Release(const void *ptr, Size size)
 {
     K_ASSERT(size >= 0);
 
-    if (ptr) {
-        Size aligned_size = AlignLen(size, 8);
-
-        if (ptr == last_alloc) {
-            current_bucket->used -= aligned_size;
-
-            if (!current_bucket->used) {
-                allocator.Release(current_bucket, K_SIZE(Bucket) + block_size);
-                current_bucket = nullptr;
-            }
-
-            last_alloc = nullptr;
-        } else if (AllocateSeparately(aligned_size)) {
-            allocator.Release(ptr, size);
-        }
+    if (ptr == last_alloc) {
+        bucket_ptr = last_alloc;
+        last_alloc = nullptr;
+    } else if (size > block_size) {
+        allocator.Release(ptr, size);
     }
 }
 
 void BlockAllocator::GiveTo(LinkedAllocator *alloc)
 {
-    current_bucket = nullptr;
+    bucket_ptr = nullptr;
+    bucket_end = nullptr;
     last_alloc = nullptr;
 
     allocator.GiveTo(alloc);
