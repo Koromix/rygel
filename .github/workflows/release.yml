@@ -1,0 +1,71 @@
+name: Build and Release
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version (e.g., v1.0.0) - leave empty to auto-increment"
+        required: false
+        type: string
+      project:
+        description: "Which project to tag"
+        required: true
+        type: choice
+        options:
+          - rekkord
+          - goupile
+          - tytools
+          - meestic
+          #- felix
+          #- heimdall
+      increment:
+        description: "How to increment version if not specified"
+        required: false
+        default: "patch"
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+jobs:
+  release:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v5
+        with:
+          fetch-depth: 0
+      - name: Determine new version
+        id: version
+        run: |
+          bash .github/scripts/increment-tag.sh \
+            "${{ inputs.project }}" \
+            "${{ inputs.version }}" \
+            "${{ inputs.increment || 'patch' }}" \
+            | tee $GITHUB_OUTPUT
+      - name: Building source tarball for ${{ inputs.project }}
+        run: |
+          export VERSION="${{ steps.version.outputs.version }}"
+          tag="${{ inputs.project }}/${{ steps.version.outputs.version }}"
+
+          sudo apt-get update
+          sudo apt-get install build-essential libudev-dev qt6-base-dev qt6-base-dev-tools qt6-svg-dev
+
+          bash src/${{ inputs.project }}/dist/source/source.sh
+
+          mv bin/Packages/*tar.gz bin/Packages/${{ inputs.project }}-${{ steps.version.outputs.version }}.tar.gz
+          mv bin/Packages/*tar.xz bin/Packages/${{ inputs.project }}-${{ steps.version.outputs.version }}.tar.xz
+      - name: Tag and release
+        run: |
+          tag="${{ inputs.project }}/${{ steps.version.outputs.version }}"
+
+          git tag $tag
+          git push origin $tag
+
+          gh release create $tag \
+            --title "Release $tag" \
+            --notes "Release $tag" \
+            --latest \
+            bin/Packages/*tar*
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}

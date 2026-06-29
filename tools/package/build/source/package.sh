@@ -12,7 +12,8 @@ directories=$(grep -E -o '[|"](lib/native|lib/web|src|vendor)/[a-zA-Z0-9_\-]+/' 
 sources="bootstrap.sh bootstrap.bat FelixBuild.ini.presets ${directories}"
 imports=$(ls "${DEST_DIR}/bin/Log/"*.json | grep -v compile_commands | xargs jq -r '.imports | .[]')
 
-VERSION=$(./felix -pDebug -O "${DEST_DIR}/bin" --run "${VERSION_TARGET}" --version | awk -F'[ ]' "/^${VERSION_TARGET}/ {print \$2}")
+LOCAL_VERSION=$(./felix -pDebug -O "${DEST_DIR}/bin" --run "${VERSION_TARGET}" --version | awk -F'[ ]' "/^${VERSION_TARGET}/ {print \$2}")
+VERSION=${VERSION:-$LOCAL_VERSION}
 TMP_DIR="${DEST_DIR}/${PKG_NAME}_${VERSION}"
 DEST_TAR="../../${PKG_NAME}_${VERSION}_src.tar"
 
