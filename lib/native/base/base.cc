@@ -186,14 +186,11 @@ void *MallocAllocator::Resize(void *ptr, Size old_size, Size new_size)
 {
     if (!new_size) {
         Release(ptr, old_size);
-        ptr = nullptr;
-    } else {
-        void *new_ptr = realloc(ptr, (size_t)new_size);
-        K_CRITICAL(new_ptr || !new_size, "Failed to resize %1 memory block to %2",
-                                          FmtMemSize(old_size), FmtMemSize(new_size));
-
-        ptr = new_ptr;
+        return nullptr;
     }
+
+    ptr = realloc(ptr, (size_t)new_size);
+    K_CRITICAL(ptr || !new_size, "Failed to resize %1 memory block to %2", FmtMemSize(old_size), FmtMemSize(new_size));
 
     return ptr;
 }
@@ -401,22 +398,28 @@ void *BlockAllocator::Allocate(Size size)
     K_ASSERT(size >= 0);
 
     uint8_t *ptr = bucket_ptr;
-    uint8_t *new_ptr = AlignUp(ptr + size, 8);
 
-    if (new_ptr <= bucket_end) [[likely]] {
+    // Fast path
+    if (uint8_t *new_ptr = AlignUp(ptr + size, 8); new_ptr <= bucket_end) [[likely]] {
         bucket_ptr = new_ptr;
-    } else if (size <= block_size) {
+
+        last_alloc = ptr;
+        return ptr;
+    }
+
+    if (size <= block_size) {
         bucket_ptr = (uint8_t *)allocator.Allocate(block_size);
         bucket_end = bucket_ptr + block_size;
 
         ptr = bucket_ptr;
         bucket_ptr = AlignUp(ptr + size, 8);
-    } else {
-        return allocator.Allocate(size);
+
+        last_alloc = ptr;
+        return ptr;
     }
 
-    last_alloc = ptr;
-    return ptr;
+    // Fallback for big allocations
+    return allocator.Allocate(size);
 }
 
 void *BlockAllocator::Resize(void *ptr, Size old_size, Size new_size)
@@ -430,24 +433,25 @@ void *BlockAllocator::Resize(void *ptr, Size old_size, Size new_size)
         return nullptr;
     }
 
-    // Let's be optimistic!
-    uint8_t *new_ptr = AlignUp((uint8_t *)ptr + new_size, 8);
-
-    if (ptr == last_alloc && new_ptr <= bucket_end) {
+    // Fast path
+    if (uint8_t *new_ptr = AlignUp((uint8_t *)ptr + new_size, 8); ptr == last_alloc && new_ptr <= bucket_end) {
         K_ASSERT(ptr);
 
         bucket_ptr = new_ptr;
         return ptr;
-    } else if (old_size <= block_size) {
+    }
+
+    if (old_size <= block_size) {
         uint8_t *copy_ptr = (uint8_t *)Allocate(new_size);
         Size copy_len = std::min(old_size, new_size);
 
         MemCpy(copy_ptr, ptr, copy_len);
 
         return copy_ptr;
-    } else {
-        return allocator.Resize(ptr, old_size, new_size);
     }
+
+    // Old allocation fell back to separate allocation, we can resize at will now!
+    return allocator.Resize(ptr, old_size, new_size);
 }
 
 void BlockAllocator::Release(const void *ptr, Size size)
