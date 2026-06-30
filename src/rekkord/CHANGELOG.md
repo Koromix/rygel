@@ -1,10 +1,9 @@
+> [!IMPORTANT]
+> Rekkord is currently in active development, we recommend using **redundant backups**.
+
 # Version history
 
 ## Alpha versions
-
-> [!CAUTION]
-> This software has not been stabilized yet and **must not be used as your primary backup** tool.
-> You've been warned!
 
 ### Rekkord 0.105
 
