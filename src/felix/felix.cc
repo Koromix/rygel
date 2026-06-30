@@ -655,7 +655,7 @@ For help about those commands, type: %!..+%1 command --help%!0)", FelixTarget);
     HeapArray<const SourceFileInfo *> enabled_sources;
     if (selectors.len) {
         bool valid = true;
-        HashSet<const char *> handled_set;
+        HashSet<const void *> handled_set;
 
         for (const char *selector: selectors) {
             bool match = false;
@@ -663,7 +663,7 @@ For help about those commands, type: %!..+%1 command --help%!0)", FelixTarget);
             // Match targets
             for (const TargetInfo &target: target_set.targets) {
                 if (MatchPathSpec(target.name, selector)) {
-                    bool inserted = handled_set.InsertOrFail(target.name);
+                    bool inserted = handled_set.InsertOrFail(&target);
 
                     if (inserted) {
                         if (!target.TestPlatforms(compiler->platform)) {
@@ -687,7 +687,7 @@ For help about those commands, type: %!..+%1 command --help%!0)", FelixTarget);
             // Match source files
             for (const SourceFileInfo &src: target_set.sources) {
                 if (MatchPathSpec(src.filename, selector)) {
-                    bool inserted = handled_set.InsertOrFail(src.filename);
+                    bool inserted = handled_set.InsertOrFail(&src);
 
                     if (inserted) {
                         if (!src.target->TestPlatforms(compiler->platform)) {
