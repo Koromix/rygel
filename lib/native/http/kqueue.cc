@@ -19,6 +19,11 @@
 #include <sys/event.h>
 #include <sys/uio.h>
 
+#if defined(__APPLE__)
+    // The flag may exist, but it does not seem to work with recv!
+    #undef MSG_DONTWAIT
+#endif
+
 namespace K {
 
 struct http_Socket {
@@ -294,7 +299,6 @@ void http_IO::SendFile(int status, int fd, int64_t len)
     }
 
 #if defined(__FreeBSD__) || defined(__APPLE__)
-    Span<const char> intro = PrepareResponse(status, CompressionType::None, len);
     bool cork = (len >= MaxSend);
 
     if (cork) {
@@ -306,8 +310,16 @@ void http_IO::SendFile(int status, int fd, int64_t len)
         }
     };
 
-    struct iovec header = { (void *)intro.ptr, (size_t)intro.len };
-    struct sf_hdtr hdtr = { &header, 1, nullptr, 0 };
+    // In theory we can use the hdtr argument of sendfile, but the documentation is confusing.
+    // Among others, it's not clear what the "sent" value means regarding the headers. Let's not risk it.
+    {
+        Span<const char> intro = PrepareResponse(status, CompressionType::None, len);
+
+        if (!daemon->WriteSocket(socket, intro.As<uint8_t>())) {
+            request.keepalive = false;
+            return;
+        }
+    }
 
     off_t offset = 0;
     int64_t remain = len;
@@ -318,10 +330,10 @@ void http_IO::SendFile(int status, int fd, int64_t len)
 
 #if defined(__FreeBSD__)
         off_t sent = 0;
-        int ret = sendfile(fd, socket->sock, offset, (size_t)send, &hdtr, &sent, 0);
+        int ret = sendfile(fd, socket->sock, offset, (size_t)send, nullptr, &sent, 0);
 #else
         off_t sent = (off_t)send;
-        int ret = sendfile(fd, socket->sock, offset, &sent, &hdtr, 0);
+        int ret = sendfile(fd, socket->sock, offset, &sent, nullptr, 0);
 #endif
 
         if (ret < 0) {
@@ -345,19 +357,8 @@ void http_IO::SendFile(int status, int fd, int64_t len)
 
         socket->client.timeout_at = GetMonotonicClock() + daemon->send_timeout;
 
-        if (sent < (Size)header.iov_len) [[unlikely]] {
-            header.iov_base = (uint8_t *)header.iov_base + sent;
-            header.iov_len -= sent;
-
-            continue;
-        }
-        sent -= (Size)header.iov_len;
-
         offset += sent;
         remain -= sent;
-
-        hdtr.hdr_cnt = 0;
-        header.iov_len = 0;
     } while (remain);
 #else
     Send(status, len, [&](StreamWriter *writer) {
