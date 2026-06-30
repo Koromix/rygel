@@ -111,6 +111,7 @@ bool MigrateDatabase(sq_Database *db)
             } [[fallthrough]];
 
             case 2: {
+#if defined(WEB_WATCH)
                 bool success = db->RunMany(R"(
                     CREATE TABLE repositories (
                         id INTEGER PRIMARY KEY NOT NULL,
@@ -130,9 +131,11 @@ bool MigrateDatabase(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+#endif
             } [[fallthrough]];
 
             case 3: {
+#if defined(WEB_WATCH)
                 bool success = db->RunMany(R"(
                     DROP INDEX repositories_un;
 
@@ -180,9 +183,11 @@ bool MigrateDatabase(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+#endif
             } [[fallthrough]];
 
             case 4: {
+#if defined(WEB_WATCH)
                 bool success = db->RunMany(R"(
                     CREATE TABLE snapshots (
                         repository INTEGER REFERENCES repositories (id) ON DELETE CASCADE,
@@ -197,9 +202,11 @@ bool MigrateDatabase(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+#endif
             } [[fallthrough]];
 
             case 5: {
+#if defined(WEB_WATCH)
                 bool success = db->RunMany(R"(
                     CREATE TABLE failures (
                         repository INTEGER REFERENCES repositories (id) ON DELETE CASCADE,
@@ -221,6 +228,7 @@ bool MigrateDatabase(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+#endif
             } [[fallthrough]];
 
             case 6: {
@@ -238,6 +246,7 @@ bool MigrateDatabase(sq_Database *db)
             } [[fallthrough]];
 
             case 7: {
+#if defined(WEB_WATCH)
                 bool success = db->RunMany(R"(
                     DROP INDEX failures_r;
                     DROP INDEX stales_rc;
@@ -267,9 +276,11 @@ bool MigrateDatabase(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+#endif
             } [[fallthrough]];
 
             case 8: {
+#if defined(WEB_WATCH)
                 bool success = db->RunMany(R"(
                     ALTER TABLE channels RENAME COLUMN hash TO oid;
                     ALTER TABLE snapshots RENAME COLUMN hash TO oid;
@@ -279,15 +290,18 @@ bool MigrateDatabase(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+#endif
             } [[fallthrough]];
 
             case 9: {
+#if defined(WEB_WATCH)
                 bool success = db->RunMany(R"(
                     UPDATE channels SET oid = UPPER(oid);
                     UPDATE snapshots SET oid = UPPER(oid);
                 )");
                 if (!success)
                     return false;
+#endif
             } [[fallthrough]];
 
             case 10: {
@@ -300,15 +314,18 @@ bool MigrateDatabase(sq_Database *db)
             } [[fallthrough]];
 
             case 11: {
+#if defined(WEB_WATCH)
                 bool success = db->RunMany(R"(
                     UPDATE variables SET key = 'S3_ACCESS_KEY_ID' WHERE key = 'AWS_ACCESS_KEY_ID';
                     UPDATE variables SET key = 'S3_SECRET_ACCESS_KEY' WHERE key = 'AWS_SECRET_ACCESS_KEY';
                 )");
                 if (!success)
                     return false;
+#endif
             } [[fallthrough]];
 
             case 12: {
+#if defined(WEB_WATCH)
                 bool success = db->RunMany(R"(
                     DROP INDEX snapshots_c;
                     DROP INDEX IF EXISTS snapshots_ro;
@@ -335,9 +352,11 @@ bool MigrateDatabase(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+#endif
             } [[fallthrough]];
 
             case 13: {
+#if defined(WEB_WATCH)
                 bool success = db->RunMany(R"(
                     CREATE TABLE keys (
                         id INTEGER PRIMARY KEY NOT NULL,
@@ -349,9 +368,11 @@ bool MigrateDatabase(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+#endif
             } [[fallthrough]];
 
             case 14: {
+#if defined(WEB_WATCH)
                 bool success = db->RunMany(R"(
                     ALTER TABLE keys RENAME TO keys_BAK;
 
@@ -372,14 +393,17 @@ bool MigrateDatabase(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+#endif
             } [[fallthrough]];
 
             case 15: {
+#if defined(WEB_WATCH)
                 bool success = db->RunMany(R"(
                     CREATE UNIQUE INDEX keys_k ON keys (key);
                 )");
                 if (!success)
                     return false;
+#endif
             } [[fallthrough]];
 
             case 16: {
@@ -391,6 +415,7 @@ bool MigrateDatabase(sq_Database *db)
             } [[fallthrough]];
 
             case 17: {
+#if defined(WEB_WATCH)
                 bool success = db->RunMany(R"(
                     CREATE TABLE plans (
                         id INTEGER PRIMARY KEY NOT NULL,
@@ -417,18 +442,22 @@ bool MigrateDatabase(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+#endif
             } [[fallthrough]];
 
             case 18: {
+#if defined(WEB_WATCH)
                 bool success = db->RunMany(R"(
                     DROP INDEX keys_k;
                     DROP TABLE keys;
                 )");
                 if (!success)
                     return false;
+#endif
             } [[fallthrough]];
 
             case 19: {
+#if defined(WEB_WATCH)
                 bool success = db->RunMany(R"(
                     DROP TABLE paths;
 
@@ -439,9 +468,11 @@ bool MigrateDatabase(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+#endif
             } [[fallthrough]];
 
             case 20: {
+#if defined(WEB_WATCH)
                 bool success = db->RunMany(R"(
                     CREATE TABLE runs (
                         id INTEGER PRIMARY KEY NOT NULL,
@@ -454,17 +485,21 @@ bool MigrateDatabase(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+#endif
             } [[fallthrough]];
 
             case 21: {
+#if defined(WEB_WATCH)
                 bool success = db->RunMany(R"(
                     ALTER TABLE items ADD COLUMN changeset BLOB;
                 )");
                 if (!success)
                     return false;
+#endif
             } [[fallthrough]];
 
             case 22: {
+#if defined(WEB_WATCH)
                 bool success = db->RunMany(R"(
                     PRAGMA defer_foreign_keys = ON;
 
@@ -510,9 +545,11 @@ bool MigrateDatabase(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+#endif
             } [[fallthrough]];
 
             case 23: {
+#if defined(WEB_WATCH)
                 bool success = db->RunMany(R"(
                     DROP INDEX repositories_un;
                     CREATE UNIQUE INDEX repositories_on ON repositories (owner, name);
@@ -524,9 +561,11 @@ bool MigrateDatabase(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+#endif
             } [[fallthrough]];
 
             case 24: {
+#if defined(WEB_WATCH)
                 bool success = db->RunMany(R"(
                     DROP INDEX items_pc;
 
@@ -572,23 +611,28 @@ bool MigrateDatabase(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+#endif
             } [[fallthrough]];
 
             case 25: {
+#if defined(WEB_WATCH)
                 bool success = db->RunMany(R"(
                     ALTER TABLE runs RENAME TO reports;
                     ALTER TABLE items RENAME COLUMN run TO report;
                 )");
                 if (!success)
                     return false;
+#endif
             } [[fallthrough]];
 
             case 26: {
+#if defined(WEB_WATCH)
                 bool success = db->RunMany(R"(
                     ALTER TABLE plans ADD COLUMN scan INTEGER;
                 )");
                 if (!success)
                     return false;
+#endif
             } [[fallthrough]];
 
             case 27: {
@@ -656,15 +700,18 @@ bool MigrateDatabase(sq_Database *db)
             } [[fallthrough]];
 
             case 30: {
+#if defined(WEB_WATCH)
                 bool success = db->RunMany(R"(
                     DROP INDEX repositories_on;
                     ALTER TABLE repositories DROP COLUMN name;
                 )");
                 if (!success)
                     return false;
+#endif
             } [[fallthrough]];
 
             case 31: {
+#if defined(WEB_WATCH)
                 bool success = db->RunMany(R"(
                     CREATE TABLE reports_NEW (
                         id INTEGER PRIMARY KEY NOT NULL,
@@ -693,17 +740,21 @@ bool MigrateDatabase(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+#endif
             } [[fallthrough]];
 
             case 32: {
+#if defined(WEB_WATCH)
                 bool success = db->RunMany(R"(
                     ALTER TABLE repositories ADD COLUMN name TEXT;
                 )");
                 if (!success)
                     return false;
+#endif
             } [[fallthrough]];
 
             case 33: {
+#if defined(WEB_WATCH)
                 bool success = db->RunMany(R"(
                     CREATE TABLE paths_NEW (
                         item INTEGER REFERENCES items (id) ON DELETE CASCADE,
@@ -719,6 +770,7 @@ bool MigrateDatabase(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+#endif
             } [[fallthrough]];
 
             case 34: {
@@ -735,7 +787,12 @@ bool MigrateDatabase(sq_Database *db)
                     ALTER TABLE users ADD COLUMN ckey BLOB;
                     UPDATE users SET ckey = rnd_safe(32);
                     ALTER TABLE users ALTER ckey SET NOT NULL;
+                )");
+                if (!success)
+                    return false;
 
+#if defined(WEB_DROP)
+                success = db->RunMany(R"(
                     CREATE TABLE drops (
                         id INTEGER PRIMARY KEY NOT NULL,
                         owner INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
@@ -753,17 +810,21 @@ bool MigrateDatabase(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+#endif
             } [[fallthrough]];
 
             case 36: {
+#if defined(WEB_WATCH)
                 bool success = db->RunMany(R"(
                     CREATE INDEX plans_o ON plans (owner);
                 )");
                 if (!success)
                     return false;
+#endif
             } [[fallthrough]];
 
             case 37: {
+#if defined(WEB_DROP)
                 bool success = db->RunMany(R"(
                     DELETE FROM drops;
 
@@ -772,9 +833,11 @@ bool MigrateDatabase(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+#endif
             } [[fallthrough]];
 
             case 38: {
+#if defined(WEB_DROP)
                 bool success = db->RunMany(R"(
                     DROP TABLE drops;
 
@@ -797,9 +860,11 @@ bool MigrateDatabase(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+#endif
             } [[fallthrough]];
 
             case 39: {
+#if defined(WEB_DROP)
                 bool success = db->RunMany(R"(
                     ALTER TABLE drops ADD COLUMN deleted INTEGER CHECK(deleted IN (0, 1));
                     UPDATE drops SET deleted = 0;
@@ -810,9 +875,11 @@ bool MigrateDatabase(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+#endif
             } [[fallthrough]];
 
             case 40: {
+#if defined(WEB_DROP)
                 bool success = db->RunMany(R"(
                     DROP TABLE drops;
 
@@ -838,9 +905,11 @@ bool MigrateDatabase(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+#endif
             } [[fallthrough]];
 
             case 41: {
+#if defined(WEB_DROP)
                 bool success = db->RunMany(R"(
                     CREATE TABLE quotas (
                         user INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
@@ -850,6 +919,7 @@ bool MigrateDatabase(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+#endif
             } // [[fallthrough]];
 
             static_assert(DatabaseVersion == 42);

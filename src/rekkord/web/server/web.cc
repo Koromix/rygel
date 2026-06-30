@@ -1,16 +1,25 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
+#if !defined(WEB_DROP) && !defined(WEB_WATCH)
+    #error Define WEB_DROP or WEB_WATCH
+#elif defined(WEB_DROP) && defined(WEB_WATCH)
+    #error Both WEB_DROP and WEB_WATCH are defined
+#endif
+
 #include "lib/native/base/base.hh"
-#include "rokkerd.hh"
-#include "alert.hh"
+#include "web.hh"
 #include "config.hh"
 #include "database.hh"
-#include "drop.hh"
+#if defined(WEB_DROP)
+    #include "drop.hh"
+#endif
 #include "link.hh"
 #include "mail.hh"
-#include "plan.hh"
-#include "repository.hh"
+#if defined(WEB_WATCH)
+    #include "plan.hh"
+    #include "repository.hh"
+#endif
 #include "user.hh"
 #include "lib/native/sandbox/sandbox.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
@@ -19,6 +28,12 @@ namespace K {
 
 Config config;
 sq_Database db;
+
+#if defined(WEB_DROP)
+static const char *const DefaultConfigName = "RekkordDrop.ini";
+#elif defined(WEB_WATCH)
+static const char *const DefaultConfigName = "RekkordWatch.ini";
+#endif
 
 static HashMap<const char *, const AssetInfo *> asset_map;
 static const AssetInfo *asset_index = nullptr;
@@ -242,10 +257,17 @@ static void InitAssets()
                 const char *url = Fmt(&asset_alloc, "/static/%1/%2", shared_etag, name).ptr;
                 asset_map.Set(url, &asset);
 
-                if (name == "m_app.js") {
+#if defined(WEB_DROP)
+                if (name == "m_drop.js") {
                     asset_js = url;
-                } else if (name == "m_app.css") {
+                } else if (name == "m_drop.css") {
                     asset_css = url;
+#elif defined(WEB_WATCH)
+                if (name == "m_watch.js") {
+                    asset_js = url;
+                } else if (name == "m_watch.css") {
+                    asset_css = url;
+#endif
                 } else if (EndsWith(name, ".js")) {
                     asset_bundles.Append(url);
                 }
@@ -354,54 +376,60 @@ static void HandleRequest(http_IO *io)
             HandlePictureSave(io);
         } else if (url == "/api/picture/delete" && method == http_RequestMethod::Post) {
             HandlePictureDelete(io);
-        } else if (config.backup && url == "/api/repository/list" && method == http_RequestMethod::Get) {
-            HandleRepositoryList(io);
-        } else if (config.backup && url == "/api/repository/get" && method == http_RequestMethod::Get) {
-            HandleRepositoryGet(io);
-        } else if (config.backup && url == "/api/repository/save" && method == http_RequestMethod::Post) {
-            HandleRepositorySave(io);
-        } else if (config.backup && url == "/api/repository/delete" && method == http_RequestMethod::Post) {
-            HandleRepositoryDelete(io);
-        } else if (config.backup && url == "/api/repository/snapshots" && method == http_RequestMethod::Get) {
-            HandleRepositorySnapshots(io);
-        } else if (config.backup && url == "/api/plan/list" && method == http_RequestMethod::Get) {
-            HandlePlanList(io);
-        } else if (config.backup && url == "/api/plan/get" && method == http_RequestMethod::Get) {
-            HandlePlanGet(io);
-        } else if (config.backup && url == "/api/plan/save" && method == http_RequestMethod::Post) {
-            HandlePlanSave(io);
-        } else if (config.backup && url == "/api/plan/delete" && method == http_RequestMethod::Post) {
-            HandlePlanDelete(io);
-        } else if (config.backup && url == "/api/plan/key" && method == http_RequestMethod::Post) {
-            HandlePlanKey(io);
-        } else if (config.backup && url == "/api/plan/fetch" && method == http_RequestMethod::Get) {
-            HandlePlanFetch(io);
-        } else if (config.backup && url == "/api/link/snapshot" && method == http_RequestMethod::Post) {
-            HandleLinkSnapshot(io);
-        } else if (config.drop && url == "/api/drop/list" && method == http_RequestMethod::Get) {
+#if defined(WEB_DROP)
+        } else if (url == "/api/drop/list" && method == http_RequestMethod::Get) {
             HandleDropList(io);
-        } else if (config.drop && url == "/api/drop/info" && method == http_RequestMethod::Get) {
+        } else if (url == "/api/drop/info" && method == http_RequestMethod::Get) {
             HandleDropInfo(io);
-        } else if (config.drop && url == "/api/drop/create" && method == http_RequestMethod::Post) {
+        } else if (url == "/api/drop/create" && method == http_RequestMethod::Post) {
             HandleDropCreate(io);
-        } else if (config.drop && url == "/api/drop/delete" && method == http_RequestMethod::Post) {
+        } else if (url == "/api/drop/delete" && method == http_RequestMethod::Post) {
             HandleDropDelete(io);
-        } else if (config.drop && url == "/api/drop/mark" && method == http_RequestMethod::Post) {
+        } else if (url == "/api/drop/mark" && method == http_RequestMethod::Post) {
             HandleDropMark(io);
-        } else if (config.drop && url == "/api/drop/fragment" && method == http_RequestMethod::Put) {
+        } else if (url == "/api/drop/fragment" && method == http_RequestMethod::Put) {
             HandleFragmentUpload(io);
-        } else if (config.drop && url == "/api/drop/fragment" && method == http_RequestMethod::Get) {
+        } else if (url == "/api/drop/fragment" && method == http_RequestMethod::Get) {
             HandleFragmentDownload(io);
+#endif
+#if defined(WEB_WATCH)
+        } else if (url == "/api/repository/list" && method == http_RequestMethod::Get) {
+            HandleRepositoryList(io);
+        } else if (url == "/api/repository/get" && method == http_RequestMethod::Get) {
+            HandleRepositoryGet(io);
+        } else if (url == "/api/repository/save" && method == http_RequestMethod::Post) {
+            HandleRepositorySave(io);
+        } else if (url == "/api/repository/delete" && method == http_RequestMethod::Post) {
+            HandleRepositoryDelete(io);
+        } else if (url == "/api/repository/snapshots" && method == http_RequestMethod::Get) {
+            HandleRepositorySnapshots(io);
+        } else if (url == "/api/plan/list" && method == http_RequestMethod::Get) {
+            HandlePlanList(io);
+        } else if (url == "/api/plan/get" && method == http_RequestMethod::Get) {
+            HandlePlanGet(io);
+        } else if (url == "/api/plan/save" && method == http_RequestMethod::Post) {
+            HandlePlanSave(io);
+        } else if (url == "/api/plan/delete" && method == http_RequestMethod::Post) {
+            HandlePlanDelete(io);
+        } else if (url == "/api/plan/key" && method == http_RequestMethod::Post) {
+            HandlePlanKey(io);
+        } else if (url == "/api/plan/fetch" && method == http_RequestMethod::Get) {
+            HandlePlanFetch(io);
+        } else if (url == "/api/link/snapshot" && method == http_RequestMethod::Post) {
+            HandleLinkSnapshot(io);
+#endif
         } else {
             io->SendError(404);
         }
 
         return;
     }
-    if (config.drop && StartsWith(url, "/drop/download/") && method == http_RequestMethod::Get) {
+#if defined(WEB_DROP)
+    if (StartsWith(url, "/drop/download/") && method == http_RequestMethod::Get) {
         HandleDropDownload(io);
         return;
     }
+#endif
 
     // User picture?
     if (StartsWith(url, "/pictures/") && method == http_RequestMethod::Get) {
@@ -447,9 +475,6 @@ static void HandleRequest(http_IO *io)
 
                     json.Key("title"); json.String(config.title);
                     json.Key("url"); json.String(config.url);
-
-                    json.Key("backup"); json.Bool(config.backup);
-                    json.Key("drop"); json.Bool(config.drop);
 
                     json.Key("auth"); json.StartObject();
                     json.Key("internal"); json.Bool(config.internal_auth);
@@ -512,7 +537,7 @@ int Main(int argc, char **argv)
     BlockAllocator temp_alloc;
 
     // Options
-    const char *config_filename = "rokkerd.ini";
+    const char *config_filename = DefaultConfigName;
     bool sandbox = false;
 
     const auto print_usage = [=](StreamWriter *st) {
@@ -549,7 +574,7 @@ Options:
                 return 0;
             } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 if (IsDirectory(opt.current_value)) {
-                    config_filename = Fmt(&temp_alloc, "%1%/rokkerd.ini", TrimStrRight(opt.current_value, K_PATH_SEPARATORS)).ptr;
+                    config_filename = Fmt(&temp_alloc, "%1%/%2", TrimStrRight(opt.current_value, K_PATH_SEPARATORS), DefaultConfigName).ptr;
                 } else {
                     config_filename = opt.current_value;
                 }
@@ -606,13 +631,12 @@ Options:
     LogInfo("Init assets");
     InitAssets();
 
-    if (config.drop) {
-        LogInfo("Init drops");
-
-        if (!InitDrops())
-            return 1;
-    }
+#if defined(WEB_DROP)
+    LogInfo("Init drops");
+    if (!InitDrops())
+        return 1;
     K_DEFER { ExitDrops(); };
+#endif
 
     // Run!
     LogInfo("Init HTTP server");
@@ -666,19 +690,21 @@ Options:
         LogInfo("Periodic timer set to %1 s", FmtDouble((double)timeout / 1000.0, 1));
 
         while (run) {
-            if (config.drop) {
-                LogDebug("Prune drops");
-                PruneDrops();
-            }
+#if defined(WEB_DROP)
+            LogDebug("Prune drops");
+            PruneDrops();
+#endif
+
+#if defined(WEB_WATCH)
+            LogDebug("Detect alerts");
+            DetectAlerts();
+#endif
 
             LogDebug("Prune tokens");
             PruneTokens();
 
             LogDebug("Prune sessions");
             PruneSessions();
-
-            LogDebug("Detect alerts");
-            DetectAlerts();
 
             LogDebug("Send mails");
             if (!SendMails()) {

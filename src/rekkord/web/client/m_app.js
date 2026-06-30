@@ -8,10 +8,6 @@ import { Base64 } from 'lib/web/base/mixer.js';
 import * as UI from 'lib/web/ui/ui.js';
 import { deploy } from 'lib/web/flat/static.js';
 import * as UserMod from './u_user.js';
-import * as PlanMod from './b_plan.js';
-import * as RepositoryMod from './b_repository.js';
-import { initRelay } from './d_relay.js';
-import * as DropMod from './d_drop.js';
 import { ASSETS } from '../assets/assets.js';
 
 import en from '../../i18n/en.json';
@@ -29,9 +25,11 @@ const MODES = {
     link: { run: UserMod.runLink },
     account: { run: UserMod.runAccount }
 };
-const DEFAULT_MODES = ['repositories', 'drops'];
 
 let languages = {};
+
+let default_mode = null;
+let render_menu = null;
 
 let route = {
     mode: null,
@@ -62,7 +60,7 @@ let cache = {
 // Init
 // ------------------------------------------------------------------------
 
-async function start() {
+async function init(modes, def, menu) {
     languages.en = en;
     languages.fr = fr;
 
@@ -77,27 +75,9 @@ async function start() {
 
     UI.init(run, renderApp);
 
-    // Init backup modes
-    if (ENV.backup) {
-        Object.assign(MODES, {
-            repositories: { run: RepositoryMod.runRepositories },
-            repository: { run: RepositoryMod.runRepository, path: [{ key: 'repository', type: 'integer' }]},
-
-            plans: { run: PlanMod.runPlans },
-            plan: { run: PlanMod.runPlan, path: [{ key: 'plan', type: 'integer' }]}
-        });
-    }
-
-    // Init drops
-    if (ENV.drop) {
-        Object.assign(MODES, {
-            drops: { run: DropMod.runDrops },
-            drop: { run: DropMod.runDrop, path: [{ key: 'drop', type: 'string' }] },
-            send: { run: DropMod.runSend }
-        });
-
-        await initRelay();
-    }
+    Object.assign(MODES, modes);
+    default_mode = def;
+    render_menu = menu;
 
     // Handle internal links
     Util.interceptLocalAnchors((e, href) => {
@@ -131,11 +111,6 @@ async function start() {
         if (rnd != null)
             session = await Net.get('/api/session/info');
     }
-
-    await go(window.location.href, false);
-
-    UI.main();
-    document.body.classList.remove('loading');
 }
 
 // ------------------------------------------------------------------------
@@ -158,7 +133,7 @@ function go(url = null, push = true) {
     switch (mode) {
         case 'login': {
             if (isLogged()) {
-                changes.mode = DEFAULT_MODES.find(mode => Object.hasOwn(MODES, mode));
+                changes.mode = default_mode;
             } else {
                 changes.mode = 'login';
             }
@@ -173,7 +148,7 @@ function go(url = null, push = true) {
             let info = MODES[mode];
 
             if (info == null) {
-                mode = DEFAULT_MODES.find(mode => Object.hasOwn(MODES, mode));
+                mode = default_mode;
                 info = MODES[mode];
             }
 
@@ -228,7 +203,7 @@ async function run(changes = {}, hash = null, push = false) {
                 return;
             }
 
-            let info = MODES[route.mode] ?? MODES[DEFAULT_MODES.find(mode => Object.hasOwn(MODES, mode))];
+            let info = MODES[route.mode] ?? MODES[default_mode];
             await info.run();
 
             // Update URL
@@ -286,24 +261,12 @@ function renderApp(el) {
         document.body.appendChild(root_el);
     }
 
-    let in_repositories = ['repositories', 'repository'].includes(route.mode);
-    let in_plans = ['plans', 'plan'].includes(route.mode);
-    let in_drops = ['drops', 'drop', 'send'].includes(route.mode);
-
     render(html`
         <nav id="top">
             <div @click=${deploy}></div>
             <menu>
                 <a id="logo" href="/"><img src=${ASSETS['main/logo']} alt=${'Logo ' + ENV.title} /></a>
-                ${isLogged() && ENV.backup ? html`
-                    <li><a href=${!in_repositories && route.repository != null ? makeURL({ mode: 'repository' }) : '/repositories'}
-                           class=${in_repositories ? 'active' : ''}>${T.repositories}</a></li>
-                    <li><a href=${!in_plans && route.plan != null ? makeURL({ mode: 'plan' }) : '/plans'}
-                           class=${in_plans ? 'active' : ''}>${T.machines}</a></li>
-                ` : ''}
-                ${isLogged() && ENV.drop ? html`
-                    <li><a href="/drops" class=${in_drops ? 'active' : ''}>${T.files}</a></li>
-                ` : ''}
+                ${render_menu()}
                 <div style="flex: 1;"></div>
                 ${isLogged() ? html`
                     <li><a href="/account" class=${route.mode == 'account' ? 'active' : ''}>${T.account}</a></li>
@@ -403,7 +366,7 @@ export {
     route,
     cache,
 
-    start,
+    init,
 
     makeURL,
     go,

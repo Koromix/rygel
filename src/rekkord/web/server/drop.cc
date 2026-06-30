@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
+#if defined(WEB_DROP)
+
 #include "lib/native/base/base.hh"
 #include "lib/native/sqlite/sqlite.hh"
-#include "rokkerd.hh"
+#include "web.hh"
 #include "user.hh"
 #include "utility.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
@@ -132,8 +134,6 @@ bool PruneDrops()
 
 void HandleDropList(http_IO *io)
 {
-    K_ASSERT(config.drop);
-
     RetainPtr<const SessionInfo> session = GetNormalSession(io);
 
     if (!session) {
@@ -200,8 +200,6 @@ void HandleDropList(http_IO *io)
 
 void HandleDropInfo(http_IO *io)
 {
-    K_ASSERT(config.drop);
-
     const http_RequestInfo &request = io->Request();
 
     KID kid;
@@ -255,8 +253,6 @@ void HandleDropInfo(http_IO *io)
 
 void HandleDropCreate(http_IO *io)
 {
-    K_ASSERT(config.drop);
-
     RetainPtr<const SessionInfo> session = GetNormalSession(io);
 
     if (!session) {
@@ -382,8 +378,6 @@ void HandleDropCreate(http_IO *io)
 
 void HandleDropDelete(http_IO *io)
 {
-    K_ASSERT(config.drop);
-
     RetainPtr<const SessionInfo> session = GetNormalSession(io);
 
     if (!session) {
@@ -457,8 +451,6 @@ static inline T ComputedEncryptedSize(T size)
 
 void HandleFragmentUpload(http_IO *io)
 {
-    K_ASSERT(config.drop);
-
     const http_RequestInfo &request = io->Request();
     RetainPtr<const SessionInfo> session = GetNormalSession(io);
 
@@ -545,8 +537,6 @@ void HandleFragmentUpload(http_IO *io)
 
 void HandleFragmentDownload(http_IO *io)
 {
-    K_ASSERT(config.drop);
-
     const http_RequestInfo &request = io->Request();
 
     KID kid;
@@ -617,8 +607,6 @@ void HandleFragmentDownload(http_IO *io)
 
 void HandleDropMark(http_IO *io)
 {
-    K_ASSERT(config.drop);
-
     const http_RequestInfo &request = io->Request();
     RetainPtr<const SessionInfo> session = GetNormalSession(io);
 
@@ -702,8 +690,6 @@ void HandleDropMark(http_IO *io)
 
 void HandleDropDownload(http_IO *io)
 {
-    K_ASSERT(config.drop);
-
     const http_RequestInfo &request = io->Request();
 
     KID kid;
@@ -771,3 +757,5 @@ void HandleDropDownload(http_IO *io)
 }
 
 }
+
+#endif

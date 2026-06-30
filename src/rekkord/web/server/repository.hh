@@ -8,7 +8,7 @@
 
 namespace K {
 
-bool CheckRepositories();
+bool DetectAlerts();
 
 void HandleRepositoryList(http_IO *io);
 void HandleRepositoryGet(http_IO *io);

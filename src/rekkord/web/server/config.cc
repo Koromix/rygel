@@ -19,14 +19,14 @@ bool Config::Validate() const
         valid = false;
     }
 
-    if (drop) {
-        valid &= s3.Validate();
+#if defined(WEB_DROP)
+    valid &= s3.Validate();
 
-        if (drop_prefix[0] && !EndsWith(drop_prefix, "/")) {
-            LogError("S3 drop path must end with '/'");
-            valid = false;
-        }
+    if (drop_prefix[0] && !EndsWith(drop_prefix, "/")) {
+        LogError("S3 drop path must end with '/'");
+        valid = false;
     }
+#endif
 
     valid &= http.Validate();
     valid &= smtp.Validate();
@@ -91,23 +91,9 @@ bool LoadConfig(StreamReader *st, Config *out_config)
 
                     first = false;
                 } while (ini.NextInSection(&prop));
-            } else if (prop.section == "Backup") {
-                if (prop.key == "Enabled") {
-                    valid &= ParseBool(prop.value, &config.backup);
-                } else if (prop.key == "StaleDelay") {
-                    valid &= ParseDuration(prop.value, &config.stale_delay);
-                } else if (prop.key == "MailDelay") {
-                    valid &= ParseDuration(prop.value, &config.mail_delay);
-                } else if (prop.key == "RepeatDelay") {
-                    valid &= ParseDuration(prop.value, &config.repeat_delay);
-                } else {
-                    LogError("Unknown attribute '%1'", prop.key);
-                    valid = false;
-                }
+#if defined(WEB_DROP)
             } else if (prop.section == "Drop") {
-                if (prop.key == "Enabled") {
-                    valid &= ParseBool(prop.value, &config.drop);
-                } else if (prop.key == "Quota") {
+                if (prop.key == "Quota") {
                     valid &= ParseSize(prop.value, &config.drop_quota);
                 } else if (prop.key == "S3Path") {
                     const char *suffix = prop.value.len && !EndsWith(prop.value, "/") ? "/" : "";
@@ -118,6 +104,20 @@ bool LoadConfig(StreamReader *st, Config *out_config)
                 }
             } else if (prop.section == "S3") {
                 valid &= config.s3.SetProperty(prop.key, prop.value, root_directory);
+#endif
+#if defined(WEB_WATCH)
+            } else if (prop.section == "Watch") {
+                if (prop.key == "StaleDelay") {
+                    valid &= ParseDuration(prop.value, &config.stale_delay);
+                } else if (prop.key == "MailDelay") {
+                    valid &= ParseDuration(prop.value, &config.mail_delay);
+                } else if (prop.key == "RepeatDelay") {
+                    valid &= ParseDuration(prop.value, &config.repeat_delay);
+                } else {
+                    LogError("Unknown attribute '%1'", prop.key);
+                    valid = false;
+                }
+#endif
             } else if (prop.section == "HTTP") {
                 valid &= config.http.SetProperty(prop.key.ptr, prop.value.ptr, root_directory);
             } else if (prop.section == "SMTP") {

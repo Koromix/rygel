@@ -15,19 +15,21 @@ struct Config {
     const char *title = nullptr;
     const char *url = nullptr;
 
-    bool backup = true;
-    int64_t stale_delay = 30 * 3600000;
-    int64_t mail_delay = 1 * 3600000;
-    int64_t repeat_delay = 24 * 3600000;
-
-    bool drop = false;
-    const char *drop_prefix = "";
-    int64_t drop_quota = Megabytes(1000);
-
     const char *database_filename = nullptr;
     const char *tmp_directory = nullptr;
 
+#if defined(WEB_DROP)
+    const char *drop_prefix = "";
+    int64_t drop_quota = Megabytes(1000);
+
     s3_Config s3;
+#endif
+
+#if defined(WEB_WATCH)
+    int64_t stale_delay = 30 * 3600000;
+    int64_t mail_delay = 1 * 3600000;
+    int64_t repeat_delay = 24 * 3600000;
+#endif
 
     http_Config http { 8891 };
 
