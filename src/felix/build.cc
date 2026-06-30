@@ -574,7 +574,7 @@ bool Builder::AddCppSource(const SourceFileInfo &src, HeapArray<const char *> *o
                                        src.target->include_files, flags, features,
                                        obj_filename, &str_alloc, &cmd);
 
-        const char *text = Fmt(&str_alloc, StdErr->IsVt100(), "Compile %!..+%1%!0", src.filename).ptr;
+        const char *text = Fmt(&str_alloc, StdErr->IsVt100(), "Compile %!..+%1%!0 %!D..@%2%!0", src.filename, src.target->ns).ptr;
         bool append = pch_filename ? AppendNode(text, src.target->ns, obj_filename, cmd, { src.filename, pch_filename })
                                    : AppendNode(text, src.target->ns, obj_filename, cmd, src.filename);
 
@@ -617,7 +617,7 @@ bool Builder::AddAssemblySource(const SourceFileInfo &src, HeapArray<const char 
         build.compiler->MakeAssemblyCommand(src.filename, src.target->definitions, src.target->include_directories,
                                             flags, features, obj_filename, &str_alloc, &cmd);
 
-        const char *text = Fmt(&str_alloc, StdErr->IsVt100(), "Assemble %!..+%1%!0", src.filename).ptr;
+        const char *text = Fmt(&str_alloc, StdErr->IsVt100(), "Assemble %!..+%1%!0 %!D..@%2%!0", src.filename, src.target->ns).ptr;
         bool append = AppendNode(text, src.target->ns, obj_filename, cmd, src.filename);
 
        if (append && !build.fake && !EnsureDirectoryExists(obj_filename))

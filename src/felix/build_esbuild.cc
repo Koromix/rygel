@@ -238,7 +238,7 @@ const char *Builder::AddEsbuildSource(const SourceFileInfo &src)
             cmd.deps_filename = meta_filename;
         }
 
-        const char *text = Fmt(&str_alloc, StdErr->IsVt100(), "Bundle %!..+%1%!0", src.filename).ptr;
+        const char *text = Fmt(&str_alloc, StdErr->IsVt100(), "Bundle %!..+%1%!0 %!D..@%2%!0", src.filename, src.target->ns).ptr;
         bool append = AppendNode(text, src.target->ns, meta_filename, cmd, { src.filename, esbuild_binary });
 
         if (append && !build.fake && !EnsureDirectoryExists(bundle_filename))

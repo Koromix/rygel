@@ -58,7 +58,7 @@ const char *Builder::AddQtUiSource(const SourceFileInfo &src)
             cmd.cmd_line = buf.TrimAndLeak(1);
         }
 
-        const char *text = Fmt(&str_alloc, StdErr->IsVt100(), "Build UI %!..+%1%!0", src.filename).ptr;
+        const char *text = Fmt(&str_alloc, StdErr->IsVt100(), "Build UI %!..+%1%!0 %!D..@%2%!0", src.filename, src.target->ns).ptr;
         bool append = AppendNode(text, src.target->ns, header_filename, cmd, { src.filename, qt->uic });
 
         if (append && !build.fake && !EnsureDirectoryExists(header_filename))
@@ -336,7 +336,7 @@ bool Builder::CompileMocHelper(const SourceFileInfo &src, Span<const char *const
                 cmd.cmd_line = Fmt(&str_alloc, "\"%1\" \"%2\" --no-notes -o \"%3\"", qt->moc, header_filename, moc_filename);
                 cmd.cache_len = cmd.cmd_line.len;
 
-                const char *text = Fmt(&str_alloc, StdErr->IsVt100(), "Run MOC on %!..+%1%!0", header_filename).ptr;
+                const char *text = Fmt(&str_alloc, StdErr->IsVt100(), "Run MOC on %!..+%1%!0 %!D..@%2%!0", header_filename, src.target->ns).ptr;
                 bool append  = AppendNode(text, src.target->ns, moc_filename, cmd, { header_filename, qt->moc });
 
                 if (append && !build.fake && !EnsureDirectoryExists(moc_filename))
@@ -362,7 +362,7 @@ bool Builder::CompileMocHelper(const SourceFileInfo &src, Span<const char *const
                                            {}, flags, features,
                                            obj_filename, &str_alloc, &cmd);
 
-            const char *text = Fmt(&str_alloc, StdErr->IsVt100(), "Build MOC for %!..+%1%!0", src.filename).ptr;
+            const char *text = Fmt(&str_alloc, StdErr->IsVt100(), "Build MOC for %!..+%1%!0 %!D..@%2%!0", src.filename, src.target->ns).ptr;
             AppendNode(text, src.target->ns, obj_filename, cmd, moc_filename);
         }
 
