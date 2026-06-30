@@ -113,6 +113,8 @@ class TargetSetBuilder {
     HashSet<const char *> known_targets;
     TargetSet set;
 
+    HashTable<const char *, const SourceFileInfo *> pch_map;
+
 public:
     TargetSetBuilder(const Compiler *compiler, uint32_t features)
         : compiler(compiler), features(features) {}

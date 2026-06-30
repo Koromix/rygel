@@ -580,13 +580,21 @@ const TargetInfo *TargetSetBuilder::CreateTarget(const char *root_directory, Tar
     if (target_config->c_pch_filename) {
         const SourceFeatures *features = target_config->src_features.Find(target_config->c_pch_filename);
 
-        target->c_pch_src = CreateSource(target, target_config->c_pch_filename, SourceType::C, features);
+        target->c_pch_src = pch_map.FindValue(target_config->c_pch_filename, nullptr);
+        if (!target->c_pch_src) {
+            target->c_pch_src = CreateSource(target, target_config->c_pch_filename, SourceType::C, features);
+            pch_map.Set(target->c_pch_src);
+        }
         target->pchs.Append(target->c_pch_src->filename);
     }
     if (target_config->cxx_pch_filename) {
         const SourceFeatures *features = target_config->src_features.Find(target_config->cxx_pch_filename);
 
-        target->cxx_pch_src = CreateSource(target, target_config->cxx_pch_filename, SourceType::Cxx, features);
+        target->cxx_pch_src = pch_map.FindValue(target_config->cxx_pch_filename, nullptr);
+        if (!target->cxx_pch_src) {
+            target->cxx_pch_src = CreateSource(target, target_config->cxx_pch_filename, SourceType::Cxx, features);
+            pch_map.Set(target->cxx_pch_src);
+        }
         target->pchs.Append(target->cxx_pch_src->filename);
     }
 
