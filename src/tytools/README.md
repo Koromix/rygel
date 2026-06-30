@@ -51,7 +51,7 @@ apt update
 apt install tytools
 ```
 
-For other distributions, you can [build the code from source](https://koromix.dev/tytools#hacking-tytools) as documented on the website.
+For other distributions, you can [build the code from source](#hacking-tytools) as documented on the website.
 
 ## Linux (RPM)
 
@@ -77,7 +77,7 @@ Once this is done, install the package with this command:
 dnf install tytools
 ```
 
-For other distributions, you can [build the code from source](#build-from-source) as documented below.
+For other distributions, you can [build the code from source](#hacking-tytools) as documented below.
 
 # Using tycmd
 
