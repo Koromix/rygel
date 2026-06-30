@@ -3,11 +3,11 @@
 
 # Windows
 
-Download ready-to-use binaries here: https://download.koromix.dev/releases/rekkord
+Download ready-to-use binaries here: https://download.koromix.dev/releases/rekkord/windows
 
 # macOS
 
-Download ready-to-use binaries here: https://download.koromix.dev/releases/rekkord
+Download ready-to-use binaries here: https://download.koromix.dev/releases/rekkord/macos
 
 # Linux
 
@@ -53,3 +53,7 @@ Once this is done, install the package with this command:
 ```sh
 dnf install rekkord
 ```
+
+## Build from source
+
+Follow the [build instructions](contribute#linux-macos) on the contribution page.
