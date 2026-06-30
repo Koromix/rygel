@@ -33,7 +33,7 @@ const char *Builder::AddQtUiSource(const SourceFileInfo &src)
 {
     K_ASSERT(src.type == SourceType::QtUi);
 
-    const char *header_filename = build_map.FindValue({ current_ns, src.filename }, nullptr);
+    const char *header_filename = build_map.FindValue({ src.target->ns, src.filename }, nullptr);
 
     // First, we need Qt!
     if (!header_filename && !PrepareQtSdk(src.target->qt_version))
@@ -44,7 +44,7 @@ const char *Builder::AddQtUiSource(const SourceFileInfo &src)
         Span<const char> filename_noext;
         SplitStrReverse(src.filename, '.', &filename_noext);
 
-        header_filename = BuildObjectPath(filename_noext, cache_directory, "ui_", ".h");
+        header_filename = BuildObjectPath(src.target->ns, filename_noext, cache_directory, "ui_", ".h");
 
         Command cmd = {};
 
@@ -59,7 +59,7 @@ const char *Builder::AddQtUiSource(const SourceFileInfo &src)
         }
 
         const char *text = Fmt(&str_alloc, StdErr->IsVt100(), "Build UI %!..+%1%!0", src.filename).ptr;
-        bool append = AppendNode(text, header_filename, cmd, { src.filename, qt->uic });
+        bool append = AppendNode(text, src.target->ns, header_filename, cmd, { src.filename, qt->uic });
 
         if (append && !build.fake && !EnsureDirectoryExists(header_filename))
             return nullptr;
@@ -70,7 +70,7 @@ const char *Builder::AddQtUiSource(const SourceFileInfo &src)
 
 const char *Builder::AddQtResource(const TargetInfo &target, Span<const char *> qrc_filenames)
 {
-    const char *cpp_filename = build_map.FindValue({ current_ns, qrc_filenames[0] }, nullptr);
+    const char *cpp_filename = build_map.FindValue({ target.ns, qrc_filenames[0] }, nullptr);
 
     // First, we need Qt!
     if (!cpp_filename && !PrepareQtSdk(target.qt_version))
@@ -95,10 +95,10 @@ const char *Builder::AddQtResource(const TargetInfo &target, Span<const char *> 
         }
 
         const char *text = Fmt(&str_alloc, StdErr->IsVt100(), "Assemble %!..+%1%!0 resource file", target.name).ptr;
-        AppendNode(text, cpp_filename, cmd, qrc_filenames);
+        AppendNode(text, nullptr, cpp_filename, cmd, qrc_filenames);
     }
 
-    const char *obj_filename = build_map.FindValue({ current_ns, cpp_filename }, nullptr);
+    const char *obj_filename = build_map.FindValue({ target.ns, cpp_filename }, nullptr);
 
     if (!obj_filename) {
         obj_filename = Fmt(&str_alloc, "%1%2", cpp_filename, build.compiler->GetObjectExtension()).ptr;
@@ -112,7 +112,7 @@ const char *Builder::AddQtResource(const TargetInfo &target, Span<const char *> 
                                        obj_filename, &str_alloc, &cmd);
 
         const char *text = Fmt(&str_alloc, StdErr->IsVt100(), "Compile %!..+%1%!0 QRC resources", target.name).ptr;
-        AppendNode(text, obj_filename, cmd, cpp_filename);
+        AppendNode(text, nullptr, obj_filename, cmd, cpp_filename);
     }
 
     return obj_filename;
@@ -329,7 +329,7 @@ bool Builder::CompileMocHelper(const SourceFileInfo &src, Span<const char *const
             const char *header_filename = Fmt(&str_alloc, "%1%2", base, ext).ptr;
 
             if (TestFile(header_filename, FileType::File)) {
-                moc_filename = BuildObjectPath(header_filename, cache_directory, "moc_", ".cpp");
+                moc_filename = BuildObjectPath(src.target->ns, header_filename, cache_directory, "moc_", ".cpp");
 
                 Command cmd = {};
 
@@ -337,7 +337,7 @@ bool Builder::CompileMocHelper(const SourceFileInfo &src, Span<const char *const
                 cmd.cache_len = cmd.cmd_line.len;
 
                 const char *text = Fmt(&str_alloc, StdErr->IsVt100(), "Run MOC on %!..+%1%!0", header_filename).ptr;
-                bool append  = AppendNode(text, moc_filename, cmd, { header_filename, qt->moc });
+                bool append  = AppendNode(text, src.target->ns, moc_filename, cmd, { header_filename, qt->moc });
 
                 if (append && !build.fake && !EnsureDirectoryExists(moc_filename))
                     return false;
@@ -348,7 +348,7 @@ bool Builder::CompileMocHelper(const SourceFileInfo &src, Span<const char *const
     }
 
     if (moc_filename) {
-        const char *obj_filename = build_map.FindValue({ current_ns, moc_filename }, nullptr);
+        const char *obj_filename = build_map.FindValue({ src.target->ns, moc_filename }, nullptr);
 
         if (!obj_filename) {
             obj_filename = Fmt(&str_alloc, "%1%2", moc_filename, build.compiler->GetObjectExtension()).ptr;
@@ -363,7 +363,7 @@ bool Builder::CompileMocHelper(const SourceFileInfo &src, Span<const char *const
                                            obj_filename, &str_alloc, &cmd);
 
             const char *text = Fmt(&str_alloc, StdErr->IsVt100(), "Build MOC for %!..+%1%!0", src.filename).ptr;
-            AppendNode(text, obj_filename, cmd, moc_filename);
+            AppendNode(text, src.target->ns, obj_filename, cmd, moc_filename);
         }
 
         moc_map.Set(src.filename, obj_filename);
@@ -413,7 +413,7 @@ R"(#include <QtCore/QtPlugin>
                                    obj_filename,  &str_alloc, &cmd);
 
     const char *text = Fmt(&str_alloc, StdErr->IsVt100(), "Compile %!..+%1%!0 static Qt helper", target.name).ptr;
-    AppendNode(text, obj_filename, cmd, src_filename);
+    AppendNode(text, nullptr, obj_filename, cmd, src_filename);
 
     return obj_filename;
 }

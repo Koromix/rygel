@@ -98,7 +98,6 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
     }
 
     // Core platform source files (e.g. Teensy core)
-    TargetInfo *core = nullptr;
     {
         HeapArray<const char *> core_filenames;
         HeapArray<const char *> core_definitions;
@@ -109,13 +108,14 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
             return false;
 
         if (name) {
-            core = core_targets_map.FindValue(name, nullptr);
+            TargetInfo *core = core_targets_map.FindValue(name, nullptr);
 
             if (!core) {
                 core = core_targets.AppendDefault();
 
                 core->name = name;
                 core->type = TargetType::Library;
+                core->ns = name;
                 core->platforms = 1u << (int)build.compiler->platform;
                 std::swap(core->definitions, core_definitions);
                 core->disable_features = (int)CompileFeature::Warnings;
@@ -133,24 +133,13 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
 
                 core_targets_map.Set(name, core);
             }
-        }
-    }
 
-    if (core) {
-        K_DEFER_C(prev_ns = current_ns,
-                   prev_directory = cache_directory) {
-            current_ns = prev_ns;
-            cache_directory = prev_directory;
-        };
+            for (const SourceFileInfo *src: core->sources) {
+                K_ASSERT(src->type == SourceType::C || src->type == SourceType::Cxx);
 
-        cache_directory = Fmt(&str_alloc, "%1%/%2", cache_directory, core->name).ptr;
-        current_ns = core->name;
-
-        for (const SourceFileInfo *src: core->sources) {
-            K_ASSERT(src->type == SourceType::C || src->type == SourceType::Cxx);
-
-            if (!AddCppSource(*src, &obj_filenames))
-                return false;
+                if (!AddCppSource(*src, &obj_filenames))
+                    return false;
+            }
         }
     }
 
@@ -238,7 +227,7 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
             MakeTranslationCommand(target.translations, src_filename, &str_alloc, &cmd);
 
             const char *text = Fmt(&str_alloc, StdErr->IsVt100(), "Bundle %!..+%1%!0 translations", target.name).ptr;
-            AppendNode(text, src_filename, cmd, target.translations);
+            AppendNode(text, nullptr, src_filename, cmd, target.translations);
         }
 
         // Build object file
@@ -252,7 +241,7 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
                                            obj_filename,  &str_alloc, &cmd);
 
             const char *text = Fmt(&str_alloc, StdErr->IsVt100(), "Compile %!..+%1%!0 translations", target.name).ptr;
-            AppendNode(text, obj_filename, cmd, src_filename);
+            AppendNode(text, nullptr, obj_filename, cmd, src_filename);
         }
 
         obj_filenames.Append(obj_filename);
@@ -276,7 +265,7 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
             build.compiler->MakeEmbedCommand(embed_filenames, target.embed_options, features, src_filename, &str_alloc, &cmd);
 
             const char *text = Fmt(&str_alloc, StdErr->IsVt100(), "Embed %!..+%1%!0 assets", target.name).ptr;
-            AppendNode(text, src_filename, cmd, embed_filenames);
+            AppendNode(text, nullptr, src_filename, cmd, embed_filenames);
         }
 
         // Build object file
@@ -296,7 +285,7 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
             }
 
             const char *text = Fmt(&str_alloc, StdErr->IsVt100(), "Compile %!..+%1%!0 assets", target.name).ptr;
-            AppendNode(text, obj_filename, cmd, src_filename);
+            AppendNode(text, nullptr, obj_filename, cmd, src_filename);
         }
 
         // Build module if needed
@@ -310,7 +299,7 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
                                             flags, features, module_filename, &str_alloc, &cmd);
 
             const char *text = Fmt(&str_alloc, StdErr->IsVt100(), "Link %!..+%1%!0", GetLastDirectoryAndName(module_filename)).ptr;
-            AppendNode(text, module_filename, cmd, obj_filename);
+            AppendNode(text, nullptr, module_filename, cmd, obj_filename);
         } else {
             obj_filenames.Append(obj_filename);
         }
@@ -319,7 +308,7 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
     // Some compilers (such as MSVC) also build PCH object files that need to be linked
     if (build.features & (int)CompileFeature::PCH) {
         for (const char *filename: target.pchs) {
-            const char *pch_filename = build_map.FindValue({ current_ns, filename }, nullptr);
+            const char *pch_filename = build_map.FindValue({ nullptr, filename }, nullptr);
 
             if (pch_filename) {
                 const char *obj_filename = build.compiler->GetPchObject(pch_filename, &str_alloc);
@@ -348,7 +337,7 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
                                        obj_filename, &str_alloc, &cmd);
 
         const char *text = Fmt(&str_alloc, StdErr->IsVt100(), "Compile %!..+%1%!0 version file", target.name).ptr;
-        AppendNode(text, obj_filename, cmd, src_filename);
+        AppendNode(text, nullptr, obj_filename, cmd, src_filename);
 
         obj_filenames.Append(obj_filename);
     }
@@ -368,9 +357,9 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
         const char *text = Fmt(&str_alloc, StdErr->IsVt100(), "Build %!..+%1%!0 resource file", target.name).ptr;
 
         if (target.icon_filename) {
-            AppendNode(text, res_filename, cmd, { rc_filename, target.icon_filename });
+            AppendNode(text, nullptr, res_filename, cmd, { rc_filename, target.icon_filename });
         } else {
-            AppendNode(text, res_filename, cmd, rc_filename);
+            AppendNode(text, nullptr, res_filename, cmd, rc_filename);
         }
 
         obj_filenames.Append(res_filename);
@@ -398,7 +387,7 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
                                             flags, features, link_filename, &str_alloc, &cmd);
 
             const char *text = Fmt(&str_alloc, StdErr->IsVt100(), "Link %!..+%1%!0", GetLastDirectoryAndName(link_filename)).ptr;
-            AppendNode(text, link_filename, cmd, obj_filenames);
+            AppendNode(text, nullptr, link_filename, cmd, obj_filenames);
         }
 
         const char *target_filename;
@@ -409,7 +398,7 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
             build.compiler->MakePostCommand(link_filename, target_filename, &str_alloc, &cmd);
 
             const char *text = Fmt(&str_alloc, StdErr->IsVt100(), "Convert %!..+%1%!0", GetLastDirectoryAndName(target_filename)).ptr;
-            AppendNode(text, target_filename, cmd, link_filename);
+            AppendNode(text, nullptr, target_filename, cmd, link_filename);
         } else {
             target_filename = link_filename;
         }
@@ -438,7 +427,7 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
             cmd.env_variables.Append({ "QMAKE_PATH", qt->qmake });
 
             const char *text = Fmt(&str_alloc, StdErr->IsVt100(), "Bundle %!..+%1%!0", GetLastDirectoryAndName(bundle_filename)).ptr;
-            AppendNode(text, bundle_filename, cmd, target_filename);
+            AppendNode(text, nullptr, bundle_filename, cmd, target_filename);
 
             target_filename = bundle_filename;
         }
@@ -524,10 +513,10 @@ bool Builder::AddCppSource(const SourceFileInfo &src, HeapArray<const char *> *o
         }
 
         if (pch) {
-            pch_filename = build_map.FindValue({ current_ns, pch->filename }, nullptr);
+            pch_filename = build_map.FindValue({ nullptr, pch->filename }, nullptr);
 
             if (!pch_filename) {
-                pch_filename = BuildObjectPath(pch->filename, cache_directory, "", pch_ext);
+                pch_filename = BuildObjectPath(nullptr, pch->filename, cache_directory, "", pch_ext);
 
                 const char *cache_filename = build.compiler->GetPchCache(pch_filename, &str_alloc);
 
@@ -557,21 +546,19 @@ bool Builder::AddCppSource(const SourceFileInfo &src, HeapArray<const char *> *o
                 }
 
                 const char *text = Fmt(&str_alloc, StdErr->IsVt100(), "Precompile %!..+%1%!0", pch->filename).ptr;
-                bool append = AppendNode(text, pch_filename, cmd, pch->filename);
+                bool append = AppendNode(text, nullptr, pch_filename, cmd, pch->filename);
 
-                if (append) {
-                    if (!build.fake && !CreatePrecompileHeader(pch->filename, pch_filename))
-                        return false;
-                }
+                if (append && !build.fake && !CreatePrecompileHeader(pch->filename, pch_filename))
+                    return false;
             }
         }
     }
 
-    const char *obj_filename = build_map.FindValue({ current_ns, src.filename }, nullptr);
+    const char *obj_filename = build_map.FindValue({ src.target->ns, src.filename }, nullptr);
 
     // Build main object
     if (!obj_filename) {
-        obj_filename = BuildObjectPath(src.filename, cache_directory, "", build.compiler->GetObjectExtension());
+        obj_filename = BuildObjectPath(src.target->ns, src.filename, cache_directory, "", build.compiler->GetObjectExtension());
 
         uint32_t features = src.CombineFeatures(build.features);
         const char *flags = GatherFlags(*src.target, src.type);
@@ -588,8 +575,8 @@ bool Builder::AddCppSource(const SourceFileInfo &src, HeapArray<const char *> *o
                                        obj_filename, &str_alloc, &cmd);
 
         const char *text = Fmt(&str_alloc, StdErr->IsVt100(), "Compile %!..+%1%!0", src.filename).ptr;
-        bool append = pch_filename ? AppendNode(text, obj_filename, cmd, { src.filename, pch_filename })
-                                   : AppendNode(text, obj_filename, cmd, src.filename);
+        bool append = pch_filename ? AppendNode(text, src.target->ns, obj_filename, cmd, { src.filename, pch_filename })
+                                   : AppendNode(text, src.target->ns, obj_filename, cmd, src.filename);
 
        if (append && !build.fake && !EnsureDirectoryExists(obj_filename))
             return false;
@@ -617,11 +604,11 @@ bool Builder::AddAssemblySource(const SourceFileInfo &src, HeapArray<const char 
 {
     K_ASSERT(src.type == SourceType::GnuAssembly || src.type == SourceType::MicrosoftAssembly);
 
-    const char *obj_filename = build_map.FindValue({ current_ns, src.filename }, nullptr);
+    const char *obj_filename = build_map.FindValue({ src.target->ns, src.filename }, nullptr);
 
     // Build main object
     if (!obj_filename) {
-        obj_filename = BuildObjectPath(src.filename, cache_directory, "", build.compiler->GetObjectExtension());
+        obj_filename = BuildObjectPath(src.target->ns, src.filename, cache_directory, "", build.compiler->GetObjectExtension());
 
         uint32_t features = src.CombineFeatures(build.features);
         const char *flags = GatherFlags(*src.target, src.type);
@@ -631,7 +618,7 @@ bool Builder::AddAssemblySource(const SourceFileInfo &src, HeapArray<const char 
                                             flags, features, obj_filename, &str_alloc, &cmd);
 
         const char *text = Fmt(&str_alloc, StdErr->IsVt100(), "Assemble %!..+%1%!0", src.filename).ptr;
-        bool append = AppendNode(text, obj_filename, cmd, src.filename);
+        bool append = AppendNode(text, src.target->ns, obj_filename, cmd, src.filename);
 
        if (append && !build.fake && !EnsureDirectoryExists(obj_filename))
             return false;
@@ -1098,7 +1085,7 @@ void Builder::SaveCompileDatabase()
     st.Close();
 }
 
-const char *Builder::BuildObjectPath(Span<const char> src_filename, const char *output_directory,
+const char *Builder::BuildObjectPath(const char *ns, Span<const char> src_filename, const char *output_directory,
                                      const char *prefix, const char *suffix)
 {
     if (PathIsAbsolute(src_filename)) {
@@ -1112,11 +1099,13 @@ const char *Builder::BuildObjectPath(Span<const char> src_filename, const char *
 
     Size offset = Fmt(&buf, "%1%/Build%/", output_directory).len;
 
-    if (src_directory.len) {
-        Fmt(&buf, "%1%/%2%3%4", src_directory, prefix, src_name, suffix);
-    } else {
-        Fmt(&buf, "%1%2%3", prefix, src_name, suffix);
+    if (ns) {
+        Fmt(&buf, "%1%/", ns);
     }
+    if (src_directory.len) {
+        Fmt(&buf, "%1%/", src_directory);
+    }
+    Fmt(&buf, "%1%2%3", prefix, src_name, suffix);
 
     // Replace '..' components with '__'
     {
@@ -1202,12 +1191,12 @@ static inline const char *CleanFileName(const char *str)
     return str + (str[0] == '@');
 }
 
-bool Builder::AppendNode(const char *text, const char *dest_filename, const Command &cmd,
+bool Builder::AppendNode(const char *text, const char *ns, const char *dest_filename, const Command &cmd,
                          Span<const char *const> src_filenames)
 {
     K_ASSERT(src_filenames.len >= 1);
 
-    build_map.Set({ current_ns, CleanFileName(src_filenames[0]) }, dest_filename);
+    build_map.Set({ ns, CleanFileName(src_filenames[0]) }, dest_filename);
     total++;
 
     if (NeedsRebuild(dest_filename, cmd, src_filenames)) {

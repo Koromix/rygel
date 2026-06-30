@@ -480,6 +480,7 @@ const TargetInfo *TargetSetBuilder::CreateTarget(const char *root_directory, Tar
     // Copy/steal simple values
     target->name = target_config->name;
     target->type = target_config->type;
+    target->ns = target_config->name;
     target->platforms = target_config->platforms;
     target->architectures = target_config->architectures;
     target->enable_by_default = target_config->enable_by_default;
@@ -542,6 +543,7 @@ const TargetInfo *TargetSetBuilder::CreateTarget(const char *root_directory, Tar
             target->pchs.Append(import->pchs);
             target->sources.Append(import->sources);
             target->translations.Append(import->translations);
+            target->embed_filenames.Append(import->embed_filenames);
         }
     }
 
@@ -616,25 +618,18 @@ const TargetInfo *TargetSetBuilder::CreateTarget(const char *root_directory, Tar
 const SourceFileInfo *TargetSetBuilder::CreateSource(const TargetInfo *target, const char *filename,
                                                      SourceType type, const SourceFeatures *features)
 {
-    bool inserted;
-    SourceFileInfo **ptr = set.sources_map.InsertOrGetDefault(filename, &inserted);
+    SourceFileInfo *src = set.sources.AppendDefault();
 
-    if (inserted) {
-        SourceFileInfo *src = set.sources.AppendDefault();
+    src->target = target;
+    src->filename = DuplicateString(filename, &set.str_alloc).ptr;
+    src->type = type;
 
-        src->target = target;
-        src->filename = DuplicateString(filename, &set.str_alloc).ptr;
-        src->type = type;
-
-        if (features) {
-            src->enable_features = features->enable_features;
-            src->disable_features = features->disable_features;
-        }
-
-        *ptr = src;
+    if (features) {
+        src->enable_features = features->enable_features;
+        src->disable_features = features->disable_features;
     }
 
-    return *ptr;
+    return src;
 }
 
 void TargetSetBuilder::Finish(TargetSet *out_set)

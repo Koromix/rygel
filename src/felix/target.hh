@@ -15,6 +15,7 @@ struct SourceFeatures;
 struct alignas(8) TargetInfo {
     const char *name;
     TargetType type;
+    const char *ns;
     unsigned int platforms;
     unsigned int architectures;
     bool enable_by_default;
@@ -97,7 +98,6 @@ struct TargetSet {
     HashTable<const char *, TargetInfo *> targets_map;
 
     BucketArray<SourceFileInfo> sources;
-    HashTable<const char *, SourceFileInfo *> sources_map;
 
     BlockAllocator str_alloc;
 };

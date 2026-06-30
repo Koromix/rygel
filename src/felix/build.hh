@@ -83,8 +83,8 @@ class Builder {
         }
 
         BuildKey() = default;
-        BuildKey(const char *filename) : ns("default"), filename(filename) {}
-        BuildKey(const char *ns, const char *filename) : ns(ns), filename(filename) {}
+        BuildKey(const char *filename) : ns(""), filename(filename) {}
+        BuildKey(const char *ns, const char *filename) : ns(ns ? ns : ""), filename(filename) {}
     };
 
     BuildSettings build;
@@ -93,7 +93,6 @@ class Builder {
     const char *aux_directory;
     const char *misc_directory;
     const char *cache_filename;
-    const char *current_ns = "default";
 
     // Qt stuff
     const QtInfo *qt = nullptr;
@@ -167,11 +166,11 @@ private:
     bool UpdateVersionSource(const char *target, const char *version, const char *dest_filename);
     bool UpdateResourceFile(const char *target_name, const char *icon_filename, const char *dest_filename);
 
-    const char *BuildObjectPath(Span<const char> src_filename, const char *output_directory,
+    const char *BuildObjectPath(const char *ns, Span<const char> src_filename, const char *output_directory,
                                 const char *prefix, const char *suffix);
     const char *GatherFlags(const TargetInfo& target, SourceType type);
 
-    bool AppendNode(const char *text, const char *dest_filename, const Command &cmd,
+    bool AppendNode(const char *text, const char *ns, const char *dest_filename, const Command &cmd,
                     Span<const char *const> src_filenames);
     bool NeedsRebuild(const char *dest_filename, const Command &cmd,
                       Span<const char *const> src_filenames);

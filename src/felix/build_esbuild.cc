@@ -187,7 +187,7 @@ const char *Builder::AddEsbuildSource(const SourceFileInfo &src)
 {
     K_ASSERT(src.type == SourceType::Esbuild);
 
-    const char *meta_filename = build_map.FindValue({ current_ns, src.filename }, nullptr);
+    const char *meta_filename = build_map.FindValue({ src.target->ns, src.filename }, nullptr);
 
     // First, we need esbuild!
     if (!meta_filename && !PrepareEsbuild())
@@ -195,7 +195,7 @@ const char *Builder::AddEsbuildSource(const SourceFileInfo &src)
 
     // Build web bundle
     if (!meta_filename) {
-        const char *bundle_filename = BuildObjectPath(src.filename, cache_directory, "", "");
+        const char *bundle_filename = BuildObjectPath(src.target->ns, src.filename, cache_directory, "", "");
 
         meta_filename = Fmt(&str_alloc, "%1.meta", bundle_filename).ptr;
 
@@ -239,7 +239,7 @@ const char *Builder::AddEsbuildSource(const SourceFileInfo &src)
         }
 
         const char *text = Fmt(&str_alloc, StdErr->IsVt100(), "Bundle %!..+%1%!0", src.filename).ptr;
-        bool append = AppendNode(text, meta_filename, cmd, { src.filename, esbuild_binary });
+        bool append = AppendNode(text, src.target->ns, meta_filename, cmd, { src.filename, esbuild_binary });
 
         if (append && !build.fake && !EnsureDirectoryExists(bundle_filename))
             return nullptr;
