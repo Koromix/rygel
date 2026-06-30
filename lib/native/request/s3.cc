@@ -618,16 +618,6 @@ StatResult s3_Client::HeadObject(Span<const char> key, s3_ObjectInfo *out_info)
     }
 }
 
-static inline const char *GetRetainModeString(s3_RetainMode mode)
-{
-    switch (mode) {
-        case s3_RetainMode::Governance: return "GOVERNANCE";
-        case s3_RetainMode::Compliance: return "COMPLIANCE";
-    }
-
-    K_UNREACHABLE();
-}
-
 s3_PutResult s3_Client::PutObject(Span<const char> key, int64_t size,
                                   FunctionRef<Size(int64_t offset, Span<uint8_t>)> func, const s3_PutSettings &settings)
 {
@@ -716,7 +706,7 @@ s3_PutResult s3_Client::PutObject(Span<const char> key, int64_t size,
             TimeSpec spec = DecomposeTimeUTC(settings.retain_until);
             const char *until = Fmt(&temp_alloc, "%1", FmtTimeIso(spec)).ptr;
 
-            headers.Append({ "x-amz-object-lock-mode", GetRetainModeString(settings.retain_mode) });
+            headers.Append({ "x-amz-object-lock-mode", s3_RetainModeNames[(int)settings.retain_mode] });
             headers.Append({ "x-amz-object-lock-retain-until-date", until });
         }
 
@@ -856,7 +846,7 @@ R"(<?xml version="1.0" encoding="UTF-8"?>
 )";
 
     TimeSpec spec = DecomposeTimeUTC(until);
-    Span<const char> body = Fmt(&temp_alloc, xml, FmtTimeIso(spec), GetRetainModeString(mode));
+    Span<const char> body = Fmt(&temp_alloc, xml, FmtTimeIso(spec), s3_RetainModeNames[(int)mode]);
 
     int status = RunSafe("retain S3 object", 5, [&](CURL *curl, int) {
         int64_t now = GetUnixTime();

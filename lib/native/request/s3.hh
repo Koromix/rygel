@@ -53,8 +53,8 @@ enum class s3_RetainMode {
     Compliance
 };
 static const char *const s3_RetainModeNames[] = {
-    "Governance",
-    "Compliance"
+    "GOVERNANCE",
+    "COMPLIANCE"
 };
 
 enum class s3_ChecksumType {
