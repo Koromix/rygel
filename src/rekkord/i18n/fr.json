@@ -267,7 +267,7 @@
         "Check period cannot be negative or zero": "La période de vérification ne peut pas être négative ou nulle",
         "Checked %1 snapshots, %2 are invalid": "%1 instantanés vérifiés, %2 ne sont pas valides",
         "Checked %1 snapshots, all clear!": "%1 instantanés vérifiés, tout va bien !",
-        "Checked %1 snapshots, all clear, but one or more hooks failed!": "%1 instantanés vérifiés, tout va bien, mais un ou plusieurs hooks ont échoué !",
+        "Checked %1 snapshots, all clear, but other errors have occured!": "%1 instantanés vérifiés, tout va bien, mais d'autres erreurs se sont produites !",
         "Checking snapshots...": "Vérification des instantanés...",
         "Chunk size mismatch for '%1'": "Incohérence de taille de bloc pour '%1'",
         "Code is incorrect": "Le code est incorrect",

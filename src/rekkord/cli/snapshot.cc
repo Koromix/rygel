@@ -519,7 +519,7 @@ Scan options:
         LogInfo("Checked %1 snapshots, all clear!", snapshots.len);
         return 0;
     } else if (!errors.len) {
-        LogInfo("Checked %1 snapshots, all clear, but one or more hooks failed!", snapshots.len);
+        LogInfo("Checked %1 snapshots, all clear, but other errors have occured!", snapshots.len);
         return 1;
     } else {
         LogInfo("Checked %1 snapshots, %2 are invalid", snapshots.len, errors.len);
