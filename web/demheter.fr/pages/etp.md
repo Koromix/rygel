@@ -47,6 +47,7 @@ Il y a actuellement deux programmes ETP en place au sein de DEMHETER :
         <div class="group">Programme sur les troubles de l'humeur</div>
         <li>Le premier module de six séances porte sur la connaissance de la pathologie bipolaire et la dépression résistante.
         <li>Le deuxième module porte sur la qualité de vie, la gestion du stress, des émotions et des ruminations.
+        <div style="margin-top: 2em; text-align: center;"><a href="static/guide/etp.pdf" target="_blank"><img src="{{ ASSET static/fiches/professionnels/etp.webp }}" height="300" alt=""></a></div>
     </ul>
     <ul style="color: #4d9290;">
          <div class="group">Programme sur le trouble somatique fonctionnel</div>
