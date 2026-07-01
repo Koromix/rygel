@@ -209,7 +209,7 @@ static bool LoadConfig(StreamReader *st, Config *out_config)
         IniProperty prop;
         while (ini.Next(&prop)) {
             if (prop.section == "HTTP") {
-                valid &= config.http.SetProperty(prop.key.ptr, prop.value.ptr, root_directory);
+                valid &= config.http.SetProperty(prop.key, prop.value, root_directory);
             } else if (prop.section == "Settings") {
                 if (prop.key == "AutoIndex") {
                     if (ParseBool(prop.value, &config.auto_index)) {
