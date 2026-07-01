@@ -13,7 +13,14 @@ struct smtp_Config {
     const char *password = nullptr;
     const char *from = nullptr;
 
+    BlockAllocator str_alloc;
+
+    bool SetProperty(Span<const char> key, Span<const char> value, Span<const char>);
+
+    bool Complete();
     bool Validate() const;
+
+    void Clone(smtp_Config *out_config) const;
 };
 
 struct smtp_AttachedFile {
@@ -33,8 +40,6 @@ struct smtp_MailContent {
 
 class smtp_Sender {
     smtp_Config config;
-
-    BlockAllocator str_alloc;
 
 public:
     bool Init(const smtp_Config &config);

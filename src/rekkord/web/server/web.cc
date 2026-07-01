@@ -608,6 +608,8 @@ Options:
             }
         }
 
+        if (!config.Complete())
+            return 1;
         if (!config.Validate())
             return 1;
     }

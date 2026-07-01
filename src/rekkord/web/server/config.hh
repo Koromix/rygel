@@ -19,8 +19,14 @@ struct Config {
     const char *tmp_directory = nullptr;
 
 #if defined(WEB_DROP)
-    const char *drop_prefix = "";
-    int64_t drop_quota = Megabytes(1000);
+    struct {
+        const char *value = "";
+        bool changed = false;
+    } drop_prefix;
+    struct {
+        int64_t value = Megabytes(1000);
+        bool changed = false;
+    } drop_quota;
 
     s3_Config s3;
 #endif
@@ -41,6 +47,7 @@ struct Config {
 
     BlockAllocator str_alloc;
 
+    bool Complete();
     bool Validate() const;
 };
 

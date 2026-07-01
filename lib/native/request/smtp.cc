@@ -72,6 +72,50 @@ static bool IsAddressSafe(const char *mail)
     return true;
 }
 
+bool smtp_Config::SetProperty(Span<const char> key, Span<const char> value, Span<const char>)
+{
+    if (key == "URL") {
+        url = DuplicateString(value, &str_alloc).ptr;
+        return true;
+    } else if (key == "Username") {
+        username = DuplicateString(value, &str_alloc).ptr;
+        return true;
+    } else if (key == "Password") {
+        password = DuplicateString(value, &str_alloc).ptr;
+        return true;
+    } else if (key == "From") {
+        from = DuplicateString(value, &str_alloc).ptr;
+        return true;
+    }
+
+    LogError("Unknown SMTP property '%1'", key);
+    return false;
+}
+
+bool smtp_Config::Complete()
+{
+    if (!url) {
+        const char *str = GetEnv("SMTP_URL");
+        url = str ? DuplicateString(str, &str_alloc).ptr : nullptr;
+    }
+
+    if (!username) {
+        const char *str = GetEnv("SMTP_USERNAME");
+        username = str ? DuplicateString(str, &str_alloc).ptr : nullptr;
+    }
+    if (!password) {
+        const char *str = GetEnv("SMTP_PASSWORD");
+        password = str ? DuplicateString(str, &str_alloc).ptr : nullptr;
+    }
+
+    if (!from) {
+        const char *str = GetEnv("SMTP_FROM");
+        from = str ? DuplicateString(str, &str_alloc).ptr : nullptr;
+    }
+
+    return true;
+}
+
 bool smtp_Config::Validate() const
 {
     bool valid = true;
@@ -101,17 +145,20 @@ bool smtp_Config::Validate() const
     return valid;
 }
 
+void smtp_Config::Clone(smtp_Config *out_config) const
+{
+    out_config->url = DuplicateString(url, &out_config->str_alloc).ptr;
+    out_config->username = DuplicateString(username, &out_config->str_alloc).ptr;
+    out_config->password = DuplicateString(password, &out_config->str_alloc).ptr;
+    out_config->from = DuplicateString(from, &out_config->str_alloc).ptr;
+}
+
 bool smtp_Sender::Init(const smtp_Config &config)
 {
-    // Validate configuration
     if (!config.Validate())
         return false;
 
-    str_alloc.Reset();
-    this->config.url = DuplicateString(config.url, &str_alloc).ptr;
-    this->config.username = DuplicateString(config.username, &str_alloc).ptr;
-    this->config.password = DuplicateString(config.password, &str_alloc).ptr;
-    this->config.from = DuplicateString(config.from, &str_alloc).ptr;
+    config.Clone(&this->config);
 
     return true;
 }

@@ -461,7 +461,7 @@ bool DomainHolder::Open()
     settings.admin_password = gp_config.admin_password;
     settings.root_password = gp_config.root_password;
     settings.security_provisioned = gp_config.custom_security;
-    settings.smtp = gp_config.smtp;
+    gp_config.smtp.Clone(&settings.smtp);
     settings.smtp_provisioned = gp_config.smtp.url;
 
     // Load high-level settings

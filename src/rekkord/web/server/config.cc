@@ -6,6 +6,47 @@
 
 namespace K {
 
+bool Config::Complete()
+{
+#if defined(WEB_DROP)
+    if (!title) {
+        const char *str = GetEnv("DROP_TITLE");
+        title = str ? DuplicateString(str, &str_alloc).ptr : nullptr;
+    }
+    if (!url) {
+        const char *str = GetEnv("DROP_URL");
+        url = str ? DuplicateString(str, &str_alloc).ptr : nullptr;
+    }
+
+    if (!drop_prefix.changed) {
+        const char *str = GetEnv("DROP_PREFIX");
+
+        if (str) {
+            drop_prefix.value = DuplicateString(str, &str_alloc).ptr;
+            drop_prefix.changed = true;
+        }
+    }
+
+    if (!drop_quota.changed) {
+        const char *str = GetEnv("DROP_QUOTA");
+
+        if (str) {
+            if (!ParseSize(str, &drop_quota.value))
+                return false;
+            drop_quota.changed = true;
+        }
+    }
+
+    if (!s3.Complete())
+        return false;
+#endif
+
+    if (!smtp.Complete())
+        return false;
+
+    return true;
+}
+
 bool Config::Validate() const
 {
     bool valid = true;
@@ -22,7 +63,7 @@ bool Config::Validate() const
 #if defined(WEB_DROP)
     valid &= s3.Validate();
 
-    if (drop_prefix[0] && !EndsWith(drop_prefix, "/")) {
+    if (drop_prefix.value[0] && !EndsWith(drop_prefix.value, "/")) {
         LogError("S3 drop path must end with '/'");
         valid = false;
     }
@@ -94,10 +135,16 @@ bool LoadConfig(StreamReader *st, Config *out_config)
 #if defined(WEB_DROP)
             } else if (prop.section == "Drop") {
                 if (prop.key == "Quota") {
-                    valid &= ParseSize(prop.value, &config.drop_quota);
+                    if (ParseSize(prop.value, &config.drop_quota.value)) {
+                        config.drop_quota.changed = true;
+                    } else {
+                        valid = false;
+                    }
                 } else if (prop.key == "S3Path") {
                     const char *suffix = prop.value.len && !EndsWith(prop.value, "/") ? "/" : "";
-                    config.drop_prefix = Fmt(&config.str_alloc, "%1%2", prop.value, suffix).ptr;
+
+                    config.drop_prefix.value = Fmt(&config.str_alloc, "%1%2", prop.value, suffix).ptr;
+                    config.drop_prefix.changed = true;
                 } else {
                     LogError("Unknown attribute '%1'", prop.key);
                     valid = false;
@@ -121,18 +168,7 @@ bool LoadConfig(StreamReader *st, Config *out_config)
             } else if (prop.section == "HTTP") {
                 valid &= config.http.SetProperty(prop.key, prop.value, root_directory);
             } else if (prop.section == "SMTP") {
-                if (prop.key == "URL") {
-                    config.smtp.url = DuplicateString(prop.value, &config.str_alloc).ptr;
-                } else if (prop.key == "Username") {
-                    config.smtp.username = DuplicateString(prop.value, &config.str_alloc).ptr;
-                } else if (prop.key == "Password") {
-                    config.smtp.password = DuplicateString(prop.value, &config.str_alloc).ptr;
-                } else if (prop.key == "From") {
-                    config.smtp.from = DuplicateString(prop.value, &config.str_alloc).ptr;
-                } else {
-                    LogError("Unknown attribute '%1'", prop.key);
-                    valid = false;
-                }
+                valid &= config.smtp.SetProperty(prop.key, prop.value, root_directory);
             } else if (prop.section == "Authentication") {
                 if (prop.key == "AllowInternal") {
                     valid &= ParseBool(prop.value, &config.internal_auth);

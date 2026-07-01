@@ -104,18 +104,7 @@ bool LoadConfig(StreamReader *st, Config *out_config)
             } else if (prop.section == "HTTP") {
                 valid &= config.http.SetProperty(prop.key, prop.value, root_directory);
             } else if (prop.section == "SMTP") {
-                if (prop.key == "URL") {
-                    config.smtp.url = DuplicateString(prop.value, &config.str_alloc).ptr;
-                } else if (prop.key == "Username") {
-                    config.smtp.username = DuplicateString(prop.value, &config.str_alloc).ptr;
-                } else if (prop.key == "Password") {
-                    config.smtp.password = DuplicateString(prop.value, &config.str_alloc).ptr;
-                } else if (prop.key == "From") {
-                    config.smtp.from = DuplicateString(prop.value, &config.str_alloc).ptr;
-                } else {
-                    LogError("Unknown attribute '%1'", prop.key);
-                    valid = false;
-                }
+                valid &= config.smtp.SetProperty(prop.key, prop.value, root_directory);
             } else {
                 LogError("Unknown section '%1'", prop.section);
                 while (ini.NextInSection(&prop));
