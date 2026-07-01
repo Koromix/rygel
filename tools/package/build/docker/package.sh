@@ -1,7 +1,7 @@
 PKG_DIR=bin/Packages
 DEST_DIR=${PKG_DIR}/${TARGET}/docker
 DOCKER_IMAGE=debian12
-IMAGE_PREFIX=koromix/
+IMAGE_NAME=${IMAGE_NAME-koromix/$TARGET}
 
 podman build -t rygel/${DOCKER_IMAGE} tools/docker/${DOCKER_IMAGE}
 
@@ -21,16 +21,16 @@ echo "$TARGET = $VERSION" > $DEST_DIR/versions.txt
 
 cd $DEST_DIR
 
-podman manifest rm $IMAGE_PREFIX$TARGET:$VERSION  2>/dev/null || true
-podman manifest create $IMAGE_PREFIX$TARGET:$VERSION
-podman build --platform "$PLATFORMS" --manifest $IMAGE_PREFIX$TARGET:$VERSION .
+podman manifest rm $IMAGE_NAME:$VERSION  2>/dev/null || true
+podman manifest create $IMAGE_NAME:$VERSION
+podman build --platform "$PLATFORMS" --manifest $IMAGE_NAME:$VERSION .
 
-echo "podman manifest push --all $IMAGE_PREFIX$TARGET:$VERSION docker.io/$IMAGE_PREFIX$TARGET:$VERSION"
+echo "podman manifest push --all $IMAGE_NAME:$VERSION docker.io/$IMAGE_NAME:$VERSION"
 
-podman image tag $IMAGE_PREFIX$TARGET:$VERSION $IMAGE_PREFIX$TARGET:dev
-echo "podman manifest push --all $IMAGE_PREFIX$TARGET:dev docker.io/$IMAGE_PREFIX$TARGET:dev"
+podman image tag $IMAGE_NAME:$VERSION $IMAGE_NAME:dev
+echo "podman manifest push --all $IMAGE_NAME:dev docker.io/$IMAGE_NAME:dev"
 
 if echo "$VERSION" | grep -qv '-'; then
-    podman image tag $IMAGE_PREFIX$TARGET:$VERSION $IMAGE_PREFIX$TARGET:latest
-    echo "podman manifest push --all $IMAGE_PREFIX$TARGET:latest docker.io/$IMAGE_PREFIX$TARGET:latest"
+    podman image tag $IMAGE_NAME:$VERSION $IMAGE_NAME:latest
+    echo "podman manifest push --all $IMAGE_NAME:latest docker.io/$IMAGE_NAME:latest"
 fi
