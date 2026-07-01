@@ -374,13 +374,16 @@ BlockAllocator& BlockAllocator::operator=(BlockAllocator &&other)
 
 void BlockAllocator::Reset()
 {
-    last_alloc = nullptr;
-
     if (bucket_ptr) {
         bucket_ptr = bucket_end - block_size;
+
+        // Not true but Resize code assumes that last_alloc is not null when a bucket exists.
+        // I could also let it as-is, but for some reason I find that less clean.
+        last_alloc = bucket_ptr;
+
         allocator.ReleaseAllExcept(bucket_ptr);
     } else {
-        allocator.ReleaseAll();
+        ReleaseAll();
     }
 }
 
@@ -460,7 +463,6 @@ void BlockAllocator::Release(const void *ptr, Size size)
 
     if (ptr == last_alloc) {
         bucket_ptr = last_alloc;
-        last_alloc = nullptr;
     } else if (size > block_size) {
         allocator.Release(ptr, size);
     }
