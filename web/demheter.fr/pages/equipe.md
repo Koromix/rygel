@@ -6,7 +6,7 @@
         <div class="mission">Référent médical</div>
     </div>
     <div>
-        <div class="name">Dr Mathilde HORN</div>
+        <div class="name">Pre Mathilde HORN</div>
         <img src="{{ ASSET static/equipe/mathilde_horn.jpg }}" alt="" />
         <div class="title">Psychiatre</div>
         <div class="mission">Référente médicale</div>
@@ -39,7 +39,7 @@
         <div class="mission">Gestion des protocoles de recherche</div>
     </div>
     <div>
-        <div class="name">Dr Clémence NINEUIL</div>
+        <div class="name">Dre Clémence NINEUIL</div>
         <img src="{{ ASSET static/equipe/clemence_nineuil.jpg }}" alt="" />
         <div class="title">Psychologue - Attachée de recherche clinique</div>
         <div class="mission">Réalisation d’évaluations cliniques et neuropsychologiques</div>
@@ -55,7 +55,7 @@
 
 <div class="team">
     <div>
-        <div class="name">Dr Maéva MAGNAT</div>
+        <div class="name">Dre Maéva MAGNAT</div>
         <img src="{{ ASSET static/equipe/avatar.png }}" alt="" />
         <div class="title">Psychiatre</div>
         <div class="mission">Consultations troubles de l'humeur résistantes</div>
@@ -69,7 +69,7 @@
         <div class="mission">Activité d'ECT</div>
     </div>
     <div>
-        <div class="name">Dr Jehan ALLYBOKUS</div>
+        <div class="name">Dre Jehan ALLYBOKUS</div>
         <img src="{{ ASSET static/equipe/jehan_allybokus.jpg }}" alt="" />
         <div class="title">Psychiatre</div>
         <div class="mission">Consultations troubles de l'humeur résistantes</div>
