@@ -136,8 +136,6 @@ bool LoadConfig(StreamReader *st, Config *out_config)
     if (!config.tmp_directory) {
         config.tmp_directory = NormalizePath("tmp", data_directory, &config.str_alloc).ptr;
     }
-    if (!config.Validate())
-        return false;
 
     std::swap(*out_config, config);
     return true;

@@ -1143,7 +1143,6 @@ For help about those commands, type: %!..+%1 command --help%!0)"),
 
         opt.LogUnusedArguments();
 
-        // We may have changed some stuff (such as HTTP port), so revalidate
         if (!gp_config.Validate())
             return 1;
     }

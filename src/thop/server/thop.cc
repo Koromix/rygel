@@ -518,7 +518,6 @@ Options:
         opt.ConsumeNonOptions(&thop_config.mco_stay_filenames);
         opt.LogUnusedArguments();
 
-        // We may have changed some stuff (such as base_url), so revalidate
         if (!thop_config.Validate())
             return 1;
     }

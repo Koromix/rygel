@@ -179,9 +179,6 @@ bool LoadConfig(StreamReader *st, Config *out_config)
         }
     }
 
-    if (!config.Validate())
-        return false;
-
     std::swap(*out_config, config);
     return true;
 }

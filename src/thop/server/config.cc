@@ -107,8 +107,6 @@ bool LoadConfig(StreamReader *st, Config *out_config)
     if (!config.profile_directory) {
         config.profile_directory = NormalizePath("profile", root_directory, &config.str_alloc).ptr;
     }
-    if (!config.Validate())
-        return false;
 
     std::swap(*out_config, config);
     return true;
