@@ -68,6 +68,19 @@ bool s3_Config::SetProperty(Span<const char> key, Span<const char> value, Span<c
 
 bool s3_Config::Complete()
 {
+    if (!host) {
+        const char *str1 = GetS3Env("LOCATION");
+        const char *str2 = GetS3Env("ENDPOINT");
+
+        if (str1) {
+            if (!s3_DecodeURL(str1, this))
+                return false;
+        } else if (str2) {
+            if (!s3_DecodeURL(str2, this))
+                return false;
+        }
+    }
+
     if (!access_id) {
         const char *str = GetS3Env("ACCESS_KEY_ID");
         access_id = str ? DuplicateString(str, &str_alloc).ptr : nullptr;
