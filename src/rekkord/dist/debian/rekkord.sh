@@ -7,18 +7,19 @@ PKG_AUTHOR="Niels Martignène <niels.martignene@protonmail.com>"
 PKG_DESCRIPTION="Backup tool with deduplication and asymmetric encryption"
 PKG_DEPENDENCIES=""
 PKG_LICENSE=GPL-3.0-or-later
+PKG_ARCHITECTURES="amd64 arm64"
 
-SCRIPT_PATH=src/rekkord/dist/linux/rpm.sh
+SCRIPT_PATH=src/rekkord/dist/debian/rekkord.sh
 VERSION_TARGET=rekkord
-DOCKER_IMAGE=rocky9
+DOCKER_IMAGE=debian11
 
 build() {
     ./bootstrap.sh
-    ./felix -pFast rekkord RekkordTray
+    ./felix -pFast --host=$1:clang-18:lld-18 rekkord RekkordTray
 
     install -D -m0755 bin/Fast/rekkord ${ROOT_DIR}/usr/bin/rekkord
     install -D -m0755 bin/Fast/RekkordTray ${ROOT_DIR}/usr/bin/RekkordTray
 }
 
 cd "$(dirname $0)/../../../.."
-. tools/package/build/rpm/package.sh
+. tools/package/build/debian/package.sh

@@ -8,7 +8,7 @@ PKG_DESCRIPTION="CLI and GUI tools to control the keyboard lighting on MSI Delta
 PKG_DEPENDENCIES="libudev"
 PKG_LICENSE=GPL-3.0-or-later
 
-SCRIPT_PATH=src/meestic/dist/linux/rpm.sh
+SCRIPT_PATH=src/meestic/dist/rpm/meestic.sh
 VERSION_TARGET=meestic
 DOCKER_IMAGE=rocky9
 
@@ -22,10 +22,10 @@ build() {
     install -D -m0755 bin/Fast/MeesticTray ${ROOT_DIR}/usr/bin/MeesticTray
 
     install -D -m0644 src/meestic/MeesticTray.ini ${ROOT_DIR}/etc/meestic.ini
-    install -D -m0644 src/meestic/dist/linux/MeesticTray.desktop ${ROOT_DIR}/usr/share/applications/MeesticTray.desktop
-    install -D -m0644 src/meestic/dist/linux/MeesticTray.desktop ${ROOT_DIR}/etc/xdg/autostart/MeesticTray.desktop
+    install -D -m0644 src/meestic/dist/rpm/MeesticTray.desktop ${ROOT_DIR}/usr/share/applications/MeesticTray.desktop
+    install -D -m0644 src/meestic/dist/rpm/MeesticTray.desktop ${ROOT_DIR}/etc/xdg/autostart/MeesticTray.desktop
     install -D -m0644 src/meestic/images/meestic.png ${ROOT_DIR}/usr/share/icons/hicolor/512x512/apps/MeesticTray.png
-    install -D -m0644 src/meestic/dist/linux/meestic.service ${ROOT_DIR}/usr/lib/systemd/system/meestic.service
+    install -D -m0644 src/meestic/dist/rpm/meestic.service ${ROOT_DIR}/usr/lib/systemd/system/meestic.service
 
     echo "
 %post

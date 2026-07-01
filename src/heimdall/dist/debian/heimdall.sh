@@ -9,7 +9,7 @@ PKG_DEPENDENCIES=""
 PKG_LICENSE=GPL-3.0-or-later
 PKG_ARCHITECTURES="amd64 arm64"
 
-SCRIPT_PATH=src/heimdall/dist/linux/debian.sh
+SCRIPT_PATH=src/heimdall/dist/debian/heimdall.sh
 VERSION_TARGET=heimdall
 DOCKER_IMAGE=debian11
 
@@ -18,11 +18,11 @@ build() {
     ./felix -pFast --host=$1:clang-18:lld-18 heimdall
 
     install -D -m0755 bin/Fast/heimdall ${ROOT_DIR}/usr/bin/heimdall
-    install -D -m0644 src/heimdall/dist/linux/heimdall.ini ${ROOT_DIR}/etc/heimdall.ini
+    install -D -m0644 src/heimdall/dist/debian/heimdall.ini ${ROOT_DIR}/etc/heimdall.ini
 
     echo '/etc/heimdall.ini' > ${DEBIAN_DIR}/conffiles
 
-    install -D -m0644 src/heimdall/dist/linux/heimdall.service ${DEBIAN_DIR}/heimdall.service
+    install -D -m0644 src/heimdall/dist/debian/heimdall.service ${DEBIAN_DIR}/heimdall.service
 
 echo '\
 #!/bin/sh
