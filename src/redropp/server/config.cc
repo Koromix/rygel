@@ -8,6 +8,37 @@ namespace K {
 
 bool Config::Complete()
 {
+    if (!title) {
+        const char *str = GetEnv("DROP_TITLE");
+        title = str ? DuplicateString(str, &str_alloc).ptr : nullptr;
+    }
+    if (!url) {
+        const char *str = GetEnv("DROP_URL");
+        url = str ? DuplicateString(str, &str_alloc).ptr : nullptr;
+    }
+
+    if (!drop_prefix.changed) {
+        const char *str = GetEnv("DROP_PREFIX");
+
+        if (str) {
+            drop_prefix.value = DuplicateString(str, &str_alloc).ptr;
+            drop_prefix.changed = true;
+        }
+    }
+
+    if (!drop_quota.changed) {
+        const char *str = GetEnv("DROP_QUOTA");
+
+        if (str) {
+            if (!ParseSize(str, &drop_quota.value))
+                return false;
+            drop_quota.changed = true;
+        }
+    }
+
+    if (!s3.Complete())
+        return false;
+
     if (!smtp.Complete())
         return false;
 
@@ -24,6 +55,13 @@ bool Config::Validate() const
     }
     if (!url || !url[0]) {
         LogError("Missing public URL");
+        valid = false;
+    }
+
+    valid &= s3.Validate();
+
+    if (drop_prefix.value[0] && !EndsWith(drop_prefix.value, "/")) {
+        LogError("S3 drop path must end with '/'");
         valid = false;
     }
 
@@ -90,17 +128,24 @@ bool LoadConfig(StreamReader *st, Config *out_config)
 
                     first = false;
                 } while (ini.NextInSection(&prop));
-            } else if (prop.section == "Alerts") {
-                if (prop.key == "StaleDelay") {
-                    valid &= ParseDuration(prop.value, &config.stale_delay);
-                } else if (prop.key == "MailDelay") {
-                    valid &= ParseDuration(prop.value, &config.mail_delay);
-                } else if (prop.key == "RepeatDelay") {
-                    valid &= ParseDuration(prop.value, &config.repeat_delay);
+            } else if (prop.section == "Drop") {
+                if (prop.key == "Quota") {
+                    if (ParseSize(prop.value, &config.drop_quota.value)) {
+                        config.drop_quota.changed = true;
+                    } else {
+                        valid = false;
+                    }
+                } else if (prop.key == "S3Path") {
+                    const char *suffix = prop.value.len && !EndsWith(prop.value, "/") ? "/" : "";
+
+                    config.drop_prefix.value = Fmt(&config.str_alloc, "%1%2", prop.value, suffix).ptr;
+                    config.drop_prefix.changed = true;
                 } else {
                     LogError("Unknown attribute '%1'", prop.key);
                     valid = false;
                 }
+            } else if (prop.section == "S3") {
+                valid &= config.s3.SetProperty(prop.key, prop.value, root_directory);
             } else if (prop.section == "HTTP") {
                 valid &= config.http.SetProperty(prop.key, prop.value, root_directory);
             } else if (prop.section == "SMTP") {
@@ -130,7 +175,7 @@ bool LoadConfig(StreamReader *st, Config *out_config)
 
     // Default values
     if (!config.database_filename) {
-        config.database_filename = NormalizePath("RekkordWatch.db", data_directory, &config.str_alloc).ptr;
+        config.database_filename = NormalizePath("redropp.db", data_directory, &config.str_alloc).ptr;
     }
     if (!config.tmp_directory) {
         config.tmp_directory = NormalizePath("tmp", data_directory, &config.str_alloc).ptr;

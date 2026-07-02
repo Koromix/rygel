@@ -1,0 +1,9 @@
+Bienvenue !
+
+Utilisez le lien suivant pour valider votre compte et accéder à {{ TITLE }} :
+
+{{ URL }}
+
+Une fois votre adresse confirmée, vous serez invité à choisir un mot de passe sécurisé.
+
+{{ TITLE }}

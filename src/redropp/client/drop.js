@@ -9,19 +9,19 @@ import { Util, LruMap, Log, Net, HttpError, ProgressMeter } from 'lib/web/base/b
 import * as IDB from 'lib/web/base/indexeddb.js';
 import { Base64 } from 'lib/web/base/mixer.js';
 import * as UI from 'lib/web/ui/ui.js';
-import * as App from './m_app.js';
-import { route, cache, session } from './m_app.js';
-import * as UserMod from './u_user.js';
+import * as App from './app.js';
+import { route, cache, session } from './app.js';
+import * as UserMod from './user.js';
 import {
     formatSize,
     formatDuration
-} from './m_format.js';
-import { sendDrop, getProgress } from './d_relay.js';
+} from './format.js';
+import { sendDrop, getProgress } from './relay.js';
 import {
     createHeader,
     decodeHeader,
     upload
-} from './d_file.js';
+} from './file.js';
 import { ASSETS } from '../assets/assets.js';
 
 const EXPIRATION_DAYS = [1, 7, 30, 90];

@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
 import { Util, Log, Net, ProgressMeter } from 'lib/web/base/base.js';
-import * as App from './m_app.js';
+import * as App from './app.js';
 
 const PROGRESS_EXPIRATION = 2 * 60000;
 

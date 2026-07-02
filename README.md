@@ -18,6 +18,7 @@ As a general rule, applications are licensed under the [GPL 3.0 license](https:/
 | *ludivine* | Platform underlying the Lignes de Vie project (https://ldv-recherche.fr)         | Felix      | **Good** | GPL 3     |
 | *meestic*  | Control the keyboard lighting on MSI Delta 15 laptops                            | Felix      | **Good** | GPL 3     |
 | *napka*    | List and map of mental healthcare resources in France                            | Node.js    | **WIP**  | GPL 3     |
+| *redropp*  | File transfer web app with user accounts, SSO and end-to-end encryption          | Felix      | **Good** | GPL 3     |
 | *rekkord*  | Backup tool with deduplication and asymmetric encryption                         | Felix      | **WIP**  | GPL 3     |
 | *staks*    | Simple stacker-like game for web browsers                                        | Node.js    | **Good** | GPL 3     |
 | *thop*     | Web-based institutional PMSI (MCO) reporting tool based on libdrd                | Felix      | **Good** | GPL 3     |

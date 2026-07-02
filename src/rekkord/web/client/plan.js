@@ -5,16 +5,16 @@ import { render, html, live, unsafeHTML } from 'vendor/lit-html/lit-html.bundle.
 import dayjs from 'vendor/dayjs/dayjs.bundle.js';
 import { Util, Log, Net } from 'lib/web/base/base.js';
 import * as UI from 'lib/web/ui/ui.js';
-import * as App from './m_app.js';
-import { route, cache } from './m_app.js';
-import * as UserMod from './u_user.js';
-import { runChannel } from './b_repository.js';
+import * as App from './app.js';
+import { route, cache } from './app.js';
+import * as UserMod from './user.js';
+import { runChannel } from './repository.js';
 import {
     DAYS,
     formatDays,
     formatClock,
     parseClock,
-} from './m_format.js';
+} from './format.js';
 import { ASSETS } from '../assets/assets.js';
 
 async function runPlans() {

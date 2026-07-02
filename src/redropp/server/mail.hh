@@ -1,0 +1,20 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
+
+#pragma once
+
+#include "lib/native/base/base.hh"
+
+namespace K {
+
+struct smtp_Config;
+struct smtp_MailContent;
+
+bool InitSMTP(const smtp_Config &config);
+
+Span<const char> PatchMail(const char *basename, Allocator *alloc, FunctionRef<void(Span<const char>, StreamWriter *)> func);
+bool PostMail(const char *to, const smtp_MailContent &content);
+
+bool SendMails();
+
+}

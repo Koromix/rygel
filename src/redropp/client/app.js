@@ -7,11 +7,13 @@ import { Util, Mutex, Log, Net, HttpError } from 'lib/web/base/base.js';
 import { Base64 } from 'lib/web/base/mixer.js';
 import * as UI from 'lib/web/ui/ui.js';
 import { deploy } from 'lib/web/flat/static.js';
-import * as UserMod from './u_user.js';
+import * as UserMod from './user.js';
+import * as DropMod from './drop.js';
+import { initRelay } from './relay.js';
 import { ASSETS } from '../assets/assets.js';
 
-import en from '../../i18n/en.json';
-import fr from '../../i18n/fr.json';
+import en from '../i18n/en.json';
+import fr from '../i18n/fr.json';
 
 import '../assets/client.css';
 
@@ -23,13 +25,15 @@ const MODES = {
     recover: { run: UserMod.runRecover },
     reset: { run: UserMod.runReset },
     link: { run: UserMod.runLink },
-    account: { run: UserMod.runAccount }
+    account: { run: UserMod.runAccount },
+
+    drops: { run: DropMod.runDrops },
+    drop: { run: DropMod.runDrop, path: [{ key: 'drop', type: 'string' }] },
+    send: { run: DropMod.runSend }
 };
+const DEFAULT_MODE = 'drops';
 
 let languages = {};
-
-let default_mode = null;
-let render_menu = null;
 
 let route = {
     mode: null,
@@ -60,7 +64,7 @@ let cache = {
 // Init
 // ------------------------------------------------------------------------
 
-async function init(modes, def, menu) {
+async function start() {
     languages.en = en;
     languages.fr = fr;
 
@@ -74,10 +78,6 @@ async function init(modes, def, menu) {
     }
 
     UI.init(run, renderApp);
-
-    Object.assign(MODES, modes);
-    default_mode = def;
-    render_menu = menu;
 
     // Handle internal links
     Util.interceptLocalAnchors((e, href) => {
@@ -111,6 +111,13 @@ async function init(modes, def, menu) {
         if (rnd != null)
             session = await Net.get('/api/session/info');
     }
+
+    await initRelay();
+
+    await go(window.location.href, false);
+
+    UI.main();
+    document.body.classList.remove('loading');
 }
 
 // ------------------------------------------------------------------------
@@ -133,7 +140,7 @@ function go(url = null, push = true) {
     switch (mode) {
         case 'login': {
             if (isLogged()) {
-                changes.mode = default_mode;
+                changes.mode = DEFAULT_MODE;
             } else {
                 changes.mode = 'login';
             }
@@ -148,7 +155,7 @@ function go(url = null, push = true) {
             let info = MODES[mode];
 
             if (info == null) {
-                mode = default_mode;
+                mode = DEFAULT_MODE;
                 info = MODES[mode];
             }
 
@@ -203,7 +210,7 @@ async function run(changes = {}, hash = null, push = false) {
                 return;
             }
 
-            let info = MODES[route.mode] ?? MODES[default_mode];
+            let info = MODES[route.mode] ?? MODES[DEFAULT_MODE];
             await info.run();
 
             // Update URL
@@ -261,12 +268,16 @@ function renderApp(el) {
         document.body.appendChild(root_el);
     }
 
+    let in_drops = ['drops', 'drop', 'send'].includes(route.mode);
+
     render(html`
         <nav id="top">
             <div @click=${deploy}></div>
             <menu>
                 <a id="logo" href="/"><img src=${ASSETS['main/logo']} alt=${'Logo ' + ENV.title} /></a>
-                ${render_menu()}
+                ${isLogged() ? html`
+                    <li><a href="/drops" class=${in_drops ? 'active' : ''}>${T.files}</a></li>
+                ` : ''}
                 <div style="flex: 1;"></div>
                 ${isLogged() ? html`
                     <li><a href="/account" class=${route.mode == 'account' ? 'active' : ''}>${T.account}</a></li>
@@ -366,7 +377,7 @@ export {
     route,
     cache,
 
-    init,
+    start,
 
     makeURL,
     go,

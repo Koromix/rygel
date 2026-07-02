@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
-#if defined(WEB_DROP)
-
 #include "lib/native/base/base.hh"
 #include "lib/native/sqlite/sqlite.hh"
 #include "web.hh"
@@ -757,5 +755,3 @@ void HandleDropDownload(http_IO *io)
 }
 
 }
-
-#endif

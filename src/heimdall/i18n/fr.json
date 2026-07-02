@@ -87,6 +87,7 @@
         "Missing database filename": "Nom de fichier de base de données manquant",
         "Missing or invalid 'entity' parameter": "Paramètre 'entity' manquant ou non valide",
         "Missing project parameter": "Paramètre de projet manquant",
+        "Only %1 marks will be exported, consult documentation of hm_export_marks() for more": null,
         "Path '%1' does not start with '/'": "Le chemin '%1' ne commence pas par '/'",
         "Periodic timer set to %1 s": "Minuterie périodique réglée sur %1 s",
         "Process interrupted": "Processus interrompu",

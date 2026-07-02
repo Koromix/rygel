@@ -18,11 +18,18 @@ struct Config {
     const char *database_filename = nullptr;
     const char *tmp_directory = nullptr;
 
-    int64_t stale_delay = 30 * 3600000;
-    int64_t mail_delay = 1 * 3600000;
-    int64_t repeat_delay = 24 * 3600000;
+    struct {
+        const char *value = "";
+        bool changed = false;
+    } drop_prefix;
+    struct {
+        int64_t value = Megabytes(1000);
+        bool changed = false;
+    } drop_quota;
 
-    http_Config http { 8891 };
+    s3_Config s3;
+
+    http_Config http { 8894 };
 
     smtp_Config smtp;
 

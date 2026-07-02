@@ -5,10 +5,8 @@
 #include "web.hh"
 #include "config.hh"
 #include "database.hh"
-#include "link.hh"
+#include "drop.hh"
 #include "mail.hh"
-#include "plan.hh"
-#include "repository.hh"
 #include "user.hh"
 #include "lib/native/sandbox/sandbox.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
@@ -18,7 +16,7 @@ namespace K {
 Config config;
 sq_Database db;
 
-static const char *const DefaultConfigName = "RekkordWatch.ini";
+static const char *const DefaultConfigName = "redropp.ini";
 
 static HashMap<const char *, const AssetInfo *> asset_map;
 static const AssetInfo *asset_index = nullptr;
@@ -225,12 +223,12 @@ static void InitAssets()
     }
 
     for (const AssetInfo &asset: GetEmbedAssets()) {
-        if (TestStr(asset.name, "src/rekkord/web/client/index.html")) {
+        if (TestStr(asset.name, "src/redropp/client/index.html")) {
             asset_index = &asset;
             asset_map.Set("/", &asset);
-        } else if (TestStr(asset.name, "src/rekkord/web/client/d_sw.js")) {
+        } else if (TestStr(asset.name, "src/redropp/client/sw.js")) {
             asset_map.Set("/sw.js", &asset);
-        } else if (TestStr(asset.name, "src/rekkord/web/assets/main/rekkord.webp")) {
+        } else if (TestStr(asset.name, "src/redropp/assets/main/redropp.webp")) {
             asset_map.Set("/favicon.webp", &asset);
         } else {
             Span<const char> name = SplitStrReverseAny(asset.name, K_PATH_SEPARATORS);
@@ -354,34 +352,28 @@ static void HandleRequest(http_IO *io)
             HandlePictureSave(io);
         } else if (url == "/api/picture/delete" && method == http_RequestMethod::Post) {
             HandlePictureDelete(io);
-        } else if (url == "/api/repository/list" && method == http_RequestMethod::Get) {
-            HandleRepositoryList(io);
-        } else if (url == "/api/repository/get" && method == http_RequestMethod::Get) {
-            HandleRepositoryGet(io);
-        } else if (url == "/api/repository/save" && method == http_RequestMethod::Post) {
-            HandleRepositorySave(io);
-        } else if (url == "/api/repository/delete" && method == http_RequestMethod::Post) {
-            HandleRepositoryDelete(io);
-        } else if (url == "/api/repository/snapshots" && method == http_RequestMethod::Get) {
-            HandleRepositorySnapshots(io);
-        } else if (url == "/api/plan/list" && method == http_RequestMethod::Get) {
-            HandlePlanList(io);
-        } else if (url == "/api/plan/get" && method == http_RequestMethod::Get) {
-            HandlePlanGet(io);
-        } else if (url == "/api/plan/save" && method == http_RequestMethod::Post) {
-            HandlePlanSave(io);
-        } else if (url == "/api/plan/delete" && method == http_RequestMethod::Post) {
-            HandlePlanDelete(io);
-        } else if (url == "/api/plan/key" && method == http_RequestMethod::Post) {
-            HandlePlanKey(io);
-        } else if (url == "/api/plan/fetch" && method == http_RequestMethod::Get) {
-            HandlePlanFetch(io);
-        } else if (url == "/api/link/snapshot" && method == http_RequestMethod::Post) {
-            HandleLinkSnapshot(io);
+        } else if (url == "/api/drop/list" && method == http_RequestMethod::Get) {
+            HandleDropList(io);
+        } else if (url == "/api/drop/info" && method == http_RequestMethod::Get) {
+            HandleDropInfo(io);
+        } else if (url == "/api/drop/create" && method == http_RequestMethod::Post) {
+            HandleDropCreate(io);
+        } else if (url == "/api/drop/delete" && method == http_RequestMethod::Post) {
+            HandleDropDelete(io);
+        } else if (url == "/api/drop/mark" && method == http_RequestMethod::Post) {
+            HandleDropMark(io);
+        } else if (url == "/api/drop/fragment" && method == http_RequestMethod::Put) {
+            HandleFragmentUpload(io);
+        } else if (url == "/api/drop/fragment" && method == http_RequestMethod::Get) {
+            HandleFragmentDownload(io);
         } else {
             io->SendError(404);
         }
 
+        return;
+    }
+    if (StartsWith(url, "/drop/download/") && method == http_RequestMethod::Get) {
+        HandleDropDownload(io);
         return;
     }
 
@@ -587,6 +579,11 @@ Options:
     LogInfo("Init assets");
     InitAssets();
 
+    LogInfo("Init drops");
+    if (!InitDrops())
+        return 1;
+    K_DEFER { ExitDrops(); };
+
     // Run!
     LogInfo("Init HTTP server");
     http_Daemon daemon;
@@ -639,8 +636,8 @@ Options:
         LogInfo("Periodic timer set to %1 s", FmtDouble((double)timeout / 1000.0, 1));
 
         while (run) {
-            LogDebug("Detect alerts");
-            DetectAlerts();
+            LogDebug("Prune drops");
+            PruneDrops();
 
             LogDebug("Prune tokens");
             PruneTokens();

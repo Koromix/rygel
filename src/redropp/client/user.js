@@ -4,9 +4,9 @@
 import { render, html, live, unsafeHTML } from 'vendor/lit-html/lit-html.bundle.js';
 import { Util, Log, Net, HttpError } from 'lib/web/base/base.js';
 import * as UI from 'lib/web/ui/ui.js';
-import * as App from './m_app.js';
-import { route, cache, session } from './m_app.js';
-import { PictureCropper } from './u_picture.js';
+import * as App from './app.js';
+import { route, cache, session } from './app.js';
+import { PictureCropper } from './picture.js';
 import { ASSETS } from '../assets/assets.js';
 
 async function runRegister() {

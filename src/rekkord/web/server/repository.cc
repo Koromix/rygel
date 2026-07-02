@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
-#if defined(WEB_WATCH)
-
 #include "lib/native/base/base.hh"
 #include "lib/native/http/http.hh"
 #include "../../lib/librekkord.hh"
@@ -524,5 +522,3 @@ void HandleRepositorySnapshots(http_IO *io)
 }
 
 }
-
-#endif

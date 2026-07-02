@@ -1,0 +1,102 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com> */
+
+@import url('lib/web/flat/flat.css');
+
+html {
+    --top_color: white;
+    --button_color: #d87129;
+    --anchor_color: #262626;
+
+    --bar_color: #d87129;
+    --tab_color: #f8fafc;
+    --box_color: #efefef;
+
+    --top_height: 80px;
+    --small_height: 60px;
+    --top_background: #222222;
+
+    --button_radius: 5px;
+}
+
+body { font-size: 15px; }
+
+:is(main, dialog) a {
+    text-decoration: underline !important;
+    text-decoration-style: dotted !important;
+}
+:is(main, dialog) a:hover { text-decoration-style: solid !important; }
+:is(main, dialog) a:has(> img) { text-decoration: none !important; }
+
+span[title] { border-bottom: 1px dotted #383838; }
+
+.picture {
+    --size: 256px;
+
+    box-sizing: border-box;
+    width: var(--size);
+    height: var(--size);
+    border-radius: 50%;
+    border: none;
+    vertical-align: middle;
+}
+li + .picture { margin-left: -1em; }
+
+.deploy { color: white; }
+
+#top {
+    font-size: 1.1em;
+    color: white;
+
+    & menu {
+        gap: 2em;
+        text-transform: none;
+    }
+    & li > a {
+        border-bottom: none;
+        margin-bottom: 1px;
+        color: inherit;
+    }
+    & li > a:hover, li.active > a {
+        margin-bottom: -1px;
+        color: white !important;
+    }
+    & .picture { --size: 48px; }
+
+    &.border { border-bottom-color: var(--top_background); }
+}
+
+footer {
+    position: relative;
+    font-size: 1.1em;
+
+    & .legal {
+        display: block;
+        font-size: 0.8em;
+    }
+}
+
+@media screen and (max-width: 960px) {
+    #logo { display: none; }
+
+    #top {
+        & menu { gap: 0; }
+        & div { display: none; }
+        & li > a.active { display: block !important; }
+        & .picture {
+            position: fixed;
+            top: 14px;
+            right: 14px;
+            width: 34px;
+            height: 34px;
+        }
+    }
+
+    footer {
+        padding-left: 1em;
+        align-items: start;
+        text-align: left;
+
+        & .legal { display: none; }
+    }
+}

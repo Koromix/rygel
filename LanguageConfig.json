@@ -52,6 +52,13 @@
             "messages": true
         },
         {
+            "namespace": "redropp",
+            "sources": ["src/redropp"],
+            "path": "src/redropp/i18n",
+            "keys": true,
+            "messages": true
+        },
+        {
             "namespace": "staks",
             "sources": ["src/staks/src"],
             "path": "src/staks/i18n",

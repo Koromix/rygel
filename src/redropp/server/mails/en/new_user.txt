@@ -1,0 +1,9 @@
+Welcome !
+
+Use the following link to validate your account and access {{ TITLE }}:
+
+{{ URL }}
+
+Once your address is confirmed, you will be invited to choose a secure password.
+
+{{ TITLE }}
