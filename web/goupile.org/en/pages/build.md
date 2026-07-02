@@ -49,7 +49,7 @@ Once the Goupile executable is compiled, you can create a Goupile domain using t
 # But you can create it wherever you wish!
 
 mkdir -p tmp
-bin/Debug/Goupile init tmp/test
+bin/Debug/goupile init tmp/test
 ```
 
 To access this domain via a web browser, you can start it using the following command:

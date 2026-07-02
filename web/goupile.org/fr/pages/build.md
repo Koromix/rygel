@@ -49,7 +49,7 @@ Une fois l'exécutable Goupile compilé, il est possible de créer un domaine Go
 # Mais vous pouvez le créer où vous le souhaiter !
 
 mkdir -p tmp
-bin/Debug/Goupile init tmp/test
+bin/Debug/goupile init tmp/test
 ```
 
 Pour accéder à ce domaine via un navigateur web, vous pouvez le lancer à l'aide de la commande suivante :

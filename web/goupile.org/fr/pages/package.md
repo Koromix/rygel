@@ -106,7 +106,7 @@ server {
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 
-        proxy_pass http://127.0.0.1:8888/;
+        proxy_pass http://127.0.0.1:8889/;
     }
 }
 ```
@@ -124,7 +124,7 @@ Le bloc `VirtualHost` devrait ressembler à ceci :
     LimitRequestBody 268435456
 
     ProxyPreserveHost On
-    ProxyPass "/" "http://127.0.0.1:8888/"
-    ProxyPassReverse "/" "http://127.0.0.1:8888/"
+    ProxyPass "/" "http://127.0.0.1:8889/"
+    ProxyPassReverse "/" "http://127.0.0.1:8889/"
 </VirtualHost>
 ```
