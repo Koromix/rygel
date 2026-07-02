@@ -78,7 +78,7 @@ function tool_spell_check() {
 # Generate a properly formatted C source/header file
 #
 function tool_c_style() {
-	cat - | astyle --options=none --lineend=linux --mode=c \
+	cat - | /home/thromatk/git/libseccomp/astyle/AStyle/build/gcc/bin/astyle --options=none --lineend=linux --mode=c \
 		--style=linux \
 		--indent=force-tab=8 \
 		--indent-col1-comments \
