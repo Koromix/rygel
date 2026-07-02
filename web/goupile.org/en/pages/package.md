@@ -19,7 +19,7 @@ apt update
 apt install goupile
 ```
 
-For other distributions, you can [compile the code](#compilation) as indicated below.
+For other distributions, you can [compile the code](build) manually.
 
 ## Linux (RPM)
 
@@ -45,7 +45,7 @@ Once this is done, install the package with this command:
 dnf install goupile
 ```
 
-For other distributions, you can [compile the code](#compilation) as indicated below.
+For other distributions, you can [compile the code](build) manually.
 
 # Domains
 
