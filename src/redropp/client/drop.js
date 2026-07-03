@@ -374,8 +374,13 @@ async function runSend() {
                 <label>
                     <span>${T.expiration}</span>
                     <select name="expiration">
-                        ${EXPIRATION_DAYS.map(days =>
-                            html`<option value=${days} ?selected=${days == DEFAULT_EXPIRATION}>${T.count(T.expiration_delay, days)}</option>`)}
+                        ${EXPIRATION_DAYS.map(days => {
+                            if (days * 86400000 > ENV.max_duration)
+                                return '';
+
+                            return html`<option value=${days} ?selected=${days == DEFAULT_EXPIRATION}>${T.count(T.expiration_delay, days)}</option>`;
+                        })}
+                        ${ENV.allow_infinite ? html`<option value="0">${T.no_expiration}</option>` : ''}
                     </select>
                 </label>
                 <div class="sub">${T.drag_or_browse_file}</div>
@@ -412,7 +417,7 @@ async function runSend() {
         let elements = form.elements;
 
         let file = send_file;
-        let expiration = parseInt(elements.expiration.value, 10) * 86400000;
+        let expiration = (parseInt(elements.expiration.value, 10) * 86400000) || null;
         let password = elements.password.value.trim();
 
         // The scrypt code in createHeader blocks for some time, repaint the UI before

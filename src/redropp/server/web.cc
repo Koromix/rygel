@@ -422,6 +422,9 @@ static void HandleRequest(http_IO *io)
                     json.Key("title"); json.String(config.title);
                     json.Key("url"); json.String(config.url);
 
+                    json.Key("max_duration"); json.Int64(config.max_duration);
+                    json.Key("allow_infinite"); json.Bool(config.allow_infinite);
+
                     json.Key("auth"); json.StartObject();
                     json.Key("internal"); json.Bool(config.internal_auth);
                     json.Key("providers"); json.StartArray();

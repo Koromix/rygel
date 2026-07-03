@@ -90,6 +90,7 @@
         "never": "Jamais",
         "new_password": "Nouveau mot de passe",
         "no": "Non",
+        "no_expiration": "Pas d'expiration",
         "no_file": "Aucun fichier",
         "not_used": "Non utilisé",
         "optional": "Optionnel",

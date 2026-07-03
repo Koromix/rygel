@@ -10,8 +10,6 @@
 
 namespace K {
 
-static const int64_t MaxExpiration = 90 * 86400000ull; // 90 days
-static bool AllowNoExpiration = true;
 static const int64_t StaleDelay = 7 * 86400000ull; // 7 days
 static const int64_t CleanupDelay = 6 * 3600000ull; // 6 hours
 
@@ -300,11 +298,11 @@ void HandleDropCreate(http_IO *io)
                     LogError("Invalid or excessive 'size' parameter");
                     valid = false;
                 }
-                if (expiration < 0 && !AllowNoExpiration) {
+                if (expiration < 0 && !config.allow_infinite) {
                     LogError("You must set an expiration time");
                     valid = false;
-                } else if (expiration > MaxExpiration) {
-                    LogError("Excessive expiration time, max is approximately %1 days", MaxExpiration / 86400000);
+                } else if (expiration > config.max_duration) {
+                    LogError("Excessive expiration time, max is approximately %1 days", config.max_duration / 86400000);
                     valid = false;
                 }
                 if (header.len != HeaderLength || !IsStringValid(header, "\n")) {
@@ -327,7 +325,7 @@ void HandleDropCreate(http_IO *io)
     }
 
     int64_t now = GetUnixTime();
-    int64_t expire = now + expiration;
+    int64_t expire = (expiration >= 0) ? now + expiration : -1;
 
     KID kid;
     FillKID(KIDType::Drop, &kid);
@@ -361,7 +359,8 @@ void HandleDropCreate(http_IO *io)
         if (!db.Run(R"(INSERT INTO drops (kid, owner, name, size, expire, protect,
                                           header, nonce, split, uploaded, deleted)
                        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, 0, 0))",
-                    sq_Binding(kid.raw), session->userid, name, size, expire,
+                    sq_Binding(kid.raw), session->userid, name, size,
+                    expire >= 0 ? sq_Binding(expire) : sq_Binding(),
                     0 + protect, header, nonce, FragmentSize))
             return false;
 

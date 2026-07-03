@@ -140,6 +140,10 @@ bool LoadConfig(StreamReader *st, Config *out_config)
 
                     config.drop_prefix.value = Fmt(&config.str_alloc, "%1%2", prop.value, suffix).ptr;
                     config.drop_prefix.changed = true;
+                } else if (prop.key == "MaxDuration") {
+                    valid &= ParseDuration(prop.value, &config.max_duration);
+                } else if (prop.key == "AllowInfinite") {
+                    valid &= ParseBool(prop.value, &config.allow_infinite);
                 } else {
                     LogError("Unknown attribute '%1'", prop.key);
                     valid = false;

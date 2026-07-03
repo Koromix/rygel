@@ -27,6 +27,9 @@ struct Config {
         bool changed = false;
     } drop_quota;
 
+    int64_t max_duration = 90 * 86400000ull; // 90 days
+    bool allow_infinite = false;
+
     s3_Config s3;
 
     http_Config http { 8894 };
