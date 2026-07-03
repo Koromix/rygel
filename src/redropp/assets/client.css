@@ -31,6 +31,21 @@ main.dialog {
     main.dialog { margin-top: 0; }
 }
 
+#logo {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+
+    & > img {
+        width: auto;
+    }
+
+    & > span {
+        font-size: 1.2em;
+        color: white;
+    }
+}
+
 #language {
     position: absolute;
     right: 1em;

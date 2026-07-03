@@ -274,7 +274,7 @@ function renderApp(el) {
         <nav id="top">
             <div @click=${deploy}></div>
             <menu>
-                <a id="logo" href="/"><img src=${ASSETS['main/logo']} alt=${'Logo ' + ENV.title} /></a>
+                <a id="logo" href="/"><img src=${ASSETS['main/white']} alt="" /> <span>${ENV.title}</span></a>
                 ${isLogged() ? html`
                     <li><a href="/drops" class=${in_drops ? 'active' : ''}>${T.files}</a></li>
                 ` : ''}
