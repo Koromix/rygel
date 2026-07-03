@@ -85,6 +85,9 @@ bool oidc_Provider::SetProperty(Span<const char> key, Span<const char> value, Sp
         }
 
         return true;
+    } else if (key == "AuthorizationClaims") {
+        auth_claims = DuplicateString(value, &str_alloc).ptr;
+        return true;
     }
 
     LogError("Unknown OIDC property '%1'", key);
@@ -253,10 +256,20 @@ void oidc_PrepareAuthorization(const oidc_Provider &provider, const char *scopes
     Span<const char> state = Fmt(&temp_alloc, "%1|%2|%3", FmtRandom(24), provider.issuer, redirect);
     Span<const char> nonce = Fmt(&temp_alloc, "%1", FmtRandom(24));
 
-    out_auth->url = Fmt(alloc, "%1?client_id=%2&redirect_uri=%3&scope=openid+%4&response_type=code&state=%5&nonce=%6",
-                               provider.auth_url, FmtUrlSafe(provider.client_id, "-._~@"),
-                               FmtUrlSafe(callback, "-._~@"), FmtUrlSafe(scopes, "-._~@"),
-                               FmtUrlSafe(state, "-._~@"), FmtUrlSafe(nonce, "-._~@")).ptr;
+    {
+        HeapArray<char> buf(alloc);
+
+        Fmt(&buf, "%1?client_id=%2&redirect_uri=%3&scope=openid+%4&response_type=code&state=%5&nonce=%6",
+                   provider.auth_url, FmtUrlSafe(provider.client_id, "-._~@"),
+                   FmtUrlSafe(callback, "-._~@"), FmtUrlSafe(scopes, "-._~@"),
+                   FmtUrlSafe(state, "-._~@"), FmtUrlSafe(nonce, "-._~@"));
+
+        if (provider.auth_claims) {
+            Fmt(&buf, "&claims=%1", FmtUrlSafe(provider.auth_claims, "-._~@"));
+        }
+
+        out_auth->url = buf.TrimAndLeak(1).ptr;
+    }
 
     // Prepare encrypted cookie
     {
