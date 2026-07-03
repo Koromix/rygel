@@ -237,7 +237,7 @@ async function runOidc() {
     let state = query.get('state');
 
     if (code == null || state == null) {
-        console.error('Missing OIDC callback parameters');
+        Log.error(T.message(`Missing OIDC callback parameters`));
 
         App.go('/');
         return;
