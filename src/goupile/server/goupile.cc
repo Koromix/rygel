@@ -14,9 +14,7 @@
 #include "vm.hh"
 #include "../legacy/records.hh"
 #include "lib/native/http/http.hh"
-#include "lib/native/request/curl.hh"
 #include "lib/native/sandbox/sandbox.hh"
-#include "vendor/libsodium/src/libsodium/include/sodium.h"
 #if !defined(_WIN32)
     #include <signal.h>
     #include <sys/time.h>
@@ -1254,7 +1252,7 @@ For help about those commands, type: %!..+%1 command --help%!0)"),
 
         // Randomize the delay a bit to reduce situations where all goupile
         // services perform cleanups at the same time and cause a load spike.
-        timeout += randombytes_uniform(timeout / 4 + 1);
+        timeout += GetRandomInt(0, timeout / 4 + 1);
         LogInfo("Periodic timer set to %1 s", FmtDouble((double)timeout / 1000.0, 1));
 
         while (run) {

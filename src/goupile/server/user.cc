@@ -795,7 +795,7 @@ static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, Sessio
         {
             static_assert(K_SIZE(code) <= K_SIZE(SessionInfo::secret));
 
-            uint32_t rnd = randombytes_uniform(100000000); // 8 digits
+            uint32_t rnd = (uint32_t)GetRandomInt(0, 100000000); // 8 digits
             Fmt(code, "%1", FmtInt(rnd, 8));
         }
 
@@ -824,7 +824,7 @@ static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, Sessio
         {
             static_assert(K_SIZE(code) <= K_SIZE(SessionInfo::secret));
 
-            uint32_t rnd = randombytes_uniform(1000000); // 6 digits
+            uint32_t rnd = (uint32_t)GetRandomInt(0, 1000000); // 6 digits
             Fmt(code, "%1", FmtInt(rnd, 6));
         }
 
@@ -1669,10 +1669,10 @@ RetainPtr<const SessionInfo> MigrateGuestSession(http_IO *io, InstanceHolder *in
         Span<char> key = AllocateSpan<char>(io->Allocator(), 11);
 
         for (Size i = 0; i < 7; i++) {
-            key[i] = (char)('a' + randombytes_uniform('z' - 'a' + 1));
+            key[i] = (char)('a' + GetRandomInt(0, 'z' - 'a' + 1));
         }
         for (Size i = 7; i < 10; i++) {
-            key[i] = (char)('0' + randombytes_uniform('9' - '0' + 1));
+            key[i] = (char)('0' + GetRandomInt(0, '9' - '0' + 1));
         }
         key[10] = 0;
 

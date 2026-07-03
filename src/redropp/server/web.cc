@@ -9,7 +9,6 @@
 #include "mail.hh"
 #include "user.hh"
 #include "lib/native/sandbox/sandbox.hh"
-#include "vendor/libsodium/src/libsodium/include/sodium.h"
 
 namespace K {
 
@@ -635,7 +634,7 @@ Options:
 
         // Randomize the delay a bit to reduce situations where all goupile
         // services perform cleanups at the same time and cause a load spike.
-        timeout += randombytes_uniform(timeout / 4 + 1);
+        timeout += GetRandomInt(0, timeout / 4 + 1);
         LogInfo("Periodic timer set to %1 s", FmtDouble((double)timeout / 1000.0, 1));
 
         while (run) {
