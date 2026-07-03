@@ -11,7 +11,7 @@
 namespace K {
 
 static const int64_t StaleDelay = 7 * 86400000ull; // 7 days
-static const int64_t CleanupDelay = 6 * 3600000ull; // 6 hours
+static const int64_t CleanupDelay = 1 * 3600000ull; // 1 hour
 
 static const int64_t HeaderLength = 149;
 static const int64_t FragmentSize = Mebibytes(2);
