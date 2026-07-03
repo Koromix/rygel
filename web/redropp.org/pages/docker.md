@@ -4,13 +4,14 @@ Before you can run Redropp, you must create a configuration file. For Docker, yo
 
 ```
 # Name/title of this instance
-DROP_TITLE=
+TITLE=
 
 # Public URL
-DROP_URL=
+URL=
 
-# Per-user usage quota
+# Drop settings : per-user quota, max duration, infinite mode
 DROP_QUOTA=1G
+DROP_MAX_DURATION=90d
 
 # SMTP information, read the CURL documentation for supported URLs: https://everything.curl.dev/usingcurl/smtp.html
 SMTP_URL=

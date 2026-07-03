@@ -18,16 +18,10 @@ struct Config {
     const char *database_filename = nullptr;
     const char *tmp_directory = nullptr;
 
-    struct {
-        const char *value = "";
-        bool changed = false;
-    } drop_prefix;
-    struct {
-        int64_t value = Megabytes(1000);
-        bool changed = false;
-    } drop_quota;
-
+    int64_t quota = Megabytes(1000);
+    bool explicit_quota = false;
     int64_t max_duration = 90 * 86400000ull; // 90 days
+    bool explicit_duration = false;
     bool allow_infinite = false;
 
     s3_Config s3;

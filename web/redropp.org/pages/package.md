@@ -65,6 +65,10 @@ RootDirectory = /var/lib/redropp
 [Drop]
 # Per-user storage quota
 Quota = 1000M
+# Maximum expiration
+MaxDuration = 90d
+# Allow no expiration
+AllowInfinite = No
 
 [S3]
 # Endpoint and bucket, example: https://sos-de-fra-1.exo.io/bucket

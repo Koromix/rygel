@@ -69,7 +69,7 @@ static void CleanupFragments(int64_t now)
                 int64_t end = std::min(start + 1000, fragments);
 
                 for (int64_t i = start; i < end; i++) {
-                    const char *key = Fmt(&temp_alloc, "%1%2/%3", config.drop_prefix.value, kid, FmtInt(i, 6)).ptr;
+                    const char *key = Fmt(&temp_alloc, "%1/%2", kid, FmtInt(i, 6)).ptr;
                     keys.Append(key);
                 }
 
@@ -152,7 +152,7 @@ void HandleDropList(http_IO *io)
     http_SendJson(io, 200, [&](json_Writer *json) {
         json->StartObject();
 
-        json->Key("quota"); json->Int64(config.drop_quota.value);
+        json->Key("quota"); json->Int64(config.quota);
 
         // User consumption
         {
@@ -347,10 +347,10 @@ void HandleDropCreate(http_IO *io)
         // Make sure we're not over quota
         {
             int64_t total = sqlite3_column_int64(stmt, 0);
-            int64_t remain = config.drop_quota.value - total;
+            int64_t remain = config.quota - total;
 
             if (remain < 0) {
-                LogError("These files would exceed total quota by %1 (max = %2)", FmtDiskSize(-remain), FmtDiskSize(config.drop_quota.value));
+                LogError("These files would exceed total quota by %1 (max = %2)", FmtDiskSize(-remain), FmtDiskSize(config.quota));
                 io->SendError(403);
                 return false;
             }
@@ -514,7 +514,7 @@ void HandleFragmentUpload(http_IO *io)
     if (!io->OpenForRead(-1, &reader))
         return;
 
-    Span<const char> key = Fmt(io->Allocator(), "%1%2/%3", config.drop_prefix.value, kid, FmtInt(fragment, 6));
+    Span<const char> key = Fmt(io->Allocator(), "%1/%2", kid, FmtInt(fragment, 6));
 
     s3_PutResult ret = s3.PutObject(key, ComputedEncryptedSize(expected), [&](int64_t offset, Span<uint8_t> buf) {
         if (offset != reader.GetRawRead()) {
@@ -586,7 +586,7 @@ void HandleFragmentDownload(http_IO *io)
     if (!io->OpenForWrite(200, ComputedEncryptedSize(expected), &writer))
         return;
 
-    Span<const char> key = Fmt(io->Allocator(), "%1%2/%3", config.drop_prefix.value, kid, FmtInt(fragment, 6));
+    Span<const char> key = Fmt(io->Allocator(), "%1/%2", kid, FmtInt(fragment, 6));
 
     int64_t downloaded = s3.GetObject(key, [&](int64_t offset, Span<const uint8_t> buf) {
         if (offset != writer.GetRawWritten()) {
@@ -740,7 +740,7 @@ void HandleDropDownload(http_IO *io)
         Span<uint8_t> buf = AllocateSpan<uint8_t>(io->Allocator(), ComputedEncryptedSize(size));
 
         for (int64_t i = 0; i < fragments; i++) {
-            Span<const char> key = Fmt(io->Allocator(), "%1%2/%3", config.drop_prefix.value, kid, FmtInt(i, 6));
+            Span<const char> key = Fmt(io->Allocator(), "%1/%2", kid, FmtInt(i, 6));
             Size downloaded = s3.GetObject(key, buf);
 
             if (downloaded < 0)

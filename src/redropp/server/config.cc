@@ -9,30 +9,31 @@ namespace K {
 bool Config::Complete()
 {
     if (!title) {
-        const char *str = GetEnv("DROP_TITLE");
+        const char *str = GetEnv("TITLE");
         title = str ? DuplicateString(str, &str_alloc).ptr : nullptr;
     }
     if (!url) {
-        const char *str = GetEnv("DROP_URL");
+        const char *str = GetEnv("URL");
         url = str ? DuplicateString(str, &str_alloc).ptr : nullptr;
     }
 
-    if (!drop_prefix.changed) {
-        const char *str = GetEnv("DROP_PREFIX");
-
-        if (str) {
-            drop_prefix.value = DuplicateString(str, &str_alloc).ptr;
-            drop_prefix.changed = true;
-        }
-    }
-
-    if (!drop_quota.changed) {
+    if (!explicit_quota) {
         const char *str = GetEnv("DROP_QUOTA");
 
         if (str) {
-            if (!ParseSize(str, &drop_quota.value))
+            if (!ParseSize(str, &quota))
                 return false;
-            drop_quota.changed = true;
+            explicit_quota = true;
+        }
+    }
+
+    if (!explicit_duration) {
+        const char *str = GetEnv("DROP_MAX_DURATION");
+
+        if (str) {
+            if (!ParseDuration(str, &max_duration))
+                return false;
+            explicit_duration = true;
         }
     }
 
@@ -59,12 +60,6 @@ bool Config::Validate() const
     }
 
     valid &= s3.Validate();
-
-    if (drop_prefix.value[0] && !EndsWith(drop_prefix.value, "/")) {
-        LogError("S3 drop path must end with '/'");
-        valid = false;
-    }
-
     valid &= http.Validate();
     valid &= smtp.Validate();
 
@@ -130,18 +125,17 @@ bool LoadConfig(StreamReader *st, Config *out_config)
                 } while (ini.NextInSection(&prop));
             } else if (prop.section == "Drop") {
                 if (prop.key == "Quota") {
-                    if (ParseSize(prop.value, &config.drop_quota.value)) {
-                        config.drop_quota.changed = true;
+                    if (ParseSize(prop.value, &config.quota)) {
+                        config.explicit_quota = true;
                     } else {
                         valid = false;
                     }
-                } else if (prop.key == "S3Path") {
-                    const char *suffix = prop.value.len && !EndsWith(prop.value, "/") ? "/" : "";
-
-                    config.drop_prefix.value = Fmt(&config.str_alloc, "%1%2", prop.value, suffix).ptr;
-                    config.drop_prefix.changed = true;
                 } else if (prop.key == "MaxDuration") {
-                    valid &= ParseDuration(prop.value, &config.max_duration);
+                    if (ParseDuration(prop.value, &config.max_duration)) {
+                        config.explicit_duration = true;
+                    } else {
+                        valid = false;
+                    }
                 } else if (prop.key == "AllowInfinite") {
                     valid &= ParseBool(prop.value, &config.allow_infinite);
                 } else {
