@@ -29,7 +29,7 @@
 
 ## Koffi
 
-<div class="project" style="flex-direction: row-reverse;">
+<div class="project">
     <img src="{{ ASSET static/koffi/logo.webp }}" width="180" alt="" />
     <div>
         <p>Koffi is a <b>fast and easy-to-use dynamic JS to C FFI module</b> for <a href="https://nodejs.org/">Node.js</a>, featuring:
@@ -51,6 +51,16 @@
     <div>
         <p>Rekkord is a multi-platform <b>backup tool with deduplication and asymmetric encryption</b>, with support for local and remote storage backends.
         <p>Find out more on the <a href="rekkord">page dedicated to Rekkord</a>.
+    </div>
+</div>
+
+## Redropp
+
+<div class="project">
+    <img src="{{ ASSET static/redropp/logo.webp }}" width="260" alt="" />
+    <div>
+        <p>Redropp is a <b>file sharing web application</b> with support for user accounts (internal and SSO) and end-to-end encryption.
+        <p>Find out more on the <a href="redropp">page dedicated to Redropp</a>.
     </div>
 </div>
 

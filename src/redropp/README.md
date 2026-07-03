@@ -8,6 +8,10 @@ Redropp is a **file transfer web application** featuring:
 - Encrypted file fragments are stored on an S3 backend
 - Configurable global per-user storage quota
 
+<div class="illustrations">
+    <img src="{{ ASSET static/redropp/logo.webp }}" width="218" height="64" alt="" />
+</div>
+
 Go to the web site for more information: https://redropp.org
 
 # Project history
