@@ -133,7 +133,7 @@ The VirtualHost block should look something like this:
 <VirtualHost *:443>
     # ...
 
-    LimitRequestBody 268435456
+    LimitRequestBody 67108864
 
     ProxyPreserveHost On
     ProxyPass "/" "http://127.0.0.1:8894/"
