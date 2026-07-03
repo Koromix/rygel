@@ -38,7 +38,7 @@ Run the most recent release with the following command:
 docker run --env-file=/path/to/env/file -p 8894:80 koromix/redropp:latest
 ```
 
-Once Redropp is running, open http://localhost:8894/ in your browser and click on the Administration button.
+Once Redropp is running, open http://localhost:8894/ in your browser. That's it!
 
 > [!CAUTION]
 > With this command, the data will be saved inside the container and may be **lost once the container is destroyed!**
