@@ -73,7 +73,7 @@ function createDownloadStream(kid) {
 
                     controller.enqueue(frag);
                 } else {
-                    controller.close();
+                    setTimeout(() => controller.close(), 1000);
                     resolve();
                 }
             } catch (err) {
