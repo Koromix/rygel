@@ -72,7 +72,7 @@ function createDownloadStream(kid) {
                 setTimeout(() => {
                     controller.close();
                     resolve();
-                }, 2000);
+                }, 1000);
 
                 return;
             }
