@@ -51,30 +51,46 @@ self.addEventListener('fetch', e => {
 function createDownloadStream(kid) {
     let [info, key, client] = findDrop(kid);
 
-    let [wait, resolve, reject] = createPromise();
-
     let fragments = download(info, key);
+    let pending = null;
     let downloaded = 0;
+    let complete = false;
+
+    let [wait, resolve] = createPromise();
 
     let stream = new ReadableStream({
         pull: async (controller) => {
-            if (controller.desizedSize < 0)
+            if (controller.desizedSize <= 0)
                 return;
 
+            if (pending != null) {
+                push(controller);
+                return;
+            }
+
+            if (complete) {
+                setTimeout(() => {
+                    controller.close();
+                    resolve();
+                }, 2000);
+
+                return;
+            }
+
             try {
-                let { value: frag, done } = await fragments.next();
+                let { value: next, done } = await fragments.next();
 
                 // Reset expiration timer
                 findDrop(info.kid);
 
                 if (!done) {
-                    downloaded += frag.length;
+                    downloaded += next.length;
                     client.postMessage({ type: 'progress', args: [info.kid, downloaded, info.size] });
 
-                    controller.enqueue(frag);
+                    pending = next;
+                    push(controller);
                 } else {
-                    setTimeout(() => controller.close(), 1000);
-                    resolve();
+                    complete = true;
                 }
             } catch (err) {
                 controller.error(err);
@@ -82,10 +98,20 @@ function createDownloadStream(kid) {
                 console.error(err);
                 client.postMessage({ type: 'error', args: [err] });
 
-                reject(err);
+                resolve();
             }
         }
     });
+
+    function push(controller) {
+        let slice = pending.subarray(0, controller.desizedSize);
+
+        controller.enqueue(slice);
+        pending = pending.subarray(slice.length);
+
+        if (!pending.length)
+            pending = null;
+    }
 
     let options = {
         status: 200,
