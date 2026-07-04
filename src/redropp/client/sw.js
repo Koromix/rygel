@@ -98,7 +98,9 @@ function prepareHeaders(info) {
     let headers = {
         'Content-Type': 'application/octet-stream',
         'Content-Disposition': `attachment; filename="${info.name.replaceAll('"', '\"')}"`,
-        'Content-Length': info.size
+        'Content-Length': info.size,
+
+        'X-Content-Type-Options': 'nosniff'
     };
 
     return headers;
