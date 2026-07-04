@@ -266,10 +266,12 @@ table tbody tr:hover > td {
 
 .heading {
     margin-bottom: 1em;
+    padding: 0 1em;
     font-size: 1.2em;
     font-weight: bold;
     text-transform: uppercase;
     text-align: center;
+    overflow-wrap: anywhere;
     color: #262626;
 }
 
