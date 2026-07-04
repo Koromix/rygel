@@ -58,6 +58,9 @@ function createDownloadStream(kid) {
 
     let stream = new ReadableStream({
         pull: async (controller) => {
+            if (controller.desizedSize < 0)
+                return;
+
             try {
                 let { value: frag, done } = await fragments.next();
 
