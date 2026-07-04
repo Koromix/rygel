@@ -29,7 +29,7 @@ async function runPlans() {
     let plans = UI.tableValues('plans', cache.plans, 'name');
 
     UI.main(html`
-        <div class="header">${T.machines}</div>
+        <div class="heading">${T.machines}</div>
 
         <div class="block">
             <table style="table-layout: fixed; width: 100%;">
@@ -124,7 +124,7 @@ async function runPlan() {
     let repo = cache.repositories.find(repo => repo.id == cache.plan.repository);
 
     UI.main(html`
-        <div class="header">${cache.plan.name}</div>
+        <div class="heading">${cache.plan.name}</div>
 
         <div class="row">
             <div class="block info" style="min-width: 250px;">

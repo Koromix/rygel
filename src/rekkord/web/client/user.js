@@ -16,7 +16,7 @@ async function runRegister() {
     }
 
     UI.main(html`
-        <div class="header">${T.create_your_account}</div>
+        <div class="heading">${T.create_your_account}</div>
 
         <div class="block" style="align-items: center;">
             <div class="columns">
@@ -91,7 +91,7 @@ async function runFinalize() {
     }
 
     UI.main(html`
-        <div class="header">${T.create_password}</div>
+        <div class="heading">${T.create_password}</div>
 
         <div class="block" style="align-items: center;">
             <form @submit=${UI.wrap(submit)}>
@@ -148,7 +148,7 @@ async function runLogin() {
         }
 
         UI.main(html`
-            <div class="header">${T.format(T.login_to_x, ENV.title)}</div>
+            <div class="heading">${T.format(T.login_to_x, ENV.title)}</div>
 
             <div class="block" style="align-items: center;">
                 <div class="columns">
@@ -198,7 +198,7 @@ async function runLogin() {
         }
     } else if (!session.authorized) {
         UI.main(html`
-            <div class="header">${T.format(T.login_to_x, ENV.title)}</div>
+            <div class="heading">${T.format(T.login_to_x, ENV.title)}</div>
 
             <div class="block" style="align-items: center;">
                 <form style="text-align: center;" @submit=${UI.wrap(submit)}>
@@ -258,7 +258,7 @@ async function runRecover() {
     }
 
     UI.main(html`
-        <div class="header">${T.recover_account}</div>
+        <div class="heading">${T.recover_account}</div>
 
         <div class="block" style="align-items: center;">
             <form style="text-align: center;" @submit=${UI.wrap(submit)}>
@@ -317,7 +317,7 @@ async function runReset() {
     }
 
     UI.main(html`
-        <div class="header">${T.recover_account}</div>
+        <div class="heading">${T.recover_account}</div>
 
         <div class="block" style="align-items: center;">
             <form @submit=${UI.wrap(submit)}>
@@ -380,7 +380,7 @@ async function runLink() {
     let provider = ENV.auth.providers.find(provider => provider.issuer == link.issuer);
 
     UI.main(html`
-        <div class="header">${T.account_link}</div>
+        <div class="heading">${T.account_link}</div>
 
         <div class="block" style="align-items: center;">
             <div>
@@ -395,7 +395,7 @@ async function runAccount() {
         return runLogin();
 
     UI.main(html`
-        <div class="header">${T.account}</div>
+        <div class="heading">${T.account}</div>
 
         <div class="block" style="align-items: center;">
             <div class="sub">${session.username}</div>

@@ -44,7 +44,7 @@ async function runDrops() {
     let passphrases = new Set(await db.list('passphrases'));
 
     UI.main(html`
-        <div class="header">${T.files}</div>
+        <div class="heading">${T.files}</div>
 
         <div class="block">
             <div style="text-align: center;">
@@ -205,7 +205,7 @@ async function runDrop() {
         let progress = cache.drop.progress.measure();
 
         UI.main(html`
-            <div class="header">${T.send_file}</div>
+            <div class="heading">${T.send_file}</div>
 
             <div class="block" style="align-items: center;">
                 <p>${cache.drop.name}</p>
@@ -227,7 +227,7 @@ async function runDrop() {
         let url = App.makeURL({ mode: 'drop', drop: cache.drop.kid }, hash);
 
         UI.main(html`
-            <div class="header">${cache.drop.name}</div>
+            <div class="heading">${cache.drop.name}</div>
 
             <div class="block" style="align-items: center;">
                 <div>${formatSize(cache.drop.size)}</div>
@@ -247,7 +247,7 @@ async function runDrop() {
             progress = null;
 
         UI.main(html`
-            <div class="header">${cache.drop.name}</div>
+            <div class="heading">${cache.drop.name}</div>
 
             <form @submit=${UI.wrap(submit)}>
                 <div class="block" style="align-items: center;">
@@ -367,7 +367,7 @@ async function runSend() {
         return UserMod.runLogin();
 
     UI.main(html`
-        <div class="header">${T.send_file}</div>
+        <div class="heading">${T.send_file}</div>
 
         <form @submit=${UI.wrap(submit)}>
             <div class="block" style="align-items: center;">
