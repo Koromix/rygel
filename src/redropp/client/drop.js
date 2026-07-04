@@ -264,7 +264,7 @@ async function runDrop() {
                             ${T.speed}${T._colon}${progress.rate != null ? formatSize(progress.rate * 1000) + '/s' : '-'}<br>
                             ${T.remaining_time}${T._colon}${progress.remaining != null ? formatDuration(progress.remaining) : '-'}
                         </div>
-                        <div>${T.keep_tab_open_during_download}</div>
+                        <div style="text-align: center;">${T.keep_tab_open_during_download}</div>
                     ` : ''}
                 </div>
 
