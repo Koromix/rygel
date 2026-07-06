@@ -120,7 +120,7 @@ bool smtp_Config::Validate() const
 {
     bool valid = true;
 
-    if (url) {
+    if (url && url[0]) {
         valid = CheckURL(url);
     } else {
         LogError("SMTP URL is not set");

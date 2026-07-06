@@ -39,6 +39,9 @@ static const char *GetS3Env(const char *name)
 bool s3_Config::SetProperty(Span<const char> key, Span<const char> value, Span<const char>)
 {
     if (key == "Location" || key == "Endpoint") {
+        if (!value.len)
+            return true;
+
         return s3_DecodeURL(value, this);
     } else if (key == "Host") {
         host = DuplicateString(value, &str_alloc).ptr;
