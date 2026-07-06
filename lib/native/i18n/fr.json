@@ -377,7 +377,7 @@
         "SMS Provider is not set": "Le fournisseur de SMS (Provider) n'est pas défini",
         "SMTP From address is invalid": "L'adresse SMTP From n'est pas valide",
         "SMTP From setting is not set": "Le paramètre SMTP From n'est pas défini",
-        "SMTP URL is not set": "Le paramètre URL SMTP n'est pas définie",
+        "SMTP URL is not set": "Le paramètre URL SMTP n'est pas défini",
         "SMTP username is set without password": "Le nom d'utilisateur SMTP est défini sans mot de passe",
         "SQLite Error: %1": "Erreur SQLite : %1",
         "SQLite checkpoint failed: %1": "Échec du point de contrôle SQLite : %1",
