@@ -526,13 +526,7 @@ async function uploadFile(info, key, file, progress = () => {}) {
     let stream = file.stream();
     let chunks = readChunks(stream);
 
-    let fragments = upload(info, key, chunks);
-    let uploaded = 0;
-
-    for await (let frag of fragments) {
-        uploaded += frag.length;
-        progress(uploaded);
-    }
+    await upload(info, key, chunks, progress);
 
     Net.invalidate('drops');
 }

@@ -29,8 +29,6 @@ self.addEventListener('fetch', e => {
                     headers: prepareHeaders(info)
                 });
                 e.respondWith(response);
-
-                return;
             } catch (err) {
                 console.error(err);
                 // Unknown drop, go on and fail hard (with server relay)
@@ -40,18 +38,14 @@ self.addEventListener('fetch', e => {
 
             e.waitUntil(wait);
             e.respondWith(response);
-
-            return;
         }
     }
-
-    e.respondWith(fetch(e.request));
 });
 
 function createDownloadStream(kid) {
     let [info, key, client] = findDrop(kid);
 
-    let fragments = download(info, key);
+    let fragments = download(info, key, progress);
     let pending = null;
     let downloaded = 0;
     let complete = false;
@@ -85,7 +79,7 @@ function createDownloadStream(kid) {
 
                 if (!done) {
                     downloaded += next.length;
-                    client.postMessage({ type: 'progress', args: [info.kid, downloaded, info.size] });
+                    progress(downloaded);
 
                     pending = next;
                     push(controller);
@@ -111,6 +105,10 @@ function createDownloadStream(kid) {
 
         if (!pending.length)
             pending = null;
+    }
+
+    function progress(value) {
+        client.postMessage({ type: 'progress', args: [info.kid, value, info.size] });
     }
 
     let options = {

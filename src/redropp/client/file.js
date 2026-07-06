@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
 import { scryptAsync, hkdf, hmac, sha256, chacha20poly1305, randomBytes } from 'vendor/noble/noble.bundle.js';
-import { Util, Log, Net, HttpError } from 'lib/web/base/base.js';
+import { Util, Log, Net, NetworkError, HttpError } from 'lib/web/base/base.js';
 import { Base64 } from 'lib/web/base/mixer.js';
 
 // Use scrypt for age compatibility
@@ -148,15 +148,14 @@ function encodeSalt(salt) {
     return buf;
 }
 
-async function* upload(info, key, iter) {
+async function upload(info, key, iter, progress = () => {}) {
     let timer = null;
     let uploaded = 0;
 
-    let fragments = parallelize(uploadFragments(info, key, iter), UPLOAD_QUEUE_SIZE, UPLOAD_AHEAD_LIMIT);
+    let fragments = parallelize(uploadFragments(info, key, iter, progress), UPLOAD_QUEUE_SIZE, UPLOAD_AHEAD_LIMIT);
 
     for await (let frag of fragments) {
         uploaded += frag.length;
-        yield frag;
 
         if (timer == null) {
             timer = setTimeout(async () => {
@@ -170,7 +169,7 @@ async function* upload(info, key, iter) {
     await markUpload(info.kid, uploaded);
 }
 
-async function* uploadFragments(info, key, iter) {
+async function* uploadFragments(info, key, iter, progress) {
     let uploaded = 0;
     let idx = 0;
     let counter = 0n;
@@ -209,7 +208,6 @@ async function* uploadFragments(info, key, iter) {
             cipher.set(buf, j);
         }
 
-        uploaded += frag.length;
         idx++;
 
         // Upload fragment with retry logic
@@ -218,16 +216,33 @@ async function* uploadFragments(info, key, iter) {
 
             for (let i = 0; i < 4; i++) {
                 try {
-                    let response = await Net.fetch(url, {
-                        method: 'PUT',
-                        body: cipher,
-                        timeout: 30000
-                    });
+                    await new Promise((resolve, reject) => {
+                        let xhr = new XMLHttpRequest;
 
-                    if (!response.ok) {
-                        let msg = await Net.readError(response);
-                        throw new HttpError(response.status, msg);
-                    }
+                        xhr.responseType = 'text';
+                        xhr.timeout = 30000;
+
+                        xhr.onload = async () => {
+                            if (xhr.status == 200) {
+                                resolve();
+                            } else {
+                                let text = (new TextDecoder).decode(body);
+                                let msg = await Net.readError(xhr.responseText);
+
+                                reject(new HttpError(xhr.status, msg));
+                            }
+                        };
+                        xhr.ontimeout = e => reject(new NetworkError('timeout'));
+                        xhr.onerror = e => reject(new NetworkError(e.type ?? 'network error'));
+
+                        xhr.upload.onprogress = e => {
+                            let normalized = Math.round(e.loaded / cipher.length * frag.length);
+                            progress(uploaded + normalized);
+                        };
+
+                        xhr.open('PUT', url, true);
+                        xhr.send(cipher);
+                    });
 
                     success = true;
                     break;
@@ -242,6 +257,9 @@ async function* uploadFragments(info, key, iter) {
                 throw new Error('Failed to upload file fragment');
         }
 
+        uploaded += frag.length;
+        progress(uploaded);
+
         yield frag;
     }
 }
@@ -251,11 +269,11 @@ async function markUpload(kid, uploaded) {
     await Net.post(url, { uploaded: uploaded });
 }
 
-function download(info, key) {
-    return parallelize(downloadFragments(info, key), DOWNLOAD_QUEUE_SIZE, DOWNLOAD_AHEAD_LIMIT);
+function download(info, key, progress = () => {}) {
+    return parallelize(downloadFragments(info, key, progress), DOWNLOAD_QUEUE_SIZE, DOWNLOAD_AHEAD_LIMIT);
 }
 
-async function* downloadFragments(info, key) {
+async function* downloadFragments(info, key, progress) {
     let downloaded = 0;
     let idx = 0;
     let counter = 0n;
@@ -266,7 +284,7 @@ async function* downloadFragments(info, key) {
         let expected = Math.min(info.size - idx * info.split, info.split);
         let extra = Math.floor((expected + BODY_CHUNK_SIZE - 1) / BODY_CHUNK_SIZE) * 16;
 
-        let cipher = null;
+        let cipher = new Uint8Array(expected + extra);
 
         // Download fragment with retry logic
         {
@@ -281,9 +299,28 @@ async function* downloadFragments(info, key) {
                         throw new HttpError(response.status, msg);
                     }
 
-                    cipher = await response.bytes();
+                    let reader = response.body.getReader();
+                    let loaded = 0;
 
-                    if (cipher.length == expected + extra) {
+                    try {
+                        for (;;) {
+                            let { value: chunk, done } = await reader.read();
+
+                            if (done)
+                                break;
+
+                            if (loaded + chunk.length <= cipher.length)
+                                cipher.set(chunk, loaded);
+                            loaded += chunk.length;
+
+                            let normalized = Math.round(loaded / cipher.length * expected);
+                            progress(downloaded + normalized);
+                        }
+                    } finally {
+                        reader.releaseLock();
+                    }
+
+                    if (loaded == cipher.length) {
                         success = true;
                         break;
                     }
@@ -300,8 +337,10 @@ async function* downloadFragments(info, key) {
                 throw new Error('Failed to download file fragment');
         }
 
-        downloaded += expected;
         idx++;
+
+        downloaded += expected;
+        progress(downloaded);
 
         let frag = new Uint8Array(expected);
 
