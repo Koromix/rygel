@@ -142,6 +142,21 @@ bool LoadConfig(StreamReader *st, Config *out_config)
                     LogError("Unknown attribute '%1'", prop.key);
                     valid = false;
                 }
+            } else if (prop.section == "Customize") {
+                if (prop.key == "IconFile") {
+                    config.custom_icon = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
+                } else if (prop.key == "LogoFile") {
+                    config.custom_logo = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
+                } else if (prop.key == "StyleFile") {
+                    const char *filename = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
+                    config.custom_styles.Append(filename);
+                } else if (prop.key == "ScriptFile") {
+                    const char *filename = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
+                    config.custom_scripts.Append(filename);
+                } else {
+                    LogError("Unknown attribute '%1'", prop.key);
+                    valid = false;
+                }
             } else if (prop.section == "S3") {
                 valid &= config.s3.SetProperty(prop.key, prop.value, root_directory);
             } else if (prop.section == "HTTP") {

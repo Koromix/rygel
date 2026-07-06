@@ -24,6 +24,10 @@ static HashMap<const char *, const AssetInfo *> asset_map;
 static const AssetInfo *asset_index = nullptr;
 static const char *asset_js = nullptr;
 static const char *asset_css = nullptr;
+static const char *asset_favicon = nullptr;
+static const char *asset_logo = nullptr;
+static HeapArray<const char *> asset_styles;
+static HeapArray<const char *> asset_scripts;
 static HeapArray<const char *> asset_bundles;
 static BlockAllocator asset_alloc;
 static char shared_etag[17];
@@ -297,6 +301,25 @@ static bool NameContainsHash(Span<const char> name)
     return true;
 }
 
+static void CustomizeAsset(const char *url, int64_t max_size, const char *filename)
+{
+    Span<uint8_t> data;
+    {
+        HeapArray<uint8_t> buf(&asset_alloc);
+        if (ReadFile(filename, max_size, &buf) < 0)
+            return;
+        data = buf.TrimAndLeak();
+    }
+
+    AssetInfo *asset = AllocateOne<AssetInfo>(&asset_alloc);
+
+    asset->name = url;
+    asset->data = data;
+    asset->compression_type = CompressionType::None;
+
+    asset_map.Set(asset->name, asset);
+}
+
 static void InitAssets()
 {
     asset_map.Clear();
@@ -305,6 +328,11 @@ static void InitAssets()
     asset_css = nullptr;
     asset_bundles.Clear();
     asset_alloc.ReleaseAll();
+
+    asset_favicon = "favicon.webp";
+    asset_logo = nullptr;
+    asset_styles.Clear();
+    asset_scripts.Clear();
 
     // Update ETag
     {
@@ -340,6 +368,40 @@ static void InitAssets()
                 }
             }
         }
+    }
+
+    if (config.custom_icon) {
+        Span<const char> ext = GetPathExtension(config.custom_icon);
+        const char *url = Fmt(&asset_alloc, "/favicon%1", ext).ptr;
+
+        CustomizeAsset(url, Megabytes(1), config.custom_icon);
+        asset_favicon = url;
+    }
+    if (config.custom_logo) {
+        Span<const char> ext = GetPathExtension(config.custom_logo);
+        const char *url = Fmt(&asset_alloc, "/static/custom/%1/logo%2", shared_etag, ext).ptr;
+
+        CustomizeAsset(url, Megabytes(1), config.custom_logo);
+        asset_logo = url;
+    }
+
+    for (Size i = 0; i < config.custom_styles.len; i++) {
+        const char *filename = config.custom_styles[i];
+
+        Span<const char> ext = GetPathExtension(filename);
+        const char *url = Fmt(&asset_alloc, "/static/custom/%1/%2%3", shared_etag, i, ext).ptr;
+
+        CustomizeAsset(url, Megabytes(2), filename);
+        asset_styles.Append(url);
+    }
+    for (Size i = 0; i < config.custom_scripts.len; i++) {
+        const char *filename = config.custom_scripts[i];
+
+        Span<const char> ext = GetPathExtension(filename);
+        const char *url = Fmt(&asset_alloc, "/static/custom/%1/%2%3", shared_etag, i, ext).ptr;
+
+        CustomizeAsset(url, Megabytes(2), filename);
+        asset_scripts.Append(url);
     }
 
     K_ASSERT(asset_index);
@@ -505,6 +567,8 @@ static void HandleRequest(http_IO *io)
                     writer->Write(FelixCompiler);
                 } else if (key == "TITLE") {
                     writer->Write(config.title);
+                } else if (key == "FAVICON") {
+                    writer->Write(asset_favicon);
                 } else if (key == "ENV") {
                     json_CompactWriter json(writer);
 
@@ -512,6 +576,7 @@ static void HandleRequest(http_IO *io)
 
                     json.Key("title"); json.String(config.title);
                     json.Key("url"); json.String(config.url);
+                    json.Key("logo"); json.StringOrNull(asset_logo);
 
                     json.Key("max_duration"); json.Int64(config.max_duration);
                     json.Key("allow_infinite"); json.Bool(config.allow_infinite);
@@ -537,7 +602,7 @@ static void HandleRequest(http_IO *io)
                     writer->Write(asset_js);
                 } else if (key == "CSS") {
                     writer->Write(asset_css);
-                }  else if (key == "BUNDLES") {
+                } else if (key == "BUNDLES") {
                     json_CompactWriter json(writer);
 
                     json.StartObject();
@@ -546,6 +611,13 @@ static void HandleRequest(http_IO *io)
                         json.Key(name); json.String(bundle);
                     }
                     json.EndObject();
+                } else if (key == "HEAD") {
+                    for (const char *url: asset_styles) {
+                        PrintLn(writer, "        <link rel=\"stylesheet\" href=\"%1\" async />", url);
+                    }
+                    for (const char *url: asset_scripts) {
+                        PrintLn(writer, "        <script src=\"%1\"></script>", url);
+                    }
                 } else {
                     Print(writer, "{{%1}}", expr);
                 }

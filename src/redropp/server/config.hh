@@ -24,6 +24,11 @@ struct Config {
     bool explicit_duration = false;
     bool allow_infinite = false;
 
+    const char *custom_icon = nullptr;
+    const char *custom_logo = nullptr;
+    HeapArray<const char *> custom_styles;
+    HeapArray<const char *> custom_scripts;
+
     s3_Config s3;
 
     http_Config http { 8894 };
