@@ -8,6 +8,7 @@
 
 - Add `redropp init` command
 - Add front-end customization settings
+- Switch to 4MB file fragments
 - Use smooth speed and ETA estimation (especially for slow connections)
 - Remove automatic SSO redirection if only one SSO provider exists
 - Improve documentation of config file
