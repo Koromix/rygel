@@ -95,7 +95,6 @@ main.dialog {
 }
 
 .actions {
-    margin-top: 1.5em;
     gap: 0.5em;
 
     & > a {
@@ -118,6 +117,7 @@ main.dialog {
     justify-content: center;
     flex-wrap: wrap;
 }
+* + .actions { margin-top: 1.5em; }
 
 button {
     font-size: 0.92em;

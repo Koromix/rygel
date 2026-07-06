@@ -331,7 +331,6 @@ button > img:only-child {
 
 .actions {
     display: flex;
-    margin-top: 1em;
     gap: 12px;
     flex-direction: column;
     align-items: center;
@@ -352,6 +351,7 @@ button > img:only-child {
         color: white;
     }
 }
+* + .actions { margin-top: 1em; }
 .actions + * { margin-top: 1em; }
 
 :is(a, button).disabled {
