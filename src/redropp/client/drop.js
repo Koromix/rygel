@@ -206,6 +206,9 @@ async function runDrop() {
     if (cache.drop.uploaded < cache.drop.size) {
         let progress = cache.drop.progress.measure();
 
+        if (progress.rate != null)
+            setTimeout(() => App.go(), 500);
+
         UI.main(html`
             <div class="heading">${T.send_file}</div>
 
@@ -247,6 +250,8 @@ async function runDrop() {
 
         if (progress && progress.value == progress.max)
             progress = null;
+        if (progress?.rate != null)
+            setTimeout(() => App.go(), 500);
 
         UI.main(html`
             <div class="heading">${cache.drop.name}</div>

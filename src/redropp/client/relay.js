@@ -145,14 +145,14 @@ function getProgress(kid) {
     if (meter == null)
         return null;
 
-    let stat = meter.measure();
+    let progress = meter.measure();
 
-    if (performance.now() >= stat.time + PROGRESS_EXPIRATION) {
+    if (performance.now() >= progress.time + PROGRESS_EXPIRATION) {
         progress_map.delete(kid);
         return null;
     }
 
-    return stat;
+    return progress;
 }
 
 export {

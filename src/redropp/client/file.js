@@ -214,6 +214,8 @@ async function* uploadFragments(info, key, iter, progress) {
         {
             let success = false;
 
+            let prev = performance.now();
+
             for (let i = 0; i < 4; i++) {
                 try {
                     await new Promise((resolve, reject) => {
