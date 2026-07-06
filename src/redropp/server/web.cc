@@ -111,11 +111,11 @@ T(R"(Usage: %!..+%1 init [option...] [directory]%!0)"), FelixTarget);
     }
 
     LogInfo("Please configure mandatory settings:");
-    LogInfo("    %!..+%1%!0", config_filename);
+    LogInfo(("    %!..+%1%!0"), config_filename);
 
     LogInfo();
     LogInfo("Once this is done, run Redropp with:");
-    LogInfo("    %!..+%1 -C \"%2\"%!0", FelixTarget, FmtEscape(config_filename, '"'));
+    LogInfo(("    %!..+%1 -C \"%2\"%!0"), FelixTarget, FmtEscape(config_filename, '"'));
 
     root_guard.Disable();
     return 0;
