@@ -28,14 +28,6 @@
 
 namespace K {
 
-struct RenderInfo {
-    const char *key;
-    AssetInfo asset;
-    int64_t time;
-
-    K_HASHTABLE_HANDLER(RenderInfo, key);
-};
-
 Config gp_config;
 sq_Database gp_db;
 
