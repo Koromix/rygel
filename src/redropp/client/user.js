@@ -140,13 +140,6 @@ async function runFinalize() {
 
 async function runLogin() {
     if (session == null) {
-        if (!ENV.auth.internal && ENV.auth.providers.length == 1) {
-            let provider = ENV.auth.providers[0];
-
-            await App.sso(provider.issuer, window.location.pathname);
-            await Util.waitFor(3000);
-        }
-
         UI.main(html`
             <div class="heading">${T.format(T.login_to_x, ENV.title)}</div>
 
