@@ -18,7 +18,10 @@ build() {
 
     install -D -m0755 bin/Fast/redropp ${ROOT_DIR}/usr/bin/redropp
 
-    install -D -m0644 src/redropp/dist/rpm/redropp.ini ${ROOT_DIR}/etc/redropp/redropp.ini
+    install -D -m0644 src/redropp/dist/debian/redropp.ini ${ROOT_DIR}/etc/redropp/redropp.ini
+    echo "" >> ${ROOT_DIR}/etc/redropp/redropp.ini
+    cat src/redropp/server/config.ini >> ${ROOT_DIR}/etc/redropp/redropp.ini
+
     install -D -m0644 src/redropp/dist/rpm/redropp.service ${ROOT_DIR}/usr/lib/systemd/system/redropp.service
 
     echo "

@@ -18,7 +18,10 @@ build() {
     ./felix -pFast --host=$1:clang-18:lld-18 redropp
 
     install -D -m0755 bin/Fast/redropp ${ROOT_DIR}/usr/bin/redropp
+
     install -D -m0644 src/redropp/dist/debian/redropp.ini ${ROOT_DIR}/etc/redropp/redropp.ini
+    echo "" >> ${ROOT_DIR}/etc/redropp/redropp.ini
+    cat src/redropp/server/config.ini >> ${ROOT_DIR}/etc/redropp/redropp.ini
 
     echo '/etc/redropp/redropp.ini' > ${DEBIAN_DIR}/conffiles
 
