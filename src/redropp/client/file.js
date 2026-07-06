@@ -220,7 +220,7 @@ async function* uploadFragments(info, key, iter, progress) {
                         let xhr = new XMLHttpRequest;
 
                         xhr.responseType = 'text';
-                        xhr.timeout = 30000;
+                        xhr.timeout = 60000;
 
                         xhr.onload = async () => {
                             if (xhr.status == 200) {

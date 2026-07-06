@@ -14,7 +14,7 @@ static const int64_t StaleDelay = 7 * 86400000ull; // 7 days
 static const int64_t CleanupDelay = 1 * 3600000ull; // 1 hour
 
 static const int64_t HeaderLength = 149;
-static const int64_t FragmentSize = Mebibytes(2);
+static const int64_t FragmentSize = Mebibytes(4);
 static const Size ChunkSize = Kibibytes(64);
 
 static_assert(FragmentSize % ChunkSize == 0);
