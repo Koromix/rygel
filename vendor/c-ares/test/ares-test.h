@@ -288,6 +288,7 @@ public:
   {
     reply_ = nullptr;
     exact_reply_.clear();
+    disconnect_after_reply_ = false;
     for (ares_socket_t fd : connfds_) {
       sclose(fd);
     }
@@ -295,6 +296,11 @@ public:
     free(tcp_data_);
     tcp_data_     = NULL;
     tcp_data_len_ = 0;
+  }
+
+  void DisconnectAfterReply()
+  {
+    disconnect_after_reply_ = true;
   }
 
   // The set of file descriptors that the server handles.
@@ -330,6 +336,7 @@ private:
   const DNSPacket        *reply_;
   std::string             expected_request_;
   int                     qid_;
+  bool                    disconnect_after_reply_;
   unsigned char          *tcp_data_;
   size_t                  tcp_data_len_;
 };
@@ -502,6 +509,11 @@ ACTION_P(Disconnect, mockserver)
   mockserver->Disconnect();
 }
 
+ACTION_P(DisconnectAfterReply, mockserver)
+{
+  mockserver->DisconnectAfterReply();
+}
+
 // C++ wrapper for struct hostent.
 struct HostEnt {
   HostEnt() : addrtype_(-1)
@@ -638,15 +650,15 @@ std::ostream &operator<<(std::ostream &os, const AddrInfoResult &result);
 // Standard implementation of ares callbacks that fill out the corresponding
 // structures.
 void          HostCallback(void *data, int status, int timeouts,
-                           struct hostent *hostent);
+                           const struct hostent *hostent);
 void          QueryCallback(void *data, ares_status_t status, size_t timeouts,
                             const ares_dns_record_t *dnsrec);
-void SearchCallback(void *data, int status, int timeouts, unsigned char *abuf,
-                    int alen);
+void SearchCallback(void *data, int status, int timeouts,
+                    const unsigned char *abuf, int alen);
 void SearchCallbackDnsRec(void *data, ares_status_t status, size_t timeouts,
                           const ares_dns_record_t *dnsrec);
-void NameInfoCallback(void *data, int status, int timeouts, char *node,
-                      char *service);
+void NameInfoCallback(void *data, int status, int timeouts, const char *node,
+                      const char *service);
 void AddrInfoCallback(void *data, int status, int timeouts,
                       struct ares_addrinfo *res);
 

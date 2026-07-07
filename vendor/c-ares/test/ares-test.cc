@@ -443,7 +443,7 @@ void DefaultChannelModeTest::Process(unsigned int cancel_ms) {
 }
 
 MockServer::MockServer(int family, unsigned short port)
-  : udpport_(port), tcpport_(port), qid_(-1) {
+  : udpport_(port), tcpport_(port), qid_(-1), disconnect_after_reply_(false) {
   reply_ = nullptr;
   // Create a TCP socket to receive data on.
   tcp_data_ = NULL;
@@ -644,6 +644,17 @@ void MockServer::ProcessFD(ares_socket_t fd) {
     if (connfd == ARES_SOCKET_BAD) {
       std::cerr << "Error accepting connection on fd " << fd << std::endl;
     } else {
+      /* This test harness is single-threaded: the mock server runs in the same
+       * thread as the c-ares client, so the client can only drain a socket
+       * between our (blocking) sends, never during one.  A full-size TCP reply
+       * (MakeMaxReadTcpAReply() is a 65535-octet frame) therefore deadlocks a
+       * blocking send() on platforms whose default socket buffers can't hold
+       * the whole frame -- e.g. OpenBSD's ~16k default -- because send() waits
+       * for a reader that cannot run.  Enlarge the send buffer so the entire
+       * frame fits locally and send() returns without a concurrent reader. */
+      int sndbuf = 128 * 1024;
+      setsockopt(connfd, SOL_SOCKET, SO_SNDBUF, BYTE_CAST &sndbuf,
+                 sizeof(sndbuf));
       connfds_.insert(connfd);
     }
     return;
@@ -772,6 +783,15 @@ void MockServer::ProcessRequest(ares_socket_t fd, struct sockaddr_storage* addr,
                                          (struct sockaddr *)addr, addrlen);
   if (rc < static_cast<ares_ssize_t>(reply.size())) {
     std::cerr << "Failed to send full reply, rc=" << rc << std::endl;
+  }
+
+  if (disconnect_after_reply_ && fd != udpfd_) {
+    disconnect_after_reply_ = false;
+    connfds_.erase(fd);
+    sclose(fd);
+    free(tcp_data_);
+    tcp_data_     = NULL;
+    tcp_data_len_ = 0;
   }
 
 }
@@ -1060,7 +1080,7 @@ std::ostream& operator<<(std::ostream& os, const HostEnt& host) {
 }
 
 void HostCallback(void *data, int status, int timeouts,
-                  struct hostent *hostent) {
+                  const struct hostent *hostent) {
   EXPECT_NE(nullptr, data);
   if (data == nullptr)
     return;
@@ -1202,7 +1222,7 @@ std::ostream& operator<<(std::ostream& os, const SearchResult& result) {
 }
 
 void SearchCallback(void *data, int status, int timeouts,
-                    unsigned char *abuf, int alen) {
+                    const unsigned char *abuf, int alen) {
   EXPECT_NE(nullptr, data);
   SearchResult* result = reinterpret_cast<SearchResult*>(data);
   result->done_ = true;
@@ -1241,7 +1261,7 @@ std::ostream& operator<<(std::ostream& os, const NameInfoResult& result) {
 }
 
 void NameInfoCallback(void *data, int status, int timeouts,
-                      char *node, char *service) {
+                      const char *node, const char *service) {
   EXPECT_NE(nullptr, data);
   NameInfoResult* result = reinterpret_cast<NameInfoResult*>(data);
   result->done_ = true;

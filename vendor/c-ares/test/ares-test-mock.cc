@@ -57,6 +57,37 @@ class NoDNS0x20MockTest
   struct ares_options opts_;
 };
 
+static std::vector<byte> MakeMaxReadTcpAReply(void) {
+  std::vector<byte> reply = {
+    0x00, 0x00,  // qid
+    0x84, 0x00,  // response + query + AA + noerror
+    0x00, 0x01,  // qdcount
+    0x00, 0x01,  // ancount
+    0x00, 0x00,  // nscount
+    0x00, 0x00,  // arcount
+    // Question: www.google.com IN A
+    0x03, 'w', 'w', 'w',
+    0x06, 'g', 'o', 'o', 'g', 'l', 'e',
+    0x03, 'c', 'o', 'm',
+    0x00,
+    0x00, 0x01,
+    0x00, 0x01,
+    // Answer: name ptr, IN A 1.2.3.4
+    0xc0, 0x0c,
+    0x00, 0x01,
+    0x00, 0x01,
+    0x00, 0x00, 0x00, 0x64,
+    0x00, 0x04,
+    0x01, 0x02, 0x03, 0x04
+  };
+
+  /* Keep payload at 65533 bytes so TCP frame length is exactly 65535,
+   * forcing the read loop to attempt one more recv() where disconnect can
+   * race with already-buffered data. */
+  reply.resize(65533, 0x00);
+  return reply;
+}
+
 
 TEST_P(NoDNS0x20MockTest, Basic) {
   std::vector<byte> reply = {
@@ -495,6 +526,69 @@ TEST_P(MockUDPMaxQueriesTest, GetHostByNameParallelLookups) {
   }
 }
 
+// Regression test for #1152.  A transient failure (a single query timeout)
+// must not force a brand new UDP socket to be opened for every subsequent
+// query to the same server.  The connection that saw the timeout is retired
+// for new queries (ARES_CONN_FLAG_NONEW) and drains, while new queries share
+// one fresh connection.  Before the fix, ares_fetch_connection() rejected
+// reuse whenever the server's consec_failures was > 0, so a single dropped
+// packet caused a new socket per query and exhausted sockets/ports under load.
+class MockUDPTransientFailureTest
+    : public MockChannelOptsTest,
+      public ::testing::WithParamInterface<int> {
+ public:
+  MockUDPTransientFailureTest()
+    : MockChannelOptsTest(1, GetParam(), false, false,
+                          FillOptions(&opts_),
+                          ARES_OPT_TIMEOUTMS | ARES_OPT_TRIES) {}
+  static struct ares_options* FillOptions(struct ares_options * opts) {
+    memset(opts, 0, sizeof(struct ares_options));
+    opts->timeout = 150; /* ms (ARES_OPT_TIMEOUTMS) - keep the test quick */
+    opts->tries   = 3;
+    return opts;
+  }
+ private:
+  struct ares_options opts_;
+};
+
+TEST_P(MockUDPTransientFailureTest, NoSocketExplosionOnTimeout) {
+  // Configure the server to never reply, so every query times out (a
+  // transient failure).  No SetReply() means ProcessRequest() drops the
+  // packet; the AnyNumber() expectation just silences uninteresting-call
+  // warnings for the many dropped requests.
+  EXPECT_CALL(server_, OnRequest("www.example.com", T_A))
+    .Times(testing::AnyNumber());
+
+  int rc = ARES_SUCCESS;
+  ares_set_socket_callback(channel_, SocketConnectCallback, &rc);
+  sock_cb_count = 0;
+
+  const size_t nqueries = 16;
+  HostResult result[nqueries];
+  for (size_t i = 0; i < nqueries; i++) {
+    ares_gethostbyname(channel_, "www.example.com.", AF_INET, HostCallback,
+                       &result[i]);
+  }
+  Process();
+
+  // All queries complete (they fail with a timeout since the server never
+  // replied).
+  for (size_t i = 0; i < nqueries; i++) {
+    EXPECT_TRUE(result[i].done_);
+  }
+
+  // The key assertion: with tries=3 the fix opens roughly one connection per
+  // retry round (the retired connection is skipped and the single replacement
+  // is reused by all queries), not one per query.  Before the fix this was on
+  // the order of nqueries*tries sockets.
+  EXPECT_LE(sock_cb_count, 6)
+    << "opened " << sock_cb_count << " sockets for " << nqueries
+    << " queries; a transient timeout must not force a new socket per query";
+}
+
+INSTANTIATE_TEST_SUITE_P(AddressFamilies, MockUDPTransientFailureTest,
+                         ::testing::ValuesIn(ares::test::families), PrintFamily);
+
 class CacheQueriesTest
     : public MockChannelOptsTest,
       public ::testing::WithParamInterface<int> {
@@ -576,6 +670,27 @@ TEST_P(MockTCPChannelTest, GetHostByNameParallelLookups) {
     ss << result[i].host_;
     EXPECT_EQ("{'www.google.com' aliases=[] addrs=[2.3.4.5]}", ss.str());
   }
+}
+
+TEST_P(MockTCPChannelTest, ReadFullFrameThenDisconnect) {
+  std::vector<byte> reply = MakeMaxReadTcpAReply();
+
+  EXPECT_CALL(server_, OnRequest("www.google.com", T_A))
+    .WillOnce(DoAll(SetReplyData(&server_, reply),
+                    DisconnectAfterReply(&server_)));
+
+  HostResult result;
+  ares_gethostbyname(channel_, "www.google.com.", AF_INET, HostCallback,
+                     &result);
+  Process();
+
+  EXPECT_TRUE(result.done_);
+  EXPECT_EQ(ARES_SUCCESS, result.status_);
+  EXPECT_EQ(0, result.timeouts_);
+
+  std::stringstream ss;
+  ss << result.host_;
+  EXPECT_EQ("{'www.google.com' aliases=[] addrs=[1.2.3.4]}", ss.str());
 }
 
 TEST_P(MockTCPChannelTest, MalformedResponse) {
@@ -1722,6 +1837,115 @@ TEST_P(MockUDPChannelTest, TriggerResendThenConnFailEDNS) {
   EXPECT_EQ("{'www.google.com' aliases=[] addrs=[1.2.3.4]}", ss.str());
 }
 
+// Regression for issue #1043: a long chain of retryable connection failures
+// used to recurse ares_requeue_query() -> ares_send_query() until the stack was
+// exhausted.  With a very high retry count and a socket that always fails to be
+// created (a retryable ARES_ECONNREFUSED), the retries must be processed
+// iteratively and the query must terminate cleanly rather than crashing.
+class MockRetryDepthChannelTest : public MockChannelOptsTest,
+                                  public ::testing::WithParamInterface<int> {
+public:
+  MockRetryDepthChannelTest()
+    : MockChannelOptsTest(1, GetParam(), false, false, FillOptions(&opts_),
+                          ARES_OPT_TRIES)
+  {
+  }
+
+  static struct ares_options *FillOptions(struct ares_options *opts)
+  {
+    memset(opts, 0, sizeof(struct ares_options));
+    /* Large enough that the old recursive path would overflow the stack. */
+    opts->tries = 100000;
+    return opts;
+  }
+
+private:
+  struct ares_options opts_;
+};
+
+static size_t g_always_fail_socket_calls = 0;
+
+static ares_socket_t always_fail_socket(int af, int type, int protocol,
+                                        void *user_data)
+{
+  (void)af;
+  (void)type;
+  (void)protocol;
+  (void)user_data;
+  g_always_fail_socket_calls++;
+  return ARES_SOCKET_BAD;
+}
+
+TEST_P(MockRetryDepthChannelTest, HighRetryNoStackOverflow) {
+  ares_socket_functions sock_funcs;
+  memset(&sock_funcs, 0, sizeof(sock_funcs));
+  sock_funcs.asocket = always_fail_socket;
+  ares_set_socket_functions(channel_, &sock_funcs, NULL);
+
+  g_always_fail_socket_calls = 0;
+
+  QueryResult result;
+  ares_query_dnsrec(channel_, "www.google.com", ARES_CLASS_IN, ARES_REC_TYPE_A,
+                    QueryCallback, &result, NULL);
+  Process();
+
+  /* If the retries didn't drive the query to a terminal state on their own
+   * (e.g. it parked awaiting a response that will never arrive), cancel it so
+   * the query terminates deterministically. */
+  if (!result.done_) {
+    ares_cancel(channel_);
+    Process();
+  }
+
+  /* The essential property is that we reached this point at all: on unpatched
+   * code the retryable failures recursed ares_requeue_query()/ares_send_query()
+   * until the stack overflowed and the process aborted before getting here.  We
+   * also confirm the retries were attempted iteratively (more than one socket
+   * creation) and that the query reached a terminal state. */
+  EXPECT_GT(g_always_fail_socket_calls, (size_t)1);
+  EXPECT_TRUE(result.done_);
+}
+
+// Regression for CVE-2026-33630 / GHSA-6wfj-rwm7-3542: invoking ares_cancel()
+// from within a normal response callback must not double-free the query.  The
+// callback is dispatched from the read_answers() deferred-requeue flush, and the
+// query must be detached from all lookup lists before the callback runs so that
+// the reentrant ares_cancel() cannot find and free it a second time.
+struct CancelInCbData {
+  ares_channel_t *channel;
+  bool            done;
+};
+
+static void CancelChannelCallback(void *arg, ares_status_t status,
+                                  size_t timeouts,
+                                  const ares_dns_record_t *dnsrec)
+{
+  CancelInCbData *data = static_cast<CancelInCbData *>(arg);
+  (void)status;
+  (void)timeouts;
+  (void)dnsrec;
+  data->done = true;
+  /* Reentrant cancel from within the callback.  Must not double-free. */
+  ares_cancel(data->channel);
+}
+
+TEST_P(MockUDPChannelTest, CancelInCallbackNoDoubleFree) {
+  DNSPacket reply;
+  reply.set_response().set_aa()
+    .add_question(new DNSQuestion("www.google.com", T_A))
+    .add_answer(new DNSARR("www.google.com", 0x0100, {0x01, 0x02, 0x03, 0x04}));
+  ON_CALL(server_, OnRequest("www.google.com", T_A))
+    .WillByDefault(SetReply(&server_, &reply));
+
+  CancelInCbData data;
+  data.channel = channel_;
+  data.done    = false;
+  ares_query_dnsrec(channel_, "www.google.com", ARES_CLASS_IN, ARES_REC_TYPE_A,
+                    CancelChannelCallback, &data, NULL);
+  Process();
+  EXPECT_TRUE(data.done);
+}
+
 TEST_P(MockUDPChannelTest, GetSock) {
   DNSPacket reply;
   reply.set_response().set_aa()
@@ -2527,6 +2751,244 @@ TEST_P(ServerFailoverOptsMultiMockTest, ServerFailoverOpts) {
   EXPECT_CALL(*servers_[1], OnRequest("www.example.com", T_A))
     .WillOnce(SetReply(servers_[1].get(), &okrsp));
   CheckExample();
+};
+
+
+// Test that probe_pending flag is properly cleared when a probe times out,
+// by testing a scenario where a server is probed, the probe times out, and
+// then the server is probed again.
+TEST_P(ServerFailoverOptsMultiMockTest, ProbeAfterProbeTimeout) {
+  std::vector<byte> nothing;
+  DNSPacket okrsp;
+  okrsp.set_response().set_aa()
+    .add_question(new DNSQuestion("www.example.com", T_A))
+    .add_answer(new DNSARR("www.example.com", 100, {2,3,4,5}));
+
+  auto tv_begin = std::chrono::high_resolution_clock::now();
+  auto tv_now   = std::chrono::high_resolution_clock::now();
+  unsigned int delay_ms;
+
+  // First, fail server #0 so it becomes marked as failed
+  if (verbose) std::cerr << std::chrono::duration_cast<std::chrono::milliseconds>(tv_now - tv_begin).count() << "ms: Failing Server0 with timeout" << std::endl;
+  EXPECT_CALL(*servers_[0], OnRequest("www.example.com", T_A))
+    .WillOnce(SetReplyData(servers_[0].get(), nothing));
+  EXPECT_CALL(*servers_[1], OnRequest("www.example.com", T_A))
+    .WillOnce(SetReply(servers_[1].get(), &okrsp));
+  HostResult result1;
+  ares_gethostbyname(channel_, "www.example.com.", AF_INET, HostCallback, &result1);
+  Process();
+  EXPECT_TRUE(result1.done_);
+
+  // Sleep past the retry delay and send another query
+  // This should trigger a probe to server #0, which will timeout
+  tv_now = std::chrono::high_resolution_clock::now();
+  delay_ms = SERVER_FAILOVER_RETRY_DELAY + (SERVER_FAILOVER_RETRY_DELAY / 10);
+  if (verbose) std::cerr << std::chrono::duration_cast<std::chrono::milliseconds>(tv_now - tv_begin).count() << "ms: sleep " << delay_ms << "ms" << std::endl;
+  ares_sleep_time(delay_ms);
+  tv_now = std::chrono::high_resolution_clock::now();
+
+  if (verbose) std::cerr << std::chrono::duration_cast<std::chrono::milliseconds>(tv_now - tv_begin).count() << "ms: Sending query that triggers probe to Server0, probe will timeout" << std::endl;
+  // Server #1 will handle the real query, Server #0 will be probed and timeout
+  EXPECT_CALL(*servers_[1], OnRequest("www.example.com", T_A))
+    .WillOnce(SetReply(servers_[1].get(), &okrsp));
+  EXPECT_CALL(*servers_[0], OnRequest("www.example.com", T_A))
+    .WillOnce(SetReplyData(servers_[0].get(), nothing));  // Probe times out
+  HostResult result2;
+  ares_gethostbyname(channel_, "www.example.com.", AF_INET, HostCallback, &result2);
+  Process();
+  EXPECT_TRUE(result2.done_);
+
+  // Sleep past the retry delay again
+  // The next query will trigger another probe to server #0
+  tv_now = std::chrono::high_resolution_clock::now();
+  delay_ms = SERVER_FAILOVER_RETRY_DELAY + (SERVER_FAILOVER_RETRY_DELAY / 10);
+  if (verbose) std::cerr << std::chrono::duration_cast<std::chrono::milliseconds>(tv_now - tv_begin).count() << "ms: sleep " << delay_ms << "ms again" << std::endl;
+  ares_sleep_time(delay_ms);
+  tv_now = std::chrono::high_resolution_clock::now();
+
+  if (verbose) std::cerr << std::chrono::duration_cast<std::chrono::milliseconds>(tv_now - tv_begin).count() << "ms: Sending another query - should trigger another probe to Server0" << std::endl;
+  // Server #1 will handle the real query
+  // Server #0 should be probed again
+  EXPECT_CALL(*servers_[1], OnRequest("www.example.com", T_A))
+    .WillOnce(SetReply(servers_[1].get(), &okrsp));
+  EXPECT_CALL(*servers_[0], OnRequest("www.example.com", T_A))
+    .WillOnce(SetReply(servers_[0].get(), &okrsp));
+  HostResult result3;
+  ares_gethostbyname(channel_, "www.example.com.", AF_INET, HostCallback, &result3);
+  Process();
+  EXPECT_TRUE(result3.done_);
+}
+
+class ServerRecoveryMultiMockTest
+  : public MockChannelOptsTest,
+    public ::testing::WithParamInterface< std::pair<int, bool> > {
+ public:
+  ServerRecoveryMultiMockTest()
+    : MockChannelOptsTest(2, GetParam().first, GetParam().second, false,
+                          FillOptions(&opts_),
+                          ARES_OPT_SERVER_FAILOVER | ARES_OPT_NOROTATE) {}
+
+  static struct ares_options* FillOptions(struct ares_options *opts) {
+    memset(opts, 0, sizeof(struct ares_options));
+    opts->server_failover_opts.retry_chance = 1;
+    opts->server_failover_opts.retry_delay = SERVER_FAILOVER_RETRY_DELAY;
+    return opts;
+  }
+ private:
+  struct ares_options opts_;
+};
+
+// Test that when every server has failures, a query sent to a failed server
+// still spawns a probe of another failed server.  Without this, a server
+// that recovers from an extended outage while another (better-sorted) server
+// is still failing is never noticed until the failure counts catch up
+// ("sticky recovery").
+TEST_P(ServerRecoveryMultiMockTest, StickyRecoveryProbe) {
+  DNSPacket servfailrsp;
+  servfailrsp.set_response().set_aa().set_rcode(SERVFAIL)
+    .add_question(new DNSQuestion("www.example.com", T_A));
+  DNSPacket okrsp;
+  okrsp.set_response().set_aa()
+    .add_question(new DNSQuestion("www.example.com", T_A))
+    .add_answer(new DNSARR("www.example.com", 100, {2,3,4,5}));
+  unsigned int delay_ms = SERVER_FAILOVER_RETRY_DELAY +
+                          (SERVER_FAILOVER_RETRY_DELAY / 10);
+
+  // Fail all attempts of the first query so both servers end up failed.
+  // Attempts alternate between the servers as each failure re-sorts the
+  // list, so each server sees 3 requests (2 servers x 3 tries).  No probes
+  // are spawned: retries never probe, and the initial attempt is sent while
+  // all servers are still healthy.
+  EXPECT_CALL(*servers_[0], OnRequest("www.example.com", T_A))
+    .WillOnce(SetReply(servers_[0].get(), &servfailrsp))
+    .WillOnce(SetReply(servers_[0].get(), &servfailrsp))
+    .WillOnce(SetReply(servers_[0].get(), &servfailrsp));
+  EXPECT_CALL(*servers_[1], OnRequest("www.example.com", T_A))
+    .WillOnce(SetReply(servers_[1].get(), &servfailrsp))
+    .WillOnce(SetReply(servers_[1].get(), &servfailrsp))
+    .WillOnce(SetReply(servers_[1].get(), &servfailrsp));
+  HostResult result1;
+  ares_gethostbyname(channel_, "www.example.com.", AF_INET, HostCallback,
+                     &result1);
+  Process();
+  EXPECT_TRUE(result1.done_);
+  EXPECT_EQ(ARES_ESERVFAIL, result1.status_);
+
+  // Sleep past the retry delay so both servers are eligible for probing.
+  ares_sleep_time(delay_ms);
+
+  // Server #0 recovers.  The query is sent to server #0 (both servers have
+  // equal failure counts and #0 failed least recently).  Even though the
+  // chosen server has failures, a probe must be spawned to the other failed
+  // server (#1), which is still down.
+  EXPECT_CALL(*servers_[0], OnRequest("www.example.com", T_A))
+    .WillOnce(SetReply(servers_[0].get(), &okrsp));
+  EXPECT_CALL(*servers_[1], OnRequest("www.example.com", T_A))
+    .WillOnce(SetReply(servers_[1].get(), &servfailrsp));
+  HostResult result2;
+  ares_gethostbyname(channel_, "www.example.com.", AF_INET, HostCallback,
+                     &result2);
+  Process();
+  EXPECT_TRUE(result2.done_);
+  EXPECT_EQ(ARES_SUCCESS, result2.status_);
+
+  // Sleep past the retry delay again so server #1 is once more eligible for
+  // probing.
+  ares_sleep_time(delay_ms);
+
+  // Server #1 has now recovered.  The query goes to healthy server #0 and a
+  // probe is spawned to server #1 which succeeds, marking it healthy again.
+  EXPECT_CALL(*servers_[0], OnRequest("www.example.com", T_A))
+    .WillOnce(SetReply(servers_[0].get(), &okrsp));
+  EXPECT_CALL(*servers_[1], OnRequest("www.example.com", T_A))
+    .WillOnce(SetReply(servers_[1].get(), &okrsp));
+  HostResult result3;
+  ares_gethostbyname(channel_, "www.example.com.", AF_INET, HostCallback,
+                     &result3);
+  Process();
+  EXPECT_TRUE(result3.done_);
+  EXPECT_EQ(ARES_SUCCESS, result3.status_);
+}
+
+class ServerRecoveryNoProbeMultiMockTest
+  : public MockChannelOptsTest,
+    public ::testing::WithParamInterface< std::pair<int, bool> > {
+ public:
+  ServerRecoveryNoProbeMultiMockTest()
+    : MockChannelOptsTest(2, GetParam().first, GetParam().second, false,
+                          FillOptions(&opts_),
+                          ARES_OPT_SERVER_FAILOVER | ARES_OPT_NOROTATE) {}
+
+  static struct ares_options* FillOptions(struct ares_options *opts) {
+    memset(opts, 0, sizeof(struct ares_options));
+    // Probing disabled: recovery must come from server selection alone
+    opts->server_failover_opts.retry_chance = 0;
+    opts->server_failover_opts.retry_delay = SERVER_FAILOVER_RETRY_DELAY;
+    return opts;
+  }
+ private:
+  struct ares_options opts_;
+};
+
+// Test that with probing disabled, a server whose failure count went stale
+// during an outage is still retried once an actively-failing server reaches
+// the same count: servers with equal failure counts are tried
+// least-recently-failed first rather than in configuration order.
+TEST_P(ServerRecoveryNoProbeMultiMockTest, StickyRecoveryTieBreak) {
+  DNSPacket servfailrsp;
+  servfailrsp.set_response().set_aa().set_rcode(SERVFAIL)
+    .add_question(new DNSQuestion("www.example.com", T_A));
+  DNSPacket okrsp;
+  okrsp.set_response().set_aa()
+    .add_question(new DNSQuestion("www.example.com", T_A))
+    .add_answer(new DNSARR("www.example.com", 100, {2,3,4,5}));
+
+  // Fail all attempts of the first query so both servers end up failed with
+  // a failure count of 3 (2 servers x 3 tries, alternating).
+  EXPECT_CALL(*servers_[0], OnRequest("www.example.com", T_A))
+    .WillOnce(SetReply(servers_[0].get(), &servfailrsp))
+    .WillOnce(SetReply(servers_[0].get(), &servfailrsp))
+    .WillOnce(SetReply(servers_[0].get(), &servfailrsp));
+  EXPECT_CALL(*servers_[1], OnRequest("www.example.com", T_A))
+    .WillOnce(SetReply(servers_[1].get(), &servfailrsp))
+    .WillOnce(SetReply(servers_[1].get(), &servfailrsp))
+    .WillOnce(SetReply(servers_[1].get(), &servfailrsp));
+  HostResult result1;
+  ares_gethostbyname(channel_, "www.example.com.", AF_INET, HostCallback,
+                     &result1);
+  Process();
+  EXPECT_TRUE(result1.done_);
+  EXPECT_EQ(ARES_ESERVFAIL, result1.status_);
+
+  // Server #0 recovers briefly: the next query succeeds and resets its
+  // failure count, while server #1 stays failed with its count frozen at 3.
+  EXPECT_CALL(*servers_[0], OnRequest("www.example.com", T_A))
+    .WillOnce(SetReply(servers_[0].get(), &okrsp));
+  HostResult result2;
+  ares_gethostbyname(channel_, "www.example.com.", AF_INET, HostCallback,
+                     &result2);
+  Process();
+  EXPECT_TRUE(result2.done_);
+  EXPECT_EQ(ARES_SUCCESS, result2.status_);
+
+  // Server #0 starts failing again while server #1 has (unnoticed)
+  // recovered.  The query retries server #0 until its failure count catches
+  // up to server #1's stale count of 3.  At that point server #1 must sort
+  // first (it failed least recently) and answer successfully.  Without the
+  // tie-break the remaining attempts would all go to server #0 and the query
+  // would fail without server #1 ever being tried.
+  EXPECT_CALL(*servers_[0], OnRequest("www.example.com", T_A))
+    .WillOnce(SetReply(servers_[0].get(), &servfailrsp))
+    .WillOnce(SetReply(servers_[0].get(), &servfailrsp))
+    .WillOnce(SetReply(servers_[0].get(), &servfailrsp));
+  EXPECT_CALL(*servers_[1], OnRequest("www.example.com", T_A))
+    .WillOnce(SetReply(servers_[1].get(), &okrsp));
+  HostResult result3;
+  ares_gethostbyname(channel_, "www.example.com.", AF_INET, HostCallback,
+                     &result3);
+  Process();
+  EXPECT_TRUE(result3.done_);
+  EXPECT_EQ(ARES_SUCCESS, result3.status_);
 }
 
 const char *af_tostr(int af)
@@ -2573,6 +3035,8 @@ INSTANTIATE_TEST_SUITE_P(AddressFamilies, ContainedMockChannelSysConfig, ::testi
 
 INSTANTIATE_TEST_SUITE_P(AddressFamilies, MockUDPChannelTest, ::testing::ValuesIn(ares::test::families), PrintFamily);
 
+INSTANTIATE_TEST_SUITE_P(AddressFamilies, MockRetryDepthChannelTest, ::testing::ValuesIn(ares::test::families), PrintFamily);
+
 INSTANTIATE_TEST_SUITE_P(AddressFamilies, MockUDPMaxQueriesTest, ::testing::ValuesIn(ares::test::families), PrintFamily);
 
 INSTANTIATE_TEST_SUITE_P(AddressFamilies, CacheQueriesTest, ::testing::ValuesIn(ares::test::families), PrintFamily);
@@ -2588,6 +3052,10 @@ INSTANTIATE_TEST_SUITE_P(AddressFamilies, MockEDNSChannelTest, ::testing::Values
 INSTANTIATE_TEST_SUITE_P(TransportModes, NoRotateMultiMockTest, ::testing::ValuesIn(ares::test::families_modes), PrintFamilyMode);
 
 INSTANTIATE_TEST_SUITE_P(TransportModes, ServerFailoverOptsMultiMockTest, ::testing::ValuesIn(ares::test::families_modes), PrintFamilyMode);
+
+INSTANTIATE_TEST_SUITE_P(TransportModes, ServerRecoveryMultiMockTest, ::testing::ValuesIn(ares::test::families_modes), PrintFamilyMode);
+
+INSTANTIATE_TEST_SUITE_P(TransportModes, ServerRecoveryNoProbeMultiMockTest, ::testing::ValuesIn(ares::test::families_modes), PrintFamilyMode);
 
 }  // namespace test
 }  // namespace ares
