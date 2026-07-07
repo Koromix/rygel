@@ -33,7 +33,7 @@ class CoverageTask(outcome_analysis.CoverageTask):
                           r'.*\b(?:' + r'|'.join(words) + r')\b.*',
                           re.DOTALL)
 
-    IGNORED_TESTS = {
+    UNCOVERED_TESTS = {
         'ssl-opt': [
             # We don't run ssl-opt.sh with Valgrind on the CI because
             # it's extremely slow. We don't intend to change this.
@@ -449,8 +449,8 @@ class DriverVSReference_no_ecp_at_all(outcome_analysis.DriverVSReference):
             # consequence compressed points are supported in the reference
             # component but not in the accelerated one, so they should be skipped
             # while checking driver's coverage.
-            re.compile(r'Parse EC Key .*compressed\)'),
-            re.compile(r'Parse Public EC Key .*compressed\)'),
+            re.compile(r'Parse EC Key .*(?<!un)compressed\)'),
+            re.compile(r'Parse Public EC Key.*(?<!un)compressed.*'),
         ],
         # See ecp_light_only
         'test_suite_ssl': [
@@ -487,8 +487,8 @@ class DriverVSReference_ecc_no_bignum(outcome_analysis.DriverVSReference):
         ],
         # See no_ecp_at_all
         'test_suite_pkparse': [
-            re.compile(r'Parse EC Key .*compressed\)'),
-            re.compile(r'Parse Public EC Key .*compressed\)'),
+            re.compile(r'Parse EC Key .*(?<!un)compressed\)'),
+            re.compile(r'Parse Public EC Key.*(?<!un)compressed.*'),
         ],
         'test_suite_asn1parse': [
             'INTEGER too large for mpi',
@@ -542,8 +542,8 @@ class DriverVSReference_ecc_ffdh_no_bignum(outcome_analysis.DriverVSReference):
         ],
         # See no_ecp_at_all
         'test_suite_pkparse': [
-            re.compile(r'Parse EC Key .*compressed\)'),
-            re.compile(r'Parse Public EC Key .*compressed\)'),
+            re.compile(r'Parse EC Key .*(?<!un)compressed\)'),
+            re.compile(r'Parse Public EC Key.*(?<!un)compressed.*'),
         ],
         'test_suite_asn1parse': [
             'INTEGER too large for mpi',

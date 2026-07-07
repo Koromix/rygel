@@ -8,9 +8,11 @@ Please write a few sentences describing the overall goals of the pull request's 
 
 Please add the numbers (or links) of the associated pull requests for consuming branches. You can omit branches where this pull request is not needed.
 
-- [ ] **TF-PSA-Crypto PR** provided # | not required because: 
-- [ ] **development PR** provided # | not required because: 
-- [ ] **3.6 PR** provided # | not required because: 
+- [ ] **TF-PSA-Crypto development PR** provided # | not required because: 
+- [ ] **TF-PSA-Crypto 1.1 PR** provided # | not required because: 
+- [ ] **mbedtls development PR** provided # | not required because: 
+- [ ] **mbedtls 4.1 PR** provided # | not required because: 
+- [ ] **mbedtls 3.6 PR** provided # | not required because: 
 
 
 

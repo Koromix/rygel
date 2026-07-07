@@ -1956,6 +1956,14 @@ int query_config(const char *config)
     }
 #endif /* MBEDTLS_PKCS7_C */
 
+#if defined(MBEDTLS_PKCS7_ALLOW_WEAK_SIGNATURES)
+    if( strcmp( "MBEDTLS_PKCS7_ALLOW_WEAK_SIGNATURES", config ) == 0 )
+    {
+        MACRO_EXPANSION_TO_STR( MBEDTLS_PKCS7_ALLOW_WEAK_SIGNATURES );
+        return( 0 );
+    }
+#endif /* MBEDTLS_PKCS7_ALLOW_WEAK_SIGNATURES */
+
 #if defined(MBEDTLS_PKCS12_C)
     if( strcmp( "MBEDTLS_PKCS12_C", config ) == 0 )
     {
@@ -4485,6 +4493,10 @@ void list_config(void)
 #if defined(MBEDTLS_PKCS7_C)
     OUTPUT_MACRO_NAME_VALUE(MBEDTLS_PKCS7_C);
 #endif /* MBEDTLS_PKCS7_C */
+
+#if defined(MBEDTLS_PKCS7_ALLOW_WEAK_SIGNATURES)
+    OUTPUT_MACRO_NAME_VALUE(MBEDTLS_PKCS7_ALLOW_WEAK_SIGNATURES);
+#endif /* MBEDTLS_PKCS7_ALLOW_WEAK_SIGNATURES */
 
 #if defined(MBEDTLS_PKCS12_C)
     OUTPUT_MACRO_NAME_VALUE(MBEDTLS_PKCS12_C);

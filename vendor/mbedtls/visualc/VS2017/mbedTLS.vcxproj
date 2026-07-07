@@ -292,6 +292,7 @@
     <ClInclude Include="..\..\library\bignum_mod_raw_invasive.h" />
     <ClInclude Include="..\..\library\block_cipher_internal.h" />
     <ClInclude Include="..\..\library\bn_mul.h" />
+    <ClInclude Include="..\..\library\chacha20_internal.h" />
     <ClInclude Include="..\..\library\check_crypto_config.h" />
     <ClInclude Include="..\..\library\cipher_invasive.h" />
     <ClInclude Include="..\..\library\cipher_wrap.h" />
