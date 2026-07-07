@@ -10,14 +10,12 @@ const DATABASE_VERSION = 7;
 let uploads = 0;
 
 let worker = null;
-let next_message = 0;
-let msg_handlers = new Map;
 
 function initSync() {
     let url = BUNDLES['worker.js'];
     worker = new Worker(url, { type: 'module' });
 
-    worker.onmessage = handleMessage;
+    worker.onmessage = Async.handle;
 }
 
 function isSyncing() {
@@ -27,7 +25,7 @@ function isSyncing() {
 
 async function downloadVault(vid) {
     let force_sabfs = !sqlite3.hasOPFS();
-    let ref = await callWorker('download', vid, force_sabfs);
+    let ref = await Async.call(worker, 'download', vid, force_sabfs);
 
     return ref;
 }
@@ -39,7 +37,7 @@ async function uploadVault(ref) {
         if (ref.type == 'sab')
             ref.sab = await sqlite3.SABFS.shrink(ref.filename);
 
-        ref.generation = await callWorker('upload', ref);
+        ref.generation = await Async.call(worker, 'upload', ref);
     } finally {
         uploads--;
     }
@@ -235,40 +233,6 @@ async function openVault(ref, key, lock) {
     });
 
     return db;
-}
-
-async function callWorker(type, ...args) {
-    let p = new Promise((resolve, reject) => {
-        let id = ++next_message;
-
-        msg_handlers.set(id, {
-            resolve: resolve,
-            reject: reject
-        });
-
-        let msg = {
-            id: id,
-            type: type,
-            args: args
-        };
-
-        worker.postMessage(msg);
-    });
-
-    let ret = await p;
-    return ret;
-}
-
-function handleMessage(e) {
-    let msg = e.data;
-    let handler = msg_handlers.get(msg.id);
-
-    switch (msg.type) {
-        case 'success': { handler.resolve(msg.value); } break;
-        case 'error': { handler.reject(msg.value); } break;
-    }
-
-    msg_handlers.delete(msg.id);
 }
 
 export {

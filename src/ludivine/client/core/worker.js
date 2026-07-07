@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
 import { Util, Log, Net, HttpError } from 'lib/web/base/base.js';
+import * as Async from 'lib/web/base/async.js';
 
 const MAX_SABFS_SIZE = 64 * 1024 * 1024;
 
@@ -13,17 +14,8 @@ function handleMessage(e) {
     let msg = e.data;
 
     switch (msg.type) {
-        case 'download': { wrapAsync(msg.id, downloadVault, msg.args); } break;
-        case 'upload': { wrapAsync(msg.id, uploadVault, msg.args); } break;
-    }
-}
-
-async function wrapAsync(id, func, args) {
-    try {
-        let ret = await func(...args);
-        self.postMessage({ id: id, type: 'success', value: ret });
-    } catch (err) {
-        self.postMessage({ id: id, type: 'error', value: err });
+        case 'download': { Async.wrap(self, msg.id, downloadVault, msg.args); } break;
+        case 'upload': { Async.wrap(self, msg.id, uploadVault, msg.args); } break;
     }
 }
 

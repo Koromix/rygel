@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
 import { Util, Log, Net } from 'lib/web/base/base.js';
+import * as Async from 'lib/web/base/async.js';
 import { download } from './file.js';
 
 const EXPIRATION_DELAY = 5 * 60000; // 5 minutes
@@ -137,7 +138,7 @@ function handleMessage(e) {
     let msg = e.data;
 
     switch (msg.type) {
-        case 'drop': { wrapAsync(e.source, msg.id, updateDrop, [e.source, ...msg.args]); } break;
+        case 'drop': { Async.wrap(e.source, msg.id, updateDrop, [e.source, ...msg.args]); } break;
     }
 }
 
@@ -187,15 +188,6 @@ function expireDrops() {
         let timeout = Math.max(0, first.expire - performance.now());
 
         clear_timer = setTimeout(expireDrops, timeout);
-    }
-}
-
-async function wrapAsync(client, id, func, args) {
-    try {
-        let ret = await func(...args);
-        client.postMessage({ type: 'return', args: [id, true, ret] });
-    } catch (err) {
-        client.postMessage({ type: 'return', args: [id, false, err] });
     }
 }
 

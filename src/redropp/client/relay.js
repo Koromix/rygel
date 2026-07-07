@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
 import { Util, Log, Net, ProgressMeter } from 'lib/web/base/base.js';
+import * as Async from 'lib/web/base/async.js';
 import * as App from './app.js';
 
 const PROGRESS_EXPIRATION = 2 * 60000;
@@ -35,12 +36,9 @@ async function initRelay() {
 }
 
 function updateController() {
-    if (sw != null && navigator.serviceWorker.controller != sw) {
-        sw = navigator.serviceWorker.controller;
-        restartCalls();
-    } else {
-        sw = navigator.serviceWorker.controller;
-    }
+    if (sw != null && navigator.serviceWorker.controller != sw)
+        Async.restart(sw, navigator.serviceWorker.controller);
+    sw = navigator.serviceWorker.controller;
 
     if (sw_resolve != null) {
         sw_resolve();
@@ -52,19 +50,6 @@ function handleMessage(e) {
     let msg = e.data;
 
     switch (msg.type) {
-        case 'return': {
-            let [id, success, value] = msg.args;
-            let handler = msg_handlers.get(id);
-
-            if (success) {
-                handler.resolve(value);
-            } else {
-                handler.reject(value);
-            }
-
-            msg_handlers.delete(msg.id);
-        } break;
-
         case 'progress': {
             let [kid, value, max] = msg.args;
 
@@ -81,62 +66,13 @@ function handleMessage(e) {
             let [err] = msg.args;
             Log.error(err);
         } break;
-    }
 
-    msg_handlers.delete(msg.id);
+        default: { Async.handle(msg); } break;
+    }
 }
 
 async function sendDrop(info, key) {
-    await callWorker('drop', info, key);
-}
-
-async function callWorker(type, ...args) {
-    let p = new Promise((resolve, reject) => {
-        let id = ++next_message;
-
-        msg_handlers.set(id, {
-            type: type,
-            args: args,
-            resolve: resolve,
-            reject: reject
-        });
-
-        let msg = {
-            id: id,
-            type: type,
-            args: args
-        };
-
-        sw.postMessage(msg);
-    });
-
-    let ret = await p;
-    return ret;
-}
-
-function restartCalls() {
-    let handlers = Array.from(msg_handlers.values());
-
-    msg_handlers.clear();
-
-    for (let handler of handlers) {
-        let id = ++next_message;
-
-        let msg = {
-            id: id,
-            type: handler.type,
-            args: handler.args
-        };
-
-        msg_handlers.set(id, {
-            type: handler.type,
-            args: handler.args,
-            resolve: handler.resolve,
-            reject: handler.reject
-        });
-
-        sw.postMessage(msg);
-    }
+    await Async.call(sw, 'drop', [info, key]);
 }
 
 function getProgress(kid) {
