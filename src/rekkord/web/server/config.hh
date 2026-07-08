@@ -27,6 +27,7 @@ struct Config {
     smtp_Config smtp;
 
     bool internal_auth = true;
+    bool allow_register = true;
     bool auto_link_email = false;
     HeapArray<oidc_Provider> oidc_providers;
     HashMap<const char *, const oidc_Provider *> oidc_map;

@@ -418,6 +418,11 @@ void HandleUserRegister(http_IO *io)
         io->SendError(403);
         return;
     }
+    if (!config.allow_register) {
+        LogError("Creation of new accounts is disabled");
+        io->SendError(403);
+        return;
+    }
 
     const char *mail = nullptr;
     {
@@ -1195,6 +1200,12 @@ void HandleSsoOidc(http_IO *io)
                     // Automatically link provider to existing mail if AutoLink = On (not default)
                     allowed = true;
                 }
+            }
+
+            if (created && !config.allow_register) {
+                LogError("Creation of new accounts is disabled");
+                io->SendError(403);
+                return false;
             }
 
             // Create identity

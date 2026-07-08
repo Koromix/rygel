@@ -10,7 +10,7 @@ import { PictureCropper } from './picture.js';
 import { ASSETS } from '../assets/assets.js';
 
 async function runRegister() {
-    if (!ENV.auth.internal) {
+    if (!ENV.auth.internal || !ENV.auth.register) {
         App.go('/login');
         return;
     }
@@ -155,7 +155,7 @@ async function runLogin() {
                             </label>
                             <div class="actions">
                                 <button type="submit">${T.login}</button>
-                                <a href="/register">${T.maybe_create_account}</a>
+                                ${ENV.auth.register ? html`<a href="/register">${T.maybe_create_account}</a>` : ''}
                                 <a href="/recover">${T.maybe_lost_password}</a>
                             </div>
                         </form>
