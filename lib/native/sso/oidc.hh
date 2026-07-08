@@ -65,8 +65,9 @@ struct oidc_IdentityInfo {
     HashMap<const char *, const char *> claims;
 };
 
-void oidc_PrepareAuthorization(const oidc_Provider &provider, const char *scopes, const char *callback,
-                               const char *redirect, Allocator *alloc, oidc_AuthorizationInfo *out_auth);
+void oidc_PrepareAuthorization(const oidc_Provider &provider, const char *scopes,
+                               const char *callback, const char *redirect, const char *claims,
+                               Allocator *alloc, oidc_AuthorizationInfo *out_auth);
 
 bool oidc_CheckCookie(Span<const char> cookie, Span<const char> rnd, Allocator *alloc, oidc_CookieInfo *out_info);
 bool oidc_ExchangeCode(const oidc_Provider &provider, const char *callback_url, const char *code,

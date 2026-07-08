@@ -32,6 +32,7 @@ static const int64_t BanTime = 15 * 60000;
 static const int64_t PictureCacheDelay = 3600 * 1000;
 static const Size MaxPictureSize = Kibibytes(256);
 
+static const char *SsoClaims = R"({"id_token":{"email":{"essential":true},"email_verified":null}})";
 static const int SsoCookieFlags =  (int)http_CookieFlag::SameSiteStrict | (int)http_CookieFlag::Secure | (int)http_CookieFlag::HttpOnly;
 static const int SsoCookieMaxAge = 10 * 60000; // 10 minutes
 
@@ -1037,7 +1038,7 @@ void HandleSsoLogin(http_IO *io)
     const char *callback = Fmt(io->Allocator(), "%1/oidc", config.url).ptr;
 
     oidc_AuthorizationInfo auth;
-    oidc_PrepareAuthorization(*provider, scopes, callback, redirect, io->Allocator(), &auth);
+    oidc_PrepareAuthorization(*provider, scopes, callback, redirect, SsoClaims, io->Allocator(), &auth);
 
     // Don't set SameSite=Strict because we want the cookie to be available when the user gets redirected to the callback URL
     io->AddCookieHeader("/", "oidc", auth.cookie, SsoCookieFlags, SsoCookieMaxAge);

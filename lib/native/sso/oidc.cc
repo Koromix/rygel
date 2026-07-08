@@ -39,8 +39,6 @@ struct JwksCacheEntry {
     K_HASHTABLE_HANDLER(JwksCacheEntry, id);
 };
 
-static Span<const char> AuthorizationClaims = R"({"id_token":{"email":{"essential":true},"email_verified":null}})";
-
 static const int TimestampTolerance = 120 * 1000; // 2 minutes
 static const int JwksExpirationDelay = 6 * 3600 * 1000; // Fetch new JWKS files every 6 hours
 
@@ -247,19 +245,30 @@ static uint8_t *GetSsoCookieKey32()
     return key;
 }
 
-void oidc_PrepareAuthorization(const oidc_Provider &provider, const char *scopes, const char *callback,
-                               const char *redirect, Allocator *alloc, oidc_AuthorizationInfo *out_auth)
+void oidc_PrepareAuthorization(const oidc_Provider &provider, const char *scopes,
+                               const char *callback, const char *redirect, const char *claims,
+                               Allocator *alloc, oidc_AuthorizationInfo *out_auth)
 {
     BlockAllocator temp_alloc;
 
     Span<const char> state = Fmt(&temp_alloc, "%1|%2|%3", FmtRandom(24), provider.issuer, redirect);
     Span<const char> nonce = Fmt(&temp_alloc, "%1", FmtRandom(24));
 
-    out_auth->url = Fmt(alloc, "%1?client_id=%2&redirect_uri=%3&scope=openid+%4&response_type=code&state=%5&nonce=%6&claims=%7",
-                               provider.auth_url, FmtUrlSafe(provider.client_id, "-._~@"),
-                               FmtUrlSafe(callback, "-._~@"), FmtUrlSafe(scopes, "-._~@"),
-                               FmtUrlSafe(state, "-._~@"), FmtUrlSafe(nonce, "-._~@"),
-                               FmtUrlSafe(AuthorizationClaims, "-._~@")).ptr;
+    // Prepare URL
+    {
+        HeapArray<char> buf(alloc);
+
+        Fmt(&buf, "%1?client_id=%2&redirect_uri=%3&scope=openid+%4&response_type=code&state=%5&nonce=%6",
+                   provider.auth_url, FmtUrlSafe(provider.client_id, "-._~@"),
+                   FmtUrlSafe(callback, "-._~@"), FmtUrlSafe(scopes, "-._~@"),
+                   FmtUrlSafe(state, "-._~@"), FmtUrlSafe(nonce, "-._~@"));
+
+        if (claims) {
+            Fmt(&buf, "&claims=%1", FmtUrlSafe(claims, "-._~@"));
+        }
+
+        out_auth->url = buf.TrimAndLeak(1).ptr;
+    }
 
     // Prepare encrypted cookie
     {
