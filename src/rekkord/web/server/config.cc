@@ -108,6 +108,8 @@ bool LoadConfig(StreamReader *st, Config *out_config)
             } else if (prop.section == "Authentication") {
                 if (prop.key == "AllowInternal") {
                     valid &= ParseBool(prop.value, &config.internal_auth);
+                } else if (prop.key == "AutoLinkEmail") {
+                    valid &= ParseBool(prop.value, &config.auto_link_email);
                 } else {
                     LogError("Unknown attribute '%1'", prop.key);
                     valid = false;

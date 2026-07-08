@@ -1188,8 +1188,13 @@ void HandleSsoOidc(http_IO *io)
                 created = (sqlite3_column_int64(stmt, 1) == now);
                 ckey = DuplicateString((const char *)sqlite3_column_text(stmt, 2), io->Allocator()).ptr;
 
-                // Automatically allow the provider that resulted in user creation if address mail is verified
-                allowed = verified && created;
+                if (verified && created) {
+                    // Automatically allow the provider that resulted in user creation if address mail is verified
+                    allowed = true;
+                } else if (verified && config.auto_link_email) {
+                    // Automatically link provider to existing mail if AutoLink = On (not default)
+                    allowed = true;
+                }
             }
 
             // Create identity
