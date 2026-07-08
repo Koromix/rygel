@@ -91,7 +91,7 @@ function createDownloadStream(kid) {
                 controller.error(err);
 
                 console.error(err);
-                client.postMessage({ type: 'error', args: [err] });
+                client.postMessage({ kind: 'log', args: ['error', err] });
 
                 resolve();
             }
@@ -109,7 +109,7 @@ function createDownloadStream(kid) {
     }
 
     function progress(value) {
-        client.postMessage({ type: 'progress', args: [info.kid, value, info.size] });
+        client.postMessage({ kind: 'progress', args: [info.kid, value, info.size] });
     }
 
     let options = {
@@ -137,8 +137,8 @@ function prepareHeaders(info) {
 function handleMessage(e) {
     let msg = e.data;
 
-    switch (msg.type) {
-        case 'drop': { Async.wrap(e.source, msg.id, updateDrop, [e.source, ...msg.args]); } break;
+    switch (msg.kind) {
+        case 'drop': { Async.wrap(e.source, msg, () => updateDrop(e.source, ...msg.args)); } break;
     }
 }
 

@@ -49,7 +49,7 @@ function updateController() {
 function handleMessage(e) {
     let msg = e.data;
 
-    switch (msg.type) {
+    switch (msg.kind) {
         case 'progress': {
             let [kid, value, max] = msg.args;
 
@@ -59,12 +59,12 @@ function handleMessage(e) {
             App.go();
 
             // Try to keep the service worker alive, especially on Firefox!
-            sw.postMessage({ type: 'alive', args: [] });
+            sw.postMessage({ kind: 'alive', args: [] });
         } break;
 
-        case 'error': {
-            let [err] = msg.args;
-            Log.error(err);
+        case 'log': {
+            let [type, err] = msg.args;
+            Log[type](err);
         } break;
 
         default: { Async.handle(msg); } break;
