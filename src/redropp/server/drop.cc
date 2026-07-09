@@ -143,8 +143,8 @@ void HandleDropList(http_IO *io)
                               IIF(d.uploaded = d.size, 1, 0) AS complete,
                               q.total
                        FROM drops d
-                       LEFT JOIN quotas q ON (user = 1)
-                       WHERE owner = ?1 AND deleted = 0)", &stmt, session->userid))
+                       LEFT JOIN quotas q ON (user = d.owner)
+                       WHERE d.owner = ?1 AND d.deleted = 0)", &stmt, session->userid))
         return;
     if (!stmt.Run())
         return;
