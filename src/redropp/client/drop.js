@@ -467,11 +467,15 @@ async function runSend() {
         let url = App.makeURL({ mode: 'drop', drop: info.kid }, passphrase);
         App.go(url);
 
+        let ui_lock = UI.blockClose();
+
         try {
             await uploadFile(info, key, file, uploaded => progress(drop, uploaded));
         } catch (err) {
             drop.error = err;
             throw err;
+        } finally {
+            UI.unblockClose(ui_lock);
         }
     }
 

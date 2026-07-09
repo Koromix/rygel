@@ -104,6 +104,8 @@ async function start() {
     window.onbeforeunload = e => {
         if (UI.isDialogOpen())
             return T.confirm_or_close_dialog;
+        if (UI.isCloseBlocked())
+            return T.confirm_or_close_dialog;
     };
 
     // Retrieve session if there seems to be one

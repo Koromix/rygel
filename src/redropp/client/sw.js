@@ -91,7 +91,7 @@ function createDownloadStream(kid) {
                 controller.error(err);
 
                 console.error(err);
-                client.postMessage({ kind: 'log', args: ['error', err] });
+                client.postMessage({ kind: 'failed', args: [info.kid, err] });
 
                 resolve();
             }

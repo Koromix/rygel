@@ -3,6 +3,7 @@
 
 import { Util, Log, Net } from 'lib/web/base/base.js';
 import * as Async from 'lib/web/base/async.js';
+import * as UI from 'lib/web/ui/ui.js';
 import * as App from './app.js';
 import { ProgressMeter } from './format.js';
 
@@ -54,8 +55,19 @@ function handleMessage(e) {
         case 'progress': {
             let [kid, value, max] = msg.args;
 
-            let meter = progress_map.getOrInsertComputed(kid, () => new ProgressMeter(max));
-            meter.add(value);
+            let progress = progress_map.getOrInsertComputed(kid, () => {
+                let status = {
+                    lock: UI.blockClose(),
+                    meter: new ProgressMeter(max)
+                };
+
+                return status;
+            });
+
+            progress.meter.add(value);
+
+            if (value == max)
+                UI.unblockClose(progress.lock);
 
             App.go();
 
@@ -63,9 +75,16 @@ function handleMessage(e) {
             sw.postMessage({ kind: 'alive', args: [] });
         } break;
 
-        case 'log': {
-            let [type, err] = msg.args;
-            Log[type](err);
+        case 'failed': {
+            let [kid, err] = msg.args;
+            let progress = progress_map.get(kid);
+
+            if (progress != null) {
+                UI.unblockClose(progress.lock);
+                progress_map.delete(kid);
+            }
+
+            Log.error(err);
         } break;
 
         default: { Async.handle(msg); } break;
@@ -77,19 +96,19 @@ async function sendDrop(info, key) {
 }
 
 function getProgress(kid) {
-    let meter = progress_map.get(kid);
+    let progress = progress_map.get(kid);
 
-    if (meter == null)
+    if (progress == null)
         return null;
 
-    let progress = meter.measure();
+    let stat = progress.meter.measure();
 
-    if (performance.now() >= progress.time + PROGRESS_EXPIRATION) {
+    if (performance.now() >= stat.time + PROGRESS_EXPIRATION) {
         progress_map.delete(kid);
         return null;
     }
 
-    return progress;
+    return stat;
 }
 
 export {
