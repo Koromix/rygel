@@ -5,7 +5,7 @@ import { render, html, live, svg, unsafeHTML } from 'vendor/lit-html/lit-html.bu
 import { xsalsa20poly1305, randomBytes } from 'vendor/noble/noble.bundle.js';
 import dayjs from 'vendor/dayjs/dayjs.bundle.js';
 import QRC from 'vendor/qrcodegen/js/qrcodegen.js';
-import { Util, LruMap, Log, Net, HttpError, ProgressMeter } from 'lib/web/base/base.js';
+import { Util, LruMap, Log, Net, HttpError } from 'lib/web/base/base.js';
 import * as IDB from 'lib/web/base/indexeddb.js';
 import { Base64 } from 'lib/web/base/mixer.js';
 import * as UI from 'lib/web/ui/ui.js';
@@ -14,7 +14,8 @@ import { route, cache, session } from './app.js';
 import * as UserMod from './user.js';
 import {
     formatSize,
-    formatDuration
+    formatDuration,
+    ProgressMeter
 } from './format.js';
 import { sendDrop, getProgress } from './relay.js';
 import {
@@ -214,7 +215,7 @@ async function runDrop() {
 
             <div class="block" style="align-items: center;">
                 <p>${cache.drop.name}</p>
-                <progress value=${cache.drop.uploaded} max=${cache.drop.size}></progress>
+                <progress value=${progress.value} max=${cache.drop.size}></progress>
                 <div class="sub" style="text-align: center;">
                     ${T.speed}${T._colon}${progress.rate != null ? formatSize(progress.rate * 1000) + '/s' : '-'}<br>
                     ${T.remaining_time}${T._colon}${progress.remaining != null ? formatDuration(progress.remaining) : '-'}

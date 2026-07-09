@@ -79,6 +79,77 @@ function formatDuration(duration) {
     }
 }
 
+function ProgressMeter(max) {
+    let self = this;
+
+    let duration = 10000;
+    let interval = 1000;
+
+    let points = [];
+
+    let stat = {
+        time: null,
+        value: null,
+
+        max: max,
+        rate: null,
+        remaining: null
+    };
+
+    let next_update = 0;
+
+    Object.defineProperties(this, {
+        duration: { get: () => duration, set: value => { duration = value }, enumerable: true },
+        interval: { get: () => interval, set: value => { interval = value }, enumerable: true }
+    });
+
+    this.add = function (value) {
+        let now = performance.now();
+
+        points.push({
+            value: value,
+            time: now
+        });
+
+        collect(now);
+    };
+
+    this.measure = function () {
+        let now = performance.now();
+
+        collect(now);
+
+        let first = points[0];
+        let last = points[points.length - 1];
+
+        if (now >= next_update) {
+            if (last?.time - first?.time >= 500) {
+                stat.rate = (last.value - first.value) / (now - first.time);
+                stat.remaining = (max - last.value) / stat.rate;
+            } else {
+                stat.rate = null;
+                stat.remaining = null;
+            }
+
+            next_update = now + interval;
+        }
+
+        stat.time = now;
+        stat.value = last?.value ?? null;
+
+        return stat;
+    }
+
+    function collect(now) {
+        let j = 0;
+        for (let i = 0; i < points.length; i++) {
+            points[j] = points[i];
+            j += (points[i].time >= now - duration);
+        }
+        points.length = j;
+    }
+}
+
 export {
     DAYS,
 
@@ -87,4 +158,6 @@ export {
     formatClock,
     parseClock,
     formatDuration,
+
+    ProgressMeter
 }
