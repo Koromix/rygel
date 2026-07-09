@@ -2,6 +2,18 @@
 
 ## Alpha versions
 
+### Redropp 0.6
+
+*Released on 2026-07-09*
+
+- Fix broken quota usage for everyone except first user
+- Prevent tab close during upload and download
+- Reduce jankiness of progress rate meter
+- Fix ugly space above single SSO button
+- Add setting to disable account registration
+- Add setting to auto link new SSO identities to existing users
+- Remove SSO/OIDC AuthorizationClaims setting
+
 ### Redropp 0.5
 
 *Released on 2026-07-06*
