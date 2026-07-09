@@ -6,7 +6,7 @@
 
 *Released on 2026-07-09*
 
-- Fix broken quota usage for everyone except first user
+- Fix broken quota usage display for everyone except first user
 - Prevent tab close during upload and download
 - Reduce jankiness of progress rate meter
 - Fix ugly space above single SSO button
