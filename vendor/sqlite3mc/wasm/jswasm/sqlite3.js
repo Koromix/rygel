@@ -27,11 +27,11 @@
 /* @preserve
 ** This code was built from sqlite3 version...
 **
-** SQLITE_VERSION "3.53.2"
-** SQLITE_VERSION_NUMBER 3053002
-** SQLITE_SOURCE_ID "2026-06-03 19:12:13 d6e03d8c777cfa2d35e3b60d8ec3e0187f3e9f99d8e2ee9cac695fd6fcdf1a24"
+** SQLITE_VERSION "3.53.3"
+** SQLITE_VERSION_NUMBER 3053003
+** SQLITE_SOURCE_ID "2026-06-26 20:14:12 d4c0e51e4aeb96955b99185ab9cde75c339e2c29c3f3f12428d364a10d782c62"
 **
-** Emscripten SDK: 6.0.0
+** Emscripten SDK: 6.0.2
 */
 
 
@@ -44,7 +44,7 @@ var sqlite3InitModule = (() => {
   
   var _scriptName = globalThis.document?.currentScript?.src;
   return async function(moduleArg = {}) {
-    var moduleRtn;
+    var Module = moduleArg;
 
 
 
@@ -61,8 +61,6 @@ var sqlite3InitModule = (() => {
 
 
 
-
-var Module = moduleArg;
 
 
 
@@ -275,16 +273,29 @@ class EmscriptenSjLj extends EmscriptenEH {}
 
 
 
-var readyPromiseResolve, readyPromiseReject;
-
 
 
 var runtimeInitialized = false;
 
 
 
+
+
+function getMemoryBuffer() {
+  try {
+    
+    var b = wasmMemory.toResizableBuffer();
+    return b;
+    
+  } catch {}
+  return wasmMemory.buffer;
+}
+
 function updateMemoryViews() {
-  var b = wasmMemory.buffer;
+  
+  
+  if (HEAP8?.buffer?.resizable) return;
+  var b = getMemoryBuffer();
   HEAP8 = new Int8Array(b);
   HEAP16 = new Int16Array(b);
   HEAPU8 = new Uint8Array(b);
@@ -334,11 +345,10 @@ function initMemory() {
 
 
 function preRun() {
-  if (Module['preRun']) {
-    if (typeof Module['preRun'] == 'function') Module['preRun'] = [Module['preRun']];
-    while (Module['preRun'].length) {
-      addOnPreRun(Module['preRun'].shift());
-    }
+  var preRun = Module['preRun'];
+  if (preRun) {
+    if (typeof preRun == 'function') preRun = [preRun];
+    onPreRuns.push(...preRun);
   }
   
   callRuntimeCallbacks(onPreRuns);
@@ -358,16 +368,15 @@ TTY.init();
   
   FS.ignorePermissions = false;
   
+
 }
 
 function postRun() {
-   
 
-  if (Module['postRun']) {
-    if (typeof Module['postRun'] == 'function') Module['postRun'] = [Module['postRun']];
-    while (Module['postRun'].length) {
-      addOnPostRun(Module['postRun'].shift());
-    }
+  var postRun = Module['postRun'];
+  if (postRun) {
+    if (typeof postRun == 'function') postRun = [postRun];
+    onPostRuns.push(...postRun);
   }
 
   
@@ -404,7 +413,6 @@ function abort(what) {
   
   var e = new WebAssembly.RuntimeError(what);
 
-  readyPromiseReject?.(e);
   
   
   
@@ -418,9 +426,6 @@ function findWasmBinary() {
 }
 
 function getBinarySync(file) {
-  if (file == wasmBinaryFile && wasmBinary) {
-    return new Uint8Array(wasmBinary);
-  }
   if (readBinary) {
     return readBinary(file);
   }
@@ -490,8 +495,7 @@ async function createWasm() {
   
   
   
-  
-  function receiveInstance(instance, module) {
+  function receiveInstance(instance) {
     wasmExports = instance.exports;
 
     assignWasmExports(wasmExports);
@@ -516,11 +520,10 @@ async function createWasm() {
   
   
   
-  if (Module['instantiateWasm']) {
-    return new Promise((resolve, reject) => {
-        Module['instantiateWasm'](info, (inst, mod) => {
-          resolve(receiveInstance(inst, mod));
-        });
+  var instantiateWasm = Module['instantiateWasm'];
+  if (instantiateWasm) {
+    return new Promise((resolve) => {
+        instantiateWasm(info, (inst) => resolve(receiveInstance(inst)));
     });
   }
 
@@ -754,18 +757,20 @@ relative:(from, to) => {
 
 var UTF8Decoder = new TextDecoder();
 
-var findStringEnd = (heapOrArray, idx, maxBytesToRead, ignoreNul) => {
-    var maxIdx = idx + maxBytesToRead;
-    if (ignoreNul) return maxIdx;
-    
-    
-    
-    
-    while (heapOrArray[idx] && !(idx >= maxIdx)) ++idx;
-    return idx;
-  };
 
   
+  var findStringEnd = (heapOrArray, idx, maxBytesToRead, ignoreNul) => {
+      var maxIdx = idx + maxBytesToRead;
+      if (ignoreNul) return maxIdx;
+      
+      
+      
+      
+      while (heapOrArray[idx] && !(idx >= maxIdx)) ++idx;
+      return idx;
+    };
+  
+    
   var UTF8ArrayToString = (heapOrArray, idx = 0, maxBytesToRead, ignoreNul) => {
   
       var endPtr = findStringEnd(heapOrArray, idx, maxBytesToRead, ignoreNul);
@@ -1364,24 +1369,27 @@ var findStringEnd = (heapOrArray, idx, maxBytesToRead, ignoreNul) => {
       return id;
     };
   
+  var dependenciesPromise = null;
+  var resolveRunDependencies = async () => dependenciesPromise;
   var runDependencies = 0;
   
   
-  var dependenciesFulfilled = null;
   var removeRunDependency = (id) => {
       runDependencies--;
   
       Module['monitorRunDependencies']?.(runDependencies);
   
-      if (runDependencies == 0) {
-        if (dependenciesFulfilled) {
-          var callback = dependenciesFulfilled;
-          dependenciesFulfilled = null;
-          callback(); 
-        }
+      if (!runDependencies) {
+        dependenciesPromise.resolve();
       }
     };
+  
   var addRunDependency = (id) => {
+      if (!runDependencies) {
+        var resolve;
+        dependenciesPromise = new Promise((r) => resolve = r);
+        dependenciesPromise.resolve = resolve;
+      }
       runDependencies++;
   
       Module['monitorRunDependencies']?.(runDependencies);
@@ -3108,7 +3116,7 @@ var findStringEnd = (heapOrArray, idx, maxBytesToRead, ignoreNul) => {
           
           return 0;
         }
-        var buffer = HEAPU8.slice(addr, addr + len);
+        var buffer = HEAPU8.subarray(addr, addr + len);
         FS.msync(stream, buffer, offset, len, flags);
       },
   getStreamFromFD(fd) {
@@ -3596,6 +3604,9 @@ var findStringEnd = (heapOrArray, idx, maxBytesToRead, ignoreNul) => {
   
   
       var date = new Date(time*1000);
+      if (isNaN(date.getTime())) {
+        return 1;
+      }
       HEAP32[((tmPtr)>>2)] = date.getSeconds();
       HEAP32[(((tmPtr)+(4))>>2)] = date.getMinutes();
       HEAP32[(((tmPtr)+(8))>>2)] = date.getHours();
@@ -3614,6 +3625,7 @@ var findStringEnd = (heapOrArray, idx, maxBytesToRead, ignoreNul) => {
       var winterOffset = start.getTimezoneOffset();
       var dst = (summerOffset != winterOffset && date.getTimezoneOffset() == Math.min(winterOffset, summerOffset))|0;
       HEAP32[(((tmPtr)+(32))>>2)] = dst;
+      return 0;
     ;
   }
 
@@ -4050,19 +4062,21 @@ var findStringEnd = (heapOrArray, idx, maxBytesToRead, ignoreNul) => {
 
   
   if (Module['noExitRuntime']) noExitRuntime = Module['noExitRuntime'];
-if (Module['preloadPlugins']) preloadPlugins = Module['preloadPlugins'];
+
 if (Module['print']) out = Module['print'];
 if (Module['printErr']) err = Module['printErr'];
-if (Module['wasmBinary']) wasmBinary = Module['wasmBinary'];
   
 
   if (Module['arguments']) programArgs = Module['arguments'];
   if (Module['thisProgram']) thisProgram = Module['thisProgram'];
 
-  if (Module['preInit']) {
-    if (typeof Module['preInit'] == 'function') Module['preInit'] = [Module['preInit']];
-    while (Module['preInit'].length > 0) {
-      Module['preInit'].shift()();
+  var preInit = Module['preInit'];
+  if (preInit) {
+    if (typeof preInit == 'function') Module['preInit'] = preInit = [preInit];
+    
+    
+    while (preInit.length > 0) {
+      preInit.shift()();
     }
   }
 }
@@ -4721,55 +4735,38 @@ var wasmImports = {
 
 
 
-function run() {
-
-  if (runDependencies > 0) {
-    dependenciesFulfilled = run;
-    return;
-  }
+async function run() {
 
   preRun();
 
-  
-  if (runDependencies > 0) {
-    dependenciesFulfilled = run;
-    return;
+  if (runDependencies) {
+    await resolveRunDependencies();
   }
 
-  function doRun() {
+  var setStatus = Module['setStatus'];
+  if (setStatus) {
+    setStatus('Running...');
     
+    await new Promise((resolve) => setTimeout(resolve, 1));
     
-    Module['calledRun'] = true;
-
-    if (ABORT) return;
-
-    initRuntime();
-
-    readyPromiseResolve?.(Module);
-    Module['onRuntimeInitialized']?.();
-
-    postRun();
+    setTimeout(setStatus, 1, '');
   }
 
-  if (Module['setStatus']) {
-    Module['setStatus']('Running...');
-    setTimeout(() => {
-      setTimeout(() => Module['setStatus'](''), 1);
-      doRun();
-    }, 1);
-  } else
-  {
-    doRun();
-  }
+  if (ABORT) return;
+
+  initRuntime();
+
+  Module['onRuntimeInitialized']?.();
+
+  postRun();
 }
 
 var wasmExports;
 
 
 
-wasmExports = await (createWasm());
-
-run();
+wasmExports = await createWasm();
+await run();
 
 
 
@@ -5788,7 +5785,7 @@ globalThis.sqlite3ApiBootstrap.defaultConfig = Object.create(null);
 
 globalThis.sqlite3ApiBootstrap.sqlite3 = undefined;
 globalThis.sqlite3ApiBootstrap.initializers.push(function(sqlite3){
-  sqlite3.version = {"libVersion": "3.53.2", "libVersionNumber": 3053002, "sourceId": "2026-06-03 19:12:13 d6e03d8c777cfa2d35e3b60d8ec3e0187f3e9f99d8e2ee9cac695fd6fcdf1a24","downloadVersion": 3530200,"scm":{ "sha3-256": "d6e03d8c777cfa2d35e3b60d8ec3e0187f3e9f99d8e2ee9cac695fd6fcdf1a24","branch": "branch-3.53","tags": "release version-3.53.2","datetime": "2026-06-03T19:12:13.350Z"}};
+  sqlite3.version = {"libVersion": "3.53.3", "libVersionNumber": 3053003, "sourceId": "2026-06-26 20:14:12 d4c0e51e4aeb96955b99185ab9cde75c339e2c29c3f3f12428d364a10d782c62","downloadVersion": 3530300,"scm":{ "sha3-256": "d4c0e51e4aeb96955b99185ab9cde75c339e2c29c3f3f12428d364a10d782c62","branch": "branch-3.53","tags": "release version-3.53.3","datetime": "2026-06-26T20:14:12.354Z"}};
 });
 
 
@@ -11530,10 +11527,6 @@ globalThis.sqlite3ApiBootstrap.initializers.push(function(sqlite3){
       xOpen: function(pProtoVfs,zName,pProtoFile,flags,pOutFlags){
         cache.popError();
         let zToFree ;
-        if( 0 ){
-          
-          flags |= capi.SQLITE_OPEN_CREATE;
-        }
         try{
           if( !zName ){
             zToFree = wasm.allocCString(""+pProtoFile+"."
@@ -14394,21 +14387,8 @@ try{
 
 
 
-if (runtimeInitialized)  {
-  moduleRtn = Module;
-} else {
-  
-  moduleRtn = new Promise((resolve, reject) => {
-    readyPromiseResolve = resolve;
-    readyPromiseReject = reject;
-  });
-}
 
-
-
-
-
-    return moduleRtn;
+    return Module;
   };
 })();
 
