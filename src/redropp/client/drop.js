@@ -215,7 +215,7 @@ async function runDrop() {
 
             <div class="block" style="align-items: center;">
                 <p>${cache.drop.name}</p>
-                <progress value=${progress.value} max=${cache.drop.size}></progress>
+                <progress value=${progress.value ?? 0} max=${cache.drop.size}></progress>
                 <div class="sub" style="text-align: center;">
                     ${T.speed}${T._colon}${progress.rate != null ? formatSize(progress.rate * 1000) + '/s' : '-'}<br>
                     ${T.remaining_time}${T._colon}${progress.remaining != null ? formatDuration(progress.remaining) : '-'}
@@ -267,7 +267,7 @@ async function runDrop() {
                         </label>
                     ` : ''}
                     ${progress != null ? html`
-                        <progress value=${progress.value} max=${progress.max}></progress>
+                        <progress value=${progress.value ?? 0} max=${progress.max}></progress>
                         <div class="sub" style="text-align: center;">
                             ${T.speed}${T._colon}${progress.rate != null ? formatSize(progress.rate * 1000) + '/s' : '-'}<br>
                             ${T.remaining_time}${T._colon}${progress.remaining != null ? formatDuration(progress.remaining) : '-'}
