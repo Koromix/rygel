@@ -6,6 +6,8 @@ import { Util, Log, Net } from 'lib/web/base/base.js';
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
 function formatSize(size) {
+    size = Math.round(size);
+
     if (size >= 999950000) {
         let value = size / 1000000000;
         let prec = 1 + (value < 9.9995) + (value < 99.995);
