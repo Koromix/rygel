@@ -62,6 +62,7 @@
             "odd": "{1} jours"
         },
         "expired": "Expiré",
+        "expires_at_x": "Expire le {1}",
         "external_identities": "Identifiants externes",
         "file": "Fichier",
         "files": "Fichiers",
@@ -89,6 +90,7 @@
         },
         "name": "Nom",
         "never": "Jamais",
+        "never_expires": "N'expire jamais",
         "new_password": "Nouveau mot de passe",
         "no": "Non",
         "no_expiration": "Pas d'expiration",

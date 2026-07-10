@@ -208,7 +208,7 @@ void HandleDropInfo(http_IO *io)
     int64_t now = GetUnixTime();
 
     sq_Statement stmt;
-    if (!db.Prepare(R"(SELECT kid_str(kid), name, size, protect, header, nonce, split
+    if (!db.Prepare(R"(SELECT kid_str(kid), name, size, IFNULL(expire, -1), protect, header, nonce, split
                        FROM drops WHERE kid = ?1 AND
                                         IIF(expire IS NOT NULL, expire > ?2, 1) AND
                                         deleted = 0 AND
@@ -227,10 +227,11 @@ void HandleDropInfo(http_IO *io)
     const char *id = (const char *)sqlite3_column_text(stmt, 0);
     const char *name = (const char *)sqlite3_column_text(stmt, 1);
     int64_t size = sqlite3_column_int64(stmt, 2);
-    bool protect = sqlite3_column_int(stmt, 3);
-    const char *header = (const char *)sqlite3_column_text(stmt, 4);
-    const char *nonce = (const char *)sqlite3_column_text(stmt, 5);
-    int64_t split = sqlite3_column_int64(stmt, 6);
+    int64_t expire = sqlite3_column_int64(stmt, 3);
+    bool protect = sqlite3_column_int(stmt, 4);
+    const char *header = (const char *)sqlite3_column_text(stmt, 5);
+    const char *nonce = (const char *)sqlite3_column_text(stmt, 6);
+    int64_t split = sqlite3_column_int64(stmt, 7);
 
     http_SendJson(io, 200, [&](json_Writer *json) {
         json->StartObject();
@@ -238,6 +239,11 @@ void HandleDropInfo(http_IO *io)
         json->Key("kid"); json->String(id);
         json->Key("name"); json->String(name);
         json->Key("size"); json->Int64(size);
+        if (expire >= 0) {
+            json->Key("expire"); json->Int64(expire);
+        } else {
+            json->Key("expire"); json->Null();
+        }
         json->Key("protect"); json->Bool(protect);
         json->Key("header"); json->String(header);
         json->Key("nonce"); json->String(nonce);
@@ -369,8 +375,23 @@ void HandleDropCreate(http_IO *io)
     if (!success)
         return;
 
-    Span<const char> json = Fmt(io->Allocator(), "{\"kid\": \"%1\", \"split\": %2}", kid, FragmentSize);
-    io->SendText(200, json, "application/json");
+
+    http_SendJson(io, 200, [&](json_Writer *json) {
+        json->StartObject();
+
+        char str[128];
+        Fmt(str, "%1", kid);
+
+        json->Key("kid"); json->String(str);
+        if (expire >= 0) {
+            json->Key("expire"); json->Int64(expire);
+        } else {
+            json->Key("expire"); json->Null();
+        }
+        json->Key("split"); json->Int64(FragmentSize);
+
+        json->EndObject();
+    });
 }
 
 void HandleDropDelete(http_IO *io)

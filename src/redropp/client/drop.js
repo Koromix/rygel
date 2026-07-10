@@ -139,6 +139,7 @@ async function recoverLink(info) {
         kid: info.kid,
         name: info.name,
         size: info.size,
+        expire: info.expire,
         passphrase: passphrase,
         uploaded: info.size,
         error: null
@@ -241,6 +242,10 @@ async function runDrop() {
                 <input class="link" type="text" readonly value=${ENV.url + url}
                        @click=${e => e.target.select()} />
                 ${makeQrCodeSvg(ENV.url + url, 200)}
+                <div class="sub">
+                    ${cache.drop.expire != null ? T.format(T.expires_at_x, dayjs(cache.drop.expire).format('lll')) : ''}
+                    ${cache.drop.expire == null ? T.never_expires : ''}
+                </div>
             </div>
 
             <div class="actions">
@@ -262,6 +267,10 @@ async function runDrop() {
             <form @submit=${UI.wrap(submit)}>
                 <div class="block" style="align-items: center;">
                     <div>${formatSize(cache.drop.size)}</div>
+                    <div class="sub">
+                        ${cache.drop.expire != null ? T.format(T.expires_at_x, dayjs(cache.drop.expire).format('lll')) : ''}
+                        ${cache.drop.expire == null ? T.never_expires : ''}
+                    </div>
                     ${cache.drop.protect && stat == null ? html`
                         <label>
                             <span>${T.password}</span>
@@ -466,6 +475,7 @@ async function runSend() {
             kid: info.kid,
             name: file.name,
             size: file.size,
+            expire: info.expire,
             passphrase: passphrase,
             uploaded: 0,
             progress: new ProgressMeter(file.size),
