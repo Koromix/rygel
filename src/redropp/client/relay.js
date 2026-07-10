@@ -54,17 +54,10 @@ function handleMessage(e) {
     switch (msg.kind) {
         case 'progress': {
             let [kid, value, max] = msg.args;
+            let status = status_map.get(kid);
 
-            let status = status_map.getOrInsertComputed(kid, () => {
-                let status = {
-                    time: null,
-                    meter: new ProgressMeter(max),
-                    error: null,
-                    lock: null
-                };
-
-                return status;
-            });
+            if (status == null)
+                break;
 
             status.time = performance.now();
             status.meter.add(value, status.time);
@@ -107,6 +100,13 @@ function handleMessage(e) {
 }
 
 async function sendDrop(info, key) {
+    status_map.getOrInsert(info.kid, {
+        time: performance.now(),
+        meter: new ProgressMeter(info.size),
+        error: null,
+        lock: null
+    });
+
     await Async.call(sw, 'drop', [info, key]);
 }
 
