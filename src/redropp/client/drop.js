@@ -171,38 +171,37 @@ async function runDrop() {
     let is_new = false;
     let passphrase = null;
 
-    if (route.drop != null) {
-        cache.drop = new_drops.get(route.drop);
-
-        if (cache.drop != null) {
-            is_new = true;
-            passphrase = cache.drop.passphrase;
-        } else {
-            try {
-                let url = Util.pasteURL('/api/drop/info', { kid: route.drop });
-                cache.drop = await Net.cache('drop', url);
-            } catch (err) {
-                if (err.status != 404 && err.status != 422)
-                    throw err;
-
-                cache.drop = null;
-            }
-
-            passphrase = window.location.hash.substr(1);
-
-            if (!passphrase)
-                throw new Error(T.message(`Missing decryption passphrase`));
-        }
-    } else {
+    if (route.drop == null) {
         cache.drop = null;
-    }
 
-    route.drop = cache.drop?.kid;
-
-    if (cache.drop == null) {
         App.go('/send');
         return;
     }
+
+    cache.drop = new_drops.get(route.drop);
+
+    if (cache.drop != null) {
+        is_new = true;
+        passphrase = cache.drop.passphrase;
+    } else {
+        try {
+            let url = Util.pasteURL('/api/drop/info', { kid: route.drop });
+            cache.drop = await Net.cache('drop', url);
+        } catch (err) {
+            cache.drop = null;
+
+            if (err.status == 404)
+                err = new Error(T.unknown_or_expired_drop);
+            throw err;
+        }
+
+        passphrase = window.location.hash.substr(1);
+
+        if (!passphrase)
+            throw new Error(T.message(`Missing decryption passphrase`));
+    }
+
+    route.drop = cache.drop?.kid;
 
     if (cache.drop.uploaded < cache.drop.size) {
         let progress = cache.drop.progress.measure();

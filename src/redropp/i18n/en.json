@@ -132,6 +132,7 @@
         "totp_scan1": "Scan this QR code with a two-factor application on your smartphone.",
         "totp_scan2": "Once done, enter the 6-digit code into the field below.",
         "two_factor_authentication": "Two-factor authentication",
+        "unknown_or_expired_drop": "Unknown or expired drop",
         "upload_image": "Upload image",
         "use_age_to_decrypt_the_file": "Decrypt the file with <a href=\"https://age-encryption.org/\" target=\"_blank\">age</a> with the following command:",
         "use_curl_to_download_encrypted_file": "Use curl to download the encrypted file:",
