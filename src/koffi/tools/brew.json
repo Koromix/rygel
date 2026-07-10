@@ -300,7 +300,7 @@
             "machine": "windows_x64",
             "directory": "C:/Users/windows/Desktop/luigi_arm64",
             "build": "C:\\Node64\\node64.cmd node ../../cnoke.cjs -t win32_arm64",
-            "package": null
+            "package": "win32-arm64"
         }
     },
 
