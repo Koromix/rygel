@@ -7,6 +7,13 @@
 
 ### Koffi 3.1
 
+#### Koffi 3.1.1
+
+*Released on 2026-07-10*
+
+- Restore missing Windows ARM64 build
+- Slightly optimize memory allocation routines
+
 #### Koffi 3.1.0
 
 *Released on 2026-06-29*
