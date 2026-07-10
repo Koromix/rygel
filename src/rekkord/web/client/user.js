@@ -68,7 +68,6 @@ async function runFinalize() {
         return;
     }
 
-    let error = T.message(`Missing token`);
     let token = null;
 
     if (window.location.hash) {
@@ -77,17 +76,11 @@ async function runFinalize() {
 
         token = query.get('token') || null;
 
-        if (token != null) {
-            try {
-                await Net.post('/api/user/reset', { token: token });
-                error = null;
-            } catch (err) {
-                if (!(error instanceof HttpError))
-                    throw err;
+        if (token == null)
+            throw new Error(T.message(`Missing token`));
 
-                error = err.message;
-            }
-        }
+        // Make sure it's valid
+        await Net.post('/api/user/reset', { token: token });
     }
 
     UI.main(html`
@@ -95,20 +88,17 @@ async function runFinalize() {
 
         <div class="block" style="align-items: center;">
             <form @submit=${UI.wrap(submit)}>
-                ${error == null ? html`
-                    <label>
-                        <span>${T.choose_password}</span>
-                        <input type="password" name="password1" style="width: 20em;" placeholder=${T.password.toLowerCase()} />
-                    </label>
-                    <label>
-                        <span>${T.confirmation}</span>
-                        <input type="password" name="password2" style="width: 20em;" placeholder=${T.confirmation.toLowerCase()} />
-                    </label>
-                    <div class="actions">
-                        <button type="submit">${T.set_password}</button>
-                    </div>
-                ` : ''}
-                ${error != null ? html`<p>${error}</p>` : ''}
+                <label>
+                    <span>${T.choose_password}</span>
+                    <input type="password" name="password1" style="width: 20em;" placeholder=${T.password.toLowerCase()} />
+                </label>
+                <label>
+                    <span>${T.confirmation}</span>
+                    <input type="password" name="password2" style="width: 20em;" placeholder=${T.confirmation.toLowerCase()} />
+                </label>
+                <div class="actions">
+                    <button type="submit">${T.set_password}</button>
+                </div>
             </form>
         </div>
     `);
@@ -327,7 +317,7 @@ async function runReset() {
                         <button type="submit">${T.confirm_password}</button>
                     </div>
                 ` : ''}
-                ${error != null ? html`<p>${error}</p>` : ''}
+                ${error != null ? html`<p style="color: red;">${error}</p>` : ''}
             </form>
         </div>
     `);

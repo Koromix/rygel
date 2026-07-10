@@ -116,7 +116,15 @@ async function start() {
             session = await Net.get('/api/session/info');
     }
 
-    await go(window.location.href, false);
+    try {
+        await go(window.location.href, false);
+    } catch (err) {
+        UI.main(html`
+            <div class="block" style="align-items: center;">
+                <p style="color: red;">${err.message}</p>
+            </div>
+        `);
+    }
 
     UI.main();
     document.body.classList.remove('loading');
