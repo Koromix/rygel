@@ -213,6 +213,8 @@ Allocator *GetNullAllocator()
 LinkedAllocator& LinkedAllocator::operator=(LinkedAllocator &&other)
 {
     ReleaseAll();
+
+    allocator = other.allocator;
     list = other.list;
     other.list = nullptr;
 
