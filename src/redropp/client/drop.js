@@ -17,7 +17,7 @@ import {
     formatDuration,
     ProgressMeter
 } from './format.js';
-import { sendDrop, getProgress } from './relay.js';
+import { sendDrop, getDownloadStatus } from './relay.js';
 import {
     createHeader,
     decodeHeader,
@@ -204,9 +204,9 @@ async function runDrop() {
     route.drop = cache.drop?.kid;
 
     if (cache.drop.uploaded < cache.drop.size) {
-        let progress = cache.drop.progress.measure();
+        let stat = cache.drop.progress.measure();
 
-        if (progress.rate != null)
+        if (stat.rate != null)
             setTimeout(() => App.go(), 500);
 
         UI.main(html`
@@ -214,13 +214,15 @@ async function runDrop() {
 
             <div class="block" style="align-items: center;">
                 <p>${cache.drop.name}</p>
-                <progress value=${progress.value ?? 0} max=${cache.drop.size}></progress>
-                <div class="sub" style="text-align: center;">
-                    ${T.speed}${T._colon}${progress.rate != null ? formatSize(progress.rate * 1000) + '/s' : '-'}<br>
-                    ${T.remaining_time}${T._colon}${progress.remaining != null ? formatDuration(progress.remaining) : '-'}
-                </div>
+                <progress value=${stat.value ?? 0} max=${cache.drop.size}></progress>
+                ${cache.drop.error == null ? html`
+                    <div class="sub" style="text-align: center;">
+                        ${T.speed}${T._colon}${stat.rate != null ? formatSize(stat.rate * 1000) + '/s' : '-'}<br>
+                        ${T.remaining_time}${T._colon}${stat.remaining != null ? formatDuration(stat.remaining) : '-'}
+                    </div>
+                ` : ''}
                 ${cache.drop.error != null ? html`
-                    <p style="color: red;">
+                    <p style="text-align: center; color: red;">
                         ${T.error_has_occured}<br>
                         ${cache.drop.error.message}
                     </p>
@@ -246,11 +248,12 @@ async function runDrop() {
             </div>
         `);
     } else {
-        let progress = getProgress(cache.drop.kid);
+        let status = getDownloadStatus(cache.drop.kid);
 
-        if (progress && progress.value == progress.max)
-            progress = null;
-        if (progress?.rate != null)
+        let stat = status?.meter?.measure?.();
+        let complete = (stat != null && stat.value == stat.max);
+
+        if (stat?.rate != null)
             setTimeout(() => App.go(), 500);
 
         UI.main(html`
@@ -259,31 +262,40 @@ async function runDrop() {
             <form @submit=${UI.wrap(submit)}>
                 <div class="block" style="align-items: center;">
                     <div>${formatSize(cache.drop.size)}</div>
-                    ${cache.drop.protect && progress == null ? html`
+                    ${cache.drop.protect && stat == null ? html`
                         <label>
                             <span>${T.password}</span>
                             <input type="password" name="password" />
                         </label>
                     ` : ''}
-                    ${progress != null ? html`
-                        <progress value=${progress.value ?? 0} max=${progress.max}></progress>
-                        <div class="sub" style="text-align: center;">
-                            ${T.speed}${T._colon}${progress.rate != null ? formatSize(progress.rate * 1000) + '/s' : '-'}<br>
-                            ${T.remaining_time}${T._colon}${progress.remaining != null ? formatDuration(progress.remaining) : '-'}
-                        </div>
-                        <div style="text-align: center;">${T.keep_tab_open_during_download}</div>
+                    ${stat != null ? html`
+                        <progress value=${stat.value ?? 0} max=${stat.max}></progress>
+                        ${!complete && status.error == null ? html`
+                            <div class="sub" style="text-align: center;">
+                                ${T.speed}${T._colon}${stat.rate != null ? formatSize(stat.rate * 1000) + '/s' : '-'}<br>
+                                ${T.remaining_time}${T._colon}${stat.remaining != null ? formatDuration(stat.remaining) : '-'}
+                            </div>
+                            <div style="text-align: center;">${T.keep_tab_open_during_download}</div>
+                        ` : ''}
+                        ${complete ? html`<div class="sub" style="text-align: center;">${T.download_complete}</div>` : ''}
+                    ` : ''}
+                    ${status?.error != null ? html`
+                        <p style="text-align: center; color: red;">
+                            ${T.error_has_occured}<br>
+                            ${status.error.message}
+                        </p>
                     ` : ''}
                 </div>
 
                 <div class="actions">
-                    <button type="submit" ?disabled=${progress != null}>${T.download}</button>
+                    <button type="submit" ?disabled=${status != null && !complete}>${T.download}</button>
                     <a @click=${UI.wrap(e => otherDownloadOptions(cache.drop, passphrase))}>${T.show_other_download_options}</a>
                 </div>
             </form>
         `);
 
         async function submit(e) {
-            if (progress != null)
+            if (status != null)
                 return;
 
             let form = e.currentTarget;

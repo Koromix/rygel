@@ -48,6 +48,7 @@
         "disable_2fa": "Désactiver l'authentification à deux facteurs",
         "dissociate": "Dissocier",
         "download": "Télécharger",
+        "download_complete": "Téléchargement terminé",
         "download_link": "Lien de téléchargement",
         "download_x": "Télécharger '{1}'",
         "drag_or_browse_file": "Déposez un fichier ou utilisez le bouton « Parcourir »",

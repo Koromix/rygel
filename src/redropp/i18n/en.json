@@ -48,6 +48,7 @@
         "disable_2fa": "Disable two-factor authentification",
         "dissociate": "Dissociate",
         "download": "Download",
+        "download_complete": "Download complete",
         "download_link": "Download link",
         "download_x": "Download '{1}'",
         "drag_or_browse_file": "Drop a file or use the 'Browse' button",

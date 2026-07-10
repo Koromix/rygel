@@ -7,7 +7,7 @@ import * as UI from 'lib/web/ui/ui.js';
 import * as App from './app.js';
 import { ProgressMeter } from './format.js';
 
-const PROGRESS_EXPIRATION = 2 * 60000;
+const STATUS_EXPIRATION = 5 * 60000; // 5 minutes
 
 let sw = null;
 let sw_resolve = null;
@@ -15,7 +15,7 @@ let sw_resolve = null;
 let next_message = 0;
 let msg_handlers = new Map;
 
-let progress_map = new Map;
+let status_map = new Map;
 
 async function initRelay() {
     navigator.serviceWorker.register('/sw.js');
@@ -55,19 +55,27 @@ function handleMessage(e) {
         case 'progress': {
             let [kid, value, max] = msg.args;
 
-            let progress = progress_map.getOrInsertComputed(kid, () => {
+            let status = status_map.getOrInsertComputed(kid, () => {
                 let status = {
-                    lock: UI.blockClose(),
-                    meter: new ProgressMeter(max)
+                    time: null,
+                    meter: new ProgressMeter(max),
+                    error: null,
+                    lock: null
                 };
 
                 return status;
             });
 
-            progress.meter.add(value);
+            status.time = performance.now();
+            status.meter.add(value, status.time);
+            status.error = null;
 
-            if (value == max)
-                UI.unblockClose(progress.lock);
+            if (value == max) {
+                UI.unblockClose(status.lock);
+                status.lock = null;
+            } else if (status.lock == null) {
+                status.lock = UI.blockClose();
+            }
 
             App.go();
 
@@ -77,14 +85,21 @@ function handleMessage(e) {
 
         case 'failed': {
             let [kid, err] = msg.args;
-            let progress = progress_map.get(kid);
+            let status = status_map.get(kid);
 
-            if (progress != null) {
-                UI.unblockClose(progress.lock);
-                progress_map.delete(kid);
+            if (err == null)
+                err = new Error(T.message(`The download seems to have been cancelled`));
+
+            if (status != null) {
+                status.error = err;
+
+                UI.unblockClose(status.lock);
+                status.lock = null;
             }
 
             Log.error(err);
+
+            App.go();
         } break;
 
         default: { Async.handle(msg); } break;
@@ -95,25 +110,22 @@ async function sendDrop(info, key) {
     await Async.call(sw, 'drop', [info, key]);
 }
 
-function getProgress(kid) {
-    let progress = progress_map.get(kid);
+function getDownloadStatus(kid) {
+    let status = status_map.get(kid);
 
-    if (progress == null)
+    if (status == null)
         return null;
-
-    let stat = progress.meter.measure();
-
-    if (performance.now() >= stat.time + PROGRESS_EXPIRATION) {
-        progress_map.delete(kid);
+    if (performance.now() >= status.time + STATUS_EXPIRATION) {
+        status_map.delete(kid);
         return null;
     }
 
-    return stat;
+    return status;
 }
 
 export {
     initRelay,
 
     sendDrop,
-    getProgress
+    getDownloadStatus
 }

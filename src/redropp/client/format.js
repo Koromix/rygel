@@ -88,8 +88,8 @@ function ProgressMeter(max) {
     let points = [];
 
     let stat = {
-        time: null,
         value: null,
+        time: null,
 
         max: max,
         rate: null,
@@ -103,13 +103,16 @@ function ProgressMeter(max) {
         interval: { get: () => interval, set: value => { interval = value }, enumerable: true }
     });
 
-    this.add = function (value) {
-        let now = performance.now();
+    this.add = function (value, now = null) {
+        now ??= performance.now();
 
         points.push({
             value: value,
             time: now
         });
+
+        stat.value = value;
+        stat.time = now;
 
         collect(now);
     };
@@ -133,9 +136,6 @@ function ProgressMeter(max) {
 
             next_update = now + interval;
         }
-
-        stat.time = now;
-        stat.value = last?.value ?? null;
 
         return stat;
     }

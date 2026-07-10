@@ -101,7 +101,13 @@ function createDownloadStream(kid) {
     function push(controller) {
         let slice = pending.subarray(0, controller.desizedSize);
 
-        controller.enqueue(slice);
+        try {
+            controller.enqueue(slice);
+        } catch (err) {
+            console.error(err);
+            client.postMessage({ kind: 'failed', args: [info.kid, null] });
+        }
+
         pending = pending.subarray(slice.length);
 
         if (!pending.length)
