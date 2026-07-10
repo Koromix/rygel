@@ -2,6 +2,16 @@
 
 ## Alpha versions
 
+### Redropp 0.7
+
+*Released on 2026-07-10*
+
+- Improve progress and error report for downloads and uploads
+- Show expiration date on download page
+- Show proper error for unknown or expired drop links
+- Block recover button for incomplete uploads
+- Minor style fixes
+
 ### Redropp 0.6
 
 *Released on 2026-07-09*
