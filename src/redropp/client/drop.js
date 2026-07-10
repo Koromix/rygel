@@ -72,7 +72,7 @@ async function runDrops() {
                 </thead>
                 <tbody>
                     ${drops.map(drop => {
-                        let recover = passphrases.has(drop.kid);
+                        let recover = passphrases.has(drop.kid) && drop.complete;
 
                         return html`
                             <tr>
