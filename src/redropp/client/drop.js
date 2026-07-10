@@ -257,6 +257,7 @@ async function runDrop() {
 
         let stat = status?.meter?.measure?.();
         let complete = (stat != null && stat.value == stat.max);
+        let enabled = (status == null || complete);
 
         if (stat?.rate != null)
             setTimeout(() => App.go(), 500);
@@ -297,14 +298,14 @@ async function runDrop() {
                 </div>
 
                 <div class="actions">
-                    <button type="submit" ?disabled=${status != null && !complete}>${T.download}</button>
+                    <button type="submit" ?disabled=${!enabled}>${T.download}</button>
                     <a @click=${UI.wrap(e => otherDownloadOptions(cache.drop, passphrase))}>${T.show_other_download_options}</a>
                 </div>
             </form>
         `);
 
         async function submit(e) {
-            if (status != null)
+            if (!enabled)
                 return;
 
             let form = e.currentTarget;
