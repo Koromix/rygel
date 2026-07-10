@@ -2,6 +2,13 @@
 
 ## Alpha versions
 
+### Redropp 0.7.1
+
+*Released on 2026-07-10*
+
+- Fix non-working download button after first download
+- Make sure download button stays disabled while it starts
+
 ### Redropp 0.7
 
 *Released on 2026-07-10*
