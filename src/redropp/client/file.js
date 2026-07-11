@@ -228,9 +228,7 @@ async function* uploadFragments(info, key, iter, progress) {
                             if (xhr.status == 200) {
                                 resolve();
                             } else {
-                                let text = (new TextDecoder).decode(body);
                                 let msg = await Net.readError(xhr.responseText);
-
                                 reject(new HttpError(xhr.status, msg));
                             }
                         };
