@@ -252,7 +252,7 @@ async function runDrop() {
             </div>
 
             <div class="actions">
-                <button @click=${UI.wrap(e => Util.writeClipboard(T.download_link, ENV.url + url))}>${T.copy_download_link}</button>
+                <button @click=${UI.wrap(e => copyClipboard(e, ENV.url + url))}>${T.copy_download_link}</button>
             </div>
         `);
     } else {
@@ -367,17 +367,17 @@ async function otherDownloadOptions(info, passphrase) {
                 <p>${unsafeHTML(T.use_curl_to_download_encrypted_file)}</p>
                 <div class="command">
                     <pre>${curl}</pre>
-                    <button type="button" class="small" @click=${UI.wrap(e => Util.writeClipboard(T.command, curl))}>${T.copy}</button>
+                    <button type="button" class="small" @click=${UI.wrap(e => copyClipboard(e, curl))}>${T.copy}</button>
                 </div>
                 <p>${unsafeHTML(T.use_age_to_decrypt_the_file)}</p>
                 <div class="command">
                     <pre>${age}</pre>
-                    <button type="button" class="small" @click=${UI.wrap(e => Util.writeClipboard(T.command, age))}>${T.copy}</button>
+                    <button type="button" class="small" @click=${UI.wrap(e => copyClipboard(e, age))}>${T.copy}</button>
                 </div>
                 <p>${T.use_passphrase_to_decrypt_with_age}</p>
                 <div class="command">
                     <pre>${passphrase}${suffix ? '/' : ''}${suffix}</pre>
-                    <button type="button" class="small" @click=${UI.wrap(e => Util.writeClipboard(T.passphrase, passphrase + (suffix ? '/' : '')))}>${T.copy}</button>
+                    <button type="button" class="small" @click=${UI.wrap(e => copyClipboard(e, passphrase + (suffix ? '/' : '')))}>${T.copy}</button>
                 </div>
                 ${info.protect ? html`<span class="sub" style="color: red;">${T.add_password_after_passphrase}</span>` : ''}
             </div>
@@ -612,6 +612,14 @@ async function openLocalDB(id) {
     });
 
     return db;
+}
+
+async function copyClipboard(el, text) {
+    if (el instanceof Event)
+        el = el.currentTarget;
+
+    await navigator.clipboard.writeText(text);
+    UI.flash(el, T.copied);
 }
 
 export {

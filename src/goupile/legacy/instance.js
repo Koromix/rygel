@@ -365,7 +365,7 @@ async function generateExportKey(e) {
             d.refresh();
         });
 
-        d.action(T.copy_to_clipboard, { disabled: api_key == null }, () => Util.writeClipboard(T.api_key, api_key));
+        d.action(T.copy_to_clipboard, { disabled: api_key == null }, () => writeClipboard(T.api_key, api_key));
     });
 }
 
@@ -3068,6 +3068,13 @@ async function syncRecords(standalone = true, full = false) {
             throw err;
         }
     });
+}
+
+async function writeClipboard(label, text) {
+    await navigator.clipboard.writeText(text);
+
+    let msg = T.message(`{1} copied to clipboard`, label);
+    Log.info(msg);
 }
 
 function encryptSymmetric(obj, ns) {

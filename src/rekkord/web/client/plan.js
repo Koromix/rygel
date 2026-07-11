@@ -415,7 +415,7 @@ async function showKey(plan, key, secret) {
                     <label>
                         <span>${T.api_key}</span>
                         <input type="text" style="width: 40em;" readonly value=${full} />
-                        <button type="button" class="small" @click=${UI.wrap(e => Util.writeClipboard(T.api_key, full))}>${T.copy}</button>
+                        <button type="button" class="small" @click=${UI.wrap(e => copyClipboard(e, full))}>${T.copy}</button>
                     </label>
 
                     <div style="color: red; font-style: italic; text-align: center">${T.please_copy_api_key}</div>
@@ -447,6 +447,14 @@ async function deletePlan(id) {
 
     if (route.plan == id)
         route.plan = null;
+}
+
+async function copyClipboard(el, text) {
+    if (el instanceof Event)
+        el = el.currentTarget;
+
+    await navigator.clipboard.writeText(text);
+    UI.flash(el, T.copied);
 }
 
 export {
