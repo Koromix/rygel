@@ -77,8 +77,8 @@ async function runDrops() {
                 </thead>
                 <tbody>
                     ${drops.map(drop => {
-                        let can_recover = passphrases.has(drop.kid);
-                        let show_recover = can_recover && drop.complete;
+                        let show_recover = drop.complete;
+                        let can_recover = show_recover && passphrases.has(drop.kid);
 
                         return html`
                             <tr>
