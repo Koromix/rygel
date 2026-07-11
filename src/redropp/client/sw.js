@@ -6,6 +6,7 @@ import * as Async from 'lib/web/base/async.js';
 import { download } from './file.js';
 
 const EXPIRATION_DELAY = 5 * 60000; // 5 minutes
+const STALL_DELAY = 20000; // 20 seconds
 
 let drops = new Map;
 let clear_timer = null;
@@ -23,11 +24,11 @@ self.addEventListener('fetch', e => {
 
         if (e.request.method == 'HEAD') {
             try {
-                let [info] = findDrop(kid);
+                let drop = findDrop(kid);
 
                 let response = new Response('', {
                     status: 200,
-                    headers: prepareHeaders(info)
+                    headers: prepareHeaders(drop.info)
                 });
                 e.respondWith(response);
             } catch (err) {
@@ -44,12 +45,15 @@ self.addEventListener('fetch', e => {
 });
 
 function createDownloadStream(kid) {
-    let [info, key, client] = findDrop(kid);
+    let drop = findDrop(kid);
+    let client = drop.client;
 
-    let fragments = download(info, key, progress);
-    let pending = null;
+    let fragments = download(drop.info, drop.key, progress);
+
+    let pending_frag = null;
     let downloaded = 0;
-    let complete = false;
+    let download_complete = false;
+    let stall_timer = null;
 
     let [wait, resolve] = createPromise();
 
@@ -58,15 +62,15 @@ function createDownloadStream(kid) {
             if (controller.desizedSize <= 0)
                 return;
 
-            if (pending != null) {
+            if (pending_frag != null) {
                 push(controller);
                 return;
             }
 
-            if (complete) {
+            if (download_complete) {
                 setTimeout(() => {
                     controller.close();
-                    resolve();
+                    end();
                 }, 1000);
 
                 return;
@@ -76,54 +80,60 @@ function createDownloadStream(kid) {
                 let { value: next, done } = await fragments.next();
 
                 // Reset expiration timer
-                findDrop(info.kid);
+                findDrop(kid);
 
                 if (!done) {
                     downloaded += next.length;
                     progress(downloaded);
 
-                    pending = next;
+                    pending_frag = next;
                     push(controller);
                 } else {
-                    complete = true;
+                    download_complete = true;
                 }
             } catch (err) {
                 controller.error(err);
 
                 console.error(err);
-                client.postMessage({ kind: 'failed', args: [info.kid, err] });
+                client.postMessage({ kind: 'failed', args: [drop.id, err] });
 
-                resolve();
+                end();
             }
         }
     });
 
     function push(controller) {
-        let slice = pending.subarray(0, controller.desizedSize);
+        let slice = pending_frag.subarray(0, controller.desizedSize);
 
         try {
             controller.enqueue(slice);
         } catch (err) {
             console.error(err);
-            client.postMessage({ kind: 'failed', args: [info.kid, null] });
+            client.postMessage({ kind: 'failed', args: [drop.id, null] });
         }
 
-        pending = pending.subarray(slice.length);
+        pending_frag = pending_frag.subarray(slice.length);
 
-        if (!pending.length)
-            pending = null;
+        if (!pending_frag.length)
+            pending_frag = null;
     }
 
     function progress(value) {
-        client.postMessage({ kind: 'progress', args: [info.kid, value, info.size] });
+        client.postMessage({ kind: 'progress', args: [drop.id, value, drop.info.size] });
+
+        clearTimeout(stall_timer);
+        stall_timer = setTimeout(() => progress(value), STALL_DELAY);
     }
 
-    let options = {
-        status: 200,
-        headers: prepareHeaders(info)
-    };
+    function end() {
+        clearTimeout(stall_timer);
+        resolve();
+    }
 
-    let response = new Response(stream, options);
+    let response = new Response(stream, {
+        status: 200,
+        headers: prepareHeaders(drop.info)
+    });
 
     return [response, wait];
 }
@@ -148,11 +158,10 @@ function handleMessage(e) {
     }
 }
 
-function updateDrop(client, info, key) {
-    drops.delete(info.kid);
-
+function updateDrop(client, id, info, key) {
     drops.set(info.kid, {
         client: client,
+        id: id,
 
         info: info,
         key: key,
@@ -175,7 +184,7 @@ function findDrop(kid) {
 
     expireDrops();
 
-    return [drop.info, drop.key, drop.client];
+    return drop;
 }
 
 function expireDrops() {

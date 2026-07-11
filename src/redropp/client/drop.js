@@ -35,6 +35,8 @@ const FRAGMENT_SIZE = 2097152;
 let send_file = null;
 let new_drops = new LruMap(4);
 
+let refresh_timer = null;
+
 async function runDrops() {
     if (!App.isLogged())
         return UserMod.runLogin();
@@ -214,7 +216,7 @@ async function runDrop() {
         let stat = cache.drop.progress.measure();
 
         if (stat.rate != null)
-            setTimeout(() => App.go(), 500);
+            refreshSoon();
 
         UI.main(html`
             <div class="heading">${T.send_file}</div>
@@ -263,10 +265,10 @@ async function runDrop() {
 
         let stat = status?.meter?.measure?.();
         let complete = (stat != null && stat.value == stat.max);
-        let enabled = (status == null || complete || status.error != null);
+        let enabled = (status == null || !status.busy);
 
-        if (stat?.rate != null)
-            setTimeout(() => App.go(), 500);
+        if (status?.busy && stat?.rate != null)
+            refreshSoon();
 
         UI.main(html`
             <div class="heading">${cache.drop.name}</div>
@@ -341,7 +343,7 @@ async function download(info, passphrase, password) {
         throw new Error(msg);
     }
 
-    await prepareDownload(info, key);
+    await prepareDownload(info, key, refreshSoon);
 
     let url = '/drop/decrypt/' + info.kid;
     let response = await Net.fetch(url, { method: 'HEAD' });
@@ -615,6 +617,16 @@ async function openLocalDB(id) {
     });
 
     return db;
+}
+
+function refreshSoon() {
+    if (refresh_timer != null)
+        return;
+
+    refresh_timer = setTimeout(() => {
+        refresh_timer = null;
+        App.go();
+    }, 500);
 }
 
 async function copyClipboard(el, text) {
