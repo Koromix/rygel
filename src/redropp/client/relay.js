@@ -65,7 +65,6 @@ function handleMessage(e) {
 
             if (value == max) {
                 UI.unblockClose(status.lock);
-                status.lock = null;
             } else if (status.lock == null) {
                 status.lock = UI.blockClose();
             }
@@ -85,9 +84,7 @@ function handleMessage(e) {
 
             if (status != null) {
                 status.error = err;
-
                 UI.unblockClose(status.lock);
-                status.lock = null;
             }
 
             Log.error(err);
