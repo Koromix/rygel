@@ -5,7 +5,7 @@ set -e
 PKG_NAME=redropp
 BUILD_TARGETS="redropp"
 VERSION_TARGET=redropp
-FELIX_PRESET=Fast
+FELIX_PRESET=Paranoid
 
 adjust() {
     cp src/redropp/*.md "$1"
