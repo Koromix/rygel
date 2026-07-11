@@ -22,7 +22,7 @@ async function runRegister() {
             <div class="columns">
                 <form style="text-align: center;" @submit=${UI.wrap(submit)}>
                     <label>
-                        <input type="text" name="mail" style="width: 20em;" placeholder=${T.mail_address.toLowerCase()} />
+                        <input type="email" name="mail" style="width: 20em;" placeholder=${T.mail_address.toLowerCase()} />
                     </label>
                     <div class="actions">
                         <button type="submit">${T.register}</button>
@@ -138,7 +138,7 @@ async function runLogin() {
                     ${ENV.auth.internal ? html`
                         <form style="text-align: center;" @submit=${UI.wrap(submit)}>
                             <label>
-                                <input type="text" name="mail" style="width: 20em;" placeholder=${T.mail_address.toLowerCase()} />
+                                <input type="email" name="mail" style="width: 20em;" placeholder=${T.mail_address.toLowerCase()} />
                             </label>
                             <label>
                                 <input type="password" name="password" style="width: 20em;" placeholder=${T.password.toLowerCase()} />
@@ -187,7 +187,8 @@ async function runLogin() {
                 <form style="text-align: center;" @submit=${UI.wrap(submit)}>
                     <p>${T.two_factor_authentication}</p>
                     <label  style="text-align: center;">
-                        <input type="text" name="code" style="width: 20em;" placeholder=${T.totp_digits} />
+                        <input type="text" name="code" pattern="[0-9]*"
+                               style="width: 20em;" placeholder=${T.totp_digits} />
                     </label>
                     <div class="actions">
                         <button type="submit">${T.confirm}</button>
@@ -246,7 +247,7 @@ async function runRecover() {
         <div class="block" style="align-items: center;">
             <form style="text-align: center;" @submit=${UI.wrap(submit)}>
                 <label>
-                    <input type="text" name="mail" style="width: 20em;" placeholder=${T.mail_address.toLowerCase()} />
+                    <input type="email" name="mail" style="width: 20em;" placeholder=${T.mail_address.toLowerCase()} />
                 </label>
                 <div class="actions">
                     <button type="submit">${T.reset_password}</button>
@@ -499,7 +500,8 @@ async function configureSecurity() {
 
                                 <label>
                                     <span>Code</span>
-                                    <input type="text" name="code" style="width: 20em;" placeholder=${T.totp_digits} />
+                                    <input type="text" name="code" pattern="[0-9]*"
+                                           style="width: 20em;" placeholder=${T.totp_digits} />
                                 </label>
 
                                 <p><i>${T.totp_applications}</i></p>
