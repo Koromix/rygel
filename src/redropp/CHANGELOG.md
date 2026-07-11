@@ -2,6 +2,13 @@
 
 ## Alpha versions
 
+### Redropp 0.7.3
+
+*Released on 2026-07-11*
+
+- Reduce progress/refresh spam and desync during download
+- Translate more error strings
+
 ### Redropp 0.7.2
 
 *Released on 2026-07-11*
