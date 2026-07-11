@@ -2,6 +2,12 @@
 
 ## Alpha versions
 
+### Redropp 0.7.4
+
+*Released on 2026-07-11*
+
+- Fix missing "Recover link" buttons
+
 ### Redropp 0.7.3
 
 *Released on 2026-07-11*
