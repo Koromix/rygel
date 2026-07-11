@@ -85,8 +85,14 @@ function handleMessage(e) {
             if (status == null)
                 break;
 
-            if (err == null)
+            if (err != null) {
+                let msg = T.message(err.message); // The SW cannot translate anything
+
+                if (msg != null)
+                    err = new Error(msg);
+            } else {
                 err = new Error(T.message(`The download seems to have been cancelled`));
+            }
 
             endDownload(status, err);
 

@@ -254,7 +254,7 @@ async function* uploadFragments(info, key, iter, progress) {
             }
 
             if (!success)
-                throw new Error('Failed to upload file fragment');
+                throw new Error(T.message(`Failed to upload file fragment`));
         }
 
         uploaded += frag.length;
@@ -334,7 +334,7 @@ async function* downloadFragments(info, key, progress) {
             }
 
             if (!success)
-                throw new Error('Failed to download file fragment');
+                throw new Error(T.message(`Failed to download file fragment`));
         }
 
         idx++;
