@@ -2,6 +2,18 @@
 
 ## Alpha versions
 
+### Redropp 0.7.2
+
+*Released on 2026-07-11*
+
+- Use reactive buttons for clipboard copy actions
+- Fix persistent browser tab lock after download failure
+- Keep error state after download error
+- Fix missing error notification when upload fails
+- Hide recover link button for incomplete uploads
+- Default to Paranoid build in source package
+- Translate more strings and messages
+
 ### Redropp 0.7.1
 
 *Released on 2026-07-10*
