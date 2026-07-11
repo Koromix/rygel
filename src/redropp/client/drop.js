@@ -17,7 +17,10 @@ import {
     formatDuration,
     ProgressMeter
 } from './format.js';
-import { sendDrop, getDownloadStatus } from './relay.js';
+import {
+    prepareDownload,
+    getDownloadStatus
+} from './relay.js';
 import {
     createHeader,
     decodeHeader,
@@ -260,7 +263,7 @@ async function runDrop() {
 
         let stat = status?.meter?.measure?.();
         let complete = (stat != null && stat.value == stat.max);
-        let enabled = (status == null || complete);
+        let enabled = (status == null || complete || status.error != null);
 
         if (stat?.rate != null)
             setTimeout(() => App.go(), 500);
@@ -338,7 +341,7 @@ async function download(info, passphrase, password) {
         throw new Error(msg);
     }
 
-    await sendDrop(info, key);
+    await prepareDownload(info, key);
 
     let url = '/drop/decrypt/' + info.kid;
     let response = await Net.fetch(url, { method: 'HEAD' });

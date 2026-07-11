@@ -58,10 +58,11 @@ function handleMessage(e) {
 
             if (status == null)
                 break;
+            if (status.error != null)
+                break;
 
             status.time = performance.now();
             status.meter.add(value, status.time);
-            status.error = null;
 
             if (value == max) {
                 UI.unblockClose(status.lock);
@@ -96,8 +97,8 @@ function handleMessage(e) {
     }
 }
 
-async function sendDrop(info, key) {
-    status_map.getOrInsert(info.kid, {
+async function prepareDownload(info, key) {
+    status_map.set(info.kid, {
         time: performance.now(),
         meter: new ProgressMeter(info.size),
         error: null,
@@ -123,6 +124,6 @@ function getDownloadStatus(kid) {
 export {
     initRelay,
 
-    sendDrop,
+    prepareDownload,
     getDownloadStatus
 }
