@@ -2,6 +2,18 @@
 
 ## Alpha versions
 
+### Redropp 0.8
+
+*Released on 2026-07-12*
+
+- Improve UI/UX on mobile screens:
+  * Hide menu logo on small screens
+  * Use responsive table for list of drops
+  * Display form labels above widgets
+  * Use correct keyboard type for mail and number inputs
+- Format numbers with respect to user locale
+- Use WASM (@awasm-noble) for faster cryptography
+
 ### Redropp 0.7.4
 
 *Released on 2026-07-11*
