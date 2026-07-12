@@ -688,6 +688,7 @@ table.responsive { width: 100%; }
     table.responsive {
         width: 100%;
         display: block;
+        padding: 0.2em;
         background: transparent;
         border: none;
 
@@ -697,7 +698,6 @@ table.responsive { width: 100%; }
         & tr {
             box-sizing: border-box;
             width: 100%;
-            margin: 0.2em;
             padding: 0.2em;
             display: flex;
             flex-direction: row;
