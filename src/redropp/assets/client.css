@@ -483,7 +483,7 @@ form {
         min-width: 400px;
 
         & > span:first-child {
-            width: 180px;
+            width: 200px;
             flex: 1;
         }
     }
@@ -658,4 +658,22 @@ progress[value] {
     max-width: 90%;
     text-align: center;
     text-overflow: ellipsis;
+}
+
+@media screen and (max-width: 640px) {
+    form {
+        & label {
+            margin: 0 2em;
+            min-width: auto;
+            height: auto;
+            flex-direction: column;
+            align-self: stretch;
+            align-items: stretch;
+
+            & > span:first-child {
+                width: auto;
+                flex: 0;
+            }
+        }
+    }
 }
