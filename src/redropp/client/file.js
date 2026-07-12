@@ -1,7 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
-import { scrypt, hkdf, hmac, sha256, chacha20poly1305, randomBytes } from 'vendor/awasm-noble/awasm-noble.bundle.js';
+import {
+    scrypt,
+    hkdf,
+    hmac,
+    sha256,
+    chacha20poly1305,
+    xsalsa20poly1305,
+    randomBytes
+} from 'vendor/awasm-noble/awasm-noble.bundle.js';
 import { Util, Log, Net, NetworkError, HttpError } from 'lib/web/base/base.js';
 import { Base64 } from 'lib/web/base/mixer.js';
 
@@ -449,10 +457,40 @@ async function* parallelize(iter, parallel, ahead) {
     }
 }
 
+function encryptString(key, str) {
+    let nonce = randomBytes(24);
+    let salsa = xsalsa20poly1305(key, nonce);
+
+    let encoded = (new TextEncoder).encode(str);
+    let cipher = salsa.encrypt(encoded);
+
+    let encrypted = {
+        nonce: Base64.toBase64(nonce),
+        cipher: Base64.toBase64(cipher)
+    };
+
+    return encrypted;
+}
+
+function decryptString(key, encrypted) {
+    let nonce = Base64.toBytes(encrypted.nonce);
+    let cipher = Base64.toBytes(encrypted.cipher);
+
+    let salsa = xsalsa20poly1305(key, nonce);
+    let encoded = salsa.decrypt(cipher);
+
+    let str = (new TextDecoder).decode(encoded);
+
+    return str;
+}
+
 export {
     createHeader,
     decodeHeader,
 
     upload,
-    download
+    download,
+
+    encryptString,
+    decryptString
 }

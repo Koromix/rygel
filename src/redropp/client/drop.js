@@ -2,7 +2,6 @@
 // SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
 import { render, html, live, svg, unsafeHTML } from 'vendor/lit-html/lit-html.bundle.js';
-import { xsalsa20poly1305, randomBytes } from 'vendor/awasm-noble/awasm-noble.bundle.js';
 import dayjs from 'vendor/dayjs/dayjs.bundle.js';
 import QRC from 'vendor/qrcodegen/js/qrcodegen.js';
 import { Util, LruMap, Log, Net, HttpError } from 'lib/web/base/base.js';
@@ -21,11 +20,6 @@ import {
     prepareDownload,
     getDownloadStatus
 } from './relay.js';
-import {
-    createHeader,
-    decodeHeader,
-    upload
-} from './file.js';
 import { ASSETS } from '../assets/assets.js';
 
 const EXPIRATION_DAYS = [1, 7, 30, 90];
@@ -124,20 +118,16 @@ async function recoverLink(info) {
 
     // Find passphrase in local database
     {
+        let { decryptString } = await import('./file.js');
         let db = await openLocalDB(session.userid);
-        let obj = await db.load('passphrases', info.kid);
+
+        let encrypted = await db.load('passphrases', info.kid);
+        let key = Base64.toBytes(session.ckey);
 
         try {
-            let key = Base64.toBytes(session.ckey);
-            let nonce = Base64.toBytes(obj.nonce);
-            let cipher = Base64.toBytes(obj.cipher);
-
-            let salsa = xsalsa20poly1305(key, nonce);
-            let encoded = salsa.decrypt(cipher);
-
-            passphrase = (new TextDecoder).decode(encoded);
+            passphrase = decryptString(key, encrypted);
         } catch (err) {
-            if (obj != null)
+            if (encrypted != null)
                 console.error(err);
             throw new Error(T.message(`Failed to recover link for this drop`));
         }
@@ -330,8 +320,9 @@ async function runDrop() {
 async function download(info, passphrase, password) {
     let key = null;
 
-    // The scrypt code in decodeHeader blocks for some time, repaint the UI before
-    await Util.waitFor(0);
+    // The scrypt code in decodeHeader blocks for some time.
+    // But this dynamic import also gives the browser time for a repaint.
+    const { decodeHeader } = await import('./file.js');
 
     try {
         key = await decodeHeader(info.header, info.nonce, passphrase, password);
@@ -349,7 +340,7 @@ async function download(info, passphrase, password) {
     let response = await Net.fetch(url, { method: 'HEAD' });
 
     if (!response.ok)
-        throw new Error(T.message(`Failed to initiate service worker download, refresh the page`));
+        throw new Error(T.message(`Failed to communicate with service worker for download. Refresh the page and try again.`));
 
     window.location.href = '/drop/decrypt/' + info.kid;
 }
@@ -457,27 +448,22 @@ async function runSend() {
         let expiration = (parseInt(elements.expiration.value, 10) * 86400000) || null;
         let password = elements.password.value.trim();
 
-        // The scrypt code in createHeader blocks for some time, repaint the UI before
-        await Util.waitFor(0);
+        // The scrypt code in createHeader blocks for some time.
+        // But this dynamic import also gives the browser time for a repaint.
+        const { createHeader } = await import('./file.js');
 
         let { passphrase, header, nonce, key } = await createHeader(password);
         let info = await createDrop(file, expiration, !!password, header, nonce);
 
         // Encrypt and save passphrase locally
         if (session != null) {
+            let { encryptString } = await import('./file.js');
             let db = await openLocalDB(session.userid);
 
             let key = Base64.toBytes(session.ckey);
-            let nonce = randomBytes(24);
-            let salsa = xsalsa20poly1305(key, nonce);
+            let encrypted = encryptString(key, passphrase);
 
-            let encoded = (new TextEncoder).encode(passphrase);
-            let cipher = salsa.encrypt(encoded);
-
-            await db.saveWithKey('passphrases', info.kid, {
-                nonce: Base64.toBase64(nonce),
-                cipher: Base64.toBase64(cipher)
-            }); 
+            await db.saveWithKey('passphrases', info.kid, encrypted);
         }
 
         let drop = {
@@ -563,6 +549,8 @@ async function createDrop(file, expiration, protect, header, nonce) {
 }
 
 async function uploadFile(info, key, file, progress = () => {}) {
+    let { upload } = await import('./file.js');
+
     let stream = file.stream();
     let chunks = readChunks(stream);
 

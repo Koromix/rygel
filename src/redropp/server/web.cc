@@ -24,11 +24,11 @@ static HashMap<const char *, const AssetInfo *> asset_map;
 static const AssetInfo *asset_index = nullptr;
 static const char *asset_js = nullptr;
 static const char *asset_css = nullptr;
+static HashMap<const char *, const char *> asset_bundles;
 static const char *asset_favicon = nullptr;
 static const char *asset_logo = nullptr;
 static HeapArray<const char *> asset_styles;
 static HeapArray<const char *> asset_scripts;
-static HeapArray<const char *> asset_bundles;
 static BlockAllocator asset_alloc;
 static char shared_etag[17];
 
@@ -320,6 +320,75 @@ static void CustomizeAsset(const char *url, int64_t max_size, const char *filena
     asset_map.Set(asset->name, asset);
 }
 
+static AssetInfo PatchAsset(AssetInfo asset, Span<const char> nonce, Allocator *alloc)
+{
+    asset.data = PatchFile(asset, alloc, [&](Span<const char> expr, StreamWriter *writer) {
+        Span<const char> key = TrimStr(expr);
+
+        if (key == "VERSION") {
+            writer->Write(FelixVersion);
+        } else if (key == "COMPILER") {
+            writer->Write(FelixCompiler);
+        } else if (key == "TITLE") {
+            writer->Write(config.title);
+        } else if (key == "FAVICON") {
+            writer->Write(asset_favicon);
+        } else if (key == "ENV") {
+            json_CompactWriter json(writer);
+
+            json.StartObject();
+
+            json.Key("title"); json.String(config.title);
+            json.Key("url"); json.String(config.url);
+            json.Key("logo"); json.StringOrNull(asset_logo);
+
+            json.Key("max_duration"); json.Int64(config.max_duration);
+            json.Key("allow_infinite"); json.Bool(config.allow_infinite);
+
+            json.Key("auth"); json.StartObject();
+            json.Key("internal"); json.Bool(config.internal_auth);
+            json.Key("register"); json.Bool(config.allow_register);
+            json.Key("providers"); json.StartArray();
+            for (const oidc_Provider &provider: config.oidc_providers) {
+                json.StartObject();
+
+                json.Key("issuer"); json.String(provider.issuer);
+                json.Key("title"); json.String(provider.title);
+
+                json.EndObject();
+            }
+            json.EndArray();
+            json.EndObject();
+
+            json.EndObject();
+        } else if (key == "NONCE") {
+            writer->Write(nonce);
+        } else if (key == "JS") {
+            writer->Write(asset_js);
+        } else if (key == "CSS") {
+            writer->Write(asset_css);
+        } else if (StartsWith(key, "BUNDLE ")) {
+            Span<const char> name = TrimStr(key.Take(7, key.len - 7));
+
+            const char *url = asset_bundles.FindValue(name, nullptr);
+            K_ASSERT(url);
+
+            writer->Write(url);
+        } else if (key == "HEAD") {
+            for (const char *url: asset_styles) {
+                PrintLn(writer, "        <link rel=\"stylesheet\" href=\"%1\" async />", url);
+            }
+            for (const char *url: asset_scripts) {
+                PrintLn(writer, "        <script src=\"%1\"></script>", url);
+            }
+        } else {
+            Print(writer, "{{%1}}", expr);
+        }
+    });
+
+    return asset;
+}
+
 static void InitAssets()
 {
     asset_map.Clear();
@@ -344,9 +413,11 @@ static void InitAssets()
     for (const AssetInfo &asset: GetEmbedAssets()) {
         if (TestStr(asset.name, "src/redropp/client/index.html")) {
             asset_index = &asset;
-            asset_map.Set("/", &asset);
         } else if (TestStr(asset.name, "src/redropp/client/sw.js")) {
-            asset_map.Set("/sw.js", &asset);
+            AssetInfo *sw = AllocateOne<AssetInfo>(&asset_alloc);
+
+            *sw = PatchAsset(asset, {}, &asset_alloc);
+            asset_map.Set("/sw.js", sw);
         } else if (TestStr(asset.name, "src/redropp/assets/main/redropp.webp")) {
             asset_map.Set("/favicon.webp", &asset);
         } else {
@@ -364,7 +435,7 @@ static void InitAssets()
                 } else if (name == "app.css") {
                     asset_css = url;
                 } else if (EndsWith(name, ".js")) {
-                    asset_bundles.Append(url);
+                    asset_bundles.Set(name.ptr, url);
                 }
             }
         }
@@ -407,6 +478,7 @@ static void InitAssets()
     K_ASSERT(asset_index);
     K_ASSERT(asset_js);
     K_ASSERT(asset_css);
+    K_ASSERT(asset_map.Find("/sw.js"));
 }
 
 static void AttachStatic(http_IO *io, const AssetInfo &asset, int64_t max_age, const char *etag)
@@ -542,8 +614,6 @@ static void HandleRequest(http_IO *io)
         Span<const char> ext = GetPathExtension(path);
 
         if (path == "/" || ext == "" || ext == ".html") {
-            AssetInfo index = *asset_index;
-
             Span<const char> nonce = Fmt(io->Allocator(), "%1", FmtRandom(16));
 
             Span<const char> csp = Fmt(io->Allocator(), "base-uri 'none'; "
@@ -558,71 +628,7 @@ static void HandleRequest(http_IO *io)
             io->AddHeader("Content-Security-Policy", csp);
             io->AddHeader("X-Content-Type-Options", "nosniff");
 
-            index.data = PatchFile(index, io->Allocator(), [&](Span<const char> expr, StreamWriter *writer) {
-                Span<const char> key = TrimStr(expr);
-
-                if (key == "VERSION") {
-                    writer->Write(FelixVersion);
-                } else if (key == "COMPILER") {
-                    writer->Write(FelixCompiler);
-                } else if (key == "TITLE") {
-                    writer->Write(config.title);
-                } else if (key == "FAVICON") {
-                    writer->Write(asset_favicon);
-                } else if (key == "ENV") {
-                    json_CompactWriter json(writer);
-
-                    json.StartObject();
-
-                    json.Key("title"); json.String(config.title);
-                    json.Key("url"); json.String(config.url);
-                    json.Key("logo"); json.StringOrNull(asset_logo);
-
-                    json.Key("max_duration"); json.Int64(config.max_duration);
-                    json.Key("allow_infinite"); json.Bool(config.allow_infinite);
-
-                    json.Key("auth"); json.StartObject();
-                    json.Key("internal"); json.Bool(config.internal_auth);
-                    json.Key("register"); json.Bool(config.allow_register);
-                    json.Key("providers"); json.StartArray();
-                    for (const oidc_Provider &provider: config.oidc_providers) {
-                        json.StartObject();
-
-                        json.Key("issuer"); json.String(provider.issuer);
-                        json.Key("title"); json.String(provider.title);
-
-                        json.EndObject();
-                    }
-                    json.EndArray();
-                    json.EndObject();
-
-                    json.EndObject();
-                } else if (key == "NONCE") {
-                    writer->Write(nonce);
-                } else if (key == "JS") {
-                    writer->Write(asset_js);
-                } else if (key == "CSS") {
-                    writer->Write(asset_css);
-                } else if (key == "BUNDLES") {
-                    json_CompactWriter json(writer);
-
-                    json.StartObject();
-                    for (const char *bundle: asset_bundles) {
-                        const char *name = SplitStrReverseAny(bundle, K_PATH_SEPARATORS).ptr;
-                        json.Key(name); json.String(bundle);
-                    }
-                    json.EndObject();
-                } else if (key == "HEAD") {
-                    for (const char *url: asset_styles) {
-                        PrintLn(writer, "        <link rel=\"stylesheet\" href=\"%1\" async />", url);
-                    }
-                    for (const char *url: asset_scripts) {
-                        PrintLn(writer, "        <script src=\"%1\"></script>", url);
-                    }
-                } else {
-                    Print(writer, "{{%1}}", expr);
-                }
-            });
+            AssetInfo index = PatchAsset(*asset_index, nonce, io->Allocator());
 
             io->AddCachingHeaders(0, nullptr);
             io->SendAsset(200, index.data, "text/html", index.compression_type);

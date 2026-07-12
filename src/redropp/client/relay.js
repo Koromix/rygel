@@ -16,13 +16,15 @@ let next_id = 0;
 let status_map = new Map;
 
 async function initRelay() {
-    navigator.serviceWorker.register('/sw.js');
+    navigator.serviceWorker.register('/sw.js', { type: 'module' });
     navigator.serviceWorker.addEventListener('controllerchange', updateController);
     navigator.serviceWorker.addEventListener('message', handleMessage);
+}
 
+async function waitForServiceWorker() {
     await navigator.serviceWorker.ready;
 
-    sw = navigator.serviceWorker.controller;
+    sw ??= navigator.serviceWorker.controller;
 
     if (sw == null) {
         await new Promise((resolve, reject) => {
@@ -31,7 +33,7 @@ async function initRelay() {
         });
 
         if (sw == null)
-            throw new Error('Failed to register service worker');
+            throw new Error(T.message(`Failed to register service worker. Refresh the page and try again.`));
     }
 }
 
@@ -128,6 +130,8 @@ function endDownload(status, err) {
 }
 
 async function prepareDownload(info, key, signal = null) {
+    await waitForServiceWorker();
+
     let id = next_id++;
 
     let status = {

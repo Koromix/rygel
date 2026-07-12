@@ -3,7 +3,7 @@
 
 import { Util, Log, Net } from 'lib/web/base/base.js';
 import * as Async from 'lib/web/base/async.js';
-import { download } from './file.js';
+import { download } from '{{ BUNDLE file.js }}';
 
 const EXPIRATION_DELAY = 5 * 60000; // 5 minutes
 const STALL_DELAY = 20000; // 20 seconds
