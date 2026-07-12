@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
 import { render, html, live, svg, unsafeHTML } from 'vendor/lit-html/lit-html.bundle.js';
-import { xsalsa20poly1305, randomBytes } from 'vendor/noble/noble.bundle.js';
+import { xsalsa20poly1305, randomBytes } from 'vendor/awasm-noble/awasm-noble.bundle.js';
 import dayjs from 'vendor/dayjs/dayjs.bundle.js';
 import QRC from 'vendor/qrcodegen/js/qrcodegen.js';
 import { Util, LruMap, Log, Net, HttpError } from 'lib/web/base/base.js';

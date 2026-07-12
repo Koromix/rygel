@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
-import { scryptAsync, hkdf, hmac, sha256, chacha20poly1305, randomBytes } from 'vendor/noble/noble.bundle.js';
+import { scrypt, hkdf, hmac, sha256, chacha20poly1305, randomBytes } from 'vendor/awasm-noble/awasm-noble.bundle.js';
 import { Util, Log, Net, NetworkError, HttpError } from 'lib/web/base/base.js';
 import { Base64 } from 'lib/web/base/mixer.js';
 
@@ -31,7 +31,7 @@ async function createHeader(password = null) {
     let nonce = randomBytes(16);
 
     let n = 2 ** WORK_FACTOR_LOG2;
-    let wrap = await scryptAsync(passphrase + password, encodeSalt(salt), { N: 2 ** WORK_FACTOR_LOG2, r: 8, p: 1, dkLen: 32 });
+    let wrap = await scrypt.async(passphrase + password, encodeSalt(salt), { N: 2 ** WORK_FACTOR_LOG2, r: 8, p: 1, dkLen: 32 });
     let chacha = chacha20poly1305(wrap, new Uint8Array(12));
     let body = chacha.encrypt(master);
 
@@ -81,7 +81,7 @@ async function decodeHeader(header, nonce, passphrase, password = null) {
     }
 
     let n = 2 ** header.factor;
-    let wrap = await scryptAsync(passphrase + password, encodeSalt(header.salt), { N: n, r: 8, p: 1, dkLen: 32 });
+    let wrap = await scrypt.async(passphrase + password, encodeSalt(header.salt), { N: n, r: 8, p: 1, dkLen: 32 });
     let chacha = chacha20poly1305(wrap, new Uint8Array(12));
     let master = chacha.decrypt(header.body);
 
