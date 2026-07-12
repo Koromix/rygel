@@ -53,13 +53,13 @@ async function runDrops() {
                 <progress value=${Math.min(cache.drops.total, cache.drops.quota)} max=${cache.drops.quota}></progress>
             </div>
 
-            <table style="table-layout: fixed; width: 100%;">
+            <table class="responsive" style="table-layout: fixed;">
                 <colgroup>
                     <col/>
                     <col style="width: 120px;" />
-                    <col style="width: 120px;" />
                     <col style="width: 180px;" />
-                    <col style="width: 60px;" />
+                    <col style="width: 180px;" />
+                    <col class="check" />
                 </colgroup>
                 <thead>
                     <tr>
@@ -87,17 +87,17 @@ async function runDrops() {
                                         ` : ''}
                                     </div>
                                 </td>
-                                <td style="text-align: right;">
+                                <td class="right">
                                     ${formatSize(drop.size)}
                                     ${!drop.complete ? html`<span class="sub" style="color: red;">${T.incomplete}</span>` : ''}
                                 </td>
-                                <td style="text-align: center;">${drop.protect ? T.yes : T.no}</td>
-                                <td style="text-align: right;">
+                                <td class="center">${drop.protect ? T.protected : T.no_password}</td>
+                                <td class="right">
                                     ${drop.expire != null && drop.expire > now ? dayjs(drop.expire).format('lll') : ''}
                                     ${drop.expire != null && drop.expire <= now ? T.expired : ''}
                                     ${drop.expire == null ? T.never : ''}
                                 </td>
-                                <td class="center">
+                                <td class="check">
                                     <button type="button" class="small"
                                             @click=${UI.wrap(e => deleteDrop(drop.kid))}><img src=${ASSETS['ui/delete']} alt=${T.delete} /></button>
                                 </td>

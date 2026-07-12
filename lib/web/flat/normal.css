@@ -275,7 +275,11 @@ tbody th {
 }
 th.center, td.center { text-align: center; }
 th.right, td.right { text-align: right; }
-table :is(td, th, col).check { width: 2em; }
+table :is(td, th, col).check {
+    width: 3em;
+    min-width: 3em;
+    text-align: center;
+}
 table :is(td, th).center { text-align: center; }
 table :is(td, th).right { text-align: right; }
 table :is(tr, td, th, col).missing {
