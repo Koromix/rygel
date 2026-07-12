@@ -12,6 +12,7 @@ import * as App from './app.js';
 import { route, cache, session } from './app.js';
 import * as UserMod from './user.js';
 import {
+    formatFixed,
     formatSize,
     formatDuration,
     ProgressMeter
@@ -48,7 +49,7 @@ async function runDrops() {
 
         <div class="block">
             <div style="text-align: center;">
-                <p class="sub">${T.format(T.quota_x_of_x, formatSize(cache.drops.total), formatSize(cache.drops.quota), (cache.drops.total / cache.drops.quota * 100).toFixed(1))}</p>
+                <p class="sub">${T.format(T.quota_x_of_x, formatSize(cache.drops.total), formatSize(cache.drops.quota), formatFixed(cache.drops.total / cache.drops.quota * 100, 1))}</p>
                 <progress value=${Math.min(cache.drops.total, cache.drops.quota)} max=${cache.drops.quota}></progress>
             </div>
 

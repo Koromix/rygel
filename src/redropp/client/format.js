@@ -5,22 +5,35 @@ import { Util, Log, Net } from 'lib/web/base/base.js';
 
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
+function formatFixed(value, prec) {
+    if (typeof Intl.NumberFormat != 'undefined') {
+        let fmt = Intl.NumberFormat(document.documentElement.lang, {
+            minimumFractionDigits: prec,
+            maximumFractionDigits: prec
+        });
+
+        return fmt.format(value);
+    } else {
+        return value.toFixed(prec);
+    }
+}
+
 function formatSize(size) {
     if (size >= 999950000) {
         let value = size / 1000000000;
         let prec = 1 + (value < 9.9995) + (value < 99.995);
 
-        return value.toFixed(prec) + ' ' + T.size_units.gb;
+        return formatFixed(value, prec) + ' ' + T.size_units.gb;
     } else if (size >= 999950) {
         let value = size / 1000000;
         let prec = 1 + (value < 9.9995) + (value < 99.995);
 
-        return value.toFixed(prec) + ' ' + T.size_units.mb;
+        return formatFixed(value, prec) + ' ' + T.size_units.mb;
     } else if (size >= 999.95) {
         let value = size / 1000;
         let prec = 1 + (value < 9.9995) + (value < 99.995);
 
-        return value.toFixed(prec) + ' ' + T.size_units.kb;
+        return formatFixed(value, prec) + ' ' + T.size_units.kb;
     } else if (size > 1) {
         return T.format(T.size_units.x_b, size);
     } else {
@@ -153,6 +166,7 @@ function ProgressMeter(max) {
 export {
     DAYS,
 
+    formatFixed,
     formatSize,
     formatDays,
     formatClock,
