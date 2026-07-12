@@ -77,7 +77,7 @@ footer {
 }
 
 @media screen and (max-width: 960px) {
-    #logo { display: none; }
+    #logo { display: none !important; }
 
     #top {
         & menu { gap: 0; }
