@@ -513,7 +513,7 @@ async function configureSecurity() {
         });
     }
 
-    if (!security.password || ENV.auth.providers.length) {
+    if (ENV.auth.providers.length) {
         tabs.push({
             title: T.external_identities,
             render: (render, close) => {
@@ -580,7 +580,7 @@ async function configureSecurity() {
         });
     }
 
-    if (!security.password) {
+    if (ENV.auth.internal && !security.password) {
         tabs.push({
             title: T.password,
             render: (render, close) => html`
