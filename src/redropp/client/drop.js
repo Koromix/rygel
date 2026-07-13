@@ -383,7 +383,7 @@ async function otherDownloadOptions(info, passphrase) {
         </div>
 
         <div class="footer" style="justify-content: center;">
-            <button type="button" class="secondary" @click=${UI.insist(close)}>${T.close}</button>
+            <button type="button" class="secondary" @click=${UI.wrap(close)}>${T.close}</button>
         </div>
     `);
 }
