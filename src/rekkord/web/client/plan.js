@@ -454,7 +454,7 @@ async function copyClipboard(el, text) {
         el = el.currentTarget;
 
     await navigator.clipboard.writeText(text);
-    UI.flash(el, T.copied);
+    UI.flash(el, T.copied_flash);
 }
 
 export {

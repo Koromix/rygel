@@ -28,7 +28,7 @@
         "confirmation": "Confirmation",
         "consult_registration_mail": "Consult the <b>mail that has been sent</b> and click the link inside to finalize your registration.",
         "consult_reset_mail": "Consult the <b>mail that has been sent</b> and click the link inside to reset your password.",
-        "copied": "Copied",
+        "copied_flash": "Copied!",
         "copy": "Copy",
         "copy_download_link": "Copy download link",
         "create_password": "Create password",

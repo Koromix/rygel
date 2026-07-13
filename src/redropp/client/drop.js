@@ -238,8 +238,10 @@ async function runDrop() {
 
             <div class="block" style="align-items: center;">
                 <div>${formatSize(cache.drop.size)}</div>
-                <input class="link" type="text" readonly value=${ENV.url + url}
-                       @click=${e => e.target.select()} />
+                <div class="command">
+                    <pre style="text-align: center;"
+                         @click=${e => window.getSelection().selectAllChildren(e.target)}>${ENV.url + url}</pre>
+                </div>
                 ${makeQrCodeSvg(ENV.url + url, 200)}
                 <div class="sub">
                     ${cache.drop.expire != null ? T.format(T.expires_at_x, dayjs(cache.drop.expire).format('lll')) : ''}
@@ -348,7 +350,7 @@ async function download(info, passphrase, password) {
 
 async function otherDownloadOptions(info, passphrase) {
     let curl = `curl -o ${escapeShellArgument(info.name + '.age')} ${ENV.url}/drop/download/${info.kid}`;
-    let age = `age -d -o ${escapeShellArgument(info.name)} ${escapeShellArgument(info.name)}.age`;
+    let age = `age -d -o ${escapeShellArgument(info.name)} ${escapeShellArgument(info.name + '.age')}`;
     let suffix = info.protect ? html`<span style="color: red;">${T.password_suffix}</span>` : '';
 
     await UI.dialog((render, close) => html`
@@ -360,20 +362,20 @@ async function otherDownloadOptions(info, passphrase) {
 
         <div class="main">
             <div class="section">${T.command_line}</div>
-            <div>
+            <div style="max-width: 40em;">
                 <p>${unsafeHTML(T.use_curl_to_download_encrypted_file)}</p>
                 <div class="command">
-                    <pre>${curl}</pre>
+                    <pre @click=${e => window.getSelection().selectAllChildren(e.target)}>${curl}</pre>
                     <button type="button" class="small" @click=${UI.wrap(e => copyClipboard(e, curl))}>${T.copy}</button>
                 </div>
                 <p>${unsafeHTML(T.use_age_to_decrypt_the_file)}</p>
                 <div class="command">
-                    <pre>${age}</pre>
+                    <pre @click=${e => window.getSelection().selectAllChildren(e.target)}>${age}</pre>
                     <button type="button" class="small" @click=${UI.wrap(e => copyClipboard(e, age))}>${T.copy}</button>
                 </div>
                 <p>${T.use_passphrase_to_decrypt_with_age}</p>
                 <div class="command">
-                    <pre>${passphrase}${suffix ? '/' : ''}${suffix}</pre>
+                    <pre @click=${e => window.getSelection().selectAllChildren(e.target)}>${passphrase}${suffix ? '/' : ''}${suffix}</pre>
                     <button type="button" class="small" @click=${UI.wrap(e => copyClipboard(e, passphrase + (suffix ? '/' : '')))}>${T.copy}</button>
                 </div>
                 ${info.protect ? html`<span class="sub" style="color: red;">${T.add_password_after_passphrase}</span>` : ''}
@@ -381,7 +383,7 @@ async function otherDownloadOptions(info, passphrase) {
         </div>
 
         <div class="footer" style="justify-content: center;">
-            <button type="button" class="secondary" @click=${UI.wrap(close)}>${T.close}</button>
+            <button type="button" class="secondary" @click=${UI.insist(close)}>${T.close}</button>
         </div>
     `);
 }
@@ -623,7 +625,7 @@ async function copyClipboard(el, text) {
         el = el.currentTarget;
 
     await navigator.clipboard.writeText(text);
-    UI.flash(el, T.copied);
+    UI.flash(el, T.copied_flash);
 }
 
 export {

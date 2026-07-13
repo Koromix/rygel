@@ -88,10 +88,17 @@ main.dialog {
 
 .command {
     display: flex;
+    margin: 0 0.5em;
     align-items: center;
     gap: 0.5em;
 
-    & > pre { flex: 1; }
+    & > pre {
+        text-indent: 2em hanging;
+        white-space: normal;
+        line-break: anywhere;
+        flex: 1;
+        padding: 4px 6px;
+    }
 }
 
 .actions {
@@ -151,8 +158,7 @@ button.insist {
 }
 button.flash {
     position: relative;
-    --button_color: #2d8261;
-    --color: #2d8261;
+    color: #00000000 !important;
     pointer-events: none;
 }
 button.flash::after {
@@ -161,7 +167,8 @@ button.flash::after {
     left: 50%;
     top: 50%;
     transform: translate(-50%, -50%);
-    color: white;
+    color: var(--color);
+    font-weight: bold;
 }
 button:disabled { filter: saturate(0%) contrast(50%); }
 
@@ -614,13 +621,6 @@ progress[value] {
 
     &::-webkit-progress-bar { background: white; }
     &::-moz-progress-bar, &::-webkit-progress-value { background: var(--button_color); }
-}
-
-.link {
-    width: 60em;
-    max-width: 90%;
-    text-align: center;
-    text-overflow: ellipsis;
 }
 
 @media screen and (max-width: 640px) {
