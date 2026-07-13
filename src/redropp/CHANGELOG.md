@@ -2,6 +2,14 @@
 
 ## Alpha versions
 
+### Redropp 0.8.1
+
+*Released on 2026-07-13*
+
+- Adjust style of link and command widgets
+- Adjust style of reactive Copy buttons
+- Fix unbalanced margins around drop list on mobile screens
+
 ### Redropp 0.8
 
 *Released on 2026-07-12*
