@@ -169,6 +169,7 @@ button.flash::after {
     transform: translate(-50%, -50%);
     color: var(--color);
     font-weight: bold;
+    white-space: nowrap;
 }
 button:disabled { filter: saturate(0%) contrast(50%); }
 
