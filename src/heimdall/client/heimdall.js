@@ -1092,7 +1092,7 @@ async function runSettings() {
                     <div class="title">
                         ${T.settings}
                         <div style="flex: 1;"></div>
-                        <button type="button" class="secondary" @click=${UI.insist(close)}>✖\uFE0E</button>
+                        <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
                     </div>
 
                     <div class="main">
@@ -1134,7 +1134,7 @@ async function runSettings() {
                     </div>
 
                     <div class="footer">
-                        <button type="button" class="secondary" @click=${UI.insist(close)}>${T.cancel}</button>
+                        <button type="button" class="secondary" @click=${UI.wrap(close)}>${T.cancel}</button>
                         <button type="submit">${T.apply}</button>
                     </div>
                 `;
@@ -1170,38 +1170,38 @@ function switchLanguage(lang) {
 }
 
 async function runHelp() {
-    await UI.dialog({
-        run: (render, close) => {
-            return html`
-                <div class="title">
-                    ${T.help}
-                    <div style="flex: 1;"></div>
-                    <button type="button" class="secondary" @click=${UI.insist(close)}>✖\uFE0E</button>
-                </div>
+    await UI.dialog((render, close) => html`
+        <div class="title">
+            ${T.help}
+            <div style="flex: 1;"></div>
+            <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
+        </div>
 
-                <div class="main">
-                    <div class="section">${T.navigation}</div>
-                    <table class="shortcuts">
-                        <tr><th>${T.left_click}</th><td>${T.actions.move}</td></tr>
-                        <tr><th>${T.wheel} (${T.main_area.toLowerCase()})</th><td>${T.actions.zoom}</td></tr>
-                        <tr><th>${T.wheel} (${T.tree_area.toLowerCase()})</th><td>${T.actions.scroll}</td></tr>
-                        <tr><th>Ctrl</th><td>${T.actions.faster}</td></tr>
-                    </table>
+        <div class="main">
+            <div class="section">${T.navigation}</div>
+            <table class="shortcuts">
+                <tr><th>${T.left_click}</th><td>${T.actions.move}</td></tr>
+                <tr><th>${T.wheel} (${T.main_area.toLowerCase()})</th><td>${T.actions.zoom}</td></tr>
+                <tr><th>${T.wheel} (${T.tree_area.toLowerCase()})</th><td>${T.actions.scroll}</td></tr>
+                <tr><th>Ctrl</th><td>${T.actions.faster}</td></tr>
+            </table>
 
-                    <div class="section">${T.shortcuts}</div>
-                    <table class="shortcuts">
-                        <tr><th>R</th><td>${T.actions.reset}</td></tr>
-                        <tr><th>C</th><td>${T.actions.center}</td></tr>
-                        <tr><th>F</th><td>${T.actions.filter}</td></tr>
-                        <tr><th>H</th><td>${T.actions.highlight}</td></tr>
-                        <tr><th>${T.space}</th><td>${T.actions.toggle}</td></tr>
-                        <tr><th>M</th><td>${T.actions.mark}</td></tr>
-                        <tr><th>L</th><td>${T.actions.locate}</td></tr>
-                    </table>
-                </div>
-            `;
-        }
-    });
+            <div class="section">${T.shortcuts}</div>
+            <table class="shortcuts">
+                <tr><th>R</th><td>${T.actions.reset}</td></tr>
+                <tr><th>C</th><td>${T.actions.center}</td></tr>
+                <tr><th>F</th><td>${T.actions.filter}</td></tr>
+                <tr><th>H</th><td>${T.actions.highlight}</td></tr>
+                <tr><th>${T.space}</th><td>${T.actions.toggle}</td></tr>
+                <tr><th>M</th><td>${T.actions.mark}</td></tr>
+                <tr><th>L</th><td>${T.actions.locate}</td></tr>
+            </table>
+        </div>
+
+        <div class="footer">
+            <button type="button" class="secondary" @click=${UI.wrap(close)}>${T.close}</button>
+        </div>
+    `);
 }
 
 async function runLocate() {
@@ -1210,7 +1210,7 @@ async function runLocate() {
             <div class="title">
                 ${T.locate_entity}
                 <div style="flex: 1;"></div>
-                <button type="button" class="secondary" @click=${UI.insist(close)}>✖\uFE0E</button>
+                <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
             </div>
 
             <div class="main">
@@ -1221,7 +1221,7 @@ async function runLocate() {
             </div>
 
             <div class="footer">
-                <button type="button" class="secondary" @click=${UI.insist(close)}>${T.cancel}</button>
+                <button type="button" class="secondary" @click=${UI.wrap(close)}>${T.cancel}</button>
                 <button type="submit">${T.locate}</button>
             </div>
         `,

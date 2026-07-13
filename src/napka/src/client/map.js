@@ -194,7 +194,7 @@ async function login() {
             <div class="title">
                 Se connecter
                 <div style="flex: 1;"></div>
-                <button type="button" class="secondary" @click=${UI.insist(close)}>✖\uFE0E</button>
+                <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
             </div>
 
             <div class="main">
@@ -209,6 +209,7 @@ async function login() {
             </div>
 
             <div class="footer">
+                <button type="button" class="secondary" @click=${UI.wrap(close)}>Annuler</button>
                 <button type="submit">Se connecter</button>
             </div>
         `,
@@ -345,13 +346,17 @@ async function handleClick(markers, clickable) {
                     <div class="title">
                         Plusieurs entrées disponibles
                         <div style="flex: 1;"></div>
-                        <button type="button" class="secondary" @click=${UI.insist(close)}>✖\uFE0E</button>
+                        <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
                     </div>
 
                     <div class="main" @click=${handlePopupClick}>
                         ${markers.map(marker => html`
                             <a @click=${UI.wrap(e => { handleClick([marker], true); close(); })}>${marker.entry.name}</a><br>
                         `)}
+                    </div>
+
+                    <div class="footer">
+                        <button type="button" class="secondary" @click=${UI.wrap(close)}>Fermer</button>
                     </div>
                 `
             });
@@ -372,22 +377,25 @@ async function handleClick(markers, clickable) {
                         ${edit_key == 'name' ? makeField(entry, 'name', 'markdown') : ''}
                         ${edit_key != 'name' ? html`<div style="max-width: 660px;">${makeField(entry, 'name', 'markdown')}</div>` : ''}
                         <div style="flex: 1;"></div>
-                        <button type="button" class="secondary" @click=${UI.insist(close)}>✖\uFE0E</button>
+                        <button type="button" class="secondary" @click=${isConnected ? UI.insist(close) : UI.wrap(close)}>✖\uFE0E</button>
                     </div>
 
                     <div class="main" @click=${handlePopupClick}>
                         ${provider.renderEntry(entry, edit_key)}
                     </div>
 
-                    ${isConnected() ? html`
-                        <div class="footer">
+                    <div class="footer">
+                        ${isConnected() ? html`
                             <button type="button" class="danger"
                                     @click=${UI.wrap(e => deleteEntry(entry.id).then(close))}>Supprimer</button>
                             <div style="flex: 1;"></div>
                             <button type="button" class="secondary" @click=${UI.insist(close)}>Annuler</button>
                             <button @click=${closeOrSubmit} type="submit">Modifier</button>
-                        </div>
-                    ` : ''}
+                        ` : ''}
+                        ${!isConnected() ? html`
+                            <button type="button" class="secondary" @click=${UI.wrap(close)}>Fermer</button>
+                        ` : ''}
+                    </div>
                 `,
 
                 submit: (elements) => updateEntry(entry)
@@ -581,7 +589,11 @@ async function updateEntry(entry) {
 
 async function deleteEntry(id) {
     await UI.dialog((render, close) => html`
-        <div class="title">Supprimer cet établissement</div>
+        <div class="title">
+            Supprimer cet établissement
+            <div style="flex: 1;"></div>
+            <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
+        </div>
         <div class="main">Attention, cette action n'est pas réversible !</div>
         <div class="footer">
             <button type="button" class="secondary" @click=${UI.wrap(close)}>Annuler</button>
@@ -589,9 +601,7 @@ async function deleteEntry(id) {
         </div>
     `);
 
-    await Net.post('api/admin/delete', {
-        id: id
-    });
+    await Net.post('api/admin/delete', { id: id });
 
     await provider.loadMap();
     refreshMap();

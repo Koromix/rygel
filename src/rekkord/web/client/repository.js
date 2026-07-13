@@ -209,7 +209,11 @@ async function configureRepository(repo) {
 
 async function deleteRepository(id) {
     await UI.dialog((render, close) => html`
-        <div class="title">${T.delete_repository}</div>
+        <div class="title">
+            ${T.delete_repository}
+            <div style="flex: 1;"></div>
+            <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
+        </div>
         <div class="main">${T.confirm_not_reversible}</div>
         <div class="footer">
             <button type="button" class="secondary" @click=${UI.wrap(close)}>${T.cancel}</button>
@@ -310,7 +314,7 @@ async function runChannel(repo, channel) {
                 <div class="title">
                     ${T.format(T.x_snapshots, channel)}
                     <div style="flex: 1;"></div>
-                    <button type="button" class="secondary" @click=${UI.insist(close)}>✖\uFE0E</button>
+                    <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
                 </div>
 
                 <div class="main">
@@ -349,6 +353,10 @@ async function runChannel(repo, channel) {
                             ${!snapshots.length ? html`<tr><td colspan="5" style="text-align: center;">${T.no_snapshot}</td></tr>` : ''}
                         </tbody>
                     </table>
+                </div>
+
+                <div class="footer">
+                    <button type="button" class="secondary" @click=${UI.wrap(close)}>${T.close}</button>
                 </div>
             `;
         }

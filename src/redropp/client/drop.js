@@ -152,7 +152,11 @@ async function recoverLink(info) {
 
 async function deleteDrop(kid) {
     await UI.dialog((render, close) => html`
-        <div class="title">${T.delete_file}</div>
+        <div class="title">
+            ${T.delete_file}
+            <div style="flex: 1;"></div>
+            <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
+        </div>
         <div class="main">${T.confirm_not_reversible}</div>
         <div class="footer">
             <button type="button" class="secondary" @click=${UI.wrap(close)}>${T.cancel}</button>
@@ -357,7 +361,7 @@ async function otherDownloadOptions(info, passphrase) {
         <div class="title">
             ${T.format(T.download_x, info.name)}
             <div style="flex: 1;"></div>
-            <button type="button" class="secondary" @click=${UI.insist(close)}>✖\uFE0E</button>
+            <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
         </div>
 
         <div class="main">
@@ -382,7 +386,7 @@ async function otherDownloadOptions(info, passphrase) {
             </div>
         </div>
 
-        <div class="footer" style="justify-content: center;">
+        <div class="footer">
             <button type="button" class="secondary" @click=${UI.wrap(close)}>${T.close}</button>
         </div>
     `);

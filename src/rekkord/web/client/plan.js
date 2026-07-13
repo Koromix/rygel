@@ -408,7 +408,7 @@ async function showKey(plan, key, secret) {
                 <div class="title">
                     ${T.api_key}
                     <div style="flex: 1;"></div>
-                    <button type="button" class="secondary" @click=${UI.insist(close)}>✖\uFE0E</button>
+                    <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
                 </div>
 
                 <div class="main">
@@ -421,7 +421,7 @@ async function showKey(plan, key, secret) {
                     <div style="color: red; font-style: italic; text-align: center">${T.please_copy_api_key}</div>
                 </div>
 
-                <div class="footer" style="justify-content: center;">
+                <div class="footer">
                     <button type="button" class="secondary" @click=${UI.wrap(close)}>${T.close}</button>
                 </div>
             `
@@ -434,7 +434,11 @@ async function showKey(plan, key, secret) {
 
 async function deletePlan(id) {
     await UI.dialog((render, close) => html`
-        <div class="title">${T.delete_machine}</div>
+        <div class="title">
+            ${T.delete_machine}
+            <div style="flex: 1;"></div>
+            <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
+        </div>
         <div class="main">${T.confirm_not_reversible}</div>
         <div class="footer">
             <button type="button" class="secondary" @click=${UI.wrap(close)}>${T.cancel}</button>

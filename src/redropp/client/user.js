@@ -431,192 +431,213 @@ async function changePicture() {
 
 async function configureSecurity() {
     let security = await Net.get('/api/user/security');
-
-    let tab = security.password ? 'password' : 'identities';
+    let totp = ENV.auth.internal ? await Net.get('/api/totp/secret') : null;
 
     let enable_totp = !security.totp;
-    let totp = ENV.auth.internal ? await Net.get('/api/totp/secret') : null;
+    let can_dissociate = false;
+
+    let tabs = [];
+
+    if (security.password) {
+        tabs.push({
+            title: T.password,
+            render: (render, close) => html`
+                <label>
+                    <span>${T.new_password}</span>
+                    <input type="password" name="password1" style="width: 20em;" placeholder=${T.new_password.toLowerCase()} />
+                </label>
+                <label>
+                    <span>${T.confirmation}</span>
+                    <input type="password" name="password2" style="width: 20em;" placeholder=${T.confirmation.toLowerCase()} />
+                </label>
+            `,
+            submit: async (elements) => {
+                let password1 = elements.password1.value.trim();
+                let password2 = elements.password2.value.trim();
+
+                if (!password1 || !password2)
+                    throw new Error(T.message(`New password is missing`));
+                if (password2 != password1)
+                    throw new Error(T.message(`Passwords do not match`));
+
+                let old_password = security.password ? await confirmPassword() : null;
+
+                await Net.post('/api/user/password', {
+                    old_password: old_password,
+                    new_password: password1
+                });
+            }
+        });
+
+        tabs.push({
+            title: T.two_factor_authentication,
+            render: (render, close) => html`
+                ${security.totp ? html`
+                    <label>
+                        <input type="checkbox" checked @change=${UI.wrap(e => { enable_totp = !e.target.checked; render(); })} />
+                        <span>${T.disable_2fa}</span>
+                    </label>
+                ` : ''}
+
+                ${enable_totp ? html`
+                    <div style="text-align: center;"><img src=${totp.image} alt="" /></div>
+                    <p style="text-align: center; font-size: 0.8em; margin-top: 0;">${totp.secret}</p>
+
+                    <p>
+                        ${T.totp_scan1}<br>
+                        ${T.totp_scan2}
+                    </p>
+
+                    <label>
+                        <span>Code</span>
+                        <input type="text" name="code" pattern="[0-9]*"
+                               style="width: 20em;" placeholder=${T.totp_digits} />
+                    </label>
+
+                    <p><i>${T.totp_applications}</i></p>
+                ` : ''}
+            `,
+            submit: async (elements) => {
+                let password = security.password ? await confirmPassword() : null;
+
+                if (enable_totp) {
+                    await Net.post('/api/totp/change', {
+                        token: totp.token,
+                        password: password,
+                        code: elements.code.value
+                    });
+                } else {
+                    await Net.post('/api/totp/disable', { password: password });
+                }
+            }
+        });
+    }
+
+    if (!security.password || ENV.auth.providers.length) {
+        tabs.push({
+            title: T.external_identities,
+            render: (render, close) => {
+                return html`
+                    <p>${T.list_of_external_identities}</p>
+
+                    <table style="table-layout: fixed;">
+                        <colgroup>
+                            <col style="width: 200px;"/>
+                            <col style="width: 100px;"/>
+                        </colgroup>
+                        <thead>
+                            <tr>
+                                <th>${T.provider}</th>
+                                <th>${T.status}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${ENV.auth.providers.map(provider => {
+                                let identity = security.identities.find(identity => identity.issuer == provider.issuer);
+
+                                return html`
+                                    <tr>
+                                        <td>
+                                            ${provider.title}
+                                            ${identity?.allowed === false ? html`<span class="sub">(${T.pending.toLowerCase()})</span>` : ''}
+                                        </td>
+                                        <td class="center">
+                                            ${identity != null && !can_dissociate ? T.allowed : ''}
+                                            ${identity != null && can_dissociate ? html`
+                                                <button type="button" class="danger small"
+                                                        @click=${UI.wrap(e => delete_identity(identity.id))}>${T.dissociate}</button>
+                                            ` : ''}
+                                            ${identity == null ? html`<span class="sub">${T.not_used}</span>` : ''}
+                                        </td>
+                                    </tr>
+                                `;
+                            })}
+                        </tbody>
+                    </table>
+                `;
+
+                async function delete_identity(id) {
+                    await UI.dialog((render, close) => html`
+                        <div class="title">
+                            ${T.dissociate}
+                            <div style="flex: 1;"></div>
+                            <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
+                        </div>
+                        <div class="main">${T.confirm_not_reversible}</div>
+                        <div class="footer">
+                            <button type="button" class="secondary" @click=${UI.wrap(close)}>${T.cancel}</button>
+                            <button type="submit">${T.confirm}</button>
+                        </div>
+                    `);
+
+                    await Net.post('/api/sso/unlink', { identity: id });
+
+                    security = await Net.get('/api/user/security');
+                    render();
+                }
+            },
+            submit: null
+        });
+    }
+
+    if (!security.password) {
+        tabs.push({
+            title: T.password,
+            render: (render, close) => html`
+                <p>${T.this_account_has_no_password_create_one}</p>
+
+                <label>
+                    <input type="checkbox" name="recover" />
+                    <span>${T.enable_direct_login_with_password}</span>
+                </label>
+            `,
+            submit: async (elements) => {
+                if (!elements.recover.checked)
+                    throw new Error(T.message(`Please check to continue`));
+
+                await Net.post('/api/user/recover', { mail: security.mail });
+
+                Log.info(unsafeHTML(T.consult_reset_mail));
+            }
+        });
+    }
+
+    let current_tab = tabs[0];
 
     await UI.dialog({
         run: (render, close) => {
-            let can_dissociate = security.password || (security.identities.reduce((acc, identity) => acc + identity.allowed, 0) > 1);
+            can_dissociate = security.password || (security.identities.reduce((acc, identity) => acc + identity.allowed, 0) > 1);
 
             return html`
                 <div class="title">
                     ${T.account_security}
                     <div style="flex: 1;"></div>
-                    <button type="button" class="secondary" @click=${UI.insist(close)}>✖\uFE0E</button>
+                    <button type="button" class="secondary" @click=${current_tab.submit != null ? UI.insist(close) : UI.wrap(close)}>✖\uFE0E</button>
                 </div>
 
                 <div class="main">
                     <div class="tabbar">
-                        ${security.password ? html`
-                            <a class=${tab == 'password' ? 'active' : '' } @click=${e => { tab = 'password'; render(); }}>${T.password}</a>
-                            <a class=${tab == 'totp' ? 'active' : '' } @click=${e => { tab = 'totp'; render(); }}>${T.two_factor_authentication}</a>
-                            ${ENV.auth.providers.length ? html`<a class=${tab == 'identities' ? 'active' : '' } @click=${e => { tab = 'identities'; render(); }}>${T.external_identities}</a>` : ''}
-                        ` : ''}
-                        ${!security.password ? html`
-                            <a class=${tab == 'identities' ? 'active' : '' } @click=${e => { tab = 'identities'; render(); }}>${T.external_identities}</a>
-                            ${ENV.auth.internal ? html`<a class=${tab == 'password' ? 'active' : '' } @click=${e => { tab = 'password'; render(); }}>${T.password}</a>` : ''}
-                        ` : ''}
+                        ${tabs.map(tab => html`<a class=${tab == current_tab ? 'active' : '' } @click=${e => { current_tab = tab; render(); }}>${tab.title}</a>`)}
                     </div>
 
                     <div class="block">
-                        ${tab == 'password' && security.password ? html`
-                            <label>
-                                <span>${T.new_password}</span>
-                                <input type="password" name="password1" style="width: 20em;" placeholder=${T.new_password.toLowerCase()} />
-                            </label>
-                            <label>
-                                <span>${T.confirmation}</span>
-                                <input type="password" name="password2" style="width: 20em;" placeholder=${T.confirmation.toLowerCase()} />
-                            </label>
-                        ` : ''}
-                        ${tab == 'password' && !security.password ? html`
-                            <p>${T.this_account_has_no_password_create_one}</p>
-
-                            <label>
-                                <input type="checkbox" name="recover" />
-                                <span>${T.enable_direct_login_with_password}</span>
-                            </label>
-                        ` : ''}
-
-                        ${tab == 'totp' ? html`
-                            ${security.totp ? html`
-                                <label>
-                                    <input type="checkbox" checked @change=${UI.wrap(e => { enable_totp = !e.target.checked; render(); })} />
-                                    <span>${T.disable_2fa}</span>
-                                </label>
-                            ` : ''}
-
-                            ${enable_totp ? html`
-                                <div style="text-align: center;"><img src=${totp.image} alt="" /></div>
-                                <p style="text-align: center; font-size: 0.8em; margin-top: 0;">${totp.secret}</p>
-
-                                <p>
-                                    ${T.totp_scan1}<br>
-                                    ${T.totp_scan2}
-                                </p>
-
-                                <label>
-                                    <span>Code</span>
-                                    <input type="text" name="code" pattern="[0-9]*"
-                                           style="width: 20em;" placeholder=${T.totp_digits} />
-                                </label>
-
-                                <p><i>${T.totp_applications}</i></p>
-                            ` : ''}
-                        ` : ''}
-
-                        ${tab == 'identities' ? html`
-                            <p>${T.list_of_external_identities}</p>
-
-                            <table style="table-layout: fixed;">
-                                <colgroup>
-                                    <col style="width: 200px;"/>
-                                    <col style="width: 100px;"/>
-                                </colgroup>
-                                <thead>
-                                    <tr>
-                                        <th>${T.provider}</th>
-                                        <th>${T.status}</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${ENV.auth.providers.map(provider => {
-                                        let identity = security.identities.find(identity => identity.issuer == provider.issuer);
-
-                                        return html`
-                                            <tr>
-                                                <td>
-                                                    ${provider.title}
-                                                    ${identity?.allowed === false ? html`<span class="sub">(${T.pending.toLowerCase()})</span>` : ''}
-                                                </td>
-                                                <td class="center">
-                                                    ${identity != null && !can_dissociate ? T.allowed : ''}
-                                                    ${identity != null && can_dissociate ? html`
-                                                        <button type="button" class="danger small"
-                                                                @click=${UI.wrap(e => delete_identity(identity.id))}>${T.dissociate}</button>
-                                                    ` : ''}
-                                                    ${identity == null ? html`<span class="sub">${T.not_used}</span>` : ''}
-                                                </td>
-                                            </tr>
-                                        `;
-                                    })}
-                                </tbody>
-                            </table>
-                        ` : ''}
+                        ${current_tab.render(render, close)}
                     </div>
                 </div>
 
-                ${tab != 'identities' ? html`
-                    <div class="footer">
+                <div class="footer">
+                    ${current_tab.submit != null ? html`
                         <button type="button" class="secondary" @click=${UI.insist(close)}>${T.cancel}</button>
                         <button type="submit">${T.confirm}</button>
-                    </div>
-                ` : ''}
+                    ` : ''}
+                    ${current_tab.submit == null ? html`
+                        <button type="button" class="secondary" @click=${UI.wrap(close)}>${T.close}</button>
+                    ` : ''}
+                </div>
             `;
-
-            async function delete_identity(id) {
-                await UI.dialog((render, close) => html`
-                    <div class="title">${T.dissociate}</div>
-                    <div class="main">${T.confirm_not_reversible}</div>
-                    <div class="footer">
-                        <button type="button" class="secondary" @click=${UI.wrap(close)}>${T.cancel}</button>
-                        <button type="submit">${T.confirm}</button>
-                    </div>
-                `);
-
-                await Net.post('/api/sso/unlink', { identity: id });
-
-                security = await Net.get('/api/user/security');
-                render();
-            }
         },
 
-        submit: async (elements) => {
-            switch (tab) {
-                case 'password': {
-                    if (security.password) {
-                        let password1 = elements.password1.value.trim();
-                        let password2 = elements.password2.value.trim();
-
-                        if (!password1 || !password2)
-                            throw new Error(T.message(`New password is missing`));
-                        if (password2 != password1)
-                            throw new Error(T.message(`Passwords do not match`));
-
-                        let old_password = security.password ? await confirmPassword() : null;
-
-                        await Net.post('/api/user/password', {
-                            old_password: old_password,
-                            new_password: password1
-                        });
-                    } else {
-                        if (!elements.recover.checked)
-                            throw new Error(T.message(`Please check to continue`));
-
-                        await Net.post('/api/user/recover', { mail: security.mail });
-
-                        Log.info(unsafeHTML(T.consult_reset_mail));
-                    }
-                } break;
-
-                case 'totp': {
-                    let password = security.password ? await confirmPassword() : null;
-
-                    if (enable_totp) {
-                        await Net.post('/api/totp/change', {
-                            token: totp.token,
-                            password: password,
-                            code: elements.code.value
-                        });
-                    } else {
-                        await Net.post('/api/totp/disable', { password: password });
-                    }
-                } break;
-            }
-        }
+        submit: elements => current_tab.submit?.(elements)
     });
 }
 
