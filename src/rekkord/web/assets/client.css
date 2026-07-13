@@ -134,6 +134,20 @@ button.insist {
     transform: scale(1.1);
     transition: filter 0.2s ease, transform 0.1s ease;
 }
+button.flash {
+    position: relative;
+    color: #00000000 !important;
+    pointer-events: none;
+}
+button.flash::after {
+    position: absolute;
+    content: var(--text);
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--color);
+    font-weight: bold;
+}
 button:disabled { filter: saturate(0%) contrast(50%); }
 
 button.highlight { animation: highlight 1.4s ease-in-out infinite alternate; }
