@@ -1,11 +1,11 @@
 # Build Redropp
 
-The Redropp server is **Linux-only** for the moment, and uses the **Landlock LSM** (and seccomp) which requires Linux 5.13 or more recent.
+The Redropp server works **best on Linux** at the moment, because it can use **Landlock and seccomp** to reduce the attack surface. Please note that Landlock requires Linux 5.13 or more recent.
 
 > [!NOTE]
-> Support for sandboxing on other operating systems is considered a long-term goal but is not currently available.
+> Even if Linux is preferred, the Redropp server should also work on FreeBSD, OpenBSD, Windows and macOS. Support for sandboxing on other operating systems is considered a long-term goal but is not currently available.
 >
-> Using Debian 12 or a later distribution is recommended.
+> Using **Debian 12 or a later distribution** is recommended.
 
 Redropp relies on C++ (server-side) and HTML/CSS/JS (client-side). Compiling Redropp uses a dedicated tool included directly in the repository.
 
