@@ -13,6 +13,7 @@ option(MI_GUARDED           "Build with guard pages behind certain object alloca
 option(MI_USE_CXX           "Use the C++ compiler to compile the library (instead of the C compiler)" OFF)
 option(MI_OPT_ARCH          "Only for optimized builds: turn on architecture specific optimizations (for x64: '-march=haswell;-mavx2' (2013), for arm64: '-march=armv8.1-a' (2016))" OFF)
 option(MI_OPT_SIMD          "Use SIMD instructions (requires MI_OPT_ARCH to be enabled)" OFF)
+option(MI_FREE_IS_CHECKED   "Always check for invalid pointers in 'free' (always enabled in debug and secure builds, or when MI_OVERRIDE is ON)" OFF)
 
 option(MI_DEBUG             "Enable assertion checks (enabled by default in a debug build)" OFF)
 option(MI_DEBUG_INTERNAL    "Enable assertion and internal invariant checks (enabled by default in a debug build)" OFF)
@@ -29,6 +30,7 @@ option(MI_BUILD_STATIC      "Build static library" ON)
 option(MI_BUILD_OBJECT      "Build object library" ON)
 option(MI_BUILD_TESTS       "Build test executables" ON)
 
+# OS specific
 option(MI_OSX_INTERPOSE     "Use interpose to override standard malloc on macOS" ON)
 option(MI_OSX_ZONE          "Use malloc zone to override standard malloc on macOS" ON)
 option(MI_WIN_REDIRECT      "Use redirection module ('mimalloc-redirect') on Windows if compiling mimalloc as a DLL" ON)
@@ -36,6 +38,7 @@ option(MI_WIN_DIRECT_TLS    "Use only direct TLS slots on Windows to avoid extra
 option(MI_LOCAL_DYNAMIC_TLS "Use local-dynamic-tls, a slightly slower but dlopen-compatible thread local storage mechanism (Unix)" OFF)
 option(MI_LIBC_MUSL         "Enable this when linking with musl libc" OFF)
 
+# advanced
 option(MI_PADDING           "Enable padding to detect heap block overflow (always on in DEBUG or SECURE mode, or with Valgrind/ASAN)" OFF)
 option(MI_SKIP_COLLECT_ON_EXIT "Skip collecting memory on program exit" OFF)
 option(MI_NO_PADDING        "Force no use of padding even in DEBUG mode etc." OFF)
@@ -47,10 +50,15 @@ option(MI_SEE_ASM           "Generate assembly files" OFF)
 # negated options for vcpkg features
 option(MI_NO_USE_CXX        "Use plain C compilation (has priority over MI_USE_CXX)" OFF)
 option(MI_NO_OPT_ARCH       "Do not use architecture specific optimizations (like '-march=armv8.1-a' for example) (has priority over MI_OPT_ARCH)" OFF)
+option(MI_NO_DEBUG          "Disable all assertion checks even in debug builds" OFF)
 
 # experimental
 option(MI_WIN_INIT_USE_RAW_DLLMAIN "Use the raw DLL main entry point for mimalloc initialization; can be more robust but can also lead to link errors with other libraries" OFF)
 option(MI_WIN_INIT_USE_TLS_DLLMAIN "Use legacy TLS entries with DllMain for mimalloc initialization" OFF)
+
+option(MI_TLS_MODEL_LOCAL    "Force TLS model based on thread local variables" OFF)
+option(MI_TLS_MODEL_PTHREADS "Force TLS model based on pthreads" OFF)
+option(MI_TLS_RECURSE_GUARD  "Force a recursion check on thread local access (MI_TLS_MODEL_LOCAL only)" OFF)
 
 # deprecated options
 option(MI_WIN_USE_FLS       "Use Fiber local storage on Windows to detect thread termination (deprecated)" OFF)
@@ -330,7 +338,11 @@ if (MI_SKIP_COLLECT_ON_EXIT)
   list(APPEND mi_defines MI_SKIP_COLLECT_ON_EXIT=1)
 endif()
 
-if(MI_DEBUG_FULL)
+if(MI_NO_DEBUG)
+  message(STATUS "Set debug level zero, all assertions are disabled (MI_NO_DEBUG=ON)")
+  set(MI_DEBUG OFF)
+  list(APPEND mi_defines MI_DEBUG=0)
+elseif(MI_DEBUG_FULL)
   message(STATUS "Set debug level to full assertion and internal invariant checking (MI_DEBUG_FULL=ON, expensive)")
   set(MI_DEBUG ON)
   list(APPEND mi_defines MI_DEBUG=3)   # full invariant checking (mi_assert, mi_assert_internal, and mi_assert_expensive)
@@ -365,6 +377,17 @@ else()
     message(STATUS "Enable explicit padding of heap blocks (MI_PADDING=ON)")
     list(APPEND mi_defines MI_PADDING=1)
   endif()
+endif()
+
+if(MI_DEBUG OR MI_SECURE)
+  set(MI_FREE_IS_CHECKED ON)
+endif()
+if(MI_FREE_IS_CHECKED)
+  message(STATUS "Check validity of pointers passed to 'mi_free' (MI_FREE_IS_CHECKED=ON)")
+  list(APPEND mi_defines MI_FREE_IS_CHECKED=1)
+elseif(MI_OVERRIDE)  
+  message(STATUS "Check validity of pointers passed to 'mi_free' only in the dynamic link library (MI_OVERRIDE=ON, MI_FREE_IS_CHECKED=OFF)")
+  list(APPEND mi_cflags_dynamic -DMI_FREE_IS_CHECKED=1)
 endif()
 
 if(MI_XMALLOC)
@@ -419,6 +442,19 @@ if(MI_LIBC_MUSL)
   list(APPEND mi_defines MI_LIBC_MUSL=1)
 endif()
 
+if(MI_TLS_MODEL_LOCAL)
+  message(STATUS "Use TLS model based on thread local (MI_TLS_MODEL_LOCAL=ON)")
+  list(APPEND mi_defines MI_TLS_MODEL_THREAD_LOCAL=1)
+elseif(MI_TLS_MODEL_PTHREADS)
+  message(STATUS "Use TLS model based on pthreads (MI_TLS_MODEL_PTHREADS=ON)")
+  list(APPEND mi_defines MI_TLS_MODEL_DYNAMIC_PTHREADS=1)
+endif()
+
+if(MI_TLS_RECURSE_GUARD)
+  message(STATUS "Use TLS recursion guard (for MI_TLS_MODEL_LOCAL only)")
+  list(APPEND mi_defines MI_TLS_RECURSE_GUARD=1)
+endif()
+
 if(MI_WIN_DIRECT_TLS)
   message(STATUS "Use only direct TLS slots on Windows to avoid extra tests in the malloc fast path -- this only works if the program uses less than 64 TlsAlloc'd slots in total! (MI_WIN_USE_ONLY_DIRECT_TLS=ON)")
   list(APPEND mi_defines MI_WIN_DIRECT_TLS=1)
@@ -439,13 +475,14 @@ else()
   # list(APPEND mi_defines MI_WIN_INIT_USE_CRT_TLS=1)
 endif()
 
-# Check /proc/cpuinfo for an SV39 MMU and limit the virtual address bits.
-# (this will skip the aligned hinting in that case. Issue #939, #949)
-if (EXISTS /proc/cpuinfo)
-  file(STRINGS /proc/cpuinfo mi_sv39_mmu REGEX "^mmu[ \t]+:[ \t]+sv39$")
-  if (mi_sv39_mmu)
-    MESSAGE( STATUS "Set virtual address bits to 39 (SV39 MMU detected)" )
-    list(APPEND mi_defines MI_DEFAULT_VIRTUAL_ADDRESS_BITS=39)
+if(MI_ARCH MATCHES "riscv")
+  CHECK_INCLUDE_FILES("asm/hwprobe.h" MI_HAS_ASM_HWPROBEH)
+  if (MI_HAS_ASM_HWPROBEH)
+    list(APPEND mi_defines MI_HAS_ASM_HWPROBEH=1)
+  endif()
+  CHECK_INCLUDE_FILES("sys/hwprobe.h" MI_HAS_SYS_HWPROBEH)
+  if (MI_HAS_SYS_HWPROBEH)
+    list(APPEND mi_defines MI_HAS_SYS_HWPROBEH=1)
   endif()
 endif()
 
@@ -576,7 +613,7 @@ endif()
 # set language for source files now
 if(MI_USE_CXX)
   set_source_files_properties(${mi_sources} PROPERTIES LANGUAGE CXX )
-  set_source_files_properties(src/static.c test/test-api.c test/test-api-fill test/test-stress PROPERTIES LANGUAGE CXX )
+  set_source_files_properties(src/static.c test/test-api.c test/test-api-fill.c test/test-stress.c PROPERTIES LANGUAGE CXX )
 endif()
 
 
@@ -743,7 +780,7 @@ if (MI_BUILD_OBJECT)
     set(mimalloc-obj-static "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/mimalloc-obj.dir/src/static.c${CMAKE_C_OUTPUT_EXTENSION}")
   endif()
   set(mimalloc-obj-out "${CMAKE_CURRENT_BINARY_DIR}/${mi_libname}${CMAKE_C_OUTPUT_EXTENSION}")
-  add_custom_command(OUTPUT ${mimalloc-obj-out} DEPENDS mimalloc-obj COMMAND "${CMAKE_COMMAND}" -E copy "${mimalloc-obj-static}" "${mimalloc-obj-out}")
+  add_custom_command(OUTPUT ${mimalloc-obj-out} DEPENDS mimalloc-obj mimalloc-static COMMAND "${CMAKE_COMMAND}" -E copy "${mimalloc-obj-static}" "${mimalloc-obj-out}")
   add_custom_target(mimalloc-obj-target ALL DEPENDS ${mimalloc-obj-out})
 
 
@@ -802,7 +839,7 @@ if (MI_BUILD_TESTS)
   endforeach()
 
   # dynamic override test
-  if(MI_BUILD_SHARED AND NOT (MI_TRACK_ASAN OR MI_DEBUG_TSAN OR MI_DEBUG_UBSAN))
+  if(MI_BUILD_SHARED AND NOT (MI_TRACK_ASAN OR MI_DEBUG_TSAN OR MI_DEBUG_UBSAN)) # AND NOT (APPLE AND MI_USE_CXX))
     add_executable(mimalloc-test-stress-dynamic test/test-stress.c)
     target_compile_definitions(mimalloc-test-stress-dynamic PRIVATE ${mi_defines} "USE_STD_MALLOC=1")
     target_compile_options(mimalloc-test-stress-dynamic PRIVATE ${mi_cflags})
