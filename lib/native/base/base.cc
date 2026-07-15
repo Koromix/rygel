@@ -5650,8 +5650,7 @@ bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
     // Don't f*ck up the log
     bool warned = false;
 
-    bool success = ExecuteCommandLine(cmd_line, info, [&]() { return in_buf; },
-                                                      [&](Span<uint8_t> buf) {
+    bool success = ExecuteCommandLine(cmd_line, info, [&]() { return in_buf; }, [&](Span<uint8_t> buf) {
         if (out_buf->len - start_len <= max_len - buf.len) {
             out_buf->Append(buf);
         } else if (!warned) {
@@ -5684,16 +5683,16 @@ Size ReadCommandOutput(const char *cmd_line, Span<uint8_t> out_output)
         total_len += copy;
     };
 
-    int exit_code;
-    if (!ExecuteCommandLine(cmd_line, info, MakeSpan((const uint8_t *)nullptr, 0), write, &exit_code)) {
-        if (out_output.len) {
-            Span<const char> output = out_output.As<const char>();
-            LogError("Command '%1' failed: %2", cmd_line, output);
-        }
-        return -1;
-    }
+    int exit_code = -1;
+    ExecuteCommandLine(cmd_line, info, MakeSpan((const uint8_t *)nullptr, 0), write, &exit_code);
+
     if (exit_code) {
-        LogDebug("Command '%1' failed (exit code: %2)", cmd_line, exit_code);
+        if (out_output.len) {
+            Span<const char> output = TrimStr(out_output.As<const char>());
+            LogError("Command '%1' failed with exit code %2:\n%3", cmd_line, exit_code, FmtArg(output));
+        } else {
+            LogError("Command '%1' failed with exit code %2", cmd_line, exit_code);
+        }
         return -1;
     }
 
@@ -5713,17 +5712,17 @@ bool ReadCommandOutput(const char *cmd_line, HeapArray<uint8_t> *out_output)
     ExecuteInfo info = {};
     info.env_variables = variables;
 
-    int exit_code;
-    if (!ExecuteCommandLine(cmd_line, info, {}, Mebibytes(1), out_output, &exit_code)) {
-        if (out_output->len > start_len) {
-            Span<const char> output = out_output->Take(start_len, out_output->len - start_len).As<const char>();
-            LogError("Command '%1' failed: %2", cmd_line, output);
-        }
-        return false;
-    }
+    int exit_code = -1;
+    ExecuteCommandLine(cmd_line, info, {}, Mebibytes(1), out_output, &exit_code);
+
     if (exit_code) {
-        LogDebug("Command '%1' failed (exit code: %2)", cmd_line, exit_code);
-        return false;
+        if (out_output->len > start_len) {
+            Span<const char> output = TrimStr(out_output->Take(start_len, out_output->len - start_len).As<const char>());
+            LogError("Command '%1' failed with exit code %2:\n%3", cmd_line, exit_code, FmtArg(output));
+        } else {
+            LogError("Command '%1' failed with exit code %2", cmd_line, exit_code);
+        }
+        return -1;
     }
 
     err_guard.Disable();
