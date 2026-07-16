@@ -231,7 +231,7 @@ async function exportRecords(id, secret, stores, template = {}) {
                 continue;
 
             // Respect XLSX limit
-            sheet.name = sheet.name.substr(0, 30);
+            sheet = sheet.substr(0, 30);
 
             if (wb.Sheets[sheet] == null)
                 continue;
@@ -260,7 +260,7 @@ async function exportRecords(id, secret, stores, template = {}) {
                 continue;
 
             // Respect XLSX limit
-            sheet.name = sheet.name.substr(0, 30);
+            sheet = sheet.substr(0, 30);
 
             XLSX.utils.book_append_sheet(wb, ws, sheet);
         }
