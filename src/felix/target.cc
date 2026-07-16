@@ -783,7 +783,7 @@ unsigned int ParseSupportedArchitectures(Span<const char> str)
         if (part.len) {
             HostArchitecture architecture;
             if (ParseArchitecture(part, &architecture)) {
-                architectures |= (int)architecture << 1;
+                architectures |= 1 << (int)architecture;
             } else {
                 valid = false;
             }
