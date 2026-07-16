@@ -555,6 +555,9 @@ Options:
         return 1;
 #endif
 
+    // From here on, don't quit abruptly
+    WaitEvents(0);
+
     // Run periodic tasks until exit
     int status = 0;
     {
