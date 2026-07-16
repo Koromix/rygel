@@ -156,7 +156,7 @@ async function exportRecords(id, secret, stores, options = {}) {
     await fillWorkbook(wb, stores, threads, tables, counters, sheets);
 
     let filename = `export_${name}.xlsx`;
-    let blob = await wb.save();
+    let blob = await wb.save({ formulas: false });
 
     Util.saveFile(blob, filename);
 }
