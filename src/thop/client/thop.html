@@ -10,7 +10,12 @@
         <title>THOP</title>
 
         <script>
+            // Version: {{ VERSION }}
+            // Compiler: {{ COMPILER }}
+
             var ENV = {
+                version: '{{ VERSION }}',
+
                 base_url: '{{ BASE_URL }}',
                 buster: '{{ BUSTER }}',
                 has_users: {{ HAS_USERS }}
@@ -93,7 +98,6 @@
             </div>
 
             <div id="th_version">{{ VERSION }}</div>
-            <!-- Compiler: {{ COMPILER }} -->
         </div>
 
         <main>

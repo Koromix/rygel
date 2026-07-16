@@ -532,27 +532,36 @@ function renderListInfo(type, label, current_list) {
 }
 
 async function exportListToXLSX(records, handler) {
-    let XLSX = await import(`${ENV.base_url}static/XLSX.bundle.js?${ENV.buster}`);
+    let XLSX = await import(`${ENV.base_url}static/xlsx.js?${ENV.buster}`);
 
-    let ws = XLSX.utils.aoa_to_sheet([
-        handler.columns.map(col => col.key),
-        ...records.map(record => handler.columns.map(col => {
+    let wb = new XLSX.Workbook({
+        app: 'THOP',
+        version: ENV.version
+    });
+
+    let ws = wb.createSheet(handler.export);
+    let row = 1;
+
+    wb.writeSpan(ws, 'A1', handler.columns.map(col => col.key));
+
+    for (let record of records) {
+        let values = handler.columns.map(col => {
             let value = col.func(record);
 
-            if (value == null || typeof value === 'number') {
-                return value;
-            } else if (value.toJSDate) {
+            if (value == null) {
+                return '';
+            } else if (value.toJSDate != null) {
                 return value.toJSDate(true);
             } else {
                 return value.toString();
             }
-        }))
-    ]);
+        });
 
-    let wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, handler.export);
+        wb.writeSpan(ws, XLSX.makeRef(0, row++), values);
+    }
 
-    XLSX.writeFile(wb, `${handler.export}.xlsx`, { cellDates: true });
+    let blob = await wb.save();
+    Util.saveFile(blob, handler.export + '.xlsx');
 }
 
 // ------------------------------------------------------------------------
