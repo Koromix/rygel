@@ -11,6 +11,8 @@ import * as UI from './ui.js';
 
 let XLSX = null;
 
+let row_counters = new WeakMap;
+
 async function runExportDialog(e, app) {
     let downloads = await Net.get(`${ENV.urls.instance}api/bulk/list`);
 
@@ -124,79 +126,147 @@ async function createExport(thread = null, anchor = null) {
     return info;
 }
 
-async function exportRecords(id, secret, stores, template = {}) {
+async function exportRecords(id, secret, stores, options = {}) {
     if (XLSX == null)
-        XLSX = await import(`${ENV.urls.static}sheetjs/XLSX.bundle.js`);
+        XLSX = await import(`${ENV.urls.static}xlsx.js`);
 
     let { name, threads, tables, counters } = await walkThreads(id, secret);
 
+    let wb = null;
+    let sheets = null;
+
+    if (options.xlsx != null) {
+        let response = await Net.fetch(options.xlsx);
+        if (!response.ok)
+            throw new Error(T.message(`Cannot fetch XLSX template '{1}'`, options.xlsx));
+        let buf = await response.bytes();
+
+        wb = await XLSX.open(buf);
+        sheets = Object.fromEntries(Object.keys(wb.sheets).map(key => [key, key]));
+    } else {
+        wb = new XLSX.Workbook({
+            app: 'Goupile',
+            version: ENV.version
+        });
+    }
+
+    if (options.sheets != null)
+        sheets = Object.fromEntries(Object.entries(options.sheets).map(e => [e[1], e[0]]));
+
+    await fillWorkbook(wb, stores, threads, tables, counters, sheets);
+
+    let filename = `export_${name}.xlsx`;
+    let blob = await wb.save();
+
+    Util.saveFile(blob, filename);
+}
+
+async function fillWorkbook(wb, stores, threads, tables, counters, sheets) {
     // Metadata worksheets
     let meta = {
-        definitions: XLSX.utils.aoa_to_sheet([['table', 'variable', 'label', 'type']]),
-        propositions: XLSX.utils.aoa_to_sheet([['table', 'variable', 'prop', 'label']]),
+        definitions: wb.createSheet(),
+        propositions: wb.createSheet(),
         counters: null
     };
 
-    // Prepare worksheet for counters
-    if (counters.length) {
-        let columns = ['__tid', ...counters];
-        meta.counters = XLSX.utils.aoa_to_sheet([columns]);
-    }
+    wb.writeSpan(meta.definitions, refNextRow(meta.definitions), ['table', 'variable', 'label', 'type']);
+    wb.writeSpan(meta.propositions, refNextRow(meta.propositions), ['table', 'variable', 'prop', 'label']);
 
-    // Create base worksheets
-    let worksheets = stores.map(store => {
+    // Prepare definitions and propositions meta tablers
+    for (let store of stores) {
         let table = tables[store];
 
         if (table == null)
-            return null;
+            continue;
 
         // Definitions and propositions
         for (let variable of table.variables) {
-            let info = [store, variable.key, variable.label, variable.type];
-            XLSX.utils.sheet_add_aoa(meta.definitions, [info], { origin: -1 });
+            let values = [store, variable.key, variable.label, variable.type];
+            wb.writeSpan(meta.definitions, refNextRow(meta.definitions), values);
 
             if (variable.props != null) {
-                let props = variable.props.filter(prop => prop.value != null).map(prop => [store, variable.key, prop.value, prop.label]);
-                XLSX.utils.sheet_add_aoa(meta.propositions, props, { origin: -1 });
+                for (let prop of variable.props) {
+                    if (prop.value == null)
+                        continue;
+
+                    let values = [store, variable.key, prop.value, prop.label];
+                    wb.writeSpan(meta.propositions, refNextRow(meta.propositions), values);
+                }
             }
         }
+    }
 
-        // Create worksheet
-        let header = [
-            '__tid', '__sequence', '__hid',
-            ...table.columns.map(column => column.name)
-        ];
-        let ws = XLSX.utils.aoa_to_sheet([header]);
+    // Prepare worksheet for counters (if any)
+    if (counters.length) {
+        meta.counters = wb.createSheet();
 
-        return ws;
-    });
+        let columns = ['__tid', ...counters];
+        wb.writeSpan(meta.counters, refNextRow(meta.counters), columns);
+    }
+
+    let worksheets = [];
+    let headers = [];
+
+    // Create or reuse base worksheets
+    for (let store of stores) {
+        let table = tables[store];
+        let name = (sheets != null) ? sheets[store] : store;
+        let ws = wb.sheets[name];
+
+        if (ws != null) {
+            let header = wb.readSpan(ws, 'A1');
+
+            refNextRow(ws);
+
+            worksheets.push(ws);
+            headers.push(header);
+        } else if (name != null && table != null) {
+            let ws = wb.createSheet();
+
+            let header = [
+                '__tid', '__sequence', '__hid',
+                ...table.columns.map(column => column.name)
+            ];
+            wb.writeSpan(ws, refNextRow(ws), header);
+
+            worksheets.push(ws);
+            headers.push(header);
+        } else {
+            worksheets.push(null);
+            headers.push(null);
+        }
+    }
 
     // Export data
     for (let thread of threads) {
         for (let i = 0; i < stores.length; i++) {
             let store = stores[i];
             let ws = worksheets[i];
+            let header = headers[i];
 
             let table = tables[store];
             let entry = thread.entries[store];
 
-            if (table == null || entry == null)
+            if (table == null || entry == null || ws == null)
                 continue;
 
-            let row = [
-                thread.tid, thread.sequence, thread.hid,
-                ...table.columns.map(column => {
-                    let result = column.read(entry.data);
-                    return result ?? 'NA';
-                })
-            ];
+            let values = {
+                '__tid': thread.tid,
+                '__sequence': thread.sequence,
+                '__hid': thread.hid,
 
-            XLSX.utils.sheet_add_aoa(ws, [row], { origin: -1 });
-            table.length++;
+                ...Object.fromEntries(table.columns.map(column => {
+                    let result = column.read(entry.data);
+                    return [column.name, result ?? 'NA'];
+                }))
+            };
+            let cells = header.map(key => values[key]);
+
+            wb.writeSpan(ws, refNextRow(ws), cells);
         }
 
         if (meta.counters != null) {
-            let row = [
+            let values = [
                 thread.tid,
                 ...counters.map(key => {
                     let counter = thread.counters[key] ?? thread.secrets[key];
@@ -204,80 +274,41 @@ async function exportRecords(id, secret, stores, template = {}) {
                 })
             ];
 
-            XLSX.utils.sheet_add_aoa(meta.counters, [row], { origin: -1 });
+            wb.writeSpan(meta.counters, refNextRow(meta.counters), values);
         }
     }
 
-    let wb = null;
-    let sheets = null;
+    // Prepare final set of Excel sheets
+    for (let i = 0; i < stores.length; i++) {
+        let name = (sheets != null) ? sheets[stores[i]] : stores[i];
+        let sheet = worksheets[i];
 
-    if (template.sheets != null)
-        sheets = Object.fromEntries(Object.entries(template.sheets).map(e => [e[1], e[0]]));
+        if (name == null || sheet == null)
+            continue;
 
-    // Create or load workbook...
-    if (template.xlsx != null) {
-        let response = await Net.fetch(template.xlsx);
-        if (!response.ok)
-            throw new Error(T.message(`Cannot fetch XLSX template '{1}'`, template.xlsx));
-        let buf = await response.arrayBuffer();
+        // Respect XLSX limit
+        name = name.substr(0, 30);
 
-        wb = XLSX.read(buf);
-
-        for (let i = 0; i < stores.length; i++) {
-            let sheet = (sheets != null) ? sheets[stores[i]] : stores[i];
-            let ws = worksheets[i];
-
-            if (sheet == null || ws == null)
-                continue;
-
-            // Respect XLSX limit
-            sheet = sheet.substr(0, 30);
-
-            if (wb.Sheets[sheet] == null)
-                continue;
-
-            updateSheet(wb.Sheets[sheet], ws);
-        }
-        for (let key in meta) {
-            let sheet = (sheets != null) ? sheets['@' + key] : ('@' + key);
-            let ws = meta[key];
-
-            if (sheet == null || ws == null)
-                continue;
-            if (wb.Sheets[sheet] == null)
-                continue;
-
-            updateSheet(wb.Sheets[sheet], ws);
-        }
-    } else {
-        wb = XLSX.utils.book_new();
-
-        for (let i = 0; i < stores.length; i++) {
-            let sheet = (sheets != null) ? sheets[stores[i]] : stores[i];
-            let ws = worksheets[i];
-
-            if (sheet == null || ws == null)
-                continue;
-
-            // Respect XLSX limit
-            sheet = sheet.substr(0, 30);
-
-            XLSX.utils.book_append_sheet(wb, ws, sheet);
-        }
-        for (let key in meta) {
-            let sheet = (sheets != null) ? sheets['@' + key] : ('@' + key);
-            let ws = meta[key];
-
-            if (sheet == null || ws == null)
-                continue;
-
-            XLSX.utils.book_append_sheet(wb, ws, sheet);
-        }
+        wb.sheets[name] = sheet;
     }
+    for (let key in meta) {
+        let name = (sheets != null) ? sheets['@' + key] : ('@' + key);
+        let sheet = meta[key];
 
-    // ... and export it!
-    let filename = `export_${name}.xlsx`;
-    XLSX.writeFile(wb, filename);
+        if (name == null || sheet == null)
+            continue;
+
+        wb.sheets[name] = sheet;
+    }
+}
+
+function refNextRow(obj) {
+    let row = row_counters.get(obj) ?? 0;
+    let ref = XLSX.makeRef(0, row);
+
+    row_counters.set(obj, row + 1);
+
+    return ref;
 }
 
 async function walkThreads(id, secret) {
@@ -419,46 +450,6 @@ function expandColumns(variables) {
     }
 
     return columns;
-}
-
-function updateSheet(dest, src) {
-    let from = listColumns(src);
-    let to = listColumns(dest);
-
-    if (from == null || to == null)
-        return;
-
-    let map = to.reduce((obj, key, idx) => { obj[key] = idx; return obj }, {});
-    let end = XLSX.utils.decode_range(src['!ref']).e.r + 1;
-
-    for (let row = 1; row < end; row++) {
-        let cells = new Array(to.length).fill('');
-
-        for (let column = 0; column < from.length; column++) {
-            let to = map[from[column]];
-            if (to == null)
-                continue;
-
-            let addr = XLSX.utils.encode_cell({ r: row, c: column });
-            cells[to] = src[addr]?.v ?? '';
-        }
-
-        XLSX.utils.sheet_add_aoa(dest, [cells], { origin: row });
-    }
-}
-
-function listColumns(ws) {
-    let columns = [];
-
-    for (;;) {
-        let addr = XLSX.utils.encode_cell({ r: 0, c: columns.length });
-        let value = ws[addr]?.v;
-        if (value == null)
-            break;
-        columns.push('' + value);
-    }
-
-    return columns.length ? columns : null;
 }
 
 export {
