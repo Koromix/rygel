@@ -147,10 +147,10 @@ bool smtp_Config::Validate() const
 
 void smtp_Config::Clone(smtp_Config *out_config) const
 {
-    out_config->url = DuplicateString(url, &out_config->str_alloc).ptr;
-    out_config->username = DuplicateString(username, &out_config->str_alloc).ptr;
-    out_config->password = DuplicateString(password, &out_config->str_alloc).ptr;
-    out_config->from = DuplicateString(from, &out_config->str_alloc).ptr;
+    out_config->url = url ? DuplicateString(url, &out_config->str_alloc).ptr : nullptr;
+    out_config->username = username ? DuplicateString(username, &out_config->str_alloc).ptr : nullptr;
+    out_config->password = password ? DuplicateString(password, &out_config->str_alloc).ptr : nullptr;
+    out_config->from = from ? DuplicateString(from, &out_config->str_alloc).ptr : nullptr;
 }
 
 bool smtp_Sender::Init(const smtp_Config &config)
