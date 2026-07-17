@@ -80,10 +80,13 @@ async function runDrops() {
                                 <td>
                                     <div style="display: flex; align-items: center;">
                                         <span style="flex: 1; overflow: hidden; text-overflow: ellipsis;">${drop.name}</span>
-                                        ${show_recover ? html`
+                                        ${show_recover && can_recover ? html`
                                             <button type="button" class="small"
-                                                    ?disabled=${!can_recover} title=${!can_recover ? T.links_can_be_recovered_on_upload_machine : ''}
                                                     @click=${UI.wrap(e => recoverLink(drop))}>${T.recover_link}</button>
+                                        ` : ''}
+                                        ${show_recover && !can_recover ? html`
+                                            <button type="button" class="small" disabled
+                                                    title=${T.links_can_be_recovered_on_upload_machine}>${T.not_recoverable}</button>
                                         ` : ''}
                                     </div>
                                 </td>

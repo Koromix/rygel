@@ -196,6 +196,7 @@
         "no_user": "Aucun utilisateur",
         "none": "Aucun",
         "not_available": "Non disponible",
+        "not_recoverable": "Non récupérable",
         "offline_password_error": "Mot de passe non reconnu",
         "offline_password_error_disabled": "Mot de passe non reconnu, connexion hors ligne désactivée",
         "old_password": "Ancien mot de passe",

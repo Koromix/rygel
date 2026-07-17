@@ -196,6 +196,7 @@
         "no_user": "No user",
         "none": "None",
         "not_available": "Not available",
+        "not_recoverable": "Not recoverable",
         "offline_password_error": "Unknown password",
         "offline_password_error_disabled": "Unknown password, offline login has been disabled",
         "old_password": "Old password",
