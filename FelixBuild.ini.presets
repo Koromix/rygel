@@ -34,11 +34,7 @@ Features = ?PCH, ?Ccache, Warnings, DebugInfo, Optimize, LTO
 
 [Paranoid]
 Host = :clang:lld
-Features = Warnings, Optimize, LTO, SafeStack, CFI, ZeroInit, ShuffleCode, MaxCompression
-
-[DebugParanoid]
-Template = Paranoid
-Features = +DebugInfo
+Features = Warnings, DebugInfo, Optimize, LTO, SafeStack, CFI, ZeroInit, ShuffleCode, MaxCompression
 
 [EmscriptenNode]
 Host = Emscripten/Node
