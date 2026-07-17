@@ -16,12 +16,11 @@ if [ $# -gt 2 ]; then
     cd "$3"
 fi
 
-gpg --local-user "$GPG_USER" --export >"$REPO_NAME-archive-keyring.gpg"
-
-# Keep old content
+# Keep existing content
 mkdir -p pool
-
 rm -rf dists
+
+gpg --local-user "$GPG_USER" --export >"$REPO_NAME-archive-keyring.gpg"
 
 for arch in amd64 arm64; do
     mkdir -p dists/stable/main/binary-$arch
