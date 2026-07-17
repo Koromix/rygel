@@ -1152,7 +1152,8 @@ void HandleDomainDemo(http_IO *io)
     {
         InstanceOptions options = {
             .populate = true,
-            .demo = true
+            .demo = true,
+            .lang = GetThreadLocale()
         };
 
         if (int error = 500; !CreateInstance(&gp_db, name, name, options, &error)) {
