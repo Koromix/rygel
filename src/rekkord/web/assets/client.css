@@ -447,6 +447,7 @@ form {
         justify-content: right;
         gap: 0.71em;
     }
+    & > .footer:has(:only-child) { justify-content: center; }
 
     & .section {
         display: flex;
