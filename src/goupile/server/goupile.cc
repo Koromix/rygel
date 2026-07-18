@@ -226,8 +226,9 @@ static void InitAssets()
             assets_map.Set("/", &asset);
         } else if (TestStr(asset.name, "src/goupile/client/root.html")) {
             assets_root = &asset;
-        } else if (TestStr(asset.name, "src/goupile/client/d_sw.js")) {
+        } else if (TestStr(asset.name, "src/goupile/client/sw.js")) {
             assets_map.Set("/sw.js", &asset);
+            assets_map.Set("/sw.pk.js", &asset);
         } else if (TestStr(asset.name, "src/goupile/client/manifest.json")) {
             assets_map.Set("/manifest.json", &asset);
             assets_for_cache.Append("/manifest.json");
