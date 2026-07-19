@@ -472,7 +472,11 @@ reenter:
     if (custom_config) {
         LogInfo();
         LogInfo("You have used a custom config path.");
+#if defined(_WIN32)
+        LogInfo("Use %!..+set REKKORD_CONFIG_FILE=%1%!0 before you execute other commands.", config_full);
+#else
         LogInfo("Use %!..+export REKKORD_CONFIG_FILE=\"%1\"%!0 before you execute other commands.", FmtEscape(config_full, '"'));
+#endif
     }
 
     LogInfo();
