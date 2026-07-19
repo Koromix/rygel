@@ -177,14 +177,21 @@ function detectJsMessages(filename) {
     let code = fs.readFileSync(filename).toString();
 
     let matches = [
-        ...code.matchAll(/T\.message\(`(.+?)`/g).map(m => unescapeLiteral(m[1]))
+        ...code.matchAll(/T\.message\(`(.+?)`/g).map(m => m[1])
     ];
 
     return matches;
 }
 
 function unescapeLiteral(str) {
-    str = str.replace(/\\[\\nr"']/g, p => p[1]);
+    str = str.replace(/\\[\\nr"']/g, p => {
+        switch (p[1]) {
+            case 'n': return '\n';
+            case 'r': return '\r';
+            default: return p[1];
+        }
+    });
+
     return str;
 }
 
