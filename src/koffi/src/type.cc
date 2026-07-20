@@ -609,7 +609,7 @@ bool CanPassType(const TypeInfo *type, int directions)
 
         return false;
     } else {
-        if (type->primitive == PrimitiveKind::Void)
+        if (!type->size)
             return false;
         if (type->primitive == PrimitiveKind::Array)
             return false;
@@ -627,7 +627,7 @@ bool CanReturnType(const TypeInfo *type)
     if (type->countedby)
         return false;
 
-    if (type->primitive == PrimitiveKind::Void && type != type->instance->void_type)
+    if (!type->size && type != type->instance->void_type)
         return false;
     if (type->primitive == PrimitiveKind::Array)
         return false;
@@ -639,7 +639,7 @@ bool CanReturnType(const TypeInfo *type)
 
 bool CanStoreType(const TypeInfo *type)
 {
-    if (type->primitive == PrimitiveKind::Void)
+    if (!type->size)
         return false;
     if (type->primitive == PrimitiveKind::Prototype)
         return false;
