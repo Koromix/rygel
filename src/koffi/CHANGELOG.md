@@ -7,6 +7,15 @@
 
 ### Koffi 3.1
 
+#### Koffi 3.1.2
+
+*Released on 2026-07-20*
+
+- Fix crash when trying to run async callback during shutdown
+- Perform buffer length check after array type expansion
+- Prevent buffer overflow when computing string length (when buffer has known size)
+- Support calling `koffi.encode()` with negative (automatic) lengths
+
 #### Koffi 3.1.1
 
 *Released on 2026-07-10*
