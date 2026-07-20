@@ -196,7 +196,7 @@ napi_value CallData::CallCallback(const TrampolineInfo *trampoline, const napi_v
     NAPI_OK(napi_get_reference_value(env, trampoline->func, &func));
 
     napi_status status = napi_call_function(env, recv, func, (size_t)count, args, &value);
-    if (status == napi_pending_exception) [[unlikely]]
+    if (status == napi_pending_exception || status == napi_cannot_run_js) [[unlikely]]
         return nullptr;
     K_ASSERT(status == napi_ok);
 
