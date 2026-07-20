@@ -2381,16 +2381,14 @@ static Napi::Value EncodeValue(const Napi::CallbackInfo &info)
     if (has_len) {
         Size len = info[3 + has_offset].As<Napi::Number>();
 
-        if (type->primitive != PrimitiveKind::String &&
-                type->primitive != PrimitiveKind::String16 &&
-                type->primitive != PrimitiveKind::String32 &&
-                type->primitive != PrimitiveKind::Prototype) {
-            if (len < 0) [[unlikely]] {
-                ThrowError<Napi::TypeError>(env, "Automatic (negative) length is only supported when decoding");
-                return env.Null();
-            }
-
+        if (len >= 0) {
             type = MakeArrayType(instance, type, len);
+        } else if (dest_len >= 0 && type->size > 0) {
+            Size len = dest_len / type->size;
+            type = MakeArrayType(instance, type, len);
+        } else {
+            ThrowError<Napi::TypeError>(env, "Automatic (negative) length cannot work with slim pointers");
+            return env.Null();
         }
     }
 
