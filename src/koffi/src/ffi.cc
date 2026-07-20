@@ -2035,22 +2035,22 @@ static Napi::Value DecodeValue(const Napi::CallbackInfo &info)
             switch (type->primitive) {
                 case PrimitiveKind::Int8:
                 case PrimitiveKind::UInt8: {
-                    Size count = strlen((const char *)src);
+                    Size count = (src_len >= 0) ? strnlen((const char *)src, (size_t)src_len) : strlen((const char *)src);
                     type = MakeArrayType(instance, type, count);
                 } break;
                 case PrimitiveKind::Int16:
                 case PrimitiveKind::UInt16: {
-                    Size count = NullTerminatedLength((const char16_t *)src);
+                    Size count = (src_len >= 0) ? NullTerminatedLength((const char16_t *)src, src_len) : NullTerminatedLength((const char16_t *)src);
                     type = MakeArrayType(instance, type, count);
                 } break;
                 case PrimitiveKind::Int32:
                 case PrimitiveKind::UInt32: {
-                    Size count = NullTerminatedLength((const char32_t *)src);
+                    Size count = (src_len >= 0) ? NullTerminatedLength((const char32_t *)src, src_len) : NullTerminatedLength((const char32_t *)src);
                     type = MakeArrayType(instance, type, count);
                 } break;
 
                 case PrimitiveKind::Pointer: {
-                    Size count = NullTerminatedLength((const void **)src);
+                    Size count = (src_len >= 0) ? NullTerminatedLength((const void **)src, src_len) : NullTerminatedLength((const void **)src);
                     type = MakeArrayType(instance, type, count);
                 } break;
 
