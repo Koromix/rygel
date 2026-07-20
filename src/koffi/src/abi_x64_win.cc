@@ -547,11 +547,17 @@ void CallData::Relay(Size idx, uint8_t *sp)
 
     const TypeInfo *type = proto->ret.type;
 
-    // Make the call!
-    Napi::Value value = func.Call(arguments[0], arguments.len - 1, arguments.data + 1);
+    Napi::Value value;
+    {
+        napi_value ret;
 
-    if (env.IsExceptionPending()) [[unlikely]]
-        return;
+        napi_status status = napi_call_function(env, arguments[0], func, (size_t)arguments.len - 1, arguments.data + 1, &ret);
+        if (status == napi_pending_exception || status == napi_cannot_run_js) [[unlikely]]
+            return;
+        K_ASSERT(status == napi_ok);
+
+        value = Napi::Value(env, ret);
+    }
 
 #define RETURN_INTEGER(CType) \
         do { \
