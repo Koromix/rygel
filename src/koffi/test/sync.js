@@ -1131,6 +1131,19 @@ async function test() {
         assert.equal(ConcatMany2(strings, strings.length), expected);
     }
 
+    // Test buffer size checks
+    {
+        let buf = Buffer.alloc(8);
+
+        assert.throws(() => koffi.encode(buf, 'char', 'Hello World!', 10), /Expected buffer with size superior or equal/);
+        assert.throws(() => koffi.encode(buf, 'char', 'Hello!', 10), /Expected buffer with size superior or equal/);
+        assert.throws(() => koffi.decode(buf, 'char', 10), /Expected buffer with size superior or equal/);
+
+        koffi.encode(buf, 'char', 'Hello World!', -1);
+        assert.equal(koffi.decode(buf, 'char', 5), 'Hello');
+        assert.equal(koffi.decode(buf, 'char', -1), 'Hello W');
+    }
+
     // Test boundary conditions between fast and slow string handling paths
     if (allow_slow) {
         let pattern = '👉🫠👉🫠🫠👉🫠🫠';
