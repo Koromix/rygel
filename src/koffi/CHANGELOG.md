@@ -106,6 +106,12 @@ Consult the [migration guide](migration) for more information.
 
 ### Koffi 2.16
 
+#### Koffi 2.16.3
+
+*Released on 2026-07-20*
+
+- Fix crash when trying to run async callback during shutdown
+
 #### Koffi 2.16.2
 
 *Released on 2026-05-06*
