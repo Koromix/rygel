@@ -9388,6 +9388,12 @@ void InitLocales(Span<const TranslationTable> tables, const char *default_lang)
     SetDefaultLocale(default_lang);
 }
 
+bool HasLocale(const char *name)
+{
+    Span<const char> lang = name ? SplitStrAny(name, "_-") : "";
+    return i18n_locales.Find(lang);
+}
+
 void ChangeThreadLocale(const char *name)
 {
     Span<const char> lang = name ? SplitStrAny(name, "_-") : "";

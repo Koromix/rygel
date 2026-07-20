@@ -1145,6 +1145,41 @@ void HandleDomainDemo(http_IO *io)
         return;
     }
 
+    const char *lang = nullptr;
+    {
+        bool success = http_ParseJson(io, Kibibytes(1), [&](json_Parser *json) {
+            bool valid = true;
+
+            for (json->ParseObject(); json->InObject(); ) {
+                Span<const char> key = json->ParseKey();
+
+                if (key == "languages") {
+                    for (json->ParseArray(); json->InArray(); ) {
+                        const char *name = json->ParseString().ptr;
+
+                        if (lang)
+                            continue;
+                        if (!name || !HasLocale(name))
+                            continue;
+
+                        lang = DuplicateString(SplitStr(name, '-'), io->Allocator()).ptr;
+                    }
+                } else {
+                    json->UnexpectedKey(key);
+                    valid = false;
+                }
+            }
+            valid &= json->IsValid();
+
+            return valid;
+        });
+
+        if (!success) {
+            io->SendError(422);
+            return;
+        }
+    }
+
     char name[9];
     Fmt(name, "%1", FmtRandom(K_SIZE(name) - 1));
 
@@ -1153,7 +1188,7 @@ void HandleDomainDemo(http_IO *io)
         InstanceOptions options = {
             .populate = true,
             .demo = true,
-            .lang = GetThreadLocale()
+            .lang = lang
         };
 
         if (int error = 500; !CreateInstance(&gp_db, name, name, options, &error)) {
@@ -1178,6 +1213,11 @@ void HandleDomainDemo(http_IO *io)
         return;
     }
     stamp->develop = true;
+
+    if (lang) {
+        const char *path = Fmt(io->Allocator(), "/%1/", name).ptr;
+        io->AddCookieHeader(path, "lang", lang, 0);
+    }
 
     const char *redirect = Fmt(io->Allocator(), "/%1/", name).ptr;
 

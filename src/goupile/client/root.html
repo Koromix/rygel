@@ -119,7 +119,12 @@
 
             async function demo() {
                 try {
-                    let response = await fetch('/admin/api/domain/demo', { method: 'POST' });
+                    let response = await fetch('/admin/api/domain/demo', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            languages: navigator.languages.map(lang => lang.replace(/-.*$/, ''))
+                        })
+                    });
 
                     if (!response.ok) {
                         let text = (await response.text()).trim();
