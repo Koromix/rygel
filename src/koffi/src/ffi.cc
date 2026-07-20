@@ -2012,23 +2012,11 @@ static Napi::Value DecodeValue(const Napi::CallbackInfo &info)
     int64_t offset = has_offset ? info[1].As<Napi::Number>().Int64Value() : 0;
 
     const void *src = nullptr;
-    Size len = 0;
+    Size src_len = 0;
 
-    if (!TryPointer(env, ref, (void **)&src, &len)) {
+    if (!TryPointer(env, ref, (void **)&src, &src_len)) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for reference, expected pointer", GetValueType(instance, ref));
         return env.Null();
-    }
-
-    if (len >= 0) {
-        if (offset < 0) [[unlikely]] {
-            ThrowError<Napi::Error>(env, "Offset must be >= 0");
-            return env.Null();
-        }
-        if (len - offset < type->size) [[unlikely]] {
-            ThrowError<Napi::Error>(env, "Expected buffer with size superior or equal to type %1 (%2 bytes)",
-                                    type->name, type->size + offset);
-            return env.Null();
-        }
     }
 
     if (!src) [[unlikely]] {
@@ -2071,6 +2059,18 @@ static Napi::Value DecodeValue(const Napi::CallbackInfo &info)
                     return env.Null();
                 } break;
             }
+        }
+    }
+
+    if (src_len >= 0) {
+        if (offset < 0) [[unlikely]] {
+            ThrowError<Napi::Error>(env, "Offset must be >= 0");
+            return env.Null();
+        }
+        if (src_len - offset < type->size) [[unlikely]] {
+            ThrowError<Napi::Error>(env, "Expected buffer with size superior or equal to type %1 (%2 bytes)",
+                                    type->name, type->size + offset);
+            return env.Null();
         }
     }
 
@@ -2364,23 +2364,11 @@ static Napi::Value EncodeValue(const Napi::CallbackInfo &info)
     Napi::Value value = info[2 + has_offset];
 
     void *dest = nullptr;
-    Size len = 0;
+    Size dest_len = 0;
 
-    if (!TryPointer(env, ref, &dest, &len)) {
+    if (!TryPointer(env, ref, &dest, &dest_len)) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for reference, expected pointer", GetValueType(instance, ref));
         return env.Null();
-    }
-
-    if (len >= 0) {
-        if (offset < 0) [[unlikely]] {
-            ThrowError<Napi::Error>(env, "Offset must be >= 0");
-            return env.Null();
-        }
-        if (len - offset < type->size) [[unlikely]] {
-            ThrowError<Napi::Error>(env, "Expected buffer with size superior or equal to type %1 (%2 bytes)",
-                                    type->name, type->size + offset);
-            return env.Null();
-        }
     }
 
     if (!dest) [[unlikely]] {
@@ -2403,6 +2391,18 @@ static Napi::Value EncodeValue(const Napi::CallbackInfo &info)
             }
 
             type = MakeArrayType(instance, type, len);
+        }
+    }
+
+    if (dest_len >= 0) {
+        if (offset < 0) [[unlikely]] {
+            ThrowError<Napi::Error>(env, "Offset must be >= 0");
+            return env.Null();
+        }
+        if (dest_len - offset < type->size) [[unlikely]] {
+            ThrowError<Napi::Error>(env, "Expected buffer with size superior or equal to type %1 (%2 bytes)",
+                                    type->name, type->size + offset);
+            return env.Null();
         }
     }
 
