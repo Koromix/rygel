@@ -13,7 +13,48 @@ DEFAULT_NAME = 'koromix'
 DEFAULT_USER = 'niels.martignene@protonmail.com'
 DEFAULT_IMPORT_DIR = '../../bin/Packages'
 
-def copy_packages(src, dest, ext):
+def prune_old_versions(directory):
+    entries = list(os.scandir(directory))
+    files = []
+
+    for entry in entries:
+        if entry.is_dir():
+            entries.extend(os.scandir(entry.path))
+        else:
+            files.append(entry)
+
+    packages = {}
+
+    for entry in files:
+        parts = re.split(r'[\-_]', entry.name)
+        if len(parts) < 2:
+            continue
+        pkg = parts[0]
+        version = parts[1]
+
+        prev = packages.get(pkg, None)
+
+        if prev is None or is_greater_nat(version, prev):
+            packages[pkg] = version
+
+    for entry in files:
+        parts = re.split(r'[\-_]', entry.name)
+        if len(parts) < 2:
+            continue
+        pkg = parts[0]
+        version = parts[1]
+
+        if pkg in packages and version != packages[pkg]:
+            print(f'  - Removing {os.path.basename(entry.path)}...')
+            os.remove(entry.path)
+
+def is_greater_nat(a, b):
+    a = [int(t) if t.isdigit() else t.lower() for t in re.split(r'(\d+)', a)]
+    b = [int(t) if t.isdigit() else t.lower() for t in re.split(r'(\d+)', b)]
+
+    return a > b
+
+def import_packages(src, dest, ext):
     names = os.listdir(src)
 
     for name in names:
@@ -107,7 +148,8 @@ if __name__ == '__main__':
         os.makedirs(args.directory + '/debian', exist_ok = True)
         os.makedirs(args.directory + '/debian/pool', exist_ok = True)
         for path in args.imports:
-            copy_packages(path, args.directory + '/debian/pool', '.deb')
+            import_packages(path, args.directory + '/debian/pool', '.deb')
+        prune_old_versions(args.directory + '/debian/pool')
         print('  - Updating repository...')
         run_command(script_dir + '/../package/repo/apt/update.sh', [args.name, args.user], args.directory + '/debian')
 
@@ -115,7 +157,8 @@ if __name__ == '__main__':
         print('>> Processing RPM repository...')
         os.makedirs(args.directory + '/rpm', exist_ok = True)
         for path in args.imports:
-            copy_packages(path, args.directory + '/rpm', '.rpm')
+            import_packages(path, args.directory + '/rpm', '.rpm')
+        prune_old_versions(args.directory + '/rpm')
         print('  - Updating repository...')
         run_command(script_dir + '/../package/repo/rpm/update.sh', [args.name, args.user], args.directory + '/rpm')
 
@@ -124,4 +167,5 @@ if __name__ == '__main__':
         os.makedirs(args.directory + '/releases', exist_ok = True)
         for path in args.imports:
             process_releases(path, args.directory + '/releases', shutil.copyfile)
+        prune_old_versions(args.directory + '/releases')
         process_releases(args.directory + '/releases', args.directory + '/releases', shutil.move)
