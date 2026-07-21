@@ -86,7 +86,13 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if not args.types:
-        args.types = ['debian', 'rpm', 'releases']
+        args.types = []
+        if os.path.isdir(args.directory + '/debian'):
+            args.types.append('debian')
+        if os.path.isdir(args.directory + '/rpm'):
+            args.types.append('rpm')
+        if os.path.isdir(args.directory + '/releases'):
+            args.types.append('releases')
 
     if None in args.imports:
         default_import = script_dir + '/' + DEFAULT_IMPORT_DIR
