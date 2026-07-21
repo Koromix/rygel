@@ -8,7 +8,7 @@ TARGET=target
 DEST=dest
 SYSROOT=sysroot
 PACKAGES="curl wget htop dfc sudo nodejs build-essential git ninja-build clang lld gdb cmake ssh libx11-dev libxi-dev libgl-dev libxrandr-dev libxcursor-dev libxinerama-dev ccache vim xvfb xauth"
-SUITE=sid
+SUITE=testing
 
 export DEBIAN_FRONTEND=noninteractive
 
