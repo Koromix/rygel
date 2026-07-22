@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
-import { render, html, live, svg, unsafeHTML } from 'vendor/lit-html/lit-html.bundle.js';
+import { render, html, live, unsafeHTML } from 'vendor/lit-html/lit-html.bundle.js';
 import dayjs from 'vendor/dayjs/dayjs.bundle.js';
 import QRC from 'vendor/qrcodegen/js/qrcodegen.js';
 import { Util, LruMap, Log, Net, HttpError } from 'lib/web/base/base.js';
@@ -249,7 +249,7 @@ async function runDrop() {
                     <pre style="text-align: center;"
                          @click=${e => window.getSelection().selectAllChildren(e.target)}>${ENV.url + url}</pre>
                 </div>
-                ${makeQrCodeSvg(ENV.url + url, 200)}
+                ${makeQrCodeCanvas(ENV.url + url, { background: 'white' })}
                 <div class="sub">
                     ${cache.drop.expire != null ? T.format(T.expires_at_x, dayjs(cache.drop.expire).format('lll')) : ''}
                     ${cache.drop.expire == null ? T.never_expires : ''}
@@ -582,25 +582,37 @@ async function* readChunks(stream) {
     }
 }
 
-function makeQrCodeSvg(text, size, border = 2) {
+function makeQrCodeCanvas(text, options = {}) {
+    let scale = options.scale ?? 6;
+    let border = options.border ?? scale;
+    let background = options.background ?? null;
+
     let qr = QRC.QrCode.encodeText(text, QRC.QrCode.Ecc.MEDIUM);
+    let size = scale * qr.size;
 
-    let parts = [];
+    let canvas = document.createElement('canvas');
+    let ctx = canvas.getContext('2d');
 
-    for (let y = 0; y < qr.size; y++) {
-        for (let x = 0; x < qr.size; x++) {
-            if (qr.getModule(x, y))
-                parts.push(`M${x + border},${y + border}h1v1h-1z`);
+    canvas.width = size + 2 * border;
+    canvas.height = size + 2 * border;
+
+    if (background != null) {
+        ctx.fillStyle = background;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    ctx.fillStyle = 'black';
+    ctx.translate(border, border);
+    ctx.scale(scale, scale);
+
+    for (let i = 0; i < qr.size; i++) {
+        for (let j = 0; j < qr.size; j++) {
+            if (qr.getModule(i, j))
+                ctx.fillRect(i, j, 1, 1);
         }
     }
 
-    return svg`
-        <svg width=${size + border * 2} height=${size + border * 2} style="margin: 0.5em;"
-             viewBox="0 0 ${qr.size + border * 2} ${qr.size + border * 2}" stroke="none">
-            <rect width="100%" height="100%" fill="#FFFFFF"/>
-            <path d="${parts.join(" ")}" fill="#000000"/>
-        </svg>
-    `;
+    return canvas;
 }
 
 async function openLocalDB(id) {
