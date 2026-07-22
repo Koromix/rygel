@@ -583,10 +583,14 @@ static void HandleRequest(http_IO *io)
             HandleDropInfo(io);
         } else if (url == "/api/drop/create" && method == http_RequestMethod::Post) {
             HandleDropCreate(io);
-        } else if (url == "/api/drop/delete" && method == http_RequestMethod::Post) {
-            HandleDropDelete(io);
+        } else if (url == "/api/drop/populate" && method == http_RequestMethod::Post) {
+            HandleDropPopulate(io);
         } else if (url == "/api/drop/mark" && method == http_RequestMethod::Post) {
             HandleDropMark(io);
+        } else if (url == "/api/drop/complete" && method == http_RequestMethod::Post) {
+            HandleDropComplete(io);
+        } else if (url == "/api/drop/delete" && method == http_RequestMethod::Post) {
+            HandleDropDelete(io);
         } else if (url == "/api/drop/fragment" && method == http_RequestMethod::Post) {
             HandleFragmentUpload(io);
         } else if (url == "/api/drop/fragment" && method == http_RequestMethod::Get) {
@@ -597,8 +601,8 @@ static void HandleRequest(http_IO *io)
 
         return;
     }
-    if (StartsWith(url, "/drop/download/") && method == http_RequestMethod::Get) {
-        HandleDropDownload(io);
+    if (StartsWith(url, "/download/") && method == http_RequestMethod::Get) {
+        HandleFileDownload(io);
         return;
     }
 

@@ -27,19 +27,13 @@ const UPLOAD_MARK_DELAY = 5000;
 const DOWNLOAD_QUEUE_SIZE = 2;
 const DOWNLOAD_AHEAD_LIMIT = 4;
 
-async function createHeader(password = null) {
-    if (password == null)
-        password = '';
-    if (password)
-        password = '/' + password;
-
+async function createHeader(passphrase) {
     let master = randomBytes(16);
-    let passphrase = Base64.toBase64Url(randomBytes(32));
     let salt = randomBytes(16);
     let nonce = randomBytes(16);
 
     let n = 2 ** WORK_FACTOR_LOG2;
-    let wrap = await scrypt.async(passphrase + password, encodeSalt(salt), { N: 2 ** WORK_FACTOR_LOG2, r: 8, p: 1, dkLen: 32 });
+    let wrap = await scrypt.async(passphrase, encodeSalt(salt), { N: 2 ** WORK_FACTOR_LOG2, r: 8, p: 1, dkLen: 32 });
     let chacha = chacha20poly1305(wrap, new Uint8Array(12));
     let body = chacha.encrypt(master);
 
@@ -62,19 +56,13 @@ async function createHeader(password = null) {
     }
 
     return {
-        passphrase: passphrase,
         header: headers.join('\n'),
         nonce: Base64.toBase64(nonce),
         key: key
     };
 }
 
-async function decodeHeader(header, nonce, passphrase, password = null) {
-    if (password == null)
-        password = '';
-    if (password)
-        password = '/' + password;
-
+async function decodeHeader(header, nonce, passphrase) {
     if (header.length != HEADER_LENGTH)
         throw new Error('Invalid header length');
 
@@ -89,7 +77,7 @@ async function decodeHeader(header, nonce, passphrase, password = null) {
     }
 
     let n = 2 ** header.factor;
-    let wrap = await scrypt.async(passphrase + password, encodeSalt(header.salt), { N: n, r: 8, p: 1, dkLen: 32 });
+    let wrap = await scrypt.async(passphrase, encodeSalt(header.salt), { N: n, r: 8, p: 1, dkLen: 32 });
     let chacha = chacha20poly1305(wrap, new Uint8Array(12));
     let master = chacha.decrypt(header.body);
 
@@ -492,5 +480,7 @@ export {
     download,
 
     encryptString,
-    decryptString
+    decryptString,
+
+    randomBytes
 }

@@ -15,12 +15,13 @@ void HandleDropList(http_IO *io);
 void HandleDropInfo(http_IO *io);
 
 void HandleDropCreate(http_IO *io);
-void HandleFragmentUpload(http_IO *io);
-void HandleFragmentDownload(http_IO *io);
+void HandleDropPopulate(http_IO *io);
 void HandleDropMark(http_IO *io);
+void HandleDropComplete(http_IO *io);
 void HandleDropDelete(http_IO *io);
 
-// Uses special URL format
-void HandleDropDownload(http_IO *io);
+void HandleFragmentDownload(http_IO *io);
+void HandleFragmentUpload(http_IO *io);
+void HandleFileDownload(http_IO *io); // Uses special URL format
 
 }

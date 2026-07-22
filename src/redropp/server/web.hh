@@ -14,10 +14,12 @@ extern Config config;
 extern sq_Database db;
 
 enum class KIDType {
-    Drop = 0
+    Drop = 0,
+    File = 1
 };
 static const char *const KIDTypeNames[] = {
-    "Drop"
+    "Drop",
+    "File"
 };
 
 static inline void FillKID(KIDType type, KID *out_kid) { return FillKID((int8_t)type, out_kid); }

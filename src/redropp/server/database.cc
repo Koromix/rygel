@@ -8,7 +8,7 @@
 
 namespace K {
 
-const int DatabaseVersion = 1;
+const int DatabaseVersion = 2;
 
 bool AddDatabaseFunctions(sq_Database *db)
 {
@@ -121,12 +121,53 @@ bool MigrateDatabase(sq_Database *db)
                         total INTEGER NOT NULL
                     );
                     CREATE UNIQUE INDEX quotas_u ON quotas (user);
-                    )");
+                )");
+                if (!success)
+                    return false;
+            } [[fallthrough]];
+
+            case 1: {
+                bool success = db->RunMany(R"(
+                    CREATE TABLE files (
+                        id INTEGER PRIMARY KEY NOT NULL,
+                        kid BLOB NOT NULL,
+                        parent INTEGER NOT NULL REFERENCES drops (id) ON DELETE CASCADE,
+                        name TEXT NOT NULL,
+                        size INTEGER NOT NULL,
+                        split INTEGER NOT NULL,
+                        header TEXT NOT NULL,
+                        nonce TEXT NOT NULL,
+                        sequence INTEGER NOT NULL,
+                        uploaded INTEGER NOT NULL,
+                        changeset BLOB
+                    );
+                    CREATE UNIQUE INDEX files_k ON files (kid);
+                    CREATE INDEX files_ps ON files (parent, sequence);
+
+                    -- This inserts the wrong KID type but it will work okay and sort
+                    -- itself out once these drops expire and/or get deleted.
+                    INSERT INTO files (kid, parent, name, size, split, header, nonce, sequence, uploaded)
+                        SELECT kid, id, name, size, split, header, nonce, 0, uploaded FROM drops;
+
+                    ALTER TABLE drops ADD COLUMN complete INTEGER CHECK (complete IN (0, 1));
+                    UPDATE drops SET complete = IIF(uploaded = size, 1, 0);
+                    ALTER TABLE drops ALTER COLUMN complete SET NOT NULL;
+
+                    UPDATE drops SET uploaded = size;
+                    ALTER TABLE drops RENAME COLUMN uploaded TO total;
+
+                    ALTER TABLE drops DROP COLUMN split;
+                    ALTER TABLE drops DROP COLUMN header;
+                    ALTER TABLE drops DROP COLUMN nonce;
+                    ALTER TABLE drops DROP COLUMN size;
+
+                    ALTER TABLE quotas RENAME COLUMN total TO usage;
+                )");
                 if (!success)
                     return false;
             } // [[fallthrough]];
 
-            static_assert(DatabaseVersion == 1);
+            static_assert(DatabaseVersion == 2);
         }
 
         if (!db->Run("INSERT INTO migrations (version, build, timestamp) VALUES (?, ?, ?)",

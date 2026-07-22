@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
-import { Util, Log, Net } from 'lib/web/base/base.js';
+import { Util, LruMap, Log, Net } from 'lib/web/base/base.js';
 import * as Async from 'lib/web/base/async.js';
 import * as UI from 'lib/web/ui/ui.js';
 import { ProgressMeter } from './format.js';
@@ -13,7 +13,7 @@ let sw = null;
 let sw_resolve = null;
 
 let next_id = 0;
-let status_map = new Map;
+let download_map = new LruMap(64);
 
 async function initRelay() {
     navigator.serviceWorker.register('/sw.js', { type: 'module' });
@@ -54,7 +54,7 @@ function handleMessage(e) {
     switch (msg.kind) {
         case 'progress': {
             let [id, value, max] = msg.args;
-            let status = status_map.get(id);
+            let status = download_map.get(id);
 
             if (status == null)
                 break;
@@ -82,7 +82,7 @@ function handleMessage(e) {
 
         case 'failed': {
             let [id, err] = msg.args;
-            let status = status_map.get(id);
+            let status = download_map.get(id);
 
             if (status == null)
                 break;
@@ -109,7 +109,7 @@ function handleMessage(e) {
 }
 
 function handleTimeout(id) {
-    let status = status_map.get(id);
+    let status = download_map.get(id);
 
     if (status == null)
         return;
@@ -149,25 +149,25 @@ async function prepareDownload(info, key, signal = null) {
 
     // Clear existing status entry
     {
-        let prev = status_map.get(info.kid);
+        let prev = download_map.get(info.kid);
 
         if (prev != null)
-            status_map.delete(prev.kid);
+            download_map.delete(prev.kid);
     }
 
-    status_map.set(id, status);
-    status_map.set(info.kid, status);
+    download_map.set(id, status);
+    download_map.set(info.kid, status);
 
     await Async.call(sw, 'drop', [id, info, key]);
 }
 
 function getDownloadStatus(kid) {
-    let status = status_map.get(kid);
+    let status = download_map.get(kid);
 
     if (status == null)
         return null;
     if (performance.now() >= status.time + STATUS_EXPIRATION) {
-        status_map.delete(kid);
+        download_map.delete(kid);
         return null;
     }
 
