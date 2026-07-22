@@ -250,7 +250,7 @@ async function runDrop() {
                     <pre style="text-align: center;"
                          @click=${e => window.getSelection().selectAllChildren(e.target)}>${ENV.url + url}</pre>
                 </div>
-                ${makeQrCodeCanvas(ENV.url + url, { background: 'white' })}
+                ${makeQrCodeCanvas(ENV.url + url)}
                 <div class="sub">
                     ${cache.drop.expire != null ? T.format(T.expires_at_x, dayjs(cache.drop.expire).format('lll')) : ''}
                     ${cache.drop.expire == null ? T.never_expires : ''}
@@ -583,10 +583,9 @@ async function* readChunks(stream) {
     }
 }
 
-function makeQrCodeCanvas(text, options = {}) {
-    let scale = options.scale ?? 6;
-    let border = options.border ?? scale;
-    let background = options.background ?? null;
+function makeQrCodeCanvas(text) {
+    let scale = 7;
+    let border = 4;
 
     let qr = QRC.QrCode.encodeText(text, QRC.QrCode.Ecc.MEDIUM);
     let size = scale * qr.size;
@@ -597,19 +596,63 @@ function makeQrCodeCanvas(text, options = {}) {
     canvas.width = size + 2 * border;
     canvas.height = size + 2 * border;
 
-    if (background != null) {
-        ctx.fillStyle = background;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-    }
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     ctx.fillStyle = 'black';
+    ctx.strokeStyle = 'black'
+    ctx.lineWidth = 0.6;
+
     ctx.translate(border, border);
     ctx.scale(scale, scale);
+    ctx.translate(0.5, 0.5);
 
     for (let i = 0; i < qr.size; i++) {
         for (let j = 0; j < qr.size; j++) {
-            if (qr.getModule(i, j))
-                ctx.fillRect(i, j, 1, 1);
+            let idx = (j * qr.size) + i;
+
+            if (qr.getModule(i, j)) {
+                ctx.beginPath();
+                ctx.arc(i, j, 0.5, 0, Math.PI * 2, false);
+                ctx.fill();
+            }
+        }
+    }
+
+    for (let i = 0; i < qr.size; i++) {
+        for (let j = 0; j < qr.size; j++) {
+            if (qr.getModule(i, j)) {
+                let k = j;
+
+                while (qr.getModule(i, k + 1)) {
+                    k++;
+                }
+
+                if (k > j) {
+                    ctx.beginPath();
+                    ctx.moveTo(i, j);
+                    ctx.lineTo(i, k);
+                    ctx.stroke();
+                }
+            }
+        }
+    }
+    for (let j = 0; j < qr.size; j++) {
+        for (let i = 0; i < qr.size; i++) {
+            if (qr.getModule(i, j)) {
+                let k = i;
+
+                while (qr.getModule(k + 1, j)) {
+                    k++;
+                }
+
+                if (k > i) {
+                    ctx.beginPath();
+                    ctx.moveTo(i, j);
+                    ctx.lineTo(k, j);
+                    ctx.stroke();
+                }
+            }
         }
     }
 
