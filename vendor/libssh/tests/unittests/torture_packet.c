@@ -56,6 +56,7 @@ torture_packet(const char *cipher, const char *mac_type,
     uint8_t buffer[1024];
     uint8_t response[1024];
     size_t encrypted_packet_len;
+    size_t processed;
     ssh_packet_callback callbacks[]={copy_packet_data};
     struct ssh_packet_callbacks_struct cb = {
             .start=2,
@@ -131,8 +132,9 @@ torture_packet(const char *cipher, const char *mac_type,
 
     ssh_packet_set_callbacks(session, &cb);
     ssh_burn(response, sizeof(response));
-    rc = ssh_packet_socket_callback(buffer, encrypted_packet_len, session);
-    assert_int_not_equal(rc, SSH_ERROR);
+    processed =
+        ssh_packet_socket_callback(buffer, encrypted_packet_len, session);
+    assert_int_equal(processed, encrypted_packet_len);
     if(payload_len > 0){
         assert_memory_equal(response, test_data+1, payload_len-1);
     }

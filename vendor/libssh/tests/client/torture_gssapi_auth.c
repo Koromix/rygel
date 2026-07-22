@@ -247,6 +247,32 @@ torture_gssapi_auth_delegate_creds(void **state)
     torture_teardown_kdc_server(state);
 }
 
+static void torture_gssapi_auth_bad_user(void **state)
+{
+    struct torture_state *s = *state;
+    ssh_session session = s->ssh.session;
+    int rc;
+
+    rc = ssh_options_set(s->ssh.session, SSH_OPTIONS_USER, TORTURE_SSH_USER_BOB);
+    assert_ssh_return_code(s->ssh.session, rc);
+
+    rc = ssh_connect(session);
+    assert_ssh_return_code(session, rc);
+
+    torture_setup_kdc_server(
+        state,
+        "kadmin.local addprinc -randkey host/server.libssh.site \n"
+        "kadmin.local ktadd -k $(dirname $0)/d/ssh.keytab host/server.libssh.site \n"
+        "kadmin.local addprinc -pw bar alice \n"
+        "kadmin.local list_principals",
+
+        "echo bar | kinit alice");
+
+    rc = ssh_userauth_gssapi(session);
+    assert_int_equal(rc, SSH_AUTH_DENIED);
+    torture_teardown_kdc_server(state);
+}
+
 int
 torture_run_tests(void)
 {
@@ -262,6 +288,9 @@ torture_run_tests(void)
                                         session_setup,
                                         session_teardown),
         cmocka_unit_test_setup_teardown(torture_gssapi_auth_delegate_creds,
+                                        session_setup,
+                                        session_teardown),
+        cmocka_unit_test_setup_teardown(torture_gssapi_auth_bad_user,
                                         session_setup,
                                         session_teardown),
     };

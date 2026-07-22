@@ -411,18 +411,12 @@ static void torture_algorithm_mlkem768x25119_self_compat(void **state)
 
 static void torture_algorithm_mlkem768nistp256_self_compat(void **state)
 {
-    if (ssh_fips_mode()) {
-        skip();
-    }
     test_kex_self_compat(state, "mlkem768nistp256-sha256");
 }
 
 #ifdef HAVE_MLKEM1024
 static void torture_algorithm_mlkem1024nistp384_self_compat(void **state)
 {
-    if (ssh_fips_mode()) {
-        skip();
-    }
     test_kex_self_compat(state, "mlkem1024nistp384-sha384");
 }
 #endif /* HAVE_MLKEM1024 */

@@ -130,6 +130,8 @@ ENGINE *pki_get_engine(void);
 #endif
 #endif /* WITH_PKCS11_PROVIDER */
 
+#define FIPS_FALLBACK_PROPQ "provider=default,-fips"
+
 #endif /* HAVE_LIBCRYPTO */
 
 #endif /* LIBCRYPTO_H_ */

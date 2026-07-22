@@ -340,7 +340,7 @@ md5_direct(const unsigned char *digest, size_t len, unsigned char *hash)
     }
 
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
-    md5 = EVP_MD_fetch(NULL, "MD5", "provider=default,-fips");
+    md5 = EVP_MD_fetch(NULL, "MD5", FIPS_FALLBACK_PROPQ);
     if (md5 == NULL) {
         goto out;
     }

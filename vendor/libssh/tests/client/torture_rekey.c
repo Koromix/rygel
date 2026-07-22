@@ -858,7 +858,7 @@ static void torture_rekey_guess_all_combinations(void **state)
     const char *supported = NULL;
     struct ssh_tokens_st *s_tok = NULL;
     uint64_t rekey_limit = 0;
-    char *p = NULL;
+    const char *p = NULL;
     int rc, i, j;
 
     /* The rekey limit is 1/2 of the transferred file size so we will likely get

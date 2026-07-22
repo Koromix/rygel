@@ -110,6 +110,7 @@ struct sftp_session_struct {
     sftp_ext ext;
     sftp_packet read_packet;
     sftp_limits_t limits;
+    struct ssh_list *outstanding_ids;
 };
 
 struct sftp_packet_struct {

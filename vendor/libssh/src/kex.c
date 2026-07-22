@@ -213,7 +213,15 @@
                                            "rsa-sha2-256-cert-v01@openssh.com," \
                                            FIPS_ALLOWED_HOSTKEYS
 
-#define FIPS_ALLOWED_KEX "ecdh-sha2-nistp256,"\
+#ifdef HAVE_MLKEM1024
+#define FIPS_MLKEM_KEX "mlkem768nistp256-sha256," \
+                       "mlkem1024nistp384-sha384,"
+#else
+#define FIPS_MLKEM_KEX "mlkem768nistp256-sha256,"
+#endif
+
+#define FIPS_ALLOWED_KEX FIPS_MLKEM_KEX \
+                         "ecdh-sha2-nistp256,"\
                          "ecdh-sha2-nistp384,"\
                          "ecdh-sha2-nistp521,"\
                          "diffie-hellman-group-exchange-sha256,"\
@@ -354,7 +362,7 @@ static int cmp_first_kex_algo(const char *client_str,
     size_t client_kex_len;
     size_t server_kex_len;
 
-    char *colon = NULL;
+    const char *colon = NULL;
 
     int is_wrong = 1;
 
@@ -1230,7 +1238,7 @@ int ssh_send_kex(ssh_session session)
      * do it now. The packet is simple, but we need to do some preparations */
     if (first_kex_packet_follows == 1) {
         char *list = kex->methods[SSH_KEX];
-        char *colon = strchr(list, ',');
+        const char *colon = strchr(list, ',');
         size_t kex_name_len = colon ? (size_t)(colon - list) : strlen(list);
         char *kex_name = calloc(kex_name_len + 1, 1);
         if (kex_name == NULL) {

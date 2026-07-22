@@ -152,7 +152,7 @@ static int derive_hybrid_secret(ssh_session session,
 
     rc = ssh_buffer_pack(combined_secret,
                          "PP",
-                         MLKEM_SHARED_SECRET_SIZE,
+                         (size_t)MLKEM_SHARED_SECRET_SIZE,
                          mlkem_shared_secret,
                          ssh_string_len(ecdh_shared_secret),
                          ssh_string_data(ecdh_shared_secret));
@@ -244,7 +244,7 @@ int ssh_client_hybrid_mlkem_init(ssh_session session)
                              "PP",
                              ssh_string_len(crypto->mlkem_client_pubkey),
                              ssh_string_data(crypto->mlkem_client_pubkey),
-                             CURVE25519_PUBKEY_SIZE,
+                             (size_t)CURVE25519_PUBKEY_SIZE,
                              crypto->curve25519_client_pubkey);
         break;
     case SSH_KEX_MLKEM768NISTP256_SHA256:
@@ -656,6 +656,8 @@ static SSH_PACKET_CALLBACK(ssh_packet_server_hybrid_mlkem_init)
                       SSH_FATAL,
                       "Could not read ML-KEM pubkey from "
                       "the client init buffer, buffer too short");
+        session->session_state = SSH_SESSION_STATE_ERROR;
+        goto cleanup;
     }
 
 #ifdef DEBUG_CRYPTO
@@ -768,7 +770,7 @@ static SSH_PACKET_CALLBACK(ssh_packet_server_hybrid_mlkem_init)
                              "PP",
                              ssh_string_len(crypto->mlkem_ciphertext),
                              ssh_string_data(crypto->mlkem_ciphertext),
-                             CURVE25519_PUBKEY_SIZE,
+                             (size_t)CURVE25519_PUBKEY_SIZE,
                              crypto->curve25519_server_pubkey);
         break;
     case SSH_KEX_MLKEM768NISTP256_SHA256:

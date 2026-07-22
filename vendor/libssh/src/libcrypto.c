@@ -641,7 +641,7 @@ static void evp_cipher_aead_encrypt(struct ssh_cipher_struct *cipher,
 
     /* compute tag */
     rc = EVP_EncryptFinal(cipher->ctx, NULL, &tmplen);
-    if (rc < 0) {
+    if (rc != 1) {
         SSH_LOG(SSH_LOG_TRACE, "EVP_EncryptFinal failed: Failed to create a tag");
         return;
     }
@@ -724,7 +724,7 @@ static int evp_cipher_aead_decrypt(struct ssh_cipher_struct *cipher,
 
     /* verify tag */
     rc = EVP_DecryptFinal(cipher->ctx, NULL, &outlen);
-    if (rc < 0) {
+    if (rc != 1 || outlen != 0) {
         SSH_LOG(SSH_LOG_TRACE,
                 "EVP_DecryptFinal failed: Failed authentication");
         return SSH_ERROR;

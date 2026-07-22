@@ -421,3 +421,95 @@
    fun:gss_acquire_cred_from
    fun:gss_acquire_cred
 }
+
+# Function mecherror_copy called in various
+# functions of the krb5 library copies entries
+# to the global error mapping table (mecherrmap m).
+{
+   Global error mapping table in krb5
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   fun:mecherror_copy
+}
+
+# Function add_error_table called in various
+# functions of the krb5 library adds entries
+# to a global list of error tables et_list.
+{
+   Global list of error tables in krb5
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   fun:add_error_table
+}
+
+# Function build_mechSet builds the global
+# gss_OID_set_desc g_mechSet which is only
+# free'd when initialized again.
+{
+   Global OID set in krb5
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   ...
+   fun:build_mechSet
+}
+
+# Function gssint_register_mechinfo()
+# called from gssint_mechglue_init() adds
+# entries to a global linked list g_mechList.
+{
+   Global list of gss_mech_info in krb5
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   ...
+   fun:gssint_register_mechinfo*
+   ...
+   fun:gssint_mechglue_init
+}
+
+# Function addConfigEntry() called during
+# updateMechList() adds entries to
+# a global linked list g_mechList.
+{
+   Global list of gss_mech_info in krb5
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   ...
+   fun:addConfigEntry
+   ...
+   fun:updateMechList
+}
+
+# Function loadInterMech() called during
+# updateMechList() loops through the global
+# linked list g_mechList and updates its entries
+# with heap-alloced  "interposer fields".
+{
+   Global list of gss_mech_info in krb5
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   ...
+   fun:loadInterMech
+   ...
+   fun:updateMechList
+}
+
+# Multiple krb5 functions call krb5int_open_plugin
+# which opens shared libraries using dlopen.
+# The plugin handle then seems to be stored in the
+# main krb5 context.
+{
+   Plugin handles stored in the krb5 context
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   ...
+   fun:dlopen*
+   ...
+   fun:krb5int_open_plugin
+}

@@ -108,6 +108,110 @@ static int session_setup_ssh_dir(void **state)
     return 0;
 }
 
+/* This sets up the ssh session in the directory without the default
+ * certificates that are used for authentication, requiring them to be provided
+ * as configuration options. It also changes the target user to one that does
+ * not accept authentication using this certificate and moves private key to
+ * different location so the default matching does not work */
+static int session_setup_bob_cert(void **state)
+{
+    struct torture_state *s = *state;
+    char doe_ssh_key[1024];
+    char new_ssh_key[1024];
+    char doe_ssh_cert[2048];
+    char keydata[2048];
+    struct passwd *pwd = NULL;
+    int fd;
+    int rc;
+
+    session_setup(state);
+
+    s->ssh.session->opts.homedir = strdup("~/.no_ssh");
+
+    /* certs won't log in for bob */
+    rc = ssh_options_set(s->ssh.session,
+                         SSH_OPTIONS_USER,
+                         TORTURE_SSH_USER_BOB);
+    assert_int_equal(rc, SSH_OK);
+
+    pwd = getpwnam("doe");
+    assert_non_null(pwd);
+
+    snprintf(doe_ssh_key, sizeof(doe_ssh_key), "%s/.ssh/id_rsa", pwd->pw_dir);
+    snprintf(new_ssh_key, sizeof(new_ssh_key), "%s/.ssh/my_rsa", pwd->pw_dir);
+    snprintf(doe_ssh_cert, sizeof(doe_ssh_cert), "%s-cert.pub", doe_ssh_key);
+
+    /* move the private key away from the default location the certificate can
+     * not be loaded automatically */
+    fd = open(doe_ssh_key, O_RDONLY);
+    assert_true(fd > 0);
+    rc = read(fd, keydata, sizeof(keydata));
+    assert_true(rc > 0);
+    keydata[rc] = '\0';
+    close(fd);
+    torture_write_file(new_ssh_key, keydata);
+
+    /* Explicit private key and cert */
+    rc = ssh_options_set(s->ssh.session, SSH_OPTIONS_IDENTITY, new_ssh_key);
+    assert_int_equal(rc, SSH_OK);
+    rc = ssh_options_set(s->ssh.session, SSH_OPTIONS_CERTIFICATE, doe_ssh_cert);
+    assert_int_equal(rc, SSH_OK);
+
+    return 0;
+}
+
+/* This sets up the ssh session in the directory without the default
+ * certificates that are used for authentication, requiring them to be provided
+ * as configuration options. It also changes the target user to one that does
+ * not accept authentication using this certificate and sets non-existing
+ * certificate path to trigger the right code path */
+static int session_setup_bob_cert_bad(void **state)
+{
+    struct torture_state *s = *state;
+    char doe_ssh_key[1024];
+    char new_ssh_key[1024];
+    char doe_ssh_cert[2048];
+    char keydata[2048];
+    struct passwd *pwd = NULL;
+    int fd;
+    int rc;
+
+    session_setup(state);
+
+    s->ssh.session->opts.homedir = strdup("~/.no_ssh");
+
+    /* certs won't log in for bob */
+    rc = ssh_options_set(s->ssh.session,
+                         SSH_OPTIONS_USER,
+                         TORTURE_SSH_USER_BOB);
+    assert_int_equal(rc, SSH_OK);
+
+    pwd = getpwnam("doe");
+    assert_non_null(pwd);
+
+    snprintf(doe_ssh_key, sizeof(doe_ssh_key), "%s/.ssh/id_rsa", pwd->pw_dir);
+    snprintf(new_ssh_key, sizeof(new_ssh_key), "%s/.ssh/my_rsa", pwd->pw_dir);
+    snprintf(doe_ssh_cert, sizeof(doe_ssh_cert), "%s-cert1.pub", doe_ssh_key);
+
+    /* move the private key away from the default location the certificate can
+     * not be loaded automatically */
+    fd = open(doe_ssh_key, O_RDONLY);
+    assert_true(fd > 0);
+    rc = read(fd, keydata, sizeof(keydata));
+    assert_true(rc > 0);
+    keydata[rc] = '\0';
+    close(fd);
+    torture_write_file(new_ssh_key, keydata);
+
+    /* Explicit private key and cert */
+    rc = ssh_options_set(s->ssh.session, SSH_OPTIONS_IDENTITY, new_ssh_key);
+    assert_int_equal(rc, SSH_OK);
+    rc = ssh_options_set(s->ssh.session, SSH_OPTIONS_CERTIFICATE, doe_ssh_cert);
+    assert_int_equal(rc, SSH_OK);
+
+    return 0;
+}
+
 static int session_teardown(void **state)
 {
     struct torture_state *s = *state;
@@ -934,6 +1038,16 @@ torture_auth_agent_cert_only_identities_only_nonblocking(void **state)
     assert_ssh_return_code(session, rc);
 }
 
+#define GROUP_TEST(TEST_NAME, SETUP) \
+    {                                \
+        #TEST_NAME "_" #SETUP,       \
+        TEST_NAME,                   \
+        session_setup##_##SETUP,     \
+        session_teardown,            \
+        NULL,                        \
+    }
+
+
 int torture_run_tests(void)
 {
     int rc;
@@ -951,12 +1065,12 @@ int torture_run_tests(void)
             torture_auth_cert_default_non_explicit_nonblocking,
             session_setup,
             session_teardown),
-        cmocka_unit_test_setup_teardown(torture_auth_auto_fail,
-                                        session_setup_ssh_dir,
-                                        session_teardown),
-        cmocka_unit_test_setup_teardown(torture_auth_auto_fail_nonblocking,
-                                        session_setup_ssh_dir,
-                                        session_teardown),
+        GROUP_TEST(torture_auth_auto_fail, ssh_dir),
+        GROUP_TEST(torture_auth_auto_fail_nonblocking, ssh_dir),
+        GROUP_TEST(torture_auth_auto_fail, bob_cert),
+        GROUP_TEST(torture_auth_auto_fail_nonblocking, bob_cert),
+        GROUP_TEST(torture_auth_auto_fail, bob_cert_bad),
+        GROUP_TEST(torture_auth_auto_fail_nonblocking, bob_cert_bad),
         cmocka_unit_test_setup_teardown(torture_auth_cert_options_private,
                                         session_setup_ssh_dir,
                                         session_teardown),

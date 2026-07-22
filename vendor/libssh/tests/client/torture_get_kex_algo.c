@@ -14,6 +14,7 @@
 #define SNTRUP761X25519 "sntrup761x25519-sha512"
 #define SNTRUP761X25519_OPENSSH "sntrup761x25519-sha512@openssh.com"
 #define MLKEM768X25519 "mlkem768x25519-sha256"
+#define MLKEM768NISTP256 "mlkem768nistp256-sha256"
 
 static int sshd_setup(void **state)
 {
@@ -77,6 +78,7 @@ static void torture_kex_basic_functionality(void **state)
         SNTRUP761X25519,
         SNTRUP761X25519_OPENSSH,
         MLKEM768X25519,
+        MLKEM768NISTP256,
         CURVE25519_SHA256,
         ECDH_SHA2_NISTP256,
         DIFFIE_HELLMAN_GROUP_14_SHA_1,

@@ -1290,6 +1290,7 @@ enum ssh_auth_auto_state_e {
     SSH_AUTH_AUTO_STATE_PUBKEY,
     SSH_AUTH_AUTO_STATE_KEY_IMPORTED,
     SSH_AUTH_AUTO_STATE_CERTIFICATE_FILE,
+    SSH_AUTH_AUTO_STATE_CERTIFICATE_OPTION_INIT,
     SSH_AUTH_AUTO_STATE_CERTIFICATE_OPTION,
     SSH_AUTH_AUTO_STATE_PUBKEY_ACCEPTED
 };
@@ -1521,6 +1522,7 @@ int ssh_userauth_publickey_auto(ssh_session session,
         }
         if (state->state == SSH_AUTH_AUTO_STATE_KEY_IMPORTED ||
             state->state == SSH_AUTH_AUTO_STATE_CERTIFICATE_FILE ||
+            state->state == SSH_AUTH_AUTO_STATE_CERTIFICATE_OPTION_INIT ||
             state->state == SSH_AUTH_AUTO_STATE_CERTIFICATE_OPTION) {
             ssh_key k = state->pubkey;
             if (state->state != SSH_AUTH_AUTO_STATE_KEY_IMPORTED) {
@@ -1571,14 +1573,15 @@ int ssh_userauth_publickey_auto(ssh_session session,
                         continue;
                     }
                     /* if the file does not exists, try configuration options */
-                    state->state = SSH_AUTH_AUTO_STATE_CERTIFICATE_OPTION;
+                    state->state = SSH_AUTH_AUTO_STATE_CERTIFICATE_OPTION_INIT;
                 }
                 /* Try certificate files loaded through options */
+                if (state->state == SSH_AUTH_AUTO_STATE_CERTIFICATE_OPTION_INIT) {
+                    state->cert_it = ssh_list_get_iterator(session->opts.certificate);
+                    state->state = SSH_AUTH_AUTO_STATE_CERTIFICATE_OPTION;
+                }
                 if (state->state == SSH_AUTH_AUTO_STATE_CERTIFICATE_OPTION) {
                     SSH_KEY_FREE(state->cert);
-                    if (state->cert_it == NULL) {
-                        state->cert_it = ssh_list_get_iterator(session->opts.certificate);
-                    }
                     while (state->cert_it != NULL) {
                         const char *cert_file = state->cert_it->data;
                         ssh_key cert = NULL;
@@ -1602,10 +1605,12 @@ int ssh_userauth_publickey_auto(ssh_session session,
                             state->cert = cert;
                             cert = NULL;
                             state->state = SSH_AUTH_AUTO_STATE_CERTIFICATE_OPTION;
+                            state->cert_it = state->cert_it->next;
                             /* try to authenticate with this identity */
                             break; /* try this cert */
                         }
                         /* continue with next identity */
+                        state->cert_it = state->cert_it->next;
                     }
                     if (state->cert != NULL) {
                         continue; /* retry with the certificate */
@@ -2299,7 +2304,7 @@ ssh_userauth_kbdint_getprompt(ssh_session session, unsigned int i, char *echo)
         ssh_set_error_invalid(session);
         return NULL;
     }
-    if (i > session->kbdint->nprompts) {
+    if (i >= session->kbdint->nprompts) {
         ssh_set_error_invalid(session);
         return NULL;
     }

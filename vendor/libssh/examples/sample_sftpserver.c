@@ -305,6 +305,12 @@ static ssh_channel channel_open(ssh_session session, void *userdata)
 {
     struct session_data_struct *sdata = (struct session_data_struct *)userdata;
 
+    /* This server supports only one channel -- fail for repeated channel
+     * requests */
+    if (sdata->channel != NULL) {
+        return NULL;
+    }
+
     sdata->channel = ssh_channel_new(session);
     return sdata->channel;
 }

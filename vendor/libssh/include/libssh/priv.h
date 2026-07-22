@@ -249,6 +249,8 @@ struct tm *ssh_localtime(const time_t *timer, struct tm *result);
 # define LIBSSH_MEM_PROTECTION
 #endif
 
+#define SSH_DANGEROUS_SHELL_CHARS "'`\";&<>|(){}$\\,"
+
 /* forward declarations */
 struct ssh_common_struct;
 struct ssh_kex_struct;

@@ -39,10 +39,29 @@ static void torture_channel_select(void **state)
     close(fd);
 }
 
+static void torture_channel_null_session(void **state)
+{
+    ssh_channel channel = NULL;
+
+    (void)state;
+
+    channel = calloc(1, sizeof(struct ssh_channel_struct));
+
+    assert_non_null(channel);
+
+    channel->state = SSH_CHANNEL_STATE_OPEN;
+    channel->session = NULL;
+
+    assert_int_equal(ssh_channel_is_open(channel), 0);
+
+    free(channel);
+}
+
 int torture_run_tests(void) {
     int rc;
     struct CMUnitTest tests[] = {
         cmocka_unit_test(torture_channel_select),
+        cmocka_unit_test(torture_channel_null_session),
     };
 
     ssh_init();

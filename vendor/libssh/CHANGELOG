@@ -1,6 +1,39 @@
 CHANGELOG
 =========
 
+version 0.12.1 (released 2026-07-21)
+ * Security:
+   * CVE-2026-15370: Stack buffer overflow in SFTP server longname construction
+   * CVE-2026-59842: Information disclosure via short GSSAPI Curve25519 public key
+   * CVE-2026-59843: Denial of service via zero advertised channel packet size
+   * CVE-2026-59844: Denial of service via oversized SFTP read length
+   * CVE-2026-59845: Denial of service via unchecked ProxyCommand fork() failure
+   * CVE-2026-59846: Information disclosure via ProxyCommand %r username expansion
+   * CVE-2026-59847: Integrity downgrade via OpenSSL AES-GCM tag verification
+   * CVE-2026-59848: Denial of service via SFTP responses with unknown request IDs
+   * CVE-2026-59849: Denial of service via automatic certificate authentication loop
+   * CVE-2026-59850: Use-after-free via data callbacks on closed channels
+   * CVE-2026-59851: Authentication bypass via missing GSSAPI principal check
+   * Zero-initialize every ssh_string
+ * Compatibility:
+   * Fix compatibility with C23 / gcc16
+   * Allow hybrid ML-KEM key exchange in FIPS mode
+ * Bugfixes:
+   * Fix multiple memory leaks, null checks, and error checks
+   * Fix parameter size mismatch in mlkem768x25519-sha256
+   * Fix client SFTP messages being ignored if sent at high rate
+   * Validate peer public key in DH key exchange
+   * Fix ambiguous error reporting of sftp_init
+   * Fix hidden integer underflow in socket packet callback
+   * Avoid remote window overflow
+   * Fix socket data callback return value on rekey failure
+   * Avoid off-by-one overflow during kbdint authentication
+   * Avoid logging uninitialized sequence numbers
+   * Avoid double conversion of SFTP version number
+   * Send correct SFTP server version number
+   * Avoid handling repeated SFTP INIT messages
+   * Harmonize return values from SFTP server callbacks
+
 version 0.12.0 (released 2026-02-10)
  * Deprecations and removals:
    * Bumped minimal RSA key size to 1024 bits

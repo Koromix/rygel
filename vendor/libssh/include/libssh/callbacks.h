@@ -242,8 +242,9 @@ typedef int (*ssh_auth_password_callback) (ssh_session session, const char *user
 typedef int (*ssh_auth_none_callback) (ssh_session session, const char *user, void *userdata);
 
 /**
- * @brief SSH authentication callback. Tries to authenticates user with the
- * "gssapi-with-mic" method
+ * @brief SSH authentication callback. Tries to authenticate user with the
+ * "gssapi-with-mic" or "gssapi-keyex" method. This callback is dispatched
+ * after the server has already verified the authenticity of the principal.
  * @param session Current session handler
  * @param user Username of the user (can be spoofed)
  * @param principal Authenticated principal of the user, including realm.
@@ -252,9 +253,9 @@ typedef int (*ssh_auth_none_callback) (ssh_session session, const char *user, vo
  * @returns `SSH_AUTH_PARTIAL` Partial authentication, more authentication means
  * are needed.
  * @returns `SSH_AUTH_DENIED` Authentication failed.
- * @warning Implementations should verify that parameter user matches in some
- * way the principal. user and principal can be different. Only the latter is
- * guaranteed to be safe.
+ * @warning Using this callback, implementations should verify that the principal
+ * is allowed to log in as the local user, e.g. by checking that the username
+ * matches the principal in some way.
  */
 typedef int (*ssh_auth_gssapi_mic_callback) (ssh_session session, const char *user, const char *principal,
 		void *userdata);

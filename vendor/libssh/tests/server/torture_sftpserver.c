@@ -468,6 +468,9 @@ static void torture_server_test_sftp_function(void **state)
     rc = sftp_init(sftp);
     assert_int_equal(rc, SSH_OK);
 
+    /* Assert some information about the connected session */
+    assert_int_equal(sftp->server_version, LIBSFTP_VERSION);
+
     /* symbol link */
     rc = sftp_symlink(sftp, "/tmp/this_is_the_link", "/tmp/sftp_symlink_test");
     assert_int_equal(rc, SSH_OK);
@@ -505,6 +508,74 @@ static void torture_server_test_sftp_function(void **state)
 
     rc = sftp_unlink(sftp, "ssh-copy");
     assert_int_equal(rc, SSH_OK);
+}
+
+static void torture_server_sftp_init_repeat(void **state)
+{
+    struct test_server_st *tss = *state;
+    struct torture_state *s = NULL;
+    struct torture_sftp *tsftp = NULL;
+    ssh_session session = NULL;
+    sftp_session sftp = NULL;
+    ssh_buffer buffer = NULL;
+    sftp_packet packet = NULL;
+    uint32_t version;
+    int rc;
+
+    assert_non_null(tss);
+
+    s = tss->state;
+    assert_non_null(s);
+
+    session = s->ssh.session;
+    assert_non_null(session);
+
+    rc = ssh_options_set(session, SSH_OPTIONS_USER, SSHD_DEFAULT_USER);
+    assert_int_equal(rc, SSH_OK);
+
+    rc = ssh_connect(session);
+    assert_int_equal(rc, SSH_OK);
+
+    rc = ssh_userauth_none(session, NULL);
+    /* This request should return a SSH_REQUEST_DENIED error */
+    if (rc == SSH_AUTH_ERROR) {
+        assert_int_equal(ssh_get_error_code(session), SSH_REQUEST_DENIED);
+    }
+    rc = ssh_userauth_list(session, NULL);
+    assert_true(rc & SSH_AUTH_METHOD_PASSWORD);
+
+    /* Using the default password for the server */
+    rc = ssh_userauth_password(session, NULL, SSHD_DEFAULT_PASSWORD);
+    assert_int_equal(rc, SSH_AUTH_SUCCESS);
+
+    /* init sftp session */
+    tsftp = s->ssh.tsftp;
+    sftp = sftp_new(session);
+    assert_non_null(sftp);
+    tsftp->sftp = sftp;
+
+    buffer = ssh_buffer_new();
+    assert_non_null(buffer);
+
+    /* send one version N-1 */
+    rc = ssh_buffer_pack(buffer, "d", LIBSFTP_VERSION - 1);
+    assert_int_equal(rc, SSH_OK);
+    rc = sftp_packet_write(sftp, SSH_FXP_INIT, buffer);
+    SSH_BUFFER_FREE(buffer);
+    assert_int_equal(rc, 9);
+
+    packet = sftp_packet_read(sftp);
+    assert_non_null(packet);
+    assert_int_equal(packet->type, SSH_FXP_VERSION);
+
+    /* Make sure we get the expected version N-1 */
+    rc = ssh_buffer_unpack(packet->payload, "d", &version);
+    assert_int_equal(rc, SSH_OK);
+    assert_int_equal(version, LIBSFTP_VERSION - 1);
+
+    /* Repeated INIT will fail on server */
+    rc = sftp_init(sftp);
+    assert_int_equal(rc, SSH_ERROR);
 }
 
 static void torture_server_sftp_open_read_write(void **state)
@@ -1087,6 +1158,93 @@ torture_server_sftp_setstat(void **state)
     sftp_attributes_free(tmp_attr);
 }
 
+static void
+torture_server_sftp_readdir(void **state)
+{
+
+    char name[128] = {0};
+    char data[10] = "0123456789";
+    int rc;
+    size_t len;
+    int atime = 10676, mtime = 13467;
+    mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP;
+    int num_files = 0;
+    sftp_dir dir;
+    sftp_attributes a = NULL;
+
+    struct passwd *pwd = NULL;
+    struct test_server_st *tss = *state;
+    struct torture_state *s = NULL;
+    struct torture_sftp *tsftp = NULL;
+    struct sftp_attributes_struct attr;
+
+    sftp_session sftp = NULL;
+    ssh_session session = NULL;
+    sftp_file new_file = NULL;
+
+    pwd = getpwnam("alice");
+    assert_non_null(pwd);
+
+    assert_non_null(tss);
+
+    s = tss->state;
+    assert_non_null(s);
+
+    session = s->ssh.session;
+    assert_non_null(session);
+
+    tsftp = s->ssh.tsftp;
+    assert_non_null(tsftp);
+
+    sftp = tsftp->sftp;
+    assert_non_null(sftp);
+    assert_non_null(tsftp->testdir);
+    snprintf(name, sizeof(name), "%s/server_setstat_test", tsftp->testdir);
+    new_file = sftp_open(sftp, name, O_WRONLY | O_CREAT, 0700);
+    assert_non_null(new_file);
+    len = sftp_write(new_file, data, sizeof(data));
+    assert_int_equal(len, sizeof(data));
+    rc = sftp_close(new_file);
+    assert_int_equal(rc, SSH_OK);
+
+    ZERO_STRUCT(attr);
+    attr.flags = SSH_FILEXFER_ATTR_SIZE | SSH_FILEXFER_ATTR_PERMISSIONS |
+                 SSH_FILEXFER_ATTR_UIDGID | SSH_FILEXFER_ATTR_ACMODTIME;
+
+    attr.size = len;
+    attr.uid = pwd->pw_uid;
+    attr.gid = pwd->pw_gid;
+    attr.permissions = mode;
+    attr.atime = atime;
+    attr.mtime = mtime;
+
+    rc = sftp_setstat(sftp, name, &attr);
+    assert_int_equal(rc, SSH_OK);
+
+    dir = sftp_opendir(sftp, tsftp->testdir);
+    assert_non_null(dir);
+    while ((a = sftp_readdir(sftp, dir))) {
+        if (strcmp(a->name, "server_setstat_test") == 0) {
+            /* verify long name is in the expected format */
+            assert_string_equal(a->longname,
+                "-rw-r-----   1 5001 9000 10 Jan  1 03:44:27 1970 server_setstat_test");
+        } else if (strcmp(a->name, ".") != 0 &&
+            strcmp(a->name, "..") != 0) {
+            /* There is a file we did not create */
+            assert_true(false);
+        }
+
+        num_files++;
+        sftp_attributes_free(a);
+    }
+    assert_int_equal(num_files, 3);
+    rc = sftp_dir_eof(dir);
+    assert_int_equal(rc, 1);
+    rc = sftp_closedir(dir);
+    assert_ssh_return_code(session, rc);
+}
+
+
 /* The max number of handles is 256 in sftpserver.h -- keep in sync! */
 #define SFTP_HANDLES 256
 static void torture_server_sftp_handles_exhaustion(void **state)
@@ -1130,6 +1288,46 @@ static void torture_server_sftp_handles_exhaustion(void **state)
     }
 }
 
+static void torture_server_sftp_opendir_handles_exhaustion(void **state)
+{
+    struct test_server_st *tss = *state;
+    struct torture_state *s = NULL;
+    struct torture_sftp *tsftp = NULL;
+    char name[128] = {0};
+    sftp_file handles[SFTP_HANDLES] = {0};
+    sftp_dir dir = NULL;
+    sftp_session sftp = NULL;
+    int rc;
+
+    assert_non_null(tss);
+
+    s = tss->state;
+    assert_non_null(s);
+
+    tsftp = s->ssh.tsftp;
+    assert_non_null(tsftp);
+
+    sftp = tsftp->sftp;
+    assert_non_null(sftp);
+
+    /* Occupy all handles with files */
+    for (int i = 0; i < SFTP_HANDLES; i++) {
+        snprintf(name, sizeof(name), "%s/fn%d", tsftp->testdir, i);
+        handles[i] = sftp_open(sftp, name, O_WRONLY | O_CREAT, 0700);
+        assert_non_null(handles[i]);
+    }
+
+    /* Opening a directory should fail gracefully without leaking h->name */
+    dir = sftp_opendir(sftp, tsftp->testdir);
+    assert_null(dir);
+
+    /* cleanup */
+    for (int i = 0; i < SFTP_HANDLES; i++) {
+        rc = sftp_close(handles[i]);
+        assert_int_equal(rc, SSH_OK);
+    }
+}
+
 static void torture_server_sftp_handle_overrun(void **state)
 {
     struct test_server_st *tss = *state;
@@ -1160,11 +1358,16 @@ static void torture_server_sftp_handle_overrun(void **state)
     handle = sftp_open(sftp, name, O_WRONLY | O_CREAT, 0700);
     assert_non_null(handle);
 
+    rc = sftp_close(handle);
+    assert_int_equal(rc, SSH_OK);
+
     /* Craft an malicious SFTP packet trying to access handle 256
      * (SFTP_HANDLES) */
     buffer = ssh_buffer_new();
-    id = sftp_get_new_id(sftp);
     assert_non_null(buffer);
+
+    rc = sftp_get_new_id(sftp, &id);
+    assert_int_equal(rc, SSH_OK);
 
     rc = ssh_buffer_pack(buffer,
                          "ddPqd",
@@ -1186,9 +1389,6 @@ static void torture_server_sftp_handle_overrun(void **state)
     sftp_message_free(msg);
     assert_int_equal(status->status, SSH_FX_INVALID_HANDLE);
     status_msg_free(status);
-
-    rc = sftp_close(handle);
-    assert_int_equal(rc, SSH_OK);
 }
 
 static void torture_server_sftp_payload_overrun(void **state)
@@ -1236,8 +1436,10 @@ static void torture_server_sftp_payload_overrun(void **state)
     /* Craft an malicious SFTP packet trying to write to the file with
      * payload_length overrun */
     buffer = ssh_buffer_new();
-    id = sftp_get_new_id(sftp);
     assert_non_null(buffer);
+
+    rc = sftp_get_new_id(sftp, &id);
+    assert_int_equal(rc, SSH_OK);
 
     rc = ssh_buffer_pack(buffer,
                          "dbdSqd",
@@ -1260,6 +1462,47 @@ static void torture_server_sftp_payload_overrun(void **state)
     free(handle);
 }
 
+static void torture_server_sftp_after_channel_close(void **state)
+{
+    struct test_server_st *tss = *state;
+    struct torture_state *s = NULL;
+    struct torture_sftp *tsftp = NULL;
+    char tmp_file[PATH_MAX] = {0};
+    sftp_session sftp = NULL;
+    sftp_file handle = NULL;
+    struct stat sb;
+    int rc;
+
+    assert_non_null(tss);
+
+    s = tss->state;
+    assert_non_null(s);
+
+    tsftp = s->ssh.tsftp;
+    assert_non_null(tsftp);
+
+    sftp = tsftp->sftp;
+    assert_non_null(sftp);
+
+    snprintf(tmp_file, sizeof(tmp_file), "%s/newfile", tss->temp_dir);
+
+    /* Close the channel */
+    ssh_channel_close(sftp->channel);
+    /* Reset the flags so the channel looks open for the caller so we do not
+     * have to reimplement sending the message in the test */
+    sftp->channel->local_eof = 0;
+    sftp->channel->state = SSH_CHANNEL_STATE_OPEN;
+    sftp->channel->flags &= ~SSH_CHANNEL_FLAG_CLOSED_LOCAL;
+
+    /* Create a new file */
+    handle = sftp_open(sftp, tmp_file, O_WRONLY | O_CREAT, 0751);
+    assert_null(handle);
+
+    /* Should not be created */
+    rc = stat(tmp_file, &sb);
+    assert_int_equal(rc, -1);
+}
+
 int torture_run_tests(void) {
     int rc;
     struct CMUnitTest tests[] = {
@@ -1267,6 +1510,9 @@ int torture_run_tests(void) {
                                         session_setup,
                                         session_teardown),
         cmocka_unit_test_setup_teardown(torture_server_test_sftp_function,
+                                        session_setup,
+                                        session_teardown),
+        cmocka_unit_test_setup_teardown(torture_server_sftp_init_repeat,
                                         session_setup,
                                         session_teardown),
         cmocka_unit_test_setup_teardown(torture_server_sftp_open_read_write,
@@ -1287,7 +1533,13 @@ int torture_run_tests(void) {
         cmocka_unit_test_setup_teardown(torture_server_sftp_setstat,
                                         session_setup_sftp,
                                         session_teardown),
+        cmocka_unit_test_setup_teardown(torture_server_sftp_readdir,
+                                        session_setup_sftp,
+                                        session_teardown),
         cmocka_unit_test_setup_teardown(torture_server_sftp_handles_exhaustion,
+                                        session_setup_sftp,
+                                        session_teardown),
+        cmocka_unit_test_setup_teardown(torture_server_sftp_opendir_handles_exhaustion,
                                         session_setup_sftp,
                                         session_teardown),
         cmocka_unit_test_setup_teardown(torture_server_sftp_handle_overrun,
@@ -1296,7 +1548,12 @@ int torture_run_tests(void) {
         cmocka_unit_test_setup_teardown(torture_server_sftp_payload_overrun,
                                         session_setup_sftp,
                                         session_teardown),
+        cmocka_unit_test_setup_teardown(torture_server_sftp_after_channel_close,
+                                        session_setup_sftp,
+                                        session_teardown),
     };
+
+    setenv("TZ", "UTC", 1);
 
     ssh_init();
 

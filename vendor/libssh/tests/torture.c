@@ -1035,6 +1035,12 @@ torture_setup_create_sshd_config(void **state, bool pam, bool second_sshd)
         "\n"
         "GSSAPIKeyExchange no\n"
         "KexAlgorithms "
+#if defined(OPENSSH_MLKEM768NISTP256_SHA256)
+        "mlkem768nistp256-sha256,"
+#ifdef HAVE_MLKEM1024
+        "mlkem1024nistp384-sha384,"
+#endif
+#endif
         "ecdh-sha2-nistp256,ecdh-sha2-nistp384,"
         "ecdh-sha2-nistp521,diffie-hellman-group-exchange-sha256,"
         "diffie-hellman-group14-sha256,diffie-hellman-group16-sha512,"

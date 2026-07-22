@@ -369,8 +369,8 @@ int ssh_options_set_algo(ssh_session session,
  *                default ssh directory.\n
  *                \n
  *                The ssh directory is used for files like known_hosts
- *                and identity (private and public key). It may include
- *                "%s" which will be replaced by the user home
+ *                and identity (private and public key). It may start
+ *                with ~ which will be replaced by the user home
  *                directory.
  *
  *              - SSH_OPTIONS_KNOWNHOSTS:

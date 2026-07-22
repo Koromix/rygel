@@ -267,47 +267,40 @@ static void torture_options_get_key_exchange(void **state)
     ssh_session session = *state;
     int rc;
     char *value = NULL;
+    const char *exp_value = NULL;
 
     /* Test defaults returned */
     rc = ssh_options_get(session, SSH_OPTIONS_KEY_EXCHANGE, &value);
     assert_ssh_return_code(session, rc);
     assert_non_null(value);
     if (ssh_fips_mode()) {
-        assert_string_equal(value,
-                            "ecdh-sha2-nistp256,"
-                            "ecdh-sha2-nistp384,"
-                            "ecdh-sha2-nistp521,"
-                            "diffie-hellman-group-exchange-sha256,"
-                            "diffie-hellman-group14-sha256,"
-                            "diffie-hellman-group16-sha512,"
-                            "diffie-hellman-group18-sha512");
-    } else {
+        exp_value = "mlkem768nistp256-sha256,"
 #ifdef HAVE_MLKEM1024
-        assert_string_equal(value,
-                            "mlkem768x25519-sha256,"
-                            "mlkem768nistp256-sha256,"
-                            "mlkem1024nistp384-sha384,"
-                            "sntrup761x25519-sha512,sntrup761x25519-sha512@openssh.com,"
-                            "curve25519-sha256,curve25519-sha256@libssh.org,"
-                            "ecdh-sha2-nistp256,ecdh-sha2-nistp384,"
-                            "ecdh-sha2-nistp521,diffie-hellman-group18-sha512,"
-                            "diffie-hellman-group16-sha512,"
-                            "diffie-hellman-group-exchange-sha256,"
-                            "diffie-hellman-group14-sha256");
-#else
-        assert_string_equal(value,
-                            "mlkem768x25519-sha256,"
-                            "mlkem768nistp256-sha256,"
-                            "sntrup761x25519-sha512,"
-                            "sntrup761x25519-sha512@openssh.com,"
-                            "curve25519-sha256,curve25519-sha256@libssh.org,"
-                            "ecdh-sha2-nistp256,ecdh-sha2-nistp384,"
-                            "ecdh-sha2-nistp521,diffie-hellman-group18-sha512,"
-                            "diffie-hellman-group16-sha512,"
-                            "diffie-hellman-group-exchange-sha256,"
-                            "diffie-hellman-group14-sha256");
+                    "mlkem1024nistp384-sha384,"
 #endif
+                    "ecdh-sha2-nistp256,"
+                    "ecdh-sha2-nistp384,"
+                    "ecdh-sha2-nistp521,"
+                    "diffie-hellman-group-exchange-sha256,"
+                    "diffie-hellman-group14-sha256,"
+                    "diffie-hellman-group16-sha512,"
+                    "diffie-hellman-group18-sha512";
+    } else {
+        exp_value = "mlkem768x25519-sha256,"
+                    "mlkem768nistp256-sha256,"
+#ifdef HAVE_MLKEM1024
+                    "mlkem1024nistp384-sha384,"
+#endif
+                    "sntrup761x25519-sha512,"
+                    "sntrup761x25519-sha512@openssh.com,"
+                    "curve25519-sha256,curve25519-sha256@libssh.org,"
+                    "ecdh-sha2-nistp256,ecdh-sha2-nistp384,"
+                    "ecdh-sha2-nistp521,diffie-hellman-group18-sha512,"
+                    "diffie-hellman-group16-sha512,"
+                    "diffie-hellman-group-exchange-sha256,"
+                    "diffie-hellman-group14-sha256";
     }
+    assert_string_equal(value, exp_value);
     ssh_string_free_char(value);
 
     /* Test explicit kexes */

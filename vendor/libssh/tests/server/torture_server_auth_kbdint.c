@@ -716,7 +716,10 @@ static void torture_server_auth_kbdint(void **state)
     struct test_server_st *tss = *state;
     struct torture_state *s;
     ssh_session session;
+    int nprompts = 0;
     int rc;
+    const char *prompt = NULL;
+    char echo;
 
     assert_non_null(tss);
 
@@ -742,7 +745,19 @@ static void torture_server_auth_kbdint(void **state)
 
     rc = ssh_userauth_kbdint(session, NULL, NULL);
     assert_int_equal(rc, SSH_AUTH_INFO);
-    assert_int_equal(ssh_userauth_kbdint_getnprompts(session), 2);
+    nprompts = ssh_userauth_kbdint_getnprompts(session);
+    assert_int_equal(nprompts, 2);
+
+    prompt = ssh_userauth_kbdint_getprompt(NULL, 0, &echo);
+    assert_null(prompt);
+    prompt = ssh_userauth_kbdint_getprompt(session, 0, &echo);
+    assert_string_equal(prompt, "username: ");
+    assert_int_equal(echo, 1);
+    prompt = ssh_userauth_kbdint_getprompt(session, 1, &echo);
+    assert_string_equal(prompt, "password: ");
+    assert_int_equal(echo, 0);
+    prompt = ssh_userauth_kbdint_getprompt(session, 2, &echo);
+    assert_null(prompt);
 
     /* Reply the first 2 prompts using the username and password */
     rc = ssh_userauth_kbdint_setanswer(session, 0,
@@ -756,7 +771,12 @@ static void torture_server_auth_kbdint(void **state)
     /* Resend the password */
     rc = ssh_userauth_kbdint(session, NULL, NULL);
     assert_int_equal(rc, SSH_AUTH_INFO);
-    assert_int_equal(ssh_userauth_kbdint_getnprompts(session), 1);
+    nprompts = ssh_userauth_kbdint_getnprompts(session);
+    assert_int_equal(nprompts, 1);
+
+    prompt = ssh_userauth_kbdint_getprompt(session, 0, &echo);
+    assert_string_equal(prompt, "retype password: ");
+    assert_int_equal(echo, 0);
 
     rc = ssh_userauth_kbdint_setanswer(session, 0,
             TORTURE_SSH_USER_BOB_PASSWORD);
@@ -765,8 +785,11 @@ static void torture_server_auth_kbdint(void **state)
     rc = ssh_userauth_kbdint(session, NULL, NULL);
 
     /* Sometimes, SSH server send an empty query at the end of exchange */
-    if(rc == SSH_AUTH_INFO) {
-        assert_int_equal(ssh_userauth_kbdint_getnprompts(session), 0);
+    if (rc == SSH_AUTH_INFO) {
+        nprompts = ssh_userauth_kbdint_getnprompts(session);
+        assert_int_equal(nprompts, 0);
+        prompt = ssh_userauth_kbdint_getprompt(session, 0, &echo);
+        assert_null(prompt);
         rc = ssh_userauth_kbdint(session, NULL, NULL);
     }
 

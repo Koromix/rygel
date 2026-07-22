@@ -366,10 +366,6 @@ static void torture_override_mlkem768nistp256_sha256(void **state)
     struct torture_state *s = *state;
     bool internal_mlkem768_called;
 
-    if (ssh_fips_mode()) {
-        skip();
-    }
-
     test_algorithm(s->ssh.session,
                    "mlkem768nistp256-sha256",
                    NULL, /* cipher */

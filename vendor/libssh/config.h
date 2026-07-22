@@ -1,5 +1,5 @@
 #define PACKAGE "libssh"
-#define VERSION "0.12.0"
+#define VERSION "0.12.1"
 
 #if defined(_WIN32)
     #define GLOBAL_BIND_CONFIG "/etc/ssh/libssh_server_config"

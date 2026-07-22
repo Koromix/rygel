@@ -798,6 +798,8 @@ static sftp_message sftp_get_message(sftp_packet packet)
 {
     sftp_session sftp = packet->sftp;
     sftp_message msg = NULL;
+    struct ssh_iterator *id_it = NULL;
+    bool id_found = false;
     int rc;
 
     switch (packet->type) {
@@ -845,7 +847,61 @@ static sftp_message sftp_get_message(sftp_packet packet)
             msg->id,
             msg->packet_type);
 
+    /* Validate that this ID is in our outstanding requests list */
+    id_it = ssh_list_get_iterator(sftp->outstanding_ids);
+    for (; id_it != NULL; id_it = id_it->next) {
+        uint32_t *stored_id = (uint32_t *)id_it->data;
+        if (*stored_id == msg->id) {
+            id_found = true;
+            ssh_list_remove(sftp->outstanding_ids, id_it);
+            free(stored_id);
+            break;
+        }
+    }
+
+    if (!id_found) {
+        ssh_set_error(packet->sftp->session,
+                      SSH_FATAL,
+                      "Unknown request ID %" PRIu32,
+                      msg->id);
+        sftp_message_free(msg);
+        sftp_set_error(packet->sftp, SSH_FX_FAILURE);
+        return NULL;
+    }
+
     return msg;
+}
+
+int sftp_get_new_id(sftp_session sftp, uint32_t *id_out)
+{
+    uint32_t *id = NULL;
+    int rc;
+
+    if (id_out == NULL) {
+        ssh_set_error_invalid(sftp->session);
+        sftp_set_error(sftp, SSH_FX_FAILURE);
+        return SSH_ERROR;
+    }
+
+    id = malloc(sizeof(uint32_t));
+    if (id == NULL) {
+        ssh_set_error_oom(sftp->session);
+        sftp_set_error(sftp, SSH_FX_FAILURE);
+        return SSH_ERROR;
+    }
+
+    *id = ++sftp->id_counter;
+    rc = ssh_list_append(sftp->outstanding_ids, id);
+    if (rc != SSH_OK) {
+        free(id);
+        ssh_set_error_oom(sftp->session);
+        sftp_set_error(sftp, SSH_FX_FAILURE);
+        return SSH_ERROR;
+    }
+
+    *id_out = *id;
+
+    return SSH_OK;
 }
 
 int sftp_read_and_dispatch(sftp_session sftp)

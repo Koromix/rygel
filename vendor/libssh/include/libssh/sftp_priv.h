@@ -97,15 +97,17 @@ int sftp_recv_response_msg(sftp_session sftp,
                            bool blocking,
                            sftp_message *msg_ptr);
 
-/*
- * Assigns a new SFTP ID for new requests and assures there is no collision
- * between them.
- * Returns a new ID ready to use in a request
+/**
+ * @brief Assigns a new SFTP ID for new requests and assures there is no
+ *        collision between them.
+ *
+ * @param sftp           The sftp session handle.
+ * @param id_out         Pointer to store the new ID.
+ *
+ * @returns SSH_OK on success with the new ID stored in *id
+ * @returns SSH_ERROR on failure with the sftp and ssh errors set
  */
-static inline uint32_t sftp_get_new_id(sftp_session session)
-{
-    return ++session->id_counter;
-}
+int sftp_get_new_id(sftp_session sftp, uint32_t *id_out);
 
 sftp_status_message parse_status_msg(sftp_message msg);
 

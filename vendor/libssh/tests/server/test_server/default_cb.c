@@ -53,6 +53,10 @@
 #include <util.h>
 #endif
 
+#ifdef WITH_GSSAPI
+#include <krb5.h>
+#endif
+
 int auth_none_cb(UNUSED_PARAM(ssh_session session),
                  const char *user,
                  void *userdata)
@@ -232,39 +236,47 @@ auth_kbdint_cb(ssh_message message, ssh_session session, void *userdata)
 }
 
 #if WITH_GSSAPI
-int auth_gssapi_mic_cb(ssh_session session,
-                       UNUSED_PARAM(const char *user),
-                       UNUSED_PARAM(const char *principal),
+int auth_gssapi_mic_cb(UNUSED_PARAM(ssh_session session),
+                       const char *user,
+                       const char *principal,
                        void *userdata)
 {
-    ssh_gssapi_creds creds;
-    struct session_data_st *sdata;
+    struct session_data_st *sdata = NULL;
+    krb5_context krb5_ctx;
+    krb5_principal krb5_princ;
+
+    if (user == NULL || principal == NULL || userdata == NULL) {
+        fprintf(stderr, "Error: invalid arguments to GSSAPI auth callback\n");
+        return SSH_AUTH_ERROR;
+    }
 
     sdata = (struct session_data_st *)userdata;
 
-    if (sdata == NULL) {
-        fprintf(stderr, "Error: NULL userdata\n");
-        goto null_userdata;
+    if (krb5_init_context(&krb5_ctx) != 0) {
+        fprintf(stderr, "Error: failed to initialize krb5 context\n");
+        return SSH_AUTH_ERROR;
     }
 
-    printf("GSSAPI authentication\n");
-
-    creds = ssh_gssapi_get_creds(session);
-    if (creds != NULL) {
-        printf("Received some gssapi credentials\n");
-    } else {
-        printf("Not received any forwardable creds\n");
+    if (krb5_parse_name(krb5_ctx, principal, &krb5_princ) != 0) {
+        fprintf(stderr, "Error: failed to parse krb5 principal name\n");
+        krb5_free_context(krb5_ctx);
+        return SSH_AUTH_ERROR;
     }
+
+    if (!krb5_kuserok(krb5_ctx, krb5_princ, user)) {
+        krb5_free_principal(krb5_ctx, krb5_princ);
+        krb5_free_context(krb5_ctx);
+        sdata->auth_attempts++;
+        return SSH_AUTH_DENIED;
+    }
+
+    krb5_free_principal(krb5_ctx, krb5_princ);
+    krb5_free_context(krb5_ctx);
 
     printf("Authenticated\n");
-
     sdata->authenticated = 1;
     sdata->auth_attempts = 0;
-
     return SSH_AUTH_SUCCESS;
-
-null_userdata:
-    return SSH_AUTH_DENIED;
 }
 #endif
 

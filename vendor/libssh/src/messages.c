@@ -1168,6 +1168,7 @@ SSH_PACKET_CALLBACK(ssh_packet_userauth_request)
         ssh_string mic_token_string = NULL;
         OM_uint32 maj_stat, min_stat;
         ssh_buffer buf = NULL;
+        ssh_server_callbacks callbacks = session->server_callbacks;
 
         if (!ssh_kex_is_gss(session->current_crypto)) {
             ssh_set_error(session,
@@ -1220,7 +1221,23 @@ SSH_PACKET_CALLBACK(ssh_packet_userauth_request)
             goto error;
         }
 
-        ssh_auth_reply_success(session, 0);
+        if (ssh_callbacks_exists(callbacks, auth_gssapi_mic_function)) {
+            rc = callbacks->auth_gssapi_mic_function(session,
+                                                     session->gssapi->user,
+                                                     session->gssapi->canonic_user,
+                                                     callbacks->userdata);
+            switch (rc) {
+            case SSH_AUTH_SUCCESS:
+                ssh_auth_reply_success(session, 0);
+                break;
+            case SSH_AUTH_PARTIAL:
+                ssh_auth_reply_success(session, 1);
+                break;
+            default:
+                ssh_auth_reply_default(session, 0);
+                break;
+            }
+        }
 
         /* bypass the message queue thing */
         SAFE_FREE(service);

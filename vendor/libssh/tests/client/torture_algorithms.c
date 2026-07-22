@@ -773,10 +773,6 @@ static void torture_algorithms_ecdh_mlkem768nistp256_sha256(void **state)
 {
     struct torture_state *s = *state;
 
-    if (ssh_fips_mode()) {
-        skip();
-    }
-
     test_algorithm(s->ssh.session,
                    "mlkem768nistp256-sha256",
                    NULL /*cipher*/,
@@ -788,10 +784,6 @@ static void torture_algorithms_ecdh_mlkem768nistp256_sha256(void **state)
 static void torture_algorithms_ecdh_mlkem1024nistp384_sha384(void **state)
 {
     struct torture_state *s = *state;
-
-    if (ssh_fips_mode()) {
-        skip();
-    }
 
     test_algorithm(s->ssh.session,
                    "mlkem1024nistp384-sha384",

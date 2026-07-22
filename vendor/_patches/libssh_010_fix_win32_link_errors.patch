@@ -23,7 +23,7 @@ diff --git a/vendor/libssh/src/legacy.c b/vendor/libssh/src/legacy.c
 index 5fad635f9f..a2a39a6d21 100644
 --- a/vendor/libssh/src/legacy.c
 +++ b/vendor/libssh/src/legacy.c
-@@ -26,9 +26,16 @@
+@@ -26,9 +26,12 @@
  
  #include "config.h"
  
@@ -33,10 +33,6 @@ index 5fad635f9f..a2a39a6d21 100644
  #include <errno.h>
  #include <stdio.h>
  
-+#ifdef _WIN32
-+#include <winsock2.h>
-+#endif
-+
  #include <libssh/priv.h>
  #include <libssh/session.h>
  #include <libssh/server.h>

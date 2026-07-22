@@ -41,6 +41,12 @@
 #include <sys/ioctl.h>
 #include <sys/stat.h>
 
+#include <setjmp.h> // for cmocka
+#include <stdarg.h> // for cmocka
+#include <stdint.h> // for cmocka
+
+#include <cmocka.h>
+
 #ifdef HAVE_LIBUTIL_H
 #include <libutil.h>
 #endif
@@ -129,6 +135,11 @@ static ssh_channel sftp_channel_new_session_cb(ssh_session session, void *userda
         goto end;
     }
 
+    if (sdata->channel != NULL) {
+        fprintf(stderr, "Only one channel is supported\n");
+        goto end;
+    }
+
     chan = ssh_channel_new(session);
     if (chan == NULL) {
         fprintf(stderr, "Error creating channel: %s\n",
@@ -211,6 +222,33 @@ end:
     return cb;
 }
 
+/* Default SFTP channel data callback with some additional checks */
+int sftp_channel_data_callback(ssh_session session,
+                               ssh_channel channel,
+                               void *data,
+                               uint32_t len,
+                               int is_stderr,
+                               void *userdata)
+{
+    sftp_session *sftpp = (sftp_session *)userdata;
+    int rv;
+
+    rv = sftp_channel_default_data_callback(session,
+                                            channel,
+                                            data,
+                                            len,
+                                            is_stderr,
+                                            userdata);
+
+    if (sftpp != NULL && *sftpp != NULL) {
+        sftp_session sftp = *sftpp;
+        /* NOTE that this expects both server and clieng being libssh with this
+         * same version number */
+        assert_true(sftp->client_version <= LIBSFTP_VERSION);
+    }
+    return rv;
+}
+
 /* The caller is responsible to set the userdata to be provided to the callback
  * The caller is responsible to free the allocated structure
  * */
@@ -225,7 +263,7 @@ struct ssh_channel_callbacks_struct *get_sftp_channel_cb(void)
         goto end;
     }
 
-    cb->channel_data_function = sftp_channel_default_data_callback;
+    cb->channel_data_function = sftp_channel_data_callback;
     cb->channel_subsystem_request_function = sftp_channel_default_subsystem_request;
 
 end:

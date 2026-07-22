@@ -243,6 +243,7 @@ ssh_gssapi_handle_userauth(ssh_session session, const char *user,
     /* Get the server supported oids */
     rc = ssh_gssapi_server_oids(&supported);
     if (rc != SSH_OK) {
+        gss_release_oid_set(&min_stat, &both_supported);
         return SSH_ERROR;
     }
 
@@ -332,6 +333,11 @@ ssh_gssapi_handle_userauth(ssh_session session, const char *user,
         }
     }
     gss_release_oid_set(&min_stat, &selected);
+    if (i == n_oid) {
+        SSH_LOG(SSH_LOG_TRACE, "GSSAPI: no selected OID matched client OIDs");
+        ssh_auth_reply_default(session, 0);
+        return SSH_ERROR;
+    }
     session->gssapi->user = strdup(user);
     session->gssapi->state = SSH_GSSAPI_STATE_RCV_TOKEN;
     return ssh_gssapi_send_response(session, oids[i]);
@@ -730,7 +736,8 @@ int ssh_gssapi_check_client_config(ssh_session session)
         gssapi = calloc(1, sizeof(struct ssh_gssapi_struct));
         if (gssapi == NULL) {
             ssh_set_error_oom(session);
-            return SSH_ERROR;
+            ret = SSH_ERROR;
+            break;
         }
         gssapi->server_creds = GSS_C_NO_CREDENTIAL;
         gssapi->client_creds = GSS_C_NO_CREDENTIAL;
@@ -818,6 +825,11 @@ int ssh_gssapi_check_client_config(ssh_session session)
         gss_release_oid(&min_stat, &gssapi->client.oid);
         gss_release_buffer(&min_stat, &output_token);
         gss_delete_sec_context(&min_stat, &gssapi->ctx, GSS_C_NO_BUFFER);
+
+        if (client_id != GSS_C_NO_NAME) {
+            gss_release_name(&min_stat, &client_id);
+            client_id = GSS_C_NO_NAME;
+        }
 
         SAFE_FREE(gssapi->canonic_user);
         SAFE_FREE(gssapi);
