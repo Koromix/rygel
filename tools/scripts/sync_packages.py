@@ -7,13 +7,15 @@ import hashlib
 import json
 import os
 import re
+import random
 import sys
 import shutil
 import subprocess
+import tempfile
+import threading
 
 REPOSITORY_NAME = 'koromix'
 GPG_SIGNING_USER = 'niels.martignene@protonmail.com'
-MINISIGN_KEY_FILE = os.path.expanduser('~/.minisign/minisign.key')
 
 DEFAULT_IMPORT_DIR = '../../bin/Packages'
 
@@ -105,7 +107,35 @@ def process_releases(root):
     with open(root + '/packages.json', 'w') as f:
         json.dump(packages, f, indent = 4)
     run_command('gzip', ['-f', root + '/packages.json'])
-    run_command('minisign', ['-S', '-s', MINISIGN_KEY_FILE, '-f', '-m', root + '/packages.json.gz'], capture = False)
+
+    minisign_key_gpg = os.path.dirname(__file__) + '/../package/repo/minisign.key.gpg'
+    minisign_key = capture_command('gpg', ['--decrypt', minisign_key_gpg])
+    minisign_key_fifo = create_secret_fifo(minisign_key)
+
+    try:
+        run_command('minisign', ['-S', '-s', minisign_key_fifo, '-f', '-m', root + '/packages.json.gz'], capture = False)
+    finally:
+        os.unlink(minisign_key_fifo)
+
+def create_secret_fifo(secret):
+    for i in range(0, 100):
+        rnd = random.randrange(0, 100000000)
+        filename = tempfile.gettempdir() + f'/sync{rnd}.key'
+        try:
+            os.mkfifo(filename, mode = 0o600)
+            break
+        except OSError:
+            pass
+
+    # Don't block main thread. Don't keep process alive.
+    t = threading.Thread(target = write_file_str, args = [filename, secret], daemon = False)
+    t.start()
+
+    return filename
+
+def write_file_str(filename, s):
+    with open(filename, 'w') as f:
+        f.write(s)
 
 def split_name(name):
     parts = re.split(r'[\-_]', name)
@@ -154,16 +184,27 @@ def is_greater_nat(a, b):
     return a > b
 
 def run_command(cmd, args, cwd = None, capture = True):
-    ret = subprocess.run([cmd] + args, check = True, cwd = cwd,
-                                       stdout = subprocess.PIPE if capture else None,
-                                       stderr = subprocess.STDOUT if capture else None)
+    ret = subprocess.run([cmd] + args, cwd = cwd, stdout = subprocess.PIPE if capture else None,
+                                                  stderr = subprocess.STDOUT if capture else None)
 
     if ret.returncode != 0:
         if capture:
-            output = ret.stdout.decode('utf-8')
+            output = ret.stdout.decode('utf-8').strip()
             print(output)
 
         raise RuntimeError(f'Command {cmd} failed with status {ret.returncode}')
+
+def capture_command(cmd, args, cwd = None):
+    ret = subprocess.run([cmd] + args, cwd = cwd, stdout = subprocess.PIPE, stderr = subprocess.PIPE)
+
+    if ret.returncode != 0:
+        error = ret.stderr.decode('utf-8').strip()
+        print(error)
+
+        raise RuntimeError(f'Command {cmd} failed with status {ret.returncode}')
+
+    output = ret.stdout.decode('utf-8')
+    return output
 
 if __name__ == '__main__':
     script_dir = os.path.dirname(__file__)
