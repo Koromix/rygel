@@ -42,7 +42,7 @@ def import_releases(src, root, func):
             suffix = '/linux'
         elif name.endswith('_win64.zip') or name.endswith('_win64.exe') or name.endswith('_win64.msi'):
             suffix = '/windows'
-        elif name.endswith('_macos.tar.gz') or name.endswith('_macos.tar.xz'):
+        elif name.endswith('_macos.tar.gz') or name.endswith('_macos.tar.xz') or name.endswith('_macos.dmg'):
             suffix = '/macos'
         elif name.endswith('.tar.gz') or name.endswith('.tar.xz'):
             suffix = ''
