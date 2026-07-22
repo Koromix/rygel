@@ -72,7 +72,8 @@ async function runDrops() {
                 </thead>
                 <tbody>
                     ${drops.map(drop => {
-                        let show_recover = drop.complete;
+                        let has_expired = (drop.expire <= now);
+                        let show_recover = !has_expired && drop.complete;
                         let can_recover = show_recover && passphrases.has(drop.kid);
 
                         return html`
@@ -96,8 +97,8 @@ async function runDrops() {
                                 </td>
                                 <td class="center">${drop.protect ? T.protected : T.no_password}</td>
                                 <td class="right">
-                                    ${drop.expire != null && drop.expire > now ? dayjs(drop.expire).format('lll') : ''}
-                                    ${drop.expire != null && drop.expire <= now ? T.expired : ''}
+                                    ${drop.expire != null && !has_expired ? dayjs(drop.expire).format('lll') : ''}
+                                    ${drop.expire != null && has_expired ? T.expired : ''}
                                     ${drop.expire == null ? T.never : ''}
                                 </td>
                                 <td class="check">
