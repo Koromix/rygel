@@ -17,11 +17,12 @@ RcppExports.*
 .Rhistory
 .Rbuildignore
 .vagrant
-*.vault
 FelixBuild.ini.user
 *.log
 *.vcxproj.user
 .vs/
+*.vault
+*.key
 
 __pycache__/
 node_modules/
