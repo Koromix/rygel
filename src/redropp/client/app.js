@@ -3,7 +3,7 @@
 
 import { render, html, live, classMap, unsafeHTML } from 'vendor/lit-html/lit-html.bundle.js';
 import dayjs from 'vendor/dayjs/dayjs.bundle.js';
-import { Util, Mutex, Log, Net, HttpError } from 'lib/web/base/base.js';
+import { Util, Mutex, Log, Net, HttpError, LruMap } from 'lib/web/base/base.js';
 import { Base64 } from 'lib/web/base/mixer.js';
 import * as UI from 'lib/web/ui/ui.js';
 import { deploy } from 'lib/web/flat/static.js';
@@ -42,6 +42,7 @@ let route = {
     drop: null
 };
 let route_url = null;
+let route_hashes = new LruMap(2);
 let poisoned = false;
 let run_pending = -1;
 let run_mutex = new Mutex;
@@ -262,9 +263,11 @@ function makeURL(changes = {}, hash = null) {
     if (hash) {
         if (!hash.startsWith('#'))
             hash = '#' + hash;
+        route_hashes.set(path, hash);
+
         path += hash;
-    } else if (path == window.location.pathname && window.location.hash) {
-        path += window.location.hash;
+    } else {
+        path += route_hashes.get(path) ?? '';
     }
 
     return path;
