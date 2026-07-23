@@ -188,7 +188,7 @@ static_assert(sizeof(intptr_t) == sizeof(size_t), "This code base assumes that i
     #endif
 #endif
 
-extern "C" void AssertMessage(const char *filename, int line, const char *cond);
+void PrintAssertError(const char *filename, int line, const char *msg);
 
 #if defined(_MSC_VER)
     #define K_DEBUG_BREAK() __debugbreak()
@@ -232,7 +232,7 @@ extern "C" void AssertMessage(const char *filename, int line, const char *cond);
     #define K_ASSERT(Cond) \
         do { \
             if (!(Cond)) [[unlikely]] { \
-                K::AssertMessage(__FILE__, __LINE__, K_STRINGIFY(Cond)); \
+                K::PrintAssertError(__FILE__, __LINE__, K_STRINGIFY(Cond)); \
                 K_DEBUG_BREAK(); \
                 abort(); \
             } \
@@ -247,7 +247,7 @@ extern "C" void AssertMessage(const char *filename, int line, const char *cond);
 #if defined(K_DEBUG)
     #define K_UNREACHABLE() \
         do { \
-            K::AssertMessage(__FILE__, __LINE__, "Reached code marked as UNREACHABLE"); \
+            K::PrintAssertError(__FILE__, __LINE__, "Reached code marked as UNREACHABLE"); \
             K_DEBUG_BREAK(); \
             abort(); \
         } while (false)
@@ -1226,6 +1226,11 @@ Span<T> AllocateSpan(Allocator *alloc, Size len)
     K_ASSERT(len >= 0);
     K_ASSERT(len <= K_SIZE_MAX / K_SIZE(T));
 
+    if (len >= K_SIZE_MAX / K_SIZE(T)) [[unlikely]] {
+        PrintAssertError(__FILE__, __LINE__, "allocation size overflow");
+        abort();
+    }
+
     alloc = alloc ? alloc : GetDefaultAllocator();
 
     Size size = len * K_SIZE(T);
@@ -1250,6 +1255,11 @@ Span<T> ResizeSpan(Allocator *alloc, Span<T> mem, Size new_len)
 {
     K_ASSERT(new_len >= 0);
     K_ASSERT(new_len <= K_SIZE_MAX / K_SIZE(T));
+
+    if (new_len >= K_SIZE_MAX / K_SIZE(T)) [[unlikely]] {
+        PrintAssertError(__FILE__, __LINE__, "allocation size overflow");
+        abort();
+    }
 
     alloc = alloc ? alloc : GetDefaultAllocator();
 
@@ -1280,7 +1290,6 @@ void ReleaseSpan(Allocator *alloc, Span<T> mem)
     alloc = alloc ? alloc : GetDefaultAllocator();
 
     Size size = mem.len * K_SIZE(T);
-
     alloc->Release((void *)mem.ptr, size);
 }
 

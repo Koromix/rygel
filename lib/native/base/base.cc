@@ -134,9 +134,9 @@ namespace K {
     const char *FelixCompiler = "????";
 #endif
 
-extern "C" void AssertMessage(const char *filename, int line, const char *cond)
+void PrintAssertError(const char *filename, int line, const char *msg)
 {
-    Print(StdErr, "%1:%2: Assertion '%3' failed\n", filename, line, cond);
+    Print(StdErr, "%1:%2: Assertion '%3' failed\n", filename, line, msg);
 }
 
 #if defined(_WIN32)
