@@ -1783,7 +1783,7 @@ function sendMessage(message, { worker, writer, transferStreams }) {
     const { value, readable, writable } = message;
     const transferables = [];
     if (value) {
-      message.value = value;
+      message.value = value.byteOffset || value.byteLength != value.buffer.byteLength ? new Uint8Array(value) : value;
       transferables.push(message.value.buffer);
     }
     if (transferStreams && transferStreamsSupported) {
@@ -5585,6 +5585,197 @@ function createOPFSTempStream(options = {}) {
   };
 }
 
+// node_modules/@zip.js/zip.js/lib/core/util/blob-temp-stream.js
+var DEFAULT_THRESHOLD2 = 1024 * 1024;
+function createBlobTempStream(options = {}) {
+  const {
+    thresholdBytes = DEFAULT_THRESHOLD2
+  } = options;
+  return function() {
+    const memoryChunks = [];
+    let bufferedSize = 0;
+    let spilled = false;
+    let blobWriter, blobPromise, blobReader;
+    async function spillToBlob() {
+      const transformStream = new TransformStream();
+      blobPromise = new Response(transformStream.readable).blob();
+      blobWriter = transformStream.writable.getWriter();
+      spilled = true;
+      for (const chunk of memoryChunks) {
+        await blobWriter.write(chunk);
+      }
+      memoryChunks.length = 0;
+    }
+    const writable = new WritableStream({
+      async write(chunk) {
+        if (spilled) {
+          await blobWriter.write(chunk);
+        } else {
+          memoryChunks.push(chunk);
+          bufferedSize += chunk.length;
+          if (bufferedSize > thresholdBytes) {
+            await spillToBlob();
+          }
+        }
+      },
+      async close() {
+        if (blobWriter) {
+          await blobWriter.close();
+          blobWriter = null;
+        }
+      }
+    });
+    let memoryIndex = 0;
+    const readable = new ReadableStream({
+      async pull(controller) {
+        if (spilled) {
+          if (!blobReader) {
+            const blob = await blobPromise;
+            blobReader = blob.stream().getReader();
+          }
+          const { value, done } = await blobReader.read();
+          if (done) {
+            controller.close();
+          } else {
+            controller.enqueue(value);
+          }
+        } else if (memoryIndex < memoryChunks.length) {
+          controller.enqueue(memoryChunks[memoryIndex++]);
+        } else {
+          controller.close();
+        }
+      },
+      async cancel(reason) {
+        if (blobReader) {
+          await blobReader.cancel(reason);
+        }
+      }
+    }, { highWaterMark: 0 });
+    async function dispose() {
+      if (blobWriter) {
+        try {
+          await blobWriter.abort();
+        } catch {
+        }
+        blobWriter = null;
+      }
+      if (blobPromise) {
+        blobPromise.catch(() => {
+        });
+        blobPromise = null;
+      }
+      memoryChunks.length = 0;
+    }
+    return { writable, readable, dispose };
+  };
+}
+
+// node_modules/@zip.js/zip.js/lib/core/util/sync-access-handle-temp-stream.js
+var DEFAULT_THRESHOLD3 = 1024 * 1024;
+var DEFAULT_DIRECTORY_NAME2 = ".zip.js-temp";
+var READ_CHUNK_SIZE = 512 * 1024;
+var ERR_UNSUPPORTED_CONTEXT = "createSyncAccessHandle is only available in dedicated workers";
+function createSyncAccessHandleTempStream(options = {}) {
+  const {
+    thresholdBytes = DEFAULT_THRESHOLD3,
+    directoryName = DEFAULT_DIRECTORY_NAME2,
+    getDirectory
+  } = options;
+  if (!getDirectory && (typeof FileSystemFileHandle == "undefined" || !FileSystemFileHandle.prototype.createSyncAccessHandle)) {
+    throw new Error(ERR_UNSUPPORTED_CONTEXT);
+  }
+  const getRootDirectory = getDirectory || (() => navigator.storage.getDirectory());
+  let directoryHandlePromise;
+  function getTempDirectory() {
+    if (!directoryHandlePromise) {
+      directoryHandlePromise = Promise.resolve(getRootDirectory()).then((root) => root.getDirectoryHandle(directoryName, { create: true }));
+    }
+    return directoryHandlePromise;
+  }
+  return function() {
+    const memoryChunks = [];
+    let bufferedSize = 0;
+    let spilled = false;
+    let fileName, accessHandle;
+    let writeOffset = 0;
+    let readOffset = 0;
+    async function spillToFile() {
+      const directoryHandle = await getTempDirectory();
+      fileName = crypto.randomUUID();
+      const fileHandle = await directoryHandle.getFileHandle(fileName, { create: true });
+      accessHandle = await fileHandle.createSyncAccessHandle();
+      spilled = true;
+      for (const chunk of memoryChunks) {
+        accessHandle.write(chunk, { at: writeOffset });
+        writeOffset += chunk.length;
+      }
+      memoryChunks.length = 0;
+    }
+    const writable = new WritableStream({
+      async write(chunk) {
+        if (spilled) {
+          accessHandle.write(chunk, { at: writeOffset });
+          writeOffset += chunk.length;
+        } else {
+          memoryChunks.push(chunk);
+          bufferedSize += chunk.length;
+          if (bufferedSize > thresholdBytes) {
+            await spillToFile();
+          }
+        }
+      },
+      close() {
+        if (accessHandle) {
+          accessHandle.flush();
+        }
+      }
+    });
+    let memoryIndex = 0;
+    const readable = new ReadableStream({
+      pull(controller) {
+        if (spilled) {
+          const remaining = writeOffset - readOffset;
+          if (remaining <= 0) {
+            controller.close();
+            return;
+          }
+          const buffer = new Uint8Array(Math.min(READ_CHUNK_SIZE, remaining));
+          const read = accessHandle.read(buffer, { at: readOffset });
+          if (read) {
+            readOffset += read;
+            controller.enqueue(buffer.subarray(0, read));
+          } else {
+            controller.close();
+          }
+        } else if (memoryIndex < memoryChunks.length) {
+          controller.enqueue(memoryChunks[memoryIndex++]);
+        } else {
+          controller.close();
+        }
+      }
+    }, { highWaterMark: 0 });
+    async function dispose() {
+      if (accessHandle) {
+        try {
+          accessHandle.close();
+        } catch {
+        }
+        accessHandle = null;
+      }
+      if (fileName) {
+        try {
+          const directoryHandle = await getTempDirectory();
+          await directoryHandle.removeEntry(fileName);
+        } catch {
+        }
+        fileName = null;
+      }
+      memoryChunks.length = 0;
+    }
+    return { writable, readable, dispose };
+  };
+}
+
 // node_modules/@zip.js/zip.js/lib/zip-core-base.js
 try {
   configure({ baseURI: import.meta.url });
@@ -8491,7 +8682,9 @@ export {
   ZipWriter,
   ZipWriterStream,
   configure,
+  createBlobTempStream,
   createOPFSTempStream,
+  createSyncAccessHandleTempStream,
   fs,
   getMimeType2 as getMimeType,
   terminateWorkersAndModule as terminateWorkers
