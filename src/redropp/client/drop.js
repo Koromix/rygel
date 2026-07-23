@@ -240,6 +240,7 @@ async function runDrop() {
     } else if (is_new) {
         let hash = `#${passphrase}`;
         let url = App.makeURL({ mode: 'drop', drop: cache.drop.kid }, hash);
+        let logo = await Net.loadImage(ASSETS['main/redropp']);
 
         UI.main(html`
             <div class="heading">${cache.drop.name}</div>
@@ -250,7 +251,7 @@ async function runDrop() {
                     <pre style="text-align: center;"
                          @click=${e => window.getSelection().selectAllChildren(e.target)}>${ENV.url + url}</pre>
                 </div>
-                ${makeQrCodeCanvas(ENV.url + url)}
+                ${makeQrCodeCanvas(ENV.url + url, logo)}
                 <div class="sub">
                     ${cache.drop.expire != null ? T.format(T.expires_at_x, dayjs(cache.drop.expire).format('lll')) : ''}
                     ${cache.drop.expire == null ? T.never_expires : ''}
@@ -583,11 +584,11 @@ async function* readChunks(stream) {
     }
 }
 
-function makeQrCodeCanvas(text) {
+function makeQrCodeCanvas(text, logo) {
     let scale = 7;
     let border = 4;
 
-    let qr = QRC.QrCode.encodeText(text, QRC.QrCode.Ecc.MEDIUM);
+    let qr = QRC.QrCode.encodeText(text, QRC.QrCode.Ecc.QUARTILE);
     let size = scale * qr.size;
 
     let canvas = document.createElement('canvas');
@@ -596,64 +597,85 @@ function makeQrCodeCanvas(text) {
     canvas.width = size + 2 * border;
     canvas.height = size + 2 * border;
 
-    ctx.fillStyle = 'white';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // Draw QR code
+    {
+        ctx.save();
 
-    ctx.fillStyle = 'black';
-    ctx.strokeStyle = 'black'
-    ctx.lineWidth = 0.6;
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    ctx.translate(border, border);
-    ctx.scale(scale, scale);
-    ctx.translate(0.5, 0.5);
+        ctx.fillStyle = 'black';
+        ctx.strokeStyle = 'black'
+        ctx.lineWidth = 0.6;
 
-    for (let i = 0; i < qr.size; i++) {
-        for (let j = 0; j < qr.size; j++) {
-            let idx = (j * qr.size) + i;
+        ctx.translate(border, border);
+        ctx.scale(scale, scale);
+        ctx.translate(0.5, 0.5);
 
-            if (qr.getModule(i, j)) {
-                ctx.beginPath();
-                ctx.arc(i, j, 0.5, 0, Math.PI * 2, false);
-                ctx.fill();
-            }
-        }
-    }
-
-    for (let i = 0; i < qr.size; i++) {
-        for (let j = 0; j < qr.size; j++) {
-            if (qr.getModule(i, j)) {
-                let k = j;
-
-                while (qr.getModule(i, k + 1)) {
-                    k++;
-                }
-
-                if (k > j) {
-                    ctx.beginPath();
-                    ctx.moveTo(i, j);
-                    ctx.lineTo(i, k);
-                    ctx.stroke();
-                }
-            }
-        }
-    }
-    for (let j = 0; j < qr.size; j++) {
         for (let i = 0; i < qr.size; i++) {
-            if (qr.getModule(i, j)) {
-                let k = i;
+            for (let j = 0; j < qr.size; j++) {
+                let idx = (j * qr.size) + i;
 
-                while (qr.getModule(k + 1, j)) {
-                    k++;
-                }
-
-                if (k > i) {
+                if (qr.getModule(i, j)) {
                     ctx.beginPath();
-                    ctx.moveTo(i, j);
-                    ctx.lineTo(k, j);
-                    ctx.stroke();
+                    ctx.arc(i, j, 0.5, 0, Math.PI * 2, false);
+                    ctx.fill();
                 }
             }
         }
+
+        for (let i = 0; i < qr.size; i++) {
+            for (let j = 0; j < qr.size; j++) {
+                if (qr.getModule(i, j)) {
+                    let k = j;
+
+                    while (qr.getModule(i, k + 1)) {
+                        k++;
+                    }
+
+                    if (k > j) {
+                        ctx.beginPath();
+                        ctx.moveTo(i, j);
+                        ctx.lineTo(i, k);
+                        ctx.stroke();
+                    }
+                }
+            }
+        }
+
+        for (let j = 0; j < qr.size; j++) {
+            for (let i = 0; i < qr.size; i++) {
+                if (qr.getModule(i, j)) {
+                    let k = i;
+
+                    while (qr.getModule(k + 1, j)) {
+                        k++;
+                    }
+
+                    if (k > i) {
+                        ctx.beginPath();
+                        ctx.moveTo(i, j);
+                        ctx.lineTo(k, j);
+                        ctx.stroke();
+                    }
+                }
+            }
+        }
+
+        ctx.restore();
+    }
+
+    // Draw logo
+    {
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.fillStyle = 'white';
+
+        ctx.beginPath();
+        ctx.arc(canvas.width / 2, canvas.height / 2, 32, 0, Math.PI * 2, false);
+        ctx.fill();
+
+        ctx.drawImage(logo, canvas.width / 2 - 32, canvas.height / 2 - 32, 64, 64);
     }
 
     return canvas;
