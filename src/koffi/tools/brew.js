@@ -5,7 +5,8 @@
 import process from 'node:process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { spawnSync } from 'node:child_process';
+import util from 'node:util';
+import { execFile, spawnSync } from 'node:child_process';
 import esbuild from '../../../vendor/esbuild/native/lib/main.js';
 import { determineAbi } from '../../cnoke/src/abi.js';
 import {
@@ -179,16 +180,18 @@ async function build() {
                 continue;
             }
 
-            let machine = runner.machine(build.info.machine);
-
             let binary_filename = build_dir + `/qemu/${version}/${build.key}/koffi.node`;
 
             if (fs.existsSync(binary_filename)) {
-                runner.logSuccess(machine, `${build.title} > Status`);
+                runner.logSuccess(null, `${build.title} > Status`);
                 ignore_builds.add(build);
             } else {
-                runner.logError(machine, `${build.title} > Status`, 'missing');
-                needed_machines.add(machine);
+                runner.logError(null, `${build.title} > Status`, 'missing');
+
+                if (build.info.release != null || build.info.target == null) {
+                    let machine = runner.machine(build.info.machine);
+                    needed_machines.add(machine);
+                }
             }
         }
 
@@ -213,15 +216,36 @@ async function build() {
             success &= await upload(snapshot_dir);
 
             console.log('>> Run build commands...');
-            await compile(build => build.info.release ?? (build.info.build + ' --release'));
+            await compile(build => {
+                if (build.info.release != null) {
+                    return {
+                        local: false,
+                        cmd: build.info.release,
+                        cwd: build.info.directory + '/src/koffi'
+                    };
+                } else if (build.info.target == null) {
+                    return {
+                        local: false,
+                        cmd: build.info.build + ' --release',
+                        cwd: build.info.directory + '/src/koffi'
+                    };
+                } else {
+                    let build_dir = root_dir + `/bin/Koffi/cross/release/${build.key}`;
+
+                    unlinkRecursive(build_dir);
+                    fs.mkdirSync(build_dir, { mode: 0o755, recursive: true });
+
+                    return {
+                        local: true,
+                        cmd: [process.execPath, '../../cnoke.cjs', '--clang', '-O', build_dir, '-t', build.info.target, '--release'],
+                        cwd: snapshot_dir + '/src/koffi'
+                    };
+                }
+            });
         }
 
-        console.log('>> Get build artifacts');
+        console.log('>> Fetch build artifacts');
         await Promise.all(builds.map(async build => {
-            let machine = runner.machine(build.info.machine);
-
-            let src_name = machine.platform + '_' + build.info.arch;
-            let src_dir = build.info.directory + `/bin/Koffi/${src_name}`;
             let dest_dir = build_dir + `/qemu/${version}/${build.key}`;
 
             if (build.info.package != null) {
@@ -232,29 +256,46 @@ async function build() {
                 artifacts.push(artifact);
             }
 
-            if (runner.isIgnored(machine))
-                return;
             if (ignore_builds.has(build))
                 return;
 
-            unlinkRecursive(dest_dir);
-            fs.mkdirSync(dest_dir, { mode: 0o755, recursive: true });
+            if (build.info.release != null || build.info.target == null) {
+                let machine = runner.machine(build.info.machine);
 
-            try {
-                let ssh = await runner.join(machine);
+                let src_name = machine.platform + '_' + build.info.arch;
+                let src_dir = build.info.directory + `/bin/Koffi/${src_name}`;
 
-                await ssh.getDirectory(dest_dir, src_dir, {
-                    recursive: false,
-                    concurrency: 4,
-                    validate: filename => !path.basename(filename).match(/^v[0-9]+/)
-                });
+                if (runner.isIgnored(machine))
+                    return;
 
-                runner.logSuccess(machine, `${build.title} > Download`);
-            } catch (err) {
-                runner.logError(machine, `${build.title} > Download`);
+                unlinkRecursive(dest_dir);
+                fs.mkdirSync(dest_dir, { mode: 0o755, recursive: true });
 
-                ignore_builds.add(machine);
-                success = false;
+                try {
+                    let ssh = await runner.join(machine);
+
+                    await ssh.getDirectory(dest_dir, src_dir, {
+                        recursive: false,
+                        concurrency: 4,
+                        validate: filename => !path.basename(filename).match(/^v[0-9]+/)
+                    });
+
+                    runner.logSuccess(machine, `${build.title} > Download`);
+                } catch (err) {
+                    runner.logError(machine, `${build.title} > Download`);
+
+                    ignore_builds.add(machine);
+                    success = false;
+                }
+            } else {
+                let src_dir = root_dir + `/bin/Koffi/cross/release/${build.key}`;
+
+                unlinkRecursive(dest_dir);
+                fs.mkdirSync(dest_dir, { mode: 0o755, recursive: true });
+
+                copyRecursive(src_dir, dest_dir, name => name.startsWith('koffi.'));
+
+                runner.logSuccess(null, `${build.title} > Copy`);
             }
         }));
 
@@ -640,29 +681,47 @@ async function compile(command) {
     let success = true;
 
     await Promise.all(builds.map(async build => {
-        let machine = runner.machine(build.info.machine);
-
         if (ignore_builds.has(build))
             return;
-        if (runner.isIgnored(machine))
-            return;
 
-        let cmd = command(build);
-        let cwd = build.info.directory + '/src/koffi';
+        let { local, cmd, cwd } = command(build);
 
-        let start = process.hrtime.bigint();
-        let ret = await runner.exec(machine, cmd, cwd);
-        let time = Number((process.hrtime.bigint() - start) / 1000000n);
+        if (local) {
+            try {
+                let start = process.hrtime.bigint();
+                let ret = await util.promisify(execFile)(cmd[0], cmd.slice(1), { cwd: cwd });
+                let time = Number((process.hrtime.bigint() - start) / 1000000n);
 
-        if (ret.code == 0) {
-            runner.logSuccess(machine, `${build.title} > Build`, (time / 1000).toFixed(2) + 's');
-            runner.logOutput(ret.stdout, ret.stderr);
+                runner.logSuccess(null, `${build.title} > Build`, (time / 1000).toFixed(2) + 's');
+                runner.logOutput(ret.stdout, ret.stderr);
+            } catch (err) {
+                console.log(err);
+                runner.logError(null, `${build.title} > Build`);
+                runner.logOutput(err.stdout, err.stderr);
+
+                ignore_builds.add(build);
+                success = false;
+            }
         } else {
-            runner.logError(machine, `${build.title} > Build`);
-            runner.logOutput(ret.stdout, ret.stderr);
+            let machine = runner.machine(build.info.machine);
 
-            ignore_builds.add(build);
-            success = false;
+            if (runner.isIgnored(machine))
+                return;
+
+            let start = process.hrtime.bigint();
+            let ret = await runner.exec(machine, cmd, cwd);
+            let time = Number((process.hrtime.bigint() - start) / 1000000n);
+
+            if (ret.code == 0) {
+                runner.logSuccess(machine, `${build.title} > Build`, (time / 1000).toFixed(2) + 's');
+                runner.logOutput(ret.stdout, ret.stderr);
+            } else {
+                runner.logError(machine, `${build.title} > Build`);
+                runner.logOutput(ret.stdout, ret.stderr);
+
+                ignore_builds.add(build);
+                success = false;
+            }
         }
     }));
 
@@ -873,7 +932,61 @@ async function test(debug = false) {
     let ignored_machines = runner.ignoreCount;
 
     console.log('>> Run build commands...');
-    await compile(build => build.info.build + (debug ? ' --debug' : ' --release'));
+    await compile(build => {
+        let mode = debug ? '--debug' : '--release';
+
+        if (build.info.target == null) {
+            return {
+                local: false,
+                cmd: `${build.info.build} ${mode}`,
+                cwd: build.info.directory + '/src/koffi'
+            };
+        } else {
+            let build_dir = root_dir + `/bin/Koffi/cross/release/${build.key}`;
+
+            unlinkRecursive(build_dir);
+            fs.mkdirSync(build_dir, { mode: 0o755, recursive: true });
+
+            return {
+                local: true,
+                cmd: [process.execPath, '../../cnoke.cjs', '--clang', '-O', build_dir, '-t', build.info.target, mode],
+                cwd: snapshot_dir + '/src/koffi'
+            };
+        }
+    });
+
+    console.log('>> Upload local builds...');
+    await Promise.all(builds.map(async build => {
+        if (build.info.target == null)
+            return;
+
+        let machine = runner.machine(build.info.machine);
+
+        if (ignore_builds.has(build))
+            return;
+        if (runner.isIgnored(machine))
+            return;
+
+        let ssh = await runner.join(machine);
+
+        try {
+            let src_name = machine.platform + '_' + build.info.arch;
+            let src_dir = root_dir + `/bin/Koffi/cross/release/${build.key}`;
+            let dest_dir = build.info.directory + `/bin/Koffi/${src_name}`;
+
+            await ssh.putDirectory(src_dir, dest_dir, {
+                recursive: false,
+                concurrency: (process.platform != 'win32') ? 4 : 1
+            });
+
+            runner.logSuccess(machine, `${build.title} > Upload`);
+        } catch (err) {
+            runner.logError(machine, `${build.title} > Upload`);
+
+            ignore_builds.add(build);
+            success = false;
+        }
+    }));
 
     console.log('>> Run test commands...');
     await Promise.all(builds.map(async build => {

@@ -6,6 +6,7 @@
             "arch": "arm64",
             "machine": "debian_arm64",
             "directory": "/home/debian/luigi",
+            "target": "linux_arm64",
             "build": "CC=clang-21 CXX=clang++-21 node ../../cnoke.cjs --ccache",
             "package": "linux-arm64"
         },
@@ -32,6 +33,7 @@
             "arch": "ia32",
             "machine": "debian_i386",
             "directory": "/home/debian/luigi",
+            "target": "linux_ia32",
             "build": "node ../../cnoke.cjs --ccache",
             "package": "linux-ia32"
         },
@@ -58,6 +60,7 @@
             "arch": "x64",
             "machine": "debian_x64",
             "directory": "/home/debian/luigi",
+            "target": "linux_x64",
             "build": "CC=clang-21 CXX=clang++-21 node ../../cnoke.cjs --ccache",
             "release": "CC=clang-21 CXX=clang++-21 LLVM_PROFDATA=llvm-profdata-21 sh ./tools/pgo_clang.sh",
             "package": "linux-x64"
@@ -84,6 +87,7 @@
         "info": {
             "arch": "riscv64d",
             "machine": "debian_riscv64",
+            "target": "linux_riscv64d",
             "directory": "/home/debian/luigi",
             "build": "node ../../cnoke.cjs --ccache",
             "package": "linux-riscv64"
@@ -137,6 +141,7 @@
             "arch": "x64",
             "machine": "freebsd_x64",
             "directory": "/home/freebsd/luigi",
+            "target": "freebsd_x64",
             "build": "node ../../cnoke.cjs --ccache",
             "package": "freebsd-x64"
         },
@@ -163,6 +168,7 @@
             "arch": "arm64",
             "machine": "freebsd_arm64",
             "directory": "/home/freebsd/luigi",
+            "target": "freebsd_arm64",
             "build": "node ../../cnoke.cjs --ccache",
             "package": "freebsd-arm64"
         },
@@ -241,6 +247,7 @@
             "arch": "ia32",
             "machine": "windows_x64",
             "directory": "C:/Users/windows/Desktop/luigi_ia32",
+            "target": "win32_ia32",
             "build": "C:\\Node32\\node32.cmd node ../../cnoke.cjs",
             "package": "win32-ia32"
         },
@@ -270,6 +277,7 @@
             "arch": "x64",
             "machine": "windows_x64",
             "directory": "C:/Users/windows/Desktop/luigi_x64",
+            "target": "win32_x64",
             "build": "C:\\Node64\\node64.cmd node ../../cnoke.cjs --clang",
             "package": "win32-x64"
         },
@@ -299,6 +307,7 @@
             "arch": "arm64",
             "machine": "windows_x64",
             "directory": "C:/Users/windows/Desktop/luigi_arm64",
+            "target": "win32_arm64",
             "build": "C:\\Node64\\node64.cmd node ../../cnoke.cjs -t win32_arm64",
             "package": "win32-arm64"
         }
@@ -373,6 +382,7 @@
             "arch": "loong64",
             "machine": "debian_loong64",
             "directory": "/home/debian/luigi",
+            "target": "linux_loong64",
             "build": "node ../../cnoke.cjs --ccache",
             "package": "linux-loong64"
         },

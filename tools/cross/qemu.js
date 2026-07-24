@@ -202,7 +202,7 @@ function QemuRunner(registry = null) {
             }
         }));
 
-        if (success && missing == machines.length)
+        if (machines.length && success && missing == machines.length)
             throw new Error('No machine available');
 
         return success;
@@ -415,17 +415,19 @@ function QemuRunner(registry = null) {
     };
 
     this.log = function(machine, action, status) {
-        machine = self.machine(machine);
+        if (machine != null)
+            machine = self.machine(machine);
 
         if (log_align == null) {
             let lengths = self.machines.map(machine => machine.title.length);
-            log_align = Math.max(...lengths);
+            log_align = Math.max('Local'.length, ...lengths);
         }
 
-        let align1 = Math.max(log_align - machine.title.length, 0);
+        let title = machine?.title ?? 'Local';
+        let align1 = Math.max(log_align - title.length, 0);
         let align2 = Math.max(34 - action.length, 0);
 
-        console.log(`     [${machine.title}]${' '.repeat(align1)}  ${action}${' '.repeat(align2)}  ${status}`);
+        console.log(`     [${title}]${' '.repeat(align1)}  ${action}${' '.repeat(align2)}  ${status}`);
     };
 
     this.logSuccess = function(machine, action, message = 'ok') {
