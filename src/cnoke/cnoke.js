@@ -65,7 +65,7 @@ async function main() {
                 if (value == null)
                     throw new Error(`Missing value for ${arg}`);
 
-                config.output_directory = value;
+                config.build_dir = value;
             } else if ((command == 'build' || command == 'configure') && arg == '--runtime') {
                 if (value == null)
                     throw new Error(`Missing value for ${arg}`);
