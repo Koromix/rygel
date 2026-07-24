@@ -138,6 +138,10 @@ async function recoverLink(info) {
         }
     }
 
+    shareLink(info, passphrase);
+}
+
+async function shareLink(info, passphrase) {
     let drop = {
         kid: info.kid,
         name: info.name,
@@ -149,6 +153,13 @@ async function recoverLink(info) {
     };
 
     new_drops.set(info.kid, drop);
+
+    let url = App.makeURL({ mode: 'drop', drop: info.kid }, passphrase);
+    App.go(url);
+}
+
+function unshareLink(info, passphrase) {
+    new_drops.delete(info.kid);
 
     let url = App.makeURL({ mode: 'drop', drop: info.kid }, passphrase);
     App.go(url);
@@ -176,7 +187,7 @@ async function deleteDrop(kid) {
 }
 
 async function runDrop() {
-    let is_new = false;
+    let is_sharing = false;
     let passphrase = null;
 
     if (route.drop == null) {
@@ -189,7 +200,7 @@ async function runDrop() {
     cache.drop = new_drops.get(route.drop);
 
     if (cache.drop != null) {
-        is_new = true;
+        is_sharing = true;
         passphrase = cache.drop.passphrase;
     } else {
         try {
@@ -237,7 +248,7 @@ async function runDrop() {
                 ` : ''}
             </div>
         `);
-    } else if (is_new) {
+    } else if (is_sharing) {
         let hash = `#${passphrase}`;
         let url = App.makeURL({ mode: 'drop', drop: cache.drop.kid }, hash);
         let logo = await Net.loadImage(ASSETS['main/redropp']);
@@ -260,6 +271,7 @@ async function runDrop() {
 
             <div class="actions">
                 <button @click=${UI.wrap(e => copyClipboard(e, ENV.url + url))}>${T.copy_download_link}</button>
+                <a @click=${UI.wrap(e => unshareLink(cache.drop, passphrase))}>${T.show_download_page}</button>
             </div>
         `);
     } else {
@@ -310,6 +322,7 @@ async function runDrop() {
                 <div class="actions">
                     <button type="submit" ?disabled=${!enabled}>${T.download}</button>
                     <a @click=${UI.wrap(e => otherDownloadOptions(cache.drop, passphrase))}>${T.show_other_download_options}</a>
+                    <a @click=${UI.wrap(e => shareLink(cache.drop, passphrase))}>${T.share_drop_link}</a>
                 </div>
             </form>
         `);

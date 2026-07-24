@@ -117,6 +117,8 @@
         "send": "Envoyer",
         "send_file": "Envoyer un fichier",
         "set_password": "Définir le mot de passe",
+        "share_drop_link": "Partager ce lien",
+        "show_download_page": "Ouvrir la page de téléchargement",
         "show_other_download_options": "Afficher d'autres options de téléchargement",
         "size": "Taille",
         "size_units": {
