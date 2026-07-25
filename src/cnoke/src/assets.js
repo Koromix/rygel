@@ -128,6 +128,12 @@ const TOOLCHAINS = {
         processor: "arm64",
         triplet: "aarch64-unknown-freebsd",
         sysroot: "../../tools/cross/sysroots/freebsd_arm64"
+    },
+    freebsd_i386: {
+        system: "FreeBSD",
+        processor: "i386",
+        triplet: "i686-unknown-freebsd",
+        sysroot: "../../tools/cross/sysroots/freebsd_i386"
     }
 };
 
