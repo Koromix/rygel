@@ -42,6 +42,13 @@ const TOOLCHAINS = {
         sysroot: "../../tools/cross/sysroots/debian_loong64"
     },
 
+    musl_x64: {
+        system: "Linux",
+        processor: "x86_64",
+        triplet: "x86_64-linux-musl",
+        sysroot: "../../tools/cross/sysroots/alpine_x64"
+    },
+
     win32_ia32: {
         system: "Windows",
         processor: "X86",

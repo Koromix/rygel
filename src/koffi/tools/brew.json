@@ -358,6 +358,7 @@
             "arch": "x64",
             "machine": "alpine_x64",
             "directory": "/home/alpine/luigi",
+            "target": "musl_x64",
             "build": "node ../../cnoke.cjs --ccache",
             "package": "linux-x64"
         },
