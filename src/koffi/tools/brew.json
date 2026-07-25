@@ -115,6 +115,7 @@
             "arch": "ia32",
             "machine": "freebsd_i386",
             "directory": "/home/freebsd/luigi",
+            "target": "freebsd_i386",
             "build": "node ../../cnoke.cjs --ccache",
             "package": "freebsd-ia32"
         },
