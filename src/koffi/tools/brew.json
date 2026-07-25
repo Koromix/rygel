@@ -411,6 +411,7 @@
             "arch": "arm64",
             "machine": "alpine_arm64",
             "directory": "/home/alpine/luigi",
+            "target": "musl_arm64",
             "build": "node ../../cnoke.cjs --ccache",
             "package": "linux-arm64"
         },

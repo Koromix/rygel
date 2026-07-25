@@ -48,6 +48,12 @@ const TOOLCHAINS = {
         triplet: "x86_64-linux-musl",
         sysroot: "../../tools/cross/sysroots/alpine_x64"
     },
+    musl_arm64: {
+        system: "Linux",
+        processor: "aarch64",
+        triplet: "aarch64-linux-musl",
+        sysroot: "../../tools/cross/sysroots/alpine_arm64"
+    },
 
     win32_ia32: {
         system: "Windows",
