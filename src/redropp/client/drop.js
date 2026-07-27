@@ -598,7 +598,7 @@ async function* readChunks(stream) {
 }
 
 function makeQrCodeCanvas(text, logo) {
-    let scale = 7;
+    let scale = 6;
     let border = 4;
 
     let qr = QRC.QrCode.encodeText(text, QRC.QrCode.Ecc.QUARTILE);
