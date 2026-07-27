@@ -20,7 +20,7 @@ self.addEventListener('fetch', e => {
     let url = new URL(e.request.url);
 
     if (url.pathname.startsWith('/drop/decrypt/')) {
-        let kid = url.pathname.substr(14);
+        let [, , , kid] = url.pathname.split('/');
 
         if (e.request.method == 'HEAD') {
             try {
@@ -141,7 +141,7 @@ function createDownloadStream(kid) {
 function prepareHeaders(info) {
     let headers = {
         'Content-Type': 'application/octet-stream',
-        'Content-Disposition': `attachment; filename="${info.name.replaceAll('"', '\"')}"`,
+        'Content-Disposition': 'attachment',
         'Content-Length': info.size,
 
         'X-Content-Type-Options': 'nosniff'
