@@ -96,9 +96,9 @@ async function runDrops() {
                                     ${!drop.complete ? html`<span class="sub" style="color: red;">${T.incomplete}</span>` : ''}
                                 </td>
                                 <td class="center">${drop.protect ? T.protected : T.no_password}</td>
-                                <td class="right">
-                                    ${drop.expire != null && !has_expired ? dayjs(drop.expire).format('lll') : ''}
-                                    ${drop.expire != null && has_expired ? T.expired : ''}
+                                <td class="right" title=${drop.expire != null ? dayjs(drop.expire).format('lll') : ''}>
+                                    ${drop.expire != null && !has_expired ? Util.capitalize(dayjs(drop.expire).fromNow()) : ''}
+                                    ${drop.expire != null && has_expired ? html`${T.expired} <span class="sub">(${dayjs(drop.expire).fromNow()})</span>`: ''}
                                     ${drop.expire == null ? T.never : ''}
                                 </td>
                                 <td class="check">
@@ -263,8 +263,8 @@ async function runDrop() {
                          @click=${e => window.getSelection().selectAllChildren(e.target)}>${ENV.url + url}</pre>
                 </div>
                 ${makeQrCodeCanvas(ENV.url + url, logo)}
-                <div class="sub">
-                    ${cache.drop.expire != null ? T.format(T.expires_at_x, dayjs(cache.drop.expire).format('lll')) : ''}
+                <div class="sub" title=${cache.drop.expire != null ? dayjs(cache.drop.expire).format('lll') : null}>
+                    ${cache.drop.expire != null ? T.format(T.expires_in_x, dayjs(cache.drop.expire).fromNow(true)) : ''}
                     ${cache.drop.expire == null ? T.never_expires : ''}
                 </div>
             </div>
@@ -290,8 +290,8 @@ async function runDrop() {
             <form @submit=${UI.wrap(submit)}>
                 <div class="block" style="align-items: center;">
                     <div>${formatSize(cache.drop.size)}</div>
-                    <div class="sub">
-                        ${cache.drop.expire != null ? T.format(T.expires_at_x, dayjs(cache.drop.expire).format('lll')) : ''}
+                    <div class="sub" title=${cache.drop.expire != null ? dayjs(cache.drop.expire).format('lll') : ''}>
+                        ${cache.drop.expire != null ? T.format(T.expires_in_x, dayjs(cache.drop.expire).fromNow(true)) : ''}
                         ${cache.drop.expire == null ? T.never_expires : ''}
                     </div>
                     ${cache.drop.protect && stat == null ? html`

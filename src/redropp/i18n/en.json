@@ -61,7 +61,7 @@
             "odd": "{1} days"
         },
         "expired": "Expired",
-        "expires_at_x": "Expires at {1}",
+        "expires_in_x": "Expires in {1}",
         "external_identities": "External identifiers",
         "file": "File",
         "files": "Files",
