@@ -57,7 +57,7 @@ def import_releases(src, root, func):
         filename = src + '/' + name
         dest = directory + '/' + name
 
-        print(f'  * Importing {name}...')
+        print(f'  - Importing {name}...')
         func(filename, dest)
 
 def process_releases(root):
@@ -174,7 +174,7 @@ def prune_old_versions(directory):
             continue
 
         if pkg in packages and version != packages[pkg]:
-            print(f'  * Deleting {os.path.basename(entry.path)}...')
+            print(f'  - Deleting {os.path.basename(entry.path)}...')
             os.remove(entry.path)
 
 def is_greater_nat(a, b):
