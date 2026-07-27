@@ -361,12 +361,16 @@ async function download(info, passphrase, password) {
 
     await prepareDownload(info, key, refreshSoon);
 
-    let url = '/drop/decrypt/' + info.kid + '/' + encodeURIComponent(info.name);
-    let response = await Net.fetch(url, { method: 'HEAD' });
+    // Make sure service worker is ready
+    {
+        let url = `/auto/download/${info.kid}`;
+        let response = await Net.fetch(url, { method: 'HEAD' });
 
-    if (!response.ok)
-        throw new Error(T.message(`Failed to communicate with service worker for download. Refresh the page and try again.`));
+        if (!response.ok)
+            throw new Error(T.message(`Failed to communicate with service worker for download. Refresh the page and try again.`));
+    }
 
+    let url = `/auto/download/${info.kid}/${encodeURIComponent(info.name)}`;
     window.location.href = url;
 }
 
