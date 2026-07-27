@@ -8,7 +8,7 @@
 
 - Generate easy-to-save image for QR code (with app logo)
 - Add links to toggle between drop share/download pages
-- Fix error when downloadibng files whose names contain UTF-8 characters
+- Fix error when downloading files whose names contain UTF-8 characters
 - Fix small UI inconsistencies and missing labels
 
 ### Redropp 0.8.1
