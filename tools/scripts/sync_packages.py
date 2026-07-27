@@ -155,7 +155,7 @@ def hash_file(filename):
     return digest.hexdigest()
 
 def prune_old_versions(directory):
-    files = (entry for entry in os.scandir(directory) if entry.is_file())
+    files = [entry for entry in os.scandir(directory) if entry.is_file()]
 
     packages = {}
 
