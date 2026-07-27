@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
+import QRC from 'vendor/qrcodegen/js/qrcodegen.js';
 import { Util, Log, Net } from 'lib/web/base/base.js';
 
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
@@ -163,6 +164,116 @@ function ProgressMeter(max) {
     }
 }
 
+function drawQrCode(text, options = {}) {
+    let scale = options.scale ?? 6;
+    let border = options.border ?? 4;
+    let logo = options.logo ?? null;
+    let ecl = options.ecl ?? (logo != null ? 'Q' : 'M');
+
+    switch (ecl) {
+        case 'L': { ecl = QRC.QrCode.Ecc.LOW; } break;
+        case 'M': { ecl = QRC.QrCode.Ecc.MEDIUM; } break;
+        case 'Q': { ecl = QRC.QrCode.Ecc.QUARTILE; } break;
+        case 'H': { ecl = QRC.QrCode.Ecc.HIGH; } break;
+    }
+    if (!(ecl instanceof QRC.QrCode.Ecc))
+        throw new Error('Invalid QR error correction level');
+
+    let qr = QRC.QrCode.encodeText(text, ecl);
+    let size = scale * qr.size;
+
+    let canvas = document.createElement('canvas');
+    let ctx = canvas.getContext('2d');
+
+    canvas.width = size + 2 * border;
+    canvas.height = size + 2 * border;
+
+    // Draw QR code
+    {
+        ctx.save();
+
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = 'black';
+        ctx.strokeStyle = 'black'
+        ctx.lineWidth = 0.6;
+
+        ctx.translate(border, border);
+        ctx.scale(scale, scale);
+        ctx.translate(0.5, 0.5);
+
+        for (let i = 0; i < qr.size; i++) {
+            for (let j = 0; j < qr.size; j++) {
+                let idx = (j * qr.size) + i;
+
+                if (qr.getModule(i, j)) {
+                    ctx.beginPath();
+                    ctx.arc(i, j, 0.5, 0, Math.PI * 2, false);
+                    ctx.fill();
+                }
+            }
+        }
+
+        for (let i = 0; i < qr.size; i++) {
+            for (let j = 0; j < qr.size; j++) {
+                if (qr.getModule(i, j)) {
+                    let k = j;
+
+                    while (qr.getModule(i, k + 1)) {
+                        k++;
+                    }
+
+                    if (k > j) {
+                        ctx.beginPath();
+                        ctx.moveTo(i, j);
+                        ctx.lineTo(i, k);
+                        ctx.stroke();
+                    }
+                }
+            }
+        }
+
+        for (let j = 0; j < qr.size; j++) {
+            for (let i = 0; i < qr.size; i++) {
+                if (qr.getModule(i, j)) {
+                    let k = i;
+
+                    while (qr.getModule(k + 1, j)) {
+                        k++;
+                    }
+
+                    if (k > i) {
+                        ctx.beginPath();
+                        ctx.moveTo(i, j);
+                        ctx.lineTo(k, j);
+                        ctx.stroke();
+                    }
+                }
+            }
+        }
+
+        ctx.restore();
+    }
+
+    // Draw logo
+    {
+        let ctx = canvas.getContext('2d');
+
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.fillStyle = 'white';
+
+        ctx.beginPath();
+        ctx.arc(canvas.width / 2, canvas.height / 2, 32, 0, Math.PI * 2, false);
+        ctx.fill();
+
+        ctx.drawImage(logo, canvas.width / 2 - 32, canvas.height / 2 - 32, 64, 64);
+    }
+
+    return canvas;
+}
+
 export {
     DAYS,
 
@@ -173,5 +284,7 @@ export {
     parseClock,
     formatDuration,
 
-    ProgressMeter
+    ProgressMeter,
+
+    drawQrCode
 }

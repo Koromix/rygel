@@ -3,7 +3,6 @@
 
 import { render, html, live, unsafeHTML } from 'vendor/lit-html/lit-html.bundle.js';
 import dayjs from 'vendor/dayjs/dayjs.bundle.js';
-import QRC from 'vendor/qrcodegen/js/qrcodegen.js';
 import { Util, LruMap, Log, Net, HttpError } from 'lib/web/base/base.js';
 import * as IDB from 'lib/web/base/indexeddb.js';
 import { Base64 } from 'lib/web/base/mixer.js';
@@ -15,7 +14,8 @@ import {
     formatFixed,
     formatSize,
     formatDuration,
-    ProgressMeter
+    ProgressMeter,
+    drawQrCode
 } from './format.js';
 import {
     prepareDownload,
@@ -262,7 +262,7 @@ async function runDrop() {
                     <pre style="text-align: center;"
                          @click=${e => window.getSelection().selectAllChildren(e.target)}>${ENV.url + url}</pre>
                 </div>
-                ${makeQrCodeCanvas(ENV.url + url, logo)}
+                ${drawQrCode(ENV.url + url, { logo: logo })}
                 <div class="sub" title=${cache.drop.expire != null ? dayjs(cache.drop.expire).format('lll') : null}>
                     ${cache.drop.expire != null ? T.format(T.expires_in_x, dayjs(cache.drop.expire).fromNow(true)) : ''}
                     ${cache.drop.expire == null ? T.never_expires : ''}
@@ -599,103 +599,6 @@ async function* readChunks(stream) {
 
         yield value;
     }
-}
-
-function makeQrCodeCanvas(text, logo) {
-    let scale = 6;
-    let border = 4;
-
-    let qr = QRC.QrCode.encodeText(text, QRC.QrCode.Ecc.QUARTILE);
-    let size = scale * qr.size;
-
-    let canvas = document.createElement('canvas');
-    let ctx = canvas.getContext('2d');
-
-    canvas.width = size + 2 * border;
-    canvas.height = size + 2 * border;
-
-    // Draw QR code
-    {
-        ctx.save();
-
-        ctx.fillStyle = 'white';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        ctx.fillStyle = 'black';
-        ctx.strokeStyle = 'black'
-        ctx.lineWidth = 0.6;
-
-        ctx.translate(border, border);
-        ctx.scale(scale, scale);
-        ctx.translate(0.5, 0.5);
-
-        for (let i = 0; i < qr.size; i++) {
-            for (let j = 0; j < qr.size; j++) {
-                let idx = (j * qr.size) + i;
-
-                if (qr.getModule(i, j)) {
-                    ctx.beginPath();
-                    ctx.arc(i, j, 0.5, 0, Math.PI * 2, false);
-                    ctx.fill();
-                }
-            }
-        }
-
-        for (let i = 0; i < qr.size; i++) {
-            for (let j = 0; j < qr.size; j++) {
-                if (qr.getModule(i, j)) {
-                    let k = j;
-
-                    while (qr.getModule(i, k + 1)) {
-                        k++;
-                    }
-
-                    if (k > j) {
-                        ctx.beginPath();
-                        ctx.moveTo(i, j);
-                        ctx.lineTo(i, k);
-                        ctx.stroke();
-                    }
-                }
-            }
-        }
-
-        for (let j = 0; j < qr.size; j++) {
-            for (let i = 0; i < qr.size; i++) {
-                if (qr.getModule(i, j)) {
-                    let k = i;
-
-                    while (qr.getModule(k + 1, j)) {
-                        k++;
-                    }
-
-                    if (k > i) {
-                        ctx.beginPath();
-                        ctx.moveTo(i, j);
-                        ctx.lineTo(k, j);
-                        ctx.stroke();
-                    }
-                }
-            }
-        }
-
-        ctx.restore();
-    }
-
-    // Draw logo
-    {
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = 'high';
-        ctx.fillStyle = 'white';
-
-        ctx.beginPath();
-        ctx.arc(canvas.width / 2, canvas.height / 2, 32, 0, Math.PI * 2, false);
-        ctx.fill();
-
-        ctx.drawImage(logo, canvas.width / 2 - 32, canvas.height / 2 - 32, 64, 64);
-    }
-
-    return canvas;
 }
 
 async function openLocalDB(id) {
