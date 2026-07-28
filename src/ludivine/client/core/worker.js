@@ -13,9 +13,9 @@ onmessage = handleMessage;
 function handleMessage(e) {
     let msg = e.data;
 
-    switch (msg.type) {
-        case 'download': { Async.wrap(self, msg.id, downloadVault, msg.args); } break;
-        case 'upload': { Async.wrap(self, msg.id, uploadVault, msg.args); } break;
+    switch (msg.kind) {
+        case 'download': { Async.wrap(self, msg, downloadVault); } break;
+        case 'upload': { Async.wrap(self, msg, uploadVault); } break;
     }
 }
 

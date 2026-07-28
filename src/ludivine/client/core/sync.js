@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
 import { Util, Log, Net } from 'lib/web/base/base.js';
+import * as Async from 'lib/web/base/async.js';
 import { Hex } from 'lib/web/base/mixer.js';
 import * as sqlite3 from 'lib/web/sqlite/sqlite3.js';
 
@@ -25,7 +26,7 @@ function isSyncing() {
 
 async function downloadVault(vid) {
     let force_sabfs = !sqlite3.hasOPFS();
-    let ref = await Async.call(worker, 'download', vid, force_sabfs);
+    let ref = await Async.call(worker, 'download', [vid, force_sabfs]);
 
     return ref;
 }
@@ -37,7 +38,7 @@ async function uploadVault(ref) {
         if (ref.type == 'sab')
             ref.sab = await sqlite3.SABFS.shrink(ref.filename);
 
-        ref.generation = await Async.call(worker, 'upload', ref);
+        ref.generation = await Async.call(worker, 'upload', [ref]);
     } finally {
         uploads--;
     }
