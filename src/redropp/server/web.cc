@@ -587,7 +587,7 @@ static void HandleRequest(http_IO *io)
             HandleDropDelete(io);
         } else if (url == "/api/drop/mark" && method == http_RequestMethod::Post) {
             HandleDropMark(io);
-        } else if (url == "/api/drop/fragment" && method == http_RequestMethod::Put) {
+        } else if (url == "/api/drop/fragment" && method == http_RequestMethod::Post) {
             HandleFragmentUpload(io);
         } else if (url == "/api/drop/fragment" && method == http_RequestMethod::Get) {
             HandleFragmentDownload(io);

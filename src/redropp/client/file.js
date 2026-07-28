@@ -248,7 +248,7 @@ async function* uploadFragments(info, key, iter, progress) {
                             progress(uploaded + normalized);
                         };
 
-                        xhr.open('PUT', url, true);
+                        xhr.open('POST', url, true);
                         xhr.send(cipher);
                     });
 

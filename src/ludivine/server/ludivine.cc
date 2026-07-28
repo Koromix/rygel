@@ -392,7 +392,7 @@ static void HandleRequest(http_IO *io)
             HandlePassword(io);
         } else if (url == "/api/download" && method == http_RequestMethod::Get) {
             HandleDownload(io);
-        } else if (url == "/api/upload" && method == http_RequestMethod::Put) {
+        } else if (url == "/api/upload" && method == http_RequestMethod::Post) {
             HandleUpload(io);
         } else if (url == "/api/remind" && method == http_RequestMethod::Post) {
             HandleRemind(io);

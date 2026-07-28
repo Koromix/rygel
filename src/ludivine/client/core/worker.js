@@ -120,7 +120,7 @@ async function uploadVault(ref) {
     upload_controller = controller;
 
     let response = await Net.fetch('/api/upload', {
-        method: 'PUT',
+        method: 'POST',
         headers: {
             'X-Vault-Id': ref.vid,
             'X-Vault-Generation': ref.generation
