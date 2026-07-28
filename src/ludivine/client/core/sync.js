@@ -12,6 +12,8 @@ let uploads = 0;
 
 let worker = null;
 
+let sab_map = new WeakMap;
+
 function initSync() {
     let url = BUNDLES['worker.js'];
     worker = new Worker(url, { type: 'module' });
@@ -35,8 +37,11 @@ async function uploadVault(ref) {
     try {
         uploads++;
 
-        if (ref.type == 'sab')
-            ref.sab = await sqlite3.SABFS.shrink(ref.filename);
+        if (ref.type == 'sab') {
+            let sabfs = sab_map.get(ref.sab);
+            ref.sab = await sabfs.shrink(ref.filename);
+            sab_map.set(ref.sab, sabfs);
+        }
 
         ref.generation = await Async.call(worker, 'upload', [ref]);
     } finally {
@@ -48,24 +53,20 @@ async function openVault(ref, key, lock) {
     let url = BUNDLES['sqlite3worker.js'];
     await sqlite3.init(url);
 
-    let db = null;
+    let db = await sqlite3.create(lock);
 
     switch (ref.type) {
         case 'opfs': {
-            db = await sqlite3.open(ref.filename, {
-                vfs: 'multipleciphers-opfs',
-                lock: lock
-            });
+            await db.open(ref.filename, 'multipleciphers-opfs');
         } break;
 
         case 'sab': {
-            await sqlite3.SABFS.init();
-            await sqlite3.SABFS.write(ref.filename, ref.sab);
+            let sabfs = await sqlite3.initSabFS(db);
+            sab_map.set(ref.sab, sabfs);
 
-            db = await sqlite3.open(ref.filename, {
-                vfs: 'multipleciphers-sabfs',
-                lock: lock
-            });
+            await sabfs.write(ref.filename, ref.sab);
+
+            await db.open(ref.filename, 'multipleciphers-sabfs');
         } break;
     }
 

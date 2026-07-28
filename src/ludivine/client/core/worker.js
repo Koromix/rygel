@@ -67,7 +67,7 @@ async function downloadVault(vid, force_sabfs = false) {
 
         return ref;
     } else {
-        console.warn('OPFS not available, switching to SABFS');
+        console.warn('OPFS not available, switching to SabFS');
 
         let sab = new SharedArrayBuffer(buf.byteLength, { maxByteLength: MAX_SABFS_SIZE });
 
