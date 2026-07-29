@@ -442,7 +442,7 @@ async function deletePlan(id) {
         <div class="main">${T.confirm_not_reversible}</div>
         <div class="footer">
             <button type="button" class="secondary" @click=${UI.wrap(close)}>${T.cancel}</button>
-            <button type="submit">${T.confirm}</button>
+            <button type="submit" class="danger">${T.confirm}</button>
         </div>
     `);
 
