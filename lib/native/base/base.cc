@@ -6177,7 +6177,11 @@ void ExitApp()
 
 bool FlushStandardOutputs()
 {
-    bool success = StdOut->Flush() & StdErr->Flush();
+    bool success = true;
+
+    success &= StdOut->Flush();
+    success &= StdErr->Flush();
+
     return success;
 }
 
