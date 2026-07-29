@@ -6175,6 +6175,12 @@ void ExitApp()
     }
 }
 
+bool FlushStandardOutputs()
+{
+    bool success = StdOut->Flush() & StdErr->Flush();
+    return success;
+}
+
 // ------------------------------------------------------------------------
 // Standard paths
 // ------------------------------------------------------------------------

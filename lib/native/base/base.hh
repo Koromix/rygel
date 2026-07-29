@@ -4690,6 +4690,7 @@ public:
 
 void InitApp();
 void ExitApp();
+bool FlushStandardOutputs();
 
 int Main(int argc, char **argv);
 
@@ -4700,7 +4701,13 @@ static inline int RunApp(int argc, char **argv)
     InitApp();
     K_DEFER { ExitApp(); };
 
-    return Main(argc, argv);
+    int ret = Main(argc, argv);
+
+    if (!FlushStandardOutputs() && !ret) {
+        ret = 1;
+    }
+
+    return ret;
 }
 
 // ------------------------------------------------------------------------
