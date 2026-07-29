@@ -2,15 +2,32 @@
 
 ## Goupile 3.12
 
+### Goupile 3.12.6
+
+*Sortie le 29/07/2026*
+
+- Réécriture de l'exporteur XLSX afin de :
+  * Mieux préserver la mise en forme des documents lors de l'utilisation de modèles/templates.
+  * Éviter les erreurs dues à une longueur excessive des noms de feuilles.
+- Prise en compte de la langue du navigateur lors de la création d'un projet de démonstration.
+- Correction des boucles infinies dans la séquence des pages lorsqu'une clé de page est répétée.
+- Correction des problèmes d'export dans les projets v2 :
+  * Correction des lenteurs d'export causées par un nombre excessif d'appels à `fsync()`.
+  * Réduction du nombre de colonnes dans les exportations de bases de données des projets v2.
+- Masquage du bouton « Précédent » lorsque l'option de page `multi` est activée dans les projets v2.
+- Restriction des domaines et des types de sockets disponibles dans la sandbox seccomp.
+- Corrections mineures dans l'interface utilisateur et les traductions.
+- Optimisation des routines d'allocation mémoire.
+
 ### Goupile 3.12.5
 
 *Sortie le 17/04/2026*
 
-* Correction de divers bugs d'affichage dans la table de suivi sur Chrome.
-* Ajout du HID dans les exports de données (colonne `__hid`).
-* Prise en charge des groupes de modalités dans enumRadio, enumRadio et multiCheck.
-* Prise en charge du préfixe de variable « ? » pour désactiver une saisie obligatoire.
-* Utilisation de c-ares pour la résolution des noms DNS.
+- Correction de divers bugs d'affichage dans la table de suivi sur Chrome.
+- Ajout du HID dans les exports de données (colonne `__hid`).
+- Prise en charge des groupes de modalités dans enumRadio, enumRadio et multiCheck.
+- Prise en charge du préfixe de variable « ? » pour désactiver une saisie obligatoire.
+- Utilisation de c-ares pour la résolution des noms DNS.
 
 ### Goupile 3.12.4
 

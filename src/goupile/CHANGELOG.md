@@ -2,6 +2,23 @@
 
 ## Goupile 3.12
 
+### Goupile 3.12.6
+
+*Released on 2026-07-29*
+
+- Rewrite XLSX exporter for:
+    * Better document preservation when using XLSX templates.
+    * Avoid excessive sheet name length error.
+- Respect browser language when creating demo instance.
+- Fix infinite page sequence loops when a page key is repeated.
+- Fix export problems in legacy projects (v2):
+    * Fix slow export caused by excessive `fsync()` calls.
+    * Reduce number of columns in legacy database exports.
+- Hide "Previous" button when page option `multi` is enabled in legacy projects (v2).
+- Restrict available socket domains and types in seccomp sandbox.
+- Minor UI and translation changes.
+- Optimize memory allocation routines.
+
 ### Goupile 3.12.5
 
 *Released on 2026-04-17*
