@@ -10,13 +10,13 @@ Rekkord is a **multi-platform backup tool**, with the following features:
 - Data compression with LZ4
 - Local and remote storage backends: local directory, S3 storage, SFTP servers
 
+<div id="demo" style="margin: 2em auto; box-sizing: border-box; max-width: 800px;"></div>
+
 If you like this project, consider supporting me:
 
 <p style="display: flex; gap: 1em; justify-content: center; align-items: center;">
      <a href="https://liberapay.com/Koromix/donate" target="_blank"><img alt="Donate using Liberapay" src="https://liberapay.com/assets/widgets/donate.svg"></a>
 </p>
-
-<div id="demo" style="margin: 2em auto; box-sizing: border-box; max-width: 800px;"></div>
 
 # License
 
