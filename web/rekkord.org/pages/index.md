@@ -1,8 +1,5 @@
 # Overview
 
-> [!IMPORTANT]
-> Rekkord is currently in active development, we recommend using **redundant backups**.
-
 Rekkord is a **multi-platform backup tool**, with the following features:
 
 - Write-only passwords / keys (using asymmetric encryption)
@@ -11,6 +8,9 @@ Rekkord is a **multi-platform backup tool**, with the following features:
 - Local and remote storage backends: local directory, S3 storage, SFTP servers
 
 <div id="demo" style="margin: 2em auto; box-sizing: border-box; max-width: 800px;"></div>
+
+> [!IMPORTANT]
+> Rekkord is currently in active development, we recommend using **redundant backups**.
 
 If you like this project, consider supporting me:
 
