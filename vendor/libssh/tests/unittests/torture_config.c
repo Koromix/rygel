@@ -787,7 +787,9 @@ helper_proxy_jump_check(struct ssh_iterator *jump,
         int iport = strtol(port, NULL, 10);
         assert_int_equal(jis->port, iport);
     } else {
-        assert_int_equal(jis->port, 22);
+        /* No port in the ProxyJump spec: left unset for the jump host's own
+         * configuration to supply. */
+        assert_int_equal(jis->port, 0);
     }
 }
 
@@ -2950,6 +2952,128 @@ static void torture_config_invalid(void **state)
 #endif
 }
 
+/* Issue #365: a value set via ssh_options_set() before config parsing must
+ * NOT be overridden by the config file. */
+static void torture_config_user_not_overridden(void **state)
+{
+    ssh_session session = *state;
+    char *user = NULL;
+    int rc;
+
+    rc = ssh_options_set(session, SSH_OPTIONS_USER, "appuser");
+    assert_ssh_return_code(session, rc);
+
+    _parse_config(session, NULL, "User configuser\n", SSH_OK);
+
+    rc = ssh_options_get(session, SSH_OPTIONS_USER, &user);
+    assert_ssh_return_code(session, rc);
+    assert_non_null(user);
+    assert_string_equal(user, "appuser");
+    SSH_STRING_FREE_CHAR(user);
+}
+
+/* When the application did NOT set User, the config value still applies. */
+static void torture_config_user_from_config_applies(void **state)
+{
+    ssh_session session = *state;
+    char *user = NULL;
+    int rc;
+
+    _parse_config(session, NULL, "User configuser\n", SSH_OK);
+
+    rc = ssh_options_get(session, SSH_OPTIONS_USER, &user);
+    assert_ssh_return_code(session, rc);
+    assert_non_null(user);
+    assert_string_equal(user, "configuser");
+    SSH_STRING_FREE_CHAR(user);
+}
+
+/* Protection is general, not User-specific: an app-set Port survives config. */
+static void torture_config_port_not_overridden(void **state)
+{
+    ssh_session session = *state;
+    unsigned int port = 2020;
+    int rc;
+
+    rc = ssh_options_set(session, SSH_OPTIONS_PORT, &port);
+    assert_ssh_return_code(session, rc);
+
+    _parse_config(session, NULL, "Port 2222\n", SSH_OK);
+    assert_int_equal(session->opts.port, 2020);
+}
+
+/* The host match key is NOT protected: config HostName still resolves an
+ * app-set alias to the real hostname. */
+static void torture_config_hostname_still_resolves(void **state)
+{
+    ssh_session session = *state;
+    int rc;
+
+    rc = ssh_options_set(session, SSH_OPTIONS_HOST, "myalias");
+    assert_ssh_return_code(session, rc);
+
+    _parse_config(session,
+                  NULL,
+                  "Host myalias\n\tHostName real.example.com\n",
+                  SSH_OK);
+
+    assert_non_null(session->opts.host);
+    assert_string_equal(session->opts.host, "real.example.com");
+}
+
+/* HostName keeps its own "first obtained value wins" precedence between config
+ * entries, independently of the application-set SSH_OPTIONS_HOST lookup key.
+ * Every target below resolves to the first HostName, matching OpenSSH:
+ *
+ *   $ ssh -F config -G test  | grep ^hostname   ->  hostname test
+ *   $ ssh -F config -G test2 | grep ^hostname   ->  hostname test
+ *   $ ssh -F config -G test3 | grep ^hostname   ->  hostname test
+ */
+static void torture_config_hostname_first_wins(void **state)
+{
+    ssh_session session = *state;
+    const char *config = "HostName test\n"
+                         "HostName test2\n"
+                         "Match host test2\n"
+                         "\tHostName test3\n";
+    const char *targets[] = {"test", "test2", "test3"};
+    size_t i;
+    int rc;
+
+    (void)session;
+
+    for (i = 0; i < ARRAY_SIZE(targets); i++) {
+        ssh_session s = ssh_new();
+        assert_non_null(s);
+
+        rc = ssh_options_set(s, SSH_OPTIONS_HOST, targets[i]);
+        assert_ssh_return_code(s, rc);
+
+        _parse_config(s, NULL, config, SSH_OK);
+
+        assert_non_null(s->opts.host);
+        assert_string_equal(s->opts.host, "test");
+
+        ssh_free(s);
+    }
+}
+
+/* Operational options like log verbosity are NOT protected: config LogLevel
+ * still applies even if the application set verbosity beforehand. */
+static void torture_config_loglevel_not_overridden(void **state)
+{
+    ssh_session session = *state;
+    int level = SSH_LOG_NOLOG;
+    int rc;
+
+    rc = ssh_options_set(session, SSH_OPTIONS_LOG_VERBOSITY, &level);
+    assert_ssh_return_code(session, rc);
+
+    _parse_config(session, NULL, "LogLevel DEBUG3\n", SSH_OK);
+
+    assert_int_equal(session->common.log_verbosity, SSH_LOG_TRACE);
+}
+
 int torture_run_tests(void)
 {
     int rc;
@@ -3105,6 +3229,24 @@ int torture_run_tests(void)
                                         setup,
                                         teardown),
         cmocka_unit_test_setup_teardown(torture_config_invalid,
+                                        setup,
+                                        teardown),
+        cmocka_unit_test_setup_teardown(torture_config_user_not_overridden,
+                                        setup,
+                                        teardown),
+        cmocka_unit_test_setup_teardown(torture_config_user_from_config_applies,
+                                        setup,
+                                        teardown),
+        cmocka_unit_test_setup_teardown(torture_config_port_not_overridden,
+                                        setup,
+                                        teardown),
+        cmocka_unit_test_setup_teardown(torture_config_hostname_still_resolves,
+                                        setup,
+                                        teardown),
+        cmocka_unit_test_setup_teardown(torture_config_hostname_first_wins,
+                                        setup,
+                                        teardown),
+        cmocka_unit_test_setup_teardown(torture_config_loglevel_not_overridden,
                                         setup,
                                         teardown),
     };

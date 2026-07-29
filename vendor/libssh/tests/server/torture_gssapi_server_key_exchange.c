@@ -278,6 +278,7 @@ static void torture_gssapi_server_key_exchange(void **state)
     struct test_server_st *tss = *state;
     struct torture_state *s = NULL;
     ssh_session session;
+    enum ssh_known_hosts_e known_hosts_state;
     int rc;
     bool t = true;
 
@@ -304,6 +305,11 @@ static void torture_gssapi_server_key_exchange(void **state)
 
     rc = ssh_connect(session);
     assert_int_equal(rc, SSH_OK);
+
+    assert_true(ssh_session_kex_is_gss(session));
+
+    known_hosts_state = ssh_session_is_known_server(session);
+    assert_int_equal(known_hosts_state, SSH_KNOWN_HOSTS_UNKNOWN);
 
     torture_teardown_kdc_server((void **)&s);
 }
@@ -342,7 +348,7 @@ static void torture_gssapi_server_key_exchange_no_tgt(void **state)
     rc = ssh_connect(session);
     assert_ssh_return_code(session, rc);
 
-    assert_false(ssh_kex_is_gss(session->current_crypto));
+    assert_false(ssh_session_kex_is_gss(session));
 
     torture_teardown_kdc_server((void **)&s);
 }
@@ -354,6 +360,7 @@ static void torture_gssapi_server_key_exchange_alg(void **state,
     struct test_server_st *tss = *state;
     struct torture_state *s = NULL;
     ssh_session session;
+    enum ssh_known_hosts_e known_hosts_state;
     int rc;
     bool t = true;
 
@@ -387,6 +394,9 @@ static void torture_gssapi_server_key_exchange_alg(void **state,
     assert_ssh_return_code(session, rc);
 
     assert_int_equal(session->current_crypto->kex_type, kex_type);
+
+    known_hosts_state = ssh_session_is_known_server(session);
+    assert_int_equal(known_hosts_state, SSH_KNOWN_HOSTS_UNKNOWN);
 
     torture_teardown_kdc_server((void **)&s);
 }
@@ -533,6 +543,8 @@ static void torture_gssapi_server_key_exchange_no_auth(void **state)
 
     rc = ssh_connect(session);
     assert_int_equal(rc, SSH_OK);
+
+    assert_false(ssh_session_kex_is_gss(session));
 
     /* Still try to do "gssapi-keyex" auth */
     rc = ssh_userauth_gssapi_keyex(session);

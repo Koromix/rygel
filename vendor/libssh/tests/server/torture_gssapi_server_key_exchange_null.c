@@ -247,6 +247,7 @@ static void torture_gssapi_server_key_exchange_null(void **state)
     struct test_server_st *tss = *state;
     struct torture_state *s = NULL;
     ssh_session session;
+    enum ssh_known_hosts_e known_hosts_state;
     int rc;
     bool t = true;
 
@@ -274,8 +275,13 @@ static void torture_gssapi_server_key_exchange_null(void **state)
     rc = ssh_connect(session);
     assert_ssh_return_code(s->ssh.session, rc);
 
+    assert_true(ssh_session_kex_is_gss(session));
+
     assert_string_equal(session->current_crypto->kex_methods[SSH_HOSTKEYS],
                         "null");
+
+    known_hosts_state = ssh_session_is_known_server(session);
+    assert_int_equal(known_hosts_state, SSH_KNOWN_HOSTS_UNKNOWN);
 
     torture_teardown_kdc_server((void **)&s);
 }

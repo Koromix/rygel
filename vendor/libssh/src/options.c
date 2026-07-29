@@ -320,6 +320,142 @@ int ssh_options_set_algo(ssh_session session,
     return 0;
 }
 
+/*
+ * Map a public ssh_options_e onto the internal config opcode whose parser
+ * case applies it via ssh_options_set(). Used to mark a value as "seen" when
+ * an application sets it explicitly, so later config-file processing does not
+ * override it (OpenSSH "first obtained value wins" semantics).
+ *
+ * Returns SOC_UNKNOWN for options that must NOT be protected:
+ *   - accumulative options (IdentityFile/CertificateFile and friends),
+ *   - SSH_OPTIONS_HOST, the Host/Match lookup key that config HostName
+ *     intentionally overrides during alias resolution,
+ *   - operational settings such as log verbosity,
+ *   - options that have no ssh_config equivalent,
+ *   - getter-only options, which ssh_options_set() never accepts.
+ */
+static enum ssh_config_opcode_e ssh_opt_type_to_opcode(enum ssh_options_e type)
+{
+    switch (type) {
+    case SSH_OPTIONS_PORT:
+    case SSH_OPTIONS_PORT_STR:
+        return SOC_PORT;
+    case SSH_OPTIONS_USER:
+        return SOC_USERNAME;
+    case SSH_OPTIONS_KNOWNHOSTS:
+        return SOC_KNOWNHOSTS;
+    case SSH_OPTIONS_GLOBAL_KNOWNHOSTS:
+        return SOC_GLOBALKNOWNHOSTSFILE;
+    case SSH_OPTIONS_TIMEOUT:
+        return SOC_TIMEOUT;
+    case SSH_OPTIONS_CIPHERS_C_S:
+    case SSH_OPTIONS_CIPHERS_S_C:
+        return SOC_CIPHERS;
+    case SSH_OPTIONS_COMPRESSION:
+    case SSH_OPTIONS_COMPRESSION_C_S:
+    case SSH_OPTIONS_COMPRESSION_S_C:
+        return SOC_COMPRESSION;
+    case SSH_OPTIONS_PROXYCOMMAND:
+        return SOC_PROXYCOMMAND;
+    case SSH_OPTIONS_PROXYJUMP:
+        return SOC_PROXYJUMP;
+    case SSH_OPTIONS_BINDADDR:
+        return SOC_BINDADDRESS;
+    case SSH_OPTIONS_STRICTHOSTKEYCHECK:
+        return SOC_STRICTHOSTKEYCHECK;
+    case SSH_OPTIONS_KEY_EXCHANGE:
+        return SOC_KEXALGORITHMS;
+    case SSH_OPTIONS_HOSTKEYS:
+        return SOC_HOSTKEYALGORITHMS;
+    case SSH_OPTIONS_PUBLICKEY_ACCEPTED_TYPES:
+        return SOC_PUBKEYACCEPTEDKEYTYPES;
+    case SSH_OPTIONS_HMAC_C_S:
+    case SSH_OPTIONS_HMAC_S_C:
+        return SOC_MACS;
+    case SSH_OPTIONS_GSSAPI_SERVER_IDENTITY:
+        return SOC_GSSAPISERVERIDENTITY;
+    case SSH_OPTIONS_GSSAPI_CLIENT_IDENTITY:
+        return SOC_GSSAPICLIENTIDENTITY;
+    case SSH_OPTIONS_GSSAPI_DELEGATE_CREDENTIALS:
+        return SOC_GSSAPIDELEGATECREDENTIALS;
+    case SSH_OPTIONS_GSSAPI_KEY_EXCHANGE:
+        return SOC_GSSAPIKEYEXCHANGE;
+    case SSH_OPTIONS_GSSAPI_KEY_EXCHANGE_ALGS:
+        return SOC_GSSAPIKEXALGORITHMS;
+    case SSH_OPTIONS_PASSWORD_AUTH:
+        return SOC_PASSWORDAUTHENTICATION;
+    case SSH_OPTIONS_PUBKEY_AUTH:
+        return SOC_PUBKEYAUTHENTICATION;
+    case SSH_OPTIONS_KBDINT_AUTH:
+        return SOC_KBDINTERACTIVEAUTHENTICATION;
+    case SSH_OPTIONS_GSSAPI_AUTH:
+        return SOC_GSSAPIAUTHENTICATION;
+    case SSH_OPTIONS_REKEY_DATA:
+    case SSH_OPTIONS_REKEY_TIME:
+        return SOC_REKEYLIMIT;
+    case SSH_OPTIONS_RSA_MIN_SIZE:
+        return SOC_REQUIRED_RSA_SIZE;
+    case SSH_OPTIONS_IDENTITY_AGENT:
+        return SOC_IDENTITYAGENT;
+    case SSH_OPTIONS_IDENTITIES_ONLY:
+        return SOC_IDENTITIESONLY;
+    case SSH_OPTIONS_CONTROL_MASTER:
+        return SOC_CONTROLMASTER;
+    case SSH_OPTIONS_CONTROL_PATH:
+        return SOC_CONTROLPATH;
+    case SSH_OPTIONS_ADDRESS_FAMILY:
+        return SOC_ADDRESSFAMILY;
+    /*
+     * Accumulative options append to a list instead of replacing a value, so
+     * the "first value wins" precedence between config and the application does
+     * not apply to them.
+     */
+    case SSH_OPTIONS_IDENTITY:
+    case SSH_OPTIONS_ADD_IDENTITY:
+    case SSH_OPTIONS_CERTIFICATE:
+    case SSH_OPTIONS_PROXYJUMP_CB_LIST_APPEND:
+    /*
+     * SSH_OPTIONS_HOST carries the destination as given by the application,
+     * which is OpenSSH's "host" (the Host/Match lookup key), not its
+     * "hostname". Config HostName resolves that key to the real hostname and
+     * must keep doing so. HostName has its own "first value wins" precedence
+     * between config entries, enforced independently via seen[SOC_HOSTNAME]
+     * while parsing the configuration.
+     */
+    case SSH_OPTIONS_HOST:
+    /*
+     * Operational settings that applications and frameworks routinely set on
+     * their own, independent of the connection configuration. OpenSSH's config
+     * parser notably does not let a previously-set value suppress LogLevel, so
+     * we follow it and leave log verbosity unprotected.
+     */
+    case SSH_OPTIONS_LOG_VERBOSITY:
+    case SSH_OPTIONS_LOG_VERBOSITY_STR:
+    /*
+     * Options with no OpenSSH ssh_config equivalent (or that are never applied
+     * from a config file), so there is no config value that could override the
+     * application's choice.
+     */
+    case SSH_OPTIONS_FD:
+    case SSH_OPTIONS_SSH_DIR:
+    case SSH_OPTIONS_SSH1:
+    case SSH_OPTIONS_SSH2:
+    case SSH_OPTIONS_TIMEOUT_USEC:
+    case SSH_OPTIONS_COMPRESSION_LEVEL:
+    case SSH_OPTIONS_NODELAY:
+    case SSH_OPTIONS_PROCESS_CONFIG:
+    case SSH_OPTIONS_PKI_CONTEXT:
+    /*
+     * Getter-only options: ssh_options_set() rejects them, so they never reach
+     * the marking step. Listed to keep the switch exhaustive.
+     */
+    case SSH_OPTIONS_NEXT_IDENTITY:
+        return SOC_UNKNOWN;
+    }
+
+    return SOC_UNKNOWN;
+}
+
 /**
  * @brief This function can set all possible ssh options.
  *
@@ -705,6 +841,7 @@ int ssh_options_set(ssh_session session, enum ssh_options_e type,
     int rc;
     char **wanted_methods = session->opts.wanted_methods;
     struct ssh_jump_callbacks_struct *j = NULL;
+    enum ssh_config_opcode_e opcode;
 
     if (session == NULL) {
         return -1;
@@ -1466,6 +1603,17 @@ int ssh_options_set(ssh_session session, enum ssh_options_e type,
             break;
     }
 
+    /*
+     * The option was set successfully. Mark config-backed options as
+     * explicitly set so that later processing of OpenSSH configuration files
+     * keeps the application's value (issue #365). Options that map to
+     * SOC_UNKNOWN are intentionally left unmarked.
+     */
+    opcode = ssh_opt_type_to_opcode(type);
+    if (opcode != SOC_UNKNOWN) {
+        session->opts.options_seen[opcode] = 1;
+    }
+
     return 0;
 }
 
@@ -1956,8 +2104,12 @@ int ssh_options_getopt(ssh_session session, int *argcptr, char **argv)
 /**
  * @brief Parse the ssh config file.
  *
- * This should be the last call of all options, it may overwrite options which
- * are already set. It requires that the host name is already set with
+ * This should be the last call of all options. Options that were already set
+ * explicitly via ssh_options_set() take precedence and are not overwritten by
+ * the configuration file, matching OpenSSH's "first obtained value wins"
+ * behavior. Accumulative options such as IdentityFile and CertificateFile, as
+ * well as host-alias resolution via HostName, are still applied from the
+ * configuration. It requires that the host name is already set with
  * ssh_options_set(SSH_OPTIONS_HOST).
  *
  * @param  session      SSH session handle

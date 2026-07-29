@@ -1311,8 +1311,21 @@ jump_thread_func(void *arg)
     next_hostname = jump_thread_data->next_hostname;
 
     ssh_options_set(jump_session, SSH_OPTIONS_HOST, jis->hostname);
-    ssh_options_set(jump_session, SSH_OPTIONS_USER, jis->username);
-    ssh_options_set(jump_session, SSH_OPTIONS_PORT, &jis->port);
+
+    /*
+     * Only propagate the username and port that the ProxyJump specification
+     * actually provided. Setting them unconditionally would inject internal
+     * defaults (the local username and port 22) as if the application had
+     * chosen them, which then prevents the jump host's own configuration from
+     * supplying these values (issue #365). When they are omitted here, the jump
+     * host config and the connection internals fill them in.
+     */
+    if (jis->username != NULL) {
+        ssh_options_set(jump_session, SSH_OPTIONS_USER, jis->username);
+    }
+    if (jis->port > 0) {
+        ssh_options_set(jump_session, SSH_OPTIONS_PORT, &jis->port);
+    }
 
     if (cb != NULL && cb->before_connection != NULL) {
         rc = cb->before_connection(jump_session, cb->userdata);

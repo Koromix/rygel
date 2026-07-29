@@ -176,6 +176,13 @@ he/she trusts it. Once he/she concluded that the host is valid and worth being
 added in the known hosts file, you use ssh_write_knownhost() to register it in
 the known hosts file, or any other way if you use your own database.
 
+Note: When GSSAPI key exchange is used, the server identity is already verified
+via mutual GSSAPI authentication initiated by the SSH client. In such cases,
+most SSH servers won't send their host keys at all. If it fits your use case
+(e.g., you don't expect the server to send a host key), you can use
+ssh_session_kex_is_gss() to check if GSSAPI key exchange indeed took place
+and skip the knownhosts check.
+
 The following example is part of the examples suite available in the
 examples/ directory:
 
@@ -193,6 +200,18 @@ int verify_knownhost(ssh_session session)
     char *p = NULL;
     int cmp;
     int rc;
+
+    /* If GSSAPI key exchange was used, the server identity was already
+     * verified via Kerberos mutual authentication (MIC). We might skip
+     * the host key verification, especially if we don't expect the server
+     * to send its key. Alternatively, we could proceed without this check
+     * and handle the scenario when the server does not provide its host key
+     * later. In that case, ssh_session_is_known_server will return
+     * SSH_KNOWN_HOSTS_UNKNOWN.
+     */
+    if (ssh_session_kex_is_gss(session)) {
+        return 0;
+    }
 
     rc = ssh_get_server_publickey(session, &srv_pubkey);
     if (rc < 0) {

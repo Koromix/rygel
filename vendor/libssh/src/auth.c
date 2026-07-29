@@ -2505,7 +2505,7 @@ int ssh_userauth_gssapi_keyex(ssh_session session)
     }
 
     /* Check if GSSAPI Key exchange was performed */
-    if (!ssh_kex_is_gss(session->current_crypto)) {
+    if (!ssh_session_kex_is_gss(session)) {
         ssh_set_error(session,
                       SSH_FATAL,
                       "Attempt to authenticate with gssapi-keyex without "

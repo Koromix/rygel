@@ -162,7 +162,15 @@ int authenticate_console(ssh_session session)
                 break;
             }
         }
-        // Try to authenticate with public key first
+        if (method & SSH_AUTH_METHOD_GSSAPI_KEYEX) {
+            rc = ssh_userauth_gssapi_keyex(session);
+            if (rc == SSH_AUTH_ERROR || !ssh_is_connected(session)) {
+                error(session);
+                return rc;
+            } else if (rc == SSH_AUTH_SUCCESS) {
+                break;
+            }
+        }
         if (method & SSH_AUTH_METHOD_PUBLICKEY) {
             rc = ssh_userauth_publickey_auto(session, NULL, NULL);
             if (rc == SSH_AUTH_ERROR || !ssh_is_connected(session)) {

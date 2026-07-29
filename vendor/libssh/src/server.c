@@ -704,7 +704,7 @@ int ssh_auth_reply_default(ssh_session session,int partial) {
   }
   /* Check if GSSAPI Key exchange was performed */
   if (session->auth.supported_methods & SSH_AUTH_METHOD_GSSAPI_KEYEX) {
-      if (ssh_kex_is_gss(session->current_crypto)) {
+      if (ssh_session_kex_is_gss(session)) {
           strncat(methods_c,
                   "gssapi-keyex,",
                   sizeof(methods_c) - strlen(methods_c) - 1);

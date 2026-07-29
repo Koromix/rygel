@@ -507,3 +507,10 @@ LIBSSH_4_11_0    # Released
         sshsig_verify;
 } LIBSSH_4_10_0;
 
+LIBSSH_4_12_0    # Released
+{
+    global:
+        ssh_session_kex_is_gss;
+        ssh_userauth_gssapi_keyex;
+} LIBSSH_4_11_0;
+

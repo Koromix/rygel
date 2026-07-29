@@ -307,6 +307,8 @@ static void torture_gssapi_server_key_exchange_fallback(void **state)
     rc = ssh_connect(session);
     assert_int_equal(rc, SSH_OK);
 
+    assert_false(ssh_session_kex_is_gss(session));
+
     rc = ssh_userauth_gssapi_keyex(session);
     assert_int_equal(rc, SSH_AUTH_ERROR);
 

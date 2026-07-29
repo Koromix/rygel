@@ -40,6 +40,7 @@
 #include "libssh/options.h"
 #include "libssh/misc.h"
 #include "libssh/pki.h"
+#include "libssh/libssh.h"
 #include "libssh/dh.h"
 #include "libssh/knownhosts.h"
 #include "libssh/token.h"
@@ -1166,11 +1167,22 @@ ssh_known_hosts_check_server_key(const char *hosts_entry,
  *                                     are under attack or the administrator
  *                                     changed the key. You HAVE to warn the
  *                                     user about a possible attack.\n
+ *                                     Note: When GSSAPI key exchange is used,
+ *                                     host keys may change frequently and
+ *                                     without advance warning per RFC 4462.
+ *                                     Clients SHOULD NOT issue strong warnings
+ *                                     or abort when this occurs with GSSAPI
+ *                                     key exchange.\n
  *          SSH_KNOWN_HOSTS_OTHER:     The server gave use a key of a type while
  *                                     we had an other type recorded. It is a
  *                                     possible attack.\n
  *          SSH_KNOWN_HOSTS_UNKNOWN:   The server is unknown. User should
- *                                     confirm the public key hash is correct.\n
+ *                                     confirm the public key hash is correct.
+ *                                     This is also returned when GSSAPI key
+ *                                     exchange with null hostkey is negotiated,
+ *                                     as there is no host key to verify, or when
+ *                                     the server does not send the host key despite
+ *                                     negotiating a non-null host key algorithm.\n
  *          SSH_KNOWN_HOSTS_NOT_FOUND: The known host file does not exist. The
  *                                     host is thus unknown. File will be
  *                                     created if host key is accepted.\n
@@ -1264,6 +1276,15 @@ ssh_session_get_known_hosts_entry_file(ssh_session session,
 
     server_pubkey = ssh_dh_get_current_server_publickey(session);
     if (server_pubkey == NULL) {
+#ifdef WITH_GSSAPI
+        /* After GSSAPI key exchange, sending the host key is optional
+         * because the server is already authenticated via Kerberos.
+         * Return SSH_KNOWN_HOSTS_UNKNOWN if there is no host key
+         * to let the application decide how to handle this case. */
+        if (ssh_session_kex_is_gss(session)) {
+            return SSH_KNOWN_HOSTS_UNKNOWN;
+        }
+#endif
         ssh_set_error(session,
                       SSH_FATAL,
                       "ssh_session_is_known_host called without a "

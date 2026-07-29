@@ -38,6 +38,7 @@
 #include "libssh/ssh2.h"
 #include "libssh/agent.h"
 #include "libssh/packet.h"
+#include "libssh/kex.h"
 #include "libssh/session.h"
 #include "libssh/misc.h"
 #include "libssh/buffer.h"
@@ -522,10 +523,25 @@ const char* ssh_get_kex_algo(ssh_session session) {
         return "diffie-hellman-group-exchange-sha256";
 #endif /* WITH_GEX */
     }
-
     return NULL;
 }
 
+/**
+ * @brief Check if current session keys were exchanged using
+ *        a GSSAPI key exchange method.
+ *
+ * @param[in] session The SSH session.
+ *
+ * @return True if GSSAPI key exchange took place, false otherwise
+ *         (other or no key exchange took place).
+ */
+bool ssh_session_kex_is_gss(ssh_session session)
+{
+    if (session == NULL || session->current_crypto == NULL) {
+        return false;
+    }
+    return ssh_kex_is_gss(session->current_crypto);
+}
 /**
  * @brief get the name of the input cipher for the given session.
  *

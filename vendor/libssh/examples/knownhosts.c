@@ -41,6 +41,18 @@ int verify_knownhost(ssh_session session)
     ssh_key srv_pubkey = NULL;
     int rc;
 
+    /* If GSSAPI key exchange was used, the server identity was already
+     * verified via Kerberos mutual authentication (MIC). We might skip
+     * the host key verification, especially if we don't expect the server
+     * to send its key. Alternatively, we could proceed without this check
+     * and handle the scenario when the server does not provide its host key
+     * later. In that case, ssh_session_is_known_server will return
+     * SSH_KNOWN_HOSTS_UNKNOWN.
+     */
+    if (ssh_session_kex_is_gss(session)) {
+        return 0;
+    }
+
     rc = ssh_get_server_publickey(session, &srv_pubkey);
     if (rc < 0) {
         return -1;

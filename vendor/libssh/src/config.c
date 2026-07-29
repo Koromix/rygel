@@ -548,9 +548,9 @@ ssh_config_parse_proxy_jump(ssh_session session, const char *s, bool do_parsing)
                 SAFE_FREE(jump_host);
                 goto out;
             }
-            if (port == NULL) {
-                jump_host->port = 22;
-            } else {
+            /* Leave the port at 0 when it is not given, so that the jump
+             * host's own configuration can supply it later. */
+            if (port != NULL) {
                 jump_host->port = strtol(port, NULL, 10);
                 SAFE_FREE(port);
             }

@@ -1,11 +1,25 @@
 CHANGELOG
 =========
 
+version 0.12.2 (released 2026-07-28)
+ * Security:
+   * CVE-2026-59843: Denial of service via zero advertised channel packet size
+     (accidentally missed from previous release backports)
+ * Bugfixes:
+   * Fix fallback to default provider if FIPS provider does not have ML-KEM
+     implementation
+   * Do not override explicitly set options through a configuration file to
+     match OpenSSH behavior.
+   * Return SSH_KNOWN_HOSTS_UNKNOWN when GSSAPI key exchange is used without any
+     hostkey
+ * New API:
+   * API to check the GSSAPI key exchange was used for hostkey handling
+   * API to initiate GSSAPI keyex authentication (missing from last release)
+
 version 0.12.1 (released 2026-07-21)
  * Security:
    * CVE-2026-15370: Stack buffer overflow in SFTP server longname construction
    * CVE-2026-59842: Information disclosure via short GSSAPI Curve25519 public key
-   * CVE-2026-59843: Denial of service via zero advertised channel packet size
    * CVE-2026-59844: Denial of service via oversized SFTP read length
    * CVE-2026-59845: Denial of service via unchecked ProxyCommand fork() failure
    * CVE-2026-59846: Information disclosure via ProxyCommand %r username expansion

@@ -90,6 +90,7 @@ static void torture_gssapi_key_exchange_null(void **state)
 {
     struct torture_state *s = *state;
     ssh_session session = s->ssh.session;
+    enum ssh_known_hosts_e known_hosts_state;
     int rc;
     bool t = true;
 
@@ -111,6 +112,11 @@ static void torture_gssapi_key_exchange_null(void **state)
 
     assert_string_equal(session->current_crypto->kex_methods[SSH_HOSTKEYS],
                         "null");
+
+    assert_true(ssh_session_kex_is_gss(session));
+
+    known_hosts_state = ssh_session_is_known_server(session);
+    assert_int_equal(known_hosts_state, SSH_KNOWN_HOSTS_UNKNOWN);
 
     torture_teardown_kdc_server(state);
 }
@@ -119,6 +125,7 @@ static void torture_gssapi_key_exchange_null_pubkey_auth(void **state)
 {
     struct torture_state *s = *state;
     ssh_session session = s->ssh.session;
+    enum ssh_known_hosts_e known_hosts_state;
     int rc;
     bool t = true;
 
@@ -140,6 +147,11 @@ static void torture_gssapi_key_exchange_null_pubkey_auth(void **state)
 
     assert_string_equal(session->current_crypto->kex_methods[SSH_HOSTKEYS],
                         "null");
+
+    assert_true(ssh_session_kex_is_gss(session));
+
+    known_hosts_state = ssh_session_is_known_server(session);
+    assert_int_equal(known_hosts_state, SSH_KNOWN_HOSTS_UNKNOWN);
 
     rc = ssh_userauth_publickey_auto(session, NULL, NULL);
     assert_int_equal(rc, SSH_AUTH_SUCCESS);

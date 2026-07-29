@@ -200,6 +200,13 @@ SSH_PACKET_CALLBACK(ssh_packet_channel_open_conf)
     if (rc != SSH_OK)
         goto error;
 
+    if (channel->remote_maxpacket == 0) {
+        SSH_LOG(SSH_LOG_RARE,
+                "Invalid maximum packet size 0 in "
+                "SSH2_MSG_CHANNEL_OPEN_CONFIRMATION");
+        goto error;
+    }
+
     SSH_LOG(SSH_LOG_DEBUG,
             "Received a CHANNEL_OPEN_CONFIRMATION for channel %" PRIu32
             ":%" PRIu32,

@@ -852,6 +852,7 @@ LIBSSH_API const char *ssh_userauth_kbdint_getanswer(ssh_session session, unsign
 LIBSSH_API int ssh_userauth_kbdint_setanswer(ssh_session session, unsigned int i,
     const char *answer);
 LIBSSH_API int ssh_userauth_gssapi(ssh_session session);
+LIBSSH_API int ssh_userauth_gssapi_keyex(ssh_session session);
 LIBSSH_API const char *ssh_version(int req_version);
 
 LIBSSH_API void ssh_string_burn(ssh_string str);
@@ -891,6 +892,7 @@ LIBSSH_API void ssh_event_free(ssh_event event);
 LIBSSH_API const char* ssh_get_clientbanner(ssh_session session);
 LIBSSH_API const char* ssh_get_serverbanner(ssh_session session);
 LIBSSH_API const char* ssh_get_kex_algo(ssh_session session);
+LIBSSH_API bool ssh_session_kex_is_gss(ssh_session session);
 LIBSSH_API const char* ssh_get_cipher_in(ssh_session session);
 LIBSSH_API const char* ssh_get_cipher_out(ssh_session session);
 LIBSSH_API const char* ssh_get_hmac_in(ssh_session session);
