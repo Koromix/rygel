@@ -321,6 +321,8 @@ async function test() {
     const StringLength16 = lib.func('size_t StringLength16(const char16_t *str)');
     const ConcatMany1 = lib.func('const char *! ConcatMany(const char **strings, size_t count)');
     const ConcatMany2 = lib.func('const char *! ConcatMany(void **strings, size_t count)');
+    const SumInts = lib.func('int SumInts(int a, int b, int c, int d, int e, int f)');
+    const SumBools = lib.func('int SumBools(bool a, bool b, bool c, bool d, bool e, bool f)');
 
     free_ptr = CallFree;
 
@@ -1173,6 +1175,10 @@ async function test() {
             assert.equal(StringLength16(str), expected);
         }
     }
+
+    // Try to ensure registers used for bool arguments don't carry garbage
+    assert.equal(SumInts(127436, 2828, 181818, 1111, -4, -6), 313183);
+    assert.equal(SumBools(true, true, false, true, false, false), 3);
 
     lib.unload();
 }

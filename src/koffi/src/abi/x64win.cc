@@ -277,7 +277,7 @@ namespace {
             return call->env.Null();
         }
 
-        *(bool *)(base + inst->b1) = b;
+        *(uint64_t *)(base + inst->b1) = (uint64_t)b;
 
         NEXT();
     }

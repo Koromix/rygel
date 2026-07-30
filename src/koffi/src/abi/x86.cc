@@ -371,7 +371,7 @@ napi_value RunLoop(CallData *call, napi_value *args, uint8_t *base, const AbiIns
             return call->env.Null();
         }
 
-        *(bool *)(base + inst->b1) = b;
+        *(uint32_t *)(base + inst->b1) = (uint32_t)b;
 
         NEXT();
     }
