@@ -7,6 +7,15 @@
 
 ### Koffi 3.1
 
+#### Koffi 3.1.3
+
+*Released on 2026-07-30*
+
+- Detect Linux libc dynamically:
+  * Avoid trying to load glibc build when running musl-based Node binary
+  * Fix a crash when loading Koffi binary in Alpine ARM64
+- Cross-compile Linux/glibc, Linux/musl, FreeBSD and Windows builds with Clang
+
 #### Koffi 3.1.2
 
 *Released on 2026-07-20*
