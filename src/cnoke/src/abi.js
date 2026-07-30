@@ -7,8 +7,9 @@ function determineAbi() {
     let abi = process.arch.toString();
 
     if (abi == 'riscv32' || abi == 'riscv64') {
-        let buf = readFileHeader(process.execPath, 512);
-        let header = decodeElfHeader(buf);
+        using file = openFile(process.execPath, 'r');
+
+        let header = readElfHeader(file);
         let float_abi = (header.e_flags & 0x6);
 
         switch (float_abi) {
@@ -18,8 +19,9 @@ function determineAbi() {
             case 6: { abi += 'q'; } break;
         }
     } else if (abi == 'arm') {
-        let buf = readFileHeader(process.execPath, 512);
-        let header = decodeElfHeader(buf);
+        using file = openFile(process.execPath, 'r');
+
+        let header = readElfHeader(file);
 
         if (header.e_flags & 0x400) {
             abi += 'hf';
@@ -33,24 +35,8 @@ function determineAbi() {
     return abi;
 }
 
-function readFileHeader(filename, read) {
-    let fd = null;
-
-    try {
-        let fd = fs.openSync(filename);
-
-        let buf = Buffer.allocUnsafe(read);
-        let len = fs.readSync(fd, buf);
-
-        return buf.subarray(0, len);
-    } finally {
-        if (fd != null)
-            fs.closeSync(fd);
-    }
-}
-
-function decodeElfHeader(buf) {
-    let header = {};
+function readElfHeader(file, offset = 0) {
+    let buf = file.read(offset, 512);
 
     if (buf.length < 16)
         throw new Error('Truncated header');
@@ -61,29 +47,54 @@ function decodeElfHeader(buf) {
     if (buf[5] != 1)
         throw new Error('Big-endian architectures are not supported');
 
-    header.e_machine = buf.readUInt16LE(18);
-
     switch (buf[4]) {
         case 1: { // 32 bit
-            buf = buf.subarray(0, 68);
             if (buf.length < 68)
                 throw new Error('Truncated ELF header');
 
-            header.ei_class = 32;
-            header.e_flags = buf.readUInt32LE(36);
+            return {
+                ei_class: 32,
+
+                e_machine: buf.readUInt16LE(18),
+                e_flags: buf.readUInt32LE(36)
+            };
         } break;
+
         case 2: { // 64 bit
-            buf = buf.subarray(0, 120);
             if (buf.length < 120)
                 throw new Error('Truncated ELF header');
 
-            header.ei_class = 64;
-            header.e_flags = buf.readUInt32LE(48);
+            return {
+                ei_class: 64,
+
+                e_machine: buf.readUInt16LE(18),
+                e_flags: buf.readUInt32LE(48)
+            };
         } break;
+
         default: throw new Error('Invalid ELF class');
     }
+}
 
-    return header;
+function openFile(filename, flags) {
+    let fd = fs.openSync(filename, flags);
+    return new FileHandle(fd);
+}
+
+class FileHandle {
+    constructor(fd) {
+        this.fd = fd;
+    }
+
+    close() { fs.closeSync(this.fd); }
+    [Symbol.dispose]() { fs.closeSync(this.fd); }
+
+    read(offset, len) {
+        let buf = Buffer.allocUnsafe(len);
+        let read = fs.readSync(this.fd, buf, offset, len);
+
+        return buf.subarray(0, read);
+    }
 }
 
 export { determineAbi }
