@@ -695,7 +695,6 @@ async function compile(command) {
                 runner.logSuccess(null, `${build.title} > Build`, (time / 1000).toFixed(2) + 's');
                 runner.logOutput(ret.stdout, ret.stderr);
             } catch (err) {
-                console.log(err);
                 runner.logError(null, `${build.title} > Build`);
                 runner.logOutput(err.stdout, err.stderr);
 
