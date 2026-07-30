@@ -464,29 +464,29 @@ This contains the ${pkg.target} binaries for [Koffi](https://koffi.dev), a fast 
 > Do not install this package directly, use \`npm install koffi\` instead.
 `;
 
-            let code = `
-                let native = null;
-                let err = null;
+            let loader = script_dir + `/loaders/${pkg.target}.js`;
 
-                ${pkg.builds.map(build => `
-                    if (native == null) {
-                        try {
-                            native = require('./${build.name}/koffi.node');
-                        } catch (e) {
-                            err = e;
-                        }
-                    }
-                `).join('\n')}
+            if (fs.existsSync(loader)) {
+                await esbuild.build({
+                    entryPoints: [loader],
+                    bundle: true,
+                    minify: false,
+                    write: true,
+                    platform: 'node',
+                    target: 'es2022',
+                    outfile: pkg.path + '/index.js'
+                });
+            } else {
+                if (pkg.builds.length > 1)
+                    throw new Error(`Could not find loader script for ${pkg.name}`);
 
-                if (native == null)
-                    throw err;
+                let build = pkg.builds[0];
+                let code = `module.exports = require('./${build.name}/koffi.node');\n`;
 
-                module.exports = native;
-            `;
-            code = esbuild.transformSync(code, { loader: 'js' }).code;
+                fs.writeFileSync(pkg.path + '/index.js', code);
+            }
 
             fs.writeFileSync(pkg.path + '/README.md', readme);
-            fs.writeFileSync(pkg.path + '/index.js', code);
             fs.writeFileSync(pkg.path + '/package.json', JSON.stringify(binary, null, 4));
         }
     }

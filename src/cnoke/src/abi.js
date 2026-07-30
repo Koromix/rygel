@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
 import fs from 'node:fs';
+import path from 'node:path';
 
 function determineAbi() {
     let abi = process.arch.toString();
@@ -35,6 +36,32 @@ function determineAbi() {
     return abi;
 }
 
+function determineLibc() {
+    if (process.platform != 'linux')
+        throw new Error('ELF libc detection only works on Linux');
+
+    using file = openFile(process.execPath, 'r');
+
+    let header = readElfHeader(file);
+
+    if (!header.e_phoff)
+        throw new Error('Cannot find program headers in process binary');
+
+    let interp = null;
+
+    switch (header.ei_class) {
+        case 32: { interp = findInterpreter32(file, header); } break;
+        case 64: { interp = findInterpreter64(file, header); } break;
+
+        default: throw new Error('Unsupported ELF machine class');
+    }
+
+    let basename = path.basename(interp);
+    let libc = basename.startsWith('ld-musl-') ? 'musl': 'glibc';
+
+    return libc;
+}
+
 function readElfHeader(file, offset = 0) {
     let buf = file.read(offset, 512);
 
@@ -56,7 +83,11 @@ function readElfHeader(file, offset = 0) {
                 ei_class: 32,
 
                 e_machine: buf.readUInt16LE(18),
-                e_flags: buf.readUInt32LE(36)
+                e_flags: buf.readUInt32LE(36),
+
+                e_phoff: buf.readUInt32LE(28),
+                e_phentsize: buf.readUInt16LE(42),
+                e_phnum: buf.readUInt16LE(44)
             };
         } break;
 
@@ -68,12 +99,88 @@ function readElfHeader(file, offset = 0) {
                 ei_class: 64,
 
                 e_machine: buf.readUInt16LE(18),
-                e_flags: buf.readUInt32LE(48)
+                e_flags: buf.readUInt32LE(48),
+
+                e_phoff: buf.readBigUInt64LE(32),
+                e_phentsize: buf.readUInt16LE(54),
+                e_phnum: buf.readUInt16LE(56)
             };
         } break;
 
         default: throw new Error('Invalid ELF class');
     }
+}
+
+function findInterpreter32(file, header) {
+    if (header.e_phentsize != 32)
+        throw new Error('Unsupport ELF program header format');
+
+    let expected = header.e_phnum * header.e_phentsize;
+    let buf = file.read(header.e_phoff, expected);
+
+    if (buf.length != expected)
+        throw new Error('Truncated ELF program headers');
+
+    let interp = null;
+
+    for (let offset = 0; offset < expected; offset += header.e_phentsize) {
+        let p_type = buf.readUInt32LE(offset + 0);
+
+        if (p_type == 3) {
+            let p_offset = buf.readUInt32LE(offset + 4);
+            let p_filesz = buf.readUInt32LE(offset + 16);
+
+            let bytes = file.read(p_offset, p_filesz);
+
+            if (!bytes.length || bytes.length != p_filesz || bytes[bytes.length - 1] != 0)
+                throw new Error('Truncated PT_INTERP value');
+            bytes = bytes.subarray(0, bytes.length - 1);
+
+            interp = bytes.toString('ascii');
+            break;
+        }
+    }
+
+    if (interp == null)
+        throw new Error('Failed to find PT_INTERP program header');
+
+    return interp;
+}
+
+function findInterpreter64(file, header) {
+    if (header.e_phentsize != 56)
+        throw new Error('Unsupport ELF program header format');
+
+    let expected = header.e_phnum * header.e_phentsize;
+    let buf = file.read(header.e_phoff, expected);
+
+    if (buf.length != expected)
+        throw new Error('Truncated ELF program headers');
+
+    let interp = null;
+
+    for (let offset = 0; offset < expected; offset += header.e_phentsize) {
+        let p_type = buf.readUInt32LE(offset + 0);
+
+        if (p_type == 3) {
+            let p_offset = buf.readBigUInt64LE(offset + 8);
+            let p_filesz = Number(buf.readBigUInt64LE(offset + 32));
+
+            let bytes = file.read(p_offset, p_filesz);
+
+            if (!bytes.length || bytes.length != p_filesz || bytes[bytes.length - 1] != 0)
+                throw new Error('Truncated PT_INTERP value');
+            bytes = bytes.subarray(0, bytes.length - 1);
+
+            interp = bytes.toString('ascii');
+            break;
+        }
+    }
+
+    if (interp == null)
+        throw new Error('Failed to find PT_INTERP program header');
+
+    return interp;
 }
 
 function openFile(filename, flags) {
@@ -91,10 +198,13 @@ class FileHandle {
 
     read(offset, len) {
         let buf = Buffer.allocUnsafe(len);
-        let read = fs.readSync(this.fd, buf, offset, len);
+        let read = fs.readSync(this.fd, buf, 0, len, offset);
 
         return buf.subarray(0, read);
     }
 }
 
-export { determineAbi }
+export {
+    determineAbi,
+    determineLibc
+}
