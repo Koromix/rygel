@@ -7,6 +7,13 @@
 
 ### Koffi 3.1
 
+#### Koffi 3.1.4
+
+*Released on 2026-07-31*
+
+- Clear unused register/stack bytes when pushing bool arguments on Win64 and i386
+- Dump count of busy static callback trampolines in `koffi.stats()`
+
 #### Koffi 3.1.3
 
 *Released on 2026-07-30*
