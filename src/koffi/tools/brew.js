@@ -821,6 +821,7 @@ async function bundleScripts(dest_dir, packages, build_dir, drop) {
                 write: true,
                 external: [BINARY_PREFIX + '*', './src/static' + ext],
                 platform: 'node',
+                target: 'es2022',
                 format: format,
                 dropLabels: drop ? ['REPOSITORY'] : [],
                 outfile: dest_dir + '/src/koffi/' + variant + ext,
@@ -858,6 +859,7 @@ async function bundleScripts(dest_dir, packages, build_dir, drop) {
         minify: false,
         write: true,
         platform: 'node',
+        target: 'es2022',
         dropLabels: drop ? ['UNSAFE'] : [],
         outfile: dest_dir + '/cnoke.cjs',
         plugins: [makeImportMetaPlugin('cjs')]
