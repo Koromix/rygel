@@ -335,6 +335,8 @@ async function test() {
         assert.equal(called, true);
 
         SetIdle(koffi.node.env, null);
+
+        koffi.unregister(cb);
     }
 
     // Watch file descriptor
@@ -368,4 +370,7 @@ async function test() {
 
         handle.stop();
     }
+
+    // Count registered callbacks to make register/unregister works
+    assert.equal(koffi.stats().callbacks, 2);
 }

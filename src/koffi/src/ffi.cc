@@ -181,9 +181,16 @@ static Napi::Value GetStats(const Napi::CallbackInfo &info)
     Napi::Env env = info.Env();
     InstanceData *instance = (InstanceData *)info.Data();
 
+    Size callbacks;
+    {
+        std::lock_guard<std::mutex> lock(shared.mutex);
+        callbacks = MaxTrampolines - shared.available.len;
+    }
+
     Napi::Object obj = Napi::Object::New(env);
 
     obj.Set("disposed", instance->stats.disposed);
+    obj.Set("callbacks", callbacks);
 
     return obj;
 }
