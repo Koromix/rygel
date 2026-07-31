@@ -34,10 +34,17 @@ namespace K {
     #endif
 #endif
 
+// Only napi_ok matters, but many node-api functions fail with napi_cannot_run_js during
+// shutdown.
+// In Koffi, this mainly happens when running an async callback, while Koffi converts the
+// register and stack arguments to JS values and objects. This fails, but it does not matter
+// because the situation gets detected once the calback code reaches napi_call_function(),
+// which also returns napi_cannot_run_js.
+// The easiest fix is to ignore napi_cannot_run_js, so debug builds don't crash during shutdown.
 #define NAPI_OK(Call) \
     do { \
         napi_status _status = (Call); \
-        K_ASSERT(_status == napi_ok); \
+        K_ASSERT(_status == napi_ok || _status == napi_cannot_run_js); \
     } while (false)
 
 static const Size DefaultSyncStackSize = Mebibytes(1);
