@@ -504,7 +504,7 @@ void HandleDropPopulate(http_IO *io)
     bool success = db.Transaction([&]() {
         int64_t drop = 0;
 
-        // Update and check drop quota
+        // Find existing drop data
         {
             sq_Statement stmt;
             if (!db.Prepare(R"(SELECT id, total
@@ -526,9 +526,28 @@ void HandleDropPopulate(http_IO *io)
 
             drop = sqlite3_column_int64(stmt, 0);
             total -= sqlite3_column_int64(stmt, 1);
+        }
 
-            if (total > config.quota) {
-                LogError("These files would exceed total quota by %1 (max = %2)", FmtDiskSize(total - config.quota), FmtDiskSize(config.quota));
+        // Update and check user quota
+        {
+            sq_Statement stmt;
+            if (!db.Prepare(R"(INSERT INTO quotas (user, usage)
+                               VALUES (?1, ?2)
+                               ON CONFLICT DO UPDATE SET usage = usage + excluded.usage
+                               RETURNING usage)",
+                            &stmt, session->userid, total))
+                return false;
+
+            if (!stmt.Step()) {
+                K_ASSERT(!stmt.IsValid());
+                return false;
+            }
+
+            int64_t usage = sqlite3_column_int64(stmt, 0);
+            int64_t remain = config.quota - usage;
+
+            if (remain < 0) {
+                LogError("These files would exceed total quota by %1 (max = %2)", FmtDiskSize(-remain), FmtDiskSize(config.quota));
                 io->SendError(403);
                 return false;
             }
