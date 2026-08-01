@@ -67,15 +67,6 @@ function createDownloadStream(kid) {
                 return;
             }
 
-            if (download_complete) {
-                setTimeout(() => {
-                    controller.close();
-                    end();
-                }, 1000);
-
-                return;
-            }
-
             try {
                 let { value: next, done } = await fragments.next();
 
@@ -88,8 +79,13 @@ function createDownloadStream(kid) {
 
                     pending_frag = next;
                     push(controller);
-                } else {
+                } else if (!download_complete) {
                     download_complete = true;
+
+                    setTimeout(() => {
+                        controller.close();
+                        end();
+                    }, 1000);
                 }
             } catch (err) {
                 controller.error(err);
