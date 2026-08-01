@@ -1111,9 +1111,9 @@ int s3_Client::RunSafe(const char *action, int tries, int expect, FunctionRef<in
         LocalArray<char, 16384> *log = (LocalArray<char, 16384> *)udata;
 
         // Avoid stack overflow
-        nmemb = std::min(nmemb, (size_t)log->Available());
+        Size len = std::min((Size)nmemb, log->Available());
+        Span<const char> buf = MakeSpan(ptr, len);
 
-        Span<const char> buf = MakeSpan(ptr, (Size)nmemb);
         log->Append(buf);
 
         return nmemb;
