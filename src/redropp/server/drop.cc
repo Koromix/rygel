@@ -1012,7 +1012,7 @@ void HandleFileDownload(http_IO *io)
     int64_t fragments = (size + split - 1) / split;
     int64_t total = header.len + 1 + nonce.len + ComputedEncryptedSize(size);
 
-    const char *disposition = Fmt(io->Allocator(), "attachment; filename=\"%1.age\"", FmtEscape(name, '"')).ptr;
+    const char *disposition = Fmt(io->Allocator(), "attachment; filename=\"%1.age\"; filename*=UTF-8''%2.age", FmtEscape(name, '"'), FmtUrlSafe(name, "-._~@")).ptr;
     io->AddHeader("Content-Disposition", disposition);
 
     StreamWriter writer;
