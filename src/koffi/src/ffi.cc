@@ -1907,12 +1907,9 @@ static Napi::Value RegisterCallback(const Napi::CallbackInfo &info)
     trampoline->proto = type->proto;
     NAPI_OK(napi_create_reference(env, func, 1, &trampoline->func));
 
-    void *ptr = GetTrampoline(idx);
-
-    // Cache index for fast unregistration
-    instance->trampolines_map.Set(ptr, idx);
-
+    void *ptr = GetTrampolinePointer(idx);
     napi_value wrapper = WrapPointer(env, type->ref.type, ptr);
+
     return Napi::Value(env, wrapper);
 }
 
@@ -1932,17 +1929,11 @@ static Napi::Value UnregisterCallback(const Napi::CallbackInfo &info)
         return env.Null();
     }
 
-    int16_t idx;
-    {
-        int16_t *it = instance->trampolines_map.Find(ptr);
+    Size idx = GetTrampolineIndex(ptr);
 
-        if (!it) [[unlikely]] {
-            ThrowError<Napi::Error>(env, "Could not find matching registered callback");
-            return env.Null();
-        }
-
-        idx = *it;
-        instance->trampolines_map.Remove(it);
+    if (idx < 0 || idx >= MaxTrampolines) [[unlikely]] {
+        ThrowError<Napi::Error>(env, "Could not find matching registered callback");
+        return env.Null();
     }
 
     // Release shared trampoline safely
@@ -1950,13 +1941,17 @@ static Napi::Value UnregisterCallback(const Napi::CallbackInfo &info)
         std::lock_guard<std::mutex> lock(shared.mutex);
 
         TrampolineInfo *trampoline = &shared.trampolines[idx];
-        K_ASSERT(trampoline->func);
+
+        if (trampoline->instance != instance || !trampoline->func) [[unlikely]] {
+            ThrowError<Napi::Error>(env, "Could not find matching registered callback");
+            return env.Null();
+        }
 
         trampoline->state = 0;
         node_api_delete_reference(env, trampoline->func);
         trampoline->func = nullptr;
 
-        shared.available.Append(idx);
+        shared.available.Append((int16_t)idx);
     }
 
     return env.Undefined();

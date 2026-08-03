@@ -1155,9 +1155,7 @@ void *CallData::ReserveTrampoline(const FunctionInfo *proto, Napi::Function func
     trampoline->proto = proto;
     NAPI_OK(napi_create_reference(env, func, 1, &trampoline->func));
 
-    void *ptr = GetTrampoline(idx);
-
-    return ptr;
+    return GetTrampolinePointer(idx);
 }
 
 bool CallData::CheckDynamicLength(napi_value obj, Size element, const char *countedby, napi_value value)
@@ -1710,9 +1708,14 @@ bool InitAsyncBroker(Napi::Env env, InstanceData *instance)
     return true;
 }
 
-void *GetTrampoline(int idx)
+void *GetTrampolinePointer(Size idx)
 {
     return (void *)(TrampolineStart + TrampolineSize * idx);
+}
+
+Size GetTrampolineIndex(void *ptr)
+{
+    return ((uint8_t *)ptr - TrampolineStart) / TrampolineSize;
 }
 
 static bool CanTypeAcceptCallbacks(const TypeInfo *type)

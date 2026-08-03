@@ -396,8 +396,6 @@ struct InstanceData {
     BucketArray<LinkedAllocator> encode_allocators;
     HashMap<void *, LinkedAllocator *> encode_map;
 
-    HashMap<void *, int16_t> trampolines_map;
-
     BlockAllocator str_alloc;
 
     struct {
