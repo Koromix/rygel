@@ -327,11 +327,12 @@ async function runDownload(secret) {
                                     <td>${file.name}</td>
                                     <td class="right"><span class="sub">${formatSize(file.size)}</span></td>
                                     <td class="center">
-                                        ${status?.error == null ? html`<button type="button" class="small" ?disabled=${!enabled}
-                                                                               @click=${UI.wrap(e => start(file))}>${T.download}</button>` : ''}
+                                        ${!status?.busy && status?.error == null ?
+                                            html`<button type="button" class="small" ?disabled=${!enabled}
+                                                         @click=${UI.wrap(e => start(file))}>${T.download}</button>` : ''}
+                                        ${status?.busy ? html`<progress value=${stat.value ?? 0} max=${stat.max}></progress>` : ''}
                                         ${status?.error != null ? html`<p style="color: var(--color, red); font-size: 0.9em;">${status.error.message}</p>` : ''}
                                     </td>
-
                                 </tr>
                             `;
                         })}
