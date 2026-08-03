@@ -10,8 +10,6 @@
 
 namespace K {
 
-#if !defined(EXTERNAL_TYPES)
-
 class TypeObject: public Napi::ObjectWrap<TypeObject> {
     const TypeInfo *type;
 
@@ -26,8 +24,6 @@ public:
 
     const TypeInfo *GetType() { return type; }
 };
-
-#endif
 
 static FORCE_INLINE bool IsInteger(const TypeInfo *type)
 {

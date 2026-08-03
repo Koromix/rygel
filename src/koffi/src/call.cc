@@ -890,23 +890,10 @@ bool CallData::PushPointer(napi_value value, const TypeInfo *type, int direction
 restart:
 
     if (TryPointer(env, value, &ptr, &kind)) {
-#if defined(EXTERNAL_POINTERS)
-        if (kind == napi_external && CheckValueTag(env, value, &CastMarker)) {
-            Napi::External<ValueCast> external = Napi::External<ValueCast>(env, value);
-            ValueCast *cast = external.Data();
-
-            NAPI_OK(napi_get_reference_value(env, cast->ref, &value));
-            type = cast->type;
-
-            goto restart;
-        }
-#endif
-
         *out_ptr = ptr;
         return true;
     }
 
-#if !defined(EXTERNAL_POINTERS)
     if (kind == napi_external && CheckValueTag(env, value, &CastMarker)) {
         Napi::External<ValueCast> external = Napi::External<ValueCast>(env, value);
         ValueCast *cast = external.Data();
@@ -916,7 +903,6 @@ restart:
 
         goto restart;
     }
-#endif
 
     return PushPointerSlow(value, kind, type, directions, out_ptr);
 }
@@ -1063,18 +1049,6 @@ bool CallData::PushCallback(napi_value value, const TypeInfo *type, void **out_p
 restart:
 
     if (TryPointer(env, value, &ptr, &kind)) {
-#if defined(EXTERNAL_POINTERS)
-        if (kind == napi_external && CheckValueTag(env, value, &CastMarker)) {
-            Napi::External<ValueCast> external = Napi::External<ValueCast>(env, value);
-            ValueCast *cast = external.Data();
-
-            NAPI_OK(napi_get_reference_value(env, cast->ref, &value));
-            type = cast->type;
-
-            goto restart;
-        }
-#endif
-
         *out_ptr = ptr;
         return true;
     }
@@ -1088,7 +1062,6 @@ restart:
 
         *out_ptr = ptr;
         return true;
-#if !defined(EXTERNAL_POINTERS)
     } else if (kind == napi_external && CheckValueTag(env, value, &CastMarker)) {
         Napi::External<ValueCast> external = Napi::External<ValueCast>(env, value);
         ValueCast *cast = external.Data();
@@ -1097,7 +1070,6 @@ restart:
         type = cast->type;
 
         goto restart;
-#endif
     }
 
     ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected %2", GetValueType(instance, value), type->name);

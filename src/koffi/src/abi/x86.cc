@@ -545,13 +545,13 @@ napi_value RunLoop(CallData *call, napi_value *args, uint8_t *base, const AbiIns
     }
     OP(RunPointer) {
         uint32_t eax = (uint32_t)WRAP(ForwardCallG(call->native, base, &call->saved_sp));
-        napi_value value = WrapPointer(call->env, inst->type, (void *)eax);
+        napi_value value = WrapPointer(call->env, (void *)eax);
         DISPOSE((void *)eax);
         return value;
     }
     OP(RunCallback) {
         uint32_t eax = (uint32_t)WRAP(ForwardCallG(call->native, base, &call->saved_sp));
-        return WrapPointer(call->env, inst->type, (void *)eax);
+        return WrapPointer(call->env, (void *)eax);
     }
     OP(RunRecord) { K_UNREACHABLE(); return call->env.Null(); }
     OP(RunUnion) { K_UNREACHABLE(); return call->env.Null(); }
@@ -624,13 +624,13 @@ napi_value RunLoop(CallData *call, napi_value *args, uint8_t *base, const AbiIns
     }
     OP(RunPointerR) {
         uint32_t eax = (uint32_t)WRAP(ForwardCallGR(call->native, base, &call->saved_sp));
-        napi_value value = WrapPointer(call->env, inst->type, (void *)eax);
+        napi_value value = WrapPointer(call->env, (void *)eax);
         DISPOSE((void *)eax);
         return value;
     }
     OP(RunCallbackR) {
         uint32_t eax = (uint32_t)WRAP(ForwardCallGR(call->native, base, &call->saved_sp));
-        return WrapPointer(call->env, inst->type, (void *)eax);
+        return WrapPointer(call->env, (void *)eax);
     }
     OP(RunRecordR) { K_UNREACHABLE(); return call->env.Null(); }
     OP(RunUnionR) { K_UNREACHABLE(); return call->env.Null(); }
@@ -771,13 +771,13 @@ napi_value RunLoop(CallData *call, napi_value *args, uint8_t *base, const AbiIns
     }
     OP(ReturnPointer) {
         uint32_t eax = *(uint32_t *)base;
-        napi_value value = WrapPointer(call->env, inst->type, (void *)eax);
+        napi_value value = WrapPointer(call->env, (void *)eax);
         DISPOSE();
         return value;
     }
     OP(ReturnCallback) {
         uint32_t eax = *(uint32_t *)base;
-        return WrapPointer(call->env, inst->type, (void *)eax);
+        return WrapPointer(call->env, (void *)eax);
     }
     OP(ReturnRecord) { K_UNREACHABLE(); return call->env.Null(); }
     OP(ReturnUnion) { K_UNREACHABLE(); return call->env.Null(); }
@@ -980,7 +980,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
             } break;
             case PrimitiveKind::Pointer: {
                 void *ptr2 = *(void **)(args_ptr++);
-                arguments[i] = WrapPointer(env, param.type->ref.type, ptr2);
+                arguments[i] = WrapPointer(env, ptr2);
 
                 if (param.type->dispose) {
                     param.type->dispose(instance, param.type, ptr2);
@@ -988,7 +988,7 @@ void CallData::Relay(Size idx, uint8_t *sp)
             } break;
             case PrimitiveKind::Callback: {
                 void *ptr2 = *(void **)(args_ptr++);
-                arguments[i] = WrapPointer(env, param.type->ref.type, ptr2);
+                arguments[i] = WrapPointer(env, ptr2);
             } break;
             case PrimitiveKind::Record:
             case PrimitiveKind::Union: {

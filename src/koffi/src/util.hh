@@ -195,13 +195,6 @@ static FORCE_INLINE bool TryPointer(napi_env env, napi_value value, void **out_p
 
         *out_ptr = (void *)(uintptr_t)i;
         return true;
-#if defined(EXTERNAL_POINTERS)
-    } else if (kind == napi_external) {
-        Napi::External<void> external = Napi::External<void>(env, value);
-
-        *out_ptr = (void *)external.Data();
-        return true;
-#endif
     }
 
     if (napi_get_arraybuffer_info(env, value, out_ptr, nullptr) == napi_ok)
@@ -247,15 +240,6 @@ static FORCE_INLINE bool TryPointer(napi_env env, napi_value value, void **out_p
         *out_len = -1;
 
         return true;
-#if defined(EXTERNAL_POINTERS)
-    } else if (kind == napi_external) {
-        Napi::External<void> external = Napi::External<void>(env, value);
-
-        *out_ptr = (void *)external.Data();
-        *out_len = -1;
-
-        return true;
-#endif
     }
 
     if (size_t len = 0; napi_get_arraybuffer_info(env, value, out_ptr, &len) == napi_ok) {
@@ -303,15 +287,6 @@ static FORCE_INLINE bool TryPointer(napi_env env, napi_value value, void **out_p
         *out_kind = napi_number;
 
         return true;
-#if defined(EXTERNAL_POINTERS)
-    } else if (kind == napi_external) {
-        Napi::External<void> external = Napi::External<void>(env, value);
-
-        *out_ptr = (void *)external.Data();
-        *out_kind = napi_external;
-
-        return true;
-#endif
     }
 
     if (napi_get_arraybuffer_info(env, value, out_ptr, nullptr) == napi_ok) {
@@ -469,16 +444,12 @@ static FORCE_INLINE Napi::Array GetOwnPropertyNames(napi_env env, napi_value obj
     return Napi::Array(env, result);
 }
 
-static FORCE_INLINE napi_value WrapPointer(Napi::Env env, const TypeInfo *, void *ptr)
+static FORCE_INLINE napi_value WrapPointer(Napi::Env env, void *ptr)
 {
     napi_value value;
 
     if (ptr) {
-#if defined(EXTERNAL_POINTERS)
-        NAPI_OK(napi_create_external(env, ptr, nullptr, nullptr, &value));
-#else
         NAPI_OK(napi_create_bigint_uint64(env, (uint64_t)(uintptr_t)ptr, &value));
-#endif
     } else {
         NAPI_OK(napi_get_null(env, &value));
     }

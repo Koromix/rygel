@@ -267,11 +267,7 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
 
     bool skip = (info.Length() > 1);
     bool named = skip && !IsNullOrUndefined(env, info[0]);
-#if defined(EXTERNAL_TYPES)
-    bool redefine = named && info[0].IsExternal() && CheckValueTag(env, info[0], &TypeObjectMarker);
-#else
     bool redefine = named && info[0].IsObject() && CheckValueTag(env, info[0], &TypeObjectMarker);
-#endif
 
     if (named && !info[0].IsString() && !redefine) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string", GetValueType(instance, info[0]));
@@ -305,15 +301,10 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
     TypeInfo *replace = nullptr;
 
     if (redefine) {
-#if defined(EXTERNAL_TYPES)
-        Napi::External<TypeInfo> external = name.As<Napi::External<TypeInfo>>();
-        replace = external.Data();
-#else
         TypeObject *defn = nullptr;
         NAPI_OK(napi_unwrap(env, name, (void **)&defn));
 
         replace = (TypeInfo *)defn->GetType();
-#endif
 
         type->instance = instance;
         type->name = replace->name;
@@ -469,11 +460,7 @@ static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
 
     bool skip = (info.Length() > 1);
     bool named = skip && !IsNullOrUndefined(env, info[0]);
-#if defined(EXTERNAL_TYPES)
-    bool redefine = named && info[0].IsExternal() && CheckValueTag(env, info[0], &TypeObjectMarker);
-#else
     bool redefine = named && info[0].IsObject() && CheckValueTag(env, info[0], &TypeObjectMarker);
-#endif
 
     if (named && !info[0].IsString() && !redefine) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string", GetValueType(instance, info[0]));
@@ -507,15 +494,10 @@ static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
     TypeInfo *replace = nullptr;
 
     if (redefine) {
-#if defined(EXTERNAL_TYPES)
-        Napi::External<TypeInfo> external = name.As<Napi::External<TypeInfo>>();
-        replace = external.Data();
-#else
         TypeObject *defn = nullptr;
         NAPI_OK(napi_unwrap(env, name, (void **)&defn));
 
         replace = (TypeInfo *)defn->GetType();
-#endif
 
         type->instance = instance;
         type->name = replace->name;
@@ -865,7 +847,7 @@ static Napi::Value CreateDisposableType(const Napi::CallbackInfo &info)
             NAPI_OK(napi_get_reference_value(env, type->dispose_ref, &func));
 
             napi_value self = env.Null();
-            napi_value wrapper = WrapPointer(env, type->ref.type, (void *)ptr);
+            napi_value wrapper = WrapPointer(env, (void *)ptr);
 
             NAPI_OK(napi_call_function(env, self, func, 1, &wrapper, nullptr));
             instance->stats.disposed++;
@@ -952,7 +934,7 @@ static Napi::Value CallAlloc(const Napi::CallbackInfo &info)
         return env.Null();
     }
 
-    napi_value wrapper = WrapPointer(env, type, ptr);
+    napi_value wrapper = WrapPointer(env, ptr);
     return Napi::Value(env, wrapper);
 }
 
@@ -1405,18 +1387,7 @@ static Napi::Value CreateEnumType(const Napi::CallbackInfo &info)
     err_guard.Disable();
 
     napi_value wrapper = WrapType(instance, type, false);
-
-#if defined(EXTERNAL_TYPES)
-    Napi::Object defn;
-    {
-        napi_value value;
-        NAPI_OK(napi_get_reference_value(env, type->defn, &defn));
-
-        defn = Napi::Object(env, value);
-    }
-#else
     Napi::Object defn(env, wrapper);
-#endif
 
     defn.Set("values", values);
     defn.Freeze();
@@ -1470,33 +1441,6 @@ static Napi::Value GetResolvedType(const Napi::CallbackInfo &info)
     napi_value wrapper = WrapType(instance, type);
     return Napi::Value(env, wrapper);
 }
-
-#if defined(EXTERNAL_TYPES)
-
-static Napi::Value GetTypeDefinition(const Napi::CallbackInfo &info)
-{
-    Napi::Env env = info.Env();
-    InstanceData *instance = (InstanceData *)info.Data();
-
-    if (info.Length() < 1) {
-        ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", info.Length());
-        return env.Null();
-    }
-
-    const TypeInfo *type = ResolveType(instance, info[0]);
-    if (!type)
-        return env.Null();
-
-    // Make sure definition is available
-    WrapType(instance, type);
-
-    napi_value defn;
-    NAPI_OK(napi_get_reference_value(env, instance->defn, &defn));
-
-    return defn;
-}
-
-#endif
 
 InstanceMemory *AllocateMemory(InstanceData *instance, Size stack_size, Size heap_size)
 {
@@ -1725,31 +1669,16 @@ Napi::Value LibraryHandle::Symbol(const Napi::CallbackInfo &info)
     Napi::Env env = info.Env();
     InstanceData *instance = (InstanceData *)info.Data();
 
-#if defined(EXTERNAL_POINTERS)
-    if (info.Length() < 2) {
-        ThrowError<Napi::TypeError>(env, "Expected 2 arguments, got %1", info.Length());
-        return env.Null();
-    }
-#else
     if (info.Length() < 1) {
         ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", info.Length());
         return env.Null();
     }
-#endif
     if (!info[0].IsString()) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string", GetValueType(instance, info[0]));
         return env.Null();
     }
 
     std::string name = info[0].As<Napi::String>();
-
-#if defined(EXTERNAL_POINTERS)
-    const TypeInfo *type = ResolveType(instance, info[1]);
-    if (!type)
-        return env.Null();
-#else
-    const TypeInfo *type = nullptr;
-#endif
 
 #if defined(_WIN32)
     void *ptr = (void *)GetProcAddress((HMODULE)lib->module, name.c_str());
@@ -1761,7 +1690,7 @@ Napi::Value LibraryHandle::Symbol(const Napi::CallbackInfo &info)
         return env.Null();
     }
 
-    napi_value wrapper = WrapPointer(env, type, ptr);
+    napi_value wrapper = WrapPointer(env, ptr);
     return Napi::Value(env, wrapper);
 }
 
@@ -1908,7 +1837,7 @@ static Napi::Value RegisterCallback(const Napi::CallbackInfo &info)
     NAPI_OK(napi_create_reference(env, func, 1, &trampoline->func));
 
     void *ptr = GetTrampolinePointer(idx);
-    napi_value wrapper = WrapPointer(env, type->ref.type, ptr);
+    napi_value wrapper = WrapPointer(env, ptr);
 
     return Napi::Value(env, wrapper);
 }
@@ -2756,9 +2685,6 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
     exports.Set("enumeration", Napi::Function::New(env, CreateEnumType, "enumeration", instance));
 
     exports.Set("type", Napi::Function::New(env, GetResolvedType, "type", instance));
-#if defined(EXTERNAL_TYPES)
-    exports.Set("introspect", Napi::Function::New(env, GetTypeDefinition, "introspect", instance));
-#endif
 
     exports.Set("load", Napi::Function::New(env, LoadSharedLibrary, "load", instance));
 
@@ -2857,16 +2783,12 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
     {
         instance->object_constructor = Napi::Persistent(env.RunScript("Object.prototype").As<Napi::Object>());
         instance->construct_lib = Napi::Persistent(LibraryHandle::InitClass(instance));
-#if !defined(EXTERNAL_TYPES)
         instance->construct_type = Napi::Persistent(TypeObject::InitClass(instance));
-#endif
         instance->construct_poll = Napi::Persistent(PollHandle::InitClass(instance));
         instance->active_symbol = Napi::Persistent(Napi::Symbol::New(env, "active"));
 
         exports.Set("LibraryHandle", instance->construct_lib.Value());
-#if !defined(EXTERNAL_TYPES)
         exports.Set("TypeObject", instance->construct_type.Value());
-#endif
     }
 
     // Init base types
@@ -2944,7 +2866,7 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
         Napi::Object node = Napi::Object::New(env);
         exports.Set("node", node);
 
-        node.Set("env", WrapPointer(env, instance->void_type, (napi_env)env));
+        node.Set("env", WrapPointer(env, (napi_env)env));
 
         node.Set("poll", Napi::Function::New(env, &Poll, "poll", instance));
         node.Set("PollHandle", instance->construct_poll.Value());

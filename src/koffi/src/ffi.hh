@@ -9,9 +9,6 @@
 
 namespace K {
 
-// #define EXTERNAL_POINTERS
-// #define EXTERNAL_TYPES
-
 #if defined(_MSC_VER)
     #define FORCE_INLINE __forceinline
 #else
@@ -368,9 +365,7 @@ struct InstanceData {
 
     Napi::ObjectReference object_constructor;
     Napi::FunctionReference construct_lib;
-#if !defined(EXTERNAL_TYPES)
     Napi::FunctionReference construct_type;
-#endif
     Napi::FunctionReference construct_poll;
     Napi::Reference<Napi::Symbol> active_symbol;
 

@@ -10,8 +10,6 @@
 
 namespace K {
 
-#if !defined(EXTERNAL_TYPES)
-
 Napi::Function TypeObject::InitClass(InstanceData *instance)
 {
     Napi::Env env = instance->env;
@@ -39,8 +37,6 @@ void TypeObject::Finalize(Napi::BasicEnv env)
     node_api_delete_reference(env, *this);
     SuppressDestruct();
 }
-
-#endif
 
 static inline bool IsIdentifierStart(char c)
 {
@@ -153,16 +149,6 @@ const TypeInfo *ResolveType(InstanceData *instance, napi_value value, int *out_d
         }
 
         return type;
-#if defined(EXTERNAL_TYPES)
-    } else if (kind == napi_external && CheckValueTag(env, value, &TypeObjectMarker)) {
-        Napi::External<TypeInfo> external = Napi::External<TypeInfo>(env, value);
-        const TypeInfo *type = external.Data();
-
-        if (out_directions) {
-            *out_directions = 1;
-        }
-        return type;
-#else
     } else if (kind == napi_object && CheckValueTag(env, value, &TypeObjectMarker)) {
         TypeObject *defn = nullptr;
         NAPI_OK(napi_unwrap(env, value, (void **)&defn));
@@ -171,7 +157,6 @@ const TypeInfo *ResolveType(InstanceData *instance, napi_value value, int *out_d
             *out_directions = 1;
         }
         return defn->GetType();
-#endif
     } else {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value as type specifier, expected string or type", GetValueType(instance, value));
         return nullptr;
@@ -438,13 +423,9 @@ napi_value WrapType(InstanceData *instance, const TypeInfo *type, bool freeze)
     Napi::Env env = instance->env;
 
     if (!type->defn) {
-#if defined(EXTERNAL_TYPES)
-        Napi::Object defn = Napi::Object::New(env);
-#else
         Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, (TypeInfo *)type);
         Napi::Object defn = instance->construct_type.New({ external });
         SetValueTag(env, defn, &TypeObjectMarker);
-#endif
 
         defn.Set("name", NewString(env, type->name));
         defn.Set("primitive", PrimitiveKindNames[(int)type->primitive]);
@@ -517,17 +498,10 @@ napi_value WrapType(InstanceData *instance, const TypeInfo *type, bool freeze)
         }
     }
 
-#if defined(EXTERNAL_TYPES)
-    Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, (TypeInfo *)type);
-    SetValueTag(env, external, &TypeObjectMarker);
-
-    return external;
-#else
     napi_value defn;
     NAPI_OK(napi_get_reference_value(env, type->defn, &defn));
 
     return defn;
-#endif
 }
 
 const TypeInfo *ReshapeType(InstanceData *instance, const TypeInfo *type, int32_t stride, uint16_t flags)
