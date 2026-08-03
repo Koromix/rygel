@@ -14,7 +14,7 @@ import { Util, Log, Net, NetworkError, HttpError } from 'lib/web/base/base.js';
 import { Base64 } from 'lib/web/base/mixer.js';
 
 // Use scrypt for age compatibility
-const WORK_FACTOR_LOG2 = 18;
+const WORK_FACTOR_LOG2 = 15;
 const BODY_CHUNK_SIZE = 65536;
 const HEADER_SIGNATURE = 'age-encryption.org/v1';
 const HEADER_LENGTH = 149;
@@ -42,7 +42,7 @@ async function createHeader(passphrase) {
 
     let headers = [
         HEADER_SIGNATURE,
-        `-> scrypt ${Base64.toBase64(salt, false)} 18`,
+        `-> scrypt ${Base64.toBase64(salt, false)} ${WORK_FACTOR_LOG2}`,
         Base64.toBase64(body, false),
         '---'
     ];

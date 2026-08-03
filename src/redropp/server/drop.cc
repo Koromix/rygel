@@ -208,7 +208,7 @@ void HandleDropList(http_IO *io)
                 json->StartObject();
 
                 json->Key("kid"); json->String(kid);
-                json->Key("name"); json->String(name);
+                json->Key("name"); json->StringOrNull(name);
                 json->Key("protect"); json->Bool(protect);
                 if (expire >= 0) {
                     json->Key("expire"); json->Int64(expire);
@@ -286,7 +286,7 @@ void HandleDropInfo(http_IO *io)
         json->StartObject();
 
         json->Key("kid"); json->String(id);
-        json->Key("name"); json->String(name);
+        json->Key("name"); json->StringOrNull(name);
         if (expire >= 0) {
             json->Key("expire"); json->Int64(expire);
         } else {
@@ -346,7 +346,7 @@ void HandleDropCreate(http_IO *io)
                 Span<const char> key = json->ParseKey();
 
                 if (key == "name") {
-                    json->ParseString(&name);
+                    json->SkipNull() || json->ParseString(&name);
                 } else if (key == "expiration") {
                     json->SkipNull() || json->ParseInt(&expiration);
                 } else if (key == "protect") {
@@ -359,7 +359,7 @@ void HandleDropCreate(http_IO *io)
             valid &= json->IsValid();
 
             if (valid) {
-                if (!IsStringValid(name)) {
+                if (name && !IsStringValid(name)) {
                     LogError("Invalid 'name' parameter");
                     valid = false;
                 }
@@ -591,7 +591,6 @@ void HandleDropPopulate(http_IO *io)
             Fmt(str, "%1", file.kid);
 
             json->Key("kid"); json->String(str);
-            json->Key("name"); json->String(file.name);
             json->Key("size"); json->Int64(file.size);
             json->Key("split"); json->Int64(FragmentSize);
 

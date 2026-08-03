@@ -62,6 +62,7 @@ function handleMessage(e) {
                 break;
 
             status.time = performance.now();
+            status.downloaded = value;
             status.meter.add(value, status.time);
 
             clearTimeout(status.timeout);
@@ -133,6 +134,8 @@ async function prepareDownload(file, key, signal = null) {
         name: file.name,
 
         time: performance.now(),
+
+        downloaded: 0,
         meter: new ProgressMeter(file.size),
         busy: true,
         error: null,
@@ -152,7 +155,7 @@ async function prepareDownload(file, key, signal = null) {
     download_map.set(id, status);
     download_map.set(file.kid, status);
 
-    await Async.call(sw, 'drop', [id, file, key]);
+    await Async.call(sw, 'prepare', [id, file, key]);
 }
 
 function getDownloadStatus(kid) {

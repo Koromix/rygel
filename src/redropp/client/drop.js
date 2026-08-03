@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
-import { render, html, live, unsafeHTML } from 'vendor/lit-html/lit-html.bundle.js';
+import { render, html, live, ref, unsafeHTML } from 'vendor/lit-html/lit-html.bundle.js';
 import dayjs from 'vendor/dayjs/dayjs.bundle.js';
 import { Util, LruMap, Log, Net, HttpError } from 'lib/web/base/base.js';
 import * as IDB from 'lib/web/base/indexeddb.js';
@@ -27,7 +27,9 @@ const EXPIRATION_DAYS = [1, 7, 30, 90];
 const DEFAULT_EXPIRATION = 7;
 const FRAGMENT_SIZE = 2097152;
 
-let send_file = null;
+let FileApi = null;
+
+let send_files = [];
 let upload_map = new LruMap(64);
 let secret_map = new LruMap(4);
 let download_tasks = new WeakMap;
@@ -55,7 +57,7 @@ async function runDrops() {
                 <progress value=${Math.min(cache.drops.usage, cache.drops.quota)} max=${cache.drops.quota}></progress>
             </div>
 
-            <table class="responsive" style="table-layout: fixed;">
+            <table class="responsive" style="width: 100%; table-layout: fixed;">
                 <colgroup>
                     <col/>
                     <col style="width: 120px;" />
@@ -82,7 +84,10 @@ async function runDrops() {
                             <tr>
                                 <td>
                                     <div style="display: flex; align-items: center;">
-                                        <span style="flex: 1; overflow: hidden; text-overflow: ellipsis;">${drop.name}</span>
+                                        <span style="flex: 1; overflow: hidden; text-overflow: ellipsis;">
+                                            ${drop.name}
+                                            ${!drop.name ? html`<i>${T.unnamed_drop}</i> <span class="sub">(${T.count(T.count_files, drop.files)})</span>` : ''}
+                                        </span>
                                         ${show_recover && can_recover ? html`
                                             <button type="button" class="small"
                                                     @click=${UI.wrap(e => recoverLink(drop.kid))}>${T.recover_link}</button>
@@ -123,16 +128,18 @@ async function runDrops() {
 async function recoverLink(kid) {
     let secret = null;
 
+    if (FileApi == null)
+        FileApi = await import('./file.js');
+
     // Find secret in local database
     {
-        let { decryptString } = await import('./file.js');
         let db = await openLocalDB(session.userid);
 
         let encrypted = await db.load('secrets', kid);
         let key = Base64.toBytes(session.ckey);
 
         try {
-            secret = decryptString(key, encrypted);
+            secret = FileApi.decryptString(key, encrypted);
         } catch (err) {
             if (encrypted != null)
                 console.error(err);
@@ -200,148 +207,169 @@ async function runDrop() {
         return;
     }
 
-    let secret = secret_map.get(cache.drop.kid);
-    let is_sharing = (secret != null);
-
-    if (!is_sharing) {
-        secret = route.hash;
-        if (!secret)
-            throw new Error(T.message(`Missing decryption secret`));
-    }
-
     if (!cache.drop.complete) {
-        let status = getUploadStatus(cache.drop.files[0]);
-        if (status == null)
-            throw new Error(T.message(`Incomplete drop '${cache.drop.kid}'`));
+        await runUpload();
+    } else {
+        let secret = secret_map.get(cache.drop.kid);
+        let is_sharing = (secret != null);
 
-        let stat = status.meter.measure();
-
-        if (stat.rate != null)
-            refreshSoon();
-
-        // The error notification stays open until the user comes here
-        if (status.task != null && status.error != null) {
-            status.task.close();
-            status.task = null;
+        if (!is_sharing) {
+            secret = route.hash;
+            if (!secret)
+                throw new Error(T.message(`Missing decryption secret`));
         }
 
-        UI.main(html`
-            <div class="heading">${T.send_file}</div>
+        if (is_sharing) {
+            await runShare(secret);
+        } else {
+            await runDownload(secret);
+        }
+    }
+}
 
-            <div class="block" style="align-items: center;">
-                <p>${cache.drop.name}</p>
-                <progress value=${stat.value ?? 0} max=${cache.drop.total}></progress>
-                ${status.error == null ? html`
-                    <div class="sub" style="text-align: center;">
-                        ${T.speed}${T._colon}${stat.rate != null ? formatSize(stat.rate * 1000) + '/s' : '-'}<br>
-                        ${T.remaining_time}${T._colon}${stat.remaining != null ? formatDuration(stat.remaining) : '-'}
-                    </div>
-                ` : ''}
-                ${status.error != null ? html`
-                    <p style="text-align: center; color: red;">
-                        ${T.error_has_occured}<br>
-                        ${status.error.message}
-                    </p>
-                ` : ''}
+async function runShare(secret) {
+    let hash = `#${secret}`;
+    let url = App.makeURL({ mode: 'drop', drop: cache.drop.kid }, hash);
+    let logo = await Net.loadImage(ASSETS['main/redropp']);
+
+    UI.main(html`
+        <div class="heading">${cache.drop.name ?? T.unnamed_drop}</div>
+
+        <div class="block" style="align-items: center;">
+            <div>${formatSize(cache.drop.total)}</div>
+            <div class="command">
+                <pre style="text-align: center;"
+                     @click=${e => window.getSelection().selectAllChildren(e.target)}>${ENV.url + url}</pre>
             </div>
-        `);
-    } else if (is_sharing) {
-        let hash = `#${secret}`;
-        let url = App.makeURL({ mode: 'drop', drop: cache.drop.kid }, hash);
-        let logo = await Net.loadImage(ASSETS['main/redropp']);
+            ${drawQrCode(ENV.url + url, { logo: logo })}
+            <div class="sub" title=${cache.drop.expire != null ? dayjs(cache.drop.expire).format('lll') : null}>
+                ${cache.drop.expire != null ? T.format(T.expires_in_x, dayjs(cache.drop.expire).fromNow(true)) : ''}
+                ${cache.drop.expire == null ? T.never_expires : ''}
+            </div>
+        </div>
 
-        UI.main(html`
-            <div class="heading">${cache.drop.name}</div>
+        <div class="actions">
+            <button @click=${UI.wrap(e => copyClipboard(e, ENV.url + url))}>${T.copy_download_link}</button>
+            <a @click=${UI.wrap(e => unshareLink(cache.drop.kid, secret))}>${T.show_download_page}</button>
+        </div>
+    `);
+}
 
+async function runDownload(secret) {
+    let agg = null;
+
+    // Aggregate stats (if any) for this drop
+    {
+        let statuses = cache.drop.files.map(file => getDownloadStatus(file.kid)).filter(status => status?.busy);
+
+        if (statuses.some(status => status.busy)) {
+            let stats = statuses.map(status => status.meter.measure());
+
+            agg = {
+                value: null,
+                max: null,
+                rate: null,
+                remaining: null
+            };
+
+            for (let stat of stats) {
+                if (stat.rate == null)
+                    continue;
+
+                agg.value += stat.value;
+                agg.max += stat.max;
+                agg.rate += stat.rate;
+                agg.remaining = Math.max(agg.remaining, stat.remaining);
+            }
+        }
+    }
+
+    let form = null;
+
+    UI.main(html`
+        <div class="heading">${cache.drop.name ?? T.unnamed_drop}</div>
+
+        <form @submit=${UI.wrap(submit)} ${ref(el => { form = el ?? form; })}>
             <div class="block" style="align-items: center;">
                 <div>${formatSize(cache.drop.total)}</div>
-                <div class="command">
-                    <pre style="text-align: center;"
-                         @click=${e => window.getSelection().selectAllChildren(e.target)}>${ENV.url + url}</pre>
-                </div>
-                ${drawQrCode(ENV.url + url, { logo: logo })}
-                <div class="sub" title=${cache.drop.expire != null ? dayjs(cache.drop.expire).format('lll') : null}>
+                ${cache.drop.protect && stat == null ? html`
+                    <label>
+                        <span>${T.password}</span>
+                        <input type="password" name="password" @input=${e => { password = e.target.value; }} />
+                    </label>
+                ` : ''}
+                <table class="responsive" style="table-layout: fixed;">
+                    <colgroup>
+                        <col style="width: 240px;" />
+                        <col style="width: 100px;" />
+                        <col style="width: 280px;" />
+                    </colgroup>
+                    <tbody>
+                        ${cache.drop.files.map(file => {
+                            let status = getDownloadStatus(file.kid);
+                            let task = download_tasks.get(status);
+                            let stat = status?.meter?.measure?.();
+
+                            let complete = (stat != null && stat.value == stat.max);
+                            let enabled = (status == null || complete);
+
+                            if (status?.busy && stat?.rate != null)
+                                refreshSoon();
+
+                            // The error notification stays open until the user comes here
+                            if (task != null && !status.busy) {
+                                task.close();
+                                download_tasks.delete(status);
+                            }
+
+                            return html`
+                                <tr>
+                                    <td>${file.name}</td>
+                                    <td class="right"><span class="sub">${formatSize(file.size)}</span></td>
+                                    <td class="center">
+                                        ${status?.error == null ? html`<button type="button" class="small" ?disabled=${!enabled}
+                                                                               @click=${UI.wrap(e => start(file))}>${T.download}</button>` : ''}
+                                        ${status?.error != null ? html`<p style="color: var(--color, red); font-size: 0.9em;">${status.error.message}</p>` : ''}
+                                    </td>
+
+                                </tr>
+                            `;
+                        })}
+                    </tbody>
+                </table>
+                <div title=${cache.drop.expire != null ? dayjs(cache.drop.expire).format('lll') : ''}>
                     ${cache.drop.expire != null ? T.format(T.expires_in_x, dayjs(cache.drop.expire).fromNow(true)) : ''}
                     ${cache.drop.expire == null ? T.never_expires : ''}
                 </div>
+                ${agg != null ? html`
+                    <div class="sub" style="text-align: center;">
+                        ${T.speed}${T._colon}${agg.rate != null ? formatSize(agg.rate * 1000) + '/s' : '-'}<br>
+                        ${T.remaining_time}${T._colon}${agg.remaining != null ? formatDuration(agg.remaining) : '-'}
+                    </div>
+                    <div style="text-align: center;">${T.keep_tab_open_during_download}</div>
+                ` : ''}
             </div>
 
             <div class="actions">
-                <button @click=${UI.wrap(e => copyClipboard(e, ENV.url + url))}>${T.copy_download_link}</button>
-                <a @click=${UI.wrap(e => unshareLink(cache.drop.kid, secret))}>${T.show_download_page}</button>
+                <button type="submit" ?disabled=${cache.drop.files.length > 1 || agg != null}>${T.download}</button>
+                <a @click=${UI.wrap(e => otherDownloadOptions(cache.drop, secret))}>${T.show_other_download_options}</a>
+                <a @click=${UI.wrap(e => shareLink(cache.drop.kid, secret))}>${T.share_drop_link}</a>
             </div>
-        `);
-    } else {
-        let status = getDownloadStatus(cache.drop.files[0].kid);
-        let task = download_tasks.get(status);
+        </form>
+    `);
 
-        let stat = status?.meter?.measure?.();
-        let complete = (stat != null && stat.value == stat.max);
-        let enabled = (status == null || !status.busy);
+    async function submit(e) {
+        await start(cache.drop.files[0]);
+    }
 
-        if (status?.busy && stat?.rate != null)
-            refreshSoon();
-
-        // The error notification stays open until the user comes here
-        if (task != null && !status.busy) {
-            task.close();
-            download_tasks.delete(status);
-        }
-
-        UI.main(html`
-            <div class="heading">${cache.drop.name}</div>
-
-            <form @submit=${UI.wrap(submit)}>
-                <div class="block" style="align-items: center;">
-                    <div>${formatSize(cache.drop.total)}</div>
-                    <div class="sub" title=${cache.drop.expire != null ? dayjs(cache.drop.expire).format('lll') : ''}>
-                        ${cache.drop.expire != null ? T.format(T.expires_in_x, dayjs(cache.drop.expire).fromNow(true)) : ''}
-                        ${cache.drop.expire == null ? T.never_expires : ''}
-                    </div>
-                    ${cache.drop.protect && stat == null ? html`
-                        <label>
-                            <span>${T.password}</span>
-                            <input type="password" name="password" />
-                        </label>
-                    ` : ''}
-                    ${stat != null ? html`
-                        <progress value=${stat.value ?? 0} max=${stat.max}></progress>
-                        ${!complete && status.error == null ? html`
-                            <div class="sub" style="text-align: center;">
-                                ${T.speed}${T._colon}${stat.rate != null ? formatSize(stat.rate * 1000) + '/s' : '-'}<br>
-                                ${T.remaining_time}${T._colon}${stat.remaining != null ? formatDuration(stat.remaining) : '-'}
-                            </div>
-                            <div style="text-align: center;">${T.keep_tab_open_during_download}</div>
-                        ` : ''}
-                        ${complete ? html`<div class="sub" style="text-align: center;">${T.download_complete}</div>` : ''}
-                    ` : ''}
-                    ${status?.error != null ? html`
-                        <p style="text-align: center; color: red;">
-                            ${T.error_has_occured}<br>
-                            ${status.error.message}
-                        </p>
-                    ` : ''}
-                </div>
-
-                <div class="actions">
-                    <button type="submit" ?disabled=${!enabled}>${T.download}</button>
-                    <a @click=${UI.wrap(e => otherDownloadOptions(cache.drop, secret))}>${T.show_other_download_options}</a>
-                    <a @click=${UI.wrap(e => shareLink(cache.drop.kid, secret))}>${T.share_drop_link}</a>
-                </div>
-            </form>
-        `);
-
-        async function submit(e) {
-            if (!enabled)
-                return;
-
-            let form = e.currentTarget;
+    async function start(file) {
+        if (cache.drop.protect) {
             let password = form.elements.password?.value?.trim?.();
-
-            if (cache.drop.protect && !password)
+            if (!password)
                 throw new Error(T.message(`Missing password`));
-
-            await download(cache.drop, cache.drop.files[0], secret, password);
+            await download(cache.drop, file, secret, password);
+        } else {
+            await download(cache.drop, file, secret, null);
         }
     }
 }
@@ -349,14 +377,14 @@ async function runDrop() {
 async function download(drop, file, secret, password) {
     let key = null;
 
-    // The scrypt code in decodeHeader blocks for some time.
-    // But this dynamic import also gives the browser time for a repaint.
-    const { decodeHeader } = await import('./file.js');
+    if (FileApi == null)
+        FileApi = await import('./file.js');
+    setTimeout(() => {}, 0); // DoEvents
 
     try {
         let passphrase = makePassphrase(secret, password);
 
-        key = await decodeHeader(file.header, file.nonce, passphrase, password);
+        key = await FileApi.decodeHeader(file.header, file.nonce, passphrase, password);
     } catch (err) {
         console.error(err);
 
@@ -382,7 +410,7 @@ async function download(drop, file, secret, password) {
 
         if (status.busy) {
             let stat = status.meter.measure();
-            task.progress(status.name, stat.value, stat.max);
+            task.progress(status.name, stat.value);
         } else if (status.error != null) {
             task.error(status.error, null);
         } else {
@@ -403,47 +431,58 @@ async function download(drop, file, secret, password) {
 
     let url = `/auto/download/${file.kid}/${encodeURIComponent(file.name)}`;
     window.location.href = url;
-
 }
 
-async function otherDownloadOptions(info, secret) {
-    let curl = `curl -o ${escapeShellArgument(info.name + '.age')} ${ENV.url}/download/${info.kid}`;
-    let age = `age -d -o ${escapeShellArgument(info.name)} ${escapeShellArgument(info.name + '.age')}`;
-    let suffix = info.protect ? html`<span style="color: red;">${T.password_suffix}</span>` : '';
+async function otherDownloadOptions(drop, secret) {
+    let file = drop.files[0];
 
-    await UI.dialog((render, close) => html`
-        <div class="title">
-            ${T.format(T.download_x, info.name)}
-            <div style="flex: 1;"></div>
-            <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
-        </div>
+    await UI.dialog((render, close) => {
+        let curl = `curl -o ${escapeShellArgument(file.name + '.age')} ${ENV.url}/download/${file.kid}`;
+        let age = `age -d -o ${escapeShellArgument(file.name)} ${escapeShellArgument(file.name + '.age')}`;
+        let suffix = drop.protect ? html`<span style="color: red;">${T.password_suffix}</span>` : '';
 
-        <div class="main">
-            <div class="section">${T.command_line}</div>
-            <div style="max-width: 40em;">
-                <p>${unsafeHTML(T.use_curl_to_download_encrypted_file)}</p>
-                <div class="command">
-                    <pre @click=${e => window.getSelection().selectAllChildren(e.target)}>${curl}</pre>
-                    <button type="button" class="small" @click=${UI.wrap(e => copyClipboard(e, curl))}>${T.copy}</button>
-                </div>
-                <p>${unsafeHTML(T.use_age_to_decrypt_the_file)}</p>
-                <div class="command">
-                    <pre @click=${e => window.getSelection().selectAllChildren(e.target)}>${age}</pre>
-                    <button type="button" class="small" @click=${UI.wrap(e => copyClipboard(e, age))}>${T.copy}</button>
-                </div>
-                <p>${T.use_passphrase_to_decrypt_with_age}</p>
-                <div class="command">
-                    <pre @click=${e => window.getSelection().selectAllChildren(e.target)}>${secret}${suffix ? '/' : ''}${suffix}</pre>
-                    <button type="button" class="small" @click=${UI.wrap(e => copyClipboard(e, secret + (suffix ? '/' : '')))}>${T.copy}</button>
-                </div>
-                ${info.protect ? html`<span class="sub" style="color: red;">${T.add_password_after_passphrase}</span>` : ''}
+        return html`
+            <div class="title">
+                ${T.format(T.download_x, drop.name ?? T.unnamed_drop)}
+                <div style="flex: 1;"></div>
+                <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
             </div>
-        </div>
 
-        <div class="footer">
-            <button type="button" class="secondary" @click=${UI.wrap(close)}>${T.close}</button>
-        </div>
-    `);
+            <div class="main">
+                ${drop.files.length > 1 ? html`
+                    <div style="text-align: center;">
+                        <select name="file" @change=${e => { file = drop.files[parseInt(e.target.value, 10)]; render(); }}>
+                            ${drop.files.map((it, idx) => html`<option value=${idx} ?selected=${it == file}>${it.name}</option>`)}
+                        </select>
+                    </div>
+                ` : ''}
+
+                <div class="section">${T.command_line}</div>
+                <div style="max-width: 40em;">
+                    <p>${unsafeHTML(T.use_curl_to_download_encrypted_file)}</p>
+                    <div class="command">
+                        <pre @click=${e => window.getSelection().selectAllChildren(e.target)}>${curl}</pre>
+                        <button type="button" class="small" @click=${UI.wrap(e => copyClipboard(e, curl))}>${T.copy}</button>
+                    </div>
+                    <p>${unsafeHTML(T.use_age_to_decrypt_the_file)}</p>
+                    <div class="command">
+                        <pre @click=${e => window.getSelection().selectAllChildren(e.target)}>${age}</pre>
+                        <button type="button" class="small" @click=${UI.wrap(e => copyClipboard(e, age))}>${T.copy}</button>
+                    </div>
+                    <p>${T.use_passphrase_to_decrypt_with_age}</p>
+                    <div class="command">
+                        <pre @click=${e => window.getSelection().selectAllChildren(e.target)}>${secret}${suffix ? '/' : ''}${suffix}</pre>
+                        <button type="button" class="small" @click=${UI.wrap(e => copyClipboard(e, secret + (suffix ? '/' : '')))}>${T.copy}</button>
+                    </div>
+                    ${drop.protect ? html`<span class="sub" style="color: red;">${T.add_password_after_passphrase}</span>` : ''}
+                </div>
+            </div>
+
+            <div class="footer">
+                <button type="button" class="secondary" @click=${UI.wrap(close)}>${T.close}</button>
+            </div>
+        `;
+    });
 }
 
 function escapeShellArgument(str) {
@@ -461,6 +500,10 @@ async function runSend() {
         <form @submit=${UI.wrap(submit)}>
             <div class="block" style="align-items: center;">
                 <label>
+                    <span>${T.title} <span class="sub">(${T.optional.toLowerCase()})</span></span>
+                    <input type="text" name="name" placeholder=${send_files.length == 1 ? send_files[0].name : ''} />
+                </label>
+                <label>
                     <span>${T.expiration}</span>
                     <select name="expiration">
                         ${EXPIRATION_DAYS.map(days => {
@@ -472,13 +515,31 @@ async function runSend() {
                         ${ENV.allow_infinite ? html`<option value="0">${T.no_expiration}</option>` : ''}
                     </select>
                 </label>
-                <div class="sub">${T.drag_or_browse_file}</div>
-                <label>
-                    <span>${T.file}</span>
-                    <input type="file" name="file" style="display: none;" @change=${change} />
-                    <button type="button" @click=${e => { e.target.parentNode.click(); e.preventDefault(); }}>${T.browse_for_file}</button>
-                </label>
-                ${send_file != null ? html`<div class="sub">${send_file.name} (${formatSize(send_file.size)})` : ''}
+                <table class="responsive" style="table-layout: fixed;">
+                    <colgroup>
+                        <col style="width: 240px;" />
+                        <col style="width: 100px;" />
+                        <col style="width: 140px;" />
+                    </colgroup>
+                    <tbody>
+                        ${send_files.map((file, idx) => html`
+                            <tr>
+                                <td>${file.name}</td>
+                                <td class="right"><span class="sub">${formatSize(file.size)}</span></td>
+                                <td class="center">
+                                    <button type="button" class="small" @click=${e => remove_file(idx)}>${T.remove}</button>
+                                </td>
+                            </tr>
+                        `)}
+                        <tr>
+                            <td colspan="3" class="center">
+                                ${!send_files.length ? html`<div class="sub" style="margin-bottom: 0.5em;">${T.drag_or_browse_file}</div>` : ''}
+                                <input type="file" name="file" multiple style="display: none;" @change=${add_files} />
+                                <button type="button" @click=${e => { e.target.previousElementSibling.click(); e.preventDefault(); }}>${T.add}</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
                 <label>
                     <span>${T.password} <span class="sub">(${T.optional.toLowerCase()})</span></span>
                     <input type="password" name="password" />
@@ -486,7 +547,7 @@ async function runSend() {
             </div>
 
             <div class="actions">
-                <button type="submit" ?disabled=${send_file == null}>${T.send}</button>
+                <button type="submit" ?disabled=${!send_files.length}>${T.send}</button>
             </div>
         </form>
     `);
@@ -496,8 +557,13 @@ async function runSend() {
     window.ondragover = drop;
     window.ondrop = drop;
 
-    async function change(e) {
-        send_file = e.target.files[0];
+    async function add_files(e) {
+        send_files.push(...e.target.files);
+        App.go();
+    }
+
+    function remove_file(idx) {
+        send_files.splice(idx, 1);
         App.go();
     }
 
@@ -505,34 +571,38 @@ async function runSend() {
         let form = e.currentTarget;
         let elements = form.elements;
 
-        let file = send_file;
+        let name = elements.name.value || null;
         let expiration = (parseInt(elements.expiration.value, 10) * 86400000) || null;
+        let sources = send_files.slice();
         let password = elements.password.value.trim();
 
-        // The scrypt code in createHeader blocks for some time.
-        // But this dynamic import also gives the browser time for a repaint.
-        const { createHeader, randomBytes } = await import('./file.js');
+        if (name == null && sources.length == 1)
+            name = sources[0].name;
 
-        let secret = Base64.toBase64Url(randomBytes(32));
+        if (FileApi == null)
+            FileApi = await import('./file.js');
+        setTimeout(() => {}, 0); // DoEvents
+
+        let secret = Base64.toBase64Url(FileApi.randomBytes(32));
         let passphrase = makePassphrase(secret, password);
 
-        let { header, nonce, key } = await createHeader(passphrase);
-        let { drop, files } = await createDrop(file, expiration, !!password, header, nonce);
+        let drop = await createDrop(name, expiration, !!password);
+        let files = await populateDrop(drop.kid, sources, passphrase);
+        let total = files.reduce((acc, file) => acc + file.size, 0);
 
         // Encrypt and save passphrase locally
         if (session != null) {
-            let { encryptString } = await import('./file.js');
             let db = await openLocalDB(session.userid);
 
             let key = Base64.toBytes(session.ckey);
-            let encrypted = encryptString(key, passphrase);
+            let encrypted = FileApi.encryptString(key, passphrase);
 
             await db.saveWithKey('secrets', drop.kid, encrypted);
         }
 
-        send_file = null;
+        send_files = [];
 
-        let task = Log.progress(file.name, 0, files[0].size);
+        let task = Log.progress(name, 0, total);
 
         task.click = () => {
             let url = App.makeURL({ mode: 'drop', drop: drop.kid }, secret);
@@ -540,31 +610,42 @@ async function runSend() {
         };
         task.visible = () => (route.mode != 'drop' || route.drop != drop.kid);
 
-        upload_map.set(files[0].kid, {
-            meter: new ProgressMeter(files[0].size),
+        let status = {
+            name: name,
+            uploads: new Map(files.map(file => [file.kid, 0])),
+            total: total,
+            meter: new ProgressMeter(total),
             task: task,
             error: null
-        });
+        };
+        upload_map.set(drop.kid, status);
+
         shareLink(drop.kid, secret);
 
         try {
-            await uploadFile(files[0], key, file, uploaded => progress(files[0], uploaded));
+            await Promise.all(files.map(file => {
+                let report = uploaded => progress(status, file, uploaded);
+                return uploadFile(file, file.key, file.source, report);
+            }));
+
             await completeDrop(drop.kid);
 
             task.success(T.upload_complete);
         } catch (err) {
-            let status = getUploadStatus(files[0]);
             status.error = err;
-
             task.error(err, null);
         }
     }
 
-    function progress(file, uploaded) {
-        let status = getUploadStatus(file);
+    function progress(status, file, uploaded) {
+        status.uploads.set(file.kid, uploaded);
 
-        status.meter.add(uploaded);
-        status.task.progress(file.name, uploaded, file.size);
+        let progress = 0;
+        for (let uploaded of status.uploads.values())
+            progress += uploaded;
+
+        status.meter.add(progress);
+        status.task.progress(drop.name ?? T.unnamed_drop, progress);
 
         App.go();
     }
@@ -572,7 +653,7 @@ async function runSend() {
     function drop(e) {
         let dt = e.dataTransfer || e.clipboardData;
 
-        let src = null;
+        let files = [];
         let found = false;
 
         for (let i = 0; i < dt.items.length; i++) {
@@ -580,19 +661,16 @@ async function runSend() {
 
             if (item.kind == 'file') {
                 let file = item.getAsFile();
-
                 if (file != null)
-                    src = file;
-
+                    files.push(file);
                 found = true;
-                break;
             }
         }
 
         if (e.type == 'dragover') {
             dt.dropEffect = found ? 'move' : 'none';
-        } else if (e.type == 'drop' && src != null) {
-            send_file = src;
+        } else if (e.type == 'drop' && files.length) {
+            send_files.push(...files);
             App.go();
         }
 
@@ -607,28 +685,44 @@ function makePassphrase(secret, password) {
     return passphrase;
 }
 
-async function createDrop(file, expiration, protect, header, nonce) {
+async function createDrop(name, expiration, protect) {
     let drop = await Net.post('/api/drop/create', {
-        name: file.name,
+        name: name,
         expiration: expiration,
         protect: protect
     });
 
-    let files = null;
+    return drop;
+}
 
-    // Populate drop files
-    {
-        let url = Util.pasteURL('/api/drop/populate', { kid: drop.kid });
+async function populateDrop(kid, sources, passphrase) {
+    let url = Util.pasteURL('/api/drop/populate', { kid: kid });
 
-        files = await Net.post(url, [{
-            name: file.name,
-            size: file.size,
+    let pairs = await Promise.all(sources.map(async src => {
+        let { header, nonce, key } = await FileApi.createHeader(passphrase);
+
+        let info = {
+            name: src.name,
+            size: src.size,
             header: header,
             nonce: nonce
-        }]);
-    }
+        };
 
-    return { drop, files };
+        return [info, key];
+    }));
+
+    let files = await Net.post(url, pairs.map(pair => pair[0]));
+
+    // Regroup information
+    files = files.map((file, idx) => ({
+        ...file,
+
+        name: sources[idx].name,
+        source: sources[idx],
+        key: pairs[idx][1]
+    }));
+
+    return files;
 }
 
 async function completeDrop(kid) {
@@ -640,12 +734,10 @@ async function completeDrop(kid) {
 }
 
 async function uploadFile(info, key, file, progress = () => {}) {
-    let { upload } = await import('./file.js');
-
     let stream = file.stream();
     let chunks = readChunks(stream);
 
-    await upload(info, key, chunks, progress);
+    await FileApi.upload(info, key, chunks, progress);
 }
 
 async function* readChunks(stream) {
@@ -659,6 +751,44 @@ async function* readChunks(stream) {
 
         yield value;
     }
+}
+
+async function runUpload() {
+    let status = getUploadStatus(cache.drop.kid);
+    if (status == null)
+        throw new Error(T.message(`Incomplete drop '${cache.drop.kid}'`));
+
+    let stat = status.meter.measure();
+
+    if (stat.rate != null)
+        refreshSoon();
+
+    // The error notification stays open until the user comes here
+    if (status.task != null && status.error != null) {
+        status.task.close();
+        status.task = null;
+    }
+
+    UI.main(html`
+        <div class="heading">${T.send_file}</div>
+
+        <div class="block" style="align-items: center;">
+            <p>${cache.drop.name ?? T.unnamed_drop}</p>
+            <progress value=${stat.value ?? 0} max=${stat.max}></progress>
+            ${status.error == null ? html`
+                <div class="sub" style="text-align: center;">
+                    ${T.speed}${T._colon}${stat.rate != null ? formatSize(stat.rate * 1000) + '/s' : '-'}<br>
+                    ${T.remaining_time}${T._colon}${stat.remaining != null ? formatDuration(stat.remaining) : '-'}
+                </div>
+            ` : ''}
+            ${status.error != null ? html`
+                <p style="text-align: center; color: red;">
+                    ${T.error_has_occured}<br>
+                    ${status.error.message}
+                </p>
+            ` : ''}
+        </div>
+    `);
 }
 
 async function openLocalDB(id) {
@@ -681,8 +811,8 @@ async function openLocalDB(id) {
     return db;
 }
 
-function getUploadStatus(file) {
-    let status = upload_map.get(file.kid);
+function getUploadStatus(kid) {
+    let status = upload_map.get(kid);
     return status;
 }
 

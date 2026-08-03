@@ -8,7 +8,7 @@ import { download } from '{{ BUNDLE file.js }}';
 const EXPIRATION_DELAY = 5 * 60000; // 5 minutes
 const STALL_DELAY = 20000; // 20 seconds
 
-let drops = new Map;
+let files = new Map;
 let clear_timer = null;
 
 onmessage = handleMessage;
@@ -24,16 +24,16 @@ self.addEventListener('fetch', e => {
 
         if (e.request.method == 'HEAD') {
             try {
-                let drop = findDrop(kid);
+                let file = findFile(kid);
 
                 let response = new Response('', {
                     status: 200,
-                    headers: prepareHeaders(drop.info)
+                    headers: prepareHeaders(file.info)
                 });
                 e.respondWith(response);
             } catch (err) {
                 console.error(err);
-                // Unknown drop, go on and fail hard (with server relay)
+                // Unknown drop/file, go on and fail hard (with server relay)
             }
         } else if (e.request.method == 'GET') {
             let [response, wait] = createDownloadStream(kid);
@@ -45,10 +45,10 @@ self.addEventListener('fetch', e => {
 });
 
 function createDownloadStream(kid) {
-    let drop = findDrop(kid);
-    let client = drop.client;
+    let file = findFile(kid);
+    let client = file.client;
 
-    let fragments = download(drop.info, drop.key, progress);
+    let fragments = download(file.info, file.key, progress);
 
     let pending_frag = null;
     let downloaded = 0;
@@ -71,7 +71,7 @@ function createDownloadStream(kid) {
                 let { value: next, done } = await fragments.next();
 
                 // Reset expiration timer
-                findDrop(kid);
+                findFile(kid);
 
                 if (!done) {
                     downloaded += next.length;
@@ -91,7 +91,7 @@ function createDownloadStream(kid) {
                 controller.error(err);
 
                 console.error(err);
-                client.postMessage({ kind: 'failed', args: [drop.id, err] });
+                client.postMessage({ kind: 'failed', args: [file.id, err] });
 
                 end();
             }
@@ -105,7 +105,7 @@ function createDownloadStream(kid) {
             controller.enqueue(slice);
         } catch (err) {
             console.error(err);
-            client.postMessage({ kind: 'failed', args: [drop.id, null] });
+            client.postMessage({ kind: 'failed', args: [file.id, null] });
         }
 
         pending_frag = pending_frag.subarray(slice.length);
@@ -115,7 +115,7 @@ function createDownloadStream(kid) {
     }
 
     function progress(value) {
-        client.postMessage({ kind: 'progress', args: [drop.id, value, drop.info.size] });
+        client.postMessage({ kind: 'progress', args: [file.id, value, file.info.size] });
 
         clearTimeout(stall_timer);
         stall_timer = setTimeout(() => progress(value), STALL_DELAY);
@@ -128,7 +128,7 @@ function createDownloadStream(kid) {
 
     let response = new Response(stream, {
         status: 200,
-        headers: prepareHeaders(drop.info)
+        headers: prepareHeaders(file.info)
     });
 
     return [response, wait];
@@ -150,12 +150,12 @@ function handleMessage(e) {
     let msg = e.data;
 
     switch (msg.kind) {
-        case 'drop': { Async.wrap(e.source, msg, () => updateDrop(e.source, ...msg.args)); } break;
+        case 'prepare': { Async.wrap(e.source, msg, () => updateFile(e.source, ...msg.args)); } break;
     }
 }
 
-function updateDrop(client, id, info, key) {
-    drops.set(info.kid, {
+function updateFile(client, id, info, key) {
+    files.set(info.kid, {
         client: client,
         id: id,
 
@@ -165,40 +165,40 @@ function updateDrop(client, id, info, key) {
         expire: performance.now() + EXPIRATION_DELAY
     });
 
-    expireDrops();
+    expireFiles();
 }
 
-function findDrop(kid) {
-    let drop = drops.get(kid);
+function findFile(kid) {
+    let file = files.get(kid);
 
-    if (drop == null)
+    if (file == null)
         throw new Error('Missing or stale file drop information');
 
     // Keep at the the end of entries, so expiration times are sorted
-    drops.delete(kid);
-    drops.set(kid, drop);
+    files.delete(kid);
+    files.set(kid, file);
 
-    expireDrops();
+    expireFiles();
 
-    return drop;
+    return file;
 }
 
-function expireDrops() {
+function expireFiles() {
     let now = performance.now();
 
-    for (let [kid, drop] of drops.entries()) {
-        if (drop.expire > now)
+    for (let [kid, file] of files.entries()) {
+        if (file.expire > now)
             break;
-        drops.delete(kid);
+        files.delete(kid);
     }
 
     clearTimeout(clear_timer);
 
-    if (drops.size) {
-        let first = drops.values().next().value;
+    if (files.size) {
+        let first = files.values().next().value;
         let timeout = Math.max(0, first.expire - performance.now());
 
-        clear_timer = setTimeout(expireDrops, timeout);
+        clear_timer = setTimeout(expireFiles, timeout);
     }
 }
 

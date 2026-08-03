@@ -189,7 +189,7 @@ button.highlight { animation: highlight 1.4s ease-in-out infinite alternate; }
     position: fixed;
     bottom: 10px;
     right: 10px;
-    max-width: 600px;
+    max-width: 300px;
     z-index: 99999;
     user-select: none;
     -webkit-user-select: none;
@@ -662,7 +662,7 @@ table .grab {
     user-select: none;
     -webkit-user-select: none;
 }
-table tbody tr:hover {
+table tbody tr:has(> * ~ *):hover {
     background: var(--bar_color);
 
     & > td {
@@ -671,7 +671,6 @@ table tbody tr:hover {
         --color: white;
     }
 }
-table.responsive { width: 100%; }
 
 @media screen and (max-width: 960px) {
     table.responsive {
