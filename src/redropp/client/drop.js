@@ -213,7 +213,6 @@ async function runDrop() {
         let status = getUploadStatus(cache.drop.files[0]);
         if (status == null)
             throw new Error(T.message(`Incomplete drop '${cache.drop.kid}'`));
-        let task = download_tasks.get(status);
 
         let stat = status.meter.measure();
 
@@ -221,9 +220,9 @@ async function runDrop() {
             refreshSoon();
 
         // The error notification stays open until the user comes here
-        if (status.error != null && task != null) {
-            task.close();
-            download_tasks.delete(status);
+        if (status.task != null && status.error != null) {
+            status.task.close();
+            status.task = null;
         }
 
         UI.main(html`
@@ -284,7 +283,7 @@ async function runDrop() {
             refreshSoon();
 
         // The error notification stays open until the user comes here
-        if (complete && task != null) {
+        if (task != null && !status.busy) {
             task.close();
             download_tasks.delete(status);
         }
@@ -387,7 +386,7 @@ async function download(drop, file, secret, password) {
         } else if (status.error != null) {
             task.error(status.error, null);
         } else {
-            task.success(status.name, null);
+            task.success(T.download_complete);
         }
 
         refreshSoon();
@@ -552,7 +551,7 @@ async function runSend() {
             await uploadFile(files[0], key, file, uploaded => progress(files[0], uploaded));
             await completeDrop(drop.kid);
 
-            task.success(file.name, null);
+            task.success(T.upload_complete);
         } catch (err) {
             let status = getUploadStatus(files[0]);
             status.error = err;

@@ -353,7 +353,7 @@ async function switchLanguage(lang) {
     dayjs.locale(document.documentElement.lang);
     Util.setCookie('lang', document.documentElement.lang, '/', 365 * 86400);
 
-    await run({}, false);
+    await run({}, null, false);
 }
 
 // ------------------------------------------------------------------------
@@ -375,7 +375,7 @@ async function login(mail, password) {
         password: password
     });
 
-    await run({}, false);
+    await run({}, null, false);
 }
 
 async function confirm(code) {
