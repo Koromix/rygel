@@ -183,6 +183,7 @@ static bool ApplySandbox(Span<const char *const> reveals)
         { "nanosleep", sb_FilterAction::Allow },
         { "sched_yield", sb_FilterAction::Allow },
         { "sched_getaffinity", sb_FilterAction::Allow },
+        { "getcpu", sb_FilterAction::Allow },
         { "recv", sb_FilterAction::Allow },
         { "recvfrom", sb_FilterAction::Allow },
         { "recvmmsg", sb_FilterAction::Allow },

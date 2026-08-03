@@ -66,6 +66,7 @@ static bool ApplySandbox()
         { "accept", sb_FilterAction::Allow },
         { "accept4", sb_FilterAction::Allow },
         { "shutdown", sb_FilterAction::Allow },
+        { "getcpu", sb_FilterAction::Allow },
         { "recv", sb_FilterAction::Allow },
         { "recvfrom", sb_FilterAction::Allow },
         { "recvmmsg", sb_FilterAction::Allow },

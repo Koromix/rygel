@@ -140,6 +140,7 @@ static bool ApplySandbox(Span<const char *const> reveal_paths)
         { "sched_getaffinity", sb_FilterAction::Allow },
         { "sched_getscheduler", sb_FilterAction::Allow },
         { "sched_setscheduler", sb_FilterAction::Allow },
+        { "getcpu", sb_FilterAction::Allow },
         { "recv", sb_FilterAction::Allow },
         { "recvfrom", sb_FilterAction::Allow },
         { "recvmmsg", sb_FilterAction::Allow },
