@@ -201,7 +201,8 @@ type KoffiConfig = {
     max_type_size?: number;
 };
 type KoffiStats = {
-    disposed: number
+    disposed: number,
+    callbacks: number
 };
 
 export function config(): KoffiConfig;
