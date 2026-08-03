@@ -302,7 +302,7 @@ async function runDownload(secret) {
                     <colgroup>
                         <col style="width: 240px;" />
                         <col style="width: 100px;" />
-                        <col style="width: 280px;" />
+                        <col style="width: 140px;" />
                     </colgroup>
                     <tbody>
                         ${cache.drop.files.map(file => {
@@ -311,7 +311,6 @@ async function runDownload(secret) {
                             let stat = status?.meter?.measure?.();
 
                             let complete = (stat != null && stat.value == stat.max);
-                            let enabled = (status == null || complete);
 
                             if (status?.busy && stat?.rate != null)
                                 refreshSoon();
@@ -327,13 +326,15 @@ async function runDownload(secret) {
                                     <td>${file.name}</td>
                                     <td class="right"><span class="sub">${formatSize(file.size)}</span></td>
                                     <td class="center">
-                                        ${!status?.busy && status?.error == null ?
-                                            html`<button type="button" class="small" ?disabled=${!enabled}
-                                                         @click=${UI.wrap(e => start(file))}>${T.download}</button>` : ''}
-                                        ${status?.busy ? html`<progress value=${stat.value ?? 0} max=${stat.max}></progress>` : ''}
-                                        ${status?.error != null ? html`<p style="color: var(--color, red); font-size: 0.9em;">${status.error.message}</p>` : ''}
+                                        <button type="button" class="small" ?disabled=${status?.busy}
+                                                @click=${UI.wrap(e => start(file))}>${T.download}</button>
                                     </td>
                                 </tr>
+                                ${status?.error != null ? html`
+                                    <tr>
+                                        <td colspan="3"><p style="color: var(--color, red); font-size: 0.9em;">${status.error.message}</p></td>
+                                    </tr>
+                                ` : ''}
                             `;
                         })}
                     </tbody>
@@ -343,6 +344,7 @@ async function runDownload(secret) {
                     ${cache.drop.expire == null ? T.never_expires : ''}
                 </div>
                 ${agg != null ? html`
+                    <progress value=${agg.value ?? 0} max=${agg.max}></progress>
                     <div class="sub" style="text-align: center;">
                         ${T.speed}${T._colon}${agg.rate != null ? formatSize(agg.rate * 1000) + '/s' : '-'}<br>
                         ${T.remaining_time}${T._colon}${agg.remaining != null ? formatDuration(agg.remaining) : '-'}
