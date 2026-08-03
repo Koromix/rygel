@@ -49,7 +49,7 @@ async function runDrops() {
     let secrets = new Set(await db.list('secrets'));
 
     UI.main(html`
-        <div class="heading">${T.files}</div>
+        <div class="heading">${T.drops}</div>
 
         <div class="block">
             <div style="text-align: center;">
@@ -120,7 +120,7 @@ async function runDrops() {
             </table>
         </div>
         <div class="actions">
-            <button type="button" @click=${UI.wrap(e => App.go('/send'))}>${T.send_file}</button>
+            <button type="button" @click=${UI.wrap(e => App.go('/send'))}>${T.send_files}</button>
         </div>
     `);
 }
@@ -495,7 +495,7 @@ async function runSend() {
         return UserMod.runLogin();
 
     UI.main(html`
-        <div class="heading">${T.send_file}</div>
+        <div class="heading">${T.send_files}</div>
 
         <form @submit=${UI.wrap(submit)}>
             <div class="block" style="align-items: center;">
@@ -770,7 +770,7 @@ async function runUpload() {
     }
 
     UI.main(html`
-        <div class="heading">${T.send_file}</div>
+        <div class="heading">${T.send_files}</div>
 
         <div class="block" style="align-items: center;">
             <p>${cache.drop.name ?? T.unnamed_drop}</p>

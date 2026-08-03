@@ -306,7 +306,7 @@ function renderApp(el) {
         document.body.appendChild(root_el);
     }
 
-    let in_drops = ['drops', 'drop', 'send'].includes(route.mode);
+    let in_drops = ['drops', 'drop'].includes(route.mode);
 
     render(html`
         <nav id="top">
@@ -317,7 +317,8 @@ function renderApp(el) {
                     ${ENV.logo == null ? html`<span>${ENV.title}</span>` : ''}
                 </a>
                 ${isLogged() ? html`
-                    <li><a href="/drops" class=${in_drops ? 'active' : ''}>${T.files}</a></li>
+                    <li><a href="/drops" class=${in_drops ? 'active' : ''}>${T.drops}</a></li>
+                    <li><a href="/send" class=${route.mode == 'send' ? 'active' : ''}>${T.send}</a></li>
                 ` : ''}
                 <div style="flex: 1;"></div>
                 ${isLogged() ? html`

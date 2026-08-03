@@ -58,6 +58,7 @@
         "download_x": "Download '{1}'",
         "drag_or_browse_file": "Drop a file or use the 'Add' button",
         "drag_paste_or_browse_image": "Drop an image, paste it or use the 'Browse' button below",
+        "drops": "Drops",
         "enable_direct_login_with_password": "I want to create a password to be able to sign in directly",
         "error_has_occured": "An error has occured:",
         "expiration": "Expiration",
@@ -122,7 +123,7 @@
             "odd": "{1} seconds"
         },
         "send": "Send",
-        "send_file": "Send file",
+        "send_files": "Send files",
         "set_password": "Set password",
         "share_drop_link": "Share this link",
         "show_download_page": "Open download page",
