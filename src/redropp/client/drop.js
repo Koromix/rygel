@@ -354,7 +354,7 @@ async function runDownload(secret) {
             </div>
 
             <div class="actions">
-                <button type="submit" ?disabled=${cache.drop.files.length > 1 || agg != null}>${T.download}</button>
+                <button type="submit" ?disabled=${cache.drop.files.length > 1 || agg != null}>${cache.drop.files.length > 1 ? T.download_all : T.download}</button>
                 <a @click=${UI.wrap(e => otherDownloadOptions(cache.drop, secret))}>${T.show_other_download_options}</a>
                 <a @click=${UI.wrap(e => shareLink(cache.drop.kid, secret))}>${T.share_drop_link}</a>
             </div>
