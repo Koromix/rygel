@@ -300,7 +300,7 @@ async function runDownload(secret) {
                 ` : ''}
                 <table class="responsive" style="table-layout: fixed;">
                     <colgroup>
-                        <col style="width: 240px;" />
+                        <col/>
                         <col style="width: 100px;" />
                         <col style="width: 140px;" />
                     </colgroup>
@@ -520,7 +520,7 @@ async function runSend() {
                 </label>
                 <table class="responsive" style="table-layout: fixed;">
                     <colgroup>
-                        <col style="width: 240px;" />
+                        <col/>
                         <col style="width: 100px;" />
                         <col style="width: 140px;" />
                     </colgroup>
