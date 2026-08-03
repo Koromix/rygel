@@ -470,7 +470,7 @@ void HandleDropPopulate(http_IO *io)
                         FillKID(KIDType::File, &file.kid);
                     }
 
-                    if (!IsStringValid(file.name)) {
+                    if (!IsFileNameValid(file.name)) {
                         LogError("Invalid file name value");
                         valid = false;
                     }

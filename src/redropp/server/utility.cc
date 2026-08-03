@@ -46,4 +46,18 @@ bool IsStringValid(Span<const char> str, const char *allowed)
     return true;
 }
 
+bool IsFileNameValid(Span<const char> str)
+{
+    const auto test_char = [&](char c) { return !IsAsciiControl(c) && c != '/' && c != '\\'; };
+
+    if (!str.len)
+        return false;
+    if (!std::all_of(str.begin(), str.end(), test_char))
+        return false;
+    if (IsAsciiWhite(str[0]) || IsAsciiWhite(str[str.len - 1]))
+        return false;
+
+    return true;
+}
+
 }
