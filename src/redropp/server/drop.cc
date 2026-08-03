@@ -787,10 +787,17 @@ void HandleFragmentDownload(http_IO *io)
     KID kid;
     int64_t fragment;
 
-    if (const char *str = request.GetQueryValue("kid"); !ParseKID(str, KIDType::File, &kid)) {
+    // We need to accept drop KIDs for some time, because older drops use them.
+    if (const char *str = request.GetQueryValue("kid"); !ParseKID(str, &kid)) {
         io->SendError(422);
         return;
     }
+    if (kid.type != (int8_t)KIDType::Drop && kid.type != (int8_t)KIDType::File) {
+        LogError("Unexpected KID type");
+        io->SendError(422);
+        return;
+    }
+
     if (const char *str = request.GetQueryValue("fragment"); !ParseInt(str, &fragment)) {
         io->SendError(422);
         return;
