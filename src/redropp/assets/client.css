@@ -696,13 +696,13 @@ table tbody tr:has(> * ~ *):hover {
             border: none;
             border-radius: 8px;
         }
-        & tr + tr { margin-top: 0.8em; }
+        & tr + tr:not(.cling) { margin-top: 0.8em; }
         & td {
             box-sizing: border-box;
             height: auto;
             border: none;
         }
-        & td:first-child {
+        & td:first-child:not(:only-child) {
             width: 100%;
             border-bottom: 1px solid #ebebeb;
         }

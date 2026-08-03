@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
-import { render, html, live, ref, unsafeHTML } from 'vendor/lit-html/lit-html.bundle.js';
+import { render, html, live, unsafeHTML } from 'vendor/lit-html/lit-html.bundle.js';
 import dayjs from 'vendor/dayjs/dayjs.bundle.js';
 import { Util, LruMap, Log, Net, HttpError } from 'lib/web/base/base.js';
 import * as IDB from 'lib/web/base/indexeddb.js';
@@ -32,6 +32,7 @@ let FileApi = null;
 let send_files = [];
 let upload_map = new LruMap(64);
 let secret_map = new LruMap(4);
+let password_map = new LruMap(2);
 let download_tasks = new WeakMap;
 
 let refresh_timer = null;
@@ -284,20 +285,12 @@ async function runDownload(secret) {
         }
     }
 
-    let form = null;
-
     UI.main(html`
         <div class="heading">${cache.drop.name ?? T.unnamed_drop}</div>
 
-        <form @submit=${UI.wrap(submit)} ${ref(el => { form = el ?? form; })}>
+        <form @submit=${UI.wrap(submit)}>
             <div class="block" style="align-items: center;">
                 <div>${formatSize(cache.drop.total)}</div>
-                ${cache.drop.protect && agg == null ? html`
-                    <label>
-                        <span>${T.password}</span>
-                        <input type="password" name="password" />
-                    </label>
-                ` : ''}
                 <table class="responsive" style="table-layout: fixed;">
                     <colgroup>
                         <col/>
@@ -331,8 +324,10 @@ async function runDownload(secret) {
                                     </td>
                                 </tr>
                                 ${status?.error != null ? html`
-                                    <tr>
-                                        <td colspan="3"><p style="color: var(--color, red); font-size: 0.9em;">${status.error.message}</p></td>
+                                    <tr class="cling">
+                                        <td colspan="3" class="center">
+                                            <p style="font-size: 0.9em; color: var(--color, red);">${status.error.message}</p>
+                                        </td>
                                     </tr>
                                 ` : ''}
                             `;
@@ -367,14 +362,56 @@ async function runDownload(secret) {
 
     async function start(file) {
         if (cache.drop.protect) {
-            let password = form.elements.password?.value?.trim?.();
-            if (!password)
-                throw new Error(T.message(`Missing password`));
-            await download(cache.drop, file, secret, password);
+            let password = password_map.get(cache.drop.kid);
+
+            if (password == null) {
+                password = await askPassword(cache.drop);
+                password_map.set(cache.drop.kid, password);
+            }
+
+            try {
+                await download(cache.drop, file, secret, password);
+            } catch (err) {
+                password_map.delete(cache.drop.kid);
+                throw err;
+            }
         } else {
             await download(cache.drop, file, secret, null);
         }
     }
+}
+
+async function askPassword() {
+    let password = await UI.dialog({
+        run: (render, close) => html`
+            <div class="title">
+                ${T.password}
+                <div style="flex: 1;"></div>
+                <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
+            </div>
+            <div class="main">
+                <label>
+                    <span>${T.password}</span>
+                    <input type="password" name="password" />
+                </label>
+            </div>
+            <div class="footer">
+                <button type="button" class="secondary" @click=${UI.wrap(close)}>${T.cancel}</button>
+                <button type="submit" class="danger">${T.confirm}</button>
+            </div>
+        `,
+
+        submit: (elements) => {
+            let password = elements.password.value.trim();
+
+            if (!password)
+                throw new Error(T.message(`Missing password`));
+
+            return password;
+        }
+    });
+
+    return password;
 }
 
 async function download(drop, file, secret, password) {
@@ -391,7 +428,7 @@ async function download(drop, file, secret, password) {
     } catch (err) {
         console.error(err);
 
-        let msg = drop.protect ? T.message(`Invalid decryption key or password`)
+        let msg = file.protect ? T.message(`Invalid decryption key or password`)
                                : T.message(`Invalid decryption key`);
         throw new Error(msg);
     }
