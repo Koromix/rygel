@@ -292,7 +292,7 @@ async function runDownload(secret) {
         <form @submit=${UI.wrap(submit)} ${ref(el => { form = el ?? form; })}>
             <div class="block" style="align-items: center;">
                 <div>${formatSize(cache.drop.total)}</div>
-                ${cache.drop.protect && stat == null ? html`
+                ${cache.drop.protect && agg == null ? html`
                     <label>
                         <span>${T.password}</span>
                         <input type="password" name="password" @input=${e => { password = e.target.value; }} />
