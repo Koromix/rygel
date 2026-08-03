@@ -646,7 +646,7 @@ async function runSend() {
             progress += uploaded;
 
         status.meter.add(progress);
-        status.task.progress(drop.name ?? T.unnamed_drop, progress);
+        status.task.progress(status.name ?? T.unnamed_drop, progress);
 
         App.go();
     }
