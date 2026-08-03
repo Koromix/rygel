@@ -527,7 +527,7 @@ async function runSend() {
                                 <td>${file.name}</td>
                                 <td class="right"><span class="sub">${formatSize(file.size)}</span></td>
                                 <td class="center">
-                                    <button type="button" class="small" @click=${e => remove_file(idx)}>${T.remove}</button>
+                                    <button type="button" class="small" @click=${UI.insist(e => remove_file(idx))}>${T.remove}</button>
                                 </td>
                             </tr>
                         `)}
