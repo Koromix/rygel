@@ -682,6 +682,7 @@ table tbody tr:has(> * ~ *):hover {
 
         & colgroup { display: none; }
         & thead { display: none; }
+        & tbody { display: block; }
 
         & tr {
             box-sizing: border-box;
