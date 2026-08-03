@@ -399,7 +399,7 @@ static void InitAssets()
     asset_bundles.Clear();
     asset_alloc.ReleaseAll();
 
-    asset_favicon = "favicon.webp";
+    asset_favicon = "/favicon.webp";
     asset_logo = nullptr;
     asset_styles.Clear();
     asset_scripts.Clear();
