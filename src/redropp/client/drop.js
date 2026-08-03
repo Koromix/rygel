@@ -295,7 +295,7 @@ async function runDownload(secret) {
                 ${cache.drop.protect && agg == null ? html`
                     <label>
                         <span>${T.password}</span>
-                        <input type="password" name="password" @input=${e => { password = e.target.value; }} />
+                        <input type="password" name="password" />
                     </label>
                 ` : ''}
                 <table class="responsive" style="table-layout: fixed;">
