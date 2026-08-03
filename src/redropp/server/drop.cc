@@ -432,7 +432,7 @@ void HandleDropPopulate(http_IO *io)
 
     // Process POST data
     {
-        bool success = http_ParseJson(io, Kibibytes(1), [&](json_Parser *json) {
+        bool success = http_ParseJson(io, Mebibytes(1), [&](json_Parser *json) {
             bool valid = true;
 
             for (json->ParseArray(); json->InArray(); ) {
