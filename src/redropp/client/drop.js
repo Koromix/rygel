@@ -30,6 +30,7 @@ const FRAGMENT_SIZE = 2097152;
 let send_file = null;
 let upload_map = new LruMap(64);
 let secret_map = new LruMap(4);
+let download_tasks = new WeakMap;
 
 let refresh_timer = null;
 
@@ -180,48 +181,50 @@ async function deleteDrop(kid) {
 }
 
 async function runDrop() {
-    let secret = null;
-    let is_sharing = false;
+    if (route.drop != null) {
+        try {
+            let url = Util.pasteURL('/api/drop/info', { kid: route.drop });
+            cache.drop = await Net.cache('drop', url);
+        } catch (err) {
+            cache.drop = null;
 
+            if (err.status == 404)
+                err = new Error(T.unknown_or_expired_drop);
+            throw err;
+        }
+
+        route.drop = cache.drop?.kid;
+    }
     if (route.drop == null) {
-        cache.drop = null;
-
         App.go('/send');
         return;
     }
 
-    try {
-        let url = Util.pasteURL('/api/drop/info', { kid: route.drop });
-        cache.drop = await Net.cache('drop', url);
-    } catch (err) {
-        cache.drop = null;
+    let secret = secret_map.get(cache.drop.kid);
+    let is_sharing = (secret != null);
 
-        if (err.status == 404)
-            err = new Error(T.unknown_or_expired_drop);
-        throw err;
-    }
-
-    route.drop = cache.drop?.kid;
-
-    secret = secret_map.get(cache.drop.kid);
-
-    if (secret != null) {
-        is_sharing = true;
-    } else {
-        secret = window.location.hash.substr(1);
+    if (!is_sharing) {
+        secret = route.hash;
         if (!secret)
             throw new Error(T.message(`Missing decryption secret`));
-        is_sharing = false;
     }
 
     if (!cache.drop.complete) {
         let status = getUploadStatus(cache.drop.files[0]);
         if (status == null)
             throw new Error(T.message(`Incomplete drop '${cache.drop.kid}'`));
-        let stat = status.progress.measure();
+        let task = download_tasks.get(status);
+
+        let stat = status.meter.measure();
 
         if (stat.rate != null)
             refreshSoon();
+
+        // The error notification stays open until the user comes here
+        if (status.error != null && task != null) {
+            task.close();
+            download_tasks.delete(status);
+        }
 
         UI.main(html`
             <div class="heading">${T.send_file}</div>
@@ -271,6 +274,7 @@ async function runDrop() {
         `);
     } else {
         let status = getDownloadStatus(cache.drop.files[0].kid);
+        let task = download_tasks.get(status);
 
         let stat = status?.meter?.measure?.();
         let complete = (stat != null && stat.value == stat.max);
@@ -278,6 +282,12 @@ async function runDrop() {
 
         if (status?.busy && stat?.rate != null)
             refreshSoon();
+
+        // The error notification stays open until the user comes here
+        if (complete && task != null) {
+            task.close();
+            download_tasks.delete(status);
+        }
 
         UI.main(html`
             <div class="heading">${cache.drop.name}</div>
@@ -332,12 +342,12 @@ async function runDrop() {
             if (cache.drop.protect && !password)
                 throw new Error(T.message(`Missing password`));
 
-            await download(cache.drop.files[0], secret, password);
+            await download(cache.drop, cache.drop.files[0], secret, password);
         }
     }
 }
 
-async function download(info, secret, password) {
+async function download(drop, file, secret, password) {
     let key = null;
 
     // The scrypt code in decodeHeader blocks for some time.
@@ -347,28 +357,54 @@ async function download(info, secret, password) {
     try {
         let passphrase = makePassphrase(secret, password);
 
-        key = await decodeHeader(info.header, info.nonce, passphrase, password);
+        key = await decodeHeader(file.header, file.nonce, passphrase, password);
     } catch (err) {
         console.error(err);
 
-        let msg = info.protect ? T.message(`Invalid decryption key or password`)
+        let msg = file.protect ? T.message(`Invalid decryption key or password`)
                                : T.message(`Invalid decryption key`);
         throw new Error(msg);
     }
 
-    await prepareDownload(info, key, refreshSoon);
+    await prepareDownload(file, key, status => {
+        let task = download_tasks.get(status);
+
+        if (task == null) {
+            task = Log.progress(file.name, 0, file.size);
+
+            task.click = () => {
+                let url = App.makeURL({ mode: 'drop', drop: drop.kid }, secret);
+                App.go(url);
+            };
+            task.visible = () => (route.mode != 'drop' || route.drop != drop.kid);
+
+            download_tasks.set(status, task);
+        }
+
+        if (status.busy) {
+            let stat = status.meter.measure();
+            task.progress(status.name, stat.value, stat.max);
+        } else if (status.error != null) {
+            task.error(status.error, null);
+        } else {
+            task.success(status.name, null);
+        }
+
+        refreshSoon();
+    });
 
     // Make sure service worker is ready
     {
-        let url = `/auto/download/${info.kid}`;
+        let url = `/auto/download/${file.kid}`;
         let response = await Net.fetch(url, { method: 'HEAD' });
 
         if (!response.ok)
             throw new Error(T.message(`Failed to communicate with service worker for download. Refresh the page and try again.`));
     }
 
-    let url = `/auto/download/${info.kid}/${encodeURIComponent(info.name)}`;
+    let url = `/auto/download/${file.kid}/${encodeURIComponent(file.name)}`;
     window.location.href = url;
+
 }
 
 async function otherDownloadOptions(info, secret) {
@@ -497,30 +533,39 @@ async function runSend() {
 
         send_file = null;
 
+        let task = Log.progress(file.name, 0, files[0].size);
+
+        task.click = () => {
+            let url = App.makeURL({ mode: 'drop', drop: drop.kid }, secret);
+            App.go(url);
+        };
+        task.visible = () => (route.mode != 'drop' || route.drop != drop.kid);
+
         upload_map.set(files[0].kid, {
-            progress: new ProgressMeter(files[0].size),
+            meter: new ProgressMeter(files[0].size),
+            task: task,
             error: null
         });
         shareLink(drop.kid, secret);
 
-        let ui_lock = UI.blockClose();
-
         try {
             await uploadFile(files[0], key, file, uploaded => progress(files[0], uploaded));
             await completeDrop(drop.kid);
+
+            task.success(file.name, null);
         } catch (err) {
             let status = getUploadStatus(files[0]);
             status.error = err;
 
-            throw err;
-        } finally {
-            UI.unblockClose(ui_lock);
+            task.error(err, null);
         }
     }
 
     function progress(file, uploaded) {
         let status = getUploadStatus(file);
-        status.progress.add(uploaded);
+
+        status.meter.add(uploaded);
+        status.task.progress(file.name, uploaded, file.size);
 
         App.go();
     }

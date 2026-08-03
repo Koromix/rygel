@@ -591,6 +591,7 @@ void HandleDropPopulate(http_IO *io)
             Fmt(str, "%1", file.kid);
 
             json->Key("kid"); json->String(str);
+            json->Key("name"); json->String(file.name);
             json->Key("size"); json->Int64(file.size);
             json->Key("split"); json->Int64(FragmentSize);
 

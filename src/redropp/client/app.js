@@ -37,6 +37,8 @@ let languages = {};
 
 let route = {
     mode: null,
+    hash: null,
+
     repository: null,
     plan: null,
     drop: null
@@ -103,7 +105,7 @@ async function start() {
     window.onbeforeunload = e => {
         if (UI.isDialogOpen())
             return T.confirm_or_close_dialog;
-        if (UI.isCloseBlocked())
+        if (Log.entries.some(entry => entry.type == 'progress'))
             return T.confirm_or_close_dialog;
     };
 
@@ -222,11 +224,27 @@ async function run(changes = {}, hash = null, push = false) {
             }
 
             let info = MODES[route.mode] ?? MODES[DEFAULT_MODE];
+
+            // Communicate relevant URL hash to module
+            {
+                let path = makePath({});
+
+                if (hash != null) {
+                    if (hash.startsWith('#'))
+                        hash = hash.substr(1);
+
+                    route_hashes.set(path, hash);
+                    route.hash = hash;
+                } else {
+                    route.hash = route_hashes.get(path) ?? null;
+                }
+            }
+
             await info.run();
 
             // Update URL
             if (!run_pending) {
-                let url = makeURL({}, hash);
+                let url = makeURL({});
 
                 if (url != route_url) {
                     if (push) {
@@ -240,6 +258,8 @@ async function run(changes = {}, hash = null, push = false) {
             }
         });
 
+        UI.renderLog();
+
         if (scroll)
             window.scrollTo(0, 0);
     } finally {
@@ -248,6 +268,21 @@ async function run(changes = {}, hash = null, push = false) {
 }
 
 function makeURL(changes = {}, hash = null) {
+    let url = makePath(changes);
+
+    if (hash) {
+        if (hash.startsWith('#'))
+            hash = hash.substr(1);
+    } else {
+        hash = route_hashes.get(url);
+    }
+    if (hash)
+        url += '#' + hash;
+
+    return url;
+}
+
+function makePath(changes = {}) {
     let values = Object.assign({}, route, changes);
     let path = '/' + values.mode;
 
@@ -258,16 +293,6 @@ function makeURL(changes = {}, hash = null) {
             let arg = info.path[i];
             path += '/' + values[arg.key];
         }
-    }
-
-    if (hash) {
-        if (!hash.startsWith('#'))
-            hash = '#' + hash;
-        route_hashes.set(path, hash);
-
-        path += hash;
-    } else {
-        path += route_hashes.get(path) ?? '';
     }
 
     return path;
@@ -309,15 +334,15 @@ function renderApp(el) {
         ${el}
 
         <footer>
+            <select id="language" aria-label=${T.language} @change=${UI.wrap(e => switchLanguage(e.target.value))}>
+                ${Object.keys(languages).map(lang =>
+                    html`<option value=${lang} .selected=${lang == document.documentElement.lang}>${lang.toUpperCase()}</option>`)}
+            </select>
             <div>${ENV.title}</div>
             <div style="font-size: 0.8em;">
                 Niels Martignène (<a href="https://koromix.dev/" target="_blank">Koromix</a>)<br>
                 <a href="mailto:niels.martignene@protonmail.com" style="font-weight: bold; color: inherit;">niels.martignene@protonmail.com</a>
             </div>
-            <select id="language" aria-label=${T.language} @change=${UI.wrap(e => switchLanguage(e.target.value))}>
-                ${Object.keys(languages).map(lang =>
-                    html`<option value=${lang} .selected=${lang == document.documentElement.lang}>${lang.toUpperCase()}</option>`)}
-            </select>
         </footer>
     `, root_el);
 }

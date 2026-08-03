@@ -67,17 +67,14 @@ function handleMessage(e) {
             clearTimeout(status.timeout);
             status.timeout = setTimeout(() => handleTimeout(id), STATUS_TIMEOUT);
 
-            if (value == max) {
+            if (value == max)
                 endDownload(status, null);
-            } else if (status.lock == null) {
-                status.lock = UI.blockClose();
-            }
 
             // Try to keep the service worker alive, especially on Firefox!
             sw.postMessage({ kind: 'alive', args: [] });
 
             if (status.signal != null)
-                status.signal();
+                status.signal(status);
         } break;
 
         case 'failed': {
@@ -98,10 +95,8 @@ function handleMessage(e) {
 
             endDownload(status, err);
 
-            Log.error(err);
-
             if (status.signal != null)
-                status.signal();
+                status.signal(status);
         } break;
 
         default: { Async.handle(msg); } break;
@@ -118,7 +113,7 @@ function handleTimeout(id) {
     endDownload(status, err);
 
     if (status.signal != null)
-        status.signal();
+        status.signal(status);
 }
 
 function endDownload(status, err) {
@@ -126,39 +121,38 @@ function endDownload(status, err) {
     status.busy = false;
 
     clearTimeout(status.timeout);
-    UI.unblockClose(status.lock);
 }
 
-async function prepareDownload(info, key, signal = null) {
+async function prepareDownload(file, key, signal = null) {
     await waitForServiceWorker();
 
     let id = next_id++;
 
     let status = {
-        kid: info.kid,
+        kid: file.kid,
+        name: file.name,
 
         time: performance.now(),
-        meter: new ProgressMeter(info.size),
+        meter: new ProgressMeter(file.size),
         busy: true,
         error: null,
         timeout: null,
-        lock: null,
 
         signal: signal
     };
 
     // Clear existing status entry
     {
-        let prev = download_map.get(info.kid);
+        let prev = download_map.get(file.kid);
 
         if (prev != null)
             download_map.delete(prev.kid);
     }
 
     download_map.set(id, status);
-    download_map.set(info.kid, status);
+    download_map.set(file.kid, status);
 
-    await Async.call(sw, 'drop', [id, info, key]);
+    await Async.call(sw, 'drop', [id, file, key]);
 }
 
 function getDownloadStatus(kid) {
