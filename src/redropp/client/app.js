@@ -122,6 +122,8 @@ async function start() {
     try {
         await go(window.location.href, false);
     } catch (err) {
+        console.error(err);
+
         UI.main(html`
             <div class="block" style="align-items: center;">
                 <p style="color: red;">${err.message}</p>
