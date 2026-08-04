@@ -188,7 +188,7 @@ function prepareFile(client, id, file, key) {
         client: client,
         id: id,
         expire: performance.now() + EXPIRATION_DELAY,
-        total: total.size,
+        total: file.size,
 
         file: file,
         key: key
