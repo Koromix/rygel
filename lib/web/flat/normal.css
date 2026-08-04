@@ -271,6 +271,7 @@ tbody th {
     text-align: left;
     font-weight: normal;
     font-style: italic;
+    border: 1px solid #ebebeb;
 }
 th.center, td.center { text-align: center; }
 th.right, td.right { text-align: right; }

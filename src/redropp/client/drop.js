@@ -557,24 +557,26 @@ async function runSend() {
                 </label>
                 <table class="responsive" style="table-layout: fixed;">
                     <colgroup>
+                        <col class=${send_files.length > 1 ? 'check' : ''} />
                         <col/>
                         <col style="width: 100px;" />
                         <col style="width: 100px;" />
                     </colgroup>
                     <tbody>
-                        ${send_files.map((file, idx) => html`
-                            <tr>
-                                <td>${file.name}</td>
+                        ${send_files.map(file => html`
+                            <tr ${UI.reorderItems(send_files, file)}>
+                                ${send_files.length > 1 ? html`<th class="grab"><img src=${ASSETS['ui/move']} width="16" height="16" alt=${T.move} /></th>` : ''}
+                                <td colspan=${send_files.length > 1 ? 1 : 2}>${file.name}</td>
                                 <td class="right"><span class="sub">${formatSize(file.size)}</span></td>
                                 <td class="center">
-                                    <button type="button" class="small" @click=${UI.insist(e => remove_file(idx))}>${T.remove}</button>
+                                    <button type="button" class="small" @click=${UI.insist(e => remove_file(file))}>${T.remove}</button>
                                 </td>
                             </tr>
                         `)}
                         <tr>
-                            <td colspan="3" class="center">
+                            <td colspan="4" class="center">
                                 ${!send_files.length ? html`<div class="sub" style="margin-bottom: 0.5em;">${T.drag_or_browse_file}</div>` : ''}
-                                <input type="file" name="file" multiple style="display: none;" @change=${add_files} />
+                                <input type="file" name="file" multiple style="display: none;" @change=${UI.wrap(add_files)} />
                                 <button type="button" @click=${e => { e.target.previousElementSibling.click(); e.preventDefault(); }}>${T.add}</button>
                             </td>
                         </tr>
@@ -599,12 +601,10 @@ async function runSend() {
 
     async function add_files(e) {
         send_files.push(...e.target.files);
-        App.go();
     }
 
-    function remove_file(idx) {
-        send_files.splice(idx, 1);
-        App.go();
+    function remove_file(file) {
+        send_files = send_files.filter(it => it != file);
     }
 
     async function submit(e) {
