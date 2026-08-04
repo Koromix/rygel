@@ -469,8 +469,16 @@ async function download(drop, file, secret, password) {
             throw new Error(T.message(`Failed to communicate with service worker for download. Refresh the page and try again.`));
     }
 
-    let url = `/auto/download/${file.kid}/${encodeURIComponent(file.name)}`;
-    window.location.href = url;
+    // Other ways, such as clicking on <a download>, do not work because some niche browsers
+    // (such as Chrome) bypass the service worker for these downloads.
+    {
+        let url = `/auto/download/${file.kid}/${encodeURIComponent(file.name)}`;
+        let prev_unload = window.onbeforeunload;
+
+        window.onbeforeunload = '';
+        window.location.href = url;
+        window.onbeforeunload = prev_unload;
+    }
 }
 
 async function otherDownloadOptions(drop, secret) {
