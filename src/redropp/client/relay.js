@@ -167,14 +167,11 @@ async function prepareZip(drop, keys, signal = null) {
     let offsets = [];
     let offset = 0;
 
-    /// XXX: Store per-drop time on the server, and use it for file mtime
-    let mtime = (new Date).valueOf();
-
     for (let i = 0; i < drop.files.length; i++) {
         let file = drop.files[i];
 
         // The CRC-32 will be patched in by the service worker
-        let header = createLocalHeader(file.name, mtime);
+        let header = createLocalHeader(file.name, drop.ctime);
         let footer = createLocalFooter(file.size, 0);
 
         headers.push(header);
@@ -186,7 +183,7 @@ async function prepareZip(drop, keys, signal = null) {
 
     let files = drop.files.map(file => ({
         ...file,
-        mtime: mtime
+        mtime: drop.ctime
     }));
     let directory = createCentralDirectory(offset, files, offsets);
 

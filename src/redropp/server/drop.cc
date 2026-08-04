@@ -165,8 +165,8 @@ void HandleDropList(http_IO *io)
     }
 
     sq_Statement stmt;
-    if (!db.Prepare(R"(SELECT kid_str(d.kid), d.name, d.protect, IFNULL(d.expire, -1) AS expire,
-                              d.complete, COUNT(f.id) AS files, d.total,
+    if (!db.Prepare(R"(SELECT kid_str(d.kid), d.ctime, d.name, d.protect,
+                              IFNULL(d.expire, -1) AS expire, d.complete, COUNT(f.id) AS files, d.total,
                               q.usage
                        FROM drops d
                        LEFT JOIN files f ON (f.parent = d.id)
@@ -187,7 +187,7 @@ void HandleDropList(http_IO *io)
 
         // User consumption
         {
-            int64_t usage = stmt.IsRow() ? sqlite3_column_int64(stmt, 7) : 0;
+            int64_t usage = stmt.IsRow() ? sqlite3_column_int64(stmt, 8) : 0;
             json->Key("usage"); json->Int64(usage);
         }
 
@@ -195,12 +195,13 @@ void HandleDropList(http_IO *io)
         if (stmt.IsRow()) {
             do {
                 const char *kid = (const char *)sqlite3_column_text(stmt, 0);
-                const char *name = (const char *)sqlite3_column_text(stmt, 1);
-                bool protect = sqlite3_column_int(stmt, 2);
-                int64_t expire = sqlite3_column_int64(stmt, 3);
-                bool complete = sqlite3_column_int(stmt, 4);
-                int files = sqlite3_column_int(stmt, 5);
-                int64_t total = sqlite3_column_int64(stmt, 6);
+                int64_t ctime = sqlite3_column_int64(stmt, 1);
+                const char *name = (const char *)sqlite3_column_text(stmt, 2);
+                bool protect = sqlite3_column_int(stmt, 3);
+                int64_t expire = sqlite3_column_int64(stmt, 4);
+                bool complete = sqlite3_column_int(stmt, 5);
+                int files = sqlite3_column_int(stmt, 6);
+                int64_t total = sqlite3_column_int64(stmt, 7);
 
                 if (!files)
                     continue;
@@ -208,6 +209,7 @@ void HandleDropList(http_IO *io)
                 json->StartObject();
 
                 json->Key("kid"); json->String(kid);
+                json->Key("ctime"); json->Int64(ctime);
                 json->Key("name"); json->StringOrNull(name);
                 json->Key("protect"); json->Bool(protect);
                 if (expire >= 0) {
@@ -244,8 +246,8 @@ void HandleDropInfo(http_IO *io)
     int64_t now = GetUnixTime();
 
     sq_Statement stmt;
-    if (!db.Prepare(R"(SELECT kid_str(d.kid) AS kid, d.name, d.protect, IFNULL(d.expire, -1) AS expire,
-                              d.complete, d.owner, d.total,
+    if (!db.Prepare(R"(SELECT kid_str(d.kid) AS kid, d.ctime, d.name, d.protect,
+                              IFNULL(d.expire, -1) AS expire, d.complete, d.owner, d.total,
                               kid_str(f.kid), f.name, f.size, f.split, f.header, f.nonce
                        FROM drops d
                        LEFT JOIN files f ON (f.parent = d.id)
@@ -265,15 +267,16 @@ void HandleDropInfo(http_IO *io)
     }
 
     const char *id = (const char *)sqlite3_column_text(stmt, 0);
-    const char *name = (const char *)sqlite3_column_text(stmt, 1);
-    bool protect = sqlite3_column_int(stmt, 2);
-    int64_t expire = sqlite3_column_int64(stmt, 3);
-    bool complete = sqlite3_column_int(stmt, 4);
-    int64_t total = sqlite3_column_int64(stmt, 6);
+    int64_t ctime = sqlite3_column_int64(stmt, 1);
+    const char *name = (const char *)sqlite3_column_text(stmt, 2);
+    bool protect = sqlite3_column_int(stmt, 3);
+    int64_t expire = sqlite3_column_int64(stmt, 4);
+    bool complete = sqlite3_column_int(stmt, 5);
+    int64_t total = sqlite3_column_int64(stmt, 7);
 
     if (!complete) {
         RetainPtr<const SessionInfo> session = GetNormalSession(io);
-        int64_t owner = sqlite3_column_int64(stmt, 5);
+        int64_t owner = sqlite3_column_int64(stmt, 6);
 
         if (!session || session->userid != owner) {
             LogError("Unknown drop KID '%1'", kid);
@@ -286,6 +289,7 @@ void HandleDropInfo(http_IO *io)
         json->StartObject();
 
         json->Key("kid"); json->String(id);
+        json->Key("ctime"); json->Int64(ctime);
         json->Key("name"); json->StringOrNull(name);
         if (expire >= 0) {
             json->Key("expire"); json->Int64(expire);
@@ -296,14 +300,14 @@ void HandleDropInfo(http_IO *io)
         json->Key("complete"); json->Bool(complete);
 
         json->Key("files"); json->StartArray();
-        if (sqlite3_column_type(stmt, 7) != SQLITE_NULL) {
+        if (sqlite3_column_type(stmt, 8) != SQLITE_NULL) {
             do {
-                const char *id = (const char *)sqlite3_column_text(stmt, 7);
-                const char *name = (const char *)sqlite3_column_text(stmt, 8);
-                int64_t size = sqlite3_column_int64(stmt, 9);
-                int64_t split = sqlite3_column_int64(stmt, 10);
-                const char *header = (const char *)sqlite3_column_text(stmt, 11);
-                const char *nonce = (const char *)sqlite3_column_text(stmt, 12);
+                const char *id = (const char *)sqlite3_column_text(stmt, 8);
+                const char *name = (const char *)sqlite3_column_text(stmt, 9);
+                int64_t size = sqlite3_column_int64(stmt, 10);
+                int64_t split = sqlite3_column_int64(stmt, 11);
+                const char *header = (const char *)sqlite3_column_text(stmt, 12);
+                const char *nonce = (const char *)sqlite3_column_text(stmt, 13);
 
                 json->StartObject();
                 json->Key("kid"); json->String(id);
@@ -387,9 +391,9 @@ void HandleDropCreate(http_IO *io)
     KID kid;
     FillKID(KIDType::Drop, &kid);
 
-    if (!db.Run(R"(INSERT INTO drops (kid, owner, name, expire, protect, total, complete, deleted)
-                   VALUES (?1, ?2, ?3, ?4, ?5, 0, 0, 0))",
-                sq_Binding(kid.raw), session->userid, name,
+    if (!db.Run(R"(INSERT INTO drops (kid, owner, ctime, name, expire, protect, total, complete, deleted)
+                   VALUES (?1, ?2, ?3, ?4, ?5, ?6, 0, 0, 0))",
+                sq_Binding(kid.raw), session->userid, now, name,
                 expire >= 0 ? sq_Binding(expire) : sq_Binding(), 0 + protect))
         return;
 
