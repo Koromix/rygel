@@ -56,7 +56,7 @@ self.addEventListener('fetch', e => {
         } else if (e.request.method == 'GET') {
             let entry = findEntry(kid);
 
-            let init = progress => zip(entry.files, entry.keys, entry.headers, entry.footers, entry.directory);
+            let init = progress => zip(entry.files, entry.keys, entry.headers, entry.footers, entry.directory, progress);
             let [response, wait] = createStream(entry, 'application/zip', init);
 
             e.waitUntil(wait);
@@ -264,8 +264,9 @@ function createPromise() {
     return ret;
 }
 
-async function* zip(files, keys, headers, footers, directory) {
+async function* zip(files, keys, headers, footers, directory, progress) {
     let directory_offset = 0;
+    let downloaded = 0;
 
     for (let i = 0; i < files.length; i++) {
         let file = files[i];
@@ -274,20 +275,29 @@ async function* zip(files, keys, headers, footers, directory) {
         let footer = footers[i];
 
         yield header;
+        report(header.length, true);
 
         let crc32 = 0;
 
-        for await (let frag of download(file, key)) {
+        for await (let frag of download(file, key, report)) {
             crc32 = CRC32(crc32, frag);
             yield frag;
         }
+        report(file.size, true);
 
         patchFooterCrc32(footer, 0, crc32);
         patchCentralCrc32(directory, directory_offset, crc32);
         directory_offset += skipCentralHeader(directory, directory_offset);
 
         yield footer;
+        report(footer.length, true);
     }
 
     yield directory;
+    report(directory.length, true);
+
+    function report(value, commit = false) {
+        progress(downloaded + value);
+        downloaded += commit ? value : 0;
+    }
 }
