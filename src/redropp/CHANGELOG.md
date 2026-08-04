@@ -2,6 +2,31 @@
 
 ## Alpha versions
 
+### Redropp 0.9.0
+
+*Released on 2026-08-04*
+
+**Highlights:**
+
+- Refactor Redropp to support multiple files per drop
+- Show active background tasks in the background right corner
+- Store drop creation time in database
+
+**Other changes:**
+
+- Use relative strings for drop expiration time
+- Ask for protected drop password in separate dialog
+- Reduce scrypt work factor to avoid delay when download starts
+- Block dangerous file names
+- Add proper UTF-8 encoded name to Content-Disposition header
+- Harmonize various button colors
+
+**Bug fixes:**
+
+- Fix broken favicon URL on some pages
+- Fix never-ending small file downloads on Chrome
+- Fix sandbox SIGKILL caused by getcpu syscall
+
 ### Redropp 0.8.2
 
 *Released on 2026-07-27*
