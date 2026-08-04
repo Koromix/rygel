@@ -1,6 +1,6 @@
 # Version history
 
-## Alpha versions
+## Beta versions
 
 ### Redropp 0.9.0
 
@@ -26,6 +26,8 @@
 - Fix broken favicon URL on some pages
 - Fix never-ending small file downloads on Chrome
 - Fix sandbox SIGKILL caused by getcpu syscall
+
+## Alpha versions
 
 ### Redropp 0.8.2
 
