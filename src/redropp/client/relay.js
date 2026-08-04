@@ -5,6 +5,11 @@ import { Util, LruMap, Log, Net } from 'lib/web/base/base.js';
 import * as Async from 'lib/web/base/async.js';
 import * as UI from 'lib/web/ui/ui.js';
 import { ProgressMeter } from './format.js';
+import {
+    createLocalHeader,
+    createLocalFooter,
+    createCentralDirectory
+} from './zip.js';
 
 const STATUS_TIMEOUT = 40000; // 40 seconds
 const STATUS_EXPIRATION = 5 * 60000; // 5 minutes
@@ -124,7 +129,7 @@ function endDownload(status, err) {
     clearTimeout(status.timeout);
 }
 
-async function prepareDownload(file, key, signal = null) {
+async function prepareFile(file, key, signal = null) {
     await waitForServiceWorker();
 
     let id = next_id++;
@@ -136,7 +141,9 @@ async function prepareDownload(file, key, signal = null) {
         time: performance.now(),
 
         downloaded: 0,
+        total: file.size,
         meter: new ProgressMeter(file.size),
+
         busy: true,
         error: null,
         timeout: null,
@@ -144,18 +151,71 @@ async function prepareDownload(file, key, signal = null) {
         signal: signal
     };
 
-    // Clear existing status entry
-    {
-        let prev = download_map.get(file.kid);
-
-        if (prev != null)
-            download_map.delete(prev.kid);
-    }
-
     download_map.set(id, status);
     download_map.set(file.kid, status);
 
-    await Async.call(sw, 'prepare', [id, file, key]);
+    await Async.call(sw, 'file', [id, file, key]);
+}
+
+async function prepareZip(drop, keys, signal = null) {
+    await waitForServiceWorker();
+
+    let id = next_id++;
+
+    let headers = [];
+    let footers = [];
+    let offsets = [];
+    let offset = 0;
+
+    /// XXX: Store per-drop time on the server, and use it for file mtime
+    let mtime = (new Date).valueOf();
+
+    for (let i = 0; i < drop.files.length; i++) {
+        let file = drop.files[i];
+
+        // The CRC-32 will be patched in by the service worker
+        let header = createLocalHeader(file.name, mtime);
+        let footer = createLocalFooter(file.size, 0);
+
+        headers.push(header);
+        footers.push(footer);
+
+        offsets.push(offset);
+        offset += header.length + file.size + footer.length;
+    }
+
+    let files = drop.files.map(file => ({
+        ...file,
+        mtime: mtime
+    }));
+    let directory = createCentralDirectory(offset, files, offsets);
+
+    let total = offset + directory.length;
+
+    let status = {
+        kid: drop.kid,
+        name: drop.name,
+
+        time: performance.now(),
+
+        downloaded: 0,
+        total: total,
+        meter: new ProgressMeter(total),
+
+        busy: true,
+        error: null,
+        timeout: null,
+
+        signal: signal
+    };
+
+    download_map.set(id, status);
+    download_map.set(drop.kid, status);
+
+    let args = [id, drop, total, keys, headers, footers, directory];
+    let transferrables = [...headers, ...footers, directory].map(buf => buf.buffer);
+
+    await Async.call(sw, 'zip', args, transferrables);
 }
 
 function getDownloadStatus(kid) {
@@ -174,6 +234,8 @@ function getDownloadStatus(kid) {
 export {
     initRelay,
 
-    prepareDownload,
+    prepareFile,
+    prepareZip,
+
     getDownloadStatus
 }

@@ -18,7 +18,8 @@ import {
     drawQrCode
 } from './format.js';
 import {
-    prepareDownload,
+    prepareFile,
+    prepareZip,
     getDownloadStatus
 } from './relay.js';
 import { ASSETS } from '../assets/assets.js';
@@ -349,7 +350,7 @@ async function runDownload(secret) {
             </div>
 
             <div class="actions">
-                <button type="submit" ?disabled=${cache.drop.files.length > 1 || agg != null}>${cache.drop.files.length > 1 ? T.download_all : T.download}</button>
+                <button type="submit" ?disabled=${agg != null}>${cache.drop.files.length > 1 ? T.download_all : T.download}</button>
                 <a @click=${UI.wrap(e => otherDownloadOptions(cache.drop, secret))}>${T.show_other_download_options}</a>
                 <a @click=${UI.wrap(e => shareLink(cache.drop.kid, secret))}>${T.share_drop_link}</a>
             </div>
@@ -357,26 +358,34 @@ async function runDownload(secret) {
     `);
 
     async function submit(e) {
-        await start(cache.drop.files[0]);
+        if (cache.drop.files.length > 1) {
+            await start(null);
+        } else {
+            await start(cache.drop.files[0]);
+        }
     }
 
     async function start(file) {
+        let password = null;
+
         if (cache.drop.protect) {
-            let password = password_map.get(cache.drop.kid);
+            password = password_map.get(cache.drop.kid);
 
             if (password == null) {
                 password = await askPassword(cache.drop);
                 password_map.set(cache.drop.kid, password);
             }
+        }
 
-            try {
-                await download(cache.drop, file, secret, password);
-            } catch (err) {
-                password_map.delete(cache.drop.kid);
-                throw err;
+        try {
+            if (file != null) {
+                await downloadFile(cache.drop, file, secret, password);
+            } else {
+                await downloadZip(cache.drop, secret, password);
             }
-        } else {
-            await download(cache.drop, file, secret, null);
+        } catch (err) {
+            password_map.delete(cache.drop.kid);
+            throw err;
         }
     }
 }
@@ -397,7 +406,7 @@ async function askPassword() {
             </div>
             <div class="footer">
                 <button type="button" class="secondary" @click=${UI.wrap(close)}>${T.cancel}</button>
-                <button type="submit" class="danger">${T.confirm}</button>
+                <button type="submit">${T.confirm}</button>
             </div>
         `,
 
@@ -414,16 +423,15 @@ async function askPassword() {
     return password;
 }
 
-async function download(drop, file, secret, password) {
-    let key = null;
-
+async function downloadFile(drop, file, secret, password) {
     if (FileApi == null)
         FileApi = await import('./file.js');
     setTimeout(() => {}, 0); // DoEvents
 
+    let key = null;
+
     try {
         let passphrase = makePassphrase(secret, password);
-
         key = await FileApi.decodeHeader(file.header, file.nonce, passphrase, password);
     } catch (err) {
         console.error(err);
@@ -433,11 +441,11 @@ async function download(drop, file, secret, password) {
         throw new Error(msg);
     }
 
-    await prepareDownload(file, key, status => {
+    await prepareFile(file, key, status => {
         let task = download_tasks.get(status);
 
         if (task == null) {
-            task = Log.progress(file.name, 0, file.size);
+            task = Log.progress(file.name, 0, status.total);
 
             task.click = () => {
                 let url = App.makeURL({ mode: 'drop', drop: drop.kid }, secret);
@@ -469,16 +477,77 @@ async function download(drop, file, secret, password) {
             throw new Error(T.message(`Failed to communicate with service worker for download. Refresh the page and try again.`));
     }
 
+    let url = `/auto/download/${file.kid}/${encodeURIComponent(file.name)}`;
+    triggerDownload(url);
+}
+
+async function downloadZip(drop, secret, password) {
+    if (FileApi == null)
+        FileApi = await import('./file.js');
+    setTimeout(() => {}, 0); // DoEvents
+
+    let keys = null;
+
+    try {
+        let passphrase = makePassphrase(secret, password);
+        keys = await Promise.all(drop.files.map(file => FileApi.decodeHeader(file.header, file.nonce, passphrase, password)));
+    } catch (err) {
+        console.error(err);
+
+        let msg = file.protect ? T.message(`Invalid decryption key or password`)
+                               : T.message(`Invalid decryption key`);
+        throw new Error(msg);
+    }
+
+    await prepareZip(drop, keys, status => {
+        let task = download_tasks.get(status);
+
+        if (task == null) {
+            task = Log.progress(drop.name ?? T.unnamed_drop, 0, status.total);
+
+            task.click = () => {
+                let url = App.makeURL({ mode: 'drop', drop: drop.kid }, secret);
+                App.go(url);
+            };
+            task.visible = () => (route.mode != 'drop' || route.drop != drop.kid);
+
+            download_tasks.set(status, task);
+        }
+
+        if (status.busy) {
+            let stat = status.meter.measure();
+            task.progress(status.name, stat.value);
+        } else if (status.error != null) {
+            task.error(status.error, null);
+        } else {
+            task.success(T.download_complete);
+        }
+
+        refreshSoon();
+    });
+
+    // Make sure service worker is ready
+    {
+        let url = `/auto/zip/${drop.kid}`;
+        let response = await Net.fetch(url, { method: 'HEAD' });
+
+        if (!response.ok)
+            throw new Error(T.message(`Failed to communicate with service worker for download. Refresh the page and try again.`));
+    }
+
+    let url = `/auto/zip/${drop.kid}/${encodeURIComponent(drop.name ?? T.unnamed_drop)}.zip`;
+    triggerDownload(url);
+}
+
+function triggerDownload(url) {
     // Other ways, such as clicking on <a download>, do not work because some niche browsers
     // (such as Chrome) bypass the service worker for these downloads.
-    {
-        let url = `/auto/download/${file.kid}/${encodeURIComponent(file.name)}`;
-        let prev_unload = window.onbeforeunload;
 
-        window.onbeforeunload = '';
-        window.location.href = url;
-        window.onbeforeunload = prev_unload;
-    }
+    let prev_unload = window.onbeforeunload;
+
+    window.onbeforeunload = '';
+    window.location.href = url;
+    window.onbeforeunload = prev_unload;
 }
 
 async function otherDownloadOptions(drop, secret) {
