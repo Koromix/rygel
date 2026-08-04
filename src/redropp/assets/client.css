@@ -674,7 +674,6 @@ table {
 
 @media screen and (max-width: 960px) {
     table.responsive {
-        width: 100%;
         display: block;
         padding: 0.2em;
         background: transparent;
@@ -703,10 +702,8 @@ table {
             height: auto;
             border: none;
         }
-        & td:first-of-type:not(:only-child) {
-            width: 100%;
-            border-bottom: 1px solid #ebebeb;
-        }
+        & td:first-of-type { width: 100%; }
+        & td:first-of-type:not(:only-child) { border-bottom: 1px solid #ebebeb; }
         & td:not(:first-of-type) {
             width: 50%;
             text-align: center;
