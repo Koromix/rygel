@@ -262,7 +262,10 @@ async function runDownload(secret) {
 
     // Aggregate stats (if any) for this drop
     {
-        let statuses = cache.drop.files.map(file => getDownloadStatus(file.kid)).filter(status => status?.busy);
+        let statuses = [
+            getDownloadStatus(cache.drop.kid),
+            ...cache.drop.files.map(file => getDownloadStatus(file.kid))
+        ].filter(status => status?.busy);
 
         if (statuses.some(status => status.busy)) {
             let stats = statuses.map(status => status.meter.measure());
