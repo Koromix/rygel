@@ -429,7 +429,7 @@ async function askPassword() {
 async function downloadFile(drop, file, secret, password) {
     if (FileApi == null)
         FileApi = await import('./file.js');
-    setTimeout(() => {}, 0); // DoEvents
+    await Util.waitFor(0); // DoEvents
 
     let key = null;
 
@@ -487,7 +487,7 @@ async function downloadFile(drop, file, secret, password) {
 async function downloadZip(drop, secret, password) {
     if (FileApi == null)
         FileApi = await import('./file.js');
-    setTimeout(() => {}, 0); // DoEvents
+    await Util.waitFor(0); // DoEvents
 
     let keys = null;
 
@@ -701,7 +701,7 @@ async function runSend() {
 
         if (FileApi == null)
             FileApi = await import('./file.js');
-        setTimeout(() => {}, 0); // DoEvents
+        await Util.waitFor(0); // DoEvents
 
         let secret = Base64.toBase64Url(FileApi.randomBytes(32));
         let passphrase = makePassphrase(secret, password);
