@@ -274,13 +274,13 @@ async function runDownload(secret) {
             };
 
             for (let stat of stats) {
-                if (stat.rate == null)
-                    continue;
-
                 agg.value += stat.value;
                 agg.max += stat.max;
-                agg.rate += stat.rate;
-                agg.remaining = Math.max(agg.remaining, stat.remaining);
+
+                if (stat.rate != null) {
+                    agg.rate += stat.rate;
+                    agg.remaining = Math.max(agg.remaining, stat.remaining);
+                }
             }
         }
     }
