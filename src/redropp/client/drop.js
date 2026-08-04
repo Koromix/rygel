@@ -291,7 +291,7 @@ async function runDownload(secret) {
         <form @submit=${UI.wrap(submit)}>
             <div class="block" style="align-items: center;">
                 <div>${formatSize(cache.drop.total)}</div>
-                <table class="responsive" style="table-layout: fixed;">
+                <table class="responsive" style="min-width: 400px; table-layout: fixed;">
                     <colgroup>
                         <col/>
                         <col style="width: 100px;" />
@@ -563,7 +563,7 @@ async function runSend() {
                         ${ENV.allow_infinite ? html`<option value="0">${T.no_expiration}</option>` : ''}
                     </select>
                 </label>
-                <table class="responsive" style="table-layout: fixed;">
+                <table class="responsive" style="min-width: 400px; table-layout: fixed;">
                     <colgroup>
                         <col class=${send_files.length > 1 ? 'check' : ''} />
                         <col/>
