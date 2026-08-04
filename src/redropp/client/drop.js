@@ -258,35 +258,48 @@ async function runShare(secret) {
 }
 
 async function runDownload(secret) {
+    let zip_status = getDownloadStatus(cache.drop.kid);
+    let file_statuses = cache.drop.files.map(file => getDownloadStatus(file.kid));
+
+    let busy = zip_status?.busy || file_statuses.some(status => status?.busy);
     let agg = null;
 
     // Aggregate stats (if any) for this drop
     {
-        let statuses = [
-            getDownloadStatus(cache.drop.kid),
-            ...cache.drop.files.map(file => getDownloadStatus(file.kid))
-        ].filter(status => status?.busy);
+        let statuses = [zip_status, ...file_statuses];
 
-        if (statuses.some(status => status.busy)) {
-            let stats = statuses.map(status => status.meter.measure());
+        agg = {
+            value: null,
+            max: null,
+            rate: null,
+            remaining: null
+        };
 
-            agg = {
-                value: null,
-                max: null,
-                rate: null,
-                remaining: null
-            };
+        for (let status of statuses) {
+            if (status == null)
+                continue;
 
-            for (let stat of stats) {
-                agg.value += stat.value;
-                agg.max += stat.max;
+            let stat = status.meter.measure();
+            let task = download_tasks.get(status);
 
-                if (stat.rate != null) {
-                    agg.rate += stat.rate;
-                    agg.remaining = Math.max(agg.remaining, stat.remaining);
-                }
+            agg.value += stat.value;
+            agg.max += stat.max;
+
+            if (stat.rate != null) {
+                agg.rate += stat.rate;
+                agg.remaining = Math.max(agg.remaining, stat.remaining);
+
+                refreshSoon();
+            }
+
+            if (!status.busy && task != null) {
+                task.close();
+                download_tasks.delete(status);
             }
         }
+
+        if (!busy)
+            agg = null;
     }
 
     UI.main(html`
@@ -302,28 +315,15 @@ async function runDownload(secret) {
                         <col style="width: 100px;" />
                     </colgroup>
                     <tbody>
-                        ${cache.drop.files.map(file => {
-                            let status = getDownloadStatus(file.kid);
-                            let task = download_tasks.get(status);
-                            let stat = status?.meter?.measure?.();
-
-                            let complete = (stat != null && stat.value == stat.max);
-
-                            if (status?.busy && stat?.rate != null)
-                                refreshSoon();
-
-                            // The error notification stays open until the user comes here
-                            if (task != null && !status.busy) {
-                                task.close();
-                                download_tasks.delete(status);
-                            }
+                        ${cache.drop.files.map((file, idx) => {
+                            let status = file_statuses[idx];
 
                             return html`
                                 <tr>
                                     <td>${file.name}</td>
                                     <td class="right"><span class="sub">${formatSize(file.size)}</span></td>
                                     <td class="center">
-                                        <button type="button" class="small" ?disabled=${status?.busy}
+                                        <button type="button" class="small" ?disabled=${status?.busy ?? false}
                                                 @click=${UI.wrap(e => start(file))}>${T.download}</button>
                                     </td>
                                 </tr>
@@ -343,17 +343,25 @@ async function runDownload(secret) {
                     ${cache.drop.expire == null ? T.never_expires : ''}
                 </div>
                 ${agg != null ? html`
-                    <progress value=${agg.value ?? 0} max=${agg.max}></progress>
-                    <div class="sub" style="text-align: center;">
-                        ${T.speed}${T._colon}${agg.rate != null ? formatSize(agg.rate * 1000) + '/s' : '-'}<br>
-                        ${T.remaining_time}${T._colon}${agg.remaining != null ? formatDuration(agg.remaining) : '-'}
-                    </div>
-                    <div style="text-align: center;">${T.keep_tab_open_during_download}</div>
+                    <progress value=${agg.value} max=${agg.max}></progress>
+                    ${busy ? html`
+                        <div class="sub" style="text-align: center;">
+                            ${T.speed}${T._colon}${agg.rate != null ? formatSize(agg.rate * 1000) + '/s' : '-'}<br>
+                            ${T.remaining_time}${T._colon}${agg.remaining != null ? formatDuration(agg.remaining) : '-'}
+                        </div>
+                        <div style="text-align: center;">${T.keep_tab_open_during_download}</div>
+                    ` : ''}
+                ` : ''}
+                ${zip_status?.error != null ? html`
+                    <p style="text-align: center; color: red;">
+                        ${T.error_has_occured}<br>
+                        ${zip_status.error.message}
+                    </p>
                 ` : ''}
             </div>
 
             <div class="actions">
-                <button type="submit" ?disabled=${agg != null}>${cache.drop.files.length > 1 ? T.download_all : T.download}</button>
+                <button type="submit" ?disabled=${zip_status?.busy ?? false}>${cache.drop.files.length > 1 ? T.download_all : T.download}</button>
                 <a @click=${UI.wrap(e => otherDownloadOptions(cache.drop, secret))}>${T.show_other_download_options}</a>
                 <a @click=${UI.wrap(e => shareLink(cache.drop.kid, secret))}>${T.share_drop_link}</a>
             </div>
@@ -894,8 +902,8 @@ async function runUpload() {
 
         <div class="block" style="align-items: center;">
             <p>${cache.drop.name ?? T.unnamed_drop}</p>
-            <progress value=${stat.value ?? 0} max=${stat.max}></progress>
             ${status.error == null ? html`
+                <progress value=${stat.value ?? 0} max=${stat.max}></progress>
                 <div class="sub" style="text-align: center;">
                     ${T.speed}${T._colon}${stat.rate != null ? formatSize(stat.rate * 1000) + '/s' : '-'}<br>
                     ${T.remaining_time}${T._colon}${stat.remaining != null ? formatDuration(stat.remaining) : '-'}
