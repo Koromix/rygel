@@ -295,7 +295,7 @@ async function runDownload(secret) {
                     <colgroup>
                         <col/>
                         <col style="width: 100px;" />
-                        <col style="width: 140px;" />
+                        <col style="width: 100px;" />
                     </colgroup>
                     <tbody>
                         ${cache.drop.files.map(file => {
@@ -559,7 +559,7 @@ async function runSend() {
                     <colgroup>
                         <col/>
                         <col style="width: 100px;" />
-                        <col style="width: 140px;" />
+                        <col style="width: 100px;" />
                     </colgroup>
                     <tbody>
                         ${send_files.map((file, idx) => html`
