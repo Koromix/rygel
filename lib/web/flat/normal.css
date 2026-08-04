@@ -246,6 +246,7 @@ table {
     border-collapse: collapse;
     empty-cells: show;
 }
+* + :is(table, .table) { margin: 1em 0; }
 tr {
     border-bottom: 1px solid #ededf0;
     vertical-align: middle;
@@ -296,10 +297,7 @@ table :is(td, th).picture > img {
     text-align: center;
     font-size: 0.8em;
 }
-.table {
-    margin-top: 1em;
-    overflow-x: scroll;
-}
+.table { overflow-x: scroll; }
 
 hr {
     margin: 4px auto;
