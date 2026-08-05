@@ -239,15 +239,15 @@ async function runShare(secret) {
 
         <div class="block" style="align-items: center;">
             <div>${formatSize(cache.drop.total)}</div>
+            <div class="sub" title=${cache.drop.expire != null ? dayjs(cache.drop.expire).format('lll') : null}>
+                ${cache.drop.expire != null ? T.format(T.expires_in_x, dayjs(cache.drop.expire).fromNow(true)) : ''}
+                ${cache.drop.expire == null ? T.never_expires : ''}
+            </div>
             <div class="command">
                 <pre style="text-align: center;"
                      @click=${e => window.getSelection().selectAllChildren(e.target)}>${ENV.url + url}</pre>
             </div>
             ${drawQrCode(ENV.url + url, { logo: logo })}
-            <div class="sub" title=${cache.drop.expire != null ? dayjs(cache.drop.expire).format('lll') : null}>
-                ${cache.drop.expire != null ? T.format(T.expires_in_x, dayjs(cache.drop.expire).fromNow(true)) : ''}
-                ${cache.drop.expire == null ? T.never_expires : ''}
-            </div>
         </div>
 
         <div class="actions">
@@ -308,6 +308,10 @@ async function runDownload(secret) {
         <form @submit=${UI.wrap(submit)}>
             <div class="block" style="align-items: center;">
                 <div>${formatSize(cache.drop.total)}</div>
+                <div class="sub" title=${cache.drop.expire != null ? dayjs(cache.drop.expire).format('lll') : ''}>
+                    ${cache.drop.expire != null ? T.format(T.expires_in_x, dayjs(cache.drop.expire).fromNow(true)) : ''}
+                    ${cache.drop.expire == null ? T.never_expires : ''}
+                </div>
                 <table class="responsive" style="min-width: 400px; table-layout: fixed;">
                     <colgroup>
                         <col/>
@@ -338,10 +342,6 @@ async function runDownload(secret) {
                         })}
                     </tbody>
                 </table>
-                <div title=${cache.drop.expire != null ? dayjs(cache.drop.expire).format('lll') : ''}>
-                    ${cache.drop.expire != null ? T.format(T.expires_in_x, dayjs(cache.drop.expire).fromNow(true)) : ''}
-                    ${cache.drop.expire == null ? T.never_expires : ''}
-                </div>
                 ${agg != null ? html`
                     <progress value=${agg.value} max=${agg.max}></progress>
                     ${busy ? html`
