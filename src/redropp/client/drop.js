@@ -103,12 +103,12 @@ async function runDrops() {
                                     </div>
                                 </td>
                                 <td class="center">${dayjs(drop.ctime).format('lll')}</td>
-                                <td class="right">
+                                <td class="center">
                                     ${formatSize(drop.total)}
                                     ${!drop.complete ? html`<span class="sub" style="color: red;">${T.incomplete}</span>` : ''}
                                 </td>
                                 <td class="center">${drop.protect ? T.protected : T.no_password}</td>
-                                <td class="right" title=${drop.expire != null ? dayjs(drop.expire).format('lll') : ''}>
+                                <td class="center" title=${drop.expire != null ? dayjs(drop.expire).format('lll') : ''}>
                                     ${drop.expire != null && !has_expired ? Util.capitalize(dayjs(drop.expire).fromNow()) : ''}
                                     ${drop.expire != null && has_expired ? html`${T.expired} <span class="sub">(${dayjs(drop.expire).fromNow()})</span>`: ''}
                                     ${drop.expire == null ? T.never : ''}
@@ -332,7 +332,7 @@ async function runDownload(secret) {
                             return html`
                                 <tr>
                                     <td>${file.name}</td>
-                                    <td class="right"><span class="sub">${formatSize(file.size)}</span></td>
+                                    <td class="center"><span class="sub">${formatSize(file.size)}</span></td>
                                     <td class="center">
                                         <button type="button" class="small" ?disabled=${status?.busy ?? false}
                                                 @click=${UI.wrap(e => start(file))}>${T.download}</button>
@@ -677,7 +677,7 @@ async function runSend() {
                                 <tr ${UI.reorderItems(send_files, file)}>
                                     ${send_files.length > 1 ? html`<th class="grab"><img src=${ASSETS['ui/move']} width="16" height="16" alt=${T.move} /></th>` : ''}
                                     <td colspan=${send_files.length > 1 ? 1 : 2}>${file.name}</td>
-                                    <td class="right"><span class="sub">${formatSize(file.size)}</span></td>
+                                    <td class="center"><span class="sub">${formatSize(file.size)}</span></td>
                                     <td class="center">
                                         <button type="button" class="small" @click=${UI.insist(e => remove_file(file))}>${T.remove}</button>
                                     </td>
