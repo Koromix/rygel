@@ -622,70 +622,81 @@ async function runSend() {
     if (!App.isLogged())
         return UserMod.runLogin();
 
-    UI.main(html`
-        <div class="heading">${T.send_files}</div>
+    UI.main({
+        open: () => {
+            window.addEventListener('dragenter', drop);
+            window.addEventListener('dragover', drop);
+            window.addEventListener('drop', drop);
+            window.addEventListener('paste', drop);
+        },
 
-        <form @submit=${UI.wrap(submit)}>
-            <div class="block" style="align-items: center;">
-                <label>
-                    <span>${T.title} <span class="sub">(${T.optional.toLowerCase()})</span></span>
-                    <input type="text" name="name" placeholder=${send_files.length == 1 ? send_files[0].name : ''} />
-                </label>
-                <label>
-                    <span>${T.expiration}</span>
-                    <select name="expiration">
-                        ${EXPIRATION_DAYS.map(days => {
-                            if (days * 86400000 > ENV.max_duration)
-                                return '';
+        close: () => {
+            window.removeEventListener('dragenter', drop);
+            window.removeEventListener('dragover', drop);
+            window.removeEventListener('drop', drop);
+            window.removeEventListener('paste', drop);
+        },
 
-                            return html`<option value=${days} ?selected=${days == DEFAULT_EXPIRATION}>${T.count(T.expiration_delay, days)}</option>`;
-                        })}
-                        ${ENV.allow_infinite ? html`<option value="0">${T.no_expiration}</option>` : ''}
-                    </select>
-                </label>
-                <table class="responsive" style="min-width: 400px; table-layout: fixed;">
-                    <colgroup>
-                        <col class=${send_files.length > 1 ? 'check' : ''} />
-                        <col/>
-                        <col style="width: 100px;" />
-                        <col style="width: 100px;" />
-                    </colgroup>
-                    <tbody>
-                        ${send_files.map(file => html`
-                            <tr ${UI.reorderItems(send_files, file)}>
-                                ${send_files.length > 1 ? html`<th class="grab"><img src=${ASSETS['ui/move']} width="16" height="16" alt=${T.move} /></th>` : ''}
-                                <td colspan=${send_files.length > 1 ? 1 : 2}>${file.name}</td>
-                                <td class="right"><span class="sub">${formatSize(file.size)}</span></td>
-                                <td class="center">
-                                    <button type="button" class="small" @click=${UI.insist(e => remove_file(file))}>${T.remove}</button>
+        content: html`
+            <div class="heading">${T.send_files}</div>
+
+            <form @submit=${UI.wrap(submit)}>
+                <div class="block" style="align-items: center;">
+                    <label>
+                        <span>${T.title} <span class="sub">(${T.optional.toLowerCase()})</span></span>
+                        <input type="text" name="name" placeholder=${send_files.length == 1 ? send_files[0].name : ''} />
+                    </label>
+                    <label>
+                        <span>${T.expiration}</span>
+                        <select name="expiration">
+                            ${EXPIRATION_DAYS.map(days => {
+                                if (days * 86400000 > ENV.max_duration)
+                                    return '';
+
+                                return html`<option value=${days} ?selected=${days == DEFAULT_EXPIRATION}>${T.count(T.expiration_delay, days)}</option>`;
+                            })}
+                            ${ENV.allow_infinite ? html`<option value="0">${T.no_expiration}</option>` : ''}
+                        </select>
+                    </label>
+                    <table class="responsive" style="min-width: 400px; table-layout: fixed;">
+                        <colgroup>
+                            <col class=${send_files.length > 1 ? 'check' : ''} />
+                            <col/>
+                            <col style="width: 100px;" />
+                            <col style="width: 100px;" />
+                        </colgroup>
+                        <tbody>
+                            ${send_files.map(file => html`
+                                <tr ${UI.reorderItems(send_files, file)}>
+                                    ${send_files.length > 1 ? html`<th class="grab"><img src=${ASSETS['ui/move']} width="16" height="16" alt=${T.move} /></th>` : ''}
+                                    <td colspan=${send_files.length > 1 ? 1 : 2}>${file.name}</td>
+                                    <td class="right"><span class="sub">${formatSize(file.size)}</span></td>
+                                    <td class="center">
+                                        <button type="button" class="small" @click=${UI.insist(e => remove_file(file))}>${T.remove}</button>
+                                    </td>
+                                </tr>
+                            `)}
+                            <tr>
+                                <td colspan="4" class="center">
+                                    ${!send_files.length ? html`<div class="sub" style="margin-bottom: 0.5em;">${T.drag_or_browse_file}</div>` : ''}
+                                    <input type="file" name="file" multiple style="display: none;" @change=${UI.wrap(add_files)} />
+                                    <button type="button" @click=${e => { e.target.previousElementSibling.click(); e.preventDefault(); }}>${T.add}</button>
                                 </td>
                             </tr>
-                        `)}
-                        <tr>
-                            <td colspan="4" class="center">
-                                ${!send_files.length ? html`<div class="sub" style="margin-bottom: 0.5em;">${T.drag_or_browse_file}</div>` : ''}
-                                <input type="file" name="file" multiple style="display: none;" @change=${UI.wrap(add_files)} />
-                                <button type="button" @click=${e => { e.target.previousElementSibling.click(); e.preventDefault(); }}>${T.add}</button>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-                <label>
-                    <span>${T.password} <span class="sub">(${T.optional.toLowerCase()})</span></span>
-                    <input type="password" name="password" autocomplete="new-password" />
-                </label>
-            </div>
+                        </tbody>
+                    </table>
+                    <label>
+                        <span>${T.password} <span class="sub">(${T.optional.toLowerCase()})</span></span>
+                        <input type="password" name="password" autocomplete="new-password" />
+                    </label>
+                </div>
 
-            <div class="actions">
-                <button type="submit" ?disabled=${!send_files.length}>${T.send}</button>
-            </div>
-        </form>
-    `);
-
-    // UI.main() resets these each time
-    window.ondragenter = (e) => e.preventDefault();
-    window.ondragover = drop;
-    window.ondrop = drop;
+                <div class="actions">
+                    <button type="submit" ?disabled=${!send_files.length}>${T.send}</button>
+                </div>
+            </form>
+        `
+    });
 
     async function add_files(e) {
         send_files.push(...e.target.files);
@@ -779,27 +790,29 @@ async function runSend() {
     }
 
     function drop(e) {
-        let dt = e.dataTransfer || e.clipboardData;
+        let dt = e.dataTransfer ?? e.clipboardData;
 
-        let files = [];
-        let found = false;
+        if (dt != null) {
+            let files = [];
+            let found = false;
 
-        for (let i = 0; i < dt.items.length; i++) {
-            let item = dt.items[i];
+            for (let i = 0; i < dt.items.length; i++) {
+                let item = dt.items[i];
 
-            if (item.kind == 'file') {
-                let file = item.getAsFile();
-                if (file != null)
-                    files.push(file);
-                found = true;
+                if (item.kind == 'file') {
+                    let file = item.getAsFile();
+                    if (file != null)
+                        files.push(file);
+                    found = true;
+                }
             }
-        }
 
-        if (e.type == 'dragover') {
-            dt.dropEffect = found ? 'move' : 'none';
-        } else if (e.type == 'drop' && files.length) {
-            send_files.push(...files);
-            App.go();
+            if (e.type == 'dragover') {
+                dt.dropEffect = found ? 'move' : 'none';
+            } else if (e.type == 'drop'  || e.type == 'paste') {
+                send_files.push(...files);
+                App.go();
+            }
         }
 
         e.preventDefault();
