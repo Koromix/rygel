@@ -191,7 +191,7 @@ async function prepareZip(drop, keys, signal = null) {
 
     let status = {
         kid: drop.kid,
-        name: drop.name ?? T.unnamed_drop,
+        name: drop.name,
 
         time: performance.now(),
 

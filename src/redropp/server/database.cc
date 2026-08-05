@@ -8,7 +8,7 @@
 
 namespace K {
 
-const int DatabaseVersion = 4;
+const int DatabaseVersion = 5;
 
 bool AddDatabaseFunctions(sq_Database *db)
 {
@@ -185,9 +185,18 @@ bool MigrateDatabase(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 4: {
+                bool success = db->RunMany(R"(
+                    UPDATE drops SET name = strftime('%Y%m%dT%H%M%S', ctime / 1000, 'unixepoch') WHERE name IS NULL;
+                    ALTER TABLE drops ALTER COLUMN name SET NOT NULL;
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            static_assert(DatabaseVersion == 4);
+            static_assert(DatabaseVersion == 5);
         }
 
         if (!db->Run("INSERT INTO migrations (version, build, timestamp) VALUES (?, ?, ?)",

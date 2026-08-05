@@ -30,7 +30,9 @@ const FRAGMENT_SIZE = 2097152;
 
 let FileApi = null;
 
+let send_codename = null;
 let send_files = [];
+
 let upload_map = new LruMap(64);
 let secret_map = new LruMap(4);
 let password_map = new LruMap(2);
@@ -88,10 +90,7 @@ async function runDrops() {
                             <tr>
                                 <td>
                                     <div style="display: flex; align-items: center;">
-                                        <span style="flex: 1; overflow: hidden; text-overflow: ellipsis;">
-                                            ${drop.name}
-                                            ${!drop.name ? html`<i>${T.unnamed_drop}</i> <span class="sub">(${T.count(T.count_files, drop.files)})</span>` : ''}
-                                        </span>
+                                        <span style="flex: 1; overflow: hidden; text-overflow: ellipsis;">${drop.name}</span>
                                         ${show_recover && can_recover ? html`
                                             <button type="button" class="small"
                                                     @click=${UI.wrap(e => recoverLink(drop.kid))}>${T.recover_link}</button>
@@ -238,7 +237,7 @@ async function runShare(secret) {
     let logo = await Net.loadImage(ASSETS['main/redropp']);
 
     UI.main(html`
-        <div class="heading">${cache.drop.name ?? T.unnamed_drop}</div>
+        <div class="heading">${cache.drop.name}</div>
 
         <div class="block" style="align-items: center;">
             <div>${formatSize(cache.drop.total)}</div>
@@ -308,7 +307,7 @@ async function runDownload(secret) {
     }
 
     UI.main(html`
-        <div class="heading">${cache.drop.name ?? T.unnamed_drop}</div>
+        <div class="heading">${cache.drop.name}</div>
 
         <form @submit=${UI.wrap(submit)}>
             <div class="block" style="align-items: center;">
@@ -521,7 +520,7 @@ async function downloadZip(drop, secret, password) {
         let task = download_tasks.get(status);
 
         if (task == null) {
-            task = Log.progress(drop.name ?? T.unnamed_drop, 0, status.total);
+            task = Log.progress(drop.name, 0, status.total);
 
             task.click = () => {
                 let url = App.makeURL({ mode: 'drop', drop: drop.kid }, secret);
@@ -553,7 +552,7 @@ async function downloadZip(drop, secret, password) {
             throw new Error(T.message(`Failed to communicate with service worker for download. Refresh the page and try again.`));
     }
 
-    let url = `/auto/zip/${drop.kid}/${encodeURIComponent(drop.name ?? T.unnamed_drop)}.zip`;
+    let url = `/auto/zip/${drop.kid}/${encodeURIComponent(drop.name)}.zip`;
     triggerDownload(url);
 }
 
@@ -578,7 +577,7 @@ async function otherDownloadOptions(drop, secret) {
 
         return html`
             <div class="title">
-                ${T.format(T.download_x, drop.name ?? T.unnamed_drop)}
+                ${T.format(T.download_x, drop.name)}
                 <div style="flex: 1;"></div>
                 <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
             </div>
@@ -629,6 +628,15 @@ async function runSend() {
     if (!App.isLogged())
         return UserMod.runLogin();
 
+    if (send_codename == null) {
+        let dictionaries = await import('./words.json');
+        let words = dictionaries[document.documentElement.lang] ?? dictionaries.en;
+
+        send_codename = createCodeName(words, 3);
+    }
+
+    let name_placeholder = (send_files.length == 1) ? send_files[0].name : send_codename;
+
     UI.main({
         open: () => {
             window.addEventListener('dragenter', drop);
@@ -651,7 +659,7 @@ async function runSend() {
                 <div class="block" style="align-items: center;">
                     <label>
                         <span>${T.title} <span class="sub">(${T.optional.toLowerCase()})</span></span>
-                        <input type="text" name="name" placeholder=${send_files.length == 1 ? send_files[0].name : ''} />
+                        <input type="text" name="name" placeholder=${send_files.length ? name_placeholder : ''} />
                     </label>
                     <label>
                         <span>${T.expiration}</span>
@@ -717,13 +725,10 @@ async function runSend() {
         let form = e.currentTarget;
         let elements = form.elements;
 
-        let name = elements.name.value || null;
-        let expiration = (parseInt(elements.expiration.value, 10) * 86400000) || null;
         let sources = send_files.slice();
+        let name = elements.name.value || (sources.length > 1 ? send_codename : sources[0].name);
+        let expiration = (parseInt(elements.expiration.value, 10) * 86400000) || null;
         let password = elements.password.value.trim();
-
-        if (name == null && sources.length == 1)
-            name = sources[0].name;
 
         if (FileApi == null)
             FileApi = await import('./file.js');
@@ -746,6 +751,7 @@ async function runSend() {
             await db.saveWithKey('secrets', drop.kid, encrypted);
         }
 
+        send_codename = null;
         send_files = [];
 
         let task = Log.progress(name, 0, total);
@@ -791,7 +797,7 @@ async function runSend() {
             progress += uploaded;
 
         status.meter.add(progress);
-        status.task.progress(status.name ?? T.unnamed_drop, progress);
+        status.task.progress(status.name, progress);
 
         App.go();
     }
@@ -921,7 +927,7 @@ async function runUpload() {
         <div class="heading">${T.send_files}</div>
 
         <div class="block" style="align-items: center;">
-            <p>${cache.drop.name ?? T.unnamed_drop}</p>
+            <p>${cache.drop.name}</p>
             ${status.error == null ? html`
                 <progress value=${stat.value ?? 0} max=${stat.max}></progress>
                 <div class="sub" style="text-align: center;">
@@ -972,6 +978,24 @@ function refreshSoon() {
         refresh_timer = null;
         App.go();
     }, 500);
+}
+
+function createCodeName(words, count) {
+    let codename = '';
+    let used = new Set;
+
+    for (let i = 0; i < count; i++) {
+        let rnd = null;
+
+        do {
+            rnd = Util.getRandomInt(0, words.length);
+        } while (used.has(rnd));
+
+        codename += Util.capitalize(words[rnd]);
+        used.add(rnd);
+    }
+
+    return codename;
 }
 
 async function copyClipboard(el, text) {

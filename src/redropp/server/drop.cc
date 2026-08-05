@@ -210,7 +210,7 @@ void HandleDropList(http_IO *io)
 
                 json->Key("kid"); json->String(kid);
                 json->Key("ctime"); json->Int64(ctime);
-                json->Key("name"); json->StringOrNull(name);
+                json->Key("name"); json->String(name);
                 json->Key("protect"); json->Bool(protect);
                 if (expire >= 0) {
                     json->Key("expire"); json->Int64(expire);
@@ -290,7 +290,7 @@ void HandleDropInfo(http_IO *io)
 
         json->Key("kid"); json->String(id);
         json->Key("ctime"); json->Int64(ctime);
-        json->Key("name"); json->StringOrNull(name);
+        json->Key("name"); json->String(name);
         if (expire >= 0) {
             json->Key("expire"); json->Int64(expire);
         } else {
@@ -350,7 +350,7 @@ void HandleDropCreate(http_IO *io)
                 Span<const char> key = json->ParseKey();
 
                 if (key == "name") {
-                    json->SkipNull() || json->ParseString(&name);
+                    json->ParseString(&name);
                 } else if (key == "expiration") {
                     json->SkipNull() || json->ParseInt(&expiration);
                 } else if (key == "protect") {
@@ -363,7 +363,7 @@ void HandleDropCreate(http_IO *io)
             valid &= json->IsValid();
 
             if (valid) {
-                if (name && !IsStringValid(name)) {
+                if (!IsStringValid(name)) {
                     LogError("Invalid 'name' parameter");
                     valid = false;
                 }

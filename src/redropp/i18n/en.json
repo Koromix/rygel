@@ -151,7 +151,6 @@
         "totp_scan2": "Once done, enter the 6-digit code into the field below.",
         "two_factor_authentication": "Two-factor authentication",
         "unknown_or_expired_drop": "Unknown or expired drop",
-        "unnamed_drop": "Unnamed drop",
         "upload_complete": "Upload complete",
         "upload_image": "Upload image",
         "use_age_to_decrypt_the_file": "Decrypt the file with <a href=\"https://age-encryption.org/\" target=\"_blank\">age</a> with the following command:",
