@@ -454,7 +454,7 @@ async function downloadFile(drop, file, secret, password) {
     } catch (err) {
         console.error(err);
 
-        let msg = file.protect ? T.message(`Invalid decryption key or password`)
+        let msg = drop.protect ? T.message(`Invalid decryption key or password`)
                                : T.message(`Invalid decryption key`);
         throw new Error(msg);
     }
@@ -512,7 +512,7 @@ async function downloadZip(drop, secret, password) {
     } catch (err) {
         console.error(err);
 
-        let msg = file.protect ? T.message(`Invalid decryption key or password`)
+        let msg = drop.protect ? T.message(`Invalid decryption key or password`)
                                : T.message(`Invalid decryption key`);
         throw new Error(msg);
     }
