@@ -412,7 +412,7 @@ async function askPassword() {
             <div class="main">
                 <label>
                     <span>${T.password}</span>
-                    <input type="password" name="password" />
+                    <input type="password" name="password" autocomplete="new-password" />
                 </label>
             </div>
             <div class="footer">
@@ -672,7 +672,7 @@ async function runSend() {
                 </table>
                 <label>
                     <span>${T.password} <span class="sub">(${T.optional.toLowerCase()})</span></span>
-                    <input type="password" name="password" />
+                    <input type="password" name="password" autocomplete="new-password" />
                 </label>
             </div>
 
