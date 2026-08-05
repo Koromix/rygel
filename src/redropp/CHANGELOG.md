@@ -2,6 +2,16 @@
 
 ## Beta versions
 
+### Redropp 0.9.2
+
+*Released on 2026-08-05*
+
+- Generate and use default codename for multi-file drops
+- Fix error message when using wrong secret or password
+- Fix reversed table header sort arrows
+- Fix weird download stats when triggering successive downloads
+- Adjust position and duration of Redropp log entries
+
 ### Redropp 0.9.1
 
 *Released on 2026-08-05*
