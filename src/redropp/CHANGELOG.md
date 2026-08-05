@@ -2,6 +2,16 @@
 
 ## Beta versions
 
+### Redropp 0.9.1
+
+*Released on 2026-08-05*
+
+- Support file paste on drop creation page
+- Show drop publication date and time
+- Disable autocomplete for drop password inputs
+- Small UI changes and fixes
+- Reduce scrypt work factor even more
+
 ### Redropp 0.9.0
 
 *Released on 2026-08-04*
