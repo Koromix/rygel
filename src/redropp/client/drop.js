@@ -635,12 +635,8 @@ async function runSend() {
     if (!App.isLogged())
         return UserMod.runLogin();
 
-    if (send_codename == null) {
-        let dictionaries = await import('./words.json');
-        let words = dictionaries[document.documentElement.lang] ?? dictionaries.en;
-
-        send_codename = createCodeName(words, 3);
-    }
+    if (send_codename == null)
+        send_codename = await Net.get('/api/drop/codename').then(json => json.codename);
 
     let name_placeholder = (send_files.length == 1) ? send_files[0].name : send_codename;
 
@@ -985,24 +981,6 @@ function refreshSoon() {
         refresh_timer = null;
         App.go();
     }, 500);
-}
-
-function createCodeName(words, count) {
-    let codename = '';
-    let used = new Set;
-
-    for (let i = 0; i < count; i++) {
-        let rnd = null;
-
-        do {
-            rnd = Util.getRandomInt(0, words.length);
-        } while (used.has(rnd));
-
-        codename += Util.capitalize(words[rnd]);
-        used.add(rnd);
-    }
-
-    return codename;
 }
 
 async function copyClipboard(el, text) {

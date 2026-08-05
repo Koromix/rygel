@@ -6,6 +6,7 @@
 #include "web.hh"
 #include "user.hh"
 #include "utility.hh"
+#include "words.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 
 namespace K {
@@ -34,6 +35,8 @@ static const int64_t CleanupDelay = 1 * 3600000ull; // 1 hour
 static const int64_t HeaderLength = 149;
 static const int64_t FragmentSize = Mebibytes(4);
 static const Size ChunkSize = Kibibytes(64);
+
+static const int CodeNameCount = 3;
 
 static_assert(FragmentSize % ChunkSize == 0);
 static_assert(crypto_secretbox_xsalsa20poly1305_NONCEBYTES == 24);
@@ -1069,6 +1072,32 @@ void HandleFileDownload(http_IO *io)
     }
 
     writer.Close();
+}
+
+void HandleDropCodeName(http_IO *io)
+{
+    const char *language = GetThreadLocale();
+    Span<const char *const> words = CodeWords.FindValue(language, Words0);
+
+    LocalArray<char, 512> codename;
+
+    FastRandom rng;
+
+    int used[16] = {};
+    static_assert(CodeNameCount <= K_LEN(used));
+
+    for (int i = 0; i < CodeNameCount; i++) {
+        int rnd = 0;
+        do {
+            rnd = rng.GetInt(0, words.len);
+        } while (std::any_of(used, used + i, [&](int prev) { return prev == rnd; }));
+        used[i] = rnd;
+
+        codename.Append(words[rnd]);
+    }
+
+    const char *json = Fmt(io->Allocator(), "{\"codename\": \"%1\"}", codename).ptr;
+    io->SendText(200, json, "application/json");
 }
 
 }

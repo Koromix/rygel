@@ -24,4 +24,6 @@ void HandleFragmentDownload(http_IO *io);
 void HandleFragmentUpload(http_IO *io);
 void HandleFileDownload(http_IO *io); // Uses special URL format
 
+void HandleDropCodeName(http_IO *io);
+
 }

@@ -596,6 +596,8 @@ static void HandleRequest(http_IO *io)
             HandleFragmentUpload(io);
         } else if (url == "/api/drop/fragment" && method == http_RequestMethod::Get) {
             HandleFragmentDownload(io);
+        } else if (url == "/api/drop/codename" && method == http_RequestMethod::Get) {
+            HandleDropCodeName(io);
         } else {
             io->SendError(404);
         }
