@@ -187,8 +187,8 @@ button.highlight { animation: highlight 1.4s ease-in-out infinite alternate; }
 
 #log {
     position: fixed;
-    bottom: 10px;
-    right: 10px;
+    bottom: 80px;
+    right: 30px;
     max-width: 300px;
     z-index: 99999;
     user-select: none;
@@ -222,7 +222,11 @@ button.highlight { animation: highlight 1.4s ease-in-out infinite alternate; }
 }
 
 @media screen and (max-width: 960px) {
-    #log { transform: translate(10%, 10%) scale(0.8); }
+    #log {
+        right: 10px;
+        bottom: 10px;
+        transform: translate(10%, 10%) scale(0.8);
+    }
 }
 
 .row {
