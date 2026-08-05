@@ -62,14 +62,16 @@ async function runDrops() {
             <table class="responsive" style="width: 100%; table-layout: fixed;">
                 <colgroup>
                     <col/>
-                    <col style="width: 120px;" />
                     <col style="width: 180px;" />
+                    <col style="width: 120px;" />
+                    <col style="width: 160px;" />
                     <col style="width: 180px;" />
                     <col class="check" />
                 </colgroup>
                 <thead>
                     <tr>
                         ${UI.tableHeader('drops', 'name', T.name)}
+                        ${UI.tableHeader('drops', 'ctime', T.published)}
                         ${UI.tableHeader('drops', 'total', T.size)}
                         ${UI.tableHeader('drops', 'protect', T.password)}
                         ${UI.tableHeader('drops', 'expire', T.expiration)}
@@ -100,6 +102,7 @@ async function runDrops() {
                                         ` : ''}
                                     </div>
                                 </td>
+                                <td class="center">${dayjs(drop.ctime).format('lll')}</td>
                                 <td class="right">
                                     ${formatSize(drop.total)}
                                     ${!drop.complete ? html`<span class="sub" style="color: red;">${T.incomplete}</span>` : ''}
@@ -117,7 +120,7 @@ async function runDrops() {
                             </tr>
                         `;
                     })}
-                    ${!drops.length ? html`<tr><td colspan="5" style="text-align: center;">${T.no_file}</td></tr>` : ''}
+                    ${!drops.length ? html`<tr><td colspan="6" style="text-align: center;">${T.no_file}</td></tr>` : ''}
                 </tbody>
             </table>
         </div>
@@ -239,7 +242,9 @@ async function runShare(secret) {
 
         <div class="block" style="align-items: center;">
             <div>${formatSize(cache.drop.total)}</div>
-            <div class="sub" title=${cache.drop.expire != null ? dayjs(cache.drop.expire).format('lll') : null}>
+            <div class="sub" style="text-align: center;"
+                 title=${cache.drop.expire != null ? T.format(T.expires_on_x, dayjs(cache.drop.expire).format('lll')) : null}>
+                ${T.format(T.published_on_x, dayjs(cache.drop.ctime).format('lll'))}<br/>
                 ${cache.drop.expire != null ? T.format(T.expires_in_x, dayjs(cache.drop.expire).fromNow(true)) : ''}
                 ${cache.drop.expire == null ? T.never_expires : ''}
             </div>
@@ -308,7 +313,9 @@ async function runDownload(secret) {
         <form @submit=${UI.wrap(submit)}>
             <div class="block" style="align-items: center;">
                 <div>${formatSize(cache.drop.total)}</div>
-                <div class="sub" title=${cache.drop.expire != null ? dayjs(cache.drop.expire).format('lll') : ''}>
+                <div class="sub" style="text-align: center;"
+                     title=${cache.drop.expire != null ? T.format(T.expires_on_x, dayjs(cache.drop.expire).format('lll')) : null}>
+                    ${T.format(T.published_on_x, dayjs(cache.drop.ctime).format('lll'))}<br/>
                     ${cache.drop.expire != null ? T.format(T.expires_in_x, dayjs(cache.drop.expire).fromNow(true)) : ''}
                     ${cache.drop.expire == null ? T.never_expires : ''}
                 </div>
