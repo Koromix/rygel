@@ -67,7 +67,6 @@ function handleMessage(e) {
                 break;
 
             status.time = performance.now();
-            status.downloaded = value;
             status.meter.add(value, status.time);
 
             clearTimeout(status.timeout);
@@ -140,7 +139,6 @@ async function prepareFile(file, key, signal = null) {
 
         time: performance.now(),
 
-        downloaded: 0,
         total: file.size,
         meter: new ProgressMeter(file.size),
 
@@ -195,7 +193,6 @@ async function prepareZip(drop, keys, signal = null) {
 
         time: performance.now(),
 
-        downloaded: 0,
         total: total,
         meter: new ProgressMeter(total),
 

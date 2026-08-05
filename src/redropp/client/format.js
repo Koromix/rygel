@@ -131,6 +131,15 @@ function ProgressMeter(max) {
         collect(now);
     };
 
+    this.reset = function () {
+        points.length = 0;
+
+        stat.value = null;
+        stat.time = null;
+        stat.rate = null;
+        stat.remaining = null;
+    };
+
     this.measure = function () {
         let now = performance.now();
 

@@ -302,8 +302,15 @@ async function runDownload(secret) {
             }
         }
 
-        if (!busy)
+        if (!busy) {
             agg = null;
+
+            // Clear stats to avoid weirdness for new downloads
+            for (let status of statuses) {
+                if (status != null)
+                    status.meter.reset();
+            }
+        }
     }
 
     UI.main(html`
