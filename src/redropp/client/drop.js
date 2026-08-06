@@ -842,6 +842,10 @@ function makePassphrase(secret, password) {
     return passphrase;
 }
 
+function hasPendingSend() {
+    return send_files.length > 0;
+}
+
 async function createDrop(name, expiration, protect) {
     let drop = await Net.post('/api/drop/create', {
         name: name,
@@ -994,5 +998,7 @@ async function copyClipboard(el, text) {
 export {
     runDrops,
     runDrop,
-    runSend
+
+    runSend,
+    hasPendingSend
 }

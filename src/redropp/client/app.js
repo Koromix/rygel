@@ -29,7 +29,7 @@ const MODES = {
 
     drops: { run: DropMod.runDrops },
     drop: { run: DropMod.runDrop, path: [{ key: 'drop', type: 'string' }] },
-    send: { run: DropMod.runSend }
+    send: { run: DropMod.runSend, busy: DropMod.hasPendingSend }
 };
 const DEFAULT_MODE = 'drops';
 
@@ -104,6 +104,8 @@ async function start() {
     // Prevent loss of data
     window.onbeforeunload = e => {
         if (UI.isDialogOpen())
+            return T.confirm_or_close_dialog;
+        if (Object.values(MODES).some(mode => mode?.busy?.()))
             return T.confirm_or_close_dialog;
         if (Log.entries.some(entry => entry.type == 'progress'))
             return T.confirm_or_close_dialog;
