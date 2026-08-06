@@ -296,7 +296,7 @@ button.highlight { animation: highlight 1.4s ease-in-out infinite alternate; }
         padding: 0.4em 1em 0.5em 1em;
         background: color-mix(in srgb, var(--bar_color), white 50%);
         cursor: pointer;
-        text-decoration: none;
+        text-decoration: none !important;
         color: black;
         text-align: center;
         border-top-left-radius: 8px;
