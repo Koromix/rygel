@@ -107,6 +107,7 @@
         "not_used": "Not used",
         "optional": "Optional",
         "password": "Password",
+        "password_protection": "Password protection",
         "password_reset_successful": "Your password has been changed, please login to continue.",
         "password_suffix": "PASSWORD",
         "pending": "Pending",

@@ -419,7 +419,7 @@ async function askPassword() {
     let password = await UI.dialog({
         run: (render, close) => html`
             <div class="title">
-                ${T.password}
+                ${T.password_protection}
                 <div style="flex: 1;"></div>
                 <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
             </div>
