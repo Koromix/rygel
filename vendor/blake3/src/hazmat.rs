@@ -397,15 +397,16 @@ fn test_left_subtree_len() {
 /// See the [module level examples](index.html#examples).
 #[derive(Copy, Clone, Debug)]
 pub enum Mode<'a> {
-    /// Corresponding to [`hash`](crate::hash)
+    /// The default [`hash`][crate::hash] mode. Subtrees must be hashed with [`Hasher::new`].
     Hash,
 
-    /// Corresponding to [`keyed_hash`](crate::hash)
+    /// The [`keyed_hash`][crate::keyed_hash] mode. Subtrees must be hashed with
+    /// [`Hasher::new_keyed`].
     KeyedHash(&'a [u8; KEY_LEN]),
 
-    /// Corresponding to [`derive_key`](crate::hash)
-    ///
-    /// The [`ContextKey`] comes from [`hash_derive_key_context`].
+    /// The [`derive_key`][crate::derive_key] mode. Subtrees must be hashed with either
+    /// [`Hasher::new_derive_key`] or [`Hasher::new_from_context_key`]. The [`ContextKey`] comes
+    /// from [`hash_derive_key_context`].
     DeriveKeyMaterial(&'a ContextKey),
 }
 

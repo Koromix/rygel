@@ -227,8 +227,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // environment variables it supports, in particular for $CC. We expect to
     // do a lot of benchmarking across different compilers, so we explicitly
     // add the variables that we're likely to need.
-    println!("cargo:rerun-if-env-changed=CC");
-    println!("cargo:rerun-if-env-changed=CFLAGS");
+    println!("cargo::rerun-if-env-changed=CC");
+    println!("cargo::rerun-if-env-changed=CFLAGS");
 
     // Ditto for source files, though these shouldn't change as often. `ignore::Walk` respects
     // .gitignore, so this doesn't traverse target/.
@@ -236,7 +236,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let result = result?;
         let path = result.path();
         if path.is_file() {
-            println!("cargo:rerun-if-changed={}", path.to_str().unwrap());
+            println!("cargo::rerun-if-changed={}", path.to_str().unwrap());
         }
     }
 
