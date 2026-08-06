@@ -2,6 +2,12 @@
 
 ## Beta versions
 
+### Redropp 0.9.3
+
+*Released on 2026-08-06*
+
+- Generate codenames on server to reduce JS bundle size
+
 ### Redropp 0.9.2
 
 *Released on 2026-08-05*
