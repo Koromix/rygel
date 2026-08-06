@@ -19,7 +19,7 @@ html {
     --button_radius: 5px;
 }
 
-body { font-size: 15px; }
+body { font-size: 16px; }
 
 :is(main, dialog) a {
     text-decoration: underline !important;
@@ -93,9 +93,10 @@ footer {
     }
 
     footer {
-        padding-left: 5em;
+        padding-left: 6em;
         align-items: start;
         text-align: left;
+        font-size: 0.8em;
 
         & .legal { display: none; }
     }

@@ -89,10 +89,10 @@ async function runDrops() {
                         return html`
                             <tr>
                                 <td>
-                                    <div style="display: flex; align-items: center;">
-                                        <span style="flex: 1; overflow: hidden; text-overflow: ellipsis;">${drop.name}</span>
+                                    <div style="display: flex; align-items: center;" title=${drop.name}>
+                                        <span class="nowrap" style="flex: 1;">${drop.name}</span>
                                         ${show_recover && can_recover ? html`
-                                            <button type="button" class="small"
+                                            <button type="button" class="small" title=""
                                                     @click=${UI.wrap(e => recoverLink(drop.kid))}>${T.recover_link}</button>
                                         ` : ''}
                                         ${show_recover && !can_recover ? html`
@@ -325,7 +325,7 @@ async function runDownload(secret) {
                     ${cache.drop.expire != null ? T.format(T.expires_in_x, dayjs(cache.drop.expire).fromNow(true)) : ''}
                     ${cache.drop.expire == null ? T.never_expires : ''}
                 </div>
-                <table class="responsive" style="min-width: 400px; table-layout: fixed;">
+                <table class="responsive" style="table-layout: fixed;">
                     <colgroup>
                         <col/>
                         <col style="width: 100px;" />
@@ -337,7 +337,7 @@ async function runDownload(secret) {
 
                             return html`
                                 <tr>
-                                    <td>${file.name}</td>
+                                    <td class="nowrap" title=${file.name}>${file.name}</td>
                                     <td class="center"><span class="sub">${formatSize(file.size)}</span></td>
                                     <td class="center">
                                         <button type="button" class="small" ?disabled=${status?.busy ?? false}
@@ -676,7 +676,7 @@ async function runSend() {
                             ${ENV.allow_infinite ? html`<option value="0">${T.no_expiration}</option>` : ''}
                         </select>
                     </label>
-                    <table class="responsive" style="min-width: 400px; table-layout: fixed;">
+                    <table class="responsive" style="table-layout: fixed;">
                         <colgroup>
                             <col class=${send_files.length > 1 ? 'check' : ''} />
                             <col/>
@@ -687,7 +687,7 @@ async function runSend() {
                             ${send_files.map(file => html`
                                 <tr ${UI.reorderItems(send_files, file)}>
                                     ${send_files.length > 1 ? html`<th class="grab"><img src=${ASSETS['ui/move']} width="16" height="16" alt=${T.move} /></th>` : ''}
-                                    <td colspan=${send_files.length > 1 ? 1 : 2}>${file.name}</td>
+                                    <td colspan=${send_files.length > 1 ? 1 : 2} class="nowrap" title=${file.name}>${file.name}</td>
                                     <td class="center"><span class="sub">${formatSize(file.size)}</span></td>
                                     <td class="center">
                                         <button type="button" class="small" @click=${UI.insist(e => remove_file(file))}>${T.remove}</button>
@@ -696,7 +696,7 @@ async function runSend() {
                             `)}
                             <tr>
                                 <td colspan="4" class="center">
-                                    ${!send_files.length ? html`<div class="sub" style="margin-bottom: 0.5em;">${T.drag_or_browse_file}</div>` : ''}
+                                    ${!send_files.length ? html`<div class="sub" style="margin-bottom: 1em;">${T.drag_or_browse_file}</div>` : ''}
                                     <input type="file" name="file" multiple style="display: none;" @change=${UI.wrap(add_files)} />
                                     <button type="button" @click=${e => { e.target.previousElementSibling.click(); e.preventDefault(); }}>${T.add}</button>
                                 </td>

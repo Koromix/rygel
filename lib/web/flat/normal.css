@@ -274,23 +274,28 @@ tbody th {
     font-style: italic;
     border: 1px solid #ebebeb;
 }
-th.center, td.center { text-align: center; }
-th.right, td.right { text-align: right; }
-table :is(td, th, col).check {
+:is(th, td).center { text-align: center; }
+:is(th, td).right { text-align: right; }
+:is(td, th, col).check {
     width: 3em;
     min-width: 3em;
     text-align: center;
 }
-table :is(td, th).center { text-align: center; }
-table :is(td, th).right { text-align: right; }
-table :is(tr, td, th, col).missing {
+:is(td, th).center { text-align: center; }
+:is(td, th).right { text-align: right; }
+:is(tr, td, th, col).missing {
     font-style: italic;
     color: var(--color, gray);
 }
-table :is(td, th).picture { padding: 6px 0 0 6px; }
-table :is(td, th).picture > img {
+:is(td, th).picture { padding: 6px 0 0 6px; }
+:is(td, th).picture > img {
     width: 24px;
     height: 24px;
+}
+:is(td, th).nowrap {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 :is(table, .table) + div.legend {
     margin-top: 6px;

@@ -24,7 +24,7 @@ main.dialog {
 
 @media screen and (max-width: 960px) {
     main {
-        padding: 0;
+        padding: 0 0 16px 0;
         & > .tabbar { padding: 0 16px; }
     }
 
@@ -49,7 +49,7 @@ main.dialog {
 #language {
     position: absolute;
     left: 1em;
-    font-size: 0.8em;
+    font-size: 0.9em;
 }
 
 .columns {
@@ -111,13 +111,13 @@ main.dialog {
         padding: 0;
         background: none !important;
         color: var(--anchor_color) !important;
-        font-size: 0.9em;
+        font-size: 0.8em;
         text-decoration: underline;
         flex-basis: 100%;
     }
 
-    & > button + a { margin-top: 0.5em; }
-    & > a + a { margin-top: -0.5em; }
+    & > button + a { margin-top: 0.6em; }
+    & > a + a { margin-top: -0.25em; }
 }
 .actions.horizontal {
     flex-direction: row;
@@ -127,7 +127,7 @@ main.dialog {
 * + .actions { margin-top: 1.5em; }
 
 button {
-    font-size: 0.92em;
+    font-size: 0.9em;
     font-weight: normal !important;
     color: var(--color) !important;
     --color: white;
@@ -183,6 +183,11 @@ button.highlight { animation: highlight 1.4s ease-in-out infinite alternate; }
         filter: contrast(120%);
         transform: scale(1.2);
     }
+}
+
+@media screen and (max-width: 960px) {
+    button { font-size: 1em; }
+    .actions > a { font-size: 0.9em; }
 }
 
 #log {
@@ -332,7 +337,7 @@ button.highlight { animation: highlight 1.4s ease-in-out infinite alternate; }
     font-weight: normal;
     text-transform: none;
     font-variant: normal;
-    color: var(--color, #888);
+    color: var(--color, #666);
 }
 .nowrap {
     overflow: hidden;
@@ -443,7 +448,7 @@ form {
         gap: 0.43em;
         align-items: start;
         height: 2em;
-        min-width: 400px;
+        min-width: 500px;
 
         & > span:first-child {
             width: 200px;
@@ -456,12 +461,12 @@ form {
 }
 
 input {
-    padding: 0.3em 0.5em;
+    padding: 0.2em 0.4em 0.3em 0.4em;
     background: white;
     border: 1px solid var(--input_color);
     border-radius: var(--input_radius);
     font: inherit;
-    font-size: 0.9em;
+    font-size: 1em;
 }
 textarea {
     align-self: stretch;
@@ -471,10 +476,10 @@ textarea {
     border: 1px solid var(--input_color);
     border-radius: var(--input_radius);
     font: inherit;
-    font-size: 0.9em;
+    font-size: 1em;
 }
 select {
-    padding: 0.3em calc(20px + 0.5em) 0.3em 0.5em;
+    padding: 0.2em calc(20px + 0.5em) 0.3em 0.5em;
     border: none;
     border-radius: var(--input_radius);
     -webkit-appearance: none;
@@ -489,7 +494,7 @@ select {
     text-overflow: ellipsis;
     white-space: nowrap;
     font-family: inherit;
-    font-size: 0.9em;
+    font-size: 1em;
 }
 :is(input, textarea, select):focus { background-color: white; }
 :is(input, textarea, select):disabled {
@@ -674,6 +679,12 @@ table {
             --color: white;
         }
     }
+}
+
+table.responsive {
+    min-width: calc(min(500px, 90%));
+    max-width: 96%;
+    box-sizing: border-box;
 }
 
 @media screen and (max-width: 960px) {
