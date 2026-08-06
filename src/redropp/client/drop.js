@@ -391,32 +391,47 @@ async function runDownload(secret) {
     }
 
     async function start(file) {
-        let password = null;
+        if (file != null) {
+            let key = cache.drop.protect ? await openWithPassword(cache.drop, file, secret)
+                                         : await openKey(file, secret, null);
 
-        if (cache.drop.protect) {
-            password = password_map.get(cache.drop.kid);
+            await downloadFile(cache.drop, file, key);
+        } else {
+            let key0 = cache.drop.protect ? await openWithPassword(cache.drop, cache.drop.files[0], secret)
+                                          : await openKey(cache.drop.files[0], secret, null);
+            let keys = [key0];
 
-            if (password == null) {
-                password = await askPassword(cache.drop);
-                password_map.set(cache.drop.kid, password);
+            for (let i = 1; i < cache.drop.files.length; i++) {
+                let password = password_map.get(cache.drop.kid);
+                let key = await openKey(cache.drop.files[i], secret, password);
+
+                keys.push(key);
             }
-        }
 
-        try {
-            if (file != null) {
-                await downloadFile(cache.drop, file, secret, password);
-            } else {
-                await downloadZip(cache.drop, secret, password);
-            }
-        } catch (err) {
-            password_map.delete(cache.drop.kid);
-            throw err;
+            await downloadZip(cache.drop, keys);
         }
     }
 }
 
-async function askPassword() {
-    let password = await UI.dialog({
+async function openWithPassword(drop, file, secret) {
+    // Quick open with cached password (if any)
+    {
+        let password = password_map.get(drop.kid);
+
+        if (password != null) {
+            try {
+                let key = await openKey(file, secret, password);
+                return key;
+            } catch (err) {
+                console.error(err);
+                password_map.delete(cache.drop.kid);
+
+                // Weird... but go on, show the dialog
+            }
+        }
+    }
+
+    let key = await UI.dialog({
         run: (render, close) => html`
             <div class="title">
                 ${T.password_protection}
@@ -435,37 +450,44 @@ async function askPassword() {
             </div>
         `,
 
-        submit: (elements) => {
+        submit: async (elements) => {
             let password = elements.password.value.trim();
 
             if (!password)
                 throw new Error(T.message(`Missing password`));
 
-            return password;
+            let key = await openKey(file, secret, password);
+
+            // Success! Cache it for quick access to other drop files.
+            password_map.set(cache.drop.kid, password);
+
+            return key;
         }
     });
 
-    return password;
+    return key;
 }
 
-async function downloadFile(drop, file, secret, password) {
+async function openKey(file, secret, password) {
     if (FileApi == null)
         FileApi = await import('./file.js');
     await Util.waitFor(0); // DoEvents
 
-    let key = null;
-
     try {
         let passphrase = makePassphrase(secret, password);
-        key = await FileApi.decodeHeader(file.header, file.nonce, passphrase, password);
+        let key = await FileApi.decodeHeader(file.header, file.nonce, passphrase);
+
+        return key;
     } catch (err) {
         console.error(err);
 
-        let msg = drop.protect ? T.message(`Invalid decryption key or password`)
-                               : T.message(`Invalid decryption key`);
+        let msg = password ? T.message(`Invalid decryption key or password`)
+                           : T.message(`Invalid decryption key`);
         throw new Error(msg);
     }
+}
 
+async function downloadFile(drop, file, key) {
     await prepareFile(file, key, status => {
         let task = download_tasks.get(status);
 
@@ -506,24 +528,7 @@ async function downloadFile(drop, file, secret, password) {
     triggerDownload(url);
 }
 
-async function downloadZip(drop, secret, password) {
-    if (FileApi == null)
-        FileApi = await import('./file.js');
-    await Util.waitFor(0); // DoEvents
-
-    let keys = null;
-
-    try {
-        let passphrase = makePassphrase(secret, password);
-        keys = await Promise.all(drop.files.map(file => FileApi.decodeHeader(file.header, file.nonce, passphrase, password)));
-    } catch (err) {
-        console.error(err);
-
-        let msg = drop.protect ? T.message(`Invalid decryption key or password`)
-                               : T.message(`Invalid decryption key`);
-        throw new Error(msg);
-    }
-
+async function downloadZip(drop, keys) {
     await prepareZip(drop, keys, status => {
         let task = download_tasks.get(status);
 
