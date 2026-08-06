@@ -107,6 +107,7 @@
         "not_used": "Non utilisé",
         "optional": "Optionnel",
         "password": "Mot de passe",
+        "password_protected": "Protégé par mot de passe",
         "password_protection": "Protection par mot de passe",
         "password_reset_successful": "Votre mot de passe a été modifié, veuillez vous connecter pour continuer.",
         "password_suffix": "MOT_DE_PASSE",

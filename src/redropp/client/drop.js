@@ -246,7 +246,8 @@ async function runShare(secret) {
                  title=${cache.drop.expire != null ? T.format(T.expires_on_x, dayjs(cache.drop.expire).format('lll')) : null}>
                 ${T.format(T.published_on_x, dayjs(cache.drop.ctime).format('lll'))}<br/>
                 ${cache.drop.expire != null ? T.format(T.expires_in_x, dayjs(cache.drop.expire).fromNow(true)) : ''}
-                ${cache.drop.expire == null ? T.never_expires : ''}
+                ${cache.drop.expire == null ? T.never_expires : ''}<br/>
+                ${cache.drop.protect ? T.password_protected : ''}
             </div>
             <div class="command">
                 <pre style="text-align: center;"
@@ -324,7 +325,8 @@ async function runDownload(secret) {
                      title=${cache.drop.expire != null ? T.format(T.expires_on_x, dayjs(cache.drop.expire).format('lll')) : null}>
                     ${T.format(T.published_on_x, dayjs(cache.drop.ctime).format('lll'))}<br/>
                     ${cache.drop.expire != null ? T.format(T.expires_in_x, dayjs(cache.drop.expire).fromNow(true)) : ''}
-                    ${cache.drop.expire == null ? T.never_expires : ''}
+                    ${cache.drop.expire == null ? T.never_expires : ''}<br/>
+                    ${cache.drop.protect ? T.password_protected : ''}
                 </div>
                 <table class="responsive" style="table-layout: fixed;">
                     <colgroup>
