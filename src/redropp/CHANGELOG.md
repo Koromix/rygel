@@ -1,6 +1,16 @@
 # Version history
 
-## Beta versions
+## Alpha versions
+
+### Redropp 0.9.4
+
+*Released on 2026-08-06*
+
+- Fix password ending up in local secret database
+- Show drop password protection status
+- Keep drop password dialog open until it works
+- Try to prevent tab close if send form contains files
+- Improve UI and accessibility on small screens
 
 ### Redropp 0.9.3
 
@@ -52,8 +62,6 @@
 - Fix broken favicon URL on some pages
 - Fix never-ending small file downloads on Chrome
 - Fix sandbox SIGKILL caused by getcpu syscall
-
-## Alpha versions
 
 ### Redropp 0.8.2
 
