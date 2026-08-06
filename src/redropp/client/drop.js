@@ -145,6 +145,11 @@ async function recoverLink(kid) {
 
         try {
             secret = FileApi.decryptString(key, encrypted);
+
+            // In versions < 0.9.4, the entire passphrase (secret + password) could end up in the local database.
+            // It probably does not affect anyone, but strip the password just in case. Not ideal but at least things work.
+            if (secret.includes('/'))
+                secret = secret.substr(0, secret.indexOf('/'));
         } catch (err) {
             if (encrypted != null)
                 console.error(err);
@@ -757,7 +762,7 @@ async function runSend() {
             let db = await openLocalDB(session.userid);
 
             let key = Base64.toBytes(session.ckey);
-            let encrypted = FileApi.encryptString(key, passphrase);
+            let encrypted = FileApi.encryptString(key, secret);
 
             await db.saveWithKey('secrets', drop.kid, encrypted);
         }
