@@ -225,11 +225,21 @@ function getDownloadStatus(kid) {
     return status;
 }
 
+function isDownloading() {
+    for (let status of download_map.values()) {
+        if (status.busy)
+            return true;
+    }
+
+    return false;
+}
+
 export {
     initRelay,
 
     prepareFile,
     prepareZip,
 
-    getDownloadStatus
+    getDownloadStatus,
+    isDownloading
 }

@@ -20,7 +20,8 @@ import {
 import {
     prepareFile,
     prepareZip,
-    getDownloadStatus
+    getDownloadStatus,
+    isDownloading
 } from './relay.js';
 import { ASSETS } from '../assets/assets.js';
 
@@ -771,6 +772,7 @@ async function runSend() {
             total: total,
             meter: new ProgressMeter(total),
             task: task,
+            busy: true,
             error: null
         };
         upload_map.set(drop.kid, status);
@@ -789,6 +791,8 @@ async function runSend() {
         } catch (err) {
             status.error = err;
             task.error(err, null);
+        } finally {
+            status.busy = false;
         }
     }
 
@@ -840,10 +844,6 @@ function makePassphrase(secret, password) {
     if (password)
         passphrase += '/' + password;
     return passphrase;
-}
-
-function hasPendingSend() {
-    return send_files.length > 0;
 }
 
 async function createDrop(name, expiration, protect) {
@@ -977,6 +977,18 @@ function getUploadStatus(kid) {
     return status;
 }
 
+function isUploading() {
+    if (send_files.length > 0)
+        return true;
+
+    for (let status of upload_map.values()) {
+        if (status.busy)
+            return true;
+    }
+
+    return false;
+}
+
 function refreshSoon() {
     if (refresh_timer != null)
         return;
@@ -998,7 +1010,8 @@ async function copyClipboard(el, text) {
 export {
     runDrops,
     runDrop,
+    isDownloading,
 
     runSend,
-    hasPendingSend
+    isUploading
 }

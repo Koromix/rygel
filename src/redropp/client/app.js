@@ -28,8 +28,8 @@ const MODES = {
     account: { run: UserMod.runAccount },
 
     drops: { run: DropMod.runDrops },
-    drop: { run: DropMod.runDrop, path: [{ key: 'drop', type: 'string' }] },
-    send: { run: DropMod.runSend, busy: DropMod.hasPendingSend }
+    drop: { run: DropMod.runDrop, path: [{ key: 'drop', type: 'string' }], busy: DropMod.isDownloading },
+    send: { run: DropMod.runSend, busy: DropMod.isUploading }
 };
 const DEFAULT_MODE = 'drops';
 
@@ -106,8 +106,6 @@ async function start() {
         if (UI.isDialogOpen())
             return T.confirm_or_close_dialog;
         if (Object.values(MODES).some(mode => mode?.busy?.()))
-            return T.confirm_or_close_dialog;
-        if (Log.entries.some(entry => entry.type == 'progress'))
             return T.confirm_or_close_dialog;
     };
 
