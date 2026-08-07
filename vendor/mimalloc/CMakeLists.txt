@@ -463,6 +463,15 @@ if(MI_TLS_RECURSE_GUARD)
   list(APPEND mi_defines MI_TLS_RECURSE_GUARD=1)
 endif()
 
+if("$ENV{MSYSTEM}" STREQUAL "UCRT64")
+  message(STATUS "Detected MSYS2 UCRT64 environment")
+  set(MI_MSYS_UCRT64 "ON")
+  list(APPEND mi_defines MI_WINGW_UCRT64=1)
+elseif("$ENV{MSYSTEM}" STREQUAL "MSYS")
+  message(STATUS "Detected MSYS2 MSYS/Cygwin environment")
+  set(MI_CYGWIN "ON")
+endif()
+
 if(MI_WIN_DIRECT_TLS)
   message(STATUS "Use only direct TLS slots on Windows to avoid extra tests in the malloc fast path -- this only works if the program uses less than 64 TlsAlloc'd slots in total! (MI_WIN_USE_ONLY_DIRECT_TLS=ON)")
   list(APPEND mi_defines MI_WIN_DIRECT_TLS=1)
@@ -661,6 +670,12 @@ if(CMAKE_BUILD_TYPE_LC MATCHES "^(release|relwithdebinfo|minsizerel|none)$")
 else()
   set(mi_libname "${mi_libname}-${CMAKE_BUILD_TYPE_LC}") #append build type (e.g. -debug) if not a release version
 endif()
+string(REGEX REPLACE "^mimalloc[-]?" "" mi_libsuffix "${mi_libname}")
+
+set(mi_libname "mimalloc")
+if(NOT mi_libsuffix STREQUAL "")
+set(mi_libname "${mi_libname}-${mi_libsuffix}")
+endif()
 
 if(MI_BUILD_SHARED)
   list(APPEND mi_build_targets "shared")
@@ -724,16 +739,20 @@ if(MI_BUILD_SHARED)
     # On windows, link and copy the mimalloc redirection dll too.
     if(CMAKE_GENERATOR_PLATFORM STREQUAL "arm64ec")
       set(MIMALLOC_REDIRECT_SUFFIX "-arm64ec")
+      set(MINJECT_SUFFIX "")
     elseif(MI_ARCH STREQUAL "x64")
       set(MIMALLOC_REDIRECT_SUFFIX "")
+      set(MINJECT_SUFFIX "")
       if(CMAKE_SYSTEM_PROCESSOR STREQUAL "ARM64")
         message(STATUS "Note: x64 code emulated on Windows for arm64 should use an arm64ec build of 'mimalloc.dll'")
         message(STATUS "      together with 'mimalloc-redirect-arm64ec.dll'. See the 'bin\\readme.md' for more information.")
       endif()
     elseif(MI_ARCH STREQUAL "x86")
       set(MIMALLOC_REDIRECT_SUFFIX "32")
+      set(MINJECT_SUFFIX "32")
     else()
       set(MIMALLOC_REDIRECT_SUFFIX "-${MI_ARCH}")  # -arm64 etc.
+      set(MINJECT_SUFFIX "-${MI_ARCH}")
     endif()
 
     target_link_libraries(mimalloc PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/bin/mimalloc-redirect${MIMALLOC_REDIRECT_SUFFIX}.lib)  # the DLL import library
@@ -844,11 +863,17 @@ if (MI_BUILD_TESTS)
     else()
       message(STATUS "cannot build TSAN tests without MI_BUILD_SHARED being enabled")
     endif()
+    if(MI_GUARDED)
+    add_test(NAME test-${TEST_NAME} COMMAND ${CMAKE_COMMAND} -E env MIMALLOC_GUARDED_SAMPLE_RATE=1 $<TARGET_FILE:mimalloc-test-${TEST_NAME}>)
+    elseif(TEST_NAME STREQUAL "stress-heaps")
+    add_test(NAME test-${TEST_NAME} COMMAND ${CMAKE_COMMAND} -E env MIMALLOC_ARENA_EAGER_COMMIT=0 MIMALLOC_PAGE_COMMIT_ON_DEMAND=1 $<TARGET_FILE:mimalloc-test-${TEST_NAME}>)
+    else()
     add_test(NAME test-${TEST_NAME} COMMAND mimalloc-test-${TEST_NAME})
+    endif()
   endforeach()
 
   # dynamic override test
-  if(MI_BUILD_SHARED AND NOT (MI_TRACK_ASAN OR MI_DEBUG_TSAN OR MI_DEBUG_UBSAN)) # AND NOT (APPLE AND MI_USE_CXX))
+  if(MI_BUILD_SHARED AND NOT (MI_CYGWIN OR MI_TRACK_ASAN OR MI_DEBUG_TSAN OR MI_DEBUG_UBSAN)) # AND NOT (APPLE AND MI_USE_CXX))
     add_executable(mimalloc-test-stress-dynamic test/test-stress.c)
     target_compile_definitions(mimalloc-test-stress-dynamic PRIVATE ${mi_defines} "USE_STD_MALLOC=1")
     target_compile_options(mimalloc-test-stress-dynamic PRIVATE ${mi_cflags})
@@ -856,6 +881,11 @@ if (MI_BUILD_TESTS)
     if(WIN32)
       target_compile_definitions(mimalloc-test-stress-dynamic PRIVATE "MI_LINK_VERSION=1")  # link mi_version
       target_link_libraries(mimalloc-test-stress-dynamic PRIVATE mimalloc ${mi_libraries})  # link mi_version
+      if(MI_MSYS_UCRT64)
+        # mingw always links mimalloc after system libraries.
+        # post-process with `minject` to make sure mimalloc is the first dll in the load order.
+        add_custom_command(TARGET mimalloc-test-stress-dynamic POST_BUILD COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/bin/minject${MINJECT_SUFFIX} --postfix=${mi_libsuffix} -f -i $<TARGET_FILE:mimalloc-test-stress-dynamic>)
+      endif()
       add_test(NAME test-stress-dynamic COMMAND ${CMAKE_COMMAND} -E env MIMALLOC_VERBOSE=1 $<TARGET_FILE:mimalloc-test-stress-dynamic>)
     else()
       target_link_libraries(mimalloc-test-stress-dynamic PRIVATE ${mi_libraries}) # pthreads, issue 1158

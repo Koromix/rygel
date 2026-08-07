@@ -50,7 +50,11 @@ terms of the MIT license. A copy of the license can be found in the file
 #define mi_decl_thread          __thread
 #define mi_decl_noreturn        __attribute__((noreturn))
 #define mi_decl_weak            __attribute__((weak))
+#if defined(__MINGW32__) || defined(__CYGWIN__)
+#define mi_decl_hidden
+#else
 #define mi_decl_hidden          __attribute__((visibility("hidden")))
+#endif
 #if (__GNUC__ >= 4) || defined(__clang__)
 #define mi_decl_cold            __attribute__((cold))
 #else
@@ -256,7 +260,7 @@ mi_page_t*    _mi_safe_ptr_page(const void* p);
 void          _mi_page_map_unsafe_destroy(void);
 
 // "page.c"
-void*         _mi_malloc_generic(mi_theap_t* theap, size_t size, size_t zero_huge_alignment, size_t* usable)  mi_attr_noexcept mi_attr_malloc;
+void*         _mi_malloc_generic(mi_theap_t* heap, size_t size, size_t zero_huge_alignment, mi_page_t** ppage)  mi_attr_noexcept mi_attr_malloc;
 
 void          _mi_page_retire(mi_page_t* page) mi_attr_noexcept;       // free the page if there are no other pages with many free blocks
 void          _mi_page_unfull(mi_page_t* page);
@@ -280,7 +284,9 @@ void          _mi_theap_collect_retired(mi_theap_t* theap, bool force);
 void          _mi_theap_collect_abandon(mi_theap_t* theap);
 bool          _mi_theap_area_visit_blocks(const mi_heap_area_t* area, mi_page_t* page, mi_block_visit_fun* visitor, void* arg);
 void          _mi_theap_page_reclaim(mi_theap_t* theap, mi_page_t* page);
-bool          _mi_theap_free(mi_theap_t* theap, bool acquire_heap_theaps_lock, bool acquire_tld_theaps_lock);
+
+void          _mi_heap_detach_theaps( mi_heap_t* heap );
+void          _mi_tld_detach_theaps( mi_tld_t* tld );
 void          _mi_theap_incref(mi_theap_t* theap);
 void          _mi_theap_decref(mi_theap_t* theap);
 
@@ -303,15 +309,16 @@ mi_msecs_t    _mi_clock_start(void);
 
 // "alloc.c"
 void*         _mi_page_malloc_zero(mi_theap_t* theap, mi_page_t* page, size_t size, bool zero) mi_attr_noexcept;                  // called from `_mi_theap_malloc_aligned`
-void*         _mi_theap_malloc_zero(mi_theap_t* theap, size_t size, bool zero, size_t* usable) mi_attr_noexcept;
-void*         _mi_theap_malloc_zero_ex(mi_theap_t* theap, size_t size, bool zero, size_t huge_alignment, size_t* usable) mi_attr_noexcept;     // called from `_mi_theap_malloc_aligned`
-void*         _mi_theap_realloc_zero(mi_theap_t* theap, void* p, size_t newsize, bool zero, size_t* usable_pre, size_t* usable_post) mi_attr_noexcept;
+void*         _mi_theap_malloc_zero(mi_theap_t* theap, size_t size, bool zero, mi_page_t** ppage) mi_attr_noexcept;
+void*         _mi_theap_malloc_zero_ex(mi_theap_t* theap, size_t size, bool zero, size_t huge_alignment, mi_page_t** ppage) mi_attr_noexcept;     // called from `_mi_theap_malloc_aligned`
+void*         _mi_theap_realloc_zero(mi_theap_t* theap, void* p, size_t newsize, bool zero) mi_attr_noexcept;
 mi_block_t*   _mi_page_ptr_unalign(const mi_page_t* page, const void* p);
 void          _mi_padding_shrink(const mi_page_t* page, const mi_block_t* block, const size_t min_size);
 
 // "free.c"
 void          _mi_free_subproc_safe(void* p);
 void          _mi_page_unguard_all(mi_page_t* page);
+size_t        _mi_page_usable_size(const mi_page_t* page, const void* p) mi_attr_noexcept;
 
 #if MI_DEBUG>1
 bool          _mi_page_is_valid(mi_page_t* page);
@@ -406,7 +413,7 @@ static inline void* mi_pthread_key_get(pthread_key_t key) {
   #if !MI_PTHREADS_GET_INVALID_KEY_IS_NULL
   if mi_unlikely(key==MI_PTHREAD_KEY_INVALID) return NULL;
   #endif
-  return pthread_getspecific(key);  
+  return pthread_getspecific(key);
 }
 
 static inline bool mi_pthread_key_set(pthread_key_t* pkey, void* val) {
@@ -476,7 +483,7 @@ static inline bool _mi_is_power_of_two(uintptr_t x) {
 
 // valid alignment values are as posix memalign: <https://en.cppreference.com/c/memory/aligned_alloc#Notes>
 static inline bool mi_alignment_is_valid(size_t alignment) {
-  return ((alignment!=0) && _mi_is_power_of_two(alignment)); 
+  return ((alignment!=0) && _mi_is_power_of_two(alignment));
 }
 
 // Is a pointer aligned?
@@ -487,7 +494,7 @@ static inline bool _mi_is_aligned(const void* p, size_t alignment) {
 // Align upwards
 static inline uintptr_t _mi_align_up(uintptr_t sz, size_t alignment) {
   mi_assert_internal(alignment != 0);
-  uintptr_t mask = alignment - 1;
+  const uintptr_t mask = alignment - 1;
   if ((alignment & mask) == 0) {  // power of two?
     return ((sz + mask) & ~mask);
   }
@@ -501,18 +508,19 @@ static inline void* _mi_align_up_ptr(const void* p, size_t alignment) {
   return (void*)_mi_align_up((uintptr_t)p, alignment);
 }
 
+// Align down
 static inline uintptr_t _mi_align_down(uintptr_t sz, size_t alignment) {
   mi_assert_internal(alignment != 0);
-  uintptr_t mask = alignment - 1;
-  if ((alignment & mask) == 0) { // power of two?
+  const uintptr_t mask = alignment - 1;
+  if ((alignment & mask) == 0) {  // power of two?
     return (sz & ~mask);
   }
   else {
-    return ((sz / alignment) * alignment);
+    return ((sz/alignment)*alignment);
   }
 }
 
-// align a pointer downwards
+// Align a pointer downwards
 static inline void* _mi_align_down_ptr(const void* p, size_t alignment) {
   return (void*)_mi_align_down((uintptr_t)p, alignment);
 }
@@ -806,9 +814,15 @@ static inline size_t mi_page_slice_offset_of(const mi_page_t* page, size_t offse
   return (mi_page_start(page) - mi_page_slice_start(page)) + offset_relative_to_page_start;
 }
 
+// How much of the page is committed relative to the slice start? (or 0 if fully committed already)
+static inline size_t mi_page_slice_committed(const mi_page_t* page) {
+  return ((size_t)page->slice_pcommitted * _mi_os_page_size());
+}
+
 // Currently committed part of a page
 static inline size_t mi_page_committed(const mi_page_t* page) {
-  return (page->slice_committed == 0 ? mi_page_size(page) : page->slice_committed - mi_page_slice_offset_of(page,0));
+  const size_t slice_committed = mi_page_slice_committed(page);
+  return (slice_committed == 0 ? mi_page_size(page) : slice_committed - mi_page_slice_offset_of(page,0));
 }
 
 // are all blocks in a page freed?
@@ -866,6 +880,10 @@ static inline mi_page_queue_t* mi_page_queue(const mi_theap_t* theap, size_t siz
   return pq;
 }
 
+static inline size_t mi_page_min_commit_size(void) {
+  const size_t psize = _mi_os_page_size();
+  return (MI_PAGE_MIN_COMMIT_SIZE >= psize ? MI_PAGE_MIN_COMMIT_SIZE : psize);
+}
 
 //-----------------------------------------------------------
 // Page thread id and flags
@@ -1058,15 +1076,15 @@ static inline bool mi_theap_malloc_use_guarded(mi_theap_t* theap, size_t size) {
     // no sample
     theap->guarded_sample_count = count;
     return false;
-  }  
-  else { 
+  }
+  else {
     // count == 0
     const size_t rate = theap->guarded_sample_rate;
     if (rate == 0) {
       return false; // don't write to an empty theap
     }
     else if (size >= theap->guarded_size_min && size <= theap->guarded_size_max) {
-      // use guarded allocation        
+      // use guarded allocation
       theap->guarded_sample_count = rate;  // reset
       return true;
     }
@@ -1078,7 +1096,7 @@ static inline bool mi_theap_malloc_use_guarded(mi_theap_t* theap, size_t size) {
   }
 }
 
-mi_decl_restrict void* _mi_theap_malloc_guarded(mi_theap_t* theap, size_t size, bool zero, size_t* usable) mi_attr_noexcept;
+mi_decl_restrict void* _mi_theap_malloc_guarded(mi_theap_t* theap, size_t size, bool zero, mi_page_t** ppage) mi_attr_noexcept;
 #endif
 
 /* -------------------------------------------------------------------

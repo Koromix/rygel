@@ -652,7 +652,8 @@ static bool mi_page_extend_free(mi_theap_t* theap, mi_page_t* page) {
   mi_assert_internal(extend < (1UL<<16));
 
   // commit on demand?
-  if (page->slice_committed > 0) {
+  const size_t slice_committed = mi_page_slice_committed(page);
+  if (slice_committed > 0) {
     // reduce extend if it commits more than an arena slice
     if ((extend * bsize) > MI_ARENA_SLICE_SIZE) {
       extend = _mi_divide_up(MI_ARENA_SLICE_SIZE, bsize);
@@ -660,7 +661,7 @@ static bool mi_page_extend_free(mi_theap_t* theap, mi_page_t* page) {
     // commit required size
     const size_t needed_size = (page->capacity + extend)*bsize;
     mi_assert_internal(needed_size <= page_size);
-    size_t needed_commit = _mi_align_up( mi_page_slice_offset_of(page, needed_size), MI_PAGE_MIN_COMMIT_SIZE );
+    size_t needed_commit = _mi_align_up( mi_page_slice_offset_of(page, needed_size), mi_page_min_commit_size());
     #if MI_SECURE>=5
     // the previous alignup could extend the commit into the guard page; re-adjust if needed
     const size_t page_size_commit = _mi_align_up( mi_page_slice_offset_of(page, page_size), _mi_os_page_size() );    
@@ -668,13 +669,13 @@ static bool mi_page_extend_free(mi_theap_t* theap, mi_page_t* page) {
       needed_commit = page_size_commit;
     }
     #endif
-    if (needed_commit > page->slice_committed) {
-      mi_assert_internal(((needed_commit - page->slice_committed) % _mi_os_page_size()) == 0);
-      if (!_mi_os_commit(_mi_theap_subproc(theap), mi_page_slice_start(page) + page->slice_committed, needed_commit - page->slice_committed, NULL)) {
+    if (needed_commit > slice_committed) {
+      mi_assert_internal(((needed_commit - slice_committed) % _mi_os_page_size()) == 0);
+      if (!_mi_os_commit(_mi_theap_subproc(theap), mi_page_slice_start(page) + slice_committed, needed_commit - slice_committed, NULL)) {
         return false;
       }
-      mi_assert_internal(needed_commit < UINT32_MAX);
-      page->slice_committed = (uint32_t)needed_commit;
+      mi_assert_internal(needed_commit <= UINT16_MAX * _mi_os_page_size());
+      page->slice_pcommitted = (uint16_t)(needed_commit / _mi_os_page_size());
     }
   }
 
@@ -975,7 +976,7 @@ static mi_page_t* mi_find_page(mi_theap_t* theap, size_t size, size_t huge_align
 // very large requested alignments in which case we use a huge singleton page.
 // Note: we put `bool zero, size_t huge_alignment` into one parameter (with zero in the low bit)
 // to use 4 parameters which compiles better on msvc for the malloc fast path.
-void* _mi_malloc_generic(mi_theap_t* theap, size_t size, size_t zero_huge_alignment, size_t* usable) mi_attr_noexcept
+void* _mi_malloc_generic(mi_theap_t* theap, size_t size, size_t zero_huge_alignment, mi_page_t** ppage) mi_attr_noexcept
 {
   const bool zero = ((zero_huge_alignment & 1) != 0);
   const size_t huge_alignment = (zero_huge_alignment & ~1);
@@ -1032,7 +1033,7 @@ void* _mi_malloc_generic(mi_theap_t* theap, size_t size, size_t zero_huge_alignm
   mi_assert_internal(_mi_ptr_page(mi_page_start(page))==page);
 
   // and try again, this time succeeding! (i.e. this should never recurse through _mi_page_malloc)
-  if (usable!=NULL) { *usable = mi_page_usable_block_size(page); }
+  if (ppage!=NULL) { *ppage = page; }
   void* const p = _mi_page_malloc_zero(theap,page,size,zero);
   mi_assert_internal(p != NULL);
 
