@@ -557,13 +557,15 @@ var BaseDiffView = /** @class */ (function () {
     };
     BaseDiffView.prototype.$initWidgets = function (editor) {
         var session = editor.session;
+        if (!session)
+            return;
         if (!session.widgetManager) {
             session.widgetManager = new LineWidgets(session);
             session.widgetManager.attach(editor);
         }
-        editor.session.lineWidgets = [];
-        editor.session.widgetManager.lineWidgets = [];
-        editor.session.$resetRowCache(0);
+        session.lineWidgets = [];
+        session.widgetManager.lineWidgets = [];
+        session.$resetRowCache(0);
     };
     BaseDiffView.prototype.$screenRow = function (pos, session) {
         var row = session.documentToScreenPosition(pos).row;
@@ -692,6 +694,7 @@ var BaseDiffView = /** @class */ (function () {
         if (this.savedOptionsB && this.savedOptionsB.customScrollbar) {
             this.$resetDecorators(this.editorB.renderer);
         }
+        clearTimeout(this.$onInputTimer);
     };
     BaseDiffView.prototype.$removeLineWidgets = function (session) {
         session.lineWidgets = [];
@@ -1168,7 +1171,7 @@ var InlineDiffView = /** @class */ (function (_super) {
     };
     InlineDiffView.prototype.selectEditor = function (editor) {
         if (editor == this.activeEditor) {
-            this.otherEditor.selection.clearSelection();
+            this.otherEditor.selection && this.otherEditor.selection.clearSelection();
             this.activeEditor.textInput.setHost(this.activeEditor);
             this.activeEditor.setStyle("ace_diff_other", false);
             this.cursorLayer.element.remove();
@@ -1182,7 +1185,7 @@ var InlineDiffView = /** @class */ (function (_super) {
             this.removeBracketHighlight(this.otherEditor);
         }
         else {
-            this.activeEditor.selection.clearSelection();
+            this.activeEditor.selection && this.activeEditor.selection.clearSelection();
             this.activeEditor.textInput.setHost(this.otherEditor);
             this.activeEditor.setStyle("ace_diff_other");
             this.activeEditor.renderer.$cursorLayer.element.parentNode.appendChild(this.cursorLayer.element);
@@ -1200,7 +1203,7 @@ var InlineDiffView = /** @class */ (function (_super) {
     };
     InlineDiffView.prototype.removeBracketHighlight = function (editor) {
         var session = editor.session;
-        if (session.$bracketHighlight) {
+        if (session && session.$bracketHighlight) {
             session.$bracketHighlight.markerIds.forEach(function (id) {
                 session.removeMarker(id);
             });
@@ -1320,6 +1323,8 @@ var InlineDiffView = /** @class */ (function (_super) {
         session.off("changeWrapMode", this.onChangeWrapLimit);
     };
     InlineDiffView.prototype.$detachSessionHandlers = function (editor, marker) {
+        if (!editor.session)
+            return;
         editor.session.removeMarker(marker.id);
         editor.selection.off("changeCursor", this.onSelect);
         editor.selection.off("changeSelection", this.onSelect);

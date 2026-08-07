@@ -246,7 +246,7 @@ declare module "ace-builds" {
             foldStyle: "markbegin" | "markbeginend" | "manual";
             overwrite: boolean;
             newLineMode: NewLineMode;
-            mode: string;
+            mode: SyntaxMode | string;
         }
         interface VirtualRendererOptions {
             animatedScroll: boolean;
@@ -1066,7 +1066,7 @@ declare module "ace-builds" {
     import { Range } from "ace-builds-internal/range";
     import { UndoManager } from "ace-builds-internal/undomanager";
     import { VirtualRenderer as Renderer } from "ace-builds-internal/virtual_renderer";
-    export var version: "1.43.6";
+    export var version: "1.44.0";
     export { Range, Editor, EditSession, UndoManager, Renderer as VirtualRenderer };
 }
 

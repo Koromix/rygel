@@ -460,6 +460,11 @@ exports.delayedCall = function (fcn, defaultTimeout) {
     };
     return _self;
 };
+exports.sleep = function (ms) {
+    return new Promise(function (resolve) {
+        setTimeout(resolve, ms);
+    });
+};
 exports.supportsLookbehind = function () {
     try {
         new RegExp('(?<=.)');
@@ -1351,7 +1356,7 @@ var reportErrorIfPathIsNotConfigured = function () {
         reportErrorIfPathIsNotConfigured = function () { };
     }
 };
-exports.version = "1.43.6";
+exports.version = "1.44.0";
 
 });
 
@@ -4198,22 +4203,22 @@ exports.addTouchListeners = function (el, editor) {
         contextMenu = dom.buildDom(["div",
             {
                 class: "ace_mobile-menu",
-                ontouchstart: function (e) {
-                    mode = "menu";
-                    e.stopPropagation();
-                    e.preventDefault();
-                    editor.textInput.focus();
-                },
-                ontouchend: function (e) {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    handleClick(e);
-                },
                 onclick: handleClick
             },
             ["span"],
             ["span", { class: "ace_mobile-button", action: "more" }, "..."]
         ], editor.container);
+        contextMenu.addEventListener("touchstart", function (e) {
+            mode = "menu";
+            e.stopPropagation();
+            e.preventDefault();
+            editor.textInput.focus();
+        });
+        contextMenu.addEventListener("touchend", function (e) {
+            e.stopPropagation();
+            e.preventDefault();
+            handleClick(e);
+        });
     }
     function showContextMenu() {
         if (!editor.getOption("enableMobileMenu")) {
@@ -10641,8 +10646,8 @@ var EditSession = /** @class */ (function () {
         if (typeof session == "string")
             session = JSON.parse(session);
         var undoManager = new UndoManager();
-        undoManager.$undoStack = session.history.undo;
-        undoManager.$redoStack = session.history.redo;
+        undoManager.$undoStack = session.history.$undoStack;
+        undoManager.$redoStack = session.history.$redoStack;
         undoManager.mark = session.history.mark;
         undoManager.$rev = session.history.rev;
         var editSession = new EditSession(session.value);
@@ -17581,7 +17586,9 @@ var Text = /** @class */ (function () {
         }
         else if (value[0] == "\t") {
             for (var i = 0; i < cols; i++) {
-                parent.appendChild(this.$tabStrings["\t"].cloneNode(true));
+                var tabSpan = this.$tabStrings["\t"].cloneNode(true);
+                tabSpan["charCount"] = 1;
+                parent.appendChild(tabSpan);
             }
             this.$highlightIndentGuide();
             return value.substr(cols);
@@ -18107,6 +18114,7 @@ var Scrollbar = /** @class */ (function () {
     function Scrollbar(parent, classSuffix) {
         this.element = dom.createElement("div");
         this.element.className = "ace_scrollbar ace_scrollbar" + classSuffix;
+        this.element.tabIndex = -1;
         this.inner = dom.createElement("div");
         this.inner.className = "ace_scrollbar-inner";
         this.inner.textContent = "\xa0";
@@ -19826,7 +19834,7 @@ var VirtualRenderer = /** @class */ (function () {
         var offsetX = x + this.scrollLeft - canvasPos.left - this.$padding;
         var offset = offsetX / this.characterWidth;
         var col = this.$blockCursor ? Math.floor(offset) : Math.round(offset);
-        var row = Math.floor((y + this.scrollTop - canvasPos.top) / this.lineHeight);
+        var row = (y + this.scrollTop - canvasPos.top) / this.lineHeight;
         return this.session.screenToDocumentPosition(row, Math.max(col, 0), offsetX);
     };
     VirtualRenderer.prototype.textToScreenCoordinates = function (row, column) {

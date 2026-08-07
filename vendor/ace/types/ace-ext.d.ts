@@ -270,7 +270,6 @@ declare module "ace-builds/src-noconflict/ext-diff/inline_diff_view" {
         removeBracketHighlight(editor: any): void;
         initMouse(): void;
         onMouseDetach: () => void;
-        onChangeWrapLimit(): void;
     }
     import { BaseDiffView } from "ace-builds/src-noconflict/ext-diff/base_diff_view";
 }
@@ -1208,4 +1207,6 @@ declare module "ace-builds/src-noconflict/ext-whitespace" {
         exec: (editor: any, args: any) => void;
     }[];
     export type EditSession = import("ace-builds-internal/edit_session").EditSession;
+}
+declare module "ace-builds/src-noconflict/ext-whitespaces_in_selection" {
 }

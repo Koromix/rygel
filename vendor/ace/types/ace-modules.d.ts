@@ -375,7 +375,7 @@ declare module "ace-builds-internal/config" {
             string
         ], onLoad: (module: any) => void) => void;
         setModuleLoader: (moduleName: any, onLoad: any) => void;
-        version: "1.43.6";
+        version: "1.44.0";
     };
     export = _exports;
 }
@@ -2799,6 +2799,8 @@ declare module "ace-builds-internal/editor" {
          * opens a prompt displaying message
          **/
         prompt(message: any, options: any, callback: any): void;
+        set hoverTooltip(value: any);
+        get hoverTooltip(): any;
         env?: any;
         widgetManager?: import("ace-builds").Ace.LineWidgets;
         completer?: import("ace-builds").Ace.Autocomplete | import("ace-builds").Ace.InlineAutocomplete;
@@ -3472,6 +3474,7 @@ declare module "ace-builds-internal/marker_group" {
     }
 }
 declare module "ace-builds-internal/autocomplete/text_completer" {
+    export const id: "textCompleter";
     export function getCompletions(editor: any, session: any, pos: any, prefix: any, callback: any): void;
 }
 declare module "ace-builds-internal/line_widgets" {
@@ -3731,11 +3734,49 @@ declare module "ace-builds-internal/layer/text_markers" {
         range: import("ace-builds").Ace.IRange;
         id: number;
         className: string;
+        type?: string;
+    };
+    export type SelectionSegment = {
+        /**
+         * - Characters before selection
+         */
+        beforeSelection: number;
+        /**
+         * - Length of selection
+         */
+        selectionLength: number;
+        /**
+         * - Characters after selection
+         */
+        afterSelection: number;
     };
     export namespace textMarkerMixin {
         function $removeClass(this: Text, className: string): void;
         function $applyTextMarkers(this: Text): void;
-        function $modifyDomForMarkers(this: Text, lineElement: HTMLElement, row: number, marker: TextMarker): void;
+        /**
+         * Modifies the DOM for marker rendering.
+         * @param {HTMLElement} lineElement - The line element to modify
+         * @param {number} row - The row being processed
+         * @param {TextMarker} marker - The marker to apply
+         */
+        function $modifyDomForMarkers(lineElement: HTMLElement, row: number, marker: TextMarker): void;
+        /**
+         * Process text nodes for invisible markers (whitespace visualization)
+         * @param {Node} node - The DOM node to process
+         * @param {Node} parentNode - The parent node
+         * @param {object} marker - The marker being applied
+         */
+        function $processInvisibleMarker(node: Node, parentNode: Node, selectionSegment: SelectionSegment, marker: object): void;
+        /**
+         * Process nodes for regular markers (not invisible whitespace)
+         * @param {Node} node - The DOM node to process
+         * @param {Node} parentNode - The parent node
+         * @param {TextMarker} marker - The marker being applied
+         * @param {number} nodeStart - Starting column of the node
+         * @param {number} startCol - Starting column of the selection
+         * @param {number} endCol - Ending column of the selection
+         */
+        function $processRegularMarker(node: Node, parentNode: Node, selectionSegment: SelectionSegment, marker: TextMarker, nodeStart: number, startCol: number, endCol: number): void;
     }
     export namespace editSessionTextMarkerMixin {
         /**
@@ -3743,10 +3784,11 @@ declare module "ace-builds-internal/layer/text_markers" {
          *
          * @param {import("ace-builds").Ace.IRange} range - The range to mark in the document
          * @param {string} className - The CSS class name to apply to the marked text
+         * @param {string} [type] - The type of marker (e.g. "invisible" for whitespace rendering)
          * @returns {number} The unique identifier for the added text marker
          *
          */
-        function addTextMarker(this: EditSession, range: import("ace-builds").Ace.IRange, className: string): number;
+        function addTextMarker(this: EditSession, range: import("ace-builds").Ace.IRange, className: string, type?: string): number;
         /**
          * Removes a text marker from the current edit session.
          *
@@ -4030,7 +4072,7 @@ declare module "ace-builds-internal/edit_session" {
         /**
          * Sets up a new `EditSession` and associates it with the given `Document` and `Mode`.
          **/
-        constructor(text?: Document | string, mode?: SyntaxMode);
+        constructor(text?: Document | string, mode?: SyntaxMode | string);
         doc: Document;
         prevOp: {};
         id: string;
@@ -4620,9 +4662,10 @@ declare module "ace-builds-internal/edit_session" {
         range: IRange;
         id: number;
         className: string;
+        type?: string;
     };
     type TextMarkers = {
-        addTextMarker(this: EditSession, range: IRange, className: string): number;
+        addTextMarker(this: EditSession, range: IRange, className: string, type?: string): number;
         removeTextMarker(this: EditSession, markerId: number): void;
         getTextMarkers(this: EditSession): TextMarker[];
     } & {

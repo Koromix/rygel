@@ -577,459 +577,6 @@ assert.ifError = function (err) { if (err) {
 
 });
 
-define("ace/test/asyncjs/async",["require","exports","module"], function(require, exports, module){/*!
- * async.js
- * Copyright(c) 2010 Fabian Jakobs <fabian.jakobs@web.de>
- * MIT Licensed
- */
-var STOP = exports.STOP = {};
-exports.Generator = function (source) {
-    if (typeof source == "function")
-        this.source = {
-            next: source
-        };
-    else
-        this.source = source;
-};
-(function () {
-    this.next = function (callback) {
-        this.source.next(callback);
-    };
-    this.map = function (mapper) {
-        if (!mapper)
-            return this;
-        mapper = makeAsync(1, mapper);
-        var source = this.source;
-        this.next = function (callback) {
-            source.next(function (err, value) {
-                if (err)
-                    callback(err);
-                else {
-                    mapper(value, function (err, value) {
-                        if (err)
-                            callback(err);
-                        else
-                            callback(null, value);
-                    });
-                }
-            });
-        };
-        return new this.constructor(this);
-    };
-    this.filter = function (filter) {
-        if (!filter)
-            return this;
-        filter = makeAsync(1, filter);
-        var source = this.source;
-        this.next = function (callback) {
-            source.next(function handler(err, value) {
-                if (err)
-                    callback(err);
-                else {
-                    filter(value, function (err, takeIt) {
-                        if (err)
-                            callback(err);
-                        else if (takeIt)
-                            callback(null, value);
-                        else
-                            source.next(handler);
-                    });
-                }
-            });
-        };
-        return new this.constructor(this);
-    };
-    this.slice = function (begin, end) {
-        var count = -1;
-        if (!end || end < 0)
-            var end = Infinity;
-        var source = this.source;
-        this.next = function (callback) {
-            source.next(function handler(err, value) {
-                count++;
-                if (err)
-                    callback(err);
-                else if (count >= begin && count < end)
-                    callback(null, value);
-                else if (count >= end)
-                    callback(STOP);
-                else
-                    source.next(handler);
-            });
-        };
-        return new this.constructor(this);
-    };
-    this.reduce = function (reduce, initialValue) {
-        reduce = makeAsync(3, reduce);
-        var index = 0;
-        var done = false;
-        var previousValue = initialValue;
-        var source = this.source;
-        this.next = function (callback) {
-            if (done)
-                return callback(STOP);
-            if (initialValue === undefined) {
-                source.next(function (err, currentValue) {
-                    if (err)
-                        return callback(err, previousValue);
-                    previousValue = currentValue;
-                    reduceAll();
-                });
-            }
-            else
-                reduceAll();
-            function reduceAll() {
-                source.next(function handler(err, currentValue) {
-                    if (err) {
-                        done = true;
-                        if (err == STOP)
-                            return callback(null, previousValue);
-                        else
-                            return (err);
-                    }
-                    reduce(previousValue, currentValue, index++, function (err, value) {
-                        previousValue = value;
-                        source.next(handler);
-                    });
-                });
-            }
-        };
-        return new this.constructor(this);
-    };
-    this.forEach =
-        this.each = function (fn) {
-            fn = makeAsync(1, fn);
-            var source = this.source;
-            this.next = function (callback) {
-                source.next(function handler(err, value) {
-                    if (err)
-                        callback(err);
-                    else {
-                        fn(value, function (err) {
-                            callback(err, value);
-                        });
-                    }
-                });
-            };
-            return new this.constructor(this);
-        };
-    this.some = function (condition) {
-        condition = makeAsync(1, condition);
-        var source = this.source;
-        var done = false;
-        this.next = function (callback) {
-            if (done)
-                return callback(STOP);
-            source.next(function handler(err, value) {
-                if (err)
-                    return callback(err);
-                condition(value, function (err, result) {
-                    if (err) {
-                        done = true;
-                        if (err == STOP)
-                            callback(null, false);
-                        else
-                            callback(err);
-                    }
-                    else if (result) {
-                        done = true;
-                        callback(null, true);
-                    }
-                    else
-                        source.next(handler);
-                });
-            });
-        };
-        return new this.constructor(this);
-    };
-    this.every = function (condition) {
-        condition = makeAsync(1, condition);
-        var source = this.source;
-        var done = false;
-        this.next = function (callback) {
-            if (done)
-                return callback(STOP);
-            source.next(function handler(err, value) {
-                if (err)
-                    return callback(err);
-                condition(value, function (err, result) {
-                    if (err) {
-                        done = true;
-                        if (err == STOP)
-                            callback(null, true);
-                        else
-                            callback(err);
-                    }
-                    else if (!result) {
-                        done = true;
-                        callback(null, false);
-                    }
-                    else
-                        source.next(handler);
-                });
-            });
-        };
-        return new this.constructor(this);
-    };
-    this.call = function (context) {
-        var source = this.source;
-        return this.map(function (fn, next) {
-            fn = makeAsync(0, fn, context);
-            fn.call(context, function (err, value) {
-                next(err, value);
-            });
-        });
-    };
-    this.concat = function (generator) {
-        var generators = [this];
-        generators.push.apply(generators, arguments);
-        var index = 0;
-        var source = generators[index++];
-        return new this.constructor(function (callback) {
-            source.next(function handler(err, value) {
-                if (err) {
-                    if (err == STOP) {
-                        source = generators[index++];
-                        if (!source)
-                            return callback(STOP);
-                        else
-                            return source.next(handler);
-                    }
-                    else
-                        return callback(err);
-                }
-                else
-                    return callback(null, value);
-            });
-        });
-    };
-    this.zip = function (generator) {
-        var generators = [this];
-        generators.push.apply(generators, arguments);
-        return new this.constructor(function (callback) {
-            exports.list(generators)
-                .map(function (gen, next) {
-                gen.next(next);
-            })
-                .toArray(callback);
-        });
-    };
-    this.expand = function (inserter, constructor) {
-        if (!inserter)
-            return this;
-        var inserter = makeAsync(1, inserter);
-        var constructor = constructor || this.constructor;
-        var source = this.source;
-        var spliced = null;
-        return new constructor(function next(callback) {
-            if (!spliced) {
-                source.next(function (err, value) {
-                    if (err)
-                        return callback(err);
-                    inserter(value, function (err, toInsert) {
-                        if (err)
-                            return callback(err);
-                        spliced = toInsert;
-                        next(callback);
-                    });
-                });
-            }
-            else {
-                spliced.next(function (err, value) {
-                    if (err == STOP) {
-                        spliced = null;
-                        return next(callback);
-                    }
-                    else if (err)
-                        return callback(err);
-                    callback(err, value);
-                });
-            }
-        });
-    };
-    this.sort = function (compare) {
-        var self = this;
-        var arrGen;
-        this.next = function (callback) {
-            if (arrGen)
-                return arrGen.next(callback);
-            self.toArray(function (err, arr) {
-                if (err)
-                    callback(err);
-                else {
-                    arrGen = exports.list(arr.sort(compare));
-                    arrGen.next(callback);
-                }
-            });
-        };
-        return new this.constructor(this);
-    };
-    this.join = function (separator) {
-        return this.$arrayOp(Array.prototype.join, separator !== undefined ? [separator] : null);
-    };
-    this.reverse = function () {
-        return this.$arrayOp(Array.prototype.reverse);
-    };
-    this.$arrayOp = function (arrayMethod, args) {
-        var self = this;
-        var i = 0;
-        this.next = function (callback) {
-            if (i++ > 0)
-                return callback(STOP);
-            self.toArray(function (err, arr) {
-                if (err)
-                    callback(err, "");
-                else {
-                    if (args)
-                        callback(null, arrayMethod.apply(arr, args));
-                    else
-                        callback(null, arrayMethod.call(arr));
-                }
-            });
-        };
-        return new this.constructor(this);
-    };
-    this.end = function (breakOnError, callback) {
-        if (!callback) {
-            callback = arguments[0];
-            breakOnError = true;
-        }
-        var source = this.source;
-        var last;
-        var lastError;
-        source.next(function handler(err, value) {
-            if (err) {
-                if (err == STOP)
-                    callback && callback(lastError, last);
-                else if (!breakOnError) {
-                    lastError = err;
-                    source.next(handler);
-                }
-                else
-                    callback && callback(err, value);
-            }
-            else {
-                last = value;
-                source.next(handler);
-            }
-        });
-    };
-    this.toArray = function (breakOnError, callback) {
-        if (!callback) {
-            callback = arguments[0];
-            breakOnError = true;
-        }
-        var values = [];
-        var errors = [];
-        var source = this.source;
-        source.next(function handler(err, value) {
-            if (err) {
-                if (err == STOP) {
-                    if (breakOnError)
-                        return callback(null, values);
-                    else {
-                        errors.length = values.length;
-                        return callback(errors, values);
-                    }
-                }
-                else {
-                    if (breakOnError)
-                        return callback(err);
-                    else
-                        errors[values.length] = err;
-                }
-            }
-            values.push(value);
-            source.next(handler);
-        });
-    };
-}).call(exports.Generator.prototype);
-var makeAsync = exports.makeAsync = function (args, fn, context) {
-    if (fn.length > args)
-        return fn;
-    else {
-        return function () {
-            var value;
-            var next = arguments[args];
-            try {
-                value = fn.apply(context || this, arguments);
-            }
-            catch (e) {
-                return next(e);
-            }
-            next(null, value);
-        };
-    }
-};
-exports.list = function (arr, construct) {
-    var construct = construct || exports.Generator;
-    var i = 0;
-    var len = arr.length;
-    return new construct(function (callback) {
-        if (i < len)
-            callback(null, arr[i++]);
-        else
-            callback(STOP);
-    });
-};
-exports.values = function (map, construct) {
-    var values = [];
-    for (var key in map)
-        values.push(map[key]);
-    return exports.list(values, construct);
-};
-exports.keys = function (map, construct) {
-    var keys = [];
-    for (var key in map)
-        keys.push(key);
-    return exports.list(keys, construct);
-};
-exports.range = function (start, stop, step, construct) {
-    var construct = construct || exports.Generator;
-    start = start || 0;
-    step = step || 1;
-    if (stop === undefined || stop === null)
-        stop = step > 0 ? Infinity : -Infinity;
-    var value = start;
-    return new construct(function (callback) {
-        if (step > 0 && value >= stop || step < 0 && value <= stop)
-            callback(STOP);
-        else {
-            var current = value;
-            value += step;
-            callback(null, current);
-        }
-    });
-};
-exports.concat = function (first, varargs) {
-    if (arguments.length > 1)
-        return first.concat.apply(first, Array.prototype.slice.call(arguments, 1));
-    else
-        return first;
-};
-exports.zip = function (first, varargs) {
-    if (arguments.length > 1)
-        return first.zip.apply(first, Array.prototype.slice.call(arguments, 1));
-    else
-        return first.map(function (item, next) {
-            next(null, [item]);
-        });
-};
-exports.plugin = function (members, constructors) {
-    if (members) {
-        for (var key in members) {
-            exports.Generator.prototype[key] = members[key];
-        }
-    }
-    if (constructors) {
-        for (var key in constructors) {
-            exports[key] = constructors[key];
-        }
-    }
-};
-
-});
-
 define("ace/test/mockrenderer",["require","exports","module"], function(require, exports, module){"use strict";
 var MockRenderer = exports.MockRenderer = function (visibleRowCount) {
     if (typeof document == "object") {
@@ -1167,7 +714,7 @@ MockRenderer.prototype.setHighlightIndentGuides = function () {
 
 });
 
-define("kitchen-sink/dev_util",["require","exports","module","ace/ace","ace/lib/dom","ace/lib/event","ace/range","ace/edit_session","ace/undomanager","ace/lib/oop","ace/lib/dom","ace/test/user","ace/range","ace/editor","ace/test/asyncjs/assert","ace/test/asyncjs/async","ace/undomanager","ace/edit_session","ace/test/mockrenderer","ace/lib/event_emitter"], function(require, exports, module) {var ace = require("ace/ace");
+define("kitchen-sink/dev_util",["require","exports","module","ace/ace","ace/lib/dom","ace/lib/event","ace/range","ace/edit_session","ace/undomanager","ace/lib/oop","ace/lib/dom","ace/test/user","ace/range","ace/editor","ace/test/asyncjs/assert","ace/undomanager","ace/edit_session","ace/test/mockrenderer","ace/lib/event_emitter"], function(require, exports, module) {var ace = require("ace/ace");
 var dom = require("ace/lib/dom");
 var event = require("ace/lib/event");
 var Range = require("ace/range").Range;
@@ -1202,7 +749,6 @@ exports.addGlobals = function() {
     window.Range = require("ace/range").Range;
     window.Editor = require("ace/editor").Editor;
     window.assert = require("ace/test/asyncjs/assert");
-    window.asyncjs = require("ace/test/asyncjs/async");
     window.UndoManager = require("ace/undomanager").UndoManager;
     window.EditSession = require("ace/edit_session").EditSession;
     window.MockRenderer = require("ace/test/mockrenderer").MockRenderer;
@@ -1633,6 +1179,8 @@ var supportedModes = {
     BibTeX: ["bib"],
     C_Cpp: ["cpp|c|cc|cxx|h|hh|hpp|ino"],
     C9Search: ["c9search_results"],
+    Cedar: ["cedar"],
+    CedarSchema: ["cedarschema"],
     Cirru: ["cirru|cr"],
     Clojure: ["clj|cljs"],
     Clue: ["clue"],
@@ -1674,6 +1222,7 @@ var supportedModes = {
     Gobstones: ["gbs"],
     golang: ["go"],
     GraphQLSchema: ["gql"],
+    GROQ: ["groq"],
     Groovy: ["groovy"],
     HAML: ["haml"],
     Handlebars: ["hbs|handlebars|tpl|mustache"],
@@ -1706,7 +1255,6 @@ var supportedModes = {
     Liquid: ["liquid"],
     Lisp: ["lisp"],
     LiveScript: ["ls"],
-    Log: ["log"],
     LogiQL: ["logic|lql"],
     Logtalk: ["lgt"],
     LSL: ["lsl"],
@@ -1724,6 +1272,7 @@ var supportedModes = {
     MIXAL: ["mixal"],
     MUSHCode: ["mc|mush"],
     MySQL: ["mysql"],
+    Mariadb: ["mariadb"],
     Nasal: ["nas"],
     Nginx: ["nginx|conf"],
     Nim: ["nim"],
@@ -2634,13 +2183,15 @@ var BaseDiffView = /** @class */ (function () {
     };
     BaseDiffView.prototype.$initWidgets = function (editor) {
         var session = editor.session;
+        if (!session)
+            return;
         if (!session.widgetManager) {
             session.widgetManager = new LineWidgets(session);
             session.widgetManager.attach(editor);
         }
-        editor.session.lineWidgets = [];
-        editor.session.widgetManager.lineWidgets = [];
-        editor.session.$resetRowCache(0);
+        session.lineWidgets = [];
+        session.widgetManager.lineWidgets = [];
+        session.$resetRowCache(0);
     };
     BaseDiffView.prototype.$screenRow = function (pos, session) {
         var row = session.documentToScreenPosition(pos).row;
@@ -2769,6 +2320,7 @@ var BaseDiffView = /** @class */ (function () {
         if (this.savedOptionsB && this.savedOptionsB.customScrollbar) {
             this.$resetDecorators(this.editorB.renderer);
         }
+        clearTimeout(this.$onInputTimer);
     };
     BaseDiffView.prototype.$removeLineWidgets = function (session) {
         session.lineWidgets = [];
@@ -3245,7 +2797,7 @@ var InlineDiffView = /** @class */ (function (_super) {
     };
     InlineDiffView.prototype.selectEditor = function (editor) {
         if (editor == this.activeEditor) {
-            this.otherEditor.selection.clearSelection();
+            this.otherEditor.selection && this.otherEditor.selection.clearSelection();
             this.activeEditor.textInput.setHost(this.activeEditor);
             this.activeEditor.setStyle("ace_diff_other", false);
             this.cursorLayer.element.remove();
@@ -3259,7 +2811,7 @@ var InlineDiffView = /** @class */ (function (_super) {
             this.removeBracketHighlight(this.otherEditor);
         }
         else {
-            this.activeEditor.selection.clearSelection();
+            this.activeEditor.selection && this.activeEditor.selection.clearSelection();
             this.activeEditor.textInput.setHost(this.otherEditor);
             this.activeEditor.setStyle("ace_diff_other");
             this.activeEditor.renderer.$cursorLayer.element.parentNode.appendChild(this.cursorLayer.element);
@@ -3277,7 +2829,7 @@ var InlineDiffView = /** @class */ (function (_super) {
     };
     InlineDiffView.prototype.removeBracketHighlight = function (editor) {
         var session = editor.session;
-        if (session.$bracketHighlight) {
+        if (session && session.$bracketHighlight) {
             session.$bracketHighlight.markerIds.forEach(function (id) {
                 session.removeMarker(id);
             });
@@ -3397,6 +2949,8 @@ var InlineDiffView = /** @class */ (function (_super) {
         session.off("changeWrapMode", this.onChangeWrapLimit);
     };
     InlineDiffView.prototype.$detachSessionHandlers = function (editor, marker) {
+        if (!editor.session)
+            return;
         editor.session.removeMarker(marker.id);
         editor.selection.off("changeCursor", this.onSelect);
         editor.selection.off("changeSelection", this.onSelect);
@@ -7661,6 +7215,325 @@ require("./config").defineOptions(Editor.prototype, "editor", {
         }
     }
 });
+
+});
+
+define("ace/layer/text_markers",["require","exports","module","ace/layer/text","ace/lib/lang","ace/edit_session","ace/editor","ace/config"], function(require, exports, module){var Text = require("./text").Text;
+var lang = require("../lib/lang");
+var textMarkerMixin = {
+    $removeClass: function (className) {
+        if (!this.element || !className)
+            return;
+        var selectedElements = this.element.querySelectorAll('.' + className);
+        for (var i = 0; i < selectedElements.length; i++) {
+            var element = selectedElements[i];
+            element.classList.remove(className);
+            if (element.hasAttribute('data-whitespace')) {
+                var originalWhitespace = element.getAttribute('data-whitespace');
+                var textNode = this.dom.createTextNode(originalWhitespace, this.element);
+                textNode["charCount"] = element["charCount"];
+                element.parentNode.replaceChild(textNode, element);
+            }
+        }
+    },
+    $applyTextMarkers: function () {
+        var _this = this;
+        if (this.session.$scheduleForRemove) {
+            this.session.$scheduleForRemove.forEach(function (className) {
+                _this.$removeClass(className);
+            });
+            this.session.$scheduleForRemove = new Set();
+        }
+        var textMarkers = this.session.getTextMarkers();
+        if (textMarkers.length === 0) {
+            return;
+        }
+        var classNameGroups = new Set();
+        textMarkers.forEach(function (marker) {
+            classNameGroups.add(marker.className);
+        });
+        classNameGroups.forEach(function (className) {
+            _this.$removeClass(className);
+        });
+        textMarkers.forEach(function (marker) {
+            var _loop_1 = function (row) {
+                cell = _this.$lines.cells.find(function (el) { return el.row === row; });
+                if (cell) {
+                    _this.$modifyDomForMarkers(cell.element, row, marker);
+                }
+            };
+            var cell;
+            for (var row = marker.range.start.row; row <= marker.range.end.row; row++) {
+                _loop_1(row);
+            }
+        });
+    },
+    $modifyDomForMarkers: function (lineElement, row, marker) {
+        var _this = this;
+        var lineLength = this.session.getLine(row).length;
+        var startCol = row > marker.range.start.row ? 0 : marker.range.start.column;
+        var endCol = row < marker.range.end.row ? lineLength : marker.range.end.column;
+        if (startCol === endCol) {
+            return;
+        }
+        var lineElements = [];
+        if (lineElement.classList.contains('ace_line_group')) {
+            lineElements = Array.from(lineElement.childNodes);
+        }
+        else {
+            lineElements = [lineElement];
+        }
+        var currentColumn = 0;
+        lineElements.forEach(function (lineElement) {
+            var childNodes = Array.from(lineElement.childNodes);
+            for (var i = 0; i < childNodes.length; i++) {
+                var subChildNodes = [childNodes[i]];
+                var parentNode = lineElement;
+                if (childNodes[i].childNodes && childNodes[i].childNodes.length > 0) {
+                    subChildNodes = Array.from(childNodes[i].childNodes);
+                    parentNode = childNodes[i];
+                }
+                for (var j = 0; j < subChildNodes.length; j++) {
+                    var node = subChildNodes[j];
+                    var nodeText = node.textContent || '';
+                    if (node.parentNode["charCount"]) {
+                        node["charCount"] = node.parentNode["charCount"];
+                    }
+                    var contentLength = node["charCount"] || nodeText.length;
+                    var nodeStart = currentColumn;
+                    var nodeEnd = currentColumn + contentLength;
+                    if (node["charCount"] === 0 || contentLength === 0) {
+                        continue;
+                    }
+                    if (nodeStart < endCol && nodeEnd > startCol) {
+                        var beforeSelection = Math.max(0, startCol - nodeStart);
+                        var afterSelection = Math.max(0, nodeEnd - endCol);
+                        var selectionLength = contentLength - beforeSelection - afterSelection;
+                        if (marker.type === "invisible") {
+                            _this.$processInvisibleMarker(node, parentNode, {
+                                beforeSelection: beforeSelection,
+                                selectionLength: selectionLength,
+                                afterSelection: afterSelection
+                            }, marker);
+                        }
+                        else {
+                            _this.$processRegularMarker(node, parentNode, {
+                                beforeSelection: beforeSelection,
+                                selectionLength: selectionLength,
+                                afterSelection: afterSelection
+                            }, marker, nodeStart, startCol, endCol);
+                        }
+                    }
+                    currentColumn = nodeEnd;
+                }
+            }
+        });
+    },
+    $processInvisibleMarker: function (node, parentNode, selectionSegment, marker) {
+        var nodeText = node.textContent || '';
+        if (node.nodeType === 3) { // Text node
+            var fragment = this.dom.createFragment(this.element);
+            if (selectionSegment.beforeSelection > 0) {
+                fragment.appendChild(this.dom.createTextNode(nodeText.substring(0, selectionSegment.beforeSelection), this.element));
+            }
+            if (selectionSegment.selectionLength > 0) {
+                var selectedText = selectionSegment.beforeSelection === 0 && selectionSegment.afterSelection === 0
+                    ? nodeText : nodeText.substring(selectionSegment.beforeSelection, selectionSegment.beforeSelection + selectionSegment.selectionLength);
+                var segments = selectedText.match(/\s+|[^\s]+/g) || [];
+                for (var k = 0; k < segments.length; k++) {
+                    var segment = segments[k];
+                    var span = void 0;
+                    if (/^\s+$/.test(segment)) {
+                        span = this.dom.createElement("span");
+                        span.className = marker.className;
+                        var symbol = node["charCount"] ? this.TAB_CHAR : this.SPACE_CHAR;
+                        span.textContent = lang.stringRepeat(symbol, segment.length);
+                        span.setAttribute("data-whitespace", segment);
+                        fragment.appendChild(span);
+                    }
+                    else {
+                        span = this.dom.createElement("span");
+                        span.textContent = segment;
+                    }
+                    if (node["charCount"] && segments.length === 1) { //this is for real tabs
+                        span["charCount"] = node["charCount"];
+                    }
+                    fragment.appendChild(span);
+                }
+            }
+            if (selectionSegment.afterSelection > 0) {
+                fragment.appendChild(this.dom.createTextNode(nodeText.substring(selectionSegment.beforeSelection + selectionSegment.selectionLength), this.element));
+            }
+            parentNode.replaceChild(fragment, node);
+        }
+    },
+    $processRegularMarker: function (node, parentNode, selectionSegment, marker, nodeStart, startCol, endCol) {
+        var nodeText = node.textContent || '';
+        if (node.nodeType === 3) { // Text node
+            if (selectionSegment.beforeSelection > 0 || selectionSegment.afterSelection > 0) {
+                var fragment = this.dom.createFragment(this.element);
+                if (selectionSegment.beforeSelection > 0) {
+                    fragment.appendChild(this.dom.createTextNode(nodeText.substring(0, selectionSegment.beforeSelection), this.element));
+                }
+                if (selectionSegment.selectionLength > 0) {
+                    var selectedSpan = this.dom.createElement('span');
+                    selectedSpan.classList.add(marker.className);
+                    selectedSpan.textContent = nodeText.substring(selectionSegment.beforeSelection, selectionSegment.beforeSelection + selectionSegment.selectionLength);
+                    fragment.appendChild(selectedSpan);
+                }
+                if (selectionSegment.afterSelection > 0) {
+                    fragment.appendChild(this.dom.createTextNode(nodeText.substring(selectionSegment.beforeSelection + selectionSegment.selectionLength), this.element));
+                }
+                parentNode.replaceChild(fragment, node);
+            }
+            else {
+                var selectedSpan = this.dom.createElement('span');
+                selectedSpan.classList.add(marker.className);
+                selectedSpan.textContent = nodeText;
+                selectedSpan["charCount"] = node["charCount"];
+                parentNode.replaceChild(selectedSpan, node);
+            }
+        }
+        else if (node.nodeType === 1) { // Element node
+            if (nodeStart >= startCol && nodeStart + (nodeText.length || 0) <= endCol) {
+                node.classList.add(marker.className);
+            }
+            else {
+                if (selectionSegment.beforeSelection > 0 || selectionSegment.afterSelection > 0) {
+                    var nodeClasses = node.className;
+                    var fragment = this.dom.createFragment(this.element);
+                    if (selectionSegment.beforeSelection > 0) {
+                        var beforeSpan = this.dom.createElement('span');
+                        beforeSpan.className = nodeClasses;
+                        beforeSpan.textContent = nodeText.substring(0, selectionSegment.beforeSelection);
+                        fragment.appendChild(beforeSpan);
+                    }
+                    if (selectionSegment.selectionLength > 0) {
+                        var selectedSpan = this.dom.createElement('span');
+                        selectedSpan.className = nodeClasses + ' ' + marker.className;
+                        selectedSpan.textContent = nodeText.substring(selectionSegment.beforeSelection, selectionSegment.beforeSelection + selectionSegment.selectionLength);
+                        fragment.appendChild(selectedSpan);
+                    }
+                    if (selectionSegment.afterSelection > 0) {
+                        var afterSpan = this.dom.createElement('span');
+                        afterSpan.className = nodeClasses;
+                        afterSpan.textContent = nodeText.substring(selectionSegment.beforeSelection + selectionSegment.selectionLength);
+                        fragment.appendChild(afterSpan);
+                    }
+                    parentNode.replaceChild(fragment, node);
+                }
+            }
+        }
+    }
+};
+Object.assign(Text.prototype, textMarkerMixin);
+var EditSession = require("../edit_session").EditSession;
+var editSessionTextMarkerMixin = {
+    addTextMarker: function (range, className, type) {
+        this.$textMarkerId = this.$textMarkerId || 0;
+        this.$textMarkerId++;
+        var marker = {
+            range: range,
+            id: this.$textMarkerId,
+            className: className,
+            type: type
+        };
+        if (!this.$textMarkers) {
+            this.$textMarkers = [];
+        }
+        this.$textMarkers[marker.id] = marker;
+        return marker.id;
+    },
+    removeTextMarker: function (markerId) {
+        if (!this.$textMarkers) {
+            return;
+        }
+        var marker = this.$textMarkers[markerId];
+        if (!marker) {
+            return;
+        }
+        if (!this.$scheduleForRemove) {
+            this.$scheduleForRemove = new Set();
+        }
+        this.$scheduleForRemove.add(marker.className);
+        delete this.$textMarkers[markerId];
+    },
+    getTextMarkers: function () {
+        return this.$textMarkers || [];
+    }
+};
+Object.assign(EditSession.prototype, editSessionTextMarkerMixin);
+var onAfterRender = function (e, renderer) {
+    renderer.$textLayer.$applyTextMarkers();
+};
+var Editor = require("../editor").Editor;
+require("../config").defineOptions(Editor.prototype, "editor", {
+    enableTextMarkers: {
+        set: function (val) {
+            if (val) {
+                this.renderer.on("afterRender", onAfterRender);
+            }
+            else {
+                this.renderer.off("afterRender", onAfterRender);
+            }
+        },
+        value: true
+    }
+});
+exports.textMarkerMixin = textMarkerMixin;
+exports.editSessionTextMarkerMixin = editSessionTextMarkerMixin;
+
+});
+
+define("ace/ext/whitespaces_in_selection",["require","exports","module","ace/layer/text_markers","ace/editor","ace/config","ace/lib/dom"], function(require, exports, module){/**
+ * ## Show whitespaces in the current selection
+ *
+ * This extension adds a configuration option `showWhitespacesInSelection` to the editor
+ * that highlights whitespaces within the current selection. When enabled, it adds a
+ * marker to the selection that makes whitespaces visible.
+ */
+"use strict";
+require("../layer/text_markers");
+var Editor = require("../editor").Editor;
+var config = require("../config");
+var dom = require("../lib/dom");
+dom.importCssString("\n.ace_whitespaces_in_selection {\n    color: rgba(0,0,0,0.29);\n}\n\n.ace_dark .ace_whitespaces_in_selection {\n    color: rgba(187, 181, 181, 0.5);\n}\n", "ace_whitespaces_in_selection", false);
+config.defineOptions(Editor.prototype, "editor", {
+    showWhitespacesInSelection: {
+        set: function (val) {
+            this.$showWhitespacesInSelection = val;
+            if (val) {
+                if (!this.$boundChangeSelectionForWhitespace) {
+                    this.$boundChangeSelectionForWhitespace = $onChangeSelectionForWhitespace.bind(this);
+                }
+                this.on("changeSelection", this.$boundChangeSelectionForWhitespace);
+            }
+            else {
+                this.off("changeSelection", this.$boundChangeSelectionForWhitespace);
+                if (this.session && this.session.$invisibleMarkerId) {
+                    this.session.removeTextMarker(this.session.$invisibleMarkerId);
+                    this.session.$invisibleMarkerId = null;
+                }
+                this.$boundChangeSelectionForWhitespace = null;
+            }
+        },
+        get: function () {
+            return this.$showWhitespacesInSelection;
+        },
+        initialValue: false
+    }
+});
+function $onChangeSelectionForWhitespace() {
+    var invisibleMarkerId = this.session.$invisibleMarkerId;
+    if (invisibleMarkerId) {
+        this.session.removeTextMarker(invisibleMarkerId);
+        this.session.$invisibleMarkerId = null;
+    }
+    var currentRange = this.selection.getRange();
+    if (!currentRange.isEmpty()) {
+        this.session.$invisibleMarkerId = this.session.addTextMarker(currentRange, "ace_whitespaces_in_selection", "invisible");
+    }
+}
 
 });
 
@@ -12484,7 +12357,7 @@ exports.commands = [{
 
 });
 
-define("kitchen-sink/demo",["require","exports","module","ace/ext/rtl","ace/multi_select","kitchen-sink/inline_editor","kitchen-sink/dev_util","kitchen-sink/file_drop","ace/config","ace/lib/dom","ace/lib/net","ace/lib/lang","ace/lib/event","ace/theme/textmate","ace/edit_session","ace/undomanager","ace/keyboard/hash_handler","ace/virtual_renderer","ace/editor","ace/range","ace/ext/whitespace","ace/ext/diff","kitchen-sink/doclist","kitchen-sink/layout","kitchen-sink/util","ace/ext/elastic_tabstops_lite","ace/incremental_search","kitchen-sink/token_tooltip","ace/config","ace/config","ace/tooltip","ace/marker_group","ace/worker/worker_client","ace/split","ace/ext/options","ace/autocomplete","ace/ext/statusbar","ace/placeholder","ace/snippets","ace/ext/language_tools","ace/ext/inline_autocomplete","ace/ext/beautify","ace/keyboard/keybinding","ace/commands/command_manager"], function(require, exports, module) {"use strict";
+define("kitchen-sink/demo",["require","exports","module","ace/ext/rtl","ace/multi_select","kitchen-sink/inline_editor","kitchen-sink/dev_util","kitchen-sink/file_drop","ace/config","ace/lib/dom","ace/lib/net","ace/lib/lang","ace/lib/event","ace/theme/textmate","ace/edit_session","ace/undomanager","ace/keyboard/hash_handler","ace/virtual_renderer","ace/editor","ace/range","ace/ext/whitespace","ace/ext/diff","kitchen-sink/doclist","kitchen-sink/layout","kitchen-sink/util","ace/ext/elastic_tabstops_lite","ace/incremental_search","ace/ext/whitespaces_in_selection","kitchen-sink/token_tooltip","ace/config","ace/config","ace/config","ace/tooltip","ace/marker_group","ace/worker/worker_client","ace/split","ace/ext/options","ace/autocomplete","ace/ext/statusbar","ace/placeholder","ace/snippets","ace/ext/language_tools","ace/ext/inline_autocomplete","ace/ext/beautify","ace/keyboard/keybinding","ace/commands/command_manager"], function(require, exports, module) {"use strict";
 
 require("ace/ext/rtl");
 
@@ -12530,6 +12403,8 @@ var saveOption = util.saveOption;
 require("ace/ext/elastic_tabstops_lite");
 require("ace/incremental_search");
 
+require("ace/ext/whitespaces_in_selection");
+
 var TokenTooltip = require("./token_tooltip").TokenTooltip;
 require("ace/config").defineOptions(Editor.prototype, "editor", {
     showTokenInfo: {
@@ -12552,20 +12427,63 @@ require("ace/config").defineOptions(Editor.prototype, "editor", {
 require("ace/config").defineOptions(Editor.prototype, "editor", {
     useAceLinters: {
         set: function(val) {
-            if (val && !window.languageProvider) {
-                loadLanguageProvider(editor);
+            var enabled = !!val;
+            if (enabled && !window.languageProvider) {
+                loadLanguageProvider(this);
             }
-            else if (val) {
+            else if (enabled) {
                 window.languageProvider.registerEditor(this);
             } else {
+                if (window.languageProvider) {
+                    window.languageProvider.unregisterEditor(this, true);
+                    window.languageProvider = null;
+                }
+                if (this.getOption("useAceSpellCheck")) {
+                    this.setOption("useAceSpellCheck", false);
+                    saveOption("useAceSpellCheck", false);
+                    if (env.optionsPanel) {
+                        env.optionsPanel.editor = this;
+                        env.optionsPanel.render();
+                    }
+                }
             }
         }
+    }
+});
+
+require("ace/config").defineOptions(Editor.prototype, "editor", {
+    useAceSpellCheck: {
+        set: function(val) {
+            var nextValue = !!val;
+            if (window.useAceSpellCheck === nextValue) return;
+            window.useAceSpellCheck = nextValue;
+            if (nextValue && !this.getOption("useAceLinters")) {
+                this.setOption("useAceLinters", true);
+                saveOption("useAceLinters", true);
+                if (env.optionsPanel) {
+                    env.optionsPanel.editor = this;
+                    env.optionsPanel.render();
+                }
+                return;
+            }
+            if (window.languageProvider && this.getOption("useAceLinters")) {
+                window.languageProvider.unregisterEditor(this, true);
+                window.languageProvider = null;
+                loadLanguageProvider(this);
+            }
+        },
+        get: function() {
+            return window.useAceSpellCheck !== false;
+        },
+        handlesSet: true
     }
 });
 
 var {HoverTooltip} = require("ace/tooltip");
 var MarkerGroup = require("ace/marker_group").MarkerGroup;
 var docTooltip = new HoverTooltip();
+window.useAceSpellCheck = true;
+
 function loadLanguageProvider(editor) {
     function loadScript(cb) {
         if (define.amd) {
@@ -12583,7 +12501,22 @@ function loadLanguageProvider(editor) {
         }
     }
     loadScript(function(LanguageProvider) {
-        var languageProvider = LanguageProvider.fromCdn("https://mkslanc.github.io/ace-linters/build", {
+        var services = [];
+        if (window.useAceSpellCheck !== false) {
+            services.push({
+                name: "ace-spell-check",
+                className: "AceSpellCheck",
+                modes: "*",
+                script: "ace-spell-check.js",
+                cdnUrl: "https://unpkg.com/ace-spell-check@latest/build"
+            });
+        }
+
+        var languageProvider = LanguageProvider.fromCdn({
+            services: services,
+            serviceManagerCdn:"https://mkslanc.github.io/ace-linters/build",
+            includeDefaultLinters: true
+        }, {
             functionality: {
                 hover: true,
                 completion: {
@@ -12820,24 +12753,27 @@ doclist.addToHistory = function(name) {
         h.index = h.push(name);
     }
 };
+
+var initDoc = (session) => {
+    if (!session)
+        return;
+    doclist.addToHistory(session.name);
+    session = env.split.setSession(session);
+    whitespace.detectIndentation(session);
+    optionsPanel.render();
+    env.editor.focus();
+    if (diffView) {
+        diffView.detach()
+        diffView = createDiffView({
+            inline: "b",
+            editorB: editor,
+            valueA: editor.getValue()
+        });
+    }
+}
+
 doclist.pickDocument = function(name) {
-    doclist.loadDoc(name, function(session) {
-        if (!session)
-            return;
-        doclist.addToHistory(session.name);
-        session = env.split.setSession(session);
-        whitespace.detectIndentation(session);
-        optionsPanel.render();
-        env.editor.focus();
-        if (diffView) {
-            diffView.detach()
-            diffView = createDiffView({
-                inline: "b",
-                editorB: editor,
-                valueA: editor.getValue()
-            });
-        }
-    });
+    doclist.loadDoc(name, initDoc);
 };
 
 
@@ -12891,7 +12827,7 @@ optionsPanel.add({
             }
         },
         "Show diffs": {
-            position: 0,
+            position: -102,
             type: "buttonBar",
             path: "diffView",
             values: ["None", "Inline"],
@@ -12957,6 +12893,14 @@ optionsPanel.add({
             position: 3000,
             path: "useAceLinters"
         },
+        "Use Spell Checker": {
+            position: 3001,
+            path: "useAceSpellCheck"
+        },
+        "Show whitespaces in selection": {
+            position: 3100,
+            path: "showWhitespacesInSelection"
+        },
         "Show Textarea Position": devUtil.textPositionDebugger,
         "Text Input Debugger": devUtil.textInputDebugger,
     }
@@ -12984,8 +12928,23 @@ env.editor.on("changeSession", function() {
     }
 });
 
-optionsPanel.setOption("doc", util.getOption("doc") || "JavaScript");
+if (localStorage.last_session) {
+    try {
+        var sessionObj = JSON.parse(localStorage.last_session);
+        var session = EditSession.fromJSON(localStorage.last_session);
+        session.name = sessionObj.name;
+        var cachedDoc = doclist.fileCache[session.name.toLowerCase()];
+        if (cachedDoc) {
+            cachedDoc.session = session;
+        }
+        initDoc(session);
+    } catch (e) {
+        console.error(e);
+        optionsPanel.setOption("doc", util.getOption("doc") || "JavaScript");
+    }
+}
 for (var i in optionsPanel.options) {
+    if (i === "doc") continue;
     var value = util.getOption(i);
     if (value != undefined) {
         if ((i == "mode" || i == "theme") && !/[/]/.test(value))
@@ -12993,6 +12952,7 @@ for (var i in optionsPanel.options) {
         optionsPanel.setOption(i, value);
     }
 }
+optionsPanel.render();
 
 
 function synchroniseScrolling() {
@@ -13062,6 +13022,32 @@ optionsPanelContainer.insertBefore(
         ]
     ]),
     optionsPanelContainer.children[1]
+);
+
+
+var resetSession = () => {
+    if (localStorage) {
+        localStorage.last_session = undefined;
+    }
+    try {
+        var session = env.editor.session;
+        if (session.name)
+            var cachedDoc = doclist.fileCache[session.name.toLowerCase()];
+        if (cachedDoc) {
+            cachedDoc.session = undefined;
+        }
+        optionsPanel.setOption("doc", util.getOption("doc") || "JavaScript");
+    } catch (e) {
+        console.error(e);
+    }
+};
+
+optionsPanelContainer.insertBefore(
+    dom.buildDom(["div", {style: "text-align:center;width: 100%"},
+        ["div", {},
+            ["button", {onclick: resetSession}, "Reset session"]],
+    ]),
+    optionsPanelContainer.children[0]
 );
 
 function openTestDialog(animateHeight) {
@@ -13187,6 +13173,15 @@ function moveFocus() {
     else
         env.editor.focus();
 }
+
+window.onbeforeunload = function () {
+    if (env.editor && localStorage) {
+        var sessionObj = env.editor.session.toJSON();
+        sessionObj.name = util.getOption("doc") || "JavaScript";
+        localStorage.last_session = JSON.stringify(sessionObj);
+    }
+};
+
 });                (function() {
                     window.require(["kitchen-sink/demo"], function(m) {
                         if (typeof module == "object" && typeof exports == "object" && module) {
