@@ -17,7 +17,7 @@ function DemheterProvider() {
 
     let icons = {};
 
-    this.loadMap = async function() {
+    this.loadMap = async function () {
         let [data, images] = await Promise.all([
             Net.get('api/entries'),
             Promise.all(Object.values(ICONS).map(loadTexture))
@@ -37,7 +37,7 @@ function DemheterProvider() {
         }
     };
 
-    this.renderFilters = function() {
+    this.renderFilters = function () {
         return html`
             <div id="filters">
                 <div id="count"></div>
@@ -63,7 +63,7 @@ function DemheterProvider() {
         `;
     };
 
-    this.fillMap = function(filters) {
+    this.fillMap = function (filters) {
         let markers = [];
         let total = 0;
 
@@ -119,7 +119,7 @@ function DemheterProvider() {
         return null;
     }
 
-    this.renderEntry = function(entry, edit_key) {
+    this.renderEntry = function (entry, edit_key) {
         let content = html`
             <div>
                 <i>${entry.type}</i>

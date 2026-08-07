@@ -61,7 +61,7 @@ function NetworkModule(app, study, page) {
         anonymous: { get: () => anonymous, set: value => { anonymous = value; }, enumerable: true }
     });
 
-    this.run = async function() {
+    this.run = async function () {
         if (runner != null)
             return;
 
@@ -123,11 +123,11 @@ function NetworkModule(app, study, page) {
         runner.start();
     };
 
-    this.stop = function() {
+    this.stop = function () {
         runner.stop();
     };
 
-    this.render = function(section) {
+    this.render = function (section) {
         runner.busy();
 
         render(html`
@@ -139,7 +139,7 @@ function NetworkModule(app, study, page) {
         return wrapper;
     };
 
-    this.hasUnsavedData = function() {
+    this.hasUnsavedData = function () {
         let unsafe = (save_timer != null);
         return unsafe;
     };
@@ -309,7 +309,7 @@ function NetworkModule(app, study, page) {
         await app.finalizeTest(page, data, results);
     }
 
-    this.registerPush = function(array, ref, auto = false) {
+    this.registerPush = function (array, ref, auto = false) {
         let undo = {
             type: 'push',
             more: auto,
@@ -321,7 +321,7 @@ function NetworkModule(app, study, page) {
         addUndo(undo);
     };
 
-    this.registerRemove = function(array, idx, obj, auto = false) {
+    this.registerRemove = function (array, idx, obj, auto = false) {
         let undo = {
             type: 'remove',
             more: auto,
@@ -334,7 +334,7 @@ function NetworkModule(app, study, page) {
         addUndo(undo);
     };
 
-    this.registerChange = function(objects, auto = false, aggregate = false) {
+    this.registerChange = function (objects, auto = false, aggregate = false) {
         objects = Array.isArray(objects) ? objects.slice() : [objects];
 
         if (aggregate && undo_actions.length) {
@@ -528,7 +528,7 @@ function NetworkModule(app, study, page) {
         }, 1000);
     }
 
-    this.actions = function(align, content = null) {
+    this.actions = function (align, content = null) {
         let el = action_elements[align];
 
         if (el == null) {
@@ -544,7 +544,7 @@ function NetworkModule(app, study, page) {
         return el;
     };
 
-    this.tooltip = function(text, options = {}) {
+    this.tooltip = function (text, options = {}) {
         if (!text)
             return;
 
@@ -572,7 +572,7 @@ function NetworkModule(app, study, page) {
         }
     };
 
-    this.showGuide = async function(key, text, options = {}) {
+    this.showGuide = async function (key, text, options = {}) {
         if (overlay != null)
             return;
         if (known_guides.has(key))
@@ -633,7 +633,7 @@ function NetworkModule(app, study, page) {
         known_guides.add(key);
     };
 
-    this.isGuideNeeded = function(key) {
+    this.isGuideNeeded = function (key) {
         let known = known_guides.has(key);
         return !known;
     };

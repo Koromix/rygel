@@ -34,7 +34,7 @@ function PageInfo(key, title, stack) {
     this.form = null;
     this.url = null;
 
-    this.getOption = function(key, record, default_value = undefined) {
+    this.getOption = function (key, record, default_value = undefined) {
         for (let i = stack.length - 1; i >= 0; i--) {
             let options = stack[i];
 
@@ -79,25 +79,25 @@ function ApplicationBuilder(app) {
     ];
     let form_ref = null;
 
-    this.home = function(home) { app.home = home; };
-    this.panel = function(panel, enable) { app.panels[panel] = enable; };
+    this.home = function (home) { app.home = home; };
+    this.panel = function (panel, enable) { app.panels[panel] = enable; };
 
-    this.mtime = function(mtime) { app.mtime = mtime; };
-    this.dashboard = function(url) { app.dashboard = url; };
+    this.mtime = function (mtime) { app.mtime = mtime; };
+    this.dashboard = function (url) { app.dashboard = url; };
 
-    this.pushOptions = function(options = {}) {
+    this.pushOptions = function (options = {}) {
         options_stack = expandOptions(options);
     };
-    this.popOptions = function() {
+    this.popOptions = function () {
         if (options_stack.length < 2)
             throw new Error('Too many popOptions() operations');
 
         options_stack.pop();
     };
 
-    this.head = function(head) { app.head = head; };
+    this.head = function (head) { app.head = head; };
 
-    this.form = function(key, title, func = null, options = null) {
+    this.form = function (key, title, func = null, options = null) {
         checkKey(key);
         if (app.forms.has(key))
             throw new Error(`Form key '${key}' is already used`);
@@ -171,7 +171,7 @@ function ApplicationBuilder(app) {
         return false;
     }
 
-    this.many = function(key, multi, title, func = null, options = {}) {
+    this.many = function (key, multi, title, func = null, options = {}) {
         if (form_ref == null)
             throw new Error('many cannot be used for top-level forms');
 
@@ -181,7 +181,7 @@ function ApplicationBuilder(app) {
     };
     this.formMulti = this.many;
 
-    this.page = function(key, title, options = null) {
+    this.page = function (key, title, options = null) {
         checkKey(key);
         if (app.pages.has(key))
             throw new Error(`Page key '${key}' is already used`);

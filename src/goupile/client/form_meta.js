@@ -19,11 +19,11 @@ function MetaInterface(app, page, thread, meta, state, model) {
         summary: { get: () => meta.summary, set: summary => { meta.summary = summary; }, enumerable: true }
     });
 
-    this.check = function() {
+    this.check = function () {
         state.triggerErrors(model);
     };
 
-    this.constrain = function(key, types) {
+    this.constrain = function (key, types) {
         if (!key)
             throw new Error(T.message(`Constraint keys must not be empty`));
         if (key.startsWith('__'))
@@ -51,7 +51,7 @@ function MetaInterface(app, page, thread, meta, state, model) {
         meta.constraints[key] = constraint;
     };
 
-    this.count = function(key, secret = false) {
+    this.count = function (key, secret = false) {
         if (!key)
             throw new Error(T.message(`Counter keys must not be empty`));
         if (key.startsWith('__'))
@@ -72,7 +72,7 @@ function MetaInterface(app, page, thread, meta, state, model) {
         return value;
     };
 
-    this.randomize = function(key, max = 2, secret = false) {
+    this.randomize = function (key, max = 2, secret = false) {
         if (!key)
             throw new Error(T.message(`Randomization keys must not be empty`));
         if (key.startsWith('__'))
@@ -95,7 +95,7 @@ function MetaInterface(app, page, thread, meta, state, model) {
         return value;
     };
 
-    this.signup = function(key, to, subject, content, text = null) {
+    this.signup = function (key, to, subject, content, text = null) {
         page = app.pages.find(page => page.key == key);
 
         if (page == null)
@@ -126,19 +126,19 @@ function MetaInterface(app, page, thread, meta, state, model) {
         return url;
     }
 
-    this.contextualize = function(url, thread) {
+    this.contextualize = function (url, thread) {
         if (typeof url != 'string')
             url = url?.url;
 
         return contextualizeURL(url, thread);
     };
 
-    this.status = function(item, thread) {
+    this.status = function (item, thread) {
         let status = computeStatus(item, thread);
         return status;
     };
 
-    this.go = function(e, url = null) {
+    this.go = function (e, url = null) {
         return go(e, url);
     };
 }

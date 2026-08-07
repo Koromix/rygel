@@ -8,7 +8,7 @@ import * as Data from 'lib/web/base/data.js';
 function DataRemote() {
     let self = this;
 
-    this.load = async function(tid, anchor) {
+    this.load = async function (tid, anchor) {
         let url = Util.pasteURL(`${ENV.urls.instance}api/records/get`, {
             tid: tid,
             anchor: anchor
@@ -21,7 +21,7 @@ function DataRemote() {
         return thread;
     };
 
-    this.reserve = async function(counters) {
+    this.reserve = async function (counters) {
         let ticket = await Net.post(ENV.urls.instance + 'api/records/reserve', {
             counters: counters
         });
@@ -29,7 +29,7 @@ function DataRemote() {
         return ticket;
     };
 
-    this.save = async function(tid, entry, frag, fs) {
+    this.save = async function (tid, entry, frag, fs) {
         let blobs = [];
         let data = await preserve(frag.data, blobs);
 
@@ -59,15 +59,15 @@ function DataRemote() {
         return json.anchor;
     };
 
-    this.delete = async function(tid) {
+    this.delete = async function (tid) {
         await Net.post(ENV.urls.instance + 'api/records/delete', { tid: tid });
     };
 
-    this.lock = async function(tid) {
+    this.lock = async function (tid) {
         await Net.post(ENV.urls.instance + 'api/records/lock', { tid: tid });
     };
 
-    this.unlock = async function(tid) {
+    this.unlock = async function (tid) {
         await Net.post(ENV.urls.instance + 'api/records/unlock', { tid: tid });
     };
 }

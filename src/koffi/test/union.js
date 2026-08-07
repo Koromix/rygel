@@ -10,7 +10,7 @@ const { cnoke } = require('./package.json');
 
 // Make sure Koffi only uses object own properties, and ignores prototype properties
 Object.defineProperty(globalThis.Object.prototype, 'stuff', {
-    value: function() {},
+    value: function () {},
     writable: false,
     configurable: false,
     enumerable: true

@@ -836,13 +836,13 @@ function Game() {
         lines: { get: () => lines, enumerable: true }
     });
 
-    this.start = function() {
+    this.start = function () {
         started = true;
         gameover = false;
         pause = false;
     };
 
-    this.update = function() {
+    this.update = function () {
         if (!started)
             return;
 
@@ -1463,7 +1463,7 @@ function Game() {
         console.log(`${action}!`);
     }
 
-    this.draw = function() {
+    this.draw = function () {
         drawWell();
         drawParticles();
         drawBag();

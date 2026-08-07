@@ -24,7 +24,7 @@ function DiaryModule(app) {
 
     let save_timer = null;
 
-    this.run = async function() {
+    this.run = async function () {
         if (data == null || data.id != route.entry) {
             data = await db.fetch1('SELECT id, date, title, content FROM diary WHERE id = ?', route.entry);
 
@@ -97,12 +97,12 @@ function DiaryModule(app) {
         }
     };
 
-    this.stop = function() {
+    this.stop = function () {
         if (editor != null)
             editor.destroy();
     };
 
-    this.render = function(section) {
+    this.render = function (section) {
         let entry = route.entry;
 
         if (div == null)
@@ -143,7 +143,7 @@ function DiaryModule(app) {
         return div;
     };
 
-    this.hasUnsavedData = function() {
+    this.hasUnsavedData = function () {
         let unsafe = (save_timer != null);
         return unsafe;
     };

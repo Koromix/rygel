@@ -10,7 +10,7 @@ function InstancePublisher(bundler = null) {
     let actions;
     let refresh;
 
-    this.runDialog = async function(e) {
+    this.runDialog = async function (e) {
         actions = await computeActions();
 
         return UI.dialog(e, T.publishing, {}, (d, resolve, reject) => {

@@ -17,12 +17,12 @@ function TouchInterface(runner, assets) {
     let buttons = new Map;
     let prev_buttons = null;
 
-    this.begin = function() {
+    this.begin = function () {
         prev_buttons = buttons;
         buttons = new Map;
     };
 
-    this.button = function(key, x, y, size) {
+    this.button = function (key, x, y, size) {
         let prev = prev_buttons.get(key);
 
         let img = assets.ui[key];
@@ -66,7 +66,7 @@ function TouchInterface(runner, assets) {
         return status;
     };
 
-    this.draw = function() {
+    this.draw = function () {
         ctx.fillStyle = 'white';
 
         for (let btn of buttons.values()) {

@@ -84,7 +84,7 @@ function ApplicationBuilder(app) {
         help: makeOptionProperty('help')
     });
 
-    this.panel = function(panel, enable) {
+    this.panel = function (panel, enable) {
         if (panel.startsWith('_') || !Object.hasOwn(app.panels, panel))
             throw new Error(T.message(`Unknown panel key '{1}'`, panel));
 
@@ -92,18 +92,18 @@ function ApplicationBuilder(app) {
     };
 
     // Keep public for backward compatibility
-    this.pushOptions = function(options = {}) {
+    this.pushOptions = function (options = {}) {
         options = expandOptions(options);
         options_stack.push(options);
     };
-    this.popOptions = function() {
+    this.popOptions = function () {
         if (options_stack.length < 2)
             throw new Error(T.message(`Too many calls to function popOptions()`));
 
         options_stack.pop();
     };
 
-    this.page = function(key, title, options = null) {
+    this.page = function (key, title, options = null) {
         checkKeySyntax(key);
         if (app.pages.some(page => page.key == key))
             throw new Error(T.message(`Page '{1}' already exists`, key));
@@ -140,7 +140,7 @@ function ApplicationBuilder(app) {
         return page;
     };
 
-    this.form = function(key, title, func = null, options = null) {
+    this.form = function (key, title, func = null, options = null) {
         checkKeySyntax(key);
         if (app.stores.some(store => store.key == key))
             throw new Error(T.message(`Form '{1}' already exists`, key));
@@ -230,7 +230,7 @@ function ApplicationBuilder(app) {
         }
     };
 
-    this.many = function(key, title, plural, func = null, options = null) {
+    this.many = function (key, title, plural, func = null, options = null) {
         self.form(key, title, func, options);
 
         let store = app.stores[app.stores.length - 1];

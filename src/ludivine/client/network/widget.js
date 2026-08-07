@@ -61,7 +61,7 @@ function NetworkWidget(app, mod, world) {
     // Misc
     let last_link = { quality: DEFAULT_LINK };
 
-    this.init = async function() {
+    this.init = async function () {
         if (app.identity.picture != null)
             textures.self = await loadTexture(app.identity.picture);
 
@@ -72,7 +72,7 @@ function NetworkWidget(app, mod, world) {
         await Promise.all(promises);
     };
 
-    this.update = function() {
+    this.update = function () {
         // Convert mouse coordinates
         {
             let scale = computeScale(state.zoom);
@@ -1034,7 +1034,7 @@ function NetworkWidget(app, mod, world) {
         }
     }
 
-    this.draw = function() {
+    this.draw = function () {
         ctx.save();
 
         // Transform from world space to screen space

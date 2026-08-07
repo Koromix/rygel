@@ -57,7 +57,7 @@ function TileMap(runner) {
         styleCluster: { get: () => style_cluster, set: func => { style_cluster = func; }, enumerable: true }
     });
 
-    this.init = async function(config) {
+    this.init = async function (config) {
         tiles = Object.assign({
             min_zoom: 1
         }, config);
@@ -78,7 +78,7 @@ function TileMap(runner) {
         marker_textures.clear();
     };
 
-    this.move = function(lat, lng, zoom = null) {
+    this.move = function (lat, lng, zoom = null) {
         if (zoom != null) {
             state.zoom = zoom;
             self.refresh();
@@ -90,7 +90,7 @@ function TileMap(runner) {
         runner.busy();
     };
 
-    this.reveal = function(markers, minimize = false) {
+    this.reveal = function (markers, minimize = false) {
         let prev_zoom = state.zoom;
 
         let zoom = tiles.max_zoom + 1;
@@ -147,7 +147,7 @@ function TileMap(runner) {
         return zoomed;
     };
 
-    this.setMarkers = function(key, markers) {
+    this.setMarkers = function (key, markers) {
         if (!Array.isArray(markers))
             throw new Error('Not an array of markers');
 
@@ -156,12 +156,12 @@ function TileMap(runner) {
         self.refresh();
     };
 
-    this.clearMarkers = function(key) {
+    this.clearMarkers = function (key) {
         delete marker_groups[key];
         self.refresh();
     };
 
-    this.refresh = function() {
+    this.refresh = function () {
         render_elements.length = 0;
 
         let items = [];
@@ -242,7 +242,7 @@ function TileMap(runner) {
         });
     };
 
-    this.update = function() {
+    this.update = function () {
         if (ctx == null)
             return;
 
@@ -365,7 +365,7 @@ function TileMap(runner) {
         return -(Math.cos(Math.PI * t) - 1) / 2;
     }
 
-    this.zoom = function(delta, at = null) {
+    this.zoom = function (delta, at = null) {
         if (state.zoom + delta < tiles.min_zoom || state.zoom + delta > tiles.max_zoom)
             return;
         if (at == null)
@@ -415,7 +415,7 @@ function TileMap(runner) {
         return viewport;
     }
 
-    this.draw = function() {
+    this.draw = function () {
         if (ctx == null)
             return;
 
@@ -786,7 +786,7 @@ function TileMap(runner) {
         return { x: px, y: py };
     }
 
-    this.coordToScreen = function(latitude, longitude) {
+    this.coordToScreen = function (latitude, longitude) {
         let viewport = getViewport();
         let pos = latLongToXY(latitude, longitude, state.zoom);
 
@@ -796,7 +796,7 @@ function TileMap(runner) {
         return pos;
     };
 
-    this.screenToCoord = function(pos) {
+    this.screenToCoord = function (pos) {
         let size = mapSize(state.zoom);
         let px = Util.clamp(pos.x + state.pos.x - canvas.width / 2, 0, size);
         let py = size - Util.clamp(pos.y + state.pos.y - canvas.height / 2, 0, size);

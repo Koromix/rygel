@@ -24,7 +24,7 @@ function ProjectBuilder(project) {
         summary: { get: () => project.summary, set: summary => { project.summary = summary; }, enumerable: true }
     });
 
-    this.module = function(key, title, func, options = {}) {
+    this.module = function (key, title, func, options = {}) {
         if (current_page != null && current_page.tests.length)
             throw new Error('Cannot combine child modules and tests');
 
@@ -87,11 +87,11 @@ function ProjectBuilder(project) {
         }
     };
 
-    this.form = function(key, title, build, options = {}) {
+    this.form = function (key, title, build, options = {}) {
         test(key, title, 'form', { build: build }, options);
     };
 
-    this.network = function(key, title, options = {}) {
+    this.network = function (key, title, options = {}) {
         test(key, title, 'network', {}, options);
     };
 

@@ -34,8 +34,8 @@ function FormState(values = {}) {
     // Stored values
     this.values = proxyObject(values);
 
-    this.hasChanged = function() { return !!changes.size && self.explicitly_changed; };
-    this.markInteraction = function() { self.explicitly_changed = true; };
+    this.hasChanged = function () { return !!changes.size && self.explicitly_changed; };
+    this.markInteraction = function () { self.explicitly_changed = true; };
 
     function proxyObject(obj) {
         if (obj == null)
@@ -52,7 +52,7 @@ function FormState(values = {}) {
             let obj_changes = new Set;
 
             proxy = new Proxy(obj, {
-                set: function(obj, key, value) {
+                set: function (obj, key, value) {
                     value = proxyObject(value);
                     obj[key] = value;
 
@@ -103,17 +103,17 @@ function FormModel() {
     this.valid = true;
     this.triggered = false;
 
-    this.isValid = function() { return self.valid; };
-    this.hasErrors = function() { return !!self.errors; };
+    this.isValid = function () { return self.valid; };
+    this.hasErrors = function () { return !!self.errors; };
 
-    this.render = function() {
+    this.render = function () {
         return html`
             <div class="fm_main">${self.renderWidgets()}</div>
             <div class="ui_actions" style="margin-top: 32px;">${self.renderActions()}</div>
         `;
     };
-    this.renderWidgets = function() { return self.widgets0.map(intf => intf.render()); };
-    this.renderActions = function() { return self.actions.map(intf => intf.render()); };
+    this.renderWidgets = function () { return self.widgets0.map(intf => intf.render()); };
+    this.renderActions = function () { return self.actions.map(intf => intf.render()); };
 }
 
 function FormBuilder(state, model, readonly = false) {
@@ -164,13 +164,13 @@ function FormBuilder(state, model, readonly = false) {
     this.state = state;
     this.values = state.values;
 
-    this.hasChanged = function() { return state.hasChanged(); };
-    this.markInteraction = function() { state.markInteraction(); };
+    this.hasChanged = function () { return state.hasChanged(); };
+    this.markInteraction = function () { state.markInteraction(); };
 
-    this.isValid = function() { return model.isValid(); };
-    this.hasErrors = function() { return model.hasErrors(); };
+    this.isValid = function () { return model.isValid(); };
+    this.hasErrors = function () { return model.hasErrors(); };
 
-    this.triggerErrors = function() {
+    this.triggerErrors = function () {
         if (!self.isValid()) {
             state.take_delayed = new Set(model.variables.map(variable => variable.key.toString()));
 
@@ -181,11 +181,11 @@ function FormBuilder(state, model, readonly = false) {
         }
     };
 
-    this.pushOptions = function(options = {}) {
+    this.pushOptions = function (options = {}) {
         options = expandOptions(options);
         options_stack.push(options);
     };
-    this.popOptions = function() {
+    this.popOptions = function () {
         if (options_stack.length < 2)
             throw new Error('Too many popOptions() operations');
 
@@ -200,7 +200,7 @@ function FormBuilder(state, model, readonly = false) {
     this.missing = key => variables_map[key].missing;
     this.error = (key, msg, delay = false) => variables_map[key].error(msg, delay);
 
-    this.text = function(key, label, options = {}) {
+    this.text = function (key, label, options = {}) {
         options = expandOptions(options);
         key = decodeKey(key, options);
 
@@ -225,7 +225,7 @@ function FormBuilder(state, model, readonly = false) {
         return intf;
     };
 
-    this.textArea = function(key, label, options = {}) {
+    this.textArea = function (key, label, options = {}) {
         options = expandOptions(options);
         key = decodeKey(key, options);
 
@@ -249,7 +249,7 @@ function FormBuilder(state, model, readonly = false) {
         return intf;
     };
 
-    this.password = function(key, label, options = {}) {
+    this.password = function (key, label, options = {}) {
         options = expandOptions(options);
         key = decodeKey(key, options);
 
@@ -281,7 +281,7 @@ function FormBuilder(state, model, readonly = false) {
         updateValue(key, e.target.value || undefined);
     }
 
-    this.pin = function(key, label, options = {}) {
+    this.pin = function (key, label, options = {}) {
         options = expandOptions(options);
         key = decodeKey(key, options);
 
@@ -329,7 +329,7 @@ function FormBuilder(state, model, readonly = false) {
         updateValue(key, undefined);
     }
 
-    this.number = function(key, label, options = {}) {
+    this.number = function (key, label, options = {}) {
         options = expandOptions(options);
         key = decodeKey(key, options);
 
@@ -384,7 +384,7 @@ function FormBuilder(state, model, readonly = false) {
         updateValue(key, value);
     }
 
-    this.slider = function(key, label, options = {}) {
+    this.slider = function (key, label, options = {}) {
         options = expandOptions(options);
         key = decodeKey(key, options);
 
@@ -538,7 +538,7 @@ function FormBuilder(state, model, readonly = false) {
         });
     }
 
-    this.enum = function(key, label, props = [], options = {}) {
+    this.enum = function (key, label, props = [], options = {}) {
         options = expandOptions(options);
         key = decodeKey(key, options);
         props = normalizePropositions(props);
@@ -594,14 +594,14 @@ function FormBuilder(state, model, readonly = false) {
         }
     }
 
-    this.binary = function(key, label, options = {}) {
+    this.binary = function (key, label, options = {}) {
         return self.enum(key, label, [[1, 'Oui'], [0, 'Non']], options);
     };
-    this.boolean = function(key, label, options = {}) {
+    this.boolean = function (key, label, options = {}) {
         return self.enum(key, label, [[true, 'Oui'], [false, 'Non']], options);
     };
 
-    this.enumDrop = function(key, label, props = [], options = {}) {
+    this.enumDrop = function (key, label, props = [], options = {}) {
         options = expandOptions(options);
         key = decodeKey(key, options);
         props = normalizePropositions(props);
@@ -645,7 +645,7 @@ function FormBuilder(state, model, readonly = false) {
         updateValue(key, Util.strToValue(e.target.value));
     }
 
-    this.enumRadio = function(key, label, props = [], options = {}) {
+    this.enumRadio = function (key, label, props = [], options = {}) {
         options = expandOptions(options);
         key = decodeKey(key, options);
         props = normalizePropositions(props);
@@ -702,7 +702,7 @@ function FormBuilder(state, model, readonly = false) {
         }
     }
 
-    this.multi = function(key, label, props = [], options = {}) {
+    this.multi = function (key, label, props = [], options = {}) {
         options = expandOptions(options);
         key = decodeKey(key, options);
         props = normalizePropositions(props);
@@ -783,7 +783,7 @@ function FormBuilder(state, model, readonly = false) {
         }
     }
 
-    this.multiCheck = function(key, label, props = [], options = {}) {
+    this.multiCheck = function (key, label, props = [], options = {}) {
         options = expandOptions(options);
         key = decodeKey(key, options);
         props = normalizePropositions(props);
@@ -864,7 +864,7 @@ function FormBuilder(state, model, readonly = false) {
         }
     }
 
-    this.proposition = function(value, label) {
+    this.proposition = function (value, label) {
         return {value: value, label: label || value};
     };
 
@@ -894,7 +894,7 @@ function FormBuilder(state, model, readonly = false) {
         return props;
     }
 
-    this.date = function(key, label, options = {}) {
+    this.date = function (key, label, options = {}) {
         options = expandOptions(options);
         key = decodeKey(key, options);
 
@@ -956,7 +956,7 @@ function FormBuilder(state, model, readonly = false) {
         }
     }
 
-    this.month = function(key, label, options = {}) {
+    this.month = function (key, label, options = {}) {
         options = expandOptions(options);
         key = decodeKey(key, options);
 
@@ -1020,7 +1020,7 @@ function FormBuilder(state, model, readonly = false) {
         }
     }
 
-    this.time = function(key, label, options = {}) {
+    this.time = function (key, label, options = {}) {
         options = expandOptions(options);
         key = decodeKey(key, options);
 
@@ -1083,7 +1083,7 @@ function FormBuilder(state, model, readonly = false) {
         }
     }
 
-    this.file = function(key, label, options = {}) {
+    this.file = function (key, label, options = {}) {
         options = expandOptions(options);
         key = decodeKey(key, options);
 
@@ -1143,7 +1143,7 @@ function FormBuilder(state, model, readonly = false) {
         updateValue(key, e.target.files[0] || undefined);
     }
 
-    this.calc = function(key, label, value, options = {}) {
+    this.calc = function (key, label, value, options = {}) {
         options = expandOptions(options);
         key = decodeKey(key, options);
 
@@ -1196,7 +1196,7 @@ function FormBuilder(state, model, readonly = false) {
         return intf;
     };
 
-    this.output = function(content, options = {}) {
+    this.output = function (content, options = {}) {
         options = expandOptions(options);
 
         options.mandatory = false;
@@ -1222,7 +1222,7 @@ function FormBuilder(state, model, readonly = false) {
         }
     };
 
-    this.block = function(func, options = {}) {
+    this.block = function (func, options = {}) {
         options = expandOptions(options);
 
         let widgets = [];
@@ -1237,7 +1237,7 @@ function FormBuilder(state, model, readonly = false) {
     };
     this.scope = this.block;
 
-    this.section = function(label, func, options = {}) {
+    this.section = function (label, func, options = {}) {
         options = expandOptions(options);
 
         if (typeof label === 'string' && options.anchor == null && !section_depth)
@@ -1281,7 +1281,7 @@ function FormBuilder(state, model, readonly = false) {
         self.restart();
     }
 
-    this.errorList = function(label, options = {}) {
+    this.errorList = function (label, options = {}) {
         options = expandOptions(options);
 
         let render = intf => html`
@@ -1305,7 +1305,7 @@ function FormBuilder(state, model, readonly = false) {
         return intf;
     };
 
-    this.tabs = function(key, func, options = {}) {
+    this.tabs = function (key, func, options = {}) {
         options = expandOptions(options);
 
         if (!key)
@@ -1394,7 +1394,7 @@ function FormBuilder(state, model, readonly = false) {
         self.restart();
     }
 
-    this.tab = function(label, func, options = {}) {
+    this.tab = function (label, func, options = {}) {
         options = expandOptions(options);
 
         if (!tabs_ref)
@@ -1427,7 +1427,7 @@ function FormBuilder(state, model, readonly = false) {
         return intf;
     };
 
-    this.repeat = function(key, func, options = {}) {
+    this.repeat = function (key, func, options = {}) {
         options = expandOptions(options);
         key = decodeKey(key, options);
 
@@ -1492,7 +1492,7 @@ instead of:
         self.restart();
     }
 
-    this.columns = function(func, options) {
+    this.columns = function (func, options) {
         options = expandOptions(options);
 
         let widgets = [];
@@ -1515,7 +1515,7 @@ instead of:
         return intf;
     };
 
-    this.sameLine = function(wide = false) {
+    this.sameLine = function (wide = false) {
         if (inline_widgets == null) {
             let prev_widget = widgets_ref.pop();
 
@@ -1566,7 +1566,7 @@ instead of:
         return widgets;
     }
 
-    this.action = function(label, options = {}, func = null) {
+    this.action = function (label, options = {}, func = null) {
         options = expandOptions(options);
 
         if (typeof label === 'string' && label.startsWith('+')) {
@@ -1608,7 +1608,7 @@ instead of:
         self.restart();
     }
 
-    this.refresh = function() {
+    this.refresh = function () {
         if (!restart) {
             state.just_triggered = false;
 

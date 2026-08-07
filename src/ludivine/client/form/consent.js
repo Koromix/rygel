@@ -22,7 +22,7 @@ function ConsentModule(app, project) {
     let state = null;
     let values = null;
 
-    this.run = async function() {
+    this.run = async function () {
         if (state != null)
             return;
 
@@ -42,16 +42,16 @@ function ConsentModule(app, project) {
         state.changeHandler = runConsent;
     };
 
-    this.stop = function() {
+    this.stop = function () {
         // Nothing to do
     };
 
-    this.render = function() {
+    this.render = function () {
         runConsent();
         return div;
     };
 
-    this.hasUnsavedData = function() {
+    this.hasUnsavedData = function () {
         return false;
     };
 

@@ -54,7 +54,7 @@ function SmallCalendar() {
         month: { get: () => date.month, enumerable: true }
     })
 
-    this.render = function() {
+    this.render = function () {
         if (!root_el) {
             root_el = document.createElement('div');
             root_el.className = 'scal';

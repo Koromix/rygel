@@ -16,7 +16,7 @@ function CatatoniaProvider() {
 
     let icons = {};
 
-    this.loadMap = async function() {
+    this.loadMap = async function () {
         let [data, images] = await Promise.all([
             Net.get('api/entries'),
             Promise.all(Object.values(ICONS).map(loadTexture))
@@ -35,7 +35,7 @@ function CatatoniaProvider() {
         }
     };
 
-    this.renderFilters = function() {
+    this.renderFilters = function () {
         return html`
             <div id="filters">
                 <div id="count"></div>
@@ -54,7 +54,7 @@ function CatatoniaProvider() {
         `;
     };
 
-    this.fillMap = function(filters) {
+    this.fillMap = function (filters) {
         let markers = [];
         let total = 0;
 
@@ -98,7 +98,7 @@ function CatatoniaProvider() {
         return entry.ect ? icons.dual : icons.center;
     }
 
-    this.renderEntry = function(entry, edit_key) {
+    this.renderEntry = function (entry, edit_key) {
         let content = html`
             <div>
                 ${entry.type == 'Centre' && entry.ect ? html`Centre <span class="tag" style="background: #18a059;">ECT</span><br/><br/>` : ''}

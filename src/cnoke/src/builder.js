@@ -83,7 +83,7 @@ function Builder(config = {}) {
 
     let cmake_bin = null;
 
-    this.configure = async function(retry = true) {
+    this.configure = async function (retry = true) {
         let options = readCNokeOptions();
 
         let args = [project_dir];
@@ -293,7 +293,7 @@ function Builder(config = {}) {
         }
     };
 
-    this.build = async function() {
+    this.build = async function () {
         checkCompatibility();
 
         if (prebuild) {
@@ -342,7 +342,7 @@ function Builder(config = {}) {
         return (proc.status === 0);
     }
 
-    this.clean = function() {
+    this.clean = function () {
         unlinkRecursive(build_dir);
     };
 

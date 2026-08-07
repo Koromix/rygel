@@ -28,7 +28,7 @@ function FormModule(app, study, page) {
 
     let rendered_idx = null;
 
-    this.run = async function() {
+    this.run = async function () {
         if (state != null)
             return;
 
@@ -78,11 +78,11 @@ function FormModule(app, study, page) {
         };
     };
 
-    this.stop = function() {
+    this.stop = function () {
         // Nothing to do
     };
 
-    this.render = function(section) {
+    this.render = function (section) {
         if (section != null) {
             part_idx = parseInt(section, 10);
         } else {
@@ -98,7 +98,7 @@ function FormModule(app, study, page) {
         return div;
     };
 
-    this.hasUnsavedData = function() {
+    this.hasUnsavedData = function () {
         return has_changed;
     };
 

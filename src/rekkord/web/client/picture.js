@@ -45,7 +45,7 @@ function PictureCropper(title, size) {
     let move_pointer = null;
     let prev_offset = null;
 
-    this.run = async function(url = null, func = null) {
+    this.run = async function (url = null, func = null) {
         await load(url);
 
         init_url = url;

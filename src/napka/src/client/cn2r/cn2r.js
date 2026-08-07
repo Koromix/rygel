@@ -21,7 +21,7 @@ function Cn2rProvider() {
 
     this.clusterTreshold = 3;
 
-    this.loadMap = async function() {
+    this.loadMap = async function () {
         let [data, images] = await Promise.all([
             Net.get('api/entries/etablissements'),
             Promise.all(Object.values(ICONS).map(loadTexture))
@@ -41,7 +41,7 @@ function Cn2rProvider() {
         }
     }
 
-    this.renderFilters = function() {
+    this.renderFilters = function () {
         return html`
             <div id="filters">
                 <div id="count"></div>
@@ -103,7 +103,7 @@ function Cn2rProvider() {
         `;
     }
 
-    this.fillMap = function(filters) {
+    this.fillMap = function (filters) {
         let markers = [];
         let total = 0;
 
@@ -163,7 +163,7 @@ function Cn2rProvider() {
         return markers;
     };
 
-    this.renderEntry = function(entry, edit_key) {
+    this.renderEntry = function (entry, edit_key) {
         let columns = 0;
         let show_we = 0;
         let days_map = {};

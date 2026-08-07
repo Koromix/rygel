@@ -11,14 +11,14 @@ const DataCache = new function() {
     let json_cache = new LruMap(4);
     let dict_cache = new LruMap(4);
 
-    this.fetchJson = async function(url) { return fetchAndCache(json_cache, url, url, json => json); };
+    this.fetchJson = async function (url) { return fetchAndCache(json_cache, url, url, json => json); };
 
-    this.fetchDictionary = async function(name) {
+    this.fetchDictionary = async function (name) {
         let url = `${ENV.base_url}dictionaries/${name}.json`;
         return fetchAndCache(dict_cache, name, url, parseDictionary);
     };
 
-    this.getCacheDictionary = function(name) { return dict_cache.get(name); };
+    this.getCacheDictionary = function (name) { return dict_cache.get(name); };
 
     async function fetchAndCache(cache, key, url, func) {
         let resource = cache.get(key);
@@ -67,17 +67,17 @@ const DataCache = new function() {
         if (chapter.parents)
             this.parents = chapter.parents;
 
-        this.find = function(code) { return map[code]; };
+        this.find = function (code) { return map[code]; };
 
-        this.label = function(code) {
+        this.label = function (code) {
             let defn = map[code];
             return defn ? defn.label : '';
         };
-        this.describe = function(code) {
+        this.describe = function (code) {
             let defn = map[code];
             return defn ? defn.describe() : code;
         };
-        this.describeParent = function(code, type) {
+        this.describeParent = function (code, type) {
             let defn = map[code];
             return defn ? dict[type].describe(defn.parents[type]) : '';
         };
@@ -86,7 +86,7 @@ const DataCache = new function() {
         function describeParent(type) { return dict[type].describe(this.parents[type]); }
     }
 
-    this.clear = function() {
+    this.clear = function () {
         json_cache.clear();
         dict_cache.clear();
     };

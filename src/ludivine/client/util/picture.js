@@ -116,7 +116,7 @@ function PictureCropper(title, size) {
 
     let apply_func;
 
-    this.change = async function(prev = null, func = null) {
+    this.change = async function (prev = null, func = null) {
         await load(prev);
 
         init_url = prev;

@@ -24,7 +24,7 @@ function ColorPicker() {
         color: { get: () => color, enumerable: true }
     });
 
-    this.pick = async function(e, color) {
+    this.pick = async function (e, color) {
         current_color = color;
         [h, s, v] = RGBtoHSV(...parseRGB(color));
 
