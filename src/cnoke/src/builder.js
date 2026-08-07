@@ -363,8 +363,14 @@ function Builder(config = {}) {
     function getCacheDirectory() {
         if (process.platform == 'win32') {
             let cache_dir = process.env['LOCALAPPDATA'] || process.env['APPDATA'];
-            if (cache_dir == null)
-                throw new Error('Missing LOCALAPPDATA and APPDATA environment variable');
+
+            if (!cache_dir) {
+                let home = os.homedir();
+                if (!home)
+                    throw new Error('Missing LOCALAPPDATA and APPDATA environment variable');
+
+                cache_dir = path.join(home, 'AppData', 'Local');
+            }
 
             cache_dir = path.join(cache_dir, 'cnoke');
             return cache_dir;
@@ -372,8 +378,8 @@ function Builder(config = {}) {
             let cache_dir = process.env['XDG_CACHE_HOME'];
 
             if (cache_dir == null) {
-                let home = process.env['HOME'];
-                if (home == null)
+                let home = process.env['HOME'] || os.homedir();
+                if (!home)
                     throw new Error('Missing HOME environment variable');
 
                 cache_dir = path.join(home, '.cache');
