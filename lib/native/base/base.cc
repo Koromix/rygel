@@ -26,6 +26,7 @@
     #include <sys/stat.h>
     #include <direct.h>
     #include <shlobj.h>
+    #include <userenv.h>
     #if !defined(ENABLE_VIRTUAL_TERMINAL_PROCESSING)
         #define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
     #endif
@@ -93,6 +94,7 @@
     #include <arpa/inet.h>
     #include <termios.h>
     #include <time.h>
+    #include <pwd.h>
 
     extern char **environ;
 #endif
@@ -2577,14 +2579,15 @@ Size ConvertUtf8ToWin32Wide(Span<const char> str, Span<wchar_t> out_str_w)
     return (Size)len;
 }
 
-Size ConvertWin32WideToUtf8(LPCWSTR str_w, Span<char> out_str)
+Size ConvertWin32WideToUtf8(Span<const wchar_t> str_w, Span<char> out_str)
 {
     if (!out_str.len) {
         LogError("Output buffer is too small");
         return -1;
     }
 
-    int len = WideCharToMultiByte(CP_UTF8, 0, str_w, -1, out_str.ptr, (int)out_str.len - 1, nullptr, nullptr);
+    int len = WideCharToMultiByte(CP_UTF8, 0, str_w.ptr, str_w.len, out_str.ptr, (int)out_str.len - 1, nullptr, nullptr);
+
     if (!len) {
         switch (GetLastError()) {
             case ERROR_INSUFFICIENT_BUFFER: { LogError("Cannot convert UTF-16 string to UTF-8: too large"); } break;
@@ -2594,7 +2597,19 @@ Size ConvertWin32WideToUtf8(LPCWSTR str_w, Span<char> out_str)
         return -1;
     }
 
-    return (Size)len - 1;
+    if (len >= out_str.len) {
+        LogError("Cannot convert UTF-16 string to UTF-8: too large");
+        return -1;
+    }
+    out_str[len] = 0;
+
+    return (Size)len;
+}
+
+Size ConvertWin32WideToUtf8(LPCWSTR str_w, Span<char> out_str)
+{
+    Span<const wchar_t> span = MakeSpan(str_w, (Size)wcslen(str_w));
+    return ConvertWin32WideToUtf8(span, out_str);
 }
 
 char *GetWin32ErrorString(uint32_t error_code)
@@ -3764,22 +3779,22 @@ bool FindExecutableInPath(const char *name, Allocator *alloc, const char **out_p
 #if defined(_WIN32)
     LocalArray<char, 16384> env_buf;
     Span<const char> paths;
+
     if (win32_utf8) {
         paths = GetEnv("PATH");
     } else {
         wchar_t buf_w[K_SIZE(env_buf.data)];
-        DWORD len = GetEnvironmentVariableW(L"PATH", buf_w, K_LEN(buf_w));
+        DWORD len_w = GetEnvironmentVariableW(L"PATH", buf_w, K_LEN(buf_w));
 
-        if (!len && GetLastError() != ERROR_ENVVAR_NOT_FOUND) {
+        if (!len_w && GetLastError() != ERROR_ENVVAR_NOT_FOUND) {
             LogError("Failed to get PATH environment variable: %1", GetWin32ErrorString());
             return false;
-        } else if (len >= K_LEN(buf_w)) {
+        } else if (len_w >= K_LEN(buf_w)) {
             LogError("Failed to get PATH environment variable: buffer to small");
             return false;
         }
-        buf_w[len] = 0;
 
-        env_buf.len = ConvertWin32WideToUtf8(buf_w, env_buf.data);
+        env_buf.len = ConvertWin32WideToUtf8(MakeSpan(buf_w, len_w), env_buf.data);
         if (env_buf.len < 0)
             return false;
 
@@ -3824,11 +3839,11 @@ const char *GetWorkingDirectory()
 #if defined(_WIN32)
     if (!win32_utf8) {
         wchar_t buf_w[K_SIZE(buf)];
-        DWORD ret = GetCurrentDirectoryW(K_SIZE(buf_w), buf_w);
-        K_ASSERT(ret && ret <= K_SIZE(buf_w));
+        DWORD len_w = GetCurrentDirectoryW(K_SIZE(buf_w), buf_w);
+        K_ASSERT(len_w && len_w <= K_SIZE(buf_w));
 
-        Size str_len = ConvertWin32WideToUtf8(buf_w, buf);
-        K_ASSERT(str_len >= 0);
+        Size len = ConvertWin32WideToUtf8(MakeSpan(buf_w, len_w), buf);
+        K_ASSERT(len >= 0);
 
         return buf;
     }
@@ -3847,15 +3862,15 @@ const char *GetApplicationExecutable()
 
     if (!executable_path[0]) {
         if (win32_utf8) {
-            Size path_len = (Size)GetModuleFileNameA(nullptr, executable_path, K_SIZE(executable_path));
-            K_ASSERT(path_len && path_len < K_SIZE(executable_path));
+            Size len = (Size)GetModuleFileNameA(nullptr, executable_path, K_SIZE(executable_path));
+            K_ASSERT(len && len < K_SIZE(executable_path));
         } else {
             wchar_t path_w[K_SIZE(executable_path)];
-            Size path_len = (Size)GetModuleFileNameW(nullptr, path_w, K_SIZE(path_w));
-            K_ASSERT(path_len && path_len < K_LEN(path_w));
+            Size len_w = (Size)GetModuleFileNameW(nullptr, path_w, K_SIZE(path_w));
+            K_ASSERT(len_w && len_w < K_LEN(path_w));
 
-            Size str_len = ConvertWin32WideToUtf8(path_w, executable_path);
-            K_ASSERT(str_len >= 0);
+            Size len = ConvertWin32WideToUtf8(MakeSpan(path_w, len_w), executable_path);
+            K_ASSERT(len >= 0);
         }
     }
 
@@ -3945,16 +3960,85 @@ const char *GetApplicationExecutable()
 const char *GetApplicationDirectory()
 {
     static char executable_dir[4096];
+    static bool init;
 
-    if (!executable_dir[0]) {
+    if (!init) {
         const char *executable_path = GetApplicationExecutable();
-        Size dir_len = (Size)strlen(executable_path);
-        while (dir_len && !IsPathSeparator(executable_path[--dir_len]));
-        MemCpy(executable_dir, executable_path, dir_len);
-        executable_dir[dir_len] = 0;
+
+        if (executable_path) {
+            Size dir_len = (Size)strlen(executable_path);
+            while (dir_len && !IsPathSeparator(executable_path[--dir_len]));
+            MemCpy(executable_dir, executable_path, dir_len);
+            executable_dir[dir_len] = 0;
+        }
+
+        init = true;
     }
 
-    return executable_dir;
+    return executable_dir[0] ? executable_dir : nullptr;
+}
+
+const char *GetHomeDirectory()
+{
+    static char home_dir[4096];
+    static bool init;
+
+#if defined(_WIN32)
+    if (!init) {
+        HANDLE token = nullptr;
+        DWORD len = 0;
+
+        OpenProcessToken(GetCurrentProcess(), TOKEN_READ, &token);
+        K_DEFER { CloseHandle(token); };
+
+        if (win32_utf8) {
+            len = K_SIZE(home_dir);
+
+            GetUserProfileDirectoryA(token, home_dir, &len);
+            K_CRITICAL(len && len <= K_SIZE(home_dir), "Failed to retrieve user profile path");
+
+            len--;
+        } else {
+            wchar_t dir_w[K_SIZE(home_dir)];
+            DWORD len_w = K_LEN(dir_w);
+
+            GetUserProfileDirectoryW(token, dir_w, &len_w);
+            K_CRITICAL(len_w && len_w <= K_LEN(dir_w), "Failed to retrieve user profile path");
+
+            len = (DWORD)ConvertWin32WideToUtf8(MakeSpan(dir_w, len_w), home_dir);
+            K_CRITICAL(len > 0, "Failed to retrieve user profile path");
+        }
+
+        Size end = TrimStrRight(MakeSpan(home_dir, (Size)len), K_PATH_SEPARATORS).len;
+        home_dir[end] = 0;
+
+        init = true;
+    }
+#else
+    if (!init) {
+        const char *value = GetEnv("HOME");
+
+        if (value && value[0]) {
+            Span<const char> trimmed = TrimStrRight(value, '/');
+            CopyString(trimmed, home_dir);
+        } else {
+            struct passwd pw;
+            struct passwd *result = nullptr;;
+            char buf[8192];
+
+            K_RESTART_EINTR(getpwuid_r(geteuid(), &pw, buf, K_SIZE(buf), &result), < 0);
+
+            if (result) {
+                Span<const char> trimmed = TrimStrRight(result->pw_dir, '/');
+                CopyString(trimmed, home_dir);
+            }
+        }
+
+        init = true;
+    }
+#endif
+
+    return home_dir[0] ? home_dir : nullptr;
 }
 
 Span<const char> GetPathDirectory(Span<const char> filename)
@@ -4010,7 +4094,7 @@ Span<char> NormalizePath(Span<const char> path, Span<const char> root_directory,
         Span<const char> prefix = SplitStrAny(path, K_PATH_SEPARATORS);
 
         if (prefix == "~") {
-            const char *home = GetEnv("HOME");
+            const char *home = GetHomeDirectory();
 
             if (home) {
                 root_directory = home;
@@ -6249,7 +6333,7 @@ const char *GetTemporaryDirectory()
 
             K_CRITICAL(len_w < K_LEN(dir_w), "Temporary directory path is too big");
 
-            len = ConvertWin32WideToUtf8(dir_w, temp_dir);
+            len = ConvertWin32WideToUtf8(MakeSpan(dir_w, len_w), temp_dir);
             K_CRITICAL(len >= 0, "Temporary directory path is invalid or too big");
         }
 
@@ -6269,7 +6353,7 @@ const char *GetUserConfigPath(const char *name, Allocator *alloc)
     K_ASSERT(!strchr(K_PATH_SEPARATORS, name[0]));
 
     const char *xdg = GetEnv("XDG_CONFIG_HOME");
-    const char *home = GetEnv("HOME");
+    const char *home = GetHomeDirectory();
 
     const char *path = nullptr;
 
@@ -6294,7 +6378,7 @@ const char *GetUserCachePath(const char *name, Allocator *alloc)
     K_ASSERT(!strchr(K_PATH_SEPARATORS, name[0]));
 
     const char *xdg = GetEnv("XDG_CACHE_HOME");
-    const char *home = GetEnv("HOME");
+    const char *home = GetHomeDirectory();
 
     const char *path = nullptr;
 
