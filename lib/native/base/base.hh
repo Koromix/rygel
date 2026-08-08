@@ -4453,6 +4453,7 @@ const char *GetWorkingDirectory();
 
 const char *GetApplicationExecutable(); // Can be NULL (EmSDK)
 const char *GetApplicationDirectory(); // Can be NULL (EmSDK)
+const char *GetHomeDirectory(); // Can be NULL
 
 bool MakeDirectory(const char *directory, bool error_if_exists = true);
 bool MakeDirectoryRec(Span<const char> directory);

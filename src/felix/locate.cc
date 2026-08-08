@@ -20,6 +20,16 @@ namespace K {
 static std::mutex mutex;
 static BlockAllocator str_alloc;
 
+static Span<const char> ResolvePrefix(const char *key)
+{
+    if (TestStr(key, "HOME")) {
+        return GetHomeDirectory();
+    } else {
+        Span<const char> value = GetEnv(key);
+        return TrimStrRight(value, K_PATH_SEPARATORS);
+    }
+}
+
 static bool LocateSdkQmake(const Compiler *compiler, Allocator *alloc, const char **out_qmake)
 {
     BlockAllocator temp_alloc;
@@ -44,15 +54,9 @@ static bool LocateSdkQmake(const Compiler *compiler, Allocator *alloc, const cha
         const char *directory = nullptr;
 
         if (test.env) {
-            Span<const char> prefix = GetEnv(test.env);
-
+            Span<const char> prefix = ResolvePrefix(test.env);
             if (!prefix.len)
                 continue;
-
-            while (prefix.len && IsPathSeparator(prefix[prefix.len - 1])) {
-                prefix.len--;
-            }
-
             directory = Fmt(&temp_alloc, "%1%/%2", prefix, test.path).ptr;
         } else {
             directory = Fmt(&temp_alloc, "%1", test.path).ptr;
@@ -379,12 +383,9 @@ const WasiSdkInfo *FindWasiSdk()
         char path[4096];
 
         if (test.env) {
-            Span<const char> prefix = GetEnv(test.env);
-            prefix = TrimStrRight(prefix, K_PATH_SEPARATORS);
-
+            Span<const char> prefix = ResolvePrefix(test.env);
             if (!prefix.len)
                 continue;
-
             Fmt(path, "%1%2", prefix, test.path);
         } else {
             CopyString(test.path, path);
