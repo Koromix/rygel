@@ -368,7 +368,6 @@ function Builder(config = {}) {
                 let home = os.homedir();
                 if (!home)
                     throw new Error('Missing LOCALAPPDATA and APPDATA environment variable');
-
                 cache_dir = path.join(home, 'AppData', 'Local');
             }
 
@@ -377,11 +376,10 @@ function Builder(config = {}) {
         } else {
             let cache_dir = process.env['XDG_CACHE_HOME'];
 
-            if (cache_dir == null) {
-                let home = process.env['HOME'] || os.homedir();
+            if (!cache_dir) {
+                let home = os.homedir();
                 if (!home)
                     throw new Error('Missing HOME environment variable');
-
                 cache_dir = path.join(home, '.cache');
             }
 
