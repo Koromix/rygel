@@ -64,7 +64,7 @@ func (service *serviceType) createActiveBuild(key int) *activeBuild {
 	activeBuild := &activeBuild{}
 	service.activeBuilds[key] = activeBuild
 
-	// This pairs with "Done()" in "decRefCount"
+	// This pairs with "Done()" in "destroyActiveBuild"
 	service.keepAliveWaitGroup.Add(1)
 	return activeBuild
 }
@@ -77,7 +77,7 @@ func (service *serviceType) destroyActiveBuild(key int) {
 	delete(service.activeBuilds, key)
 	service.mutex.Unlock()
 
-	// This pairs with "Add()" in "trackActiveBuild"
+	// This pairs with "Add()" in "createActiveBuild"
 	service.keepAliveWaitGroup.Done()
 }
 
@@ -639,6 +639,12 @@ func (service *serviceType) handleBuildRequest(id uint32, request map[string]int
 	}
 
 	activeBuild := service.createActiveBuild(key)
+	shouldDestroyActiveBuild := true
+	defer func() {
+		if shouldDestroyActiveBuild {
+			service.destroyActiveBuild(key)
+		}
+	}()
 
 	hasOnEndCallbacks := false
 	if plugins, ok := request["plugins"]; ok {
@@ -769,6 +775,7 @@ func (service *serviceType) handleBuildRequest(id uint32, request map[string]int
 		// Keep the build alive until "dispose" has been called
 		activeBuild.disposeWaitGroup.Add(1)
 		activeBuild.ctx = ctx
+		shouldDestroyActiveBuild = false
 
 		return encodePacket(packet{
 			id: id,
@@ -781,8 +788,6 @@ func (service *serviceType) handleBuildRequest(id uint32, request map[string]int
 
 	result := api.Build(options)
 	response := resultToResponse(result)
-
-	service.destroyActiveBuild(key)
 
 	return encodePacket(packet{
 		id:    id,
@@ -1239,6 +1244,21 @@ func (service *serviceType) handleFormatMessagesRequest(id uint32, request map[s
 	}
 	if value, ok := request["terminalWidth"].(int); ok {
 		options.TerminalWidth = value
+	}
+	if logStyle, ok := request["logStyle"].(string); ok {
+		switch logStyle {
+		case "default":
+			options.LogStyle = api.LogStyleDefault
+		case "visualstudio":
+			options.LogStyle = api.LogStyleVisualStudio
+		default:
+			return encodePacket(packet{
+				id: id,
+				value: map[string]interface{}{
+					"error": fmt.Sprintf("Invalid log style: %q", logStyle),
+				},
+			})
+		}
 	}
 
 	result := api.FormatMessages(msgs, options)

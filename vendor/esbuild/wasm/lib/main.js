@@ -562,10 +562,12 @@ function pushLogFlags(flags, options, keys, isTTY2, logLevelDefault) {
   let color = getFlag(options, keys, "color", mustBeBoolean);
   let logLevel = getFlag(options, keys, "logLevel", mustBeString);
   let logLimit = getFlag(options, keys, "logLimit", mustBeInteger);
+  let logStyle = getFlag(options, keys, "logStyle", mustBeString);
   if (color !== void 0) flags.push(`--color=${color}`);
   else if (isTTY2) flags.push(`--color=true`);
   flags.push(`--log-level=${logLevel || logLevelDefault}`);
   flags.push(`--log-limit=${logLimit || 0}`);
+  if (logStyle) flags.push(`--log-style=${logStyle}`);
 }
 function validateStringValue(value, what, key) {
   if (typeof value !== "string") {
@@ -914,8 +916,8 @@ function createChannel(streamIn) {
     if (isFirstPacket) {
       isFirstPacket = false;
       let binaryVersion = String.fromCharCode(...bytes);
-      if (binaryVersion !== "0.28.1") {
-        throw new Error(`Cannot start service: Host version "${"0.28.1"}" does not match binary version ${quote(binaryVersion)}`);
+      if (binaryVersion !== "0.28.2") {
+        throw new Error(`Cannot start service: Host version "${"0.28.2"}" does not match binary version ${quote(binaryVersion)}`);
       }
       return;
     }
@@ -1054,6 +1056,7 @@ function createChannel(streamIn) {
     let kind = getFlag(options, keys, "kind", mustBeString);
     let color = getFlag(options, keys, "color", mustBeBoolean);
     let terminalWidth = getFlag(options, keys, "terminalWidth", mustBeInteger);
+    let logStyle = getFlag(options, keys, "logStyle", mustBeString);
     checkForInvalidFlags(options, keys, `in ${callName}() call`);
     if (kind === void 0) throw new Error(`Missing "kind" in ${callName}() call`);
     if (kind !== "error" && kind !== "warning") throw new Error(`Expected "kind" to be "error" or "warning" in ${callName}() call`);
@@ -1064,6 +1067,7 @@ function createChannel(streamIn) {
     };
     if (color !== void 0) request.color = color;
     if (terminalWidth !== void 0) request.terminalWidth = terminalWidth;
+    if (logStyle !== void 0) request.logStyle = logStyle;
     sendRequest(refs, request, (error, response) => {
       if (error) return callback(new Error(error), null);
       callback(null, response.messages);
@@ -1900,7 +1904,7 @@ if (process.env.ESBUILD_WORKER_THREADS !== "0") {
   }
 }
 var _a;
-var isInternalWorkerThread = ((_a = worker_threads == null ? void 0 : worker_threads.workerData) == null ? void 0 : _a.esbuildVersion) === "0.28.1";
+var isInternalWorkerThread = ((_a = worker_threads == null ? void 0 : worker_threads.workerData) == null ? void 0 : _a.esbuildVersion) === "0.28.2";
 var esbuildCommandAndArgs = () => {
   if ((!ESBUILD_BINARY_PATH || true) && (path2.basename(__filename) !== "main.js" || path2.basename(__dirname) !== "lib")) {
     throw new Error(
@@ -1967,7 +1971,7 @@ var fsAsync = {
     }
   }
 };
-var version = "0.28.1";
+var version = "0.28.2";
 var build = (options) => ensureServiceIsRunning().build(options);
 var context = (buildOptions) => ensureServiceIsRunning().context(buildOptions);
 var transform = (input, options) => ensureServiceIsRunning().transform(input, options);
@@ -2070,7 +2074,7 @@ var stopService;
 var ensureServiceIsRunning = () => {
   if (longLivedService) return longLivedService;
   let [command, args] = esbuildCommandAndArgs();
-  let child = child_process.spawn(command, args.concat(`--service=${"0.28.1"}`, "--ping"), {
+  let child = child_process.spawn(command, args.concat(`--service=${"0.28.2"}`, "--ping"), {
     windowsHide: true,
     stdio: ["pipe", "pipe", "inherit"],
     cwd: defaultWD
@@ -2174,7 +2178,7 @@ var runServiceSync = (callback) => {
     esbuild: node_exports
   });
   callback(service);
-  let stdout = child_process.execFileSync(command, args.concat(`--service=${"0.28.1"}`), {
+  let stdout = child_process.execFileSync(command, args.concat(`--service=${"0.28.2"}`), {
     cwd: defaultWD,
     windowsHide: true,
     input: stdin,
@@ -2194,7 +2198,7 @@ var workerThreadService = null;
 var startWorkerThreadService = (worker_threads2) => {
   let { port1: mainPort, port2: workerPort } = new worker_threads2.MessageChannel();
   let worker = new worker_threads2.Worker(__filename, {
-    workerData: { workerPort, defaultWD, esbuildVersion: "0.28.1" },
+    workerData: { workerPort, defaultWD, esbuildVersion: "0.28.2" },
     transferList: [workerPort],
     // From node's documentation: https://nodejs.org/api/worker_threads.html
     //

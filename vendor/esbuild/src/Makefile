@@ -47,7 +47,7 @@ check-go-version:
 # variable like this: "ESBUILD_RACE=-race make test". Or you can permanently
 # enable it by adding "export ESBUILD_RACE=-race" to your shell profile.
 test-go:
-	go test $(ESBUILD_RACE) ./internal/... ./pkg/...
+	go test $(ESBUILD_RACE) ./cmd/... ./internal/... ./pkg/...
 
 vet-go:
 	go vet ./cmd/... ./internal/... ./pkg/...
@@ -76,7 +76,8 @@ go-compiler: go/$(GO_VERSION)
 # into other text, and a local development server that serves a read-only
 # view of your source code and is not intended for production use.
 go/$(GO_VERSION):
-	mkdir -p go/$(GO_VERSION) && cd go/$(GO_VERSION) && curl -LO https://go.dev/dl/go$(GO_VERSION).src.tar.gz && tar xzf go$(GO_VERSION).src.tar.gz
+	mkdir -p go/$(GO_VERSION) && touch go/go.mod # Disable the Go language server in this folder
+	cd go/$(GO_VERSION) && curl -LO https://go.dev/dl/go$(GO_VERSION).src.tar.gz && tar xzf go$(GO_VERSION).src.tar.gz
 	cd go/$(GO_VERSION)/go && grep -qF "ctxt.buildinfo()" src/cmd/link/internal/ld/main.go # Make sure this call is still there
 	cd go/$(GO_VERSION)/go/src/cmd/link/internal/ld && sed "s/ctxt.buildinfo/\\/\\/ctxt.buildinfo/" main.go > temp && mv temp main.go
 	cd go/$(GO_VERSION)/go/src && if uname | grep -qE "MINGW|WIN32|CYGWIN"; then ./make.bat; else ./make.bash; fi

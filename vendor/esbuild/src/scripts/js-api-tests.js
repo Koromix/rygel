@@ -77,6 +77,33 @@ let buildTests = {
     }
   },
 
+  async doNotOverwriteInputFiles({ esbuild, testDir }) {
+    let input = path.join(testDir, 'input.js')
+    await writeFileAsync(input, 'x=1+2')
+
+    try {
+      await esbuild.build({
+        entryPoints: [input],
+        outfile: input,
+        logLevel: 'silent',
+      })
+      throw new Error('Expected build failure')
+    } catch (e) {
+      if (!e.errors || !e.errors[0] || !e.errors[0].text.startsWith('Refusing to overwrite input file')) {
+        throw e
+      }
+    }
+    assert.strictEqual(await readFileAsync(input, 'utf8'), 'x=1+2')
+
+    await esbuild.build({
+      entryPoints: [input],
+      outfile: input,
+      logLevel: 'silent',
+      allowOverwrite: true,
+    })
+    assert.strictEqual(await readFileAsync(input, 'utf8'), 'x = 1 + 2;\n')
+  },
+
   async mangleCacheBuild({ esbuild }) {
     var result = await esbuild.build({
       stdin: {
@@ -4945,6 +4972,7 @@ let serveTests = {
     const big = path.join(testDir, 'big.txt')
     const byteCount = 16 * 1024 * 1024
     const buffer = require('crypto').randomBytes(byteCount)
+    for (let i = 0; i < 1; i++) buffer[i] = 0xFF * (i & 1) // Make sure the MIME type is "application/octet-stream"
     await writeFileAsync(big, buffer)
 
     const context = await esbuild.context({});
@@ -7589,12 +7617,29 @@ let formatTests = {
     const messages = await esbuild.formatMessages([
       { text: 'This is an error' },
       { text: 'Another error', location: { file: 'file.js' } },
+      { text: 'Error with line and column', location: { file: 'file.js', line: 3, column: 6 } },
     ], {
       kind: 'error',
     })
-    assert.strictEqual(messages.length, 2)
+    assert.strictEqual(messages.length, 3)
     assert.strictEqual(messages[0], `${errorIcon} [ERROR] This is an error\n\n`)
     assert.strictEqual(messages[1], `${errorIcon} [ERROR] Another error\n\n    file.js:0:0:\n      0 │ \n        ╵ ^\n\n`)
+    assert.strictEqual(messages[2], `${errorIcon} [ERROR] Error with line and column\n\n    file.js:3:6:\n      3 │ \n        ╵ ^\n\n`)
+  },
+
+  async formatMessagesVisualStudio({ esbuild }) {
+    const messages = await esbuild.formatMessages([
+      { text: 'This is an error' },
+      { text: 'Another error', location: { file: 'file.js' } },
+      { text: 'Error with line and column', location: { file: 'file.js', line: 3, column: 6 } },
+    ], {
+      kind: 'error',
+      logStyle: 'visualstudio',
+    })
+    assert.strictEqual(messages.length, 3)
+    assert.strictEqual(messages[0], `esbuild: error ES0000: This is an error\n`)
+    assert.strictEqual(messages[1], `file.js: error ES0000: Another error\n`)
+    assert.strictEqual(messages[2], `file.js(3,7): error ES0000: Error with line and column\n`)
   },
 }
 
