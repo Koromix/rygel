@@ -6,7 +6,7 @@
 #include "lib/native/base/base.hh"
 #include "../ffi.hh"
 #include "../call.hh"
-#include "../forward.hh"
+#include "../interp.hh"
 #include "../type.hh"
 #include "../util.hh"
 #if defined(_WIN32)
@@ -122,8 +122,8 @@ bool AnalyseFunction(Napi::Env, InstanceData *instance, FunctionInfo *func)
 #endif
                 }
 
-                int delta = (int)AbiOpcode::PushVoid - (int)PrimitiveKind::Void;
-                AbiOpcode code = (AbiOpcode)((int)param.type->primitive + delta);
+                int delta = (int)Opcode::PushVoid - (int)PrimitiveKind::Void;
+                Opcode code = (Opcode)((int)param.type->primitive + delta);
 
                 func->sync.Append({ .op = Code2Op(code), .a = param.offset, .b1 = (int16_t)param.abi.offset, .b2 = (int16_t)param.directions, .type = param.type });
                 func->async.Append({ .op = Code2Op(code), .a = param.offset, .b1 = (int16_t)param.abi.offset, .b2 = (int16_t)param.directions, .type = param.type });
@@ -138,8 +138,8 @@ bool AnalyseFunction(Napi::Env, InstanceData *instance, FunctionInfo *func)
                         param.abi.offset = gpr_index;
                         gpr_index++;
 
-                        func->sync.Append({ .op = Code2Op(AbiOpcode::PushAggregateReg), .a = param.offset, .b1 = (int16_t)param.abi.offset, .type = param.type });
-                        func->async.Append({ .op = Code2Op(AbiOpcode::PushAggregateReg), .a = param.offset, .b1 = (int16_t)param.abi.offset, .type = param.type });
+                        func->sync.Append({ .op = Code2Op(Opcode::PushAggregateReg), .a = param.offset, .b1 = (int16_t)param.abi.offset, .type = param.type });
+                        func->async.Append({ .op = Code2Op(Opcode::PushAggregateReg), .a = param.offset, .b1 = (int16_t)param.abi.offset, .type = param.type });
                     } else {
                         if (gpr_index < gpr_max) {
                             param.abi.regular = true;
@@ -152,8 +152,8 @@ bool AnalyseFunction(Napi::Env, InstanceData *instance, FunctionInfo *func)
 
                         param.abi.indirect = true;
 
-                        func->sync.Append({ .op = Code2Op(AbiOpcode::PushAggregateMem), .a = param.offset, .b1 = (int16_t)param.abi.offset, .type = param.type });
-                        func->async.Append({ .op = Code2Op(AbiOpcode::PushAggregateMem), .a = param.offset, .b1 = (int16_t)param.abi.offset, .type = param.type });
+                        func->sync.Append({ .op = Code2Op(Opcode::PushAggregateMem), .a = param.offset, .b1 = (int16_t)param.abi.offset, .type = param.type });
+                        func->async.Append({ .op = Code2Op(Opcode::PushAggregateMem), .a = param.offset, .b1 = (int16_t)param.abi.offset, .type = param.type });
                     }
 
                     break;
@@ -179,8 +179,8 @@ bool AnalyseFunction(Napi::Env, InstanceData *instance, FunctionInfo *func)
                             stack_offset += registers * 8;
                         }
 
-                        func->sync.Append({ .op = Code2Op(AbiOpcode::PushAggregateReg), .a = param.offset, .b1 = (int16_t)param.abi.offset, .type = param.type });
-                        func->async.Append({ .op = Code2Op(AbiOpcode::PushAggregateReg), .a = param.offset, .b1 = (int16_t)param.abi.offset, .type = param.type });
+                        func->sync.Append({ .op = Code2Op(Opcode::PushAggregateReg), .a = param.offset, .b1 = (int16_t)param.abi.offset, .type = param.type });
+                        func->async.Append({ .op = Code2Op(Opcode::PushAggregateReg), .a = param.offset, .b1 = (int16_t)param.abi.offset, .type = param.type });
                     } else {
                         if (gpr_index < gpr_max) {
                             param.abi.regular = true;
@@ -194,8 +194,8 @@ bool AnalyseFunction(Napi::Env, InstanceData *instance, FunctionInfo *func)
 
                         param.abi.indirect = true;
 
-                        func->sync.Append({ .op = Code2Op(AbiOpcode::PushAggregateMem), .a = param.offset, .b1 = (int16_t)param.abi.offset, .type = param.type });
-                        func->async.Append({ .op = Code2Op(AbiOpcode::PushAggregateMem), .a = param.offset, .b1 = (int16_t)param.abi.offset, .type = param.type });
+                        func->sync.Append({ .op = Code2Op(Opcode::PushAggregateMem), .a = param.offset, .b1 = (int16_t)param.abi.offset, .type = param.type });
+                        func->async.Append({ .op = Code2Op(Opcode::PushAggregateMem), .a = param.offset, .b1 = (int16_t)param.abi.offset, .type = param.type });
                     }
 
                     break;
@@ -221,8 +221,8 @@ bool AnalyseFunction(Napi::Env, InstanceData *instance, FunctionInfo *func)
                             param.type = ReshapeType(instance, param.type, 8, 0);
                         }
 
-                        func->sync.Append({ .op = Code2Op(AbiOpcode::PushAggregateReg), .a = param.offset, .b1 = (int16_t)param.abi.offset, .type = param.type });
-                        func->async.Append({ .op = Code2Op(AbiOpcode::PushAggregateReg), .a = param.offset, .b1 = (int16_t)param.abi.offset, .type = param.type });
+                        func->sync.Append({ .op = Code2Op(Opcode::PushAggregateReg), .a = param.offset, .b1 = (int16_t)param.abi.offset, .type = param.type });
+                        func->async.Append({ .op = Code2Op(Opcode::PushAggregateReg), .a = param.offset, .b1 = (int16_t)param.abi.offset, .type = param.type });
                     } else {
                         vec_index = vec_max;
 
@@ -232,8 +232,8 @@ bool AnalyseFunction(Napi::Env, InstanceData *instance, FunctionInfo *func)
                         param.abi.offset = 19 * 8 + stack_offset;
                         stack_offset += 8;
 
-                        func->sync.Append({ .op = Code2Op(AbiOpcode::PushAggregateReg), .a = param.offset, .b1 = (int16_t)param.abi.offset, .type = param.type });
-                        func->async.Append({ .op = Code2Op(AbiOpcode::PushAggregateReg), .a = param.offset, .b1 = (int16_t)param.abi.offset, .type = param.type });
+                        func->sync.Append({ .op = Code2Op(Opcode::PushAggregateReg), .a = param.offset, .b1 = (int16_t)param.abi.offset, .type = param.type });
+                        func->async.Append({ .op = Code2Op(Opcode::PushAggregateReg), .a = param.offset, .b1 = (int16_t)param.abi.offset, .type = param.type });
                     }
                 } else if (param.type->size <= 16) {
                     int registers = (param.type->size + 7) / 8;
@@ -254,8 +254,8 @@ bool AnalyseFunction(Napi::Env, InstanceData *instance, FunctionInfo *func)
                         stack_offset += registers * 8;
                     }
 
-                    func->sync.Append({ .op = Code2Op(AbiOpcode::PushAggregateReg), .a = param.offset, .b1 = (int16_t)param.abi.offset, .type = param.type });
-                    func->async.Append({ .op = Code2Op(AbiOpcode::PushAggregateReg), .a = param.offset, .b1 = (int16_t)param.abi.offset, .type = param.type });
+                    func->sync.Append({ .op = Code2Op(Opcode::PushAggregateReg), .a = param.offset, .b1 = (int16_t)param.abi.offset, .type = param.type });
+                    func->async.Append({ .op = Code2Op(Opcode::PushAggregateReg), .a = param.offset, .b1 = (int16_t)param.abi.offset, .type = param.type });
                 } else {
                     // Big types (more than 16 bytes) are replaced by a pointer
                     if (gpr_index < gpr_max) {
@@ -272,8 +272,8 @@ bool AnalyseFunction(Napi::Env, InstanceData *instance, FunctionInfo *func)
 
                     param.abi.indirect = true;
 
-                    func->sync.Append({ .op = Code2Op(AbiOpcode::PushAggregateMem), .a = param.offset, .b1 = (int16_t)param.abi.offset, .type = param.type });
-                    func->async.Append({ .op = Code2Op(AbiOpcode::PushAggregateMem), .a = param.offset, .b1 = (int16_t)param.abi.offset, .type = param.type });
+                    func->sync.Append({ .op = Code2Op(Opcode::PushAggregateMem), .a = param.offset, .b1 = (int16_t)param.abi.offset, .type = param.type });
+                    func->async.Append({ .op = Code2Op(Opcode::PushAggregateMem), .a = param.offset, .b1 = (int16_t)param.abi.offset, .type = param.type });
                 }
             } break;
             case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
@@ -290,8 +290,8 @@ bool AnalyseFunction(Napi::Env, InstanceData *instance, FunctionInfo *func)
                         stack_offset += 8;
                     }
 
-                    func->sync.Append({ .op = Code2Op(AbiOpcode::PushFloat32), .a = param.offset, .b1 = (int16_t)param.abi.offset, .b2 = (int16_t)param.directions, .type = param.type });
-                    func->async.Append({ .op = Code2Op(AbiOpcode::PushFloat32), .a = param.offset, .b1 = (int16_t)param.abi.offset, .b2 = (int16_t)param.directions, .type = param.type });
+                    func->sync.Append({ .op = Code2Op(Opcode::PushFloat32), .a = param.offset, .b1 = (int16_t)param.abi.offset, .b2 = (int16_t)param.directions, .type = param.type });
+                    func->async.Append({ .op = Code2Op(Opcode::PushFloat32), .a = param.offset, .b1 = (int16_t)param.abi.offset, .b2 = (int16_t)param.directions, .type = param.type });
 
                     break;
                 }
@@ -312,8 +312,8 @@ bool AnalyseFunction(Napi::Env, InstanceData *instance, FunctionInfo *func)
 #endif
                 }
 
-                func->sync.Append({ .op = Code2Op(AbiOpcode::PushFloat32), .a = param.offset, .b1 = (int16_t)param.abi.offset, .b2 = (int16_t)param.directions, .type = param.type });
-                func->async.Append({ .op = Code2Op(AbiOpcode::PushFloat32), .a = param.offset, .b1 = (int16_t)param.abi.offset, .b2 = (int16_t)param.directions, .type = param.type });
+                func->sync.Append({ .op = Code2Op(Opcode::PushFloat32), .a = param.offset, .b1 = (int16_t)param.abi.offset, .b2 = (int16_t)param.directions, .type = param.type });
+                func->async.Append({ .op = Code2Op(Opcode::PushFloat32), .a = param.offset, .b1 = (int16_t)param.abi.offset, .b2 = (int16_t)param.directions, .type = param.type });
             } break;
             case PrimitiveKind::Float64: {
 #if defined(_WIN32)
@@ -327,8 +327,8 @@ bool AnalyseFunction(Napi::Env, InstanceData *instance, FunctionInfo *func)
                         stack_offset += 8;
                     }
 
-                    func->sync.Append({ .op = Code2Op(AbiOpcode::PushFloat64), .a = param.offset, .b1 = (int16_t)param.abi.offset, .b2 = (int16_t)param.directions, .type = param.type });
-                    func->async.Append({ .op = Code2Op(AbiOpcode::PushFloat64), .a = param.offset, .b1 = (int16_t)param.abi.offset, .b2 = (int16_t)param.directions, .type = param.type });
+                    func->sync.Append({ .op = Code2Op(Opcode::PushFloat64), .a = param.offset, .b1 = (int16_t)param.abi.offset, .b2 = (int16_t)param.directions, .type = param.type });
+                    func->async.Append({ .op = Code2Op(Opcode::PushFloat64), .a = param.offset, .b1 = (int16_t)param.abi.offset, .b2 = (int16_t)param.directions, .type = param.type });
 
                     break;
                 }
@@ -346,8 +346,8 @@ bool AnalyseFunction(Napi::Env, InstanceData *instance, FunctionInfo *func)
                     stack_offset += 8;
                 }
 
-                func->sync.Append({ .op = Code2Op(AbiOpcode::PushFloat64), .a = param.offset, .b1 = (int16_t)param.abi.offset, .b2 = (int16_t)param.directions, .type = param.type });
-                func->async.Append({ .op = Code2Op(AbiOpcode::PushFloat64), .a = param.offset, .b1 = (int16_t)param.abi.offset, .b2 = (int16_t)param.directions, .type = param.type });
+                func->sync.Append({ .op = Code2Op(Opcode::PushFloat64), .a = param.offset, .b1 = (int16_t)param.abi.offset, .b2 = (int16_t)param.directions, .type = param.type });
+                func->async.Append({ .op = Code2Op(Opcode::PushFloat64), .a = param.offset, .b1 = (int16_t)param.abi.offset, .b2 = (int16_t)param.directions, .type = param.type });
             } break;
 
             case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;
@@ -357,12 +357,12 @@ bool AnalyseFunction(Napi::Env, InstanceData *instance, FunctionInfo *func)
     func->stk_size = AlignLen(19 * 8 + stack_offset, 16) + 8;
     func->forward_fp = vec_index;
 
-    func->async.Append({ .op = Code2Op(AbiOpcode::Yield) });
+    func->async.Append({ .op = Code2Op(Opcode::Yield) });
 
 #if defined(_M_ARM64EC)
     if (func->variadic) {
-        func->sync.Append({ .op = Code2Op(AbiOpcode::SetVariadicRegisters), .a = (int32_t)stack_offset });
-        func->async.Append({ .op = Code2Op(AbiOpcode::SetVariadicRegisters), .a = (int32_t)stack_offset });
+        func->sync.Append({ .op = Code2Op(Opcode::SetVariadicRegisters), .a = (int32_t)stack_offset });
+        func->async.Append({ .op = Code2Op(Opcode::SetVariadicRegisters), .a = (int32_t)stack_offset });
     }
 #endif
 
@@ -389,22 +389,22 @@ bool AnalyseFunction(Napi::Env, InstanceData *instance, FunctionInfo *func)
         case PrimitiveKind::Pointer:
         case PrimitiveKind::Callback: {
             if (func->forward_fp) {
-                int delta = (int)AbiOpcode::RunVoidX - (int)PrimitiveKind::Void;
-                AbiOpcode run = (AbiOpcode)((int)func->ret.type->primitive + delta);
+                int delta = (int)Opcode::RunVoidX - (int)PrimitiveKind::Void;
+                Opcode run = (Opcode)((int)func->ret.type->primitive + delta);
 
                 func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
             } else {
-                int delta = (int)AbiOpcode::RunVoid - (int)PrimitiveKind::Void;
-                AbiOpcode run = (AbiOpcode)((int)func->ret.type->primitive + delta);
+                int delta = (int)Opcode::RunVoid - (int)PrimitiveKind::Void;
+                Opcode run = (Opcode)((int)func->ret.type->primitive + delta);
 
                 func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
             }
 
             // Async
             {
-                int delta = (int)AbiOpcode::ReturnVoid - (int)PrimitiveKind::Void;
-                AbiOpcode call = func->forward_fp ? AbiOpcode::CallGX : AbiOpcode::CallG;
-                AbiOpcode ret = (AbiOpcode)((int)func->ret.type->primitive + delta);
+                int delta = (int)Opcode::ReturnVoid - (int)PrimitiveKind::Void;
+                Opcode call = func->forward_fp ? Opcode::CallGX : Opcode::CallG;
+                Opcode ret = (Opcode)((int)func->ret.type->primitive + delta);
 
                 func->async.Append({ .op = Code2Op(call) });
                 func->async.Append({ .op = Code2Op(ret), .type = func->ret.type });
@@ -423,49 +423,49 @@ bool AnalyseFunction(Napi::Env, InstanceData *instance, FunctionInfo *func)
                     func->ret.type = ReshapeType(instance, func->ret.type, 8, 0);
                 }
 
-                AbiOpcode run = func->forward_fp ? AbiOpcode::RunAggregateDDDDX : AbiOpcode::RunAggregateDDDD;
-                AbiOpcode call = func->forward_fp ? AbiOpcode::CallDDDDX : AbiOpcode::CallDDDD;
+                Opcode run = func->forward_fp ? Opcode::RunAggregateDDDDX : Opcode::RunAggregateDDDD;
+                Opcode call = func->forward_fp ? Opcode::CallDDDDX : Opcode::CallDDDD;
 
                 func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
                 func->async.Append({ .op = Code2Op(call) });
-                func->async.Append({ .op = Code2Op(AbiOpcode::ReturnAggregateReg), .type = func->ret.type });
+                func->async.Append({ .op = Code2Op(Opcode::ReturnAggregateReg), .type = func->ret.type });
             } else if (func->ret.type->size <= 16) {
                 func->ret.abi.regular = true;
                 func->ret.abi.offset = offsetof(BackRegisters, x0);
 
-                AbiOpcode run = func->forward_fp ? AbiOpcode::RunAggregateGGX : AbiOpcode::RunAggregateGG;
-                AbiOpcode call = func->forward_fp ? AbiOpcode::CallGGX : AbiOpcode::CallGG;
+                Opcode run = func->forward_fp ? Opcode::RunAggregateGGX : Opcode::RunAggregateGG;
+                Opcode call = func->forward_fp ? Opcode::CallGGX : Opcode::CallGG;
 
                 func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
                 func->async.Append({ .op = Code2Op(call) });
-                func->async.Append({ .op = Code2Op(AbiOpcode::ReturnAggregateReg), .type = func->ret.type });
+                func->async.Append({ .op = Code2Op(Opcode::ReturnAggregateReg), .type = func->ret.type });
             } else {
-                AbiOpcode run = func->forward_fp ? AbiOpcode::RunAggregateMemX : AbiOpcode::RunAggregateMem;
-                AbiOpcode call = func->forward_fp ? AbiOpcode::CallMemX : AbiOpcode::CallMem;
+                Opcode run = func->forward_fp ? Opcode::RunAggregateMemX : Opcode::RunAggregateMem;
+                Opcode call = func->forward_fp ? Opcode::CallMemX : Opcode::CallMem;
                 int16_t offset = 8 * 8; // x8
 
                 func->sync.Append({ .op = Code2Op(run), .a = (int32_t)func->ret.type->size, .b1 = offset, .type = func->ret.type });
                 func->async.Append({ .op = Code2Op(call), .a = (int32_t)func->ret.type->size, .b1 = offset });
-                func->async.Append({ .op = Code2Op(AbiOpcode::ReturnAggregateMem), .b1 = offset, .type = func->ret.type });
+                func->async.Append({ .op = Code2Op(Opcode::ReturnAggregateMem), .b1 = offset, .type = func->ret.type });
             }
         } break;
         case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
 
         case PrimitiveKind::Float32: {
-            AbiOpcode run = func->forward_fp ? AbiOpcode::RunFloat32X : AbiOpcode::RunFloat32;
-            AbiOpcode call = func->forward_fp ? AbiOpcode::CallFX : AbiOpcode::CallF;
+            Opcode run = func->forward_fp ? Opcode::RunFloat32X : Opcode::RunFloat32;
+            Opcode call = func->forward_fp ? Opcode::CallFX : Opcode::CallF;
 
             func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
             func->async.Append({ .op = Code2Op(call) });
-            func->async.Append({ .op = Code2Op(AbiOpcode::ReturnFloat32), .type = func->ret.type });
+            func->async.Append({ .op = Code2Op(Opcode::ReturnFloat32), .type = func->ret.type });
         } break;
         case PrimitiveKind::Float64: {
-            AbiOpcode run = func->forward_fp ? AbiOpcode::RunFloat64X : AbiOpcode::RunFloat64;
-            AbiOpcode call = func->forward_fp ? AbiOpcode::CallDX : AbiOpcode::CallD;
+            Opcode run = func->forward_fp ? Opcode::RunFloat64X : Opcode::RunFloat64;
+            Opcode call = func->forward_fp ? Opcode::CallDX : Opcode::CallD;
 
             func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
             func->async.Append({ .op = Code2Op(call) });
-            func->async.Append({ .op = Code2Op(AbiOpcode::ReturnFloat64), .type = func->ret.type });
+            func->async.Append({ .op = Code2Op(Opcode::ReturnFloat64), .type = func->ret.type });
         } break;
 
         case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;

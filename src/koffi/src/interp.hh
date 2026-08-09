@@ -7,7 +7,7 @@
 
 namespace K {
 
-enum class AbiOpcode {
+enum class Opcode {
     #define PRIMITIVE(Name) Push ## Name,
     #include "primitives.inc"
     PushAggregateReg,
@@ -61,6 +61,6 @@ enum class AbiOpcode {
     ReturnAggregateMem
 };
 
-void *Code2Op(AbiOpcode code);
+void *Code2Op(Opcode code);
 
 }

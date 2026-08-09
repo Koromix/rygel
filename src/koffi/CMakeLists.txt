@@ -66,7 +66,7 @@ add_custom_command(OUTPUT trampolines/gnu.inc
 set(KOFFI_SRC
     src/ffi.cc
     src/call.cc
-    src/forward.cc
+    src/interp.cc
     src/parser.cc
     src/type.cc
     src/util.cc

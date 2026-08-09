@@ -6,14 +6,14 @@
 
 ; These three are the same, but they differ (in the C side) by their return type.
 ; Unlike the three next functions, these ones don't forward XMM argument registers.
-public ForwardCallG
-public ForwardCallF
-public ForwardCallD
+public CallG
+public CallF
+public CallD
 
 ; The X variants are slightly slower, and are used when XMM arguments must be forwarded.
-public ForwardCallGX
-public ForwardCallFX
-public ForwardCallDX
+public CallGX
+public CallFX
+public CallDX
 
 extern SehHandler : PROC
 
@@ -54,7 +54,7 @@ endm
 ; Its frame lives entirely on the custom stack, so its EstablisherFrame passes
 ; the TEB stack bounds check. This ensures that SehHandler is found by
 ; RtlDispatchException before it tries to cross back to the original stack
-; (through ForwardCall*), which would fail the bounds check and terminate.
+; (through Call*), which would fail the bounds check and terminate.
 ; After the native call returns, CallNative restores the original stack via
 ; RBP (non-volatile, preserved by native) and returns directly to the C++ caller.
 CallNative proc frame:SehHandler
@@ -65,44 +65,44 @@ CallNative proc frame:SehHandler
     ret
 CallNative endp
 
-ForwardCallG proc frame
+CallG proc frame
     prologue
     forward_gpr
     jmp CallNative
-ForwardCallG endp
+CallG endp
 
-ForwardCallF proc frame
+CallF proc frame
     prologue
     forward_gpr
     jmp CallNative
-ForwardCallF endp
+CallF endp
 
-ForwardCallD proc frame
+CallD proc frame
     prologue
     forward_gpr
     jmp CallNative
-ForwardCallD endp
+CallD endp
 
-ForwardCallGX proc frame
+CallGX proc frame
     prologue
     forward_xmm
     forward_gpr
     jmp CallNative
-ForwardCallGX endp
+CallGX endp
 
-ForwardCallFX proc frame
+CallFX proc frame
     prologue
     forward_xmm
     forward_gpr
     jmp CallNative
-ForwardCallFX endp
+CallFX endp
 
-ForwardCallDX proc frame
+CallDX proc frame
     prologue
     forward_xmm
     forward_gpr
     jmp CallNative
-ForwardCallDX endp
+CallDX endp
 
 ; Callbacks
 ; ----------------------------

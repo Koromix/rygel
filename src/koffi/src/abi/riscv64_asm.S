@@ -8,22 +8,22 @@
 
 # These three are the same, but they differ (in the C side) by their return type.
 # Unlike the three next functions, these ones don't forward FA argument registers.
-.global ForwardCallG
-.global ForwardCallF
-.global ForwardCallD
-.global ForwardCallGG
-.global ForwardCallDG
-.global ForwardCallGD
-.global ForwardCallDD
+.global CallG
+.global CallF
+.global CallD
+.global CallGG
+.global CallDG
+.global CallGD
+.global CallDD
 
 # The X variants are slightly slower, and are used when FA arguments must be forwarded.
-.global ForwardCallGX
-.global ForwardCallFX
-.global ForwardCallDX
-.global ForwardCallGGX
-.global ForwardCallDGX
-.global ForwardCallGDX
-.global ForwardCallDDX
+.global CallGX
+.global CallFX
+.global CallDX
+.global CallGGX
+.global CallDGX
+.global CallGDX
+.global CallDDX
 
 # Copy function pointer to t0, in order to save it through argument forwarding.
 # Also make a copy of the SP to CallData::old_sp because the callback system might need it.
@@ -74,78 +74,78 @@
     fld fa0, 64(a1)
 .endm
 
-ForwardCallG:
+CallG:
     prologue
     forward_gpr
     epilogue
 
-ForwardCallF:
+CallF:
     prologue
     forward_gpr
     epilogue
 
-ForwardCallD:
+CallD:
     prologue
     forward_gpr
     epilogue
 
-ForwardCallGG:
+CallGG:
     prologue
     forward_gpr
     epilogue
 
-ForwardCallDG:
+CallDG:
     prologue
     forward_gpr
     epilogue
 
-ForwardCallGD:
+CallGD:
     prologue
     forward_gpr
     epilogue
 
-ForwardCallDD:
+CallDD:
     prologue
     forward_gpr
     epilogue
 
-ForwardCallGX:
-    prologue
-    forward_vec
-    forward_gpr
-    epilogue
-
-ForwardCallFX:
+CallGX:
     prologue
     forward_vec
     forward_gpr
     epilogue
 
-ForwardCallDX:
+CallFX:
     prologue
     forward_vec
     forward_gpr
     epilogue
 
-ForwardCallGGX:
+CallDX:
     prologue
     forward_vec
     forward_gpr
     epilogue
 
-ForwardCallDGX:
+CallGGX:
     prologue
     forward_vec
     forward_gpr
     epilogue
 
-ForwardCallGDX:
+CallDGX:
     prologue
     forward_vec
     forward_gpr
     epilogue
 
-ForwardCallDDX:
+CallGDX:
+    prologue
+    forward_vec
+    forward_gpr
+    epilogue
+
+CallDDX:
     prologue
     forward_vec
     forward_gpr

@@ -4,7 +4,7 @@
 #include "lib/native/base/base.hh"
 #include "ffi.hh"
 #include "call.hh"
-#include "forward.hh"
+#include "interp.hh"
 #include "type.hh"
 #include "util.hh"
 #if defined(_WIN32)
@@ -38,22 +38,22 @@ struct RetDDDD {
     double d3;
 };
 
-extern "C" uint64_t ForwardCallG(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
-extern "C" float ForwardCallF(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
-extern "C" double ForwardCallD(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
-extern "C" RetGG ForwardCallGG(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
-extern "C" RetDD ForwardCallDD(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
-extern "C" RetDG ForwardCallDG(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
-extern "C" RetGD ForwardCallGD(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
-extern "C" RetDDDD ForwardCallDDDD(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
-extern "C" uint64_t ForwardCallGX(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
-extern "C" float ForwardCallFX(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
-extern "C" double ForwardCallDX(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
-extern "C" RetGG ForwardCallGGX(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
-extern "C" RetDD ForwardCallDDX(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
-extern "C" RetDG ForwardCallDGX(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
-extern "C" RetGD ForwardCallGDX(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
-extern "C" RetDDDD ForwardCallDDDDX(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
+extern "C" uint64_t CallG(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
+extern "C" float CallF(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
+extern "C" double CallD(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
+extern "C" RetGG CallGG(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
+extern "C" RetDD CallDD(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
+extern "C" RetDG CallDG(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
+extern "C" RetGD CallGD(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
+extern "C" RetDDDD CallDDDD(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
+extern "C" uint64_t CallGX(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
+extern "C" float CallFX(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
+extern "C" double CallDX(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
+extern "C" RetGG CallGGX(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
+extern "C" RetDD CallDDX(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
+extern "C" RetDG CallDGX(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
+extern "C" RetGD CallGDX(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
+extern "C" RetDDDD CallDDDDX(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
 
 #if defined(__GNUC__)
     #pragma GCC diagnostic push
@@ -62,22 +62,22 @@ extern "C" RetDDDD ForwardCallDDDDX(const void *func, uint8_t *sp, uint8_t **out
 
 namespace {
 #if defined(MUST_TAIL)
-    PRESERVE_NONE typedef napi_value ForwardFunc(CallData *call, napi_value *args, uint8_t *base, const AbiInstruction *inst);
+    PRESERVE_NONE typedef napi_value ForwardFunc(CallData *call, napi_value *args, uint8_t *base, const InstructionData *inst);
 
     #define OP(Code) \
-        PRESERVE_NONE napi_value Handle ## Code(CallData *call, napi_value *args, uint8_t *base, const AbiInstruction *inst)
+        PRESERVE_NONE napi_value Forward ## Code(CallData *call, napi_value *args, uint8_t *base, const InstructionData *inst)
     #define NEXT() \
         do { \
-            const AbiInstruction *next = inst + 1; \
+            const InstructionData *next = inst + 1; \
             MUST_TAIL return ((ForwardFunc *)next->op)(call, args, base, next); \
         } while (false)
 #else
     #define OP(Code) \
-        case (int)AbiOpcode::Code:
+        case (int)Opcode::Code:
     #define NEXT() \
         break
 
-    napi_value RunLoop(CallData *call, napi_value *args, uint8_t *base, const AbiInstruction *inst)
+    napi_value RunLoop(CallData *call, napi_value *args, uint8_t *base, const InstructionData *inst)
     {
         for (;; ++inst) {
             switch ((intptr_t)inst->op) {
@@ -294,12 +294,12 @@ namespace {
 
 #define INTEGER(Suffix, CType) \
         do { \
-            uint64_t ret = WRAP(ForwardCall ## Suffix(call->native, base, &call->saved_sp)); \
+            uint64_t ret = WRAP(Call ## Suffix(call->native, base, &call->saved_sp)); \
             return NewInt(call->env, (CType)ret); \
         } while (false)
 #define INTEGER_SWAP(Suffix, CType) \
         do { \
-            uint64_t ret = WRAP(ForwardCall ## Suffix(call->native, base, &call->saved_sp)); \
+            uint64_t ret = WRAP(Call ## Suffix(call->native, base, &call->saved_sp)); \
             return NewInt(call->env, ReverseBytes((CType)ret)); \
         } while (false)
 #define DISPOSE(Ptr) \
@@ -310,11 +310,11 @@ namespace {
         } while (false)
 
     OP(RunVoid) {
-        WRAP(ForwardCallG(call->native, base, &call->saved_sp));
+        WRAP(CallG(call->native, base, &call->saved_sp));
         return nullptr;
     }
     OP(RunBool) {
-        uint64_t ret = WRAP(ForwardCallG(call->native, base, &call->saved_sp));
+        uint64_t ret = WRAP(CallG(call->native, base, &call->saved_sp));
         return Napi::Boolean::New(call->env, ret & 0x1);
     }
     OP(RunInt8) { INTEGER(G, int8_t); }
@@ -332,89 +332,89 @@ namespace {
     OP(RunUInt64) { INTEGER(G, uint64_t); }
     OP(RunUInt64S) { INTEGER_SWAP(G, uint64_t); }
     OP(RunString) {
-        uint64_t ret = WRAP(ForwardCallG(call->native, base, &call->saved_sp));
+        uint64_t ret = WRAP(CallG(call->native, base, &call->saved_sp));
         napi_value value = NewString(call->env, (const char *)ret);
         DISPOSE((void *)ret);
         return value;
     }
     OP(RunString16) {
-        uint64_t ret = WRAP(ForwardCallG(call->native, base, &call->saved_sp));
+        uint64_t ret = WRAP(CallG(call->native, base, &call->saved_sp));
         napi_value value = NewString(call->env, (const char16_t *)ret);
         DISPOSE((void *)ret);
         return value;
     }
     OP(RunString32) {
-        uint64_t ret = WRAP(ForwardCallG(call->native, base, &call->saved_sp));
+        uint64_t ret = WRAP(CallG(call->native, base, &call->saved_sp));
         napi_value value = NewString(call->env, (const char32_t *)ret);
         DISPOSE((void *)ret);
         return value;
     }
     OP(RunPointer) {
-        uint64_t ret = WRAP(ForwardCallG(call->native, base, &call->saved_sp));
+        uint64_t ret = WRAP(CallG(call->native, base, &call->saved_sp));
         napi_value value = WrapPointer(call->env, (void *)ret);
         DISPOSE((void *)ret);
         return value;
     }
     OP(RunCallback) {
-        uint64_t ret = WRAP(ForwardCallG(call->native, base, &call->saved_sp));
+        uint64_t ret = WRAP(CallG(call->native, base, &call->saved_sp));
         return WrapPointer(call->env, (void *)ret);
     }
     OP(RunRecord) { K_UNREACHABLE(); return call->env.Null(); }
     OP(RunUnion) { K_UNREACHABLE(); return call->env.Null(); }
     OP(RunArray) { K_UNREACHABLE(); return call->env.Null(); }
     OP(RunFloat32) {
-        float f = WRAP(ForwardCallF(call->native, base, &call->saved_sp));
+        float f = WRAP(CallF(call->native, base, &call->saved_sp));
         return NewFloat(call->env, f);
     }
     OP(RunFloat64) {
-        double d = WRAP(ForwardCallD(call->native, base, &call->saved_sp));
+        double d = WRAP(CallD(call->native, base, &call->saved_sp));
         return NewFloat(call->env, d);
     }
     OP(RunPrototype) { K_UNREACHABLE(); return call->env.Null(); }
     OP(RunAggregateG) {
-        auto ret = WRAP(ForwardCallG(call->native, base, &call->saved_sp));
+        auto ret = WRAP(CallG(call->native, base, &call->saved_sp));
         return DecodeObject(call->instance, (const uint8_t *)&ret, inst->type);
     }
     OP(RunAggregateF) {
-        auto ret = WRAP(ForwardCallF(call->native, base, &call->saved_sp));
+        auto ret = WRAP(CallF(call->native, base, &call->saved_sp));
         return DecodeObject(call->instance, (const uint8_t *)&ret, inst->type);
     }
     OP(RunAggregateD) {
-        auto ret = WRAP(ForwardCallD(call->native, base, &call->saved_sp));
+        auto ret = WRAP(CallD(call->native, base, &call->saved_sp));
         return DecodeObject(call->instance, (const uint8_t *)&ret, inst->type);
     }
     OP(RunAggregateGG) {
-        auto ret = WRAP(ForwardCallGG(call->native, base, &call->saved_sp));
+        auto ret = WRAP(CallGG(call->native, base, &call->saved_sp));
         return DecodeObject(call->instance, (const uint8_t *)&ret, inst->type);
     }
     OP(RunAggregateDD) {
-        auto ret = WRAP(ForwardCallDD(call->native, base, &call->saved_sp));
+        auto ret = WRAP(CallDD(call->native, base, &call->saved_sp));
         return DecodeObject(call->instance, (const uint8_t *)&ret, inst->type);
     }
     OP(RunAggregateGD) {
-        auto ret = WRAP(ForwardCallGD(call->native, base, &call->saved_sp));
+        auto ret = WRAP(CallGD(call->native, base, &call->saved_sp));
         return DecodeObject(call->instance, (const uint8_t *)&ret, inst->type);
     }
     OP(RunAggregateDG) {
-        auto ret = WRAP(ForwardCallDG(call->native, base, &call->saved_sp));
+        auto ret = WRAP(CallDG(call->native, base, &call->saved_sp));
         return DecodeObject(call->instance, (const uint8_t *)&ret, inst->type);
     }
     OP(RunAggregateDDDD) {
-        auto ret = WRAP(ForwardCallDDDD(call->native, base, &call->saved_sp));
+        auto ret = WRAP(CallDDDD(call->native, base, &call->saved_sp));
         return DecodeObject(call->instance, (const uint8_t *)&ret, inst->type);
     }
     OP(RunAggregateMem) {
         uint8_t *ptr = call->AllocHeap(inst->a);
         *(uint8_t **)(base + inst->b1) = ptr;
-        WRAP(ForwardCallG(call->native, base, &call->saved_sp));
+        WRAP(CallG(call->native, base, &call->saved_sp));
         return DecodeObject(call->instance, ptr, inst->type);
     }
     OP(RunVoidX) {
-        WRAP(ForwardCallGX(call->native, base, &call->saved_sp));
+        WRAP(CallGX(call->native, base, &call->saved_sp));
         return nullptr;
     }
     OP(RunBoolX) {
-        uint64_t ret = WRAP(ForwardCallGX(call->native, base, &call->saved_sp));
+        uint64_t ret = WRAP(CallGX(call->native, base, &call->saved_sp));
         return Napi::Boolean::New(call->env, ret & 0x1);
     }
     OP(RunInt8X) { INTEGER(GX, int8_t); }
@@ -432,81 +432,81 @@ namespace {
     OP(RunUInt64X) { INTEGER(GX, uint64_t); }
     OP(RunUInt64SX) { INTEGER_SWAP(GX, uint64_t); }
     OP(RunStringX) {
-        uint64_t ret = WRAP(ForwardCallGX(call->native, base, &call->saved_sp));
+        uint64_t ret = WRAP(CallGX(call->native, base, &call->saved_sp));
         napi_value value = NewString(call->env, (const char *)ret);
         DISPOSE((void *)ret);
         return value;
     }
     OP(RunString16X) {
-        uint64_t ret = WRAP(ForwardCallGX(call->native, base, &call->saved_sp));
+        uint64_t ret = WRAP(CallGX(call->native, base, &call->saved_sp));
         napi_value value = NewString(call->env, (const char16_t *)ret);
         DISPOSE((void *)ret);
         return value;
     }
     OP(RunString32X) {
-        uint64_t ret = WRAP(ForwardCallGX(call->native, base, &call->saved_sp));
+        uint64_t ret = WRAP(CallGX(call->native, base, &call->saved_sp));
         napi_value value = NewString(call->env, (const char32_t *)ret);
         DISPOSE((void *)ret);
         return value;
     }
     OP(RunPointerX) {
-        uint64_t ret = WRAP(ForwardCallGX(call->native, base, &call->saved_sp));
+        uint64_t ret = WRAP(CallGX(call->native, base, &call->saved_sp));
         napi_value value = WrapPointer(call->env, (void *)ret);
         DISPOSE((void *)ret);
         return value;
     }
     OP(RunCallbackX) {
-        uint64_t ret = WRAP(ForwardCallGX(call->native, base, &call->saved_sp));
+        uint64_t ret = WRAP(CallGX(call->native, base, &call->saved_sp));
         return WrapPointer(call->env, (void *)ret);
     }
     OP(RunRecordX) { K_UNREACHABLE(); return call->env.Null(); }
     OP(RunUnionX) { K_UNREACHABLE(); return call->env.Null(); }
     OP(RunArrayX) { K_UNREACHABLE(); return call->env.Null(); }
     OP(RunFloat32X) {
-        float f = WRAP(ForwardCallFX(call->native, base, &call->saved_sp));
+        float f = WRAP(CallFX(call->native, base, &call->saved_sp));
         return NewFloat(call->env, f);
     }
     OP(RunFloat64X) {
-        double d = WRAP(ForwardCallDX(call->native, base, &call->saved_sp));
+        double d = WRAP(CallDX(call->native, base, &call->saved_sp));
         return NewFloat(call->env, d);
     }
     OP(RunPrototypeX) { K_UNREACHABLE(); return call->env.Null(); }
     OP(RunAggregateGX) {
-        auto ret = WRAP(ForwardCallGX(call->native, base, &call->saved_sp));
+        auto ret = WRAP(CallGX(call->native, base, &call->saved_sp));
         return DecodeObject(call->instance, (const uint8_t *)&ret, inst->type);
     }
     OP(RunAggregateFX) {
-        auto ret = WRAP(ForwardCallFX(call->native, base, &call->saved_sp));
+        auto ret = WRAP(CallFX(call->native, base, &call->saved_sp));
         return DecodeObject(call->instance, (const uint8_t *)&ret, inst->type);
     }
     OP(RunAggregateDX) {
-        auto ret = WRAP(ForwardCallDX(call->native, base, &call->saved_sp));
+        auto ret = WRAP(CallDX(call->native, base, &call->saved_sp));
         return DecodeObject(call->instance, (const uint8_t *)&ret, inst->type);
     }
     OP(RunAggregateGGX) {
-        auto ret = WRAP(ForwardCallGGX(call->native, base, &call->saved_sp));
+        auto ret = WRAP(CallGGX(call->native, base, &call->saved_sp));
         return DecodeObject(call->instance, (const uint8_t *)&ret, inst->type);
     }
     OP(RunAggregateDDX) {
-        auto ret = WRAP(ForwardCallDDX(call->native, base, &call->saved_sp));
+        auto ret = WRAP(CallDDX(call->native, base, &call->saved_sp));
         return DecodeObject(call->instance, (const uint8_t *)&ret, inst->type);
     }
     OP(RunAggregateGDX) {
-        auto ret = WRAP(ForwardCallGDX(call->native, base, &call->saved_sp));
+        auto ret = WRAP(CallGDX(call->native, base, &call->saved_sp));
         return DecodeObject(call->instance, (const uint8_t *)&ret, inst->type);
     }
     OP(RunAggregateDGX) {
-        auto ret = WRAP(ForwardCallDGX(call->native, base, &call->saved_sp));
+        auto ret = WRAP(CallDGX(call->native, base, &call->saved_sp));
         return DecodeObject(call->instance, (const uint8_t *)&ret, inst->type);
     }
     OP(RunAggregateDDDDX) {
-        auto ret = WRAP(ForwardCallDDDDX(call->native, base, &call->saved_sp));
+        auto ret = WRAP(CallDDDDX(call->native, base, &call->saved_sp));
         return DecodeObject(call->instance, (const uint8_t *)&ret, inst->type);
     }
     OP(RunAggregateMemX) {
         uint8_t *ptr = call->AllocHeap(inst->a);
         *(uint8_t **)(base + inst->b1) = ptr;
-        WRAP(ForwardCallGX(call->native, base, &call->saved_sp));
+        WRAP(CallGX(call->native, base, &call->saved_sp));
         return DecodeObject(call->instance, ptr, inst->type);
     }
 
@@ -516,7 +516,7 @@ namespace {
 
 #define CALL(Suffix) \
         do { \
-            auto ret = WRAP(ForwardCall ## Suffix(call->native, base, &call->saved_sp)); \
+            auto ret = WRAP(Call ## Suffix(call->native, base, &call->saved_sp)); \
             memcpy(base, &ret, K_SIZE(ret)); \
         } while (false)
 #define DISPOSE() \
@@ -644,7 +644,7 @@ namespace {
 #undef CALL
 
 #if defined(MUST_TAIL)
-    FORCE_INLINE napi_value RunLoop(CallData *call, napi_value *args, uint8_t *base, const AbiInstruction *inst)
+    FORCE_INLINE napi_value RunLoop(CallData *call, napi_value *args, uint8_t *base, const InstructionData *inst)
     {
         return ((ForwardFunc *)inst->op)(call, args, base, inst);
     }
@@ -669,67 +669,67 @@ namespace {
 #if defined(MUST_TAIL)
 
 static ForwardFunc *const ForwardDispatch[256] = {
-    #define PRIMITIVE(Name) HandlePush ## Name,
+    #define PRIMITIVE(Name) ForwardPush ## Name,
     #include "primitives.inc"
-    HandlePushAggregateReg,
-    HandlePushAggregateSplit,
-    HandlePushAggregateStack,
-    HandlePushAggregateMem,
-    #define PRIMITIVE(Name) HandleRun ## Name,
+    ForwardPushAggregateReg,
+    ForwardPushAggregateSplit,
+    ForwardPushAggregateStack,
+    ForwardPushAggregateMem,
+    #define PRIMITIVE(Name) ForwardRun ## Name,
     #include "primitives.inc"
-    HandleRunAggregateG,
-    HandleRunAggregateF,
-    HandleRunAggregateD,
-    HandleRunAggregateGG,
-    HandleRunAggregateDD,
-    HandleRunAggregateGD,
-    HandleRunAggregateDG,
-    HandleRunAggregateDDDD,
-    HandleRunAggregateMem,
-    #define PRIMITIVE(Name) HandleRun ## Name ## X,
+    ForwardRunAggregateG,
+    ForwardRunAggregateF,
+    ForwardRunAggregateD,
+    ForwardRunAggregateGG,
+    ForwardRunAggregateDD,
+    ForwardRunAggregateGD,
+    ForwardRunAggregateDG,
+    ForwardRunAggregateDDDD,
+    ForwardRunAggregateMem,
+    #define PRIMITIVE(Name) ForwardRun ## Name ## X,
     #include "primitives.inc"
-    HandleRunAggregateGX,
-    HandleRunAggregateFX,
-    HandleRunAggregateDX,
-    HandleRunAggregateGGX,
-    HandleRunAggregateDDX,
-    HandleRunAggregateGDX,
-    HandleRunAggregateDGX,
-    HandleRunAggregateDDDDX,
-    HandleRunAggregateMemX,
-    HandleYield,
-    HandleCallG,
-    HandleCallF,
-    HandleCallD,
-    HandleCallGG,
-    HandleCallDD,
-    HandleCallDG,
-    HandleCallGD,
-    HandleCallDDDD,
-    HandleCallMem,
-    HandleCallGX,
-    HandleCallFX,
-    HandleCallDX,
-    HandleCallGGX,
-    HandleCallDDX,
-    HandleCallDGX,
-    HandleCallGDX,
-    HandleCallDDDDX,
-    HandleCallMemX,
-    #define PRIMITIVE(Name) HandleReturn ## Name,
+    ForwardRunAggregateGX,
+    ForwardRunAggregateFX,
+    ForwardRunAggregateDX,
+    ForwardRunAggregateGGX,
+    ForwardRunAggregateDDX,
+    ForwardRunAggregateGDX,
+    ForwardRunAggregateDGX,
+    ForwardRunAggregateDDDDX,
+    ForwardRunAggregateMemX,
+    ForwardYield,
+    ForwardCallG,
+    ForwardCallF,
+    ForwardCallD,
+    ForwardCallGG,
+    ForwardCallDD,
+    ForwardCallDG,
+    ForwardCallGD,
+    ForwardCallDDDD,
+    ForwardCallMem,
+    ForwardCallGX,
+    ForwardCallFX,
+    ForwardCallDX,
+    ForwardCallGGX,
+    ForwardCallDDX,
+    ForwardCallDGX,
+    ForwardCallGDX,
+    ForwardCallDDDDX,
+    ForwardCallMemX,
+    #define PRIMITIVE(Name) ForwardReturn ## Name,
     #include "primitives.inc"
-    HandleReturnAggregateReg,
-    HandleReturnAggregateMem
+    ForwardReturnAggregateReg,
+    ForwardReturnAggregateMem
 };
 
-void *Code2Op(AbiOpcode code)
+void *Code2Op(Opcode code)
 {
     return (void *)ForwardDispatch[(int)code];
 }
 
 #else
 
-void *Code2Op(AbiOpcode code)
+void *Code2Op(Opcode code)
 {
     return (void *)code;
 }
@@ -742,7 +742,7 @@ napi_value CallData::Run(const FunctionInfo *func, napi_value *args)
     if (!base) [[unlikely]]
         return env.Null();
 
-    const AbiInstruction *first = func->sync.ptr;
+    const InstructionData *first = func->sync.ptr;
     return RunLoop(this, args, base, first);
 }
 
@@ -753,92 +753,92 @@ bool CallData::PrepareAsync(const FunctionInfo *func, napi_value *args)
         return env.Null();
     async_base = base;
 
-    const AbiInstruction *first = func->async.ptr;
+    const InstructionData *first = func->async.ptr;
     return !RunLoop(this, args, base, first); // Yield returns nullptr
 }
 
 void CallData::ExecuteAsync()
 {
-    const AbiInstruction *next = async_ip++;
+    const InstructionData *next = async_ip++;
     RunLoop(this, nullptr, async_base, next);
 }
 
 napi_value CallData::EndAsync()
 {
-    const AbiInstruction *next = async_ip++;
+    const InstructionData *next = async_ip++;
     return RunLoop(this, nullptr, async_base, next);
 }
 
 #if defined(_MSC_VER)
-    extern "C" uint64_t WeakForwardCallG(const void *, uint8_t *, uint8_t **) { abort(); }
-    extern "C" float WeakForwardCallF(const void *, uint8_t *, uint8_t **) { abort(); }
-    extern "C" double WeakForwardCallD(const void *, uint8_t *, uint8_t **) { abort(); }
-    extern "C" RetGG WeakForwardCallGG(const void *, uint8_t *, uint8_t **) { abort(); }
-    extern "C" RetDD WeakForwardCallDD(const void *, uint8_t *, uint8_t **) { abort(); }
-    extern "C" RetDG WeakForwardCallDG(const void *, uint8_t *, uint8_t **) { abort(); }
-    extern "C" RetGD WeakForwardCallGD(const void *, uint8_t *, uint8_t **) { abort(); }
-    extern "C" RetDDDD WeakForwardCallDDDD(const void *, uint8_t *, uint8_t **) { abort(); }
-    extern "C" uint64_t WeakForwardCallGX(const void *, uint8_t *, uint8_t **) { abort(); }
-    extern "C" float WeakForwardCallFX(const void *, uint8_t *, uint8_t **) { abort(); }
-    extern "C" double WeakForwardCallDX(const void *, uint8_t *, uint8_t **) { abort(); }
-    extern "C" RetGG WeakForwardCallGGX(const void *, uint8_t *, uint8_t **) { abort(); }
-    extern "C" RetDD WeakForwardCallDDX(const void *, uint8_t *, uint8_t **) { abort(); }
-    extern "C" RetDG WeakForwardCallDGX(const void *, uint8_t *, uint8_t **) { abort(); }
-    extern "C" RetGD WeakForwardCallGDX(const void *, uint8_t *, uint8_t **) { abort(); }
-    extern "C" RetDDDD WeakForwardCallDDDDX(const void *, uint8_t *, uint8_t **) { abort(); }
+    extern "C" uint64_t WeakCallG(const void *, uint8_t *, uint8_t **) { abort(); }
+    extern "C" float WeakCallF(const void *, uint8_t *, uint8_t **) { abort(); }
+    extern "C" double WeakCallD(const void *, uint8_t *, uint8_t **) { abort(); }
+    extern "C" RetGG WeakCallGG(const void *, uint8_t *, uint8_t **) { abort(); }
+    extern "C" RetDD WeakCallDD(const void *, uint8_t *, uint8_t **) { abort(); }
+    extern "C" RetDG WeakCallDG(const void *, uint8_t *, uint8_t **) { abort(); }
+    extern "C" RetGD WeakCallGD(const void *, uint8_t *, uint8_t **) { abort(); }
+    extern "C" RetDDDD WeakCallDDDD(const void *, uint8_t *, uint8_t **) { abort(); }
+    extern "C" uint64_t WeakCallGX(const void *, uint8_t *, uint8_t **) { abort(); }
+    extern "C" float WeakCallFX(const void *, uint8_t *, uint8_t **) { abort(); }
+    extern "C" double WeakCallDX(const void *, uint8_t *, uint8_t **) { abort(); }
+    extern "C" RetGG WeakCallGGX(const void *, uint8_t *, uint8_t **) { abort(); }
+    extern "C" RetDD WeakCallDDX(const void *, uint8_t *, uint8_t **) { abort(); }
+    extern "C" RetDG WeakCallDGX(const void *, uint8_t *, uint8_t **) { abort(); }
+    extern "C" RetGD WeakCallGDX(const void *, uint8_t *, uint8_t **) { abort(); }
+    extern "C" RetDDDD WeakCallDDDDX(const void *, uint8_t *, uint8_t **) { abort(); }
 
     #if defined(_WIN64)
-        #pragma comment(linker, "/alternatename:ForwardCallG=WeakForwardCallG")
-        #pragma comment(linker, "/alternatename:ForwardCallF=WeakForwardCallF")
-        #pragma comment(linker, "/alternatename:ForwardCallD=WeakForwardCallD")
-        #pragma comment(linker, "/alternatename:ForwardCallGG=WeakForwardCallGG")
-        #pragma comment(linker, "/alternatename:ForwardCallDG=WeakForwardCallDG")
-        #pragma comment(linker, "/alternatename:ForwardCallGD=WeakForwardCallGD")
-        #pragma comment(linker, "/alternatename:ForwardCallDD=WeakForwardCallDD")
-        #pragma comment(linker, "/alternatename:ForwardCallDDDD=WeakForwardCallDDDD")
-        #pragma comment(linker, "/alternatename:ForwardCallGX=WeakForwardCallGX")
-        #pragma comment(linker, "/alternatename:ForwardCallFX=WeakForwardCallFX")
-        #pragma comment(linker, "/alternatename:ForwardCallDX=WeakForwardCallDX")
-        #pragma comment(linker, "/alternatename:ForwardCallGGX=WeakForwardCallGGX")
-        #pragma comment(linker, "/alternatename:ForwardCallDGX=WeakForwardCallDGX")
-        #pragma comment(linker, "/alternatename:ForwardCallGDX=WeakForwardCallGDX")
-        #pragma comment(linker, "/alternatename:ForwardCallDDX=WeakForwardCallDDX")
-        #pragma comment(linker, "/alternatename:ForwardCallDDDDX=WeakForwardCallDDDDX")
+        #pragma comment(linker, "/alternatename:CallG=WeakCallG")
+        #pragma comment(linker, "/alternatename:CallF=WeakCallF")
+        #pragma comment(linker, "/alternatename:CallD=WeakCallD")
+        #pragma comment(linker, "/alternatename:CallGG=WeakCallGG")
+        #pragma comment(linker, "/alternatename:CallDG=WeakCallDG")
+        #pragma comment(linker, "/alternatename:CallGD=WeakCallGD")
+        #pragma comment(linker, "/alternatename:CallDD=WeakCallDD")
+        #pragma comment(linker, "/alternatename:CallDDDD=WeakCallDDDD")
+        #pragma comment(linker, "/alternatename:CallGX=WeakCallGX")
+        #pragma comment(linker, "/alternatename:CallFX=WeakCallFX")
+        #pragma comment(linker, "/alternatename:CallDX=WeakCallDX")
+        #pragma comment(linker, "/alternatename:CallGGX=WeakCallGGX")
+        #pragma comment(linker, "/alternatename:CallDGX=WeakCallDGX")
+        #pragma comment(linker, "/alternatename:CallGDX=WeakCallGDX")
+        #pragma comment(linker, "/alternatename:CallDDX=WeakCallDDX")
+        #pragma comment(linker, "/alternatename:CallDDDDX=WeakCallDDDDX")
     #else
-        #pragma comment(linker, "/alternatename:_ForwardCallG=_WeakForwardCallG")
-        #pragma comment(linker, "/alternatename:_ForwardCallF=_WeakForwardCallF")
-        #pragma comment(linker, "/alternatename:_ForwardCallD=_WeakForwardCallD")
-        #pragma comment(linker, "/alternatename:_ForwardCallGG=_WeakForwardCallGG")
-        #pragma comment(linker, "/alternatename:_ForwardCallDD=_WeakForwardCallDD")
-        #pragma comment(linker, "/alternatename:_ForwardCallDG=_WeakForwardCallDG")
-        #pragma comment(linker, "/alternatename:_ForwardCallGD=_WeakForwardCallGD")
-        #pragma comment(linker, "/alternatename:_ForwardCallDDDD=_WeakForwardCallDDDD")
-        #pragma comment(linker, "/alternatename:_ForwardCallGX=_WeakForwardCallGX")
-        #pragma comment(linker, "/alternatename:_ForwardCallFX=_WeakForwardCallFX")
-        #pragma comment(linker, "/alternatename:_ForwardCallDX=_WeakForwardCallDX")
-        #pragma comment(linker, "/alternatename:_ForwardCallGGX=_WeakForwardCallGGX")
-        #pragma comment(linker, "/alternatename:_ForwardCallDDX=_WeakForwardCallDDX")
-        #pragma comment(linker, "/alternatename:_ForwardCallDGX=_WeakForwardCallDGX")
-        #pragma comment(linker, "/alternatename:_ForwardCallGDX=_WeakForwardCallGDX")
-        #pragma comment(linker, "/alternatename:_ForwardCallDDDDX=_WeakForwardCallDDDDX")
+        #pragma comment(linker, "/alternatename:_CallG=_WeakCallG")
+        #pragma comment(linker, "/alternatename:_CallF=_WeakCallF")
+        #pragma comment(linker, "/alternatename:_CallD=_WeakCallD")
+        #pragma comment(linker, "/alternatename:_CallGG=_WeakCallGG")
+        #pragma comment(linker, "/alternatename:_CallDD=_WeakCallDD")
+        #pragma comment(linker, "/alternatename:_CallDG=_WeakCallDG")
+        #pragma comment(linker, "/alternatename:_CallGD=_WeakCallGD")
+        #pragma comment(linker, "/alternatename:_CallDDDD=_WeakCallDDDD")
+        #pragma comment(linker, "/alternatename:_CallGX=_WeakCallGX")
+        #pragma comment(linker, "/alternatename:_CallFX=_WeakCallFX")
+        #pragma comment(linker, "/alternatename:_CallDX=_WeakCallDX")
+        #pragma comment(linker, "/alternatename:_CallGGX=_WeakCallGGX")
+        #pragma comment(linker, "/alternatename:_CallDDX=_WeakCallDDX")
+        #pragma comment(linker, "/alternatename:_CallDGX=_WeakCallDGX")
+        #pragma comment(linker, "/alternatename:_CallGDX=_WeakCallGDX")
+        #pragma comment(linker, "/alternatename:_CallDDDDX=_WeakCallDDDDX")
     #endif
 #else
-    extern "C" uint64_t __attribute__((weak)) ForwardCallG(const void *, uint8_t *, uint8_t **) { abort(); }
-    extern "C" float __attribute__((weak)) ForwardCallF(const void *, uint8_t *, uint8_t **) { abort(); }
-    extern "C" double __attribute__((weak)) ForwardCallD(const void *, uint8_t *, uint8_t **) { abort(); }
-    extern "C" RetGG __attribute__((weak)) ForwardCallGG(const void *, uint8_t *, uint8_t **) { abort(); }
-    extern "C" RetDD __attribute__((weak)) ForwardCallDD(const void *, uint8_t *, uint8_t **) { abort(); }
-    extern "C" RetDG __attribute__((weak)) ForwardCallDG(const void *, uint8_t *, uint8_t **) { abort(); }
-    extern "C" RetGD __attribute__((weak)) ForwardCallGD(const void *, uint8_t *, uint8_t **) { abort(); }
-    extern "C" RetDDDD __attribute__((weak)) ForwardCallDDDD(const void *, uint8_t *, uint8_t **) { abort(); }
-    extern "C" uint64_t __attribute__((weak)) ForwardCallGX(const void *, uint8_t *, uint8_t **) { abort(); }
-    extern "C" float __attribute__((weak)) ForwardCallFX(const void *, uint8_t *, uint8_t **) { abort(); }
-    extern "C" double __attribute__((weak)) ForwardCallDX(const void *, uint8_t *, uint8_t **) { abort(); }
-    extern "C" RetGG __attribute__((weak)) ForwardCallGGX(const void *, uint8_t *, uint8_t **) { abort(); }
-    extern "C" RetDD __attribute__((weak)) ForwardCallDDX(const void *, uint8_t *, uint8_t **) { abort(); }
-    extern "C" RetDG __attribute__((weak)) ForwardCallDGX(const void *, uint8_t *, uint8_t **) { abort(); }
-    extern "C" RetGD __attribute__((weak)) ForwardCallGDX(const void *, uint8_t *, uint8_t **) { abort(); }
-    extern "C" RetDDDD __attribute__((weak)) ForwardCallDDDDX(const void *, uint8_t *, uint8_t **) { abort(); }
+    extern "C" uint64_t __attribute__((weak)) CallG(const void *, uint8_t *, uint8_t **) { abort(); }
+    extern "C" float __attribute__((weak)) CallF(const void *, uint8_t *, uint8_t **) { abort(); }
+    extern "C" double __attribute__((weak)) CallD(const void *, uint8_t *, uint8_t **) { abort(); }
+    extern "C" RetGG __attribute__((weak)) CallGG(const void *, uint8_t *, uint8_t **) { abort(); }
+    extern "C" RetDD __attribute__((weak)) CallDD(const void *, uint8_t *, uint8_t **) { abort(); }
+    extern "C" RetDG __attribute__((weak)) CallDG(const void *, uint8_t *, uint8_t **) { abort(); }
+    extern "C" RetGD __attribute__((weak)) CallGD(const void *, uint8_t *, uint8_t **) { abort(); }
+    extern "C" RetDDDD __attribute__((weak)) CallDDDD(const void *, uint8_t *, uint8_t **) { abort(); }
+    extern "C" uint64_t __attribute__((weak)) CallGX(const void *, uint8_t *, uint8_t **) { abort(); }
+    extern "C" float __attribute__((weak)) CallFX(const void *, uint8_t *, uint8_t **) { abort(); }
+    extern "C" double __attribute__((weak)) CallDX(const void *, uint8_t *, uint8_t **) { abort(); }
+    extern "C" RetGG __attribute__((weak)) CallGGX(const void *, uint8_t *, uint8_t **) { abort(); }
+    extern "C" RetDD __attribute__((weak)) CallDDX(const void *, uint8_t *, uint8_t **) { abort(); }
+    extern "C" RetDG __attribute__((weak)) CallDGX(const void *, uint8_t *, uint8_t **) { abort(); }
+    extern "C" RetGD __attribute__((weak)) CallGDX(const void *, uint8_t *, uint8_t **) { abort(); }
+    extern "C" RetDDDD __attribute__((weak)) CallDDDDX(const void *, uint8_t *, uint8_t **) { abort(); }
 #endif
 
 }

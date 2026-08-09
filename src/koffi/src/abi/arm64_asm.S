@@ -17,18 +17,18 @@
 
 # These three are the same, but they differ (in the C side) by their return type.
 # Unlike the three next functions, these ones don't forward XMM argument registers.
-.global SYMBOL(ForwardCallG)
-.global SYMBOL(ForwardCallF)
-.global SYMBOL(ForwardCallD)
-.global SYMBOL(ForwardCallGG)
-.global SYMBOL(ForwardCallDDDD)
+.global SYMBOL(CallG)
+.global SYMBOL(CallF)
+.global SYMBOL(CallD)
+.global SYMBOL(CallGG)
+.global SYMBOL(CallDDDD)
 
 # The X variants are slightly slower, and are used when XMM arguments must be forwarded.
-.global SYMBOL(ForwardCallGX)
-.global SYMBOL(ForwardCallFX)
-.global SYMBOL(ForwardCallDX)
-.global SYMBOL(ForwardCallGGX)
-.global SYMBOL(ForwardCallDDDDX)
+.global SYMBOL(CallGX)
+.global SYMBOL(CallFX)
+.global SYMBOL(CallDX)
+.global SYMBOL(CallGGX)
+.global SYMBOL(CallDDDDX)
 
 # Copy function pointer to r9, in order to save it through argument forwarding.
 # Also make a copy of the SP to CallData::old_sp because the callback system might need it.
@@ -79,56 +79,56 @@
     ldp d0, d1, [x1, 72]
 .endm
 
-SYMBOL(ForwardCallG):
+SYMBOL(CallG):
     prologue
     forward_gpr
     epilogue
 
-SYMBOL(ForwardCallF):
+SYMBOL(CallF):
     prologue
     forward_gpr
     epilogue
 
-SYMBOL(ForwardCallD):
+SYMBOL(CallD):
     prologue
     forward_gpr
     epilogue
 
-SYMBOL(ForwardCallGG):
+SYMBOL(CallGG):
     prologue
     forward_gpr
     epilogue
 
-SYMBOL(ForwardCallDDDD):
+SYMBOL(CallDDDD):
     prologue
     forward_gpr
     epilogue
 
-SYMBOL(ForwardCallGX):
-    prologue
-    forward_vec
-    forward_gpr
-    epilogue
-
-SYMBOL(ForwardCallFX):
+SYMBOL(CallGX):
     prologue
     forward_vec
     forward_gpr
     epilogue
 
-SYMBOL(ForwardCallDX):
+SYMBOL(CallFX):
     prologue
     forward_vec
     forward_gpr
     epilogue
 
-SYMBOL(ForwardCallGGX):
+SYMBOL(CallDX):
     prologue
     forward_vec
     forward_gpr
     epilogue
 
-SYMBOL(ForwardCallDDDDX):
+SYMBOL(CallGGX):
+    prologue
+    forward_vec
+    forward_gpr
+    epilogue
+
+SYMBOL(CallDDDDX):
     prologue
     forward_vec
     forward_gpr

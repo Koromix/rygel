@@ -4,12 +4,12 @@
 ; Forward
 ; ----------------------------
 
-public ForwardCallG
-public ForwardCallF
-public ForwardCallD
-public ForwardCallGX
-public ForwardCallFX
-public ForwardCallDX
+public CallG
+public CallF
+public CallD
+public CallGX
+public CallFX
+public CallDX
 
 .model flat, C
 .code
@@ -43,38 +43,38 @@ epilogue macro
     ret
 endm
 
-ForwardCallG proc
+CallG proc
     prologue
     epilogue
-ForwardCallG endp
+CallG endp
 
-ForwardCallF proc
+CallF proc
     prologue
     epilogue
-ForwardCallF endp
+CallF endp
 
-ForwardCallD proc
+CallD proc
     prologue
     epilogue
-ForwardCallD endp
+CallD endp
 
-ForwardCallGX proc
+CallGX proc
     prologue
     fastcall
     epilogue
-ForwardCallGX endp
+CallGX endp
 
-ForwardCallFX proc
+CallFX proc
     prologue
     fastcall
     epilogue
-ForwardCallFX endp
+CallFX endp
 
-ForwardCallDX proc
+CallDX proc
     prologue
     fastcall
     epilogue
-ForwardCallDX endp
+CallDX endp
 
 ; Callbacks
 ; ----------------------------

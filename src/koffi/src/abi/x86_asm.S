@@ -10,12 +10,12 @@
 # Forward
 # ----------------------------
 
-.global SYMBOL(ForwardCallG)
-.global SYMBOL(ForwardCallF)
-.global SYMBOL(ForwardCallD)
-.global SYMBOL(ForwardCallGX)
-.global SYMBOL(ForwardCallFX)
-.global SYMBOL(ForwardCallDX)
+.global SYMBOL(CallG)
+.global SYMBOL(CallF)
+.global SYMBOL(CallD)
+.global SYMBOL(CallGX)
+.global SYMBOL(CallFX)
+.global SYMBOL(CallDX)
 
 #define ENDBR32 .byte 0xf3, 0x0f, 0x1e, 0xfb
 
@@ -54,29 +54,29 @@
     .cfi_endproc
 .endm
 
-SYMBOL(ForwardCallG):
+SYMBOL(CallG):
     prologue
     epilogue
 
-SYMBOL(ForwardCallF):
+SYMBOL(CallF):
     prologue
     epilogue
 
-SYMBOL(ForwardCallD):
+SYMBOL(CallD):
     prologue
     epilogue
 
-SYMBOL(ForwardCallGX):
-    prologue
-    fastcall
-    epilogue
-
-SYMBOL(ForwardCallFX):
+SYMBOL(CallGX):
     prologue
     fastcall
     epilogue
 
-SYMBOL(ForwardCallDX):
+SYMBOL(CallFX):
+    prologue
+    fastcall
+    epilogue
+
+SYMBOL(CallDX):
     prologue
     fastcall
     epilogue

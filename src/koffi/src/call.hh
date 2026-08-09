@@ -47,7 +47,7 @@ struct alignas(8) CallData {
     bool release_alloc = false;
 
     uint8_t *async_base;
-    const AbiInstruction *async_ip;
+    const InstructionData *async_ip;
 
     LocalArray<int16_t, 16> used_trampolines;
     LocalArray<OutArgument, MaxParameters> out_arguments;

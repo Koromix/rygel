@@ -6,12 +6,12 @@
 # Forward
 # ----------------------------
 
-.global ForwardCallG
-.global ForwardCallF
-.global ForwardCallD
-.global ForwardCallGX
-.global ForwardCallFX
-.global ForwardCallDX
+.global CallG
+.global CallF
+.global CallD
+.global CallGX
+.global CallFX
+.global CallDX
 
 .global SehHandler
 
@@ -47,7 +47,7 @@
 # Its frame lives entirely on the custom stack, so its EstablisherFrame passes
 # the TEB stack bounds check. This ensures that SehHandler is found by
 # RtlDispatchException before it tries to cross back to the original stack
-# (through ForwardCall*), which would fail the bounds check and terminate.
+# (through Call*), which would fail the bounds check and terminate.
 # After the native call returns, CallNative restores the original stack via
 # RBP (non-volatile, preserved by native) and returns directly to the C++ caller.
 CallNative:
@@ -60,34 +60,34 @@ CallNative:
     ret
     .seh_endproc
 
-ForwardCallG:
+CallG:
     prologue
     forward_gpr
     jmp CallNative
 
-ForwardCallF:
+CallF:
     prologue
     forward_gpr
     jmp CallNative
 
-ForwardCallD:
+CallD:
     prologue
     forward_gpr
     jmp CallNative
 
-ForwardCallGX:
-    prologue
-    forward_xmm
-    forward_gpr
-    jmp CallNative
-
-ForwardCallFX:
+CallGX:
     prologue
     forward_xmm
     forward_gpr
     jmp CallNative
 
-ForwardCallDX:
+CallFX:
+    prologue
+    forward_xmm
+    forward_gpr
+    jmp CallNative
+
+CallDX:
     prologue
     forward_xmm
     forward_gpr

@@ -12,22 +12,22 @@
 
 # These five are the same, but they differ (in the C side) by their return type.
 # Unlike the five next functions, these ones don't forward XMM argument registers.
-.global SYMBOL(ForwardCallG)
-.global SYMBOL(ForwardCallF)
-.global SYMBOL(ForwardCallD)
-.global SYMBOL(ForwardCallGG)
-.global SYMBOL(ForwardCallDG)
-.global SYMBOL(ForwardCallGD)
-.global SYMBOL(ForwardCallDD)
+.global SYMBOL(CallG)
+.global SYMBOL(CallF)
+.global SYMBOL(CallD)
+.global SYMBOL(CallGG)
+.global SYMBOL(CallDG)
+.global SYMBOL(CallGD)
+.global SYMBOL(CallDD)
 
 # The X variants are slightly slower, and are used when XMM arguments must be forwarded.
-.global SYMBOL(ForwardCallGX)
-.global SYMBOL(ForwardCallFX)
-.global SYMBOL(ForwardCallDX)
-.global SYMBOL(ForwardCallGGX)
-.global SYMBOL(ForwardCallDGX)
-.global SYMBOL(ForwardCallGDX)
-.global SYMBOL(ForwardCallDDX)
+.global SYMBOL(CallGX)
+.global SYMBOL(CallFX)
+.global SYMBOL(CallDX)
+.global SYMBOL(CallGGX)
+.global SYMBOL(CallDGX)
+.global SYMBOL(CallGDX)
+.global SYMBOL(CallDDX)
 
 #define ENDBR64 .byte 0xf3, 0x0f, 0x1e, 0xfa
 
@@ -81,91 +81,91 @@
     movsd 48(%rsi), %xmm0
 .endm
 
-SYMBOL(ForwardCallG):
+SYMBOL(CallG):
     prologue
     forward_gpr
     movb $0, %al
     epilogue
 
-SYMBOL(ForwardCallF):
+SYMBOL(CallF):
     prologue
     forward_gpr
     movb $0, %al
     epilogue
 
-SYMBOL(ForwardCallD):
+SYMBOL(CallD):
     prologue
     forward_gpr
     movb $0, %al
     epilogue
 
-SYMBOL(ForwardCallGG):
+SYMBOL(CallGG):
     prologue
     forward_gpr
     movb $0, %al
     epilogue
 
-SYMBOL(ForwardCallDG):
+SYMBOL(CallDG):
     prologue
     forward_gpr
     movb $0, %al
     epilogue
 
-SYMBOL(ForwardCallGD):
+SYMBOL(CallGD):
     prologue
     forward_gpr
     movb $0, %al
     epilogue
 
-SYMBOL(ForwardCallDD):
+SYMBOL(CallDD):
     prologue
     forward_gpr
     movb $0, %al
     epilogue
 
-SYMBOL(ForwardCallGX):
+SYMBOL(CallGX):
     prologue
     forward_xmm
     forward_gpr
     movb $8, %al
     epilogue
 
-SYMBOL(ForwardCallFX):
+SYMBOL(CallFX):
     prologue
     forward_xmm
     forward_gpr
     movb $8, %al
     epilogue
 
-SYMBOL(ForwardCallDX):
+SYMBOL(CallDX):
     prologue
     forward_xmm
     forward_gpr
     movb $8, %al
     epilogue
 
-SYMBOL(ForwardCallGGX):
+SYMBOL(CallGGX):
     prologue
     forward_xmm
     forward_gpr
     movb $8, %al
     epilogue
 
-SYMBOL(ForwardCallDGX):
+SYMBOL(CallDGX):
     prologue
     forward_xmm
     forward_gpr
     movb $8, %al
     epilogue
 
-SYMBOL(ForwardCallGDX):
+SYMBOL(CallGDX):
     prologue
     forward_xmm
     forward_gpr
     movb $8, %al
     epilogue
 
-SYMBOL(ForwardCallDDX):
+SYMBOL(CallDDX):
     prologue
     forward_xmm
     forward_gpr

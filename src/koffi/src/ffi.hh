@@ -200,15 +200,6 @@ static const char *const CallConventionNames[] = {
 
 enum class AbiMethod : int;
 
-struct AbiInstruction {
-    void *op;
-
-    int32_t a = 0;
-    int16_t b1 = 0;
-    int16_t b2 = 0;
-    const TypeInfo *type = nullptr;
-};
-
 struct ParameterInfo {
     const TypeInfo *type;
     int directions;
@@ -270,12 +261,13 @@ struct ReturnInfo {
 #endif
 };
 
-struct ValueCast {
-    napi_env env;
-    napi_ref ref;
-    const TypeInfo *type;
+struct InstructionData {
+    void *op;
 
-    ~ValueCast();
+    int32_t a = 0;
+    int16_t b1 = 0;
+    int16_t b2 = 0;
+    const TypeInfo *type = nullptr;
 };
 
 // Also used for callbacks, even though many members are not used in this case
@@ -302,8 +294,8 @@ struct FunctionInfo {
 
     // ABI-specific part
 
-    HeapArray<AbiInstruction> sync;
-    HeapArray<AbiInstruction> async;
+    HeapArray<InstructionData> sync;
+    HeapArray<InstructionData> async;
     Size stk_size;
 #if defined(__i386__) || defined(_M_IX86)
     int ret_pop;
@@ -412,6 +404,14 @@ struct InstanceData {
 static_assert(DefaultResidentAsyncPools <= K_LEN(InstanceData::memories.data) - 1);
 static_assert(DefaultMaxAsyncCalls >= DefaultResidentAsyncPools);
 static_assert(MaxAsyncCalls >= DefaultMaxAsyncCalls);
+
+struct ValueCast {
+    napi_env env;
+    napi_ref ref;
+    const TypeInfo *type;
+
+    ~ValueCast();
+};
 
 struct TrampolineInfo {
     int state;

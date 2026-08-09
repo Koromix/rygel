@@ -8,18 +8,18 @@
 
     ; These three are the same, but they differ (in the C side) by their return type.
     ; Unlike the three next functions, these ones don't forward XMM argument registers.
-    EXPORT ForwardCallG
-    EXPORT ForwardCallF
-    EXPORT ForwardCallD
-    EXPORT ForwardCallGG
-    EXPORT ForwardCallDDDD
+    EXPORT CallG
+    EXPORT CallF
+    EXPORT CallD
+    EXPORT CallGG
+    EXPORT CallDDDD
 
     ; The X variants are slightly slower, and are used when XMM arguments must be forwarded.
-    EXPORT ForwardCallGX
-    EXPORT ForwardCallFX
-    EXPORT ForwardCallDX
-    EXPORT ForwardCallGGX
-    EXPORT ForwardCallDDDDX
+    EXPORT CallGX
+    EXPORT CallFX
+    EXPORT CallDX
+    EXPORT CallGGX
+    EXPORT CallDDDDX
 
     ; Copy function pointer to r9, in order to save it through argument forwarding.
     ; Save RSP in r29 (non-volatile), and use carefully assembled stack provided by caller.
@@ -66,65 +66,65 @@
     ldp d0, d1, [x1, 72]
     MEND
 
-ForwardCallG PROC
+CallG PROC
     prologue
     forward_gpr
     epilogue
     ENDP
 
-ForwardCallF PROC
+CallF PROC
     prologue
     forward_gpr
     epilogue
     ENDP
 
-ForwardCallD PROC
+CallD PROC
     prologue
     forward_gpr
     epilogue
     ENDP
 
-ForwardCallGG PROC
+CallGG PROC
     prologue
     forward_gpr
     epilogue
     ENDP
 
-ForwardCallDDDD PROC
+CallDDDD PROC
     prologue
     forward_gpr
     epilogue
     ENDP
 
-ForwardCallGX PROC
-    prologue
-    forward_vec
-    forward_gpr
-    epilogue
-    ENDP
-
-ForwardCallFX PROC
+CallGX PROC
     prologue
     forward_vec
     forward_gpr
     epilogue
     ENDP
 
-ForwardCallDX PROC
+CallFX PROC
     prologue
     forward_vec
     forward_gpr
     epilogue
     ENDP
 
-ForwardCallGGX PROC
+CallDX PROC
     prologue
     forward_vec
     forward_gpr
     epilogue
     ENDP
 
-ForwardCallDDDDX PROC
+CallGGX PROC
+    prologue
+    forward_vec
+    forward_gpr
+    epilogue
+    ENDP
+
+CallDDDDX PROC
     prologue
     forward_vec
     forward_gpr
