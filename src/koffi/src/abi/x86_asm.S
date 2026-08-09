@@ -13,9 +13,9 @@
 .global SYMBOL(ForwardCallG)
 .global SYMBOL(ForwardCallF)
 .global SYMBOL(ForwardCallD)
-.global SYMBOL(ForwardCallGR)
-.global SYMBOL(ForwardCallFR)
-.global SYMBOL(ForwardCallDR)
+.global SYMBOL(ForwardCallGX)
+.global SYMBOL(ForwardCallFX)
+.global SYMBOL(ForwardCallDX)
 
 #define ENDBR32 .byte 0xf3, 0x0f, 0x1e, 0xfb
 
@@ -66,17 +66,17 @@ SYMBOL(ForwardCallD):
     prologue
     epilogue
 
-SYMBOL(ForwardCallGR):
+SYMBOL(ForwardCallGX):
     prologue
     fastcall
     epilogue
 
-SYMBOL(ForwardCallFR):
+SYMBOL(ForwardCallFX):
     prologue
     fastcall
     epilogue
 
-SYMBOL(ForwardCallDR):
+SYMBOL(ForwardCallDX):
     prologue
     fastcall
     epilogue

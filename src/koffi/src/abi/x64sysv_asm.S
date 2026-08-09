@@ -12,15 +12,19 @@
 
 # These five are the same, but they differ (in the C side) by their return type.
 # Unlike the five next functions, these ones don't forward XMM argument registers.
-.global SYMBOL(ForwardCallGG)
+.global SYMBOL(ForwardCallG)
 .global SYMBOL(ForwardCallF)
+.global SYMBOL(ForwardCallD)
+.global SYMBOL(ForwardCallGG)
 .global SYMBOL(ForwardCallDG)
 .global SYMBOL(ForwardCallGD)
 .global SYMBOL(ForwardCallDD)
 
 # The X variants are slightly slower, and are used when XMM arguments must be forwarded.
-.global SYMBOL(ForwardCallGGX)
+.global SYMBOL(ForwardCallGX)
 .global SYMBOL(ForwardCallFX)
+.global SYMBOL(ForwardCallDX)
+.global SYMBOL(ForwardCallGGX)
 .global SYMBOL(ForwardCallDGX)
 .global SYMBOL(ForwardCallGDX)
 .global SYMBOL(ForwardCallDDX)
@@ -77,13 +81,25 @@
     movsd 48(%rsi), %xmm0
 .endm
 
-SYMBOL(ForwardCallGG):
+SYMBOL(ForwardCallG):
     prologue
     forward_gpr
     movb $0, %al
     epilogue
 
 SYMBOL(ForwardCallF):
+    prologue
+    forward_gpr
+    movb $0, %al
+    epilogue
+
+SYMBOL(ForwardCallD):
+    prologue
+    forward_gpr
+    movb $0, %al
+    epilogue
+
+SYMBOL(ForwardCallGG):
     prologue
     forward_gpr
     movb $0, %al
@@ -107,7 +123,7 @@ SYMBOL(ForwardCallDD):
     movb $0, %al
     epilogue
 
-SYMBOL(ForwardCallGGX):
+SYMBOL(ForwardCallGX):
     prologue
     forward_xmm
     forward_gpr
@@ -115,6 +131,20 @@ SYMBOL(ForwardCallGGX):
     epilogue
 
 SYMBOL(ForwardCallFX):
+    prologue
+    forward_xmm
+    forward_gpr
+    movb $8, %al
+    epilogue
+
+SYMBOL(ForwardCallDX):
+    prologue
+    forward_xmm
+    forward_gpr
+    movb $8, %al
+    epilogue
+
+SYMBOL(ForwardCallGGX):
     prologue
     forward_xmm
     forward_gpr

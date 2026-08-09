@@ -8,13 +8,17 @@
 
     ; These three are the same, but they differ (in the C side) by their return type.
     ; Unlike the three next functions, these ones don't forward XMM argument registers.
-    EXPORT ForwardCallGG
+    EXPORT ForwardCallG
     EXPORT ForwardCallF
+    EXPORT ForwardCallD
+    EXPORT ForwardCallGG
     EXPORT ForwardCallDDDD
 
     ; The X variants are slightly slower, and are used when XMM arguments must be forwarded.
-    EXPORT ForwardCallGGX
+    EXPORT ForwardCallGX
     EXPORT ForwardCallFX
+    EXPORT ForwardCallDX
+    EXPORT ForwardCallGGX
     EXPORT ForwardCallDDDDX
 
     ; Copy function pointer to r9, in order to save it through argument forwarding.
@@ -62,7 +66,7 @@
     ldp d0, d1, [x1, 72]
     MEND
 
-ForwardCallGG PROC
+ForwardCallG PROC
     prologue
     forward_gpr
     epilogue
@@ -74,13 +78,25 @@ ForwardCallF PROC
     epilogue
     ENDP
 
+ForwardCallD PROC
+    prologue
+    forward_gpr
+    epilogue
+    ENDP
+
+ForwardCallGG PROC
+    prologue
+    forward_gpr
+    epilogue
+    ENDP
+
 ForwardCallDDDD PROC
     prologue
     forward_gpr
     epilogue
     ENDP
 
-ForwardCallGGX PROC
+ForwardCallGX PROC
     prologue
     forward_vec
     forward_gpr
@@ -88,6 +104,20 @@ ForwardCallGGX PROC
     ENDP
 
 ForwardCallFX PROC
+    prologue
+    forward_vec
+    forward_gpr
+    epilogue
+    ENDP
+
+ForwardCallDX PROC
+    prologue
+    forward_vec
+    forward_gpr
+    epilogue
+    ENDP
+
+ForwardCallGGX PROC
     prologue
     forward_vec
     forward_gpr

@@ -64,8 +64,9 @@ add_custom_command(OUTPUT trampolines/gnu.inc
                    DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/trampolines.cjs")
 
 set(KOFFI_SRC
-    src/call.cc
     src/ffi.cc
+    src/call.cc
+    src/forward.cc
     src/parser.cc
     src/type.cc
     src/util.cc

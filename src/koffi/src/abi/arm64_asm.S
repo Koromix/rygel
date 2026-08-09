@@ -17,13 +17,17 @@
 
 # These three are the same, but they differ (in the C side) by their return type.
 # Unlike the three next functions, these ones don't forward XMM argument registers.
-.global SYMBOL(ForwardCallGG)
+.global SYMBOL(ForwardCallG)
 .global SYMBOL(ForwardCallF)
+.global SYMBOL(ForwardCallD)
+.global SYMBOL(ForwardCallGG)
 .global SYMBOL(ForwardCallDDDD)
 
 # The X variants are slightly slower, and are used when XMM arguments must be forwarded.
-.global SYMBOL(ForwardCallGGX)
+.global SYMBOL(ForwardCallGX)
 .global SYMBOL(ForwardCallFX)
+.global SYMBOL(ForwardCallDX)
+.global SYMBOL(ForwardCallGGX)
 .global SYMBOL(ForwardCallDDDDX)
 
 # Copy function pointer to r9, in order to save it through argument forwarding.
@@ -75,7 +79,7 @@
     ldp d0, d1, [x1, 72]
 .endm
 
-SYMBOL(ForwardCallGG):
+SYMBOL(ForwardCallG):
     prologue
     forward_gpr
     epilogue
@@ -85,18 +89,40 @@ SYMBOL(ForwardCallF):
     forward_gpr
     epilogue
 
+SYMBOL(ForwardCallD):
+    prologue
+    forward_gpr
+    epilogue
+
+SYMBOL(ForwardCallGG):
+    prologue
+    forward_gpr
+    epilogue
+
 SYMBOL(ForwardCallDDDD):
     prologue
     forward_gpr
     epilogue
 
-SYMBOL(ForwardCallGGX):
+SYMBOL(ForwardCallGX):
     prologue
     forward_vec
     forward_gpr
     epilogue
 
 SYMBOL(ForwardCallFX):
+    prologue
+    forward_vec
+    forward_gpr
+    epilogue
+
+SYMBOL(ForwardCallDX):
+    prologue
+    forward_vec
+    forward_gpr
+    epilogue
+
+SYMBOL(ForwardCallGGX):
     prologue
     forward_vec
     forward_gpr

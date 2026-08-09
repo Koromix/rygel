@@ -21,13 +21,15 @@ namespace K {
 #endif
 
 #if defined(__GNUC__) || defined(__clang__)
-    #if  __has_attribute(musttail) && __has_attribute(preserve_none)
-        #define MUST_TAIL __attribute__((musttail))
-        #define PRESERVE_NONE __attribute__((preserve_none))
-    #elif  __has_attribute(musttail) && !defined(__clang__)
-        // GCC regalloc seems better, so the generated code is not too bad even without preserve_none
-        #define MUST_TAIL __attribute__((musttail))
-        #define PRESERVE_NONE
+    #if defined(__x86_64__) || defined(__aarch64__)
+        #if  __has_attribute(musttail) && __has_attribute(preserve_none)
+            #define MUST_TAIL __attribute__((musttail))
+            #define PRESERVE_NONE __attribute__((preserve_none))
+        #elif  __has_attribute(musttail) && !defined(__clang__)
+            // GCC regalloc seems better, so the generated code is not too bad even without preserve_none
+            #define MUST_TAIL __attribute__((musttail))
+            #define PRESERVE_NONE
+        #endif
     #endif
 #endif
 

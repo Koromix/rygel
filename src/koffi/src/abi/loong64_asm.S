@@ -8,15 +8,19 @@
 
 # These three are the same, but they differ (in the C side) by their return type.
 # Unlike the three next functions, these ones don't forward FA argument registers.
-.global ForwardCallGG
+.global ForwardCallG
 .global ForwardCallF
+.global ForwardCallD
+.global ForwardCallGG
 .global ForwardCallDG
 .global ForwardCallGD
 .global ForwardCallDD
 
 # The X variants are slightly slower, and are used when FA arguments must be forwarded.
-.global ForwardCallGGX
+.global ForwardCallGX
 .global ForwardCallFX
+.global ForwardCallDX
+.global ForwardCallGGX
 .global ForwardCallDGX
 .global ForwardCallGDX
 .global ForwardCallDDX
@@ -70,12 +74,22 @@
     fld.d $fa0, $a1, 64
 .endm
 
-ForwardCallGG:
+ForwardCallG:
     prologue
     forward_gpr
     epilogue
 
 ForwardCallF:
+    prologue
+    forward_gpr
+    epilogue
+
+ForwardCallD:
+    prologue
+    forward_gpr
+    epilogue
+
+ForwardCallGG:
     prologue
     forward_gpr
     epilogue
@@ -95,13 +109,25 @@ ForwardCallDD:
     forward_gpr
     epilogue
 
-ForwardCallGGX:
+ForwardCallGX:
     prologue
     forward_vec
     forward_gpr
     epilogue
 
 ForwardCallFX:
+    prologue
+    forward_vec
+    forward_gpr
+    epilogue
+
+ForwardCallDX:
+    prologue
+    forward_vec
+    forward_gpr
+    epilogue
+
+ForwardCallGGX:
     prologue
     forward_vec
     forward_gpr
