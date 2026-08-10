@@ -772,22 +772,22 @@ napi_value CallData::EndAsync()
 }
 
 #if defined(_MSC_VER)
-    extern "C" uint64_t WeakCallG(const void *, uint8_t *, uint8_t **) { abort(); }
-    extern "C" float WeakCallF(const void *, uint8_t *, uint8_t **) { abort(); }
-    extern "C" double WeakCallD(const void *, uint8_t *, uint8_t **) { abort(); }
-    extern "C" RetGG WeakCallGG(const void *, uint8_t *, uint8_t **) { abort(); }
-    extern "C" RetDD WeakCallDD(const void *, uint8_t *, uint8_t **) { abort(); }
-    extern "C" RetDG WeakCallDG(const void *, uint8_t *, uint8_t **) { abort(); }
-    extern "C" RetGD WeakCallGD(const void *, uint8_t *, uint8_t **) { abort(); }
-    extern "C" RetDDDD WeakCallDDDD(const void *, uint8_t *, uint8_t **) { abort(); }
-    extern "C" uint64_t WeakCallGX(const void *, uint8_t *, uint8_t **) { abort(); }
-    extern "C" float WeakCallFX(const void *, uint8_t *, uint8_t **) { abort(); }
-    extern "C" double WeakCallDX(const void *, uint8_t *, uint8_t **) { abort(); }
-    extern "C" RetGG WeakCallGGX(const void *, uint8_t *, uint8_t **) { abort(); }
-    extern "C" RetDD WeakCallDDX(const void *, uint8_t *, uint8_t **) { abort(); }
-    extern "C" RetDG WeakCallDGX(const void *, uint8_t *, uint8_t **) { abort(); }
-    extern "C" RetGD WeakCallGDX(const void *, uint8_t *, uint8_t **) { abort(); }
-    extern "C" RetDDDD WeakCallDDDDX(const void *, uint8_t *, uint8_t **) { abort(); }
+    extern "C" uint64_t WeakCallG(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
+    extern "C" float WeakCallF(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
+    extern "C" double WeakCallD(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
+    extern "C" RetGG WeakCallGG(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
+    extern "C" RetDD WeakCallDD(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
+    extern "C" RetDG WeakCallDG(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
+    extern "C" RetGD WeakCallGD(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
+    extern "C" RetDDDD WeakCallDDDD(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
+    extern "C" uint64_t WeakCallGX(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
+    extern "C" float WeakCallFX(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
+    extern "C" double WeakCallDX(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
+    extern "C" RetGG WeakCallGGX(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
+    extern "C" RetDD WeakCallDDX(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
+    extern "C" RetDG WeakCallDGX(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
+    extern "C" RetGD WeakCallGDX(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
+    extern "C" RetDDDD WeakCallDDDDX(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
 
     #if defined(_WIN64)
         #pragma comment(linker, "/alternatename:CallG=WeakCallG")
@@ -825,22 +825,22 @@ napi_value CallData::EndAsync()
         #pragma comment(linker, "/alternatename:_CallDDDDX=_WeakCallDDDDX")
     #endif
 #else
-    extern "C" uint64_t __attribute__((weak)) CallG(const void *, uint8_t *, uint8_t **) { abort(); }
-    extern "C" float __attribute__((weak)) CallF(const void *, uint8_t *, uint8_t **) { abort(); }
-    extern "C" double __attribute__((weak)) CallD(const void *, uint8_t *, uint8_t **) { abort(); }
-    extern "C" RetGG __attribute__((weak)) CallGG(const void *, uint8_t *, uint8_t **) { abort(); }
-    extern "C" RetDD __attribute__((weak)) CallDD(const void *, uint8_t *, uint8_t **) { abort(); }
-    extern "C" RetDG __attribute__((weak)) CallDG(const void *, uint8_t *, uint8_t **) { abort(); }
-    extern "C" RetGD __attribute__((weak)) CallGD(const void *, uint8_t *, uint8_t **) { abort(); }
-    extern "C" RetDDDD __attribute__((weak)) CallDDDD(const void *, uint8_t *, uint8_t **) { abort(); }
-    extern "C" uint64_t __attribute__((weak)) CallGX(const void *, uint8_t *, uint8_t **) { abort(); }
-    extern "C" float __attribute__((weak)) CallFX(const void *, uint8_t *, uint8_t **) { abort(); }
-    extern "C" double __attribute__((weak)) CallDX(const void *, uint8_t *, uint8_t **) { abort(); }
-    extern "C" RetGG __attribute__((weak)) CallGGX(const void *, uint8_t *, uint8_t **) { abort(); }
-    extern "C" RetDD __attribute__((weak)) CallDDX(const void *, uint8_t *, uint8_t **) { abort(); }
-    extern "C" RetDG __attribute__((weak)) CallDGX(const void *, uint8_t *, uint8_t **) { abort(); }
-    extern "C" RetGD __attribute__((weak)) CallGDX(const void *, uint8_t *, uint8_t **) { abort(); }
-    extern "C" RetDDDD __attribute__((weak)) CallDDDDX(const void *, uint8_t *, uint8_t **) { abort(); }
+    extern "C" uint64_t __attribute__((weak)) CallG(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
+    extern "C" float __attribute__((weak)) CallF(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
+    extern "C" double __attribute__((weak)) CallD(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
+    extern "C" RetGG __attribute__((weak)) CallGG(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
+    extern "C" RetDD __attribute__((weak)) CallDD(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
+    extern "C" RetDG __attribute__((weak)) CallDG(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
+    extern "C" RetGD __attribute__((weak)) CallGD(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
+    extern "C" RetDDDD __attribute__((weak)) CallDDDD(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
+    extern "C" uint64_t __attribute__((weak)) CallGX(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
+    extern "C" float __attribute__((weak)) CallFX(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
+    extern "C" double __attribute__((weak)) CallDX(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
+    extern "C" RetGG __attribute__((weak)) CallGGX(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
+    extern "C" RetDD __attribute__((weak)) CallDDX(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
+    extern "C" RetDG __attribute__((weak)) CallDGX(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
+    extern "C" RetGD __attribute__((weak)) CallGDX(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
+    extern "C" RetDDDD __attribute__((weak)) CallDDDDX(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
 #endif
 
 }
