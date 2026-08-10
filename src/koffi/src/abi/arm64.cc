@@ -446,7 +446,7 @@ bool AnalyseFunction(Napi::Env, InstanceData *instance, FunctionInfo *func)
 
                 func->sync.Append({ .op = Code2Op(run), .a = (int32_t)func->ret.type->size, .b1 = offset, .type = func->ret.type });
                 func->async.Append({ .op = Code2Op(call), .a = (int32_t)func->ret.type->size, .b1 = offset });
-                func->async.Append({ .op = Code2Op(Opcode::ReturnAggregateMem), .b1 = offset, .type = func->ret.type });
+                func->async.Append({ .op = Code2Op(Opcode::ReturnAggregateMem), .type = func->ret.type });
             }
         } break;
         case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
