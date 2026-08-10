@@ -257,6 +257,14 @@ void PrintAssertError(const char *filename, int line, const char *msg);
     #define K_UNREACHABLE() __assume(0)
 #endif
 
+#if defined(_MSC_VER) && defined(_WIN64)
+    #define K_WEAK_REDIRECT(Func, Replace) _Pragma(K_STRINGIFY(comment(linker, K_STRINGIFY(/alternatename:Func=Replace))))
+#elif defined(_MSC_VER)
+    #define K_WEAK_REDIRECT(Func, Replace) _Pragma(K_STRINGIFY(comment(linker, K_STRINGIFY(/alternatename:K_CONCAT(_, Func)=K_CONCAT(_, Replace)))))
+#else
+    #define K_WEAK_REDIRECT(Func, Replace) _Pragma(K_STRINGIFY(weak Func=Replace))
+#endif
+
 #define K_DELETE_COPY(Cls) \
     Cls(const Cls&) = delete; \
     Cls &operator=(const Cls&) = delete;

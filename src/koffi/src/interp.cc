@@ -771,76 +771,23 @@ napi_value CallData::EndAsync()
     return RunLoop(this, nullptr, async_base, next);
 }
 
-#if defined(_MSC_VER)
-    extern "C" uint64_t WeakCallG(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
-    extern "C" float WeakCallF(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
-    extern "C" double WeakCallD(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
-    extern "C" RetGG WeakCallGG(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
-    extern "C" RetDD WeakCallDD(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
-    extern "C" RetDG WeakCallDG(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
-    extern "C" RetGD WeakCallGD(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
-    extern "C" RetDDDD WeakCallDDDD(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
-    extern "C" uint64_t WeakCallGX(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
-    extern "C" float WeakCallFX(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
-    extern "C" double WeakCallDX(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
-    extern "C" RetGG WeakCallGGX(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
-    extern "C" RetDD WeakCallDDX(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
-    extern "C" RetDG WeakCallDGX(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
-    extern "C" RetGD WeakCallGDX(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
-    extern "C" RetDDDD WeakCallDDDDX(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
+extern "C" uint64_t CallUnused(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
 
-    #if defined(_WIN64)
-        #pragma comment(linker, "/alternatename:CallG=WeakCallG")
-        #pragma comment(linker, "/alternatename:CallF=WeakCallF")
-        #pragma comment(linker, "/alternatename:CallD=WeakCallD")
-        #pragma comment(linker, "/alternatename:CallGG=WeakCallGG")
-        #pragma comment(linker, "/alternatename:CallDG=WeakCallDG")
-        #pragma comment(linker, "/alternatename:CallGD=WeakCallGD")
-        #pragma comment(linker, "/alternatename:CallDD=WeakCallDD")
-        #pragma comment(linker, "/alternatename:CallDDDD=WeakCallDDDD")
-        #pragma comment(linker, "/alternatename:CallGX=WeakCallGX")
-        #pragma comment(linker, "/alternatename:CallFX=WeakCallFX")
-        #pragma comment(linker, "/alternatename:CallDX=WeakCallDX")
-        #pragma comment(linker, "/alternatename:CallGGX=WeakCallGGX")
-        #pragma comment(linker, "/alternatename:CallDGX=WeakCallDGX")
-        #pragma comment(linker, "/alternatename:CallGDX=WeakCallGDX")
-        #pragma comment(linker, "/alternatename:CallDDX=WeakCallDDX")
-        #pragma comment(linker, "/alternatename:CallDDDDX=WeakCallDDDDX")
-    #else
-        #pragma comment(linker, "/alternatename:_CallG=_WeakCallG")
-        #pragma comment(linker, "/alternatename:_CallF=_WeakCallF")
-        #pragma comment(linker, "/alternatename:_CallD=_WeakCallD")
-        #pragma comment(linker, "/alternatename:_CallGG=_WeakCallGG")
-        #pragma comment(linker, "/alternatename:_CallDD=_WeakCallDD")
-        #pragma comment(linker, "/alternatename:_CallDG=_WeakCallDG")
-        #pragma comment(linker, "/alternatename:_CallGD=_WeakCallGD")
-        #pragma comment(linker, "/alternatename:_CallDDDD=_WeakCallDDDD")
-        #pragma comment(linker, "/alternatename:_CallGX=_WeakCallGX")
-        #pragma comment(linker, "/alternatename:_CallFX=_WeakCallFX")
-        #pragma comment(linker, "/alternatename:_CallDX=_WeakCallDX")
-        #pragma comment(linker, "/alternatename:_CallGGX=_WeakCallGGX")
-        #pragma comment(linker, "/alternatename:_CallDDX=_WeakCallDDX")
-        #pragma comment(linker, "/alternatename:_CallDGX=_WeakCallDGX")
-        #pragma comment(linker, "/alternatename:_CallGDX=_WeakCallGDX")
-        #pragma comment(linker, "/alternatename:_CallDDDDX=_WeakCallDDDDX")
-    #endif
-#else
-    extern "C" uint64_t __attribute__((weak)) CallG(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
-    extern "C" float __attribute__((weak)) CallF(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
-    extern "C" double __attribute__((weak)) CallD(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
-    extern "C" RetGG __attribute__((weak)) CallGG(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
-    extern "C" RetDD __attribute__((weak)) CallDD(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
-    extern "C" RetDG __attribute__((weak)) CallDG(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
-    extern "C" RetGD __attribute__((weak)) CallGD(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
-    extern "C" RetDDDD __attribute__((weak)) CallDDDD(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
-    extern "C" uint64_t __attribute__((weak)) CallGX(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
-    extern "C" float __attribute__((weak)) CallFX(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
-    extern "C" double __attribute__((weak)) CallDX(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
-    extern "C" RetGG __attribute__((weak)) CallGGX(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
-    extern "C" RetDD __attribute__((weak)) CallDDX(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
-    extern "C" RetDG __attribute__((weak)) CallDGX(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
-    extern "C" RetGD __attribute__((weak)) CallGDX(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
-    extern "C" RetDDDD __attribute__((weak)) CallDDDDX(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
-#endif
+K_WEAK_REDIRECT(CallG, CallUnused)
+K_WEAK_REDIRECT(CallF, CallUnused)
+K_WEAK_REDIRECT(CallD, CallUnused)
+K_WEAK_REDIRECT(CallGG, CallUnused)
+K_WEAK_REDIRECT(CallDD, CallUnused)
+K_WEAK_REDIRECT(CallDG, CallUnused)
+K_WEAK_REDIRECT(CallGD, CallUnused)
+K_WEAK_REDIRECT(CallDDDD, CallUnused)
+K_WEAK_REDIRECT(CallGX, CallUnused)
+K_WEAK_REDIRECT(CallFX, CallUnused)
+K_WEAK_REDIRECT(CallDX, CallUnused)
+K_WEAK_REDIRECT(CallGGX, CallUnused)
+K_WEAK_REDIRECT(CallDDX, CallUnused)
+K_WEAK_REDIRECT(CallDGX, CallUnused)
+K_WEAK_REDIRECT(CallGDX, CallUnused)
+K_WEAK_REDIRECT(CallDDDDX, CallUnused)
 
 }
