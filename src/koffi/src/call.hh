@@ -11,8 +11,6 @@
 
 namespace K {
 
-bool AnalyseFunction(Napi::Env env, InstanceData *instance, FunctionInfo *func);
-
 struct BackRegisters;
 
 // I'm not sure why the alignas(8), because alignof(CallData) is 8 without it.

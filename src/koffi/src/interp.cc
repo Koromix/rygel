@@ -666,75 +666,77 @@ namespace {
     #pragma GCC diagnostic pop
 #endif
 
+bool PreparePlan(Napi::Env env, InstanceData *instance, FunctionInfo *func)
+{
+    if (!AnalyseFunction(env, instance, func))
+        return false;
+
 #if defined(MUST_TAIL)
+    static ForwardFunc *const ForwardDispatch[256] = {
+        #define PRIMITIVE(Name) ForwardPush ## Name,
+        #include "primitives.inc"
+        ForwardPushAggregateReg,
+        ForwardPushAggregateSplit,
+        ForwardPushAggregateStack,
+        ForwardPushAggregateMem,
+        #define PRIMITIVE(Name) ForwardRun ## Name,
+        #include "primitives.inc"
+        ForwardRunAggregateG,
+        ForwardRunAggregateF,
+        ForwardRunAggregateD,
+        ForwardRunAggregateGG,
+        ForwardRunAggregateDD,
+        ForwardRunAggregateGD,
+        ForwardRunAggregateDG,
+        ForwardRunAggregateDDDD,
+        ForwardRunAggregateMem,
+        #define PRIMITIVE(Name) ForwardRun ## Name ## X,
+        #include "primitives.inc"
+        ForwardRunAggregateGX,
+        ForwardRunAggregateFX,
+        ForwardRunAggregateDX,
+        ForwardRunAggregateGGX,
+        ForwardRunAggregateDDX,
+        ForwardRunAggregateGDX,
+        ForwardRunAggregateDGX,
+        ForwardRunAggregateDDDDX,
+        ForwardRunAggregateMemX,
+        ForwardYield,
+        ForwardCallG,
+        ForwardCallF,
+        ForwardCallD,
+        ForwardCallGG,
+        ForwardCallDD,
+        ForwardCallDG,
+        ForwardCallGD,
+        ForwardCallDDDD,
+        ForwardCallMem,
+        ForwardCallGX,
+        ForwardCallFX,
+        ForwardCallDX,
+        ForwardCallGGX,
+        ForwardCallDDX,
+        ForwardCallDGX,
+        ForwardCallGDX,
+        ForwardCallDDDDX,
+        ForwardCallMemX,
+        #define PRIMITIVE(Name) ForwardReturn ## Name,
+        #include "primitives.inc"
+        ForwardReturnAggregateReg,
+        ForwardReturnAggregateMem
+    };
 
-static ForwardFunc *const ForwardDispatch[256] = {
-    #define PRIMITIVE(Name) ForwardPush ## Name,
-    #include "primitives.inc"
-    ForwardPushAggregateReg,
-    ForwardPushAggregateSplit,
-    ForwardPushAggregateStack,
-    ForwardPushAggregateMem,
-    #define PRIMITIVE(Name) ForwardRun ## Name,
-    #include "primitives.inc"
-    ForwardRunAggregateG,
-    ForwardRunAggregateF,
-    ForwardRunAggregateD,
-    ForwardRunAggregateGG,
-    ForwardRunAggregateDD,
-    ForwardRunAggregateGD,
-    ForwardRunAggregateDG,
-    ForwardRunAggregateDDDD,
-    ForwardRunAggregateMem,
-    #define PRIMITIVE(Name) ForwardRun ## Name ## X,
-    #include "primitives.inc"
-    ForwardRunAggregateGX,
-    ForwardRunAggregateFX,
-    ForwardRunAggregateDX,
-    ForwardRunAggregateGGX,
-    ForwardRunAggregateDDX,
-    ForwardRunAggregateGDX,
-    ForwardRunAggregateDGX,
-    ForwardRunAggregateDDDDX,
-    ForwardRunAggregateMemX,
-    ForwardYield,
-    ForwardCallG,
-    ForwardCallF,
-    ForwardCallD,
-    ForwardCallGG,
-    ForwardCallDD,
-    ForwardCallDG,
-    ForwardCallGD,
-    ForwardCallDDDD,
-    ForwardCallMem,
-    ForwardCallGX,
-    ForwardCallFX,
-    ForwardCallDX,
-    ForwardCallGGX,
-    ForwardCallDDX,
-    ForwardCallDGX,
-    ForwardCallGDX,
-    ForwardCallDDDDX,
-    ForwardCallMemX,
-    #define PRIMITIVE(Name) ForwardReturn ## Name,
-    #include "primitives.inc"
-    ForwardReturnAggregateReg,
-    ForwardReturnAggregateMem
-};
+    for (InstructionData &inst: func->sync) {
+        inst.op = (void *)ForwardDispatch[(uintptr_t)inst.op];
+    }
 
-void *Code2Op(Opcode code)
-{
-    return (void *)ForwardDispatch[(int)code];
-}
-
-#else
-
-void *Code2Op(Opcode code)
-{
-    return (void *)code;
-}
-
+    for (InstructionData &inst: func->async) {
+        inst.op = (void *)ForwardDispatch[(uintptr_t)inst.op];
+    }
 #endif
+
+    return true;
+}
 
 napi_value CallData::Run(const FunctionInfo *func, napi_value *args)
 {

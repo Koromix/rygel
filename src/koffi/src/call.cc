@@ -2,8 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
 #include "lib/native/base/base.hh"
-#include "call.hh"
 #include "ffi.hh"
+#include "call.hh"
+#include "interp.hh"
 #include "type.hh"
 #include "util.hh"
 #if defined(_WIN32)
@@ -1436,7 +1437,7 @@ static napi_value TranslateVariadicCall(napi_env env, const FunctionInfo *func, 
             variadic->parameters.Append(param);
         }
 
-        if (!AnalyseFunction(env, instance, variadic)) [[unlikely]]
+        if (!PreparePlan(env, instance, variadic)) [[unlikely]]
             return Napi::Env(env).Null();
     }
 

@@ -4,6 +4,7 @@
 #include "lib/native/base/base.hh"
 #include "ffi.hh"
 #include "call.hh"
+#include "interp.hh"
 #include "parser.hh"
 #include "type.hh"
 #include "util.hh"
@@ -1206,7 +1207,7 @@ static Napi::Value CreateFunctionType(const Napi::CallbackInfo &info)
         func->name = Fmt(&instance->str_alloc, "<anonymous_%1>", instance->types.count).ptr;
     }
 
-    if (!AnalyseFunction(env, instance, func))
+    if (!PreparePlan(env, instance, func))
         return env.Null();
 
     // We cannot fail after this check
@@ -1630,7 +1631,7 @@ Napi::Value LibraryHandle::Func(const Napi::CallbackInfo &info)
         func->convention = CallConvention::Cdecl;
     }
 
-    if (!AnalyseFunction(env, instance, func))
+    if (!PreparePlan(env, instance, func))
         return env.Null();
 
 #if defined(_WIN32)
