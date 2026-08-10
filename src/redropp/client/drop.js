@@ -373,12 +373,7 @@ async function runDownload(secret) {
                         <div style="text-align: center;">${T.keep_tab_open_during_download}</div>
                     ` : ''}
                 ` : ''}
-                ${zip_status?.error != null ? html`
-                    <p style="text-align: center; color: red;">
-                        ${T.error_has_occured}<br>
-                        ${zip_status.error.message}
-                    </p>
-                ` : ''}
+                ${zip_status?.error != null ? html`<p style="text-align: center; color: red;">${zip_status.error.message}</p>` : ''}
             </div>
 
             <div class="actions">
@@ -954,12 +949,7 @@ async function runUpload() {
                     ${T.remaining_time}${T._colon}${stat.remaining != null ? formatDuration(stat.remaining) : '-'}
                 </div>
             ` : ''}
-            ${status.error != null ? html`
-                <p style="text-align: center; color: red;">
-                    ${T.error_has_occured}<br>
-                    ${status.error.message}
-                </p>
-            ` : ''}
+            ${status.error != null ? html`<p style="text-align: center; color: red;">${status.error.message}</p>` : ''}
         </div>
     `);
 }

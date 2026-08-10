@@ -61,7 +61,6 @@
         "drag_paste_or_browse_image": "Drop an image, paste it or use the 'Browse' button below",
         "drops": "Drops",
         "enable_direct_login_with_password": "I want to create a password to be able to sign in directly",
-        "error_has_occured": "An error has occured:",
         "expiration": "Expiration",
         "expiration_delay": {
             "1": "1 day",

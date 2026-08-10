@@ -61,7 +61,6 @@
         "drag_paste_or_browse_image": "Déposez une image, copier-collez la ou utilisez le bouton « Parcourir »",
         "drops": "Envois",
         "enable_direct_login_with_password": "Je souhaite créer un mot de passe pour pouvoir me connecter directement",
-        "error_has_occured": "Une erreur est survenue :",
         "expiration": "Expiration",
         "expiration_delay": {
             "1": "1 jour",
