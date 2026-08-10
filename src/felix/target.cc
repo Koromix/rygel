@@ -117,15 +117,15 @@ static void AppendListValues(Span<const char> str, Allocator *alloc, HeapArray<c
 #undef APPEND_ITEM
 }
 
-static bool EnumerateSortedFiles(const char *directory, Span<const char> root, const char *filter,
+static bool EnumerateSortedFiles(const char *name, Span<const char> root, const char *filter,
                                  bool recursive, Allocator *alloc, HeapArray<const char *> *out_filenames)
 {
     K_ASSERT(alloc);
 
     Size start_idx = out_filenames->len;
-    const char *path = Fmt(alloc, "%1%/%2", root, directory).ptr;
+    const char *dirname = Fmt(alloc, "%1%/%2", root, name).ptr;
 
-    if (!EnumerateFiles(path, filter, recursive ? -1  : 0, 1024, alloc, out_filenames))
+    if (!EnumerateFiles(dirname, filter, recursive ? -1  : 0, 1024, alloc, out_filenames))
         return false;
 
     // Remove root directory prefix from collected filenames
@@ -148,7 +148,7 @@ static bool ResolveFileSet(const FileSet &file_set, Span<const char> root, const
 
     K_DEFER_NC(out_guard, len = out_filenames->len) { out_filenames->RemoveFrom(len); };
 
-    out_filenames->Append(file_set.filenames);
+    // List directories
     for (const char *directory: file_set.directories) {
         if (!EnumerateSortedFiles(directory, root, filter, false, alloc, out_filenames))
             return false;
@@ -157,6 +157,17 @@ static bool ResolveFileSet(const FileSet &file_set, Span<const char> root, const
         if (!EnumerateSortedFiles(directory, root, filter, true, alloc, out_filenames))
             return false;
     }
+
+    // Check individual files
+    for (const char *name: file_set.filenames) {
+        const char *filename = Fmt(alloc, "%1%/%2", root, name).ptr;
+
+        if (!TestFile(filename, FileType::File)) {
+            LogError("File '%1' does not exist", filename);
+            return false;
+        }
+    }
+    out_filenames->Append(file_set.filenames);
 
     out_filenames->RemoveFrom(std::remove_if(out_filenames->begin(), out_filenames->end(),
                                              [&](const char *filename) {
