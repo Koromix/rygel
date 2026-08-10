@@ -36,7 +36,8 @@ static const int64_t HeaderLength = 149;
 static const int64_t FragmentSize = Mebibytes(4);
 static const Size ChunkSize = Kibibytes(64);
 
-static const int CodeNameCount = 3;
+static const int CodeNameWords = 2;
+static const int CodeNameDigits = 3;
 
 static_assert(FragmentSize % ChunkSize == 0);
 static_assert(crypto_secretbox_xsalsa20poly1305_NONCEBYTES == 24);
@@ -1084,9 +1085,10 @@ void HandleDropCodeName(http_IO *io)
     FastRandom rng;
 
     int used[16] = {};
-    static_assert(CodeNameCount <= K_LEN(used));
+    static_assert(CodeNameWords > 0);
+    static_assert(CodeNameWords <= K_LEN(used));
 
-    for (int i = 0; i < CodeNameCount; i++) {
+    for (int i = 0; i < CodeNameWords; i++) {
         int rnd = 0;
         do {
             rnd = rng.GetInt(0, words.len);
@@ -1094,6 +1096,13 @@ void HandleDropCodeName(http_IO *io)
         used[i] = rnd;
 
         codename.Append(words[rnd]);
+        codename.Append('_');
+    }
+
+    if (CodeNameDigits) {
+        codename.len += Fmt(codename.TakeAvailable(), "%1", FmtRandom(CodeNameDigits, "0123456789")).len;
+    } else {
+        codename.len--;
     }
 
     const char *json = Fmt(io->Allocator(), "{\"codename\": \"%1\"}", codename).ptr;
