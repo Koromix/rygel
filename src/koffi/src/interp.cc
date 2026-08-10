@@ -77,7 +77,7 @@ namespace {
     #define NEXT() \
         break
 
-    napi_value RunLoop(CallData *call, napi_value *args, uint8_t *base, const InstructionData *inst)
+    napi_value RunForward(CallData *call, napi_value *args, uint8_t *base, const InstructionData *inst)
     {
         for (;; ++inst) {
             switch ((intptr_t)inst->op) {
@@ -644,7 +644,7 @@ namespace {
 #undef CALL
 
 #if defined(MUST_TAIL)
-    FORCE_INLINE napi_value RunLoop(CallData *call, napi_value *args, uint8_t *base, const InstructionData *inst)
+    FORCE_INLINE napi_value RunForward(CallData *call, napi_value *args, uint8_t *base, const InstructionData *inst)
     {
         return ((ForwardFunc *)inst->op)(call, args, base, inst);
     }
@@ -745,7 +745,7 @@ napi_value CallData::Run(const FunctionInfo *func, napi_value *args)
         return env.Null();
 
     const InstructionData *first = func->sync.ptr;
-    return RunLoop(this, args, base, first);
+    return RunForward(this, args, base, first);
 }
 
 bool CallData::PrepareAsync(const FunctionInfo *func, napi_value *args)
@@ -756,19 +756,19 @@ bool CallData::PrepareAsync(const FunctionInfo *func, napi_value *args)
     async_base = base;
 
     const InstructionData *first = func->async.ptr;
-    return !RunLoop(this, args, base, first); // Yield returns nullptr
+    return !RunForward(this, args, base, first); // Yield returns nullptr
 }
 
 void CallData::ExecuteAsync()
 {
     const InstructionData *next = async_ip++;
-    RunLoop(this, nullptr, async_base, next);
+    RunForward(this, nullptr, async_base, next);
 }
 
 napi_value CallData::EndAsync()
 {
     const InstructionData *next = async_ip++;
-    return RunLoop(this, nullptr, async_base, next);
+    return RunForward(this, nullptr, async_base, next);
 }
 
 extern "C" uint64_t CallUnused(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
