@@ -32,15 +32,12 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
 
         if (param.type->primitive == PrimitiveKind::Record || param.type->primitive == PrimitiveKind::Union) {
             Opcode code = param.abi.regular ? Opcode::PushAggregateReg : Opcode::PushAggregateMem;
-
             func->sync.Append({ .op = Code2Op(code), .a = param.offset, .b1 = (int16_t)(arg * 8), .type = param.type });
-            func->async.Append({ .op = Code2Op(code), .a = param.offset, .b1 = (int16_t)(arg * 8), .type = param.type });
         } else {
             int delta = (int)Opcode::PushVoid - (int)PrimitiveKind::Void;
             Opcode code = (Opcode)((int)param.type->primitive + delta);
 
             func->sync.Append({ .op = Code2Op(code), .a = param.offset, .b1 = (int16_t)(arg * 8), .b2 = (int16_t)param.directions, .type = param.type });
-            func->async.Append({ .op = Code2Op(code), .a = param.offset, .b1 = (int16_t)(arg * 8), .b2 = (int16_t)param.directions, .type = param.type });
         }
 
         func->forward_fp |= IsFloat(param.type);
@@ -51,8 +48,6 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
         Size count = std::max((Size)4, func->parameters.len + !func->ret.abi.regular);
         func->stk_size = AlignLen(8 * count, 16);
     }
-
-    func->async.Append({ .op = Code2Op(Opcode::Yield) });
 
     switch (func->ret.type->primitive) {
         case PrimitiveKind::Void:
@@ -87,53 +82,27 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
 
                 func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
             }
-
-            // Async
-            {
-                int delta = (int)Opcode::ReturnVoid - (int)PrimitiveKind::Void;
-                Opcode call = func->forward_fp ? Opcode::CallGX : Opcode::CallG;
-                Opcode ret = (Opcode)((int)func->ret.type->primitive + delta);
-
-                func->async.Append({ .op = Code2Op(call) });
-                func->async.Append({ .op = Code2Op(ret), .type = func->ret.type });
-            }
         } break;
 
         case PrimitiveKind::Record:
         case PrimitiveKind::Union: {
             if (func->ret.abi.regular) {
                 Opcode run = func->forward_fp ? Opcode::RunAggregateGX : Opcode::RunAggregateG;
-                Opcode call = func->forward_fp ? Opcode::CallGX : Opcode::CallG;
-
                 func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
-                func->async.Append({ .op = Code2Op(call) });
-                func->async.Append({ .op = Code2Op(Opcode::ReturnAggregateReg), .type = func->ret.type });
             } else {
                 Opcode run = func->forward_fp ? Opcode::RunAggregateMemX : Opcode::RunAggregateMem;
-                Opcode call = func->forward_fp ? Opcode::CallMemX : Opcode::CallMem;
-
                 func->sync.Append({ .op = Code2Op(run), .a = (int32_t)func->ret.type->size, .type = func->ret.type });
-                func->async.Append({ .op = Code2Op(call), .a = (int32_t)func->ret.type->size });
-                func->async.Append({ .op = Code2Op(Opcode::ReturnAggregateMem), .type = func->ret.type });
             }
         } break;
         case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
 
         case PrimitiveKind::Float32: {
             Opcode run = func->forward_fp ? Opcode::RunFloat32X : Opcode::RunFloat32;
-            Opcode call = func->forward_fp ? Opcode::CallFX : Opcode::CallF;
-
             func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
-            func->async.Append({ .op = Code2Op(call) });
-            func->async.Append({ .op = Code2Op(Opcode::ReturnFloat32), .type = func->ret.type });
         } break;
         case PrimitiveKind::Float64: {
             Opcode run = func->forward_fp ? Opcode::RunFloat64X : Opcode::RunFloat64;
-            Opcode call = func->forward_fp ? Opcode::CallDX : Opcode::CallD;
-
             func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
-            func->async.Append({ .op = Code2Op(call) });
-            func->async.Append({ .op = Code2Op(Opcode::ReturnFloat64), .type = func->ret.type });
         } break;
 
         case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;

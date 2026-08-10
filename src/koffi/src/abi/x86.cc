@@ -79,21 +79,17 @@ bool AnalyseFunction(Napi::Env env, InstanceData *instance, FunctionInfo *func)
 
         if (param.type->primitive == PrimitiveKind::Record || param.type->primitive == PrimitiveKind::Union) {
             func->sync.Append({ .op = Code2Op(Opcode::PushAggregateStack), .a = param.offset, .b1 = (int16_t)(offset * 4), .type = param.type });
-            func->async.Append({ .op = Code2Op(Opcode::PushAggregateStack), .a = param.offset, .b1 = (int16_t)(offset * 4), .type = param.type });
         } else {
             int delta = (int)Opcode::PushVoid - (int)PrimitiveKind::Void;
             Opcode code = (Opcode)((int)param.type->primitive + delta);
 
             func->sync.Append({ .op = Code2Op(code), .a = param.offset, .b1 = (int16_t)(offset * 4), .b2 = (int16_t)param.directions, .type = param.type });
-            func->async.Append({ .op = Code2Op(code), .a = param.offset, .b1 = (int16_t)(offset * 4), .b2 = (int16_t)param.directions, .type = param.type });
         }
     }
 
     // We need enough space to memcpy result in CallX instructions
     func->ret_pop = (int)(4 * stk_offset);
     func->stk_size = stk_offset ? AlignLen(4 * stk_offset, 16) : 16;
-
-    func->async.Append({ .op = Code2Op(Opcode::Yield) });
 
     switch (func->ret.type->primitive) {
         case PrimitiveKind::Void:
@@ -128,16 +124,6 @@ bool AnalyseFunction(Napi::Env env, InstanceData *instance, FunctionInfo *func)
 
                 func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
             }
-
-            // Async
-            {
-                int delta = (int)Opcode::ReturnVoid - (int)PrimitiveKind::Void;
-                Opcode call = fast ? Opcode::CallGX : Opcode::CallG;
-                Opcode ret = (Opcode)((int)func->ret.type->primitive + delta);
-
-                func->async.Append({ .op = Code2Op(call) });
-                func->async.Append({ .op = Code2Op(ret), .type = func->ret.type });
-            }
         } break;
 
         case PrimitiveKind::Record:
@@ -148,20 +134,12 @@ bool AnalyseFunction(Napi::Env env, InstanceData *instance, FunctionInfo *func)
 
                 if (member.type->primitive == PrimitiveKind::Float32) {
                     Opcode run = fast ? Opcode::RunAggregateFX : Opcode::RunAggregateF;
-                    Opcode call = fast ? Opcode::CallFX : Opcode::CallF;
-
                     func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
-                    func->async.Append({ .op = Code2Op(call) });
-                    func->async.Append({ .op = Code2Op(Opcode::ReturnAggregateReg), .type = func->ret.type });
 
                     break;
                 } else if (member.type->primitive == PrimitiveKind::Float64) {
                     Opcode run = fast ? Opcode::RunAggregateDX : Opcode::RunAggregateD;
-                    Opcode call = fast ? Opcode::CallDX : Opcode::CallD;
-
                     func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
-                    func->async.Append({ .op = Code2Op(call) });
-                    func->async.Append({ .op = Code2Op(Opcode::ReturnAggregateReg), .type = func->ret.type });
 
                     break;
                 }
@@ -170,14 +148,9 @@ bool AnalyseFunction(Napi::Env env, InstanceData *instance, FunctionInfo *func)
 
             if (func->ret.abi.regular) {
                 Opcode run = fast ? Opcode::RunAggregateGX : Opcode::RunAggregateG;
-                Opcode call = fast ? Opcode::CallGX : Opcode::CallG;
-
                 func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
-                func->async.Append({ .op = Code2Op(call) });
-                func->async.Append({ .op = Code2Op(Opcode::ReturnAggregateReg), .type = func->ret.type });
             } else {
                 Opcode run = fast ? Opcode::RunAggregateMemX : Opcode::RunAggregateMem;
-                Opcode call = fast ? Opcode::CallMemX : Opcode::CallMem;
 
 #if defined(_WIN32)
                 int16_t offset = fast ? 16 : 0;
@@ -186,27 +159,17 @@ bool AnalyseFunction(Napi::Env env, InstanceData *instance, FunctionInfo *func)
 #endif
 
                 func->sync.Append({ .op = Code2Op(run), .a = (int32_t)func->ret.type->size, .b1 = offset, .type = func->ret.type });
-                func->async.Append({ .op = Code2Op(call), .a = (int32_t)func->ret.type->size, .b1 = offset });
-                func->async.Append({ .op = Code2Op(Opcode::ReturnAggregateMem), .type = func->ret.type });
             }
         } break;
         case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
 
         case PrimitiveKind::Float32: {
             Opcode run = fast ? Opcode::RunFloat32X : Opcode::RunFloat32;
-            Opcode call = fast ? Opcode::CallFX : Opcode::CallF;
-
             func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
-            func->async.Append({ .op = Code2Op(call) });
-            func->async.Append({ .op = Code2Op(Opcode::ReturnFloat32), .type = func->ret.type });
         } break;
         case PrimitiveKind::Float64: {
             Opcode run = fast ? Opcode::RunFloat64X : Opcode::RunFloat64;
-            Opcode call = fast ? Opcode::CallDX : Opcode::CallD;
-
             func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
-            func->async.Append({ .op = Code2Op(call) });
-            func->async.Append({ .op = Code2Op(Opcode::ReturnFloat64), .type = func->ret.type });
         } break;
 
         case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;

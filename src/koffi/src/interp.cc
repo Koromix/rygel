@@ -43,16 +43,16 @@ extern "C" float CallF(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
 extern "C" double CallD(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
 extern "C" RetGG CallGG(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
 extern "C" RetDD CallDD(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
-extern "C" RetDG CallDG(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
 extern "C" RetGD CallGD(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
+extern "C" RetDG CallDG(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
 extern "C" RetDDDD CallDDDD(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
 extern "C" uint64_t CallGX(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
 extern "C" float CallFX(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
 extern "C" double CallDX(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
 extern "C" RetGG CallGGX(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
 extern "C" RetDD CallDDX(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
-extern "C" RetDG CallDGX(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
 extern "C" RetGD CallGDX(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
+extern "C" RetDG CallDGX(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
 extern "C" RetDDDD CallDDDDX(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
 
 #if defined(__GNUC__)
@@ -547,8 +547,8 @@ namespace {
     OP(CallD) { CALL(D); return nullptr; }
     OP(CallGG) { CALL(GG); return nullptr; }
     OP(CallDD) { CALL(DD); return nullptr; }
-    OP(CallDG) { CALL(DG); return nullptr; }
     OP(CallGD) { CALL(GD); return nullptr; }
+    OP(CallDG) { CALL(DG); return nullptr; }
     OP(CallDDDD) { CALL(DDDD); return nullptr; }
     OP(CallMem) {
         uint8_t *ptr = call->AllocHeap(inst->a);
@@ -562,8 +562,8 @@ namespace {
     OP(CallDX) { CALL(DX); return nullptr; }
     OP(CallGGX) { CALL(GGX); return nullptr; }
     OP(CallDDX) { CALL(DDX); return nullptr; }
-    OP(CallDGX) { CALL(DGX); return nullptr; }
     OP(CallGDX) { CALL(GDX); return nullptr; }
+    OP(CallDGX) { CALL(DGX); return nullptr; }
     OP(CallDDDDX) { CALL(DDDDX); return nullptr; }
     OP(CallMemX) {
         uint8_t *ptr = call->AllocHeap(inst->a);
@@ -671,6 +671,218 @@ bool PreparePlan(Napi::Env env, InstanceData *instance, FunctionInfo *func)
     if (!AnalyseFunction(env, instance, func))
         return false;
 
+    for (const InstructionData &inst: func->sync) {
+        switch ((Opcode)(intptr_t)inst.op) {
+            case Opcode::PushVoid:
+            case Opcode::PushBool:
+            case Opcode::PushInt8:
+            case Opcode::PushUInt8:
+            case Opcode::PushInt16:
+            case Opcode::PushInt16S:
+            case Opcode::PushUInt16:
+            case Opcode::PushUInt16S:
+            case Opcode::PushInt32:
+            case Opcode::PushInt32S:
+            case Opcode::PushUInt32:
+            case Opcode::PushUInt32S:
+            case Opcode::PushInt64:
+            case Opcode::PushInt64S:
+            case Opcode::PushUInt64:
+            case Opcode::PushUInt64S:
+            case Opcode::PushString:
+            case Opcode::PushString16:
+            case Opcode::PushString32:
+            case Opcode::PushPointer:
+            case Opcode::PushRecord:
+            case Opcode::PushUnion:
+            case Opcode::PushArray:
+            case Opcode::PushFloat32:
+            case Opcode::PushFloat64:
+            case Opcode::PushCallback:
+            case Opcode::PushPrototype:
+            case Opcode::PushAggregateReg:
+            case Opcode::PushAggregateSplit:
+            case Opcode::PushAggregateStack:
+            case Opcode::PushAggregateMem: { func->async.Append(inst); } break;
+
+            case Opcode::RunVoid:
+            case Opcode::RunBool:
+            case Opcode::RunInt8:
+            case Opcode::RunUInt8:
+            case Opcode::RunInt16:
+            case Opcode::RunInt16S:
+            case Opcode::RunUInt16:
+            case Opcode::RunUInt16S:
+            case Opcode::RunInt32:
+            case Opcode::RunInt32S:
+            case Opcode::RunUInt32:
+            case Opcode::RunUInt32S:
+            case Opcode::RunInt64:
+            case Opcode::RunInt64S:
+            case Opcode::RunUInt64:
+            case Opcode::RunUInt64S:
+            case Opcode::RunString:
+            case Opcode::RunString16:
+            case Opcode::RunString32:
+            case Opcode::RunPointer:
+            case Opcode::RunCallback: {
+                int delta = (int)Opcode::ReturnVoid - (int)Opcode::RunVoid;
+                Opcode ret = (Opcode)((intptr_t)inst.op + delta);
+
+                func->async.Append({ .op = Code2Op(Opcode::Yield) });
+                func->async.Append({ .op = Code2Op(Opcode::CallG) });
+                func->async.Append({ .op = Code2Op(ret), .type = inst.type });
+            } break;
+            case Opcode::RunRecord:
+            case Opcode::RunUnion:
+            case Opcode::RunArray: { K_UNREACHABLE(); } break;
+            case Opcode::RunFloat32: {
+                func->async.Append({ .op = Code2Op(Opcode::Yield) });
+                func->async.Append({ .op = Code2Op(Opcode::CallF) });
+                func->async.Append({ .op = Code2Op(Opcode::ReturnFloat32), .type = inst.type });
+            } break;
+            case Opcode::RunFloat64: {
+                func->async.Append({ .op = Code2Op(Opcode::Yield) });
+                func->async.Append({ .op = Code2Op(Opcode::CallD) });
+                func->async.Append({ .op = Code2Op(Opcode::ReturnFloat64), .type = inst.type });
+            } break;
+            case Opcode::RunPrototype: { K_UNREACHABLE(); } break;
+            case Opcode::RunAggregateG:
+            case Opcode::RunAggregateF:
+            case Opcode::RunAggregateD:
+            case Opcode::RunAggregateGG:
+            case Opcode::RunAggregateDD:
+            case Opcode::RunAggregateGD:
+            case Opcode::RunAggregateDG:
+            case Opcode::RunAggregateDDDD: {
+                int delta = (int)Opcode::CallG - (int)Opcode::RunAggregateG;
+                Opcode call = (Opcode)((intptr_t)inst.op + delta);
+
+                func->async.Append({ .op = Code2Op(Opcode::Yield) });
+                func->async.Append({ .op = Code2Op(call) });
+                func->async.Append({ .op = Code2Op(Opcode::ReturnAggregateReg), .type = inst.type });
+            } break;
+            case Opcode::RunAggregateMem: {
+                func->async.Append({ .op = Code2Op(Opcode::Yield) });
+                func->async.Append({ .op = Code2Op(Opcode::CallMem), .a = inst.a, .b1 = inst.b1 });
+                func->async.Append({ .op = Code2Op(Opcode::ReturnAggregateMem), .type = inst.type });
+            } break;
+            case Opcode::RunVoidX:
+            case Opcode::RunBoolX:
+            case Opcode::RunInt8X:
+            case Opcode::RunUInt8X:
+            case Opcode::RunInt16X:
+            case Opcode::RunInt16SX:
+            case Opcode::RunUInt16X:
+            case Opcode::RunUInt16SX:
+            case Opcode::RunInt32X:
+            case Opcode::RunInt32SX:
+            case Opcode::RunUInt32X:
+            case Opcode::RunUInt32SX:
+            case Opcode::RunInt64X:
+            case Opcode::RunInt64SX:
+            case Opcode::RunUInt64X:
+            case Opcode::RunUInt64SX:
+            case Opcode::RunStringX:
+            case Opcode::RunString16X:
+            case Opcode::RunString32X:
+            case Opcode::RunPointerX:
+            case Opcode::RunCallbackX: {
+                int delta = (int)Opcode::ReturnVoid - (int)Opcode::RunVoidX;
+                Opcode ret = (Opcode)((intptr_t)inst.op + delta);
+
+                func->async.Append({ .op = Code2Op(Opcode::Yield) });
+                func->async.Append({ .op = Code2Op(Opcode::CallGX) });
+                func->async.Append({ .op = Code2Op(ret), .type = inst.type });
+            } break;
+            case Opcode::RunRecordX:
+            case Opcode::RunUnionX:
+            case Opcode::RunArrayX: { K_UNREACHABLE(); } break;
+            case Opcode::RunFloat32X: {
+                func->async.Append({ .op = Code2Op(Opcode::Yield) });
+                func->async.Append({ .op = Code2Op(Opcode::CallFX) });
+                func->async.Append({ .op = Code2Op(Opcode::ReturnFloat32), .type = inst.type });
+            } break;
+            case Opcode::RunFloat64X: {
+                func->async.Append({ .op = Code2Op(Opcode::Yield) });
+                func->async.Append({ .op = Code2Op(Opcode::CallDX) });
+                func->async.Append({ .op = Code2Op(Opcode::ReturnFloat64), .type = inst.type });
+            } break;
+            case Opcode::RunPrototypeX: { K_UNREACHABLE(); } break;
+            case Opcode::RunAggregateGX:
+            case Opcode::RunAggregateFX:
+            case Opcode::RunAggregateDX:
+            case Opcode::RunAggregateGGX:
+            case Opcode::RunAggregateDDX:
+            case Opcode::RunAggregateGDX:
+            case Opcode::RunAggregateDGX:
+            case Opcode::RunAggregateDDDDX: {
+                int delta = (int)Opcode::CallGX - (int)Opcode::RunAggregateGX;
+                Opcode call = (Opcode)((intptr_t)inst.op + delta);
+
+                func->async.Append({ .op = Code2Op(Opcode::Yield) });
+                func->async.Append({ .op = Code2Op(call) });
+                func->async.Append({ .op = Code2Op(Opcode::ReturnAggregateReg), .type = inst.type });
+            } break;
+            case Opcode::RunAggregateMemX: {
+                func->async.Append({ .op = Code2Op(Opcode::Yield) });
+                func->async.Append({ .op = Code2Op(Opcode::CallMemX), .a = inst.a, .b1 = inst.b1 });
+                func->async.Append({ .op = Code2Op(Opcode::ReturnAggregateMem), .type = inst.type });
+            } break;
+
+            case Opcode::Yield: { K_UNREACHABLE(); } break;
+
+            case Opcode::CallG:
+            case Opcode::CallF:
+            case Opcode::CallD:
+            case Opcode::CallGG:
+            case Opcode::CallDD:
+            case Opcode::CallGD:
+            case Opcode::CallDG:
+            case Opcode::CallDDDD:
+            case Opcode::CallMem:
+            case Opcode::CallGX:
+            case Opcode::CallFX:
+            case Opcode::CallDX:
+            case Opcode::CallGGX:
+            case Opcode::CallDDX:
+            case Opcode::CallGDX:
+            case Opcode::CallDGX:
+            case Opcode::CallDDDDX:
+            case Opcode::CallMemX: { K_UNREACHABLE(); } break;
+
+            case Opcode::ReturnVoid:
+            case Opcode::ReturnBool:
+            case Opcode::ReturnInt8:
+            case Opcode::ReturnUInt8:
+            case Opcode::ReturnInt16:
+            case Opcode::ReturnInt16S:
+            case Opcode::ReturnUInt16:
+            case Opcode::ReturnUInt16S:
+            case Opcode::ReturnInt32:
+            case Opcode::ReturnInt32S:
+            case Opcode::ReturnUInt32:
+            case Opcode::ReturnUInt32S:
+            case Opcode::ReturnInt64:
+            case Opcode::ReturnInt64S:
+            case Opcode::ReturnUInt64:
+            case Opcode::ReturnUInt64S:
+            case Opcode::ReturnString:
+            case Opcode::ReturnString16:
+            case Opcode::ReturnString32:
+            case Opcode::ReturnPointer:
+            case Opcode::ReturnCallback:
+            case Opcode::ReturnRecord:
+            case Opcode::ReturnUnion:
+            case Opcode::ReturnArray:
+            case Opcode::ReturnFloat32:
+            case Opcode::ReturnFloat64:
+            case Opcode::ReturnPrototype:
+            case Opcode::ReturnAggregateReg:
+            case Opcode::ReturnAggregateMem: { K_UNREACHABLE(); } break;
+        }
+    }
+
 #if defined(MUST_TAIL)
     static ForwardFunc *const ForwardDispatch[256] = {
         #define PRIMITIVE(Name) ForwardPush ## Name,
@@ -707,8 +919,8 @@ bool PreparePlan(Napi::Env env, InstanceData *instance, FunctionInfo *func)
         ForwardCallD,
         ForwardCallGG,
         ForwardCallDD,
-        ForwardCallDG,
         ForwardCallGD,
+        ForwardCallDG,
         ForwardCallDDDD,
         ForwardCallMem,
         ForwardCallGX,
@@ -716,8 +928,8 @@ bool PreparePlan(Napi::Env env, InstanceData *instance, FunctionInfo *func)
         ForwardCallDX,
         ForwardCallGGX,
         ForwardCallDDX,
-        ForwardCallDGX,
         ForwardCallGDX,
+        ForwardCallDGX,
         ForwardCallDDDDX,
         ForwardCallMemX,
         #define PRIMITIVE(Name) ForwardReturn ## Name,
@@ -778,16 +990,16 @@ K_WEAK_REDIRECT(CallF, CallUnused)
 K_WEAK_REDIRECT(CallD, CallUnused)
 K_WEAK_REDIRECT(CallGG, CallUnused)
 K_WEAK_REDIRECT(CallDD, CallUnused)
-K_WEAK_REDIRECT(CallDG, CallUnused)
 K_WEAK_REDIRECT(CallGD, CallUnused)
+K_WEAK_REDIRECT(CallDG, CallUnused)
 K_WEAK_REDIRECT(CallDDDD, CallUnused)
 K_WEAK_REDIRECT(CallGX, CallUnused)
 K_WEAK_REDIRECT(CallFX, CallUnused)
 K_WEAK_REDIRECT(CallDX, CallUnused)
 K_WEAK_REDIRECT(CallGGX, CallUnused)
 K_WEAK_REDIRECT(CallDDX, CallUnused)
-K_WEAK_REDIRECT(CallDGX, CallUnused)
 K_WEAK_REDIRECT(CallGDX, CallUnused)
+K_WEAK_REDIRECT(CallDGX, CallUnused)
 K_WEAK_REDIRECT(CallDDDDX, CallUnused)
 
 }

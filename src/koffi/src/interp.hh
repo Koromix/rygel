@@ -19,6 +19,7 @@ enum class Opcode {
     PushAggregateSplit,
     PushAggregateStack,
     PushAggregateMem,
+
     #define PRIMITIVE(Name) Run ## Name,
     #include "primitives.inc"
     RunAggregateG,
@@ -41,14 +42,16 @@ enum class Opcode {
     RunAggregateDGX,
     RunAggregateDDDDX,
     RunAggregateMemX,
+
     Yield,
+
     CallG,
     CallF,
     CallD,
     CallGG,
     CallDD,
-    CallDG,
     CallGD,
+    CallDG,
     CallDDDD,
     CallMem,
     CallGX,
@@ -56,10 +59,11 @@ enum class Opcode {
     CallDX,
     CallGGX,
     CallDDX,
-    CallDGX,
     CallGDX,
+    CallDGX,
     CallDDDDX,
     CallMemX,
+
     #define PRIMITIVE(Name) Return ## Name,
     #include "primitives.inc"
     ReturnAggregateReg,
