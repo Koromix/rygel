@@ -1641,6 +1641,11 @@ bool rk_CheckSnapshots(rk_Repository *repo, Span<const rk_SnapshotInfo> snapshot
         }
     }
 
+    // Commit pending checks now, otherwise ListChecks() will miss uncommitted changes.
+    // We could also change ListChecks() to list uncommitted stuff but... meh. Meh meh meh.
+    if (!cache.Commit())
+        return false;
+
     // Retain objects
     if (repo->CanRetain()) {
         int64_t retains;

@@ -77,6 +77,8 @@ public:
     void PutRetain(const rk_ObjectID &oid);
     void PutStat(const char *path, const rk_CacheStat &stat);
 
+    bool Commit() { return Commit(true); }
+
 private:
     bool Commit(bool force);
 };
