@@ -68,13 +68,8 @@ bool AnalyseFunction(Napi::Env, InstanceData *instance, FunctionInfo *func)
     int vec_index = 0;
     int stack_offset = 0;
 
-#if defined(_M_ARM64EC)
-    int gpr_max = func->variadic ? 4 : 8;
-    int vec_max = 8;
-#else
     int gpr_max = 8;
     int vec_max = 8;
-#endif
 
     for (ParameterInfo &param: func->parameters) {
 #if defined(__APPLE__)
@@ -131,35 +126,6 @@ bool AnalyseFunction(Napi::Env, InstanceData *instance, FunctionInfo *func)
 
             case PrimitiveKind::Record:
             case PrimitiveKind::Union: {
-#if defined(_M_ARM64EC)
-                if (func->variadic) {
-                    if (IsRegularSize(param.type->size, 8) && gpr_index < gpr_max) {
-                        param.abi.regular = true;
-                        param.abi.offset = gpr_index;
-                        gpr_index++;
-
-                        func->sync.Append({ .op = Code2Op(Opcode::PushAggregateReg), .a = param.offset, .b1 = (int16_t)param.abi.offset, .type = param.type });
-                        func->async.Append({ .op = Code2Op(Opcode::PushAggregateReg), .a = param.offset, .b1 = (int16_t)param.abi.offset, .type = param.type });
-                    } else {
-                        if (gpr_index < gpr_max) {
-                            param.abi.regular = true;
-                            param.abi.offset = gpr_index * 8;
-                            gpr_index++;
-                        } else {
-                            param.abi.offset = 19 * 8 + stack_offset;
-                            stack_offset += 8;
-                        }
-
-                        param.abi.indirect = true;
-
-                        func->sync.Append({ .op = Code2Op(Opcode::PushAggregateMem), .a = param.offset, .b1 = (int16_t)param.abi.offset, .type = param.type });
-                        func->async.Append({ .op = Code2Op(Opcode::PushAggregateMem), .a = param.offset, .b1 = (int16_t)param.abi.offset, .type = param.type });
-                    }
-
-                    break;
-                }
-#endif
-
 #if defined(__APPLE__)
                 if (param.variadic) {
                     if (param.type->size <= 16) {
@@ -358,13 +324,6 @@ bool AnalyseFunction(Napi::Env, InstanceData *instance, FunctionInfo *func)
     func->forward_fp = vec_index;
 
     func->async.Append({ .op = Code2Op(Opcode::Yield) });
-
-#if defined(_M_ARM64EC)
-    if (func->variadic) {
-        func->sync.Append({ .op = Code2Op(Opcode::SetVariadicRegisters), .a = (int32_t)stack_offset });
-        func->async.Append({ .op = Code2Op(Opcode::SetVariadicRegisters), .a = (int32_t)stack_offset });
-    }
-#endif
 
     switch (func->ret.type->primitive) {
         case PrimitiveKind::Void:
