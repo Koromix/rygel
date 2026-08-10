@@ -1126,4 +1126,5 @@ std::unique_ptr<rk_Repository> rk_OpenRepository(rk_Disk *disk, const rk_Config 
 
     return repo;
 }
+
 }
