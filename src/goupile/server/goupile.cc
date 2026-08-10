@@ -973,9 +973,6 @@ static bool OpenMainDatabase()
         }
     }
 
-    if (gp_config.use_snapshots && !gp_db.SetSnapshotDirectory(gp_config.snapshot_directory, FullSnapshotDelay))
-        return 1;
-
     db_guard.Disable();
     return true;
 }
@@ -998,12 +995,8 @@ static bool PerformDuties(bool first)
     LogDebug("Prune temporary files");
     PruneOldFiles(gp_config.database_directory, "*.tmp", false, first ? 0 : 7200 * 1000);
     PruneOldFiles(gp_config.tmp_directory, nullptr, true, first ? 0 : 7200 * 1000);
-    PruneOldFiles(gp_config.snapshot_directory, "*.tmp", false, first ? 0 : 7200 * 1000);
     PruneOldFiles(gp_config.archive_directory, "*.tmp", false, first ? 0 : 7200 * 1000);
     PruneOldFiles(gp_config.export_directory, "*.tmp", false, first ? 0 : 7200 * 1000);
-
-    LogDebug("Prune old snapshot files");
-    PruneOldFiles(gp_config.snapshot_directory, nullptr, true, 3 * 86400 * 1000);
 
     LogDebug("Prune old archives");
     if (domain) {
@@ -1150,8 +1143,6 @@ For help about those commands, type: %!..+%1 command --help%!0)"),
         return false;
     if (!MakeDirectory(gp_config.archive_directory, false))
         return false;
-    if (!MakeDirectory(gp_config.snapshot_directory, false))
-        return false;
     if (!MakeDirectory(gp_config.view_directory, false))
         return false;
     if (!MakeDirectory(gp_config.export_directory, false))
@@ -1211,7 +1202,6 @@ For help about those commands, type: %!..+%1 command --help%!0)"),
 #endif
             gp_config.database_directory,
             gp_config.archive_directory,
-            gp_config.snapshot_directory,
             gp_config.tmp_directory,
             gp_config.view_directory
         };

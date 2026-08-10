@@ -9,7 +9,7 @@
 #include "instance.hh"
 #include "message.hh"
 #include "record.hh"
-#include "lib/native/sqlite/sqlite.hh"
+#include "lib/native/wrap/sqlite.hh"
 #include "user.hh"
 #include "vendor/sqlite3mc/sqlite3mc.h"
 #include "vm.hh"

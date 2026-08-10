@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
 #include "lib/native/base/base.hh"
-#include "lib/native/sqlite/sqlite.hh"
+#include "lib/native/wrap/sqlite.hh"
 #include "web.hh"
 #include "mail.hh"
 #include "user.hh"

@@ -3,7 +3,7 @@
 
 #include "lib/native/base/base.hh"
 #include "lib/native/wrap/Rcc.hh"
-#include "lib/native/sqlite/sqlite.hh"
+#include "lib/native/wrap/sqlite.hh"
 #include "../server/database.hh"
 
 #if !defined(_WIN32)

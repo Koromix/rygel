@@ -174,10 +174,6 @@ bool InitDomain()
                 complete = false;
                 continue;
             }
-            if (gp_config.use_snapshots && !db->SetSnapshotDirectory(gp_config.snapshot_directory, FullSnapshotDelay)) {
-                complete = false;
-                continue;
-            }
 
             db_guard.Disable();
             databases.Append(db);

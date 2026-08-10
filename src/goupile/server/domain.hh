@@ -7,7 +7,7 @@
 #include "instance.hh"
 #include "user.hh"
 #include "lib/native/request/smtp.hh"
-#include "lib/native/sqlite/sqlite.hh"
+#include "lib/native/wrap/sqlite.hh"
 
 namespace K {
 

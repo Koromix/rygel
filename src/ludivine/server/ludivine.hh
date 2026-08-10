@@ -5,7 +5,7 @@
 
 #include "lib/native/base/base.hh"
 #include "config.hh"
-#include "lib/native/sqlite/sqlite.hh"
+#include "lib/native/wrap/sqlite.hh"
 
 namespace K {
 

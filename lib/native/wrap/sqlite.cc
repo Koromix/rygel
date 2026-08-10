@@ -205,10 +205,6 @@ bool sq_Database::Close()
 {
     bool success = true;
 
-#if defined(SQLITE_SNAPSHOTS)
-    success &= StopSnapshot();
-#endif
-
     int ret = sqlite3_close(db);
     if (ret != SQLITE_OK) {
         LogError("Failed to close SQLite database: %1", sqlite3_errstr(ret));
@@ -347,21 +343,7 @@ restart:
     return dest_db.Close();
 }
 
-bool sq_Database::Checkpoint(bool restart)
-{
-#if defined(SQLITE_SNAPSHOTS)
-    if (snapshot) {
-        return CheckpointSnapshot(restart);
-    } else {
-        return CheckpointDirect();
-    }
-#else
-    (void)restart;
-    return CheckpointDirect();
-#endif
-}
-
-bool sq_Database::CheckpointDirect()
+bool sq_Database::Checkpoint()
 {
     bool nested = LockExclusive();
     K_ASSERT(!nested);

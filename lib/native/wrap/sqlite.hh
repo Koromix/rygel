@@ -118,8 +118,6 @@ class sq_Database {
     std::thread::id running_exclusive_thread;
     std::atomic_bool lock_reads { false };
 
-    struct sq_SnapshotPriv *snapshot = nullptr;
-
 public:
     sq_Database() {}
     sq_Database(const char *filename, unsigned int flags) { Open(filename, flags); }
@@ -131,10 +129,6 @@ public:
     bool Close();
 
     bool SetWAL(bool enable);
-
-    // Cannot be used if core/sqlite is built without SQLITE_SNAPSHOTS, will trigger link error
-    bool SetSnapshotDirectory(const char *directory, int64_t full_delay);
-    bool UsesSnapshot() const { return snapshot; }
 
     bool GetUserVersion(int *out_version);
     bool SetUserVersion(int version);
@@ -163,16 +157,11 @@ public:
     bool ColumnExists(const char *table, const char *column);
 
     bool BackupTo(const char *filename);
-    bool Checkpoint(bool restart = false);
+    bool Checkpoint();
 
     operator sqlite3 *() { return db; }
 
 private:
-    bool StopSnapshot();
-
-    bool CheckpointSnapshot(bool restart = false);
-    bool CheckpointDirect();
-
     void RunCopyThread();
     bool CopyWAL(bool full);
     bool OpenNextFrame(int64_t now);

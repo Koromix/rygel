@@ -49,10 +49,13 @@ bool LoadConfig(StreamReader *st, Config *out_config)
                         config.database_filename = NormalizePath(prop.value, data_directory, &config.str_alloc).ptr;
                     } else if (prop.key == "ArchiveDirectory" || prop.key == "BackupDirectory") {
                         config.archive_directory = NormalizePath(prop.value, data_directory, &config.str_alloc).ptr;
-                    } else if (prop.key == "SnapshotDirectory") {
-                        config.snapshot_directory = NormalizePath(prop.value, data_directory, &config.str_alloc).ptr;
-                    } else if (prop.key == "UseSnapshots") {
-                        valid &= ParseBool(prop.value, &config.use_snapshots);
+                    } else if (prop.key == "SnapshotDirectory" || prop.key == "UseSnapshots") {
+                        static bool warned = false;
+
+                        if (!warned) {
+                            LogWarning("SQLite snapshots are not supported anymore");
+                            warned = true;
+                        }
                     } else {
                         LogError("Unknown attribute '%1'", prop.key);
                         valid = false;
@@ -135,9 +138,6 @@ bool LoadConfig(StreamReader *st, Config *out_config)
     config.tmp_directory = NormalizePath("tmp", data_directory, &config.str_alloc).ptr;
     if (!config.archive_directory) {
         config.archive_directory = NormalizePath("archives", data_directory, &config.str_alloc).ptr;
-    }
-    if (!config.snapshot_directory) {
-        config.snapshot_directory = NormalizePath("snapshots", data_directory, &config.str_alloc).ptr;
     }
     config.view_directory = NormalizePath("views", data_directory, &config.str_alloc).ptr;
     config.export_directory = NormalizePath("exports", data_directory, &config.str_alloc).ptr;

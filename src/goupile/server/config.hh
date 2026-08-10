@@ -19,10 +19,8 @@ struct Config {
     const char *instances_directory = nullptr;
     const char *tmp_directory = nullptr;
     const char *archive_directory = nullptr;
-    const char *snapshot_directory = nullptr;
     const char *view_directory = nullptr;
     const char *export_directory = nullptr;
-    bool use_snapshots = true;
 
     PasswordComplexity user_password = PasswordComplexity::Moderate;
     PasswordComplexity admin_password = PasswordComplexity::Moderate;
