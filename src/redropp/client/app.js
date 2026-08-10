@@ -319,7 +319,7 @@ function renderApp(el) {
                     ${ENV.logo == null ? html`<span>${ENV.title}</span>` : ''}
                 </a>
                 ${isLogged() ? html`
-                    <li><a href="/drops" class=${in_drops ? 'active' : ''}>${T.drops}</a></li>
+                    <li><a href=${in_drops || route.drop == null ? '/drops' : makeURL({ mode: 'drop' })} class=${in_drops ? 'active' : ''}>${T.drops}</a></li>
                     <li><a href="/send" class=${route.mode == 'send' ? 'active' : ''}>${T.send}</a></li>
                 ` : ''}
                 <div style="flex: 1;"></div>
