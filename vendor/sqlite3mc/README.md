@@ -1,9 +1,9 @@
 # Release notes
 
-Release date: 2026-08-02
+Release date: 2026-07-25
 
 Version information:
-  - SQLite3MC 2.5.0
+  - SQLite3MC 2.4.0
   - SQLite 3.53.4
 
 # SQLite3 Multiple Ciphers amalgamation
