@@ -31,6 +31,9 @@
         <p>L'étude socio-trauma vise à étudier comment, à la suite directe d'un évènement difficile et potentiellement traumatique, <b>vos relations à vos proches et votre bien être psychologique évoluent</b>. Cela implique que, pour participer, vous devez avoir vécu un évènement que vous considérez comme difficile il y a moins d'un mois.
         <p>Des consignes détaillées guideront <b>chacune des 6 étapes de l’étude</b>, avec des exercices à réaliser à plusieurs reprises. Nous vous poserons des questions sur votre situation actuelle, vos relations avec vos proches et la société, ainsi que sur votre bien-être psychologique.
         <p>L’étude se déroule entièrement en ligne, sans contact direct avec les autres participants ou les responsables de l’étude. Nous vous invitons à prendre connaissance de la lettre d’information de l’étude SocioTrauma pour en savoir plus.
+        <div class="actions">
+            <a href="{{ ASSET static/documents/SocioTrauma_Information.pdf }}" download>Télécharger la lettre d'information</a>
+        </div>
     </div>
     <img src="{{ ASSET ../../src/ludivine/assets/pictures/sociotrauma.webp }}" style="flex: 1;" alt="" />
 </div>
