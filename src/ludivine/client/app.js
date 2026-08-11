@@ -769,26 +769,6 @@ async function runRegister() {
 
         <div class="tab">
             <div class="box" style="align-items: center;">
-                <div class="header">Vous avez déjà un compte</div>
-
-                <div style="max-width: 700px;">
-                    <p>Pour vous connecter, vous devez utiliser le lien présent dans le mail d'inscription. Cherchez le mail portant l'objet <b>« Connexion à ${ENV.title} ! »</b> et cliquez sur le lien à l'intérieur.
-                </div>
-
-                <div class="help">
-                    <img src=${ASSETS['pictures/help1']} alt="" />
-                    <div>
-                        <p>Toutes vos données étant chiffrées et sécurisées, vous devez <b>conserver précieusement le lien de connexion</b> qui est présent dans le mail d'inscription !
-                        <p>Nous ne serons <b>pas en mesure de recréer le lien de connexion</b> qui existe dans ce mail si vous le perdez !
-                    </div>
-                </div>
-
-                <div style="max-width: 700px;">
-                    <p>Vous pouvez aussi vous <a href="/connexion">connecter avec votre mot de passe</a> si vous en avez créé un après votre première connexion.
-                </div>
-            </div>
-
-            <div class="box" style="align-items: center;">
                 <div class="header">Créez votre compte</div>
 
                 <div style="max-width: 700px;">
@@ -806,6 +786,26 @@ async function runRegister() {
                         <button type="submit">Créer mon compte</button>
                     </div>
                 </form>
+            </div>
+
+            <div class="box" style="align-items: center;">
+                <div class="header">Vous avez déjà un compte</div>
+
+                <div style="max-width: 700px;">
+                    <p>Pour vous connecter, vous devez utiliser le lien présent dans le mail d'inscription. Cherchez le mail portant l'objet <b>« Connexion à ${ENV.title} ! »</b> et cliquez sur le lien à l'intérieur.
+                </div>
+
+                <div class="help">
+                    <img src=${ASSETS['pictures/help1']} alt="" />
+                    <div>
+                        <p>Toutes vos données étant chiffrées et sécurisées, vous devez <b>conserver précieusement le lien de connexion</b> qui est présent dans le mail d'inscription !
+                        <p>Nous ne serons <b>pas en mesure de recréer le lien de connexion</b> qui existe dans ce mail si vous le perdez !
+                    </div>
+                </div>
+
+                <div style="max-width: 700px;">
+                    <p>Vous pouvez aussi vous <a href="/connexion">connecter avec votre mot de passe</a> si vous en avez créé un après votre première connexion.
+                </div>
             </div>
         </div>
     `);
