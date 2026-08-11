@@ -685,11 +685,11 @@ form {
         color: #383838;
     }
     & .enum > button:not(.active):hover {
-        background: color-mix(in srgb, var(--bar_color), white 25%);
+        background: color-mix(in srgb, var(--button_color), white 25%);
         color: white;
     }
     & .enum > button.active {
-        background: var(--bar_color);
+        background: var(--button_color);
         color: white;
     }
     & .enum > button:disabled { color: #bbb; }
