@@ -772,12 +772,7 @@ async function runRegister() {
                 <div class="header">Créez votre compte</div>
 
                 <div style="max-width: 700px;">
-                    <p>La <b>création d’un compte</b> est essentielle pour participer aux études, elle permet de :
-                    <ul>
-                        <li>Garantir la protection de vos données
-                        <li>Faciliter le suivi de votre progression
-                        <li>Assurer la fiabilité des données recueillies
-                    </ul>
+                    <p>Vous devez <b>créer un compte</b> pour participer. Celui-ci vous permet de suivre votre progression et assure la fiabilité des données recueillies.
                 </div>
 
                 <form style="text-align: center;" @submit=${UI.wrap(register)}>
