@@ -568,7 +568,7 @@ form {
         border: none;
         border-radius: 8px;
         font: inherit;
-        font-size: 0.9em;
+        font-size: 1em;
     }
     & textarea {
         align-self: stretch;
@@ -578,7 +578,7 @@ form {
         border: none;
         border-radius: 8px;
         font: inherit;
-        font-size: 0.9em;
+        font-size: 1em;
     }
     & .ck { align-self: stretch; }
     & select {
@@ -597,7 +597,7 @@ form {
         text-overflow: ellipsis;
         white-space: nowrap;
         font-family: inherit;
-        font-size: 0.9em;
+        font-size: 1em;
     }
     & :is(input, textarea, select):focus { background-color: white; }
     & :is(input, textarea, select):disabled {
