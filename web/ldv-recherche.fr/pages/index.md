@@ -2,8 +2,8 @@
     <div class="title">Bienvenue sur Lignes de Vie</div>
     <div class="intro columns">
         <div style="flex: 3;">
-            <p>Vous <b>êtes majeur, vous avez récemment vécu un événement particulièrement difficile</b> et souhaitez contribuer à faire avancer la recherche sur les psychotraumatismes ? Votre engagement est précieux, et nous vous sommes reconnaissants du <b>temps que vous consacrerez à participer</b> aux études.
-            <p>Une fois votre inscription finalisée, vous accéderez à notre <b>étude SocioTrauma</b>. Celle-ci vous permettra de participer aux différentes études actuellement proposées.
+            <p>Vous <b>êtes majeur, vous avez récemment vécu un événement particulièrement difficile</b> et souhaitez contribuer à faire avancer la recherche sur les psychotraumatismes ? Votre engagement est précieux, et nous vous sommes reconnaissants du temps que vous consacrerez à participer aux études.
+            <p>Une fois votre inscription finalisée, vous <b>accéderez à notre étude SocioTrauma</b>. Celle-ci vous permettra de participer aux différentes études actuellement proposées.
             <div class="actions">
                 <a href="/participer/sociotrauma">Participer à SocioTrauma</a>
                 <a href="{{ ASSET static/documents/SocioTrauma_Information.pdf }}" download>Ouvrir la lettre d'information</a>
@@ -30,7 +30,7 @@
     <div style="flex: 2;">
         <p>L'étude socio-trauma vise à étudier comment, à la suite directe d'un évènement difficile et potentiellement traumatique, <b>vos relations à vos proches et votre bien être psychologique évoluent</b>. Cela implique que, pour participer, vous devez avoir vécu un évènement que vous considérez comme difficile il y a moins d'un mois.
         <p>Des consignes détaillées guideront <b>chacune des 6 étapes de l’étude</b>, avec des exercices à réaliser à plusieurs reprises. Des rappels par e-mail et/ou notifications via l’application vous aideront à respecter les échéances. Un calendrier est également disponible depuis votre tableau de bord. Nous vous poserons des questions sur votre situation actuelle, vos relations avec vos proches et la société, ainsi que sur votre bien-être psychologique
-        <p>L’étude se déroule entièrement en ligne, sans contact direct avec les autres participants ou les responsables de l’étude. Nous vous invitons à <b>prendre connaissance de la lettre d’information</b> de l’étude SocioTrauma pour en savoir plus.
+        <p>L’étude se déroule entièrement en ligne, sans contact direct avec les autres participants ou les responsables de l’étude. Nous vous invitons à prendre connaissance de la lettre d’information de l’étude SocioTrauma pour en savoir plus.
     </div>
     <img src="{{ ASSET ../../src/ludivine/assets/pictures/sociotrauma.webp }}" style="flex: 1;" alt="" />
 </div>
