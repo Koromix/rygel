@@ -385,7 +385,7 @@ function go(url = null, push = true) {
                 return Util.waitFor(2000);
             }
 
-            changes.mode = 'profile';
+            changes.mode = 'dashboard';
         } break;
     }
 
@@ -880,9 +880,10 @@ async function runProfile() {
 
     UI.main(html`
         <div class="tabbar">
-            <a href="/profil" class="active">Profil</a>
             <a href="/participer">Études</a>
             ${cache.project != null ? html`<a href=${makeURL({ mode: 'study' })}>${cache.project.title}</a>` : ''}
+            <a href="/profil" class="active">Profil</a>
+            <a href=${makeURL({ mode: 'diary' })}>Mon journal</a>
 
             <div style="flex: 1;"></div>
             <a id="sos" @click=${UI.wrap(e => sos(event))}></a>
@@ -898,8 +899,8 @@ async function runProfile() {
                     <img class="avatar" src=${identity?.picture ?? ASSETS['ui/user']} alt=""/>
 
                     <div class="actions vertical">
-                        <button type="button" @click=${UI.wrap(changePicture)}>Modifier mon avatar</button>
-                        <button type="button" @click=${UI.wrap(changePassword)}>${session.password ? 'Modifier mon mot de passe' : 'Créer un mot de passe'}</button>
+                        <button type="button" class="secondary" @click=${UI.wrap(changePicture)}>Modifier mon avatar</button>
+                        <button type="button" class="secondary" @click=${UI.wrap(changePassword)}>${session.password ? 'Modifier mon mot de passe' : 'Créer un mot de passe'}</button>
                         <button type="button" class="secondary" @click=${UI.insist(logout)}>Se déconnecter</button>
                     </div>
                 </div>
@@ -978,9 +979,9 @@ async function runDashboard() {
 
     UI.main(html`
         <div class="tabbar">
-            <a href="/profil">Profil</a>
             <a href="/participer" class="active">Études</a>
             ${cache.project != null ? html`<a href=${makeURL({ mode: 'study' })}>${cache.project.title}</a>` : ''}
+            <a href=${makeURL({ mode: 'diary' })}>Mon journal</a>
 
             <div style="flex: 1;"></div>
             <a id="sos" @click=${UI.wrap(e => sos(event))}></a>
@@ -991,10 +992,6 @@ async function runDashboard() {
                 <div>
                     <div class="header">Bienvenue sur ${ENV.title} !</div>
                     <p>Vous pouvez vous <b>inscrire ou continuer</b> votre participation aux études ci-dessous le cas échéant, ou retourner à votre profil pour utiliser votre journal ou modifier votre avatar.
-                </div>
-
-                <div class="actions">
-                    <a href="/profil">Accéder au profil</a>
                 </div>
             </div>
 
@@ -1291,9 +1288,9 @@ async function runConsent() {
 
     UI.main(html`
         <div class="tabbar">
-            <a href="/profil">Profil</a>
             <a href="/participer">Études</a>
             <a class="active">${project.title}</a>
+            <a href=${makeURL({ mode: 'diary' })}>Mon journal</a>
 
             <div style="flex: 1;"></div>
             <a id="sos" @click=${UI.wrap(e => sos(event))}></a>
@@ -1335,9 +1332,9 @@ async function runProject() {
 
         UI.main(html`
             <div class="tabbar">
-                <a href="/profil">Profil</a>
                 <a href="/participer">Études</a>
                 <a class="active">${project.title}</a>
+                <a href=${makeURL({ mode: 'diary' })}>Mon journal</a>
 
                 <div style="flex: 1;"></div>
                 <a id="sos" @click=${UI.wrap(e => sos(event))}></a>
@@ -1734,9 +1731,8 @@ async function runDiary() {
 
     UI.main(html`
         <div class="tabbar">
-            <a href="/profil">Profil</a>
             <a href="/participer">Études</a>
-            <a href=${makeURL()} class="active">Mon journal</a>
+            <a href=${makeURL({ mode: 'diary' })} class="active">Mon journal</a>
 
             <div style="flex: 1;"></div>
             <a id="sos" @click=${UI.wrap(e => sos(event))}></a>

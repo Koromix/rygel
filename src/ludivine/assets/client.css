@@ -4,12 +4,12 @@
 @import url('./ludivine.css');
 
 html {
-    --input_color: #f6d3c3;
-    --check_color: #d98869;
+    --input_color: #f9fbfb;
+    --check_color: #369692;
 
-    --empty_color: #d0cccc;
+    --empty_color: var(--box_color);
     --draft_color: #d9bf69;
-    --done_color: #eca17f;
+    --done_color: white;
 }
 
 main {
@@ -64,8 +64,11 @@ main.fullscreen {
     z-index: 999999;
 }
 
-button.confirm { --button_color: #2d8261; }
-button.secondary { --button_color: var(--bar_color); }
+button.confirm { font-weight: bold; }
+button.secondary {
+    --button_color: #9bcbc9;
+    --color: #383838;
+}
 button.secondary.active { color: white !important; }
 button.insist {
     filter: contrast(130%);
@@ -283,7 +286,7 @@ button.highlight { animation: highlight 1.4s ease-in-out infinite alternate; }
     font-weight: bold;
     text-transform: uppercase;
     text-align: center;
-    color: var(--top_color);
+    color: #12597f;
 }
 .safe {
     display: inline-block;
@@ -291,7 +294,7 @@ button.highlight { animation: highlight 1.4s ease-in-out infinite alternate; }
     width: 24px;
     height: 24px;
     margin: 0 0.5em;
-    background-color: #89b85a;
+    background-color: var(--button_color);
     background-image: url('../assets/ui/private.png');
     background-position: center;
     background-size: 16px 16px;
@@ -304,7 +307,6 @@ button.highlight { animation: highlight 1.4s ease-in-out infinite alternate; }
     width: 192px;
     height: 192px;
     margin: 0 auto;
-    border-width: 6px;
 }
 
 @media screen and (max-width: 960px) {
@@ -313,7 +315,7 @@ button.highlight { animation: highlight 1.4s ease-in-out infinite alternate; }
 
 .diary {
     display: flex;
-    background: #f6d4c3;
+    background: white;
     border-radius: 8px;
     padding: 0.5em;
     gap: 0.8em;
@@ -331,23 +333,21 @@ button.highlight { animation: highlight 1.4s ease-in-out infinite alternate; }
 }
 
 .study {
-    --background: var(--empty_color);
-
     display: flex;
     min-height: 6em;
-    padding: 0.7em 1em;
-    background: color-mix(in srgb, var(--background), transparent 60%);
+    padding: 1.3em 1em;
+    background: var(--empty_color);
     border-radius: 8px;
     gap: 3em;
     align-items: center;
 
     &.draft {
-        --background: var(--draft_color);
-        --button_color: var(--background);
+        background: color-mix(in srgb, var(--draft_color), transparent 60%);
+        --button_color: var(--draft_color);
     }
     &.done {
-        --background: var(--done_color);
-        --button_color: var(--background);
+        background: color-mix(in srgb, var(--done_color), transparent 60%);
+        --button_color: var(--done_color);
     }
 
     & > .title {
@@ -392,7 +392,7 @@ button.highlight { animation: highlight 1.4s ease-in-out infinite alternate; }
 
 .event {
     display: flex;
-    background: #f6d4c3;
+    background: white;
     border-radius: 8px;
     padding: 0.5em;
     gap: 0.8em;
@@ -405,8 +405,6 @@ button.highlight { animation: highlight 1.4s ease-in-out infinite alternate; }
         line-height: 1.4;
     }
     & > button {
-        --button_color: #d9bf69;
-
         width: 3em;
         height: 3em;
         padding: 0 0.1em 0.2em 0.1em;
@@ -471,12 +469,12 @@ button.highlight { animation: highlight 1.4s ease-in-out infinite alternate; }
 
 .modules {
     display: flex;
-    justify-content: space-evenly;
+    justify-content: center;
     flex-wrap: wrap;
-    gap: 1em;
+    gap: 1.5em;
 }
 .module {
-    --color: white;
+    --fill: white;
 
     display: flex;
     width: 120px;
@@ -486,20 +484,19 @@ button.highlight { animation: highlight 1.4s ease-in-out infinite alternate; }
     gap: 0.15em;
     align-items: center;
     justify-content: center;
-    background: color-mix(in srgb, var(--color), transparent 60%);
+    background: color-mix(in srgb, var(--fill), transparent 60%);
     border-radius: 8px;
     cursor: pointer;
 
-    &.draft { --color: #d9bf69; }
-    &.complete { --color: #eca17f; }
+    &.draft { --fill: var(--draft_color); }
+    &.done { --fill: var(--done_color); }
     &.disabled {
         filter: saturate(10%) brightness(80%);
         cursor: not-allowed;
     }
 
     & > .title {
-        font-weight: bold;
-        color: #364b9b;
+        color: #383838;
         text-align: center;
     }
     & > .status {
@@ -507,7 +504,7 @@ button.highlight { animation: highlight 1.4s ease-in-out infinite alternate; }
         font-size: 0.9em;
         text-align: center;
     }
-    &.draft > .status { font-weight: bold; }
+    &.draft { font-weight: bold; }
 
     & > img {
         margin: 4px 0;
@@ -521,7 +518,7 @@ button.highlight { animation: highlight 1.4s ease-in-out infinite alternate; }
     font-weight: bold;
     text-transform: uppercase;
     text-align: center;
-    color: #364b9b;
+    color: #12597f;
     cursor: pointer;
 }
 
@@ -568,7 +565,7 @@ form {
     & input {
         padding: 0.4em 0.6em;
         background: white;
-        border: 1px solid var(--input_color);
+        border: none;
         border-radius: 8px;
         font: inherit;
         font-size: 0.9em;
@@ -578,7 +575,7 @@ form {
         padding: 0.4em 0.6em;
         border: none;
         background: white;
-        border: 1px solid var(--input_color);
+        border: none;
         border-radius: 8px;
         font: inherit;
         font-size: 0.9em;
@@ -685,7 +682,7 @@ form {
         padding: 0.2em 1.4em 0.35em 1.4em;
         border-radius: 8px;
         background: white;
-        color: var(--top_color);
+        color: #383838;
     }
     & .enum > button:not(.active):hover {
         background: color-mix(in srgb, var(--bar_color), white 25%);
@@ -704,7 +701,8 @@ form {
         align-items: center;
 
         & > span { font-size: 0.8em; }
-        & > input[type=range] { flex: 1; }
+        & > div { flex: 1; }
+        & input[type=range] { width: 100%; }
     }
     & input[type=range] {
         appearance: none;
@@ -717,13 +715,13 @@ form {
             appearance: none;
             -webkit-appearance: none;
             height: 6px;
-            background: var(--input_color);
+            background: var(--box_color);
             border-radius: 4px;
         }
         &::-moz-range-track {
             appearance: none;
             height: 6px;
-            background: var(--input_color);
+            background: var(--box_color);
             border-radius: 4px;
         }
 

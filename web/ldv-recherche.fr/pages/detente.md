@@ -12,7 +12,7 @@
         <div class="tile" style="flex: 6;">
             <img src="{{ ASSET ../../src/ludivine/assets/pictures/staks.webp }}" alt="" />
             <div>
-                <p>Lancez une <b>partie de STAKS</b> pour vous changer les idées. Ce jeu a <a href="https://www.nature.com/articles/mp201723" target="_blank">prouvé son efficacité</a> pour gérer certains symptômes de TSPT.</p>
+                <p>Lancez une <b>partie de jeu de blocs</b> pour vous changer les idées. Ce jeu a <a href="https://www.nature.com/articles/mp201723" target="_blank">prouvé son efficacité</a> pour gérer certains symptômes de TSPT.</p>
                 <div class="actions">
                     <a href="/staks">Jeu de blocs</a>
                 </div>

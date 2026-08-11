@@ -5,7 +5,6 @@ html {
     --top_color: #ccc;
     --anchor_color: #383838;
     --button_color: #888;
-    --focus_color: #ececec;
 
     --top_height: 90px;
     --top_padding: 6px;
@@ -315,7 +314,7 @@ button {
     background: var(--button_color);
     border: none;
     border-radius: var(--button_radius);
-    color: white;
+    color: var(--color, white);
     cursor: pointer;
     white-space: nowrap;
 }
@@ -350,14 +349,14 @@ button > img:only-child {
         max-width: 60em;
         background: var(--button_color);
         border-radius: var(--button_radius);
-        color: white;
+        color: var(--color, white);
         padding: 0.35em 2em 0.45em 2em;
         text-decoration: none;
         text-align: center;
     }
     & > :is(a, button):hover {
         background: color-mix(in srgb, var(--button_color) 90%, black);
-        color: white;
+        color: var(--color, white);
     }
 }
 * + .actions { margin-top: 1em; }

@@ -4,13 +4,14 @@
 @import url('lib/web/flat/flat.css');
 
 html {
-    --top_color: #364b9b;
-    --button_color: #d9bf69;
+    --top_color: #115881;
+    --button_color: #369692;
     --anchor_color: #000552;
+    --focus_color: #36969266;
 
-    --bar_color: #e9a07f;
-    --tab_color: #fdfbf8;
-    --box_color: #f9e8df;
+    --bar_color: #369692;
+    --tab_color: #f9fbfb;
+    --box_color: #f1f5f5;
 
     --top_height: 80px;
     --top_background: var(--tab_color);
@@ -20,9 +21,14 @@ html {
     --button_radius: 30px;
 }
 
+*:focus { outline: 3px solid var(--focus_color); }
+
 body { font-size: 15px; }
 
-:is(main, dialog) a { text-decoration: underline; }
+:is(main, dialog) a {
+    text-decoration: underline dotted;
+    text-underline-offset: 4px;
+}
 :is(main, dialog) a:hover { color: #26346c; }
 :is(main, dialog) a:has(> img) { text-decoration: none !important; }
 
@@ -33,8 +39,6 @@ h1 {
 
 span[title] { border-bottom: 1px dotted #383838; }
 
-button { font-weight: bold; }
-
 .reference {
     font-weight: bold;
     color: var(--top_color);
@@ -44,8 +48,6 @@ button { font-weight: bold; }
     flex-direction: row;
     justify-content: center;
     flex-wrap: wrap;
-
-    & > a { font-weight: bold; }
 }
 .actions.vertical { flex-direction: column; }
 p + .actions { margin-top: 2em; }
@@ -54,9 +56,7 @@ p + .actions { margin-top: 2em; }
     box-sizing: border-box;
     background: white;
     border-radius: 50%;
-    border: 3px solid var(--bar_color);
 }
-.avatar.anonymous { border: none; }
 
 #top { font-size: 1.1em; }
 #top menu {
@@ -70,8 +70,8 @@ p + .actions { margin-top: 2em; }
 #top li > a:hover { margin-bottom: -2px; }
 #top.border { border-bottom-color: var(--top_background); }
 #top .avatar {
-    width: 51px;
-    height: 51px;
+    width: 54px;
+    height: 54px;
 }
 
 footer {
@@ -138,19 +138,18 @@ dialog {
 .banner > .title {
     padding: 0.8em 1.2em;
     align-self: start;
-    background: #e9a07f;
+    background: var(--top_color);
     color: white;
     font-size: 1.1em;
-    font-weight: bold;
     border-radius: 8px;
     z-index: 1;
 }
 .banner > .intro {
     margin: -20px 2em 1em 2em;
     padding: calc(1em + 20px) 1em 1em 1em;
-    border-left: 4px solid #e9a07f;
+    border-left: 4px solid var(--top_color);
     border-radius: 0 8px 8px 0;
-    background: #fdfbf8;
+    background: var(--tab_color);
 }
 
 @media screen and (max-width: 960px) {
@@ -169,14 +168,18 @@ dialog {
     display: flex;
     align-items: start;
     gap: 2em;
+
+    & > * { flex: 1; width: 0; }
 }
-.columns > * { flex: 1; width: 0; }
 p + .columns { margin-top: 2em; }
 
 @media screen and (max-width: 960px) {
-    .columns { display: block; }
-    .columns > * { width: auto; }
-    .columns > * + * { margin-top: 3em; }
+    .columns {
+        display: block;
+
+        & > * { width: auto; }
+        & > * + * { margin-top: 3em; }
+    }
 }
 
 .tabbar {
