@@ -14,7 +14,7 @@ var __export = (target, all) => {
 };
 
 // node_modules/@zip.js/zip.js/lib/core/constants.js
-var MAX_32_BITS, MAX_16_BITS, MAX_8_BITS, COMPRESSION_METHOD_DEFLATE, COMPRESSION_METHOD_DEFLATE_64, COMPRESSION_METHOD_STORE, COMPRESSION_METHOD_AES, LOCAL_FILE_HEADER_SIGNATURE, SPLIT_ZIP_FILE_SIGNATURE, DATA_DESCRIPTOR_RECORD_SIGNATURE, CENTRAL_FILE_HEADER_SIGNATURE, END_OF_CENTRAL_DIR_SIGNATURE, ZIP64_END_OF_CENTRAL_DIR_SIGNATURE, ZIP64_END_OF_CENTRAL_DIR_LOCATOR_SIGNATURE, CENTRAL_FILE_HEADER_LENGTH, END_OF_CENTRAL_DIR_LENGTH, ZIP64_END_OF_CENTRAL_DIR_LOCATOR_LENGTH, ZIP64_END_OF_CENTRAL_DIR_LENGTH, ZIP64_END_OF_CENTRAL_DIR_TOTAL_LENGTH, DATA_DESCRIPTOR_RECORD_LENGTH, DATA_DESCRIPTOR_RECORD_ZIP_64_LENGTH, DATA_DESCRIPTOR_RECORD_SIGNATURE_LENGTH, EXTRAFIELD_TYPE_ZIP64, EXTRAFIELD_TYPE_AES, EXTRAFIELD_TYPE_NTFS, EXTRAFIELD_TYPE_NTFS_TAG1, EXTRAFIELD_TYPE_EXTENDED_TIMESTAMP, EXTRAFIELD_TYPE_UNICODE_PATH, EXTRAFIELD_TYPE_UNICODE_COMMENT, EXTRAFIELD_TYPE_USDZ, EXTRAFIELD_TYPE_INFOZIP, EXTRAFIELD_TYPE_UNIX, BITFLAG_ENCRYPTED, BITFLAG_LEVEL, BITFLAG_LEVEL_MAX_MASK, BITFLAG_LEVEL_FAST_MASK, BITFLAG_LEVEL_SUPER_FAST_MASK, BITFLAG_DATA_DESCRIPTOR, BITFLAG_LANG_ENCODING_FLAG, FILE_ATTR_MSDOS_DIR_MASK, FILE_ATTR_MSDOS_READONLY_MASK, FILE_ATTR_MSDOS_HIDDEN_MASK, FILE_ATTR_MSDOS_SYSTEM_MASK, FILE_ATTR_MSDOS_ARCHIVE_MASK, FILE_ATTR_UNIX_TYPE_MASK, FILE_ATTR_UNIX_TYPE_DIR, FILE_ATTR_UNIX_EXECUTABLE_MASK, FILE_ATTR_UNIX_DEFAULT_MASK, FILE_ATTR_UNIX_SETUID_MASK, FILE_ATTR_UNIX_SETGID_MASK, FILE_ATTR_UNIX_STICKY_MASK, VERSION_DEFLATE, VERSION_ZIP64, VERSION_AES, DIRECTORY_SIGNATURE, HEADER_SIZE, HEADER_OFFSET_VERSION, HEADER_OFFSET_SIGNATURE, HEADER_OFFSET_COMPRESSED_SIZE, HEADER_OFFSET_UNCOMPRESSED_SIZE, LOCAL_HEADER_COMMON_OFFSET, MAX_DATE, MIN_DATE, UNDEFINED_VALUE, INFINITY_VALUE, UNDEFINED_TYPE, FUNCTION_TYPE, OBJECT_TYPE, EMPTY_UINT8_ARRAY;
+var MAX_32_BITS, MAX_16_BITS, MAX_8_BITS, COMPRESSION_METHOD_DEFLATE, COMPRESSION_METHOD_DEFLATE_64, COMPRESSION_METHOD_STORE, COMPRESSION_METHOD_AES, LOCAL_FILE_HEADER_SIGNATURE, SPLIT_ZIP_FILE_SIGNATURE, DATA_DESCRIPTOR_RECORD_SIGNATURE, ARCHIVE_EXTRA_DATA_SIGNATURE, CENTRAL_FILE_HEADER_SIGNATURE, END_OF_CENTRAL_DIR_SIGNATURE, ZIP64_END_OF_CENTRAL_DIR_SIGNATURE, ZIP64_END_OF_CENTRAL_DIR_LOCATOR_SIGNATURE, CENTRAL_FILE_HEADER_LENGTH, END_OF_CENTRAL_DIR_LENGTH, ZIP64_END_OF_CENTRAL_DIR_LOCATOR_LENGTH, ZIP64_END_OF_CENTRAL_DIR_LENGTH, ZIP64_END_OF_CENTRAL_DIR_TOTAL_LENGTH, DATA_DESCRIPTOR_RECORD_LENGTH, DATA_DESCRIPTOR_RECORD_ZIP_64_LENGTH, DATA_DESCRIPTOR_RECORD_SIGNATURE_LENGTH, EXTRAFIELD_TYPE_ZIP64, EXTRAFIELD_TYPE_AES, EXTRAFIELD_TYPE_NTFS, EXTRAFIELD_TYPE_NTFS_TAG1, EXTRAFIELD_TYPE_EXTENDED_TIMESTAMP, EXTRAFIELD_TYPE_UNICODE_PATH, EXTRAFIELD_TYPE_UNICODE_COMMENT, EXTRAFIELD_TYPE_USDZ, EXTRAFIELD_TYPE_INFOZIP, EXTRAFIELD_TYPE_UNIX, BITFLAG_ENCRYPTED, BITFLAG_LEVEL, BITFLAG_LEVEL_MAX_MASK, BITFLAG_LEVEL_FAST_MASK, BITFLAG_LEVEL_SUPER_FAST_MASK, BITFLAG_DATA_DESCRIPTOR, BITFLAG_STRONG_ENCRYPTION, BITFLAG_LANG_ENCODING_FLAG, FILE_ATTR_MSDOS_DIR_MASK, FILE_ATTR_MSDOS_READONLY_MASK, FILE_ATTR_MSDOS_HIDDEN_MASK, FILE_ATTR_MSDOS_SYSTEM_MASK, FILE_ATTR_MSDOS_ARCHIVE_MASK, FILE_ATTR_UNIX_TYPE_MASK, FILE_ATTR_UNIX_TYPE_DIR, FILE_ATTR_UNIX_EXECUTABLE_MASK, FILE_ATTR_UNIX_DEFAULT_MASK, FILE_ATTR_UNIX_SETUID_MASK, FILE_ATTR_UNIX_SETGID_MASK, FILE_ATTR_UNIX_STICKY_MASK, VERSION_DEFLATE, VERSION_ZIP64, VERSION_AES, DIRECTORY_SIGNATURE, HEADER_SIZE, HEADER_OFFSET_VERSION, HEADER_OFFSET_SIGNATURE, HEADER_OFFSET_COMPRESSED_SIZE, HEADER_OFFSET_UNCOMPRESSED_SIZE, LOCAL_HEADER_COMMON_OFFSET, MAX_DATE, MIN_DATE, UNDEFINED_VALUE, INFINITY_VALUE, UNDEFINED_TYPE, FUNCTION_TYPE, OBJECT_TYPE, EMPTY_UINT8_ARRAY;
 var init_constants = __esm({
   "node_modules/@zip.js/zip.js/lib/core/constants.js"() {
     MAX_32_BITS = 4294967295;
@@ -27,6 +27,7 @@ var init_constants = __esm({
     LOCAL_FILE_HEADER_SIGNATURE = 67324752;
     SPLIT_ZIP_FILE_SIGNATURE = 134695760;
     DATA_DESCRIPTOR_RECORD_SIGNATURE = SPLIT_ZIP_FILE_SIGNATURE;
+    ARCHIVE_EXTRA_DATA_SIGNATURE = 134630224;
     CENTRAL_FILE_HEADER_SIGNATURE = 33639248;
     END_OF_CENTRAL_DIR_SIGNATURE = 101010256;
     ZIP64_END_OF_CENTRAL_DIR_SIGNATURE = 101075792;
@@ -55,6 +56,7 @@ var init_constants = __esm({
     BITFLAG_LEVEL_FAST_MASK = 4;
     BITFLAG_LEVEL_SUPER_FAST_MASK = 6;
     BITFLAG_DATA_DESCRIPTOR = 8;
+    BITFLAG_STRONG_ENCRYPTION = 64;
     BITFLAG_LANG_ENCODING_FLAG = 2048;
     FILE_ATTR_MSDOS_DIR_MASK = 16;
     FILE_ATTR_MSDOS_READONLY_MASK = 1;
@@ -78,7 +80,7 @@ var init_constants = __esm({
     HEADER_OFFSET_COMPRESSED_SIZE = 14;
     HEADER_OFFSET_UNCOMPRESSED_SIZE = 18;
     LOCAL_HEADER_COMMON_OFFSET = 4;
-    MAX_DATE = new Date(2107, 11, 31);
+    MAX_DATE = new Date(2107, 11, 31, 23, 59, 58);
     MIN_DATE = new Date(1980, 0, 1);
     UNDEFINED_VALUE = void 0;
     INFINITY_VALUE = Infinity;
@@ -138,6 +140,7 @@ var init_configuration = __esm({
       maxWorkers,
       terminateWorkerTimeout: 5e3,
       workerStarvationTimeout: 5e3,
+      workerStartupTimeout: 5e3,
       useWebWorkers: true,
       useCompressionStream: true,
       transferStreams: true,
@@ -152,6 +155,7 @@ var init_configuration = __esm({
       "maxWorkers",
       "terminateWorkerTimeout",
       "workerStarvationTimeout",
+      "workerStartupTimeout",
       "useCompressionStream",
       "useWebWorkers",
       "transferStreams",
@@ -161,6 +165,76 @@ var init_configuration = __esm({
       "DecompressionStreamZlib"
     ];
     config = { ...DEFAULT_CONFIGURATION };
+  }
+});
+
+// node_modules/@zip.js/zip.js/lib/core/codec-registry.js
+function registerCodec(codec2 = {}) {
+  const { compressionMethod, format, codecURI, CompressionStream: CompressionStream2, DecompressionStream: DecompressionStream2, versionNeeded } = codec2;
+  if (!Number.isInteger(compressionMethod) || compressionMethod < 0 || compressionMethod > MAX_16_BITS || typeof format != STRING_TYPE || !format.length) {
+    throw new Error(ERR_INVALID_CODEC_DEFINITION);
+  }
+  if (RESERVED_COMPRESSION_METHODS.includes(compressionMethod)) {
+    throw new Error(ERR_RESERVED_COMPRESSION_METHOD);
+  }
+  const hasStreams = typeof CompressionStream2 == FUNCTION_TYPE || typeof DecompressionStream2 == FUNCTION_TYPE;
+  if (!hasStreams && (typeof codecURI != STRING_TYPE || !codecURI.length)) {
+    throw new Error(ERR_INVALID_CODEC_DEFINITION);
+  }
+  registeredCodecs.set(compressionMethod, { compressionMethod, format, codecURI, versionNeeded });
+  if (hasStreams) {
+    setCodecStreams(format, { CompressionStream: CompressionStream2, DecompressionStream: DecompressionStream2 });
+  }
+}
+function unregisterCodec(compressionMethod) {
+  const codec2 = registeredCodecs.get(compressionMethod);
+  if (codec2) {
+    registeredCodecs.delete(compressionMethod);
+    let formatUsed;
+    registeredCodecs.forEach((otherCodec) => formatUsed = formatUsed || otherCodec.format == codec2.format);
+    if (!formatUsed) {
+      codecStreams.delete(codec2.format);
+    }
+  }
+}
+function getRegisteredCodec(compressionMethod) {
+  return registeredCodecs.get(compressionMethod);
+}
+function getCodecStreams(format) {
+  return codecStreams.get(format);
+}
+function setCodecStreams(format, streams) {
+  const { CompressionStream: CompressionStream2, DecompressionStream: DecompressionStream2 } = streams;
+  if (typeof CompressionStream2 != FUNCTION_TYPE && typeof DecompressionStream2 != FUNCTION_TYPE) {
+    throw new Error(ERR_INVALID_CODEC_MODULE);
+  }
+  codecStreams.set(format, { CompressionStream: CompressionStream2, DecompressionStream: DecompressionStream2 });
+}
+async function ensureCodecStreams(format, codecURI) {
+  if (!codecStreams.has(format) && codecURI) {
+    setCodecStreams(format, await import(
+      /* webpackIgnore: true */
+      /* @vite-ignore */
+      codecURI
+    ));
+  }
+}
+var ERR_INVALID_CODEC_DEFINITION, ERR_RESERVED_COMPRESSION_METHOD, ERR_INVALID_CODEC_MODULE, STRING_TYPE, RESERVED_COMPRESSION_METHODS, registeredCodecs, codecStreams;
+var init_codec_registry = __esm({
+  "node_modules/@zip.js/zip.js/lib/core/codec-registry.js"() {
+    init_constants();
+    ERR_INVALID_CODEC_DEFINITION = "Invalid codec definition";
+    ERR_RESERVED_COMPRESSION_METHOD = "Reserved compression method";
+    ERR_INVALID_CODEC_MODULE = "Invalid codec module";
+    STRING_TYPE = "string";
+    RESERVED_COMPRESSION_METHODS = [
+      COMPRESSION_METHOD_STORE,
+      COMPRESSION_METHOD_DEFLATE,
+      COMPRESSION_METHOD_DEFLATE_64,
+      COMPRESSION_METHOD_AES
+    ];
+    registeredCodecs = /* @__PURE__ */ new Map();
+    codecStreams = /* @__PURE__ */ new Map();
   }
 });
 
@@ -1180,7 +1254,7 @@ var init_zip_crypto_stream = __esm({
             if (zipCrypto.password || zipCrypto.rawPassword) {
               const decryptedHeader = decrypt(zipCrypto, chunk.subarray(0, HEADER_LENGTH));
               zipCrypto.password = zipCrypto.rawPassword = null;
-              if ((decryptedHeader.at(-1) ^ zipCrypto.passwordVerification) != 0) {
+              if ((decryptedHeader[HEADER_LENGTH - 1] ^ zipCrypto.passwordVerification) != 0) {
                 throw new Error(ERR_INVALID_PASSWORD);
               }
               chunk = chunk.subarray(HEADER_LENGTH);
@@ -1224,7 +1298,65 @@ var init_zip_crypto_stream = __esm({
   }
 });
 
+// node_modules/@zip.js/zip.js/lib/core/util/compatible-streams.js
+function toCompatibleReadable(readable) {
+  if (readable instanceof ReadableStream) {
+    return readable;
+  }
+  const reader = readable.getReader();
+  return new ReadableStream({
+    async pull(controller) {
+      const { value, done } = await reader.read();
+      if (done) {
+        controller.close();
+      } else {
+        controller.enqueue(value);
+      }
+    },
+    cancel(reason) {
+      return reader.cancel(reason);
+    }
+  });
+}
+function toCompatibleWritable(writable) {
+  if (writable instanceof WritableStream) {
+    return writable;
+  }
+  const writer = writable.getWriter();
+  return new WritableStream({
+    write(chunk) {
+      return writer.write(chunk);
+    },
+    close() {
+      return writer.close();
+    },
+    abort(reason) {
+      return writer.abort(reason);
+    }
+  });
+}
+var init_compatible_streams = __esm({
+  "node_modules/@zip.js/zip.js/lib/core/util/compatible-streams.js"() {
+  }
+});
+
 // node_modules/@zip.js/zip.js/lib/core/streams/zip-entry-stream.js
+function supportsDeflateRaw(StreamClass) {
+  if (!StreamClass) {
+    return false;
+  }
+  let supported = deflateRawSupportByStream.get(StreamClass);
+  if (supported === UNDEFINED_VALUE) {
+    try {
+      new StreamClass(FORMAT_DEFLATE_RAW);
+      supported = true;
+    } catch {
+      supported = false;
+    }
+    deflateRawSupportByStream.set(StreamClass, supported);
+  }
+  return supported;
+}
 function setReadable(stream, readable, flush) {
   readable = pipeThrough(readable, new TransformStream({ flush }));
   Object.defineProperty(stream, "readable", {
@@ -1233,21 +1365,21 @@ function setReadable(stream, readable, flush) {
     }
   });
 }
-function pipeThroughCommpressionStream(readable, useCompressionStream, options, CompressionStreamNative, CompressionStreamZlib2, CompressionStream2) {
-  const Stream2 = useCompressionStream && CompressionStreamNative ? CompressionStreamNative : CompressionStreamZlib2 || CompressionStream2;
+function createCodecStream(CodecStreamClass, format, options) {
+  if (!CodecStreamClass) {
+    throw new Error(ERR_UNSUPPORTED_COMPRESSION);
+  }
+  return new CodecStreamClass(format, options);
+}
+function pipeThroughCompressionStream(readable, useCompressionStream, options, CompressionStreamNative, CompressionStreamZlib2) {
+  const Stream2 = useCompressionStream && CompressionStreamNative ? CompressionStreamNative : CompressionStreamZlib2 || CompressionStreamNative;
   const format = options.deflate64 ? FORMAT_DEFLATE64_RAW : FORMAT_DEFLATE_RAW;
   let codecStream;
   try {
     codecStream = new Stream2(format, options);
   } catch (error) {
-    if (useCompressionStream) {
-      if (CompressionStreamZlib2) {
-        codecStream = new CompressionStreamZlib2(format, options);
-      } else if (CompressionStream2) {
-        codecStream = new CompressionStream2(format, options);
-      } else {
-        throw error;
-      }
+    if (useCompressionStream && CompressionStreamZlib2 && Stream2 != CompressionStreamZlib2) {
+      codecStream = new CompressionStreamZlib2(format, options);
     } else {
       throw error;
     }
@@ -1255,7 +1387,7 @@ function pipeThroughCommpressionStream(readable, useCompressionStream, options, 
   return pipeThroughBackpressured(readable, codecStream);
 }
 function pipeThrough(readable, transformStream) {
-  return readable.pipeThrough(transformStream);
+  return toCompatibleReadable(readable).pipeThrough(transformStream);
 }
 function pipeThroughBackpressured(readable, transformStream) {
   const writer = transformStream.writable.getWriter();
@@ -1318,16 +1450,20 @@ function mapInflateStreamError(readable) {
     }
   });
 }
-var ERR_INVALID_UNCOMPRESSED_SIZE, ERR_INVALID_COMPRESSED_DATA, FORMAT_DEFLATE_RAW, FORMAT_DEFLATE64_RAW, FORMAT_GZIP, GZIP_HEADER_LENGTH, GZIP_TRAILER_LENGTH, DeflateStream, GzipToRawDeflateStream, InflateStream;
+var ERR_INVALID_UNCOMPRESSED_SIZE, ERR_INVALID_COMPRESSED_DATA, ERR_UNSUPPORTED_COMPRESSION, FORMAT_DEFLATE_RAW, FORMAT_DEFLATE64_RAW, FORMAT_GZIP, GZIP_HEADER_LENGTH, GZIP_TRAILER_LENGTH, DeflateStream, GzipToRawDeflateStream, InflateStream, deflateRawSupportByStream;
 var init_zip_entry_stream = __esm({
   "node_modules/@zip.js/zip.js/lib/core/streams/zip-entry-stream.js"() {
     init_crc32_stream();
     init_aes_crypto_stream();
     init_zip_crypto_stream();
     init_common_crypto();
+    init_constants();
     init_array();
+    init_compatible_streams();
+    init_codec_registry();
     ERR_INVALID_UNCOMPRESSED_SIZE = "Invalid uncompressed size";
     ERR_INVALID_COMPRESSED_DATA = "Invalid compressed data";
+    ERR_UNSUPPORTED_COMPRESSION = "Compression method not supported";
     FORMAT_DEFLATE_RAW = "deflate-raw";
     FORMAT_DEFLATE64_RAW = "deflate64-raw";
     FORMAT_GZIP = "gzip";
@@ -1336,22 +1472,25 @@ var init_zip_entry_stream = __esm({
     DeflateStream = class extends TransformStream {
       constructor(options, { chunkSize, CompressionStreamZlib: CompressionStreamZlib2, CompressionStream: CompressionStream2 }) {
         super({});
-        const { compressed, encrypted, useCompressionStream, zipCrypto, signed, level, deflate64 } = options;
+        const { compressed, encrypted, useCompressionStream, zipCrypto, signed, level, deflate64, format, compressionMethod } = options;
         const stream = this;
         let crc32Stream, encryptionStream, gzipCrc32Stream;
         let readable = super.readable;
-        const useGzipCrc32 = signed && compressed && !deflate64 && (!encrypted || zipCrypto) && Boolean(useCompressionStream && CompressionStream2);
+        const codecStreams2 = format && getCodecStreams(format);
+        const useGzipCrc32 = signed && compressed && !deflate64 && !codecStreams2 && (!encrypted || zipCrypto) && Boolean(useCompressionStream && CompressionStream2);
         if ((!encrypted || zipCrypto) && signed && !useGzipCrc32) {
           crc32Stream = new Crc32Stream();
           readable = pipeThrough(readable, crc32Stream);
         }
         if (compressed) {
-          if (useGzipCrc32) {
+          if (codecStreams2) {
+            readable = pipeThroughBackpressured(readable, createCodecStream(codecStreams2.CompressionStream, format, { level, chunkSize, compressionMethod }));
+          } else if (useGzipCrc32) {
             gzipCrc32Stream = new GzipToRawDeflateStream();
             readable = pipeThroughBackpressured(readable, new CompressionStream2(FORMAT_GZIP));
             readable = pipeThrough(readable, gzipCrc32Stream);
           } else {
-            readable = pipeThroughCommpressionStream(readable, useCompressionStream, { level, chunkSize }, CompressionStream2, CompressionStreamZlib2, CompressionStream2);
+            readable = pipeThroughCompressionStream(readable, useCompressionStream, { level, chunkSize }, CompressionStream2, CompressionStreamZlib2);
           }
         }
         if (encrypted) {
@@ -1417,7 +1556,7 @@ var init_zip_entry_stream = __esm({
     InflateStream = class extends TransformStream {
       constructor(options, { chunkSize, DecompressionStreamZlib: DecompressionStreamZlib2, DecompressionStream: DecompressionStream2 }) {
         super({});
-        const { zipCrypto, encrypted, signed, signature, compressed, useCompressionStream, deflate64 } = options;
+        const { zipCrypto, encrypted, signed, signature, compressed, useCompressionStream, deflate64, format, compressionMethod, rawBitFlag, outputSize } = options;
         let crc32Stream, decryptionStream;
         let readable = super.readable;
         if (encrypted) {
@@ -1429,7 +1568,12 @@ var init_zip_entry_stream = __esm({
           }
         }
         if (compressed) {
-          readable = pipeThroughCommpressionStream(readable, useCompressionStream, { chunkSize, deflate64 }, DecompressionStream2, DecompressionStreamZlib2, DecompressionStream2);
+          const codecStreams2 = format && getCodecStreams(format);
+          if (codecStreams2) {
+            readable = pipeThroughBackpressured(readable, createCodecStream(codecStreams2.DecompressionStream, format, { chunkSize, compressionMethod, rawBitFlag, uncompressedSize: outputSize }));
+          } else {
+            readable = pipeThroughCompressionStream(readable, useCompressionStream, { chunkSize, deflate64 }, DecompressionStream2, DecompressionStreamZlib2);
+          }
           readable = mapInflateStreamError(readable);
         }
         if ((!encrypted || zipCrypto) && signed) {
@@ -1446,6 +1590,7 @@ var init_zip_entry_stream = __esm({
         });
       }
     };
+    deflateRawSupportByStream = /* @__PURE__ */ new Map();
   }
 });
 
@@ -1575,6 +1720,9 @@ var init_codec_stream = __esm({
 function configureWorker({ initModule: initModuleFunction }) {
   initModule = initModuleFunction;
 }
+function resetWebWorkerSupport() {
+  webWorkerSupported = UNDEFINED_VALUE;
+}
 async function callHandler(handler, ...parameters) {
   try {
     await handler(...parameters);
@@ -1587,7 +1735,7 @@ function createWorkerInterface(workerData, config2) {
   };
 }
 function createWebWorkerInterface(workerData, config2) {
-  const { baseURI, chunkSize } = config2;
+  const { baseURI, chunkSize, workerStartupTimeout } = config2;
   let { wasmURI } = config2;
   if (!workerData.interface) {
     if (typeof wasmURI == FUNCTION_TYPE) {
@@ -1602,9 +1750,26 @@ function createWebWorkerInterface(workerData, config2) {
     }
     Object.assign(workerData, {
       worker,
+      workerAlive: false,
       terminated: false,
       interface: {
-        run: () => runWebWorker(workerData, { chunkSize, wasmURI, baseURI })
+        run: async () => {
+          try {
+            return await runWebWorker(workerData, { chunkSize, wasmURI, baseURI, workerStartupTimeout });
+          } catch (error) {
+            if (error && error.workerStartupFailed) {
+              webWorkerSupported = false;
+              const { reader } = workerData;
+              if (reader) {
+                reader.releaseLock();
+              }
+              workerData.reader = null;
+              workerData.writer = null;
+              return runWorker(workerData, config2);
+            }
+            throw error;
+          }
+        }
       }
     });
   }
@@ -1613,13 +1778,22 @@ function createWebWorkerInterface(workerData, config2) {
 async function runWorker({ options, readable, writable, onTaskFinished }, config2) {
   let codecStream;
   try {
-    if (!options.useCompressionStream) {
-      try {
-        await initModule(config2);
-      } catch {
-        const ZlibStream = options.codecType.startsWith(CODEC_DEFLATE) ? config2.CompressionStreamZlib : config2.DecompressionStreamZlib;
-        if (!ZlibStream || ZlibStream.requiresModule) {
-          options.useCompressionStream = true;
+    if (options.compressed && !options.format) {
+      const deflate = options.codecType.startsWith(CODEC_DEFLATE);
+      const ZlibStream = deflate ? config2.CompressionStreamZlib : config2.DecompressionStreamZlib;
+      const NativeStream = deflate ? config2.CompressionStream : config2.DecompressionStream;
+      if (!options.useCompressionStream) {
+        try {
+          await initModule(config2);
+        } catch {
+          if (!ZlibStream || ZlibStream.requiresModule) {
+            options.useCompressionStream = true;
+          }
+        }
+      } else if (ZlibStream && ZlibStream.requiresModule && !supportsDeflateRaw(NativeStream)) {
+        try {
+          await initModule(config2);
+        } catch {
         }
       }
     }
@@ -1682,6 +1856,10 @@ async function runWebWorker(workerData, config2) {
       reader: readable.getReader(),
       writer: writable.getWriter()
     });
+  }
+  const { workerStartupTimeout } = config2;
+  if (!workerData.workerAlive && Number.isFinite(workerStartupTimeout) && workerStartupTimeout >= 0) {
+    workerData.startupTimeout = setTimeout(() => onStartupTimeout(workerData), workerStartupTimeout);
   }
   try {
     const resultValue = await result;
@@ -1786,26 +1964,64 @@ function getWebWorker(url, baseURI, workerData, isModuleType, useBlobURI = true)
   } else {
     worker = new Worker(webWorkerURI, webWorkerOptions);
   }
-  worker.addEventListener(MESSAGE_EVENT_TYPE, (event) => onMessage(event, workerData));
+  worker.addEventListener(MESSAGE_EVENT_TYPE, (event) => {
+    workerData.workerAlive = true;
+    clearStartupTimeout(workerData);
+    onMessage(event, workerData);
+  });
   worker.addEventListener(ERROR_EVENT_TYPE, (event) => onWorkerError(event, workerData));
   worker.addEventListener(MESSAGE_ERROR_EVENT_TYPE, (event) => onWorkerError(event, workerData));
   return worker;
+}
+function onStartupTimeout(workerData) {
+  workerData.startupTimeout = null;
+  if (workerData.workerAlive) {
+    return;
+  }
+  const { rejectResult, writer } = workerData;
+  terminateWorker(workerData);
+  workerData.worker = null;
+  if (rejectResult) {
+    const error = new Error(ERR_WORKER_STARTUP_TIMEOUT);
+    error.workerStartupFailed = true;
+    rejectResult(error);
+    if (writer) {
+      writer.releaseLock();
+    }
+  }
+}
+function clearStartupTimeout(workerData) {
+  const { startupTimeout } = workerData;
+  if (startupTimeout) {
+    clearTimeout(startupTimeout);
+    workerData.startupTimeout = null;
+  }
 }
 function onWorkerError(event, workerData) {
   if (event.preventDefault) {
     event.preventDefault();
   }
-  const { rejectResult, writer, onTaskFinished } = workerData;
+  clearStartupTimeout(workerData);
+  const { workerAlive, rejectResult, writer, onTaskFinished } = workerData;
   terminateWorker(workerData);
+  if (!workerAlive) {
+    workerData.worker = null;
+  }
   if (rejectResult) {
-    rejectResult(event.error || new Error(event.message || ERROR_EVENT_TYPE));
+    let error = event.error || new Error(event.message || ERROR_EVENT_TYPE);
+    if (!workerAlive) {
+      error = Object.assign(new Error(error.message || ERROR_EVENT_TYPE), { workerStartupFailed: true });
+    }
+    rejectResult(error);
     if (writer) {
       writer.releaseLock();
     }
-    onTaskFinished();
+    if (workerAlive) {
+      onTaskFinished();
+    }
   }
 }
-function sendMessage(message, { worker, writer, transferStreams }) {
+function sendMessage(message, { worker, writer, transferStreams, workerAlive }) {
   try {
     const { value, readable, writable } = message;
     const transferables = [];
@@ -1813,7 +2029,7 @@ function sendMessage(message, { worker, writer, transferStreams }) {
       message.value = toExactUint8Array(value);
       transferables.push(message.value.buffer);
     }
-    if (transferStreams && transferStreamsSupported) {
+    if (transferStreams && transferStreamsSupported && workerAlive) {
       if (readable) {
         transferables.push(readable);
       }
@@ -1891,7 +2107,7 @@ async function onMessage({ data }, workerData) {
     onTaskFinished();
   }
 }
-var MODULE_WORKER_OPTIONS, ERROR_EVENT_TYPE, MESSAGE_ERROR_EVENT_TYPE, webWorkerSupported, webWorkerSource, webWorkerURI, webWorkerOptions, transferStreamsSupported, initModule, CodecWorker, ProgressWatcherStream;
+var MODULE_WORKER_OPTIONS, ERROR_EVENT_TYPE, MESSAGE_ERROR_EVENT_TYPE, ERR_WORKER_STARTUP_TIMEOUT, webWorkerSupported, webWorkerSource, webWorkerURI, webWorkerOptions, transferStreamsSupported, initModule, CodecWorker, ProgressWatcherStream;
 var init_codec_worker = __esm({
   "node_modules/@zip.js/zip.js/lib/core/codec-worker.js"() {
     init_constants();
@@ -1901,6 +2117,7 @@ var init_codec_worker = __esm({
     MODULE_WORKER_OPTIONS = { type: "module" };
     ERROR_EVENT_TYPE = "error";
     MESSAGE_ERROR_EVENT_TYPE = "messageerror";
+    ERR_WORKER_STARTUP_TIMEOUT = "Worker startup timeout";
     transferStreamsSupported = true;
     try {
       transferStreamsSupported = typeof structuredClone == FUNCTION_TYPE && structuredClone(new DOMException("", "AbortError")).code !== UNDEFINED_VALUE;
@@ -1985,11 +2202,18 @@ var init_codec_worker = __esm({
 // node_modules/@zip.js/zip.js/lib/core/codec-pool.js
 async function runWorker2(stream, workerOptions) {
   const { options, config: config2 } = workerOptions;
-  const { transferStreams, useWebWorkers, useCompressionStream, compressed, signed, encrypted } = options;
+  const { transferStreams, useWebWorkers, useCompressionStream, compressed, signed, encrypted, format, codecURI } = options;
   const { workerURI, maxWorkers: maxWorkers2 } = config2;
+  if (format) {
+    if (codecURI) {
+      options.codecURI = resolveCodecURI(codecURI, config2.baseURI);
+    }
+    await ensureCodecStreams(format, options.codecURI);
+  }
   workerOptions.transferStreams = transferStreams || transferStreams === UNDEFINED_VALUE && config2.transferStreams;
   const streamCopy = !compressed && !signed && !encrypted;
-  workerOptions.useWebWorkers = !streamCopy && (useWebWorkers || useWebWorkers === UNDEFINED_VALUE && config2.useWebWorkers);
+  const workerSupported = format === UNDEFINED_VALUE || Boolean(options.codecURI);
+  workerOptions.useWebWorkers = !streamCopy && workerSupported && (useWebWorkers || useWebWorkers === UNDEFINED_VALUE && config2.useWebWorkers);
   workerOptions.workerURI = workerOptions.useWebWorkers && workerURI ? workerURI : UNDEFINED_VALUE;
   options.useCompressionStream = useCompressionStream || useCompressionStream === UNDEFINED_VALUE && config2.useCompressionStream;
   return (await getWorker()).run();
@@ -2023,6 +2247,13 @@ async function runWorker2(stream, workerOptions) {
     } else {
       pool = pool.filter((data) => data != workerData);
     }
+  }
+}
+function resolveCodecURI(codecURI, baseURI) {
+  try {
+    return new URL(codecURI, baseURI).toString();
+  } catch {
+    return codecURI;
   }
 }
 function armStarvationTimeout() {
@@ -2078,12 +2309,14 @@ async function terminateWorkers() {
     clearTerminateTimeout(workerData);
     return workerData.terminate();
   }));
+  resetWebWorkerSupport();
 }
 var pool, pendingRequests, starvationTimeout, starvationDelay, indexWorker;
 var init_codec_pool = __esm({
   "node_modules/@zip.js/zip.js/lib/core/codec-pool.js"() {
     init_constants();
     init_codec_stream();
+    init_codec_registry();
     init_codec_worker();
     pool = [];
     pendingRequests = [];
@@ -2108,6 +2341,9 @@ function probeBlobSliceReliability() {
       blobSliceReliable = false;
     }
   })();
+}
+function responseSupportsGlobalReadable() {
+  return typeof Blob.prototype.stream != FUNCTION_TYPE || new Blob([]).stream() instanceof ReadableStream;
 }
 function createHttpReader(httpReader, url, options) {
   const {
@@ -2413,6 +2649,7 @@ var init_io = __esm({
     init_constants();
     init_configuration();
     init_array();
+    init_compatible_streams();
     ERR_HTTP_STATUS = "HTTP error ";
     ERR_HTTP_RANGE = "HTTP Range not supported";
     ERR_HTTP_RESOURCE_CHANGED = "HTTP resource changed";
@@ -2565,10 +2802,10 @@ var init_io = __esm({
         const { blob, size } = reader;
         const { offset = 0, size: readSize = size - offset } = options || {};
         if (!offset && readSize >= size) {
-          return blob.stream();
+          return toCompatibleReadable(blob.stream());
         }
         if (blobSliceReliable) {
-          return blob.slice(offset, offset + readSize).stream();
+          return toCompatibleReadable(blob.slice(offset, offset + readSize).stream());
         }
         return super.createReadable(options);
       }
@@ -2590,16 +2827,25 @@ var init_io = __esm({
         super();
         const writer = this;
         const transformStream = new TransformStream();
-        const headers = [];
-        if (contentType) {
-          headers.push([HTTP_HEADER_CONTENT_TYPE, contentType]);
-        }
         Object.defineProperty(writer, PROPERTY_NAME_WRITABLE, {
           get() {
             return transformStream.writable;
           }
         });
-        writer.blob = new Response(transformStream.readable, { headers }).blob();
+        if (responseSupportsGlobalReadable()) {
+          const headers = [];
+          if (contentType) {
+            headers.push([HTTP_HEADER_CONTENT_TYPE, contentType]);
+          }
+          writer.blob = new Response(transformStream.readable, { headers }).blob();
+        } else {
+          const chunks = [];
+          writer.blob = transformStream.readable.pipeTo(new WritableStream({
+            write(chunk) {
+              chunks.push(chunk);
+            }
+          })).then(() => new Blob(chunks, { type: contentType }));
+        }
         writer.blob.catch(() => {
         });
       }
@@ -2773,7 +3019,7 @@ var init_io = __esm({
       }
       getDiskOffset(diskNumber) {
         const { diskOffsets, size } = this;
-        const diskOffset = diskOffsets.at(diskNumber);
+        const diskOffset = diskOffsets[diskNumber];
         return diskOffset === UNDEFINED_VALUE ? size : diskOffset;
       }
       async readUint8Array(offset, length) {
@@ -2903,9 +3149,9 @@ var init_io = __esm({
         if (Array.isArray(reader)) {
           reader = new SplitDataReader(reader);
         }
-        if (reader instanceof ReadableStream) {
+        if (reader instanceof ReadableStream || typeof reader.getReader == FUNCTION_TYPE) {
           reader = {
-            readable: reader
+            readable: toCompatibleReadable(reader)
           };
         }
         return reader;
@@ -2916,9 +3162,9 @@ var init_io = __esm({
         if (writer.writable === UNDEFINED_VALUE && typeof writer.next == FUNCTION_TYPE) {
           writer = new SplitDataWriter(writer);
         }
-        if (writer instanceof WritableStream) {
+        if (writer instanceof WritableStream || typeof writer.getWriter == FUNCTION_TYPE) {
           writer = {
-            writable: writer
+            writable: toCompatibleWritable(writer)
           };
         }
         if (writer.size === UNDEFINED_VALUE) {
@@ -3072,7 +3318,7 @@ var init_zip_entry = __esm({
 });
 
 // node_modules/@zip.js/zip.js/lib/core/options.js
-var OPTION_FILENAME_ENCODING, OPTION_COMMENT_ENCODING, OPTION_DECODE_TEXT, OPTION_EXTRACT_PREPENDED_DATA, OPTION_EXTRACT_APPENDED_DATA, OPTION_PASSWORD, OPTION_RAW_PASSWORD, OPTION_PASS_THROUGH, OPTION_SIGNAL, OPTION_CHECK_PASSWORD_ONLY, OPTION_CHECK_OVERLAPPING_ENTRY_ONLY, OPTION_CHECK_OVERLAPPING_ENTRY, OPTION_CHECK_AMBIGUITY, OPTION_CHECK_SIGNATURE, OPTION_USE_WEB_WORKERS, OPTION_USE_COMPRESSION_STREAM, OPTION_TRANSFER_STREAMS, OPTION_PREVENT_CLOSE, OPTION_ENCRYPTION_STRENGTH, OPTION_EXTENDED_TIMESTAMP, OPTION_KEEP_ORDER, OPTION_LEVEL, OPTION_BUFFERED_WRITE, OPTION_CREATE_TEMP_STREAM, OPTION_DATA_DESCRIPTOR_SIGNATURE, OPTION_USE_UNICODE_FILE_NAMES, OPTION_DATA_DESCRIPTOR, OPTION_SUPPORT_ZIP64_SPLIT_FILE, OPTION_ENCODE_TEXT, OPTION_OFFSET, OPTION_USDZ, OPTION_UNIX_EXTRA_FIELD_TYPE, OPTION_STRICTNESS, OPTION_MAX_APPENDED_DATA_SIZE, STRICTNESS_STRICT, STRICTNESS_BALANCED, STRICTNESS_TOLERANT;
+var OPTION_FILENAME_ENCODING, OPTION_COMMENT_ENCODING, OPTION_DECODE_TEXT, OPTION_EXTRACT_PREPENDED_DATA, OPTION_EXTRACT_APPENDED_DATA, OPTION_PASSWORD, OPTION_RAW_PASSWORD, OPTION_PASS_THROUGH, OPTION_SIGNAL, OPTION_CHECK_PASSWORD_ONLY, OPTION_CHECK_OVERLAPPING_ENTRY_ONLY, OPTION_CHECK_OVERLAPPING_ENTRY, OPTION_CHECK_AMBIGUITY, OPTION_CHECK_SIGNATURE, OPTION_USE_WEB_WORKERS, OPTION_USE_COMPRESSION_STREAM, OPTION_TRANSFER_STREAMS, OPTION_PREVENT_CLOSE, OPTION_ENCRYPTION_STRENGTH, OPTION_EXTENDED_TIMESTAMP, OPTION_NTFS_TIMESTAMP, OPTION_KEEP_ORDER, OPTION_LEVEL, OPTION_BUFFERED_WRITE, OPTION_CREATE_TEMP_STREAM, OPTION_DATA_DESCRIPTOR_SIGNATURE, OPTION_USE_UNICODE_FILE_NAMES, OPTION_DATA_DESCRIPTOR, OPTION_SUPPORT_ZIP64_SPLIT_FILE, OPTION_ENCODE_TEXT, OPTION_OFFSET, OPTION_USDZ, OPTION_UNIX_EXTRA_FIELD_TYPE, OPTION_STRICTNESS, OPTION_MAX_APPENDED_DATA_SIZE, STRICTNESS_STRICT, STRICTNESS_BALANCED, STRICTNESS_TOLERANT;
 var init_options = __esm({
   "node_modules/@zip.js/zip.js/lib/core/options.js"() {
     OPTION_FILENAME_ENCODING = "filenameEncoding";
@@ -3095,6 +3341,7 @@ var init_options = __esm({
     OPTION_PREVENT_CLOSE = "preventClose";
     OPTION_ENCRYPTION_STRENGTH = "encryptionStrength";
     OPTION_EXTENDED_TIMESTAMP = "extendedTimestamp";
+    OPTION_NTFS_TIMESTAMP = "ntfsTimestamp";
     OPTION_KEEP_ORDER = "keepOrder";
     OPTION_LEVEL = "level";
     OPTION_BUFFERED_WRITE = "bufferedWrite";
@@ -3122,6 +3369,7 @@ __export(zip_reader_exports, {
   ERR_BAD_FORMAT: () => ERR_BAD_FORMAT,
   ERR_CENTRAL_DIRECTORY_NOT_FOUND: () => ERR_CENTRAL_DIRECTORY_NOT_FOUND,
   ERR_ENCRYPTED: () => ERR_ENCRYPTED,
+  ERR_ENCRYPTED_CENTRAL_DIRECTORY: () => ERR_ENCRYPTED_CENTRAL_DIRECTORY,
   ERR_EOCDR_LOCATOR_ZIP64_NOT_FOUND: () => ERR_EOCDR_LOCATOR_ZIP64_NOT_FOUND,
   ERR_EOCDR_NOT_FOUND: () => ERR_EOCDR_NOT_FOUND,
   ERR_EXTRAFIELD_ZIP64_NOT_FOUND: () => ERR_EXTRAFIELD_ZIP64_NOT_FOUND,
@@ -3132,11 +3380,20 @@ __export(zip_reader_exports, {
   ERR_LOCAL_FILE_HEADER_NOT_FOUND: () => ERR_LOCAL_FILE_HEADER_NOT_FOUND,
   ERR_OVERLAPPING_ENTRY: () => ERR_OVERLAPPING_ENTRY,
   ERR_SPLIT_ZIP_FILE: () => ERR_SPLIT_ZIP_FILE,
-  ERR_UNSUPPORTED_COMPRESSION: () => ERR_UNSUPPORTED_COMPRESSION,
+  ERR_UNSUPPORTED_COMPRESSION: () => ERR_UNSUPPORTED_COMPRESSION2,
   ERR_UNSUPPORTED_ENCRYPTION: () => ERR_UNSUPPORTED_ENCRYPTION,
   ZipReader: () => ZipReader,
   ZipReaderStream: () => ZipReaderStream
 });
+function detectEncryptedCentralDirectory(directoryView) {
+  const maxOffset = Math.min(directoryView.byteLength, 1024) - 3;
+  for (let offset = 0; offset < maxOffset; offset++) {
+    if (getUint32(directoryView, offset) == ARCHIVE_EXTRA_DATA_SIGNATURE) {
+      return true;
+    }
+  }
+  return false;
+}
 function readCommonHeader(directory, dataView, offset) {
   const rawBitFlag = directory.rawBitFlag = getUint16(dataView, offset + 2);
   const encrypted = (rawBitFlag & BITFLAG_ENCRYPTED) == BITFLAG_ENCRYPTED;
@@ -3597,15 +3854,17 @@ function getUint32(view, offset) {
 function getBigUint64(view, offset) {
   return Number(view.getBigUint64(offset, true));
 }
-var ERR_BAD_FORMAT, ERR_EOCDR_NOT_FOUND, ERR_EOCDR_LOCATOR_ZIP64_NOT_FOUND, ERR_CENTRAL_DIRECTORY_NOT_FOUND, ERR_LOCAL_FILE_HEADER_NOT_FOUND, ERR_EXTRAFIELD_ZIP64_NOT_FOUND, ERR_ENCRYPTED, ERR_UNSUPPORTED_ENCRYPTION, ERR_UNSUPPORTED_COMPRESSION, ERR_SPLIT_ZIP_FILE, ERR_OVERLAPPING_ENTRY, ERR_AMBIGUOUS_ARCHIVE, CHARSET_UTF8, PROPERTY_NAME_UTF8_SUFFIX, CHARSET_CP437, BITFLAG_AMBIGUITY_MASK, ZIP64_PROPERTIES, ZIP64_EXTRACTION, ZipReader, ZipReaderStream, ZipEntry, MAX_END_OF_CENTRAL_DIR_PROBES, CENTRAL_DIRECTORY_UNREACHABLE, CENTRAL_DIRECTORY_PLAUSIBLE, CENTRAL_DIRECTORY_REACHABLE;
+var ERR_BAD_FORMAT, ERR_EOCDR_NOT_FOUND, ERR_EOCDR_LOCATOR_ZIP64_NOT_FOUND, ERR_CENTRAL_DIRECTORY_NOT_FOUND, ERR_LOCAL_FILE_HEADER_NOT_FOUND, ERR_EXTRAFIELD_ZIP64_NOT_FOUND, ERR_ENCRYPTED, ERR_UNSUPPORTED_ENCRYPTION, ERR_UNSUPPORTED_COMPRESSION2, ERR_SPLIT_ZIP_FILE, ERR_OVERLAPPING_ENTRY, ERR_AMBIGUOUS_ARCHIVE, ERR_ENCRYPTED_CENTRAL_DIRECTORY, CHARSET_UTF8, PROPERTY_NAME_UTF8_SUFFIX, CHARSET_CP437, BITFLAG_AMBIGUITY_MASK, ZIP64_PROPERTIES, ZIP64_EXTRACTION, ZipReader, ZipReaderStream, ZipEntry, MAX_END_OF_CENTRAL_DIR_PROBES, CENTRAL_DIRECTORY_UNREACHABLE, CENTRAL_DIRECTORY_PLAUSIBLE, CENTRAL_DIRECTORY_REACHABLE;
 var init_zip_reader = __esm({
   "node_modules/@zip.js/zip.js/lib/core/zip-reader.js"() {
     init_constants();
     init_configuration();
+    init_codec_registry();
     init_codec_pool();
     init_io();
     init_decode_text();
     init_array();
+    init_compatible_streams();
     init_crc32();
     init_zip_entry();
     init_options();
@@ -3617,10 +3876,11 @@ var init_zip_reader = __esm({
     ERR_EXTRAFIELD_ZIP64_NOT_FOUND = "Zip64 extra field not found";
     ERR_ENCRYPTED = "File contains encrypted entry";
     ERR_UNSUPPORTED_ENCRYPTION = "Encryption method not supported";
-    ERR_UNSUPPORTED_COMPRESSION = "Compression method not supported";
+    ERR_UNSUPPORTED_COMPRESSION2 = "Compression method not supported";
     ERR_SPLIT_ZIP_FILE = "Split zip file";
     ERR_OVERLAPPING_ENTRY = "Overlapping entry found";
     ERR_AMBIGUOUS_ARCHIVE = "Ambiguous archive";
+    ERR_ENCRYPTED_CENTRAL_DIRECTORY = "Encrypted central directory is not supported";
     CHARSET_UTF8 = "utf-8";
     PROPERTY_NAME_UTF8_SUFFIX = "UTF8";
     CHARSET_CP437 = "cp437";
@@ -3695,6 +3955,7 @@ var init_zip_reader = __esm({
         let prependedDataLength = 0;
         let startOffset;
         let zip64EndOfDirectory;
+        let zip64EndOfDirectoryVersion2;
         const requiresZip64 = directoryDataOffset == MAX_32_BITS || directoryDataLength == MAX_32_BITS || filesLength == MAX_16_BITS || diskNumber == MAX_16_BITS;
         if (directoryDataOffset != MAX_32_BITS && diskNumber != MAX_16_BITS) {
           directoryDataOffset += getDiskOffset(reader, diskNumber);
@@ -3720,6 +3981,7 @@ var init_zip_reader = __esm({
               throw new Error(ERR_EOCDR_LOCATOR_ZIP64_NOT_FOUND);
             }
             zip64EndOfDirectory = true;
+            zip64EndOfDirectoryVersion2 = getBigUint64(endOfDirectoryView2, 4) > ZIP64_END_OF_CENTRAL_DIR_LENGTH - 12;
             if (lastDiskNumber == MAX_16_BITS) {
               lastDiskNumber = getUint32(endOfDirectoryView2, 16);
             } else if (checkAmbiguity && lastDiskNumber != getUint32(endOfDirectoryView2, 16)) {
@@ -3798,6 +4060,9 @@ var init_zip_reader = __esm({
         for (let indexFile = 0; indexFile < filesLength; indexFile++) {
           const fileEntry = new ZipEntry(reader, config2, zipReader.options);
           if (offset + CENTRAL_FILE_HEADER_LENGTH > directoryArray.length || getUint32(directoryView, offset) != CENTRAL_FILE_HEADER_SIGNATURE) {
+            if (indexFile == 0 && (zip64EndOfDirectoryVersion2 || detectEncryptedCentralDirectory(directoryView))) {
+              throw new Error(ERR_ENCRYPTED_CENTRAL_DIRECTORY);
+            }
             throw new Error(ERR_CENTRAL_DIRECTORY_NOT_FOUND);
           }
           readCommonHeader(fileEntry, directoryView, offset + 6);
@@ -3992,6 +4257,7 @@ var init_zip_reader = __esm({
           compressionMethod,
           config: config2,
           bitFlag,
+          rawBitFlag,
           signature,
           rawLastModDate,
           uncompressedSize,
@@ -4011,11 +4277,8 @@ var init_zip_reader = __esm({
         rawPassword = rawPassword && rawPassword.length && rawPassword;
         if (extraFieldAES) {
           if (extraFieldAES.originalCompressionMethod != COMPRESSION_METHOD_AES) {
-            throw new Error(ERR_UNSUPPORTED_COMPRESSION);
+            throw new Error(ERR_UNSUPPORTED_COMPRESSION2);
           }
-        }
-        if (compressionMethod != COMPRESSION_METHOD_STORE && compressionMethod != COMPRESSION_METHOD_DEFLATE && compressionMethod != COMPRESSION_METHOD_DEFLATE_64 && !passThrough) {
-          throw new Error(ERR_UNSUPPORTED_COMPRESSION);
         }
         if (dataArray.length < HEADER_SIZE || getUint32(dataView, 0) != LOCAL_FILE_HEADER_SIGNATURE) {
           throw new Error(ERR_LOCAL_FILE_HEADER_NOT_FOUND);
@@ -4050,8 +4313,15 @@ var init_zip_reader = __esm({
         if (!passThrough) {
           fileEntry.zipCrypto = zipCrypto;
         }
+        if (encrypted && (localDirectory.rawBitFlag & BITFLAG_STRONG_ENCRYPTION) == BITFLAG_STRONG_ENCRYPTION) {
+          throw new Error(ERR_UNSUPPORTED_ENCRYPTION);
+        }
+        const registeredCodec = passThrough ? UNDEFINED_VALUE : getRegisteredCodec(compressionMethod);
+        if (compressionMethod != COMPRESSION_METHOD_STORE && compressionMethod != COMPRESSION_METHOD_DEFLATE && compressionMethod != COMPRESSION_METHOD_DEFLATE_64 && !registeredCodec && !passThrough) {
+          throw new Error(ERR_UNSUPPORTED_COMPRESSION2);
+        }
         if (encrypted) {
-          if (!zipCrypto && extraFieldAES.strength === UNDEFINED_VALUE) {
+          if (!zipCrypto && (extraFieldAES.strength < 1 || extraFieldAES.strength > 3)) {
             throw new Error(ERR_UNSUPPORTED_ENCRYPTION);
           } else if (!password && !rawPassword) {
             throw new Error(ERR_ENCRYPTED);
@@ -4059,7 +4329,7 @@ var init_zip_reader = __esm({
         }
         const dataOffset = localHeaderOffset + HEADER_SIZE + filenameLength + extraFieldLength;
         const size = compressedSize;
-        const readable = reader.createReadable({ offset: dataOffset, size });
+        const readable = toCompatibleReadable(reader.createReadable({ offset: dataOffset, size }));
         const signal = getOptionValue(zipEntry, options, OPTION_SIGNAL);
         const checkPasswordOnly = getOptionValue(zipEntry, options, OPTION_CHECK_PASSWORD_ONLY);
         let checkOverlappingEntry = getOptionValue(zipEntry, options, OPTION_CHECK_OVERLAPPING_ENTRY);
@@ -4090,6 +4360,10 @@ var init_zip_reader = __esm({
             useCompressionStream,
             transferStreams: getOptionValue(zipEntry, options, OPTION_TRANSFER_STREAMS),
             deflate64,
+            format: registeredCodec ? registeredCodec.format : UNDEFINED_VALUE,
+            codecURI: registeredCodec ? registeredCodec.codecURI : UNDEFINED_VALUE,
+            compressionMethod,
+            rawBitFlag,
             checkPasswordOnly
           },
           config: config2,
@@ -4153,7 +4427,7 @@ init_configuration();
 
 // node_modules/@zip.js/zip.js/lib/core/web-worker-inline-wasm.js
 function t(t3) {
-  const e = '(t=>{"function"==typeof define&&define.amd?define(t):t()})(function(){"use strict";const{Array:t,Object:e,Number:n,Math:s,Error:r,Uint8Array:o,Uint16Array:i,Uint32Array:c,Int32Array:a,Map:f,DataView:l,Promise:u,TextEncoder:w,crypto:h,postMessage:p,TransformStream:d,ReadableStream:y,WritableStream:m,CompressionStream:g,DecompressionStream:v}=self,b=void 0,S="undefined",k="function",z=new o,C=[[],[],[],[],[],[],[],[]];for(let t=0;256>t;t++){let e=t;for(let t=0;8>t;t++)e=1&e?e>>>1^3988292384:e>>>1;C[0][t]=e}for(let t=0;256>t;t++)for(let e=1;8>e;e++){const n=C[e-1][t];C[e][t]=n>>>8^C[0][255&n]}const[A,I,x,P,R,U,M,_]=C;class B{constructor(t){this.o=t||-1}append(t){let e=0|this.o;const n=0|t.length;let s=0;if(n>=8&&t.buffer){const r=new l(t.buffer,t.byteOffset,n),o=n-8;for(;o>=s;s+=8){const t=e^r.getInt32(s,!0),n=r.getInt32(s+4,!0);e=_[255&t]^M[t>>>8&255]^U[t>>>16&255]^R[t>>>24&255]^P[255&n]^x[n>>>8&255]^I[n>>>16&255]^A[n>>>24&255]}}for(;n>s;s++)e=e>>>8^A[255&(e^t[s])];this.o=e}get(){return~this.o}}class D extends d{constructor(){let t;const e=new B;super({transform(t,n){e.append(t),n.enqueue(t)},flush(){const n=new o(4);new l(n.buffer).setUint32(0,e.get()),t.value=n}}),t=this}}function V(t,e){const n=new o(t.length+e.length);return n.set(t),n.set(e,t.length),n}const W={concat(t,e){if(0===t.length||0===e.length)return t.concat(e);const n=t[t.length-1],s=W.l(n);return 32===s?t.concat(e):W.h(e,s,0|n,t.slice(0,t.length-1))},m(t){const e=t.length;if(0===e)return 0;const n=t[e-1];return 32*(e-1)+W.l(n)},v(t,e){if(32*t.length<e)return t;const n=(t=t.slice(0,s.ceil(e/32))).length;return e&=31,n>0&&e&&(t[n-1]=W.S(e,t[n-1]&2147483648>>e-1,1)),t},S:(t,e,n)=>32===t?e:(n?0|e:e<<32-t)+1099511627776*t,l:t=>s.round(t/1099511627776)||32,h(t,e,n,s){for(void 0===s&&(s=[]);e>=32;e-=32)s.push(n),n=0;if(0===e)return s.concat(t);for(let r=0;r<t.length;r++)s.push(n|t[r]>>>e),n=t[r]<<32-e;const r=t.length?t[t.length-1]:0,o=W.l(r);return s.push(W.S(e+o&31,e+o>32?n:s.pop(),1)),s}},K={bytes:{C(t){const e=W.m(t)/8,n=new o(e);let s;for(let r=0;e>r;r++)3&r||(s=t[r/4]),n[r]=s>>>24,s<<=8;return n},A(t){const e=[];let n,s=0;for(n=0;n<t.length;n++)s=s<<8|t[n],3&~n||(e.push(s),s=0);return 3&n&&e.push(W.S(8*(3&n),s)),e}}},E=class{constructor(t){const e=this;e.blockSize=512,e.I=[1732584193,4023233417,2562383102,271733878,3285377520],e.P=[1518500249,1859775393,2400959708,3395469782],t?(e.R=t.R.slice(0),e.U=t.U.slice(0),e.M=t.M):e.reset()}reset(){const t=this;return t.R=t.I.slice(0),t.U=[],t.M=0,t}update(t){const e=this;"string"==typeof t&&(t=K._.A(t));const n=e.U=W.concat(e.U,t),s=e.M,o=e.M=s+W.m(t);if(o>9007199254740991)throw new r("Cannot hash more than 2^53 - 1 bits");const i=new c(n);let a=0;for(let t=e.blockSize+s-(e.blockSize+s&e.blockSize-1);o>=t;t+=e.blockSize)e.B(i.subarray(16*a,16*(a+1))),a+=1;return n.splice(0,16*a),e}D(){const t=this;let e=t.U;const n=t.R;e=W.concat(e,[W.S(1,1)]);for(let t=e.length+2;15&t;t++)e.push(0);for(e.push(s.floor(t.M/4294967296)),e.push(0|t.M);e.length;)t.B(e.splice(0,16));return t.reset(),n}V(t,e,n,s){return t>19?t>39?t>59?t>79?void 0:e^n^s:e&n|e&s|n&s:e^n^s:e&n|~e&s}W(t,e){return e<<t|e>>>32-t}B(e){const n=this,r=n.R,o=t(80);for(let t=0;16>t;t++)o[t]=e[t];let i=r[0],c=r[1],a=r[2],f=r[3],l=r[4];for(let t=0;79>=t;t++){16>t||(o[t]=n.W(1,o[t-3]^o[t-8]^o[t-14]^o[t-16]));const e=n.W(5,i)+n.V(t,c,a,f)+l+o[t]+n.P[s.floor(t/20)]|0;l=f,f=a,a=n.W(30,c),c=i,i=e}r[0]=r[0]+i|0,r[1]=r[1]+c|0,r[2]=r[2]+a|0,r[3]=r[3]+f|0,r[4]=r[4]+l|0}},L={importKey:t=>new L.K(K.bytes.A(t)),L(t,e,n,s){if(n=n||1e4,0>s||0>n)throw new r("invalid params to pbkdf2");const o=1+(s>>5)<<2;let i,c,a,f,u;const w=new ArrayBuffer(o),h=new l(w);let p=0;const d=W;for(e=K.bytes.A(e),u=1;(o||1)>p;u++){for(i=c=t.encrypt(d.concat(e,[u])),a=1;n>a;a++)for(c=t.encrypt(c),f=0;f<c.length;f++)i[f]^=c[f];for(a=0;(o||1)>p&&a<i.length;a++)h.setInt32(p,i[a]),p+=4}return w.slice(0,s/8)},K:class{constructor(t){const e=this,n=e.O=E,s=[[],[]];e.T=[new n,new n];const r=e.T[0].blockSize/32;t.length>r&&(t=(new n).update(t).D());for(let e=0;r>e;e++)s[0][e]=909522486^t[e],s[1][e]=1549556828^t[e];e.T[0].update(s[0]),e.T[1].update(s[1]),e.j=new n(e.T[0])}reset(){const t=this;t.j=new t.O(t.T[0]),t.H=!1}update(t){this.H=!0,this.j.update(t)}digest(){const t=this,e=t.j.D(),n=new t.O(t.T[1]).update(e).D();return t.reset(),n}encrypt(t){if(this.H)throw new r("encrypt on already updated hmac called!");return this.update(t),this.digest(t)}}},O=typeof h!=S&&typeof h.getRandomValues==k,T="Invalid password",j="Invalid signature",H="zipjs-abort-check-password";function Z(t){if(O)return h.getRandomValues(t);throw new r("Crypto API not supported")}const F=16,N={name:"PBKDF2"},q=e.assign({hash:{name:"HMAC"}},N),G=e.assign({iterations:1e3,hash:{name:"SHA-1"}},N),J=["deriveBits"],Q=[8,12,16],X=[16,24,32],Y=10,$=[0,0,0,0],tt=typeof h!=S,et=tt&&h.subtle,nt=tt&&typeof et!=S,st=K.bytes,rt=class{constructor(t){const e=this;e.Z=[[[],[],[],[],[]],[[],[],[],[],[]]],e.Z[0][0][0]||e.F();const n=e.Z[0][4],s=e.Z[1],o=t.length;let i,c,a,f=1;if(4!==o&&6!==o&&8!==o)throw new r("invalid aes key size");for(e.P=[c=t.slice(0),a=[]],i=o;4*o+28>i;i++){let t=c[i-1];(i%o===0||8===o&&i%o===4)&&(t=n[t>>>24]<<24^n[t>>16&255]<<16^n[t>>8&255]<<8^n[255&t],i%o===0&&(t=t<<8^t>>>24^f<<24,f=f<<1^283*(f>>7))),c[i]=c[i-o]^t}for(let t=0;i;t++,i--){const e=c[3&t?i:i-4];a[t]=4>=i||4>t?e:s[0][n[e>>>24]]^s[1][n[e>>16&255]]^s[2][n[e>>8&255]]^s[3][n[255&e]]}}encrypt(t){return this.N(t,0)}decrypt(t){return this.N(t,1)}F(){const t=this.Z[0],e=this.Z[1],n=t[4],s=e[4],r=[],o=[];let i,c,a,f;for(let t=0;256>t;t++)o[(r[t]=t<<1^283*(t>>7))^t]=t;for(let l=i=0;!n[l];l^=c||1,i=o[i]||1){let o=i^i<<1^i<<2^i<<3^i<<4;o=o>>8^255&o^99,n[l]=o,s[o]=l,f=r[a=r[c=r[l]]];let u=16843009*f^65537*a^257*c^16843008*l,w=257*r[o]^16843008*o;for(let n=0;4>n;n++)t[n][l]=w=w<<24^w>>>8,e[n][o]=u=u<<24^u>>>8}for(let n=0;5>n;n++)t[n]=t[n].slice(0),e[n]=e[n].slice(0)}N(t,e){if(4!==t.length)throw new r("invalid aes block size");const n=this.P[e],s=n.length/4-2,o=[0,0,0,0],i=this.Z[e],c=i[0],a=i[1],f=i[2],l=i[3],u=i[4];let w,h,p,d=t[0]^n[0],y=t[e?3:1]^n[1],m=t[2]^n[2],g=t[e?1:3]^n[3],v=4;for(let t=0;s>t;t++)w=c[d>>>24]^a[y>>16&255]^f[m>>8&255]^l[255&g]^n[v],h=c[y>>>24]^a[m>>16&255]^f[g>>8&255]^l[255&d]^n[v+1],p=c[m>>>24]^a[g>>16&255]^f[d>>8&255]^l[255&y]^n[v+2],g=c[g>>>24]^a[d>>16&255]^f[y>>8&255]^l[255&m]^n[v+3],v+=4,d=w,y=h,m=p;for(let t=0;4>t;t++)o[e?3&-t:t]=u[d>>>24]<<24^u[y>>16&255]<<16^u[m>>8&255]<<8^u[255&g]^n[v++],w=d,d=y,y=m,m=g,g=w;return o}},ot=class{constructor(t,e){this.G=t,this.J=e,this.X=e}reset(){this.X=this.J}update(t){return this.Y(this.G,t,this.X)}$(t){if(255&~(t>>24))t+=1<<24;else{let e=t>>16&255,n=t>>8&255,s=255&t;255===e?(e=0,255===n?(n=0,255===s?s=0:++s):++n):++e,t=0,t+=e<<16,t+=n<<8,t+=s}return t}et(t){0===(t[0]=this.$(t[0]))&&(t[1]=this.$(t[1]))}Y(t,e,n){let s;if(!(s=e.length))return[];const r=W.m(e);for(let r=0;s>r;r+=4){this.et(n);const s=t.encrypt(n);e[r]^=s[0],e[r+1]^=s[1],e[r+2]^=s[2],e[r+3]^=s[3]}return W.v(e,r)}},it=L.K;let ct=tt&&nt&&typeof et.importKey==k,at=tt&&nt&&typeof et.deriveBits==k;class ft extends d{constructor({password:t,rawPassword:e,encryptionStrength:n,checkPasswordOnly:s}){super({start(){ut(this,t,e,n)},async transform(t,e){const n=this,{password:i,strength:c,nt:a,ready:f}=n;i?(await(async(t,e,n,s)=>{const o=await ht(t,e,n,dt(s,0,Q[e])),i=dt(s,Q[e]);if(o[0]!=i[0]||o[1]!=i[1])throw new r(T)})(n,c,i,dt(t,0,Q[c]+2)),t=dt(t,Q[c]+2),s?e.error(new r(H)):a()):await f;const l=new o(t.length-Y-(t.length-Y)%F);e.enqueue(wt(n,t,l,0,Y,!0))},async flush(t){const{st:e,ot:n,pending:s,ready:o}=this;if(n&&e){await o;const i=dt(s,0,s.length-Y),c=dt(s,s.length-Y);let a=z;if(i.length){const t=mt(st,i);n.update(t);const s=e.update(t);a=yt(st,s)}const f=dt(yt(st,n.digest()),0,Y);let l=s.length<Y?1:0;for(let t=0;Y>t;t++)l|=f[t]^c[t];if(l)throw new r(j);t.enqueue(a)}}})}}class lt extends d{constructor({password:t,rawPassword:e,encryptionStrength:n}){let s;super({start(){ut(this,t,e,n)},async transform(t,e){const n=this,{password:s,strength:r,nt:i,ready:c}=n;let a=z;s?(a=await(async(t,e,n)=>{const s=Z(new o(Q[e]));return V(s,await ht(t,e,n,s))})(n,r,s),i()):await c;const f=new o(a.length+t.length-t.length%F);f.set(a,0),e.enqueue(wt(n,t,f,a.length,0))},async flush(t){const{st:e,ot:n,pending:r,ready:o}=this;if(n&&e){await o;let i=z;if(r.length){const t=e.update(mt(st,r));n.update(t),i=yt(st,t)}s.signature=yt(st,n.digest()).slice(0,Y),t.enqueue(V(i,s.signature))}}}),s=this}}function ut(t,n,s,r){e.assign(t,{ready:new u(e=>t.nt=e),password:pt(n,s),strength:r-1,pending:z})}function wt(t,e,n,s,r,i){const{st:c,ot:a,pending:f}=t;f.length&&(e=V(f,e));const l=e.length-r;let u;for(n=((t,e)=>{if(e&&e>t.length){const n=t;(t=new o(e)).set(n,0)}return t})(n,s+(l-l%F)),u=0;l-F>=u;u+=F){const t=mt(st,dt(e,u,u+F));i&&a.update(t);const r=c.update(t);i||a.update(r),n.set(yt(st,r),u+s)}return t.pending=dt(e,u),n}async function ht(n,s,r,i){n.password=null;const c=await(async(t,e,n,s,r)=>{if(!ct)return L.importKey(e);try{return await et.importKey("raw",e,n,!1,r)}catch{return ct=!1,L.importKey(e)}})(0,r,q,0,J),a=await(async(t,e,n)=>{if(!at)return L.L(e,t.salt,G.iterations,n);try{return await et.deriveBits(t,e,n)}catch{return at=!1,L.L(e,t.salt,G.iterations,n)}})(e.assign({salt:i},G),c,8*(2*X[s]+2)),f=new o(a),l=mt(st,dt(f,0,X[s])),u=mt(st,dt(f,X[s],2*X[s])),w=dt(f,2*X[s]);return e.assign(n,{keys:{key:l,it:u,passwordVerification:w},st:new ot(new rt(l),t.from($)),ot:new it(u)}),w}function pt(t,e){return e===b?(t=>{if(typeof w==S){const e=new o((t=unescape(encodeURIComponent(t))).length);for(let n=0;n<e.length;n++)e[n]=t.charCodeAt(n);return e}return(new w).encode(t)})(t):e}function dt(t,e,n){return t.subarray(e,n)}function yt(t,e){return t.C(e)}function mt(t,e){return t.A(e)}class gt extends d{constructor({password:t,rawPassword:e,passwordVerification:n,checkPasswordOnly:s}){super({start(){bt(this,t,e,n)},transform(t,e){const n=this;if(n.password||n.rawPassword){const e=St(n,t.subarray(0,12));if(n.password=n.rawPassword=null,0!=(e.at(-1)^n.passwordVerification))throw new r(T);t=t.subarray(12)}s?e.error(new r(H)):e.enqueue(St(n,t))}})}}class vt extends d{constructor({password:t,rawPassword:e,passwordVerification:n}){super({start(){bt(this,t,e,n)},transform(t,e){const n=this;let s,r;if(n.password||n.rawPassword){n.password=n.rawPassword=null;const e=Z(new o(12));e[11]=n.passwordVerification,s=new o(t.length+e.length),s.set(kt(n,e),0),r=12}else s=new o(t.length),r=0;s.set(kt(n,t),r),e.enqueue(s)}})}}function bt(t,n,s,r){e.assign(t,{password:n,rawPassword:s,passwordVerification:r}),((t,n,s)=>{const r=[305419896,591751049,878082192];if(e.assign(t,{keys:r,ct:new B(r[0]),ft:new B(r[2])}),s)for(let e=0;e<s.length;e++)zt(t,s[e]);else for(let e=0;e<n.length;e++)zt(t,n.charCodeAt(e))})(t,n,s)}function St(t,e){const n=new o(e.length);for(let s=0;s<e.length;s++)n[s]=Ct(t)^e[s],zt(t,n[s]);return n}function kt(t,e){const n=new o(e.length);for(let s=0;s<e.length;s++)n[s]=Ct(t)^e[s],zt(t,e[s]);return n}function zt(t,e){let[,n]=t.keys;t.ct.append([e]);const r=~t.ct.get();n=It(s.imul(It(n+At(r)),134775813)+1),t.ft.append([n>>>24]);const o=~t.ft.get();t.keys=[r,n,o]}function Ct(t){const e=2|t.keys[2];return At(s.imul(e,1^e)>>>8)}function At(t){return 255&t}function It(t){return 4294967295&t}class xt extends d{constructor(t,{chunkSize:e,CompressionStreamZlib:n,CompressionStream:s}){super({});const{compressed:r,encrypted:o,useCompressionStream:i,zipCrypto:c,signed:a,level:f,deflate64:u}=t,w=this;let h,p,d,y=super.readable;const m=a&&r&&!u&&(!o||c)&&!(!i||!s);o&&!c||!a||m||(h=new D,y=_t(y,h)),r&&(m?(d=new Pt,y=Bt(y,new s("gzip")),y=_t(y,d)):y=Mt(y,i,{level:f,chunkSize:e},s,n,s)),o&&(c?y=_t(y,new vt(t)):(p=new lt(t),y=_t(y,p))),Ut(w,y,()=>{let t;o&&!c&&(t=p.signature),o&&!c||!a||(t=m?d.signature:new l(h.value.buffer).getUint32(0)),w.signature=t})}}class Pt extends d{constructor(){let t,e=10,n=new o(0);super({transform(t,r){if(e){const n=s.min(e,t.length);if(e-=n,!(t=t.subarray(n)).length)return}const o=n.length+t.length;if(8>=o)return void(n=V(n,t));const i=o-8,c=s.min(i,n.length);r.enqueue(V(n.subarray(0,c),t.subarray(0,i-c))),n=V(n.subarray(c),t.subarray(i-c))},flush(){const e=new l((s=n).buffer,s.byteOffset,s.byteLength);var s;t.signature=e.getUint32(0,!0),t.uncompressedSize=e.getUint32(4,!0)}}),t=this}}class Rt extends d{constructor(t,{chunkSize:e,DecompressionStreamZlib:n,DecompressionStream:s}){super({});const{zipCrypto:o,encrypted:i,signed:c,signature:a,compressed:f,useCompressionStream:u,deflate64:w}=t;let h,p,d=super.readable;i&&(o?d=_t(d,new gt(t)):(p=new ft(t),d=_t(d,p))),f&&(d=Mt(d,u,{chunkSize:e,deflate64:w},s,n,s),d=(t=>{const e=t.getReader();return new y({async pull(t){let n;try{n=await e.read()}catch(t){if(t&&t.message)throw t;const e=new r("Invalid compressed data");throw e.cause=t,e}const{value:s,done:o}=n;o?t.close():t.enqueue(s)},cancel:t=>e.cancel(t)})})(d)),i&&!o||!c||(h=new D,d=_t(d,h)),Ut(this,d,()=>{if((!i||o)&&c){const t=new l(h.value.buffer);if(a!=t.getUint32(0,!1))throw new r(j)}})}}function Ut(t,n,s){n=_t(n,new d({flush:s})),e.defineProperty(t,"readable",{get:()=>n})}function Mt(t,e,n,s,r,o){const i=e&&s?s:r||o,c=n.deflate64?"deflate64-raw":"deflate-raw";let a;try{a=new i(c,n)}catch(t){if(!e)throw t;if(r)a=new r(c,n);else{if(!o)throw t;a=new o(c,n)}}return Bt(t,a)}function _t(t,e){return t.pipeThrough(e)}function Bt(t,e){const n=e.writable.getWriter(),s=t.getReader();return(async()=>{try{for(;;){await n.ready;const t=await s.read();if(t.done){await n.close();break}await n.write(t.value)}}catch(t){await(async(t,e)=>{try{await t.abort(e)}catch{}})(n,t),await(async(t,e)=>{try{await t.cancel(e)}catch{}})(s,t)}})(),e.readable}const Dt="data",Vt="close";class Wt extends d{constructor(t,n){super({});const s=this,{codecType:o}=t;let i;o.startsWith("deflate")?i=xt:o.startsWith("inflate")&&(i=Rt),s.outputSize=0;let c=0;const a=new i(t,n),f=super.readable,l=new d({transform(t,e){t&&t.length&&(c+=t.length,e.enqueue(t))},flush(){e.assign(s,{inputSize:c})}}),u=new d({transform(e,n){if(e&&e.length&&(n.enqueue(e),s.outputSize+=e.length,t.outputSize!==b&&s.outputSize>t.outputSize))throw new r("Invalid uncompressed size")},flush(){const{signature:t}=a;e.assign(s,{signature:t,inputSize:c})}});e.defineProperty(s,"readable",{get:()=>f.pipeThrough(l).pipeThrough(a).pipeThrough(u)})}}class Kt extends d{constructor(t){const e=[];let s=0;function r(){const n=new o(t);let r=0;for(;t>r;){const s=e[0],o=t-r;s.length>o?(n.set(s.subarray(0,o),r),e[0]=s.subarray(o),r+=o):(n.set(s,r),r+=s.length,e.shift())}return s-=t,n}n.isFinite(t)&&t>=1||(t=65536),super({transform(n,o){for(e.push(n),s+=n.length;s>t;)o.enqueue(r())},flush(t){s&&t.enqueue(((t,e)=>{const n=new o(e);let s=0;for(const e of t)n.set(e,s),s+=e.length;return n})(e,s))}})}}let Et=2;try{typeof navigator!=S&&navigator.hardwareConcurrency&&(Et=navigator.hardwareConcurrency)}catch{}const Lt=new f,Ot=new f;let Tt,jt,Ht,Zt,Ft,Nt=0;async function qt(t){let e,r;try{const{options:o,config:i}=t;if(!o.useCompressionStream)try{await self.initModule(t.config)}catch{o.useCompressionStream=!0}i.CompressionStream=self.CompressionStream,i.DecompressionStream=self.DecompressionStream;const c={highWaterMark:1},a=t.readable||new y({async pull(t){const e=new u(t=>Lt.set(Nt,t));Gt({type:"pull",messageId:Nt}),Nt=(Nt+1)%n.MAX_SAFE_INTEGER;const{value:s,done:r}=await e;t.enqueue(s),r&&t.close()}},c);r=t.writable||new m({async write(t){let e;const s=new u(t=>e=t);Ot.set(Nt,e),Gt({type:Dt,value:t,messageId:Nt}),Nt=(Nt+1)%n.MAX_SAFE_INTEGER,await s}},c),e=new Wt(o,i),Tt=new AbortController;const{signal:f}=Tt;await a.pipeThrough(e).pipeThrough(new Kt((t=>s.max(t.chunkSize,64))(i))).pipeTo(r,{signal:f,preventClose:!0,preventAbort:!0}),await r.getWriter().close();const{signature:l,inputSize:w,outputSize:h}=e;Gt({type:Vt,result:{signature:l,inputSize:w,outputSize:h}})}catch(t){if(t.outputSize=e?e.outputSize:0,r&&!r.locked)try{await r.getWriter().close()}catch{}Jt(t)}}function Gt(t){let{value:e}=t;if(e)if(e.length)try{t.value=(n=e,n.byteOffset||n.byteLength!=n.buffer.byteLength?new o(n):n).buffer,p(t,[t.value])}catch{p(t)}else p(t);else p(t);var n}function Jt(t=new r("Unknown error")){const{message:e,stack:n,code:s,name:o,outputSize:i}=t;p({error:{message:e,stack:n,code:s,name:o,outputSize:i}})}function Qt(t,e,n={}){const i="number"==typeof n.level?n.level:-1,c="number"==typeof n.outBuffer?n.outBuffer:65536,a="number"==typeof n.inBufferSize?n.inBufferSize:65536;return new d({start(){try{let n;if(this.lt=Ht(c),this.in=Ht(a),this.inBufferSize=a,!this.lt||!this.in)throw new r("allocation failed");if(this.ut=new o(c),t?(this.wt=jt.deflate_process,this.ht=jt.deflate_last_consumed,this.yt=jt.deflate_end,this.gt=jt.deflate_new(),n="gzip"===e?jt.deflate_init_gzip(this.gt,i):"deflate-raw"===e?jt.deflate_init_raw(this.gt,i):jt.deflate_init(this.gt,i)):"deflate64-raw"===e?(this.wt=jt.inflate9_process,this.ht=jt.inflate9_last_consumed,this.yt=jt.inflate9_end,this.gt=jt.inflate9_new(),n=jt.inflate9_init_raw(this.gt)):(this.wt=jt.inflate_process,this.ht=jt.inflate_last_consumed,this.yt=jt.inflate_end,this.gt=jt.inflate_new(),n="deflate-raw"===e?jt.inflate_init_raw(this.gt):"gzip"===e?jt.inflate_init_gzip(this.gt):jt.inflate_init(this.gt)),0!==n)throw new r("init failed:"+n)}catch(t){throw f(this),t}},transform(e,n){try{const i=e,a=new o(Ft.buffer),f=this.wt,l=this.ht,u=this.lt,w=this.ut;let h=0;for(;h<i.length;){const e=s.min(i.length-h,32768);if((!this.in||this.inBufferSize<e)&&(this.in&&Zt&&(Zt(this.in),this.in=0),this.in=Ht(e),this.inBufferSize=e,!this.in))throw new r("allocation failed");a.set(i.subarray(h,h+e),this.in);const o=f(this.gt,this.in,e,u,c,0),p=16777215&o;if(p&&(w.set(a.subarray(u,u+p),0),n.enqueue(w.slice(0,p))),!t){const t=o>>24&255,e=128&t?t-256:t;if(0>e)throw new r("process error:"+e)}const d=l(this.gt);if(0===d)break;h+=d}}catch(t){f(this),n.error(t)}},flush(e){try{const n=new o(Ft.buffer),s=this.wt,i=this.lt,a=this.ut;for(;;){const o=s(this.gt,0,0,i,c,4),f=16777215&o,l=o>>24&255;if(!t){const t=128&l?l-256:l;if(0>t)throw new r("process error:"+t)}if(f&&(a.set(n.subarray(i,i+f),0),e.enqueue(a.slice(0,f))),1===l||0===f)break}}catch(t){e.error(t)}finally{const t=f(this);0!==t&&e.error(new r("end error:"+t))}},cancel(){f(this)}});function f(t){let e=0;return t.gt&&t.yt&&(e=t.yt(t.gt)),t.gt=0,t.in&&Zt&&Zt(t.in),t.in=0,t.lt&&Zt&&Zt(t.lt),t.lt=0,e}}addEventListener("message",({data:t})=>{const{type:e,messageId:n,value:s,done:r}=t;try{if("start"==e&&qt(t),e==Dt){const t=Lt.get(n);Lt.delete(n),t({value:s||new o,done:r})}if("ack"==e){const t=Ot.get(n);Ot.delete(n),t()}e==Vt&&Tt.abort()}catch(t){Jt(t)}});class Xt{constructor(t="deflate",e){return Qt(!0,t,e)}}class Yt{constructor(t="deflate",e){return Qt(!1,t,e)}}Xt.vt=!0,Yt.vt=!0;let $t=!1;self.initModule=async t=>{try{const e=await(async(t,{baseURI:e})=>{if(!$t){let n,s;try{try{s=new URL(t,e)}catch{}const r=await fetch(s);n=await r.arrayBuffer()}catch(e){if(!t.startsWith("data:application/wasm;base64,"))throw e;n=(t=>{const e=t.split(",")[1],n=atob(e),s=n.length,r=new o(s);for(let t=0;s>t;++t)r[t]=n.charCodeAt(t);return r.buffer})(t)}(t=>{if(jt=t,({malloc:Ht,free:Zt,memory:Ft}=jt),"function"!=typeof Ht||"function"!=typeof Zt||!Ft)throw jt=Ht=Zt=Ft=null,new r("Invalid WASM module")})((await WebAssembly.instantiate(n)).instance.exports),$t=!0}})(t.wasmURI,t);return t.CompressionStreamZlib=Xt,t.DecompressionStreamZlib=Yt,e}catch{}}});\n';
+  const e = '(t=>{"function"==typeof define&&define.amd?define(t):t()})(function(){"use strict";const{Array:t,Object:e,Number:n,Math:s,Error:r,Uint8Array:o,Uint16Array:i,Uint32Array:c,Int32Array:a,Map:f,DataView:l,Promise:u,TextEncoder:w,crypto:h,postMessage:p,TransformStream:d,ReadableStream:y,WritableStream:m,CompressionStream:g,DecompressionStream:S}=self,v=void 0,b="undefined",z="function",k=new o,C=[[],[],[],[],[],[],[],[]];for(let t=0;256>t;t++){let e=t;for(let t=0;8>t;t++)e=1&e?e>>>1^3988292384:e>>>1;C[0][t]=e}for(let t=0;256>t;t++)for(let e=1;8>e;e++){const n=C[e-1][t];C[e][t]=n>>>8^C[0][255&n]}const[A,I,x,P,M,B,D,R]=C;class U{constructor(t){this.o=t||-1}append(t){let e=0|this.o;const n=0|t.length;let s=0;if(n>=8&&t.buffer){const r=new l(t.buffer,t.byteOffset,n),o=n-8;for(;o>=s;s+=8){const t=e^r.getInt32(s,!0),n=r.getInt32(s+4,!0);e=R[255&t]^D[t>>>8&255]^B[t>>>16&255]^M[t>>>24&255]^P[255&n]^x[n>>>8&255]^I[n>>>16&255]^A[n>>>24&255]}}for(;n>s;s++)e=e>>>8^A[255&(e^t[s])];this.o=e}get(){return~this.o}}class _ extends d{constructor(){let t;const e=new U;super({transform(t,n){e.append(t),n.enqueue(t)},flush(){const n=new o(4);new l(n.buffer).setUint32(0,e.get()),t.value=n}}),t=this}}function V(t,e){const n=new o(t.length+e.length);return n.set(t),n.set(e,t.length),n}const W={concat(t,e){if(0===t.length||0===e.length)return t.concat(e);const n=t[t.length-1],s=W.l(n);return 32===s?t.concat(e):W.h(e,s,0|n,t.slice(0,t.length-1))},m(t){const e=t.length;if(0===e)return 0;const n=t[e-1];return 32*(e-1)+W.l(n)},S(t,e){if(32*t.length<e)return t;const n=(t=t.slice(0,s.ceil(e/32))).length;return e&=31,n>0&&e&&(t[n-1]=W.v(e,t[n-1]&2147483648>>e-1,1)),t},v:(t,e,n)=>32===t?e:(n?0|e:e<<32-t)+1099511627776*t,l:t=>s.round(t/1099511627776)||32,h(t,e,n,s){for(void 0===s&&(s=[]);e>=32;e-=32)s.push(n),n=0;if(0===e)return s.concat(t);for(let r=0;r<t.length;r++)s.push(n|t[r]>>>e),n=t[r]<<32-e;const r=t.length?t[t.length-1]:0,o=W.l(r);return s.push(W.v(e+o&31,e+o>32?n:s.pop(),1)),s}},K={bytes:{C(t){const e=W.m(t)/8,n=new o(e);let s;for(let r=0;e>r;r++)3&r||(s=t[r/4]),n[r]=s>>>24,s<<=8;return n},A(t){const e=[];let n,s=0;for(n=0;n<t.length;n++)s=s<<8|t[n],3&~n||(e.push(s),s=0);return 3&n&&e.push(W.v(8*(3&n),s)),e}}},E=class{constructor(t){const e=this;e.blockSize=512,e.I=[1732584193,4023233417,2562383102,271733878,3285377520],e.P=[1518500249,1859775393,2400959708,3395469782],t?(e.M=t.M.slice(0),e.B=t.B.slice(0),e.D=t.D):e.reset()}reset(){const t=this;return t.M=t.I.slice(0),t.B=[],t.D=0,t}update(t){const e=this;"string"==typeof t&&(t=K.R.A(t));const n=e.B=W.concat(e.B,t),s=e.D,o=e.D=s+W.m(t);if(o>9007199254740991)throw new r("Cannot hash more than 2^53 - 1 bits");const i=new c(n);let a=0;for(let t=e.blockSize+s-(e.blockSize+s&e.blockSize-1);o>=t;t+=e.blockSize)e.U(i.subarray(16*a,16*(a+1))),a+=1;return n.splice(0,16*a),e}_(){const t=this;let e=t.B;const n=t.M;e=W.concat(e,[W.v(1,1)]);for(let t=e.length+2;15&t;t++)e.push(0);for(e.push(s.floor(t.D/4294967296)),e.push(0|t.D);e.length;)t.U(e.splice(0,16));return t.reset(),n}V(t,e,n,s){return t>19?t>39?t>59?t>79?void 0:e^n^s:e&n|e&s|n&s:e^n^s:e&n|~e&s}W(t,e){return e<<t|e>>>32-t}U(e){const n=this,r=n.M,o=t(80);for(let t=0;16>t;t++)o[t]=e[t];let i=r[0],c=r[1],a=r[2],f=r[3],l=r[4];for(let t=0;79>=t;t++){16>t||(o[t]=n.W(1,o[t-3]^o[t-8]^o[t-14]^o[t-16]));const e=n.W(5,i)+n.V(t,c,a,f)+l+o[t]+n.P[s.floor(t/20)]|0;l=f,f=a,a=n.W(30,c),c=i,i=e}r[0]=r[0]+i|0,r[1]=r[1]+c|0,r[2]=r[2]+a|0,r[3]=r[3]+f|0,r[4]=r[4]+l|0}},F={importKey:t=>new F.K(K.bytes.A(t)),F(t,e,n,s){if(n=n||1e4,0>s||0>n)throw new r("invalid params to pbkdf2");const o=1+(s>>5)<<2;let i,c,a,f,u;const w=new ArrayBuffer(o),h=new l(w);let p=0;const d=W;for(e=K.bytes.A(e),u=1;(o||1)>p;u++){for(i=c=t.encrypt(d.concat(e,[u])),a=1;n>a;a++)for(c=t.encrypt(c),f=0;f<c.length;f++)i[f]^=c[f];for(a=0;(o||1)>p&&a<i.length;a++)h.setInt32(p,i[a]),p+=4}return w.slice(0,s/8)},K:class{constructor(t){const e=this,n=e.L=E,s=[[],[]];e.O=[new n,new n];const r=e.O[0].blockSize/32;t.length>r&&(t=(new n).update(t)._());for(let e=0;r>e;e++)s[0][e]=909522486^t[e],s[1][e]=1549556828^t[e];e.O[0].update(s[0]),e.O[1].update(s[1]),e.T=new n(e.O[0])}reset(){const t=this;t.T=new t.L(t.O[0]),t.j=!1}update(t){this.j=!0,this.T.update(t)}digest(){const t=this,e=t.T._(),n=new t.L(t.O[1]).update(e)._();return t.reset(),n}encrypt(t){if(this.j)throw new r("encrypt on already updated hmac called!");return this.update(t),this.digest(t)}}},L=typeof h!=b&&typeof h.getRandomValues==z,O="Invalid password",T="Invalid signature",j="zipjs-abort-check-password";function H(t){if(L)return h.getRandomValues(t);throw new r("Crypto API not supported")}const Z=16,N={name:"PBKDF2"},q=e.assign({hash:{name:"HMAC"}},N),G=e.assign({iterations:1e3,hash:{name:"SHA-1"}},N),J=["deriveBits"],Q=[8,12,16],X=[16,24,32],Y=10,$=[0,0,0,0],tt=typeof h!=b,et=tt&&h.subtle,nt=tt&&typeof et!=b,st=K.bytes,rt=class{constructor(t){const e=this;e.H=[[[],[],[],[],[]],[[],[],[],[],[]]],e.H[0][0][0]||e.Z();const n=e.H[0][4],s=e.H[1],o=t.length;let i,c,a,f=1;if(4!==o&&6!==o&&8!==o)throw new r("invalid aes key size");for(e.P=[c=t.slice(0),a=[]],i=o;4*o+28>i;i++){let t=c[i-1];(i%o===0||8===o&&i%o===4)&&(t=n[t>>>24]<<24^n[t>>16&255]<<16^n[t>>8&255]<<8^n[255&t],i%o===0&&(t=t<<8^t>>>24^f<<24,f=f<<1^283*(f>>7))),c[i]=c[i-o]^t}for(let t=0;i;t++,i--){const e=c[3&t?i:i-4];a[t]=4>=i||4>t?e:s[0][n[e>>>24]]^s[1][n[e>>16&255]]^s[2][n[e>>8&255]]^s[3][n[255&e]]}}encrypt(t){return this.N(t,0)}decrypt(t){return this.N(t,1)}Z(){const t=this.H[0],e=this.H[1],n=t[4],s=e[4],r=[],o=[];let i,c,a,f;for(let t=0;256>t;t++)o[(r[t]=t<<1^283*(t>>7))^t]=t;for(let l=i=0;!n[l];l^=c||1,i=o[i]||1){let o=i^i<<1^i<<2^i<<3^i<<4;o=o>>8^255&o^99,n[l]=o,s[o]=l,f=r[a=r[c=r[l]]];let u=16843009*f^65537*a^257*c^16843008*l,w=257*r[o]^16843008*o;for(let n=0;4>n;n++)t[n][l]=w=w<<24^w>>>8,e[n][o]=u=u<<24^u>>>8}for(let n=0;5>n;n++)t[n]=t[n].slice(0),e[n]=e[n].slice(0)}N(t,e){if(4!==t.length)throw new r("invalid aes block size");const n=this.P[e],s=n.length/4-2,o=[0,0,0,0],i=this.H[e],c=i[0],a=i[1],f=i[2],l=i[3],u=i[4];let w,h,p,d=t[0]^n[0],y=t[e?3:1]^n[1],m=t[2]^n[2],g=t[e?1:3]^n[3],S=4;for(let t=0;s>t;t++)w=c[d>>>24]^a[y>>16&255]^f[m>>8&255]^l[255&g]^n[S],h=c[y>>>24]^a[m>>16&255]^f[g>>8&255]^l[255&d]^n[S+1],p=c[m>>>24]^a[g>>16&255]^f[d>>8&255]^l[255&y]^n[S+2],g=c[g>>>24]^a[d>>16&255]^f[y>>8&255]^l[255&m]^n[S+3],S+=4,d=w,y=h,m=p;for(let t=0;4>t;t++)o[e?3&-t:t]=u[d>>>24]<<24^u[y>>16&255]<<16^u[m>>8&255]<<8^u[255&g]^n[S++],w=d,d=y,y=m,m=g,g=w;return o}},ot=class{constructor(t,e){this.G=t,this.J=e,this.X=e}reset(){this.X=this.J}update(t){return this.Y(this.G,t,this.X)}$(t){if(255&~(t>>24))t+=1<<24;else{let e=t>>16&255,n=t>>8&255,s=255&t;255===e?(e=0,255===n?(n=0,255===s?s=0:++s):++n):++e,t=0,t+=e<<16,t+=n<<8,t+=s}return t}et(t){0===(t[0]=this.$(t[0]))&&(t[1]=this.$(t[1]))}Y(t,e,n){let s;if(!(s=e.length))return[];const r=W.m(e);for(let r=0;s>r;r+=4){this.et(n);const s=t.encrypt(n);e[r]^=s[0],e[r+1]^=s[1],e[r+2]^=s[2],e[r+3]^=s[3]}return W.S(e,r)}},it=F.K;let ct=tt&&nt&&typeof et.importKey==z,at=tt&&nt&&typeof et.deriveBits==z;class ft extends d{constructor({password:t,rawPassword:e,encryptionStrength:n,checkPasswordOnly:s}){super({start(){ut(this,t,e,n)},async transform(t,e){const n=this,{password:i,strength:c,nt:a,ready:f}=n;i?(await(async(t,e,n,s)=>{const o=await ht(t,e,n,dt(s,0,Q[e])),i=dt(s,Q[e]);if(o[0]!=i[0]||o[1]!=i[1])throw new r(O)})(n,c,i,dt(t,0,Q[c]+2)),t=dt(t,Q[c]+2),s?e.error(new r(j)):a()):await f;const l=new o(t.length-Y-(t.length-Y)%Z);e.enqueue(wt(n,t,l,0,Y,!0))},async flush(t){const{st:e,ot:n,pending:s,ready:o}=this;if(n&&e){await o;const i=dt(s,0,s.length-Y),c=dt(s,s.length-Y);let a=k;if(i.length){const t=mt(st,i);n.update(t);const s=e.update(t);a=yt(st,s)}const f=dt(yt(st,n.digest()),0,Y);let l=s.length<Y?1:0;for(let t=0;Y>t;t++)l|=f[t]^c[t];if(l)throw new r(T);t.enqueue(a)}}})}}class lt extends d{constructor({password:t,rawPassword:e,encryptionStrength:n}){let s;super({start(){ut(this,t,e,n)},async transform(t,e){const n=this,{password:s,strength:r,nt:i,ready:c}=n;let a=k;s?(a=await(async(t,e,n)=>{const s=H(new o(Q[e]));return V(s,await ht(t,e,n,s))})(n,r,s),i()):await c;const f=new o(a.length+t.length-t.length%Z);f.set(a,0),e.enqueue(wt(n,t,f,a.length,0))},async flush(t){const{st:e,ot:n,pending:r,ready:o}=this;if(n&&e){await o;let i=k;if(r.length){const t=e.update(mt(st,r));n.update(t),i=yt(st,t)}s.signature=yt(st,n.digest()).slice(0,Y),t.enqueue(V(i,s.signature))}}}),s=this}}function ut(t,n,s,r){e.assign(t,{ready:new u(e=>t.nt=e),password:pt(n,s),strength:r-1,pending:k})}function wt(t,e,n,s,r,i){const{st:c,ot:a,pending:f}=t;f.length&&(e=V(f,e));const l=e.length-r;let u;for(n=((t,e)=>{if(e&&e>t.length){const n=t;(t=new o(e)).set(n,0)}return t})(n,s+(l-l%Z)),u=0;l-Z>=u;u+=Z){const t=mt(st,dt(e,u,u+Z));i&&a.update(t);const r=c.update(t);i||a.update(r),n.set(yt(st,r),u+s)}return t.pending=dt(e,u),n}async function ht(n,s,r,i){n.password=null;const c=await(async(t,e,n,s,r)=>{if(!ct)return F.importKey(e);try{return await et.importKey("raw",e,n,!1,r)}catch{return ct=!1,F.importKey(e)}})(0,r,q,0,J),a=await(async(t,e,n)=>{if(!at)return F.F(e,t.salt,G.iterations,n);try{return await et.deriveBits(t,e,n)}catch{return at=!1,F.F(e,t.salt,G.iterations,n)}})(e.assign({salt:i},G),c,8*(2*X[s]+2)),f=new o(a),l=mt(st,dt(f,0,X[s])),u=mt(st,dt(f,X[s],2*X[s])),w=dt(f,2*X[s]);return e.assign(n,{keys:{key:l,it:u,passwordVerification:w},st:new ot(new rt(l),t.from($)),ot:new it(u)}),w}function pt(t,e){return e===v?(t=>{if(typeof w==b){const e=new o((t=unescape(encodeURIComponent(t))).length);for(let n=0;n<e.length;n++)e[n]=t.charCodeAt(n);return e}return(new w).encode(t)})(t):e}function dt(t,e,n){return t.subarray(e,n)}function yt(t,e){return t.C(e)}function mt(t,e){return t.A(e)}class gt extends d{constructor({password:t,rawPassword:e,passwordVerification:n,checkPasswordOnly:s}){super({start(){vt(this,t,e,n)},transform(t,e){const n=this;if(n.password||n.rawPassword){const e=bt(n,t.subarray(0,12));if(n.password=n.rawPassword=null,0!=(e[11]^n.passwordVerification))throw new r(O);t=t.subarray(12)}s?e.error(new r(j)):e.enqueue(bt(n,t))}})}}class St extends d{constructor({password:t,rawPassword:e,passwordVerification:n}){super({start(){vt(this,t,e,n)},transform(t,e){const n=this;let s,r;if(n.password||n.rawPassword){n.password=n.rawPassword=null;const e=H(new o(12));e[11]=n.passwordVerification,s=new o(t.length+e.length),s.set(zt(n,e),0),r=12}else s=new o(t.length),r=0;s.set(zt(n,t),r),e.enqueue(s)}})}}function vt(t,n,s,r){e.assign(t,{password:n,rawPassword:s,passwordVerification:r}),((t,n,s)=>{const r=[305419896,591751049,878082192];if(e.assign(t,{keys:r,ct:new U(r[0]),ft:new U(r[2])}),s)for(let e=0;e<s.length;e++)kt(t,s[e]);else for(let e=0;e<n.length;e++)kt(t,n.charCodeAt(e))})(t,n,s)}function bt(t,e){const n=new o(e.length);for(let s=0;s<e.length;s++)n[s]=Ct(t)^e[s],kt(t,n[s]);return n}function zt(t,e){const n=new o(e.length);for(let s=0;s<e.length;s++)n[s]=Ct(t)^e[s],kt(t,e[s]);return n}function kt(t,e){let[,n]=t.keys;t.ct.append([e]);const r=~t.ct.get();n=It(s.imul(It(n+At(r)),134775813)+1),t.ft.append([n>>>24]);const o=~t.ft.get();t.keys=[r,n,o]}function Ct(t){const e=2|t.keys[2];return At(s.imul(e,1^e)>>>8)}function At(t){return 255&t}function It(t){return 4294967295&t}const xt=new f;function Pt(t){return xt.get(t)}const Mt="deflate-raw";class Bt extends d{constructor(t,{chunkSize:e,CompressionStreamZlib:n,CompressionStream:s}){super({});const{compressed:r,encrypted:o,useCompressionStream:i,zipCrypto:c,signed:a,level:f,deflate64:u,format:w,compressionMethod:h}=t,p=this;let d,y,m,g=super.readable;const S=w&&Pt(w),v=a&&r&&!u&&!S&&(!o||c)&&!(!i||!s);o&&!c||!a||v||(d=new _,g=Kt(g,d)),r&&(S?g=Et(g,Vt(S.CompressionStream,w,{level:f,chunkSize:e,compressionMethod:h})):v?(m=new Dt,g=Et(g,new s("gzip")),g=Kt(g,m)):g=Wt(g,i,{level:f,chunkSize:e},s,n)),o&&(c?g=Kt(g,new St(t)):(y=new lt(t),g=Kt(g,y))),_t(p,g,()=>{let t;o&&!c&&(t=y.signature),o&&!c||!a||(t=v?m.signature:new l(d.value.buffer).getUint32(0)),p.signature=t})}}class Dt extends d{constructor(){let t,e=10,n=new o(0);super({transform(t,r){if(e){const n=s.min(e,t.length);if(e-=n,!(t=t.subarray(n)).length)return}const o=n.length+t.length;if(8>=o)return void(n=V(n,t));const i=o-8,c=s.min(i,n.length);r.enqueue(V(n.subarray(0,c),t.subarray(0,i-c))),n=V(n.subarray(c),t.subarray(i-c))},flush(){const e=new l((s=n).buffer,s.byteOffset,s.byteLength);var s;t.signature=e.getUint32(0,!0),t.uncompressedSize=e.getUint32(4,!0)}}),t=this}}class Rt extends d{constructor(t,{chunkSize:e,DecompressionStreamZlib:n,DecompressionStream:s}){super({});const{zipCrypto:o,encrypted:i,signed:c,signature:a,compressed:f,useCompressionStream:u,deflate64:w,format:h,compressionMethod:p,rawBitFlag:d,outputSize:m}=t;let g,S,v=super.readable;if(i&&(o?v=Kt(v,new gt(t)):(S=new ft(t),v=Kt(v,S))),f){const t=h&&Pt(h);v=t?Et(v,Vt(t.DecompressionStream,h,{chunkSize:e,compressionMethod:p,rawBitFlag:d,uncompressedSize:m})):Wt(v,u,{chunkSize:e,deflate64:w},s,n),v=(t=>{const e=t.getReader();return new y({async pull(t){let n;try{n=await e.read()}catch(t){if(t&&t.message)throw t;const e=new r("Invalid compressed data");throw e.cause=t,e}const{value:s,done:o}=n;o?t.close():t.enqueue(s)},cancel:t=>e.cancel(t)})})(v)}i&&!o||!c||(g=new _,v=Kt(v,g)),_t(this,v,()=>{if((!i||o)&&c){const t=new l(g.value.buffer);if(a!=t.getUint32(0,!1))throw new r(T)}})}}const Ut=new f;function _t(t,n,s){n=Kt(n,new d({flush:s})),e.defineProperty(t,"readable",{get:()=>n})}function Vt(t,e,n){if(!t)throw new r("Compression method not supported");return new t(e,n)}function Wt(t,e,n,s,r){const o=e&&s?s:r||s,i=n.deflate64?"deflate64-raw":Mt;let c;try{c=new o(i,n)}catch(t){if(!e||!r||o==r)throw t;c=new r(i,n)}return Et(t,c)}function Kt(t,e){return(t=>{if(t instanceof y)return t;const e=t.getReader();return new y({async pull(t){const{value:n,done:s}=await e.read();s?t.close():t.enqueue(n)},cancel:t=>e.cancel(t)})})(t).pipeThrough(e)}function Et(t,e){const n=e.writable.getWriter(),s=t.getReader();return(async()=>{try{for(;;){await n.ready;const t=await s.read();if(t.done){await n.close();break}await n.write(t.value)}}catch(t){await(async(t,e)=>{try{await t.abort(e)}catch{}})(n,t),await(async(t,e)=>{try{await t.cancel(e)}catch{}})(s,t)}})(),e.readable}const Ft="data",Lt="close",Ot="deflate";class Tt extends d{constructor(t,n){super({});const s=this,{codecType:o}=t;let i;o.startsWith(Ot)?i=Bt:o.startsWith("inflate")&&(i=Rt),s.outputSize=0;let c=0;const a=new i(t,n),f=super.readable,l=new d({transform(t,e){t&&t.length&&(c+=t.length,e.enqueue(t))},flush(){e.assign(s,{inputSize:c})}}),u=new d({transform(e,n){if(e&&e.length&&(n.enqueue(e),s.outputSize+=e.length,t.outputSize!==v&&s.outputSize>t.outputSize))throw new r("Invalid uncompressed size")},flush(){const{signature:t}=a;e.assign(s,{signature:t,inputSize:c})}});e.defineProperty(s,"readable",{get:()=>f.pipeThrough(l).pipeThrough(a).pipeThrough(u)})}}class jt extends d{constructor(t){const e=[];let s=0;function r(){const n=new o(t);let r=0;for(;t>r;){const s=e[0],o=t-r;s.length>o?(n.set(s.subarray(0,o),r),e[0]=s.subarray(o),r+=o):(n.set(s,r),r+=s.length,e.shift())}return s-=t,n}n.isFinite(t)&&t>=1||(t=65536),super({transform(n,o){for(e.push(n),s+=n.length;s>t;)o.enqueue(r())},flush(t){s&&t.enqueue(((t,e)=>{const n=new o(e);let s=0;for(const e of t)n.set(e,s),s+=e.length;return n})(e,s))}})}}let Ht=2;try{typeof navigator!=b&&navigator.hardwareConcurrency&&(Ht=navigator.hardwareConcurrency)}catch{}const Zt=new f,Nt=new f;let qt,Gt,Jt,Qt,Xt,Yt=0;async function $t(t){let e,o;try{const{options:i,config:c}=t;if(i.format&&await(async(t,e)=>{!xt.has(t)&&e&&((t,e)=>{const{CompressionStream:n,DecompressionStream:s}=e;if(typeof n!=z&&typeof s!=z)throw new r("Invalid codec module");xt.set(t,{CompressionStream:n,DecompressionStream:s})})(t,await(import(e)))})(i.format,i.codecURI),c.CompressionStream=self.CompressionStream,c.DecompressionStream=self.DecompressionStream,i.compressed&&!i.format)if(i.useCompressionStream){if(!(t=>{if(!t)return!1;let e=Ut.get(t);if(e===v){try{new t(Mt),e=!0}catch{e=!1}Ut.set(t,e)}return e})(i.codecType.startsWith(Ot)?c.CompressionStream:c.DecompressionStream))try{await self.initModule(t.config)}catch{}}else try{await self.initModule(t.config)}catch{i.useCompressionStream=!0}const a={highWaterMark:1},f=t.readable||new y({async pull(t){const e=new u(t=>Zt.set(Yt,t));te({type:"pull",messageId:Yt}),Yt=(Yt+1)%n.MAX_SAFE_INTEGER;const{value:s,done:r}=await e;t.enqueue(s),r&&t.close()}},a);o=t.writable||new m({async write(t){let e;const s=new u(t=>e=t);Nt.set(Yt,e),te({type:Ft,value:t,messageId:Yt}),Yt=(Yt+1)%n.MAX_SAFE_INTEGER,await s}},a),e=new Tt(i,c),qt=new AbortController;const{signal:l}=qt;await f.pipeThrough(e).pipeThrough(new jt((t=>s.max(t.chunkSize,64))(c))).pipeTo(o,{signal:l,preventClose:!0,preventAbort:!0}),await o.getWriter().close();const{signature:w,inputSize:h,outputSize:p}=e;te({type:Lt,result:{signature:w,inputSize:h,outputSize:p}})}catch(t){if(t.outputSize=e?e.outputSize:0,o&&!o.locked)try{await o.getWriter().close()}catch{}ee(t)}}function te(t){const{value:e}=t;if(e)if(e.length)try{t.value=(n=e,n.byteOffset||n.byteLength!=n.buffer.byteLength?new o(n):n).buffer,p(t,[t.value])}catch{p(t)}else p(t);else p(t);var n}function ee(t=new r("Unknown error")){const{message:e,stack:n,code:s,name:o,outputSize:i}=t;p({error:{message:e,stack:n,code:s,name:o,outputSize:i}})}function ne(t,e,n={}){const i="number"==typeof n.level?n.level:-1,c="number"==typeof n.outBuffer?n.outBuffer:65536,a="number"==typeof n.inBufferSize?n.inBufferSize:65536;return new d({start(){try{let n;if(this.lt=Jt(c),this.in=Jt(a),this.inBufferSize=a,!this.lt||!this.in)throw new r("allocation failed");if(this.ut=new o(c),t?(this.wt=Gt.deflate_process,this.ht=Gt.deflate_last_consumed,this.yt=Gt.deflate_end,this.gt=Gt.deflate_new(),n="gzip"===e?Gt.deflate_init_gzip(this.gt,i):"deflate-raw"===e?Gt.deflate_init_raw(this.gt,i):Gt.deflate_init(this.gt,i)):"deflate64-raw"===e?(this.wt=Gt.inflate9_process,this.ht=Gt.inflate9_last_consumed,this.yt=Gt.inflate9_end,this.gt=Gt.inflate9_new(),n=Gt.inflate9_init_raw(this.gt)):(this.wt=Gt.inflate_process,this.ht=Gt.inflate_last_consumed,this.yt=Gt.inflate_end,this.gt=Gt.inflate_new(),n="deflate-raw"===e?Gt.inflate_init_raw(this.gt):"gzip"===e?Gt.inflate_init_gzip(this.gt):Gt.inflate_init(this.gt)),0!==n)throw new r("init failed:"+n)}catch(t){throw f(this),t}},transform(e,n){try{const i=e,a=new o(Xt.buffer),f=this.wt,l=this.ht,u=this.lt,w=this.ut;let h=0;for(;h<i.length;){const e=s.min(i.length-h,32768);if((!this.in||this.inBufferSize<e)&&(this.in&&Qt&&(Qt(this.in),this.in=0),this.in=Jt(e),this.inBufferSize=e,!this.in))throw new r("allocation failed");a.set(i.subarray(h,h+e),this.in);const o=f(this.gt,this.in,e,u,c,0),p=16777215&o;if(p&&(w.set(a.subarray(u,u+p),0),n.enqueue(w.slice(0,p))),!t){const t=o>>24&255,e=128&t?t-256:t;if(0>e)throw new r("process error:"+e)}const d=l(this.gt);if(0===d)break;h+=d}}catch(t){f(this),n.error(t)}},flush(e){try{const n=new o(Xt.buffer),s=this.wt,i=this.lt,a=this.ut;for(;;){const o=s(this.gt,0,0,i,c,4),f=16777215&o,l=o>>24&255;if(!t){const t=128&l?l-256:l;if(0>t)throw new r("process error:"+t)}if(f&&(a.set(n.subarray(i,i+f),0),e.enqueue(a.slice(0,f))),1===l||0===f)break}}catch(t){e.error(t)}finally{const t=f(this);0!==t&&e.error(new r("end error:"+t))}},cancel(){f(this)}});function f(t){let e=0;return t.gt&&t.yt&&(e=t.yt(t.gt)),t.gt=0,t.in&&Qt&&Qt(t.in),t.in=0,t.lt&&Qt&&Qt(t.lt),t.lt=0,e}}addEventListener("message",({data:t})=>{const{type:e,messageId:n,value:s,done:r}=t;try{if("start"==e&&$t(t),e==Ft){const t=Zt.get(n);Zt.delete(n),t({value:s||new o,done:r})}if("ack"==e){const t=Nt.get(n);Nt.delete(n),t()}e==Lt&&qt.abort()}catch(t){ee(t)}}),p({type:"ready"});class se{constructor(t="deflate",e){return ne(!0,t,e)}}class re{constructor(t="deflate",e){return ne(!1,t,e)}}se.St=!0,re.St=!0;let oe=!1;self.initModule=async t=>{try{const e=await(async(t,{baseURI:e})=>{if(!oe){let n,s;try{try{s=new URL(t,e)}catch{}const r=await fetch(s);n=await r.arrayBuffer()}catch(e){if(!t.startsWith("data:application/wasm;base64,"))throw e;n=(t=>{const e=t.split(",")[1],n=atob(e),s=n.length,r=new o(s);for(let t=0;s>t;++t)r[t]=n.charCodeAt(t);return r.buffer})(t)}(t=>{if(Gt=t,({malloc:Jt,free:Qt,memory:Xt}=Gt),"function"!=typeof Jt||"function"!=typeof Qt||!Xt)throw Gt=Jt=Qt=Xt=null,new r("Invalid WASM module")})((await WebAssembly.instantiate(n)).instance.exports),oe=!0}})(t.wasmURI,t);return t.CompressionStreamZlib=se,t.DecompressionStreamZlib=re,e}catch{}}});\n';
   t3({ workerURI: (t4) => {
     const n2 = "text/javascript";
     if (t4) {
@@ -4173,10 +4447,12 @@ init_zip_reader();
 // node_modules/@zip.js/zip.js/lib/core/zip-writer.js
 init_constants();
 init_configuration();
+init_codec_registry();
 init_codec_pool();
 init_io();
 init_encode_text();
 init_array();
+init_compatible_streams();
 init_zip_entry();
 init_options();
 var ERR_DUPLICATED_NAME = "File already exists";
@@ -4185,9 +4461,10 @@ var ERR_INVALID_ENTRY_COMMENT = "File entry comment exceeds 64KB";
 var ERR_INVALID_ENTRY_NAME = "File entry name exceeds 64KB";
 var ERR_INVALID_VERSION = "Version exceeds 65535";
 var ERR_INVALID_ENCRYPTION_STRENGTH = "The strength must equal 1, 2, or 3";
+var ERR_UNSUPPORTED_ENCRYPTION_USDZ = "Encryption is not supported in USDZ files";
 var ERR_INVALID_EXTRAFIELD_TYPE = "Extra field type exceeds 65535";
 var ERR_INVALID_EXTRAFIELD_DATA = "Extra field data exceeds 64KB";
-var ERR_UNSUPPORTED_COMPRESSION2 = "Compression method not supported";
+var ERR_UNSUPPORTED_COMPRESSION3 = "Compression method not supported";
 var MIN_UNIX_TIME = -2147483648;
 var MAX_UNIX_TIME = 2147483647;
 var ERR_UNSUPPORTED_FORMAT = "Zip64 is not supported (set the 'zip64' option to 'true')";
@@ -4523,7 +4800,11 @@ function resolveAttributes(zipWriter, name, options) {
   if (versionMadeBy > MAX_16_BITS) {
     throw new Error(ERR_INVALID_VERSION);
   }
-  let externalFileAttributes = getOptionValue2(zipWriter, options, PROPERTY_NAME_EXTERNAL_FILE_ATTRIBUTES, 0);
+  let externalFileAttributes = getOptionValue2(zipWriter, options, PROPERTY_NAME_EXTERNAL_FILE_ATTRIBUTES);
+  const externalFileAttributesProvided = externalFileAttributes !== UNDEFINED_VALUE;
+  if (!externalFileAttributesProvided) {
+    externalFileAttributes = 0;
+  }
   if (!options[PROPERTY_NAME_DIRECTORY] && name.endsWith(DIRECTORY_SIGNATURE)) {
     options[PROPERTY_NAME_DIRECTORY] = true;
   }
@@ -4532,13 +4813,13 @@ function resolveAttributes(zipWriter, name, options) {
     if (!name.endsWith(DIRECTORY_SIGNATURE)) {
       name += DIRECTORY_SIGNATURE;
     }
-    if (externalFileAttributes === 0) {
+    if (!externalFileAttributesProvided) {
       externalFileAttributes = FILE_ATTR_MSDOS_DIR_MASK;
       if (!msDosCompatible) {
         externalFileAttributes |= (FILE_ATTR_UNIX_TYPE_DIR | FILE_ATTR_UNIX_EXECUTABLE_MASK | FILE_ATTR_UNIX_DEFAULT_MASK) << 16;
       }
     }
-  } else if (!msDosCompatible && externalFileAttributes === 0) {
+  } else if (!msDosCompatible && !externalFileAttributesProvided) {
     if (executable) {
       externalFileAttributes = (FILE_ATTR_UNIX_EXECUTABLE_MASK | FILE_ATTR_UNIX_DEFAULT_MASK) << 16;
     } else {
@@ -4547,6 +4828,7 @@ function resolveAttributes(zipWriter, name, options) {
   }
   let unixExternalUpper;
   if (!msDosCompatible) {
+    const unixModeProvided = unixMode !== UNDEFINED_VALUE || Boolean(setuid || setgid || sticky);
     unixExternalUpper = externalFileAttributes >> 16 & MAX_16_BITS;
     unixMode = unixMode === UNDEFINED_VALUE ? unixExternalUpper : unixMode & MAX_16_BITS;
     if (setuid) {
@@ -4564,10 +4846,12 @@ function resolveAttributes(zipWriter, name, options) {
     } else {
       sticky = Boolean(unixMode & FILE_ATTR_UNIX_STICKY_MASK);
     }
-    if (directory) {
-      unixMode |= FILE_ATTR_UNIX_TYPE_DIR;
+    if (!externalFileAttributesProvided || unixModeProvided) {
+      if (directory) {
+        unixMode |= FILE_ATTR_UNIX_TYPE_DIR;
+      }
+      externalFileAttributes = (unixMode & MAX_16_BITS) << 16 | externalFileAttributes & MAX_16_BITS;
     }
-    externalFileAttributes = (unixMode & MAX_16_BITS) << 16 | externalFileAttributes & MAX_8_BITS;
   }
   ({ msdosAttributesRaw, msdosAttributes } = normalizeMsdosAttributes(msdosAttributesRaw, msdosAttributes));
   if (hasMsDosProvided) {
@@ -4626,6 +4910,7 @@ function resolveMetadata(zipWriter, name, options) {
   const encryptionStrength = getOptionValue2(zipWriter, options, OPTION_ENCRYPTION_STRENGTH, 3);
   const zipCrypto = getOptionValue2(zipWriter, options, PROPERTY_NAME_ZIPCRYPTO);
   const extendedTimestamp = getOptionValue2(zipWriter, options, OPTION_EXTENDED_TIMESTAMP, true);
+  const ntfsTimestamp = getOptionValue2(zipWriter, options, OPTION_NTFS_TIMESTAMP);
   const keepOrder = getOptionValue2(zipWriter, options, OPTION_KEEP_ORDER, true);
   const useWebWorkers = getOptionValue2(zipWriter, options, OPTION_USE_WEB_WORKERS);
   const transferStreams = getOptionValue2(zipWriter, options, OPTION_TRANSFER_STREAMS);
@@ -4635,10 +4920,19 @@ function resolveMetadata(zipWriter, name, options) {
   const signal = getOptionValue2(zipWriter, options, OPTION_SIGNAL);
   const useUnicodeFileNames = getOptionValue2(zipWriter, options, OPTION_USE_UNICODE_FILE_NAMES, true);
   const compressionMethod = getOptionValue2(zipWriter, options, PROPERTY_NAME_COMPRESSION_METHOD);
-  if (!passThrough && compressionMethod !== UNDEFINED_VALUE && compressionMethod !== COMPRESSION_METHOD_STORE && compressionMethod !== COMPRESSION_METHOD_DEFLATE) {
-    throw new Error(ERR_UNSUPPORTED_COMPRESSION2);
+  const registeredCodec = passThrough || compressionMethod === UNDEFINED_VALUE ? UNDEFINED_VALUE : getRegisteredCodec(compressionMethod);
+  if (!passThrough && compressionMethod !== UNDEFINED_VALUE && compressionMethod !== COMPRESSION_METHOD_STORE && compressionMethod !== COMPRESSION_METHOD_DEFLATE && !registeredCodec) {
+    throw new Error(ERR_UNSUPPORTED_COMPRESSION3);
   }
   let level = getOptionValue2(zipWriter, options, OPTION_LEVEL);
+  if (zipWriter.options[OPTION_USDZ]) {
+    if (password !== UNDEFINED_VALUE || rawPassword !== UNDEFINED_VALUE) {
+      throw new Error(ERR_UNSUPPORTED_ENCRYPTION_USDZ);
+    }
+    if (level === UNDEFINED_VALUE && compressionMethod === UNDEFINED_VALUE) {
+      level = 0;
+    }
+  }
   let useCompressionStream = getOptionValue2(zipWriter, options, OPTION_USE_COMPRESSION_STREAM);
   let dataDescriptor = getOptionValue2(zipWriter, options, OPTION_DATA_DESCRIPTOR);
   if (bufferedWrite && dataDescriptor === UNDEFINED_VALUE) {
@@ -4650,7 +4944,7 @@ function resolveMetadata(zipWriter, name, options) {
   if (level !== UNDEFINED_VALUE && level != 6) {
     useCompressionStream = false;
   }
-  if (!useCompressionStream && (zipWriter.config.CompressionStream === UNDEFINED_VALUE && zipWriter.config.CompressionStreamZlib === UNDEFINED_VALUE)) {
+  if (!useCompressionStream && !registeredCodec && (zipWriter.config.CompressionStream === UNDEFINED_VALUE && zipWriter.config.CompressionStreamZlib === UNDEFINED_VALUE)) {
     level = 0;
   }
   const zip64 = getOptionValue2(zipWriter, options, PROPERTY_NAME_ZIP64);
@@ -4694,6 +4988,7 @@ function resolveMetadata(zipWriter, name, options) {
       encryptionStrength,
       zipCrypto,
       extendedTimestamp,
+      ntfsTimestamp,
       keepOrder,
       useWebWorkers,
       transferStreams,
@@ -4703,6 +4998,9 @@ function resolveMetadata(zipWriter, name, options) {
       signal,
       useUnicodeFileNames,
       compressionMethod,
+      format: registeredCodec ? registeredCodec.format : UNDEFINED_VALUE,
+      codecURI: registeredCodec ? registeredCodec.codecURI : UNDEFINED_VALUE,
+      codecVersionNeeded: registeredCodec ? registeredCodec.versionNeeded : UNDEFINED_VALUE,
       level,
       useCompressionStream,
       dataDescriptor,
@@ -4991,7 +5289,9 @@ async function createFileEntry(reader, writer, { diskNumberStart, lock }, entryI
     msdosAttributesRaw,
     msdosAttributes,
     useCompressionStream,
-    passThrough
+    passThrough,
+    format,
+    codecURI
   } = options;
   const fileEntry = {
     lock,
@@ -5035,7 +5335,7 @@ async function createFileEntry(reader, writer, { diskNumberStart, lock }, entryI
   }
   const { writable } = writer;
   if (reader) {
-    const readable = reader.createReadable ? reader.createReadable() : reader.readable;
+    const readable = toCompatibleReadable(reader.createReadable ? reader.createReadable() : reader.readable);
     const size = reader.size;
     const workerOptions = {
       options: {
@@ -5051,7 +5351,10 @@ async function createFileEntry(reader, writer, { diskNumberStart, lock }, entryI
         encrypted: encrypted && !passThrough,
         useWebWorkers,
         useCompressionStream,
-        transferStreams
+        transferStreams,
+        format,
+        codecURI,
+        compressionMethod
       },
       config: config2,
       streamOptions: { signal, size, onstart, onprogress, onend }
@@ -5120,6 +5423,7 @@ function getHeaderInfo(options) {
     rawExtraField,
     encryptionStrength,
     extendedTimestamp,
+    ntfsTimestamp,
     passThrough,
     encrypted,
     zip64UncompressedSize,
@@ -5163,7 +5467,8 @@ function getHeaderInfo(options) {
   let extraFieldExtendedTimestampFlag;
   if (extendedTimestamp) {
     const lastModTimeUnix = getTimeUnix(lastModDate);
-    if (inUnixTimeRange(lastModTimeUnix)) {
+    const lastModTimeUnixInRange = inUnixTimeRange(lastModTimeUnix);
+    if (lastModTimeUnixInRange) {
       const extraFieldTimestampLength = 9 + (lastAccessDate ? 4 : 0) + (creationDate ? 4 : 0);
       const extraFieldTimestamp = createRecordWriter(extraFieldTimestampLength);
       extraFieldExtendedTimestampFlag = 1 + (lastAccessDate ? 2 : 0) + (creationDate ? 4 : 0);
@@ -5181,19 +5486,24 @@ function getHeaderInfo(options) {
     } else {
       rawExtraFieldExtendedTimestamp = EMPTY_UINT8_ARRAY;
     }
-    try {
-      const lastModTimeNTFS = getTimeNTFS(lastModDate);
-      const extraFieldNTFS = createRecordWriter(36);
-      extraFieldNTFS.uint16(EXTRAFIELD_TYPE_NTFS);
-      extraFieldNTFS.uint16(32);
-      extraFieldNTFS.skip(4);
-      extraFieldNTFS.uint16(EXTRAFIELD_TYPE_NTFS_TAG1);
-      extraFieldNTFS.uint16(24);
-      extraFieldNTFS.uint64(lastModTimeNTFS);
-      extraFieldNTFS.uint64(getTimeNTFS(lastAccessDate) || lastModTimeNTFS);
-      extraFieldNTFS.uint64(getTimeNTFS(creationDate) || lastModTimeNTFS);
-      rawExtraFieldNTFS = extraFieldNTFS.array;
-    } catch {
+    const writeExtraFieldNTFS = ntfsTimestamp === UNDEFINED_VALUE ? !lastModTimeUnixInRange || Boolean(lastAccessDate || creationDate) : ntfsTimestamp;
+    if (writeExtraFieldNTFS) {
+      try {
+        const lastModTimeNTFS = getTimeNTFS(lastModDate);
+        const extraFieldNTFS = createRecordWriter(36);
+        extraFieldNTFS.uint16(EXTRAFIELD_TYPE_NTFS);
+        extraFieldNTFS.uint16(32);
+        extraFieldNTFS.skip(4);
+        extraFieldNTFS.uint16(EXTRAFIELD_TYPE_NTFS_TAG1);
+        extraFieldNTFS.uint16(24);
+        extraFieldNTFS.uint64(lastModTimeNTFS);
+        extraFieldNTFS.uint64(getTimeNTFS(lastAccessDate) || lastModTimeNTFS);
+        extraFieldNTFS.uint64(getTimeNTFS(creationDate) || lastModTimeNTFS);
+        rawExtraFieldNTFS = extraFieldNTFS.array;
+      } catch {
+        rawExtraFieldNTFS = EMPTY_UINT8_ARRAY;
+      }
+    } else {
       rawExtraFieldNTFS = EMPTY_UINT8_ARRAY;
     }
   } else {
@@ -5231,6 +5541,10 @@ function getHeaderInfo(options) {
   if (compressionMethod === UNDEFINED_VALUE) {
     compressionMethod = compressed ? COMPRESSION_METHOD_DEFLATE : COMPRESSION_METHOD_STORE;
   }
+  const { codecVersionNeeded } = options;
+  if (compressed && codecVersionNeeded !== UNDEFINED_VALUE) {
+    version = version > codecVersionNeeded ? version : codecVersionNeeded;
+  }
   if (zip64) {
     version = version > VERSION_ZIP64 ? version : VERSION_ZIP64;
   }
@@ -5244,6 +5558,7 @@ function getHeaderInfo(options) {
   if (extraFieldLength > MAX_16_BITS) {
     throw new Error(ERR_INVALID_EXTRAFIELD_DATA);
   }
+  const dosLastModDate = new Date(Math.ceil(lastModDate.getTime() / 2e3) * 2e3);
   const {
     headerArray,
     headerView,
@@ -5253,7 +5568,7 @@ function getHeaderInfo(options) {
     bitFlag: getBitFlag(level, useUnicodeFileNames, dataDescriptor, encrypted, compressionMethod),
     compressionMethod,
     uncompressedSize,
-    lastModDate: lastModDate < MIN_DATE ? MIN_DATE : lastModDate > MAX_DATE ? MAX_DATE : lastModDate,
+    lastModDate: dosLastModDate < MIN_DATE ? MIN_DATE : dosLastModDate > MAX_DATE ? MAX_DATE : dosLastModDate,
     rawFilename,
     zip64CompressedSize,
     zip64UncompressedSize,
@@ -5868,6 +6183,7 @@ function getMimeType() {
 
 // node_modules/@zip.js/zip.js/lib/zip-core-base.js
 init_configuration();
+init_codec_registry();
 
 // node_modules/@zip.js/zip.js/lib/core/util/opfs-temp-stream.js
 var DEFAULT_THRESHOLD = 1024 * 1024;
@@ -9037,11 +9353,14 @@ export {
   ERR_CENTRAL_DIRECTORY_NOT_FOUND,
   ERR_DUPLICATED_NAME,
   ERR_ENCRYPTED,
+  ERR_ENCRYPTED_CENTRAL_DIRECTORY,
   ERR_EOCDR_LOCATOR_ZIP64_NOT_FOUND,
   ERR_EOCDR_NOT_FOUND,
   ERR_EXTRAFIELD_ZIP64_NOT_FOUND,
   ERR_HTTP_RANGE,
   ERR_HTTP_RESOURCE_CHANGED,
+  ERR_INVALID_CODEC_DEFINITION,
+  ERR_INVALID_CODEC_MODULE,
   ERR_INVALID_COMMENT,
   ERR_INVALID_COMPRESSED_DATA,
   ERR_INVALID_ENCRYPTION_STRENGTH,
@@ -9056,11 +9375,13 @@ export {
   ERR_ITERATOR_COMPLETED_TOO_SOON,
   ERR_LOCAL_FILE_HEADER_NOT_FOUND,
   ERR_OVERLAPPING_ENTRY,
+  ERR_RESERVED_COMPRESSION_METHOD,
   ERR_SPLIT_ZIP_FILE,
   ERR_UNDEFINED_READER,
   ERR_UNDEFINED_UNCOMPRESSED_SIZE,
-  ERR_UNSUPPORTED_COMPRESSION,
+  ERR_UNSUPPORTED_COMPRESSION2 as ERR_UNSUPPORTED_COMPRESSION,
   ERR_UNSUPPORTED_ENCRYPTION,
+  ERR_UNSUPPORTED_ENCRYPTION_USDZ,
   ERR_UNSUPPORTED_FORMAT,
   ERR_WRITER_NOT_INITIALIZED,
   ERR_ZIP_NOT_EMPTY,
@@ -9084,6 +9405,8 @@ export {
   createSyncAccessHandleTempStream,
   fs,
   getMimeType2 as getMimeType,
+  registerCodec,
   resetConfiguration,
-  terminateWorkersAndModule as terminateWorkers
+  terminateWorkersAndModule as terminateWorkers,
+  unregisterCodec
 };
