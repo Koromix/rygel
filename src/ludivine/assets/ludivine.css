@@ -130,30 +130,39 @@ dialog {
     max-width: 1200px;
     flex-direction: column;
     margin: 0 auto 1em auto;
-}
-.banner > img {
-    object-fit: contain;
-    margin-bottom: -1.8em;
-}
-.banner > .title {
-    padding: 0.8em 1.2em;
-    align-self: start;
-    background: var(--top_color);
-    color: white;
-    font-size: 1.1em;
-    border-radius: 8px;
-    z-index: 1;
-}
-.banner > .intro {
-    margin: -20px 2em 1em 2em;
-    padding: calc(1em + 20px) 1em 1em 1em;
-    border-left: 4px solid var(--top_color);
-    border-radius: 0 8px 8px 0;
-    background: var(--tab_color);
+
+    & > img {
+        object-fit: contain;
+        margin-bottom: -1.8em;
+    }
+    & > .title {
+        padding: 0.8em 1.2em;
+        align-self: start;
+        background: var(--top_color);
+        color: white;
+        font-size: 1.1em;
+        border-radius: 8px;
+        z-index: 1;
+    }
+    & > .intro {
+        margin: -20px 2em 1em 2em;
+        padding: calc(1em + 20px) 1em 1em 1em;
+        border-left: 4px solid var(--top_color);
+        border-radius: 0 8px 8px 0;
+        background: var(--tab_color);
+    }
 }
 
 @media screen and (max-width: 960px) {
-    .banner > .intro { margin: -2px 1.5em 1em 1.5em; }
+    .banner {
+        & > .title { display: none; }
+        & > .intro {
+            margin: 0.5em 0 0 0;
+            padding-top: 1em;
+            border-left: none;
+            border-radius: 8px;
+        }
+    }
 }
 
 #logo { height: 100%; }
@@ -175,10 +184,11 @@ p + .columns { margin-top: 2em; }
 
 @media screen and (max-width: 960px) {
     .columns {
-        display: block;
+        flex-direction: column;
+        gap: 2em;
+        align-items: center;
 
         & > * { width: auto; }
-        & > * + * { margin-top: 3em; }
     }
 }
 

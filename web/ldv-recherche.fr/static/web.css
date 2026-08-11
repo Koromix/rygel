@@ -3,6 +3,21 @@
 
 @import url('../../../src/ludivine/assets/ludivine.css');
 
+@media screen and (max-width: 960px) {
+    .intro {
+        & img { display: none; }
+    }
+
+    .columns {
+        & img {
+            max-height: 100px;
+        }
+    }
+    .columns:has(> img:first-child) {
+        flex-direction: column-reverse;
+    }
+}
+
 .cardset {
     position: relative;
     display: flex;

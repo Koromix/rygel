@@ -6,7 +6,7 @@
             <p>Une fois votre inscription finalisée, vous accéderez à notre <b>étude SocioTrauma</b>. Celle-ci vous permettra de participer aux différentes études actuellement proposées.
             <div class="actions">
                 <a href="/participer/sociotrauma">Participer à SocioTrauma</a>
-                <a href="{{ ASSET static/documents/SocioTrauma_Information.pdf }}" download>Télécharger la lettre d'information</a>
+                <a href="{{ ASSET static/documents/SocioTrauma_Information.pdf }}" download>Ouvrir la lettre d'information</a>
             </div>
         </div>
         <img src="{{ ASSET ../../src/ludivine/assets/pictures/dispositif.webp }}" style="flex: 1;" alt="" />
