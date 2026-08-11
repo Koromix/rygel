@@ -5,28 +5,37 @@ function createLocalHeader(name, mtime = null) {
     if (typeof name == 'string')
         name = (new TextEncoder).encode(name);
 
-    let buf = new Uint8Array(30 + name.length + 20);
+    let buf = new Uint8Array(30 + name.length + 20 + 36);
     let view = new DataView(buf.buffer);
     let p = 0;
 
-    let [day, time] = decomposeTime(mtime ?? 0);
+    let [dos_date, dos_time] = encodeDosTime(mtime ?? 0);
+    let ntfs_time = encodeNtfsTime(mtime ?? 0);
 
     view.setUint32(p, 0x04034B50, true); p += 4;
     view.setUint16(p, 45, true); p += 2;
     view.setUint16(p, 0x0008, true); p += 2;
     view.setUint16(p, 0, true); p += 2;
-    view.setUint16(p, time, true); p += 2;
-    view.setUint16(p, day, true); p += 2;
+    view.setUint16(p, dos_time, true); p += 2;
+    view.setUint16(p, dos_date, true); p += 2;
     view.setUint32(p, 0, true); p += 4;
     view.setUint32(p, 0xFFFFFFFF, true); p += 4;
     view.setUint32(p, 0xFFFFFFFF, true); p += 4;
     view.setUint16(p, name.length, true); p += 2;
-    view.setUint16(p, 20, true); p += 2;
+    view.setUint16(p, 20 + 36, true); p += 2;
     buf.set(name, p); p += name.length;
     view.setUint16(p, 0x0001, true); p += 2;
     view.setUint16(p, 16, true); p += 2;
     view.setBigUint64(p, 0n, true); p += 8;
     view.setBigUint64(p, 0n, true); p += 8;
+    view.setUint16(p, 0x000a, true); p += 2;
+    view.setUint16(p, 32, true); p += 2;
+    view.setUint32(p, 0, true); p += 4;
+    view.setUint16(p, 1, true); p += 2;
+    view.setUint16(p, 24, true); p += 2;
+    view.setBigUint64(p, ntfs_time, true); p += 8;
+    view.setBigUint64(p, ntfs_time, true); p += 8;
+    view.setBigUint64(p, ntfs_time, true); p += 8;
 
     return buf;
 }
@@ -49,7 +58,7 @@ function createCentralDirectory(offset, files, offsets) {
 
     let encoder = new TextEncoder;
     let names = files.map(f => encoder.encode(f.name));
-    let total = names.reduce((acc, name) => acc + 46 + name.length + 28, 0) + 56 + 20 + 22;
+    let total = names.reduce((acc, name) => acc + 46 + name.length + 28 + 36, 0) + 56 + 20 + 22;
 
     let buf = new Uint8Array(total);
     let view = new DataView(buf.buffer);
@@ -61,20 +70,21 @@ function createCentralDirectory(offset, files, offsets) {
         let size = BigInt(file.size);
         let offset = BigInt(offsets[i]);
 
-        let [day, time] = decomposeTime(file.mtime ?? 0);
+        let [dos_date, dos_time] = encodeDosTime(file.mtime ?? 0);
+        let ntfs_time = encodeNtfsTime(file.mtime ?? 0);
 
         view.setUint32(p, 0x02014B50, true); p += 4;
         view.setUint16(p, 45, true); p += 2;
         view.setUint16(p, 45, true); p += 2;
         view.setUint16(p, 0x0008, true); p += 2;
         view.setUint16(p, 0, true); p += 2;
-        view.setUint16(p, time, true); p += 2;
-        view.setUint16(p, day, true); p += 2;
+        view.setUint16(p, dos_time, true); p += 2;
+        view.setUint16(p, dos_date, true); p += 2;
         view.setUint32(p, file.crc32, true); p += 4;
         view.setUint32(p, 0xFFFFFFFF, true); p += 4;
         view.setUint32(p, 0xFFFFFFFF, true); p += 4;
         view.setUint16(p, name.length, true); p += 2;
-        view.setUint16(p, 28, true); p += 2;
+        view.setUint16(p, 28 + 36, true); p += 2;
         view.setUint16(p, 0, true); p += 2;
         view.setUint16(p, 0, true); p += 2;
         view.setUint16(p, 0, true); p += 2;
@@ -86,6 +96,14 @@ function createCentralDirectory(offset, files, offsets) {
         view.setBigUint64(p, size, true); p += 8;
         view.setBigUint64(p, size, true); p += 8;
         view.setBigUint64(p, offset, true); p += 8;
+        view.setUint16(p, 0x000a, true); p += 2;
+        view.setUint16(p, 32, true); p += 2;
+        view.setUint32(p, 0, true); p += 4;
+        view.setUint16(p, 1, true); p += 2;
+        view.setUint16(p, 24, true); p += 2;
+        view.setBigUint64(p, ntfs_time, true); p += 8;
+        view.setBigUint64(p, ntfs_time, true); p += 8;
+        view.setBigUint64(p, ntfs_time, true); p += 8;
     }
 
     let cd_size = BigInt(p);
@@ -119,7 +137,7 @@ function createCentralDirectory(offset, files, offsets) {
     return buf;
 }
 
-function decomposeTime(ms) {
+function encodeDosTime(ms) {
     let date = new Date(ms);
 
     let day = 0;
@@ -140,6 +158,11 @@ function decomposeTime(ms) {
     return [day, time];
 }
 
+function encodeNtfsTime(time) {
+    time = (BigInt(time) + 11644473600000n) * 10000n;
+    return time;
+}
+
 function patchFooterCrc32(buf, offset, crc32) {
     let view = new DataView(buf.buffer, buf.byteOffset + offset);
     view.setUint32(0, crc32, true);
@@ -153,8 +176,9 @@ function patchCentralCrc32(buf, offset, crc32) {
 function skipCentralHeader(buf, offset) {
     let view = new DataView(buf.buffer, buf.byteOffset + offset);
     let name_len = view.getUint16(28, true);
+    let extra_len = view.getUint16(30, true);
 
-    return 46 + name_len + 28;
+    return 46 + name_len + extra_len;
 }
 
 export {
