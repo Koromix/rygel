@@ -51,6 +51,7 @@ span[title] { border-bottom: 1px dotted #383838; }
 }
 .actions.vertical { flex-direction: column; }
 p + .actions { margin-top: 2em; }
+.actions:has(+ p) { margin-bottom: 2em; }
 
 .avatar {
     box-sizing: border-box;
