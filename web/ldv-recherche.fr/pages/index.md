@@ -6,7 +6,6 @@
             <p>Inscrivez-vous à notre programme Lignes de Vie, et participez à notre <b>première étude SocioTrauma</b>.
             <div class="actions">
                 <a href="/participer/sociotrauma">Participer à SocioTrauma</a>
-                <a href="{{ ASSET static/documents/SocioTrauma_Information.pdf }}" download>Ouvrir la lettre d'information</a>
             </div>
             <p>Votre engagement est précieux, et <b>nous vous sommes reconnaissants</b> du temps que vous consacrerez à participer aux études !
         </div>
