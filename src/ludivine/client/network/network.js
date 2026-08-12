@@ -483,17 +483,27 @@ function NetworkModule(app, study, page) {
     }
 
     function resolveObjectPath(path) {
-        if (typeof path != 'string' || !path.match(/^world(\.[a-zA-Z][a-zA-Z_0-9]+(\[[0-9]+\])?)+$/))
-            throw new Error('Unsafe named reference in serialized history');
+        if (typeof path != 'string' || !path.startsWith('world.'))
+            throw new Error('Unsupported named reference in serialized history');
+        path = path.substr(5);
 
-        let func = new Function('world', 'return ' + path);
-        let value = func(world);
+        // Beautiful stuff, really. Just squint hard enough.
+        let parts = Array.from(path.matchAll(/(?:\.([a-zA_Z_]+))|\[([0-9]+)\]/g));
+        let keys = parts.map(it => it[1] ?? parseInt(it[2], 10));
+        let value = walkPath(world, keys);
 
         if (value == null)
             throw new Error('Failed to restore named reference');
 
         return value;
     }
+
+    function walkPath(value, keys) {
+        for (let key of keys)
+            value = value?.[key];
+        return value;
+    }
+
 
     function resolveObjectID(root, id) {
         if (Util.isPodObject(root)) {
