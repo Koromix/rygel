@@ -367,7 +367,6 @@ function go(url = null, push = true) {
             // Pick project from URL (if any)
             {
                 let project = PROJECTS.find(project => project.key == parts[0]);
-
                 if (project != null)
                     changes.project = parts.shift();
             }
@@ -389,7 +388,16 @@ function go(url = null, push = true) {
             }
         } break;
 
-        case 'inscription': { changes.mode = 'register'; } break;
+        case 'inscription': {
+            changes.mode = 'register';
+
+            // Pick project from URL (if any)
+            {
+                let project = PROJECTS.find(project => project.key == parts[0]);
+                if (project != null)
+                    changes.project = parts.shift();
+            }
+        } break;
         case 'connexion': { changes.mode = 'login'; } break;
 
         case 'etudes': { changes.mode = 'dashboard'; } break;
@@ -658,7 +666,12 @@ function makeURL(changes = {}, hash = null) {
     let values = Object.assign({}, route, changes);
 
     switch (values.mode) {
-        case 'register': { path += 'inscription'; } break;
+        case 'register': {
+            path += 'inscription';
+
+            if (values.project != null)
+                path += '/' + values.project;
+        } break;
         case 'login': { path += 'connexion'; } break;
 
         case 'dashboard': { path += 'etudes'; } break;
