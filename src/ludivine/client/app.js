@@ -1023,7 +1023,7 @@ async function runProfile() {
 }
 
 async function navigateDiary(id) {
-    route.mode = 'diary';
+    route.mode = 'entry';
     route.entry = id;
 
     await go();
@@ -1862,7 +1862,7 @@ async function runEntry() {
         <div class="tabbar">
             <a href="/etudes">Études</a>
             ${cache.project != null ? html`<a href=${makeURL({ mode: 'study' })}>${cache.project.title}</a>` : ''}
-            <a href=${makeURL({ mode: 'diary' })} class="active">Mon journal</a>
+            <a href=${makeURL({ mode: 'entry' })} class="active">Mon journal</a>
 
             <div style="flex: 1;"></div>
             <a id="sos" @click=${UI.wrap(e => sos(event))}></a>
