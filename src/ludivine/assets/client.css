@@ -68,6 +68,8 @@ button.confirm { font-weight: bold; }
 button.secondary {
     --button_color: #9bcbc9;
     --color: #383838;
+
+    & img { filter: invert(75%); }
 }
 button.secondary.active { color: white !important; }
 button.insist {
