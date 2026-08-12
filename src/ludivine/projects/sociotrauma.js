@@ -66,8 +66,8 @@ const consent = {
 
 function init(build, start, values) {
     build.summary = html`
-        <p>Pour rappel, cette étude s’adresse à <b>toute personne majeure (18 ans et plus) estimant avoir été exposée à un évènement potentiellement traumatique</b> au cours du mois précédent et n’étant pas actuellement sous mesure de protection de justice (sous tutelle, curatelle ou toute autre forme de protection judiciaire).
-        <p>Commencez par faire votre bilan initial. Vous pouvez <b>arrêter à tout moment</b> et recommencer plus tard !
+        <p>Commencez par noter les <b>dates des différentes échéances (6 semaines, 3 mois, 6 mois et 1 an)</b> dans votre agenda, pour revenir le moment venu.
+        <p>Ensuite, présentez-vous puis réalisez le bilan initial. Vous pouvez <b>arrêter à tout moment</b> et recommencer plus tard !
     `
 
     build.module('recueil', 'Recueil', mod => {

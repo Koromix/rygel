@@ -434,7 +434,7 @@ button.highlight { animation: highlight 1.4s ease-in-out infinite alternate; }
     &.done > .circle { --fill: var(--done_color); }
 
     & > img {
-        width: 240px;
+        width: 260px;
         object-fit: cover;
         object-position: center top;
         background: #ecdbc3;
