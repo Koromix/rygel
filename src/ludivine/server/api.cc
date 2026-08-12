@@ -206,7 +206,7 @@ static bool CreateLoginDocument(const char *title, const char *login, Allocator 
 
             double size = 12.0;
             double x = 0.5 * (width - pdfioContentTextMeasure(font, careful, size));
-            double y = 0.05 * height;
+            double y = 0.3 * height;
 
             pdfioContentSetFillColorDeviceRGB(page, 0.859, 0.039, 0.039); // #db0a0a
 
