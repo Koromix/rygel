@@ -1100,6 +1100,16 @@ async function runDashboard() {
                             </div>
                         </div>
                     ` : ''}
+
+                    ${!cache.studies.length ? html`
+                        <div class="help">
+                            <img src=${ASSETS['pictures/help1']} alt="" />
+                            <div>
+                                <p>Pour le moment, SocioTrauma est la seule étude disponible.
+                                <p>Nous vous tiendrons au courant quand d'autres études seront mises en ligne !
+                            </div>
+                        </div>
+                    ` : ''}
                 </div>
 
                 ${cache.studies.length ? html`
