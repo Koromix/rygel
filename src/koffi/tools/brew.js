@@ -737,6 +737,7 @@ async function snapshot() {
 
     copyRecursive(root_dir, snapshot_dir, makePathFilter([
         'lib/native/base',
+        'src/cnoke',
         'src/koffi',
         'vendor/node-addon-api',
         'vendor/node-api-headers',
