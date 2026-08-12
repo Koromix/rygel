@@ -331,7 +331,7 @@ async function logout() {
     channel.postMessage({ message: 'logout' });
 
     window.onbeforeunload = null;
-    window.location.href = '/';
+    window.location.href = '/participer';
     await Util.waitFor(2000);
 
     poisoned = true;
