@@ -8,7 +8,7 @@ html {
     --check_color: #369692;
 
     --empty_color: var(--box_color);
-    --draft_color: #d9bf69;
+    --draft_color: #f6e298;
     --done_color: white;
 }
 
@@ -84,15 +84,21 @@ button.small > img {
 }
 button:is(.secondary, .small) { font-weight: normal !important; }
 
-button.highlight { animation: highlight 1.4s ease-in-out infinite alternate; }
+.highlight {
+    animation: highlight 1.2s ease-in-out 14 alternate;
+    outline: 3px solid transparent;
+}
+
 @keyframes highlight {
     0% {
         filter: contrast(100%);
         transform: scale(1);
+        outline-color: transparent;
     }
     100% {
         filter: contrast(120%);
-        transform: scale(1.2);
+        transform: scale(1.1);
+        outline-color: #ff660066;
     }
 }
 

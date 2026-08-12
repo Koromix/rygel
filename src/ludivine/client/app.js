@@ -1441,6 +1441,8 @@ function renderModule() {
     let [progress, total] = computeProgress(step ?? project.root, today);
     let cls = 'summary ' + (progress == total ? 'done' : 'draft');
 
+    let highlight = true;
+
     return html`
         <div class=${cls}>
             <img src=${project.picture} alt="" />
@@ -1484,9 +1486,12 @@ function renderModule() {
                     } else if (progress) {
                         cls += ' draft';
                         status = progressBar(progress, total);
-                    } else if (total) {
-                        status = 'À compléter';
 
+                        if (highlight) {
+                            cls += ' highlight';
+                            highlight = false;
+                        }
+                    } else if (total) {
                         let earliest = null;
 
                         for (let it of child.tests) {
@@ -1504,8 +1509,12 @@ function renderModule() {
                                 cls += ' disabled';
                                 available = false;
                             }
+                        } else if (highlight) {
+                            cls += ' draft highlight';
+                            status = 'À compléter';
+                            highlight = false;
                         } else {
-                            cls += ' draft';
+                            status = '';
                         }
                     } else {
                         status = 'Non disponible';
@@ -1539,9 +1548,12 @@ function renderModule() {
                             cls += ' disabled';
                             available = false;
                         }
-                    } else {
+                    } else if (highlight) {
+                        cls += ' draft highlight';
                         status = 'À compléter';
-                        cls += ' draft';
+                        highlight = false;
+                    } else {
+                        status = '';
                     }
 
                     return html`
