@@ -204,7 +204,7 @@ function DiaryModule(app) {
         await db.exec('DELETE FROM diary WHERE id = ?', data.id);
 
         if (data.id == route.entry)
-            await app.go('/profil');
+            await app.go('/journal');
     }
 
     async function exit() {
