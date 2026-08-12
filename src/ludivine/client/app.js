@@ -711,7 +711,7 @@ function makeURL(changes = {}, hash = null) {
 
 async function syncContext(key, func = null) {
     if (ctx_key == key)
-        return;
+        return false;
 
     if (ctx?.stop != null)
         await ctx.stop();
@@ -723,6 +723,7 @@ async function syncContext(key, func = null) {
     }
 
     ctx_key = key;
+    return true;
 }
 
 function renderApp(el, fullscreen) {
@@ -1377,7 +1378,7 @@ async function runProject() {
     // Best effort, don't wait
     syncEvents();
 
-    await syncContext(cache.page, () => {
+    let changed = await syncContext(cache.page, () => {
         let page = cache.page;
         let test = cache.tests.find(test => test.key == page.key);
 
@@ -1390,26 +1391,10 @@ async function runProject() {
     if (ctx?.run != null)
         await ctx.run();
 
-    // Render tab
-    {
-        let project = cache.project;
-        let page = cache.page;
-
-        UI.main(html`
-            <div class="tabbar">
-                <a href="/etudes">Études</a>
-                <a class="active">${project.title}</a>
-                <a href=${makeURL({ mode: 'diary' })}>Mon journal</a>
-
-                <div style="flex: 1;"></div>
-                <a id="sos" @click=${UI.wrap(e => sos(event))}></a>
-            </div>
-
-            <div class="tab" style="flex: 1;">
-                ${page.type == 'module' ? renderModule() : null}
-                ${page.type != 'module' ? renderTest() : null}
-            </div>
-        `);
+    if (cache.page.type == 'module') {
+        runModule(changed);
+    } else {
+        runTest(changed);
     }
 }
 
@@ -1481,7 +1466,7 @@ async function syncEvents() {
     });
 }
 
-function renderModule() {
+function runModule(changed) {
     if (UI.isFullscreen)
         UI.toggleFullscreen(false);
 
@@ -1496,66 +1481,116 @@ function renderModule() {
 
     let highlight = true;
 
-    return html`
-        <div class=${cls}>
-            <img src=${project.picture} alt="" />
-            <div>
-                <div class="header">
-                    ${step == null ? `Étude ${project.title}` : ''}
-                    ${step != null ? step.title : ''}
-                </div>
-                ${step != null ? step.step : project.summary}
-            </div>
-            ${step != null ? progressCircle(progress, total) : ''}
+    UI.main(html`
+        <div class="tabbar">
+            <a href="/etudes">Études</a>
+            <a class="active">${project.title}</a>
+            <a href=${makeURL({ mode: 'diary' })}>Mon journal</a>
+
+            <div style="flex: 1;"></div>
+            <a id="sos" @click=${UI.wrap(e => sos(event))}></a>
         </div>
 
-        ${Util.mapRange(0, page.chain.length - 1, idx => {
-            let parent = page.chain[idx];
-            let next = page.chain[idx + 1];
-
-            return html`
-                <div class="box level" @click=${UI.wrap(e => navigateStudy(parent))}>
-                    ${parent.level ?? ''}${parent.level ? ' - ' : ''}
-                    ${next.title}
+        <div class="tab" style="flex: 1;">
+            <div class=${cls}>
+                <img src=${project.picture} alt="" />
+                <div>
+                    <div class="header">
+                        ${step == null ? `Étude ${project.title}` : ''}
+                        ${step != null ? step.title : ''}
+                    </div>
+                    ${step != null ? step.step : project.summary}
                 </div>
-            `;
-        })}
+                ${step != null ? progressCircle(progress, total) : ''}
+            </div>
 
-        <div class="box">
-            <div class="header">${page.level}</div>
-            <div class="modules">
-                ${page.modules.map(child => {
-                    let [progress, total] = computeProgress(child, today);
+            ${Util.mapRange(0, page.chain.length - 1, idx => {
+                let parent = page.chain[idx];
+                let next = page.chain[idx + 1];
 
-                    let cls = 'module';
-                    let status = '';
-                    let img = null;
-                    let available = true;
+                return html`
+                    <div class="box level" @click=${UI.wrap(e => navigateStudy(parent))}>
+                        ${parent.level ?? ''}${parent.level ? ' - ' : ''}
+                        ${next.title}
+                    </div>
+                `;
+            })}
 
-                    if (total && progress == total) {
-                        cls += ' done';
-                        status = 'Terminé';
-                        img = ASSETS['ui/validate'];
-                    } else if (progress) {
-                        if (highlight) {
-                            cls += ' draft highlight';
-                            highlight = false;
+            <div class="box">
+                <div class="header">${page.level}</div>
+                <div class="modules">
+                    ${page.modules.map(child => {
+                        let [progress, total] = computeProgress(child, today);
+
+                        let cls = 'module';
+                        let status = '';
+                        let img = null;
+                        let available = true;
+
+                        if (total && progress == total) {
+                            cls += ' done';
+                            status = 'Terminé';
+                            img = ASSETS['ui/validate'];
+                        } else if (progress) {
+                            if (highlight) {
+                                cls += ' draft highlight';
+                                highlight = false;
+                            }
+
+                            status = progressBar(progress, total);
+                        } else if (total) {
+                            let earliest = null;
+
+                            for (let it of child.tests) {
+                                if (it.status == 'done' || it.schedule == null)
+                                    continue;
+
+                                if (earliest == null || it.schedule < earliest)
+                                    earliest = it.schedule;
+                            }
+
+                            if (earliest != null && earliest > today) {
+                                status = niceDate(earliest, true);
+
+                                if (!ENV.test) {
+                                    cls += ' disabled';
+                                    available = false;
+                                }
+                            } else if (highlight) {
+                                cls += ' draft highlight';
+                                status = 'À compléter';
+                                highlight = false;
+                            } else {
+                                status = '';
+                            }
+                        } else {
+                            status = 'Non disponible';
+                            cls += ' disabled';
+                            available = false;
                         }
 
-                        status = progressBar(progress, total);
-                    } else if (total) {
-                        let earliest = null;
+                        return html`
+                            <div class=${cls} @click=${available ? UI.wrap(e => navigateStudy(child)) : null}>
+                                <div class="title">${child.title}</div>
+                                ${img != null ? html`<img src=${img} alt="" />` : ''}
+                                <div class="status">${status}</div>
+                            </div>
+                        `;
+                    })}
+                    ${!page.modules.length ? page.tests.map(child => {
+                        let test = cache.tests.find(test => test.key == child.key);
 
-                        for (let it of child.tests) {
-                            if (it.status == 'done' || it.schedule == null)
-                                continue;
+                        let cls = 'module';
+                        let status = null;
+                        let img = null;
+                        let available = true;
 
-                            if (earliest == null || it.schedule < earliest)
-                                earliest = it.schedule;
-                        }
-
-                        if (earliest != null && earliest > today) {
-                            status = niceDate(earliest, true);
+                        if (test.status == 'done') {
+                            cls += ' done';
+                            status = 'Terminé';
+                            img = ASSETS['ui/validate'];
+                        } else if (child.schedule != null && child.schedule > today) {
+                            status = niceDate(child.schedule, true);
 
                             if (!ENV.test) {
                                 cls += ' disabled';
@@ -1565,63 +1600,35 @@ function renderModule() {
                             cls += ' draft highlight';
                             status = 'À compléter';
                             highlight = false;
-                        } else {
-                            status = '';
+                        } else if (test.status != 'empty') {
+                            status = 'Incomplet';
                         }
-                    } else {
-                        status = 'Non disponible';
-                        cls += ' disabled';
-                        available = false;
-                    }
 
-                    return html`
-                        <div class=${cls} @click=${available ? UI.wrap(e => navigateStudy(child)) : null}>
-                            <div class="title">${child.title}</div>
-                            ${img != null ? html`<img src=${img} alt="" />` : ''}
-                            <div class="status">${status}</div>
-                        </div>
-                    `;
-                })}
-                ${!page.modules.length ? page.tests.map(child => {
-                    let test = cache.tests.find(test => test.key == child.key);
+                        return html`
+                            <div class=${cls} @click=${available ? UI.wrap(ae => navigateStudy(child)) : null}>
+                                <div class="title">${child.title}</div>
+                                ${img != null ? html`<img src=${img} alt="" />` : ''}
+                                <div class="status">${status}</div>
+                            </div>
+                        `;
+                    }) : ''}
+                </div>
 
-                    let cls = 'module';
-                    let status = null;
-                    let img = null;
-                    let available = true;
-
-                    if (test.status == 'done') {
-                        cls += ' done';
-                        status = 'Terminé';
-                        img = ASSETS['ui/validate'];
-                    } else if (child.schedule != null && child.schedule > today) {
-                        status = niceDate(child.schedule, true);
-
-                        if (!ENV.test) {
-                            cls += ' disabled';
-                            available = false;
-                        }
-                    } else if (highlight) {
-                        cls += ' draft highlight';
-                        status = 'À compléter';
-                        highlight = false;
-                    } else if (test.status != 'empty') {
-                        status = 'Incomplet';
-                    }
-
-                    return html`
-                        <div class=${cls} @click=${available ? UI.wrap(ae => navigateStudy(child)) : null}>
-                            <div class="title">${child.title}</div>
-                            ${img != null ? html`<img src=${img} alt="" />` : ''}
-                            <div class="status">${status}</div>
-                        </div>
-                    `;
-                }) : ''}
+                ${wrapHelp(page, progress, total)}
             </div>
-
-            ${wrapHelp(page, progress, total)}
         </div>
-    `;
+    `);
+
+    if (changed) {
+        let target = document.querySelector('.modules');
+
+        if (target != null) {
+            target.scrollIntoView({
+                block: 'center',
+                behavior: 'smooth'
+            });
+        }
+    }
 }
 
 function wrapHelp(page, progress, total) {
@@ -1650,7 +1657,7 @@ function wrapHelp(page, progress, total) {
     }
 }
 
-function renderTest() {
+function runTest(changed) {
     let project = cache.project;
     let page = cache.page;
 
@@ -1660,25 +1667,36 @@ function renderTest() {
     let [progress, total] = computeProgress(step ?? project.root, today);
     let cls = 'summary ' + (progress == total ? 'done' : 'draft');
 
-    return html`
-        <div class=${cls}>
-            <img src=${project.picture} alt="" />
-            <div>
-                <div class="header">
-                    ${step == null ? `Étude ${project.title}` : ''}
-                    ${step != null ? step.title : ''}
-                </div>
-                <div class="header">${page.title}</div>
-                <div class="actions">
-                    <button type="button" class="secondary"
-                            @click=${UI.wrap(e => exitTest(page))}>Retourner au menu</button>
-                </div>
-            </div>
-            ${step != null ? progressCircle(progress, total) : ''}
+    UI.main(html`
+        <div class="tabbar">
+            <a href="/etudes">Études</a>
+            <a class="active">${project.title}</a>
+            <a href=${makeURL({ mode: 'diary' })}>Mon journal</a>
+
+            <div style="flex: 1;"></div>
+            <a id="sos" @click=${UI.wrap(e => sos(event))}></a>
         </div>
 
-        ${ctx.render(cache.section)}
-    `;
+        <div class="tab" style="flex: 1;">
+            <div class=${cls}>
+                <img src=${project.picture} alt="" />
+                <div>
+                    <div class="header">
+                        ${step == null ? `Étude ${project.title}` : ''}
+                        ${step != null ? step.title : ''}
+                    </div>
+                    <div class="header">${page.title}</div>
+                    <div class="actions">
+                        <button type="button" class="secondary"
+                                @click=${UI.wrap(e => exitTest(page))}>Retourner au menu</button>
+                    </div>
+                </div>
+                ${step != null ? progressCircle(progress, total) : ''}
+            </div>
+
+            ${ctx.render(cache.section, changed)}
+        </div>
+    `);
 }
 
 async function startStudy(project, values) {

@@ -82,7 +82,7 @@ function FormModule(app, study, page) {
         // Nothing to do
     };
 
-    this.render = function (section) {
+    this.render = function (section, changed) {
         if (section != null) {
             part_idx = parseInt(section, 10);
         } else {
@@ -92,7 +92,7 @@ function FormModule(app, study, page) {
         if (part_idx != null) {
             runForm();
         } else {
-            runStart();
+            runStart(changed);
         }
 
         return div;
@@ -102,7 +102,7 @@ function FormModule(app, study, page) {
         return has_changed;
     };
 
-    function runStart() {
+    function runStart(changed) {
         render(html`
             <div class="help">
                 <img src=${ASSETS['pictures/help1']} alt="" />
@@ -116,6 +116,19 @@ function FormModule(app, study, page) {
                 <button type="button" class=${is_new ? 'primary highlight' : ''} @click=${UI.wrap(e => app.navigateStudy(page, 0))}>${is_new ? 'Commencer' : 'Continuer'}</button>
             </div>
         `, div);
+
+        if (changed) {
+            let target = div.querySelector('button');
+
+            if (target != null) {
+                setTimeout(() => {
+                    target.scrollIntoView({
+                        block: 'nearest',
+                        behavior: 'smooth'
+                    });
+                }, 0);
+            }
+        }
     }
 
     function runForm() {
