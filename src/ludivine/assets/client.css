@@ -554,9 +554,9 @@ form {
         align-items: start;
     }
     & * + :is(label, .widget) { margin-top: 1em; }
-    & :is(label, .widget) > :is(input, textarea, select, div) { margin-left: 1em !important; }
     & label:empty { display: none; }
 
+    & .widget > :is(input, textarea, select, div) { margin-left: 1em !important; }
     & .widget.annotate {
         padding: 1em;
         background: #ff660022;
@@ -574,6 +574,13 @@ form {
     & .widget > .error {
         margin-top: 0.5em;
         color: #ff6600;
+    }
+
+    & .notes {
+        display: flex;
+        flex-direction: column;
+        gap: 0.6em;
+        align-items: start;
     }
 
     & input {
