@@ -1007,7 +1007,8 @@ async function runDashboard() {
                                             ${study?.total && study.progress == study.total ? 'Participation terminée' : ''}
                                         </div>
                                     ` : ''}
-                                    <button type="button" @click=${UI.wrap(e => openStudy(project))}>
+                                    <button type="button" class=${study?.total && !study.progress ? 'highlight' : ''}
+                                            @click=${UI.wrap(e => openStudy(project))}>
                                         ${study == null ? 'Participer' : ''}
                                         ${study?.total && !study.progress ? 'Commencer' : ''}
                                         ${study?.total && study.progress && study.progress < study.total ? 'Reprendre' : ''}
@@ -1475,7 +1476,7 @@ function renderModule() {
                     let [progress, total] = computeProgress(child, today);
 
                     let cls = 'module';
-                    let status = null;
+                    let status = '';
                     let img = null;
                     let available = true;
 
@@ -1484,13 +1485,12 @@ function renderModule() {
                         status = 'Terminé';
                         img = ASSETS['ui/validate'];
                     } else if (progress) {
-                        cls += ' draft';
-                        status = progressBar(progress, total);
-
                         if (highlight) {
-                            cls += ' highlight';
+                            cls += ' draft highlight';
                             highlight = false;
                         }
+
+                        status = progressBar(progress, total);
                     } else if (total) {
                         let earliest = null;
 
@@ -1533,12 +1533,13 @@ function renderModule() {
                 ${!page.modules.length ? page.tests.map(child => {
                     let test = cache.tests.find(test => test.key == child.key);
 
-                    let cls = 'module ' + test.status;
+                    let cls = 'module';
                     let status = null;
                     let img = null;
                     let available = true;
 
                     if (test.status == 'done') {
+                        cls += ' done';
                         status = 'Terminé';
                         img = ASSETS['ui/validate'];
                     } else if (child.schedule != null && child.schedule > today) {
@@ -1552,8 +1553,8 @@ function renderModule() {
                         cls += ' draft highlight';
                         status = 'À compléter';
                         highlight = false;
-                    } else {
-                        status = '';
+                    } else if (test.status != 'empty') {
+                        status = 'Incomplet';
                     }
 
                     return html`

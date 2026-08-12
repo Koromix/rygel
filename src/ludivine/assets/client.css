@@ -8,7 +8,7 @@ html {
     --check_color: #369692;
 
     --empty_color: var(--box_color);
-    --draft_color: #f6e298;
+    --draft_color: #f6d153;
     --done_color: white;
 }
 
@@ -64,25 +64,37 @@ main.fullscreen {
     z-index: 999999;
 }
 
-button.confirm { font-weight: bold; }
-button.secondary {
-    --button_color: #9bcbc9;
-    --color: #383838;
+button {
+    &.primary {
+        --button_color: var(--draft_color);
+        --color: #383838;
+        font-weight: bold;
+    }
+    &.secondary {
+        --button_color: #9bcbc9;
+        --color: #383838;
 
-    & img { filter: invert(75%); }
+        & img { filter: invert(75%); }
+    }
+    &.secondary.active { color: white !important; }
+
+    &.confirm { font-weight: bold; }
+
+    &.insist {
+        filter: contrast(130%);
+        transform: scale(1.1);
+        transition: filter 0.1s ease, transform 0.2s ease;
+    }
+
+    &.small {
+        font-size: 0.7em;
+
+        & > img {
+            width: 12px;
+            height: 12px;
+        }
+    }
 }
-button.secondary.active { color: white !important; }
-button.insist {
-    filter: contrast(130%);
-    transform: scale(1.1);
-    transition: filter 0.1s ease, transform 0.2s ease;
-}
-button.small { font-size: 0.7em; }
-button.small > img {
-    width: 12px;
-    height: 12px;
-}
-button:is(.secondary, .small) { font-weight: normal !important; }
 
 .highlight {
     animation: highlight 1.2s ease-in-out 14 alternate;
@@ -177,7 +189,7 @@ button:is(.secondary, .small) { font-weight: normal !important; }
 
 .bar {
     --fill: #383838;
-    --empty: white;
+    --empty: #fafafa;
     --rounding: 1px;
 
     width: 100%;
@@ -201,7 +213,7 @@ button:is(.secondary, .small) { font-weight: normal !important; }
 }
 .circle {
     --fill: #383838;
-    --empty: white;
+    --empty: #fafafa;
 
     & circle:nth-child(1) { stroke: var(--empty); }
     & circle:nth-child(2) { stroke: var(--fill); }
@@ -231,6 +243,8 @@ button:is(.secondary, .small) { font-weight: normal !important; }
         background: color-mix(in srgb, var(--draft_color), transparent 60%);
         --button_color: var(--draft_color);
         --color: #383838;
+
+        button { font-weight: bold; }
     }
     &.done {
         background: color-mix(in srgb, var(--done_color), transparent 60%);
@@ -483,7 +497,7 @@ button:is(.secondary, .small) { font-weight: normal !important; }
     gap: 0.15em;
     align-items: center;
     justify-content: center;
-    background: color-mix(in srgb, var(--fill), transparent 60%);
+    background: var(--fill);
     border-radius: 8px;
     cursor: pointer;
 
@@ -501,6 +515,7 @@ button:is(.secondary, .small) { font-weight: normal !important; }
     & > .status {
         min-width: 70%;
         font-size: 0.9em;
+        font-style: italic;
         text-align: center;
     }
     &.draft > .title { font-weight: bold; }

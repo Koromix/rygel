@@ -113,7 +113,7 @@ function FormModule(app, study, page) {
                 </div>
             </div>
             <div class="actions">
-                <button type="button" @click=${UI.wrap(e => app.navigateStudy(page, 0))}>${is_new ? 'Commencer' : 'Continuer'}</button>
+                <button type="button" class=${is_new ? 'primary highlight' : ''} @click=${UI.wrap(e => app.navigateStudy(page, 0))}>${is_new ? 'Commencer' : 'Continuer'}</button>
             </div>
         `, div);
     }
