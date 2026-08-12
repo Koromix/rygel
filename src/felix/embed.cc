@@ -335,13 +335,6 @@ bool PackAssets(Span<const EmbedAsset> assets, unsigned int flags, const char *o
     if (output_path) {
         if (!c.Open(output_path))
             return false;
-
-        if (flags & (int)EmbedFlag::UseEmbed) {
-            const char *bin_dirname = Fmt(&temp_alloc, "%1.d", output_path).ptr;
-
-            if (!MakeDirectory(bin_dirname, false))
-                return false;
-        }
     } else {
         if (flags & (int)EmbedFlag::UseEmbed) {
             LogError("You must use an explicit output path for UseEmbed");
@@ -365,6 +358,8 @@ bool PackAssets(Span<const EmbedAsset> assets, unsigned int flags, const char *o
         if (flags & (int)EmbedFlag::UseEmbed) {
             Async async;
 
+            bool dir_ready = false;
+
             for (Size i = 0; i < assets.len; i++) {
                 const EmbedAsset &asset = assets[i];
                 BlobInfo *blob = blobs.AppendDefault();
@@ -374,6 +369,10 @@ bool PackAssets(Span<const EmbedAsset> assets, unsigned int flags, const char *o
 
                 if (asset.compression_type != CompressionType::None) {
                     const char *bin_filename = Fmt(&temp_alloc, "%1.d/%2.bin", output_path, i).ptr;
+
+                    if (!dir_ready && !EnsureDirectoryExists(bin_filename))
+                        return false;
+                    dir_ready = true;
 
                     async.Run([=]() {
                         StreamWriter writer(bin_filename);
