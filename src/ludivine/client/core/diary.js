@@ -133,8 +133,8 @@ function DiaryModule(app) {
 
                 <div class="actions">
                     <button type="button" @click=${UI.wrap(exit)}>
-                        ${data != null ? 'Enregistrer et retourner au tableau de bord' : ''}
-                        ${data == null ? 'Retourner au tableau de bord' : ''}
+                        ${data != null ? 'Enregistrer et retourner au journal' : ''}
+                        ${data == null ? 'Retourner au journal' : ''}
                     </button>
                 </div>
             </div>
@@ -213,7 +213,7 @@ function DiaryModule(app) {
             await save();
         }
 
-        await app.go('/profil');
+        await app.go('/journal');
     }
 }
 
