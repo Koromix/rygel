@@ -52,7 +52,25 @@ async function downloadVault(vid, force_sabfs = false) {
 
     if (root != null) {
         let handle = await findFile(root, filename, true);
-        let sync = await handle.createSyncAccessHandle();
+        let sync = null;
+
+        // Try to replace vault
+        {
+            let last_err = null;
+
+            for (let i = 0; i < 6; i++) {
+                try {
+                    sync = await handle.createSyncAccessHandle();
+                    break;
+                } catch (err) {
+                    last_err = err;
+                    await Util.waitFor(i * Util.getRandomInt(20, 100));
+                }
+            }
+
+            if (sync == null)
+                throw last_err;
+        }
 
         sync.write(buf);
         sync.truncate(buf.byteLength);

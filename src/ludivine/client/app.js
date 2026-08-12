@@ -192,8 +192,10 @@ function initChannel() {
             } break;
 
             case 'picture': {
-                identity.picture = e.data.picture;
-                sessionStorage.setItem('picture', e.data.picture ?? '');
+                if (identity != null) {
+                    identity.picture = e.data.picture;
+                    sessionStorage.setItem('picture', e.data.picture ?? '');
+                }
 
                 await run();
             } break;
@@ -205,7 +207,11 @@ function initChannel() {
         }
     });
 
-    channel.postMessage({ message: 'app' });
+    if (session != null) {
+        channel.postMessage({ message: 'session', session: session });
+    } else {
+        channel.postMessage({ message: 'app' });
+    }
 }
 
 async function loginMagic(uid, tkey, registration) {
