@@ -372,26 +372,39 @@ bool PackAssets(Span<const EmbedAsset> assets, unsigned int flags, const char *o
                 blob->name = asset.name;
                 blob->compression_type = asset.compression_type;
 
-                const char *bin_filename = Fmt(&temp_alloc, "%1.d/%2.bin", output_path, i).ptr;
+                if (asset.compression_type != CompressionType::None) {
+                    const char *bin_filename = Fmt(&temp_alloc, "%1.d/%2.bin", output_path, i).ptr;
 
-                async.Run([=]() {
-                    StreamWriter writer(bin_filename);
+                    async.Run([=]() {
+                        StreamWriter writer(bin_filename);
 
-                    auto print = [&](Span<const uint8_t> buf) { writer.Write(buf); };
-                    blob->len = WriteAsset(asset, speed, print);
+                        auto print = [&](Span<const uint8_t> buf) { writer.Write(buf); };
+                        blob->len = WriteAsset(asset, speed, print);
 
-                    // Put NUL byte at the end to make it a valid C string
-                    print(0);
+                        // Put NUL byte at the end to make it a valid C string
+                        print(0);
 
-                    if (blob->len < 0)
+                        if (blob->len < 0)
+                            return false;
+                        if (!writer.Close())
+                            return false;
+
+                        return true;
+                    });
+
+                    PrintLn(&c, "static const uint8_t raw%1[] = {\n    #embed \"%2\"\n};", i, bin_filename);
+                } else {
+                    FileInfo file_info;
+                    if (StatFile(asset.src_filename, &file_info) != StatResult::Success)
                         return false;
-                    if (!writer.Close())
-                        return false;
+                    blob->len = file_info.size;
 
-                    return true;
-                });
-
-                PrintLn(&c, "static const uint8_t raw%1[] = {\n    #embed \"%2\"\n};", i, bin_filename);
+                    if (file_info.size) {
+                        PrintLn(&c, "static const uint8_t raw%1[] = {\n    #embed \"%2\" suffix(, 0)\n};", i, asset.src_filename);
+                    } else {
+                        PrintLn(&c, "static const uint8_t raw%1[] = { 0 };", i, asset.src_filename);
+                    }
+                }
             }
 
             if (!async.Sync())
