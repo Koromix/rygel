@@ -60,6 +60,25 @@ static bool IsUUIDValid(Span<const char> uuid)
     return true;
 }
 
+static Span<const uint8_t> GetLogoPng()
+{
+    static HeapArray<uint8_t> png;
+    static std::once_flag flag;
+
+    std::call_once(flag, []() {
+        const AssetInfo *asset = FindEmbedAsset("src/ludivine/server/mails/logo.png");
+        K_ASSERT(asset);
+
+        StreamReader reader(asset->data, "<logo>", asset->compression_type);
+        StreamWriter writer(&png, "<png>");
+
+        bool success = SpliceStream(&reader, -1, &writer);
+        K_ASSERT(success);
+    });
+
+    return png;
+}
+
 static bool CreateLoginDocument(const char *title, const char *login, Allocator *alloc, HeapArray<uint8_t> *out_pdf)
 {
     struct PdfContext {
@@ -108,17 +127,7 @@ static bool CreateLoginDocument(const char *title, const char *login, Allocator 
     // Prepare logo
     pdfio_obj_t *logo;
     {
-        const AssetInfo *asset = FindEmbedAsset("src/ludivine/server/mails/logo.png");
-        K_ASSERT(asset);
-
-        HeapArray<uint8_t> png;
-        {
-            StreamReader reader(asset->data, "<logo>", asset->compression_type);
-            StreamWriter writer(&png, "<png>");
-
-            if (!SpliceStream(&reader, -1, &writer))
-                return false;
-        }
+        Span<const uint8_t> png = GetLogoPng();
 
         int width, height, channels;
         uint8_t *img = stbi_load_from_memory(png.ptr, png.len, &width, &height, &channels, 4);
@@ -260,9 +269,9 @@ static bool SendNewMail(const char *to, const char *uid, Span<const uint8_t> tke
         return false;
 
     smtp_AttachedFile files[] = {
-        { .mimetype = "application/pdf", .name = filename, .data = pdf }
+        { .mimetype = "image/png", .id = "logo.png", .inlined = true, .data = GetLogoPng() },
+        { .mimetype = "application/pdf", .name = filename, .inlined = false, .data = pdf }
     };
-
     content.files = files;
 
     return PostMail(to, content);
@@ -291,6 +300,9 @@ static bool SendExistingMail(const char *to, bool password, Allocator *alloc)
     content.subject = Fmt(alloc, T("Nouvelle connexion à %1"), config.title);
     content.html = PatchMail(password ? "existing_user_with_password.html" : "existing_user_no_password.html", alloc, patch);
     content.text = PatchMail(password ? "existing_user_with_password.txt" : "existing_user_no_password.txt", alloc, patch);
+
+    smtp_AttachedFile logo = { .mimetype = "image/png", .id = "logo.png", .inlined = true, .data = GetLogoPng() };
+    content.files = logo;
 
     return PostMail(to, content);
 }
@@ -322,6 +334,9 @@ static bool SendContinueMail(const char *to, const char *uid, int64_t study, con
     content.subject = Fmt(alloc, T("Rappel %1 : participez à %2 !"), config.title, title);
     content.html = PatchMail("continue_study.html", alloc, patch);
     content.text = PatchMail("continue_study.txt", alloc, patch);
+
+    smtp_AttachedFile logo = { .mimetype = "image/png", .id = "logo.png", .inlined = true, .data = GetLogoPng() };
+    content.files = logo;
 
     return PostMail(to, content);
 }
