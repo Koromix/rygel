@@ -275,13 +275,13 @@ function FormModule(app, study, page) {
 
         let valid = true;
 
-        for (let widget of part.widgets) {
-            if (widget.key == null)
+        for (let variable of part.variables) {
+            if (variable.key == null)
                 continue;
 
-            let notes = widget.notes;
+            let notes = variable.notes;
 
-            if (widget.value != null || widget.optional || widget.disabled) {
+            if (variable.value != null || variable.optional || variable.disabled) {
                 delete notes.skip;
             } else if (!notes.skip) {
                 notes.skip = false;
