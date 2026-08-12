@@ -58,6 +58,7 @@ p + .actions { margin-top: 2em; }
     background: white;
     border-radius: 50%;
 }
+.avatar.active { outline: 3px solid var(--bar_color); }
 
 #top { font-size: 1.1em; }
 #top menu {

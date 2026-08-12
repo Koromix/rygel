@@ -723,6 +723,13 @@ function renderApp(el, fullscreen) {
     if (fullscreen) {
         render(el, root_el);
     } else {
+        let avatar_cls = 'avatar';
+
+        if (identity?.picture == null)
+            avatar_cls += ' anonymous';
+        if (route.mode == 'profile')
+            avatar_cls += ' active';
+
         render(html`
             <nav id="top">
                 <div @click=${deploy}></div>
@@ -744,8 +751,7 @@ function renderApp(el, fullscreen) {
                         return html`<li><a href=${page.url} class=${active ? 'active' : ''} style="margin-left: 0em;">${page.title}</a>`;
                     })}
                     <div style="flex: 1;"></div>
-                    <a href="/profil"><img class=${'avatar' + (identity?.picture == null ? ' anonymous' : '')}
-                                           src=${identity?.picture ?? ASSETS['ui/anonymous']} alt="" /></a>
+                    <a href="/profil"><img class=${avatar_cls} src=${identity?.picture ?? ASSETS['ui/anonymous']} alt="" /></a>
                 </menu>
             </nav>
 
