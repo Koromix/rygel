@@ -344,11 +344,30 @@ function go(url = null, push = true) {
     let mode = parts.shift();
 
     switch (mode) {
+        case 'participer': {
+            changes.mode = 'dashboard';
+
+            try {
+                let prev = sessionStorage.getItem('context');
+
+                if (prev) {
+                    let values = JSON.parse(prev);
+
+                    if (values.mode == null)
+                        throw new Error('Invalid app context');
+
+                    Object.assign(changes, values);
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        } break;
+
         case 'inscription': { changes.mode = 'register'; } break;
         case 'connexion': { changes.mode = 'login'; } break;
 
+        case 'etudes': { changes.mode = 'dashboard'; } break;
         case 'profil': { changes.mode = 'profile'; } break;
-        case 'participer': { changes.mode = 'dashboard'; } break;
 
         case 'etude': {
             let project = PROJECTS.find(project => project.key == parts[0]);
@@ -589,6 +608,9 @@ async function run(changes = {}, push = false) {
                 route_url = url;
             }
         }
+
+        // Save route for quick return from static website
+        sessionStorage.setItem('context', JSON.stringify(route));
     });
 
     if (scroll)
@@ -604,7 +626,7 @@ function makeURL(changes = {}, hash = null) {
         case 'register': { path += 'inscription'; } break;
         case 'login': { path += 'connexion'; } break;
 
-        case 'dashboard': { path += 'participer'; } break;
+        case 'dashboard': { path += 'etudes'; } break;
         case 'profile': { path += 'profil'; } break;
 
         case 'study': {
@@ -891,7 +913,7 @@ async function runProfile() {
 
     UI.main(html`
         <div class="tabbar">
-            <a href="/participer">Études</a>
+            <a href="/etudes">Études</a>
             ${cache.project != null ? html`<a href=${makeURL({ mode: 'study' })}>${cache.project.title}</a>` : ''}
             <a href="/profil" class="active">Profil</a>
 
@@ -922,7 +944,7 @@ async function runProfile() {
                         Une fois prêt(e), accéder à votre <b>tableau de bord et aux études</b> à l'aide du bouton ci-dessous.
 
                         <div class="actions">
-                            <a href="/participer">Accéder aux études</a>
+                            <a href="/etudes">Accéder aux études</a>
                         </div>
                     </div>
 
@@ -965,7 +987,7 @@ async function runDashboard() {
 
     UI.main(html`
         <div class="tabbar">
-            <a href="/participer" class="active">Études</a>
+            <a href="/etudes" class="active">Études</a>
             ${cache.project != null ? html`<a href=${makeURL({ mode: 'study' })}>${cache.project.title}</a>` : ''}
 
             <div style="flex: 1;"></div>
@@ -1303,7 +1325,7 @@ async function runConsent() {
 
     UI.main(html`
         <div class="tabbar">
-            <a href="/participer">Études</a>
+            <a href="/etudes">Études</a>
             <a class="active">${project.title}</a>
 
             <div style="flex: 1;"></div>
@@ -1346,7 +1368,7 @@ async function runProject() {
 
         UI.main(html`
             <div class="tabbar">
-                <a href="/participer">Études</a>
+                <a href="/etudes">Études</a>
                 <a class="active">${project.title}</a>
 
                 <div style="flex: 1;"></div>
@@ -1756,7 +1778,7 @@ async function runDiary() {
 
     UI.main(html`
         <div class="tabbar">
-            <a href="/participer">Études</a>
+            <a href="/etudes">Études</a>
             <a href=${makeURL({ mode: 'diary' })} class="active">Mon journal</a>
 
             <div style="flex: 1;"></div>
