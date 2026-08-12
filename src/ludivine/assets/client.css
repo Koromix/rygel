@@ -193,7 +193,7 @@ button.highlight { animation: highlight 1.4s ease-in-out infinite alternate; }
 }
 .circle {
     --fill: #383838;
-    --empty: color-mix(in srgb, var(--fill), white 80%);
+    --empty: white;
 
     & circle:nth-child(1) { stroke: var(--empty); }
     & circle:nth-child(2) { stroke: var(--fill); }
