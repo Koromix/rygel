@@ -984,7 +984,7 @@ async function runDashboard() {
                 <div class="column" style="flex: 1;">
                     ${PROJECTS.map(project => {
                         let study = cache.studies.find(study => study.key == project.key);
-                        let cls = 'study';
+                        let cls = 'box';
 
                         if (study != null) {
                             if (study.progress == study.total) {
@@ -992,31 +992,29 @@ async function runDashboard() {
                             } else {
                                 cls += ' draft';
                             }
-                        } else {
-                            cls += ' unsubscribed';
                         }
 
                         return html`
                             <div class=${cls}>
-                                <div class="title">
-                                    Étude ${project.title}
+                                <div class="header">Étude ${project.title}</div>
+                                <div class="study">
                                     <img src=${project.picture} alt="" />
+                                    ${study == null ? html`<div class="description">${project.description}</div>` : ''}
+                                    ${study != null ? html`
+                                        <div class="progress">
+                                            ${study?.total && !study.progress ? 'Participation acceptée' : ''}
+                                            ${study?.total && study.progress && study.progress < study.total ? 'Participation en cours' : ''}
+                                            ${study?.total && study.progress == study.total ? 'Participation terminée' : ''}
+                                        </div>
+                                    ` : ''}
+                                    <button type="button" @click=${UI.wrap(e => openStudy(project))}>
+                                        ${study == null ? 'Participer' : ''}
+                                        ${study?.total && !study.progress ? 'Commencer' : ''}
+                                        ${study?.total && study.progress && study.progress < study.total ? 'Reprendre' : ''}
+                                        ${study?.total && study.progress == study.total ? 'Accéder' : ''}
+                                        ${study != null && !study.total ? 'Ouvrir' : ''}
+                                    </button>
                                 </div>
-                                ${study == null ? html`<div class="description">${project.description}</div>` : ''}
-                                ${study != null ? html`
-                                    <div class="progress">
-                                        ${study?.total && !study.progress ? 'Participation acceptée' : ''}
-                                        ${study?.total && study.progress && study.progress < study.total ? 'Participation en cours' : ''}
-                                        ${study?.total && study.progress == study.total ? 'Participation terminée' : ''}
-                                    </div>
-                                ` : ''}
-                                <button type="button" @click=${UI.wrap(e => openStudy(project))}>
-                                    ${study == null ? 'Participer' : ''}
-                                    ${study?.total && !study.progress ? 'Commencer' : ''}
-                                    ${study?.total && study.progress && study.progress < study.total ? 'Reprendre' : ''}
-                                    ${study?.total && study.progress == study.total ? 'Accéder' : ''}
-                                    ${study != null && !study.total ? 'Ouvrir' : ''}
-                                </button>
                             </div>
                         `;
                     })}

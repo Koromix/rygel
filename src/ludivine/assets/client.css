@@ -218,8 +218,18 @@ button.highlight { animation: highlight 1.4s ease-in-out infinite alternate; }
     gap: 1em;
     background: var(--box_color);
     border-radius: 8px;
+
+    & > .help { margin: 1em auto; }
+
+    &.draft {
+        background: color-mix(in srgb, var(--draft_color), transparent 60%);
+        --button_color: var(--draft_color);
+    }
+    &.done {
+        background: color-mix(in srgb, var(--done_color), transparent 60%);
+        --button_color: var(--done_color);
+    }
 }
-.box > .help { margin: 1em auto; }
 
 .help {
     display: flex;
@@ -337,34 +347,13 @@ button.highlight { animation: highlight 1.4s ease-in-out infinite alternate; }
 .study {
     display: flex;
     min-height: 6em;
-    padding: 1.3em 1em;
-    background: var(--empty_color);
     border-radius: 8px;
     gap: 3em;
     align-items: center;
 
-    &.draft {
-        background: color-mix(in srgb, var(--draft_color), transparent 60%);
-        --button_color: var(--draft_color);
-    }
-    &.done {
-        background: color-mix(in srgb, var(--done_color), transparent 60%);
-        --button_color: var(--done_color);
-    }
-
-    & > .title {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 1em;
-        font-weight: bold;
-
-        & > img { width: 150px; }
-    }
+    & > img { width: 150px; }
     & > .description {
         flex: 1;
-        font-size: 0.9em;
-        font-style: italic;
         min-width: 280px;
     }
     & > .progress {
