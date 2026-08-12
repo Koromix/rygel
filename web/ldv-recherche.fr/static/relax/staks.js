@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
+
 document.body.classList.add('loading');
 
 import { load, start } from '../../../../src/staks/src/game.js';
