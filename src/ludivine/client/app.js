@@ -917,12 +917,12 @@ async function runLogin() {
                     <p>Pour vous connecter, vous devez utiliser le lien présent dans le mail d'inscription. Cherchez le mail portant l'objet <b>« Connexion à ${ENV.title} ! »</b> et cliquez sur le lien à l'intérieur.
                 </div>
 
-                <div class="help">
-                    <img src=${ASSETS['pictures/help1']} alt="" />
+                <div class="help right">
                     <div>
                         <p>Vous pouvez aussi vous connecter avec un mot de passe si vous en avez créé un après votre première connexion.
                         <p>Si c'est le cas, utilisez le formulaire ci-dessous. Sinon, retrouvez le mail !
                     </div>
+                    <img src=${ASSETS['pictures/help2']} alt="" />
                 </div>
             </div>
 
