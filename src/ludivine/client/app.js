@@ -344,10 +344,10 @@ function go(url = null, push = true) {
     let mode = parts.shift();
 
     switch (mode) {
+        case 'inscription': { changes.mode = 'register'; } break;
         case 'connexion': { changes.mode = 'login'; } break;
 
         case 'profil': { changes.mode = 'profile'; } break;
-
         case 'participer': { changes.mode = 'dashboard'; } break;
 
         case 'etude': {
@@ -504,6 +504,15 @@ async function run(changes = {}, push = false) {
 
         // Run module
         switch (route.mode) {
+            case 'register': {
+                if (db != null) {
+                    go('/profil');
+                    return;
+                }
+
+                await runRegister();
+            } break;
+
             case 'login': {
                 if (db != null) {
                     go('/profil');
@@ -515,7 +524,7 @@ async function run(changes = {}, push = false) {
 
             case 'profile': {
                 if (db == null) {
-                    await runRegister();
+                    await runLogin();
                     return;
                 }
 
@@ -592,11 +601,11 @@ function makeURL(changes = {}, hash = null) {
     let values = Object.assign({}, route, changes);
 
     switch (values.mode) {
+        case 'register': { path += 'inscription'; } break;
         case 'login': { path += 'connexion'; } break;
 
-        case 'profile': { path += 'profil'; } break;
-
         case 'dashboard': { path += 'participer'; } break;
+        case 'profile': { path += 'profil'; } break;
 
         case 'study': {
             path += 'etude';
@@ -764,42 +773,31 @@ async function runRegister() {
 
     UI.main(html`
         <div class="tabbar">
-            <a class="active">Connectez-vous</a>
+            <a class="active">Créez votre compte</a>
+            <a href="/connexion">Reconnectez-vous</a>
         </div>
 
-        <div class="tab">
-            <div class="box" style="align-items: center;">
-                <div class="header">Créez votre compte</div>
+        <div class="tab" style="align-items: center;">
+            <div class="header">Créez votre compte</div>
 
-                <div style="max-width: 700px;">
-                    <p>Vous devez <b>créer un compte</b> pour participer. Celui-ci vous permet de suivre votre progression et assure la fiabilité des données recueillies.
-                </div>
-
-                <form style="text-align: center;" @submit=${UI.wrap(register)}>
-                    <input type="text" name="mail" style="width: 20em;" placeholder="adresse email" />
-                    <div class="actions">
-                        <button type="submit">Créer mon compte</button>
-                    </div>
-                </form>
+            <div style="max-width: 700px;">
+                <p>Vous devez <b>créer un compte</b> pour participer. Celui-ci vous permet de suivre votre progression et assure la fiabilité des données recueillies.
             </div>
 
-            <div class="box" style="align-items: center;">
-                <div class="header">Vous avez déjà un compte</div>
-
-                <div style="max-width: 700px;">
-                    <p>Pour vous connecter, vous devez utiliser le lien présent dans le mail d'inscription. Cherchez le mail portant l'objet <b>« Connexion à ${ENV.title} ! »</b> et cliquez sur le lien à l'intérieur.
+            <form style="text-align: center;" @submit=${UI.wrap(register)}>
+                <label>
+                    <input type="email" name="mail" style="width: 20em;" placeholder="adresse email" />
+                </label>
+                <div class="actions">
+                    <button type="submit">Créer mon compte</button>
                 </div>
+            </form>
 
-                <div class="help">
-                    <img src=${ASSETS['pictures/help1']} alt="" />
-                    <div>
-                        <p>Toutes vos données étant chiffrées et sécurisées, vous devez <b>conserver précieusement le lien de connexion</b> qui est présent dans le mail d'inscription !
-                        <p>Nous ne serons <b>pas en mesure de recréer le lien de connexion</b> qui existe dans ce mail si vous le perdez !
-                    </div>
-                </div>
-
-                <div style="max-width: 700px;">
-                    <p>Vous pouvez aussi vous <a href="/connexion">connecter avec votre mot de passe</a> si vous en avez créé un après votre première connexion.
+            <div class="help">
+                <img src=${ASSETS['pictures/help1']} alt="" />
+                <div>
+                    <p>Toutes vos données étant chiffrées et sécurisées, vous devrez <b>conserver précieusement le lien de connexion</b> qui présent dans le mail que vous allez recevoir !
+                    <p>Nous ne serons <b>pas en mesure de recréer le lien de connexion</b> qui existe dans ce mail si vous le perdez !
                 </div>
             </div>
         </div>
@@ -827,25 +825,48 @@ async function runLogin() {
 
     UI.main(html`
         <div class="tabbar">
-            <a class="active">Connectez-vous</a>
+            <a href="/inscription">Créez votre compte</a>
+            <a class="active">Reconnectez-vous</a>
         </div>
 
-        <div class="tab" style="align-items: center;">
-            <div class="header">Connectez-vous pour continuer</div>
+        <div class="tab">
+            <div class="box" style="align-items: center;">
+                <div class="header">Mail de connexion</div>
 
-            <form style="text-align: center;" @submit=${UI.wrap(login)}>
-                <label>
-                    <input type="text" name="mail" style="width: 20em;" placeholder="adresse email" />
-                </label>
-                <label>
-                    <input type="password" name="password" style="width: 20em;" placeholder="mot de passe" />
-                </label>
-                <div class="actions">
-                    <button type="submit">Continuer</button>
+                <div style="max-width: 700px;">
+                    <p>Pour vous connecter, vous devez utiliser le lien présent dans le mail d'inscription. Cherchez le mail portant l'objet <b>« Connexion à ${ENV.title} ! »</b> et cliquez sur le lien à l'intérieur.
                 </div>
-            </form>
+
+                <div class="help">
+                    <img src=${ASSETS['pictures/help1']} alt="" />
+                    <div>
+                        <p>Vous pouvez aussi vous connecter avec un mot de passe si vous en avez créé un après votre première connexion.
+                        <p>Si c'est le cas, utilisez le formulaire ci-dessous. Sinon, retrouvez le mail !
+                    </div>
+                </div>
+            </div>
+
+            <div class="box" style="align-items: center;">
+                <div class="header">Connexion par mot de passe</div>
+
+                <div style="max-width: 700px;">
+                    <p>Après votre première connexion à Lignes de Vie, vous avez eu la <b>possibilité de créer un mot de passe</b>. Si vous l'avez fait, utilisez-le pour vous connectez.
+                </div>
+
+                <form id="password" style="text-align: center;" @submit=${UI.wrap(login)}>
+                    <label>
+                        <input type="email" name="mail" style="width: 20em;" placeholder="adresse email" />
+                    </label>
+                    <label>
+                        <input type="password" name="password" style="width: 20em;" placeholder="mot de passe" />
+                    </label>
+                    <div class="actions">
+                        <button type="submit">Continuer</button>
+                    </div>
+                </form>
+            </div>
         </div>
-    `);
+    `, { focus: false });
 }
 
 async function login(e) {
