@@ -133,9 +133,17 @@ async function start() {
             tkey = Hex.toBytes(tkey);
             registration = parseInt(registration, 10);
 
-            await loginMagic(uid, tkey, registration);
-
+            let registered = await loginMagic(uid, tkey, registration);
             let url = window.location.pathname + window.location.search;
+
+            if (registered) {
+                let study = parseInt(query.get('s'), 10);
+                let project = PROJECTS.find(project => project.index == study);
+
+                if (project != null)
+                    url = '/etude/' + project.key;
+            }
+
             history.replaceState('', document.title, url);
         }
     }
@@ -226,6 +234,9 @@ async function loginMagic(uid, tkey, registration) {
     };
 
     await open(session);
+
+    // Returns true for newly-registered users
+    return (session.vid == init.vid);
 }
 
 function encrypt(obj, key) {
@@ -347,6 +358,14 @@ function go(url = null, push = true) {
         case 'participer': {
             changes.mode = 'dashboard';
 
+            // Pick project from URL (if any)
+            {
+                let project = PROJECTS.find(project => project.key == parts[0]);
+
+                if (project != null)
+                    changes.project = parts.shift();
+            }
+
             try {
                 let prev = sessionStorage.getItem('context');
 
@@ -356,7 +375,8 @@ function go(url = null, push = true) {
                     if (values.mode == null)
                         throw new Error('Invalid app context');
 
-                    Object.assign(changes, values);
+                    if (changes.project == null || values.project == changes.project)
+                        Object.assign(changes, values);
                 }
             } catch (err) {
                 console.error(err);
@@ -806,7 +826,7 @@ async function runRegister() {
                 <p>Vous devez <b>créer un compte</b> pour participer. Celui-ci vous permet de suivre votre progression et assure la fiabilité des données recueillies.
             </div>
 
-            <form style="text-align: center;" @submit=${UI.wrap(register)}>
+            <form style="text-align: center;" @submit=${UI.wrap(e => register(e, route.project))}>
                 <label>
                     <input type="email" name="mail" style="width: 20em;" placeholder="adresse email" />
                 </label>
@@ -826,16 +846,19 @@ async function runRegister() {
     `);
 }
 
-async function register(e) {
+async function register(e, reason) {
     let form = e.currentTarget;
     let elements = form.elements;
 
     let mail = elements.mail.value.trim();
-
     if (!mail)
         throw new Error('Adresse email manquante');
+    let study = PROJECTS.find(project => project.key == reason)?.index ?? null;
 
-    await Net.post('/api/register', { mail: mail });
+    await Net.post('/api/register', {
+        mail: mail,
+        study: study
+    });
 
     form.innerHTML = '';
     render(html`<p>Consultez l'email qui <b>vous a été envoyé</b> pour continuer !</p>`, form);

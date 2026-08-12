@@ -233,13 +233,22 @@ static bool CreateLoginDocument(const char *title, const char *login, Allocator 
     return true;
 }
 
-static bool SendNewMail(const char *to, const char *uid, Span<const uint8_t> tkey, int registration, Allocator *alloc)
+static bool SendNewMail(const char *to, const char *uid, Span<const uint8_t> tkey,
+                        int registration, int study, Allocator *alloc)
 {
     smtp_MailContent content;
 
-    // Format magic link
-    FmtArg fmt = FmtHex(tkey);
-    const char *login = Fmt(alloc, "%1/session#uid=%2&tk=%3&r=%4", config.url, uid, fmt, registration).ptr;
+    const char *login;
+    {
+        HeapArray<char> buf(alloc);
+
+        Fmt(&buf, "%1/session#uid=%2&tk=%3&r=%4", config.url, uid, FmtHex(tkey), registration);
+        if (study >= 0) {
+            Fmt(&buf, "&s=%1", study);
+        }
+
+        login = buf.Leak().ptr;
+    }
 
     const auto patch = [&](Span<const char> expr, StreamWriter *writer) {
         Span<const char> key = TrimStr(expr);
@@ -307,7 +316,7 @@ static bool SendExistingMail(const char *to, bool password, Allocator *alloc)
     return PostMail(to, content);
 }
 
-static bool SendContinueMail(const char *to, const char *uid, int64_t study, const char *title, Allocator *alloc)
+static bool SendContinueMail(const char *to, const char *uid, int study, const char *title, Allocator *alloc)
 {
     smtp_MailContent content;
 
@@ -344,6 +353,7 @@ static bool SendContinueMail(const char *to, const char *uid, int64_t study, con
 void HandleRegister(http_IO *io)
 {
     const char *mail = nullptr;
+    int study = -1;
     {
         bool success = http_ParseJson(io, Kibibytes(1), [&](json_Parser *json) {
             bool valid = true;
@@ -353,6 +363,8 @@ void HandleRegister(http_IO *io)
 
                 if (key == "mail") {
                     json->ParseString(&mail);
+                } else if (key == "study") {
+                    json->SkipNull() || json->ParseInt(&study);
                 } else {
                     json->UnexpectedKey(key);
                     valid = false;
@@ -424,7 +436,7 @@ void HandleRegister(http_IO *io)
     }
 
     if (uid) {
-        if (!SendNewMail(mail, uid, tkey, registration, io->Allocator()))
+        if (!SendNewMail(mail, uid, tkey, registration, study, io->Allocator()))
             return;
     } else {
         if (!SendExistingMail(mail, has_password, io->Allocator()))
@@ -732,7 +744,7 @@ void HandleToken(http_IO *io)
                 return;
         }
 
-        has_password = sqlite3_column_int(stmt, 3);
+        has_password = sqlite3_column_int(stmt, 4);
     }
 
     http_SendJson(io, 200, [&](json_Writer *json) {
@@ -935,7 +947,7 @@ static bool IsTitleValid(Span<const char> title)
 void HandleRemind(http_IO *io)
 {
     const char *uid = nullptr;
-    int64_t study = -1;
+    int study = -1;
     const char *title = nullptr;
     LocalDate start = {};
     HeapArray<EventInfo> events;
@@ -1090,7 +1102,7 @@ void HandleRemind(http_IO *io)
 void HandleIgnore(http_IO *io)
 {
     const char *uid = nullptr;
-    int64_t study = -1;
+    int study = -1;
     bool all = true;
     {
         bool success = http_ParseJson(io, Kibibytes(1), [&](json_Parser *json) {
@@ -1163,7 +1175,7 @@ void HandleIgnore(http_IO *io)
 void HandlePublish(http_IO *io)
 {
     const char *rid = nullptr;
-    int64_t study = -1;
+    int study = -1;
     const char *test = nullptr;
     Span<const char> values = {};
     {
@@ -1275,7 +1287,7 @@ bool RemindLateUsers()
             int64_t id = sqlite3_column_int64(stmt, 0);
             const char *uid = (const char *)sqlite3_column_text(stmt, 1);
             const char *mail = (const char *)sqlite3_column_text(stmt, 2);
-            int64_t study = sqlite3_column_int64(stmt, 3);
+            int study = sqlite3_column_int(stmt, 3);
             const char *title = (const char *)sqlite3_column_text(stmt, 4);
 
             if (!SendContinueMail(mail, uid, study, title, &temp_alloc))
