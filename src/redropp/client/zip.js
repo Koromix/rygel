@@ -43,12 +43,13 @@ function createLocalHeader(name, mtime = null) {
 function createLocalFooter(size, crc32) {
     size = BigInt(size);
 
-    let buf = new Uint8Array(20);
+    let buf = new Uint8Array(24);
     let view = new DataView(buf.buffer);
 
-    view.setUint32(0, crc32, true);
-    view.setBigUint64(4, size, true);
-    view.setBigUint64(12, size, true);
+    view.setUint32(0, 0x08074B50, true);
+    view.setUint32(4, crc32, true);
+    view.setBigUint64(8, size, true);
+    view.setBigUint64(16, size, true);
 
     return buf;
 }
@@ -165,7 +166,7 @@ function encodeNtfsTime(time) {
 
 function patchFooterCrc32(buf, offset, crc32) {
     let view = new DataView(buf.buffer, buf.byteOffset + offset);
-    view.setUint32(0, crc32, true);
+    view.setUint32(4, crc32, true);
 }
 
 function patchCentralCrc32(buf, offset, crc32) {
