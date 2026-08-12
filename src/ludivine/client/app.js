@@ -796,7 +796,7 @@ async function runRegister() {
             <div class="help">
                 <img src=${ASSETS['pictures/help1']} alt="" />
                 <div>
-                    <p>Toutes vos données étant chiffrées et sécurisées, vous devrez <b>conserver précieusement le lien de connexion</b> qui présent dans le mail que vous allez recevoir !
+                    <p>Toutes vos données étant chiffrées et sécurisées, vous devrez <b>conserver précieusement le lien de connexion</b> présent dans le mail que vous allez recevoir !
                     <p>Nous ne serons <b>pas en mesure de recréer le lien de connexion</b> qui existe dans ce mail si vous le perdez !
                 </div>
             </div>
