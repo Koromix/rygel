@@ -2,7 +2,7 @@
     <div class="title">Notre philosophie</div>
     <div class="intro">
         <p>Le programme Lignes de Vie est porté par une <b>équipe pluridisciplinaire</b> avec des connaissances en neurosciences, en savoir expérientiel, en informatique et développement, en psychologie et neuropsychologie, en éthique, en communication, en gestion de projets et en journalisme scientifique.
-        <p>La philosophie de Lignes de Vie s’appuie sur une conviction simple mais audacieuse : replacer l’humain au cœur de l’investigation scientifique. Cette démarche valorise une éthique de participation mutuelle, créant un <b>espace de collaboration où chercheurs et patients partenaires</b> unissent leurs savoirs scientifiques et expérientiels.
+        <p>La philosophie du programme s’appuie sur une conviction simple mais audacieuse : replacer l’humain au cœur de l’investigation scientifique. Cette démarche valorise une éthique de participation mutuelle, créant un <b>espace de collaboration où chercheurs et patients partenaires</b> unissent leurs savoirs scientifiques et expérientiels.
         <p>En adoptant une démarche transversale d’ethics by design et privacy by using, les questions éthiques sont prises en compte dès la conception du programme, pour encourageons une recherche alignée sur les besoins des personnes concernées.
     </div>
 </div>
