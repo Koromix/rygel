@@ -889,17 +889,11 @@ async function runProfile() {
     if (UI.isFullscreen)
         UI.toggleFullscreen(false);
 
-    let entries = await db.fetchAll('SELECT id, date, title FROM diary ORDER BY id DESC');
-
-    for (let entry of entries)
-        entry.date = LocalDate.parse(entry.date);
-
     UI.main(html`
         <div class="tabbar">
             <a href="/participer">Études</a>
             ${cache.project != null ? html`<a href=${makeURL({ mode: 'study' })}>${cache.project.title}</a>` : ''}
             <a href="/profil" class="active">Profil</a>
-            <a href=${makeURL({ mode: 'diary' })}>Mon journal</a>
 
             <div style="flex: 1;"></div>
             <a id="sos" @click=${UI.wrap(e => sos(event))}></a>
@@ -947,35 +941,6 @@ async function runProfile() {
                             </div>
                         </div>
                     ` : ''}
-
-                    <div class="box">
-                        <div class="header">
-                            Mon journal
-                            ${safeTag('Les entrées de votre journal sont privées.')}
-                        </div>
-                        ${entries.map(entry => html`
-                            <div class="diary">
-                                <img src=${ASSETS['ui/diary']} alt="" />
-                                <div class="text">
-                                    <b>${entry.title || html`<i>Entrée sans titre</i>`}</b><br>
-                                    ${niceDate(entry.date, true)}
-                                </div>
-                                <button type="button" @click=${UI.wrap(e => navigateDiary(entry.id))}>Éditer</button>
-                            </div>
-                        `)}
-                        ${!entries.length ? html`
-                            <div class="help right">
-                                <div>
-                                    <p>Utilisez librement votre journal, ces <b>données sont privées</b> et nous ne nous en servirons pas !
-                                    <p>Pour ajouter une première entrée, cliquez sur le bouton d'ajout ci-dessous.
-                                </div>
-                                <img src=${ASSETS['pictures/help2']} alt="" />
-                            </div>
-                        ` : ''}
-                        <div class="actions">
-                            <a href="/journal">Ajouter une entrée</a>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
@@ -993,11 +958,15 @@ async function runDashboard() {
     if (UI.isFullscreen)
         UI.toggleFullscreen(false);
 
+    let entries = await db.fetchAll('SELECT id, date, title FROM diary ORDER BY id DESC');
+
+    for (let entry of entries)
+        entry.date = LocalDate.parse(entry.date);
+
     UI.main(html`
         <div class="tabbar">
             <a href="/participer" class="active">Études</a>
             ${cache.project != null ? html`<a href=${makeURL({ mode: 'study' })}>${cache.project.title}</a>` : ''}
-            <a href=${makeURL({ mode: 'diary' })}>Mon journal</a>
 
             <div style="flex: 1;"></div>
             <a id="sos" @click=${UI.wrap(e => sos(event))}></a>
@@ -1007,7 +976,7 @@ async function runDashboard() {
             <div class="box">
                 <div>
                     <div class="header">Bienvenue sur ${ENV.title} !</div>
-                    <p>Vous pouvez vous <b>inscrire ou continuer</b> votre participation aux études ci-dessous le cas échéant, ou retourner à votre profil pour utiliser votre journal ou modifier votre avatar.
+                    <p>Vous pouvez vous <b>inscrire ou continuer</b> votre participation aux études ci-dessous le cas échéant, utiliser votre journal personnel, ou retourner à votre profil pour modifier vos préférences.
                 </div>
             </div>
 
@@ -1079,6 +1048,37 @@ async function runDashboard() {
                     </div>
                 ` : ''}
             </div>
+
+
+
+                    <div class="box">
+                        <div class="header">
+                            Mon journal
+                            ${safeTag('Les entrées de votre journal sont privées.')}
+                        </div>
+                        ${entries.map(entry => html`
+                            <div class="diary">
+                                <img src=${ASSETS['ui/diary']} alt="" />
+                                <div class="text">
+                                    <b>${entry.title || html`<i>Entrée sans titre</i>`}</b><br>
+                                    ${niceDate(entry.date, true)}
+                                </div>
+                                <button type="button" @click=${UI.wrap(e => navigateDiary(entry.id))}>Éditer</button>
+                            </div>
+                        `)}
+                        ${!entries.length ? html`
+                            <div class="help right">
+                                <div>
+                                    <p>Utilisez librement votre journal, ces <b>données sont privées</b> et nous ne nous en servirons pas !
+                                    <p>Pour ajouter une première entrée, cliquez sur le bouton d'ajout ci-dessous.
+                                </div>
+                                <img src=${ASSETS['pictures/help2']} alt="" />
+                            </div>
+                        ` : ''}
+                        <div class="actions">
+                            <a href="/journal">Ajouter une entrée</a>
+                        </div>
+                    </div>
         </div>
     `);
 }
@@ -1306,7 +1306,6 @@ async function runConsent() {
         <div class="tabbar">
             <a href="/participer">Études</a>
             <a class="active">${project.title}</a>
-            <a href=${makeURL({ mode: 'diary' })}>Mon journal</a>
 
             <div style="flex: 1;"></div>
             <a id="sos" @click=${UI.wrap(e => sos(event))}></a>
@@ -1350,7 +1349,6 @@ async function runProject() {
             <div class="tabbar">
                 <a href="/participer">Études</a>
                 <a class="active">${project.title}</a>
-                <a href=${makeURL({ mode: 'diary' })}>Mon journal</a>
 
                 <div style="flex: 1;"></div>
                 <a id="sos" @click=${UI.wrap(e => sos(event))}></a>

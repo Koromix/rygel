@@ -133,8 +133,8 @@ function DiaryModule(app) {
 
                 <div class="actions">
                     <button type="button" @click=${UI.wrap(exit)}>
-                        ${data != null ? 'Enregistrer et retourner au profil' : ''}
-                        ${data == null ? 'Retourner au profil' : ''}
+                        ${data != null ? 'Enregistrer et retourner au tableau de bord' : ''}
+                        ${data == null ? 'Retourner au tableau de bord' : ''}
                     </button>
                 </div>
             </div>
