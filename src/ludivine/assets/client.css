@@ -98,7 +98,7 @@ button:is(.secondary, .small) { font-weight: normal !important; }
     100% {
         filter: contrast(120%);
         transform: scale(1.1);
-        outline-color: #ff660066;
+        outline-color: #aaa;
     }
 }
 
@@ -230,10 +230,12 @@ button:is(.secondary, .small) { font-weight: normal !important; }
     &.draft {
         background: color-mix(in srgb, var(--draft_color), transparent 60%);
         --button_color: var(--draft_color);
+        --color: #383838;
     }
     &.done {
         background: color-mix(in srgb, var(--done_color), transparent 60%);
         --button_color: var(--done_color);
+        --color: #383838;
     }
 }
 
@@ -501,7 +503,7 @@ button:is(.secondary, .small) { font-weight: normal !important; }
         font-size: 0.9em;
         text-align: center;
     }
-    &.draft { font-weight: bold; }
+    &.draft > .title { font-weight: bold; }
 
     & > img {
         margin: 4px 0;
