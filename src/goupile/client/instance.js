@@ -244,7 +244,7 @@ function renderMenu() {
 
             ${show_menu && !wide_menu ? html`
                 ${renderDropItem(route.page.chain[0], true)}
-                ${Util.map(route.page.chain[0].children, page => renderDropItem(page, false))}
+                ${route.page.chain[0].children.map(page => renderDropItem(page, false))}
             ` : ''}
             ${show_menu && wide_menu ? route.page.chain.map((page, idx) => renderDropItem(page, !idx)) : ''}
             <div style="flex: 1; min-width: 4px;"></div>
@@ -1285,7 +1285,7 @@ function renderPageMenu(page) {
     return html`
         <a href=${contextualizeURL(page.url, form_thread)}>${page.menu || page.title}</a>
         <ul>
-            ${Util.map(page.children, (child, idx) => {
+            ${page.children.map((child, idx) => {
                 if (!child.menu)
                     return '';
 

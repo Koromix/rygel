@@ -1440,7 +1440,7 @@ async function syncEvents() {
         }
 
         // Simplify events
-        events = Array.from(Util.map(events.entries(), ([date, evt]) => ({
+        events = Array.from(events.entries().map(([date, evt]) => ({
             date: date,
             ...evt
         })));

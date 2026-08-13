@@ -1024,7 +1024,7 @@ function saveState() {
                 y: position.y / window.devicePixelRatio
             },
             settings: settings,
-            views: Object.fromEntries(Util.map(world.views.values(), view => [view.name, Array.from(view.expand)]))
+            views: Object.fromEntries(world.views.values().map(view => [view.name, Array.from(view.expand)]))
         };
         let json = JSON.stringify(state);
 

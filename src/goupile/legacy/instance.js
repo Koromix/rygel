@@ -262,7 +262,7 @@ function renderMenu() {
                     return html`
                         <div id="ins_drop" class="drop">
                             <button title=${form.title} @click=${UI.deployMenu}>${form.title}</button>
-                            <div>${Util.map(form.menu, item => renderDropItem(meta, item))}</div>
+                            <div>${form.menu.map(item => renderDropItem(meta, item))}</div>
                         </div>
                     `;
                 } else {
@@ -270,7 +270,7 @@ function renderMenu() {
                 }
             }) : ''}
             ${menu && !wide ? html`
-                ${Util.map(route.form.chain[0].menu, item => {
+                ${route.form.chain[0].menu.map(item => {
                     let active = UI.isPanelActive('view') &&
                                  (route.form.chain.some(form => form === item.form) || item.page === route.page);
                     let drop = (item.type === 'form' && item.form.menu.length > 1);
@@ -283,7 +283,7 @@ function renderMenu() {
                             <div id="ins_drop" class="drop">
                                 <button title=${item.title} class=${active ? 'active' : ''} ?disabled=${!enabled}
                                         @click=${UI.deployMenu}>${item.title}</button>
-                                <div>${Util.map(item.form.menu, item => renderDropItem(meta, item))}</div>
+                                <div>${item.form.menu.map(item => renderDropItem(meta, item))}</div>
                             </div>
                         `;
                     } else {
@@ -1168,7 +1168,7 @@ function renderFormMenu(form) {
         ${show ? html`
             <a>${title}</a>
             <ul>
-                ${Util.map(form.menu, item => {
+                ${form.menu.map(item => {
                     if (item.type === 'page') {
                         let page = item.page;
 
