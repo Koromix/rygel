@@ -64,7 +64,8 @@ async function openVault(ref, key, lock) {
             let sabfs = await sqlite3.initSabFS(db);
             sab_map.set(ref.sab, sabfs);
 
-            await sabfs.write(ref.filename, ref.sab);
+            if (ref.sab.byteLength)
+                await sabfs.write(ref.filename, ref.sab);
 
             await db.open(ref.filename, 'multipleciphers-sabfs');
         } break;
