@@ -248,7 +248,6 @@
             "arch": "ia32",
             "machine": "windows_x64",
             "directory": "C:/Users/windows/Desktop/luigi_ia32",
-            "target": "win32_ia32",
             "build": "C:\\Node32\\node32.cmd node ../../cnoke.cjs",
             "package": "win32-ia32"
         },
@@ -278,7 +277,6 @@
             "arch": "x64",
             "machine": "windows_x64",
             "directory": "C:/Users/windows/Desktop/luigi_x64",
-            "target": "win32_x64",
             "build": "C:\\Node64\\node64.cmd node ../../cnoke.cjs --clang",
             "package": "win32-x64"
         },
@@ -308,7 +306,6 @@
             "arch": "arm64",
             "machine": "windows_x64",
             "directory": "C:/Users/windows/Desktop/luigi_arm64",
-            "target": "win32_arm64",
             "build": "C:\\Node64\\node64.cmd node ../../cnoke.cjs -t win32_arm64",
             "package": "win32-arm64"
         }
