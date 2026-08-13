@@ -27,10 +27,6 @@ async function downloadVault(vid, force_sabfs = false) {
     });
 
     if (!response.ok) {
-        // First time, it's ok!
-        if (response.status == 204)
-            return;
-
         let msg = await Net.readError(response);
         throw new HttpError(response.status, msg);
     }
@@ -146,6 +142,11 @@ async function uploadVault(ref) {
         body: body,
         signal: controller.signal
     });
+
+    if (!response.ok) {
+        let msg = await Net.readError(response);
+        throw new HttpError(response.status, msg);
+    }
 
     let header = response.headers.get('X-Vault-Generation');
     let generation = parseInt(header, 10);
