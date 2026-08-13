@@ -360,20 +360,15 @@ bool AnalyseFunction(Napi::Env, InstanceData *instance, FunctionInfo *func)
                 }
 
                 Opcode run = func->forward_fp ? Opcode::RunAggregateDDDDX : Opcode::RunAggregateDDDD;
-                Opcode call = func->forward_fp ? Opcode::CallDDDDX : Opcode::CallDDDD;
-
                 func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
             } else if (func->ret.type->size <= 16) {
                 func->ret.abi.regular = true;
                 func->ret.abi.offset = offsetof(BackRegisters, x0);
 
                 Opcode run = func->forward_fp ? Opcode::RunAggregateGGX : Opcode::RunAggregateGG;
-                Opcode call = func->forward_fp ? Opcode::CallGGX : Opcode::CallGG;
-
                 func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
             } else {
                 Opcode run = func->forward_fp ? Opcode::RunAggregateMemX : Opcode::RunAggregateMem;
-                Opcode call = func->forward_fp ? Opcode::CallMemX : Opcode::CallMem;
                 int16_t offset = 8 * 8; // x8
 
                 func->sync.Append({ .op = Code2Op(run), .a = (int32_t)func->ret.type->size, .b1 = offset, .type = func->ret.type });
@@ -383,14 +378,10 @@ bool AnalyseFunction(Napi::Env, InstanceData *instance, FunctionInfo *func)
 
         case PrimitiveKind::Float32: {
             Opcode run = func->forward_fp ? Opcode::RunFloat32X : Opcode::RunFloat32;
-            Opcode call = func->forward_fp ? Opcode::CallFX : Opcode::CallF;
-
             func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
         } break;
         case PrimitiveKind::Float64: {
             Opcode run = func->forward_fp ? Opcode::RunFloat64X : Opcode::RunFloat64;
-            Opcode call = func->forward_fp ? Opcode::CallDX : Opcode::CallD;
-
             func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
         } break;
 
