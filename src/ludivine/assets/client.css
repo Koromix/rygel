@@ -74,7 +74,7 @@ button {
         --button_color: #9bcbc9;
         --color: #383838;
 
-        & img { filter: invert(75%); }
+        &:not(.active) img { filter: invert(75%); }
     }
     &.secondary.active { color: white !important; }
 
