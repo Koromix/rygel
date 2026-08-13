@@ -7,6 +7,13 @@
 
 ### Koffi 3.1
 
+#### Koffi 3.1.5
+
+*Released on 2026-08-13*
+
+- Revert to native compilation for Windows builds for stability
+- Avoid using `statx()` to allow compilation with... stuff
+
 #### Koffi 3.1.4
 
 *Released on 2026-07-31*
