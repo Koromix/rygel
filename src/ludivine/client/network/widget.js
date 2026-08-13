@@ -4,7 +4,13 @@
 import { render, html } from 'vendor/lit-html/lit-html.bundle.js';
 import { Util, Log } from 'lib/web/base/base.js';
 import { loadTexture, safeTag } from '../core/misc.js';
-import { PROXIMITY_LEVELS, PERSON_KINDS, QUALITY_COLORS, USER_GUIDES } from './constants.js';
+import {
+    PROXIMITY_LEVELS,
+    PROXIMITY_COLOR,
+    PERSON_KINDS,
+    QUALITY_COLORS,
+    USER_GUIDES
+} from './constants.js';
 import { ASSETS } from '../../assets/assets.js';
 
 const PERSON_RADIUS = 0.05;
@@ -1050,8 +1056,8 @@ function NetworkWidget(app, mod, world) {
         {
             ctx.save();
 
-            ctx.fillStyle = '#0000000b';
-            ctx.strokeStyle = '#44444433';
+            ctx.fillStyle = PROXIMITY_COLOR + '0b';
+            ctx.strokeStyle = PROXIMITY_COLOR + '33';
             ctx.lineWidth = 0.01;
             ctx.setLineDash([0.02, 0.02]);
 
@@ -1065,7 +1071,7 @@ function NetworkWidget(app, mod, world) {
                 ctx.stroke();
             }
 
-            ctx.fillStyle = '#aaaaaa';
+            ctx.fillStyle = PROXIMITY_COLOR;
 
             for (let i = 1; i < PROXIMITY_LEVELS.length; i++) {
                 let level = PROXIMITY_LEVELS[i];
@@ -1077,7 +1083,7 @@ function NetworkWidget(app, mod, world) {
             }
 
             ctx.font = `bold ${(20 + state.zoom) * window.devicePixelRatio}px Open Sans`;
-            ctx.fillStyle = '#77777755';
+            ctx.fillStyle = PROXIMITY_COLOR + '55';
 
             for (let i = 1; i < PROXIMITY_LEVELS.length; i++) {
                 let level = PROXIMITY_LEVELS[i];
