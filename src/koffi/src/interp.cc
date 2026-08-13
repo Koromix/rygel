@@ -38,22 +38,45 @@ struct RetDDDD {
     double d3;
 };
 
-extern "C" uint64_t CallG(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
-extern "C" float CallF(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
-extern "C" double CallD(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
-extern "C" RetGG CallGG(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
-extern "C" RetDD CallDD(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
-extern "C" RetGD CallGD(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
-extern "C" RetDG CallDG(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
-extern "C" RetDDDD CallDDDD(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
-extern "C" uint64_t CallGX(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
-extern "C" float CallFX(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
-extern "C" double CallDX(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
-extern "C" RetGG CallGGX(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
-extern "C" RetDD CallDDX(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
-extern "C" RetGD CallGDX(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
-extern "C" RetDG CallDGX(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
-extern "C" RetDDDD CallDDDDX(const void *func, uint8_t *sp, uint8_t **out_saved_sp);
+extern "C" {
+    // Each ABI backend uses a different subset of CallXX assembly functions.
+    // Use weak symbols to provide a default implementation for unused ones and avoid linker errors.
+
+#if defined(_MSC_VER) && defined(_WIN64)
+    void CallUnused(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
+
+    #define WEAK_CALL(Ret, Name) \
+        Ret Name(const void *, uint8_t *, uint8_t **); \
+        _Pragma(K_STRINGIFY(comment(linker, K_STRINGIFY(/alternatename:Name=CallUnused))));
+#elif defined(_MSC_VER)
+    void CallUnused(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
+
+    #define WEAK_CALL(Ret, Name) \
+        Ret Name(const void *, uint8_t *, uint8_t **); \
+        _Pragma(K_STRINGIFY(comment(linker, K_STRINGIFY(/alternatename:K_CONCAT(_, Name)=_CallUnused))))
+#else
+    #define WEAK_CALL(Ret, Name, ...) __attribute__((weak)) Ret Name(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
+#endif
+
+    WEAK_CALL(uint64_t, CallG)
+    WEAK_CALL(float, CallF)
+    WEAK_CALL(double, CallD)
+    WEAK_CALL(RetGG, CallGG)
+    WEAK_CALL(RetDD, CallDD)
+    WEAK_CALL(RetGD, CallGD)
+    WEAK_CALL(RetDG, CallDG)
+    WEAK_CALL(RetDDDD, CallDDDD)
+    WEAK_CALL(uint64_t, CallGX)
+    WEAK_CALL(float, CallFX)
+    WEAK_CALL(double, CallDX)
+    WEAK_CALL(RetGG, CallGGX)
+    WEAK_CALL(RetDD, CallDDX)
+    WEAK_CALL(RetGD, CallGDX)
+    WEAK_CALL(RetDG, CallDGX)
+    WEAK_CALL(RetDDDD, CallDDDDX)
+
+#undef WEAK_CALL
+}
 
 #if defined(__GNUC__)
     #pragma GCC diagnostic push
@@ -982,24 +1005,5 @@ napi_value CallData::EndAsync()
     const InstructionData *next = async_ip++;
     return RunForward(this, nullptr, async_base, next);
 }
-
-extern "C" uint64_t CallUnused(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
-
-K_WEAK_REDIRECT(CallG, CallUnused)
-K_WEAK_REDIRECT(CallF, CallUnused)
-K_WEAK_REDIRECT(CallD, CallUnused)
-K_WEAK_REDIRECT(CallGG, CallUnused)
-K_WEAK_REDIRECT(CallDD, CallUnused)
-K_WEAK_REDIRECT(CallGD, CallUnused)
-K_WEAK_REDIRECT(CallDG, CallUnused)
-K_WEAK_REDIRECT(CallDDDD, CallUnused)
-K_WEAK_REDIRECT(CallGX, CallUnused)
-K_WEAK_REDIRECT(CallFX, CallUnused)
-K_WEAK_REDIRECT(CallDX, CallUnused)
-K_WEAK_REDIRECT(CallGGX, CallUnused)
-K_WEAK_REDIRECT(CallDDX, CallUnused)
-K_WEAK_REDIRECT(CallGDX, CallUnused)
-K_WEAK_REDIRECT(CallDGX, CallUnused)
-K_WEAK_REDIRECT(CallDDDDX, CallUnused)
 
 }
