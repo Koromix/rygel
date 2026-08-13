@@ -1082,8 +1082,8 @@ function NetworkWidget(app, mod, world) {
                 ctx.fill();
             }
 
-            ctx.font = `bold ${(20 + state.zoom) * window.devicePixelRatio}px Open Sans`;
-            ctx.fillStyle = PROXIMITY_COLOR + '55';
+            ctx.font = `${(18 + state.zoom) * window.devicePixelRatio}px Open Sans`;
+            ctx.fillStyle = PROXIMITY_COLOR + '44';
 
             for (let i = 1; i < PROXIMITY_LEVELS.length; i++) {
                 let level = PROXIMITY_LEVELS[i];
