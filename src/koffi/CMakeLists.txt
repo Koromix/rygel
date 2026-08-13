@@ -138,8 +138,8 @@ if(WIN32)
 endif()
 
 target_compile_definitions(koffi PRIVATE FELIX_TARGET=koffi NAPI_VERSION=NAPI_VERSION_EXPERIMENTAL
-                                         NODE_ADDON_API_DISABLE_CPP_EXCEPTIONS NODE_ADDON_API_REQUIRE_BASIC_FINALIZERS)
-
+                                         NODE_ADDON_API_DISABLE_CPP_EXCEPTIONS NODE_ADDON_API_REQUIRE_BASIC_FINALIZERS
+                                         CORE_NO_STATX)
 if(WIN32)
     target_compile_definitions(koffi PRIVATE _CRT_SECURE_NO_WARNINGS _CRT_NONSTDC_NO_DEPRECATE)
     target_link_libraries(koffi PRIVATE ws2_32)
