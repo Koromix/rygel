@@ -2979,7 +2979,7 @@ static StatResult StatAt(int fd, bool fd_is_directory, const char *filename, uns
     }
 
     struct statx sxb;
-    if (statx(fd, pathname, stat_flags, stat_mask, &sxb) < 0) {
+    if (syscall(__NR_statx, fd, pathname, stat_flags, stat_mask, &sxb) < 0) {
         switch (errno) {
             case ENOENT: {
                 if (!(flags & (int)StatFlag::SilentMissing)) {
