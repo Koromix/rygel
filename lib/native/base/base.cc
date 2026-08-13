@@ -2965,61 +2965,68 @@ static FileType FileModeToType(mode_t mode)
 static StatResult StatAt(int fd, bool fd_is_directory, const char *filename, unsigned int flags, FileInfo *out_info)
 {
 #if defined(__linux__)
-    const char *pathname = filename;
-    int stat_flags = (flags & (int)StatFlag::FollowSymlink) ? 0 : AT_SYMLINK_NOFOLLOW;
-    int stat_mask = STATX_TYPE | STATX_MODE | STATX_MTIME | STATX_BTIME | STATX_SIZE;
+    {
+        const char *pathname = filename;
+        int stat_flags = (flags & (int)StatFlag::FollowSymlink) ? 0 : AT_SYMLINK_NOFOLLOW;
+        int stat_mask = STATX_TYPE | STATX_MODE | STATX_MTIME | STATX_BTIME | STATX_SIZE;
 
-    if (!fd_is_directory) {
-        if (fd >= 0) {
-            pathname = "";
-            stat_flags |= AT_EMPTY_PATH;
-        } else {
-            fd = AT_FDCWD;
+        if (!fd_is_directory) {
+            if (fd >= 0) {
+                pathname = "";
+                stat_flags |= AT_EMPTY_PATH;
+            } else {
+                fd = AT_FDCWD;
+            }
         }
-    }
 
-    struct statx sxb;
-    if (syscall(__NR_statx, fd, pathname, stat_flags, stat_mask, &sxb) < 0) {
-        switch (errno) {
-            case ENOENT: {
-                if (!(flags & (int)StatFlag::SilentMissing)) {
+        struct statx sxb;
+        if (syscall(__NR_statx, fd, pathname, stat_flags, stat_mask, &sxb) < 0) {
+            switch (errno) {
+                case ENOSYS: goto fallback;
+
+                case ENOENT: {
+                    if (!(flags & (int)StatFlag::SilentMissing)) {
+                        LogError("Cannot stat '%1': %2", filename, strerror(errno));
+                    }
+                    return StatResult::MissingPath;
+                } break;
+                case EACCES: {
                     LogError("Cannot stat '%1': %2", filename, strerror(errno));
-                }
-                return StatResult::MissingPath;
-            } break;
-            case EACCES: {
-                LogError("Cannot stat '%1': %2", filename, strerror(errno));
-                return StatResult::AccessDenied;
-            } break;
-            case ENOTDIR: {
-                LogError("Cannot stat '%1': Component is not a directory", filename);
-                return StatResult::OtherError;
-            } break;
-            default: {
-                LogError("Cannot stat '%1': %2", filename, strerror(errno));
-                return StatResult::OtherError;
-            } break;
+                    return StatResult::AccessDenied;
+                } break;
+                case ENOTDIR: {
+                    LogError("Cannot stat '%1': Component is not a directory", filename);
+                    return StatResult::OtherError;
+                } break;
+                default: {
+                    LogError("Cannot stat '%1': %2", filename, strerror(errno));
+                    return StatResult::OtherError;
+                } break;
+            }
         }
+
+        out_info->type = FileModeToType(sxb.stx_mode);
+        out_info->size = (int64_t)sxb.stx_size;
+        out_info->mtime = (int64_t)sxb.stx_mtime.tv_sec * 1000 +
+                          (int64_t)sxb.stx_mtime.tv_nsec / 1000000;
+        out_info->ctime = (int64_t)sxb.stx_ctime.tv_sec * 1000 +
+                          (int64_t)sxb.stx_ctime.tv_nsec / 1000000;
+        out_info->atime = (int64_t)sxb.stx_atime.tv_sec * 1000 +
+                          (int64_t)sxb.stx_atime.tv_nsec / 1000000;
+        if (sxb.stx_mask & STATX_BTIME) {
+            out_info->btime = (int64_t)sxb.stx_btime.tv_sec * 1000 +
+                              (int64_t)sxb.stx_btime.tv_nsec / 1000000;
+        } else {
+            out_info->btime = out_info->mtime;
+        }
+        out_info->mode = (unsigned int)sxb.stx_mode & ~S_IFMT;
+        out_info->uid = sxb.stx_uid;
+        out_info->gid = sxb.stx_gid;
     }
 
-    out_info->type = FileModeToType(sxb.stx_mode);
-    out_info->size = (int64_t)sxb.stx_size;
-    out_info->mtime = (int64_t)sxb.stx_mtime.tv_sec * 1000 +
-                      (int64_t)sxb.stx_mtime.tv_nsec / 1000000;
-    out_info->ctime = (int64_t)sxb.stx_ctime.tv_sec * 1000 +
-                      (int64_t)sxb.stx_ctime.tv_nsec / 1000000;
-    out_info->atime = (int64_t)sxb.stx_atime.tv_sec * 1000 +
-                      (int64_t)sxb.stx_atime.tv_nsec / 1000000;
-    if (sxb.stx_mask & STATX_BTIME) {
-        out_info->btime = (int64_t)sxb.stx_btime.tv_sec * 1000 +
-                          (int64_t)sxb.stx_btime.tv_nsec / 1000000;
-    } else {
-        out_info->btime = out_info->mtime;
-    }
-    out_info->mode = (unsigned int)sxb.stx_mode & ~S_IFMT;
-    out_info->uid = sxb.stx_uid;
-    out_info->gid = sxb.stx_gid;
-#else
+fallback:
+#endif
+
     if (fd < 0) {
         fd_is_directory = true;
         fd = AT_FDCWD;
@@ -3107,7 +3114,6 @@ static StatResult StatAt(int fd, bool fd_is_directory, const char *filename, uns
     out_info->mode = (unsigned int)sb.st_mode;
     out_info->uid = (uint32_t)sb.st_uid;
     out_info->gid = (uint32_t)sb.st_gid;
-#endif
 
     return StatResult::Success;
 }
