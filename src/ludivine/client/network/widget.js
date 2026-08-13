@@ -7,6 +7,7 @@ import { loadTexture, safeTag } from '../core/misc.js';
 import {
     PROXIMITY_LEVELS,
     PROXIMITY_COLOR,
+    HANDLE_COLOR,
     PERSON_KINDS,
     QUALITY_COLORS,
     USER_GUIDES
@@ -1071,7 +1072,7 @@ function NetworkWidget(app, mod, world) {
                 ctx.stroke();
             }
 
-            ctx.fillStyle = PROXIMITY_COLOR;
+            ctx.fillStyle = HANDLE_COLOR;
 
             for (let i = 1; i < PROXIMITY_LEVELS.length; i++) {
                 let level = PROXIMITY_LEVELS[i];

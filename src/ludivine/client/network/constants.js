@@ -39,7 +39,9 @@ const PROXIMITY_LEVELS = [
         size: 1.2
     }
 ];
+
 const PROXIMITY_COLOR = '#116381';
+const HANDLE_COLOR = '#70a1b3';
 
 // Keep in sync with quality widget CSS (network.css)
 const QUALITY_COLORS = {
@@ -69,6 +71,7 @@ const USER_GUIDES = {
 export {
     PROXIMITY_LEVELS,
     PROXIMITY_COLOR,
+    HANDLE_COLOR,
     PERSON_KINDS,
     QUALITY_COLORS,
     USER_GUIDES
