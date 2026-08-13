@@ -187,8 +187,17 @@ function initChannel() {
             } break;
 
             case 'session': {
-                await open(e.data.session);
-                await run();
+                if (session == null) {
+                    await open(e.data.session);
+                    await run();
+                } else if (session.vid != e.data.session.vid) {
+                    let json = JSON.stringify(e.data.session);
+                    sessionStorage.setItem('session', json);
+
+                    window.onbeforeunload = null;
+                    window.location.href = window.location.href;
+                    poisoned = true;
+                }
             } break;
 
             case 'picture': {
@@ -304,7 +313,7 @@ async function deriveKey(password, salt) {
 }
 
 async function open(obj) {
-    if (session?.vid != obj?.vid) {
+    if (session != null) {
         if (db != null)
             await db.close();
 
