@@ -1,11 +1,11 @@
 <div class="banner">
-    <div class="title">Bienvenue sur Lignes de Vie</div>
+    <div class="title">Bienvenue sur Lignes de Vie !</div>
     <div class="intro columns">
         <div style="flex: 3;">
             <p>Vous <b>êtes majeur, vous avez récemment vécu un événement particulièrement difficile</b> et souhaitez contribuer à faire avancer la recherche sur les psychotraumatismes ?
             <p>Inscrivez-vous à notre programme Lignes de Vie, et participez à notre <b>première étude SocioTrauma</b>.
             <div class="actions">
-                <a href="/participer/sociotrauma">Participer à SocioTrauma</a>
+                <a href="/participer/sociotrauma">Participer à l'étude SocioTrauma</a>
             </div>
             <p>Votre engagement est précieux, et <b>nous vous sommes reconnaissants</b> du temps que vous consacrerez à participer aux études !
         </div>

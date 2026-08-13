@@ -157,12 +157,17 @@ dialog {
 
 @media screen and (max-width: 960px) {
     .banner {
-        & > .title { display: none; }
+        & > .title {
+            align-self: stretch;
+            margin-top: 4px;
+            border-radius: 8px 8px 0 0;
+            text-align: center;
+        }
         & > .intro {
-            margin: 0.5em 0 0 0;
+            margin: 0;
             padding-top: 1em;
             border-left: none;
-            border-radius: 8px;
+            border-radius: 0 0 8px 8px;
         }
     }
 }
