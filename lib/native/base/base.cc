@@ -2964,7 +2964,7 @@ static FileType FileModeToType(mode_t mode)
 
 static StatResult StatAt(int fd, bool fd_is_directory, const char *filename, unsigned int flags, FileInfo *out_info)
 {
-#if defined(__linux__)
+#if defined(__linux__) && defined(STATX_TYPE)
     {
         const char *pathname = filename;
         int stat_flags = (flags & (int)StatFlag::FollowSymlink) ? 0 : AT_SYMLINK_NOFOLLOW;
