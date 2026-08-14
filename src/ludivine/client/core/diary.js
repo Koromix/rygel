@@ -195,8 +195,8 @@ function DiaryModule(app) {
                 <div class="box">Attention, cette action n'est pas réversible !</div>
 
                 <div class="actions">
-                    <button type="button" class="secondary" @click=${close}>Annuler</button>
                     <button type="submit">Confirmer</button>
+                    <button type="button" class="secondary" @click=${close}>Annuler</button>
                 </div>
             </div>
         `);

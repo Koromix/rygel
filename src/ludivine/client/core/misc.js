@@ -151,10 +151,10 @@ function progressCircle(value, total, cls = null) {
     cls = 'circle' + (cls ? ' ' + cls : '');
 
     return svg`
-        <svg class=${cls} width="100" height="100" viewBox="-12.5 -12.5 125 125" style="transform: rotate(-90deg)">
-            <circle r="50" cx="50" cy="50" fill="transparent" stroke-width="16" stroke-dasharray=${array + 'px'} stroke-dashoffset="0"></circle>
-            <circle r="50" cx="50" cy="50" stroke-width="16" stroke-linecap="butt" stroke-dasharray=${array + 'px'} stroke-dashoffset=${offset + 'px'} fill="transparent"></circle>
-            <text x="50px" y="53px" font-size="19px" fill="black" font-weight="bold" text-anchor="middle" style="transform: rotate(90deg) translate(0px, -96px)">${progress}%</text>
+        <svg class=${cls} width="80" height="80" viewBox="-40 -40 80 80" style="transform: rotate(-90deg)">
+            <circle r="30" cx="0" cy="0" fill="transparent" stroke-width="12" stroke-dasharray=${array + 'px'} stroke-dashoffset="0"></circle>
+            <circle r="30" cx="0" cy="0" stroke-width="12" stroke-linecap="butt" stroke-dasharray=${array + 'px'} stroke-dashoffset=${offset + 'px'} fill="transparent"></circle>
+            <text x="0px" y="3px" font-size="12px" fill="#383838" text-anchor="middle" style="transform: rotate(90deg)">${progress}%</text>
         </svg>
     `;
 }

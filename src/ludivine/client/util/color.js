@@ -54,8 +54,8 @@ function ColorPicker() {
             </div>
 
             <div class="actions">
-                <button type="button" class="secondary" @click=${UI.insist(close)}>Annuler</button>
                 <button type="submit">Confirmer</button>
+                <button type="button" class="secondary" @click=${UI.insist(close)}>Annuler</button>
             </div>
         `);
 

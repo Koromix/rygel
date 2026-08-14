@@ -616,8 +616,8 @@ function NetworkWidget(app, mod, world) {
                                 </div>
 
                                 <div class="actions">
-                                    <button type="button" class="secondary" @click=${UI.insist(close)}>Annuler</button>
                                     <button type="submit">Ajouter</button>
+                                    <button type="button" class="secondary" @click=${UI.insist(close)}>Annuler</button>
                                 </div>
                             </div>
                         `;
@@ -777,11 +777,11 @@ function NetworkWidget(app, mod, world) {
                 </div>
 
                 <div class="actions">
+                    <button type="submit">Appliquer</button>
+                    <button type="button" class="secondary" @click=${UI.insist(close)}>Annuler</button>
+                    <div style="flex: 1;"></div>
                     <button type="button" class="secondary"
                             @click=${UI.wrap(e => confirmDeletePerson(p).then(close))}>Supprimer</button>
-                    <div style="flex: 1;"></div>
-                    <button type="button" class="secondary" @click=${UI.insist(close)}>Annuler</button>
-                    <button type="submit">Appliquer</button>
                 </div>
             `,
 
@@ -815,8 +815,8 @@ function NetworkWidget(app, mod, world) {
                 <div class="box">Attention, cette action n'est pas réversible !</div>
 
                 <div class="actions">
-                    <button type="button" class="secondary" @click=${close}>Annuler</button>
                     <button type="submit">Confirmer</button>
+                    <button type="button" class="secondary" @click=${close}>Annuler</button>
                 </div>
             </div>
         `);
@@ -871,11 +871,11 @@ function NetworkWidget(app, mod, world) {
                     </div>
 
                     <div class="actions">
+                        <button type="submit">Appliquer</button>
+                        <button type="button" class="secondary" @click=${UI.insist(close)}>Annuler</button>
+                        <div style="flex: 1;"></div>
                         <button type="button" class="secondary"
                                 @click=${UI.insist(e => { deleteLink(link); close(); })}>Supprimer</button>
-                        <div style="flex: 1;"></div>
-                        <button type="button" class="secondary" @click=${UI.insist(close)}>Annuler</button>
-                        <button type="submit">Appliquer</button>
                     </div>
                 </div>
             `,

@@ -155,8 +155,8 @@ function PictureCropper(title, size) {
                         ${current_mode == 'notion' ? renderNotion() : ''}
 
                         <div class="actions">
-                            <button type="button" class="secondary" @click=${UI.insist(close)}>${T.cancel}</button>
                             <button type="submit">${T.save}</button>
+                            <button type="button" class="secondary" @click=${UI.insist(close)}>${T.cancel}</button>
                         </div>
                     </div>
                 `;

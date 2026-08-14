@@ -316,7 +316,6 @@ button {
     border-radius: var(--button_radius);
     color: var(--color, white);
     cursor: pointer;
-    white-space: nowrap;
 }
 button::-moz-focus-inner { border: 0; }
 button:not(:disabled):not(.active):hover { background: color-mix(in srgb, var(--button_color) 90%, black); }
@@ -345,7 +344,7 @@ button > img:only-child {
 
     & > :is(a, button) {
         display: block;
-        min-width: 15em;
+        min-width: 12em;
         max-width: 60em;
         background: var(--button_color);
         border-radius: var(--button_radius);

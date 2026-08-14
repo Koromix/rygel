@@ -164,7 +164,6 @@ function FormModule(app, study, page) {
             </div>
 
             <div class="actions">
-                <button type="button" class="secondary" @click=${UI.wrap(previous)}>Précédent</button>
                 ${part_idx < end ? html`<button type="button" @click=${UI.wrap(next)}>Continuer</button>` : ''}
                 ${part_idx == end ? html`
                     <button type="button" class="confirm" @click=${UI.wrap(next)}>
@@ -172,6 +171,7 @@ function FormModule(app, study, page) {
                         <span style="display: inline;">Finaliser</span>
                     </button>
                 ` : ''}
+                <button type="button" class="secondary" @click=${UI.wrap(previous)}>Précédent</button>
             </div>
         `, div);
 

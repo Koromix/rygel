@@ -45,7 +45,7 @@ span[title] { border-bottom: 1px dotted #383838; }
 }
 
 .actions {
-    flex-direction: row;
+    flex-direction: row-reverse;
     justify-content: center;
     flex-wrap: wrap;
 }

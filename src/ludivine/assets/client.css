@@ -446,13 +446,10 @@ button {
 
 .summary {
     display: flex;
-    padding-right: 1em;
+    padding-right: 0.5em;
     background: var(--box_color);
     border-radius: 8px;
-    gap: 1.5em;
-
-    &.draft > .circle { --fill: var(--draft_color); }
-    &.done > .circle { --fill: var(--done_color); }
+    gap: 1em;
 
     & > img {
         width: 260px;
@@ -477,9 +474,12 @@ button {
         color: #364b9b;
     }
     & > .circle {
-        margin: 0.5em 0;
+        margin: 0.5em 1em 0.5em 0;
         align-self: center;
     }
+
+    &.draft > .circle { --fill: var(--draft_color); }
+    &.done > .circle { --fill: var(--done_color); }
 
     &.test > div {
         align-items: center;
@@ -492,6 +492,7 @@ button {
         & > img { display: none; }
         & > div { align-content: center; }
         & > div > :not(:is(.header, .actions)) { display: none; }
+        & > .circle { margin-right: 0; }
     }
 }
 
