@@ -867,7 +867,7 @@ async function runRegister() {
         <div class="tab" style="align-items: center;">
             <div class="header">Créez votre compte</div>
 
-            <div style="max-width: 700px;">
+            <div class="notice">
                 <p>Vous devez <b>créer un compte</b> pour participer. Celui-ci vous permet de suivre votre progression et assure la fiabilité des données recueillies.
             </div>
 
@@ -921,7 +921,7 @@ async function runLogin() {
             <div class="box" style="align-items: center;">
                 <div class="header">Mail de connexion</div>
 
-                <div style="max-width: 700px;">
+                <div class="notice">
                     <p>Pour vous connecter, vous devez utiliser le lien présent dans le mail d'inscription. Cherchez le mail portant l'objet <b>« Connexion à ${ENV.title} ! »</b> et cliquez sur le lien à l'intérieur.
                 </div>
 
@@ -935,7 +935,7 @@ async function runLogin() {
             <div class="box" style="align-items: center;">
                 <div class="header">Connexion par mot de passe</div>
 
-                <div style="max-width: 700px;">
+                <div class="notice">
                     <p>Après votre première connexion à Lignes de Vie, vous avez eu la <b>possibilité de créer un mot de passe</b>. Si vous l'avez fait, utilisez-le pour vous connectez.
                 </div>
 
@@ -1171,7 +1171,7 @@ async function changePassword() {
                 </div>
 
                 <div class="tab" style="align-items: center;">
-                    <div style="max-width: 700px;">
+                    <div class="notice">
                         <p>Pour vous connecter à Lignes de Vie, vous avez besoin du lien qui vous a été envoyé par mail lors de votre inscription.
                         <p>Cependant, si vous le souhaitez, vous pouvez définir un mot de passe qui vous fournira un <b>moyen de connexion supplémentaire</b> !
                     </div>

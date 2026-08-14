@@ -229,6 +229,7 @@ button {
     flex-direction: column;
     gap: 1em;
 }
+
 .box {
     display: flex;
     flex-direction: column;
@@ -250,6 +251,9 @@ button {
         --color: #383838;
     }
 }
+
+.notice { max-width: 700px; }
+.tab > .notice { padding: 1em; }
 
 .sub {
     font-size: 0.8em;
