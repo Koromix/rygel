@@ -86,11 +86,13 @@ footer {
 }
 
 @media screen and (max-width: 960px) {
-    #logo { display: none; }
+    #logo {
+        margin-top: -4px;
+        padding-right: 40px;
+    }
 
     #top menu { gap: 0; }
     #top div { display: none; }
-    #top li > a.active { display: block !important; }
     #top .avatar {
         position: fixed;
         top: 14px;
