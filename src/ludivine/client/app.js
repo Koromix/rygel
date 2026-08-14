@@ -897,7 +897,7 @@ async function register(e, reason) {
 
     let mail = elements.mail.value.trim();
     if (!mail)
-        throw new Error('Adresse email manquante');
+        throw new Error('Veuillez saisir votre adresse email pour continuer');
     let study = PROJECTS.find(project => project.key == reason)?.index ?? null;
 
     await Net.post('/api/register', {
@@ -967,9 +967,9 @@ async function login(e) {
     let password = elements.password.value.trim();
 
     if (!mail)
-        throw new Error('Adresse email manquante');
+        throw new Error('Veuillez saisir votre adresse email pour continuer');
     if (!password)
-        throw new Error('Mot de passe manquant');
+        throw new Error('Vous devez saisir un mot de passe pour continuer');
 
     await loginPassword(mail, password);
     await go('/profil');
