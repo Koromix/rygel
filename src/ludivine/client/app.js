@@ -882,10 +882,8 @@ async function runRegister() {
 
             <div class="help">
                 <img src=${ASSETS['pictures/help1']} alt="" />
-                <div>
-                    <p>Toutes vos données étant chiffrées et sécurisées, vous devrez <b>conserver précieusement le lien de connexion</b> présent dans le mail que vous allez recevoir !
-                    <p>Nous ne serons <b>pas en mesure de recréer le lien de connexion</b> qui existe dans ce mail si vous le perdez !
-                </div>
+                <p>Toutes vos données étant chiffrées et sécurisées, vous devrez <b>conserver précieusement le lien de connexion</b> présent dans le mail que vous allez recevoir !
+                <p>Nous ne serons <b>pas en mesure de recréer le lien de connexion</b> qui existe dans ce mail si vous le perdez !
             </div>
         </div>
     `);
@@ -928,11 +926,9 @@ async function runLogin() {
                 </div>
 
                 <div class="help right">
-                    <div>
-                        <p>Vous pouvez aussi vous connecter avec un mot de passe si vous en avez créé un après votre première connexion.
-                        <p>Si c'est le cas, utilisez le formulaire ci-dessous. Sinon, retrouvez le mail !
-                    </div>
                     <img src=${ASSETS['pictures/help2']} alt="" />
+                    <p>Vous pouvez aussi vous connecter avec un mot de passe si vous en avez créé un après votre première connexion.
+                    <p>Si c'est le cas, utilisez le formulaire ci-dessous. Sinon, retrouvez le mail !
                 </div>
             </div>
 
@@ -1016,12 +1012,10 @@ async function runProfile() {
                             <div class="header">Créez un mot de passe</div>
                             <div class="help">
                                 <img src=${ASSETS['pictures/help1']} alt="" />
-                                <div>
-                                    <p>Vous devrez utiliser le mail d'inscription qui vous a été envoyé initialement pour vous connecter à nouveau.
-                                    <p>Cependant, nous vous recommandons de <b>créer un mot de passe</b> pour vous permettre de vous connecter sans avoir besoin de ce mail !
-                                    <div class="actions">
-                                        <button @click=${UI.wrap(changePassword)}>Je souhaite créer un mot de passe</button>
-                                    </div>
+                                <p>Vous devrez utiliser le mail d'inscription qui vous a été envoyé initialement pour vous connecter à nouveau.
+                                <p>Cependant, nous vous recommandons de <b>créer un mot de passe</b> pour vous permettre de vous connecter sans avoir besoin de ce mail !
+                                <div class="actions">
+                                    <button @click=${UI.wrap(changePassword)}>Je souhaite créer un mot de passe</button>
                                 </div>
                             </div>
                         </div>
@@ -1104,20 +1098,16 @@ async function runDashboard() {
                     ${cache.events.length ? html`
                         <div class="help" style="align-self: end;">
                             <img src=${ASSETS['pictures/help1']} alt="" />
-                            <div>
-                                <p>Ajoutez les <b>prochaines étapes de l'étude à votre agenda</b> pour revenir le moment venu !
-                                <p>Utilisez les boutons <img class="shortcut" src=${ASSETS['ui/calendar']} alt="Agenda" /> dans la section <b>« À venir »</b>.
-                            </div>
+                            <p>Ajoutez les <b>prochaines étapes de l'étude à votre agenda</b> pour revenir le moment venu !
+                            <p>Utilisez les boutons <img class="shortcut" src=${ASSETS['ui/calendar']} alt="Agenda" /> dans la section <b>« À venir »</b>.
                         </div>
                     ` : ''}
 
                     ${!cache.studies.length ? html`
                         <div class="help">
                             <img src=${ASSETS['pictures/help1']} alt="" />
-                            <div>
-                                <p>Pour le moment, SocioTrauma est la seule étude disponible.
-                                <p>Nous vous tiendrons au courant quand d'autres études seront mises en ligne !
-                            </div>
+                            <p>Pour le moment, SocioTrauma est la seule étude disponible.
+                            <p>Nous vous tiendrons au courant quand d'autres études seront mises en ligne !
                         </div>
                     ` : ''}
                 </div>
@@ -1196,9 +1186,7 @@ async function changePassword() {
 
                     <div class="help">
                         <img src=${ASSETS['pictures/help1']} alt="" />
-                        <div>
-                            <p>Toutes vos données étant chiffrées et sécurisées, nous ne serons <b>pas en mesure de vous aider</b> si vous perdez à la fois le mail d'inscription et le mot de passe que vous avez défini !
-                        </div>
+                        <p>Toutes vos données étant chiffrées et sécurisées, nous ne serons <b>pas en mesure de vous aider</b> si vous perdez à la fois le mail d'inscription et le mot de passe que vous avez défini !
                     </div>
                 </div>
             `;
@@ -1652,14 +1640,14 @@ function wrapHelp(page, progress, total) {
         return html`
             <div class="help">
                 <img src=${ASSETS['pictures/help1']} alt="" />
-                <div>${help}</div>
+                ${help}
             </div>
         `;
     } else {
         return html`
             <div class="help right">
-                <div>${help}</div>
                 <img src=${ASSETS['pictures/help2']} alt="" />
+                ${help}
             </div>
         `;
     }
@@ -1848,11 +1836,9 @@ async function runDiary() {
                 `)}
                 ${!entries.length ? html`
                     <div class="help right">
-                        <div>
-                            <p>Utilisez librement votre journal, ces <b>données sont privées</b> et nous ne nous en servirons pas !
-                            <p>Pour ajouter une première entrée, cliquez sur le bouton d'ajout ci-dessous.
-                        </div>
                         <img src=${ASSETS['pictures/help2']} alt="" />
+                        <p>Utilisez librement votre journal, ces <b>données sont privées</b> et nous ne nous en servirons pas !
+                        <p>Pour ajouter une première entrée, cliquez sur le bouton d'ajout ci-dessous.
                     </div>
                 ` : ''}
                 <div class="actions">

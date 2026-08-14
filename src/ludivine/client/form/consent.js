@@ -76,10 +76,8 @@ function ConsentModule(app, project) {
                 ${consent.download != null ? html`
                     <div class="help">
                         <img src=${ASSETS['pictures/help1']} alt="" />
-                        <div>
-                            <p>Vous devez <b>télécharger et lire la lettre d'informations</b> pour pouvoir commencer.
-                            <p>Une fois cela fait, vous pourrez participer à l'étude !
-                        </div>
+                        <p>Vous devez <b>télécharger et lire la lettre d'informations</b> pour pouvoir commencer.
+                        <p>Une fois cela fait, vous pourrez participer à l'étude !
                     </div>
                 ` : ''}
                 <form @submit=${UI.wrap(e => start(valid, values))}>

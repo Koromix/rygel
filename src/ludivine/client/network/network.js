@@ -606,24 +606,20 @@ function NetworkModule(app, study, page) {
                 overlay = html`
                     <div class="help">
                         <img src=${ASSETS['pictures/help1']} alt="" />
-                        <div>
-                            ${text}
-                            <div class="actions">
-                                <button type="button" class="secondary small" @click=${resolve}>C'est compris</button>
-                            </div>
+                        ${text}
+                        <div class="actions">
+                            <button type="button" class="secondary small" @click=${resolve}>C'est compris</button>
                         </div>
                     </div>
                 `;
             } else {
                 overlay = html`
                     <div class="help right">
-                        <div>
-                            ${text}
-                            <div class="actions">
-                                <button type="button" class="secondary small" @click=${resolve}>C'est compris</button>
-                            </div>
-                        </div>
                         <img src=${ASSETS['pictures/help2']} alt="" />
+                        ${text}
+                        <div class="actions">
+                            <button type="button" class="secondary small" @click=${resolve}>C'est compris</button>
+                        </div>
                     </div>
                 `;
             }

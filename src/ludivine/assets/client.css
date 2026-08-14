@@ -237,8 +237,6 @@ button {
     background: var(--box_color);
     border-radius: 8px;
 
-    & > .help { margin: 1em auto; }
-
     &.draft {
         background: color-mix(in srgb, var(--draft_color), transparent 60%);
         --button_color: var(--draft_color);
@@ -263,32 +261,40 @@ button {
 }
 
 .help {
-    display: flex;
+    position: relative;
     width: 80%;
-    max-width: 600px;
-    gap: 1em;
-    align-items: start;
-    align-self: center;
+    max-width: calc(min(calc(100% - 320px), 500px));
+    min-height: 100px;
+    margin: 1em auto;
+    padding: 1em;
+    background: white;
+    border-radius: 8px;
+    margin-top: calc(80px + 1em);
+    margin-bottom: calc(50px + 1em);
+    padding-left: calc(120px + 1em);
+    transform: translateX(40px);
 
     & > img {
+        position: absolute;
+        left: -80px;
+        top: -80px;
         width: 200px;
         aspect-ratio: auto;
         z-index: 1;
-        transform: translateX(-100px);
-    }
-    & > div {
-        min-height: 100px;
-        margin: 75px 0 0 -250px;
-        padding: 1em 1em 1em 150px;
-        background: white;
-        border-radius: 8px;
     }
 
-    &.right > div {
-        margin: 75px -250px 0 0;
-        padding: 1em 150px 1em 1em;
+    &.right {
+        padding-left: 1em;
+        padding-right: calc(120px + 1em);
+        transform: translateX(-40px);
     }
-    &.right > img { transform: translateX(100px); }
+    &.right > img {
+        left: auto;
+        right: -80px;
+        top: -80px;
+    }
+
+    & > p:first-of-type { margin-top: 0; }
 }
 
 @media screen and (max-width: 960px) {
@@ -298,28 +304,21 @@ button {
     }
 
     .help {
-        align-items: center;
+        max-width: none;
+        margin-top: calc(10px + 1em);
+        margin-bottom: 1em;
+        padding: 1em !important;
+        transform: none !important;
 
-        & > img { width: 100px; }
-        & > div {
-            min-height: 60px;
-            margin-top: 20px;
+        & > img {
+            position: static;
+            float: left;
+            width: 60px;
+            margin: -30px 10px 10px -25px;
         }
-    }
-    .help:not(.right) {
-        margin-right: 1em;
-
-        & > div {
-            margin-left: calc(-150px - 2em);
-            padding-left: 75px;
-        }
-    }
-    .help.right {
-        margin-left: 1em;
-
-        & > div {
-            margin-right: calc(-150px - 2em);
-            padding-right: 75px;
+        &.right > img {
+            float: right;
+            margin: -20px -20px 8px 8px;
         }
     }
 }
