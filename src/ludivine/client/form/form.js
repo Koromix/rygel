@@ -182,10 +182,12 @@ function FormModule(app, study, page) {
             let target = div.querySelector(new_intro ? '#intro' : '#part');
 
             if (target != null) {
-                target.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'start'
-                });
+                setTimeout(() => {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }, 0);
             }
 
             rendered_idx = part_idx;

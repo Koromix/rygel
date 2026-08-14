@@ -1619,10 +1619,12 @@ function runModule(changed) {
         let target = document.querySelector('.modules');
 
         if (target != null) {
-            target.scrollIntoView({
-                block: 'center',
-                behavior: 'smooth'
-            });
+            setTimeout(() => {
+                target.scrollIntoView({
+                    block: 'center',
+                    behavior: 'smooth'
+                });
+            }, 0);
         }
     }
 }
