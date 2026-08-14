@@ -131,10 +131,12 @@ function build(form) {
         ])
     })
 
-    form.section(() => {
-        form.binary("q7", "L’évènement impliquait-il une agression sexuelle ?")
-        form.binary("q8", "L’événement comportait-il une violence (physique ou psychologique) intentionnelle exercée par autrui à votre encontre ?")
-    })
+    if (values.q1 !== 0 || ![1, 2, 3, 5].includes(values.q1c)) {
+        form.section(() => {
+            form.binary("q7", "L’évènement impliquait-il une agression sexuelle ?")
+            form.binary("q8", "L’événement comportait-il une violence (physique ou psychologique) intentionnelle exercée par autrui à votre encontre ?")
+        })
+    }
 
     form.section(() => {
         form.enumRadio("q9", "Si l’évènement a entrainé la mort d’un membre de la famille ou d’un ami proche, était-ce dû à un type d’accident ou de violence, ou était-ce dû à des causes naturelles ?", [
@@ -145,7 +147,7 @@ function build(form) {
 
         form.enumButtons("q10", "Combien de fois est-ce que cela s’est produit ?", [
             [1, "Seulement une fois"],
-            [2, "Plus qu’une fois"]
+            [2, "Plus d’une fois"]
         ])
     })
 
