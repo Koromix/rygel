@@ -160,16 +160,16 @@ dialog {
 @media screen and (max-width: 960px) {
     .banner {
         & > .title {
-            align-self: stretch;
+            align-self: center;
             margin-top: 4px;
-            border-radius: 8px 8px 0 0;
+            border-radius: 8px;
             text-align: center;
         }
         & > .intro {
-            margin: 0;
+            margin: 1em 0 0 0;
             padding-top: 1em;
             border-left: none;
-            border-radius: 0 0 8px 8px;
+            border-radius: 8px;
         }
     }
 }
