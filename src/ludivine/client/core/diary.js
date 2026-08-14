@@ -112,11 +112,11 @@ function DiaryModule(app) {
             <div class="box">
                 <div class="header">
                     ${data != null ? html`
-                        Journal - Entrée du ${data.date.toLocaleString()}
+                        Mon journal - Entrée du ${data.date.toLocaleString()}
                         <button type="button" class="small secondary" style="margin-left: 30px;"
                                 @click=${UI.wrap(e => deleteEntry(data))}>Supprimer cette entrée</button>
                     ` : ''}
-                    ${data == null ? `Journal - Nouvelle entrée` : ''}
+                    ${data == null ? `Mon journal - Nouvelle entrée` : ''}
                 </div>
 
                 <form @submit=${e => e.preventDefault()}>
