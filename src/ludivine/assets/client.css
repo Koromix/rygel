@@ -253,6 +253,15 @@ button {
     }
 }
 
+.sub {
+    font-size: 0.8em;
+    font-weight: normal;
+    text-transform: none;
+    font-variant: normal;
+    color: var(--color, #666);
+    vertical-align: 1px;
+}
+
 .help {
     display: flex;
     width: 80%;
@@ -455,6 +464,8 @@ button {
         border-bottom-left-radius: 8px;
     }
     & > div {
+        display: flex;
+        flex-direction: column;
         flex: 1;
         padding: 1em 0;
         overflow: hidden;
@@ -469,6 +480,11 @@ button {
     & > .circle {
         margin: 0.5em 0;
         align-self: center;
+    }
+
+    &.test > div {
+        align-items: center;
+        justify-content: center;
     }
 }
 

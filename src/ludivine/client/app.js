@@ -1504,10 +1504,7 @@ function runModule(changed) {
             <div class=${cls}>
                 <img src=${project.picture} alt="" />
                 <div>
-                    <div class="header">
-                        ${step == null ? `Étude ${project.title}` : ''}
-                        ${step != null ? step.title : ''}
-                    </div>
+                    <div class="header">Étude ${project.title}</div>
                     ${step != null ? step.step : project.summary}
                 </div>
                 ${step != null ? progressCircle(progress, total) : ''}
@@ -1519,8 +1516,10 @@ function runModule(changed) {
 
                 return html`
                     <div class="box level" @click=${UI.wrap(e => navigateStudy(parent))}>
-                        ${parent.level ?? ''}${parent.level ? ' - ' : ''}
-                        ${next.title}
+                        <p>
+                            ${parent.level ? html`${parent.level}<br><span class="sub">${next.title}</span>` : ''}
+                            ${!parent.level ? next.title : ''}
+                        </p>
                     </div>
                 `;
             })}
@@ -1674,7 +1673,7 @@ function runTest(changed) {
 
     let step = page.chain.findLast(it => it.type == 'module' && it.step != null);
     let [progress, total] = computeProgress(step ?? project.root, today);
-    let cls = 'summary ' + (progress == total ? 'done' : 'draft');
+    let cls = 'summary test ' + (progress == total ? 'done' : 'draft');
 
     UI.main(html`
         <div class="tabbar">
@@ -1690,15 +1689,11 @@ function runTest(changed) {
             <div class=${cls}>
                 <img src=${project.picture} alt="" />
                 <div>
-                    <div class="header">
-                        ${step == null ? `Étude ${project.title}` : ''}
-                        ${step != null ? step.title : ''}
-                    </div>
+                    <div class="header">Étude ${project.title}</div>
                     <div class="header">${page.title}</div>
-                    <div class="actions">
-                        <button type="button" class="secondary"
-                                @click=${UI.wrap(e => exitTest(page))}>Retourner au menu</button>
-                    </div>
+
+                    <a class="sub" style="margin-top: 1em;"
+                       @click=${UI.wrap(e => exitTest(page))}>Retourner au menu de l'étude</a>
                 </div>
                 ${step != null ? progressCircle(progress, total) : ''}
             </div>
