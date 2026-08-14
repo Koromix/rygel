@@ -20,10 +20,12 @@ namespace K {
 struct BackRegisters {
     uint32_t eax;
     uint32_t edx;
+
     union {
         double d;
         float f;
     } x87;
+
     int ret_type;
     int ret_pop;
 };
@@ -117,12 +119,12 @@ bool AnalyseFunction(Napi::Env env, InstanceData *instance, FunctionInfo *func)
                 int delta = (int)Opcode::RunVoidX - (int)PrimitiveKind::Void;
                 Opcode run = (Opcode)((int)func->ret.type->primitive + delta);
 
-                func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
+                func->sync.Append({ .op = Code2Op(run), .b1 = (int16_t)func->parameters.len, .type = func->ret.type });
             } else {
                 int delta = (int)Opcode::RunVoid - (int)PrimitiveKind::Void;
                 Opcode run = (Opcode)((int)func->ret.type->primitive + delta);
 
-                func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
+                func->sync.Append({ .op = Code2Op(run), .b1 = (int16_t)func->parameters.len, .type = func->ret.type });
             }
         } break;
 
@@ -134,12 +136,12 @@ bool AnalyseFunction(Napi::Env env, InstanceData *instance, FunctionInfo *func)
 
                 if (member.type->primitive == PrimitiveKind::Float32) {
                     Opcode run = fast ? Opcode::RunAggregateFX : Opcode::RunAggregateF;
-                    func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
+                    func->sync.Append({ .op = Code2Op(run), .b1 = (int16_t)func->parameters.len, .b2 = 8, .type = func->ret.type });
 
                     break;
                 } else if (member.type->primitive == PrimitiveKind::Float64) {
                     Opcode run = fast ? Opcode::RunAggregateDX : Opcode::RunAggregateD;
-                    func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
+                    func->sync.Append({ .op = Code2Op(run), .b1 = (int16_t)func->parameters.len, .b2 = 8, .type = func->ret.type });
 
                     break;
                 }
@@ -148,7 +150,7 @@ bool AnalyseFunction(Napi::Env env, InstanceData *instance, FunctionInfo *func)
 
             if (func->ret.abi.regular) {
                 Opcode run = fast ? Opcode::RunAggregateGX : Opcode::RunAggregateG;
-                func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
+                func->sync.Append({ .op = Code2Op(run), .b1 = (int16_t)func->parameters.len, .type = func->ret.type });
             } else {
                 Opcode run = fast ? Opcode::RunAggregateMemX : Opcode::RunAggregateMem;
 
@@ -158,18 +160,18 @@ bool AnalyseFunction(Napi::Env env, InstanceData *instance, FunctionInfo *func)
                 int16_t offset = 0;
 #endif
 
-                func->sync.Append({ .op = Code2Op(run), .a = (int32_t)func->ret.type->size, .b1 = offset, .type = func->ret.type });
+                func->sync.Append({ .op = Code2Op(run), .a = (int32_t)func->ret.type->size, .b1 = (int16_t)func->parameters.len, .b2 = offset, .type = func->ret.type });
             }
         } break;
         case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
 
         case PrimitiveKind::Float32: {
             Opcode run = fast ? Opcode::RunFloat32X : Opcode::RunFloat32;
-            func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
+            func->sync.Append({ .op = Code2Op(run), .b1 = (int16_t)func->parameters.len, .b2 = 8, .type = func->ret.type });
         } break;
         case PrimitiveKind::Float64: {
             Opcode run = fast ? Opcode::RunFloat64X : Opcode::RunFloat64;
-            func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
+            func->sync.Append({ .op = Code2Op(run), .b1 = (int16_t)func->parameters.len, .b2 = 8, .type = func->ret.type });
         } break;
 
         case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;

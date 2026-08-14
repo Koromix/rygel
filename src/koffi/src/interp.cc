@@ -428,7 +428,7 @@ namespace {
     }
     OP(RunAggregateMem) {
         uint8_t *ptr = call->AllocHeap(inst->a);
-        *(uint8_t **)(base + inst->b1) = ptr;
+        *(uint8_t **)(base + inst->b2) = ptr;
         WRAP(CallG(call->native, base, &call->saved_sp));
         return DecodeObject(call->instance, ptr, inst->type);
     }
@@ -528,7 +528,7 @@ namespace {
     }
     OP(RunAggregateMemX) {
         uint8_t *ptr = call->AllocHeap(inst->a);
-        *(uint8_t **)(base + inst->b1) = ptr;
+        *(uint8_t **)(base + inst->b2) = ptr;
         WRAP(CallGX(call->native, base, &call->saved_sp));
         return DecodeObject(call->instance, ptr, inst->type);
     }
@@ -575,7 +575,7 @@ namespace {
     OP(CallDDDD) { CALL(DDDD); return nullptr; }
     OP(CallMem) {
         uint8_t *ptr = call->AllocHeap(inst->a);
-        *(uint8_t **)(base + inst->b1) = ptr;
+        *(uint8_t **)(base + inst->b2) = ptr;
         CALL(G);
         *(uint8_t **)base = ptr;
         return nullptr;
@@ -590,7 +590,7 @@ namespace {
     OP(CallDDDDX) { CALL(DDDDX); return nullptr; }
     OP(CallMemX) {
         uint8_t *ptr = call->AllocHeap(inst->a);
-        *(uint8_t **)(base + inst->b1) = ptr;
+        *(uint8_t **)(base + inst->b2) = ptr;
         CALL(GX);
         *(uint8_t **)base = ptr;
         return nullptr;
@@ -787,7 +787,7 @@ bool PreparePlan(Napi::Env env, InstanceData *instance, FunctionInfo *func)
             } break;
             case Opcode::RunAggregateMem: {
                 func->async.Append({ .op = Code2Op(Opcode::Yield) });
-                func->async.Append({ .op = Code2Op(Opcode::CallMem), .a = inst.a, .b1 = inst.b1 });
+                func->async.Append({ .op = Code2Op(Opcode::CallMem), .a = inst.a, .b1 = inst.b1, .b2 = inst.b2 });
                 func->async.Append({ .op = Code2Op(Opcode::ReturnAggregateMem), .type = inst.type });
             } break;
             case Opcode::RunVoidX:
@@ -849,7 +849,7 @@ bool PreparePlan(Napi::Env env, InstanceData *instance, FunctionInfo *func)
             } break;
             case Opcode::RunAggregateMemX: {
                 func->async.Append({ .op = Code2Op(Opcode::Yield) });
-                func->async.Append({ .op = Code2Op(Opcode::CallMemX), .a = inst.a, .b1 = inst.b1 });
+                func->async.Append({ .op = Code2Op(Opcode::CallMemX), .a = inst.a, .b1 = inst.b1, .b2 = inst.b2 });
                 func->async.Append({ .op = Code2Op(Opcode::ReturnAggregateMem), .type = inst.type });
             } break;
 

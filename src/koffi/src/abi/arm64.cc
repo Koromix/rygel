@@ -338,12 +338,12 @@ bool AnalyseFunction(Napi::Env, InstanceData *instance, FunctionInfo *func)
                 int delta = (int)Opcode::RunVoidX - (int)PrimitiveKind::Void;
                 Opcode run = (Opcode)((int)func->ret.type->primitive + delta);
 
-                func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
+                func->sync.Append({ .op = Code2Op(run), .b1 = (int16_t)func->parameters.len, .type = func->ret.type });
             } else {
                 int delta = (int)Opcode::RunVoid - (int)PrimitiveKind::Void;
                 Opcode run = (Opcode)((int)func->ret.type->primitive + delta);
 
-                func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
+                func->sync.Append({ .op = Code2Op(run), .b1 = (int16_t)func->parameters.len, .type = func->ret.type });
             }
         } break;
 
@@ -360,29 +360,29 @@ bool AnalyseFunction(Napi::Env, InstanceData *instance, FunctionInfo *func)
                 }
 
                 Opcode run = func->forward_fp ? Opcode::RunAggregateDDDDX : Opcode::RunAggregateDDDD;
-                func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
+                func->sync.Append({ .op = Code2Op(run), .b1 = (int16_t)func->parameters.len, .b2 = 16, .type = func->ret.type });
             } else if (func->ret.type->size <= 16) {
                 func->ret.abi.regular = true;
                 func->ret.abi.offset = offsetof(BackRegisters, x0);
 
                 Opcode run = func->forward_fp ? Opcode::RunAggregateGGX : Opcode::RunAggregateGG;
-                func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
+                func->sync.Append({ .op = Code2Op(run), .b1 = (int16_t)func->parameters.len, .type = func->ret.type });
             } else {
                 Opcode run = func->forward_fp ? Opcode::RunAggregateMemX : Opcode::RunAggregateMem;
                 int16_t offset = 8 * 8; // x8
 
-                func->sync.Append({ .op = Code2Op(run), .a = (int32_t)func->ret.type->size, .b1 = offset, .type = func->ret.type });
+                func->sync.Append({ .op = Code2Op(run), .a = (int32_t)func->ret.type->size, .b1 = (int16_t)func->parameters.len, .b2 = offset, .type = func->ret.type });
             }
         } break;
         case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
 
         case PrimitiveKind::Float32: {
             Opcode run = func->forward_fp ? Opcode::RunFloat32X : Opcode::RunFloat32;
-            func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
+            func->sync.Append({ .op = Code2Op(run), .b1 = (int16_t)func->parameters.len, .b2 = 16, .type = func->ret.type });
         } break;
         case PrimitiveKind::Float64: {
             Opcode run = func->forward_fp ? Opcode::RunFloat64X : Opcode::RunFloat64;
-            func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
+            func->sync.Append({ .op = Code2Op(run), .b1 = (int16_t)func->parameters.len, .b2 = 16, .type = func->ret.type });
         } break;
 
         case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;

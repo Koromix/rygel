@@ -75,12 +75,12 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
                 int delta = (int)Opcode::RunVoidX - (int)PrimitiveKind::Void;
                 Opcode run = (Opcode)((int)func->ret.type->primitive + delta);
 
-                func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
+                func->sync.Append({ .op = Code2Op(run), .b1 = (int16_t)func->parameters.len, .type = func->ret.type });
             } else {
                 int delta = (int)Opcode::RunVoid - (int)PrimitiveKind::Void;
                 Opcode run = (Opcode)((int)func->ret.type->primitive + delta);
 
-                func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
+                func->sync.Append({ .op = Code2Op(run), .b1 = (int16_t)func->parameters.len, .type = func->ret.type });
             }
         } break;
 
@@ -88,21 +88,21 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
         case PrimitiveKind::Union: {
             if (func->ret.abi.regular) {
                 Opcode run = func->forward_fp ? Opcode::RunAggregateGX : Opcode::RunAggregateG;
-                func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
+                func->sync.Append({ .op = Code2Op(run), .b1 = (int16_t)func->parameters.len, .type = func->ret.type });
             } else {
                 Opcode run = func->forward_fp ? Opcode::RunAggregateMemX : Opcode::RunAggregateMem;
-                func->sync.Append({ .op = Code2Op(run), .a = (int32_t)func->ret.type->size, .type = func->ret.type });
+                func->sync.Append({ .op = Code2Op(run), .a = (int32_t)func->ret.type->size, .b1 = (int16_t)func->parameters.len, .type = func->ret.type });
             }
         } break;
         case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
 
         case PrimitiveKind::Float32: {
             Opcode run = func->forward_fp ? Opcode::RunFloat32X : Opcode::RunFloat32;
-            func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
+            func->sync.Append({ .op = Code2Op(run), .b1 = (int16_t)func->parameters.len, .b2 = 8, .type = func->ret.type });
         } break;
         case PrimitiveKind::Float64: {
             Opcode run = func->forward_fp ? Opcode::RunFloat64X : Opcode::RunFloat64;
-            func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
+            func->sync.Append({ .op = Code2Op(run), .b1 = (int16_t)func->parameters.len, .b2 = 8, .type = func->ret.type });
         } break;
 
         case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;

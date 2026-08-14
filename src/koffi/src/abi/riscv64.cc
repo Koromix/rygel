@@ -282,12 +282,12 @@ bool AnalyseFunction(Napi::Env, InstanceData *instance, FunctionInfo *func)
                 int delta = (int)Opcode::RunVoidX - (int)PrimitiveKind::Void;
                 Opcode run = (Opcode)((int)func->ret.type->primitive + delta);
 
-                func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
+                func->sync.Append({ .op = Code2Op(run), .b1 = (int16_t)func->parameters.len, .type = func->ret.type });
             } else {
                 int delta = (int)Opcode::RunVoid - (int)PrimitiveKind::Void;
                 Opcode run = (Opcode)((int)func->ret.type->primitive + delta);
 
-                func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
+                func->sync.Append({ .op = Code2Op(run), .b1 = (int16_t)func->parameters.len, .type = func->ret.type });
             }
         } break;
 
@@ -296,27 +296,27 @@ bool AnalyseFunction(Napi::Env, InstanceData *instance, FunctionInfo *func)
             switch (func->ret.abi.method) {
                 case AbiMethod::Memory: {
                     Opcode run = func->forward_fp ? Opcode::RunAggregateMemX : Opcode::RunAggregateMem;
-                    func->sync.Append({ .op = Code2Op(run), .a = (int32_t)func->ret.type->size, .type = func->ret.type });
+                    func->sync.Append({ .op = Code2Op(run), .a = (int32_t)func->ret.type->size, .b1 = (int16_t)func->parameters.len, .type = func->ret.type });
                 } break;
 
                 case AbiMethod::Gpr:
                 case AbiMethod::GprGpr:
                 case AbiMethod::GprStack: {
                     Opcode run = func->forward_fp ? Opcode::RunAggregateGGX : Opcode::RunAggregateGG;
-                    func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
+                    func->sync.Append({ .op = Code2Op(run), .b1 = (int16_t)func->parameters.len, .type = func->ret.type });
                 } break;
                 case AbiMethod::Vec:
                 case AbiMethod::VecVec: {
                     Opcode run = func->forward_fp ? Opcode::RunAggregateDDX : Opcode::RunAggregateDD;
-                    func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
+                    func->sync.Append({ .op = Code2Op(run), .b1 = (int16_t)func->parameters.len, .b2 = 16, .type = func->ret.type });
                 } break;
                 case AbiMethod::GprVec: {
                     Opcode run = func->forward_fp ? Opcode::RunAggregateGDX : Opcode::RunAggregateGD;
-                    func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
+                    func->sync.Append({ .op = Code2Op(run), .b1 = (int16_t)func->parameters.len, .b2 = 16, .type = func->ret.type });
                 } break;
                 case AbiMethod::VecGpr: {
                     Opcode run = func->forward_fp ? Opcode::RunAggregateDGX : Opcode::RunAggregateDG;
-                    func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
+                    func->sync.Append({ .op = Code2Op(run), .b1 = (int16_t)func->parameters.len, .b2 = 16, .type = func->ret.type });
                 } break;
             }
         } break;
@@ -324,11 +324,11 @@ bool AnalyseFunction(Napi::Env, InstanceData *instance, FunctionInfo *func)
 
         case PrimitiveKind::Float32: {
             Opcode run = func->forward_fp ? Opcode::RunFloat32X : Opcode::RunFloat32;
-            func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
+            func->sync.Append({ .op = Code2Op(run), .b1 = (int16_t)func->parameters.len, .b2 = 16, .type = func->ret.type });
         } break;
         case PrimitiveKind::Float64: {
             Opcode run = func->forward_fp ? Opcode::RunFloat64X : Opcode::RunFloat64;
-            func->sync.Append({ .op = Code2Op(run), .type = func->ret.type });
+            func->sync.Append({ .op = Code2Op(run), .b1 = (int16_t)func->parameters.len, .b2 = 16, .type = func->ret.type });
         } break;
 
         case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;
