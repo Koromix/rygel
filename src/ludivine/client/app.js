@@ -1176,8 +1176,8 @@ async function changePassword() {
                         <p>Cependant, si vous le souhaitez, vous pouvez définir un mot de passe qui vous fournira un <b>moyen de connexion supplémentaire</b> !
                     </div>
 
-                    <input type="password" name="password1" placeholder="mot de passe" />
-                    <input type="password" name="password2" placeholder="confirmation" />
+                    <label><input type="password" name="password1" placeholder="mot de passe" /></label>
+                    <label><input type="password" name="password2" placeholder="confirmation" /></label>
                     <div class="tip">Le mot de passe doit contenir au moins 10 caractères, des lettres, des chiffres et un symbole spécial.</div>
                     <div class="actions">
                         <button type="submit">${session.password ? 'Modifier le mot de passe' : 'Définir le mot de passe'}</button>
