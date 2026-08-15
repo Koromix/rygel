@@ -190,40 +190,40 @@
         "results": {
             "atoi": {
                 "Node-API": {
-                    "time": 8020,
-                    "iterations": 211000000,
+                    "time": 8008,
+                    "iterations": 198000000,
                     "ratio": 1,
                     "overhead": 0
                 },
                 "Koffi v3": {
-                    "time": 8015,
-                    "iterations": 185000000,
-                    "ratio": 0.8773242114163906,
-                    "overhead": 0.139829480353171
+                    "time": 8041,
+                    "iterations": 180000000,
+                    "ratio": 0.905360029847034,
+                    "overhead": 0.10453296703296688
                 },
                 "Koffi v2": {
-                    "time": 8029,
+                    "time": 8043,
                     "iterations": 108000000,
-                    "ratio": 0.5112745916904303,
-                    "overhead": 0.9558961392814258
-                },
-                "node-ctypes": {
-                    "time": 8071,
-                    "iterations": 64000000,
-                    "ratio": 0.301400896428087,
-                    "overhead": 2.3178401652119702
+                    "ratio": 0.5430809399477807,
+                    "overhead": 0.8413461538461537
                 },
                 "node:ffi": {
-                    "time": 8003,
-                    "iterations": 49000000,
-                    "ratio": 0.23272078657707154,
-                    "overhead": 3.296994758002951
+                    "time": 8010,
+                    "iterations": 67000000,
+                    "ratio": 0.33829934803717576,
+                    "overhead": 1.9559619484992616
+                },
+                "node-ctypes": {
+                    "time": 8034,
+                    "iterations": 63000000,
+                    "ratio": 0.31715210355987056,
+                    "overhead": 2.1530612244897958
                 },
                 "ffi-rs": {
-                    "time": 9697,
+                    "time": 9963,
                     "iterations": 5000000,
-                    "ratio": 0.019598576195207686,
-                    "overhead": 50.02411471321695
+                    "ratio": 0.020297322314786932,
+                    "overhead": 48.267582417582425
                 },
                 "ffi-napi": {
                     "time": 9024,
@@ -234,40 +234,40 @@
             },
             "memset": {
                 "Node-API": {
-                    "time": 8025,
-                    "iterations": 62000000,
+                    "time": 8107,
+                    "iterations": 64000000,
                     "ratio": 1,
                     "overhead": 0
                 },
                 "Koffi v3": {
-                    "time": 8019,
-                    "iterations": 58000000,
-                    "ratio": 0.936183821488481,
-                    "overhead": 0.06816629068643243
+                    "time": 8128,
+                    "iterations": 60000000,
+                    "ratio": 0.9350778174212598,
+                    "overhead": 0.06942971094938533
                 },
                 "node:ffi": {
-                    "time": 8195,
-                    "iterations": 34000000,
-                    "ratio": 0.5370111594402567,
-                    "overhead": 0.8621586952538023
+                    "time": 8165,
+                    "iterations": 37000000,
+                    "ratio": 0.574018294549908,
+                    "overhead": 0.7421047543164236
                 },
                 "node-ctypes": {
-                    "time": 8078,
-                    "iterations": 32000000,
-                    "ratio": 0.5127426942152721,
-                    "overhead": 0.9502959501557633
+                    "time": 8177,
+                    "iterations": 30000000,
+                    "ratio": 0.4647372202519261,
+                    "overhead": 1.1517536285514578
                 },
                 "Koffi v2": {
-                    "time": 8048,
-                    "iterations": 23000000,
-                    "ratio": 0.36990757070480346,
-                    "overhead": 1.7033780306108626
+                    "time": 8267,
+                    "iterations": 22000000,
+                    "ratio": 0.3370970424579654,
+                    "overhead": 1.9665048162642833
                 },
                 "ffi-rs": {
-                    "time": 8232,
+                    "time": 8644,
                     "iterations": 3000000,
-                    "ratio": 0.047170365842189414,
-                    "overhead": 20.1997507788162
+                    "ratio": 0.04396293671911152,
+                    "overhead": 21.74643312363801
                 },
                 "ffi-napi": {
                     "time": 8959,
