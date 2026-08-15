@@ -495,7 +495,6 @@ button {
     .summary {
         & > img { display: none; }
         & > div { align-content: center; }
-        & > div > :not(:is(.header, .actions)) { display: none; }
         & > .circle { margin-right: 0; }
     }
 }

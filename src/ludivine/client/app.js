@@ -1677,15 +1677,12 @@ function runTest(changed) {
 
         <div class="tab" style="flex: 1;">
             <div class=${cls}>
-                <img src=${project.picture} alt="" />
                 <div>
-                    <div class="header">Étude ${project.title}</div>
                     <div class="header">${page.title}</div>
 
                     <a class="sub" style="margin-top: 1em;"
                        @click=${UI.wrap(e => exitTest(page))}>Retourner au menu de l'étude</a>
                 </div>
-                ${step != null ? progressCircle(progress, total) : ''}
             </div>
 
             ${ctx.render(cache.section, changed)}
