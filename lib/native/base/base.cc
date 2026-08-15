@@ -4104,7 +4104,6 @@ Span<char> NormalizePath(Span<const char> path, Span<const char> root_directory,
     if (!path.len && !root_directory.len)
         return Fmt(alloc, "");
 
-#if !defined(_WIN32)
     if (!(flags & (int)NormalizeFlag::NoExpansion)) {
         Span<const char> prefix = SplitStrAny(path, K_PATH_SEPARATORS);
 
@@ -4117,7 +4116,6 @@ Span<char> NormalizePath(Span<const char> path, Span<const char> root_directory,
             }
         }
     }
-#endif
 
     HeapArray<char> buf(alloc);
     Size parts_count = 0;
