@@ -25,7 +25,7 @@ For performance reasons, Koffi now uses BigInt numbers for pointers instead of V
 Most code should work without any change, but there are two cases where this might impact you:
 
 - If you use a **type system**, for example in TypeScript code (e.g. for parameters), you may need to accept BigInt values now if you pass pointer values around.
-- BigInt pointers **do not carry the C type around**. In Koffi 2.x, trying to pass a pointer to an integer to a `void Myfunc(MyStruct *)` function would have triggerd an exception, but in Koffi 3.x this will "work" (and probably crash).
+- BigInt pointers **do not carry the C type around**. In Koffi 2.x, trying to pass a pointer to an integer to a `void Myfunc(MyStruct *)` function would have triggered an exception, but in Koffi 3.x this will "work" (and probably crash).
 
 ## Type objects
 
