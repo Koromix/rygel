@@ -127,13 +127,14 @@ function initTables() {
                 <tbody>
                     ${Object.keys(results).map(engine => {
                         let perf = results[engine];
+                        let overhead = Math.round(perf.overhead * 100);
 
                         return html`
                             <tr>
                                 <td>${engine}</td>
                                 <td>${formatTime(perf.time / perf.iterations)}</td>
                                 <td>x${perf.ratio.toFixed(2)}</td>
-                                <td>${Math.round(perf.overhead * 100)}%</td>
+                                <td>${overhead > 0 ? '+' : ''}${overhead}%</td>
                             </tr>
                         `;
                     })}
