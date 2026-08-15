@@ -551,8 +551,8 @@ function NetworkWidget(app, mod, world) {
                             </div>
 
                             <div class="actions">
-                                <button type="button" class="secondary" @click=${UI.insist(close)}>Annuler</button>
                                 <button type="submit" ?disabled=${!text}>Ajouter</button>
+                                <button type="button" class="secondary" @click=${UI.insist(close)}>Annuler</button>
                             </div>
                         </div>
                     `;
