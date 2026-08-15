@@ -569,7 +569,7 @@ async function run(changes = {}, push = false) {
         switch (route.mode) {
             case 'register': {
                 if (db != null) {
-                    go('/profil');
+                    go('/etudes');
                     return;
                 }
 
@@ -578,7 +578,7 @@ async function run(changes = {}, push = false) {
 
             case 'login': {
                 if (db != null) {
-                    go('/profil');
+                    go('/etudes');
                     return;
                 }
 
@@ -968,7 +968,7 @@ async function login(e) {
         throw new Error('Vous devez saisir un mot de passe pour continuer');
 
     await loginPassword(mail, password);
-    await go('/profil');
+    await go('/etudes');
 }
 
 async function runProfile() {
