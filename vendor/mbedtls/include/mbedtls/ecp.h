@@ -74,6 +74,11 @@
 extern "C" {
 #endif
 
+#if defined(_WIN32) && defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wzero-as-null-pointer-constant"
+#endif
+
 /**
  * Domain-parameter identifiers: curve, subgroup, and generator.
  *
@@ -1509,6 +1514,10 @@ int mbedtls_ecp_export(const mbedtls_ecp_keypair *key, mbedtls_ecp_group *grp,
 int mbedtls_ecp_self_test(int verbose);
 
 #endif /* MBEDTLS_SELF_TEST */
+
+#if defined(_WIN32) && defined(__clang__)
+#pragma clang diagnostic pop
+#endif
 
 #ifdef __cplusplus
 }

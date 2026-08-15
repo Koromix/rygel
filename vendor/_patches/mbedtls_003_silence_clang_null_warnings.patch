@@ -1,0 +1,55 @@
+diff --git a/vendor/mbedtls/include/mbedtls/cipher.h b/vendor/mbedtls/include/mbedtls/cipher.h
+index 28502a6689..8877f92af2 100644
+--- a/vendor/mbedtls/include/mbedtls/cipher.h
++++ b/vendor/mbedtls/include/mbedtls/cipher.h
+@@ -56,6 +56,11 @@
+ extern "C" {
+ #endif
+ 
++#if defined(_WIN32) && defined(__clang__)
++#pragma clang diagnostic push
++#pragma clang diagnostic ignored "-Wzero-as-null-pointer-constant"
++#endif
++
+ /**
+  * \brief     Supported cipher types.
+  *
+@@ -1243,6 +1248,11 @@ int mbedtls_cipher_auth_decrypt_ext(mbedtls_cipher_context_t *ctx,
+                                     unsigned char *output, size_t output_len,
+                                     size_t *olen, size_t tag_len);
+ #endif /* MBEDTLS_CIPHER_MODE_AEAD || MBEDTLS_NIST_KW_C */
++
++#if defined(_WIN32) && defined(__clang__)
++#pragma clang diagnostic pop
++#endif
++
+ #ifdef __cplusplus
+ }
+ #endif
+diff --git a/vendor/mbedtls/include/mbedtls/ecp.h b/vendor/mbedtls/include/mbedtls/ecp.h
+index c8d63d6038..127bb46168 100644
+--- a/vendor/mbedtls/include/mbedtls/ecp.h
++++ b/vendor/mbedtls/include/mbedtls/ecp.h
+@@ -74,6 +74,11 @@
+ extern "C" {
+ #endif
+ 
++#if defined(_WIN32) && defined(__clang__)
++#pragma clang diagnostic push
++#pragma clang diagnostic ignored "-Wzero-as-null-pointer-constant"
++#endif
++
+ /**
+  * Domain-parameter identifiers: curve, subgroup, and generator.
+  *
+@@ -1510,6 +1515,10 @@ int mbedtls_ecp_self_test(int verbose);
+ 
+ #endif /* MBEDTLS_SELF_TEST */
+ 
++#if defined(_WIN32) && defined(__clang__)
++#pragma clang diagnostic pop
++#endif
++
+ #ifdef __cplusplus
+ }
+ #endif

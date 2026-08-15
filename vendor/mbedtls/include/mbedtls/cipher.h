@@ -56,6 +56,11 @@
 extern "C" {
 #endif
 
+#if defined(_WIN32) && defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wzero-as-null-pointer-constant"
+#endif
+
 /**
  * \brief     Supported cipher types.
  *
@@ -1243,6 +1248,11 @@ int mbedtls_cipher_auth_decrypt_ext(mbedtls_cipher_context_t *ctx,
                                     unsigned char *output, size_t output_len,
                                     size_t *olen, size_t tag_len);
 #endif /* MBEDTLS_CIPHER_MODE_AEAD || MBEDTLS_NIST_KW_C */
+
+#if defined(_WIN32) && defined(__clang__)
+#pragma clang diagnostic pop
+#endif
+
 #ifdef __cplusplus
 }
 #endif
