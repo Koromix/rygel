@@ -344,7 +344,7 @@ button > img:only-child {
 
     & > :is(a, button) {
         display: block;
-        min-width: 12em;
+        min-width: 15em;
         max-width: 60em;
         background: var(--button_color);
         border-radius: var(--button_radius);

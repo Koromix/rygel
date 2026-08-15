@@ -351,10 +351,14 @@ button {
     cursor: pointer;
 }
 
-.profile > .avatar {
-    width: 192px;
-    height: 192px;
-    margin: 0 auto;
+.profile {
+    width: 350px;
+
+    & > .avatar {
+        width: 192px;
+        height: 192px;
+        margin: 0 auto;
+    }
 }
 
 @media screen and (max-width: 960px) {
@@ -577,7 +581,10 @@ form {
     & * + :is(label, .widget) { margin-top: 1em; }
     & label:empty { display: none; }
 
+    & :is(label, .widget) > :is(input, textarea, select, div) { margin-left: 1em !important; }
     & .widget > :is(input, textarea, select, div) { margin-left: 1em !important; }
+    & .widget label > :is(input, textarea, select, div) { margin-left: 0 !important; }
+
     & .widget.annotate {
         padding: 1em;
         background: #ff660022;
