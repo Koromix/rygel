@@ -3994,13 +3994,19 @@ const char *GetHomeDirectory()
         HANDLE token = nullptr;
         DWORD len = 0;
 
+        HMODULE module = LoadLibraryA("userenv");
+        K_DEFER { FreeLibrary(module); };
+
         OpenProcessToken(GetCurrentProcess(), TOKEN_READ, &token);
         K_DEFER { CloseHandle(token); };
 
         if (win32_utf8) {
             len = K_SIZE(home_dir);
 
-            GetUserProfileDirectoryA(token, home_dir, &len);
+            BOOL (*GetUserProfileDirectoryA_)(HANDLE hToken, const char *lpProfileDir, DWORD *lpcchSize);
+            GetUserProfileDirectoryA_ = (decltype(GetUserProfileDirectoryA_))GetProcAddress(module, "GetUserProfileDirectoryA");
+
+            GetUserProfileDirectoryA_(token, home_dir, &len);
             K_CRITICAL(len && len <= K_SIZE(home_dir), "Failed to retrieve user profile path");
 
             len--;
@@ -4008,7 +4014,10 @@ const char *GetHomeDirectory()
             wchar_t dir_w[K_SIZE(home_dir)];
             DWORD len_w = K_LEN(dir_w);
 
-            GetUserProfileDirectoryW(token, dir_w, &len_w);
+            BOOL (*GetUserProfileDirectoryW_)(HANDLE hToken, const wchar_t *lpProfileDir, DWORD *lpcchSize);
+            GetUserProfileDirectoryW_ = (decltype(GetUserProfileDirectoryW_))GetProcAddress(module, "GetUserProfileDirectoryW");
+
+            GetUserProfileDirectoryW_(token, dir_w, &len_w);
             K_CRITICAL(len_w && len_w <= K_LEN(dir_w), "Failed to retrieve user profile path");
 
             len = (DWORD)ConvertWin32WideToUtf8(MakeSpan(dir_w, len_w), home_dir);

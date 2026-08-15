@@ -143,7 +143,7 @@ target_compile_definitions(koffi PRIVATE FELIX_TARGET=koffi NAPI_VERSION=NAPI_VE
 
 if(WIN32)
     target_compile_definitions(koffi PRIVATE _CRT_SECURE_NO_WARNINGS _CRT_NONSTDC_NO_DEPRECATE)
-    target_link_libraries(koffi PRIVATE ws2_32 userenv)
+    target_link_libraries(koffi PRIVATE ws2_32)
 endif()
 
 if(UNIX AND NOT APPLE)
