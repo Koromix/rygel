@@ -69,6 +69,8 @@ button {
         --button_color: var(--draft_color);
         --color: #383838;
         font-weight: bold;
+
+        &:not(.active) img { filter: invert(75%); }
     }
     &.secondary {
         --button_color: #9bcbc9;

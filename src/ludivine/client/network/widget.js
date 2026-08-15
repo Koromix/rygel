@@ -519,6 +519,8 @@ function NetworkWidget(app, mod, world) {
     async function createPersons() {
         let text = '';
 
+        let show_help = (persons.length == 1);
+
         for (;;) {
             let names = await UI.dialog({
                 overlay: true,
@@ -532,11 +534,13 @@ function NetworkWidget(app, mod, world) {
                         </div>
 
                         <div class="tab">
-                            <div class="help">
-                                <img src=${ASSETS['pictures/help1']} alt="" />
-                                <p>Commencez par saisir les <b>noms ou libellés</b> de toutes les personnes auxquelles vous pensez. Séparez les par des espaces, des virgules ou des nouvelles lignes.
-                                <p><i>Exemple : « Maman Papa Mitchouk, Apolline »</i>
-                            </div>
+                            ${show_help ? html`
+                                <div class="help">
+                                    <img src=${ASSETS['pictures/help1']} alt="" />
+                                    <p>Commencez par saisir les <b>noms ou libellés</b> de toutes les personnes auxquelles vous pensez. Séparez les par des espaces, des virgules ou des nouvelles lignes.
+                                    <p><i>Exemple : « Maman Papa Mitchouk, Apolline »</i>
+                                </div>
+                            ` : ''}
 
                             <div class="box">
                                 <label>
@@ -581,15 +585,17 @@ function NetworkWidget(app, mod, world) {
                             </div>
 
                             <div class="tab">
-                                <div class="help right">
-                                    <img src=${ASSETS['pictures/help2']} alt="" />
-                                    <p>Pour chacune de ces personnes, indiquez :
-                                    <ul>
-                                        <li>Le <b>type de relation</b>
-                                        <li>La <b>qualité de la relation</b>
-                                    </ul>
-                                    <p>Validez vos choix pour ajouter ces personnes à votre sociogramme. Vous pourrez toujours <b>modifier vos choix</b> en cliquant sur chaque personne du sociogramme !
-                                </div>
+                                ${show_help ? html`
+                                    <div class="help">
+                                        <img src=${ASSETS['pictures/help1']} alt="" />
+                                        <p>Pour chacune de ces personnes, indiquez :
+                                        <ul>
+                                            <li>Le <b>type de relation</b>
+                                            <li>La <b>qualité de la relation</b>
+                                        </ul>
+                                        <p>Validez vos choix pour ajouter ces personnes à votre sociogramme. Vous pourrez toujours <b>modifier vos choix</b> en cliquant sur chaque personne du sociogramme !
+                                    </div>
+                                ` : ''}
 
                                 <div class="box">
                                     ${items.map(it => html`

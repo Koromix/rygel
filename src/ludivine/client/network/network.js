@@ -595,8 +595,22 @@ function NetworkModule(app, study, page) {
         if (highlight == null)
             highlight = [];
 
-        for (let el of highlight)
+        for (let el of highlight) {
+            let add_primary = !el.classList.contains('primary');
+
+            if (add_primary)
+                el.classList.add('primary');
             el.classList.add('highlight');
+
+            let revert = () => {
+                if (add_primary)
+                    el.classList.remove('primary');
+                el.classList.remove('highlight');
+            };
+
+            el.addEventListener('click', revert, { once: true });
+            setTimeout(revert, 20000);
+        }
         wrapper.classList.add('guide');
 
         await new Promise((resolve, reject) => {
@@ -632,8 +646,6 @@ function NetworkModule(app, study, page) {
         overlay = null;
         self.render();
 
-        for (let el of highlight)
-            el.classList.remove('highlight');
         wrapper.classList.remove('guide');
 
         known_guides.add(key);
