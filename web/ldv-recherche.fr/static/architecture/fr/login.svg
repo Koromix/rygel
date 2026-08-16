@@ -186,7 +186,7 @@
        clip-path="url(#cb8761f8f7)"
        id="g9656">
       <path
-         fill="#364b9b"
+         fill="#369692"
          d="m 658.71484,87.398438 h 114.4336 v 72.335932 h -114.4336 z m 0,0"
          fill-opacity="1"
          fill-rule="nonzero"
@@ -201,7 +201,7 @@
        clip-path="url(#e199564179)"
        id="g9702">
       <path
-         fill="#364b9b"
+         fill="#369692"
          d="m 658.71484,358.17578 h 114.4336 v 72.33203 h -114.4336 z m 0,0"
          fill-opacity="1"
          fill-rule="nonzero"
@@ -224,7 +224,7 @@
      id="g9220"
      transform="matrix(0.70711088,0.70711088,-0.63964634,0.63964634,151.84526,-49.303632)">
     <path
-       fill="#dac068"
+       fill="#f3c551"
        d="M 52.273438,28.308594 H 117.38281 V 100.28516 H 52.273438 Z m 0,0"
        fill-opacity="1"
        fill-rule="nonzero"
@@ -365,7 +365,7 @@
      id="g9620"
      transform="matrix(0.70711088,0.70711088,-0.63968102,0.63968102,347.8995,-349.24364)">
     <path
-       fill="#dac068"
+       fill="#f3c551"
        d="m 52.273438,497.25 h 65.109372 v 71.97266 H 52.273438 Z m 0,0"
        fill-opacity="1"
        fill-rule="nonzero"
@@ -506,14 +506,14 @@
        x="171.58142"
        y="58.276409">UID</tspan></text>
   <rect
-     style="fill:#eba17e;fill-opacity:1;stroke-width:4.66527"
+     style="fill:#115881;fill-opacity:1;stroke-width:4.66527"
      id="rect4677-5-6-2-9"
      width="160.59399"
      height="35.522003"
      x="-0.15008351"
      y="300.59244" />
   <rect
-     style="fill:#eba17e;fill-opacity:1;stroke-width:6.06699"
+     style="fill:#115881;fill-opacity:1;stroke-width:6.06699"
      id="rect4677-5-6-2-1"
      width="158.08696"
      height="61.027519"
