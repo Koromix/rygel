@@ -5,7 +5,11 @@ var __getOwnPropNames = Object.getOwnPropertyNames;
 var __getProtoOf = Object.getPrototypeOf;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
 var __commonJS = (cb, mod) => function __require() {
-  return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+  try {
+    return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+  } catch (e) {
+    throw mod = 0, e;
+  }
 };
 var __copyProps = (to, from, except, desc) => {
   if (from && typeof from === "object" || typeof from === "function") {
@@ -423,7 +427,7 @@ var require_timezone = __commonJS({
       "use strict";
       var t = { year: 0, month: 1, day: 2, hour: 3, minute: 4, second: 5 }, e = {};
       return function(n, i, o) {
-        var r, a = function(t2, n2, i2) {
+        var r, u = function(t2, n2, i2) {
           void 0 === i2 && (i2 = {});
           var o2 = new Date(t2), r2 = (function(t3, n3) {
             void 0 === n3 && (n3 = {});
@@ -431,25 +435,25 @@ var require_timezone = __commonJS({
             return r3 || (r3 = new Intl.DateTimeFormat("en-US", { hour12: false, timeZone: t3, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", timeZoneName: i3 }), e[o3] = r3), r3;
           })(n2, i2);
           return r2.formatToParts(o2);
-        }, u = function(e2, n2) {
-          for (var i2 = a(e2, n2), r2 = [], u2 = 0; u2 < i2.length; u2 += 1) {
-            var f2 = i2[u2], s2 = f2.type, m = f2.value, c = t[s2];
+        }, a = function(e2, n2) {
+          for (var i2 = u(e2, n2), r2 = [], a2 = 0; a2 < i2.length; a2 += 1) {
+            var f2 = i2[a2], s2 = f2.type, m = f2.value, c = t[s2];
             c >= 0 && (r2[c] = parseInt(m, 10));
           }
-          var d = r2[3], l = 24 === d ? 0 : d, h = r2[0] + "-" + r2[1] + "-" + r2[2] + " " + l + ":" + r2[4] + ":" + r2[5] + ":000", v = +e2;
+          var l = r2[3], d = 24 === l ? 0 : l, h = r2[0] + "-" + r2[1] + "-" + r2[2] + " " + d + ":" + r2[4] + ":" + r2[5] + ":000", v = +e2;
           return (o.utc(h).valueOf() - (v -= v % 1e3)) / 6e4;
         }, f = i.prototype;
         f.tz = function(t2, e2) {
           void 0 === t2 && (t2 = r);
-          var n2, i2 = this.utcOffset(), a2 = this.toDate(), u2 = a2.toLocaleString("en-US", { timeZone: t2 }), f2 = Math.round((a2 - new Date(u2)) / 1e3 / 60), s2 = 15 * -Math.round(a2.getTimezoneOffset() / 15) - f2;
+          var n2, i2 = this.utcOffset(), u2 = this.toDate(), f2 = u2.toLocaleString("en-US", { timeZone: t2 }), s2 = a(+u2, t2);
           if (!Number(s2)) n2 = this.utcOffset(0, e2);
-          else if (n2 = o(u2, { locale: this.$L }).$set("millisecond", this.$ms).utcOffset(s2, true), e2) {
+          else if (n2 = o(f2, { locale: this.$L }).$set("millisecond", this.$ms).utcOffset(s2, true), e2) {
             var m = n2.utcOffset();
             n2 = n2.add(i2 - m, "minute");
           }
           return n2.$x.$timezone = t2, n2;
         }, f.offsetName = function(t2) {
-          var e2 = this.$x.$timezone || o.tz.guess(), n2 = a(this.valueOf(), e2, { timeZoneName: t2 }).find((function(t3) {
+          var e2 = this.$x.$timezone || o.tz.guess(), n2 = u(this.valueOf(), e2, { timeZoneName: t2 }).find((function(t3) {
             return "timezonename" === t3.type.toLowerCase();
           }));
           return n2 && n2.value;
@@ -460,15 +464,15 @@ var require_timezone = __commonJS({
           var n2 = o(this.format("YYYY-MM-DD HH:mm:ss:SSS"), { locale: this.$L });
           return s.call(n2, t2, e2).tz(this.$x.$timezone, true);
         }, o.tz = function(t2, e2, n2) {
-          var i2 = n2 && e2, a2 = n2 || e2 || r, f2 = u(+o(), a2);
-          if ("string" != typeof t2) return o(t2).tz(a2);
+          var i2 = n2 && e2, u2 = n2 || e2 || r, f2 = a(+o(), u2);
+          if ("string" != typeof t2) return o(t2).tz(u2);
           var s2 = (function(t3, e3, n3) {
-            var i3 = t3 - 60 * e3 * 1e3, o2 = u(i3, n3);
+            var i3 = t3 - 60 * e3 * 1e3, o2 = a(i3, n3);
             if (e3 === o2) return [i3, e3];
-            var r2 = u(i3 -= 60 * (o2 - e3) * 1e3, n3);
+            var r2 = a(i3 -= 60 * (o2 - e3) * 1e3, n3);
             return o2 === r2 ? [i3, o2] : [t3 - 60 * Math.min(o2, r2) * 1e3, Math.max(o2, r2)];
-          })(o.utc(t2, i2).valueOf(), f2, a2), m = s2[0], c = s2[1], d = o(m).utcOffset(c);
-          return d.$x.$timezone = a2, d;
+          })(o.utc(t2, i2).valueOf(), f2, u2), m = s2[0], c = s2[1], l = o(m).utcOffset(c);
+          return l.$x.$timezone = u2, l;
         }, o.tz.guess = function() {
           return Intl.DateTimeFormat().resolvedOptions().timeZone;
         }, o.tz.setDefault = function(t2) {
