@@ -5,6 +5,8 @@ import { UI } from './ui.js';
 
 import './admin.css';
 
+const IMAGE_HEIGHT = 640;
+
 let admin = false;
 let news = null;
 
@@ -157,12 +159,22 @@ function deleteNews(item) {
 }
 
 async function updateImage(item) {
-    let file = await Util.loadFile();
-    let src = await loadImage(file);
+    let img = null;
 
-    let height = 640;
-    let width = Math.round(src.width / src.height * height);
-    let img = await resizeImage(src, width, height);
+    // Resize if needed
+    {
+        let file = await Util.loadFile();
+        let src = await loadImage(file);
+
+        if (src.height != IMAGE_HEIGHT) {
+            let height = IMAGE_HEIGHT;
+            let width = Math.round(src.width / src.height * height);
+
+            img = await resizeImage(src, width, height);
+        } else {
+            img = file;
+        }
+    }
 
     let buf = await img.arrayBuffer();
     let base64 = Base64.toBase64(buf);
@@ -195,7 +207,7 @@ async function resizeImage(img, width, height) {
     ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(img, 0, 0, width, height);
 
-    let blob = await canvas.convertToBlob({ type: 'image/webp', quality: 0.95 });
+    let blob = await canvas.convertToBlob({ type: 'image/webp', quality: 0.9 });
     return blob;
 }
 
