@@ -14,7 +14,7 @@ Le processus de mouvement oculaire en EMDR facilite ce retraitement, **stimulant
 
 <div class="quotes">
     <div class="content" style="background: #4d9290;">
-        <img src="{{ ASSET static/clubhouse/talk.png }}" alt="" />
+        <img src="{{ ASSET static/clubhouse/talk.webp }}" alt="" />
         <div>
             <p>« Imaginez que votre esprit est une bibliothèque vaste mais désorganisée, où chaque livre représente un souvenir. Certains livres, notamment ceux relatant des expériences difficiles, sont mal rangés.</p>
             <p>L'EMDR agit comme un bibliothécaire qui retrouve ces livres, les réexamine et les réorganise de manière cohérente, facilitant ainsi un accès moins perturbant à ces souvenirs. »

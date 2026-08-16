@@ -11,7 +11,7 @@ Ces thérapies mettent en lumière le rôle important que jouent les problèmes 
 <div class="quotes">
     <div class="intro">Expliquez-le comme ceci...</div>
     <div class="content" style="background: #c973c3;">
-        <img src="{{ ASSET static/clubhouse/talk.png }}" alt="" />
+        <img src="{{ ASSET static/clubhouse/talk.webp }}" alt="" />
         <div>
             <p>« Imaginez la thérapie familiale ou de couple comme une séance d'orchestration où la famille ou le couple est un groupe de musiciens.
             <p>Chacun possède son propre instrument et sa manière unique de jouer, mais pour créer une mélodie harmonieuse, ils doivent apprendre à jouer ensemble. Le thérapeute agit comme un chef d'orchestre, aidant chaque membre à ajuster son rythme, à écouter les autres, et à comprendre le rôle de chacun dans l'ensemble.

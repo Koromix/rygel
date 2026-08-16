@@ -12,16 +12,16 @@ Le site de [Psycom](https://www.psycom.org/) peut vous aider à vous orienter et
 # Brochures
 
 <div class="shelf">
-    <a href="https://mpnext.cdn.prismic.io/mpnext/3b9de344-fcc0-4070-9b66-a30002604756_Bipolarite%CC%81s.pdf" target="_blank"><img src="{{ ASSET static/fiches/usagers/mieux_vivre_avec_un_trouble_bipolaire.jpg }}" alt="Mieux vivre avec un trouble bipolaire" height="380" /></a>
-    <a href="https://mpnext.cdn.prismic.io/mpnext/e7a23b94-b719-4e29-acb6-735068766342_Depression.pdf" target="_blank"><img src="{{ ASSET static/fiches/usagers/mieux_vivre_avec_la_depression.jpg }}" alt="Mieux vivre avec la dépression" height="380" /></a>
-    <a href="https://mpnext.cdn.prismic.io/mpnext/1d7a4b18-823a-449c-a9a5-c3e12a57ca89_Trouble+Anxieux.pdf" target="_blank"><img src="{{ ASSET static/fiches/usagers/mieux_vivre_avec_un_trouble_anxieux.jpg }}" alt="Mieux vivre avec un trouble anxieux" height="380" /></a>
+    <a href="https://mpnext.cdn.prismic.io/mpnext/3b9de344-fcc0-4070-9b66-a30002604756_Bipolarite%CC%81s.pdf" target="_blank"><img src="{{ ASSET static/fiches/usagers/mieux_vivre_avec_un_trouble_bipolaire.webp }}" alt="Mieux vivre avec un trouble bipolaire" height="380" /></a>
+    <a href="https://mpnext.cdn.prismic.io/mpnext/e7a23b94-b719-4e29-acb6-735068766342_Depression.pdf" target="_blank"><img src="{{ ASSET static/fiches/usagers/mieux_vivre_avec_la_depression.webp }}" alt="Mieux vivre avec la dépression" height="380" /></a>
+    <a href="https://mpnext.cdn.prismic.io/mpnext/1d7a4b18-823a-449c-a9a5-c3e12a57ca89_Trouble+Anxieux.pdf" target="_blank"><img src="{{ ASSET static/fiches/usagers/mieux_vivre_avec_un_trouble_anxieux.webp }}" alt="Mieux vivre avec un trouble anxieux" height="380" /></a>
 </div>
 
 # Livres
 
 <div class="shelf">
-    <a href="https://www.dunod.com/sciences-humaines-et-sociales/mieux-vivre-avec-un-trouble-bipolaire-comment-reconnaitre-et-traiter-0" target="_blank"><img src="{{ ASSET static/livres/mieux_vivre_avec_un_trouble_bipolaire.jpg }}" alt="Mieux vivre avec un trouble bipolaire - Comment le reconnaître et le traiter" height="380" /></a>
-    <a href="https://www.odilejacob.fr/catalogue/psychologie/psychiatrie/idees-noires-et-tentatives-de-suicide_9782738117250.php" target="_blank"><img src="{{ ASSET static/livres/idees_noires_et_tentatives_de_suicide.jpg }}" alt="Idées noires et tentatives de suicide - Réagir et faire face" height="380" /></a>
+    <a href="https://www.dunod.com/sciences-humaines-et-sociales/mieux-vivre-avec-un-trouble-bipolaire-comment-reconnaitre-et-traiter-0" target="_blank"><img src="{{ ASSET static/livres/mieux_vivre_avec_un_trouble_bipolaire.webp }}" alt="Mieux vivre avec un trouble bipolaire - Comment le reconnaître et le traiter" height="380" /></a>
+    <a href="https://www.odilejacob.fr/catalogue/psychologie/psychiatrie/idees-noires-et-tentatives-de-suicide_9782738117250.php" target="_blank"><img src="{{ ASSET static/livres/idees_noires_et_tentatives_de_suicide.webp }}" alt="Idées noires et tentatives de suicide - Réagir et faire face" height="380" /></a>
 </div>
 
 # Podcasts
@@ -36,9 +36,9 @@ Radiofrance propose différents podcasts sur les troubles bipolaires et sur la d
 # Romans graphiques
 
 <div class="shelf">
-    <a href="https://www.babelio.com/livres/Williams-Je-vais-mieux-merci--Vaincre-la-depression/1046824" target="_blank"><img src="{{ ASSET static/livres/je_vais_mieux_merci.jpg }}" alt="Je vais mieux merci : vaincre la dépression" height="380" /></a>
-    <a href="https://www.babelio.com/livres/Lubie-Goupil-ou-face/885488" target="_blank"><img src="{{ ASSET static/livres/goupil_ou_face.jpg }}" alt="Goupil ou face : comment apprivoiser sa cyclothymie" height="380" /></a>
-    <a href="https://www.babelio.com/livres/Forney-Une-case-en-moins--La-depression-Michel-Ange-et-m/538167" target="_blank"><img src="{{ ASSET static/livres/une_case_en_moins.jpg }}" alt="Une case en moins : la dépression, Michel-Ange et moi" height="380" /></a>
+    <a href="https://www.babelio.com/livres/Williams-Je-vais-mieux-merci--Vaincre-la-depression/1046824" target="_blank"><img src="{{ ASSET static/livres/je_vais_mieux_merci.webp }}" alt="Je vais mieux merci : vaincre la dépression" height="380" /></a>
+    <a href="https://www.babelio.com/livres/Lubie-Goupil-ou-face/885488" target="_blank"><img src="{{ ASSET static/livres/goupil_ou_face.webp }}" alt="Goupil ou face : comment apprivoiser sa cyclothymie" height="380" /></a>
+    <a href="https://www.babelio.com/livres/Forney-Une-case-en-moins--La-depression-Michel-Ange-et-m/538167" target="_blank"><img src="{{ ASSET static/livres/une_case_en_moins.webp }}" alt="Une case en moins : la dépression, Michel-Ange et moi" height="380" /></a>
 </div>
 
 # Témoignages

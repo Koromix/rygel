@@ -5,7 +5,7 @@
 L'[UNAFAM](https://www.unafam.org/) est une association qui accompagne les familles adhérentes au sein de 305 points d'accueil, pour briser l’isolement et leur permettre de retrouver la force d’avancer.
 
 <div class="shelf">
-    <a href="https://www.unafam.org/" target="_blank"><img src="{{ ASSET static/partners/unafam.png }}" alt="UNAFAM" /></a>
+    <a href="https://www.unafam.org/" target="_blank"><img src="{{ ASSET static/partners/unafam.webp }}" alt="UNAFAM" /></a>
 </div>
 
 ## Autres ressources
@@ -24,7 +24,7 @@ D'autres ressources sont disponibles, dont notamment :
 L'association [Clubhouse France](https://www.clubhousefrance.org/) est une association qui lutte contre la stigmatisation et l’isolement des personnes en situation de handicap psychique, et facilite leur réinsertion sociale et professionnelle.
 
 <div class="shelf">
-    <a href="https://www.clubhousefrance.org/" target="_blank"><img src="{{ ASSET static/partners/clubhouse.png }}" alt="Clubhouse France" /></a>
+    <a href="https://www.clubhousefrance.org/" target="_blank"><img src="{{ ASSET static/partners/clubhouse.webp }}" alt="Clubhouse France" /></a>
 </div>
 
 ## Annuaires

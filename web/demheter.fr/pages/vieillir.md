@@ -10,7 +10,7 @@ L’équipe médicale de DEMHETER apporte ici **quelques éléments de réponse*
 
 <div class="quotes">
     <div class="content">
-        <img src="{{ ASSET static/clubhouse/question.png }}" alt="" />
+        <img src="{{ ASSET static/clubhouse/question.webp }}" alt="" />
         <div>« Quels sont les effets des traitements pris sur le long terme sur l'espérance de vie ? »</div>
     </div>
 </div>
@@ -23,7 +23,7 @@ Suivre un <u>traitement permet de réduire ce risque</u> et d’améliorer la qu
 
 <div class="quotes">
     <div class="content">
-        <img src="{{ ASSET static/clubhouse/question.png }}" alt="" />
+        <img src="{{ ASSET static/clubhouse/question.webp }}" alt="" />
         <div>« Quels sont les effets des traitements pris sur le long terme sur le métabolisme ? »</div>
     </div>
 </div>
@@ -33,7 +33,7 @@ Chaque individu peut réagir différemment aux traitements.
 La plupart des médicaments sont métabolisés par le foie : une surveillance de la **tolérance hépatique est parfois nécessaire** lorsque l’on prend un traitement sur le long court.
 
 <p>
-    <img src="{{ ASSET static/clubhouse/lithium.png }}" class="inline" width="64" height="64" alt="" />
+    <img src="{{ ASSET static/clubhouse/lithium.webp }}" class="inline" width="64" height="64" alt="" />
     Concernant le <b>lithium</b>, il est nécessaire de réaliser un bilan sanguin régulier pour surveiller la tolérance du rein et de la thyroïde. En cas d’anomalie de votre bilan sanguin, votre médecin vous adressera à un spécialiste.
 </p>
 
@@ -41,7 +41,7 @@ La plupart des médicaments sont métabolisés par le foie : une surveillance de
 
 <div class="quotes">
     <div class="content">
-        <img src="{{ ASSET static/clubhouse/question.png }}" alt="" />
+        <img src="{{ ASSET static/clubhouse/question.webp }}" alt="" />
         <div>« Existe-t-il un lien entre la prise de traitements, comme les neuroleptiques, et les troubles de la mémoire/maladie d'Alzheimer ? »</div>
     </div>
 </div>
@@ -53,7 +53,7 @@ En revanche, à ce jour on ne retrouve pas :
 - <u>Pas d'association entre la prise d’antidépresseurs et la démence</u> (ou maladie d'Alzheimer) [^2]
 - <u>Pas d'association entre les stabilisateurs de l'humeur et la démence</u> (ou maladie d'Alzheimer) [^2]
 
-<img src="{{ ASSET static/clubhouse/people2.png }}" class="inline" width="99" height="149" alt="" />
+<img src="{{ ASSET static/clubhouse/people2.webp }}" class="inline" width="99" height="149" alt="" />
 
 La prise de **traitements anticholinergiques** peut temporairement entraîner des troubles cognitifs. Certaines études tendent vers la conclusion que la prise simultanée de plusieurs traitements anticholinergiques au long court (certains antidépresseurs, antihistaminiques et traitements pour décontracter la vessie) pourrait causer des troubles cognitifs persistants, même après l’arrêt de ces traitements [^3].
 
@@ -63,7 +63,7 @@ La prise de **traitements anticholinergiques** peut temporairement entraîner de
 
 <div class="quotes">
     <div class="content">
-        <img src="{{ ASSET static/clubhouse/question.png }}" alt="" />
+        <img src="{{ ASSET static/clubhouse/question.webp }}" alt="" />
         <div>« La perte de libido peut-elle être accentuée par la prise de traitements sur le long terme ? »</div>
     </div>
 </div>
@@ -78,14 +78,14 @@ Les **troubles de l’humeur, l’âge et les maladies cardiovasculaires** peuve
 
 <div class="quotes">
     <div class="content">
-        <img src="{{ ASSET static/clubhouse/question.png }}" alt="" />
+        <img src="{{ ASSET static/clubhouse/question.webp }}" alt="" />
         <div>« Avec l'âge, les troubles de l'humeur peuvent-ils se stabiliser ou au contraire le risque de rechute est-il plus important ? »</div>
     </div>
 </div>
 
 Avec l’âge, les troubles de l’humeur peuvent être **plus sévères ou pharmaco-résistants** en cas de rechute.
 
-<img src="{{ ASSET static/clubhouse/people3.png }}" class="inline right" width="131" height="121" alt="" />
+<img src="{{ ASSET static/clubhouse/people3.webp }}" class="inline right" width="131" height="121" alt="" />
 
 Cependant, une <u>bonne hygiène de vie</u> (sommeil, alimentation équilibrée, activité physique régulière et adaptée à vos capacités physiques) associée à un suivi et à une prise en charge adaptée participent à stabiliser un trouble de l’humeur.
 

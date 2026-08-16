@@ -24,7 +24,7 @@ Sans les explications d’un médecin, les **personnes se retrouvent seules** fa
 <div class="quotes">
     <div class="intro">Ils témoignent...</div>
     <div class="content" style="background: #ec9d36;">
-        <img src="{{ ASSET static/clubhouse/talk.png }}" alt="" />
+        <img src="{{ ASSET static/clubhouse/talk.webp }}" alt="" />
         <div>
             <p>« Annoncer le diagnostic permet d’établir une relation thérapeutique de confiance et
         de traverser le diagnostic ensemble »
@@ -39,7 +39,7 @@ Dans ces conditions, **deux écueils possibles** : le refus du diagnostic ou la 
 
 # ... pour accepter son trouble
 
-<img src="{{ ASSET static/clubhouse/people1.png }}" class="inline" width="116" height="133" alt="" />
+<img src="{{ ASSET static/clubhouse/people1.webp }}" class="inline" width="116" height="133" alt="" />
 
 L’accès à un diagnostic clair permet non seulement de répondre **au besoin de savoir** de la personne mais lui donne aussi la possibilité, si elle le souhaite, d’annoncer et d’expliquer son trouble à ses proches.
 
@@ -48,7 +48,7 @@ Le trouble psychique peut être vécu comme un **« tabou familial »** : la com
 <div class="quotes">
     <div class="intro">Ils témoignent...</div>
     <div class="content" style="background: #4d9290;">
-        <img src="{{ ASSET static/clubhouse/talk.png }}" alt="" />
+        <img src="{{ ASSET static/clubhouse/talk.webp }}" alt="" />
         <div>
             <p>« Sans un diagnostic clair, on ne se sent pas légitime de parler aux autres de son trouble psychique »
             <p class="name">Victoria

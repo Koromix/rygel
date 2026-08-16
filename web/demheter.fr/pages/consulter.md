@@ -5,17 +5,17 @@ Lors de cet atelier, les membres du Clubhouse de Lille ont fait part de leurs **
 # Réticences et blocages
 
 <div class="circles bugs">
-    <div><img src="{{ ASSET static/clubhouse/cross.png }}" alt="" /></div>
+    <div><img src="{{ ASSET static/clubhouse/cross.webp }}" alt="" /></div>
     <div>
         <p>La peur de se confier
         <p>La peur du jugement
     </div>
-    <div><img src="{{ ASSET static/clubhouse/sad.png }}" alt="" /></div>
+    <div><img src="{{ ASSET static/clubhouse/sad.webp }}" alt="" /></div>
     <div>
         <p>La honte de consulter
         <p class="small">liée à la stigmatisation des troubles psychiques et à<br> l'auto-stigmatisation
     </div>
-    <div><img src="{{ ASSET static/clubhouse/question.png }}" alt="" /></div>
+    <div><img src="{{ ASSET static/clubhouse/question.webp }}" alt="" /></div>
     <div>
         <p>La peur
         <p>La méfiance vis-à-vis des traitements
@@ -34,17 +34,17 @@ Lors de cet atelier, les membres du Clubhouse de Lille ont fait part de leurs **
 # Franchir le pas
 
 <div class="circles tips">
-    <div><img src="{{ ASSET static/clubhouse/check.png }}" alt="" /></div>
+    <div><img src="{{ ASSET static/clubhouse/check.webp }}" alt="" /></div>
     <div>
         <p>Demander conseil<br> à son médecin généraliste
         <p class="small">pour être orienté⸱e vers un psychiatre/psychologue</p>
     </div>
-    <div><img src="{{ ASSET static/clubhouse/talk.png }}" alt="" /></div>
+    <div><img src="{{ ASSET static/clubhouse/talk.webp }}" alt="" /></div>
     <div>
         <p>Demander conseil<br> à un autre professionnel
         <p class="small">comme un infirmier référent
     </div>
-    <div><img src="{{ ASSET static/clubhouse/hands.png }}" alt="" /></div>
+    <div><img src="{{ ASSET static/clubhouse/hands.webp }}" alt="" /></div>
     <div>
         <p>En parler avec un pair-aidant ou un médiateur de santé pair</p>
         <p class="small">pour échanger sur son expérience<br> et être rassuré</p>
@@ -52,7 +52,7 @@ Lors de cet atelier, les membres du Clubhouse de Lille ont fait part de leurs **
     <div>
         <p>Ne pas se décourager à la 1ère tentative/consultation</p>
     </div>
-    <div><img src="{{ ASSET static/clubhouse/check.png }}" alt="" /></div>
+    <div><img src="{{ ASSET static/clubhouse/check.webp }}" alt="" /></div>
     <div>
         <p>Changer de psychiatre ou psychologue si on ne se sent pas à l'aise</p>
     </div>

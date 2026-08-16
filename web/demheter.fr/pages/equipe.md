@@ -1,19 +1,19 @@
 <div class="team">
     <div>
         <div class="name">Pr Ali AMAD</div>
-        <img src="{{ ASSET static/equipe/ali_amad.jpg }}" alt="" />
+        <img src="{{ ASSET static/equipe/ali_amad.webp }}" alt="" />
         <div class="title">Psychiatre</div>
         <div class="mission">Référent médical</div>
     </div>
     <div>
         <div class="name">Pre Mathilde HORN</div>
-        <img src="{{ ASSET static/equipe/mathilde_horn.jpg }}" alt="" />
+        <img src="{{ ASSET static/equipe/mathilde_horn.webp }}" alt="" />
         <div class="title">Psychiatre</div>
         <div class="mission">Référente médicale</div>
     </div>
     <div>
         <div class="name">Dr Briac BATAILLEY</div>
-        <img src="{{ ASSET static/equipe/briac_batailley.jpg }}" alt="" />
+        <img src="{{ ASSET static/equipe/briac_batailley.webp }}" alt="" />
         <div class="title">Psychiatre</div>
         <div class="mission">Coordinateur médical</div>
         <div class="mission">Consultations troubles de l'humeur résistantes</div>
@@ -25,7 +25,7 @@
 <div class="team">
     <div>
         <div class="name">Charlotte MASSART</div>
-        <img src="{{ ASSET static/equipe/avatar.png }}" alt="" />
+        <img src="{{ ASSET static/equipe/avatar.webp }}" alt="" />
         <div class="title">Psychologue</div>
         <div class="mission">Formation des psychologues du réseau</div>
         <div class="mission">Mise en place d'évaluations psychologiques standardisées</div>
@@ -33,21 +33,21 @@
     </div>
     <div>
         <div class="name">Maxime LOGIER</div>
-        <img src="{{ ASSET static/equipe/maxime_logier.jpg }}" alt="" />
+        <img src="{{ ASSET static/equipe/maxime_logier.webp }}" alt="" />
         <div class="title">Attaché de recherche clinique</div>
         <div class="mission">Communication</div>
         <div class="mission">Gestion des protocoles de recherche</div>
     </div>
     <div>
         <div class="name">Dre Clémence NINEUIL</div>
-        <img src="{{ ASSET static/equipe/clemence_nineuil.jpg }}" alt="" />
+        <img src="{{ ASSET static/equipe/clemence_nineuil.webp }}" alt="" />
         <div class="title">Psychologue - Attachée de recherche clinique</div>
         <div class="mission">Réalisation d’évaluations cliniques et neuropsychologiques</div>
         <div class="mission">Gestion des protocoles de recherche</div>
     </div>
     <div>
         <div class="name">Dr Niels MARTIGNENE</div>
-        <img src="{{ ASSET static/equipe/niels_martignene.jpg }}" alt="" />
+        <img src="{{ ASSET static/equipe/niels_martignene.webp }}" alt="" />
         <div class="title">Médecin de santé publique</div>
         <div class="mission">Site internet</div>
     </div>
@@ -56,28 +56,28 @@
 <div class="team">
     <div>
         <div class="name">Dre Maéva MAGNAT</div>
-        <img src="{{ ASSET static/equipe/avatar.png }}" alt="" />
+        <img src="{{ ASSET static/equipe/avatar.webp }}" alt="" />
         <div class="title">Psychiatre</div>
         <div class="mission">Consultations troubles de l'humeur résistantes</div>
         <div class="mission">Activité d'ECT</div>
     </div>
     <div>
         <div class="name">Dr Valentin COUESNON</div>
-        <img src="{{ ASSET static/equipe/avatar.png }}" alt="" />
+        <img src="{{ ASSET static/equipe/avatar.webp }}" alt="" />
         <div class="title">Psychiatre</div>
         <div class="mission">Consultations troubles de l'humeur résistantes</div>
         <div class="mission">Activité d'ECT</div>
     </div>
     <div>
         <div class="name">Dre Jehan ALLYBOKUS</div>
-        <img src="{{ ASSET static/equipe/jehan_allybokus.jpg }}" alt="" />
+        <img src="{{ ASSET static/equipe/jehan_allybokus.webp }}" alt="" />
         <div class="title">Psychiatre</div>
         <div class="mission">Consultations troubles de l'humeur résistantes</div>
         <div class="mission">Activité d'ECT</div>
     </div>
     <div>
         <div class="name">Dr Tristan GAGGIOLI</div>
-        <img src="{{ ASSET static/equipe/avatar.png }}" alt="" />
+        <img src="{{ ASSET static/equipe/avatar.webp }}" alt="" />
         <div class="title">Psychiatre</div>
         <div class="mission">Consultations troubles de l'humeur résistantes</div>
         <div class="mission">Activité d'ECT</div>
