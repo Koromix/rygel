@@ -51,7 +51,7 @@ async function uploadVault(ref) {
 
 async function openVault(ref, key, lock) {
     let url = BUNDLES['sqlite3worker.js'];
-    await sqlite3.init(url);
+    await sqlite3.init(url, { opfs: ref.type == 'opfs' });
 
     let db = await sqlite3.create(lock);
 
