@@ -8,7 +8,7 @@ html {
     --check_color: #369692;
 
     --empty_color: var(--box_color);
-    --draft_color: #f6d153;
+    --draft_color: #f0c250;
     --done_color: white;
 }
 
