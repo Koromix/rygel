@@ -21,13 +21,34 @@
                 margin: 64px 0 1em 0;
                 position: relative;
             }
-            #news > img {
+            #news > span {
+                display: block;
                 position: absolute;
                 width: 32px;
                 height: 32px;
                 top: calc(50% - 16px);
                 cursor: pointer;
                 z-index: 2;
+                background: #112a2c;
+                border-radius: 16px;
+            }
+            #news > span::after {
+                position: absolute;
+                left: 12px;
+                top: 12px;
+                width: 8px;
+                height: 8px;
+                content: '';
+                border-top: 2px solid white;
+                border-left: 2px solid white;
+            }
+            #news > span.left {
+                left: 16px;
+                transform: rotate(-45deg);
+            }
+            #news > span.right {
+                right: 16px;
+                transform: rotate(135deg);
             }
             #news > div {
                 grid-column: 1;
@@ -75,7 +96,7 @@
                     position: relative;
                     overflow: hidden;
                 }
-                #news > img { top: calc(100% - 48px); }
+                #news > span { top: calc(100% - 48px); }
                 #news > div > img {
                     position: absolute;
                     width: 100%;
@@ -128,8 +149,8 @@ if (count($news)) {
     echo '<div id="news">';
 
     if (count($news) > 1) {
-        echo '<img style="left: 16px;" src="/static/misc/left.png" alt="" onclick="toggleNews(-1, true)" />
-              <img style="right: 16px;" src="/static/misc/right.png" alt="" onclick="toggleNews(1, true)" />';
+        echo '<span class="left" onclick="toggleNews(-1, true)"></span>
+              <span class="right" onclick="toggleNews(1, true)"></span>';
     }
 
     foreach ($news as $i => $item) {
