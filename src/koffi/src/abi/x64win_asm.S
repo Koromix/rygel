@@ -24,7 +24,7 @@
     push %rbp
     movq %rsp, %rbp
     movq %rsp, (%r8)
-    movq %rdx, %rsp
+    leaq 80(%rdx), %rsp
 .endm
 
 # Prepare integer argument registers from array passed by caller.
@@ -37,10 +37,10 @@
 
 # Prepare XMM argument registers from array passed by caller.
 .macro forward_xmm
-    movsd 24(%rdx), %xmm3
-    movsd 16(%rdx), %xmm2
-    movsd 8(%rdx), %xmm1
-    movsd 0(%rdx), %xmm0
+    movsd 56(%rdx), %xmm3
+    movsd 48(%rdx), %xmm2
+    movsd 40(%rdx), %xmm1
+    movsd 32(%rdx), %xmm0
 .endm
 
 # CallNative is a minimal wrapper around the native function call.
@@ -114,21 +114,21 @@ CallDX:
 .endm
 
 RelayTrampoline:
-    subq $120, %rsp
-    movq %rcx, 32(%rsp)
-    movq %rdx, 40(%rsp)
-    movq %r8, 48(%rsp)
-    movq %r9, 56(%rsp)
-    movsd %xmm0, 64(%rsp)
-    movsd %xmm1, 72(%rsp)
-    movsd %xmm2, 80(%rsp)
-    movsd %xmm3, 88(%rsp)
+    subq $136, %rsp
+    movq %rcx, 64(%rsp)
+    movq %rdx, 72(%rsp)
+    movq %r8, 80(%rsp)
+    movq %r9, 88(%rsp)
+    movsd %xmm0, 96(%rsp)
+    movsd %xmm1, 104(%rsp)
+    movsd %xmm2, 112(%rsp)
+    movsd %xmm3, 120(%rsp)
     movq %rax, %rcx
-    leaq 32(%rsp), %rdx
+    leaq 64(%rsp), %rdx
     call RelayCallback
-    movq 96(%rsp), %rax
-    movsd 104(%rsp), %xmm0
-    addq $120, %rsp
+    movq 32(%rsp), %rax
+    movsd 40(%rsp), %xmm0
+    addq $136, %rsp
     ret
 
 # When a callback is relayed, Koffi will call into Node.js and V8 to execute Javascript.

@@ -156,7 +156,7 @@ int GetTypedArrayType(const TypeInfo *type)
     K_UNREACHABLE();
 }
 
-static FORCE_INLINE napi_value NewStringUTF32(Napi::Env env, const char32_t *ptr, Size len)
+static K_FORCE_INLINE napi_value NewStringUTF32(Napi::Env env, const char32_t *ptr, Size len)
 {
     static const char16_t ReplacementChar = 0xFFFD;
 
@@ -301,7 +301,7 @@ static uint32_t DecodeDynamicLength(const uint8_t *origin, const RecordMember &b
 }
 
 template <typename SetFunc>
-static FORCE_INLINE void DecodeObject(InstanceData *instance, const uint8_t *origin, const TypeInfo *type, SetFunc set)
+static K_FORCE_INLINE void DecodeObject(InstanceData *instance, const uint8_t *origin, const TypeInfo *type, SetFunc set)
 {
     K_ASSERT(type->primitive == PrimitiveKind::Record);
 
@@ -951,14 +951,12 @@ napi_value Decode(InstanceData *instance, const uint8_t *ptr, const TypeInfo *ty
 
             memcpy((void *)func, proto, K_SIZE(*proto));
             memset((void *)&func->parameters, 0, K_SIZE(func->parameters));
-            memset((void *)&func->sync, 0, K_SIZE(func->sync));
-            memset((void *)&func->async, 0, K_SIZE(func->async));
+            memset((void *)&func->plan, 0, K_SIZE(func->plan));
 
             func->name = "<anonymous>";
             func->native = (void *)ptr;
             func->parameters = proto->parameters;
-            func->sync = proto->sync;
-            func->async = proto->async;
+            func->plan = proto->plan;
 
             return WrapFunction(instance, func);
         } break;
@@ -987,37 +985,6 @@ bool DetectCallConvention(Span<const char> name, CallConvention *out_convention)
     } else {
         return false;
     }
-}
-
-static int AnalyseFlatRec(const TypeInfo *type, int offset, int count, FunctionRef<void(const TypeInfo *type, int offset, int count)> func)
-{
-    if (type->primitive == PrimitiveKind::Record) {
-        for (int i = 0; i < count; i++) {
-            for (const RecordMember &member: type->members) {
-                offset = AnalyseFlatRec(member.type, offset, 1, func);
-            }
-        }
-    } else if (type->primitive == PrimitiveKind::Union) {
-        for (int i = 0; i < count; i++) {
-            for (const RecordMember &member: type->members) {
-                AnalyseFlatRec(member.type, offset, 1, func);
-            }
-        }
-        offset += count;
-    } else if (type->primitive == PrimitiveKind::Array) {
-        count *= type->size / type->ref.type->size;
-        offset = AnalyseFlatRec(type->ref.type, offset, count, func);
-    } else {
-        func(type, offset, count);
-        offset += count;
-    }
-
-    return offset;
-}
-
-int AnalyseFlat(const TypeInfo *type, FunctionRef<void(const TypeInfo *type, int offset, int count)> func)
-{
-    return AnalyseFlatRec(type, 0, 1, func);
 }
 
 void DumpMemory(const char *type, Span<const uint8_t> bytes)

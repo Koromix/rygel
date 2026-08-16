@@ -46,7 +46,7 @@ void ThrowError(Napi::Env env, const char *msg, Args... args)
     err.ThrowAsJavaScriptException();
 }
 
-static FORCE_INLINE napi_valuetype GetKindOf(napi_env env, napi_value value)
+static K_FORCE_INLINE napi_valuetype GetKindOf(napi_env env, napi_value value)
 {
     napi_valuetype kind = napi_undefined;
     NAPI_OK(napi_typeof(env, value, &kind));
@@ -57,18 +57,18 @@ static FORCE_INLINE napi_valuetype GetKindOf(napi_env env, napi_value value)
 void SetValueTag(napi_env env, napi_value value, const void *marker);
 bool CheckValueTag(napi_env env, napi_value value, const void *marker);
 
-static FORCE_INLINE bool IsNullOrUndefined(napi_valuetype kind)
+static K_FORCE_INLINE bool IsNullOrUndefined(napi_valuetype kind)
 {
     return kind == napi_null || kind == napi_undefined;
 }
 
-static FORCE_INLINE bool IsNullOrUndefined(napi_env env, napi_value value)
+static K_FORCE_INLINE bool IsNullOrUndefined(napi_env env, napi_value value)
 {
     napi_valuetype kind = GetKindOf(env, value);
     return IsNullOrUndefined(kind);
 }
 
-static FORCE_INLINE bool IsArray(napi_env env, napi_value value)
+static K_FORCE_INLINE bool IsArray(napi_env env, napi_value value)
 {
     bool array = false;
     napi_is_array(env, value, &array);
@@ -76,7 +76,7 @@ static FORCE_INLINE bool IsArray(napi_env env, napi_value value)
     return array;
 }
 
-static FORCE_INLINE bool IsObject(napi_env env, napi_value value)
+static K_FORCE_INLINE bool IsObject(napi_env env, napi_value value)
 {
     if (GetKindOf(env, value) != napi_object)
         return false;
@@ -86,28 +86,28 @@ static FORCE_INLINE bool IsObject(napi_env env, napi_value value)
     return true;
 }
 
-static FORCE_INLINE bool IsTypedArray(napi_env env, napi_value value)
+static K_FORCE_INLINE bool IsTypedArray(napi_env env, napi_value value)
 {
     bool typedarray = false;
     napi_is_typedarray(env, value, &typedarray);
     return typedarray;
 }
 
-static FORCE_INLINE bool IsArrayBuffer(napi_env env, napi_value value)
+static K_FORCE_INLINE bool IsArrayBuffer(napi_env env, napi_value value)
 {
     bool arraybuffer = false;
     napi_is_arraybuffer(env, value, &arraybuffer);
     return arraybuffer;
 }
 
-static FORCE_INLINE bool IsBuffer(napi_env env, napi_value value)
+static K_FORCE_INLINE bool IsBuffer(napi_env env, napi_value value)
 {
     bool buffer = false;
     napi_is_buffer(env, value, &buffer);
     return buffer;
 }
 
-static FORCE_INLINE napi_value GetReferenceValue(napi_env env, napi_ref ref)
+static K_FORCE_INLINE napi_value GetReferenceValue(napi_env env, napi_ref ref)
 {
     napi_value value;
     NAPI_OK(napi_get_reference_value(env, ref, &value));
@@ -115,7 +115,7 @@ static FORCE_INLINE napi_value GetReferenceValue(napi_env env, napi_ref ref)
     return value;
 }
 
-static FORCE_INLINE uint32_t GetArrayLength(napi_env env, napi_value array)
+static K_FORCE_INLINE uint32_t GetArrayLength(napi_env env, napi_value array)
 {
     uint32_t length = 0;
     NAPI_OK(napi_get_array_length(env, array, &length));
@@ -124,7 +124,7 @@ static FORCE_INLINE uint32_t GetArrayLength(napi_env env, napi_value array)
 }
 
 template <typename T>
-static FORCE_INLINE bool TryNumber(napi_env env, napi_value value, T *out_value)
+static K_FORCE_INLINE bool TryNumber(napi_env env, napi_value value, T *out_value)
 {
     T v;
     napi_status status;
@@ -166,7 +166,7 @@ static FORCE_INLINE bool TryNumber(napi_env env, napi_value value, T *out_value)
     return false;
 }
 
-static FORCE_INLINE bool TryPointer(napi_env env, napi_value value, void **out_ptr)
+static K_FORCE_INLINE bool TryPointer(napi_env env, napi_value value, void **out_ptr)
 {
     // Fast path for BigInt
     {
@@ -203,7 +203,7 @@ static FORCE_INLINE bool TryPointer(napi_env env, napi_value value, void **out_p
     return false;
 }
 
-static FORCE_INLINE bool TryPointer(napi_env env, napi_value value, void **out_ptr, Size *out_len)
+static K_FORCE_INLINE bool TryPointer(napi_env env, napi_value value, void **out_ptr, Size *out_len)
 {
     // Fast path for BigInt
     {
@@ -250,7 +250,7 @@ static FORCE_INLINE bool TryPointer(napi_env env, napi_value value, void **out_p
     return false;
 }
 
-static FORCE_INLINE bool TryPointer(napi_env env, napi_value value, void **out_ptr, napi_valuetype *out_kind)
+static K_FORCE_INLINE bool TryPointer(napi_env env, napi_value value, void **out_ptr, napi_valuetype *out_kind)
 {
     // Fast path for BigInt
     {
@@ -298,7 +298,7 @@ static FORCE_INLINE bool TryPointer(napi_env env, napi_value value, void **out_p
     return false;
 }
 
-static FORCE_INLINE bool TryBuffer(napi_env env, napi_value value, Span<uint8_t> *out_buffer)
+static K_FORCE_INLINE bool TryBuffer(napi_env env, napi_value value, Span<uint8_t> *out_buffer)
 {
     void *ptr = nullptr;
     size_t len = 0;
@@ -316,20 +316,20 @@ static FORCE_INLINE bool TryBuffer(napi_env env, napi_value value, Span<uint8_t>
 
 int GetTypedArrayType(const TypeInfo *type);
 
-static FORCE_INLINE napi_value NewInt(Napi::Env env, char i) { napi_value value; NAPI_OK(napi_create_int32(env, (int32_t)i, &value)); return value; }
-static FORCE_INLINE napi_value NewInt(Napi::Env env, signed char i) { napi_value value; NAPI_OK(napi_create_int32(env, (int32_t)i, &value)); return value; }
-static FORCE_INLINE napi_value NewInt(Napi::Env env, unsigned char i) { napi_value value; NAPI_OK(napi_create_uint32(env, (uint32_t)i, &value)); return value; }
-static FORCE_INLINE napi_value NewInt(Napi::Env env, short i) { napi_value value; NAPI_OK(napi_create_int32(env, (int32_t)i, &value)); return value; }
-static FORCE_INLINE napi_value NewInt(Napi::Env env, unsigned short i) { napi_value value; NAPI_OK(napi_create_uint32(env, (uint32_t)i, &value)); return value; }
-static FORCE_INLINE napi_value NewInt(Napi::Env env, int i) { napi_value value; NAPI_OK(napi_create_int32(env, (int32_t)i, &value)); return value; }
-static FORCE_INLINE napi_value NewInt(Napi::Env env, unsigned int i) { napi_value value; NAPI_OK(napi_create_uint32(env, (uint32_t)i, &value)); return value; }
+static K_FORCE_INLINE napi_value NewInt(Napi::Env env, char i) { napi_value value; NAPI_OK(napi_create_int32(env, (int32_t)i, &value)); return value; }
+static K_FORCE_INLINE napi_value NewInt(Napi::Env env, signed char i) { napi_value value; NAPI_OK(napi_create_int32(env, (int32_t)i, &value)); return value; }
+static K_FORCE_INLINE napi_value NewInt(Napi::Env env, unsigned char i) { napi_value value; NAPI_OK(napi_create_uint32(env, (uint32_t)i, &value)); return value; }
+static K_FORCE_INLINE napi_value NewInt(Napi::Env env, short i) { napi_value value; NAPI_OK(napi_create_int32(env, (int32_t)i, &value)); return value; }
+static K_FORCE_INLINE napi_value NewInt(Napi::Env env, unsigned short i) { napi_value value; NAPI_OK(napi_create_uint32(env, (uint32_t)i, &value)); return value; }
+static K_FORCE_INLINE napi_value NewInt(Napi::Env env, int i) { napi_value value; NAPI_OK(napi_create_int32(env, (int32_t)i, &value)); return value; }
+static K_FORCE_INLINE napi_value NewInt(Napi::Env env, unsigned int i) { napi_value value; NAPI_OK(napi_create_uint32(env, (uint32_t)i, &value)); return value; }
 #if LONG_MAX == INT32_MAX
-static FORCE_INLINE napi_value NewInt(Napi::Env env, long i) { napi_value value; NAPI_OK(napi_create_int32(env, (int32_t)i, &value)); return value; }
-static FORCE_INLINE napi_value NewInt(Napi::Env env, unsigned long i) { napi_value value; NAPI_OK(napi_create_uint32(env, (uint32_t)i, &value)); return value; }
+static K_FORCE_INLINE napi_value NewInt(Napi::Env env, long i) { napi_value value; NAPI_OK(napi_create_int32(env, (int32_t)i, &value)); return value; }
+static K_FORCE_INLINE napi_value NewInt(Napi::Env env, unsigned long i) { napi_value value; NAPI_OK(napi_create_uint32(env, (uint32_t)i, &value)); return value; }
 #endif
 
 template <typename T>
-static FORCE_INLINE napi_value NewInt(Napi::Env env, T i)
+static K_FORCE_INLINE napi_value NewInt(Napi::Env env, T i)
 {
     static_assert(sizeof(T) == 8);
 
@@ -354,11 +354,11 @@ static FORCE_INLINE napi_value NewInt(Napi::Env env, T i)
     }
 }
 
-static FORCE_INLINE napi_value NewFloat(Napi::Env env, float f) { napi_value value; NAPI_OK(napi_create_double(env, (double)f, &value)); return value; }
-static FORCE_INLINE napi_value NewFloat(Napi::Env env, double d) { napi_value value; NAPI_OK(napi_create_double(env, d, &value)); return value; }
+static K_FORCE_INLINE napi_value NewFloat(Napi::Env env, float f) { napi_value value; NAPI_OK(napi_create_double(env, (double)f, &value)); return value; }
+static K_FORCE_INLINE napi_value NewFloat(Napi::Env env, double d) { napi_value value; NAPI_OK(napi_create_double(env, d, &value)); return value; }
 
 template <typename T>
-static FORCE_INLINE Size NullTerminatedLength(const T *ptr)
+static K_FORCE_INLINE Size NullTerminatedLength(const T *ptr)
 {
     Size len = 0;
     while (ptr[len]) {
@@ -367,7 +367,7 @@ static FORCE_INLINE Size NullTerminatedLength(const T *ptr)
     return len;
 }
 template <typename T>
-static FORCE_INLINE Size NullTerminatedLength(const T *ptr, Size max)
+static K_FORCE_INLINE Size NullTerminatedLength(const T *ptr, Size max)
 {
     Size len = 0;
     while (len < max && ptr[len]) {
@@ -376,7 +376,7 @@ static FORCE_INLINE Size NullTerminatedLength(const T *ptr, Size max)
     return len;
 }
 
-static FORCE_INLINE napi_value NewString(Napi::Env env, const char *ptr, Size len)
+static K_FORCE_INLINE napi_value NewString(Napi::Env env, const char *ptr, Size len)
 {
     napi_value value;
     if (ptr) {
@@ -386,7 +386,7 @@ static FORCE_INLINE napi_value NewString(Napi::Env env, const char *ptr, Size le
     }
     return value;
 }
-static FORCE_INLINE napi_value NewString(Napi::Env env, const char *ptr)
+static K_FORCE_INLINE napi_value NewString(Napi::Env env, const char *ptr)
 {
     napi_value value;
     if (ptr) {
@@ -397,7 +397,7 @@ static FORCE_INLINE napi_value NewString(Napi::Env env, const char *ptr)
     return value;
 }
 
-static FORCE_INLINE napi_value NewString(Napi::Env env, const char16_t *ptr, Size len)
+static K_FORCE_INLINE napi_value NewString(Napi::Env env, const char16_t *ptr, Size len)
 {
     napi_value value;
     if (ptr) {
@@ -407,7 +407,7 @@ static FORCE_INLINE napi_value NewString(Napi::Env env, const char16_t *ptr, Siz
     }
     return value;
 }
-static FORCE_INLINE napi_value NewString(Napi::Env env, const char16_t *ptr)
+static K_FORCE_INLINE napi_value NewString(Napi::Env env, const char16_t *ptr)
 {
     napi_value value;
     if (ptr) {
@@ -431,7 +431,7 @@ INLINE_UNITY void DecodeBuffer(Span<uint8_t> buffer, const uint8_t *origin, cons
 
 napi_value Decode(InstanceData *instance, const uint8_t *ptr, const TypeInfo *type);
 
-static FORCE_INLINE Napi::Array GetOwnPropertyNames(napi_env env, napi_value obj)
+static K_FORCE_INLINE Napi::Array GetOwnPropertyNames(napi_env env, napi_value obj)
 {
     K_ASSERT(IsObject(env, obj));
 
@@ -444,7 +444,7 @@ static FORCE_INLINE Napi::Array GetOwnPropertyNames(napi_env env, napi_value obj
     return Napi::Array(env, result);
 }
 
-static FORCE_INLINE napi_value WrapPointer(Napi::Env env, void *ptr)
+static K_FORCE_INLINE napi_value WrapPointer(Napi::Env env, void *ptr)
 {
     napi_value value;
 
@@ -456,8 +456,6 @@ static FORCE_INLINE napi_value WrapPointer(Napi::Env env, void *ptr)
 
     return value;
 }
-
-int AnalyseFlat(const TypeInfo *type, FunctionRef<void(const TypeInfo *type, int offset, int count)> func);
 
 void DumpMemory(const char *type, Span<const uint8_t> bytes);
 

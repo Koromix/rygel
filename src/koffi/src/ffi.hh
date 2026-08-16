@@ -4,33 +4,16 @@
 #pragma once
 
 #include "lib/native/base/base.hh"
+#include "interp.hh"
 
 #include <napi.h>
 
 namespace K {
 
-#if defined(_MSC_VER)
-    #define FORCE_INLINE __forceinline
-#else
-    #define FORCE_INLINE __attribute__((always_inline)) inline
-#endif
 #if defined(UNITY_BUILD)
-    #define INLINE_UNITY FORCE_INLINE
+    #define INLINE_UNITY K_FORCE_INLINE
 #else
     #define INLINE_UNITY
-#endif
-
-#if defined(__GNUC__) || defined(__clang__)
-    #if defined(__x86_64__) || defined(__aarch64__)
-        #if  __has_attribute(musttail) && __has_attribute(preserve_none)
-            #define MUST_TAIL __attribute__((musttail))
-            #define PRESERVE_NONE __attribute__((preserve_none))
-        #elif  __has_attribute(musttail) && !defined(__clang__)
-            // GCC regalloc seems better, so the generated code is not too bad even without preserve_none
-            #define MUST_TAIL __attribute__((musttail))
-            #define PRESERVE_NONE
-        #endif
-    #endif
 #endif
 
 // Only napi_ok matters, but many node-api functions fail with napi_cannot_run_js during
@@ -198,76 +181,11 @@ static const char *const CallConventionNames[] = {
     "Thiscall"
 };
 
-enum class AbiMethod : int;
-
 struct ParameterInfo {
     const TypeInfo *type;
     int directions;
     bool variadic;
     int8_t offset;
-
-    // ABI-specific part
-
-#if defined(_M_X64)
-    struct {
-        bool regular; // Used for structs and unions
-    } abi;
-#elif defined(__x86_64__)
-    struct {
-        bool regular;
-        int offsets[2];
-    } abi;
-#elif defined(__arm__) || defined(__aarch64__) || defined(_M_ARM64)
-    struct {
-        bool regular;
-        bool indirect;
-        int offset;
-    } abi;
-#elif __riscv_xlen == 64 || defined(__loongarch64)
-    struct {
-        AbiMethod method;
-        int offsets[2];
-    } abi;
-#endif
-};
-
-struct ReturnInfo {
-    const TypeInfo *type;
-
-    // ABI-specific part
-
-#if defined(_M_X64)
-    struct {
-        bool regular;
-    } abi;
-#elif defined(__x86_64__)
-    struct {
-        AbiMethod method;
-    } abi;
-#elif defined(__arm__) || defined(__aarch64__) || defined(_M_ARM64)
-    struct {
-        bool regular;
-        int offset;
-    } abi;
-#elif defined(__i386__) || defined(_M_IX86)
-    struct {
-        bool regular;
-    } abi;
-#elif __riscv_xlen == 64 || defined(__loongarch64)
-    struct {
-        AbiMethod method;
-        int offsets[2];
-    } abi;
-#endif
-};
-
-struct InstructionData {
-    void *op;
-
-    int32_t a = 0;
-    int16_t b1 = 0;
-    int16_t b2 = 0;
-    const TypeInfo *type = nullptr;
 };
 
 // Also used for callbacks, even though many members are not used in this case
@@ -287,21 +205,12 @@ struct FunctionInfo {
     void *native;
     CallConvention convention;
 
-    ReturnInfo ret;
+    const TypeInfo *ret;
     HeapArray<ParameterInfo> parameters;
     int8_t required_parameters;
     bool variadic;
 
-    // ABI-specific part
-
-    HeapArray<InstructionData> sync;
-    HeapArray<InstructionData> async;
-    Size stk_size;
-#if defined(__i386__) || defined(_M_IX86)
-    int ret_pop;
-#else
-    bool forward_fp;
-#endif
+    ExecutionPlan plan;
 
     ~FunctionInfo();
 

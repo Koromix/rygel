@@ -190,7 +190,7 @@ RelayTrampoline:
     fst.d $fa6, $sp, 168
     fst.d $fa7, $sp, 176
     move $a0, $t0
-    addi.d $a1, $sp, 16
+    addi.d $a1, $sp, 56
     bl RelayCallback
     ld.d $ra, $sp, 0
     ld.d $a0, $sp, 16

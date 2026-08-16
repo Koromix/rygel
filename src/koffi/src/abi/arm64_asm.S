@@ -178,7 +178,7 @@ RelayTrampoline:
     stp d4, d5, [sp, 152]
     stp d6, d7, [sp, 168]
     mov x0, x9
-    mov x1, sp
+    add x1, sp, #48
     bl SYMBOL(RelayCallback)
     ldp x0, x1, [sp, 0]
     ldp d0, d1, [sp, 16]

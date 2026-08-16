@@ -1123,11 +1123,11 @@ static bool ParseClassicFunction(const Napi::CallbackInfo &info, bool concrete, 
     // Leave anonymous naming responsibility to caller
     out_func->name = named ? DuplicateString(name.Utf8Value().c_str(), &instance->str_alloc).ptr : nullptr;
 
-    out_func->ret.type = ResolveType(instance, ret);
-    if (!out_func->ret.type)
+    out_func->ret = ResolveType(instance, ret);
+    if (!out_func->ret)
         return false;
-    if (!CanReturnType(out_func->ret.type)) {
-        ThrowError<Napi::TypeError>(env, "You are not allowed to directly return %1 values (maybe try %1 *)", out_func->ret.type->name);
+    if (!CanReturnType(out_func->ret)) {
+        ThrowError<Napi::TypeError>(env, "You are not allowed to directly return %1 values (maybe try %1 *)", out_func->ret->name);
         return false;
     }
 
@@ -1207,7 +1207,7 @@ static Napi::Value CreateFunctionType(const Napi::CallbackInfo &info)
         func->name = Fmt(&instance->str_alloc, "<anonymous_%1>", instance->types.count).ptr;
     }
 
-    if (!PreparePlan(env, instance, func))
+    if (!func->variadic && !PreparePlan(instance, func))
         return env.Null();
 
     // We cannot fail after this check
@@ -1631,7 +1631,7 @@ Napi::Value LibraryHandle::Func(const Napi::CallbackInfo &info)
         func->convention = CallConvention::Cdecl;
     }
 
-    if (!PreparePlan(env, instance, func))
+    if (!func->variadic && !PreparePlan(instance, func))
         return env.Null();
 
 #if defined(_WIN32)
@@ -2011,7 +2011,7 @@ static Napi::Value DecodeValue(const Napi::CallbackInfo &info)
 }
 
 template <typename T>
-static FORCE_INLINE napi_value DecodeInteger(napi_env env, napi_callback_info info)
+static K_FORCE_INLINE napi_value DecodeInteger(napi_env env, napi_callback_info info)
 {
     napi_value arg;
     size_t count = 1;
@@ -2037,7 +2037,7 @@ static FORCE_INLINE napi_value DecodeInteger(napi_env env, napi_callback_info in
 }
 
 template <typename T>
-static FORCE_INLINE napi_value DecodeIntegerSwap(napi_env env, napi_callback_info info)
+static K_FORCE_INLINE napi_value DecodeIntegerSwap(napi_env env, napi_callback_info info)
 {
     napi_value arg;
     size_t count = 1;
@@ -2065,16 +2065,16 @@ static FORCE_INLINE napi_value DecodeIntegerSwap(napi_env env, napi_callback_inf
 #if defined(K_BIG_ENDIAN)
 
 template <typename T>
-static FORCE_INLINE napi_value DecodeIntegerLE(napi_env env, napi_callback_info info) { return DecodeIntegerSwap<T>(env, info); }
+static K_FORCE_INLINE napi_value DecodeIntegerLE(napi_env env, napi_callback_info info) { return DecodeIntegerSwap<T>(env, info); }
 template <typename T>
-static FORCE_INLINE napi_value DecodeIntegerBE(napi_env env, napi_callback_info info) { return DecodeInteger<T>(env, info); }
+static K_FORCE_INLINE napi_value DecodeIntegerBE(napi_env env, napi_callback_info info) { return DecodeInteger<T>(env, info); }
 
 #else
 
 template <typename T>
-static FORCE_INLINE napi_value DecodeIntegerLE(napi_env env, napi_callback_info info) { return DecodeInteger<T>(env, info); }
+static K_FORCE_INLINE napi_value DecodeIntegerLE(napi_env env, napi_callback_info info) { return DecodeInteger<T>(env, info); }
 template <typename T>
-static FORCE_INLINE napi_value DecodeIntegerBE(napi_env env, napi_callback_info info) { return DecodeIntegerSwap<T>(env, info); }
+static K_FORCE_INLINE napi_value DecodeIntegerBE(napi_env env, napi_callback_info info) { return DecodeIntegerSwap<T>(env, info); }
 
 #endif
 

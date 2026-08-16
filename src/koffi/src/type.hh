@@ -25,21 +25,21 @@ public:
     const TypeInfo *GetType() { return type; }
 };
 
-static FORCE_INLINE bool IsInteger(const TypeInfo *type)
+static K_FORCE_INLINE bool IsInteger(const TypeInfo *type)
 {
     bool integer = ((int)type->primitive >= (int)PrimitiveKind::Int8 &&
                     (int)type->primitive <= (int)PrimitiveKind::UInt64);
     return integer;
 }
 
-static FORCE_INLINE bool IsFloat(const TypeInfo *type)
+static K_FORCE_INLINE bool IsFloat(const TypeInfo *type)
 {
     bool fp = (type->primitive == PrimitiveKind::Float32 ||
                type->primitive == PrimitiveKind::Float64);
     return fp;
 }
 
-static FORCE_INLINE bool IsRegularSize(Size size, Size max)
+static K_FORCE_INLINE bool IsRegularSize(Size size, Size max)
 {
     bool regular = (size <= max && !(size & (size - 1)));
     return regular;

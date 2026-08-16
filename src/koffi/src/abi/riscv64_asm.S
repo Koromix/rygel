@@ -190,7 +190,7 @@ RelayTrampoline:
     fsd fa6, 168(sp)
     fsd fa7, 176(sp)
     mv a0, t0
-    addi a1, sp, 16
+    addi a1, sp, 56
     call RelayCallback
     ld ra, 0(sp)
     ld a0, 16(sp)

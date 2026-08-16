@@ -19,9 +19,9 @@ bool PrototypeParser::Parse(const char *str, bool concrete, FunctionInfo *out_fu
 
     Tokenize(str);
 
-    out_func->ret.type = ParseType(nullptr);
-    if (!CanReturnType(out_func->ret.type)) {
-        MarkError("You are not allowed to directly return %1 values (maybe try %1 *)", out_func->ret.type->name);
+    out_func->ret = ParseType(nullptr);
+    if (!CanReturnType(out_func->ret)) {
+        MarkError("You are not allowed to directly return %1 values (maybe try %1 *)", out_func->ret->name);
         return false;
     }
     offset += (offset < tokens.len && DetectCallConvention(tokens[offset], &out_func->convention));

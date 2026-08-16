@@ -116,7 +116,8 @@ RelayTrampoline:
     subl $44, %esp
     .cfi_def_cfa esp, 48
     movl %eax, 0(%esp)
-    movl %esp, 4(%esp)
+    leal 48(%esp), %ecx
+    movl %ecx, 4(%esp)
     movl $0, 32(%esp)
     movl $0, 36(%esp)
 #if defined(_WIN32)

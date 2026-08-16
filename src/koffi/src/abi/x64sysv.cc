@@ -5,21 +5,9 @@
 
 #include "lib/native/base/base.hh"
 #include "../ffi.hh"
-#include "../call.hh"
 #include "../interp.hh"
-#include "../type.hh"
-#include "../util.hh"
-
-#include <napi.h>
 
 namespace K {
-
-struct BackRegisters {
-    uint64_t rax;
-    uint64_t rdx;
-    double xmm0;
-    double xmm1;
-};
 
 enum class AbiMethod {
     Stack,
@@ -230,76 +218,83 @@ ClassAnalyser::RegisterClass ClassAnalyser::MergeClasses(RegisterClass cls1, Reg
     return RegisterClass::SSE;
 }
 
-bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
+void AnalyseFunction(InstanceData *, const FunctionInfo *func, ExecutionPlan *out_plan, const char **)
 {
+    AbiMethod ret_abi = {};
+    Size stk_size = 0;
+    bool forward_fp = false;
+
     // Handle return value
     {
         ClassAnalyser analyser(0, 2, 0, 2);
-        ClassResult ret = analyser.Analyse(func->ret.type);
+        ClassResult ret = analyser.Analyse(func->ret);
 
-        func->ret.abi.method = ret.method;
+        ret_abi = ret.method;
     }
 
     // Handle parameters
     {
-        int gpr_result = (func->ret.abi.method == AbiMethod::Stack);
+        int gpr_result = (ret_abi == AbiMethod::Stack);
         ClassAnalyser analyser(gpr_result, 6, 0, 8);
 
-        for (ParameterInfo &param: func->parameters) {
+        for (const ParameterInfo &param: func->parameters) {
             ClassResult ret = analyser.Analyse(param.type);
+
+            bool registers = false;
+            int offsets[2] = {};
 
             switch (ret.method) {
                 case AbiMethod::Stack: {
-                    param.abi.regular = false;
-                    param.abi.offsets[0] = 16 * 8 + ret.stack_offset;
+                    registers = false;
+                    offsets[0] = 16 * 8 + ret.stack_offset;
                 } break;
                 case AbiMethod::Gpr: {
-                    param.abi.regular = true;
-                    param.abi.offsets[0] = (0 + ret.gpr_index) * 8;
-                    param.abi.offsets[1] = param.abi.offsets[0];
+                    registers = true;
+                    offsets[0] = (0 + ret.gpr_index) * 8;
+                    offsets[1] = offsets[0];
                 } break;
                 case AbiMethod::GprGpr: {
-                    param.abi.regular = true;
-                    param.abi.offsets[0] = (0 + ret.gpr_index) * 8;
-                    param.abi.offsets[1] = param.abi.offsets[0] + 8;
+                    registers = true;
+                    offsets[0] = (0 + ret.gpr_index) * 8;
+                    offsets[1] = offsets[0] + 8;
                 } break;
                 case AbiMethod::Xmm: {
-                    param.abi.regular = true;
-                    param.abi.offsets[0] = (6 + ret.xmm_index) * 8;
-                    param.abi.offsets[1] = param.abi.offsets[0];
+                    registers = true;
+                    offsets[0] = (6 + ret.xmm_index) * 8;
+                    offsets[1] = offsets[0];
                 } break;
                 case AbiMethod::XmmXmm: {
-                    param.abi.regular = true;
-                    param.abi.offsets[0] = (6 + ret.xmm_index) * 8;
-                    param.abi.offsets[1] = param.abi.offsets[0] + 8;
+                    registers = true;
+                    offsets[0] = (6 + ret.xmm_index) * 8;
+                    offsets[1] = offsets[0] + 8;
                 } break;
                 case AbiMethod::GprXmm: {
-                    param.abi.regular = true;
-                    param.abi.offsets[0] = (0 + ret.gpr_index) * 8;
-                    param.abi.offsets[1] = (6 + ret.xmm_index) * 8;
+                    registers = true;
+                    offsets[0] = (0 + ret.gpr_index) * 8;
+                    offsets[1] = (6 + ret.xmm_index) * 8;
                 } break;
                 case AbiMethod::XmmGpr: {
-                    param.abi.regular = true;
-                    param.abi.offsets[0] = (6 + ret.xmm_index) * 8;
-                    param.abi.offsets[1] = (0 + ret.gpr_index) * 8;
+                    registers = true;
+                    offsets[0] = (6 + ret.xmm_index) * 8;
+                    offsets[1] = (0 + ret.gpr_index) * 8;
                 } break;
             }
 
             if (param.type->primitive == PrimitiveKind::Record || param.type->primitive == PrimitiveKind::Union) {
-                Opcode code = param.abi.regular ? Opcode::PushAggregateSplit : Opcode::PushAggregateReg;
-                func->sync.Append({ .op = Code2Op(code), .a = param.offset, .b1 = (int16_t)param.abi.offsets[0], .b2 = (int16_t)param.abi.offsets[1], .type = param.type });
+                Opcode code = registers ? Opcode::PushAggregateSplit : Opcode::PushAggregateReg;
+                out_plan->sync.Append({ .op = Code2Op(code), .a = param.offset, .b1 = (int16_t)offsets[0], .b2 = (int16_t)offsets[1], .type = param.type });
             } else {
                 int delta = (int)Opcode::PushVoid - (int)PrimitiveKind::Void;
                 Opcode code = (Opcode)((int)param.type->primitive + delta);
-                func->sync.Append({ .op = Code2Op(code), .a = param.offset, .b1 = (int16_t)param.abi.offsets[0], .b2 = (int16_t)param.directions, .type = param.type });
+                out_plan->sync.Append({ .op = Code2Op(code), .a = param.offset, .b1 = (int16_t)offsets[0], .b2 = (int16_t)param.directions, .type = param.type });
             }
         }
 
-        func->stk_size = AlignLen(16 * 8 + analyser.StackOffset(), 16);
-        func->forward_fp = analyser.XmmCount();
+        stk_size = AlignLen(16 * 8 + analyser.StackOffset(), 16);
+        forward_fp = analyser.XmmCount();
     }
 
-    switch (func->ret.type->primitive) {
+    switch (func->ret->primitive) {
         case PrimitiveKind::Void:
         case PrimitiveKind::Bool:
         case PrimitiveKind::Int8:
@@ -321,385 +316,73 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
         case PrimitiveKind::String32:
         case PrimitiveKind::Pointer:
         case PrimitiveKind::Callback: {
-            if (func->forward_fp) {
+            if (forward_fp) {
                 int delta = (int)Opcode::RunVoidX - (int)PrimitiveKind::Void;
-                Opcode run = (Opcode)((int)func->ret.type->primitive + delta);
+                Opcode run = (Opcode)((int)func->ret->primitive + delta);
 
-                func->sync.Append({ .op = Code2Op(run), .b1 = (int16_t)func->parameters.len, .type = func->ret.type });
+                out_plan->sync.Append({ .op = Code2Op(run), .a = (int32_t)func->parameters.len, .b1 = -32, .type = func->ret });
             } else {
                 int delta = (int)Opcode::RunVoid - (int)PrimitiveKind::Void;
-                Opcode run = (Opcode)((int)func->ret.type->primitive + delta);
+                Opcode run = (Opcode)((int)func->ret->primitive + delta);
 
-                func->sync.Append({ .op = Code2Op(run), .b1 = (int16_t)func->parameters.len, .type = func->ret.type });
+                out_plan->sync.Append({ .op = Code2Op(run), .a = (int32_t)func->parameters.len, .b1 = -32, .type = func->ret });
             }
         } break;
 
         case PrimitiveKind::Record:
         case PrimitiveKind::Union: {
-            switch (func->ret.abi.method) {
+            switch (ret_abi) {
                 case AbiMethod::Stack: {
-                    Opcode run = func->forward_fp ? Opcode::RunAggregateMemX : Opcode::RunAggregateMem;
-                    func->sync.Append({ .op = Code2Op(run), .a = (int32_t)func->ret.type->size, .b1 = (int16_t)func->parameters.len, .type = func->ret.type });
+                    Opcode run = forward_fp ? Opcode::RunAggregateMemX : Opcode::RunAggregateMem;
+                    out_plan->sync.Append({ .op = Code2Op(run), .a = (int32_t)func->parameters.len, .b2 = -32, .type = func->ret });
 
                     // Allocate stack space for return value
-                    func->stk_size += AlignLen(func->ret.type->size, 16);
+                    stk_size += AlignLen(func->ret->size, 16);
                 } break;
                 case AbiMethod::Gpr: {
-                    Opcode run = func->forward_fp ? Opcode::RunAggregateGX : Opcode::RunAggregateG;
-                    func->sync.Append({ .op = Code2Op(run), .b1 = (int16_t)func->parameters.len, .type = func->ret.type });
+                    Opcode run = forward_fp ? Opcode::RunAggregateGX : Opcode::RunAggregateG;
+                    out_plan->sync.Append({ .op = Code2Op(run), .a = (int32_t)func->parameters.len, .b1 = -32, .type = func->ret });
                 } break;
                 case AbiMethod::GprGpr: {
-                    Opcode run = func->forward_fp ? Opcode::RunAggregateGGX : Opcode::RunAggregateGG;
-                    func->sync.Append({ .op = Code2Op(run), .b1 = (int16_t)func->parameters.len, .type = func->ret.type });
+                    Opcode run = forward_fp ? Opcode::RunAggregateGGX : Opcode::RunAggregateGG;
+                    out_plan->sync.Append({ .op = Code2Op(run), .a = (int32_t)func->parameters.len, .b1 = -32, .type = func->ret });
                 } break;
                 case AbiMethod::Xmm: {
-                    Opcode run = func->forward_fp ? Opcode::RunAggregateDX : Opcode::RunAggregateD;
-                    func->sync.Append({ .op = Code2Op(run), .b1 = (int16_t)func->parameters.len, .b2 = 16, .type = func->ret.type });
+                    Opcode run = forward_fp ? Opcode::RunAggregateDX : Opcode::RunAggregateD;
+                    out_plan->sync.Append({ .op = Code2Op(run), .a = (int32_t)func->parameters.len, .b1 = -32 + 16, .type = func->ret });
                 } break;
                 case AbiMethod::XmmXmm: {
-                    Opcode run = func->forward_fp ? Opcode::RunAggregateDDX : Opcode::RunAggregateDD;
-                    func->sync.Append({ .op = Code2Op(run), .b1 = (int16_t)func->parameters.len, .b2 = 16, .type = func->ret.type });
+                    Opcode run = forward_fp ? Opcode::RunAggregateDDX : Opcode::RunAggregateDD;
+                    out_plan->sync.Append({ .op = Code2Op(run), .a = (int32_t)func->parameters.len, .b1 = -32 + 16, .type = func->ret });
                 } break;
                 case AbiMethod::GprXmm: {
-                    Opcode run = func->forward_fp ? Opcode::RunAggregateGDX : Opcode::RunAggregateGD;
-                    func->sync.Append({ .op = Code2Op(run), .b1 = (int16_t)func->parameters.len, .b2 = 16, .type = func->ret.type });
+                    Opcode run = forward_fp ? Opcode::RunAggregateGDX : Opcode::RunAggregateGD;
+                    out_plan->sync.Append({ .op = Code2Op(run), .a = (int32_t)func->parameters.len, .b1 = -32, .b2 = -32 + 16, .type = func->ret });
                 } break;
                 case AbiMethod::XmmGpr: {
-                    Opcode run = func->forward_fp ? Opcode::RunAggregateDGX : Opcode::RunAggregateDG;
-                    func->sync.Append({ .op = Code2Op(run), .b1 = (int16_t)func->parameters.len, .b2 = 16, .type = func->ret.type });
+                    Opcode run = forward_fp ? Opcode::RunAggregateDGX : Opcode::RunAggregateDG;
+                    out_plan->sync.Append({ .op = Code2Op(run), .a = (int32_t)func->parameters.len, .b1 = -32 + 16, .b2 = -32, .type = func->ret });
                 } break;
             }
         } break;
         case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
 
         case PrimitiveKind::Float32: {
-            Opcode run = func->forward_fp ? Opcode::RunFloat32X : Opcode::RunFloat32;
-            func->sync.Append({ .op = Code2Op(run), .b1 = (int16_t)func->parameters.len, .b2 = 16, .type = func->ret.type });
+            Opcode run = forward_fp ? Opcode::RunFloat32X : Opcode::RunFloat32;
+            out_plan->sync.Append({ .op = Code2Op(run), .a = (int32_t)func->parameters.len, .b1 = -32 + 16, .type = func->ret });
         } break;
         case PrimitiveKind::Float64: {
-            Opcode run = func->forward_fp ? Opcode::RunFloat64X : Opcode::RunFloat64;
-            func->sync.Append({ .op = Code2Op(run), .b1 = (int16_t)func->parameters.len, .b2 = 16, .type = func->ret.type });
+            Opcode run = forward_fp ? Opcode::RunFloat64X : Opcode::RunFloat64;
+            out_plan->sync.Append({ .op = Code2Op(run), .a = (int32_t)func->parameters.len, .b1 = -32 + 16, .type = func->ret });
         } break;
 
         case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;
     }
 
-    return true;
-}
+    out_plan->stk_size = stk_size;
 
-void CallData::Relay(Size idx, uint8_t *sp)
-{
-    TrampolineInfo *trampoline = &shared.trampolines[idx];
-    const FunctionInfo *proto = trampoline->proto;
-
-    uint8_t *in_ptr = sp + 32;
-    BackRegisters *out_reg = (BackRegisters *)sp;
-
-    K_DEFER_N(err_guard) {
-        trampoline->state = -1;
-        memset(out_reg, 0, K_SIZE(*out_reg));
-    };
-
-    napi_value arguments[MaxParameters];
-
-#define POP_INTEGER(CType) \
-        do { \
-            const uint8_t *src = in_ptr + param.abi.offsets[0]; \
-            CType v = *(const CType *)src; \
-             \
-            arguments[i] = NewInt(env, v); \
-        } while (false)
-#define POP_INTEGER_SWAP(CType) \
-        do { \
-            const uint8_t *src = in_ptr + param.abi.offsets[0]; \
-            CType v = *(const CType *)src; \
-             \
-            arguments[i] = NewInt(env, ReverseBytes(v)); \
-        } while (false)
-
-    // Convert to JS arguments
-    for (Size i = 0; i < proto->parameters.len; i++) {
-        const ParameterInfo &param = proto->parameters[i];
-        K_ASSERT(param.directions >= 1 && param.directions <= 3);
-
-        switch (param.type->primitive) {
-            case PrimitiveKind::Void: { K_UNREACHABLE(); } break;
-
-            case PrimitiveKind::Bool: {
-                const uint8_t *src = in_ptr + param.abi.offsets[0];
-                bool b = *(bool *)src;
-
-                arguments[i] = Napi::Boolean::New(env, b);
-            } break;
-
-            case PrimitiveKind::Int8: { POP_INTEGER(int8_t); } break;
-            case PrimitiveKind::UInt8: { POP_INTEGER(uint8_t); } break;
-            case PrimitiveKind::Int16: { POP_INTEGER(int16_t); } break;
-            case PrimitiveKind::Int16S: { POP_INTEGER_SWAP(int16_t); } break;
-            case PrimitiveKind::UInt16: { POP_INTEGER(uint16_t); } break;
-            case PrimitiveKind::UInt16S: { POP_INTEGER_SWAP(uint16_t); } break;
-            case PrimitiveKind::Int32: { POP_INTEGER(int32_t); } break;
-            case PrimitiveKind::Int32S: { POP_INTEGER_SWAP(int32_t); } break;
-            case PrimitiveKind::UInt32: { POP_INTEGER(uint32_t); } break;
-            case PrimitiveKind::UInt32S: { POP_INTEGER_SWAP(uint32_t); } break;
-            case PrimitiveKind::Int64: { POP_INTEGER(int64_t); } break;
-            case PrimitiveKind::Int64S: { POP_INTEGER_SWAP(int64_t); } break;
-            case PrimitiveKind::UInt64: { POP_INTEGER(uint64_t); } break;
-            case PrimitiveKind::UInt64S: { POP_INTEGER_SWAP(uint64_t); } break;
-
-            case PrimitiveKind::String: {
-                const uint8_t *src = in_ptr + param.abi.offsets[0];
-                const char *str = *(const char **)src;
-
-                arguments[i] = NewString(env, str);
-
-                if (param.type->dispose) {
-                    param.type->dispose(instance, param.type, str);
-                }
-            } break;
-            case PrimitiveKind::String16: {
-                const uint8_t *src = in_ptr + param.abi.offsets[0];
-                const char16_t *str16 = *(const char16_t **)src;
-
-                arguments[i] = NewString(env, str16);
-
-                if (param.type->dispose) {
-                    param.type->dispose(instance, param.type, str16);
-                }
-            } break;
-            case PrimitiveKind::String32: {
-                const uint8_t *src = in_ptr + param.abi.offsets[0];
-                const char32_t *str32 = *(const char32_t **)src;
-
-                arguments[i] = NewString(env, str32);
-
-                if (param.type->dispose) {
-                    param.type->dispose(instance, param.type, str32);
-                }
-            } break;
-
-            case PrimitiveKind::Pointer: {
-                const uint8_t *src = in_ptr + param.abi.offsets[0];
-                void *ptr2 = *(void **)src;
-
-                arguments[i] = WrapPointer(env, ptr2);
-
-                if (param.type->dispose) {
-                    param.type->dispose(instance, param.type, ptr2);
-                }
-            } break;
-
-            case PrimitiveKind::Record:
-            case PrimitiveKind::Union: {
-                if (param.abi.regular) {
-                    uint64_t buf[2];
-                    buf[0] = *(uint64_t *)(in_ptr + param.abi.offsets[0]);
-                    buf[1] = *(uint64_t *)(in_ptr + param.abi.offsets[1]);
-
-                    arguments[i] = DecodeObject(instance, (const uint8_t *)buf, param.type);
-                } else {
-                    arguments[i] = DecodeObject(instance, in_ptr + param.abi.offsets[0], param.type);
-                }
-            } break;
-            case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
-
-            case PrimitiveKind::Float32: {
-                const uint8_t *src = in_ptr + param.abi.offsets[0];
-                float f = *(float *)src;
-
-                arguments[i] = NewFloat(env, f);
-            } break;
-            case PrimitiveKind::Float64: {
-                const uint8_t *src = in_ptr + param.abi.offsets[0];
-                double d = *(double *)src;
-
-                arguments[i] = NewFloat(env, d);
-            } break;
-
-            case PrimitiveKind::Callback: {
-                const uint8_t *src = in_ptr + param.abi.offsets[0];
-                void *ptr2 = *(void **)src;
-
-                arguments[i] = WrapPointer(env, ptr2);
-            } break;
-
-            case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;
-        }
-    }
-
-#undef POP_INTEGER_SWAP
-#undef POP_INTEGER
-
-    const TypeInfo *type = proto->ret.type;
-
-    // We're ready, make the call!
-    napi_value value = CallCallback(trampoline, arguments, proto->parameters.len);
-
-    if (!value) [[unlikely]]
-        return;
-
-#define RETURN_INTEGER(CType) \
-        do { \
-            CType v; \
-            if (!TryNumber(env, value, &v)) [[unlikely]] { \
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value)); \
-                return; \
-            } \
-             \
-            out_reg->rax = (uint64_t)v; \
-        } while (false)
-#define RETURN_INTEGER_SWAP(CType) \
-        do { \
-            CType v; \
-            if (!TryNumber(env, value, &v)) [[unlikely]] { \
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value)); \
-                return; \
-            } \
-             \
-            out_reg->rax = (uint64_t)ReverseBytes(v); \
-        } while (false)
-
-    // Convert the result
-    switch (type->primitive) {
-        case PrimitiveKind::Void: {} break;
-
-        case PrimitiveKind::Bool: {
-            bool b;
-            if (napi_get_value_bool(env, value, &b) != napi_ok) [[unlikely]] {
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected boolean", GetValueType(instance, value));
-                return;
-            }
-
-            out_reg->rax = (uint64_t)b;
-        } break;
-
-        case PrimitiveKind::Int8: { RETURN_INTEGER(int8_t); } break;
-        case PrimitiveKind::UInt8: { RETURN_INTEGER(uint8_t); } break;
-        case PrimitiveKind::Int16: { RETURN_INTEGER(int16_t); } break;
-        case PrimitiveKind::Int16S: { RETURN_INTEGER_SWAP(int16_t); } break;
-        case PrimitiveKind::UInt16: { RETURN_INTEGER(uint16_t); } break;
-        case PrimitiveKind::UInt16S: { RETURN_INTEGER_SWAP(uint16_t); } break;
-        case PrimitiveKind::Int32: { RETURN_INTEGER(int32_t); } break;
-        case PrimitiveKind::Int32S: { RETURN_INTEGER_SWAP(int32_t); } break;
-        case PrimitiveKind::UInt32: { RETURN_INTEGER(uint32_t); } break;
-        case PrimitiveKind::UInt32S: { RETURN_INTEGER_SWAP(uint32_t); } break;
-        case PrimitiveKind::Int64: { RETURN_INTEGER(int64_t); } break;
-        case PrimitiveKind::Int64S: { RETURN_INTEGER_SWAP(int64_t); } break;
-        case PrimitiveKind::UInt64: { RETURN_INTEGER(uint64_t); } break;
-        case PrimitiveKind::UInt64S: { RETURN_INTEGER_SWAP(uint64_t); } break;
-
-        case PrimitiveKind::String: {
-            const char *str;
-            if (!PushString(value, 1, &str)) [[unlikely]]
-                return;
-
-            out_reg->rax = (uint64_t)str;
-        } break;
-        case PrimitiveKind::String16: {
-            const char16_t *str16;
-            if (!PushString16(value, 1, &str16)) [[unlikely]]
-                return;
-
-            out_reg->rax = (uint64_t)str16;
-        } break;
-        case PrimitiveKind::String32: {
-            const char32_t *str32;
-            if (!PushString32(value, 1, &str32)) [[unlikely]]
-                return;
-
-            out_reg->rax = (uint64_t)str32;
-        } break;
-
-        case PrimitiveKind::Pointer: {
-            void *ptr;
-            if (!PushPointer(value, type, 1, &ptr)) [[unlikely]]
-                return;
-
-            out_reg->rax = (uint64_t)ptr;
-        } break;
-
-        case PrimitiveKind::Record:
-        case PrimitiveKind::Union: {
-            if (proto->ret.abi.method == AbiMethod::Stack) {
-                uint64_t *gpr_ptr = (uint64_t *)in_ptr;
-                uint8_t *dest = (uint8_t *)gpr_ptr[0];
-
-                if (!PushObject(value, type, dest)) [[unlikely]]
-                    return;
-
-                out_reg->rax = (uint64_t)dest;
-            } else {
-                K_ASSERT(type->size <= 16);
-
-                uint8_t buf[16] = {};
-                if (!PushObject(value, type, buf)) [[unlikely]]
-                    return;
-
-                switch (proto->ret.abi.method) {
-                    case AbiMethod::Stack: { K_UNREACHABLE(); } break;
-
-                    case AbiMethod::Gpr: {
-                        memcpy(&out_reg->rax, buf + 0, 8);
-                    } break;
-                    case AbiMethod::GprGpr: {
-                        memcpy(&out_reg->rax, buf + 0, 8);
-                        memcpy(&out_reg->rdx, buf + 8, 8);
-                    } break;
-                    case AbiMethod::Xmm: {
-                        memcpy(&out_reg->xmm0, buf + 0, 8);
-                    } break;
-                    case AbiMethod::XmmXmm: {
-                        memcpy(&out_reg->xmm0, buf + 0, 8);
-                        memcpy(&out_reg->xmm1, buf + 8, 8);
-                    } break;
-                    case AbiMethod::GprXmm: {
-                        memcpy(&out_reg->rax, buf + 0, 8);
-                        memcpy(&out_reg->xmm0, buf + 8, 8);
-                    } break;
-                    case AbiMethod::XmmGpr: {
-                        memcpy(&out_reg->xmm0, buf + 0, 8);
-                        memcpy(&out_reg->rax, buf + 8, 8);
-                    } break;
-                }
-            }
-        } break;
-        case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
-
-        case PrimitiveKind::Float32: {
-            float f;
-            if (!TryNumber(env, value, &f)) [[unlikely]] {
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
-                return;
-            }
-
-            memset(&out_reg->xmm0, 0, 8);
-            memcpy(&out_reg->xmm0, &f, 4);
-        } break;
-        case PrimitiveKind::Float64: {
-            double d;
-            if (!TryNumber(env, value, &d)) [[unlikely]] {
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
-                return;
-            }
-
-            out_reg->xmm0 = d;
-        } break;
-
-        case PrimitiveKind::Callback: {
-            void *ptr;
-            if (!PushCallback(value, type, &ptr)) [[unlikely]]
-                return;
-
-            out_reg->rax = (uint64_t)ptr;
-        } break;
-
-        case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;
-    }
-
-#undef RETURN_INTEGER_SWAP
-#undef RETURN_INTEGER
-
-    err_guard.Disable();
+    FillAsyncPlan(out_plan->sync, &out_plan->async);
+    out_plan->relay = out_plan->sync;
 }
 
 }

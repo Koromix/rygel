@@ -67,7 +67,7 @@ struct alignas(8) CallData {
     ~CallData();
 #endif
 
-    FORCE_INLINE void Init(InstanceData *instance, InstanceMemory *mem)
+    K_FORCE_INLINE void Init(InstanceData *instance, InstanceMemory *mem)
     {
         K_ASSERT(!this->mem);
 
@@ -87,8 +87,8 @@ struct alignas(8) CallData {
     INLINE_UNITY void Finalize();
     INLINE_UNITY void FinalizeFast();
 
-    INLINE_UNITY void Relay(Size idx, uint8_t *sp);
-    void RelayAsync(Size idx, uint8_t *sp);
+    INLINE_UNITY void Relay(Size idx, uint8_t *base);
+    void RelayAsync(Size idx, uint8_t *base);
 
     INLINE_UNITY napi_value CallCallback(const TrampolineInfo *trampoline, const napi_value *args, Size count);
 
@@ -123,8 +123,8 @@ struct alignas(8) CallData {
     void DebugCall(const FunctionInfo *func);
     void DebugForward();
 #else
-    FORCE_INLINE void DebugCall(const FunctionInfo *) {}
-    FORCE_INLINE void DebugForward() {}
+    K_FORCE_INLINE void DebugCall(const FunctionInfo *) {}
+    K_FORCE_INLINE void DebugForward() {}
 #endif
 };
 

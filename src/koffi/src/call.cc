@@ -19,7 +19,7 @@ struct RelayContext {
     CallData *call;
 
     Size idx;
-    uint8_t *sp;
+    uint8_t *base;
 
     std::mutex mutex = {};
     std::condition_variable cv = {};
@@ -57,6 +57,48 @@ CallData::~CallData()
     K_ASSERT(!used_trampolines.len);
 }
 #endif
+
+napi_value CallData::Run(const FunctionInfo *func, void *native)
+{
+    uint8_t *base = AllocStack<uint8_t>(func->plan.stk_size);
+    if (!base) [[unlikely]]
+        return env.Null();
+
+    const InstructionData *first = func->plan.sync.ptr;
+    return RunForward(this, base, native, first);
+}
+
+bool CallData::PrepareAsync(const FunctionInfo *func)
+{
+    uint8_t *base = AllocStack<uint8_t>(func->plan.stk_size);
+    if (!base) [[unlikely]]
+        return env.Null();
+    async_base = base;
+
+    const InstructionData *first = func->plan.async.ptr;
+    return !RunForward(this, base, nullptr, first); // Yield returns nullptr
+}
+
+void CallData::ExecuteAsync(void *native)
+{
+    const InstructionData *next = async_ip++;
+    RunForward(this, async_base, native, next);
+}
+
+napi_value CallData::EndAsync()
+{
+    const InstructionData *next = async_ip++;
+    return RunForward(this, async_base, nullptr, next);
+}
+
+void CallData::Relay(Size idx, uint8_t *base)
+{
+    TrampolineInfo *trampoline = &shared.trampolines[idx];
+    const FunctionInfo *proto = trampoline->proto;
+
+    const InstructionData *first = proto->plan.relay.ptr;
+    trampoline->state = RunRelay(this, trampoline, base, first);
+}
 
 void CallData::Finalize()
 {
@@ -167,7 +209,7 @@ void CallData::FinalizeFast()
     }
 }
 
-void CallData::RelayAsync(Size idx, uint8_t *sp)
+void CallData::RelayAsync(Size idx, uint8_t *base)
 {
     // JS/V8 is single-threaded, and runs on main_thread_id. Forward the call
     // to the JS event loop.
@@ -175,7 +217,7 @@ void CallData::RelayAsync(Size idx, uint8_t *sp)
     RelayContext ctx = {
         .call = this,
         .idx = idx,
-        .sp = sp
+        .base = base
     };
 
     NAPI_OK(napi_call_threadsafe_function(instance->broker, &ctx, napi_tsfn_blocking));
@@ -377,7 +419,7 @@ Size CallData::PushString32Value(napi_value value, const char32_t **out_str32)
     return j;
 }
 
-static FORCE_INLINE napi_value GetMemberValue(napi_env env, napi_value obj, const RecordMember &member)
+static K_FORCE_INLINE napi_value GetMemberValue(napi_env env, napi_value obj, const RecordMember &member)
 {
     napi_value value;
 
@@ -1195,7 +1237,7 @@ void CallData::DebugCall(const FunctionInfo *func)
         }
     }
 
-    PrintLn(StdErr, "Return: %1 (%2)", func->ret.type->name, FmtMemSize(func->ret.type->size));
+    PrintLn(StdErr, "Return: %1 (%2)", func->ret->name, FmtMemSize(func->ret->size));
 }
 
 void CallData::DebugForward()
@@ -1267,7 +1309,7 @@ static napi_value TranslateFastCall(napi_env env, napi_callback_info info)
     return ret;
 }
 
-static FORCE_INLINE napi_value TranslateNormalCall(CallData *call, const FunctionInfo *func, void *native, Size count)
+static K_FORCE_INLINE napi_value TranslateNormalCall(CallData *call, const FunctionInfo *func, void *native, Size count)
 {
     if (count < func->required_parameters) [[unlikely]] {
         ThrowError<Napi::TypeError>(call->env, "Expected %1 arguments, got %2", func->parameters.len, count);
@@ -1351,7 +1393,7 @@ static napi_value TranslateNormalCallDebugAsync(napi_env env, napi_callback_info
     return ret;
 }
 
-static FORCE_INLINE napi_value TranslateVariadicCall(CallData *call, const FunctionInfo *func, void *native, Size count)
+static K_FORCE_INLINE napi_value TranslateVariadicCall(CallData *call, const FunctionInfo *func, void *native, Size count)
 {
     InstanceData *instance = func->instance;
     InstanceMemory *mem = instance->memories[0];
@@ -1398,8 +1440,6 @@ static FORCE_INLINE napi_value TranslateVariadicCall(CallData *call, const Funct
 
         memcpy((void *)variadic, func, K_SIZE(*func));
         memset((void *)&variadic->parameters, 0, K_SIZE(variadic->parameters));
-        memset((void *)&variadic->sync, 0, K_SIZE(variadic->sync));
-        memset((void *)&variadic->async, 0, K_SIZE(variadic->async));
 
         variadic->parameters = func->parameters;
         variadic->lib = nullptr;
@@ -1435,7 +1475,7 @@ static FORCE_INLINE napi_value TranslateVariadicCall(CallData *call, const Funct
             variadic->parameters.Append(param);
         }
 
-        if (!PreparePlan(env, instance, variadic)) [[unlikely]]
+        if (!PreparePlan(instance, variadic)) [[unlikely]]
             return Napi::Env(env).Null();
     }
 
@@ -1718,7 +1758,7 @@ static void PerformAsyncRelay(napi_env, napi_value, void *, void *udata)
     RelayContext *ctx = (RelayContext *)udata;
     CallData *call = ctx->call;
 
-    call->Relay(ctx->idx, ctx->sp);
+    call->Relay(ctx->idx, ctx->base);
     call->Finalize();
 
     // We're done!
@@ -1808,7 +1848,7 @@ napi_value DescribeFunction(InstanceData *instance, const FunctionInfo *func)
 
     meta.Set("name", NewString(env, func->name));
     meta.Set("arguments", arguments);
-    meta.Set("result", WrapType(instance, func->ret.type));
+    meta.Set("result", WrapType(instance, func->ret));
 
     for (Size i = 0; i < func->parameters.len; i++) {
         const ParameterInfo &param = func->parameters[i];
@@ -1871,7 +1911,7 @@ napi_value WrapFunction(InstanceData *instance, const FunctionInfo *func)
     return wrapper;
 }
 
-static FORCE_INLINE bool CheckTrampolineStatus(TrampolineInfo *trampoline)
+static K_FORCE_INLINE bool CheckTrampolineStatus(TrampolineInfo *trampoline)
 {
     if (trampoline->state == 1) [[likely]]
         return true;

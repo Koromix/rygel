@@ -257,6 +257,12 @@ void PrintAssertError(const char *filename, int line, const char *msg);
     #define K_UNREACHABLE() __assume(0)
 #endif
 
+#if defined(_MSC_VER)
+    #define K_FORCE_INLINE __forceinline
+#else
+    #define K_FORCE_INLINE __attribute__((always_inline)) inline
+#endif
+
 #define K_DELETE_COPY(Cls) \
     Cls(const Cls&) = delete; \
     Cls &operator=(const Cls&) = delete;

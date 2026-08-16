@@ -78,17 +78,18 @@ extern "C" {
 #undef WEAK_CALL
 }
 
-#if defined(__GNUC__)
+#if defined(_MSC_VER)
+    #pragma warning(push)
+    #pragma warning(disable:4102)
+#else
     #pragma GCC diagnostic push
     #pragma GCC diagnostic ignored "-Wunused-parameter"
+    #pragma GCC diagnostic ignored "-Wunused-label"
 #endif
 
-namespace {
 #if defined(MUST_TAIL)
-    PRESERVE_NONE typedef napi_value ForwardFunc(CallData *call, uint8_t *base, void *native, const InstructionData *inst);
-
     #define FWD(Code) \
-        PRESERVE_NONE napi_value Forward ## Code(CallData *call, uint8_t *base, void *native, const InstructionData *inst)
+        static PRESERVE_NONE napi_value Forward ## Code(CallData *call, uint8_t *base, void *native, const InstructionData *inst)
     #define NEXT() \
         do { \
             const InstructionData *next = inst + 1; \
@@ -100,10 +101,10 @@ namespace {
     #define NEXT() \
         break
 
-    napi_value RunForward(CallData *call, uint8_t *base, void *native, const InstructionData *inst)
-    {
-        for (;; ++inst) {
-            switch ((intptr_t)inst->op) {
+napi_value RunForward(CallData *call, uint8_t *base, void *native, const InstructionData *inst)
+{
+    for (;; ++inst) {
+        switch ((intptr_t)inst->op) {
 #endif
 
 #define INTEGER(CType) \
@@ -284,7 +285,7 @@ namespace {
     FWD(PushAggregateSplit) {
         napi_value arg = call->args[inst->a];
 
-        uint64_t buf[2];
+        uintptr_t buf[2];
         if (!call->PushObject(arg, inst->type, (uint8_t *)buf)) [[unlikely]]
             return call->env.Null();
 
@@ -292,8 +293,8 @@ namespace {
         // which case the analysis code will put the same value in both offsets to
         // make sure we don't overwrite something else. Well, if we copy the second
         // part first, that is, as we do below.
-        *(uint64_t *)(base + inst->b2) = buf[1];
-        *(uint64_t *)(base + inst->b1) = buf[0];
+        *(uintptr_t *)(base + inst->b2) = buf[1];
+        *(uintptr_t *)(base + inst->b1) = buf[0];
 
         NEXT();
     }
@@ -305,6 +306,15 @@ namespace {
 
         if (!call->PushObject(arg, inst->type, ptr)) [[unlikely]]
             return call->env.Null();
+
+        NEXT();
+    }
+
+    FWD(PushPair) {
+        int *ptr = (int *)(base + inst->a);
+
+        ptr[0] = inst->b1;
+        ptr[1] = inst->b2;
 
         NEXT();
     }
@@ -444,8 +454,8 @@ namespace {
         return DecodeObject(call->instance, (const uint8_t *)&ret, inst->type);
     }
     FWD(RunAggregateMem) {
-        uint8_t *ptr = call->AllocHeap(inst->a);
-        *(uint8_t **)(base + inst->b2) = ptr;
+        uint8_t *ptr = call->AllocHeap(inst->type->size);
+        *(uint8_t **)(base + inst->b1) = ptr;
         WRAP(CallG(native, base, &call->saved_sp));
         return DecodeObject(call->instance, ptr, inst->type);
     }
@@ -544,8 +554,8 @@ namespace {
         return DecodeObject(call->instance, (const uint8_t *)&ret, inst->type);
     }
     FWD(RunAggregateMemX) {
-        uint8_t *ptr = call->AllocHeap(inst->a);
-        *(uint8_t **)(base + inst->b2) = ptr;
+        uint8_t *ptr = call->AllocHeap(inst->type->size);
+        *(uint8_t **)(base + inst->b1) = ptr;
         WRAP(CallGX(native, base, &call->saved_sp));
         return DecodeObject(call->instance, ptr, inst->type);
     }
@@ -591,8 +601,8 @@ namespace {
     FWD(CallDG) { CALL(DG); return nullptr; }
     FWD(CallDDDD) { CALL(DDDD); return nullptr; }
     FWD(CallMem) {
-        uint8_t *ptr = call->AllocHeap(inst->a);
-        *(uint8_t **)(base + inst->b2) = ptr;
+        uint8_t *ptr = call->AllocHeap(inst->type->size);
+        *(uint8_t **)(base + inst->b1) = ptr;
         CALL(G);
         *(uint8_t **)base = ptr;
         return nullptr;
@@ -606,8 +616,8 @@ namespace {
     FWD(CallDGX) { CALL(DGX); return nullptr; }
     FWD(CallDDDDX) { CALL(DDDDX); return nullptr; }
     FWD(CallMemX) {
-        uint8_t *ptr = call->AllocHeap(inst->a);
-        *(uint8_t **)(base + inst->b2) = ptr;
+        uint8_t *ptr = call->AllocHeap(inst->type->size);
+        *(uint8_t **)(base + inst->b1) = ptr;
         CALL(GX);
         *(uint8_t **)base = ptr;
         return nullptr;
@@ -615,7 +625,7 @@ namespace {
 
     FWD(ReturnVoid) { return nullptr; }
     FWD(ReturnBool) {
-        uint64_t ret = *(uint64_t *)base;
+        uintptr_t ret = *(uintptr_t *)base;
         return Napi::Boolean::New(call->env, ret & 0x1);
     }
     FWD(ReturnInt8) { INTEGER(int8_t); }
@@ -633,31 +643,31 @@ namespace {
     FWD(ReturnUInt64) { INTEGER(uint64_t); }
     FWD(ReturnUInt64S) { INTEGER_SWAP(uint64_t); }
     FWD(ReturnString) {
-        uint64_t ret = *(uint64_t *)base;
+        uintptr_t ret = *(uintptr_t *)base;
         napi_value value = NewString(call->env, (const char *)ret);
         DISPOSE();
         return value;
     }
     FWD(ReturnString16) {
-        uint64_t ret = *(uint64_t *)base;
+        uintptr_t ret = *(uintptr_t *)base;
         napi_value value = NewString(call->env, (const char16_t *)ret);
         DISPOSE();
         return value;
     }
     FWD(ReturnString32) {
-        uint64_t ret = *(uint64_t *)base;
+        uintptr_t ret = *(uintptr_t *)base;
         napi_value value = NewString(call->env, (const char32_t *)ret);
         DISPOSE();
         return value;
     }
     FWD(ReturnPointer) {
-        uint64_t ret = *(uint64_t *)base;
+        uintptr_t ret = *(uintptr_t *)base;
         napi_value value = WrapPointer(call->env, (void *)ret);
         DISPOSE();
         return value;
     }
     FWD(ReturnCallback) {
-        uint64_t ret = *(uint64_t *)base;
+        uintptr_t ret = *(uintptr_t *)base;
         return WrapPointer(call->env, (void *)ret);
     }
     FWD(ReturnRecord) { K_UNREACHABLE(); return call->env.Null(); }
@@ -674,7 +684,7 @@ namespace {
     FWD(ReturnPrototype) { K_UNREACHABLE(); return call->env.Null(); }
     FWD(ReturnAggregateReg) { return DecodeObject(call->instance, base, inst->type); }
     FWD(ReturnAggregateMem) {
-        uint64_t ret = *(uint64_t *)base;
+        uintptr_t ret = *(uintptr_t *)base;
         return DecodeObject(call->instance, (const uint8_t *)ret, inst->type);
     }
 
@@ -683,35 +693,664 @@ namespace {
 #undef DISPOSE
 #undef CALL
 
-#if defined(MUST_TAIL)
-    FORCE_INLINE napi_value RunForward(CallData *call, uint8_t *base, void *native, const InstructionData *inst)
-    {
-        return ((ForwardFunc *)inst->op)(call, base, native, inst);
-    }
-#else
-            }
+#if !defined(MUST_TAIL)
         }
-
-        K_UNREACHABLE();
     }
+
+    K_UNREACHABLE();
+}
 #endif
 
 #undef WRAP
-
 #undef NEXT
 #undef FWD
-}
 
-#if defined(__GNUC__)
+#if defined(MUST_TAIL)
+    #define RELAY(Code) \
+        static PRESERVE_NONE int Relay ## Code(CallData *call, TrampolineInfo *trampoline, uint8_t *base, const InstructionData *inst)
+    #define NEXT() \
+        do { \
+            const InstructionData *next = inst + 1; \
+            MUST_TAIL return ((RelayFunc *)next->op)(call, trampoline, base, next); \
+        } while (false)
+    #define ALIAS(From, To) \
+        RelayFunc *const Relay ## From = Relay ## To;
+#else
+    #define RELAY(Code) \
+        Code: \
+        case (int)Opcode::Code:
+    #define NEXT() \
+        break
+    #define ALIAS(From, To) \
+        RELAY(From) { goto To; }
+
+int RunRelay(CallData *call, TrampolineInfo *trampoline, uint8_t *base, const InstructionData *inst)
+{
+    for (;; ++inst) {
+        switch ((intptr_t)inst->op) {
+#endif
+
+#define INTEGER(CType) \
+        do { \
+            const uint8_t *src = base + inst->b1; \
+            CType v = *(const CType *)src; \
+             \
+            call->args[inst->a] = NewInt(trampoline->env, v); \
+        } while (false)
+#define INTEGER_SWAP(CType) \
+        do { \
+            const uint8_t *src = base + inst->b1; \
+            CType v = *(const CType *)src; \
+             \
+            call->args[inst->a] = NewInt(trampoline->env, ReverseBytes(v)); \
+        } while (false)
+#define DISPOSE(Ptr) \
+        do { \
+            if (inst->type->dispose) { \
+                inst->type->dispose(trampoline->instance, inst->type, (Ptr)); \
+            } \
+        } while (false)
+
+    RELAY(PushVoid) { K_UNREACHABLE(); }
+    RELAY(PushBool) {
+        const uint8_t *src = base + inst->b1;
+        call->args[inst->a] = Napi::Boolean::New(trampoline->env, *(bool *)src);
+
+        NEXT();
+    }
+    RELAY(PushInt8) { INTEGER(int8_t); NEXT(); }
+    RELAY(PushUInt8) { INTEGER(uint8_t); NEXT(); }
+    RELAY(PushInt16) { INTEGER(int16_t); NEXT(); }
+    RELAY(PushInt16S) { INTEGER_SWAP(int16_t); NEXT(); }
+    RELAY(PushUInt16) { INTEGER(uint16_t); NEXT(); }
+    RELAY(PushUInt16S) { INTEGER_SWAP(uint16_t); NEXT(); }
+    RELAY(PushInt32) { INTEGER(int32_t); NEXT(); }
+    RELAY(PushInt32S) { INTEGER_SWAP(int32_t); NEXT(); }
+    RELAY(PushUInt32) { INTEGER(uint32_t); NEXT(); }
+    RELAY(PushUInt32S) { INTEGER_SWAP(uint32_t); NEXT(); }
+    RELAY(PushInt64) { INTEGER(int64_t); NEXT(); }
+    RELAY(PushInt64S) { INTEGER_SWAP(int64_t); NEXT(); }
+    RELAY(PushUInt64) { INTEGER(int64_t); NEXT(); }
+    RELAY(PushUInt64S) { INTEGER_SWAP(int64_t); NEXT(); }
+    RELAY(PushString) {
+        const uint8_t *src = base + inst->b1;
+        const char *str = *(const char **)src;
+
+        call->args[inst->a] = NewString(trampoline->env, str);
+        DISPOSE(str);
+
+        NEXT();
+    }
+    RELAY(PushString16) {
+        const uint8_t *src = base + inst->b1;
+        const char16_t *str16 = *(const char16_t **)src;
+
+        call->args[inst->a] = NewString(trampoline->env, str16);
+        DISPOSE(str16);
+
+        NEXT();
+    }
+    RELAY(PushString32) {
+        const uint8_t *src = base + inst->b1;
+        const char32_t *str32 = *(const char32_t **)src;
+
+        call->args[inst->a] = NewString(trampoline->env, str32);
+        DISPOSE(str32);
+
+        NEXT();
+    }
+    RELAY(PushPointer) {
+        const uint8_t *src = base + inst->b1;
+        void *ptr2 = *(void **)src;
+
+        call->args[inst->a] = WrapPointer(trampoline->env, ptr2);
+        DISPOSE(ptr2);
+
+        NEXT();
+    }
+    RELAY(PushRecord) { K_UNREACHABLE(); }
+    RELAY(PushUnion) { K_UNREACHABLE(); }
+    RELAY(PushArray) { K_UNREACHABLE(); }
+    RELAY(PushFloat32) {
+        const uint8_t *src = base + inst->b1;
+        call->args[inst->a] = NewFloat(trampoline->env, *(float *)src);
+
+        NEXT();
+    }
+    RELAY(PushFloat64) {
+        const uint8_t *src = base + inst->b1;
+        call->args[inst->a] = NewFloat(trampoline->env, *(double *)src);
+
+        NEXT();
+    }
+    RELAY(PushCallback) {
+        const uint8_t *src = base + inst->b1;
+        call->args[inst->a] = WrapPointer(trampoline->env, *(void **)src);
+
+        NEXT();
+    }
+    RELAY(PushPrototype) { K_UNREACHABLE(); }
+    RELAY(PushAggregateReg) {
+        const uint8_t *src = base + inst->b1;
+        call->args[inst->a] = DecodeObject(trampoline->instance, src, inst->type);
+
+        NEXT();
+    }
+    RELAY(PushAggregateSplit) {
+        uintptr_t buf[2] = {
+            *(uintptr_t *)(base + inst->b1),
+            *(uintptr_t *)(base + inst->b2)
+        };
+        call->args[inst->a] = DecodeObject(trampoline->instance, (const uint8_t *)buf, inst->type);
+
+        NEXT();
+    }
+    RELAY(PushAggregateMem) {
+        const uint8_t *src = *(const uint8_t **)(base + inst->b1);
+        call->args[inst->a] = DecodeObject(trampoline->instance, src, inst->type);
+
+        NEXT();
+    }
+
+    RELAY(PushPair) {
+        int *ptr = (int *)(base + inst->a);
+
+        ptr[0] = inst->b1;
+        ptr[1] = inst->b2;
+
+        NEXT();
+    }
+
+#undef DISPOSE
+#undef INTEGER_SWAP
+#undef INTEGER
+
+#define INTEGER(Suffix, CType) \
+        do { \
+            napi_value value = call->CallCallback(trampoline, call->args, inst->a); \
+            if (!value) [[unlikely]] \
+                return -1; \
+             \
+            CType v; \
+            if (!TryNumber(trampoline->env, value, &v)) [[unlikely]] { \
+                ThrowError<Napi::TypeError>(trampoline->env, "Unexpected %1 value, expected number", GetValueType(trampoline->instance, value)); \
+                return -1; \
+            } \
+             \
+            *(uintptr_t *)(base + inst->b1) = (uintptr_t)v; \
+            return 1; \
+        } while (false)
+#define INTEGER_SWAP(Suffix, CType) \
+        do { \
+            napi_value value = call->CallCallback(trampoline, call->args, inst->a); \
+            if (!value) [[unlikely]] \
+                return -1; \
+             \
+            CType v; \
+            if (!TryNumber(trampoline->env, value, &v)) [[unlikely]] { \
+                ThrowError<Napi::TypeError>(trampoline->env, "Unexpected %1 value, expected number", GetValueType(trampoline->instance, value)); \
+                return -1; \
+            } \
+             \
+            *(uintptr_t *)(base + inst->b1) = (uintptr_t)ReverseBytes(v); \
+            return 1; \
+        } while (false)
+#define INTEGER64(Suffix, CType) \
+        do { \
+            napi_value value = call->CallCallback(trampoline, call->args, inst->a); \
+            if (!value) [[unlikely]] \
+                return -1; \
+             \
+            CType v; \
+            if (!TryNumber(trampoline->env, value, &v)) [[unlikely]] { \
+                ThrowError<Napi::TypeError>(trampoline->env, "Unexpected %1 value, expected number", GetValueType(trampoline->instance, value)); \
+                return -1; \
+            } \
+             \
+            *(uint64_t *)(base + inst->b1) = (uint64_t)v; \
+            return 1; \
+        } while (false)
+#define INTEGER64_SWAP(Suffix, CType) \
+        do { \
+            napi_value value = call->CallCallback(trampoline, call->args, inst->a); \
+            if (!value) [[unlikely]] \
+                return -1; \
+             \
+            CType v; \
+            if (!TryNumber(trampoline->env, value, &v)) [[unlikely]] { \
+                ThrowError<Napi::TypeError>(trampoline->env, "Unexpected %1 value, expected number", GetValueType(trampoline->instance, value)); \
+                return -1; \
+            } \
+             \
+            *(uint64_t *)(base + inst->b1) = (uint64_t)ReverseBytes(v); \
+            return 1; \
+        } while (false)
+
+    RELAY(RunVoid) {
+        call->CallCallback(trampoline, call->args, inst->a);
+        return 1;
+    }
+    RELAY(RunBool) {
+        napi_value value = call->CallCallback(trampoline, call->args, inst->a);
+        bool b;
+
+        if (napi_get_value_bool(trampoline->env, value, &b) == napi_boolean_expected) [[unlikely]] {
+            ThrowError<Napi::TypeError>(trampoline->env, "Unexpected %1 value, expected boolean", GetValueType(trampoline->instance, value));
+            return -1;
+        }
+
+        *(uintptr_t *)(base + inst->b1) = (uintptr_t)b;
+        return 1;
+    }
+    RELAY(RunInt8) { INTEGER(G, int8_t); }
+    RELAY(RunUInt8) { INTEGER(G, uint8_t); }
+    RELAY(RunInt16) { INTEGER(G, int16_t); }
+    RELAY(RunInt16S) { INTEGER_SWAP(G, int16_t); }
+    RELAY(RunUInt16) { INTEGER(G, uint16_t); }
+    RELAY(RunUInt16S) { INTEGER_SWAP(G, uint16_t); }
+    RELAY(RunInt32) { INTEGER(G, int32_t); }
+    RELAY(RunInt32S) { INTEGER_SWAP(G, int32_t); }
+    RELAY(RunUInt32) { INTEGER(G, uint32_t); }
+    RELAY(RunUInt32S) { INTEGER_SWAP(G, uint32_t); }
+    RELAY(RunInt64) { INTEGER64(G, int64_t); }
+    RELAY(RunInt64S) { INTEGER64_SWAP(G, int64_t); }
+    RELAY(RunUInt64) { INTEGER64(G, uint64_t); }
+    RELAY(RunUInt64S) { INTEGER64_SWAP(G, uint64_t); }
+    RELAY(RunString) {
+        napi_value value = call->CallCallback(trampoline, call->args, inst->a);
+        const char *str;
+
+        if (!value) [[unlikely]]
+            return -1;
+        if (!call->PushString(value, 1, &str)) [[unlikely]]
+            return -1;
+
+        *(uintptr_t *)(base + inst->b1) = (uintptr_t)str;
+        return 1;
+    }
+    RELAY(RunString16) {
+        napi_value value = call->CallCallback(trampoline, call->args, inst->a);
+        const char16_t *str16;
+
+        if (!value) [[unlikely]]
+            return -1;
+        if (!call->PushString16(value, 1, &str16)) [[unlikely]]
+            return -1;
+
+        *(uintptr_t *)(base + inst->b1) = (uintptr_t)str16;
+        return 1;
+    }
+    RELAY(RunString32) {
+        napi_value value = call->CallCallback(trampoline, call->args, inst->a);
+        const char32_t *str32;
+
+        if (!value) [[unlikely]]
+            return -1;
+        if (!call->PushString32(value, 1, &str32)) [[unlikely]]
+            return -1;
+
+        *(uintptr_t *)(base + inst->b1) = (uintptr_t)str32;
+        return 1;
+    }
+    RELAY(RunPointer) {
+        napi_value value = call->CallCallback(trampoline, call->args, inst->a);
+        void *ptr;
+
+        if (!value) [[unlikely]]
+            return -1;
+        if (!call->PushPointer(value, inst->type, 1, &ptr)) [[unlikely]]
+            return -1;
+
+        *(uintptr_t *)(base + inst->b1) = (uintptr_t)ptr;
+        return 1;
+    }
+    RELAY(RunCallback) {
+        napi_value value = call->CallCallback(trampoline, call->args, inst->a);
+        void *ptr;
+
+        if (!value) [[unlikely]]
+            return -1;
+        if (!call->PushCallback(value, inst->type, &ptr)) [[unlikely]]
+            return -1;
+
+        *(uintptr_t *)(base + inst->b1) = (uintptr_t)ptr;
+        return 1;
+    }
+    RELAY(RunRecord) { K_UNREACHABLE(); }
+    RELAY(RunUnion) { K_UNREACHABLE(); }
+    RELAY(RunArray) { K_UNREACHABLE(); }
+    RELAY(RunFloat32) {
+        napi_value value = call->CallCallback(trampoline, call->args, inst->a);
+        float f;
+
+        if (!value) [[unlikely]]
+            return -1;
+        if (!TryNumber(trampoline->env, value, &f)) [[unlikely]] {
+            ThrowError<Napi::TypeError>(trampoline->env, "Unexpected %1 value, expected number", GetValueType(trampoline->instance, value));
+            return -1;
+        }
+
+#if K_SIZE_MAX == INT64_MAX
+        memset(base + inst->b1, 0xFF, 8);
+#endif
+        *(float *)(base + inst->b1) = f;
+
+        return 1;
+    }
+    RELAY(RunFloat64) {
+        napi_value value = call->CallCallback(trampoline, call->args, inst->a);
+        double d;
+
+        if (!value) [[unlikely]]
+            return -1;
+        if (!TryNumber(trampoline->env, value, &d)) [[unlikely]] {
+            ThrowError<Napi::TypeError>(trampoline->env, "Unexpected %1 value, expected number", GetValueType(trampoline->instance, value));
+            return -1;
+        }
+
+        *(double *)(base + inst->b1) = d;
+        return 1;
+    }
+    RELAY(RunPrototype) { K_UNREACHABLE(); }
+    RELAY(RunAggregateG) {
+        napi_value value = call->CallCallback(trampoline, call->args, inst->a);
+
+        if (!value) [[unlikely]]
+            return -1;
+        if (!call->PushObject(value, inst->type, base + inst->b1)) [[unlikely]]
+            return -1;
+
+        return 1;
+    }
+    ALIAS(RunAggregateF, RunAggregateG)
+    ALIAS(RunAggregateD, RunAggregateG)
+    ALIAS(RunAggregateGG, RunAggregateG)
+    ALIAS(RunAggregateDD, RunAggregateG)
+    RELAY(RunAggregateGD) {
+        napi_value value = call->CallCallback(trampoline, call->args, inst->a);
+        uintptr_t buf[2] = {};
+
+        if (!value) [[unlikely]]
+            return -1;
+        if (!call->PushObject(value, inst->type, (uint8_t *)buf)) [[unlikely]]
+            return -1;
+
+        memcpy(base + inst->b1, buf + 0, K_SIZE(uintptr_t));
+        memcpy(base + inst->b2, buf + 1, K_SIZE(uintptr_t));
+
+        return 1;
+    }
+    ALIAS(RunAggregateDG, RunAggregateGD)
+    ALIAS(RunAggregateDDDD, RunAggregateG)
+    RELAY(RunAggregateMem) {
+        napi_value value = call->CallCallback(trampoline, call->args, inst->a);
+        uint8_t *ptr = *(uint8_t **)(base + inst->b1);
+
+        if (!value) [[unlikely]]
+            return -1;
+        if (!call->PushObject(value, inst->type, ptr)) [[unlikely]]
+            return -1;
+
+        *(uintptr_t *)(base + inst->b2) = (uintptr_t)ptr;
+        return 1;
+    }
+
+#undef INTEGER64_SWAP
+#undef INTEGER64
+#undef INTEGER_SWAP
+#undef INTEGER
+
+    ALIAS(RunVoidX, RunVoid)
+    ALIAS(RunBoolX, RunBool)
+    ALIAS(RunInt8X, RunInt8)
+    ALIAS(RunUInt8X, RunUInt8)
+    ALIAS(RunInt16X, RunInt16)
+    ALIAS(RunInt16SX, RunInt16S)
+    ALIAS(RunUInt16X, RunUInt16)
+    ALIAS(RunUInt16SX, RunUInt16S)
+    ALIAS(RunInt32X, RunInt32)
+    ALIAS(RunInt32SX, RunInt32S)
+    ALIAS(RunUInt32X, RunUInt32)
+    ALIAS(RunUInt32SX, RunUInt32S)
+    ALIAS(RunInt64X, RunInt64)
+    ALIAS(RunInt64SX, RunInt64S)
+    ALIAS(RunUInt64X, RunUInt64)
+    ALIAS(RunUInt64SX, RunUInt64S)
+    ALIAS(RunStringX, RunString)
+    ALIAS(RunString16X, RunString16)
+    ALIAS(RunString32X, RunString32)
+    ALIAS(RunPointerX, RunPointer)
+    ALIAS(RunCallbackX, RunCallback)
+    ALIAS(RunRecordX, RunRecord)
+    ALIAS(RunUnionX, RunUnion)
+    ALIAS(RunArrayX, RunArray)
+    ALIAS(RunFloat32X, RunFloat32)
+    ALIAS(RunFloat64X, RunFloat64)
+    ALIAS(RunPrototypeX, RunPrototype)
+    ALIAS(RunAggregateGX, RunAggregateG)
+    ALIAS(RunAggregateFX, RunAggregateF)
+    ALIAS(RunAggregateDX, RunAggregateD)
+    ALIAS(RunAggregateGGX, RunAggregateGG)
+    ALIAS(RunAggregateDDX, RunAggregateDD)
+    ALIAS(RunAggregateGDX, RunAggregateGD)
+    ALIAS(RunAggregateDGX, RunAggregateDG)
+    ALIAS(RunAggregateDDDDX, RunAggregateDDDD)
+    ALIAS(RunAggregateMemX, RunAggregateMem)
+
+    RELAY(Yield) { K_UNREACHABLE(); }
+
+    RELAY(CallG) { K_UNREACHABLE(); }
+    RELAY(CallF) { K_UNREACHABLE(); }
+    RELAY(CallD) { K_UNREACHABLE(); }
+    RELAY(CallGG) { K_UNREACHABLE(); }
+    RELAY(CallDD) { K_UNREACHABLE(); }
+    RELAY(CallGD) { K_UNREACHABLE(); }
+    RELAY(CallDG) { K_UNREACHABLE(); }
+    RELAY(CallDDDD) { K_UNREACHABLE(); }
+    RELAY(CallMem) { K_UNREACHABLE(); }
+    RELAY(CallGX) { K_UNREACHABLE(); }
+    RELAY(CallFX) { K_UNREACHABLE(); }
+    RELAY(CallDX) { K_UNREACHABLE(); }
+    RELAY(CallGGX) { K_UNREACHABLE(); }
+    RELAY(CallDDX) { K_UNREACHABLE(); }
+    RELAY(CallGDX) { K_UNREACHABLE(); }
+    RELAY(CallDGX) { K_UNREACHABLE(); }
+    RELAY(CallDDDDX) { K_UNREACHABLE(); }
+    RELAY(CallMemX) { K_UNREACHABLE(); }
+
+    RELAY(ReturnVoid) { K_UNREACHABLE(); }
+    RELAY(ReturnBool) { K_UNREACHABLE(); }
+    RELAY(ReturnInt8) { K_UNREACHABLE(); }
+    RELAY(ReturnUInt8) { K_UNREACHABLE(); }
+    RELAY(ReturnInt16) { K_UNREACHABLE(); }
+    RELAY(ReturnInt16S) { K_UNREACHABLE(); }
+    RELAY(ReturnUInt16) { K_UNREACHABLE(); }
+    RELAY(ReturnUInt16S) { K_UNREACHABLE(); }
+    RELAY(ReturnInt32) { K_UNREACHABLE(); }
+    RELAY(ReturnInt32S) { K_UNREACHABLE(); }
+    RELAY(ReturnUInt32) { K_UNREACHABLE(); }
+    RELAY(ReturnUInt32S) { K_UNREACHABLE(); }
+    RELAY(ReturnInt64) { K_UNREACHABLE(); }
+    RELAY(ReturnInt64S) { K_UNREACHABLE(); }
+    RELAY(ReturnUInt64) { K_UNREACHABLE(); }
+    RELAY(ReturnUInt64S) { K_UNREACHABLE(); }
+    RELAY(ReturnString) { K_UNREACHABLE(); }
+    RELAY(ReturnString16) { K_UNREACHABLE(); }
+    RELAY(ReturnString32) { K_UNREACHABLE(); }
+    RELAY(ReturnPointer) { K_UNREACHABLE(); }
+    RELAY(ReturnCallback) { K_UNREACHABLE(); }
+    RELAY(ReturnRecord) { K_UNREACHABLE(); }
+    RELAY(ReturnUnion) { K_UNREACHABLE(); }
+    RELAY(ReturnArray) { K_UNREACHABLE(); }
+    RELAY(ReturnFloat32) { K_UNREACHABLE(); }
+    RELAY(ReturnFloat64) { K_UNREACHABLE(); }
+    RELAY(ReturnPrototype) { K_UNREACHABLE(); }
+    RELAY(ReturnAggregateReg) { K_UNREACHABLE(); }
+    RELAY(ReturnAggregateMem) { K_UNREACHABLE(); }
+
+#if !defined(MUST_TAIL)
+        }
+    }
+
+    K_UNREACHABLE();
+}
+#endif
+
+#undef ALIAS
+#undef NEXT
+#undef RELAY
+
+#if defined(_MSC_VER)
+    #pragma warning(pop)
+#else
     #pragma GCC diagnostic pop
 #endif
 
-bool PreparePlan(Napi::Env env, InstanceData *instance, FunctionInfo *func)
+bool PreparePlan(InstanceData *instance, FunctionInfo *func)
 {
-    if (!AnalyseFunction(env, instance, func))
-        return false;
+    K_ASSERT(!func->plan.sync.len);
+    K_ASSERT(!func->plan.async.len);
+    K_ASSERT(!func->plan.relay.len);
 
-    for (const InstructionData &inst: func->sync) {
+    if (!func->lib && func->convention != CallConvention::Cdecl &&
+                      func->convention != CallConvention::Stdcall) {
+        ThrowError<Napi::Error>(instance->env, "Only Cdecl and Stdcall callbacks are supported");
+        return false;
+    }
+
+    AnalyseFunction(instance, func, &func->plan, &func->decorated_name);
+
+    K_ASSERT(func->plan.sync.len);
+    K_ASSERT(func->plan.async.len);
+    K_ASSERT(func->plan.relay.len);
+    K_ASSERT(func->plan.stk_size);
+
+#if defined(MUST_TAIL)
+    static ForwardFunc *const ForwardDispatch[256] = {
+        #define PRIMITIVE(Name) ForwardPush ## Name,
+        #include "primitives.inc"
+        ForwardPushAggregateReg,
+        ForwardPushAggregateSplit,
+        ForwardPushAggregateMem,
+        ForwardPushPair,
+        #define PRIMITIVE(Name) ForwardRun ## Name,
+        #include "primitives.inc"
+        ForwardRunAggregateG,
+        ForwardRunAggregateF,
+        ForwardRunAggregateD,
+        ForwardRunAggregateGG,
+        ForwardRunAggregateDD,
+        ForwardRunAggregateGD,
+        ForwardRunAggregateDG,
+        ForwardRunAggregateDDDD,
+        ForwardRunAggregateMem,
+        #define PRIMITIVE(Name) ForwardRun ## Name ## X,
+        #include "primitives.inc"
+        ForwardRunAggregateGX,
+        ForwardRunAggregateFX,
+        ForwardRunAggregateDX,
+        ForwardRunAggregateGGX,
+        ForwardRunAggregateDDX,
+        ForwardRunAggregateGDX,
+        ForwardRunAggregateDGX,
+        ForwardRunAggregateDDDDX,
+        ForwardRunAggregateMemX,
+        ForwardYield,
+        ForwardCallG,
+        ForwardCallF,
+        ForwardCallD,
+        ForwardCallGG,
+        ForwardCallDD,
+        ForwardCallGD,
+        ForwardCallDG,
+        ForwardCallDDDD,
+        ForwardCallMem,
+        ForwardCallGX,
+        ForwardCallFX,
+        ForwardCallDX,
+        ForwardCallGGX,
+        ForwardCallDDX,
+        ForwardCallGDX,
+        ForwardCallDGX,
+        ForwardCallDDDDX,
+        ForwardCallMemX,
+        #define PRIMITIVE(Name) ForwardReturn ## Name,
+        #include "primitives.inc"
+        ForwardReturnAggregateReg,
+        ForwardReturnAggregateMem
+    };
+
+    static RelayFunc *const RelayDispatch[256] = {
+        #define PRIMITIVE(Name) RelayPush ## Name,
+        #include "primitives.inc"
+        RelayPushAggregateReg,
+        RelayPushAggregateSplit,
+        RelayPushAggregateMem,
+        RelayPushPair,
+        #define PRIMITIVE(Name) RelayRun ## Name,
+        #include "primitives.inc"
+        RelayRunAggregateG,
+        RelayRunAggregateF,
+        RelayRunAggregateD,
+        RelayRunAggregateGG,
+        RelayRunAggregateDD,
+        RelayRunAggregateGD,
+        RelayRunAggregateDG,
+        RelayRunAggregateDDDD,
+        RelayRunAggregateMem,
+        #define PRIMITIVE(Name) RelayRun ## Name ## X,
+        #include "primitives.inc"
+        RelayRunAggregateGX,
+        RelayRunAggregateFX,
+        RelayRunAggregateDX,
+        RelayRunAggregateGGX,
+        RelayRunAggregateDDX,
+        RelayRunAggregateGDX,
+        RelayRunAggregateDGX,
+        RelayRunAggregateDDDDX,
+        RelayRunAggregateMemX,
+        RelayYield,
+        RelayCallG,
+        RelayCallF,
+        RelayCallD,
+        RelayCallGG,
+        RelayCallDD,
+        RelayCallGD,
+        RelayCallDG,
+        RelayCallDDDD,
+        RelayCallMem,
+        RelayCallGX,
+        RelayCallFX,
+        RelayCallDX,
+        RelayCallGGX,
+        RelayCallDDX,
+        RelayCallGDX,
+        RelayCallDGX,
+        RelayCallDDDDX,
+        RelayCallMemX,
+        #define PRIMITIVE(Name) RelayReturn ## Name,
+        #include "primitives.inc"
+        RelayReturnAggregateReg,
+        RelayReturnAggregateMem
+    };
+
+    for (InstructionData &inst: func->plan.sync) {
+        inst.op = (void *)ForwardDispatch[(uintptr_t)inst.op];
+    }
+    for (InstructionData &inst: func->plan.async) {
+        inst.op = (void *)ForwardDispatch[(uintptr_t)inst.op];
+    }
+    for (InstructionData &inst: func->plan.relay) {
+        inst.op = (void *)RelayDispatch[(uintptr_t)inst.op];
+    }
+#endif
+
+    return true;
+}
+
+void FillAsyncPlan(Span<const InstructionData> sync, HeapArray<InstructionData> *out_async)
+{
+    for (const InstructionData &inst: sync) {
         switch ((Opcode)(intptr_t)inst.op) {
             case Opcode::PushVoid:
             case Opcode::PushBool:
@@ -742,7 +1381,8 @@ bool PreparePlan(Napi::Env env, InstanceData *instance, FunctionInfo *func)
             case Opcode::PushPrototype:
             case Opcode::PushAggregateReg:
             case Opcode::PushAggregateSplit:
-            case Opcode::PushAggregateMem: { func->async.Append(inst); } break;
+            case Opcode::PushAggregateMem:
+            case Opcode::PushPair: { out_async->Append(inst); } break;
 
             case Opcode::RunVoid:
             case Opcode::RunBool:
@@ -768,22 +1408,22 @@ bool PreparePlan(Napi::Env env, InstanceData *instance, FunctionInfo *func)
                 int delta = (int)Opcode::ReturnVoid - (int)Opcode::RunVoid;
                 Opcode ret = (Opcode)((intptr_t)inst.op + delta);
 
-                func->async.Append({ .op = Code2Op(Opcode::Yield) });
-                func->async.Append({ .op = Code2Op(Opcode::CallG) });
-                func->async.Append({ .op = Code2Op(ret), .type = inst.type });
+                out_async->Append({ .op = Code2Op(Opcode::Yield) });
+                out_async->Append({ .op = Code2Op(Opcode::CallG) });
+                out_async->Append({ .op = Code2Op(ret), .type = inst.type });
             } break;
             case Opcode::RunRecord:
             case Opcode::RunUnion:
             case Opcode::RunArray: { K_UNREACHABLE(); } break;
             case Opcode::RunFloat32: {
-                func->async.Append({ .op = Code2Op(Opcode::Yield) });
-                func->async.Append({ .op = Code2Op(Opcode::CallF) });
-                func->async.Append({ .op = Code2Op(Opcode::ReturnFloat32), .type = inst.type });
+                out_async->Append({ .op = Code2Op(Opcode::Yield) });
+                out_async->Append({ .op = Code2Op(Opcode::CallF) });
+                out_async->Append({ .op = Code2Op(Opcode::ReturnFloat32), .type = inst.type });
             } break;
             case Opcode::RunFloat64: {
-                func->async.Append({ .op = Code2Op(Opcode::Yield) });
-                func->async.Append({ .op = Code2Op(Opcode::CallD) });
-                func->async.Append({ .op = Code2Op(Opcode::ReturnFloat64), .type = inst.type });
+                out_async->Append({ .op = Code2Op(Opcode::Yield) });
+                out_async->Append({ .op = Code2Op(Opcode::CallD) });
+                out_async->Append({ .op = Code2Op(Opcode::ReturnFloat64), .type = inst.type });
             } break;
             case Opcode::RunPrototype: { K_UNREACHABLE(); } break;
             case Opcode::RunAggregateG:
@@ -797,14 +1437,14 @@ bool PreparePlan(Napi::Env env, InstanceData *instance, FunctionInfo *func)
                 int delta = (int)Opcode::CallG - (int)Opcode::RunAggregateG;
                 Opcode call = (Opcode)((intptr_t)inst.op + delta);
 
-                func->async.Append({ .op = Code2Op(Opcode::Yield) });
-                func->async.Append({ .op = Code2Op(call) });
-                func->async.Append({ .op = Code2Op(Opcode::ReturnAggregateReg), .type = inst.type });
+                out_async->Append({ .op = Code2Op(Opcode::Yield) });
+                out_async->Append({ .op = Code2Op(call) });
+                out_async->Append({ .op = Code2Op(Opcode::ReturnAggregateReg), .type = inst.type });
             } break;
             case Opcode::RunAggregateMem: {
-                func->async.Append({ .op = Code2Op(Opcode::Yield) });
-                func->async.Append({ .op = Code2Op(Opcode::CallMem), .a = inst.a, .b1 = inst.b1, .b2 = inst.b2 });
-                func->async.Append({ .op = Code2Op(Opcode::ReturnAggregateMem), .type = inst.type });
+                out_async->Append({ .op = Code2Op(Opcode::Yield) });
+                out_async->Append({ .op = Code2Op(Opcode::CallMem), .b1 = inst.b1, .type = inst.type });
+                out_async->Append({ .op = Code2Op(Opcode::ReturnAggregateMem), .type = inst.type });
             } break;
             case Opcode::RunVoidX:
             case Opcode::RunBoolX:
@@ -830,22 +1470,22 @@ bool PreparePlan(Napi::Env env, InstanceData *instance, FunctionInfo *func)
                 int delta = (int)Opcode::ReturnVoid - (int)Opcode::RunVoidX;
                 Opcode ret = (Opcode)((intptr_t)inst.op + delta);
 
-                func->async.Append({ .op = Code2Op(Opcode::Yield) });
-                func->async.Append({ .op = Code2Op(Opcode::CallGX) });
-                func->async.Append({ .op = Code2Op(ret), .type = inst.type });
+                out_async->Append({ .op = Code2Op(Opcode::Yield) });
+                out_async->Append({ .op = Code2Op(Opcode::CallGX) });
+                out_async->Append({ .op = Code2Op(ret), .type = inst.type });
             } break;
             case Opcode::RunRecordX:
             case Opcode::RunUnionX:
             case Opcode::RunArrayX: { K_UNREACHABLE(); } break;
             case Opcode::RunFloat32X: {
-                func->async.Append({ .op = Code2Op(Opcode::Yield) });
-                func->async.Append({ .op = Code2Op(Opcode::CallFX) });
-                func->async.Append({ .op = Code2Op(Opcode::ReturnFloat32), .type = inst.type });
+                out_async->Append({ .op = Code2Op(Opcode::Yield) });
+                out_async->Append({ .op = Code2Op(Opcode::CallFX) });
+                out_async->Append({ .op = Code2Op(Opcode::ReturnFloat32), .type = inst.type });
             } break;
             case Opcode::RunFloat64X: {
-                func->async.Append({ .op = Code2Op(Opcode::Yield) });
-                func->async.Append({ .op = Code2Op(Opcode::CallDX) });
-                func->async.Append({ .op = Code2Op(Opcode::ReturnFloat64), .type = inst.type });
+                out_async->Append({ .op = Code2Op(Opcode::Yield) });
+                out_async->Append({ .op = Code2Op(Opcode::CallDX) });
+                out_async->Append({ .op = Code2Op(Opcode::ReturnFloat64), .type = inst.type });
             } break;
             case Opcode::RunPrototypeX: { K_UNREACHABLE(); } break;
             case Opcode::RunAggregateGX:
@@ -859,14 +1499,14 @@ bool PreparePlan(Napi::Env env, InstanceData *instance, FunctionInfo *func)
                 int delta = (int)Opcode::CallGX - (int)Opcode::RunAggregateGX;
                 Opcode call = (Opcode)((intptr_t)inst.op + delta);
 
-                func->async.Append({ .op = Code2Op(Opcode::Yield) });
-                func->async.Append({ .op = Code2Op(call) });
-                func->async.Append({ .op = Code2Op(Opcode::ReturnAggregateReg), .type = inst.type });
+                out_async->Append({ .op = Code2Op(Opcode::Yield) });
+                out_async->Append({ .op = Code2Op(call) });
+                out_async->Append({ .op = Code2Op(Opcode::ReturnAggregateReg), .type = inst.type });
             } break;
             case Opcode::RunAggregateMemX: {
-                func->async.Append({ .op = Code2Op(Opcode::Yield) });
-                func->async.Append({ .op = Code2Op(Opcode::CallMemX), .a = inst.a, .b1 = inst.b1, .b2 = inst.b2 });
-                func->async.Append({ .op = Code2Op(Opcode::ReturnAggregateMem), .type = inst.type });
+                out_async->Append({ .op = Code2Op(Opcode::Yield) });
+                out_async->Append({ .op = Code2Op(Opcode::CallMemX), .b1 = inst.b1, .type = inst.type });
+                out_async->Append({ .op = Code2Op(Opcode::ReturnAggregateMem), .type = inst.type });
             } break;
 
             case Opcode::Yield: { K_UNREACHABLE(); } break;
@@ -921,104 +1561,37 @@ bool PreparePlan(Napi::Env env, InstanceData *instance, FunctionInfo *func)
             case Opcode::ReturnAggregateMem: { K_UNREACHABLE(); } break;
         }
     }
+}
 
-#if defined(MUST_TAIL)
-    static ForwardFunc *const ForwardDispatch[256] = {
-        #define PRIMITIVE(Name) ForwardPush ## Name,
-        #include "primitives.inc"
-        ForwardPushAggregateReg,
-        ForwardPushAggregateSplit,
-        ForwardPushAggregateMem,
-        #define PRIMITIVE(Name) ForwardRun ## Name,
-        #include "primitives.inc"
-        ForwardRunAggregateG,
-        ForwardRunAggregateF,
-        ForwardRunAggregateD,
-        ForwardRunAggregateGG,
-        ForwardRunAggregateDD,
-        ForwardRunAggregateGD,
-        ForwardRunAggregateDG,
-        ForwardRunAggregateDDDD,
-        ForwardRunAggregateMem,
-        #define PRIMITIVE(Name) ForwardRun ## Name ## X,
-        #include "primitives.inc"
-        ForwardRunAggregateGX,
-        ForwardRunAggregateFX,
-        ForwardRunAggregateDX,
-        ForwardRunAggregateGGX,
-        ForwardRunAggregateDDX,
-        ForwardRunAggregateGDX,
-        ForwardRunAggregateDGX,
-        ForwardRunAggregateDDDDX,
-        ForwardRunAggregateMemX,
-        ForwardYield,
-        ForwardCallG,
-        ForwardCallF,
-        ForwardCallD,
-        ForwardCallGG,
-        ForwardCallDD,
-        ForwardCallGD,
-        ForwardCallDG,
-        ForwardCallDDDD,
-        ForwardCallMem,
-        ForwardCallGX,
-        ForwardCallFX,
-        ForwardCallDX,
-        ForwardCallGGX,
-        ForwardCallDDX,
-        ForwardCallGDX,
-        ForwardCallDGX,
-        ForwardCallDDDDX,
-        ForwardCallMemX,
-        #define PRIMITIVE(Name) ForwardReturn ## Name,
-        #include "primitives.inc"
-        ForwardReturnAggregateReg,
-        ForwardReturnAggregateMem
-    };
-
-    for (InstructionData &inst: func->sync) {
-        inst.op = (void *)ForwardDispatch[(uintptr_t)inst.op];
+static int AnalyseFlatRec(const TypeInfo *type, int offset, int count, FunctionRef<void(const TypeInfo *type, int offset, int count)> func)
+{
+    if (type->primitive == PrimitiveKind::Record) {
+        for (int i = 0; i < count; i++) {
+            for (const RecordMember &member: type->members) {
+                offset = AnalyseFlatRec(member.type, offset, 1, func);
+            }
+        }
+    } else if (type->primitive == PrimitiveKind::Union) {
+        for (int i = 0; i < count; i++) {
+            for (const RecordMember &member: type->members) {
+                AnalyseFlatRec(member.type, offset, 1, func);
+            }
+        }
+        offset += count;
+    } else if (type->primitive == PrimitiveKind::Array) {
+        count *= type->size / type->ref.type->size;
+        offset = AnalyseFlatRec(type->ref.type, offset, count, func);
+    } else {
+        func(type, offset, count);
+        offset += count;
     }
 
-    for (InstructionData &inst: func->async) {
-        inst.op = (void *)ForwardDispatch[(uintptr_t)inst.op];
-    }
-#endif
-
-    return true;
+    return offset;
 }
 
-napi_value CallData::Run(const FunctionInfo *func, void *native)
+int AnalyseFlat(const TypeInfo *type, FunctionRef<void(const TypeInfo *type, int offset, int count)> func)
 {
-    uint8_t *base = AllocStack<uint8_t>(func->stk_size);
-    if (!base) [[unlikely]]
-        return env.Null();
-
-    const InstructionData *first = func->sync.ptr;
-    return RunForward(this, base, native, first);
-}
-
-bool CallData::PrepareAsync(const FunctionInfo *func)
-{
-    uint8_t *base = AllocStack<uint8_t>(func->stk_size);
-    if (!base) [[unlikely]]
-        return env.Null();
-    async_base = base;
-
-    const InstructionData *first = func->async.ptr;
-    return !RunForward(this, base, nullptr, first); // Yield returns nullptr
-}
-
-void CallData::ExecuteAsync(void *native)
-{
-    const InstructionData *next = async_ip++;
-    RunForward(this, async_base, native, next);
-}
-
-napi_value CallData::EndAsync()
-{
-    const InstructionData *next = async_ip++;
-    return RunForward(this, async_base, nullptr, next);
+    return AnalyseFlatRec(type, 0, 1, func);
 }
 
 }

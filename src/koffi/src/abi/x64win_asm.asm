@@ -31,7 +31,7 @@ prologue macro
     mov qword ptr [r8+0], rsp
     .setframe rbp, 0
     .endprolog
-    mov rsp, rdx
+    lea rsp, qword ptr [rdx+80]
 endm
 
 ; Prepare integer argument registers from array passed by caller.
@@ -44,10 +44,10 @@ endm
 
 ; Prepare XMM argument registers from array passed by caller.
 forward_xmm macro
-    movsd xmm3, qword ptr [rdx+24]
-    movsd xmm2, qword ptr [rdx+16]
-    movsd xmm1, qword ptr [rdx+8]
-    movsd xmm0, qword ptr [rdx+0]
+    movsd xmm3, qword ptr [rdx+56]
+    movsd xmm2, qword ptr [rdx+48]
+    movsd xmm1, qword ptr [rdx+40]
+    movsd xmm0, qword ptr [rdx+32]
 endm
 
 ; CallNative is a minimal wrapper around the native function call.
@@ -126,23 +126,23 @@ trampoline macro ID
 endm
 
 RelayTrampoline proc frame
-    sub rsp, 120
-    .allocstack 120
+    sub rsp, 136
+    .allocstack 136
     .endprolog
-    mov qword ptr [rsp+32], rcx
-    mov qword ptr [rsp+40], rdx
-    mov qword ptr [rsp+48], r8
-    mov qword ptr [rsp+56], r9
-    movsd qword ptr [rsp+64], xmm0
-    movsd qword ptr [rsp+72], xmm1
-    movsd qword ptr [rsp+80], xmm2
-    movsd qword ptr [rsp+88], xmm3
+    mov qword ptr [rsp+64], rcx
+    mov qword ptr [rsp+72], rdx
+    mov qword ptr [rsp+80], r8
+    mov qword ptr [rsp+88], r9
+    movsd qword ptr [rsp+96], xmm0
+    movsd qword ptr [rsp+104], xmm1
+    movsd qword ptr [rsp+112], xmm2
+    movsd qword ptr [rsp+120], xmm3
     mov rcx, rax
-    lea rdx, qword ptr [rsp+32]
+    lea rdx, qword ptr [rsp+64]
     call RelayCallback
-    mov rax, qword ptr [rsp+96]
-    movsd xmm0, qword ptr [rsp+104]
-    add rsp, 120
+    mov rax, qword ptr [rsp+32]
+    movsd xmm0, qword ptr [rsp+40]
+    add rsp, 136
     ret
 RelayTrampoline endp
 

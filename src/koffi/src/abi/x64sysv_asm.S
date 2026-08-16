@@ -214,7 +214,7 @@ RelayTrampoline:
     movsd %xmm6, 128(%rsp)
     movsd %xmm7, 136(%rsp)
     movq %rax, %rdi
-    movq %rsp, %rsi
+    leaq 32(%rsp), %rsi
     call SYMBOL(RelayCallback)
     movq 0(%rsp), %rax
     movq 8(%rsp), %rdx
