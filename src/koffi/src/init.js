@@ -79,7 +79,7 @@ function wrapNative(native, version) {
 
     let load = native.load;
     let register = native.register;
-    let introspect = native.introspect ?? native.type;
+    let introspect = native.type;
 
     // Introspection shortcuts
     native.sizeof = (spec) => introspect(spec).size;
@@ -120,12 +120,8 @@ function wrapNative(native, version) {
         return lib;
     };
 
-    if (native.introspect == null) {
-        native.resolve = util.deprecate(native.type, 'The koffi.resolve() function was deprecated in Koffi 3.0, use koffi.type() instead', 'KOFFI007');
-        native.introspect = util.deprecate(native.type, 'The koffi.introspect() function was deprecated in Koffi 3.0, use koffi.type() instead', 'KOFFI008');
-    } else {
-        native.resolve = native.type;
-    }
+    native.resolve = util.deprecate(native.type, 'The koffi.resolve() function was deprecated in Koffi 3.0, use koffi.type() instead', 'KOFFI007');
+    native.introspect = util.deprecate(native.type, 'The koffi.introspect() function was deprecated in Koffi 3.0, use koffi.type() instead', 'KOFFI008');
 }
 
 export {
