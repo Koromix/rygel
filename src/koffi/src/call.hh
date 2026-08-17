@@ -37,7 +37,8 @@ struct alignas(8) CallData {
     Napi::Env env;
     InstanceData *instance;
     InstanceMemory *mem;
-    void *native;
+
+    napi_value args[MaxParameters];
 
     uint8_t *prev_stack;
     uint8_t *prev_heap;
@@ -54,17 +55,33 @@ struct alignas(8) CallData {
     bool finalized = false;
 #endif
 
-    CallData(napi_env env, InstanceData *instance, InstanceMemory *mem, void *native)
-        : env(env), instance(instance), mem(mem), native(native),
+#if defined(K_DEBUG)
+    CallData(napi_env env) : env(env), instance(nullptr), mem(nullptr) {} // Partial initialization, use Init()
+#else
+    CallData(napi_env env) : env(env) {} // Partial initialization, use Init()
+#endif
+    CallData(napi_env env, InstanceData *instance, InstanceMemory *mem)
+        : env(env), instance(instance), mem(mem),
           prev_stack(mem->stack.end), prev_heap(mem->heap.ptr) {}
 #if defined(K_DEBUG)
     ~CallData();
 #endif
 
-    INLINE_UNITY napi_value Run(const FunctionInfo *func, napi_value *args);
+    FORCE_INLINE void Init(InstanceData *instance, InstanceMemory *mem)
+    {
+        K_ASSERT(!this->mem);
 
-    bool PrepareAsync(const FunctionInfo *func, napi_value *args);
-    void ExecuteAsync();
+        this->instance = instance;
+        this->mem = mem;
+
+        prev_stack = mem->stack.end;
+        prev_heap = mem->heap.ptr;
+    }
+
+    INLINE_UNITY napi_value Run(const FunctionInfo *func, void *native);
+
+    bool PrepareAsync(const FunctionInfo *func);
+    void ExecuteAsync(void *native);
     napi_value EndAsync();
 
     INLINE_UNITY void Finalize();

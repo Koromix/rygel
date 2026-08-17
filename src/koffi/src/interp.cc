@@ -85,14 +85,14 @@ extern "C" {
 
 namespace {
 #if defined(MUST_TAIL)
-    PRESERVE_NONE typedef napi_value ForwardFunc(CallData *call, napi_value *args, uint8_t *base, const InstructionData *inst);
+    PRESERVE_NONE typedef napi_value ForwardFunc(CallData *call, uint8_t *base, void *native, const InstructionData *inst);
 
     #define FWD(Code) \
-        PRESERVE_NONE napi_value Forward ## Code(CallData *call, napi_value *args, uint8_t *base, const InstructionData *inst)
+        PRESERVE_NONE napi_value Forward ## Code(CallData *call, uint8_t *base, void *native, const InstructionData *inst)
     #define NEXT() \
         do { \
             const InstructionData *next = inst + 1; \
-            MUST_TAIL return ((ForwardFunc *)next->op)(call, args, base, next); \
+            MUST_TAIL return ((ForwardFunc *)next->op)(call, base, native, next); \
         } while (false)
 #else
     #define FWD(Code) \
@@ -100,7 +100,7 @@ namespace {
     #define NEXT() \
         break
 
-    napi_value RunForward(CallData *call, napi_value *args, uint8_t *base, const InstructionData *inst)
+    napi_value RunForward(CallData *call, uint8_t *base, void *native, const InstructionData *inst)
     {
         for (;; ++inst) {
             switch ((intptr_t)inst->op) {
@@ -108,9 +108,11 @@ namespace {
 
 #define INTEGER(CType) \
         do { \
+            napi_value arg = call->args[inst->a]; \
+             \
             CType v; \
-            if (!TryNumber(call->env, args[inst->a], &v)) [[unlikely]] { \
-                ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected number", GetValueType(call->instance, args[inst->a])); \
+            if (!TryNumber(call->env, arg, &v)) [[unlikely]] { \
+                ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected number", GetValueType(call->instance, call->args[inst->a])); \
                 return call->env.Null(); \
             } \
              \
@@ -118,9 +120,11 @@ namespace {
         } while (false)
 #define INTEGER_SWAP(CType) \
         do { \
+            napi_value arg = call->args[inst->a]; \
+             \
             CType v; \
-            if (!TryNumber(call->env, args[inst->a], &v)) [[unlikely]] { \
-                ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected number", GetValueType(call->instance, args[inst->a])); \
+            if (!TryNumber(call->env, arg, &v)) [[unlikely]] { \
+                ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected number", GetValueType(call->instance, call->args[inst->a])); \
                 return call->env.Null(); \
             } \
              \
@@ -128,9 +132,11 @@ namespace {
         } while (false)
 #define INTEGER64(CType) \
         do { \
+            napi_value arg = call->args[inst->a]; \
+             \
             CType v; \
-            if (!TryNumber(call->env, args[inst->a], &v)) [[unlikely]] { \
-                ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected number", GetValueType(call->instance, args[inst->a])); \
+            if (!TryNumber(call->env, arg, &v)) [[unlikely]] { \
+                ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected number", GetValueType(call->instance, call->args[inst->a])); \
                 return call->env.Null(); \
             } \
              \
@@ -138,9 +144,11 @@ namespace {
         } while (false)
 #define INTEGER64_SWAP(CType) \
         do { \
+            napi_value arg = call->args[inst->a]; \
+             \
             CType v; \
-            if (!TryNumber(call->env, args[inst->a], &v)) [[unlikely]] { \
-                ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected number", GetValueType(call->instance, args[inst->a])); \
+            if (!TryNumber(call->env, arg, &v)) [[unlikely]] { \
+                ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected number", GetValueType(call->instance, call->args[inst->a])); \
                 return call->env.Null(); \
             } \
              \
@@ -149,9 +157,11 @@ namespace {
 
     FWD(PushVoid) { K_UNREACHABLE(); return call->env.Null(); }
     FWD(PushBool) {
+        napi_value arg = call->args[inst->a];
+
         bool b;
-        if (napi_get_value_bool(call->env, args[inst->a], &b) != napi_ok) [[unlikely]] {
-            ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected boolean", GetValueType(call->instance, args[inst->a]));
+        if (napi_get_value_bool(call->env, arg, &b) != napi_ok) [[unlikely]] {
+            ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected boolean", GetValueType(call->instance, call->args[inst->a]));
             return call->env.Null();
         }
 
@@ -174,8 +184,10 @@ namespace {
     FWD(PushUInt64) { INTEGER64(int64_t); NEXT(); }
     FWD(PushUInt64S) { INTEGER64_SWAP(int64_t); NEXT(); }
     FWD(PushString) {
+        napi_value arg = call->args[inst->a];
+
         const char *str;
-        if (!call->PushString(args[inst->a], inst->b2, &str)) [[unlikely]]
+        if (!call->PushString(arg, inst->b2, &str)) [[unlikely]]
             return call->env.Null();
 
         *(const char **)(base + inst->b1) = str;
@@ -183,8 +195,10 @@ namespace {
         NEXT();
     }
     FWD(PushString16) {
+        napi_value arg = call->args[inst->a];
+
         const char16_t *str16;
-        if (!call->PushString16(args[inst->a], inst->b2, &str16)) [[unlikely]]
+        if (!call->PushString16(arg, inst->b2, &str16)) [[unlikely]]
             return call->env.Null();
 
         *(const char16_t **)(base + inst->b1) = str16;
@@ -192,8 +206,10 @@ namespace {
         NEXT();
     }
     FWD(PushString32) {
+        napi_value arg = call->args[inst->a];
+
         const char32_t *str32;
-        if (!call->PushString32(args[inst->a], inst->b2, &str32)) [[unlikely]]
+        if (!call->PushString32(arg, inst->b2, &str32)) [[unlikely]]
             return call->env.Null();
 
         *(const char32_t **)(base + inst->b1) = str32;
@@ -201,8 +217,10 @@ namespace {
         NEXT();
     }
     FWD(PushPointer) {
+        napi_value arg = call->args[inst->a];
+
         void *ptr;
-        if (!call->PushPointer(args[inst->a], inst->type, inst->b2, &ptr)) [[unlikely]]
+        if (!call->PushPointer(arg, inst->type, inst->b2, &ptr)) [[unlikely]]
             return call->env.Null();
 
         *(void **)(base + inst->b1) = ptr;
@@ -213,9 +231,11 @@ namespace {
     FWD(PushUnion) { K_UNREACHABLE(); return call->env.Null(); }
     FWD(PushArray) { K_UNREACHABLE(); return call->env.Null(); }
     FWD(PushFloat32) {
+        napi_value arg = call->args[inst->a];
+
         float f;
-        if (!TryNumber(call->env, args[inst->a], &f)) [[unlikely]] {
-            ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected number", GetValueType(call->instance, args[inst->a]));
+        if (!TryNumber(call->env, arg, &f)) [[unlikely]] {
+            ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected number", GetValueType(call->instance, call->args[inst->a]));
             return call->env.Null();
         }
 
@@ -227,9 +247,11 @@ namespace {
         NEXT();
     }
     FWD(PushFloat64) {
+        napi_value arg = call->args[inst->a];
+
         double d;
-        if (!TryNumber(call->env, args[inst->a], &d)) [[unlikely]] {
-            ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected number", GetValueType(call->instance, args[inst->a]));
+        if (!TryNumber(call->env, arg, &d)) [[unlikely]] {
+            ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected number", GetValueType(call->instance, call->args[inst->a]));
             return call->env.Null();
         }
 
@@ -238,8 +260,10 @@ namespace {
         NEXT();
     }
     FWD(PushCallback) {
+        napi_value arg = call->args[inst->a];
+
         void *ptr;
-        if (!call->PushCallback(args[inst->a], inst->type, &ptr)) [[unlikely]]
+        if (!call->PushCallback(arg, inst->type, &ptr)) [[unlikely]]
             return call->env.Null();
 
         *(void **)(base + inst->b1) = ptr;
@@ -248,7 +272,7 @@ namespace {
     }
     FWD(PushPrototype) { K_UNREACHABLE(); return call->env.Null(); }
     FWD(PushAggregateReg) {
-        napi_value arg = args[inst->a];
+        napi_value arg = call->args[inst->a];
 
         uint8_t *ptr = base + inst->b1;
 
@@ -258,7 +282,7 @@ namespace {
         NEXT();
     }
     FWD(PushAggregateSplit) {
-        napi_value arg = args[inst->a];
+        napi_value arg = call->args[inst->a];
 
         uint64_t buf[2];
         if (!call->PushObject(arg, inst->type, (uint8_t *)buf)) [[unlikely]]
@@ -274,7 +298,7 @@ namespace {
         NEXT();
     }
     FWD(PushAggregateMem) {
-        napi_value arg = args[inst->a];
+        napi_value arg = call->args[inst->a];
 
         uint8_t *ptr = call->AllocHeap(inst->type->size);
         *(uint8_t **)(base + inst->b1) = ptr;
@@ -309,12 +333,12 @@ namespace {
 
 #define INTEGER(Suffix, CType) \
         do { \
-            uint64_t ret = WRAP(Call ## Suffix(call->native, base, &call->saved_sp)); \
+            uint64_t ret = WRAP(Call ## Suffix(native, base, &call->saved_sp)); \
             return NewInt(call->env, (CType)ret); \
         } while (false)
 #define INTEGER_SWAP(Suffix, CType) \
         do { \
-            uint64_t ret = WRAP(Call ## Suffix(call->native, base, &call->saved_sp)); \
+            uint64_t ret = WRAP(Call ## Suffix(native, base, &call->saved_sp)); \
             return NewInt(call->env, ReverseBytes((CType)ret)); \
         } while (false)
 #define DISPOSE(Ptr) \
@@ -325,11 +349,11 @@ namespace {
         } while (false)
 
     FWD(RunVoid) {
-        WRAP(CallG(call->native, base, &call->saved_sp));
+        WRAP(CallG(native, base, &call->saved_sp));
         return nullptr;
     }
     FWD(RunBool) {
-        uint64_t ret = WRAP(CallG(call->native, base, &call->saved_sp));
+        uint64_t ret = WRAP(CallG(native, base, &call->saved_sp));
         return Napi::Boolean::New(call->env, ret & 0x1);
     }
     FWD(RunInt8) { INTEGER(G, int8_t); }
@@ -347,89 +371,89 @@ namespace {
     FWD(RunUInt64) { INTEGER(G, uint64_t); }
     FWD(RunUInt64S) { INTEGER_SWAP(G, uint64_t); }
     FWD(RunString) {
-        uint64_t ret = WRAP(CallG(call->native, base, &call->saved_sp));
+        uint64_t ret = WRAP(CallG(native, base, &call->saved_sp));
         napi_value value = NewString(call->env, (const char *)ret);
         DISPOSE((void *)ret);
         return value;
     }
     FWD(RunString16) {
-        uint64_t ret = WRAP(CallG(call->native, base, &call->saved_sp));
+        uint64_t ret = WRAP(CallG(native, base, &call->saved_sp));
         napi_value value = NewString(call->env, (const char16_t *)ret);
         DISPOSE((void *)ret);
         return value;
     }
     FWD(RunString32) {
-        uint64_t ret = WRAP(CallG(call->native, base, &call->saved_sp));
+        uint64_t ret = WRAP(CallG(native, base, &call->saved_sp));
         napi_value value = NewString(call->env, (const char32_t *)ret);
         DISPOSE((void *)ret);
         return value;
     }
     FWD(RunPointer) {
-        uint64_t ret = WRAP(CallG(call->native, base, &call->saved_sp));
+        uint64_t ret = WRAP(CallG(native, base, &call->saved_sp));
         napi_value value = WrapPointer(call->env, (void *)ret);
         DISPOSE((void *)ret);
         return value;
     }
     FWD(RunCallback) {
-        uint64_t ret = WRAP(CallG(call->native, base, &call->saved_sp));
+        uint64_t ret = WRAP(CallG(native, base, &call->saved_sp));
         return WrapPointer(call->env, (void *)ret);
     }
     FWD(RunRecord) { K_UNREACHABLE(); return call->env.Null(); }
     FWD(RunUnion) { K_UNREACHABLE(); return call->env.Null(); }
     FWD(RunArray) { K_UNREACHABLE(); return call->env.Null(); }
     FWD(RunFloat32) {
-        float f = WRAP(CallF(call->native, base, &call->saved_sp));
+        float f = WRAP(CallF(native, base, &call->saved_sp));
         return NewFloat(call->env, f);
     }
     FWD(RunFloat64) {
-        double d = WRAP(CallD(call->native, base, &call->saved_sp));
+        double d = WRAP(CallD(native, base, &call->saved_sp));
         return NewFloat(call->env, d);
     }
     FWD(RunPrototype) { K_UNREACHABLE(); return call->env.Null(); }
     FWD(RunAggregateG) {
-        auto ret = WRAP(CallG(call->native, base, &call->saved_sp));
+        auto ret = WRAP(CallG(native, base, &call->saved_sp));
         return DecodeObject(call->instance, (const uint8_t *)&ret, inst->type);
     }
     FWD(RunAggregateF) {
-        auto ret = WRAP(CallF(call->native, base, &call->saved_sp));
+        auto ret = WRAP(CallF(native, base, &call->saved_sp));
         return DecodeObject(call->instance, (const uint8_t *)&ret, inst->type);
     }
     FWD(RunAggregateD) {
-        auto ret = WRAP(CallD(call->native, base, &call->saved_sp));
+        auto ret = WRAP(CallD(native, base, &call->saved_sp));
         return DecodeObject(call->instance, (const uint8_t *)&ret, inst->type);
     }
     FWD(RunAggregateGG) {
-        auto ret = WRAP(CallGG(call->native, base, &call->saved_sp));
+        auto ret = WRAP(CallGG(native, base, &call->saved_sp));
         return DecodeObject(call->instance, (const uint8_t *)&ret, inst->type);
     }
     FWD(RunAggregateDD) {
-        auto ret = WRAP(CallDD(call->native, base, &call->saved_sp));
+        auto ret = WRAP(CallDD(native, base, &call->saved_sp));
         return DecodeObject(call->instance, (const uint8_t *)&ret, inst->type);
     }
     FWD(RunAggregateGD) {
-        auto ret = WRAP(CallGD(call->native, base, &call->saved_sp));
+        auto ret = WRAP(CallGD(native, base, &call->saved_sp));
         return DecodeObject(call->instance, (const uint8_t *)&ret, inst->type);
     }
     FWD(RunAggregateDG) {
-        auto ret = WRAP(CallDG(call->native, base, &call->saved_sp));
+        auto ret = WRAP(CallDG(native, base, &call->saved_sp));
         return DecodeObject(call->instance, (const uint8_t *)&ret, inst->type);
     }
     FWD(RunAggregateDDDD) {
-        auto ret = WRAP(CallDDDD(call->native, base, &call->saved_sp));
+        auto ret = WRAP(CallDDDD(native, base, &call->saved_sp));
         return DecodeObject(call->instance, (const uint8_t *)&ret, inst->type);
     }
     FWD(RunAggregateMem) {
         uint8_t *ptr = call->AllocHeap(inst->a);
         *(uint8_t **)(base + inst->b2) = ptr;
-        WRAP(CallG(call->native, base, &call->saved_sp));
+        WRAP(CallG(native, base, &call->saved_sp));
         return DecodeObject(call->instance, ptr, inst->type);
     }
     FWD(RunVoidX) {
-        WRAP(CallGX(call->native, base, &call->saved_sp));
+        WRAP(CallGX(native, base, &call->saved_sp));
         return nullptr;
     }
     FWD(RunBoolX) {
-        uint64_t ret = WRAP(CallGX(call->native, base, &call->saved_sp));
+        uint64_t ret = WRAP(CallGX(native, base, &call->saved_sp));
         return Napi::Boolean::New(call->env, ret & 0x1);
     }
     FWD(RunInt8X) { INTEGER(GX, int8_t); }
@@ -447,81 +471,81 @@ namespace {
     FWD(RunUInt64X) { INTEGER(GX, uint64_t); }
     FWD(RunUInt64SX) { INTEGER_SWAP(GX, uint64_t); }
     FWD(RunStringX) {
-        uint64_t ret = WRAP(CallGX(call->native, base, &call->saved_sp));
+        uint64_t ret = WRAP(CallGX(native, base, &call->saved_sp));
         napi_value value = NewString(call->env, (const char *)ret);
         DISPOSE((void *)ret);
         return value;
     }
     FWD(RunString16X) {
-        uint64_t ret = WRAP(CallGX(call->native, base, &call->saved_sp));
+        uint64_t ret = WRAP(CallGX(native, base, &call->saved_sp));
         napi_value value = NewString(call->env, (const char16_t *)ret);
         DISPOSE((void *)ret);
         return value;
     }
     FWD(RunString32X) {
-        uint64_t ret = WRAP(CallGX(call->native, base, &call->saved_sp));
+        uint64_t ret = WRAP(CallGX(native, base, &call->saved_sp));
         napi_value value = NewString(call->env, (const char32_t *)ret);
         DISPOSE((void *)ret);
         return value;
     }
     FWD(RunPointerX) {
-        uint64_t ret = WRAP(CallGX(call->native, base, &call->saved_sp));
+        uint64_t ret = WRAP(CallGX(native, base, &call->saved_sp));
         napi_value value = WrapPointer(call->env, (void *)ret);
         DISPOSE((void *)ret);
         return value;
     }
     FWD(RunCallbackX) {
-        uint64_t ret = WRAP(CallGX(call->native, base, &call->saved_sp));
+        uint64_t ret = WRAP(CallGX(native, base, &call->saved_sp));
         return WrapPointer(call->env, (void *)ret);
     }
     FWD(RunRecordX) { K_UNREACHABLE(); return call->env.Null(); }
     FWD(RunUnionX) { K_UNREACHABLE(); return call->env.Null(); }
     FWD(RunArrayX) { K_UNREACHABLE(); return call->env.Null(); }
     FWD(RunFloat32X) {
-        float f = WRAP(CallFX(call->native, base, &call->saved_sp));
+        float f = WRAP(CallFX(native, base, &call->saved_sp));
         return NewFloat(call->env, f);
     }
     FWD(RunFloat64X) {
-        double d = WRAP(CallDX(call->native, base, &call->saved_sp));
+        double d = WRAP(CallDX(native, base, &call->saved_sp));
         return NewFloat(call->env, d);
     }
     FWD(RunPrototypeX) { K_UNREACHABLE(); return call->env.Null(); }
     FWD(RunAggregateGX) {
-        auto ret = WRAP(CallGX(call->native, base, &call->saved_sp));
+        auto ret = WRAP(CallGX(native, base, &call->saved_sp));
         return DecodeObject(call->instance, (const uint8_t *)&ret, inst->type);
     }
     FWD(RunAggregateFX) {
-        auto ret = WRAP(CallFX(call->native, base, &call->saved_sp));
+        auto ret = WRAP(CallFX(native, base, &call->saved_sp));
         return DecodeObject(call->instance, (const uint8_t *)&ret, inst->type);
     }
     FWD(RunAggregateDX) {
-        auto ret = WRAP(CallDX(call->native, base, &call->saved_sp));
+        auto ret = WRAP(CallDX(native, base, &call->saved_sp));
         return DecodeObject(call->instance, (const uint8_t *)&ret, inst->type);
     }
     FWD(RunAggregateGGX) {
-        auto ret = WRAP(CallGGX(call->native, base, &call->saved_sp));
+        auto ret = WRAP(CallGGX(native, base, &call->saved_sp));
         return DecodeObject(call->instance, (const uint8_t *)&ret, inst->type);
     }
     FWD(RunAggregateDDX) {
-        auto ret = WRAP(CallDDX(call->native, base, &call->saved_sp));
+        auto ret = WRAP(CallDDX(native, base, &call->saved_sp));
         return DecodeObject(call->instance, (const uint8_t *)&ret, inst->type);
     }
     FWD(RunAggregateGDX) {
-        auto ret = WRAP(CallGDX(call->native, base, &call->saved_sp));
+        auto ret = WRAP(CallGDX(native, base, &call->saved_sp));
         return DecodeObject(call->instance, (const uint8_t *)&ret, inst->type);
     }
     FWD(RunAggregateDGX) {
-        auto ret = WRAP(CallDGX(call->native, base, &call->saved_sp));
+        auto ret = WRAP(CallDGX(native, base, &call->saved_sp));
         return DecodeObject(call->instance, (const uint8_t *)&ret, inst->type);
     }
     FWD(RunAggregateDDDDX) {
-        auto ret = WRAP(CallDDDDX(call->native, base, &call->saved_sp));
+        auto ret = WRAP(CallDDDDX(native, base, &call->saved_sp));
         return DecodeObject(call->instance, (const uint8_t *)&ret, inst->type);
     }
     FWD(RunAggregateMemX) {
         uint8_t *ptr = call->AllocHeap(inst->a);
         *(uint8_t **)(base + inst->b2) = ptr;
-        WRAP(CallGX(call->native, base, &call->saved_sp));
+        WRAP(CallGX(native, base, &call->saved_sp));
         return DecodeObject(call->instance, ptr, inst->type);
     }
 
@@ -531,7 +555,7 @@ namespace {
 
 #define CALL(Suffix) \
         do { \
-            auto ret = WRAP(Call ## Suffix(call->native, base, &call->saved_sp)); \
+            auto ret = WRAP(Call ## Suffix(native, base, &call->saved_sp)); \
             memcpy(base, &ret, K_SIZE(ret)); \
         } while (false)
 #define DISPOSE() \
@@ -659,9 +683,9 @@ namespace {
 #undef CALL
 
 #if defined(MUST_TAIL)
-    FORCE_INLINE napi_value RunForward(CallData *call, napi_value *args, uint8_t *base, const InstructionData *inst)
+    FORCE_INLINE napi_value RunForward(CallData *call, uint8_t *base, void *native, const InstructionData *inst)
     {
-        return ((ForwardFunc *)inst->op)(call, args, base, inst);
+        return ((ForwardFunc *)inst->op)(call, base, native, inst);
     }
 #else
             }
@@ -963,17 +987,17 @@ bool PreparePlan(Napi::Env env, InstanceData *instance, FunctionInfo *func)
     return true;
 }
 
-napi_value CallData::Run(const FunctionInfo *func, napi_value *args)
+napi_value CallData::Run(const FunctionInfo *func, void *native)
 {
     uint8_t *base = AllocStack<uint8_t>(func->stk_size);
     if (!base) [[unlikely]]
         return env.Null();
 
     const InstructionData *first = func->sync.ptr;
-    return RunForward(this, args, base, first);
+    return RunForward(this, base, native, first);
 }
 
-bool CallData::PrepareAsync(const FunctionInfo *func, napi_value *args)
+bool CallData::PrepareAsync(const FunctionInfo *func)
 {
     uint8_t *base = AllocStack<uint8_t>(func->stk_size);
     if (!base) [[unlikely]]
@@ -981,19 +1005,19 @@ bool CallData::PrepareAsync(const FunctionInfo *func, napi_value *args)
     async_base = base;
 
     const InstructionData *first = func->async.ptr;
-    return !RunForward(this, args, base, first); // Yield returns nullptr
+    return !RunForward(this, base, nullptr, first); // Yield returns nullptr
 }
 
-void CallData::ExecuteAsync()
+void CallData::ExecuteAsync(void *native)
 {
     const InstructionData *next = async_ip++;
-    RunForward(this, nullptr, async_base, next);
+    RunForward(this, async_base, native, next);
 }
 
 napi_value CallData::EndAsync()
 {
     const InstructionData *next = async_ip++;
-    return RunForward(this, nullptr, async_base, next);
+    return RunForward(this, async_base, nullptr, next);
 }
 
 }
