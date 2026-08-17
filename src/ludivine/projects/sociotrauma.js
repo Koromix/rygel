@@ -37,7 +37,7 @@ import substance from './forms/substance.js'
 
 const consent = {
     text: html`
-        <p>L'étude SocioTrauma vise à étudier comment, à la suite directe d'un évènement difficile et potentiellement traumatique, vos relations à vos proches et votre bien être psychologique évolue. Cela implique que, pour participer, <b>vous devez avoir vécu un évènement que vous considérez comme difficile il y a moins d'un mois</b>.
+        <p>L'étude SocioTrauma vise à étudier comment, à la suite directe d'un évènement difficile et potentiellement traumatique, vos relations à vos proches et votre bien être psychologique évoluent. Cela implique que, pour participer, <b>vous devez avoir vécu un évènement que vous considérez comme difficile il y a moins d'un mois</b>.
         <p>Dans cette étude, nous vous poserons des questions sur votre situation actuelle, vos relations avec vos proches et la société, ainsi que sur votre bien-être psychologique. Il sera également demandé de fournir quelques informations sur l’évènement difficile que vous avez vécu.
         <p>Des consignes détaillées guideront chacune des 6 étapes de l’étude, avec des exercices à réaliser à plusieurs reprises. Des rappels par e-mail et/ou notifications via l’application vous aideront à respecter les échéances. Un calendrier est également disponible depuis votre tableau de bord.
         <p>L’étude se déroule <b>entièrement en ligne</b>, sans contact direct avec les autres participants ou les responsables de l’étude. Toutefois, l’investigatrice principale peut être contactée par e-mail pour toute question: Wivine Blekic, <a href="mailto:sociotrauma@ldv-recherche.fr">sociotrauma@ldv-recherche.fr</a>.

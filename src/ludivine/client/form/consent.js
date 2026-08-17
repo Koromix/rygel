@@ -63,7 +63,7 @@ function ConsentModule(app, project) {
 
         render(html`
             <div class="box">
-                <div class="header">Consentement</div>
+                <div class="header">Participez à SocioTrauma</div>
                 <div>${consent.text}</div>
                 ${consent.download != null ? html`
                     <div class="actions">
