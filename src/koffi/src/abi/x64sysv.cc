@@ -286,7 +286,7 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
             }
 
             if (param.type->primitive == PrimitiveKind::Record || param.type->primitive == PrimitiveKind::Union) {
-                Opcode code = param.abi.regular ? Opcode::PushAggregateSplit : Opcode::PushAggregateStack;
+                Opcode code = param.abi.regular ? Opcode::PushAggregateSplit : Opcode::PushAggregateReg;
                 func->sync.Append({ .op = Code2Op(code), .a = param.offset, .b1 = (int16_t)param.abi.offsets[0], .b2 = (int16_t)param.abi.offsets[1], .type = param.type });
             } else {
                 int delta = (int)Opcode::PushVoid - (int)PrimitiveKind::Void;

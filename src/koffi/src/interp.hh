@@ -17,7 +17,6 @@ enum class Opcode {
     #include "primitives.inc"
     PushAggregateReg,
     PushAggregateSplit,
-    PushAggregateStack,
     PushAggregateMem,
 
     #define PRIMITIVE(Name) Run ## Name,

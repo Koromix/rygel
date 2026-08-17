@@ -273,14 +273,6 @@ namespace {
 
         NEXT();
     }
-    FWD(PushAggregateStack) {
-        napi_value arg = args[inst->a];
-
-        if (!call->PushObject(arg, inst->type, base + inst->b1)) [[unlikely]]
-            return call->env.Null();
-
-        NEXT();
-    }
     FWD(PushAggregateMem) {
         napi_value arg = args[inst->a];
 
@@ -725,7 +717,6 @@ bool PreparePlan(Napi::Env env, InstanceData *instance, FunctionInfo *func)
             case Opcode::PushPrototype:
             case Opcode::PushAggregateReg:
             case Opcode::PushAggregateSplit:
-            case Opcode::PushAggregateStack:
             case Opcode::PushAggregateMem: { func->async.Append(inst); } break;
 
             case Opcode::RunVoid:
@@ -912,7 +903,6 @@ bool PreparePlan(Napi::Env env, InstanceData *instance, FunctionInfo *func)
         #include "primitives.inc"
         ForwardPushAggregateReg,
         ForwardPushAggregateSplit,
-        ForwardPushAggregateStack,
         ForwardPushAggregateMem,
         #define PRIMITIVE(Name) ForwardRun ## Name,
         #include "primitives.inc"
