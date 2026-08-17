@@ -1048,13 +1048,6 @@ async function runDashboard() {
         </div>
 
         <div class="tab">
-            <div class="box">
-                <div>
-                    <div class="header">Bienvenue sur ${ENV.title} !</div>
-                    <p>Vous pouvez <b>commencer ou continuer</b> votre participation aux études ci-dessous le cas échéant, utiliser votre journal personnel, ou consulter votre profil pour modifier vos préférences.
-                </div>
-            </div>
-
             <div class="row">
                 <div class="column" style="flex: 1;">
                     ${PROJECTS.map(project => {
