@@ -130,7 +130,7 @@ static bool CreateLoginDocument(const char *title, const char *login, Allocator 
         Span<const uint8_t> png = GetLogoPng();
 
         int width, height, channels;
-        uint8_t *img = stbi_load_from_memory(png.ptr, png.len, &width, &height, &channels, 4);
+        uint8_t *img = stbi_load_from_memory(png.ptr, (int)png.len, &width, &height, &channels, 4);
         K_ASSERT(img);
         K_DEFER { free(img); };
 

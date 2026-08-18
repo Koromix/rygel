@@ -22,7 +22,7 @@ static void KidGenFunc(sqlite3_context *ctx, int, sqlite3_value **argv)
     }
 
     KID kid;
-    FillKID(type, &kid);
+    FillKID((int8_t)type, &kid);
 
     sqlite3_result_blob(ctx, kid.raw, K_SIZE(kid.raw), SQLITE_TRANSIENT);
 }

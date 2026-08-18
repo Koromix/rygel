@@ -2586,7 +2586,7 @@ Size ConvertWin32WideToUtf8(Span<const wchar_t> str_w, Span<char> out_str)
         return -1;
     }
 
-    int len = WideCharToMultiByte(CP_UTF8, 0, str_w.ptr, str_w.len, out_str.ptr, (int)out_str.len - 1, nullptr, nullptr);
+    int len = WideCharToMultiByte(CP_UTF8, 0, str_w.ptr, (int)str_w.len, out_str.ptr, (int)out_str.len - 1, nullptr, nullptr);
 
     if (!len) {
         switch (GetLastError()) {

@@ -937,7 +937,7 @@ Options:
             return 1;
     }
 
-    Async async(1 + config.services.len);
+    Async async(1 + (int)config.services.len);
 
     if (config.services.len) {
         LogInfo("Start services");
