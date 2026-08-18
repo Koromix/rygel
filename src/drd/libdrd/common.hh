@@ -85,7 +85,7 @@ union alignas(8) drd_DiagnosisCode {
 
     operator FmtArg() const { return FmtArg(str); }
 
-    constexpr uint64_t Hash() const { return HashTraits<const char *>::Hash(str); }
+    uint64_t Hash() const { return HashTraits<const char *>::Hash(str); }
 };
 
 union alignas(8) drd_ProcedureCode {
@@ -136,7 +136,7 @@ union alignas(8) drd_ProcedureCode {
 
     operator FmtArg() const { return FmtArg(str); }
 
-    constexpr uint64_t Hash() const { return HashTraits<const char *>::Hash(str); }
+    uint64_t Hash() const { return HashTraits<const char *>::Hash(str); }
 };
 
 struct drd_UnitCode {
@@ -173,7 +173,7 @@ struct drd_UnitCode {
 
     operator FmtArg() const { return FmtArg(number); }
 
-    constexpr uint64_t Hash() const { return HashTraits<int16_t>::Hash(number); }
+    uint64_t Hash() const { return HashTraits<int16_t>::Hash(number); }
 };
 
 struct drd_ListMask {

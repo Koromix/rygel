@@ -100,7 +100,7 @@ union mco_GhmRootCode {
         return arg;
     }
 
-    constexpr uint64_t Hash() const { return HashTraits<int32_t>::Hash(value); }
+    uint64_t Hash() const { return HashTraits<int32_t>::Hash(value); }
 };
 
 union mco_GhmCode {
@@ -219,7 +219,7 @@ union mco_GhmCode {
         return ghm_root;
     }
 
-    constexpr uint64_t Hash() const { return HashTraits<int32_t>::Hash(value); }
+    uint64_t Hash() const { return HashTraits<int32_t>::Hash(value); }
 };
 
 struct mco_GhsCode {
