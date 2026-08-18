@@ -78,13 +78,13 @@ extern "C" {
 #undef WEAK_CALL
 }
 
-#if defined(_MSC_VER)
-    #pragma warning(push)
-    #pragma warning(disable:4102)
-#else
+#if defined(__GNUC__) || defined(__clang__)
     #pragma GCC diagnostic push
     #pragma GCC diagnostic ignored "-Wunused-parameter"
     #pragma GCC diagnostic ignored "-Wunused-label"
+#else
+    #pragma warning(push)
+    #pragma warning(disable:4102)
 #endif
 
 #if defined(MUST_TAIL)
@@ -1200,10 +1200,10 @@ int RunRelay(CallData *call, TrampolineInfo *trampoline, uint8_t *base, const In
 #undef NEXT
 #undef RELAY
 
-#if defined(_MSC_VER)
-    #pragma warning(pop)
-#else
+#if defined(__GNUC__) || defined(__clang__)
     #pragma GCC diagnostic pop
+#else
+    #pragma warning(pop)
 #endif
 
 bool PreparePlan(InstanceData *instance, FunctionInfo *func)
