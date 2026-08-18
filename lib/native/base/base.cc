@@ -5819,7 +5819,7 @@ bool ReadCommandOutput(const char *cmd_line, HeapArray<uint8_t> *out_output)
         } else {
             LogError("Command '%1' failed with exit code %2", cmd_line, exit_code);
         }
-        return -1;
+        return false;
     }
 
     err_guard.Disable();
