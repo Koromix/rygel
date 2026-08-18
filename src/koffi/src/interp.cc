@@ -317,6 +317,8 @@ namespace {
 #if defined(_WIN32)
     #define WRAP(Expr) \
         [&]() { \
+            call->DebugForward(); \
+             \
             TEB *teb = GetTEB(); \
              \
             K_DEFER { call->instance->last_error = teb->LastErrorValue; }; \
@@ -324,7 +326,6 @@ namespace {
              \
             ADJUST_TEB(teb, call->mem->stack0.ptr, call->mem->stack0.end); \
              \
-            call->DebugForward(); \
             return (Expr); \
         }()
 #else
