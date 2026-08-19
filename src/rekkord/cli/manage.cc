@@ -418,6 +418,8 @@ reenter:
             }
             if (fingerprint[0]) {
                 PrintLn(&st, "Fingerprint = %1", fingerprint);
+            } else {
+                PrintLn(&st, "# Fingerprint =");
             }
         } break;
     }
