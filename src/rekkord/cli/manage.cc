@@ -357,8 +357,8 @@ reenter:
             if (secret_key) {
                 PrintLn(&st, "SecretKey = %1", secret_key);
             }
-            PrintLn("# RetainDuration = 30d");
-            PrintLn("# RetainMode = GOVERNANCE");
+            PrintLn(&st, "# RetainDuration = 30d");
+            PrintLn(&st, "# RetainMode = GOVERNANCE");
         } break;
 
         case rk_DiskType::SFTP: {
