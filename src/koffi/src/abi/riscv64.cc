@@ -266,7 +266,7 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
                 case AbiMethod::Vec: {
                     Opcode run = forward_fp ? Opcode::RunAggregateDDX : Opcode::RunAggregateDD;
                     out_plan->sync.Append({ .op = Code2Op(run), .a = (int32_t)func->parameters.len, .b1 = -40 + 16, .type = func->ret });
-                }
+                } break;
                 case AbiMethod::VecVec: {
                     const TypeInfo *type = ReshapeType(instance, func->ret, 8, (int)TypeFlag::FillWithOnes);
                     Opcode run = forward_fp ? Opcode::RunAggregateDDX : Opcode::RunAggregateDD;
