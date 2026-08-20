@@ -64,6 +64,9 @@ async function main() {
 }
 
 async function test() {
+    // Make sure koffi.register() does not crash when used before (see #277) loading a library
+    koffi.register(() => {}, 'IdleCallback *');
+
     const lib_filename = path.join(__dirname, cnoke.output, 'callbacks' + koffi.extension);
     const lib = koffi.load(lib_filename);
 
@@ -372,5 +375,5 @@ async function test() {
     }
 
     // Count registered callbacks to make register/unregister works
-    assert.equal(koffi.stats().callbacks, 2);
+    assert.equal(koffi.stats().callbacks, 3);
 }
