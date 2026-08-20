@@ -171,7 +171,7 @@ bool DetectCallConvention(Span<const char> name, CallConvention *out_convention)
 
 napi_value CallPointer(Napi::Env env, const FunctionInfo *proto, void *native, napi_value *args, Size count);
 
-bool InitAsyncBroker(Napi::Env env, InstanceData *instance);
+bool InitAsyncBroker(InstanceData *instance);
 void *GetTrampoline(int idx);
 
 bool Encode(InstanceData *instance, uint8_t *ptr, napi_value value, const TypeInfo *type);

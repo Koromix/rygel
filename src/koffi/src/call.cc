@@ -1126,7 +1126,7 @@ Size CallData::PushIndirectString(Napi::Array array, const TypeInfo *ref, void *
 
 void *CallData::ReserveTrampoline(const FunctionInfo *proto, Napi::Function func)
 {
-    if (!InitAsyncBroker(env, instance)) [[unlikely]]
+    if (!InitAsyncBroker(instance)) [[unlikely]]
         return nullptr;
 
     int16_t idx;
@@ -1693,9 +1693,11 @@ static void PerformAsyncRelay(napi_env, napi_value, void *, void *udata)
     ctx->cv.notify_one();
 }
 
-bool InitAsyncBroker(Napi::Env env, InstanceData *instance)
+bool InitAsyncBroker(InstanceData *instance)
 {
     if (!instance->broker) {
+        Napi::Env env = instance->env;
+
         if (napi_create_threadsafe_function(env, nullptr, nullptr,
                                             NewString(env, "Koffi Async Callback Broker"),
                                             0, 1, nullptr, nullptr, nullptr,

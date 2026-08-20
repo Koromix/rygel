@@ -1498,6 +1498,15 @@ static Napi::Value GetTypeDefinition(const Napi::CallbackInfo &info)
 
 #endif
 
+static void InitSyncMemory(InstanceData *instance)
+{
+    if (instance->memories.len)
+        return;
+
+    AllocateMemory(instance, instance->config.sync_stack_size, instance->config.sync_heap_size);
+    K_ASSERT(instance->memories.len == 1);
+}
+
 InstanceMemory *AllocateMemory(InstanceData *instance, Size stack_size, Size heap_size)
 {
     std::lock_guard<std::mutex> lock(instance->mem_mutex);
@@ -1808,10 +1817,7 @@ static Napi::Value LoadSharedLibrary(const Napi::CallbackInfo &info)
     }
 #endif
 
-    if (!instance->memories.len) {
-        AllocateMemory(instance, instance->config.sync_stack_size, instance->config.sync_heap_size);
-        K_ASSERT(instance->memories.len == 1);
-    }
+    InitSyncMemory(instance);
 
     // Load shared library
     void *module = nullptr;
@@ -1864,7 +1870,9 @@ static Napi::Value RegisterCallback(const Napi::CallbackInfo &info)
     Napi::Env env = info.Env();
     InstanceData *instance = (InstanceData *)info.Data();
 
-    if (!InitAsyncBroker(env, instance)) [[unlikely]]
+    InitSyncMemory(instance);
+
+    if (!InitAsyncBroker(instance)) [[unlikely]]
         return env.Null();
 
     if (info.Length() < 2u) {
