@@ -8,28 +8,36 @@ function determineAbi() {
     let abi = process.arch.toString();
 
     if (abi == 'riscv32' || abi == 'riscv64') {
-        using file = openFile(process.execPath, 'r');
+        let file = openFile(process.execPath, 'r');
 
-        let header = readElfHeader(file);
-        let float_abi = (header.e_flags & 0x6);
+        try {
+            let header = readElfHeader(file);
+            let float_abi = (header.e_flags & 0x6);
 
-        switch (float_abi) {
-            case 0: {} break;
-            case 2: { abi += 'f'; } break;
-            case 4: { abi += 'd'; } break;
-            case 6: { abi += 'q'; } break;
+            switch (float_abi) {
+                case 0: {} break;
+                case 2: { abi += 'f'; } break;
+                case 4: { abi += 'd'; } break;
+                case 6: { abi += 'q'; } break;
+            }
+        } finally {
+            file.close();
         }
     } else if (abi == 'arm') {
-        using file = openFile(process.execPath, 'r');
+        let file = openFile(process.execPath, 'r');
 
-        let header = readElfHeader(file);
+        try {
+            let header = readElfHeader(file);
 
-        if (header.e_flags & 0x400) {
-            abi += 'hf';
-        } else if (header.e_flags & 0x200) {
-            abi += 'sf';
-        } else {
-            throw new Error('Unknown ARM floating-point ABI');
+            if (header.e_flags & 0x400) {
+                abi += 'hf';
+            } else if (header.e_flags & 0x200) {
+                abi += 'sf';
+            } else {
+                throw new Error('Unknown ARM floating-point ABI');
+            }
+        } finally {
+            file.close();
         }
     }
 
@@ -40,20 +48,24 @@ function determineLibc() {
     if (process.platform != 'linux')
         throw new Error('ELF libc detection only works on Linux');
 
-    using file = openFile(process.execPath, 'r');
-
-    let header = readElfHeader(file);
-
-    if (!header.e_phoff)
-        throw new Error('Cannot find program headers in process binary');
+    let file = openFile(process.execPath, 'r');
 
     let interp = null;
 
-    switch (header.ei_class) {
-        case 32: { interp = findInterpreter32(file, header); } break;
-        case 64: { interp = findInterpreter64(file, header); } break;
+    try {
+        let header = readElfHeader(file);
 
-        default: throw new Error('Unsupported ELF machine class');
+        if (!header.e_phoff)
+            throw new Error('Cannot find program headers in process binary');
+
+        switch (header.ei_class) {
+            case 32: { interp = findInterpreter32(file, header); } break;
+            case 64: { interp = findInterpreter64(file, header); } break;
+
+            default: throw new Error('Unsupported ELF machine class');
+        }
+    } finally {
+        file.close();
     }
 
     let basename = path.basename(interp);
