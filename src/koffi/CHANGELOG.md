@@ -7,6 +7,12 @@
 
 ### Koffi 3.1
 
+#### Koffi 3.1.6
+
+*Released on 2026-08-20*
+
+- Fix crash when calling `koffi.register()` before loading any library
+
 #### Koffi 3.1.5
 
 *Released on 2026-08-13*
