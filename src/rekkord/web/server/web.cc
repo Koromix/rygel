@@ -434,11 +434,11 @@ static void HandleRequest(http_IO *io)
                     json.Key("internal"); json.Bool(config.internal_auth);
                     json.Key("register"); json.Bool(config.allow_register);
                     json.Key("providers"); json.StartArray();
-                    for (const oidc_Provider &provider: config.oidc_providers) {
+                    for (const OidcConfig &oidc: config.oidc_configs) {
                         json.StartObject();
 
-                        json.Key("issuer"); json.String(provider.issuer);
-                        json.Key("title"); json.String(provider.title);
+                        json.Key("issuer"); json.String(oidc.provider.issuer);
+                        json.Key("title"); json.String(oidc.provider.title);
 
                         json.EndObject();
                     }

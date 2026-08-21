@@ -11,6 +11,11 @@
 
 namespace K {
 
+struct OidcConfig {
+    oidc_Provider provider;
+    bool auto_link = false;
+};
+
 struct Config {
     const char *title = nullptr;
     const char *url = nullptr;
@@ -28,9 +33,8 @@ struct Config {
 
     bool internal_auth = true;
     bool allow_register = true;
-    bool auto_link_email = false;
-    HeapArray<oidc_Provider> oidc_providers;
-    HashMap<const char *, const oidc_Provider *> oidc_map;
+    HeapArray<OidcConfig> oidc_configs;
+    HashMap<const char *, const OidcConfig *> oidc_map;
 
     BlockAllocator str_alloc;
 

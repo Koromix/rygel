@@ -1027,8 +1027,8 @@ void HandleSsoLogin(http_IO *io)
         }
     }
 
-    const oidc_Provider *provider = config.oidc_map.FindValue(type, nullptr);
-    if (!provider) {
+    const OidcConfig *oidc = config.oidc_map.FindValue(type, nullptr);
+    if (!oidc) {
         LogError("Unknown provider type '%1'", type);
         io->SendError(404);
         return;
@@ -1038,7 +1038,7 @@ void HandleSsoLogin(http_IO *io)
     const char *callback = Fmt(io->Allocator(), "%1/oidc", config.url).ptr;
 
     oidc_AuthorizationInfo auth;
-    oidc_PrepareAuthorization(*provider, scopes, callback, redirect, SsoClaims, io->Allocator(), &auth);
+    oidc_PrepareAuthorization(oidc->provider, scopes, callback, redirect, SsoClaims, io->Allocator(), &auth);
 
     // Don't set SameSite=Strict because we want the cookie to be available when the user gets redirected to the callback URL
     io->AddCookieHeader("/", "oidc", auth.cookie, SsoCookieFlags, SsoCookieMaxAge);
@@ -1105,8 +1105,8 @@ void HandleSsoOidc(http_IO *io)
         return;
     }
 
-    const oidc_Provider *provider = config.oidc_map.FindValue(info.issuer, nullptr);
-    if (!provider) [[unlikely]] {
+    const OidcConfig *oidc = config.oidc_map.FindValue(info.issuer, nullptr);
+    if (!oidc) [[unlikely]] {
         LogError("SSO provider '%1' is gone!", info.issuer);
         return;
     }
@@ -1115,14 +1115,14 @@ void HandleSsoOidc(http_IO *io)
     {
         const char *callback = Fmt(io->Allocator(), "%1/oidc", config.url).ptr;
 
-        if (!oidc_ExchangeCode(*provider, callback, code, io->Allocator(), &tokens)) {
+        if (!oidc_ExchangeCode(oidc->provider, callback, code, io->Allocator(), &tokens)) {
             io->SendError(401);
             return;
         }
     }
 
     oidc_IdentityInfo identity;
-    if (!oidc_DecodeIdToken(*provider, tokens.id, info.nonce, io->Allocator(), &identity)) {
+    if (!oidc_DecodeIdToken(oidc->provider, tokens.id, info.nonce, io->Allocator(), &identity)) {
         io->SendError(401);
         return;
     }
@@ -1146,7 +1146,7 @@ void HandleSsoOidc(http_IO *io)
                            INNER JOIN users u ON (u.id = i.user)
                            WHERE i.issuer = ?1 AND i.sub = ?2 AND
                                  i.allowed = 1 AND u.confirmed = 1)",
-                        &stmt, provider->issuer, identity.sub))
+                        &stmt, oidc->provider.issuer, identity.sub))
             return;
 
         if (stmt.Step()) {
@@ -1197,7 +1197,7 @@ void HandleSsoOidc(http_IO *io)
                 if (verified && created) {
                     // Automatically allow the provider that resulted in user creation if address mail is verified
                     allowed = true;
-                } else if (verified && config.auto_link_email) {
+                } else if (verified && oidc->auto_link) {
                     // Automatically link provider to existing mail if AutoLink = On (not default)
                     allowed = true;
                 }
@@ -1217,7 +1217,7 @@ void HandleSsoOidc(http_IO *io)
                                    VALUES (?1, ?2, ?3, ?4)
                                    ON CONFLICT (issuer, sub) DO UPDATE SET allowed = allowed
                                    RETURNING id)",
-                                &stmt, userid, provider->issuer, identity.sub, 0 + allowed))
+                                &stmt, userid, oidc->provider.issuer, identity.sub, 0 + allowed))
                     return false;
 
                 if (!stmt.Step()) {
@@ -1241,7 +1241,7 @@ void HandleSsoOidc(http_IO *io)
         if (allowed) {
             session = CreateUserSession(userid, true, identity.email, ckey, 1);
         } else {
-            if (!SendLinkIdentityMail(identity.email, *provider, token, io->Allocator()))
+            if (!SendLinkIdentityMail(identity.email, oidc->provider, token, io->Allocator()))
                 return;
 
             if (created) {

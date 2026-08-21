@@ -63,13 +63,13 @@ bool Config::Validate() const
     valid &= http.Validate();
     valid &= smtp.Validate();
 
-    if (!internal_auth && !oidc_providers.len) {
+    if (!internal_auth && !oidc_configs.len) {
         LogError("Cannot disable internal auth if no SSO provider is configured");
         valid = false;
     }
 
-    for (const oidc_Provider &provider: oidc_providers) {
-        valid &= provider.Validate();
+    for (const OidcConfig &oidc: oidc_configs) {
+        valid &= oidc.provider.Validate();
     }
 
     return valid;
@@ -168,17 +168,19 @@ bool LoadConfig(StreamReader *st, Config *out_config)
                     valid &= ParseBool(prop.value, &config.internal_auth);
                 } else if (prop.key == "AllowRegister") {
                     valid &= ParseBool(prop.value, &config.allow_register);
-                } else if (prop.key == "AutoLinkEmail") {
-                    valid &= ParseBool(prop.value, &config.auto_link_email);
                 } else {
                     LogError("Unknown attribute '%1'", prop.key);
                     valid = false;
                 }
             } else if (prop.section == "SSO") {
-                oidc_Provider *provider = config.oidc_providers.AppendDefault();
+                OidcConfig *oidc = config.oidc_configs.AppendDefault();
 
                 do {
-                    valid &= provider->SetProperty(prop.key, prop.value, root_directory);
+                    if (prop.key == "AutoLink") {
+                        valid &= ParseBool(prop.value, &oidc->auto_link);
+                    } else {
+                        valid &= oidc->provider.SetProperty(prop.key, prop.value, root_directory);
+                    }
                 } while (ini.NextInSection(&prop));
             } else {
                 LogError("Unknown section '%1'", prop.section);
@@ -200,15 +202,15 @@ bool LoadConfig(StreamReader *st, Config *out_config)
 
     // Finalize OIDC providers
     {
-        for (oidc_Provider &provider: config.oidc_providers) {
-            valid &= provider.Discover();
+        for (OidcConfig &oidc: config.oidc_configs) {
+            valid &= oidc.provider.Discover();
         }
         if (!valid)
             return false;
 
-        for (const oidc_Provider &provider: config.oidc_providers) {
-            if (provider.issuer) {
-                config.oidc_map.Set(provider.issuer, &provider);
+        for (const OidcConfig &oidc: config.oidc_configs) {
+            if (oidc.provider.issuer) {
+                config.oidc_map.Set(oidc.provider.issuer, &oidc);
             }
         }
     }
