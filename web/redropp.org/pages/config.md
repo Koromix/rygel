@@ -1,5 +1,11 @@
 # Main configuration
 
+You can create the default configuration file with the following command:
+
+```sh
+redropp init > redropp.ini
+```
+
 ## Mandatory settings
 
 The following settings are mandatory, and msut be set before Redropp can work:
@@ -40,12 +46,6 @@ Quota = 1G
 MaxDuration = 90d
 # Allow drops without expiration delay (infinite duration)
 AllowInfinite = No
-```
-
-You can create the default configuration file with the following command:
-
-```sh
-redropp init > redropp.ini
 ```
 
 # Authentication methods
