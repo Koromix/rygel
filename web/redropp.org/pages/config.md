@@ -106,3 +106,23 @@ ClientSecret =
 ```
 > [!NOTE]
 > Configuring SSO requires the use of a configuration file. It is not possible to configure SSO through environment variables.
+
+# Customization
+
+Redropp assets are bundled inside the standalone binary. However, you can use customize the logo (shown in the top menu), the favicon and provide additional script and CSS files.
+
+To do so, change the settings in the `[Customize]` section of the INI config file:
+
+```ini
+# [Customize]
+# Replace the favicon with another image (PNG or WEBP)
+# IconFile =
+# Replace the top logo with another image (PNG or WEBP)
+# LogoFile =
+# Load and include additional CSS from specified file
+# StyleFile =
+# Load and include additional JS from specified file
+# ScriptFile =
+```
+
+These settings and the additional files are loaded into memory on startup. You must restart Redropp after any change to these settings or to the custom script and style files for them to take effect.
