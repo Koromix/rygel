@@ -37,11 +37,11 @@ static int RunInit(Span<const char *> arguments)
     BlockAllocator temp_alloc;
 
     // Options
-    const char *root_directory = nullptr;
+    const char *filename = nullptr;
 
     const auto print_usage = [](StreamWriter *st) {
         PrintLn(st,
-T(R"(Usage: %!..+%1 init [option...] [directory]%!0)"), FelixTarget);
+T(R"(Usage: %!..+%1 init [option...] [filename]%!0)"), FelixTarget);
     };
 
     // Parse arguments
@@ -58,66 +58,53 @@ T(R"(Usage: %!..+%1 init [option...] [directory]%!0)"), FelixTarget);
             }
         }
 
-        root_directory = opt.ConsumeNonOption();
-        root_directory = NormalizePath(root_directory ? root_directory : ".", GetWorkingDirectory(), &temp_alloc).ptr;
+        filename = opt.ConsumeNonOption();
 
         opt.LogUnusedArguments();
     }
 
-    // Drop created files and directories if anything fails
-    HeapArray<const char *> directories;
-    HeapArray<const char *> files;
-    K_DEFER_N(root_guard) {
-        for (const char *filename: files) {
-            UnlinkFile(filename);
-        }
-        for (Size i = directories.len - 1; i >= 0; i--) {
-            UnlinkDirectory(directories[i]);
-        }
-    };
-
-    // Make or check root directory
-    if (TestFile(root_directory)) {
-        if (!IsDirectoryEmpty(root_directory)) {
-            LogError("Directory '%1' exists and is not empty", root_directory);
-            return 1;
-        }
-    } else {
-        if (!MakeDirectory(root_directory))
-            return 1;
-        directories.Append(root_directory);
+    // Check for exisiting config file
+    if (filename && TestFile(filename)) {
+        LogError("File '%1' already exists", filename);
+        return 1;
     }
-
-    const char *config_filename = Fmt(&temp_alloc, "%1%/%2", root_directory, DefaultConfigName).ptr;
-    files.Append(config_filename);
 
     // Create main config file
     {
-
         const AssetInfo *asset = FindEmbedAsset("src/redropp/server/config.ini");
         K_ASSERT(asset);
 
-        StreamReader reader(asset->data, "<asset>", asset->compression_type);
-        StreamWriter writer(config_filename, (int)StreamWriterFlag::Atomic);
+        if (filename) {
+            StreamReader reader(asset->data, "<asset>", asset->compression_type);
+            StreamWriter writer(filename, (int)StreamWriterFlag::Atomic);
 
-        if (!SpliceStream(&reader, -1, &writer))
-            return 1;
-        if (!writer.Close())
-            return 1;
+            if (!SpliceStream(&reader, -1, &writer))
+                return 1;
+            if (!writer.Close())
+                return 1;
 
 #if !defined(_WIN32)
-        chmod(config_filename, 0600);
+        chmod(filename, 0600);
 #endif
+        } else {
+            StreamReader reader(asset->data, "<asset>", asset->compression_type);
+
+            if (!SpliceStream(&reader, -1, StdOut))
+                return 1;
+            if (!StdOut->Flush())
+                return 1;
+        }
     }
 
-    LogInfo("Please configure mandatory settings:");
-    LogInfo(("    %!..+%1%!0"), config_filename);
+    if (filename) {
+        LogInfo("Please configure mandatory settings:");
+        LogInfo(("    %!..+%1%!0"), filename);
 
-    LogInfo();
-    LogInfo("Once this is done, run Redropp with:");
-    LogInfo(("    %!..+%1 -C \"%2\"%!0"), FelixTarget, FmtEscape(config_filename, '"'));
+        LogInfo();
+        LogInfo("Once this is done, run Redropp with:");
+        LogInfo(("    %!..+%1 -C \"%2\"%!0"), FelixTarget, FmtEscape(filename, '"'));
+    }
 
-    root_guard.Disable();
     return 0;
 }
 
