@@ -12,17 +12,20 @@ The following settings are mandatory, and msut be set before Redropp can work:
 
 ```ini
 [General]
+
 # Your instance title
 Title =
+
 # Public-facing URL
 URL =
 
 [S3]
+
 # Endpoint and bucket, example: https://sos-de-fra-1.exo.io/bucket
 Location =
-# AWS/S3 access key ID
+
+# AWS/S3 access key ID and secret access key
 AccessKeyID = 
-# AWS/S3 secret access key
 SecretKey =
 
 [SMTP]
@@ -39,11 +42,14 @@ From =
 Redropp provides several settings to adjust the storage allowed for each registered user. These settings are grouped in the `[Drop]` section:
 
 ```ini
-# [Drop]
+[Drop]
+
 # Change maximum per-user storage
 Quota = 1G
+
 # Change maximum expiration delay of drops
 MaxDuration = 90d
+
 # Allow drops without expiration delay (infinite duration)
 AllowInfinite = No
 ```
@@ -68,6 +74,7 @@ You can however disable the registration of new users, or disable internal authe
 
 ```ini
 [Authentication]
+
 # Set to No to disable internal user accounts (login, registration, password loss recovery, etc.)
 AllowInternal = Yes
 
@@ -84,6 +91,7 @@ This requires a provider that provides a discovery URL, which usually lives at `
 
 ```ini
 [SSO]
+
 # URL to the SSO provider, to which Redropp will append /.well-known/openid-configuration in order to fetch
 # the OIDC configuration. You can instead specify the full discovery URL with the DiscoveryURL= setting.
 URL = https://example.com
@@ -114,14 +122,18 @@ Redropp assets are bundled inside the standalone binary. However, you can use cu
 To do so, change the settings in the `[Customize]` section of the INI config file:
 
 ```ini
-# [Customize]
+[Customize]
+
 # Replace the favicon with another image (PNG or WEBP)
 # IconFile =
+
 # Replace the top logo with another image (PNG or WEBP)
 # LogoFile =
-# Load and include additional CSS from specified file
+
+# Load and include additional CSS from specified file, you can repeat this setting
 # StyleFile =
-# Load and include additional JS from specified file
+
+# Load and include additional JS from specified file, you can repeat this setting
 # ScriptFile =
 ```
 

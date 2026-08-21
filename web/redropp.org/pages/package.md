@@ -49,45 +49,11 @@ For other distributions, you can [compile the code](build) manually.
 
 # Configuration
 
-Before you can run Redropp, you must create configure it. Edit `/etc/redropp/redropp.ini`, the following settings are needed:
+Before you can run Redropp, you must create configure it. Edit `/etc/redropp/redropp.ini`, the following settings are mandatory before Redropp can start:
 
-```ini
-[General]
-# Name/title of this instance
-Title = Redropp
-# Public URL
-URL = http://localhost:8894/
-
-[Data]
-# Directory for SQLite database and temporary storage
-RootDirectory = /var/lib/redropp
-
-[Drop]
-# Per-user storage quota
-Quota = 1000M
-# Maximum expiration
-MaxDuration = 90d
-# Allow no expiration
-AllowInfinite = No
-
-[S3]
-# Endpoint and bucket, example: https://sos-de-fra-1.exo.io/bucket
-Location =
-# S3/AWS access key ID
-KeyID =
-# S3/AWS secret access key
-SecretKey =
-
-[SMTP]
-# SMTP information, read the CURL documentation for supported URLs: https://everything.curl.dev/usingcurl/smtp.html
-# URL = 
-# Username =
-# Password =
-# From =
-
-[HTTP]
-Port = 8894
-```
+- Title and public URL of this instance
+- S3 location and keys
+- SMTP server and authentication settings
 
 Once configured, start the systemd service:
 
