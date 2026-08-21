@@ -25,8 +25,6 @@ import {
 } from './relay.js';
 import { ASSETS } from '../assets/assets.js';
 
-const EXPIRATION_DAYS = [1, 7, 30, 90];
-const DEFAULT_EXPIRATION = 7;
 const FRAGMENT_SIZE = 2097152;
 
 let FileApi = null;
@@ -675,12 +673,8 @@ async function runSend() {
                     <label>
                         <span>${T.expiration}</span>
                         <select name="expiration">
-                            ${EXPIRATION_DAYS.map(days => {
-                                if (days * 86400000 > ENV.max_duration)
-                                    return '';
-
-                                return html`<option value=${days} ?selected=${days == DEFAULT_EXPIRATION}>${T.count(T.expiration_delay, days)}</option>`;
-                            })}
+                            ${ENV.durations.map(duration =>
+                                html`<option value=${duration} ?selected=${duration == ENV.default_duration}>${formatDuration(duration)}</option>`)}
                             ${ENV.allow_infinite ? html`<option value="0">${T.no_expiration}</option>` : ''}
                         </select>
                     </label>
@@ -738,7 +732,7 @@ async function runSend() {
 
         let sources = send_files.slice();
         let name = elements.name.value || (sources.length > 1 ? send_codename : sources[0].name);
-        let expiration = (parseInt(elements.expiration.value, 10) * 86400000) || null;
+        let expiration = parseInt(elements.expiration.value, 10) || null;
         let password = elements.password.value.trim();
 
         if (FileApi == null)

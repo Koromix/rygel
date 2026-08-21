@@ -25,8 +25,8 @@ struct Config {
 
     int64_t quota = Megabytes(1000);
     bool explicit_quota = false;
-    int64_t max_duration = 90 * 86400000ull; // 90 days
-    bool explicit_duration = false;
+    HeapArray<int64_t> durations; // See DEFAULT_DURATIONS in config.cc
+    int64_t default_duration = 0; // 7 days
     bool allow_infinite = false;
 
     const char *custom_icon = nullptr;

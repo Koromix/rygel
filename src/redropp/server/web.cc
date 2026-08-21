@@ -330,7 +330,12 @@ static AssetInfo PatchAsset(AssetInfo asset, Span<const char> nonce, Allocator *
             json.Key("url"); json.String(config.url);
             json.Key("logo"); json.StringOrNull(asset_logo);
 
-            json.Key("max_duration"); json.Int64(config.max_duration);
+            json.Key("durations"); json.StartArray();
+            for (int64_t duration: config.durations) {
+                json.Int64(duration);
+            }
+            json.EndArray();
+            json.Key("default_duration"); json.Int64(config.default_duration);
             json.Key("allow_infinite"); json.Bool(config.allow_infinite);
 
             json.Key("auth"); json.StartObject();

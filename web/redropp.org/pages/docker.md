@@ -19,9 +19,8 @@ You mount configure mandatory settings (title, URL, S3) inside `config/redropp.i
 > # Public URL
 > URL=
 > 
-> # Drop settings : per-user quota, max duration, infinite mode
+> # Drop settings : per-user quota
 > DROP_QUOTA=1G
-> DROP_MAX_DURATION=90d
 > 
 > # SMTP information, read the CURL documentation for supported URLs: https://everything.curl.dev/usingcurl/smtp.html
 > SMTP_URL=

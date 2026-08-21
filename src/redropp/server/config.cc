@@ -6,6 +6,14 @@
 
 namespace K {
 
+static const int64_t DefaultDurations[] = {
+    1 * 86400000ll, // 1 day
+    7 * 86400000ll, // 7 day
+    30 * 86400000ll, // 30 days
+    90 * 86400000ll // 90 days
+};
+static const int64_t DefaultDuration = 7 * 86400000ll;
+
 bool Config::Complete()
 {
     if (!title) {
@@ -24,16 +32,6 @@ bool Config::Complete()
             if (!ParseSize(str, &quota))
                 return false;
             explicit_quota = true;
-        }
-    }
-
-    if (!explicit_duration) {
-        const char *str = GetEnv("DROP_MAX_DURATION");
-
-        if (str) {
-            if (!ParseDuration(str, &max_duration))
-                return false;
-            explicit_duration = true;
         }
     }
 
@@ -130,14 +128,55 @@ bool LoadConfig(StreamReader *st, Config *out_config)
                     } else {
                         valid = false;
                     }
-                } else if (prop.key == "MaxDuration") {
-                    if (ParseDuration(prop.value, &config.max_duration)) {
-                        config.explicit_duration = true;
-                    } else {
-                        valid = false;
+                } else if (prop.key == "ExpirationDelays") {
+                    config.durations.Clear();
+                    config.default_duration = 0;
+                    config.allow_infinite = false;
+
+                    Span<const char> first_duration = {};
+
+                    while (prop.value.len) {
+                        Span<const char> part = TrimStr(SplitStrAny(prop.value, " ,", &prop.value));
+
+                        if (TestStrI(part, "Never")) {
+                            config.allow_infinite = true;
+                        } else if (part.len) {
+                            int64_t duration = 0;
+                            bool set_default = false;
+
+                            if (part[0] == '*') {
+                                part = part.Take(1, part.len - 1);
+                                set_default = true;
+                            }
+
+                            if (ParseDuration(part, &duration)) {
+                                config.durations.Append(duration);
+
+                                if (set_default) {
+                                    if (!config.default_duration) {
+                                        config.default_duration = duration;
+                                    } else {
+                                        LogError("Cannot set default delay multiple times");
+                                        valid = false;
+                                    }
+                                }
+                            } else {
+                                valid = false;
+                            }
+
+                            if (!first_duration.len) {
+                                first_duration = part;
+                            }
+                        }
                     }
-                } else if (prop.key == "AllowInfinite") {
-                    valid &= ParseBool(prop.value, &config.allow_infinite);
+
+                    if (!config.durations.len) {
+                        LogError("Empty/invalid value for delays");
+                        valid = false;
+                    } else if (!config.default_duration) {
+                        LogWarning("Missing default expiration delay, set to first choice");
+                        config.default_duration = config.durations[0];
+                    }
                 } else {
                     LogError("Unknown attribute '%1'", prop.key);
                     valid = false;
@@ -198,6 +237,11 @@ bool LoadConfig(StreamReader *st, Config *out_config)
     }
     if (!config.tmp_directory) {
         config.tmp_directory = NormalizePath("tmp", data_directory, &config.str_alloc).ptr;
+    }
+    if (!config.durations.len) {
+        config.durations.Append(DefaultDurations);
+        config.default_duration = DefaultDuration;
+        config.allow_infinite = false;
     }
 
     // Finalize OIDC providers

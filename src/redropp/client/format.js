@@ -42,19 +42,6 @@ function formatSize(size) {
     }
 }
 
-function formatDays(days) {
-    let parts = [];
-
-    for (let i = 0; i < DAYS.length; i++) {
-        if (days & (1 << i)) {
-            let prefix = T.day_names[DAYS[i]].substr(0, 3);
-            parts.push(prefix);
-        }
-    }
-
-    return parts.join(', ');
-}
-
 function formatClock(clock) {
     let hh = Math.floor(clock / 100).toString().padStart(2, '0');
     let mm = Math.floor(clock % 100).toString().padStart(2, '0');
@@ -68,29 +55,27 @@ function parseClock(clock) {
 }
 
 function formatDuration(duration) {
+    // Work in seconds
     duration = Math.round(duration / 1000);
 
-    if (duration < 5) {
-        return T.a_few_seconds;
-    } else if (duration < 60) {
-        return T.count(T.second_units, duration);
-    } else if (duration < 300) {
-        let minutes = Math.floor(duration / 60);
-        let seconds = duration % 60;
+    let str = '';
 
-        return T.count(T.minute_units, minutes) + ' ' + T.count(T.second_units, seconds);
-    } else if (duration < 3600) {
-        let minutes = Math.floor(duration / 60);
-        return T.count(T.minute_units, minutes);
-    } else if (duration < 5 * 3600) {
-        let hours = Math.floor(duration / 3600);
-        let minutes = Math.floor((duration % 3600) / 60);
-
-        return T.count(T.hour_units, hours) + ' ' + T.count(T.minute_units, minutes);
-    } else {
-        let hours = Math.floor(duration / 3600);
-        return T.count(T.hour_units, hours);
+    if (duration >= 86400) {
+        let days = Math.floor(duration / 86400); duration %= 86400;
+        str += ' ' + T.count(T.day_units, days);
     }
+    if (duration >= 3600) {
+        let hours = Math.floor(duration / 3600); duration %= 3600;
+        str += ' ' + T.count(T.hour_units, hours);
+    }
+    if (duration >= 60) {
+        let minutes = Math.floor(duration / 60); duration %= 60;
+        str += ' ' + T.count(T.minute_units, minutes);
+    }
+    if (!str.length)
+        str += ' ' + T.count(T.second_units, seconds);
+
+    return str.substr(1);
 }
 
 function ProgressMeter(max) {
@@ -288,7 +273,6 @@ export {
 
     formatFixed,
     formatSize,
-    formatDays,
     formatClock,
     parseClock,
     formatDuration,

@@ -62,7 +62,7 @@
         "drops": "Drops",
         "enable_direct_login_with_password": "I want to create a password to be able to sign in directly",
         "expiration": "Expiration",
-        "expiration_delay": {
+        "day_units": {
             "1": "1 day",
             "even": "{1} days",
             "odd": "{1} days"

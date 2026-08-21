@@ -62,7 +62,7 @@
         "drops": "Envois",
         "enable_direct_login_with_password": "Je souhaite créer un mot de passe pour pouvoir me connecter directement",
         "expiration": "Expiration",
-        "expiration_delay": {
+        "day_units": {
             "1": "1 jour",
             "even": "{1} jours",
             "odd": "{1} jours"

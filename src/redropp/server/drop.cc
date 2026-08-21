@@ -372,10 +372,10 @@ void HandleDropCreate(http_IO *io)
                     valid = false;
                 }
                 if (expiration < 0 && !config.allow_infinite) {
-                    LogError("You must set an expiration time");
+                    LogError("You must set an expiration delay");
                     valid = false;
-                } else if (expiration > config.max_duration) {
-                    LogError("Excessive expiration time, max is approximately %1 days", config.max_duration / 86400000);
+                } else if (!std::find(config.durations.begin(), config.durations.end(), expiration)) {
+                    LogError("Unsupported expiration delay");
                     valid = false;
                 }
             }
