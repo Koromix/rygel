@@ -2,6 +2,19 @@
 
 ## Alpha versions
 
+### Redropp 0.9.5
+
+*Released on 2026-08-21*
+
+- Simplify `rekkord init` usage
+- Use underscores and digits in drop codenames
+- Use per-provider SSO auto-link setting
+- Support directly setting OpenID discovery URL
+- Add signature to ZIP data descriptors
+- Encode precise file time in ZIP file (NTFS extra)
+- Make it easier to navigate back to drop download
+- Remove useless download/upload error prefix
+
 ### Redropp 0.9.4
 
 *Released on 2026-08-06*
