@@ -1,56 +1,54 @@
-# Create configuration file
+# Configure Redropp
 
-Before you can run Redropp, you must create a configuration file. For Docker, you can use an environment file:
+Full configuration requires the use of an INI file. You can create a default configuration file with the following command:
 
-```
-# Name/title of this instance
-TITLE=
-
-# Public URL
-URL=
-
-# Drop settings : per-user quota, max duration, infinite mode
-DROP_QUOTA=1G
-DROP_MAX_DURATION=90d
-
-# SMTP information, read the CURL documentation for supported URLs: https://everything.curl.dev/usingcurl/smtp.html
-SMTP_URL=
-SMTP_USERNAME=
-SMTP_PASSWORD=
-SMTP_FROM=
-
-# S3 location should look something like this: https://sos-de-fra-1.exo.io/bucket
-S3_LOCATION=
-S3_ACCESS_KEY_ID=
-S3_SECRET_ACCESS_KEY=
+```sh
+mkdir config
+docker run koromix/redropp:latest /app/redropp init > config/redropp.ini
 ```
 
-# Run Docker image
+You mount configure mandatory settings (title, URL, S3) inside `config/redropp.ini` before you can run it.
 
 > [!NOTE]
-> Redropp in Docker requires a Linux kernel with **Landlock support**. Use a distribution with Linux 5.13 or newer to run Redropp inside Docker or Podman, such as *Debian 12*.
+> You can use an environment file instead, if you prefer:
+>
+> ```
+> # Name/title of this instance
+> TITLE=
+> 
+> # Public URL
+> URL=
+> 
+> # Drop settings : per-user quota, max duration, infinite mode
+> DROP_QUOTA=1G
+> DROP_MAX_DURATION=90d
+> 
+> # SMTP information, read the CURL documentation for supported URLs: https://everything.curl.dev/usingcurl/smtp.html
+> SMTP_URL=
+> SMTP_USERNAME=
+> SMTP_PASSWORD=
+> SMTP_FROM=
+> 
+> # S3 location should look something like this: https://sos-de-fra-1.exo.io/bucket
+> S3_LOCATION=
+> S3_ACCESS_KEY_ID=
+> S3_SECRET_ACCESS_KEY=
+> ```
+>
+> Environment variables are limited. Some settings (such as SSO authentication) can only be changed through a configuration file.
+
+# Run Docker image
 
 ## Manual command
 
 Run the most recent release with the following command:
 
 ```sh
-docker run --env-file=/path/to/env/file -p 8894:80 koromix/redropp:latest
+mkdir -p data
+docker run -p 8894:80 -v $PWD/config:/config -v $PWD/data:/data koromix/redropp:latest
 ```
 
 Once Redropp is running, open http://localhost:8894/ in your browser. That's it!
-
-> [!CAUTION]
-> With this command, the data will be saved inside the container and may be **lost once the container is destroyed!**
->
-> Follow on to prevent this from occuring.
-
-Mount a volume on `/data` to prevent this:
-
-```sh
-mkdir -p data
-docker run --env-file=/path/to/env/file -p 8894:80 -v $PWD/data:/data koromix/redropp:latest
-```
 
 ## Docker Compose
 
@@ -67,8 +65,8 @@ services:
     ports:
       - 8894:80
     volumes:
+      - ./config:config
       - ./data:/data
-    env_file: /path/to/env/file
 ```
 
 > [!TIP]
