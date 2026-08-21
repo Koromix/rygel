@@ -21,7 +21,7 @@ static const char *const oidc_JwtSigningAlgorithmNames[] = {
 struct oidc_Provider {
     const char *title = nullptr;
 
-    const char *url = nullptr;
+    const char *discovery_url = nullptr;
     const char *client_id = nullptr;
     const char *client_secret = nullptr;
     oidc_JwtSigningAlgorithm jwt_algorithm = oidc_JwtSigningAlgorithm::RS256;
@@ -35,7 +35,7 @@ struct oidc_Provider {
     BlockAllocator str_alloc;
 
     bool SetProperty(Span<const char> key, Span<const char> value, Span<const char> root_directory);
-    bool Finalize();
+    bool Discover();
 
     bool Validate() const;
 };

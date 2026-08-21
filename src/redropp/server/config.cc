@@ -201,7 +201,7 @@ bool LoadConfig(StreamReader *st, Config *out_config)
     // Finalize OIDC providers
     {
         for (oidc_Provider &provider: config.oidc_providers) {
-            valid &= !provider.url || provider.Finalize();
+            valid &= provider.Discover();
         }
         if (!valid)
             return false;

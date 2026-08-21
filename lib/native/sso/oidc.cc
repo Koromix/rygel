@@ -69,8 +69,11 @@ bool oidc_Provider::SetProperty(Span<const char> key, Span<const char> value, Sp
         return true;
     } else if (key == "URL") {
         Span<const char> trimmed = TrimStrRight(value, '/');
-        url = DuplicateString(trimmed, &str_alloc).ptr;
+        discovery_url = Fmt(&str_alloc, "%1/.well-known/openid-configuration", trimmed).ptr;
 
+        return true;
+    } else if (key == "DiscoveryURL") {
+        discovery_url = DuplicateString(value, &str_alloc).ptr;
         return true;
     } else if (key == "ClientID") {
         client_id = DuplicateString(value, &str_alloc).ptr;
@@ -91,11 +94,14 @@ bool oidc_Provider::SetProperty(Span<const char> key, Span<const char> value, Sp
     return false;
 }
 
-bool oidc_Provider::Finalize()
+bool oidc_Provider::Discover()
 {
-    const char *discover_url = Fmt(&str_alloc, "%1/.well-known/openid-configuration", url).ptr;
+    if (!discovery_url) {
+        // Cannot discover without the URL, the validation will fail anyway!
+        return true;
+    }
 
-    LogDebug("Fetching OIDC configuration from '%1'", discover_url);
+    LogDebug("Fetching OIDC configuration from '%1'", discovery_url);
 
     HeapArray<char> body;
     {
@@ -104,7 +110,7 @@ bool oidc_Provider::Finalize()
             return false;
         K_DEFER { curl_easy_cleanup(curl); };
 
-        curl_easy_setopt(curl, CURLOPT_URL, discover_url);
+        curl_easy_setopt(curl, CURLOPT_URL, discovery_url);
 
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, +[](char *ptr, size_t, size_t nmemb, void *udata) {
             HeapArray<char> *body = (HeapArray<char> *)udata;
@@ -150,7 +156,7 @@ bool oidc_Provider::Finalize()
             return false;
     }
 
-    return Validate();
+    return true;
 }
 
 static bool CheckURL(const char *url)
@@ -197,8 +203,8 @@ bool oidc_Provider::Validate() const
         valid = false;
     }
 
-    if (url) {
-        valid &= CheckURL(url);
+    if (discovery_url) {
+        valid &= CheckURL(discovery_url);
     } else {
         LogError("OIDC provider URL is not set");
         valid = false;
