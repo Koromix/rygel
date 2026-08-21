@@ -21,7 +21,7 @@ static time_t	get_date_time(const char *s);
 // '_pdfioValueCopy()' - Copy a value to a PDF file.
 //
 
-_pdfio_value_t	*
+_pdfio_value_t	*			// O - Destination value or `NULL` on error
 _pdfioValueCopy(pdfio_file_t   *pdfdst,	// I - Destination PDF file
                 _pdfio_value_t *vdst,	// I - Destination value
                 pdfio_file_t   *pdfsrc,	// I - Source PDF file
@@ -168,7 +168,10 @@ _pdfioValueDecrypt(pdfio_file_t   *pdf,	// I - PDF file
 
 	ivlen = v->value.binary.datalen;
 	if ((cb = _pdfioCryptoMakeReader(pdf, obj, &ctx, v->value.binary.data, &ivlen)) == NULL)
+	{
+	  _pdfioStringFreeBuffer(pdf, (char *)temp);
 	  return (false);
+	}
 
 	templen = (cb)(&ctx, temp, v->value.binary.data + ivlen, v->value.binary.datalen - ivlen, /*last*/true);
 
@@ -195,7 +198,10 @@ _pdfioValueDecrypt(pdfio_file_t   *pdf,	// I - PDF file
 
 	ivlen = templen;
 	if ((cb = _pdfioCryptoMakeReader(pdf, obj, &ctx, (uint8_t *)v->value.string, &ivlen)) == NULL)
+	{
+	  _pdfioStringFreeBuffer(pdf, (char *)temp);
 	  return (false);
+	}
 
 	templen = (cb)(&ctx, temp, (uint8_t *)v->value.string + ivlen, templen - ivlen, /*last*/true);
 	temp[templen] = '\0';
@@ -356,6 +362,8 @@ _pdfioValueRead(pdfio_file_t   *pdf,	// I - PDF file
 
   PDFIO_DEBUG("_pdfioValueRead(pdf=%p, obj=%p, v=%p)\n", (void *)pdf, (void *)obj, (void *)v);
 
+  memset(v, 0, sizeof(_pdfio_value_t));
+
   if (!token)
     goto done;
 
@@ -371,9 +379,10 @@ _pdfioValueRead(pdfio_file_t   *pdf,	// I - PDF file
       goto done;
     }
 
-    v->type = PDFIO_VALTYPE_ARRAY;
     if ((v->value.array = _pdfioArrayRead(pdf, obj, tb, depth + 1)) == NULL)
       goto done;
+
+    v->type = PDFIO_VALTYPE_ARRAY;
 
     ret = v;
   }
@@ -386,9 +395,10 @@ _pdfioValueRead(pdfio_file_t   *pdf,	// I - PDF file
       goto done;
     }
 
-    v->type = PDFIO_VALTYPE_DICT;
     if ((v->value.dict = _pdfioDictRead(pdf, obj, tb, depth + 1)) == NULL)
       goto done;
+
+    v->type = PDFIO_VALTYPE_DICT;
 
     ret = v;
   }
@@ -406,7 +416,7 @@ _pdfioValueRead(pdfio_file_t   *pdf,	// I - PDF file
       // String
       v->type         = PDFIO_VALTYPE_STRING;
       v->value.string = pdfioStringCreate(pdf, token + 1);
-      ret           = v;
+      ret             = v;
     }
   }
   else if (token[0] == '/')
@@ -422,13 +432,14 @@ _pdfioValueRead(pdfio_file_t   *pdf,	// I - PDF file
     const char		*tokptr;	// Pointer into token
     unsigned char	*dataptr;	// Pointer into data
 
-    v->type                 = PDFIO_VALTYPE_BINARY;
     v->value.binary.datalen = strlen(token) / 2;
     if ((v->value.binary.data = (unsigned char *)malloc(v->value.binary.datalen)) == NULL)
     {
       _pdfioFileError(pdf, "Out of memory for hex string.");
       goto done;
     }
+
+    v->type = PDFIO_VALTYPE_BINARY;
 
     // Convert hex to binary...
     tokptr  = token + 1;

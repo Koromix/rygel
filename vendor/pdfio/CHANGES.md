@@ -2,6 +2,20 @@ Changes in PDFio
 ================
 
 
+v1.6.5 - 2026-08-20
+-------------------
+
+- CVE-2016-NNNNN: Fixed reading of invalid empty AES-encrypted strings.
+- Fixed `pdfioContentTextXxx` output with Unicode characters past U+FFFF
+  (Issue #171)
+- Fixed `pdfioPageCopy` with a damaged input PDF file (Issue #174)
+- Fixed error recovery when reading values (Issue #178)
+- Fixed `pdfioContentTextXxx` output with invalid UTF-8.
+- Fixed import of 16-bit PNG files with alpha.
+- Fixed `pdfioDictSetStringf` which wasn't making a copy of the formatted
+  string.
+
+
 v1.6.4 - 2026-06-05
 -------------------
 
