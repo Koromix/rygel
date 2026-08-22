@@ -55,25 +55,31 @@ function parseClock(clock) {
 }
 
 function formatDuration(duration) {
-    // Work in seconds
-    duration = Math.round(duration / 1000);
-
+    let seconds = Math.round(duration / 1000);
     let str = '';
 
-    if (duration >= 86400) {
-        let days = Math.floor(duration / 86400); duration %= 86400;
+    if (seconds >= 86400) {
+        let days = Math.floor(seconds / 86400); seconds %= 86400;
         str += ' ' + T.count(T.day_units, days);
     }
-    if (duration >= 3600) {
-        let hours = Math.floor(duration / 3600); duration %= 3600;
+    if (seconds >= 3600) {
+        let hours = Math.floor(seconds / 3600); seconds %= 3600;
         str += ' ' + T.count(T.hour_units, hours);
     }
-    if (duration >= 60) {
-        let minutes = Math.floor(duration / 60); duration %= 60;
+    if (seconds >= 60) {
+        let minutes = Math.floor(seconds / 60); seconds %= 60;
         str += ' ' + T.count(T.minute_units, minutes);
     }
-    if (!str.length)
+
+    if (!str.length) {
+        if (seconds >= 5) {
+            str = ' ' + T.count(T.second_units, seconds);
+        } else {
+            str = ' ' + T.a_few_seconds;
+        }
+    } else if (duration < 120000) {
         str += ' ' + T.count(T.second_units, seconds);
+    }
 
     return str.substr(1);
 }
