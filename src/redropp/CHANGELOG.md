@@ -2,6 +2,13 @@
 
 ## Alpha versions
 
+### Redropp 0.9.6
+
+*Released on 2026-08-22*
+
+- Use customizable list of expiration delays
+- Set UTF-8 filename encoding bit in ZIP files
+
 ### Redropp 0.9.5
 
 *Released on 2026-08-21*
