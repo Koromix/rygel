@@ -14,7 +14,7 @@ function createLocalHeader(name, mtime = null) {
 
     view.setUint32(p, 0x04034B50, true); p += 4;
     view.setUint16(p, 45, true); p += 2;
-    view.setUint16(p, 0x0008, true); p += 2;
+    view.setUint16(p, 0x808, true); p += 2;
     view.setUint16(p, 0, true); p += 2;
     view.setUint16(p, dos_time, true); p += 2;
     view.setUint16(p, dos_date, true); p += 2;
@@ -77,7 +77,7 @@ function createCentralDirectory(offset, files, offsets) {
         view.setUint32(p, 0x02014B50, true); p += 4;
         view.setUint16(p, 45, true); p += 2;
         view.setUint16(p, 45, true); p += 2;
-        view.setUint16(p, 0x0008, true); p += 2;
+        view.setUint16(p, 0x808, true); p += 2;
         view.setUint16(p, 0, true); p += 2;
         view.setUint16(p, dos_time, true); p += 2;
         view.setUint16(p, dos_date, true); p += 2;
