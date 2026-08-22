@@ -378,6 +378,8 @@ async function runAccount() {
     if (!App.isLogged())
         return runLogin();
 
+    let show_security = ENV.auth.internal || (ENV.auth.providers.length > 1);
+
     UI.main(html`
         <div class="heading">${T.account}</div>
 
@@ -386,7 +388,7 @@ async function runAccount() {
             <img class="picture" src=${`/pictures/${session.userid}?v=${session.picture}`} alt="" />
             <div class="actions horizontal">
                 <button type="button" class="secondary" @click=${UI.wrap(changePicture)}>${T.change_picture}</button>
-                <button type="button" class="secondary" @click=${UI.wrap(configureSecurity)}>${T.account_security}</button>
+                ${show_security ? html`<button type="button" class="secondary" @click=${UI.wrap(configureSecurity)}>${T.account_security}</button>` : ''}
             </div>
         </div>
 
