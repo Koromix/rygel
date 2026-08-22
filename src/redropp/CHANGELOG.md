@@ -2,6 +2,12 @@
 
 ## Alpha versions
 
+### Redropp 0.9.7
+
+*Released on 2026-08-22*
+
+- Fix stunted progress bar caused by JS error
+
 ### Redropp 0.9.6
 
 *Released on 2026-08-22*
