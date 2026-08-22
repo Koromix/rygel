@@ -10,14 +10,14 @@ if [ -z "$VERSION" ]; then
 fi
 
 git clone https://github.com/highlightjs/highlight.js repo
+
 cd repo
 git checkout "$VERSION"
-
 npm install
 npm run build-browser :common
 
-cp build/highlight.js ../highlight.js
-rsync -rtvp build/demo/styles/ ../styles/ --delete
-
 cd ..
+npx esbuild --bundle --platform=browser --format=esm ./highlight.js --outfile=highlight.bundle.js
+rsync -rtvp repo/build/demo/styles/ styles/ --delete
+
 rm -rf repo

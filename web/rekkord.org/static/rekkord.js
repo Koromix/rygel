@@ -3,7 +3,7 @@
 
 import '../../../lib/web/flat/static.js';
 import * as AsciinemaPlayer from '../../../vendor/asciinema/asciinema-player.js';
-import * as hljs from '../../../vendor/highlight.js/highlight.js';
+import * as hljs from '../../../vendor/highlight.js/highlight.bundle.js';
 
 import demo from './demo.cast';
 
