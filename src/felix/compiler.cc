@@ -853,10 +853,6 @@ public:
         }
         if (features & (int)CompileFeature::LTO) {
             Fmt(&buf, " -flto=thin");
-
-            if (platform != HostPlatform::Windows) {
-                Fmt(&buf, " -Wl,-O1");
-            }
         }
 
         // Objects and libraries
