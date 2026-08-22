@@ -571,7 +571,7 @@ public:
             Fmt(&buf, " -O0 -ftrapv");
         }
         if (features & (int)CompileFeature::LTO) {
-            Fmt(&buf, " -flto");
+            Fmt(&buf, " -flto=thin");
         }
         if (features & (int)CompileFeature::Warnings) {
             Fmt(&buf, " -Wall -Wextra -Wswitch -Wuninitialized -Wno-unknown-warning-option");
@@ -852,7 +852,7 @@ public:
             Fmt(&buf, " -s");
         }
         if (features & (int)CompileFeature::LTO) {
-            Fmt(&buf, " -flto");
+            Fmt(&buf, " -flto=thin");
 
             if (platform != HostPlatform::Windows) {
                 Fmt(&buf, " -Wl,-O1");
