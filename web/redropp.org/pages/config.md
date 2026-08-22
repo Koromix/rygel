@@ -29,11 +29,13 @@ AccessKeyID =
 SecretKey =
 
 [SMTP]
-# SMTP information
+
 # Read the CURL documentation for supported URLs: https://everything.curl.dev/usingcurl/smtp.html
 URL =
 Username =
 Password =
+
+# Expeditor address
 From =
 ```
 
