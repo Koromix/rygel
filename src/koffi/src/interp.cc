@@ -330,11 +330,12 @@ napi_value RunForward(CallData *call, uint8_t *base, void *native, const Instruc
             call->DebugForward(); \
              \
             TEB *teb = GetTEB(); \
+            InstanceMemory *mem = call->mem; \
              \
-            K_DEFER { call->instance->last_error = teb->LastErrorValue; }; \
-            teb->LastErrorValue = call->instance->last_error; \
+            K_DEFER { mem->last_error = teb->LastErrorValue; }; \
+            teb->LastErrorValue = mem->last_error; \
              \
-            ADJUST_TEB(teb, call->mem->stack0.ptr, call->mem->stack0.end); \
+            ADJUST_TEB(teb, mem->stack0.ptr, mem->stack0.end); \
              \
             return (Expr); \
         }()

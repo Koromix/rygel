@@ -1526,6 +1526,11 @@ class AsyncCall {
 
     bool prepared = false;
 
+    int last_errno = 0;
+#if defined(_WIN32)
+    uint32_t last_error = 0;
+#endif
+
 public:
     AsyncCall(Napi::Env env) : env(env), call(env) {}
     ~AsyncCall();
@@ -1613,6 +1618,11 @@ void AsyncCall::Execute()
 {
     K_ASSERT(prepared);
     call->ExecuteAsync(func->native);
+
+    last_errno = errno;
+#if defined(_WIN32)
+    last_error = call->mem->last_error;
+#endif
 }
 
 void AsyncCall::Complete()
@@ -1628,6 +1638,22 @@ void AsyncCall::Complete()
 
     NAPI_OK(napi_get_undefined(env, &recv));
     NAPI_OK(napi_get_reference_value(env, callback, &func));
+
+#if defined(_WIN32)
+    InstanceData *instance = call->instance;
+    InstanceMemory *mem0 = instance->memories[0];
+
+    K_DEFER_C(prev_errno = errno,
+              prev_error = mem0->last_error) {
+        errno = prev_errno;
+        mem0->last_error = prev_error;
+    };
+    errno = last_errno;
+    mem0->last_error = last_error;
+#else
+    K_DEFER_C(prev_errno = errno) { errno = prev_errno; };
+    errno = last_errno;
+#endif
 
     napi_call_function(env, recv, func, K_LEN(args), args, nullptr);
 }
@@ -2001,9 +2027,9 @@ extern "C" void RelayDirect(CallData *call, Size idx, uint8_t *sp)
     };
 
     // Adjust stack limits so SEH works correctly
-    teb->StackBase = instance->main_stack_max;
-    teb->StackLimit = instance->main_stack_min;
-    teb->DeallocationStack = instance->main_stack_min;
+    teb->StackBase = instance->real_stack.end;
+    teb->StackLimit = instance->real_stack.ptr;
+    teb->DeallocationStack = instance->real_stack.ptr;
 #endif
 
     if (!CheckTrampolineStatus(trampoline))

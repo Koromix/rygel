@@ -2887,8 +2887,8 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
     {
         TEB *teb = GetTEB();
 
-        instance->main_stack_max = teb->StackBase;
-        instance->main_stack_min = teb->DeallocationStack;
+        instance->real_stack.end = teb->StackBase;
+        instance->real_stack.ptr = teb->DeallocationStack;
     }
 #endif
 

@@ -244,6 +244,10 @@ struct InstanceMemory {
     // For big heap allocations
     LinkedAllocator allocator;
 
+#if defined(_WIN32)
+    uint32_t last_error = 0;
+#endif
+
     bool busy;
     bool temporary;
 };
@@ -285,10 +289,7 @@ struct InstanceData {
     CallData *sync_call = nullptr;
 
 #if defined(_WIN32)
-    void *main_stack_max;
-    void *main_stack_min;
-
-    uint32_t last_error = 0;
+    MemoryRange<void> real_stack;
 #endif
 
     BucketArray<LinkedAllocator> encode_allocators;
