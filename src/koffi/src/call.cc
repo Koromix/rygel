@@ -1624,7 +1624,7 @@ void AsyncCall::Complete()
 
     napi_value recv;
     napi_value func;
-    napi_value args[] = { env.Null(), ret };
+    napi_value args[] = { env.Null(), ret ? ret : env.Undefined() };
 
     NAPI_OK(napi_get_undefined(env, &recv));
     NAPI_OK(napi_get_reference_value(env, callback, &func));
