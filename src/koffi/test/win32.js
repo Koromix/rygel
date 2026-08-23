@@ -42,12 +42,24 @@ async function test() {
     const GetLastError = kernel32.func('uint32_t __stdcall GetLastError()');
     const SetLastError = kernel32.func('void __stdcall SetLastError(uint32_t dwErrorCode)');
 
-    // Try to make sure GetLastError() survives across Koffi calls
+    // Check that GetLastError() survives across sync Koffi calls
     for (let i = 0; i < 100; i++) {
         SetLastError(i);
         Sleep(0);
         assert.equal(GetLastError(), i);
         assert.equal(GetLastError(), i);
+    }
+
+    // Access cross-thread GetLastError() in async callbacks
+    for (let i = 0; i < 100; i++) {
+        SetLastError(i + 42);
+        await new Promise(resolve => {
+            SetLastError.async(i, () => {
+                assert.equal(GetLastError(), i);
+                resolve();
+            });
+        });
+        assert.equal(GetLastError(), i + 42);
     }
 
     // Sync SEH and exception support

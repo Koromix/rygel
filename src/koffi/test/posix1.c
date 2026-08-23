@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
+#include <errno.h>
+
 #define EXPORT __attribute__((visibility("default")))
 
 EXPORT int DoSumInts(int a, int b)
@@ -16,4 +18,14 @@ EXPORT int DoGetInt()
 EXPORT int GetInt()
 {
     return DoGetInt();
+}
+
+EXPORT void SetErrno(int err)
+{
+    errno = err;
+}
+
+EXPORT int GetErrno()
+{
+    return errno;
 }

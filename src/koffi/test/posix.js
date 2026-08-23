@@ -35,6 +35,8 @@ async function test() {
     const GetInt1 = lib1.func('int GetInt()');
     const GetInt2 = lib2.func('int GetInt()');
     const GetInt3 = lib3.func('int GetInt()');
+    const SetErrno = lib1.func('void SetErrno(int err)');
+    const GetErrno = lib1.func('int GetErrno()');
 
     assert.equal(SumInts(4, 2), 6);
     assert.equal(SumInts(50, -8), 42);
@@ -44,5 +46,17 @@ async function test() {
         assert.equal(GetInt1(), 1);
         assert.equal(GetInt2(), 1);
         assert.equal(GetInt3(), 3);
+    }
+
+    // Access cross-thread errno in async callbacks
+    for (let i = 0; i < 100; i++) {
+        SetErrno(i + 42);
+        assert.equal(GetErrno(), i + 42);
+        await new Promise(resolve => {
+            SetErrno.async(i, () => {
+                assert.equal(GetErrno(), i);
+                resolve();
+            });
+        });
     }
 }
