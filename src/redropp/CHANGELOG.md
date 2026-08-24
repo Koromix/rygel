@@ -2,6 +2,13 @@
 
 ## Alpha versions
 
+### Redropp 0.9.8
+
+*Released on 2026-08-24*
+
+- Fix possible sandbox crash when getrandom() gets called on Linux 6.11+
+- Hide security center if internal auth is disabled and there is a single SSO provider
+
 ### Redropp 0.9.7
 
 *Released on 2026-08-22*
