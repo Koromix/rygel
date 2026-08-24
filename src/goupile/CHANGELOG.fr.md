@@ -2,6 +2,13 @@
 
 ## Goupile 3.12
 
+### Goupile 3.12.7
+
+*Sortie le 24/08/2026*
+
+- Corrige un possible plantage (sandbox seccomp) lorsque `getrandom()` est appelé sous Linux 6.11+.
+- Retrait du système d'instantanés SQLite inutilisé.
+
 ### Goupile 3.12.6
 
 *Sortie le 29/07/2026*

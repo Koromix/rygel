@@ -2,6 +2,13 @@
 
 ## Goupile 3.12
 
+### Goupile 3.12.7
+
+*Released on 2026-08-24*
+
+- Fix possible sandbox crash when getrandom() gets called on Linux 6.11+.
+- Remove unused SQLite snapshot system.
+
 ### Goupile 3.12.6
 
 *Released on 2026-07-29*
