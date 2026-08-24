@@ -737,7 +737,8 @@ static bool InitSeccomp(Span<const sb_SyscallFilter> filters)
                 unsigned int map_combinations[] = {
                     MAP_PRIVATE | MAP_ANONYMOUS,
                     MAP_PRIVATE | MAP_ANONYMOUS | MAP_STACK,
-                    MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE
+                    MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE,
+                    MAP_DROPPABLE | MAP_ANONYMOUS
                 };
 
                 for (unsigned int prot_flags: prot_combinations) {
