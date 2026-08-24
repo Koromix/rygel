@@ -21,6 +21,10 @@
 #include <signal.h>
 #include <termios.h>
 
+#if !defined(MAP_DROPPABLE)
+    #define MAP_DROPPABLE 0x08
+#endif
+
 // For some reason sys/capability.h is in some crap separate package, because why make
 // it simple when you could instead make it a mess and require users to install
 // random distribution-specifc packages to do anything of value.
