@@ -757,20 +757,26 @@ static bool InitSeccomp(Span<const sb_SyscallFilter> filters)
                 int syscall = seccomp_syscall_resolve_name("mmap");
                 K_ASSERT(syscall != __NR_SCMP_ERROR);
 
-                unsigned int mask = PROT_NONE | PROT_READ | PROT_WRITE | PROT_EXEC;
-                unsigned int combinations[] = {
+                unsigned int prot_mask = PROT_NONE | PROT_READ | PROT_WRITE | PROT_EXEC;
+                unsigned int prot_combinations[] = {
                     PROT_NONE,
                     PROT_READ,
                     PROT_WRITE,
                     PROT_READ | PROT_WRITE
                 };
+                unsigned int map_combinations[] = {
+                    MAP_SHARED,
+                    MAP_SHARED_VALIDATE
+                };
 
-                for (unsigned int flags: combinations) {
-                    ret = seccomp_rule_add(ctx, translate_action(filter.action), syscall, 2,
-                                           SCMP_A2(SCMP_CMP_MASKED_EQ, mask, flags),
-                                           SCMP_A3(SCMP_CMP_EQ, MAP_SHARED, 0));
-                    if (ret < 0)
-                        break;
+                for (unsigned int prot_flags: prot_combinations) {
+                    for (unsigned int map_flags: map_combinations) {
+                        ret = seccomp_rule_add(ctx, translate_action(filter.action), syscall, 2,
+                                               SCMP_A2(SCMP_CMP_MASKED_EQ, prot_mask, prot_flags),
+                                               SCMP_A3(SCMP_CMP_EQ, map_flags, 0));
+                        if (ret < 0)
+                            break;
+                    }
                 }
             } else if (TestStr(filter.name, "mprotect/noexec")) {
                 int syscall = seccomp_syscall_resolve_name("mprotect");
