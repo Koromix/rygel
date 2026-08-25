@@ -18,7 +18,7 @@ struct ConfigProfile {
 };
 
 struct Config {
-    BucketArray<ConfigProfile> profiles;
+    BucketList<ConfigProfile> profiles;
     HashTable<const char *, const ConfigProfile *> profiles_map;
 
     Size default_idx = 0;

@@ -2358,8 +2358,8 @@ public:
 };
 
 template <typename T, Size BucketSize = 64, typename AllocatorType = BlockAllocator>
-class BucketArray {
-    K_DELETE_COPY(BucketArray)
+class BucketList {
+    K_DELETE_COPY(BucketList)
 
 public:
     struct Bucket {
@@ -2462,19 +2462,19 @@ public:
     Size count = 0;
 
     typedef T value_type;
-    typedef Iterator<BucketArray> iterator_type;
+    typedef Iterator<BucketList> iterator_type;
 
-    BucketArray() {}
-    BucketArray(std::initializer_list<T> l)
+    BucketList() {}
+    BucketList(std::initializer_list<T> l)
     {
         for (const T &value: l) {
             Append(value);
         }
     }
-    ~BucketArray() { ClearBucketsAndValues(); }
+    ~BucketList() { ClearBucketsAndValues(); }
 
-    BucketArray(BucketArray &&other) { *this = std::move(other); }
-    BucketArray &operator=(BucketArray &&other)
+    BucketList(BucketList &&other) { *this = std::move(other); }
+    BucketList &operator=(BucketList &&other)
     {
         ClearBucketsAndValues();
         MemMove(this, &other, K_SIZE(other));
@@ -2491,7 +2491,7 @@ public:
     }
 
     iterator_type begin() { return iterator_type(this, 0, offset); }
-    Iterator<const BucketArray<T, BucketSize>> begin() const { return Iterator<const BucketArray>(this, 0, offset); }
+    Iterator<const BucketList<T, BucketSize>> begin() const { return Iterator<const BucketList>(this, 0, offset); }
     iterator_type end()
     {
         Size end_idx = offset + count;
@@ -2500,13 +2500,13 @@ public:
 
         return iterator_type(this, bucket_idx, bucket_offset);
     }
-    Iterator<const BucketArray<T, BucketSize>> end() const
+    Iterator<const BucketList<T, BucketSize>> end() const
     {
         Size end_idx = offset + count;
         Size bucket_idx = end_idx / BucketSize;
         Size bucket_offset = end_idx % BucketSize;
 
-        return Iterator<const BucketArray>(this, bucket_idx, bucket_offset);
+        return Iterator<const BucketList>(this, bucket_idx, bucket_offset);
     }
 
     const T &operator[](Size idx) const
@@ -2519,7 +2519,7 @@ public:
 
         return buckets[bucket_idx]->values[bucket_offset];
     }
-    T &operator[](Size idx) { return (T &)(*(const BucketArray *)this)[idx]; }
+    T &operator[](Size idx) { return (T &)(*(const BucketList *)this)[idx]; }
 
     T *AppendDefault(Allocator **out_alloc = nullptr)
     {
@@ -2634,7 +2634,7 @@ public:
 
         K_ASSERT(it == end());
     }
-    void RemoveFrom(const Iterator<const BucketArray<T, BucketSize>> &it) { return RemoveFrom((iterator_type)it); }
+    void RemoveFrom(const Iterator<const BucketList<T, BucketSize>> &it) { return RemoveFrom((iterator_type)it); }
 
     void RemoveUntil(const iterator_type &it)
     {
@@ -2661,7 +2661,7 @@ public:
         offset = (offset + count) % BucketSize;
         count -= count;
     }
-    void RemoveUntil(const Iterator<const BucketArray<T, BucketSize>> &it) { return RemoveUntil((iterator_type)it); }
+    void RemoveUntil(const Iterator<const BucketList<T, BucketSize>> &it) { return RemoveUntil((iterator_type)it); }
 
     void Trim()
     {

@@ -61,7 +61,7 @@ struct AssetBundle {
 };
 
 struct AssetSet {
-    BucketArray<FileHash> hashes;
+    BucketList<FileHash> hashes;
     HashMap<const char *, const FileHash *> map;
 };
 

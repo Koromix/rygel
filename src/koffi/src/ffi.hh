@@ -257,9 +257,9 @@ struct InstanceData {
 
     napi_env env;
 
-    BucketArray<TypeInfo> types;
+    BucketList<TypeInfo> types;
     HashMap<const char *, const TypeInfo *> types_map;
-    BucketArray<FunctionInfo> callbacks;
+    BucketList<FunctionInfo> callbacks;
     Size base_types_count;
 
     const TypeInfo *void_type;
@@ -292,7 +292,7 @@ struct InstanceData {
     MemoryRange<void> real_stack;
 #endif
 
-    BucketArray<LinkedAllocator> encode_allocators;
+    BucketList<LinkedAllocator> encode_allocators;
     HashMap<void *, LinkedAllocator *> encode_map;
 
     BlockAllocator str_alloc;

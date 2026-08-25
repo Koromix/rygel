@@ -7583,7 +7583,7 @@ struct WorkerData {
     int idx;
 
     std::mutex queue_mutex;
-    BucketArray<Task> tasks;
+    BucketList<Task> tasks;
 };
 
 class AsyncPool {

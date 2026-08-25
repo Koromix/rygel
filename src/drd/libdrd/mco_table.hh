@@ -327,32 +327,32 @@ struct mco_TableSet {
     HeapArray<mco_TableIndex> indexes;
 
     struct {
-        BucketArray<HeapArray<mco_GhmDecisionNode>, 16> ghm_nodes;
-        BucketArray<HeapArray<mco_DiagnosisInfo>, 16> diagnoses;
-        BucketArray<HeapArray<mco_ExclusionInfo>, 16> exclusions;
-        BucketArray<HeapArray<mco_ProcedureInfo>, 16> procedures;
-        BucketArray<HeapArray<mco_ProcedureLink>, 16> procedure_links;
-        BucketArray<HeapArray<mco_GhmRootInfo>, 16> ghm_roots;
-        BucketArray<HeapArray<mco_ValueRangeCell<2>>, 16> gnn_cells;
-        BucketArray<HeapArray<mco_ValueRangeCell<2>>, 16> cma_cells[3];
-        BucketArray<HeapArray<mco_GhmToGhsInfo>, 16> ghs;
-        BucketArray<HeapArray<mco_AuthorizationInfo>, 16> authorizations;
-        BucketArray<HeapArray<mco_SrcPair>, 16> src_pairs[2];
+        BucketList<HeapArray<mco_GhmDecisionNode>, 16> ghm_nodes;
+        BucketList<HeapArray<mco_DiagnosisInfo>, 16> diagnoses;
+        BucketList<HeapArray<mco_ExclusionInfo>, 16> exclusions;
+        BucketList<HeapArray<mco_ProcedureInfo>, 16> procedures;
+        BucketList<HeapArray<mco_ProcedureLink>, 16> procedure_links;
+        BucketList<HeapArray<mco_GhmRootInfo>, 16> ghm_roots;
+        BucketList<HeapArray<mco_ValueRangeCell<2>>, 16> gnn_cells;
+        BucketList<HeapArray<mco_ValueRangeCell<2>>, 16> cma_cells[3];
+        BucketList<HeapArray<mco_GhmToGhsInfo>, 16> ghs;
+        BucketList<HeapArray<mco_AuthorizationInfo>, 16> authorizations;
+        BucketList<HeapArray<mco_SrcPair>, 16> src_pairs[2];
 
-        BucketArray<HeapArray<mco_GhsPriceInfo>, 16> ghs_prices[2];
+        BucketList<HeapArray<mco_GhsPriceInfo>, 16> ghs_prices[2];
     } store;
 
     struct {
-        BucketArray<HashTable<drd_DiagnosisCode, const mco_DiagnosisInfo *>, 16> diagnoses;
-        BucketArray<HashTable<drd_ProcedureCode, const mco_ProcedureInfo *>, 16> procedures;
-        BucketArray<HashTable<mco_GhmRootCode, const mco_GhmRootInfo *>, 16> ghm_roots;
-        BucketArray<HashTable<mco_GhmCode, const mco_GhmToGhsInfo *>, 16> ghm_to_ghs;
-        BucketArray<HashTable<mco_GhmRootCode, const mco_GhmToGhsInfo *,
+        BucketList<HashTable<drd_DiagnosisCode, const mco_DiagnosisInfo *>, 16> diagnoses;
+        BucketList<HashTable<drd_ProcedureCode, const mco_ProcedureInfo *>, 16> procedures;
+        BucketList<HashTable<mco_GhmRootCode, const mco_GhmRootInfo *>, 16> ghm_roots;
+        BucketList<HashTable<mco_GhmCode, const mco_GhmToGhsInfo *>, 16> ghm_to_ghs;
+        BucketList<HashTable<mco_GhmRootCode, const mco_GhmToGhsInfo *,
                                mco_GhmToGhsInfo::GhmRootHandler>, 16> ghm_root_to_ghs;
-        BucketArray<HashTable<int16_t, const mco_AuthorizationInfo *>, 16> authorizations;
-        BucketArray<HashTable<drd_DiagnosisCode, const mco_SrcPair *>, 16> src_pairs;
+        BucketList<HashTable<int16_t, const mco_AuthorizationInfo *>, 16> authorizations;
+        BucketList<HashTable<drd_DiagnosisCode, const mco_SrcPair *>, 16> src_pairs;
 
-        BucketArray<HashTable<mco_GhsCode, const mco_GhsPriceInfo *>, 16> ghs_prices[2];
+        BucketList<HashTable<mco_GhsCode, const mco_GhsPriceInfo *>, 16> ghs_prices[2];
     } maps;
 
     BlockAllocator str_alloc;

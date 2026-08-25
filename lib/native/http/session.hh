@@ -35,7 +35,7 @@ class http_SessionManager {
     const char *cookie_path = "/";
 
     std::shared_mutex mutex;
-    BucketArray<SessionHandle> sessions;
+    BucketList<SessionHandle> sessions;
     HashTable<const char *, SessionHandle *> sessions_map;
 
 public:

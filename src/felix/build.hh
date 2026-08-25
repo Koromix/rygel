@@ -103,9 +103,9 @@ class Builder {
     const char *tsconfig_filename = nullptr;
 
     // Core host targets (if any)
-    BucketArray<TargetInfo> core_targets;
+    BucketList<TargetInfo> core_targets;
     HashMap<const char *, TargetInfo *> core_targets_map;
-    BucketArray<SourceFileInfo> core_sources;
+    BucketList<SourceFileInfo> core_sources;
 
     // AddTarget, AddSource
     HeapArray<Node> nodes;

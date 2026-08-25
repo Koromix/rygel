@@ -94,10 +94,10 @@ struct SourceFileInfo {
 struct TargetSet {
     const char *root_directory = nullptr;
 
-    BucketArray<TargetInfo> targets;
+    BucketList<TargetInfo> targets;
     HashTable<const char *, TargetInfo *> targets_map;
 
-    BucketArray<SourceFileInfo> sources;
+    BucketList<SourceFileInfo> sources;
 
     BlockAllocator str_alloc;
 };

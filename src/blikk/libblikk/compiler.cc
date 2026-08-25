@@ -73,7 +73,7 @@ class bk_Parser {
     bool show_hints;
 
     // Transient mappings
-    BucketArray<ForwardInfo> forwards;
+    BucketList<ForwardInfo> forwards;
     HashTable<const char *, ForwardInfo *> forwards_map;
     HashMap<Size, ForwardInfo *> skip_map;
     HashMap<const void *, Size> definitions_map;
@@ -179,7 +179,7 @@ private:
     const char *GetVariableKind(const bk_VariableInfo *var, bool capitalize);
     void DestroyVariables(Size first_idx);
     template<typename T>
-    void DestroyTypes(BucketArray<T> *types, Size first_idx);
+    void DestroyTypes(BucketList<T> *types, Size first_idx);
 
     void FixJumps(Size jump_addr, Size target_addr);
     void TrimInstructions(Size trim_addr);
@@ -196,7 +196,7 @@ private:
 
     const char *InternString(const char *str);
     template<typename T>
-    bk_TypeInfo *InsertType(const T &type_buf, BucketArray<T> *out_types);
+    bk_TypeInfo *InsertType(const T &type_buf, BucketList<T> *out_types);
 
     bool RecurseInc();
     void RecurseDec();
@@ -681,7 +681,7 @@ void bk_Parser::Preparse(Span<const Size> positions)
 }
 
 template<typename T>
-bk_TypeInfo *bk_Parser::InsertType(const T &type_buf, BucketArray<T> *out_types)
+bk_TypeInfo *bk_Parser::InsertType(const T &type_buf, BucketList<T> *out_types)
 {
     bool inserted;
     const bk_TypeInfo **ptr = program->types_map.InsertOrGetDefault(type_buf.signature, &inserted);
@@ -3422,7 +3422,7 @@ void bk_Parser::DestroyVariables(Size first_idx)
 }
 
 template <typename T>
-void bk_Parser::DestroyTypes(BucketArray<T> *types, Size first_idx)
+void bk_Parser::DestroyTypes(BucketList<T> *types, Size first_idx)
 {
     for (Size i = types->count - 1; i >= first_idx; i--) {
         const bk_TypeInfo &type = (*types)[i];

@@ -50,7 +50,7 @@ class LinuxTray: public gui_TrayIcon {
     std::function<void()> activate;
     std::function<void()> context;
     std::function<void(int)> scroll;
-    BucketArray<MenuItem> items;
+    BucketList<MenuItem> items;
     int revision = 0;
 
 public:
@@ -687,7 +687,7 @@ int LinuxTray::GetMenuComplexProperty(sd_bus *, const char *, const char *, cons
 
 bool LinuxTray::DumpMenuItems(FunctionRef<bool(int, const char *, int)> func)
 {
-    // Keep separate counter because BucketArray iterator is faster than direct indexing
+    // Keep separate counter because BucketList iterator is faster than direct indexing
     Size idx = 0;
 
     for (const MenuItem &item: items) {

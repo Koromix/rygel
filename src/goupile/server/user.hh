@@ -86,7 +86,7 @@ enum class SessionConfirm {
 };
 
 class SessionInfo: public RetainObject<SessionInfo> {
-    mutable BucketArray<SessionStamp, 8> stamps;
+    mutable BucketList<SessionStamp, 8> stamps;
     mutable HashTable<int64_t, SessionStamp *> stamps_map;
     mutable BlockAllocator stamps_alloc;
 

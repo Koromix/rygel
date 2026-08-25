@@ -531,10 +531,10 @@ class RecordExporter {
         const char *name;
         bool root;
 
-        BucketArray<Row> rows;
+        BucketList<Row> rows;
         HashTable<const char *, Row *> rows_map;
 
-        BucketArray<Column> columns;
+        BucketList<Column> columns;
         HashTable<const char *, Column *> columns_map;
         HeapArray<const Column *> ordered_columns;
 
@@ -553,7 +553,7 @@ class RecordExporter {
 
     json_Parser *json;
 
-    BucketArray<Table> tables;
+    BucketList<Table> tables;
     HashTable<const char *, Table *> tables_map;
 
     BlockAllocator str_alloc;

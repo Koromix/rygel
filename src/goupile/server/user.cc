@@ -51,7 +51,7 @@ struct EventInfo {
 static http_SessionManager<SessionInfo> sessions;
 
 static std::shared_mutex events_mutex;
-static BucketArray<EventInfo> events;
+static BucketList<EventInfo> events;
 static HashTable<EventInfo::Key, EventInfo *> events_map;
 
 bool SessionInfo::IsAdmin() const

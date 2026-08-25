@@ -57,7 +57,7 @@ class WinTray: public gui_TrayIcon {
     IconSet icons;
     std::function<void()> activate;
     std::function<void()> context;
-    BucketArray<MenuItem> items;
+    BucketList<MenuItem> items;
 
 public:
     ~WinTray();
@@ -267,7 +267,7 @@ LRESULT __stdcall WinTray::TrayProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM l
             K_DEFER { DestroyMenu(menu); };
 
             {
-                // Keep separate counter because BucketArray iterator is faster than direct indexing
+                // Keep separate counter because BucketList iterator is faster than direct indexing
                 Size idx = 0;
 
                 for (const MenuItem &item: self->items) {

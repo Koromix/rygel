@@ -153,7 +153,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow, rk_Hash
     HeapArray<uint8_t> extended;
 
     // Enumerate directory hierarchy and process files
-    BucketArray<PendingDirectory> pending_directories;
+    BucketList<PendingDirectory> pending_directories;
     {
         PendingDirectory *pending0 = pending_directories.AppendDefault();
 

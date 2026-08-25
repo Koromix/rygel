@@ -245,14 +245,14 @@ struct bk_Program {
     HeapArray<bk_Instruction> main;
     HeapArray<bk_SourceMap> sources;
 
-    BucketArray<bk_FunctionTypeInfo> function_types;
-    BucketArray<bk_ArrayTypeInfo> array_types;
-    BucketArray<bk_RecordTypeInfo> record_types;
-    BucketArray<bk_EnumTypeInfo> enum_types;
-    BucketArray<bk_TypeInfo> bare_types;
+    BucketList<bk_FunctionTypeInfo> function_types;
+    BucketList<bk_ArrayTypeInfo> array_types;
+    BucketList<bk_RecordTypeInfo> record_types;
+    BucketList<bk_EnumTypeInfo> enum_types;
+    BucketList<bk_TypeInfo> bare_types;
 
-    BucketArray<bk_FunctionInfo> functions;
-    BucketArray<bk_VariableInfo> variables;
+    BucketList<bk_FunctionInfo> functions;
+    BucketList<bk_VariableInfo> variables;
     HeapArray<bk_PrimitiveValue> ro;
 
     HashTable<const char *, const bk_TypeInfo *> types_map;

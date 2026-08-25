@@ -65,7 +65,7 @@ struct EventInfo {
 static http_SessionManager<SessionInfo> sessions;
 
 static std::shared_mutex events_mutex;
-static BucketArray<EventInfo> events;
+static BucketList<EventInfo> events;
 static HashTable<EventKey, EventInfo *> events_map;
 
 static const char *FormatUUID(const uint8_t raw[16], Allocator *alloc)

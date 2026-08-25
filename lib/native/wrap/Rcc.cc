@@ -6,7 +6,7 @@
 
 namespace K {
 
-static BucketArray<const char *> log_messages;
+static BucketList<const char *> log_messages;
 static bool log_missing = false;
 
 void rcc_RedirectLog()

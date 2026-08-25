@@ -44,7 +44,7 @@ static const int JwksExpirationDelay = 6 * 3600 * 1000; // Fetch new JWKS files 
 
 static std::shared_mutex jwks_mutex;
 static int64_t jwks_timestamp;
-static BucketArray<JwksCacheEntry> jwks_entries;
+static BucketList<JwksCacheEntry> jwks_entries;
 static HashTable<JwksCacheID, const JwksCacheEntry *> jwks_map;
 static HashSet<const void *> jwks_providers;
 static HeapArray<psa_key_id_t> jwks_keys;
