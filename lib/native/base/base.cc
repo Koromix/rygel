@@ -7007,21 +7007,22 @@ void FillRandomSafe(void *out_buf, Size len)
 
     if (reseed) {
         struct { uint8_t key[32]; uint8_t iv[8]; } buf;
-
         MemSet(rnd_state, 0, K_SIZE(rnd_state));
-#if defined(_WIN32)
-        K_CRITICAL(RtlGenRandom(&buf, K_SIZE(buf)), "RtlGenRandom() failed: %1", GetWin32ErrorString());
-#elif defined(__linux__)
-        {
-restart:
-            int ret = syscall(SYS_getrandom, &buf, K_SIZE(buf), 0);
-            K_CRITICAL(ret >= 0, "getrandom() failed: %1", strerror(errno));
 
-            if (ret < K_SIZE(buf)) [[unlikely]]
-                goto restart;
+#if defined(_WIN32)
+        BOOL success = RtlGenRandom(&buf, K_SIZE(buf));
+        K_CRITICAL(success, "RtlGenRandom() failed: %1", GetWin32ErrorString());
+#elif defined(__BIONIC__) && __ANDROID_API__ < 28
+restart:
+        int ret = syscall(__NR_getrandom, &buf, K_SIZE(buf), 0);
+        if (ret < 0) {
+            K_ASSERT(errno == EINTR);
+            goto restart;
         }
+        K_CRITICAL(ret == K_SIZE(buf), "getrandom() returned a partially filled buffer");
 #else
-        K_CRITICAL(getentropy(&buf, K_SIZE(buf)) == 0, "getentropy() failed: %1", strerror(errno));
+        int ret = getentropy(&buf, K_SIZE(buf));
+        K_CRITICAL(!ret, "getentropy() failed: %1", strerror(errno));
 #endif
 
         InitChaCha20(rnd_state, buf.key, buf.iv);
