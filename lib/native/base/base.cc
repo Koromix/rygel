@@ -5431,9 +5431,6 @@ static void DefaultSignalHandler(int signal)
         return;
     }
 
-    pid_t pid = getpid();
-    K_ASSERT(pid > 1);
-
     if (int fd = interrupt_pfd[1].load(); fd >= 0) {
         char dummy = 0;
         K_IGNORE write(fd, &dummy, 1);
