@@ -6134,6 +6134,65 @@ error:
     return false;
 }
 
+static std::mutex fork_mutex;
+static int64_t fork_generation;
+
+bool DetectFork(int64_t *marker)
+{
+    static void *addr = []() -> void * {
+        size_t page_size = (size_t)GetPageSize();
+
+        void *addr = mmap(nullptr, page_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+        if (!addr)
+            return nullptr;
+        K_DEFER_N(err_guard) { munmap(addr, page_size); };
+
+#if defined(__linux__)
+        if (!madvise(addr, page_size, -1) || madvise(addr, page_size, MADV_WIPEONFORK) < 0)
+            return nullptr;
+#elif defined(MAP_INHERIT_ZERO)
+        if (minherit(addr, page_size, MAP_INHERIT_ZERO) < 0)
+            return nullptr;
+#elif defined(INHERIT_ZERO)
+        if (minherit(addr, page_size, INHERIT_ZERO) < 0)
+            return nullptr;
+#else
+        return nullptr;
+#endif
+
+        err_guard.Disable();
+        return addr;
+    }();
+
+    if (addr) {
+        std::atomic<int64_t> *ptr = (std::atomic<int64_t> *)addr;
+        int64_t generation = ptr->load();
+
+        if (!generation) {
+            std::lock_guard<std::mutex> lock(fork_mutex);
+
+            generation = ++fork_generation;
+            ptr->store(generation);
+        }
+
+        if (*marker != generation) [[unlikely]] {
+            *marker = generation;
+            return true;
+        } else {
+            return false;
+        }
+    } else {
+        int64_t pid = (int64_t)getpid();
+
+        if (*marker != pid) [[unlikely]] {
+            *marker = pid;
+            return true;
+        } else {
+            return false;
+        }
+    }
+}
+
 #endif
 
 #if defined(__linux__)
@@ -6889,7 +6948,7 @@ bool ParseVersion(Span<const char> str, int parts, int multiplier,
 static thread_local Size rnd_remain;
 static thread_local int64_t rnd_clock;
 #if !defined(_WIN32)
-static thread_local pid_t rnd_pid;
+static thread_local int64_t rnd_generation;
 #endif
 static thread_local uint32_t rnd_state[16];
 static thread_local uint8_t rnd_buf[64];
@@ -7002,7 +7061,7 @@ void FillRandomSafe(void *out_buf, Size len)
     reseed |= (rnd_remain <= 0);
     reseed |= (GetMonotonicClock() - rnd_clock > 3600 * 1000);
 #if !defined(_WIN32)
-    reseed |= (getpid() != rnd_pid);
+    reseed |= DetectFork(&rnd_generation);
 #endif
 
     if (reseed) {
@@ -7030,9 +7089,6 @@ restart:
 
         rnd_remain = Mebibytes(4);
         rnd_clock = GetMonotonicClock();
-#if !defined(_WIN32)
-        rnd_pid = getpid();
-#endif
 
         rnd_offset = K_SIZE(rnd_buf);
     }
