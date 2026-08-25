@@ -262,6 +262,7 @@ TEST_FUNCTION("base/FastRandom")
         }
     }
 }
+
 TEST_FUNCTION("base/CmpStr")
 {
     TEST_GT(CmpStr("b", "a"), 0);
