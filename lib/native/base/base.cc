@@ -3162,12 +3162,12 @@ RenameResult RenameFile(const char *src_filename, const char *dest_filename, uns
         if (rename(src_filename, dest_filename) < 0)
             goto error;
     } else {
-#if defined(SYS_renameat2)
+#if defined(__NR_renameat2)
         {
             int dirfd = AT_FDCWD;
             int rflags = 1; // RENAME_NOREPLACE
 
-            if (!syscall(SYS_renameat2, dirfd, src_filename, dirfd, dest_filename, rflags))
+            if (!syscall(__NR_renameat2, dirfd, src_filename, dirfd, dest_filename, rflags))
                 goto sync;
             if (!IsErrnoNotSupported(errno) && errno != EINVAL)
                 goto error;
@@ -4774,7 +4774,7 @@ bool SpliceFile(int src_fd, const char *src_filename, int64_t src_offset,
     progress(0, max);
 
     // Try copy_file_range() if available
-#if defined(SYS_copy_file_range)
+#if defined(__NR_copy_file_range)
     {
         bool first = true;
 
@@ -4782,7 +4782,7 @@ bool SpliceFile(int src_fd, const char *src_filename, int64_t src_offset,
             // glibc < 2.27 doesn't define copy_file_range
 
             size_t count = (size_t)std::min(size, (int64_t)Mebibytes(64));
-            ssize_t ret = syscall(SYS_copy_file_range, src_fd, (off_t *)&src_offset, dest_fd, (off_t *)&dest_offset, count, 0u);
+            ssize_t ret = syscall(__NR_copy_file_range, src_fd, (off_t *)&src_offset, dest_fd, (off_t *)&dest_offset, count, 0u);
 
             if (ret < 0) {
                 if (first && errno == EXDEV)
