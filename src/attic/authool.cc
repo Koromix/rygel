@@ -275,6 +275,82 @@ retry:
     return 0;
 }
 
+static int RunRandomBytes(Span<const char *> arguments)
+{
+    // Options
+    int64_t size = 0;
+    const char *filename = nullptr;
+
+    const auto print_usage = [=](StreamWriter *st) {
+        PrintLn(st,
+R"(Usage: %!..+%1 random_bytes [option...] [filename]%!0
+
+Options:
+
+    %!..+-s, --size size%!0              Set desired output size, use 0 for infinite output
+                                   %!D..(default: Infinite)%!0)", FelixTarget);
+    };
+
+    // Parse arguments
+    {
+        OptionParser opt(arguments);
+
+        while (opt.Next()) {
+            if (opt.Test("--help")) {
+                print_usage(StdOut);
+                return 0;
+            } else if (opt.Test("-s", "--size", OptionType::Value)) {
+                if (!ParseSize(opt.current_value, &size))
+                    return 1;
+            } else {
+                opt.LogUnknownError();
+                return 1;
+            }
+        }
+
+        filename = opt.ConsumeNonOption();
+
+        opt.LogUnusedArguments();
+    }
+
+    StreamWriter writer;
+
+    if (filename) {
+        if (!writer.Open(filename, (int)StreamWriterFlag::NoBuffer))
+            return 1;
+    } else {
+        if (!writer.Open(STDOUT_FILENO, "<stdout>", (int)StreamWriterFlag::NoBuffer))
+            return 1;
+    }
+
+    if (size > 0) {
+        uint8_t buf[65536];
+
+        while (size >= K_SIZE(buf)) {
+            FillRandomSafe(buf, K_SIZE(buf));
+            if (!writer.Write(buf, K_SIZE(buf)))
+                return 1;
+            size -= K_SIZE(buf);
+        }
+
+        if (size) {
+            FillRandomSafe(buf, (Size)size);
+            if (!writer.Write(buf, (Size)size))
+                return 1;
+        }
+    } else {
+        uint8_t buf[65536];
+
+        for (;;) {
+            FillRandomSafe(buf, K_SIZE(buf));
+            if (!writer.Write(buf, K_SIZE(buf)))
+                return 1;
+        }
+    }
+
+    return !writer.Close();
+}
+
 static int RunGenerateTOTP(Span<const char *> arguments)
 {
     BlockAllocator temp_alloc;
@@ -726,6 +802,8 @@ Commands:
     %!..+hash_password%!0                  Hash a password (using libsodium)
     %!..+check_password%!0                 Check password strength
 
+    %!..+random_bytes%!0                   Generate and output random bytes
+
     %!..+generate_totp%!0                  Generate a TOTP QR code
     %!..+compute_totp%!0                   Generate TOTP code based on current time
     %!..+check_totp%!0                     Check TOTP code based on current time
@@ -767,6 +845,8 @@ Use %!..+%1 help command%!0 or %!..+%1 command --help%!0 for more specific help.
         return RunHashPassword(arguments);
     } else if (TestStr(cmd, "check_password")) {
         return RunCheckPassword(arguments);
+    } else if (TestStr(cmd, "random_bytes")) {
+        return RunRandomBytes(arguments);
     } else if (TestStr(cmd, "generate_totp")) {
         return RunGenerateTOTP(arguments);
     } else if (TestStr(cmd, "compute_totp")) {
