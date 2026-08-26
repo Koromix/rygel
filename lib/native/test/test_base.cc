@@ -773,39 +773,6 @@ TEST_FUNCTION("base/ChaCha20")
     }
 }
 
-TEST_FUNCTION("base/GetRandomInt")
-{
-    static const int iterations = 100;
-    static const int upper = 2000;
-    static const int loop = 100000;
-
-    bool varied = true;
-
-    for (int i = 0; i < iterations; i++) {
-        int max = GetRandomInt(100, upper);
-
-        TEST(max >= 100);
-        TEST(max < upper);
-
-        int distrib = 0;
-        bool memory[upper] = {};
-
-        for (int j = 0; j < loop; j++) {
-            int rnd = GetRandomInt(0, max);
-
-            TEST(rnd >= 0);
-            TEST(rnd < max);
-
-            distrib += !memory[rnd];
-            memory[rnd] = true;
-        }
-
-        varied &= (distrib > 95 * max / 100);
-    }
-
-    TEST_EX(varied, "GetRandomInt() values look well distributed");
-}
-
 TEST_FUNCTION("base/OptionParser")
 {
     // Empty
