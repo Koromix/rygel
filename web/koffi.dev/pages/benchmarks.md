@@ -4,6 +4,7 @@ This pages presents the execution time of Koffi calls on three benchmarks, where
 
 - The first benchmark is based on `atoi()` calls
 - The second benchmark is based on `memset()` calls
+- The third benchmark is based on Raylib
 
 # Linux x86_64
 
@@ -22,6 +23,18 @@ This test is based on `atoi`, which takes a string parameter. Javascript (V8) to
 This test is based around repeated calls to the standard C function `memset`. All implementations pass a Node.js Buffer for the pointer argument.
 
 <div class="benchmark table" data-platform="linux_x64" data-benchmark="memset"></div>
+
+## Raylib results for Linux x86_64 ^ Raylib results
+
+This benchmark uses the CPU-based image drawing functions in Raylib. The calls are much heavier than in the atoi benchmark, thus the FFI overhead is reduced. In this implementation, Koffi is compared to:
+
+- [node-raylib](https://github.com/RobLoach/node-raylib) (baseline): This is a native wrapper implemented with N-API
+- Raylib C++: C++ implementation of the benchmark, without any Javascript
+
+<div class="benchmark table" data-platform="linux_x64" data-benchmark="raylib"></div>
+
+> [!NOTE]
+> The node-raylib project seems to be **somewhat abandoned as of 2026**. It is based on an older version of Raylib than the other implentations. It could likely be slightly faster than Koffi with some effort and more build optimizations (such as PGO).
 
 # macOS ARM64
 
