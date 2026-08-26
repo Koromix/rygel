@@ -129,13 +129,13 @@ static bool ShouldRun(const ItemData &item)
     if (date < today) {
         date++;
         while (date < today) {
-            if (item.days & (1 << date.GetWeekDay()))
+            if (item.days & (1 << (date.IsoWeekDay() - 1)))
                 return true;
             date++;
         }
     }
 
-    if (item.days & (1 << date.GetWeekDay())) {
+    if (item.days & (1 << (date.IsoWeekDay() - 1))) {
         int hhmm1 = then.hour * 100 + then.min;
         int hhmm2 = spec.hour * 100 + spec.min;
 

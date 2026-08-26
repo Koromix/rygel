@@ -3455,7 +3455,7 @@ union LocalDate {
     int ToJulianDays() const;
     int ToCalendarDate() const { return ToJulianDays() - 2440588; }
 
-    int GetWeekDay() const;
+    int IsoWeekDay() const;
 
     int operator-(LocalDate other) const
         { return ToJulianDays() - other.ToJulianDays(); }

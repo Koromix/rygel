@@ -605,42 +605,20 @@ int LocalDate::ToJulianDays() const
     // Straight from the Web:
     // http://www.cs.utsa.edu/~cs1063/projects/Spring2011/Project1/jdn-explanation.html
 
-    int julian_days;
-    {
-        bool adjust = st.month < 3;
-        int year = st.year + 4800 - adjust;
-        int month = st.month + 12 * adjust - 3;
+    bool adjust = st.month < 3;
+    int year = st.year + 4800 - adjust;
+    int month = st.month + 12 * adjust - 3;
 
-        julian_days = st.day + (153 * month + 2) / 5 + 365 * year - 32045 +
+    int julian_days = st.day + (153 * month + 2) / 5 + 365 * year - 32045 +
                       year / 4 - year / 100 + year / 400;
-    }
 
     return julian_days;
 }
 
-int LocalDate::GetWeekDay() const
+int LocalDate::IsoWeekDay() const
 {
     K_ASSERT(IsValid());
-
-    // Zeller's congruence:
-    // https://en.wikipedia.org/wiki/Zeller%27s_congruence
-
-    int week_day;
-    {
-        int year = st.year;
-        int month = st.month;
-        if (month < 3) {
-            year--;
-            month += 12;
-        }
-
-        int century = year / 100;
-        year %= 100;
-
-        week_day = (st.day + (13 * (month + 1) / 5) + year + year / 4 + century / 4 + 5 * century + 5) % 7;
-    }
-
-    return week_day;
+    return 1 + ToJulianDays() % 7;
 }
 
 LocalDate &LocalDate::operator++()

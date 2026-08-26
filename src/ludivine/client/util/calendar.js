@@ -62,7 +62,7 @@ function SmallCalendar() {
 
         if (events == null) {
             let first = new LocalDate(date.year, date.month, 1);
-            let start = first.minus(first.getWeekDay() - 1);
+            let start = first.minus(first.isoWeekDay() - 1);
             let end = first.plusMonths(1).plus(7);
 
             let ret = event_func(start, end);
@@ -95,8 +95,8 @@ function SmallCalendar() {
         let first = new LocalDate(date.year, date.month, 1);
         let last = first.plusMonths(1).minus(1);
 
-        let before = first.getWeekDay() - 1;
-        let after = 7 - last.getWeekDay() - 1;
+        let before = first.isoWeekDay() - 1;
+        let after = 7 - last.isoWeekDay() - 1;
         let count = LocalDate.daysInMonth(date.year, date.month);
 
         let days = Util.mapRange(1, 8, day => T.days[day].substr(0, 3));
