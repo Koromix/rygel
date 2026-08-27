@@ -1511,7 +1511,7 @@ var require_highlight = __commonJS({
             };
           }
         }
-        function addPlugin(plugin) {
+        function addPlugin2(plugin) {
           upgradePluginAPI(plugin);
           plugins.push(plugin);
         }
@@ -1551,7 +1551,7 @@ var require_highlight = __commonJS({
           registerAliases,
           autoDetection,
           inherit,
-          addPlugin,
+          addPlugin: addPlugin2,
           removePlugin
         });
         hljs3.debugMode = function() {
@@ -11716,15 +11716,19 @@ function ini_default(hljs) {
 
 // highlight.js
 (0, import_highlight.registerLanguage)("ini", ini_default);
+var export_addPlugin = import_highlight.addPlugin;
 var export_highlight = import_highlight.highlight;
 var export_highlightAll = import_highlight.highlightAll;
 var export_highlightAuto = import_highlight.highlightAuto;
 var export_highlightElement = import_highlight.highlightElement;
+var export_registerLanguage = import_highlight.registerLanguage;
 export {
+  export_addPlugin as addPlugin,
   export_highlight as highlight,
   export_highlightAll as highlightAll,
   export_highlightAuto as highlightAuto,
-  export_highlightElement as highlightElement
+  export_highlightElement as highlightElement,
+  export_registerLanguage as registerLanguage
 };
 /*!
   Highlight.js v11.12.0 (git: f7f7d3803b)

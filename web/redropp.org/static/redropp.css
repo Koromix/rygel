@@ -2,7 +2,9 @@
 /* SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com> */
 
 @import url('../../../lib/web/flat/flat.css');
+
 @import url('../../../vendor/highlight.js/styles/base16/edge-light.css');
+@import url('../../../vendor/highlight.js/copy/highlightjs-copy.css');
 @import url('../../../vendor/asciinema/asciinema-player.css');
 
 html {
@@ -10,3 +12,6 @@ html {
     --button_color: #eb7120;
     --anchor_color: #eb7120;
 }
+
+.hljs-copy-button { --hljs-theme-color: var(--button_color); }
+.hljs-copy-button:hover { color: white; }
