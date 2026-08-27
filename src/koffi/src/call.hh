@@ -120,9 +120,13 @@ struct alignas(8) CallData {
     bool CheckDynamicLength(napi_value obj, Size element, const char *countedby, napi_value value);
 
 #if defined(K_DEBUG)
+    void FillMemory(void *ptr, Size len);
+
     void DebugCall(const FunctionInfo *func);
     void DebugForward();
 #else
+    K_FORCE_INLINE void FillMemory(void *, Size) {}
+
     K_FORCE_INLINE void DebugCall(const FunctionInfo *) {}
     K_FORCE_INLINE void DebugForward() {}
 #endif
@@ -139,10 +143,8 @@ inline T *CallData::AllocStack(Size size)
         return nullptr;
     }
 
-#if defined(K_DEBUG)
-    Size len = mem->stack.end - ptr;
-    MemSet(ptr, 0, len);
-#endif
+    Size fill = mem->stack.end - ptr;
+    FillMemory(ptr, fill);
 
     mem->stack.end = ptr;
 
@@ -158,9 +160,7 @@ inline T *CallData::AllocHeap(Size size)
     uint8_t *end = AlignUp(ptr + size, 16);
 
     if (end <= mem->heap.end) [[likely]] {
-#if defined(K_DEBUG)
-        MemSet(ptr, 0, size);
-#endif
+        FillMemory(ptr, size);
 
         mem->heap.ptr = end;
 
@@ -170,9 +170,7 @@ inline T *CallData::AllocHeap(Size size)
         ptr = AlignUp(ptr, 16);
         release_alloc |= (prev_stack == mem->stack.end);
 
-#if defined(K_DEBUG)
-        MemSet(ptr, 0, size);
-#endif
+        FillMemory(ptr, size);
 
         return ptr;
     }

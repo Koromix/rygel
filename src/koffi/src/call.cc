@@ -1216,6 +1216,17 @@ bool CallData::CheckDynamicLength(napi_value obj, Size element, const char *coun
 
 #if defined(K_DEBUG)
 
+void CallData::FillMemory(void *ptr, Size len)
+{
+    static bool randomize = GetDebugFlag("RANDOMIZE_MEMORY");
+
+    if (randomize) {
+        FillRandomSafe(ptr, len);
+    } else {
+        MemSet(ptr, 0, len);
+    }
+}
+
 static bool IsDebugCallsEnabled()
 {
     static bool debug = GetDebugFlag("DEBUG_CALLS");
