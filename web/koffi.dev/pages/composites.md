@@ -61,9 +61,9 @@ const Function2 = lib.func('Function', A, [A]);
 
 ## Opaque types
 
-Many C libraries use some kind of object-oriented API, with a pair of functions dedicated to create and delete objects. An obvious example of this can be found in stdio.h, with the opaque `FILE *` pointer. You can open and close files with `fopen()` and `fclose()`, and manipule the opaque pointer with other functions such as `fread()` or `ftell()`.
+Many C libraries use some kind of object-oriented API, with a pair of functions dedicated to create and delete objects. An obvious example of this can be found in stdio.h, with the opaque `FILE *` pointer. You can open and close files with `fopen()` and `fclose()`, and manipulate the opaque pointer with other functions such as `fread()` or `ftell()`.
 
-In Koffi, you can manage this with opaque types. Declare the opaque type with `koffi.opaque(name)`, and use a pointer to this type either as a return type or some kind of [output parameter](output) (with a double pointer).
+In Koffi, you can manage this with opaque types. Declare the type with `koffi.opaque(name)`, and use a pointer to this type either as a return type or some kind of [output parameter](output) (with a double pointer).
 
 The full example below implements an iterative string builder (concatenator) in C, and uses it from Javascript to output a mix of Hello World and FizzBuzz. The builder is hidden behind an opaque type, and is created and destroyed using a pair of C functions: `ConcatNew` (or `ConcatNewOut`) and `ConcatFree`.
 
