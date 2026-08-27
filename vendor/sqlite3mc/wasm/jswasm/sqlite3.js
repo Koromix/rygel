@@ -31,7 +31,7 @@
 ** SQLITE_VERSION_NUMBER 3053004
 ** SQLITE_SOURCE_ID "2026-07-24 19:02:57 bf7c7f30031888f4e796e429ab3978879485813aaca6f641c7b33e4e09459bcc"
 **
-** Emscripten SDK: 6.0.4
+** Emscripten SDK: 6.0.3
 */
 
 
@@ -291,13 +291,13 @@ function updateMemoryViews() {
   HEAP8 = new Int8Array(b);
   HEAP16 = new Int16Array(b);
   HEAPU8 = new Uint8Array(b);
-  
+  HEAPU16 = new Uint16Array(b);
   HEAP32 = new Int32Array(b);
   HEAPU32 = new Uint32Array(b);
   HEAPF32 = new Float32Array(b);
   HEAPF64 = new Float64Array(b);
   HEAP64 = new BigInt64Array(b);
-  
+  HEAPU64 = new BigUint64Array(b);
 }
 
 
@@ -539,7 +539,34 @@ async function createWasm() {
     }
 
   
+  var HEAP16;
+
+  
+  var HEAP32;
+
+  
+  var HEAP64;
+
+  
   var HEAP8;
+
+  
+  var HEAPF32;
+
+  
+  var HEAPF64;
+
+  
+  var HEAPU16;
+
+  
+  var HEAPU32;
+
+  
+  var HEAPU64;
+
+  
+  var HEAPU8;
 
   var callRuntimeCallbacks = (callbacks) => {
       while (callbacks.length > 0) {
@@ -554,7 +581,41 @@ async function createWasm() {
   var addOnPreRun = (cb) => onPreRuns.push(cb);
 
 
+  
+    
+  function getValue(ptr, type = 'i8') {
+    if (type.endsWith('*')) type = '*';
+    switch (type) {
+      case 'i1': return HEAP8[ptr];
+      case 'i8': return HEAP8[ptr];
+      case 'i16': return HEAP16[((ptr)>>1)];
+      case 'i32': return HEAP32[((ptr)>>2)];
+      case 'i64': return HEAP64[((ptr)>>3)];
+      case 'float': return HEAPF32[((ptr)>>2)];
+      case 'double': return HEAPF64[((ptr)>>3)];
+      case '*': return HEAPU32[((ptr)>>2)];
+      default: abort(`invalid type for getValue: ${type}`);
+    }
+  }
+
   var noExitRuntime = true;
+
+  
+    
+  function setValue(ptr, value, type = 'i8') {
+    if (type.endsWith('*')) type = '*';
+    switch (type) {
+      case 'i1': HEAP8[ptr] = value; break;
+      case 'i8': HEAP8[ptr] = value; break;
+      case 'i16': HEAP16[((ptr)>>1)] = value; break;
+      case 'i32': HEAP32[((ptr)>>2)] = value; break;
+      case 'i64': HEAP64[((ptr)>>3)] = BigInt(value); break;
+      case 'float': HEAPF32[((ptr)>>2)] = value; break;
+      case 'double': HEAPF64[((ptr)>>3)] = value; break;
+      case '*': HEAPU32[((ptr)>>2)] = value; break;
+      default: abort(`invalid type for setValue: ${type}`);
+    }
+  }
 
   var stackRestore = (val) => __emscripten_stack_restore(val);
 
@@ -941,8 +1002,6 @@ var UTF8Decoder = new TextDecoder();
   };
   
   
-  
-  var HEAPU8;
   var zeroMemory = (ptr, size) => HEAPU8.fill(0, ptr, ptr + size);
   
   var alignMemory = (size, alignment) => {
@@ -954,7 +1013,6 @@ var UTF8Decoder = new TextDecoder();
       if (ptr) zeroMemory(ptr, size);
       return ptr;
     };
-  
   var MEMFS = {
   ops_table:null,
   mount(mount) {
@@ -1097,7 +1155,7 @@ var UTF8Decoder = new TextDecoder();
           return attr;
         },
   setattr(node, attr) {
-          for (const key of ['mode', 'atime', 'mtime', 'ctime']) {
+          for (const key of ["mode", "atime", "mtime", "ctime"]) {
             if (attr[key] != null) {
               node[key] = attr[key];
             }
@@ -1370,7 +1428,6 @@ var UTF8Decoder = new TextDecoder();
   var FS_createPreloadedFile = (parent, name, url, canRead, canWrite, onload, onerror, dontCreateFile, canOwn, preFinish) => {
       FS_preloadFile(parent, name, url, canRead, canWrite, dontCreateFile, canOwn, preFinish).then(onload).catch(onerror);
     };
-  
   var FS = {
   root:null,
   mounts:[],
@@ -2346,7 +2403,7 @@ var UTF8Decoder = new TextDecoder();
         });
       },
   open(path, flags, mode = 0o666) {
-        if (path === '') {
+        if (path === "") {
           throw new FS.ErrnoError(44);
         }
         flags = FS_modeStringToFlags(flags);
@@ -2360,7 +2417,7 @@ var UTF8Decoder = new TextDecoder();
         if (typeof path == 'object') {
           node = path;
         } else {
-          isDirPath = path.endsWith('/');
+          isDirPath = path.endsWith("/");
           
           
           
@@ -2874,7 +2931,7 @@ var UTF8Decoder = new TextDecoder();
   forceLoadFile(obj) {
         if (obj.isDevice || obj.isFolder || obj.link || obj.contents) return true;
         if (globalThis.XMLHttpRequest) {
-          abort('Lazy loading should have been performed (contents set) in createLazyFile, but it was not. Lazy loading only works in web workers. Use --embed-file or --preload-file in emcc on the main thread.');
+          abort("Lazy loading should have been performed (contents set) in createLazyFile, but it was not. Lazy loading only works in web workers. Use --embed-file or --preload-file in emcc on the main thread.");
         } else { 
           try {
             obj.contents = readBinary(obj.url);
@@ -2905,11 +2962,11 @@ var UTF8Decoder = new TextDecoder();
             var xhr = new XMLHttpRequest();
             xhr.open('HEAD', url, false);
             xhr.send(null);
-            if (!(xhr.status >= 200 && xhr.status < 300 || xhr.status === 304)) abort(`Couldn't load ${url}. Status: ${xhr.status}`);
-            var datalength = Number(xhr.getResponseHeader('Content-length'));
+            if (!(xhr.status >= 200 && xhr.status < 300 || xhr.status === 304)) abort("Couldn't load " + url + ". Status: " + xhr.status);
+            var datalength = Number(xhr.getResponseHeader("Content-length"));
             var header;
-            var hasByteServing = (header = xhr.getResponseHeader('Accept-Ranges')) && header === 'bytes';
-            var usesGzip = (header = xhr.getResponseHeader('Content-Encoding')) && header === 'gzip';
+            var hasByteServing = (header = xhr.getResponseHeader("Accept-Ranges")) && header === "bytes";
+            var usesGzip = (header = xhr.getResponseHeader("Content-Encoding")) && header === "gzip";
   
             var chunkSize = 1024*1024; 
   
@@ -2923,7 +2980,7 @@ var UTF8Decoder = new TextDecoder();
               
               var xhr = new XMLHttpRequest();
               xhr.open('GET', url, false);
-              if (datalength !== chunkSize) xhr.setRequestHeader('Range', `bytes=${from}-${to}`);
+              if (datalength !== chunkSize) xhr.setRequestHeader("Range", "bytes=" + from + "-" + to);
   
               
               xhr.responseType = 'arraybuffer';
@@ -2932,7 +2989,7 @@ var UTF8Decoder = new TextDecoder();
               }
   
               xhr.send(null);
-              if (!(xhr.status >= 200 && xhr.status < 300 || xhr.status === 304)) abort(`Couldn't load ${url}. Status: ${xhr.status}`);
+              if (!(xhr.status >= 200 && xhr.status < 300 || xhr.status === 304)) abort("Couldn't load " + url + ". Status: " + xhr.status);
               if (xhr.response !== undefined) {
                 return new Uint8Array((xhr.response || []));
               }
@@ -2955,7 +3012,7 @@ var UTF8Decoder = new TextDecoder();
               chunkSize = datalength = 1; 
               datalength = this.getter(0).length;
               chunkSize = datalength;
-              out('LazyFiles on gzip forces download of the whole file when length is accessed');
+              out("LazyFiles on gzip forces download of the whole file when length is accessed");
             }
   
             this._length = datalength;
@@ -3046,23 +3103,12 @@ var UTF8Decoder = new TextDecoder();
   
   
   
-  
     
   var UTF8ToString = (ptr, maxBytesToRead, ignoreNul) => {
       if (!ptr) return '';
       var end = findStringEnd(HEAPU8, ptr, maxBytesToRead, ignoreNul);
       return UTF8Decoder.decode(HEAPU8.subarray(ptr, end));
     };
-  
-  
-  
-  var HEAP32;
-  
-  
-  var HEAPU32;
-  
-  
-  var HEAP64;
   var SYSCALLS = {
   currentUmask:18,
   calculateAt(dirfd, path, allowEmpty) {
@@ -3215,9 +3261,6 @@ var UTF8Decoder = new TextDecoder();
   var syscallGetVarargP = syscallGetVarargI;
   
   
-  
-  
-  var HEAP16;
   function ___syscall_fcntl64(fd, cmd, varargs) {
   SYSCALLS.varargs = varargs;
   try {
@@ -3302,7 +3345,6 @@ var UTF8Decoder = new TextDecoder();
   }
 
   
-  
   var stringToUTF8 = (str, outPtr, maxBytesToWrite) => {
       return stringToUTF8Array(str, HEAPU8, outPtr, maxBytesToWrite);
     };
@@ -3322,11 +3364,6 @@ var UTF8Decoder = new TextDecoder();
   }
   
 
-  var ___syscall_geteuid32 = () => 0;
-
-  
-  
-  
   
   function ___syscall_ioctl(fd, op, varargs) {
   SYSCALLS.varargs = varargs;
@@ -3489,7 +3526,6 @@ var UTF8Decoder = new TextDecoder();
 
   
   
-  
   function ___syscall_readlinkat(dirfd, path, buf, bufsize) {
   try {
   
@@ -3557,11 +3593,9 @@ var UTF8Decoder = new TextDecoder();
   }
   
 
-  
   var readI53FromI64 = (ptr) => {
       return HEAPU32[((ptr)>>2)] + HEAP32[(((ptr)+(4))>>2)] * 4294967296;
     };
-  
   
   function ___syscall_utimensat(dirfd, path, times, flags) {
   try {
@@ -3623,7 +3657,6 @@ var UTF8Decoder = new TextDecoder();
       return yday;
     };
   
-  
   function __localtime_js(time, tmPtr) {
     time = bigintToI53Checked(time);
   
@@ -3654,8 +3687,6 @@ var UTF8Decoder = new TextDecoder();
     ;
   }
 
-  
-  
   
   
   
@@ -3698,8 +3729,6 @@ var UTF8Decoder = new TextDecoder();
   ;
   }
 
-  
-  
   var __tzset_js = (timezone, daylight, std_name, dst_name) => {
       
       var currentYear = new Date().getFullYear();
@@ -3728,11 +3757,11 @@ var UTF8Decoder = new TextDecoder();
       var extractZone = (timezoneOffset) => {
         
         
-        var sign = timezoneOffset >= 0 ? '-' : '+';
+        var sign = timezoneOffset >= 0 ? "-" : "+";
   
         var absOffset = Math.abs(timezoneOffset)
-        var hours = String(Math.floor(absOffset / 60)).padStart(2, '0');
-        var minutes = String(absOffset % 60).padStart(2, '0');
+        var hours = String(Math.floor(absOffset / 60)).padStart(2, "0");
+        var minutes = String(absOffset % 60).padStart(2, "0");
   
         return `UTC${sign}${hours}${minutes}`;
       }
@@ -3756,7 +3785,6 @@ var UTF8Decoder = new TextDecoder();
   var nowIsMonotonic = 1;
   
   var checkWasiClock = (clock_id) => clock_id >= 0 && clock_id <= 3;
-  
   
   function _clock_time_get(clk_id, ignored_precision, ptime) {
     ignored_precision = bigintToI53Checked(ignored_precision);
@@ -3806,7 +3834,6 @@ var UTF8Decoder = new TextDecoder();
       
       
     };
-  
   var _emscripten_resize_heap = (requestedSize) => {
       var oldSize = HEAPU8.length;
       
@@ -3891,7 +3918,6 @@ var UTF8Decoder = new TextDecoder();
       return getEnvStrings.strings;
     };
   
-  
   var _environ_get = (__environ, environ_buf) => {
       var bufSize = 0;
       var envp = 0;
@@ -3904,7 +3930,6 @@ var UTF8Decoder = new TextDecoder();
       return 0;
     };
 
-  
   
   var _environ_sizes_get = (penviron_count, penviron_buf_size) => {
       var strings = getEnvStrings();
@@ -3949,9 +3974,6 @@ var UTF8Decoder = new TextDecoder();
   }
   
 
-  
-  
-  
   function _fd_fdstat_get(fd, pbuf) {
   try {
   
@@ -3979,7 +4001,6 @@ var UTF8Decoder = new TextDecoder();
   }
   
 
-  
   
   var doReadv = (stream, iov, iovcnt, offset) => {
       var ret = 0;
@@ -4009,7 +4030,6 @@ var UTF8Decoder = new TextDecoder();
       return ret;
     };
   
-  
   function _fd_read(fd, iov, iovcnt, pnum) {
   try {
   
@@ -4024,7 +4044,6 @@ var UTF8Decoder = new TextDecoder();
   }
   
 
-  
   
   function _fd_seek(fd, offset, whence, newOffset) {
     offset = bigintToI53Checked(offset);
@@ -4059,8 +4078,6 @@ var UTF8Decoder = new TextDecoder();
   
 
   
-  
-  
   var doWritev = (stream, iov, iovcnt, offset) => {
       
       
@@ -4085,7 +4102,6 @@ var UTF8Decoder = new TextDecoder();
       return FS.write(stream, view, 0, total, offset);
     };
   
-  
   function _fd_write(fd, iov, iovcnt, pnum) {
   try {
   
@@ -4100,62 +4116,7 @@ var UTF8Decoder = new TextDecoder();
   }
   
 
-  
   var _random_get = (buffer, size) => randomFill(HEAPU8.subarray(buffer, buffer + size));
-
-  
-  
-  
-  
-  
-  var HEAPF32;
-  
-  
-  var HEAPF64;
-  
-  
-    
-  function getValue(ptr, type = 'i8') {
-    if (type.endsWith('*')) type = '*';
-    switch (type) {
-      case 'i1': return HEAP8[ptr];
-      case 'i8': return HEAP8[ptr];
-      case 'i16': return HEAP16[((ptr)>>1)];
-      case 'i32': return HEAP32[((ptr)>>2)];
-      case 'i64': return HEAP64[((ptr)>>3)];
-      case 'float': return HEAPF32[((ptr)>>2)];
-      case 'double': return HEAPF64[((ptr)>>3)];
-      case '*': return HEAPU32[((ptr)>>2)];
-      default: abort(`invalid type for getValue: ${type}`);
-    }
-  }
-
-  
-  
-  
-  
-  
-  
-  
-    
-  function setValue(ptr, value, type = 'i8') {
-    if (type.endsWith('*')) type = '*';
-    switch (type) {
-      case 'i1': HEAP8[ptr] = value; break;
-      case 'i8': HEAP8[ptr] = value; break;
-      case 'i16': HEAP16[((ptr)>>1)] = value; break;
-      case 'i32': HEAP32[((ptr)>>2)] = value; break;
-      case 'i64': HEAP64[((ptr)>>3)] = BigInt(value); break;
-      case 'float': HEAPF32[((ptr)>>2)] = value; break;
-      case 'double': HEAPF64[((ptr)>>3)] = value; break;
-      case '*': HEAPU32[((ptr)>>2)] = value; break;
-      default: abort(`invalid type for setValue: ${type}`);
-    }
-  }
-
-
-
-
 
 
   FS.createPreloadedFile = FS_createPreloadedFile;
@@ -4779,8 +4740,6 @@ var wasmImports = {
   __syscall_ftruncate64: ___syscall_ftruncate64,
   
   __syscall_getcwd: ___syscall_getcwd,
-  
-  __syscall_geteuid32: ___syscall_geteuid32,
   
   __syscall_ioctl: ___syscall_ioctl,
   
