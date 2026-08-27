@@ -311,6 +311,7 @@ button {
 
     .help {
         max-width: none;
+        min-height: 60px;
         margin-top: calc(10px + 1em);
         margin-bottom: 1em;
         padding: 1em !important;
