@@ -703,9 +703,11 @@ form {
     }
     & label:has(> input[type=checkbox]):not(:first-child) { margin-top: 0.3em !important; }
     & input[type=checkbox] {
-        position: relative;
-        width: 16px;
-        height: 16px;
+        --state: transparent;
+
+        box-sizing: content-box;
+        width: 14px;
+        height: 14px;
         margin: 4px 0 0 0;
         padding: 0;
         flex-shrink: 0;
@@ -716,18 +718,17 @@ form {
         border: 1px solid var(--check_color);
         border-radius: 0;
     }
-    & input[type=checkbox]::before {
-        content: '';
-        position: absolute;
-        left: 3px;
-        top: 3px;
-        width: 8px;
-        height: 8px;
-        transition: 120ms transform ease-in-out;
+    & input[type=checkbox]::after {
+        display: block;
+        content: ' ';
+        box-sizing: border-box;
+        width: 14px;
+        height: 14px;
+        border: 3px solid white;
+        background: var(--state);
     }
-    & input[type=checkbox]:hover::before { box-shadow: inset 1em 1em var(--hover_color); }
-    & input[type=checkbox]:checked::before { box-shadow: inset 1em 1em var(--check_color); }
-    & label:has(> input[type=checkbox]:disabled) { color: #979797 !important; }
+    & input[type=checkbox]:hover{ --state: var(--hover_color); }
+    & input[type=checkbox]:checked { --state: var(--check_color); }
 
     & .number {
         display: flex;
