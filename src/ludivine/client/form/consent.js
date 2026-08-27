@@ -57,9 +57,9 @@ function ConsentModule(app, project) {
 
     function runConsent() {
         let model = new FormModel;
-        let builder = new FormBuilder(state, model, { disabled: !downloaded });
+        let builder = new FormBuilder(state, model);
 
-        let valid = consent.accept(builder, values);
+        let valid = consent.accept(builder, downloaded);
 
         render(html`
             <div class="box">
@@ -76,15 +76,14 @@ function ConsentModule(app, project) {
                 ${consent.download != null ? html`
                     <div class="help">
                         <img src=${ASSETS['pictures/help1']} alt="" />
-                        <p>Vous devez <b>télécharger et lire la lettre d'informations</b> pour pouvoir commencer.
-                        <p>Une fois cela fait, vous pourrez participer à l'étude !
+                        <p>Nous vous recommandons de <b>lire la lettre d'informations</b> avant de continuer.
                     </div>
                 ` : ''}
                 <form @submit=${UI.wrap(e => start(valid, values))}>
                     ${model.widgets.map(widget => widget.render())}
 
                     <div class="actions">
-                        <button type="submit" ?disabled=${!downloaded}>Participer</button>
+                        <button type="submit">Participer</button>
                     </div>
                 </form>
             </div>

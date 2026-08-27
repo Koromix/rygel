@@ -46,8 +46,10 @@ const consent = {
 
     download: '/static/documents/SocioTrauma_Information.pdf',
 
-    accept: form => {
+    accept: (form, downloaded) => {
         let values = form.values
+
+        values.telecharge = 0 + downloaded;
 
         form.binary("consentement", "J’ai lu et je ne m’oppose pas à participer à l’étude SocioTrauma :")
         form.enumRadio("anciennete", "Je considère avoir vécu un évènement difficile il y a :", [
