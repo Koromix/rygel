@@ -90,7 +90,7 @@ typedef struct Concat {
     size_t total;
 } Concat;
 
-bool ConcatNewOut(Concat **out)
+bool ConcatNew(Concat **out)
 {
     Concat *c = malloc(sizeof(*c));
     if (!c) {
@@ -104,13 +104,6 @@ bool ConcatNewOut(Concat **out)
 
     *out = c;
     return true;
-}
-
-Concat *ConcatNew()
-{
-    Concat *c = NULL;
-    ConcatNewOut(&c);
-    return c;
 }
 
 void ConcatFree(Concat *c)
@@ -193,20 +186,16 @@ import koffi from 'koffi';
 const lib = koffi.load('./handles.so');
 
 const Concat = koffi.opaque('Concat');
-const ConcatNewOut = lib.func('bool ConcatNewOut(_Out_ Concat **out)');
-const ConcatNew = lib.func('Concat *ConcatNew()');
+const ConcatNew = lib.func('bool ConcatNew(_Out_ Concat **out)');
 const ConcatFree = lib.func('void ConcatFree(Concat *c)');
 const ConcatAppend = lib.func('bool ConcatAppend(Concat *c, const char *frag)');
 const ConcatBuild = lib.func('const char *ConcatBuild(Concat *c)');
 
-let c = ConcatNew();
-if (!c) {
-    // This is stupid, it does the same, but try both versions (return value, output parameter)
-    let ptr = [null];
-    if (!ConcatNewOut(ptr))
-        throw new Error('Allocation failure');
-    c = ptr[0];
-}
+// The new function uses an output parameter, and returns success with a boolean.
+let ptr = [null];
+if (!ConcatNew(ptr))
+    throw new Error('Allocation failure');
+let c = ptr[0];
 
 try {
     if (!ConcatAppend(c, 'Hello... '))
