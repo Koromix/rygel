@@ -33,6 +33,9 @@ function initCharts() {
         let canvas = document.createElement('canvas');
         let ctx = canvas.getContext('2d');
 
+        let max = Math.max(...ENGINES.flatMap(engine => benchmarks.map(benchmark => data.results[benchmark][engine]?.ratio ?? 0)));
+        let right = Math.max(Math.ceil((max + 0.3) * 5) / 5, 1.4);
+
         new Chart(ctx, {
             plugins: [ChartDataLabels],
             type: 'bar',
@@ -46,7 +49,7 @@ function initCharts() {
                 responsive: true,
                 scales: {
                     x: {
-                        max: 1.4,
+                        max: right,
                         ticks: {
                             font: {
                                 family: 'Open Sans',
