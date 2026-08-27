@@ -81,11 +81,10 @@ function ConsentModule(app, project) {
                 ` : ''}
                 <form @submit=${UI.wrap(e => start(valid, values))}>
                     ${model.widgets.map(widget => widget.render())}
-
-                    <div class="actions">
-                        <button type="submit">Participer</button>
-                    </div>
                 </form>
+            </div>
+            <div class="actions">
+                <button type="button" @click=${UI.wrap(e => start(valid, values))}>Participer à ${project.title}</button>
             </div>
         `, div);
     }
