@@ -665,6 +665,9 @@ form {
     }
     & label:has(> input[type=radio]):not(:first-child) { margin-top: 0.3em !important; }
     & input[type=radio] {
+        --state: transparent;
+
+        box-sizing: content-box;
         width: 14px;
         height: 14px;
         margin: 4px 0 0 0;
@@ -674,12 +677,21 @@ form {
         -webkit-appearance: none;
         border-radius: 50%;
         background: white;
-        border: 3px solid white;
-        box-shadow: 0 0 0 1px var(--check_color);
+        border: 1px solid var(--check_color);
         cursor: pointer;
     }
-    & input[type=radio]:hover { background: var(--hover_color);  }
-    & input[type=radio]:checked { background: var(--check_color); }
+    & input[type=radio]::after {
+        display: block;
+        content: ' ';
+        box-sizing: border-box;
+        width: 14px;
+        height: 14px;
+        border: 3px solid white;
+        background: var(--state);
+        border-radius: 50%;
+    }
+    & input[type=radio]:hover { --state: var(--hover_color);  }
+    & input[type=radio]:checked { --state: var(--check_color); }
     & label:has(> input[type=radio]:disabled) { color: #979797 !important; }
 
     & label:has(> input[type=checkbox]) {
