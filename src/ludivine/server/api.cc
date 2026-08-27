@@ -388,6 +388,8 @@ void HandleRegister(http_IO *io)
         }
     }
 
+    int64_t now = GetUnixTime();
+
     // Try to create user
     uint8_t tkey[32];
     {
@@ -396,10 +398,11 @@ void HandleRegister(http_IO *io)
         FillRandomSafe(uid);
         FillRandomSafe(tkey);
 
-        if (!db.Run(R"(INSERT INTO users (uid, mail, registration)
-                       VALUES (?1, ?2, -1)
-                       ON CONFLICT (mail) DO UPDATE SET registration = registration - IIF(registration < 0, 1, 0))",
-                    (Span<const uint8_t>)uid, mail))
+        if (!db.Run(R"(INSERT INTO users (uid, mail, registration, ctime)
+                       VALUES (?1, ?2, -1, ?3)
+                       ON CONFLICT (mail) DO UPDATE SET registration = registration - IIF(registration < 0, 1, 0),
+                                                        ctime = IIF(registration < 0, excluded.ctime, ctime))",
+                    (Span<const uint8_t>)uid, mail, now))
             return;
     }
 
