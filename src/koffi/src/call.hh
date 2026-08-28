@@ -135,16 +135,12 @@ struct alignas(8) CallData {
 template <typename T>
 inline T *CallData::AllocStack(Size size)
 {
-    uint8_t *ptr = AlignDown(mem->stack.end, 16) - size;
+    K_ASSERT(AlignDown(mem->stack.end, 16) == mem->stack.end);
+    K_ASSERT(AlignLen(size, 16) == size);
 
-    // Keep 512 bytes for redzone (required in some ABIs)
-    if (ptr < mem->stack.ptr + 512) [[unlikely]] {
-        ThrowError<Napi::Error>(env, "FFI call is taking up too much memory");
-        return nullptr;
-    }
+    uint8_t *ptr = mem->stack.end - size;
 
-    Size fill = mem->stack.end - ptr;
-    FillMemory(ptr, fill);
+    FillMemory(ptr, mem->stack.end - ptr);
 
     mem->stack.end = ptr;
 

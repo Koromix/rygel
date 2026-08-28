@@ -61,8 +61,6 @@ CallData::~CallData()
 napi_value CallData::Run(const FunctionInfo *func, void *native)
 {
     uint8_t *base = AllocStack<uint8_t>(func->plan.stk_size);
-    if (!base) [[unlikely]]
-        return env.Null();
 
     const InstructionData *first = func->plan.sync.ptr;
     return RunForward(this, base, native, first);
@@ -71,8 +69,6 @@ napi_value CallData::Run(const FunctionInfo *func, void *native)
 bool CallData::PrepareAsync(const FunctionInfo *func)
 {
     uint8_t *base = AllocStack<uint8_t>(func->plan.stk_size);
-    if (!base) [[unlikely]]
-        return env.Null();
     async_base = base;
 
     const InstructionData *first = func->plan.async.ptr;
