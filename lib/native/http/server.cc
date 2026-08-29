@@ -548,7 +548,6 @@ void http_IO::AddEncodingHeader(CompressionType encoding)
         case CompressionType::Zlib: { AddHeader("Content-Encoding", "deflate"); } break;
         case CompressionType::Gzip: { AddHeader("Content-Encoding", "gzip"); } break;
         case CompressionType::Brotli: { AddHeader("Content-Encoding", "br"); } break;
-        case CompressionType::LZ4: { K_UNREACHABLE(); } break;
         case CompressionType::Zstd: { AddHeader("Content-Encoding", "zstd"); } break;
     }
 }
@@ -1253,7 +1252,6 @@ Span<const char> http_IO::PrepareResponse(int status, CompressionType encoding, 
         case CompressionType::Zlib: { Fmt(&buf, "Content-Encoding: deflate\r\n"); } break;
         case CompressionType::Gzip: { Fmt(&buf, "Content-Encoding: gzip\r\n"); } break;
         case CompressionType::Brotli: { Fmt(&buf, "Content-Encoding: br\r\n"); } break;
-        case CompressionType::LZ4: { K_UNREACHABLE(); } break;
         case CompressionType::Zstd: { Fmt(&buf, "Content-Encoding: zstd\r\n"); } break;
     }
 

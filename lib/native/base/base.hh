@@ -4273,7 +4273,6 @@ enum class CompressionType {
     Zlib,
     Gzip,
     Brotli,
-    LZ4,
     Zstd
 };
 static const char *const CompressionTypeNames[] = {
@@ -4281,7 +4280,6 @@ static const char *const CompressionTypeNames[] = {
     "Zlib",
     "Gzip",
     "Brotli",
-    "LZ4",
     "Zstd"
 };
 static const char *const CompressionTypeExtensions[] = {
@@ -4289,7 +4287,6 @@ static const char *const CompressionTypeExtensions[] = {
     ".zz",
     ".gz",
     ".br",
-    ".lz4",
     ".zst"
 };
 
