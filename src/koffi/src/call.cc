@@ -1261,7 +1261,13 @@ void CallData::DebugForward()
 
 #endif
 
-static napi_value TranslateZeroCall(napi_env env, napi_callback_info info)
+#if defined(__GNUC__)
+    #define TRANSLATE_FUNC __attribute__((no_stack_protector))
+#else
+    #define TRANSLATE_FUNC
+#endif
+
+static TRANSLATE_FUNC napi_value TranslateZeroCall(napi_env env, napi_callback_info info)
 {
     struct CallbackBundle {
         napi_env env;
@@ -1286,7 +1292,7 @@ static napi_value TranslateZeroCall(napi_env env, napi_callback_info info)
     return ret;
 }
 
-static napi_value TranslateFastCall(napi_env env, napi_callback_info info)
+static TRANSLATE_FUNC napi_value TranslateFastCall(napi_env env, napi_callback_info info)
 {
     static_assert(MaxParameters >= 6);
 
@@ -1316,7 +1322,7 @@ static napi_value TranslateFastCall(napi_env env, napi_callback_info info)
     return ret;
 }
 
-static K_FORCE_INLINE napi_value TranslateNormalCall(CallData *call, const FunctionInfo *func, void *native, Size count)
+static TRANSLATE_FUNC K_FORCE_INLINE napi_value TranslateNormalCall(CallData *call, const FunctionInfo *func, void *native, Size count)
 {
     if (count < func->required_parameters) [[unlikely]] {
         ThrowError<Napi::TypeError>(call->env, "Expected %1 arguments, got %2", func->parameters.len, count);
@@ -1338,7 +1344,7 @@ static K_FORCE_INLINE napi_value TranslateNormalCall(CallData *call, const Funct
     return ret;
 }
 
-static napi_value TranslateNormalCall(napi_env env, napi_callback_info info)
+static TRANSLATE_FUNC napi_value TranslateNormalCall(napi_env env, napi_callback_info info)
 {
     static_assert(MaxParameters >= 8);
 
@@ -1356,7 +1362,7 @@ static napi_value TranslateNormalCall(napi_env env, napi_callback_info info)
     return TranslateNormalCall(&call, func, func->native, (Size)count);
 }
 
-static napi_value TranslateNormalCallDebugAsync(napi_env env, napi_callback_info info)
+static TRANSLATE_FUNC napi_value TranslateNormalCallDebugAsync(napi_env env, napi_callback_info info)
 {
     static_assert(MaxParameters >= 8);
 
@@ -1400,7 +1406,7 @@ static napi_value TranslateNormalCallDebugAsync(napi_env env, napi_callback_info
     return ret;
 }
 
-static K_FORCE_INLINE napi_value TranslateVariadicCall(CallData *call, const FunctionInfo *func, void *native, Size count)
+static TRANSLATE_FUNC K_FORCE_INLINE napi_value TranslateVariadicCall(CallData *call, const FunctionInfo *func, void *native, Size count)
 {
     InstanceData *instance = func->instance;
     InstanceMemory *mem = instance->memories[0];
@@ -1504,7 +1510,7 @@ static K_FORCE_INLINE napi_value TranslateVariadicCall(CallData *call, const Fun
     return ret;
 }
 
-static napi_value TranslateVariadicCall(napi_env env, napi_callback_info info)
+static TRANSLATE_FUNC napi_value TranslateVariadicCall(napi_env env, napi_callback_info info)
 {
     static_assert(MaxParameters >= 8);
 
@@ -1521,6 +1527,8 @@ static napi_value TranslateVariadicCall(napi_env env, napi_callback_info info)
 
     return TranslateVariadicCall(&call, func, func->native, (Size)count);
 }
+
+#undef TRANSLATE_FUNC
 
 class AsyncCall {
     Napi::Env env;

@@ -102,10 +102,7 @@ int AnalyseFlat(const TypeInfo *type, FunctionRef<void(const TypeInfo *type, int
         #if  __has_attribute(musttail) && __has_attribute(preserve_none)
             #define MUST_TAIL __attribute__((musttail))
             #define PRESERVE_NONE __attribute__((preserve_none))
-        #elif  __has_attribute(musttail) && !defined(__clang__)
-            // GCC regalloc seems better, so the generated code is not too bad even without preserve_none
-            #define MUST_TAIL __attribute__((musttail))
-            #define PRESERVE_NONE
+            #define NO_STACK_PROTECTOR __attribute__((no_stack_protector))
         #endif
     #endif
 #endif

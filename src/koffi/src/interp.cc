@@ -89,7 +89,7 @@ extern "C" {
 
 #if defined(MUST_TAIL)
     #define FWD(Code) \
-        static PRESERVE_NONE napi_value Forward ## Code(CallData *call, uint8_t *base, void *native, const InstructionData *inst)
+        static PRESERVE_NONE NO_STACK_PROTECTOR napi_value Forward ## Code(CallData *call, uint8_t *base, void *native, const InstructionData *inst)
     #define NEXT() \
         do { \
             const InstructionData *next = inst + 1; \
@@ -708,7 +708,7 @@ napi_value RunForward(CallData *call, uint8_t *base, void *native, const Instruc
 
 #if defined(MUST_TAIL)
     #define RELAY(Code) \
-        static PRESERVE_NONE int Relay ## Code(CallData *call, TrampolineInfo *trampoline, uint8_t *base, const InstructionData *inst)
+        static PRESERVE_NONE NO_STACK_PROTECTOR int Relay ## Code(CallData *call, TrampolineInfo *trampoline, uint8_t *base, const InstructionData *inst)
     #define NEXT() \
         do { \
             const InstructionData *next = inst + 1; \
