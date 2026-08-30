@@ -210,7 +210,7 @@ SwitchAndRelay:
     st.d $ra, $sp, 0
     st.d $fp, $sp, 8
     move $fp, $sp
-    st.d $sp, $a4, 8
+    st.d $sp, $a4, 0
     move $sp, $a3
     bl RelayDirect
     move $sp, $fp

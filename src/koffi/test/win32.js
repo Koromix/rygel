@@ -42,6 +42,9 @@ async function test() {
     const GetLastError = kernel32.func('uint32_t __stdcall GetLastError()');
     const SetLastError = kernel32.func('void __stdcall SetLastError(uint32_t dwErrorCode)');
 
+    // Check that the EnvironmentPointer TEB field Koffi uses is "available"
+    assert.equal(GetLastError(), 0);
+
     // Check that GetLastError() survives across sync Koffi calls
     for (let i = 0; i < 100; i++) {
         SetLastError(i);

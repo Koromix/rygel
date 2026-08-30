@@ -185,7 +185,7 @@ RelayTrampoline PROC
 SwitchAndRelay PROC
     stp x29, x30, [sp, -16]!
     mov x29, sp
-    str x29, [x4, 8]
+    str x29, [x4]
     mov sp, x3
     bl RelayDirect
     mov sp, x29

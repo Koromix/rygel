@@ -141,7 +141,7 @@ static Napi::Value GetSetConfig(const Napi::CallbackInfo &info)
                 if (!ChangeMemorySize(instance, key.c_str(), value, &new_config.async_heap_size))
                     return env.Null();
             } else if (key == "resident_async_pools") {
-                if (!ChangeAsyncLimit(instance, key.c_str(), value, K_LEN(instance->memories.data) - 1, &new_config.resident_async_pools))
+                if (!ChangeAsyncLimit(instance, key.c_str(), value, K_LEN(instance->memories.data), &new_config.resident_async_pools))
                     return env.Null();
             } else if (key == "max_async_calls") {
                 if (!ChangeAsyncLimit(instance, key.c_str(), value, MaxAsyncCalls, &max_async_calls))
@@ -1445,18 +1445,17 @@ static Napi::Value GetResolvedType(const Napi::CallbackInfo &info)
 
 static void InitSyncMemory(InstanceData *instance)
 {
-    if (instance->memories.len)
+    if (instance->sync_memory.IsAllocated()) [[likely]]
         return;
 
-    AllocateMemory(instance, instance->config.sync_stack_size, instance->config.sync_heap_size);
-    K_ASSERT(instance->memories.len == 1);
+    instance->sync_memory.Allocate(instance->config.sync_stack_size, instance->config.sync_heap_size);
 }
 
-InstanceMemory *AllocateMemory(InstanceData *instance, Size stack_size, Size heap_size)
+InstanceMemory *AllocateAsyncMemory(InstanceData *instance)
 {
     std::lock_guard<std::mutex> lock(instance->mem_mutex);
 
-    for (Size i = 1; i < instance->memories.len; i++) {
+    for (Size i = 0; i < instance->memories.len; i++) {
         InstanceMemory *mem = instance->memories[i];
 
         if (!mem->busy) {
@@ -1465,60 +1464,15 @@ InstanceMemory *AllocateMemory(InstanceData *instance, Size stack_size, Size hea
         }
     }
 
-    bool temporary = (instance->memories.len > instance->config.resident_async_pools);
+    bool temporary = (instance->memories.len >= instance->config.resident_async_pools);
 
-    if (temporary && instance->temporaries > instance->config.max_temporaries)
+    if (temporary && instance->temporaries >= instance->config.max_temporaries)
         return nullptr;
 
     InstanceMemory *mem = new InstanceMemory();
     K_DEFER_N(mem_guard) { delete mem; };
 
-    stack_size = AlignLen(stack_size, Kibibytes(64));
-
-#if defined(_WIN32)
-    // Allocate stack memory
-    mem->stack.ptr = (uint8_t *)VirtualAlloc(nullptr, stack_size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
-    mem->stack.end = mem->stack.ptr + stack_size;
-
-    K_CRITICAL(mem->stack.ptr, "Failed to allocate %1 of memory", stack_size);
-#else
-    mem->stack.ptr = (uint8_t *)mmap(nullptr, stack_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON | MAP_STACK, -1, 0);
-    mem->stack.end = mem->stack.ptr + stack_size;
-
-    K_CRITICAL(mem->stack.ptr, "Failed to allocate %1 of memory", stack_size);
-#endif
-
-#if defined(__OpenBSD__)
-    // Make sure the SP points inside the MAP_STACK area, or (void) functions may crash on OpenBSD i386
-    mem->stack.end -= 16;
-#endif
-
-    // Keep real stack limits intact, in case we need them
-    mem->stack0 = mem->stack;
-
-#if defined(_WIN32) && !defined(_WIN64)
-    mem->stack.end -= K_SIZE(SehFrame);
-
-    // Prepare at the top SEH frame record
-    {
-        SehFrame *seh = (SehFrame *)mem->stack.end;
-
-        seh->Next = (void *)-1;
-        seh->Handler = (void *)SehHandler;
-    }
-#endif
-
-#if defined(_WIN32)
-    mem->heap.ptr = (uint8_t *)VirtualAlloc(nullptr, heap_size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-    mem->heap.end = mem->heap.ptr + heap_size;
-
-    K_CRITICAL(mem->heap.ptr, "Failed to allocate %1 of memory", heap_size);
-#else
-    mem->heap.ptr = (uint8_t *)mmap(nullptr, heap_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
-    mem->heap.end = mem->heap.ptr + heap_size;
-
-    K_CRITICAL(mem->heap.ptr, "Failed to allocate %1 of memory", heap_size);
-#endif
+    mem->Allocate(instance->config.async_stack_size, instance->config.async_heap_size);
 
     if (temporary) {
         instance->temporaries++;
@@ -1534,7 +1488,7 @@ InstanceMemory *AllocateMemory(InstanceData *instance, Size stack_size, Size hea
     return mem;
 }
 
-void ReleaseMemory(InstanceData *instance, InstanceMemory *mem)
+void ReleaseAsyncMemory(InstanceData *instance, InstanceMemory *mem)
 {
     std::lock_guard<std::mutex> lock(instance->mem_mutex);
 
@@ -1841,7 +1795,7 @@ static Napi::Value RegisterCallback(const Napi::CallbackInfo &info)
     trampoline->state = 1;
     trampoline->env = env;
     trampoline->instance = instance;
-    trampoline->stack0 = instance->memories[0]->stack0;
+    trampoline->stack = instance->sync_memory.stack;
     trampoline->proto = type->proto;
     NAPI_OK(napi_create_reference(env, func, 1, &trampoline->func));
 
@@ -2473,6 +2427,44 @@ InstanceMemory::~InstanceMemory()
     if (heap.ptr) {
         munmap(heap.ptr, heap.end - heap.ptr);
     }
+#endif
+}
+
+void InstanceMemory::Allocate(Size stack_size, Size heap_size)
+{
+    K_ASSERT(!stack.ptr);
+    K_ASSERT(!heap.ptr);
+
+    stack_size = AlignLen(stack_size, Kibibytes(64));
+
+#if defined(_WIN32)
+    // Allocate stack memory
+    stack.ptr = (uint8_t *)VirtualAlloc(nullptr, stack_size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+    stack.end = stack.ptr + stack_size;
+
+    K_CRITICAL(stack.ptr, "Failed to allocate %1 of memory", stack_size);
+#else
+    stack.ptr = (uint8_t *)mmap(nullptr, stack_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON | MAP_STACK, -1, 0);
+    stack.end = stack.ptr + stack_size;
+
+    K_CRITICAL(stack.ptr, "Failed to allocate %1 of memory", stack_size);
+#endif
+
+#if defined(__OpenBSD__)
+    // Make sure the SP points inside the MAP_STACK area, or (void) functions may crash on OpenBSD i386
+    stack.end -= 16;
+#endif
+
+#if defined(_WIN32)
+    heap.ptr = (uint8_t *)VirtualAlloc(nullptr, heap_size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+    heap.end = heap.ptr + heap_size;
+
+    K_CRITICAL(heap.ptr, "Failed to allocate %1 of memory", heap_size);
+#else
+    heap.ptr = (uint8_t *)mmap(nullptr, heap_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+    heap.end = heap.ptr + heap_size;
+
+    K_CRITICAL(heap.ptr, "Failed to allocate %1 of memory", heap_size);
 #endif
 }
 

@@ -55,15 +55,18 @@ struct TEB {
     void *ExceptionList;
     void *StackBase;
     void *StackLimit;
-    char _pad1[80];
+    char _pad1[32];
+    void *EnvironmentPointer;
+    char _pad2[40];
     unsigned long LastErrorValue;
-    char _pad2[5132];
+    char _pad3[5132];
     void *DeallocationStack;
-    char _pad3[712];
+    char _pad4[712];
     uint32_t GuaranteedStackBytes;
-    char _pad4[162];
+    char _pad5[162];
     uint16_t SameTebFlags;
 };
+static_assert(offsetof(TEB, EnvironmentPointer) == 0x38);
 static_assert(offsetof(TEB, DeallocationStack) == 0x1478);
 static_assert(offsetof(TEB, GuaranteedStackBytes) == 0x1748);
 static_assert(offsetof(TEB, SameTebFlags) == 0x17EE);
@@ -74,23 +77,21 @@ struct TEB {
     void *ExceptionList;
     void *StackBase;
     void *StackLimit;
-    char _pad1[40];
+    char _pad1[16];
+    void *EnvironmentPointer;
+    char _pad2[20];
     unsigned long LastErrorValue;
-    char _pad2[3540];
+    char _pad3[3540];
     void *DeallocationStack;
-    char _pad3[360];
+    char _pad4[360];
     uint32_t GuaranteedStackBytes;
-    char _pad4[78];
+    char _pad5[78];
     uint16_t SameTebFlags;
 };
+static_assert(offsetof(TEB, EnvironmentPointer) == 0x1C);
 static_assert(offsetof(TEB, DeallocationStack) == 0xE0C);
 static_assert(offsetof(TEB, GuaranteedStackBytes) == 0x0F78);
 static_assert(offsetof(TEB, SameTebFlags) == 0xFCA);
-
-struct SehFrame {
-    void *Next;
-    void *Handler;
-};
 
 #endif
 
@@ -133,7 +134,9 @@ static inline TEB *GetTEB()
         (Teb)->StackBase = (High); \
         (Teb)->StackLimit = (Low); \
         (Teb)->DeallocationStack = (Low); \
-        (Teb)->ExceptionList = (High) - K_SIZE(SehFrame);
+        (Teb)->ExceptionList = High - 8; \
+        ((void **)(High))[-2] = (void *)-1; \
+        ((void **)(High))[-1] = (void *)SehHandler;
 #endif
 
 extern const HashMap<int, const char *> WindowsMachineNames;

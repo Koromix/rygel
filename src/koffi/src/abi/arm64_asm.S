@@ -205,7 +205,7 @@ SYMBOL(SwitchAndRelay):
     .cfi_offset 29, 16
     .cfi_offset 30, 8
     mov x29, sp
-    str x29, [x4, 8]
+    str x29, [x4]
     mov sp, x3
     bl SYMBOL(RelayDirect)
     mov sp, x29

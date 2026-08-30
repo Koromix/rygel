@@ -325,17 +325,24 @@ napi_value RunForward(CallData *call, uint8_t *base, void *native, const Instruc
 #undef INTEGER
 
 #if defined(_WIN32)
+    // Sane people don't use an unused-since-OS2-days field of the TEB (named EnvironmentPointer) to
+    // preserve a copy the last GetLastError() value. Nobody sane seems to be using it, Node and V8
+    // certainly don't. So we should be good! Except for the fact that I should check myself in.
+    // Maybe some obscure malware stuffs something inside this field, for whatever purpose, but it's
+    // unlikely to be loaded through Koffi anyway, and if it is, this code is unlikely to like Koffi's
+    // custom stack. So we're good (I think).
+    // A bit more info here about this field: https://www.geoffchappell.com/studies/windows/km/ntoskrnl/inc/api/pebteb/teb/index.htm
+
     #define WRAP(Expr) \
         [&]() { \
             call->DebugForward(); \
              \
             TEB *teb = GetTEB(); \
-            InstanceMemory *mem = call->mem; \
              \
-            K_DEFER { mem->last_error = teb->LastErrorValue; }; \
-            teb->LastErrorValue = mem->last_error; \
+            K_DEFER { teb->EnvironmentPointer = (void *)(uintptr_t)teb->LastErrorValue; }; \
+            teb->LastErrorValue = (unsigned long)(uintptr_t)teb->EnvironmentPointer; \
              \
-            ADJUST_TEB(teb, mem->stack0.ptr, mem->stack0.end); \
+            ADJUST_TEB(teb, call->stack.ptr, call->stack.end); \
              \
             return (Expr); \
         }()

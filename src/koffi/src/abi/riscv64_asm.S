@@ -210,7 +210,7 @@ SwitchAndRelay:
     sd ra, 0(sp)
     sd s1, 8(sp)
     mv s1, sp
-    sd sp, 8(a4)
+    sd sp, 0(a4)
     mv sp, a3
     call RelayDirect
     mv sp, s1

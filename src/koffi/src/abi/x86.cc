@@ -200,6 +200,11 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
     // We need enough space to memcpy result in CallX instructions
     out_plan->stk_size = stk_offset ? AlignLen(4 * stk_offset, 16) : 16;
 
+#if defined(_WIN32)
+    // Account for SEH frame record
+    out_plan->stk_size += 16;
+#endif
+
     FillAsyncPlan(out_plan->sync, &out_plan->async);
 
     if (out_decorated) {

@@ -159,7 +159,7 @@ SwitchAndRelay proc frame
     .setframe rbp, 0
     .endprolog
     mov r10, qword ptr [rsp+48]
-    mov qword ptr [r10+8], rsp
+    mov qword ptr [r10+0], rsp
     lea rsp, [r9-32]
     call RelayDirect
     mov rsp, rbp

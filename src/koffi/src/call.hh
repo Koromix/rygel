@@ -36,14 +36,20 @@ struct alignas(8) CallData {
 
     Napi::Env env;
     InstanceData *instance;
-    InstanceMemory *mem;
+
+    MemoryRange<uint8_t> stack;
+    MemoryRange<uint8_t> heap;
+#if defined(K_DEBUG)
+    uint8_t *prev_stack;
+    uint8_t *prev_heap;
+#endif
+
+    // For big allocations
+    NoDestroy<HeapChain> allocator;
 
     napi_value args[MaxParameters];
 
-    uint8_t *prev_stack;
-    uint8_t *prev_heap;
     uint8_t *saved_sp;
-    bool release_alloc = false;
 
     uint8_t *async_base;
     const InstructionData *async_ip;
@@ -56,26 +62,31 @@ struct alignas(8) CallData {
 #endif
 
 #if defined(K_DEBUG)
-    CallData(napi_env env) : env(env), instance(nullptr), mem(nullptr) {} // Partial initialization, use Init()
+    CallData(napi_env env)
+        : env(env), instance(nullptr), stack({}), heap({}),
+          prev_stack(nullptr), prev_heap(nullptr) {} // Partial initialization, use Init()
+    CallData(napi_env env, InstanceData *instance, InstanceMemory *mem)
+        : env(env), instance(instance), stack(mem->stack), heap(mem->heap),
+          prev_stack(mem->stack.end), prev_heap(mem->heap.ptr) {}
+    ~CallData();
 #else
     CallData(napi_env env) : env(env) {} // Partial initialization, use Init()
-#endif
     CallData(napi_env env, InstanceData *instance, InstanceMemory *mem)
-        : env(env), instance(instance), mem(mem),
-          prev_stack(mem->stack.end), prev_heap(mem->heap.ptr) {}
-#if defined(K_DEBUG)
-    ~CallData();
+        : env(env), instance(instance), stack(mem->stack), heap(mem->heap) {}
 #endif
 
     K_FORCE_INLINE void Init(InstanceData *instance, InstanceMemory *mem)
     {
-        K_ASSERT(!this->mem);
+        K_ASSERT(!this->instance);
 
         this->instance = instance;
-        this->mem = mem;
+        this->stack = mem->stack;
+        this->heap = mem->heap;
 
+#if defined(K_DEBUG)
         prev_stack = mem->stack.end;
         prev_heap = mem->heap.ptr;
+#endif
     }
 
     INLINE_UNITY napi_value Run(const FunctionInfo *func, void *native);
@@ -135,14 +146,11 @@ struct alignas(8) CallData {
 template <typename T>
 inline T *CallData::AllocStack(Size size)
 {
-    K_ASSERT(AlignDown(mem->stack.end, 16) == mem->stack.end);
+    K_ASSERT(AlignDown(stack.end, 16) == stack.end);
     K_ASSERT(AlignLen(size, 16) == size);
 
-    uint8_t *ptr = mem->stack.end - size;
-
-    FillMemory(ptr, mem->stack.end - ptr);
-
-    mem->stack.end = ptr;
+    uint8_t *ptr = stack.end - size;
+    FillMemory(ptr, stack.end - ptr);
 
     return (T *)ptr;
 }
@@ -150,21 +158,20 @@ inline T *CallData::AllocStack(Size size)
 template <typename T>
 inline T *CallData::AllocHeap(Size size)
 {
-    K_ASSERT(AlignUp(mem->heap.ptr, 16) == mem->heap.ptr);
+    K_ASSERT(AlignUp(heap.ptr, 16) == heap.ptr);
 
-    uint8_t *ptr = mem->heap.ptr;
+    uint8_t *ptr = heap.ptr;
     uint8_t *end = AlignUp(ptr + size, 16);
 
-    if (end <= mem->heap.end) [[likely]] {
+    if (end <= heap.end) [[likely]] {
         FillMemory(ptr, size);
 
-        mem->heap.ptr = end;
+        heap.ptr = end;
 
         return ptr;
     } else {
-        ptr = (uint8_t *)AllocateRaw(&mem->allocator, size + 16);
-        ptr = AlignUp(ptr, 16);
-        release_alloc |= (prev_stack == mem->stack.end);
+        ptr = (uint8_t *)allocator->Allocate(size);
+        K_ASSERT(ptr == AlignUp(ptr, 16));
 
         FillMemory(ptr, size);
 

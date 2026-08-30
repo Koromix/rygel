@@ -235,26 +235,19 @@ struct MemoryRange {
 };
 
 struct InstanceMemory {
-    ~InstanceMemory();
-
     MemoryRange<uint8_t> stack;
-    MemoryRange<uint8_t> stack0;
     MemoryRange<uint8_t> heap;
-
-    // For big heap allocations
-    LinkedAllocator allocator;
-
-#if defined(_WIN32)
-    uint32_t last_error = 0;
-#endif
 
     bool busy;
     bool temporary;
+
+    ~InstanceMemory();
+
+    void Allocate(Size stack_size, Size heap_size);
+    bool IsAllocated() const { return stack.ptr; }
 };
 
 struct InstanceData {
-    ~InstanceData();
-
     napi_env env;
 
     BucketList<TypeInfo> types;
@@ -277,7 +270,8 @@ struct InstanceData {
     Napi::Reference<Napi::Symbol> active_symbol;
 
     std::mutex mem_mutex;
-    LocalArray<InstanceMemory *, 17> memories;
+    InstanceMemory sync_memory;
+    LocalArray<InstanceMemory *, 16> memories;
     int temporaries = 0;
 
     // Variadic cache
@@ -292,8 +286,8 @@ struct InstanceData {
     MemoryRange<void> real_stack;
 #endif
 
-    BucketList<LinkedAllocator> encode_allocators;
-    HashMap<void *, LinkedAllocator *> encode_map;
+    BucketList<HeapChain> encode_allocators;
+    HashMap<void *, HeapChain *> encode_map;
 
     BlockAllocator str_alloc;
 
@@ -310,8 +304,10 @@ struct InstanceData {
     struct {
         int64_t disposed = 0;
     } stats;
+
+    ~InstanceData();
 };
-static_assert(DefaultResidentAsyncPools <= K_LEN(InstanceData::memories.data) - 1);
+static_assert(DefaultResidentAsyncPools <= K_LEN(InstanceData::memories.data));
 static_assert(DefaultMaxAsyncCalls >= DefaultResidentAsyncPools);
 static_assert(MaxAsyncCalls >= DefaultMaxAsyncCalls);
 
@@ -328,7 +324,7 @@ struct TrampolineInfo {
 
     napi_env env;
     InstanceData *instance;
-    MemoryRange<uint8_t> stack0;
+    MemoryRange<uint8_t> stack;
 
     const FunctionInfo *proto;
     napi_ref func;
@@ -367,7 +363,7 @@ extern napi_status (NAPI_CDECL *node_api_post_finalizer)(node_api_basic_env env,
 extern napi_status (NAPI_CDECL *node_api_create_object_with_properties)(napi_env env, napi_value prototype_or_null, const napi_value *property_names,
                                                                         const napi_value *property_values, size_t property_count, napi_value *result);
 
-InstanceMemory *AllocateMemory(InstanceData *instance, Size stack_size, Size heap_size);
-void ReleaseMemory(InstanceData *instance, InstanceMemory *mem);
+InstanceMemory *AllocateAsyncMemory(InstanceData *instance);
+void ReleaseAsyncMemory(InstanceData *instance, InstanceMemory *mem);
 
 }

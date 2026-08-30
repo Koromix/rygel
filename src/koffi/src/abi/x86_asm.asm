@@ -136,7 +136,7 @@ SwitchAndRelay proc
     push ebp
     mov ebp, esp
     mov ecx, dword ptr [esp+24]
-    mov dword ptr [ecx+4], esp
+    mov dword ptr [ecx+0], esp
     mov esp, dword ptr [esp+20]
     sub esp, 24
     mov eax, dword ptr [ebp+8]

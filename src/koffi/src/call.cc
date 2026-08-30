@@ -26,7 +26,7 @@ struct RelayContext {
     bool done = false;
 };
 
-extern "C" napi_value SwitchAndRelay(CallData *call, Size idx, uint8_t *sp, uint8_t *saved_sp, MemoryRange<uint8_t> *new_stack);
+extern "C" napi_value SwitchAndRelay(CallData *call, Size idx, uint8_t *sp, uint8_t *saved_sp, uint8_t **new_stack);
 
 #if defined(_WIN32)
 
@@ -51,10 +51,9 @@ static napi_value (*translate_zero_call)(napi_env env, napi_callback_info info);
 #if defined(K_DEBUG)
 CallData::~CallData()
 {
-    K_ASSERT(!mem || mem->stack.end == prev_stack);
-    K_ASSERT(!mem || mem->heap.ptr == prev_heap);
     K_ASSERT(!out_arguments.len);
     K_ASSERT(!used_trampolines.len);
+    K_ASSERT(!allocator->IsUsed());
 }
 #endif
 
@@ -193,16 +192,7 @@ void CallData::FinalizeFast()
     K_DEFER { finalized = true; };
 #endif
 
-    mem->stack.end = prev_stack;
-    mem->heap.ptr = prev_heap;
-
-    if (release_alloc) {
-        // We could check for prev_stack == mem->stack.len and call ReleaseAll() if true, but
-        // it is a virtual method. Which means it could be slow (unless devirtualized), and
-        // most of the time there's nothing to release.
-        // So instead, take note of the need to call ReleaseAll() when big chunks are allocated.
-        mem->allocator.ReleaseAll();
-    }
+    allocator->ReleaseAll();
 }
 
 void CallData::RelayAsync(Size idx, uint8_t *base)
@@ -291,8 +281,8 @@ Size CallData::PushStringValue(napi_value value, const char **out_str)
 {
     size_t len;
 
-    size_t available = (size_t)(mem->heap.end - mem->heap.ptr);
-    char *ptr = (char *)mem->heap.ptr;
+    size_t available = (size_t)(heap.end - heap.ptr);
+    char *ptr = (char *)heap.ptr;
 
     // Fast path for small strings
     if (available >= 4096) [[likely]] {
@@ -308,7 +298,7 @@ Size CallData::PushStringValue(napi_value value, const char **out_str)
         // So len < 4096 - 4 should be enough, but exagerate a bit "just in case" :)
 
         if ((Size)len < 4096 - 8) {
-            mem->heap.ptr += (Size)AlignLen(len, 16);
+            heap.ptr += (Size)AlignLen(len, 16);
 
             *out_str = ptr;
             return (Size)len;
@@ -322,13 +312,12 @@ Size CallData::PushStringValue(napi_value value, const char **out_str)
     if (len <= available) {
         NAPI_OK(napi_get_value_string_utf8(env, value, ptr, len, nullptr));
 
-        mem->heap.ptr += (Size)AlignLen(len, 16);
+        heap.ptr += (Size)AlignLen(len, 16);
 
         *out_str = ptr;
         return (Size)len;
     } else {
-        Span<char> buf = AllocateSpan<char>(&mem->allocator, (Size)len);
-        release_alloc |= (prev_stack == mem->stack.end);
+        Span<char> buf = allocator->AllocateSpan<char>((Size)len);
 
         NAPI_OK(napi_get_value_string_utf8(env, value, buf.ptr, len, nullptr));
 
@@ -349,16 +338,15 @@ Size CallData::PushString16Value(napi_value value, const char16_t **out_str16)
 
     len++;
 
-    buf.ptr = (char16_t *)mem->heap.ptr;
-    buf.len = (mem->heap.end - mem->heap.ptr) / 2;
+    buf.ptr = (char16_t *)heap.ptr;
+    buf.len = (heap.end - heap.ptr) / 2;
 
     if (len <= (size_t)buf.len) {
         NAPI_OK(napi_get_value_string_utf16(env, value, buf.ptr, len, nullptr));
 
-        mem->heap.ptr += (Size)AlignLen(len * 2, 16);
+        heap.ptr += (Size)AlignLen(len * 2, 16);
     } else {
-        buf = AllocateSpan<char16_t>(&mem->allocator, (Size)len);
-        release_alloc |= (prev_stack == mem->stack.end);
+        buf = allocator->AllocateSpan<char16_t>((Size)len);
 
         NAPI_OK(napi_get_value_string_utf16(env, value, buf.ptr, len, nullptr));
     }
@@ -378,14 +366,13 @@ Size CallData::PushString32Value(napi_value value, const char32_t **out_str32)
     if (buf16.len < 0) [[unlikely]]
         return -1;
 
-    buf.ptr = (char32_t *)mem->heap.ptr;
-    buf.len = (mem->heap.end - mem->heap.ptr) / 4;
+    buf.ptr = (char32_t *)heap.ptr;
+    buf.len = (heap.end - heap.ptr) / 4;
 
     if (buf16.len < buf.len) [[likely]] {
-        mem->heap.ptr += AlignLen(buf16.len * 4, 16);
+        heap.ptr += AlignLen(buf16.len * 4, 16);
     } else {
-        buf = AllocateSpan<char32_t>(&mem->allocator, buf16.len);
-        release_alloc |= (prev_stack == mem->stack.end);
+        buf = allocator->AllocateSpan<char32_t>(buf16.len);
     }
 
     Size j = 0;
@@ -1162,7 +1149,7 @@ void *CallData::ReserveTrampoline(const FunctionInfo *proto, Napi::Function func
     trampoline->state = 1;
     trampoline->env = env;
     trampoline->instance = instance;
-    trampoline->stack0 = instance->memories[0]->stack0;
+    trampoline->stack = instance->sync_memory.stack;
     trampoline->proto = proto;
     NAPI_OK(napi_create_reference(env, func, 1, &trampoline->func));
 
@@ -1252,8 +1239,8 @@ void CallData::DebugForward()
     if (!IsDebugCallsEnabled())
         return;
 
-    Span<const uint8_t> stack = MakeSpan(mem->stack.end, prev_stack - mem->stack.end);
-    Span<const uint8_t> heap = MakeSpan(prev_heap, mem->heap.ptr - prev_heap);
+    Span<const uint8_t> stack = MakeSpan(this->stack.end, prev_stack - this->stack.end);
+    Span<const uint8_t> heap = MakeSpan(prev_heap, this->heap.ptr - prev_heap);
 
     DumpMemory("Stack", stack);
     DumpMemory("Heap", heap);
@@ -1278,8 +1265,7 @@ static TRANSLATE_FUNC napi_value TranslateZeroCall(napi_env env, napi_callback_i
     FunctionInfo *func = (FunctionInfo *)(*ptr)->data;
 
     InstanceData *instance = func->instance;
-    InstanceMemory *mem = instance->memories[0];
-    CallData call(env, instance, mem);
+    CallData call(env, instance, &instance->sync_memory);
 
     K_DEFER_C(prev_call = instance->sync_call) { instance->sync_call = prev_call; };
     instance->sync_call = &call;
@@ -1308,8 +1294,7 @@ static TRANSLATE_FUNC napi_value TranslateFastCall(napi_env env, napi_callback_i
     }
 
     InstanceData *instance = func->instance;
-    InstanceMemory *mem = instance->memories[0];
-    call.Init(instance, mem);
+    call.Init(instance, &instance->sync_memory);
 
     K_DEFER_C(prev_call = instance->sync_call) { instance->sync_call = prev_call; };
     instance->sync_call = &call;
@@ -1330,8 +1315,7 @@ static TRANSLATE_FUNC K_FORCE_INLINE napi_value TranslateNormalCall(CallData *ca
     }
 
     InstanceData *instance = func->instance;
-    InstanceMemory *mem = instance->memories[0];
-    call->Init(instance, mem);
+    call->Init(instance, &instance->sync_memory);
 
     K_DEFER_C(prev_call = instance->sync_call) { instance->sync_call = prev_call; };
     instance->sync_call = call;
@@ -1382,8 +1366,7 @@ static TRANSLATE_FUNC napi_value TranslateNormalCallDebugAsync(napi_env env, nap
     }
 
     InstanceData *instance = func->instance;
-    InstanceMemory *mem = instance->memories[0];
-    call.Init(instance, mem);
+    call.Init(instance, &instance->sync_memory);
 
     K_DEFER_C(prev_call = instance->sync_call) { instance->sync_call = prev_call; };
     instance->sync_call = &call;
@@ -1409,8 +1392,7 @@ static TRANSLATE_FUNC napi_value TranslateNormalCallDebugAsync(napi_env env, nap
 static TRANSLATE_FUNC K_FORCE_INLINE napi_value TranslateVariadicCall(CallData *call, const FunctionInfo *func, void *native, Size count)
 {
     InstanceData *instance = func->instance;
-    InstanceMemory *mem = instance->memories[0];
-    call->Init(instance, mem);
+    call->Init(instance, &instance->sync_memory);
 
     FunctionInfo *variadic = nullptr;
     K_DEFER_N(err_guard) { delete variadic; };
@@ -1535,15 +1517,16 @@ class AsyncCall {
 
     napi_async_work work = nullptr;
     napi_ref callback = nullptr;
-    const FunctionInfo *func = nullptr;
 
+    const FunctionInfo *func = nullptr;
+    InstanceMemory *mem = nullptr;
     NoDestroy<CallData> call;
 
     bool prepared = false;
 
     int last_errno = 0;
 #if defined(_WIN32)
-    uint32_t last_error = 0;
+    void *last_error = nullptr;
 #endif
 
 public:
@@ -1586,7 +1569,7 @@ AsyncCall::~AsyncCall()
 #endif
 
     if (func) {
-        ReleaseMemory(call->instance, call->mem);
+        ReleaseAsyncMemory(call->instance, mem);
         func->Unref();
     }
 
@@ -1609,6 +1592,7 @@ bool AsyncCall::Prepare(InstanceData *instance, InstanceMemory *mem, const Funct
 
     // Keep together (see destructor)
     this->func = func->Ref();
+    this->mem = mem;
     call->Init(instance, mem);
 
     call->DebugCall(func);
@@ -1635,8 +1619,10 @@ void AsyncCall::Execute()
     call->ExecuteAsync(func->native);
 
     last_errno = errno;
+
 #if defined(_WIN32)
-    last_error = call->mem->last_error;
+    TEB *teb = GetTEB();
+    last_error = teb->EnvironmentPointer;
 #endif
 }
 
@@ -1655,16 +1641,15 @@ void AsyncCall::Complete()
     NAPI_OK(napi_get_reference_value(env, callback, &func));
 
 #if defined(_WIN32)
-    InstanceData *instance = call->instance;
-    InstanceMemory *mem0 = instance->memories[0];
+    TEB *teb = GetTEB();
 
     K_DEFER_C(prev_errno = errno,
-              prev_error = mem0->last_error) {
+              prev_error = teb->EnvironmentPointer) {
         errno = prev_errno;
-        mem0->last_error = prev_error;
+        teb->EnvironmentPointer = prev_error;
     };
     errno = last_errno;
-    mem0->last_error = last_error;
+    teb->EnvironmentPointer = last_error;
 #else
     K_DEFER_C(prev_errno = errno) { errno = prev_errno; };
     errno = last_errno;
@@ -1718,7 +1703,7 @@ static napi_value TranslateAsyncCall(napi_env env, napi_callback_info info)
         return Napi::Env(env).Null();
     }
 
-    InstanceMemory *mem = AllocateMemory(instance, instance->config.async_stack_size, instance->config.async_heap_size);
+    InstanceMemory *mem = AllocateAsyncMemory(instance);
     if (!mem) [[unlikely]] {
         ThrowError<Napi::Error>(env, "Too many asynchronous calls are running");
         return Napi::Env(env).Null();
@@ -1985,10 +1970,18 @@ extern "C" void RelayCallback(Size idx, uint8_t *sp)
     // Fast path: main thread and we are running a native call through Koffi.
     // But this means we are running on the custom Koffi stack, which could trip up
     // Node and V8, so we need to switch back to the normal/main stack.
-    if (sp >= trampoline->stack0.ptr && sp <= trampoline->stack0.end) [[likely]] {
+    if (sp >= trampoline->stack.ptr && sp <= trampoline->stack.end) [[likely]] {
+        InstanceMemory *mem0 = &instance->sync_memory;
         CallData *call = instance->sync_call;
 
-        SwitchAndRelay(call, idx, sp, call->saved_sp, &call->mem->stack);
+        K_DEFER_C(prev_stack = mem0->stack.end,
+                  prev_heap = mem0->heap.ptr) {
+            mem0->stack.end = prev_stack;
+            mem0->heap.ptr = prev_heap;
+        };
+        mem0->heap.ptr = call->heap.ptr;
+
+        SwitchAndRelay(call, idx, sp, call->saved_sp, &mem0->stack.end);
         return;
     }
 
@@ -2002,12 +1995,12 @@ extern "C" void RelayCallback(Size idx, uint8_t *sp)
 
     Napi::Env env = trampoline->env;
 
-    InstanceMemory *mem = AllocateMemory(instance, instance->config.async_stack_size, instance->config.async_heap_size);
+    InstanceMemory *mem = AllocateAsyncMemory(instance);
     if (!mem) [[unlikely]] {
         ThrowError<Napi::Error>(env, "Too many asynchronous calls are running");
         return;
     }
-    K_DEFER { ReleaseMemory(instance, mem); };
+    K_DEFER { ReleaseAsyncMemory(instance, mem); };
 
     if (std::this_thread::get_id() == instance->main_thread_id) {
         CallData call(env, instance, mem);
@@ -2199,15 +2192,16 @@ bool Encode(InstanceData *instance, uint8_t *origin, napi_value value, const Typ
 #undef PUSH_INTEGER
 
     // Keep memory around if any was allocated
-    if (mem.allocator.IsUsed()) {
-        LinkedAllocator *copy = instance->encode_map.FindValue(origin, nullptr);
+    if (call.allocator->IsUsed()) {
+        HeapChain *copy = instance->encode_map.FindValue(origin, nullptr);
 
         if (!copy) {
             copy = instance->encode_allocators.AppendDefault();
             instance->encode_map.Set(origin, copy);
         }
 
-        std::swap(mem.allocator, *copy);
+        std::swap(*call.allocator, *copy);
+        call.allocator->ReleaseAll();
     }
 
     return true;

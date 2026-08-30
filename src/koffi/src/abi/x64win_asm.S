@@ -141,7 +141,7 @@ SwitchAndRelay:
     push %rbp
     movq %rsp, %rbp
     movq 48(%rsp), %r10
-    movq %rsp, 8(%r10)
+    movq %rsp, 0(%r10)
     leaq -32(%r9), %rsp
     call RelayDirect
     movq %rbp, %rsp
