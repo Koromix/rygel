@@ -1121,19 +1121,19 @@ public:
     void Release(const void *ptr, Size) override;
 };
 
-class NullAllocator: public Allocator {
+class VoidAllocator: public Allocator {
 public:
     void *Allocate(Size) override { K_UNREACHABLE(); }
     void *Resize(void *, Size, Size) override { K_UNREACHABLE(); }
 
-    // This is the only useful method, switch to the null allocator (call GetNullAllocator())
+    // This is the only useful method, switch to the null allocator (use NullAllocator global)
     // when you want to keep container memory around when it is destroyed. This can be used
     // to leak HeapArray memory without resetting it, for example.
     void Release(const void *, Size) override {}
 };
 
-K_DEFAULT_ALLOCATOR *GetDefaultAllocator();
-Allocator *GetNullAllocator();
+extern K_DEFAULT_ALLOCATOR DefaultAllocator;
+extern VoidAllocator NullAllocator;
 
 class LinkedAllocator final: public Allocator {
     struct Bucket {
@@ -1150,7 +1150,7 @@ class LinkedAllocator final: public Allocator {
     Bucket *list = nullptr;
 
 public:
-    LinkedAllocator(Allocator *alloc = nullptr) : allocator(alloc ? alloc : GetDefaultAllocator()) {}
+    LinkedAllocator(Allocator *alloc = nullptr) : allocator(alloc ? alloc : &DefaultAllocator) {}
     ~LinkedAllocator() override { ReleaseAll(); }
 
     LinkedAllocator(LinkedAllocator &&other) { *this = std::move(other); }
@@ -1208,7 +1208,7 @@ static inline void *AllocateRaw(Allocator *alloc, Size size)
 {
     K_ASSERT(size >= 0);
 
-    alloc = alloc ? alloc : GetDefaultAllocator();
+    alloc = alloc ? alloc : &DefaultAllocator;
 
     void *ptr = alloc->Allocate(size);
 
@@ -1218,7 +1218,7 @@ static inline void *AllocateRaw(Allocator *alloc, Size size)
 template <typename T>
 T *AllocateOne(Allocator *alloc)
 {
-    alloc = alloc ? alloc : GetDefaultAllocator();
+    alloc = alloc ? alloc : &DefaultAllocator;
 
     Size size = K_SIZE(T);
     T *ptr = (T *)alloc->Allocate(size);
@@ -1237,7 +1237,7 @@ Span<T> AllocateSpan(Allocator *alloc, Size len)
         abort();
     }
 
-    alloc = alloc ? alloc : GetDefaultAllocator();
+    alloc = alloc ? alloc : &DefaultAllocator;
 
     Size size = len * K_SIZE(T);
     T *ptr = (T *)alloc->Allocate(size);
@@ -1249,7 +1249,7 @@ static inline void *ResizeRaw(Allocator *alloc, void *ptr, Size old_size, Size n
 {
     K_ASSERT(new_size >= 0);
 
-    alloc = alloc ? alloc : GetDefaultAllocator();
+    alloc = alloc ? alloc : &DefaultAllocator;
 
     ptr = alloc->Resize(ptr, old_size, new_size);
 
@@ -1267,7 +1267,7 @@ Span<T> ResizeSpan(Allocator *alloc, Span<T> mem, Size new_len)
         abort();
     }
 
-    alloc = alloc ? alloc : GetDefaultAllocator();
+    alloc = alloc ? alloc : &DefaultAllocator;
 
     Size old_size = mem.len * K_SIZE(T);
     Size new_size = new_len * K_SIZE(T);
@@ -1279,21 +1279,21 @@ Span<T> ResizeSpan(Allocator *alloc, Span<T> mem, Size new_len)
 
 static inline void ReleaseRaw(Allocator *alloc, const void *ptr, Size size)
 {
-    alloc = alloc ? alloc : GetDefaultAllocator();
+    alloc = alloc ? alloc : &DefaultAllocator;
     alloc->Release(ptr, size);
 }
 
 template<typename T>
 void ReleaseOne(Allocator *alloc, T *ptr)
 {
-    alloc = alloc ? alloc : GetDefaultAllocator();
+    alloc = alloc ? alloc : &DefaultAllocator;
     alloc->Release((void *)ptr, K_SIZE(T));
 }
 
 template<typename T>
 void ReleaseSpan(Allocator *alloc, Span<T> mem)
 {
-    alloc = alloc ? alloc : GetDefaultAllocator();
+    alloc = alloc ? alloc : &DefaultAllocator;
 
     Size size = mem.len * K_SIZE(T);
     alloc->Release((void *)mem.ptr, size);
@@ -1302,6 +1302,74 @@ void ReleaseSpan(Allocator *alloc, Span<T> mem)
 void *AllocateSafe(Size len);
 void ReleaseSafe(void *ptr, Size len);
 void ZeroSafe(void *ptr, Size len);
+
+// This is like ArenaAllocator but simpler, without a vtable, without resizing, and whatnot.
+// It is it own free thing and cannot be used with the standard allocation functions.
+// Use when you want low overhead.
+class HeapChain {
+    struct Bucket {
+        Bucket *next;
+        alignas(16) uint8_t data[];
+    };
+
+    Bucket *list = nullptr;
+
+public:
+    HeapChain() = default;
+    ~HeapChain() { ReleaseAll(); }
+
+    HeapChain(HeapChain &&other) { *this = std::move(other); }
+    HeapChain& operator=(HeapChain &&other)
+    {
+        ReleaseAll();
+
+        list = other.list;
+        other.list = nullptr;
+
+        return *this;
+    }
+
+    void *Allocate(Size size)
+    {
+        static_assert(offsetof(Bucket, data) == 16);
+
+        Size needed = K_SIZE(Bucket) + size;
+        Bucket *bucket = (Bucket *)DefaultAllocator.Allocate(needed);
+
+        bucket->next = list;
+        list = bucket;
+
+        return bucket->data;
+    }
+
+    template<typename T>
+    Span<T> AllocateSpan(Size len)
+    {
+        K_ASSERT(len >= 0);
+        K_ASSERT(len <= K_SIZE_MAX / K_SIZE(T));
+
+        if (len >= K_SIZE_MAX / K_SIZE(T)) [[unlikely]] {
+            PrintAssertError(__FILE__, __LINE__, "allocation size overflow");
+            abort();
+        }
+
+        Size size = len * K_SIZE(T);
+        T *ptr = (T *)Allocate(size);
+
+        return MakeSpan(ptr, len);
+    }
+
+    void ReleaseAll()
+    {
+        while (list) {
+            Bucket *next = list->next;
+            DefaultAllocator.Release(list, -1);
+            list = next;
+        }
+    }
+
+    bool IsUsed() const { return list; }
+};
 
 // ------------------------------------------------------------------------
 // Reference counting

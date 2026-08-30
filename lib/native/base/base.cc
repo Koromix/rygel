@@ -173,8 +173,8 @@ void *MemMem(const void *src, Size src_len, const void *needle, Size needle_len)
 // Memory / Allocator
 // ------------------------------------------------------------------------
 
-static K_DEFAULT_ALLOCATOR default_allocator;
-static NullAllocator null_allocator;
+K_DEFAULT_ALLOCATOR DefaultAllocator;
+VoidAllocator NullAllocator;
 
 void *MallocAllocator::Allocate(Size size)
 {
@@ -200,16 +200,6 @@ void *MallocAllocator::Resize(void *ptr, Size old_size, Size new_size)
 void MallocAllocator::Release(const void *ptr, Size)
 {
     free((void *)ptr);
-}
-
-K_DEFAULT_ALLOCATOR *GetDefaultAllocator()
-{
-    return &default_allocator;
-}
-
-Allocator *GetNullAllocator()
-{
-    return &null_allocator;
 }
 
 LinkedAllocator& LinkedAllocator::operator=(LinkedAllocator &&other)
@@ -2076,7 +2066,7 @@ const char *GetEnv(const char *name)
             }
         }, name);
 
-        bucket->key = DuplicateString(name, GetDefaultAllocator()).ptr;
+        bucket->key = DuplicateString(name, &DefaultAllocator).ptr;
         bucket->value = str;
     }
 
@@ -3911,7 +3901,7 @@ const char *GetApplicationExecutable()
             CopyString(argv[0], executable_path);
         } else {
             const char *path;
-            bool success = FindExecutableInPath(argv[0], GetDefaultAllocator(), &path);
+            bool success = FindExecutableInPath(argv[0], &DefaultAllocator, &path);
             K_ASSERT(success);
             K_ASSERT(strlen(path) < K_SIZE(executable_path));
 
