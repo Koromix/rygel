@@ -61,7 +61,7 @@ napi_value CallData::Run(const FunctionInfo *func, void *native)
 {
     uint8_t *base = AllocStack<uint8_t>(func->plan.stk_size);
 
-    const InstructionData *first = func->plan.sync.ptr;
+    const OpData *first = func->plan.sync.ptr;
     return RunForward(this, base, native, first);
 }
 
@@ -70,19 +70,19 @@ bool CallData::PrepareAsync(const FunctionInfo *func)
     uint8_t *base = AllocStack<uint8_t>(func->plan.stk_size);
     async_base = base;
 
-    const InstructionData *first = func->plan.async.ptr;
+    const OpData *first = func->plan.async.ptr;
     return !RunForward(this, base, nullptr, first); // Yield returns nullptr
 }
 
 void CallData::ExecuteAsync(void *native)
 {
-    const InstructionData *next = async_ip++;
+    const OpData *next = async_ip++;
     RunForward(this, async_base, native, next);
 }
 
 napi_value CallData::EndAsync()
 {
-    const InstructionData *next = async_ip++;
+    const OpData *next = async_ip++;
     return RunForward(this, async_base, nullptr, next);
 }
 
@@ -91,7 +91,7 @@ void CallData::Relay(Size idx, uint8_t *base)
     TrampolineInfo *trampoline = &shared.trampolines[idx];
     const FunctionInfo *proto = trampoline->proto;
 
-    const InstructionData *first = proto->plan.relay.ptr;
+    const OpData *first = proto->plan.relay.ptr;
     trampoline->state = RunRelay(this, trampoline, base, first);
 }
 

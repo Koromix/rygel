@@ -157,56 +157,60 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
 
             const TypeInfo *type = param.type;
             int offsets[2] = {};
+            bool split = false;
 
             switch (ret.method) {
-                case AbiMethod::Memory: {
-                    offsets[0] = 8 * (0 + ret.gpr_index);
-                } break;
+                case AbiMethod::Memory: { offsets[0] = 8 * (0 + ret.gpr_index); } break;
+                case AbiMethod::Gpr: { offsets[0] = 8 * (0 + ret.gpr_index); } break;
+                case AbiMethod::Vec: { offsets[0] = 8 * (8 + ret.vec_index); } break;
 
-                case AbiMethod::Gpr: {
-                    offsets[0] = 8 * (0 + ret.gpr_index);
-                    offsets[1] = 8 * (0 + ret.gpr_index);
-                } break;
                 case AbiMethod::GprGpr: {
                     offsets[0] = 8 * (0 + ret.gpr_index);
                     offsets[1] = 8 * (1 + ret.gpr_index);
-                } break;
-                case AbiMethod::Vec: {
-                    offsets[0] = 8 * (8 + ret.vec_index);
-                    offsets[1] = 8 * (8 + ret.vec_index);
+                    split = true;
                 } break;
                 case AbiMethod::VecVec: {
                     type = ReshapeType(instance, type, 8, (int)TypeFlag::FillWithOnes);
 
                     offsets[0] = 8 * (8 + ret.vec_index);
                     offsets[1] = 8 * (9 + ret.vec_index);
+                    split = true;
                 } break;
                 case AbiMethod::GprVec: {
                     type = ReshapeType(instance, type, 8, (int)TypeFlag::FillWithOnes);
 
                     offsets[0] = 8 * (0 + ret.gpr_index);
                     offsets[1] = 8 * (8 + ret.vec_index);
+                    split = true;
                 } break;
                 case AbiMethod::VecGpr: {
                     type = ReshapeType(instance, type, 8, (int)TypeFlag::FillWithOnes);
 
                     offsets[0] = 8 * (8 + ret.vec_index);
                     offsets[1] = 8 * (0 + ret.gpr_index);
+                    split = true;
                 } break;
                 case AbiMethod::GprStack: {
                     offsets[0] = 8 * (0 + ret.gpr_index);
                     offsets[1] = 18 * 8;
+                    split = true;
                 } break;
             }
 
             if (type->primitive == PrimitiveKind::Record || type->primitive == PrimitiveKind::Union) {
-                Opcode code = (ret.method != AbiMethod::Memory) ? Opcode::PushAggregateSplit : Opcode::PushAggregateMem;
-                out_plan->sync.Append({ .op = Code2Op(code), .a = param.offset, .b1 = (int16_t)offsets[0], .b2 = (int16_t)offsets[1], .type = type });
+                if (split) {
+                    out_plan->sync.Append({ .o = Code2Op(Opcode::PushAggregateSplit), .s1 = (int16_t)param.offset, .s3 = (int16_t)offsets[0], .s4 = (int16_t)offsets[1], .type = type });
+                } else {
+                    Opcode code = (ret.method != AbiMethod::Memory) ? Opcode::PushAggregateReg : Opcode::PushAggregateMem;
+                    out_plan->sync.Append({ .o = Code2Op(code), .s1 = (int16_t)param.offset, .i = offsets[0], .type = type });
+                }
             } else {
+                K_ASSERT(!split);
+
                 int delta = (int)Opcode::PushVoid - (int)PrimitiveKind::Void;
                 Opcode code = (Opcode)((int)type->primitive + delta);
 
-                out_plan->sync.Append({ .op = Code2Op(code), .a = param.offset, .b1 = (int16_t)offsets[0], .b2 = (int16_t)param.directions, .type = type });
+                out_plan->sync.Append({ .o = Code2Op(code), .s1 = (int16_t)param.offset, .s2 = (int16_t)param.directions, .i = offsets[0], .type = type });
             }
         }
 
@@ -240,12 +244,12 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
                 int delta = (int)Opcode::RunVoidX - (int)PrimitiveKind::Void;
                 Opcode run = (Opcode)((int)func->ret->primitive + delta);
 
-                out_plan->sync.Append({ .op = Code2Op(run), .a = (int32_t)func->parameters.len, .b1 = -40, .type = func->ret });
+                out_plan->sync.Append({ .o = Code2Op(run), .s1 = -40, .i = (int32_t)func->parameters.len, .type = func->ret });
             } else {
                 int delta = (int)Opcode::RunVoid - (int)PrimitiveKind::Void;
                 Opcode run = (Opcode)((int)func->ret->primitive + delta);
 
-                out_plan->sync.Append({ .op = Code2Op(run), .a = (int32_t)func->parameters.len, .b1 = -40, .type = func->ret });
+                out_plan->sync.Append({ .o = Code2Op(run), .s1 = -40, .i = (int32_t)func->parameters.len, .type = func->ret });
             }
         } break;
 
@@ -254,36 +258,36 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
             switch (ret_abi) {
                 case AbiMethod::Memory: {
                     Opcode run = forward_fp ? Opcode::RunAggregateMemX : Opcode::RunAggregateMem;
-                    out_plan->sync.Append({ .op = Code2Op(run), .a = (int32_t)func->parameters.len, .b2 = -40, .type = func->ret });
+                    out_plan->sync.Append({ .o = Code2Op(run), .s1 = 0, .s2 = -40, .i = (int32_t)func->parameters.len, .type = func->ret });
                 } break;
 
                 case AbiMethod::Gpr:
                 case AbiMethod::GprGpr:
                 case AbiMethod::GprStack: {
                     Opcode run = forward_fp ? Opcode::RunAggregateGGX : Opcode::RunAggregateGG;
-                    out_plan->sync.Append({ .op = Code2Op(run), .a = (int32_t)func->parameters.len, .b1 = -40, .type = func->ret });
+                    out_plan->sync.Append({ .o = Code2Op(run), .s1 = -40, .i = (int32_t)func->parameters.len, .type = func->ret });
                 } break;
                 case AbiMethod::Vec: {
                     Opcode run = forward_fp ? Opcode::RunAggregateDDX : Opcode::RunAggregateDD;
-                    out_plan->sync.Append({ .op = Code2Op(run), .a = (int32_t)func->parameters.len, .b1 = -40 + 16, .type = func->ret });
+                    out_plan->sync.Append({ .o = Code2Op(run), .s1 = -40 + 16, .i = (int32_t)func->parameters.len, .type = func->ret });
                 } break;
                 case AbiMethod::VecVec: {
                     const TypeInfo *type = ReshapeType(instance, func->ret, 8, (int)TypeFlag::FillWithOnes);
                     Opcode run = forward_fp ? Opcode::RunAggregateDDX : Opcode::RunAggregateDD;
 
-                    out_plan->sync.Append({ .op = Code2Op(run), .a = (int32_t)func->parameters.len, .b1 = -40 + 16, .type = type });
+                    out_plan->sync.Append({ .o = Code2Op(run), .s1 = -40 + 16, .i = (int32_t)func->parameters.len, .type = type });
                 } break;
                 case AbiMethod::GprVec: {
                     const TypeInfo *type = ReshapeType(instance, func->ret, 8, (int)TypeFlag::FillWithOnes);
                     Opcode run = forward_fp ? Opcode::RunAggregateGDX : Opcode::RunAggregateGD;
 
-                    out_plan->sync.Append({ .op = Code2Op(run), .a = (int32_t)func->parameters.len, .b1 = -40, .b2 = -40 + 16, .type = type });
+                    out_plan->sync.Append({ .o = Code2Op(run), .s1 = -40, .s2 = -40 + 16, .i = (int32_t)func->parameters.len, .type = type });
                 } break;
                 case AbiMethod::VecGpr: {
                     const TypeInfo *type = ReshapeType(instance, func->ret, 8, (int)TypeFlag::FillWithOnes);
                     Opcode run = forward_fp ? Opcode::RunAggregateDGX : Opcode::RunAggregateDG;
 
-                    out_plan->sync.Append({ .op = Code2Op(run), .a = (int32_t)func->parameters.len, .b1 = -40 + 16, .b2 = -40, .type = type });
+                    out_plan->sync.Append({ .o = Code2Op(run), .s1 = -40 + 16, .s2 = -40, .i = (int32_t)func->parameters.len, .type = type });
                 } break;
             }
         } break;
@@ -291,11 +295,11 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
 
         case PrimitiveKind::Float32: {
             Opcode run = forward_fp ? Opcode::RunFloat32X : Opcode::RunFloat32;
-            out_plan->sync.Append({ .op = Code2Op(run), .a = (int32_t)func->parameters.len, .b1 = -40 + 16, .type = func->ret });
+            out_plan->sync.Append({ .o = Code2Op(run), .s1 = -40 + 16, .i = (int32_t)func->parameters.len, .type = func->ret });
         } break;
         case PrimitiveKind::Float64: {
             Opcode run = forward_fp ? Opcode::RunFloat64X : Opcode::RunFloat64;
-            out_plan->sync.Append({ .op = Code2Op(run), .a = (int32_t)func->parameters.len, .b1 = -40 + 16, .type = func->ret });
+            out_plan->sync.Append({ .o = Code2Op(run), .s1 = -40 + 16, .i = (int32_t)func->parameters.len, .type = func->ret });
         } break;
 
         case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;

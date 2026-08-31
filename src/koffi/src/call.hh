@@ -52,7 +52,7 @@ struct alignas(8) CallData {
     uint8_t *saved_sp;
 
     uint8_t *async_base;
-    const InstructionData *async_ip;
+    const OpData *async_ip;
 
     LocalArray<int16_t, 16> used_trampolines;
     LocalArray<OutArgument, MaxParameters> out_arguments;
