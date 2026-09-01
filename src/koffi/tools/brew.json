@@ -8,7 +8,7 @@
             "directory": "/home/debian/luigi",
             "target": "linux_armhf",
             "build": "node ../../cnoke.cjs --ccache",
-            "package": "linux-arm32"
+            "package": "linux-arm"
         },
 
         "test": {
