@@ -5,6 +5,21 @@
 
 ## Koffi 3
 
+### Koffi 3.2
+
+#### Koffi 3.2.0
+
+*Released on 2026-09-02*
+
+- Make errno and GetLastError() available in async callbacks
+- Merge forward call interpreters
+- Switch to shared bytecode implementation for callbacks
+- Restore support for ARM32 ABIs
+- Add "callbacks" member to TypeScript result definition for `koffi.stats()`
+- Improve performance of GCC builds
+- Optimize allocation and preparation for simple calls
+- Remove unnecessary map of registered trampoline pointers
+
 ### Koffi 3.1
 
 #### Koffi 3.1.6
