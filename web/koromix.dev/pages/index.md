@@ -15,16 +15,6 @@
 
 # Main projects
 
-## Goupile
-
-<div class="project">
-    <img src="{{ ASSET static/goupile/logo.webp }}" width="260" alt="" />
-    <div>
-        <p>Goupile is an <b>open-source electronic data capture</b> application that strives to make form creation and data entry both powerful and easy.
-        <p>Find out more on the <a href="goupile">page dedicated to Goupile</a>.
-    </div>
-</div>
-
 ## Koffi
 
 <div class="project">
@@ -49,6 +39,16 @@
     <div>
         <p>Rekkord is a multi-platform <b>backup tool with deduplication and asymmetric encryption</b>, with support for local and remote storage backends.
         <p>Find out more on the <a href="rekkord">page dedicated to Rekkord</a>.
+    </div>
+</div>
+
+## Goupile
+
+<div class="project">
+    <img src="{{ ASSET static/goupile/logo.webp }}" width="260" alt="" />
+    <div>
+        <p>Goupile is an <b>open-source electronic data capture</b> application that strives to make form creation and data entry both powerful and easy.
+        <p>Find out more on the <a href="goupile">page dedicated to Goupile</a>.
     </div>
 </div>
 
