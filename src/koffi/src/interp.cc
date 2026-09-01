@@ -282,7 +282,7 @@ napi_value RunForward(CallData *call, uint8_t *base, void *native, const OpData 
 
         NEXT();
     }
-    FWD(PushAggregateSplit) {
+    FWD(PushAggregatePair) {
         napi_value arg = call->args[op->s1];
 
         uintptr_t buf[2];
@@ -291,6 +291,21 @@ napi_value RunForward(CallData *call, uint8_t *base, void *native, const OpData 
 
         *(uintptr_t *)(base + op->s3) = buf[0];
         *(uintptr_t *)(base + op->s4) = buf[1];
+
+        NEXT();
+    }
+    FWD(PushAggregateSplit) {
+        napi_value arg = call->args[op->s1];
+
+        int size = op->type->size;
+        int split = op->s2;
+        uint8_t *buf = call->AllocHeap(size); // Wasteful, but rare
+
+        if (!call->PushObject(arg, op->type, buf)) [[unlikely]]
+            return call->env.Null();
+
+        memcpy(base + op->s3, buf, split);
+        memcpy(base + op->s4, buf + split, size - split);
 
         NEXT();
     }
@@ -840,11 +855,23 @@ int RunRelay(CallData *call, TrampolineInfo *trampoline, uint8_t *base, const Op
 
         NEXT();
     }
-    RELAY(PushAggregateSplit) {
+    RELAY(PushAggregatePair) {
         uintptr_t buf[2] = {
             *(uintptr_t *)(base + op->s3),
             *(uintptr_t *)(base + op->s4)
         };
+        call->args[op->s1] = DecodeObject(trampoline->instance, (const uint8_t *)buf, op->type);
+
+        NEXT();
+    }
+    RELAY(PushAggregateSplit) {
+        int size = op->type->size;
+        int split = op->s2;
+        uint8_t *buf = call->AllocHeap(size); // Wasteful, but rare
+
+        memcpy(buf, base + op->s3, split);
+        memcpy(buf + split, base + op->s4, size - split);
+
         call->args[op->s1] = DecodeObject(trampoline->instance, (const uint8_t *)buf, op->type);
 
         NEXT();
@@ -1234,6 +1261,7 @@ bool PreparePlan(InstanceData *instance, FunctionInfo *func)
         #define PRIMITIVE(Name) ForwardPush ## Name,
         #include "primitives.inc"
         ForwardPushAggregateReg,
+        ForwardPushAggregatePair,
         ForwardPushAggregateSplit,
         ForwardPushAggregateMem,
         ForwardPushPair,
@@ -1288,6 +1316,7 @@ bool PreparePlan(InstanceData *instance, FunctionInfo *func)
         #define PRIMITIVE(Name) RelayPush ## Name,
         #include "primitives.inc"
         RelayPushAggregateReg,
+        RelayPushAggregatePair,
         RelayPushAggregateSplit,
         RelayPushAggregateMem,
         RelayPushPair,
@@ -1384,6 +1413,7 @@ void FillAsyncPlan(Span<const OpData> sync, HeapArray<OpData> *out_async)
             case Opcode::PushCallback:
             case Opcode::PushPrototype:
             case Opcode::PushAggregateReg:
+            case Opcode::PushAggregatePair:
             case Opcode::PushAggregateSplit:
             case Opcode::PushAggregateMem:
             case Opcode::PushPair: { out_async->Append(op); } break;

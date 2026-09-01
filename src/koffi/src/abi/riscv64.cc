@@ -199,7 +199,7 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
 
             if (type->primitive == PrimitiveKind::Record || type->primitive == PrimitiveKind::Union) {
                 if (split) {
-                    out_plan->sync.Append({ .o = Code2Op(Opcode::PushAggregateSplit), .s1 = (int16_t)param.offset, .s3 = (int16_t)offsets[0], .s4 = (int16_t)offsets[1], .type = type });
+                    out_plan->sync.Append({ .o = Code2Op(Opcode::PushAggregatePair), .s1 = (int16_t)param.offset, .s3 = (int16_t)offsets[0], .s4 = (int16_t)offsets[1], .type = type });
                 } else {
                     Opcode code = (ret.method != AbiMethod::Memory) ? Opcode::PushAggregateReg : Opcode::PushAggregateMem;
                     out_plan->sync.Append({ .o = Code2Op(code), .s1 = (int16_t)param.offset, .i = offsets[0], .type = type });
