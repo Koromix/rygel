@@ -2,6 +2,12 @@
 
 ## Goupile 3.12
 
+### Goupile 3.12.8
+
+*Sortie le 02/09/2026*
+
+- Correction d'une erreur de sélecteur `:has()` lors des exports XLSX sur les anciens navigateurs.
+
 ### Goupile 3.12.7
 
 *Sortie le 24/08/2026*

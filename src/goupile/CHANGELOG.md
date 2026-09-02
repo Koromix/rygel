@@ -2,6 +2,12 @@
 
 ## Goupile 3.12
 
+### Goupile 3.12.8
+
+*Released on 2026-09-02*
+
+- Fix `:has()` selector error when trying to export data on older browsers.
+
 ### Goupile 3.12.7
 
 *Released on 2026-08-24*
