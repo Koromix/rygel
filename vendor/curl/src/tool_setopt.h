@@ -29,9 +29,6 @@
  * Macros used in operate()
  */
 
-/* return TRUE if the error code is "lethal" */
-bool setopt_bad(CURLcode result);
-
 #ifndef CURL_DISABLE_LIBCURL_OPTION
 
 /* Associate symbolic names with option values */
@@ -99,7 +96,7 @@ CURLcode tool_setopt_offt(CURL *curl, const char *name, CURLoption tag,
                           curl_off_t lval);
 CURLcode tool_setopt_str(CURL *curl, struct OperationConfig *config,
                          const char *name, CURLoption tag,
-                         ...) WARN_UNUSED_RESULT;
+                         const char *value) WARN_UNUSED_RESULT;
 CURLcode tool_setopt_ptr(CURL *curl, const char *name, CURLoption tag, ...);
 
 #define my_setopt_long(x, y, z)       tool_setopt_long(x, #y, y, z)

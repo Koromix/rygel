@@ -38,7 +38,8 @@ TESTENV =                               \
   testenv/ports.py                      \
   testenv/sshd.py                       \
   testenv/vsftpd.py                     \
-  testenv/ws_echo_server.py
+  testenv/ws_echo_server.py             \
+  testenv/ws_4frames_server.py
 
 EXTRA_DIST =             \
   CMakeLists.txt         \
@@ -77,7 +78,7 @@ EXTRA_DIST =             \
   $(TESTENV)
 
 clean-local:
-	rm -rf *.pyc __pycache__
+	rm -rf ./*.pyc __pycache__
 	rm -rf gen
 
 check: libtests

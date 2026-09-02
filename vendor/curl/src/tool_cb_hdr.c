@@ -268,6 +268,7 @@ static size_t save_etag(const char *etag_h, const char *endp,
 
       /* Truncate regular files to avoid stale etag content */
       if((fd != -1) &&
+         etag_save->regular_file &&
          !curlx_fstat(fd, &file) &&
          (S_ISREG(file.st_mode) &&
           toolx_ftruncate(fd, 0)))
@@ -280,6 +281,32 @@ static size_t save_etag(const char *etag_h, const char *endp,
     }
   }
   return 0; /* ok */
+}
+
+static bool set_filename(struct OutStruct *outs,
+                         struct per_transfer *per, char *filename)
+{
+  if(outs->stream) {
+    /* indication of problem, get out! */
+    curlx_free(filename);
+    return FALSE;
+  }
+  if(outs->alloc_filename)
+    curlx_safefree(outs->filename);
+
+  if(per->config->output_dir) {
+    char *f = curl_maprintf("%s/%s", per->config->output_dir, filename);
+    curlx_free(filename);
+    if(!f)
+      return FALSE;
+    outs->filename = curlx_strdup(f);
+    curl_free(f);
+    if(!outs->filename)
+      return FALSE;
+  }
+  else
+    outs->filename = filename;
+  return TRUE;
 }
 
 /*
@@ -303,27 +330,8 @@ static size_t content_disposition(const char *str, const char *end,
     if(p < end) { /* as a precaution */
       char *filename = parse_filename(p, cb - (p - str), 0);
       if(filename) {
-        if(outs->stream) {
-          /* indication of problem, get out! */
-          curlx_free(filename);
+        if(!set_filename(outs, per, filename))
           return CURL_WRITEFUNC_ERROR;
-        }
-        if(outs->alloc_filename)
-          curlx_safefree(outs->filename);
-
-        if(per->config->output_dir) {
-          char *f = curl_maprintf("%s/%s", per->config->output_dir,
-                                  filename);
-          curlx_free(filename);
-          if(!f)
-            return CURL_WRITEFUNC_ERROR;
-          outs->filename = curlx_strdup(f);
-          curl_free(f);
-          if(!outs->filename)
-            return CURL_WRITEFUNC_ERROR;
-        }
-        else
-          outs->filename = filename;
         outs->alloc_filename = TRUE;
         outs->is_cd_filename = TRUE; /* set to avoid clobbering existing files
                                         by default */
@@ -358,28 +366,8 @@ static size_t content_disposition(const char *str, const char *end,
       len = cb - (size_t)(p - str);
       filename = parse_filename(p, len, ';');
       if(filename) {
-        if(outs->stream) {
-          /* indication of problem, get out! */
-          curlx_free(filename);
+        if(!set_filename(outs, per, filename))
           return CURL_WRITEFUNC_ERROR;
-        }
-        if(outs->alloc_filename)
-          curlx_safefree(outs->filename);
-
-        if(per->config->output_dir) {
-          char *f = curl_maprintf("%s/%s", per->config->output_dir,
-                                  filename);
-          curlx_free(filename);
-          if(!f)
-            return CURL_WRITEFUNC_ERROR;
-          outs->filename = curlx_strdup(f);
-          curl_free(f);
-          if(!outs->filename)
-            return CURL_WRITEFUNC_ERROR;
-        }
-        else
-          outs->filename = filename;
-
         outs->is_cd_filename = TRUE;
         outs->regular_file = TRUE;
         outs->fopened = FALSE;
@@ -424,10 +412,10 @@ static size_t content_disposition(const char *str, const char *end,
 }
 
 /*
-** callback for CURLOPT_HEADERFUNCTION
-*
-* 'size' is always 1
-*/
+ * callback for CURLOPT_HEADERFUNCTION
+ *
+ * 'size' is always 1
+ */
 size_t tool_header_cb(char *ptr, size_t size, size_t nmemb, void *userdata)
 {
   struct per_transfer *per = userdata;

@@ -251,7 +251,7 @@ static int writeString(FILE *stream, const struct writeoutvar *wovar,
       break;
     case VAR_ERRORMSG:
       if(per_result) {
-        strinfo = (per->errorbuffer[0]) ? per->errorbuffer :
+        strinfo = per->errorbuffer[0] ? per->errorbuffer :
           curl_easy_strerror(per_result);
         valid = TRUE;
       }
@@ -569,7 +569,7 @@ static const char *outtime(const char *ptr, /* %time{ ... */
        - +0000 for %z because it is otherwise not portable
        - UTC for %Z because it is otherwise not portable
        - Keep '%%' as-is so that strftime() makes a single % out of them
-    */
+     */
     for(i = 0; !result && i < vlen; i++) {
       if((i < vlen - 1) && ptr[i] == '%') {
         switch(ptr[i + 1]) {

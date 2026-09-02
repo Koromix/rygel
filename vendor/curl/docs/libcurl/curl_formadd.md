@@ -213,7 +213,7 @@ See example below.
 ~~~c
 #include <string.h> /* for strlen */
 
-static const char record[]="data in a buffer";
+static const char record[] = "data in a buffer";
 
 int main(void)
 {
@@ -222,10 +222,10 @@ int main(void)
     struct curl_httppost *post = NULL;
     struct curl_httppost *last = NULL;
     char namebuffer[] = "name buffer";
-    long namelength = strlen(namebuffer);
+    size_t namelength = strlen(namebuffer);
     char buffer[] = "test buffer";
     char htmlbuffer[] = "<HTML>test buffer</HTML>";
-    long htmlbufferlength = strlen(htmlbuffer);
+    size_t htmlbufferlength = strlen(htmlbuffer);
     struct curl_forms forms[3];
     char file1[] = "my-face.jpg";
     char file2[] = "your-face.jpg";
@@ -250,12 +250,12 @@ int main(void)
     /* Add ptrname/ptrcontent section */
     curl_formadd(&post, &last, CURLFORM_PTRNAME, namebuffer,
                  CURLFORM_PTRCONTENTS, buffer, CURLFORM_NAMELENGTH,
-                 namelength, CURLFORM_END);
+                 (long)namelength, CURLFORM_END);
 
     /* Add name/ptrcontent/contenttype section */
     curl_formadd(&post, &last, CURLFORM_COPYNAME, "html_code_with_hole",
                  CURLFORM_PTRCONTENTS, htmlbuffer,
-                 CURLFORM_CONTENTSLENGTH, htmlbufferlength,
+                 CURLFORM_CONTENTSLENGTH, (long)htmlbufferlength,
                  CURLFORM_CONTENTTYPE, "text/html", CURLFORM_END);
 
     /* Add simple file section */
@@ -277,7 +277,7 @@ int main(void)
     forms[0].value  = file1;
     forms[1].option = CURLFORM_FILE;
     forms[1].value  = file2;
-    forms[2].option  = CURLFORM_END;
+    forms[2].option = CURLFORM_END;
 
     /* Add a buffer to upload */
     curl_formadd(&post, &last,

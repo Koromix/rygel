@@ -421,7 +421,7 @@ issue.
 
 Commands for the test DNS server.
 
-- `A: [dotted ipv4 address]` - set IPv4 address to return
+- `A: [dotted IPv4 address]` - set IPv4 address to return
 - `AAAA: [numerical IPv6 address]` - set IPv6 address to return, with or
   without `[]`
 
@@ -445,8 +445,6 @@ What server(s) this test case requires/uses. Available servers:
 - `https`
 - `https-proxy`
 - `https-mtls`
-- `httptls+srp`
-- `httptls+srp-ipv6`
 - `http-unix`
 - `imap`
 - `mqtt`
@@ -536,6 +534,7 @@ Features testable here are:
 - `SPNEGO`
 - `SSL`
 - `SSLpinning`
+- `SSLS-EXPORT`
 - `SSPI`
 - `threaded-resolver`
 - `TLS-SRP`
@@ -590,7 +589,7 @@ command has been run.
 
 If the variable name has no assignment, no `=`, then that variable is deleted.
 
-### `<command [option="no-q/no-output/no-include/no-memdebug/force-output/binary-trace"] [timeout="secs"][delay="secs"][type="perl/shell"]>`
+### `<command [option="no-q/no-output/no-stdout/no-include/no-memdebug/force-output/binary-trace"] [timeout="secs"][delay="secs"][type="perl/shell"]>`
 Command line to run.
 
 If the command spans multiple lines, they are concatenated with a space added
@@ -605,6 +604,9 @@ there is no memory debugging and valgrind gets shut off for this test.
 Set `option="no-output"` to prevent the test script to slap on the `--output`
 argument that directs the output to a file. The `--output` is also not added
 if the verify/stdout section is used.
+
+Set `option="no-stdout"` to prevent the normal stdout redirect template to be
+applied on the command line to run.
 
 Set `option="force-output"` to make use of `--output` even when the test is
 otherwise written to verify stdout.

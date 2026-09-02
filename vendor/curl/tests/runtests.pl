@@ -558,7 +558,7 @@ sub checksystemfeatures {
             $curl = $_;
             $CURLVERSION = $1;
             $CURLVERNUM = $CURLVERSION;
-            $CURLVERNUM =~ s/^([0-9.]+)(.*)/$1/; # leading dots and numbers
+            $CURLVERNUM =~ s/^([0-9.]+)(.*)/$1/; # leading digits and dots
             $curl =~ s/^(.*)(libcurl.*)/$1/g or die "Failure determining curl binary version";
 
             $libcurl = $2;
@@ -589,6 +589,9 @@ sub checksystemfeatures {
             elsif($libcurl =~ /\swolfssl\b/i) {
                 $feature{"wolfssl"} = 1;
                 $feature{"SSLpinning"} = 1;
+                if($libcurl =~ /\swolfssl\/5\.9\.2\b/i) {
+                    $feature{"wolfssl-5.9.2"} = 1;
+                }
             }
             elsif($libcurl =~ /\s(AWS-LC|BoringSSL)\b/i) {
                 # OpenSSL compatible API
@@ -697,8 +700,6 @@ sub checksystemfeatures {
             $feature{"Kerberos"} = $feat =~ /Kerberos/i;
             # SPNEGO enabled
             $feature{"SPNEGO"} = $feat =~ /SPNEGO/i;
-            # TLS-SRP enabled
-            $feature{"TLS-SRP"} = $feat =~ /TLS-SRP/i;
             # PSL enabled
             $feature{"PSL"} = $feat =~ /PSL/i;
             # alt-svc enabled
@@ -732,33 +733,13 @@ sub checksystemfeatures {
                 # 'https-proxy' is used as "server" so consider it a protocol
                 push @protocols, 'https-proxy';
             }
+            $feature{"SSLS-EXPORT"} = $feat =~ /SSLS-EXPORT/;
             # Unicode support
             $feature{"Unicode"} = $feat =~ /Unicode/i;
             # Thread-safe init
             $feature{"threadsafe"} = $feat =~ /threadsafe/i;
             $feature{"HTTPSRR"} = $feat =~ /HTTPSRR/;
             $feature{"ECH"} = $feat =~ /ECH/;
-        }
-        #
-        # Test harness currently uses a non-stunnel server in order to
-        # run HTTP TLS-SRP tests required when curl is built with https
-        # protocol support and TLS-SRP feature enabled. For convenience
-        # 'httptls' may be included in the test harness protocols array
-        # to differentiate this from classic stunnel based 'https' test
-        # harness server.
-        #
-        if($feature{"TLS-SRP"}) {
-            my $add_httptls;
-            for(@protocols) {
-                if($_ =~ /^https(-ipv6|)$/) {
-                    $add_httptls = 1;
-                    last;
-                }
-            }
-            if($add_httptls && (! grep /^httptls$/, @protocols)) {
-                push @protocols, 'httptls';
-                push @protocols, 'httptls-ipv6';
-            }
         }
     }
 
@@ -983,8 +964,13 @@ sub citest_starttest {
     my $testnum = $_[0];
 
     # get the name of the test early
-    my $testname= (getpart("client", "name"))[0];
+    my $testname = (getpart("client", "name"))[0];
     chomp $testname;
+
+    if(length($testname) > 70) {
+        logmsg "ERROR: test $testnum has a too long name, wider than 70 columns\n";
+        return 1;
+    }
 
     # create test result in CI services
     if(azure_check_environment() && $AZURE_RUN_ID) {
@@ -993,6 +979,7 @@ sub citest_starttest {
     elsif(appveyor_check_environment()) {
         appveyor_create_test_result($ACURL, $testnum, $testname);
     }
+    return 0;
 }
 
 # Submit the test case result with the CI runner
@@ -1231,10 +1218,10 @@ sub singletest_count {
     }
 
     # At this point we have committed to run this test
-    logmsg sprintf("test %04d...", $testnum) if(!$automakestyle);
+    logmsg sprintf("test %04d ", $testnum) if(!$automakestyle);
 
     # name of the test
-    my $testname= (getpart("client", "name"))[0];
+    my $testname = (getpart("client", "name"))[0];
     chomp $testname;
     logmsg "[$testname]\n" if(!$short);
 
@@ -1280,7 +1267,7 @@ sub singletest_check {
     my $ok = "";
     my $res;
     chomp $errorcode;
-    my $testname= (getpart("client", "name"))[0];
+    my $testname = (getpart("client", "name"))[0];
     chomp $testname;
 
     # what parts to cut off from stdout/stderr
@@ -1391,10 +1378,6 @@ sub singletest_check {
                 s/\r//;
                 s/\n/ /;
             }
-            my $v = join(@validstderr, "");
-            my $a = join(@actual, "");
-            @validstderr = $v;
-            @actual = $a;
         }
 
         if($hash{'nonewline'}) {
@@ -1429,7 +1412,7 @@ sub singletest_check {
     my @strippart = getpart("verify", "strippart");
 
     # this is the valid protocol blurb curl should generate
-    my @protocol= getpart("verify", "protocol");
+    my @protocol = getpart("verify", "protocol");
     if(@protocol) {
         # Verify the sent request
         my @out = loadarray("$logdir/$SERVERIN");
@@ -1447,7 +1430,7 @@ sub singletest_check {
             # strip off all lines that match the patterns from both arrays
             chomp $_;
             @out = striparray( $_, \@out);
-            @protocol= striparray( $_, \@protocol);
+            @protocol = striparray( $_, \@protocol);
         }
 
         for my $strip (@strippart) {
@@ -1617,7 +1600,7 @@ sub singletest_check {
             # strip off all lines that match the patterns from both arrays
             chomp $_;
             @out = striparray( $_, \@out);
-            @proxyprot= striparray( $_, \@proxyprot);
+            @proxyprot = striparray( $_, \@proxyprot);
         }
 
         for my $strip (@strippart) {
@@ -1951,8 +1934,8 @@ sub singletest_check {
 sub singletest_success {
     my ($testnum, $count, $total, $errorreturncode) = @_;
 
-    my $sofar= time()-$start;
-    my $esttotal = $sofar/$count * $total;
+    my $sofar = time() - $start;
+    my $esttotal = $sofar / $count * $total;
     my $estleft = $esttotal - $sofar;
     my $timeleft = sprintf("remaining: %02d:%02d",
                      $estleft / 60,
@@ -1965,7 +1948,7 @@ sub singletest_success {
                        $count, $total, $timeleft, $took, $duration);
     }
     else {
-        my $testname= (getpart("client", "name"))[0];
+        my $testname = (getpart("client", "name"))[0];
         chomp $testname;
         logmsg "PASS: $testnum - $testname\n";
     }
@@ -2025,7 +2008,9 @@ sub singletest {
 
         ###################################################################
         # Register the test case with the CI environment
-        citest_starttest($testnum);
+        if(citest_starttest($testnum)) {
+            return (-1, 0);
+        }
 
         if(runnerac_test_preprocess($runnerid, $testnum)) {
             logmsg "ERROR: runner $runnerid seems to have died\n";
@@ -2363,9 +2348,13 @@ if(@ARGV && $ARGV[-1] eq '$TFLAGS') {
 
 $args = join(' ', @ARGV);
 
+my $mintotalany = 0;
+
 $valgrind = checktestcmd("valgrind");
 my $number = 0;
 my $fromnum = -1;
+my $useshares;
+my $usepart;
 my @testthis;
 while(@ARGV) {
     if($ARGV[0] eq "-v") {
@@ -2459,6 +2448,7 @@ while(@ARGV) {
     elsif($ARGV[0] =~ /--min=(\d+)/) {
         my ($num) = ($1);
         $mintotal = $num;
+        $mintotalany = 1;
     }
     elsif($ARGV[0] eq "-n") {
         # no valgrind
@@ -2479,6 +2469,14 @@ while(@ARGV) {
 
         if($xtra =~ s/(\d+)$//) {
             $tortalloc = $1;
+        }
+    }
+    elsif($ARGV[0] =~ /^--subset=(\d+)\/(\d+)$/) {
+        # split all tests into $2 parts.
+        # this invoke then runs the part number $1 (0-indexed)
+        ($usepart, $useshares) = ($1, $2);
+        if($useshares < 1 || $usepart >= $useshares) {
+            die "illegal subset specified";
         }
     }
     elsif($ARGV[0] =~ /--shallow=(\d+)/) {
@@ -2538,6 +2536,10 @@ while(@ARGV) {
         if($xtra =~ s/(\d+)$//) {
             $jobs = $1;
         }
+    }
+    elsif($ARGV[0] eq "-k") {  # delete this check after December 2026
+        print "Option -k became always-on in 7.65.2 (2019) and now a no-op. Delete it to continue.\n";
+        exit 1;
     }
     elsif($ARGV[0] eq "-r") {
         # run time statistics needs Time::HiRes
@@ -2758,8 +2760,11 @@ if(!$jobs) {
     setlogfunc(\&logmsg);
 }
 
-if(!$mintotal && $ENV{"CURL_TEST_MIN"}) {
+if(!$mintotalany && $ENV{"CURL_TEST_MIN"}) {
     $mintotal = $ENV{"CURL_TEST_MIN"};
+    if($useshares) {
+        $mintotal /= $useshares;
+    }
 }
 
 #######################################################################
@@ -2774,7 +2779,7 @@ if(!$listonly) {
 # Output information about the curl build
 #
 if(!$listonly && $buildinfo) {
-    if(open(my $fd, "<", "../buildinfo.txt")) {
+    if(open(my $fd, "<", '../buildinfo.txt')) {
         while(my $line = <$fd>) {
             chomp $line;
             if($line && $line !~ /^#/) {
@@ -2906,6 +2911,25 @@ if($scrambleorder) {
         $TESTCASES = join(" ", @all);
     }
     $TESTCASES = join(" ", @rand);
+}
+
+if($useshares) {
+    my @a = grep { length($_) } split(/ +/, $TESTCASES);
+    my $n = scalar(@a);
+
+    if($useshares < 1 || $usepart >= $useshares) {
+        die "illegal subset specified";
+    }
+
+    my $start = int(($n * $usepart) / $useshares);
+    my $end = int(($n * ($usepart + 1)) / $useshares); # one past last index
+    my $run = $end - $start;
+
+    printf STDERR "Subset: 1/%u of the tests (run %u tests out of %u). Part %u\n",
+        $useshares, $run, $n, $usepart;
+
+    my @s = $run ? @a[$start .. $end - 1] : ();
+    $TESTCASES = join(" ", @s);
 }
 
 # Display the contents of the given file.  Line endings are canonicalized

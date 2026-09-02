@@ -28,8 +28,6 @@
 #include <curl/curl.h>
 #include "config-os400.h"  /* Not curl_setup.h: we only need some defines. */
 
-#include <sys/types.h>
-#include <sys/socket.h>
 #include <sys/un.h>
 
 #include <stdlib.h>
@@ -57,11 +55,11 @@
 
 #include "os400sys.h"
 
-/**
-*** QADRT OS/400 ASCII runtime defines only the most used procedures, but a
-*** lot of them are not supported. This module implements ASCII wrappers for
-*** those that are used by libcurl, but not defined by QADRT.
-**/
+/*
+ * QADRT OS/400 ASCII runtime defines only the most used procedures, but a
+ * lot of them are not supported. This module implements ASCII wrappers for
+ * those that are used by libcurl, but not defined by QADRT.
+ */
 
 #pragma convert(0)                              /* Restore EBCDIC. */
 
@@ -1035,4 +1033,4 @@ int Curl_os400_inflateEnd(z_streamp strm)
   return ret;
 }
 
-#endif
+#endif /* HAVE_LIBZ */

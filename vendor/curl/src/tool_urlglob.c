@@ -425,8 +425,7 @@ static CURLcode add_glob(struct URLGlob *glob, size_t pos)
 }
 
 /* returns the named glob pattern (case sensitively) if it exists, otherwise
-   NULL
-*/
+   NULL */
 static struct URLPattern *glob_find_name(struct URLGlob *glob,
                                          struct Curl_str *name)
 {
@@ -603,7 +602,7 @@ void glob_cleanup(struct URLGlob *glob)
     for(i = 0; i < glob->pnum; i++) {
       DEBUGASSERT(glob->pattern[i].type);
       if((glob->pattern[i].type == GLOB_SET) &&
-         (glob->pattern[i].c.set.elem)) {
+         glob->pattern[i].c.set.elem) {
         curl_off_t elem;
         for(elem = 0; elem < glob->pattern[i].c.set.size; elem++)
           curlx_safefree(glob->pattern[i].c.set.elem[elem]);
@@ -637,7 +636,7 @@ CURLcode glob_next_url(char **globbed, struct URLGlob *glob)
       pat = &glob->pattern[glob->pnum - 1 - i];
       switch(pat->type) {
       case GLOB_SET:
-        if((pat->c.set.elem) && (++pat->c.set.idx == pat->c.set.size)) {
+        if(pat->c.set.elem && (++pat->c.set.idx == pat->c.set.size)) {
           pat->c.set.idx = 0;
           carry = TRUE;
         }

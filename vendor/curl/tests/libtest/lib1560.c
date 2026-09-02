@@ -153,6 +153,46 @@ struct clearurlcase {
 };
 
 static const struct testcase get_parts_list[] = {
+  /* backslash mistakes */
+  {"http:\\\\hostname", "",
+   CURLU_GUESS_SCHEME, 0, CURLUE_BACKSLASH },
+  {"http:\\\\hostname:1234", "",
+   CURLU_GUESS_SCHEME, 0, CURLUE_BACKSLASH },
+  {"http://hostname:1111\\path", "",
+   0, 0, CURLUE_BACKSLASH },
+
+  /* non-supported URL without hostname */
+  {"weird:///path",
+   "weird | [11] | [12] | [13] |  | [15] | /path | [16] | [17]",
+   CURLU_NON_SUPPORT_SCHEME|CURLU_NO_AUTHORITY, 0, CURLUE_OK},
+  /* non-supported URL without hostname, using path with multiple leading
+     slashes */
+  {"weird:////path",
+   "weird | [11] | [12] | [13] |  | [15] | //path | [16] | [17]",
+   CURLU_NON_SUPPORT_SCHEME|CURLU_NO_AUTHORITY, 0, CURLUE_OK},
+
+  /* RFC 4291 IPv4-Mapped IPv6 Addresses */
+  {"https://[0:0:0:0:0:FFFF:129.144.52.38]:1234",
+   "https | [11] | [12] | [13] | [::ffff:129.144.52.38] | 1234 "
+   "| / | [16] | [17]", CURLU_DEFAULT_SCHEME, 0, CURLUE_OK},
+  {"https://[::FFFF:127.0.0.1]:1234",
+   "https | [11] | [12] | [13] | [::ffff:127.0.0.1] | 1234 "
+   "| / | [16] | [17]", CURLU_DEFAULT_SCHEME, 0, CURLUE_OK},
+  {"https://[::13.1.68.3]:1234",
+   "https | [11] | [12] | [13] | [::13.1.68.3] | 1234 "
+   "| / | [16] | [17]", CURLU_DEFAULT_SCHEME, 0, CURLUE_OK},
+  {"https://[0:0:0:0:0:FFFF:7f00:0001]:1234",
+   "https | [11] | [12] | [13] | [::ffff:127.0.0.1] | 1234 "
+   "| / | [16] | [17]", CURLU_DEFAULT_SCHEME, 0, CURLUE_OK},
+  {"https://[::FFFF:7f00:0001]:1234",
+   "https | [11] | [12] | [13] | [::ffff:127.0.0.1] | 1234 "
+   "| / | [16] | [17]", CURLU_DEFAULT_SCHEME, 0, CURLUE_OK},
+  {"https://[%3A%3A13%2e1%2e68%2e3%25eth0]:1234",
+   "https | [11] | [12] | [13] | [::13.1.68.3] eth0 | 1234 "
+   "| / | [16] | [17]", CURLU_DEFAULT_SCHEME, 0, CURLUE_OK},
+  {"https://[0:0:0:0:0:0:0d01:4403]:1234",
+   "https | [11] | [12] | [13] | [::13.1.68.3] | 1234 "
+   "| / | [16] | [17]", CURLU_DEFAULT_SCHEME, 0, CURLUE_OK},
   { /* query and fragments with control characters */
     "http://host/path/?\001#\002",
     "", CURLU_URLENCODE, 0, CURLUE_MALFORMED_INPUT },
@@ -268,12 +308,11 @@ static const struct testcase get_parts_list[] = {
     "| [16] | [17]",
     0, CURLU_URLDECODE, CURLUE_OK },
 #ifdef USE_IDN
-  /*
-    https://sv.wikipedia.org/wiki/R%c3%a4ksm%c3%b6rg%c3%a5s
-    https://codepoints.net/U+00E4 Latin Small Letter A with Diaeresis
-    https://codepoints.net/U+00F6 Latin Small Letter O with Diaeresis
-    https://codepoints.net/U+00E5 Latin Small Letter A with Ring Above
-  */
+  /* https://sv.wikipedia.org/wiki/R%c3%a4ksm%c3%b6rg%c3%a5s
+     https://codepoints.net/U+00E4 Latin Small Letter A with Diaeresis
+     https://codepoints.net/U+00F6 Latin Small Letter O with Diaeresis
+     https://codepoints.net/U+00E5 Latin Small Letter A with Ring Above
+   */
   { "https://r\xc3\xa4ksm\xc3\xb6rg\xc3\xa5s.se",
     "https | [11] | [12] | [13] | xn--rksmrgs-5wao1o.se | "
     "[15] | / | [16] | [17]", 0, CURLU_PUNYCODE, CURLUE_OK },
@@ -291,15 +330,14 @@ static const struct testcase get_parts_list[] = {
     "https | [11] | [12] | [13] | [30] | [15] | / | [16] | [17]",
     0, CURLU_PUNYCODE, CURLUE_OK },
 #endif
-  /*
-    https://codepoints.net/U+2102  Double-Struck Capital C
-    https://codepoints.net/U+1d64  Latin Subscript Small Letter U
-    https://codepoints.net/U+24c7  Circled Latin Capital Letter R
-    https://codepoints.net/U+2112  Script Capital L
-    https://codepoints.net/U+3002  Ideographic Full Stop
-    https://codepoints.net/U+1d412 Mathematical Bold Capital S
-    https://codepoints.net/U+1f134 Squared Latin Capital Letter E
-  */
+  /* https://codepoints.net/U+2102  Double-Struck Capital C
+     https://codepoints.net/U+1d64  Latin Subscript Small Letter U
+     https://codepoints.net/U+24c7  Circled Latin Capital Letter R
+     https://codepoints.net/U+2112  Script Capital L
+     https://codepoints.net/U+3002  Ideographic Full Stop
+     https://codepoints.net/U+1d412 Mathematical Bold Capital S
+     https://codepoints.net/U+1f134 Squared Latin Capital Letter E
+   */
   {"https://"
    "%e2%84%82%e1%b5%a4%e2%93%87%e2%84%92%e3%80%82%f0%9d%90%92%f0%9f%84%b4",
    "https | [11] | [12] | [13] | "
@@ -532,9 +570,70 @@ static const struct testcase get_parts_list[] = {
   {"file:///hello.html",
    "file | [11] | [12] | [13] | [14] | [15] | /hello.html | [16] | [17]",
    0, 0, CURLUE_OK},
+
+  /* verify that we get the right default ports */
   {"https://127.0.0.1",
    "https | [11] | [12] | [13] | 127.0.0.1 | 443 | / | [16] | [17]",
    0, CURLU_DEFAULT_PORT, CURLUE_OK},
+  {"http://127.0.0.1",
+   "http | [11] | [12] | [13] | 127.0.0.1 | 80 | / | [16] | [17]",
+   0, CURLU_DEFAULT_PORT, CURLUE_OK},
+  {"ftp://127.0.0.1",
+   "ftp | [11] | [12] | [13] | 127.0.0.1 | 21 | / | [16] | [17]",
+   0, CURLU_DEFAULT_PORT, CURLUE_OK},
+  {"ftps://127.0.0.1",
+   "ftps | [11] | [12] | [13] | 127.0.0.1 | 990 | / | [16] | [17]",
+   0, CURLU_DEFAULT_PORT, CURLUE_OK},
+  {"scp://127.0.0.1",
+   "scp | [11] | [12] | [13] | 127.0.0.1 | 22 | / | [16] | [17]",
+   0, CURLU_DEFAULT_PORT, CURLUE_OK},
+  {"sftp://127.0.0.1",
+   "sftp | [11] | [12] | [13] | 127.0.0.1 | 22 | / | [16] | [17]",
+   0, CURLU_DEFAULT_PORT, CURLUE_OK},
+  {"imap://127.0.0.1",
+   "imap | [11] | [12] | [13] | 127.0.0.1 | 143 | / | [16] | [17]",
+   0, CURLU_DEFAULT_PORT, CURLUE_OK},
+  {"imaps://127.0.0.1",
+   "imaps | [11] | [12] | [13] | 127.0.0.1 | 993 | / | [16] | [17]",
+   0, CURLU_DEFAULT_PORT, CURLUE_OK},
+  {"smtp://127.0.0.1",
+   "smtp | [11] | [12] | [13] | 127.0.0.1 | 25 | / | [16] | [17]",
+   0, CURLU_DEFAULT_PORT, CURLUE_OK},
+  {"smtps://127.0.0.1",
+   "smtps | [11] | [12] | [13] | 127.0.0.1 | 465 | / | [16] | [17]",
+   0, CURLU_DEFAULT_PORT, CURLUE_OK},
+  {"pop3://127.0.0.1",
+   "pop3 | [11] | [12] | [13] | 127.0.0.1 | 110 | / | [16] | [17]",
+   0, CURLU_DEFAULT_PORT, CURLUE_OK},
+  {"pop3s://127.0.0.1",
+   "pop3s | [11] | [12] | [13] | 127.0.0.1 | 995 | / | [16] | [17]",
+   0, CURLU_DEFAULT_PORT, CURLUE_OK},
+#ifndef CURL_DISABLE_WEBSOCKETS
+  {"ws://127.0.0.1",
+   "ws | [11] | [12] | [13] | 127.0.0.1 | 80 | / | [16] | [17]",
+   0, CURLU_DEFAULT_PORT, CURLUE_OK},
+  {"wss://127.0.0.1",
+   "wss | [11] | [12] | [13] | 127.0.0.1 | 443 | / | [16] | [17]",
+   0, CURLU_DEFAULT_PORT, CURLUE_OK},
+#endif
+  {"telnet://127.0.0.1",
+   "telnet | [11] | [12] | [13] | 127.0.0.1 | 23 | / | [16] | [17]",
+   0, CURLU_DEFAULT_PORT, CURLUE_OK},
+  {"gopher://127.0.0.1",
+   "gopher | [11] | [12] | [13] | 127.0.0.1 | 70 | / | [16] | [17]",
+   0, CURLU_DEFAULT_PORT, CURLUE_OK},
+  {"gophers://127.0.0.1",
+   "gophers | [11] | [12] | [13] | 127.0.0.1 | 70 | / | [16] | [17]",
+   0, CURLU_DEFAULT_PORT, CURLUE_OK},
+#ifndef CURL_DISABLE_LDAP
+  {"ldap://127.0.0.1",
+   "ldap | [11] | [12] | [13] | 127.0.0.1 | 389 | / | [16] | [17]",
+   0, CURLU_DEFAULT_PORT, CURLUE_OK},
+  {"ldaps://127.0.0.1",
+   "ldaps | [11] | [12] | [13] | 127.0.0.1 | 636 | / | [16] | [17]",
+   0, CURLU_DEFAULT_PORT, CURLUE_OK},
+#endif
+
   {"https://127.0.0.1",
    "https | [11] | [12] | [13] | 127.0.0.1 | [15] | / | [16] | [17]",
    CURLU_DEFAULT_SCHEME, 0, CURLUE_OK},
@@ -662,7 +761,7 @@ static const struct urltestcase get_url_list[] = {
 
   /* malformed unbracketed IPv6 */
   {"https://fe80:8080::1/", "", 0, 0, CURLUE_BAD_PORT_NUMBER},
-  {"https://::1/", "", 0, 0, CURLUE_BAD_PORT_NUMBER},
+  {"https://::1/", "", 0, 0, CURLUE_NO_HOST},
 
   /* Empty host with standard schemes */
   {"http:///", "", 0, 0, CURLUE_NO_HOST},
@@ -869,9 +968,11 @@ static const struct urltestcase get_url_list[] = {
   {"pop3.example.com/path/html",
    "pop3://pop3.example.com/path/html",
    CURLU_GUESS_SCHEME, 0, CURLUE_OK},
+#ifndef CURL_DISABLE_LDAP
   {"ldap.example.com/path/html",
    "ldap://ldap.example.com/path/html",
    CURLU_GUESS_SCHEME, 0, CURLUE_OK},
+#endif
   {"imap.example.com/path/html",
    "imap://imap.example.com/path/html",
    CURLU_GUESS_SCHEME, 0, CURLUE_OK},
@@ -890,9 +991,11 @@ static const struct urltestcase get_url_list[] = {
   {"pop3.com/path/html",
    "pop3://pop3.com/path/html",
    CURLU_GUESS_SCHEME, 0, CURLUE_OK},
+#ifndef CURL_DISABLE_LDAP
   {"ldap.com/path/html",
    "ldap://ldap.com/path/html",
    CURLU_GUESS_SCHEME, 0, CURLUE_OK},
+#endif
   {"imap.com/path/html",
    "imap://imap.com/path/html",
    CURLU_GUESS_SCHEME, 0, CURLUE_OK},
@@ -908,9 +1011,11 @@ static const struct urltestcase get_url_list[] = {
   {"pop3/path/html",
    "http://pop3/path/html",
    CURLU_GUESS_SCHEME, 0, CURLUE_OK},
+#ifndef CURL_DISABLE_LDAP
   {"ldap/path/html",
    "http://ldap/path/html",
    CURLU_GUESS_SCHEME, 0, CURLUE_OK},
+#endif
   {"imap/path/html",
    "http://imap/path/html",
    CURLU_GUESS_SCHEME, 0, CURLUE_OK},
@@ -1033,7 +1138,7 @@ static int checkurl(const char *org, const char *url, const char *out)
 /* 1. Set the URL
    2. Set components
    3. Extract all components (not URL)
-*/
+ */
 static const struct setgetcase setget_parts_list[] = {
   {"https://example.com/",
    "query=\"\",",
@@ -1530,19 +1635,26 @@ static const struct redircase set_url_list[] = {
    0, 0, CURLUE_OK},
   {"http://example.org/foo/bar",
    "#",
-   "http://example.org/foo/bar",
-   /* This happens because the parser removes empty fragments */
+   "http://example.org/foo/bar#",
    0, 0, CURLUE_OK},
   {"http://example.org/foo/bar",
    "?",
-   "http://example.org/foo/bar",
-   /* This happens because the parser removes empty queries */
+   "http://example.org/foo/bar?",
    0, 0, CURLUE_OK},
   {"http://example.org/foo/bar",
    "?#",
-   "http://example.org/foo/bar",
-   /* This happens because the parser removes empty queries and fragments */
+   "http://example.org/foo/bar?#",
    0, 0, CURLUE_OK},
+  {"http://host/path?", "#new",
+   "http://host/path?#new", 0, 0, CURLUE_OK},
+  {"http://host/path?#", "#new",
+   "http://host/path?#new", 0, 0, CURLUE_OK},
+  {"http://host/path#", "?new",
+   "http://host/path?new", 0, 0, CURLUE_OK},
+  {"http://host/path?#", "?new",
+   "http://host/path?new", 0, 0, CURLUE_OK},
+  {"http://host/path?#", "sub",
+   "http://host/sub", 0, 0, CURLUE_OK},
   {"http://example.com/please/../gimme/%TESTNUMBER?foobar#hello",
    "http://example.net/there/it/is/../../tes t case=/%TESTNUMBER0002? yes no",
    "http://example.net/there/tes%20t%20case=/%TESTNUMBER0002?+yes+no",
@@ -1617,7 +1729,7 @@ static int set_url(void)
       }
       else {
         char *url = NULL;
-        rc = curl_url_get(urlp, CURLUPART_URL, &url, 0);
+        rc = curl_url_get(urlp, CURLUPART_URL, &url, CURLU_GET_EMPTY);
         if(rc) {
           curl_mfprintf(stderr, "%s:%d Get URL returned %d (%s)\n",
                         __FILE__, __LINE__, (int)rc, curl_url_strerror(rc));
@@ -1642,7 +1754,7 @@ static int set_url(void)
 /* 1. Set a URL
    2. Set one or more parts
    3. Extract and compare all parts - not the URL
-*/
+ */
 static int setget_parts(bool has_utf8)
 {
   int i;
@@ -2157,7 +2269,7 @@ static char bigpart[120000];
  */
 static int huge(void)
 {
-  static const char *smallpart = "c";
+  static const char smallpart[] = "c";
   int i;
   CURLU *urlp = curl_url();
   CURLUcode rc;
@@ -2211,7 +2323,7 @@ static int huge(void)
 
 static int urldup(void)
 {
-  static const char *url[] = {
+  static const char * const url[] = {
     "http://"
     "user:pwd@"
     "[2a04:4e42:e00::347%25eth0]"
@@ -2304,11 +2416,97 @@ static int test_api_errors(void)
   return 0;
 }
 
+struct guessscheme1560 {
+  const char *url;
+  bool expectedfail; /* the URL should fail to parse */
+  unsigned int setflags;
+  const char *scheme;
+  unsigned int getflags;
+};
+
+static int test_scheme_guess(void)
+{
+  const struct guessscheme1560 g[] = {
+    { "https://example.com", FALSE, 0, "https", 0 },
+    { "example.com", TRUE, 0, NULL, 0 },
+    { "example.com", FALSE, CURLU_GUESS_SCHEME, "http", 0 },
+    { "ftp.example.com:22", FALSE, CURLU_GUESS_SCHEME, "ftp", 0 },
+    { "ftp.example.com/foo", FALSE, CURLU_GUESS_SCHEME,
+      NULL, CURLU_NO_GUESS_SCHEME },
+    { "dict.example.com:33", FALSE, CURLU_GUESS_SCHEME, "dict", 0 },
+    { "dict.example.com/bar", FALSE, CURLU_GUESS_SCHEME,
+      NULL, CURLU_NO_GUESS_SCHEME },
+    { "ldap.example.com#none", FALSE, CURLU_GUESS_SCHEME, "ldap", 0 },
+    { "ldap.example.com?special", FALSE, CURLU_GUESS_SCHEME,
+      NULL, CURLU_NO_GUESS_SCHEME },
+    { "smtp.example.com?hey#ho", FALSE, CURLU_GUESS_SCHEME, "smtp", 0 },
+    { "smtp.example.com:99/moo", FALSE, CURLU_GUESS_SCHEME,
+      NULL, CURLU_NO_GUESS_SCHEME },
+    { "pop3.example.com:100#foobar", FALSE, CURLU_GUESS_SCHEME, "pop3", 0 },
+    { "pop3.example.com:101?gg", FALSE, CURLU_GUESS_SCHEME,
+      NULL, CURLU_NO_GUESS_SCHEME },
+    { "example.com", FALSE, CURLU_GUESS_SCHEME, NULL, CURLU_NO_GUESS_SCHEME },
+    { "https://example.com", FALSE, CURLU_GUESS_SCHEME,
+      "https", CURLU_NO_GUESS_SCHEME },
+    { "foobar://example.com", FALSE,
+      CURLU_GUESS_SCHEME|CURLU_NON_SUPPORT_SCHEME,
+      "foobar", CURLU_NO_GUESS_SCHEME },
+    { "foobar://example.com", FALSE, CURLU_NON_SUPPORT_SCHEME,
+      "foobar", CURLU_NO_GUESS_SCHEME },
+    { "foobar://example.com", FALSE, CURLU_NON_SUPPORT_SCHEME, "foobar", 0 },
+  };
+  int error = 0;
+  unsigned int i;
+  for(i = 0; i < CURL_ARRAYSIZE(g) && !error; i++) {
+    CURLU *u = curl_url();
+    char *schemep = NULL;
+    if(u) {
+      int rc = curl_url_set(u, CURLUPART_URL, g[i].url, g[i].setflags);
+      if(!rc) {
+        rc = curl_url_get(u, CURLUPART_SCHEME, &schemep, g[i].getflags);
+        if(!rc && !schemep) {
+          curl_mfprintf(stderr, "%u: returned success but no scheme\n", i);
+          error++;
+        }
+        else if(rc && schemep) {
+          curl_mfprintf(stderr, "%u: returned error but with scheme\n", i);
+          error++;
+        }
+      }
+      else if(!g[i].expectedfail) {
+        curl_mfprintf(stderr, "%u: URL parsing failed unexpectedly\n", i);
+        error++;
+      }
+    }
+    if(!schemep && g[i].scheme) {
+      curl_mfprintf(stderr, "%u: got no scheme when %s was expected\n", i,
+                    g[i].scheme);
+      error++;
+    }
+    else if(schemep && !g[i].scheme) {
+      curl_mfprintf(stderr, "%u: got scheme %s when none was expected\n", i,
+                    schemep);
+      error++;
+    }
+    else if(schemep && g[i].scheme && strcmp(schemep, g[i].scheme)) {
+      curl_mfprintf(stderr, "%u: got scheme %s when %s was expected\n", i,
+                    schemep, g[i].scheme);
+      error++;
+    }
+    curl_free(schemep);
+    curl_url_cleanup(u);
+  }
+  return error;
+}
+
 static CURLcode test_lib1560(const char *URL)
 {
   bool has_utf8 = !!getenv("CURL_TEST_HAVE_CODESET_UTF8");
 
   (void)URL;
+
+  if(test_scheme_guess())
+    return (CURLcode)13;
 
   if(test_api_errors())
     return (CURLcode)12;

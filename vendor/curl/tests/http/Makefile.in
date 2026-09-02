@@ -196,6 +196,7 @@ CURL_CPP = @CURL_CPP@
 CURL_LIBCURL_VERSIONED_SYMBOLS_PREFIX = @CURL_LIBCURL_VERSIONED_SYMBOLS_PREFIX@
 CURL_LIBCURL_VERSIONED_SYMBOLS_SONAME = @CURL_LIBCURL_VERSIONED_SYMBOLS_SONAME@
 CURL_NETWORK_AND_TIME_LIBS = @CURL_NETWORK_AND_TIME_LIBS@
+CURL_PACKAGE_MAINTAINER = @CURL_PACKAGE_MAINTAINER@
 CYGPATH_W = @CYGPATH_W@
 DANTED = @DANTED@
 DEFS = @DEFS@
@@ -349,7 +350,8 @@ TESTENV = \
   testenv/ports.py                      \
   testenv/sshd.py                       \
   testenv/vsftpd.py                     \
-  testenv/ws_echo_server.py
+  testenv/ws_echo_server.py             \
+  testenv/ws_4frames_server.py
 
 EXTRA_DIST = \
   CMakeLists.txt         \
@@ -584,7 +586,7 @@ uninstall-am:
 
 
 clean-local:
-	rm -rf *.pyc __pycache__
+	rm -rf ./*.pyc __pycache__
 	rm -rf gen
 
 check: libtests
