@@ -46,7 +46,7 @@ int main() {
 
   // test_manage_os_memory();
   // test_large_pages();
-  // detect double frees and theap corruption
+  // detect double frees and heap corruption
   // double_free1();
   // double_free2();
   // corrupt_free();
@@ -57,7 +57,7 @@ int main() {
   // invalid_free();
   // test_reserved();
   // negative_stat();
-  // test_theap_walk();
+  // test_heap_walk();
   // alloc_huge();
 
 
@@ -68,8 +68,8 @@ int main() {
   char* s = strdup("hello\n");
   free(p2);
 
-  // mi_theap_t* h = mi_theap_new();
-  // mi_theap_set_default(h);
+  mi_heap_t* h = mi_heap_new();
+  mi_heap_set_default(h);
 
   p2 = malloc(16);
   p1 = realloc(p1, 32);
@@ -93,7 +93,7 @@ int main() {
 
 static void invalid_free() {
   free((void*)0xBADBEEF);
-  realloc((void*)0xBADBEEF, 10);
+  realloc((void*)0xBADBEEF,10);
 }
 
 static void block_overflow1() {
@@ -146,7 +146,7 @@ static void double_free2() {
 }
 
 
-// Try to corrupt the theap through buffer overflow
+// Try to corrupt the heap through buffer overflow
 #define N   256
 #define SZ  64
 
@@ -191,7 +191,7 @@ static void test_process_info(void) {
   size_t peak_commit = 0;
   size_t page_faults = 0;
   for (int i = 0; i < 100000; i++) {
-    void* p = calloc(100, 10);
+    void* p = calloc(100,10);
     free(p);
   }
   mi_process_info(&elapsed, &user_msecs, &system_msecs, &current_rss, &peak_rss, &current_commit, &peak_commit, &page_faults);
@@ -249,8 +249,8 @@ static void test_heap_walk(void) {
 }
 
 static void test_canary_leak(void) {
-  char* p = mi_mallocn_tp(char, 22);
-  for (int i = 0; i < 22; i++) {
+  char* p = mi_mallocn_tp(char,23);
+  for(int i = 0; i < 23; i++) {
     p[i] = '0'+i;
   }
   puts(p);
@@ -263,17 +263,17 @@ static void test_manage_os_memory(void) {
   void* ptr = VirtualAlloc(NULL, size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
   mi_arena_id_t arena_id;
   mi_manage_os_memory_ex(ptr, size, true /* committed */, true /* pinned */, false /* is zero */, -1 /* numa node */, true /* exclusive */, &arena_id);
-  mi_heap_t* cuda_theap = mi_heap_new_in_arena(arena_id);    // you can do this in any thread
+  mi_heap_t* cuda_heap = mi_heap_new_in_arena(arena_id);    // you can do this in any thread
 
   // now allocate only in the cuda arena
-  void* p1 = mi_heap_malloc(cuda_theap, 8);
-  int* p2  = mi_heap_malloc_tp(int,cuda_theap);
+  void* p1 = mi_heap_malloc(cuda_heap, 8);
+  int* p2 = mi_heap_malloc_tp(cuda_heap, int);
   *p2 = 42;
 
-  // and maybe set the cuda theap as the default theap? (but careful as now `malloc` will allocate in the cuda theap as well)
+  // and maybe set the cuda heap as the default heap? (but careful as now `malloc` will allocate in the cuda heap as well)
   {
-    mi_theap_t* prev_default_theap = mi_theap_set_default(mi_heap_theap(cuda_theap));
-    void* p3 = mi_malloc(8);  // allocate in the cuda theap
+    mi_heap_t* prev_default_heap = mi_heap_set_default(cuda_heap);
+    void* p3 = mi_malloc(8);  // allocate in the cuda heap
     mi_free(p3);
   }
   mi_free(p1);
@@ -316,15 +316,15 @@ static void test_dep(void) {
 static void test_large_pages(void) {
   mi_memid_t memid;
 
-#if 0
+  #if 0
   size_t pages_reserved;
   size_t page_size;
   uint8_t* p = (uint8_t*)_mi_os_alloc_huge_os_pages(1, -1, 30000, &pages_reserved, &page_size, &memid);
   const size_t req_size = pages_reserved * page_size;
-#else
+  #else
   const size_t req_size = 64*MI_MiB;
-  uint8_t* p = (uint8_t*)_mi_os_alloc(req_size, &memid, NULL);
-#endif
+  uint8_t* p = (uint8_t*)_mi_os_alloc(req_size,&memid,NULL);
+  #endif
 
   p[0] = 1;
 
@@ -347,8 +347,8 @@ static void test_large_pages(void) {
 #if 0
 #include <stdint.h>
 #include <stdbool.h>
-#include <mimalloc/bits.h>
 
+#define MI_INTPTR_SIZE 8
 #define MI_LARGE_WSIZE_MAX (4*1024*1024 / MI_INTPTR_SIZE)
 
 #define MI_BIN_HUGE 100
@@ -400,6 +400,8 @@ uint8_t _mi_bsr(uintptr_t x) {
   #endif
 }
 
+
+
 static inline size_t _mi_wsize_from_size(size_t size) {
   return (size + sizeof(uintptr_t) - 1) / sizeof(uintptr_t);
 }
@@ -439,9 +441,7 @@ static inline size_t mi_bin(size_t wsize) {
 #endif
     wsize--;
     // find the highest bit
-    size_t idx;
-    mi_bsr(wsize, &idx);
-    uint8_t b = (uint8_t)idx;
+    const size_t b = _mi_bsr(wsize);  // note: wsize != 0
     // and use the top 3 bits to determine the bin (~12.5% worst internal fragmentation).
     // - adjust with 3 because we use do not round the first 8 sizes
     //   which each get an exact bin
@@ -475,9 +475,7 @@ static inline uint8_t _mi_bin4(size_t size) {
     bin = MI_BIN_HUGE;
   }
   else {
-    size_t idx;
-    mi_bsr(wsize, &idx);
-    uint8_t b = (uint8_t)idx;
+    uint8_t b = mi_bsr32((uint32_t)wsize);
     bin = ((b << 1) + (uint8_t)((wsize >> (b - 1)) & 0x01)) + 3;
   }
   return bin;
@@ -493,9 +491,7 @@ static size_t _mi_binx4(size_t wsize) {
     bin = (uint8_t)wsize;
   }
   else {
-    size_t idx;
-    mi_bsr(wsize, &idx);
-    uint8_t b = (uint8_t)idx;
+    uint8_t b = mi_bsr32((uint32_t)wsize);
     if (b <= 1) return wsize;
     bin = ((b << 1) | (wsize >> (b - 1))&0x01) + 3;
   }
@@ -504,9 +500,7 @@ static size_t _mi_binx4(size_t wsize) {
 
 static size_t _mi_binx8(size_t bsize) {
   if (bsize<=1) return bsize;
-  size_t idx;
-  mi_bsr(bsize, &idx);
-  uint8_t b = (uint8_t)idx;
+  uint8_t b = mi_bsr32((uint32_t)bsize);
   if (b <= 2) return bsize;
   size_t bin = ((b << 2) | (bsize >> (b - 2))&0x03) - 5;
   return bin;
@@ -524,10 +518,8 @@ static inline size_t mi_binx(size_t wsize) {
   }
   else {
     wsize--;
-    assert(wsize>0);
     // find the highest bit
-    uint8_t b = (uint8_t)(MI_SIZE_BITS - 1 - mi_clz(wsize));
-
+    uint8_t b = (uint8_t)mi_bsr32((uint32_t)wsize);  // note: wsize != 0
     // and use the top 3 bits to determine the bin (~12.5% worst internal fragmentation).
     // - adjust with 3 because we use do not round the first 8 sizes
     //   which each get an exact bin

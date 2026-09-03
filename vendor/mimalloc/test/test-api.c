@@ -1,5 +1,5 @@
 /* ----------------------------------------------------------------------------
-Copyright (c) 2018-2026, Microsoft Research, Daan Leijen
+Copyright (c) 2018-2020, Microsoft Research, Daan Leijen
 This is free software; you can redistribute it and/or modify it under the
 terms of the MIT license. A copy of the license can be found in the file
 "LICENSE" at the root of this distribution.
@@ -34,7 +34,7 @@ we therefore test the API over various inputs. Please add more tests :-)
 
 #include "mimalloc.h"
 // #include "mimalloc/internal.h"
-#include "mimalloc/types.h" // for MI_DEBUG and MI_PAGE_MAX_OVERALLOC_ALIGN
+#include "mimalloc/types.h" // for MI_DEBUG and MI_BLOCK_ALIGNMENT_MAX
 
 #include "testhelper.h"
 
@@ -42,17 +42,15 @@ we therefore test the API over various inputs. Please add more tests :-)
 // ---------------------------------------------------------------------------
 // Test functions
 // ---------------------------------------------------------------------------
-bool test_theap1(void);
-bool test_theap2(void);
-bool test_theap_arena_destroy(void);
-bool test_theap_arena_delete(void);
+bool test_heap1(void);
+bool test_heap2(void);
 bool test_stl_allocator1(void);
 bool test_stl_allocator2(void);
 
-bool test_stl_theap_allocator1(void);
-bool test_stl_theap_allocator2(void);
-bool test_stl_theap_allocator3(void);
-bool test_stl_theap_allocator4(void);
+bool test_stl_heap_allocator1(void);
+bool test_stl_heap_allocator2(void);
+bool test_stl_heap_allocator3(void);
+bool test_stl_heap_allocator4(void);
 
 static bool test_zero_aligned_first(void);
 
@@ -73,11 +71,11 @@ static bool mem_is_zero(const void* p, size_t size) {
 int main(void) {
   mi_option_disable(mi_option_verbose);
 
-  #if 1
-  #if defined(__cplusplus) && !defined(_MSC_VER)
+  #if 0
+  #ifdef __cplusplus
   CHECK_BODY("c++ new-handler") {
     std::set_new_handler([]{ throw std::bad_alloc(); });
-    void* p = mi_new_nothrow(SIZE_MAX/2);
+    void* p = mi_new_nothrow(size_t(1)<<(MI_SIZE_BITS-2));
     result = (p==NULL);
   }
   CHECK_BODY("c++ new handler2") {
@@ -105,14 +103,9 @@ int main(void) {
   CHECK_BODY("malloc-nomem1") {
     result = (mi_malloc((size_t)PTRDIFF_MAX + (size_t)1) == NULL);
   };
-  CHECK_BODY("malloc-free-null") {
+  CHECK_BODY("malloc-null") {
     mi_free(NULL);
   };
-  #if MI_INTPTR_BITS > 32
-  CHECK_BODY("malloc-free-invalid-low") {
-    mi_free((void*)(MI_ZU(0x0000000003990080))); // issue #1087
-  };
-  #endif
   CHECK_BODY("calloc-overflow") {
     // use (size_t)&mi_calloc to get some number without triggering compiler warnings
     result = (mi_calloc((size_t)&mi_calloc,SIZE_MAX/1000) == NULL);
@@ -197,13 +190,13 @@ int main(void) {
     void* p = mi_malloc_aligned(4097,4096);
     size_t usable = mi_usable_size(p);
     result = (usable >= 4097 && usable < 16000);
-    fprintf(stderr, "malloc_aligned5: usable size: %zi.  ", usable);
+    printf("malloc_aligned5: usable size: %zi\n", usable);
     mi_free(p);
   };
   /*
   CHECK_BODY("malloc-aligned6") {
     bool ok = true;
-    for (size_t align = 1; align <= MI_PAGE_MAX_OVERALLOC_ALIGN && ok; align *= 2) {
+    for (size_t align = 1; align <= MI_BLOCK_ALIGNMENT_MAX && ok; align *= 2) {
       void* ps[8];
       for (int i = 0; i < 8 && ok; i++) {
         ps[i] = mi_malloc_aligned(align*13  // size
@@ -220,16 +213,16 @@ int main(void) {
   };
   */
   CHECK_BODY("malloc-aligned7") {
-    void* p = mi_malloc_aligned(1024,MI_PAGE_MAX_OVERALLOC_ALIGN);
+    void* p = mi_malloc_aligned(1024,MI_BLOCK_ALIGNMENT_MAX);
     mi_free(p);
-    result = ((uintptr_t)p % MI_PAGE_MAX_OVERALLOC_ALIGN) == 0;
+    result = ((uintptr_t)p % MI_BLOCK_ALIGNMENT_MAX) == 0;
   };
   CHECK_BODY("malloc-aligned8") {
     bool ok = true;
     for (int i = 0; i < 5 && ok; i++) {
       int n = (1 << i);
-      void* p = mi_malloc_aligned(1024, n * MI_PAGE_MAX_OVERALLOC_ALIGN);
-      ok = ((uintptr_t)p % (n*MI_PAGE_MAX_OVERALLOC_ALIGN)) == 0;
+      void* p = mi_malloc_aligned(1024, n * MI_BLOCK_ALIGNMENT_MAX);
+      ok = ((uintptr_t)p % (n*MI_BLOCK_ALIGNMENT_MAX)) == 0;
       mi_free(p);
     }
     result = ok;
@@ -238,15 +231,12 @@ int main(void) {
   CHECK_BODY("malloc-aligned9") { // test large alignments
     bool ok = true;
     void* p[8];
-    const int max_align_shift =
+    size_t sizes[8] = { 8, 512, 1024 * 1024, MI_BLOCK_ALIGNMENT_MAX, MI_BLOCK_ALIGNMENT_MAX + 1, 
       #if SIZE_MAX > UINT32_MAX
-      28
-      #else
-      20
+      2 * MI_BLOCK_ALIGNMENT_MAX, 8 * MI_BLOCK_ALIGNMENT_MAX, 
       #endif
-      ;
-    size_t sizes[8] = { 8, 512, 1024 * 1024, MI_PAGE_MAX_OVERALLOC_ALIGN, MI_PAGE_MAX_OVERALLOC_ALIGN + 1, 2 * MI_PAGE_MAX_OVERALLOC_ALIGN, 8 * MI_PAGE_MAX_OVERALLOC_ALIGN, 0 };
-    for (int i = 0; i < max_align_shift && ok; i++) {
+      0 };
+    for (int i = 0; i < 28 && ok; i++) {
       int align = (1 << i);
       for (int j = 0; j < 8 && ok; j++) {
         p[j] = mi_zalloc_aligned(sizes[j], align);
@@ -281,12 +271,14 @@ int main(void) {
     }
     result = ok;
   }
-  //CHECK_BODY("malloc_aligned11") {
-  //  mi_theap_t* theap = mi_theap_new();
-  //  void* p = mi_theap_malloc_aligned(theap, 33554426, 8);
-  //  result = mi_theap_contains_block(theap, p);
-  //  mi_theap_destroy(theap);
-  //}
+  
+  CHECK_BODY("malloc_aligned11") {
+    mi_heap_t* heap = mi_heap_new();
+    void* p = mi_heap_malloc_aligned(heap, 33554426, 8);
+    result = mi_heap_contains_block(heap, p);
+    mi_heap_destroy(heap);
+  }
+  
   CHECK_BODY("mimalloc-aligned12") {
     void* p = mi_malloc_aligned(0x100, 0x100);
     result = (((uintptr_t)p % 0x100) == 0); // #602
@@ -304,7 +296,7 @@ int main(void) {
         }
         for(int i = 0; i < 10 && ok; i++) {
           mi_free(p[i]);
-        }
+        }       
         /*
         if (ok && align <= size && ((size + MI_PADDING_SIZE) & (align-1)) == 0) {
           size_t bsize = mi_good_size(size);
@@ -360,7 +352,6 @@ int main(void) {
     assert(mem_has_vals((uint8_t*)ptr,n/2,123));
     result = mem_is_zero((uint8_t*)ptr + n/2, n/2);    
   }
-
   // ---------------------------------------------------
   // Reallocation
   // ---------------------------------------------------
@@ -389,15 +380,6 @@ int main(void) {
     mi_free(p);
   };
 
-  CHECK_BODY("realloc-guarded") {      // issue #1304
- 	  void* shared_ptr = NULL;
-    for (int iterations = 0; iterations < 64; ++iterations) {
-      for (int i = 0; i < 1024; ++i) {
-        shared_ptr = mi_realloc(shared_ptr, i * 64);
-      }
-    }
-  }
-
   // ---------------------------------------------------
   // Returned block sizes
   // ---------------------------------------------------
@@ -417,45 +399,11 @@ int main(void) {
     }
   }
 
-  #if (MI_INTPTR_SIZE > 4)
-  CHECK_BODY("arena_reserve") {
-    result = (0==mi_reserve_os_memory(16*MI_GiB,false,true));
-  }
-  #endif
-
   // ---------------------------------------------------
   // Heaps
   // ---------------------------------------------------
-
-  CHECK_BODY("heap-os1") {
-    // @zoxc opus bug #2.
-    mi_heap_t* h = mi_heap_new();
-    void* p = mi_heap_malloc_aligned(h, 1<<20, 2<<20);   // forced OS allocation
-    mi_heap_delete(h);
-    mi_free(p);                                          // SIGSEGV
-  }
-
-  CHECK_BODY("heap-os2") {
-    // @zoxc opus bug #3.
-    mi_stats_t_decl(stats0); 
-    mi_stats_get(&stats0);
-
-    mi_heap_t* h = mi_heap_new();      
-    for(int i = 0; i < 10; i++) {
-      int* p = (int*)mi_heap_malloc_aligned(h, 1<<20, 2<<20);   // forced OS allocation
-      p[0] = 42;
-    }
-    mi_heap_destroy(h);
-
-    mi_stats_t_decl(stats1); 
-    mi_stats_get(&stats1);
-    result = (stats0.pages.current == stats1.pages.current);    
-  }
-
-  //CHECK("theap_destroy", test_theap1());
-  //CHECK("theap_delete", test_theap2());
-  //CHECK("theap_arena_destroy", test_theap_arena_destroy());
-  //CHECK("theap_arena_delete", test_theap_arena_delete());
+  CHECK("heap_destroy", test_heap1());
+  CHECK("heap_delete", test_heap2());
 
   
   // ---------------------------------------------------
@@ -481,10 +429,10 @@ int main(void) {
   CHECK("stl_allocator1", test_stl_allocator1());
   CHECK("stl_allocator2", test_stl_allocator2());
 
-	//CHECK("stl_theap_allocator1", test_stl_theap_allocator1());
-	//CHECK("stl_theap_allocator2", test_stl_theap_allocator2());
-	//CHECK("stl_theap_allocator3", test_stl_theap_allocator3());
-	//CHECK("stl_theap_allocator4", test_stl_theap_allocator4());
+	CHECK("stl_heap_allocator1", test_stl_heap_allocator1());
+	CHECK("stl_heap_allocator2", test_stl_heap_allocator2());
+	CHECK("stl_heap_allocator3", test_stl_heap_allocator3());
+	CHECK("stl_heap_allocator4", test_stl_heap_allocator4());
 
   // ---------------------------------------------------
   // Done
@@ -496,53 +444,26 @@ int main(void) {
 // Larger test functions
 // ---------------------------------------------------
 
-/*
-bool test_theap1(void) {
-  mi_theap_t* theap = mi_theap_new();
-  int* p1 = mi_theap_malloc_tp(theap,int);
-  int* p2 = mi_theap_malloc_tp(theap,int);
+bool test_heap1(void) {
+  mi_heap_t* heap = mi_heap_new();
+  int* p1 = mi_heap_malloc_tp(heap,int);
+  int* p2 = mi_heap_malloc_tp(heap,int);
   *p1 = *p2 = 43;
-  mi_theap_destroy(theap);
+  mi_heap_destroy(heap);
   return true;
 }
 
-bool test_theap2(void) {
-  mi_theap_t* theap = mi_theap_new();
-  int* p1 = mi_theap_malloc_tp(theap,int);
-  int* p2 = mi_theap_malloc_tp(theap,int);
-  mi_theap_delete(theap);
+bool test_heap2(void) {
+  mi_heap_t* heap = mi_heap_new();
+  int* p1 = mi_heap_malloc_tp(heap,int);
+  int* p2 = mi_heap_malloc_tp(heap,int);
+  mi_heap_delete(heap);
   *p1 = 42;
   mi_free(p1);
   mi_free(p2);
   return true;
 }
 
-bool test_theap_arena_destroy(void) {
-  mi_arena_id_t arena_id = NULL;
-  if (mi_reserve_os_memory_ex(64 * 1024 * 1024, true, false, true, &arena_id) != 0) {
-    return false;
-  }
-  mi_theap_t* theap = mi_theap_new_ex(0, true, arena_id);
-  if (theap == NULL) {
-    return false;
-  }
-  mi_theap_destroy(theap);
-  return true;
-}
-
-bool test_theap_arena_delete(void) {
-  mi_arena_id_t arena_id = NULL;
-  if (mi_reserve_os_memory_ex(64 * 1024 * 1024, true, false, true, &arena_id) != 0) {
-    return false;
-  }
-  mi_theap_t* theap = mi_theap_new_ex(0, true, arena_id);
-  if (theap == NULL) {
-    return false;
-  }
-  mi_theap_delete(theap);
-  return true;
-}
-*/
 bool test_stl_allocator1(void) {
 #ifdef __cplusplus
   std::vector<int, mi_stl_allocator<int> > vec;
@@ -567,10 +488,9 @@ bool test_stl_allocator2(void) {
 #endif
 }
 
-/*
-bool test_stl_theap_allocator1(void) {
+bool test_stl_heap_allocator1(void) {
 #ifdef __cplusplus
-  std::vector<some_struct, mi_theap_stl_allocator<some_struct> > vec;
+  std::vector<some_struct, mi_heap_stl_allocator<some_struct> > vec;
   vec.push_back(some_struct());
   vec.pop_back();
   return vec.size() == 0;
@@ -579,9 +499,9 @@ bool test_stl_theap_allocator1(void) {
 #endif
 }
 
-bool test_stl_theap_allocator2(void) {
+bool test_stl_heap_allocator2(void) {
 #ifdef __cplusplus
-  std::vector<some_struct, mi_theap_destroy_stl_allocator<some_struct> > vec;
+  std::vector<some_struct, mi_heap_destroy_stl_allocator<some_struct> > vec;
   vec.push_back(some_struct());
   vec.pop_back();
   return vec.size() == 0;
@@ -590,42 +510,42 @@ bool test_stl_theap_allocator2(void) {
 #endif
 }
 
-bool test_stl_theap_allocator3(void) {
+bool test_stl_heap_allocator3(void) {
 #ifdef __cplusplus
-	mi_theap_t* theap = mi_theap_new();
+	mi_heap_t* heap = mi_heap_new();
 	bool good = false;
 	{
-		mi_theap_stl_allocator<some_struct> myAlloc(theap);
-		std::vector<some_struct, mi_theap_stl_allocator<some_struct> > vec(myAlloc);
+		mi_heap_stl_allocator<some_struct> myAlloc(heap);
+		std::vector<some_struct, mi_heap_stl_allocator<some_struct> > vec(myAlloc);
 		vec.push_back(some_struct());
 		vec.pop_back();
 		good = vec.size() == 0;
 	}
-	mi_theap_delete(theap);
+	mi_heap_delete(heap);
   return good;
 #else
   return true;
 #endif
 }
 
-bool test_stl_theap_allocator4(void) {
+bool test_stl_heap_allocator4(void) {
 #ifdef __cplusplus
-	mi_theap_t* theap = mi_theap_new();
+	mi_heap_t* heap = mi_heap_new();
 	bool good = false;
 	{
-		mi_theap_destroy_stl_allocator<some_struct> myAlloc(theap);
-		std::vector<some_struct, mi_theap_destroy_stl_allocator<some_struct> > vec(myAlloc);
+		mi_heap_destroy_stl_allocator<some_struct> myAlloc(heap);
+		std::vector<some_struct, mi_heap_destroy_stl_allocator<some_struct> > vec(myAlloc);
 		vec.push_back(some_struct());
 		vec.pop_back();
 		good = vec.size() == 0;
 	}
-	mi_theap_destroy(theap);
+	mi_heap_destroy(heap);
   return good;
 #else
   return true;
 #endif
 }
-*/
+
 
 // ---------------------------------------------------------------------------
 // Test a zero size aligned allocation as the very first allocation of a fresh thread.

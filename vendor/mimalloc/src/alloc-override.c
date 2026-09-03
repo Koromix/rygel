@@ -48,6 +48,7 @@ typedef void* mi_nothrow_t;
   #define MI_FORWARD02(fun,x,y)   { fun(x,y); }
 #endif
 
+
 #if defined(__APPLE__) && defined(MI_SHARED_LIB_EXPORT) && defined(MI_OSX_INTERPOSE)
   // define MI_OSX_IS_INTERPOSED as we should not provide forwarding definitions for
   // functions that are interposed (or the interposing does not work)
@@ -326,12 +327,12 @@ extern "C" {
 
 // defined here instead alloc-posix so we can alias it
 mi_decl_nodiscard size_t mi_malloc_size(const void* p) mi_attr_noexcept {
-  if (!mi_is_in_heap_region(p)) return 0;
+  // if (!mi_is_in_heap_region(p)) return 0;
   return mi_usable_size(p);
 }
 
 mi_decl_nodiscard size_t mi_malloc_usable_size(const void *p) mi_attr_noexcept {
-  if (!mi_is_in_heap_region(p)) return 0;
+  // if (!mi_is_in_heap_region(p)) return 0;
   return mi_usable_size(p);
 }
 

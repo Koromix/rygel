@@ -15,9 +15,9 @@ is a general purpose allocator with excellent [performance](#performance) charac
 Initially developed by Daan Leijen for the runtime systems of the
 [Koka](https://koka-lang.github.io) and [Lean](https://github.com/leanprover/lean) languages.
 
-Latest release   : `v3.4.5`  (2026-08-05) recommended.  
-Latest v2 release: `v2.4.5`  (2026-08-05) stable.  
-Latest v1 release: `v1.9.15` (2026-08-05) legacy.
+Latest release   : `v3.5.1`  (2026-09-01) recommended.  
+Latest v2 release: `v2.5.1`  (2026-09-01) stable, legacy.  
+Latest v1 release: `v1.15.1` (2026-09-01) legacy.
 
 mimalloc is a drop-in replacement for `malloc` and can be used in other programs
 without code changes, for example, on dynamically linked ELF-based systems (Linux, BSD, etc.) you can use it as:
@@ -85,14 +85,25 @@ New development is mostly on v3, while v1 and v2 are maintained with security an
         and has more efficient heap-walking (for the CPython GC for example).
         (release tags: `v3.x`, development branch `dev3`).
 - __v2__: stable mimalloc version. Uses thread-local segments to reduce fragmentation. (release tags: `v2.x`, development branch `dev2` and `main`)
-- __v1__: legacy version: initial design of mimalloc (release tags: `v1.9.x`, development branch `dev`). 
+- __v1__: legacy version: initial design of mimalloc (release tags: `v1.x`, development branch `dev`). 
         __Send PR's against this version if possible.__
 
 ### Releases
-
+* 2026-09-01, `v3.5.1`, `v2.5.1`, `v1.15.1`: (v3) Yet better performance for `free` calls.
+  (v3) Added `mi_free_small(_nonnull)` for runtimes, and `mi_free_csize(_nonnull)` for inlined constant size free-ing.
+  (v3) Improved MI_OPT_ARCH options; on arm64, defaults to armv8.3 on Apple and armv8.1 otherwise. Improved cache
+  behavior for small allocations. Improved riscV suppor, add riscV to CI. Various small build fixes.
+* 2026-08-18, `v1.15.0`, `v2.5.0`, `v3.5.0`: (v3) slightly better performance for `free`
+  using aligned chunks, cleanup cmake options, require armv8.3 (with MI_OPT_ARCH) for 
+  faster load-acquire, increase retired page count from 1 to 3, faster double free 
+  detection in secure mode, use faster atomics for the arena bitmaps (thank you Alan 
+  Andrade, #1346), faster pagemap lookup.
+  Other: fix numa sparse node count detection (#1365), add theap stats retrieval,
+  use __builtin_thread_pointer on riscV (#1363), fix C mode compilation on x86 with 
+  msvc (#1361), improved mingw-ucrt64 support.
 * 2026-08-05, `v1.9.15`, `v2.4.5`, `v3.4.5`: Fix compilation with xmalloc (#1353), make the build deterministic (#1355),
   mi_zalloc_aligned fix (#763), improve support for mingw (ucrt64), fix fputs fallback on windows (#1354), (v3): use proper 
-  lock backoff for first-class heap deletion. 
+  lock backoff for first-class heap deletion, improved riscv64 codegen.
 * 2026-08-01, `v1.9.14`, `v2.4.4`, `v3.4.4`: various bug and security fixes through Opus 5 LLM audit (issue #1271, by @Zoxc). 
   (v3): use pthreads by default on macOS (issue #1333, issue #1327), fix glibc 2.44 crash (issue #1341), fix alignment check for realloc_aligned. (v1,v2,v3): Add initial mingw support,
   set `errno` on allocation errors, improved double-free checks and size checks in secure mode, enable 

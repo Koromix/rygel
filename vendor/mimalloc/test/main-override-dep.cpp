@@ -1,4 +1,4 @@
-// Issue #981: test overriding allocation in a DLL that is compiled independent of mimalloc.
+// Issue #981: test overriding allocation in a DLL that is compiled independent of mimalloc. 
 // This is imported by the `mimalloc-test-override` project.
 #include <string>
 #include <iostream>
@@ -16,15 +16,6 @@ std::string TestAllocInDll::GetString()
 	return r;
 }
 
-#include <windows.h>
-
-void TestAllocInDll::TestHeapAlloc()
-{
-	HANDLE theap = GetProcessHeap();
-	int* p = (int*)HeapAlloc(theap, 0, sizeof(int));
-	*p = 42;
-	HeapFree(theap, 0, p);
-}
 
 class Static {
 private:
@@ -55,6 +46,6 @@ BOOL WINAPI DllMain(HINSTANCE module, DWORD reason, LPVOID reserved) {
   }
   else if (reason==DLL_PROCESS_DETACH) {
     printf("override-dep: dll detach\n");
-  }
+  }  
   return TRUE;
 }

@@ -24,16 +24,12 @@ static Static s = Static();
 
 void Test(void) {
   char* s = mi_mallocn_tp(char, 128);
-  #ifdef _WIN32
   strcpy_s(s, 128, "hello world!");
-  #else
-  strlcpy(s, "hello world!", 128);
-  #endif
   printf("message from static dll: %s\n", s);
   mi_free(s);
 }
 
-#ifdef WIN32
+
 #include <windows.h>
 
 BOOL WINAPI DllMain(HINSTANCE module, DWORD reason, LPVOID reserved) {
@@ -48,4 +44,3 @@ BOOL WINAPI DllMain(HINSTANCE module, DWORD reason, LPVOID reserved) {
   }
   return TRUE;
 }
-#endif

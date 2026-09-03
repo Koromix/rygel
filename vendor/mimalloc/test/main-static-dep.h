@@ -1,17 +1,11 @@
 #pragma once
 
-#if __cplusplus
-extern "C" {
-#endif
+typedef void (__stdcall * TestFun)(void);
 
-#ifdef WIN32
-typedef void (__cdecl *TestFun)(void);
+#if __cplusplus
+extern "C" 
+#endif
 __declspec(dllexport) void __cdecl Test(void);
-#else
-typedef void (*TestFun)(void);
-void Test(void);
-#endif
 
-#if __cplusplus
-}
-#endif
+
+
