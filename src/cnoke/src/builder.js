@@ -211,55 +211,59 @@ function Builder(config = {}) {
                 }
             }
 
-            if (toolchain != null && info.triplet != null) {
-                let values = [
-                    ['CMAKE_SYSTEM_NAME', info.system],
-                    ['CMAKE_SYSTEM_PROCESSOR', info.processor]
-                ];
-                let sysroot = null;
+            if (toolchain != null) {
+                if (info.toolchain != null) {
+                    args.push(`-DCMAKE_TOOLCHAIN_FILE=${info.toolchain}`);
+                } else if (info.triplet != null) {
+                    let values = [
+                        ['CMAKE_SYSTEM_NAME', info.system],
+                        ['CMAKE_SYSTEM_PROCESSOR', info.processor]
+                    ];
+                    let sysroot = null;
 
-                // Switch to Clang automatically if the GCC cross-compiler does not exist
-                if (process.platform != 'win32' && !prefer_clang) {
-                    let binary = info.triplet + '-gcc';
+                    // Switch to Clang automatically if the GCC cross-compiler does not exist
+                    if (process.platform != 'win32' && !prefer_clang) {
+                        let binary = info.triplet + '-gcc';
 
-                    if (spawnSync(binary, ['-v']).status !== 0)
-                        prefer_clang = true;
-                }
-
-                if (prefer_clang) {
-                    values.push(['CMAKE_ASM_COMPILER_TARGET', info.triplet]);
-                    values.push(['CMAKE_C_COMPILER_TARGET', info.triplet]);
-                    values.push(['CMAKE_CXX_COMPILER_TARGET', info.triplet]);
-
-                    values.push(['CMAKE_EXE_LINKER_FLAGS', '-fuse-ld=lld']);
-                    values.push(['CMAKE_SHARED_LINKER_FLAGS', '-fuse-ld=lld']);
-                    values.push(['CMAKE_STATIC_LINKER_FLAGS', '-fuse-ld=lld']);
-                } else if (process.platform != 'win32') {
-                    values.push(['CMAKE_ASM_COMPILER', info.triplet + '-gcc']);
-                    values.push(['CMAKE_C_COMPILER', info.triplet + '-gcc']);
-                    values.push(['CMAKE_CXX_COMPILER', info.triplet + '-g++']);
-                }
-
-                if (info.sysroot != null) {
-                    sysroot = expandPath(info.sysroot, import.meta.dirname + '/..');
-                    if (!fs.existsSync(sysroot))
-                        throw new Error(`Cross-compilation sysroot '${sysroot}' does not exist`);
-
-                    values.push(['CMAKE_SYSROOT', sysroot]);
-                }
-
-                if (info.variables != null) {
-                    for (let key in info.variables) {
-                        let value = expandString(info.variables[key], { sysroot: sysroot });
-                        values.push([key, value]);
+                        if (spawnSync(binary, ['-v']).status !== 0)
+                            prefer_clang = true;
                     }
+
+                    if (prefer_clang) {
+                        values.push(['CMAKE_ASM_COMPILER_TARGET', info.triplet]);
+                        values.push(['CMAKE_C_COMPILER_TARGET', info.triplet]);
+                        values.push(['CMAKE_CXX_COMPILER_TARGET', info.triplet]);
+
+                        values.push(['CMAKE_EXE_LINKER_FLAGS', '-fuse-ld=lld']);
+                        values.push(['CMAKE_SHARED_LINKER_FLAGS', '-fuse-ld=lld']);
+                        values.push(['CMAKE_STATIC_LINKER_FLAGS', '-fuse-ld=lld']);
+                    } else if (process.platform != 'win32') {
+                        values.push(['CMAKE_ASM_COMPILER', info.triplet + '-gcc']);
+                        values.push(['CMAKE_C_COMPILER', info.triplet + '-gcc']);
+                        values.push(['CMAKE_CXX_COMPILER', info.triplet + '-g++']);
+                    }
+
+                    if (info.sysroot != null) {
+                        sysroot = expandPath(info.sysroot, import.meta.dirname + '/..');
+                        if (!fs.existsSync(sysroot))
+                            throw new Error(`Cross-compilation sysroot '${sysroot}' does not exist`);
+
+                        values.push(['CMAKE_SYSROOT', sysroot]);
+                    }
+
+                    if (info.variables != null) {
+                        for (let key in info.variables) {
+                            let value = expandString(info.variables[key], { sysroot: sysroot });
+                            values.push([key, value]);
+                        }
+                    }
+
+                    let filename = `${work_dir}/toolchain.cmake`;
+                    let text = values.map(pair => `set(${pair[0]} "${pair[1]}")`).join('\n');
+
+                    fs.writeFileSync(filename, text);
+                    args.push(`-DCMAKE_TOOLCHAIN_FILE=${filename}`);
                 }
-
-                let filename = `${work_dir}/toolchain.cmake`;
-                let text = values.map(pair => `set(${pair[0]} "${pair[1]}")`).join('\n');
-
-                fs.writeFileSync(filename, text);
-                args.push(`-DCMAKE_TOOLCHAIN_FILE=${filename}`);
             }
         })();
 

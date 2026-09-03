@@ -147,6 +147,11 @@ const TOOLCHAINS = {
         processor: "i386",
         triplet: "i686-unknown-freebsd",
         sysroot: "../../tools/cross/sysroots/freebsd_i386"
+    },
+
+    android_arm64: {
+        toolchain: "/opt/Android/Sdk/ndk/30.0.16138531/build/cmake/android.toolchain.cmake",
+        flags: ["-DANDROID_ABI=arm64-v8a", "-DANDROID_PLATFORM=android-28", "-DCMAKE_SHARED_LINKER_FLAGS=-z undefs"]
     }
 };
 

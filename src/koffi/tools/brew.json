@@ -452,5 +452,15 @@
                 "Test SQLite": "node --no-deprecation test/sqlite.js"
             }
         }
+    },
+
+    "android_arm64": {
+        "title": "Android ARM64",
+
+        "info": {
+            "arch": "arm64",
+            "target": "android_arm64",
+            "package": "android-arm64"
+        }
     }
 }

@@ -871,6 +871,9 @@ async function upload(snapshot_dir) {
 
     console.log('>> Upload source code...');
     await Promise.all(builds.map(async build => {
+        if (build.info.machine == null)
+            return;
+
         let machine = runner.machine(build.info.machine);
 
         if (ignore_builds.has(build))

@@ -10,14 +10,14 @@ Koffi is a fast and easy-to-use dynamic C FFI module for Node.js, featuring:
 
 The following combinations of OS and architectures __are officially supported and tested__ at the moment:
 
-ISA / OS           | Windows     | Linux/glibc | Linux/musl  | macOS       | FreeBSD     | OpenBSD
------------------- | ----------- | ----------- | ----------- | ----------- | ----------- | --------
-x86 (IA32) [^1]    | ✅ Yes      | ✅ Yes      | 🟨 Probably | ⬜️ *N/A*    | ✅ Yes      | ✅ Yes
-x86_64 (AMD64)     | ✅ Yes      | ✅ Yes      | ✅ Yes      | ✅ Yes      | ✅ Yes      | ✅ Yes
-ARM32 LE [^2]      | ⬜️ *N/A*    | ✅ Yes      | 🟨 Probably | ⬜️ *N/A*    | 🟨 Probably | 🟨 Probably
-ARM64 (AArch64) LE | ✅ Yes      | ✅ Yes      | ✅ Yes      | ✅ Yes      | ✅ Yes      | 🟨 Probably
-RISC-V 64 [^3]     | ⬜️ *N/A*    | ✅ Yes      | 🟨 Probably | ⬜️ *N/A*    | 🟨 Probably | 🟨 Probably
-LoongArch64        | ⬜️ *N/A*    | ✅ Yes      | 🟨 Probably | ⬜️ *N/A*    | 🟨 Probably | 🟨 Probably
+ISA / OS           | Windows  | Linux/glibc | Linux/musl  | macOS    | FreeBSD     | OpenBSD     | Android
+------------------ | -------- | ----------- | ----------- | -------- | ----------- | ----------- | -----------
+x86 (IA32) [^1]    | ✅ Yes   | ✅ Yes      | 🟨 Probably | ⬜️ *N/A* | ✅ Yes      | ✅ Yes      | ⬜️ *N/A*
+x86_64 (AMD64)     | ✅ Yes   | ✅ Yes      | ✅ Yes      | ✅ Yes   | ✅ Yes      | ✅ Yes      | 🟨 Probably
+ARM32 LE [^2]      | ⬜️ *N/A* | ✅ Yes      | 🟨 Probably | ⬜️ *N/A* | 🟨 Probably | 🟨 Probably | 🟨 Probably
+ARM64 (AArch64) LE | ✅ Yes   | ✅ Yes      | ✅ Yes      | ✅ Yes   | ✅ Yes      | 🟨 Probably | ✅ Yes
+RISC-V 64 [^3]     | ⬜️ *N/A* | ✅ Yes      | 🟨 Probably | ⬜️ *N/A* | 🟨 Probably | 🟨 Probably | ⬜️ *N/A*
+LoongArch64        | ⬜️ *N/A* | ✅ Yes      | 🟨 Probably | ⬜️ *N/A* | 🟨 Probably | 🟨 Probably | ⬜️ *N/A*
 
 [^1]: The following call conventions are supported: cdecl, stdcall, MS fastcall, thiscall.
 [^2]: The prebuilt binary uses the hard float ABI and expects a VFP coprocessor. Build from source to use Koffi with a different ABI (softfp, soft).
