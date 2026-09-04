@@ -462,5 +462,15 @@
             "target": "android_arm64",
             "package": "android-arm64"
         }
+    },
+
+    "android_x64": {
+        "title": "Android x64",
+
+        "info": {
+            "arch": "x64",
+            "target": "android_x64",
+            "package": "android-x64"
+        }
     }
 }

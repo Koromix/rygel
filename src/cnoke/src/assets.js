@@ -152,6 +152,10 @@ const TOOLCHAINS = {
     android_arm64: {
         toolchain: "/opt/Android/Sdk/ndk/30.0.16138531/build/cmake/android.toolchain.cmake",
         flags: ["-DANDROID_ABI=arm64-v8a", "-DANDROID_PLATFORM=android-28", "-DCMAKE_SHARED_LINKER_FLAGS=-z undefs"]
+    },
+    android_x64: {
+        toolchain: "/opt/Android/Sdk/ndk/30.0.16138531/build/cmake/android.toolchain.cmake",
+        flags: ["-DANDROID_ABI=x86_64", "-DANDROID_PLATFORM=android-28", "-DCMAKE_SHARED_LINKER_FLAGS=-z undefs"]
     }
 };
 
