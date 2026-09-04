@@ -21,6 +21,8 @@ struct SessionInfo: public RetainObject<SessionInfo> {
     char username[];
 };
 
+void InitUsers();
+
 bool PruneTokens();
 void PruneSessions();
 

@@ -294,6 +294,7 @@ bool InitUsers(const char *profile_directory)
     }
 
     sessions.SetCookiePath(thop_config.base_url);
+    sessions.SetCookieSecure(thop_config.secure_cookies);
 
     return true;
 }

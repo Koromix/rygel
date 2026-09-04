@@ -54,6 +54,11 @@ static std::shared_mutex events_mutex;
 static BucketList<EventInfo> events;
 static HashTable<EventInfo::Key, EventInfo *> events_map;
 
+void InitUsers()
+{
+    sessions.SetCookieSecure(gp_config.secure_cookies);
+}
+
 bool SessionInfo::IsAdmin() const
 {
     if (!is_admin)

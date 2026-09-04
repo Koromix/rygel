@@ -585,6 +585,9 @@ Options:
     if (!InitSMTP(config.smtp))
         return 1;
 
+    LogInfo("Init users");
+    InitUsers();
+
     LogInfo("Init assets");
     InitAssets();
 

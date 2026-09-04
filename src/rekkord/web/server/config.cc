@@ -102,7 +102,11 @@ bool LoadConfig(StreamReader *st, Config *out_config)
                     valid = false;
                 }
             } else if (prop.section == "HTTP") {
-                valid &= config.http.SetProperty(prop.key, prop.value, root_directory);
+                if (prop.key == "SecureCookies") {
+                    valid &= ParseBool(prop.value, &config.secure_cookies);
+                } else {
+                    valid &= config.http.SetProperty(prop.key, prop.value, root_directory);
+                }
             } else if (prop.section == "SMTP") {
                 valid &= config.smtp.SetProperty(prop.key, prop.value, root_directory);
             } else if (prop.section == "Authentication") {

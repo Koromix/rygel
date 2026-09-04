@@ -17,7 +17,7 @@ class http_SessionManager {
     static const int64_t MaxLockDelay = 120 * 60000;
     static const int64_t RegenerateDelay = 5 * 60000;
 
-    static const unsigned int CookieFlags = (int)http_CookieFlag::SameSiteStrict | (int)http_CookieFlag::Secure;
+    static const unsigned int DefaultCookieFlags = (int)http_CookieFlag::SameSiteStrict;
 
     struct SessionHandle {
         char session_key[65];
@@ -33,6 +33,7 @@ class http_SessionManager {
     };
 
     const char *cookie_path = "/";
+    unsigned int cookie_flags = DefaultCookieFlags;
 
     std::shared_mutex mutex;
     BucketList<SessionHandle> sessions;
@@ -41,7 +42,8 @@ class http_SessionManager {
 public:
     http_SessionManager() = default;
 
-    void SetCookiePath(const char *new_path) { cookie_path = new_path; }
+    void SetCookiePath(const char *path) { cookie_path = path; }
+    void SetCookieSecure(bool secure) { cookie_flags = DefaultCookieFlags | (secure ? (int)http_CookieFlag::Secure : 0); }
 
     void Open(http_IO *io, RetainPtr<T> udata)
     {
@@ -59,8 +61,8 @@ public:
         handle->udata = udata;
 
         // Set session cookies
-        io->AddCookieHeader(cookie_path, "session_key", handle->session_key, CookieFlags | (int)http_CookieFlag::HttpOnly);
-        io->AddCookieHeader(cookie_path, "session_rnd", handle->session_rnd, CookieFlags);
+        io->AddCookieHeader(cookie_path, "session_key", handle->session_key, cookie_flags | (int)http_CookieFlag::HttpOnly);
+        io->AddCookieHeader(cookie_path, "session_rnd", handle->session_rnd, cookie_flags);
     }
 
     void Close(http_IO *io)
@@ -118,9 +120,9 @@ public:
                 handle->udata = udata;
 
                 // Set session cookies
-                io->AddCookieHeader(cookie_path, "session_key", handle->session_key, CookieFlags | (int)http_CookieFlag::HttpOnly);
+                io->AddCookieHeader(cookie_path, "session_key", handle->session_key, cookie_flags | (int)http_CookieFlag::HttpOnly);
                 if (!locked) {
-                    io->AddCookieHeader(cookie_path, "session_rnd", handle->session_rnd, CookieFlags);
+                    io->AddCookieHeader(cookie_path, "session_rnd", handle->session_rnd, cookie_flags);
                 }
             }
 
@@ -243,8 +245,8 @@ private:
 
     void DeleteSessionCookies(http_IO *io)
     {
-        io->AddCookieHeader(cookie_path, "session_key", nullptr, CookieFlags | (int)http_CookieFlag::HttpOnly);
-        io->AddCookieHeader(cookie_path, "session_rnd", nullptr, CookieFlags);
+        io->AddCookieHeader(cookie_path, "session_key", nullptr, cookie_flags | (int)http_CookieFlag::HttpOnly);
+        io->AddCookieHeader(cookie_path, "session_rnd", nullptr, cookie_flags);
     }
 };
 

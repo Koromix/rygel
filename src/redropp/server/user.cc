@@ -188,7 +188,7 @@ static bool SendLinkIdentityMail(const char *to, const oidc_Provider &provider, 
     return PostMail(to, content);
 }
 
-bool HashPassword(Span<const char> password, char out_hash[PasswordHashBytes])
+static bool HashPassword(Span<const char> password, char out_hash[PasswordHashBytes])
 {
     if (crypto_pwhash_str(out_hash, password.ptr, password.len,
                           crypto_pwhash_OPSLIMIT_INTERACTIVE, crypto_pwhash_MEMLIMIT_INTERACTIVE) != 0) {
@@ -263,6 +263,11 @@ static bool CheckPasswordComplexity(const char *username, Span<const char> passw
 {
     unsigned int flags = UINT_MAX & ~(int)pwd_CheckFlag::Score;
     return pwd_CheckPassword(password, username, flags);
+}
+
+void InitUsers()
+{
+    sessions.SetCookieSecure(config.secure_cookies);
 }
 
 bool PruneTokens()

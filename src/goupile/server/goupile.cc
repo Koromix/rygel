@@ -1219,6 +1219,9 @@ For help about those commands, type: %!..+%1 command --help%!0)"),
         return 1;
     K_DEFER { CloseDomain(); };
 
+    LogInfo("Init users");
+    InitUsers();
+
     // From here on, don't quit abruptly
     // Trigger a check when something happens to the zygote process
     WaitEvents(0);

@@ -86,6 +86,8 @@ bool LoadConfig(StreamReader *st, Config *out_config)
                     config.base_url = DuplicateString(prop.value, &config.str_alloc).ptr;
                 } else if (prop.key == "MaxAge") {
                     valid &= ParseDuration(prop.value, &config.max_age);
+                } else if (prop.key == "SecureCookies") {
+                    valid &= ParseBool(prop.value, &config.secure_cookies);
                 } else {
                     valid &= config.http.SetProperty(prop.key.ptr, prop.value.ptr, root_directory);
                 }

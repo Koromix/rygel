@@ -115,6 +115,8 @@ public:
                            bool single = false, const char *lock = nullptr);
 };
 
+void InitUsers();
+
 void ExportProfile(const SessionInfo *session, const InstanceHolder *instance, json_Writer *json);
 Span<const char> ExportProfile(const SessionInfo *session, const InstanceHolder *instance, Allocator *alloc);
 

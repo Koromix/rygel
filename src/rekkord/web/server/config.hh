@@ -28,6 +28,7 @@ struct Config {
     int64_t repeat_delay = 24 * 3600000;
 
     http_Config http { 8891 };
+    bool secure_cookies = false;
 
     smtp_Config smtp;
 

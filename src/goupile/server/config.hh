@@ -30,6 +30,7 @@ struct Config {
     bool demo_mode = false;
 
     http_Config http { 8889 };
+    bool secure_cookies = false;
 
     smtp_Config smtp;
     sms_Config sms;

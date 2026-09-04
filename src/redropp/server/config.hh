@@ -37,6 +37,7 @@ struct Config {
     s3_Config s3;
 
     http_Config http { 8894 };
+    bool secure_cookies = false;
 
     smtp_Config smtp;
 

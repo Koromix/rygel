@@ -745,6 +745,9 @@ For help about those commands, type: %!..+%1 command --help%!0)"),
     if (!InitSMTP(config.smtp))
         return 1;
 
+    LogInfo("Init users");
+    InitUsers();
+
     LogInfo("Init assets");
     InitAssets();
 
