@@ -7,6 +7,13 @@
 
 ### Koffi 3.2
 
+#### Koffi 3.2.1
+
+*Released on 2026-09-04*
+
+- Add Android ARM64 prebuild (@koromix/koffi-android-arm64)
+- Add Android x64 prebuild (@koromix/koffi-android-x64)
+
 #### Koffi 3.2.0
 
 *Released on 2026-09-02*
