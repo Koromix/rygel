@@ -12,10 +12,10 @@ The following combinations of OS and architectures __are officially supported an
 
 ISA / OS           | Windows  | Linux/glibc | Linux/musl  | macOS    | FreeBSD     | OpenBSD     | Android
 ------------------ | -------- | ----------- | ----------- | -------- | ----------- | ----------- | -----------
-x86 (IA32) [^1]    | ✅ Yes   | ✅ Yes      | 🟨 Probably | ⬜️ *N/A* | ✅ Yes      | ✅ Yes      | ⬜️ *N/A*
-x86_64 (AMD64)     | ✅ Yes   | ✅ Yes      | ✅ Yes      | ✅ Yes   | ✅ Yes      | ✅ Yes      | 🟨 Probably
-ARM32 LE [^2]      | ⬜️ *N/A* | ✅ Yes      | 🟨 Probably | ⬜️ *N/A* | 🟨 Probably | 🟨 Probably | 🟨 Probably
+x86_64 (AMD64)     | ✅ Yes   | ✅ Yes      | ✅ Yes      | ✅ Yes   | ✅ Yes      | ✅ Yes      | ✅ Yes
 ARM64 (AArch64) LE | ✅ Yes   | ✅ Yes      | ✅ Yes      | ✅ Yes   | ✅ Yes      | 🟨 Probably | ✅ Yes
+x86 (IA32) [^1]    | ✅ Yes   | ✅ Yes      | 🟨 Probably | ⬜️ *N/A* | ✅ Yes      | ✅ Yes      | ⬜️ *N/A*
+ARM32 LE [^2]      | ⬜️ *N/A* | ✅ Yes      | 🟨 Probably | ⬜️ *N/A* | 🟨 Probably | 🟨 Probably | 🟨 Probably
 RISC-V 64 [^3]     | ⬜️ *N/A* | ✅ Yes      | 🟨 Probably | ⬜️ *N/A* | 🟨 Probably | 🟨 Probably | ⬜️ *N/A*
 LoongArch64        | ⬜️ *N/A* | ✅ Yes      | 🟨 Probably | ⬜️ *N/A* | 🟨 Probably | 🟨 Probably | ⬜️ *N/A*
 
