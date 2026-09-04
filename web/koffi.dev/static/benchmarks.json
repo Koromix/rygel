@@ -339,6 +339,32 @@
                     "ratio": 0.014447536987495005,
                     "overhead": 68.21595015576324
                 }
+            },
+            "raylib": {
+                "C++": {
+                    "time": 8007,
+                    "iterations": 806400,
+                    "ratio": 1.0234697607629852,
+                    "overhead": -0.022931562477711886
+                },
+                "Node-API": {
+                    "time": 8012,
+                    "iterations": 788400,
+                    "ratio": 1,
+                    "overhead": 0
+                },
+                "Koffi v3": {
+                    "time": 8023,
+                    "iterations": 684000,
+                    "ratio": 0.8663904061212142,
+                    "overhead": 0.1542140736264026
+                },
+                "Koffi v2": {
+                    "time": 8019,
+                    "iterations": 579600,
+                    "ratio": 0.7345180766455922,
+                    "overhead": 0.3614368819441647
+                }
             }
         }
     }

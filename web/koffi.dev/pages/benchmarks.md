@@ -54,6 +54,15 @@ This test is based around repeated calls to the standard C function `memset`. Al
 
 <div class="benchmark table" data-platform="darwin_arm64" data-benchmark="memset"></div>
 
+## Raylib results for macOS ARM64 ^ Raylib results
+
+This benchmark uses the CPU-based image drawing functions in Raylib. The calls are much heavier than in the atoi benchmark, thus the FFI overhead is reduced. In this implementation, Koffi is compared to:
+
+- [node-raylib](https://github.com/RobLoach/node-raylib) (baseline): This is a native wrapper implemented with N-API
+- Raylib C++: C++ implementation of the benchmark, without any Javascript
+
+<div class="benchmark table" data-platform="darwin_arm64" data-benchmark="raylib"></div>
+
 # Windows x86_64
 
 The results presented below were measured on my x86_64 Windows machine (AMD Ryzen™ 5 2600).
