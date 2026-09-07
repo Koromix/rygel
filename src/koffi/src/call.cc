@@ -1237,7 +1237,7 @@ void CallData::DebugForward()
     if (!IsDebugCallsEnabled())
         return;
 
-    Span<const uint8_t> stack = MakeSpan(this->stack.end, prev_stack - this->stack.end);
+    Span<const uint8_t> stack = MakeSpan(new_stack, this->stack.end);
     Span<const uint8_t> heap = MakeSpan(prev_heap, this->heap.ptr - prev_heap);
 
     DumpMemory("Stack", stack);

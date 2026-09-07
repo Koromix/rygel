@@ -40,7 +40,7 @@ struct alignas(8) CallData {
     MemoryRange<uint8_t> stack;
     MemoryRange<uint8_t> heap;
 #if defined(K_DEBUG)
-    uint8_t *prev_stack;
+    uint8_t *new_stack;
     uint8_t *prev_heap;
 #endif
 
@@ -64,10 +64,10 @@ struct alignas(8) CallData {
 #if defined(K_DEBUG)
     CallData(napi_env env)
         : env(env), instance(nullptr), stack({}), heap({}),
-          prev_stack(nullptr), prev_heap(nullptr) {} // Partial initialization, use Init()
+          new_stack(nullptr), prev_heap(nullptr) {} // Partial initialization, use Init()
     CallData(napi_env env, InstanceData *instance, InstanceMemory *mem)
         : env(env), instance(instance), stack(mem->stack), heap(mem->heap),
-          prev_stack(mem->stack.end), prev_heap(mem->heap.ptr) {}
+          new_stack(mem->stack.end), prev_heap(mem->heap.ptr) {}
     ~CallData();
 #else
     CallData(napi_env env) : env(env) {} // Partial initialization, use Init()
@@ -84,7 +84,7 @@ struct alignas(8) CallData {
         this->heap = mem->heap;
 
 #if defined(K_DEBUG)
-        prev_stack = mem->stack.end;
+        new_stack = mem->stack.end;
         prev_heap = mem->heap.ptr;
 #endif
     }
@@ -151,6 +151,10 @@ inline T *CallData::AllocStack(Size size)
 
     uint8_t *ptr = stack.end - size;
     FillMemory(ptr, stack.end - ptr);
+
+#if defined(K_DEBUG)
+    new_stack = ptr;
+#endif
 
     return (T *)ptr;
 }
