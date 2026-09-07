@@ -42,7 +42,6 @@ static int IsHFA(const TypeInfo *type)
 enum class AbiMethod {
     Memory,
     Gpr,
-    GprGpr,
     Hfa
 };
 
@@ -56,15 +55,13 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
 
     AbiMethod ret_abi = {};
 
-    if (int hfa = IsHFA(func->ret); hfa) {
+    if (IsHFA(func->ret)) {
         ret_abi = AbiMethod::Hfa;
-    } else if (!IsAggregate(func->ret)) {
-        ret_abi = (func->ret->size > 4) ? AbiMethod::GprGpr : AbiMethod::Gpr;
-    } else if (func->ret->size <= 4) {
-        ret_abi = AbiMethod::Gpr;
-    } else {
+    } else if (IsAggregate(func->ret) && func->ret->size > 4) {
         ret_abi = AbiMethod::Memory;
         gpr_index++;
+    } else {
+        ret_abi = AbiMethod::Gpr;
     }
 
     for (const ParameterInfo &param: func->parameters) {
@@ -270,8 +267,7 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
                     Opcode run = vec_index ? Opcode::RunAggregateMemX : Opcode::RunAggregateMem;
                     out_plan->sync.Append({ .o = Code2Op(run), .s1 = 0, .s2 = -40, .i = (int32_t)func->parameters.len, .type = func->ret });
                 } break;
-                case AbiMethod::Gpr:
-                case AbiMethod::GprGpr: {
+                case AbiMethod::Gpr: {
                     Opcode run = vec_index ? Opcode::RunAggregateGX : Opcode::RunAggregateG;
                     out_plan->sync.Append({ .o = Code2Op(run), .s1 = -40, .i = (int32_t)func->parameters.len, .type = func->ret });
                 } break;
