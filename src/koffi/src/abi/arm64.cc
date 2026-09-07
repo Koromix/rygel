@@ -164,12 +164,8 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
                         offset = 9 * 8 + vec_index * 8;
                         vec_index += hfa.count;
 
-                        if (hfa.float32) {
-                            const TypeInfo *type = ReshapeType(instance, param.type, 8, 0);
-                            out_plan->sync.Append({ .o = Code2Op(Opcode::PushAggregateReg), .s1 = (int16_t)param.offset, .i = offset, .type = type });
-                        } else {
-                            out_plan->sync.Append({ .o = Code2Op(Opcode::PushAggregateReg), .s1 = (int16_t)param.offset, .i = offset, .type = param.type });
-                        }
+                        const TypeInfo *type = hfa.float32 ? ReshapeType(instance, param.type, 8, 0) : param.type;
+                        out_plan->sync.Append({ .o = Code2Op(Opcode::PushAggregateReg), .s1 = (int16_t)param.offset, .i = offset, .type = type });
                     } else {
                         vec_index = vec_max;
 
@@ -335,12 +331,8 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
             if (hfa.count) {
                 Opcode run = vec_index ? Opcode::RunAggregateDDDDX : Opcode::RunAggregateDDDD;
 
-                if (hfa.float32) {
-                    const TypeInfo *type = ReshapeType(instance, func->ret, 8, 0);
-                    out_plan->sync.Append({ .o = Code2Op(run), .s1 = -48 + 16, .i = (int32_t)func->parameters.len, .type = type });
-                } else {
-                    out_plan->sync.Append({ .o = Code2Op(run), .s1 = -48 + 16, .i = (int32_t)func->parameters.len, .type = func->ret });
-                }
+                const TypeInfo *type = hfa.float32 ? ReshapeType(instance, func->ret, 8, 0) : func->ret;
+                out_plan->sync.Append({ .o = Code2Op(run), .s1 = -48 + 16, .i = (int32_t)func->parameters.len, .type = type });
             } else if (func->ret->size <= 16) {
                 Opcode run = vec_index ? Opcode::RunAggregateGGX : Opcode::RunAggregateGG;
                 out_plan->sync.Append({ .o = Code2Op(run), .s1 = -48, .i = (int32_t)func->parameters.len, .type = func->ret });
