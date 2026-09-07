@@ -39,6 +39,13 @@ static K_FORCE_INLINE bool IsFloat(const TypeInfo *type)
     return fp;
 }
 
+static K_FORCE_INLINE bool IsAggregate(const TypeInfo *type)
+{
+    bool aggregate = (type->primitive == PrimitiveKind::Record ||
+                      type->primitive == PrimitiveKind::Union);
+    return aggregate;
+}
+
 static K_FORCE_INLINE bool IsRegularSize(Size size, Size max)
 {
     bool regular = (size <= max && !(size & (size - 1)));

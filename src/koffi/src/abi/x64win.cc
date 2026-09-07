@@ -19,7 +19,7 @@ void AnalyseFunction(InstanceData *, const FunctionInfo *func, ExecutionPlan *ou
         const ParameterInfo &param = func->parameters[i];
         int arg = (int)(!regular_ret + i);
 
-        if (param.type->primitive == PrimitiveKind::Record || param.type->primitive == PrimitiveKind::Union) {
+        if (IsAggregate(param.type)) {
             Opcode code = IsRegularSize(param.type->size, 8) ? Opcode::PushAggregateReg : Opcode::PushAggregateMem;
             int offset = 8 * arg + (arg >= 4 ? 80 : 0);
 

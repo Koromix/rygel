@@ -197,7 +197,7 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
                 } break;
             }
 
-            if (type->primitive == PrimitiveKind::Record || type->primitive == PrimitiveKind::Union) {
+            if (IsAggregate(type)) {
                 if (split) {
                     out_plan->sync.Append({ .o = Code2Op(Opcode::PushAggregatePair), .s1 = (int16_t)param.offset, .s3 = (int16_t)offsets[0], .s4 = (int16_t)offsets[1], .type = type });
                 } else {

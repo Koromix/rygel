@@ -28,8 +28,7 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
     bool regular_ret = IsRegularSize(func->ret->size, 8);
 
 #if defined(__linux__)
-    regular_ret &= (func->ret->primitive != PrimitiveKind::Record) &&
-                   (func->ret->primitive != PrimitiveKind::Union);
+    regular_ret &= !IsAggregate(func->ret);
 #endif
 
     int fast_regs = (func->convention == CallConvention::Fastcall) ? 2 :
@@ -63,7 +62,7 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
             stk_offset += (param.type->size + 3) / 4;
         }
 
-        if (param.type->primitive == PrimitiveKind::Record || param.type->primitive == PrimitiveKind::Union) {
+        if (IsAggregate(param.type)) {
             out_plan->sync.Append({ .o = Code2Op(Opcode::PushAggregateReg), .s1 = (int16_t)param.offset, .i = offset * 4, .type = param.type });
             out_plan->relay.Append({ .o = Code2Op(Opcode::PushAggregateReg), .s1 = (int16_t)param.offset, .i = offset * 4, .type = param.type });
         } else {

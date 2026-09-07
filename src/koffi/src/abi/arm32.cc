@@ -58,8 +58,7 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
 
     if (int hfa = IsHFA(func->ret); hfa) {
         ret_abi = AbiMethod::Hfa;
-    } else if (func->ret->primitive != PrimitiveKind::Record &&
-               func->ret->primitive != PrimitiveKind::Union) {
+    } else if (!IsAggregate(func->ret)) {
         ret_abi = (func->ret->size > 4) ? AbiMethod::GprGpr : AbiMethod::Gpr;
     } else if (func->ret->size <= 4) {
         ret_abi = AbiMethod::Gpr;

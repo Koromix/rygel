@@ -419,8 +419,7 @@ static K_FORCE_INLINE napi_value GetMemberValue(napi_env env, napi_value obj, co
 
 bool CallData::PushObject(napi_value obj, const TypeInfo *type, uint8_t *origin)
 {
-    K_ASSERT(type->primitive == PrimitiveKind::Record ||
-             type->primitive == PrimitiveKind::Union);
+    K_ASSERT(IsAggregate(type));
 
     if (GetKindOf(env, obj) != napi_object) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected object", GetValueType(instance, obj));
@@ -1013,8 +1012,7 @@ bool CallData::PushPointerSlow(napi_value value, napi_valuetype kind, const Type
 
         *out_ptr = ptr;
         return true;
-    } else if (ref->primitive == PrimitiveKind::Record ||
-               ref->primitive == PrimitiveKind::Union) [[likely]] {
+    } else if (IsAggregate(ref)) [[likely]] {
         ptr = (void *)AllocHeap(ref->size);
 
         if (ref->primitive == PrimitiveKind::Union &&
@@ -1829,8 +1827,7 @@ static bool CanTypeAcceptCallbacks(const TypeInfo *type)
     if (type->primitive == PrimitiveKind::Callback)
         return true;
 
-    if (type->primitive == PrimitiveKind::Record ||
-            type->primitive == PrimitiveKind::Union) {
+    if (IsAggregate(type)) {
         for (const RecordMember &member: type->members) {
             if (CanTypeAcceptCallbacks(member.type))
                 return false;

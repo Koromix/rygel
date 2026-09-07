@@ -270,7 +270,7 @@ void AnalyseFunction(InstanceData *, const FunctionInfo *func, ExecutionPlan *ou
                 } break;
             }
 
-            if (param.type->primitive == PrimitiveKind::Record || param.type->primitive == PrimitiveKind::Union) {
+            if (IsAggregate(param.type)) {
                 if (split) {
                     out_plan->sync.Append({ .o = Code2Op(Opcode::PushAggregatePair), .s1 = (int16_t)param.offset, .s3 = (int16_t)offsets[0], .s4 = (int16_t)offsets[1], .type = param.type });
                 } else {
