@@ -1,0 +1,4 @@
+auto enp0s2
+iface enp0s2 inet static
+      address 10.0.2.15/24
+      gateway 10.0.2.2

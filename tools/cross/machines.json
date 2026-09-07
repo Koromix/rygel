@@ -306,5 +306,25 @@
 
             "shutdown": "doas poweroff"
         }
+    },
+
+    "debian_ppc64el": {
+        "title": "Debian PPC64 LE",
+        "platform": "linux",
+
+        "qemu": {
+            "binary": "qemu-system-ppc64",
+            "arguments": ["-M", "pseries", "-m", "3G", "-smp", 2, "-kernel", "vmlinux", "-initrd", "initrd.img", "-append", "root=/dev/sda1 rw rootfstype=ext4", "-hda", "disk.qcow2", "-device", "virtio-net,netdev=mynet", "-netdev", "user,id=mynet,hostfwd=tcp::22217-:22", "-vnc", "127.0.0.1:27"],
+
+            "disk": "disk.qcow2",
+
+            "ssh_port": 22217,
+            "vnc_port": 5927,
+
+            "username": "debian",
+            "password": "debian",
+
+            "shutdown": "sudo poweroff"
+        }
     }
 }

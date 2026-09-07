@@ -41,6 +41,12 @@ const TOOLCHAINS = {
         triplet: "loongarch64-linux-gnu",
         sysroot: "../../tools/cross/sysroots/debian_loong64"
     },
+    linux_ppc64le: {
+        system: "Linux",
+        processor: "ppc64le",
+        triplet: "powerpc64le-linux-gnu",
+        sysroot: "../../tools/cross/sysroots/debian_ppc64el"
+    },
 
     musl_x64: {
         system: "Linux",
