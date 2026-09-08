@@ -944,7 +944,7 @@ napi_value Decode(InstanceData *instance, const uint8_t *ptr, const TypeInfo *ty
         } break;
     }
 
-#undef RETURN_BIGINT
+#undef RETURN_INT_SWAP
 #undef RETURN_INT
 
     return env.Null();
