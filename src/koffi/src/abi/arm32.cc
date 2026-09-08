@@ -272,7 +272,7 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
                     out_plan->sync.Append({ .o = Code2Op(run), .s1 = -40, .i = (int32_t)func->parameters.len, .type = func->ret });
                 } break;
                 case AbiMethod::Hfa: {
-                    Opcode run = vec_index ? Opcode::RunAggregateDDDDX : Opcode::RunAggregateDDDD;
+                    Opcode run = vec_index ? Opcode::RunAggregateHfa4X : Opcode::RunAggregateHfa4;
                     out_plan->sync.Append({ .o = Code2Op(run), .s1 = -40 + 8, .i = (int32_t)func->parameters.len, .type = func->ret });
                 } break;
             }

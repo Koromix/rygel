@@ -12,14 +12,14 @@
     EXPORT CallF
     EXPORT CallD
     EXPORT CallGG
-    EXPORT CallDDDD
+    EXPORT CallHfa4
 
     ; The X variants are slightly slower, and are used when XMM arguments must be forwarded.
     EXPORT CallGX
     EXPORT CallFX
     EXPORT CallDX
     EXPORT CallGGX
-    EXPORT CallDDDDX
+    EXPORT CallHfa4X
 
     ; Copy function pointer to r9, in order to save it through argument forwarding.
     ; Save RSP in r29 (non-volatile), and use carefully assembled stack provided by caller.
@@ -90,7 +90,7 @@ CallGG PROC
     epilogue
     ENDP
 
-CallDDDD PROC
+CallHfa4 PROC
     prologue
     forward_gpr
     epilogue
@@ -124,7 +124,7 @@ CallGGX PROC
     epilogue
     ENDP
 
-CallDDDDX PROC
+CallHfa4X PROC
     prologue
     forward_vec
     forward_gpr

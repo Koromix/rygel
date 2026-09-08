@@ -329,7 +329,7 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
             HfaInfo hfa = IsHFA(func->ret);
 
             if (hfa.count) {
-                Opcode run = vec_index ? Opcode::RunAggregateDDDDX : Opcode::RunAggregateDDDD;
+                Opcode run = vec_index ? Opcode::RunAggregateHfa4X : Opcode::RunAggregateHfa4;
 
                 const TypeInfo *type = hfa.float32 ? ReshapeType(instance, func->ret, 8, 0) : func->ret;
                 out_plan->sync.Append({ .o = Code2Op(run), .s1 = -48 + 16, .i = (int32_t)func->parameters.len, .type = type });

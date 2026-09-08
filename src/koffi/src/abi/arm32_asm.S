@@ -13,13 +13,13 @@
 .global CallG
 .global CallF
 .global CallD
-.global CallDDDD
+.global CallHfa4
 
 # The X variants are slightly slower, and are used when XMM arguments must be forwarded.
 .global CallGX
 .global CallFX
 .global CallDX
-.global CallDDDDX
+.global CallHfa4X
 
 # Copy function pointer to r12, in order to save it through argument forwarding.
 # Also make a copy of the SP to CallData::old_sp because the callback system might need it.
@@ -70,7 +70,7 @@ CallD:
     add sp, sp, #80
     epilogue
 
-CallDDDD:
+CallHfa4:
     prologue
     ldmia sp!, {r0-r3}
     add sp, sp, #80
@@ -97,7 +97,7 @@ CallDX:
     add sp, sp, #16
     epilogue
 
-CallDDDDX:
+CallHfa4X:
     prologue
     ldmia sp!, {r0-r3}
     vldmia sp!, {d0-d7}

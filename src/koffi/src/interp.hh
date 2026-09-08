@@ -55,7 +55,7 @@ enum class Opcode {
     RunAggregateDD,
     RunAggregateGD,
     RunAggregateDG,
-    RunAggregateDDDD,
+    RunAggregateHfa4,
     RunAggregateMem,
     #define PRIMITIVE(Name) Run ## Name ## X,
     #include "primitives.inc"
@@ -66,7 +66,7 @@ enum class Opcode {
     RunAggregateDDX,
     RunAggregateGDX,
     RunAggregateDGX,
-    RunAggregateDDDDX,
+    RunAggregateHfa4X,
     RunAggregateMemX,
 
     Yield,
@@ -78,7 +78,7 @@ enum class Opcode {
     CallDD,
     CallGD,
     CallDG,
-    CallDDDD,
+    CallHfa4,
     CallMem,
     CallGX,
     CallFX,
@@ -87,7 +87,7 @@ enum class Opcode {
     CallDDX,
     CallGDX,
     CallDGX,
-    CallDDDDX,
+    CallHfa4X,
     CallMemX,
 
     #define PRIMITIVE(Name) Return ## Name,
