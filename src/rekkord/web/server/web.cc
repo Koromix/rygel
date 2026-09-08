@@ -17,7 +17,7 @@ namespace K {
 Config config;
 sq_Database db;
 
-static const char *const DefaultConfigName = "RekkordWatch.ini";
+static const char *const DefaultConfigName = "RekkordWeb.ini";
 
 static HashMap<const char *, const AssetInfo *> asset_map;
 static const AssetInfo *asset_index = nullptr;

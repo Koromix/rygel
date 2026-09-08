@@ -140,7 +140,7 @@ bool LoadConfig(StreamReader *st, Config *out_config)
 
     // Default values
     if (!config.database_filename) {
-        config.database_filename = NormalizePath("RekkordWatch.db", data_directory, &config.str_alloc).ptr;
+        config.database_filename = NormalizePath("RekkordWeb.db", data_directory, &config.str_alloc).ptr;
     }
     if (!config.tmp_directory) {
         config.tmp_directory = NormalizePath("tmp", data_directory, &config.str_alloc).ptr;
