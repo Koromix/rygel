@@ -6,6 +6,7 @@
 #include "lib/native/base/base.hh"
 #include "../ffi.hh"
 #include "../interp.hh"
+#include "../type.hh"
 
 namespace K {
 
