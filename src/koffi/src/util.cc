@@ -138,24 +138,6 @@ bool CheckValueTag(napi_env env, napi_value value, const void *marker)
     return match;
 }
 
-int GetTypedArrayType(const TypeInfo *type)
-{
-    switch (type->primitive) {
-        case PrimitiveKind::Int8: return napi_int8_array;
-        case PrimitiveKind::UInt8: return napi_uint8_array;
-        case PrimitiveKind::Int16: return napi_int16_array;
-        case PrimitiveKind::UInt16: return napi_uint16_array;
-        case PrimitiveKind::Int32: return napi_int32_array;
-        case PrimitiveKind::UInt32: return napi_uint32_array;
-        case PrimitiveKind::Float32: return napi_float32_array;
-        case PrimitiveKind::Float64: return napi_float64_array;
-
-        default: return -1;
-    }
-
-    K_UNREACHABLE();
-}
-
 static K_FORCE_INLINE napi_value NewStringUTF32(Napi::Env env, const char32_t *ptr, Size len)
 {
     static const char16_t ReplacementChar = 0xFFFD;

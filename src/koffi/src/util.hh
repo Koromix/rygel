@@ -314,8 +314,6 @@ static K_FORCE_INLINE bool TryBuffer(napi_env env, napi_value value, Span<uint8_
     return false;
 }
 
-int GetTypedArrayType(const TypeInfo *type);
-
 static K_FORCE_INLINE napi_value NewInt(Napi::Env env, char i) { napi_value value; NAPI_OK(napi_create_int32(env, (int32_t)i, &value)); return value; }
 static K_FORCE_INLINE napi_value NewInt(Napi::Env env, signed char i) { napi_value value; NAPI_OK(napi_create_int32(env, (int32_t)i, &value)); return value; }
 static K_FORCE_INLINE napi_value NewInt(Napi::Env env, unsigned char i) { napi_value value; NAPI_OK(napi_create_uint32(env, (uint32_t)i, &value)); return value; }
