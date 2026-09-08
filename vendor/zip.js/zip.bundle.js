@@ -14,7 +14,7 @@ var __export = (target, all) => {
 };
 
 // node_modules/@zip.js/zip.js/lib/core/constants.js
-var MAX_32_BITS, MAX_16_BITS, MAX_8_BITS, COMPRESSION_METHOD_DEFLATE, COMPRESSION_METHOD_DEFLATE_64, COMPRESSION_METHOD_STORE, COMPRESSION_METHOD_AES, LOCAL_FILE_HEADER_SIGNATURE, SPLIT_ZIP_FILE_SIGNATURE, TEMPORARY_SPLIT_ZIP_FILE_SIGNATURE, DATA_DESCRIPTOR_RECORD_SIGNATURE, ARCHIVE_EXTRA_DATA_SIGNATURE, DIGITAL_SIGNATURE_RECORD_SIGNATURE, CENTRAL_FILE_HEADER_SIGNATURE, END_OF_CENTRAL_DIR_SIGNATURE, ZIP64_END_OF_CENTRAL_DIR_SIGNATURE, ZIP64_END_OF_CENTRAL_DIR_LOCATOR_SIGNATURE, CENTRAL_FILE_HEADER_LENGTH, END_OF_CENTRAL_DIR_LENGTH, ZIP64_END_OF_CENTRAL_DIR_LOCATOR_LENGTH, ZIP64_END_OF_CENTRAL_DIR_LENGTH, ZIP64_END_OF_CENTRAL_DIR_TOTAL_LENGTH, DATA_DESCRIPTOR_RECORD_LENGTH, DATA_DESCRIPTOR_RECORD_ZIP_64_LENGTH, DATA_DESCRIPTOR_RECORD_SIGNATURE_LENGTH, SPLIT_ZIP_FILE_SIGNATURE_LENGTH, EXTRAFIELD_TYPE_ZIP64, EXTRAFIELD_TYPE_AES, EXTRAFIELD_TYPE_NTFS, EXTRAFIELD_TYPE_NTFS_TAG1, EXTRAFIELD_TYPE_EXTENDED_TIMESTAMP, EXTRAFIELD_TYPE_UNICODE_PATH, EXTRAFIELD_TYPE_UNICODE_COMMENT, EXTRAFIELD_TYPE_USDZ, EXTRAFIELD_TYPE_INFOZIP, EXTRAFIELD_TYPE_UNIX, EXTRAFIELD_TYPE_UNIX_TYPE1, EXTRAFIELD_TYPE_PKWARE_UNIX, BITFLAG_ENCRYPTED, BITFLAG_LEVEL, BITFLAG_LEVEL_MAX_MASK, BITFLAG_LEVEL_FAST_MASK, BITFLAG_LEVEL_SUPER_FAST_MASK, BITFLAG_DATA_DESCRIPTOR, BITFLAG_COMPRESSED_PATCHED_DATA, BITFLAG_STRONG_ENCRYPTION, BITFLAG_LANG_ENCODING_FLAG, BITFLAG_MASKED_LOCAL_HEADERS, FILE_ATTR_MSDOS_DIR_MASK, FILE_ATTR_MSDOS_READONLY_MASK, FILE_ATTR_MSDOS_HIDDEN_MASK, FILE_ATTR_MSDOS_SYSTEM_MASK, FILE_ATTR_MSDOS_ARCHIVE_MASK, FILE_ATTR_UNIX_TYPE_MASK, FILE_ATTR_UNIX_TYPE_DIR, FILE_ATTR_UNIX_TYPE_SYMLINK, FILE_ATTR_UNIX_TYPE_FILE, FILE_ATTR_UNIX_EXECUTABLE_MASK, FILE_ATTR_UNIX_DEFAULT_MASK, FILE_ATTR_UNIX_SETUID_MASK, FILE_ATTR_UNIX_SETGID_MASK, FILE_ATTR_UNIX_STICKY_MASK, VERSION_STORE, VERSION_DEFLATE, VERSION_ZIP64, VERSION_AES, VERSION_MADE_BY_MSDOS, VERSION_MADE_BY_UNIX, DIRECTORY_SIGNATURE, HEADER_SIZE, HEADER_OFFSET_VERSION, HEADER_OFFSET_SIGNATURE, HEADER_OFFSET_COMPRESSED_SIZE, HEADER_OFFSET_UNCOMPRESSED_SIZE, HEADER_OFFSET_FILENAME_LENGTH, HEADER_OFFSET_EXTRAFIELD_LENGTH, LOCAL_HEADER_COMMON_OFFSET, MAX_DATE, MIN_DATE, UNDEFINED_VALUE, INFINITY_VALUE, UNDEFINED_TYPE, FUNCTION_TYPE, OBJECT_TYPE, STRING_TYPE, NUMBER_TYPE, BOOLEAN_TYPE, EMPTY_UINT8_ARRAY;
+var MAX_32_BITS, MAX_16_BITS, MAX_8_BITS, COMPRESSION_METHOD_DEFLATE, COMPRESSION_METHOD_DEFLATE_64, COMPRESSION_METHOD_STORE, COMPRESSION_METHOD_AES, LOCAL_FILE_HEADER_SIGNATURE, SPLIT_ZIP_FILE_SIGNATURE, TEMPORARY_SPLIT_ZIP_FILE_SIGNATURE, DATA_DESCRIPTOR_RECORD_SIGNATURE, ARCHIVE_EXTRA_DATA_SIGNATURE, DIGITAL_SIGNATURE_RECORD_SIGNATURE, CENTRAL_FILE_HEADER_SIGNATURE, END_OF_CENTRAL_DIR_SIGNATURE, ZIP64_END_OF_CENTRAL_DIR_SIGNATURE, ZIP64_END_OF_CENTRAL_DIR_LOCATOR_SIGNATURE, CENTRAL_FILE_HEADER_LENGTH, END_OF_CENTRAL_DIR_LENGTH, ZIP64_END_OF_CENTRAL_DIR_LOCATOR_LENGTH, ZIP64_END_OF_CENTRAL_DIR_LENGTH, ZIP64_END_OF_CENTRAL_DIR_TOTAL_LENGTH, DATA_DESCRIPTOR_RECORD_LENGTH, DATA_DESCRIPTOR_RECORD_ZIP_64_LENGTH, DATA_DESCRIPTOR_RECORD_SIGNATURE_LENGTH, SPLIT_ZIP_FILE_SIGNATURE_LENGTH, EXTRAFIELD_TYPE_ZIP64, EXTRAFIELD_TYPE_AES, EXTRAFIELD_TYPE_NTFS, EXTRAFIELD_TYPE_NTFS_TAG1, EXTRAFIELD_TYPE_EXTENDED_TIMESTAMP, EXTRAFIELD_TYPE_UNICODE_PATH, EXTRAFIELD_TYPE_UNICODE_COMMENT, EXTRAFIELD_TYPE_USDZ, EXTRAFIELD_TYPE_INFOZIP, EXTRAFIELD_TYPE_UNIX, EXTRAFIELD_TYPE_UNIX_TYPE1, EXTRAFIELD_TYPE_PKWARE_UNIX, BITFLAG_ENCRYPTED, BITFLAG_LEVEL, BITFLAG_LEVEL_MAX_MASK, BITFLAG_LEVEL_FAST_MASK, BITFLAG_LEVEL_SUPER_FAST_MASK, BITFLAG_DATA_DESCRIPTOR, BITFLAG_COMPRESSED_PATCHED_DATA, BITFLAG_STRONG_ENCRYPTION, BITFLAG_LANG_ENCODING_FLAG, BITFLAG_MASKED_LOCAL_HEADERS, FILE_ATTR_MSDOS_DIR_MASK, FILE_ATTR_MSDOS_READONLY_MASK, FILE_ATTR_MSDOS_HIDDEN_MASK, FILE_ATTR_MSDOS_SYSTEM_MASK, FILE_ATTR_MSDOS_ARCHIVE_MASK, FILE_ATTR_UNIX_TYPE_MASK, FILE_ATTR_UNIX_TYPE_DIR, FILE_ATTR_UNIX_TYPE_SYMLINK, FILE_ATTR_UNIX_TYPE_FILE, FILE_ATTR_UNIX_EXECUTABLE_MASK, FILE_ATTR_UNIX_DEFAULT_MASK, FILE_ATTR_UNIX_SETUID_MASK, FILE_ATTR_UNIX_SETGID_MASK, FILE_ATTR_UNIX_STICKY_MASK, VERSION_STORE, VERSION_DEFLATE, VERSION_ZIP64, VERSION_AES, VERSION_MADE_BY_MSDOS, VERSION_MADE_BY_UNIX, DIRECTORY_SIGNATURE, HEADER_SIZE, HEADER_OFFSET_VERSION, HEADER_OFFSET_SIGNATURE, HEADER_OFFSET_COMPRESSED_SIZE, HEADER_OFFSET_UNCOMPRESSED_SIZE, HEADER_OFFSET_FILENAME_LENGTH, HEADER_OFFSET_EXTRAFIELD_LENGTH, LOCAL_HEADER_COMMON_OFFSET, MAX_DATE, MIN_DATE, UNDEFINED_VALUE, INFINITY_VALUE, UNDEFINED_TYPE, FUNCTION_TYPE, OBJECT_TYPE, STRING_TYPE, NUMBER_TYPE, BOOLEAN_TYPE, EMPTY_UINT8_ARRAY, SYMBOL_ASYNC_DISPOSE;
 var init_constants = __esm({
   "node_modules/@zip.js/zip.js/lib/core/constants.js"() {
     MAX_32_BITS = 4294967295;
@@ -105,6 +105,7 @@ var init_constants = __esm({
     NUMBER_TYPE = "number";
     BOOLEAN_TYPE = "boolean";
     EMPTY_UINT8_ARRAY = new Uint8Array();
+    SYMBOL_ASYNC_DISPOSE = Symbol.asyncDispose || /* @__PURE__ */ Symbol();
   }
 });
 
@@ -121,10 +122,21 @@ function checkSignalOption(signal) {
   }
   return signal || UNDEFINED_VALUE;
 }
+function throwIfAborted(signal) {
+  if (signal && signal.aborted) {
+    throw signal.reason === UNDEFINED_VALUE ? new DOMException(ERR_ABORTED, ABORT_ERROR_NAME) : signal.reason;
+  }
+}
 function checkPasswordOption(password, rawPassword) {
   if (password && typeof password != STRING_TYPE || rawPassword && !(rawPassword instanceof Uint8Array)) {
     throw new Error(ERR_INVALID_PASSWORD_TYPE);
   }
+}
+function checkPassThroughOption(passThrough) {
+  if (passThrough !== UNDEFINED_VALUE && typeof passThrough != BOOLEAN_TYPE && passThrough !== PASS_THROUGH_COMPRESSED) {
+    throw new Error(ERR_INVALID_PASS_THROUGH_VALUE);
+  }
+  return passThrough;
 }
 function checkInteger(value, maxValue, errorMessage) {
   if (!Number.isInteger(value) || value < 0 || value > maxValue) {
@@ -139,7 +151,7 @@ function checkIntegerOption(value, maxValue, errorMessage) {
 function toNumber(value) {
   return typeof value == STRING_TYPE && value.trim() ? Number(value) : value;
 }
-var OPTION_FILENAME_ENCODING, OPTION_COMMENT_ENCODING, OPTION_DECODE_TEXT, OPTION_EXTRACT_PREPENDED_DATA, OPTION_EXTRACT_APPENDED_DATA, OPTION_PASSWORD, OPTION_RAW_PASSWORD, OPTION_PASS_THROUGH, OPTION_SIGNAL, OPTION_CHECK_PASSWORD_ONLY, OPTION_CHECK_OVERLAPPING_ENTRY_ONLY, OPTION_CHECK_OVERLAPPING_ENTRY, OPTION_CHECK_AMBIGUITY, OPTION_CHECK_LOCAL_DIRECTORY, OPTION_CHECK_SIGNATURE, OPTION_CHECK_CRC32, OPTION_CHECK_AUTHENTICATION_CODE, OPTION_USE_WEB_WORKERS, OPTION_USE_COMPRESSION_STREAM, OPTION_TRANSFER_STREAMS, OPTION_PREVENT_CLOSE, OPTION_ENCRYPTION_STRENGTH, OPTION_EXTENDED_TIMESTAMP, OPTION_NTFS_TIMESTAMP, OPTION_KEEP_ORDER, OPTION_LEVEL, OPTION_BUFFERED_WRITE, OPTION_CREATE_TEMP_STREAM, OPTION_DATA_DESCRIPTOR_SIGNATURE, OPTION_USE_UNICODE_FILE_NAMES, OPTION_DATA_DESCRIPTOR, OPTION_SUPPORT_ZIP64_SPLIT_FILE, OPTION_ENCODE_TEXT, OPTION_OFFSET, OPTION_USDZ, OPTION_UNIX_EXTRA_FIELD_TYPE, OPTION_LOCAL_EXTRA_FIELD, OPTION_CENTRAL_EXTRA_FIELD, OPTION_STRICTNESS, OPTION_FILENAME_VALIDATION, OPTION_NORMALIZE_FILENAME, OPTION_MAX_APPENDED_DATA_SIZE, OPTION_DECRYPT_CENTRAL_DIRECTORY, OPTION_SIGN_CENTRAL_DIRECTORY, TEXT_TYPE_FILENAME, TEXT_TYPE_COMMENT, STRICTNESS_STRICT, STRICTNESS_BALANCED, STRICTNESS_TOLERANT, ERR_INVALID_FUNCTION_OPTION, ERR_INVALID_SIGNAL, ERR_INVALID_PASSWORD_TYPE;
+var OPTION_FILENAME_ENCODING, OPTION_COMMENT_ENCODING, OPTION_DECODE_TEXT, OPTION_EXTRACT_PREPENDED_DATA, OPTION_EXTRACT_APPENDED_DATA, OPTION_PASSWORD, OPTION_RAW_PASSWORD, OPTION_PASS_THROUGH, OPTION_SIGNAL, OPTION_CHECK_PASSWORD_ONLY, OPTION_CHECK_OVERLAPPING_ENTRY_ONLY, OPTION_CHECK_OVERLAPPING_ENTRY, OPTION_CHECK_AMBIGUITY, OPTION_CHECK_LOCAL_DIRECTORY, OPTION_CHECK_LOCAL_FILENAME, OPTION_CHECK_SIGNATURE, OPTION_CHECK_CRC32, OPTION_CHECK_AUTHENTICATION_CODE, OPTION_USE_WEB_WORKERS, OPTION_USE_COMPRESSION_STREAM, OPTION_TRANSFER_STREAMS, OPTION_PREVENT_CLOSE, OPTION_ENCRYPTION_STRENGTH, OPTION_EXTENDED_TIMESTAMP, OPTION_NTFS_TIMESTAMP, OPTION_KEEP_ORDER, OPTION_LEVEL, OPTION_BUFFERED_WRITE, OPTION_CREATE_TEMP_STREAM, OPTION_DATA_DESCRIPTOR_SIGNATURE, OPTION_USE_UNICODE_FILE_NAMES, OPTION_DATA_DESCRIPTOR, OPTION_SUPPORT_ZIP64_SPLIT_FILE, OPTION_ENCODE_TEXT, OPTION_OFFSET, OPTION_USDZ, OPTION_UNIX_EXTRA_FIELD_TYPE, OPTION_LOCAL_EXTRA_FIELD, OPTION_CENTRAL_EXTRA_FIELD, OPTION_STRICTNESS, OPTION_FILENAME_VALIDATION, OPTION_NORMALIZE_FILENAME, OPTION_MAX_APPENDED_DATA_SIZE, OPTION_DECRYPT_CENTRAL_DIRECTORY, OPTION_SIGN_CENTRAL_DIRECTORY, OPTION_ENTRY, TEXT_TYPE_FILENAME, TEXT_TYPE_COMMENT, STRICTNESS_STRICT, STRICTNESS_BALANCED, STRICTNESS_TOLERANT, PASS_THROUGH_COMPRESSED, ERR_INVALID_FUNCTION_OPTION, ERR_INVALID_SIGNAL, ERR_INVALID_PASSWORD_TYPE, ERR_INVALID_PASS_THROUGH_VALUE, ERR_ABORTED, ABORT_ERROR_NAME;
 var init_options = __esm({
   "node_modules/@zip.js/zip.js/lib/core/options.js"() {
     init_constants();
@@ -157,6 +169,7 @@ var init_options = __esm({
     OPTION_CHECK_OVERLAPPING_ENTRY = "checkOverlappingEntry";
     OPTION_CHECK_AMBIGUITY = "checkAmbiguity";
     OPTION_CHECK_LOCAL_DIRECTORY = "checkLocalDirectory";
+    OPTION_CHECK_LOCAL_FILENAME = "checkLocalFilename";
     OPTION_CHECK_SIGNATURE = "checkSignature";
     OPTION_CHECK_CRC32 = "checkCrc32";
     OPTION_CHECK_AUTHENTICATION_CODE = "checkAuthenticationCode";
@@ -187,14 +200,19 @@ var init_options = __esm({
     OPTION_MAX_APPENDED_DATA_SIZE = "maxAppendedDataSize";
     OPTION_DECRYPT_CENTRAL_DIRECTORY = "decryptCentralDirectory";
     OPTION_SIGN_CENTRAL_DIRECTORY = "signCentralDirectory";
+    OPTION_ENTRY = "entry";
     TEXT_TYPE_FILENAME = "filename";
     TEXT_TYPE_COMMENT = "comment";
     STRICTNESS_STRICT = "strict";
     STRICTNESS_BALANCED = "balanced";
     STRICTNESS_TOLERANT = "tolerant";
+    PASS_THROUGH_COMPRESSED = "compressed";
     ERR_INVALID_FUNCTION_OPTION = "Invalid option (must be a function)";
     ERR_INVALID_SIGNAL = "Invalid signal (must be an AbortSignal instance)";
     ERR_INVALID_PASSWORD_TYPE = "Invalid password (password must be a string, rawPassword must be a Uint8Array)";
+    ERR_INVALID_PASS_THROUGH_VALUE = "Invalid passThrough option (must be a boolean or 'compressed')";
+    ERR_ABORTED = "The operation was aborted";
+    ABORT_ERROR_NAME = "AbortError";
   }
 });
 
@@ -230,6 +248,14 @@ function checkPropertyValue(propertyName, propertyValue) {
     }
   } else if (FUNCTION_PROPERTY_NAMES.includes(propertyName)) {
     checkFunctionOption(propertyValue);
+  } else if (propertyName == PROPERTY_NAME_BASE_URI) {
+    if (propertyValue && typeof propertyValue != STRING_TYPE) {
+      throw new Error(ERR_INVALID_BASE_URI);
+    }
+  } else if (URI_PROPERTY_NAMES.includes(propertyName)) {
+    if (propertyValue && typeof propertyValue != STRING_TYPE && typeof propertyValue != FUNCTION_TYPE) {
+      throw new Error(ERR_INVALID_URI);
+    }
   }
   return propertyValue;
 }
@@ -259,7 +285,7 @@ function resetConfiguration() {
   }
   Object.assign(config, DEFAULT_CONFIGURATION);
 }
-var DEFAULT_CHUNK_SIZE, MINIMUM_CHUNK_SIZE, MINIMUM_PROPERTY_VALUE, ERR_INVALID_MAX_WORKERS, maxWorkers, DEFAULT_CONFIGURATION, PROPERTY_NAME_MAX_WORKERS, STRING_PROPERTY_NAMES, BOOLEAN_PROPERTY_NAMES, NUMBER_PROPERTY_NAMES, FUNCTION_PROPERTY_NAMES, CONFIGURABLE_PROPERTY_NAMES, config;
+var DEFAULT_CHUNK_SIZE, MINIMUM_CHUNK_SIZE, MINIMUM_PROPERTY_VALUE, ERR_INVALID_MAX_WORKERS, ERR_INVALID_BASE_URI, ERR_INVALID_URI, maxWorkers, DEFAULT_CONFIGURATION, PROPERTY_NAME_MAX_WORKERS, PROPERTY_NAME_BASE_URI, URI_PROPERTY_NAMES, BOOLEAN_PROPERTY_NAMES, NUMBER_PROPERTY_NAMES, FUNCTION_PROPERTY_NAMES, CONFIGURABLE_PROPERTY_NAMES, config;
 var init_configuration = __esm({
   "node_modules/@zip.js/zip.js/lib/core/configuration.js"() {
     init_constants();
@@ -268,6 +294,8 @@ var init_configuration = __esm({
     MINIMUM_CHUNK_SIZE = 64;
     MINIMUM_PROPERTY_VALUE = 1;
     ERR_INVALID_MAX_WORKERS = "Invalid maxWorkers (must be an integer greater than 0)";
+    ERR_INVALID_BASE_URI = "Invalid baseURI (must be a string)";
+    ERR_INVALID_URI = "Invalid URI (must be a string or a function returning a string)";
     maxWorkers = 2;
     try {
       if (typeof navigator != UNDEFINED_TYPE && navigator.hardwareConcurrency) {
@@ -290,8 +318,8 @@ var init_configuration = __esm({
       DecompressionStream: typeof DecompressionStream != UNDEFINED_TYPE && DecompressionStream
     };
     PROPERTY_NAME_MAX_WORKERS = "maxWorkers";
-    STRING_PROPERTY_NAMES = [
-      "baseURI",
+    PROPERTY_NAME_BASE_URI = "baseURI";
+    URI_PROPERTY_NAMES = [
       "wasmURI",
       "workerURI"
     ];
@@ -315,7 +343,8 @@ var init_configuration = __esm({
       "DecompressionStreamFallback"
     ];
     CONFIGURABLE_PROPERTY_NAMES = [
-      ...STRING_PROPERTY_NAMES,
+      PROPERTY_NAME_BASE_URI,
+      ...URI_PROPERTY_NAMES,
       ...BOOLEAN_PROPERTY_NAMES,
       ...NUMBER_PROPERTY_NAMES,
       ...FUNCTION_PROPERTY_NAMES
@@ -373,9 +402,9 @@ var init_crc32 = __esm({
           const view = new DataView(data.buffer, data.byteOffset, length);
           const end = length - 8;
           for (; offset <= end; offset += 8) {
-            const a = crc ^ view.getInt32(offset, true);
+            const a2 = crc ^ view.getInt32(offset, true);
             const b = view.getInt32(offset + 4, true);
-            crc = T7[a & 255] ^ T6[a >>> 8 & 255] ^ T5[a >>> 16 & 255] ^ T4[a >>> 24 & 255] ^ T3[b & 255] ^ T2[b >>> 8 & 255] ^ T1[b >>> 16 & 255] ^ T0[b >>> 24 & 255];
+            crc = T7[a2 & 255] ^ T6[a2 >>> 8 & 255] ^ T5[a2 >>> 16 & 255] ^ T4[a2 >>> 24 & 255] ^ T3[b & 255] ^ T2[b >>> 8 & 255] ^ T1[b >>> 16 & 255] ^ T0[b >>> 24 & 255];
           }
         }
         for (; offset < length; offset++) {
@@ -463,12 +492,12 @@ var init_sjcl = __esm({
        * @param {bitArray} a The array.
        * @return {Number} The length of a, in bits.
        */
-      bitLength(a) {
-        const l2 = a.length;
+      bitLength(a2) {
+        const l2 = a2.length;
         if (l2 === 0) {
           return 0;
         }
-        const x = a[l2 - 1];
+        const x = a2[l2 - 1];
         return (l2 - 1) * 32 + bitArray.getPartial(x);
       },
       /**
@@ -477,17 +506,17 @@ var init_sjcl = __esm({
        * @param {Number} len The length to truncate to, in bits.
        * @return {bitArray} A new array, truncated to len bits.
        */
-      clamp(a, len) {
-        if (a.length * 32 < len) {
-          return a;
+      clamp(a2, len) {
+        if (a2.length * 32 < len) {
+          return a2;
         }
-        a = a.slice(0, Math.ceil(len / 32));
-        const l2 = a.length;
+        a2 = a2.slice(0, Math.ceil(len / 32));
+        const l2 = a2.length;
         len = len & 31;
         if (l2 > 0 && len) {
-          a[l2 - 1] = bitArray.partial(len, a[l2 - 1] & 2147483648 >> len - 1, 1);
+          a2[l2 - 1] = bitArray.partial(len, a2[l2 - 1] & 2147483648 >> len - 1, 1);
         }
-        return a;
+        return a2;
       },
       /**
        * Make a partial word for a bit array.
@@ -517,7 +546,7 @@ var init_sjcl = __esm({
        * @param {bitArray} [out=[]] An array to prepend to the output.
        * @private
        */
-      _shiftRight(a, shift, carry, out) {
+      _shiftRight(a2, shift, carry, out) {
         if (out === void 0) {
           out = [];
         }
@@ -526,13 +555,13 @@ var init_sjcl = __esm({
           carry = 0;
         }
         if (shift === 0) {
-          return out.concat(a);
+          return out.concat(a2);
         }
-        for (let i = 0; i < a.length; i++) {
-          out.push(carry | a[i] >>> shift);
-          carry = a[i] << 32 - shift;
+        for (let i = 0; i < a2.length; i++) {
+          out.push(carry | a2[i] >>> shift);
+          carry = a2[i] << 32 - shift;
         }
-        const last2 = a.length ? a[a.length - 1] : 0;
+        const last2 = a2.length ? a2[a2.length - 1] : 0;
         const shift2 = bitArray.getPartial(last2);
         out.push(bitArray.partial(shift + shift2 & 31, shift + shift2 > 32 ? carry : out.pop(), 1));
         return out;
@@ -616,10 +645,10 @@ var init_sjcl = __esm({
         if (nl > 9007199254740991) {
           throw new Error("Cannot hash more than 2^53 - 1 bits");
         }
-        const c2 = new Uint32Array(b);
+        const c = new Uint32Array(b);
         let j = 0;
         for (let i = sha1.blockSize + ol - (sha1.blockSize + ol & sha1.blockSize - 1); i <= nl; i += sha1.blockSize) {
-          sha1._block(c2.subarray(16 * j, 16 * (j + 1)));
+          sha1._block(c.subarray(16 * j, 16 * (j + 1)));
           j += 1;
         }
         b.splice(0, 16 * j);
@@ -649,15 +678,15 @@ var init_sjcl = __esm({
        * The SHA-1 logical functions f(0), f(1), ..., f(79).
        * @private
        */
-      _f(t3, b, c2, d) {
+      _f(t3, b, c, d) {
         if (t3 <= 19) {
-          return b & c2 | ~b & d;
+          return b & c | ~b & d;
         } else if (t3 <= 39) {
-          return b ^ c2 ^ d;
+          return b ^ c ^ d;
         } else if (t3 <= 59) {
-          return b & c2 | b & d | c2 & d;
+          return b & c | b & d | c & d;
         } else if (t3 <= 79) {
-          return b ^ c2 ^ d;
+          return b ^ c ^ d;
         }
       }
       /**
@@ -679,25 +708,25 @@ var init_sjcl = __esm({
         for (let j = 0; j < 16; j++) {
           w[j] = words[j];
         }
-        let a = h[0];
+        let a2 = h[0];
         let b = h[1];
-        let c2 = h[2];
+        let c = h[2];
         let d = h[3];
         let e3 = h[4];
         for (let t3 = 0; t3 <= 79; t3++) {
           if (t3 >= 16) {
             w[t3] = sha1._S(1, w[t3 - 3] ^ w[t3 - 8] ^ w[t3 - 14] ^ w[t3 - 16]);
           }
-          const tmp = sha1._S(5, a) + sha1._f(t3, b, c2, d) + e3 + w[t3] + sha1._key[Math.floor(t3 / 20)] | 0;
+          const tmp = sha1._S(5, a2) + sha1._f(t3, b, c, d) + e3 + w[t3] + sha1._key[Math.floor(t3 / 20)] | 0;
           e3 = d;
-          d = c2;
-          c2 = sha1._S(30, b);
-          b = a;
-          a = tmp;
+          d = c;
+          c = sha1._S(30, b);
+          b = a2;
+          a2 = tmp;
         }
-        h[0] = h[0] + a | 0;
+        h[0] = h[0] + a2 | 0;
         h[1] = h[1] + b | 0;
-        h[2] = h[2] + c2 | 0;
+        h[2] = h[2] + c | 0;
         h[3] = h[3] + d | 0;
         h[4] = h[4] + e3 | 0;
       }
@@ -814,29 +843,29 @@ var init_sjcl = __esm({
         const t22 = table[2];
         const t3 = table[3];
         const sbox = table[4];
-        let a = input[0] ^ key[0];
+        let a2 = input[0] ^ key[0];
         let b = input[dir ? 3 : 1] ^ key[1];
-        let c2 = input[2] ^ key[2];
+        let c = input[2] ^ key[2];
         let d = input[dir ? 1 : 3] ^ key[3];
         let kIndex = 4;
-        let a2, b2, c22;
+        let a22, b2, c2;
         for (let i = 0; i < nInnerRounds; i++) {
-          a2 = t0[a >>> 24] ^ t1[b >> 16 & 255] ^ t22[c2 >> 8 & 255] ^ t3[d & 255] ^ key[kIndex];
-          b2 = t0[b >>> 24] ^ t1[c2 >> 16 & 255] ^ t22[d >> 8 & 255] ^ t3[a & 255] ^ key[kIndex + 1];
-          c22 = t0[c2 >>> 24] ^ t1[d >> 16 & 255] ^ t22[a >> 8 & 255] ^ t3[b & 255] ^ key[kIndex + 2];
-          d = t0[d >>> 24] ^ t1[a >> 16 & 255] ^ t22[b >> 8 & 255] ^ t3[c2 & 255] ^ key[kIndex + 3];
+          a22 = t0[a2 >>> 24] ^ t1[b >> 16 & 255] ^ t22[c >> 8 & 255] ^ t3[d & 255] ^ key[kIndex];
+          b2 = t0[b >>> 24] ^ t1[c >> 16 & 255] ^ t22[d >> 8 & 255] ^ t3[a2 & 255] ^ key[kIndex + 1];
+          c2 = t0[c >>> 24] ^ t1[d >> 16 & 255] ^ t22[a2 >> 8 & 255] ^ t3[b & 255] ^ key[kIndex + 2];
+          d = t0[d >>> 24] ^ t1[a2 >> 16 & 255] ^ t22[b >> 8 & 255] ^ t3[c & 255] ^ key[kIndex + 3];
           kIndex += 4;
-          a = a2;
+          a2 = a22;
           b = b2;
-          c2 = c22;
+          c = c2;
         }
         for (let i = 0; i < 4; i++) {
-          out[dir ? 3 & -i : i] = sbox[a >>> 24] << 24 ^ sbox[b >> 16 & 255] << 16 ^ sbox[c2 >> 8 & 255] << 8 ^ sbox[d & 255] ^ key[kIndex++];
-          a2 = a;
-          a = b;
-          b = c2;
-          c2 = d;
-          d = a2;
+          out[dir ? 3 & -i : i] = sbox[a2 >>> 24] << 24 ^ sbox[b >> 16 & 255] << 16 ^ sbox[c >> 8 & 255] << 8 ^ sbox[d & 255] ^ key[kIndex++];
+          a22 = a2;
+          a2 = b;
+          b = c;
+          c = d;
+          d = a22;
         }
         return out;
       }
@@ -918,22 +947,22 @@ var init_sjcl = __esm({
           throw new Error("invalid params to pbkdf2");
         }
         const byteLength = (length >> 5) + 1 << 2;
-        let u2, ui, i, j, k;
+        let u, ui, i, j, k;
         const arrayBuffer = new ArrayBuffer(byteLength);
         const out = new DataView(arrayBuffer);
         let outLength = 0;
         const b = bitArray;
         salt = codec.bytes.toBits(salt);
         for (k = 1; outLength < (byteLength || 1); k++) {
-          u2 = ui = prf.encrypt(b.concat(salt, [k]));
+          u = ui = prf.encrypt(b.concat(salt, [k]));
           for (i = 1; i < count; i++) {
             ui = prf.encrypt(ui);
             for (j = 0; j < ui.length; j++) {
-              u2[j] ^= ui[j];
+              u[j] ^= ui[j];
             }
           }
-          for (i = 0; outLength < (byteLength || 1) && i < u2.length; i++) {
-            out.setInt32(outLength, u2[i]);
+          for (i = 0; outLength < (byteLength || 1) && i < u.length; i++) {
+            out.setInt32(outLength, u[i]);
             outLength += 4;
           }
         }
@@ -995,14 +1024,13 @@ function getRandomValues(array) {
     throw new Error(ERR_UNSUPPORTED_CRYPTO_API);
   }
 }
-var GET_RANDOM_VALUES_SUPPORTED, ERR_INVALID_PASSWORD, ERR_INVALID_SIGNATURE, ERR_INVALID_AUTHENTICATION_CODE, ERR_ABORT_CHECK_PASSWORD, ERR_UNSUPPORTED_CRYPTO_API;
+var GET_RANDOM_VALUES_SUPPORTED, ERR_INVALID_PASSWORD, ERR_INVALID_AUTHENTICATION_CODE, ERR_ABORT_CHECK_PASSWORD, ERR_UNSUPPORTED_CRYPTO_API;
 var init_common_crypto = __esm({
   "node_modules/@zip.js/zip.js/lib/core/streams/common-crypto.js"() {
     init_constants();
     GET_RANDOM_VALUES_SUPPORTED = typeof crypto != UNDEFINED_TYPE && typeof crypto.getRandomValues == FUNCTION_TYPE;
     ERR_INVALID_PASSWORD = "Invalid password";
-    ERR_INVALID_SIGNATURE = "Invalid signature";
-    ERR_INVALID_AUTHENTICATION_CODE = ERR_INVALID_SIGNATURE;
+    ERR_INVALID_AUTHENTICATION_CODE = "Invalid authentication code";
     ERR_ABORT_CHECK_PASSWORD = "zipjs-abort-check-password";
     ERR_UNSUPPORTED_CRYPTO_API = "Crypto API not supported";
   }
@@ -1496,13 +1524,14 @@ async function ensureCodecStreams(format, codecURI) {
     ));
   }
 }
-var ERR_INVALID_CODEC_DEFINITION, ERR_RESERVED_COMPRESSION_METHOD, ERR_INVALID_CODEC_MODULE, RESERVED_COMPRESSION_METHODS, registeredCodecs, codecStreams;
+var ERR_INVALID_CODEC_DEFINITION, ERR_RESERVED_COMPRESSION_METHOD, ERR_INVALID_CODEC_MODULE, ERR_UNSUPPORTED_COMPRESSION, RESERVED_COMPRESSION_METHODS, registeredCodecs, codecStreams;
 var init_codec_registry = __esm({
   "node_modules/@zip.js/zip.js/lib/core/codec-registry.js"() {
     init_constants();
     ERR_INVALID_CODEC_DEFINITION = "Invalid codec definition";
     ERR_RESERVED_COMPRESSION_METHOD = "Reserved compression method";
     ERR_INVALID_CODEC_MODULE = "Invalid codec module";
+    ERR_UNSUPPORTED_COMPRESSION = "Compression method not supported";
     RESERVED_COMPRESSION_METHODS = [
       COMPRESSION_METHOD_STORE,
       COMPRESSION_METHOD_DEFLATE,
@@ -1703,7 +1732,7 @@ function mapInflateStreamError(readable) {
     }
   });
 }
-var ERR_INVALID_UNCOMPRESSED_SIZE, ERR_INVALID_COMPRESSED_DATA, ERR_INVALID_CRC32, ERR_UNSUPPORTED_COMPRESSION, FORMAT_DEFLATE_RAW, FORMAT_DEFLATE64_RAW, FORMAT_GZIP, GZIP_HEADER_LENGTH, GZIP_TRAILER_LENGTH, GZIP_HEADER_BYTES, GZIP_OUTPUT_STALL_TIMEOUT, DeflateStream, GzipToRawDeflateStream, InflateStream, formatSupportByStream;
+var ERR_INVALID_UNCOMPRESSED_SIZE, ERR_INVALID_COMPRESSED_DATA, ERR_INVALID_CRC32, FORMAT_DEFLATE_RAW, FORMAT_DEFLATE64_RAW, FORMAT_GZIP, GZIP_HEADER_LENGTH, GZIP_TRAILER_LENGTH, GZIP_HEADER_BYTES, GZIP_OUTPUT_STALL_TIMEOUT, DeflateStream, GzipToRawDeflateStream, InflateStream, formatSupportByStream;
 var init_zip_entry_stream = __esm({
   "node_modules/@zip.js/zip.js/lib/core/streams/zip-entry-stream.js"() {
     init_crc32();
@@ -1717,8 +1746,7 @@ var init_zip_entry_stream = __esm({
     init_codec_registry();
     ERR_INVALID_UNCOMPRESSED_SIZE = "Invalid uncompressed size";
     ERR_INVALID_COMPRESSED_DATA = "Invalid compressed data";
-    ERR_INVALID_CRC32 = ERR_INVALID_SIGNATURE;
-    ERR_UNSUPPORTED_COMPRESSION = "Compression method not supported";
+    ERR_INVALID_CRC32 = "Invalid CRC32";
     FORMAT_DEFLATE_RAW = "deflate-raw";
     FORMAT_DEFLATE64_RAW = "deflate64-raw";
     FORMAT_GZIP = "gzip";
@@ -1942,6 +1970,7 @@ var init_codec_stream = __esm({
       constructor(chunkSize) {
         const pendingChunks = [];
         let pendingLength = 0;
+        let outputSize = 0;
         if (!Number.isFinite(chunkSize) || chunkSize < 1) {
           chunkSize = DEFAULT_CHUNK_SIZE2;
         }
@@ -1950,14 +1979,19 @@ var init_codec_stream = __esm({
             pendingChunks.push(chunk);
             pendingLength += chunk.length;
             while (pendingLength > chunkSize) {
+              outputSize += chunkSize;
               controller.enqueue(shiftChunk());
             }
           },
           flush(controller) {
             if (pendingLength) {
+              outputSize += pendingLength;
               controller.enqueue(concatChunks(pendingChunks, pendingLength));
             }
           }
+        });
+        Object.defineProperty(this, "outputSize", {
+          get: () => outputSize
         });
         function shiftChunk() {
           const result = new Uint8Array(chunkSize);
@@ -2040,7 +2074,7 @@ function createWorkerInterface(workerData, config2) {
   };
 }
 async function runWorker({ options, readable, writable, onTaskFinished }, config2) {
-  let codecStream;
+  let codecStream, chunkStream;
   try {
     if (options.compressed && !options.format) {
       const deflate = options.codecType.startsWith(CODEC_DEFLATE);
@@ -2062,7 +2096,8 @@ async function runWorker({ options, readable, writable, onTaskFinished }, config
       }
     }
     codecStream = new CodecStream(options, config2);
-    await readable.pipeThrough(codecStream).pipeThrough(new ChunkStream(getChunkSize(config2))).pipeTo(writable, { preventClose: true, preventAbort: true });
+    chunkStream = new ChunkStream(getChunkSize(config2));
+    await readable.pipeThrough(codecStream).pipeThrough(chunkStream).pipeTo(writable, { preventClose: true, preventAbort: true });
     const {
       crc32,
       inputSize,
@@ -2075,7 +2110,7 @@ async function runWorker({ options, readable, writable, onTaskFinished }, config
     };
   } catch (error) {
     if (codecStream) {
-      error.outputSize = codecStream.outputSize;
+      error.outputSize = chunkStream ? chunkStream.outputSize : 0;
     }
     throw error;
   } finally {
@@ -2297,21 +2332,16 @@ var init_codec_pool = __esm({
 
 // node_modules/@zip.js/zip.js/lib/core/util/decode-cp437.js
 function decodeCP437(stringValue) {
-  if (VALID_CP437) {
-    let result = "";
-    for (let indexCharacter = 0; indexCharacter < stringValue.length; indexCharacter++) {
-      result += CP437[stringValue[indexCharacter]];
-    }
-    return result;
-  } else {
-    return new TextDecoder().decode(stringValue);
+  let result = "";
+  for (let indexCharacter = 0; indexCharacter < stringValue.length; indexCharacter++) {
+    result += CP437[stringValue[indexCharacter]];
   }
+  return result;
 }
-var CP437, VALID_CP437;
+var CP437;
 var init_decode_cp437 = __esm({
   "node_modules/@zip.js/zip.js/lib/core/util/decode-cp437.js"() {
     CP437 = "\0\u263A\u263B\u2665\u2666\u2663\u2660\u2022\u25D8\u25CB\u25D9\u2642\u2640\u266A\u266B\u263C\u25BA\u25C4\u2195\u203C\xB6\xA7\u25AC\u21A8\u2191\u2193\u2192\u2190\u221F\u2194\u25B2\u25BC !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~\u2302\xC7\xFC\xE9\xE2\xE4\xE0\xE5\xE7\xEA\xEB\xE8\xEF\xEE\xEC\xC4\xC5\xC9\xE6\xC6\xF4\xF6\xF2\xFB\xF9\xFF\xD6\xDC\xA2\xA3\xA5\u20A7\u0192\xE1\xED\xF3\xFA\xF1\xD1\xAA\xBA\xBF\u2310\xAC\xBD\xBC\xA1\xAB\xBB\u2591\u2592\u2593\u2502\u2524\u2561\u2562\u2556\u2555\u2563\u2551\u2557\u255D\u255C\u255B\u2510\u2514\u2534\u252C\u251C\u2500\u253C\u255E\u255F\u255A\u2554\u2569\u2566\u2560\u2550\u256C\u2567\u2568\u2564\u2565\u2559\u2558\u2552\u2553\u256B\u256A\u2518\u250C\u2588\u2584\u258C\u2590\u2580\u03B1\xDF\u0393\u03C0\u03A3\u03C3\xB5\u03C4\u03A6\u0398\u03A9\u03B4\u221E\u03C6\u03B5\u2229\u2261\xB1\u2265\u2264\u2320\u2321\xF7\u2248\xB0\u2219\xB7\u221A\u207F\xB2\u25A0\xA0".split("");
-    VALID_CP437 = CP437.length == 256;
   }
 });
 
@@ -2618,7 +2648,7 @@ async function getContentLength(httpReader, sendRequest, getRequestData2) {
 }
 async function sendFetchRequest(method, { fetch: fetchFunction = fetch, options, url }, headers) {
   const response = await fetchFunction(url, Object.assign({}, options, { method, headers }));
-  if (response.status < 400) {
+  if (response.status >= MIN_SUCCESS_HTTP_STATUS && response.status <= MAX_SUCCESS_HTTP_STATUS) {
     return response;
   } else {
     throw response.status == 416 ? new Error(ERR_HTTP_RANGE) : new Error(ERR_HTTP_STATUS + (response.statusText || response.status));
@@ -2628,7 +2658,7 @@ function sendXMLHttpRequest(method, { url }, headers) {
   return new Promise((resolve, reject) => {
     const request = new XMLHttpRequest();
     request.addEventListener("load", () => {
-      if (request.status < 400) {
+      if (request.status >= MIN_SUCCESS_HTTP_STATUS && request.status <= MAX_SUCCESS_HTTP_STATUS) {
         const headers2 = [];
         request.getAllResponseHeaders().trim().split(/[\r\n]+/).forEach((header) => {
           const splitHeader = header.trim().split(/\s*:\s*/);
@@ -2691,7 +2721,7 @@ function createReadable(reader, options) {
     return reader.readable;
   }
 }
-var ERR_HTTP_STATUS, ERR_HTTP_RANGE, ERR_HTTP_RESOURCE_CHANGED, ERR_ITERATOR_COMPLETED_TOO_SOON, ERR_WRITER_NOT_INITIALIZED, CONTENT_TYPE_TEXT_PLAIN, HTTP_HEADER_CONTENT_LENGTH, HTTP_HEADER_CONTENT_ENCODING, HTTP_HEADER_CONTENT_RANGE, HTTP_HEADER_ACCEPT_RANGES, HTTP_HEADER_RANGE, HTTP_HEADER_ETAG, HTTP_HEADER_LAST_MODIFIED, HTTP_METHOD_HEAD, HTTP_METHOD_GET, HTTP_RANGE_UNIT, DEFAULT_BUFFER_SIZE, DEFAULT_MAXIMUM_RANGE_SIZE, PROPERTY_NAME_WRITABLE, DISK_BOUNDARY, Stream, Reader, Writer, Data64URIReader, Data64URIWriter, blobSliceReliable, blobSliceProbe, BlobReader, BlobWriter, TextReader, TextWriter, FetchReader, XHRReader, HttpReader, HttpRangeReader, Uint8ArrayReader, Uint8ArrayWriter, SplitDataReader, SplitDataWriter, GenericReader, GenericWriter;
+var ERR_HTTP_STATUS, MIN_SUCCESS_HTTP_STATUS, MAX_SUCCESS_HTTP_STATUS, ERR_HTTP_RANGE, ERR_HTTP_RESOURCE_CHANGED, ERR_ITERATOR_COMPLETED_TOO_SOON, ERR_WRITER_NOT_INITIALIZED, ERR_WRITER_SIZE_NOT_WRITABLE, CONTENT_TYPE_TEXT_PLAIN, HTTP_HEADER_CONTENT_LENGTH, HTTP_HEADER_CONTENT_ENCODING, HTTP_HEADER_CONTENT_RANGE, HTTP_HEADER_ACCEPT_RANGES, HTTP_HEADER_RANGE, HTTP_HEADER_ETAG, HTTP_HEADER_LAST_MODIFIED, HTTP_METHOD_HEAD, HTTP_METHOD_GET, HTTP_RANGE_UNIT, DEFAULT_BUFFER_SIZE, DEFAULT_MAXIMUM_RANGE_SIZE, PROPERTY_NAME_WRITABLE, DISK_BOUNDARY, Stream, Reader, Writer, Data64URIReader, Data64URIWriter, blobSliceReliable, blobSliceProbe, BlobReader, BlobWriter, TextReader, TextWriter, FetchReader, XHRReader, HttpReader, HttpRangeReader, Uint8ArrayReader, Uint8ArrayWriter, SplitDataReader, SplitDataWriter, GenericReader, GenericWriter;
 var init_io = __esm({
   "node_modules/@zip.js/zip.js/lib/core/io.js"() {
     init_constants();
@@ -2700,10 +2730,13 @@ var init_io = __esm({
     init_compatible_streams();
     init_decode_text();
     ERR_HTTP_STATUS = "HTTP error ";
+    MIN_SUCCESS_HTTP_STATUS = 200;
+    MAX_SUCCESS_HTTP_STATUS = 299;
     ERR_HTTP_RANGE = "HTTP Range not supported";
     ERR_HTTP_RESOURCE_CHANGED = "HTTP resource changed";
     ERR_ITERATOR_COMPLETED_TOO_SOON = "Writer iterator completed too soon";
     ERR_WRITER_NOT_INITIALIZED = "Writer not initialized";
+    ERR_WRITER_SIZE_NOT_WRITABLE = "Invalid writer (size must be writable)";
     CONTENT_TYPE_TEXT_PLAIN = "text/plain";
     HTTP_HEADER_CONTENT_LENGTH = "Content-Length";
     HTTP_HEADER_CONTENT_ENCODING = "Content-Encoding";
@@ -2741,11 +2774,10 @@ var init_io = __esm({
             const data = await readUint8Array(reader, offset + chunkOffset, dataSize);
             if (data.length) {
               controller.enqueue(data);
+              chunkOffset += data.length;
             }
-            if (chunkOffset + chunkSize >= size || !data.length && dataSize) {
+            if (size !== UNDEFINED_VALUE && chunkOffset >= size || !data.length && dataSize) {
               controller.close();
-            } else {
-              chunkOffset += chunkSize;
             }
           }
         });
@@ -2853,11 +2885,13 @@ var init_io = __esm({
         const reader = this;
         const { sourceBlob, size } = reader;
         const { offset = 0, size: readSize = size - offset } = options || {};
-        if (!offset && readSize >= size) {
-          return toCompatibleReadable(sourceBlob.stream());
-        }
-        if (blobSliceReliable) {
-          return toCompatibleReadable(sourceBlob.slice(offset, offset + readSize).stream());
+        if (typeof sourceBlob.stream == FUNCTION_TYPE) {
+          if (!offset && readSize >= size) {
+            return toCompatibleReadable(sourceBlob.stream());
+          }
+          if (blobSliceReliable) {
+            return toCompatibleReadable(sourceBlob.slice(offset, offset + readSize).stream());
+          }
         }
         return super.createReadable(options);
       }
@@ -3199,8 +3233,10 @@ var init_io = __esm({
             writable: toCompatibleWritable(writer)
           };
         }
-        if (writer.size === UNDEFINED_VALUE) {
-          writer.size = 0;
+        try {
+          writer.size = writer.size === UNDEFINED_VALUE ? 0 : writer.size;
+        } catch {
+          throw new Error(ERR_WRITER_SIZE_NOT_WRITABLE);
         }
         return writer;
       }
@@ -3208,10 +3244,43 @@ var init_io = __esm({
   }
 });
 
+// node_modules/@zip.js/zip.js/lib/core/util/warnings.js
+function addWarning(warnings, reason, filename) {
+  if (!warnings.some((warning) => warning.reason == reason)) {
+    const warning = { reason };
+    if (filename !== UNDEFINED_VALUE) {
+      warning.filename = filename;
+    }
+    warnings.push(warning);
+  }
+}
+var init_warnings = __esm({
+  "node_modules/@zip.js/zip.js/lib/core/util/warnings.js"() {
+    init_constants();
+  }
+});
+
 // node_modules/@zip.js/zip.js/lib/core/zip-entry.js
-var PROPERTY_NAME_FILENAME, PROPERTY_NAME_RAW_FILENAME, PROPERTY_NAME_COMMENT, PROPERTY_NAME_RAW_COMMENT, PROPERTY_NAME_UNCOMPRESSED_SIZE, PROPERTY_NAME_COMPRESSED_SIZE, PROPERTY_NAME_OFFSET, PROPERTY_NAME_DISK_NUMBER_START, PROPERTY_NAME_LAST_MODIFICATION_DATE, PROPERTY_NAME_RAW_LAST_MODIFICATION_DATE, PROPERTY_NAME_LAST_ACCESS_DATE, PROPERTY_NAME_RAW_LAST_ACCESS_DATE, PROPERTY_NAME_CREATION_DATE, PROPERTY_NAME_RAW_CREATION_DATE, PROPERTY_NAME_INTERNAL_FILE_ATTRIBUTES, PROPERTY_NAME_EXTERNAL_FILE_ATTRIBUTES, PROPERTY_NAME_DEPRECATED_INTERNAL_FILE_ATTRIBUTES, PROPERTY_NAME_DEPRECATED_EXTERNAL_FILE_ATTRIBUTES, PROPERTY_NAME_MSDOS_ATTRIBUTES_RAW, PROPERTY_NAME_MSDOS_ATTRIBUTES, PROPERTY_NAME_MS_DOS_COMPATIBLE, PROPERTY_NAME_ZIP64, PROPERTY_NAME_ENCRYPTED, PROPERTY_NAME_VERSION, PROPERTY_NAME_VERSION_MADE_BY, PROPERTY_NAME_ZIPCRYPTO, PROPERTY_NAME_DIRECTORY, PROPERTY_NAME_EXECUTABLE, PROPERTY_NAME_SYMLINK, PROPERTY_NAME_COMPRESSION_METHOD, PROPERTY_NAME_SIGNATURE, PROPERTY_NAME_CRC32, PROPERTY_NAME_EXTRA_FIELD, PROPERTY_NAME_EXTRA_FIELD_INFOZIP, PROPERTY_NAME_EXTRA_FIELD_UNIX, PROPERTY_NAME_EXTRA_FIELD_UNIX_TYPE1, PROPERTY_NAME_EXTRA_FIELD_PKWARE_UNIX, PROPERTY_NAME_UID, PROPERTY_NAME_GID, PROPERTY_NAME_UNIX_MODE, PROPERTY_NAME_SETUID, PROPERTY_NAME_SETGID, PROPERTY_NAME_STICKY, PROPERTY_NAME_BITFLAG, PROPERTY_NAME_RAW_BITFLAG, PROPERTY_NAME_FILENAME_LENGTH, PROPERTY_NAME_EXTRA_FIELD_LENGTH, PROPERTY_NAME_UNIX_EXTERNAL_UPPER, PROPERTY_NAME_FILENAME_UTF8, PROPERTY_NAME_COMMENT_UTF8, PROPERTY_NAME_RAW_EXTRA_FIELD, PROPERTY_NAME_EXTRA_FIELD_ZIP64, PROPERTY_NAME_EXTRA_FIELD_UNICODE_PATH, PROPERTY_NAME_EXTRA_FIELD_UNICODE_COMMENT, PROPERTY_NAME_EXTRA_FIELD_AES, PROPERTY_NAME_EXTRA_FIELD_NTFS, PROPERTY_NAME_EXTRA_FIELD_EXTENDED_TIMESTAMP, PROPERTY_NAME_EXTRA_FIELD_USDZ, PROPERTY_NAMES, Entry;
+function getUserExtraField(extraField) {
+  if (extraField) {
+    const userExtraField = /* @__PURE__ */ new Map();
+    extraField.forEach((field, type) => {
+      if (!INTERPRETED_EXTRA_FIELD_TYPES.has(type)) {
+        userExtraField.set(type, field.data);
+      }
+    });
+    if (userExtraField.size) {
+      return userExtraField;
+    }
+  }
+}
+function getEncryptionOverhead(encrypted, zipCrypto, encryptionStrength) {
+  return encrypted ? zipCrypto ? 12 : 16 + encryptionStrength * 4 : 0;
+}
+var PROPERTY_NAME_FILENAME, PROPERTY_NAME_RAW_FILENAME, PROPERTY_NAME_COMMENT, PROPERTY_NAME_RAW_COMMENT, PROPERTY_NAME_UNCOMPRESSED_SIZE, PROPERTY_NAME_COMPRESSED_SIZE, PROPERTY_NAME_OFFSET, PROPERTY_NAME_DISK_NUMBER_START, PROPERTY_NAME_LAST_MODIFICATION_DATE, PROPERTY_NAME_RAW_LAST_MODIFICATION_DATE, PROPERTY_NAME_LAST_ACCESS_DATE, PROPERTY_NAME_RAW_LAST_ACCESS_DATE, PROPERTY_NAME_CREATION_DATE, PROPERTY_NAME_RAW_CREATION_DATE, PROPERTY_NAME_INTERNAL_FILE_ATTRIBUTES, PROPERTY_NAME_EXTERNAL_FILE_ATTRIBUTES, PROPERTY_NAME_MSDOS_ATTRIBUTES_RAW, PROPERTY_NAME_MSDOS_ATTRIBUTES, PROPERTY_NAME_MS_DOS_COMPATIBLE, PROPERTY_NAME_ZIP64, PROPERTY_NAME_ENCRYPTED, PROPERTY_NAME_VERSION, PROPERTY_NAME_VERSION_MADE_BY, PROPERTY_NAME_ZIPCRYPTO, PROPERTY_NAME_DIRECTORY, PROPERTY_NAME_EXECUTABLE, PROPERTY_NAME_SYMLINK, PROPERTY_NAME_COMPRESSION_METHOD, PROPERTY_NAME_SIGNATURE, PROPERTY_NAME_CRC32, PROPERTY_NAME_EXTRA_FIELD, PROPERTY_NAME_EXTRA_FIELD_INFOZIP, PROPERTY_NAME_EXTRA_FIELD_UNIX, PROPERTY_NAME_EXTRA_FIELD_UNIX_TYPE1, PROPERTY_NAME_EXTRA_FIELD_PKWARE_UNIX, PROPERTY_NAME_UID, PROPERTY_NAME_GID, PROPERTY_NAME_UNIX_MODE, PROPERTY_NAME_SETUID, PROPERTY_NAME_SETGID, PROPERTY_NAME_STICKY, PROPERTY_NAME_BITFLAG, PROPERTY_NAME_RAW_BITFLAG, PROPERTY_NAME_FILENAME_LENGTH, PROPERTY_NAME_EXTRA_FIELD_LENGTH, PROPERTY_NAME_UNIX_EXTERNAL_UPPER, PROPERTY_NAME_FILENAME_UTF8, PROPERTY_NAME_COMMENT_UTF8, PROPERTY_NAME_RAW_EXTRA_FIELD, PROPERTY_NAME_EXTRA_FIELD_ZIP64, PROPERTY_NAME_EXTRA_FIELD_UNICODE_PATH, PROPERTY_NAME_EXTRA_FIELD_UNICODE_COMMENT, PROPERTY_NAME_EXTRA_FIELD_AES, PROPERTY_NAME_EXTRA_FIELD_NTFS, PROPERTY_NAME_EXTRA_FIELD_EXTENDED_TIMESTAMP, PROPERTY_NAME_EXTRA_FIELD_USDZ, PROPERTY_NAMES, Entry, INTERPRETED_EXTRA_FIELD_TYPES;
 var init_zip_entry = __esm({
   "node_modules/@zip.js/zip.js/lib/core/zip-entry.js"() {
+    init_constants();
     PROPERTY_NAME_FILENAME = "filename";
     PROPERTY_NAME_RAW_FILENAME = "rawFilename";
     PROPERTY_NAME_COMMENT = "comment";
@@ -3228,8 +3297,6 @@ var init_zip_entry = __esm({
     PROPERTY_NAME_RAW_CREATION_DATE = "rawCreationDate";
     PROPERTY_NAME_INTERNAL_FILE_ATTRIBUTES = "internalFileAttributes";
     PROPERTY_NAME_EXTERNAL_FILE_ATTRIBUTES = "externalFileAttributes";
-    PROPERTY_NAME_DEPRECATED_INTERNAL_FILE_ATTRIBUTES = "internalFileAttribute";
-    PROPERTY_NAME_DEPRECATED_EXTERNAL_FILE_ATTRIBUTES = "externalFileAttribute";
     PROPERTY_NAME_MSDOS_ATTRIBUTES_RAW = "msdosAttributesRaw";
     PROPERTY_NAME_MSDOS_ATTRIBUTES = "msdosAttributes";
     PROPERTY_NAME_MS_DOS_COMPATIBLE = "msDosCompatible";
@@ -3287,8 +3354,6 @@ var init_zip_entry = __esm({
       PROPERTY_NAME_DISK_NUMBER_START,
       PROPERTY_NAME_INTERNAL_FILE_ATTRIBUTES,
       PROPERTY_NAME_EXTERNAL_FILE_ATTRIBUTES,
-      PROPERTY_NAME_DEPRECATED_INTERNAL_FILE_ATTRIBUTES,
-      PROPERTY_NAME_DEPRECATED_EXTERNAL_FILE_ATTRIBUTES,
       PROPERTY_NAME_MSDOS_ATTRIBUTES_RAW,
       PROPERTY_NAME_MSDOS_ATTRIBUTES,
       PROPERTY_NAME_MS_DOS_COMPATIBLE,
@@ -3335,6 +3400,19 @@ var init_zip_entry = __esm({
         PROPERTY_NAMES.forEach((name) => this[name] = data[name]);
       }
     };
+    INTERPRETED_EXTRA_FIELD_TYPES = /* @__PURE__ */ new Set([
+      EXTRAFIELD_TYPE_ZIP64,
+      EXTRAFIELD_TYPE_AES,
+      EXTRAFIELD_TYPE_NTFS,
+      EXTRAFIELD_TYPE_EXTENDED_TIMESTAMP,
+      EXTRAFIELD_TYPE_UNICODE_PATH,
+      EXTRAFIELD_TYPE_UNICODE_COMMENT,
+      EXTRAFIELD_TYPE_USDZ,
+      EXTRAFIELD_TYPE_INFOZIP,
+      EXTRAFIELD_TYPE_UNIX,
+      EXTRAFIELD_TYPE_UNIX_TYPE1,
+      EXTRAFIELD_TYPE_PKWARE_UNIX
+    ]);
   }
 });
 
@@ -3356,14 +3434,13 @@ __export(zip_reader_exports, {
   ERR_INVALID_FILENAME_VALIDATION: () => ERR_INVALID_FILENAME_VALIDATION,
   ERR_INVALID_MAX_APPENDED_DATA_SIZE: () => ERR_INVALID_MAX_APPENDED_DATA_SIZE,
   ERR_INVALID_PASSWORD: () => ERR_INVALID_PASSWORD,
-  ERR_INVALID_SIGNATURE: () => ERR_INVALID_SIGNATURE,
   ERR_INVALID_STRICTNESS: () => ERR_INVALID_STRICTNESS,
   ERR_INVALID_UNCOMPRESSED_SIZE: () => ERR_INVALID_UNCOMPRESSED_SIZE,
   ERR_LOCAL_FILE_HEADER_NOT_FOUND: () => ERR_LOCAL_FILE_HEADER_NOT_FOUND,
   ERR_OVERLAPPING_ENTRY: () => ERR_OVERLAPPING_ENTRY,
   ERR_SPLIT_ZIP_FILE: () => ERR_SPLIT_ZIP_FILE,
   ERR_UNSAFE_FILENAME: () => ERR_UNSAFE_FILENAME,
-  ERR_UNSUPPORTED_COMPRESSION: () => ERR_UNSUPPORTED_COMPRESSION2,
+  ERR_UNSUPPORTED_COMPRESSION: () => ERR_UNSUPPORTED_COMPRESSION,
   ERR_UNSUPPORTED_ENCRYPTION: () => ERR_UNSUPPORTED_ENCRYPTION,
   ERR_UNSUPPORTED_UINT64: () => ERR_UNSUPPORTED_UINT64,
   ERR_WORKER_STARTUP_TIMEOUT: () => ERR_WORKER_STARTUP_TIMEOUT,
@@ -3374,7 +3451,10 @@ __export(zip_reader_exports, {
   WARNING_MISMATCHED_LOCAL_FILE_HEADER_BIT_FLAG: () => WARNING_MISMATCHED_LOCAL_FILE_HEADER_BIT_FLAG,
   WARNING_MISMATCHED_LOCAL_FILE_HEADER_COMPRESSION_METHOD: () => WARNING_MISMATCHED_LOCAL_FILE_HEADER_COMPRESSION_METHOD,
   WARNING_MISMATCHED_LOCAL_FILE_HEADER_CRC32_OR_SIZES: () => WARNING_MISMATCHED_LOCAL_FILE_HEADER_CRC32_OR_SIZES,
+  WARNING_MISMATCHED_LOCAL_FILE_HEADER_FILENAME: () => WARNING_MISMATCHED_LOCAL_FILE_HEADER_FILENAME,
   WARNING_MISMATCHED_ZIP64_END_OF_CENTRAL_DIRECTORY: () => WARNING_MISMATCHED_ZIP64_END_OF_CENTRAL_DIRECTORY,
+  WARNING_MULTIPLE_END_OF_CENTRAL_DIRECTORY: () => WARNING_MULTIPLE_END_OF_CENTRAL_DIRECTORY,
+  WARNING_PREPENDED_CENTRAL_DIRECTORY: () => WARNING_PREPENDED_CENTRAL_DIRECTORY,
   WARNING_PREPENDED_DATA: () => WARNING_PREPENDED_DATA,
   WARNING_TRAILING_CENTRAL_DIRECTORY_DATA: () => WARNING_TRAILING_CENTRAL_DIRECTORY_DATA,
   WARNING_UNKNOWN_VERSION: () => WARNING_UNKNOWN_VERSION,
@@ -3385,6 +3465,45 @@ __export(zip_reader_exports, {
   ZipReaderStream: () => ZipReaderStream,
   isZipFile: () => isZipFile
 });
+function createEntryStream(entry, pendingEntries2) {
+  const { readable, writable } = new TransformStream();
+  let dataReader;
+  const entryStream = {
+    cancel: async (reason) => {
+      pendingEntries2.delete(entryStream);
+      await (dataReader ? dataReader.cancel(reason) : readable.cancel(reason));
+    }
+  };
+  entryStream.readable = new ReadableStream({
+    async pull(controller) {
+      if (!dataReader) {
+        dataReader = readable.getReader();
+        pendingEntries2.add(entryStream);
+        getData();
+      }
+      const { done, value } = await dataReader.read();
+      if (done) {
+        controller.close();
+      } else {
+        controller.enqueue(value);
+      }
+    },
+    cancel: (reason) => entryStream.cancel(reason)
+  }, { highWaterMark: 0 });
+  return entryStream;
+  async function getData() {
+    try {
+      await entry.getData(writable, { preventClose: false });
+    } catch (error) {
+      try {
+        await writable.abort(error);
+      } catch {
+      }
+    } finally {
+      pendingEntries2.delete(entryStream);
+    }
+  }
+}
 async function isZipFile(reader, options = {}) {
   reader = new GenericReader(reader);
   await initStream(reader);
@@ -3993,7 +4112,7 @@ function validateLocalDirectory(zipEntry, localDirectory, rawLocalFilename, chec
   const reject = !warnings;
   const maskedLocalDirectory = zipEntry.decryptedDirectory && (localDirectory.rawBitFlag & BITFLAG_MASKED_LOCAL_HEADERS) == BITFLAG_MASKED_LOCAL_HEADERS;
   if (checkLocalFilename && !maskedLocalDirectory && (rawLocalFilename.length != rawFilename.length || rawLocalFilename.some((byteValue, indexByte) => byteValue != rawFilename[indexByte]))) {
-    reportAmbiguity(reject, warnings, "mismatched local file header (filename)");
+    reportAmbiguity(reject, warnings, WARNING_MISMATCHED_LOCAL_FILE_HEADER_FILENAME);
   }
   if ((localDirectory.rawBitFlag & BITFLAG_AMBIGUITY_MASK) != (zipEntry.rawBitFlag & BITFLAG_AMBIGUITY_MASK)) {
     reportAmbiguity(reject, warnings, WARNING_MISMATCHED_LOCAL_FILE_HEADER_BIT_FLAG);
@@ -4010,15 +4129,6 @@ function reportAmbiguity(reject, warnings, reason) {
     throwAmbiguousArchive(reason);
   } else {
     addWarning(warnings, reason);
-  }
-}
-function addWarning(warnings, reason, filename) {
-  if (!warnings.some((warning) => warning.reason == reason)) {
-    const warning = { reason };
-    if (filename !== UNDEFINED_VALUE) {
-      warning.filename = filename;
-    }
-    warnings.push(warning);
   }
 }
 function throwAmbiguousArchive(reason) {
@@ -4056,7 +4166,7 @@ function getBigUint64(view, offset) {
   }
   return Number(value);
 }
-var ERR_BAD_FORMAT, ERR_EOCDR_NOT_FOUND, ERR_EOCDR_LOCATOR_ZIP64_NOT_FOUND, ERR_CENTRAL_DIRECTORY_NOT_FOUND, ERR_LOCAL_FILE_HEADER_NOT_FOUND, ERR_EXTRAFIELD_ZIP64_NOT_FOUND, ERR_ENCRYPTED, ERR_UNSUPPORTED_ENCRYPTION, ERR_UNSUPPORTED_COMPRESSION2, ERR_SPLIT_ZIP_FILE, ERR_OVERLAPPING_ENTRY, ERR_ENTRY_DATA_OUT_OF_BOUNDS, ERR_AMBIGUOUS_ARCHIVE, ERR_ENCRYPTED_CENTRAL_DIRECTORY, ERR_UNSAFE_FILENAME, ERR_INVALID_STRICTNESS, ERR_INVALID_FILENAME_VALIDATION, ERR_INVALID_MAX_APPENDED_DATA_SIZE, ERR_UNSUPPORTED_UINT64, WARNING_UNSORTED_CENTRAL_DIRECTORY, WARNING_UNKNOWN_VERSION, WARNING_COMPRESSED_PATCHED_DATA, WARNING_MALFORMED_EXTRA_FIELD, WARNING_UNKNOWN_ZIP64_EXTENSIBLE_DATA, WARNING_WRAPPED_ENTRIES_COUNT, WARNING_APPENDED_DATA, WARNING_PREPENDED_DATA, WARNING_TRAILING_CENTRAL_DIRECTORY_DATA, WARNING_DUPLICATE_FILENAME, WARNING_MISMATCHED_ZIP64_END_OF_CENTRAL_DIRECTORY, WARNING_MISMATCHED_LOCAL_FILE_HEADER_BIT_FLAG, WARNING_MISMATCHED_LOCAL_FILE_HEADER_COMPRESSION_METHOD, WARNING_MISMATCHED_LOCAL_FILE_HEADER_CRC32_OR_SIZES, MAX_KNOWN_VERSION, DRIVE_LETTER_REGEXP, CHARSET_UTF8, PROPERTY_NAME_UTF8_SUFFIX, CHARSET_CP437, BITFLAG_AMBIGUITY_MASK, VENDOR_VERSION_AE_1, ZIP64_PROPERTIES, ZIP64_EXTRACTION, MAX_SAFE_UINT64, MAX_END_OF_CENTRAL_DIR_PROBES, MAX_DEFLATE_EXPANSION_RATIO, CENTRAL_DIRECTORY_UNREACHABLE, CENTRAL_DIRECTORY_PLAUSIBLE, CENTRAL_DIRECTORY_REACHABLE, ZipReader, ZipReaderStream, ZipEntry;
+var ERR_BAD_FORMAT, ERR_EOCDR_NOT_FOUND, ERR_EOCDR_LOCATOR_ZIP64_NOT_FOUND, ERR_CENTRAL_DIRECTORY_NOT_FOUND, ERR_LOCAL_FILE_HEADER_NOT_FOUND, ERR_EXTRAFIELD_ZIP64_NOT_FOUND, ERR_ENCRYPTED, ERR_UNSUPPORTED_ENCRYPTION, ERR_SPLIT_ZIP_FILE, ERR_OVERLAPPING_ENTRY, ERR_ENTRY_DATA_OUT_OF_BOUNDS, ERR_AMBIGUOUS_ARCHIVE, ERR_ENCRYPTED_CENTRAL_DIRECTORY, ERR_UNSAFE_FILENAME, ERR_INVALID_STRICTNESS, ERR_INVALID_FILENAME_VALIDATION, ERR_INVALID_MAX_APPENDED_DATA_SIZE, ERR_UNSUPPORTED_UINT64, WARNING_UNSORTED_CENTRAL_DIRECTORY, WARNING_UNKNOWN_VERSION, WARNING_COMPRESSED_PATCHED_DATA, WARNING_MALFORMED_EXTRA_FIELD, WARNING_UNKNOWN_ZIP64_EXTENSIBLE_DATA, WARNING_WRAPPED_ENTRIES_COUNT, WARNING_APPENDED_DATA, WARNING_PREPENDED_DATA, WARNING_PREPENDED_CENTRAL_DIRECTORY, WARNING_TRAILING_CENTRAL_DIRECTORY_DATA, WARNING_DUPLICATE_FILENAME, WARNING_MISMATCHED_ZIP64_END_OF_CENTRAL_DIRECTORY, WARNING_MULTIPLE_END_OF_CENTRAL_DIRECTORY, WARNING_MISMATCHED_LOCAL_FILE_HEADER_FILENAME, WARNING_MISMATCHED_LOCAL_FILE_HEADER_BIT_FLAG, WARNING_MISMATCHED_LOCAL_FILE_HEADER_COMPRESSION_METHOD, WARNING_MISMATCHED_LOCAL_FILE_HEADER_CRC32_OR_SIZES, MAX_KNOWN_VERSION, DRIVE_LETTER_REGEXP, CHARSET_UTF8, PROPERTY_NAME_UTF8_SUFFIX, CHARSET_CP437, BITFLAG_AMBIGUITY_MASK, VENDOR_VERSION_AE_1, ZIP64_PROPERTIES, ZIP64_EXTRACTION, MAX_SAFE_UINT64, MAX_END_OF_CENTRAL_DIR_PROBES, MAX_DEFLATE_EXPANSION_RATIO, CENTRAL_DIRECTORY_UNREACHABLE, CENTRAL_DIRECTORY_PLAUSIBLE, CENTRAL_DIRECTORY_REACHABLE, ZipReader, ZipReaderStream, ZipEntry;
 var init_zip_reader = __esm({
   "node_modules/@zip.js/zip.js/lib/core/zip-reader.js"() {
     init_constants();
@@ -4066,6 +4176,7 @@ var init_zip_reader = __esm({
     init_io();
     init_decode_text();
     init_array();
+    init_warnings();
     init_compatible_streams();
     init_crc32();
     init_zip_entry();
@@ -4078,7 +4189,6 @@ var init_zip_reader = __esm({
     ERR_EXTRAFIELD_ZIP64_NOT_FOUND = "Zip64 extra field not found";
     ERR_ENCRYPTED = "File contains encrypted entry";
     ERR_UNSUPPORTED_ENCRYPTION = "Encryption method not supported";
-    ERR_UNSUPPORTED_COMPRESSION2 = "Compression method not supported";
     ERR_SPLIT_ZIP_FILE = "Split zip file";
     ERR_OVERLAPPING_ENTRY = "Overlapping entry found";
     ERR_ENTRY_DATA_OUT_OF_BOUNDS = "Entry data out of bounds";
@@ -4097,9 +4207,12 @@ var init_zip_reader = __esm({
     WARNING_WRAPPED_ENTRIES_COUNT = "wrapped entries count";
     WARNING_APPENDED_DATA = "appended data";
     WARNING_PREPENDED_DATA = "prepended data";
+    WARNING_PREPENDED_CENTRAL_DIRECTORY = "prepended central directory";
     WARNING_TRAILING_CENTRAL_DIRECTORY_DATA = "trailing central directory data";
     WARNING_DUPLICATE_FILENAME = "duplicate filename";
     WARNING_MISMATCHED_ZIP64_END_OF_CENTRAL_DIRECTORY = "mismatched zip64 end of central directory record";
+    WARNING_MULTIPLE_END_OF_CENTRAL_DIRECTORY = "multiple end of central directory records";
+    WARNING_MISMATCHED_LOCAL_FILE_HEADER_FILENAME = "mismatched local file header (filename)";
     WARNING_MISMATCHED_LOCAL_FILE_HEADER_BIT_FLAG = "mismatched local file header (general purpose bit flag)";
     WARNING_MISMATCHED_LOCAL_FILE_HEADER_COMPRESSION_METHOD = "mismatched local file header (compression method)";
     WARNING_MISMATCHED_LOCAL_FILE_HEADER_CRC32_OR_SIZES = "mismatched local file header (crc32 or sizes)";
@@ -4167,7 +4280,7 @@ var init_zip_reader = __esm({
           }
         }
         if (rejectAmbiguousEndOfDirectory && endOfDirectoryReachingEndCount > 1) {
-          throwAmbiguousArchive("multiple end of central directory records");
+          throwAmbiguousArchive(WARNING_MULTIPLE_END_OF_CENTRAL_DIRECTORY);
         }
         const endOfDirectoryView = getDataView(endOfDirectoryInfo);
         let directoryDataLength = getUint32(endOfDirectoryView, 12);
@@ -4187,6 +4300,7 @@ var init_zip_reader = __esm({
         let diskNumber = getUint16(endOfDirectoryView, 6);
         let filesLength = getUint16(endOfDirectoryView, 10);
         let prependedDataLength = 0;
+        let prependedCentralDirectory;
         let startOffset;
         let zip64EndOfDirectory;
         let zip64EndOfDirectoryVersion2;
@@ -4284,6 +4398,7 @@ var init_zip_reader = __esm({
               directoryDataOffset = expectedDirectoryDataOffset;
               if (directoryDataOffset > originalDirectoryDataOffset) {
                 prependedDataLength += directoryDataOffset - originalDirectoryDataOffset;
+                prependedCentralDirectory = storedPointsAtDirectory;
               }
               directoryArray = await readUint8Array(reader, directoryDataOffset, directoryDataLength);
               directoryView = getDataView(directoryArray);
@@ -4442,8 +4557,6 @@ var init_zip_reader = __esm({
             sticky,
             symlink,
             unixExternalUpper,
-            internalFileAttribute: fileEntry.internalFileAttributes,
-            externalFileAttribute: fileEntry.externalFileAttributes,
             executable,
             directory: modeIsDir || upperIsDir || msDosCompatible && msdosAttributes.directory || fileEntry.filename.endsWith(DIRECTORY_SIGNATURE),
             zipCrypto: fileEntry.encrypted && !fileEntry.extraFieldAES
@@ -4455,7 +4568,12 @@ var init_zip_reader = __esm({
             const arrayBufferPromise = streamToBlob(writer.readable).then((blob) => blob.arrayBuffer());
             arrayBufferPromise.catch(() => {
             });
-            await fileEntry.getData(writer, entry, zipReader.readRanges, options2);
+            await fileEntry.getData(
+              writer,
+              entry,
+              zipReader.readRanges,
+              Object.assign({}, options2, { preventClose: false })
+            );
             return arrayBufferPromise;
           };
           offset = endOffset;
@@ -4503,6 +4621,9 @@ var init_zip_reader = __esm({
         if (prependedDataLength || filesLength && startOffset > SPLIT_ZIP_FILE_SIGNATURE_LENGTH) {
           addWarning(warnings, WARNING_PREPENDED_DATA);
         }
+        if (prependedCentralDirectory) {
+          addWarning(warnings, WARNING_PREPENDED_CENTRAL_DIRECTORY);
+        }
         if (extractPrependedData) {
           zipReader.prependedData = startOffset > splitZipSignatureLength ? await readUint8Array(reader, splitZipSignatureLength, startOffset - splitZipSignatureLength) : EMPTY_UINT8_ARRAY;
         }
@@ -4525,38 +4646,50 @@ var init_zip_reader = __esm({
           await reader.readable.cancel();
         }
       }
+      [SYMBOL_ASYNC_DISPOSE]() {
+        return this.close();
+      }
     };
     ZipReaderStream = class {
       constructor(options = {}) {
-        const { readable, writable } = new TransformStream();
-        const gen = new ZipReader(readable, options).getEntriesGenerator();
+        let sourceController;
+        const { readable, writable } = new TransformStream({
+          start(controller) {
+            sourceController = controller;
+          }
+        });
+        const zipReader = new ZipReader(readable, options);
+        const gen = zipReader.getEntriesGenerator();
+        const pendingEntries2 = /* @__PURE__ */ new Set();
         this.readable = new ReadableStream({
           async pull(controller) {
             const { done, value } = await gen.next();
             if (done)
               return controller.close();
+            const entryStream = createEntryStream(value, pendingEntries2);
             const chunk = {
               ...value,
-              readable: (function() {
-                const { readable: readable2, writable: writable2 } = new TransformStream();
-                if (value.getData) {
-                  getData();
-                  return readable2;
-                }
-                async function getData() {
-                  try {
-                    await value.getData(writable2);
-                  } catch (error) {
-                    try {
-                      await writable2.abort(error);
-                    } catch {
-                    }
-                  }
-                }
-              })()
+              readable: entryStream.readable
             };
             delete chunk.getData;
+            Object.defineProperties(chunk, {
+              localDirectory: {
+                get: () => value.localDirectory,
+                enumerable: true
+              },
+              warnings: {
+                get: () => value.warnings,
+                enumerable: true
+              }
+            });
             controller.enqueue(chunk);
+          },
+          async cancel(reason) {
+            const entryStreams = Array.from(pendingEntries2);
+            pendingEntries2.clear();
+            sourceController.error(reason);
+            await Promise.allSettled(entryStreams.map((entryStream) => entryStream.cancel(reason)));
+            await Promise.allSettled([gen.return(), zipReader.close()]);
           }
         });
         this.writable = writable;
@@ -4597,13 +4730,15 @@ var init_zip_reader = __esm({
         const dataView = getDataView(dataArray);
         let password = getOptionValue(zipEntry, options, OPTION_PASSWORD);
         let rawPassword = getOptionValue(zipEntry, options, OPTION_RAW_PASSWORD);
-        const passThrough = getOptionValue(zipEntry, options, OPTION_PASS_THROUGH);
+        const passThrough = checkPassThroughOption(getOptionValue(zipEntry, options, OPTION_PASS_THROUGH));
+        const passThroughCompression = Boolean(passThrough);
+        const passThroughEncryption = passThrough === true;
         checkPasswordOption(password, rawPassword);
         password = password && password.length && password;
         rawPassword = rawPassword && rawPassword.length && rawPassword;
         if (extraFieldAES) {
           if (extraFieldAES.originalCompressionMethod != COMPRESSION_METHOD_AES) {
-            throw new Error(ERR_UNSUPPORTED_COMPRESSION2);
+            throw new Error(ERR_UNSUPPORTED_COMPRESSION);
           }
         }
         if (dataArray.length < HEADER_SIZE || getUint32(dataView, 0) != LOCAL_FILE_HEADER_SIGNATURE) {
@@ -4618,7 +4753,11 @@ var init_zip_reader = __esm({
         const checkLocalDirectoryOption = getOptionValue(zipEntry, options, OPTION_CHECK_LOCAL_DIRECTORY);
         const entryStrictness = getStrictness(options, zipEntry.options);
         const checkLocalDirectory = getCheckLocalDirectory(checkLocalDirectoryOption, entryStrictness);
-        const checkLocalFilename = getCheckLocalFilename(checkLocalDirectoryOption, entryStrictness);
+        const checkLocalFilenameOption = getOptionValue(zipEntry, options, OPTION_CHECK_LOCAL_FILENAME);
+        const checkLocalFilename = getCheckLocalFilename(
+          checkLocalFilenameOption === UNDEFINED_VALUE ? checkLocalDirectoryOption : checkLocalFilenameOption,
+          entryStrictness
+        );
         let rawLocalFilename = EMPTY_UINT8_ARRAY;
         if (checkLocalFilename && (filenameLength || extraFieldLength)) {
           const trailingDataArray = await readUint8Array(reader, localHeaderOffset + HEADER_SIZE, filenameLength + extraFieldLength);
@@ -4647,17 +4786,18 @@ var init_zip_reader = __esm({
         if (gid !== UNDEFINED_VALUE && fileEntry.gid === UNDEFINED_VALUE) {
           fileEntry.gid = gid;
         }
-        const encrypted = zipEntry.encrypted && localDirectory.encrypted && !passThrough;
+        const checkPasswordOnly = getOptionValue(zipEntry, options, OPTION_CHECK_PASSWORD_ONLY);
+        const encrypted = zipEntry.encrypted && localDirectory.encrypted && (!passThroughEncryption || checkPasswordOnly);
         const zipCrypto = encrypted && !extraFieldAES;
-        if (!passThrough) {
+        if (!passThroughEncryption) {
           fileEntry.zipCrypto = zipCrypto;
         }
         if (encrypted && (localDirectory.rawBitFlag & BITFLAG_STRONG_ENCRYPTION) == BITFLAG_STRONG_ENCRYPTION) {
           throw new Error(ERR_UNSUPPORTED_ENCRYPTION);
         }
-        const registeredCodec = passThrough ? UNDEFINED_VALUE : getRegisteredCodec(compressionMethod);
-        if (compressionMethod != COMPRESSION_METHOD_STORE && compressionMethod != COMPRESSION_METHOD_DEFLATE && compressionMethod != COMPRESSION_METHOD_DEFLATE_64 && !registeredCodec && !passThrough) {
-          throw new Error(ERR_UNSUPPORTED_COMPRESSION2);
+        const registeredCodec = passThroughCompression ? UNDEFINED_VALUE : getRegisteredCodec(compressionMethod);
+        if (compressionMethod != COMPRESSION_METHOD_STORE && compressionMethod != COMPRESSION_METHOD_DEFLATE && compressionMethod != COMPRESSION_METHOD_DEFLATE_64 && !registeredCodec && !passThroughCompression) {
+          throw new Error(ERR_UNSUPPORTED_COMPRESSION);
         }
         if (encrypted) {
           if (!zipCrypto && (extraFieldAES.strength < 1 || extraFieldAES.strength > 3)) {
@@ -4672,22 +4812,22 @@ var init_zip_reader = __esm({
         const size = compressedSize;
         const readable = toCompatibleReadable(reader.createReadable({ offset: dataOffset, size }));
         const signal = checkSignalOption(getOptionValue(zipEntry, options, OPTION_SIGNAL));
-        const checkPasswordOnly = getOptionValue(zipEntry, options, OPTION_CHECK_PASSWORD_ONLY);
+        throwIfAborted(signal);
         let checkOverlappingEntry = getOptionValue(zipEntry, options, OPTION_CHECK_OVERLAPPING_ENTRY);
         const checkOverlappingEntryOnly = getOptionValue(zipEntry, options, OPTION_CHECK_OVERLAPPING_ENTRY_ONLY);
         if (checkOverlappingEntryOnly) {
           checkOverlappingEntry = true;
         }
         const { onstart, onprogress, onend } = options;
-        const compressed = compressionMethod != COMPRESSION_METHOD_STORE && !passThrough;
-        const outputSize = passThrough ? compressedSize : uncompressedSize;
+        const compressed = compressionMethod != COMPRESSION_METHOD_STORE && !passThroughCompression;
+        const outputSize = passThroughCompression ? compressedSize - getEncryptionOverhead(encrypted, zipCrypto, extraFieldAES && extraFieldAES.strength) : uncompressedSize;
         const deflate64 = compressionMethod == COMPRESSION_METHOD_DEFLATE_64;
         let useCompressionStream = getOptionValue(zipEntry, options, OPTION_USE_COMPRESSION_STREAM);
         if (deflate64) {
           useCompressionStream = false;
         }
         const checkCrc32Option = getOptionValue(zipEntry, options, OPTION_CHECK_CRC32);
-        const checkCrc32 = (checkCrc32Option === UNDEFINED_VALUE ? getOptionValue(zipEntry, options, OPTION_CHECK_SIGNATURE) : checkCrc32Option) && !passThrough && (!encrypted || zipCrypto || extraFieldAES && extraFieldAES.vendorVersion == VENDOR_VERSION_AE_1);
+        const checkCrc32 = (checkCrc32Option === UNDEFINED_VALUE ? getOptionValue(zipEntry, options, OPTION_CHECK_SIGNATURE) : checkCrc32Option) && !passThroughCompression && (!encrypted || zipCrypto || extraFieldAES && extraFieldAES.vendorVersion == VENDOR_VERSION_AE_1);
         const workerOptions = {
           options: {
             codecType: CODEC_INFLATE,
@@ -4740,10 +4880,10 @@ var init_zip_reader = __esm({
             await initStream(writer, getDecodableOutputSize(outputSize, compressedSize, compressed));
             ({ writable } = writer);
             const { outputSize: writtenSize } = await runWorker2({ readable, writable }, workerOptions);
-            writer.size += writtenSize;
             if (writtenSize != outputSize) {
-              throw new Error(ERR_INVALID_UNCOMPRESSED_SIZE);
+              throw Object.assign(new Error(ERR_INVALID_UNCOMPRESSED_SIZE), { outputSize: writtenSize });
             }
+            writer.size += writtenSize;
           }
         } catch (error) {
           if (error.outputSize !== UNDEFINED_VALUE) {
@@ -4782,7 +4922,7 @@ t.fill(8, 0, 144), t.fill(9, 144, 256), t.fill(7, 256, 280), t.fill(8, 280, 288)
 var e = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 var n = (t3) => t3({ workerURI: (t4) => {
   const n3 = "text/javascript";
-  let s2 = '!function(t){"function"==typeof define&&define.amd?define(t):t()}(function(){"use strict";const{Array:t,Object:n,Number:e,Math:s,Error:r,Uint8Array:o,Uint16Array:c,Uint32Array:i,Int32Array:a,Map:f,DataView:u,Promise:l,TextEncoder:w,crypto:h,postMessage:p,TransformStream:d,ReadableStream:y,WritableStream:m,CompressionStream:S,DecompressionStream:g}=self,v=void 0,b="undefined",k="function",z=new o,C=[[],[],[],[],[],[],[],[]];for(let t=0;t<256;t++){let n=t;for(let t=0;t<8;t++)n=1&n?n>>>1^3988292384:n>>>1;C[0][t]=n}for(let t=0;t<256;t++)for(let n=1;n<8;n++){const e=C[n-1][t];C[n][t]=e>>>8^C[0][255&e]}const[I,A,x,M,P,B,D,F]=C;class R{constructor(t){this.o=t||-1}append(t){let n=0|this.o;const e=0|t.length;let s=0;if(e>=8&&t.buffer){const r=new u(t.buffer,t.byteOffset,e),o=e-8;for(;s<=o;s+=8){const t=n^r.getInt32(s,!0),e=r.getInt32(s+4,!0);n=F[255&t]^D[t>>>8&255]^B[t>>>16&255]^P[t>>>24&255]^M[255&e]^x[e>>>8&255]^A[e>>>16&255]^I[e>>>24&255]}}for(;s<e;s++)n=n>>>8^I[255&(n^t[s])];this.o=n}get(){return~this.o}}class U extends d{constructor(){let t;const n=new R;super({transform(t,e){n.append(t),e.enqueue(t)},flush(){const e=new o(4);new u(e.buffer).setUint32(0,n.get()),t.value=e}}),t=this}}function W(t,n){const e=new o(t.length+n.length);return e.set(t),e.set(n,t.length),e}function _(t){return new u(t.buffer,t.byteOffset,t.byteLength)}const T={concat(t,n){if(0===t.length||0===n.length)return t.concat(n);const e=t[t.length-1],s=T.l(e);return 32===s?t.concat(n):T.h(n,s,0|e,t.slice(0,t.length-1))},bitLength(t){const n=t.length;if(0===n)return 0;const e=t[n-1];return 32*(n-1)+T.l(e)},m(t,n){if(32*t.length<n)return t;const e=(t=t.slice(0,s.ceil(n/32))).length;return n&=31,e>0&&n&&(t[e-1]=T.S(n,t[e-1]&2147483648>>n-1,1)),t},S:(t,n,e)=>32===t?n:(e?0|n:n<<32-t)+1099511627776*t,l:t=>s.round(t/1099511627776)||32,h(t,n,e,s){for(void 0===s&&(s=[]);n>=32;n-=32)s.push(e),e=0;if(0===n)return s.concat(t);for(let r=0;r<t.length;r++)s.push(e|t[r]>>>n),e=t[r]<<32-n;const r=t.length?t[t.length-1]:0,o=T.l(r);return s.push(T.S(n+o&31,n+o>32?e:s.pop(),1)),s}},V={bytes:{v(t){const n=T.bitLength(t)/8,e=new o(n);let s;for(let r=0;r<n;r++)3&r||(s=t[r/4]),e[r]=s>>>24,s<<=8;return e},C(t){const n=[];let e,s=0;for(e=0;e<t.length;e++)s=s<<8|t[e],3&~e||(n.push(s),s=0);return 3&e&&n.push(T.S(8*(3&e),s)),n}}},K=class{constructor(t){const n=this;n.blockSize=512,n.I=[1732584193,4023233417,2562383102,271733878,3285377520],n.A=[1518500249,1859775393,2400959708,3395469782],t?(n.M=t.M.slice(0),n.P=t.P.slice(0),n.B=t.B):n.reset()}reset(){const t=this;return t.M=t.I.slice(0),t.P=[],t.B=0,t}update(t){const n=this;"string"==typeof t&&(t=V.D.C(t));const e=n.P=T.concat(n.P,t),s=n.B,o=n.B=s+T.bitLength(t);if(o>9007199254740991)throw new r("Cannot hash more than 2^53 - 1 bits");const c=new i(e);let a=0;for(let t=n.blockSize+s-(n.blockSize+s&n.blockSize-1);t<=o;t+=n.blockSize)n.F(c.subarray(16*a,16*(a+1))),a+=1;return e.splice(0,16*a),n}R(){const t=this;let n=t.P;const e=t.M;n=T.concat(n,[T.S(1,1)]);for(let t=n.length+2;15&t;t++)n.push(0);for(n.push(s.floor(t.B/4294967296)),n.push(0|t.B);n.length;)t.F(n.splice(0,16));return t.reset(),e}U(t,n,e,s){return t<=19?n&e|~n&s:t<=39?n^e^s:t<=59?n&e|n&s|e&s:t<=79?n^e^s:void 0}W(t,n){return n<<t|n>>>32-t}F(n){const e=this,r=e.M,o=t(80);for(let t=0;t<16;t++)o[t]=n[t];let c=r[0],i=r[1],a=r[2],f=r[3],u=r[4];for(let t=0;t<=79;t++){t>=16&&(o[t]=e.W(1,o[t-3]^o[t-8]^o[t-14]^o[t-16]));const n=e.W(5,c)+e.U(t,i,a,f)+u+o[t]+e.A[s.floor(t/20)]|0;u=f,f=a,a=e.W(30,i),i=c,c=n}r[0]=r[0]+c|0,r[1]=r[1]+i|0,r[2]=r[2]+a|0,r[3]=r[3]+f|0,r[4]=r[4]+u|0}},E={importKey:t=>new E._(V.bytes.C(t)),T(t,n,e,s){if(e=e||1e4,s<0||e<0)throw new r("invalid params to pbkdf2");const o=1+(s>>5)<<2;let c,i,a,f,l;const w=new ArrayBuffer(o),h=new u(w);let p=0;const d=T;for(n=V.bytes.C(n),l=1;p<(o||1);l++){for(c=i=t.encrypt(d.concat(n,[l])),a=1;a<e;a++)for(i=t.encrypt(i),f=0;f<i.length;f++)c[f]^=i[f];for(a=0;p<(o||1)&&a<c.length;a++)h.setInt32(p,c[a]),p+=4}return w.slice(0,s/8)},_:class{constructor(t){const n=this,e=n.V=K,s=[[],[]];n.K=[new e,new e];const r=n.K[0].blockSize/32;t.length>r&&(t=(new e).update(t).R());for(let n=0;n<r;n++)s[0][n]=909522486^t[n],s[1][n]=1549556828^t[n];n.K[0].update(s[0]),n.K[1].update(s[1]),n.L=new e(n.K[0])}reset(){const t=this;t.L=new t.V(t.K[0]),t.O=!1}update(t){this.O=!0,this.L.update(t)}digest(){const t=this,n=t.L.R(),e=new t.V(t.K[1]).update(n).R();return t.reset(),e}encrypt(t){if(this.O)throw new r("encrypt on already updated hmac called!");return this.update(t),this.digest(t)}}},L=typeof h!=b&&typeof h.getRandomValues==k,O="Invalid password",j="Invalid signature",H=j,N="zipjs-abort-check-password";function q(t){if(L)return h.getRandomValues(t);throw new r("Crypto API not supported")}const G=16,J={name:"PBKDF2"},Q=n.assign({hash:{name:"HMAC"}},J),X=n.assign({iterations:1e3,hash:{name:"SHA-1"}},J),Y=["deriveBits"],Z=[8,12,16],$=[16,24,32],tt=10,nt=[0,0,0,0],et=typeof h!=b,st=et&&h.subtle,rt=et&&typeof st!=b,ot=V.bytes,ct=class{constructor(t){const n=this;n.j=[[[],[],[],[],[]],[[],[],[],[],[]]],n.j[0][0][0]||n.H();const e=n.j[0][4],s=n.j[1],o=t.length;let c,i,a,f=1;if(4!==o&&6!==o&&8!==o)throw new r("invalid aes key size");for(n.A=[i=t.slice(0),a=[]],c=o;c<4*o+28;c++){let t=i[c-1];(c%o===0||8===o&&c%o===4)&&(t=e[t>>>24]<<24^e[t>>16&255]<<16^e[t>>8&255]<<8^e[255&t],c%o===0&&(t=t<<8^t>>>24^f<<24,f=f<<1^283*(f>>7))),i[c]=i[c-o]^t}for(let t=0;c;t++,c--){const n=i[3&t?c:c-4];a[t]=c<=4||t<4?n:s[0][e[n>>>24]]^s[1][e[n>>16&255]]^s[2][e[n>>8&255]]^s[3][e[255&n]]}}encrypt(t){return this.N(t,0)}decrypt(t){return this.N(t,1)}H(){const t=this.j[0],n=this.j[1],e=t[4],s=n[4],r=[],o=[];let c,i,a,f;for(let t=0;t<256;t++)o[(r[t]=t<<1^283*(t>>7))^t]=t;for(let u=c=0;!e[u];u^=i||1,c=o[c]||1){let o=c^c<<1^c<<2^c<<3^c<<4;o=o>>8^255&o^99,e[u]=o,s[o]=u,f=r[a=r[i=r[u]]];let l=16843009*f^65537*a^257*i^16843008*u,w=257*r[o]^16843008*o;for(let e=0;e<4;e++)t[e][u]=w=w<<24^w>>>8,n[e][o]=l=l<<24^l>>>8}for(let e=0;e<5;e++)t[e]=t[e].slice(0),n[e]=n[e].slice(0)}N(t,n){if(4!==t.length)throw new r("invalid aes block size");const e=this.A[n],s=e.length/4-2,o=[0,0,0,0],c=this.j[n],i=c[0],a=c[1],f=c[2],u=c[3],l=c[4];let w,h,p,d=t[0]^e[0],y=t[n?3:1]^e[1],m=t[2]^e[2],S=t[n?1:3]^e[3],g=4;for(let t=0;t<s;t++)w=i[d>>>24]^a[y>>16&255]^f[m>>8&255]^u[255&S]^e[g],h=i[y>>>24]^a[m>>16&255]^f[S>>8&255]^u[255&d]^e[g+1],p=i[m>>>24]^a[S>>16&255]^f[d>>8&255]^u[255&y]^e[g+2],S=i[S>>>24]^a[d>>16&255]^f[y>>8&255]^u[255&m]^e[g+3],g+=4,d=w,y=h,m=p;for(let t=0;t<4;t++)o[n?3&-t:t]=l[d>>>24]<<24^l[y>>16&255]<<16^l[m>>8&255]<<8^l[255&S]^e[g++],w=d,d=y,y=m,m=S,S=w;return o}},it=class{constructor(t,n){this.G=t,this.J=n,this.X=n}reset(){this.X=this.J}update(t){return this.Y(this.G,t,this.X)}Z(t){if(255&~(t>>24))t+=1<<24;else{let n=t>>16&255,e=t>>8&255,s=255&t;255===n?(n=0,255===e?(e=0,255===s?s=0:++s):++e):++n,t=0,t+=n<<16,t+=e<<8,t+=s}return t}$(t){0===(t[0]=this.Z(t[0]))&&(t[1]=this.Z(t[1]))}Y(t,n,e){let s;if(!(s=n.length))return[];const r=T.bitLength(n);for(let r=0;r<s;r+=4){this.$(e);const s=t.encrypt(e);n[r]^=s[0],n[r+1]^=s[1],n[r+2]^=s[2],n[r+3]^=s[3]}return T.m(n,r)}},at=E._;let ft=et&&rt&&typeof st.importKey==k,ut=et&&rt&&typeof st.deriveBits==k;class lt extends d{constructor({password:t,rawPassword:n,encryptionStrength:e,checkPasswordOnly:s,checkAuthenticationCode:c=!0}){super({start(){ht(this,t,n,e)},async transform(t,n){const e=this,{password:c,strength:i,nt:a,ready:f}=e;c?(await async function(t,n,e,s){const o=await dt(t,n,e,mt(s,0,Z[n])),c=mt(s,Z[n]);if(o[0]!=c[0]||o[1]!=c[1])throw new r(O)}(e,i,c,mt(t,0,Z[i]+2)),t=mt(t,Z[i]+2),s?n.error(new r(N)):a()):await f;const u=new o(t.length-tt-(t.length-tt)%G);n.enqueue(pt(e,t,u,0,tt,!0))},async flush(t){const{et:n,st:e,ot:s,ready:o}=this;if(e&&n){await o;const i=mt(s,0,s.length-tt),a=mt(s,s.length-tt);let f=z;if(i.length){const t=gt(ot,i);e.update(t);const s=n.update(t);f=St(ot,s)}const u=mt(St(ot,e.digest()),0,tt);let l=s.length<tt?1:0;for(let t=0;t<tt;t++)l|=u[t]^a[t];if(l&&c)throw new r(H);t.enqueue(f)}}})}}class wt extends d{constructor({password:t,rawPassword:n,encryptionStrength:e}){super({start(){ht(this,t,n,e)},async transform(t,n){const e=this,{password:s,strength:r,nt:c,ready:i}=e;let a=z;s?(a=await async function(t,n,e){const s=q(new o(Z[n]));return W(s,await dt(t,n,e,s))}(e,r,s),c()):await i;const f=new o(a.length+t.length-t.length%G);f.set(a,0),n.enqueue(pt(e,t,f,a.length,0))},async flush(t){const{et:n,st:e,ot:s,ready:r}=this;if(e&&n){await r;let o=z;if(s.length){const t=n.update(gt(ot,s));e.update(t),o=St(ot,t)}const c=St(ot,e.digest()).slice(0,tt);t.enqueue(W(o,c))}}})}}function ht(t,e,s,r){n.assign(t,{ready:new l(n=>t.nt=n),password:yt(e,s),strength:r-1,ot:z})}function pt(t,n,e,s,r,c){const{et:i,st:a,ot:f}=t;f.length&&(n=W(f,n));const u=n.length-r;let l;for(e=function(t,n){if(n&&n>t.length){const e=t;(t=new o(n)).set(e,0)}return t}(e,s+(u-u%G)),l=0;l<=u-G;l+=G){const t=gt(ot,mt(n,l,l+G));c&&a.update(t);const r=i.update(t);c||a.update(r),e.set(St(ot,r),l+s)}return t.ot=mt(n,l),e}async function dt(e,s,r,c){e.password=null;const i=await async function(t,n,e,s,r){if(!ft)return E.importKey(n);try{return await st.importKey("raw",n,e,!1,r)}catch{return ft=!1,E.importKey(n)}}(0,r,Q,0,Y),a=await async function(t,n,e){if(!ut)return E.T(n,t.salt,X.iterations,e);try{return await st.deriveBits(t,n,e)}catch{return ut=!1,E.T(n,t.salt,X.iterations,e)}}(n.assign({salt:c},X),i,8*(2*$[s]+2)),f=new o(a),u=gt(ot,mt(f,0,$[s])),l=gt(ot,mt(f,$[s],2*$[s])),w=mt(f,2*$[s]);return n.assign(e,{keys:{key:u,ct:l,passwordVerification:w},et:new it(new ct(u),t.from(nt)),st:new at(l)}),w}function yt(t,n){return n===v?function(t){if(typeof w==b){t=unescape(encodeURIComponent(t));const n=new o(t.length);for(let e=0;e<n.length;e++)n[e]=t.charCodeAt(e);return n}return(new w).encode(t)}(t):n}function mt(t,n,e){return t.subarray(n,e)}function St(t,n){return t.v(n)}function gt(t,n){return t.C(n)}class vt extends d{constructor({password:t,rawPassword:n,passwordVerification:e,checkPasswordOnly:s}){super({start(){kt(this,t,n,e)},transform(t,n){const e=this;if(e.password||e.rawPassword){const n=zt(e,t.subarray(0,12));if(e.password=e.rawPassword=null,0!=(n[11]^e.passwordVerification))throw new r(O);t=t.subarray(12)}s?n.error(new r(N)):n.enqueue(zt(e,t))}})}}class bt extends d{constructor({password:t,rawPassword:n,passwordVerification:e}){super({start(){kt(this,t,n,e)},transform(t,n){const e=this;let s,r;if(e.password||e.rawPassword){e.password=e.rawPassword=null;const n=q(new o(12));n[11]=e.passwordVerification,s=new o(t.length+n.length),s.set(Ct(e,n),0),r=12}else s=new o(t.length),r=0;s.set(Ct(e,t),r),n.enqueue(s)}})}}function kt(t,e,s,r){n.assign(t,{password:e,rawPassword:s,passwordVerification:r}),function(t,e,s){const r=[305419896,591751049,878082192];if(n.assign(t,{keys:r,it:new R(r[0]),ft:new R(r[2])}),s)for(let n=0;n<s.length;n++)It(t,s[n]);else for(let n=0;n<e.length;n++)It(t,e.charCodeAt(n))}(t,e,s)}function zt(t,n){const e=new o(n.length);for(let s=0;s<n.length;s++)e[s]=At(t)^n[s],It(t,e[s]);return e}function Ct(t,n){const e=new o(n.length);for(let s=0;s<n.length;s++)e[s]=At(t)^n[s],It(t,n[s]);return e}function It(t,n){let[,e]=t.keys;t.it.append([n]);const r=~t.it.get();e=Mt(s.imul(Mt(e+xt(r)),134775813)+1),t.ft.append([e>>>24]);const o=~t.ft.get();t.keys=[r,e,o]}function At(t){const n=2|t.keys[2];return xt(s.imul(n,1^n)>>>8)}function xt(t){return 255&t}function Mt(t){return 4294967295&t}function Pt(t){if(t instanceof y)return t;const n=t.getReader();return new y({async pull(t){const{value:e,done:s}=await n.read();s?t.close():t.enqueue(e)},cancel:t=>n.cancel(t)})}const Bt=new f;function Dt(t){return Bt.get(t)}const Ft="Invalid uncompressed size",Rt=j,Ut="deflate-raw",Wt="gzip",_t=[31,139,8];class Tt extends d{constructor(t,{chunkSize:n,CompressionStreamFallback:e,CompressionStream:s}){super({});const{compressed:r,encrypted:o,useCompressionStream:c,zipCrypto:i,computeCrc32:a,level:f,deflate64:l,format:w,compressionMethod:h,inputSize:p}=t,d=this;let y,m,S,g=super.readable;const v=w&&Dt(w),b=a&&r&&!l&&!v&&(!o||i)&&Boolean(c&&s);if(o&&!i||!a||b||(y=new U,g=Ht(g,y)),r)if(v)g=Nt(g,Ot(v.CompressionStream,w,{level:f,chunkSize:n,compressionMethod:h,uncompressedSize:p}));else if(b)S=new Vt,g=Nt(g,new s(Wt)),g=Ht(g,S);else try{g=jt(g,c,{level:f,chunkSize:n},s,e)}catch(t){let n;try{n=new s(Wt)}catch{throw t}g=Nt(g,n),g=Ht(g,new Vt)}o&&(i?g=Ht(g,new bt(t)):(m=new wt(t),g=Ht(g,m))),Lt(d,g,()=>{o&&!i||!a||(d.crc32=b?S.crc32:new u(y.value.buffer).getUint32(0))})}}class Vt extends d{constructor(){let t,n=10,e=new o(0);super({transform(t,r){if(n){const e=s.min(n,t.length);if(n-=e,!(t=t.subarray(e)).length)return}const o=e.length+t.length;if(o<=8)return void(e=W(e,t));const c=o-8,i=s.min(c,e.length);r.enqueue(W(e.subarray(0,i),t.subarray(0,c-i))),e=W(e.subarray(i),t.subarray(c-i))},flush(){const n=_(e);t.crc32=n.getUint32(0,!0),t.uncompressedSize=n.getUint32(4,!0)}}),t=this}}class Kt extends d{constructor(t,{chunkSize:n,DecompressionStreamFallback:e,DecompressionStream:s}){super({});const{zipCrypto:c,encrypted:i,checkCrc32:a,crc32:f,compressed:w,useCompressionStream:h,deflate64:p,format:m,compressionMethod:S,rawBitFlag:g,outputSize:b}=t;let k,z,C=super.readable;if(i&&(c?C=Ht(C,new vt(t)):(z=new lt(t),C=Ht(C,z))),w){const t=m&&Dt(m);if(t)C=Nt(C,Ot(t.DecompressionStream,m,{chunkSize:n,compressionMethod:S,rawBitFlag:g,uncompressedSize:b}));else try{C=jt(C,h,{chunkSize:n,deflate64:p},s,e)}catch(t){if(p||b===v)throw t;let n;try{n=new s(Wt)}catch{throw t}C=function(t,n,e){const s=new R;let c,i,a,f=0,u=!1;const w=new l((t,n)=>{i=t,a=n});w.catch(()=>{}),e||i();const h=new d({start(t){const n=new o(10);n.set(_t),t.enqueue(n)},transform(t,n){n.enqueue(t)},async flush(t){u=!0,y();try{await w}finally{m()}const n=new o(8),r=_(n);r.setUint32(0,s.get(),!0),r.setUint32(4,e,!0),t.enqueue(n)},cancel(t){a(t)}}),p=new d({transform(t,n){s.append(t),f+=t.length,f>=e?i():u&&y(),n.enqueue(t)},cancel(t){a(t)}});return t=Ht(t,h),Ht(t=Nt(t,n),p);function y(){m(),c=setTimeout(()=>a(new r(Ft)),5e3)}function m(){clearTimeout(c)}}(C,n,b)}C=function(t){const n=t.getReader();return new y({async pull(t){let e;try{e=await n.read()}catch(t){if(t&&t.message)throw t;const n=new r("Invalid compressed data");throw n.cause=t,n}const{value:s,done:o}=e;o?t.close():t.enqueue(s)},cancel:t=>n.cancel(t)})}(C)}a&&(k=new U,C=Ht(C,k)),Lt(this,C,()=>{if(a){const t=new u(k.value.buffer);if(f!=t.getUint32(0,!1))throw new r(Rt)}})}}const Et=new f;function Lt(t,e,s){e=Ht(e,new d({flush:s})),n.defineProperty(t,"readable",{get:()=>e})}function Ot(t,n,e){if(!t)throw new r("Compression method not supported");return new t(n,e)}function jt(t,n,e,s,r){const o=n&&s?s:r||s,c=e.deflate64?"deflate64-raw":Ut;let i;try{i=new o(c,e)}catch(t){if(!n||!r||o==r)throw t;i=new r(c,e)}return Nt(t,i)}function Ht(t,n){return Pt(t).pipeThrough(n)}function Nt(t,n){const e=n.writable.getWriter(),s=t.getReader();return async function(){try{for(;;){await e.ready;const t=await s.read();if(t.done){await e.close();break}await e.write(t.value)}}catch(t){await async function(t,n){try{await t.abort(n)}catch{}}(e,t),await async function(t,n){try{await t.cancel(n)}catch{}}(s,t)}}(),n.readable}const qt="data",Gt="close",Jt="deflate";class Qt extends d{constructor(t,e){super({});const s=this,{codecType:o}=t;let c;o.startsWith(Jt)?c=Tt:o.startsWith("inflate")&&(c=Kt),s.outputSize=0;let i=0;const a=new c(t,e),f=super.readable,u=new d({transform(t,n){t&&t.length&&(i+=t.length,n.enqueue(t))},flush(){n.assign(s,{inputSize:i})}}),l=new d({transform(n,e){if(n&&n.length&&(e.enqueue(n),s.outputSize+=n.length,t.outputSize!==v&&s.outputSize>t.outputSize))throw new r(Ft)},flush(){const{crc32:t}=a;n.assign(s,{crc32:t,inputSize:i})}});n.defineProperty(s,"readable",{get:()=>f.pipeThrough(u).pipeThrough(a).pipeThrough(l)})}}class Xt extends d{constructor(t){const n=[];let s=0;function r(){const e=new o(t);let r=0;for(;r<t;){const s=n[0],o=t-r;s.length<=o?(e.set(s,r),r+=s.length,n.shift()):(e.set(s.subarray(0,o),r),n[0]=s.subarray(o),r+=o)}return s-=t,e}(!e.isFinite(t)||t<1)&&(t=65536),super({transform(e,o){for(n.push(e),s+=e.length;s>t;)o.enqueue(r())},flush(t){s&&t.enqueue(function(t,n){const e=new o(n);let s=0;for(const n of t)e.set(n,s),s+=n.length;return e}(n,s))}})}}let Yt=2;try{typeof navigator!=b&&navigator.hardwareConcurrency&&(Yt=navigator.hardwareConcurrency)}catch{}const Zt=new f,$t=new f;let tn,nn=0;async function en(t){let n,o;try{const{options:c,config:i}=t;if(c.format)try{await async function(t,n){!Bt.has(t)&&n&&function(t,n){const{CompressionStream:e,DecompressionStream:s}=n;if(typeof e!=k&&typeof s!=k)throw new r("Invalid codec module");Bt.set(t,{CompressionStream:e,DecompressionStream:s})}(t,await(import(n)))}(c.format,c.codecURI)}catch(t){throw t.codecImportFailed=!0,t}if(i.CompressionStream=self.CompressionStream,i.DecompressionStream=self.DecompressionStream,c.compressed&&!c.format)if(c.useCompressionStream){if(!function(t,n){if(!t)return!1;let e=Et.get(t);e||(e=new f,Et.set(t,e));let s=e.get(n);if(s===v){try{new t(n),s=!0}catch{s=!1}e.set(n,s)}return s}(c.codecType.startsWith(Jt)?i.CompressionStream:i.DecompressionStream,Ut))try{await self.initModule(t.config)}catch{}}else try{await self.initModule(t.config)}catch{c.useCompressionStream=!0}!i.CompressionStreamFallback&&i.CompressionStreamZlib&&(i.CompressionStreamFallback=i.CompressionStreamZlib),!i.DecompressionStreamFallback&&i.DecompressionStreamZlib&&(i.DecompressionStreamFallback=i.DecompressionStreamZlib);const a={highWaterMark:1},u=t.readable?Pt(t.readable):new y({async pull(t){const n=new l(t=>Zt.set(nn,t));sn({type:"pull",messageId:nn}),nn=(nn+1)%e.MAX_SAFE_INTEGER;const{value:s,done:r}=await n;t.enqueue(s),r&&t.close()}},a);o=t.writable?function(t){if(t instanceof m)return t;const n=t.getWriter();return new m({write:t=>n.write(t),close:()=>n.close(),abort:t=>n.abort(t)})}(t.writable):new m({async write(t){let n;const s=new l(t=>n=t);$t.set(nn,n),sn({type:qt,value:t,messageId:nn}),nn=(nn+1)%e.MAX_SAFE_INTEGER,await s}},a),n=new Qt(c,i),tn=new AbortController;const{signal:w}=tn;await u.pipeThrough(n).pipeThrough(new Xt(function(t){return r="string"==typeof(n=r=t.chunkSize)&&n.trim()?e(n):n,e.isInteger(r)&&r>=1?s.max(r,64):65536;var n,r}(i))).pipeTo(o,{signal:w,preventClose:!0,preventAbort:!0}),await o.getWriter().close();const{crc32:h,inputSize:p,outputSize:d}=n;sn({type:Gt,result:{crc32:h,inputSize:p,outputSize:d}})}catch(t){if(t.outputSize=n?n.outputSize:0,o&&!o.locked)try{await o.getWriter().close()}catch{}rn(t)}}function sn(t){const{value:n}=t;if(n)if(n.length)try{t.value=(e=n,e.byteOffset||e.byteLength!=e.buffer.byteLength?new o(e):e).buffer,p(t,[t.value])}catch{p(t)}else p(t);else p(t);var e}function rn(t=new r("Unknown error")){const{message:n,stack:e,code:s,name:o,outputSize:c,cause:i,codecImportFailed:a}=t,f={message:n,stack:e,code:s,name:o,outputSize:c};i&&(f.cause={name:i.name,message:i.message}),a&&(f.codecImportFailed=!0),p({error:f})}addEventListener("message",({data:t})=>{const{type:n,messageId:e,value:s,done:r}=t;try{if("start"==n&&en(t),n==qt){const t=Zt.get(e);Zt.delete(e),t({value:s||new o,done:r})}if("ack"==n){const t=$t.get(e);$t.delete(e),t()}n==Gt&&tn.abort()}catch(t){rn(t)}}),p({type:"ready"});const on="deflate",cn="deflate-raw",an="deflate64-raw",fn="gzip";let un,ln,wn,hn,pn;function dn(t,n,e={}){if(!un){const t=new r("WASM module not loaded");throw t.cause=pn,t}const c="number"==typeof e.level?e.level:-1,i="number"==typeof e.outBuffer?e.outBuffer:65536,a="number"==typeof e.inBufferSize?e.inBufferSize:65536;return new d({start(){try{let e;if(this.ut=ln(i),this.in=ln(a),this.inBufferSize=a,!this.ut||!this.in)throw new r("allocation failed");if(this.lt=new o(i),t?(this.wt=un.deflate_process,this.ht=un.deflate_last_consumed,this.yt=un.deflate_end,this.St=un.deflate_new(),e=n===fn?un.deflate_init_gzip(this.St,c):n===cn?un.deflate_init_raw(this.St,c):un.deflate_init(this.St,c)):n===an?(this.wt=un.inflate9_process,this.ht=un.inflate9_last_consumed,this.yt=un.inflate9_end,this.St=un.inflate9_new(),e=un.inflate9_init_raw(this.St)):(this.wt=un.inflate_process,this.ht=un.inflate_last_consumed,this.yt=un.inflate_end,this.St=un.inflate_new(),e=n===cn?un.inflate_init_raw(this.St):n===fn?un.inflate_init_gzip(this.St):un.inflate_init(this.St)),0!==e)throw new r("init failed:"+e)}catch(t){throw f(this),t}},transform(n,e){try{const c=n,a=new o(hn.buffer),f=this.wt,u=this.ht,l=this.ut,w=this.lt;let h=0;for(;h<c.length;){const n=s.min(c.length-h,32768);if((!this.in||this.inBufferSize<n)&&(this.in&&wn&&(wn(this.in),this.in=0),this.in=ln(n),this.inBufferSize=n,!this.in))throw new r("allocation failed");a.set(c.subarray(h,h+n),this.in);const o=f(this.St,this.in,n,l,i,0),p=16777215&o;if(p&&(w.set(a.subarray(l,l+p),0),e.enqueue(w.slice(0,p))),!t){const t=o>>24&255,n=128&t?t-256:t;if(n<0)throw new r("process error:"+n)}const d=u(this.St);if(0===d)break;h+=d}}catch(t){f(this),e.error(t)}},flush(n){try{const e=new o(hn.buffer),s=this.wt,c=this.ut,a=this.lt;for(;;){const o=s(this.St,0,0,c,i,4),f=16777215&o,u=o>>24&255;if(!t){const t=128&u?u-256:u;if(t<0)throw new r("process error:"+t)}if(f&&(a.set(e.subarray(c,c+f),0),n.enqueue(a.slice(0,f))),1===u||0===f)break}}catch(t){n.error(t)}finally{const t=f(this);0!==t&&n.error(new r("end error:"+t))}},cancel(){f(this)}});function f(t){let n=0;return t.St&&t.yt&&(n=t.yt(t.St)),t.St=0,t.in&&wn&&wn(t.in),t.in=0,t.ut&&wn&&wn(t.ut),t.ut=0,n}}class yn{constructor(t=on,n){return dn(!0,t,n)}}class mn{constructor(t=on,n){return dn(!1,t,n)}}yn.gt=!0,mn.gt=!0,yn.vt=[on,cn,fn],mn.vt=[on,cn,fn,an];let Sn=!1;!function(t={}){const{init:n}=t,e=t.CompressionStreamFallback||t.CompressionStreamZlib,s=t.DecompressionStreamFallback||t.DecompressionStreamZlib;self.initModule=async t=>{n&&await n(t),e&&(t.CompressionStreamFallback=e),s&&(t.DecompressionStreamFallback=s)}}({CompressionStreamFallback:yn,DecompressionStreamFallback:mn,init:t=>async function(t,{baseURI:n}){if(!Sn)try{await async function(t,n){let e,s;try{try{s=new URL(t,n)}catch{}const r=await fetch(s);e=await r.arrayBuffer()}catch(n){if(!t.startsWith("data:application/wasm;base64,"))throw n;e=function(t){const n=t.split(",")[1],e=atob(n),s=e.length,r=new o(s);for(let t=0;t<s;++t)r[t]=e.charCodeAt(t);return r.buffer}(t)}!function(t){if(un=t,({malloc:ln,free:wn,memory:hn}=un),"function"!=typeof ln||"function"!=typeof wn||!hn)throw un=ln=wn=hn=null,new r("Invalid WASM module")}((await WebAssembly.instantiate(e)).instance.exports)}(t,n),Sn=!0}catch(t){throw function(t){pn=t}(t),t}}(t.wasmURI,t)})});\n';
+  let s2 = '!function(t){"function"==typeof define&&define.amd?define(t):t()}(function(){"use strict";const{Array:t,Object:n,Number:e,Math:s,Error:r,Uint8Array:o,Uint16Array:c,Uint32Array:i,Int32Array:a,Map:f,DataView:u,Promise:l,TextEncoder:w,crypto:h,postMessage:p,TransformStream:d,ReadableStream:y,WritableStream:m,CompressionStream:S,DecompressionStream:g}=self,v=void 0,b="undefined",k="function",z=new o,C=[[],[],[],[],[],[],[],[]];for(let t=0;t<256;t++){let n=t;for(let t=0;t<8;t++)n=1&n?n>>>1^3988292384:n>>>1;C[0][t]=n}for(let t=0;t<256;t++)for(let n=1;n<8;n++){const e=C[n-1][t];C[n][t]=e>>>8^C[0][255&e]}const[I,A,x,M,P,B,D,F]=C;class R{constructor(t){this.o=t||-1}append(t){let n=0|this.o;const e=0|t.length;let s=0;if(e>=8&&t.buffer){const r=new u(t.buffer,t.byteOffset,e),o=e-8;for(;s<=o;s+=8){const t=n^r.getInt32(s,!0),e=r.getInt32(s+4,!0);n=F[255&t]^D[t>>>8&255]^B[t>>>16&255]^P[t>>>24&255]^M[255&e]^x[e>>>8&255]^A[e>>>16&255]^I[e>>>24&255]}}for(;s<e;s++)n=n>>>8^I[255&(n^t[s])];this.o=n}get(){return~this.o}}class U extends d{constructor(){let t;const n=new R;super({transform(t,e){n.append(t),e.enqueue(t)},flush(){const e=new o(4);new u(e.buffer).setUint32(0,n.get()),t.value=e}}),t=this}}function W(t,n){const e=new o(t.length+n.length);return e.set(t),e.set(n,t.length),e}function _(t){return new u(t.buffer,t.byteOffset,t.byteLength)}const T={concat(t,n){if(0===t.length||0===n.length)return t.concat(n);const e=t[t.length-1],s=T.l(e);return 32===s?t.concat(n):T.h(n,s,0|e,t.slice(0,t.length-1))},bitLength(t){const n=t.length;if(0===n)return 0;const e=t[n-1];return 32*(n-1)+T.l(e)},m(t,n){if(32*t.length<n)return t;const e=(t=t.slice(0,s.ceil(n/32))).length;return n&=31,e>0&&n&&(t[e-1]=T.S(n,t[e-1]&2147483648>>n-1,1)),t},S:(t,n,e)=>32===t?n:(e?0|n:n<<32-t)+1099511627776*t,l:t=>s.round(t/1099511627776)||32,h(t,n,e,s){for(void 0===s&&(s=[]);n>=32;n-=32)s.push(e),e=0;if(0===n)return s.concat(t);for(let r=0;r<t.length;r++)s.push(e|t[r]>>>n),e=t[r]<<32-n;const r=t.length?t[t.length-1]:0,o=T.l(r);return s.push(T.S(n+o&31,n+o>32?e:s.pop(),1)),s}},V={bytes:{v(t){const n=T.bitLength(t)/8,e=new o(n);let s;for(let r=0;r<n;r++)3&r||(s=t[r/4]),e[r]=s>>>24,s<<=8;return e},C(t){const n=[];let e,s=0;for(e=0;e<t.length;e++)s=s<<8|t[e],3&~e||(n.push(s),s=0);return 3&e&&n.push(T.S(8*(3&e),s)),n}}},K=class{constructor(t){const n=this;n.blockSize=512,n.I=[1732584193,4023233417,2562383102,271733878,3285377520],n.A=[1518500249,1859775393,2400959708,3395469782],t?(n.M=t.M.slice(0),n.P=t.P.slice(0),n.B=t.B):n.reset()}reset(){const t=this;return t.M=t.I.slice(0),t.P=[],t.B=0,t}update(t){const n=this;"string"==typeof t&&(t=V.D.C(t));const e=n.P=T.concat(n.P,t),s=n.B,o=n.B=s+T.bitLength(t);if(o>9007199254740991)throw new r("Cannot hash more than 2^53 - 1 bits");const c=new i(e);let a=0;for(let t=n.blockSize+s-(n.blockSize+s&n.blockSize-1);t<=o;t+=n.blockSize)n.F(c.subarray(16*a,16*(a+1))),a+=1;return e.splice(0,16*a),n}R(){const t=this;let n=t.P;const e=t.M;n=T.concat(n,[T.S(1,1)]);for(let t=n.length+2;15&t;t++)n.push(0);for(n.push(s.floor(t.B/4294967296)),n.push(0|t.B);n.length;)t.F(n.splice(0,16));return t.reset(),e}U(t,n,e,s){return t<=19?n&e|~n&s:t<=39?n^e^s:t<=59?n&e|n&s|e&s:t<=79?n^e^s:void 0}W(t,n){return n<<t|n>>>32-t}F(n){const e=this,r=e.M,o=t(80);for(let t=0;t<16;t++)o[t]=n[t];let c=r[0],i=r[1],a=r[2],f=r[3],u=r[4];for(let t=0;t<=79;t++){t>=16&&(o[t]=e.W(1,o[t-3]^o[t-8]^o[t-14]^o[t-16]));const n=e.W(5,c)+e.U(t,i,a,f)+u+o[t]+e.A[s.floor(t/20)]|0;u=f,f=a,a=e.W(30,i),i=c,c=n}r[0]=r[0]+c|0,r[1]=r[1]+i|0,r[2]=r[2]+a|0,r[3]=r[3]+f|0,r[4]=r[4]+u|0}},E={importKey:t=>new E._(V.bytes.C(t)),T(t,n,e,s){if(e=e||1e4,s<0||e<0)throw new r("invalid params to pbkdf2");const o=1+(s>>5)<<2;let c,i,a,f,l;const w=new ArrayBuffer(o),h=new u(w);let p=0;const d=T;for(n=V.bytes.C(n),l=1;p<(o||1);l++){for(c=i=t.encrypt(d.concat(n,[l])),a=1;a<e;a++)for(i=t.encrypt(i),f=0;f<i.length;f++)c[f]^=i[f];for(a=0;p<(o||1)&&a<c.length;a++)h.setInt32(p,c[a]),p+=4}return w.slice(0,s/8)},_:class{constructor(t){const n=this,e=n.V=K,s=[[],[]];n.K=[new e,new e];const r=n.K[0].blockSize/32;t.length>r&&(t=(new e).update(t).R());for(let n=0;n<r;n++)s[0][n]=909522486^t[n],s[1][n]=1549556828^t[n];n.K[0].update(s[0]),n.K[1].update(s[1]),n.L=new e(n.K[0])}reset(){const t=this;t.L=new t.V(t.K[0]),t.O=!1}update(t){this.O=!0,this.L.update(t)}digest(){const t=this,n=t.L.R(),e=new t.V(t.K[1]).update(n).R();return t.reset(),e}encrypt(t){if(this.O)throw new r("encrypt on already updated hmac called!");return this.update(t),this.digest(t)}}},L=typeof h!=b&&typeof h.getRandomValues==k,O="Invalid password",j="zipjs-abort-check-password";function H(t){if(L)return h.getRandomValues(t);throw new r("Crypto API not supported")}const N=16,q={name:"PBKDF2"},G=n.assign({hash:{name:"HMAC"}},q),J=n.assign({iterations:1e3,hash:{name:"SHA-1"}},q),Q=["deriveBits"],X=[8,12,16],Y=[16,24,32],Z=10,$=[0,0,0,0],tt=typeof h!=b,nt=tt&&h.subtle,et=tt&&typeof nt!=b,st=V.bytes,rt=class{constructor(t){const n=this;n.j=[[[],[],[],[],[]],[[],[],[],[],[]]],n.j[0][0][0]||n.H();const e=n.j[0][4],s=n.j[1],o=t.length;let c,i,a,f=1;if(4!==o&&6!==o&&8!==o)throw new r("invalid aes key size");for(n.A=[i=t.slice(0),a=[]],c=o;c<4*o+28;c++){let t=i[c-1];(c%o===0||8===o&&c%o===4)&&(t=e[t>>>24]<<24^e[t>>16&255]<<16^e[t>>8&255]<<8^e[255&t],c%o===0&&(t=t<<8^t>>>24^f<<24,f=f<<1^283*(f>>7))),i[c]=i[c-o]^t}for(let t=0;c;t++,c--){const n=i[3&t?c:c-4];a[t]=c<=4||t<4?n:s[0][e[n>>>24]]^s[1][e[n>>16&255]]^s[2][e[n>>8&255]]^s[3][e[255&n]]}}encrypt(t){return this.N(t,0)}decrypt(t){return this.N(t,1)}H(){const t=this.j[0],n=this.j[1],e=t[4],s=n[4],r=[],o=[];let c,i,a,f;for(let t=0;t<256;t++)o[(r[t]=t<<1^283*(t>>7))^t]=t;for(let u=c=0;!e[u];u^=i||1,c=o[c]||1){let o=c^c<<1^c<<2^c<<3^c<<4;o=o>>8^255&o^99,e[u]=o,s[o]=u,f=r[a=r[i=r[u]]];let l=16843009*f^65537*a^257*i^16843008*u,w=257*r[o]^16843008*o;for(let e=0;e<4;e++)t[e][u]=w=w<<24^w>>>8,n[e][o]=l=l<<24^l>>>8}for(let e=0;e<5;e++)t[e]=t[e].slice(0),n[e]=n[e].slice(0)}N(t,n){if(4!==t.length)throw new r("invalid aes block size");const e=this.A[n],s=e.length/4-2,o=[0,0,0,0],c=this.j[n],i=c[0],a=c[1],f=c[2],u=c[3],l=c[4];let w,h,p,d=t[0]^e[0],y=t[n?3:1]^e[1],m=t[2]^e[2],S=t[n?1:3]^e[3],g=4;for(let t=0;t<s;t++)w=i[d>>>24]^a[y>>16&255]^f[m>>8&255]^u[255&S]^e[g],h=i[y>>>24]^a[m>>16&255]^f[S>>8&255]^u[255&d]^e[g+1],p=i[m>>>24]^a[S>>16&255]^f[d>>8&255]^u[255&y]^e[g+2],S=i[S>>>24]^a[d>>16&255]^f[y>>8&255]^u[255&m]^e[g+3],g+=4,d=w,y=h,m=p;for(let t=0;t<4;t++)o[n?3&-t:t]=l[d>>>24]<<24^l[y>>16&255]<<16^l[m>>8&255]<<8^l[255&S]^e[g++],w=d,d=y,y=m,m=S,S=w;return o}},ot=class{constructor(t,n){this.G=t,this.J=n,this.X=n}reset(){this.X=this.J}update(t){return this.Y(this.G,t,this.X)}Z(t){if(255&~(t>>24))t+=1<<24;else{let n=t>>16&255,e=t>>8&255,s=255&t;255===n?(n=0,255===e?(e=0,255===s?s=0:++s):++e):++n,t=0,t+=n<<16,t+=e<<8,t+=s}return t}$(t){0===(t[0]=this.Z(t[0]))&&(t[1]=this.Z(t[1]))}Y(t,n,e){let s;if(!(s=n.length))return[];const r=T.bitLength(n);for(let r=0;r<s;r+=4){this.$(e);const s=t.encrypt(e);n[r]^=s[0],n[r+1]^=s[1],n[r+2]^=s[2],n[r+3]^=s[3]}return T.m(n,r)}},ct=E._;let it=tt&&et&&typeof nt.importKey==k,at=tt&&et&&typeof nt.deriveBits==k;class ft extends d{constructor({password:t,rawPassword:n,encryptionStrength:e,checkPasswordOnly:s,checkAuthenticationCode:c=!0}){super({start(){lt(this,t,n,e)},async transform(t,n){const e=this,{password:c,strength:i,nt:a,ready:f}=e;c?(await async function(t,n,e,s){const o=await ht(t,n,e,dt(s,0,X[n])),c=dt(s,X[n]);if(o[0]!=c[0]||o[1]!=c[1])throw new r(O)}(e,i,c,dt(t,0,X[i]+2)),t=dt(t,X[i]+2),s?n.error(new r(j)):a()):await f;const u=new o(t.length-Z-(t.length-Z)%N);n.enqueue(wt(e,t,u,0,Z,!0))},async flush(t){const{et:n,st:e,ot:s,ready:o}=this;if(e&&n){await o;const i=dt(s,0,s.length-Z),a=dt(s,s.length-Z);let f=z;if(i.length){const t=mt(st,i);e.update(t);const s=n.update(t);f=yt(st,s)}const u=dt(yt(st,e.digest()),0,Z);let l=s.length<Z?1:0;for(let t=0;t<Z;t++)l|=u[t]^a[t];if(l&&c)throw new r("Invalid authentication code");t.enqueue(f)}}})}}class ut extends d{constructor({password:t,rawPassword:n,encryptionStrength:e}){super({start(){lt(this,t,n,e)},async transform(t,n){const e=this,{password:s,strength:r,nt:c,ready:i}=e;let a=z;s?(a=await async function(t,n,e){const s=H(new o(X[n]));return W(s,await ht(t,n,e,s))}(e,r,s),c()):await i;const f=new o(a.length+t.length-t.length%N);f.set(a,0),n.enqueue(wt(e,t,f,a.length,0))},async flush(t){const{et:n,st:e,ot:s,ready:r}=this;if(e&&n){await r;let o=z;if(s.length){const t=n.update(mt(st,s));e.update(t),o=yt(st,t)}const c=yt(st,e.digest()).slice(0,Z);t.enqueue(W(o,c))}}})}}function lt(t,e,s,r){n.assign(t,{ready:new l(n=>t.nt=n),password:pt(e,s),strength:r-1,ot:z})}function wt(t,n,e,s,r,c){const{et:i,st:a,ot:f}=t;f.length&&(n=W(f,n));const u=n.length-r;let l;for(e=function(t,n){if(n&&n>t.length){const e=t;(t=new o(n)).set(e,0)}return t}(e,s+(u-u%N)),l=0;l<=u-N;l+=N){const t=mt(st,dt(n,l,l+N));c&&a.update(t);const r=i.update(t);c||a.update(r),e.set(yt(st,r),l+s)}return t.ot=dt(n,l),e}async function ht(e,s,r,c){e.password=null;const i=await async function(t,n,e,s,r){if(!it)return E.importKey(n);try{return await nt.importKey("raw",n,e,!1,r)}catch{return it=!1,E.importKey(n)}}(0,r,G,0,Q),a=await async function(t,n,e){if(!at)return E.T(n,t.salt,J.iterations,e);try{return await nt.deriveBits(t,n,e)}catch{return at=!1,E.T(n,t.salt,J.iterations,e)}}(n.assign({salt:c},J),i,8*(2*Y[s]+2)),f=new o(a),u=mt(st,dt(f,0,Y[s])),l=mt(st,dt(f,Y[s],2*Y[s])),w=dt(f,2*Y[s]);return n.assign(e,{keys:{key:u,ct:l,passwordVerification:w},et:new ot(new rt(u),t.from($)),st:new ct(l)}),w}function pt(t,n){return n===v?function(t){if(typeof w==b){t=unescape(encodeURIComponent(t));const n=new o(t.length);for(let e=0;e<n.length;e++)n[e]=t.charCodeAt(e);return n}return(new w).encode(t)}(t):n}function dt(t,n,e){return t.subarray(n,e)}function yt(t,n){return t.v(n)}function mt(t,n){return t.C(n)}class St extends d{constructor({password:t,rawPassword:n,passwordVerification:e,checkPasswordOnly:s}){super({start(){vt(this,t,n,e)},transform(t,n){const e=this;if(e.password||e.rawPassword){const n=bt(e,t.subarray(0,12));if(e.password=e.rawPassword=null,0!=(n[11]^e.passwordVerification))throw new r(O);t=t.subarray(12)}s?n.error(new r(j)):n.enqueue(bt(e,t))}})}}class gt extends d{constructor({password:t,rawPassword:n,passwordVerification:e}){super({start(){vt(this,t,n,e)},transform(t,n){const e=this;let s,r;if(e.password||e.rawPassword){e.password=e.rawPassword=null;const n=H(new o(12));n[11]=e.passwordVerification,s=new o(t.length+n.length),s.set(kt(e,n),0),r=12}else s=new o(t.length),r=0;s.set(kt(e,t),r),n.enqueue(s)}})}}function vt(t,e,s,r){n.assign(t,{password:e,rawPassword:s,passwordVerification:r}),function(t,e,s){const r=[305419896,591751049,878082192];if(n.assign(t,{keys:r,it:new R(r[0]),ft:new R(r[2])}),s)for(let n=0;n<s.length;n++)zt(t,s[n]);else for(let n=0;n<e.length;n++)zt(t,e.charCodeAt(n))}(t,e,s)}function bt(t,n){const e=new o(n.length);for(let s=0;s<n.length;s++)e[s]=Ct(t)^n[s],zt(t,e[s]);return e}function kt(t,n){const e=new o(n.length);for(let s=0;s<n.length;s++)e[s]=Ct(t)^n[s],zt(t,n[s]);return e}function zt(t,n){let[,e]=t.keys;t.it.append([n]);const r=~t.it.get();e=At(s.imul(At(e+It(r)),134775813)+1),t.ft.append([e>>>24]);const o=~t.ft.get();t.keys=[r,e,o]}function Ct(t){const n=2|t.keys[2];return It(s.imul(n,1^n)>>>8)}function It(t){return 255&t}function At(t){return 4294967295&t}function xt(t){if(t instanceof y)return t;const n=t.getReader();return new y({async pull(t){const{value:e,done:s}=await n.read();s?t.close():t.enqueue(e)},cancel:t=>n.cancel(t)})}const Mt=new f;function Pt(t){return Mt.get(t)}const Bt="Invalid uncompressed size",Dt="deflate-raw",Ft="gzip",Rt=[31,139,8];class Ut extends d{constructor(t,{chunkSize:n,CompressionStreamFallback:e,CompressionStream:s}){super({});const{compressed:r,encrypted:o,useCompressionStream:c,zipCrypto:i,computeCrc32:a,level:f,deflate64:l,format:w,compressionMethod:h,inputSize:p}=t,d=this;let y,m,S,g=super.readable;const v=w&&Pt(w),b=a&&r&&!l&&!v&&(!o||i)&&Boolean(c&&s);if(o&&!i||!a||b||(y=new U,g=Lt(g,y)),r)if(v)g=Ot(g,Kt(v.CompressionStream,w,{level:f,chunkSize:n,compressionMethod:h,uncompressedSize:p}));else if(b)S=new Wt,g=Ot(g,new s(Ft)),g=Lt(g,S);else try{g=Et(g,c,{level:f,chunkSize:n},s,e)}catch(t){let n;try{n=new s(Ft)}catch{throw t}g=Ot(g,n),g=Lt(g,new Wt)}o&&(i?g=Lt(g,new gt(t)):(m=new ut(t),g=Lt(g,m))),Vt(d,g,()=>{o&&!i||!a||(d.crc32=b?S.crc32:new u(y.value.buffer).getUint32(0))})}}class Wt extends d{constructor(){let t,n=10,e=new o(0);super({transform(t,r){if(n){const e=s.min(n,t.length);if(n-=e,!(t=t.subarray(e)).length)return}const o=e.length+t.length;if(o<=8)return void(e=W(e,t));const c=o-8,i=s.min(c,e.length);r.enqueue(W(e.subarray(0,i),t.subarray(0,c-i))),e=W(e.subarray(i),t.subarray(c-i))},flush(){const n=_(e);t.crc32=n.getUint32(0,!0),t.uncompressedSize=n.getUint32(4,!0)}}),t=this}}class _t extends d{constructor(t,{chunkSize:n,DecompressionStreamFallback:e,DecompressionStream:s}){super({});const{zipCrypto:c,encrypted:i,checkCrc32:a,crc32:f,compressed:w,useCompressionStream:h,deflate64:p,format:m,compressionMethod:S,rawBitFlag:g,outputSize:b}=t;let k,z,C=super.readable;if(i&&(c?C=Lt(C,new St(t)):(z=new ft(t),C=Lt(C,z))),w){const t=m&&Pt(m);if(t)C=Ot(C,Kt(t.DecompressionStream,m,{chunkSize:n,compressionMethod:S,rawBitFlag:g,uncompressedSize:b}));else try{C=Et(C,h,{chunkSize:n,deflate64:p},s,e)}catch(t){if(p||b===v)throw t;let n;try{n=new s(Ft)}catch{throw t}C=function(t,n,e){const s=new R;let c,i,a,f=0,u=!1;const w=new l((t,n)=>{i=t,a=n});w.catch(()=>{}),e||i();const h=new d({start(t){const n=new o(10);n.set(Rt),t.enqueue(n)},transform(t,n){n.enqueue(t)},async flush(t){u=!0,y();try{await w}finally{m()}const n=new o(8),r=_(n);r.setUint32(0,s.get(),!0),r.setUint32(4,e,!0),t.enqueue(n)},cancel(t){a(t)}}),p=new d({transform(t,n){s.append(t),f+=t.length,f>=e?i():u&&y(),n.enqueue(t)},cancel(t){a(t)}});return t=Lt(t,h),Lt(t=Ot(t,n),p);function y(){m(),c=setTimeout(()=>a(new r(Bt)),5e3)}function m(){clearTimeout(c)}}(C,n,b)}C=function(t){const n=t.getReader();return new y({async pull(t){let e;try{e=await n.read()}catch(t){if(t&&t.message)throw t;const n=new r("Invalid compressed data");throw n.cause=t,n}const{value:s,done:o}=e;o?t.close():t.enqueue(s)},cancel:t=>n.cancel(t)})}(C)}a&&(k=new U,C=Lt(C,k)),Vt(this,C,()=>{if(a){const t=new u(k.value.buffer);if(f!=t.getUint32(0,!1))throw new r("Invalid CRC32")}})}}const Tt=new f;function Vt(t,e,s){e=Lt(e,new d({flush:s})),n.defineProperty(t,"readable",{get:()=>e})}function Kt(t,n,e){if(!t)throw new r("Compression method not supported");return new t(n,e)}function Et(t,n,e,s,r){const o=n&&s?s:r||s,c=e.deflate64?"deflate64-raw":Dt;let i;try{i=new o(c,e)}catch(t){if(!n||!r||o==r)throw t;i=new r(c,e)}return Ot(t,i)}function Lt(t,n){return xt(t).pipeThrough(n)}function Ot(t,n){const e=n.writable.getWriter(),s=t.getReader();return async function(){try{for(;;){await e.ready;const t=await s.read();if(t.done){await e.close();break}await e.write(t.value)}}catch(t){await async function(t,n){try{await t.abort(n)}catch{}}(e,t),await async function(t,n){try{await t.cancel(n)}catch{}}(s,t)}}(),n.readable}const jt="data",Ht="close",Nt="deflate";class qt extends d{constructor(t,e){super({});const s=this,{codecType:o}=t;let c;o.startsWith(Nt)?c=Ut:o.startsWith("inflate")&&(c=_t),s.outputSize=0;let i=0;const a=new c(t,e),f=super.readable,u=new d({transform(t,n){t&&t.length&&(i+=t.length,n.enqueue(t))},flush(){n.assign(s,{inputSize:i})}}),l=new d({transform(n,e){if(n&&n.length&&(e.enqueue(n),s.outputSize+=n.length,t.outputSize!==v&&s.outputSize>t.outputSize))throw new r(Bt)},flush(){const{crc32:t}=a;n.assign(s,{crc32:t,inputSize:i})}});n.defineProperty(s,"readable",{get:()=>f.pipeThrough(u).pipeThrough(a).pipeThrough(l)})}}class Gt extends d{constructor(t){const s=[];let r=0,c=0;function i(){const n=new o(t);let e=0;for(;e<t;){const r=s[0],o=t-e;r.length<=o?(n.set(r,e),e+=r.length,s.shift()):(n.set(r.subarray(0,o),e),s[0]=r.subarray(o),e+=o)}return r-=t,n}(!e.isFinite(t)||t<1)&&(t=65536),super({transform(n,e){for(s.push(n),r+=n.length;r>t;)c+=t,e.enqueue(i())},flush(t){r&&(c+=r,t.enqueue(function(t,n){const e=new o(n);let s=0;for(const n of t)e.set(n,s),s+=n.length;return e}(s,r)))}}),n.defineProperty(this,"outputSize",{get:()=>c})}}let Jt=2;try{typeof navigator!=b&&navigator.hardwareConcurrency&&(Jt=navigator.hardwareConcurrency)}catch{}const Qt=new f,Xt=new f;let Yt,Zt=0;async function $t(t){let n,o,c;try{const{options:i,config:a}=t;if(i.format)try{await async function(t,n){!Mt.has(t)&&n&&function(t,n){const{CompressionStream:e,DecompressionStream:s}=n;if(typeof e!=k&&typeof s!=k)throw new r("Invalid codec module");Mt.set(t,{CompressionStream:e,DecompressionStream:s})}(t,await(import(n)))}(i.format,i.codecURI)}catch(t){throw t.codecImportFailed=!0,t}if(a.CompressionStream=self.CompressionStream,a.DecompressionStream=self.DecompressionStream,i.compressed&&!i.format)if(i.useCompressionStream){if(!function(t,n){if(!t)return!1;let e=Tt.get(t);e||(e=new f,Tt.set(t,e));let s=e.get(n);if(s===v){try{new t(n),s=!0}catch{s=!1}e.set(n,s)}return s}(i.codecType.startsWith(Nt)?a.CompressionStream:a.DecompressionStream,Dt))try{await self.initModule(t.config)}catch{}}else try{await self.initModule(t.config)}catch{i.useCompressionStream=!0}!a.CompressionStreamFallback&&a.CompressionStreamZlib&&(a.CompressionStreamFallback=a.CompressionStreamZlib),!a.DecompressionStreamFallback&&a.DecompressionStreamZlib&&(a.DecompressionStreamFallback=a.DecompressionStreamZlib);const u={highWaterMark:1},w=t.readable?xt(t.readable):new y({async pull(t){const n=new l(t=>Qt.set(Zt,t));tn({type:"pull",messageId:Zt}),Zt=(Zt+1)%e.MAX_SAFE_INTEGER;const{value:s,done:r}=await n;t.enqueue(s),r&&t.close()}},u);c=t.writable?function(t){if(t instanceof m)return t;const n=t.getWriter();return new m({write:t=>n.write(t),close:()=>n.close(),abort:t=>n.abort(t)})}(t.writable):new m({async write(t){let n;const s=new l(t=>n=t);Xt.set(Zt,n),tn({type:jt,value:t,messageId:Zt}),Zt=(Zt+1)%e.MAX_SAFE_INTEGER,await s}},u),n=new qt(i,a),o=new Gt(function(t){return r="string"==typeof(n=r=t.chunkSize)&&n.trim()?e(n):n,e.isInteger(r)&&r>=1?s.max(r,64):65536;var n,r}(a)),Yt=new AbortController;const{signal:h}=Yt;await w.pipeThrough(n).pipeThrough(o).pipeTo(c,{signal:h,preventClose:!0,preventAbort:!0}),await c.getWriter().close();const{crc32:p,inputSize:d,outputSize:S}=n;tn({type:Ht,result:{crc32:p,inputSize:d,outputSize:S}})}catch(t){if(t.outputSize=o?o.outputSize:0,c&&!c.locked)try{await c.getWriter().close()}catch{}nn(t)}}function tn(t){const{value:n}=t;if(n)if(n.length)try{t.value=(e=n,e.byteOffset||e.byteLength!=e.buffer.byteLength?new o(e):e).buffer,p(t,[t.value])}catch{p(t)}else p(t);else p(t);var e}function nn(t=new r("Unknown error")){const{message:n,stack:e,code:s,name:o,outputSize:c,cause:i,codecImportFailed:a}=t,f={message:n,stack:e,code:s,name:o,outputSize:c};i&&(f.cause={name:i.name,message:i.message}),a&&(f.codecImportFailed=!0),p({error:f})}addEventListener("message",({data:t})=>{const{type:n,messageId:e,value:s,done:r}=t;try{if("start"==n&&$t(t),n==jt){const t=Qt.get(e);Qt.delete(e),t({value:s||new o,done:r})}if("ack"==n){const t=Xt.get(e);Xt.delete(e),t()}n==Ht&&Yt.abort()}catch(t){nn(t)}}),p({type:"ready"});const en="deflate",sn="deflate-raw",rn="deflate64-raw",on="gzip";let cn,an,fn,un,ln;function wn(t,n,e={}){if(!cn){const t=new r("WASM module not loaded");throw t.cause=ln,t}const c="number"==typeof e.level?e.level:-1,i="number"==typeof e.outBuffer?e.outBuffer:65536,a="number"==typeof e.inBufferSize?e.inBufferSize:65536;return new d({start(){try{let e;if(this.ut=an(i),this.in=an(a),this.inBufferSize=a,!this.ut||!this.in)throw new r("allocation failed");if(this.lt=new o(i),t?(this.wt=cn.deflate_process,this.ht=cn.deflate_last_consumed,this.yt=cn.deflate_end,this.St=cn.deflate_new(),e=n===on?cn.deflate_init_gzip(this.St,c):n===sn?cn.deflate_init_raw(this.St,c):cn.deflate_init(this.St,c)):n===rn?(this.wt=cn.inflate9_process,this.ht=cn.inflate9_last_consumed,this.yt=cn.inflate9_end,this.St=cn.inflate9_new(),e=cn.inflate9_init_raw(this.St)):(this.wt=cn.inflate_process,this.ht=cn.inflate_last_consumed,this.yt=cn.inflate_end,this.St=cn.inflate_new(),e=n===sn?cn.inflate_init_raw(this.St):n===on?cn.inflate_init_gzip(this.St):cn.inflate_init(this.St)),0!==e)throw new r("init failed:"+e)}catch(t){throw f(this),t}},transform(t,n){try{const e=t,c=new o(un.buffer),a=this.wt,f=this.ht,u=this.ut,l=this.lt;let w=0;for(;w<e.length;){const t=s.min(e.length-w,32768);if((!this.in||this.inBufferSize<t)&&(this.in&&fn&&(fn(this.in),this.in=0),this.in=an(t),this.inBufferSize=t,!this.in))throw new r("allocation failed");c.set(e.subarray(w,w+t),this.in);const o=a(this.St,this.in,t,u,i,0),h=o>>24&255,p=128&h?h-256:h;if(p<0)throw new r("process error:"+p);const d=16777215&o;d&&(l.set(c.subarray(u,u+d),0),n.enqueue(l.slice(0,d)));const y=f(this.St);if(0===y&&0===d)break;w+=y}}catch(t){f(this),n.error(t)}},flush(t){try{const n=new o(un.buffer),e=this.wt,s=this.ut,c=this.lt;for(;;){const o=e(this.St,0,0,s,i,4),a=o>>24&255,f=128&a?a-256:a;if(f<0)throw new r("process error:"+f);const u=16777215&o;if(u&&(c.set(n.subarray(s,s+u),0),t.enqueue(c.slice(0,u))),1===a||0===u)break}}catch(n){t.error(n)}finally{const n=f(this);0!==n&&t.error(new r("end error:"+n))}},cancel(){f(this)}});function f(t){let n=0;return t.St&&t.yt&&(n=t.yt(t.St)),t.St=0,t.in&&fn&&fn(t.in),t.in=0,t.ut&&fn&&fn(t.ut),t.ut=0,n}}class hn{constructor(t=en,n){return wn(!0,t,n)}}class pn{constructor(t=en,n){return wn(!1,t,n)}}hn.gt=!0,pn.gt=!0,hn.vt=[en,sn,on],pn.vt=[en,sn,on,rn];let dn=!1;!function(t={}){const{init:n}=t,e=t.CompressionStreamFallback||t.CompressionStreamZlib,s=t.DecompressionStreamFallback||t.DecompressionStreamZlib;self.initModule=async t=>{n&&await n(t),e&&(t.CompressionStreamFallback=e),s&&(t.DecompressionStreamFallback=s)}}({CompressionStreamFallback:hn,DecompressionStreamFallback:pn,init:t=>async function(t,{baseURI:n}){if(!dn)try{await async function(t,n){let e,s;try{try{s=new URL(t,n)}catch{}const r=await fetch(s);e=await r.arrayBuffer()}catch(n){if(!t.startsWith("data:application/wasm;base64,"))throw n;e=function(t){const n=t.split(",")[1],e=atob(n),s=e.length,r=new o(s);for(let t=0;t<s;++t)r[t]=e.charCodeAt(t);return r.buffer}(t)}!function(t){if(cn=t,({malloc:an,free:fn,memory:un}=cn),"function"!=typeof an||"function"!=typeof fn||!un)throw cn=an=fn=un=null,new r("Invalid WASM module")}((await WebAssembly.instantiate(e)).instance.exports)}(t,n),dn=!0}catch(t){throw function(t){ln=t}(t),t}}(t.wasmURI,t)})});\n';
   if ("string" == typeof s2 && (s2 = new TextEncoder().encode(s2)), t4) {
     const t5 = new Blob([s2], { type: n3 });
     return URL.createObjectURL(t5);
@@ -4795,11 +4935,11 @@ var n = (t3) => t3({ workerURI: (t4) => {
       const s4 = t5[r2] << 16 | t5[r2 + 1] << 8 | t5[r2 + 2];
       n4 += e[s4 >> 18 & 63] + e[s4 >> 12 & 63] + e[s4 >> 6 & 63] + e[63 & s4];
     }
-    const o = s3 - r2;
-    if (1 === o) {
+    const o2 = s3 - r2;
+    if (1 === o2) {
       const s4 = t5[r2] << 16;
       n4 += e[s4 >> 18 & 63] + e[s4 >> 12 & 63] + "==";
-    } else if (2 === o) {
+    } else if (2 === o2) {
       const s4 = t5[r2] << 16 | t5[r2 + 1] << 8;
       n4 += e[s4 >> 18 & 63] + e[s4 >> 12 & 63] + e[s4 >> 6 & 63] + "=";
     }
@@ -4882,11 +5022,17 @@ async function runWebWorker(workerData, config2) {
   let resolveResult, rejectResult;
   const result = new Promise((resolve, reject) => {
     resolveResult = resolve;
-    rejectResult = reject;
+    rejectResult = (error) => {
+      if (error && error.outputSize === UNDEFINED_VALUE) {
+        error.outputSize = workerData.outputSize;
+      }
+      reject(error);
+    };
   });
   Object.assign(workerData, {
     reader: null,
     writer: null,
+    outputSize: 0,
     resolveResult,
     rejectResult,
     result
@@ -5154,8 +5300,10 @@ async function onMessage({ data }, workerData) {
         }
       }
       if (type == MESSAGE_DATA) {
+        const chunk = new Uint8Array(value);
         await writer.ready;
-        await writer.write(new Uint8Array(value));
+        await writer.write(chunk);
+        workerData.outputSize += chunk.length;
         if (!stale()) {
           sendMessage({ type: MESSAGE_ACK_DATA, messageId }, workerData);
         }
@@ -5200,6 +5348,7 @@ init_codec_pool();
 init_io();
 init_encode_text();
 init_array();
+init_warnings();
 init_compatible_streams();
 init_zip_entry();
 init_options();
@@ -5213,12 +5362,12 @@ var ERR_INVALID_ENTRY_NAME = "File entry name exceeds 64KB";
 var ERR_INVALID_VERSION = "Version exceeds 65535";
 var ERR_INVALID_ENCRYPTION_STRENGTH = "The strength must equal 1, 2, or 3";
 var ERR_UNSUPPORTED_ENCRYPTION_USDZ = "Encryption is not supported in USDZ files";
-var ERR_UNSUPPORTED_ENCRYPTION_PASS_THROUGH = "Encryption is not supported when the 'passThrough' option is set";
+var ERR_UNSUPPORTED_SPLIT_USDZ = "Split zip files are not supported in USDZ files";
+var ERR_UNSUPPORTED_ENCRYPTION_PASS_THROUGH = "Encryption is not supported when the 'passThrough' option is set to true (use 'compressed' instead)";
 var ERR_INVALID_EXTRAFIELD = "Invalid extra field (must be a Map)";
 var ERR_INVALID_EXTRAFIELD_TYPE = "Invalid extra field type (must be integer 0..65535)";
 var ERR_INVALID_EXTRAFIELD_DATA_TYPE = "Invalid extra field data (must be a Uint8Array)";
 var ERR_INVALID_EXTRAFIELD_DATA = "Extra field data exceeds 64KB";
-var ERR_UNSUPPORTED_COMPRESSION3 = "Compression method not supported";
 var MIN_UNIX_TIME = -2147483648;
 var MAX_UNIX_TIME = 2147483647;
 var MIN_NTFS_TIME = BigInt(0);
@@ -5226,8 +5375,10 @@ var MAX_NTFS_TIME = BigInt("0x7fffffffffffffff");
 var ERR_UNSUPPORTED_FORMAT = "Zip64 is not supported (set the 'zip64' option to 'true')";
 var ERR_UNDEFINED_UNCOMPRESSED_SIZE = "Undefined uncompressed size";
 var ERR_UNDEFINED_COMPRESSION_METHOD = "Undefined compression method";
+var ERR_UNDEFINED_CRC32 = "Undefined CRC32";
 var ERR_UNDETERMINED_SIZE = "Undetermined size";
 var ERR_UNDEFINED_READER = "Undefined reader";
+var ERR_INVALID_READER = "Invalid reader (must be a Reader instance, a ReadableStream instance, or an object with a 'readable' property)";
 var ERR_ZIP_NOT_EMPTY = "Zip file not empty";
 var ERR_INVALID_UID = "Invalid uid (must be integer 0..2^32-1)";
 var ERR_INVALID_GID = "Invalid gid (must be integer 0..2^32-1)";
@@ -5238,13 +5389,20 @@ var ERR_INVALID_MSDOS_ATTRIBUTES = "Invalid msdosAttributesRaw (must be integer 
 var ERR_INVALID_MSDOS_DATA = "Invalid msdosAttributes (must be an object with boolean flags)";
 var ERR_INVALID_LEVEL = "Invalid level (must be integer 0..9)";
 var ERR_INVALID_SIGNATURE_DATA = "Signature data exceeds 64KB";
+var ERR_INVALID_ENTRY = "Invalid entry option (must be an entry returned by ZipReader#getEntries())";
+var ERR_ZIP_CRYPTO_LAST_MOD_DATE = "The last modification date of an entry encrypted with ZipCrypto cannot be changed when passThrough is set";
+var WARNING_COMPRESSION_UNAVAILABLE = "compression unavailable";
+var WARNING_CLAMPED_LAST_MODIFICATION_DATE = "clamped last modification date";
 var EXTRAFIELD_DATA_AES = new Uint8Array([7, 0, 2, 0, 65, 69, 3, 0, 0]);
 var EXTRAFIELD_OFFSET_AES_VENDOR_VERSION = 4;
 var EXTRAFIELD_OFFSET_AES_COMPRESSION_METHOD = 9;
 var EXTRAFIELD_USDZ_MAX_LENGTH = 67;
+var MIN_PRINTABLE_ASCII_CHARACTER_CODE = 32;
+var MAX_PRINTABLE_ASCII_CHARACTER_CODE = 126;
 var VENDOR_VERSION_AE_12 = 1;
 var INFOZIP_EXTRA_FIELD_TYPE = "infozip";
 var UNIX_EXTRA_FIELD_TYPE = "unix";
+var LEVEL_BY_BITFLAG_LEVEL = [8, 9, 5, 3];
 var MAX_LEVEL = 9;
 var workers = 0;
 var pendingEntries = [];
@@ -5253,6 +5411,9 @@ var ZipWriter = class {
     writer = new GenericWriter(writer);
     const { availableSize = INFINITY_VALUE, maxSize = INFINITY_VALUE } = writer;
     const addSplitZipSignature = availableSize > 0 && availableSize !== INFINITY_VALUE && maxSize > 0 && maxSize !== INFINITY_VALUE;
+    if (addSplitZipSignature && options[OPTION_USDZ]) {
+      throw new Error(ERR_UNSUPPORTED_SPLIT_USDZ);
+    }
     Object.assign(this, {
       writer,
       addSplitZipSignature,
@@ -5263,8 +5424,11 @@ var ZipWriter = class {
       initialOffset: options[OPTION_OFFSET] === UNDEFINED_VALUE ? 0 : options[OPTION_OFFSET] - (writer.size || writer.writable.size || 0),
       pendingAddFileCalls: /* @__PURE__ */ new Set(),
       pendingErrors: [],
+      warnings: [],
       bufferedWrites: 0,
-      lastFileEntry: UNDEFINED_VALUE
+      directWrites: 0,
+      lastFileEntry: UNDEFINED_VALUE,
+      archiveClosed: false
     });
   }
   prependZip(reader) {
@@ -5364,6 +5528,7 @@ var ZipWriter = class {
         }
         const { offset, diskNumberStart } = entryPositions.get(entry);
         Object.assign(entry, {
+          zip64Enabled: true,
           zip64UncompressedSize,
           zip64CompressedSize,
           offset,
@@ -5421,6 +5586,9 @@ var ZipWriter = class {
     const zipWriter = this;
     const { pendingAddFileCalls, writer } = this;
     const { writable } = writer;
+    if (zipWriter.archiveClosed) {
+      return getWriterData(writer);
+    }
     if (!(comment instanceof Uint8Array)) {
       throw new Error(ERR_INVALID_COMMENT_TYPE);
     }
@@ -5443,11 +5611,15 @@ var ZipWriter = class {
       throw error;
     }
     await closeFile(zipWriter, comment, options);
+    zipWriter.archiveClosed = true;
     const preventClose = !ownsWritable(writer) && getOptionValue2(zipWriter, options, OPTION_PREVENT_CLOSE);
     if (!preventClose) {
       await writable.getWriter().close();
     }
-    return writer.getData ? writer.getData() : writable;
+    return getWriterData(writer);
+  }
+  [SYMBOL_ASYNC_DISPOSE]() {
+    return this.close();
   }
 };
 var ZipWriterStream = class {
@@ -5516,6 +5688,9 @@ var WatchedPromise = class extends Promise {
     return super.then(onFulfilled, onRejected);
   }
 };
+function getWriterData(writer) {
+  return writer.getData ? writer.getData() : writer.writable;
+}
 function watchPromiseError(zipWriter, promise) {
   const watchedPromise = new WatchedPromise((resolve, reject) => Promise.prototype.then.call(promise, resolve, reject));
   const watcher = {};
@@ -5532,6 +5707,16 @@ async function prependZipEntries(zipWriter, reader) {
 }
 async function addFileEntry(zipWriter, name, reader, options) {
   options = Object.assign({}, options);
+  const entry = options[OPTION_ENTRY];
+  if (entry !== UNDEFINED_VALUE) {
+    const { entryOptions, passThroughOptions } = getSourceEntryOptions(
+      entry,
+      checkPassThroughOption(getOptionValue2(zipWriter, options, OPTION_PASS_THROUGH)),
+      getOptionValue2(zipWriter, options, PROPERTY_NAME_LAST_MODIFICATION_DATE)
+    );
+    delete options[OPTION_ENTRY];
+    options = Object.assign(entryOptions, passThroughOptions, options);
+  }
   if (getOptionValue2(zipWriter, options, PROPERTY_NAME_DIRECTORY) && !name.endsWith(DIRECTORY_SIGNATURE)) {
     name += DIRECTORY_SIGNATURE;
   }
@@ -5580,39 +5765,152 @@ async function addFile(zipWriter, name, reader, options) {
   const { comment } = metadataInfo;
   const extraField = options[PROPERTY_NAME_EXTRA_FIELD];
   zipWriter.fileEntries.set(name, UNDEFINED_VALUE);
+  const previousFileEntry = zipWriter.lastFileEntry;
+  const pendingFileEntry = {};
+  let releaseLockFileEntry;
+  if (metadataInfo.resolvedOptions.keepOrder) {
+    pendingFileEntry.lockFileEntry = new Promise((resolve) => releaseLockFileEntry = resolve);
+  }
+  zipWriter.lastFileEntry = pendingFileEntry;
   let fileEntry;
   try {
     const { resolvedOptions } = metadataInfo;
-    if (resolvedOptions.level != 0 && resolvedOptions.compressionMethod === UNDEFINED_VALUE && !resolvedOptions.passThrough && !await supportsDeflate(getConfiguration())) {
+    if (resolvedOptions.level != 0 && resolvedOptions.compressionMethod === UNDEFINED_VALUE && !resolvedOptions.passThroughCompression && !await supportsDeflate(getConfiguration())) {
       resolvedOptions.level = 0;
+      addWarning(zipWriter.warnings, WARNING_COMPRESSION_UNAVAILABLE, name);
     }
     const sizesInfo = await resolveSizes(zipWriter, reader, metadataInfo, options);
     ({ reader } = sizesInfo);
     const diskOffset = getDiskOffset2(zipWriter.writer);
     const diskNumber = getDiskNumber(zipWriter.writer);
+    let crc32 = options.crc32 === UNDEFINED_VALUE ? options[PROPERTY_NAME_SIGNATURE] : options.crc32;
+    const storesAE2 = sizesInfo.resolvedOptions.encrypted && !resolvedOptions.zipCrypto;
+    if (resolvedOptions.passThroughCompression && !resolvedOptions.passThroughEncryption && storesAE2) {
+      crc32 = UNDEFINED_VALUE;
+    }
+    if (resolvedOptions.passThroughCompression && reader && !storesAE2 && crc32 === UNDEFINED_VALUE) {
+      throw new Error(ERR_UNDEFINED_CRC32);
+    }
     options = Object.assign({}, options, attributesInfo.resolvedOptions, metadataInfo.resolvedOptions, sizesInfo.resolvedOptions, {
       signature: options[PROPERTY_NAME_SIGNATURE],
-      crc32: options.crc32 === UNDEFINED_VALUE ? options[PROPERTY_NAME_SIGNATURE] : options.crc32,
+      crc32,
       offset: zipWriter.offset - diskOffset,
       diskNumberStart: diskNumber,
       [OPTION_USDZ]: zipWriter.options[OPTION_USDZ]
     });
     const headerInfo = getHeaderInfo(options);
+    if (headerInfo.lastModDateClamped) {
+      addWarning(zipWriter.warnings, WARNING_CLAMPED_LAST_MODIFICATION_DATE, name);
+    }
     const dataDescriptorInfo = getDataDescriptorInfo(options);
     const metadataSize = getLength(headerInfo.localHeaderArray, dataDescriptorInfo.dataDescriptorArray);
-    fileEntry = await getFileEntry(zipWriter, name, reader, { headerInfo, dataDescriptorInfo, metadataSize }, options);
+    fileEntry = await getFileEntry(zipWriter, name, reader, {
+      headerInfo,
+      dataDescriptorInfo,
+      metadataSize,
+      fileEntry: pendingFileEntry,
+      previousFileEntry,
+      releaseLockFileEntry
+    }, options);
   } catch (error) {
     zipWriter.fileEntries.delete(name);
     throw error;
+  } finally {
+    if (releaseLockFileEntry) {
+      releaseLockFileEntry(previousFileEntry && previousFileEntry.lockFileEntry);
+    }
   }
   Object.assign(fileEntry, {
     name,
     comment,
-    extraField,
-    [PROPERTY_NAME_DEPRECATED_INTERNAL_FILE_ATTRIBUTES]: fileEntry.internalFileAttributes,
-    [PROPERTY_NAME_DEPRECATED_EXTERNAL_FILE_ATTRIBUTES]: fileEntry.externalFileAttributes
+    extraField
   });
   return new Entry(fileEntry);
+}
+function getSourceEntryOptions(entry, passThrough, lastModDateOverride) {
+  if (entry === null || typeof entry != OBJECT_TYPE || Array.isArray(entry)) {
+    throw new Error(ERR_INVALID_ENTRY);
+  }
+  const {
+    externalFileAttributes,
+    versionMadeBy,
+    comment,
+    lastModDate,
+    rawLastModDate,
+    creationDate,
+    lastAccessDate,
+    uncompressedSize,
+    encrypted,
+    zipCrypto,
+    crc32,
+    compressionMethod,
+    extraFieldAES,
+    extraFieldUnix,
+    internalFileAttributes,
+    extraField,
+    bitFlag,
+    directory,
+    uid,
+    gid
+  } = entry;
+  const entryOptions = {
+    externalFileAttributes,
+    versionMadeBy,
+    comment,
+    lastModDate,
+    creationDate,
+    lastAccessDate,
+    internalFileAttributes,
+    directory
+  };
+  if (bitFlag && bitFlag.languageEncodingFlag) {
+    entryOptions[OPTION_USE_UNICODE_FILE_NAMES] = true;
+  }
+  const userExtraField = getUserExtraField(extraField);
+  if (userExtraField) {
+    entryOptions[PROPERTY_NAME_EXTRA_FIELD] = userExtraField;
+  }
+  if (uid !== UNDEFINED_VALUE || gid !== UNDEFINED_VALUE) {
+    Object.assign(entryOptions, {
+      uid,
+      gid,
+      unixExtraFieldType: extraFieldUnix ? UNIX_EXTRA_FIELD_TYPE : INFOZIP_EXTRA_FIELD_TYPE
+    });
+  }
+  const passThroughOptions = {};
+  if (passThrough && !directory) {
+    Object.assign(passThroughOptions, {
+      uncompressedSize,
+      crc32,
+      compressionMethod
+    });
+    if (passThrough !== PASS_THROUGH_COMPRESSED) {
+      Object.assign(passThroughOptions, {
+        encrypted,
+        zipCrypto,
+        encryptionStrength: extraFieldAES ? extraFieldAES.strength : UNDEFINED_VALUE
+      });
+    }
+    if (bitFlag) {
+      passThroughOptions.dataDescriptor = bitFlag.dataDescriptor;
+      passThroughOptions[OPTION_LEVEL] = LEVEL_BY_BITFLAG_LEVEL[bitFlag.level];
+    }
+    if (lastModDateOverride === UNDEFINED_VALUE) {
+      passThroughOptions.rawLastModDate = rawLastModDate;
+    } else if (passThrough !== PASS_THROUGH_COMPRESSED && zipCrypto && (!bitFlag || bitFlag.dataDescriptor) && lastModDateOverride instanceof Date && getDosTimeHighByte(lastModDateOverride) != (rawLastModDate >>> 8 & MAX_8_BITS)) {
+      throw new Error(ERR_ZIP_CRYPTO_LAST_MOD_DATE);
+    }
+  }
+  return { entryOptions, passThroughOptions };
+}
+function getDosTimeHighByte(lastModDate) {
+  let dosLastModDate = new Date(Math.ceil(Math.floor(lastModDate.getTime() / 1e3) / 2) * 2e3);
+  if (dosLastModDate < MIN_DATE) {
+    dosLastModDate = MIN_DATE;
+  } else if (dosLastModDate > MAX_DATE) {
+    dosLastModDate = MAX_DATE;
+  }
+  return (dosLastModDate.getHours() << 3 | dosLastModDate.getMinutes() >> 3) & MAX_8_BITS;
 }
 function resolveAttributes(zipWriter, name, options) {
   let msDosCompatible = getOptionValue2(zipWriter, options, PROPERTY_NAME_MS_DOS_COMPATIBLE);
@@ -5655,7 +5953,7 @@ function resolveAttributes(zipWriter, name, options) {
   if (versionMadeBy > MAX_16_BITS) {
     throw new Error(ERR_INVALID_VERSION);
   }
-  let externalFileAttributes = getAliasedOptionValue(zipWriter, options, PROPERTY_NAME_EXTERNAL_FILE_ATTRIBUTES, PROPERTY_NAME_DEPRECATED_EXTERNAL_FILE_ATTRIBUTES);
+  let externalFileAttributes = getOptionValue2(zipWriter, options, PROPERTY_NAME_EXTERNAL_FILE_ATTRIBUTES);
   const externalFileAttributesProvided = externalFileAttributes !== UNDEFINED_VALUE;
   if (!externalFileAttributesProvided) {
     externalFileAttributes = 0;
@@ -5763,8 +6061,10 @@ function resolveMetadata(zipWriter, name, options) {
   const rawLastModDate = getOptionValue2(zipWriter, options, PROPERTY_NAME_RAW_LAST_MODIFICATION_DATE);
   const lastAccessDate = getDateOptionValue(zipWriter, options, PROPERTY_NAME_LAST_ACCESS_DATE);
   const creationDate = getDateOptionValue(zipWriter, options, PROPERTY_NAME_CREATION_DATE);
-  const internalFileAttributes = getAliasedOptionValue(zipWriter, options, PROPERTY_NAME_INTERNAL_FILE_ATTRIBUTES, PROPERTY_NAME_DEPRECATED_INTERNAL_FILE_ATTRIBUTES, 0);
-  const passThrough = getOptionValue2(zipWriter, options, OPTION_PASS_THROUGH);
+  const internalFileAttributes = getOptionValue2(zipWriter, options, PROPERTY_NAME_INTERNAL_FILE_ATTRIBUTES, 0);
+  const passThrough = checkPassThroughOption(getOptionValue2(zipWriter, options, OPTION_PASS_THROUGH));
+  const passThroughCompression = Boolean(passThrough);
+  const passThroughEncryption = passThrough === true;
   const password = getOptionValue2(zipWriter, options, OPTION_PASSWORD);
   const rawPassword = getOptionValue2(zipWriter, options, OPTION_RAW_PASSWORD);
   checkPasswordOption(password, rawPassword);
@@ -5779,11 +6079,17 @@ function resolveMetadata(zipWriter, name, options) {
   const createTempStream = getFunctionOptionValue2(zipWriter, options, OPTION_CREATE_TEMP_STREAM);
   const dataDescriptorSignature = getOptionValue2(zipWriter, options, OPTION_DATA_DESCRIPTOR_SIGNATURE, true);
   const signal = checkSignalOption(getOptionValue2(zipWriter, options, OPTION_SIGNAL));
-  const useUnicodeFileNames = getOptionValue2(zipWriter, options, OPTION_USE_UNICODE_FILE_NAMES, true);
+  throwIfAborted(signal);
+  const useUnicodeFileNames = getOptionValue2(
+    zipWriter,
+    options,
+    OPTION_USE_UNICODE_FILE_NAMES,
+    !isPrintableASCIIText(rawFilename) || !isPrintableASCIIText(rawComment)
+  );
   const compressionMethod = getOptionValue2(zipWriter, options, PROPERTY_NAME_COMPRESSION_METHOD);
-  const registeredCodec = passThrough || compressionMethod === UNDEFINED_VALUE ? UNDEFINED_VALUE : getRegisteredCodec(compressionMethod);
-  if (!passThrough && compressionMethod !== UNDEFINED_VALUE && compressionMethod !== COMPRESSION_METHOD_STORE && compressionMethod !== COMPRESSION_METHOD_DEFLATE && !registeredCodec) {
-    throw new Error(ERR_UNSUPPORTED_COMPRESSION3);
+  const registeredCodec = passThroughCompression || compressionMethod === UNDEFINED_VALUE ? UNDEFINED_VALUE : getRegisteredCodec(compressionMethod);
+  if (!passThroughCompression && compressionMethod !== UNDEFINED_VALUE && compressionMethod !== COMPRESSION_METHOD_STORE && compressionMethod !== COMPRESSION_METHOD_DEFLATE && !registeredCodec) {
+    throw new Error(ERR_UNSUPPORTED_COMPRESSION);
   }
   let level = getNumberOptionValue(zipWriter, options, OPTION_LEVEL);
   checkIntegerOption(level, MAX_LEVEL, ERR_INVALID_LEVEL);
@@ -5795,15 +6101,15 @@ function resolveMetadata(zipWriter, name, options) {
       level = 0;
     }
   }
-  if (passThrough) {
-    level = UNDEFINED_VALUE;
+  if (passThroughCompression) {
+    level = toNumber(options[OPTION_LEVEL]);
   }
   let useCompressionStream = getOptionValue2(zipWriter, options, OPTION_USE_COMPRESSION_STREAM);
   let dataDescriptor = getOptionValue2(zipWriter, options, OPTION_DATA_DESCRIPTOR);
   if (bufferedWrite && dataDescriptor === UNDEFINED_VALUE) {
     dataDescriptor = false;
   }
-  if (dataDescriptor === UNDEFINED_VALUE || zipCrypto && !passThrough) {
+  if (dataDescriptor === UNDEFINED_VALUE || zipCrypto && !passThroughEncryption) {
     dataDescriptor = true;
   }
   if (level !== UNDEFINED_VALUE && level != 6) {
@@ -5827,7 +6133,8 @@ function resolveMetadata(zipWriter, name, options) {
       lastAccessDate,
       creationDate,
       internalFileAttributes,
-      passThrough,
+      passThroughCompression,
+      passThroughEncryption,
       password,
       rawPassword,
       encryptionStrength,
@@ -5886,23 +6193,27 @@ function serializeExtraField(extraField) {
   return rawExtraField;
 }
 async function resolveSizes(zipWriter, reader, { resolvedOptions: metadata }, options) {
-  if (metadata.passThrough && !reader && !getOptionValue2(zipWriter, options, PROPERTY_NAME_DIRECTORY)) {
+  if (metadata.passThroughCompression && !reader && !getOptionValue2(zipWriter, options, PROPERTY_NAME_DIRECTORY)) {
     throw new Error(ERR_UNDEFINED_READER);
   }
   let contentSize;
   if (reader) {
     reader = new GenericReader(reader);
     await initStream(reader);
+    if (!reader.readable && !reader.readUint8Array) {
+      throw new Error(ERR_INVALID_READER);
+    }
     ({ size: contentSize } = reader);
   }
   return Object.assign({ reader }, resolveEntrySizes(zipWriter, Boolean(reader), contentSize, metadata, options));
 }
 function resolveEntrySizes(zipWriter, hasContent, contentSize, metadata, options) {
-  const { passThrough, zipCrypto, password, rawPassword, encryptionStrength } = metadata;
+  const { passThroughCompression, passThroughEncryption, zipCrypto, password, rawPassword, encryptionStrength } = metadata;
   let { dataDescriptor, zip64, level, compressionMethod } = metadata;
   let maximumCompressedSize = 0;
   let uncompressedSize = 0;
-  if (passThrough && hasContent) {
+  let unknownSize = false;
+  if (passThroughCompression && hasContent) {
     uncompressedSize = options[PROPERTY_NAME_UNCOMPRESSED_SIZE];
     if (uncompressedSize === UNDEFINED_VALUE) {
       throw new Error(ERR_UNDEFINED_UNCOMPRESSED_SIZE);
@@ -5913,22 +6224,22 @@ function resolveEntrySizes(zipWriter, hasContent, contentSize, metadata, options
   }
   const zip64Enabled = zip64 === true;
   const encrypted = getOptionValue2(zipWriter, options, PROPERTY_NAME_ENCRYPTED);
-  if (hasContent && passThrough && !encrypted && getLength(password, rawPassword)) {
+  if (hasContent && passThroughEncryption && !encrypted && getLength(password, rawPassword)) {
     throw new Error(ERR_UNSUPPORTED_ENCRYPTION_PASS_THROUGH);
   }
-  const encryptedEntry = hasContent && (Boolean(password && getLength(password) || rawPassword && getLength(rawPassword)) || passThrough && encrypted);
+  const encryptedEntry = hasContent && (Boolean(password && getLength(password) || rawPassword && getLength(rawPassword)) || passThroughEncryption && encrypted);
   if (!hasContent) {
     level = 0;
     compressionMethod = COMPRESSION_METHOD_STORE;
   }
-  const encryptionOverhead = encryptedEntry ? zipCrypto ? 12 : 16 + encryptionStrength * 4 : 0;
+  const encryptionOverhead = getEncryptionOverhead(encryptedEntry, zipCrypto, encryptionStrength);
   if (hasContent) {
-    if (!passThrough) {
+    if (!passThroughCompression) {
       if (contentSize === UNDEFINED_VALUE) {
         dataDescriptor = true;
         if (zip64 || zip64 === UNDEFINED_VALUE) {
-          zip64 = true;
-          uncompressedSize = maximumCompressedSize = MAX_32_BITS + 1;
+          zip64 = unknownSize = true;
+          maximumCompressedSize = MAX_32_BITS + 1;
         }
       } else {
         options.uncompressedSize = uncompressedSize = contentSize;
@@ -5936,14 +6247,14 @@ function resolveEntrySizes(zipWriter, hasContent, contentSize, metadata, options
       }
     } else {
       options.uncompressedSize = uncompressedSize;
-      maximumCompressedSize = contentSize === UNDEFINED_VALUE ? getMaximumCompressedSize(uncompressedSize) + encryptionOverhead : contentSize;
+      maximumCompressedSize = contentSize === UNDEFINED_VALUE ? getMaximumCompressedSize(uncompressedSize) + encryptionOverhead : contentSize + (passThroughEncryption ? 0 : encryptionOverhead);
     }
   }
-  const emptyEntry = !encryptedEntry && (!hasContent || contentSize === 0 && !passThrough) && !isCompressed(compressionMethod, level);
+  const emptyEntry = !encryptedEntry && (!hasContent || contentSize === 0 && !passThroughCompression) && !isCompressed(compressionMethod, level);
   if (emptyEntry && !zipCrypto && getOptionValue2(zipWriter, options, OPTION_DATA_DESCRIPTOR) === UNDEFINED_VALUE) {
     dataDescriptor = false;
   }
-  const zip64UncompressedSize = zip64Enabled || uncompressedSize >= MAX_32_BITS;
+  const zip64UncompressedSize = zip64Enabled || unknownSize || uncompressedSize >= MAX_32_BITS;
   const zip64CompressedSize = zip64Enabled || maximumCompressedSize >= MAX_32_BITS;
   if (zip64UncompressedSize || zip64CompressedSize) {
     if (zip64 === false) {
@@ -5959,6 +6270,8 @@ function resolveEntrySizes(zipWriter, hasContent, contentSize, metadata, options
       dataDescriptor,
       emptyEntry,
       zip64,
+      zip64Enabled,
+      unknownSize,
       zip64UncompressedSize,
       zip64CompressedSize,
       uncompressedSize,
@@ -5982,10 +6295,11 @@ async function getEntriesSize(writerOptions, entries, writeOrderGuaranteed, comm
   }
   const usdz = writerOptions[OPTION_USDZ];
   const files = /* @__PURE__ */ new Map();
-  let layoutDependsOnWriteOrder = Boolean(usdz);
   const initialOffset = writerOptions[OPTION_OFFSET] === UNDEFINED_VALUE ? 0 : writerOptions[OPTION_OFFSET];
   let offset = initialOffset;
   let minimumEntrySize = INFINITY_VALUE;
+  const entrySizes = [];
+  const entriesAlreadyZip64 = /* @__PURE__ */ new Set();
   for (const entry of entries) {
     let { name } = entry;
     const { size } = entry;
@@ -5996,7 +6310,7 @@ async function getEntriesSize(writerOptions, entries, writeOrderGuaranteed, comm
     const attributesInfo = resolveAttributes(zipWriter, name, options);
     ({ name } = attributesInfo);
     const { resolvedOptions: metadata } = resolveMetadata(zipWriter, name, options);
-    if (metadata.level != 0 && metadata.compressionMethod === UNDEFINED_VALUE && !metadata.passThrough && !await supportsDeflate(getConfiguration())) {
+    if (metadata.level != 0 && metadata.compressionMethod === UNDEFINED_VALUE && !metadata.passThroughCompression && !await supportsDeflate(getConfiguration())) {
       metadata.level = 0;
     }
     const hasContent = !getOptionValue2(zipWriter, options, PROPERTY_NAME_DIRECTORY);
@@ -6004,7 +6318,7 @@ async function getEntriesSize(writerOptions, entries, writeOrderGuaranteed, comm
       throw new Error(ERR_UNDETERMINED_SIZE);
     }
     const { maximumCompressedSize, resolvedOptions: sizes } = resolveEntrySizes(zipWriter, hasContent, size, metadata, options);
-    if (hasContent && !metadata.passThrough && isCompressed(sizes.compressionMethod, sizes.level)) {
+    if (hasContent && !metadata.passThroughCompression && isCompressed(sizes.compressionMethod, sizes.level)) {
       throw new Error(ERR_UNDETERMINED_SIZE);
     }
     const entryOptions = Object.assign({}, options, attributesInfo.resolvedOptions, metadata, sizes, { [OPTION_USDZ]: usdz });
@@ -6024,16 +6338,16 @@ async function getEntriesSize(writerOptions, entries, writeOrderGuaranteed, comm
       compressedSize
     }));
     const entrySize = entryInfo.metadataSize + compressedSize;
+    entrySizes.push(entrySize);
+    entriesAlreadyZip64.add(Boolean(entryOptions.zip64Enabled || entryOptions.uncompressedSize >= MAX_32_BITS || compressedSize >= MAX_32_BITS));
     minimumEntrySize = Math.min(minimumEntrySize, entrySize);
     offset += entrySize;
   }
-  if (files.size && offset - minimumEntrySize >= MAX_32_BITS) {
-    layoutDependsOnWriteOrder = true;
-  }
+  const layoutDependsOnWriteOrder = files.size > 1 && (usdz || offset - minimumEntrySize >= MAX_32_BITS && (entriesAlreadyZip64.size > 1 || countEntriesBefore4GB(entrySizes, initialOffset, true) != countEntriesBefore4GB(entrySizes, initialOffset, false)));
   if (layoutDependsOnWriteOrder && !writeOrderGuaranteed) {
     throw new Error(ERR_UNDETERMINED_SIZE);
   }
-  const directoryDataLength = createDirectoryRecords(files);
+  const { directoryDataLength, zip64Entries } = createDirectoryRecords(files);
   let zip64 = getOptionValue2(zipWriter, writerOptions, PROPERTY_NAME_ZIP64);
   if (offset >= MAX_32_BITS || directoryDataLength >= MAX_32_BITS || files.size >= MAX_16_BITS) {
     if (zip64 === false) {
@@ -6041,8 +6355,23 @@ async function getEntriesSize(writerOptions, entries, writeOrderGuaranteed, comm
     } else {
       zip64 = true;
     }
+  } else if (zip64 === UNDEFINED_VALUE && zip64Entries) {
+    zip64 = true;
   }
   return offset - initialOffset + directoryDataLength + commentLength + (zip64 ? ZIP64_END_OF_CENTRAL_DIR_TOTAL_LENGTH : END_OF_CENTRAL_DIR_LENGTH);
+}
+function countEntriesBefore4GB(entrySizes, initialOffset, largestFirst) {
+  const ordered = entrySizes.slice().sort((first, second) => largestFirst ? second - first : first - second);
+  let position = initialOffset;
+  let count = 0;
+  for (const entrySize of ordered) {
+    if (position >= MAX_32_BITS) {
+      break;
+    }
+    position += entrySize;
+    count++;
+  }
+  return count;
 }
 async function getFileEntry(zipWriter, name, reader, entryInfo, options) {
   const {
@@ -6056,28 +6385,25 @@ async function getFileEntry(zipWriter, name, reader, entryInfo, options) {
     signal
   } = options;
   const {
-    headerInfo
+    headerInfo,
+    fileEntry: pendingFileEntry,
+    previousFileEntry,
+    releaseLockFileEntry
   } = entryInfo;
   const usdz = zipWriter.options[OPTION_USDZ];
-  const previousFileEntry = zipWriter.lastFileEntry;
-  let fileEntry = {};
+  let fileEntry = pendingFileEntry;
   let bufferedWrite;
+  let directWrite;
   let releaseLockWriter;
-  let releaseLockCurrentFileEntry;
   let writingBufferedEntryData;
   let writingEntryData;
   let writerSizeBeforeEntry;
   let flushedBufferedSize = 0;
   let fileWriter;
+  const lockPreviousFileEntry = keepOrder && previousFileEntry ? previousFileEntry.lockFileEntry : UNDEFINED_VALUE;
   fileEntries.set(name, fileEntry);
-  zipWriter.lastFileEntry = fileEntry;
   try {
-    let lockPreviousFileEntry;
-    if (keepOrder) {
-      lockPreviousFileEntry = previousFileEntry && previousFileEntry.lockFileEntry;
-      requestLockCurrentFileEntry();
-    }
-    if (options.bufferedWrite || !keepOrder || zipWriter.writerLocked || zipWriter.bufferedWrites || !dataDescriptor && !emptyEntry) {
+    if (options.bufferedWrite || !keepOrder || zipWriter.writerLocked || zipWriter.bufferedWrites || zipWriter.directWrites || !dataDescriptor && !emptyEntry) {
       bufferedWrite = true;
       zipWriter.bufferedWrites++;
       if (options.createTempStream) {
@@ -6088,7 +6414,10 @@ async function getFileEntry(zipWriter, name, reader, entryInfo, options) {
       fileWriter.size = 0;
       await initStream(writer);
     } else {
+      directWrite = true;
+      zipWriter.directWrites++;
       fileWriter = writer;
+      await lockPreviousFileEntry;
       await requestLockWriter();
     }
     await initStream(fileWriter);
@@ -6101,7 +6430,6 @@ async function getFileEntry(zipWriter, name, reader, entryInfo, options) {
     }
     const { localHeaderArray } = headerInfo;
     if (!bufferedWrite) {
-      await lockPreviousFileEntry;
       await skipDiskIfNeeded();
     }
     const diskNumberStart = getDiskNumber(writer);
@@ -6165,8 +6493,11 @@ async function getFileEntry(zipWriter, name, reader, entryInfo, options) {
     if (bufferedWrite) {
       zipWriter.bufferedWrites--;
     }
-    if (releaseLockCurrentFileEntry) {
-      releaseLockCurrentFileEntry();
+    if (directWrite) {
+      zipWriter.directWrites--;
+    }
+    if (releaseLockFileEntry) {
+      releaseLockFileEntry(lockPreviousFileEntry);
     }
     if (releaseLockWriter) {
       releaseLockWriter();
@@ -6177,9 +6508,6 @@ async function getFileEntry(zipWriter, name, reader, entryInfo, options) {
       } catch {
       }
     }
-  }
-  function requestLockCurrentFileEntry() {
-    fileEntry.lockFileEntry = new Promise((resolve) => releaseLockCurrentFileEntry = resolve);
   }
   async function requestLockWriter() {
     zipWriter.writerLocked = true;
@@ -6215,6 +6543,7 @@ async function createFileEntry(reader, writer, { diskNumberStart, lockFileEntry 
     localExtraFieldZip64Length,
     rawExtraFieldExtendedTimestamp,
     extraFieldExtendedTimestampFlag,
+    extraFieldExtendedTimestampTime,
     rawExtraFieldNTFS,
     rawExtraFieldUnix,
     rawExtraFieldAES
@@ -6227,7 +6556,9 @@ async function createFileEntry(reader, writer, { diskNumberStart, lockFileEntry 
     password,
     rawPassword,
     level,
+    useUnicodeFileNames,
     zip64,
+    zip64Enabled,
     zip64UncompressedSize,
     zip64CompressedSize,
     zipCrypto,
@@ -6260,7 +6591,8 @@ async function createFileEntry(reader, writer, { diskNumberStart, lockFileEntry 
     msdosAttributesRaw,
     msdosAttributes,
     useCompressionStream,
-    passThrough,
+    passThroughCompression,
+    passThroughEncryption,
     format,
     codecURI
   } = options;
@@ -6268,11 +6600,12 @@ async function createFileEntry(reader, writer, { diskNumberStart, lockFileEntry 
     lockFileEntry,
     versionMadeBy,
     zip64,
+    zip64Enabled,
     directory: Boolean(directory),
     executable: Boolean(executable),
-    filenameUTF8: true,
+    filenameUTF8: Boolean(useUnicodeFileNames),
     rawFilename,
-    commentUTF8: true,
+    commentUTF8: Boolean(useUnicodeFileNames),
     rawComment,
     rawExtraFieldZip64,
     localExtraFieldZip64Length,
@@ -6303,13 +6636,13 @@ async function createFileEntry(reader, writer, { diskNumberStart, lockFileEntry 
     uncompressedSize
   } = options;
   let compressedSize = 0;
-  if (!passThrough) {
+  if (!passThroughCompression) {
     uncompressedSize = 0;
   }
   const { writable } = writer;
   if (reader) {
-    const readable = toCompatibleReadable(createReadable(reader));
     const size = reader.size;
+    const readable = toCompatibleReadable(createReadable(reader, { size }));
     const workerOptions = {
       options: {
         codecType: CODEC_DEFLATE,
@@ -6320,9 +6653,9 @@ async function createFileEntry(reader, writer, { diskNumberStart, lockFileEntry 
         encryptionStrength,
         zipCrypto: encrypted && zipCrypto,
         passwordVerification: encrypted && zipCrypto && rawLastModDate >> 8 & MAX_8_BITS,
-        computeCrc32: !passThrough,
-        compressed: compressed && !passThrough,
-        encrypted: encrypted && !passThrough,
+        computeCrc32: !passThroughCompression,
+        compressed: compressed && !passThroughCompression,
+        encrypted: encrypted && !passThroughEncryption,
         useWebWorkers,
         useCompressionStream,
         transferStreams,
@@ -6337,7 +6670,7 @@ async function createFileEntry(reader, writer, { diskNumberStart, lockFileEntry 
       const result = await runWorker2({ readable, writable }, workerOptions);
       compressedSize = result.outputSize;
       writer.size += compressedSize;
-      if (!passThrough) {
+      if (!passThroughCompression) {
         uncompressedSize = result.inputSize;
         if (!encrypted || zipCrypto) {
           crc32 = result.crc32;
@@ -6378,8 +6711,9 @@ async function createFileEntry(reader, writer, { diskNumberStart, lockFileEntry 
     headerArray,
     headerView,
     signature: crc32,
-    crc32: encrypted && !zipCrypto && !passThrough ? UNDEFINED_VALUE : crc32,
+    crc32: encrypted && !zipCrypto && !passThroughCompression ? UNDEFINED_VALUE : crc32,
     extraFieldExtendedTimestampFlag,
+    extraFieldExtendedTimestampTime,
     zip64UncompressedSize,
     zip64CompressedSize
   });
@@ -6403,18 +6737,19 @@ function getHeaderInfo(options) {
     encryptionStrength,
     extendedTimestamp,
     ntfsTimestamp,
-    passThrough,
+    passThroughCompression,
     encrypted,
     zip64UncompressedSize,
     zip64CompressedSize,
     uncompressedSize,
+    unknownSize,
     crc32
   } = options;
   let { version, compressionMethod } = options;
   const compressed = !directory && isCompressed(compressionMethod, level);
   let rawLocalExtraFieldZip64;
-  const uncompressedFile = passThrough || !compressed;
-  const zip64ExtraFieldComplete = zip64 && (options.bufferedWrite || !dataDescriptor || (!zip64UncompressedSize && !zip64CompressedSize || uncompressedFile));
+  const uncompressedFile = passThroughCompression || !compressed;
+  const zip64ExtraFieldComplete = zip64 && (options.bufferedWrite || !dataDescriptor || (!zip64UncompressedSize && !zip64CompressedSize || uncompressedFile && !unknownSize));
   const writeLocalExtraFieldZip64 = zip64ExtraFieldComplete || zip64 && dataDescriptor && (zip64UncompressedSize || zip64CompressedSize);
   if (zip64 && (zip64UncompressedSize || zip64CompressedSize)) {
     const length = 4 + 16;
@@ -6425,8 +6760,8 @@ function getHeaderInfo(options) {
     if (zip64ExtraFieldComplete) {
       extraFieldZip64.writeUint64(uncompressedSize);
       if (uncompressedFile) {
-        const encryptionOverhead = encrypted ? zipCrypto ? 12 : 16 + encryptionStrength * 4 : 0;
-        extraFieldZip64.writeUint64(passThrough ? 0 : uncompressedSize + encryptionOverhead);
+        const encryptionOverhead = getEncryptionOverhead(encrypted, zipCrypto, encryptionStrength);
+        extraFieldZip64.writeUint64(passThroughCompression ? 0 : uncompressedSize + encryptionOverhead);
       }
     }
   } else {
@@ -6445,6 +6780,7 @@ function getHeaderInfo(options) {
   let rawExtraFieldNTFS;
   let rawExtraFieldExtendedTimestamp;
   let extraFieldExtendedTimestampFlag;
+  let extraFieldExtendedTimestampTime;
   if (extendedTimestamp) {
     const lastModTimeUnix = getTimeUnix(lastModDate);
     const lastModTimeUnixInRange = inUnixTimeRange(lastModTimeUnix);
@@ -6452,6 +6788,7 @@ function getHeaderInfo(options) {
       const extraFieldTimestampLength = 9 + (lastAccessDate ? 4 : 0) + (creationDate ? 4 : 0);
       const extraFieldTimestamp = createRecordWriter(extraFieldTimestampLength);
       extraFieldExtendedTimestampFlag = 1 + (lastAccessDate ? 2 : 0) + (creationDate ? 4 : 0);
+      extraFieldExtendedTimestampTime = lastModTimeUnix;
       extraFieldTimestamp.writeUint16(EXTRAFIELD_TYPE_EXTENDED_TIMESTAMP);
       extraFieldTimestamp.writeUint16(extraFieldTimestampLength - 4);
       extraFieldTimestamp.writeUint8(extraFieldExtendedTimestampFlag);
@@ -6533,7 +6870,7 @@ function getHeaderInfo(options) {
   }
   if (encrypted && !zipCrypto) {
     version = version > VERSION_AES ? version : VERSION_AES;
-    if (passThrough && crc32 !== UNDEFINED_VALUE) {
+    if (passThroughCompression && crc32 !== UNDEFINED_VALUE) {
       rawExtraFieldAES[EXTRAFIELD_OFFSET_AES_VENDOR_VERSION] = VENDOR_VERSION_AE_12;
     }
     setUint16(getDataView(rawExtraFieldAES), EXTRAFIELD_OFFSET_AES_COMPRESSION_METHOD, compressionMethod);
@@ -6546,6 +6883,8 @@ function getHeaderInfo(options) {
     throw new Error(ERR_INVALID_EXTRAFIELD_DATA);
   }
   const dosLastModDate = new Date(Math.ceil(Math.floor(lastModDate.getTime() / 1e3) / 2) * 2e3);
+  const clampedLastModDate = dosLastModDate < MIN_DATE ? MIN_DATE : dosLastModDate > MAX_DATE ? MAX_DATE : dosLastModDate;
+  const storedLastModDate = getLength(rawExtraFieldExtendedTimestamp) ? new Date(getTimeUnix(lastModDate) * 1e3) : getLength(rawExtraFieldNTFS) ? lastModDate : clampedLastModDate;
   const {
     headerArray,
     headerView,
@@ -6555,7 +6894,7 @@ function getHeaderInfo(options) {
     bitFlag: getBitFlag(level, useUnicodeFileNames, dataDescriptor, encrypted, compressionMethod),
     compressionMethod,
     uncompressedSize,
-    lastModDate: dosLastModDate < MIN_DATE ? MIN_DATE : dosLastModDate > MAX_DATE ? MAX_DATE : dosLastModDate,
+    lastModDate: clampedLastModDate,
     rawLastModDate: rawLastModDateOption,
     rawFilename,
     zip64CompressedSize,
@@ -6590,13 +6929,15 @@ function getHeaderInfo(options) {
     localHeaderView,
     headerArray,
     headerView,
-    lastModDate,
+    lastModDate: storedLastModDate,
+    lastModDateClamped: storedLastModDate === clampedLastModDate && dosLastModDate.getTime() != clampedLastModDate.getTime(),
     rawLastModDate,
     encrypted,
     compressed,
     version,
     compressionMethod,
     extraFieldExtendedTimestampFlag,
+    extraFieldExtendedTimestampTime,
     rawExtraFieldZip64: EMPTY_UINT8_ARRAY,
     localExtraFieldZip64Length,
     rawExtraFieldExtendedTimestamp,
@@ -6694,7 +7035,7 @@ function setEntryInfo({
 }, {
   zip64,
   zipCrypto,
-  passThrough,
+  passThroughCompression,
   dataDescriptor
 }) {
   const {
@@ -6705,7 +7046,7 @@ function setEntryInfo({
     dataDescriptorView,
     dataDescriptorOffset
   } = dataDescriptorInfo;
-  if ((!encrypted || zipCrypto || passThrough) && crc32 !== UNDEFINED_VALUE) {
+  if ((!encrypted || zipCrypto || passThroughCompression) && crc32 !== UNDEFINED_VALUE) {
     setUint32(headerView, HEADER_OFFSET_SIGNATURE, crc32);
     if (dataDescriptor) {
       setUint32(dataDescriptorView, dataDescriptorOffset, crc32);
@@ -6735,9 +7076,9 @@ function updateLocalHeader({
   uncompressedSize,
   zip64UncompressedSize,
   zip64CompressedSize
-}, localHeaderView, { dataDescriptor, passThrough }) {
+}, localHeaderView, { dataDescriptor, passThroughCompression }) {
   if (!dataDescriptor) {
-    if (!encrypted || passThrough && crc32 !== UNDEFINED_VALUE) {
+    if (!encrypted || passThroughCompression && crc32 !== UNDEFINED_VALUE) {
       setUint32(localHeaderView, HEADER_OFFSET_SIGNATURE + LOCAL_HEADER_COMMON_OFFSET, crc32);
     }
     if (!zip64CompressedSize) {
@@ -6754,13 +7095,14 @@ function updateLocalHeader({
   }
 }
 async function closeFile(zipWriter, comment, options) {
-  const directoryDataLength = createDirectoryRecords(zipWriter.fileEntries);
+  const { directoryDataLength, zip64Entries } = createDirectoryRecords(zipWriter.fileEntries);
   const { directoryStart, directoryEnd, directoryArray } = await writeDirectoryRecords(zipWriter, directoryDataLength, options);
   const signatureLength = await writeDigitalSignatureRecord(zipWriter, directoryArray, options);
-  await writeEndOfDirectoryRecord(zipWriter, comment, options, { directoryStart, directoryEnd, directoryDataLength, signatureLength });
+  await writeEndOfDirectoryRecord(zipWriter, comment, options, { directoryStart, directoryEnd, directoryDataLength, signatureLength, zip64Entries });
 }
 function createDirectoryRecords(files) {
   let directoryDataLength = 0;
+  let zip64Entries = false;
   for (const [, fileEntry] of files) {
     const {
       rawFilename,
@@ -6770,14 +7112,22 @@ function createDirectoryRecords(files) {
       rawExtraFieldUnix,
       rawExtraField,
       rawCentralExtraField,
-      extendedTimestamp,
       extraFieldExtendedTimestampFlag,
-      lastModDate,
-      zip64UncompressedSize,
-      zip64CompressedSize,
+      extraFieldExtendedTimestampTime,
+      zip64Enabled,
       uncompressedSize,
       compressedSize
     } = fileEntry;
+    let { zip64UncompressedSize, zip64CompressedSize } = fileEntry;
+    if (!zip64Enabled) {
+      if (zip64UncompressedSize && uncompressedSize < MAX_32_BITS) {
+        zip64UncompressedSize = fileEntry.zip64UncompressedSize = false;
+      }
+      if (zip64CompressedSize && compressedSize < MAX_32_BITS) {
+        zip64CompressedSize = fileEntry.zip64CompressedSize = false;
+      }
+    }
+    zip64Entries = zip64Entries || zip64UncompressedSize || zip64CompressedSize;
     const zip64Offset = fileEntry.offset >= MAX_32_BITS;
     const zip64DiskNumberStart = fileEntry.diskNumberStart >= MAX_16_BITS;
     let rawExtraFieldZip64;
@@ -6806,16 +7156,15 @@ function createDirectoryRecords(files) {
     fileEntry.zip64Offset = zip64Offset;
     fileEntry.zip64DiskNumberStart = zip64DiskNumberStart;
     let rawExtraFieldTimestamp;
-    const lastModTimeUnix = getTimeUnix(lastModDate);
-    if (extendedTimestamp && inUnixTimeRange(lastModTimeUnix)) {
+    if (extraFieldExtendedTimestampTime === UNDEFINED_VALUE) {
+      rawExtraFieldTimestamp = EMPTY_UINT8_ARRAY;
+    } else {
       const extraFieldTimestamp = createRecordWriter(9);
       extraFieldTimestamp.writeUint16(EXTRAFIELD_TYPE_EXTENDED_TIMESTAMP);
       extraFieldTimestamp.writeUint16(5);
       extraFieldTimestamp.writeUint8(extraFieldExtendedTimestampFlag);
-      extraFieldTimestamp.writeUint32(lastModTimeUnix);
+      extraFieldTimestamp.writeUint32(extraFieldExtendedTimestampTime);
       rawExtraFieldTimestamp = extraFieldTimestamp.array;
-    } else {
-      rawExtraFieldTimestamp = EMPTY_UINT8_ARRAY;
     }
     fileEntry.rawExtraFieldExtendedTimestamp = rawExtraFieldTimestamp;
     const extraFieldLength = getLength(
@@ -6832,7 +7181,7 @@ function createDirectoryRecords(files) {
     }
     directoryDataLength += CENTRAL_FILE_HEADER_LENGTH + getLength(rawFilename, rawComment) + extraFieldLength;
   }
-  return directoryDataLength;
+  return { directoryDataLength, zip64Entries };
 }
 async function writeDirectoryRecords(zipWriter, directoryDataLength, options) {
   const { fileEntries, writer } = zipWriter;
@@ -6948,7 +7297,7 @@ async function writeDigitalSignatureRecord(zipWriter, directoryArray, options) {
 }
 async function writeEndOfDirectoryRecord(zipWriter, comment, options, cdInfo) {
   const { writer } = zipWriter;
-  const { directoryStart, directoryEnd, signatureLength } = cdInfo;
+  const { directoryStart, directoryEnd, signatureLength, zip64Entries } = cdInfo;
   let { directoryDataLength } = cdInfo;
   let fileEntriesLength = zipWriter.fileEntries.size;
   let diskNumber = directoryStart.diskNumber;
@@ -6968,6 +7317,8 @@ async function writeEndOfDirectoryRecord(zipWriter, comment, options, cdInfo) {
     } else {
       zip64 = true;
     }
+  } else if (zip64 === UNDEFINED_VALUE && zip64Entries) {
+    zip64 = true;
   }
   const endOfdirectoryRecord = createRecordWriter(zip64 ? ZIP64_END_OF_CENTRAL_DIR_TOTAL_LENGTH : END_OF_CENTRAL_DIR_LENGTH);
   if (exceedsAvailableSize(writer, getLength(endOfdirectoryRecord.array) + commentLength)) {
@@ -7202,14 +7553,6 @@ function getDateOptionValue(zipWriter, options, name, defaultValue) {
 function getFunctionOptionValue2(zipWriter, options, name) {
   return checkFunctionOption(getOptionValue2(zipWriter, options, name));
 }
-function getAliasedOptionValue(zipWriter, options, name, deprecatedName, defaultValue) {
-  const value = getAliasedValue(options, name, deprecatedName);
-  const result = value === UNDEFINED_VALUE ? getAliasedValue(zipWriter.options, name, deprecatedName) : value;
-  return result === UNDEFINED_VALUE ? defaultValue : result;
-}
-function getAliasedValue(options, name, deprecatedName) {
-  return options[name] === UNDEFINED_VALUE ? options[deprecatedName] : options[name];
-}
 function getNumberOptionValue(zipWriter, options, name, defaultValue) {
   return toNumber(getOptionValue2(zipWriter, options, name, defaultValue));
 }
@@ -7290,6 +7633,9 @@ function getHeaderArrayData({
     headerView,
     rawLastModDate
   };
+}
+function isPrintableASCIIText(rawText) {
+  return rawText.every((characterCode) => characterCode >= MIN_PRINTABLE_ASCII_CHARACTER_CODE && characterCode <= MAX_PRINTABLE_ASCII_CHARACTER_CODE);
 }
 function getBitFlag(level, useUnicodeFileNames, dataDescriptor, encrypted, compressionMethod) {
   let bitFlag = 0;
@@ -7377,7 +7723,7 @@ function formatSupported(StreamClass, format) {
 }
 
 // node_modules/@zip.js/zip.js/lib/core/version.js
-var VERSION = "2.8.60";
+var VERSION = "2.12.0";
 
 // node_modules/@zip.js/zip.js/lib/core/util/opfs-temp-stream.js
 var DEFAULT_THRESHOLD = 1024 * 1024;
@@ -7692,128 +8038,128 @@ try {
 init_configuration();
 
 // node_modules/@zip.js/zip.js/lib/core/zlib-streams-inline.js
-var n2 = [3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15, 17, 19, 23, 27, 31, 35, 43, 51, 59, 67, 83, 99, 115, 131, 163, 195, 227, 258];
-var c = [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 0];
-var f = [1, 2, 3, 4, 5, 7, 9, 13, 17, 25, 33, 49, 65, 97, 129, 193, 257, 385, 513, 769, 1025, 1537, 2049, 3073, 4097, 6145, 8193, 12289, 16385, 24577];
-var s = [0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13];
-var t2 = [16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15];
-var u = new Uint8Array(288);
-u.fill(8, 0, 144), u.fill(9, 144, 256), u.fill(7, 256, 280), u.fill(8, 280, 288);
-var z = new Uint8Array(30).fill(5);
-function r(n3) {
-  const c2 = new Uint16Array(16);
-  for (const f3 of n3) c2[f3]++;
-  c2[0] = 0;
-  const f2 = new Uint16Array(17);
-  for (let n4 = 1; n4 <= 15; n4++) f2[n4 + 1] = f2[n4] + c2[n4];
-  const s2 = new Uint16Array(n3.length);
-  for (let c3 = 0; c3 < n3.length; c3++) n3[c3] && (s2[f2[n3[c3]]++] = c3);
-  return { l: c2, symbols: s2 };
+var t2 = [3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15, 17, 19, 23, 27, 31, 35, 43, 51, 59, 67, 83, 99, 115, 131, 163, 195, 227, 258];
+var e2 = [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 0];
+var n2 = [1, 2, 3, 4, 5, 7, 9, 13, 17, 25, 33, 49, 65, 97, 129, 193, 257, 385, 513, 769, 1025, 1537, 2049, 3073, 4097, 6145, 8193, 12289, 16385, 24577];
+var o = [0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13];
+var r = [16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15];
+var V = new Uint8Array(288);
+V.fill(8, 0, 144), V.fill(9, 144, 256), V.fill(7, 256, 280), V.fill(8, 280, 288);
+var l = new Uint8Array(30).fill(5);
+function a(t3) {
+  const e3 = new Uint16Array(16);
+  for (const n4 of t3) e3[n4]++;
+  e3[0] = 0;
+  const n3 = new Uint16Array(17);
+  for (let t4 = 1; t4 <= 15; t4++) n3[t4 + 1] = n3[t4] + e3[t4];
+  const o2 = new Uint16Array(t3.length);
+  for (let e4 = 0; e4 < t3.length; e4++) t3[e4] && (o2[n3[t3[e4]]++] = e4);
+  return { o: e3, symbols: o2 };
 }
-var e2 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-function l(l2) {
-  let U;
-  l2({ wasmURI: () => (U || (U = "data:application/wasm;base64," + (function(n3) {
-    let c2 = "";
-    const f2 = n3.length;
-    let s2 = 0;
-    for (; s2 + 2 < f2; s2 += 3) {
-      const f3 = n3[s2] << 16 | n3[s2 + 1] << 8 | n3[s2 + 2];
-      c2 += e2[f3 >> 18 & 63] + e2[f3 >> 12 & 63] + e2[f3 >> 6 & 63] + e2[63 & f3];
+var f = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+function s(s2) {
+  let m;
+  s2({ wasmURI: () => (m || (m = "data:application/wasm;base64," + (function(t3) {
+    let e3 = "";
+    const n3 = t3.length;
+    let o2 = 0;
+    for (; o2 + 2 < n3; o2 += 3) {
+      const n4 = t3[o2] << 16 | t3[o2 + 1] << 8 | t3[o2 + 2];
+      e3 += f[n4 >> 18 & 63] + f[n4 >> 12 & 63] + f[n4 >> 6 & 63] + f[63 & n4];
     }
-    const t3 = f2 - s2;
-    if (1 === t3) {
-      const f3 = n3[s2] << 16;
-      c2 += e2[f3 >> 18 & 63] + e2[f3 >> 12 & 63] + "==";
-    } else if (2 === t3) {
-      const f3 = n3[s2] << 16 | n3[s2 + 1] << 8;
-      c2 += e2[f3 >> 18 & 63] + e2[f3 >> 12 & 63] + e2[f3 >> 6 & 63] + "=";
+    const r2 = n3 - o2;
+    if (1 === r2) {
+      const n4 = t3[o2] << 16;
+      e3 += f[n4 >> 18 & 63] + f[n4 >> 12 & 63] + "==";
+    } else if (2 === r2) {
+      const n4 = t3[o2] << 16 | t3[o2 + 1] << 8;
+      e3 += f[n4 >> 18 & 63] + f[n4 >> 12 & 63] + f[n4 >> 6 & 63] + "=";
     }
-    return c2;
-  })((function(e3) {
-    let l3 = 0, U2 = 0, o = 0, i = new Uint8Array(1024), a = 0, y = 0;
+    return e3;
+  })((function(f2) {
+    let s3 = 0, m2 = 0, q = 0, i = new Uint8Array(1024), K = 0, y = 0;
     for (; !y; ) {
-      y = w(1);
-      const n3 = w(2);
-      if (0 == n3) V();
-      else if (1 == n3) j(r(u), r(z));
+      y = W(1);
+      const t3 = W(2);
+      if (0 == t3) Y();
+      else if (1 == t3) c(a(V), a(l));
       else {
-        if (2 != n3) throw new Error("invalid deflate block type");
-        j(...m());
+        if (2 != t3) throw new Error("invalid deflate block type");
+        c(...p());
       }
     }
-    return i.subarray(0, a);
-    function b() {
-      if (l3 >= e3.length) throw new Error("unexpected end of deflate data");
-      return e3[l3++];
+    return i.subarray(0, K);
+    function z() {
+      if (s3 >= f2.length) throw new Error("unexpected end of deflate data");
+      return f2[s3++];
     }
-    function w(n3) {
-      for (; o < n3; ) U2 |= b() << o, o += 8;
-      const c2 = U2 & (1 << n3) - 1;
-      return U2 >>>= n3, o -= n3, c2;
+    function W(t3) {
+      for (; q < t3; ) m2 |= z() << q, q += 8;
+      const e3 = m2 & (1 << t3) - 1;
+      return m2 >>>= t3, q -= t3, e3;
     }
-    function V() {
-      U2 = 0, o = 0;
-      const n3 = b() | b() << 8;
-      l3 += 2, L(a + n3);
-      for (let c2 = 0; c2 < n3; c2++) i[a++] = b();
+    function Y() {
+      m2 = 0, q = 0;
+      const t3 = z() | z() << 8;
+      s3 += 2, Z(K + t3);
+      for (let e3 = 0; e3 < t3; e3++) i[K++] = z();
     }
-    function j(t3, u2) {
-      let z2 = q(t3);
-      for (; 256 != z2; ) {
-        if (z2 < 256) L(a + 1), i[a++] = z2;
+    function c(r2, V2) {
+      let l2 = u(r2);
+      for (; 256 != l2; ) {
+        if (l2 < 256) Z(K + 1), i[K++] = l2;
         else {
-          const t4 = z2 - 257, r2 = n2[t4] + w(c[t4]), e4 = q(u2), l4 = f[e4] + w(s[e4]);
-          L(a + r2);
-          const U3 = a - l4;
-          for (let n3 = 0; n3 < r2; n3++) i[a++] = i[U3 + n3];
+          const r3 = l2 - 257, a2 = t2[r3] + W(e2[r3]), f3 = u(V2), s4 = n2[f3] + W(o[f3]);
+          Z(K + a2);
+          const m3 = K - s4;
+          for (let t3 = 0; t3 < a2; t3++) i[K++] = i[m3 + t3];
         }
-        z2 = q(t3);
+        l2 = u(r2);
       }
     }
-    function m() {
-      const n3 = w(5) + 257, c2 = w(5) + 1, f2 = w(4) + 4, s2 = new Uint8Array(19);
-      for (let n4 = 0; n4 < f2; n4++) s2[t2[n4]] = w(3);
-      const u2 = r(s2), z2 = new Uint8Array(n3 + c2);
-      let e4 = 0;
-      for (; e4 < z2.length; ) {
-        const n4 = q(u2);
-        if (n4 < 16) z2[e4++] = n4;
-        else if (16 == n4) {
-          const n5 = z2[e4 - 1];
-          let c3 = w(2) + 3;
-          for (; c3--; ) z2[e4++] = n5;
-        } else e4 += 17 == n4 ? w(3) + 3 : w(7) + 11;
+    function p() {
+      const t3 = W(5) + 257, e3 = W(5) + 1, n3 = W(4) + 4, o2 = new Uint8Array(19);
+      for (let t4 = 0; t4 < n3; t4++) o2[r[t4]] = W(3);
+      const V2 = a(o2), l2 = new Uint8Array(t3 + e3);
+      let f3 = 0;
+      for (; f3 < l2.length; ) {
+        const t4 = u(V2);
+        if (t4 < 16) l2[f3++] = t4;
+        else if (16 == t4) {
+          const t5 = l2[f3 - 1];
+          let e4 = W(2) + 3;
+          for (; e4--; ) l2[f3++] = t5;
+        } else f3 += 17 == t4 ? W(3) + 3 : W(7) + 11;
       }
-      return [r(z2.subarray(0, n3)), r(z2.subarray(n3))];
+      return [a(l2.subarray(0, t3)), a(l2.subarray(t3))];
     }
-    function q(n3) {
-      const { l: c2, symbols: f2 } = n3;
-      let s2 = 0, t3 = 0, u2 = 0;
-      for (let n4 = 1; n4 <= 15; n4++) {
-        s2 |= w(1);
-        const z2 = c2[n4];
-        if (s2 - t3 < z2) return f2[u2 + (s2 - t3)];
-        u2 += z2, t3 = t3 + z2 << 1, s2 <<= 1;
+    function u(t3) {
+      const { o: e3, symbols: n3 } = t3;
+      let o2 = 0, r2 = 0, V2 = 0;
+      for (let t4 = 1; t4 <= 15; t4++) {
+        o2 |= W(1);
+        const l2 = e3[t4];
+        if (o2 - r2 < l2) return n3[V2 + (o2 - r2)];
+        V2 += l2, r2 = r2 + l2 << 1, o2 <<= 1;
       }
       throw new Error("invalid huffman code");
     }
-    function L(n3) {
-      if (i.length < n3) {
-        let c2 = 2 * i.length;
-        for (; c2 < n3; ) c2 *= 2;
-        const f2 = new Uint8Array(c2);
-        f2.set(i.subarray(0, a)), i = f2;
+    function Z(t3) {
+      if (i.length < t3) {
+        let e3 = 2 * i.length;
+        for (; e3 < t3; ) e3 *= 2;
+        const n3 = new Uint8Array(e3);
+        n3.set(i.subarray(0, K)), i = n3;
       }
     }
-  })((function(n3) {
-    const c2 = (n3 = String(n3).replace(/[^A-Za-z0-9+/=]/g, "")).length, f2 = [];
-    for (let s2 = 0; s2 < c2; s2 += 4) {
-      const c3 = e2.indexOf(n3[s2]) << 18 | e2.indexOf(n3[s2 + 1]) << 12 | (63 & e2.indexOf(n3[s2 + 2])) << 6 | 63 & e2.indexOf(n3[s2 + 3]);
-      f2.push(c3 >> 16 & 255), "=" !== n3[s2 + 2] && f2.push(c3 >> 8 & 255), "=" !== n3[s2 + 3] && f2.push(255 & c3);
+  })((function(t3) {
+    const e3 = (t3 = String(t3).replace(/[^A-Za-z0-9+/=]/g, "")).length, n3 = [];
+    for (let o2 = 0; o2 < e3; o2 += 4) {
+      const e4 = f.indexOf(t3[o2]) << 18 | f.indexOf(t3[o2 + 1]) << 12 | (63 & f.indexOf(t3[o2 + 2])) << 6 | 63 & f.indexOf(t3[o2 + 3]);
+      n3.push(e4 >> 16 & 255), "=" !== t3[o2 + 2] && n3.push(e4 >> 8 & 255), "=" !== t3[o2 + 3] && n3.push(255 & e4);
     }
-    return new Uint8Array(f2);
-  })("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")))), U) });
+    return new Uint8Array(n3);
+  })("zb19jF3HdSdYX/fjvftuv9tkk2zyUeK5l4zdstWk5DhN2dImXYybrRZFy5v1H/kjgERTLZvvUaS62aZlj6LX+gyTyB7CIwRar7DhZIx1EEhYAauZdXaVMWeibDyzyoxm1wNoYGNhzBo7XsCLURbCQFhoxdXvnLrvo7tJUbKTrBrUu/fWvVWnTp06dep8lTpx7kGtlNK/kd9n+n3dv8/2+cf0++o+jSvdV/xQ3afUfUr374v7/J/u35f0B5euz6+4cKsf1X3760di64x1SWKVTVXD4j+lVKqsNdpq3YgyrbUxqhUp13SuaaIoiqxyWjmllHGxdpF+SDebUaz14+ZxE6e6r/2lP4iy5Pfc3vjB5QfPrn7VqNapMw+cPrG2/Kl7zyx/RSWTg9tTZ06t3bt64isqzceeqWYxuH9o9ezJ5XPnVDasZfnM/Wpi5+D29Ilza/eePHvm3JcfXL5ftbNQII3VX0m9RTF6y01PTo49+uLXTj2ktrXrZ4PWB7Vy4zvqu41t37882nZ9x21vL0Zvue2pybFH3PaOdv2sbnvnoFa0Pe0eWF1eVmZH/XADCPGDJ06fPntS6YwrPXXi9KmvLSu1+957T525/9Tq8sm1ex/48pmTa6fOnrl37cQXTi9rtfve5QfPnVw99dDa8pl7z62dONm7d3X53NrZ1WUV7d1U9MXltXtPfnl1dfnMmoqre+89+fCJe0+dObm6/ODymbV7lx8+ufwQV766/MDJs18+s6Z+rdHWyuusofZ0Wrvm5z71nzVf+ytzxKjsex/VWX+/8kWvah5QZn7zHyn/lj7u5v2TO2aMqqwvSPms69+2K7hY6lSxt+crdb7S3q44fKF9/5zXK6S6lfF2rdL+hR3dSpGeMS/vqPSMSavoKNdI1j9K5isrc0a1dEYRqTnTIkXRnEkz0j7tloo0cS3G29U543DbrTQqc17jSSvLKPbPMHjp8VyTBhTekMJHikxvlTSptZUvAcS1SjE4hhSDozaCo7+yUtkBQAYAmQCQojgAoSjuVo64Pk1xr4oEFlKku3hbUermKfUPr6C1UvvnAF9pTJ+s15R6e36tSlYWQruUrOIbjUaBoKy06OicScnWMGj5sQIK48Y/t4PcnFH+mR3caCvL/AVGRLaQa8q+5M3ajHl5V2WArYdXKO6VjkypLY/TjCkqteD4aqpSC7nOgJXwZqUJ2HZLle6U6Jkh3SkNqRJgZmRmzHTZIIOLVqUW3Tyu0krXo6jnTNpq8otTlXZ9Mn6qG+G2qPRCbsn4opuVkZ2nqExIV8pPdcsIIExVOlekfBHuC9xnlHiFXjYy3y9jUv57/WP8WtattH94pYxD75OFXPl9ZeqV9Fj5t65cSY67eYr9R0BX579Yqd55JlKv13r+V7tlmgWCT2ukaYyOKkEJ+KHY76bU6/M9ryj1+xY7a6WpEVnjzJK7J1eky4hs5XLlVelIl6plQT6MZ0s8tv6G896tdLlvRzukyHZKRcbrtdIQeosPolWBIfKGUpCuItVbpWQFo2VJ1QNcqox4/Oz86AgackulJoOBlDGMcFGj1PVJC7qzSnGL0UKuyMlkoriHrkQY5pQiXIRhjjYPc5rhqQxzxMMcDYY54mE2dp4MyFqG2WwYZjMyzFaGORnO6wgcSKaQMvMUMXn64h43L1PRkB5MwKgLkNRwtmJSKYoGUzca5x9elcarUmeYRfgSs8pwDTzJWg3AcZHhMEtu3l/cQYYBwLvP7/DPc5HAgc9GgRkwjLqqQEmHupUzff+j6Rmj3Lz/CX5BZz+dPtI/bJT/8fSR9Uvr6+vrDnc/mqamb3X9Qyv+jT/5t38SnUPLb04zmvzl8LtOWaW7lfWKdK9KVsCYjuepf2WaMejm/ct8lZLuVg1Kj1NEjaXVvJGZeX95elYp78CQas4f+oUPX50ulVAWPsdgUEQpU1p3KbfMNVIhIa8KVxnfP5pb0qX1P+Y2lde9KiKzAmZDpgeW2mViXumWNiMLUG0AVQ1Ajch2q4Si46QoWVrNXUa2cJUis5jrVoTvTA+zAU+ZgpQAdTTXZHhSABJNsb+lSxZwq9K0XCYIx/wg2+vyIrFSmcLJ24Zst7T8qs3I+P5ibjLg+TK+8g68OiMdOso9Rjur4JHHV/MIv2AFsZ/pHs+jzL88LR1Cd3isvst3CtT03WlMJJUNEO6GCJcuYarNGFdF3aO5GaIa3XhWSA+YJHO8A2bxrBAvE5r//jTWC+VfneaH/ts7fB+/f7xDSA/Xrwv9YHxlOZP1OpozL+8gjXXluzvAJruV8rSYqwwTwPqZXqX8w2R6HqTWw/uYDWF95tWMhqui6foZzLVLO/zPQsMtl4EzHccac2xVetby6QquyFLUxfvP7yDnHybHrSip2F/cIdMR6DSkeoxTrPGhOUNui+Yso6QVy0+NPDLHRpAmQx8x/s08FqYwAmB7AfO6ZcCbZxWAXchtFkbLzNej5UBoWDuZFqtoKSysKa8lV8FfsgX+kmvhjxxF/qMUoYKuP9SrQATOF92lTqV9h2Ul/9r0TUYdNgVp/6pcpv61aRat0N5G+gi0QNpPd2XK+6RmX6S8gzwWLYFHa3JHsdAJI310BW+xuNCrTICaBRhlsO5fgQhJphaHlOkHeVJ7Fu/Or1WmFoY0GRaGWAJTLAxp9AzCkMZPy7dK41Owy328ZF4Ji7vxHyGz5eKuMnKYZnvJHWF0KG/W/Mu7uqVmVidiQ+QhJ1aWIbkAsSwSsYyFLIBj/G5UyiKAEhGAV3UlUkxVSwKGZ6q/4TzWWizpMhvcSreyWOYiXuZQbQHI9JyZ9mlpyFW6VL5Vi4EVd7slAKTShZQn9nRpfCsjF9Y6ULywkbBQKTBUzBSsQR9qqXKZX9/hb8GHqpZfZFVksibb5alWk3C3Sgc1aP8waXloKaa0W7lemdQMjiyk7eeD5DqYy4mwRnQyyPU6kyVfPhiKukE82fQBiESwAPxZsEzl7YrXRzF5IR828LRVGt7WCE1akWWM7ACEKv2jYIXnZV9iMiHkIIKnoe7pMjZg0HaxrkTVbyl5y/DzqUo5yPwQiawI3LkmyyKRtvMsKaoKknGpRSRSuWLJGIIbfwBaiXzoF6SVjOKFXEn9eyuQMgjv5V2MKNKgaxkqk2t/YYdQNzpV9wifUjxjCrwf490C3eKrqYwM7wQMxXNmOgDt5qVjhVDBdBb6BnmRC6YGBQk1umVClhpM7K5kUlcDHlEzNUdJl8D1KAljkWzNH5IPyh9korRkYgU+YdBK4BOJ/wglW/IJg9loRviEqfmEGuETzLTWqqjmEzrwCTXgE4nfDVGe+YQJWwVeHWTMq1pGT8AnsBXAYIvoD+YLPhENxOFowCcUBsTVfXSBGpWQsBNxXDiFD6+O4CGjVGY2j38qFBSBgjQoyDAFYSdMhimIJ5diCqIkbIyTAf1ElAb6SZkuAAhfTYWdCClKAYP0gwV1DfrhfcN0vV0A/XDBVF1g5sn5toiYDoxKjQruwnwGDAI7gVAc4V1LoQzMtcvDQS5Ql9uautx1UZcV6rJApxWs2hHq4lYCdTn/EXJXW4WsrEJ2q1UIM4OVFjVdmVotwIu0NDgNuNxVlyEhr3q77wbLkK6XIRPIKxluqlF7IXoGzOu6kzaQlxHmZofqB9mgTdeqCe4TNoBCXsz5GkJeZkBeEZMX2CxFm8grE/IaEJehRiCuxoC4GhuIqwEIzFWIy7wvcZmNxGU2E5cZEJfBu9GAuBw2mW6TlkeFLao2/aGOh+xGLc8Iadmwf5axbVHYVGvR8mDNi4J6x4l4yijOqOmL7gFFKvvfMp32sZxxX32KbYfyrifU/TBk5jJinZxegbjmzQqvP2DfCmKnFTF4KdesuyqDErBeecPq1oJOopbiZLlzi7kZXTH1YMWM6gVybHkcX0RdWED0+OLI+gJZHJ2dJ8dqIV4cXRjTenF0YexH1EKWmYpjRaS3i7kF3pjMItJh+bEDYYGVjaodGD4AY35qtlhhmYDdcIV1V11h9YdeYTVjNhDxyAqrZYUNRFxP0ShoZtBZvcKgBu0Vj7CrRa0oiFp2TNRSQXIaIsPKeC/mULiIOuE5+W0HIQz7/iCG2TExbHNl2JfVyAUNkuJtwzgVsQ7JbZK7xqhofGRcJrookFU0ooYaJSt7VTWUCWqoD05WJtuSfga9lI3lkGSiDSQTXT/JRNdLMtFVSCa6OslsgpsspYu5qidJOxvIxGqgth6slA5LEzM0VbMzRW6j0josVSmpehHRwwWiLWKYGiyUyn8ELOv8FystC6UeEcOsiGF2gxjmTN/Mm/64IJYMBTHhsE5odDpsE0ltJY45sGomh8G2TQ3EMTfQxJIbrpduuF6ictKl89xtWw2wUDnpu2DCT5cKOzuvsjJh7YKsGwEzPBhJ0Mx8mylCQy/QJ9UBw8+eyXTSF84cmaBigNqJubkJ3FyJLksHOQJvQQEVlqOgumiVdrARtyIzbmThZnTyKZlrYQ3g9009qibMR96vONcnxXONNbiOFdMjKt+EXGVF5csczeWKWbzc10gdZ+FmlIVrYeEmTEE12LNGXMQsPAA2ZOF2MB8V5qMZzkc1nI8iVo3PRzMyH9XIfLSD+Wh5Plqej1bmI/fcMGYxb0VOmg4IMpiPXDBVFwzYdejtVjxbjfFsHZRCw96rD8Kz1RjP3qIy2K0CNqGmYWISnj0km8Cz7QaebcZ59uhQDHm2HeHZ43RU82w3zrPdkGd/cDpinr2ZYAa9FJ5tx3m22ZJnvx+NRNdLI9FVaCS6Co1sBTc2VYFn63qBlbHRNc82A54NQ6Nmnq2HuxvLDNLUgn3G5iElu5tg0DFDuw7zbItGAs/WA/uZEZ5tap7NCiILnq2EZ9uaZ5uRrTPWETvCsV3g2CbsB3i5Ylbqd8NSyizbCsu2gFgJNWCcmGVrsGwLlo0fjbfAuwcs2wjLDqoLFxAbeirLElaCgT1LdGykZIej6l01b6CzJSyIP50KOnmfdCFhGxaaybASXrMSntSvKV+sHc/1UInWb2f+p1PSTZ3FitQBlTm1X2Ve676Z96+qQldBjnc9mGPsitwp/6p6J4M1g1mtmTMHsBjPGSIVeZVlk4pgx/WP8iL+UNHI/iur477/GhYN/2yKym4F3TwKbVOoNPAtqiw/mDEHwu+M1/5Hh8lOalUZVPtIOyj/9qKXc+a2eriM1/Lw5XfVnHHgmMVeEUZJe3WnCCj+oaNVPGfeOCyWKe0L36a4c6xMRKWqUIZt6XkfdUvY40Bx7RUIMkwJKXYnurSUiAhk58yMSIUtaVAq+SQZUN7No89IepoKUU6R472i83plztySyQd3yKsH3ruDxe0hFjiOvPyuOoyd35HH5Nlrh2Hq9i83Wd596L1v1tedX183FHd4KwqUfF5+PudZnJphMIHZSRNQvjejiAe/SLNtTDDoD6vyXZFnf3qnKfvm0f3KU6+aOIABm66xyot41QiDpKp4QdZlF6wLe3nbX1n/vXeVaHEu86jgB7NT+6hX7iPjf6S6JZHxb0XdcgcZ/4bqlh0y/k3VLfdIF8udKFfdchJzbh6iy4y5QwzHrtpbprLi5eW2UV8R2ED8b5duKz+Sv4k/siC83sS+KE7SxsFDt9zazFr5RLuYtGZqh67Ugc4e96lP334H87q7y6xVDa46fHW6bLUKuara+LmPzfPtpU6ZtSa4oFW61qxcVXZhBK+tg7C2J6JOSBfyT8A5oFemFM8qRckaRXBeiL3uljHUjV2md1i3zcoCRf4P/8Asri6I18SMVNyeMzNYmLB2Ydqr4oaKWeoE3r5dY/8x4V3Xm+IGXpf/MUMiU2KvV2XSOsigHoAVkRyMfbewYmbNr79rV3B1vuv3PbQAXrmywhTk/2GT6df/m7pbFPn2ik9Z7vP/Mdtc6s5XFhO0iV45avrkOPeiylyfskjm5gy5jNw9K/l2SjwMAKT8H4xVRraMWrPjWLz1OrHIPjlTFPkr+mqgzgLU9cvwSiLl30g3FjKeLC/IwAvzBMVLul93zHoNjHxyOeHTTytHE/zqp1Ukfi97B8PBU9v4fyJTDh4bqkyka/tC12653q6NwDVnHCvEZtUOFvbHYeLyMUjcAJL/fgtIaiQf+hCQ+PS8CG2MciyH14ILtLo1hr47Dpfsv61fTzFMEW/IakBZtzYGpwO5jcNpUE9Kroxat2aKKcPNmc8I7E03T03cT8m0sjKy+4fQ7qcJcltD29pfYwCvsc6zaO0fH9PZ6ydXP70GynrXrvh0bVVILkzK6fOrqzLRWYS6hYz/p5vRVPB0pVxEmYYIJmkw3okQlcyx9jSaM3d4U063bs0GnOTGDQ18jxvIaJ83S/nHRBrMU8C8WjYpLi2lYTAMa7UXcuidNdyp7GhfLfpqqTnSUSYP/8/eVWU6wqwjr8+zOa43YZU2NhP98BuHqyYE79j/bKpbZTOGPdJi/850F9IerIpvyWUs5q/YzvuLmgsusl1+Evhe6/r0dq0C6gGKnffrpowp9etGXkv5tQZeS/FaGl57znBtz5nR2pKNtVHqL41VlI5XRBPU9OuTp/3F3V3IO3sJ/QLwMjoTvgG0aJr0lwxN+L1dMJUu7aBmsW8PiJjboNEmog1NcI3vTHdpAut9KtXCOdGb96qlTbVSxvuhoDf6HJkjv7u+vv66Omx+kwxo5/Nk/F8KM9Y+XswtrG3g1ZG3MF7bMiZXpq3ZzL+K8RRtyp+A0YKTlmkm9bjsKh/+UsZmvRK79cQnK+fZUu7CBNoww934/HG8vAxneNL6OM/wyF+5YlcqsKL+OV+cF+7/F42xtQWv/xLI/5+PrJGfqSeU9Fa1ZvDGn4epYGbMZwK7g0Y+XepUlnKylONqIf8oNbC1K0iYxWfI9sBpYOksG3ixV+LtGLCnuEuZhYSp1qqEdeSBdXzkA7COfSvv7eYeM905cz/fR+fxyHndnTNf4ifN81izXbfK5sx9lPgJGYuJ86z+t/6G4y5MN3L+xqVVFhr9PxzDGYtH/i9qztMWufh0xr4tGbWx799OGWV++/GOqM4oY5UZZfAPsnPmNE3ieu2QvthiClagYFtmLZXx9vyq3CW9Pu7SRkOxNNQeaYgin6ygrXEyjMv2gBSlgp0ipe8UGT6Z45mwk2X2suUVTfrttIc6tEOwVeyrdjF5fW9cfiiBqv8pkBajyatyF9PQ/VWBny91y7adpxa14ebVx6PfXPP9c+V2XH6unKK4bFKKbQ2jYooi2r7izVq32j2rdJWROwZaBGosUGOpOTpJmkBNs54kOgM/3X1ImyqtLVytEVwJkphlOcoYQ5QJhuBuYvqsWBX/16I3YZQ2GGjTBb+FrWxJYKHrg2WsEUctkTR/Z3yKNqEXCmv3R0EcBp84bwCXYxVgt0wZdJrsetM7pFlFmOH5OFj7PgBYgUAoO8++6zzpErQF5pb5ZGPdN36QupORuhOp+4pa8Vk3gztyVsbUppRa3aVrIESEjJTXARm3GOOG4SxbgWsEam5hfg6+42eH9FtO0P3O+OwmkGxjSPBhFmBFomJLmv9H6eYK4jnzW8L/Hpozn8e6wzTPYILqaQ/Rpor+eouK/rLmM7sCM4avdOsjKPr+kCG/cbjaTqlvL61S7p80S6t5fP0yEDUo71aFf8L0yt24oW29blmyTxI45A1QtGMlbQ3nZmvGfJI3ga0Zc3N1I35uqSq6cakDD21+/FtlGz+fL5v4+VyZ42ceZP4r5o5yP+5u49Xc+dtWQQLsZNAz85RTfBNo6MWnaf+T1f7v1BM+mVVKxF8xdSezynxaQeudgBWwE3tO+yl+8cLmrxqgi8boh5oamLkNqNeu/n2ZCLHzrG+ZPinTZ8LnbyJ8s5+iFy+U+/FEVdECG+Rr2EKzUPH6AsJ7ckibUjaPVcIekAnX8R3fpwTYXaGsW2b0XnWoNKN2mVBT5AGKRt/j3kWAQmqQDygCFAk3ZvrYJaxUU8HZskwoFs+I21ZxPcRyub/Gv0+6mH8TFB3SRpqb4ubY2XUvJTQlrU1xaw0qe3A+XuKglogS3FXHc4Xxfe0wQgx+0mzFYupN7mFPGEtJr1tG4gxzI0xFvYqfUELZPbw1ylBRBpVUA5VSUZTwSysTSssIqspsidEcysIXeH8g3BVV2YAEmJYJC4JlRAU1ev7Q3QgWoKjHOE0W8ibX0+jOKjUcMbiZ9MpEFmRup9hfNuDBj5tMAILzPd9yWZz5fwf+fFmt5HYPNRmDTEKRVBOhCOSRMxWgSBAcDcZTVnDIQhR5Wsn1Hv9nWS1HZsHjIqYbgKUG7YbPbDac4mEIq1i0xLvR3SdMtwqM4AaKe36iWzEnaJGDT60FH2gJGJbBAEcYV2exo8z33lWL+Q3w854zrx9u3QAO9K+EIQ9kVhFik9bejJlHGbdurK8ogasHd/CGjGVLlgemoCE01FwTzrf1JuzP3lUBI+uX1Uon7Phau8PeqFU5if8Acsb2nTdep/CoaBvl7BQyY6a6Yl0wM4bYfZPYtlk1F8AYj67K9La9khnv3rItQEy5eWoTPO9vEBV8q8JnZRMDJgU3Qr9oaKRv6ECT1QLYVEfvu/vlhjpHWTP9r8f0UZSX21p7soHgnpfbMED/WlaSXRnlC3mDGiyQg8jr1YNyICiv2dSuoGl+/fCoKFaIKNbeIIq1KaJCuFBrXBRz1ykLtMALCxAgeFbL6x4rqiZQTVa2vSozQV/Bc2PK9ymjVpeBajFDhDjYWqHsPINRAIw2Zd2lDwYHi2GulvWKWaXKFhUMHEasYE0JZPsuUEOO2iK/tPF6CzCLntn4vxKETyAYhlb40fdq8VcmDhddVqJu+7NxXRx0qf5f1O/v823a3qF4BYzw7lp8ySiDzW9kKNgF3wlHtAts6LmeTjOJv36YMulU2KxFwHHg9230e1wOrmUot8W8nt7i2a4tnu2UPWTJRtR/We8723PmB4czIbvfkhHG5ee3JLvWynC8P/AOQEa2ZeZ5pKtCIqQYGWJsaVOL6W0701sh9FYwkrczzdf01tpAb+mHord6GMqE50FZyLxoUbvkYUrqIRofimJARf8u21I+ngR+/+cavwUEASYklofvHNLTCHopc+PEFP8cxHTnKDGhxXH4sadpljGAfC1IsnnOuqu8NRlY+52VC6z5GMsXCESq2PvoluPCNlnEIAgZYzOpnRmmJAipbkmG9zb87+ZQR68bjLu3wbDU62ZiEoVuo0mOmkudCsKgg1ajbFLu23dDS+pZAdsge5NSh1lYSCEsWPxYaJ5cKJ9Rao7LnZS7UG5C+SGlbudyI+UmlMNPzeCFMWkEpvoGWWoWB0SGFSVMrXZhAINc43i0RO8Qqtok24gOQYQS59vH0OF7eGVrgge3V1ifMKKVxAcTqdLOOOesAzANr3u3KnXkscefvHDx0uV1/Wi1/7CCvLYfiGliiXRB6yOwxFI2eMX5Aq804J3QEGAgt1V4ZHqHlCp+iSZusilLmRM32WLk26BNstQ8msPTdPhFaBjvl/vl+wN2ftj0ARm2QvBQ9NgjAvxs0LbrzShVfOS62rY0+sWHa9sKOtPeTUqN4XC0IVNXHl4s949WvH/LiploHCSVZmktBHB3nMebhzrjWqiBi3SsVSYhJ407eAvIHG9wbWRrGgz3TJOBA4Amm6zuy6kper7mYt4aiBut1hbrwcQWz/ItnrWGW/g0Y2Vnk3VWCQK6Rf3v/3S4J56qmsFewoA5QmgQayuZlbDNIgPzyGCkbYWrafDzGdjAe5UDj3HU6hL0Eei6OMy3j3Wg3ZwxU2WTRbgtLGHBUAJFaLDp1MrQig0vovkMetCMXA4U+v9hRFX2mYHpCJ3gEOl0IU9F6YIJjRkaDDhosYktejtIk5+pMjygexiUjFWgn2EJhuynlUQPY2xB8elSJ1dXt1MNelJbzVytu3Xcg4VcI/i3tgEpsQGxFet/3LI7xUh3kmt158DG7sz8LXUn3dSdA+jOK6PE5TDovFoOLYbJ9e03BLYaoAjKqL0i1D8+Lg/abMy0FayMcCe5BZToG2KOvTnbaAnfYL/iPf9CzqLG1EIejW2SouvcJDmGVxPXQogAVv67Y6suA+lKy1vYALj4GaYZ7YKNAoC+Lu96XcI38nqVVGEhwgqeK96J5Rz55aoYNR6D74t3izmsUX/F98Hdw86Y20Q6t8FtB45wM2u+6Hp2CiV48MTw14kXcsMO5TdXKX8Av5dbOBUFf4KN880YPRZJmpTew/5sDUp7lBYklPJJCRu4ec7cEpzcIIUkXWpQs0cp9BoxNSmm5lKVdqq4INZhAky8gjjEuEd4zB5xG6rjm08izgJpG1IBtrnY4Rehg0upeQ87yYF9sl8DfFDKnH1SSk7PAS9V2ktprytOyNybeNPeN+a9b02ow80vHGyQMMLK/rdJRkStKbYiW4qLGwCpXN6YiZGPh/QWdpCaQSA9grFhS+10/bqWa8QhwikHj6AU4Kidf44HpKAGPdrpzkF883+PXEfCeBmoDtg67T3aAQEc7ZTTQmb/SyCzR8pprO2ESJDp7FsN3eqLGxgclsT/6LZyAj93EBIXmD5N8F6u0OJ4NX8PXq6DPNkK4OFrnXU5hhXZXUqWHnpVA71oQweSm3lqew5qocyvG/hmZd51ie1aDezQoQfnAHuv144jdF7Jgp13eW+Syat4rUp9gQoa4Hher6x6ww6PDcoQ+J+G8JsWVG518E1CaYGJGNxlW0c5JQMu826VU3acRcMt6kulyRB/iNjYOuY6DbGVzw1rfKauMaVsKUfEaCof85Zqy/rzQWhjitjHVIIbUwTKhQhpkS3wIaX1p/xuQsloPooEWwUO/8lD+E8SAguBhyr1ZiXXHHcECCcBIZT4Wa/chjdaZZPtOOIZ2oJ3Y0LNDV676WiEa0JNcKkm2klDO9Osv2hSa3GkkrG3DD+fqhLXpxZ77rYgcCTgpS323M3tPOVlSknVhOdujm5OVQkWQYh0OZa+AvcIThxGuDYzKsQxt8V2bvgHJOyYi7GhhB1zm8Buc9wxNx1xzG1RERxzC7zLjrl8NZVBNcUTuQCTF6B5jidg2dzN6Sz0jVdsFEwNCrbJshhGcnJIBJPjIynDvSUlbguUvekbSmlbAbkZK2OSMVxYqhgxmLrsAbjHP+Ifhq8KB3ol3q50WEOJumCOTY51+MsGTVDyThNyxERhqJFVE4FB3Ff7dN5BiibmzG0ZwTd5Ag6J8gH7vhZ1KAe/64TH3iZK2IjiSaU4PJK9HF1vjjeyYMs99hhGSMf02mp2v4Z1wfX9o3i72BuY7V4EXtzGPtEbfSXBf3VwodQbXCg5WQvDURhShSEd+UezrAhOsMH1cn6DV2y7aGx4srLpyb6ikTXFLb5d+PpyZXi5r/Ab3TajIs/+z1/SucSlPEqq+BW4Wh5bzdWeOmKjFZw290oUsENSFXbiDA6u7qgsE85/K1oMpvn/COOdwAXXH5EJZrA2wRl5ZrCBDeuTKg7zi7IpcLVI0p8zM3UEkzu6yiE2/iueg4yPdbrsMs331ru7Ot27VnN48V/D5dL5jy2ya+G3okUJPYFnUGub5IMSVeFfs2QmmZ/WtW+t+fU3dY+lJhecfrTXd4kA/ANdWW/uzJW/DMnZ+ngpV1g6LyNMPj7aKSVPCEWrlfW0Srw6v6I7lfX7HiK76vedK35VnkmU+iH9CTzAxS3Fr2bsQM3KdxEcGTrGF1AXZC004vynwCODuBnczYO4WbupaZYjuCjt+n2scN667Pf1NQrTT6tBeKw4lW79nrpGHX9TZd5IFBwPTGPxvVXDeSeCDA9bBzqdO8OwbFULuWu0YEVHPz4ITN1Cq20WUw+UHBC6t2QhE2p/iIMlS4UFzwGuvCGVM8SN0Hji1aKHiJV2Vhlu21n1nAmss+oLmMc6qwzDjNnLMn1dWRQgjUJF9vreYndQefGQjq+julmVvP9bPy/yGezWdUDD+UgQhIs9//XgYur6cBGRzWbMzeyxqGYwhSCb4zNsTm9hR6PhFpo40ZLMQ2Yyf6F6E5FpNBqWFXk/VKyQ8v9BLeasohdqYV4/7MU82UN6imX8HsJEAazYEMR7mzfE98iMT6HukB6xEYi6rB6qBt5drYodjOWVmxfAgESRONof10WWgl7dpVHT2oC2JTKoV8bBjjdgy63sKoDENQxTnNNgDAxourYCw46AwRhlg8tg77p3xuyVpWGqTAQhewOKROvMglUceppsbiLpsj0/NDHgnlGoKQitMJ5AByGYCARCFIkWBGw8kMwAbNCLDVqN0EdZF5AoLzmeq41Q2CEUw47+UNWO0lzHgbqOv/m+HvgQff0wPf0Po0N5swxlq9bXGHEnqgF1Ah0quzogg9JrTuV67azB2Mi3bU3MyYCs48FVNLgSaDhSxcyYVxFuzTHZbH//VnQ017XM0a+5n6yKuphr1WWBCZraO834nyAs1g4KuV5TfHq0jVio5MmDokTR0uEXwF7VZx23dkGT7SKOSoQIsj2vi0Py4it6zrzADEMVh731/BByVkd6p+bMSzpUwq8PRt/MmDdng4vmm7Nigfnp7Ojy+yGKZegijq1DthN7CIldu/AOM9Jrr3tz5lVdQ8+Kwzn0imvE/9+afT80wI7k1ZYoqLvP6fcyqZTVb9eD1WtXuZBbwekb2+HmJqPLvqfimij9q2L/hGGr5hD3r2jxm8LQ64WR95ZW8oTizS9T7M2xPIwba/JGqeRoLY/9IqgkGSCp8YtBUhJU0gCcRtxDOJ9SBSsXTL8pmzWhNOQrPbgyi7z5ftx0y9ybUVOYRHDBriG+V5RKdp+IPzJyhZhsuXKLuZOraBGaVlzFi3ksV8kiVMZQlcH2FHWrBoMDM/L/o5coKi0ro+E5xFbAGFcwGIIEIvh3Bs8yGBk5RBixgWwtjHwc3N0iuK+xgaZBeQ994nxjlmLYQuoBf3MWeSS9Xcr1HglPkDnFMwppKPXolBsUR1vOyE3FqLlXCWuHu8SsunQRyR8o6/on0w1ztOUvfVMjGHPz7J0xL2kO6QqEKlTMHuavymZT2IvMZqZYACTG3YS5DmahHe+d3QD+oNhu2btNxRShmMfmA/KbbJzhqJ+b4YjVDwkZrG+d9m9vR0zIpFJZZf2jK95IyOO3OGKKrP/tFba48544j/eMCozW68XBgoMdcW8iUki0rtl79sJBmb/PHKzs2iqnebN+4rPMFOLb9YWDV5O846tve6Bs/t2DQTZGxT7vlc4bX5DtnecIExBSN+x158wzB/0fPaMPaVlLYn+Jb5CCaG21ClCwttb2yN053EDWS73bAqaNZUOY4MEZIIt657l2JOD0RU80866bASQyxcEQsstCwc0IL18UIeZ51ixw2tP3GntWV1Ht+88ZnxRZjmBm+n7+4HC1DmyXfzHo+AX11PoMfodlCNGUwE+YaWMalHQ33BFZkgFZmMHCtnkA9EDmufortcxzSH+ifJ+KZtUvl+/bVvrzvTIEp/n+4GTXfoWNVW2eP744P64ekUk2jTSyd7kQyN4bpNFayFg19u9ZHfX3sr1a90dUZsXuEUVc9k+1tn1owKDqiwYqPmyfOTXKNTR9monm2i9cfL8XLugPrkz8bVZ+/bU62skQmK0LkzVYv3e60NkCp/JCWpUQNj9jaEO0/F7J3cC6IhUmg/M/eFf1/H1LDFf2fMMk/eRR0kE9iZj8J5CuDRk6n+AF4eITmtchr2FCllLJKboAzgfvTzYsRwiVRBQae5dz3CuyJFQNf+npf/9/PXoOTjFer8BRHdM9bDjBvqHIuni7rLcR2zE5vXRp/aUntFzD1qDFv8bTUW4jO5L+hps/8oah7Ih9+rfLJr/5cGm95M5pfo59a47oJ/jC+X0rnJL80hOabPFReP4IHHjnAvuMZpR9xzfXKk5pefHX3+M9F/8cWcoGTUu4HiJA4Ebs4Dlqi49KKr9Bl7Ij+hH2ocyALRiOlXwBQ2LxUSz/gGH4BeeCPiemeH9oKef8ygukfbKyIGHYsBUbwnCQPcfumujJxdt5M3SOkxIgK8qIDRi8aeZM1QDgwZeIA6/1TZYofvGpKv/OsJ5fL2MUTJN68alqYqxAoaCg5MWnqvZYQYKC9wSqF5+qirGCCAWK7ItPVdlYgT2iyyYG5kj6n8O1BqhmBLP5q3nEPl21LtRfdDnN+zn2EZigDc/VuRIyY3vj8+QcfNWp2Pg8OldCDMw2PrdAXRPD1RRXKIYc/SonuN9lm/FSFoy3Emx+BtlnGv43T5Ph/C4vPlXMvAjP/Ref4qs2cMVXBdDJVxkw/lQxU1rO2cp1cIMWGYjTJYfgBrCH9x3hQAohWr9/LrrqJxXyV6FUkxotHRaYqxXYqxW4qxVEVyuIr1aQbCjgHqbSwzT0MPuziJk2x1SWnLoppL86yp4F6DryJP71FduDhsK/ecUeg5Xa4dCFAmdsrK/f0eWVhYtIrSIvDZ/3ADtZwHqYXnWFVmK5h1OKHJp4yBdrYMdoDJkAucbVNtjfDw3nRXjp49j9ac5ObbHyhcrkBlGI4dIML+3w0g0vo+FlPLxMhpfp8LIxvGwOL7PhZWt4mQ8vJ4aXbVzyWRQFp8PjjPi5qvvNpg++wBi99HEZpJc+XtOhcX2m42JIx9eJ0UHN0XA0OVEy0223UuHSDC/t8NINL6PhZTy8TIaX6fCyMbxsDi+z4WVreJkPLyeGlzW+dEiFDJdKRgU0y3AFXFuNvM6yf9HQO3GEzTw7F4RNbOJh+BXVL/Eq2fLUJS1h1byJWWO763A/MxJlzZnhEt+GGR2stP68GT4GXwXuZTWL4Uos+TSRIV0Ojrhs5iD7bvnY63ICm9sEdmX445aJ1+xK2mArPTVlo8ttNuo2de0wC5YWSWEyDLFNUCjuTAmCtKhxrFNOeM11S2R5sSjh1mtlFnrLFZC0hEbg36A+m+uWQzWIWkXWjgX0dnE1F38naqFBg5rFQ2wDooc4Zgt0S4AMuIbzBWM7kscckJqN4N5PlZMUVdvLqTqT3YQxCmmU2n49p7hTTvnLE/5yC5fb/WOmnIRlfL3w6xOhtO0v51Kqykk4YyHxiD7q/9fY/yCmuFNNe00Ta1V7aSXHdDRH/b9x/nWHot0kT9sY3j1ie9pGE6zzNb4PdZTXFK+VOy2svYomKaIddX9zr7vHcrWHcppcYsVM7n/Mbhvb8ajn9VoV480yp5imsGnPysT3qUFFr9q1VnZoG/zZ2QW/3Es7eeD2UkqdLjtBdKuY8tu1oZh2IcovpgTif4pDGZg+emsyKlXs9XlOOBivgMcMSWlA9L2qznDQI7NCcZdNZKVBd5AXKOEFQWKC2B1Yj3Q1/IjyZc8KnGSOwtng+GrOQWUIPGse61BBE1R0qgLmmG20k/u1DaCiw8ka/EPYxySholtlx9griGHNQgu9KvPqrlxTUsYjY4kxoHa3atP0sRUeQ2rT7mMrq3kiUy4jwVdCE0BUIhvhhLbBN8mcBw7TkjUKaKnM6/mDyYXplcg0YertVkKrw3nCsTqHtAIpB+4M1zmOe8M2CtUrGSKYtcWPkwGjNt7hlAwObhdKXCCTdub72ccVKrLzwgCV6N81n4E1lEs4o1mW/QONkxUsqZ747xvx34dgJf77YaFXIWOwEf99pIkW/30N1ZoOhzpknEtSyoP/voY6DuWGyznZF7wk92yAjv1INJniQJY9aGxfPyoHHakKTt1W0jS1j0l6uxmj4MPn4KCNOF4XHLQVxYdrRUX4OupJ6mstfmR8JhfnAJdDNEhl33XGDpJlWRxfBr+NYwBGLHWcZHNvyGzNyAsBACMZqkT/MxoAwN3aGAAQj0HpepyoHQjkXUQekyZ+RYdXeLUKa5dIvaIIBT6DO7+FBMwJNoMTfqhe6kUrCACA40b9RWgY78Mwju8x2wdNJzLug/WSSYVTLddt1+7819O2FaeR8MWHa9sKOiUAIL5KQ6auXIcAgHi04njLig1nG0RArPXT3aJir0l4DPQ493RxgEUgYledHoizZA0b+0rq7KsGBzDyVJEU3AMytDJ62Md5dz7kf2WiqWS6AG5VbySu8n2ANkh6I5sJlVVas/gGOY7TtHZJ385NYqPD8vhWr8zxK65+5R5t+2EjLieQqfpoJd5soUVSK8G5SJ+vXK0dYPFwpSOs5Hy9xclulSZ1SKRVb99+BfscdSS98NSABUk3vpO9oLXry8xzBxj8Hu/gjUB+lDNeaE4C2GGNgw+JGyUNqAq8Mka+Ci2n5fDqJCpmVmHx6oQ5XHyMhQSDekwQbDGQEUmW3iqGiI38/2DJzCtYQT14P/uktn05TgmeeJUNqX29PsZp9KV3vTIcPnaFXdeyP9HstcZmKMPY+a+NnCQCAxUfGcZPb5SHr+0Yfbh9MeQ+NLWANoo/r2/XP2mIBmr9oOQmfHtW7t+cja724VULsv/WMKzQ6bHuVrEuF7riiLW5WCucKLFVyNo7UAYrVhKyov8qZapWFHPC1VC5rRXFPu9J5L0NWmJVzNY1DVWRUpMZaWVTWa3vvFrxlSv2nFhargLnwP8kJCwWx29enCi4h08RkuhMZd/RnHQz9EX7xghqdKhWD7t/4eBIs1uUM3pEQ63uztX71cQ+aTIwaJ95hRLcMSUiHQm+vHgw+29qQE1/ACw7tf6cwNYQ+AB2eiefAPC+deLzIeQ+7fGYZ9m7TZ1AVZoMDw6FHV9UypyvsjljboaK3oY51fBX1q/8YZ+VfrGkvXKs/kSWJVA5dj3slqfPD7K+8R5BY+k6pC+YnLXYz4Tf50xuPA2UiFhYWCEYFJANVLhQ25E41aiEocTwBI452ARo+enObnELX701uPqJ7qITP9tZ3Mr3b2zn+7fr+/Vd/Kb/VzvA6rZhBTPolcU2wIh9J0IYyuvb656J6C09EsS/PYsvTneryE9255ghzJh3Zn2zixNW4Wva4avouGie34CtmtOmJMgcAvcXWL/hi++OBacWNh0WN/NaCN4ghww9c7B02N/xC9ab1WBYMldhFhsJwlwXgbFVKdBsYBZ6M7Pwl57U/tLXdfEJJkQ4ogZw+JymASABtp8HoDB9co5Q9gXpniyBDI7E7DgBCkNdNZCgIBxA+vZObD0YMa0AD43h7OeAS9KZjeKKF6esJ2eQBFyQ81E3Q97uZ2SI9BCShPQvBJLk2pBwM/xkCEns/98rgiQGKR8i5xcD0lboqdJATK2eCHl1c/Vz180qF8DjeO56ZopsGVNThJB0w6TEgZCDat5/GqTX1wGzJewjE2EU1gE/AM+pDDWKX645TqUp4Tu4RX0CxrePs3VVFbNZ9i8berIvZwClwdjGORMlha19T8aAvPj6X6rD5tJNHFRovbqLD4X1f3wTD6B/YRe4cr9sDoQ1J1YgNWMu3YRTB+4Ospvm8+Mu3QSvW7bSNFlC9nAtMXdWSUeOl0u5tGp1IfCocOjnAGlvz7LzwNtwb2pSgljveKFehd6ZpZg32aY3Z96ZZfGHg3BEcIQOox6YSzeh8WaAp8nwhNPt6vaMZCtJeGs+JkpqxHS4IA6z8KrudqHH/EAEeK5czZiXdvG2KXSbD2J8aRex9rD4pIDz7Zt4+zBnvl1/Af8UMWbFgwP0Rt+qSwPO2Llr0FMHfUMqKyJ3mwVjmOdZ5IWzD5+IwlfYSsVLkLjRa0cWmohEftiVfQTYkFpvMLZ35Sobhc0E2GSAuSeixHxmF+In2a7bEopLBhRXyKl1aRnceQvJ2Z4jqTcU9qKE5NwLg+SADEewqjnWXgoMguBa3jX+FScF6KV/xd3dKSd5mTXSEUOTCDVN2AQq31YwfFbbuhXCWhKaCKmJsOnAR1gd765Mp2oDP0b057YEN2lB5xRzhsFxvxfOTh5R9lmOK4pYncRtSQJ8WcYnxFfDUrt7WlbyfJSwkd1gG6DoUoRyIW/DqQSw5+GtEHSNJBuqmEzF9gLD4OSofQKSDOU04XVPdkoRFxq4sEBpczurqTLR9XHaP2/uwv96JULoUfkC91HXyjwj21rWQyM3RjVEI/DBefTFEQjpn3D8+WI9Bd+eRUooPimzF3ocka7nWr39lU2WqEPgGxYXN0XMhU3xyZH3sn9idKNPGqlC+BRRJoErV+ztOvbOW3LQmCf+9zSu0rD3EsbV5yTtYdOZBT7m2FwdyYGufH5QdpQPwdKBldVE4Y5iScCj6Bj0pqYPRbXk47JB/xqjn5FMQvaOYUUTLyj1SxEjQ+glk13ZMzv59pmd/BHLho3jgr1D+qIUXtwZVBaH9LPy5NmdGXIGNn3scaCiO1rZTt1tb70j2wnoYLz9INWNsKl5c5blPxb5oiDy2VZ9PvhPZxGF5maV4eygvNIdUiGlvK69vQT/g00lqC6uN3/1ztIXnD3gzuEiuXHfFl1jTzeySMajG8uwa4VFCz5IRnyQRD6M2MOuamBmpwzl0+k4mE+mVTPUlaytQhkgq7nAmozAmgR4knoDeX2wNgewJr3zoX444QV/KVzWa3rD7+350/e4cGDipW8gDioAk86Y9ckqDQ5czNNZ/HCjQtNGMNz17NM3iEyud57dBNOhR5cIlfKwhlURd0XOvdO9KqXUJ+f9uum+d/+YWerMqkvfDJhPhAmIDpHJHcllRvUNvqB40LWfR+XQHO1HqB+BHANsx90M2mHGtkMkbIp4ykt/H5lgfIHr9W2IPA9UCrWRHdKFtD/0f/9AlOA2IXozgMMWa6oeACypTKtMZizOVc7A9h5PWb0c4XodJ5PYIVVIiPa1p5y7PsTqAdwqbM/4nOkiSPthh5b9d5lu9oXdgiVXSad0zIaTDrsLBOY7znj7nKZbYQvHh/dE1BSmq0VUbNYsN6XkqOjxupURpstHDArTTdhiZAMjc4GRwS/K1tTnhDO1KNqApLhH0QiSNo7wKJI2lo0gqTVAUtQ7H+qPhoMb8WBG4h1ZW2dgrBruuG2940bOSk7QElPC3qqSKDL0knWhpZx9HguvdTWVmnkZ9GvNpuuiWFPz2K5kKIqDA6qVIXeju2A+NA4rl0ACzyng4pD+xs5qCMvYLPoFwGS2gMmEUOVnDlJUbzeNb392wDXNxq1mHBqLt9hqmjoa5n23miZMC4NcsYaSYHWQBkMJ+yclnDuBIlnTrazpG9H2zb9TtL1bo23ibxFteW8rlEmiZStyzkYs/cHfKZb+U42l5t8ilhphmRjHEpLVGskYHeDLWAxMKD1aGRYDU3BiiIEGYmDa4azqIgpe0Trry9YeQhu29lU02LRWDShFOEvwWoixEUtKvR10d8npp+Q+m/PR9dgQrFau/j6pFSZpKAzPW/XzXPLh5ou8xeD4BN7PzypJYOOwXcrYI2S8BjeoeYk3cxyEIin6ZLeLQ7UodCWcpRi2F/XDBszrT2hx3TXXdN3lozJ17boLBapka/mhwjlVO497OJvrNf/YpXWz0pHjBCU2VRtjWLr3HztKCjFsq5zn6FOLeX1Iu8neafAozJiWj3oV08QjcJAnu9QpeZvLuWvYzroo3kai3GbzOR9fFvTsH2PNb8K5UkBHePyKFsnhBV21IK3hsHWkiTLIxMP7WWSBEKXePZ3KHIN6uEnJwgrKFldXVzjTkZJsAEdZ3bNSxcXNI8YT73qBvoePbG9oqxk+NXjarw00w+e6NwwmlIiOTFKKSO9b+L2gpR+s9YAj0bEOB+IyHhz8sVocVcunniNOFmExhdxMccmUTMAXNN+9wGrvHg9CbX5g/4sWmeK2PeMPuuG4a46/7clR2HZoKeIjAjM5vN2ytUCOBXaVkWMCeSSYBDlNtEEaRx5oDlPj49rWD4ZesgsIMIXOhbc4/oGn+CtaKsGQ6zDCiO84xhYli6otx/JxZZjP0AIFRK0fBPM5PlDQodWsrgS/Tx68R+pBg1kNUDeMA9IrkqvBekXDvdNIY8JxH5E6KtuDdp4i5EPvhqoA/AvMUN8b82cPHhMg5syzB3mr6yR+T09EWimlAzYRDwpfOCufvYCT/Ia9NyFpMV67Jw+DW0WCM3cn9wRuAwMgEYfNI18jhw/pNu+DnEfIBiXYK1omW40mI32zgQg5awdYtKTZE5wg6BMDAJIKaLNDtNlRtLle/Tm5gLYtsFWjoop7VVTP89YoDwBabJjRrmYoFlNdPM4sJnmYzvHi6sJqbgbYloNRBdQLmmIOXgeejnUqw+5sEmCzR+KmZIT2cOR7VmnwhTDHTLfGNOYz9EjeRN7yeeY+Zbsl2ez3JRqEQySKgyFVSaXl6DgoX+xSJxzSHmKZC9I1BbZId+VgZ3nelVw0bMLVwwkPI44cpsmVK75FmR7EnL0HT5FlX9ccuMIn5DGPgROzCYs8pj0jcy/SHllR4iOUmNh7yRwdBojDmHxDSFkWPvDc1kj5jSEhmFTSHeh8U75BCr7sv0z5XF92JUiCQTSWE/Rq4+mr2j/Fh6MohLXKk8r4p8W5SaJ5JAAboY1BcfSKLm6XgBSQhn/a9AJdmt6SAEmmuAMk+pIOXXhJlyaTAFtv76l7Oh4NqCQaUKpSM+ay7o1Y4scjlVUdFzlizt/yDYPISSP5QEYjJ2OJnAyaTHEESVgjKef+YKMZ9BLIprbUQVRltw6rHPtMCdqkm5XpYacmt2/NyrR/c5aNgXZJpt7ruracitb/JW3n67kdrB48t9kbYaW4PUz8l3TQmCN0c6BHH/3EklvMI3aICiGeNccwg1pnzHMHazUxs5aKTzxI58xz4em3Wf8FDYeaMX+s15DT/rlQOWf8GSymIRLdXH00RywxH6JYpII4GCm2QnodGboZexwYqiQw1IYIw8Ux7vSChjEJcaLSIReCpMlJnGioc5QLqUFgumEXGzNg6sabezqjwd11E3q0CV03oSWwe3MTHNgdmum0g9ImMN33rfLaUMNVC0sh2Oafx7rZF86eYAKLoPiqmALC4hj65rrQJnL5I105CUNWP84B1oW+vlcz1Muaj5G4PCS8pBdSA9RsPZEF1MmSJd5nbiAtPMtAP6/FCiGz5xF2d7IS9xk0xNAcwpeY0ns6wQ8rqEUUQviCdcMG28Z1f4sQr+ehe0m6ZRTkBMVHni4EYWAw1ZlguhQVt8kzJjwpggCDmCItFTx3kM80Zq1hWL970iVkp1B88PHINH/yIJtFAi2xS25gy4i0hpySiTeNXapXhAtBaOGqK81ad07KOZzSVUpulr25eVJX8dq5FYzMc1pi4iOBR7O3Btv5sBdaO0dp/ZogFgBq0ivsrCwD5tgm1Dyk2dLWJC3z027qBnfAHGMNpPFPmWP5UAQQ2xRTnshkzx6sDPugiE/SqzXDqTSZY27eP85BKbwH8Y8bbD0WsNoPkmzy1EBSIw4JBqMTrCGAX5M5zmpC04PiU+TAICq4PulBDQY1aDkWGSBFhKgv6CyfPZhl9/JqH1hm3SRHY80EhDH3BGFcC39icFPsGiCoE0N29kNj2n3zKF57LfCY87j5fkDRjzTCOsI0Fam1558Gq/dslz4e9n8/DlInElaI7bZsBrLJKGLTlCTD0L0qJ9s9pJQcvvukltSeFzXOacPjIiRCwZY86wpJangOsyR0SCkq+IpJik2tNpz30+rCPXeSJWZcbfsNPnpq21Nf+46352GEMV0sLs6/rZdCbnyEHDxussp8lildM2cxxHoTIyF4hvIAryk5E3ibNE2s1NESGnJ2woEIfNbLIHVD9m+bQ+EoHQpHQTzqbxaOFkako6UVpCNZyBnRkvVhRDbKSlev2Bj77+uaOc6ZlzXyYciG7SWNk6JZE81CwT2bBSo3EKhccUfINmF9dGzgm6UlONcu5trbeo8RhCf/GEFmG20wE/LhPauII3ZpmJlodAmWKTculFVMay9r3z/XHZfMRjJWXEUy2/zGB5HM0p9DMvs+5/7rjY7Eq5JZpcsMO4GyQdT+b83KdHpzdlwgs4PNljuOhVc2R8Ky0QDYQpDNvl/LZmGEWRD77piAIuthsgjqqWWnYc4KtWXOimvIIoblvRnz3SHbEk4pWVr+bqSzofQ1KguZ0S4a6WK9c7hKN0el3KEcMSL4DbDgIlm/x5C9xSctw+d7/v8NY0Ino0Il9uAfQKi0H0aoNO9f5XUJlWAobfgR/NpgTdysp9bjztebiuG0nCpSbl5lmVUqeybX0TARxNDZv7QSFRDz4fVI96nCHh9YnGY1bKWC2hWKWM/Rk75/tFNaZP/y6k4HVYTpRSEGwmusV8hgIRHARQ+acc5Dkh6tkhWO7ibrG8dWV3PlH4HTCKdD95cOkkIOdFEAeyS49M8dfCeDIKU4ebdHViZxV1tnLRLD6D8muW61ODxpMmt44xFSR65ceYzPz4VYcWR9/fH1N/Vh87webBif1BL+NAOoVr3BNfKwzzEpSwmvJCMlF/Xg+fN6WAAKANKeDepBCOB+fV3PmZ/Nhqpw6139AWBMZQh/NuvN2pxp1coEiKFBK3CxVrk8yxdG0s1y4pz3hnCdT2rUxe49A13kI7AMGF905VD5kM/F1aKXFHOwiRk0MZDuuAdvaNE7/oDj0T6tDtRAVoHA5uCSwuv1aQ/d7luzIB7Sxa/kHImG9OgaNaWkESwxhS7vrawctMb62pQ1t8hjwiQ0zz6OsrZMI6rjU/5jmNxHK9XhnnJG4kG2V06vLFliMz6DwD/K6YJK45/7BsLdQqIt9i3fK77qZq3icbn0DS359tcn1xD9hz7f1cEuQ4n/IMeC+EsXdZ2dczSShX3Tldz6P/ym9ntDDtaQY8LYeV9wwDjc/jlS/8ajmCEcS7YGRadP1ubg78Dgaorg8OCTHqfYwFjd1eE9RIi9cf7Ss3BnH0IymldDAg5xWcfyiMOeGTrsDcFnLhUf0oWERPmLmpOxa3m6jdEFQYDzLZLzb8J5cRuO5eYXJsILzw1emO7eridwHre0fSmgzqzhsO0/elKPog5mrefAoQt2If9DA3+y2nPV31h/WSmcov1HX5cpGiGY6NLXRyvCAHPuFbEf4eDv8ZbC88ZVnqebn0dD2vj7NW1suyZtfFMHf5iRDkqqlpo2Mjm04ZmDIrqH+BHrf1rMmQu7yPofFHPmnZ1k/eVizry5k7nqazug6t7F129s786Zt+T5T8Def7qTbPFxmUmqnslzwfQwyOekhVVUpo46CimC9HB6P39QfmHHYDdjOszrP+D9rh4+eyHIXPXW9wfat05X2r+1HRuCOfNj5pD+zXD7I7n9v8Pt63L7n8Lta5pPokNAn8uy/yNLlF9Ps3/sTp059+UHHjh18tTymTV6cPnBs6tfVbce/OWDtx68dfbBs2unl7+qTp05f+L0qfvp9Km15dUTpw+dXj7zxbUvnaNzy2uDspNn71+m0YIvn+mdOfuVM/Sl5RP3L6/SA6dPfHH8i/tPnVs7cebk8vjTL5xaC9XQ6vJDyyfW1NrZs/TgiTNfrR+fXR18Sue++uAXzp4+N/j63NrZ1eX76Qunz57s1dCoL3z5gQeWV2l5dfXsqjq3trp84sFwMwb87Cw9eOrcuVNnvkjLZ+6fPfvALFejTp05eXZ1dfnkWt2Vk19aHnsc4Nr4+P4TaycGD8e7TOjTAydW6QsnTvZUXe3qSQDw4Im1k18afPGVU2fuP/sVOnfqa8tDFHHv1r760PJVRob7s7lRfloPy8mzDz60unzu3KmzZ+jB5bUvnb1fyX+FmlTblFKpSlRDxaqpIpUpp1rKqlwZNaG0ait/uZX9qbPKqUjFKlGpaqimylSu2mpSbVe7VEftU/vVx9Uvq9vVr6v/Qp1U59QT6h+pP1f/uzK6bmv8bzL8bQt/28PfVPjbEf4KtaS+z6YxowQGwJqrSbVblepW5dUJ9Zj6Z0rrx5CmzmqnY53qli70tCZ9i57X9422X7dZt4U2dqqdapfapabVtNqtdqs9ao/qqI7aq/aqG9QNal7Nqw/bfxtwvb7h77Hw93j4eyL8PRn+ngp/F38B/dfr+vJou3V7dTtPq6fV76jfURfUBfW76nfV76nfU7+vfl89o55RX1dfV99Q31B0RKn1VCmtlbpRK9VWSl06qpRqSP9uVPKM+xqebVdKJcpfmsyOi3Vz+M9s+Gc3/HMb/kVj//zFbdnyxqo2flq/Hod/SfiXhn+N8K8Z/mXhXyv8y/mfv7w9219Xn9QTZ3KbSpNG3Iwy17K5mdBt5d/enj2YcNtOpfxP8XgVKg3XMW8i0vAOqLHBsBT8vL7GKMk1vXetNK5xZbRycm200apoKP/TqaxBx7Rg9f8D")))), m) });
 }
 
 // node_modules/@zip.js/zip.js/lib/zip-module-wasm-base.js
@@ -7931,20 +8277,18 @@ function _make(isCompress, type, options = {}) {
           }
           heap.set(buffer.subarray(offset, offset + toRead), this.in);
           const result = process(this.streamHandle, this.in, toRead, out, outBufferSize, 0);
+          const code = result >> 24 & 255;
+          const signedCode = code & 128 ? code - 256 : code;
+          if (signedCode < 0) {
+            throw new Error("process error:" + signedCode);
+          }
           const prod = result & 16777215;
           if (prod) {
             scratch.set(heap.subarray(out, out + prod), 0);
             controller.enqueue(scratch.slice(0, prod));
           }
-          if (!isCompress) {
-            const code = result >> 24 & 255;
-            const signedCode = code & 128 ? code - 256 : code;
-            if (signedCode < 0) {
-              throw new Error("process error:" + signedCode);
-            }
-          }
           const consumed = last_consumed(this.streamHandle);
-          if (consumed === 0) {
+          if (consumed === 0 && prod === 0) {
             break;
           }
           offset += consumed;
@@ -7962,14 +8306,12 @@ function _make(isCompress, type, options = {}) {
         const scratch = this._scratch;
         while (true) {
           const result = process(this.streamHandle, 0, 0, out, outBufferSize, 4);
-          const produced = result & 16777215;
           const code = result >> 24 & 255;
-          if (!isCompress) {
-            const signedCode = code & 128 ? code - 256 : code;
-            if (signedCode < 0) {
-              throw new Error("process error:" + signedCode);
-            }
+          const signedCode = code & 128 ? code - 256 : code;
+          if (signedCode < 0) {
+            throw new Error("process error:" + signedCode);
           }
+          const produced = result & 16777215;
           if (produced) {
             scratch.set(heap.subarray(out, out + produced), 0);
             controller.enqueue(scratch.slice(0, produced));
@@ -8091,14 +8433,14 @@ setDefaultConfiguration({
   CompressionStreamFallback: CompressionStreamZlib,
   DecompressionStreamFallback: DecompressionStreamZlib
 });
-function terminateWorkersAndModule() {
+async function terminateWorkersAndModule() {
+  await terminateWorkers();
   modulePromise = null;
-  terminateWorkers();
   resetWasmModule();
 }
 
 // node_modules/@zip.js/zip.js/lib/zip-module-wasm.js
-l(setDefaultConfiguration);
+s(setDefaultConfiguration);
 
 // node_modules/@zip.js/zip.js/lib/core/zip-fs.js
 init_io();
@@ -8110,27 +8452,21 @@ init_constants();
 init_array();
 init_compatible_streams();
 var ERR_ENTRY_EXISTS = "Entry filename already exists";
+var ERR_DUPLICATE_IMPORTED_ENTRY = "Duplicate entry filename in the imported zip file";
+var ERR_INVALID_DUPLICATES = 'Invalid duplicates option (must be "throw", "keep-first" or "keep-last")';
+var ERR_ANCESTOR_ENTRY = "Entry is an ancestor of target entry";
+var ERR_ROOT_DIRECTORY_NOT_MOVABLE = "Root directory cannot be moved";
+var ERR_TARGET_NOT_DIRECTORY = "Target entry is not a directory";
+var ERR_PARENT_NOT_DIRECTORY = "Parent entry is not a directory";
 var ERR_READABLE_CONSUMED = "Readable stream already consumed";
+var DUPLICATES_THROW = "throw";
+var DUPLICATES_KEEP_FIRST = "keep-first";
+var DUPLICATES_KEEP_LAST = "keep-last";
+var DUPLICATES_VALUES = /* @__PURE__ */ new Set([DUPLICATES_THROW, DUPLICATES_KEEP_FIRST, DUPLICATES_KEEP_LAST]);
 var ERR_INVALID_PASS_THROUGH = "Invalid passThrough option (use readerOptions.passThrough or set uncompressedSize for each entry)";
 var ERR_INVALID_READER_OPTIONS = "Invalid readerOptions (must be an object)";
-var ERR_ZIP_CRYPTO_LAST_MOD_DATE = "The last modification date of an entry encrypted with ZipCrypto cannot be changed when passThrough is set";
+var ERR_UNSUPPORTED_PASS_THROUGH_VALUE = "The 'compressed' passThrough option is only supported by Entry#getData() and ZipWriter#add()";
 var ERR_ABORT_EXPORT = "zipjs-abort-export";
-var ERR_ABORTED = "The operation was aborted";
-var ABORT_ERROR_NAME = "AbortError";
-var INFOZIP_EXTRA_FIELD_TYPE2 = "infozip";
-var INTERPRETED_EXTRA_FIELD_TYPES = /* @__PURE__ */ new Set([
-  EXTRAFIELD_TYPE_ZIP64,
-  EXTRAFIELD_TYPE_AES,
-  EXTRAFIELD_TYPE_NTFS,
-  EXTRAFIELD_TYPE_EXTENDED_TIMESTAMP,
-  EXTRAFIELD_TYPE_UNICODE_PATH,
-  EXTRAFIELD_TYPE_UNICODE_COMMENT,
-  EXTRAFIELD_TYPE_USDZ,
-  EXTRAFIELD_TYPE_INFOZIP,
-  EXTRAFIELD_TYPE_UNIX,
-  EXTRAFIELD_TYPE_UNIX_TYPE1,
-  EXTRAFIELD_TYPE_PKWARE_UNIX
-]);
 var ZipEntry2 = class {
   constructor(fs2, name, params, parent) {
     const zipEntry = this;
@@ -8181,12 +8517,26 @@ var ZipEntry2 = class {
     return Boolean(entry);
   }
   rename(name) {
-    const parent = this.parent;
-    if (parent && parent.getChildByName(name)) {
-      throw new Error(ERR_ENTRY_EXISTS);
-    } else {
-      this.name = name;
+    const zipEntry = this;
+    let parent = zipEntry.parent;
+    if (parent) {
+      const path = splitPath(name);
+      if (path) {
+        name = path.pop();
+        parent = getPathParent(parent, path, zipEntry);
+      }
+      const existingChild = parent.getChildByName(name);
+      if (existingChild && existingChild != zipEntry) {
+        throw new Error(ERR_ENTRY_EXISTS);
+      }
+      if (parent != zipEntry.parent) {
+        detach(zipEntry);
+        zipEntry.parent = parent;
+        parent.children.push(zipEntry);
+        registerEntries(zipEntry.fs, zipEntry);
+      }
     }
+    zipEntry.name = name;
   }
   setOptions(options) {
     const entryOptions = Object.assign({}, this.options, options);
@@ -8265,43 +8615,43 @@ var ZipFileEntry = class _ZipFileEntry extends ZipEntry2 {
     return toExactUint8Array(array).buffer;
   }
   replaceBlob(blob) {
-    Object.assign(this, {
+    replaceContent(this, {
       data: blob,
       Reader: BlobReader,
       Writer: BlobWriter,
-      reader: null
+      uncompressedSize: blob.size
     });
   }
   replaceText(text) {
-    Object.assign(this, {
+    replaceContent(this, {
       data: text,
       Reader: TextReader,
       Writer: TextWriter,
-      reader: null
+      uncompressedSize: getTextSize(text)
     });
   }
   replaceData64URI(dataURI) {
-    Object.assign(this, {
+    replaceContent(this, {
       data: dataURI,
       Reader: Data64URIReader,
       Writer: Data64URIWriter,
-      reader: null
+      uncompressedSize: getData64URISize(dataURI)
     });
   }
   replaceUint8Array(array) {
-    Object.assign(this, {
+    replaceContent(this, {
       data: array,
       Reader: Uint8ArrayReader,
       Writer: Uint8ArrayWriter,
-      reader: null
+      uncompressedSize: array.length
     });
   }
   replaceReadable(readable) {
-    Object.assign(this, {
+    replaceContent(this, {
       data: null,
       Reader: getReadableReader(readable),
       Writer: null,
-      reader: null
+      uncompressedSize: UNDEFINED_VALUE
     });
   }
 };
@@ -8344,17 +8694,12 @@ var ZipDirectoryEntry = class _ZipDirectoryEntry extends ZipEntry2 {
     });
   }
   addData64URI(name, dataURI, options = {}) {
-    let dataEnd = dataURI.length;
-    while (dataURI.charAt(dataEnd - 1) == "=") {
-      dataEnd--;
-    }
-    const dataStart = dataURI.indexOf(",") + 1;
     return addChild(this, name, {
       data: dataURI,
       Reader: Data64URIReader,
       Writer: Data64URIWriter,
       options,
-      uncompressedSize: Math.floor((dataEnd - dataStart) * 0.75)
+      uncompressedSize: getData64URISize(dataURI)
     });
   }
   addUint8Array(name, array, options = {}) {
@@ -8445,6 +8790,8 @@ var ZipDirectoryEntry = class _ZipDirectoryEntry extends ZipEntry2 {
       await initStream(reader);
       zipReader = new ZipReader(reader, options);
     }
+    checkPassThroughValue(options.passThrough);
+    const duplicates = checkDuplicatesOption(options.duplicates);
     const importedEntries = [];
     const entries = await zipReader.getEntries(options);
     for (const entry of entries) {
@@ -8452,19 +8799,42 @@ var ZipDirectoryEntry = class _ZipDirectoryEntry extends ZipEntry2 {
       try {
         const path = entry.filename.split("/").filter((pathPart) => pathPart != "" && pathPart != ".");
         const name = path.pop();
-        path.forEach((pathPart) => {
+        let skippedEntry = false;
+        for (const pathPart of path) {
           const previousParent = parent;
           parent = parent.getChildByName(pathPart);
           if (parent) {
             if (!parent.directory) {
-              throw new Error(ERR_ENTRY_EXISTS);
+              if (duplicates == DUPLICATES_KEEP_FIRST) {
+                skippedEntry = true;
+                break;
+              } else if (duplicates == DUPLICATES_KEEP_LAST) {
+                this.fs.remove(parent);
+                parent = new _ZipDirectoryEntry(this.fs, pathPart, { data: null }, previousParent);
+                importedEntries.push(parent);
+              } else {
+                throw new Error(ERR_DUPLICATE_IMPORTED_ENTRY);
+              }
             }
           } else {
             parent = new _ZipDirectoryEntry(this.fs, pathPart, { data: null }, previousParent);
             importedEntries.push(parent);
           }
-        });
+        }
+        if (skippedEntry) {
+          continue;
+        }
         if (!entry.directory) {
+          const existingChild = parent.getChildByName(name);
+          if (existingChild) {
+            if (duplicates == DUPLICATES_KEEP_FIRST) {
+              continue;
+            } else if (duplicates == DUPLICATES_KEEP_LAST) {
+              this.fs.remove(existingChild);
+            } else {
+              throw new Error(ERR_DUPLICATE_IMPORTED_ENTRY);
+            }
+          }
           importedEntries.push(addChild(parent, name, {
             data: entry,
             Reader: getZipBlobReader(Object.assign({}, options)),
@@ -8475,11 +8845,17 @@ var ZipDirectoryEntry = class _ZipDirectoryEntry extends ZipEntry2 {
           let directoryEntry = parent;
           if (name) {
             directoryEntry = parent.getChildByName(name);
-            if (directoryEntry) {
-              if (!directoryEntry.directory) {
-                throw new Error(ERR_ENTRY_EXISTS);
+            if (directoryEntry && !directoryEntry.directory) {
+              if (duplicates == DUPLICATES_KEEP_FIRST) {
+                continue;
+              } else if (duplicates == DUPLICATES_KEEP_LAST) {
+                this.fs.remove(directoryEntry);
+                directoryEntry = UNDEFINED_VALUE;
+              } else {
+                throw new Error(ERR_DUPLICATE_IMPORTED_ENTRY);
               }
-            } else {
+            }
+            if (!directoryEntry) {
               directoryEntry = new _ZipDirectoryEntry(this.fs, name, { data: null }, parent);
               importedEntries.push(directoryEntry);
             }
@@ -8489,6 +8865,7 @@ var ZipDirectoryEntry = class _ZipDirectoryEntry extends ZipEntry2 {
           }
         }
       } catch (error) {
+        importedEntries.reverse().forEach((importedEntry) => this.fs.remove(importedEntry));
         try {
           error.cause = {
             entry
@@ -8502,28 +8879,37 @@ var ZipDirectoryEntry = class _ZipDirectoryEntry extends ZipEntry2 {
   }
   async exportZip(writer, options = {}) {
     const zipEntry = this;
+    const zipWriterProvided = Boolean(writer) && typeof writer.add == FUNCTION_TYPE;
     options = Object.assign({}, options);
-    if (options.bufferedWrite === UNDEFINED_VALUE) {
+    if (!zipWriterProvided && options.bufferedWrite === UNDEFINED_VALUE) {
       options.bufferedWrite = true;
     }
-    const [readers] = await Promise.all([initReaders(zipEntry, checkReaderOptions(options.readerOptions)), initStream(writer)]);
-    const zipWriter = new ZipWriter(writer, options);
+    const [readers] = await Promise.all([
+      initReaders(zipEntry, checkReaderOptions(options.readerOptions)),
+      zipWriterProvided ? UNDEFINED_VALUE : initStream(writer)
+    ]);
+    const zipWriter = zipWriterProvided ? writer : new ZipWriter(writer, options);
     await exportZip(zipWriter, zipEntry, getTotalSize([zipEntry], getUncompressedSize), options, readers);
+    if (zipWriterProvided) {
+      return zipWriter;
+    }
     await zipWriter.close(options.globalComment);
     return writer.getData ? writer.getData() : writer.writable;
   }
-  getExportedSize(options = {}) {
+  async getExportedSize(options = {}) {
     const zipEntry = this;
     options = Object.assign({}, options);
     checkReaderOptions(options.readerOptions);
     if (options.bufferedWrite === UNDEFINED_VALUE) {
       options.bufferedWrite = true;
     }
-    const writeOrderGuaranteed = !options.bufferedWrite || options.keepOrder !== false && zipEntry.children.every((child) => !child.children.length);
-    return getEntriesSize(options, zipEntry.getChildren({ recursive: true }).filter((child) => !isImplicitDirectory(child)).map((child) => {
+    const children = zipEntry.getChildren({ recursive: true });
+    const entries = children.filter((child) => !isImplicitDirectory(child)).map((child) => {
       const { name, entryOptions } = getChildEntryOptions(child, zipEntry, options);
       return { name, size: child.directory ? 0 : getDeterminedSize(child, isPassThrough(child, options)), options: entryOptions };
-    }), writeOrderGuaranteed, options.globalComment);
+    });
+    const writeOrderGuaranteed = !options.bufferedWrite || entries.every((entry) => entry.options.keepOrder !== false) && children.every((child) => isImplicitDirectory(child) || !child.children.length);
+    return await getEntriesSize(options, entries, writeOrderGuaranteed, options.globalComment);
   }
   getChildByName(name) {
     const children = this.children;
@@ -8574,7 +8960,7 @@ var ZipFS = class {
   }
   move(entry, destination) {
     if (entry == this.root) {
-      throw new Error("Root directory cannot be moved");
+      throw new Error(ERR_ROOT_DIRECTORY_NOT_MOVABLE);
     } else {
       if (destination.directory) {
         if (!destination.isDescendantOf(entry)) {
@@ -8592,10 +8978,10 @@ var ZipFS = class {
             }
           }
         } else {
-          throw new Error("Entry is a ancestor of target entry");
+          throw new Error(ERR_ANCESTOR_ENTRY);
         }
       } else {
-        throw new Error("Target entry is not a directory");
+        throw new Error(ERR_TARGET_NOT_DIRECTORY);
       }
     }
   }
@@ -8603,7 +8989,7 @@ var ZipFS = class {
     const path = fullname.split("/");
     let node = this.root;
     for (let index = 0; node && index < path.length; index++) {
-      node = node.getChildByName(path[index]);
+      node = node.directory ? node.getChildByName(path[index]) : UNDEFINED_VALUE;
     }
     if (!node) {
       node = this.entries.find((entry) => entry && (entry == this.root || entry.isDescendantOf(this.root)) && entry.getRelativeName() == fullname);
@@ -8650,28 +9036,22 @@ var ZipFS = class {
     return this.root.addFile(file, options);
   }
   importBlob(blob, options) {
-    resetFS(this);
-    return this.root.importBlob(blob, options);
+    return resetAndImport(this, (root) => root.importBlob(blob, options));
   }
   importData64URI(dataURI, options) {
-    resetFS(this);
-    return this.root.importData64URI(dataURI, options);
+    return resetAndImport(this, (root) => root.importData64URI(dataURI, options));
   }
   importUint8Array(array, options) {
-    resetFS(this);
-    return this.root.importUint8Array(array, options);
+    return resetAndImport(this, (root) => root.importUint8Array(array, options));
   }
   importHttpContent(url, options) {
-    resetFS(this);
-    return this.root.importHttpContent(url, options);
+    return resetAndImport(this, (root) => root.importHttpContent(url, options));
   }
   importReadable(readable, options) {
-    resetFS(this);
-    return this.root.importReadable(readable, options);
+    return resetAndImport(this, (root) => root.importReadable(readable, options));
   }
   importZip(reader, options) {
-    resetFS(this);
-    return this.root.importZip(reader, options);
+    return resetAndImport(this, (root) => root.importZip(reader, options));
   }
   exportBlob(options) {
     return this.root.exportBlob(options);
@@ -8863,69 +9243,11 @@ function getChildEntryOptions(child, selectedEntry, options) {
   let zipEntryMetadata = {};
   let passThroughOptions = {};
   if (child.data instanceof Entry) {
-    const {
-      externalFileAttributes,
-      versionMadeBy,
-      comment,
-      lastModDate,
-      rawLastModDate,
-      creationDate,
-      lastAccessDate,
-      uncompressedSize,
-      encrypted,
-      zipCrypto,
-      crc32,
-      compressionMethod,
-      extraFieldAES,
-      internalFileAttributes,
-      extraField,
-      bitFlag,
-      uid,
-      gid
-    } = child.data;
-    zipEntryMetadata = {
-      externalFileAttributes,
-      versionMadeBy,
-      comment,
-      lastModDate,
-      creationDate,
-      lastAccessDate,
-      internalFileAttributes
-    };
-    const userExtraField = getUserExtraField(extraField);
-    if (userExtraField) {
-      zipEntryMetadata.extraField = userExtraField;
-    }
-    if (uid !== UNDEFINED_VALUE || gid !== UNDEFINED_VALUE) {
-      Object.assign(zipEntryMetadata, {
-        uid,
-        gid,
-        unixExtraFieldType: INFOZIP_EXTRA_FIELD_TYPE2
-      });
-    }
-    if (isPassThrough(child, options)) {
-      let encryptionStrength;
-      if (extraFieldAES) {
-        encryptionStrength = extraFieldAES.strength;
-      }
-      passThroughOptions = {
-        passThrough: true,
-        encrypted,
-        zipCrypto,
-        crc32,
-        uncompressedSize,
-        encryptionStrength,
-        compressionMethod
-      };
-      if (bitFlag) {
-        passThroughOptions.dataDescriptor = bitFlag.dataDescriptor;
-      }
-      const lastModDateOverride = childOptions.lastModDate === UNDEFINED_VALUE ? options.lastModDate : childOptions.lastModDate;
-      if (lastModDateOverride === UNDEFINED_VALUE) {
-        passThroughOptions.rawLastModDate = rawLastModDate;
-      } else if (zipCrypto && (!bitFlag || bitFlag.dataDescriptor) && lastModDateOverride instanceof Date && getDosTimeHighByte(lastModDateOverride) != (rawLastModDate >>> 8 & MAX_8_BITS)) {
-        throw new Error(ERR_ZIP_CRYPTO_LAST_MOD_DATE);
-      }
+    const passThrough = isPassThrough(child, options);
+    const lastModDateOverride = childOptions.lastModDate === UNDEFINED_VALUE ? options.lastModDate : childOptions.lastModDate;
+    ({ entryOptions: zipEntryMetadata, passThroughOptions } = getSourceEntryOptions(child.data, passThrough, lastModDateOverride));
+    if (passThrough) {
+      passThroughOptions.passThrough = true;
     }
   }
   const entryOptions = Object.assign({ lastModDate: child.defaultLastModDate }, zipEntryMetadata, options, childOptions, passThroughOptions, { directory: child.directory });
@@ -8933,15 +9255,6 @@ function getChildEntryOptions(child, selectedEntry, options) {
     throw new Error(ERR_INVALID_PASS_THROUGH);
   }
   return { name, entryOptions };
-}
-function getDosTimeHighByte(lastModDate) {
-  let dosLastModDate = new Date(Math.ceil(Math.floor(lastModDate.getTime() / 1e3) / 2) * 2e3);
-  if (dosLastModDate < MIN_DATE) {
-    dosLastModDate = MIN_DATE;
-  } else if (dosLastModDate > MAX_DATE) {
-    dosLastModDate = MAX_DATE;
-  }
-  return (dosLastModDate.getHours() << 3 | dosLastModDate.getMinutes() >> 3) & MAX_8_BITS;
 }
 function getDeterminedSize(child, passThrough) {
   const { reader } = child;
@@ -8954,7 +9267,32 @@ function checkReaderOptions(readerOptions) {
   if (readerOptions && (typeof readerOptions != OBJECT_TYPE || Array.isArray(readerOptions))) {
     throw new Error(ERR_INVALID_READER_OPTIONS);
   }
+  if (readerOptions) {
+    checkPassThroughValue(readerOptions.passThrough);
+  }
   return readerOptions;
+}
+function checkPassThroughValue(passThrough) {
+  if (checkPassThroughOption(passThrough) === PASS_THROUGH_COMPRESSED) {
+    throw new Error(ERR_UNSUPPORTED_PASS_THROUGH_VALUE);
+  }
+}
+function replaceContent(zipEntry, params) {
+  const { uncompressedSize } = params;
+  Object.assign(zipEntry, params, {
+    reader: null,
+    passThrough: UNDEFINED_VALUE,
+    uncompressedSize: uncompressedSize === UNDEFINED_VALUE ? 0 : uncompressedSize,
+    undeterminedSize: uncompressedSize === UNDEFINED_VALUE
+  });
+}
+function getData64URISize(dataURI) {
+  let dataEnd = dataURI.length;
+  while (dataURI.charAt(dataEnd - 1) == "=") {
+    dataEnd--;
+  }
+  const dataStart = dataURI.indexOf(",") + 1;
+  return Math.floor((dataEnd - dataStart) * 0.75);
 }
 function isPassThrough(child, options) {
   const { readerOptions } = options;
@@ -8962,19 +9300,6 @@ function isPassThrough(child, options) {
 }
 function isImplicitDirectory(child) {
   return child.directory && child.data === null;
-}
-function getUserExtraField(extraField) {
-  if (extraField) {
-    const userExtraField = /* @__PURE__ */ new Map();
-    extraField.forEach((field, type) => {
-      if (!INTERPRETED_EXTRA_FIELD_TYPES.has(type)) {
-        userExtraField.set(type, field.data);
-      }
-    });
-    if (userExtraField.size) {
-      return userExtraField;
-    }
-  }
 }
 async function exportZip(zipWriter, entry, totalSize, options, readers) {
   const { onstart, onprogress, onend, onentryprogress } = options;
@@ -9072,6 +9397,7 @@ function addFileSystemHandle(zipEntry, handle, options) {
 }
 async function exportFileSystemHandle(zipEntry, directoryHandle, options) {
   const { onstart, onprogress, onend } = options;
+  checkPassThroughValue(options.passThrough);
   const readerOptions = checkReaderOptions(options.readerOptions);
   const abortController = new AbortController();
   const { signal } = abortController;
@@ -9143,7 +9469,7 @@ async function exportFileSystemHandle(zipEntry, directoryHandle, options) {
       if (exportAborted || isExportAborted(signal.reason)) {
         return;
       }
-      throw signal.reason === UNDEFINED_VALUE ? new DOMException(ERR_ABORTED, ABORT_ERROR_NAME) : signal.reason;
+      throwIfAborted(signal);
     }
     try {
       if (child.directory) {
@@ -9226,6 +9552,14 @@ function resetFS(fs2) {
   fs2.entryIdCounter = 0;
   fs2.root = new ZipDirectoryEntry(fs2);
 }
+function resetAndImport(fs2, importFunction) {
+  const { entries, entryIdCounter, root } = fs2;
+  resetFS(fs2);
+  return importFunction(fs2.root).catch((error) => {
+    Object.assign(fs2, { entries, entryIdCounter, root });
+    throw error;
+  });
+}
 function collectChildren(directory, recursive) {
   const children = [];
   const pendingDirectories = [directory];
@@ -9252,10 +9586,49 @@ function registerEntries(fs2, entry) {
 }
 function addChild(parent, name, params, directory) {
   if (parent.directory) {
+    const path = splitPath(name);
+    if (path) {
+      name = path.pop();
+      parent = getPathParent(parent, path);
+    }
     return directory ? new ZipDirectoryEntry(parent.fs, name, params, parent) : new ZipFileEntry(parent.fs, name, params, parent);
   } else {
-    throw new Error("Parent entry is not a directory");
+    throw new Error(ERR_PARENT_NOT_DIRECTORY);
   }
+}
+function checkDuplicatesOption(duplicates) {
+  if (duplicates === UNDEFINED_VALUE) {
+    return DUPLICATES_THROW;
+  } else if (DUPLICATES_VALUES.has(duplicates)) {
+    return duplicates;
+  } else {
+    throw new Error(ERR_INVALID_DUPLICATES);
+  }
+}
+function splitPath(name) {
+  if (name.includes("/")) {
+    const path = name.split("/").filter((pathPart) => pathPart != "" && pathPart != ".");
+    if (path.length) {
+      return path;
+    }
+  }
+}
+function getPathParent(parent, path, movedEntry) {
+  path.forEach((pathPart) => {
+    const previousParent = parent;
+    parent = parent.getChildByName(pathPart);
+    if (parent) {
+      if (!parent.directory) {
+        throw new Error(ERR_ENTRY_EXISTS);
+      }
+      if (movedEntry && (parent == movedEntry || parent.isDescendantOf(movedEntry))) {
+        throw new Error(ERR_ANCESTOR_ENTRY);
+      }
+    } else {
+      parent = new ZipDirectoryEntry(previousParent.fs, pathPart, { data: null }, previousParent);
+    }
+  });
+  return parent;
 }
 
 // node_modules/@zip.js/zip.js/lib/core/util/mime-type-data.js
@@ -9301,9 +9674,11 @@ export {
   Data64URIWriter,
   ERR_ABORTED,
   ERR_AMBIGUOUS_ARCHIVE,
+  ERR_ANCESTOR_ENTRY,
   ERR_BAD_FORMAT,
   ERR_CENTRAL_DIRECTORY_NOT_FOUND,
   ERR_DUPLICATED_NAME,
+  ERR_DUPLICATE_IMPORTED_ENTRY,
   ERR_ENCRYPTED,
   ERR_ENCRYPTED_CENTRAL_DIRECTORY,
   ERR_ENTRY_DATA_OUT_OF_BOUNDS,
@@ -9313,7 +9688,9 @@ export {
   ERR_EXTRAFIELD_ZIP64_NOT_FOUND,
   ERR_HTTP_RANGE,
   ERR_HTTP_RESOURCE_CHANGED,
+  ERR_HTTP_STATUS,
   ERR_INVALID_AUTHENTICATION_CODE,
+  ERR_INVALID_BASE_URI,
   ERR_INVALID_CODEC_DEFINITION,
   ERR_INVALID_CODEC_MODULE,
   ERR_INVALID_COMMENT,
@@ -9321,7 +9698,9 @@ export {
   ERR_INVALID_COMPRESSED_DATA,
   ERR_INVALID_CRC32,
   ERR_INVALID_DATE,
+  ERR_INVALID_DUPLICATES,
   ERR_INVALID_ENCRYPTION_STRENGTH,
+  ERR_INVALID_ENTRY,
   ERR_INVALID_ENTRY_COMMENT,
   ERR_INVALID_ENTRY_COMMENT_TYPE,
   ERR_INVALID_ENTRY_NAME,
@@ -9340,9 +9719,10 @@ export {
   ERR_INVALID_PASSWORD,
   ERR_INVALID_PASSWORD_TYPE,
   ERR_INVALID_PASS_THROUGH,
+  ERR_INVALID_PASS_THROUGH_VALUE,
+  ERR_INVALID_READER,
   ERR_INVALID_READER_OPTIONS,
   ERR_INVALID_SIGNAL,
-  ERR_INVALID_SIGNATURE,
   ERR_INVALID_SIGNATURE_DATA,
   ERR_INVALID_STRICTNESS,
   ERR_INVALID_UID,
@@ -9350,28 +9730,36 @@ export {
   ERR_INVALID_UNIX_EXTRA_FIELD_TYPE,
   ERR_INVALID_UNIX_ID_SIZE,
   ERR_INVALID_UNIX_MODE,
+  ERR_INVALID_URI,
   ERR_INVALID_VERSION,
   ERR_ITERATOR_COMPLETED_TOO_SOON,
   ERR_LOCAL_FILE_HEADER_NOT_FOUND,
   ERR_OVERLAPPING_ENTRY,
+  ERR_PARENT_NOT_DIRECTORY,
   ERR_READABLE_CONSUMED,
   ERR_RESERVED_COMPRESSION_METHOD,
+  ERR_ROOT_DIRECTORY_NOT_MOVABLE,
   ERR_SPLIT_ZIP_FILE,
+  ERR_TARGET_NOT_DIRECTORY,
   ERR_UNDEFINED_COMPRESSION_METHOD,
+  ERR_UNDEFINED_CRC32,
   ERR_UNDEFINED_READER,
   ERR_UNDEFINED_UNCOMPRESSED_SIZE,
   ERR_UNDETERMINED_SIZE,
   ERR_UNSAFE_FILENAME,
-  ERR_UNSUPPORTED_COMPRESSION2 as ERR_UNSUPPORTED_COMPRESSION,
+  ERR_UNSUPPORTED_COMPRESSION,
   ERR_UNSUPPORTED_CONTEXT,
   ERR_UNSUPPORTED_CRYPTO_API,
   ERR_UNSUPPORTED_ENCRYPTION,
   ERR_UNSUPPORTED_ENCRYPTION_PASS_THROUGH,
   ERR_UNSUPPORTED_ENCRYPTION_USDZ,
   ERR_UNSUPPORTED_FORMAT,
+  ERR_UNSUPPORTED_PASS_THROUGH_VALUE,
+  ERR_UNSUPPORTED_SPLIT_USDZ,
   ERR_UNSUPPORTED_UINT64,
   ERR_WORKER_STARTUP_TIMEOUT,
   ERR_WRITER_NOT_INITIALIZED,
+  ERR_WRITER_SIZE_NOT_WRITABLE,
   ERR_ZIP_CRYPTO_LAST_MOD_DATE,
   ERR_ZIP_NOT_EMPTY,
   HttpRangeReader,
@@ -9385,13 +9773,18 @@ export {
   Uint8ArrayWriter,
   VERSION,
   WARNING_APPENDED_DATA,
+  WARNING_CLAMPED_LAST_MODIFICATION_DATE,
   WARNING_COMPRESSED_PATCHED_DATA,
+  WARNING_COMPRESSION_UNAVAILABLE,
   WARNING_DUPLICATE_FILENAME,
   WARNING_MALFORMED_EXTRA_FIELD,
   WARNING_MISMATCHED_LOCAL_FILE_HEADER_BIT_FLAG,
   WARNING_MISMATCHED_LOCAL_FILE_HEADER_COMPRESSION_METHOD,
   WARNING_MISMATCHED_LOCAL_FILE_HEADER_CRC32_OR_SIZES,
+  WARNING_MISMATCHED_LOCAL_FILE_HEADER_FILENAME,
   WARNING_MISMATCHED_ZIP64_END_OF_CENTRAL_DIRECTORY,
+  WARNING_MULTIPLE_END_OF_CENTRAL_DIRECTORY,
+  WARNING_PREPENDED_CENTRAL_DIRECTORY,
   WARNING_PREPENDED_DATA,
   WARNING_TRAILING_CENTRAL_DIRECTORY_DATA,
   WARNING_UNKNOWN_VERSION,
