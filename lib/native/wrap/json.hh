@@ -130,6 +130,8 @@ public:
     bool IsValid() const { return !error && st.IsValid(); }
     bool IsEOF() const { return eof; }
 
+    void Rearm();
+
     bool ParseKey(Span<const char> *out_key);
     bool ParseKey(const char **out_key);
     Span<const char> ParseKey();

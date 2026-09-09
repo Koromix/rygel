@@ -40,6 +40,11 @@ void json_StreamReader::ReadByte()
     }
 }
 
+void json_Parser::Rearm()
+{
+    reader.IterativeParseInit();
+}
+
 bool json_Parser::Handler::StartObject()
 {
     token = json_TokenType::StartObject;
