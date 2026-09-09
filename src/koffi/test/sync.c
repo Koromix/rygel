@@ -1193,3 +1193,8 @@ EXPORT int SumBools(int a, int b, int c, int d, int e, int f)
 {
     return a + b + c + d + e + f;
 }
+
+EXPORT void CopyBuffer(const void *in, int size, void * out)
+{
+    memcpy(out, in, size);
+}

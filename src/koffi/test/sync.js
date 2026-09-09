@@ -1177,6 +1177,38 @@ async function test() {
     assert.equal(SumInts(127436, 2828, 181818, 1111, -4, -6), 313183);
     assert.equal(SumBools(true, true, false, true, false, false), 3);
 
+    // Test automatic endianness conversion of pointer arguments
+    {
+        const CopyEndian16A = lib.func('void CopyBuffer(int16_be_t *in, int len, _Out_ int16_le_t *out)');
+        const CopyEndian16B = lib.func('void CopyBuffer(int16_le_t *in, int len, _Out_ int16_be_t *out)');
+        const CopyEndian32A = lib.func('void CopyBuffer(int32_be_t *in, int len, _Out_ int32_le_t *out)');
+        const CopyEndian32B = lib.func('void CopyBuffer(int32_le_t *in, int len, _Out_ int32_be_t *out)');
+        const CopyEndian64A = lib.func('void CopyBuffer(int64_be_t *in, int len, _Out_ int64_le_t *out)');
+        const CopyEndian64B = lib.func('void CopyBuffer(int64_le_t *in, int len, _Out_ int64_be_t *out)');
+
+        let int16 = new Int16Array([0x7BCD, 0xBE42, 0x1234]);
+        let out16 = new Int16Array(3);
+        let int32 = new Int32Array([0x12345678, 0x9ABCDEF0, 0xAD27CF23]);
+        let out32 = new Int32Array(3);
+        let int64 = new BigInt64Array([0x7BCDEABD12345678n, 0x458EAB6FC236ABCFn, 0x12AB34CD56EF4242n]);
+        let out64 = new BigInt64Array(3);
+
+        CopyEndian16A(int16, int16.byteLength, out16);
+        assert.deepEqual(out16, new Int16Array([0xCD7B, 0x42BE, 0x3412]));
+        CopyEndian16B(int16, int16.byteLength, out16);
+        assert.deepEqual(out16, new Int16Array([0xCD7B, 0x42BE, 0x3412]));
+
+        CopyEndian32A(int32, int32.byteLength, out32);
+        assert.deepEqual(out32, new Int32Array([0x78563412, 0xF0DEBC9A, 0x23CF27AD]));
+        CopyEndian32B(int32, int32.byteLength, out32);
+        assert.deepEqual(out32, new Int32Array([0x78563412, 0xF0DEBC9A, 0x23CF27AD]));
+
+        CopyEndian64A(int64, int64.byteLength, out64);
+        assert.deepEqual(out64, new BigInt64Array([0x78563412BDEACD7Bn, 0xCFAB36C26FAB8E45n, 0x4242EF56CD34AB12n]));
+        CopyEndian64B(int64, int64.byteLength, out64);
+        assert.deepEqual(out64, new BigInt64Array([0x78563412BDEACD7Bn, 0xCFAB36C26FAB8E45n, 0x4242EF56CD34AB12n]));
+    }
+
     lib.unload();
 }
 
