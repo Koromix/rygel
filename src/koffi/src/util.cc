@@ -190,6 +190,31 @@ napi_value NewString(Napi::Env env, const char32_t *ptr)
     }
 }
 
+void ConvertBuffer(BufferConversion conversion, void *ptr, Size size, Size stride)
+{
+#define SWAP(CType) \
+        do { \
+            stride = stride ? stride : K_SIZE(CType); \
+             \
+            Size len = size / stride; \
+             \
+            for (Size i = 0; i < len; i++) { \
+                CType *it = (CType *)((uint8_t *)ptr + i * stride); \
+                *it = ReverseBytes(*it); \
+            } \
+        } while (false)
+
+    switch (conversion) {
+        case BufferConversion::None: {} break;
+
+        case BufferConversion::Swap16: { SWAP(uint16_t); } break;
+        case BufferConversion::Swap32: { SWAP(uint32_t); } break;
+        case BufferConversion::Swap64: { SWAP(uint64_t); } break;
+    }
+
+#undef SWAP
+}
+
 static uint32_t DecodeDynamicLength(const uint8_t *origin, const RecordMember &by)
 {
     const uint8_t *src = origin + by.offset;
@@ -824,25 +849,7 @@ void DecodeBuffer(Span<uint8_t> buffer, const uint8_t *origin, const TypeInfo *t
         }
     }
 
-#define SWAP(CType) \
-        do { \
-            CType *data = (CType *)buffer.ptr; \
-            Size len = buffer.len / K_SIZE(CType); \
-             \
-            for (Size i = 0; i < len; i++) { \
-                data[i] = ReverseBytes(data[i]); \
-            } \
-        } while (false)
-
-    if (ref->primitive == PrimitiveKind::Int16S || ref->primitive == PrimitiveKind::UInt16S) {
-        SWAP(uint16_t);
-    } else if (ref->primitive == PrimitiveKind::Int32S || ref->primitive == PrimitiveKind::UInt32S) {
-        SWAP(uint32_t);
-    } else if (ref->primitive == PrimitiveKind::Int64S || ref->primitive == PrimitiveKind::UInt64S) {
-        SWAP(uint64_t);
-    }
-
-#undef SWAP
+    ConvertBuffer(type->ref.conversion, buffer.ptr, buffer.len, stride);
 }
 
 napi_value Decode(InstanceData *instance, const uint8_t *ptr, const TypeInfo *type)

@@ -1907,8 +1907,9 @@ static Napi::Value DecodeValue(const Napi::CallbackInfo &info)
 
     const void *src = nullptr;
     Size src_len = 0;
+    napi_valuetype src_kind;
 
-    if (!TryPointer(env, ref, (void **)&src, &src_len)) {
+    if (!TryPointer(env, ref, (void **)&src, &src_len, &src_kind)) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for reference, expected pointer", GetValueType(instance, ref));
         return env.Null();
     }
@@ -2259,8 +2260,9 @@ static Napi::Value EncodeValue(const Napi::CallbackInfo &info)
 
     void *dest = nullptr;
     Size dest_len = 0;
+    napi_valuetype dest_kind;
 
-    if (!TryPointer(env, ref, &dest, &dest_len)) {
+    if (!TryPointer(env, ref, &dest, &dest_len, &dest_kind)) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for reference, expected pointer", GetValueType(instance, ref));
         return env.Null();
     }

@@ -22,16 +22,16 @@ struct alignas(8) CallData {
             String,
             String16,
             String32,
-            Object
+            Object,
+            Convert
         };
 
         Kind kind;
 
         napi_ref ref;
-        const uint8_t *ptr;
+        void *ptr;
+        Size len;
         const TypeInfo *type;
-
-        Size max_len; // Only for indirect strings
     };
 
     Napi::Env env;

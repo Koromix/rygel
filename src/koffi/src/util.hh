@@ -203,7 +203,7 @@ static K_FORCE_INLINE bool TryPointer(napi_env env, napi_value value, void **out
     return false;
 }
 
-static K_FORCE_INLINE bool TryPointer(napi_env env, napi_value value, void **out_ptr, Size *out_len)
+static K_FORCE_INLINE bool TryPointer(napi_env env, napi_value value, void **out_ptr, Size *out_len, napi_valuetype *out_kind)
 {
     // Fast path for BigInt
     {
@@ -214,6 +214,7 @@ static K_FORCE_INLINE bool TryPointer(napi_env env, napi_value value, void **out
         if (status == napi_ok) {
             *out_ptr = (void *)(uintptr_t)u64;
             *out_len = -1;
+            *out_kind = napi_bigint;
 
             return true;
         }
@@ -221,53 +222,8 @@ static K_FORCE_INLINE bool TryPointer(napi_env env, napi_value value, void **out
 
     if (size_t len = 0; node_api_get_buffer_info(env, value, out_ptr, &len) == napi_ok) {
         *out_len = (Size)len;
-        return true;
-    }
-
-    napi_valuetype kind = GetKindOf(env, value);
-
-    if (IsNullOrUndefined(kind)) {
-        *out_ptr = nullptr;
-        *out_len = -1;
-
-        return true;
-    } else if (kind == napi_number) {
-        int64_t i;
-        napi_status status = napi_get_value_int64(env, value, &i);
-        K_ASSERT(status == napi_ok);
-
-        *out_ptr = (void *)(uintptr_t)i;
-        *out_len = -1;
-
-        return true;
-    }
-
-    if (size_t len = 0; napi_get_arraybuffer_info(env, value, out_ptr, &len) == napi_ok) {
-        *out_len = (Size)len;
-        return true;
-    }
-
-    return false;
-}
-
-static K_FORCE_INLINE bool TryPointer(napi_env env, napi_value value, void **out_ptr, napi_valuetype *out_kind)
-{
-    // Fast path for BigInt
-    {
-        uint64_t u64;
-        bool lossless;
-        napi_status status = napi_get_value_bigint_uint64(env, value, &u64, &lossless);
-
-        if (status == napi_ok) {
-            *out_ptr = (void *)(uintptr_t)u64;
-            *out_kind = napi_bigint;
-
-            return true;
-        }
-    }
-
-    if (node_api_get_buffer_info(env, value, out_ptr, nullptr) == napi_ok) {
         *out_kind = napi_object;
+
         return true;
     }
 
@@ -275,6 +231,7 @@ static K_FORCE_INLINE bool TryPointer(napi_env env, napi_value value, void **out
 
     if (IsNullOrUndefined(kind)) {
         *out_ptr = nullptr;
+        *out_len = -1;
         *out_kind = kind;
 
         return true;
@@ -284,13 +241,16 @@ static K_FORCE_INLINE bool TryPointer(napi_env env, napi_value value, void **out
         K_ASSERT(status == napi_ok);
 
         *out_ptr = (void *)(uintptr_t)i;
+        *out_len = -1;
         *out_kind = napi_number;
 
         return true;
     }
 
-    if (napi_get_arraybuffer_info(env, value, out_ptr, nullptr) == napi_ok) {
+    if (size_t len = 0; napi_get_arraybuffer_info(env, value, out_ptr, &len) == napi_ok) {
+        *out_len = (Size)len;
         *out_kind = napi_object;
+
         return true;
     }
 
@@ -418,6 +378,8 @@ static K_FORCE_INLINE napi_value NewString(Napi::Env env, const char16_t *ptr)
 
 napi_value NewString(Napi::Env env, const char32_t *ptr, Size len);
 napi_value NewString(Napi::Env env, const char32_t *ptr);
+
+INLINE_UNITY void ConvertBuffer(BufferConversion conversion, void *ptr, Size size, Size stride = 0);
 
 napi_value DecodeObject(InstanceData *instance, const uint8_t *origin, const TypeInfo *type);
 void DecodeObject(InstanceData *instance, napi_value obj, const uint8_t *origin, const TypeInfo *type);

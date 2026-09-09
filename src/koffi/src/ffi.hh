@@ -64,6 +64,13 @@ enum class TypeFlag {
     FillWithOnes = 1 << 2
 };
 
+enum class BufferConversion {
+    None,
+    Swap16,
+    Swap32,
+    Swap64
+};
+
 enum class ArrayHint {
     Array,
     Typed,
@@ -108,6 +115,7 @@ struct TypeInfo {
     struct {
         const TypeInfo *type; // Pointer or array
         int32_t stride; // Array only
+        BufferConversion conversion; // Array or pointer
     } ref;
     const FunctionInfo *proto; // Callback only
     ArrayHint hint; // Array only

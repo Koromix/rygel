@@ -332,6 +332,55 @@ const TypeInfo *ResolveType(InstanceData *instance, Span<const char> str)
     return type;
 }
 
+static BufferConversion SelectBufferConversion(const TypeInfo *ref)
+{
+    switch (ref->primitive) {
+        case PrimitiveKind::Void:
+        case PrimitiveKind::Bool:
+        case PrimitiveKind::Int8:
+        case PrimitiveKind::UInt8:
+        case PrimitiveKind::Int16:
+        case PrimitiveKind::UInt16:
+        case PrimitiveKind::Int32:
+        case PrimitiveKind::UInt32:
+        case PrimitiveKind::Int64:
+        case PrimitiveKind::UInt64:
+        case PrimitiveKind::String:
+        case PrimitiveKind::String16:
+        case PrimitiveKind::String32:
+        case PrimitiveKind::Float32:
+        case PrimitiveKind::Float64:
+        case PrimitiveKind::Array:
+        case PrimitiveKind::Pointer:
+        case PrimitiveKind::Record:
+        case PrimitiveKind::Union:
+        case PrimitiveKind::Prototype:
+        case PrimitiveKind::Callback: return BufferConversion::None;
+
+        case PrimitiveKind::Int16S:
+        case PrimitiveKind::UInt16S: return BufferConversion::Swap16;
+
+        case PrimitiveKind::Int32S:
+        case PrimitiveKind::UInt32S: return BufferConversion::Swap32;
+
+        case PrimitiveKind::Int64S:
+        case PrimitiveKind::UInt64S: return BufferConversion::Swap64;
+    }
+
+    K_UNREACHABLE();
+}
+
+static ArrayHint SelectArrayHint(const TypeInfo *ref)
+{
+    if (ref->flags & (int)TypeFlag::IsCharLike) {
+        return ArrayHint::String;
+    } else if (ref->flags & (int)TypeFlag::HasTypedArray) {
+        return ArrayHint::Typed;
+    } else {
+        return ArrayHint::Array;
+    }
+}
+
 TypeInfo *MakePointerType(InstanceData *instance, const TypeInfo *ref, int count)
 {
     K_ASSERT(count >= 1);
@@ -354,6 +403,7 @@ TypeInfo *MakePointerType(InstanceData *instance, const TypeInfo *ref, int count
                 type->align = K_SIZE(void *);
                 type->ref.type = ref;
                 type->ref.stride = ref->size;
+                type->ref.conversion = SelectBufferConversion(ref);
                 type->hint = (ref->flags & (int)TypeFlag::HasTypedArray) ? ArrayHint::Typed : ArrayHint::Array;
             } else {
                 type->primitive = PrimitiveKind::Callback;
@@ -387,6 +437,7 @@ static TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size
     type->size = (int32_t)(len * ref->size);
     type->ref.type = ref;
     type->ref.stride = ref->size;
+    type->ref.conversion = SelectBufferConversion(ref);
     type->hint = hint;
 
     if (insert) {
@@ -400,16 +451,7 @@ static TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size
 
 TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len)
 {
-    ArrayHint hint = {};
-
-    if (ref->flags & (int)TypeFlag::IsCharLike) {
-        hint = ArrayHint::String;
-    } else if (ref->flags & (int)TypeFlag::HasTypedArray) {
-        hint = ArrayHint::Typed;
-    } else {
-        hint = ArrayHint::Array;
-    }
-
+    ArrayHint hint = SelectArrayHint(ref);
     return MakeArrayType(instance, ref, len, hint, true);
 }
 

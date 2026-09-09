@@ -102,55 +102,67 @@ void CallData::Finalize()
     if (out_arguments.len) {
         if (!env.IsExceptionPending()) {
             for (const OutArgument &out: out_arguments) {
-                napi_value value = GetReferenceValue(env, out.ref);
-
                 switch (out.kind) {
                     case OutArgument::Kind::Array: {
+                        napi_value value = GetReferenceValue(env, out.ref);
+
                         K_ASSERT(IsArray(env, value));
 
                         uint32_t len = GetArrayLength(env, value);
-                        DecodeElements(instance, value, out.ptr, out.type, len);
+                        DecodeElements(instance, value, (const uint8_t *)out.ptr, out.type, len);
                     } break;
 
                     case OutArgument::Kind::String: {
+                        napi_value value = GetReferenceValue(env, out.ref);
+
                         K_ASSERT(IsArray(env, value));
                         K_ASSERT(GetArrayLength(env, value) == 1);
 
-                        Size len = strnlen((const char *)out.ptr, out.max_len);
+                        Size len = strnlen((const char *)out.ptr, out.len);
                         napi_value str = NewString(env, (const char *)out.ptr, len);
 
                         napi_set_element(env, value, 0, str);
                     } break;
 
                     case OutArgument::Kind::String16: {
+                        napi_value value = GetReferenceValue(env, out.ref);
+
                         K_ASSERT(IsArray(env, value));
                         K_ASSERT(GetArrayLength(env, value) == 1);
 
-                        Size len = NullTerminatedLength((const char16_t *)out.ptr, out.max_len);
+                        Size len = NullTerminatedLength((const char16_t *)out.ptr, out.len);
                         napi_value str = NewString(env, (const char16_t *)out.ptr, len);
 
                         napi_set_element(env, value, 0, str);
                     } break;
 
                     case OutArgument::Kind::String32: {
+                        napi_value value = GetReferenceValue(env, out.ref);
+
                         K_ASSERT(IsArray(env, value));
                         K_ASSERT(GetArrayLength(env, value) == 1);
 
-                        Size len = NullTerminatedLength((const char32_t *)out.ptr, out.max_len);
+                        Size len = NullTerminatedLength((const char32_t *)out.ptr, out.len);
                         napi_value str = NewString(env, (const char32_t *)out.ptr, len);
 
                         napi_set_element(env, value, 0, str);
                     } break;
 
                     case OutArgument::Kind::Object: {
+                        napi_value value = GetReferenceValue(env, out.ref);
+
                         if (CheckValueTag(env, value, &UnionValueMarker)) {
                             UnionValue *u = nullptr;
                             NAPI_OK(napi_unwrap(env, value, (void **)&u));
 
-                            u->SetRaw(out.ptr);
+                            u->SetRaw((const uint8_t *)out.ptr);
                         } else {
-                            DecodeObject(instance, value, out.ptr, out.type->ref.type);
+                            DecodeObject(instance, value, (const uint8_t *)out.ptr, out.type->ref.type);
                         }
+                    } break;
+
+                    case OutArgument::Kind::Convert: {
+                        ConvertBuffer(out.type->ref.conversion, (uint8_t *)out.ptr, out.len);
                     } break;
                 }
             }
@@ -842,6 +854,8 @@ void CallData::PushBuffer(Span<const uint8_t> buffer, const TypeInfo *type, uint
     if (stride == ref->size) {
         MemCpy(origin, buffer.ptr, buffer.len);
         MemSet(origin + buffer.len, 0, (Size)type->size - buffer.len);
+
+        ConvertBuffer(type->ref.conversion, origin, buffer.len, stride);
     } else {
         Size len = buffer.len / ref->size;
 
@@ -851,29 +865,9 @@ void CallData::PushBuffer(Span<const uint8_t> buffer, const TypeInfo *type, uint
 
             memcpy(dest, src, ref->size);
         }
+
+        ConvertBuffer(type->ref.conversion, origin, len * stride, stride);
     }
-
-#define SWAP(CType) \
-        do { \
-            Size len = buffer.len / K_SIZE(CType); \
-             \
-            for (Size i = 0; i < len; i++) { \
-                CType *ptr = (CType *)(origin + i * stride); \
-                *ptr = ReverseBytes(*ptr); \
-            } \
-        } while (false)
-
-    if (type->primitive == PrimitiveKind::Array || type->primitive == PrimitiveKind::Pointer) {
-        if (ref->primitive == PrimitiveKind::Int16S || ref->primitive == PrimitiveKind::UInt16S) {
-            SWAP(uint16_t);
-        } else if (ref->primitive == PrimitiveKind::Int32S || ref->primitive == PrimitiveKind::UInt32S) {
-            SWAP(uint32_t);
-        } else if (ref->primitive == PrimitiveKind::Int64S || ref->primitive == PrimitiveKind::UInt64S) {
-            SWAP(uint64_t);
-        }
-    }
-
-#undef SWAP
 }
 
 bool CallData::PushStringArray(napi_value value, const TypeInfo *type, uint8_t *origin)
@@ -910,11 +904,32 @@ bool CallData::PushPointer(napi_value value, const TypeInfo *type, int direction
     // just made things worse. Oh, well.
 
     void *ptr = nullptr;
+    Size len = 0;
     napi_valuetype kind = napi_undefined;
 
 restart:
 
-    if (TryPointer(env, value, &ptr, &kind)) {
+    if (TryPointer(env, value, &ptr, &len, &kind)) {
+        if (type->ref.conversion != BufferConversion::None && kind == napi_object) [[unlikely]] {
+            void *original = ptr;
+
+            if (directions & 1) {
+                ptr = AllocHeap(len);
+
+                MemCpy(ptr, original, len);
+                ConvertBuffer(type->ref.conversion, ptr, len);
+            }
+
+            if (directions & 2) {
+                OutArgument *out = out_arguments.AppendDefault();
+
+                out->kind = OutArgument::Kind::Convert;
+                out->ptr = original;
+                out->len = len;
+                out->type = type;
+            }
+        }
+
         *out_ptr = ptr;
         return true;
     }
@@ -975,7 +990,7 @@ bool CallData::PushPointerSlow(napi_value value, napi_valuetype kind, const Type
         Size len = PushIndirectString(array, ref, &ptr);
 
         OutArgument::Kind out_kind;
-        Size out_max_len = -1;
+        Size out_len = 0;
 
         if (len >= 0) {
             if (!ref->size && ref != instance->void_type) [[unlikely]] {
@@ -988,7 +1003,7 @@ bool CallData::PushPointerSlow(napi_value value, napi_valuetype kind, const Type
                 case 2: { out_kind = OutArgument::Kind::String16; } break;
                 case 4: { out_kind = OutArgument::Kind::String32; } break;
             }
-            out_max_len = len;
+            out_len = len;
         } else {
             Size size = (Size)array.Length() * ref->size;
 
@@ -1016,9 +1031,9 @@ bool CallData::PushPointerSlow(napi_value value, napi_valuetype kind, const Type
             NAPI_OK(napi_create_reference(env, value, 1, &out->ref));
 
             out->kind = out_kind;
-            out->ptr = (const uint8_t *)ptr;
+            out->ptr = ptr;
+            out->len = out_len;
             out->type = type;
-            out->max_len = out_max_len;
         }
 
         *out_ptr = ptr;
@@ -1048,9 +1063,8 @@ bool CallData::PushPointerSlow(napi_value value, napi_valuetype kind, const Type
             NAPI_OK(napi_create_reference(env, value, 1, &out->ref));
 
             out->kind = OutArgument::Kind::Object;
-            out->ptr = (const uint8_t *)ptr;
+            out->ptr = ptr;
             out->type = type;
-            out->max_len = -1;
         }
 
         *out_ptr = ptr;
@@ -1079,11 +1093,12 @@ unexpected:
 bool CallData::PushCallback(napi_value value, const TypeInfo *type, void **out_ptr)
 {
     void *ptr = nullptr;
+    Size len = 0;
     napi_valuetype kind = napi_undefined;
 
 restart:
 
-    if (TryPointer(env, value, &ptr, &kind)) {
+    if (TryPointer(env, value, &ptr, &len, &kind)) {
         *out_ptr = ptr;
         return true;
     }
