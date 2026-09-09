@@ -1,5 +1,5 @@
 project('libfuse3', ['c'],
-        version: '3.18.2',
+        version: '3.18.3',
         meson_version: '>= 0.60.0',
         default_options: [
             'buildtype=debugoptimized',
@@ -178,6 +178,16 @@ if get_option('enable-io-uring') and liburing.found() and libnuma.found()
               dependencies: [liburing])
       private_cfg.set('HAVE_URING', true)
    endif
+endif
+
+# A custom io peer might not be a kernel and can forge requests libfuse parses
+# without bounds checks. Off unless a build asks for it.
+private_cfg.set('HAVE_CUSTOM_IO', get_option('enable-custom-io'))
+if get_option('enable-custom-io')
+    warning('enable-custom-io lets a peer that might not be a kernel send ' +
+            'requests that libfuse parses without bounds checks, so a ' +
+            'forged request can crash or corrupt the filesystem process - ' +
+            'see doc/README.custom-io.')
 endif
 
 #

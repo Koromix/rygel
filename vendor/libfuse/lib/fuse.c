@@ -1019,6 +1019,7 @@ static int try_get_path(struct fuse *f, fuse_ino_t nodeid, const char *name,
 
 	if (wnodep) {
 		assert(need_lock);
+		assert(name != NULL);
 		wnode = lookup_node(f, nodeid, name);
 		if (wnode) {
 			if (wnode->treelock != 0) {
@@ -2265,8 +2266,12 @@ int fuse_fs_poll(struct fuse_fs *fs, const char *path,
 	int res;
 
 	fuse_get_context()->private_data = fs->user_data;
-	if (!fs->op.poll)
+
+	if (!fs->op.poll) {
+		fuse_pollhandle_destroy(ph);
 		return -ENOSYS;
+	}
+
 	if (fs->debug)
 		fuse_log(FUSE_LOG_DEBUG, "poll[%llu] ph: %p, events 0x%x\n",
 			(unsigned long long) fi->fh, ph,
@@ -2531,7 +2536,11 @@ static struct fuse_context_i *fuse_create_context(struct fuse *f)
 			fuse_log(FUSE_LOG_ERR, "fuse: failed to allocate thread specific data\n");
 			abort();
 		}
-		pthread_setspecific(fuse_context_key, c);
+		if (pthread_setspecific(fuse_context_key, c) != 0) {
+			fuse_log(FUSE_LOG_ERR, "fuse: failed to set thread specific data\n");
+			free(c);
+			abort();
+		}
 	} else {
 		memset(c, 0, sizeof(*c));
 	}
@@ -4328,6 +4337,8 @@ static void fuse_lib_poll(fuse_req_t req, fuse_ino_t ino,
 		err = fuse_fs_poll(f->fs, path, fi, ph, &revents);
 		fuse_finish_interrupt(f, req, &d);
 		free_path(f, ino, path);
+	} else {
+		fuse_pollhandle_destroy(ph);
 	}
 	if (!err)
 		fuse_reply_poll(req, revents);
@@ -4453,8 +4464,8 @@ static void fuse_lib_statx(fuse_req_t req, fuse_ino_t ino, int flags, int mask,
 		if (f->conf.auto_cache) {
 			struct stat stbuf;
 
-			stbuf.st_mtime = stxbuf.stx_mtime.tv_nsec;
-			ST_MTIM_NSEC(&stbuf) = stxbuf.stx_mtime.tv_nsec;
+			stbuf.st_mtime = stxbuf.stx_mtime.tv_sec;
+			ST_MTIM_NSEC_SET(&stbuf, stxbuf.stx_mtime.tv_nsec);
 			stbuf.st_size = stxbuf.stx_size;
 			update_stat(node, &stbuf);
 		}
@@ -4790,8 +4801,10 @@ static void print_module_help(const char *name,
 {
 	struct fuse_args a = FUSE_ARGS_INIT(0, NULL);
 	if (fuse_opt_add_arg(&a, "") == -1 ||
-	    fuse_opt_add_arg(&a, "-h") == -1)
+	    fuse_opt_add_arg(&a, "-h") == -1) {
+		fuse_opt_free_args(&a);
 		return;
+	}
 	printf("\nOptions for %s module:\n", name);
 	(*fac)(&a, NULL);
 	fuse_opt_free_args(&a);

@@ -2170,6 +2170,13 @@ int fuse_session_custom_io_317(struct fuse_session *se,
  * The provided file descriptor `fd` will be closed when fuse_session_destroy()
  * is called.
  *
+ * Requires a library built with -Denable-custom-io=true. The peer at the other
+ * end of `fd` takes the place of the kernel as the sender of requests, so it
+ * owes the session the validation the kernel would have done -- libfuse does
+ * not repeat it. A request whose length or count field exceeds the bytes that
+ * actually arrived makes the handlers read past the receive buffer and crash
+ * the filesystem process.
+ *
  * @param se session object
  * @param io Custom io to use when retrieving/sending requests/responses
  * @param fd file descriptor for the session
@@ -2178,6 +2185,7 @@ int fuse_session_custom_io_317(struct fuse_session *se,
  * @return -EINVAL if `io`, `io->read` or `ìo->writev` are NULL
  * @return -EBADF  if `fd` was smaller than 0
  * @return -errno  if failed to allocate memory to store `io`
+ * @return -ENOTSUP if the library was built without custom io
  *
  **/
 #if FUSE_MAKE_VERSION(3, 17) <= FUSE_USE_VERSION
@@ -2258,12 +2266,17 @@ int fuse_session_loop(struct fuse_session *se);
 /**
  * Flag a session as terminated.
  *
- * This will cause any running event loops to terminate on the next opportunity. If this function is
- * called by a thread that is not a FUSE worker thread, the next
- * opportunity will be when FUSE a request is received (which may be far in the future if the
- * filesystem is not currently being used by any clients). One way to avoid this delay is to
- * afterwards sent a signal to the main thread (if fuse_set_signal_handlers() is used, SIGPIPE
- * will cause the main thread to wake-up but otherwise be ignored).
+ * This will cause any running event loop to terminate on the next opportunity.
+ * fuse_session_loop_mt(), and fuse_session_loop() from FUSE_USE_VERSION 3.19
+ * on, are woken up directly and return without waiting for a request, no
+ * matter which thread calls this.
+ *
+ * The deprecated fuse_session_loop() below FUSE_USE_VERSION 3.19 is not woken
+ * up and only notices the flag once the next request is received, which may be
+ * far in the future if the filesystem is not currently being used by any
+ * clients. Sending a signal to its thread afterwards avoids that delay - if
+ * fuse_set_signal_handlers() is used, SIGPIPE will cause the thread to wake-up
+ * but otherwise be ignored.
  *
  * @param se the session
  */

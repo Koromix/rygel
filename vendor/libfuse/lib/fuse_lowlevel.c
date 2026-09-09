@@ -49,6 +49,10 @@
 #define F_SETPIPE_SZ	(F_LINUX_SPECIFIC_BASE + 7)
 #endif
 
+#ifndef O_CLOEXEC
+#define O_CLOEXEC 0
+#endif
+
 #define PARAM(inarg) (((char *)(inarg)) + sizeof(*(inarg)))
 #define OFFSET_MAX 0x7fffffffffffffffLL
 
@@ -413,6 +417,10 @@ int fuse_reply_err(fuse_req_t req, int err)
 
 void fuse_reply_none(fuse_req_t req)
 {
+	if (req->flags.is_uring) {
+		send_reply_uring(req, 0, NULL, 0);
+		return;
+	}
 	fuse_free_req(req);
 }
 
@@ -774,7 +782,7 @@ static int grow_pipe_to_max(int pipefd)
 	long maxfd;
 	char buf[32];
 
-	maxfd = open("/proc/sys/fs/pipe-max-size", O_RDONLY);
+	maxfd = open("/proc/sys/fs/pipe-max-size", O_RDONLY | O_CLOEXEC);
 	if (maxfd < 0)
 		return -errno;
 
@@ -1662,7 +1670,9 @@ static void _do_create(fuse_req_t req, const fuse_ino_t nodeid,
 		if (req->se->conn.proto_minor >= 12)
 			req->ctx.umask = arg->umask;
 
-		/* XXX: fuse_create_in::open_flags */
+		if (req->se->conn.want_ext & FUSE_CAP_HANDLE_KILLPRIV_V2)
+			fi.kill_suidgid =
+				(arg->open_flags & FUSE_OPEN_KILL_SUIDGID) != 0;
 
 		req->se->op.create(req, nodeid, name, arg->mode, &fi);
 	} else {
@@ -1692,7 +1702,9 @@ static void _do_open(fuse_req_t req, const fuse_ino_t nodeid, const void *op_in,
 	memset(&fi, 0, sizeof(fi));
 	fi.flags = arg->flags;
 
-	/* XXX: fuse_open_in::open_flags */
+	if (req->se->conn.want_ext & FUSE_CAP_HANDLE_KILLPRIV_V2)
+		fi.kill_suidgid =
+			(arg->open_flags & FUSE_OPEN_KILL_SUIDGID) != 0;
 
 	if (req->se->op.open)
 		req->se->op.open(req, nodeid, &fi);
@@ -1743,6 +1755,10 @@ static void _do_write(fuse_req_t req, const fuse_ino_t nodeid,
 	fi.fh = arg->fh;
 	fi.writepage = (arg->write_flags & FUSE_WRITE_CACHE) != 0;
 
+	if (req->se->conn.want_ext & FUSE_CAP_HANDLE_KILLPRIV_V2)
+		fi.kill_suidgid =
+			(arg->write_flags & FUSE_WRITE_KILL_SUIDGID) != 0;
+
 	if (req->se->conn.proto_minor >= 9) {
 		fi.lock_owner = arg->lock_owner;
 		fi.flags = arg->flags;
@@ -1778,6 +1794,10 @@ static void _do_write_buf(fuse_req_t req, const fuse_ino_t nodeid,
 	memset(&fi, 0, sizeof(fi));
 	fi.fh = arg->fh;
 	fi.writepage = arg->write_flags & FUSE_WRITE_CACHE;
+
+	if (se->conn.want_ext & FUSE_CAP_HANDLE_KILLPRIV_V2)
+		fi.kill_suidgid =
+			(arg->write_flags & FUSE_WRITE_KILL_SUIDGID) != 0;
 
 	if (se->conn.proto_minor >= 9) {
 		fi.lock_owner = arg->lock_owner;
@@ -2538,9 +2558,9 @@ static void _do_statx(fuse_req_t req, const fuse_ino_t nodeid,
 		      const void *op_in, const void *in_payload)
 {
 	(void)in_payload;
-	(void)req;
 	(void)nodeid;
 	(void)op_in;
+	fuse_reply_err(req, ENOSYS);
 }
 #endif
 
@@ -3036,7 +3056,7 @@ static void list_init_nreq(struct fuse_notify_req *nreq)
 	nreq->prev = nreq;
 }
 
-static void do_notify_reply(fuse_req_t req, fuse_ino_t nodeid,
+static void _do_notify_reply(fuse_req_t req, fuse_ino_t nodeid,
 			    const void *inarg, const struct fuse_buf *buf)
 {
 	struct fuse_session *se = req->se;
@@ -3055,6 +3075,15 @@ static void do_notify_reply(fuse_req_t req, fuse_ino_t nodeid,
 
 	if (nreq != head)
 		nreq->reply(nreq, req, nodeid, inarg, buf);
+}
+
+static void do_notify_reply(fuse_req_t req, fuse_ino_t nodeid,
+			    const void *inarg, const struct fuse_buf *ibuf)
+{
+	struct fuse_buf buf = *ibuf;
+
+	buf.size -= sizeof(struct fuse_in_header);
+	_do_notify_reply(req, nodeid, inarg, &buf);
 }
 
 static int send_notify_iov(struct fuse_session *se, int notify_code,
@@ -3276,8 +3305,7 @@ static void fuse_ll_retrieve_reply(struct fuse_notify_req *nreq,
 	if (!(bufv.buf[0].flags & FUSE_BUF_IS_FD))
 		bufv.buf[0].mem = PARAM(arg);
 
-	bufv.buf[0].size -= sizeof(struct fuse_in_header) +
-		sizeof(struct fuse_notify_retrieve_in);
+	bufv.buf[0].size -= sizeof(struct fuse_notify_retrieve_in);
 
 	if (bufv.buf[0].size < arg->size) {
 		fuse_log(FUSE_LOG_ERR, "fuse: retrieve reply: buffer size too small\n");
@@ -3743,7 +3771,7 @@ void fuse_session_process_uring_cqe(struct fuse_session *se,
 		goto reply_err;
 
 	err = ENOSYS;
-	if (in->opcode >= FUSE_MAXOP || !fuse_ll_ops[in->opcode].func)
+	if (in->opcode >= FUSE_MAXOP || !fuse_ll_ops2[in->opcode].func)
 		goto reply_err;
 
 	if (se->debug) {
@@ -3766,7 +3794,7 @@ void fuse_session_process_uring_cqe(struct fuse_session *se,
 	} else if (in->opcode == FUSE_NOTIFY_REPLY) {
 		struct fuse_buf buf = { .size = payload_len,
 					.mem = op_payload };
-		do_notify_reply(req, in->nodeid, op_in, &buf);
+		_do_notify_reply(req, in->nodeid, op_payload, &buf);
 	} else {
 		fuse_ll_ops2[in->opcode].func(req, in->nodeid, op_in,
 					      op_payload);
@@ -3832,6 +3860,7 @@ void fuse_session_destroy(struct fuse_session *se)
 	if (se->io != NULL)
 		free(se->io);
 	destroy_mount_opts(se->mo);
+	free(atomic_exchange(&se->mountpoint, NULL));
 	free(se);
 }
 
@@ -3915,12 +3944,15 @@ pipe_retry:
 				res = grow_pipe_to_max(llp->pipe[0]);
 				if (res > 0)
 					llp->size = res;
+				fuse_ll_clear_pipe(se);
 				goto fallback;
 			}
 			llp->size = res;
 		}
-		if (llp->size < bufsize)
+		if (llp->size < bufsize) {
+			fuse_ll_clear_pipe(se);
 			goto fallback;
+		}
 	}
 
 	if (se->io != NULL && se->io->splice_receive != NULL) {
@@ -4271,6 +4303,14 @@ FUSE_SYMVER("fuse_session_custom_io_317", "fuse_session_custom_io@@FUSE_3.17")
 int fuse_session_custom_io_317(struct fuse_session *se,
 				const struct fuse_custom_io *io, size_t op_size, int fd)
 {
+#ifndef HAVE_CUSTOM_IO
+	(void)se;
+	(void)io;
+	(void)op_size;
+	(void)fd;
+	fuse_log(FUSE_LOG_ERR, "fuse: custom io is not enabled in this build\n");
+	return -ENOTSUP;
+#else
 	if (sizeof(struct fuse_custom_io) < op_size) {
 		fuse_log(FUSE_LOG_ERR, "fuse: warning: library too old, some operations may not work\n");
 		op_size = sizeof(struct fuse_custom_io);
@@ -4305,6 +4345,7 @@ int fuse_session_custom_io_317(struct fuse_session *se,
 	se->fd = fd;
 	memcpy(se->io, io, op_size);
 	return 0;
+#endif
 }
 
 int fuse_session_custom_io_30(struct fuse_session *se,
@@ -4358,17 +4399,16 @@ int fuse_session_mount(struct fuse_session *se, const char *_mountpoint)
 				fd);
 			goto error_out;
 		}
-		se->fd = fd;
-		return 0;
+		goto out;
 	}
 
 	/* Open channel */
 	fd = fuse_kern_mount(mountpoint, se->mo);
 	if (fd == -1)
 		goto error_out;
-	se->fd = fd;
 
-	/* Save mountpoint */
+out:
+	se->fd = fd;
 	se->mountpoint = mountpoint;
 
 	return 0;
