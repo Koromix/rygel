@@ -944,21 +944,32 @@ bool CallData::PushPointerSlow(napi_value value, napi_valuetype kind, const Type
         if (directions & 2) [[unlikely]]
             goto unexpected;
 
-        if (ref == instance->void_type) {
-            PushStringValue(value, (const char **)out_ptr);
-            return true;
-        } else if (ref->primitive == PrimitiveKind::Int8) {
-            PushStringValue(value, (const char **)out_ptr);
-            return true;
-        } else if (ref->primitive == PrimitiveKind::Int16) {
-            PushString16Value(value, (const char16_t **)out_ptr);
-            return true;
-        } else if (ref->primitive == PrimitiveKind::Int32) {
-            PushString32Value(value, (const char32_t **)out_ptr);
-            return true;
-        } else {
-            goto unexpected;
+        switch (ref->primitive) {
+            case PrimitiveKind::Void: {
+                if (ref != instance->void_type) [[unlikely]]
+                    goto unexpected;
+
+                PushStringValue(value, (const char **)out_ptr);
+                return true;
+            } break;
+
+            case PrimitiveKind::Int8: {
+                PushStringValue(value, (const char **)out_ptr);
+                return true;
+            } break;
+            case PrimitiveKind::Int16: {
+                PushString16Value(value, (const char16_t **)out_ptr);
+                return true;
+            } break;
+            case PrimitiveKind::Int32: {
+                PushString32Value(value, (const char32_t **)out_ptr);
+                return true;
+            } break;
+
+            default: goto unexpected;
         }
+
+        K_UNREACHABLE();
     } else if (IsArray(env, value)) {
         Napi::Array array = Napi::Array(env, value);
         Size len = PushIndirectString(array, ref, &ptr);
