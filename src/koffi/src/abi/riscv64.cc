@@ -170,21 +170,21 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
                     split = true;
                 } break;
                 case AbiMethod::VecVec: {
-                    type = ReshapeType(instance, type, 8, (int)TypeFlag::FillWithOnes);
+                    type = ReshapeAggregate(instance, type, { .stride = 8, .fill = 0xFF });
 
                     offsets[0] = 8 * (8 + ret.fpr_index);
                     offsets[1] = 8 * (9 + ret.fpr_index);
                     split = true;
                 } break;
                 case AbiMethod::GprVec: {
-                    type = ReshapeType(instance, type, 8, (int)TypeFlag::FillWithOnes);
+                    type = ReshapeAggregate(instance, type, { .stride = 8, .fill = 0xFF });
 
                     offsets[0] = 8 * (0 + ret.gpr_index);
                     offsets[1] = 8 * (8 + ret.fpr_index);
                     split = true;
                 } break;
                 case AbiMethod::VecGpr: {
-                    type = ReshapeType(instance, type, 8, (int)TypeFlag::FillWithOnes);
+                    type = ReshapeAggregate(instance, type, { .stride = 8, .fill = 0xFF });
 
                     offsets[0] = 8 * (8 + ret.fpr_index);
                     offsets[1] = 8 * (0 + ret.gpr_index);
@@ -272,19 +272,19 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
                     out_plan->sync.Append({ .o = Code2Op(run), .s1 = -40 + 16, .i = (int32_t)func->parameters.len, .type = func->ret });
                 } break;
                 case AbiMethod::VecVec: {
-                    const TypeInfo *type = ReshapeType(instance, func->ret, 8, (int)TypeFlag::FillWithOnes);
+                    const TypeInfo *type = ReshapeAggregate(instance, func->ret, { .stride = 8, .fill = 0xFF });
                     Opcode run = forward_fp ? Opcode::RunAggregateDDX : Opcode::RunAggregateDD;
 
                     out_plan->sync.Append({ .o = Code2Op(run), .s1 = -40 + 16, .i = (int32_t)func->parameters.len, .type = type });
                 } break;
                 case AbiMethod::GprVec: {
-                    const TypeInfo *type = ReshapeType(instance, func->ret, 8, (int)TypeFlag::FillWithOnes);
+                    const TypeInfo *type = ReshapeAggregate(instance, func->ret, { .stride = 8, .fill = 0xFF });
                     Opcode run = forward_fp ? Opcode::RunAggregateGDX : Opcode::RunAggregateGD;
 
                     out_plan->sync.Append({ .o = Code2Op(run), .s1 = -40, .s2 = -40 + 16, .i = (int32_t)func->parameters.len, .type = type });
                 } break;
                 case AbiMethod::VecGpr: {
-                    const TypeInfo *type = ReshapeType(instance, func->ret, 8, (int)TypeFlag::FillWithOnes);
+                    const TypeInfo *type = ReshapeAggregate(instance, func->ret, { .stride = 8, .fill = 0xFF });
                     Opcode run = forward_fp ? Opcode::RunAggregateDGX : Opcode::RunAggregateDG;
 
                     out_plan->sync.Append({ .o = Code2Op(run), .s1 = -40 + 16, .s2 = -40, .i = (int32_t)func->parameters.len, .type = type });

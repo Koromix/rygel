@@ -60,8 +60,7 @@ typedef void DisposeFunc (InstanceData *instance, const TypeInfo *type, const vo
 
 enum class TypeFlag {
     HasTypedArray = 1 << 0,
-    IsCharLike = 1 << 1,
-    FillWithOnes = 1 << 2
+    IsCharLike = 1 << 1
 };
 
 enum class BufferConversion {
@@ -106,7 +105,8 @@ struct TypeInfo {
     alignas(8) PrimitiveKind primitive;
     int32_t size;
     int16_t align;
-    uint16_t flags;
+    uint8_t flags;
+    uint8_t fill; // Aggregates
 
     DisposeFunc *dispose = nullptr;
     napi_ref dispose_ref = nullptr;

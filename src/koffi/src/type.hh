@@ -62,7 +62,12 @@ TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len, A
 
 napi_value WrapType(InstanceData *instance, const TypeInfo *type, bool freeze = true);
 
-const TypeInfo *ReshapeType(InstanceData *instance, const TypeInfo *type, int32_t stride, uint16_t flags);
+struct ReshapeConfig {
+    int stride = 0; // Mandatory
+    int fill = 0;
+};
+
+const TypeInfo *ReshapeAggregate(InstanceData *instance, const TypeInfo *type, const ReshapeConfig &config);
 
 bool CanPassType(const TypeInfo *type, int directions);
 bool CanReturnType(const TypeInfo *type);

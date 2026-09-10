@@ -164,7 +164,7 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
                         offset = 9 * 8 + fpr_index * 8;
                         fpr_index += hfa.count;
 
-                        const TypeInfo *type = hfa.float32 ? ReshapeType(instance, param.type, 8, 0) : param.type;
+                        const TypeInfo *type = hfa.float32 ? ReshapeAggregate(instance, param.type, { .stride = 8 }) : param.type;
                         out_plan->sync.Append({ .o = Code2Op(Opcode::PushAggregateReg), .s1 = (int16_t)param.offset, .i = offset, .type = type });
                     } else {
                         fpr_index = fpr_max;
@@ -331,7 +331,7 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
             if (hfa.count) {
                 Opcode run = fpr_index ? Opcode::RunAggregateHfa4X : Opcode::RunAggregateHfa4;
 
-                const TypeInfo *type = hfa.float32 ? ReshapeType(instance, func->ret, 8, 0) : func->ret;
+                const TypeInfo *type = hfa.float32 ? ReshapeAggregate(instance, func->ret, { .stride = 8 }) : func->ret;
                 out_plan->sync.Append({ .o = Code2Op(run), .s1 = -48 + 16, .i = (int32_t)func->parameters.len, .type = type });
             } else if (func->ret->size <= 16) {
                 Opcode run = fpr_index ? Opcode::RunAggregateGGX : Opcode::RunAggregateGG;

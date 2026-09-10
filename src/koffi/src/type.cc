@@ -546,9 +546,10 @@ napi_value WrapType(InstanceData *instance, const TypeInfo *type, bool freeze)
     return defn;
 }
 
-const TypeInfo *ReshapeType(InstanceData *instance, const TypeInfo *type, int32_t stride, uint16_t flags)
+const TypeInfo *ReshapeAggregate(InstanceData *instance, const TypeInfo *type, const ReshapeConfig &config)
 {
     K_ASSERT(type->defn);
+    K_ASSERT(config.stride);
 
     if (!type->reshaped) {
         Napi::Env env = instance->env;
@@ -566,12 +567,12 @@ const TypeInfo *ReshapeType(InstanceData *instance, const TypeInfo *type, int32_
                 memset((void *)&reshaped->members, 0, K_SIZE(reshaped->members));
                 reshaped->members.Reserve(type->members.len);
                 reshaped->size = 0;
-                reshaped->flags |= flags;
+                reshaped->fill = config.fill;
                 NAPI_OK(napi_create_reference(env, defn, 1, &reshaped->defn));
 
                 for (RecordMember member: type->members) {
                     member.offset = reshaped->size;
-                    member.type = ReshapeType(instance, member.type, stride, flags);
+                    member.type = ReshapeAggregate(instance, member.type, config);
 
                     if (member.key) {
                         napi_value key;
@@ -580,7 +581,7 @@ const TypeInfo *ReshapeType(InstanceData *instance, const TypeInfo *type, int32_
                     }
 
                     reshaped->members.Append(member);
-                    reshaped->size += (int)AlignLen(member.type->size, stride);
+                    reshaped->size += (int)AlignLen(member.type->size, config.stride);
 
                     member.key = nullptr;
                 }
@@ -593,9 +594,9 @@ const TypeInfo *ReshapeType(InstanceData *instance, const TypeInfo *type, int32_
                 NAPI_OK(napi_get_reference_value(env, type->defn, &defn));
 
                 memcpy((void *)reshaped, (const void *)type, K_SIZE(*type));
-                reshaped->ref.stride = stride;
-                reshaped->size = (type->size / type->ref.stride) * stride;
-                reshaped->flags |= flags;
+                reshaped->ref.stride = config.stride;
+                reshaped->size = (type->size / type->ref.stride) * config.stride;
+                reshaped->fill = config.fill;
                 NAPI_OK(napi_create_reference(env, defn, 1, &reshaped->defn));
             } break;
 

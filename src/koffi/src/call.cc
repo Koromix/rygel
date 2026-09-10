@@ -511,8 +511,7 @@ bool CallData::PushObject(napi_value obj, const TypeInfo *type, uint8_t *origin)
         }
     }
 
-    int fill = (type->flags & (int)TypeFlag::FillWithOnes) ? 0xFF : 0;
-    MemSet(origin, fill, type->size);
+    MemSet(origin, type->fill, type->size);
 
 #define PUSH_INTEGER(CType) \
         do { \
@@ -679,15 +678,12 @@ bool CallData::PushNormalArray(Napi::Array array, const TypeInfo *type, Size siz
         len = size / stride;
 
         if (stride != ref->size) {
-            int fill = (type->flags & (int)TypeFlag::FillWithOnes) ? 0xFF : 0;
-            MemSet(origin, fill, size);
+            MemSet(origin, type->fill, size);
         }
     } else if (stride == ref->size) {
-        int fill = (type->flags & (int)TypeFlag::FillWithOnes) ? 0xFF : 0;
-        MemSet(origin + available, fill, size - available);
+        MemSet(origin + available, type->fill, size - available);
     } else {
-        int fill = (type->flags & (int)TypeFlag::FillWithOnes) ? 0xFF : 0;
-        MemSet(origin, fill, size);
+        MemSet(origin, type->fill, size);
     }
 
     Size offset = 0;
