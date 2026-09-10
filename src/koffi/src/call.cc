@@ -95,6 +95,29 @@ void CallData::Relay(Size idx, uint8_t *base)
     trampoline->state = RunRelay(this, trampoline, base, first);
 }
 
+static K_FORCE_INLINE void ConvertBuffer(BufferConversion conversion, void *ptr, Size size, Size stride)
+{
+#define SWAP(CType) \
+        do { \
+            Size len = size / stride; \
+             \
+            for (Size i = 0; i < len; i++) { \
+                CType *it = (CType *)((uint8_t *)ptr + i * stride); \
+                *it = ReverseBytes(*it); \
+            } \
+        } while (false)
+
+    switch (conversion) {
+        case BufferConversion::None: {} break;
+
+        case BufferConversion::Swap16: { SWAP(uint16_t); } break;
+        case BufferConversion::Swap32: { SWAP(uint32_t); } break;
+        case BufferConversion::Swap64: { SWAP(uint64_t); } break;
+    }
+
+#undef SWAP
+}
+
 void CallData::Finalize()
 {
     FinalizeFast();
@@ -162,7 +185,7 @@ void CallData::Finalize()
                     } break;
 
                     case OutArgument::Kind::Convert: {
-                        ConvertBuffer(out.type->ref.conversion, (uint8_t *)out.ptr, out.len);
+                        ConvertBuffer(out.type->ref.conversion, (uint8_t *)out.ptr, out.len, out.type->ref.stride);
                     } break;
                 }
             }
@@ -917,7 +940,7 @@ restart:
                 ptr = AllocHeap(len);
 
                 MemCpy(ptr, original, len);
-                ConvertBuffer(type->ref.conversion, ptr, len);
+                ConvertBuffer(type->ref.conversion, ptr, len, type->ref.stride);
             }
 
             if (directions & 2) {

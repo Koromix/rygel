@@ -379,8 +379,6 @@ static K_FORCE_INLINE napi_value NewString(Napi::Env env, const char16_t *ptr)
 napi_value NewString(Napi::Env env, const char32_t *ptr, Size len);
 napi_value NewString(Napi::Env env, const char32_t *ptr);
 
-INLINE_UNITY void ConvertBuffer(BufferConversion conversion, void *ptr, Size size, Size stride = 0);
-
 napi_value DecodeObject(InstanceData *instance, const uint8_t *origin, const TypeInfo *type);
 void DecodeObject(InstanceData *instance, napi_value obj, const uint8_t *origin, const TypeInfo *type);
 

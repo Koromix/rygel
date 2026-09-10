@@ -190,31 +190,6 @@ napi_value NewString(Napi::Env env, const char32_t *ptr)
     }
 }
 
-void ConvertBuffer(BufferConversion conversion, void *ptr, Size size, Size stride)
-{
-#define SWAP(CType) \
-        do { \
-            stride = stride ? stride : K_SIZE(CType); \
-             \
-            Size len = size / stride; \
-             \
-            for (Size i = 0; i < len; i++) { \
-                CType *it = (CType *)((uint8_t *)ptr + i * stride); \
-                *it = ReverseBytes(*it); \
-            } \
-        } while (false)
-
-    switch (conversion) {
-        case BufferConversion::None: {} break;
-
-        case BufferConversion::Swap16: { SWAP(uint16_t); } break;
-        case BufferConversion::Swap32: { SWAP(uint32_t); } break;
-        case BufferConversion::Swap64: { SWAP(uint64_t); } break;
-    }
-
-#undef SWAP
-}
-
 static uint32_t DecodeDynamicLength(const uint8_t *origin, const RecordMember &by)
 {
     const uint8_t *src = origin + by.offset;
@@ -849,7 +824,25 @@ void DecodeBuffer(Span<uint8_t> buffer, const uint8_t *origin, const TypeInfo *t
         }
     }
 
-    ConvertBuffer(type->ref.conversion, buffer.ptr, buffer.len, stride);
+#define SWAP(CType) \
+        do { \
+            CType *dest = (CType *)buffer.ptr; \
+            Size len = buffer.len / K_SIZE(CType); \
+             \
+            for (Size i = 0; i < len; i++) { \
+                dest[i] = ReverseBytes(dest[i]); \
+            } \
+        } while (false)
+
+    switch (type->ref.conversion) {
+        case BufferConversion::None: {} break;
+
+        case BufferConversion::Swap16: { SWAP(uint16_t); } break;
+        case BufferConversion::Swap32: { SWAP(uint32_t); } break;
+        case BufferConversion::Swap64: { SWAP(uint64_t); } break;
+    }
+
+#undef SWAP
 }
 
 napi_value Decode(InstanceData *instance, const uint8_t *ptr, const TypeInfo *type)
