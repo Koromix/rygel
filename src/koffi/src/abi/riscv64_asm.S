@@ -62,8 +62,8 @@
     ld a1, 8(a1)
 .endm
 
-# Prepare vector argument registers from array passed by caller.
-.macro forward_vec
+# Prepare FP argument registers from array passed by caller.
+.macro forward_fpr
     fld fa7, 120(a1)
     fld fa6, 112(a1)
     fld fa5, 104(a1)
@@ -111,43 +111,43 @@ CallDD:
 
 CallGX:
     prologue
-    forward_vec
+    forward_fpr
     forward_gpr
     epilogue
 
 CallFX:
     prologue
-    forward_vec
+    forward_fpr
     forward_gpr
     epilogue
 
 CallDX:
     prologue
-    forward_vec
+    forward_fpr
     forward_gpr
     epilogue
 
 CallGGX:
     prologue
-    forward_vec
+    forward_fpr
     forward_gpr
     epilogue
 
 CallDGX:
     prologue
-    forward_vec
+    forward_fpr
     forward_gpr
     epilogue
 
 CallGDX:
     prologue
-    forward_vec
+    forward_fpr
     forward_gpr
     epilogue
 
 CallDDX:
     prologue
-    forward_vec
+    forward_fpr
     forward_gpr
     epilogue
 

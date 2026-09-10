@@ -48,17 +48,17 @@ static HfaInfo IsHFA(const TypeInfo *type)
 void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, ExecutionPlan *out_plan, const char **)
 {
     int gpr_index = 0;
-    int vec_index = 0;
+    int fpr_index = 0;
     int stack_offset = 0;
 
     int gpr_max = 8;
-    int vec_max = 8;
+    int fpr_max = 8;
 
     for (const ParameterInfo &param: func->parameters) {
 #if defined(__APPLE__)
         if (param.variadic) {
             gpr_index = gpr_max;
-            vec_index = vec_max;
+            fpr_index = fpr_max;
         }
 #endif
 
@@ -160,14 +160,14 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
                 if (hfa.count) {
                     int offset = 0;
 
-                    if (hfa.count <= vec_max - vec_index) {
-                        offset = 9 * 8 + vec_index * 8;
-                        vec_index += hfa.count;
+                    if (hfa.count <= fpr_max - fpr_index) {
+                        offset = 9 * 8 + fpr_index * 8;
+                        fpr_index += hfa.count;
 
                         const TypeInfo *type = hfa.float32 ? ReshapeType(instance, param.type, 8, 0) : param.type;
                         out_plan->sync.Append({ .o = Code2Op(Opcode::PushAggregateReg), .s1 = (int16_t)param.offset, .i = offset, .type = type });
                     } else {
-                        vec_index = vec_max;
+                        fpr_index = fpr_max;
 
 #if defined(__APPLE__)
                         stack_offset = AlignLen(stack_offset, param.type->align);
@@ -236,9 +236,9 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
                 }
 #endif
 
-                if (vec_index < vec_max) {
-                    offset = 9 * 8 + vec_index * 8;
-                    vec_index++;
+                if (fpr_index < fpr_max) {
+                    offset = 9 * 8 + fpr_index * 8;
+                    fpr_index++;
                 } else {
 #if defined(__APPLE__)
                     stack_offset = AlignLen(stack_offset, param.variadic ? 8 : 4);
@@ -271,9 +271,9 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
                 }
 #endif
 
-                if (vec_index < vec_max) {
-                    offset = 9 * 8 + vec_index * 8;
-                    vec_index++;
+                if (fpr_index < fpr_max) {
+                    offset = 9 * 8 + fpr_index * 8;
+                    fpr_index++;
                 } else {
 #if defined(__APPLE__)
                     stack_offset = AlignLen(stack_offset, 8);
@@ -311,7 +311,7 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
         case PrimitiveKind::String32:
         case PrimitiveKind::Pointer:
         case PrimitiveKind::Callback: {
-            if (vec_index) {
+            if (fpr_index) {
                 int delta = (int)Opcode::RunVoidX - (int)PrimitiveKind::Void;
                 Opcode run = (Opcode)((int)func->ret->primitive + delta);
 
@@ -329,15 +329,15 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
             HfaInfo hfa = IsHFA(func->ret);
 
             if (hfa.count) {
-                Opcode run = vec_index ? Opcode::RunAggregateHfa4X : Opcode::RunAggregateHfa4;
+                Opcode run = fpr_index ? Opcode::RunAggregateHfa4X : Opcode::RunAggregateHfa4;
 
                 const TypeInfo *type = hfa.float32 ? ReshapeType(instance, func->ret, 8, 0) : func->ret;
                 out_plan->sync.Append({ .o = Code2Op(run), .s1 = -48 + 16, .i = (int32_t)func->parameters.len, .type = type });
             } else if (func->ret->size <= 16) {
-                Opcode run = vec_index ? Opcode::RunAggregateGGX : Opcode::RunAggregateGG;
+                Opcode run = fpr_index ? Opcode::RunAggregateGGX : Opcode::RunAggregateGG;
                 out_plan->sync.Append({ .o = Code2Op(run), .s1 = -48, .i = (int32_t)func->parameters.len, .type = func->ret });
             } else {
-                Opcode run = vec_index ? Opcode::RunAggregateMemX : Opcode::RunAggregateMem;
+                Opcode run = fpr_index ? Opcode::RunAggregateMemX : Opcode::RunAggregateMem;
                 int16_t x8 = 8 * 8;
 
                 out_plan->sync.Append({ .o = Code2Op(run), .s1 = x8, .s2 = -48, .i = (int32_t)func->parameters.len, .type = func->ret });
@@ -346,11 +346,11 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
         case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
 
         case PrimitiveKind::Float32: {
-            Opcode run = vec_index ? Opcode::RunFloat32X : Opcode::RunFloat32;
+            Opcode run = fpr_index ? Opcode::RunFloat32X : Opcode::RunFloat32;
             out_plan->sync.Append({ .o = Code2Op(run), .s1 = -48 + 16, .i = (int32_t)func->parameters.len, .type = func->ret });
         } break;
         case PrimitiveKind::Float64: {
-            Opcode run = vec_index ? Opcode::RunFloat64X : Opcode::RunFloat64;
+            Opcode run = fpr_index ? Opcode::RunFloat64X : Opcode::RunFloat64;
             out_plan->sync.Append({ .o = Code2Op(run), .s1 = -48 + 16, .i = (int32_t)func->parameters.len, .type = func->ret });
         } break;
 

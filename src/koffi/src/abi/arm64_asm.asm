@@ -56,9 +56,9 @@
     ldp x0, x1, [x1, 0]
     MEND
 
-    ; Prepare vector argument registers from array passed by caller.
+    ; Prepare FP argument registers from array passed by caller.
     MACRO
-    forward_vec
+    forward_fpr
 
     ldp d6, d7, [x1, 120]
     ldp d4, d5, [x1, 104]
@@ -98,35 +98,35 @@ CallHfa4 PROC
 
 CallGX PROC
     prologue
-    forward_vec
+    forward_fpr
     forward_gpr
     epilogue
     ENDP
 
 CallFX PROC
     prologue
-    forward_vec
+    forward_fpr
     forward_gpr
     epilogue
     ENDP
 
 CallDX PROC
     prologue
-    forward_vec
+    forward_fpr
     forward_gpr
     epilogue
     ENDP
 
 CallGGX PROC
     prologue
-    forward_vec
+    forward_fpr
     forward_gpr
     epilogue
     ENDP
 
 CallHfa4X PROC
     prologue
-    forward_vec
+    forward_fpr
     forward_gpr
     epilogue
     ENDP

@@ -25,24 +25,24 @@ struct ClassResult {
     AbiMethod method;
 
     int gpr_index;
-    int vec_index;
+    int fpr_index;
 };
 
 class ClassAnalyser {
     int gpr_max;
-    int vec_max;
+    int fpr_max;
     int gpr_index; // Can go beyond gpr_max when using stack
-    int vec_index;
+    int fpr_index;
     int stack_start;
 
 public:
-    ClassAnalyser(int gpr_index, int gpr_max, int vec_index, int vec_max, int stack_start = -1)
-        : gpr_max(gpr_max), vec_max(vec_max), gpr_index(gpr_index), vec_index(vec_index), stack_start(stack_start) {}
+    ClassAnalyser(int gpr_index, int gpr_max, int fpr_index, int fpr_max, int stack_start = -1)
+        : gpr_max(gpr_max), fpr_max(fpr_max), gpr_index(gpr_index), fpr_index(fpr_index), stack_start(stack_start) {}
 
     ClassResult Analyse(const TypeInfo *type, bool variadic);
 
     int GprCount() const { return gpr_index; }
-    int VecCount() const { return vec_index; }
+    int VecCount() const { return fpr_index; }
 };
 
 ClassResult ClassAnalyser::Analyse(const TypeInfo *type, bool variadic)
@@ -60,41 +60,41 @@ ClassResult ClassAnalyser::Analyse(const TypeInfo *type, bool variadic)
     }
 
     int gpr_avail = std::min(2, gpr_max - gpr_index); // Can go negative
-    int vec_avail = std::min(2, vec_max - vec_index);
+    int fpr_avail = std::min(2, fpr_max - fpr_index);
 
 #if defined(__riscv_float_abi_double) || defined(__loongarch64)
     if (type->primitive != PrimitiveKind::Union && !variadic) {
         int gpr_count = 0;
-        int vec_count = 0;
-        bool gpr_vec = false;
+        int fpr_count = 0;
+        bool gpr_fpr = false;
 
         AnalyseFlat(type, [&](const TypeInfo *type, int offset, int count) {
             if (IsFloat(type)) {
-                vec_count += count;
+                fpr_count += count;
             } else {
                 gpr_count += count;
-                gpr_vec |= !vec_count;
+                gpr_fpr |= !fpr_count;
             }
         });
 
         // Pass mixed float-integer structs in one GPR and one FP register
-        if (gpr_count == 1 && vec_count == 1 && gpr_avail > 0 && vec_avail) {
-            ret.method = gpr_vec ? AbiMethod::GprVec : AbiMethod::VecGpr;
+        if (gpr_count == 1 && fpr_count == 1 && gpr_avail > 0 && fpr_avail) {
+            ret.method = gpr_fpr ? AbiMethod::GprVec : AbiMethod::VecGpr;
             ret.gpr_index = gpr_index;
-            ret.vec_index = vec_index;
+            ret.fpr_index = fpr_index;
 
             gpr_index++;
-            vec_index++;
+            fpr_index++;
 
             return ret;
         }
 
         // HFA rules
-        if (vec_count && !gpr_count && vec_count <= vec_avail) {
-            ret.method = (vec_count > 1) ? AbiMethod::VecVec : AbiMethod::Vec;
-            ret.vec_index = vec_index;
+        if (fpr_count && !gpr_count && fpr_count <= fpr_avail) {
+            ret.method = (fpr_count > 1) ? AbiMethod::VecVec : AbiMethod::Vec;
+            ret.fpr_index = fpr_index;
 
-            vec_index += vec_count;
+            fpr_index += fpr_count;
 
             return ret;
         }
@@ -162,7 +162,7 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
             switch (ret.method) {
                 case AbiMethod::Memory: { offsets[0] = 8 * (0 + ret.gpr_index); } break;
                 case AbiMethod::Gpr: { offsets[0] = 8 * (0 + ret.gpr_index); } break;
-                case AbiMethod::Vec: { offsets[0] = 8 * (8 + ret.vec_index); } break;
+                case AbiMethod::Vec: { offsets[0] = 8 * (8 + ret.fpr_index); } break;
 
                 case AbiMethod::GprGpr: {
                     offsets[0] = 8 * (0 + ret.gpr_index);
@@ -172,21 +172,21 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
                 case AbiMethod::VecVec: {
                     type = ReshapeType(instance, type, 8, (int)TypeFlag::FillWithOnes);
 
-                    offsets[0] = 8 * (8 + ret.vec_index);
-                    offsets[1] = 8 * (9 + ret.vec_index);
+                    offsets[0] = 8 * (8 + ret.fpr_index);
+                    offsets[1] = 8 * (9 + ret.fpr_index);
                     split = true;
                 } break;
                 case AbiMethod::GprVec: {
                     type = ReshapeType(instance, type, 8, (int)TypeFlag::FillWithOnes);
 
                     offsets[0] = 8 * (0 + ret.gpr_index);
-                    offsets[1] = 8 * (8 + ret.vec_index);
+                    offsets[1] = 8 * (8 + ret.fpr_index);
                     split = true;
                 } break;
                 case AbiMethod::VecGpr: {
                     type = ReshapeType(instance, type, 8, (int)TypeFlag::FillWithOnes);
 
-                    offsets[0] = 8 * (8 + ret.vec_index);
+                    offsets[0] = 8 * (8 + ret.fpr_index);
                     offsets[1] = 8 * (0 + ret.gpr_index);
                     split = true;
                 } break;

@@ -48,9 +48,9 @@ enum class AbiMethod {
 void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, ExecutionPlan *out_plan, const char **)
 {
     int gpr_max = 4;
-    int vec_max = 16;
+    int fpr_max = 16;
     int gpr_index = 0;
-    int vec_index = 0;
+    int fpr_index = 0;
     int stack_offset = 0;
 
     AbiMethod ret_abi = {};
@@ -128,9 +128,9 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
                 int gpr0 = AlignLen(gpr_index, param.type->align == 8 ? 2 : 1);
                 int gprs = AlignLen(param.type->size, 4) / 4;
 
-                if (hfa && vec_index + hfa <= vec_max) {
-                    int offset = 4 * 4 + 4 * vec_index;
-                    vec_index += hfa;
+                if (hfa && fpr_index + hfa <= fpr_max) {
+                    int offset = 4 * 4 + 4 * fpr_index;
+                    fpr_index += hfa;
 
                     out_plan->sync.Append({ .o = Code2Op(Opcode::PushAggregateReg), .s1 = (int16_t)param.offset, .i = offset, .type = param.type });
                 } else if (!hfa && gpr0 + gprs <= gpr_max) {
@@ -167,9 +167,9 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
 #endif
 
                 if (vfp) {
-                    if (vec_index < vec_max) {
-                        offset = 4 * 4 + 4 * vec_index;
-                        vec_index++;
+                    if (fpr_index < fpr_max) {
+                        offset = 4 * 4 + 4 * fpr_index;
+                        fpr_index++;
                     } else {
                         offset = 24 * 4 + stack_offset;
                         stack_offset += 4;
@@ -196,11 +196,11 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
 #endif
 
                 if (vfp) {
-                    int vec0 = AlignLen(vec_index, 2);
+                    int fpr0 = AlignLen(fpr_index, 2);
 
-                    if (vec0 + 2 <= vec_max) {
-                        offset = 4 * 4 + 4 * vec0;
-                        vec_index = vec0 + 2;
+                    if (fpr0 + 2 <= fpr_max) {
+                        offset = 4 * 4 + 4 * fpr0;
+                        fpr_index = fpr0 + 2;
                     } else {
                         offset = 24 * 4 + stack_offset;
                         stack_offset += 4;
@@ -247,7 +247,7 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
         case PrimitiveKind::String32:
         case PrimitiveKind::Pointer:
         case PrimitiveKind::Callback: {
-            if (vec_index) {
+            if (fpr_index) {
                 int delta = (int)Opcode::RunVoidX - (int)PrimitiveKind::Void;
                 Opcode run = (Opcode)((int)func->ret->primitive + delta);
 
@@ -264,15 +264,15 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
         case PrimitiveKind::Union: {
             switch (ret_abi) {
                 case AbiMethod::Memory: {
-                    Opcode run = vec_index ? Opcode::RunAggregateMemX : Opcode::RunAggregateMem;
+                    Opcode run = fpr_index ? Opcode::RunAggregateMemX : Opcode::RunAggregateMem;
                     out_plan->sync.Append({ .o = Code2Op(run), .s1 = 0, .s2 = -40, .i = (int32_t)func->parameters.len, .type = func->ret });
                 } break;
                 case AbiMethod::Gpr: {
-                    Opcode run = vec_index ? Opcode::RunAggregateGX : Opcode::RunAggregateG;
+                    Opcode run = fpr_index ? Opcode::RunAggregateGX : Opcode::RunAggregateG;
                     out_plan->sync.Append({ .o = Code2Op(run), .s1 = -40, .i = (int32_t)func->parameters.len, .type = func->ret });
                 } break;
                 case AbiMethod::Hfa: {
-                    Opcode run = vec_index ? Opcode::RunAggregateHfa4X : Opcode::RunAggregateHfa4;
+                    Opcode run = fpr_index ? Opcode::RunAggregateHfa4X : Opcode::RunAggregateHfa4;
                     out_plan->sync.Append({ .o = Code2Op(run), .s1 = -40 + 8, .i = (int32_t)func->parameters.len, .type = func->ret });
                 } break;
             }
@@ -280,11 +280,11 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
         case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
 
         case PrimitiveKind::Float32: {
-            Opcode run = vec_index ? Opcode::RunFloat32X : Opcode::RunFloat32;
+            Opcode run = fpr_index ? Opcode::RunFloat32X : Opcode::RunFloat32;
             out_plan->sync.Append({ .o = Code2Op(run), .s1 = -40 + 8, .i = (int32_t)func->parameters.len, .type = func->ret });
         } break;
         case PrimitiveKind::Float64: {
-            Opcode run = vec_index ? Opcode::RunFloat64X : Opcode::RunFloat64;
+            Opcode run = fpr_index ? Opcode::RunFloat64X : Opcode::RunFloat64;
             out_plan->sync.Append({ .o = Code2Op(run), .s1 = -40 + 8, .i = (int32_t)func->parameters.len, .type = func->ret });
         } break;
 
