@@ -25,10 +25,10 @@ struct BackRegisters {
 
 void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, ExecutionPlan *out_plan, const char **out_decorated)
 {
-    bool regular_ret = IsRegularSize(func->ret->size, 8);
-
 #if defined(__linux__)
-    regular_ret &= !IsAggregate(func->ret);
+    bool regular_ret = IsRegularSize(func->ret->size, 8) && !IsAggregate(func->ret);
+#else
+    bool regular_ret = IsRegularSize(func->ret->size, 8);
 #endif
 
     int fast_regs = (func->convention == CallConvention::Fastcall) ? 2 :
