@@ -11,6 +11,9 @@
 #include "repository.hh"
 #include "user.hh"
 #include "lib/native/sandbox/sandbox.hh"
+#if !defined(_WIN32)
+    #include <sys/stat.h>
+#endif
 
 namespace K {
 
@@ -26,6 +29,82 @@ static const char *asset_css = nullptr;
 static HeapArray<const char *> asset_bundles;
 static BlockAllocator asset_alloc;
 static char shared_etag[17];
+
+static int RunInit(Span<const char *> arguments)
+{
+    BlockAllocator temp_alloc;
+
+    // Options
+    const char *filename = nullptr;
+
+    const auto print_usage = [](StreamWriter *st) {
+        PrintLn(st,
+T(R"(Usage: %!..+%1 init [option...] [filename]%!0)"), FelixTarget);
+    };
+
+    // Parse arguments
+    {
+        OptionParser opt(arguments);
+
+        while (opt.Next()) {
+            if (opt.Test("--help")) {
+                print_usage(StdOut);
+                return 0;
+            } else {
+                opt.LogUnknownError();
+                return 1;
+            }
+        }
+
+        filename = opt.ConsumeNonOption();
+
+        opt.LogUnusedArguments();
+    }
+
+    // Check for exisiting config file
+    if (filename && TestFile(filename)) {
+        LogError("File '%1' already exists", filename);
+        return 1;
+    }
+
+    // Create main config file
+    {
+        const AssetInfo *asset = FindEmbedAsset("src/rekkord/web/server/config.ini");
+        K_ASSERT(asset);
+
+        if (filename) {
+            StreamReader reader(asset->data, "<asset>", asset->compression_type);
+            StreamWriter writer(filename, (int)StreamWriterFlag::Atomic);
+
+            if (!SpliceStream(&reader, -1, &writer))
+                return 1;
+            if (!writer.Close())
+                return 1;
+
+#if !defined(_WIN32)
+        chmod(filename, 0600);
+#endif
+        } else {
+            StreamReader reader(asset->data, "<asset>", asset->compression_type);
+
+            if (!SpliceStream(&reader, -1, StdOut))
+                return 1;
+            if (!StdOut->Flush())
+                return 1;
+        }
+    }
+
+    if (filename) {
+        LogInfo("Please configure mandatory settings:");
+        LogInfo(("    %!..+%1%!0"), filename);
+
+        LogInfo();
+        LogInfo("Once this is done, run Redropp with:");
+        LogInfo(("    %!..+%1 -C \"%2\"%!0"), FelixTarget, FmtEscape(filename, '"'));
+    }
+
+    return 0;
+}
 
 static bool ApplySandbox(Span<const char *const> reveals)
 {
@@ -485,10 +564,8 @@ static void HandleRequest(http_IO *io)
     io->SendError(404);
 }
 
-int Main(int argc, char **argv)
+static int RunServe(Span<const char *> arguments)
 {
-    InitLocales(TranslationTables, "en");
-
     BlockAllocator temp_alloc;
 
     // Options
@@ -508,20 +585,18 @@ Options:
                                    %!D..(default: %3)%!0
         %!..+--bind IP%!0                  Bind to specific IP
 
-        %!..+--sandbox%!0                  Run sandboxed (on supported platforms))"),
+        %!..+--sandbox%!0                  Run sandboxed (on supported platforms)
+Other commands:
+
+    %!..+init%!0                           Create new instance and configuration
+
+For help about those commands, type: %!..+%1 command --help%!0)"),
                 FelixTarget, config_filename, config.http.port);
     };
 
-    // Handle version
-    if (argc >= 2 && TestStr(argv[1], "--version")) {
-        PrintLn("%!R..%1%!0 %!..+%2%!0", FelixTarget, FelixVersion);
-        PrintLn(T("Compiler: %1"), FelixCompiler);
-        return 0;
-    }
-
     // Find config filename
     {
-        OptionParser opt(argc, argv, OptionMode::Skip);
+        OptionParser opt(arguments, OptionMode::Skip);
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
@@ -545,7 +620,7 @@ Options:
 
     // Parse arguments
     {
-        OptionParser opt(argc, argv);
+        OptionParser opt(arguments);
 
         while (opt.Next()) {
             if (opt.Test("-C", "--config_file", OptionType::Value)) {
@@ -675,6 +750,53 @@ Options:
     daemon.Stop();
 
     return status;
+}
+
+int Main(int argc, char **argv)
+{
+    InitLocales(TranslationTables, "en");
+
+    // Handle help and version arguments
+    if (argc >= 2) {
+        if (TestStr(argv[1], "--help") || TestStr(argv[1], "help")) {
+            if (argc >= 3 && argv[2][0] != '-') {
+                argv[1] = argv[2];
+                argv[2] = const_cast<char *>("--help");
+            } else {
+                const char *args[] = {"--help"};
+                return RunServe(args);
+            }
+        } else if (TestStr(argv[1], "--version")) {
+            PrintLn("%!R..%1%!0 %!..+%2%!0", FelixTarget, FelixVersion);
+            PrintLn(T("Compiler: %1"), FelixCompiler);
+            return 0;
+        }
+    }
+
+    const char *cmd = nullptr;
+    Span<const char *> arguments = {};
+
+    if (argc >= 2) {
+        cmd = argv[1];
+
+        if (cmd[0] == '-') {
+            cmd = "serve";
+            arguments = MakeSpan((const char **)argv + 1, argc - 1);
+        } else {
+            arguments = MakeSpan((const char **)argv + 2, argc - 2);
+        }
+    } else {
+        cmd = "serve";
+    }
+
+    if (TestStr(cmd, "serve")) {
+        return RunServe(arguments);
+    } else if (TestStr(cmd, "init")) {
+        return RunInit(arguments);
+    } else {
+        LogError("Unknown command '%1'", cmd);
+        return 1;
+    }
 }
 
 }
