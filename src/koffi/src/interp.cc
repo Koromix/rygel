@@ -1595,35 +1595,4 @@ void FillAsyncPlan(Span<const OpData> sync, HeapArray<OpData> *out_async)
     }
 }
 
-static int AnalyseFlatRec(const TypeInfo *type, int offset, int count, FunctionRef<void(const TypeInfo *type, int offset, int count)> func)
-{
-    if (type->primitive == PrimitiveKind::Record) {
-        for (int i = 0; i < count; i++) {
-            for (const RecordMember &member: type->members) {
-                offset = AnalyseFlatRec(member.type, offset, 1, func);
-            }
-        }
-    } else if (type->primitive == PrimitiveKind::Union) {
-        for (int i = 0; i < count; i++) {
-            for (const RecordMember &member: type->members) {
-                AnalyseFlatRec(member.type, offset, 1, func);
-            }
-        }
-        offset += count;
-    } else if (type->primitive == PrimitiveKind::Array) {
-        count *= type->size / type->ref.type->size;
-        offset = AnalyseFlatRec(type->ref.type, offset, count, func);
-    } else {
-        func(type, offset, count);
-        offset += count;
-    }
-
-    return offset;
-}
-
-int AnalyseFlat(const TypeInfo *type, FunctionRef<void(const TypeInfo *type, int offset, int count)> func)
-{
-    return AnalyseFlatRec(type, 0, 1, func);
-}
-
 }

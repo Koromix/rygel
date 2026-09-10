@@ -62,6 +62,8 @@ TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len, A
 
 napi_value WrapType(InstanceData *instance, const TypeInfo *type, bool freeze = true);
 
+int AnalyseFlat(const TypeInfo *type, FunctionRef<void(const TypeInfo *type, int offset, int count)> func);
+
 struct ReshapeConfig {
     int stride = 0; // Mandatory
     int fill = 0;

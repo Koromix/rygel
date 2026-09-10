@@ -101,7 +101,6 @@ bool PreparePlan(InstanceData *instance, FunctionInfo *func);
 static inline void *Code2Op(Opcode code) { return (void *)code; }
 
 void FillAsyncPlan(Span<const OpData> sync, HeapArray<OpData> *out_async);
-int AnalyseFlat(const TypeInfo *type, FunctionRef<void(const TypeInfo *type, int offset, int count)> func);
 
 #if defined(__GNUC__) || defined(__clang__)
     #if defined(__x86_64__) || defined(__aarch64__)
