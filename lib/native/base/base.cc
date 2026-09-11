@@ -2076,22 +2076,18 @@ const char *GetEnv(const char *name)
 #endif
 }
 
-bool GetDebugFlag(const char *name)
+bool GetDebugFlag(const char *name, bool value)
 {
     Span<const char> str = TrimStr(GetEnv(name));
 
-    if (str.len) {
-        bool ret = false;
-        if (!ParseBool(str, &ret, K_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log)) {
-            LogError("Environment variable '%1=%2' is not a boolean", name, str);
-        }
-        if (ret) {
-            LogWarning("Debug flag '%1' is in effect", name);
-        }
-        return ret;
-    } else {
-        return false;
+    if (str.len && !ParseBool(str, &value, K_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log)) {
+        LogError("Environment variable '%1=%2' is not a boolean", name, str);
     }
+    if (value) {
+        LogWarning("Debug flag '%1' is in effect, set '%1=0' to disable", name);
+    }
+
+    return value;
 }
 
 static void RunLogFilter(Size idx, LogLevel level, const char *ctx, const char *msg)
@@ -2109,10 +2105,13 @@ static void RunLogFilter(Size idx, LogLevel level, const char *ctx, const char *
 
 void LogFmt(LogLevel level, const char *ctx, const char *fmt, Span<const FmtArg> args)
 {
-    static thread_local bool skip = false;
-
+    // Not thread-safe but it does not really matter if multiple threads try to run the
+    // code inside the init branch below. They'll reach the same results and set the values.
     static bool init = false;
     static bool log_times;
+#if defined(K_DEBUG)
+    static bool log_debug;
+#endif
 
     if (!init) {
         // Do this first... GetDebugFlag() might log an error or something, in which
@@ -2120,7 +2119,15 @@ void LogFmt(LogLevel level, const char *ctx, const char *fmt, Span<const FmtArg>
         init = true;
 
         log_times = GetDebugFlag("LOG_TIMES");
+#if defined(K_DEBUG)
+        log_debug = GetDebugFlag("LOG_DEBUG", true);
+#endif
     }
+
+#if defined(K_DEBUG)
+    if (level == LogLevel::Debug && !log_debug)
+        return;
+#endif
 
     char ctx_buf[512];
     if (log_times) {
