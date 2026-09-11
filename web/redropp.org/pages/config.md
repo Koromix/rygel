@@ -8,7 +8,7 @@ redropp init > redropp.ini
 
 ## Mandatory settings
 
-The following settings are mandatory, and msut be set before Redropp can work:
+The following settings are mandatory, and must be set before Redropp can work:
 
 ```ini
 [General]
