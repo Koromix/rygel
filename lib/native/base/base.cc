@@ -2114,12 +2114,6 @@ void LogFmt(LogLevel level, const char *ctx, const char *fmt, Span<const FmtArg>
     static bool init = false;
     static bool log_times;
 
-    // Avoid deadlock if a log filter or the handler tries to log something while handling a previous call
-    if (skip)
-        return;
-    skip = true;
-    K_DEFER { skip = false; };
-
     if (!init) {
         // Do this first... GetDebugFlag() might log an error or something, in which
         // case we don't want to recurse forever and crash!
