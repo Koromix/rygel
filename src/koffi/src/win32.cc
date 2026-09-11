@@ -25,6 +25,8 @@ const HashMap<int, const char *> WindowsMachineNames = {
     { 0x8664, "AMD x64" },
     { 0x1c0, "ARM little endian" },
     { 0xaa64, "ARM64 little endian" },
+    { 0xA641, "ARM64/emulated x64 interoperable binary" },
+    { 0xA64E, "ARM64/ARM64EC interoperable binary" }, 
     { 0x1c4, "ARM Thumb-2 little endian" },
     { 0x284, "AXP 64" },
     { 0xebc, "EFI byte code" },
