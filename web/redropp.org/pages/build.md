@@ -48,8 +48,7 @@ Once the Redropp executable is compiled, you can create a Redropp config using t
 # For this example, we will create this config in a tmp subfolder of the repository.
 # But you can create it wherever you wish!
 
-mkdir -p tmp/test
-bin/Debug/redropp init tmp/test/redropp.ini
+bin/Debug/redropp init tmp/test
 ```
 
 To access this instance via a web browser, you can start it using the following command:

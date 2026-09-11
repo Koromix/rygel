@@ -35,11 +35,11 @@ static int RunInit(Span<const char *> arguments)
     BlockAllocator temp_alloc;
 
     // Options
-    const char *filename = nullptr;
+    const char *dirname = nullptr;
 
     const auto print_usage = [](StreamWriter *st) {
         PrintLn(st,
-T(R"(Usage: %!..+%1 init [option...] [filename]%!0)"), FelixTarget);
+T(R"(Usage: %!..+%1 init [option...] [directory]%!0)"), FelixTarget);
     };
 
     // Parse arguments
@@ -56,15 +56,36 @@ T(R"(Usage: %!..+%1 init [option...] [filename]%!0)"), FelixTarget);
             }
         }
 
-        filename = opt.ConsumeNonOption();
+        dirname = opt.ConsumeNonOption();
+        dirname = dirname ? NormalizePath(dirname, GetWorkingDirectory(), &temp_alloc).ptr : nullptr;
 
         opt.LogUnusedArguments();
     }
 
-    // Check for exisiting config file
-    if (filename && TestFile(filename)) {
-        LogError("File '%1' already exists", filename);
-        return 1;
+    // Drop created files and directories if anything fails
+    HeapArray<const char *> directories;
+    HeapArray<const char *> files;
+    K_DEFER_N(root_guard) {
+        for (const char *filename: files) {
+            UnlinkFile(filename);
+        }
+        for (Size i = directories.len - 1; i >= 0; i--) {
+            UnlinkDirectory(directories[i]);
+        }
+    };
+
+    // Make or check root directory
+    if (dirname) {
+        if (TestFile(dirname)) {
+            if (!IsDirectoryEmpty(dirname)) {
+                LogError("Directory '%1' exists and is not empty", dirname);
+                return 1;
+            }
+        } else {
+            if (!MakeDirectory(dirname))
+                return 1;
+            directories.Append(dirname);
+        }
     }
 
     // Create main config file
@@ -72,7 +93,10 @@ T(R"(Usage: %!..+%1 init [option...] [filename]%!0)"), FelixTarget);
         const AssetInfo *asset = FindEmbedAsset("src/rekkord/web/server/config.ini");
         K_ASSERT(asset);
 
-        if (filename) {
+        if (dirname) {
+            const char *filename = Fmt(&temp_alloc, "%1%/%2", dirname, DefaultConfigName).ptr;
+            files.Append(filename);
+
             StreamReader reader(asset->data, "<asset>", asset->compression_type);
             StreamWriter writer(filename, (int)StreamWriterFlag::Atomic);
 
@@ -94,15 +118,18 @@ T(R"(Usage: %!..+%1 init [option...] [filename]%!0)"), FelixTarget);
         }
     }
 
-    if (filename) {
-        LogInfo("Please configure mandatory settings:");
-        LogInfo(("    %!..+%1%!0"), filename);
+    if (dirname) {
+        LogInfo("Please configure mandatory settings in:");
+        LogInfo();
+        LogInfo(("    %!..+%1%/%2%!0"), dirname, DefaultConfigName);
 
         LogInfo();
-        LogInfo("Once this is done, run Redropp with:");
-        LogInfo(("    %!..+%1 -C \"%2\"%!0"), FelixTarget, FmtEscape(filename, '"'));
+        LogInfo("Once this is done, run RekkordWeb with:");
+        LogInfo();
+        LogInfo(("    %!..+%1 -C \"%2\"%!0"), FelixTarget, FmtEscape(dirname, '"'));
     }
 
+    root_guard.Disable();
     return 0;
 }
 
