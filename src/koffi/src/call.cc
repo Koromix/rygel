@@ -1865,21 +1865,20 @@ Size GetTrampolineIndex(void *ptr)
     return ((uint8_t *)ptr - TrampolineStart) / TrampolineSize;
 }
 
-static bool CanTypeAcceptCallbacks(const TypeInfo *type)
+static bool CanTypeAcceptFunctions(const TypeInfo *type)
 {
     if (type->primitive == PrimitiveKind::Pointer)
         return true;
     if (type->primitive == PrimitiveKind::Callback)
         return true;
 
-    if (IsAggregate(type)) {
-        for (const RecordMember &member: type->members) {
-            if (CanTypeAcceptCallbacks(member.type))
-                return false;
-        }
-    }
+    if (IsAggregate(type) && std::any_of(type->members.begin(), type->members.end(),
+                                         [](const RecordMember &member) { return CanTypeAcceptFunctions(member.type); }))
+        return true;
+    if (type->primitive == PrimitiveKind::Array && CanTypeAcceptFunctions(type->ref.type))
+        return true;
 
-    return true;
+    return false;
 }
 
 static bool CanUseFastCall(const FunctionInfo *func)
@@ -1887,15 +1886,14 @@ static bool CanUseFastCall(const FunctionInfo *func)
     if (func->parameters.len > 6)
         return false;
 
-    // Fast calls basically skip CallData::Finalize(), which handles output arguments
-    // and temporary callback trampolines. If the function does not use any
-    // output argument and cannot accept callbacks (so no pointer or callback arguments),
-    // we can skip finalization!
+    // Fast calls basically skip CallData::Finalize(), which handles output arguments and
+    // temporary callback trampolines. If the function does not use any output argument
+    // and cannot accept JS functions (so no pointer/callback argument), we can skip finalization!
 
     for (const ParameterInfo &param: func->parameters) {
         if (param.directions & 2)
             return false;
-        if (CanTypeAcceptCallbacks(param.type))
+        if (CanTypeAcceptFunctions(param.type))
             return false;
     }
 
