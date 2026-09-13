@@ -980,6 +980,42 @@ static Napi::Value GetOrSetErrNo(const Napi::CallbackInfo &info)
     return Napi::Value(env, ret);
 }
 
+static ArrayHint SelectTypedHint(const TypeInfo *ref)
+{
+    switch (ref->primitive) {
+        case PrimitiveKind::Int8: return ArrayHint::Int8Array;
+        case PrimitiveKind::UInt8: return ArrayHint::Uint8Array;
+        case PrimitiveKind::Int16: return ArrayHint::Int16Array;
+        case PrimitiveKind::Int16S: return ArrayHint::Int16Array;
+        case PrimitiveKind::UInt16: return ArrayHint::Uint16Array;
+        case PrimitiveKind::UInt16S: return ArrayHint::Uint16Array;
+        case PrimitiveKind::Int32: return ArrayHint::Int32Array;
+        case PrimitiveKind::Int32S: return ArrayHint::Int32Array;
+        case PrimitiveKind::UInt32: return ArrayHint::Uint32Array;
+        case PrimitiveKind::UInt32S: return ArrayHint::Uint32Array;
+        case PrimitiveKind::Float32: return ArrayHint::Float32Array;
+        case PrimitiveKind::Float64: return ArrayHint::Float64Array;
+
+        case PrimitiveKind::Void:
+        case PrimitiveKind::Bool:
+        case PrimitiveKind::Int64:
+        case PrimitiveKind::Int64S:
+        case PrimitiveKind::UInt64:
+        case PrimitiveKind::UInt64S:
+        case PrimitiveKind::String:
+        case PrimitiveKind::String16:
+        case PrimitiveKind::String32:
+        case PrimitiveKind::Pointer:
+        case PrimitiveKind::Record:
+        case PrimitiveKind::Union:
+        case PrimitiveKind::Array:
+        case PrimitiveKind::Callback:
+        case PrimitiveKind::Prototype: return ArrayHint::Array;
+    }
+
+    K_UNREACHABLE();
+}
+
 static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
@@ -1032,14 +1068,14 @@ static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
         ArrayHint hint = {};
 
         if (str == "Typed" || str == "typed") {
-            if (!(ref->flags & (int)TypeFlag::HasTypedArray)) {
+            if (ref->hint == ArrayHint::Array) {
                 ThrowError<Napi::Error>(env, "Array hint 'Typed' cannot be used with type %1", ref->name);
                 return env.Null();
             }
 
-            hint = ArrayHint::Typed;
+            hint = SelectTypedHint(ref);
         } else if (str == "Buffer" || str == "buffer") {
-            if (!(ref->flags & (int)TypeFlag::HasTypedArray)) {
+            if (ref->hint == ArrayHint::Array) {
                 ThrowError<Napi::Error>(env, "Array hint 'Buffer' cannot be used with type %1", ref->name);
                 return env.Null();
             }
@@ -1048,14 +1084,16 @@ static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
         } else if (str == "Array" || str == "array") {
             hint = ArrayHint::Array;
         } else if (str == "String" || str == "string") {
-            if (ref->primitive != PrimitiveKind::Int8 &&
-                    ref->primitive != PrimitiveKind::Int16 &&
-                    ref->primitive != PrimitiveKind::Int32) {
+            if (ref->primitive == PrimitiveKind::Int8) {
+                hint = ArrayHint::String8;
+            } else if (ref->primitive == PrimitiveKind::Int16) {
+                hint = ArrayHint::String16;
+            } else if (ref->primitive == PrimitiveKind::Int32) {
+                hint = ArrayHint::String32;
+            } else {
                 ThrowError<Napi::Error>(env, "Array hint 'String' can only be used with 8, 16 and 32-bit signed integer types");
                 return env.Null();
             }
-
-            hint = ArrayHint::String;
         } else {
             ThrowError<Napi::Error>(env, "Array conversion hint must be 'Typed', 'Array' or 'String'");
             return env.Null();
@@ -2485,14 +2523,21 @@ static void RegisterPrimitiveType(InstanceData *instance, Napi::Object map, std:
     type->size = size;
     type->align = align;
 
-    if (IsInteger(type) || IsFloat(type)) {
-        type->flags |= (int)TypeFlag::HasTypedArray;
-    }
-    if (TestStr(type->name, "char") ||
-            TestStr(type->name, "char16") || TestStr(type->name, "char16_t") ||
-            TestStr(type->name, "char32") || TestStr(type->name, "char32_t") ||
-            TestStr(type->name, "wchar") || TestStr(type->name, "wchar_t")) {
-        type->flags |= (int)TypeFlag::IsCharLike;
+    if (TestStr(type->name, "char")) {
+        type->hint = ArrayHint::String8;
+    } else if (TestStr(type->name, "char16") || TestStr(type->name, "char16_t")) {
+        type->hint = ArrayHint::String16;
+    } else if (TestStr(type->name, "char32") || TestStr(type->name, "char32_t")) {
+        type->hint = ArrayHint::String32;
+    } else if (TestStr(type->name, "wchar") || TestStr(type->name, "wchar_t")) {
+        if constexpr (K_SIZE(wchar_t) == 2) {
+            type->hint = ArrayHint::String16;
+        } else if constexpr (K_SIZE(wchar_t) == 4) {
+            type->hint = ArrayHint::String32;
+        }
+        static_assert(K_SIZE(wchar_t) == 2 || K_SIZE(wchar_t) == 4);
+    } else {
+        type->hint = SelectTypedHint(type);
     }
 
     if (ref) {

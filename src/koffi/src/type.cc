@@ -370,17 +370,6 @@ static BufferConversion SelectBufferConversion(const TypeInfo *ref)
     K_UNREACHABLE();
 }
 
-static ArrayHint SelectArrayHint(const TypeInfo *ref)
-{
-    if (ref->flags & (int)TypeFlag::IsCharLike) {
-        return ArrayHint::String;
-    } else if (ref->flags & (int)TypeFlag::HasTypedArray) {
-        return ArrayHint::Typed;
-    } else {
-        return ArrayHint::Array;
-    }
-}
-
 TypeInfo *MakePointerType(InstanceData *instance, const TypeInfo *ref, int count)
 {
     K_ASSERT(count >= 1);
@@ -404,7 +393,7 @@ TypeInfo *MakePointerType(InstanceData *instance, const TypeInfo *ref, int count
                 type->ref.type = ref;
                 type->ref.stride = ref->size;
                 type->ref.conversion = SelectBufferConversion(ref);
-                type->hint = (ref->flags & (int)TypeFlag::HasTypedArray) ? ArrayHint::Typed : ArrayHint::Array;
+                type->hint = ref->hint;
             } else {
                 type->primitive = PrimitiveKind::Callback;
                 type->size = K_SIZE(void *);
@@ -451,13 +440,33 @@ static TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size
 
 TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len)
 {
-    ArrayHint hint = SelectArrayHint(ref);
-    return MakeArrayType(instance, ref, len, hint, true);
+    return MakeArrayType(instance, ref, len, ref->hint, true);
 }
 
 TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len, ArrayHint hint)
 {
     return MakeArrayType(instance, ref, len, hint, false);
+}
+
+static const char *NameArrayHint(ArrayHint hint)
+{
+    switch (hint) {
+        case ArrayHint::Array: return "Array";
+        case ArrayHint::Int8Array: return "Typed";
+        case ArrayHint::Uint8Array: return "Typed";
+        case ArrayHint::Int16Array: return "Typed";
+        case ArrayHint::Uint16Array: return "Typed";
+        case ArrayHint::Int32Array: return "Typed";
+        case ArrayHint::Uint32Array: return "Typed";
+        case ArrayHint::Float32Array: return "Typed";
+        case ArrayHint::Float64Array: return "Typed";
+        case ArrayHint::Buffer: return "Buffer";
+        case ArrayHint::String8: return "String";
+        case ArrayHint::String16: return "String";
+        case ArrayHint::String32: return "String";
+    }
+
+    K_UNREACHABLE();
 }
 
 napi_value WrapType(InstanceData *instance, const TypeInfo *type, bool freeze)
@@ -504,7 +513,7 @@ napi_value WrapType(InstanceData *instance, const TypeInfo *type, bool freeze)
             case PrimitiveKind::Array: {
                 uint32_t len = type->size / type->ref.type->size;
                 defn.Set("length", NewInt(env, len));
-                defn.Set("hint", ArrayHintNames[(int)type->hint]);
+                defn.Set("hint", NameArrayHint(type->hint));
             } [[fallthrough]];
             case PrimitiveKind::Pointer: {
                 napi_value ref = WrapType(instance, type->ref.type);

@@ -537,119 +537,76 @@ napi_value DecodeArray(InstanceData *instance, const uint8_t *origin, const Type
     const TypeInfo *ref = type->ref.type;
     int32_t stride = type->ref.stride;
 
-    if (type->hint == ArrayHint::Typed) {
-#define POP_TYPEDARRAY(TypedArrayType, CType) \
+#define POP_TYPEDARRAY(TypedArrayType) \
             do { \
                 napi_value buffer = nullptr; \
                 napi_value array = nullptr; \
                 void *data; \
                  \
-                NAPI_OK(napi_create_arraybuffer(env, (size_t)len * K_SIZE(CType), &data, &buffer)); \
+                NAPI_OK(napi_create_arraybuffer(env, (size_t)len * ref->size, &data, &buffer)); \
                 NAPI_OK(napi_create_typedarray(env, (TypedArrayType), (size_t)len, buffer, 0, &array)); \
                  \
-                Span<uint8_t> view = MakeSpan((uint8_t *)data, (Size)len * K_SIZE(CType)); \
+                Span<uint8_t> view = MakeSpan((uint8_t *)data, (Size)len * ref->size); \
                 DecodeBuffer(view, origin, type); \
                  \
                 return array; \
             } while (false)
 
-        switch (ref->primitive) {
-            case PrimitiveKind::Int8: { POP_TYPEDARRAY(napi_int8_array, int8_t); } break;
-            case PrimitiveKind::UInt8: { POP_TYPEDARRAY(napi_uint8_array, uint8_t); } break;
-            case PrimitiveKind::Int16: { POP_TYPEDARRAY(napi_int16_array, int16_t); } break;
-            case PrimitiveKind::Int16S: { POP_TYPEDARRAY(napi_int16_array, int16_t); } break;
-            case PrimitiveKind::UInt16: { POP_TYPEDARRAY(napi_uint16_array, uint16_t); } break;
-            case PrimitiveKind::UInt16S: { POP_TYPEDARRAY(napi_uint16_array, uint16_t); } break;
-            case PrimitiveKind::Int32: { POP_TYPEDARRAY(napi_int32_array, int32_t); } break;
-            case PrimitiveKind::Int32S: { POP_TYPEDARRAY(napi_int32_array, int32_t); } break;
-            case PrimitiveKind::UInt32: { POP_TYPEDARRAY(napi_uint32_array, uint32_t); } break;
-            case PrimitiveKind::UInt32S: { POP_TYPEDARRAY(napi_uint32_array, uint32_t); } break;
-            case PrimitiveKind::Float32: { POP_TYPEDARRAY(napi_float32_array, float); } break;
-            case PrimitiveKind::Float64: { POP_TYPEDARRAY(napi_float64_array, double); } break;
+    switch (type->hint) {
+        case ArrayHint::Array: {
+            Napi::Array array = Napi::Array::New(env);
+            DecodeElements(instance, array, origin, type, len);
 
-            case PrimitiveKind::Void:
-            case PrimitiveKind::Bool:
-            case PrimitiveKind::Int64:
-            case PrimitiveKind::Int64S:
-            case PrimitiveKind::UInt64:
-            case PrimitiveKind::UInt64S:
-            case PrimitiveKind::String:
-            case PrimitiveKind::String16:
-            case PrimitiveKind::String32:
-            case PrimitiveKind::Pointer:
-            case PrimitiveKind::Callback:
-            case PrimitiveKind::Record:
-            case PrimitiveKind::Union:
-            case PrimitiveKind::Array:
-            case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;
-        }
+            return array;
+        } break;
 
-#undef POP_TYPEDARRAY
-    } else if (type->hint == ArrayHint::Buffer) {
-        napi_value buffer;
-        void *data;
+        case ArrayHint::Int8Array: { POP_TYPEDARRAY(napi_int8_array); } break;
+        case ArrayHint::Uint8Array: { POP_TYPEDARRAY(napi_uint8_array); } break;
+        case ArrayHint::Int16Array: { POP_TYPEDARRAY(napi_int16_array); } break;
+        case ArrayHint::Uint16Array: { POP_TYPEDARRAY(napi_uint16_array); } break;
+        case ArrayHint::Int32Array: { POP_TYPEDARRAY(napi_int32_array); } break;
+        case ArrayHint::Uint32Array: { POP_TYPEDARRAY(napi_uint32_array); } break;
+        case ArrayHint::Float32Array: { POP_TYPEDARRAY(napi_float32_array); } break;
+        case ArrayHint::Float64Array: { POP_TYPEDARRAY(napi_float64_array); } break;
 
-        NAPI_OK(napi_create_buffer(env, (size_t)len * ref->size, &data, &buffer));
+        case ArrayHint::Buffer: {
+            napi_value buffer;
+            void *data;
 
-        Span<uint8_t> view = MakeSpan((uint8_t *)data, (Size)len * ref->size);
-        DecodeBuffer(view, origin, type);
+            NAPI_OK(napi_create_buffer(env, (size_t)len * ref->size, &data, &buffer));
 
-        return buffer;
-    } else if (type->hint == ArrayHint::String) {
-        K_ASSERT(stride == ref->size);
+            Span<uint8_t> view = MakeSpan((uint8_t *)data, (Size)len * ref->size);
+            DecodeBuffer(view, origin, type);
 
-        switch (ref->primitive) {
-            case PrimitiveKind::Int8: {
-                const char *ptr = (const char *)origin;
-                size_t count = strnlen(ptr, (size_t)len);
+            return buffer;
+        } break;
 
-                return NewString(env, ptr, count);
-            } break;
-            case PrimitiveKind::Int16: {
-                const char16_t *ptr = (const char16_t *)origin;
-                Size count = NullTerminatedLength(ptr, len);
+        case ArrayHint::String8: {
+            K_ASSERT(stride == ref->size);
 
-                return NewString(env, ptr, count);
-            } break;
-            case PrimitiveKind::Int32: {
-                const char32_t *ptr = (const char32_t *)origin;
-                Size count = NullTerminatedLength(ptr, len);
+            const char *ptr = (const char *)origin;
+            size_t count = strnlen(ptr, (size_t)len);
 
-                return NewString(env, ptr, count);
-            } break;
+            return NewString(env, ptr, count);
+        } break;
 
-            case PrimitiveKind::Void:
-            case PrimitiveKind::Bool:
-            case PrimitiveKind::UInt8:
-            case PrimitiveKind::Int16S:
-            case PrimitiveKind::UInt16:
-            case PrimitiveKind::UInt16S:
-            case PrimitiveKind::Int32S:
-            case PrimitiveKind::UInt32:
-            case PrimitiveKind::UInt32S:
-            case PrimitiveKind::Int64:
-            case PrimitiveKind::Int64S:
-            case PrimitiveKind::UInt64:
-            case PrimitiveKind::UInt64S:
-            case PrimitiveKind::String:
-            case PrimitiveKind::String16:
-            case PrimitiveKind::String32:
-            case PrimitiveKind::Pointer:
-            case PrimitiveKind::Callback:
-            case PrimitiveKind::Record:
-            case PrimitiveKind::Union:
-            case PrimitiveKind::Array:
-            case PrimitiveKind::Float32:
-            case PrimitiveKind::Float64:
-            case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;
-        }
-    } else {
-        K_ASSERT(type->hint == ArrayHint::Array);
+        case ArrayHint::String16: {
+            K_ASSERT(stride == ref->size);
 
-        Napi::Array array = Napi::Array::New(env);
-        DecodeElements(instance, array, origin, type, len);
+            const char16_t *ptr = (const char16_t *)origin;
+            Size count = NullTerminatedLength(ptr, len);
 
-        return array;
+            return NewString(env, ptr, count);
+        } break;
+
+        case ArrayHint::String32: {
+            K_ASSERT(stride == ref->size);
+
+            const char32_t *ptr = (const char32_t *)origin;
+            Size count = NullTerminatedLength(ptr, len);
+
+            return NewString(env, ptr, count);
+        } break;
     }
 
     K_UNREACHABLE();

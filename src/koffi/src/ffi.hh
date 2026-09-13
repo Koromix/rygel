@@ -58,30 +58,29 @@ struct CallData;
 
 typedef void DisposeFunc (InstanceData *instance, const TypeInfo *type, const void *ptr);
 
-enum class TypeFlag {
-    HasTypedArray = 1 << 0,
-    IsCharLike = 1 << 1
-};
-
-enum class BufferConversion {
+enum class BufferConversion: int8_t {
     None,
     Swap16,
     Swap32,
     Swap64
 };
 
-enum class ArrayHint {
+enum class ArrayHint: int8_t {
     Array,
-    Typed,
+    Int8Array,
+    Uint8Array,
+    Int16Array,
+    Uint16Array,
+    Int32Array,
+    Uint32Array,
+    Float32Array,
+    Float64Array,
     Buffer,
-    String
+    String8,
+    String16,
+    String32,
 };
-static const char *const ArrayHintNames[] = {
-    "Array",
-    "Typed",
-    "Buffer",
-    "String"
-};
+static_assert((int)ArrayHint::Array == 0);
 
 struct RecordMember {
     const char *name;
@@ -105,8 +104,8 @@ struct TypeInfo {
     alignas(8) PrimitiveKind primitive;
     int32_t size;
     int16_t align;
-    uint8_t flags;
     uint8_t fill; // Aggregates
+    ArrayHint hint;
 
     DisposeFunc *dispose = nullptr;
     napi_ref dispose_ref = nullptr;
@@ -118,7 +117,6 @@ struct TypeInfo {
         BufferConversion conversion; // Array or pointer
     } ref;
     const FunctionInfo *proto; // Callback only
-    ArrayHint hint; // Array only
     const char *countedby; // Pointer or array
 
     mutable napi_ref construct = nullptr; // Union only
