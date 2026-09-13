@@ -31,10 +31,6 @@ struct RetDD {
     double d0;
     double d1;
 };
-template <int N>
-struct RetHfa {
-    double d[N];
-};
 
 extern "C" {
     // Each ABI backend uses a different subset of CallXX assembly functions.
@@ -53,7 +49,7 @@ extern "C" {
         Ret Name(const void *, uint8_t *, uint8_t **); \
         _Pragma(K_STRINGIFY(comment(linker, K_STRINGIFY(/alternatename:K_CONCAT(_, Name)=_CallUnused))))
 #else
-    #define WEAK_CALL(Ret, Name, ...) __attribute__((weak)) Ret Name(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
+    #define WEAK_CALL(Ret, Name) __attribute__((weak)) Ret Name(const void *, uint8_t *, uint8_t **) { K_UNREACHABLE(); }
 #endif
 
     WEAK_CALL(uint64_t, CallG)
@@ -63,7 +59,7 @@ extern "C" {
     WEAK_CALL(RetDD, CallDD)
     WEAK_CALL(RetGD, CallGD)
     WEAK_CALL(RetDG, CallDG)
-    WEAK_CALL(RetHfa<4>, CallHfa4)
+    WEAK_CALL(void, CallHfa)
     WEAK_CALL(uint64_t, CallGX)
     WEAK_CALL(float, CallFX)
     WEAK_CALL(double, CallDX)
@@ -71,7 +67,7 @@ extern "C" {
     WEAK_CALL(RetDD, CallDDX)
     WEAK_CALL(RetGD, CallGDX)
     WEAK_CALL(RetDG, CallDGX)
-    WEAK_CALL(RetHfa<4>, CallHfa4X)
+    WEAK_CALL(void, CallHfaX)
 
 #undef WEAK_CALL
 }
@@ -466,9 +462,9 @@ napi_value RunForward(CallData *call, uint8_t *base, void *native, const OpData 
         auto ret = WRAP(CallDG(native, base, &call->saved_sp));
         return DecodeObject(call->instance, (const uint8_t *)&ret, op->type);
     }
-    FWD(RunAggregateHfa4) {
-        auto ret = WRAP(CallHfa4(native, base, &call->saved_sp));
-        return DecodeObject(call->instance, (const uint8_t *)&ret, op->type);
+    FWD(RunAggregateHfa) {
+        WRAP(CallHfa(native, base, &call->saved_sp));
+        return DecodeObject(call->instance, base, op->type);
     }
     FWD(RunAggregateMem) {
         uint8_t *ptr = call->AllocHeap(op->type->size);
@@ -566,9 +562,9 @@ napi_value RunForward(CallData *call, uint8_t *base, void *native, const OpData 
         auto ret = WRAP(CallDGX(native, base, &call->saved_sp));
         return DecodeObject(call->instance, (const uint8_t *)&ret, op->type);
     }
-    FWD(RunAggregateHfa4X) {
-        auto ret = WRAP(CallHfa4X(native, base, &call->saved_sp));
-        return DecodeObject(call->instance, (const uint8_t *)&ret, op->type);
+    FWD(RunAggregateHfaX) {
+        WRAP(CallHfaX(native, base, &call->saved_sp));
+        return DecodeObject(call->instance, base, op->type);
     }
     FWD(RunAggregateMemX) {
         uint8_t *ptr = call->AllocHeap(op->type->size);
@@ -616,11 +612,11 @@ napi_value RunForward(CallData *call, uint8_t *base, void *native, const OpData 
     FWD(CallDD) { CALL(DD); return nullptr; }
     FWD(CallGD) { CALL(GD); return nullptr; }
     FWD(CallDG) { CALL(DG); return nullptr; }
-    FWD(CallHfa4) { CALL(Hfa4); return nullptr; }
+    FWD(CallHfa) { WRAP(CallHfa(native, base, &call->saved_sp)); return nullptr; }
     FWD(CallMem) {
         uint8_t *ptr = call->AllocHeap(op->type->size);
         *(uint8_t **)(base + op->s1) = ptr;
-        CALL(G);
+        WRAP(CallG(native, base, &call->saved_sp));
         *(uint8_t **)base = ptr;
         return nullptr;
     }
@@ -631,11 +627,11 @@ napi_value RunForward(CallData *call, uint8_t *base, void *native, const OpData 
     FWD(CallDDX) { CALL(DDX); return nullptr; }
     FWD(CallGDX) { CALL(GDX); return nullptr; }
     FWD(CallDGX) { CALL(DGX); return nullptr; }
-    FWD(CallHfa4X) { CALL(Hfa4X); return nullptr; }
+    FWD(CallHfaX) { WRAP(CallHfaX(native, base, &call->saved_sp)); return nullptr; }
     FWD(CallMemX) {
         uint8_t *ptr = call->AllocHeap(op->type->size);
         *(uint8_t **)(base + op->s1) = ptr;
-        CALL(GX);
+        WRAP(CallGX(native, base, &call->saved_sp));
         *(uint8_t **)base = ptr;
         return nullptr;
     }
@@ -1110,7 +1106,7 @@ int RunRelay(CallData *call, TrampolineInfo *trampoline, uint8_t *base, const Op
         return 1;
     }
     ALIAS(RunAggregateDG, RunAggregateGD)
-    ALIAS(RunAggregateHfa4, RunAggregateG)
+    ALIAS(RunAggregateHfa, RunAggregateG)
     RELAY(RunAggregateMem) {
         napi_value value = call->CallCallback(trampoline, call->args, op->i);
         uint8_t *ptr = *(uint8_t **)(base + op->s1);
@@ -1163,7 +1159,7 @@ int RunRelay(CallData *call, TrampolineInfo *trampoline, uint8_t *base, const Op
     ALIAS(RunAggregateDDX, RunAggregateDD)
     ALIAS(RunAggregateGDX, RunAggregateGD)
     ALIAS(RunAggregateDGX, RunAggregateDG)
-    ALIAS(RunAggregateHfa4X, RunAggregateHfa4)
+    ALIAS(RunAggregateHfaX, RunAggregateHfa)
     ALIAS(RunAggregateMemX, RunAggregateMem)
 
     RELAY(Yield) { K_UNREACHABLE(); }
@@ -1175,7 +1171,7 @@ int RunRelay(CallData *call, TrampolineInfo *trampoline, uint8_t *base, const Op
     RELAY(CallDD) { K_UNREACHABLE(); }
     RELAY(CallGD) { K_UNREACHABLE(); }
     RELAY(CallDG) { K_UNREACHABLE(); }
-    RELAY(CallHfa4) { K_UNREACHABLE(); }
+    RELAY(CallHfa) { K_UNREACHABLE(); }
     RELAY(CallMem) { K_UNREACHABLE(); }
     RELAY(CallGX) { K_UNREACHABLE(); }
     RELAY(CallFX) { K_UNREACHABLE(); }
@@ -1184,7 +1180,7 @@ int RunRelay(CallData *call, TrampolineInfo *trampoline, uint8_t *base, const Op
     RELAY(CallDDX) { K_UNREACHABLE(); }
     RELAY(CallGDX) { K_UNREACHABLE(); }
     RELAY(CallDGX) { K_UNREACHABLE(); }
-    RELAY(CallHfa4X) { K_UNREACHABLE(); }
+    RELAY(CallHfaX) { K_UNREACHABLE(); }
     RELAY(CallMemX) { K_UNREACHABLE(); }
 
     RELAY(ReturnVoid) { K_UNREACHABLE(); }
@@ -1272,7 +1268,7 @@ bool PreparePlan(InstanceData *instance, FunctionInfo *func)
         ForwardRunAggregateDD,
         ForwardRunAggregateGD,
         ForwardRunAggregateDG,
-        ForwardRunAggregateHfa4,
+        ForwardRunAggregateHfa,
         ForwardRunAggregateMem,
         #define PRIMITIVE(Name) ForwardRun ## Name ## X,
         #include "primitives.inc"
@@ -1283,7 +1279,7 @@ bool PreparePlan(InstanceData *instance, FunctionInfo *func)
         ForwardRunAggregateDDX,
         ForwardRunAggregateGDX,
         ForwardRunAggregateDGX,
-        ForwardRunAggregateHfa4X,
+        ForwardRunAggregateHfaX,
         ForwardRunAggregateMemX,
         ForwardYield,
         ForwardCallG,
@@ -1293,7 +1289,7 @@ bool PreparePlan(InstanceData *instance, FunctionInfo *func)
         ForwardCallDD,
         ForwardCallGD,
         ForwardCallDG,
-        ForwardCallHfa4,
+        ForwardCallHfa,
         ForwardCallMem,
         ForwardCallGX,
         ForwardCallFX,
@@ -1302,7 +1298,7 @@ bool PreparePlan(InstanceData *instance, FunctionInfo *func)
         ForwardCallDDX,
         ForwardCallGDX,
         ForwardCallDGX,
-        ForwardCallHfa4X,
+        ForwardCallHfaX,
         ForwardCallMemX,
         #define PRIMITIVE(Name) ForwardReturn ## Name,
         #include "primitives.inc"
@@ -1327,7 +1323,7 @@ bool PreparePlan(InstanceData *instance, FunctionInfo *func)
         RelayRunAggregateDD,
         RelayRunAggregateGD,
         RelayRunAggregateDG,
-        RelayRunAggregateHfa4,
+        RelayRunAggregateHfa,
         RelayRunAggregateMem,
         #define PRIMITIVE(Name) RelayRun ## Name ## X,
         #include "primitives.inc"
@@ -1338,7 +1334,7 @@ bool PreparePlan(InstanceData *instance, FunctionInfo *func)
         RelayRunAggregateDDX,
         RelayRunAggregateGDX,
         RelayRunAggregateDGX,
-        RelayRunAggregateHfa4X,
+        RelayRunAggregateHfaX,
         RelayRunAggregateMemX,
         RelayYield,
         RelayCallG,
@@ -1348,7 +1344,7 @@ bool PreparePlan(InstanceData *instance, FunctionInfo *func)
         RelayCallDD,
         RelayCallGD,
         RelayCallDG,
-        RelayCallHfa4,
+        RelayCallHfa,
         RelayCallMem,
         RelayCallGX,
         RelayCallFX,
@@ -1357,7 +1353,7 @@ bool PreparePlan(InstanceData *instance, FunctionInfo *func)
         RelayCallDDX,
         RelayCallGDX,
         RelayCallDGX,
-        RelayCallHfa4X,
+        RelayCallHfaX,
         RelayCallMemX,
         #define PRIMITIVE(Name) RelayReturn ## Name,
         #include "primitives.inc"
@@ -1465,7 +1461,7 @@ void FillAsyncPlan(Span<const OpData> sync, HeapArray<OpData> *out_async)
             case Opcode::RunAggregateDD:
             case Opcode::RunAggregateGD:
             case Opcode::RunAggregateDG:
-            case Opcode::RunAggregateHfa4: {
+            case Opcode::RunAggregateHfa: {
                 int delta = (int)Opcode::CallG - (int)Opcode::RunAggregateG;
                 Opcode call = (Opcode)((intptr_t)op.o + delta);
 
@@ -1527,7 +1523,7 @@ void FillAsyncPlan(Span<const OpData> sync, HeapArray<OpData> *out_async)
             case Opcode::RunAggregateDDX:
             case Opcode::RunAggregateGDX:
             case Opcode::RunAggregateDGX:
-            case Opcode::RunAggregateHfa4X: {
+            case Opcode::RunAggregateHfaX: {
                 int delta = (int)Opcode::CallGX - (int)Opcode::RunAggregateGX;
                 Opcode call = (Opcode)((intptr_t)op.o + delta);
 
@@ -1550,7 +1546,7 @@ void FillAsyncPlan(Span<const OpData> sync, HeapArray<OpData> *out_async)
             case Opcode::CallDD:
             case Opcode::CallGD:
             case Opcode::CallDG:
-            case Opcode::CallHfa4:
+            case Opcode::CallHfa:
             case Opcode::CallMem:
             case Opcode::CallGX:
             case Opcode::CallFX:
@@ -1559,7 +1555,7 @@ void FillAsyncPlan(Span<const OpData> sync, HeapArray<OpData> *out_async)
             case Opcode::CallDDX:
             case Opcode::CallGDX:
             case Opcode::CallDGX:
-            case Opcode::CallHfa4X:
+            case Opcode::CallHfaX:
             case Opcode::CallMemX: { K_UNREACHABLE(); } break;
 
             case Opcode::ReturnVoid:

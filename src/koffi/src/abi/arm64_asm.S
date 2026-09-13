@@ -21,14 +21,14 @@
 .global SYMBOL(CallF)
 .global SYMBOL(CallD)
 .global SYMBOL(CallGG)
-.global SYMBOL(CallHfa4)
+.global SYMBOL(CallHfa)
 
 # The X variants are slightly slower, and are used when XMM arguments must be forwarded.
 .global SYMBOL(CallGX)
 .global SYMBOL(CallFX)
 .global SYMBOL(CallDX)
 .global SYMBOL(CallGGX)
-.global SYMBOL(CallHfa4X)
+.global SYMBOL(CallHfaX)
 
 # Copy function pointer to r9, in order to save it through argument forwarding.
 # Also make a copy of the SP to CallData::old_sp because the callback system might need it.
@@ -51,7 +51,6 @@
 # Once done, restore normal stack pointer and return.
 # The return value is passed untouched through r0, r1, v0 and/or v1.
 .macro epilogue
-    blr x9
     mov sp, x29
     .cfi_def_cfa sp, 16
     ldp x29, x30, [sp], 16
@@ -82,56 +81,70 @@
 SYMBOL(CallG):
     prologue
     forward_gpr
+    blr x9
     epilogue
 
 SYMBOL(CallF):
     prologue
     forward_gpr
+    blr x9
     epilogue
 
 SYMBOL(CallD):
     prologue
     forward_gpr
+    blr x9
     epilogue
 
 SYMBOL(CallGG):
     prologue
     forward_gpr
+    blr x9
     epilogue
 
-SYMBOL(CallHfa4):
+SYMBOL(CallHfa):
     prologue
     forward_gpr
+    blr x9
+    stp d0, d1, [sp, -152]
+    stp d2, d3, [sp, -136]
     epilogue
 
 SYMBOL(CallGX):
     prologue
     forward_vec
     forward_gpr
+    blr x9
     epilogue
 
 SYMBOL(CallFX):
     prologue
     forward_vec
     forward_gpr
+    blr x9
     epilogue
 
 SYMBOL(CallDX):
     prologue
     forward_vec
     forward_gpr
+    blr x9
     epilogue
 
 SYMBOL(CallGGX):
     prologue
     forward_vec
     forward_gpr
+    blr x9
     epilogue
 
-SYMBOL(CallHfa4X):
+SYMBOL(CallHfaX):
     prologue
     forward_vec
     forward_gpr
+    blr x9
+    stp d0, d1, [sp, -152]
+    stp d2, d3, [sp, -136]
     epilogue
 
 # Callbacks
