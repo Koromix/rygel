@@ -326,5 +326,26 @@
 
             "shutdown": "sudo poweroff"
         }
+    },
+
+    "openbsd_arm64": {
+        "title": "OpenBSD ARM64",
+        "platform": "openbsd",
+
+        "qemu": {
+            "binary": "qemu-system-aarch64",
+            "arguments": ["-M", "virt", "-cpu", "cortex-a53", "-m", "3G", "-smp", 2, "-bios", "QEMU_EFI.fd", "-drive", "if=virtio,file=disk.qcow2,format=qcow2", "-netdev", "user,id=mynet,hostfwd=tcp::22218-:22", "-device", "e1000,netdev=mynet", "-vnc", "127.0.0.1:28"],
+            "version": 1,
+
+            "disk": "disk.qcow2",
+
+            "ssh_port": 22218,
+            "vnc_port": 5928,
+
+            "username": "openbsd",
+            "password": "openbsd",
+
+            "shutdown": "sudo shutdown -p now"
+        }
     }
 }
