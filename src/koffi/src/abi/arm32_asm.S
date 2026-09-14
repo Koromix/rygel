@@ -13,13 +13,13 @@
 .global CallG
 .global CallF
 .global CallD
-.global CallHfa4
+.global CallHfa
 
 # The X variants are slightly slower, and are used when XMM arguments must be forwarded.
 .global CallGX
 .global CallFX
 .global CallDX
-.global CallHfa4X
+.global CallHfaX
 
 # Copy function pointer to r12, in order to save it through argument forwarding.
 # Also make a copy of the SP to CallData::old_sp because the callback system might need it.
@@ -41,7 +41,6 @@
 # Once done, restore normal stack pointer and return.
 # The return value is passed untouched through r0, r1, and or FP registers
 .macro epilogue
-    blx r12
     mov sp, fp
     .cfi_def_cfa sp, 8
     pop {fp, lr}
@@ -56,24 +55,30 @@ CallG:
     prologue
     ldmia sp!, {r0-r3}
     add sp, sp, #80
+    blx r12
     epilogue
 
 CallF:
     prologue
     ldmia sp!, {r0-r3}
     add sp, sp, #80
+    blx r12
     epilogue
 
 CallD:
     prologue
     ldmia sp!, {r0-r3}
     add sp, sp, #80
+    blx r12
     epilogue
 
-CallHfa4:
+CallHfa:
     prologue
     ldmia sp!, {r0-r3}
     add sp, sp, #80
+    blx r12
+    add r12, sp, -96
+    vstmia r12, {d0-d3}
     epilogue
 
 CallGX:
@@ -81,6 +86,7 @@ CallGX:
     ldmia sp!, {r0-r3}
     vldmia sp!, {d0-d7}
     add sp, sp, #16
+    blx r12
     epilogue
 
 CallFX:
@@ -88,6 +94,7 @@ CallFX:
     ldmia sp!, {r0-r3}
     vldmia sp!, {d0-d7}
     add sp, sp, #16
+    blx r12
     epilogue
 
 CallDX:
@@ -95,13 +102,17 @@ CallDX:
     ldmia sp!, {r0-r3}
     vldmia sp!, {d0-d7}
     add sp, sp, #16
+    blx r12
     epilogue
 
-CallHfa4X:
+CallHfaX:
     prologue
     ldmia sp!, {r0-r3}
     vldmia sp!, {d0-d7}
     add sp, sp, #16
+    blx r12
+    add r12, sp, -96
+    vstmia r12, {d0-d3}
     epilogue
 
 # Callbacks
