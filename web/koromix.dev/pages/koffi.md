@@ -21,7 +21,7 @@ The following combinations of OS and architectures __are officially supported an
 ISA / OS           | Windows | Linux/glibc | Linux/musl | macOS | FreeBSD | OpenBSD | Android
 ------------------ | ------- | ----------- | ---------- | ----- | ------- | ------- | -------
 x86_64 (AMD64)     | ✅      | ✅          | ✅         | ✅    | ✅      | ✅      | ✅
-ARM64 (AArch64) LE | ✅      | ✅          | ✅         | ✅    | ✅      | 🟨      | ✅
+ARM64 (AArch64) LE | ✅      | ✅          | ✅         | ✅    | ✅      | ✅      | ✅
 x86 (IA32) [^1]    | ✅      | ✅          | 🟨         | ⬜️    | ✅      | ✅      | ⬜️
 ARM32 LE [^2]      | ⬜️      | ✅          | 🟨         | ⬜️    | 🟨      | 🟨      | 🟨
 RISC-V 64 [^3]     | ⬜️      | ✅          | 🟨         | ⬜️    | 🟨      | 🟨      | ⬜️
