@@ -464,9 +464,13 @@ This contains the ${pkg.target} binaries for [Koffi](https://koffi.dev), a fast 
 > Do not install this package directly, use \`npm install koffi\` instead.
 `;
 
-            let loader = script_dir + `/loaders/${pkg.target}.js`;
+            let loaders = [
+                script_dir + `/loaders/${pkg.target}.js`,
+                script_dir + `/loaders/${cpu}.js`
+            ];
+            let loader = loaders.find(fs.existsSync);
 
-            if (fs.existsSync(loader)) {
+            if (loader != null) {
                 await esbuild.build({
                     entryPoints: [loader],
                     bundle: true,
