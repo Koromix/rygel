@@ -5,6 +5,19 @@
 
 ## Koffi 3
 
+### Koffi 3.3
+
+#### Koffi 3.3.0
+
+*Released on 2026-09-14*
+
+- Add support for Power64 ELFv2 Little-Endian ABI
+- Add OpenBSD ARM64 prebuild (@koromix/koffi-openbsd-arm64)
+- Perform endianness conversion when using typed arrays with pointer arguments
+- Support Typed array hint for 64-bit big ints
+- Add minor performance optimizations
+- Fix misused fast call routine
+
 ### Koffi 3.2
 
 #### Koffi 3.2.1
