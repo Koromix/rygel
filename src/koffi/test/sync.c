@@ -1198,3 +1198,15 @@ EXPORT void CopyBuffer(const void *in, int size, void * out)
 {
     memcpy(out, in, size);
 }
+
+EXPORT int32_t ReverseAndSum(int32_t *ptr, int len)
+{
+    int32_t sum = 0;
+
+    for (int i = 0; i < len; i++) {
+        ptr[i] = -ptr[i];
+        sum = ptr[i];
+    }
+
+    return sum;
+}

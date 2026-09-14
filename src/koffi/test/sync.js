@@ -327,6 +327,7 @@ async function test() {
     const CopyEndian32B = lib.func('void CopyBuffer(int32_le_t *in, int len, _Out_ int32_be_t *out)');
     const CopyEndian64A = lib.func('void CopyBuffer(int64_be_t *in, int len, _Out_ int64_le_t *out)');
     const CopyEndian64B = lib.func('void CopyBuffer(int64_le_t *in, int len, _Out_ int64_be_t *out)');
+    const ReverseAndSumBE = lib.func('int32_t ReverseAndSum(_Inout_ int32_be_t *ptr, int len)');
 
     free_ptr = CallFree;
 
@@ -1206,6 +1207,15 @@ async function test() {
         assert.deepEqual(out64, new BigInt64Array([0x78563412BDEACD7Bn, 0xCFAB36C26FAB8E45n, 0x4242EF56CD34AB12n]));
         CopyEndian64B(int64, int64.byteLength, out64);
         assert.deepEqual(out64, new BigInt64Array([0x78563412BDEACD7Bn, 0xCFAB36C26FAB8E45n, 0x4242EF56CD34AB12n]));
+    }
+
+    // In-place endianness conversion of pointer argument
+    {
+        let int32 = new Int32Array([0x02345608, 0x0ABCDE0F, 0x0D27CF03]);
+        let ret = ReverseAndSumBE(int32, int32.length);
+
+        assert.equal(ret, -63907597);
+        assert.deepEqual(int32, new Int32Array([0xFECBA9F7, 0xF64321F0, 0xF3D830FC]));
     }
 
     lib.unload();
