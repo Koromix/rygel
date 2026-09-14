@@ -943,22 +943,24 @@ restart:
 
     if (TryPointer(env, value, &ptr, &len, &kind)) {
         if (type->ref.conversion != BufferConversion::None && kind == napi_object) [[unlikely]] {
-            void *original = ptr;
-
-            if (directions & 1) {
-                ptr = AllocHeap(len);
-
-                MemCpy(ptr, original, len);
-                ConvertBuffer(type->ref.conversion, ptr, len, type->ref.stride);
-            }
-
             if (directions & 2) {
+                if (directions & 1) {
+                    ConvertBuffer(type->ref.conversion, ptr, len, type->ref.stride);
+                }
+
                 OutArgument *out = out_arguments.AppendDefault();
 
                 out->kind = OutArgument::Kind::Convert;
-                out->ptr = original;
+                out->ptr = ptr;
                 out->len = len;
                 out->type = type;
+            } else if (directions & 1) { // In
+                void *copy = AllocHeap(len);
+
+                MemCpy(copy, ptr, len);
+                ConvertBuffer(type->ref.conversion, copy, len, type->ref.stride);
+
+                ptr = copy;
             }
         }
 
