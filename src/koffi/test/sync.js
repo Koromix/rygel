@@ -321,6 +321,12 @@ async function test() {
     const ConcatMany2 = lib.func('const char *! ConcatMany(void **strings, size_t count)');
     const SumInts = lib.func('int SumInts(int a, int b, int c, int d, int e, int f)');
     const SumBools = lib.func('int SumBools(bool a, bool b, bool c, bool d, bool e, bool f)');
+    const CopyEndian16A = lib.func('void CopyBuffer(int16_be_t *in, int len, _Out_ int16_le_t *out)');
+    const CopyEndian16B = lib.func('void CopyBuffer(int16_le_t *in, int len, _Out_ int16_be_t *out)');
+    const CopyEndian32A = lib.func('void CopyBuffer(int32_be_t *in, int len, _Out_ int32_le_t *out)');
+    const CopyEndian32B = lib.func('void CopyBuffer(int32_le_t *in, int len, _Out_ int32_be_t *out)');
+    const CopyEndian64A = lib.func('void CopyBuffer(int64_be_t *in, int len, _Out_ int64_le_t *out)');
+    const CopyEndian64B = lib.func('void CopyBuffer(int64_le_t *in, int len, _Out_ int64_be_t *out)');
 
     free_ptr = CallFree;
 
@@ -1179,13 +1185,6 @@ async function test() {
 
     // Test automatic endianness conversion of pointer arguments
     {
-        const CopyEndian16A = lib.func('void CopyBuffer(int16_be_t *in, int len, _Out_ int16_le_t *out)');
-        const CopyEndian16B = lib.func('void CopyBuffer(int16_le_t *in, int len, _Out_ int16_be_t *out)');
-        const CopyEndian32A = lib.func('void CopyBuffer(int32_be_t *in, int len, _Out_ int32_le_t *out)');
-        const CopyEndian32B = lib.func('void CopyBuffer(int32_le_t *in, int len, _Out_ int32_be_t *out)');
-        const CopyEndian64A = lib.func('void CopyBuffer(int64_be_t *in, int len, _Out_ int64_le_t *out)');
-        const CopyEndian64B = lib.func('void CopyBuffer(int64_le_t *in, int len, _Out_ int64_be_t *out)');
-
         let int16 = new Int16Array([0x7BCD, 0xBE42, 0x1234]);
         let out16 = new Int16Array(3);
         let int32 = new Int32Array([0x12345678, 0x9ABCDEF0, 0xAD27CF23]);
