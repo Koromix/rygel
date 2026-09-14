@@ -452,17 +452,22 @@ static const char *NameArrayHint(ArrayHint hint)
 {
     switch (hint) {
         case ArrayHint::Array: return "Array";
-        case ArrayHint::Int8Array: return "Typed";
-        case ArrayHint::Uint8Array: return "Typed";
-        case ArrayHint::Int16Array: return "Typed";
-        case ArrayHint::Uint16Array: return "Typed";
-        case ArrayHint::Int32Array: return "Typed";
-        case ArrayHint::Uint32Array: return "Typed";
-        case ArrayHint::Float32Array: return "Typed";
+
+        case ArrayHint::Int8Array:
+        case ArrayHint::Uint8Array:
+        case ArrayHint::Int16Array:
+        case ArrayHint::Uint16Array:
+        case ArrayHint::Int32Array:
+        case ArrayHint::Uint32Array:
+        case ArrayHint::BigInt64Array:
+        case ArrayHint::BigUint64Array:
+        case ArrayHint::Float32Array:
         case ArrayHint::Float64Array: return "Typed";
+
         case ArrayHint::Buffer: return "Buffer";
-        case ArrayHint::String8: return "String";
-        case ArrayHint::String16: return "String";
+
+        case ArrayHint::String8:
+        case ArrayHint::String16:
         case ArrayHint::String32: return "String";
     }
 

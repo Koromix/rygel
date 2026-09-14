@@ -566,6 +566,8 @@ napi_value DecodeArray(InstanceData *instance, const uint8_t *origin, const Type
         case ArrayHint::Uint16Array: { POP_TYPEDARRAY(napi_uint16_array); } break;
         case ArrayHint::Int32Array: { POP_TYPEDARRAY(napi_int32_array); } break;
         case ArrayHint::Uint32Array: { POP_TYPEDARRAY(napi_uint32_array); } break;
+        case ArrayHint::BigInt64Array: { POP_TYPEDARRAY(napi_bigint64_array); } break;
+        case ArrayHint::BigUint64Array: { POP_TYPEDARRAY(napi_biguint64_array); } break;
         case ArrayHint::Float32Array: { POP_TYPEDARRAY(napi_float32_array); } break;
         case ArrayHint::Float64Array: { POP_TYPEDARRAY(napi_float64_array); } break;
 

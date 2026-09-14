@@ -985,23 +985,23 @@ static ArrayHint SelectTypedHint(const TypeInfo *ref)
     switch (ref->primitive) {
         case PrimitiveKind::Int8: return ArrayHint::Int8Array;
         case PrimitiveKind::UInt8: return ArrayHint::Uint8Array;
-        case PrimitiveKind::Int16: return ArrayHint::Int16Array;
+        case PrimitiveKind::Int16:
         case PrimitiveKind::Int16S: return ArrayHint::Int16Array;
-        case PrimitiveKind::UInt16: return ArrayHint::Uint16Array;
+        case PrimitiveKind::UInt16:
         case PrimitiveKind::UInt16S: return ArrayHint::Uint16Array;
-        case PrimitiveKind::Int32: return ArrayHint::Int32Array;
+        case PrimitiveKind::Int32:
         case PrimitiveKind::Int32S: return ArrayHint::Int32Array;
-        case PrimitiveKind::UInt32: return ArrayHint::Uint32Array;
+        case PrimitiveKind::UInt32:
         case PrimitiveKind::UInt32S: return ArrayHint::Uint32Array;
+        case PrimitiveKind::Int64:
+        case PrimitiveKind::Int64S: return ArrayHint::BigInt64Array;
+        case PrimitiveKind::UInt64:
+        case PrimitiveKind::UInt64S: return ArrayHint::BigUint64Array;
         case PrimitiveKind::Float32: return ArrayHint::Float32Array;
         case PrimitiveKind::Float64: return ArrayHint::Float64Array;
 
         case PrimitiveKind::Void:
         case PrimitiveKind::Bool:
-        case PrimitiveKind::Int64:
-        case PrimitiveKind::Int64S:
-        case PrimitiveKind::UInt64:
-        case PrimitiveKind::UInt64S:
         case PrimitiveKind::String:
         case PrimitiveKind::String16:
         case PrimitiveKind::String32:
