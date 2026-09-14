@@ -27,7 +27,7 @@
 .macro prologue
     mflr %r0
     std %r0, 16(%r1)
-    std %r2, -16(%r1)
+    std %r2, 24(%r1)
     std %r14, -24(%r1)
     stdu %r1, -32(%r1)
     mr %r12, %r3
@@ -43,7 +43,7 @@
 .macro epilogue
     mr %r1, %r14
     ld %r14, 8(%r1)
-    ld %r2, 16(%r1)
+    ld %r2, 56(%r1)
     ld %r0, 48(%r1)
     mtlr %r0
     addi %r1, %r1, 32
