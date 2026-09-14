@@ -472,5 +472,32 @@
             "target": "android_x64",
             "package": "android-x64"
         }
+    },
+
+    "linux_ppc64le": {
+        "title": "Linux/glibc PPC64 LE",
+
+        "info": {
+            "arch": "ppc64le",
+            "machine": "debian_ppc64el",
+            "target": "linux_ppc64le",
+            "directory": "/home/debian/luigi",
+            "build": "node ../../cnoke.cjs --ccache",
+            "package": "linux-ppc64"
+        },
+
+        "test": {
+            "build": "node ../../cnoke.cjs --ccache -D test",
+            "commands": {
+                "Test Sync": "node --no-deprecation test/sync.js",
+                "Test Sync (debug async)": "DEBUG_ASYNC=1 node --no-deprecation test/sync.js",
+                "Test Union": "node --no-deprecation test/union.js",
+                "Test Async": "node --no-deprecation test/async.js",
+                "Test Callbacks": "node --no-deprecation test/callbacks.js",
+                "Test Raylib": "node --no-deprecation test/raylib.js",
+                "Test SQLite": "node --no-deprecation test/sqlite.js",
+                "Test POSIX": "node --no-deprecation test/posix.js"
+            }
+        }
     }
 }

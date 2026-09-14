@@ -113,6 +113,19 @@ static K_FORCE_INLINE void ConvertBuffer(BufferConversion conversion, void *ptr,
         case BufferConversion::Swap16: { SWAP(uint16_t); } break;
         case BufferConversion::Swap32: { SWAP(uint32_t); } break;
         case BufferConversion::Swap64: { SWAP(uint64_t); } break;
+
+        case BufferConversion::FloatToDouble: {
+            K_ASSERT(stride == 8);
+
+            Size len = size / K_SIZE(float);
+
+            for (Size i = len - 1; i >= 0; i--) {
+                const uint8_t *src = (const uint8_t *)ptr + i * 4;
+                uint8_t *dest = (uint8_t *)ptr + i * 8;
+
+                *(double *)dest = *(float *)src;
+            }
+        } break;
     }
 
 #undef SWAP

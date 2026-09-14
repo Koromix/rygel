@@ -627,6 +627,38 @@ const TypeInfo *ReshapeAggregate(InstanceData *instance, const TypeInfo *type, c
                 }
             } break;
 
+            case PrimitiveKind::Union: {
+                napi_value defn;
+                NAPI_OK(napi_get_reference_value(env, type->defn, &defn));
+
+                reshaped = instance->types.AppendDefault();
+
+                memcpy((void *)reshaped, (const void *)type, K_SIZE(*type));
+                memset((void *)&reshaped->members, 0, K_SIZE(reshaped->members));
+                reshaped->members.Reserve(type->members.len);
+                reshaped->size = 0;
+                reshaped->fill = config.fill;
+                NAPI_OK(napi_create_reference(env, defn, 1, &reshaped->defn));
+
+                for (RecordMember member: type->members) {
+                    member.type = ReshapeAggregate(instance, member.type, config);
+
+                    if (member.key) {
+                        napi_value key;
+                        NAPI_OK(napi_get_reference_value(env, member.key, &key));
+                        NAPI_OK(napi_create_reference(env, key, 1, &member.key));
+                    }
+
+                    reshaped->members.Append(member);
+                    reshaped->size = std::max(reshaped->size, member.type->size);
+
+                    member.key = nullptr;
+                }
+
+                Napi::Object construct = UnionValue::InitClass(instance, reshaped);
+                NAPI_OK(napi_create_reference(env, construct, 1, &reshaped->construct));
+            } break;
+
             case PrimitiveKind::Array: {
                 reshaped = instance->types.AppendDefault();
 
@@ -634,13 +666,15 @@ const TypeInfo *ReshapeAggregate(InstanceData *instance, const TypeInfo *type, c
                 NAPI_OK(napi_get_reference_value(env, type->defn, &defn));
 
                 memcpy((void *)reshaped, (const void *)type, K_SIZE(*type));
+                reshaped->ref.type = ReshapeAggregate(instance, reshaped->ref.type, config);
                 reshaped->ref.stride = config.stride;
+                reshaped->ref.conversion = config.f2d ? BufferConversion::FloatToDouble : reshaped->ref.conversion;
                 reshaped->size = (type->size / type->ref.stride) * config.stride;
                 reshaped->fill = config.fill;
                 NAPI_OK(napi_create_reference(env, defn, 1, &reshaped->defn));
             } break;
 
-            default: { reshaped = (TypeInfo *)type; } break;
+            default: { reshaped = (TypeInfo *)(config.f2d ? instance->double_type : type); } break;
         }
 
         type->reshaped = reshaped;

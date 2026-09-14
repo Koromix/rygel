@@ -67,6 +67,7 @@ int AnalyseFlat(const TypeInfo *type, FunctionRef<void(const TypeInfo *type, int
 struct ReshapeConfig {
     int stride = 0; // Mandatory
     int fill = 0;
+    bool f2d = false;
 };
 
 const TypeInfo *ReshapeAggregate(InstanceData *instance, const TypeInfo *type, const ReshapeConfig &config);

@@ -26,12 +26,14 @@ x86 (IA32) [^1]    | ✅      | ✅          | 🟨         | ⬜️    | ✅   
 ARM32 LE [^2]      | ⬜️      | ✅          | 🟨         | ⬜️    | 🟨      | 🟨      | 🟨
 RISC-V 64 [^3]     | ⬜️      | ✅          | 🟨         | ⬜️    | 🟨      | 🟨      | ⬜️
 LoongArch64        | ⬜️      | ✅          | 🟨         | ⬜️    | 🟨      | 🟨      | ⬜️
+PowerPC 64 LE [^4] | ⬜️      | ✅          | 🟨         | ⬜️    | 🟨      | 🟨      | ⬜️
 
 <div class="legend">✅ Yes | 🟨 Probably | ⬜️ Not applicable</div>
 
 [^1]: The following call conventions are supported for forward calls: cdecl, stdcall, MS fastcall, thiscall. Only cdecl and stdcall can be used for C to JS callbacks.
 [^2]: The prebuilt binary uses the hard float ABI and expects a VFP coprocessor. Build from source to use Koffi with a different ABI (softfp, soft).
 [^3]: The prebuilt binary uses the LP64D (double-precision float) ABI. The LP64 ABI is supported in theory if you build Koffi from source (untested), the LP64F ABI is not supported.
+[^4]: Only the ELFv2 Power64 Little Endian ABI is supported for now.
 
 For all fully supported platforms (green check marks), a prebuilt binary is included in the NPM package which means you can install Koffi without a C++ compiler.
 

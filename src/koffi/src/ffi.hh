@@ -62,7 +62,8 @@ enum class BufferConversion: int8_t {
     None,
     Swap16,
     Swap32,
-    Swap64
+    Swap64,
+    FloatToDouble
 };
 
 enum class ArrayHint: int8_t {
@@ -268,6 +269,7 @@ struct InstanceData {
     const TypeInfo *str_type;
     const TypeInfo *str16_type;
     const TypeInfo *str32_type;
+    const TypeInfo *double_type;
 
     Napi::ObjectReference object_constructor;
     Napi::FunctionReference construct_lib;

@@ -18,10 +18,12 @@ x86 (IA32) [^1]    | ✅ Yes   | ✅ Yes      | 🟨 Probably | ⬜️ *N/A* | �
 ARM32 LE [^2]      | ⬜️ *N/A* | ✅ Yes      | 🟨 Probably | ⬜️ *N/A* | 🟨 Probably | 🟨 Probably | 🟨 Probably
 RISC-V 64 [^3]     | ⬜️ *N/A* | ✅ Yes      | 🟨 Probably | ⬜️ *N/A* | 🟨 Probably | 🟨 Probably | ⬜️ *N/A*
 LoongArch64        | ⬜️ *N/A* | ✅ Yes      | 🟨 Probably | ⬜️ *N/A* | 🟨 Probably | 🟨 Probably | ⬜️ *N/A*
+PowerPC 64 LE [^4] | ⬜️ *N/A* | ✅ Yes      | 🟨 Probably | ⬜️ *N/A* | 🟨 Probably | 🟨 Probably | ⬜️ *N/A*
 
 [^1]: The following call conventions are supported: cdecl, stdcall, MS fastcall, thiscall.
 [^2]: The prebuilt binary uses the hard float ABI and expects a VFP coprocessor. Build from source to use Koffi with a different ABI (softfp, soft).
 [^3]: The prebuilt binary uses the LP64D (double-precision float) ABI. The LP64 ABI is supported in theory if you build Koffi from source but this is untested. The LP64F ABI is not supported.
+[^4]: Only the ELFv2 Power64 Little Endian ABI is supported for now.
 
 Go to the web site for more information: https://koffi.dev/
 

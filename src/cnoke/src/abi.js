@@ -39,6 +39,20 @@ function determineAbi() {
         } finally {
             file.close();
         }
+    } else if (abi == 'ppc64') {
+        let file = openFile(process.execPath, 'r');
+
+        try {
+            let header = readElfHeader(file);
+
+            switch (header.ei_data) {
+                case 1: { abi += 'le'; } break;
+                case 2: { abi += 'be'; } break;
+                default: throw new Error('Invalid ELF endianness value');
+            }
+        } finally {
+            file.close();
+        }
     }
 
     return abi;
@@ -93,6 +107,7 @@ function readElfHeader(file, offset = 0) {
 
             return {
                 ei_class: 32,
+                ei_data: buf[5],
 
                 e_machine: buf.readUInt16LE(18),
                 e_flags: buf.readUInt32LE(36),
@@ -109,6 +124,7 @@ function readElfHeader(file, offset = 0) {
 
             return {
                 ei_class: 64,
+                ei_data: buf[5],
 
                 e_machine: buf.readUInt16LE(18),
                 e_flags: buf.readUInt32LE(48),

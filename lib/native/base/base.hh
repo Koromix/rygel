@@ -206,6 +206,8 @@ void PrintAssertError(const char *filename, int line, const char *msg);
     #define K_DEBUG_BREAK() __asm__ __volatile__("ebreak")
 #elif defined(__loongarch64)
     #define K_DEBUG_BREAK() __asm__ __volatile__("break 1")
+#else
+    #define K_DEBUG_BREAK() __builtin_trap()
 #endif
 
 #if defined(_MSC_VER) || __EXCEPTIONS

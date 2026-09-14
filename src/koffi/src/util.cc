@@ -767,36 +767,51 @@ void DecodeBuffer(Span<uint8_t> buffer, const uint8_t *origin, const TypeInfo *t
     const TypeInfo *ref = type->ref.type;
     int32_t stride = type->ref.stride;
 
-    // Go fast if possible. Brrrrr!
-    if (stride == ref->size) {
-        MemCpy(buffer.ptr, origin, (size_t)buffer.len);
-    } else {
-        Size len = buffer.len / ref->size;
-
-        for (Size i = 0; i < len; i++) {
-            const uint8_t *src = origin + i * stride;
-            uint8_t *dest = buffer.ptr + i * ref->size;
-
-            memcpy(dest, src, ref->size);
-        }
-    }
-
 #define SWAP(CType) \
         do { \
-            CType *dest = (CType *)buffer.ptr; \
             Size len = buffer.len / K_SIZE(CType); \
              \
             for (Size i = 0; i < len; i++) { \
-                dest[i] = ReverseBytes(dest[i]); \
+                const CType *src = (const CType *)(origin + i * stride); \
+                CType *dest = (CType *)(buffer.ptr + i * K_SIZE(CType)); \
+                 \
+                *dest = ReverseBytes(*src); \
             } \
         } while (false)
 
     switch (type->ref.conversion) {
-        case BufferConversion::None: {} break;
+        case BufferConversion::None: {
+            if (stride == ref->size) {
+                // Go fast if possible. Brrrrr!
+                MemCpy(buffer.ptr, origin, (size_t)buffer.len);
+            } else {
+                Size len = buffer.len / ref->size;
+
+                for (Size i = 0; i < len; i++) {
+                    const uint8_t *src = origin + i * stride;
+                    uint8_t *dest = buffer.ptr + i * ref->size;
+
+                    memcpy(dest, src, ref->size);
+                }
+            }
+        } break;
 
         case BufferConversion::Swap16: { SWAP(uint16_t); } break;
         case BufferConversion::Swap32: { SWAP(uint32_t); } break;
         case BufferConversion::Swap64: { SWAP(uint64_t); } break;
+
+        case BufferConversion::FloatToDouble: {
+            K_ASSERT(stride == 8);
+
+            Size len = buffer.len / K_SIZE(double);
+
+            for (Size i = 0; i < len; i++) {
+                const uint8_t *src = origin + i * 8;
+                uint8_t *dest = buffer.ptr + i * 4;
+
+                *(float *)dest = *(double *)src;
+            }
+        } break;
     }
 
 #undef SWAP
