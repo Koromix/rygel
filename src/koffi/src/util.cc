@@ -771,13 +771,15 @@ void DecodeBuffer(Span<uint8_t> buffer, const uint8_t *origin, const TypeInfo *t
 
 #define SWAP(CType) \
         do { \
-            Size len = buffer.len / K_SIZE(CType); \
+            const uint8_t *src = origin; \
+            uint8_t *dest = buffer.ptr; \
+            uint8_t *end = buffer.end(); \
              \
-            for (Size i = 0; i < len; i++) { \
-                const CType *src = (const CType *)(origin + i * stride); \
-                CType *dest = (CType *)(buffer.ptr + i * K_SIZE(CType)); \
+            while (dest < end) { \
+                *(CType *)dest = ReverseBytes(*(CType *)src); \
                  \
-                *dest = ReverseBytes(*src); \
+                src += stride; \
+                dest += K_SIZE(CType); \
             } \
         } while (false)
 
@@ -787,13 +789,15 @@ void DecodeBuffer(Span<uint8_t> buffer, const uint8_t *origin, const TypeInfo *t
                 // Go fast if possible. Brrrrr!
                 MemCpy(buffer.ptr, origin, (size_t)buffer.len);
             } else {
-                Size len = buffer.len / ref->size;
+                const uint8_t *src = origin;
+                uint8_t *dest = buffer.ptr;
+                uint8_t *end = buffer.end();
 
-                for (Size i = 0; i < len; i++) {
-                    const uint8_t *src = origin + i * stride;
-                    uint8_t *dest = buffer.ptr + i * ref->size;
-
+                while (dest < end) {
                     memcpy(dest, src, ref->size);
+
+                    src += stride;
+                    dest += ref->size;
                 }
             }
         } break;
@@ -805,13 +809,15 @@ void DecodeBuffer(Span<uint8_t> buffer, const uint8_t *origin, const TypeInfo *t
         case BufferConversion::FloatToDouble: {
             K_ASSERT(stride == 8);
 
-            Size len = buffer.len / K_SIZE(double);
+            const uint8_t *src = origin;
+            uint8_t *dest = buffer.ptr;
+            uint8_t *end = buffer.end();
 
-            for (Size i = 0; i < len; i++) {
-                const uint8_t *src = origin + i * 8;
-                uint8_t *dest = buffer.ptr + i * 4;
-
+            while (dest < end) {
                 *(float *)dest = *(double *)src;
+
+                src += 8;
+                dest += 4;
             }
         } break;
     }

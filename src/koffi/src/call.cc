@@ -95,15 +95,16 @@ void CallData::Relay(Size idx, uint8_t *base)
     trampoline->state = RunRelay(this, trampoline, base, first);
 }
 
-static K_FORCE_INLINE void ConvertBuffer(BufferConversion conversion, void *ptr, Size size, Size stride)
+static K_FORCE_INLINE void ConvertBuffer(BufferConversion conversion, void *ptr, Size len, Size stride)
 {
 #define SWAP(CType) \
         do { \
-            Size len = size / stride; \
+            uint8_t *it = (uint8_t *)ptr; \
+            uint8_t *end = (uint8_t *)ptr + len; \
              \
-            for (Size i = 0; i < len; i++) { \
-                CType *it = (CType *)((uint8_t *)ptr + i * stride); \
-                *it = ReverseBytes(*it); \
+            while (it < end) { \
+                *(CType *)it = ReverseBytes(*(CType *)it); \
+                it += stride; \
             } \
         } while (false)
 
@@ -117,13 +118,13 @@ static K_FORCE_INLINE void ConvertBuffer(BufferConversion conversion, void *ptr,
         case BufferConversion::FloatToDouble: {
             K_ASSERT(stride == 8);
 
-            Size len = size / K_SIZE(float);
+            len /= K_SIZE(float);
 
             for (Size i = len - 1; i >= 0; i--) {
-                const uint8_t *src = (const uint8_t *)ptr + i * 4;
-                uint8_t *dest = (uint8_t *)ptr + i * 8;
+                const float *src = (const float *)ptr + i;
+                double *dest = (double *)ptr + i;
 
-                *(double *)dest = *(float *)src;
+                *dest = *src;
             }
         } break;
     }
