@@ -378,7 +378,7 @@ napi_value RunForward(CallData *call, uint8_t *base, void *native, const OpData 
     }
     FWD(RunBool) {
         uint64_t ret = WRAP(CallG(native, base, &call->saved_sp));
-        return Napi::Boolean::New(call->env, ret & 0x1);
+        return NewBool(call->env, ret & 0x1);
     }
     FWD(RunInt8) { INTEGER(G, int8_t); }
     FWD(RunUInt8) { INTEGER(G, uint8_t); }
@@ -478,7 +478,7 @@ napi_value RunForward(CallData *call, uint8_t *base, void *native, const OpData 
     }
     FWD(RunBoolX) {
         uint64_t ret = WRAP(CallGX(native, base, &call->saved_sp));
-        return Napi::Boolean::New(call->env, ret & 0x1);
+        return NewBool(call->env, ret & 0x1);
     }
     FWD(RunInt8X) { INTEGER(GX, int8_t); }
     FWD(RunUInt8X) { INTEGER(GX, uint8_t); }
@@ -639,7 +639,7 @@ napi_value RunForward(CallData *call, uint8_t *base, void *native, const OpData 
     FWD(ReturnVoid) { return nullptr; }
     FWD(ReturnBool) {
         uintptr_t ret = *(uintptr_t *)base;
-        return Napi::Boolean::New(call->env, ret & 0x1);
+        return NewBool(call->env, ret & 0x1);
     }
     FWD(ReturnInt8) { INTEGER(int8_t); }
     FWD(ReturnUInt8) { INTEGER(uint8_t); }
@@ -767,7 +767,7 @@ int RunRelay(CallData *call, TrampolineInfo *trampoline, uint8_t *base, const Op
     RELAY(PushVoid) { K_UNREACHABLE(); }
     RELAY(PushBool) {
         const uint8_t *src = base + op->i;
-        call->args[op->s1] = Napi::Boolean::New(trampoline->env, *(bool *)src);
+        call->args[op->s1] = NewBool(trampoline->env, *(bool *)src);
 
         NEXT();
     }

@@ -487,7 +487,7 @@ napi_value WrapType(InstanceData *instance, const TypeInfo *type, bool freeze)
         defn.Set("primitive", PrimitiveKindNames[(int)type->primitive]);
         defn.Set("size", NewInt(env, type->size));
         defn.Set("alignment", NewInt(env, type->align));
-        defn.Set("disposable", Napi::Boolean::New(env, !!type->dispose));
+        defn.Set("disposable", NewBool(env, !!type->dispose));
 
         // Assign before to avoid possible recursion crash
         NAPI_OK(napi_create_reference(env, defn, 1, &type->defn));

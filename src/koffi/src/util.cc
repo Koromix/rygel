@@ -299,7 +299,7 @@ static K_FORCE_INLINE void DecodeObject(InstanceData *instance, const uint8_t *o
 
             case PrimitiveKind::Bool: {
                 bool b = *(bool *)src;
-                set(i, member, Napi::Boolean::New(env, b));
+                set(i, member, NewBool(env, b));
             } break;
             case PrimitiveKind::Int8: {
                 int8_t v = *(int8_t *)src;
@@ -654,7 +654,7 @@ void DecodeElements(InstanceData *instance, napi_value array, const uint8_t *ori
         case PrimitiveKind::Bool: {
             POP_ARRAY({
                 bool b = *(bool *)src;
-                napi_set_element(env, array, i, Napi::Boolean::New(env, b));
+                napi_set_element(env, array, i, NewBool(env, b));
             });
         } break;
         case PrimitiveKind::Int8: { POP_INTEGERS(int8_t); } break;
@@ -842,7 +842,7 @@ napi_value Decode(InstanceData *instance, const uint8_t *ptr, const TypeInfo *ty
 
         case PrimitiveKind::Bool: {
             bool v = *(bool *)ptr;
-            return Napi::Boolean::New(env, v);
+            return NewBool(env, v);
         } break;
         case PrimitiveKind::Int8: { RETURN_INT(int8_t, NewInt); } break;
         case PrimitiveKind::UInt8: { RETURN_INT(uint8_t, NewInt); } break;
