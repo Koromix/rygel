@@ -5,6 +5,17 @@
 
 ## Alpha versions
 
+### Rekkord 0.106
+
+*Released on 2026-09-15*
+
+- Fix erroneous Object Retain headers when S3 object locks are disabled
+- Fix missing object retain for some late-checked blobs during `rekkord scan`
+- Fix stdout garbage when running `rekkord setup` for S3
+- Add commented-out SSH Fingerprint in `rekkord setup`
+- Adapt `rekkord init` environment help message for Windows
+- Change confusing `rekkord scan` status message
+
 ### Rekkord 0.105
 
 *Released on 2026-06-28*
