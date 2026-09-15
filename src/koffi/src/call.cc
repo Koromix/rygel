@@ -1389,15 +1389,15 @@ static TRANSLATE_FUNC K_FORCE_INLINE napi_value TranslateNormalCall(CallData *ca
 
 static TRANSLATE_FUNC napi_value TranslateNormalCall(napi_env env, napi_callback_info info)
 {
-    static_assert(MaxParameters >= 8);
+    static_assert(MaxParameters >= 6);
 
     CallData call(env);
-    size_t count = 8;
+    size_t count = 6;
     FunctionInfo *func;
 
     NAPI_OK(napi_get_cb_info(env, info, &count, call.args, nullptr, (void **)&func));
 
-    if (count > 8) {
+    if (count > 6) {
         NAPI_OK(napi_get_cb_info(env, info, &count, call.args, nullptr, nullptr));
         count = std::min(count, (size_t)MaxParameters);
     }
