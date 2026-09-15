@@ -26,10 +26,6 @@
 
 /* Handcrafted config file for building via Visual Studio IDE Project Files */
 
-#if !defined(_MSC_VER) || _MSC_VER > 1800
-#error This manual configuration requires MSVC 2010-2013 (IDE Project builds)
-#endif
-
 /*
  * Headers and functions
  */
