@@ -467,10 +467,10 @@ form {
         gap: 0.43em;
         align-items: start;
         height: 2em;
-        min-width: 400px;
+        min-width: 500px;
 
         & > span:first-child {
-            width: 180px;
+            width: 200px;
             flex: 1;
         }
     }
