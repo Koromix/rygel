@@ -90,7 +90,7 @@ class Builder {
     BuildSettings build;
     const char *log_directory;
     const char *cache_directory;
-    const char *aux_directory;
+    const char *gen_directory;
     const char *misc_directory;
     const char *cache_filename;
 

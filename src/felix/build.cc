@@ -53,14 +53,14 @@ Builder::Builder(const BuildSettings &build)
     log_directory = Fmt(&str_alloc, "%1%/Log", build.output_directory).ptr;
     cache_directory = Fmt(&str_alloc, "%1%/%2_%3@%4", build.output_directory, build.compiler->name, platform, architecture).ptr;
     cache_filename = Fmt(&str_alloc, "%1%/commands.txt", log_directory).ptr;
-    aux_directory = Fmt(&str_alloc, "%1%/Aux", cache_directory).ptr;
+    gen_directory = Fmt(&str_alloc, "%1%/Generated", cache_directory).ptr;
     misc_directory = Fmt(&str_alloc, "%1%/Misc", build.output_directory).ptr;
 
     if (!build.fake) {
         MakeDirectoryRec(build.output_directory);
         MakeDirectory(log_directory, false);
         MakeDirectory(cache_directory, false);
-        MakeDirectory(aux_directory, false);
+        MakeDirectory(gen_directory, false);
         MakeDirectory(misc_directory, false);
     }
 
@@ -216,7 +216,7 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
 
     // Translations
     if (target.translations.len) {
-        const char *src_filename = Fmt(&str_alloc, "%1%/%2_i18n.c", aux_directory, target.name).ptr;
+        const char *src_filename = Fmt(&str_alloc, "%1%/%2_i18n.c", gen_directory, target.name).ptr;
         const char *obj_filename = Fmt(&str_alloc, "%1%2", src_filename, build.compiler->GetObjectExtension()).ptr;
 
         uint32_t features = target.CombineFeatures(build.features);
@@ -253,7 +253,7 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
 
     // Assets
     if (embed_filenames.len) {
-        const char *src_filename = Fmt(&str_alloc, "%1%/%2_embed.c", aux_directory, target.name).ptr;
+        const char *src_filename = Fmt(&str_alloc, "%1%/%2_embed.c", gen_directory, target.name).ptr;
         const char *obj_filename = Fmt(&str_alloc, "%1%2", src_filename, build.compiler->GetObjectExtension()).ptr;
 
         uint32_t features = target.CombineFeatures(build.features);
@@ -322,7 +322,7 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
 
     // Version string
     if (target.type == TargetType::Executable) {
-        const char *src_filename = Fmt(&str_alloc, "%1%/%2_version.c", aux_directory, target.name).ptr;
+        const char *src_filename = Fmt(&str_alloc, "%1%/%2_version.c", gen_directory, target.name).ptr;
         const char *obj_filename = Fmt(&str_alloc, "%1%2", src_filename, build.compiler->GetObjectExtension()).ptr;
 
         uint32_t features = target.CombineFeatures(build.features);
@@ -877,7 +877,7 @@ bool Builder::Build(int jobs, bool verbose)
                 // that response files will be generated for anything other than link commands,
                 // so the risk is very low.
                 const char *target_basename = SplitStrReverseAny(node.dest_filename, K_PATH_SEPARATORS).ptr;
-                const char *rsp_filename = Fmt(&str_alloc, "%1%/%2.rsp", aux_directory, target_basename).ptr;
+                const char *rsp_filename = Fmt(&str_alloc, "%1%/%2.rsp", gen_directory, target_basename).ptr;
 
                 Span<const char> rsp = cmd.cmd_line.Take(cmd.rsp_offset + 1,
                                                          cmd.cmd_line.len - cmd.rsp_offset - 1);
