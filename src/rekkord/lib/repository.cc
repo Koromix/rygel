@@ -580,7 +580,7 @@ rk_WriteResult rk_Repository::WriteBlob(const rk_ObjectID &oid, int type, Span<c
     rk_WriteSettings settings = {};
 
     settings.conditional = HasConditionalWrites();
-    settings.retain = true;
+    settings.retain = CanRetain();
     settings.checksum = disk->GetChecksumType();
 
     switch (settings.checksum) {
@@ -804,7 +804,7 @@ bool rk_Repository::WriteTag(const rk_ObjectID &oid, Span<const uint8_t> payload
 
     // Create tag files
     for (const char *path: paths) {
-        rk_WriteSettings settings = { .retain = true };
+        rk_WriteSettings settings = { .retain = CanRetain() };
         rk_WriteResult ret = disk->WriteFile(path, {}, settings);
 
         if (ret != rk_WriteResult::Success)
@@ -816,7 +816,7 @@ bool rk_Repository::WriteTag(const rk_ObjectID &oid, Span<const uint8_t> payload
         char path[256];
         Fmt(path, "keys/%1", FmtHex(keyset->kid));
 
-        rk_WriteSettings settings = { .conditional = HasConditionalWrites(), .retain = true };
+        rk_WriteSettings settings = { .conditional = HasConditionalWrites(), .retain = CanRetain() };
         rk_WriteResult ret = disk->WriteFile(path, keyset->badge, settings);
 
         switch (ret) {

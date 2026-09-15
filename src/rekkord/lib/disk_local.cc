@@ -185,7 +185,7 @@ bool LocalDisk::DeleteFile(const char *path)
 
 bool LocalDisk::RetainFile(const char *)
 {
-    LogError("Cannot retain files with local backend");
+    K_UNREACHABLE();
     return false;
 }
 

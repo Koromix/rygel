@@ -479,7 +479,7 @@ bool SftpDisk::DeleteFile(const char *path)
 
 bool SftpDisk::RetainFile(const char *)
 {
-    LogError("Cannot retain files with SFTP backend");
+    K_UNREACHABLE();
     return false;
 }
 

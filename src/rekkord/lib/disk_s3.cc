@@ -103,6 +103,8 @@ rk_WriteResult S3Disk::WriteFile(const char *path, Span<const uint8_t> buf, cons
     put.storage = StartsWith(path, "blobs/R/") ? data_storage : meta_storage;
 
     if (settings.retain) {
+        K_ASSERT(retain_duration);
+
         put.retain_until = GetUnixTime() + retain_duration;
         put.retain_mode = retain_mode;
     }
@@ -150,8 +152,7 @@ bool S3Disk::DeleteFile(const char *path)
 
 bool S3Disk::RetainFile(const char *path)
 {
-    if (!retain_duration)
-        return true;
+    K_ASSERT(retain_duration);
 
     int64_t until = GetUnixTime() + retain_duration;
     return s3.RetainObject(path, until, retain_mode);
