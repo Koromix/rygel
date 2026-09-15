@@ -24,7 +24,7 @@ main.dialog {
 
 @media screen and (max-width: 960px) {
     main {
-        padding: 0;
+        padding: 0 0 16px 0;
         & > .tabbar { padding: 0 16px; }
     }
 
@@ -33,8 +33,8 @@ main.dialog {
 
 #language {
     position: absolute;
-    right: 1em;
-    font-size: 0.8em;
+    left: 1em;
+    font-size: 0.9em;
 }
 
 .columns {
@@ -89,13 +89,13 @@ main.dialog {
         padding: 0;
         background: none !important;
         color: var(--anchor_color) !important;
-        font-size: 0.9em;
+        font-size: 0.8em;
         text-decoration: underline;
         flex-basis: 100%;
     }
 
-    & > button + a { margin-top: 0.5em; }
-    & > a + a { margin-top: -0.5em; }
+    & > button + a { margin-top: 0.6em; }
+    & > a + a { margin-top: -0.25em; }
 }
 .actions.horizontal {
     flex-direction: row;
@@ -105,7 +105,7 @@ main.dialog {
 * + .actions { margin-top: 1.5em; }
 
 button {
-    font-size: 0.92em;
+    font-size: 0.9em;
     font-weight: normal !important;
     color: var(--color) !important;
     --color: white;
@@ -198,6 +198,11 @@ table tbody tr:hover > td {
     background: var(--bar_color);
     color: white;
     --color: white;
+}
+
+@media screen and (max-width: 960px) {
+    button { font-size: 1em; }
+    .actions > a { font-size: 0.9em; }
 }
 
 #log {
