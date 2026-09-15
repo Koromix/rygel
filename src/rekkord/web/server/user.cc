@@ -200,7 +200,7 @@ static bool HashPassword(Span<const char> password, char out_hash[PasswordHashBy
 }
 
 static RetainPtr<SessionInfo> CreateUserSession(int64_t userid, bool authorize,
-                                                const char *username, const char *ckey, int picture)
+                                                const char *username, int picture)
 {
     Size username_bytes = strlen(username) + 1;
     Size session_bytes = K_SIZE(SessionInfo) + username_bytes;
@@ -217,7 +217,6 @@ static RetainPtr<SessionInfo> CreateUserSession(int64_t userid, bool authorize,
     session->userid = userid;
     session->authorized = authorize;
 
-    CopyString(ckey, session->ckey);
     CopyString(username, MakeSpan((char *)session->username, username_bytes));
     session->picture = picture;
 
@@ -392,8 +391,6 @@ static void ExportSession(const SessionInfo *session, json_Writer *json)
             json->Key("authorized"); json->Bool(false);
         }
 
-        json->Key("ckey"); json->String(session->ckey);
-
         json->EndObject();
     } else {
         json->Null();
@@ -475,8 +472,8 @@ void HandleUserRegister(http_IO *io)
         int64_t now = GetUnixTime();
 
         sq_Statement stmt;
-        if (!db.Prepare(R"(INSERT INTO users (mail, username, creation, confirmed, version, ckey)
-                           VALUES (?1, ?2, ?3, 0, 1, rnd_safe(32))
+        if (!db.Prepare(R"(INSERT INTO users (mail, username, creation, confirmed, version)
+                           VALUES (?1, ?2, ?3, 0, 1)
                            ON CONFLICT DO UPDATE SET confirmed = confirmed
                            RETURNING id, confirmed)",
                         &stmt, mail, mail, GetUnixTime()))
@@ -565,7 +562,7 @@ void HandleUserLogin(http_IO *io)
     int64_t start = GetMonotonicClock();
 
     sq_Statement stmt;
-    if (!db.Prepare(R"(SELECT id, password_hash, username, totp, base64(ckey), version
+    if (!db.Prepare(R"(SELECT id, password_hash, username, totp, version
                        FROM users
                        WHERE mail = ?1 AND confirmed = 1)", &stmt, mail))
         return;
@@ -577,11 +574,10 @@ void HandleUserLogin(http_IO *io)
         const char *password_hash = (const char *)sqlite3_column_text(stmt, 1);
         const char *username = (const char *)sqlite3_column_text(stmt, 2);
         bool authorize = (sqlite3_column_type(stmt, 3) == SQLITE_NULL);
-        const char *ckey = (const char *)sqlite3_column_text(stmt, 4);
-        int picture = sqlite3_column_int(stmt, 5);
+        int picture = sqlite3_column_int(stmt, 4);
 
         if (password_hash && crypto_pwhash_str_verify(password_hash, password, strlen(password)) == 0) {
-            RetainPtr<SessionInfo> session = CreateUserSession(userid, authorize, username, ckey, picture);
+            RetainPtr<SessionInfo> session = CreateUserSession(userid, authorize, username, picture);
             sessions.Open(io, session);
 
             http_SendJson(io, 200, [&](json_Writer *json) {
@@ -1146,7 +1142,7 @@ void HandleSsoOidc(http_IO *io)
     // Find matching identity and user account
     {
         sq_Statement stmt;
-        if (!db.Prepare(R"(SELECT u.id, u.username, base64(u.ckey), u.version
+        if (!db.Prepare(R"(SELECT u.id, u.username, u.version
                            FROM identities i
                            INNER JOIN users u ON (u.id = i.user)
                            WHERE i.issuer = ?1 AND i.sub = ?2 AND
@@ -1157,10 +1153,9 @@ void HandleSsoOidc(http_IO *io)
         if (stmt.Step()) {
             int64_t userid = sqlite3_column_int64(stmt, 0);
             const char *username = (const char *)sqlite3_column_text(stmt, 1);
-            const char *ckey = (const char *)sqlite3_column_text(stmt, 2);
-            int picture = sqlite3_column_int(stmt, 3);
+            int picture = sqlite3_column_int(stmt, 2);
 
-            session = CreateUserSession(userid, true, username, ckey, picture);
+            session = CreateUserSession(userid, true, username, picture);
         }
         if (!stmt.IsValid())
             return;
@@ -1175,7 +1170,6 @@ void HandleSsoOidc(http_IO *io)
         uint8_t token[16];
         bool created = false;
         bool allowed = false;
-        const char *ckey = nullptr;
 
         // Always create it to reduce timing discloure
         FillRandomSafe(token, K_SIZE(token));
@@ -1183,10 +1177,10 @@ void HandleSsoOidc(http_IO *io)
         bool success = db.Transaction([&]() {
             {
                 sq_Statement stmt;
-                if (!db.Prepare(R"(INSERT INTO users (mail, username, creation, confirmed, version, ckey)
-                                   VALUES (?1, ?2, ?3, ?4, 1, rnd_safe(32))
+                if (!db.Prepare(R"(INSERT INTO users (mail, username, creation, confirmed, version)
+                                   VALUES (?1, ?2, ?3, ?4, 1)
                                    ON CONFLICT DO UPDATE SET confirmed = confirmed
-                                   RETURNING id, creation, base64(ckey))",
+                                   RETURNING id, creation)",
                                 &stmt, identity.email, identity.email, now, 0 + verified))
                     return false;
 
@@ -1197,7 +1191,6 @@ void HandleSsoOidc(http_IO *io)
 
                 userid = sqlite3_column_int64(stmt, 0);
                 created = (sqlite3_column_int64(stmt, 1) == now);
-                ckey = DuplicateString((const char *)sqlite3_column_text(stmt, 2), io->Allocator()).ptr;
 
                 if (verified && created) {
                     // Automatically allow the provider that resulted in user creation if address mail is verified
@@ -1244,7 +1237,7 @@ void HandleSsoOidc(http_IO *io)
             return;
 
         if (allowed) {
-            session = CreateUserSession(userid, true, identity.email, ckey, 1);
+            session = CreateUserSession(userid, true, identity.email, 1);
         } else {
             if (!SendLinkIdentityMail(identity.email, oidc->provider, token, io->Allocator()))
                 return;

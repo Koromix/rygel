@@ -15,8 +15,6 @@ struct SessionInfo: public RetainObject<SessionInfo> {
     int64_t userid;
     std::atomic_bool authorized;
 
-    char ckey[64];
-
     std::atomic_int picture;
     char username[];
 };
