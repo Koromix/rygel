@@ -938,12 +938,11 @@ bool CallData::PushPointer(napi_value value, const TypeInfo *type, int direction
 
     void *ptr = nullptr;
     Size len = 0;
-    napi_valuetype kind = napi_undefined;
 
 restart:
 
-    if (TryPointer(env, value, &ptr, &len, &kind)) {
-        if (type->ref.conversion != BufferConversion::None && kind == napi_object) [[unlikely]] {
+    if (TryPointer(env, value, &ptr, &len)) {
+        if (type->ref.conversion != BufferConversion::None && len >= 0) [[unlikely]] {
             if (directions & 2) {
                 if (directions & 1) {
                     ConvertBuffer(type->ref.conversion, ptr, len, type->ref.stride);
@@ -968,6 +967,9 @@ restart:
         *out_ptr = ptr;
         return true;
     }
+
+    // When TryPointer fails, it stuffs the napi_valuetype (kind) in out_len to help
+    napi_valuetype kind = (napi_valuetype)len;
 
     if (kind == napi_external && CheckValueTag(env, value, &CastMarker)) {
         Napi::External<ValueCast> external = Napi::External<ValueCast>(env, value);
@@ -1129,14 +1131,16 @@ bool CallData::PushCallback(napi_value value, const TypeInfo *type, void **out_p
 {
     void *ptr = nullptr;
     Size len = 0;
-    napi_valuetype kind = napi_undefined;
 
 restart:
 
-    if (TryPointer(env, value, &ptr, &len, &kind)) {
+    if (TryPointer(env, value, &ptr, &len)) {
         *out_ptr = ptr;
         return true;
     }
+
+    // When TryPointer fails, it stuffs the napi_valuetype (kind) in out_len to help
+    napi_valuetype kind = (napi_valuetype)len;
 
     if (kind == napi_function) {
         Napi::Function func = Napi::Function(env, value);

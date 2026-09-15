@@ -203,7 +203,7 @@ static K_FORCE_INLINE bool TryPointer(napi_env env, napi_value value, void **out
     return false;
 }
 
-static K_FORCE_INLINE bool TryPointer(napi_env env, napi_value value, void **out_ptr, Size *out_len, napi_valuetype *out_kind)
+static K_FORCE_INLINE bool TryPointer(napi_env env, napi_value value, void **out_ptr, Size *out_len)
 {
     // Fast path for BigInt
     {
@@ -214,7 +214,6 @@ static K_FORCE_INLINE bool TryPointer(napi_env env, napi_value value, void **out
         if (status == napi_ok) {
             *out_ptr = (void *)(uintptr_t)u64;
             *out_len = -1;
-            *out_kind = napi_bigint;
 
             return true;
         }
@@ -222,8 +221,6 @@ static K_FORCE_INLINE bool TryPointer(napi_env env, napi_value value, void **out
 
     if (size_t len = 0; node_api_get_buffer_info(env, value, out_ptr, &len) == napi_ok) {
         *out_len = (Size)len;
-        *out_kind = napi_object;
-
         return true;
     }
 
@@ -232,7 +229,6 @@ static K_FORCE_INLINE bool TryPointer(napi_env env, napi_value value, void **out
     if (IsNullOrUndefined(kind)) {
         *out_ptr = nullptr;
         *out_len = -1;
-        *out_kind = kind;
 
         return true;
     } else if (kind == napi_number) {
@@ -242,19 +238,16 @@ static K_FORCE_INLINE bool TryPointer(napi_env env, napi_value value, void **out
 
         *out_ptr = (void *)(uintptr_t)i;
         *out_len = -1;
-        *out_kind = napi_number;
 
         return true;
     }
 
     if (size_t len = 0; napi_get_arraybuffer_info(env, value, out_ptr, &len) == napi_ok) {
         *out_len = (Size)len;
-        *out_kind = napi_object;
-
         return true;
     }
 
-    *out_kind = kind;
+    *out_len = (Size)kind;
     return false;
 }
 
