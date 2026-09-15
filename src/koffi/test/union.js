@@ -20,6 +20,10 @@ const SingleU = koffi.union(null, {
     f: 'float'
 });
 
+const DoubleU = koffi.union('DoubleU', {
+    f: 'float[2]'
+});
+
 const DualU = koffi.union('DualU', {
     d: 'double',
     u: 'uint64_t'
@@ -36,6 +40,10 @@ const MultiU = koffi.union('MultiU', {
         c: 'char',
         d: 'int'
     })
+});
+
+const InsideU = koffi.struct('InsideU', {
+    u: DoubleU
 });
 
 main();
@@ -62,6 +70,8 @@ async function test() {
     const MakeMultiUIndirect = lib.func('void MakeMultiUIndirect(float a, float b, _Out_ MultiU *out)');
     const GetMultiDouble = lib.func('float GetMultiDouble(MultiU u)');
     const GetMultiUnsigned = lib.func('float GetMultiUnsigned(MultiU u)');
+    const MakeInsideU = lib.func('MakeInsideU', InsideU, ['float', 'float']);
+    const ExtractAndMultU = lib.func('ExtractAndMultU', DoubleU, ['InsideU', 'float']);
 
     // Make direct single union
     {
@@ -139,5 +149,14 @@ async function test() {
             u[member] = value;
             return u;
         }
+    }
+
+    // Make sure HFA rules are respected with inner unions
+    {
+        let a = MakeInsideU(42.0, 24.0);
+        let b = ExtractAndMultU(a, 2);
+
+        assert.deepEqual(a.u.f, new Float32Array([42.0, 24.0]));
+        assert.deepEqual(b.f, new Float32Array([2 * 42.0, 2 * 24.0]));
     }
 }

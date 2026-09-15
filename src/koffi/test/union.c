@@ -26,6 +26,10 @@ typedef union SingleU {
     float f;
 } SingleU;
 
+typedef union DoubleU {
+    float f[2];
+} DoubleU;
+
 typedef union DualU {
     double d;
     uint64_t u;
@@ -43,6 +47,10 @@ typedef union MultiU {
         int d;
     } st;
 } MultiU;
+
+typedef struct InsideU {
+    DoubleU u;
+} InsideU;
 
 EXPORT SingleU MakeSingleU(float f)
 {
@@ -90,3 +98,23 @@ EXPORT void MakeMultiUIndirect(float a, float b, MultiU *out)
 
 EXPORT float GetMultiDouble(MultiU u) { return u.d; }
 EXPORT float GetMultiUnsigned(MultiU u) { return u.u; }
+
+EXPORT InsideU MakeInsideU(float f, float g)
+{
+    InsideU iu;
+
+    iu.u.f[0] = f;
+    iu.u.f[1] = g;
+
+    return iu;
+}
+
+EXPORT DoubleU ExtractAndMultU(InsideU iu, float mult)
+{
+    DoubleU u = iu.u;
+
+    u.f[0] *= mult;
+    u.f[1] *= mult;
+
+    return u;
+}
