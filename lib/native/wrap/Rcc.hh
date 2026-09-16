@@ -43,23 +43,32 @@ public:
     rcc_AutoSexp(const rcc_AutoSexp &other) : xp(other.xp ? PROTECT(other.xp) : nullptr) {}
     rcc_AutoSexp &operator=(const rcc_AutoSexp &other)
     {
+        if (&other == this) [[unlikely]]
+           return *this;
+
         if (xp) {
             UNPROTECT_PTR(xp);
         }
         xp = other.xp ? PROTECT(other.xp) : nullptr;
+
+        return *this;
+    }
+
+    rcc_AutoSexp &operator=(SEXP new_xp)
+    {
+        if (new_xp == xp) [[unlikely]]
+            return *this;
+
+        if (xp) {
+            UNPROTECT_PTR(xp);
+        }
+        xp = PROTECT(new_xp);
+
         return *this;
     }
 
     operator bool() const { return xp; }
     operator SEXP() const { return xp; }
-    rcc_AutoSexp &operator=(SEXP new_xp)
-    {
-        if (xp) {
-            UNPROTECT_PTR(xp);
-        }
-        xp = PROTECT(new_xp);
-        return *this;
-    }
 };
 
 template <typename T>

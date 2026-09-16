@@ -60,6 +60,9 @@ static bool ExtendConnection(sqlite3 *db)
 
 sq_Statement &sq_Statement::operator=(sq_Statement &&other)
 {
+    if (&other == this) [[unlikely]]
+        return *this;
+
     Finalize();
 
     db = other.db;

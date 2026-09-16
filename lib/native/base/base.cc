@@ -204,6 +204,9 @@ void MallocAllocator::Release(const void *ptr, Size)
 
 LinkedAllocator& LinkedAllocator::operator=(LinkedAllocator &&other)
 {
+    if (&other == this) [[unlikely]]
+        return *this;
+
     ReleaseAll();
 
     allocator = other.allocator;
@@ -353,6 +356,9 @@ LinkedAllocator::Bucket *LinkedAllocator::PointerToBucket(void *ptr)
 
 BlockAllocator& BlockAllocator::operator=(BlockAllocator &&other)
 {
+    if (&other == this) [[unlikely]]
+        return *this;
+
     allocator.operator=(std::move(other.allocator));
 
     block_size = other.block_size;

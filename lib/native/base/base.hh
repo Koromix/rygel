@@ -1323,6 +1323,9 @@ public:
     HeapChain(HeapChain &&other) { *this = std::move(other); }
     HeapChain& operator=(HeapChain &&other)
     {
+        if (&other == this) [[unlikely]]
+            return *this;
+
         ReleaseAll();
 
         list = other.list;
@@ -1421,6 +1424,9 @@ public:
     }
     RetainPtr &operator=(const RetainPtr &other)
     {
+        if (&other == this) [[unlikely]]
+            return *this;
+
         if (p && !p->Unref()) {
             p->delete_func((std::remove_const_t<T> *)p);
         }
@@ -2222,6 +2228,9 @@ public:
     HeapArray(HeapArray &&other) { *this = std::move(other); }
     HeapArray &operator=(HeapArray &&other)
     {
+        if (&other == this) [[unlikely]]
+            return *this;
+
         Clear();
         MemMove(this, &other, K_SIZE(other));
         MemSet(&other, 0, K_SIZE(other));
@@ -2230,6 +2239,9 @@ public:
     HeapArray(const HeapArray &other) { *this = other; }
     HeapArray &operator=(const HeapArray &other)
     {
+        if (&other == this) [[unlikely]]
+            return *this;
+
         RemoveFrom(0);
         Grow(other.capacity);
         if constexpr(!std::is_trivial<T>::value) {
@@ -2546,6 +2558,9 @@ public:
     BucketList(BucketList &&other) { *this = std::move(other); }
     BucketList &operator=(BucketList &&other)
     {
+        if (&other == this) [[unlikely]]
+            return *this;
+
         ClearBucketsAndValues();
         MemMove(this, &other, K_SIZE(other));
         MemSet(&other, 0, K_SIZE(other));
@@ -2844,6 +2859,9 @@ public:
     HashTable(HashTable &&other) { *this = std::move(other); }
     HashTable &operator=(HashTable &&other)
     {
+        if (&other == this) [[unlikely]]
+            return *this;
+
         Clear();
         MemMove(this, &other, K_SIZE(other));
         MemSet(&other, 0, K_SIZE(other));
@@ -2852,6 +2870,9 @@ public:
     HashTable(const HashTable &other) { *this = other; }
     HashTable &operator=(const HashTable &other)
     {
+        if (&other == this) [[unlikely]]
+            return *this;
+
         Clear();
         for (const ValueType &value: other) {
             Set(value);
