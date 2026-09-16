@@ -45,7 +45,7 @@ Run felix anywhere inside the repository to build all projects:
 Build presets are provided and configured in `FelixBuild.ini.presets`. This repository configures several presets such as:
 
 - *Debug* (default)
-- *ASan / TSan / UBSan / AUBSan*: debug builds with one or more sanitizers
+- *ASan / TSan / UBSan*: debug builds with one or more sanitizers
 - *Fast*
 - *LTO*
 - *Paranoid*: LTO builds with various additional mitigations: Hardened, CFI, SafeStack, etc.

@@ -20,11 +20,7 @@ Features = +TSan
 
 [UBSan]
 Template = Debug
-Features = +UBSan
-
-[AUBSan]
-Template = Debug
-Features = +ASan +UBSan
+Features = +Optimize, +UBSan
 
 [Fast]
 Features = ?PCH, ?Ccache, Warnings, DebugInfo, Optimize
