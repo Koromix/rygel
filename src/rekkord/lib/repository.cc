@@ -867,9 +867,9 @@ bool rk_Repository::ListTags(Allocator *alloc, HeapArray<rk_TagInfo> *out_tags)
         if (main.len <= 33 && main[32] != '/')
             continue;
 
-        for (Size i = 0; i < 32; i += 2) {
-            int high = ParseHexadecimalChar(main[i]);
-            int low = ParseHexadecimalChar(main[i + 1]);
+        for (Size i = 0, j = 0; i < 16; i++, j += 2) {
+            int high = ParseHexadecimalChar(main[j]);
+            int low = ParseHexadecimalChar(main[j + 1]);
 
             if (high < 0 || low < 0)
                 return false;
