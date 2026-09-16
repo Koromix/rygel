@@ -711,6 +711,8 @@ public:
             }
 
             if (clang_ver >= 160000) {
+                Fmt(&buf, " -fzero-call-used-regs=used-gpr");
+
                 if (architecture == HostArchitecture::x86_64) {
                     Fmt(&buf, " -fcf-protection=full");
                 } else if (architecture == HostArchitecture::ARM64) {
@@ -1376,7 +1378,7 @@ public:
             Fmt(&buf, " -fstack-clash-protection");
         }
         if (features & (int)CompileFeature::Hardened) {
-            Fmt(&buf, " -ftrivial-auto-var-init=zero");
+            Fmt(&buf, " -ftrivial-auto-var-init=zero -fzero-call-used-regs=used-gpr");
 
             if (architecture == HostArchitecture::x86_64) {
                 Fmt(&buf, " -fcf-protection=full");
