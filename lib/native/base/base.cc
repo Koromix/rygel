@@ -328,6 +328,8 @@ void LinkedAllocator::Release(const void *ptr, [[maybe_unused]] Size size)
 
 void LinkedAllocator::GiveTo(LinkedAllocator *alloc)
 {
+    K_ASSERT(alloc->allocator == allocator);
+
     Bucket *other = alloc->list;
 
     if (other && list) {
@@ -397,7 +399,8 @@ void *BlockAllocator::Allocate(Size size)
     uint8_t *ptr = bucket_ptr;
 
     // Fast path
-    if (uint8_t *new_ptr = AlignUp(ptr + size, 8); new_ptr <= bucket_end) [[likely]] {
+    // The ugly casts are necessary to avoid null pointer arithmethic UB
+    if (uint8_t *new_ptr = AlignUp((uint8_t *)((uintptr_t)ptr + size), 8); new_ptr <= bucket_end) [[likely]] {
         bucket_ptr = new_ptr;
 
         last_alloc = ptr;
@@ -431,7 +434,8 @@ void *BlockAllocator::Resize(void *ptr, Size old_size, Size new_size)
     }
 
     // Fast path
-    if (uint8_t *new_ptr = AlignUp((uint8_t *)ptr + new_size, 8); ptr == last_alloc && new_ptr <= bucket_end) {
+    // The ugly casts are necessary to avoid null pointer arithmethic UB
+    if (uint8_t *new_ptr = AlignUp((uint8_t *)((uintptr_t)ptr + new_size), 8); ptr == last_alloc && new_ptr <= bucket_end) {
         K_ASSERT(ptr);
 
         bucket_ptr = new_ptr;
