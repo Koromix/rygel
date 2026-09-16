@@ -945,7 +945,12 @@ bool CallData::PushPointer(napi_value value, const TypeInfo *type, int direction
 restart:
 
     if (TryPointer(env, value, &ptr, &len)) {
-        if (type->ref.conversion != BufferConversion::None && len >= 0) [[unlikely]] {
+        if (type->ref.conversion == BufferConversion::None) [[likely]] {
+            *out_ptr = ptr;
+            return true;
+        }
+
+        if (len >= 0) {
             if (directions & 2) {
                 if (directions & 1) {
                     ConvertBuffer(type->ref.conversion, ptr, len, type->ref.stride);
