@@ -334,8 +334,10 @@ Size CallData::PushStringValue(napi_value value, const char **out_str)
     char *ptr = (char *)heap.ptr;
 
     // Fast path for small strings
-    if (available >= 4096) [[likely]] {
-        napi_status status = napi_get_value_string_utf8(env, value, ptr, 4096, &len);
+    {
+        size_t small = std::min(available, (size_t)4096);
+
+        napi_status status = napi_get_value_string_utf8(env, value, ptr, small, &len);
         if (status == napi_string_expected)
             return -1;
         K_ASSERT(status == napi_ok);
@@ -344,9 +346,10 @@ Size CallData::PushStringValue(napi_value value, const char **out_str)
 
         // UTF-8 can take up to 4 bytes for a codepoint, so truncation may
         // result in a value that is several bytes less than the buffer size.
-        // So len < 4096 - 4 should be enough, but exagerate a bit "just in case" :)
+        // So len < len - 4 should be enough, but exagerate a bit "just in case" :)
+        // Avoid substraction because we're using size_t (unsigned).
 
-        if ((Size)len < 4096 - 8) {
+        if (len + 8 < small) {
             heap.ptr += (Size)AlignLen(len, 16);
 
             *out_str = ptr;
