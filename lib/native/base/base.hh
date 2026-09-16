@@ -4311,8 +4311,6 @@ public:
     template<typename... Args>
     void SetFmt(const char *fmt, Args... args) { SetFmt(1ll, 0ll, fmt, args...); }
 
-    template<typename... Args>
-
     void operator()(int64_t value, int64_t min, int64_t max) { Set(value, min, max); }
     void operator()(int64_t value, int64_t max) { Set(value, 0, max); }
     void operator()() { Set(0, 0); }
