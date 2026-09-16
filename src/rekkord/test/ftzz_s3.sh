@@ -3,10 +3,10 @@
 cd "$(dirname $0)"
 
 ../../../bootstrap.sh
-../../../felix -pFast rekkord
+../../../felix -pUBSan rekkord
 
 mkdir -p /tmp/rekkord/ftzz_s3
-install ../../../bin/Fast/rekkord /tmp/rekkord/ftzz_s3/rekkord
+install ../../../bin/UBSan/rekkord /tmp/rekkord/ftzz_s3/rekkord
 cd /tmp/rekkord/ftzz_s3
 
 curl -L -o linux.tar.xz https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.17.8.tar.xz

@@ -3,10 +3,10 @@
 cd "$(dirname $0)"
 
 ../../../bootstrap.sh
-../../../felix -pFast rekkord
+../../../felix -pUBSan rekkord
 
 mkdir -p /tmp/rekkord/ftzz_local
-install ../../../bin/Fast/rekkord /tmp/rekkord/ftzz_local/rekkord
+install ../../../bin/UBSan/rekkord /tmp/rekkord/ftzz_local/rekkord
 cd /tmp/rekkord/ftzz_local
 
 rm -f linux.tar.xz

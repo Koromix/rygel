@@ -5,10 +5,10 @@ cd "$(dirname $0)"
 ROOT=$(realpath "$PWD/../../..")
 
 $ROOT/bootstrap.sh
-$ROOT/felix -pFast rekkord
+$ROOT/felix -pUBSan rekkord
 
 mkdir -p /tmp/rekkord/repo_local
-install $ROOT/bin/Fast/rekkord /tmp/rekkord/repo_local/rekkord
+install $ROOT/bin/UBSan/rekkord /tmp/rekkord/repo_local/rekkord
 cd /tmp/rekkord/repo_local
 
 echo "[Repository]

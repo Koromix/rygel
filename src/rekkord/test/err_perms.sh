@@ -3,10 +3,10 @@
 cd "$(dirname $0)"
 
 ../../../bootstrap.sh
-../../../felix -pFast rekkord
+../../../felix -pUBSan rekkord
 
 mkdir -p /tmp/rekkord/error_perm
-install ../../../bin/Fast/rekkord /tmp/rekkord/error_perm/rekkord
+install ../../../bin/UBSan/rekkord /tmp/rekkord/error_perm/rekkord
 cd /tmp/rekkord/error_perm
 
 echo "[Repository]

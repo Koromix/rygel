@@ -5,10 +5,10 @@ cd "$(dirname $0)"
 ROOT=$(realpath "$PWD/../../..")
 
 $ROOT/bootstrap.sh
-$ROOT/felix -pFast rekkord
+$ROOT/felix -pUBSan rekkord
 
 mkdir -p /tmp/rekkord/repo_s3nock
-install $ROOT/bin/Fast/rekkord /tmp/rekkord/repo_s3nock/rekkord
+install $ROOT/bin/UBSan/rekkord /tmp/rekkord/repo_s3nock/rekkord
 cd /tmp/rekkord/repo_s3nock
 
 curl -L versitygw.tgz https://github.com/versity/versitygw/releases/download/v1.8.0/versitygw_v1.8.0_Linux_x86_64.tar.gz | tar xzO versitygw_v1.8.0_Linux_x86_64/versitygw > versitygw
