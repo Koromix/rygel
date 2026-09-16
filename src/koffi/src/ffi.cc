@@ -2485,7 +2485,7 @@ void InstanceMemory::Allocate(Size stack_size, Size heap_size)
     stack.ptr = (uint8_t *)mmap(nullptr, stack_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON | MAP_STACK, -1, 0);
     stack.end = stack.ptr + stack_size;
 
-    K_CRITICAL(stack.ptr, "Failed to allocate %1 of memory", stack_size);
+    K_CRITICAL(stack.ptr != MAP_FAILED, "Failed to allocate %1 of memory", stack_size);
 #endif
 
 #if defined(__OpenBSD__)
@@ -2502,7 +2502,7 @@ void InstanceMemory::Allocate(Size stack_size, Size heap_size)
     heap.ptr = (uint8_t *)mmap(nullptr, heap_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
     heap.end = heap.ptr + heap_size;
 
-    K_CRITICAL(heap.ptr, "Failed to allocate %1 of memory", heap_size);
+    K_CRITICAL(heap.ptr != MAP_FAILED, "Failed to allocate %1 of memory", heap_size);
 #endif
 }
 

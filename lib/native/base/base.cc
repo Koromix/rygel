@@ -6119,7 +6119,7 @@ bool DetectFork(int64_t *marker)
         size_t page_size = (size_t)GetPageSize();
 
         void *addr = mmap(nullptr, page_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-        if (!addr)
+        if (addr == MAP_FAILED)
             return nullptr;
         K_DEFER_N(err_guard) { munmap(addr, page_size); };
 
