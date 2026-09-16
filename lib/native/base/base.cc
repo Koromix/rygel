@@ -6110,8 +6110,7 @@ error:
     return false;
 }
 
-static std::mutex fork_mutex;
-static int64_t fork_generation;
+static std::atomic_int64_t fork_generation;
 
 bool DetectFork(int64_t *marker)
 {
@@ -6141,14 +6140,21 @@ bool DetectFork(int64_t *marker)
     }();
 
     if (addr) {
+#if __cplusplus >= 202002L
+        std::atomic_ref<int64_t> ref(*(int64_t *)addr);
+        std::atomic_ref<int64_t> *ptr = &ref;
+#else
         std::atomic<int64_t> *ptr = (std::atomic<int64_t> *)addr;
-        int64_t generation = ptr->load();
+#endif
+
+        int64_t generation = ptr->load(std::memory_order_relaxed);
 
         if (!generation) {
-            std::lock_guard<std::mutex> lock(fork_mutex);
+            // Multiple threads may end up fighting around this, which would cause spurious fork detections.
+            // It's okay. I think.
 
             generation = ++fork_generation;
-            ptr->store(generation);
+            ptr->store(generation, std::memory_order_relaxed);
         }
 
         if (*marker != generation) [[unlikely]] {
