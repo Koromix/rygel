@@ -379,7 +379,7 @@ public:
             supported |= (int)CompileFeature::UBSan;
             supported |= (int)CompileFeature::LTO;
         }
-        supported |= (int)CompileFeature::ZeroInit;
+        supported |= (int)CompileFeature::Hardened;
         if (platform != HostPlatform::WasmWasi) {
             if (clang_ver >= 130000 && platform != HostPlatform::OpenBSD) {
                 supported |= (int)CompileFeature::CFI; // LTO only
@@ -703,15 +703,12 @@ public:
         if (features & (int)CompileFeature::SafeStack) {
             Fmt(&buf, " -fsanitize=safe-stack");
         }
-        if (features & (int)CompileFeature::ZeroInit) {
+        if (features & (int)CompileFeature::Hardened) {
             Fmt(&buf, " -ftrivial-auto-var-init=zero");
 
             if (clang_ver < 160000) {
                 Fmt(&buf, " -enable-trivial-auto-var-init-zero-knowing-it-will-be-removed-from-clang");
             }
-        }
-        if (features & (int)CompileFeature::CFI) {
-            K_ASSERT(features & (int)CompileFeature::LTO);
 
             if (clang_ver >= 160000) {
                 if (architecture == HostArchitecture::x86_64) {
@@ -720,8 +717,9 @@ public:
                     Fmt(&buf, " -mbranch-protection=bti+pac-ret");
                 }
             }
-
-            // Fine-grained forward CFI
+        }
+        if (features & (int)CompileFeature::CFI) {
+            K_ASSERT(features & (int)CompileFeature::LTO);
             Fmt(&buf, " -fsanitize=cfi");
         }
         if (features & (int)CompileFeature::ShuffleCode) {
@@ -1103,14 +1101,7 @@ public:
             supported |= (int)CompileFeature::UBSan;
             supported |= (int)CompileFeature::LTO;
         }
-        supported |= (int)CompileFeature::ZeroInit;
-        if (platform == HostPlatform::Linux) {
-            if (architecture == HostArchitecture::x86_64) {
-                supported |= (int)CompileFeature::CFI;
-            } else if (architecture == HostArchitecture::ARM64 && gcc_ver >= 130000) {
-                supported |= (int)CompileFeature::CFI;
-            }
-        }
+        supported |= (int)CompileFeature::Hardened;
         supported |= (int)CompileFeature::StaticRuntime;
         supported |= (int)CompileFeature::LinkLibrary;
         if (platform == HostPlatform::Windows) {
@@ -1138,8 +1129,8 @@ public:
             LogError("Cannot use ASan and TSan at the same time");
             return false;
         }
-        if (gcc_ver < 120100 && (features & (int)CompileFeature::ZeroInit)) {
-            LogError("ZeroInit requires GCC >= 12.1, try --host option (e.g. --host=:gcc-12)");
+        if (gcc_ver < 140000 && (features & (int)CompileFeature::Hardened)) {
+            LogError("Hardened requires GCC >= 14, try --host option (e.g. --host=:gcc-14)");
             return false;
         }
 
@@ -1384,10 +1375,9 @@ public:
         if (platform != HostPlatform::Windows) {
             Fmt(&buf, " -fstack-clash-protection");
         }
-        if (features & (int)CompileFeature::ZeroInit) {
+        if (features & (int)CompileFeature::Hardened) {
             Fmt(&buf, " -ftrivial-auto-var-init=zero");
-        }
-        if (features & (int)CompileFeature::CFI) {
+
             if (architecture == HostArchitecture::x86_64) {
                 Fmt(&buf, " -fcf-protection=full");
             } else if (architecture == HostArchitecture::ARM64) {
@@ -1718,7 +1708,7 @@ public:
         supported |= (int)CompileFeature::DebugInfo;
         supported |= (int)CompileFeature::ASan;
         supported |= (int)CompileFeature::LTO;
-        supported |= (int)CompileFeature::CFI;
+        supported |= (int)CompileFeature::Hardened;
         supported |= (int)CompileFeature::LinkLibrary;
         supported |= (int)CompileFeature::StaticRuntime;
         supported |= (int)CompileFeature::NoConsole;
@@ -1875,7 +1865,7 @@ public:
             Fmt(&buf, " /fsanitize=address");
         }
         Fmt(&buf, " /GS");
-        if (features & (int)CompileFeature::CFI) {
+        if (features & (int)CompileFeature::Hardened) {
             Fmt(&buf, " /guard:cf /guard:ehcont");
         }
 
@@ -2004,7 +1994,7 @@ public:
         } else {
             Fmt(&buf, " /DEBUG:NONE");
         }
-        if (features & (int)CompileFeature::CFI) {
+        if (features & (int)CompileFeature::Hardened) {
             Fmt(&buf, " /GUARD:cf /GUARD:ehcont");
         }
         if (features & (int)CompileFeature::NoConsole) {
@@ -2616,9 +2606,6 @@ public:
         // Features
         if (features & (int)CompileFeature::DebugInfo) {
             Fmt(&buf, " -g");
-        }
-        if (features & (int)CompileFeature::ZeroInit) {
-            Fmt(&buf, " -ftrivial-auto-var-init=zero");
         }
 
         // Sources and definitions

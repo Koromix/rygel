@@ -48,7 +48,7 @@ Build presets are provided and configured in `FelixBuild.ini.presets`. This repo
 - *ASan / TSan / UBSan / AUBSan*: debug builds with one or more sanitizers
 - *Fast*
 - *LTO*
-- *Paranoid*: LTO builds with various additional mitigations: CFI, ZeroInit, etc.
+- *Paranoid*: LTO builds with various additional mitigations: Hardened, CFI, SafeStack, etc.
 
 Use `felix -p PRESET [targets]` to use a specific preset.
 
