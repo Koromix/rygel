@@ -46,7 +46,7 @@ ${PKG_DESCRIPTION}
     mkdir -p ${CLIENT_DIR}/upper ${CLIENT_DIR}/work
     podman run -t -i --rm -v $(pwd):/repo:O,upperdir=$(pwd)/${CLIENT_DIR}/upper,workdir=$(pwd)/${CLIENT_DIR}/work rygel/${DOCKER_IMAGE} /repo/${SCRIPT_PATH} build
 
-    cp ${CLIENT_DIR}/upper/${DEST_DIR}/${PKG_NAME}-*.rpm ${PKG_DIR}/
+    cp ${CLIENT_DIR}/upper/${DEST_DIR}/*.rpm ${PKG_DIR}/
 elif [ "$1" = "build" ]; then
     # Fix git error about dubious repository ownership
     git config --global safe.directory '*'

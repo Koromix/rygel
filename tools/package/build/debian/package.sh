@@ -61,7 +61,7 @@ License: ${PKG_LICENSE}" > ${DEBIAN_DIR}/copyright
         podman run -t -i --rm -v $(pwd):/repo:O,upperdir=$(pwd)/${CLIENT_DIR}/arm64/upper,workdir=$(pwd)/${CLIENT_DIR}/arm64/work rygel/${DOCKER_IMAGE} /repo/${SCRIPT_PATH} build aarch64-linux-gnu arm64
     fi
 
-    cp ${CLIENT_DIR}/*/upper/${DEST_DIR}/${PKG_NAME}_*.deb ${PKG_DIR}/
+    cp ${CLIENT_DIR}/*/upper/${DEST_DIR}/*.deb ${PKG_DIR}/
 elif [ "$1" = "build" ]; then
     # Fix git error about dubious repository ownership
     git config --global safe.directory '*'
