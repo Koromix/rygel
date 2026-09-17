@@ -2,6 +2,13 @@
 
 ## Alpha versions
 
+### Redropp 0.9.9
+
+*Released on 2026-09-17*
+
+- Fix tab close warning showing up when downloading files in Safari Desktop
+- Improve `redropp init` command
+
 ### Redropp 0.9.8
 
 *Released on 2026-08-24*
