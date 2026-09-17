@@ -40,7 +40,11 @@ def import_releases(src, root, func):
         if pkg is None:
             continue
 
-        if name.endswith('.rpm') or name.endswith('.deb'):
+        if name.endswith('.deb'):
+            if pkg.endswith('-dbgsym'):
+                pkg = pkg[:-7]
+            suffix = '/linux'
+        elif name.endswith('.rpm'):
             suffix = '/linux'
         elif name.endswith('_win64.zip') or name.endswith('_win64.exe') or name.endswith('_win64.msi'):
             suffix = '/windows'
@@ -84,6 +88,9 @@ def process_releases(root):
                 host = subdir.name
 
                 if subdir.name == 'linux':
+                    if name.endswith('.deb') and pkg.endswith('-dbgsym'):
+                        continue
+
                     arch = remain[-1].split('.')[0]
 
                     match arch:
@@ -138,7 +145,9 @@ def write_file_str(filename, s):
         f.write(s)
 
 def split_name(name):
-    parts = re.split(r'[\-_]', name)
+    _, ext = os.path.splitext(name)
+    separator = '_' if ext != '.rpm' else '-'
+    parts = re.split(separator, name)
 
     if len(parts) < 3:
         return None, None, None
