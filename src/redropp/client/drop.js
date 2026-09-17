@@ -569,16 +569,29 @@ async function downloadZip(drop, keys) {
     triggerDownload(url);
 }
 
-function triggerDownload(url) {
+const triggerDownload = Util.serialize(async function(url) {
     // Other ways, such as clicking on <a download>, do not work because some niche browsers
     // (such as Chrome) bypass the service worker for these downloads.
 
-    let prev_unload = window.onbeforeunload;
+    await new Promise((resolve, reject) => {
+        let prev_unload = window.onbeforeunload;
+        let prev_timeout = setTimeout(end, 2000);
 
-    window.onbeforeunload = '';
-    window.location.href = url;
-    window.onbeforeunload = prev_unload;
-}
+        // The location.href assignment below triggers the beforeunload event, which
+        // is confusing for users because the page stays open, it only triggers a download.
+        // Temporarily skip the app beforeunload handler, restore it as soon as possible.
+        window.onbeforeunload = end;
+
+        window.location.href = url;
+
+        function end() {
+            clearTimeout(prev_timeout);
+            window.onbeforeunload = prev_unload;
+
+            resolve();
+        }
+    });
+});
 
 async function otherDownloadOptions(drop, secret) {
     let file = drop.files[0];
