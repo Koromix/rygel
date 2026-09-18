@@ -114,18 +114,28 @@ def process_releases(root):
                     'hash': hash_file(subdir.path + '/' + name)
                 })
 
-    with open(root + '/packages.json', 'w') as f:
-        json.dump(packages, f, indent = 4)
-    run_command('gzip', ['-f', root + '/packages.json'])
-
     minisign_key_gpg = os.path.dirname(__file__) + '/../package/repo/minisign.key.gpg'
-    minisign_key = capture_command('gpg', ['--decrypt', minisign_key_gpg])
-    minisign_key_fifo = create_secret_fifo(minisign_key)
+
+    with open(root + '/manifest.json', 'w') as f:
+        json.dump(packages, f, indent = 4)
+    run_command('gzip', ['-f', root + '/manifest.json'])
+    minisign(minisign_key_gpg, root + '/manifest.json.gz')
+
+    for pkg, files in packages.items():
+        manifest = f'{root}/{pkg}/{pkg}.json'
+        with open(manifest, 'w') as f:
+            json.dump(files, f, indent = 4)
+        run_command('gzip', ['-f', manifest])
+        minisign(minisign_key_gpg, manifest + '.gz')
+
+def minisign(key_gpg, filename):
+    key = capture_command('gpg', ['--decrypt', key_gpg])
+    fifo = create_secret_fifo(key)
 
     try:
-        run_command('minisign', ['-S', '-s', minisign_key_fifo, '-f', '-m', root + '/packages.json.gz'], capture = False)
+        run_command('minisign', ['-S', '-s', fifo, '-f', '-m', filename], capture = False)
     finally:
-        os.unlink(minisign_key_fifo)
+        os.unlink(fifo)
 
 def create_secret_fifo(secret):
     for i in range(0, 100):
