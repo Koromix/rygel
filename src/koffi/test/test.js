@@ -36,8 +36,7 @@ function test() {
         scripts['POSIX'] = { script: 'posix.js' };
     if (process.platform == 'win32' && process.env.MSYSTEM == null)
         scripts['Win32'] = { script: 'win32.js' };
-    if (process.platform != 'darwin')
-        scripts['Raylib'] = { script: 'raylib.js' };
+    scripts['Raylib'] = { script: 'raylib.js' };
     scripts['SQLite'] = { script: 'sqlite.js' };
 
     for (let key in scripts) {
