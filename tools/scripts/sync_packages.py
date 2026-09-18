@@ -82,6 +82,7 @@ def process_releases(root):
             names = os.listdir(subdir.path)
 
             for name in names:
+                kind = 'package'
                 pkg, version, remain = split_name(name)
                 if pkg is None:
                     continue
@@ -89,7 +90,8 @@ def process_releases(root):
 
                 if subdir.name == 'linux':
                     if name.endswith('.deb') and pkg.endswith('-dbgsym'):
-                        continue
+                        kind = 'debug'
+                        pkg = pkg[:-7]
 
                     arch = remain[-1].split('.')[0]
 
@@ -105,6 +107,7 @@ def process_releases(root):
                     packages[pkg] = []
 
                 packages[pkg].append({
+                    'kind': kind,
                     'file': f'{subdir.name}/{name}',
                     'host': host,
                     'version': version,
