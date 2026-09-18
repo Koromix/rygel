@@ -570,11 +570,12 @@ static int AnalyseFlatRec(const TypeInfo *type, int offset, int count, FunctionR
         }
     } else if (type->primitive == PrimitiveKind::Union) {
         for (int i = 0; i < count; i++) {
+            int next = offset;
             for (const RecordMember &member: type->members) {
-                AnalyseFlatRec(member.type, offset, 1, func);
+                next = std::max(next, AnalyseFlatRec(member.type, offset, 1, func));
             }
+            offset = next;
         }
-        offset += count;
     } else if (type->primitive == PrimitiveKind::Array) {
         count *= type->size / type->ref.type->size;
         offset = AnalyseFlatRec(type->ref.type, offset, count, func);
