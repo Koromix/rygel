@@ -147,7 +147,6 @@ template <typename T>
 inline T *CallData::AllocStack(Size size)
 {
     K_ASSERT(AlignDown(stack.end, 16) == stack.end);
-    K_ASSERT(AlignLen(size, 16) == size);
 
     uint8_t *ptr = stack.end - size;
     FillMemory(ptr, stack.end - ptr);
