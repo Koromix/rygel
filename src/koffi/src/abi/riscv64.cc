@@ -45,6 +45,21 @@ public:
     int VecCount() const { return fpr_index; }
 };
 
+static bool DetectUnion(const TypeInfo *type)
+{
+    if (type->primitive == PrimitiveKind::Union)
+        return true;
+
+    if (type->primitive == PrimitiveKind::Record &&
+            std::any_of(type->members.begin(), type->members.end(),
+                        [](const RecordMember &member) { return DetectUnion(member.type); }))
+        return true;
+    if (type->primitive == PrimitiveKind::Array && DetectUnion(type->ref.type))
+        return true;
+
+    return false;
+}
+
 ClassResult ClassAnalyser::Analyse(const TypeInfo *type, bool variadic)
 {
     ClassResult ret = {};
@@ -63,7 +78,7 @@ ClassResult ClassAnalyser::Analyse(const TypeInfo *type, bool variadic)
     int fpr_avail = std::min(2, fpr_max - fpr_index);
 
 #if defined(__riscv_float_abi_double) || defined(__loongarch64)
-    if (type->primitive != PrimitiveKind::Union && !variadic) {
+    if (!variadic && !DetectUnion(type)) {
         int gpr_count = 0;
         int fpr_count = 0;
         bool gpr_fpr = false;
