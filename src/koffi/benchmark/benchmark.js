@@ -35,12 +35,8 @@ function benchmark(args) {
         }
     }
 
-    if (!tests.length) {
-        tests.push('rand', 'atoi', 'qsort', 'memset');
-
-        if (process.platform != 'darwin')
-            tests.push('raylib');
-    }
+    if (!tests.length)
+        tests.push('rand', 'atoi', 'qsort', 'memset', 'raylib');
 
     if (tests.includes('rand'))
         dump('rand', run('rand.js', 'Node-API', engines), 'ns');
