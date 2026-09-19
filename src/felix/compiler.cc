@@ -611,7 +611,7 @@ public:
             } break;
 
             case HostArchitecture::x86: {
-                Fmt(&buf, " -msse2");
+                Fmt(&buf, " -march=i686 -msse2");
 
                 if (features & (int)CompileFeature::AESNI) {
                     Fmt(&buf, " -maes -mpclmul");
@@ -1310,7 +1310,7 @@ public:
                     Fmt(&buf, " -m32");
                 }
 
-                Fmt(&buf, " -msse2 -mfpmath=sse");
+                Fmt(&buf, " -march=i686 -msse2 -mfpmath=sse");
 
                 if (features & (int)CompileFeature::AESNI) {
                     Fmt(&buf, " -maes -mpclmul");
