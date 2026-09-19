@@ -6110,11 +6110,16 @@ error:
     return false;
 }
 
-static std::atomic_uint fork_generation;
+static std::atomic_int64_t fork_generation;
 
-bool DetectFork(unsigned int *marker)
+bool DetectFork(int64_t *marker)
 {
-    static void *addr = []() -> void * {
+    // Without the forced alignment, the compiler is forced to use slow libatomic-based calls on
+    // x86 32-bit targets, because int64_t is 4-byte aligned on these platforms.
+    // In addition to being slow, it fails to work in Koffi because __atomic_load is not available.
+    typedef __attribute__((aligned(8))) int64_t aligned_int64_t;
+
+    static aligned_int64_t *addr = []() -> int64_t * {
         size_t page_size = (size_t)GetPageSize();
 
         void *addr = mmap(nullptr, page_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
@@ -6136,25 +6141,19 @@ bool DetectFork(unsigned int *marker)
 #endif
 
         err_guard.Disable();
-        return addr;
+        return (aligned_int64_t *)addr;
     }();
 
     if (addr) {
-#if __cpp_lib_atomic_ref
-        std::atomic_ref<unsigned int> ref(*(unsigned int *)addr);
-        std::atomic_ref<unsigned int> *ptr = &ref;
-#else
-        std::atomic_uint *ptr = (std::atomic_uint *)addr;
-#endif
-
-        unsigned int generation = ptr->load(std::memory_order_relaxed);
+        aligned_int64_t generation;
+        __atomic_load(addr, &generation, __ATOMIC_RELAXED);
 
         if (!generation) {
             // Multiple threads may end up fighting around this, which would cause spurious fork detections.
             // It's okay. I think.
 
             generation = ++fork_generation;
-            ptr->store(generation, std::memory_order_relaxed);
+            __atomic_store(addr, &generation, __ATOMIC_RELAXED);
         }
 
         if (*marker != generation) [[unlikely]] {
@@ -6164,7 +6163,7 @@ bool DetectFork(unsigned int *marker)
             return false;
         }
     } else {
-        unsigned int pid = (unsigned int)getpid();
+        int64_t pid = (int64_t)getpid();
 
         if (*marker != pid) [[unlikely]] {
             *marker = pid;
@@ -6930,7 +6929,7 @@ bool ParseVersion(Span<const char> str, int parts, int multiplier,
 static thread_local Size rnd_remain;
 static thread_local int64_t rnd_clock;
 #if !defined(_WIN32)
-static thread_local unsigned int rnd_generation;
+static thread_local int64_t rnd_generation;
 #endif
 static thread_local uint32_t rnd_state[16];
 static thread_local uint8_t rnd_buf[64];
