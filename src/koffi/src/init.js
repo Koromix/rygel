@@ -79,24 +79,6 @@ function wrapNative(native, version) {
 
     let load = native.load;
     let register = native.register;
-    let introspect = native.type;
-
-    // Introspection shortcuts
-    native.sizeof = (spec) => introspect(spec).size;
-    native.alignof = (spec) => introspect(spec).alignment;
-    native.offsetof = (spec, name) => {
-        let info = introspect(spec);
-
-        if (info.primitive != 'Record')
-            throw new TypeError('The offsetof() function can only be used with record types');
-
-        let member = info.members[name];
-
-        if (member == null)
-            throw new Error(`Record type ${info.name} does not have member '${name}'`);
-
-        return member.offset;
-    };
 
     native.register = (...args) => {
         if (args.length >= 3 && typeof args[1] == 'function') {

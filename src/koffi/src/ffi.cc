@@ -1481,6 +1481,84 @@ static Napi::Value GetResolvedType(const Napi::CallbackInfo &info)
     return Napi::Value(env, wrapper);
 }
 
+static napi_value GetTypeSize(napi_env env, napi_callback_info info)
+{
+    napi_value arg;
+    size_t count = 1;
+    InstanceData *instance;
+
+    NAPI_OK(napi_get_cb_info(env, info, &count, &arg, nullptr, (void **)&instance));
+
+    if (count < 1) {
+        ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", count);
+        return Napi::Env(env).Null();
+    }
+
+    const TypeInfo *type = ResolveType(instance, arg);
+    if (!type)
+        return Napi::Env(env).Null();
+
+    return NewInt(env, type->size);
+}
+
+static napi_value GetTypeAlign(napi_env env, napi_callback_info info)
+{
+    napi_value arg;
+    size_t count = 1;
+    InstanceData *instance;
+
+    NAPI_OK(napi_get_cb_info(env, info, &count, &arg, nullptr, (void **)&instance));
+
+    if (count < 1) {
+        ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", count);
+        return Napi::Env(env).Null();
+    }
+
+    const TypeInfo *type = ResolveType(instance, arg);
+    if (!type)
+        return Napi::Env(env).Null();
+
+    return NewInt(env, type->align);
+}
+
+static napi_value GetMemberOffset(napi_env env, napi_callback_info info)
+{
+    napi_value args[2];
+    size_t count = 2;
+    InstanceData *instance;
+
+    NAPI_OK(napi_get_cb_info(env, info, &count, args, nullptr, (void **)&instance));
+
+    if (count < 2) {
+        ThrowError<Napi::TypeError>(env, "Expected 2 arguments, got %1", count);
+        return Napi::Env(env).Null();
+    }
+
+    const TypeInfo *type = ResolveType(instance, args[0]);
+    if (!type)
+        return Napi::Env(env).Null();
+    if (type->primitive != PrimitiveKind::Record) {
+        ThrowError<Napi::TypeError>(env, "The offsetof() function can only be used with record types");
+        return Napi::Env(env).Null();
+    }
+
+    char name[256];
+    if (napi_get_value_string_utf8(env, args[1], name, K_SIZE(name), nullptr) != napi_ok) {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for member, expected string", GetValueType(instance, args[1]));
+        return Napi::Env(env).Null();
+    }
+
+    const RecordMember *member = std::find_if(type->members.begin(), type->members.end(),
+                                              [&](const RecordMember &member) { return TestStr(member.name, name); });
+
+    if (member == type->members.end()) {
+        ThrowError<Napi::TypeError>(env, "Record type %1 does not have member '%2'", type->name, name);
+        return Napi::Env(env).Null();
+    }
+
+    return NewInt(env, member->offset);
+}
+
 static void InitSyncMemory(InstanceData *instance)
 {
     if (instance->sync_memory.IsAllocated()) [[likely]]
@@ -2731,6 +2809,9 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
     exports.Set("enumeration", Napi::Function::New(env, CreateEnumType, "enumeration", instance));
 
     exports.Set("type", Napi::Function::New(env, GetResolvedType, "type", instance));
+    exports.Set("sizeof", CreateFunction(instance, GetTypeSize, "sizeof"));
+    exports.Set("alignof", CreateFunction(instance, GetTypeAlign, "alignof"));
+    exports.Set("offsetof", CreateFunction(instance, GetMemberOffset, "offsetof"));
 
     exports.Set("load", Napi::Function::New(env, LoadSharedLibrary, "load", instance));
 
