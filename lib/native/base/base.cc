@@ -6140,7 +6140,7 @@ bool DetectFork(unsigned int *marker)
     }();
 
     if (addr) {
-#if __cplusplus >= 202002L
+#if __cpp_lib_atomic_ref
         std::atomic_ref<unsigned int> ref(*(unsigned int *)addr);
         std::atomic_ref<unsigned int> *ptr = &ref;
 #else
