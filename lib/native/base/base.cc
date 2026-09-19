@@ -6110,9 +6110,9 @@ error:
     return false;
 }
 
-static std::atomic_int64_t fork_generation;
+static std::atomic_uint fork_generation;
 
-bool DetectFork(int64_t *marker)
+bool DetectFork(unsigned int *marker)
 {
     static void *addr = []() -> void * {
         size_t page_size = (size_t)GetPageSize();
@@ -6141,13 +6141,13 @@ bool DetectFork(int64_t *marker)
 
     if (addr) {
 #if __cplusplus >= 202002L
-        std::atomic_ref<int64_t> ref(*(int64_t *)addr);
-        std::atomic_ref<int64_t> *ptr = &ref;
+        std::atomic_ref<unsigned int> ref(*(unsigned int *)addr);
+        std::atomic_ref<unsigned int> *ptr = &ref;
 #else
-        std::atomic<int64_t> *ptr = (std::atomic<int64_t> *)addr;
+        std::atomic_uint *ptr = (std::atomic_uint *)addr;
 #endif
 
-        int64_t generation = ptr->load(std::memory_order_relaxed);
+        unsigned int generation = ptr->load(std::memory_order_relaxed);
 
         if (!generation) {
             // Multiple threads may end up fighting around this, which would cause spurious fork detections.
@@ -6164,7 +6164,7 @@ bool DetectFork(int64_t *marker)
             return false;
         }
     } else {
-        int64_t pid = (int64_t)getpid();
+        unsigned int pid = (unsigned int)getpid();
 
         if (*marker != pid) [[unlikely]] {
             *marker = pid;
@@ -6930,7 +6930,7 @@ bool ParseVersion(Span<const char> str, int parts, int multiplier,
 static thread_local Size rnd_remain;
 static thread_local int64_t rnd_clock;
 #if !defined(_WIN32)
-static thread_local int64_t rnd_generation;
+static thread_local unsigned int rnd_generation;
 #endif
 static thread_local uint32_t rnd_state[16];
 static thread_local uint8_t rnd_buf[64];

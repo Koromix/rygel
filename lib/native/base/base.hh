@@ -4721,7 +4721,7 @@ int GetCoreCount();
 #if !defined(_WIN32) && !defined(__wasi__)
 bool RaiseMaximumOpenFiles(int limit = -1);
 bool DropRootIdentity();
-bool DetectFork(int64_t *marker);
+bool DetectFork(unsigned int *marker);
 #endif
 
 #if defined(__linux__)
