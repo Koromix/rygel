@@ -1361,7 +1361,7 @@ static TRANSLATE_FUNC napi_value TranslateFastCall(napi_env env, napi_callback_i
 
     if (count < (size_t)func->required_parameters) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected %1 arguments, got %2", func->parameters.len, count);
-        return Napi::Env(env).Null();
+        return GetNull(env);
     }
 
     InstanceData *instance = func->instance;
@@ -1433,7 +1433,7 @@ static TRANSLATE_FUNC napi_value TranslateNormalCallDebugAsync(napi_env env, nap
     }
     if (count < (size_t)func->required_parameters) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected %1 arguments, got %2", func->parameters.len, count);
-        return Napi::Env(env).Null();
+        return GetNull(env);
     }
 
     InstanceData *instance = func->instance;
@@ -1453,7 +1453,7 @@ static TRANSLATE_FUNC napi_value TranslateNormalCallDebugAsync(napi_env env, nap
         call.ExecuteAsync(func->native);
         ret = call.EndAsync();
     } else {
-        ret = Napi::Env(env).Null();
+        ret = GetNull(env);
     }
     call.Finalize();
 
@@ -1512,11 +1512,11 @@ static TRANSLATE_FUNC K_FORCE_INLINE napi_value TranslateVariadicCall(CallData *
 
         if (count < variadic->required_parameters) [[unlikely]] {
             ThrowError<Napi::TypeError>(env, "Expected %1 arguments or more, got %2", variadic->parameters.len, count);
-            return Napi::Env(env).Null();
+            return GetNull(env);
         }
         if ((count - variadic->required_parameters) % 2) [[unlikely]] {
             ThrowError<Napi::Error>(env, "Missing value argument for variadic call");
-            return Napi::Env(env).Null();
+            return GetNull(env);
         }
 
         for (Size i = variadic->required_parameters; i < count; i += 2) {
@@ -1525,14 +1525,14 @@ static TRANSLATE_FUNC K_FORCE_INLINE napi_value TranslateVariadicCall(CallData *
             param.type = ResolveType(instance, call->args[i], &param.directions);
 
             if (!param.type) [[unlikely]]
-                return Napi::Env(env).Null();
+                return GetNull(env);
             if (!CanPassType(param.type, param.directions)) [[unlikely]] {
                 ThrowError<Napi::TypeError>(env, "Type %1 cannot be used as a parameter", param.type->name);
-                return Napi::Env(env).Null();
+                return GetNull(env);
             }
             if (variadic->parameters.len >= MaxParameters) [[unlikely]] {
                 ThrowError<Napi::TypeError>(env, "Functions cannot have more than %1 parameters", MaxParameters);
-                return Napi::Env(env).Null();
+                return GetNull(env);
             }
 
             param.variadic = true;
@@ -1542,7 +1542,7 @@ static TRANSLATE_FUNC K_FORCE_INLINE napi_value TranslateVariadicCall(CallData *
         }
 
         if (!PreparePlan(instance, variadic)) [[unlikely]]
-            return Napi::Env(env).Null();
+            return GetNull(env);
     }
 
     K_DEFER_C(prev_call = instance->sync_call) { instance->sync_call = prev_call; };
@@ -1762,7 +1762,7 @@ static napi_value TranslateAsyncCall(napi_env env, napi_callback_info info)
     }
     if (count <= (size_t)func->required_parameters) {
         ThrowError<Napi::TypeError>(env, "Expected %1 arguments, got %2", func->required_parameters + 1, count);
-        return Napi::Env(env).Null();
+        return GetNull(env);
     }
 
     InstanceData *instance = func->instance;
@@ -1771,22 +1771,22 @@ static napi_value TranslateAsyncCall(napi_env env, napi_callback_info info)
 
     if (!callback.IsFunction()) {
         ThrowError<Napi::TypeError>(env, "Expected callback function as last argument, got %1", GetValueType(instance, callback));
-        return Napi::Env(env).Null();
+        return GetNull(env);
     }
 
     InstanceMemory *mem = AllocateAsyncMemory(instance);
     if (!mem) [[unlikely]] {
         ThrowError<Napi::Error>(env, "Too many asynchronous calls are running");
-        return Napi::Env(env).Null();
+        return GetNull(env);
     }
 
     if (!async->Prepare(instance, mem, func, callback))
-        return Napi::Env(env).Null();
+        return GetNull(env);
 
     async->Queue();
     err_guard.Disable();
 
-    return Napi::Env(env).Undefined();
+    return GetUndefined(env);
 }
 
 static bool DetectDeno(Napi::Env env)

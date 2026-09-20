@@ -267,6 +267,9 @@ static K_FORCE_INLINE bool TryBuffer(napi_env env, napi_value value, Span<uint8_
     return false;
 }
 
+static K_FORCE_INLINE napi_value GetUndefined(Napi::Env env) { napi_value value; NAPI_OK(napi_get_undefined(env, &value)); return value; }
+static K_FORCE_INLINE napi_value GetNull(Napi::Env env) { napi_value value; NAPI_OK(napi_get_null(env, &value)); return value; }
+
 static K_FORCE_INLINE napi_value NewBool(Napi::Env env, bool b) { napi_value value; NAPI_OK(napi_get_boolean(env, b, &value)); return value; }
 
 static K_FORCE_INLINE napi_value NewInt(Napi::Env env, char i) { napi_value value; NAPI_OK(napi_create_int32(env, (int32_t)i, &value)); return value; }

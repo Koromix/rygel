@@ -760,19 +760,19 @@ static napi_value MarkPointer(napi_env env, napi_callback_info info, int directi
 
     if (count < 1) {
         ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", count);
-        return Napi::Env(env).Null();
+        return GetNull(env);
     }
 
     const TypeInfo *type = ResolveType(instance, arg);
     if (!type)
-        return Napi::Env(env).Null();
+        return GetNull(env);
 
     if (type->primitive != PrimitiveKind::Pointer &&
             type->primitive != PrimitiveKind::String &&
             type->primitive != PrimitiveKind::String16 &&
             type->primitive != PrimitiveKind::String32) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 type, expected pointer or string type", type->name);
-        return Napi::Env(env).Null();
+        return GetNull(env);
     }
 
     // Embed direction in unused pointer bits
@@ -890,29 +890,29 @@ static napi_value CallAlloc(napi_env env, napi_callback_info info)
 
     if (count < 2) {
         ThrowError<Napi::TypeError>(env, "Expected 2 arguments, got %1", count);
-        return Napi::Env(env).Null();
+        return GetNull(env);
     }
 
     const TypeInfo *type = ResolveType(instance, args[0]);
     if (!type)
-        return Napi::Env(env).Null();
+        return GetNull(env);
     if (!type->size) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Cannot allocate memory for zero-sized type %1", type->name);
-        return Napi::Env(env).Null();
+        return GetNull(env);
     }
 
     int32_t len;
     if (napi_get_value_int32(env, args[1], &len) != napi_ok) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for length, expected number", GetValueType(instance, args[1]));
-        return Napi::Env(env).Null();
+        return GetNull(env);
     }
     if (len <= 0) [[unlikely]] {
         ThrowError<Napi::Error>(env, "Size must be greater than 0");
-        return Napi::Env(env).Null();
+        return GetNull(env);
     }
     if (len > INT32_MAX / type->size) [[unlikely]] {
         ThrowError<Napi::Error>(env, "Cannot allocate more than %1 objects of type %2", INT32_MAX / type->size, type->name);
-        return Napi::Env(env).Null();
+        return GetNull(env);
     }
 
     void *ptr = calloc((size_t)len, (size_t)type->size);
@@ -921,7 +921,7 @@ static napi_value CallAlloc(napi_env env, napi_callback_info info)
         Size size = (Size)(len * type->size);
 
         ThrowError<Napi::Error>(env, "Failed to allocate %1 of memory", FmtMemSize((Size)size));
-        return Napi::Env(env).Null();
+        return GetNull(env);
     }
 
     return WrapPointer(env, ptr);
@@ -937,18 +937,18 @@ static napi_value CallFree(napi_env env, napi_callback_info info)
 
     if (count < 1) {
         ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", count);
-        return Napi::Env(env).Null();
+        return GetNull(env);
     }
 
     void *ptr = nullptr;
     if (!TryPointer(env, arg, &ptr)) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected pointer", GetValueType(instance, arg));
-        return Napi::Env(env).Null();
+        return GetNull(env);
     }
 
     free(ptr);
 
-    return Napi::Env(env).Undefined();
+    return GetUndefined(env);
 }
 
 static napi_value GetOrSetErrno(napi_env env, napi_callback_info info)
@@ -964,7 +964,7 @@ static napi_value GetOrSetErrno(napi_env env, napi_callback_info info)
     if (count >= 1) {
         if (napi_get_value_int32(env, arg, &value) != napi_ok) {
             ThrowError<Napi::TypeError>(env, "Unexpected %1 value for errno, expected integer", GetValueType(instance, arg));
-            return Napi::Env(env).Null();
+            return GetNull(env);
         }
         errno = value;
     } else {
@@ -1467,12 +1467,12 @@ static napi_value GetResolvedType(napi_env env, napi_callback_info info)
 
     if (count < 1) {
         ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", count);
-        return Napi::Env(env).Null();
+        return GetNull(env);
     }
 
     const TypeInfo *type = ResolveType(instance, arg);
     if (!type)
-        return Napi::Env(env).Null();
+        return GetNull(env);
 
     return WrapType(instance, type);
 }
@@ -1487,12 +1487,12 @@ static napi_value GetTypeSize(napi_env env, napi_callback_info info)
 
     if (count < 1) {
         ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", count);
-        return Napi::Env(env).Null();
+        return GetNull(env);
     }
 
     const TypeInfo *type = ResolveType(instance, arg);
     if (!type)
-        return Napi::Env(env).Null();
+        return GetNull(env);
 
     return NewInt(env, type->size);
 }
@@ -1507,12 +1507,12 @@ static napi_value GetTypeAlign(napi_env env, napi_callback_info info)
 
     if (count < 1) {
         ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", count);
-        return Napi::Env(env).Null();
+        return GetNull(env);
     }
 
     const TypeInfo *type = ResolveType(instance, arg);
     if (!type)
-        return Napi::Env(env).Null();
+        return GetNull(env);
 
     return NewInt(env, type->align);
 }
@@ -1527,21 +1527,21 @@ static napi_value GetMemberOffset(napi_env env, napi_callback_info info)
 
     if (count < 2) {
         ThrowError<Napi::TypeError>(env, "Expected 2 arguments, got %1", count);
-        return Napi::Env(env).Null();
+        return GetNull(env);
     }
 
     const TypeInfo *type = ResolveType(instance, args[0]);
     if (!type)
-        return Napi::Env(env).Null();
+        return GetNull(env);
     if (type->primitive != PrimitiveKind::Record) {
         ThrowError<Napi::TypeError>(env, "The offsetof() function can only be used with record types");
-        return Napi::Env(env).Null();
+        return GetNull(env);
     }
 
     char name[256];
     if (napi_get_value_string_utf8(env, args[1], name, K_SIZE(name), nullptr) != napi_ok) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for member, expected string", GetValueType(instance, args[1]));
-        return Napi::Env(env).Null();
+        return GetNull(env);
     }
 
     const RecordMember *member = std::find_if(type->members.begin(), type->members.end(),
@@ -1549,7 +1549,7 @@ static napi_value GetMemberOffset(napi_env env, napi_callback_info info)
 
     if (member == type->members.end()) {
         ThrowError<Napi::TypeError>(env, "Record type %1 does not have member '%2'", type->name, name);
-        return Napi::Env(env).Null();
+        return GetNull(env);
     }
 
     return NewInt(env, member->offset);
@@ -2095,13 +2095,13 @@ static K_FORCE_INLINE napi_value DecodeInteger(napi_env env, napi_callback_info 
 
     if (count < 1) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", count);
-        return Napi::Env(env).Null();
+        return GetNull(env);
     }
 
     void *ptr = nullptr;
     if (!TryPointer(env, arg, &ptr)) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected pointer", GetValueType(instance, arg));
-        return Napi::Env(env).Null();
+        return GetNull(env);
     }
 
     T i;
@@ -2121,13 +2121,13 @@ static K_FORCE_INLINE napi_value DecodeIntegerSwap(napi_env env, napi_callback_i
 
     if (count < 1) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", count);
-        return Napi::Env(env).Null();
+        return GetNull(env);
     }
 
     void *ptr = nullptr;
     if (!TryPointer(env, arg, &ptr)) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected pointer", GetValueType(instance, arg));
-        return Napi::Env(env).Null();
+        return GetNull(env);
     }
 
     T i;
@@ -2162,13 +2162,13 @@ static napi_value DecodeFloat(napi_env env, napi_callback_info info)
 
     if (count < 1) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", count);
-        return Napi::Env(env).Null();
+        return GetNull(env);
     }
 
     void *ptr = nullptr;
     if (!TryPointer(env, arg, &ptr)) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected pointer", GetValueType(instance, arg));
-        return Napi::Env(env).Null();
+        return GetNull(env);
     }
 
     float f;
@@ -2187,13 +2187,13 @@ static napi_value DecodeDouble(napi_env env, napi_callback_info info)
 
     if (count < 1) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", count);
-        return Napi::Env(env).Null();
+        return GetNull(env);
     }
 
     void *ptr = nullptr;
     if (!TryPointer(env, arg, &ptr)) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected pointer", GetValueType(instance, arg));
-        return Napi::Env(env).Null();
+        return GetNull(env);
     }
 
     double d;
@@ -2212,20 +2212,20 @@ static napi_value DecodeString(napi_env env, napi_callback_info info)
 
     if (count < 1) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected 1 to 2 arguments, got %1", count);
-        return Napi::Env(env).Null();
+        return GetNull(env);
     }
 
     void *ptr = nullptr;
     if (!TryPointer(env, args[0], &ptr)) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected pointer", GetValueType(instance, args[0]));
-        return Napi::Env(env).Null();
+        return GetNull(env);
     }
 
     if (count >= 2) {
         Size len;
         if (!TryNumber(env, args[1], &len)) [[unlikely]] {
             ThrowError<Napi::TypeError>(env, "Unexpected %1 value for length, expected number", GetValueType(instance, args[1]));
-            return Napi::Env(env).Null();
+            return GetNull(env);
         }
 
         return NewString(env, (const char *)ptr, (size_t)len);
@@ -2244,20 +2244,20 @@ static napi_value DecodeString16(napi_env env, napi_callback_info info)
 
     if (count < 1) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected 1 to 2 arguments, got %1", count);
-        return Napi::Env(env).Null();
+        return GetNull(env);
     }
 
     void *ptr = nullptr;
     if (!TryPointer(env, args[0], &ptr)) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected pointer", GetValueType(instance, args[0]));
-        return Napi::Env(env).Null();
+        return GetNull(env);
     }
 
     if (count >= 2) {
         Size len;
         if (!TryNumber(env, args[1], &len)) [[unlikely]] {
             ThrowError<Napi::TypeError>(env, "Unexpected %1 value for length, expected number", GetValueType(instance, args[1]));
-            return Napi::Env(env).Null();
+            return GetNull(env);
         }
 
         return NewString(env, (const char16_t *)ptr, (size_t)len);
@@ -2276,20 +2276,20 @@ static napi_value DecodeString32(napi_env env, napi_callback_info info)
 
     if (count < 1) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected 1 to 2 arguments, got %1", count);
-        return Napi::Env(env).Null();
+        return GetNull(env);
     }
 
     void *ptr = nullptr;
     if (!TryPointer(env, args[0], &ptr)) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected pointer", GetValueType(instance, args[0]));
-        return Napi::Env(env).Null();
+        return GetNull(env);
     }
 
     if (count >= 2) {
         Size len;
         if (!TryNumber(env, args[1], &len)) [[unlikely]] {
             ThrowError<Napi::TypeError>(env, "Unexpected %1 value for length, expected number", GetValueType(instance, args[1]));
-            return Napi::Env(env).Null();
+            return GetNull(env);
         }
 
         return NewString(env, (const char32_t *)ptr, len);
@@ -2308,13 +2308,13 @@ static napi_value GetPointerAddress(napi_env env, napi_callback_info info)
 
     if (count < 1) {
         ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", count);
-        return Napi::Env(env).Null();
+        return GetNull(env);
     }
 
     void *ptr = nullptr;
     if (!TryPointer(env, arg, &ptr)) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected pointer", GetValueType(instance, arg));
-        return Napi::Env(env).Null();
+        return GetNull(env);
     }
 
     napi_value value;
@@ -2497,7 +2497,7 @@ static napi_value ResetKoffi(napi_env env, napi_callback_info info)
     }
     instance->memories.Clear();
 
-    return Napi::Env(env).Undefined();
+    return GetUndefined(env);
 }
 
 void LibraryHolder::Unload()
