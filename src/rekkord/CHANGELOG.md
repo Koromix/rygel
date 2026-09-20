@@ -5,6 +5,12 @@
 
 ## Alpha versions
 
+### Rekkord 0.107
+
+*Released on 2026-09-20*
+
+- Fix invalid KID shown when using `rekkord snapshots -v`
+
 ### Rekkord 0.106
 
 *Released on 2026-09-15*
