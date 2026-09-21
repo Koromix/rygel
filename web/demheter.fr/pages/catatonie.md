@@ -7,7 +7,7 @@ Le syndrome catatonique caractérisé par des signes moteurs (difficulté au dé
 # Description clinique
 
 <div class="shelf">
-    <iframe width="560" height="315" src="https://www.youtube.com/embed/i9zEJM_OWzE?si=BwGVg_hEtTWFN1fw" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+    <iframe width="560" height="315" src="https://www.youtube.com/embed/i9zEJM_OWzE?si=BwGVg_hEtTWFN1fw" title="YouTube video player" frameborder="0" sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox" allow="accelerometer; encrypted-media; gyroscope" allowfullscreen></iframe>
 </div>
 
 # Pour aller plus loin...
