@@ -11,7 +11,7 @@
 
 *Released on 2026-09-19*
 
-- Fix broken HFA support for some union types (ARM64, RISC-V 64, LoongArch64 abd Power64)
+- Fix broken HFA support for some union types (ARM64, RISC-V 64, LoongArch64 and Power64)
 - Reduce slight overhead with pointer arguments introduced in Koffi 3.3.0
 - Fix invalid detection of mmap() failure
 
