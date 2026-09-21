@@ -1782,29 +1782,39 @@ Napi::Value LibraryHandle::Unload(const Napi::CallbackInfo &info)
     return env.Undefined();
 }
 
-static Napi::Value LoadSharedLibrary(const Napi::CallbackInfo &info)
+static napi_value LoadSharedLibrary(napi_env env, napi_callback_info info)
 {
-    Napi::Env env = info.Env();
-    InstanceData *instance = (InstanceData *)info.Data();
+    napi_value args[2];
+    size_t count = 2;
+    InstanceData *instance;
 
-    if (info.Length() < 1) {
-        ThrowError<Napi::TypeError>(env, "Expected 1 or 2 arguments, got %1", info.Length());
-        return env.Null();
+    NAPI_OK(napi_get_cb_info(env, info, &count, args, nullptr, (void **)&instance));
+
+    if (count < 1) {
+        ThrowError<Napi::TypeError>(env, "Expected 1 or 2 arguments, got %1", count);
+        return GetNull(env);
     }
-    if (!info[0].IsString() && !IsNullOrUndefined(env, info[0])) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for filename, expected string or null", GetValueType(instance, info[0]));
-        return env.Null();
+
+    char filename[4096];
+    [[maybe_unused]] int flags = 0;
+
+    if (napi_status ret = napi_get_value_string_utf8(env, args[0], filename, K_SIZE(filename), nullptr); ret != napi_ok) {
+        if (ret == napi_string_expected && IsNullOrUndefined(env, args[0])) {
+            filename[0] = 0;
+        } else {
+            ThrowError<Napi::TypeError>(env, "Unexpected %1 value for filename, expected string or null", GetValueType(instance, args[0]));
+            return GetNull(env);
+        }
     }
-    if (info.Length() >= 2 && !IsObject(env, info[1])) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for options, expected object", GetValueType(instance, info[1]));
-        return env.Null();
-    }
+
+    if (count >= 2) {
+        if (!IsObject(env, args[1])) {
+            ThrowError<Napi::TypeError>(env, "Unexpected %1 value for options, expected object", GetValueType(instance, args[1]));
+            return GetNull(env);
+        }
 
 #if !defined(_WIN32)
-    int flags = 0;
-
-    if (info.Length() >= 2) {
-        Napi::Object options = info[1].As<Napi::Object>();
+        Napi::Object options(env, args[1]);
 
         flags |= options.Get("lazy").ToBoolean() ? RTLD_LAZY : RTLD_NOW;
         flags |= options.Get("global").ToBoolean() ? RTLD_GLOBAL : RTLD_LOCAL;
@@ -1813,34 +1823,33 @@ static Napi::Value LoadSharedLibrary(const Napi::CallbackInfo &info)
 #endif
     } else {
         flags = RTLD_NOW | RTLD_LOCAL;
-    }
 #endif
+    }
 
     InitSyncMemory(instance);
 
     // Load shared library
     void *module = nullptr;
+
 #if defined(_WIN32)
-    if (info[0].IsString()) {
-        std::string filename = info[0].As<Napi::String>();
-        module = LoadWindowsLibrary(env, filename.c_str());
+    if (filename[0]) {
+        module = LoadWindowsLibrary(env, filename);
 
         if (!module)
-            return env.Null();
+            return GetNull(env);
     } else {
         module = GetModuleHandle(nullptr);
         K_ASSERT(module);
     }
 #else
-    if (info[0].IsString()) {
-        std::string filename = info[0].As<Napi::String>();
-        module = dlopen(filename.c_str(), flags);
+    if (filename[0]) {
+        module = dlopen(filename, flags);
 
         if (!module) {
             const char *msg = dlerror();
 
-            if (StartsWith(msg, filename.c_str())) {
-                msg += filename.length();
+            if (StartsWith(msg, filename)) {
+                msg += strlen(filename);
 
                 while (strchr(": ", msg[0]) && msg[0]) {
                     msg++;
@@ -1848,7 +1857,7 @@ static Napi::Value LoadSharedLibrary(const Napi::CallbackInfo &info)
             }
 
             ThrowError<Napi::Error>(env, "Failed to load shared library: %1", msg);
-            return env.Null();
+            return GetNull(env);
         }
     } else {
         module = RTLD_DEFAULT;
@@ -2330,32 +2339,40 @@ static napi_value GetPointerAddress(napi_env env, napi_callback_info info)
     return value;
 }
 
-static Napi::Value CallPointerSync(const Napi::CallbackInfo &info)
+static napi_value CallPointerSync(napi_env env, napi_callback_info info)
 {
-    Napi::Env env = info.Env();
-    InstanceData *instance = (InstanceData *)info.Data();
+    static_assert(MaxParameters >= 8);
 
-    if (info.Length() < 2) [[unlikely]] {
-        ThrowError<Napi::TypeError>(env, "Expected 2 or more arguments, got %1", info.Length());
-        return env.Null();
+    napi_value args[MaxParameters];
+    size_t count = 8;
+    InstanceData *instance;
+
+    NAPI_OK(napi_get_cb_info(env, info, &count, args, nullptr, (void **)&instance));
+
+    if (count > 8) {
+        NAPI_OK(napi_get_cb_info(env, info, &count, args, nullptr, nullptr));
+        count = std::min(count, (size_t)MaxParameters);
+    }
+    if (count < 2) [[unlikely]] {
+        ThrowError<Napi::TypeError>(env, "Expected 2 or more arguments, got %1", count);
+        return GetNull(env);
     }
 
     void *ptr = nullptr;
-    if (!TryPointer(env, info[0], &ptr)) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected pointer", GetValueType(instance, info[0]));
-        return env.Null();
+    if (!TryPointer(env, args[0], &ptr)) {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected pointer", GetValueType(instance, args[0]));
+        return GetNull(env);
     }
 
-    const TypeInfo *type = ResolveType(instance, info[1]);
+    const TypeInfo *type = ResolveType(instance, args[1]);
     if (!type) [[unlikely]]
-        return env.Null();
+        return GetNull(env);
     if (type->primitive != PrimitiveKind::Prototype) [[unlikely]] {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for type, expected function type", GetValueType(instance, info[1]));
-        return env.Null();
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for type, expected function type", GetValueType(instance, args[1]));
+        return GetNull(env);
     }
 
-    napi_value ret = CallPointer(env, type->proto, ptr, info.First() + 2, info.Length() - 2);
-    return Napi::Value(env, ret);
+    return CallPointer(env, type->proto, ptr, args + 2, count - 2);
 }
 
 static napi_value EncodeValue(napi_env env, napi_callback_info info)
@@ -2820,7 +2837,7 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
     exports.Set("alignof", CreateFunction(instance, GetTypeAlign, "alignof"));
     exports.Set("offsetof", CreateFunction(instance, GetMemberOffset, "offsetof"));
 
-    exports.Set("load", Napi::Function::New(env, LoadSharedLibrary, "load", instance));
+    exports.Set("load", CreateFunction(instance, LoadSharedLibrary, "load"));
 
     exports.Set("in", CreateFunction(instance, [](napi_env env, napi_callback_info info) { return MarkPointer(env, info, 1); }, "in"));
     exports.Set("out", CreateFunction(instance, [](napi_env env, napi_callback_info info) { return MarkPointer(env, info, 2); }, "out"));
@@ -2834,7 +2851,7 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
 
     exports.Set("as", CreateFunction(instance, CastValue, "as"));
     exports.Set("address", CreateFunction(instance, GetPointerAddress, "address"));
-    exports.Set("call", Napi::Function::New(env, CallPointerSync, "call", instance));
+    exports.Set("call", CreateFunction(instance, CallPointerSync, "call"));
     exports.Set("encode", CreateFunction(instance, EncodeValue, "encode"));
     exports.Set("view", CreateFunction(instance, CreateView, "view"));
 
