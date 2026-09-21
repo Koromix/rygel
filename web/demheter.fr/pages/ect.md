@@ -14,5 +14,5 @@ Vous pouvez également regarder ces vidéos sur l'ECT :
 Consultez le site <a href="https://www.conn-ect.com/" target="_blank">CONN-ECT</a> pour en apprendre davantage sur l'électroconvulsivothérapie, ses indications, ses bénéfices et ses risques.
 
 <div class="links">
-    <a href="https://www.catatonia.fr/outils-daide-au-diagnostic" target="_blank">Accéder au site CONN-ECT</a>
+    <a href="https://www.conn-ect.com/" target="_blank">Accéder au site CONN-ECT</a>
 </div>
