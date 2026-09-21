@@ -21,8 +21,8 @@ struct RelayContext {
     Size idx;
     uint8_t *base;
 
-    std::mutex mutex = {};
-    std::condition_variable cv = {};
+    std::mutex mutex;
+    std::condition_variable cv;
     bool done = false;
 };
 
