@@ -387,7 +387,7 @@ INLINE_UNITY void DecodeBuffer(Span<uint8_t> buffer, const uint8_t *origin, cons
 
 napi_value Decode(InstanceData *instance, const uint8_t *ptr, const TypeInfo *type);
 
-static K_FORCE_INLINE Napi::Array GetOwnPropertyNames(napi_env env, napi_value obj)
+static K_FORCE_INLINE napi_value GetOwnPropertyNames(napi_env env, napi_value obj)
 {
     K_ASSERT(IsObject(env, obj));
 
@@ -397,7 +397,7 @@ static K_FORCE_INLINE Napi::Array GetOwnPropertyNames(napi_env env, napi_value o
                                                      napi_key_numbers_to_strings, &result);
     K_ASSERT(status == napi_ok);
 
-    return Napi::Array(env, result);
+    return result;
 }
 
 static K_FORCE_INLINE napi_value WrapPointer(Napi::Env env, void *ptr)

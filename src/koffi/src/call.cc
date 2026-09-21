@@ -506,20 +506,29 @@ bool CallData::PushObject(napi_value obj, const TypeInfo *type, uint8_t *origin)
                 return false;
             }
         } else {
-            Napi::Array properties = GetOwnPropertyNames(env, obj);
+            napi_value props = GetOwnPropertyNames(env, obj);
 
-            if (properties.Length() != 1 || !properties.Get(0u).IsString()) [[unlikely]] {
+            if (GetArrayLength(env, props) != 1) [[unlikely]] {
                 ThrowError<Napi::Error>(env, "Expected object with single property name for union");
                 return false;
             }
 
-            std::string property = properties.Get(0u).As<Napi::String>();
+            char name[256];
+            {
+                napi_value value;
+                NAPI_OK(napi_get_element(env, props, 0, &value));
+
+                if (napi_get_value_string_utf8(env, value, name, K_SIZE(name), nullptr) != napi_ok) {
+                    ThrowError<Napi::Error>(env, "Expected object with single property name for union");
+                    return false;
+                }
+            }
 
             const RecordMember *member = std::find_if(members.begin(), members.end(),
-                                                      [&](const RecordMember &member) { return TestStr(property.c_str(), member.name); });
+                                                      [&](const RecordMember &member) { return TestStr(member.name, name); });
 
             if (member == members.end()) [[unlikely]] {
-                ThrowError<Napi::Error>(env, "Unknown member %1 in union type %2", property.c_str(), type->name);
+                ThrowError<Napi::Error>(env, "Unknown member %1 in union type %2", name, type->name);
                 return false;
             }
 
@@ -631,8 +640,7 @@ bool CallData::PushObject(napi_value obj, const TypeInfo *type, uint8_t *origin)
             } break;
             case PrimitiveKind::Array: {
                 if (IsArray(env, value)) {
-                    Napi::Array array = Napi::Array(env, value);
-                    if (!PushNormalArray(array, member.type, member.type->size, dest))
+                    if (!PushNormalArray(value, member.type, member.type->size, dest))
                         return false;
                 } else if (Span<uint8_t> buffer = {}; TryBuffer(env, value, &buffer)) {
                     PushBuffer(buffer, member.type, dest);
@@ -680,15 +688,15 @@ bool CallData::PushObject(napi_value obj, const TypeInfo *type, uint8_t *origin)
     return true;
 }
 
-bool CallData::PushNormalArray(Napi::Array array, const TypeInfo *type, Size size, uint8_t *origin)
+bool CallData::PushNormalArray(napi_value array, const TypeInfo *type, Size size, uint8_t *origin)
 {
-    K_ASSERT(array.IsArray());
+    K_ASSERT(IsArray(env, array));
 
     const TypeInfo *ref = type->ref.type;
     int32_t stride = type->ref.stride;
 
     // We can't rely on type->size because type might be a pointer
-    Size len = (Size)array.Length();
+    Size len = (Size)GetArrayLength(env, array);
     Size available = len * stride;
 
     if (available > size) {
@@ -708,7 +716,8 @@ bool CallData::PushNormalArray(Napi::Array array, const TypeInfo *type, Size siz
 #define PUSH_ARRAY(SetCode) \
         do { \
             for (Size i = 0; i < len; i++) { \
-                napi_value value = array[(uint32_t)i].AsValue(); \
+                napi_value value; \
+                NAPI_OK(napi_get_element(env, array, (uint32_t)i, &value)); \
                  \
                 uint8_t *dest = origin + offset; \
                 SetCode \
@@ -816,13 +825,13 @@ bool CallData::PushNormalArray(Napi::Array array, const TypeInfo *type, Size siz
         } break;
         case PrimitiveKind::Array: {
             for (Size i = 0; i < len; i++) {
-                napi_value value = array[(uint32_t)i].AsValue();
+                napi_value value;
+                NAPI_OK(napi_get_element(env, array, (uint32_t)i, &value));
 
                 uint8_t *dest = origin + offset;
 
                 if (IsArray(env, value)) {
-                    Napi::Array array = Napi::Array(env, value);
-                    if (!PushNormalArray(array, ref, (Size)ref->size, dest))
+                    if (!PushNormalArray(value, ref, (Size)ref->size, dest))
                         return false;
                 } else if (Span<uint8_t> buffer = {}; TryBuffer(env, value, &buffer)) {
                     PushBuffer(buffer, ref, dest);
@@ -1031,8 +1040,7 @@ bool CallData::PushPointerSlow(napi_value value, napi_valuetype kind, const Type
 
         K_UNREACHABLE();
     } else if (IsArray(env, value)) {
-        Napi::Array array = Napi::Array(env, value);
-        Size len = PushIndirectString(array, ref, &ptr);
+        Size len = PushIndirectString(value, ref, &ptr);
 
         OutArgument::Kind out_kind;
         Size out_len = 0;
@@ -1050,7 +1058,7 @@ bool CallData::PushPointerSlow(napi_value value, napi_valuetype kind, const Type
             }
             out_len = len;
         } else {
-            Size size = (Size)array.Length() * ref->size;
+            Size size = (Size)GetArrayLength(env, value) * ref->size;
 
             if (!ref->size) [[unlikely]] {
                 ThrowError<Napi::TypeError>(env, "Cannot pass %1 value to %2, use koffi.as()",
@@ -1061,7 +1069,7 @@ bool CallData::PushPointerSlow(napi_value value, napi_valuetype kind, const Type
             ptr = AllocHeap(size);
 
             if (directions & 1) {
-                if (!PushNormalArray(array, type, size, (uint8_t *)ptr))
+                if (!PushNormalArray(value, type, size, (uint8_t *)ptr))
                     return false;
             } else {
                 MemSet(ptr, 0, size);
@@ -1173,12 +1181,13 @@ restart:
     return false;
 }
 
-Size CallData::PushIndirectString(Napi::Array array, const TypeInfo *ref, void **out_ptr)
+Size CallData::PushIndirectString(napi_value array, const TypeInfo *ref, void **out_ptr)
 {
-    if (array.Length() != 1)
+    if (GetArrayLength(env, array) != 1)
         return -1;
 
-    napi_value value = array[0u].AsValue();
+    napi_value value;
+    NAPI_OK(napi_get_element(env, array, 0, &value));
 
     if (ref == instance->void_type) {
         return PushStringValue(value, (const char **)out_ptr);
@@ -1930,6 +1939,8 @@ static bool CanUseFastCall(const FunctionInfo *func)
 
 napi_value DescribeFunction(InstanceData *instance, const FunctionInfo *func)
 {
+    Napi::Env env = instance->env;
+
     static const char *const DirectionNames[] = {
         nullptr,
         "Input",
@@ -1937,10 +1948,10 @@ napi_value DescribeFunction(InstanceData *instance, const FunctionInfo *func)
         "Input/Output"
     };
 
-    Napi::Env env = instance->env;
-
     Napi::Object meta = Napi::Object::New(env);
-    Napi::Array arguments = Napi::Array::New(env, func->parameters.len);
+
+    napi_value arguments;
+    NAPI_OK(napi_create_array_with_length(env, (size_t)func->parameters.len, &arguments));
 
     meta.Set("name", NewString(env, func->name));
     meta.Set("arguments", arguments);
@@ -1953,7 +1964,7 @@ napi_value DescribeFunction(InstanceData *instance, const FunctionInfo *func)
         obj.Set("type", WrapType(instance, param.type));
         obj.Set("direction", NewString(env, DirectionNames[param.directions]));
 
-        arguments.Set((uint32_t)i, obj);
+        NAPI_OK(napi_set_element(env, arguments, (uint32_t)i, obj));
     }
 
     meta.Freeze();
@@ -2208,8 +2219,7 @@ bool Encode(InstanceData *instance, uint8_t *origin, napi_value value, const Typ
         } break;
         case PrimitiveKind::Array: {
             if (IsArray(env, value)) {
-                Napi::Array array = Napi::Array(env, value);
-                if (!call.PushNormalArray(array, type, type->size, origin))
+                if (!call.PushNormalArray(value, type, type->size, origin))
                     return false;
             } else if (Span<uint8_t> buffer = {}; TryBuffer(env, value, &buffer)) {
                 call.PushBuffer(buffer, type, origin);

@@ -554,7 +554,9 @@ napi_value DecodeArray(InstanceData *instance, const uint8_t *origin, const Type
 
     switch (type->hint) {
         case ArrayHint::Array: {
-            Napi::Array array = Napi::Array::New(env);
+            napi_value array;
+            NAPI_OK(napi_create_array_with_length(env, (size_t)len, &array));
+
             DecodeElements(instance, array, origin, type, len);
 
             return array;

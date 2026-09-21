@@ -125,7 +125,7 @@ static napi_value GetSetConfig(napi_env env, napi_callback_info info)
         int max_async_calls = new_config.resident_async_pools + new_config.max_temporaries;
 
         Napi::Object obj { env, arg };
-        Napi::Array keys = GetOwnPropertyNames(env, obj);
+        Napi::Array keys = Napi::Array(env, GetOwnPropertyNames(env, obj));
 
         for (uint32_t i = 0; i < keys.Length(); i++) {
             std::string key = keys.Get(i).As<Napi::String>();
@@ -284,7 +284,7 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
 
     Napi::String name = info[0].As<Napi::String>();
     Napi::Object obj = info[skip].As<Napi::Object>();
-    Napi::Array keys = GetOwnPropertyNames(env, obj);
+    Napi::Array keys = Napi::Array(env, GetOwnPropertyNames(env, obj));
 
     K_DEFER_NC(err_guard, count = instance->types.count) {
         Size start = count + !skip;
@@ -477,7 +477,7 @@ static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
 
     Napi::String name = info[0].As<Napi::String>();
     Napi::Object obj = info[skip].As<Napi::Object>();
-    Napi::Array keys = GetOwnPropertyNames(env, obj);
+    Napi::Array keys = Napi::Array(env, GetOwnPropertyNames(env, obj));
 
     K_DEFER_NC(err_guard, count = instance->types.count) {
         Size start = count + !skip;
@@ -1292,7 +1292,7 @@ static Napi::Value CreateEnumType(const Napi::CallbackInfo &info)
 
     Napi::String name = info[0].As<Napi::String>();
     Napi::Object obj = info[named].As<Napi::Object>();
-    Napi::Array keys = GetOwnPropertyNames(env, obj);
+    Napi::Array keys = Napi::Array(env, GetOwnPropertyNames(env, obj));
 
     TypeInfo *type = instance->types.AppendDefault();
     K_DEFER_N(err_guard) { instance->types.RemoveLast(1); };
