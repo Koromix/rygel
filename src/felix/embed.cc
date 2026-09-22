@@ -368,7 +368,9 @@ bool PackAssets(Span<const EmbedAsset> assets, unsigned int flags, const char *o
                 blob->compression_type = asset.compression_type;
 
                 if (asset.compression_type != CompressionType::None) {
-                    const char *bin_filename = Fmt(&temp_alloc, "%1.d/%2.bin", output_path, i).ptr;
+                    Span<const char> src_ext = GetPathExtension(asset.src_filename);
+                    const char *comp_ext = CompressionTypeExtensions[(int)asset.compression_type];
+                    const char *bin_filename = Fmt(&temp_alloc, "%1.d/%2%3%4", output_path, i, src_ext, comp_ext).ptr;
 
                     if (!dir_ready && !EnsureDirectoryExists(bin_filename))
                         return false;
