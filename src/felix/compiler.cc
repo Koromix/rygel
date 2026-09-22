@@ -524,7 +524,7 @@ public:
         switch (src_type) {
             case SourceType::C: { Fmt(&buf, "\"%1\" -std=gnu11", cc); } break;
             case SourceType::Cxx: {
-                int std = (clang_ver >= 160000) ? 20 : 17;
+                int std = (clang_ver >= 170000) ? 23 : 17;
                 Fmt(&buf, "\"%1\" -std=gnu++%2", cxx, std);
             } break;
 
@@ -1227,7 +1227,7 @@ public:
         switch (src_type) {
             case SourceType::C: { Fmt(&buf, "\"%1\" -std=gnu11", cc); } break;
             case SourceType::Cxx: {
-                int std = (gcc_ver >= 120000) ? 20 : 17;
+                int std = (gcc_ver >= 120000) ? 23 : 17;
                 Fmt(&buf, "\"%1\" -std=gnu++%2", cxx, std);
             } break;
 
@@ -2203,7 +2203,7 @@ public:
         // Compiler
         switch (src_type) {
             case SourceType::C: { Fmt(&buf, "\"%1\" -std=gnu11", cc); } break;
-            case SourceType::Cxx: { Fmt(&buf, "\"%1\" -std=gnu++20", cxx); } break;
+            case SourceType::Cxx: { Fmt(&buf, "\"%1\" -std=gnu++23", cxx); } break;
 
             case SourceType::GnuAssembly:
             case SourceType::MicrosoftAssembly:
@@ -2528,7 +2528,7 @@ public:
         // Compiler
         switch (src_type) {
             case SourceType::C: { Fmt(&buf, "\"%1\" -std=gnu11", cc); } break;
-            case SourceType::Cxx: { Fmt(&buf, "\"%1\" -std=gnu++20", cxx); } break;
+            case SourceType::Cxx: { Fmt(&buf, "\"%1\" -std=gnu++23", cxx); } break;
 
             case SourceType::GnuAssembly:
             case SourceType::MicrosoftAssembly:
