@@ -93,9 +93,13 @@ public:
 
     PollHandle(const Napi::CallbackInfo &info);
 
+    bool IsValid() const { return handle && handle->data; }
+
     void Finalize(Napi::BasicEnv env) override;
 
     void Start(const Napi::CallbackInfo &info);
+    bool Start(napi_value opts, napi_value cb);
+
     void Stop(const Napi::CallbackInfo &info);
     void Close(const Napi::CallbackInfo &info);
     void Ref(const Napi::CallbackInfo &info);
@@ -107,6 +111,6 @@ private:
     static void OnPoll(uv_poll_t *handle, int status, int events);
 };
 
-Napi::Value Poll(const Napi::CallbackInfo &info);
+napi_value Poll(napi_env env, napi_callback_info info);
 
 }

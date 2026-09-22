@@ -34,17 +34,24 @@ Napi::Function PollHandle::InitClass(InstanceData *instance)
 PollHandle::PollHandle(const Napi::CallbackInfo &info)
     : Napi::ObjectWrap<PollHandle>(info), env(info.Env())
 {
-    if (info.Length() < 1 || !info[0].IsExternal()) {
-        ThrowError<Napi::Error>(env, "Poll handles cannot be constructed manually");
+    if (info.Length() < 1) {
+        ThrowError<Napi::TypeError>(env, "Expected 1 arguments, got %1", info.Length());
         return;
     }
 
-    Napi::External<void> external = info[0].As<Napi::External<void>>();
-    int fd = (int)(intptr_t)external.Data();
-
+    int fd = 0;
     uv_loop_t *loop = nullptr;
+
+    // The descriptor is wrapped in an external object instead of an integer to prevent
+    // JS code from trying to create PollHandle objects with new PollHandle.
+    if (void *ptr = nullptr; napi_get_value_external(env, info[0], &ptr) == napi_ok) {
+        fd = (int)(intptr_t)ptr;
+    } else {
+        ThrowError<Napi::Error>(env, "Poll handles cannot be constructed manually");
+        return;
+    }
     if (napi_get_uv_event_loop(env, &loop) != napi_ok || !loop) {
-        ThrowError<Napi::Error>(env, "napi_get_uv_event_loop() failed");
+        ThrowError<Napi::Error>(env, "Failed to access Node event loop");
         return;
     }
 
@@ -81,25 +88,36 @@ void PollHandle::Start(const Napi::CallbackInfo &info)
         return;
     }
 
+    napi_value opts = has_opts ? info[0] : nullptr;
+    napi_value func = info[0 + has_opts];
+
+    Start(opts, func);
+}
+
+bool PollHandle::Start(napi_value opts, napi_value func)
+{
     int events = 0;
-    Napi::Function cb = info[0 + has_opts].As<Napi::Function>();
 
-    if (has_opts) {
-        Napi::Object opts = has_opts ? info[0].As<Napi::Object>() : Napi::Object::New(env);
+    if (opts) {
+        Napi::Object obj(env, opts);
 
-        events |= opts.Get("readable").ToBoolean() ? UV_READABLE : 0;
-        events |= opts.Get("writable").ToBoolean() ? UV_WRITABLE : 0;
-        events |= opts.Get("disconnect").ToBoolean() ? UV_DISCONNECT : 0;
+        events |= obj.Get("readable").ToBoolean() ? UV_READABLE : 0;
+        events |= obj.Get("writable").ToBoolean() ? UV_WRITABLE : 0;
+        events |= obj.Get("disconnect").ToBoolean() ? UV_DISCONNECT : 0;
     } else {
         events = UV_READABLE;
     }
 
-    callback = Napi::Persistent(cb);
+    callback = Napi::Persistent(Napi::Function(env, func));
+    K_DEFER_N(err_guard) { callback.Reset(); };
 
     if (int ret = uv_poll_start(handle, events, &PollHandle::OnPoll); ret != 0) {
-        callback.Reset();
         ThrowError<Napi::Error>(env, "Failed to start UV poll: %1", uv_strerror(ret));
+        return false;
     }
+
+    err_guard.Disable();
+    return true;
 }
 
 void PollHandle::Finalize(Napi::BasicEnv env)
@@ -168,45 +186,42 @@ void PollHandle::OnPoll(uv_poll_t *h, int status, int events)
     poll->callback.Call(poll->Value(), K_LEN(args), args);
 }
 
-Napi::Value Poll(const Napi::CallbackInfo &info)
+napi_value Poll(napi_env env, napi_callback_info info)
 {
-    Napi::Env env = info.Env();
-    InstanceData *instance = (InstanceData *)info.Data();
+    napi_value args[3];
+    size_t count = 3;
+    InstanceData *instance;
 
-    bool has_opts = (info.Length() >= 3 && info[1].IsObject());
+    NAPI_OK(napi_get_cb_info(env, info, &count, args, nullptr, (void **)&instance));
 
-    if (info.Length() < 2u + has_opts) {
-        ThrowError<Napi::TypeError>(env, "Expected 2 to 3 arguments, got %1", info.Length());
-        return env.Null();
+    bool has_opts = (count >= 3) && IsObject(env, args[1]);
+
+    if (count < 2 + has_opts) {
+        ThrowError<Napi::TypeError>(env, "Expected %1 arguments, got %2", 2 + has_opts, count);
+        return GetNull(env);
     }
 
-    if (!info[0].IsNumber()) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for descriptor, expected number", GetValueType(instance, info[0]));
-        return env.Null();
-    }
-    if (!info[1 + has_opts].IsFunction()) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for callback, expected function", GetValueType(instance, info[1 + has_opts]));
-        return env.Null();
-    }
+    int fd = 0;
+    napi_value opts = has_opts ? args[1] : nullptr;
+    napi_value func = args[1 + has_opts];
 
-    int fd = info[0].As<Napi::Number>().Int32Value();
+    if (!TryNumber(env, args[0], &fd)) {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for descriptor, expected number", GetValueType(instance, args[0]));
+        return GetNull(env);
+    }
+    if (GetKindOf(env, func) != napi_function) {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for callback, expected function", GetValueType(instance, args[1 + has_opts]));
+        return GetNull(env);
+    }
 
     Napi::External<void> external = Napi::External<void>::New(env, (void *)(intptr_t)fd);
     Napi::Object inst = instance->construct_poll.New({ external });
-    Napi::Function start = inst.Get("start").As<Napi::Function>();
+    PollHandle *handle = PollHandle::Unwrap(inst);
 
-    if (env.IsExceptionPending()) [[unlikely]]
-        return env.Null();
-
-    if (has_opts) {
-        Napi::Value opts = info[1];
-        Napi::Function cb = info[2].As<Napi::Function>();
-
-        start.Call(inst, { opts, cb });
-    } else {
-        Napi::Function cb = info[1].As<Napi::Function>();
-        start.Call(inst, { cb });
-    }
+    if (!handle->IsValid())
+        return GetNull(env);
+    if (!handle->Start(opts, func))
+        return GetNull(env);
 
     return inst;
 }

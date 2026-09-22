@@ -3020,7 +3020,7 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
 
         node.Set("env", WrapPointer(env, (napi_env)env));
 
-        node.Set("poll", Napi::Function::New(env, &Poll, "poll", instance));
+        node.Set("poll", CreateFunction(instance, &Poll, "poll"));
         node.Set("PollHandle", instance->construct_poll.Value());
     }
 
