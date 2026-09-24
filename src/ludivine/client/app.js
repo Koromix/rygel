@@ -816,7 +816,7 @@ async function initProject(project, study) {
         project = new ProjectInfo(project);
 
         let builder = new ProjectBuilder(project);
-        let start = LocalDate.fromJSDate(study.start);
+        let start = LocalDate.fromDate(study.start);
         let values = JSON.parse(study.data);
 
         bundle.init(builder, start, values);
@@ -1404,7 +1404,7 @@ async function syncEvents() {
         // Make copy in case it's refreshed while this runs
         tests = tests.slice();
 
-        let start = LocalDate.fromJSDate(study.start);
+        let start = LocalDate.fromDate(study.start);
         let offset = -(new Date).getTimezoneOffset();
 
         let events = new Map;
