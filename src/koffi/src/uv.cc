@@ -196,7 +196,7 @@ napi_value Poll(napi_env env, napi_callback_info info)
 
     bool has_opts = (count >= 3) && IsObject(env, args[1]);
 
-    if (count < 2 + has_opts) {
+    if (count < 2u + has_opts) {
         ThrowError<Napi::TypeError>(env, "Expected %1 arguments, got %2", 2 + has_opts, count);
         return GetNull(env);
     }

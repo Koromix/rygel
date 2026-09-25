@@ -2029,9 +2029,9 @@ static napi_value DecodeValue(napi_env env, napi_callback_info info)
     Size src_len = 0;
 
     bool has_offset = (count >= 2) && TryNumber(env, args[1], &offset);
-    bool has_len = (count >= 3 + has_offset) && TryNumber(env, args[2 + has_offset], &len);
+    bool has_len = (count >= 3u + has_offset) && TryNumber(env, args[2 + has_offset], &len);
 
-    if (count < 2 + has_offset) [[unlikely]] {
+    if (count < 2u + has_offset) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected %1 to 4 arguments, got %2", 2 + has_offset, count);
         return GetNull(env);
     }
@@ -2389,9 +2389,9 @@ static napi_value EncodeValue(napi_env env, napi_callback_info info)
     Size dest_len = 0;
 
     bool has_offset = (count >= 2) && TryNumber(env, args[1], &offset);
-    bool has_len = (count >= 4 + has_offset) && TryNumber(env, args[3 + has_offset], &len);
+    bool has_len = (count >= 4u + has_offset) && TryNumber(env, args[3 + has_offset], &len);
 
-    if (count < 3 + has_offset) [[unlikely]] {
+    if (count < 3u + has_offset) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected %1 to 5 arguments, got %2", 3 + has_offset, count);
         return GetNull(env);
     }
