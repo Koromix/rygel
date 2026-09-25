@@ -816,7 +816,7 @@ void DecodeBuffer(Span<uint8_t> buffer, const uint8_t *origin, const TypeInfo *t
             uint8_t *end = buffer.end();
 
             while (dest < end) {
-                *(float *)dest = *(double *)src;
+                *(float *)dest = (float)*(double *)src;
 
                 src += 8;
                 dest += 4;

@@ -613,7 +613,7 @@ const TypeInfo *ReshapeAggregate(InstanceData *instance, const TypeInfo *type, c
                 memset((void *)&reshaped->members, 0, K_SIZE(reshaped->members));
                 reshaped->members.Reserve(type->members.len);
                 reshaped->size = 0;
-                reshaped->fill = config.fill;
+                reshaped->fill = (uint8_t)config.fill;
                 NAPI_OK(napi_create_reference(env, defn, 1, &reshaped->defn));
 
                 for (RecordMember member: type->members) {
@@ -643,7 +643,7 @@ const TypeInfo *ReshapeAggregate(InstanceData *instance, const TypeInfo *type, c
                 memset((void *)&reshaped->members, 0, K_SIZE(reshaped->members));
                 reshaped->members.Reserve(type->members.len);
                 reshaped->size = 0;
-                reshaped->fill = config.fill;
+                reshaped->fill = (uint8_t)config.fill;
                 NAPI_OK(napi_create_reference(env, defn, 1, &reshaped->defn));
 
                 for (RecordMember member: type->members) {
@@ -676,7 +676,7 @@ const TypeInfo *ReshapeAggregate(InstanceData *instance, const TypeInfo *type, c
                 reshaped->ref.stride = config.stride;
                 reshaped->ref.conversion = config.f2d ? BufferConversion::FloatToDouble : reshaped->ref.conversion;
                 reshaped->size = (type->size / type->ref.stride) * config.stride;
-                reshaped->fill = config.fill;
+                reshaped->fill = (uint8_t)config.fill;
                 NAPI_OK(napi_create_reference(env, defn, 1, &reshaped->defn));
             } break;
 
