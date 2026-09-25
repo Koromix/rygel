@@ -1934,7 +1934,7 @@ static napi_value RegisterCallback(napi_env env, napi_callback_info info)
 static napi_value UnregisterCallback(napi_env env, napi_callback_info info)
 {
     napi_value arg;
-    size_t count = 2;
+    size_t count = 1;
     InstanceData *instance;
 
     NAPI_OK(napi_get_cb_info(env, info, &count, &arg, nullptr, (void **)&instance));
