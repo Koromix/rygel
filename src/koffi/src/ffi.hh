@@ -29,8 +29,8 @@ namespace K {
         K_ASSERT(_status == napi_ok || _status == napi_cannot_run_js); \
     } while (false)
 
-static const Size DefaultSyncStackSize = Mebibytes(1);
-static const Size DefaultSyncHeapSize = Mebibytes(2);
+static const Size DefaultSyncStackSize = Mebibytes(2);
+static const Size DefaultSyncHeapSize = Mebibytes(1);
 static const Size DefaultAsyncStackSize = Kibibytes(128);
 static const Size DefaultAsyncHeapSize = Kibibytes(128);
 static const int DefaultResidentAsyncPools = 4;

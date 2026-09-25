@@ -2,6 +2,8 @@
 
 ## Memory usage
 
+*The default synchronous sizes have changed in Koffi 3.3.2*
+
 For synchronous/normal calls, Koffi uses two preallocated memory blocks:
 
 - One to construct the C stack and assign registers, subsequently used by the platform-specific assembly code (1 MiB by default)
@@ -29,8 +31,8 @@ Async calls run on worker threads, the number of which depends on the number of 
 
 Setting              | Default | Maximum | Description
 -------------------- | ------- | ------- | ----------------------------------------------------
-sync_stack_size      | 1 MiB   | 16 MiB  | Stack size for synchronous calls
-sync_heap_size       | 2 MiB   | 16 MiB  | Heap size for synchronous calls
+sync_stack_size      | 2 MiB   | 16 MiB  | Stack size for synchronous calls
+sync_heap_size       | 1 MiB   | 16 MiB  | Heap size for synchronous calls
 async_stack_size     | 128 kiB | 16 MiB  | Stack size for asynchronous calls
 async_heap_size      | 128 kiB | 16 MiB  | Heap size for asynchronous calls
 resident_async_pools | 4       | 16      | Number of resident pools for asynchronous calls
