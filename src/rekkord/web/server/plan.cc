@@ -372,8 +372,14 @@ void HandlePlanSave(http_IO *io)
                         &stmt, id >= 0 ? sq_Binding(id) : sq_Binding(), session->userid,
                         name, key, hash, scan >= 0 ? sq_Binding(scan) : sq_Binding()))
             return false;
+
         if (!stmt.Step()) {
-            K_ASSERT(!stmt.IsValid());
+            if (stmt.IsValid()) {
+                K_ASSERT(id >= 0 && sqlite3_errcode(*instance->db) == SQLITE_CONSTRAINT);
+
+                LogError("Not allowed to edit this plan");
+                io->SendError(403);
+            }
             return false;
         }
 
