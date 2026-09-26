@@ -347,6 +347,16 @@ void HandleRepositorySave(http_IO *io)
     }
 
     int64_t id = -1;
+    {
+        const char *str = request.GetQueryValue("id");
+
+        if (!str || !ParseInt(str, &id, (int)ParseFlag::End)) {
+            LogError("Missing or invalid repository ID");
+            io->SendError(422);
+            return;
+        }
+    }
+
     const char *name = nullptr;
     {
         bool success = http_ParseJson(io, Kibibytes(4), [&](json_Parser *json) {
@@ -355,9 +365,7 @@ void HandleRepositorySave(http_IO *io)
             for (json->ParseObject(); json->InObject(); ) {
                 Span<const char> key = json->ParseKey();
 
-                if (key == "id") {
-                    json->ParseInt(&id);
-                } else if (key == "name") {
+                if (key == "name") {
                     json->SkipNull() || json->ParseString(&name);
                 } else {
                     json->UnexpectedKey(key);

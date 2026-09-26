@@ -373,19 +373,23 @@ async function configurePlan(plan) {
         },
 
         submit: async (elements) => {
-            let obj = {
-                id: plan.id,
-                name: plan.name,
-                scan: scan ? plan.scan : null,
-                items: plan.items.map(item => ({
-                    channel: item.channel,
-                    days: item.days,
-                    clock: item.clock,
-                    paths: item.paths
-                }))
-            };
+            // Save changes
+            {
+                let url = Util.pasteURL('/api/plan/save', { id: plan.id });
 
-            let json = await Net.post('/api/plan/save', obj);
+                let changes = {
+                    name: plan.name,
+                    scan: scan ? plan.scan : null,
+                    items: plan.items.map(item => ({
+                        channel: item.channel,
+                        days: item.days,
+                        clock: item.clock,
+                        paths: item.paths
+                    }))
+                };
+
+                await Net.post(url, changes);
+            }
 
             Net.invalidate('plans');
             Net.invalidate('plan');

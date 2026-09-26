@@ -191,12 +191,16 @@ async function configureRepository(repo) {
         },
 
         submit: async (elements) => {
-            let obj = {
-                id: repo.id,
-                name: elements.name.value.trim() || null
-            };
+            // Save changes
+            {
+                let url = Util.pasteURL('/api/repository/save', { id: repo.id });
 
-            await Net.post('/api/repository/save', obj);
+                let changes = {
+                    name: elements.name.value.trim() || null
+                };
+
+                await Net.post(url, obj);
+            }
 
             Net.invalidate('repositories');
             Net.invalidate('repository');
