@@ -288,7 +288,7 @@ void HandlePlanSave(http_IO *io)
             valid &= json->IsValid();
 
             if (valid) {
-                if (!name || !name[0]) {
+                if (!IsStringValid(name)) {
                     LogError("Missing or invalid 'name' parameter");
                     valid = false;
                 }
@@ -298,7 +298,7 @@ void HandlePlanSave(http_IO *io)
                 }
 
                 for (const PlanItem &item: items) {
-                    if (!item.channel || !item.channel[0]) {
+                    if (!IsStringValid(item.channel)) {
                         LogError("Missing or invalid 'channel' parameter");
                         valid = false;
                     }
@@ -312,7 +312,7 @@ void HandlePlanSave(http_IO *io)
                     }
 
                     for (const char *path: item.paths) {
-                        if (!path || !path[0]) {
+                        if (!IsStringValid(path)) {
                             LogError("Missing or invalid item path");
                             valid = false;
                         }

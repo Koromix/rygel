@@ -375,7 +375,7 @@ void HandleRepositorySave(http_IO *io)
             valid &= json->IsValid();
 
             if (valid) {
-                if (name && !name[0]) {
+                if (!IsStringValid(name)) {
                     LogError("Invalid 'name' parameter");
                     valid = false;
                 }
@@ -484,7 +484,7 @@ void HandleRepositorySnapshots(http_IO *io)
 
         channel = request.GetQueryValue("channel");
 
-        if (!channel || !channel[0]) {
+        if (!IsStringValid(channel)) {
             LogError("Missing or invalid channel name");
             io->SendError(422);
             return;
