@@ -34,16 +34,13 @@ Napi::Function PollHandle::InitClass(InstanceData *instance)
 PollHandle::PollHandle(const Napi::CallbackInfo &info)
     : Napi::ObjectWrap<PollHandle>(info), env(info.Env())
 {
-    if (info.Length() < 1) {
-        ThrowError<Napi::TypeError>(env, "Expected 1 arguments, got %1", info.Length());
-        return;
-    }
-
     int fd = 0;
     uv_loop_t *loop = nullptr;
 
     // The descriptor is wrapped in an external object instead of an integer to prevent
     // JS code from trying to create PollHandle objects with new PollHandle.
+    // The CallbackInfo::operator[] returns undefined for out-of-bound access so
+    // we can skip the count check.
     if (void *ptr = nullptr; napi_get_value_external(env, info[0], &ptr) == napi_ok) {
         fd = (int)(intptr_t)ptr;
     } else {
