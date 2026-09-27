@@ -2131,7 +2131,6 @@ class CallbackInfo {
   bool IsConstructCall() const;
   size_t Length() const;
   const Value operator[](size_t index) const;
-  napi_value *First() const;
   Value This() const;
   void* Data() const;
   void SetData(void* data);
