@@ -20,6 +20,7 @@
     #define WIN32_LEAN_AND_MEAN
     #include <windows.h>
     #include <direct.h>
+    #include <malloc.h>
 #else
     #include <unistd.h>
     #include <errno.h>
@@ -1206,6 +1207,19 @@ EXPORT int32_t ReverseAndSum(int32_t *ptr, int len)
     for (int i = 0; i < len; i++) {
         ptr[i] = -ptr[i];
         sum = ptr[i];
+    }
+
+    return sum;
+}
+
+EXPORT int AllocStack(int len)
+{
+    char *ptr = alloca(len);
+    memset(ptr, 2, len);
+
+    int sum = 0;
+    for (int i = 0; i < len; i++) {
+        sum += ptr[i];
     }
 
     return sum;

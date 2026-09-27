@@ -1301,6 +1301,8 @@ void ReleaseSpan(Allocator *alloc, Span<T> mem)
     alloc->Release((void *)mem.ptr, size);
 }
 
+Size GetPageSize();
+
 void *AllocateSafe(Size len);
 void ReleaseSafe(void *ptr, Size len);
 void ZeroSafe(void *ptr, Size len);

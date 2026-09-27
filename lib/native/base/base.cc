@@ -483,6 +483,16 @@ void BlockAllocator::GiveTo(LinkedAllocator *alloc)
 
 #if defined(_WIN32)
 
+Size GetPageSize()
+{
+    static Size pagesize = []() {
+        SYSTEM_INFO info = {};
+        GetSystemInfo(&info);
+        return (Size)info.dwPageSize;
+    }();
+    return pagesize;
+}
+
 void *AllocateSafe(Size len)
 {
     void *ptr = VirtualAlloc(nullptr, (SIZE_T)len, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
@@ -517,7 +527,7 @@ void ZeroSafe(void *ptr, Size len)
 
 #elif !defined(__wasi__)
 
-static int GetPageSize()
+Size GetPageSize()
 {
     static Size pagesize = sysconf(_SC_PAGESIZE);
     return pagesize;

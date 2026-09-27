@@ -328,6 +328,7 @@ async function test() {
     const CopyEndian64A = lib.func('void CopyBuffer(int64_be_t *in, int len, _Out_ int64_le_t *out)');
     const CopyEndian64B = lib.func('void CopyBuffer(int64_le_t *in, int len, _Out_ int64_be_t *out)');
     const ReverseAndSumBE = lib.func('int32_t ReverseAndSum(_Inout_ int32_be_t *ptr, int len)');
+    const AllocStack = lib.func('int AllocStack(int len)');
 
     free_ptr = CallFree;
 
@@ -1216,6 +1217,14 @@ async function test() {
 
         assert.equal(ret, -63907597);
         assert.deepEqual(int32, new Int32Array([0xFECBA9F7, 0xF64321F0, 0xF3D830FC]));
+    }
+
+    // Test big stack
+    {
+        let overhead = 1024;
+        let stack = koffi.config().sync_stack_size - overhead;
+
+        assert.equal(AllocStack(stack), stack * 2);
     }
 
     lib.unload();

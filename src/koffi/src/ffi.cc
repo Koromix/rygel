@@ -27,9 +27,6 @@
     #include <dlfcn.h>
     #include <unistd.h>
     #include <sys/mman.h>
-    #if !defined(MAP_STACK)
-        #define MAP_STACK 0
-    #endif
 #endif
 #include <wchar.h>
 
@@ -72,14 +69,6 @@ static bool ChangeSize(InstanceData *instance, const char *name, Napi::Value val
 
     *out_size = (Size)size;
     return true;
-}
-
-static bool ChangeMemorySize(InstanceData *instance, const char *name, Napi::Value value, Size *out_size)
-{
-    const Size MinSize = Kibibytes(1);
-    const Size MaxSize = Mebibytes(16);
-
-    return ChangeSize(instance, name, value, MinSize, MaxSize, out_size);
 }
 
 static bool ChangeAsyncLimit(InstanceData *instance, const char *name, Napi::Value value, int max, int *out_limit)
@@ -132,16 +121,16 @@ static napi_value GetSetConfig(napi_env env, napi_callback_info info)
             Napi::Value value = obj[key];
 
             if (key == "sync_stack_size") {
-                if (!ChangeMemorySize(instance, key.c_str(), value, &new_config.sync_stack_size))
+                if (!ChangeSize(instance, key.c_str(), value, Kibibytes(64), Mebibytes(16), &new_config.sync_stack_size))
                     return GetNull(env);
             } else if (key == "sync_heap_size") {
-                if (!ChangeMemorySize(instance, key.c_str(), value, &new_config.sync_heap_size))
+                if (!ChangeSize(instance, key.c_str(), value, 0, Mebibytes(16), &new_config.sync_heap_size))
                     return GetNull(env);
             } else if (key == "async_stack_size") {
-                if (!ChangeMemorySize(instance, key.c_str(), value, &new_config.async_stack_size))
+                if (!ChangeSize(instance, key.c_str(), value, Kibibytes(64), Mebibytes(16), &new_config.async_stack_size))
                     return GetNull(env);
             } else if (key == "async_heap_size") {
-                if (!ChangeMemorySize(instance, key.c_str(), value, &new_config.async_heap_size))
+                if (!ChangeSize(instance, key.c_str(), value, 0, Mebibytes(16), &new_config.async_heap_size))
                     return GetNull(env);
             } else if (key == "resident_async_pools") {
                 if (!ChangeAsyncLimit(instance, key.c_str(), value, K_LEN(instance->memories.data), &new_config.resident_async_pools))
@@ -2575,19 +2564,38 @@ void InstanceMemory::Allocate(Size stack_size, Size heap_size)
     K_ASSERT(!stack.ptr);
     K_ASSERT(!heap.ptr);
 
-    stack_size = AlignLen(stack_size, Kibibytes(64));
+    Size page_size = GetPageSize();
+
+    stack_size = AlignLen(stack_size, page_size);
 
 #if defined(_WIN32)
-    // Allocate stack memory
-    stack.ptr = (uint8_t *)VirtualAlloc(nullptr, stack_size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
-    stack.end = stack.ptr + stack_size;
+    {
+        uint8_t *base = (uint8_t *)VirtualAlloc(nullptr, stack_size + page_size, MEM_RESERVE, PAGE_NOACCESS);
 
-    K_CRITICAL(stack.ptr, "Failed to allocate %1 of memory", stack_size);
+        K_CRITICAL(base, "Failed to allocate %1 of memory", FmtMemSize(stack_size + page_size));
+        K_CRITICAL(VirtualAlloc(base + page_size, stack_size, MEM_COMMIT, PAGE_READWRITE), "Failed to initialize stack memory");
+
+        stack.ptr = base + page_size;
+        stack.end = stack.ptr + stack_size;
+    }
 #else
-    stack.ptr = (uint8_t *)mmap(nullptr, stack_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON | MAP_STACK, -1, 0);
-    stack.end = stack.ptr + stack_size;
+    {
+#if defined(MAP_STACK)
+        uint8_t *base = (uint8_t *)mmap(nullptr, stack_size + page_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON | MAP_STACK, -1, 0);
+        K_CRITICAL(base != MAP_FAILED, "Failed to allocate %1 of memory", FmtMemSize(stack_size + page_size));
+#else
+        uint8_t *base = (uint8_t *)mmap(nullptr, stack_size + page_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+        K_CRITICAL(base != MAP_FAILED, "Failed to allocate %1 of memory", FmtMemSize(stack_size + page_size));
+#endif
 
-    K_CRITICAL(stack.ptr != MAP_FAILED, "Failed to allocate %1 of memory", stack_size);
+#if defined(__linux__) || !defined(MAP_STACK)
+        // Best effort, OS-dependent
+        mprotect(base, page_size, PROT_NONE);
+#endif
+
+        stack.ptr = base + page_size;
+        stack.end = stack.ptr + stack_size;
+    }
 #endif
 
 #if defined(__OpenBSD__)
