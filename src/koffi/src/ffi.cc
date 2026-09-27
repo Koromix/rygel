@@ -2344,15 +2344,15 @@ static napi_value CallPointerSync(napi_env env, napi_callback_info info)
 {
     static_assert(MaxParameters >= 8);
 
-    napi_value args[MaxParameters];
+    napi_value args[MaxParameters + 2];
     size_t count = 8;
     InstanceData *instance;
 
     NAPI_OK(napi_get_cb_info(env, info, &count, args, nullptr, (void **)&instance));
 
     if (count > 8) {
+        count = std::min(count, (size_t)MaxParameters + 2);
         NAPI_OK(napi_get_cb_info(env, info, &count, args, nullptr, nullptr));
-        count = std::min(count, (size_t)MaxParameters);
     }
     if (count < 2) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected 2 or more arguments, got %1", count);

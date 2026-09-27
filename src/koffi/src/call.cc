@@ -1419,8 +1419,8 @@ static TRANSLATE_FUNC napi_value TranslateNormalCall(napi_env env, napi_callback
     NAPI_OK(napi_get_cb_info(env, info, &count, call.args, nullptr, (void **)&func));
 
     if (count > 6) {
-        NAPI_OK(napi_get_cb_info(env, info, &count, call.args, nullptr, nullptr));
         count = std::min(count, (size_t)MaxParameters);
+        NAPI_OK(napi_get_cb_info(env, info, &count, call.args, nullptr, nullptr));
     }
 
     return TranslateNormalCall(&call, func, func->native, (Size)count);
@@ -1428,17 +1428,17 @@ static TRANSLATE_FUNC napi_value TranslateNormalCall(napi_env env, napi_callback
 
 static TRANSLATE_FUNC napi_value TranslateNormalCallDebugAsync(napi_env env, napi_callback_info info)
 {
-    static_assert(MaxParameters >= 8);
+    static_assert(MaxParameters >= 6);
 
     CallData call(env);
-    size_t count = 8;
+    size_t count = 6;
     FunctionInfo *func;
 
     NAPI_OK(napi_get_cb_info(env, info, &count, call.args, nullptr, (void **)&func));
 
-    if (count > 8) {
-        NAPI_OK(napi_get_cb_info(env, info, &count, call.args, nullptr, nullptr));
+    if (count > 6) {
         count = std::min(count, (size_t)MaxParameters);
+        NAPI_OK(napi_get_cb_info(env, info, &count, call.args, nullptr, nullptr));
     }
     if (count < (size_t)func->required_parameters) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected %1 arguments, got %2", func->parameters.len, count);
@@ -1574,17 +1574,17 @@ static TRANSLATE_FUNC K_FORCE_INLINE napi_value TranslateVariadicCall(CallData *
 
 static TRANSLATE_FUNC napi_value TranslateVariadicCall(napi_env env, napi_callback_info info)
 {
-    static_assert(MaxParameters >= 8);
+    static_assert(MaxParameters >= 16);
 
     CallData call(env);
-    size_t count = 8;
+    size_t count = 16;
     FunctionInfo *func;
 
     NAPI_OK(napi_get_cb_info(env, info, &count, call.args, nullptr, (void **)&func));
 
-    if (count > 8) {
-        NAPI_OK(napi_get_cb_info(env, info, &count, call.args, nullptr, nullptr));
+    if (count > 16) {
         count = std::min(count, (size_t)MaxParameters);
+        NAPI_OK(napi_get_cb_info(env, info, &count, call.args, nullptr, nullptr));
     }
 
     return TranslateVariadicCall(&call, func, func->native, (Size)count);
@@ -1766,8 +1766,8 @@ static napi_value TranslateAsyncCall(napi_env env, napi_callback_info info)
     NAPI_OK(napi_get_cb_info(env, info, &count, args, nullptr, (void **)&func));
 
     if (count > 6) {
-        NAPI_OK(napi_get_cb_info(env, info, &count, args, nullptr, nullptr));
         count = std::min(count, (size_t)MaxParameters);
+        NAPI_OK(napi_get_cb_info(env, info, &count, args, nullptr, nullptr));
     }
     if (count <= (size_t)func->required_parameters) {
         ThrowError<Napi::TypeError>(env, "Expected %1 arguments, got %2", func->required_parameters + 1, count);
