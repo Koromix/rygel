@@ -7,6 +7,17 @@
 
 ### Koffi 3.3
 
+#### Koffi 3.3.2
+
+*Released on 2026-09-25*
+
+- Fix buffer overflow when calling native function with too many arguments
+- Increase default sync stack size to 2 MiB
+- Reduce default sync heap size to 1 MiB
+- Add guard page to Koffi stack to prevent overflow
+- Move type helper functions (sizeof, etc.) to native module
+- Reduce overhead of several Koffi functions
+
 #### Koffi 3.3.1
 
 *Released on 2026-09-19*
