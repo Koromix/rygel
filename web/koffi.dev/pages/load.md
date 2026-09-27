@@ -29,7 +29,7 @@ More options may be added if needed.
 
 ## Unloading
 
-Use `lib.unload()` to can explicitly unload a library. Any attempt to find or call a function from this library after unloading it will crash.
+Use `lib.unload()` to explicitly unload a library. Any attempt to find or call a function from this library after unloading it will crash.
 
 > [!NOTE]
 > On some platforms (such as with the [musl C library on Linux](https://wiki.musl-libc.org/functional-differences-from-glibc.html#Unloading-libraries)), shared libraries cannot be unloaded, so the library will remain loaded and memory mapped after the call to `lib.unload()`.
@@ -65,7 +65,7 @@ Koffi automatically tries mangled names for non-standard x86 calling conventions
 If you prefer, you can declare functions using simple C-like prototype strings, as shown below:
 
 ```js
-// The parameter name (nptn below) is not used by Koffi, and optional, but can be nice for documentation
+// The parameter name (nptr below) is not used by Koffi, and optional, but can be nice for documentation
 const atoi = lib.func('int atoi(const char *nptr)');
 ```
 
