@@ -904,8 +904,8 @@ static napi_value CallAlloc(napi_env env, napi_callback_info info)
         return GetNull(env);
     }
 
-    int32_t len;
-    if (napi_get_value_int32(env, args[1], &len) != napi_ok) {
+    Size len;
+    if (!TryNumber(env, args[1], &len) != napi_ok) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for length, expected number", GetValueType(instance, args[1]));
         return GetNull(env);
     }
@@ -921,6 +921,7 @@ static napi_value CallAlloc(napi_env env, napi_callback_info info)
     void *ptr = calloc((size_t)len, (size_t)type->size);
 
     if (!ptr) [[unlikely]] {
+        // Might overflow, who cares at this stage
         Size size = (Size)(len * type->size);
 
         ThrowError<Napi::Error>(env, "Failed to allocate %1 of memory", FmtMemSize((Size)size));
@@ -965,7 +966,7 @@ static napi_value GetOrSetErrno(napi_env env, napi_callback_info info)
     int32_t value;
 
     if (count >= 1) {
-        if (napi_get_value_int32(env, arg, &value) != napi_ok) {
+        if (!TryNumber(env, arg, &value)) {
             ThrowError<Napi::TypeError>(env, "Unexpected %1 value for errno, expected integer", GetValueType(instance, arg));
             return GetNull(env);
         }
