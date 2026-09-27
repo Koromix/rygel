@@ -894,7 +894,7 @@ static napi_value CallAlloc(napi_env env, napi_callback_info info)
     }
 
     Size len;
-    if (!TryNumber(env, args[1], &len) != napi_ok) {
+    if (!TryNumber(env, args[1], &len)) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for length, expected number", GetValueType(instance, args[1]));
         return GetNull(env);
     }
