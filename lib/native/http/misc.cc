@@ -7,6 +7,19 @@
 
 namespace K {
 
+static inline bool IsQvalue0(Span<const char> str)
+{
+    if (!StartsWith(str, "q=0"))
+        return false;
+
+    if (str.len == 3)
+        return true;
+    if (str[3] == '.' && std::all_of(str.ptr + 4, str.end(), [](char c) { return c == '0'; }))
+        return true;
+
+    return false;
+}
+
 // Mostly compliant, respects 'q=0' weights but it does not care about ordering beyond that. The
 // caller is free to choose a preferred encoding among acceptable ones.
 uint32_t http_ParseAcceptableEncodings(Span<const char> encodings)
@@ -26,26 +39,29 @@ uint32_t http_ParseAcceptableEncodings(Span<const char> encodings)
         while (encodings.len) {
             Span<const char> quality;
             Span<const char> encoding = TrimStr(SplitStr(encodings, ',', &encodings));
+
             encoding = TrimStr(SplitStr(encoding, ';', &quality));
             quality = TrimStr(quality);
 
+            bool accept = !IsQvalue0(quality);
+
             if (encoding == "identity") {
-                high_priority = ApplyMask(high_priority, 1u << (int)CompressionType::None, quality != "q=0");
-                low_priority = ApplyMask(low_priority, 1u << (int)CompressionType::None, quality != "q=0");
+                high_priority = ApplyMask(high_priority, 1u << (int)CompressionType::None, accept);
+                low_priority = ApplyMask(low_priority, 1u << (int)CompressionType::None, accept);
             } else if (encoding == "gzip") {
-                high_priority = ApplyMask(high_priority, 1u << (int)CompressionType::Gzip, quality != "q=0");
-                low_priority = ApplyMask(low_priority, 1u << (int)CompressionType::Gzip, quality != "q=0");
+                high_priority = ApplyMask(high_priority, 1u << (int)CompressionType::Gzip, accept);
+                low_priority = ApplyMask(low_priority, 1u << (int)CompressionType::Gzip, accept);
             } else if (encoding == "deflate") {
-                high_priority = ApplyMask(high_priority, 1u << (int)CompressionType::Zlib, quality != "q=0");
-                low_priority = ApplyMask(low_priority, 1u << (int)CompressionType::Zlib, quality != "q=0");
+                high_priority = ApplyMask(high_priority, 1u << (int)CompressionType::Zlib, accept);
+                low_priority = ApplyMask(low_priority, 1u << (int)CompressionType::Zlib, accept);
             } else if (encoding == "br") {
-                high_priority = ApplyMask(high_priority, 1u << (int)CompressionType::Brotli, quality != "q=0");
-                low_priority = ApplyMask(low_priority, 1u << (int)CompressionType::Brotli, quality != "q=0");
+                high_priority = ApplyMask(high_priority, 1u << (int)CompressionType::Brotli, accept);
+                low_priority = ApplyMask(low_priority, 1u << (int)CompressionType::Brotli, accept);
             } else if (encoding == "zstd") {
-                high_priority = ApplyMask(high_priority, 1u << (int)CompressionType::Zstd, quality != "q=0");
-                low_priority = ApplyMask(low_priority, 1u << (int)CompressionType::Zstd, quality != "q=0");
+                high_priority = ApplyMask(high_priority, 1u << (int)CompressionType::Zstd, accept);
+                low_priority = ApplyMask(low_priority, 1u << (int)CompressionType::Zstd, accept);
             } else if (encoding == "*") {
-                low_priority = ApplyMask(low_priority, AllEncodings, quality != "q=0");
+                low_priority = ApplyMask(low_priority, AllEncodings, accept);
             }
         }
 
