@@ -11,7 +11,7 @@
 
 *Released on 2026-09-25*
 
-- Fix buffer overflow when calling native function with too many arguments
+- Fix buffer overflow when calling native function with more than 64 arguments
 - Increase default sync stack size to 2 MiB
 - Reduce default sync heap size to 1 MiB
 - Add guard page to Koffi stack to prevent overflow
