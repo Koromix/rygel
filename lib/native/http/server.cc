@@ -625,7 +625,9 @@ bool http_IO::OpenForWrite(int status, CompressionType encoding, int64_t len, St
         int64_t remaining = request.body_len - incoming.read;
 
         if (remaining) {
-            int64_t discard = incoming.read + std::min(remaining, (int64_t)Mebibytes(32));
+            int64_t max = Mebibytes(32);
+            bool full = remaining < max;
+            int64_t discard = incoming.read + (full ? remaining : max);
 
             while (incoming.read < discard) {
                 uint8_t buf[65535];
@@ -635,7 +637,7 @@ bool http_IO::OpenForWrite(int status, CompressionType encoding, int64_t len, St
             }
 
             // Avoid desync
-            request.keepalive = false;
+            request.keepalive &= full;
         }
     }
 
