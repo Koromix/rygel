@@ -217,58 +217,77 @@ bool http_Daemon::WriteSocket(http_Socket *socket, Span<Span<const uint8_t>> par
 
 static bool CreateSocketPair(int out_pair[2])
 {
-    SOCKET listener = INVALID_SOCKET;
-    SOCKET client = INVALID_SOCKET;
-    SOCKET peer = INVALID_SOCKET;
+    for (int i = 0; i < 8; i++) {
+        SOCKET listener = INVALID_SOCKET;
+        SOCKET client = INVALID_SOCKET;
+        SOCKET peer = INVALID_SOCKET;
 
-    K_DEFER {
-        closesocket(listener);
-        closesocket(client);
-        closesocket(peer);
-    };
+        K_DEFER {
+            closesocket(listener);
+            closesocket(client);
+            closesocket(peer);
+        };
 
-    sockaddr_in addr = {};
-    socklen_t addr_len = K_SIZE(addr);
+        sockaddr_in addr = {};
+        socklen_t addr_len = K_SIZE(addr);
 
-    addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-    addr.sin_port = 0;
+        addr.sin_family = AF_INET;
+        addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+        addr.sin_port = 0;
 
-    listener = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    if (listener == INVALID_SOCKET)
-        goto error;
-    client = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-    if (client == INVALID_SOCKET)
-        goto error;
+        listener = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+        if (listener == INVALID_SOCKET)
+            break;
+        client = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+        if (client == INVALID_SOCKET)
+            break;
 
-    // Set reuse flag
-    {
-        int reuse = 1;
-        setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, (char *)&reuse, K_SIZE(reuse));
+        // Set reuse flag
+        {
+            int reuse = 1;
+            setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, (char *)&reuse, K_SIZE(reuse));
+        }
+
+        if (bind(listener, (struct sockaddr *)&addr, K_SIZE(addr)) < 0)
+            break;
+        if (getsockname(listener, (struct sockaddr *)&addr, &addr_len) < 0)
+            break;
+        if (listen(listener, 1) < 0)
+            break;
+        if (connect(client, (struct sockaddr *)&addr, K_SIZE(addr)) < 0)
+            break;
+
+        peer = accept(listener, nullptr, nullptr);
+        if (peer == INVALID_SOCKET)
+            break;
+
+        // Make sure no hijacking occured
+        {
+            sockaddr_in addr1 = {};
+            sockaddr_in addr2 = {};
+            socklen_t addr1_len = K_SIZE(addr1);
+            socklen_t addr2_len = K_SIZE(addr2);
+
+            if (getsockname(client, (struct sockaddr *)&addr1, &addr1_len) < 0)
+                break;
+            if (getpeername(peer, (struct sockaddr *)&addr2, &addr2_len) < 0)
+                break;
+
+            if (addr1_len != addr2_len || memcmp(&addr1, &addr2, addr1_len)) {
+                SetLastError(ERROR_NETWORK_BUSY); // Whatever
+                continue;
+            }
+        }
+
+        // Success!
+        out_pair[0] = (int)client;
+        out_pair[1] = (int)peer;
+        client = INVALID_SOCKET;
+        peer = INVALID_SOCKET;
+
+        return true;
     }
 
-    if (bind(listener, (struct sockaddr *)&addr, K_SIZE(addr)) < 0)
-        goto error;
-    if (getsockname(listener, (struct sockaddr *)&addr, &addr_len) < 0)
-        goto error;
-    if (listen(listener, 1) < 0)
-        goto error;
-    if (connect(client, (struct sockaddr *)&addr, K_SIZE(addr)) < 0)
-        goto error;
-
-    peer = accept(listener, nullptr, nullptr);
-    if (peer == INVALID_SOCKET)
-        goto error;
-
-    // Success!
-    out_pair[0] = (int)client;
-    out_pair[1] = (int)peer;
-    client = INVALID_SOCKET;
-    peer = INVALID_SOCKET;
-
-    return true;
-
-error:
     LogError("Failed to create socket pair: %1", GetWin32ErrorString());
     return false;
 }
