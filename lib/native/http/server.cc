@@ -440,17 +440,14 @@ static inline bool IsFieldValueValid(Span<const char> key)
     return valid;
 }
 
-[[maybe_unused]] static bool IsHeaderKeyValid(const char *key)
+[[maybe_unused]] static bool IsHeaderKeyValid(Span<const char> key)
 {
     bool upper = true;
 
-    for (Size i = 0; key[i]; i++) {
-        int c = key[i];
-
+    for (int c: key) {
         bool valid = upper ? (c == UpperAscii(c)) : (c == LowerAscii(c));
         if (!valid)
             return false;
-
         upper = (c == '-');
     }
 
@@ -532,6 +529,7 @@ bool http_IO::OpenForRead(Size max_len, StreamReader *out_st)
 void http_IO::AddHeader(Span<const char> key, Span<const char> value)
 {
     K_ASSERT(!response.started);
+    K_ASSERT(IsHeaderKeyValid(key));
 
     http_KeyValue header = {};
 
