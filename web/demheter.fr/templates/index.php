@@ -124,7 +124,7 @@
         <nav id="top">
             <div class="deploy"></div>
             <menu>
-                <a id="logo" href="/"><img src="{{ ASSET static/logo.webp }}" alt="Logo DEMHETER" /></a>
+                <a id="logo" href="/" style="max-width: 320px;"><img src="{{ ASSET static/logo.webp }}" alt="Logo DEMHETER" /></a>
 
 {{ LINKS }}
             </menu>

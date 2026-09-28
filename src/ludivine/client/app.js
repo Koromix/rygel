@@ -757,7 +757,7 @@ function renderApp(el, fullscreen) {
             <nav id="top">
                 <div @click=${deploy}></div>
                 <menu>
-                    <a id="logo" href="/"><img src=${ASSETS['main/logo']} alt=${'Logo ' + ENV.title} /></a>
+                    <a id="logo" href="/" style="max-width: 260px;"><img src=${ASSETS['main/logo']} alt=${'Logo ' + ENV.title} /></a>
                     ${ENV.pages.map((page, idx) => {
                         if (idx > 0 && ENV.pages[idx - 1].title == page.title)
                             return '';
