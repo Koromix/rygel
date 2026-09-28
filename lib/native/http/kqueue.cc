@@ -177,7 +177,7 @@ restart:
         return -1;
     }
 
-    socket->client.timeout_at = GetMonotonicClock() + idle_timeout;
+    socket->client.ExtendTimeout(bytes, idle_timeout);
 
     return bytes;
 }
@@ -191,8 +191,6 @@ bool http_Daemon::WriteSocket(http_Socket *socket, Span<const uint8_t> buf)
 #endif
 
     while (buf.len) {
-        socket->client.timeout_at = GetMonotonicClock() + send_timeout;
-
         Size len = std::min(buf.len, MaxSend);
         Size bytes = send(socket->sock, buf.ptr, len, flags);
 
@@ -207,6 +205,8 @@ bool http_Daemon::WriteSocket(http_Socket *socket, Span<const uint8_t> buf)
             socket->client.request.keepalive = false;
             return false;
         }
+
+        socket->client.ExtendTimeout(bytes, send_timeout);
 
         buf.ptr += bytes;
         buf.len -= bytes;
@@ -238,8 +238,6 @@ bool http_Daemon::WriteSocket(http_Socket *socket, Span<Span<const uint8_t>> par
 #endif
 
     while (msg.msg_iovlen) {
-        socket->client.timeout_at = GetMonotonicClock() + send_timeout;
-
         Size sent = sendmsg(socket->sock, &msg, flags);
 
         if (sent < 0) {
@@ -253,6 +251,8 @@ bool http_Daemon::WriteSocket(http_Socket *socket, Span<Span<const uint8_t>> par
             socket->client.request.keepalive = false;
             return false;
         }
+
+        socket->client.ExtendTimeout(sent, send_timeout);
 
         do {
             struct iovec *part = msg.msg_iov;
@@ -358,7 +358,7 @@ void http_IO::SendFile(int status, int fd, int64_t len)
             return;
         }
 
-        socket->client.timeout_at = GetMonotonicClock() + daemon->send_timeout;
+        ExtendTimeout(sent, daemon->send_timeout);
 
         offset += sent;
         remain -= sent;
@@ -617,7 +617,7 @@ bool http_Dispatcher::Run()
                 } break;
             }
 
-            int delay = (int)(client->timeout_at.load() - clock);
+            int delay = (int)(client->timeout_at.load(std::memory_order_relaxed) - clock);
 
             if (delay <= 0) {
                 shutdown(socket->sock, SHUT_RDWR);

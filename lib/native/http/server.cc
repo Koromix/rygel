@@ -489,7 +489,7 @@ bool http_IO::OpenForRead(Size max_len, StreamReader *out_st)
     daemon->StartRead(socket);
 
     incoming.reading = true;
-    timeout_at = GetMonotonicClock() + daemon->idle_timeout;
+    SetTimeout(GetMonotonicClock() + daemon->idle_timeout);
 
     bool success = out_st->Open([this](Span<uint8_t> out_buf) { return ReadDirect(out_buf); }, "<http>");
     K_ASSERT(success);
@@ -642,6 +642,7 @@ bool http_IO::OpenForWrite(int status, CompressionType encoding, int64_t len, St
     }
 
     response.started = true;
+    SetTimeout(GetMonotonicClock() + daemon->send_timeout);
 
     // Don't allow Keep-Alive with HTTP/1.0 when chunked encoding is used
     request.keepalive &= (len >= 0 || request.version >= 11);
@@ -782,9 +783,19 @@ void http_IO::SendFile(int status, const char *filename, const char *mimetype)
     SendFile(status, fd, file_info.size);
 }
 
-void http_IO::ExtendTimeout(int timeout)
+void http_IO::SetTimeout(int64_t timeout)
 {
-    timeout_at = GetMonotonicClock() + timeout;
+    timeout_at.store(timeout, std::memory_order_relaxed);
+}
+
+void http_IO::ExtendTimeout(int64_t extend)
+{
+    int64_t current = timeout_at.load(std::memory_order_relaxed);
+    int64_t next = 0;
+
+    do {
+        next = GetMonotonicClock() + extend;
+    } while (next > current && !timeout_at.compare_exchange_weak(current, next, std::memory_order_relaxed));
 }
 
 bool http_IO::Init(http_Socket *socket, int64_t start, struct sockaddr *sa)
@@ -828,7 +839,7 @@ bool http_IO::Init(http_Socket *socket, int64_t start, struct sockaddr *sa)
     }
 
     socket_start = start;
-    timeout_at = start + daemon->idle_timeout;
+    SetTimeout(GetMonotonicClock() + daemon->idle_timeout);
 
     return true;
 }
@@ -1218,7 +1229,7 @@ http_RequestStatus http_IO::ParseRequest()
     request.body_len = body_len;
     request.keepalive = keepalive;
 
-    timeout_at = GetMonotonicClock() + daemon->idle_timeout;
+    SetTimeout(GetMonotonicClock() + daemon->idle_timeout);
 
     return http_RequestStatus::Ready;
 }
@@ -1398,16 +1409,16 @@ bool http_IO::Rearm(int64_t now)
     bool keepalive = request.keepalive && (now >= 0);
 
     if (keepalive) {
-        int64_t keepalive_timeout = socket_start + daemon->keepalive_time;
-
         // Make sure the client gets some extra time when in Keep-Alive time to avoid
         // abrupt disconnection once we have sent "Connection: keep-alive" to the client.
-        timeout_at = std::max(keepalive_timeout, now + 5000);
+        int64_t keepalive_timeout = std::max(socket_start + daemon->keepalive_time, now + 5000);
+
+        SetTimeout(keepalive_timeout);
 
         MemMove(incoming.buf.ptr, incoming.buf.ptr + incoming.pos, incoming.buf.len - incoming.pos);
         incoming.buf.len -= incoming.pos;
     } else {
-        timeout_at = now + 5000;
+        SetTimeout(now + 5000);
 
         if (incoming.buf.capacity < Kibibytes(8)) {
             incoming.buf.len = 0;

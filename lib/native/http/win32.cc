@@ -146,7 +146,7 @@ Size http_Daemon::ReadSocket(http_Socket *socket, Span<uint8_t> buf)
         return -1;
     }
 
-    socket->client.timeout_at = GetMonotonicClock() + idle_timeout;
+    socket->client.ExtendTimeout(bytes, idle_timeout);
 
     return bytes;
 }
@@ -154,8 +154,6 @@ Size http_Daemon::ReadSocket(http_Socket *socket, Span<uint8_t> buf)
 bool http_Daemon::WriteSocket(http_Socket *socket, Span<const uint8_t> buf)
 {
     while (buf.len) {
-        socket->client.timeout_at = GetMonotonicClock() + send_timeout;
-
         int len = (int)std::min(buf.len, MaxSend);
         int bytes = send(socket->sock, (char *)buf.ptr, len, 0);
 
@@ -166,6 +164,8 @@ bool http_Daemon::WriteSocket(http_Socket *socket, Span<const uint8_t> buf)
             }
             return false;
         }
+
+        socket->client.ExtendTimeout(bytes, send_timeout);
 
         buf.ptr += bytes;
         buf.len -= bytes;
@@ -192,8 +192,6 @@ bool http_Daemon::WriteSocket(http_Socket *socket, Span<Span<const uint8_t>> par
             bufs[i].len = (unsigned long)part.len;
         }
 
-        socket->client.timeout_at = GetMonotonicClock() + send_timeout;
-
         DWORD sent = 0;
         int ret = WSASend((SOCKET)socket->sock, bufs.data, (DWORD)bufs.len, &sent, 0, nullptr, nullptr);
 
@@ -204,6 +202,8 @@ bool http_Daemon::WriteSocket(http_Socket *socket, Span<Span<const uint8_t>> par
             }
             return false;
         }
+
+        socket->client.ExtendTimeout(sent, send_timeout);
 
         // Windows does not apparently do partial writes, so don't bother dealing with that.
         // Go on!
@@ -477,7 +477,7 @@ bool http_Dispatcher::Run()
                 } break;
             }
 
-            int delay = (int)(client->timeout_at.load() - clock);
+            int delay = (int)(client->timeout_at.load(std::memory_order_relaxed) - clock);
 
             if (delay <= 0) {
                 shutdown(socket->sock, SD_BOTH);
@@ -610,6 +610,8 @@ void http_IO::SendFile(int status, int fd, int64_t len)
             request.keepalive = false;
             return;
         }
+
+        ExtendTimeout(send, daemon->send_timeout);
 
         offset += send;
         remain -= send;

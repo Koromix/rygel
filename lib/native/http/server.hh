@@ -261,7 +261,9 @@ public:
     void SendFile(int status, const char *filename, const char *mimetype = nullptr);
     void SendFile(int status, int fd, int64_t len = -1);
 
-    void ExtendTimeout(int timeout);
+    void SetTimeout(int64_t timeout);
+    void ExtendTimeout(int64_t extend);
+    void ExtendTimeout(int64_t extend, int64_t max) { ExtendTimeout(std::min(extend, max)); }
 
     bool HasResponded() const { return response.started; }
     const char *LastError() const { return last_err; }
