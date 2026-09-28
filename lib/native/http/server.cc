@@ -518,7 +518,7 @@ bool http_IO::OpenForRead(Size max_len, StreamReader *out_st)
     daemon->StartRead(socket);
 
     incoming.reading = true;
-    timeout_at = GetMonotonicClock() + daemon->send_timeout;
+    timeout_at = GetMonotonicClock() + daemon->idle_timeout;
 
     bool success = out_st->Open([this](Span<uint8_t> out_buf) { return ReadDirect(out_buf); }, "<http>");
     K_ASSERT(success);
