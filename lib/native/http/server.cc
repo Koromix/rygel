@@ -994,6 +994,7 @@ http_RequestStatus http_IO::ParseRequest()
 {
     Span<char> intro = {};
     bool keepalive = false;
+    int64_t body_len = 0;
     bool known_addr = (daemon->addr_mode == http_AddressMode::Socket);
 
     // Find end of request headers (CRLF+CRLF)
@@ -1167,17 +1168,17 @@ http_RequestStatus http_IO::ParseRequest()
         } else if (TestStr(key, "Connection")) {
             keepalive = !TestStrI(value, "close");
         } else if(TestStr(key, "Content-Length")) {
-            if (!ParseInt(value, &request.body_len)) [[unlikely]] {
+            if (!ParseInt(value, &body_len)) [[unlikely]] {
                 SendError(400);
                 return http_RequestStatus::Close;
             }
 
-            if (request.body_len < 0) [[unlikely]] {
+            if (body_len < 0) [[unlikely]] {
                 LogError("Negative Content-Length is not valid");
                 SendError(400);
                 return http_RequestStatus::Close;
             }
-            if (request.body_len && request.method == http_RequestMethod::Get) [[unlikely]] {
+            if (body_len && request.method == http_RequestMethod::Get) [[unlikely]] {
                 LogError("Refusing to process GET request with body");
                 SendError(400);
                 return http_RequestStatus::Close;
@@ -1231,6 +1232,7 @@ http_RequestStatus http_IO::ParseRequest()
     MapKeys(request.cookies, &request.cookies_map);
 
     // Set at the end so any error before would lead to "Connection: close"
+    request.body_len = body_len;
     request.keepalive = keepalive;
 
     return http_RequestStatus::Ready;
