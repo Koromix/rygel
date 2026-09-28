@@ -1248,6 +1248,30 @@ http_RequestStatus http_IO::ParseRequest()
     return http_RequestStatus::Ready;
 }
 
+class FmtHeaderValue {
+    const char *str;
+
+public:
+    FmtHeaderValue(const char *str) : str(str) {}
+
+    void Format(FunctionRef<void(Span<const char>)> append) const;
+    operator FmtArg() const { return FmtCustom(*this); }
+};
+
+void FmtHeaderValue::Format(FunctionRef<void(Span<const char>)> append) const
+{
+    for (Size i = 0; str[i]; i++) {
+        int c = str[i];
+
+        if (c == '\r' || c == '\n') {
+            // This is what Go does, so why not
+            append(' ');
+        } else {
+            append((char)c);
+        }
+    }
+}
+
 Span<const char> http_IO::PrepareResponse(int status, CompressionType encoding, int64_t len)
 {
     HeapArray<char> buf(&allocator);
@@ -1268,7 +1292,10 @@ Span<const char> http_IO::PrepareResponse(int status, CompressionType encoding, 
     }
 
     for (const http_KeyValue &header: response.headers) {
-        Fmt(&buf, "%1: %2\r\n", header.key, header.value);
+        // Header values are a mess, so the caller is responsible for proper encoding
+        // But we still want to avoid the possibility of response splitting.
+
+        Fmt(&buf, "%1: %2\r\n", header.key, FmtHeaderValue(header.value));
     }
 
     if (len >= 0) {
