@@ -803,7 +803,7 @@ bool s3_Client::DeleteObject(Span<const char> key)
 
 bool s3_Client::DeleteObjects(Span<const char *const> keys)
 {
-    BlockAllocator temp_alloc;
+    BlockAllocator temp_alloc(Kibibytes(256));
 
     static const char *const intro =
 R"(<?xml version="1.0" encoding="UTF-8"?>
@@ -817,29 +817,49 @@ R"(<?xml version="1.0" encoding="UTF-8"?>
     for (Size start = 0; start < keys.len; start += 1000) {
         Size end = std::min(start + 1000, keys.len);
 
-        HeapArray<char> body(&temp_alloc);
+        Span<char> body;
+        {
+            HeapArray<char> buf(&temp_alloc);
 
-        body.Append(intro);
-        for (Size i = start; i < end; i++) {
-            Fmt(&body, "  <Object><Key>%1</Key></Object>\n", FmtXmlSafe(keys[i]));
+            buf.Append(intro);
+            for (Size i = start; i < end; i++) {
+                Fmt(&buf, "  <Object><Key>%1</Key></Object>\n", FmtXmlSafe(keys[i]));
+            }
+            buf.Append(outro);
+
+            body = buf.Leak();
         }
-        body.Append(outro);
+
+        char checksum[128];
+        {
+            uint8_t hash[32];
+            crypto_hash_sha256(hash, (const uint8_t *)body.ptr, (size_t)body.len);
+            sodium_bin2base64(checksum, K_SIZE(checksum), hash, K_SIZE(hash), sodium_base64_VARIANT_ORIGINAL);
+        }
 
         int status = RunSafe("delete S3 objects", 5, 200, [&](CURL *curl, int) {
             int64_t now = GetUnixTime();
             TimeSpec date = DecomposeTimeUTC(now);
 
             const KeyValue params[] = {{ "delete", nullptr }};
-            PrepareRequest(curl, date, "POST", {}, params, &temp_alloc);
+            const KeyValue headers[] = {
+                { "x-amz-checksum-sha256", checksum },
+                { "x-amz-content-sha256", "UNSIGNED-PAYLOAD" },
+                { "x-amz-date", Fmt(&temp_alloc, "%1", FmtTimeBasic(date)).ptr }
+            };
+
+            PrepareRequest(curl, date, "POST", {}, params, headers, &temp_alloc);
 
             curl_easy_setopt(curl, CURLOPT_POST, 1L); // POST
             curl_easy_setopt(curl, CURLOPT_POSTFIELDS, body.ptr);
-            curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE , (long)body.len);
+            curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)body.len);
 
             return curl_Perform(curl, nullptr);
         });
         if (status != 200)
             return false;
+
+        temp_alloc.Reset();
     }
 
     return true;
