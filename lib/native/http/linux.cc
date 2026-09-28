@@ -156,6 +156,8 @@ bool http_Daemon::WriteSocket(http_Socket *socket, Span<const uint8_t> buf)
     int flags = MSG_NOSIGNAL | MSG_MORE;
 
     while (buf.len) {
+        socket->client.timeout_at = GetMonotonicClock() + send_timeout;
+
         Size len = std::min(buf.len, MaxSend);
         Size bytes = send(socket->sock, buf.ptr, len, flags);
 
@@ -170,8 +172,6 @@ bool http_Daemon::WriteSocket(http_Socket *socket, Span<const uint8_t> buf)
             socket->client.request.keepalive = false;
             return false;
         }
-
-        socket->client.timeout_at = GetMonotonicClock() + send_timeout;
 
         buf.ptr += bytes;
         buf.len -= bytes;
@@ -199,6 +199,8 @@ bool http_Daemon::WriteSocket(http_Socket *socket, Span<Span<const uint8_t>> par
     int flags = MSG_NOSIGNAL | MSG_MORE;
 
     while (msg.msg_iovlen) {
+        socket->client.timeout_at = GetMonotonicClock() + send_timeout;
+
         Size sent = sendmsg(socket->sock, &msg, flags);
 
         if (sent < 0) {
@@ -212,8 +214,6 @@ bool http_Daemon::WriteSocket(http_Socket *socket, Span<Span<const uint8_t>> par
             socket->client.request.keepalive = false;
             return false;
         }
-
-        socket->client.timeout_at = GetMonotonicClock() + send_timeout;
 
         do {
             struct iovec *part = msg.msg_iov;

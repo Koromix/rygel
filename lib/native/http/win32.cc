@@ -146,12 +146,16 @@ Size http_Daemon::ReadSocket(http_Socket *socket, Span<uint8_t> buf)
         return -1;
     }
 
+    socket->client.timeout_at = GetMonotonicClock() + idle_timeout;
+
     return bytes;
 }
 
 bool http_Daemon::WriteSocket(http_Socket *socket, Span<const uint8_t> buf)
 {
     while (buf.len) {
+        socket->client.timeout_at = GetMonotonicClock() + send_timeout;
+
         int len = (int)std::min(buf.len, MaxSend);
         int bytes = send(socket->sock, (char *)buf.ptr, len, 0);
 
@@ -187,6 +191,8 @@ bool http_Daemon::WriteSocket(http_Socket *socket, Span<Span<const uint8_t>> par
             bufs[i].buf = (char *)part.ptr;
             bufs[i].len = (unsigned long)part.len;
         }
+
+        socket->client.timeout_at = GetMonotonicClock() + send_timeout;
 
         DWORD sent = 0;
         int ret = WSASend((SOCKET)socket->sock, bufs.data, (DWORD)bufs.len, &sent, 0, nullptr, nullptr);
