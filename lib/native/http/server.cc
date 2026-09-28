@@ -642,7 +642,6 @@ bool http_IO::OpenForWrite(int status, CompressionType encoding, int64_t len, St
 {
     K_ASSERT(socket);
     K_ASSERT(!response.started);
-    K_ASSERT(!request.headers_only);
 
     daemon->StartWrite(socket);
 
@@ -671,24 +670,22 @@ bool http_IO::OpenForWrite(int status, CompressionType encoding, int64_t len, St
     // Don't allow Keep-Alive with HTTP/1.0 when chunked encoding is used
     request.keepalive &= (len >= 0 || request.version >= 11);
 
-    Span<const char> intro = PrepareResponse(status, encoding, len);
+    // Send response headers
+    {
+        Span<const char> intro = PrepareResponse(status, encoding, len);
 
-    if (!WriteDirect(intro.As<const uint8_t>()))
-        return false;
+        if (!WriteDirect(intro.As<const uint8_t>()))
+            return false;
+    }
 
-    const auto write = [this](Span<const uint8_t> buf) { return WriteDirect(buf); };
-    out_st->Open(write, "<http>");
-
-    if (len >= 0) {
-        if (encoding == CompressionType::None)
-            return true;
-
-        out_st->Close();
+    if (request.headers_only) {
+        const auto skip = [](Span<const uint8_t>) { return true; };
+        return out_st->Open(skip, "<http>");
+    } else if (len >= 0) {
+        const auto write = [this](Span<const uint8_t> buf) { return WriteDirect(buf); };
         return out_st->Open(write, "<http>", 0, encoding, CompressionSpeed::Fast);
     } else {
         const auto chunk = [this](Span<const uint8_t> buf) { return WriteChunked(buf); };
-
-        out_st->Close();
         return out_st->Open(chunk, "<http>", 0, encoding, CompressionSpeed::Fast);
     }
 }
