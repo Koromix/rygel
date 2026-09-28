@@ -203,8 +203,11 @@ bool http_ParseJson(http_IO *io, int64_t max_len, FunctionRef<bool(json_Parser *
     json_Parser json(&st, io->Allocator());
 
     if (func(&json)) {
+        // The handler is supposed to detect this.
+        // Detect missing handling in debug builds, but force failure in release builds.
         K_ASSERT(json.IsValid());
-        return true;
+
+        return json.IsValid();
     } else {
         return false;
     }
