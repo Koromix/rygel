@@ -2,6 +2,12 @@
 
 ## Alpha versions
 
+### Redropp 0.9.10
+
+*Released on 2026-09-28*
+
+- Fix S3 errors when cleaning up unused fragments (with some providers)
+
 ### Redropp 0.9.9
 
 *Released on 2026-09-17*
