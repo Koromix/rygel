@@ -1028,7 +1028,7 @@ http_RequestStatus http_IO::ParseRequest()
 
     // Parse request line
     {
-        Span<char> line = SplitStrLine(intro, &intro);
+        Span<char> line = SplitStr(intro, "\r\n", &intro);
 
         Span<char> method = SplitStr(line, ' ', &line);
         Span<char> url = SplitStr(line, ' ', &line);
@@ -1103,7 +1103,7 @@ http_RequestStatus http_IO::ParseRequest()
 
     // Parse headers
     while (intro.len) {
-        Span<char> line = SplitStrLine(intro, &intro);
+        Span<char> line = SplitStr(intro, "\r\n", &intro);
 
         Span<char> key = SplitStr(line, ':', &line);
         Span<char> value = TrimStr(line);
