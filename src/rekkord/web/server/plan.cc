@@ -8,6 +8,7 @@
 #include "web.hh"
 #include "plan.hh"
 #include "user.hh"
+#include "utility.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 
 namespace K {
@@ -216,6 +217,7 @@ void HandlePlanGet(http_IO *io)
 
 void HandlePlanSave(http_IO *io)
 {
+    const http_RequestInfo &request = io->Request();
     RetainPtr<const SessionInfo> session = GetNormalSession(io);
 
     if (!session) {
@@ -375,7 +377,7 @@ void HandlePlanSave(http_IO *io)
 
         if (!stmt.Step()) {
             if (stmt.IsValid()) {
-                K_ASSERT(id >= 0 && sqlite3_errcode(*instance->db) == SQLITE_CONSTRAINT);
+                K_ASSERT(id >= 0 && sqlite3_errcode(db) == SQLITE_CONSTRAINT);
 
                 LogError("Not allowed to edit this plan");
                 io->SendError(403);

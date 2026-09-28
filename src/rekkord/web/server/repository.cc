@@ -8,6 +8,7 @@
 #include "mail.hh"
 #include "repository.hh"
 #include "user.hh"
+#include "utility.hh"
 
 namespace K {
 
@@ -338,6 +339,7 @@ void HandleRepositoryGet(http_IO *io)
 
 void HandleRepositorySave(http_IO *io)
 {
+    const http_RequestInfo &request = io->Request();
     RetainPtr<const SessionInfo> session = GetNormalSession(io);
 
     if (!session) {
