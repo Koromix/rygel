@@ -568,7 +568,7 @@ bool http_Dispatcher::Run()
                     client->incoming.buf.ptr[client->incoming.buf.len] = 0;
 
                     status = client->ParseRequest();
-                } else if (!bytes || errno != EAGAIN) {
+                } else if (!bytes || (errno != EAGAIN && errno != EINTR)) {
                     if (client->IsBusy()) {
                         if (bytes) {
                             LogError("Connection failed: %1", strerror(errno));
