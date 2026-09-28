@@ -105,7 +105,6 @@ private:
     bool WriteSocket(http_Socket *socket, Span<const uint8_t> buf);
     bool WriteSocket(http_Socket *socket, Span<Span<const uint8_t>> bufs);
 
-    bool InitConfig(const http_Config &config);
     void RunHandler(http_IO *client, int64_t now);
 
     friend class http_Dispatcher;

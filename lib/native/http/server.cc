@@ -357,32 +357,6 @@ bool http_Daemon::Bind(const http_Config &config, bool log_addr)
     return true;
 }
 
-bool http_Daemon::InitConfig(const http_Config &config)
-{
-    if (!config.Validate())
-        return false;
-
-    if (config.addr_mode == http_AddressMode::Socket) {
-        LogWarning("You may want to %!.._set HTTP.ClientAddress%!0 to X-Forwarded-For or X-Real-Ip "
-                   "if you run this behind a reverse proxy that sets one of these headers.");
-    }
-
-    sock_type = config.sock_type;
-    addr_mode = config.addr_mode;
-
-    idle_timeout = config.idle_timeout;
-    keepalive_time = config.keepalive_time;
-    send_timeout = config.send_timeout;
-    stop_timeout = config.stop_timeout;
-
-    max_request_size = config.max_request_size;
-    max_url_len = config.max_url_len;
-    max_request_headers = config.max_request_headers;
-    max_request_cookies = config.max_request_cookies;
-
-    return true;
-}
-
 void http_Daemon::RunHandler(http_IO *client, int64_t now)
 {
     // This log filter does two things: it keeps a copy of the last log error message,
