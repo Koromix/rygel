@@ -621,7 +621,7 @@ void http_IO::SendFile(int status, int fd, int64_t len)
     // Send intro and start of file
     {
         TRANSMIT_FILE_BUFFERS tbuf = { (void *)intro.ptr, (DWORD)intro.len, nullptr, 0 };
-        DWORD send = (DWORD)(std::min(remain, (int64_t)MaxSend) - intro.len);
+        DWORD send = (DWORD)std::min(remain, (int64_t)MaxSend - intro.len);
 
         if (!TransmitFile((SOCKET)socket->sock, h, send, 0, nullptr, &tbuf, 0)) [[unlikely]] {
             LogError("Failed to send file: %1", GetWin32ErrorString());
@@ -630,7 +630,7 @@ void http_IO::SendFile(int status, int fd, int64_t len)
             return;
         }
 
-        ExtendTimeout(send, daemon->send_timeout);
+        ExtendTimeout(intro.len + send, daemon->send_timeout);
 
         offset += send;
         remain -= send;
