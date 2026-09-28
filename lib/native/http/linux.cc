@@ -376,11 +376,10 @@ bool http_Dispatcher::Run()
 
         // Process new connections
         if (accepts) {
-            sockaddr_storage ss;
-            socklen_t ss_len = K_SIZE(ss);
-
-            // Accept queued clients
             for (int i = 0; i < 8; i++) {
+                sockaddr_storage ss;
+                socklen_t ss_len = K_SIZE(ss);
+
                 int sock = accept4(listener, (sockaddr *)&ss, &ss_len, SOCK_CLOEXEC);
 
                 if (sock < 0) {
