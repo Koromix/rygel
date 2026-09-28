@@ -118,27 +118,29 @@ const char *Builder::AddQtResource(const TargetInfo &target, Span<const char *> 
     return obj_filename;
 }
 
-bool Builder::AddQtDirectories(const SourceFileInfo &src, HeapArray<const char *> *out_list)
+bool Builder::AddQtDirectories(const TargetInfo &target, HeapArray<const char *> *out_list)
 {
-    if (!PrepareQtSdk(src.target->qt_version))
+    if (!PrepareQtSdk(target.qt_version))
         return false;
 
-    const char *src_directory = DuplicateString(GetPathDirectory(src.filename), &str_alloc).ptr;
-    [[maybe_unused]] const char *misc_includes = nullptr;
+#if !defined(_WIN32)
+    const char *misc_includes = nullptr;
+#endif
 
-    out_list->Append(src_directory);
     out_list->Append(qt->headers);
 
-    for (const char *component: src.target->qt_components) {
+    for (const char *component: target.qt_components) {
 #if defined(_WIN32)
         // Probably never gonna be possible...
         K_ASSERT(build.compiler->platform != HostPlatform::macOS);
 #else
         if (build.compiler->platform == HostPlatform::macOS) {
             if (!misc_includes) {
-                misc_includes = Fmt(&str_alloc, "%1%/Qt%/%2", cache_directory, src.target->name).ptr;
+                misc_includes = Fmt(&str_alloc, "%1%/Qt%/%2", cache_directory, target.name).ptr;
+
                 if (!EnsureDirectoryExists(misc_includes))
                     return false;
+
                 out_list->Append(misc_includes);
             }
 
@@ -270,9 +272,20 @@ bool Builder::AddQtLibraries(const TargetInfo &target, HeapArray<const char *> *
                                                                              component, build.compiler->GetArchiveExtension()).ptr;
             const char *prl_filename = Fmt(&str_alloc, "%1%/%2Qt%3%4.prl", qt->libraries, build.compiler->GetLibPrefix(), qt->version_major, component).ptr;
 
-            if (!TestFile(library_filename)) {
-                LogError("Cannot find static library for Qt component '%1'", component);
-                return false;
+            bool exists = TestFile(library_filename);
+
+            if (!exists) {
+                if (build.compiler->platform == HostPlatform::macOS) {
+                    library_filename = Fmt(&str_alloc, "%1%/Qt%2.framework/Versions/Current/Qt%2", qt->libraries, component).ptr;
+                    prl_filename = Fmt(&str_alloc, "%1%/Qt%2.framework/Versions/Current/Resources/Qt%2.prl", qt->libraries, component).ptr;
+
+                    exists = TestFile(library_filename);
+                }
+
+                if (!exists) {
+                    LogError("Cannot find static library for Qt component '%1'", component);
+                    return false;
+                }
             }
 
             obj_filenames->Append(library_filename);
@@ -405,11 +418,15 @@ R"(#include <QtCore/QtPlugin>
 
     uint32_t features = target.CombineFeatures(build.features);
     const char *flags = GatherFlags(target, SourceType::Cxx);
+    HeapArray<const char *> system_directories;
+
+    if (!AddQtDirectories(target, &system_directories))
+        return nullptr;
 
     // Build object file
     Command cmd = {};
     build.compiler->MakeCppCommand(src_filename, SourceType::Cxx,
-                                   nullptr, {}, {}, qt->headers, {}, flags, features,
+                                   nullptr, {}, {}, system_directories, {}, flags, features,
                                    obj_filename,  &str_alloc, &cmd);
 
     const char *text = Fmt(&str_alloc, StdErr->IsVt100(), "Compile %!..+%1%!0 static Qt helper", target.name).ptr;

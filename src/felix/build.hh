@@ -155,7 +155,7 @@ private:
     const char *AddQtUiSource(const SourceFileInfo &src);
     const char *AddQtResource(const TargetInfo &target, Span<const char *> qrc_filenames);
 
-    bool AddQtDirectories(const SourceFileInfo &src, HeapArray<const char *> *out_list);
+    bool AddQtDirectories(const TargetInfo &target, HeapArray<const char *> *out_list);
     bool AddQtLibraries(const TargetInfo &target, HeapArray<const char *> *obj_filenames,
                                                   HeapArray<const char *> *link_libraries);
 

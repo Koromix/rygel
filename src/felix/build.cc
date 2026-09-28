@@ -562,10 +562,16 @@ bool Builder::AddCppSource(const SourceFileInfo &src, HeapArray<const char *> *o
 
         uint32_t features = src.CombineFeatures(build.features);
         const char *flags = GatherFlags(*src.target, src.type);
-
         HeapArray<const char *> system_directories;
-        if (src.target->qt_components.len && !AddQtDirectories(src, &system_directories))
-            return false;
+
+        if (src.target->qt_components.len) {
+            const char *src_directory = DuplicateString(GetPathDirectory(src.filename), &str_alloc).ptr;
+            system_directories.Append(src_directory);
+
+            if (!AddQtDirectories(*src.target, &system_directories))
+                return false;
+
+        }
 
         Command cmd = InitCommand();
         build.compiler->MakeCppCommand(src.filename, src.type,

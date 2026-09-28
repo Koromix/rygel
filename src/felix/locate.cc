@@ -204,6 +204,32 @@ static bool AdjustLibraryPath(const char *name, const Compiler *compiler,
     return true;
 }
 
+static bool DetectStaticPrl(const char *filename)
+{
+    StreamReader st(filename);
+    LineReader reader(&st);
+
+    Span<const char> line = {};
+    while (reader.Next(&line)) {
+        Span<const char> value;
+        Span<const char> key = TrimStr(SplitStr(line, '=', &value));
+        value = TrimStr(value);
+
+        if (key == "QMAKE_PRL_CONFIG") {
+            while (value.len) {
+                Span<const char> part = TrimStr(SplitStr(value, ';', &value));
+
+                if (part == "static")
+                    return true;
+            }
+
+            break;
+        }
+    }
+
+    return false;
+}
+
 const QtInfo *FindQtSdk(const Compiler *compiler)
 {
     static QtInfo qt = {};
@@ -308,10 +334,15 @@ const QtInfo *FindQtSdk(const Compiler *compiler)
 
             qt.shared = TestFile(library0);
         } else if (compiler->platform == HostPlatform::macOS) {
-            char library0[4046];
-            Fmt(library0, "%1%/libQt%2Core.a", qt.libraries, qt.version_major);
+            char prl0[4096];
+            Fmt(prl0, "%1%/QtCore.framework/Resources/QtCore.prl", qt.libraries);
 
-            qt.shared = !TestFile(library0);
+            if (!TestFile(prl0)) {
+                LogError("Cannot determine static or shared Qt mode");
+                return nullptr;
+            }
+
+            qt.shared = !DetectStaticPrl(prl0);
         } else {
             char library0[4046];
             Fmt(library0, "%1%/libQt%2Core.so", qt.libraries, qt.version_major);
