@@ -217,7 +217,7 @@ static bool DetectStaticPrl(const char *filename)
 
         if (key == "QMAKE_PRL_CONFIG") {
             while (value.len) {
-                Span<const char> part = TrimStr(SplitStr(value, ';', &value));
+                Span<const char> part = TrimStr(SplitStr(value, ' ', &value));
 
                 if (part == "static")
                     return true;
