@@ -532,14 +532,14 @@ http_Socket *http_Dispatcher::InitSocket(SOCKET sock, int64_t start, struct sock
         socket = new http_Socket(daemon);
     }
 
-    socket->sock = (int)sock;
-
     K_DEFER_N(err_guard) { delete socket; };
 
     if (!socket->client.Init(socket, start, sa)) [[unlikely]]
         return nullptr;
 
+    socket->sock = (int)sock;
     err_guard.Disable();
+
     return socket;
 }
 

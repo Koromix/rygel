@@ -530,8 +530,6 @@ http_Socket *http_Dispatcher::InitSocket(int sock, int64_t start, struct sockadd
         socket = new http_Socket(daemon);
     }
 
-    socket->sock = sock;
-
     K_DEFER_N(err_guard) { delete socket; };
 
     if (!socket->client.Init(socket, start, sa)) [[unlikely]]
@@ -539,7 +537,9 @@ http_Socket *http_Dispatcher::InitSocket(int sock, int64_t start, struct sockadd
     if (!AddEpollDescriptor(sock, EPOLLIN, socket)) [[unlikely]]
         return nullptr;
 
+    socket->sock = sock;
     err_guard.Disable();
+
     return socket;
 }
 

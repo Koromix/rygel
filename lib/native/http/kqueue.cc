@@ -672,15 +672,15 @@ http_Socket *http_Dispatcher::InitSocket(int sock, int64_t start, struct sockadd
         socket = new http_Socket(daemon);
     }
 
-    socket->sock = sock;
-
     K_DEFER_N(err_guard) { delete socket; };
 
     if (!socket->client.Init(socket, start, sa)) [[unlikely]]
         return nullptr;
     AddEventChange(EVFILT_READ, sock, EV_ADD | EV_CLEAR, socket);
 
+    socket->sock = sock;
     err_guard.Disable();
+
     return socket;
 }
 
