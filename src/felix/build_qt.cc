@@ -149,12 +149,19 @@ bool Builder::AddQtDirectories(const TargetInfo &target, HeapArray<const char *>
             if (TestFile(dirname, FileType::Directory)) {
                 const char *linkname = Fmt(&str_alloc, "%1%/Qt%2", misc_includes, component).ptr;
 
-                if (!build.fake && !TestFile(linkname, FileType::Link)) {
-                    if (!MakeDirectoryRec(misc_includes))
-                        return false;
-                    if (symlink(dirname, linkname) < 0) {
-                        LogError("Failed to create symbolic link '%1': %2", linkname, strerror(errno));
-                        return false;
+                if (!build.fake) {
+                    char target[4096] = {};
+                    readlink(linkname, target, K_SIZE(target) - 1);
+
+                    if (!TestStr(dirname, target)) {
+                        unlink(linkname);
+
+                        if (!MakeDirectoryRec(misc_includes))
+                            return false;
+                        if (symlink(dirname, linkname) < 0) {
+                            LogError("Failed to create symbolic link '%1': %2", linkname, strerror(errno));
+                            return false;
+                        }
                     }
                 }
 
