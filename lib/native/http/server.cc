@@ -303,7 +303,7 @@ bool http_Daemon::Bind(const http_Config &config, bool log_addr)
         return false;
 
     if (config.addr_mode == http_AddressMode::Socket) {
-        LogWarning("You may want to %!.._set HTTP.ClientAddress%!0 to X-Forwarded-For or X-Real-IP "
+        LogWarning("You may want to %!.._set HTTP.ClientAddress%!0 to X-Forwarded-For or X-Real-Ip "
                    "if you run this behind a reverse proxy that sets one of these headers.");
     }
 
@@ -363,7 +363,7 @@ bool http_Daemon::InitConfig(const http_Config &config)
         return false;
 
     if (config.addr_mode == http_AddressMode::Socket) {
-        LogWarning("You may want to %!.._set HTTP.ClientAddress%!0 to X-Forwarded-For or X-Real-IP "
+        LogWarning("You may want to %!.._set HTTP.ClientAddress%!0 to X-Forwarded-For or X-Real-Ip "
                    "if you run this behind a reverse proxy that sets one of these headers.");
     }
 
@@ -1208,16 +1208,16 @@ http_RequestStatus http_IO::ParseRequest()
             }
 
             known_addr = true;
-        } else if (daemon->addr_mode == http_AddressMode::XRealIP && TestStr(key, "X-Real-IP")) {
+        } else if (daemon->addr_mode == http_AddressMode::XRealIP && TestStr(key, "X-Real-Ip")) {
             Span<const char> trimmed = TrimStr(value);
 
             if (!trimmed.len) [[unlikely]] {
-                LogError("Empty client address in X-Forwarded-For header");
+                LogError("Empty client address in X-Real-Ip header");
                 SendError(400);
                 return http_RequestStatus::Close;
             }
             if (!CopyString(trimmed, addr)) [[unlikely]] {
-                LogError("Excessively long client address in X-Forwarded-For header");
+                LogError("Excessively long client address in X-Real-Ip header");
                 SendError(400);
                 return http_RequestStatus::Close;
             }

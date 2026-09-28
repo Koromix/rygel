@@ -17,7 +17,7 @@ enum class http_AddressMode {
 static const char *const http_AddressModeNames[] = {
     "Socket",
     "X-Forwarded-For",
-    "X-Real-IP"
+    "X-Real-Ip"
 };
 
 extern const HashMap<int, const char *> http_ErrorMessages;
