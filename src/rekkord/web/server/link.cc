@@ -6,6 +6,7 @@
 #include "../../lib/librekkord.hh"
 #include "link.hh"
 #include "user.hh"
+#include "utility.hh"
 
 namespace K {
 
@@ -55,11 +56,11 @@ void HandleLinkSnapshot(http_IO *io)
             valid &= json->IsValid();
 
             if (valid) {
-                if (!url) {
+                if (!IsStringValid(url)) {
                     LogError("Missing or invalid 'repository' parameter");
                     valid = false;
                 }
-                if (!channel) {
+                if (!IsStringValid(channel)) {
                     LogError("Missing or invalid 'channel' parameter");
                     valid = false;
                 }
@@ -81,8 +82,8 @@ void HandleLinkSnapshot(http_IO *io)
                         valid = false;
                     }
                 } else {
-                    if (!error) {
-                        LogError("Missing both OID and error message");
+                    if (!IsStringValid(error)) {
+                        LogError("Missing both OID and valid error message");
                         valid = false;
                     }
                 }

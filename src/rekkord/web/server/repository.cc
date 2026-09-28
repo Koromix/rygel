@@ -378,7 +378,7 @@ void HandleRepositorySave(http_IO *io)
 
             if (valid) {
                 if (!IsStringValid(name)) {
-                    LogError("Invalid 'name' parameter");
+                    LogError("Missing or invalid 'name' parameter");
                     valid = false;
                 }
             }

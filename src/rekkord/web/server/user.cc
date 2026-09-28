@@ -445,7 +445,7 @@ void HandleUserRegister(http_IO *io)
             valid &= json->IsValid();
 
             if (valid) {
-                if (!mail || !IsMailValid(mail)) {
+                if (!IsMailValid(mail)) {
                     LogError("Missing or invalid mail address");
                     valid = false;
                 }
@@ -539,12 +539,12 @@ void HandleUserLogin(http_IO *io)
             valid &= json->IsValid();
 
             if (valid) {
-                if (!mail || !IsMailValid(mail)) {
+                if (!IsMailValid(mail)) {
                     LogError("Missing or invalid mail address");
                     valid = false;
                 }
-                if (!password) {
-                    LogError("Missing password");
+                if (!IsStringValid(password)) {
+                    LogError("Missing or invalid password");
                     valid = false;
                 }
             }
@@ -629,7 +629,7 @@ void HandleUserRecover(http_IO *io)
             valid &= json->IsValid();
 
             if (valid) {
-                if (!mail || !IsMailValid(mail)) {
+                if (!IsMailValid(mail)) {
                     LogError("Missing or invalid mail address");
                     valid = false;
                 }
@@ -726,8 +726,8 @@ void HandleUserReset(http_IO *io)
             valid &= json->IsValid();
 
             if (valid) {
-                if (!token) {
-                    LogError("Missing token");
+                if (!IsStringValid(token)) {
+                    LogError("Missing or invalid token");
                     valid = false;
                 }
             }
@@ -838,12 +838,12 @@ void HandleUserPassword(http_IO *io)
             valid &= json->IsValid();
 
             if (valid) {
-                if (!old_password) {
-                    LogError("Missing 'old_password' parameter");
+                if (!IsStringValid(old_password)) {
+                    LogError("Missing or invalid 'old_password' parameter");
                     valid = false;
                 }
-                if (!new_password) {
-                    LogError("Missing 'new_password' parameter");
+                if (!IsStringValid(new_password)) {
+                    LogError("Missing or invalid 'new_password' parameter");
                     valid = false;
                 }
             }
@@ -1009,12 +1009,12 @@ void HandleSsoLogin(http_IO *io)
             valid &= json->IsValid();
 
             if (valid) {
-                if (!type) {
-                    LogError("Missing 'type' parameter");
+                if (!IsStringValid(type)) {
+                    LogError("Missing or invalid 'type' parameter");
                     valid = false;
                 }
-                if (!redirect) {
-                    LogError("Missing 'redirect' parameter");
+                if (!IsStringValid(redirect)) {
+                    LogError("Missing or invalid 'redirect' parameter");
                     valid = false;
                 }
             }
@@ -1081,12 +1081,12 @@ void HandleSsoOidc(http_IO *io)
             valid &= json->IsValid();
 
             if (valid) {
-                if (!code) {
-                    LogError("Missing 'code' parameter");
+                if (!IsStringValid(code)) {
+                    LogError("Missing or invalid 'code' parameter");
                     valid = false;
                 }
-                if (!state) {
-                    LogError("Missing 'state' parameter");
+                if (!IsStringValid(state)) {
+                    LogError("Missing or invalid 'state' parameter");
                     valid = false;
                 }
             }
@@ -1286,8 +1286,8 @@ void HandleSsoLink(http_IO *io)
             valid &= json->IsValid();
 
             if (valid) {
-                if (!token) {
-                    LogError("Missing token");
+                if (!IsStringValid(token)) {
+                    LogError("Missing or invalid token");
                     valid = false;
                 }
             }
@@ -1390,7 +1390,7 @@ void HandleSsoUnlink(http_IO *io)
 
             if (valid) {
                 if (identity < 0) {
-                    LogError("Missing identity");
+                    LogError("Missing or invalid identity");
                     valid = false;
                 }
             }
@@ -1481,8 +1481,8 @@ void HandleTotpConfirm(http_IO *io)
             valid &= json->IsValid();
 
             if (valid) {
-                if (!code) {
-                    LogError("Missing 'code' parameter");
+                if (!IsStringValid(code)) {
+                    LogError("Missing or invalid 'code' parameter");
                     valid = false;
                 }
             }
@@ -1646,16 +1646,16 @@ void HandleTotpChange(http_IO *io)
             valid &= json->IsValid();
 
             if (valid) {
-                if (!token) {
-                    LogError("Missing 'token' parameter");
+                if (!IsStringValid(token)) {
+                    LogError("Missing or invalid 'token' parameter");
                     valid = false;
                 }
-                if (!password) {
-                    LogError("Missing 'password' parameter");
+                if (!IsStringValid(password)) {
+                    LogError("Missing or invalid 'password' parameter");
                     valid = false;
                 }
-                if (!code) {
-                    LogError("Missing 'code' parameter");
+                if (!IsStringValid(code)) {
+                    LogError("Missing or invalid 'code' parameter");
                     valid = false;
                 }
             }
@@ -1777,8 +1777,8 @@ void HandleTotpDisable(http_IO *io)
             valid &= json->IsValid();
 
             if (valid) {
-                if (!password) {
-                    LogError("Missing 'password' parameter");
+                if (!IsStringValid(password)) {
+                    LogError("Missing or invalid 'password' parameter");
                     valid = false;
                 }
             }
