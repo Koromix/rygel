@@ -881,11 +881,6 @@ static Size DecodePath(Span<char> str)
     for (Size i = 0; i < str.len; i++, j++) {
         str[j] = str[i];
 
-        if (IsAsciiControl(str[i])) [[unlikely]] {
-            LogError("Unexpected control character in HTTP request line");
-            return -1;
-        }
-
         if (str[i] == '%') {
             if (i > str.len - 3) [[unlikely]] {
                 LogError("Truncated %%-encoded value in URL path");
@@ -901,6 +896,11 @@ static Size DecodePath(Span<char> str)
             }
 
             str[j] = (char)((high << 4) | low);
+        }
+
+        if (IsAsciiControl(str[j])) [[unlikely]] {
+            LogError("Unexpected control character in HTTP request line");
+            return -1;
         }
     }
     str.len = j;
@@ -919,11 +919,6 @@ static Size DecodeQueryComponent(Span<char> str)
     for (Size i = 0; i < str.len; i++, j++) {
         str[j] = str[i];
 
-        if (IsAsciiControl(str[i])) [[unlikely]] {
-            LogError("Unexpected control character in HTTP request line");
-            return -1;
-        }
-
         if (str[i] == '+') {
             str[j] = ' ';
         } else if (str[i] == '%') {
@@ -941,6 +936,11 @@ static Size DecodeQueryComponent(Span<char> str)
             }
 
             str[j] = (char)((high << 4) | low);
+        }
+
+        if (IsAsciiControl(str[j])) [[unlikely]] {
+            LogError("Unexpected control character in HTTP request line");
+            return -1;
         }
     }
     str.len = j;
