@@ -151,7 +151,7 @@ bool Builder::AddQtDirectories(const TargetInfo &target, HeapArray<const char *>
 
                 if (!build.fake) {
                     char target[4096] = {};
-                    readlink(linkname, target, K_SIZE(target) - 1);
+                    K_IGNORE readlink(linkname, target, K_SIZE(target) - 1);
 
                     if (!TestStr(dirname, target)) {
                         unlink(linkname);
