@@ -1245,6 +1245,8 @@ http_RequestStatus http_IO::ParseRequest()
     request.body_len = body_len;
     request.keepalive = keepalive;
 
+    timeout_at = GetMonotonicClock() + daemon->idle_timeout;
+
     return http_RequestStatus::Ready;
 }
 
