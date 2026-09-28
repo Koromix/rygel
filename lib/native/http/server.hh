@@ -239,7 +239,7 @@ public:
 
     bool OpenForRead(int64_t max_len, StreamReader *out_st);
 
-    void AddHeader(Span<const char> key, Span<const char> value);
+    void AddHeader(Span<const char> key, Span<const char> value, bool force = false);
     void AddEncodingHeader(CompressionType encoding);
     void AddCookieHeader(const char *path, const char *name, const char *value, unsigned int flags, int max_age = -1);
     void AddCachingHeaders(int64_t max_age, const char *etag = nullptr);

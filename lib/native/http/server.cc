@@ -500,10 +500,10 @@ bool http_IO::OpenForRead(Size max_len, StreamReader *out_st)
     return true;
 }
 
-void http_IO::AddHeader(Span<const char> key, Span<const char> value)
+void http_IO::AddHeader(Span<const char> key, Span<const char> value, bool force)
 {
     K_ASSERT(!response.started);
-    K_ASSERT(IsHeaderKeyValid(key));
+    K_ASSERT(IsHeaderKeyValid(key) || force);
 
     http_KeyValue header = {};
 
@@ -565,7 +565,7 @@ void http_IO::AddCachingHeaders(int64_t max_age, const char *etag)
 
         AddHeader("Cache-Control", max_age ? Fmt(buf, "max-age=%1", max_age / 1000).ptr : "no-store");
         if (etag) {
-            AddHeader("ETag", etag);
+            AddHeader("Etag", etag);
         }
     } else {
         AddHeader("Cache-Control", "no-store");

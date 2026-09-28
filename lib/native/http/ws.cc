@@ -67,7 +67,7 @@ bool http_IO::UpgradeToWS(unsigned int flags)
 
         if (!version_str || !TestStr(version_str, "13")) {
             LogError("Unsupported Websocket version '%1'", version_str);
-            AddHeader("Sec-WebSocket-Version", "13");
+            AddHeader("Sec-Websocket-Version", "13");
             SendError(426);
             return false;
         }
@@ -94,7 +94,7 @@ bool http_IO::UpgradeToWS(unsigned int flags)
 
     AddHeader("Connection", "upgrade");
     AddHeader("Upgrade", "websocket");
-    AddHeader("Sec-WebSocket-Accept", accept_str);
+    AddHeader("Sec-Websocket-Accept", accept_str);
     SendEmpty(101);
 
     // Corking should be disabled once SendEmpty() returns.

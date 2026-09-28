@@ -772,7 +772,7 @@ static HandlerResult HandleProxy(http_IO *io, const char *proxy_url, bool relay4
     }
 
     for (const http_KeyValue &header: ctx.headers) {
-        io->AddHeader(header.key, header.value);
+        io->AddHeader(header.key, header.value, true);
     }
     io->SendBinary(status, ctx.data.Leak());
 
@@ -794,7 +794,7 @@ static void HandleRequest(http_IO *io)
 
     // Add configured headers
     for (const http_KeyValue &header: config.headers) {
-        io->AddHeader(header.key, header.value);
+        io->AddHeader(header.key, header.value, true);
     }
 
 #define TRY(Call) \
