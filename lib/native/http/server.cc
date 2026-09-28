@@ -163,8 +163,8 @@ bool http_Config::SetPortOrPath(Span<const char> str)
         if (!ParseInt(str, &new_port))
             return false;
 
-        if (new_port <= 0 || port > UINT16_MAX) {
-            LogError("HTTP port %1 is invalid (range: 1 - %2)", port, UINT16_MAX);
+        if (new_port <= 0 || new_port > UINT16_MAX) {
+            LogError("HTTP port %1 is invalid (range: 1 - %2)", new_port, UINT16_MAX);
             return false;
         }
 
@@ -224,7 +224,7 @@ bool http_Config::Validate() const
         LogError("MaxUrlLength must be >= 512 B");
         valid = false;
     }
-    if (max_request_cookies < 16) {
+    if (max_request_headers < 16) {
         LogError("MaxRequestHeaders must be >= 16");
         valid = false;
     }
