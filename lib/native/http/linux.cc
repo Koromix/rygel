@@ -363,7 +363,7 @@ bool http_Dispatcher::Run()
         bool accepts = false;
 
         for (const struct epoll_event &ev: events) {
-            if (!ev.data.fd) {
+            if (!ev.data.ptr) {
                 if (ev.events & EPOLLHUP) [[unlikely]]
                     return true;
 
