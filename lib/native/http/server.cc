@@ -1002,6 +1002,12 @@ http_RequestStatus http_IO::ParseRequest()
         uint8_t *end = (uint8_t *)MemMem(incoming.buf.ptr + incoming.pos, incoming.buf.len - incoming.pos, "\r\n\r\n", 4);
 
         if (!end) {
+            if (incoming.pos >= daemon->max_request_size) [[unlikely]] {
+                LogError("Excessive request size");
+                SendError(413);
+                return http_RequestStatus::Close;
+            }
+
             incoming.pos = std::max((Size)0, incoming.buf.len - 3);
             return http_RequestStatus::Busy;
         }
