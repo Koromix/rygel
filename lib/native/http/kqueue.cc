@@ -321,7 +321,7 @@ void http_IO::SendFile(int status, int fd, int64_t len)
         }
     }
 
-    if (request.headers_only)
+    if (request.head)
         return;
 
     off_t offset = 0;

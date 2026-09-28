@@ -237,7 +237,7 @@ bool http_SendJson(http_IO *io, int status, FunctionRef<void(json_Writer *json)>
     io->AddHeader("Content-Type", "application/json");
 
     // Fast path for HEAD
-    if (io->Request().headers_only) {
+    if (io->Request().head) {
         io->SendEmpty(status);
         return true;
     }

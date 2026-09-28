@@ -655,7 +655,7 @@ bool http_IO::OpenForWrite(int status, CompressionType encoding, int64_t len, St
             return false;
     }
 
-    if (request.headers_only) {
+    if (request.head) {
         const auto skip = [](Span<const uint8_t>) { return true; };
         return out_st->Open(skip, "<http>");
     } else if (len >= 0) {
@@ -673,7 +673,7 @@ void http_IO::Send(int status, CompressionType encoding, int64_t len, FunctionRe
     K_ASSERT(!response.started);
 
     // HEAD quick path
-    if (request.headers_only) {
+    if (request.head) {
         daemon->StartWrite(socket);
         response.started = true;
 
@@ -736,7 +736,7 @@ void http_IO::SendAsset(int status, Span<const uint8_t> data, const char *mimety
             AddHeader("Content-Type", mimetype);
         }
 
-        if (request.headers_only) {
+        if (request.head) {
             SendEmpty(status);
         } else {
             StreamReader reader(data, "<asset>", src_encoding);
@@ -1052,9 +1052,9 @@ http_RequestStatus http_IO::ParseRequest()
 
         if (TestStr(method, "HEAD")) {
             request.method = http_RequestMethod::Get;
-            request.headers_only = true;
+            request.head = true;
         } else if (OptionToEnum(http_RequestMethodNames, method, &request.method)) {
-            request.headers_only = false;
+            request.head = false;
         } else {
             LogError("Unsupported HTTP method '%1'", method);
             SendError(405);

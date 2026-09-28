@@ -148,7 +148,7 @@ struct http_RequestInfo {
     int version = 10;
     bool keepalive = false;
     http_RequestMethod method = http_RequestMethod::Get;
-    bool headers_only = false;
+    bool head = false;
     const char *client_addr = nullptr;
     const char *path = nullptr;
     int64_t body_len = 0;
