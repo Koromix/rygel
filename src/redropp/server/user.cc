@@ -1382,7 +1382,7 @@ invalid:
 
 void HandleSsoUnlink(http_IO *io)
 {
-    RetainPtr<SessionInfo> session = sessions.Find(io);
+    RetainPtr<SessionInfo> session = GetNormalSession(io);
 
     if (!session) {
         LogError("User is not logged in");
