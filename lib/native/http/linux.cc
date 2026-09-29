@@ -251,6 +251,12 @@ void http_IO::SendFile(int status, int fd, int64_t len)
             request.keepalive = false;
             return;
         }
+        if (!S_ISREG(sb.st_mode)) {
+            LogError("Cannot send non-regular file");
+
+            request.keepalive = false;
+            return;
+        }
 
         len = (int64_t)sb.st_size;
     }

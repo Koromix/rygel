@@ -595,6 +595,13 @@ void http_IO::SendFile(int status, int fd, int64_t len)
             request.keepalive = false;
             return;
         }
+        if (attr.dwFileAttributes & (FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_DEVICE)) {
+            LogError("Cannot send non-regular file");
+
+            request.keepalive = false;
+            return;
+        }
+
 
         len = (int64_t)(((uint64_t)attr.nFileSizeHigh << 32) | attr.nFileSizeLow);
     }
