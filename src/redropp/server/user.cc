@@ -1220,17 +1220,26 @@ void HandleSsoOidc(http_IO *io)
                 sq_Statement stmt;
                 if (!db.Prepare(R"(INSERT INTO identities (user, issuer, sub, allowed)
                                    VALUES (?1, ?2, ?3, ?4)
-                                   ON CONFLICT (issuer, sub) DO UPDATE SET allowed = allowed
+                                   ON CONFLICT (issuer, sub) DO UPDATE SET allowed =
+                                       CASE
+                                           WHEN user <> excluded.user THEN NULL
+                                           WHEN excluded.allowed = 1 THEN 1
+                                           ELSE allowed
+                                       END
                                    RETURNING id)",
                                 &stmt, userid, oidc->provider.issuer, identity.sub, 0 + allowed))
                     return false;
 
-                if (!stmt.Step()) {
-                    K_ASSERT(!stmt.IsValid());
+                if (stmt.Step()) {
+                    id = sqlite3_column_int64(stmt, 0);
+                } else if (stmt.IsValid()) {
+                    // Prevent IdP takeover path with IIF() trick above.
+                    // Cheater will get error 500, it's okay.
+                    K_ASSERT(sqlite3_errcode(db) == SQLITE_CONSTRAINT);
+                    return false;
+                } else {
                     return false;
                 }
-
-                id = sqlite3_column_int64(stmt, 0);
             }
 
             if (!allowed && !db.Run(R"(INSERT INTO tokens (token, type, timestamp, user, identity)
@@ -1321,7 +1330,10 @@ void HandleSsoLink(http_IO *io)
                            FROM tokens t
                            INNER JOIN users u ON (u.id = t.user)
                            INNER JOIN identities i ON (i.id = t.identity)
-                           WHERE t.token = uuid_blob(?1) AND t.type = 'link')", &stmt, token))
+                           WHERE t.token = uuid_blob(?1) AND
+                                 t.type = 'link' AND
+                                 i.user = t.user)",
+                        &stmt, token))
             return;
 
         if (stmt.Step()) {
@@ -1345,7 +1357,7 @@ void HandleSsoLink(http_IO *io)
         bool success = db.Transaction([&]() {
             if (!db.Run("UPDATE users SET confirmed = 1 WHERE id = ?1", userid))
                 return false;
-            if (!db.Run("UPDATE identities SET allowed = 1 WHERE id = ?1", identity))
+            if (!db.Run("UPDATE identities SET allowed = 1 WHERE user = ?1 AND id = ?2", userid, identity))
                 return false;
             if (!db.Run("DELETE FROM tokens WHERE user = ?1", userid))
                 return false;
