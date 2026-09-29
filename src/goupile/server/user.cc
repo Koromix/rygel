@@ -22,37 +22,8 @@ static const int BanThreshold = 6;
 static const int64_t BanTime = 1800 * 1000;
 static const int64_t TotpPeriod = 30000;
 
-struct EventInfo {
-    struct Key {
-        const char *where;
-        const char *who;
-
-        bool operator==(const Key &other) const { return TestStr(where, other.where) && TestStr(who, other.who); }
-        bool operator!=(const Key &other) const { return !(*this == other); }
-
-        uint64_t Hash() const
-        {
-            uint64_t hash = HashTraits<const char *>::Hash(where) ^
-                            HashTraits<const char *>::Hash(who);
-            return hash;
-        }
-    };
-
-    Key key;
-    int64_t until; // Monotonic
-
-    int count;
-    int64_t prev_time; // Unix time
-    int64_t time; // Unix time
-
-    K_HASHTABLE_HANDLER(EventInfo, key);
-};
-
 static http_SessionManager<SessionInfo> sessions;
-
-static std::shared_mutex events_mutex;
-static BucketList<EventInfo> events;
-static HashTable<EventInfo::Key, EventInfo *> events_map;
+static http_EventCounter events(BanTime);
 
 void InitUsers()
 {
@@ -450,31 +421,8 @@ RetainPtr<const SessionInfo> GetAdminSession(http_IO *io, InstanceHolder *instan
 
 void PruneSessions()
 {
-    // Prune sessions
     sessions.Prune();
-
-    // Prune events
-    {
-        std::lock_guard<std::shared_mutex> lock_excl(events_mutex);
-
-        int64_t clock = GetMonotonicClock();
-
-        Size expired = 0;
-        for (const EventInfo &event: events) {
-            if (event.until > clock)
-                break;
-
-            EventInfo **ptr = events_map.Find(event.key);
-            if (*ptr == &event) {
-                events_map.Remove(ptr);
-            }
-            expired++;
-        }
-        events.RemoveFirst(expired);
-
-        events.Trim();
-        events_map.Trim();
-    }
+    events.Prune();
 }
 
 bool CheckPasswordComplexity(const char *password, const char *username, PasswordComplexity treshold)
@@ -519,43 +467,6 @@ bool HashPassword(Span<const char> password, char out_hash[PasswordHashBytes])
     }
 
     return true;
-}
-
-static const EventInfo *RegisterEvent(const char *where, const char *who, int64_t time = GetUnixTime())
-{
-    std::lock_guard<std::shared_mutex> lock_excl(events_mutex);
-
-    EventInfo::Key key = { where, who };
-    EventInfo *event = events_map.FindValue(key, nullptr);
-
-    if (!event || event->until < GetMonotonicClock()) {
-        Allocator *alloc;
-        event = events.AppendDefault(&alloc);
-
-        event->key.where = DuplicateString(where, alloc).ptr;
-        event->key.who = DuplicateString(who, alloc).ptr;
-        event->until = GetMonotonicClock() + BanTime;
-
-        events_map.Set(event);
-    }
-
-    event->count++;
-    event->prev_time = event->time;
-    event->time = time;
-
-    return event;
-}
-
-static int CountEvents(const char *where, const char *who)
-{
-    std::shared_lock<std::shared_mutex> lock_shr(events_mutex);
-
-    EventInfo::Key key = { where, who };
-    const EventInfo *event = events_map.FindValue(key, nullptr);
-
-    // We don't need to use precise timing, and a ban can last a bit
-    // more than BanTime (until pruning clears the ban).
-    return event ? event->count : 0;
 }
 
 void HandleSessionLogin(http_IO *io, InstanceHolder *instance)
@@ -674,7 +585,7 @@ void HandleSessionLogin(http_IO *io, InstanceHolder *instance)
         const char *confirm = (const char *)sqlite3_column_text(stmt, 6);
         const char *secret = (const char *)sqlite3_column_text(stmt, 7);
 
-        if (CountEvents(request.client_addr, username) >= BanThreshold) {
+        if (events.Count(request.client_addr, username) >= BanThreshold) {
             LogError("You are blocked for %1 minutes after excessive login failures", (BanTime + 59000) / 60000);
             io->SendError(403);
             return;
@@ -730,7 +641,7 @@ void HandleSessionLogin(http_IO *io, InstanceHolder *instance)
 
             return;
         } else {
-            RegisterEvent(request.client_addr, username);
+            events.Register(request.client_addr, username, start);
         }
     }
 
@@ -1010,10 +921,11 @@ void HandleSessionToken(http_IO *io, InstanceHolder *instance)
 
     if (email || sms) {
         // Avoid confirmation event (spam for mails, and SMS are costly)
-        RegisterEvent(request.client_addr, id);
+        int64_t clock = GetMonotonicClock();
+        events.Register(request.client_addr, id, clock);
     }
 
-    if (CountEvents(request.client_addr, id) >= BanThreshold) {
+    if (events.Count(request.client_addr, id) >= BanThreshold) {
         LogError("You are blocked for %1 minutes after excessive login failures", (BanTime + 59000) / 60000);
         io->SendError(403);
         return;
@@ -1066,7 +978,7 @@ static bool CheckTotp(http_IO *io, const SessionInfo &session, InstanceHolder *i
         K_ASSERT(session.userid > 0 || instance);
 
         const char *where = (session.userid > 0) ? "" : instance->key.ptr;
-        const EventInfo *event = RegisterEvent(where, session.username, time);
+        const http_EventInfo *event = events.Register(where, session.username, time);
 
         bool replay = (event->prev_time / TotpPeriod >= min) &&
                       pwd_CheckHotp(session.secret, pwd_HotpAlgorithm::SHA1, min, event->prev_time / TotpPeriod, 6, code);
@@ -1137,7 +1049,7 @@ void HandleSessionConfirm(http_IO *io, InstanceHolder *instance)
         }
     }
 
-    if (CountEvents(request.client_addr, session->username) >= BanThreshold) {
+    if (events.Count(request.client_addr, session->username) >= BanThreshold) {
         LogError("You are blocked for %1 minutes after excessive login failures", (BanTime + 59000) / 60000);
         io->SendError(403);
         return;
@@ -1157,7 +1069,8 @@ void HandleSessionConfirm(http_IO *io, InstanceHolder *instance)
 
                 SendProfile(io, session.GetRaw(), instance);
             } else {
-                const EventInfo *event = RegisterEvent(request.client_addr, session->username);
+                int64_t now = GetMonotonicClock();
+                const http_EventInfo *event = events.Register(request.client_addr, session->username, now);
 
                 if (event->count >= BanThreshold) {
                     sessions.Close(io);
@@ -1182,7 +1095,8 @@ void HandleSessionConfirm(http_IO *io, InstanceHolder *instance)
                 lock_excl.unlock();
                 SendProfile(io, session.GetRaw(), instance);
             } else {
-                const EventInfo *event = RegisterEvent(request.client_addr, session->username);
+                int64_t now = GetMonotonicClock();
+                const http_EventInfo *event = events.Register(request.client_addr, session->username, now);
 
                 if (event->count >= BanThreshold) {
                     sessions.Close(io);

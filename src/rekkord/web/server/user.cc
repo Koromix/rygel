@@ -36,37 +36,8 @@ static const char *SsoClaims = R"({"id_token":{"email":{"essential":true},"email
 static const int SsoCookieFlags = (int)http_CookieFlag::SameSiteStrict | (int)http_CookieFlag::Secure | (int)http_CookieFlag::HttpOnly;
 static const int SsoCookieMaxAge = 10 * 60000; // 10 minutes
 
-struct EventKey {
-    const char *resource;
-    const char *who;
-
-    bool operator==(const EventKey &other) const { return TestStr(resource, other.resource) && TestStr(who, other.who); }
-    bool operator!=(const EventKey &other) const { return !(*this == other); }
-
-    uint64_t Hash() const
-    {
-        uint64_t hash = HashTraits<const char *>::Hash(resource) ^
-                        HashTraits<const char *>::Hash(who);
-        return hash;
-    }
-};
-
-struct EventInfo {
-    EventKey key;
-    int64_t until; // Monotonic
-
-    int count;
-    int64_t prev_time; // Unix time
-    int64_t time; // Unix time
-
-    K_HASHTABLE_HANDLER(EventInfo, key);
-};
-
 static http_SessionManager<SessionInfo> sessions;
-
-static std::shared_mutex events_mutex;
-static BucketList<EventInfo> events;
-static HashTable<EventKey, EventInfo *> events_map;
+static http_EventCounter events(BanTime);
 
 static const char *FormatUUID(const uint8_t raw[16], Allocator *alloc)
 {
@@ -223,41 +194,6 @@ static RetainPtr<SessionInfo> CreateUserSession(int64_t userid, bool authorize,
     return ptr;
 }
 
-static const EventInfo *RegisterEvent(const EventKey &key, int64_t time)
-{
-    std::lock_guard<std::shared_mutex> lock_excl(events_mutex);
-
-    EventInfo *event = events_map.FindValue(key, nullptr);
-
-    if (!event || event->until < GetMonotonicClock()) {
-        Allocator *alloc;
-        event = events.AppendDefault(&alloc);
-
-        event->key.resource = DuplicateString(key.resource, alloc).ptr;
-        event->key.who = DuplicateString(key.who, alloc).ptr;
-        event->until = GetMonotonicClock() + BanTime;
-
-        events_map.Set(event);
-    }
-
-    event->count++;
-    event->prev_time = event->time;
-    event->time = time;
-
-    return event;
-}
-
-static int CountEvents(const EventKey &key)
-{
-    std::shared_lock<std::shared_mutex> lock_shr(events_mutex);
-
-    const EventInfo *event = events_map.FindValue(key, nullptr);
-
-    // We don't need to use precise timing, and a ban can last a bit
-    // more than BanTime (until pruning clears the ban).
-    return event ? event->count : 0;
-}
-
 static bool CheckPasswordComplexity(const char *username, Span<const char> password)
 {
     unsigned int flags = UINT_MAX & ~(int)pwd_CheckFlag::Score;
@@ -290,31 +226,8 @@ bool PruneTokens()
 
 void PruneSessions()
 {
-    // Prune sessions
     sessions.Prune();
-
-    // Prune events
-    {
-        std::lock_guard<std::shared_mutex> lock_excl(events_mutex);
-
-        int64_t clock = GetMonotonicClock();
-
-        Size expired = 0;
-        for (const EventInfo &event: events) {
-            if (event.until > clock)
-                break;
-
-            EventInfo **ptr = events_map.Find(event.key);
-            if (*ptr == &event) {
-                events_map.Remove(ptr);
-            }
-            expired++;
-        }
-        events.RemoveFirst(expired);
-
-        events.Trim();
-        events_map.Trim();
-    }
+    events.Prune();
 }
 
 RetainPtr<SessionInfo> GetNormalSession(http_IO *io)
@@ -573,7 +486,7 @@ void HandleUserLogin(http_IO *io)
     stmt.Run();
 
     // Validate password if user exists
-    if (stmt.IsRow() && CountEvents({ request.client_addr, mail }) < BanThreshold) {
+    if (stmt.IsRow() && events.Count(request.client_addr, mail) < BanThreshold) {
         int64_t userid = sqlite3_column_int64(stmt, 0);
         const char *password_hash = (const char *)sqlite3_column_text(stmt, 1);
         const char *username = (const char *)sqlite3_column_text(stmt, 2);
@@ -590,7 +503,7 @@ void HandleUserLogin(http_IO *io)
 
             return;
         } else {
-            RegisterEvent({ request.client_addr, mail }, start);
+            events.Register(request.client_addr, mail, start);
         }
     }
 
@@ -676,7 +589,7 @@ void HandleUserRecover(http_IO *io)
     }
 
     // Create recovery token
-    if (userid > 0 && RegisterEvent({ request.client_addr, mail }, start)->count < BanThreshold) {
+    if (userid > 0 && events.Register(request.client_addr, mail, start)->count < BanThreshold) {
         uint8_t token[16];
         FillRandomSafe(token, K_SIZE(token));
 
@@ -1440,7 +1353,7 @@ static bool CheckTotp(http_IO *io, int64_t userid, const char *secret, const cha
         char who[64];
         Fmt(who, "%1", userid);
 
-        const EventInfo *event = RegisterEvent({ "TOTP", who }, time);
+        const http_EventInfo *event = events.Register("TOTP", userid, time);
 
         bool replay = (event->prev_time / TotpPeriod >= min) &&
                       pwd_CheckHotp(secret, pwd_HotpAlgorithm::SHA1, min, event->prev_time / TotpPeriod, 6, code);
