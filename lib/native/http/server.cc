@@ -531,7 +531,7 @@ void http_IO::AddCookieHeader(const char *path, const char *name, const char *va
     // Delete if value is NULL
     max_age = value ? max_age : 0;
 
-    buf.len = Fmt(buf.data, "%1=%2; Path=%3;", name, value ? value : "", path).len;
+    buf.len = Fmt(buf.data, "%1=%2; Path=%3;", name, FmtUrlSafe(value, "-_.~"), path).len;
     K_ASSERT(buf.Available() >= 128);
 
     if (max_age >= 0) {
