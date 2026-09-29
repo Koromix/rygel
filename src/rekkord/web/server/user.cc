@@ -644,16 +644,14 @@ void HandleUserRecover(http_IO *io)
         }
     }
 
-    int64_t userid = 0;
-    uint8_t token[16];
-
-    // Always create it to reduce timing discloure
-    FillRandomSafe(token, K_SIZE(token));
+    // We use this to extend/fix the response delay in case of error
+    int64_t start = GetMonotonicClock();
 
     // Find user, unless it has no password and has been linked with an SSO... which would mean that
     // it was created through SSO, and we don't want users to use this API to create a password on an
     // "SSO-only" account.
     // Unless the user is logged in, in which case all is well, allow password creation.
+    int64_t userid;
     {
         sq_Statement stmt;
         if (!db.Prepare(R"(SELECT u.id
@@ -666,15 +664,18 @@ void HandleUserRecover(http_IO *io)
 
         if (stmt.Step()) {
             userid = sqlite3_column_int64(stmt, 0);
-        } else if (!stmt.IsValid()) {
+        } else if (stmt.IsValid()) {
+            userid = 0;
+        } else {
             return;
         }
     }
 
-    int64_t start = GetMonotonicClock();
-
     // Create recovery token
     if (userid > 0 && RegisterEvent({ request.client_addr, mail }, start)->count < BanThreshold) {
+        uint8_t token[16];
+        FillRandomSafe(token, K_SIZE(token));
+
         int64_t now = GetUnixTime();
 
         if (!db.Run(R"(INSERT INTO tokens (token, type, timestamp, user)
@@ -687,6 +688,10 @@ void HandleUserRecover(http_IO *io)
     } else {
         LogError("Refusing to send password recovery email for '%1'", mail);
     }
+
+    // Enforce constant delay
+    int64_t safety = std::max(500 - GetMonotonicClock() + start, (int64_t)0);
+    WaitDelay(safety);
 
     io->SendText(200, "{}", "application/json");
 }
@@ -1041,7 +1046,6 @@ void HandleSsoLogin(http_IO *io)
     oidc_AuthorizationInfo auth;
     oidc_PrepareAuthorization(oidc->provider, scopes, callback, redirect, SsoClaims, io->Allocator(), &auth);
 
-    // Don't set SameSite=Strict because we want the cookie to be available when the user gets redirected to the callback URL
     io->AddCookieHeader("/", "oidc", auth.cookie, SsoCookieFlags, SsoCookieMaxAge);
 
     Span<const char> json = Fmt(io->Allocator(), "{\"url\": \"%1\"}", FmtEscape(auth.url, '"'));
@@ -1131,8 +1135,8 @@ void HandleSsoOidc(http_IO *io)
     // Delete cookie with state and nonce
     io->AddCookieHeader("/", "oidc", nullptr, SsoCookieFlags, SsoCookieMaxAge);
 
-    if (!identity.email) {
-        LogError("Cannot use SSO login without mail address");
+    if (!IsMailValid(identity.email)) {
+        LogError("Cannot use SSO login without valid mail address");
         io->SendError(403);
         return;
     }
@@ -1213,17 +1217,26 @@ void HandleSsoOidc(http_IO *io)
                 sq_Statement stmt;
                 if (!db.Prepare(R"(INSERT INTO identities (user, issuer, sub, allowed)
                                    VALUES (?1, ?2, ?3, ?4)
-                                   ON CONFLICT (issuer, sub) DO UPDATE SET allowed = allowed
+                                   ON CONFLICT (issuer, sub) DO UPDATE SET allowed =
+                                       CASE
+                                           WHEN user <> excluded.user THEN NULL
+                                           WHEN excluded.allowed = 1 THEN 1
+                                           ELSE allowed
+                                       END
                                    RETURNING id)",
                                 &stmt, userid, oidc->provider.issuer, identity.sub, 0 + allowed))
                     return false;
 
-                if (!stmt.Step()) {
-                    K_ASSERT(!stmt.IsValid());
+                if (stmt.Step()) {
+                    id = sqlite3_column_int64(stmt, 0);
+                } else if (stmt.IsValid()) {
+                    // Prevent IdP takeover path with IIF() trick above.
+                    // Cheater will get error 500, it's okay.
+                    K_ASSERT(sqlite3_errcode(db) == SQLITE_CONSTRAINT);
+                    return false;
+                } else {
                     return false;
                 }
-
-                id = sqlite3_column_int64(stmt, 0);
             }
 
             if (!allowed && !db.Run(R"(INSERT INTO tokens (token, type, timestamp, user, identity)
@@ -1314,7 +1327,10 @@ void HandleSsoLink(http_IO *io)
                            FROM tokens t
                            INNER JOIN users u ON (u.id = t.user)
                            INNER JOIN identities i ON (i.id = t.identity)
-                           WHERE t.token = uuid_blob(?1) AND t.type = 'link')", &stmt, token))
+                           WHERE t.token = uuid_blob(?1) AND
+                                 t.type = 'link' AND
+                                 i.user = t.user)",
+                        &stmt, token))
             return;
 
         if (stmt.Step()) {
@@ -1338,7 +1354,7 @@ void HandleSsoLink(http_IO *io)
         bool success = db.Transaction([&]() {
             if (!db.Run("UPDATE users SET confirmed = 1 WHERE id = ?1", userid))
                 return false;
-            if (!db.Run("UPDATE identities SET allowed = 1 WHERE id = ?1", identity))
+            if (!db.Run("UPDATE identities SET allowed = 1 WHERE user = ?1 AND id = ?2", userid, identity))
                 return false;
             if (!db.Run("DELETE FROM tokens WHERE user = ?1", userid))
                 return false;
@@ -1363,7 +1379,7 @@ invalid:
 
 void HandleSsoUnlink(http_IO *io)
 {
-    RetainPtr<SessionInfo> session = sessions.Find(io);
+    RetainPtr<SessionInfo> session = GetNormalSession(io);
 
     if (!session) {
         LogError("User is not logged in");
