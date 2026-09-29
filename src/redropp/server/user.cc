@@ -999,7 +999,6 @@ void HandleSsoLogin(http_IO *io)
     oidc_AuthorizationInfo auth;
     oidc_PrepareAuthorization(oidc->provider, scopes, callback, redirect, SsoClaims, io->Allocator(), &auth);
 
-    // Don't set SameSite=Strict because we want the cookie to be available when the user gets redirected to the callback URL
     io->AddCookieHeader("/", "oidc", auth.cookie, SsoCookieFlags, SsoCookieMaxAge);
 
     Span<const char> json = Fmt(io->Allocator(), "{\"url\": \"%1\"}", FmtEscape(auth.url, '"'));
