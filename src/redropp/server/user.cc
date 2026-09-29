@@ -1187,16 +1187,19 @@ void HandleSsoOidc(http_IO *io)
                                 &stmt, userid, oidc->provider.issuer, identity.sub, 0 + allowed))
                     return false;
 
-                if (stmt.Step()) {
-                    id = sqlite3_column_int64(stmt, 0);
-                } else if (stmt.IsValid()) {
-                    // Prevent IdP takeover path with IIF() trick above.
-                    // Cheater will get error 500, it's okay.
-                    K_ASSERT(sqlite3_errcode(db) == SQLITE_CONSTRAINT);
-                    return false;
-                } else {
+                if (!stmt.Step()) {
+                    K_ASSERT(!stmt.IsValid());
+
+                    // The IIF() trick above triggers a SQLITE_CONSTRAINT error to prevent IdP takeover
+                    if (stmt.Status() == SQLITE_CONSTRAINT) {
+                        LogError("Cannot confirm identity due to user mismatch");
+                        io->SendError(403);
+                    }
+
                     return false;
                 }
+
+                id = sqlite3_column_int64(stmt, 0);
             }
 
             if (!allowed && !db.Run(R"(INSERT INTO tokens (token, type, timestamp, user, identity)

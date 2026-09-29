@@ -376,9 +376,9 @@ void HandlePlanSave(http_IO *io)
             return false;
 
         if (!stmt.Step()) {
-            if (stmt.IsValid()) {
-                K_ASSERT(id >= 0 && sqlite3_errcode(db) == SQLITE_CONSTRAINT);
+            K_ASSERT(!stmt.IsValid());
 
+            if (stmt.Status() == SQLITE_CONSTRAINT) {
                 LogError("Not allowed to edit this plan");
                 io->SendError(403);
             }

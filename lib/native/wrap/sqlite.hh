@@ -76,6 +76,7 @@ public:
 
     void Finalize();
 
+    int Status() const { return rc; }
     bool IsValid() const { return stmt && (rc == SQLITE_DONE || rc == SQLITE_ROW); };
     bool IsRow() const { return stmt && rc == SQLITE_ROW; }
     bool IsDone() const { return stmt && rc == SQLITE_DONE; }
