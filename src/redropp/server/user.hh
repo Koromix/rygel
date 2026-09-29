@@ -27,7 +27,6 @@ bool PruneTokens();
 void PruneSessions();
 
 RetainPtr<SessionInfo> GetNormalSession(http_IO *io);
-int64_t ValidateApiKey(http_IO *io, int64_t *out_owner = nullptr);
 
 void HandleSessionInfo(http_IO *io);
 void HandleSessionPing(http_IO *io);
