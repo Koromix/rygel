@@ -578,10 +578,8 @@ void http_Dispatcher::ParkSocket(http_Socket *socket)
 
 void http_IO::SendFile(int status, int fd, int64_t len)
 {
-    K_ASSERT(socket);
-    K_ASSERT(!response.started);
-
-    response.started = true;
+    if (!StartResponse()) [[unlikely]]
+        return;
 
     SetDescriptorNonBlock(socket->sock, false);
 

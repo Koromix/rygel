@@ -611,12 +611,13 @@ void http_IO::AddCachingHeaders(int64_t max_age, const char *etag)
 
 #if defined(K_DEBUG)
     max_age = 0;
+    etag = nullptr;
 #endif
 
-    if (max_age || etag) {
+    if (max_age) {
         char buf[128];
-
         AddHeader("Cache-Control", max_age ? Fmt(buf, "max-age=%1", max_age / 1000).ptr : "no-store");
+
         if (etag) {
             AddHeader("Etag", etag);
         }
@@ -670,32 +671,8 @@ bool http_IO::OpenForWrite(int status, CompressionType encoding, int64_t len, St
     K_ASSERT(socket);
     K_ASSERT(!response.started);
 
-    daemon->StartWrite(socket);
-
-    // Unfortunately, we need to discard the whole body before we can respond, even if it
-    // was not used / we don't care about it. But do it within limits, and ignore otherwise.
-    {
-        int64_t remaining = request.body_len - incoming.read;
-
-        if (remaining) {
-            int64_t max = Mebibytes(32);
-            bool full = remaining < max;
-            int64_t discard = incoming.read + (full ? remaining : max);
-
-            while (incoming.read < discard) {
-                uint8_t buf[65535];
-
-                if (ReadDirect(buf) < 0)
-                    return false;
-            }
-
-            // Avoid desync
-            request.keepalive &= full;
-        }
-    }
-
-    response.started = true;
-    SetTimeout(GetMonotonicClock() + daemon->send_timeout);
+    if (!StartResponse())
+        return false;
 
     // Don't allow Keep-Alive with HTTP/1.0 when chunked encoding is used
     request.keepalive &= (len >= 0 || request.version >= 11);
@@ -722,13 +699,10 @@ bool http_IO::OpenForWrite(int status, CompressionType encoding, int64_t len, St
 
 void http_IO::Send(int status, CompressionType encoding, int64_t len, FunctionRef<bool(StreamWriter *)> func)
 {
-    K_ASSERT(socket);
-    K_ASSERT(!response.started);
-
     // HEAD quick path
     if (request.head) {
-        daemon->StartWrite(socket);
-        response.started = true;
+        if (!StartResponse()) [[unlikely]]
+            return;
 
         const auto write = [this](Span<const uint8_t> buf) { return WriteDirect(buf); };
         StreamWriter writer(write, "<http>");
@@ -1295,6 +1269,43 @@ http_RequestStatus http_IO::ParseRequest()
     SetTimeout(GetMonotonicClock() + daemon->idle_timeout);
 
     return http_RequestStatus::Ready;
+}
+
+bool http_IO::StartResponse()
+{
+    K_ASSERT(socket);
+    K_ASSERT(!response.started);
+
+    daemon->StartWrite(socket);
+
+    // Unfortunately, we need to discard the whole body before we can respond, even if it
+    // was not used / we don't care about it. But do it within limits, and ignore otherwise.
+    {
+        int64_t remaining = request.body_len - incoming.read;
+
+        if (remaining) {
+            int64_t max = Mebibytes(32);
+            bool full = remaining < max;
+            int64_t discard = incoming.read + (full ? remaining : max);
+
+            while (incoming.read < discard) {
+                uint8_t buf[65535];
+
+                if (ReadDirect(buf) < 0) {
+                    request.keepalive = false;
+                    return false;
+                }
+            }
+
+            // Avoid desync
+            request.keepalive &= full;
+        }
+    }
+
+    response.started = true;
+    SetTimeout(GetMonotonicClock() + daemon->send_timeout);
+
+    return true;
 }
 
 Span<const char> http_IO::PrepareResponse(int status, CompressionType encoding, int64_t len)

@@ -236,12 +236,10 @@ bool http_Daemon::WriteSocket(http_Socket *socket, Span<Span<const uint8_t>> par
 
 void http_IO::SendFile(int status, int fd, int64_t len)
 {
-    K_ASSERT(socket);
-    K_ASSERT(!response.started);
+    if (!StartResponse()) [[unlikely]]
+        return;
 
     K_DEFER { close(fd); };
-
-    response.started = true;
 
     if (len < 0) {
         struct stat sb;

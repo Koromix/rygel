@@ -277,6 +277,8 @@ private:
     bool Init(http_Socket *socket, int64_t start, struct sockaddr *sa);
 
     http_RequestStatus ParseRequest();
+
+    bool StartResponse();
     Span<const char> PrepareResponse(int status, CompressionType encoding, int64_t len);
 
     Size ReadDirect(Span<uint8_t> buf);
