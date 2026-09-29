@@ -1128,14 +1128,13 @@ void HandleSsoOidc(http_IO *io)
         int64_t now = GetUnixTime();
         bool verified = identity.email_verified;
 
-        int64_t userid = 0;
         uint8_t token[16];
+        FillRandomSafe(token, K_SIZE(token));
+
+        int64_t userid = 0;
         bool created = false;
         bool allowed = false;
         const char *ckey = nullptr;
-
-        // Always create it to reduce timing discloure
-        FillRandomSafe(token, K_SIZE(token));
 
         bool success = db.Transaction([&]() {
             {
