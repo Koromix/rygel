@@ -686,7 +686,12 @@ bool http_IO::OpenForWrite(int status, CompressionType encoding, int64_t len, St
     }
 
     if (request.head) {
-        const auto skip = [](Span<const uint8_t>) { return true; };
+        const auto skip = [this](Span<const uint8_t> buf) {
+            if (!buf.len) {
+                daemon->EndWrite(socket);
+            }
+            return true;
+        };
         return out_st->Open(skip, "<http>");
     } else if (len >= 0) {
         const auto write = [this](Span<const uint8_t> buf) { return WriteDirect(buf); };

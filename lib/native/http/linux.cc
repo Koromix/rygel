@@ -260,16 +260,6 @@ void http_IO::SendFile(int status, int fd, int64_t len)
     }
 
     Span<const char> intro = PrepareResponse(status, CompressionType::None, len);
-    bool cork = (len >= MaxSend);
-
-    if (cork) {
-        SetDescriptorRetain(socket->sock, true);
-    }
-    K_DEFER {
-        if (cork) {
-            SetDescriptorRetain(socket->sock, false);
-        }
-    };
 
     if (!daemon->WriteSocket(socket, intro.As<uint8_t>())) {
         request.keepalive = false;

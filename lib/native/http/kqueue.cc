@@ -153,11 +153,7 @@ void http_Daemon::StartWrite(http_Socket *socket)
 
 void http_Daemon::EndWrite(http_Socket *socket)
 {
-    (void)socket;
-
-#if !defined(MSG_MORE)
     SetDescriptorRetain(socket->sock, false);
-#endif
 }
 
 Size http_Daemon::ReadSocket(http_Socket *socket, Span<uint8_t> buf)
@@ -303,16 +299,11 @@ void http_IO::SendFile(int status, int fd, int64_t len)
     }
 
 #if defined(__FreeBSD__) || defined(__APPLE__)
-    bool cork = (len >= MaxSend);
 
-    if (cork) {
-        SetDescriptorRetain(socket->sock, true);
-    }
-    K_DEFER {
-        if (cork) {
-            SetDescriptorRetain(socket->sock, false);
-        }
-    };
+#if !defined(MSG_MORE)
+    SetDescriptorRetain(socket->sock, true);
+    K_DEFER { SetDescriptorRetain(socket->sock, false); };
+#endif
 
     // In theory we can use the hdtr argument of sendfile, but the documentation is confusing.
     // Among others, it's not clear what the "sent" value means regarding the headers. Let's not risk it.
