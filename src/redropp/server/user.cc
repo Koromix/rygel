@@ -648,16 +648,14 @@ void HandleUserRecover(http_IO *io)
         }
     }
 
-    int64_t userid = 0;
-    uint8_t token[16];
-
-    // Always create it to reduce timing discloure
-    FillRandomSafe(token, K_SIZE(token));
+    // We use this to extend/fix the response delay in case of error
+    int64_t start = GetMonotonicClock();
 
     // Find user, unless it has no password and has been linked with an SSO... which would mean that
     // it was created through SSO, and we don't want users to use this API to create a password on an
     // "SSO-only" account.
     // Unless the user is logged in, in which case all is well, allow password creation.
+    int64_t userid;
     {
         sq_Statement stmt;
         if (!db.Prepare(R"(SELECT u.id
@@ -670,15 +668,18 @@ void HandleUserRecover(http_IO *io)
 
         if (stmt.Step()) {
             userid = sqlite3_column_int64(stmt, 0);
-        } else if (!stmt.IsValid()) {
+        } else if (stmt.IsValid()) {
+            userid = 0;
+        } else {
             return;
         }
     }
 
-    int64_t start = GetMonotonicClock();
-
     // Create recovery token
     if (userid > 0 && RegisterEvent({ request.client_addr, mail }, start)->count < BanThreshold) {
+        uint8_t token[16];
+        FillRandomSafe(token, K_SIZE(token));
+
         int64_t now = GetUnixTime();
 
         if (!db.Run(R"(INSERT INTO tokens (token, type, timestamp, user)
@@ -691,6 +692,10 @@ void HandleUserRecover(http_IO *io)
     } else {
         LogError("Refusing to send password recovery email for '%1'", mail);
     }
+
+    // Enforce constant delay
+    int64_t safety = std::max(500 - GetMonotonicClock() + start, (int64_t)0);
+    WaitDelay(safety);
 
     io->SendText(200, "{}", "application/json");
 }
