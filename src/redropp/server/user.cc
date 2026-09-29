@@ -387,12 +387,12 @@ static void ExportSession(const SessionInfo *session, json_Writer *json)
 
         if (session->authorized.load(std::memory_order_acquire)) {
             json->Key("authorized"); json->Bool(true);
+
             json->Key("picture"); json->Int(session->picture.load(std::memory_order_relaxed));
+            json->Key("ckey"); json->String(session->ckey);
         } else {
             json->Key("authorized"); json->Bool(false);
         }
-
-        json->Key("ckey"); json->String(session->ckey);
 
         json->EndObject();
     } else {
