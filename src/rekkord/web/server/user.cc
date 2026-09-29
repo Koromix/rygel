@@ -478,7 +478,7 @@ void HandleUserRegister(http_IO *io)
         sq_Statement stmt;
         if (!db.Prepare(R"(INSERT INTO users (mail, username, creation, confirmed, version)
                            VALUES (?1, ?2, ?3, 0, 1)
-                           ON CONFLICT DO UPDATE SET confirmed = confirmed
+                           ON CONFLICT DO UPDATE SET confirmed = MAX(confirmed, excluded.confirmed)
                            RETURNING id, confirmed)",
                         &stmt, mail, mail, GetUnixTime()))
             return false;
@@ -1221,21 +1221,14 @@ void HandleSsoOidc(http_IO *io)
                 sq_Statement stmt;
                 if (!db.Prepare(R"(INSERT INTO identities (user, issuer, sub, allowed)
                                    VALUES (?1, ?2, ?3, ?4)
-                                   ON CONFLICT (issuer, sub) DO UPDATE SET allowed =
-                                       CASE
-                                           WHEN user <> excluded.user THEN NULL
-                                           WHEN excluded.allowed = 1 THEN 1
-                                           ELSE allowed
-                                       END
+                                   ON CONFLICT (issuer, sub) DO UPDATE SET allowed = MAX(allowed, excluded.allowed)
+                                                                       WHERE user = excluded.user
                                    RETURNING id)",
                                 &stmt, userid, oidc->provider.issuer, identity.sub, 0 + allowed))
                     return false;
 
                 if (!stmt.Step()) {
-                    K_ASSERT(!stmt.IsValid());
-
-                    // The IIF() trick above triggers a SQLITE_CONSTRAINT error to prevent IdP takeover
-                    if (stmt.Status() == SQLITE_CONSTRAINT) {
+                    if (stmt.IsValid()) {
                         LogError("Cannot confirm identity due to user mismatch");
                         io->SendError(403);
                     }
