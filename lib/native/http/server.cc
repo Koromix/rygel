@@ -983,6 +983,7 @@ http_RequestStatus http_IO::ParseRequest()
     Span<char> intro = {};
     bool keepalive = false;
     int64_t body_len = 0;
+    bool explicit_len = false;
     bool known_addr = (daemon->addr_mode == http_AddressMode::Socket);
 
     // Find end of request headers (CRLF+CRLF)
@@ -1162,21 +1163,30 @@ http_RequestStatus http_IO::ParseRequest()
         } else if (TestStr(key, "Connection")) {
             keepalive = !TestStrI(value, "close");
         } else if(TestStr(key, "Content-Length")) {
-            if (!ParseInt(value, &body_len)) [[unlikely]] {
+            int64_t len;
+            if (!ParseInt(value, &len)) [[unlikely]] {
                 SendError(400);
                 return http_RequestStatus::Close;
             }
 
-            if (body_len < 0) [[unlikely]] {
+            if (len < 0) [[unlikely]] {
                 LogError("Negative Content-Length is not valid");
                 SendError(400);
                 return http_RequestStatus::Close;
             }
-            if (body_len && request.method == http_RequestMethod::Get) [[unlikely]] {
+            if (len && request.method == http_RequestMethod::Get) [[unlikely]] {
                 LogError("Refusing to process GET request with body");
                 SendError(400);
                 return http_RequestStatus::Close;
             }
+            if (explicit_len && len != body_len) [[unlikely]] {
+                LogError("Refusing mismatched Content-Length values");
+                SendError(400);
+                return http_RequestStatus::Close;
+            }
+
+            body_len = len;
+            explicit_len = true;
         } else if (daemon->addr_mode == http_AddressMode::XForwardedFor && TestStr(key, "X-Forwarded-For")) {
             Span<const char> trimmed = TrimStr(SplitStr(value, ','));
 
