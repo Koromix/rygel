@@ -469,6 +469,58 @@ const char *http_RequestInfo::GetCookieValue(const char *key) const
     return head ? head->last->value : nullptr;
 }
 
+class FmtHeaderValue {
+    const char *str;
+
+public:
+    FmtHeaderValue(const char *str) : str(str) {}
+
+    void Format(FunctionRef<void(Span<const char>)> append) const;
+    operator FmtArg() const { return FmtCustom(*this); }
+};
+
+class FmtCookieValue {
+    const char *str;
+
+public:
+    FmtCookieValue(const char *str) : str(str) {}
+
+    void Format(FunctionRef<void(Span<const char>)> append) const;
+    operator FmtArg() const { return FmtCustom(*this); }
+};
+
+void FmtHeaderValue::Format(FunctionRef<void(Span<const char>)> append) const
+{
+    for (Size i = 0; str[i]; i++) {
+        int c = str[i];
+
+        if (IsAsciiControl(c) && c != '\t') {
+            append(' ');
+        } else {
+            append((char)c);
+        }
+    }
+}
+
+void FmtCookieValue::Format(FunctionRef<void(Span<const char>)> append) const
+{
+    const char *quotes = strpbrk(str, " ,") ? "\"" : "";
+
+    append(quotes);
+
+    for (Size i = 0; str[i]; i++) {
+        int c = str[i];
+
+        if (IsAsciiControl(c) || strchr("\";\\", c)) {
+            append(' ');
+        } else {
+            append((char)c);
+        }
+    }
+
+    append(quotes);
+}
+
 bool http_IO::OpenForRead(Size max_len, StreamReader *out_st)
 {
     K_ASSERT(socket);
@@ -530,8 +582,9 @@ void http_IO::AddCookieHeader(const char *path, const char *name, const char *va
 
     // Delete if value is NULL
     max_age = value ? max_age : 0;
+    value = value ? value : "";
 
-    buf.len = Fmt(buf.data, "%1=%2; Path=%3;", name, FmtUrlSafe(value, "-_.~"), path).len;
+    buf.len = Fmt(buf.data, "%1=%2; Path=%3;", name, FmtCookieValue(value), path).len;
     K_ASSERT(buf.Available() >= 128);
 
     if (max_age >= 0) {
@@ -1242,29 +1295,6 @@ http_RequestStatus http_IO::ParseRequest()
     SetTimeout(GetMonotonicClock() + daemon->idle_timeout);
 
     return http_RequestStatus::Ready;
-}
-
-class FmtHeaderValue {
-    const char *str;
-
-public:
-    FmtHeaderValue(const char *str) : str(str) {}
-
-    void Format(FunctionRef<void(Span<const char>)> append) const;
-    operator FmtArg() const { return FmtCustom(*this); }
-};
-
-void FmtHeaderValue::Format(FunctionRef<void(Span<const char>)> append) const
-{
-    for (Size i = 0; str[i]; i++) {
-        int c = str[i];
-
-        if (IsAsciiControl(c) && c != '\t') {
-            append(' ');
-        } else {
-            append((char)c);
-        }
-    }
 }
 
 Span<const char> http_IO::PrepareResponse(int status, CompressionType encoding, int64_t len)
