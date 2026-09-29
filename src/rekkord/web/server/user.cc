@@ -1180,6 +1180,8 @@ void HandleSsoOidc(http_IO *io)
         int64_t userid = 0;
         bool created = false;
         bool allowed = false;
+        const char *username = nullptr;
+        int picture = 0;
 
         bool success = db.Transaction([&]() {
             {
@@ -1187,7 +1189,7 @@ void HandleSsoOidc(http_IO *io)
                 if (!db.Prepare(R"(INSERT INTO users (mail, username, creation, confirmed, version)
                                    VALUES (?1, ?2, ?3, ?4, 1)
                                    ON CONFLICT DO UPDATE SET confirmed = confirmed
-                                   RETURNING id, creation)",
+                                   RETURNING id, creation, username, version)",
                                 &stmt, identity.email, identity.email, now, 0 + verified))
                     return false;
 
@@ -1198,6 +1200,8 @@ void HandleSsoOidc(http_IO *io)
 
                 userid = sqlite3_column_int64(stmt, 0);
                 created = (sqlite3_column_int64(stmt, 1) == now);
+                username = DuplicateString((const char *)sqlite3_column_text(stmt, 2), io->Allocator()).ptr;
+                picture = sqlite3_column_int(stmt, 3);
 
                 if (verified && created) {
                     // Automatically allow the provider that resulted in user creation if address mail is verified
@@ -1249,7 +1253,7 @@ void HandleSsoOidc(http_IO *io)
             return;
 
         if (allowed) {
-            session = CreateUserSession(userid, true, identity.email, 1);
+            session = CreateUserSession(userid, true, username, picture);
         } else {
             if (!SendLinkIdentityMail(identity.email, oidc->provider, token, io->Allocator()))
                 return;

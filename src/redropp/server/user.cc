@@ -1134,7 +1134,9 @@ void HandleSsoOidc(http_IO *io)
         int64_t userid = 0;
         bool created = false;
         bool allowed = false;
+        const char *username = nullptr;
         const char *ckey = nullptr;
+        int picture = 0;
 
         bool success = db.Transaction([&]() {
             {
@@ -1142,7 +1144,7 @@ void HandleSsoOidc(http_IO *io)
                 if (!db.Prepare(R"(INSERT INTO users (mail, username, creation, confirmed, version, ckey)
                                    VALUES (?1, ?2, ?3, ?4, 1, rnd_safe(32))
                                    ON CONFLICT DO UPDATE SET confirmed = MAX(confirmed, excluded.confirmed)
-                                   RETURNING id, creation, base64(ckey))",
+                                   RETURNING id, creation, username, base64(ckey), version)",
                                 &stmt, identity.email, identity.email, now, 0 + verified))
                     return false;
 
@@ -1153,7 +1155,9 @@ void HandleSsoOidc(http_IO *io)
 
                 userid = sqlite3_column_int64(stmt, 0);
                 created = (sqlite3_column_int64(stmt, 1) == now);
-                ckey = DuplicateString((const char *)sqlite3_column_text(stmt, 2), io->Allocator()).ptr;
+                username = DuplicateString((const char *)sqlite3_column_text(stmt, 2), io->Allocator()).ptr;
+                ckey = DuplicateString((const char *)sqlite3_column_text(stmt, 3), io->Allocator()).ptr;
+                picture = sqlite3_column_int(stmt, 4);
 
                 if (verified && created) {
                     // Automatically allow the provider that resulted in user creation if address mail is verified
@@ -1205,7 +1209,7 @@ void HandleSsoOidc(http_IO *io)
             return;
 
         if (allowed) {
-            session = CreateUserSession(userid, true, identity.email, ckey, 1);
+            session = CreateUserSession(userid, true, username, ckey, picture);
         } else {
             if (!SendLinkIdentityMail(identity.email, oidc->provider, token, io->Allocator()))
                 return;
