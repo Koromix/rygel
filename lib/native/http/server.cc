@@ -1259,8 +1259,7 @@ void FmtHeaderValue::Format(FunctionRef<void(Span<const char>)> append) const
     for (Size i = 0; str[i]; i++) {
         int c = str[i];
 
-        if (c == '\r' || c == '\n') {
-            // This is what Go does, so why not
+        if (IsAsciiControl(c) && c != '\t') {
             append(' ');
         } else {
             append((char)c);
