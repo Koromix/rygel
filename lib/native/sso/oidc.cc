@@ -468,15 +468,15 @@ static bool ImportRsaSigningKey(Span<const char> n, Span<const char> e, psa_key_
     der.Append(0x30);
     der.Append(0x82);
     der.Append((uint8_t)((8 + modulo.len + exponent.len) >> 8));
-    der.Append((uint8_t)((8 + modulo.len + exponent.len) & 0xF));
+    der.Append((uint8_t)((8 + modulo.len + exponent.len) & 0xFF));
     der.Append(0x02);
     der.Append(0x82);
     der.Append((uint8_t)((1 + modulo.len) >> 8));
-    der.Append((uint8_t)((1 + modulo.len) & 0xF));
+    der.Append((uint8_t)((1 + modulo.len) & 0xFF));
     der.Append(0);
     der.Append(modulo);
     der.Append(0x02);
-    der.Append((uint8_t)((1 + exponent.len) & 0xF));
+    der.Append((uint8_t)((1 + exponent.len) & 0xFF));
     der.Append(0);
     der.Append(exponent);
 
