@@ -275,6 +275,10 @@ bool PruneTokens()
 
     if (!db.Run("DELETE FROM tokens WHERE timestamp < ?1", now - TokenDuration))
         return false;
+    if (!db.Run(R"(DELETE FROM identities
+                   WHERE allowed = 0 AND
+                         id NOT IN (SELECT identity FROM tokens)"))
+        return false;
     if (!db.Run(R"(DELETE FROM users
                    WHERE creation < ?1 AND
                          password_hash IS NULL AND
