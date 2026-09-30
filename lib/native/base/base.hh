@@ -4881,8 +4881,11 @@ bool ParseInt(Span<const char> str, T *out_value, unsigned int flags = K_DEFAULT
         }
 
 #if defined(__GNUC__) || defined(__clang__)
-        bool overflow = __builtin_mul_overflow(value, 10, &value) ||
-                        __builtin_add_overflow(value, digit, &value);
+        bool overflow = false;
+
+        overflow |= __builtin_mul_overflow(value, 10, &value);
+        overflow |= __builtin_add_overflow(value, digit, &value);
+
         if (overflow) [[unlikely]]
             goto overflow;
 #else
