@@ -584,15 +584,25 @@ bool http_Dispatcher::Run()
                     AddEventChange(EVFILT_READ, socket->sock, EV_DISABLE, socket);
 
                     async.Run(worker_idx, [=, this] {
+                        http_RequestStatus status;
+
                         do {
                             daemon->RunHandler(client, clock);
 
                             if (!client->Rearm(GetMonotonicClock())) {
+                                status = http_RequestStatus::Busy;
                                 shutdown(socket->sock, SHUT_RD);
+
                                 break;
                             }
-                        } while (client->ParseRequest() == http_RequestStatus::Ready);
 
+                            status = client->ParseRequest();
+                        } while (status == http_RequestStatus::Ready);
+
+                        if (status == http_RequestStatus::Close) {
+                            client->incoming.buf.len = 0;
+                            shutdown(socket->sock, SHUT_RD);
+                        }
                         Wake(socket);
 
                         return true;
