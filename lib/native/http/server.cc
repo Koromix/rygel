@@ -829,7 +829,7 @@ bool http_IO::Init(http_Socket *socket, int64_t start, struct sockaddr *sa)
                 K_ASSERT(K_SIZE(addr) >= INET6_ADDRSTRLEN + 2);
 #endif
 
-                void *ptr = &((sockaddr_in6 *)sa)->sin6_addr;
+                auto *ptr = &((sockaddr_in6 *)sa)->sin6_addr;
 
                 if (IN6_IS_ADDR_V4MAPPED(ptr)) {
                     uint8_t *bytes = (uint8_t *)ptr + 12;
