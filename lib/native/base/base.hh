@@ -1053,6 +1053,9 @@ struct Span<const char> {
     constexpr Span<U> As() const { return Span<U>((U *)ptr, len); }
 };
 
+inline bool operator==(Span<char> str, const char *other) { return str.As<const char>() == other; }
+inline bool operator!=(Span<char> str, const char *other) { return str.As<const char>() != other; }
+
 template <typename T>
 static constexpr inline Span<T> MakeSpan(T *ptr, Size len)
 {

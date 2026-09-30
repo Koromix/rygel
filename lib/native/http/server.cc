@@ -1152,7 +1152,7 @@ http_RequestStatus http_IO::ParseRequest()
         }
 
         // Handle special headers
-        if (TestStr(key, "Cookie")) {
+        if (key == "Cookie") {
             Span<char> remain = value;
 
             while (remain.len) {
@@ -1181,9 +1181,9 @@ http_RequestStatus http_IO::ParseRequest()
 
                 request.cookies.Append({ name.ptr, value.ptr, nullptr });
             }
-        } else if (TestStr(key, "Connection")) {
+        } else if (key == "Connection") {
             keepalive = !TestStrI(value, "close");
-        } else if(TestStr(key, "Content-Length")) {
+        } else if (key == "Content-Length") {
             int64_t len;
             if (!ParseInt(value, &len)) [[unlikely]] {
                 SendError(400);
@@ -1208,7 +1208,7 @@ http_RequestStatus http_IO::ParseRequest()
 
             body_len = len;
             explicit_len = true;
-        } else if (daemon->addr_mode == http_AddressMode::XForwardedFor && TestStr(key, "X-Forwarded-For")) {
+        } else if (daemon->addr_mode == http_AddressMode::XForwardedFor && key == "X-Forwarded-For") {
             Span<const char> trimmed = TrimStr(SplitStrReverse(value, ','));
 
             if (!trimmed.len) [[unlikely]] {
@@ -1223,7 +1223,7 @@ http_RequestStatus http_IO::ParseRequest()
             }
 
             known_addr = true;
-        } else if (daemon->addr_mode == http_AddressMode::XRealIP && TestStr(key, "X-Real-Ip")) {
+        } else if (daemon->addr_mode == http_AddressMode::XRealIP && key == "X-Real-Ip") {
             Span<const char> trimmed = TrimStr(value);
 
             if (!trimmed.len) [[unlikely]] {
@@ -1238,7 +1238,7 @@ http_RequestStatus http_IO::ParseRequest()
             }
 
             known_addr = true;
-        } else if (TestStr(key, "Transfer-Encoding")) {
+        } else if (key == "Transfer-Encoding") {
             LogError("Requests with Transfer-Encoding are not supported");
             SendError(501);
             return http_RequestStatus::Close;
