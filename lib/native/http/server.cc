@@ -668,9 +668,6 @@ bool http_IO::NegociateEncoding(CompressionType preferred, CompressionType *out_
 
 bool http_IO::OpenForWrite(int status, CompressionType encoding, int64_t len, StreamWriter *out_st)
 {
-    K_ASSERT(socket);
-    K_ASSERT(!response.started);
-
     if (!StartResponse())
         return false;
 
@@ -1273,6 +1270,11 @@ bool http_IO::StartResponse()
 {
     K_ASSERT(socket);
     K_ASSERT(!response.started);
+
+    if (response.started) [[unlikely]] {
+        LogWarning("Send multiple HTTP responses (bug)");
+        request.keepalive = false;
+    }
 
     daemon->StartWrite(socket);
 
