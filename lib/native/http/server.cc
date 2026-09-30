@@ -520,7 +520,7 @@ void FmtCookieValue::Format(FunctionRef<void(Span<const char>)> append) const
     append(quotes);
 }
 
-bool http_IO::OpenForRead(Size max_len, StreamReader *out_st)
+bool http_IO::OpenForRead(int64_t max_len, StreamReader *out_st)
 {
     K_ASSERT(socket);
     K_ASSERT(!incoming.reading);
