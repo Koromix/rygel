@@ -13,8 +13,6 @@
 
 #if defined(_WIN32)
     #include <malloc.h>
-#else
-    #include <alloca.h>
 #endif
 #include <assert.h>
 #include <errno.h>
