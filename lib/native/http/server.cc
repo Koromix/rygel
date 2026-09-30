@@ -1002,7 +1002,7 @@ http_RequestStatus http_IO::ParseRequest()
         if (!end) {
             if (incoming.pos >= daemon->max_request_size) [[unlikely]] {
                 LogError("Excessive request size");
-                SendError(413);
+                SendError(431);
                 return http_RequestStatus::Close;
             }
 
@@ -1015,7 +1015,7 @@ http_RequestStatus http_IO::ParseRequest()
 
         if (incoming.pos >= daemon->max_request_size) [[unlikely]] {
             LogError("Excessive request size");
-            SendError(413);
+            SendError(431);
             return http_RequestStatus::Close;
         }
     }
@@ -1132,7 +1132,7 @@ http_RequestStatus http_IO::ParseRequest()
 
             if (request.headers.len >= daemon->max_request_headers) [[unlikely]] {
                 LogError("Too many headers, server limit is %1", daemon->max_request_headers);
-                SendError(413);
+                SendError(431);
                 return http_RequestStatus::Close;
             }
 
@@ -1165,7 +1165,7 @@ http_RequestStatus http_IO::ParseRequest()
 
                 if (request.cookies.len >= daemon->max_request_cookies) [[unlikely]] {
                     LogError("Too many cookies, server limit is %1", daemon->max_request_cookies);
-                    SendError(413);
+                    SendError(431);
                     return http_RequestStatus::Close;
                 }
 
