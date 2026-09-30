@@ -388,10 +388,7 @@ bool http_Dispatcher::Run()
     kqueue_fd = kqueue1(O_CLOEXEC);
 #else
     kqueue_fd = kqueue();
-
-    if (kqueue_fd >= 0) {
-        fcntl(kqueue_fd, F_SETFD, FD_CLOEXEC);
-    }
+    fcntl(kqueue_fd, F_SETFD, FD_CLOEXEC);
 #endif
     if (kqueue_fd < 0) {
         LogError("Failed to initialize kqueue: %1", strerror(errno));
