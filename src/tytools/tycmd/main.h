@@ -26,6 +26,7 @@ bool parse_common_option(ty_optline_context *optl, char *arg);
 
 int get_monitor(ty_monitor **rmonitor);
 int get_board(ty_board **rboard);
+bool filter_board(ty_board *board);
 
 _HS_END_C
 

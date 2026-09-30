@@ -46,7 +46,7 @@ static int print_interface_info_plain(ty_board_interface *iface, void *udata)
     return 0;
 }
 
-static int print_event_plain(ty_board *board, ty_monitor_event event)
+static void print_event_plain(ty_board *board, ty_monitor_event event)
 {
     static bool first = true;
 
@@ -93,8 +93,6 @@ static int print_event_plain(ty_board *board, ty_monitor_event event)
     }
 
     fflush(stdout);
-
-    return 0;
 }
 
 static void print_json_start(const char *key, char type, bool *comma)
@@ -156,7 +154,7 @@ static int print_interface_info_json(ty_board_interface *iface, void *udata)
     return 0;
 }
 
-static int print_event_json(ty_board *board, ty_monitor_event event, bool *comma)
+static void print_event_json(ty_board *board, ty_monitor_event event, bool *comma)
 {
     ty_model model = ty_board_get_model(board);
     const char *action = "";
@@ -203,26 +201,27 @@ static int print_event_json(ty_board *board, ty_monitor_event event, bool *comma
     printf("\n");
 
     fflush(stdout);
-    return 0;
 }
 
 static int list_callback(ty_board *board, ty_monitor_event event, void *udata)
 {
     _HS_UNUSED(udata);
 
+    if (!filter_board(board))
+        return 0;
+
     switch (list_output) {
-        case OUTPUT_PLAIN: { return print_event_plain(board, event); } break;
+        case OUTPUT_PLAIN: { print_event_plain(board, event); } break;
         case OUTPUT_JSON: {
             printf("  ");
-            return print_event_json(board, event, &json_comma);
+            print_event_json(board, event, &json_comma);
         } break;
         case OUTPUT_JSON_STREAM: {
             json_comma = false;
-            return print_event_json(board, event, &json_comma);
+            print_event_json(board, event, &json_comma);
         } break;
     }
 
-    assert(false);
     return 0;
 }
 

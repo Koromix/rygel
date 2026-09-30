@@ -166,6 +166,11 @@ int get_board(ty_board **rboard)
     return 0;
 }
 
+bool filter_board(ty_board *board)
+{
+    return ty_board_matches_tag(board, main_board_tag);
+}
+
 bool parse_common_option(ty_optline_context *optl, char *arg)
 {
     if (strcmp(arg, "--board") == 0 || strcmp(arg, "-B") == 0) {
