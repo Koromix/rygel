@@ -279,7 +279,7 @@ private:
     http_RequestStatus ParseRequest();
 
     bool StartResponse();
-    Span<const char> PrepareResponse(int status, CompressionType encoding, int64_t len);
+    Span<const char> PrepareResponse(int status, CompressionType encoding, int64_t len, bool chunked);
 
     Size ReadDirect(Span<uint8_t> buf);
     bool WriteDirect(Span<const uint8_t> buf);

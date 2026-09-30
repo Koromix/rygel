@@ -669,12 +669,16 @@ bool http_IO::OpenForWrite(int status, CompressionType encoding, int64_t len, St
     if (!StartResponse())
         return false;
 
-    // Don't allow Keep-Alive with HTTP/1.0 when chunked encoding is used
-    request.keepalive &= (len >= 0 || request.version >= 11);
+    bool chunked = len < 0;
+
+    if (chunked && request.version < 11) {
+        request.keepalive = false;
+        chunked = false;
+    }
 
     // Send response headers
     {
-        Span<const char> intro = PrepareResponse(status, encoding, len);
+        Span<const char> intro = PrepareResponse(status, encoding, len, chunked);
 
         if (!WriteDirect(intro.As<const uint8_t>()))
             return false;
@@ -688,38 +692,22 @@ bool http_IO::OpenForWrite(int status, CompressionType encoding, int64_t len, St
             return true;
         };
         return out_st->Open(skip, "<http>");
-    } else if (len >= 0) {
-        const auto write = [this](Span<const uint8_t> buf) { return WriteDirect(buf); };
+    } else if (chunked) {
+        const auto write = [this](Span<const uint8_t> buf) { return WriteChunked(buf); };
         return out_st->Open(write, "<http>", 0, encoding, CompressionSpeed::Fast);
     } else {
-        const auto chunk = [this](Span<const uint8_t> buf) { return WriteChunked(buf); };
-        return out_st->Open(chunk, "<http>", 0, encoding, CompressionSpeed::Fast);
+        const auto write = [this](Span<const uint8_t> buf) { return WriteDirect(buf); };
+        return out_st->Open(write, "<http>", 0, encoding, CompressionSpeed::Fast);
     }
 }
 
 void http_IO::Send(int status, CompressionType encoding, int64_t len, FunctionRef<bool(StreamWriter *)> func)
 {
-    // HEAD quick path
-    if (request.head) {
-        if (!StartResponse()) [[unlikely]]
-            return;
-
-        const auto write = [this](Span<const uint8_t> buf) { return WriteDirect(buf); };
-        StreamWriter writer(write, "<http>");
-
-        Span<const char> intro = PrepareResponse(status, encoding, len);
-        writer.Write(intro);
-
-        request.keepalive &= writer.Close();
-
-        return;
-    }
-
     StreamWriter writer;
     if (!OpenForWrite(status, encoding, len, &writer)) [[unlikely]]
         return;
 
-    request.keepalive &= func(&writer);
+    request.keepalive &= request.head || func(&writer);
     request.keepalive &= writer.Close();
 }
 
@@ -1314,8 +1302,10 @@ bool http_IO::StartResponse()
     return true;
 }
 
-Span<const char> http_IO::PrepareResponse(int status, CompressionType encoding, int64_t len)
+Span<const char> http_IO::PrepareResponse(int status, CompressionType encoding, int64_t len, bool chunked)
 {
+    K_ASSERT(len < 0 || !chunked);
+
     HeapArray<char> buf(&allocator);
     buf.Grow(Kibibytes(2));
 
@@ -1342,8 +1332,10 @@ Span<const char> http_IO::PrepareResponse(int status, CompressionType encoding, 
 
     if (len >= 0) {
         Fmt(&buf, "Content-Length: %1\r\n\r\n", len);
-    } else {
+    } else if (chunked) {
         Fmt(&buf, "Transfer-Encoding: chunked\r\n\r\n");
+    } else {
+        buf.Append("\r\n");
     }
 
     return buf.TrimAndLeak();

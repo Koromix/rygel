@@ -308,7 +308,7 @@ void http_IO::SendFile(int status, int fd, int64_t len)
     // In theory we can use the hdtr argument of sendfile, but the documentation is confusing.
     // Among others, it's not clear what the "sent" value means regarding the headers. Let's not risk it.
     {
-        Span<const char> intro = PrepareResponse(status, CompressionType::None, len);
+        Span<const char> intro = PrepareResponse(status, CompressionType::None, len, false);
 
         if (!daemon->WriteSocket(socket, intro.As<uint8_t>())) {
             request.keepalive = false;
