@@ -266,6 +266,10 @@ void http_IO::SendFile(int status, int fd, int64_t len)
         return;
     }
 
+    if (request.head || !len) {
+        // sendfile() will uncork implicitly, so this is needed only in some cases
+        SetDescriptorRetain(socket->sock, false);
+    }
     if (request.head)
         return;
 
