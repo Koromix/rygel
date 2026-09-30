@@ -2677,7 +2677,7 @@ void HandleArchiveCreate(http_IO *io)
     }
 
     // Can take a long time, don't timeout because request looks idle
-    io->ExtendTimeout(60000);
+    io->ExtendTimeout(120000);
 
     // Do the work
     if (bool conflict = false; !ArchiveInstances(nullptr, &conflict)) {
