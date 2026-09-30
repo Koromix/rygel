@@ -1213,7 +1213,7 @@ http_RequestStatus http_IO::ParseRequest()
             body_len = len;
             explicit_len = true;
         } else if (daemon->addr_mode == http_AddressMode::XForwardedFor && TestStr(key, "X-Forwarded-For")) {
-            Span<const char> trimmed = TrimStr(SplitStr(value, ','));
+            Span<const char> trimmed = TrimStr(SplitStrReverse(value, ','));
 
             if (!trimmed.len) [[unlikely]] {
                 LogError("Empty client address in X-Forwarded-For header");
