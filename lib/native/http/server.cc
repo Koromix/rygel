@@ -201,19 +201,19 @@ bool http_Config::Validate() const
 
     if (idle_timeout < 1000) {
         LogError("HTTP IdleTimeout must be >= 1 sec");
-        return false;
+        valid = false;
     }
     if (keepalive_time && keepalive_time < 5000) {
         LogError("HTTP KeepAliveTime must be >= 5 sec (or Disabled)");
-        return false;
+        valid = false;
     }
     if (send_timeout < 10000) {
         LogError("HTTP SendTimeout must be >= 10 sec");
-        return false;
+        valid = false;
     }
     if (stop_timeout < 1000) {
         LogError("HTTP StopTimeout must be >= 1 sec");
-        return false;
+        valid = false;
     }
 
     if (max_request_size < 1024) {
