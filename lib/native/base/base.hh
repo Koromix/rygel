@@ -4852,22 +4852,25 @@ bool ParseInt(Span<const char> str, T *out_value, unsigned int flags = K_DEFAULT
     }
 
     uint64_t value = 0;
-    Size pos = 0;
     uint64_t neg = 0;
+    Size start = 0;
 
     if (str.len >= 2) {
         if (std::numeric_limits<T>::min() < 0 && str[0] == '-') {
-            pos = 1;
             neg = UINT64_MAX;
+            start = 1;
         } else if (str[0] == '+') {
-            pos = 1;
+            start = 1;
         }
     }
 
+    Size pos = start;
+
     for (; pos < str.len; pos++) {
         unsigned int digit = (unsigned int)(str[pos] - '0');
+
         if (digit > 9) [[unlikely]] {
-            if (!pos || flags & (int)ParseFlag::End) {
+            if (pos == start || (flags & (int)ParseFlag::End)) {
                 if (flags & (int)ParseFlag::Log) {
                     LogError("Malformed integer number '%1'", str);
                 }
