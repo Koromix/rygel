@@ -146,7 +146,7 @@ Size http_Daemon::ReadSocket(http_Socket *socket, Span<uint8_t> buf)
         return -1;
     }
 
-    socket->client.ExtendTimeout(bytes, idle_timeout);
+    socket->client.ExtendTimeout(bytes / 8, idle_timeout);
 
     return bytes;
 }
@@ -165,7 +165,7 @@ bool http_Daemon::WriteSocket(http_Socket *socket, Span<const uint8_t> buf)
             return false;
         }
 
-        socket->client.ExtendTimeout(bytes, send_timeout);
+        socket->client.ExtendTimeout(bytes / 8, send_timeout);
 
         buf.ptr += bytes;
         buf.len -= bytes;
@@ -203,7 +203,7 @@ bool http_Daemon::WriteSocket(http_Socket *socket, Span<Span<const uint8_t>> par
             return false;
         }
 
-        socket->client.ExtendTimeout(sent, send_timeout);
+        socket->client.ExtendTimeout(sent / 8, send_timeout);
 
         // Windows does not apparently do partial writes, so don't bother dealing with that.
         // Go on!
@@ -635,7 +635,8 @@ void http_IO::SendFile(int status, int fd, int64_t len)
             return;
         }
 
-        ExtendTimeout(intro.len + send, daemon->send_timeout);
+        int64_t bytes = intro.len + send;
+        ExtendTimeout(bytes / 8, daemon->send_timeout);
 
         offset += send;
         remain -= send;
