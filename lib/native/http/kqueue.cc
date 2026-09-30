@@ -553,10 +553,10 @@ bool http_Dispatcher::Run()
 
 #if defined(MSG_DONTWAIT)
                 Size available = client->incoming.buf.Available() - 1;
-                Size bytes = recv(socket->sock, client->incoming.buf.ptr, (size_t)available, MSG_DONTWAIT);
+                Size bytes = recv(socket->sock, client->incoming.buf.end(), (size_t)available, MSG_DONTWAIT);
 #else
                 Size available = client->incoming.buf.Available() - 1;
-                Size bytes = recv(socket->sock, client->incoming.buf.ptr, (size_t)available, 0);
+                Size bytes = recv(socket->sock, client->incoming.buf.end(), (size_t)available, 0);
 #endif
 
                 if (bytes > 0) {

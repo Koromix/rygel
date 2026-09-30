@@ -439,7 +439,7 @@ bool http_Dispatcher::Run()
                 client->incoming.buf.Grow(Kibibytes(8));
 
                 Size available = client->incoming.buf.Available() - 1;
-                Size bytes = recv(socket->sock, (char *)client->incoming.buf.ptr, (int)available, 0);
+                Size bytes = recv(socket->sock, (char *)client->incoming.buf.end(), (int)available, 0);
 
                 if (bytes > 0) {
                     client->incoming.buf.len += bytes;
