@@ -4852,9 +4852,9 @@ bool ParseInt(Span<const char> str, T *out_value, unsigned int flags = K_DEFAULT
     }
 
     uint64_t value = 0;
-
     Size pos = 0;
     uint64_t neg = 0;
+
     if (str.len >= 2) {
         if (std::numeric_limits<T>::min() < 0 && str[0] == '-') {
             pos = 1;
@@ -4877,19 +4877,29 @@ bool ParseInt(Span<const char> str, T *out_value, unsigned int flags = K_DEFAULT
             }
         }
 
-        uint64_t new_value = (value * 10) + digit;
-        if (new_value < value) [[unlikely]]
+#if defined(__GNUC__) || defined(__clang__)
+        bool overflow = __builtin_mul_overflow(value, 10, &value) ||
+                        __builtin_add_overflow(value, digit, &value);
+        if (overflow) [[unlikely]]
             goto overflow;
-        value = new_value;
+#else
+        // Slightly conservative but whatever
+        if (value > (UINT64_MAX - 9) / 10) [[unlikely]]
+            goto overflow;
+        value = value * 10 + digit;
+#endif
     }
+
     if (value > (uint64_t)std::numeric_limits<T>::max()) [[unlikely]]
         goto overflow;
+
     value = ((value ^ neg) - neg);
 
     if (out_remaining) {
         *out_remaining = str.Take(pos, str.len - pos);
     }
     *out_value = (T)value;
+
     return true;
 
 overflow:
