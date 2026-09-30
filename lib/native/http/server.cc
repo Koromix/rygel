@@ -425,8 +425,7 @@ static inline bool IsFieldValueValid(Span<const char> key)
         upper = (c == '-');
     }
 
-    bool empty = !key[0];
-    return !empty;
+    return key.len;
 }
 
 const http_KeyHead *http_RequestInfo::FindQuery(const char *key) const
