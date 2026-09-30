@@ -837,12 +837,8 @@ bool http_IO::Init(http_Socket *socket, int64_t start, struct sockaddr *sa)
     if (daemon->addr_mode == http_AddressMode::Socket) {
         switch (sa->sa_family) {
             case AF_INET: {
-                void *ptr = &((sockaddr_in *)sa)->sin_addr;
-
-                if (!inet_ntop(AF_INET, ptr, addr, K_SIZE(addr))) [[unlikely]] {
-                    LogError("Cannot convert IPv4 address to text");
-                    return false;
-                }
+                uint8_t *bytes = (uint8_t *)&((sockaddr_in *)sa)->sin_addr;
+                Fmt(addr, "%1.%2.%3.%4", bytes[0], bytes[1], bytes[2], bytes[3]);
             } break;
 
             case AF_INET6: {
@@ -852,15 +848,12 @@ bool http_IO::Init(http_Socket *socket, int64_t start, struct sockaddr *sa)
 
                 void *ptr = &((sockaddr_in6 *)sa)->sin6_addr;
 
-                if (!inet_ntop(AF_INET6, ptr, addr, K_SIZE(addr))) [[unlikely]] {
-                    LogError("Cannot convert IPv6 address to text");
-                    return false;
-                }
-
-                if (StartsWith(addr, "::ffff:") || StartsWith(addr, "::FFFF:")) {
-                    // Not supposed to even go near the limit, but make sure!
-                    Size move = std::min((Size)strlen(addr + 7) + 1, K_SIZE(addr) - 8);
-                    MemMove(addr, addr + 7, move);
+                if (IN6_IS_ADDR_V4MAPPED(ptr)) {
+                    uint8_t *bytes = (uint8_t *)ptr + 12;
+                    Fmt(addr, "%1.%2.%3.%4", bytes[0], bytes[1], bytes[2], bytes[3]);
+                } else {
+                    const char *ret = inet_ntop(AF_INET6, ptr, addr, K_SIZE(addr));
+                    K_ASSERT(ret);
                 }
             } break;
 
