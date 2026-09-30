@@ -173,7 +173,7 @@ static bool HandleInputEvent(int fd)
     Size len = read(fd, &ev, K_SIZE(ev));
 
     if (len < 0) {
-        if (errno == EAGAIN)
+        if (errno == EAGAIN || errno == EWOULDBLOCK)
             return true;
 
         LogError("Failed to read evdev event: %1", strerror(errno));

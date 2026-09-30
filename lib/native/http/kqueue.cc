@@ -502,9 +502,7 @@ bool http_Dispatcher::Run()
 #endif
 
                 if (sock < 0) {
-                    static_assert(EAGAIN == EWOULDBLOCK);
-
-                    if (errno == EAGAIN)
+                    if (errno == EAGAIN || errno == EWOULDBLOCK)
                         break;
                     if (errno == EINVAL)
                         return true;
@@ -566,7 +564,7 @@ bool http_Dispatcher::Run()
                     client->incoming.buf.ptr[client->incoming.buf.len] = 0;
 
                     status = client->ParseRequest();
-                } else if (!bytes || (errno != EAGAIN && errno != EINTR)) {
+                } else if (!bytes || (errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR)) {
                     if (client->IsBusy()) {
                         if (bytes) {
                             LogError("Connection failed: %1", strerror(errno));

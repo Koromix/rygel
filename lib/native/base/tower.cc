@@ -593,7 +593,7 @@ bool TowerServer::Process(uint64_t ready)
                 LogError("Too many connections, refusing new client");
                 CloseDescriptor(sock);
             }
-        } else if (errno != EAGAIN) {
+        } else if (errno != EAGAIN && errno != EWOULDBLOCK) {
             LogError("Failed to accept client: %1", strerror(errno));
         }
     }
@@ -616,7 +616,7 @@ bool TowerServer::Process(uint64_t ready)
         const auto read = [&](Span<uint8_t> out_buf) {
             Size received = recv(sock, out_buf.ptr, out_buf.len, 0);
             if (received < 0) {
-                if (errno == EAGAIN) {
+                if (errno == EAGAIN || errno == EWOULDBLOCK) {
                     if (IsReadable(sock, 1000)) {
                         received = recv(sock, out_buf.ptr, out_buf.len, 0);
                     } else {

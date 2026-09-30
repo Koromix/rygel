@@ -575,7 +575,7 @@ static bool ServeRequests()
         Size ret = recvmsg(main_pfd[1], &msg, MSG_DONTWAIT | MSG_CMSG_CLOEXEC);
 
         if (ret < 0) {
-            if (errno == EAGAIN)
+            if (errno == EAGAIN || errno == EWOULDBLOCK)
                 continue;
 
             LogError("Failed to read from UNIX socket: %1", strerror(errno));
