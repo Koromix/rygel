@@ -350,7 +350,8 @@ bool http_Dispatcher::Run()
         free_sockets.Clear();
     };
 
-    AddEpollDescriptor(listener, EPOLLIN | EPOLLEXCLUSIVE, nullptr);
+    if (!AddEpollDescriptor(listener, EPOLLIN | EPOLLEXCLUSIVE, nullptr))
+        return false;
 
     HeapArray<struct epoll_event> events;
     int next_worker = 0;
