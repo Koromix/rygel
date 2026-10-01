@@ -459,10 +459,18 @@ bool http_Dispatcher::Run()
                 accepts = true;
             } else if (ev.ident == (uintptr_t)pair_fd[0]) {
                 uintptr_t addr = 0;
-                Size ret = K_RESTART_EINTR(read(pair_fd[0], &addr, K_SIZE(addr)), < 0);
+                Size ret = read(pair_fd[0], &addr, K_SIZE(addr));
 
-                if (ret <= 0)
-                    break;
+                if (ret < 0) [[unlikely]] {
+                    if (errno == EINTR)
+                        continue;
+
+                    LogWarning("Unexpected error during pipe read: %1", strerror(errno));
+                    continue;
+                } else if (!ret) [[unlikely]] {
+                    LogWarning("Unexpected empty read during pipe read");
+                    continue;
+                }
                 K_ASSERT(ret == K_SIZE(void *));
 
                 http_Socket *socket = (http_Socket *)addr;
