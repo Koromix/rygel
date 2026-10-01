@@ -362,21 +362,21 @@ bool http_Dispatcher::Run()
             uintptr_t addr = 0;
             Size ret = recv(pair_fd[0], (char *)&addr, K_SIZE(addr), 0);
 
-            if (ret > 0) [[likely]] {
-                K_ASSERT(ret == K_SIZE(void *));
-
-                http_Socket *socket = (http_Socket *)addr;
-
-                if (!socket) [[unlikely]]
-                    return true;
-
-                SetDescriptorNonBlock(socket->sock, true);
-                socket->poll = true;
-            } else if (ret < 0) {
-                LogWarning("Unexpected error during pipe read: %1", GetWin32ErrorString());
-            } else {
-                LogWarning("Unexpected empty read during pipe read");
+            if (ret < 0) [[unlikely]] {
+                LogError("Unexpected error during pipe read: %1", GetWin32ErrorString());
+                return true;
+            } else if (ret != K_SIZE(addr)) [[unlikely]] {
+                LogError("Unexpected empty or partial read during pipe read");
+                return true;
             }
+
+            http_Socket *socket = (http_Socket *)addr;
+
+            if (!socket) [[unlikely]]
+                return true;
+
+            SetDescriptorNonBlock(socket->sock, true);
+            socket->poll = true;
         }
         for (Size i = 2; i < pfds.len; i++) {
             struct pollfd &pfd = pfds[i];

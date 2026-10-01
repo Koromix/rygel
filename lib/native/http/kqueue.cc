@@ -465,13 +465,12 @@ bool http_Dispatcher::Run()
                     if (errno == EINTR)
                         continue;
 
-                    LogWarning("Unexpected error during pipe read: %1", strerror(errno));
-                    continue;
-                } else if (!ret) [[unlikely]] {
-                    LogWarning("Unexpected empty read during pipe read");
-                    continue;
+                    LogError("Unexpected error during pipe read: %1", strerror(errno));
+                    return true;
+                } else if (ret != K_SIZE(addr)) [[unlikely]] {
+                    LogError("Unexpected empty or partial read during pipe read");
+                    return true;
                 }
-                K_ASSERT(ret == K_SIZE(void *));
 
                 http_Socket *socket = (http_Socket *)addr;
 
