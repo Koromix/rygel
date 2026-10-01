@@ -275,10 +275,6 @@ void http_IO::SendFile(int status, int fd, int64_t len)
     if (!StartResponse()) [[unlikely]]
         return;
 
-#if !defined(MSG_DONTWAIT)
-    SetSocketNonBlock(socket->sock, false);
-#endif
-
     if (len < 0) {
         struct stat sb;
         if (fstat(fd, &sb) < 0) {

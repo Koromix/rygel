@@ -608,8 +608,6 @@ void http_IO::SendFile(int status, int fd, int64_t len)
     if (!StartResponse()) [[unlikely]]
         return;
 
-    SetSocketNonBlock(socket->sock, false);
-
     if (len < 0) {
         HANDLE h = (HANDLE)_get_osfhandle(fd);
 
