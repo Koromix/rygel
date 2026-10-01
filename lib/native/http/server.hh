@@ -66,10 +66,6 @@ class http_Daemon {
     Size workers = 0;
     HeapArray<int> listeners;
 
-#if defined(_WIN32)
-    void *iocp = nullptr; // HANDLE
-#endif
-
     SocketType sock_type;
     http_AddressMode addr_mode;
 
@@ -206,7 +202,6 @@ class http_IO {
     struct {
         HeapArray<uint8_t> buf;
         Size pos = 0;
-        Span<uint8_t> extra = {};
 
         int64_t read = 0;
         bool reading = false;
