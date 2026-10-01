@@ -101,13 +101,12 @@ void http_Daemon::Stop()
         shutdown(listener, SHUT_RDWR);
     }
 
-#if defined(__APPLE__)
-    // On macOS, the shutdown() does not wake up poll() so use the pipe to wake it up
-    // and signal the ongoing shutdown.
+    // On macOS (and maybe others), the shutdown() does not wake up poll() so use the
+    // pipe to wake it up and signal the ongoing shutdown.
+    // Trigger shutdown explictly.
     for (http_Dispatcher *it = dispatcher; it; it = it->next) {
         it->Wake(nullptr);
     }
-#endif
 
     if (async) {
         async->Sync();
@@ -471,10 +470,8 @@ bool http_Dispatcher::Run()
 
                 http_Socket *socket = (http_Socket *)addr;
 
-#if defined(__APPLE__)
                 if (!socket) [[unlikely]]
                     return true;
-#endif
 
 #if !defined(MSG_DONTWAIT)
                 SetDescriptorNonBlock(socket->sock, true);
