@@ -7264,6 +7264,7 @@ int CreateSocket(SocketType type, int flags)
 
     int one = 1;
     setsockopt(sock, SOL_SOCKET, SO_EXCLUSIVEADDRUSE, (char *)&one, sizeof(one));
+    setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (char *)&one, sizeof(one));
 
     if (type == SocketType::Dual || type == SocketType::IPv6) {
         int v6only = (type == SocketType::IPv6);
@@ -7306,8 +7307,9 @@ int CreateSocket(SocketType type, int flags)
     fcntl(sock, F_SETFD, FD_CLOEXEC);
 #endif
 
-    int reuse = 1;
-    setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
+    int one = 1;
+    setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
+    setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one));
 
     if (type == SocketType::Dual || type == SocketType::IPv6) {
         int v6only = (type == SocketType::IPv6);
