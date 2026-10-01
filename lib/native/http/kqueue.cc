@@ -481,7 +481,7 @@ bool http_Dispatcher::Run()
 #if !defined(MSG_DONTWAIT)
                 SetDescriptorNonBlock(socket->sock, true);
 #endif
-                AddEventChange(EVFILT_READ, socket->sock, EV_ENABLE | EV_CLEAR, socket);
+                AddEventChange(EVFILT_READ, socket->sock, EV_ENABLE, socket);
             } else {
                 http_Socket *socket = (http_Socket *)ev.udata;
                 socket->process = true;
@@ -681,7 +681,7 @@ http_Socket *http_Dispatcher::InitSocket(int sock, int64_t start, struct sockadd
 
     if (!socket->client.Init(socket, start, sa)) [[unlikely]]
         return nullptr;
-    AddEventChange(EVFILT_READ, sock, EV_ADD | EV_CLEAR, socket);
+    AddEventChange(EVFILT_READ, sock, EV_ADD, socket);
 
     socket->sock = sock;
     err_guard.Disable();
