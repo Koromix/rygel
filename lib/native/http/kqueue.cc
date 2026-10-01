@@ -632,8 +632,11 @@ bool http_Dispatcher::Run()
         changes.RemoveFrom(0);
         std::swap(next_changes, changes);
 
+        // The timeout is unsigned to make it easier to use with std::min() without dealing
+        // with the default value -1. If it stays at UINT_MAX, the (int) cast results in -1.
         struct timespec ts = { timeout / 1000, (timeout % 1000) * 1000000 };
-        int ready = kevent(kqueue_fd, changes.ptr, (int)changes.len, events.ptr, (int)events.len, &ts);
+        struct timespec *t = ((int)timeout >= 0) ? &ts : nullptr;
+        int ready = kevent(kqueue_fd, changes.ptr, (int)changes.len, events.ptr, (int)events.len, t);
 
         if (ready < 0) {
             if (errno != EINTR) {
