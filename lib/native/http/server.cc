@@ -1280,7 +1280,9 @@ bool http_IO::StartResponse()
 
     if (response.started) [[unlikely]] {
         LogWarning("Send multiple HTTP responses (bug)");
+
         request.keepalive = false;
+        return false;
     }
 
     daemon->StartWrite(socket);
