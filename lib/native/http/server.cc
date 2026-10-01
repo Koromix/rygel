@@ -994,7 +994,7 @@ http_RequestStatus http_IO::ParseRequest()
 {
     Span<char> intro = {};
     bool keepalive = false;
-    bool host = false;
+    Span<const char> host = {};
     int64_t body_len = 0;
     bool explicit_len = false;
     bool known_addr = (daemon->addr_mode == http_AddressMode::Socket);
@@ -1145,7 +1145,13 @@ http_RequestStatus http_IO::ParseRequest()
 
         // Handle special headers
         if (key == "Host") {
-            host = true;
+            if (host.len && !TestStr(host, value)) [[unlikely]] {
+                LogError("Refusing mismatched Host values");
+                SendError(400);
+                return http_RequestStatus::Close;
+            }
+
+            host = value;
         } else if (key == "Cookie") {
             Span<char> remain = value;
 
@@ -1239,7 +1245,7 @@ http_RequestStatus http_IO::ParseRequest()
         }
     }
 
-    if (request.version >= 11 && !host) [[unlikely]] {
+    if (request.version >= 11 && !host.len) [[unlikely]] {
         LogError("Missing Host header in HTTP/1.1 request");
         SendError(400);
         return http_RequestStatus::Close;
