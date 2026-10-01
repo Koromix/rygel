@@ -258,12 +258,8 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
 
             target_config.name = DuplicateString(prop.section, &set.str_alloc).ptr;
             target_config.type = TargetType::Executable;
-            target_config.platforms = ParseSupportedPlatforms("Desktop");
-            target_config.architectures = UINT_MAX;
             target_config.title = target_config.name;
             target_config.version_tag = target_config.name;
-
-            K_ASSERT(target_config.platforms);
 
             // Don't reuse target names
             if (!known_targets.InsertOrFail(target_config.name)) {
@@ -555,6 +551,23 @@ const TargetInfo *TargetSetBuilder::CreateTarget(const char *root_directory, Tar
             target->sources.Append(import->sources);
             target->translations.Append(import->translations);
             target->embed_filenames.Append(import->embed_filenames);
+        }
+    }
+
+    // Default platforms and architectures
+    if (!target->platforms) {
+        target->platforms = ParseSupportedPlatforms("Desktop");
+        K_ASSERT(target->platforms);
+
+        for (const TargetInfo *import: target->imports) {
+            target->platforms &= import->platforms;
+        }
+    }
+    if (!target->architectures) {
+        target->architectures = UINT_MAX;
+
+        for (const TargetInfo *import: target->imports) {
+            target->architectures &= import->architectures;
         }
     }
 
