@@ -215,7 +215,11 @@ bool http_Daemon::WriteSocket(http_Socket *socket, Span<Span<const uint8_t>> par
         socket->client.ExtendTimeout(sent / 8, send_timeout);
 
         // Windows does not apparently do partial writes, so don't bother dealing with that.
-        // Go on!
+        //
+        // From MSDN:
+        // For non-overlapped sockets [...] WSASend adopts the same blocking semantics as send.
+        // [...] Given the same buffer situation and a blocking socket, WSASend will block until
+        // all of the application's buffer contents have been consumed.
 
         parts.ptr += bufs.len;
         parts.len -= bufs.len;
