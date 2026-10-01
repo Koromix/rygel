@@ -963,8 +963,6 @@ static bool DecodeQuery(Span<char> str, HeapArray<http_KeyValue> *out_values)
             Span<char> key = SplitStr(frag, '=', &value);
 
             key.len = DecodeQueryComponent(key);
-            if (key.len < 0)
-                return false;
             value.len = DecodeQueryComponent(value);
             if (key.len < 0 || value.len < 0)
                 return false;
