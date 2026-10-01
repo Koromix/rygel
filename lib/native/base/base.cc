@@ -7262,8 +7262,8 @@ int CreateSocket(SocketType type, int flags)
     }
     K_DEFER_N(err_guard) { closesocket(sock); };
 
-    int reuse = 1;
-    setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char *)&reuse, sizeof(reuse));
+    int one = 1;
+    setsockopt(sock, SOL_SOCKET, SO_EXCLUSIVEADDRUSE, (char *)&one, sizeof(one));
 
     if (type == SocketType::Dual || type == SocketType::IPv6) {
         int v6only = (type == SocketType::IPv6);

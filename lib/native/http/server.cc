@@ -235,15 +235,21 @@ bool http_Config::Validate() const
     return valid;
 }
 
-static void AllowPortReuse([[maybe_unused]] int sock)
+static void SetPortReuse(int sock, bool enable)
 {
 #if defined(SO_REUSEPORT_LB)
-    int reuse = 1;
+    int reuse = enable;
     setsockopt(sock, SOL_SOCKET, SO_REUSEPORT_LB, &reuse, sizeof(reuse));
 #elif defined(SO_REUSEPORT)
-    int reuse = 1;
+    int reuse = enable;
     setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &reuse, sizeof(reuse));
- #endif
+#elif defined(_WIN32)
+    int exclusive = !enable;
+    setsockopt(sock, SOL_SOCKET, SO_EXCLUSIVEADDRUSE, (char *)&exclusive, sizeof(exclusive));
+#else
+    (void)sock;
+    (void)enable;
+#endif
 }
 
 static int CreateListenSocket(const http_Config &config, bool first)
@@ -253,11 +259,9 @@ static int CreateListenSocket(const http_Config &config, bool first)
         return -1;
     K_DEFER_N(err_guard) { CloseSocket(sock); };
 
-    if (!first) {
-        // Set SO_REUSEPORT after first connection, so that two HTTP serving processes don't end up
-        // overlapping each other.
-        AllowPortReuse(sock);
-    }
+    // Set SO_REUSEPORT after first connection, so that two HTTP serving processes
+    // don't end up overlapping each other.
+    SetPortReuse(sock, !first);
 
     switch (config.sock_type) {
         case SocketType::Dual:
@@ -273,9 +277,9 @@ static int CreateListenSocket(const http_Config &config, bool first)
     }
 
     if (first) {
-        // The bind succeeded, we know that no other process is using this port. Let the next sockets
-        // reuse this port.
-        AllowPortReuse(sock);
+        // The bind succeeded, we know that no other process is using this port.
+        // Let the next sockets reuse this port.
+        SetPortReuse(sock, true);
     }
 
     if (listen(sock, 200) < 0) {
