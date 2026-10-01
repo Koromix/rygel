@@ -127,6 +127,11 @@ void http_Daemon::StartRead(http_Socket *socket)
 void http_Daemon::StartWrite(http_Socket *socket)
 {
     SetSocketNonBlock(socket->sock, false);
+
+    // Setting TCP_NODELAY just after accept() can fail, when the socket is still in CONNECTING state.
+    // Now it is safe!
+    int one = 1;
+    setsockopt(socket->sock, IPPROTO_TCP, TCP_NODELAY, (char *)&one, sizeof(one));
 }
 
 void http_Daemon::EndWrite(http_Socket *)
