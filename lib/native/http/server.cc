@@ -243,9 +243,6 @@ static void SetPortReuse(int sock, bool enable)
 #elif defined(SO_REUSEPORT)
     int reuse = enable;
     setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &reuse, sizeof(reuse));
-#elif defined(_WIN32)
-    int exclusive = !enable;
-    setsockopt(sock, SOL_SOCKET, SO_EXCLUSIVEADDRUSE, (char *)&exclusive, sizeof(exclusive));
 #else
     (void)sock;
     (void)enable;
@@ -342,9 +339,15 @@ bool http_Daemon::Bind(const http_Config &config, bool log_addr)
             return false;
         listeners.Append(listener);
 
+#if defined(_WIN32)
+        // Can't find a proper way to share port safely and
+        // load balance with multiple listeners on Windows.
+        break;
+#else
         // One cannot bind to the same UNIX socket multiple times
         if (config.sock_type == SocketType::Unix)
             break;
+#endif
     }
 
     if (log_addr) {
