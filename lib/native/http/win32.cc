@@ -141,9 +141,12 @@ Size http_Daemon::ReadSocket(http_Socket *socket, Span<uint8_t> buf)
 
     if (bytes < 0) {
         int error = GetLastError();
+
         if (error != WSAENOTCONN && error != WSAECONNRESET) {
             LogError("Failed to read from client: %1", GetWin32ErrorString(error));
         }
+
+        socket->client.request.keepalive = false;
         return -1;
     }
 
