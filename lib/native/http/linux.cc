@@ -146,7 +146,7 @@ restart:
         return -1;
     }
 
-    socket->client.ExtendTimeout(bytes / 8, idle_timeout);
+    socket->client.ExtendTimeout(bytes / 4, idle_timeout);
 
     return bytes;
 }
@@ -171,7 +171,7 @@ bool http_Daemon::WriteSocket(http_Socket *socket, Span<const uint8_t> buf)
             return false;
         }
 
-        socket->client.ExtendTimeout(bytes / 8, send_timeout);
+        socket->client.ExtendTimeout(bytes / 4, send_timeout);
 
         buf.ptr += bytes;
         buf.len -= bytes;
@@ -213,7 +213,7 @@ bool http_Daemon::WriteSocket(http_Socket *socket, Span<Span<const uint8_t>> par
             return false;
         }
 
-        socket->client.ExtendTimeout(sent / 8, send_timeout);
+        socket->client.ExtendTimeout(sent / 4, send_timeout);
 
         do {
             struct iovec *part = msg.msg_iov;
@@ -299,7 +299,7 @@ void http_IO::SendFile(int status, int fd, int64_t len)
             return;
         }
 
-        ExtendTimeout(sent / 8, daemon->send_timeout);
+        ExtendTimeout(sent / 4, daemon->send_timeout);
 
         remain -= sent;
     }
