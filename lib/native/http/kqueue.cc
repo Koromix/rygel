@@ -333,10 +333,7 @@ void http_IO::SendFile(int status, int fd, int64_t len)
         int ret = sendfile(fd, socket->sock, offset, &sent, nullptr, 0);
 #endif
 
-        if (ret < 0) {
-            if (errno == EINTR)
-                continue;
-
+        if (ret < 0 && errno != EINTR) {
             if (errno != EINVAL && errno != EPIPE && errno != ECONNRESET) {
                 LogError("Failed to send file: %1", strerror(errno));
             }
