@@ -652,7 +652,10 @@ void http_IO::SendFile(int status, int fd, int64_t len)
         TRANSMIT_FILE_BUFFERS tbuf = { (void *)intro.ptr, (DWORD)intro.len, nullptr, 0 };
         DWORD send = (DWORD)std::min(remain, (int64_t)MaxSend - intro.len);
 
-        if (!TransmitFile((SOCKET)socket->sock, h, send, 0, nullptr, &tbuf, 0)) [[unlikely]] {
+        // Needed to provide offset = 0
+        OVERLAPPED ov = {};
+
+        if (!TransmitFile((SOCKET)socket->sock, h, send, 0, &ov, &tbuf, 0)) [[unlikely]] {
             LogError("Failed to send file: %1", GetWin32ErrorString());
 
             request.keepalive = false;
