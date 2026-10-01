@@ -288,7 +288,7 @@ static int CreateListenSocket(const http_Config &config, bool first)
 #endif
     }
 
-    SetDescriptorNonBlock(sock, true);
+    SetSocketNonBlock(sock, true);
 
     err_guard.Disable();
     return sock;

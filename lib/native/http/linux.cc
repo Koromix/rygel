@@ -126,7 +126,7 @@ void http_Daemon::StartWrite(http_Socket *)
 
 void http_Daemon::EndWrite(http_Socket *socket)
 {
-    SetDescriptorRetain(socket->sock, false);
+    SetSocketRetain(socket->sock, false);
 }
 
 Size http_Daemon::ReadSocket(http_Socket *socket, Span<uint8_t> buf)
@@ -268,7 +268,7 @@ void http_IO::SendFile(int status, int fd, int64_t len)
 
     if (request.head || !len) {
         // sendfile() will uncork implicitly, so this is needed only in some cases
-        SetDescriptorRetain(socket->sock, false);
+        SetSocketRetain(socket->sock, false);
     }
     if (request.head)
         return;

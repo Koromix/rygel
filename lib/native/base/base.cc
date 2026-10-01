@@ -7512,7 +7512,7 @@ bool ConnectUnixSocket(int sock, const char *path)
     return true;
 }
 
-void SetDescriptorNonBlock(int fd, bool enable)
+void SetSocketNonBlock(int fd, bool enable)
 {
 #if defined(_WIN32)
     unsigned long mode = enable;
@@ -7524,7 +7524,7 @@ void SetDescriptorNonBlock(int fd, bool enable)
 #endif
 }
 
-void SetDescriptorRetain(int fd, bool retain)
+void SetSocketRetain(int fd, bool retain)
 {
 #if defined(TCP_CORK)
     int flag = retain;

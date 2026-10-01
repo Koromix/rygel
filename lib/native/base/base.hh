@@ -5053,8 +5053,8 @@ bool ConnectIPSocket(int sock, const char *addr, int port);
 bool ConnectUnixSocket(int sock, const char *path);
 
 // Only for sockets on Windows
-void SetDescriptorNonBlock(int fd, bool enable);
-void SetDescriptorRetain(int fd, bool retain);
+void SetSocketNonBlock(int fd, bool enable);
+void SetSocketRetain(int fd, bool retain);
 
 void CloseSocket(int fd);
 

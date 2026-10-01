@@ -134,7 +134,7 @@ void http_Daemon::StartRead(http_Socket *socket)
     (void)socket;
 
 #if !defined(MSG_DONTWAIT)
-    SetDescriptorNonBlock(socket->sock, false);
+    SetSocketNonBlock(socket->sock, false);
 #endif
 }
 
@@ -143,16 +143,16 @@ void http_Daemon::StartWrite(http_Socket *socket)
     (void)socket;
 
 #if !defined(MSG_DONTWAIT)
-    SetDescriptorNonBlock(socket->sock, false);
+    SetSocketNonBlock(socket->sock, false);
 #endif
 #if !defined(MSG_MORE)
-    SetDescriptorRetain(socket->sock, true);
+    SetSocketRetain(socket->sock, true);
 #endif
 }
 
 void http_Daemon::EndWrite(http_Socket *socket)
 {
-    SetDescriptorRetain(socket->sock, false);
+    SetSocketRetain(socket->sock, false);
 }
 
 Size http_Daemon::ReadSocket(http_Socket *socket, Span<uint8_t> buf)
@@ -276,7 +276,7 @@ void http_IO::SendFile(int status, int fd, int64_t len)
         return;
 
 #if !defined(MSG_DONTWAIT)
-    SetDescriptorNonBlock(socket->sock, false);
+    SetSocketNonBlock(socket->sock, false);
 #endif
 
     if (len < 0) {
@@ -300,8 +300,8 @@ void http_IO::SendFile(int status, int fd, int64_t len)
 #if defined(__FreeBSD__) || defined(__APPLE__)
 
 #if !defined(MSG_MORE)
-    SetDescriptorRetain(socket->sock, true);
-    K_DEFER { SetDescriptorRetain(socket->sock, false); };
+    SetSocketRetain(socket->sock, true);
+    K_DEFER { SetSocketRetain(socket->sock, false); };
 #endif
 
     // In theory we can use the hdtr argument of sendfile, but the documentation is confusing.
@@ -478,7 +478,7 @@ bool http_Dispatcher::Run()
                     return true;
 
 #if !defined(MSG_DONTWAIT)
-                SetDescriptorNonBlock(socket->sock, true);
+                SetSocketNonBlock(socket->sock, true);
 #endif
                 AddEventChange(EVFILT_READ, socket->sock, EV_ENABLE, socket);
             } else {
@@ -516,7 +516,7 @@ bool http_Dispatcher::Run()
                 fcntl(sock, F_SETFD, FD_CLOEXEC);
 #endif
 #if !defined(MSG_DONTWAIT)
-                SetDescriptorNonBlock(sock, true);
+                SetSocketNonBlock(sock, true);
 #endif
 
                 http_Socket *socket = InitSocket(sock, clock, (sockaddr *)&ss);

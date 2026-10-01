@@ -121,12 +121,12 @@ void http_Daemon::Stop()
 
 void http_Daemon::StartRead(http_Socket *socket)
 {
-    SetDescriptorNonBlock(socket->sock, false);
+    SetSocketNonBlock(socket->sock, false);
 }
 
 void http_Daemon::StartWrite(http_Socket *socket)
 {
-    SetDescriptorNonBlock(socket->sock, false);
+    SetSocketNonBlock(socket->sock, false);
 }
 
 void http_Daemon::EndWrite(http_Socket *)
@@ -375,7 +375,7 @@ bool http_Dispatcher::Run()
             if (!socket) [[unlikely]]
                 return true;
 
-            SetDescriptorNonBlock(socket->sock, true);
+            SetSocketNonBlock(socket->sock, true);
             socket->poll = true;
         }
         for (Size i = 2; i < pfds.len; i++) {
@@ -414,7 +414,7 @@ bool http_Dispatcher::Run()
                     setsockopt(sock, SOL_SOCKET, SO_OOBINLINE, (char *)&oobinline, K_SIZE(oobinline));
                 }
 
-                SetDescriptorNonBlock((int)sock, true);
+                SetSocketNonBlock((int)sock, true);
 
                 http_Socket *socket = InitSocket(sock, clock, (sockaddr *)&ss);
 
@@ -605,7 +605,7 @@ void http_IO::SendFile(int status, int fd, int64_t len)
     if (!StartResponse()) [[unlikely]]
         return;
 
-    SetDescriptorNonBlock(socket->sock, false);
+    SetSocketNonBlock(socket->sock, false);
 
     if (len < 0) {
         HANDLE h = (HANDLE)_get_osfhandle(fd);

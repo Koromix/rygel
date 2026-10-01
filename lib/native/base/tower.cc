@@ -519,7 +519,7 @@ bool TowerServer::Bind(const char *path)
     fd = CreateSocket(SocketType::Unix, SOCK_STREAM);
     if (fd < 0)
         return false;
-    SetDescriptorNonBlock(fd, true);
+    SetSocketNonBlock(fd, true);
 
     if (!BindUnixSocket(fd, path))
         return false;
@@ -583,7 +583,7 @@ bool TowerServer::Process(uint64_t ready)
             fcntl(sock, F_SETFD, FD_CLOEXEC);
 #endif
 #if !defined(MSG_DONTWAIT)
-            SetDescriptorNonBlock(sock, true);
+            SetSocketNonBlock(sock, true);
 #endif
 
             if (sources.Available()) [[likely]] {
