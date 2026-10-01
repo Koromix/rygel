@@ -383,7 +383,7 @@ bool http_Dispatcher::Run()
 
         // Process new connections
         if (accepts) {
-            for (int i = 0; i < 1; i++) {
+            for (int i = 0; i < 8; i++) {
                 sockaddr_storage ss;
                 socklen_t ss_len = K_SIZE(ss);
 
