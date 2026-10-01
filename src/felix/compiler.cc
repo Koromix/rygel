@@ -2858,7 +2858,7 @@ std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
         }
 
         return ClangCompiler::Create(spec.platform, HostArchitecture::Web32, spec.cc, nullptr, sdk->sysroot);
-#if defined(__linux__)
+#if !defined(_WIN32)
     } else if (spec.platform == HostPlatform::Windows) {
         if (!spec.cc) {
             if (spec.architecture == HostArchitecture::Unknown) {
@@ -2906,6 +2906,8 @@ std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
             LogError("Only MinGW-w64 can be used for Windows cross-compilation at the moment");
             return nullptr;
         }
+#endif
+#if defined(__linux__)
     } else if (spec.platform == HostPlatform::Linux) {
         // Go with GCC if not specified otherwise
         if (!spec.cc) {
