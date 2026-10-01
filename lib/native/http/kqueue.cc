@@ -270,10 +270,10 @@ bool http_Daemon::WriteSocket(http_Socket *socket, Span<Span<const uint8_t>> par
 
 void http_IO::SendFile(int status, int fd, int64_t len)
 {
+    K_DEFER { CloseDescriptor(fd); };
+
     if (!StartResponse()) [[unlikely]]
         return;
-
-    K_DEFER { close(fd); };
 
 #if !defined(MSG_DONTWAIT)
     SetDescriptorNonBlock(socket->sock, false);
