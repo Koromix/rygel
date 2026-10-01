@@ -24,6 +24,7 @@ namespace K {
 struct http_Socket {
     int sock = -1;
     bool process = false;
+    bool poll = false;
 
     http_IO client;
 
@@ -371,16 +372,13 @@ bool http_Dispatcher::Run()
                 return true;
 
             SetDescriptorNonBlock(socket->sock, true);
-
-            sockets.Append(socket);
+            socket->poll = true;
         }
         for (Size i = 2; i < pfds.len; i++) {
             struct pollfd &pfd = pfds[i];
 
-            if (pfd.revents) {
-                http_Socket *socket = sockets[i - 2];
-                socket->process = true;
-            }
+            http_Socket *socket = sockets[i - 2];
+            socket->process |= socket->poll && !!pfd.revents;
         }
 
         // Process new connections
@@ -406,6 +404,12 @@ bool http_Dispatcher::Run()
                     break;
                 }
 
+                // We use POLLRDBAND to disable poll processing, make sure URG bit does not break that
+                {
+                    BOOL oobinline = 1;
+                    setsockopt(sock, SOL_SOCKET, SO_OOBINLINE, (char *)&oobinline, K_SIZE(oobinline));
+                }
+
                 SetDescriptorNonBlock((int)sock, true);
 
                 http_Socket *socket = InitSocket(sock, clock, (sockaddr *)&ss);
@@ -417,6 +421,7 @@ bool http_Dispatcher::Run()
 
                 // Try to read without waiting for more performance
                 socket->process = true;
+                socket->poll = true;
 
                 sockets.Append(socket);
             }
@@ -470,7 +475,7 @@ bool http_Dispatcher::Run()
                     int worker_idx = 1 + next_worker;
                     next_worker = (next_worker + 1) % WorkersPerDispatcher;
 
-                    keep--;
+                    socket->poll = false;
 
                     async.Run(worker_idx, [=, this] {
                         http_RequestStatus status;
@@ -521,7 +526,10 @@ bool http_Dispatcher::Run()
 
         // Prepare poll descriptors
         for (const http_Socket *socket: sockets) {
-            struct pollfd pfd = { (SOCKET)socket->sock, POLLIN, 0 };
+            // Use POLLRDBAND to ignore input readiness while the worker is busy
+            short events = socket->poll ? POLLIN : POLLRDBAND;
+            struct pollfd pfd = { (SOCKET)socket->sock, events, 0 };
+
             pfds.Append(pfd);
         }
 
