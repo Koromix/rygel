@@ -187,17 +187,26 @@ bool http_PreventCSRF(http_IO *io)
 
     // Try Origin header
     {
-        const char *host = request.GetHeaderValue("Host");
-        const char *origin = request.GetHeaderValue("Origin");
+        const char *origin0 = request.GetHeaderValue("Origin");
+        const char *host0 = request.GetHeaderValue("Host");
 
-        if (host && origin) {
+        if (origin0) {
+            Span<const char> origin = origin0;
+            Span<const char> host = host0;
+
+            // If Host and Origin miss the scheme and the port, this code won't be able to
+            // detect http vs. https mismatch.
+            // It's okay though, because virtually all browsers support Sec-Fetch-Site now.
+
             if (StartsWith(origin, "https://")) {
-                origin += 8;
+                origin = origin.Take(8, origin.len - (EndsWith(origin, ":443") ? 12 : 8));
+                host.len -= 4 * EndsWith(host, ":443");
             } else if (StartsWith(origin, "http://")) {
-                origin += 7;
+                origin = origin.Take(7, origin.len - (EndsWith(origin, ":80") ? 10 : 7));
+                host.len -= 3 * EndsWith(host, ":80");
             }
 
-            if (host && !TestStr(origin, host)) {
+            if (!TestStr(host, origin)) {
                 LogError("Denying cross-origin request (Origin)");
                 io->SendError(403);
                 return false;
