@@ -38,6 +38,8 @@ class http_Dispatcher {
     http_Daemon *daemon;
     http_Dispatcher *next;
 
+    std::thread thread;
+
     int listener;
 
     int epoll_fd = -1;
@@ -48,8 +50,10 @@ class http_Dispatcher {
 public:
     http_Dispatcher(http_Daemon *daemon, http_Dispatcher *next, int listener)
         : daemon(daemon), next(next), listener(listener) {}
+    ~http_Dispatcher();
 
-    bool Run();
+    bool Init();
+    void Run();
 
 private:
     http_Socket *InitSocket(int sock, int64_t start, struct sockaddr *sa);
@@ -69,18 +73,23 @@ bool http_Daemon::Start(std::function<void(http_IO *io)> func)
     K_ASSERT(!handle_func);
     K_ASSERT(func);
 
-    async = new Async(1 + listeners.len);
-
     handle_func = func;
 
-    // Run request dispatchers
     for (Size i = 0; i < workers; i++) {
         int listener = listeners[i % listeners.len];
-
         http_Dispatcher *dispatcher = new http_Dispatcher(this, this->dispatcher, listener);
-        this->dispatcher = dispatcher;
 
-        async->Run([=] { return dispatcher->Run(); });
+        if (!dispatcher->Init()) {
+            delete dispatcher;
+            return false;
+        }
+
+        this->dispatcher = dispatcher;
+    }
+
+    // All engines are running
+    for (http_Dispatcher *it = dispatcher; it; it = it->next) {
+        it->thread = std::thread(&http_Dispatcher::Run, it);
     }
 
     return true;
@@ -88,21 +97,19 @@ bool http_Daemon::Start(std::function<void(http_IO *io)> func)
 
 void http_Daemon::Stop()
 {
-    // Shut everything down
+    // On Linux this is enough to jolt dispatchers out of poll()
     for (int listener: listeners) {
         shutdown(listener, SHUT_RDWR);
     }
 
-    if (async) {
-        async->Sync();
-
-        delete async;
-        async = nullptr;
-    }
-
     while (dispatcher) {
         http_Dispatcher *next = dispatcher->next;
+
+        if (dispatcher->thread.joinable()) {
+           dispatcher->thread.join();
+        }
         delete dispatcher;
+
         dispatcher = next;
     }
 
@@ -305,21 +312,32 @@ void http_IO::SendFile(int status, int fd, int64_t len)
     }
 }
 
-bool http_Dispatcher::Run()
+http_Dispatcher::~http_Dispatcher()
+{
+    CloseDescriptor(epoll_fd);
+}
+
+bool http_Dispatcher::Init()
 {
     K_ASSERT(epoll_fd < 0);
-
-    Async async(1 + WorkersPerDispatcher);
 
     epoll_fd = epoll_create1(EPOLL_CLOEXEC);
     if (epoll_fd < 0) {
         LogError("Failed to initialize epoll: %1", strerror(errno));
         return false;
     }
-    K_DEFER {
-        CloseDescriptor(epoll_fd);
-        epoll_fd = -1;
-    };
+
+    if (!AddEpollDescriptor(listener, EPOLLIN | EPOLLEXCLUSIVE, nullptr))
+        return false;
+
+    return true;
+}
+
+void http_Dispatcher::Run()
+{
+    K_ASSERT(epoll_fd >= 0);
+
+    Async async(1 + WorkersPerDispatcher);
 
     // Delete remaining clients when function exits
     K_DEFER {
@@ -354,9 +372,6 @@ bool http_Dispatcher::Run()
         free_sockets.Clear();
     };
 
-    if (!AddEpollDescriptor(listener, EPOLLIN | EPOLLEXCLUSIVE, nullptr))
-        return false;
-
     HeapArray<struct epoll_event> events;
     int next_worker = 0;
 
@@ -367,7 +382,7 @@ bool http_Dispatcher::Run()
         for (const struct epoll_event &ev: events) {
             if (!ev.data.ptr) {
                 if (ev.events & EPOLLHUP) [[unlikely]]
-                    return true;
+                    return;
 
                 accepts = true;
             } else {
@@ -388,7 +403,7 @@ bool http_Dispatcher::Run()
                     if (errno == EAGAIN || errno == EWOULDBLOCK)
                         break;
                     if (errno == EINVAL)
-                        return true;
+                        return;
 
                     // Assume transient error (such as too many open files)
                     LogError("Failed to accept client: %1", strerror(errno));
@@ -512,7 +527,7 @@ bool http_Dispatcher::Run()
         if (ready < 0) {
             if (errno != EINTR) {
                 LogError("Failed to poll descriptors: %1", strerror(errno));
-                return false;
+                return;
             }
 
             ready = 0;

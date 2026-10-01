@@ -79,7 +79,6 @@ class http_Daemon {
     int max_request_headers;
     int max_request_cookies;
 
-    Async *async = nullptr;
     http_Dispatcher *dispatcher = nullptr;
 
     std::function<void(http_IO *io)> handle_func;

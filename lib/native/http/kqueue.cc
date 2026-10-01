@@ -43,6 +43,8 @@ class http_Dispatcher {
     http_Daemon *daemon;
     http_Dispatcher *next;
 
+    std::thread thread;
+
     int listener;
 
     int kqueue_fd = -1;
@@ -56,8 +58,11 @@ class http_Dispatcher {
 public:
     http_Dispatcher(http_Daemon *daemon, http_Dispatcher *next, int listener)
         : daemon(daemon), next(next), listener(listener) {}
+    ~http_Dispatcher();
 
-    bool Run();
+    bool Init();
+    void Run();
+
     void Wake(http_Socket *socket);
 
 private:
@@ -77,18 +82,23 @@ bool http_Daemon::Start(std::function<void(http_IO *io)> func)
     K_ASSERT(!handle_func);
     K_ASSERT(func);
 
-    async = new Async(1 + listeners.len);
-
     handle_func = func;
 
-    // Run request dispatchers
     for (Size i = 0; i < workers; i++) {
         int listener = listeners[i % listeners.len];
-
         http_Dispatcher *dispatcher = new http_Dispatcher(this, this->dispatcher, listener);
-        this->dispatcher = dispatcher;
 
-        async->Run([=] { return dispatcher->Run(); });
+        if (!dispatcher->Init()) {
+            delete dispatcher;
+            return false;
+        }
+
+        this->dispatcher = dispatcher;
+    }
+
+    // All engines are running
+    for (http_Dispatcher *it = dispatcher; it; it = it->next) {
+        it->thread = std::thread(&http_Dispatcher::Run, it);
     }
 
     return true;
@@ -97,27 +107,24 @@ bool http_Daemon::Start(std::function<void(http_IO *io)> func)
 void http_Daemon::Stop()
 {
     // Shut everything down
+    // On macOS (and maybe others), the shutdown() does not wake up poll() so use the
+    // pipe to wake it up and signal the ongoing shutdown.
+    // To be sure, wake up poll() with the pipe.
     for (int listener: listeners) {
         shutdown(listener, SHUT_RDWR);
     }
-
-    // On macOS (and maybe others), the shutdown() does not wake up poll() so use the
-    // pipe to wake it up and signal the ongoing shutdown.
-    // Trigger shutdown explictly.
     for (http_Dispatcher *it = dispatcher; it; it = it->next) {
         it->Wake(nullptr);
     }
 
-    if (async) {
-        async->Sync();
-
-        delete async;
-        async = nullptr;
-    }
-
     while (dispatcher) {
         http_Dispatcher *next = dispatcher->next;
+
+        if (dispatcher->thread.joinable()) {
+           dispatcher->thread.join();
+        }
         delete dispatcher;
+
         dispatcher = next;
     }
 
@@ -370,11 +377,16 @@ void http_IO::SendFile(int status, int fd, int64_t len)
 #endif
 }
 
-bool http_Dispatcher::Run()
+http_Dispatcher::~http_Dispatcher()
+{
+    CloseDescriptor(kqueue_fd);
+    CloseDescriptor(pair_fd[0]);
+    CloseDescriptor(pair_fd[1]);
+}
+
+bool http_Dispatcher::Init()
 {
     K_ASSERT(kqueue_fd < 0);
-
-    Async async(1 + WorkersPerDispatcher);
 
 #if defined(__FreeBSD__)
     kqueue_fd = kqueue1(O_CLOEXEC);
@@ -386,20 +398,18 @@ bool http_Dispatcher::Run()
         LogError("Failed to initialize kqueue: %1", strerror(errno));
         return false;
     }
-    K_DEFER {
-        CloseDescriptor(kqueue_fd);
-        kqueue_fd = -1;
-    };
 
     if (!CreatePipe(false, pair_fd))
         return false;
-    K_DEFER {
-        CloseDescriptor(pair_fd[0]);
-        CloseDescriptor(pair_fd[1]);
 
-        pair_fd[0] = -1;
-        pair_fd[1] = -1;
-    };
+    return true;
+}
+
+void http_Dispatcher::Run()
+{
+    K_ASSERT(kqueue_fd >= 0);
+
+    Async async(1 + WorkersPerDispatcher);
 
     // Delete remaining clients when function exits
     K_DEFER {
@@ -450,7 +460,7 @@ bool http_Dispatcher::Run()
         for (const struct kevent &ev: events) {
             if (ev.ident == (uintptr_t)listener) {
                 if (ev.flags & EV_EOF) [[unlikely]]
-                    return true;
+                    return;
 
                 accepts = true;
             } else if (ev.ident == (uintptr_t)pair_fd[0]) {
@@ -462,16 +472,16 @@ bool http_Dispatcher::Run()
                         continue;
 
                     LogError("Unexpected error during pipe read: %1", strerror(errno));
-                    return true;
+                    return;
                 } else if (ret != K_SIZE(addr)) [[unlikely]] {
                     LogError("Unexpected empty or partial read during pipe read");
-                    return true;
+                    return;
                 }
 
                 http_Socket *socket = (http_Socket *)addr;
 
                 if (!socket) [[unlikely]]
-                    return true;
+                    return;
 
 #if !defined(MSG_DONTWAIT)
                 SetSocketNonBlock(socket->sock, true);
@@ -499,7 +509,7 @@ bool http_Dispatcher::Run()
                     if (errno == EAGAIN || errno == EWOULDBLOCK)
                         break;
                     if (errno == EINVAL)
-                        return true;
+                        return;
 
                     // Assume transient error (such as too many open files)
                     LogError("Failed to accept client: %1", strerror(errno));
@@ -641,7 +651,7 @@ bool http_Dispatcher::Run()
         if (ready < 0) {
             if (errno != EINTR) {
                 LogError("Failed to poll descriptors: %1", strerror(errno));
-                return false;
+                return;
             }
 
             ready = 0;
