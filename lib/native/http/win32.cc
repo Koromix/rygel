@@ -682,6 +682,8 @@ void http_IO::SendFile(int status, int fd, int64_t len)
             return;
         }
 
+        ExtendTimeout(send / 8, daemon->send_timeout);
+
         offset += send;
         remain -= send;
     }
