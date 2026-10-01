@@ -213,7 +213,7 @@ bool PruneTokens()
         return false;
     if (!db.Run(R"(DELETE FROM identities
                    WHERE allowed = 0 AND
-                         id NOT IN (SELECT identity FROM tokens)"))
+                         id NOT IN (SELECT identity FROM tokens))"))
         return false;
     if (!db.Run(R"(DELETE FROM users
                    WHERE creation < ?1 AND
