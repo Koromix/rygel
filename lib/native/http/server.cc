@@ -356,7 +356,7 @@ bool http_Daemon::Bind(const http_Config &config, bool log_addr)
     return true;
 }
 
-void http_Daemon::RunHandler(http_IO *client, int64_t now)
+void http_Daemon::RunHandler(http_IO *client)
 {
     // This log filter does two things: it keeps a copy of the last log error message,
     // and it sets the log context to the client address (for log file).
@@ -372,6 +372,7 @@ void http_Daemon::RunHandler(http_IO *client, int64_t now)
     });
     K_DEFER { PopLogFilter(); };
 
+    int64_t now = GetMonotonicClock();
     client->request.keepalive &= (now < client->socket_start + keepalive_time);
 
     handle_func(client);

@@ -461,7 +461,7 @@ bool http_Dispatcher::Run()
                         http_RequestStatus status;
 
                         do {
-                            daemon->RunHandler(client, clock);
+                            daemon->RunHandler(client);
 
                             if (!client->Rearm(GetMonotonicClock())) {
                                 status = http_RequestStatus::Busy;
