@@ -631,13 +631,13 @@ void http_IO::SendFile(int status, int fd, int64_t len)
     // Send intro and file in one go
     Span<const char> intro = PrepareResponse(status, CompressionType::None, len, false);
 
-    if (intro.len >= MaxSend || request.head) {
+    if (intro.len >= MaxSend || request.head || !len) {
         if (!daemon->WriteSocket(socket, intro.As<uint8_t>())) {
             request.keepalive = false;
             return;
         }
 
-        if (request.head)
+        if (request.head || !len)
             return;
 
         intro.len = 0;
