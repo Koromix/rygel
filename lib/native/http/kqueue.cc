@@ -300,8 +300,6 @@ void http_IO::SendFile(int status, int fd, int64_t len)
         len = (int64_t)sb.st_size;
     }
 
-#if defined(__FreeBSD__) || defined(__APPLE__)
-
 #if !defined(MSG_MORE)
     SetSocketRetain(socket->sock, true);
     K_DEFER { SetSocketRetain(socket->sock, false); };
@@ -321,6 +319,7 @@ void http_IO::SendFile(int status, int fd, int64_t len)
     if (request.head)
         return;
 
+#if defined(__FreeBSD__) || defined(__APPLE__)
     off_t offset = 0;
     int64_t remain = len;
 
@@ -358,22 +357,19 @@ void http_IO::SendFile(int status, int fd, int64_t len)
         remain -= sent;
     } while (remain);
 #else
-    Send(status, len, [&](StreamWriter *writer) {
-        StreamReader reader(fd, "<file>");
+    StreamReader reader(fd, "<file>");
+    StreamWriter writer([&](Span<const uint8_t> buf) { return WriteDirect(buf); }, "<http>");
 
-        if (!SpliceStream(&reader, len, writer)) {
-            request.keepalive = false;
-            return false;
-        }
-        if (writer->IsValid() && writer->GetRawWritten() < len) {
-            LogError("File was truncated while sending");
+    if (!SpliceStream(&reader, len, &writer)) {
+        request.keepalive = false;
+        return;
+    }
+    if (writer.IsValid() && writer.GetRawWritten() < len) {
+        LogError("File was truncated while sending");
 
-            request.keepalive = false;
-            return false;
-        }
-
-        return true;
-    });
+        request.keepalive = false;
+        return;
+    }
 #endif
 }
 
