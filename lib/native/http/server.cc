@@ -331,7 +331,7 @@ bool http_Daemon::Bind(const http_Config &config, bool log_addr)
         listeners.Clear();
     };
 
-    workers = 2 * GetCoreCount();
+    workers = GetCoreCount();
 
     for (Size i = 0; i < workers; i++) {
         int listener = CreateListenSocket(config, !i);

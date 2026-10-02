@@ -31,7 +31,6 @@ struct http_Socket {
     ~http_Socket() { CloseDescriptor(sock); }
 };
 
-static const int WorkersPerDispatcher = 4;
 static const Size MaxSend = Mebibytes(2);
 
 class http_Dispatcher {
@@ -75,6 +74,9 @@ bool http_Daemon::Start(std::function<void(http_IO *io)> func)
 
     handle_func = func;
 
+    int handlers = std::max(16, 4 * GetCoreCount());
+    async = new Async(handlers, (int)AsyncFlag::Dispatch);
+
     for (Size i = 0; i < workers; i++) {
         int listener = listeners[i % listeners.len];
         http_Dispatcher *dispatcher = new http_Dispatcher(this, this->dispatcher, listener);
@@ -111,6 +113,13 @@ void http_Daemon::Stop()
         delete dispatcher;
 
         dispatcher = next;
+    }
+
+    if (async) {
+        async->Sync();
+
+        delete async;
+        async = nullptr;
     }
 
     for (int listener: listeners) {
@@ -340,7 +349,7 @@ void http_Dispatcher::Run()
 {
     K_ASSERT(epoll_fd >= 0);
 
-    Async async(1 + WorkersPerDispatcher);
+    Async async(daemon->async);
 
     // Delete remaining clients when function exits
     K_DEFER {
@@ -376,7 +385,6 @@ void http_Dispatcher::Run()
     };
 
     HeapArray<struct epoll_event> events;
-    int next_worker = 0;
 
     for (;;) {
         int64_t clock = GetMonotonicClock();
@@ -470,12 +478,9 @@ void http_Dispatcher::Run()
                 case http_RequestStatus::Busy: { /* Do nothing */ } break;
 
                 case http_RequestStatus::Ready: {
-                    int worker_idx = 1 + next_worker;
-                    next_worker = (next_worker + 1) % WorkersPerDispatcher;
-
                     DeleteEpollDescriptor(socket->sock);
 
-                    async.Run(worker_idx, [=, this] {
+                    async.Run([=, this] {
                         http_RequestStatus status;
 
                         do {
