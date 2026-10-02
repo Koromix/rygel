@@ -266,11 +266,14 @@ void http_IO::SendFile(int status, int fd, int64_t len)
         len = (int64_t)sb.st_size;
     }
 
-    Span<const char> intro = PrepareResponse(status, CompressionType::None, len, false);
+    // Send intro
+    {
+        Span<const char> intro = PrepareResponse(status, CompressionType::None, len, false);
 
-    if (!daemon->WriteSocket(socket, intro.As<uint8_t>())) {
-        request.keepalive = false;
-        return;
+        if (!daemon->WriteSocket(socket, intro.As<uint8_t>())) {
+            request.keepalive = false;
+            return;
+        }
     }
 
     if (request.head || !len) {
