@@ -7631,7 +7631,7 @@ class AsyncPool {
     alignas(64) std::atomic_uint next_worker { 0 };
 
 public:
-    AsyncPool(int threads, int refcount, bool dispatch);
+    AsyncPool(int threads, int refcount, bool background);
     ~AsyncPool();
 
     int GetWorkerCount() const { return (int)workers.len; }
@@ -7671,7 +7671,7 @@ Async::Async()
 
 Async::Async(int threads, unsigned int flags)
 {
-    pool = new AsyncPool(threads, 0, flags & (int)AsyncFlag::Dispatch);
+    pool = new AsyncPool(threads, 0, flags & (int)AsyncFlag::Background);
     pool->RegisterAsync();
 
     selfish = (flags & (int)AsyncFlag::Selfish);
@@ -7680,7 +7680,7 @@ Async::Async(int threads, unsigned int flags)
 Async::Async(Async *parent, unsigned int flags)
 {
     K_ASSERT(parent);
-    K_ASSERT(!(flags & (int)AsyncFlag::Dispatch));
+    K_ASSERT(!(flags & (int)AsyncFlag::Background));
 
     pool = parent->pool;
     pool->RegisterAsync();
@@ -7730,10 +7730,10 @@ int Async::GetWorkerIdx()
     return async_running_worker_idx;
 }
 
-AsyncPool::AsyncPool(int threads, int refcount, bool dispatch)
+AsyncPool::AsyncPool(int threads, int refcount, bool background)
 {
     K_ASSERT(threads > 0);
-    K_ASSERT(threads > 1 || !dispatch);
+    K_ASSERT(threads > 1 || !background);
 
     if (threads > K_ASYNC_MAX_THREADS) {
         LogError("Async cannot use more than %1 threads", K_ASYNC_MAX_THREADS);
@@ -7750,7 +7750,7 @@ AsyncPool::AsyncPool(int threads, int refcount, bool dispatch)
         }
     }
 
-    dispatch_min = dispatch ? 1 : 0;
+    dispatch_min = background ? 1 : 0;
     dispatch_mod = threads - dispatch_min;
 
     this->refcount = refcount;

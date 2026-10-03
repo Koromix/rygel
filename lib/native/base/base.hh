@@ -5148,7 +5148,7 @@ void CloseSocket(int fd);
 
 enum class AsyncFlag {
     // Use this when the main thread won't Sync() or very late, and all tasks should be dispatched to workers
-    Dispatch = 1 << 0,
+    Background = 1 << 0,
 
     // Use this when you don't want Sync() to run tasks from other Async objects.
     // It can slow things down, and cause some busy spin. Use with care!
