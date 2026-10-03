@@ -77,7 +77,7 @@ bool http_Daemon::Start(std::function<void(http_IO *io)> func)
     int handlers = std::max(16, 4 * GetCoreCount());
     async = new Async(handlers, (int)AsyncFlag::Dispatch);
 
-    for (Size i = 0; i < workers; i++) {
+    for (Size i = 0; i < dispatchers; i++) {
         int listener = listeners[i % listeners.len];
         http_Dispatcher *dispatcher = new http_Dispatcher(this, this->dispatcher, listener);
 

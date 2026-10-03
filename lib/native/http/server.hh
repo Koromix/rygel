@@ -63,7 +63,7 @@ struct http_Socket;
 class http_Daemon {
     K_DELETE_COPY(http_Daemon)
 
-    Size workers = 0;
+    Size dispatchers = 0;
     HeapArray<int> listeners;
 
     SocketType sock_type;
