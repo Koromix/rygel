@@ -5179,7 +5179,7 @@ public:
 
     bool Sync();
     bool Wait(int timeout);
-    bool IsSuccess() const { return success; }
+    bool IsSuccess() const { return success.load(std::memory_order_relaxed); }
 
     int GetWorkerCount();
 

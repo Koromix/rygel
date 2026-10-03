@@ -7672,8 +7672,6 @@ Async::Async()
 
 Async::Async(int threads, unsigned int flags)
 {
-    K_ASSERT(threads > 0);
-
     pool = new AsyncPool(threads, 0, flags & (int)AsyncFlag::Dispatch);
     pool->RegisterAsync();
 
@@ -7693,9 +7691,7 @@ Async::Async(Async *parent, unsigned int flags)
 
 Async::~Async()
 {
-    success = false;
     Sync();
-
     pool->UnregisterAsync();
 }
 
@@ -7712,7 +7708,7 @@ void Async::Run(int worker, std::function<bool()> &&func)
 bool Async::Sync()
 {
     pool->SyncOn(this);
-    return success;
+    return success.load(std::memory_order_relaxed);
 }
 
 bool Async::Wait(int timeout)
@@ -7737,6 +7733,9 @@ int Async::GetWorkerIdx()
 
 AsyncPool::AsyncPool(int threads, int refcount, bool dispatch)
 {
+    K_ASSERT(threads > 0);
+    K_ASSERT(threads > 1 || !dispatch);
+
     if (threads > K_ASYNC_MAX_THREADS) {
         LogError("Async cannot use more than %1 threads", K_ASYNC_MAX_THREADS);
         threads = K_ASYNC_MAX_THREADS;
@@ -7854,9 +7853,9 @@ void AsyncPool::AddTask(Async *async, int worker_idx, std::function<bool()> &&fu
 {
     WorkerData *worker = &workers[worker_idx];
 
-    async->remaining_tasks++;
+    async->remaining_tasks.fetch_add(1, std::memory_order_relaxed);
 
-    bool first = !(pending_tasks++);
+    bool first = !pending_tasks.fetch_add(1, std::memory_order_relaxed);
     uint32_t slot = alloc.Allocate();
 
     // Process pending tasks when there's too much to do
@@ -7913,8 +7912,15 @@ void AsyncPool::RunWorker(int worker_idx)
         RunTasks(worker_idx);
         lock.lock();
 
-        std::chrono::duration<int, std::milli> duration(K_ASYNC_MAX_IDLE_TIME); // Thanks C++
-        pending_cv.wait_for(lock, duration, [&]() { return !!pending_tasks; });
+        // C++ is beautiful
+        {
+            auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(K_ASYNC_MAX_IDLE_TIME);
+
+            while (!pending_tasks.load(std::memory_order_relaxed)) {
+                if (pending_cv.wait_until(lock, deadline) == std::cv_status::timeout)
+                    break;
+            }
+        }
     }
 
     workers[worker_idx].pool = nullptr;
@@ -7936,30 +7942,41 @@ void AsyncPool::SyncOn(Async *async)
     async_running_pool = this;
     async_running_worker_idx = 0;
 
-    while (async->remaining_tasks) {
+    while (async->remaining_tasks.load(std::memory_order_acquire)) {
         if (async->selfish) {
             RunTasks(0, async);
         } else {
             RunTasks(0);
         }
 
-        std::unique_lock<std::mutex> lock_sync(mutex);
-        sync_cv.wait(lock_sync, [&]() { return pending_tasks || !async->remaining_tasks; });
+        std::unique_lock<std::mutex> lock(mutex);
+        while (!pending_tasks.load(std::memory_order_relaxed) &&
+               async->remaining_tasks.load(std::memory_order_relaxed)) {
+            sync_cv.wait(lock);
+        }
     }
 }
 
 bool AsyncPool::WaitOn(Async *async, int timeout)
 {
-    std::unique_lock<std::mutex> lock_sync(mutex);
+    K_ASSERT(workers.len > 1);
+
+    std::unique_lock<std::mutex> lock(mutex);
 
     if (timeout >= 0) {
-        std::chrono::milliseconds delay(timeout);
-        bool done = sync_cv.wait_for(lock_sync, delay, [&]() { return !async->remaining_tasks; });
-        return done;
+        auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeout);
+
+        while (async->remaining_tasks.load(std::memory_order_acquire)) {
+            if (sync_cv.wait_until(lock, deadline) == std::cv_status::timeout)
+                return false;
+        }
     } else {
-        sync_cv.wait(lock_sync, [&]() { return !async->remaining_tasks; });
-        return true;
+        while (async->remaining_tasks.load(std::memory_order_acquire)) {
+            sync_cv.wait(lock);
+        }
     }
+
+    return true;
 }
 
 void AsyncPool::RunTasks(int worker_idx)
@@ -8070,13 +8087,13 @@ void AsyncPool::RunTask(Async *async, const std::function<bool()> &func)
     K_DEFER_C(running = async_running_task) { async_running_task = running; };
     async_running_task = true;
 
-    pending_tasks--;
+    pending_tasks.fetch_sub(1, std::memory_order_relaxed);
 
     if (!func()) {
-        async->success = false;
+        async->success.store(false, std::memory_order_relaxed);
     }
 
-    if (!--async->remaining_tasks) {
+    if (async->remaining_tasks.fetch_sub(1, std::memory_order_release) == 1) {
         std::lock_guard<std::mutex> lock_sync(mutex);
         sync_cv.notify_all();
     }
