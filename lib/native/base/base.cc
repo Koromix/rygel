@@ -525,6 +525,19 @@ void ZeroSafe(void *ptr, Size len)
     SecureZeroMemory(ptr, (SIZE_T)len);
 }
 
+void *AllocateAligned(Size size, Size align)
+{
+    void *ptr = _aligned_malloc((size_t)size, (size_t)align);
+    K_CRITICAL(ptr, "Failed to allocate %1 of memory", FmtMemSize(size));
+
+    return ptr;
+}
+
+void ReleaseAligned(void *ptr)
+{
+    _aligned_free(ptr);
+}
+
 #elif !defined(__wasi__)
 
 Size GetPageSize()
@@ -579,6 +592,19 @@ void ZeroSafe(void *ptr, Size len)
 {
     MemSet(ptr, 0, len);
     __asm__ __volatile__("" : : "r"(ptr) : "memory");
+}
+
+void *AllocateAligned(Size size, Size align)
+{
+    void *ptr = aligned_alloc((size_t)align, (size_t)size);
+    K_CRITICAL(ptr, "Failed to allocate %1 of memory", FmtMemSize(size));
+
+    return ptr;
+}
+
+void ReleaseAligned(void *ptr)
+{
+    free(ptr);
 }
 
 #endif

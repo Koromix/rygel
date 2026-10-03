@@ -1223,6 +1223,9 @@ static inline void *AllocateRaw(Allocator *alloc, Size size)
 template <typename T>
 T *AllocateOne(Allocator *alloc)
 {
+    static_assert((alignof(T) & (alignof(T) - 1)) == 0);
+    static_assert(alignof(T) <= alignof(max_align_t));
+
     alloc = alloc ? alloc : &DefaultAllocator;
 
     Size size = K_SIZE(T);
@@ -1234,6 +1237,9 @@ T *AllocateOne(Allocator *alloc)
 template <typename T>
 Span<T> AllocateSpan(Allocator *alloc, Size len)
 {
+    static_assert((alignof(T) & (alignof(T) - 1)) == 0);
+    static_assert(alignof(T) <= alignof(max_align_t));
+
     K_ASSERT(len >= 0);
     K_ASSERT(len <= K_SIZE_MAX / K_SIZE(T));
 
@@ -1264,6 +1270,9 @@ static inline void *ResizeRaw(Allocator *alloc, void *ptr, Size old_size, Size n
 template <typename T>
 Span<T> ResizeSpan(Allocator *alloc, Span<T> mem, Size new_len)
 {
+    static_assert((alignof(T) & (alignof(T) - 1)) == 0);
+    static_assert(alignof(T) <= alignof(max_align_t));
+
     K_ASSERT(new_len >= 0);
     K_ASSERT(new_len <= K_SIZE_MAX / K_SIZE(T));
 
@@ -1309,6 +1318,9 @@ Size GetPageSize();
 void *AllocateSafe(Size len);
 void ReleaseSafe(void *ptr, Size len);
 void ZeroSafe(void *ptr, Size len);
+
+void *AllocateAligned(Size size, Size align);
+void ReleaseAligned(void *ptr);
 
 // This is like ArenaAllocator but simpler, without a vtable, without resizing, and whatnot.
 // It is it own free thing and cannot be used with the standard allocation functions.
