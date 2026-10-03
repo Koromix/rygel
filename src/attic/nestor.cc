@@ -297,7 +297,7 @@ static bool LoadConfig(const char *filename, Config *out_config)
     return LoadConfig(&st, out_config);
 }
 
-static void ServeFile(http_IO *io, const char *filename, const FileInfo &file_info)
+static void ServeFile(http_IO *io, int fd, const char *filename, const FileInfo &file_info)
 {
     const http_RequestInfo &request = io->Request();
     const char *etag = config.set_etag ? Fmt(io->Allocator(), "%1-%2", file_info.mtime, file_info.size).ptr : nullptr;
@@ -335,9 +335,7 @@ static void ServeFile(http_IO *io, const char *filename, const FileInfo &file_in
 
     // Send file directly or transformed (by handler command)
     if (filter) {
-        StreamReader reader(filename);
-        if (!reader.IsValid())
-            return;
+        StreamReader reader(fd, filename);
 
         StreamWriter writer;
         if (!io->OpenForWrite(200, -1, &writer))
@@ -362,11 +360,6 @@ static void ServeFile(http_IO *io, const char *filename, const FileInfo &file_in
             LogError("Handler command for '%1' failed with code %2", filename, code);
         }
     } else {
-        int fd = OpenFile(filename, (int)OpenFlag::Read);
-        if (fd < 0)
-            return;
-        K_DEFER { CloseDescriptor(fd); };
-
         io->SendFile(200, fd, file_info.size);
     }
 }
@@ -565,35 +558,44 @@ static HandlerResult HandleLocal(http_IO *io, const char *dirname)
     Span<const char> relative_url = TrimStrLeft(request.path, "/\\").ptr;
     Span<const char> filename = NormalizePath(relative_url, dirname, io->Allocator());
 
-    int stat_flags = (int)StatFlag::SilentMissing |
-                     (config.follow_symlinks ? (int)StatFlag::FollowSymlink : 0);
+    int open_flags = (int)OpenFlag::Read | (int)OpenFlag::Directory |
+                     (config.follow_symlinks ? 0 : (int)OpenFlag::NoFollow);
+    int stat_flags = config.follow_symlinks ? (int)StatFlag::FollowSymlink : 0;
 
-    FileInfo file_info;
+    int fd = -1;
+    K_DEFER { CloseDescriptor(fd); };
+
+    // Open file or directory (or whatever it is)
     {
-        StatResult stat = StatFile(filename.ptr, stat_flags, &file_info);
+        OpenResult open = OpenFile(filename.ptr, open_flags, (int)OpenResult::MissingPath, &fd);
 
         if (config.auto_html) {
-            if (stat == StatResult::MissingPath && !EndsWith(filename, "/")
+            if (open == OpenResult::MissingPath && !EndsWith(filename, "/")
                                                 && !GetPathExtension(filename).len) {
                 filename = Fmt(io->Allocator(), "%1.html", filename).ptr;
-                stat = StatFile(filename.ptr, stat_flags, &file_info);
+                open = OpenFile(filename.ptr, open_flags, (int)OpenResult::MissingPath, &fd);
             }
         }
 
-        switch (stat) {
-            case StatResult::Success: {} break;
+        switch (open) {
+            case OpenResult::Success: {} break;
 
-            case StatResult::MissingPath: return HandlerResult::Missing;
-            case StatResult::AccessDenied: {
+            case OpenResult::MissingPath: return HandlerResult::Missing;
+            case OpenResult::FileExists: { K_UNREACHABLE(); } break;
+            case OpenResult::AccessDenied: {
                 io->SendError(403);
                 return HandlerResult::Done;
             } break;
-            case StatResult::OtherError: return HandlerResult::Error;
+            case OpenResult::OtherError: return HandlerResult::Error;
         }
     }
 
+    FileInfo file_info;
+    if (StatFile(fd, filename.ptr, stat_flags, &file_info) != StatResult::Success)
+        return HandlerResult::Error;
+
     if (file_info.type == FileType::File) {
-        ServeFile(io, filename.ptr, file_info);
+        ServeFile(io, fd, filename.ptr, file_info);
         return HandlerResult::Done;
     } else if (file_info.type == FileType::Directory) {
         if (!EndsWith(request.path, "/")) {
@@ -603,25 +605,34 @@ static HandlerResult HandleLocal(http_IO *io, const char *dirname)
             return HandlerResult::Done;
         }
 
-        const char *index_filename = Fmt(io->Allocator(), "%1/index.html", filename).ptr;
+        // Try default index page
+        {
+            const char *index = Fmt(io->Allocator(), "%1/index.html", filename).ptr;
 
-        FileInfo index_info;
+            int fd = -1;
+            K_DEFER { CloseDescriptor(fd); };
 
-        if (StatFile(index_filename, stat_flags, &index_info) == StatResult::Success &&
-                index_info.type == FileType::File) {
-            ServeFile(io, index_filename, index_info);
-            return HandlerResult::Done;
-        } else if (config.auto_index) {
+            OpenResult open = OpenFile(index, open_flags, (int)OpenResult::MissingPath, &fd);
+
+            if (open == OpenResult::Success) {
+                FileInfo file_info;
+                StatResult stat = StatFile(fd, index, stat_flags, &file_info);
+
+                if (stat == StatResult::Success && file_info.type == FileType::File) {
+                    ServeFile(io, fd, index, file_info);
+                    return HandlerResult::Done;
+                }
+            }
+        }
+
+        if (config.auto_index) {
             ServeIndex(io, filename.ptr);
             return HandlerResult::Done;
-        } else {
-            io->SendError(403);
-            return HandlerResult::Done;
         }
-    } else {
-        io->SendError(403);
-        return HandlerResult::Done;
     }
+
+    io->SendError(403);
+    return HandlerResult::Done;
 }
 
 static HandlerResult HandleProxy(http_IO *io, const char *proxy_url, bool relay404)
