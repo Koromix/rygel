@@ -7646,8 +7646,11 @@ public:
     void SyncOn(Async *async);
     bool WaitOn(Async *async, int timeout);
 
-    void RunTasks(int worker_idx);
-    void RunTasks(int worker_idx, Async *only);
+    void SweepTasks(int worker_idx);
+    void SweepTasks(int worker_idx, Async *only);
+    bool RunTasks(int worker_idx, int limit);
+    bool RunTasks(int worker_idx, Async *only, int limit);
+
     void RunTask(Async *async, const std::function<bool()> &func);
 };
 
@@ -7861,9 +7864,12 @@ void AsyncPool::AddTask(Async *async, int worker_idx, std::function<bool()> &&fu
     if (slot == 0xFFFFFFFFu) {
         for (;;) {
             if (async->selfish) {
-                RunTasks(worker_idx, async);
+                // There might be nothing for us on our queue, which increase the risk of busy spin.
+                // Steal stuff in Selfish mode.
+
+                SweepTasks(worker_idx, async);
             } else {
-                RunTasks(worker_idx);
+                RunTasks(worker_idx, 4);
             }
 
             slot = alloc.Allocate();
@@ -7908,7 +7914,7 @@ void AsyncPool::RunWorker(int worker_idx)
 
     while (async_count) {
         lock.unlock();
-        RunTasks(worker_idx);
+        SweepTasks(worker_idx);
         lock.lock();
 
         // C++ is beautiful
@@ -7943,9 +7949,9 @@ void AsyncPool::SyncOn(Async *async)
 
     while (async->remaining_tasks.load(std::memory_order_acquire)) {
         if (async->selfish) {
-            RunTasks(0, async);
+            SweepTasks(0, async);
         } else {
-            RunTasks(0);
+            SweepTasks(0);
         }
 
         std::unique_lock<std::mutex> lock(mutex);
@@ -7978,13 +7984,37 @@ bool AsyncPool::WaitOn(Async *async, int timeout)
     return true;
 }
 
-void AsyncPool::RunTasks(int worker_idx)
+void AsyncPool::SweepTasks(int worker_idx)
 {
-    // The multiplication factor (4) is pretty arbitrary, don't try to find meaning there
+    if (RunTasks(worker_idx, 64))
+        return;
 
-    for (int i = 0; i < workers.len * 4; i++) {
-        WorkerData *worker = &workers[worker_idx];
+    // Sweep other queues. Everyone starts from its own index, thread sheduling and task duration is not
+    // constant, so contention should be low.
+    for (int i = 1; i < workers.len; i++) {
+        int queue = (worker_idx + i) % workers.len;
+        RunTasks(queue, 4);
+    }
+}
 
+void AsyncPool::SweepTasks(int worker_idx, Async *only)
+{
+    if (RunTasks(worker_idx, only, 1))
+        return;
+
+    // Sweep other queues. Everyone starts from its own index, thread sheduling and task duration is not
+    // constant, so contention should be low.
+    for (int i = 1; i < workers.len; i++) {
+        int queue = (worker_idx + i) % workers.len;
+        RunTasks(queue, only, 1);
+    }
+}
+
+bool AsyncPool::RunTasks(int worker_idx, int limit)
+{
+    WorkerData *worker = &workers[worker_idx];
+
+    for (int i = 0; i < limit; i++) {
         Async *async;
         std::function<bool()> func;
 
@@ -7995,14 +8025,10 @@ void AsyncPool::RunTasks(int worker_idx)
 
             do {
                 if (slot.idx == 0xFFFFFFFFu)
-                    break;
+                    return false;
+
                 desired = { alloc[slot.idx].next.load(std::memory_order_relaxed), slot.tag + 1 };
             } while (!worker->head.compare_exchange_weak(slot, desired, std::memory_order_acquire, std::memory_order_acquire));
-
-            if (slot.idx == 0xFFFFFFFFu) {
-                worker_idx = GetRandomInt(0, (int)workers.len);
-                continue;
-            }
 
             TaskData *task = &alloc[slot.idx];
 
@@ -8013,13 +8039,15 @@ void AsyncPool::RunTasks(int worker_idx)
 
         RunTask(async, func);
     }
+
+    return true;
 }
 
-void AsyncPool::RunTasks(int worker_idx, Async *only)
+bool AsyncPool::RunTasks(int worker_idx, Async *only, int limit)
 {
-    for (int i = 0; i < workers.len; i++) {
-        WorkerData *worker = &workers[worker_idx];
+    WorkerData *worker = &workers[worker_idx];
 
+    for (int i = 0; i < limit; i++) {
         Async *async = nullptr;
         std::function<bool()> func;
 
@@ -8070,13 +8098,13 @@ void AsyncPool::RunTasks(int worker_idx, Async *only)
             } while (!worker->head.compare_exchange_weak(head, desired, std::memory_order_release, std::memory_order_relaxed));
         }
 
-        if (!async) {
-            worker_idx = GetRandomInt(0, (int)workers.len);
-            continue;
-        }
+        if (!async)
+            return false;
 
         RunTask(async, func);
     }
+
+    return true;
 }
 
 void AsyncPool::RunTask(Async *async, const std::function<bool()> &func)
