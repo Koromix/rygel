@@ -3501,6 +3501,76 @@ public:
 private:
 };
 
+struct alignas(8) TaggedIndex {
+    uint32_t idx;
+    uint32_t tag;
+};
+static_assert(std::atomic<TaggedIndex>::is_always_lock_free, "Lock-free 64-bit atomics are required");
+
+template <typename T>
+class LockFreePool {
+    struct alignas(64) Slot {
+        T obj;
+        std::atomic_uint32_t next;
+    };
+
+    Span<Slot> slots;
+    std::atomic<TaggedIndex> head {{ 0, 0 }};
+
+public:
+    LockFreePool(Size capacity)
+    {
+        K_ASSERT(capacity > 0 && capacity < 0xFFFFFFFFu);
+        K_ASSERT(capacity <= K_SIZE_MAX / K_SIZE(Slot));
+
+        slots.ptr = (Slot *)AllocateAligned(capacity * K_SIZE(Slot), alignof(Slot));
+        slots.len = capacity;
+
+        for (Size i = 0; i < slots.len - 1; i++) {
+            slots[i].next.store(i + 1, std::memory_order_relaxed);
+        }
+        slots[slots.len - 1].next.store(0xFFFFFFFFu, std::memory_order_relaxed);
+
+        for (Slot &slot: slots) {
+            new (&slot.obj) T();
+        }
+    }
+
+    ~LockFreePool()
+    {
+        ReleaseAligned(slots.ptr);
+    }
+
+    uint32_t Allocate()
+    {
+        TaggedIndex free = head.load(std::memory_order_acquire);
+        TaggedIndex desired;
+
+        do {
+            if (free.idx == 0xFFFFFFFFu)
+                return 0xFFFFFFFFu;
+
+            desired = { slots[free.idx].next.load(std::memory_order_relaxed), free.tag + 1 };
+        } while (!head.compare_exchange_weak(free, desired, std::memory_order_acquire, std::memory_order_acquire));
+
+        return free.idx;
+    }
+
+    void Release(uint32_t idx)
+    {
+        TaggedIndex free = head.load(std::memory_order_relaxed);
+        TaggedIndex desired;
+
+        do {
+            slots[idx].next.store(free.idx, std::memory_order_relaxed);
+            desired = { idx, free.tag + 1 };
+        } while (!head.compare_exchange_weak(free, desired, std::memory_order_release, std::memory_order_relaxed));
+    }
+
+    T &operator[](uint32_t idx) { return slots[idx].obj; }
+    const T &operator[](uint32_t idx) const { return slots[idx].obj; }
+};
+
 // ------------------------------------------------------------------------
 // Date
 // ------------------------------------------------------------------------
