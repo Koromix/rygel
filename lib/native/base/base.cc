@@ -7980,8 +7980,9 @@ bool AsyncPool::WaitOn(Async *async, int timeout)
 
 void AsyncPool::RunTasks(int worker_idx)
 {
-    // The '12' factor is pretty arbitrary, don't try to find meaning there
-    for (int i = 0; i < workers.len * 12; i++) {
+    // The multiplication factor (4) is pretty arbitrary, don't try to find meaning there
+
+    for (int i = 0; i < workers.len * 4; i++) {
         WorkerData *worker = &workers[worker_idx];
 
         Async *async;
@@ -8016,9 +8017,6 @@ void AsyncPool::RunTasks(int worker_idx)
 
 void AsyncPool::RunTasks(int worker_idx, Async *only)
 {
-    // No factor here because this path can end up busy spinning a lot if most tasks are foreign
-    // Use AsyncFlag::Selfish sparingly, because it can be costly!
-
     for (int i = 0; i < workers.len; i++) {
         WorkerData *worker = &workers[worker_idx];
 
