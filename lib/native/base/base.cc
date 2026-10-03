@@ -7830,8 +7830,12 @@ void AsyncPool::RegisterAsync()
 
 void AsyncPool::UnregisterAsync()
 {
-    std::lock_guard<std::mutex> lock(mutex);
-    async_count--;
+    std::unique_lock<std::mutex> lock(mutex);
+
+    if (!--async_count && !refcount) {
+        lock.unlock();
+        delete this;
+    }
 }
 
 void AsyncPool::AddTask(Async *async, std::function<bool()> &&func)
