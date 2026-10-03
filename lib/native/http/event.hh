@@ -54,7 +54,7 @@ public:
     const http_EventInfo *Register(const char *partition, const char *what, int64_t time);
     int Count(const char *partition, const char *what);
 
-    template<typename T>
+    template<typename T, typename std::enable_if_t<std::is_integral<T>::value, bool> = true>
     const http_EventInfo *Register(const char *partition, T what, int64_t time)
     {
         char buf[256];
@@ -62,7 +62,7 @@ public:
 
         return Register(partition, buf, time);
     }
-    template<typename T>
+    template<typename T, typename std::enable_if_t<std::is_integral<T>::value, bool> = true>
     int Count(const char *partition, T what)
     {
         char buf[256];
