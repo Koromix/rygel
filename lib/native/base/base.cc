@@ -7621,15 +7621,14 @@ class AsyncPool {
     int refcount = 0;
     int async_count = 0;
 
-    std::atomic_int pending_tasks { 0 };
-
     Span<WorkerData> workers;
     int dispatch_min;
     int dispatch_mod;
 
     LockFreePool<TaskData> alloc { K_ASYNC_MAX_PENDING_TASKS };
 
-    std::atomic_uint next_worker { 0 };
+    alignas(64) std::atomic_int pending_tasks { 0 };
+    alignas(64) std::atomic_uint next_worker { 0 };
 
 public:
     AsyncPool(int threads, int refcount, bool dispatch);

@@ -5159,11 +5159,11 @@ class Async {
     K_DELETE_COPY(Async)
 
 #if !defined(__wasi__)
-    std::atomic_bool success { true };
-    std::atomic_int remaining_tasks { 0 };
-
     class AsyncPool *pool;
     bool selfish = false;
+
+    alignas(64) std::atomic_int remaining_tasks { 0 };
+    alignas(64) std::atomic_bool success { true };
 #else
     bool success = true;
 #endif
