@@ -7596,98 +7596,99 @@ void CloseSocket(int fd)
 
 #if !defined(__wasi__)
 
-struct Task {
-    Async *async;
-    std::function<bool()> func;
-};
-
-struct WorkerData {
+struct alignas(64) WorkerData {
     AsyncPool *pool = nullptr;
     int idx;
 
-    std::mutex queue_mutex;
-    BucketList<Task> tasks;
+    std::atomic<TaggedIndex> head {{ 0xFFFFFFFFu, 0 }};
+};
+
+struct TaskData {
+    Async *async;
+    std::function<bool()> func;
+
+    std::atomic<uint32_t> next;
 };
 
 class AsyncPool {
     K_DELETE_COPY(AsyncPool)
 
-    std::mutex pool_mutex;
+    std::mutex mutex;
     std::condition_variable pending_cv;
     std::condition_variable sync_cv;
 
-    // Manipulate with pool_mutex locked
+    // Manipulate with mutex locked
     int refcount = 0;
-
     int async_count = 0;
-    std::atomic_uint next_worker { 0 };
-    HeapArray<WorkerData> workers;
+
     std::atomic_int pending_tasks { 0 };
 
+    Span<WorkerData> workers;
+    int dispatch_min;
+    int dispatch_mod;
+
+    LockFreePool<TaskData> alloc { K_ASYNC_MAX_PENDING_TASKS };
+
+    std::atomic_uint next_worker { 0 };
+
 public:
-    AsyncPool(int threads, bool leak);
+    AsyncPool(int threads, int refcount, bool dispatch);
+    ~AsyncPool();
 
     int GetWorkerCount() const { return (int)workers.len; }
 
     void RegisterAsync();
     void UnregisterAsync();
 
-    void AddTask(Async *async, const std::function<bool()> &func);
-    void AddTask(Async *async, int worker_idx, const std::function<bool()> &func);
+    void AddTask(Async *async, std::function<bool()> &&func);
+    void AddTask(Async *async, int worker_idx, std::function<bool()> &&func);
 
     void RunWorker(int worker_idx);
-    void SyncOn(Async *async, Async *only);
+    void SyncOn(Async *async);
     bool WaitOn(Async *async, int timeout);
 
+    void RunTasks(int worker_idx);
     void RunTasks(int worker_idx, Async *only);
-    void RunTask(Task *task);
+    void RunTask(Async *async, const std::function<bool()> &func);
 };
 
 // thread_local breaks down on MinGW when destructors are involved, work
 // around this with heap allocation.
-static thread_local AsyncPool *async_default_pool = nullptr;
 static thread_local AsyncPool *async_running_pool = nullptr;
-static thread_local int async_running_worker_idx;
+static thread_local int async_running_worker_idx = 0;
 static thread_local bool async_running_task = false;
 
-Async::Async(int threads, unsigned int flags)
+Async::Async()
 {
-    K_ASSERT(threads);
-
-    if (threads > 0) {
-        pool = new AsyncPool(threads, false);
-    } else if (async_running_pool) {
+    if (async_running_pool) {
         pool = async_running_pool;
     } else {
-        if (!async_default_pool) {
-            // NOTE: We're leaking one AsyncPool each time a non-worker thread uses Async()
-            // for the first time. That's only one leak in most cases, when the main thread
-            // is the only non-worker thread using Async, but still. Something to keep in mind.
-
-            threads = GetCoreCount();
-            async_default_pool = new AsyncPool(threads, true);
-        }
-
-        pool = async_default_pool;
+        static AsyncPool *default_pool = new AsyncPool(GetCoreCount(), 1, false);
+        pool = default_pool;
     }
 
     pool->RegisterAsync();
+}
 
-    if (flags & (int)AsyncFlag::Selfish) {
-        only = this;
-    }
+Async::Async(int threads, unsigned int flags)
+{
+    K_ASSERT(threads > 0);
+
+    pool = new AsyncPool(threads, 0, flags & (int)AsyncFlag::Dispatch);
+    pool->RegisterAsync();
+
+    selfish = (flags & (int)AsyncFlag::Selfish);
 }
 
 Async::Async(Async *parent, unsigned int flags)
 {
     K_ASSERT(parent);
+    K_ASSERT(!(flags & (int)AsyncFlag::Dispatch));
 
     pool = parent->pool;
     pool->RegisterAsync();
 
-    if (flags & (int)AsyncFlag::Selfish) {
-        only = this;
-    }
+    selfish = (flags & (int)AsyncFlag::Selfish);
 }
 
 Async::~Async()
@@ -7698,19 +7699,19 @@ Async::~Async()
     pool->UnregisterAsync();
 }
 
-void Async::Run(const std::function<bool()> &func)
+void Async::Run(std::function<bool()> &&func)
 {
-    pool->AddTask(this, func);
+    pool->AddTask(this, std::move(func));
 }
 
-void Async::Run(int worker, const std::function<bool()> &func)
+void Async::Run(int worker, std::function<bool()> &&func)
 {
-    pool->AddTask(this, worker, func);
+    pool->AddTask(this, worker, std::move(func));
 }
 
 bool Async::Sync()
 {
-    pool->SyncOn(this, only);
+    pool->SyncOn(this);
     return success;
 }
 
@@ -7734,17 +7735,32 @@ int Async::GetWorkerIdx()
     return async_running_worker_idx;
 }
 
-AsyncPool::AsyncPool(int threads, bool leak)
+AsyncPool::AsyncPool(int threads, int refcount, bool dispatch)
 {
     if (threads > K_ASYNC_MAX_THREADS) {
         LogError("Async cannot use more than %1 threads", K_ASYNC_MAX_THREADS);
         threads = K_ASYNC_MAX_THREADS;
     }
 
-    // The first queue is for the main thread
-    workers.AppendDefault(threads);
+    // Over-aligned allocation
+    {
+        workers.ptr = (WorkerData *)AllocateAligned(threads * K_SIZE(WorkerData), alignof(WorkerData));
+        workers.len = threads;
 
-    refcount = leak;
+        for (WorkerData &worker: workers) {
+            new (&worker) WorkerData();
+        }
+    }
+
+    dispatch_min = dispatch ? 1 : 0;
+    dispatch_mod = threads - dispatch_min;
+
+    this->refcount = refcount;
+}
+
+AsyncPool::~AsyncPool()
+{
+    ReleaseAligned(workers.ptr);
 }
 
 #if defined(_WIN32)
@@ -7769,7 +7785,7 @@ static void *RunWorkerPthread(void *udata)
 
 void AsyncPool::RegisterAsync()
 {
-    std::lock_guard<std::mutex> lock_pool(pool_mutex);
+    std::lock_guard<std::mutex> lock(mutex);
 
     if (!async_count++) {
         for (int i = 1; i < workers.len; i++) {
@@ -7814,42 +7830,67 @@ void AsyncPool::RegisterAsync()
 
 void AsyncPool::UnregisterAsync()
 {
-    std::lock_guard<std::mutex> lock_pool(pool_mutex);
+    std::lock_guard<std::mutex> lock(mutex);
     async_count--;
 }
 
-void AsyncPool::AddTask(Async *async, const std::function<bool()> &func)
+void AsyncPool::AddTask(Async *async, std::function<bool()> &&func)
 {
     if (async_running_pool != this) {
-        int worker_idx = (next_worker++ % (int)workers.len);
-        AddTask(async, worker_idx, func);
+        unsigned int next = next_worker.fetch_add(1, std::memory_order_relaxed);
+        int worker = dispatch_min + (int)(next % (unsigned int)dispatch_mod);
+
+        AddTask(async, worker, std::move(func));
     } else {
-        AddTask(async, async_running_worker_idx, func);
+        AddTask(async, async_running_worker_idx, std::move(func));
     }
 }
 
-void AsyncPool::AddTask(Async *async, int worker_idx, const std::function<bool()> &func)
+void AsyncPool::AddTask(Async *async, int worker_idx, std::function<bool()> &&func)
 {
     WorkerData *worker = &workers[worker_idx];
 
-    // Add the task damn it
-    {
-        std::lock_guard<std::mutex> lock_queue(worker->queue_mutex);
-        worker->tasks.Append({ async, func });
-    }
-
     async->remaining_tasks++;
 
-    int prev_pending = pending_tasks++;
+    bool first = !(pending_tasks++);
+    uint32_t slot = alloc.Allocate();
 
-    if (prev_pending >= K_ASYNC_MAX_PENDING_TASKS) {
-        int worker_idx = async_running_worker_idx;
+    // Process pending tasks when there's too much to do
+    if (slot == 0xFFFFFFFFu) {
+        for (;;) {
+            if (async->selfish) {
+                RunTasks(worker_idx, async);
+            } else {
+                RunTasks(worker_idx);
+            }
+
+            slot = alloc.Allocate();
+
+            if (slot != 0xFFFFFFFFu) [[likely]]
+                break;
+
+            std::this_thread::yield();
+        }
+    }
+
+    TaskData *task = &alloc[slot];
+
+    task->async = async;
+    task->func = std::move(func);
+
+    // Add task to lock-free stack
+    {
+        TaggedIndex head = worker->head.load(std::memory_order_relaxed);
+        TaggedIndex desired;
 
         do {
-            RunTasks(worker_idx, async->only);
-        } while (pending_tasks >= K_ASYNC_MAX_PENDING_TASKS);
-    } else if (!prev_pending) {
-        std::lock_guard<std::mutex> lock_pool(pool_mutex);
+            task->next.store(head.idx, std::memory_order_relaxed);
+            desired = { slot, head.tag + 1 };
+        } while (!worker->head.compare_exchange_weak(head, desired, std::memory_order_release, std::memory_order_relaxed));
+    }
+
+    if (first) {
+        std::lock_guard<std::mutex> lock(mutex);
 
         pending_cv.notify_all();
         sync_cv.notify_all();
@@ -7861,29 +7902,29 @@ void AsyncPool::RunWorker(int worker_idx)
     async_running_pool = this;
     async_running_worker_idx = worker_idx;
 
-    std::unique_lock<std::mutex> lock_pool(pool_mutex);
+    std::unique_lock<std::mutex> lock(mutex);
 
     while (async_count) {
-        lock_pool.unlock();
-        RunTasks(worker_idx, nullptr);
-        lock_pool.lock();
+        lock.unlock();
+        RunTasks(worker_idx);
+        lock.lock();
 
         std::chrono::duration<int, std::milli> duration(K_ASYNC_MAX_IDLE_TIME); // Thanks C++
-        pending_cv.wait_for(lock_pool, duration, [&]() { return !!pending_tasks; });
+        pending_cv.wait_for(lock, duration, [&]() { return !!pending_tasks; });
     }
 
     workers[worker_idx].pool = nullptr;
 
     if (!--refcount) {
-        lock_pool.unlock();
+        lock.unlock();
         delete this;
     }
 }
 
-void AsyncPool::SyncOn(Async *async, Async *only)
+void AsyncPool::SyncOn(Async *async)
 {
     K_DEFER_C(pool = async_running_pool,
-               worker_idx = async_running_worker_idx) {
+              worker_idx = async_running_worker_idx) {
         async_running_pool = pool;
         async_running_worker_idx = worker_idx;
     };
@@ -7892,16 +7933,20 @@ void AsyncPool::SyncOn(Async *async, Async *only)
     async_running_worker_idx = 0;
 
     while (async->remaining_tasks) {
-        RunTasks(0, only);
+        if (async->selfish) {
+            RunTasks(0, async);
+        } else {
+            RunTasks(0);
+        }
 
-        std::unique_lock<std::mutex> lock_sync(pool_mutex);
+        std::unique_lock<std::mutex> lock_sync(mutex);
         sync_cv.wait(lock_sync, [&]() { return pending_tasks || !async->remaining_tasks; });
     }
 }
 
 bool AsyncPool::WaitOn(Async *async, int timeout)
 {
-    std::unique_lock<std::mutex> lock_sync(pool_mutex);
+    std::unique_lock<std::mutex> lock_sync(mutex);
 
     if (timeout >= 0) {
         std::chrono::milliseconds delay(timeout);
@@ -7913,64 +7958,127 @@ bool AsyncPool::WaitOn(Async *async, int timeout)
     }
 }
 
-void AsyncPool::RunTasks(int worker_idx, Async *only)
+void AsyncPool::RunTasks(int worker_idx)
 {
     // The '12' factor is pretty arbitrary, don't try to find meaning there
     for (int i = 0; i < workers.len * 12; i++) {
         WorkerData *worker = &workers[worker_idx];
-        std::unique_lock<std::mutex> lock_queue(worker->queue_mutex, std::try_to_lock);
 
-        if (lock_queue.owns_lock()) {
-            Size idx = 0;
+        Async *async;
+        std::function<bool()> func;
 
-            if (only) {
-                for (const Task &task: worker->tasks) {
-                    if (task.async == only) {
-                        std::swap(worker->tasks[0], worker->tasks[idx]);
-                        break;
-                    }
-                    idx++;
-                }
-            }
+        // Pop from lock-free stack
+        {
+            TaggedIndex slot = worker->head.load(std::memory_order_acquire);
+            TaggedIndex desired;
 
-            if (idx < worker->tasks.count) {
-                Task task = std::move(worker->tasks[0]);
+            do {
+                if (slot.idx == 0xFFFFFFFFu)
+                    break;
+                desired = { alloc[slot.idx].next.load(std::memory_order_relaxed), slot.tag + 1 };
+            } while (!worker->head.compare_exchange_weak(slot, desired, std::memory_order_acquire, std::memory_order_acquire));
 
-                worker->tasks.RemoveFirst();
-                worker->tasks.Trim();
-
-                lock_queue.unlock();
-
-                RunTask(&task);
+            if (slot.idx == 0xFFFFFFFFu) {
+                worker_idx = GetRandomInt(0, (int)workers.len);
                 continue;
             }
+
+            TaskData *task = &alloc[slot.idx];
+
+            async = task->async;
+            func = std::move(task->func);
+            alloc.Release(slot.idx);
         }
 
-        worker_idx = GetRandomInt(0, (int)workers.len);
+        RunTask(async, func);
     }
 }
 
-void AsyncPool::RunTask(Task *task)
+void AsyncPool::RunTasks(int worker_idx, Async *only)
 {
-    Async *async = task->async;
+    // No factor here because this path can end up busy spinning a lot if most tasks are foreign
+    // Use AsyncFlag::Selfish sparingly, because it can be costly!
 
+    for (int i = 0; i < workers.len; i++) {
+        WorkerData *worker = &workers[worker_idx];
+
+        Async *async = nullptr;
+        std::function<bool()> func;
+
+        uint32_t skipped_head = 0xFFFFFFFFu;
+        uint32_t skipped_tail = 0xFFFFFFFFu;
+
+        // Pop from lock-free stack
+        for (;;) {
+            TaggedIndex slot = worker->head.load(std::memory_order_acquire);
+            TaggedIndex desired;
+
+            do {
+                if (slot.idx == 0xFFFFFFFFu)
+                    break;
+                desired = { alloc[slot.idx].next.load(std::memory_order_relaxed), slot.tag + 1 };
+            } while (!worker->head.compare_exchange_weak(slot, desired, std::memory_order_acquire, std::memory_order_acquire));
+
+            if (slot.idx == 0xFFFFFFFFu)
+                break;
+
+            TaskData *task = &alloc[slot.idx];
+
+            if (only && task->async != only) {
+                task->next.store(skipped_head, std::memory_order_relaxed);
+
+                if (skipped_tail == 0xFFFFFFFFu) {
+                    skipped_tail = slot.idx;
+                }
+                skipped_head = slot.idx;
+
+                continue;
+            }
+
+            async = task->async;
+            func = std::move(task->func);
+            alloc.Release(slot.idx);
+
+            break;
+        }
+
+        if (skipped_head != 0xFFFFFFFFu) {
+            TaggedIndex head = worker->head.load(std::memory_order_relaxed);
+            TaggedIndex desired;
+
+            do {
+                alloc[skipped_tail].next.store(head.idx, std::memory_order_relaxed);
+                desired = { skipped_head, head.tag + 1 };
+            } while (!worker->head.compare_exchange_weak(head, desired, std::memory_order_release, std::memory_order_relaxed));
+        }
+
+        if (!async) {
+            worker_idx = GetRandomInt(0, (int)workers.len);
+            continue;
+        }
+
+        RunTask(async, func);
+    }
+}
+
+void AsyncPool::RunTask(Async *async, const std::function<bool()> &func)
+{
     K_DEFER_C(running = async_running_task) { async_running_task = running; };
     async_running_task = true;
 
     pending_tasks--;
 
-    if (!task->func()) {
+    if (!func()) {
         async->success = false;
     }
 
     if (!--async->remaining_tasks) {
-        std::lock_guard<std::mutex> lock_sync(pool_mutex);
+        std::lock_guard<std::mutex> lock_sync(mutex);
         sync_cv.notify_all();
     }
 }
 
 #else
-
 
 Async::Async(int threads, unsigned int)
 {

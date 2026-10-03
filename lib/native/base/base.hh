@@ -5147,7 +5147,12 @@ void CloseSocket(int fd);
 // ------------------------------------------------------------------------
 
 enum class AsyncFlag {
-    Selfish = 1 << 0
+    // Use this when the main thread won't Sync() or very late, and all tasks should be dispatched to workers
+    Dispatch = 1 << 0,
+
+    // Use this when you don't want Sync() to run tasks from other Async objects.
+    // It can slow things down, and cause some busy spin. Use with care!
+    Selfish = 1 << 1
 };
 
 class Async {
@@ -5158,19 +5163,19 @@ class Async {
     std::atomic_int remaining_tasks { 0 };
 
     class AsyncPool *pool;
-
-    Async *only = nullptr;
+    bool selfish = false;
 #else
     bool success = true;
 #endif
 
 public:
-    Async(int threads = -1, unsigned int flags = 0);
+    Async();
+    Async(int threads, unsigned int flags = 0);
     Async(Async *parent, unsigned int flags = 0);
     ~Async();
 
-    void Run(const std::function<bool()> &f);
-    void Run(int worker, const std::function<bool()> &f);
+    void Run(std::function<bool()> &&func);
+    void Run(int worker, std::function<bool()> &&func);
 
     bool Sync();
     bool Wait(int timeout);
