@@ -16,7 +16,7 @@ Features = +ASan
 
 [TSan]
 Template = Debug
-Features = +TSan
+Features = +Optimize, +TSan
 
 [UBSan]
 Template = Debug
