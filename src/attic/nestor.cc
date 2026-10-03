@@ -365,6 +365,8 @@ static void ServeFile(http_IO *io, const char *filename, const FileInfo &file_in
         int fd = OpenFile(filename, (int)OpenFlag::Read);
         if (fd < 0)
             return;
+        K_DEFER { CloseDescriptor(fd); };
+
         io->SendFile(200, fd, file_info.size);
     }
 }

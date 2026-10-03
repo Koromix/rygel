@@ -813,10 +813,7 @@ void HandleDownload(http_IO *io)
     AddGenerationHeaders(io, generation, previous);
 
     // Send it!
-    int fd = OpenFile(filename, (int)OpenFlag::Read);
-    if (fd < 0)
-        return;
-    io->SendFile(200, fd);
+    io->SendFile(200, filename);
 }
 
 void HandleUpload(http_IO *io)

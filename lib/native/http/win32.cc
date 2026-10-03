@@ -632,8 +632,6 @@ void http_Dispatcher::ParkSocket(http_Socket *socket)
 
 void http_IO::SendFile(int status, int fd, int64_t len)
 {
-    K_DEFER { CloseDescriptor(fd); };
-
     if (!StartResponse()) [[unlikely]]
         return;
 

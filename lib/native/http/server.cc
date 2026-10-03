@@ -789,7 +789,7 @@ void http_IO::SendFile(int status, const char *filename, const char *mimetype)
     int fd = OpenFile(filename, (int)OpenFlag::Read);
     if (fd < 0)
         return;
-    K_DEFER_N(err_guard) { CloseDescriptor(fd); };
+    K_DEFER { CloseDescriptor(fd); };
 
     FileInfo file_info;
     if (StatFile(fd, filename, &file_info) != StatResult::Success)
@@ -803,7 +803,6 @@ void http_IO::SendFile(int status, const char *filename, const char *mimetype)
         AddHeader("Content-Type", mimetype);
     }
 
-    err_guard.Disable();
     SendFile(status, fd, file_info.size);
 }
 
