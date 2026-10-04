@@ -11,6 +11,8 @@ cd /tmp/rekkord/ftzz_local
 
 rm -f linux.tar.xz
 curl -L -o linux.tar.xz https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.17.8.tar.xz
+curl -L -o ftzz https://github.com/SUPERCILEX/ftzz/releases/download/4.0.0/x86_64-unknown-linux-musl-ftzz
+chmod +x ftzz
 
 echo "[Repository]
 URL = repo
@@ -25,8 +27,8 @@ while true; do
     rm -rf cache repo src dest rekkord.key
 
     seed=$RANDOM
-    ftzz -n10000 -b1000000000 --seed $seed src/small
-    ftzz -n8 -b2000000000 --seed $seed src/big
+    ./ftzz -n10000 -b1000000000 --seed $seed src/small
+    ./ftzz -n8 -b2000000000 --seed $seed src/big
     mkdir src/linux
     tar -Jxf linux.tar.xz -C src/linux
 
