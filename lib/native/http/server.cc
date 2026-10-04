@@ -332,7 +332,17 @@ bool http_Daemon::Bind(const http_Config &config, bool log_addr)
         listeners.Clear();
     };
 
+#if defined(_WIN32)
+    // It is not possible to bind multiple sockets to a single TCP port on Windows
+    // safely, because SO_EXCLUSIVEADDR must be set before bind(), so it cannot be used
+    // and other processes can hijack us at any time (instead of during a small window).
+    // In addition, running accept() from multiple threads on the same listening socket
+    // will return the same socket to multiple threads which breaks everything.
+    // Yes, this happens. In 2026.
+    dispatchers.AppendDefault(1);
+#else
     dispatchers.AppendDefault(GetCoreCount());
+#endif
 
     for (Size i = 0; i < dispatchers.len; i++) {
         int listener = CreateListenSocket(config, !i);
@@ -340,15 +350,9 @@ bool http_Daemon::Bind(const http_Config &config, bool log_addr)
             return false;
         listeners.Append(listener);
 
-#if defined(_WIN32)
-        // Can't find a proper way to share port safely and load balance
-        // with multiple listeners on Windows.
-        break;
-#else
         // One cannot bind to the same UNIX socket multiple times
         if (config.sock_type == SocketType::Unix)
             break;
-#endif
     }
 
     if (log_addr) {
