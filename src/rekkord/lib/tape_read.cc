@@ -409,14 +409,14 @@ bool GetContext::ExtractEntries(Span<const uint8_t> blob, bool allow_separators,
     }
 
     struct SharedContext {
-        BlockAllocator temp_alloc;
-
         EntryInfo meta = {};
         bool chown = false;
         bool xattrs = false;
         bool fake = false;
 
         HeapArray<EntryInfo> entries;
+
+        BlockAllocator alloc;
 
         ~SharedContext() {
             if (!fake && meta.filename.len) {
@@ -444,11 +444,11 @@ bool GetContext::ExtractEntries(Span<const uint8_t> blob, bool allow_separators,
 
     if (dest.basename.len) {
         ctx->meta = dest;
-        ctx->meta.filename = DuplicateString(dest.filename, &ctx->temp_alloc);
+        ctx->meta.filename = DuplicateString(dest.filename, &ctx->alloc);
 
         if (ctx->meta.xattrs.len) {
             Span<XAttrInfo> xattrs = ctx->meta.xattrs;
-            ctx->meta.xattrs = AllocateSpan<XAttrInfo>(&ctx->temp_alloc, xattrs.len);
+            ctx->meta.xattrs = AllocateSpan<XAttrInfo>(&ctx->alloc, xattrs.len);
             MemCpy(ctx->meta.xattrs.ptr, xattrs.ptr, xattrs.len * K_SIZE(XAttrInfo));
         }
 
@@ -457,7 +457,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> blob, bool allow_separators,
         ctx->fake = settings.fake;
     }
 
-    if (!DecodeEntries(blob, K_SIZE(DirectoryHeader), allow_separators, &ctx->temp_alloc, &ctx->entries))
+    if (!DecodeEntries(blob, K_SIZE(DirectoryHeader), allow_separators, &ctx->alloc, &ctx->entries))
         return false;
 
     // Filter out invalid entries
@@ -472,7 +472,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> blob, bool allow_separators,
             if (!(entry->flags & (int)RawEntry::Flags::Readable))
                 continue;
 
-            entry->filename = Fmt(&ctx->temp_alloc, "%1%/%2", dest.filename, entry->basename).ptr;
+            entry->filename = Fmt(&ctx->alloc, "%1%/%2", dest.filename, entry->basename).ptr;
 
             if (!settings.fake && allow_separators && !EnsureDirectoryExists(entry->filename.ptr))
                 return false;
