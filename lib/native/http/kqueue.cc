@@ -29,6 +29,7 @@ namespace K {
 struct http_Socket {
     int sock = -1;
 
+    bool pollable = false;
     bool process = false;
     Size linger = 0;
 
@@ -550,6 +551,14 @@ void http_Dispatcher::Run()
 
                     continue;
                 }
+
+                if (!socket->pollable) {
+                    // We can't do this in InitSocket because the socket might get closed shortly after,
+                    // after the first recv() call. This would either trigger EV_ERROR or watch an
+                    // unrelated socket descriptor, and also read from a freed or reused socket object.
+                    AddEventChange(EVFILT_READ, socket->sock, EV_ADD, socket);
+                    socket->pollable = true;
+                }
             }
 
             switch (status) {
@@ -657,9 +666,9 @@ http_Socket *http_Dispatcher::InitSocket(int sock, int64_t start, struct sockadd
 
     if (!socket->client.Init(socket, start, sa)) [[unlikely]]
         return nullptr;
-    AddEventChange(EVFILT_READ, sock, EV_ADD, socket);
 
     socket->sock = sock;
+    socket->pollable = false;
     socket->process = true;
     socket->linger = 0;
 
