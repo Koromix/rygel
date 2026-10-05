@@ -967,7 +967,7 @@ static Size DecodePath(Span<char> str)
             str[j] = (char)((high << 4) | low);
         }
 
-        if (IsAsciiControl(str[j])) [[unlikely]] {
+        if (IsAsciiControl(str[j]) || str[j] == '\\') [[unlikely]] {
             LogError("Unexpected control character in HTTP request line");
             return -1;
         }
