@@ -63,7 +63,12 @@ struct http_Socket;
 class http_Daemon {
     K_DELETE_COPY(http_Daemon)
 
-    Size dispatchers = 0;
+    struct DispatcherThread {
+        http_Dispatcher *dispatcher;
+        std::thread thread;
+    };
+
+    HeapArray<DispatcherThread> dispatchers;
     HeapArray<int> listeners;
 
     SocketType sock_type;
@@ -80,7 +85,6 @@ class http_Daemon {
     int max_request_cookies;
 
     Async *async = nullptr;
-    http_Dispatcher *dispatcher = nullptr;
 
     std::function<void(http_IO *io)> handle_func;
 
@@ -93,6 +97,11 @@ public:
     void Stop();
 
 private:
+    http_Dispatcher *CreateDispatcher(int listener);
+    static void RunDispatcher(http_Dispatcher *dispatcher);
+    static void StopDispatcher(http_Dispatcher *dispatcher);
+    static void DestroyDispatcher(http_Dispatcher *dispatcher);
+
     void StartRead(http_Socket *socket);
     void StartWrite(http_Socket *socket);
     void EndWrite(http_Socket *socket);

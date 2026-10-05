@@ -35,10 +35,6 @@ static const Size MaxSend = Mebibytes(2);
 
 class http_Dispatcher {
     http_Daemon *daemon;
-    http_Dispatcher *next;
-
-    std::thread thread;
-
     int listener;
 
     int epoll_fd = -1;
@@ -47,8 +43,8 @@ class http_Dispatcher {
     LocalArray<http_Socket *, 64> free_sockets;
 
 public:
-    http_Dispatcher(http_Daemon *daemon, http_Dispatcher *next, int listener)
-        : daemon(daemon), next(next), listener(listener) {}
+    http_Dispatcher(http_Daemon *daemon, int listener)
+        : daemon(daemon), listener(listener) {}
     ~http_Dispatcher();
 
     bool Init();
@@ -66,68 +62,31 @@ private:
     friend class http_Daemon;
 };
 
-bool http_Daemon::Start(std::function<void(http_IO *io)> func)
+http_Dispatcher *http_Daemon::CreateDispatcher(int listener)
 {
-    K_ASSERT(listeners.len);
-    K_ASSERT(!handle_func);
-    K_ASSERT(func);
+    http_Dispatcher *dispatcher = new http_Dispatcher(this, listener);
 
-    handle_func = func;
-
-    int handlers = std::max(16, 4 * GetCoreCount());
-    async = new Async(handlers, (int)AsyncFlag::Background);
-
-    for (Size i = 0; i < dispatchers; i++) {
-        int listener = listeners[i % listeners.len];
-        http_Dispatcher *dispatcher = new http_Dispatcher(this, this->dispatcher, listener);
-
-        if (!dispatcher->Init()) {
-            delete dispatcher;
-            return false;
-        }
-
-        this->dispatcher = dispatcher;
+    if (!dispatcher->Init()) {
+        delete dispatcher;
+        return nullptr;
     }
 
-    // All engines are running
-    for (http_Dispatcher *it = dispatcher; it; it = it->next) {
-        it->thread = std::thread(&http_Dispatcher::Run, it);
-    }
-
-    return true;
+    return dispatcher;
 }
 
-void http_Daemon::Stop()
+void http_Daemon::RunDispatcher(http_Dispatcher *dispatcher)
 {
-    // On Linux this is enough to jolt dispatchers out of poll()
-    for (int listener: listeners) {
-        shutdown(listener, SHUT_RDWR);
-    }
+    dispatcher->Run();
+}
 
-    while (dispatcher) {
-        http_Dispatcher *next = dispatcher->next;
+void http_Daemon::StopDispatcher(http_Dispatcher *)
+{
+    // On Linux the shutdown() call is enough to jolt dispatchers out of poll()
+}
 
-        if (dispatcher->thread.joinable()) {
-           dispatcher->thread.join();
-        }
-        delete dispatcher;
-
-        dispatcher = next;
-    }
-
-    if (async) {
-        async->Sync();
-
-        delete async;
-        async = nullptr;
-    }
-
-    for (int listener: listeners) {
-        CloseSocket(listener);
-    }
-    listeners.Clear();
-
-    handle_func = {};
+void http_Daemon::DestroyDispatcher(http_Dispatcher *dispatcher)
+{
+    delete dispatcher;
 }
 
 void http_Daemon::StartRead(http_Socket *)

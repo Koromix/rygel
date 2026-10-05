@@ -40,10 +40,6 @@ static const Size MaxSend = Mebibytes(2);
 
 class http_Dispatcher {
     http_Daemon *daemon;
-    http_Dispatcher *next;
-
-    std::thread thread;
-
     int listener;
 
     int kqueue_fd = -1;
@@ -55,8 +51,8 @@ class http_Dispatcher {
     HeapArray<struct kevent> next_changes;
 
 public:
-    http_Dispatcher(http_Daemon *daemon, http_Dispatcher *next, int listener)
-        : daemon(daemon), next(next), listener(listener) {}
+    http_Dispatcher(http_Daemon *daemon, int listener)
+        : daemon(daemon), listener(listener) {}
     ~http_Dispatcher();
 
     bool Init();
@@ -75,74 +71,34 @@ private:
     friend class http_Daemon;
 };
 
-bool http_Daemon::Start(std::function<void(http_IO *io)> func)
+http_Dispatcher *http_Daemon::CreateDispatcher(int listener)
 {
-    K_ASSERT(listeners.len);
-    K_ASSERT(!handle_func);
-    K_ASSERT(func);
+    http_Dispatcher *dispatcher = new http_Dispatcher(this, listener);
 
-    handle_func = func;
-
-    int handlers = std::max(16, 4 * GetCoreCount());
-    async = new Async(handlers, (int)AsyncFlag::Background);
-
-    for (Size i = 0; i < dispatchers; i++) {
-        int listener = listeners[i % listeners.len];
-        http_Dispatcher *dispatcher = new http_Dispatcher(this, this->dispatcher, listener);
-
-        if (!dispatcher->Init()) {
-            delete dispatcher;
-            return false;
-        }
-
-        this->dispatcher = dispatcher;
+    if (!dispatcher->Init()) {
+        delete dispatcher;
+        return nullptr;
     }
 
-    // All engines are running
-    for (http_Dispatcher *it = dispatcher; it; it = it->next) {
-        it->thread = std::thread(&http_Dispatcher::Run, it);
-    }
-
-    return true;
+    return dispatcher;
 }
 
-void http_Daemon::Stop()
+void http_Daemon::RunDispatcher(http_Dispatcher *dispatcher)
 {
-    // Shut everything down
+    dispatcher->Run();
+}
+
+void http_Daemon::StopDispatcher(http_Dispatcher *dispatcher)
+{
     // On macOS (and maybe others), the shutdown() does not wake up poll() so use the
     // pipe to wake it up and signal the ongoing shutdown.
-    // To be sure, wake up poll() with the pipe.
-    for (int listener: listeners) {
-        shutdown(listener, SHUT_RDWR);
-    }
-    for (http_Dispatcher *it = dispatcher; it; it = it->next) {
-        it->Wake(nullptr);
-    }
 
-    while (dispatcher) {
-        http_Dispatcher *next = dispatcher->next;
+    dispatcher->Wake(nullptr);
+}
 
-        if (dispatcher->thread.joinable()) {
-           dispatcher->thread.join();
-        }
-        delete dispatcher;
-
-        dispatcher = next;
-    }
-
-    if (async) {
-        async->Sync();
-
-        delete async;
-        async = nullptr;
-    }
-
-    for (int listener: listeners) {
-        CloseSocket(listener);
-    }
-    listeners.Clear();
-
-    handle_func = {};
+void http_Daemon::DestroyDispatcher(http_Dispatcher *dispatcher)
+{
+    delete dispatcher;
 }
 
 void http_Daemon::StartRead(http_Socket *socket)

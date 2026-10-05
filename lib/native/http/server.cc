@@ -298,6 +298,7 @@ static int CreateListenSocket(const http_Config &config, bool first)
 bool http_Daemon::Bind(const http_Config &config, bool log_addr)
 {
     K_ASSERT(!listeners.len);
+    K_ASSERT(!dispatchers.len);
 
     if (!config.Validate())
         return false;
@@ -331,17 +332,17 @@ bool http_Daemon::Bind(const http_Config &config, bool log_addr)
         listeners.Clear();
     };
 
-    dispatchers = GetCoreCount();
+    dispatchers.AppendDefault(GetCoreCount());
 
-    for (Size i = 0; i < dispatchers; i++) {
+    for (Size i = 0; i < dispatchers.len; i++) {
         int listener = CreateListenSocket(config, !i);
         if (listener < 0)
             return false;
         listeners.Append(listener);
 
 #if defined(_WIN32)
-        // Can't find a proper way to share port safely and
-        // load balance with multiple listeners on Windows.
+        // Can't find a proper way to share port safely and load balance
+        // with multiple listeners on Windows.
         break;
 #else
         // One cannot bind to the same UNIX socket multiple times
@@ -361,6 +362,77 @@ bool http_Daemon::Bind(const http_Config &config, bool log_addr)
 
     err_guard.Disable();
     return true;
+}
+
+bool http_Daemon::Start(std::function<void(http_IO *io)> func)
+{
+    K_ASSERT(listeners.len);
+    K_ASSERT(dispatchers.len);
+    K_ASSERT(!handle_func);
+    K_ASSERT(func);
+
+    handle_func = func;
+
+    int handlers = std::max(16, 4 * GetCoreCount());
+    async = new Async(handlers, (int)AsyncFlag::Background);
+
+    for (Size i = 0; i < dispatchers.len; i++) {
+        K_ASSERT(!dispatchers[i].dispatcher);
+
+        int listener = listeners[i % listeners.len];
+        http_Dispatcher *dispatcher = CreateDispatcher(listener);
+
+        if (!dispatcher)
+            return false;
+
+        dispatchers[i].dispatcher = dispatcher;
+    }
+
+    // All engines are running
+    for (DispatcherThread &it: dispatchers) {
+        it.thread = std::thread(&http_Daemon::RunDispatcher, it.dispatcher);
+    }
+
+    return true;
+}
+
+void http_Daemon::Stop()
+{
+    // Shut everything down
+    // On Windows and macOS (and maybe others), the shutdown() does not wake up poll() so use
+    // the pipe to wake it up and signal the ongoing shutdown.
+    for (int listener: listeners) {
+#if defined(_WIN32)
+        shutdown(listener, SD_BOTH);
+#else
+        shutdown(listener, SHUT_RDWR);
+#endif
+    }
+
+    for (DispatcherThread &it: dispatchers) {
+        if (it.dispatcher) {
+            StopDispatcher(it.dispatcher);
+        }
+        if (it.thread.joinable()) {
+            it.thread.join();
+        }
+        DestroyDispatcher(it.dispatcher);
+    }
+    dispatchers.Clear();
+
+    if (async) {
+        async->Sync();
+
+        delete async;
+        async = nullptr;
+    }
+
+    for (int listener: listeners) {
+        CloseSocket(listener);
+    }
+    listeners.Clear();
+
+    handle_func = {};
 }
 
 void http_Daemon::RunHandler(http_IO *client)
