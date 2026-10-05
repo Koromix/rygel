@@ -5182,7 +5182,7 @@ public:
     bool IsSuccess() const { return success.load(std::memory_order_relaxed); }
 
     static bool IsTaskRunning();
-    static int GetWorkerIdx();
+    static int GetWorkerIndex();
 
     friend class AsyncPool;
 };

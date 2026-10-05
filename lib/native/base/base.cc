@@ -7721,7 +7721,7 @@ bool Async::IsTaskRunning()
     return async_running_task;
 }
 
-int Async::GetWorkerIdx()
+int Async::GetWorkerIndex()
 {
     return async_running_worker_idx;
 }
@@ -8154,7 +8154,7 @@ bool Async::IsTaskRunning()
     return false;
 }
 
-int Async::GetWorkerIdx()
+int Async::GetWorkerIndex()
 {
     return 0;
 }
