@@ -109,7 +109,7 @@ private:
     void EndWrite(http_Socket *socket);
 
     Size ReadSocket(http_Socket *socket, Span<uint8_t> buf);
-    bool WriteSocket(http_Socket *socket, Span<const uint8_t> buf);
+    bool WriteSocket(http_Socket *socket, Span<const uint8_t> buf, bool nowait = false);
     bool WriteSocket(http_Socket *socket, Span<Span<const uint8_t>> bufs);
 
     void RunHandler(http_IO *client);

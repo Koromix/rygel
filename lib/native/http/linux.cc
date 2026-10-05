@@ -96,11 +96,9 @@ void http_Daemon::StartRead(http_Socket *)
     // Nothing to do
 }
 
-void http_Daemon::StartWrite(http_Socket *socket, bool blocking)
+void http_Daemon::StartWrite(http_Socket *, bool)
 {
-    if (!blocking) {
-        SetSocketNonBlock(socket->sock, true);
-    }
+    // Nothing to do
 }
 
 void http_Daemon::EndWrite(http_Socket *socket)
@@ -130,9 +128,9 @@ restart:
     return bytes;
 }
 
-bool http_Daemon::WriteSocket(http_Socket *socket, Span<const uint8_t> buf)
+bool http_Daemon::WriteSocket(http_Socket *socket, Span<const uint8_t> buf, bool nowait)
 {
-    int flags = MSG_NOSIGNAL | MSG_MORE;
+    int flags = MSG_NOSIGNAL | MSG_MORE | (nowait ? MSG_DONTWAIT : 0);
 
     while (buf.len) {
         Size len = std::min(buf.len, MaxSend);

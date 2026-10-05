@@ -135,7 +135,7 @@ Size http_Daemon::ReadSocket(http_Socket *socket, Span<uint8_t> buf)
     return bytes;
 }
 
-bool http_Daemon::WriteSocket(http_Socket *socket, Span<const uint8_t> buf)
+bool http_Daemon::WriteSocket(http_Socket *socket, Span<const uint8_t> buf, bool)
 {
     while (buf.len) {
         int len = (int)std::min(buf.len, MaxSend);

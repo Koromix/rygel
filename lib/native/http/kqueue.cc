@@ -115,13 +115,12 @@ void http_Daemon::StartRead(http_Socket *socket)
 
 void http_Daemon::StartWrite(http_Socket *socket, bool blocking)
 {
-    if (blocking) {
 #if !defined(MSG_DONTWAIT)
-        SetSocketNonBlock(socket->sock, false);
+    SetSocketNonBlock(socket->sock, !blocking);
+#else
+    (void)blocking;
 #endif
-    } else {
-        SetSocketNonBlock(socket->sock, true);
-    }
+
 #if !defined(MSG_MORE)
     SetSocketRetain(socket->sock, true);
 #endif
@@ -154,12 +153,17 @@ restart:
     return bytes;
 }
 
-bool http_Daemon::WriteSocket(http_Socket *socket, Span<const uint8_t> buf)
+bool http_Daemon::WriteSocket(http_Socket *socket, Span<const uint8_t> buf, bool nowait)
 {
     int flags = MSG_NOSIGNAL;
 
 #if defined(MSG_MORE)
     flags |= MSG_MORE;
+#endif
+#if defined(MSG_DONTWAIT)
+    flags |= nowait ? MSG_DONTWAIT : 0;
+#else
+    (void)nowait;
 #endif
 
     while (buf.len) {

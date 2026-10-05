@@ -1353,13 +1353,16 @@ void http_IO::SendAbort(int status, const char *msg)
     daemon->StartWrite(socket, false);
     K_DEFER { daemon->EndWrite(socket); };
 
-    Span<const char> body = msg;
-    Span<const char> intro = PrepareResponse(status, CompressionType::None, body.len, false);
+    LocalArray<char, 2048> buf;
+    {
+        const char *protocol = (request.version == 11) ? "HTTP/1.1" : "HTTP/1.0";
+        const char *details = http_ErrorMessages.FindValue(status, "Unknown");
+        Span<const char> body = msg;
 
-    if (!WriteDirect(intro.As<const uint8_t>()))
-        return;
-    if (!request.head && !WriteDirect(body.As<const uint8_t>()))
-        return;
+        buf.len = Fmt(buf.data, "%1 %2 %3\r\nConnection: close\r\nContent-Length: %4\r\n\r\n%5", protocol, status, details, body.len, body).len;
+    }
+
+    daemon->WriteSocket(socket, buf.As<const uint8_t>(), true);
 }
 
 bool http_IO::StartResponse()
