@@ -2,6 +2,14 @@
 
 ## Alpha versions
 
+### Redropp 0.9.11
+
+*Released on 2026-10-05*
+
+- Improve HTTP code performance and security
+- Fix possible SSO identity theft path
+- Fix various session and SSO issues
+
 ### Redropp 0.9.10
 
 *Released on 2026-09-28*
