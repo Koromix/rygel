@@ -226,10 +226,7 @@ class http_IO {
 
     struct {
         HeapArray<http_KeyValue> headers;
-
         bool started = false;
-        int64_t expected = 0;
-        int64_t sent = 0;
     } response;
 
     int ws_opcode = 0;
