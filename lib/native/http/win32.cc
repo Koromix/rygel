@@ -23,8 +23,10 @@ namespace K {
 
 struct http_Socket {
     int sock = -1;
+
     bool process = false;
     bool poll = false;
+    Size linger = 0;
 
     http_IO client;
 
@@ -55,7 +57,7 @@ public:
 
 private:
     http_Socket *InitSocket(SOCKET sock, int64_t start, struct sockaddr *sa);
-    void ParkSocket(http_Socket *socket);
+    void ParkSocket(http_Socket *socket, bool hard);
 
     void StopWS();
 
@@ -415,10 +417,6 @@ void http_Dispatcher::Run()
                     continue;
                 }
 
-                // Try to read without waiting for more performance
-                socket->process = true;
-                socket->poll = true;
-
                 sockets.Append(socket);
             }
         }
@@ -446,12 +444,21 @@ void http_Dispatcher::Run()
                     client->incoming.buf.len += bytes;
                     client->incoming.buf.ptr[client->incoming.buf.len] = 0;
 
-                    status = client->ParseRequest();
+                    if (socket->linger) {
+                        if (client->incoming.buf.len > socket->linger) {
+                            ParkSocket(socket, true);
+                            keep--;
+
+                            continue;
+                        }
+                    } else {
+                        status = client->ParseRequest();
+                    }
                 } else {
                     int error = GetLastError();
 
                     if (!bytes || error != WSAEWOULDBLOCK) {
-                        if (client->IsBusy()) {
+                        if (!socket->linger && client->IsBusy()) {
                             if (bytes) {
                                 LogError("Connection failed: %1", GetWin32ErrorString());
                             } else {
@@ -459,7 +466,10 @@ void http_Dispatcher::Run()
                             }
                         }
 
-                        status = http_RequestStatus::Close;
+                        ParkSocket(socket, bytes < 0 && error != WSAESHUTDOWN);
+                        keep--;
+
+                        continue;
                     }
                 }
             }
@@ -477,18 +487,17 @@ void http_Dispatcher::Run()
                             daemon->RunHandler(client);
 
                             if (!client->Rearm(GetMonotonicClock())) {
-                                status = http_RequestStatus::Busy;
-                                shutdown(socket->sock, SD_RECEIVE);
-
+                                status = http_RequestStatus::Shutdown;
                                 break;
                             }
 
                             status = client->ParseRequest();
                         } while (status == http_RequestStatus::Ready);
 
-                        if (status == http_RequestStatus::Close) {
-                            client->incoming.buf.len = 0;
-                            shutdown(socket->sock, SD_RECEIVE);
+                        if (status == http_RequestStatus::Shutdown) {
+                            client->SetTimeout(GetMonotonicClock() + daemon->linger_timeout);
+                            socket->linger = Mebibytes(1);
+                            shutdown(socket->sock, SD_SEND);
                         }
                         Wake(socket);
 
@@ -496,11 +505,10 @@ void http_Dispatcher::Run()
                     });
                 } break;
 
-                case http_RequestStatus::Close: {
-                    ParkSocket(socket);
-                    keep--;
-
-                    continue;
+                case http_RequestStatus::Shutdown: {
+                    client->SetTimeout(GetMonotonicClock() + daemon->linger_timeout);
+                    socket->linger = Mebibytes(1);
+                    shutdown(socket->sock, SD_SEND);
                 } break;
             }
 
@@ -508,6 +516,8 @@ void http_Dispatcher::Run()
 
             if (delay <= 0) {
                 shutdown(socket->sock, SD_BOTH);
+                socket->linger = Mebibytes(1); // Possible race with worker (write of same value), harmless
+
                 continue;
             }
 
@@ -567,13 +577,21 @@ http_Socket *http_Dispatcher::InitSocket(SOCKET sock, int64_t start, struct sock
         return nullptr;
 
     socket->sock = (int)sock;
-    err_guard.Disable();
+    socket->process = true;
+    socket->poll = true;
+    socket->linger = 0;
 
+    err_guard.Disable();
     return socket;
 }
 
-void http_Dispatcher::ParkSocket(http_Socket *socket)
+void http_Dispatcher::ParkSocket(http_Socket *socket, bool hard)
 {
+    if (hard) {
+        struct linger sl = { 1, 0 };
+        setsockopt(socket->sock, SOL_SOCKET, SO_LINGER, (char *)&sl, sizeof(sl));
+    }
+
     if (free_sockets.Available()) {
         closesocket(socket->sock);
         socket->sock = -1;

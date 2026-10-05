@@ -23,7 +23,9 @@ namespace K {
 
 struct http_Socket {
     int sock = -1;
+
     bool process = false;
+    Size linger = 0;
 
     http_IO client;
 
@@ -52,7 +54,7 @@ public:
 
 private:
     http_Socket *InitSocket(int sock, int64_t start, struct sockaddr *sa);
-    void ParkSocket(http_Socket *socket);
+    void ParkSocket(http_Socket *socket, bool hard);
 
     bool AddEpollDescriptor(int fd, uint32_t events, void *ptr);
     void DeleteEpollDescriptor(int fd);
@@ -387,9 +389,6 @@ void http_Dispatcher::Run()
                     continue;
                 }
 
-                // Try to read without waiting for more performance
-                socket->process = true;
-
                 sockets.Append(socket);
             }
         }
@@ -417,9 +416,18 @@ void http_Dispatcher::Run()
                     client->incoming.buf.len += bytes;
                     client->incoming.buf.ptr[client->incoming.buf.len] = 0;
 
-                    status = client->ParseRequest();
+                    if (socket->linger) {
+                        if (client->incoming.buf.len > socket->linger) {
+                            ParkSocket(socket, true);
+                            keep--;
+
+                            continue;
+                        }
+                    } else {
+                        status = client->ParseRequest();
+                    }
                 } else if (!bytes || (errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR)) {
-                    if (client->IsBusy()) {
+                    if (!socket->linger && client->IsBusy()) {
                         if (bytes) {
                             LogError("Connection failed: %1", strerror(errno));
                         } else {
@@ -427,7 +435,10 @@ void http_Dispatcher::Run()
                         }
                     }
 
-                    status = http_RequestStatus::Close;
+                    ParkSocket(socket, bytes < 0);
+                    keep--;
+
+                    continue;
                 }
             }
 
@@ -444,18 +455,17 @@ void http_Dispatcher::Run()
                             daemon->RunHandler(client);
 
                             if (!client->Rearm(GetMonotonicClock())) {
-                                status = http_RequestStatus::Busy;
-                                shutdown(socket->sock, SHUT_RD);
-
+                                status = http_RequestStatus::Shutdown;
                                 break;
                             }
 
                             status = client->ParseRequest();
                         } while (status == http_RequestStatus::Ready);
 
-                        if (status == http_RequestStatus::Close) {
-                            client->incoming.buf.len = 0;
-                            shutdown(socket->sock, SHUT_RD);
+                        if (status == http_RequestStatus::Shutdown) {
+                            client->SetTimeout(GetMonotonicClock() + daemon->linger_timeout);
+                            socket->linger = Mebibytes(1);
+                            shutdown(socket->sock, SHUT_WR);
                         }
                         AddEpollDescriptor(socket->sock, EPOLLIN, socket);
 
@@ -463,11 +473,10 @@ void http_Dispatcher::Run()
                     });
                 } break;
 
-                case http_RequestStatus::Close: {
-                    ParkSocket(socket);
-                    keep--;
-
-                    continue;
+                case http_RequestStatus::Shutdown: {
+                    client->SetTimeout(GetMonotonicClock() + daemon->linger_timeout);
+                    socket->linger = Mebibytes(1);
+                    shutdown(socket->sock, SHUT_WR);
                 } break;
             }
 
@@ -475,6 +484,8 @@ void http_Dispatcher::Run()
 
             if (delay <= 0) {
                 shutdown(socket->sock, SHUT_RDWR);
+                socket->linger = Mebibytes(1); // Possible race with worker (write of same value), harmless
+
                 continue;
             }
 
@@ -527,13 +538,20 @@ http_Socket *http_Dispatcher::InitSocket(int sock, int64_t start, struct sockadd
         return nullptr;
 
     socket->sock = sock;
-    err_guard.Disable();
+    socket->process = true;
+    socket->linger = 0;
 
+    err_guard.Disable();
     return socket;
 }
 
-void http_Dispatcher::ParkSocket(http_Socket *socket)
+void http_Dispatcher::ParkSocket(http_Socket *socket, bool hard)
 {
+    if (hard) {
+        struct linger sl = { 1, 0 };
+        setsockopt(socket->sock, SOL_SOCKET, SO_LINGER, &sl, sizeof(sl));
+    }
+
     if (free_sockets.Available()) {
         close(socket->sock);
         socket->sock = -1;
