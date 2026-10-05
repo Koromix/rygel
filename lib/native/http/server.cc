@@ -1116,7 +1116,7 @@ http_RequestStatus http_IO::ParseRequest()
             return http_RequestStatus::Shutdown;
         }
         if (url.len > daemon->max_url_len) {
-            SendAbort(400, "Request URL is too long");
+            SendAbort(414, "Request URL is too long");
             return http_RequestStatus::Shutdown;
         }
         if (TestStr(protocol, "HTTP/1.0")) {
@@ -1136,7 +1136,7 @@ http_RequestStatus http_IO::ParseRequest()
         } else if (OptionToEnum(http_RequestMethodNames, method, &request.method)) {
             request.head = false;
         } else {
-            SendAbort(405, "Unsupported HTTP method");
+            SendAbort(501, "Unsupported HTTP method");
             return http_RequestStatus::Shutdown;
         }
         request.client_addr = addr;
