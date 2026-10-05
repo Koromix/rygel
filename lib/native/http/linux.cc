@@ -96,9 +96,11 @@ void http_Daemon::StartRead(http_Socket *)
     // Nothing to do
 }
 
-void http_Daemon::StartWrite(http_Socket *)
+void http_Daemon::StartWrite(http_Socket *socket, bool blocking)
 {
-    // Nothing to do
+    if (!blocking) {
+        SetSocketNonBlock(socket->sock, true);
+    }
 }
 
 void http_Daemon::EndWrite(http_Socket *socket)

@@ -99,9 +99,9 @@ void http_Daemon::StartRead(http_Socket *socket)
     SetSocketNonBlock(socket->sock, false);
 }
 
-void http_Daemon::StartWrite(http_Socket *socket)
+void http_Daemon::StartWrite(http_Socket *socket, bool blocking)
 {
-    SetSocketNonBlock(socket->sock, false);
+    SetSocketNonBlock(socket->sock, !blocking);
 
     // Setting TCP_NODELAY just after accept() can fail, when the socket is still in CONNECTING state.
     // Now it is safe!

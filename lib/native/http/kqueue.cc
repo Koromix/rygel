@@ -112,13 +112,15 @@ void http_Daemon::StartRead(http_Socket *socket)
 #endif
 }
 
-void http_Daemon::StartWrite(http_Socket *socket)
+void http_Daemon::StartWrite(http_Socket *socket, bool blocking)
 {
-    (void)socket;
-
+    if (blocking) {
 #if !defined(MSG_DONTWAIT)
-    SetSocketNonBlock(socket->sock, false);
+        SetSocketNonBlock(socket->sock, false);
 #endif
+    } else {
+        SetSocketNonBlock(socket->sock, true);
+    }
 #if !defined(MSG_MORE)
     SetSocketRetain(socket->sock, true);
 #endif

@@ -904,33 +904,31 @@ bool http_IO::Init(http_Socket *socket, int64_t start, struct sockaddr *sa)
 {
     this->socket = socket;
 
-    if (daemon->addr_mode == http_AddressMode::Socket) {
-        switch (sa->sa_family) {
-            case AF_INET: {
-                uint8_t *bytes = (uint8_t *)&((sockaddr_in *)sa)->sin_addr;
-                Fmt(addr, "%1.%2.%3.%4", bytes[0], bytes[1], bytes[2], bytes[3]);
-            } break;
+    switch (sa->sa_family) {
+        case AF_INET: {
+            uint8_t *bytes = (uint8_t *)&((sockaddr_in *)sa)->sin_addr;
+            Fmt(addr, "%1.%2.%3.%4", bytes[0], bytes[1], bytes[2], bytes[3]);
+        } break;
 
-            case AF_INET6: {
+        case AF_INET6: {
 #if !defined(_WIN32)
-                K_ASSERT(K_SIZE(addr) >= INET6_ADDRSTRLEN + 2);
+            K_ASSERT(K_SIZE(addr) >= INET6_ADDRSTRLEN + 2);
 #endif
 
-                auto *ptr = &((sockaddr_in6 *)sa)->sin6_addr;
+            auto *ptr = &((sockaddr_in6 *)sa)->sin6_addr;
 
-                if (IN6_IS_ADDR_V4MAPPED(ptr)) {
-                    uint8_t *bytes = (uint8_t *)ptr + 12;
-                    Fmt(addr, "%1.%2.%3.%4", bytes[0], bytes[1], bytes[2], bytes[3]);
-                } else {
-                    const char *ret = inet_ntop(AF_INET6, ptr, addr, K_SIZE(addr));
-                    K_ASSERT(ret);
-                }
-            } break;
+            if (IN6_IS_ADDR_V4MAPPED(ptr)) {
+                uint8_t *bytes = (uint8_t *)ptr + 12;
+                Fmt(addr, "%1.%2.%3.%4", bytes[0], bytes[1], bytes[2], bytes[3]);
+            } else {
+                const char *ret = inet_ntop(AF_INET6, ptr, addr, K_SIZE(addr));
+                K_ASSERT(ret);
+            }
+        } break;
 
-            case AF_UNIX: { CopyString("unix", addr); } break;
+        case AF_UNIX: { CopyString("unix", addr); } break;
 
-            default: { K_UNREACHABLE(); } break;
-        }
+        default: { K_UNREACHABLE(); } break;
     }
 
     socket_start = start;
@@ -1086,8 +1084,7 @@ http_RequestStatus http_IO::ParseRequest()
 
         if (!end) {
             if (incoming.pos >= daemon->max_request_size) [[unlikely]] {
-                LogError("Excessive request size");
-                SendError(431);
+                SendAbort(431, "Excessive request size");
                 return http_RequestStatus::Shutdown;
             }
 
@@ -1099,8 +1096,7 @@ http_RequestStatus http_IO::ParseRequest()
         incoming.pos = end - incoming.buf.ptr + 4;
 
         if (incoming.pos >= daemon->max_request_size) [[unlikely]] {
-            LogError("Excessive request size");
-            SendError(431);
+            SendAbort(431, "Excessive request size");
             return http_RequestStatus::Shutdown;
         }
     }
@@ -1114,23 +1110,19 @@ http_RequestStatus http_IO::ParseRequest()
         Span<char> protocol = SplitStr(line, ' ', &line);
 
         if (line.len) {
-            LogError("Unexpected data after request line");
-            SendError(400);
+            SendAbort(400, "Unexpected data after request line");
             return http_RequestStatus::Shutdown;
         }
         if (!method.len) {
-            LogError("Empty HTTP method");
-            SendError(400);
+            SendAbort(400, "Empty HTTP method");
             return http_RequestStatus::Shutdown;
         }
         if (!StartsWith(url, "/")) {
-            LogError("Request URL does not start with '/'");
-            SendError(400);
+            SendAbort(400, "Request URL does not start with '/'");
             return http_RequestStatus::Shutdown;
         }
         if (url.len > daemon->max_url_len) {
-            LogError("Request URL is too long");
-            SendError(400);
+            SendAbort(400, "Request URL is too long");
             return http_RequestStatus::Shutdown;
         }
         if (TestStr(protocol, "HTTP/1.0")) {
@@ -1140,8 +1132,7 @@ http_RequestStatus http_IO::ParseRequest()
             request.version = 11;
             keepalive = true;
         } else {
-            LogError("Invalid HTTP version");
-            SendError(400);
+            SendAbort(400, "Invalid HTTP version");
             return http_RequestStatus::Shutdown;
         }
 
@@ -1151,8 +1142,7 @@ http_RequestStatus http_IO::ParseRequest()
         } else if (OptionToEnum(http_RequestMethodNames, method, &request.method)) {
             request.head = false;
         } else {
-            LogError("Unsupported HTTP method '%1'", method);
-            SendError(405);
+            SendAbort(405, "Unsupported HTTP method");
             return http_RequestStatus::Shutdown;
         }
         request.client_addr = addr;
@@ -1162,20 +1152,19 @@ http_RequestStatus http_IO::ParseRequest()
 
         path.len = DecodePath(path);
         if (path.len < 0) {
-            SendError(400);
+            SendAbort(400, "Unsafe URL path");
             return http_RequestStatus::Shutdown;
         }
         path.ptr[path.len] = 0;
         request.path = path.ptr;
 
         if (PathContainsDotDot(request.path)) {
-            LogError("Unsafe URL containing '..' components");
-            SendError(403);
+            SendAbort(403, "Unsafe URL containing '..' components");
             return http_RequestStatus::Shutdown;
         }
 
         if (!DecodeQuery(query, &request.values)) {
-            SendError(400);
+            SendAbort(400, "Unsafe URL query string");
             return http_RequestStatus::Shutdown;
         }
     }
@@ -1188,18 +1177,15 @@ http_RequestStatus http_IO::ParseRequest()
         Span<char> value = TrimStr(line);
 
         if (line.ptr == key.end()) [[unlikely]] {
-            LogError("Missing colon in header line");
-            SendError(400);
+            SendAbort(400, "Missing colon in header line");
             return http_RequestStatus::Shutdown;
         }
         if (!key.len || !IsFieldKeyValid(key)) [[unlikely]] {
-            LogError("Malformed header key");
-            SendError(400);
+            SendAbort(400, "Malformed header key");
             return http_RequestStatus::Shutdown;
         }
         if (!IsFieldValueValid(value)) {
-            LogError("Malformed header value");
-            SendError(400);
+            SendAbort(400, "Malformed header value");
             return http_RequestStatus::Shutdown;
         }
 
@@ -1216,8 +1202,7 @@ http_RequestStatus http_IO::ParseRequest()
             value.ptr[value.len] = 0;
 
             if (request.headers.len >= daemon->max_request_headers) [[unlikely]] {
-                LogError("Too many headers, server limit is %1", daemon->max_request_headers);
-                SendError(431);
+                SendAbort(431, "Too many headers");
                 return http_RequestStatus::Shutdown;
             }
 
@@ -1227,8 +1212,7 @@ http_RequestStatus http_IO::ParseRequest()
         // Handle special headers
         if (key == "Host") {
             if (host.len && !TestStr(host, value)) [[unlikely]] {
-                LogError("Refusing mismatched Host values");
-                SendError(400);
+                SendAbort(400, "Refusing mismatched Host values");
                 return http_RequestStatus::Shutdown;
             }
 
@@ -1241,13 +1225,11 @@ http_RequestStatus http_IO::ParseRequest()
                 Span<char> value = TrimStr(SplitStr(remain, ';', &remain));
 
                 if (!IsFieldKeyValid(name)) [[unlikely]] {
-                    LogError("Malformed cookie name");
-                    SendError(400);
+                    SendAbort(400, "Malformed cookie name");
                     return http_RequestStatus::Shutdown;
                 }
                 if (!IsFieldValueValid(value)) [[unlikely]] {
-                    LogError("Malformed cookie value");
-                    SendError(400);
+                    SendAbort(400, "Malformed cookie value");
                     return http_RequestStatus::Shutdown;
                 }
 
@@ -1255,8 +1237,7 @@ http_RequestStatus http_IO::ParseRequest()
                 value.ptr[value.len] = 0;
 
                 if (request.cookies.len >= daemon->max_request_cookies) [[unlikely]] {
-                    LogError("Too many cookies, server limit is %1", daemon->max_request_cookies);
-                    SendError(431);
+                    SendAbort(431, "Too many cookies");
                     return http_RequestStatus::Shutdown;
                 }
 
@@ -1266,24 +1247,17 @@ http_RequestStatus http_IO::ParseRequest()
             keepalive = !TestStrI(value, "close");
         } else if (key == "Content-Length") {
             int64_t len;
-            if (!ParseInt(value, &len)) [[unlikely]] {
-                SendError(400);
+            if (!ParseInt(value, &len, K_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log) || len < 0) [[unlikely]] {
+                SendAbort(400, "Invalid Content-Length value");
                 return http_RequestStatus::Shutdown;
             }
 
-            if (len < 0) [[unlikely]] {
-                LogError("Negative Content-Length is not valid");
-                SendError(400);
-                return http_RequestStatus::Shutdown;
-            }
             if (len && request.method == http_RequestMethod::Get) [[unlikely]] {
-                LogError("Refusing to process GET request with body");
-                SendError(400);
+                SendAbort(400, "Refusing to process GET request with body");
                 return http_RequestStatus::Shutdown;
             }
             if (explicit_len && len != body_len) [[unlikely]] {
-                LogError("Refusing mismatched Content-Length values");
-                SendError(400);
+                SendAbort(400, "Refusing mismatched Content-Length values");
                 return http_RequestStatus::Shutdown;
             }
 
@@ -1293,13 +1267,11 @@ http_RequestStatus http_IO::ParseRequest()
             Span<const char> trimmed = TrimStr(SplitStrReverse(value, ','));
 
             if (!trimmed.len) [[unlikely]] {
-                LogError("Empty client address in X-Forwarded-For header");
-                SendError(400);
+                SendAbort(400, "Empty client address in X-Forwarded-For header");
                 return http_RequestStatus::Shutdown;
             }
             if (!CopyString(trimmed, addr)) [[unlikely]] {
-                LogError("Excessively long client address in X-Forwarded-For header");
-                SendError(400);
+                SendAbort(400, "Excessively long client address in X-Forwarded-For header");
                 return http_RequestStatus::Shutdown;
             }
 
@@ -1308,32 +1280,30 @@ http_RequestStatus http_IO::ParseRequest()
             Span<const char> trimmed = TrimStr(value);
 
             if (!trimmed.len) [[unlikely]] {
-                LogError("Empty client address in X-Real-Ip header");
-                SendError(400);
+                SendAbort(400, "Empty client address in X-Real-Ip header");
                 return http_RequestStatus::Shutdown;
             }
             if (!CopyString(trimmed, addr)) [[unlikely]] {
-                LogError("Excessively long client address in X-Real-Ip header");
-                SendError(400);
+                SendAbort(400, "Excessively long client address in X-Real-Ip header");
                 return http_RequestStatus::Shutdown;
             }
 
             known_addr = true;
-        } else if (key == "Transfer-Encoding") {
-            LogError("Requests with Transfer-Encoding are not supported");
-            SendError(501);
+        } else if (key == "Transfer-Encoding") [[unlikely]] {
+            SendAbort(501, "Requests with Transfer-Encoding are not supported");
             return http_RequestStatus::Shutdown;
         }
     }
 
     if (request.version >= 11 && !host.len) [[unlikely]] {
-        LogError("Missing Host header in HTTP/1.1 request");
-        SendError(400);
+        SendAbort(400, "Missing Host header in HTTP/1.1 request");
         return http_RequestStatus::Shutdown;
     }
     if (!known_addr) [[unlikely]] {
-        LogError("Missing expected %1 address header", http_AddressModeNames[(int)daemon->addr_mode]);
-        SendError(400);
+        char buf[128];
+        Fmt(buf, "Missing expected address header '%1'", http_AddressModeNames[(int)daemon->addr_mode]);
+
+        SendAbort(400, buf);
         return http_RequestStatus::Shutdown;
     }
 
@@ -1351,6 +1321,50 @@ http_RequestStatus http_IO::ParseRequest()
     return http_RequestStatus::Ready;
 }
 
+void http_IO::SendAbort(int status, const char *msg)
+{
+    // This should only ever be called by ParseRequest!
+    // It may be called by a dispatcher thread, so it must not block. The easy way to do this
+    // is to keep the socket in non-blocking mode.
+    // If the buffer is full (unlikely because that's pretty much the first thing we write to it),
+    // it just does not get sent. Since this is only called for request parse errors, it's okay!.
+    // Side note: the peer address gets used in the log instead of client_addr which is
+    // not trusted at this stage.
+
+    K_ASSERT(!request.keepalive);
+
+#if defined(K_DEBUG)
+    // We want to keep the debug-only source code context
+    {
+        PushLogFilter([&](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
+            char ctx_buf[512];
+            Fmt(ctx_buf, "%1%2: ", ctx ? ctx : "", addr);
+
+            func(level, ctx_buf, msg);
+        });
+        K_DEFER { PopLogFilter(); };
+
+        LogError("%1", msg);
+    }
+#else
+    Log(LogLevel::Error, addr, "%1", msg);
+#endif
+
+    incoming.buf.len = 0;
+    incoming.pos = 0;
+
+    daemon->StartWrite(socket, false);
+    K_DEFER { daemon->EndWrite(socket); };
+
+    Span<const char> body = msg;
+    Span<const char> intro = PrepareResponse(status, CompressionType::None, body.len, false);
+
+    if (!WriteDirect(intro.As<const uint8_t>()))
+        return;
+    if (!request.head && !WriteDirect(body.As<const uint8_t>()))
+        return;
+}
+
 bool http_IO::StartResponse()
 {
     K_ASSERT(socket);
@@ -1363,7 +1377,7 @@ bool http_IO::StartResponse()
         return false;
     }
 
-    daemon->StartWrite(socket);
+    daemon->StartWrite(socket, true);
 
     // Unfortunately, we need to discard the whole body before we can respond, even if it
     // was not used / we don't care about it. But do it within limits, and ignore otherwise.

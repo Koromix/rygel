@@ -105,7 +105,7 @@ private:
     static void DestroyDispatcher(http_Dispatcher *dispatcher);
 
     void StartRead(http_Socket *socket);
-    void StartWrite(http_Socket *socket);
+    void StartWrite(http_Socket *socket, bool blocking);
     void EndWrite(http_Socket *socket);
 
     Size ReadSocket(http_Socket *socket, Span<uint8_t> buf);
@@ -283,6 +283,7 @@ private:
     bool Init(http_Socket *socket, int64_t start, struct sockaddr *sa);
 
     http_RequestStatus ParseRequest();
+    void SendAbort(int status, const char *msg);
 
     bool StartResponse();
     Span<const char> PrepareResponse(int status, CompressionType encoding, int64_t len, bool chunked);
