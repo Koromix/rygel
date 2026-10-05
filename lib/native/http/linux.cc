@@ -483,7 +483,7 @@ void http_Dispatcher::Run()
         sockets.len = keep;
 
         events.RemoveFrom(0);
-        events.AppendDefault(2 + sockets.len);
+        events.AppendDefault(1 + sockets.len);
 
         // The timeout is unsigned to make it easier to use with std::min() without dealing
         // with the default value -1. If it stays at UINT_MAX, the (int) cast results in -1.
