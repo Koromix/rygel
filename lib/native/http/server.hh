@@ -120,6 +120,7 @@ private:
 
 enum class http_RequestMethod {
     Get,
+    Query,
     Post,
     Put,
     Patch,
@@ -128,6 +129,7 @@ enum class http_RequestMethod {
 };
 static const char *const http_RequestMethodNames[] = {
     "GET",
+    "QUERY",
     "POST",
     "PUT",
     "PATCH",
