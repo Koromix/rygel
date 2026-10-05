@@ -7634,8 +7634,6 @@ public:
     AsyncPool(int threads, int refcount, bool background);
     ~AsyncPool();
 
-    int GetWorkerCount() const { return (int)workers.len; }
-
     void RegisterAsync();
     void UnregisterAsync();
 
@@ -7716,11 +7714,6 @@ bool Async::Sync()
 bool Async::Wait(int timeout)
 {
     return pool->WaitOn(this, timeout);
-}
-
-int Async::GetWorkerCount()
-{
-    return pool->GetWorkerCount();
 }
 
 bool Async::IsTaskRunning()
@@ -8164,11 +8157,6 @@ bool Async::IsTaskRunning()
 int Async::GetWorkerIdx()
 {
     return 0;
-}
-
-int Async::GetWorkerCount()
-{
-    return 1;
 }
 
 #endif
