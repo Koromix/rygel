@@ -1583,6 +1583,7 @@ bool http_IO::Rearm(int64_t now)
     incoming.read = 0;
     incoming.reading = false;
 
+    request.version = 10;
     request.keepalive = false;
     request.values.RemoveFrom(0);
     request.headers.RemoveFrom(0);
