@@ -611,12 +611,6 @@ bool http_IO::OpenForRead(int64_t max_len, StreamReader *out_st)
     K_ASSERT(socket);
     K_ASSERT(!incoming.reading);
 
-    // Safety checks
-    if (request.GetHeaderValue("Content-Encoding")) {
-        LogError("Refusing request body with Content-Encoding header");
-        SendError(400);
-        return false;
-    }
     if (max_len >= 0 && request.body_len > max_len) {
         LogError("HTTP body is too big (max = %1)", FmtDiskSize(max_len));
         SendError(413);
@@ -1291,6 +1285,9 @@ http_RequestStatus http_IO::ParseRequest()
             known_addr = true;
         } else if (key == "Transfer-Encoding") [[unlikely]] {
             SendAbort(501, "Requests with Transfer-Encoding are not supported");
+            return http_RequestStatus::Shutdown;
+        } else if (key == "Content-Encoding") [[unlikely]] {
+            SendAbort(415, "Requests with Content-Encoding are not supported");
             return http_RequestStatus::Shutdown;
         }
     }
