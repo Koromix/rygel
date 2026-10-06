@@ -6311,7 +6311,7 @@ void InitApp()
     SetSignalHandler(SIGINT, DefaultSignalHandler);
     SetSignalHandler(SIGTERM, DefaultSignalHandler);
     SetSignalHandler(SIGHUP, DefaultSignalHandler);
-    SetSignalHandler(SIGPIPE, [](int) {});
+    SetSignalHandler(SIGPIPE, SIG_IGN);
 
     InitInterruptPipe();
 
