@@ -273,8 +273,7 @@ void http_IO::SendFile(int status, int fd, int64_t len)
         return;
 
 #if !defined(MSG_MORE)
-    SetSocketRetain(socket->sock, true);
-    K_DEFER { SetSocketRetain(socket->sock, false); };
+    K_DEFER { daemon->EndWrite(socket); };
 #endif
 
     // In theory we can use the hdtr argument of sendfile, but the documentation is confusing.
