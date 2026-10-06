@@ -288,7 +288,7 @@ void http_IO::SendFile(int status, int fd, int64_t len)
         }
     }
 
-    if (request.head)
+    if (request.head || !len)
         return;
 
 #if defined(__FreeBSD__) || defined(__APPLE__)

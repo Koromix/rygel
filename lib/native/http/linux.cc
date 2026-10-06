@@ -247,9 +247,8 @@ void http_IO::SendFile(int status, int fd, int64_t len)
     if (request.head || !len) {
         // sendfile() will uncork implicitly, so this is needed only in some cases
         SetSocketRetain(socket->sock, false);
-    }
-    if (request.head)
         return;
+    }
 
     off_t offset = 0;
     int64_t remain = len;
