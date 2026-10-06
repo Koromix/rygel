@@ -3539,6 +3539,10 @@ public:
 
     ~LockFreePool()
     {
+        for (Slot &slot: slots) {
+            slot.~Slot();
+        }
+
         ReleaseAligned(slots.ptr);
     }
 
