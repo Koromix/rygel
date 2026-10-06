@@ -143,9 +143,12 @@ bool http_Daemon::WriteSocket(http_Socket *socket, Span<const uint8_t> buf, bool
 
         if (bytes < 0) {
             int error = GetLastError();
+
             if (error != WSAENOTCONN && error != WSAECONNRESET) {
                 LogError("Failed to send to client: %1", GetWin32ErrorString(error));
             }
+
+            socket->client.request.keepalive = false;
             return false;
         }
 
@@ -169,6 +172,8 @@ bool http_Daemon::WriteSocket(http_Socket *socket, Span<Span<const uint8_t>> par
 
             if (part.len > (Size)INT_MAX) [[unlikely]] {
                 LogError("Cannot proceed with excessive scattered chunk size");
+
+                socket->client.request.keepalive = false;
                 return false;
             }
 
@@ -181,9 +186,12 @@ bool http_Daemon::WriteSocket(http_Socket *socket, Span<Span<const uint8_t>> par
 
         if (ret) {
             int error = GetLastError();
+
             if (error != WSAENOTCONN && error != WSAECONNRESET) {
                 LogError("Failed to send to client: %1", GetWin32ErrorString(error));
             }
+
+            socket->client.request.keepalive = false;
             return false;
         }
 
