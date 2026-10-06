@@ -5166,9 +5166,8 @@ class Async {
 #if !defined(__wasi__)
     class AsyncPool *pool;
 
+    bool background = false;
     bool selfish = false;
-    int dispatch_min;
-    int dispatch_mod;
 
     // Rarely written to so avoid separate cache line
     std::atomic_bool success { true };
@@ -5181,7 +5180,7 @@ class Async {
 
 public:
     Async();
-    Async(int threads, unsigned int flags = 0);
+    Async(int threads, unsigned int flags = 0, const char *name = nullptr);
     Async(Async *parent, unsigned int flags = 0);
     ~Async();
 
@@ -5200,6 +5199,9 @@ private:
 
     friend class AsyncPool;
 };
+
+// Might do nothing on some platforms
+void SetThreadName(const char *name);
 
 // ------------------------------------------------------------------------
 // Streams

@@ -313,6 +313,8 @@ void http_Dispatcher::Run()
 {
     K_ASSERT(pair_fd[0] >= 0);
 
+    SetThreadName("HTTP dispatcher");
+
     Async async(daemon->async);
 
     // Delete remaining clients when function exits

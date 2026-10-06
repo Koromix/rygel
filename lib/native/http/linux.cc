@@ -307,6 +307,8 @@ void http_Dispatcher::Run()
 {
     K_ASSERT(epoll_fd >= 0);
 
+    SetThreadName("HTTP dispatcher");
+
     Async async(daemon->async);
 
     // Delete remaining clients when function exits

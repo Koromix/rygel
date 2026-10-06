@@ -7624,18 +7624,19 @@ class AsyncPool {
     int refcount = 0;
     int async_count = 0;
 
+    char thread_name[16] = {};
     Span<WorkerData> workers;
-    int dispatch_min;
-    int dispatch_mod;
 
     alignas(64) std::atomic_int pending_tasks { 0 };
 
 public:
-    AsyncPool(int threads, int refcount, bool background);
+    AsyncPool(int threads, int refcount, const char *name);
     ~AsyncPool();
 
-    void RegisterAsync(Async *async);
+    void RegisterAsync();
     void UnregisterAsync();
+
+    int GetWorkerCount() const { return workers.len; }
 
     void AddTask(Async *async, int worker_idx, std::function<bool()> &&func);
 
@@ -7662,14 +7663,14 @@ Async::Async()
     if (async_running_pool) {
         Init(async_running_pool, 0);
     } else {
-        static AsyncPool *default_pool = new AsyncPool(GetCoreCount(), 1, false);
+        static AsyncPool *default_pool = new AsyncPool(GetCoreCount(), 1, nullptr);
         Init(default_pool, 0);
     }
 }
 
-Async::Async(int threads, unsigned int flags)
+Async::Async(int threads, unsigned int flags, const char *name)
 {
-    AsyncPool *pool = new AsyncPool(threads, 0, flags & (int)AsyncFlag::Background);
+    AsyncPool *pool = new AsyncPool(threads, 0, name);
     Init(pool, flags);
 }
 
@@ -7693,7 +7694,9 @@ void Async::Run(std::function<bool()> &&func)
         pool->AddTask(this, async_running_worker_idx, std::move(func));
     } else {
         unsigned int next = next_worker.fetch_add(1, std::memory_order_relaxed);
-        int worker = dispatch_min + (int)(next % (unsigned int)dispatch_mod);
+
+        int mod = pool->GetWorkerCount() - background;
+        int worker = background + (int)(next % (unsigned int)mod);
 
         pool->AddTask(this, worker, std::move(func));
     }
@@ -7727,15 +7730,15 @@ int Async::GetWorkerIndex()
 
 void Async::Init(AsyncPool *pool, unsigned int flags)
 {
-    pool->RegisterAsync(this);
-    selfish = (flags & (int)AsyncFlag::Selfish);
+    this->pool = pool;
+    pool->RegisterAsync();
+
+    background = flags & (int)AsyncFlag::Background;
+    selfish = flags & (int)AsyncFlag::Selfish;
 }
 
-AsyncPool::AsyncPool(int threads, int refcount, bool background)
+AsyncPool::AsyncPool(int threads, int refcount, const char *name)
 {
-    K_ASSERT(threads > 0);
-    K_ASSERT(threads > 1 || !background);
-
     if (threads > K_ASYNC_MAX_THREADS) {
         LogError("Async cannot use more than %1 threads", K_ASYNC_MAX_THREADS);
         threads = K_ASYNC_MAX_THREADS;
@@ -7751,10 +7754,8 @@ AsyncPool::AsyncPool(int threads, int refcount, bool background)
         }
     }
 
-    dispatch_min = background ? 1 : 0;
-    dispatch_mod = threads - dispatch_min;
-
     this->refcount = refcount;
+    CopyString(name ? name : "", thread_name);
 }
 
 AsyncPool::~AsyncPool()
@@ -7794,13 +7795,9 @@ static void *RunWorkerPthread(void *udata)
 
 #endif
 
-void AsyncPool::RegisterAsync(Async *async)
+void AsyncPool::RegisterAsync()
 {
     std::lock_guard<std::mutex> lock(mutex);
-
-    async->pool = this;
-    async->dispatch_min = dispatch_min;
-    async->dispatch_mod = dispatch_mod;
 
     if (!async_count++) {
         for (int i = 1; i < workers.len; i++) {
@@ -7908,6 +7905,10 @@ void AsyncPool::RunWorker(int worker_idx)
 {
     async_running_pool = this;
     async_running_worker_idx = worker_idx;
+
+    if (thread_name[0]) {
+        SetThreadName(thread_name);
+    }
 
     std::unique_lock<std::mutex> lock(mutex);
 
@@ -8165,6 +8166,39 @@ bool Async::IsTaskRunning()
 int Async::GetWorkerIndex()
 {
     return 0;
+}
+
+#endif
+
+#if defined(_WIN32)
+
+void SetThreadName(const char *name)
+{
+    static HRESULT (__stdcall *SetThreadDescription)(HANDLE hThread, PCWSTR lpThreadDescription) = []() {
+        HMODULE h = GetModuleHandleA("kernel32.dll");
+        return (decltype(SetThreadDescription))GetProcAddress(h, "GetThreadDescription");
+    }();
+    if (!SetThreadDescription)
+        return;
+
+    wchar_t name_w[64];
+    if (!ConvertUtf8ToWin32Wide(name, name_w))
+        return;
+
+    SetThreadDescription(GetCurrentThread(), name_w);
+}
+
+#else
+
+void SetThreadName(const char *name)
+{
+#if defined(__APPLE__)
+    pthread_setname_np(name);
+#elif defined(__linux__)
+    pthread_setname_np(pthread_self(), name);
+#elif !defined(__wasi__)
+    pthread_set_name_np(pthread_self(), name);
+#endif
 }
 
 #endif
