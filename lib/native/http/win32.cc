@@ -27,6 +27,7 @@ struct http_Socket {
     bool process = false;
     bool poll = false;
     Size linger = 0;
+    bool nodelay = false;
 
     http_IO client;
 
@@ -103,10 +104,14 @@ void http_Daemon::StartWrite(http_Socket *socket, bool blocking)
 {
     SetSocketNonBlock(socket->sock, !blocking);
 
-    // Setting TCP_NODELAY just after accept() can fail, when the socket is still in CONNECTING state.
-    // Now it is safe!
-    int one = 1;
-    setsockopt(socket->sock, IPPROTO_TCP, TCP_NODELAY, (char *)&one, sizeof(one));
+    if (!socket->nodelay) {
+        // Setting TCP_NODELAY just after accept() can fail, when the socket is still in CONNECTING state.
+        // Now it is safe!
+        int one = 1;
+        setsockopt(socket->sock, IPPROTO_TCP, TCP_NODELAY, (char *)&one, sizeof(one));
+
+        socket->nodelay = true;
+    }
 }
 
 void http_Daemon::EndWrite(http_Socket *)
@@ -588,6 +593,7 @@ http_Socket *http_Dispatcher::InitSocket(SOCKET sock, int64_t start, struct sock
     socket->process = true;
     socket->poll = true;
     socket->linger = 0;
+    socket->nodelay = false;
 
     err_guard.Disable();
     return socket;
