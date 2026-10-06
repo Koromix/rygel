@@ -297,7 +297,7 @@ bool http_Dispatcher::Init()
         return false;
     }
 
-    if (!AddEpollDescriptor(listener, EPOLLIN | EPOLLEXCLUSIVE, nullptr))
+    if (!AddEpollDescriptor(listener, EPOLLIN | EPOLLET | EPOLLEXCLUSIVE, nullptr))
         return false;
 
     return true;
@@ -345,10 +345,10 @@ void http_Dispatcher::Run()
     };
 
     HeapArray<struct epoll_event> events;
+    bool accepts = false;
 
     for (;;) {
         int64_t clock = GetMonotonicClock();
-        bool accepts = false;
 
         for (const struct epoll_event &ev: events) {
             if (!ev.data.ptr) {
@@ -364,15 +364,17 @@ void http_Dispatcher::Run()
 
         // Process new connections
         if (accepts) {
-            for (int i = 0; i < 8; i++) {
+            for (int i = 0; i < 32; i++) {
                 sockaddr_storage ss;
                 socklen_t ss_len = K_SIZE(ss);
 
                 int sock = accept4(listener, (sockaddr *)&ss, &ss_len, SOCK_CLOEXEC);
 
                 if (sock < 0) {
-                    if (errno == EAGAIN || errno == EWOULDBLOCK)
+                    if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                        accepts = false;
                         break;
+                    }
                     if (errno == EINVAL)
                         return;
 
@@ -395,7 +397,7 @@ void http_Dispatcher::Run()
         }
 
         Size keep = 0;
-        unsigned int timeout = UINT_MAX;
+        unsigned int timeout = accepts ? 0 : UINT_MAX;
 
         // Process clients
         for (Size i = 0; i < sockets.len; i++, keep++) {
