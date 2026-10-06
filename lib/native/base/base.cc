@@ -7279,9 +7279,11 @@ int CreateSocket(SocketType type, int flags)
     }
 
     bool overlapped = (flags & SOCK_OVERLAPPED);
-    flags &= ~SOCK_OVERLAPPED;
+    int wsa_flags = WSA_FLAG_NO_HANDLE_INHERIT | (overlapped ? WSA_FLAG_OVERLAPPED : 0);
 
-    SOCKET sock = WSASocketW(family, flags, 0, nullptr, 0, overlapped ? WSA_FLAG_OVERLAPPED : 0);
+    flags &= ~SOCK_OVERLAPPED; // Remove fake non-Win32 flag
+
+    SOCKET sock = WSASocketW(family, flags, 0, nullptr, 0, wsa_flags);
     if (sock == INVALID_SOCKET) {
         LogError("Failed to create IP socket: %1", GetWin32ErrorString());
         return -1;
