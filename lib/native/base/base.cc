@@ -7854,8 +7854,6 @@ void AsyncPool::AddTask(Async *async, int worker_idx, std::function<bool()> &&fu
     WorkerData *worker = &workers[worker_idx];
 
     async->remaining_tasks.fetch_add(1, std::memory_order_relaxed);
-
-    bool first = !pending_tasks.fetch_add(1, std::memory_order_relaxed);
     uint32_t slot = worker->alloc.Allocate();
 
     // Process pending tasks when there's too much to do
@@ -7875,6 +7873,8 @@ void AsyncPool::AddTask(Async *async, int worker_idx, std::function<bool()> &&fu
             std::this_thread::yield();
         }
     }
+
+    bool first = !pending_tasks.fetch_add(1, std::memory_order_relaxed);
 
     TaskData *task = &worker->alloc[slot];
 
