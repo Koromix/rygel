@@ -7598,18 +7598,19 @@ void CloseSocket(int fd)
 
 #if !defined(__wasi__)
 
-struct alignas(64) WorkerData {
-    AsyncPool *pool = nullptr;
-    int idx;
-
-    std::atomic<TaggedIndex> head {{ 0xFFFFFFFFu, 0 }};
-};
-
 struct TaskData {
     Async *async;
     std::function<bool()> func;
 
     std::atomic<uint32_t> next;
+};
+
+struct alignas(64) WorkerData {
+    AsyncPool *pool = nullptr;
+    int idx;
+
+    LockFreePool<TaskData> alloc { K_ASYNC_MAX_WORKER_TASKS };
+    alignas(64) std::atomic<TaggedIndex> head {{ 0xFFFFFFFFu, 0 }};
 };
 
 class AsyncPool {
@@ -7626,8 +7627,6 @@ class AsyncPool {
     Span<WorkerData> workers;
     int dispatch_min;
     int dispatch_mod;
-
-    LockFreePool<TaskData> alloc { K_ASYNC_MAX_PENDING_TASKS };
 
     alignas(64) std::atomic_int pending_tasks { 0 };
     alignas(64) std::atomic_uint next_worker { 0 };
@@ -7756,6 +7755,10 @@ AsyncPool::AsyncPool(int threads, int refcount, bool background)
 
 AsyncPool::~AsyncPool()
 {
+    for (WorkerData &worker: workers) {
+        worker.~WorkerData();
+    }
+
     ReleaseAligned(workers.ptr);
 }
 
@@ -7853,21 +7856,18 @@ void AsyncPool::AddTask(Async *async, int worker_idx, std::function<bool()> &&fu
     async->remaining_tasks.fetch_add(1, std::memory_order_relaxed);
 
     bool first = !pending_tasks.fetch_add(1, std::memory_order_relaxed);
-    uint32_t slot = alloc.Allocate();
+    uint32_t slot = worker->alloc.Allocate();
 
     // Process pending tasks when there's too much to do
     if (slot == 0xFFFFFFFFu) {
         for (;;) {
             if (async->selfish) {
-                // There might be nothing for us on our queue, which increase the risk of busy spin.
-                // Steal stuff in Selfish mode.
-
-                SweepTasks(worker_idx, async);
+                RunTasks(worker_idx, async, 4);
             } else {
                 RunTasks(worker_idx, 4);
             }
 
-            slot = alloc.Allocate();
+            slot = worker->alloc.Allocate();
 
             if (slot != 0xFFFFFFFFu) [[likely]]
                 break;
@@ -7876,7 +7876,7 @@ void AsyncPool::AddTask(Async *async, int worker_idx, std::function<bool()> &&fu
         }
     }
 
-    TaskData *task = &alloc[slot];
+    TaskData *task = &worker->alloc[slot];
 
     task->async = async;
     task->func = std::move(func);
@@ -8022,14 +8022,15 @@ bool AsyncPool::RunTasks(int worker_idx, int limit)
                 if (slot.idx == 0xFFFFFFFFu)
                     return false;
 
-                desired = { alloc[slot.idx].next.load(std::memory_order_relaxed), slot.tag + 1 };
+                desired = { worker->alloc[slot.idx].next.load(std::memory_order_relaxed), slot.tag + 1 };
             } while (!worker->head.compare_exchange_weak(slot, desired, std::memory_order_acquire, std::memory_order_acquire));
 
-            TaskData *task = &alloc[slot.idx];
+            TaskData *task = &worker->alloc[slot.idx];
 
             async = task->async;
             func = std::move(task->func);
-            alloc.Release(slot.idx);
+
+            worker->alloc.Release(slot.idx);
         }
 
         RunTask(async, func);
@@ -8057,13 +8058,13 @@ bool AsyncPool::RunTasks(int worker_idx, Async *only, int limit)
             do {
                 if (slot.idx == 0xFFFFFFFFu)
                     break;
-                desired = { alloc[slot.idx].next.load(std::memory_order_relaxed), slot.tag + 1 };
+                desired = { worker->alloc[slot.idx].next.load(std::memory_order_relaxed), slot.tag + 1 };
             } while (!worker->head.compare_exchange_weak(slot, desired, std::memory_order_acquire, std::memory_order_acquire));
 
             if (slot.idx == 0xFFFFFFFFu)
                 break;
 
-            TaskData *task = &alloc[slot.idx];
+            TaskData *task = &worker->alloc[slot.idx];
 
             if (only && task->async != only) {
                 task->next.store(skipped_head, std::memory_order_relaxed);
@@ -8078,7 +8079,8 @@ bool AsyncPool::RunTasks(int worker_idx, Async *only, int limit)
 
             async = task->async;
             func = std::move(task->func);
-            alloc.Release(slot.idx);
+
+            worker->alloc.Release(slot.idx);
 
             break;
         }
@@ -8088,7 +8090,7 @@ bool AsyncPool::RunTasks(int worker_idx, Async *only, int limit)
             TaggedIndex desired;
 
             do {
-                alloc[skipped_tail].next.store(head.idx, std::memory_order_relaxed);
+                worker->alloc[skipped_tail].next.store(head.idx, std::memory_order_relaxed);
                 desired = { skipped_head, head.tag + 1 };
             } while (!worker->head.compare_exchange_weak(head, desired, std::memory_order_release, std::memory_order_relaxed));
         }
