@@ -3515,7 +3515,8 @@ class LockFreePool {
     };
 
     Span<Slot> slots;
-    std::atomic<TaggedIndex> head {{ 0, 0 }};
+
+    alignas(64) std::atomic<TaggedIndex> head {{ 0, 0 }};
 
 public:
     LockFreePool(Size capacity)
