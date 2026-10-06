@@ -2,11 +2,14 @@
 
 cd "$(dirname $0)"
 
-../../../bootstrap.sh
-../../../felix -pUBSan rekkord
+ROOT=$(realpath "$PWD/../../..")
+PRESET=${PRESET:-UBSan}
+
+$ROOT/bootstrap.sh
+$ROOT/felix -p$PRESET rekkord
 
 mkdir -p /tmp/rekkord/ftzz_local
-install ../../../bin/UBSan/rekkord /tmp/rekkord/ftzz_local/rekkord
+install $ROOT/bin/$PRESET/rekkord /tmp/rekkord/ftzz_local/rekkord
 cd /tmp/rekkord/ftzz_local
 
 rm -f linux.tar.xz

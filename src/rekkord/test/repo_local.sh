@@ -3,12 +3,13 @@
 cd "$(dirname $0)"
 
 ROOT=$(realpath "$PWD/../../..")
+PRESET=${PRESET:-UBSan}
 
 $ROOT/bootstrap.sh
-$ROOT/felix -pUBSan rekkord
+$ROOT/felix -p$PRESET rekkord
 
 mkdir -p /tmp/rekkord/repo_local
-install $ROOT/bin/UBSan/rekkord /tmp/rekkord/repo_local/rekkord
+install $ROOT/bin/$PRESET/rekkord /tmp/rekkord/repo_local/rekkord
 cd /tmp/rekkord/repo_local
 
 echo "[Repository]

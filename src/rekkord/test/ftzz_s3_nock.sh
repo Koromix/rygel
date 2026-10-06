@@ -2,11 +2,14 @@
 
 cd "$(dirname $0)"
 
-../../../bootstrap.sh
-../../../felix -pUBSan rekkord
+ROOT=$(realpath "$PWD/../../..")
+PRESET=${PRESET:-UBSan}
+
+$ROOT/bootstrap.sh
+$ROOT/felix -p$PRESET rekkord
 
 mkdir -p /tmp/rekkord/ftzz_s3_nock
-install ../../../bin/UBSan/rekkord /tmp/rekkord/ftzz_s3_nock/rekkord
+install $ROOT/bin/$PRESET/rekkord /tmp/rekkord/ftzz_s3_nock/rekkord
 cd /tmp/rekkord/ftzz_s3_nock
 
 curl -L -o linux.tar.xz https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.17.8.tar.xz

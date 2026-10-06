@@ -3,12 +3,13 @@
 cd "$(dirname $0)"
 
 ROOT=$(realpath "$PWD/../../..")
+PRESET=${PRESET:-UBSan}
 
 $ROOT/bootstrap.sh
-$ROOT/felix -pUBSan rekkord
+$ROOT/felix -p$PRESET rekkord
 
 mkdir -p /tmp/rekkord/repo_s3
-install $ROOT/bin/UBSan/rekkord /tmp/rekkord/repo_s3/rekkord
+install $ROOT/bin/$PRESET/rekkord /tmp/rekkord/repo_s3/rekkord
 cd /tmp/rekkord/repo_s3
 
 curl -L versitygw.tgz https://github.com/versity/versitygw/releases/download/v1.8.0/versitygw_v1.8.0_Linux_x86_64.tar.gz | tar xzO versitygw_v1.8.0_Linux_x86_64/versitygw > versitygw

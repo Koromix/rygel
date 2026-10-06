@@ -2,11 +2,14 @@
 
 cd "$(dirname $0)"
 
-../../../bootstrap.sh
-../../../felix -pUBSan rekkord
+ROOT=$(realpath "$PWD/../../..")
+PRESET=${PRESET:-UBSan}
+
+$ROOT/bootstrap.sh
+$ROOT/felix -p$PRESET rekkord
 
 mkdir -p /tmp/rekkord/error_perm
-install ../../../bin/UBSan/rekkord /tmp/rekkord/error_perm/rekkord
+install $ROOT/bin/$PRESET/rekkord /tmp/rekkord/error_perm/rekkord
 cd /tmp/rekkord/error_perm
 
 echo "[Repository]
