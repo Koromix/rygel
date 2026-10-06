@@ -177,13 +177,13 @@ static_assert(sizeof(intptr_t) == sizeof(size_t), "This code base assumes that i
 #endif
 
 #if defined(__clang__)
-    #if __has_feature(address_sanitizer)
+    #if __has_feature(address_sanitizer) && !defined(__SANITIZE_ADDRESS__)
         #define __SANITIZE_ADDRESS__
     #endif
-    #if __has_feature(thread_sanitizer)
+    #if __has_feature(thread_sanitizer) && !defined(__SANITIZE_THREAD__)
         #define __SANITIZE_THREAD__
     #endif
-    #if __has_feature(undefined_sanitizer)
+    #if __has_feature(undefined_sanitizer) && !defined(__SANITIZE_UNDEFINED__)
         #define __SANITIZE_UNDEFINED__
     #endif
 #endif
