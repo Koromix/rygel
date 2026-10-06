@@ -447,7 +447,8 @@ void http_Dispatcher::Run()
                 case http_RequestStatus::Ready: {
                     DeleteEpollDescriptor(socket->sock);
 
-                    async.Run([=, this] {
+                    async.Run([socket, this] {
+                        http_IO *client = &socket->client;
                         http_RequestStatus status;
 
                         do {

@@ -493,7 +493,8 @@ void http_Dispatcher::Run()
                 case http_RequestStatus::Ready: {
                     socket->poll = false;
 
-                    async.Run([=, this] {
+                    async.Run([socket, this] {
+                        http_IO *client = &socket->client;
                         http_RequestStatus status;
 
                         do {

@@ -571,7 +571,8 @@ void http_Dispatcher::Run()
                 case http_RequestStatus::Ready: {
                     AddEventChange(EVFILT_READ, socket->sock, EV_DISABLE, socket);
 
-                    async.Run([=, this] {
+                    async.Run([socket, this] {
+                        http_IO *client = &socket->client;
                         http_RequestStatus status;
 
                         do {
