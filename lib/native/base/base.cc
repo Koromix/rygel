@@ -7775,6 +7775,14 @@ static DWORD WINAPI RunWorkerWin32(void *udata)
 
 static void *RunWorkerPthread(void *udata)
 {
+    // Cheap way to reduce SIGPIPE issues
+    {
+        sigset_t set;
+        sigemptyset(&set);
+        sigaddset(&set, SIGPIPE);
+        pthread_sigmask(SIG_BLOCK, &set, nullptr);
+    }
+
     WorkerData *worker = (WorkerData *)udata;
     worker->pool->RunWorker(worker->idx);
     return nullptr;
