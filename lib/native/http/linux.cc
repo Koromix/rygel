@@ -33,6 +33,7 @@ struct http_Socket {
     ~http_Socket() { CloseDescriptor(sock); }
 };
 
+static const int MaxDispatcherClients = 128;
 static const Size MaxSend = Mebibytes(2);
 
 class http_Dispatcher {
@@ -383,6 +384,14 @@ void http_Dispatcher::Run()
                     WaitDelay(20);
 
                     break;
+                }
+
+                if (sockets.len >= MaxDispatcherClients) [[unlikely]] {
+                    struct linger sl = { 1, 0 };
+                    setsockopt(sock, SOL_SOCKET, SO_LINGER, &sl, sizeof(sl));
+                    close(sock);
+
+                    continue;
                 }
 
                 http_Socket *socket = InitSocket(sock, clock, (sockaddr *)&ss);

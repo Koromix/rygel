@@ -35,6 +35,7 @@ struct http_Socket {
     ~http_Socket() { CloseSocket(sock); }
 };
 
+static const int MaxDispatcherClients = 128;
 static const Size MaxSend = Mebibytes(2);
 
 class http_Dispatcher {
@@ -415,6 +416,14 @@ void http_Dispatcher::Run()
                     WaitDelay(20);
 
                     break;
+                }
+
+                if (sockets.len >= MaxDispatcherClients) [[unlikely]] {
+                    struct linger sl = { 1, 0 };
+                    setsockopt(sock, SOL_SOCKET, SO_LINGER, (char *)&sl, sizeof(sl));
+                    close(sock);
+
+                    continue;
                 }
 
                 // We use POLLRDBAND to disable poll processing, make sure URG bit does not break that
