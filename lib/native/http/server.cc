@@ -208,8 +208,8 @@ bool http_Config::Validate() const
         LogError("HTTP KeepAliveTime must be >= 5 sec (or Disabled)");
         valid = false;
     }
-    if (send_timeout < 10000) {
-        LogError("HTTP SendTimeout must be >= 10 sec");
+    if (send_timeout < 5000) {
+        LogError("HTTP SendTimeout must be >= 5 sec");
         valid = false;
     }
     if (stop_timeout < 1000) {

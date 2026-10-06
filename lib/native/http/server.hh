@@ -36,7 +36,7 @@ struct http_Config {
 
     int idle_timeout = 10000;
     int keepalive_time = 20000;
-    int send_timeout = 60000;
+    int send_timeout = 5000;
     int linger_timeout = 5000;
     int stop_timeout = 10000;
 
