@@ -4018,7 +4018,7 @@ const char *GetHomeDirectory()
         if (win32_utf8) {
             len = K_SIZE(home_dir);
 
-            BOOL (*GetUserProfileDirectoryA_)(HANDLE hToken, const char *lpProfileDir, DWORD *lpcchSize);
+            BOOL (__stdcall *GetUserProfileDirectoryA_)(HANDLE hToken, const char *lpProfileDir, DWORD *lpcchSize);
             GetUserProfileDirectoryA_ = (decltype(GetUserProfileDirectoryA_))GetProcAddress(module, "GetUserProfileDirectoryA");
 
             GetUserProfileDirectoryA_(token, home_dir, &len);
@@ -4029,7 +4029,7 @@ const char *GetHomeDirectory()
             wchar_t dir_w[K_SIZE(home_dir)];
             DWORD len_w = K_LEN(dir_w);
 
-            BOOL (*GetUserProfileDirectoryW_)(HANDLE hToken, const wchar_t *lpProfileDir, DWORD *lpcchSize);
+            BOOL (__stdcall *GetUserProfileDirectoryW_)(HANDLE hToken, const wchar_t *lpProfileDir, DWORD *lpcchSize);
             GetUserProfileDirectoryW_ = (decltype(GetUserProfileDirectoryW_))GetProcAddress(module, "GetUserProfileDirectoryW");
 
             GetUserProfileDirectoryW_(token, dir_w, &len_w);
