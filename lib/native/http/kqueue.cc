@@ -121,9 +121,7 @@ void http_Daemon::StartWrite(http_Socket *socket, bool blocking)
     (void)blocking;
 #endif
 
-#if !defined(MSG_MORE)
     SetSocketRetain(socket->sock, true);
-#endif
 }
 
 void http_Daemon::EndWrite(http_Socket *socket)
@@ -157,9 +155,6 @@ bool http_Daemon::WriteSocket(http_Socket *socket, Span<const uint8_t> buf, bool
 {
     int flags = MSG_NOSIGNAL;
 
-#if defined(MSG_MORE)
-    flags |= MSG_MORE;
-#endif
 #if defined(MSG_DONTWAIT)
     flags |= nowait ? MSG_DONTWAIT : 0;
 #else
@@ -207,14 +202,9 @@ bool http_Daemon::WriteSocket(http_Socket *socket, Span<Span<const uint8_t>> par
         .msg_controllen = 0,
         .msg_flags = 0
     };
-    int flags = MSG_NOSIGNAL;
-
-#if defined(MSG_MORE)
-    flags |= MSG_MORE;
-#endif
 
     while (msg.msg_iovlen) {
-        Size sent = sendmsg(socket->sock, &msg, flags);
+        Size sent = sendmsg(socket->sock, &msg, MSG_NOSIGNAL);
 
         if (sent < 0) {
             if (errno == EINTR)
@@ -272,9 +262,7 @@ void http_IO::SendFile(int status, int fd, int64_t len)
     if (!StartResponse()) [[unlikely]]
         return;
 
-#if !defined(MSG_MORE)
     K_DEFER { daemon->EndWrite(socket); };
-#endif
 
     // In theory we can use the hdtr argument of sendfile, but the documentation is confusing.
     // Among others, it's not clear what the "sent" value means regarding the headers. Let's not risk it.
