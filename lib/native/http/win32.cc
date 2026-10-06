@@ -572,19 +572,7 @@ void http_Dispatcher::Wake(http_Socket *socket)
 
 http_Socket *http_Dispatcher::InitSocket(SOCKET sock, int64_t start, struct sockaddr *sa)
 {
-    http_Socket *socket = nullptr;
-
-    if (free_sockets.len) {
-        int idx = GetRandomInt(0, (int)free_sockets.len);
-
-        socket = free_sockets[idx];
-
-        std::swap(free_sockets[idx], free_sockets[free_sockets.len - 1]);
-        free_sockets.len--;
-    } else {
-        socket = new http_Socket(daemon);
-    }
-
+    http_Socket *socket = free_sockets.len ? free_sockets.data[--free_sockets.len] : new http_Socket(daemon);
     K_DEFER_N(err_guard) { delete socket; };
 
     if (!socket->client.Init(socket, start, sa)) [[unlikely]]
