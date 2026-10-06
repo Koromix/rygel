@@ -308,7 +308,7 @@ void http_IO::SendFile(int status, int fd, int64_t len)
 #endif
 
         if (ret < 0 && errno != EINTR) {
-            if (errno != EINVAL && errno != EPIPE && errno != ECONNRESET) {
+            if (errno != EPIPE && errno != ECONNRESET) {
                 LogError("Failed to send file: %1", strerror(errno));
             }
 
