@@ -251,9 +251,6 @@ bool http_Daemon::WriteSocket(http_Socket *socket, Span<Span<const uint8_t>> par
 
 void http_IO::SendFile(int status, int fd, int64_t len)
 {
-    if (!StartResponse()) [[unlikely]]
-        return;
-
     if (len < 0) {
         struct stat sb;
         if (fstat(fd, &sb) < 0) {
@@ -271,6 +268,9 @@ void http_IO::SendFile(int status, int fd, int64_t len)
 
         len = (int64_t)sb.st_size;
     }
+
+    if (!StartResponse()) [[unlikely]]
+        return;
 
 #if !defined(MSG_MORE)
     SetSocketRetain(socket->sock, true);

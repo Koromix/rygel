@@ -607,9 +607,6 @@ void http_Dispatcher::ParkSocket(http_Socket *socket, bool hard)
 
 void http_IO::SendFile(int status, int fd, int64_t len)
 {
-    if (!StartResponse()) [[unlikely]]
-        return;
-
     if (len < 0) {
         HANDLE h = (HANDLE)_get_osfhandle(fd);
 
@@ -630,6 +627,9 @@ void http_IO::SendFile(int status, int fd, int64_t len)
 
         len = (int64_t)(((uint64_t)attr.nFileSizeHigh << 32) | attr.nFileSizeLow);
     }
+
+    if (!StartResponse()) [[unlikely]]
+        return;
 
     // Send intro and file in one go
     Span<const char> intro = PrepareResponse(status, CompressionType::None, len, false);
