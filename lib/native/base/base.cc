@@ -7629,16 +7629,14 @@ class AsyncPool {
     int dispatch_mod;
 
     alignas(64) std::atomic_int pending_tasks { 0 };
-    alignas(64) std::atomic_uint next_worker { 0 };
 
 public:
     AsyncPool(int threads, int refcount, bool background);
     ~AsyncPool();
 
-    void RegisterAsync();
+    void RegisterAsync(Async *async);
     void UnregisterAsync();
 
-    void AddTask(Async *async, std::function<bool()> &&func);
     void AddTask(Async *async, int worker_idx, std::function<bool()> &&func);
 
     void RunWorker(int worker_idx);
@@ -7662,21 +7660,17 @@ static thread_local bool async_running_task = false;
 Async::Async()
 {
     if (async_running_pool) {
-        pool = async_running_pool;
+        Init(async_running_pool, 0);
     } else {
         static AsyncPool *default_pool = new AsyncPool(GetCoreCount(), 1, false);
-        pool = default_pool;
+        Init(default_pool, 0);
     }
-
-    pool->RegisterAsync();
 }
 
 Async::Async(int threads, unsigned int flags)
 {
-    pool = new AsyncPool(threads, 0, flags & (int)AsyncFlag::Background);
-    pool->RegisterAsync();
-
-    selfish = (flags & (int)AsyncFlag::Selfish);
+    AsyncPool *pool = new AsyncPool(threads, 0, flags & (int)AsyncFlag::Background);
+    Init(pool, flags);
 }
 
 Async::Async(Async *parent, unsigned int flags)
@@ -7684,10 +7678,7 @@ Async::Async(Async *parent, unsigned int flags)
     K_ASSERT(parent);
     K_ASSERT(!(flags & (int)AsyncFlag::Background));
 
-    pool = parent->pool;
-    pool->RegisterAsync();
-
-    selfish = (flags & (int)AsyncFlag::Selfish);
+    Init(parent->pool, flags);
 }
 
 Async::~Async()
@@ -7698,7 +7689,14 @@ Async::~Async()
 
 void Async::Run(std::function<bool()> &&func)
 {
-    pool->AddTask(this, std::move(func));
+    if (pool == async_running_pool) {
+        pool->AddTask(this, async_running_worker_idx, std::move(func));
+    } else {
+        unsigned int next = next_worker.fetch_add(1, std::memory_order_relaxed);
+        int worker = dispatch_min + (int)(next % (unsigned int)dispatch_mod);
+
+        pool->AddTask(this, worker, std::move(func));
+    }
 }
 
 void Async::Run(int worker, std::function<bool()> &&func)
@@ -7725,6 +7723,12 @@ bool Async::IsTaskRunning()
 int Async::GetWorkerIndex()
 {
     return async_running_worker_idx;
+}
+
+void Async::Init(AsyncPool *pool, unsigned int flags)
+{
+    pool->RegisterAsync(this);
+    selfish = (flags & (int)AsyncFlag::Selfish);
 }
 
 AsyncPool::AsyncPool(int threads, int refcount, bool background)
@@ -7790,9 +7794,13 @@ static void *RunWorkerPthread(void *udata)
 
 #endif
 
-void AsyncPool::RegisterAsync()
+void AsyncPool::RegisterAsync(Async *async)
 {
     std::lock_guard<std::mutex> lock(mutex);
+
+    async->pool = this;
+    async->dispatch_min = dispatch_min;
+    async->dispatch_mod = dispatch_mod;
 
     if (!async_count++) {
         for (int i = 1; i < workers.len; i++) {
@@ -7842,18 +7850,6 @@ void AsyncPool::UnregisterAsync()
     if (!--async_count && !refcount) {
         lock.unlock();
         delete this;
-    }
-}
-
-void AsyncPool::AddTask(Async *async, std::function<bool()> &&func)
-{
-    if (async_running_pool != this) {
-        unsigned int next = next_worker.fetch_add(1, std::memory_order_relaxed);
-        int worker = dispatch_min + (int)(next % (unsigned int)dispatch_mod);
-
-        AddTask(async, worker, std::move(func));
-    } else {
-        AddTask(async, async_running_worker_idx, std::move(func));
     }
 }
 

@@ -5165,10 +5165,16 @@ class Async {
 
 #if !defined(__wasi__)
     class AsyncPool *pool;
-    bool selfish = false;
 
+    bool selfish = false;
+    int dispatch_min;
+    int dispatch_mod;
+
+    // Rarely written to so avoid separate cache line
+    std::atomic_bool success { true };
+
+    alignas(64) std::atomic_int next_worker { 0 };
     alignas(64) std::atomic_int remaining_tasks { 0 };
-    alignas(64) std::atomic_bool success { true };
 #else
     bool success = true;
 #endif
@@ -5188,6 +5194,9 @@ public:
 
     static bool IsTaskRunning();
     static int GetWorkerIndex();
+
+private:
+    void Init(AsyncPool *pool, unsigned int flags);
 
     friend class AsyncPool;
 };
