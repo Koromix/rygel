@@ -5462,21 +5462,31 @@ static void DefaultSignalHandler(int signal)
 bool CreatePipe(bool blocking, int out_pfd[2])
 {
 #if defined(__APPLE__)
-    if (pipe(out_pfd) < 0) {
+    int pfd[2];
+
+    if (pipe(pfd) < 0) {
         LogError("Failed to create pipe: %1", strerror(errno));
         return false;
     }
+    K_DEFER_N(err_guard) {
+        CloseDescriptor(pfd[0]);
+        CloseDescriptor(pfd[1]);
+    };
 
-    if (fcntl(out_pfd[0], F_SETFD, FD_CLOEXEC) < 0 || fcntl(out_pfd[1], F_SETFD, FD_CLOEXEC) < 0) {
+    if (fcntl(pfd[0], F_SETFD, FD_CLOEXEC) < 0 || fcntl(pfd[1], F_SETFD, FD_CLOEXEC) < 0) {
         LogError("Failed to set FD_CLOEXEC on pipe: %1", strerror(errno));
         return false;
     }
     if (!blocking) {
-        if (fcntl(out_pfd[0], F_SETFL, O_NONBLOCK) < 0 || fcntl(out_pfd[1], F_SETFL, O_NONBLOCK) < 0) {
+        if (fcntl(pfd[0], F_SETFL, O_NONBLOCK) < 0 || fcntl(pfd[1], F_SETFL, O_NONBLOCK) < 0) {
             LogError("Failed to set O_NONBLOCK on pipe: %1", strerror(errno));
             return false;
         }
     }
+
+    out_pfd[0] = pfd[0];
+    out_pfd[1] = pfd[1];
+    err_guard.Disable();
 
     return true;
 #else
