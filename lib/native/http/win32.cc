@@ -37,7 +37,7 @@ struct http_Socket {
 };
 
 static const int MaxDispatcherClients = 128;
-static const Size MaxSend = Mebibytes(2);
+static const Size MaxSend = Mebibytes(1);
 
 class http_Dispatcher {
     http_Daemon *daemon;
