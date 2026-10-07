@@ -208,7 +208,7 @@ class http_IO {
     http_Daemon *daemon;
 
     http_Socket *socket;
-    int linger = 0;
+    std::atomic_int linger { 0 };
     bool keepalive = false;
     char addr[65] = {};
 
@@ -296,6 +296,8 @@ private:
 
     Size ReadWS(Span<uint8_t> out_buf);
     bool WriteWS(Span<const uint8_t> buf);
+
+    void StartLinger();
 
     // Returns true if connection is Keep-Alive and still within limits
     bool Rearm(int64_t now);

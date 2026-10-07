@@ -451,7 +451,7 @@ void http_Daemon::Stop()
 
 void http_Daemon::RunHandler(http_IO *client)
 {
-    if (client->linger) {
+    if (client->linger.load(std::memory_order_relaxed)) {
         client->keepalive = false;
         return;
     }
@@ -909,7 +909,7 @@ void http_IO::ExtendTimeout(int64_t extend)
 bool http_IO::Init(http_Socket *socket, int64_t start, struct sockaddr *sa)
 {
     this->socket = socket;
-    linger = 0;
+    linger.store(0, std::memory_order_relaxed);
 
     switch (sa->sa_family) {
         case AF_INET: {
@@ -1583,6 +1583,12 @@ bool http_IO::WriteChunked(Span<const uint8_t> data)
     return daemon->WriteSocket(socket, parts);
 }
 
+void http_IO::StartLinger()
+{
+    SetTimeout(GetMonotonicClock() + daemon->linger_timeout);
+    linger.store(Mebibytes(1), std::memory_order_relaxed);
+}
+
 bool http_IO::Rearm(int64_t now)
 {
     bool reuse = keepalive && (now >= 0);
@@ -1641,6 +1647,8 @@ bool http_IO::IsBusy() const
     if (!incoming.buf.len)
         return false;
     if (incoming.reading && incoming.read == request.body_len)
+        return false;
+    if (linger.load(std::memory_order_relaxed))
         return false;
 
     return true;
