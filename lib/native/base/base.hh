@@ -2081,10 +2081,10 @@ int CmpNaturalI(Span<const char> str1, Span<const char> str2);
 // Collections
 // ------------------------------------------------------------------------
 
-template <typename T, Size N, Size AlignAs = alignof(T)>
+template <typename T, Size N>
 class LocalArray {
 public:
-    alignas(AlignAs) T data[N];
+    T data[N];
     Size len = 0;
 
     typedef T value_type;
