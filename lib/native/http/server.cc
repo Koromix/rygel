@@ -444,6 +444,11 @@ void http_Daemon::Stop()
 
 void http_Daemon::RunHandler(http_IO *client)
 {
+    if (client->linger) {
+        client->request.keepalive = false;
+        return;
+    }
+
     // This log filter does two things: it keeps a copy of the last log error message,
     // and it sets the log context to the client address (for log file).
     PushLogFilter([&](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
@@ -897,6 +902,7 @@ void http_IO::ExtendTimeout(int64_t extend)
 bool http_IO::Init(http_Socket *socket, int64_t start, struct sockaddr *sa)
 {
     this->socket = socket;
+    linger = 0;
 
     switch (sa->sa_family) {
         case AF_INET: {

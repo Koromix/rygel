@@ -31,7 +31,6 @@ struct http_Socket {
 
     bool pollable = false;
     bool process = false;
-    Size linger = 0;
     bool handled = true;
 
     http_IO client;
@@ -542,8 +541,8 @@ void http_Dispatcher::Run()
                     client->incoming.buf.len += bytes;
                     client->incoming.buf.ptr[client->incoming.buf.len] = 0;
 
-                    if (socket->linger) {
-                        if (client->incoming.buf.len > socket->linger) {
+                    if (client->linger) {
+                        if (client->incoming.buf.len > client->linger) {
                             ParkSocket(socket, true);
                             keep--;
 
@@ -553,7 +552,7 @@ void http_Dispatcher::Run()
                         status = client->ParseRequest();
                     }
                 } else if (!bytes || (errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR)) {
-                    if (!socket->linger && client->IsBusy()) {
+                    if (!client->linger && client->IsBusy()) {
                         if (bytes) {
                             LogError("Connection failed: %1", strerror(errno));
                         } else {
@@ -600,7 +599,7 @@ void http_Dispatcher::Run()
 
                         if (status == http_RequestStatus::Shutdown) {
                             client->SetTimeout(GetMonotonicClock() + daemon->linger_timeout);
-                            socket->linger = Mebibytes(1);
+                            client->linger = Mebibytes(1);
                             shutdown(socket->sock, SHUT_WR);
                         }
                         Wake(socket);
@@ -611,7 +610,7 @@ void http_Dispatcher::Run()
 
                 case http_RequestStatus::Shutdown: {
                     client->SetTimeout(GetMonotonicClock() + daemon->linger_timeout);
-                    socket->linger = Mebibytes(1);
+                    client->linger = Mebibytes(1);
                     shutdown(socket->sock, SHUT_WR);
                 } break;
             }
@@ -619,9 +618,9 @@ void http_Dispatcher::Run()
             int delay = (int)(client->timeout_at.load(std::memory_order_relaxed) - clock);
 
             if (delay <= 0) {
-                if (!socket->linger) {
+                if (!client->linger) {
                     client->SetTimeout(GetMonotonicClock() + daemon->linger_timeout);
-                    socket->linger = Mebibytes(1); // Possible race with worker (write of same value), harmless
+                    client->linger = Mebibytes(1); // Possible race with worker (write of same value), harmless
                     shutdown(socket->sock, SHUT_RDWR);
 
                     delay = daemon->linger_timeout;
@@ -686,7 +685,6 @@ http_Socket *http_Dispatcher::InitSocket(int sock, int64_t start, struct sockadd
     socket->sock = sock;
     socket->pollable = false;
     socket->process = true;
-    socket->linger = 0;
     socket->handled = true;
 
     err_guard.Disable();

@@ -207,6 +207,7 @@ class http_IO {
     http_Daemon *daemon;
 
     http_Socket *socket;
+    int linger = 0;
     char addr[65] = {};
 
     int64_t socket_start;
