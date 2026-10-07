@@ -735,17 +735,17 @@ class Bitset {
 public:
     template <typename T>
     class Iterator {
+        T *bitset = nullptr;
+        Size offset = 0;
+        size_t bits = 0;
+        int ctz = 0;
+
     public:
         typedef std::input_iterator_tag iterator_category;
         typedef Size value_type;
         typedef Size difference_type;
         typedef Iterator *pointer;
         typedef Iterator &reference;
-
-        T *bitset = nullptr;
-        Size offset = 0;
-        size_t bits = 0;
-        int ctz = 0;
 
         Iterator() = default;
         Iterator(T *bitset, Size offset) : bitset(bitset), offset(offset - 1) { operator++(); }
@@ -2515,18 +2515,18 @@ public:
 
     template <typename U>
     class Iterator {
+        U *queue = nullptr;
+        Size bucket_idx = 0;
+        Size bucket_offset = 0;
+        Bucket *bucket = nullptr;
+        Bucket *next_bucket = nullptr;
+
     public:
         typedef std::bidirectional_iterator_tag iterator_category;
         typedef std::conditional_t<std::is_const<U>::value, const T, T> value_type;
         typedef Size difference_type;
         typedef T *pointer;
         typedef T &reference;
-
-        U *queue = nullptr;
-        Size bucket_idx = 0;
-        Size bucket_offset = 0;
-        Bucket *bucket = nullptr;
-        Bucket *next_bucket = nullptr;
 
         Iterator() = default;
         Iterator(U *queue, Size bucket_idx, Size bucket_offset)
@@ -2857,17 +2857,17 @@ class HashTable {
 public:
     template <typename T>
     class Iterator {
+        T *table = nullptr;
+        Size offset = 0;
+        uintptr_t bits = 0;
+        int ctz = 0;
+
     public:
         typedef std::forward_iterator_tag iterator_category;
         typedef ValueType value_type;
         typedef Size difference_type;
         typedef ValueType *pointer;
         typedef ValueType &reference;
-
-        T *table = nullptr;
-        Size offset = 0;
-        uintptr_t bits = 0;
-        int ctz = 0;
 
         Iterator() = default;
         Iterator(T *table, Size offset) : table(table), offset(offset - 1) { operator++(); }
