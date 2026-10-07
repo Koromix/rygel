@@ -199,7 +199,7 @@ bool ServeFile(http_IO *io, InstanceHolder *instance, const char *sha256, const 
 
             for (Size i = 0; i < ranges.len; i++) {
                 const http_ByteRange &range = ranges[i];
-                Size range_len = range.end - range.start;
+                Size range_len = (Size)(range.end - range.start);
 
                 writer.Write(boundaries[i * 2]);
 
@@ -224,7 +224,7 @@ bool ServeFile(http_IO *io, InstanceHolder *instance, const char *sha256, const 
             return false;
         } else if (ranges.len == 1) {
             const http_ByteRange &range = ranges[0];
-            Size range_len = range.end - range.start;
+            Size range_len = (Size)(range.end - range.start);
 
             // Add headers
             {

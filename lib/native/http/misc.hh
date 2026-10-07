@@ -12,12 +12,12 @@ struct http_RequestInfo;
 class http_IO;
 
 struct http_ByteRange {
-    Size start;
-    Size end;
+    int64_t start;
+    int64_t end;
 };
 
 uint32_t http_ParseAcceptableEncodings(Span<const char> encodings);
-bool http_ParseRange(Span<const char> str, Size len, LocalArray<http_ByteRange, 16> *out_ranges);
+bool http_ParseRange(Span<const char> str, int64_t len, LocalArray<http_ByteRange, 16> *out_ranges);
 
 bool http_PreventCSRF(http_IO *io);
 
