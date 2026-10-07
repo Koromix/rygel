@@ -2766,10 +2766,10 @@ public:
             buckets.RemoveLast(it.bucket_idx);
         }
 
-        Size count = it.bucket_idx * BucketSize + it.bucket_offset - offset;
+        Size remove = it.bucket_idx * BucketSize + it.bucket_offset - offset;
 
-        offset = (offset + count) % BucketSize;
-        count -= count;
+        offset = (offset + remove) % BucketSize;
+        count -= remove;
     }
     void RemoveUntil(const const_iterator_type &it) { return RemoveUntil((iterator_type)it); }
 
