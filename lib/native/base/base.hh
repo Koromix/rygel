@@ -2473,10 +2473,10 @@ public:
     class Iterator {
     public:
         typedef std::bidirectional_iterator_tag iterator_category;
-        typedef Size value_type;
+        typedef T value_type;
         typedef Size difference_type;
-        typedef Iterator *pointer;
-        typedef Iterator &reference;
+        typedef T *pointer;
+        typedef T &reference;
 
         U *queue = nullptr;
         Size bucket_idx = 0;
