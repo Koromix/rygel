@@ -2550,8 +2550,12 @@ public:
         }
 
         bool operator==(const Iterator &other) const
-            { return queue == other.queue && bucket == other.bucket &&
-                     bucket_offset == other.bucket_offset; }
+        {
+            if (queue != other.queue) [[unlikely]]
+                return false;
+
+            return bucket == other.bucket && bucket_offset == other.bucket_offset;
+        }
         bool operator!=(const Iterator &other) const { return !(*this == other); }
 
     private:
