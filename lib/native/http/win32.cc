@@ -572,7 +572,9 @@ void http_Dispatcher::Run()
 
                     continue;
                 } else {
-                    // Stuck in handler, reevaluate
+                    LogWarning("Handler for '%1' (%2) seems stuck", client->request.path, http_RequestMethodNames[(int)client->request.method]);
+                    client->ExtendTimeout(1000);
+
                     delay = 1000;
                 }
             }
