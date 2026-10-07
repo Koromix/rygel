@@ -143,7 +143,7 @@ restart:
             LogError("Failed to read from client: %1", strerror(errno));
         }
 
-        socket->client.request.keepalive = false;
+        socket->client.keepalive = false;
         return -1;
     }
 
@@ -174,7 +174,7 @@ bool http_Daemon::WriteSocket(http_Socket *socket, Span<const uint8_t> buf, bool
                 LogError("Failed to send to client: %1", strerror(errno));
             }
 
-            socket->client.request.keepalive = false;
+            socket->client.keepalive = false;
             return false;
         }
 
@@ -215,7 +215,7 @@ bool http_Daemon::WriteSocket(http_Socket *socket, Span<Span<const uint8_t>> par
                 LogError("Failed to send to client: %1", strerror(errno));
             }
 
-            socket->client.request.keepalive = false;
+            socket->client.keepalive = false;
             return false;
         }
 
@@ -247,13 +247,13 @@ void http_IO::SendFile(int status, int fd, int64_t len)
         if (fstat(fd, &sb) < 0) {
             LogError("Cannot get file size: %1", strerror(errno));
 
-            request.keepalive = false;
+            keepalive = false;
             return;
         }
         if (!S_ISREG(sb.st_mode)) {
             LogError("Cannot send non-regular file");
 
-            request.keepalive = false;
+            keepalive = false;
             return;
         }
 
@@ -271,7 +271,7 @@ void http_IO::SendFile(int status, int fd, int64_t len)
         Span<const char> intro = PrepareResponse(status, CompressionType::None, len, false);
 
         if (!daemon->WriteSocket(socket, intro.As<uint8_t>())) {
-            request.keepalive = false;
+            keepalive = false;
             return;
         }
     }
@@ -300,14 +300,14 @@ void http_IO::SendFile(int status, int fd, int64_t len)
                 LogError("Failed to send file: %1", strerror(errno));
             }
 
-            request.keepalive = false;
+            keepalive = false;
             return;
         }
 
         if (!ret && !sent) [[unlikely]] {
             LogError("Truncated file sent");
 
-            request.keepalive = false;
+            keepalive = false;
             return;
         }
 
@@ -321,13 +321,13 @@ void http_IO::SendFile(int status, int fd, int64_t len)
     StreamWriter writer([&](Span<const uint8_t> buf) { return WriteDirect(buf); }, "<http>");
 
     if (!SpliceStream(&reader, len, &writer)) {
-        request.keepalive = false;
+        keepalive = false;
         return;
     }
     if (writer.IsValid() && writer.GetRawWritten() < len) {
         LogError("File was truncated while sending");
 
-        request.keepalive = false;
+        keepalive = false;
         return;
     }
 #endif

@@ -132,7 +132,7 @@ Size http_Daemon::ReadSocket(http_Socket *socket, Span<uint8_t> buf)
             LogError("Failed to read from client: %1", GetWin32ErrorString(error));
         }
 
-        socket->client.request.keepalive = false;
+        socket->client.keepalive = false;
         return -1;
     }
 
@@ -154,7 +154,7 @@ bool http_Daemon::WriteSocket(http_Socket *socket, Span<const uint8_t> buf, bool
                 LogError("Failed to send to client: %1", GetWin32ErrorString(error));
             }
 
-            socket->client.request.keepalive = false;
+            socket->client.keepalive = false;
             return false;
         }
 
@@ -179,7 +179,7 @@ bool http_Daemon::WriteSocket(http_Socket *socket, Span<Span<const uint8_t>> par
             if (part.len > (Size)INT_MAX) [[unlikely]] {
                 LogError("Cannot proceed with excessive scattered chunk size");
 
-                socket->client.request.keepalive = false;
+                socket->client.keepalive = false;
                 return false;
             }
 
@@ -197,7 +197,7 @@ bool http_Daemon::WriteSocket(http_Socket *socket, Span<Span<const uint8_t>> par
                 LogError("Failed to send to client: %1", GetWin32ErrorString(error));
             }
 
-            socket->client.request.keepalive = false;
+            socket->client.keepalive = false;
             return false;
         }
 
@@ -650,13 +650,13 @@ void http_IO::SendFile(int status, int fd, int64_t len)
         if (!GetFileInformationByHandle(h, &attr)) {
             LogError("Cannot get file size: %1", GetWin32ErrorString());
 
-            request.keepalive = false;
+            keepalive = false;
             return;
         }
         if (attr.dwFileAttributes & (FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_DEVICE)) {
             LogError("Cannot send non-regular file");
 
-            request.keepalive = false;
+            keepalive = false;
             return;
         }
 
@@ -672,7 +672,7 @@ void http_IO::SendFile(int status, int fd, int64_t len)
 
     if (intro.len >= MaxSend || request.head || !len) {
         if (!daemon->WriteSocket(socket, intro.As<uint8_t>())) {
-            request.keepalive = false;
+            keepalive = false;
             return;
         }
 
@@ -697,7 +697,7 @@ void http_IO::SendFile(int status, int fd, int64_t len)
         if (!TransmitFile((SOCKET)socket->sock, h, send, 0, &ov, &tbuf, 0)) [[unlikely]] {
             LogError("Failed to send file: %1", GetWin32ErrorString());
 
-            request.keepalive = false;
+            keepalive = false;
             return;
         }
 
@@ -720,7 +720,7 @@ void http_IO::SendFile(int status, int fd, int64_t len)
         if (!TransmitFile((SOCKET)socket->sock, h, send, 0, &ov, nullptr, 0)) [[unlikely]] {
             LogError("Failed to send file: %1", GetWin32ErrorString());
 
-            request.keepalive = false;
+            keepalive = false;
             return;
         }
 

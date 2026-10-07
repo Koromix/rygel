@@ -445,7 +445,7 @@ void http_Daemon::Stop()
 void http_Daemon::RunHandler(http_IO *client)
 {
     if (client->linger) {
-        client->request.keepalive = false;
+        client->keepalive = false;
         return;
     }
 
@@ -464,7 +464,7 @@ void http_Daemon::RunHandler(http_IO *client)
     K_DEFER { PopLogFilter(); };
 
     int64_t now = GetMonotonicClock();
-    client->request.keepalive &= (now < client->socket_start + keepalive_time);
+    client->keepalive &= (now < client->socket_start + keepalive_time);
 
     handle_func(client);
 
@@ -759,7 +759,7 @@ bool http_IO::OpenForWrite(int status, CompressionType encoding, int64_t len, St
     bool chunked = len < 0;
 
     if (chunked && request.version < 11) {
-        request.keepalive = false;
+        keepalive = false;
         chunked = false;
     }
 
@@ -794,8 +794,8 @@ void http_IO::Send(int status, CompressionType encoding, int64_t len, FunctionRe
     if (!OpenForWrite(status, encoding, len, &writer)) [[unlikely]]
         return;
 
-    request.keepalive &= request.head || func(&writer);
-    request.keepalive &= writer.Close();
+    keepalive &= request.head || func(&writer);
+    keepalive &= writer.Close();
 }
 
 void http_IO::SendEmpty(int status)
@@ -1073,6 +1073,7 @@ http_RequestStatus http_IO::ParseRequest()
 {
     Span<char> intro = {};
     bool keepalive = false;
+    bool close = false;
     Span<const char> host = {};
     int64_t body_len = 0;
     bool explicit_len = false;
@@ -1244,7 +1245,12 @@ http_RequestStatus http_IO::ParseRequest()
                 request.cookies.Append({ name.ptr, value.ptr, nullptr });
             }
         } else if (key == "Connection") {
-            keepalive = !TestStrI(value, "close");
+            while (value.len) {
+                Span<const char> part = TrimStr(SplitStr(value, ',', &value));
+
+                keepalive |= TestStrI(part, "keep-alive");
+                close |= TestStrI(part, "close");
+            }
         } else if (key == "Content-Length") {
             int64_t len;
             if (!ParseInt(value, &len, K_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log) || len < 0) [[unlikely]] {
@@ -1317,7 +1323,7 @@ http_RequestStatus http_IO::ParseRequest()
 
     // Set at the end so any error before would lead to "Connection: close"
     request.body_len = body_len;
-    request.keepalive = keepalive;
+    this->keepalive = keepalive && !close;
 
     SetTimeout(GetMonotonicClock() + daemon->idle_timeout);
 
@@ -1334,7 +1340,7 @@ void http_IO::SendAbort(int status, const char *msg)
     // Side note: the peer address gets used in the log instead of client_addr which is
     // not trusted at this stage.
 
-    K_ASSERT(!request.keepalive);
+    K_ASSERT(!keepalive);
 
 #if defined(K_DEBUG)
     // We want to keep the debug-only source code context
@@ -1379,7 +1385,7 @@ bool http_IO::StartResponse()
     if (response.started) [[unlikely]] {
         LogWarning("Send multiple HTTP responses (bug)");
 
-        request.keepalive = false;
+        keepalive = false;
         return false;
     }
 
@@ -1399,13 +1405,13 @@ bool http_IO::StartResponse()
                 uint8_t buf[65535];
 
                 if (ReadDirect(buf) < 0) {
-                    request.keepalive = false;
+                    keepalive = false;
                     return false;
                 }
             }
 
             // Avoid desync
-            request.keepalive &= full;
+            keepalive &= full;
         }
     }
 
@@ -1424,7 +1430,7 @@ Span<const char> http_IO::PrepareResponse(int status, CompressionType encoding, 
 
     const char *protocol = (request.version == 11) ? "HTTP/1.1" : "HTTP/1.0";
     const char *details = http_ErrorMessages.FindValue(status, "Unknown");
-    const char *connection = request.keepalive ? "keep-alive" : "close";
+    const char *connection = keepalive ? "keep-alive" : "close";
 
     Fmt(&buf, "%1 %2 %3\r\nConnection: %4\r\n", protocol, status, details, connection);
 
@@ -1497,7 +1503,7 @@ bool http_IO::WriteDirect(Span<const uint8_t> data)
     }
 
     if (!daemon->WriteSocket(socket, data)) {
-        request.keepalive = false;
+        keepalive = false;
         return false;
     }
 
@@ -1510,7 +1516,7 @@ bool http_IO::WriteChunked(Span<const uint8_t> data)
         uint8_t end[5] = { '0', '\r', '\n', '\r', '\n' };
 
         if (!daemon->WriteSocket(socket, end)) {
-            request.keepalive = false;
+            keepalive = false;
             return false;
         }
         daemon->EndWrite(socket);
@@ -1567,9 +1573,9 @@ bool http_IO::WriteChunked(Span<const uint8_t> data)
 
 bool http_IO::Rearm(int64_t now)
 {
-    bool keepalive = request.keepalive && (now >= 0);
+    bool reuse = keepalive && (now >= 0);
 
-    if (keepalive) {
+    if (reuse) {
         // Make sure the client gets some extra time when in Keep-Alive time to avoid
         // abrupt disconnection once we have sent "Connection: keep-alive" to the client.
         int64_t keepalive_timeout = std::max(socket_start + daemon->keepalive_time, now + 5000);
@@ -1588,12 +1594,13 @@ bool http_IO::Rearm(int64_t now)
         }
     }
 
+    keepalive = false;
+
     incoming.pos = 0;
     incoming.read = 0;
     incoming.reading = false;
 
     request.version = 10;
-    request.keepalive = false;
     request.values.RemoveFrom(0);
     request.headers.RemoveFrom(0);
     request.cookies.RemoveFrom(0);
@@ -1608,13 +1615,13 @@ bool http_IO::Rearm(int64_t now)
 
     ws_opcode = 0;
 
-    if (keepalive) {
+    if (reuse) {
         allocator.Reset();
     } else {
         allocator.ReleaseAll();
     }
 
-    return keepalive;
+    return reuse;
 }
 
 bool http_IO::IsBusy() const

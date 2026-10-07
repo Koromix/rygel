@@ -155,7 +155,6 @@ struct http_KeyHead {
 
 struct http_RequestInfo {
     int version = 10;
-    bool keepalive = false;
     http_RequestMethod method = http_RequestMethod::Get;
     bool head = false;
     const char *client_addr = nullptr;
@@ -208,6 +207,7 @@ class http_IO {
 
     http_Socket *socket;
     int linger = 0;
+    bool keepalive = false;
     char addr[65] = {};
 
     int64_t socket_start;

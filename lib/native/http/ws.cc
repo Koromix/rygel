@@ -83,7 +83,7 @@ bool http_IO::UpgradeToWS(unsigned int flags)
     // And the socket will be in blocking mode, unless I've screwed something up ><
 
     incoming.buf.len = 0;
-    request.keepalive = false;
+    keepalive = false;
     ws_opcode = (flags & (int)http_WebSocketFlag::Text) ? 1 : 2;
 
     return true;
