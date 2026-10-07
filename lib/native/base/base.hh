@@ -2264,7 +2264,7 @@ public:
             return *this;
 
         RemoveFrom(0);
-        Grow(other.capacity);
+        SetCapacity(other.capacity);
         if constexpr(!std::is_trivially_copyable<T>::value) {
             for (Size i = 0; i < other.len; i++) {
                 new (ptr + i) T(other.ptr[i]);
@@ -2273,6 +2273,7 @@ public:
             MemCpy(ptr, other.ptr, other.len * K_SIZE(*ptr));
         }
         len = other.len;
+
         return *this;
     }
 
