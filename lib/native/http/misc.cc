@@ -112,15 +112,11 @@ bool http_ParseRange(Span<const char> str, Size len, LocalArray<http_ByteRange, 
             if (end.len) {
                 if (!ParseInt(end, &range.end))
                     return false;
-                if (range.end < 0 || range.end >= len) {
-                    LogError("Invalid HTTP range");
-                    return false;
-                }
                 if (range.end < range.start) {
                     LogError("Invalid HTTP range");
                     return false;
                 }
-                range.end++;
+                range.end = std::min(range.end + 1, len);
             } else {
                 range.end = len;
             }
