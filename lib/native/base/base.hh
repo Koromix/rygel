@@ -2863,27 +2863,43 @@ public:
         typedef ValueType &reference;
 
         T *table = nullptr;
-        Size offset;
+        Size offset = 0;
+        uintptr_t bits = 0;
+        int ctz = 0;
 
         Iterator() = default;
-        Iterator(T *table, Size offset)
-            : table(table), offset(offset - 1) { operator++(); }
+        Iterator(T *table, Size offset) : table(table), offset(offset - 1) { operator++(); }
+        Iterator(const Iterator &other) = default;
+
+        Iterator &operator=(const Iterator &other) = default;
 
         ValueType &operator*()
         {
-            K_ASSERT(!table->IsEmpty(offset));
-            return table->data[offset];
+            K_ASSERT(table->IsUsed(Index()));
+            return table->data[Index()];
         }
         const ValueType &operator*() const
         {
-            K_ASSERT(!table->IsEmpty(offset));
-            return table->data[offset];
+            K_ASSERT(table->IsUsed(Index()));
+            return table->data[Index()];
         }
 
         Iterator &operator++()
         {
-            K_ASSERT(offset < table->capacity);
-            while (++offset < table->capacity && table->IsEmpty(offset));
+            K_ASSERT(offset < ComputeUsedLength(table->capacity));
+
+            while (!bits) {
+                if (++offset == ComputeUsedLength(table->capacity)) {
+                    ctz = 0;
+                    return *this;
+                }
+
+                bits = table->used[offset];
+            }
+
+            ctz = (int)CountTrailingZeros((uint64_t)bits);
+            bits ^= (uintptr_t)1 << ctz;
+
             return *this;
         }
 
@@ -2895,15 +2911,25 @@ public:
         }
 
         bool operator==(const Iterator &other) const
-            { return table == other.table && offset == other.offset; }
+        {
+            if (table != other.table) [[unlikely]]
+                return false;
+
+            return offset == other.offset && ctz == other.ctz;
+        }
         bool operator!=(const Iterator &other) const { return !(*this == other); }
+
+private:
+        Size Index() const { return offset * K_SIZE(uintptr_t) * 8 + ctz; }
+
+        friend class HashTable;
     };
 
     typedef ValueType value_type;
     typedef Iterator<HashTable> iterator;
     typedef Iterator<const HashTable> const_iterator;
 
-    size_t *used = nullptr;
+    uintptr_t *used = nullptr;
     ValueType *data = nullptr;
     Size count = 0;
     Size capacity = 0;
@@ -2959,21 +2985,20 @@ public:
             MemSet(data, 0, capacity * K_SIZE(ValueType));
         } else if constexpr(!std::is_trivially_destructible<ValueType>::value) {
             for (iterator it = begin(); it != end(); it++) {
-                data[it.offset].~ValueType();
+                data[it.Index()].~ValueType();
             }
         }
         count = 0;
 
         if (used) {
-            Size len = (capacity + (K_SIZE(size_t) * 8) - 1) / K_SIZE(size_t);
-            MemSet(used, 0, len);
+            MemSet(used, 0, ComputeUsedLength(capacity) * K_SIZE(uintptr_t));
         }
     }
 
     Iterator<HashTable> begin() { return Iterator<HashTable>(this, 0); }
     Iterator<const HashTable> begin() const { return Iterator<const HashTable>(this, 0); }
-    Iterator<HashTable> end() { return Iterator<HashTable>(this, capacity); }
-    Iterator<const HashTable> end() const { return Iterator<const HashTable>(this, capacity); }
+    Iterator<HashTable> end() { return Iterator<HashTable>(this, ComputeUsedLength(capacity)); }
+    Iterator<const HashTable> end() const { return Iterator<const HashTable>(this, ComputeUsedLength(capacity)); }
 
     template <typename T = KeyType>
     ValueType *Find(const T &key)
@@ -3064,14 +3089,14 @@ public:
             return;
 
         Size clear_idx = it - data;
-        K_ASSERT(!IsEmpty(clear_idx));
+        K_ASSERT(IsUsed(clear_idx));
 
         it->~ValueType();
         count--;
         MarkEmpty(clear_idx);
 
         // Move following slots if needed
-        for (Size idx = NextIndex(clear_idx); !IsEmpty(idx); idx = NextIndex(idx)) {
+        for (Size idx = NextIndex(clear_idx); IsUsed(idx); idx = NextIndex(idx)) {
             Size real_idx = KeyToIndex(Handler::GetKey(data[idx]));
 
             if (clear_idx <= idx) {
@@ -3130,7 +3155,7 @@ private:
             }
             return nullptr;
         } else {
-            while (!IsEmpty(*idx)) {
+            while (IsUsed(*idx)) {
                 const KeyType &it_key = Handler::GetKey(data[*idx]);
                 if (Handler::TestKeys(it_key, key))
                     return &data[*idx];
@@ -3151,7 +3176,7 @@ private:
                 if (count >= (Size)((double)capacity * K_HASHTABLE_MAX_LOAD_FACTOR)) {
                     Rehash(capacity << 1);
                     idx = HashToIndex(hash);
-                    while (!IsEmpty(idx)) {
+                    while (IsUsed(idx)) {
                         idx = NextIndex(idx);
                     }
                 }
@@ -3183,28 +3208,26 @@ private:
         K_ASSERT(count <= new_capacity);
 
         if (new_capacity) {
-            Size used_size = (new_capacity + (K_SIZE(size_t) * 8) - 1) / K_SIZE(size_t);
-
-            size_t *new_used = (size_t *)AllocateRaw(allocator, used_size);
+            uintptr_t *new_used = (uintptr_t *)AllocateRaw(allocator, ComputeUsedLength(new_capacity) * K_SIZE(uintptr_t));
             ValueType *new_data = (ValueType *)AllocateRaw(allocator, new_capacity * K_SIZE(ValueType));
 
             if constexpr(std::is_pointer<ValueType>::value) {
                 MemSet(new_data, 0, new_capacity * K_SIZE(ValueType));
             }
-            MemSet(new_used, 0, used_size);
+            MemSet(new_used, 0, ComputeUsedLength(new_capacity) * K_SIZE(uintptr_t));
 
-            for (iterator it = begin(); it != end(); it++) {
-                Size new_idx = KeyToIndex(Handler::GetKey(data[it.offset]), new_capacity);
-                while (!IsEmpty(new_used, new_idx)) {
+            for (iterator it = begin(), guard = end(); it != guard; it++) {
+                Size new_idx = KeyToIndex(Handler::GetKey(data[it.Index()]), new_capacity);
+                while (IsUsed(new_used, new_idx)) {
                     new_idx = NextIndex(new_idx, new_capacity);
                 }
 
                 MarkUsed(new_used, new_idx);
-                new (new_data + new_idx) ValueType(std::move(data[it.offset]));
-                data[it.offset].~ValueType();
+                new (new_data + new_idx) ValueType(std::move(data[it.Index()]));
+                data[it.Index()].~ValueType();
             }
 
-            ReleaseRaw(allocator, used, (capacity + (K_SIZE(size_t) * 8) - 1) / K_SIZE(size_t));
+            ReleaseRaw(allocator, used, ComputeUsedLength(capacity) * K_SIZE(uintptr_t));
             ReleaseRaw(allocator, data, capacity * K_SIZE(ValueType));
 
             used = new_used;
@@ -3212,12 +3235,12 @@ private:
             capacity = new_capacity;
         } else {
             if constexpr(!std::is_trivially_destructible<ValueType>::value) {
-                for (iterator it = begin(); it != end(); it++) {
-                    data[it.offset].~ValueType();
+                for (iterator it = begin(), guard = end(); it != guard; it++) {
+                    data[it.Index()].~ValueType();
                 }
             }
 
-            ReleaseRaw(allocator, used, (capacity + (K_SIZE(size_t) * 8) - 1) / K_SIZE(size_t));
+            ReleaseRaw(allocator, used, ComputeUsedLength(capacity) * K_SIZE(uintptr_t));
             ReleaseRaw(allocator, data, capacity * K_SIZE(ValueType));
 
             used = nullptr;
@@ -3226,17 +3249,15 @@ private:
         }
     }
 
-    static inline void MarkUsed(size_t *used, Size idx) { used[idx / (K_SIZE(size_t) * 8)] |= (1ull << (idx % (K_SIZE(size_t) * 8))); }
-    static inline void MarkEmpty(size_t *used, Size idx) { used[idx / (K_SIZE(size_t) * 8)] &= ~(1ull << (idx % (K_SIZE(size_t) * 8))); }
+    static Size ComputeUsedLength(Size capacity) { return (capacity + (K_SIZE(uintptr_t) * 8 - 1)) / (K_SIZE(uintptr_t) * 8); }
+
+    static inline void MarkUsed(uintptr_t *used, Size idx) { used[idx / (K_SIZE(uintptr_t) * 8)] |= (1ull << (idx % (K_SIZE(uintptr_t) * 8))); }
+    static inline void MarkEmpty(uintptr_t *used, Size idx) { used[idx / (K_SIZE(uintptr_t) * 8)] &= ~(1ull << (idx % (K_SIZE(uintptr_t) * 8))); }
     inline void MarkUsed(Size idx) { MarkUsed(used, idx); }
     inline void MarkEmpty(Size idx) { MarkEmpty(used, idx); }
 
-    static inline bool IsEmpty(size_t *used, Size idx)
-    {
-        bool empty = !(used[idx / (K_SIZE(size_t) * 8)] & (1ull << (idx % (K_SIZE(size_t) * 8))));
-        return empty;
-    }
-    inline bool IsEmpty(Size idx) const { return IsEmpty(used, idx); }
+    static inline bool IsUsed(uintptr_t *used, Size idx) { return used[idx / (K_SIZE(uintptr_t) * 8)] & (1ull << (idx % (K_SIZE(uintptr_t) * 8))); }
+    inline bool IsUsed(Size idx) const { return IsUsed(used, idx); }
 
     static inline Size HashToIndex(uint64_t hash, Size capacity) { return (Size)(hash & (uint64_t)(capacity - 1)); }
     inline Size HashToIndex(uint64_t hash) const { return HashToIndex(hash, capacity); }
