@@ -2513,7 +2513,8 @@ public:
                     // use next_bucket to fix bucket_idx.
                     while (bucket_idx >= queue->buckets.len ||
                            queue->buckets[bucket_idx] != next_bucket) {
-                        bucket_idx--;
+                        if (--bucket_idx < 0) [[unlikely]]
+                            break;
                     }
                 }
 
