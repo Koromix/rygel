@@ -2258,8 +2258,14 @@ public:
             return *this;
 
         Clear();
-        MemMove(this, &other, K_SIZE(other));
-        MemSet(&other, 0, K_SIZE(other));
+
+        ptr = other.ptr;
+        len = other.len;
+        capacity = other.capacity;
+        other.ptr = nullptr;
+        other.len = 0;
+        other.capacity = 0;
+
         return *this;
     }
     HeapArray(const HeapArray &other) { *this = other; }
