@@ -2235,7 +2235,7 @@ public:
     HeapArray() = default;
     HeapArray(Allocator *alloc, Size min_capacity = 0) : allocator(alloc)
         { SetCapacity(min_capacity); }
-    HeapArray(Size min_capacity) { Reserve(min_capacity); }
+    explicit HeapArray(Size min_capacity) { Reserve(min_capacity); }
     HeapArray(std::initializer_list<T> l)
     {
         Reserve(l.size());
