@@ -332,7 +332,7 @@ static int RunBuild(Span<const char *> arguments)
     bool verbose = false;
     const char *version_filename = nullptr;
     const char *run_target_name = nullptr;
-    Span<const char *> run_arguments = {};
+    Span<const char *const> run_arguments = {};
     bool run_here = false;
 
     if (const char *str = GetEnv("FELIX_CONFIG_FILE"); str) {

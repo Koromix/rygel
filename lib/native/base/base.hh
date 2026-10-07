@@ -942,7 +942,7 @@ struct Span {
 
     Span() = default;
     constexpr Span(T &value) : ptr(&value), len(1) {}
-    constexpr Span(std::initializer_list<T> l) : ptr(l.begin()), len((Size)l.size()) {}
+    constexpr Span(std::initializer_list<const T> l) : ptr(l.begin()), len((Size)l.size()) {}
     constexpr Span(T *ptr_, Size len_) : ptr(ptr_), len(len_) {}
     template <Size N>
     constexpr Span(T (&arr)[N]) : ptr(arr), len(N) {}
@@ -987,17 +987,25 @@ struct Span {
     }
     constexpr bool operator!=(const Span &other) const { return !(*this == other); }
 
-    constexpr Span Take(Size offset, Size sub_len) const
+    constexpr Span Take(Size offset, Size sub_len)
     {
         K_ASSERT(sub_len >= 0 && sub_len <= len);
         K_ASSERT(offset >= 0 && offset <= len - sub_len);
 
-        Span<T> sub = { ptr + offset, sub_len };
-        return sub;
+        return { ptr + offset, sub_len };
+    }
+    constexpr Span<const T> Take(Size offset, Size sub_len) const
+    {
+        K_ASSERT(sub_len >= 0 && sub_len <= len);
+        K_ASSERT(offset >= 0 && offset <= len - sub_len);
+
+        return { ptr + offset, sub_len };
     }
 
     template <typename U>
-    constexpr Span<U> As() const { return Span<U>((U *)ptr, len); }
+    constexpr Span<U> As() { return Span<U>((U *)ptr, len); }
+    template <typename U>
+    constexpr Span<const U> As() const { return Span<const U>((const U *)ptr, len); }
 };
 
 // Use strlen() to build Span<const char> instead of the template-based
@@ -1046,29 +1054,30 @@ struct Span<const char> {
         K_ASSERT(sub_len >= 0 && sub_len <= len);
         K_ASSERT(offset >= 0 && offset <= len - sub_len);
 
-        Span<const char> sub = { ptr + offset, sub_len };
-        return sub;
+        return { ptr + offset, sub_len };
     }
 
     template <typename U>
     constexpr Span<U> As() const { return Span<U>((U *)ptr, len); }
 };
 
+inline bool operator==(Span<char> str, Span<const char> other) { return str.As<const char>() == other; }
+inline bool operator!=(Span<char> str, Span<const char> other) { return str.As<const char>() != other; }
 inline bool operator==(Span<char> str, const char *other) { return str.As<const char>() == other; }
 inline bool operator!=(Span<char> str, const char *other) { return str.As<const char>() != other; }
 
 template <typename T>
-static constexpr inline Span<T> MakeSpan(T *ptr, Size len)
+constexpr Span<T> MakeSpan(T *ptr, Size len)
 {
     return Span<T>(ptr, len);
 }
 template <typename T>
-static constexpr inline Span<T> MakeSpan(T *ptr, T *end)
+constexpr Span<T> MakeSpan(T *ptr, T *end)
 {
     return Span<T>(ptr, end - ptr);
 }
 template <typename T, Size N>
-static constexpr inline Span<T> MakeSpan(T (&arr)[N])
+constexpr Span<T> MakeSpan(T (&arr)[N])
 {
     return Span<T>(arr, N);
 }
@@ -5826,7 +5835,7 @@ public:
     const char *ConsumeNonOption();
     void ConsumeNonOptions(HeapArray<const char *> *non_options);
 
-    Span<const char *> GetRemainingArguments() const { return args.Take(pos, args.len - pos); }
+    Span<const char *const> GetRemainingArguments() const { return args.Take(pos, args.len - pos); }
 
     bool Test(const char *test1, const char *test2, OptionType type = OptionType::NoValue);
     bool Test(const char *test1, OptionType type = OptionType::NoValue)
