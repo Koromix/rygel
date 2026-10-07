@@ -568,7 +568,7 @@ static inline void *MemMem(const void *src, Size src_len, const void *needle, Si
 // Implemented for translations, but we need it before we get to this part
 const char *T(const char *key);
 
-template <typename T, typename = typename std::enable_if<std::is_enum<T>::value, T>>
+template <typename T, typename = typename std::enable_if_t<std::is_enum<T>::value, T>>
 typename std::underlying_type<T>::type MaskEnum(T value)
 {
     auto mask = 1 << static_cast<typename std::underlying_type<T>::type>(value);
