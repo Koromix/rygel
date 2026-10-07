@@ -2220,7 +2220,7 @@ public:
 
 template <typename T>
 class HeapArray {
-    // StaticAssert(std::is_trivially_copyable<T>::value);
+    // static_assert(std::is_trivially_relocatable<T>::value);
 
 public:
     T *ptr = nullptr;
