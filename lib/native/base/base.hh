@@ -15,6 +15,7 @@
 #include <limits>
 #include <memory>
 #include <mutex>
+#include <numeric>
 #include <shared_mutex>
 #if __cplusplus >= 202002L && __has_include(<source_location>)
     #include <source_location>

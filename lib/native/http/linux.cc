@@ -128,7 +128,7 @@ restart:
         return -1;
     }
 
-    socket->client.ExtendTimeout(bytes / 4, idle_timeout);
+    socket->client.ExtendTimeout(bytes / 4, max_timeout);
 
     return bytes;
 }
@@ -139,6 +139,10 @@ bool http_Daemon::WriteSocket(http_Socket *socket, Span<const uint8_t> buf, bool
 
     while (buf.len) {
         Size len = std::min(buf.len, MaxSend);
+
+        // Extend beforehand to prevent premature timeout
+        socket->client.ExtendTimeout(len / 4, max_timeout);
+
         Size bytes = send(socket->sock, buf.ptr, len, flags);
 
         if (bytes < 0) {
@@ -152,8 +156,6 @@ bool http_Daemon::WriteSocket(http_Socket *socket, Span<const uint8_t> buf, bool
             socket->client.keepalive = false;
             return false;
         }
-
-        socket->client.ExtendTimeout(bytes / 4, send_timeout);
 
         buf.ptr += bytes;
         buf.len -= bytes;
@@ -181,6 +183,10 @@ bool http_Daemon::WriteSocket(http_Socket *socket, Span<Span<const uint8_t>> par
     int flags = MSG_NOSIGNAL | MSG_MORE;
 
     while (msg.msg_iovlen) {
+        // Extend beforehand to prevent premature timeout
+        Size send = std::accumulate(msg.msg_iov, msg.msg_iov + msg.msg_iovlen, (Size)0, [](Size acc, const struct iovec &part) { return acc + (Size)part.iov_len; });
+        socket->client.ExtendTimeout(send / 4, max_timeout);
+
         Size sent = sendmsg(socket->sock, &msg, flags);
 
         if (sent < 0) {
@@ -194,8 +200,6 @@ bool http_Daemon::WriteSocket(http_Socket *socket, Span<Span<const uint8_t>> par
             socket->client.keepalive = false;
             return false;
         }
-
-        socket->client.ExtendTimeout(sent / 4, send_timeout);
 
         do {
             struct iovec *part = msg.msg_iov;
@@ -260,6 +264,10 @@ void http_IO::SendFile(int status, int fd, int64_t len)
 
     while (remain) {
         Size send = (Size)std::min(remain, (int64_t)MaxSend);
+
+        // Extend beforehand to prevent premature timeout
+        ExtendTimeout(send / 4, daemon->max_timeout);
+
         Size sent = sendfile(socket->sock, fd, &offset, (size_t)send);
 
         if (sent < 0) {
@@ -280,8 +288,6 @@ void http_IO::SendFile(int status, int fd, int64_t len)
             keepalive = false;
             return;
         }
-
-        ExtendTimeout(sent / 4, daemon->send_timeout);
 
         remain -= sent;
     }

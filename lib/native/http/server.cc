@@ -137,8 +137,8 @@ bool http_Config::SetProperty(Span<const char> key, Span<const char> value, Span
         } else {
             return ParseDuration(value, &keepalive_time);
         }
-    } else if (key == "SendTimeout") {
-        return ParseDuration(value, &send_timeout);
+    } else if (key == "MaxTimeout") {
+        return ParseDuration(value, &max_timeout);
     } else if (key == "LingerTimeout") {
         return ParseDuration(value, &linger_timeout);
     } else if (key == "StopTimeout") {
@@ -210,8 +210,8 @@ bool http_Config::Validate() const
         LogError("HTTP KeepAliveTime must be >= 5 sec (or Disabled)");
         valid = false;
     }
-    if (send_timeout < 5000) {
-        LogError("HTTP SendTimeout must be >= 5 sec");
+    if (max_timeout < 20000) {
+        LogError("HTTP MaxTimeout must be >= 20 sec");
         valid = false;
     }
     if (stop_timeout < 1000) {
@@ -321,7 +321,7 @@ bool http_Daemon::Bind(const http_Config &config, bool log_addr)
     addr_mode = config.addr_mode;
     idle_timeout = config.idle_timeout;
     keepalive_time = config.keepalive_time;
-    send_timeout = config.send_timeout;
+    max_timeout = config.max_timeout;
     linger_timeout = config.linger_timeout;
     stop_timeout = config.stop_timeout;
     max_request_size = config.max_request_size;
@@ -1428,7 +1428,7 @@ bool http_IO::StartResponse()
     }
 
     response.started = true;
-    SetTimeout(GetMonotonicClock() + daemon->send_timeout);
+    SetTimeout(GetMonotonicClock() + daemon->idle_timeout);
 
     return true;
 }

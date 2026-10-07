@@ -36,7 +36,7 @@ struct http_Config {
 
     int idle_timeout = 10000;
     int keepalive_time = 20000;
-    int send_timeout = 5000;
+    int max_timeout = 60000;
     int linger_timeout = 5000;
     int stop_timeout = 10000;
 
@@ -78,7 +78,7 @@ class http_Daemon {
 
     int idle_timeout;
     int keepalive_time;
-    int send_timeout;
+    int max_timeout;
     int linger_timeout;
     int stop_timeout;
 

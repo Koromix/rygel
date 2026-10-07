@@ -137,7 +137,7 @@ Size http_Daemon::ReadSocket(http_Socket *socket, Span<uint8_t> buf)
         return -1;
     }
 
-    socket->client.ExtendTimeout(bytes / 4, idle_timeout);
+    socket->client.ExtendTimeout(bytes / 4, max_timeout);
 
     return bytes;
 }
@@ -146,6 +146,10 @@ bool http_Daemon::WriteSocket(http_Socket *socket, Span<const uint8_t> buf, bool
 {
     while (buf.len) {
         int len = (int)std::min(buf.len, MaxSend);
+
+        // Extend beforehand to prevent premature timeout
+        socket->client.ExtendTimeout(len / 4, max_timeout);
+
         int bytes = send(socket->sock, (char *)buf.ptr, len, 0);
 
         if (bytes < 0) {
@@ -159,8 +163,6 @@ bool http_Daemon::WriteSocket(http_Socket *socket, Span<const uint8_t> buf, bool
             return false;
         }
 
-        socket->client.ExtendTimeout(bytes / 4, send_timeout);
-
         buf.ptr += bytes;
         buf.len -= bytes;
     }
@@ -172,6 +174,8 @@ bool http_Daemon::WriteSocket(http_Socket *socket, Span<Span<const uint8_t>> par
 {
     while (parts.len) {
         LocalArray<WSABUF, 64> bufs;
+        Size send = 0;
+
         bufs.len = std::min(parts.len, bufs.Available());
 
         for (Size i = 0; i < bufs.len; i++) {
@@ -186,7 +190,12 @@ bool http_Daemon::WriteSocket(http_Socket *socket, Span<Span<const uint8_t>> par
 
             bufs[i].buf = (char *)part.ptr;
             bufs[i].len = (unsigned long)part.len;
+
+            send += part.len;
         }
+
+        // Extend beforehand to prevent premature timeout
+        socket->client.ExtendTimeout(send / 4, max_timeout);
 
         DWORD sent = 0;
         int ret = WSASend((SOCKET)socket->sock, bufs.data, (DWORD)bufs.len, &sent, 0, nullptr, nullptr);
@@ -201,8 +210,6 @@ bool http_Daemon::WriteSocket(http_Socket *socket, Span<Span<const uint8_t>> par
             socket->client.keepalive = false;
             return false;
         }
-
-        socket->client.ExtendTimeout(sent / 4, send_timeout);
 
         // Windows does not apparently do partial writes, so don't bother dealing with that.
         //
@@ -694,6 +701,10 @@ void http_IO::SendFile(int status, int fd, int64_t len)
         TRANSMIT_FILE_BUFFERS tbuf = { (void *)intro.ptr, (DWORD)intro.len, nullptr, 0 };
         DWORD send = (DWORD)std::min(remain, (int64_t)MaxSend - intro.len);
 
+        // Extend beforehand to prevent premature timeout
+        int64_t bytes = intro.len + send;
+        ExtendTimeout(bytes / 4, daemon->max_timeout);
+
         // Needed to provide offset = 0
         OVERLAPPED ov = {};
 
@@ -703,9 +714,6 @@ void http_IO::SendFile(int status, int fd, int64_t len)
             keepalive = false;
             return;
         }
-
-        int64_t bytes = intro.len + send;
-        ExtendTimeout(bytes / 4, daemon->send_timeout);
 
         offset += send;
         remain -= send;
@@ -720,14 +728,15 @@ void http_IO::SendFile(int status, int fd, int64_t len)
 
         DWORD send = (DWORD)std::min(remain, (int64_t)MaxSend);
 
+        // Extend beforehand to prevent premature timeout
+        ExtendTimeout(send / 4, daemon->max_timeout);
+
         if (!TransmitFile((SOCKET)socket->sock, h, send, 0, &ov, nullptr, 0)) [[unlikely]] {
             LogError("Failed to send file: %1", GetWin32ErrorString());
 
             keepalive = false;
             return;
         }
-
-        ExtendTimeout(send / 4, daemon->send_timeout);
 
         offset += send;
         remain -= send;
