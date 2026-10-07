@@ -42,6 +42,7 @@ struct http_Config {
 
     Size max_request_size = Kilobytes(40);
     Size max_url_len = Kilobytes(20);
+    int max_query_values = 64;
     int max_request_headers = 64;
     int max_request_cookies = 64;
 
@@ -83,6 +84,7 @@ class http_Daemon {
 
     Size max_request_size;
     Size max_url_len;
+    int max_query_values;
     int max_request_headers;
     int max_request_cookies;
 

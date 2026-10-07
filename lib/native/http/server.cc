@@ -147,6 +147,8 @@ bool http_Config::SetProperty(Span<const char> key, Span<const char> value, Span
         return ParseSize(value, &max_request_size);
     } else if (key == "MaxUrlLength") {
         return ParseSize(value, &max_url_len);
+    } else if (key == "MaxQueryValues") {
+        return ParseInt(value, &max_query_values);
     } else if (key == "MaxRequestHeaders") {
         return ParseInt(value, &max_request_headers);
     } else if (key == "MaxRequestCookies") {
@@ -223,6 +225,10 @@ bool http_Config::Validate() const
     }
     if (max_url_len < 512) {
         LogError("MaxUrlLength must be >= 512 B");
+        valid = false;
+    }
+    if (max_query_values < 16) {
+        LogError("MaxQueryValues must be >= 16");
         valid = false;
     }
     if (max_request_headers < 16) {
@@ -320,6 +326,7 @@ bool http_Daemon::Bind(const http_Config &config, bool log_addr)
     stop_timeout = config.stop_timeout;
     max_request_size = config.max_request_size;
     max_url_len = config.max_url_len;
+    max_query_values = config.max_query_values;
     max_request_headers = config.max_request_headers;
     max_request_cookies = config.max_request_cookies;
 
@@ -1028,7 +1035,7 @@ static Size DecodeQueryComponent(Span<char> str)
     return str.len;
 }
 
-static bool DecodeQuery(Span<char> str, HeapArray<http_KeyValue> *out_values)
+static bool DecodeQuery(Span<char> str, int max_values, HeapArray<http_KeyValue> *out_values)
 {
     str = SplitStr(str, '#');
 
@@ -1036,6 +1043,11 @@ static bool DecodeQuery(Span<char> str, HeapArray<http_KeyValue> *out_values)
         Span<char> frag = SplitStr(str, '&', &str);
 
         if (frag.len) {
+            if (max_values-- <= 0) [[unlikely]] {
+                LogError("Too many query string values");
+                return false;
+            }
+
             http_KeyValue pair;
 
             Span<char> value;
@@ -1164,7 +1176,7 @@ http_RequestStatus http_IO::ParseRequest()
             return http_RequestStatus::Shutdown;
         }
 
-        if (!DecodeQuery(query, &request.values)) {
+        if (!DecodeQuery(query, daemon->max_query_values, &request.values)) {
             SendAbort(400, "Unsafe URL query string");
             return http_RequestStatus::Shutdown;
         }
