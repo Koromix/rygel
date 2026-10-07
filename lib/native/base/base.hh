@@ -2095,16 +2095,18 @@ public:
     constexpr LocalArray(std::initializer_list<T> l)
     {
         K_ASSERT(l.size() <= N);
+
         for (const T &it: l) {
             data[len++] = it;
         }
-        len = (Size)l.size();
     }
 
     void Clear()
     {
-        for (Size i = 0; i < len; i++) {
-            data[i] = T();
+        if constexpr(!std::is_trivially_destructible<T>::value) {
+            for (Size i = 0; i < len; i++) {
+                data[i] = T();
+            }
         }
         len = 0;
     }
@@ -2151,8 +2153,7 @@ public:
         T *first = data + len;
         if constexpr(!std::is_trivially_constructible<T>::value) {
             for (Size i = 0; i < count; i++) {
-                new (data + len) T();
-                len++;
+                data[len++] = T();
             }
         } else {
             MemSet(first, 0, count * K_SIZE(T));
@@ -2199,8 +2200,10 @@ public:
     {
         K_ASSERT(first >= 0 && first <= len);
 
-        for (Size i = first; i < len; i++) {
-            data[i] = T();
+        if constexpr(!std::is_trivially_destructible<T>::value) {
+            for (Size i = first; i < len; i++) {
+                data[i] = T();
+            }
         }
         len = first;
     }
