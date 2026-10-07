@@ -1003,9 +1003,17 @@ struct Span {
     }
 
     template <typename U>
-    constexpr Span<U> As() { return Span<U>((U *)ptr, len); }
+    constexpr Span<U> As()
+    {
+        static_assert(sizeof(U) == sizeof(T));
+        return Span<U>((U *)ptr, len);
+    }
     template <typename U>
-    constexpr Span<const U> As() const { return Span<const U>((const U *)ptr, len); }
+    constexpr Span<const U> As() const
+    {
+        static_assert(sizeof(U) == sizeof(T));
+        return Span<const U>((const U *)ptr, len);
+    }
 };
 
 // Use strlen() to build Span<const char> instead of the template-based
@@ -1058,7 +1066,11 @@ struct Span<const char> {
     }
 
     template <typename U>
-    constexpr Span<U> As() const { return Span<U>((U *)ptr, len); }
+    constexpr Span<U> As() const
+    {
+        static_assert(sizeof(U) == sizeof(char));
+        return Span<U>((U *)ptr, len);
+    }
 };
 
 inline bool operator==(Span<char> str, Span<const char> other) { return str.As<const char>() == other; }
@@ -2230,9 +2242,9 @@ public:
     Span<const T> TakeAvailable() const { return Span<const T>(data + len, K_LEN(data) - len); }
 
     template <typename U = T>
-    Span<U> As() { return Span<U>((U *)data, len); }
+    Span<U> As() { return Span<T>(data, len).template As<U>(); }
     template <typename U = T>
-    Span<const U> As() const { return Span<const U>((const U *)data, len); }
+    Span<const U> As() const { return Span<const T>(data, len).template As<const U>(); }
 };
 
 template <typename T>
@@ -2484,9 +2496,9 @@ public:
     Span<const T> TakeAvailable() const { return Span<const T>(ptr + len, capacity - len); }
 
     template <typename U = T>
-    Span<U> As() { return Span<U>((U *)ptr, len); }
+    Span<U> As() { return Span<T>(ptr, len).template As<U>(); }
     template <typename U = T>
-    Span<const U> As() const { return Span<const U>((const U *)ptr, len); }
+    Span<const U> As() const { return Span<const T>(ptr, len).template As<const U>(); }
 };
 
 template <typename T, Size BucketSize = 64, typename AllocatorType = BlockAllocator>
