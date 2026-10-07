@@ -2,6 +2,12 @@
 
 ## Alpha versions
 
+### Redropp 0.9.12
+
+*Released on 2026-10-07*
+
+- Fix various HTTP issues
+
 ### Redropp 0.9.11
 
 *Released on 2026-10-05*
