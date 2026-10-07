@@ -2240,7 +2240,8 @@ public:
     {
         Reserve(l.size());
         for (const T &it: l) {
-            ptr[len++] = it;
+            new (ptr + len) T(it);
+            len++;
         }
     }
     ~HeapArray() { Clear(); }
@@ -2266,7 +2267,7 @@ public:
         Grow(other.capacity);
         if constexpr(!std::is_trivially_copyable<T>::value) {
             for (Size i = 0; i < other.len; i++) {
-                ptr[i] = other.ptr[i];
+                new (ptr + i) T(other.ptr[i]);
             }
         } else {
             MemCpy(ptr, other.ptr, other.len * K_SIZE(*ptr));
