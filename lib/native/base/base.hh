@@ -2894,13 +2894,6 @@ public:
             return ret;
         }
 
-        // Beware, in some cases a previous value may be seen again after this action
-        void Remove()
-        {
-            table->Remove(&table->data[offset]);
-            offset--;
-        }
-
         bool operator==(const Iterator &other) const
             { return table == other.table && offset == other.offset; }
         bool operator!=(const Iterator &other) const { return !(*this == other); }
