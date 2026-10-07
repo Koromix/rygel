@@ -743,21 +743,15 @@ public:
         typedef Iterator &reference;
 
         T *bitset = nullptr;
-        Size offset;
+        Size offset = 0;
         size_t bits = 0;
-        int ctz;
+        int ctz = 0;
 
         Iterator() = default;
-        Iterator(T *bitset, Size offset)
-            : bitset(bitset), offset(offset - 1)
-        {
-            operator++();
-        }
+        Iterator(T *bitset, Size offset) : bitset(bitset), offset(offset - 1) { operator++(); }
 
         Size operator*() const
         {
-            K_ASSERT(offset <= K_LEN(bitset->data));
-
             if (offset == K_LEN(bitset->data))
                 return -1;
             return offset * K_SIZE(size_t) * 8 + ctz;
@@ -765,12 +759,15 @@ public:
 
         Iterator &operator++()
         {
-            K_ASSERT(offset <= K_LEN(bitset->data));
+            K_ASSERT(offset < K_LEN(bitset->data));
 
             while (!bits) {
-                if (offset == K_LEN(bitset->data) - 1)
+                if (++offset == K_LEN(bitset->data)) {
+                    bits = 0;
                     return *this;
-                bits = bitset->data[++offset];
+                }
+
+                bits = bitset->data[offset];
             }
 
             ctz = CountTrailingZeros((uint64_t)bits);
@@ -787,7 +784,12 @@ public:
         }
 
         bool operator==(const Iterator &other) const
-            { return bitset == other.bitset && offset == other.offset; }
+        {
+            if (bitset != other.bitset) [[unlikely]]
+                return false;
+
+            return offset == other.offset && bits == other.bits;
+        }
         bool operator!=(const Iterator &other) const { return !(*this == other); }
     };
 
