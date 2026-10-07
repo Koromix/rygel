@@ -353,6 +353,7 @@ void http_Dispatcher::Run()
     };
 
     HeapArray<struct pollfd> pfds;
+    bool shedding = false;
 
     // React to connections
     pfds.Append({ (SOCKET)listener, POLLIN, 0 });
@@ -422,11 +423,18 @@ void http_Dispatcher::Run()
                 }
 
                 if (sockets.len >= MaxDispatcherClients) [[unlikely]] {
+                    if (!shedding) {
+                        LogWarning("Shedding HTTP connections (capacity overload)");
+                        shedding = true;
+                    }
+
                     struct linger sl = { 1, 0 };
                     setsockopt(sock, SOL_SOCKET, SO_LINGER, (char *)&sl, sizeof(sl));
                     close(sock);
 
                     continue;
+                } else {
+                    shedding = false;
                 }
 
                 // We use POLLRDBAND to disable poll processing, make sure URG bit does not break that

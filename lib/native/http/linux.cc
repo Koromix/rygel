@@ -358,6 +358,7 @@ void http_Dispatcher::Run()
 
     HeapArray<struct epoll_event> events;
     bool accepts = false;
+    bool shedding = false;
 
     for (;;) {
         int64_t clock = GetMonotonicClock();
@@ -421,11 +422,18 @@ void http_Dispatcher::Run()
                 }
 
                 if (sockets.len >= MaxDispatcherClients) [[unlikely]] {
+                    if (!shedding) {
+                        LogWarning("Shedding HTTP connections (capacity overload)");
+                        shedding = true;
+                    }
+
                     struct linger sl = { 1, 0 };
                     setsockopt(sock, SOL_SOCKET, SO_LINGER, &sl, sizeof(sl));
                     close(sock);
 
                     continue;
+                } else {
+                    shedding = false;
                 }
 
                 http_Socket *socket = InitSocket(sock, clock, (sockaddr *)&ss);
