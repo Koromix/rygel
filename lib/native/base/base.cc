@@ -5459,7 +5459,7 @@ static void DefaultSignalHandler(int signal)
     }
 }
 
-bool CreatePipe(bool block, int out_pfd[2])
+bool CreatePipe(bool blocking, int out_pfd[2])
 {
 #if defined(__APPLE__)
     if (pipe(out_pfd) < 0) {
@@ -5471,7 +5471,7 @@ bool CreatePipe(bool block, int out_pfd[2])
         LogError("Failed to set FD_CLOEXEC on pipe: %1", strerror(errno));
         return false;
     }
-    if (!block) {
+    if (!blocking) {
         if (fcntl(out_pfd[0], F_SETFL, O_NONBLOCK) < 0 || fcntl(out_pfd[1], F_SETFL, O_NONBLOCK) < 0) {
             LogError("Failed to set O_NONBLOCK on pipe: %1", strerror(errno));
             return false;
@@ -5480,7 +5480,7 @@ bool CreatePipe(bool block, int out_pfd[2])
 
     return true;
 #else
-    int flags = O_CLOEXEC | (block ? 0 : O_NONBLOCK);
+    int flags = O_CLOEXEC | (blocking ? 0 : O_NONBLOCK);
 
     if (pipe2(out_pfd, flags) < 0)  {
         LogError("Failed to create pipe: %1", strerror(errno));

@@ -310,7 +310,7 @@ bool http_Dispatcher::Init()
         return false;
     }
 
-    if (!CreatePipe(false, pair_fd))
+    if (!CreatePipe(true, pair_fd))
         return false;
 
     if (!AddEpollDescriptor(listener, EPOLLIN | EPOLLET | EPOLLEXCLUSIVE, 0))
