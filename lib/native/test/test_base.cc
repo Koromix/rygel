@@ -1180,6 +1180,47 @@ struct StrBucket {
     K_HASHTABLE_HANDLER(StrBucket, key);
 };
 
+TEST_FUNCTION("base/Bitset")
+{
+    for (int i = 0; i < 256; i++) {
+        HashSet<int> values;
+        Bitset<4242> bitset;
+
+        for (int j = 0; j < 256; j++) {
+            int rnd = GetRandomInt(0, bitset.Bits);
+            bool set = GetRandomInt(0, 8);
+
+            if (set) {
+                values.Set(rnd);
+            } else {
+                values.Remove(rnd);
+            }
+            bitset.Set(rnd, set);
+        }
+
+        for (int j = 0; j < bitset.Bits; j++) {
+            TEST_EQ(bitset.Test(j), !!values.Find(j));
+        }
+
+        // Test iterator (1)
+        TEST_EQ(std::count_if(bitset.begin(), bitset.end(), [&](int v) { return values.Find(v); }), values.table.count);
+
+        // Test iterator (2)
+        {
+            HashSet<int> copy(values);
+            TEST_EQ(copy.table.count, values.table.count);
+
+            for (Size bit: bitset) {
+                copy.Remove(bit);
+            }
+
+            TEST_EQ(copy.table.count, 0);
+        }
+
+        TEST_EQ(bitset.PopCount(), values.table.count);
+    }
+}
+
 TEST_FUNCTION("base/HashTable")
 {
     BlockAllocator temp_alloc;
