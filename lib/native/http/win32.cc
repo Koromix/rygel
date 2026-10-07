@@ -437,7 +437,7 @@ void http_Dispatcher::Run()
 
                     struct linger sl = { 1, 0 };
                     setsockopt(sock, SOL_SOCKET, SO_LINGER, (char *)&sl, sizeof(sl));
-                    close(sock);
+                    closesocket(sock);
 
                     continue;
                 } else {
