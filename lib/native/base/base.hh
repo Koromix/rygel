@@ -737,7 +737,7 @@ public:
     class Iterator {
         T *bitset = nullptr;
         Size offset = 0;
-        size_t bits = 0;
+        uintptr_t bits = 0;
         int ctz = 0;
 
     public:
@@ -754,7 +754,7 @@ public:
         {
             if (offset == K_LEN(bitset->data))
                 return -1;
-            return offset * K_BITS(size_t) + ctz;
+            return offset * K_BITS(uintptr_t) + ctz;
         }
 
         Iterator &operator++()
@@ -771,7 +771,7 @@ public:
             }
 
             ctz = CountTrailingZeros((uint64_t)bits);
-            bits ^= (size_t)1 << ctz;
+            bits ^= (uintptr_t)1 << ctz;
 
             return *this;
         }
@@ -797,14 +797,14 @@ public:
     typedef Iterator<Bitset> iterator;
 
     static constexpr Size Bits = N;
-    size_t data[(N + K_BITS(size_t) - 1) / K_BITS(size_t)] = {};
+    uintptr_t data[(N + K_BITS(uintptr_t) - 1) / K_BITS(uintptr_t)] = {};
 
     constexpr Bitset() = default;
     constexpr Bitset(std::initializer_list<Size> bits)
     {
         for (Size idx: bits) {
-            Size offset = idx / K_BITS(size_t);
-            size_t mask = (size_t)1 << (idx % K_BITS(size_t));
+            Size offset = idx / K_BITS(uintptr_t);
+            uintptr_t mask = (uintptr_t)1 << (idx % K_BITS(uintptr_t));
 
             data[offset] |= mask;
         }
@@ -823,7 +823,7 @@ public:
     Size PopCount() const
     {
         Size count = 0;
-        for (size_t bits: data) {
+        for (uintptr_t bits: data) {
 #if K_SIZE_MAX == INT64_MAX
             count += K::PopCount((uint64_t)bits);
 #else
@@ -837,8 +837,8 @@ public:
     {
         K_ASSERT(idx >= 0 && idx < N);
 
-        Size offset = idx / K_BITS(size_t);
-        size_t mask = (size_t)1 << (idx % K_BITS(size_t));
+        Size offset = idx / K_BITS(uintptr_t);
+        uintptr_t mask = (uintptr_t)1 << (idx % K_BITS(uintptr_t));
 
         return data[offset] & mask;
     }
@@ -846,8 +846,8 @@ public:
     {
         K_ASSERT(idx >= 0 && idx < N);
 
-        Size offset = idx / K_BITS(size_t);
-        size_t mask = (size_t)1 << (idx % K_BITS(size_t));
+        Size offset = idx / K_BITS(uintptr_t);
+        uintptr_t mask = (uintptr_t)1 << (idx % K_BITS(uintptr_t));
 
         data[offset] = ApplyMask(data[offset], mask, value);
     }
@@ -855,8 +855,8 @@ public:
     {
         K_ASSERT(idx >= 0 && idx < N);
 
-        Size offset = idx / K_BITS(size_t);
-        size_t mask = (size_t)1 << (idx % K_BITS(size_t));
+        Size offset = idx / K_BITS(uintptr_t);
+        uintptr_t mask = (uintptr_t)1 << (idx % K_BITS(uintptr_t));
 
         bool ret = data[offset] & mask;
         data[offset] = ApplyMask(data[offset], mask, value);
