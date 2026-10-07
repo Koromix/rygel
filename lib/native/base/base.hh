@@ -2089,6 +2089,7 @@ public:
 
     typedef T value_type;
     typedef T *iterator_type;
+    typedef const T *const_iterator_type;
 
     constexpr LocalArray() = default;
     constexpr LocalArray(std::initializer_list<T> l)
@@ -2229,6 +2230,7 @@ public:
 
     typedef T value_type;
     typedef T *iterator_type;
+    typedef const T *const_iterator_type;
 
     HeapArray() = default;
     HeapArray(Allocator *alloc, Size min_capacity = 0) : allocator(alloc)
@@ -2486,6 +2488,9 @@ public:
         Iterator(U *queue, Size bucket_idx, Size bucket_offset)
             : queue(queue), bucket_idx(bucket_idx), bucket_offset(bucket_offset),
               bucket(GetBucketSafe(bucket_idx)), next_bucket(GetBucketSafe(bucket_idx + 1)) {}
+        Iterator(const Iterator &other) = default;
+
+        Iterator &operator=(const Iterator &other) = default;
 
         T *operator->() { return &bucket->values[bucket_offset]; }
         const T *operator->() const { return &bucket->values[bucket_offset]; }
@@ -2563,6 +2568,7 @@ public:
 
     typedef T value_type;
     typedef Iterator<BucketList> iterator_type;
+    typedef Iterator<const BucketList> const_iterator_type;
 
     BucketList() {}
     BucketList(std::initializer_list<T> l)
@@ -2594,7 +2600,7 @@ public:
     }
 
     iterator_type begin() { return iterator_type(this, 0, offset); }
-    Iterator<const BucketList<T, BucketSize>> begin() const { return Iterator<const BucketList>(this, 0, offset); }
+    const_iterator_type begin() const { return const_iterator_type(this, 0, offset); }
     iterator_type end()
     {
         Size end_idx = offset + count;
@@ -2603,13 +2609,13 @@ public:
 
         return iterator_type(this, bucket_idx, bucket_offset);
     }
-    Iterator<const BucketList<T, BucketSize>> end() const
+    const_iterator_type end() const
     {
         Size end_idx = offset + count;
         Size bucket_idx = end_idx / BucketSize;
         Size bucket_offset = end_idx % BucketSize;
 
-        return Iterator<const BucketList>(this, bucket_idx, bucket_offset);
+        return const_iterator_type(this, bucket_idx, bucket_offset);
     }
 
     const T &operator[](Size idx) const
@@ -2737,7 +2743,7 @@ public:
 
         K_ASSERT(it == end());
     }
-    void RemoveFrom(const Iterator<const BucketList<T, BucketSize>> &it) { return RemoveFrom((iterator_type)it); }
+    void RemoveFrom(const const_iterator_type &it) { return RemoveFrom((iterator_type)it); }
 
     void RemoveUntil(const iterator_type &it)
     {
@@ -2764,7 +2770,7 @@ public:
         offset = (offset + count) % BucketSize;
         count -= count;
     }
-    void RemoveUntil(const Iterator<const BucketList<T, BucketSize>> &it) { return RemoveUntil((iterator_type)it); }
+    void RemoveUntil(const const_iterator_type &it) { return RemoveUntil((iterator_type)it); }
 
     void Trim()
     {
