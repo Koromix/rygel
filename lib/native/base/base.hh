@@ -2148,7 +2148,7 @@ public:
         K_ASSERT(len <= N - count);
 
         T *first = data + len;
-        if constexpr(!std::is_trivial<T>::value) {
+        if constexpr(!std::is_trivially_constructible<T>::value) {
             for (Size i = 0; i < count; i++) {
                 new (data + len) T();
                 len++;
@@ -2262,7 +2262,7 @@ public:
 
         RemoveFrom(0);
         Grow(other.capacity);
-        if constexpr(!std::is_trivial<T>::value) {
+        if constexpr(!std::is_trivially_copyable<T>::value) {
             for (Size i = 0; i < other.len; i++) {
                 ptr[i] = other.ptr[i];
             }
@@ -2367,7 +2367,7 @@ public:
         Grow(count);
 
         T *first = ptr + len;
-        if constexpr(!std::is_trivial<T>::value) {
+        if constexpr(!std::is_trivially_constructible<T>::value) {
             for (Size i = 0; i < count; i++) {
                 new (ptr + len) T();
                 len++;
@@ -2385,7 +2385,7 @@ public:
         Grow();
 
         T *first = ptr + len;
-        if constexpr(!std::is_trivial<T>::value) {
+        if constexpr(!std::is_trivially_constructible<T>::value) {
             new (ptr + len) T;
         }
         ptr[len++] = value;
@@ -2396,7 +2396,7 @@ public:
         Grow();
 
         T *first = ptr + len;
-        if constexpr(!std::is_trivial<T>::value) {
+        if constexpr(!std::is_trivially_constructible<T>::value) {
             new (ptr + len) T;
         }
         ptr[len++] = std::move(value);
@@ -2408,7 +2408,7 @@ public:
 
         T *first = ptr + len;
         for (const T &value: values) {
-            if constexpr(!std::is_trivial<T>::value) {
+            if constexpr(!std::is_trivially_constructible<T>::value) {
                 new (ptr + len) T;
             }
             ptr[len++] = value;
@@ -2420,7 +2420,7 @@ public:
     {
         K_ASSERT(first >= 0 && first <= len);
 
-        if constexpr(!std::is_trivial<T>::value) {
+        if constexpr(!std::is_trivially_destructible<T>::value) {
             for (Size i = first; i < len; i++) {
                 ptr[i].~T();
             }
@@ -2785,7 +2785,7 @@ private:
     void DeleteValues([[maybe_unused]] iterator_type begin,
                       [[maybe_unused]] iterator_type end)
     {
-        if constexpr(!std::is_trivial<T>::value) {
+        if constexpr(!std::is_trivially_destructible<T>::value) {
             for (iterator_type it = begin; it != end; ++it) {
                 it->~T();
             }
@@ -2900,7 +2900,7 @@ public:
 
     void Clear()
     {
-        if constexpr(!std::is_trivial<ValueType>::value) {
+        if constexpr(!std::is_trivially_destructible<ValueType>::value) {
             for (Size i = 0; i < capacity; i++) {
                 data[i].~ValueType();
             }
@@ -2912,7 +2912,7 @@ public:
 
     void RemoveAll()
     {
-        if constexpr(!std::is_trivial<ValueType>::value) {
+        if constexpr(!std::is_trivially_destructible<ValueType>::value) {
             for (Size i = 0; i < capacity; i++) {
                 data[i].~ValueType();
             }
