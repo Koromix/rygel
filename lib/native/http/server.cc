@@ -137,6 +137,8 @@ bool http_Config::SetProperty(Span<const char> key, Span<const char> value, Span
         } else {
             return ParseDuration(value, &keepalive_time);
         }
+    } else if (key == "HandleTimeout") {
+        return ParseDuration(value, &handle_timeout);
     } else if (key == "MaxTimeout") {
         return ParseDuration(value, &max_timeout);
     } else if (key == "LingerTimeout") {
@@ -208,6 +210,10 @@ bool http_Config::Validate() const
     }
     if (keepalive_time && keepalive_time < 5000) {
         LogError("HTTP KeepAliveTime must be >= 5 sec (or Disabled)");
+        valid = false;
+    }
+    if (handle_timeout < 20000) {
+        LogError("HTTP HandleTimeout must be >= 20 sec");
         valid = false;
     }
     if (max_timeout < 20000) {
@@ -321,6 +327,7 @@ bool http_Daemon::Bind(const http_Config &config, bool log_addr)
     addr_mode = config.addr_mode;
     idle_timeout = config.idle_timeout;
     keepalive_time = config.keepalive_time;
+    handle_timeout = config.handle_timeout;
     max_timeout = config.max_timeout;
     linger_timeout = config.linger_timeout;
     stop_timeout = config.stop_timeout;
@@ -1337,7 +1344,7 @@ http_RequestStatus http_IO::ParseRequest()
     request.body_len = body_len;
     this->keepalive = keepalive && !close;
 
-    SetTimeout(GetMonotonicClock() + daemon->idle_timeout);
+    SetTimeout(GetMonotonicClock() + daemon->handle_timeout);
 
     return http_RequestStatus::Ready;
 }
