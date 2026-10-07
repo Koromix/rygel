@@ -2859,8 +2859,8 @@ public:
         typedef std::forward_iterator_tag iterator_category;
         typedef ValueType value_type;
         typedef Size difference_type;
-        typedef Iterator *pointer;
-        typedef Iterator &reference;
+        typedef ValueType *pointer;
+        typedef ValueType &reference;
 
         T *table = nullptr;
         Size offset;
@@ -2906,8 +2906,9 @@ public:
         bool operator!=(const Iterator &other) const { return !(*this == other); }
     };
 
-    typedef Size value_type;
+    typedef ValueType value_type;
     typedef Iterator<HashTable> iterator;
+    typedef Iterator<const HashTable> const_iterator;
 
     size_t *used = nullptr;
     ValueType *data = nullptr;
@@ -2933,6 +2934,8 @@ public:
         Clear();
         MemMove(this, &other, K_SIZE(other));
         MemSet(&other, 0, K_SIZE(other));
+        other.allocator = allocator;
+
         return *this;
     }
     HashTable(const HashTable &other) { *this = other; }
@@ -2942,35 +2945,34 @@ public:
             return *this;
 
         Clear();
+
+        allocator = other.allocator;
         for (const ValueType &value: other) {
             Set(value);
         }
+
         return *this;
     }
 
     void Clear()
     {
-        if constexpr(!std::is_trivially_destructible<ValueType>::value) {
-            for (Size i = 0; i < capacity; i++) {
-                data[i].~ValueType();
-            }
-        }
-
         count = 0;
         Rehash(0);
     }
 
     void RemoveAll()
     {
-        if constexpr(!std::is_trivially_destructible<ValueType>::value) {
-            for (Size i = 0; i < capacity; i++) {
-                data[i].~ValueType();
+        if constexpr(std::is_pointer<ValueType>::value) {
+            MemSet(data, 0, capacity * K_SIZE(ValueType));
+        } else if constexpr(!std::is_trivially_destructible<ValueType>::value) {
+            for (iterator it = begin(); it != end(); it++) {
+                data[it.offset].~ValueType();
             }
         }
-
         count = 0;
+
         if (used) {
-            size_t len = (size_t)(capacity + (K_SIZE(size_t) * 8) - 1) / K_SIZE(size_t);
+            Size len = (capacity + (K_SIZE(size_t) * 8) - 1) / K_SIZE(size_t);
             MemSet(used, 0, len);
         }
     }
@@ -2991,6 +2993,7 @@ public:
 
         uint64_t hash = Handler::HashKey(key);
         Size idx = HashToIndex(hash);
+
         return Find(&idx, key);
     }
     template <typename T = KeyType>
@@ -3010,7 +3013,11 @@ public:
         bool inserted;
         ValueType *ptr = Insert(key, &inserted);
 
-        *ptr = value;
+        if (inserted) {
+            new (ptr) ValueType(value);
+        } else if (ptr != &value) {
+            *ptr = value;
+        }
 
         return ptr;
     }
@@ -3035,7 +3042,7 @@ public:
         ValueType *ptr = Insert(key, &inserted);
 
         if (inserted) {
-            *ptr = value;
+            new (ptr) ValueType(value);
         }
 
         if (out_inserted) {
@@ -3084,12 +3091,15 @@ public:
 
             MarkUsed(clear_idx);
             MarkEmpty(idx);
-            MemMove(&data[clear_idx], &data[idx], K_SIZE(*data));
+            new (data + clear_idx) ValueType(std::move(data[idx]));
+            data[idx].~ValueType();
 
             clear_idx = idx;
         }
 
-        new (&data[clear_idx]) ValueType();
+        if constexpr(std::is_pointer<ValueType>::value) {
+            MemSet(data + clear_idx, 0, K_SIZE(ValueType));
+        }
     }
     template <typename T = KeyType>
     void Remove(const T &key) { Remove(Find(key)); }
@@ -3179,72 +3189,74 @@ private:
             return;
         K_ASSERT(count <= new_capacity);
 
-        size_t *old_used = used;
-        ValueType *old_data = data;
-        Size old_capacity = capacity;
-
         if (new_capacity) {
             Size used_size = (new_capacity + (K_SIZE(size_t) * 8) - 1) / K_SIZE(size_t);
 
-            used = (size_t *)AllocateRaw(allocator, used_size);
-            data = (ValueType *)AllocateRaw(allocator, new_capacity * K_SIZE(ValueType));
-            capacity = new_capacity;
+            size_t *new_used = (size_t *)AllocateRaw(allocator, used_size);
+            ValueType *new_data = (ValueType *)AllocateRaw(allocator, new_capacity * K_SIZE(ValueType));
 
-            for (Size i = 0; i < new_capacity; i++) {
-                new (&data[i]) ValueType();
+            if constexpr(std::is_pointer<ValueType>::value) {
+                MemSet(new_data, 0, new_capacity * K_SIZE(ValueType));
             }
-            MemSet(used, 0, used_size);
+            MemSet(new_used, 0, used_size);
 
-            for (Size i = 0; i < old_capacity; i++) {
-                if (!IsEmpty(old_used, i)) {
-                    Size new_idx = KeyToIndex(Handler::GetKey(old_data[i]));
-                    while (!IsEmpty(new_idx)) {
-                        new_idx = NextIndex(new_idx);
-                    }
-                    MarkUsed(new_idx);
-                    data[new_idx] = old_data[i];
+            for (iterator it = begin(); it != end(); it++) {
+                Size new_idx = KeyToIndex(Handler::GetKey(data[it.offset]), new_capacity);
+                while (!IsEmpty(new_used, new_idx)) {
+                    new_idx = NextIndex(new_idx, new_capacity);
+                }
+
+                MarkUsed(new_used, new_idx);
+                new (new_data + new_idx) ValueType(std::move(data[it.offset]));
+                data[it.offset].~ValueType();
+            }
+
+            ReleaseRaw(allocator, used, (capacity + (K_SIZE(size_t) * 8) - 1) / K_SIZE(size_t));
+            ReleaseRaw(allocator, data, capacity * K_SIZE(ValueType));
+
+            used = new_used;
+            data = new_data;
+            capacity = new_capacity;
+        } else {
+            if constexpr(!std::is_trivially_destructible<ValueType>::value) {
+                for (iterator it = begin(); it != end(); it++) {
+                    data[it.offset].~ValueType();
                 }
             }
-        } else {
+
+            ReleaseRaw(allocator, used, (capacity + (K_SIZE(size_t) * 8) - 1) / K_SIZE(size_t));
+            ReleaseRaw(allocator, data, capacity * K_SIZE(ValueType));
+
             used = nullptr;
             data = nullptr;
             capacity = 0;
         }
-
-        ReleaseRaw(allocator, old_used, (old_capacity + (K_SIZE(size_t) * 8) - 1) / K_SIZE(size_t));
-        ReleaseRaw(allocator, old_data, old_capacity * K_SIZE(ValueType));
     }
 
-    inline void MarkUsed(Size idx)
-    {
-        used[idx / (K_SIZE(size_t) * 8)] |= (1ull << (idx % (K_SIZE(size_t) * 8)));
-    }
-    inline void MarkEmpty(Size idx)
-    {
-        used[idx / (K_SIZE(size_t) * 8)] &= ~(1ull << (idx % (K_SIZE(size_t) * 8)));
-    }
+    static inline void MarkUsed(size_t *used, Size idx) { used[idx / (K_SIZE(size_t) * 8)] |= (1ull << (idx % (K_SIZE(size_t) * 8))); }
+    static inline void MarkEmpty(size_t *used, Size idx) { used[idx / (K_SIZE(size_t) * 8)] &= ~(1ull << (idx % (K_SIZE(size_t) * 8))); }
+    inline void MarkUsed(Size idx) { MarkUsed(used, idx); }
+    inline void MarkEmpty(Size idx) { MarkEmpty(used, idx); }
 
-    inline bool IsEmpty(size_t *used, Size idx) const
+    static inline bool IsEmpty(size_t *used, Size idx)
     {
         bool empty = !(used[idx / (K_SIZE(size_t) * 8)] & (1ull << (idx % (K_SIZE(size_t) * 8))));
         return empty;
     }
     inline bool IsEmpty(Size idx) const { return IsEmpty(used, idx); }
 
-    inline Size HashToIndex(uint64_t hash) const
-    {
-        return (Size)(hash & (uint64_t)(capacity - 1));
-    }
-    inline Size KeyToIndex(const KeyType &key) const
+    static inline Size HashToIndex(uint64_t hash, Size capacity) { return (Size)(hash & (uint64_t)(capacity - 1)); }
+    inline Size HashToIndex(uint64_t hash) const { return HashToIndex(hash, capacity); }
+
+    static inline Size KeyToIndex(const KeyType &key, Size capacity)
     {
         uint64_t hash = Handler::HashKey(key);
-        return HashToIndex(hash);
+        return HashToIndex(hash, capacity);
     }
+    inline Size KeyToIndex(const KeyType &key) const { return KeyToIndex(key, capacity); }
 
-    inline Size NextIndex(Size idx) const
-    {
-        return (idx + 1) & (capacity - 1);
-    }
+    static inline Size NextIndex(Size idx, Size capacity) { return (idx + 1) & (capacity - 1); }
+    inline Size NextIndex(Size idx) const { return NextIndex(idx, capacity); }
 };
 
 template <typename T>
@@ -3495,7 +3507,7 @@ public:
         table.Remove(it);
     }
     template <typename T = KeyType>
-    void Remove(const KeyType &key) { Remove(Find(key)); }
+    void Remove(const T &key) { Remove(Find(key)); }
 
     void Trim() { table.Trim(); }
 };
@@ -3548,8 +3560,6 @@ public:
     void Remove(const T &value) { Remove(Find(value)); }
 
     void Trim() { table.Trim(); }
-
-private:
 };
 
 struct alignas(8) TaggedIndex {
