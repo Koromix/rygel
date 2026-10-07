@@ -2536,11 +2536,8 @@ public:
                 bucket_idx--;
                 bucket_offset = BucketSize - 1;
 
-                // Allow iterator to go before start temporarily
-                if (bucket_idx >= 0) [[unlikely]] {
-                    bucket = (bucket_idx >= 0) ? GetBucketSafe(bucket_idx) : nullptr;
-                    next_bucket = (bucket_idx >= 0) ? GetBucketSafe(bucket_idx + 1) : nullptr;
-                }
+                bucket = GetBucketSafe(bucket_idx);
+                next_bucket = GetBucketSafe(bucket_idx + 1);
             }
 
             return *this;
@@ -2559,7 +2556,7 @@ public:
 
     private:
         Bucket *GetBucketSafe(Size idx)
-            { return idx < queue->buckets.len ? queue->buckets[idx] : nullptr; }
+            { return (size_t)idx < (size_t)queue->buckets.len ? queue->buckets[idx] : nullptr; }
     };
 
     HeapArray<Bucket *> buckets;
