@@ -2210,12 +2210,17 @@ public:
         RemoveFrom(len - count);
     }
 
-    Span<T> Take() const { return Span<T>((T *)data, len); }
-    Span<T> Take(Size offset, Size len) const { return Span<T>((T *)data, N).Take(offset, len); }
-    Span<T> TakeAvailable() const { return Span<T>((T *)data + len, N - len); }
+    Span<T> Take() { return Span<T>(data, len); }
+    Span<const T> Take() const { return Span<const T>(data, len); }
+    Span<T> Take(Size offset, Size len) { return Span<T>(data, this->len).Take(offset, len); }
+    Span<const T> Take(Size offset, Size len) const { return Span<const T>(data, this->len).Take(offset, len); }
+    Span<T> TakeAvailable() { return Span<T>(data + len, K_LEN(data) - len); }
+    Span<const T> TakeAvailable() const { return Span<const T>(data + len, K_LEN(data) - len); }
 
     template <typename U = T>
-    Span<U> As() const { return Span<U>((U *)data, len); }
+    Span<U> As() { return Span<U>((U *)data, len); }
+    template <typename U = T>
+    Span<const U> As() const { return Span<const U>((const U *)data, len); }
 };
 
 template <typename T>
@@ -2437,10 +2442,6 @@ public:
         RemoveFrom(len - count);
     }
 
-    Span<T> Take() const { return Span<T>(ptr, len); }
-    Span<T> Take(Size offset, Size len) const { return Span<T>(ptr, this->len).Take(offset, len); }
-    Span<T> TakeAvailable() const { return Span<T>((T *)ptr + len, capacity - len); }
-
     Span<T> Leak()
     {
         Span<T> span = *this;
@@ -2457,8 +2458,17 @@ public:
         return Leak();
     }
 
+    Span<T> Take() { return Span<T>(ptr, len); }
+    Span<const T> Take() const { return Span<const T>(ptr, len); }
+    Span<T> Take(Size offset, Size len) { return Span<T>(ptr, this->len).Take(offset, len); }
+    Span<const T> Take(Size offset, Size len) const { return Span<const T>(ptr, this->len).Take(offset, len); }
+    Span<T> TakeAvailable() { return Span<T>(ptr + len, capacity - len); }
+    Span<const T> TakeAvailable() const { return Span<const T>(ptr + len, capacity - len); }
+
     template <typename U = T>
-    Span<U> As() const { return Span<U>((U *)ptr, len); }
+    Span<U> As() { return Span<U>((U *)ptr, len); }
+    template <typename U = T>
+    Span<const U> As() const { return Span<const U>((const U *)ptr, len); }
 };
 
 template <typename T, Size BucketSize = 64, typename AllocatorType = BlockAllocator>

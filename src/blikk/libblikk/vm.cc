@@ -79,7 +79,7 @@ bool bk_VirtualMachine::Run()
             DISPATCH(++pc);
         }
         CASE(Fetch): {
-            Span<bk_PrimitiveValue> data = program->ro.Take(inst->u2.i, inst->u1.i);
+            Span<const bk_PrimitiveValue> data = program->ro.Take(inst->u2.i, inst->u1.i);
             stack.Append(data);
             DISPATCH(++pc);
         }
