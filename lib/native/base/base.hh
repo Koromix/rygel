@@ -754,7 +754,7 @@ public:
         {
             if (offset == K_LEN(bitset->data))
                 return -1;
-            return offset * K_SIZE(size_t) * 8 + ctz;
+            return offset * K_BITS(size_t) + ctz;
         }
 
         Iterator &operator++()
@@ -803,8 +803,8 @@ public:
     constexpr Bitset(std::initializer_list<Size> bits)
     {
         for (Size idx: bits) {
-            Size offset = idx / (K_SIZE(size_t) * 8);
-            size_t mask = (size_t)1 << (idx % (K_SIZE(size_t) * 8));
+            Size offset = idx / K_BITS(size_t);
+            size_t mask = (size_t)1 << (idx % K_BITS(size_t));
 
             data[offset] |= mask;
         }
@@ -837,8 +837,8 @@ public:
     {
         K_ASSERT(idx >= 0 && idx < N);
 
-        Size offset = idx / (K_SIZE(size_t) * 8);
-        size_t mask = (size_t)1 << (idx % (K_SIZE(size_t) * 8));
+        Size offset = idx / K_BITS(size_t);
+        size_t mask = (size_t)1 << (idx % K_BITS(size_t));
 
         return data[offset] & mask;
     }
@@ -846,8 +846,8 @@ public:
     {
         K_ASSERT(idx >= 0 && idx < N);
 
-        Size offset = idx / (K_SIZE(size_t) * 8);
-        size_t mask = (size_t)1 << (idx % (K_SIZE(size_t) * 8));
+        Size offset = idx / K_BITS(size_t);
+        size_t mask = (size_t)1 << (idx % K_BITS(size_t));
 
         data[offset] = ApplyMask(data[offset], mask, value);
     }
@@ -855,8 +855,8 @@ public:
     {
         K_ASSERT(idx >= 0 && idx < N);
 
-        Size offset = idx / (K_SIZE(size_t) * 8);
-        size_t mask = (size_t)1 << (idx % (K_SIZE(size_t) * 8));
+        Size offset = idx / K_BITS(size_t);
+        size_t mask = (size_t)1 << (idx % K_BITS(size_t));
 
         bool ret = data[offset] & mask;
         data[offset] = ApplyMask(data[offset], mask, value);
@@ -2922,7 +2922,7 @@ public:
         bool operator!=(const Iterator &other) const { return !(*this == other); }
 
 private:
-        Size Index() const { return offset * K_SIZE(uintptr_t) * 8 + ctz; }
+        Size Index() const { return offset * K_BITS(uintptr_t) + ctz; }
 
         friend class HashTable;
     };
@@ -3251,14 +3251,14 @@ private:
         }
     }
 
-    static Size ComputeUsedLength(Size capacity) { return (capacity + (K_SIZE(uintptr_t) * 8 - 1)) / (K_SIZE(uintptr_t) * 8); }
+    static Size ComputeUsedLength(Size capacity) { return (capacity + (K_BITS(uintptr_t) - 1)) / K_BITS(uintptr_t); }
 
-    static inline void MarkUsed(uintptr_t *used, Size idx) { used[idx / (K_SIZE(uintptr_t) * 8)] |= (1ull << (idx % (K_SIZE(uintptr_t) * 8))); }
-    static inline void MarkEmpty(uintptr_t *used, Size idx) { used[idx / (K_SIZE(uintptr_t) * 8)] &= ~(1ull << (idx % (K_SIZE(uintptr_t) * 8))); }
+    static inline void MarkUsed(uintptr_t *used, Size idx) { used[idx / K_BITS(uintptr_t)] |= (1ull << (idx % K_BITS(uintptr_t))); }
+    static inline void MarkEmpty(uintptr_t *used, Size idx) { used[idx / K_BITS(uintptr_t)] &= ~(1ull << (idx % K_BITS(uintptr_t))); }
     inline void MarkUsed(Size idx) { MarkUsed(used, idx); }
     inline void MarkEmpty(Size idx) { MarkEmpty(used, idx); }
 
-    static inline bool IsUsed(uintptr_t *used, Size idx) { return used[idx / (K_SIZE(uintptr_t) * 8)] & (1ull << (idx % (K_SIZE(uintptr_t) * 8))); }
+    static inline bool IsUsed(uintptr_t *used, Size idx) { return used[idx / K_BITS(uintptr_t)] & (1ull << (idx % K_BITS(uintptr_t))); }
     inline bool IsUsed(Size idx) const { return IsUsed(used, idx); }
 
     static inline Size HashToIndex(uint64_t hash, Size capacity) { return (Size)(hash & (uint64_t)(capacity - 1)); }
