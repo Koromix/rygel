@@ -32,6 +32,7 @@ struct http_Socket {
     bool pollable = false;
     bool process = false;
     Size linger = 0;
+    bool handled = true;
 
     http_IO client;
 
@@ -443,7 +444,9 @@ void http_Dispatcher::Run()
 #if !defined(MSG_DONTWAIT)
                 SetSocketNonBlock(socket->sock, true);
 #endif
+
                 AddEventChange(EVFILT_READ, socket->sock, EV_ENABLE, socket);
+                socket->handled = true;
             } else {
                 http_Socket *socket = (http_Socket *)ev.udata;
                 socket->process = true;
@@ -570,6 +573,7 @@ void http_Dispatcher::Run()
 
                 case http_RequestStatus::Ready: {
                     AddEventChange(EVFILT_READ, socket->sock, EV_DISABLE, socket);
+                    socket->handled = false;
 
                     async.Run([socket, this] {
                         http_IO *client = &socket->client;
@@ -607,10 +611,21 @@ void http_Dispatcher::Run()
             int delay = (int)(client->timeout_at.load(std::memory_order_relaxed) - clock);
 
             if (delay <= 0) {
-                shutdown(socket->sock, SHUT_RDWR);
-                socket->linger = Mebibytes(1); // Possible race with worker (who also sets true), harmless
+                if (!socket->linger) {
+                    client->SetTimeout(GetMonotonicClock() + daemon->linger_timeout);
+                    socket->linger = Mebibytes(1); // Possible race with worker (write of same value), harmless
+                    shutdown(socket->sock, SHUT_RDWR);
 
-                continue;
+                    delay = daemon->linger_timeout;
+                } else if (socket->handled) {
+                    ParkSocket(socket, true);
+                    keep--;
+
+                    continue;
+                } else {
+                    // Stuck in handler, reevaluate
+                    delay = 1000;
+                }
             }
 
             timeout = std::min(timeout, (unsigned int)delay);
@@ -664,6 +679,7 @@ http_Socket *http_Dispatcher::InitSocket(int sock, int64_t start, struct sockadd
     socket->pollable = false;
     socket->process = true;
     socket->linger = 0;
+    socket->handled = true;
 
     err_guard.Disable();
     return socket;

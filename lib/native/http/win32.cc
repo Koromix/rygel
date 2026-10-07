@@ -27,6 +27,7 @@ struct http_Socket {
     bool process = false;
     bool poll = false;
     Size linger = 0;
+    bool handled = true;
     bool nodelay = false;
 
     http_IO client;
@@ -386,7 +387,9 @@ void http_Dispatcher::Run()
                 return;
 
             SetSocketNonBlock(socket->sock, true);
+
             socket->poll = true;
+            socket->handled = true;
         }
         for (Size i = 2; i < pfds.len; i++) {
             struct pollfd &pfd = pfds[i];
@@ -503,6 +506,7 @@ void http_Dispatcher::Run()
 
                 case http_RequestStatus::Ready: {
                     socket->poll = false;
+                    socket->handled = false;
 
                     async.Run([socket, this] {
                         http_IO *client = &socket->client;
@@ -540,10 +544,21 @@ void http_Dispatcher::Run()
             int delay = (int)(client->timeout_at.load(std::memory_order_relaxed) - clock);
 
             if (delay <= 0) {
-                shutdown(socket->sock, SD_BOTH);
-                socket->linger = Mebibytes(1); // Possible race with worker (write of same value), harmless
+                if (!socket->linger) {
+                    client->SetTimeout(GetMonotonicClock() + daemon->linger_timeout);
+                    socket->linger = Mebibytes(1); // Possible race with worker (write of same value), harmless
+                    shutdown(socket->sock, SD_BOTH);
 
-                continue;
+                    delay = daemon->linger_timeout;
+                } else if (socket->handled) {
+                    ParkSocket(socket, true);
+                    keep--;
+
+                    continue;
+                } else {
+                    // Stuck in handler, reevaluate
+                    delay = 1000;
+                }
             }
 
             timeout = std::min(timeout, (unsigned int)delay);
@@ -593,6 +608,7 @@ http_Socket *http_Dispatcher::InitSocket(SOCKET sock, int64_t start, struct sock
     socket->process = true;
     socket->poll = true;
     socket->linger = 0;
+    socket->handled = true;
     socket->nodelay = false;
 
     err_guard.Disable();

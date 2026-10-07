@@ -26,6 +26,7 @@ struct http_Socket {
 
     bool process = false;
     Size linger = 0;
+    bool handled = true;
 
     http_IO client;
 
@@ -41,6 +42,7 @@ class http_Dispatcher {
     int listener;
 
     int epoll_fd = -1;
+    int pair_fd[2] = { -1, -1 };
 
     HeapArray<http_Socket *> sockets;
     LocalArray<http_Socket *, 64> free_sockets;
@@ -53,11 +55,13 @@ public:
     bool Init();
     void Run();
 
+    void Wake(http_Socket *socket);
+
 private:
     http_Socket *InitSocket(int sock, int64_t start, struct sockaddr *sa);
     void ParkSocket(http_Socket *socket, bool hard);
 
-    bool AddEpollDescriptor(int fd, uint32_t events, void *ptr);
+    bool AddEpollDescriptor(int fd, uint32_t events, uint64_t u);
     void DeleteEpollDescriptor(int fd);
 
     void StopWS();
@@ -286,6 +290,8 @@ void http_IO::SendFile(int status, int fd, int64_t len)
 http_Dispatcher::~http_Dispatcher()
 {
     CloseDescriptor(epoll_fd);
+    CloseDescriptor(pair_fd[0]);
+    CloseDescriptor(pair_fd[1]);
 }
 
 bool http_Dispatcher::Init()
@@ -298,7 +304,12 @@ bool http_Dispatcher::Init()
         return false;
     }
 
-    if (!AddEpollDescriptor(listener, EPOLLIN | EPOLLET | EPOLLEXCLUSIVE, nullptr))
+    if (!CreatePipe(false, pair_fd))
+        return false;
+
+    if (!AddEpollDescriptor(listener, EPOLLIN | EPOLLET | EPOLLEXCLUSIVE, 0))
+        return false;
+    if (!AddEpollDescriptor(pair_fd[0], EPOLLIN, 1))
         return false;
 
     return true;
@@ -352,11 +363,34 @@ void http_Dispatcher::Run()
         int64_t clock = GetMonotonicClock();
 
         for (const struct epoll_event &ev: events) {
-            if (!ev.data.ptr) {
+            if (ev.data.u64 == 0) {
                 if (ev.events & EPOLLHUP) [[unlikely]]
                     return;
 
                 accepts = true;
+            } else if (ev.data.u64 == 1) {
+                uintptr_t addr = 0;
+                Size ret = read(pair_fd[0], &addr, K_SIZE(addr));
+
+                if (ret < 0) [[unlikely]] {
+                    if (errno == EINTR)
+                        continue;
+
+                    LogError("Unexpected error during pipe read: %1", strerror(errno));
+                    return;
+                } else if (ret != K_SIZE(addr)) [[unlikely]] {
+                    LogError("Unexpected empty or partial read during pipe read");
+                    return;
+                }
+
+                http_Socket *socket = (http_Socket *)addr;
+
+                if (!AddEpollDescriptor(socket->sock, EPOLLIN, (uint64_t)(uintptr_t)socket)) [[unlikely]] {
+                    socket->client.SetTimeout(GetMonotonicClock());
+                    socket->linger = 1; // Any value will do to trigger hard close
+                }
+
+                socket->handled = true;
             } else {
                 http_Socket *socket = (http_Socket *)ev.data.ptr;
                 socket->process = true;
@@ -459,6 +493,7 @@ void http_Dispatcher::Run()
 
                 case http_RequestStatus::Ready: {
                     DeleteEpollDescriptor(socket->sock);
+                    socket->handled = false;
 
                     async.Run([socket, this] {
                         http_IO *client = &socket->client;
@@ -480,7 +515,7 @@ void http_Dispatcher::Run()
                             socket->linger = Mebibytes(1);
                             shutdown(socket->sock, SHUT_WR);
                         }
-                        AddEpollDescriptor(socket->sock, EPOLLIN, socket);
+                        Wake(socket);
 
                         return true;
                     });
@@ -496,10 +531,21 @@ void http_Dispatcher::Run()
             int delay = (int)(client->timeout_at.load(std::memory_order_relaxed) - clock);
 
             if (delay <= 0) {
-                shutdown(socket->sock, SHUT_RDWR);
-                socket->linger = Mebibytes(1); // Possible race with worker (write of same value), harmless
+                if (!socket->linger) {
+                    client->SetTimeout(GetMonotonicClock() + daemon->linger_timeout);
+                    socket->linger = Mebibytes(1); // Possible race with worker (write of same value), harmless
+                    shutdown(socket->sock, SHUT_RDWR);
 
-                continue;
+                    delay = daemon->linger_timeout;
+                } else if (socket->handled) {
+                    ParkSocket(socket, true);
+                    keep--;
+
+                    continue;
+                } else {
+                    // Stuck in handler, reevaluate
+                    delay = 1000;
+                }
             }
 
             timeout = std::min(timeout, (unsigned int)delay);
@@ -528,6 +574,13 @@ void http_Dispatcher::Run()
     K_UNREACHABLE();
 }
 
+void http_Dispatcher::Wake(http_Socket *socket)
+{
+    uintptr_t addr = (uintptr_t)socket;
+    Size ret = K_RESTART_EINTR(write(pair_fd[1], &addr, K_SIZE(addr)), < 0);
+    (void)ret;
+}
+
 http_Socket *http_Dispatcher::InitSocket(int sock, int64_t start, struct sockaddr *sa)
 {
     http_Socket *socket = free_sockets.len ? free_sockets.data[--free_sockets.len] : new http_Socket(daemon);
@@ -535,12 +588,13 @@ http_Socket *http_Dispatcher::InitSocket(int sock, int64_t start, struct sockadd
 
     if (!socket->client.Init(socket, start, sa)) [[unlikely]]
         return nullptr;
-    if (!AddEpollDescriptor(sock, EPOLLIN, socket)) [[unlikely]]
+    if (!AddEpollDescriptor(sock, EPOLLIN, (uint64_t)(uintptr_t)socket)) [[unlikely]]
         return nullptr;
 
     socket->sock = sock;
     socket->process = true;
     socket->linger = 0;
+    socket->handled = true;
 
     err_guard.Disable();
     return socket;
@@ -566,9 +620,9 @@ void http_Dispatcher::ParkSocket(http_Socket *socket, bool hard)
     }
 }
 
-bool http_Dispatcher::AddEpollDescriptor(int fd, uint32_t events, void *ptr)
+bool http_Dispatcher::AddEpollDescriptor(int fd, uint32_t events, uint64_t u)
 {
-    struct epoll_event ev = { events, { .ptr = ptr }};
+    struct epoll_event ev = { events, { .u64 = u }};
 
     if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, fd, &ev) < 0 && errno != EEXIST) {
         LogError("Failed to add descriptor to epoll: %1", strerror(errno));
