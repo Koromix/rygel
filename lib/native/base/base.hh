@@ -2477,10 +2477,10 @@ public:
         typedef Iterator &reference;
 
         U *queue = nullptr;
-        Size bucket_idx;
-        Size bucket_offset;
-        Bucket *bucket;
-        Bucket *next_bucket;
+        Size bucket_idx = 0;
+        Size bucket_offset = 0;
+        Bucket *bucket = nullptr;
+        Bucket *next_bucket = nullptr;
 
         Iterator() = default;
         Iterator(U *queue, Size bucket_idx, Size bucket_offset)
