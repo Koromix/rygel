@@ -66,8 +66,13 @@ void Board::loadSettings(Monitor *monitor)
 {
     auto tag = db_.get("tag", "").toString();
     int r = ty_board_set_tag(board_, tag.isEmpty() ? nullptr : tag.toLocal8Bit().constData());
-    if (r < 0)
+    if (r < 0) {
+#if defined(_MSC_VER) || __EXCEPTIONS
         throw bad_alloc();
+#else
+        std::terminate();
+#endif
+    }
 
     firmware_ = db_.get("firmware", "").toString();
     if (firmware_.isEmpty() || !QFileInfo::exists(firmware_))
@@ -432,7 +437,11 @@ void Board::setTag(const QString &tag)
 
     int r = ty_board_set_tag(board_, tag.isEmpty() ? nullptr : tag.toLocal8Bit().constData());
     if (r < 0)
+#if defined(_MSC_VER) || __EXCEPTIONS
         throw bad_alloc();
+#else
+        std::terminate();
+#endif
 
     db_.put("tag", tag);
     emit infoChanged();

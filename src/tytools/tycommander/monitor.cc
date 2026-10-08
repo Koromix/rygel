@@ -24,8 +24,13 @@ Monitor::Monitor(QObject *parent)
     : QAbstractListModel(parent)
 {
     int r = ty_pool_new(&pool_);
-    if (r < 0)
+    if (r < 0) {
+#if defined(_MSC_VER) || __EXCEPTIONS
         throw bad_alloc();
+#else
+        std::terminate();
+#endif
+    }
 
     loadSettings();
 }

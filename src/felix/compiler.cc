@@ -374,6 +374,7 @@ public:
         supported |= (int)CompileFeature::PCH;
         supported |= (int)CompileFeature::Warnings;
         supported |= (int)CompileFeature::DebugInfo;
+        supported |= (int)CompileFeature::Exceptions;
         if (platform != HostPlatform::WasmWasi) {
             supported |= (int)CompileFeature::ASan;
             supported |= (int)CompileFeature::UBSan;
@@ -562,6 +563,12 @@ public:
         if (clang_ver >= 130000) {
             Fmt(&buf, " -fno-finite-loops");
         }
+        if (src_type == SourceType::Cxx) {
+            Fmt(&buf, " -fno-rtti");
+            if (!(features & (int)CompileFeature::Exceptions)) {
+                Fmt(&buf, " -fno-exceptions");
+            }
+        }
         if (features & (int)CompileFeature::MinimizeSize) {
             Fmt(&buf, " -Os -fwrapv -DNDEBUG -ffunction-sections -fdata-sections");
         } else if (features & (int)CompileFeature::Optimize) {
@@ -657,7 +664,6 @@ public:
             } break;
 
             case HostPlatform::WasmWasi: {
-                Fmt(&buf, " -fno-exceptions");
                 // --target is handled elsewhere
             } break;
 
@@ -1094,6 +1100,7 @@ public:
         supported |= (int)CompileFeature::MaxCompression;
         supported |= (int)CompileFeature::Warnings;
         supported |= (int)CompileFeature::DebugInfo;
+        supported |= (int)CompileFeature::Exceptions;
         if (platform != HostPlatform::Windows) {
             // Sometimes it works, somestimes not and the object files are
             // corrupt... just avoid PCH on MinGW
@@ -1261,6 +1268,12 @@ public:
         Fmt(&buf, " -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free");
         if (gcc_ver >= 100000) {
             Fmt(&buf, " -fno-finite-loops");
+        }
+        if (src_type == SourceType::Cxx) {
+            Fmt(&buf, " -fno-rtti");
+            if (!(features & (int)CompileFeature::Exceptions)) {
+                Fmt(&buf, " -fno-exceptions");
+            }
         }
         if (features & (int)CompileFeature::MinimizeSize) {
             Fmt(&buf, " -Os -fwrapv -DNDEBUG -ffunction-sections -fdata-sections");
@@ -1708,6 +1721,7 @@ public:
         supported |= (int)CompileFeature::PCH;
         supported |= (int)CompileFeature::Warnings;
         supported |= (int)CompileFeature::DebugInfo;
+        supported |= (int)CompileFeature::Exceptions;
         supported |= (int)CompileFeature::ASan;
         supported |= (int)CompileFeature::LTO;
         supported |= (int)CompileFeature::Hardened;
@@ -2544,6 +2558,9 @@ public:
 
         // Build options
         Fmt(&buf, " -I. -fvisibility=hidden -fno-strict-aliasing -fno-delete-null-pointer-checks -fno-omit-frame-pointer");
+        if (src_type == SourceType::Cxx) {
+            Fmt(&buf, " -fno-exceptions -fno-rtti");
+        }
         if (features & (int)CompileFeature::MinimizeSize) {
             Fmt(&buf, " -Os -fwrapv -DNDEBUG");
         } else if (features & (int)CompileFeature::Optimize) {
@@ -2594,9 +2611,6 @@ public:
                                               " -mfpu=fpv5-d16 -mno-unaligned-access -D__IMXRT1062__%2", arduino, set_fcpu ? " -DF_CPU=600000000" : ""); } break;
             case Model::TeensyMM: { Fmt(&buf, " -DARDUINO_TEENSY_MICROMOD \"-I%1/hardware/teensy/avr/cores/teensy4\" -mcpu=cortex-m7 -mthumb -mfloat-abi=hard"
                                               " -mfpu=fpv5-d16 -mno-unaligned-access -D__IMXRT1062__%2", arduino, set_fcpu ? " -DF_CPU=600000000" : ""); } break;
-        }
-        if (src_type == SourceType::Cxx) {
-            Fmt(&buf, " -felide-constructors -fno-exceptions -fno-rtti");
         }
         if (set_usb) {
             Fmt(&buf, " -DUSB_SERIAL");
