@@ -786,12 +786,12 @@ public:
             return ret;
         }
 
-        bool operator==(const Iterator &other) const
+        friend bool operator==(const Iterator &a, const Iterator &b)
         {
-            K_ASSERT(bitset == other.bitset);
-            return offset == other.offset && bits == other.bits;
+            K_ASSERT(a.bitset == b.bitset);
+            return a.offset == b.offset && a.ctz == b.ctz;
         }
-        bool operator!=(const Iterator &other) const { return !(*this == other); }
+        friend bool operator!=(const Iterator &a, const Iterator &b) { return !(a == b); }
 
         friend class Iterator<const T>;
     };
@@ -2607,12 +2607,12 @@ public:
             return ret;
         }
 
-        bool operator==(const Iterator &other) const
+        friend bool operator==(const Iterator &a, const Iterator &b)
         {
-            K_ASSERT(queue == other.queue);
-            return bucket == other.bucket && bucket_offset == other.bucket_offset;
+            K_ASSERT(a.queue == b.queue);
+            return a.bucket == b.bucket && a.bucket_offset == b.bucket_offset;
         }
-        bool operator!=(const Iterator &other) const { return !(*this == other); }
+        friend bool operator!=(const Iterator &a, const Iterator &b) { return !(a == b); }
 
     private:
         Bucket *GetBucketSafe(Size idx)
@@ -2927,12 +2927,12 @@ public:
             return ret;
         }
 
-        bool operator==(const Iterator &other) const
+        friend bool operator==(const Iterator &a, const Iterator &b)
         {
-            K_ASSERT(table == other.table);
-            return offset == other.offset && ctz == other.ctz;
+            K_ASSERT(a.table == b.table);
+            return a.offset == b.offset && a.ctz == b.ctz;
         }
-        bool operator!=(const Iterator &other) const { return !(*this == other); }
+        friend bool operator!=(const Iterator &a, const Iterator &b) { return !(a == b); }
 
 private:
         Size Index() const { return offset * K_BITS(uintptr_t) + ctz; }
