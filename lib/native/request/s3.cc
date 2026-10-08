@@ -398,6 +398,8 @@ bool s3_Client::ListObjects(Span<const char> prefix, FunctionRef<bool(const char
 
     for (;;) {
         int status = RunSafe("list S3 objects", 5, [&](CURL *curl, int) {
+            xml.RemoveFrom(0);
+
             int64_t now = GetUnixTime();
             TimeSpec date = DecomposeTimeUTC(now);
 
@@ -456,8 +458,6 @@ bool s3_Client::ListObjects(Span<const char> prefix, FunctionRef<bool(const char
 
         if (!truncated)
             break;
-
-        xml.RemoveFrom(0);
 
         const char *token = doc.select_node("/ListBucketResult/NextContinuationToken").node().text().get();
         CopyString(token, continuation);
