@@ -703,7 +703,7 @@ void LinuxTray::HandleMenuEvent(int id, const char *type)
 {
     if (!TestStr(type, "clicked"))
         return;
-    if (id < 0 || id > items.count)
+    if (id < 0 || id > items.Count())
         return;
 
     const MenuItem &item = items[id];

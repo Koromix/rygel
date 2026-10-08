@@ -286,7 +286,7 @@ LRESULT __stdcall WinTray::TrayProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM l
             int action = (int)TrackPopupMenu(menu, align | TPM_BOTTOMALIGN | TPM_LEFTBUTTON | TPM_RETURNCMD,
                                              click.x, click.y, 0, hwnd, nullptr);
 
-            if (action > 0 && action <= self->items.count) {
+            if (action > 0 && action <= self->items.Count()) {
                 const MenuItem &item = self->items[action - 1];
 
                 if (item.func) {
