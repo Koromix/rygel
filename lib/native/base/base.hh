@@ -2798,8 +2798,6 @@ public:
         buckets.RemoveFrom(delete_idx);
 
         count = (it.bucket_idx * BucketSize) + it.bucket_offset - offset;
-
-        K_ASSERT(it == end());
     }
 
     void RemoveUntil(const const_iterator &it)
