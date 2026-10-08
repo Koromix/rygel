@@ -554,7 +554,9 @@ int64_t s3_Client::GetObject(Span<const char> key, FunctionRef<bool(int64_t, Spa
 Size s3_Client::GetObject(Span<const char> key, Span<uint8_t> out_buf, s3_ObjectInfo *out_info)
 {
     int64_t size = GetObject(key, [&](int64_t offset, Span<const uint8_t> buf) {
-        Size copy_len = (Size)std::clamp(out_buf.len - offset, (int64_t)0, (int64_t)buf.len);
+        offset = std::min(offset, (int64_t)out_buf.len);
+
+        Size copy_len = std::min((Size)(out_buf.len - offset), buf.len);
         MemCpy(out_buf.ptr + (Size)offset, buf.ptr, copy_len);
 
         return true;
