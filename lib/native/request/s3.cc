@@ -822,8 +822,14 @@ R"(<?xml version="1.0" encoding="UTF-8"?>
             HeapArray<char> buf(&temp_alloc);
 
             buf.Append(intro);
-            for (Size i = start; i < end; i++) {
-                Fmt(&buf, "  <Object><Key>%1</Key></Object>\n", FmtXmlSafe(keys[i]));
+            if (config.prefix) {
+                for (Size i = start; i < end; i++) {
+                    Fmt(&buf, "  <Object><Key>%1/%2</Key></Object>\n", FmtXmlSafe(config.prefix), FmtXmlSafe(keys[i]));
+                }
+            } else {
+                for (Size i = start; i < end; i++) {
+                    Fmt(&buf, "  <Object><Key>%1</Key></Object>\n", FmtXmlSafe(keys[i]));
+                }
             }
             buf.Append(outro);
 
