@@ -1126,7 +1126,6 @@ static inline bool ShouldRetry(int status)
 {
     if (status == 409) // Transient conflict
         return true;
-
     if (status == 500) // Internal server error
         return true;
     if (status == 502) // Gateway error
@@ -1136,7 +1135,13 @@ static inline bool ShouldRetry(int status)
     if (status == 504) // Gateway timeout
         return true;
 
-    return false;
+    if (status == -CURLE_ABORTED_BY_CALLBACK)
+        return false;
+    if (status == -CURLE_WRITE_ERROR)
+        return false;
+
+    // Retry other CURL error codes
+    return status < 0;
 }
 
 int s3_Client::RunSafe(const char *action, int tries, int expect, FunctionRef<int(CURL *, int)> func)
@@ -1171,7 +1176,7 @@ int s3_Client::RunSafe(const char *action, int tries, int expect, FunctionRef<in
 
         if (status == 200 || status == expect)
             return status;
-        if (status > 0 && !ShouldRetry(status))
+        if (!ShouldRetry(status))
             break;
 
         // Connection may be busted for some reason, start from scratch
