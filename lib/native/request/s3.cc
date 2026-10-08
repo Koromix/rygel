@@ -574,8 +574,13 @@ Size s3_Client::GetObject(Span<const char> key, Size max_len, HeapArray<uint8_t>
     if (size < 0)
         return -1;
 
+    if (!size) {
+        // Reset possible garbage (if any) after retry
+        out_obj->RemoveFrom(prev_len);
+    }
+
     err_guard.Disable();
-    return out_obj->len - prev_len;
+    return size;
 }
 
 StatResult s3_Client::HeadObject(Span<const char> key, s3_ObjectInfo *out_info)
