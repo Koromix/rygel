@@ -3026,6 +3026,10 @@ private:
 
     ValueType *Set(const ValueType &value)
     {
+        if constexpr(std::is_pointer<ValueType>::value) {
+            K_ASSERT(value);
+        }
+
         const KeyType &key = Handler::GetKey(value);
 
         bool inserted;
@@ -3054,6 +3058,10 @@ private:
 
     ValueType *InsertOrGet(const ValueType &value, bool *out_inserted = nullptr)
     {
+        if constexpr(std::is_pointer<ValueType>::value) {
+            K_ASSERT(value);
+        }
+
         const KeyType &key = Handler::GetKey(value);
 
         bool inserted;
