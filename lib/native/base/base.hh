@@ -1565,10 +1565,14 @@ static constexpr inline bool TestStr(Span<const char> str1, Span<const char> str
 {
     if (str1.len != str2.len)
         return false;
+#if defined(__GNUC__) || defined(__clang__)
+    return !__builtin_memcmp(str1.ptr, str2.ptr, (size_t)str1.len);
+#else
     for (Size i = 0; i < str1.len; i++) {
         if (str1[i] != str2[i])
             return false;
     }
+#endif
     return true;
 }
 static constexpr inline bool TestStr(Span<const char> str1, const char *str2)
