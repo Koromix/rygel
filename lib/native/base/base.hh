@@ -750,6 +750,9 @@ public:
         Iterator() = default;
         Iterator(T *bitset, Size offset) : bitset(bitset), offset(offset - 1) { operator++(); }
 
+        Iterator(const Iterator<std::remove_const_t<T>> &other)
+            : bitset(other.bitset), offset(other.offset), bits(other.bits), ctz(other.ctz) {}
+
         Size operator*() const
         {
             if (offset == K_LEN(bitset->data))
@@ -789,10 +792,13 @@ public:
             return offset == other.offset && bits == other.bits;
         }
         bool operator!=(const Iterator &other) const { return !(*this == other); }
+
+        friend class Iterator<const T>;
     };
 
     typedef Size value_type;
     typedef Iterator<Bitset> iterator;
+    typedef Iterator<const Bitset> const_iterator;
 
     static constexpr Size Bits = N;
     uintptr_t data[(N + K_BITS(uintptr_t) - 1) / K_BITS(uintptr_t)] = {};
@@ -813,10 +819,10 @@ public:
         MemSet(data, 0, K_SIZE(data));
     }
 
-    Iterator<Bitset> begin() { return Iterator<Bitset>(this, 0); }
-    Iterator<const Bitset> begin() const { return Iterator<const Bitset>(this, 0); }
-    Iterator<Bitset> end() { return Iterator<Bitset>(this, K_LEN(data)); }
-    Iterator<const Bitset> end() const { return Iterator<const Bitset>(this, K_LEN(data)); }
+    iterator begin() { return iterator(this, 0); }
+    const_iterator begin() const { return const_iterator(this, 0); }
+    iterator end() { return iterator(this, K_LEN(data)); }
+    const_iterator end() const { return const_iterator(this, K_LEN(data)); }
 
     Size PopCount() const
     {
@@ -2527,25 +2533,26 @@ public:
         Bucket *bucket = nullptr;
         Bucket *next_bucket = nullptr;
 
+        typedef std::conditional_t<std::is_const<U>::value, const T, T> V;
+
     public:
         typedef std::bidirectional_iterator_tag iterator_category;
-        typedef std::conditional_t<std::is_const<U>::value, const T, T> value_type;
+        typedef T value_type;
         typedef Size difference_type;
-        typedef T *pointer;
-        typedef T &reference;
+        typedef V *pointer;
+        typedef V &reference;
 
         Iterator() = default;
         Iterator(U *queue, Size bucket_idx, Size bucket_offset)
             : queue(queue), bucket_idx(bucket_idx), bucket_offset(bucket_offset),
               bucket(GetBucketSafe(bucket_idx)), next_bucket(GetBucketSafe(bucket_idx + 1)) {}
-        Iterator(const Iterator &other) = default;
 
-        Iterator &operator=(const Iterator &other) = default;
+        Iterator(const Iterator<std::remove_const_t<U>> &other)
+            : queue(other.queue), bucket_idx(other.bucket_idx), bucket_offset(other.bucket_offset),
+              bucket(other.bucket), next_bucket(other.next_bucket) {}
 
-        T *operator->() { return &bucket->values[bucket_offset]; }
-        const T *operator->() const { return &bucket->values[bucket_offset]; }
-        T &operator*() { return bucket->values[bucket_offset]; }
-        const T &operator*() const { return bucket->values[bucket_offset]; }
+        V *operator->() const { return &bucket->values[bucket_offset]; }
+        V &operator*() const { return bucket->values[bucket_offset]; }
 
         Iterator &operator++()
         {
@@ -2610,6 +2617,9 @@ public:
     private:
         Bucket *GetBucketSafe(Size idx)
             { return (size_t)idx < (size_t)queue->buckets.len ? queue->buckets[idx] : nullptr; }
+
+        friend class BucketList;
+        friend class Iterator<const U>;
     };
 
     typedef T value_type;
@@ -2725,7 +2735,7 @@ public:
         Size start_bucket_offset = start_idx % BucketSize;
 
         iterator from_it(this, start_bucket_idx, start_bucket_offset);
-        DeleteValues(from_it, end());
+        DestroyValues(from_it, end());
 
         Size delete_idx = start_bucket_idx + !!start_bucket_offset;
         for (Size i = delete_idx; i < buckets.len; i++) {
@@ -2755,7 +2765,7 @@ public:
         Size end_bucket_offset = end_idx % BucketSize;
 
         iterator until_it(this, end_bucket_idx, end_bucket_offset);
-        DeleteValues(begin(), until_it);
+        DestroyValues(begin(), until_it);
 
         if (end_bucket_idx) {
             for (Size i = 0; i < end_bucket_idx; i++) {
@@ -2770,7 +2780,7 @@ public:
         count -= n;
     }
 
-    void RemoveFrom(const iterator &it)
+    void RemoveFrom(const const_iterator &it)
     {
         if (it == end())
             return;
@@ -2779,7 +2789,7 @@ public:
             return;
         }
 
-        DeleteValues(it, end());
+        DestroyValues(it, end());
 
         Size delete_idx = it.bucket_idx + !!it.bucket_offset;
         for (Size i = delete_idx; i < buckets.len; i++) {
@@ -2791,9 +2801,8 @@ public:
 
         K_ASSERT(it == end());
     }
-    void RemoveFrom(const const_iterator &it) { return RemoveFrom((iterator)it); }
 
-    void RemoveUntil(const iterator &it)
+    void RemoveUntil(const const_iterator &it)
     {
         if (it == begin())
             return;
@@ -2802,7 +2811,7 @@ public:
             return;
         }
 
-        DeleteValues(begin(), it);
+        DestroyValues(begin(), it);
 
         if (it.bucket_idx) {
             for (Size i = 0; i < it.bucket_idx; i++) {
@@ -2818,7 +2827,6 @@ public:
         offset = (offset + remove) % BucketSize;
         count -= remove;
     }
-    void RemoveUntil(const const_iterator &it) { return RemoveUntil((iterator)it); }
 
     void Trim()
     {
@@ -2828,7 +2836,7 @@ public:
 private:
     void ClearBucketsAndValues()
     {
-        DeleteValues(begin(), end());
+        DestroyValues(begin(), end());
 
         for (Bucket *bucket: buckets) {
             DeleteBucket(bucket);
@@ -2836,11 +2844,11 @@ private:
         buckets.Clear();
     }
 
-    void DeleteValues([[maybe_unused]] iterator begin,
-                      [[maybe_unused]] iterator end)
+    void DestroyValues([[maybe_unused]] const_iterator begin,
+                      [[maybe_unused]] const_iterator end)
     {
         if constexpr(!std::is_trivially_destructible<T>::value) {
-            for (iterator it = begin; it != end; ++it) {
+            for (const_iterator it = begin; it != end; ++it) {
                 it->~T();
             }
         }
@@ -2864,25 +2872,27 @@ public:
         uintptr_t bits = 0;
         int ctz = 0;
 
+        typedef std::conditional_t<std::is_const<T>::value, const ValueType, ValueType> V;
+
     public:
         typedef std::forward_iterator_tag iterator_category;
         typedef ValueType value_type;
         typedef Size difference_type;
-        typedef ValueType *pointer;
-        typedef ValueType &reference;
+        typedef V *pointer;
+        typedef V &reference;
 
         Iterator() = default;
         Iterator(T *table, Size offset) : table(table), offset(offset - 1) { operator++(); }
-        Iterator(const Iterator &other) = default;
 
-        Iterator &operator=(const Iterator &other) = default;
+        Iterator(const Iterator<std::remove_const_t<T>> &other)
+            : table(other.table), offset(other.offset), bits(other.bits), ctz(other.ctz) {}
 
-        ValueType &operator*()
+        V *operator->()
         {
             K_ASSERT(table->IsUsed(Index()));
-            return table->data[Index()];
+            return &table->data[Index()];
         }
-        const ValueType &operator*() const
+        V &operator*()
         {
             K_ASSERT(table->IsUsed(Index()));
             return table->data[Index()];
@@ -2925,6 +2935,7 @@ private:
         Size Index() const { return offset * K_BITS(uintptr_t) + ctz; }
 
         friend class HashTable;
+        friend class Iterator<const T>;
     };
 
     typedef ValueType value_type;
@@ -2997,10 +3008,10 @@ private:
         }
     }
 
-    Iterator<HashTable> begin() { return Iterator<HashTable>(this, 0); }
-    Iterator<const HashTable> begin() const { return Iterator<const HashTable>(this, 0); }
-    Iterator<HashTable> end() { return Iterator<HashTable>(this, ComputeUsedLength(capacity)); }
-    Iterator<const HashTable> end() const { return Iterator<const HashTable>(this, ComputeUsedLength(capacity)); }
+    iterator begin() { return iterator(this, 0); }
+    const_iterator begin() const { return const_iterator(this, 0); }
+    iterator end() { return iterator(this, ComputeUsedLength(capacity)); }
+    const_iterator end() const { return const_iterator(this, ComputeUsedLength(capacity)); }
 
     template <typename T = KeyType>
     ValueType *Find(const T &key)
