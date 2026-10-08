@@ -5,6 +5,13 @@
 
 ## Alpha versions
 
+### Rekkord 0.108
+
+*Released on 2026-10-08*
+
+- Improve performance on computers with many cores
+- Improve robustness of S3 code
+
 ### Rekkord 0.107
 
 *Released on 2026-09-20*
