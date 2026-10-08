@@ -2890,12 +2890,12 @@ public:
         Iterator(const Iterator<std::remove_const_t<T>> &other)
             : table(other.table), offset(other.offset), bits(other.bits), ctz(other.ctz) {}
 
-        V *operator->()
+        V *operator->() const
         {
             K_ASSERT(table->IsUsed(Index()));
             return &table->data[Index()];
         }
-        V &operator*()
+        V &operator*() const
         {
             K_ASSERT(table->IsUsed(Index()));
             return table->data[Index()];
