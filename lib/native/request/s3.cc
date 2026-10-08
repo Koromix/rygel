@@ -987,8 +987,8 @@ bool s3_Client::OpenAccess()
             pugi::xml_document doc;
 
             if (doc.load_buffer(xml.ptr, xml.len)) {
-                const char *str = doc.select_node("/Error/Region").node().text().get();
-                region = str[0] ? DuplicateString(str, &config.str_alloc).ptr : nullptr;
+                Span<const char> str = doc.select_node("/Error/Region").node().text().get();
+                region = str.len ? DuplicateString(str, &config.str_alloc).ptr : nullptr;
             }
         }
     }
