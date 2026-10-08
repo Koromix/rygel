@@ -477,14 +477,16 @@ int64_t s3_Client::GetObject(Span<const char> key, FunctionRef<bool(int64_t, Spa
     struct GetContext {
         Span<const char> key;
         FunctionRef<bool(int64_t, Span<const uint8_t>)> func;
+
+        CURL *curl;
         int64_t offset;
+        long status;
     };
 
     GetContext ctx;
 
     ctx.key = key;
     ctx.func = func;
-    ctx.offset = 0;
 
     int status = RunSafe("get S3 object", 5, 404, [&](CURL *curl, int) {
         int64_t now = GetUnixTime();
@@ -493,7 +495,9 @@ int64_t s3_Client::GetObject(Span<const char> key, FunctionRef<bool(int64_t, Spa
         PrepareRequest(curl, date, "GET", key, {}, &temp_alloc);
 
         // Handle restart
+        ctx.curl = curl;
         ctx.offset = 0;
+        ctx.status = 0;
 
         if (out_info) {
             MemSet(out_info->version, 0, K_SIZE(out_info->version));
@@ -518,7 +522,12 @@ int64_t s3_Client::GetObject(Span<const char> key, FunctionRef<bool(int64_t, Spa
             GetContext *ctx = (GetContext *)udata;
             Span<const uint8_t> buf = MakeSpan((const uint8_t *)ptr, (Size)nmemb);
 
-            if (!ctx->func(ctx->offset, buf))
+            if (!ctx->status) {
+                // We need the status early to skip user callback unless it's real data
+                curl_easy_getinfo(ctx->curl, CURLINFO_RESPONSE_CODE, &ctx->status);
+            }
+
+            if (ctx->status == 200 && !ctx->func(ctx->offset, buf))
                 return (size_t)0;
             ctx->offset += buf.len;
 
