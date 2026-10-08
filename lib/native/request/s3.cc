@@ -1077,20 +1077,22 @@ bool s3_Client::OpenAccess()
 
 CURL *s3_Client::ReserveConnection()
 {
+    CURL *curl;
+
     // Reuse existing connection
     {
         std::lock_guard<std::mutex> lock(connections_mutex);
-
-        if (connections.len) {
-            CURL *curl = connections.ptr[--connections.len];
-            return curl;
-        }
+        curl = connections.len ? connections.ptr[--connections.len] : nullptr;
     }
 
-    CURL *curl = curl_Init();
-    if (!curl)
-        return nullptr;
-    curl_easy_setopt(curl, CURLOPT_SHARE, share);
+    if (!curl) {
+        curl = curl_Init();
+        if (!curl)
+            return nullptr;
+        curl_easy_setopt(curl, CURLOPT_SHARE, share);
+    }
+
+    curl_easy_setopt(curl, CURLOPT_PATH_AS_IS, 1L);
 
     return curl;
 }
