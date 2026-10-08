@@ -409,14 +409,14 @@ bool bk_Parser::Parse(const bk_TokenizedFile &file, bk_CompileReport *out_report
     K_DEFER_NC(err_guard, globals_len = program->globals.len,
                            sources_len = program->sources.len,
                            prev_main_offset = main_offset,
-                           variables_count = program->variables.count,
-                           functions_count = program->functions.count,
+                           variables_count = program->variables.Count(),
+                           functions_count = program->functions.Count(),
                            ro_len = program->ro.len,
-                           function_types_count = program->function_types.count,
-                           array_types_count = program->array_types.count,
-                           record_types_count = program->record_types.count,
-                           enum_types_count = program->enum_types.count,
-                           bare_types_count = program->bare_types.count) {
+                           function_types_count = program->function_types.Count(),
+                           array_types_count = program->array_types.Count(),
+                           record_types_count = program->record_types.Count(),
+                           enum_types_count = program->enum_types.Count(),
+                           bare_types_count = program->bare_types.Count()) {
         program->main.RemoveFrom(prev_main_len);
         program->globals.RemoveFrom(globals_len);
         program->sources.RemoveFrom(sources_len);
@@ -424,7 +424,7 @@ bool bk_Parser::Parse(const bk_TokenizedFile &file, bk_CompileReport *out_report
         main_offset = prev_main_offset;
         DestroyVariables(variables_count);
 
-        for (Size i = functions_count; i < program->functions.count; i++) {
+        for (Size i = functions_count; i < program->functions.Count(); i++) {
             bk_FunctionInfo *func = &program->functions[i];
             bk_FunctionInfo **it = program->functions_map.Find(func->name);
 
@@ -647,7 +647,7 @@ void bk_Parser::AddOpaque(const char *name)
 
 void bk_Parser::Preparse(Span<const Size> positions)
 {
-    K_ASSERT(!forwards.count);
+    K_ASSERT(!forwards.Count());
 
     for (Size i = positions.len - 1; i >= 0; i--) {
         Size fwd_pos = positions[i];
@@ -704,7 +704,7 @@ bool bk_Parser::ParseBlock(bool end_with_else)
 
     bool recurse = RecurseInc();
     K_DEFER_C(prev_offset = *offset_ptr,
-               variables_count = program->variables.count) {
+               variables_count = program->variables.Count()) {
         RecurseDec();
         depth--;
 
@@ -1068,7 +1068,7 @@ void bk_Parser::ParseFunction(ForwardInfo *fwd, bool record)
         Size func_offset = 0;
 
         K_DEFER_C(prev_func = current_func,
-                   prev_variables = program->variables.count,
+                   prev_variables = program->variables.Count(),
                    prev_offset = offset_ptr,
                    prev_src = src,
                    prev_ir = ir) {
@@ -1615,7 +1615,7 @@ void bk_Parser::ParseFor()
     }
 
     // Destroy iterator and range values
-    DestroyVariables(program->variables.count - 1);
+    DestroyVariables(program->variables.Count() - 1);
     *offset_ptr -= 3;
 }
 
@@ -3399,7 +3399,7 @@ const char *bk_Parser::GetVariableKind(const bk_VariableInfo *var, bool capitali
 
 void bk_Parser::DestroyVariables(Size first_idx)
 {
-    for (Size i = program->variables.count - 1; i >= first_idx; i--) {
+    for (Size i = program->variables.Count() - 1; i >= first_idx; i--) {
         const bk_VariableInfo &var = program->variables[i];
         bk_VariableInfo **ptr = program->variables_map.Find(var.name);
 
@@ -3424,7 +3424,7 @@ void bk_Parser::DestroyVariables(Size first_idx)
 template <typename T>
 void bk_Parser::DestroyTypes(BucketList<T> *types, Size first_idx)
 {
-    for (Size i = types->count - 1; i >= first_idx; i--) {
+    for (Size i = types->Count() - 1; i >= first_idx; i--) {
         const bk_TypeInfo &type = (*types)[i];
         const bk_TypeInfo **ptr = program->types_map.Find(type.signature);
 

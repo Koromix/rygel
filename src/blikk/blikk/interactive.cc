@@ -164,7 +164,7 @@ int RunInteractive(const Config &config)
         if (!code.len)
             continue;
 
-        Size prev_variables_count = program.variables.count;
+        Size prev_variables_count = program.variables.Count();
         Size prev_stack_len = vm.stack.len;
 
         bool valid_with_fake_print;
@@ -207,7 +207,7 @@ int RunInteractive(const Config &config)
             // execution should not even be able to fail in this case.
             // Besides, since thore are global variables, no shadowing has occured and we don't
             // need to deal with this.
-            for (Size i = prev_variables_count; i < program.variables.count; i++) {
+            for (Size i = prev_variables_count; i < program.variables.Count(); i++) {
                 program.variables_map.Remove(program.variables[i].name);
             }
             program.variables.RemoveFrom(prev_variables_count);

@@ -2509,12 +2509,16 @@ template <typename T, Size BucketSize = 64, typename AllocatorType = BlockAlloca
 class BucketList {
     K_DELETE_COPY(BucketList)
 
-public:
     struct Bucket {
         T *values;
         AllocatorType allocator;
     };
 
+    HeapArray<Bucket *> buckets;
+    Size offset = 0;
+    Size count = 0;
+
+public:
     template <typename U>
     class Iterator {
         U *queue = nullptr;
@@ -2608,10 +2612,6 @@ public:
             { return (size_t)idx < (size_t)queue->buckets.len ? queue->buckets[idx] : nullptr; }
     };
 
-    HeapArray<Bucket *> buckets;
-    Size offset = 0;
-    Size count = 0;
-
     typedef T value_type;
     typedef Iterator<BucketList> iterator;
     typedef Iterator<const BucketList> const_iterator;
@@ -2663,6 +2663,8 @@ public:
 
         return const_iterator(this, bucket_idx, bucket_offset);
     }
+
+    Size Count() const { return count; }
 
     const T &operator[](Size idx) const
     {

@@ -228,7 +228,7 @@ static bool ParseFeatureString(Span<const char> str, uint32_t *out_enable, uint3
 
 bool TargetSetBuilder::LoadIni(StreamReader *st)
 {
-    K_DEFER_NC(out_guard, count = set.targets.count) { set.targets.RemoveFrom(count); };
+    K_DEFER_NC(out_guard, count = set.targets.Count()) { set.targets.RemoveFrom(count); };
 
     Span<const char> root_directory = GetPathDirectory(st->GetFileName());
     root_directory = NormalizePath(root_directory, &set.str_alloc);
@@ -479,7 +479,7 @@ static void DeduplicateArray(HeapArray<T> *array, Func func)
 // We steal stuff from TargetConfig so it's not reusable after that
 const TargetInfo *TargetSetBuilder::CreateTarget(const char *root_directory, TargetConfig *target_config)
 {
-    K_DEFER_NC(out_guard, count = set.targets.count) { set.targets.RemoveFrom(count); };
+    K_DEFER_NC(out_guard, count = set.targets.Count()) { set.targets.RemoveFrom(count); };
 
     // Heavy type, so create it directly in HeapArray
     TargetInfo *target = set.targets.AppendDefault();

@@ -160,7 +160,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow, rk_Hash
         pending0->dirname = src_dirname;
         pending0->blob.AppendDefault(K_SIZE(DirectoryHeader));
 
-        for (Size i = 0; i < pending_directories.count; i++) {
+        for (Size i = 0; i < pending_directories.Count(); i++) {
             PendingDirectory *pending = &pending_directories[i];
 
             // We can't use pending->entries because if does not count non-stored entities (such as pipes)
@@ -459,7 +459,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow, rk_Hash
         return PutResult::Error;
 
     // Finalize and upload directory blobs
-    for (Size i = pending_directories.count - 1; i >= 0; i--) {
+    for (Size i = pending_directories.Count() - 1; i >= 0; i--) {
         PendingDirectory *pending = &pending_directories[i];
         DirectoryHeader *header = (DirectoryHeader *)pending->blob.ptr;
 
@@ -495,7 +495,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow, rk_Hash
     if (!async.Sync())
         return PutResult::Error;
 
-    put_entries.fetch_add(pending_directories.count, std::memory_order_relaxed);
+    put_entries.fetch_add(pending_directories.Count(), std::memory_order_relaxed);
 
     const PendingDirectory &pending0 = pending_directories[0];
     K_ASSERT(pending0.parent_idx < 0);

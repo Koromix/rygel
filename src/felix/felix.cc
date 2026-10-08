@@ -644,7 +644,7 @@ For help about those commands, type: %!..+%1 command --help%!0)", FelixTarget);
 
         if (!LoadTargetSet(config_filename, compiler.get(), build.features, &target_set))
             return 1;
-        if (!target_set.targets.count) {
+        if (!target_set.targets.Count()) {
             LogError("Configuration file does not contain any target");
             return 1;
         }

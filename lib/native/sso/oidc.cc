@@ -562,7 +562,7 @@ static psa_key_id_t FetchJwksKey(const oidc_Provider &provider, const char *kid,
     {
         LogDebug("Fetching OIDC JWKS file from '%1'", provider.jwks_url);
 
-        Size prev_count = jwks_entries.count;
+        Size prev_count = jwks_entries.Count();
 
         K_DEFER_N(err_guard) {
             jwks_entries.RemoveFrom(prev_count);
@@ -681,7 +681,7 @@ static psa_key_id_t FetchJwksKey(const oidc_Provider &provider, const char *kid,
                 return PSA_KEY_ID_NULL;
         }
 
-        for (Size i = prev_count; i < jwks_entries.count; i++) {
+        for (Size i = prev_count; i < jwks_entries.Count(); i++) {
             const JwksCacheEntry *entry = &jwks_entries[i];
             jwks_map.Set(entry);
         }
