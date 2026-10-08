@@ -785,9 +785,7 @@ public:
 
         bool operator==(const Iterator &other) const
         {
-            if (bitset != other.bitset) [[unlikely]]
-                return false;
-
+            K_ASSERT(bitset == other.bitset);
             return offset == other.offset && bits == other.bits;
         }
         bool operator!=(const Iterator &other) const { return !(*this == other); }
@@ -2596,9 +2594,7 @@ public:
 
         bool operator==(const Iterator &other) const
         {
-            if (queue != other.queue) [[unlikely]]
-                return false;
-
+            K_ASSERT(queue == other.queue);
             return bucket == other.bucket && bucket_offset == other.bucket_offset;
         }
         bool operator!=(const Iterator &other) const { return !(*this == other); }
@@ -2914,9 +2910,7 @@ public:
 
         bool operator==(const Iterator &other) const
         {
-            if (table != other.table) [[unlikely]]
-                return false;
-
+            K_ASSERT(table == other.table);
             return offset == other.offset && ctz == other.ctz;
         }
         bool operator!=(const Iterator &other) const { return !(*this == other); }
