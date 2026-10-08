@@ -2642,8 +2642,13 @@ public:
             return *this;
 
         ClearBucketsAndValues();
-        MemMove(this, &other, K_SIZE(other));
-        MemSet(&other, 0, K_SIZE(other));
+
+        buckets = std::move(other.buckets);
+        offset = other.offset;
+        count = other.count;
+        other.offset = 0;
+        other.count = 0;
+
         return *this;
     }
 
