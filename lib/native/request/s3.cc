@@ -1150,7 +1150,7 @@ int s3_Client::RunSafe(const char *action, int tries, int expect, FunctionRef<in
 {
     CURL *curl = ReserveConnection();
     if (!curl)
-        return false;
+        return -1;
     K_DEFER { ReleaseConnection(curl); };
 
     LocalArray<char, 16384> log;
@@ -1192,7 +1192,7 @@ int s3_Client::RunSafe(const char *action, int tries, int expect, FunctionRef<in
 
         curl = ReserveConnection();
         if (!curl)
-            return false;
+            return -1;
     }
 
     if (status < 0) {
