@@ -573,16 +573,6 @@ const char *http_RequestInfo::GetCookieValue(const char *key) const
     return head ? head->last->value : nullptr;
 }
 
-class FmtHeaderValue {
-    const char *str;
-
-public:
-    FmtHeaderValue(const char *str) : str(str) {}
-
-    void Format(FunctionRef<void(Span<const char>)> append) const;
-    operator FmtArg() const { return FmtCustom(*this); }
-};
-
 class FmtCookieValue {
     const char *str;
 
@@ -592,19 +582,6 @@ public:
     void Format(FunctionRef<void(Span<const char>)> append) const;
     operator FmtArg() const { return FmtCustom(*this); }
 };
-
-void FmtHeaderValue::Format(FunctionRef<void(Span<const char>)> append) const
-{
-    for (Size i = 0; str[i]; i++) {
-        int c = str[i];
-
-        if (IsAsciiControl(c) && c != '\t') {
-            append(' ');
-        } else {
-            append((char)c);
-        }
-    }
-}
 
 void FmtCookieValue::Format(FunctionRef<void(Span<const char>)> append) const
 {
@@ -1465,7 +1442,7 @@ Span<const char> http_IO::PrepareResponse(int status, CompressionType encoding, 
         // Header values are a mess, so the caller is responsible for proper encoding
         // But we still want to avoid the possibility of response splitting.
 
-        Fmt(&buf, "%1: %2\r\n", header.key, FmtHeaderValue(header.value));
+        Fmt(&buf, "%1: %2\r\n", header.key, FmtNoControl(header.value, " "));
     }
 
     if (len >= 0) {

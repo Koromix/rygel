@@ -2039,6 +2039,19 @@ void FmtEscape::Format(FunctionRef<void(Span<const char>)> append) const
     }
 }
 
+void FmtNoControl::Format(FunctionRef<void(Span<const char>)> append) const
+{
+    for (Size i = 0; str[i]; i++) {
+        int c = str[i];
+
+        if (IsAsciiControl(c) && c != '\t') {
+            append(replace);
+        } else {
+            append((char)c);
+        }
+    }
+}
+
 FmtArg FmtVersion(int64_t version, int parts, int by)
 {
     K_ASSERT(version >= 0);

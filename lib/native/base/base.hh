@@ -4268,6 +4268,17 @@ public:
     operator FmtArg() const { return FmtCustom(*this); }
 };
 
+class FmtNoControl {
+    const char *str;
+    const char *replace;
+
+public:
+    FmtNoControl(const char *str, const char *replace) : str(str), replace(replace) {}
+
+    void Format(FunctionRef<void(Span<const char>)> append) const;
+    operator FmtArg() const { return FmtCustom(*this); }
+};
+
 FmtArg FmtVersion(int64_t version, int parts, int by);
 
 enum class LogLevel {
