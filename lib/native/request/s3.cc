@@ -377,7 +377,7 @@ bool s3_Client::ListObjects(Span<const char> prefix, FunctionRef<bool(const char
     BlockAllocator temp_alloc;
 
     Size skip_len = 0;
-    char continuation[1024] = {};
+    char continuation[2048] = {};
 
     if (config.prefix) {
         skip_len = strlen(config.prefix) + 1;
@@ -453,8 +453,17 @@ bool s3_Client::ListObjects(Span<const char> prefix, FunctionRef<bool(const char
         if (!truncated)
             break;
 
-        const char *token = doc.select_node("/ListBucketResult/NextContinuationToken").node().text().get();
-        CopyString(token, continuation);
+        Span<const char> token = doc.select_node("/ListBucketResult/NextContinuationToken").node().text().get();
+
+        if (!token.len) [[unlikely]] {
+            // Server looks non-compliant, probably did ListObjects (V1)
+            LogError("Missing continuation token in truncated ListObjectsV2 response");
+            return false;
+        }
+        if (!CopyString(token, continuation)) [[unlikely]] {
+            LogError("ListObjectsV2 continuation token is too long");
+            return false;
+        }
     }
 
     return true;
