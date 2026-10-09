@@ -385,7 +385,7 @@ ssh_session ssh_Connect(const ssh_Config &config)
                 } break;
 
                 case SSH_KNOWN_HOSTS_ERROR: {
-                    LogInfo("Host error: %1", ssh_get_error(ssh));
+                    LogError("Host error: %1", ssh_get_error(ssh));
                     return nullptr;
                 } break;
             }
