@@ -15,6 +15,7 @@ struct ssh_Config {
     const char *username = nullptr;
     const char *path = nullptr;
 
+    int ignore_agent = -1;
     bool known_hosts = true;
     const char *fingerprint = nullptr;
 

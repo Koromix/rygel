@@ -49,6 +49,14 @@ bool ssh_Config::SetProperty(Span<const char> key, Span<const char> value, Span<
         return true;
     } else if (key == "KnownHosts") {
         return ParseBool(value, &known_hosts);
+    } else if (key == "UseAgent") {
+        bool use;
+        if (ParseBool(value, &use)) {
+            ignore_agent = !use;
+            return true;
+        } else {
+            return false;
+        }
     } else if (key == "Fingerprint") {
         fingerprint = DuplicateString(value, &str_alloc).ptr;
         return true;
@@ -76,10 +84,18 @@ bool ssh_Config::Complete()
             keyfile = DuplicateString(str, &str_alloc).ptr;
         } else if (const char *str = GetEnv("SSH_PASSWORD"); str) {
             password = DuplicateString(str, &str_alloc).ptr;
-        } else if (username && FileIsVt100(STDERR_FILENO)) {
-            password = Prompt(T("SSH password:"), nullptr, "*", &str_alloc);
-            if (!password)
-                return false;
+        } else {
+            if (ignore_agent < 0 && GetEnv("SSH_AUTH_SOCK")) {
+                ignore_agent = 0;
+            }
+
+            if (ignore_agent && username && FileIsVt100(STDERR_FILENO)) {
+                do {
+                    password = Prompt(T("SSH password:"), nullptr, "*", &str_alloc);
+                    if (!password)
+                        return false;
+                } while (!password[0]);
+            }
         }
     }
 
@@ -155,8 +171,8 @@ bool ssh_Config::Validate() const
         LogError("Cannot use SFTP without known Fingerprint and without using KnownHosts");
         valid = false;
     }
-    if (!password && !key && !keyfile) {
-        LogError("Missing SFTP password (SSH_PASSWORD) and/or key (SSH_KEY or SSH_KEYFILE)");
+    if (!password && !key && !keyfile && ignore_agent) {
+        LogError("Missing SFTP password (SSH_PASSWORD), key (SSH_KEY or SSH_KEYFILE) and agent (SSH_AUTH_SOCK)");
         valid = false;
     }
 
@@ -171,6 +187,7 @@ void ssh_Config::Clone(ssh_Config *out_config) const
     out_config->port = port;
     out_config->username = username ? DuplicateString(username, &out_config->str_alloc).ptr : nullptr;
     out_config->path = path ? DuplicateString(path, &out_config->str_alloc).ptr : nullptr;
+    out_config->ignore_agent = ignore_agent;
     out_config->known_hosts = known_hosts;
     out_config->fingerprint = fingerprint ? DuplicateString(fingerprint, &out_config->str_alloc).ptr : nullptr;
     out_config->password = password ? DuplicateString(password, &out_config->str_alloc).ptr : nullptr;
@@ -419,13 +436,18 @@ ssh_session ssh_Connect(const ssh_Config &config)
             LogError("Failed to authenticate to '%1@%2': %3", config.username, config.host, ssh_get_error(ssh));
             return nullptr;
         }
-    } else {
-        K_ASSERT(config.password);
-
+    } else if (config.password) {
         if (ssh_userauth_password(ssh, nullptr, config.password) != SSH_AUTH_SUCCESS) {
             LogError("Failed to authenticate to '%1@%2': %3", config.username, config.host, ssh_get_error(ssh));
             return nullptr;
         }
+    } else if (!config.ignore_agent) {
+        if (ssh_userauth_agent(ssh, nullptr) != SSH_AUTH_SUCCESS) {
+            LogError("Failed to authenticate to '%1@%2' (ssh-agent): %3", config.username, config.host, ssh_get_error(ssh));
+            return nullptr;
+        }
+    } else {
+        K_UNREACHABLE();
     }
 
     err_guard.Disable();
