@@ -353,7 +353,7 @@ ssh_session ssh_Connect(const ssh_Config &config)
     return ssh;
 }
 
-const char *TranslateSftpError(int error)
+static const char *TranslateSftpError(int error)
 {
     switch (error) {
         case SSH_FX_OK: return "Success";
