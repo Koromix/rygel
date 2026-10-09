@@ -328,8 +328,7 @@ ssh_session ssh_Connect(const ssh_Config &config)
             LogError("Failed to authenticate to '%1@%2': %3", config.username, config.host, ssh_get_error(ssh));
             return nullptr;
         }
-    }
-    if (config.keyfile) {
+    } else if (config.keyfile) {
         ssh_key private_key = nullptr;
         if (ssh_pki_import_privkey_file(config.keyfile, nullptr, nullptr, nullptr, &private_key) < 0) {
             LogError("Failed to load private key from '%1'", config.keyfile);
