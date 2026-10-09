@@ -6,6 +6,20 @@
 #include "ssh.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 
+#if defined(_WIN32)
+    #if !defined(NOMINMAX)
+        #define NOMINMAX
+    #endif
+    #if !defined(WIN32_LEAN_AND_MEAN)
+        #define WIN32_LEAN_AND_MEAN
+    #endif
+    #include <ws2tcpip.h>
+#else
+    #include <sys/socket.h>
+    #include <netinet/in.h>
+    #include <arpa/inet.h>
+#endif
+
 namespace K {
 
 K_INIT(libssh)
@@ -77,11 +91,41 @@ bool ssh_Config::Complete()
     return true;
 }
 
+static bool CheckHost(Span<const char> host)
+{
+    if (!host.len) {
+        LogError("Missing SFTP host name");
+        return false;
+    }
+
+    if (host[0] == '[') {
+        if (host[host.len - 1] != ']' || host.len >= 64) {
+            LogError("Invalid IPv6 address '%1'", host);
+            return false;
+        }
+
+        char ipv6[64];
+        struct in6_addr dummy;
+
+        CopyString(host.Take(1, host.len - 2), ipv6);
+
+        if (inet_pton(AF_INET6, ipv6, &dummy) != 1) {
+            LogError("Invalid IPv6 address '%1'", host);
+            return false;
+        }
+    }
+
+    // Everything is considered IPv4 or domain name
+    return true;
+}
+
 static bool CheckURLComponents(const ssh_Config &config)
 {
     bool valid = true;
 
-    if (!config.host) {
+    if (config.host) {
+        valid &= CheckHost(config.host);
+    } else {
         LogError("Missing SFTP host name");
         valid = false;
     }
@@ -178,7 +222,22 @@ bool ssh_DecodeURL(Span<const char> url, ssh_Config *out_config)
         Span<const char> remain = url;
 
         Span<const char> username = SplitStr(remain, '@', &remain);
-        Span<const char> host = SplitStr(remain, ':', &remain);
+        Span<const char> host = remain;
+
+        if (host.len && host[0] == '[') {
+            const char *end = (const char *)memchr(host.ptr, ']', (size_t)host.len);
+
+            if (!end || end + 1 >= host.end() || end[1] != ':') {
+                LogError("Failed to parse SSH URL, expected <user>@<host>:[path]");
+                return false;
+            }
+
+            host = MakeSpan(host.ptr, end + 1);
+            remain = MakeSpan(end + 2, remain.end());
+        } else {
+            host = SplitStr(host, ':', &remain);
+        }
+
         Span<const char> path = remain;
 
         if (!username.len || host.ptr == username.end() || path.ptr == host.end()) {
