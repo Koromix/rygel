@@ -414,8 +414,14 @@ ssh_session ssh_Connect(const ssh_Config &config)
     // Authenticate user
     if (config.key) {
         ssh_key private_key = nullptr;
-        if (ssh_pki_import_privkey_base64(config.key, nullptr, nullptr, nullptr, &private_key) < 0) {
-            LogError("Failed to import private key string");
+        int ret = ssh_pki_import_privkey_base64(config.key, nullptr, nullptr, nullptr, &private_key);
+
+        if (ret < 0) {
+            if (ret == SSH_ERROR) {
+                LogError("Failed to load private key string (may be encrypted, use ssh-agent for encrypted keys)");
+            } else {
+                LogError("Failed to load private key string");
+            }
             return nullptr;
         }
         K_DEFER { ssh_key_free(private_key); };
@@ -426,8 +432,14 @@ ssh_session ssh_Connect(const ssh_Config &config)
         }
     } else if (config.keyfile) {
         ssh_key private_key = nullptr;
-        if (ssh_pki_import_privkey_file(config.keyfile, nullptr, nullptr, nullptr, &private_key) < 0) {
-            LogError("Failed to load private key from '%1'", config.keyfile);
+        int ret = ssh_pki_import_privkey_file(config.keyfile, nullptr, nullptr, nullptr, &private_key);
+
+        if (ret < 0) {
+            if (ret == SSH_ERROR) {
+                LogError("Failed to load private key from '%1' (may be encrypted, use ssh-agent for encrypted keys)", config.keyfile);
+            } else {
+                LogError("Failed to load private key from '%1'", config.keyfile);
+            }
             return nullptr;
         }
         K_DEFER { ssh_key_free(private_key); };
