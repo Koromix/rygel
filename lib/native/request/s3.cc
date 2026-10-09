@@ -201,7 +201,7 @@ bool s3_DecodeURL(Span<const char> url, s3_Config *out_config)
     Span<const char> host = curl_GetUrlPartStr(h, CURLUPART_HOST, 0, &out_config->str_alloc);
     int port = curl_GetUrlPartInt(h, CURLUPART_PORT, 0);
 
-    const char *path = curl_GetUrlPartStr(h, CURLUPART_PATH, CURLU_URLDECODE, &out_config->str_alloc).ptr;
+    char *path = curl_GetUrlPartStr(h, CURLUPART_PATH, CURLU_URLDECODE, &out_config->str_alloc).ptr;
     K_ASSERT(path[0] == '/');
 
     const char *region = nullptr;
@@ -226,8 +226,8 @@ bool s3_DecodeURL(Span<const char> url, s3_Config *out_config)
         }
     }
 
-    const char *bucket = nullptr;
-    const char *prefix = nullptr;
+    char *bucket = nullptr;
+    char *prefix = nullptr;
 
     if (virtual_mode) {
         prefix = path[1] ? path + 1 : nullptr;
@@ -240,6 +240,17 @@ bool s3_DecodeURL(Span<const char> url, s3_Config *out_config)
             ptr[0] = 0;
 
             prefix = prefix[0] ? prefix : nullptr;
+        }
+    }
+
+    // Strip trailing slashes in prefix
+    {
+        Size trim = TrimStrRight(prefix, '/').len;
+
+        if (trim) {
+            prefix[trim] = 0;
+        } else {
+            prefix = nullptr;
         }
     }
 
