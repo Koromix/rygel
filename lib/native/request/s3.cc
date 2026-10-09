@@ -940,9 +940,10 @@ bool s3_Client::OpenAccess()
     BlockAllocator temp_alloc;
 
     region = config.region;
+    found_region = region;
 
     // Try to guess region with anonymous GET request
-    if (!region) {
+    if (!found_region) {
         CURL *curl = ReserveConnection();
         if (!curl)
             return false;
@@ -961,6 +962,7 @@ bool s3_Client::OpenAccess()
 
             if (TestStrI(key, "x-amz-bucket-region")) {
                 session->region = DuplicateString(value, &session->config.str_alloc).ptr;
+                session->found_region = true;
             }
 
             return nmemb;
@@ -979,18 +981,23 @@ bool s3_Client::OpenAccess()
         if (curl_Perform(curl, "S3") < 0)
             return false;
 
-        if (!region && xml.len) {
+        if (!found_region && xml.len) {
             pugi::xml_document doc;
 
             if (doc.load_buffer(xml.ptr, xml.len)) {
                 Span<const char> str = doc.select_node("/Error/Region").node().text().get();
-                region = str.len ? DuplicateString(str, &config.str_alloc).ptr : nullptr;
+
+                if (str.len) {
+                    region = DuplicateString(str, &config.str_alloc).ptr;
+                    found_region = true;
+                }
             }
         }
     }
 
-    if (!region) {
+    if (!found_region) {
         // Many S3-compatible services don't really care, or accept us-east-1 for compatibility
+        // Keep looking though :)
         region = "us-east-1";
     }
 
@@ -1011,8 +1018,9 @@ bool s3_Client::OpenAccess()
                 value = TrimStr(value);
 
                 // Last chance to determine proper region
-                if (!session->config.region && TestStrI(key, "x-amz-bucket-region")) {
+                if (!session->found_region && TestStrI(key, "x-amz-bucket-region")) {
                     session->region = DuplicateString(value, &session->config.str_alloc).ptr;
+                    session->found_region = true;
                 }
 
                 return nmemb;
@@ -1050,7 +1058,7 @@ bool s3_Client::OpenAccess()
                 return curl_Perform(curl, nullptr);
             });
 
-            if (status == 200 && !region) {
+            if (status == 200 && !found_region) {
                 pugi::xml_document doc;
                 {
                     pugi::xml_parse_result result = doc.load_buffer(xml.ptr, xml.len);
@@ -1066,8 +1074,10 @@ bool s3_Client::OpenAccess()
 
                 if (location1.len) {
                     region = DuplicateString(location1, &config.str_alloc).ptr;
+                    found_region = true;
                 } else if (location2.len) {
                     region = DuplicateString(location2, &config.str_alloc).ptr;
+                    found_region = true;
                 }
             }
         }

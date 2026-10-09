@@ -107,6 +107,7 @@ class s3_Client {
     const char *url = nullptr;
     const char *region = nullptr;
 
+    bool found_region = false;
     bool open = false;
 
     std::shared_mutex sign_mutex;
