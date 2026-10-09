@@ -1381,11 +1381,14 @@ const char *s3_Client::MakeAuthorization(const TimeSpec &date, const char *metho
             HmacSha256(key, "s3", key);
             HmacSha256(key, "aws4_request", key);
 
-            if (day > sign_day) {
-                std::lock_guard<std::shared_mutex> lock_ex(sign_mutex);
+            // Someone will get through eventually
+            {
+                std::unique_lock<std::shared_mutex> lock_ex(sign_mutex, std::try_to_lock);
 
-                sign_day = day;
-                MemCpy(sign_key, key, 32);
+                if (lock_ex.owns_lock()) {
+                    sign_day = day;
+                    MemCpy(sign_key, key, 32);
+                }
             }
         }
     }
