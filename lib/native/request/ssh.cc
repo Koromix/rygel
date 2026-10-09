@@ -337,7 +337,7 @@ ssh_session ssh_Connect(const ssh_Config &config)
         hash.len = (Size)hash_len;
         K_DEFER { ssh_clean_pubkey_hash(&hash.ptr); };
 
-        ssh_known_hosts_e state = ssh_session_is_known_server(ssh);
+        ssh_known_hosts_e state = config.known_hosts ? ssh_session_is_known_server(ssh) : SSH_KNOWN_HOSTS_UNKNOWN;
 
         switch (state) {
             case SSH_KNOWN_HOSTS_OK: { /* LogInfo("OK"); */ } break;
@@ -373,7 +373,7 @@ ssh_session ssh_Connect(const ssh_Config &config)
                     return nullptr;
                 }
 
-                if (ssh_session_update_known_hosts(ssh) < 0) {
+                if (config.known_hosts && ssh_session_update_known_hosts(ssh) < 0) {
                     LogError("Failed to update known_hosts file: %1", strerror(errno));
                     return nullptr;
                 }
