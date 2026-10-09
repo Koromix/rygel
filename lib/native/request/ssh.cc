@@ -329,60 +329,68 @@ ssh_session ssh_Connect(const ssh_Config &config)
         }
         K_DEFER { ssh_key_free(pk); };
 
-        size_t hash_len;
-        if (ssh_get_publickey_hash(pk, SSH_PUBLICKEY_HASH_SHA256, &hash.ptr, &hash_len) < 0) {
-            LogError("Failed to hash SSH public key of '%1': %2", config.host, ssh_get_error(ssh));
-            return nullptr;
+        char base64[256] = {};
+        {
+            size_t hash_len;
+            if (ssh_get_publickey_hash(pk, SSH_PUBLICKEY_HASH_SHA256, &hash.ptr, &hash_len) < 0) {
+                LogError("Failed to hash SSH public key of '%1': %2", config.host, ssh_get_error(ssh));
+                return nullptr;
+            }
+            hash.len = (Size)hash_len;
+            K_DEFER { ssh_clean_pubkey_hash(&hash.ptr); };
+
+            K_ASSERT(sodium_base64_encoded_len((size_t)hash.len, sodium_base64_VARIANT_ORIGINAL_NO_PADDING) < K_SIZE(base64));
+
+            CopyString("SHA256:", base64);
+            sodium_bin2base64(base64 + 7, K_SIZE(base64) - 7, hash.ptr, hash.len, sodium_base64_VARIANT_ORIGINAL_NO_PADDING);
         }
-        hash.len = (Size)hash_len;
-        K_DEFER { ssh_clean_pubkey_hash(&hash.ptr); };
 
-        ssh_known_hosts_e state = config.known_hosts ? ssh_session_is_known_server(ssh) : SSH_KNOWN_HOSTS_UNKNOWN;
-
-        switch (state) {
-            case SSH_KNOWN_HOSTS_OK: { /* LogInfo("OK"); */ } break;
-
-            case SSH_KNOWN_HOSTS_CHANGED:
-            case SSH_KNOWN_HOSTS_OTHER: {
-                LogError("Host key has changed, possible attack");
+        if (config.fingerprint) {
+            if (!TestStr(base64, config.fingerprint)) {
+                LogError("Server fingerprint does not match configured value");
                 return nullptr;
-            } break;
+            }
+        } else if (config.known_hosts) {
+            ssh_known_hosts_e state = ssh_session_is_known_server(ssh);
 
-            case SSH_KNOWN_HOSTS_NOT_FOUND:
-            case SSH_KNOWN_HOSTS_UNKNOWN: {
-                char base64[256] = {};
-                K_ASSERT(sodium_base64_encoded_len((size_t)hash.len, sodium_base64_VARIANT_ORIGINAL_NO_PADDING) < K_SIZE(base64));
+            switch (state) {
+                case SSH_KNOWN_HOSTS_OK: { /* LogInfo("OK"); */ } break;
 
-                CopyString("SHA256:", base64);
-                sodium_bin2base64(base64 + 7, K_SIZE(base64) - 7, hash.ptr, hash.len, sodium_base64_VARIANT_ORIGINAL_NO_PADDING);
+                case SSH_KNOWN_HOSTS_CHANGED:
+                case SSH_KNOWN_HOSTS_OTHER: {
+                    LogError("Host key has changed, possible attack");
+                    return nullptr;
+                } break;
 
-                if (config.fingerprint && TestStr(base64, config.fingerprint))
-                    break;
+                case SSH_KNOWN_HOSTS_NOT_FOUND:
+                case SSH_KNOWN_HOSTS_UNKNOWN: {
+                    LogInfo("The server is unknown, public key hash: %!..+%1%!0", base64);
 
-                LogInfo("The server is unknown, public key hash: %!..+%1%!0", base64);
-
-                bool trust = false;
-                {
-                    int ret = PromptYN("Do you trust the host key? ");
-                    if (ret < 0)
+                    bool trust = false;
+                    {
+                        int ret = PromptYN("Do you trust the host key? ");
+                        if (ret < 0)
+                            return nullptr;
+                        trust = ret;
+                    }
+                    if (!trust) {
+                        LogError("Cannot trust server, refusing to continue");
                         return nullptr;
-                    trust = ret;
-                }
-                if (!trust) {
-                    LogError("Cannot trust server, refusing to continue");
-                    return nullptr;
-                }
+                    }
 
-                if (config.known_hosts && ssh_session_update_known_hosts(ssh) < 0) {
-                    LogError("Failed to update known_hosts file: %1", strerror(errno));
-                    return nullptr;
-                }
-            } break;
+                    if (ssh_session_update_known_hosts(ssh) < 0) {
+                        LogError("Failed to update known_hosts file: %1", strerror(errno));
+                        return nullptr;
+                    }
+                } break;
 
-            case SSH_KNOWN_HOSTS_ERROR: {
-                LogInfo("Host error: %1", ssh_get_error(ssh));
-                return nullptr;
-            } break;
+                case SSH_KNOWN_HOSTS_ERROR: {
+                    LogInfo("Host error: %1", ssh_get_error(ssh));
+                    return nullptr;
+                } break;
+            }
+        } else {
+            K_UNREACHABLE();
         }
     }
 
