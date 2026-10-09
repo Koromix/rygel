@@ -72,16 +72,10 @@ bool s3_Config::SetProperty(Span<const char> key, Span<const char> value, Span<c
 bool s3_Config::Complete()
 {
     if (!host) {
-        const char *str1 = GetS3Env("LOCATION");
-        const char *str2 = GetS3Env("ENDPOINT");
+        const char *str = GetS3Env("ENDPOINT_URL");
 
-        if (str1) {
-            if (!s3_DecodeURL(str1, this))
-                return false;
-        } else if (str2) {
-            if (!s3_DecodeURL(str2, this))
-                return false;
-        }
+        if (str && !s3_DecodeURL(str, this))
+            return false;
     }
 
     if (!access_id) {
