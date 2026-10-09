@@ -7672,7 +7672,8 @@ public:
     bool RunTasks(int worker_idx, int limit);
     bool RunTasks(int worker_idx, Async *only, int limit);
 
-    void RunTask(Async *async, const std::function<bool()> &func);
+    // Resets the function
+    void RunTask(Async *async, std::function<bool()> &func);
 };
 
 // thread_local breaks down on MinGW when destructors are involved, work
@@ -8056,7 +8057,7 @@ bool AsyncPool::RunTasks(int worker_idx, int limit)
             TaskData *task = &worker->alloc[slot.idx];
 
             async = task->async;
-            func = std::move(task->func);
+            func.swap(task->func);
 
             worker->alloc.Release(slot.idx);
         }
@@ -8106,7 +8107,7 @@ bool AsyncPool::RunTasks(int worker_idx, Async *only, int limit)
             }
 
             async = task->async;
-            func = std::move(task->func);
+            func.swap(task->func);
 
             worker->alloc.Release(slot.idx);
 
@@ -8132,14 +8133,19 @@ bool AsyncPool::RunTasks(int worker_idx, Async *only, int limit)
     return true;
 }
 
-void AsyncPool::RunTask(Async *async, const std::function<bool()> &func)
+void AsyncPool::RunTask(Async *async, std::function<bool()> &func)
 {
     K_DEFER_C(running = async_running_task) { async_running_task = running; };
     async_running_task = true;
 
     pending_tasks.fetch_sub(1, std::memory_order_relaxed);
 
-    if (!func()) {
+    bool ret = func();
+
+    // Destroy captures, etc
+    func = {};
+
+    if (!ret) {
         async->success.store(false, std::memory_order_relaxed);
     }
 
