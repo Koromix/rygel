@@ -395,7 +395,7 @@ bool http_Daemon::Start(std::function<void(http_IO *io)> func)
     handle_func = func;
 
     int handlers = std::max(16, 4 * GetCoreCount());
-    async = new Async(handlers, Kibibytes(256), "HTTP handler");
+    async = new Async(handlers, (int)AsyncFlag::Background, "HTTP handler");
 
     for (Size i = 0; i < dispatchers.len; i++) {
         K_ASSERT(!dispatchers[i].dispatcher);
