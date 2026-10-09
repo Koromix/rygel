@@ -1016,6 +1016,9 @@ bool s3_Client::OpenAccess()
             int64_t now = GetUnixTime();
             TimeSpec date = DecomposeTimeUTC(now);
 
+            // Regenerate signing key
+            sign_day = 0;
+
             PrepareRequest(curl, date, "HEAD", {}, {}, &temp_alloc);
 
             curl_easy_setopt(curl, CURLOPT_NOBODY, 1L); // HEAD
@@ -1047,9 +1050,15 @@ bool s3_Client::OpenAccess()
         if (status == 403) {
             HeapArray<uint8_t> xml;
 
+            // Regenerate signing key
+            sign_day = 0;
+
             status = RunSafe("authenticate to S3 bucket", 3, 404, [&](CURL *curl, int) {
                 int64_t now = GetUnixTime();
                 TimeSpec date = DecomposeTimeUTC(now);
+
+                // Regenerate signing key
+                sign_day = 0;
 
                 const KeyValue params[] = {{ "location", nullptr }};
                 PrepareRequest(curl, date, "GET", {}, params, &temp_alloc);
