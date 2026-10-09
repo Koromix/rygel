@@ -5282,7 +5282,7 @@ class Async {
     // Rarely written to so avoid separate cache line
     std::atomic_bool success { true };
 
-    alignas(64) std::atomic_int next_worker { 0 };
+    alignas(64) std::atomic_uint next_worker { 0 };
     alignas(64) std::atomic_int remaining_tasks { 0 };
 #else
     bool success = true;
