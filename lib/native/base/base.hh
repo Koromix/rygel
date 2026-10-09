@@ -3305,71 +3305,73 @@ public:
 };
 
 // Stole the Hash function from Thomas Wang (see here: https://gist.github.com/badboy/6267743)
-#define DEFINE_INTEGER_HASH_TRAITS_32(Type, ...) \
+#define DEFINE_INTEGER_HASH_32(Type, ...) \
+    static inline __VA_ARGS__ uint64_t HashInt(Type key) \
+    { \
+        uint32_t hash = (uint32_t)key; \
+         \
+        hash = (hash ^ 61) ^ (hash >> 16); \
+        hash += hash << 3; \
+        hash ^= hash >> 4; \
+        hash *= 0x27D4EB2D; \
+        hash ^= hash >> 15; \
+         \
+        return (uint64_t)hash; \
+    } \
+     \
     template <> \
     class HashTraits<Type> { \
     public: \
-        static __VA_ARGS__ uint64_t Hash(Type key) \
-        { \
-            uint32_t hash = (uint32_t)key; \
-             \
-            hash = (hash ^ 61) ^ (hash >> 16); \
-            hash += hash << 3; \
-            hash ^= hash >> 4; \
-            hash *= 0x27D4EB2D; \
-            hash ^= hash >> 15; \
-             \
-            return (uint64_t)hash; \
-        } \
-         \
+        static __VA_ARGS__ uint64_t Hash(Type key) { return HashInt(key); } \
         static __VA_ARGS__ bool Test(Type key1, Type key2) { return key1 == key2; } \
     }
-#define DEFINE_INTEGER_HASH_TRAITS_64(Type, ...) \
+#define DEFINE_INTEGER_HASH_64(Type, ...) \
+    static inline __VA_ARGS__ uint64_t HashInt(Type key) \
+    { \
+        uint64_t hash = (uint64_t)key; \
+         \
+        hash = (~hash) + (hash << 18); \
+        hash ^= hash >> 31; \
+        hash *= 21; \
+        hash ^= hash >> 11; \
+        hash += hash << 6; \
+        hash ^= hash >> 22; \
+         \
+        return hash; \
+    } \
+     \
     template <> \
     class HashTraits<Type> { \
     public: \
-        static __VA_ARGS__ uint64_t Hash(Type key) \
-        { \
-            uint64_t hash = (uint64_t)key; \
-             \
-            hash = (~hash) + (hash << 18); \
-            hash ^= hash >> 31; \
-            hash *= 21; \
-            hash ^= hash >> 11; \
-            hash += hash << 6; \
-            hash ^= hash >> 22; \
-             \
-            return hash; \
-        } \
-         \
+        static __VA_ARGS__ uint64_t Hash(Type key) { return HashInt(key); } \
         static __VA_ARGS__ bool Test(Type key1, Type key2) { return key1 == key2; } \
     }
 
-DEFINE_INTEGER_HASH_TRAITS_32(char, constexpr);
-DEFINE_INTEGER_HASH_TRAITS_32(unsigned char, constexpr);
-DEFINE_INTEGER_HASH_TRAITS_32(short, constexpr);
-DEFINE_INTEGER_HASH_TRAITS_32(unsigned short, constexpr);
-DEFINE_INTEGER_HASH_TRAITS_32(int, constexpr);
-DEFINE_INTEGER_HASH_TRAITS_32(unsigned int, constexpr);
+DEFINE_INTEGER_HASH_32(char, constexpr);
+DEFINE_INTEGER_HASH_32(unsigned char, constexpr);
+DEFINE_INTEGER_HASH_32(short, constexpr);
+DEFINE_INTEGER_HASH_32(unsigned short, constexpr);
+DEFINE_INTEGER_HASH_32(int, constexpr);
+DEFINE_INTEGER_HASH_32(unsigned int, constexpr);
 #if defined(__LP64__)
-    DEFINE_INTEGER_HASH_TRAITS_64(long, constexpr);
-    DEFINE_INTEGER_HASH_TRAITS_64(unsigned long, constexpr);
+    DEFINE_INTEGER_HASH_64(long, constexpr);
+    DEFINE_INTEGER_HASH_64(unsigned long, constexpr);
 #else
-    DEFINE_INTEGER_HASH_TRAITS_32(long, constexpr);
-    DEFINE_INTEGER_HASH_TRAITS_32(unsigned long, constexpr);
+    DEFINE_INTEGER_HASH_32(long, constexpr);
+    DEFINE_INTEGER_HASH_32(unsigned long, constexpr);
 #endif
-DEFINE_INTEGER_HASH_TRAITS_64(long long, constexpr);
-DEFINE_INTEGER_HASH_TRAITS_64(unsigned long long, constexpr);
+DEFINE_INTEGER_HASH_64(long long, constexpr);
+DEFINE_INTEGER_HASH_64(unsigned long long, constexpr);
 #if K_SIZE_MAX == INT64_MAX
-    DEFINE_INTEGER_HASH_TRAITS_64(void *);
-    DEFINE_INTEGER_HASH_TRAITS_64(const void *);
+    DEFINE_INTEGER_HASH_64(void *);
+    DEFINE_INTEGER_HASH_64(const void *);
 #else
-    DEFINE_INTEGER_HASH_TRAITS_32(void *);
-    DEFINE_INTEGER_HASH_TRAITS_32(const void *);
+    DEFINE_INTEGER_HASH_32(void *);
+    DEFINE_INTEGER_HASH_32(const void *);
 #endif
 
-#undef DEFINE_INTEGER_HASH_TRAITS_32
-#undef DEFINE_INTEGER_HASH_TRAITS_64
+#undef DEFINE_INTEGER_HASH_32
+#undef DEFINE_INTEGER_HASH_64
 
 // MurmurHash2
 static inline uint64_t HashStr(Span<const char> str)

@@ -7767,7 +7767,7 @@ void Async::Init(AsyncPool *pool, unsigned int flags)
     background = flags & (int)AsyncFlag::Background;
     selfish = flags & (int)AsyncFlag::Selfish;
 
-    unsigned int next = HashTraits<unsigned int>::Hash((unsigned int)(uintptr_t)this);
+    unsigned int next = HashInt((unsigned int)(uintptr_t)this);
     next_worker.store(next, std::memory_order_relaxed);
 }
 
