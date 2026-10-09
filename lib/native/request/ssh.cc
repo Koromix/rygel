@@ -42,7 +42,7 @@ bool ssh_Config::SetProperty(Span<const char> key, Span<const char> value, Span<
         password = DuplicateString(value, &str_alloc).ptr;
         return true;
     } else if (key == "Key") {
-        key = DuplicateString(value, &str_alloc).ptr;
+        this->key = DuplicateString(value, &str_alloc).ptr;
         return true;
     } else if (key == "KeyFile") {
         keyfile = DuplicateString(value, &str_alloc).ptr;
