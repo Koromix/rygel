@@ -385,25 +385,20 @@ void s3_Client::Close()
 
 bool s3_Client::ListObjects(Span<const char> prefix, FunctionRef<bool(const char *, int64_t)> func)
 {
-    BlockAllocator temp_alloc;
+    BlockAllocator temp_alloc(Kibibytes(256));
 
-    Size skip_len = 0;
+    Size skip_len = config.prefix ? strlen(config.prefix) + 1 : 0;
     char continuation[2048] = {};
 
-    if (config.prefix) {
-        skip_len = strlen(config.prefix) + 1;
-        prefix = Fmt(&temp_alloc, "%1/%2", config.prefix, prefix).ptr;
-    } else {
-        // curl needs a C string
-        prefix = DuplicateString(prefix, &temp_alloc);
-    }
-
-    // Reuse for performance
-    HeapArray<uint8_t> xml;
-
     for (;;) {
+        // curl needs a C string
+        const char *prefix0 = config.prefix ? Fmt(&temp_alloc, "%1/%2", config.prefix, prefix).ptr
+                                            : DuplicateString(prefix, &temp_alloc).ptr;
+
+        Span<uint8_t> xml = {};
+
         int status = RunSafe("list S3 objects", 5, [&](CURL *curl, int) {
-            xml.RemoveFrom(0);
+            HeapArray<uint8_t> buf(&temp_alloc);
 
             int64_t now = GetUnixTime();
             TimeSpec date = DecomposeTimeUTC(now);
@@ -417,34 +412,34 @@ bool s3_Client::ListObjects(Span<const char> prefix, FunctionRef<bool(const char
                     params.Append({ "continuation-token", continuation });
                 }
                 params.Append({ "list-type", "2" });
-                params.Append({ "prefix", prefix.ptr });
+                params.Append({ "prefix", prefix0 });
 
                 PrepareRequest(curl, date, "GET", {}, params, &temp_alloc);
             }
 
             curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, +[](char *ptr, size_t, size_t nmemb, void *udata) {
-                HeapArray<uint8_t> *xml = (HeapArray<uint8_t> *)udata;
+                HeapArray<uint8_t> *buf = (HeapArray<uint8_t> *)udata;
 
-                Span<const uint8_t> buf = MakeSpan((const uint8_t *)ptr, (Size)nmemb);
-                xml->Append(buf);
+                Span<const uint8_t> span = MakeSpan((const uint8_t *)ptr, (Size)nmemb);
+                buf->Append(span);
 
                 return nmemb;
             });
-            curl_easy_setopt(curl, CURLOPT_WRITEDATA, &xml);
+            curl_easy_setopt(curl, CURLOPT_WRITEDATA, &buf);
 
-            return curl_Perform(curl, nullptr);
+            int ret = curl_Perform(curl, nullptr);
+
+            xml = buf.Leak();
+            return ret;
         });
         if (status != 200)
             return false;
 
         pugi::xml_document doc;
-        {
-            pugi::xml_parse_result result = doc.load_buffer(xml.ptr, xml.len);
 
-            if (!result) {
-                LogError("Invalid XML returned by S3: %1", result.description());
-                return false;
-            }
+        if (pugi::xml_parse_result result = doc.load_buffer_inplace(xml.ptr, xml.len); !result) {
+            LogError("Invalid XML returned by S3: %1", result.description());
+            return false;
         }
 
         pugi::xpath_node_set contents = doc.select_nodes("/ListBucketResult/Contents");
@@ -475,6 +470,8 @@ bool s3_Client::ListObjects(Span<const char> prefix, FunctionRef<bool(const char
             LogError("ListObjectsV2 continuation token is too long");
             return false;
         }
+
+        temp_alloc.Reset();
     }
 
     return true;
@@ -845,9 +842,6 @@ R"(<?xml version="1.0" encoding="UTF-8"?>
 </Delete>
 )";
 
-    // Reuse for performance
-    HeapArray<uint8_t> xml;
-
     // This function returns the number of deleted (or already missing) keys
     Size deleted = 0;
 
@@ -883,8 +877,10 @@ R"(<?xml version="1.0" encoding="UTF-8"?>
             sodium_bin2base64(checksum, K_SIZE(checksum), hash, K_SIZE(hash), sodium_base64_VARIANT_ORIGINAL);
         }
 
+        Span<uint8_t> xml = {};
+
         int status = RunSafe("delete S3 objects", 5, 200, [&](CURL *curl, int) {
-            xml.RemoveFrom(0);
+            HeapArray<uint8_t> buf(&temp_alloc);
 
             int64_t now = GetUnixTime();
             TimeSpec date = DecomposeTimeUTC(now);
@@ -904,28 +900,28 @@ R"(<?xml version="1.0" encoding="UTF-8"?>
             curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)body.len);
 
             curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, +[](char *ptr, size_t, size_t nmemb, void *udata) {
-                HeapArray<uint8_t> *xml = (HeapArray<uint8_t> *)udata;
+                HeapArray<uint8_t> *buf = (HeapArray<uint8_t> *)udata;
 
-                Span<const uint8_t> buf = MakeSpan((const uint8_t *)ptr, (Size)nmemb);
-                xml->Append(buf);
+                Span<const uint8_t> span = MakeSpan((const uint8_t *)ptr, (Size)nmemb);
+                buf->Append(span);
 
                 return nmemb;
             });
-            curl_easy_setopt(curl, CURLOPT_WRITEDATA, &xml);
+            curl_easy_setopt(curl, CURLOPT_WRITEDATA, &buf);
 
-            return curl_Perform(curl, nullptr);
+            int ret = curl_Perform(curl, nullptr);
+
+            xml = buf.Leak();
+            return ret;
         });
         if (status != 200)
             break;
 
         pugi::xml_document doc;
-        {
-            pugi::xml_parse_result result = doc.load_buffer(xml.ptr, xml.len);
 
-            if (!result) {
-                LogError("Invalid XML returned by S3: %1", result.description());
-                break;
-            }
+        if (pugi::xml_parse_result result = doc.load_buffer_inplace(xml.ptr, xml.len); !result) {
+            LogError("Invalid XML returned by S3: %1", result.description());
+            break;
         }
 
         // Count successful deletions
@@ -1020,54 +1016,60 @@ bool s3_Client::OpenAccess()
 {
     K_ASSERT(!open);
 
-    BlockAllocator temp_alloc;
+    BlockAllocator temp_alloc(Kibibytes(256));
 
     region = config.region;
     found_region = region;
 
-    // Try to guess region with anonymous GET request
     if (!found_region) {
-        CURL *curl = ReserveConnection();
-        if (!curl)
-            return false;
-        K_DEFER { ReleaseConnection(curl); };
-
         // Garage sends back the correct region in its XML Error message, maybe others do too
-        HeapArray<uint8_t> xml;
+        Span<uint8_t> xml = {};
 
-        curl_easy_setopt(curl, CURLOPT_URL, url);
-        curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, +[](char *buf, size_t, size_t nmemb, void *udata) {
-            s3_Client *session = (s3_Client *)udata;
+        // Try to guess region with anonymous GET request
+        {
+            HeapArray<uint8_t> buf(&temp_alloc);
 
-            Span<const char> value;
-            Span<const char> key = TrimStr(SplitStr(MakeSpan(buf, nmemb), ':', &value));
-            value = TrimStr(value);
+            CURL *curl = ReserveConnection();
+            if (!curl)
+                return false;
+            K_DEFER { ReleaseConnection(curl); };
 
-            if (TestStrI(key, "x-amz-bucket-region")) {
-                session->region = DuplicateString(value, &session->config.str_alloc).ptr;
-                session->found_region = true;
-            }
+            curl_easy_setopt(curl, CURLOPT_URL, url);
+            curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, +[](char *buf, size_t, size_t nmemb, void *udata) {
+                s3_Client *session = (s3_Client *)udata;
 
-            return nmemb;
-        });
-        curl_easy_setopt(curl, CURLOPT_HEADERDATA, this);
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, +[](char *ptr, size_t, size_t nmemb, void *udata) {
-            HeapArray<uint8_t> *xml = (HeapArray<uint8_t> *)udata;
+                Span<const char> value;
+                Span<const char> key = TrimStr(SplitStr(MakeSpan(buf, nmemb), ':', &value));
+                value = TrimStr(value);
 
-            Span<const uint8_t> buf = MakeSpan((const uint8_t *)ptr, (Size)nmemb);
-            xml->Append(buf);
+                if (TestStrI(key, "x-amz-bucket-region")) {
+                    session->region = DuplicateString(value, &session->config.str_alloc).ptr;
+                    session->found_region = true;
+                }
 
-            return nmemb;
-        });
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &xml);
+                return nmemb;
+            });
+            curl_easy_setopt(curl, CURLOPT_HEADERDATA, this);
+            curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, +[](char *ptr, size_t, size_t nmemb, void *udata) {
+                HeapArray<uint8_t> *buf = (HeapArray<uint8_t> *)udata;
 
-        if (curl_Perform(curl, "S3") < 0)
-            return false;
+                Span<const uint8_t> span = MakeSpan((const uint8_t *)ptr, (Size)nmemb);
+                buf->Append(span);
+
+                return nmemb;
+            });
+            curl_easy_setopt(curl, CURLOPT_WRITEDATA, &buf);
+
+            if (curl_Perform(curl, "S3") < 0)
+                return false;
+
+            xml = buf.Leak();
+        }
 
         if (!found_region && xml.len) {
             pugi::xml_document doc;
 
-            if (doc.load_buffer(xml.ptr, xml.len)) {
+            if (doc.load_buffer_inplace(xml.ptr, xml.len)) {
                 Span<const char> str = doc.select_node("/Error/Region").node().text().get();
 
                 if (str.len) {
@@ -1122,12 +1124,14 @@ bool s3_Client::OpenAccess()
         });
 
         if (status == 403) {
-            HeapArray<uint8_t> xml;
+            Span<uint8_t> xml = {};
 
             // Regenerate signing key
             sign_day = 0;
 
             status = RunSafe("authenticate to S3 bucket", 3, 404, [&](CURL *curl, int) {
+                HeapArray<uint8_t> buf(&temp_alloc);
+
                 int64_t now = GetUnixTime();
                 TimeSpec date = DecomposeTimeUTC(now);
 
@@ -1138,27 +1142,27 @@ bool s3_Client::OpenAccess()
                 PrepareRequest(curl, date, "GET", {}, params, &temp_alloc);
 
                 curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, +[](char *ptr, size_t, size_t nmemb, void *udata) {
-                    HeapArray<uint8_t> *xml = (HeapArray<uint8_t> *)udata;
+                    HeapArray<uint8_t> *buf = (HeapArray<uint8_t> *)udata;
 
-                    Span<const uint8_t> buf = MakeSpan((const uint8_t *)ptr, (Size)nmemb);
-                    xml->Append(buf);
+                    Span<const uint8_t> span = MakeSpan((const uint8_t *)ptr, (Size)nmemb);
+                    buf->Append(span);
 
                     return nmemb;
                 });
-                curl_easy_setopt(curl, CURLOPT_WRITEDATA, &xml);
+                curl_easy_setopt(curl, CURLOPT_WRITEDATA, &buf);
 
-                return curl_Perform(curl, nullptr);
+                int ret = curl_Perform(curl, nullptr);
+
+                xml = buf.Leak();
+                return ret;
             });
 
             if (status == 200 && !found_region) {
                 pugi::xml_document doc;
-                {
-                    pugi::xml_parse_result result = doc.load_buffer(xml.ptr, xml.len);
 
-                    if (!result) {
-                        LogError("Invalid XML returned by S3: %1", result.description());
-                        return false;
-                    }
+                if (pugi::xml_parse_result result = doc.load_buffer_inplace(xml.ptr, xml.len); !result) {
+                    LogError("Invalid XML returned by S3: %1", result.description());
+                    return false;
                 }
 
                 Span<const char> location1 = doc.select_node("/LocationConstraint/LocationConstraint").node().text().get();
