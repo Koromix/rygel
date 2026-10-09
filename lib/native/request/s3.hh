@@ -143,7 +143,7 @@ public:
     s3_PutResult PutObject(Span<const char> key, Span<const uint8_t> data, const s3_PutSettings &settings = {});
 
     bool DeleteObject(Span<const char> key);
-    bool DeleteObjects(Span<const char *const> keys); // Best effort
+    Size DeleteObjects(Span<const char *const> keys); // Returns number of successfully deleted (or non-existing) objects
 
     bool RetainObject(Span<const char> key, int64_t until, s3_RetainMode mode);
 

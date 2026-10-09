@@ -832,7 +832,7 @@ bool s3_Client::DeleteObject(Span<const char> key)
     return true;
 }
 
-bool s3_Client::DeleteObjects(Span<const char *const> keys)
+Size s3_Client::DeleteObjects(Span<const char *const> keys)
 {
     BlockAllocator temp_alloc(Kibibytes(256));
 
@@ -844,6 +844,15 @@ R"(<?xml version="1.0" encoding="UTF-8"?>
   <Quiet>true</Quiet>
 </Delete>
 )";
+
+    // Reuse for performance
+    HeapArray<uint8_t> xml;
+
+    // This function returns the number of deleted (or already missing) keys
+    Size deleted = 0;
+
+    bool other_errors = false;
+    bool access_denied = false;
 
     for (Size start = 0; start < keys.len; start += 1000) {
         Size end = std::min(start + 1000, keys.len);
@@ -875,6 +884,8 @@ R"(<?xml version="1.0" encoding="UTF-8"?>
         }
 
         int status = RunSafe("delete S3 objects", 5, 200, [&](CURL *curl, int) {
+            xml.RemoveFrom(0);
+
             int64_t now = GetUnixTime();
             TimeSpec date = DecomposeTimeUTC(now);
 
@@ -892,15 +903,67 @@ R"(<?xml version="1.0" encoding="UTF-8"?>
             curl_easy_setopt(curl, CURLOPT_POSTFIELDS, body.ptr);
             curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)body.len);
 
+            curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, +[](char *ptr, size_t, size_t nmemb, void *udata) {
+                HeapArray<uint8_t> *xml = (HeapArray<uint8_t> *)udata;
+
+                Span<const uint8_t> buf = MakeSpan((const uint8_t *)ptr, (Size)nmemb);
+                xml->Append(buf);
+
+                return nmemb;
+            });
+            curl_easy_setopt(curl, CURLOPT_WRITEDATA, &xml);
+
             return curl_Perform(curl, nullptr);
         });
         if (status != 200)
-            return false;
+            break;
+
+        pugi::xml_document doc;
+        {
+            pugi::xml_parse_result result = doc.load_buffer(xml.ptr, xml.len);
+
+            if (!result) {
+                LogError("Invalid XML returned by S3: %1", result.description());
+                break;
+            }
+        }
+
+        // Count successful deletions
+        {
+            pugi::xpath_node_set errors = doc.select_nodes("/DeleteResult/Error");
+            Size failures = 0;
+
+            for (const pugi::xpath_node &node: errors) {
+                Span<const char> code = node.node().child("Code").text().get();
+
+                if (TestStr(code, "NoSuchKey"))
+                    continue;
+
+                failures++;
+                access_denied |= TestStr(code, "AccessDenied");
+                other_errors |= !TestStr(code, "AccessDenied");
+            }
+
+            deleted += end - start - failures;
+        }
 
         temp_alloc.Reset();
     }
 
-    return true;
+    if (access_denied || other_errors) {
+        LocalArray<const char *, 2> reasons;
+
+        if (access_denied) {
+            reasons.Append("access denied");
+        }
+        if (other_errors) {
+            reasons.Append("other errors");
+        }
+
+        LogError("Failed to delete %1 / %2 objects (%3)", keys.len - deleted, keys.len, FmtList(reasons));
+    }
+
+    return deleted;
 }
 
 bool s3_Client::RetainObject(Span<const char> key, int64_t until, s3_RetainMode mode)
