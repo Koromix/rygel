@@ -678,6 +678,7 @@ s3_PutResult s3_Client::PutObject(Span<const char> key, int64_t size,
         if (settings.mimetype) {
             headers.Append({ "Content-Type", settings.mimetype });
         }
+        headers.Append({ "Host", host });
         if (settings.conditional) {
             headers.Append({ "If-None-Match", "*" });
         }
@@ -865,6 +866,7 @@ R"(<?xml version="1.0" encoding="UTF-8"?>
 
             const KeyValue params[] = {{ "delete", nullptr }};
             const KeyValue headers[] = {
+                { "Host", host },
                 { "x-amz-checksum-sha256", checksum },
                 { "x-amz-content-sha256", "UNSIGNED-PAYLOAD" },
                 { "x-amz-date", Fmt(&temp_alloc, "%1", FmtTimeBasic(date)).ptr }
@@ -1210,6 +1212,7 @@ void s3_Client::PrepareRequest(CURL *curl, const TimeSpec &date, const char *met
                                Span<const KeyValue> params, Allocator *alloc)
 {
     const KeyValue headers[] = {
+        { "Host", host },
         { "x-amz-content-sha256", "UNSIGNED-PAYLOAD" },
         { "x-amz-date", Fmt(alloc, "%1", FmtTimeBasic(date)).ptr }
     };
@@ -1374,13 +1377,16 @@ const char *s3_Client::MakeAuthorization(const TimeSpec &date, const char *metho
                 Fmt(&buf, "&%1=%2", FmtUrlSafe(param.key, "-._~"), FmtUrlSafe(param.value, "-._~"));
             }
         }
-        Fmt(&buf, "\nhost:%1\n", host);
+        buf.Append('\n');
         for (const KeyValue &header: headers) {
             Fmt(&buf, "%1:%2\n", FmtLowerAscii(header.key), FmtNoControl(header.value, " "));
         }
-        Fmt(&buf, "\nhost");
-        for (const KeyValue &header: headers) {
-            Fmt(&buf, ";%1", FmtLowerAscii(header.key));
+        buf.Append('\n');
+        if (headers.len) {
+            for (const KeyValue &header: headers) {
+                Fmt(&buf, "%1;", FmtLowerAscii(header.key));
+            }
+            buf.len--;
         }
         Fmt(&buf, "\nUNSIGNED-PAYLOAD");
 
@@ -1413,9 +1419,12 @@ const char *s3_Client::MakeAuthorization(const TimeSpec &date, const char *metho
 
         Fmt(&buf, "Authorization: AWS4-HMAC-SHA256 ");
         Fmt(&buf, "Credential=%1/%2/%3/s3/aws4_request, ", config.access_id, FormatYYYYMMDD(date), region);
-        Fmt(&buf, "SignedHeaders=host");
-        for (const KeyValue &header: headers) {
-            Fmt(&buf, ";%1", FmtLowerAscii(header.key));
+        Fmt(&buf, "SignedHeaders=");
+        if (headers.len) {
+            for (const KeyValue &header: headers) {
+                Fmt(&buf, "%1;", FmtLowerAscii(header.key));
+            }
+            buf.len--;
         }
         Fmt(&buf, ", Signature=%1", FormatSha256(signature));
 
