@@ -1122,7 +1122,11 @@ void s3_Client::ReleaseConnection(CURL *curl)
 
 static inline bool ShouldRetry(int status)
 {
+    if (status == 408) // Timeout)
+        return true;
     if (status == 409) // Transient conflict
+        return true;
+    if (status == 429) // Too many requests
         return true;
     if (status == 500) // Internal server error
         return true;
