@@ -103,28 +103,27 @@ int curl_Perform(CURL *curl, const char *reason)
     return (int)status;
 }
 
-Span<const char> curl_GetUrlPartStr(CURLU *h, CURLUPart part, Allocator *alloc)
+Span<char> curl_GetUrlPartStr(CURLU *h, CURLUPart part, unsigned int flags, Allocator *alloc)
 {
     char *buf = nullptr;
 
-    CURLUcode ret = curl_url_get(h, part, &buf, 0);
+    CURLUcode ret = curl_url_get(h, part, &buf, flags);
     if (ret == CURLUE_OUT_OF_MEMORY)
         K_BAD_ALLOC();
     K_DEFER { curl_free(buf); };
 
     if (buf && buf[0]) {
-        Span<const char> str = DuplicateString(buf, alloc);
-        return str;
+        return DuplicateString(buf, alloc);
     } else {
         return {};
     }
 }
 
-int curl_GetUrlPartInt(CURLU *h, CURLUPart part)
+int curl_GetUrlPartInt(CURLU *h, CURLUPart part, unsigned int flags)
 {
     char *buf = nullptr;
 
-    CURLUcode ret = curl_url_get(h, part, &buf, 0);
+    CURLUcode ret = curl_url_get(h, part, &buf, flags);
     if (ret == CURLUE_OUT_OF_MEMORY)
         K_BAD_ALLOC();
     K_DEFER { curl_free(buf); };

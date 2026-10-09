@@ -150,10 +150,10 @@ bool ssh_DecodeURL(Span<const char> url, ssh_Config *out_config)
             return false;
         }
 
-        out_config->host = curl_GetUrlPartStr(h, CURLUPART_HOST, &out_config->str_alloc).ptr;
-        out_config->port = curl_GetUrlPartInt(h, CURLUPART_PORT);
-        out_config->username = curl_GetUrlPartStr(h, CURLUPART_USER, &out_config->str_alloc).ptr;
-        out_config->path = curl_GetUrlPartStr(h, CURLUPART_PATH, &out_config->str_alloc).ptr;
+        out_config->host = curl_GetUrlPartStr(h, CURLUPART_HOST, 0, &out_config->str_alloc).ptr;
+        out_config->port = curl_GetUrlPartInt(h, CURLUPART_PORT, 0);
+        out_config->username = curl_GetUrlPartStr(h, CURLUPART_USER, 0, &out_config->str_alloc).ptr;
+        out_config->path = curl_GetUrlPartStr(h, CURLUPART_PATH, CURLU_URLDECODE, &out_config->str_alloc).ptr;
 
         // The first '/' separates the host from the path, use '//' for absolute path
         if (!out_config->path) {

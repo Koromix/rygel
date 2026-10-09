@@ -197,11 +197,11 @@ bool s3_DecodeURL(Span<const char> url, s3_Config *out_config)
         }
     }
 
-    const char *scheme = curl_GetUrlPartStr(h, CURLUPART_SCHEME, &out_config->str_alloc).ptr;
-    Span<const char> host = curl_GetUrlPartStr(h, CURLUPART_HOST, &out_config->str_alloc);
-    int port = curl_GetUrlPartInt(h, CURLUPART_PORT);
+    const char *scheme = curl_GetUrlPartStr(h, CURLUPART_SCHEME, 0, &out_config->str_alloc).ptr;
+    Span<const char> host = curl_GetUrlPartStr(h, CURLUPART_HOST, 0, &out_config->str_alloc);
+    int port = curl_GetUrlPartInt(h, CURLUPART_PORT, 0);
 
-    const char *path = curl_GetUrlPartStr(h, CURLUPART_PATH, &out_config->str_alloc).ptr;
+    const char *path = curl_GetUrlPartStr(h, CURLUPART_PATH, CURLU_URLDECODE, &out_config->str_alloc).ptr;
     K_ASSERT(path[0] == '/');
 
     const char *region = nullptr;

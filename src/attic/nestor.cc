@@ -85,8 +85,8 @@ static const char *NormalizeURL(const char *url, Allocator *alloc)
         }
     }
 
-    const char *scheme = curl_GetUrlPartStr(h, CURLUPART_SCHEME, alloc).ptr;
-    const char *normalized = curl_GetUrlPartStr(h, CURLUPART_URL, alloc).ptr;
+    const char *scheme = curl_GetUrlPartStr(h, CURLUPART_SCHEME, 0, alloc).ptr;
+    const char *normalized = curl_GetUrlPartStr(h, CURLUPART_URL, 0, alloc).ptr;
 
     if (scheme && !TestStr(scheme, "http") && !TestStr(scheme, "https")) {
         LogError("Unsupported proxy scheme '%1'", scheme);

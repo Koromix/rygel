@@ -21,7 +21,7 @@ bool curl_Reset(CURL *curl);
 
 int curl_Perform(CURL *curl, const char *reason);
 
-Span<const char> curl_GetUrlPartStr(CURLU *h, CURLUPart part, Allocator *alloc);
-int curl_GetUrlPartInt(CURLU *h, CURLUPart part);
+Span<char> curl_GetUrlPartStr(CURLU *h, CURLUPart part, unsigned int flags, Allocator *alloc);
+int curl_GetUrlPartInt(CURLU *h, CURLUPart part, unsigned int flags);
 
 }
