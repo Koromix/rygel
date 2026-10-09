@@ -169,8 +169,8 @@ bool ssh_DecodeURL(Span<const char> url, ssh_Config *out_config)
         Span<const char> host = SplitStr(remain, ':', &remain);
         Span<const char> path = remain;
 
-        if (host.ptr == username.end() || path.ptr == host.end()) {
-            LogError("Failed to parse SSH URL, expected <user>@<host>");
+        if (!username.len || host.ptr == username.end() || path.ptr == host.end()) {
+            LogError("Failed to parse SSH URL, expected <user>@<host>:[path]");
             return false;
         }
 
