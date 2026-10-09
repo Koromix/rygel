@@ -155,6 +155,18 @@ bool ssh_DecodeURL(Span<const char> url, ssh_Config *out_config)
         out_config->username = curl_GetUrlPartStr(h, CURLUPART_USER, 0, &out_config->str_alloc).ptr;
         out_config->path = curl_GetUrlPartStr(h, CURLUPART_PATH, CURLU_URLDECODE, &out_config->str_alloc).ptr;
 
+        // We don't want to use clear-text passwords
+        {
+            char *pwd = nullptr;
+            curl_url_get(h, CURLUPART_PASSWORD, &pwd, 0);
+
+            if (pwd) {
+                LogWarning("Ignoring clear-text password in SSH URL");
+            }
+
+            curl_free(pwd);
+        }
+
         // The first '/' separates the host from the path, use '//' for absolute path
         if (!out_config->path) {
             out_config->path = "";
