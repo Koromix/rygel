@@ -726,7 +726,7 @@ bool GetContext::CleanDirectory(Span<const char> dirname, const HashSet<Span<con
 {
     BlockAllocator temp_alloc;
 
-    std::function<bool(const char *)> clean_directory = [&](const char *dirname) {
+    auto clean = [&](const auto &clean, const char *dirname) -> bool {
         EnumResult ret = EnumerateDirectory(dirname, nullptr, -1, [&](const char *basename, const FileInfo &file_info) {
             const char *filename = Fmt(&temp_alloc, "%1%/%2", dirname, basename).ptr;
 
@@ -734,7 +734,7 @@ bool GetContext::CleanDirectory(Span<const char> dirname, const HashSet<Span<con
                 return true;
 
             if (file_info.type == FileType::Directory) {
-                if (!clean_directory(filename))
+                if (!clean(clean, filename))
                     return false;
 
                 if (settings.verbose) {
@@ -761,7 +761,7 @@ bool GetContext::CleanDirectory(Span<const char> dirname, const HashSet<Span<con
     };
 
     const char *copy = DuplicateString(dirname, &temp_alloc).ptr;
-    return clean_directory(copy);
+    return clean(clean, copy);
 }
 
 void GetContext::MakeProgress(int64_t entries, int64_t size)
