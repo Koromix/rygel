@@ -98,7 +98,7 @@ static void CleanupFragments(int64_t now)
                     keys.Append(key);
                 }
 
-                success &= s3.DeleteObjects(keys);
+                success &= (s3.DeleteObjects(keys) == keys.len);
             }
 
             if (success) {
