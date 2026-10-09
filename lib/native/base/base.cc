@@ -7694,6 +7694,13 @@ Async::Async()
 
 Async::Async(int threads, unsigned int flags, const char *name)
 {
+    K_ASSERT(threads > 0);
+
+    if (flags & (int)AsyncFlag::Background) {
+        // The main thread is not expected to help (will not Sync or very late when everything is done)
+        threads++;
+    }
+
     AsyncPool *pool = new AsyncPool(threads, 0, name);
     Init(pool, flags);
 }
