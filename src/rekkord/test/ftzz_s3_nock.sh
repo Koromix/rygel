@@ -13,8 +13,21 @@ install $ROOT/bin/$PRESET/rekkord /tmp/rekkord/ftzz_s3_nock/rekkord
 cd /tmp/rekkord/ftzz_s3_nock
 
 curl -L -o linux.tar.xz https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.17.8.tar.xz
-curl -L versitygw.tgz https://github.com/versity/versitygw/releases/download/v1.8.0/versitygw_v1.8.0_Linux_x86_64.tar.gz | tar xzO versitygw_v1.8.0_Linux_x86_64/versitygw > versitygw
-curl -L -o ftzz https://github.com/SUPERCILEX/ftzz/releases/download/4.0.0/x86_64-unknown-linux-musl-ftzz
+curl -L versitygw.tgz https://github.com/versity/versitygw/releases/download/v1.8.0/versitygw_v1.8.0_$(uname -sm | sed -e 's/ /_/').tar.gz | tar xzO versitygw_v1.8.0_$(uname -sm | sed -e 's/ /_/')/versitygw > versitygw
+case $(uname -sm | sed -e 's/ /_/') in
+    Darwin_arm64)
+        curl -L -o ftzz https://github.com/SUPERCILEX/ftzz/releases/download/4.0.0/aarch64-apple-darwin-ftzz
+        ;;
+    Darwin_x86_64)
+        curl -L -o ftzz https://github.com/SUPERCILEX/ftzz/releases/download/4.0.0/x86_64-apple-darwin-ftzz
+        ;;
+    Linux_x86_64)
+        curl -L -o ftzz https://github.com/SUPERCILEX/ftzz/releases/download/4.0.0/x86_64-unknown-linux-musl-ftzz
+        ;;
+    Linux_arm64)
+        curl -L -o ftzz https://github.com/SUPERCILEX/ftzz/releases/download/4.0.0/aarch64-unknown-linux-musl-ftzz
+        ;;
+esac
 chmod +x versitygw
 chmod +x ftzz
 

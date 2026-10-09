@@ -12,7 +12,7 @@ mkdir -p /tmp/rekkord/repo_s3nock
 install $ROOT/bin/$PRESET/rekkord /tmp/rekkord/repo_s3nock/rekkord
 cd /tmp/rekkord/repo_s3nock
 
-curl -L versitygw.tgz https://github.com/versity/versitygw/releases/download/v1.8.0/versitygw_v1.8.0_Linux_x86_64.tar.gz | tar xzO versitygw_v1.8.0_Linux_x86_64/versitygw > versitygw
+curl -L versitygw.tgz https://github.com/versity/versitygw/releases/download/v1.8.0/versitygw_v1.8.0_$(uname -sm | sed -e 's/ /_/').tar.gz | tar xzO versitygw_v1.8.0_$(uname -sm | sed -e 's/ /_/')/versitygw > versitygw
 chmod +x versitygw
 
 export LANG=C

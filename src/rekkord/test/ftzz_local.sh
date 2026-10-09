@@ -14,7 +14,20 @@ cd /tmp/rekkord/ftzz_local
 
 rm -f linux.tar.xz
 curl -L -o linux.tar.xz https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.17.8.tar.xz
-curl -L -o ftzz https://github.com/SUPERCILEX/ftzz/releases/download/4.0.0/x86_64-unknown-linux-musl-ftzz
+case $(uname -sm | sed -e 's/ /_/') in
+    Darwin_arm64)
+        curl -L -o ftzz https://github.com/SUPERCILEX/ftzz/releases/download/4.0.0/aarch64-apple-darwin-ftzz
+        ;;
+    Darwin_x86_64)
+        curl -L -o ftzz https://github.com/SUPERCILEX/ftzz/releases/download/4.0.0/x86_64-apple-darwin-ftzz
+        ;;
+    Linux_x86_64)
+        curl -L -o ftzz https://github.com/SUPERCILEX/ftzz/releases/download/4.0.0/x86_64-unknown-linux-musl-ftzz
+        ;;
+    Linux_arm64)
+        curl -L -o ftzz https://github.com/SUPERCILEX/ftzz/releases/download/4.0.0/aarch64-unknown-linux-musl-ftzz
+        ;;
+esac
 chmod +x ftzz
 
 echo "[Repository]
