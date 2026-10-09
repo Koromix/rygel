@@ -152,7 +152,7 @@ bool ssh_DecodeURL(Span<const char> url, ssh_Config *out_config)
 
         out_config->host = curl_GetUrlPartStr(h, CURLUPART_HOST, 0, &out_config->str_alloc).ptr;
         out_config->port = curl_GetUrlPartInt(h, CURLUPART_PORT, 0);
-        out_config->username = curl_GetUrlPartStr(h, CURLUPART_USER, 0, &out_config->str_alloc).ptr;
+        out_config->username = curl_GetUrlPartStr(h, CURLUPART_USER, CURLU_URLDECODE, &out_config->str_alloc).ptr;
         out_config->path = curl_GetUrlPartStr(h, CURLUPART_PATH, CURLU_URLDECODE, &out_config->str_alloc).ptr;
 
         // We don't want to use clear-text passwords
@@ -203,9 +203,9 @@ const char *ssh_MakeURL(const ssh_Config &config, Allocator *alloc)
     const char *url = nullptr;
 
     if (config.port > 0 && config.port != 22) {
-        url = Fmt(alloc, "sftp://%1@%2:%3/%4", config.username, config.host, config.port, config.path).ptr;
+        url = Fmt(alloc, "sftp://%1@%2:%3/%4", FmtUrlSafe(config.username, "-._~"), config.host, config.port, FmtUrlSafe(config.path, "-._~@/")).ptr;
     } else {
-        url = Fmt(alloc, "sftp://%1@%2/%3", config.username, config.host, config.path).ptr;
+        url = Fmt(alloc, "sftp://%1@%2/%3", FmtUrlSafe(config.username, "-._~"), config.host, FmtUrlSafe(config.path, "-._~@/")).ptr;
     }
 
     return url;
