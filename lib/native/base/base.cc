@@ -8776,13 +8776,13 @@ void LineReader::PushLogFilter()
 
 #if defined(O_TMPFILE)
 
-enum class FlinkMethod {
+enum class LinkAtMethod {
     Unsupported,
     Direct,
     ProcPath
 };
 
-static FlinkMethod GetFlinkMethod(const char *dirname)
+static LinkAtMethod GetLinkAtMethod(const char *dirname)
 {
     static std::atomic_int method { -1 };
 
@@ -8792,15 +8792,15 @@ static FlinkMethod GetFlinkMethod(const char *dirname)
     // (directory missing, unsupported VFS, etc.).
 
     if (int value = method.load(std::memory_order_relaxed); value >= 0)
-        return (FlinkMethod)value;
+        return (LinkAtMethod)value;
 
     int fd = K_RESTART_EINTR(open(dirname, O_WRONLY | O_TMPFILE | O_CLOEXEC, 0600), < 0);
     if (fd < 0) {
         if (errno == EISDIR) {
             // Old kernel (pre-3.11)
-            method.store((int)FlinkMethod::Unsupported, std::memory_order_relaxed);
+            method.store((int)LinkAtMethod::Unsupported, std::memory_order_relaxed);
         }
-        return FlinkMethod::Unsupported;
+        return LinkAtMethod::Unsupported;
     }
     K_DEFER { close(fd); };
 
@@ -8810,8 +8810,8 @@ static FlinkMethod GetFlinkMethod(const char *dirname)
     // and if it fails with EEXIST, it means we're running a kernel where it works.
     // Or maybe we do have CAP_DAC_READ_SEARCH, it's fine either way.
     if (linkat(fd, "", AT_FDCWD, dirname, AT_EMPTY_PATH) < 0 && errno == EEXIST) {
-        method.store((int)FlinkMethod::Direct, std::memory_order_relaxed);
-        return FlinkMethod::Direct;
+        method.store((int)LinkAtMethod::Direct, std::memory_order_relaxed);
+        return LinkAtMethod::Direct;
     }
 
     // Try the /proc/self/fd/ trick instead
@@ -8820,13 +8820,13 @@ static FlinkMethod GetFlinkMethod(const char *dirname)
         Fmt(path, "/proc/self/fd/%1", fd);
 
         if (linkat(AT_FDCWD, path, AT_FDCWD, dirname, AT_SYMLINK_FOLLOW) < 0 && errno == EEXIST) {
-            method.store((int)FlinkMethod::ProcPath, std::memory_order_relaxed);
-            return FlinkMethod::ProcPath;
+            method.store((int)LinkAtMethod::ProcPath, std::memory_order_relaxed);
+            return LinkAtMethod::ProcPath;
         }
     }
 
-    method.store((int)FlinkMethod::Unsupported, std::memory_order_relaxed);
-    return FlinkMethod::Unsupported;
+    method.store((int)LinkAtMethod::Unsupported, std::memory_order_relaxed);
+    return LinkAtMethod::Unsupported;
 }
 
 #endif
@@ -8922,7 +8922,7 @@ bool StreamWriter::Open(const char *filename, unsigned int flags,
         {
             const char *dirname = DuplicateString(directory, &str_alloc).ptr;
 
-            if (GetFlinkMethod(dirname) != FlinkMethod::Unsupported) {
+            if (GetLinkAtMethod(dirname) != LinkAtMethod::Unsupported) {
                 dest.u.file.fd = K_RESTART_EINTR(open(dirname, O_WRONLY | O_TMPFILE | O_CLOEXEC, 0644), < 0);
 
                 if (dest.u.file.fd >= 0) {
@@ -9145,24 +9145,24 @@ bool StreamWriter::Close(bool implicit)
                         char linkat_from[256];
                         int linkat_flags = 0;
 
-                        // We can't reach here unless Open() has already called GetFlinkMethod() and got
+                        // We can't reach here unless Open() has already called GetLinkAtMethod() and got
                         // something useful out of it. So calling it with nullptr is fine; it'll return
                         // the cached value.
 
-                        switch (GetFlinkMethod(nullptr)) {
-                            case FlinkMethod::Direct: {
+                        switch (GetLinkAtMethod(nullptr)) {
+                            case LinkAtMethod::Direct: {
                                 linkat_fd = dest.u.file.fd;
                                 linkat_from[0] = 0;
                                 linkat_flags = AT_EMPTY_PATH;
                             } break;
 
-                            case FlinkMethod::ProcPath: {
+                            case LinkAtMethod::ProcPath: {
                                 linkat_fd = AT_FDCWD;
                                 Fmt(linkat_from, "/proc/self/fd/%1", dest.u.file.fd);
                                 linkat_flags = AT_SYMLINK_FOLLOW;
                             } break;
 
-                            case FlinkMethod::Unsupported: { K_UNREACHABLE(); } break;
+                            case LinkAtMethod::Unsupported: { K_UNREACHABLE(); } break;
                         }
                         K_ASSERT(linkat_flags);
 
