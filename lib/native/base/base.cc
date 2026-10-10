@@ -3178,7 +3178,7 @@ static bool SyncDirectory(Span<const char> directory)
 
 static inline bool IsErrnoNotSupported(int err)
 {
-    bool unsupported = (err == ENOSYS || err == ENOTSUP || err == EOPNOTSUPP);
+    bool unsupported = (err == ENOSYS || err == EPERM || err == ENOTSUP || err == EOPNOTSUPP);
     return unsupported;
 }
 
@@ -3215,13 +3215,8 @@ RenameResult RenameFile(const char *src_filename, const char *dest_filename, uns
             }
             goto sync;
         }
-#if defined(__linux__)
-        if (!IsErrnoNotSupported(errno) && errno != EINVAL && errno != EPERM)
-            goto error;
-#else
         if (!IsErrnoNotSupported(errno) && errno != EINVAL)
             goto error;
-#endif
 
         // Fall back to racy way...
         if (!faccessat(AT_FDCWD, dest_filename, F_OK, AT_SYMLINK_NOFOLLOW)) {
