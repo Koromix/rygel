@@ -5279,10 +5279,10 @@ class Async {
     class AsyncPool *pool;
     bool selfish = false;
 
-    // Rarely written to so avoid separate cache line
+    // Rarely written to or mostly-thread-specific so avoid separate cache line
     std::atomic_bool success { true };
+    std::atomic_uint next_worker { 0 };
 
-    alignas(64) std::atomic_uint next_worker { 0 };
     alignas(64) std::atomic_int remaining_tasks { 0 };
 #else
     bool success = true;

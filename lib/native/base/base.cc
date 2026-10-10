@@ -7632,25 +7632,25 @@ struct alignas(64) WorkerData {
     AsyncPool *pool = nullptr;
     int idx;
 
+    std::atomic<TaggedIndex> head {{ 0xFFFFFFFFu, 0 }};
+
     LockFreePool<TaskData> alloc { K_ASYNC_MAX_WORKER_TASKS };
-    alignas(64) std::atomic<TaggedIndex> head {{ 0xFFFFFFFFu, 0 }};
 };
 
 class AsyncPool {
     K_DELETE_COPY(AsyncPool)
 
-    std::mutex mutex;
+    bool background = false;
+    Span<WorkerData> workers;
+    char thread_name[16] = {};
+
+    alignas(64) std::mutex mutex;
     std::condition_variable pending_cv;
     std::condition_variable sync_cv;
-
-    bool background = false;
 
     // Manipulate with mutex locked
     int refcount = 0;
     int async_count = 0;
-
-    char thread_name[16] = {};
-    Span<WorkerData> workers;
 
     alignas(64) std::atomic_int pending_tasks { 0 };
 
