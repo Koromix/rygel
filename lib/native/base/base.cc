@@ -8988,6 +8988,10 @@ bool StreamWriter::Open(const std::function<bool(Span<const uint8_t>)> &func, co
 
 bool StreamWriter::Rewind()
 {
+#if !defined(__wasm__)
+    std::lock_guard<std::mutex> lock(mutex);
+#endif
+
     if (error) [[unlikely]]
         return false;
 
