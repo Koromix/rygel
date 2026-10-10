@@ -20,7 +20,6 @@ struct ssh_Config {
     const char *fingerprint = nullptr;
 
     const char *password = nullptr;
-    const char *key = nullptr;
     const char *keyfile = nullptr;
 
     BlockAllocator str_alloc;
