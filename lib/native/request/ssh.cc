@@ -325,6 +325,7 @@ ssh_session ssh_Connect(const ssh_Config &config)
         success &= SetIntegerOption(ssh, SSH_OPTIONS_PORT, config.port > 0 ? config.port : 22);
         success &= SetStringOption(ssh, SSH_OPTIONS_USER, config.username);
         success &= SetIntegerOption(ssh, SSH_OPTIONS_TIMEOUT_USEC, 60000000L);
+        success &= SetIntegerOption(ssh, SSH_OPTIONS_NODELAY, 1);
 
         if (!success)
             return nullptr;
