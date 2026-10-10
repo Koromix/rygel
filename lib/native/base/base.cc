@@ -4775,10 +4775,12 @@ bool FlushFile(int fd, const char *filename)
 {
     K_ASSERT(filename);
 
+    int ret = K_RESTART_EINTR(fsync(fd), < 0);
+
 #if defined(__APPLE__)
-    if (fsync(fd) < 0 && errno != EINVAL && errno != ENOTSUP) {
+    if (ret < 0 && errno != EINVAL && errno != ENOTSUP) {
 #else
-    if (fsync(fd) < 0 && errno != EINVAL) {
+    if (ret < 0 && errno != EINVAL) {
 #endif
         LogError("Failed to sync '%1': %2", filename, strerror(errno));
         return false;
