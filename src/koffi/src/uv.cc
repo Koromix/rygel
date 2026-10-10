@@ -85,7 +85,7 @@ void PollHandle::Start(const Napi::CallbackInfo &info)
         return;
     }
 
-    napi_value opts = has_opts ? info[0] : nullptr;
+    napi_value opts = has_opts ? (napi_value)info[0] : nullptr;
     napi_value func = info[0 + has_opts];
 
     Start(opts, func);
