@@ -2543,15 +2543,15 @@ FunctionInfo::~FunctionInfo()
 InstanceMemory::~InstanceMemory()
 {
 #if defined(_WIN32)
-    if (stack.ptr) {
-        VirtualFree(stack.ptr, 0, MEM_RELEASE);
+    if (stack0.ptr) {
+        VirtualFree(stack0.ptr, 0, MEM_RELEASE);
     }
     if (heap.ptr) {
         VirtualFree(heap.ptr, 0, MEM_RELEASE);
     }
 #else
-    if (stack.ptr) {
-        munmap(stack.ptr, stack.end - stack.ptr);
+    if (stack0.ptr) {
+        munmap(stack0.ptr, stack0.end - stack0.ptr);
     }
     if (heap.ptr) {
         munmap(heap.ptr, heap.end - heap.ptr);
@@ -2570,22 +2570,27 @@ void InstanceMemory::Allocate(Size stack_size, Size heap_size)
 
 #if defined(_WIN32)
     {
-        uint8_t *base = (uint8_t *)VirtualAlloc(nullptr, stack_size + page_size, MEM_RESERVE, PAGE_NOACCESS);
+        Size alloc = page_size + stack_size + page_size;
+        uint8_t *base = (uint8_t *)VirtualAlloc(nullptr, alloc, MEM_RESERVE, PAGE_NOACCESS);
 
-        K_CRITICAL(base, "Failed to allocate %1 of memory", FmtMemSize(stack_size + page_size));
+        K_CRITICAL(base, "Failed to allocate %1 of memory", FmtMemSize(alloc));
         K_CRITICAL(VirtualAlloc(base + page_size, stack_size, MEM_COMMIT, PAGE_READWRITE), "Failed to initialize stack memory");
 
+        stack0.ptr = base;
+        stack0.end = stack0.ptr + alloc;
         stack.ptr = base + page_size;
         stack.end = stack.ptr + stack_size;
     }
 #else
     {
+        Size alloc = page_size + stack_size + page_size;
+
 #if defined(MAP_STACK)
-        uint8_t *base = (uint8_t *)mmap(nullptr, stack_size + page_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON | MAP_STACK, -1, 0);
-        K_CRITICAL(base != MAP_FAILED, "Failed to allocate %1 of memory", FmtMemSize(stack_size + page_size));
+        uint8_t *base = (uint8_t *)mmap(nullptr, alloc, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON | MAP_STACK, -1, 0);
+        K_CRITICAL(base != MAP_FAILED, "Failed to allocate %1 of memory", FmtMemSize(alloc));
 #else
-        uint8_t *base = (uint8_t *)mmap(nullptr, stack_size + page_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
-        K_CRITICAL(base != MAP_FAILED, "Failed to allocate %1 of memory", FmtMemSize(stack_size + page_size));
+        uint8_t *base = (uint8_t *)mmap(nullptr, alloc, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+        K_CRITICAL(base != MAP_FAILED, "Failed to allocate %1 of memory", FmtMemSize(alloc));
 #endif
 
 #if defined(__linux__) || !defined(MAP_STACK)
@@ -2593,14 +2598,11 @@ void InstanceMemory::Allocate(Size stack_size, Size heap_size)
         mprotect(base, page_size, PROT_NONE);
 #endif
 
+        stack0.ptr = base;
+        stack0.end = stack0.ptr + alloc;
         stack.ptr = base + page_size;
         stack.end = stack.ptr + stack_size;
     }
-#endif
-
-#if defined(__OpenBSD__)
-    // Make sure the SP points inside the MAP_STACK area, or (void) functions may crash on OpenBSD i386
-    stack.end -= 16;
 #endif
 
 #if defined(_WIN32)

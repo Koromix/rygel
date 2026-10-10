@@ -244,6 +244,7 @@ struct MemoryRange {
 };
 
 struct InstanceMemory {
+    MemoryRange<uint8_t> stack0;
     MemoryRange<uint8_t> stack;
     MemoryRange<uint8_t> heap;
 
