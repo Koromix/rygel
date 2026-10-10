@@ -320,6 +320,7 @@ ssh_session ssh_Connect(const ssh_Config &config)
     {
         bool success = true;
 
+        success &= SetIntegerOption(ssh, SSH_OPTIONS_PROCESS_CONFIG, false);
         success &= SetStringOption(ssh, SSH_OPTIONS_HOST, config.host);
         success &= SetIntegerOption(ssh, SSH_OPTIONS_PORT, config.port > 0 ? config.port : 22);
         success &= SetStringOption(ssh, SSH_OPTIONS_USER, config.username);
