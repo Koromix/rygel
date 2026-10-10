@@ -7890,14 +7890,14 @@ void AsyncPool::AddTask(Async *async, int worker_idx, std::function<bool()> &&fu
     WorkerData *worker = &workers[worker_idx];
 
     async->remaining_tasks.fetch_add(1, std::memory_order_relaxed);
-    uint32_t slot = worker->alloc.Allocate();
+    uint32_t slot = worker->alloc.Acquire();
 
     // Process pending tasks when there's too much to do
     if (slot == 0xFFFFFFFFu) {
         for (;;) {
             bool busy = async->selfish ? RunTasks(worker_idx, async, 4) : RunTasks(worker_idx, 4);
 
-            slot = worker->alloc.Allocate();
+            slot = worker->alloc.Acquire();
 
             if (slot != 0xFFFFFFFFu) [[likely]]
                 break;

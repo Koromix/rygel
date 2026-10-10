@@ -3645,7 +3645,7 @@ public:
         ReleaseAligned(slots.ptr);
     }
 
-    uint32_t Allocate()
+    uint32_t Acquire()
     {
         TaggedIndex free = head.load(std::memory_order_acquire);
         TaggedIndex desired;
