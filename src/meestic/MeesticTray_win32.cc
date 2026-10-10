@@ -116,8 +116,8 @@ static bool ToggleProfile(int delta)
         next_idx += delta;
 
         if (next_idx < 0) {
-            next_idx = config.profiles.count - 1;
-        } else if (next_idx >= config.profiles.count) {
+            next_idx = config.profiles.Count() - 1;
+        } else if (next_idx >= config.profiles.Count()) {
             next_idx = 0;
         }
     } while (config.profiles[next_idx].manual);
@@ -213,7 +213,7 @@ static void UpdateTray()
 {
     tray->ClearMenu();
 
-    for (Size i = 0; i < config.profiles.count; i++) {
+    for (Size i = 0; i < config.profiles.Count(); i++) {
         const ConfigProfile &profile = config.profiles[i];
         tray->AddAction(profile.name, i == active_idx, [i]() { ApplyProfile(i); });
     }
