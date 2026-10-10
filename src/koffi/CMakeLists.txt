@@ -75,36 +75,36 @@ set(KOFFI_SRC
     ../../lib/native/base/base.cc
 )
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-    # CMAKE_SYSTEM_PROCESSOR is wrong on Windows ARM64
+    if(APPLE AND CMAKE_OSX_ARCHITECTURES MATCHES "arm")
+        list(APPEND KOFFI_SRC src/abi/arm64.cc src/abi/arm64_asm.S)
+    elseif(APPLE AND CMAKE_OSX_ARCHITECTURES MATCHES "x86_64")
+        list(APPEND KOFFI_SRC src/abi/x64sysv.cc src/abi/x64sysv_asm.S)
+    elseif(MSVC AND (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch|arm|ARM|AARCH" OR CMAKE_GENERATOR_PLATFORM STREQUAL "ARM64"))
+        get_filename_component(cl_dir "${CMAKE_CXX_COMPILER}" DIRECTORY)
+        file(TO_CMAKE_PATH "${cl_dir}/armasm64.exe" asm_compiler)
 
-    if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch|arm|ARM|AARCH" OR CMAKE_GENERATOR_PLATFORM STREQUAL "ARM64" OR CMAKE_OSX_ARCHITECTURES MATCHES "arm")
-        if(MSVC)
-            get_filename_component(cl_dir "${CMAKE_CXX_COMPILER}" DIRECTORY)
-            file(TO_CMAKE_PATH "${cl_dir}/armasm64.exe" asm_compiler)
-
-            # Work around missing ARM64-native ARMASM64 compiler (at least in VS 17.3 Preview 2)
-            if(NOT EXISTS "${asm_compiler}")
-                file(TO_CMAKE_PATH "${cl_dir}/../../Hostx64/arm64/armasm64.exe" asm_compiler)
-            endif()
-
-            message(STATUS "Using ARMASM64 compiler: ${asm_compiler}")
-
-            file(TO_CMAKE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/src/abi/arm64_asm.asm" asm_source)
-            file(TO_CMAKE_PATH "${CMAKE_CURRENT_BINARY_DIR}/arm64_asm.obj" asm_object)
-
-            add_custom_command(
-                OUTPUT "${asm_object}"
-                COMMAND "${asm_compiler}"
-                ARGS /nologo /i "${CMAKE_CURRENT_BINARY_DIR}/trampolines" /o "${asm_object}" "${asm_source}"
-                DEPENDS "${asm_source}" trampolines/armasm.inc
-                COMMENT "Assembling ${asm_source}"
-            )
-            set_source_files_properties("${asm_object}" PROPERTIES EXTERNAL_OBJECT TRUE)
-
-            list(APPEND KOFFI_SRC src/abi/arm64.cc "${asm_object}")
-        else()
-            list(APPEND KOFFI_SRC src/abi/arm64.cc src/abi/arm64_asm.S)
+        # Work around missing ARM64-native ARMASM64 compiler (at least in VS 17.3 Preview 2)
+        if(NOT EXISTS "${asm_compiler}")
+            file(TO_CMAKE_PATH "${cl_dir}/../../Hostx64/arm64/armasm64.exe" asm_compiler)
         endif()
+
+        message(STATUS "Using ARMASM64 compiler: ${asm_compiler}")
+
+        file(TO_CMAKE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/src/abi/arm64_asm.asm" asm_source)
+        file(TO_CMAKE_PATH "${CMAKE_CURRENT_BINARY_DIR}/arm64_asm.obj" asm_object)
+
+        add_custom_command(
+            OUTPUT "${asm_object}"
+            COMMAND "${asm_compiler}"
+            ARGS /nologo /i "${CMAKE_CURRENT_BINARY_DIR}/trampolines" /o "${asm_object}" "${asm_source}"
+            DEPENDS "${asm_source}" trampolines/armasm.inc
+            COMMENT "Assembling ${asm_source}"
+        )
+        set_source_files_properties("${asm_object}" PROPERTIES EXTERNAL_OBJECT TRUE)
+
+        list(APPEND KOFFI_SRC src/abi/arm64.cc "${asm_object}")
+    elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch|arm|ARM|AARCH")
+        list(APPEND KOFFI_SRC src/abi/arm64.cc src/abi/arm64_asm.S)
     elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "riscv")
         list(APPEND KOFFI_SRC src/abi/riscv64.cc src/abi/riscv64_asm.S)
     elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "loongarch64")
