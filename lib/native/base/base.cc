@@ -9029,7 +9029,6 @@ bool StreamWriter::Rewind()
 
         case DestinationType::Function: {
             LogError("Cannot rewind stream '%1'", filename);
-            error = true;
             return false;
         } break;
     }
