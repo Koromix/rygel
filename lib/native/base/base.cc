@@ -8797,23 +8797,15 @@ static FlinkMethod GetFlinkMethod()
         // Try to use it on /tmp, link to existing file (/tmp itself) and if it fails with EEXIST,
         // it means we're running a kernel where it works.
         // Or maybe we do have CAP_DAC_SEARCH, it's fine either way.
-        {
-            errno = 0;
-            syscall(__NR_linkat, fd, "", AT_FDCWD, tmp, AT_EMPTY_PATH);
-
-            if (errno == EEXIST)
-                return FlinkMethod::Direct;
-        }
+        if (linkat(fd, "", AT_FDCWD, tmp, AT_EMPTY_PATH) < 0 && errno == EEXIST)
+            return FlinkMethod::Direct;
 
         // Try the /proc/self/fd/ trick instead
         {
             char path[256];
             Fmt(path, "/proc/self/fd/%1", fd);
 
-            errno = 0;
-            syscall(__NR_linkat, AT_FDCWD, path, AT_FDCWD, tmp, AT_SYMLINK_FOLLOW);
-
-            if (errno == EEXIST)
+            if (linkat(AT_FDCWD, path, AT_FDCWD, tmp, AT_SYMLINK_FOLLOW) < 0 && errno == EEXIST)
                 return FlinkMethod::ProcPath;
         }
 
