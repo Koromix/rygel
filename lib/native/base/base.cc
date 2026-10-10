@@ -9134,23 +9134,24 @@ bool StreamWriter::Close(bool implicit)
                     if (!dest.u.file.tmp_filename) {
                         int linkat_fd = -1;
                         char linkat_from[256];
-                        int linkat_flags = AT_SYMLINK_FOLLOW;
+                        int linkat_flags = 0;
 
                         switch (GetFlinkMethod()) {
                             case FlinkMethod::Direct: {
                                 linkat_fd = dest.u.file.fd;
                                 linkat_from[0] = 0;
-                                linkat_flags |= AT_EMPTY_PATH;
+                                linkat_flags = AT_EMPTY_PATH;
                             } break;
 
                             case FlinkMethod::ProcPath: {
                                 linkat_fd = AT_FDCWD;
                                 Fmt(linkat_from, "/proc/self/fd/%1", dest.u.file.fd);
+                                linkat_flags = AT_SYMLINK_FOLLOW;
                             } break;
 
                             case FlinkMethod::Unsupported: { K_UNREACHABLE(); } break;
                         }
-                        K_ASSERT(linkat_fd >= 0);
+                        K_ASSERT(linkat_flags);
 
                         if (linkat(linkat_fd, linkat_from, AT_FDCWD, filename, linkat_flags) < 0) {
                             if (errno == EEXIST) {
