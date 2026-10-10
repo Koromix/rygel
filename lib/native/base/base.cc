@@ -9123,8 +9123,6 @@ bool StreamWriter::Close(bool implicit)
                 if (IsValid()) {
 #if defined(O_TMPFILE)
                     if (!dest.u.file.tmp_filename) {
-                        bool linked = false;
-
                         int linkat_fd = -1;
                         char linkat_from[256];
                         int linkat_flags = AT_SYMLINK_FOLLOW;
@@ -9135,6 +9133,7 @@ bool StreamWriter::Close(bool implicit)
                                 linkat_from[0] = 0;
                                 linkat_flags |= AT_EMPTY_PATH;
                             } break;
+
                             case FlinkMethod::ProcPath: {
                                 linkat_fd = AT_FDCWD;
                                 Fmt(linkat_from, "/proc/self/fd/%1", dest.u.file.fd);
@@ -9144,33 +9143,23 @@ bool StreamWriter::Close(bool implicit)
                         }
                         K_ASSERT(linkat_fd >= 0);
 
-                        for (int i = 0; i < 10; i++) {
-                            if (linkat(linkat_fd, linkat_from, AT_FDCWD, filename, linkat_flags) < 0) {
-                                if (errno == EEXIST) {
-                                    unlink(filename);
-                                    continue;
+                        if (linkat(linkat_fd, linkat_from, AT_FDCWD, filename, linkat_flags) < 0) {
+                            if (errno == EEXIST) {
+                                // The linkat() call cannot overwrite an existing file. If the file already exists,
+                                // link to a temporary file and let RenameFile() handle the final step.
+
+                                Span<const char> directory = GetPathDirectory(filename);
+                                const char *basename = SplitStrReverseAny(filename, K_PATH_SEPARATORS).ptr;
+
+                                dest.u.file.tmp_filename = CreateUniquePath(directory, basename, ".tmp", &str_alloc, [&](const char *path) {
+                                    bool success = !linkat(linkat_fd, linkat_from, AT_FDCWD, path, linkat_flags);
+                                    return success;
+                                });
+                                if (!dest.u.file.tmp_filename) {
+                                    LogError("Failed to materialize file '%1': %2", filename, strerror(errno));
+                                    error = true;
                                 }
-
-                                LogError("Failed to materialize file '%1': %2", filename, strerror(errno));
-                                return false;
-                            }
-
-                            linked = true;
-                            break;
-                        }
-
-                        // The linkat() call cannot overwrite an existing file. We try to unlink() the file if
-                        // needed several times (see loop above) to make it work but it it still doesn't, link to
-                        // a temporary file and let RenameFile() handle the final step. Should be rare!
-                        if (!linked) {
-                            Span<const char> directory = GetPathDirectory(filename);
-                            const char *basename = SplitStrReverseAny(filename, K_PATH_SEPARATORS).ptr;
-
-                            dest.u.file.tmp_filename = CreateUniquePath(directory, basename, ".tmp", &str_alloc, [&](const char *path) {
-                                bool success = !linkat(linkat_fd, linkat_from, AT_FDCWD, path, linkat_flags);
-                                return success;
-                            });
-                            if (!dest.u.file.tmp_filename) {
+                            } else {
                                 LogError("Failed to materialize file '%1': %2", filename, strerror(errno));
                                 error = true;
                             }
