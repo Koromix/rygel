@@ -8904,15 +8904,6 @@ bool StreamWriter::Open(const char *filename, unsigned int flags,
     if (dest.u.file.atomic) {
         Span<const char> directory = GetPathDirectory(filename);
 
-        if (dest.u.file.exclusive) {
-            int fd = OpenFile(filename, (int)OpenFlag::Write | (int)OpenFlag::Exclusive);
-            if (fd < 0)
-                return false;
-            CloseDescriptor(fd);
-
-            dest.u.file.unlink_on_error = true;
-        }
-
 #if defined(O_TMPFILE)
         {
             const char *dirname = DuplicateString(directory, &str_alloc).ptr;
@@ -9165,7 +9156,7 @@ bool StreamWriter::Close(bool implicit)
                         K_ASSERT(linkat_flags);
 
                         if (linkat(linkat_fd, linkat_from, AT_FDCWD, filename, linkat_flags) < 0) {
-                            if (errno == EEXIST) {
+                            if (errno == EEXIST && !dest.u.file.exclusive) {
                                 // The linkat() call cannot overwrite an existing file. If the file already exists,
                                 // link to a temporary file and let RenameFile() handle the final step.
 
@@ -9177,11 +9168,11 @@ bool StreamWriter::Close(bool implicit)
                                     return success;
                                 });
                                 if (!dest.u.file.tmp_filename) {
-                                    LogError("Failed to materialize file '%1': %2", filename, strerror(errno));
+                                    LogError("Failed to finalize file '%1': %2", filename, strerror(errno));
                                     error = true;
                                 }
                             } else {
-                                LogError("Failed to materialize file '%1': %2", filename, strerror(errno));
+                                LogError("Failed to finalize file '%1': %2", filename, strerror(errno));
                                 error = true;
                             }
                         }
@@ -9194,7 +9185,7 @@ bool StreamWriter::Close(bool implicit)
                     }
 
                     if (dest.u.file.tmp_filename) {
-                        unsigned int flags = (int)RenameFlag::Overwrite | (int)RenameFlag::Sync;
+                        unsigned int flags = (int)RenameFlag::Sync | (dest.u.file.exclusive ? 0 : (int)RenameFlag::Overwrite);
 
                         if (RenameFile(dest.u.file.tmp_filename, filename, flags) == RenameResult::Success) {
                             dest.u.file.tmp_filename = nullptr;
