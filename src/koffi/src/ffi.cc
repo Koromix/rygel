@@ -2543,15 +2543,15 @@ FunctionInfo::~FunctionInfo()
 InstanceMemory::~InstanceMemory()
 {
 #if defined(_WIN32)
-    if (stack.ptr) {
-        VirtualFree(stack.ptr, 0, MEM_RELEASE);
+    if (stack_mapping.ptr) {
+        VirtualFree(stack_mapping.ptr, 0, MEM_RELEASE);
     }
     if (heap.ptr) {
         VirtualFree(heap.ptr, 0, MEM_RELEASE);
     }
 #else
-    if (stack.ptr) {
-        munmap(stack.ptr, stack.end - stack.ptr);
+    if (stack_mapping.ptr) {
+        munmap(stack_mapping.ptr, stack_mapping.end - stack_mapping.ptr);
     }
     if (heap.ptr) {
         munmap(heap.ptr, heap.end - heap.ptr);
@@ -2567,6 +2567,9 @@ void InstanceMemory::Allocate(Size stack_size, Size heap_size)
     Size page_size = GetPageSize();
 
     stack_size = AlignLen(stack_size, page_size);
+#if defined(__x86_64__) || defined(_M_X64)
+    stack_size += page_size;
+#endif
 
 #if defined(_WIN32)
     {
@@ -2598,7 +2601,13 @@ void InstanceMemory::Allocate(Size stack_size, Size heap_size)
     }
 #endif
 
-#if defined(__OpenBSD__)
+    stack_mapping = { stack.ptr - page_size, stack.end };
+
+#if defined(__x86_64__) || defined(_M_X64)
+    // Rosetta syscall stubs access above the entry SP. Keep a whole mapped page
+    // above the call stack, preserving 16-byte alignment and room for CALL.
+    stack.end -= page_size;
+#elif defined(__OpenBSD__)
     // Make sure the SP points inside the MAP_STACK area, or (void) functions may crash on OpenBSD i386
     stack.end -= 16;
 #endif

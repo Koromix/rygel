@@ -245,6 +245,7 @@ struct MemoryRange {
 
 struct InstanceMemory {
     MemoryRange<uint8_t> stack;
+    MemoryRange<uint8_t> stack_mapping;
     MemoryRange<uint8_t> heap;
 
     bool busy;
