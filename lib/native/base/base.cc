@@ -7643,6 +7643,8 @@ class AsyncPool {
     std::condition_variable pending_cv;
     std::condition_variable sync_cv;
 
+    bool background = false;
+
     // Manipulate with mutex locked
     int refcount = 0;
     int async_count = 0;
@@ -7653,13 +7655,14 @@ class AsyncPool {
     alignas(64) std::atomic_int pending_tasks { 0 };
 
 public:
-    AsyncPool(int threads, int refcount, const char *name);
+    AsyncPool(int threads, bool background, int refcount, const char *name);
     ~AsyncPool();
 
     void RegisterAsync();
     void UnregisterAsync();
 
     int GetWorkerCount() const { return workers.len; }
+    bool IsBackground() const { return background; }
 
     void AddTask(Async *async, int worker_idx, std::function<bool()> &&func);
 
@@ -7687,7 +7690,7 @@ Async::Async()
     if (async_running_pool) {
         Init(async_running_pool, 0);
     } else {
-        static AsyncPool *default_pool = new AsyncPool(GetCoreCount(), 1, nullptr);
+        static AsyncPool *default_pool = new AsyncPool(GetCoreCount(), false, 1, nullptr);
         Init(default_pool, 0);
     }
 }
@@ -7701,7 +7704,7 @@ Async::Async(int threads, unsigned int flags, const char *name)
         threads++;
     }
 
-    AsyncPool *pool = new AsyncPool(threads, 0, name);
+    AsyncPool *pool = new AsyncPool(threads, flags & (int)AsyncFlag::Background, 0, name);
     Init(pool, flags);
 }
 
@@ -7726,8 +7729,8 @@ void Async::Run(std::function<bool()> &&func)
     } else {
         unsigned int next = next_worker.fetch_add(1, std::memory_order_relaxed);
 
-        int mod = pool->GetWorkerCount() - background;
-        int worker = background + (int)(next % (unsigned int)mod);
+        int mod = pool->GetWorkerCount() - pool->IsBackground();
+        int worker = pool->IsBackground() + (int)(next % (unsigned int)mod);
 
         pool->AddTask(this, worker, std::move(func));
     }
@@ -7764,14 +7767,13 @@ void Async::Init(AsyncPool *pool, unsigned int flags)
     this->pool = pool;
     pool->RegisterAsync();
 
-    background = flags & (int)AsyncFlag::Background;
     selfish = flags & (int)AsyncFlag::Selfish;
 
     unsigned int next = HashInt((unsigned int)(uintptr_t)this);
     next_worker.store(next, std::memory_order_relaxed);
 }
 
-AsyncPool::AsyncPool(int threads, int refcount, const char *name)
+AsyncPool::AsyncPool(int threads, bool background, int refcount, const char *name)
 {
     if (threads > K_ASYNC_MAX_THREADS) {
         LogError("Async cannot use more than %1 threads", K_ASYNC_MAX_THREADS);
@@ -7788,6 +7790,7 @@ AsyncPool::AsyncPool(int threads, int refcount, const char *name)
         }
     }
 
+    this->background = background;
     this->refcount = refcount;
     CopyString(name ? name : "", thread_name);
 }

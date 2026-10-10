@@ -5277,8 +5277,6 @@ class Async {
 
 #if !defined(__wasi__)
     class AsyncPool *pool;
-
-    bool background = false;
     bool selfish = false;
 
     // Rarely written to so avoid separate cache line
