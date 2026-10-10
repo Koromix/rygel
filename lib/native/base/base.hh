@@ -5600,7 +5600,8 @@ public:
         : StreamWriter() { Open(func, filename, flags, compression_type, compression_speed); }
     ~StreamWriter() { Close(true); }
 
-    // Call before Open. Takes ownership and deletes the encoder at the end.
+    // Call after Open (with CompressionType None).
+    // Takes ownership and deletes the encoder at the end.
     void SetEncoder(StreamEncoder *encoder);
 
     bool Open(HeapArray<uint8_t> *mem, const char *filename, unsigned int flags = 0,

@@ -8834,7 +8834,7 @@ static LinkAtMethod GetLinkAtMethod(const char *dirname)
 void StreamWriter::SetEncoder(StreamEncoder *encoder)
 {
     K_ASSERT(encoder);
-    K_ASSERT(!filename);
+    K_ASSERT(filename);
     K_ASSERT(!this->encoder);
 
     this->encoder = encoder;
