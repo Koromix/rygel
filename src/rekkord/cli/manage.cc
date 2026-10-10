@@ -276,7 +276,7 @@ Options:
                 return 1;
         }
         if (TestFile(key_filename)) {
-            const char *prompt = Fmt(&temp_alloc, T("Do you want to overwrite key file '%1'?"), config_filename).ptr;
+            const char *prompt = Fmt(&temp_alloc, T("Do you want to overwrite key file '%1'?"), key_filename).ptr;
 
             if (PromptYN(prompt) != 1)
                 return 1;
