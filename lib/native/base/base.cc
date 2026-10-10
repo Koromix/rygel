@@ -7679,8 +7679,6 @@ public:
     void RunTask(Async *async, std::function<bool()> &func);
 };
 
-// thread_local breaks down on MinGW when destructors are involved, work
-// around this with heap allocation.
 static thread_local AsyncPool *async_running_pool = nullptr;
 static thread_local int async_running_worker_idx = 0;
 static thread_local bool async_running_task = false;
