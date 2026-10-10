@@ -8777,42 +8777,56 @@ void LineReader::PushLogFilter()
 #if defined(O_TMPFILE)
 
 enum class FlinkMethod {
+    Unsupported,
     Direct,
-    ProcPath,
-    Unsupported
+    ProcPath
 };
 
-static FlinkMethod GetFlinkMethod()
+static FlinkMethod GetFlinkMethod(const char *dirname)
 {
-    static FlinkMethod method = []() {
-        const char *tmp = GetTemporaryDirectory();
+    static std::atomic_int method { -1 };
 
-        int fd = open(tmp, O_WRONLY | O_TMPFILE | O_CLOEXEC, 0600);
-        if (fd < 0)
-            return FlinkMethod::Unsupported;
-        K_DEFER { close(fd); };
+    // This method caches a global result for performance reasons.
+    // It will not cache EOPNOTSUPP or errors related to the directory itself,
+    // so we won't cache "Unsupported" if the first probe happened to be unlucky
+    // (directory missing, unsupported VFS, etc.).
 
-        // The CAP_DAC_SEARCH requirement for linkat(fd, ..., AT_EMPTY_PATH) has been relaxed
-        // in 2024, see: https://lwn.net/Articles/969483/
-        // Try to use it on /tmp, link to existing file (/tmp itself) and if it fails with EEXIST,
-        // it means we're running a kernel where it works.
-        // Or maybe we do have CAP_DAC_SEARCH, it's fine either way.
-        if (linkat(fd, "", AT_FDCWD, tmp, AT_EMPTY_PATH) < 0 && errno == EEXIST)
-            return FlinkMethod::Direct;
+    if (int value = method.load(std::memory_order_relaxed); value >= 0)
+        return (FlinkMethod)value;
 
-        // Try the /proc/self/fd/ trick instead
-        {
-            char path[256];
-            Fmt(path, "/proc/self/fd/%1", fd);
-
-            if (linkat(AT_FDCWD, path, AT_FDCWD, tmp, AT_SYMLINK_FOLLOW) < 0 && errno == EEXIST)
-                return FlinkMethod::ProcPath;
+    int fd = K_RESTART_EINTR(open(dirname, O_WRONLY | O_TMPFILE | O_CLOEXEC, 0600), < 0);
+    if (fd < 0) {
+        if (errno == EISDIR) {
+            // Old kernel (pre-3.11)
+            method.store((int)FlinkMethod::Unsupported, std::memory_order_relaxed);
         }
-
         return FlinkMethod::Unsupported;
-    }();
+    }
+    K_DEFER { close(fd); };
 
-    return method;
+    // The CAP_DAC_READ_SEARCH requirement for linkat(fd, ..., AT_EMPTY_PATH) has been relaxed
+    // in 2024, see: https://lwn.net/Articles/969483/
+    // Try to use it on the destination directory, link to existing file (the directory itself)
+    // and if it fails with EEXIST, it means we're running a kernel where it works.
+    // Or maybe we do have CAP_DAC_READ_SEARCH, it's fine either way.
+    if (linkat(fd, "", AT_FDCWD, dirname, AT_EMPTY_PATH) < 0 && errno == EEXIST) {
+        method.store((int)FlinkMethod::Direct, std::memory_order_relaxed);
+        return FlinkMethod::Direct;
+    }
+
+    // Try the /proc/self/fd/ trick instead
+    {
+        char path[256];
+        Fmt(path, "/proc/self/fd/%1", fd);
+
+        if (linkat(AT_FDCWD, path, AT_FDCWD, dirname, AT_SYMLINK_FOLLOW) < 0 && errno == EEXIST) {
+            method.store((int)FlinkMethod::ProcPath, std::memory_order_relaxed);
+            return FlinkMethod::ProcPath;
+        }
+    }
+
+    method.store((int)FlinkMethod::Unsupported, std::memory_order_relaxed);
+    return FlinkMethod::Unsupported;
 }
 
 #endif
@@ -8905,15 +8919,18 @@ bool StreamWriter::Open(const char *filename, unsigned int flags,
         }
 
 #if defined(O_TMPFILE)
-        if (GetFlinkMethod() != FlinkMethod::Unsupported) {
+        {
             const char *dirname = DuplicateString(directory, &str_alloc).ptr;
-            dest.u.file.fd = K_RESTART_EINTR(open(dirname, O_WRONLY | O_TMPFILE | O_CLOEXEC, 0644), < 0);
 
-            if (dest.u.file.fd >= 0) {
-                dest.u.file.owned = true;
-            } else if (errno != EINVAL && errno != EOPNOTSUPP) {
-                LogError("Cannot open temporary file in '%1': %2", directory, strerror(errno));
-                return false;
+            if (GetFlinkMethod(dirname) != FlinkMethod::Unsupported) {
+                dest.u.file.fd = K_RESTART_EINTR(open(dirname, O_WRONLY | O_TMPFILE | O_CLOEXEC, 0644), < 0);
+
+                if (dest.u.file.fd >= 0) {
+                    dest.u.file.owned = true;
+                } else if (errno != EINVAL && errno != EOPNOTSUPP) {
+                    LogError("Cannot open temporary file in '%1': %2", directory, strerror(errno));
+                    return false;
+                }
             }
         }
 #endif
@@ -9128,7 +9145,11 @@ bool StreamWriter::Close(bool implicit)
                         char linkat_from[256];
                         int linkat_flags = 0;
 
-                        switch (GetFlinkMethod()) {
+                        // We can't reach here unless Open() has already called GetFlinkMethod() and got
+                        // something useful out of it. So calling it with nullptr is fine; it'll return
+                        // the cached value.
+
+                        switch (GetFlinkMethod(nullptr)) {
                             case FlinkMethod::Direct: {
                                 linkat_fd = dest.u.file.fd;
                                 linkat_from[0] = 0;
