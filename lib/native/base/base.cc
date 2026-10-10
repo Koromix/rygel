@@ -8785,28 +8785,37 @@ enum class FlinkMethod {
 static FlinkMethod GetFlinkMethod()
 {
     static FlinkMethod method = []() {
+        const char *tmp = GetTemporaryDirectory();
+
+        int fd = open(tmp, O_WRONLY | O_TMPFILE | O_CLOEXEC, 0600);
+        if (fd < 0)
+            return FlinkMethod::Unsupported;
+        K_DEFER { close(fd); };
+
         // The CAP_DAC_SEARCH requirement for linkat(fd, ..., AT_EMPTY_PATH) has been relaxed
         // in 2024, see: https://lwn.net/Articles/969483/
         // Try to use it on /tmp, link to existing file (/tmp itself) and if it fails with EEXIST,
         // it means we're running a kernel where it works.
         // Or maybe we do have CAP_DAC_SEARCH, it's fine either way.
         {
-            const char *tmp = GetTemporaryDirectory();
+            errno = 0;
+            syscall(__NR_linkat, fd, "", AT_FDCWD, tmp, AT_EMPTY_PATH);
 
-            int fd = open(tmp, O_WRONLY | O_TMPFILE | O_CLOEXEC, 0600);
-            K_DEFER { close(fd); };
-
-            if (fd >= 0) {
-                errno = 0;
-                syscall(__NR_linkat, fd, "", AT_FDCWD, tmp, AT_EMPTY_PATH);
-
-                if (errno == EEXIST)
-                    return FlinkMethod::Direct;
-            }
+            if (errno == EEXIST)
+                return FlinkMethod::Direct;
         }
 
-        if (!access("/proc/self/fd", X_OK))
-            return FlinkMethod::ProcPath;
+        // Try the /proc/self/fd/ trick instead
+        {
+            char path[256];
+            Fmt(path, "/proc/self/fd/%1", fd);
+
+            errno = 0;
+            syscall(__NR_linkat, AT_FDCWD, path, AT_FDCWD, tmp, AT_SYMLINK_FOLLOW);
+
+            if (errno == EEXIST)
+                return FlinkMethod::ProcPath;
+        }
 
         return FlinkMethod::Unsupported;
     }();
