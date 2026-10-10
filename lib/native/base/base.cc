@@ -8774,6 +8774,48 @@ void LineReader::PushLogFilter()
     });
 }
 
+#if defined(O_TMPFILE)
+
+enum class FlinkMethod {
+    Direct,
+    ProcPath,
+    Unsupported
+};
+
+static FlinkMethod GetFlinkMethod()
+{
+    static FlinkMethod method = []() {
+        // The CAP_DAC_SEARCH requirement for linkat(fd, ..., AT_EMPTY_PATH) has been relaxed
+        // in 2024, see: https://lwn.net/Articles/969483/
+        // Try to use it on /tmp, link to existing file (/tmp itself) and if it fails with EEXIST,
+        // it means we're running a kernel where it works.
+        // Or maybe we do have CAP_DAC_SEARCH, it's fine either way.
+        {
+            const char *tmp = GetTemporaryDirectory();
+
+            int fd = open(tmp, O_WRONLY | O_TMPFILE | O_CLOEXEC, 0600);
+            K_DEFER { close(fd); };
+
+            if (fd >= 0) {
+                errno = 0;
+                syscall(__NR_linkat, fd, "", AT_FDCWD, tmp, AT_EMPTY_PATH);
+
+                if (errno == EEXIST)
+                    return FlinkMethod::Direct;
+            }
+        }
+
+        if (!access("/proc/self/fd", X_OK))
+            return FlinkMethod::ProcPath;
+
+        return FlinkMethod::Unsupported;
+    }();
+
+    return method;
+}
+
+#endif
+
 void StreamWriter::SetEncoder(StreamEncoder *encoder)
 {
     K_ASSERT(encoder);
@@ -8862,19 +8904,15 @@ bool StreamWriter::Open(const char *filename, unsigned int flags,
         }
 
 #if defined(O_TMPFILE)
-        {
-            static bool has_proc = !access("/proc/self/fd", X_OK);
+        if (GetFlinkMethod() != FlinkMethod::Unsupported) {
+            const char *dirname = DuplicateString(directory, &str_alloc).ptr;
+            dest.u.file.fd = K_RESTART_EINTR(open(dirname, O_WRONLY | O_TMPFILE | O_CLOEXEC, 0644), < 0);
 
-            if (has_proc) {
-                const char *dirname = DuplicateString(directory, &str_alloc).ptr;
-                dest.u.file.fd = K_RESTART_EINTR(open(dirname, O_WRONLY | O_TMPFILE | O_CLOEXEC, 0644), < 0);
-
-                if (dest.u.file.fd >= 0) {
-                    dest.u.file.owned = true;
-                } else if (errno != EINVAL && errno != EOPNOTSUPP) {
-                    LogError("Cannot open temporary file in '%1': %2", directory, strerror(errno));
-                    return false;
-                }
+            if (dest.u.file.fd >= 0) {
+                dest.u.file.owned = true;
+            } else if (errno != EINVAL && errno != EOPNOTSUPP) {
+                LogError("Cannot open temporary file in '%1': %2", directory, strerror(errno));
+                return false;
             }
         }
 #endif
@@ -9087,13 +9125,27 @@ bool StreamWriter::Close(bool implicit)
                     if (!dest.u.file.tmp_filename) {
                         bool linked = false;
 
-                        // AT_EMPTY_PATH requires CAP_DAC_READ_SEARCH so use the /proc trick instead.
-                        // Will revisit once this restriction is lifted (if ever).
-                        char proc[256];
-                        Fmt(proc, "/proc/self/fd/%1", dest.u.file.fd);
+                        int linkat_fd = -1;
+                        char linkat_from[256];
+                        int linkat_flags = AT_SYMLINK_FOLLOW;
+
+                        switch (GetFlinkMethod()) {
+                            case FlinkMethod::Direct: {
+                                linkat_fd = dest.u.file.fd;
+                                linkat_from[0] = 0;
+                                linkat_flags |= AT_EMPTY_PATH;
+                            } break;
+                            case FlinkMethod::ProcPath: {
+                                linkat_fd = AT_FDCWD;
+                                Fmt(linkat_from, "/proc/self/fd/%1", dest.u.file.fd);
+                            } break;
+
+                            case FlinkMethod::Unsupported: { K_UNREACHABLE(); } break;
+                        }
+                        K_ASSERT(linkat_fd >= 0);
 
                         for (int i = 0; i < 10; i++) {
-                            if (linkat(AT_FDCWD, proc, AT_FDCWD, filename, AT_SYMLINK_FOLLOW) < 0) {
+                            if (linkat(linkat_fd, linkat_from, AT_FDCWD, filename, linkat_flags) < 0) {
                                 if (errno == EEXIST) {
                                     unlink(filename);
                                     continue;
@@ -9115,7 +9167,8 @@ bool StreamWriter::Close(bool implicit)
                             const char *basename = SplitStrReverseAny(filename, K_PATH_SEPARATORS).ptr;
 
                             dest.u.file.tmp_filename = CreateUniquePath(directory, basename, ".tmp", &str_alloc, [&](const char *path) {
-                                return !linkat(AT_FDCWD, proc, AT_FDCWD, path, AT_SYMLINK_FOLLOW);
+                                bool success = !linkat(linkat_fd, linkat_from, AT_FDCWD, path, linkat_flags);
+                                return success;
                             });
                             if (!dest.u.file.tmp_filename) {
                                 LogError("Failed to materialize file '%1': %2", filename, strerror(errno));
