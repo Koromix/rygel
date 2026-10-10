@@ -466,37 +466,4 @@ ssh_session ssh_Connect(const ssh_Config &config)
     return ssh;
 }
 
-static const char *TranslateSftpError(int error)
-{
-    switch (error) {
-        case SSH_FX_OK: return "Success";
-        case SSH_FX_EOF: return "End-of-file encountered";
-        case SSH_FX_NO_SUCH_FILE: return "File doesn't exist";
-        case SSH_FX_PERMISSION_DENIED: return "Permission denied";
-        case SSH_FX_FAILURE: return "Generic failure";
-        case SSH_FX_BAD_MESSAGE: return "Garbage received from server";
-        case SSH_FX_NO_CONNECTION: return "No connection has been set up";
-        case SSH_FX_CONNECTION_LOST: return "There was a connection, but we lost it";
-        case SSH_FX_OP_UNSUPPORTED: return "Operation not supported by the server";
-        case SSH_FX_INVALID_HANDLE: return "Invalid file handle";
-        case SSH_FX_NO_SUCH_PATH: return "No such file or directory path exists";
-        case SSH_FX_FILE_ALREADY_EXISTS: return "An attempt to create an already existing file or directory has been made";
-        case SSH_FX_WRITE_PROTECT: return "We are trying to write on a write-protected filesystem";
-        case SSH_FX_NO_MEDIA: return "No media in remote drive";
-    }
-
-    return "Unknown error";
-}
-
-const char *sftp_GetErrorString(sftp_session sftp)
-{
-    int error = sftp_get_error(sftp);
-
-    if (error != SSH_FX_OK) {
-        return TranslateSftpError(error);
-    } else {
-        return ssh_get_error(sftp->session);
-    }
-}
-
 }

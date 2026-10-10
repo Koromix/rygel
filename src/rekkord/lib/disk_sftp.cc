@@ -74,6 +74,29 @@ static bool IsSftpErrorSpecific(int error)
     return true;
 }
 
+static const char *GetSftpErrorString(int error)
+{
+    switch (error) {
+        // Should not happen but cover just in case
+        case SSH_FX_FAILURE: return "Generic failure";
+        case SSH_FX_BAD_MESSAGE: return "Garbage received from server";
+
+        case SSH_FX_EOF: return "End-of-file encountered";
+        case SSH_FX_NO_SUCH_FILE: return "File doesn't exist";
+        case SSH_FX_PERMISSION_DENIED: return "Permission denied";
+        case SSH_FX_NO_CONNECTION: return "No connection has been set up";
+        case SSH_FX_CONNECTION_LOST: return "There was a connection, but we lost it";
+        case SSH_FX_OP_UNSUPPORTED: return "Operation not supported by the server";
+        case SSH_FX_INVALID_HANDLE: return "Invalid file handle";
+        case SSH_FX_NO_SUCH_PATH: return "No such file or directory path exists";
+        case SSH_FX_FILE_ALREADY_EXISTS: return "An attempt to create an already existing file or directory has been made";
+        case SSH_FX_WRITE_PROTECT: return "We are trying to write on a write-protected filesystem";
+        case SSH_FX_NO_MEDIA: return "No media in remote drive";
+    }
+
+    return "Unknown error";
+}
+
 SftpDisk::SftpDisk(const ssh_Config &config)
 {
     config.Clone(&this->config);
@@ -121,10 +144,11 @@ bool SftpDisk::CreateDirectory(const char *path)
         if (sftp_mkdir(conn->sftp, filename.data, 0755) < 0) {
             int error = sftp_get_error(conn->sftp);
 
-            if (error == SSH_FX_FILE_ALREADY_EXISTS) {
+            if (error == SSH_FX_FILE_ALREADY_EXISTS)
                 return RunResult::Success;
-            } else if (IsSftpErrorSpecific(error)) {
-                LogError("Failed to create directory '%1': %2", filename, sftp_GetErrorString(conn->sftp));
+
+            if (IsSftpErrorSpecific(error)) {
+                LogError("Failed to create directory '%1': %2", filename, GetSftpErrorString(error));
                 return RunResult::SpecificError;
             } else {
                 return RunResult::OtherError;
@@ -146,10 +170,11 @@ bool SftpDisk::DeleteDirectory(const char *path)
         if (sftp_rmdir(conn->sftp, filename.data) < 0) {
             int error = sftp_get_error(conn->sftp);
 
-            if (error == SSH_FX_NO_SUCH_FILE) {
+            if (error == SSH_FX_NO_SUCH_FILE)
                 return RunResult::Success;
-            } else if (IsSftpErrorSpecific(error)) {
-                LogError("Failed to delete directory '%1': %2", filename, sftp_GetErrorString(conn->sftp));
+
+            if (IsSftpErrorSpecific(error)) {
+                LogError("Failed to delete directory '%1': %2", filename, GetSftpErrorString(error));
                 return RunResult::SpecificError;
             } else {
                 return RunResult::OtherError;
@@ -191,7 +216,7 @@ StatResult SftpDisk::TestDirectory(const char *path)
 
                 default: {
                     if (IsSftpErrorSpecific(error)) {
-                        LogError("Failed to stat file '%1': %2", filename, sftp_GetErrorString(conn->sftp));
+                        LogError("Failed to stat file '%1': %2", filename, GetSftpErrorString(error));
                         return RunResult::SpecificError;
                     } else {
                         return RunResult::OtherError;
@@ -235,7 +260,7 @@ Size SftpDisk::ReadFile(const char *path, Span<uint8_t> out_buf)
             int error = sftp_get_error(conn->sftp);
 
             if (IsSftpErrorSpecific(error)) {
-                LogError("Cannot open file '%1': %2", filename, sftp_GetErrorString(conn->sftp));
+                LogError("Cannot open file '%1': %2", filename, GetSftpErrorString(error));
                 return RunResult::SpecificError;
             } else {
                 return RunResult::OtherError;
@@ -249,7 +274,7 @@ Size SftpDisk::ReadFile(const char *path, Span<uint8_t> out_buf)
                 int error = sftp_get_error(conn->sftp);
 
                 if (IsSftpErrorSpecific(error)) {
-                    LogError("Failed to read file '%1': %2", filename, sftp_GetErrorString(conn->sftp));
+                    LogError("Failed to read file '%1': %2", filename, GetSftpErrorString(error));
                     return RunResult::SpecificError;
                 } else {
                     return RunResult::OtherError;
@@ -293,7 +318,7 @@ Size SftpDisk::ReadFile(const char *path, HeapArray<uint8_t> *out_buf)
             int error = sftp_get_error(conn->sftp);
 
             if (IsSftpErrorSpecific(error)) {
-                LogError("Cannot open file '%1': %2", filename, sftp_GetErrorString(conn->sftp));
+                LogError("Cannot open file '%1': %2", filename, GetSftpErrorString(error));
                 return RunResult::SpecificError;
             } else {
                 return RunResult::OtherError;
@@ -309,7 +334,7 @@ Size SftpDisk::ReadFile(const char *path, HeapArray<uint8_t> *out_buf)
                 int error = sftp_get_error(conn->sftp);
 
                 if (IsSftpErrorSpecific(error)) {
-                    LogError("Failed to read file '%1': %2", filename, sftp_GetErrorString(conn->sftp));
+                    LogError("Failed to read file '%1': %2", filename, GetSftpErrorString(error));
                     return RunResult::SpecificError;
                 } else {
                     return RunResult::OtherError;
@@ -360,10 +385,11 @@ rk_WriteResult SftpDisk::WriteFile(const char *path, Span<const uint8_t> buf, co
                 if (!file) {
                     int error = sftp_get_error(conn->sftp);
 
-                    if (error == SSH_FX_FILE_ALREADY_EXISTS) {
+                    if (error == SSH_FX_FILE_ALREADY_EXISTS)
                         continue;
-                    } else if (IsSftpErrorSpecific(error)) {
-                        LogError("Failed to open '%1': %2", tmp.data, sftp_GetErrorString(conn->sftp));
+
+                    if (IsSftpErrorSpecific(error)) {
+                        LogError("Failed to open '%1': %2", tmp.data, GetSftpErrorString(error));
                         return RunResult::SpecificError;
                     } else {
                         return RunResult::OtherError;
@@ -393,7 +419,7 @@ rk_WriteResult SftpDisk::WriteFile(const char *path, Span<const uint8_t> buf, co
                 int error = sftp_get_error(conn->sftp);
 
                 if (IsSftpErrorSpecific(error)) {
-                    LogError("Failed to write to '%1': %2", tmp, sftp_GetErrorString(conn->sftp));
+                    LogError("Failed to write to '%1': %2", tmp, GetSftpErrorString(error));
                     return RunResult::SpecificError;
                 } else {
                     return RunResult::OtherError;
@@ -409,7 +435,7 @@ rk_WriteResult SftpDisk::WriteFile(const char *path, Span<const uint8_t> buf, co
             int error = sftp_get_error(conn->sftp);
 
             if (IsSftpErrorSpecific(error)) {
-                LogError("Failed to flush '%1': %2", tmp, sftp_GetErrorString(conn->sftp));
+                LogError("Failed to flush '%1': %2", tmp, GetSftpErrorString(error));
                 return RunResult::SpecificError;
             } else {
                 return RunResult::OtherError;
@@ -436,7 +462,7 @@ rk_WriteResult SftpDisk::WriteFile(const char *path, Span<const uint8_t> buf, co
             int error = sftp_get_error(conn->sftp);
 
             if (IsSftpErrorSpecific(error)) {
-                LogError("Failed to rename '%1' to '%2': %3", tmp.data, filename.data, sftp_GetErrorString(conn->sftp));
+                LogError("Failed to rename '%1' to '%2': %3", tmp.data, filename.data, GetSftpErrorString(error));
                 return RunResult::SpecificError;
             } else {
                 return RunResult::OtherError;
@@ -461,10 +487,11 @@ bool SftpDisk::DeleteFile(const char *path)
         if (sftp_unlink(conn->sftp, filename.data) < 0) {
             int error = sftp_get_error(conn->sftp);
 
-            if (error == SSH_FX_NO_SUCH_FILE) {
+            if (error == SSH_FX_NO_SUCH_FILE)
                 return RunResult::Success;
-            } else if (IsSftpErrorSpecific(error)) {
-                LogError("Failed to delete file '%1': %2", filename, sftp_GetErrorString(conn->sftp));
+
+            if (IsSftpErrorSpecific(error)) {
+                LogError("Failed to delete file '%1': %2", filename, GetSftpErrorString(error));
                 return RunResult::SpecificError;
             } else {
                 return RunResult::OtherError;
@@ -507,7 +534,7 @@ bool SftpDisk::ListFiles(const char *path, FunctionRef<bool(const char *, int64_
                     return RunResult::Success;
 
                 if (IsSftpErrorSpecific(error)) {
-                    LogError("Failed to enumerate directory '%1': %2", dirname, sftp_GetErrorString(conn->sftp));
+                    LogError("Failed to enumerate directory '%1': %2", dirname, GetSftpErrorString(error));
                     return RunResult::SpecificError;
                 } else {
                     return RunResult::OtherError;
@@ -526,7 +553,7 @@ bool SftpDisk::ListFiles(const char *path, FunctionRef<bool(const char *, int64_
                     int error = sftp_get_error(conn->sftp);
 
                     if (IsSftpErrorSpecific(error)) {
-                        LogError("Failed to enumerate directory '%1': %2", dirname, sftp_GetErrorString(conn->sftp));
+                        LogError("Failed to enumerate directory '%1': %2", dirname, GetSftpErrorString(error));
                         return RunResult::SpecificError;
                     } else {
                         return RunResult::OtherError;
@@ -587,7 +614,7 @@ StatResult SftpDisk::TestFile(const char *path, int64_t *out_size)
 
                 default: {
                     if (IsSftpErrorSpecific(error)) {
-                        LogError("Failed to stat file '%1': %2", filename, sftp_GetErrorString(conn->sftp));
+                        LogError("Failed to stat file '%1': %2", filename, GetSftpErrorString(error));
                         return RunResult::SpecificError;
                     } else {
                         return RunResult::OtherError;
@@ -647,7 +674,7 @@ bool SftpDisk::RunSafe(const char *action, FunctionRef<RunResult(ConnectionData 
         }
     }
 
-    LogError("Failed to %1: %2", action, sftp_GetErrorString(conn->sftp));
+    LogError("Failed to %1: %2", action, ssh_get_error(conn->sftp));
     return false;
 }
 

@@ -38,6 +38,4 @@ const char *ssh_MakeURL(const ssh_Config &config, Allocator *alloc);
 
 ssh_session ssh_Connect(const ssh_Config &config);
 
-const char *sftp_GetErrorString(sftp_session sftp);
-
 }
