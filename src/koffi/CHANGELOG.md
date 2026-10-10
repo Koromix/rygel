@@ -7,6 +7,14 @@
 
 ### Koffi 3.3
 
+#### Koffi 3.3.3
+
+*Released on 2026-10-10*
+
+- Fix crash inside Rosetta caused by access above stack pointer [@steipete](https://github.com/steipete))
+- Fix stack alloc mismatch regression introduced in Koffi 3.3.2
+- Fix cross-compilation for macOS x64 on macOS ARM64
+
 #### Koffi 3.3.2
 
 *Released on 2026-09-25*
