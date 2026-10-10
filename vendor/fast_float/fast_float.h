@@ -163,7 +163,7 @@
 
 #define FASTFLOAT_VERSION_MAJOR 8
 #define FASTFLOAT_VERSION_MINOR 3
-#define FASTFLOAT_VERSION_PATCH 1
+#define FASTFLOAT_VERSION_PATCH 2
 
 #define FASTFLOAT_STRINGIZE_IMPL(x) #x
 #define FASTFLOAT_STRINGIZE(x) FASTFLOAT_STRINGIZE_IMPL(x)
@@ -1686,7 +1686,13 @@ template <typename UC> fastfloat_really_inline constexpr bool has_simd_opt() {
 // able to optimize it well.
 template <typename UC>
 fastfloat_really_inline constexpr bool is_integer(UC c) noexcept {
-  return static_cast<unsigned>(c - UC('0')) <= 9u;
+  // UC can be signed (wchar_t is a signed int on Linux and macOS), and the
+  // subtraction is then promoted to int and overflows for code units near the
+  // bottom of the range. Subtracting in the unsigned type wraps instead, which
+  // selects the same code units, as ch_to_digit already does.
+  using UnsignedUC = typename std::make_unsigned<UC>::type;
+  return static_cast<UnsignedUC>(static_cast<UnsignedUC>(c) -
+                                 static_cast<UnsignedUC>(UC('0'))) <= 9u;
 }
 
 fastfloat_really_inline constexpr uint64_t byteswap(uint64_t val) {
@@ -5092,7 +5098,9 @@ FASTFLOAT_CONSTEXPR20
     typename std::enable_if<is_supported_float_type<T>::value, T>::type
     integer_times_pow10(int64_t mantissa, int decimal_exponent) noexcept {
   const bool is_negative = mantissa < 0;
-  const uint64_t m = static_cast<uint64_t>(is_negative ? -mantissa : mantissa);
+  // Negate as unsigned: -mantissa overflows for the most negative int64_t.
+  const uint64_t m = is_negative ? uint64_t(0) - static_cast<uint64_t>(mantissa)
+                                 : static_cast<uint64_t>(mantissa);
 
   T value;
   if (clinger_fast_path_impl(m, decimal_exponent, is_negative, value))
