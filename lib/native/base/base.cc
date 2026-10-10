@@ -9155,26 +9155,27 @@ bool StreamWriter::Close(bool implicit)
                         }
                         K_ASSERT(linkat_flags);
 
-                        if (linkat(linkat_fd, linkat_from, AT_FDCWD, filename, linkat_flags) < 0) {
-                            if (errno == EEXIST && !dest.u.file.exclusive) {
-                                // The linkat() call cannot overwrite an existing file. If the file already exists,
-                                // link to a temporary file and let RenameFile() handle the final step.
+                        if (!linkat(linkat_fd, linkat_from, AT_FDCWD, filename, linkat_flags)) {
+                            Span<const char> directory = GetPathDirectory(filename);
+                            SyncDirectory(directory);
+                        } else if (errno == EEXIST && !dest.u.file.exclusive) {
+                            // The linkat() call cannot overwrite an existing file. If the file already exists,
+                            // link to a temporary file and let RenameFile() handle the final step.
 
-                                Span<const char> directory = GetPathDirectory(filename);
-                                const char *basename = SplitStrReverseAny(filename, K_PATH_SEPARATORS).ptr;
+                            Span<const char> directory = GetPathDirectory(filename);
+                            const char *basename = SplitStrReverseAny(filename, K_PATH_SEPARATORS).ptr;
 
-                                dest.u.file.tmp_filename = CreateUniquePath(directory, basename, ".tmp", &str_alloc, [&](const char *path) {
-                                    bool success = !linkat(linkat_fd, linkat_from, AT_FDCWD, path, linkat_flags);
-                                    return success;
-                                });
-                                if (!dest.u.file.tmp_filename) {
-                                    LogError("Failed to finalize file '%1': %2", filename, strerror(errno));
-                                    error = true;
-                                }
-                            } else {
+                            dest.u.file.tmp_filename = CreateUniquePath(directory, basename, ".tmp", &str_alloc, [&](const char *path) {
+                                bool success = !linkat(linkat_fd, linkat_from, AT_FDCWD, path, linkat_flags);
+                                return success;
+                            });
+                            if (!dest.u.file.tmp_filename) {
                                 LogError("Failed to finalize file '%1': %2", filename, strerror(errno));
                                 error = true;
                             }
+                        } else {
+                            LogError("Failed to finalize file '%1': %2", filename, strerror(errno));
+                            error = true;
                         }
                     }
 #endif
