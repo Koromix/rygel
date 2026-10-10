@@ -5,6 +5,25 @@
 
 ## Alpha versions
 
+### Rekkord 0.109
+
+*Released on 2026-10-10*
+
+- Fix rare issue where the directory metadata (mtime and permissions) would not be set by `rekkord restore`
+- SFTP backend changes and fixes:
+  * Fail hard if the `Fingerprint` does not match, instead of prompting
+  * Support bracketed IPv6 addresses in ssh:// and scp-style URLs
+  * Support SSH agent unless the `UseAgent` setting is set to Off
+  * Ignore global and user SSH configuration files
+  * Properly escape components in sanitized SSH URLs
+  * Fix ignored `KnownHosts` setting
+  * Fix various authentication issues and edge cases
+- S3 backend changes and fixes:
+  * Fix URL encoding issues with bucket names and key prefixes
+  * Retry requests after error 408 (timeout) and 429 (too many requests)
+  * Use `S3_ENDPOINT_URL` (and `AWS_ENDPOINT_URL`) instead of non-standard `S3_ENDPOINT` (`AWS_ENDPOINT`)
+  * Improve S3 region discovery
+
 ### Rekkord 0.108
 
 *Released on 2026-10-08*
