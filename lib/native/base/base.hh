@@ -3628,14 +3628,12 @@ public:
         slots.ptr = (Slot *)AllocateAligned(capacity * K_SIZE(Slot), alignof(Slot));
         slots.len = capacity;
 
-        for (Size i = 0; i < slots.len - 1; i++) {
-            slots[i].next.store(i + 1, std::memory_order_relaxed);
+        for (Size i = 0; i < slots.len; i++) {
+            Slot *slot = new (slots.ptr + i) Slot();
+            slot->next.store((uint32_t)i + 1, std::memory_order_relaxed);
         }
-        slots[slots.len - 1].next.store(0xFFFFFFFFu, std::memory_order_relaxed);
 
-        for (Slot &slot: slots) {
-            new (&slot.obj) T();
-        }
+        slots[slots.len - 1].next.store(0xFFFFFFFFu, std::memory_order_relaxed);
     }
 
     ~LockFreePool()
