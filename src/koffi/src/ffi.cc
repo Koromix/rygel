@@ -275,10 +275,10 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
     Napi::Object obj = info[skip].As<Napi::Object>();
     Napi::Array keys = Napi::Array(env, GetOwnPropertyNames(env, obj));
 
-    K_DEFER_NC(err_guard, count = instance->types.count) {
+    K_DEFER_NC(err_guard, count = instance->types.Count()) {
         Size start = count + !skip;
 
-        for (Size i = start; i < instance->types.count; i++) {
+        for (Size i = start; i < instance->types.Count(); i++) {
             const TypeInfo *it = &instance->types[i];
             const TypeInfo **ptr = instance->types_map.Find(it->name);
 
@@ -314,7 +314,7 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
             return env.Null();
     } else {
         type->instance = instance;
-        type->name = Fmt(&instance->str_alloc, "<anonymous_%1>", instance->types.count).ptr;
+        type->name = Fmt(&instance->str_alloc, "<anonymous_%1>", instance->types.Count()).ptr;
     }
 
     type->primitive = PrimitiveKind::Void;
@@ -468,10 +468,10 @@ static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
     Napi::Object obj = info[skip].As<Napi::Object>();
     Napi::Array keys = Napi::Array(env, GetOwnPropertyNames(env, obj));
 
-    K_DEFER_NC(err_guard, count = instance->types.count) {
+    K_DEFER_NC(err_guard, count = instance->types.Count()) {
         Size start = count + !skip;
 
-        for (Size i = start; i < instance->types.count; i++) {
+        for (Size i = start; i < instance->types.Count(); i++) {
             const TypeInfo *it = &instance->types[i];
             const TypeInfo **ptr = instance->types_map.Find(it->name);
 
@@ -507,7 +507,7 @@ static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
             return env.Null();
     } else {
         type->instance = instance;
-        type->name = Fmt(&instance->str_alloc, "<anonymous_%1>", instance->types.count).ptr;
+        type->name = Fmt(&instance->str_alloc, "<anonymous_%1>", instance->types.Count()).ptr;
     }
 
     type->primitive = PrimitiveKind::Void;
@@ -652,7 +652,7 @@ static Napi::Value CreateOpaqueType(const Napi::CallbackInfo &info)
 
     type->instance = instance;
     type->name = named ? DuplicateString(name.Utf8Value().c_str(), &instance->str_alloc).ptr
-                       : Fmt(&instance->str_alloc, "<anonymous_%1>", instance->types.count).ptr;
+                       : Fmt(&instance->str_alloc, "<anonymous_%1>", instance->types.Count()).ptr;
 
     type->primitive = PrimitiveKind::Void;
     type->size = 0;
@@ -851,7 +851,7 @@ static Napi::Value CreateDisposableType(const Napi::CallbackInfo &info)
     static_assert(!std::is_polymorphic_v<Napi::ObjectReference>);
 
     type->name = named ? DuplicateString(name.Utf8Value().c_str(), &instance->str_alloc).ptr
-                       : Fmt(&instance->str_alloc, "<anonymous_%1>", instance->types.count).ptr;
+                       : Fmt(&instance->str_alloc, "<anonymous_%1>", instance->types.Count()).ptr;
 
     type->dispose = dispose;
     NAPI_OK(napi_create_reference(env, dispose_func, 1, &type->dispose_ref));
@@ -1229,7 +1229,7 @@ static Napi::Value CreateFunctionType(const Napi::CallbackInfo &info)
     bool named = func->name;
 
     if (!named) {
-        func->name = Fmt(&instance->str_alloc, "<anonymous_%1>", instance->types.count).ptr;
+        func->name = Fmt(&instance->str_alloc, "<anonymous_%1>", instance->types.Count()).ptr;
     }
 
     if (!func->variadic && !PreparePlan(instance, func))
@@ -1289,7 +1289,7 @@ static Napi::Value CreateEnumType(const Napi::CallbackInfo &info)
 
     type->instance = instance;
     type->name = named ? DuplicateString(name.Utf8Value().c_str(), &instance->str_alloc).ptr
-                       : Fmt(&instance->str_alloc, "<anonymous_%1>", instance->types.count).ptr;
+                       : Fmt(&instance->str_alloc, "<anonymous_%1>", instance->types.Count()).ptr;
 
     Napi::Object values = Napi::Object::New(env);
 
@@ -3019,7 +3019,7 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
         instance->str32_type = instance->types_map.FindValue("char32_t *", nullptr);
         instance->double_type = instance->types_map.FindValue("double", nullptr);
 
-        instance->base_types_count = instance->types.count;
+        instance->base_types_count = instance->types.Count();
     }
 
     // Expose internal Node stuff

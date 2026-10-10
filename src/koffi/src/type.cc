@@ -290,7 +290,7 @@ const TypeInfo *ResolveType(InstanceData *instance, Span<const char> str)
             TypeInfo *copy = instance->types.AppendDefault();
 
             memcpy((void *)copy, (const void *)type, K_SIZE(*type));
-            copy->name = Fmt(&instance->str_alloc, "<anonymous_%1>", instance->types.count).ptr;
+            copy->name = Fmt(&instance->str_alloc, "<anonymous_%1>", instance->types.Count()).ptr;
             copy->defn = nullptr;
             K_ASSERT(!type->members.len);
 
