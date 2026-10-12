@@ -271553,9 +271553,9 @@ SQLITE_API const char *sqlite3_sourceid(void){ return SQLITE_SOURCE_ID; }
 
 #define SQLITE3MC_VERSION_MAJOR      2
 #define SQLITE3MC_VERSION_MINOR      6
-#define SQLITE3MC_VERSION_RELEASE    0
+#define SQLITE3MC_VERSION_RELEASE    1
 #define SQLITE3MC_VERSION_SUBRELEASE 0
-#define SQLITE3MC_VERSION_STRING     "SQLite3 Multiple Ciphers 2.6.0"
+#define SQLITE3MC_VERSION_STRING     "SQLite3 Multiple Ciphers 2.6.1"
 
 #endif /* SQLITE3MC_VERSION_H_ */
 /*** End of #include "sqlite3mc_version.h" ***/
@@ -289723,7 +289723,7 @@ int crypto_stream_chacha20_ietf_ext_xor_ic(unsigned char *c, const unsigned char
 
 #define COMPILER_ASSERT(X) (void) sizeof(char[(X) ? 1 : -1])
 
-#if defined(__SIZEOF_INT128__) || defined(__clang__) || defined(__GNUC__)
+#if defined(__SIZEOF_INT128__)
 # if defined(__SIZEOF_INT128__)
 typedef unsigned __int128 uint128_t;
 # else
@@ -348934,7 +348934,7 @@ SQLITE_PRIVATE void sqlite3mcSecureZeroMemory(void* v, size_t n)
 #elif defined(__OpenBSD__) || defined(__NetBSD__) || defined(__DragonFly__) || \
       (defined(__FreeBSD__) && __FreeBSD__ >= 11) || \
       (defined(__GLIBC__) && (__GLIBC__ > 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ >= 25))) || \
-      defined(__EMSCRIPTEN__) || defined(__wasi__)
+      (defined(__EMSCRIPTEN__) && defined(__EMSCRIPTEN_major__) && __EMSCRIPTEN_major__ >= 3) || defined(__wasi__)
   explicit_bzero(v, n);
 #else
   /* Generic implementation based on volatile pointers */

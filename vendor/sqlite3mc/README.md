@@ -1,10 +1,10 @@
 # Release notes
 
-Release date: 2026-08-27
+Release date: 2026-10-12
 
 Version information:
-  - SQLite3MC 2.5.1
-  - SQLite 3.53.4
+  - SQLite3MC 2.6.1
+  - SQLite 3.54.0
 
 # SQLite3 Multiple Ciphers amalgamation
 
@@ -12,7 +12,7 @@ This archive contains the source code amalgamation of _SQLite3 Multiple
 Ciphers_. The original, unmodified SQLite sources are not included
 anymore, but can be downloaded - if needed - from
 
-https://sqlite.org/2026/sqlite-amalgamation-3530400.zip
+https://sqlite.org/2026/sqlite-amalgamation-3540000.zip
 
 ## Archive content
 
