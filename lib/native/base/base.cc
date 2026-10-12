@@ -8631,9 +8631,7 @@ int64_t StreamReader::ComputeRawLen()
         return raw_len;
 
     switch (source.type) {
-        case SourceType::Memory: {
-            raw_len = source.u.memory.buf.len;
-        } break;
+        case SourceType::Memory: { raw_len = source.u.memory.buf.len; } break;
 
         case SourceType::File: {
 #if defined(_WIN32)
@@ -8651,9 +8649,7 @@ int64_t StreamReader::ComputeRawLen()
 #endif
         } break;
 
-        case SourceType::Function: {
-            return -1;
-        } break;
+        case SourceType::Function: return -1;
     }
 
     return raw_len;
