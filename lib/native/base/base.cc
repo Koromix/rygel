@@ -3202,7 +3202,9 @@ RenameResult RenameFile(const char *src_filename, const char *dest_filename, uns
         // Not atomic, but not racy
         if (!link(src_filename, dest_filename)) {
             if (unlink(src_filename) < 0) {
+                K_DEFER_C(err = errno) { errno = err; };
                 unlink(dest_filename);
+
                 goto error;
             }
             goto sync;
