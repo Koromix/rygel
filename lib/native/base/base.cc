@@ -9011,27 +9011,12 @@ bool StreamWriter::Rewind()
         case DestinationType::LineFile:
         case DestinationType::BufferedFile:
         case DestinationType::DirectFile: {
-            if (lseek(dest.u.file.fd, 0, SEEK_SET) < 0) {
-                LogError("Failed to rewind '%1': %2", filename, strerror(errno));
-                error = true;
+            if (!ResizeFile(dest.u.file.fd, filename, 0))
                 return false;
-            }
 
-#if defined(_WIN32)
-            HANDLE h = (HANDLE)_get_osfhandle(dest.u.file.fd);
-
-            if (!SetEndOfFile(h)) {
-                LogError("Failed to truncate '%1': %2", filename, GetWin32ErrorString());
-                error = true;
-                return false;
-            }
-#else
-            if (ftruncate(dest.u.file.fd, 0) < 0) {
-                LogError("Failed to truncate '%1': %2", filename, strerror(errno));
-                error = true;
-                return false;
-            }
-#endif
+            // Cannot realistically fail after ftruncate() success
+            off_t pos = lseek(dest.u.file.fd, 0, SEEK_SET);
+            K_CRITICAL(pos == 0, "Failed to change file pointer in '%1': %2", filename, strerror(errno));
 
             dest.u.file.buf_used = 0;
         } break;

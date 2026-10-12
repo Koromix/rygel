@@ -487,7 +487,9 @@ static bool BundleScript(const AssetBundle &bundle, const char *esbuild_binary, 
 
         // Precompress file
         if (gzip && ShouldCompressFile(obj.dest_filename)) {
-            reader.Rewind();
+            if (!reader.Rewind())
+                return false;
+
             StreamWriter writer(gzip_filename, (int)StreamWriterFlag::Atomic, CompressionType::Gzip);
 
             if (!SpliceStream(&reader, -1, &writer))
@@ -1193,7 +1195,8 @@ static bool BuildAll(Span<const char> source_dir, const BuildSettings &build, co
 
                 // Create gzipped version
                 if (build.gzip && ShouldCompressFile(dest_filename)) {
-                    reader.Rewind();
+                    if (!reader.Rewind())
+                        return false;
 
                     StreamWriter writer(gzip_filename, (int)StreamWriterFlag::Atomic, CompressionType::Gzip);
 
