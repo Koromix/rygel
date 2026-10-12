@@ -3250,13 +3250,8 @@ error:
 
 bool ResizeFile(int fd, const char *filename, int64_t len)
 {
-    if (ftruncate(fd, len) < 0) {
-        if (errno == EINVAL) {
-            // Only write() calls seem to return ENOSPC, ftruncate() seems to fail with EINVAL
-            LogError("Failed to reserve file '%1': not enough space", filename);
-        } else {
-            LogError("Failed to reserve file '%1': %2", filename, strerror(errno));
-        }
+    if (K_RESTART_EINTR(ftruncate(fd, len), < 0) < 0) {
+        LogError("Failed to resize file '%1': %2", filename, strerror(errno));
         return false;
     }
 
