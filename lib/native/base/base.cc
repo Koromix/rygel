@@ -3170,7 +3170,7 @@ static bool SyncDirectory(Span<const char> directory)
     }
     K_DEFER { CloseDescriptor(dirfd); };
 
-    if (fsync(dirfd) < 0) {
+    if (K_RESTART_EINTR(fsync(dirfd), < 0) < 0) {
         LogError("Failed to sync directory '%1': %2", directory, strerror(errno));
         return false;
     }
