@@ -98,7 +98,7 @@ static bool CheckEndpoint(const char *url, bool *out_vhost = nullptr)
 static bool CopyFile(const char *src_filename, const char *dest_filename)
 {
     StreamReader reader(src_filename);
-    StreamWriter writer(dest_filename);
+    StreamWriter writer(dest_filename, WriteBufferMode::None);
 
     if (!SpliceStream(&reader, -1, &writer))
         return false;
@@ -283,7 +283,7 @@ Options:
         }
     }
 
-    StreamWriter st(config_filename, (int)StreamWriterFlag::Atomic);
+    StreamWriter st(config_filename, WriteBufferMode::Block, (int)WriteFileFlag::Atomic);
     if (!st.IsValid())
         return 1;
 

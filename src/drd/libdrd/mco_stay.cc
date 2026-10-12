@@ -71,7 +71,7 @@ bool mco_StaySet::SavePack(StreamWriter *st) const
         st->Write(stay.procedures.ptr, stay.procedures.len * K_SIZE(*stay.procedures.ptr));
     }
 
-    return st->Close();
+    return true;
 }
 
 bool mco_StaySet::SavePack(const char *filename) const
@@ -83,8 +83,14 @@ bool mco_StaySet::SavePack(const char *filename) const
         LogError("Unknown packing extension '%1', prefer '.dmpak'", extension);
     }
 
-    StreamWriter st(filename, 0, compression_type);
-    return SavePack(&st);
+    StreamWriter st(filename, WriteBufferMode::Block, 0, compression_type);
+
+    if (!SavePack(&st))
+        return false;
+    if (!st.Close())
+        return false;
+
+    return true;
 }
 
 bool mco_StaySetBuilder::LoadPack(StreamReader *st, HashTable<int32_t, mco_Test> *out_tests)

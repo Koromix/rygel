@@ -1871,7 +1871,7 @@ void HandlePictureSave(http_IO *io)
 
     // Read request body
     {
-        StreamWriter writer(fd, "<temp>", 0);
+        StreamWriter writer(fd, "<temp>", WriteBufferMode::Block);
 
         StreamReader reader;
         if (!io->OpenForRead(MaxPictureSize, &reader))

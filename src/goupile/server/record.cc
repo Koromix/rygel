@@ -755,7 +755,7 @@ int64_t ExportRecords(InstanceHolder *instance, int64_t userid, const ExportSett
 
     const RecordInfo *cursor = walker.GetCursor();
 
-    StreamWriter st(fd, tmp_filename, 0, CompressionType::Gzip);
+    StreamWriter st(fd, tmp_filename, WriteBufferMode::Block, CompressionType::Gzip);
     json_Writer json(&st);
 
     int64_t now = GetUnixTime();

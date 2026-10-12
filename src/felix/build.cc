@@ -20,8 +20,9 @@ static bool CreatePrecompileHeader(const char *pch_filename, const char *dest_fi
     if (!EnsureDirectoryExists(dest_filename))
         return false;
 
-    StreamWriter writer(dest_filename);
+    StreamWriter writer(dest_filename, WriteBufferMode::None);
     Print(&writer, "#include \"%1%/%2\"", GetWorkingDirectory(), pch_filename);
+
     return writer.Close();
 }
 
@@ -437,7 +438,7 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
         {
             const char *info_filename = Fmt(&str_alloc, "%1%/%2.json", log_directory, target.name).ptr;
 
-            StreamWriter st(info_filename);
+            StreamWriter st(info_filename, WriteBufferMode::Block);
             json_PrettyWriter json(&st);
 
             json.StartObject();
@@ -890,7 +891,7 @@ bool Builder::Build(int jobs, bool verbose)
 
                 // Apparently backslash characters needs to be escaped in response files,
                 // but it's easier to use '/' instead.
-                StreamWriter st(rsp_filename);
+                StreamWriter st(rsp_filename, WriteBufferMode::Block);
                 for (char c: rsp) {
                     st.Write(c == '\\' ? '/' : c);
                 }
@@ -953,7 +954,7 @@ Command Builder::InitCommand()
 
 void Builder::SaveCache()
 {
-    StreamWriter st(cache_filename, (int)StreamWriterFlag::Atomic);
+    StreamWriter st(cache_filename, WriteBufferMode::Block, (int)WriteFileFlag::Atomic);
     if (!st.IsValid())
         return;
 
@@ -1066,7 +1067,7 @@ void Builder::SaveCompileDatabase()
 {
     const char *compile_filename = Fmt(&str_alloc, "%1%/compile_commands.json", misc_directory).ptr;
 
-    StreamWriter st(compile_filename, (int)StreamWriterFlag::Atomic);
+    StreamWriter st(compile_filename, WriteBufferMode::Block, (int)WriteFileFlag::Atomic);
     if (!st.IsValid())
         return;
     json_PrettyWriter json(&st);
@@ -1506,7 +1507,7 @@ static bool ParseEsbuildMeta(const char *filename, Allocator *alloc, HeapArray<c
 
     // Replace with INI file
     {
-        StreamWriter writer(filename, (int)StreamWriterFlag::Atomic);
+        StreamWriter writer(filename, WriteBufferMode::Block, (int)WriteFileFlag::Atomic);
 
         for (Span<const char> output: outputs) {
             if (!StartsWith(output, prefix)) [[unlikely]] {

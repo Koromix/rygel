@@ -98,7 +98,7 @@ T(R"(Usage: %!..+%1 init [option...] [directory]%!0)"), FelixTarget);
             files.Append(filename);
 
             StreamReader reader(asset->data, "<asset>", asset->compression_type);
-            StreamWriter writer(filename, (int)StreamWriterFlag::Atomic);
+            StreamWriter writer(filename, WriteBufferMode::None, (int)WriteFileFlag::Atomic);
 
             if (!SpliceStream(&reader, -1, &writer))
                 return 1;

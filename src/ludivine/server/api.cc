@@ -888,7 +888,7 @@ void HandleUpload(http_IO *io)
     // Upload new file
     int64_t size;
     {
-        StreamWriter writer(fd, "<temp>");
+        StreamWriter writer(fd, "<temp>", WriteBufferMode::Block);
         StreamReader reader;
         if (!io->OpenForRead(Mebibytes(16), &reader))
             return;

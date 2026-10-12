@@ -19,7 +19,7 @@ bool Builder::PrepareEsbuild()
         if (!EnsureDirectoryExists(tsconfig_filename))
             return false;
 
-        StreamWriter st(tsconfig_filename, (int)StreamWriterFlag::Atomic);
+        StreamWriter st(tsconfig_filename, WriteBufferMode::Block, (int)WriteFileFlag::Atomic);
         if (!st.IsValid())
             return false;
         json_PrettyWriter json(&st);

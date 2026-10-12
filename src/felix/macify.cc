@@ -70,7 +70,7 @@ static bool WriteInfoPlist(const char *name, const char *title, const char *icon
         StreamWriter writer;
 
     public:
-        StaticWriter(const char *filename) : writer(filename) {}
+        StaticWriter(const char *filename) : writer(filename, WriteBufferMode::Block) {}
 
         void write(const void *buf, size_t len) override { writer.Write((const uint8_t *)buf, (Size)len); }
         bool Close() { return writer.Close(); }
@@ -91,7 +91,7 @@ static bool WriteInfoPlist(const char *name, const char *title, const char *icon
 static bool CopyFile(const char *src_filename, const char *dest_filename)
 {
     StreamReader reader(src_filename);
-    StreamWriter writer(dest_filename);
+    StreamWriter writer(dest_filename, WriteBufferMode::None);
 
     if (!SpliceStream(&reader, -1, &writer))
         return false;

@@ -5517,14 +5517,17 @@ public:
     void PushLogFilter();
 };
 
-enum class StreamWriterFlag {
-    Exclusive = 1 << 0, // Only for files
-    Atomic = 1 << 1, // Only for files
-    Placeholder = 1 << 2, // Only for files
-    NoSync = 1 << 3, // Only for files
+enum class WriteFileFlag {
+    Exclusive = 1 << 0,
+    Atomic = 1 << 1,
+    Placeholder = 1 << 2,
+    NoSync = 1 << 3
+};
 
-    NoBuffer = 1 << 4, // Only for files and descriptors
-    LineBuffer = 1 << 5 // Only for files and descriptors
+enum class WriteBufferMode {
+    None,
+    Block,
+    Line
 };
 
 class StreamWriter {
@@ -5583,46 +5586,46 @@ class StreamWriter {
 
 public:
     StreamWriter() { Close(true); }
-    StreamWriter(HeapArray<uint8_t> *mem, const char *filename, unsigned int flags = 0,
+    StreamWriter(HeapArray<uint8_t> *mem, const char *filename,
                  CompressionType compression_type = CompressionType::None,
                  CompressionSpeed compression_speed = CompressionSpeed::Default)
-        : StreamWriter() { Open(mem, filename, flags, compression_type, compression_speed); }
-    StreamWriter(HeapArray<char> *mem, const char *filename, unsigned int flags = 0,
+        : StreamWriter() { Open(mem, filename, compression_type, compression_speed); }
+    StreamWriter(HeapArray<char> *mem, const char *filename,
                  CompressionType compression_type = CompressionType::None,
                  CompressionSpeed compression_speed = CompressionSpeed::Default)
-        : StreamWriter() { Open(mem, filename, flags, compression_type, compression_speed); }
-    StreamWriter(int fd, const char *filename, unsigned int flags = 0,
+        : StreamWriter() { Open(mem, filename, compression_type, compression_speed); }
+    StreamWriter(int fd, const char *filename, WriteBufferMode buffer,
                  CompressionType compression_type = CompressionType::None,
                  CompressionSpeed compression_speed = CompressionSpeed::Default)
-        : StreamWriter() { Open(fd, filename, flags, compression_type, compression_speed); }
-    StreamWriter(const char *filename, unsigned int flags = 0,
+        : StreamWriter() { Open(fd, filename, buffer, compression_type, compression_speed); }
+    StreamWriter(const char *filename, WriteBufferMode buffer, unsigned int flags = 0,
                  CompressionType compression_type = CompressionType::None,
                  CompressionSpeed compression_speed = CompressionSpeed::Default)
-        : StreamWriter() { Open(filename, flags, compression_type, compression_speed); }
-    StreamWriter(const std::function<bool(Span<const uint8_t>)> &func, const char *filename, unsigned int flags = 0,
+        : StreamWriter() { Open(filename, buffer, flags, compression_type, compression_speed); }
+    StreamWriter(const std::function<bool(Span<const uint8_t>)> &func, const char *filename,
                  CompressionType compression_type = CompressionType::None,
                  CompressionSpeed compression_speed = CompressionSpeed::Default)
-        : StreamWriter() { Open(func, filename, flags, compression_type, compression_speed); }
+        : StreamWriter() { Open(func, filename, compression_type, compression_speed); }
     ~StreamWriter() { Close(true); }
 
     // Call after Open (with CompressionType None).
     // Takes ownership and deletes the encoder at the end.
     void SetEncoder(StreamEncoder *encoder);
 
-    bool Open(HeapArray<uint8_t> *mem, const char *filename, unsigned int flags = 0,
+    bool Open(HeapArray<uint8_t> *mem, const char *filename,
               CompressionType compression_type = CompressionType::None,
               CompressionSpeed compression_speed = CompressionSpeed::Default);
-    bool Open(HeapArray<char> *mem, const char *filename, unsigned int flags = 0,
+    bool Open(HeapArray<char> *mem, const char *filename,
               CompressionType compression_type = CompressionType::None,
               CompressionSpeed compression_speed = CompressionSpeed::Default)
-        { return Open((HeapArray<uint8_t> *)mem, filename, flags, compression_type, compression_speed); }
-    bool Open(int fd, const char *filename, unsigned int flags = 0,
+        { return Open((HeapArray<uint8_t> *)mem, filename, compression_type, compression_speed); }
+    bool Open(int fd, const char *filename, WriteBufferMode buffer,
               CompressionType compression_type = CompressionType::None,
               CompressionSpeed compression_speed = CompressionSpeed::Default);
-    bool Open(const char *filename, unsigned int flags = 0,
+    bool Open(const char *filename, WriteBufferMode buffer, unsigned int flags = 0,
               CompressionType compression_type = CompressionType::None,
               CompressionSpeed compression_speed = CompressionSpeed::Default);
-    bool Open(const std::function<bool(Span<const uint8_t>)> &func, const char *filename, unsigned int flags = 0,
+    bool Open(const std::function<bool(Span<const uint8_t>)> &func, const char *filename,
               CompressionType compression_type = CompressionType::None,
               CompressionSpeed compression_speed = CompressionSpeed::Default);
     bool Close() { return Close(false); }
@@ -5652,7 +5655,7 @@ public:
 private:
     bool Close(bool implicit);
 
-    void InitFile(unsigned int flags);
+    void InitFile(WriteBufferMode mode);
     bool FlushBuffer();
 
     bool InitCompressor(CompressionType type, CompressionSpeed speed);
@@ -5664,13 +5667,13 @@ private:
 
 static inline bool WriteFile(Span<const uint8_t> buf, const char *filename, unsigned int flags = 0)
 {
-    StreamWriter st(filename, flags);
+    StreamWriter st(filename, WriteBufferMode::None, flags);
     st.Write(buf);
     return st.Close();
 }
 static inline bool WriteFile(Span<const char> buf, const char *filename, unsigned int flags = 0)
 {
-    StreamWriter st(filename, flags);
+    StreamWriter st(filename, WriteBufferMode::None, flags);
     st.Write(buf);
     return st.Close();
 }

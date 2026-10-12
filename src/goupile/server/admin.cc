@@ -177,7 +177,7 @@ T(R"(Usage: %!..+%1 init [option...] [directory]%!0)"), FelixTarget);
         K_ASSERT(asset);
 
         StreamReader reader(asset->data, "<asset>", asset->compression_type);
-        StreamWriter writer(filename, (int)StreamWriterFlag::Atomic);
+        StreamWriter writer(filename, WriteBufferMode::None, (int)WriteFileFlag::Atomic);
 
         if (!SpliceStream(&reader, -1, &writer))
             return 1;
@@ -439,7 +439,8 @@ Options:
 
     StreamWriter writer;
     if (extract) {
-        writer.Open(output_filename, (int)StreamWriterFlag::Atomic | (int)StreamWriterFlag::Exclusive);
+        unsigned int flags = (int)WriteFileFlag::Atomic | (int)WriteFileFlag::Exclusive;
+        writer.Open(output_filename, WriteBufferMode::Block, flags);
     } else {
         writer.Open([](Span<const uint8_t>) { return true; }, "<null>");
     }
@@ -530,12 +531,15 @@ static bool ArchiveInstances(const InstanceHolder *filter, bool *out_conflict = 
 
     // Open archive
     StreamWriter writer;
-    if (!writer.Open(archive_filename, (int)StreamWriterFlag::Exclusive |
-                                       (int)StreamWriterFlag::Atomic)) {
-        if (out_conflict && errno == EEXIST) {
-            *out_conflict = true;
+    {
+        unsigned int flags = (int)WriteFileFlag::Exclusive | (int)WriteFileFlag::Atomic;
+
+        if (!writer.Open(archive_filename, WriteBufferMode::Block, flags)) {
+            if (out_conflict && errno == EEXIST) {
+                *out_conflict = true;
+            }
+            return false;
         }
-        return false;
     }
 
     // Generate backup entries
@@ -1048,7 +1052,7 @@ static bool CreateInstance(sq_Database *domain, const char *instance_key,
                 Size total_len = 0;
                 {
                     StreamReader reader(asset.data, "<asset>", asset.compression_type);
-                    StreamWriter writer(&blob, "<blob>", 0, compression_type);
+                    StreamWriter writer(&blob, "<blob>", compression_type);
 
                     crypto_hash_sha256_state state;
                     crypto_hash_sha256_init(&state);
@@ -1332,7 +1336,7 @@ void HandleDomainRestore(http_IO *io)
         K_DEFER { CloseDescriptor(fd); };
 
         StreamReader reader(src_filename);
-        StreamWriter writer(fd, extract_filename);
+        StreamWriter writer(fd, extract_filename, WriteBufferMode::None);
         if (!reader.IsValid()) {
             if (errno == ENOENT) {
                 LogError("Archive '%1' does not exist", basename);
@@ -2902,13 +2906,16 @@ void HandleArchiveUpload(http_IO *io)
     const char *filename = Fmt(io->Allocator(), "%1%/%2", gp_config.archive_directory, basename).ptr;
 
     StreamWriter writer;
-    if (!writer.Open(filename, (int)StreamWriterFlag::Exclusive |
-                               (int)StreamWriterFlag::Atomic)) {
-        if (errno == EEXIST) {
-            LogError("An archive already exists with this name");
-            io->SendError(409);
+    {
+        unsigned int flags = (int)WriteFileFlag::Exclusive | (int)WriteFileFlag::Atomic;
+
+        if (!writer.Open(filename, WriteBufferMode::Block, flags)) {
+            if (errno == EEXIST) {
+                LogError("An archive already exists with this name");
+                io->SendError(409);
+            }
+            return;
         }
-        return;
     }
 
     StreamReader reader;

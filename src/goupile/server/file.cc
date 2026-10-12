@@ -336,7 +336,7 @@ bool PutFile(http_IO *io, InstanceHolder *instance, CompressionType compression_
     int64_t total_len = 0;
     char sha256[65];
     {
-        StreamWriter writer(fd, "<temp>", 0, compression_type);
+        StreamWriter writer(fd, "<temp>", WriteBufferMode::Block, compression_type);
         StreamReader reader;
         if (!io->OpenForRead(instance->settings.max_file_size, &reader))
             return false;

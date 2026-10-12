@@ -1355,7 +1355,7 @@ BENCHMARK_FUNCTION("base/Fmt")
     K_ASSERT(fp);
     K_DEFER { fclose(fp); };
 
-    StreamWriter writer(fd, "/dev/null");
+    StreamWriter writer(fd, "/dev/null", WriteBufferMode::Block);
     K_ASSERT(writer.IsValid());
 
     RunBenchmark("printf", iterations, [&](Size) {

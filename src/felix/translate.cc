@@ -131,10 +131,10 @@ bool PackTranslations(Span<const TranslationFile> files, unsigned int flags, con
 {
     StreamWriter c;
     if (output_filename) {
-        if (!c.Open(output_filename))
+        if (!c.Open(output_filename, WriteBufferMode::Block, (int)WriteFileFlag::Atomic))
             return false;
     } else {
-        if (!c.Open(STDOUT_FILENO, "<stdout>"))
+        if (!c.Open(STDOUT_FILENO, "<stdout>", WriteBufferMode::Block))
             return false;
     }
 

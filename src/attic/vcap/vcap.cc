@@ -47,7 +47,7 @@ static void HandleRequest(http_IO *io)
         StreamWriter playback;
 
         io->OpenForReadWS(&reader);
-        if (!writer.Open(filename))
+        if (!writer.Open(filename, WriteBufferMode::Block))
             return;
         io->OpenForWriteWS(&playback);
 

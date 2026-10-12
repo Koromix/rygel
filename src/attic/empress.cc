@@ -186,9 +186,6 @@ Available compression algorithms: %!..+%2%!0)", FelixTarget, FmtList(AvailableAl
     }
     K_ASSERT(dest_filenames.len == src_filenames.len);
 
-    unsigned int write_flags = (int)StreamWriterFlag::Atomic |
-                               (force ? 0 : (int)StreamWriterFlag::Exclusive);
-
     Async async;
 
     for (Size i = 0; i < src_filenames.len; i++) {
@@ -216,10 +213,12 @@ Available compression algorithms: %!..+%2%!0)", FelixTarget, FmtList(AvailableAl
             }
 
             if (dest_filename) {
-                if (!writer.Open(dest_filename, write_flags, compression_type, compression_speed))
+                unsigned int flags = (int)WriteFileFlag::Atomic | (force ? 0 : (int)WriteFileFlag::Exclusive);
+
+                if (!writer.Open(dest_filename, WriteBufferMode::None, flags, compression_type, compression_speed))
                     return false;
             } else {
-                if (!writer.Open(STDOUT_FILENO, "<stdout>", write_flags, compression_type, compression_speed))
+                if (!writer.Open(STDOUT_FILENO, "<stdout>", WriteBufferMode::None, compression_type, compression_speed))
                     return false;
             }
 
@@ -435,9 +434,6 @@ Available decompression algorithms: %!..+%2%!0)", FelixTarget, FmtList(Available
     }
     K_ASSERT(destinations.len == src_filenames.len);
 
-    unsigned int write_flags = (int)StreamWriterFlag::Atomic |
-                               (force ? 0 : (int)StreamWriterFlag::Exclusive);
-
     Async async;
 
     for (Size i = 0; i < src_filenames.len; i++) {
@@ -461,12 +457,14 @@ Available decompression algorithms: %!..+%2%!0)", FelixTarget, FmtList(Available
             ProgressHandle progress(dest_basename);
 
             if (dest.filename) {
-                if (!writer.Open(dest.filename, write_flags))
+                unsigned int flags = (int)WriteFileFlag::Atomic | (force ? 0 : (int)WriteFileFlag::Exclusive);
+
+                if (!writer.Open(dest.filename, WriteBufferMode::None, flags))
                     return false;
 
                 LogInfo("Decompressing '%1'...", dest_basename);
             } else {
-                if (!writer.Open(STDOUT_FILENO, "<stdout>", write_flags))
+                if (!writer.Open(STDOUT_FILENO, "<stdout>", WriteBufferMode::None))
                     return false;
 
                 LogInfo("Decompressing to standard output...");

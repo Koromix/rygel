@@ -186,7 +186,7 @@ R"(Usage: %!..+%1 get url key destination)", FelixTarget);
     if (!ConnectToS3(&s3, url))
         return 1;
 
-    StreamWriter writer(dest_filename);
+    StreamWriter writer(dest_filename, WriteBufferMode::None);
     if (!writer.IsValid())
         return 1;
 

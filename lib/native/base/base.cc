@@ -8261,8 +8261,8 @@ void SetThreadName(const char *name)
 // ------------------------------------------------------------------------
 
 static NoDestroy<StreamReader> StdInStream(STDIN_FILENO, "<stdin>");
-static NoDestroy<StreamWriter> StdOutStream(STDOUT_FILENO, "<stdout>", (int)StreamWriterFlag::LineBuffer);
-static NoDestroy<StreamWriter> StdErrStream(STDERR_FILENO, "<stderr>", (int)StreamWriterFlag::LineBuffer);
+static NoDestroy<StreamWriter> StdOutStream(STDOUT_FILENO, "<stdout>", WriteBufferMode::Line);
+static NoDestroy<StreamWriter> StdErrStream(STDERR_FILENO, "<stderr>", WriteBufferMode::Line);
 
 extern StreamReader *const StdIn = StdInStream.Get();
 extern StreamWriter *const StdOut = StdOutStream.Get();
@@ -8839,7 +8839,7 @@ void StreamWriter::SetEncoder(StreamEncoder *encoder)
     this->encoder = encoder;
 }
 
-bool StreamWriter::Open(HeapArray<uint8_t> *mem, const char *filename, unsigned int,
+bool StreamWriter::Open(HeapArray<uint8_t> *mem, const char *filename,
                         CompressionType compression_type, CompressionSpeed compression_speed)
 {
     Close(true);
@@ -8863,7 +8863,7 @@ bool StreamWriter::Open(HeapArray<uint8_t> *mem, const char *filename, unsigned 
     return true;
 }
 
-bool StreamWriter::Open(int fd, const char *filename, unsigned int flags,
+bool StreamWriter::Open(int fd, const char *filename, WriteBufferMode buffer,
                         CompressionType compression_type, CompressionSpeed compression_speed)
 {
     Close(true);
@@ -8876,7 +8876,7 @@ bool StreamWriter::Open(int fd, const char *filename, unsigned int flags,
     K_ASSERT(filename);
     this->filename = DuplicateString(filename, &str_alloc).ptr;
 
-    InitFile(flags);
+    InitFile(buffer);
 
     dest.u.file.fd = fd;
     dest.vt100 = FileIsVt100(fd);
@@ -8888,7 +8888,7 @@ bool StreamWriter::Open(int fd, const char *filename, unsigned int flags,
     return true;
 }
 
-bool StreamWriter::Open(const char *filename, unsigned int flags,
+bool StreamWriter::Open(const char *filename, WriteBufferMode buffer, unsigned int flags,
                         CompressionType compression_type, CompressionSpeed compression_speed)
 {
     Close(true);
@@ -8900,11 +8900,11 @@ bool StreamWriter::Open(const char *filename, unsigned int flags,
     K_ASSERT(filename);
     this->filename = DuplicateString(filename, &str_alloc).ptr;
 
-    InitFile(flags);
+    InitFile(buffer);
 
-    bool atomic = (flags & (int)StreamWriterFlag::Atomic);
-    bool exclusive = (flags & (int)StreamWriterFlag::Exclusive);
-    bool placeholder = (flags & (int)StreamWriterFlag::Placeholder);
+    bool atomic = (flags & (int)WriteFileFlag::Atomic);
+    bool exclusive = (flags & (int)WriteFileFlag::Exclusive);
+    bool placeholder = (flags & (int)WriteFileFlag::Placeholder);
 
     dest.u.file.atomic = atomic;
 
@@ -8962,7 +8962,7 @@ bool StreamWriter::Open(const char *filename, unsigned int flags,
         }
 
         dest.u.file.rename_overwrite = !exclusive || placeholder;
-        dest.u.file.atomic_sync = !(flags & (int)StreamWriterFlag::NoSync);
+        dest.u.file.atomic_sync = !(flags & (int)WriteFileFlag::NoSync);
     } else {
         K_ASSERT(!placeholder);
 
@@ -8984,7 +8984,7 @@ bool StreamWriter::Open(const char *filename, unsigned int flags,
     return true;
 }
 
-bool StreamWriter::Open(const std::function<bool(Span<const uint8_t>)> &func, const char *filename, unsigned int,
+bool StreamWriter::Open(const std::function<bool(Span<const uint8_t>)> &func, const char *filename,
                         CompressionType compression_type, CompressionSpeed compression_speed)
 {
     Close(true);
@@ -9256,23 +9256,24 @@ bool StreamWriter::Close(bool implicit)
     return ret;
 }
 
-void StreamWriter::InitFile(unsigned int flags)
+void StreamWriter::InitFile(WriteBufferMode mode)
 {
-    bool direct = (flags & (int)StreamWriterFlag::NoBuffer);
-    bool line = (flags & (int)StreamWriterFlag::LineBuffer);
-
-    K_ASSERT(!direct || !line);
-
     MemSet(&dest.u.file, 0, K_SIZE(dest.u.file));
 
-    if (direct) {
-        dest.type = DestinationType::DirectFile;
-    } else if (line) {
-        dest.type = DestinationType::LineFile;
-        dest.u.file.buf = AllocateSpan<uint8_t>(&str_alloc, Kibibytes(4));
-    } else {
-        dest.type = DestinationType::BufferedFile;
-        dest.u.file.buf = AllocateSpan<uint8_t>(&str_alloc, Kibibytes(4));
+    switch (mode) {
+        case WriteBufferMode::None: {
+            dest.type = DestinationType::DirectFile;
+        } break;
+
+        case WriteBufferMode::Line: {
+            dest.type = DestinationType::LineFile;
+            dest.u.file.buf = AllocateSpan<uint8_t>(&str_alloc, Kibibytes(4));
+        } break;
+
+        case WriteBufferMode::Block: {
+            dest.type = DestinationType::BufferedFile;
+            dest.u.file.buf = AllocateSpan<uint8_t>(&str_alloc, Kibibytes(4));
+        } break;
     }
 }
 
@@ -9778,7 +9779,7 @@ Span<const uint8_t> PatchFile(const AssetInfo &asset, Allocator *alloc,
     K_ASSERT(alloc);
 
     HeapArray<uint8_t> buf(alloc);
-    StreamWriter writer(&buf, "<asset>", 0, asset.compression_type);
+    StreamWriter writer(&buf, "<asset>", asset.compression_type);
 
     PatchFile(asset, &writer, func);
 

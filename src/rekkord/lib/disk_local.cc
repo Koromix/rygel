@@ -147,7 +147,7 @@ rk_WriteResult LocalDisk::WriteFile(const char *path, Span<const uint8_t> buf, c
         UnlinkFile(tmp.data);
     };
 
-    StreamWriter writer(fd, filename.data);
+    StreamWriter writer(fd, filename.data, WriteBufferMode::None);
 
     // Write encrypted content
     if (!writer.Write(buf))

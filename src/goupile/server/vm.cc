@@ -467,7 +467,7 @@ static bool HandleRequest(int kind, struct cmsghdr *cmsg, pid_t *out_pid)
     // Handle request
     {
         StreamReader reader(fd, "<server>");
-        StreamWriter writer(fd, "<server>", (int)StreamWriterFlag::NoBuffer);
+        StreamWriter writer(fd, "<server>", WriteBufferMode::None);
         json_Parser json(&reader, &temp_alloc);
 
         switch (kind) {
@@ -786,7 +786,7 @@ static bool SendRequest(RequestType type, Allocator *alloc,
 
     // Send payload
     {
-        StreamWriter st(pfd[0], "<zygote>");
+        StreamWriter st(pfd[0], "<zygote>", WriteBufferMode::Block);
         json_Writer json(&st);
 
         if (!send(&json))

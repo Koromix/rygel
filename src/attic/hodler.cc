@@ -490,7 +490,7 @@ static bool BundleScript(const AssetBundle &bundle, const char *esbuild_binary, 
             if (!reader.Rewind())
                 return false;
 
-            StreamWriter writer(gzip_filename, (int)StreamWriterFlag::Atomic, CompressionType::Gzip);
+            StreamWriter writer(gzip_filename, WriteBufferMode::None, (int)WriteFileFlag::Atomic, CompressionType::Gzip);
 
             if (!SpliceStream(&reader, -1, &writer))
                 return false;
@@ -819,12 +819,12 @@ static bool RenderTemplate(const char *base, const char *template_filename,
     const PageData &page = pages[page_idx];
 
     if (!template_filename) {
-        bool success = WriteFile(page.html, dest_filename, (int)StreamWriterFlag::Atomic);
+        bool success = WriteFile(page.html, dest_filename, (int)WriteFileFlag::Atomic);
         return success;
     }
 
     StreamReader reader(template_filename);
-    StreamWriter writer(dest_filename, (int)StreamWriterFlag::Atomic);
+    StreamWriter writer(dest_filename, WriteBufferMode::Block, (int)WriteFileFlag::Atomic);
 
     bool success = PatchFile(&reader, &writer, [&](Span<const char> expr, StreamWriter *writer) {
         Span<const char> key = TrimStr(expr);
@@ -1185,7 +1185,7 @@ static bool BuildAll(Span<const char> source_dir, const BuildSettings &build, co
 
                 // Copy raw file
                 {
-                    StreamWriter writer(dest_filename, (int)StreamWriterFlag::Atomic);
+                    StreamWriter writer(dest_filename, WriteBufferMode::None, (int)WriteFileFlag::Atomic);
 
                     if (!SpliceWithChecksum(&reader, &writer, hash->sha256))
                         return false;
@@ -1198,7 +1198,7 @@ static bool BuildAll(Span<const char> source_dir, const BuildSettings &build, co
                     if (!reader.Rewind())
                         return false;
 
-                    StreamWriter writer(gzip_filename, (int)StreamWriterFlag::Atomic, CompressionType::Gzip);
+                    StreamWriter writer(gzip_filename, WriteBufferMode::None, (int)WriteFileFlag::Atomic, CompressionType::Gzip);
 
                     if (!SpliceStream(&reader, -1, &writer))
                         return false;
@@ -1300,7 +1300,7 @@ static bool BuildAll(Span<const char> source_dir, const BuildSettings &build, co
 
                 if (gzip_file) {
                     StreamReader reader(dest_filename);
-                    StreamWriter writer(gzip_filename, (int)StreamWriterFlag::Atomic, CompressionType::Gzip);
+                    StreamWriter writer(gzip_filename, WriteBufferMode::None, (int)WriteFileFlag::Atomic, CompressionType::Gzip);
 
                     if (!SpliceStream(&reader, Megabytes(4), &writer))
                         return false;

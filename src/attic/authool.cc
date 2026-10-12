@@ -316,10 +316,10 @@ Options:
     StreamWriter writer;
 
     if (filename) {
-        if (!writer.Open(filename, (int)StreamWriterFlag::NoBuffer))
+        if (!writer.Open(filename, WriteBufferMode::None))
             return 1;
     } else {
-        if (!writer.Open(STDOUT_FILENO, "<stdout>", (int)StreamWriterFlag::NoBuffer))
+        if (!writer.Open(STDOUT_FILENO, "<stdout>", WriteBufferMode::None))
             return 1;
     }
 
@@ -472,7 +472,8 @@ Options:
             return 1;
 
         if (png_filename) {
-            StreamWriter st(png_filename);
+            StreamWriter st(png_filename, WriteBufferMode::Block);
+
             qr_ExportPng(qr, 12, &st);
             if (!st.Close())
                 return 1;
@@ -775,7 +776,8 @@ Options:
         }
 
         if (png_filename) {
-            StreamWriter st(png_filename);
+            StreamWriter st(png_filename, WriteBufferMode::Block);
+
             qr_ExportPng(qr, 12, &st);
             if (!st.Close())
                 return 1;

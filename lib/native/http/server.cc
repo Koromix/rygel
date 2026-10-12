@@ -772,10 +772,10 @@ bool http_IO::OpenForWrite(int status, CompressionType encoding, int64_t len, St
         return out_st->Open(skip, "<http>");
     } else if (chunked) {
         const auto write = [this](Span<const uint8_t> buf) { return WriteChunked(buf); };
-        return out_st->Open(write, "<http>", 0, encoding, CompressionSpeed::Fast);
+        return out_st->Open(write, "<http>", encoding, CompressionSpeed::Fast);
     } else {
         const auto write = [this](Span<const uint8_t> buf) { return WriteDirect(buf); };
-        return out_st->Open(write, "<http>", 0, encoding, CompressionSpeed::Fast);
+        return out_st->Open(write, "<http>", encoding, CompressionSpeed::Fast);
     }
 }
 

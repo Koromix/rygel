@@ -108,7 +108,7 @@ bool rk_SaveRawKey(Span<const uint8_t> raw, const char *filename)
     if (buf.len < 0)
         return false;
 
-    if (!WriteFile(buf, filename, (int)StreamWriterFlag::NoBuffer))
+    if (!WriteFile(buf, filename))
         return false;
 #if !defined(_WIN32)
     chmod(filename, 0600);

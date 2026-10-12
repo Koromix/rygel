@@ -166,7 +166,7 @@ static Size WriteAsset(const EmbedAsset &asset, CompressionSpeed speed, Function
         compressed_len += buf.len;
 
         return true;
-    }, "<asset>", 0, asset.compression_type, speed);
+    }, "<asset>", asset.compression_type, speed);
 
     if (!compressor.IsValid())
         return -1;
@@ -333,7 +333,7 @@ bool PackAssets(Span<const EmbedAsset> assets, unsigned int flags, const char *o
 
     StreamWriter c;
     if (output_path) {
-        if (!c.Open(output_path))
+        if (!c.Open(output_path, WriteBufferMode::Block, (int)WriteFileFlag::Atomic))
             return false;
     } else {
         if (flags & (int)EmbedFlag::UseEmbed) {
@@ -341,7 +341,7 @@ bool PackAssets(Span<const EmbedAsset> assets, unsigned int flags, const char *o
             return false;
         }
 
-        if (!c.Open(STDOUT_FILENO, "<stdout>"))
+        if (!c.Open(STDOUT_FILENO, "<stdout>", WriteBufferMode::Block))
             return false;
     }
 
@@ -377,7 +377,7 @@ bool PackAssets(Span<const EmbedAsset> assets, unsigned int flags, const char *o
                     dir_ready = true;
 
                     async.Run([=]() {
-                        StreamWriter writer(bin_filename);
+                        StreamWriter writer(bin_filename, WriteBufferMode::Block);
 
                         auto print = [&](Span<const uint8_t> buf) { writer.Write(buf); };
                         blob->len = WriteAsset(asset, speed, print);

@@ -186,7 +186,7 @@ static void GeneratePNG(Span<const uint8_t> data, int32_t width, int32_t height,
         MemCpy(chunk.type, "IDAT", 4);
         out_png->Append(MakeSpan((const uint8_t *)&chunk, K_SIZE(chunk)));
 
-        StreamWriter writer(out_png, "<png>", 0, CompressionType::Zlib);
+        StreamWriter writer(out_png, "<png>", CompressionType::Zlib);
         for (int y = 0; y < height; y++) {
             writer.Write((uint8_t)0); // Scanline filter
 
