@@ -1,0 +1,226 @@
+diff --git a/vendor/sqlite3mc/sqlite3mc.c b/vendor/sqlite3mc/sqlite3mc.c
+index b320a8295f..fd385895b1 100644
+--- a/vendor/sqlite3mc/sqlite3mc.c
++++ b/vendor/sqlite3mc/sqlite3mc.c
+@@ -289609,35 +289609,7 @@ typedef struct chacha_ctx {
+ # define __attribute__(a)
+ #endif
+ 
+-#ifdef SODIUM_STATIC
+-# define SODIUM_EXPORT
+-# define SODIUM_EXPORT_WEAK
+-#else
+-# if defined(_MSC_VER)
+-#  ifdef SODIUM_DLL_EXPORT
+-#   define SODIUM_EXPORT __declspec(dllexport)
+-#  else
+-#   define SODIUM_EXPORT __declspec(dllimport)
+-#  endif
+-# else
+-#  if defined(__SUNPRO_C)
+-#   ifndef __GNU_C__
+-#    define SODIUM_EXPORT __attribute__ (visibility(__global))
+-#   else
+-#    define SODIUM_EXPORT __attribute__ __global
+-#   endif
+-#  elif defined(_MSG_VER)
+-#   define SODIUM_EXPORT extern __declspec(dllexport)
+-#  else
+-#   define SODIUM_EXPORT __attribute__ ((visibility ("default")))
+-#  endif
+-# endif
+-# if defined(__ELF__) && !defined(SODIUM_DISABLE_WEAK_FUNCTIONS)
+-#  define SODIUM_EXPORT_WEAK SODIUM_EXPORT __attribute__((weak))
+-# else
+-#  define SODIUM_EXPORT_WEAK SODIUM_EXPORT
+-# endif
+-#endif
++#define SODIUM_EXPORT static
+ 
+ #ifndef CRYPTO_ALIGN
+ # if defined(__INTEL_COMPILER) || defined(_MSC_VER)
+@@ -289710,9 +289682,11 @@ int crypto_stream_chacha20_ietf_xor_ic(unsigned char *c, const unsigned char *m,
+ 
+ /* The ietf_ext variant allows the internal counter to overflow into the IV */
+ 
++SODIUM_EXPORT
+ int crypto_stream_chacha20_ietf_ext(unsigned char *c, unsigned long long clen,
+                                     const unsigned char *n, const unsigned char *k);
+ 
++SODIUM_EXPORT
+ int crypto_stream_chacha20_ietf_ext_xor_ic(unsigned char *c, const unsigned char *m,
+                                            unsigned long long mlen,
+                                            const unsigned char *n, uint32_t ic,
+@@ -290028,7 +290002,7 @@ typedef struct crypto_stream_chacha20_implementation {
+                                   const unsigned char *k);
+ } crypto_stream_chacha20_implementation;
+ 
+-int crypto_stream_chacha20_pick_best_implementation(void);
++SODIUM_EXPORT int crypto_stream_chacha20_pick_best_implementation(void);
+ 
+ #endif
+ /*** End of #include "stream_chacha20.h" ***/
+@@ -290069,8 +290043,8 @@ int crypto_stream_chacha20_pick_best_implementation(void);
+ /* #include "../crypto_stream_chacha20.h" */
+ 
+ 
+-extern struct crypto_stream_chacha20_implementation
+-    crypto_stream_chacha20_ref_implementation;
++// extern struct crypto_stream_chacha20_implementation
++//     crypto_stream_chacha20_ref_implementation;
+ /*** End of #include "chacha20_ref.h" ***/
+ 
+ 
+@@ -290315,7 +290289,7 @@ sodium_stream_ietf_ext_ref_xor_ic(unsigned char *c, const unsigned char *m,
+     return 0;
+ }
+ 
+-struct crypto_stream_chacha20_implementation
++static struct crypto_stream_chacha20_implementation
+     crypto_stream_chacha20_ref_implementation = {
+         .stream_xor_ic = sodium_stream_ref_xor_ic,
+         .stream_ietf_ext_xor_ic = sodium_stream_ietf_ext_ref_xor_ic
+@@ -290410,8 +290384,8 @@ sodium__mm_cvtsi64_si128(int64_t q)
+ /* #include "../crypto_stream_chacha20.h" */
+ 
+ 
+-extern struct crypto_stream_chacha20_implementation
+-    crypto_stream_chacha20_dolbeau_ssse3_implementation;
++// extern struct crypto_stream_chacha20_implementation
++//     crypto_stream_chacha20_dolbeau_ssse3_implementation;
+ /*** End of # include "chacha20_dolbeau-ssse3.h" ***/
+ 
+ 
+@@ -290886,7 +290860,7 @@ dolbeau_ssse3_stream_ietf_ext_ref_xor_ic(unsigned char *c, const unsigned char *
+     return 0;
+ }
+ 
+-struct crypto_stream_chacha20_implementation
++static struct crypto_stream_chacha20_implementation
+     crypto_stream_chacha20_dolbeau_ssse3_implementation = {
+         .stream_xor_ic          = dolbeau_ssse3_stream_ref_xor_ic,
+         .stream_ietf_ext_xor_ic = dolbeau_ssse3_stream_ietf_ext_ref_xor_ic
+@@ -290939,8 +290913,8 @@ struct crypto_stream_chacha20_implementation
+ /* #include "../crypto_stream_chacha20.h" */
+ 
+ 
+-extern struct crypto_stream_chacha20_implementation
+-    crypto_stream_chacha20_dolbeau_avx2_implementation;
++// extern struct crypto_stream_chacha20_implementation
++//     crypto_stream_chacha20_dolbeau_avx2_implementation;
+ /*** End of # include "chacha20_dolbeau-avx2.h" ***/
+ 
+ 
+@@ -291745,7 +291719,7 @@ dolbeau_avx2_stream_ietf_ext_ref_xor_ic(unsigned char *c, const unsigned char *m
+     return 0;
+ }
+ 
+-struct crypto_stream_chacha20_implementation
++static struct crypto_stream_chacha20_implementation
+     crypto_stream_chacha20_dolbeau_avx2_implementation = {
+         .stream_xor_ic          = dolbeau_avx2_stream_ref_xor_ic,
+         .stream_ietf_ext_xor_ic = dolbeau_avx2_stream_ietf_ext_ref_xor_ic
+@@ -291801,8 +291775,8 @@ struct crypto_stream_chacha20_implementation
+ /* #include "../crypto_stream_chacha20.h" */
+ 
+ 
+-extern struct crypto_stream_chacha20_implementation
+-    crypto_stream_chacha20_dolbeau_avx512_implementation;
++// extern struct crypto_stream_chacha20_implementation
++//     crypto_stream_chacha20_dolbeau_avx512_implementation;
+ /*** End of # include "chacha20_dolbeau-avx512.h" ***/
+ 
+ 
+@@ -292830,7 +292804,7 @@ dolbeau_avx512_stream_ietf_ext_ref_xor_ic(unsigned char *c, const unsigned char
+     return 0;
+ }
+ 
+-struct crypto_stream_chacha20_implementation
++static struct crypto_stream_chacha20_implementation
+     crypto_stream_chacha20_dolbeau_avx512_implementation = {
+         .stream_xor_ic          = dolbeau_avx512_stream_ref_xor_ic,
+         .stream_ietf_ext_xor_ic = dolbeau_avx512_stream_ietf_ext_ref_xor_ic
+@@ -292873,8 +292847,8 @@ struct crypto_stream_chacha20_implementation
+ /* #include "../crypto_stream_chacha20.h" */
+ 
+ 
+-extern struct crypto_stream_chacha20_implementation
+-    crypto_stream_chacha20_dolbeau_neon_implementation;
++// extern struct crypto_stream_chacha20_implementation
++//     crypto_stream_chacha20_dolbeau_neon_implementation;
+ /*** End of # include "chacha20_dolbeau-neon.h" ***/
+ 
+ 
+@@ -293421,7 +293395,7 @@ dolbeau_neon_stream_ietf_ext_neon_xor_ic(unsigned char *c, const unsigned char *
+     return 0;
+ }
+ 
+-struct crypto_stream_chacha20_implementation
++static struct crypto_stream_chacha20_implementation
+     crypto_stream_chacha20_dolbeau_neon_implementation = {
+         .stream_xor_ic          = dolbeau_neon_stream_neon_xor_ic,
+         .stream_ietf_ext_xor_ic = dolbeau_neon_stream_ietf_ext_neon_xor_ic
+@@ -293438,6 +293412,7 @@ struct crypto_stream_chacha20_implementation
+ 
+ static const crypto_stream_chacha20_implementation* sodium_chacha20_implementation = NULL;
+ 
++SODIUM_EXPORT
+ int
+ crypto_stream_chacha20_xor_ic(unsigned char *c, const unsigned char *m,
+                               unsigned long long mlen,
+@@ -293450,6 +293425,7 @@ crypto_stream_chacha20_xor_ic(unsigned char *c, const unsigned char *m,
+     return sodium_chacha20_implementation->stream_xor_ic(c, m, mlen, n, ic, k);
+ }
+ 
++SODIUM_EXPORT
+ int
+ crypto_stream_chacha20_ietf_ext_xor_ic(unsigned char *c, const unsigned char *m,
+                                        unsigned long long mlen,
+@@ -293462,6 +293438,7 @@ crypto_stream_chacha20_ietf_ext_xor_ic(unsigned char *c, const unsigned char *m,
+     return sodium_chacha20_implementation->stream_ietf_ext_xor_ic(c, m, mlen, n, ic, k);
+ }
+ 
++SODIUM_EXPORT
+ int
+ crypto_stream_chacha20_ietf_xor_ic(unsigned char *c, const unsigned char *m,
+                                    unsigned long long mlen,
+@@ -293757,8 +293734,8 @@ u128_shr(uint128_t v, int shift)
+ /* #include "../onetimeauth_poly1305.h" */
+ 
+ 
+-extern struct crypto_onetimeauth_poly1305_implementation
+-    crypto_onetimeauth_poly1305_donna_implementation;
++// extern struct crypto_onetimeauth_poly1305_implementation
++//     crypto_onetimeauth_poly1305_donna_implementation;
+ 
+ #endif /* poly1305_donna_H */
+ /*** End of #include "poly1305_donna.h" ***/
+@@ -294328,7 +294305,7 @@ crypto_onetimeauth_poly1305_donna_final(
+     return 0;
+ }
+ 
+-struct crypto_onetimeauth_poly1305_implementation
++static struct crypto_onetimeauth_poly1305_implementation
+     crypto_onetimeauth_poly1305_donna_implementation = {
+         .onetimeauth = crypto_onetimeauth_poly1305_donna,
+         .onetimeauth_init = crypto_onetimeauth_poly1305_donna_init,
+@@ -294362,8 +294339,8 @@ struct crypto_onetimeauth_poly1305_implementation
+ /* #include "../onetimeauth_poly1305.h" */
+ 
+ 
+-extern struct crypto_onetimeauth_poly1305_implementation
+-    crypto_onetimeauth_poly1305_sse2_implementation;
++// extern struct crypto_onetimeauth_poly1305_implementation
++//     crypto_onetimeauth_poly1305_sse2_implementation;
+ 
+ #endif /* poly1305_sse2_H */
+ /*** End of #include "poly1305_sse2.h" ***/
+@@ -295318,7 +295295,7 @@ crypto_onetimeauth_poly1305_sse2(unsigned char *out, const unsigned char *m,
+     return 0;
+ }
+ 
+-struct crypto_onetimeauth_poly1305_implementation
++static struct crypto_onetimeauth_poly1305_implementation
+     crypto_onetimeauth_poly1305_sse2_implementation = {
+         .onetimeauth = crypto_onetimeauth_poly1305_sse2,
+         .onetimeauth_init = crypto_onetimeauth_poly1305_sse2_init,
