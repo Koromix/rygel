@@ -8645,7 +8645,9 @@ int64_t StreamReader::ComputeRawLen()
             raw_len = (int64_t)sb.st_size;
 #else
             struct stat sb;
-            if (fstat(source.u.file.fd, &sb) < 0 || S_ISFIFO(sb.st_mode) | S_ISSOCK(sb.st_mode))
+            if (fstat(source.u.file.fd, &sb) < 0)
+                return -1;
+            if (S_ISFIFO(sb.st_mode) || S_ISSOCK(sb.st_mode))
                 return -1;
             raw_len = (int64_t)sb.st_size;
 #endif
