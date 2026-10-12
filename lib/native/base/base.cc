@@ -8480,6 +8480,8 @@ Size StreamReader::Read(Span<uint8_t> out_buf)
 
     if (error) [[unlikely]]
         return -1;
+    if (!out_buf.len)
+        return 0;
 
     Size len = 0;
 
@@ -8680,6 +8682,7 @@ Size StreamReader::ReadRaw(Size max_len, void *out_buf)
     ComputeRawLen();
 
     Size read_len = 0;
+
     switch (source.type) {
         case SourceType::Memory: {
             read_len = source.u.memory.buf.len - source.u.memory.pos;
@@ -8688,6 +8691,7 @@ Size StreamReader::ReadRaw(Size max_len, void *out_buf)
             }
             MemCpy(out_buf, source.u.memory.buf.ptr + source.u.memory.pos, read_len);
             source.u.memory.pos += read_len;
+
             source.eof = (source.u.memory.pos >= source.u.memory.buf.len);
         } break;
 
@@ -8705,6 +8709,7 @@ Size StreamReader::ReadRaw(Size max_len, void *out_buf)
                 error = true;
                 return -1;
             }
+
             source.eof = (read_len == 0);
         } break;
 
@@ -8714,6 +8719,7 @@ Size StreamReader::ReadRaw(Size max_len, void *out_buf)
                 error = true;
                 return -1;
             }
+
             source.eof = (read_len == 0);
         } break;
     }
