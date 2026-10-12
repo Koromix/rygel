@@ -9277,31 +9277,45 @@ void StreamWriter::InitFile(WriteBufferMode mode)
     }
 }
 
+static Size WriteDirect(int fd, const char *filename, Span<const uint8_t> buf)
+{
+#if defined(_WIN32)
+    unsigned int int_len = (unsigned int)std::min(buf.len, (Size)UINT_MAX);
+    Size write_len = _write(fd, buf.ptr, int_len);
+#else
+    Size write_len = K_RESTART_EINTR(write(fd, buf.ptr, (size_t)buf.len), < 0);
+#endif
+
+    if (write_len < 0) {
+        LogError("Failed to write to '%1': %2", filename, strerror(errno));
+        return -1;
+    }
+
+    return write_len;
+}
+
 bool StreamWriter::FlushBuffer()
 {
     K_ASSERT(!error);
     K_ASSERT(dest.type == DestinationType::BufferedFile ||
-              dest.type == DestinationType::LineFile);
+             dest.type == DestinationType::LineFile);
 
-    while (dest.u.file.buf_used) {
-#if defined(_WIN32)
-        Size write_len = _write(dest.u.file.fd, dest.u.file.buf.ptr, (unsigned int)dest.u.file.buf_used);
-#else
-        Size write_len = K_RESTART_EINTR(write(dest.u.file.fd, dest.u.file.buf.ptr, (size_t)dest.u.file.buf_used), < 0);
-#endif
+    Span<const uint8_t> remain = MakeSpan(dest.u.file.buf.ptr, dest.u.file.buf_used);
 
+    while (remain.len) {
+        Size write_len = WriteDirect(dest.u.file.fd, filename, remain);
         if (write_len < 0) {
-            LogError("Failed to write to '%1': %2", filename, strerror(errno));
             error = true;
             return false;
         }
 
-        Size move_len = dest.u.file.buf_used - write_len;
-        MemMove(dest.u.file.buf.ptr, dest.u.file.buf.ptr + write_len, move_len);
-        dest.u.file.buf_used -= write_len;
+        remain.ptr += write_len;
+        remain.len -= write_len;
 
         raw_written += write_len;
     }
+
+    dest.u.file.buf_used = 0;
 
     return true;
 }
@@ -9353,6 +9367,24 @@ bool StreamWriter::WriteRaw(Span<const uint8_t> buf)
         } break;
 
         case DestinationType::BufferedFile: {
+            if (buf.len >= dest.u.file.buf.len) {
+                if (!FlushBuffer())
+                    return false;
+
+                do {
+                    Size write_len = WriteDirect(dest.u.file.fd, filename, buf);
+                    if (write_len < 0) {
+                        error = true;
+                        return false;
+                    }
+
+                    buf.ptr += write_len;
+                    buf.len -= write_len;
+
+                    raw_written += write_len;
+                } while (buf.len >= dest.u.file.buf.len);
+            }
+
             if (!buf.len)
                 return true;
 
@@ -9401,15 +9433,8 @@ bool StreamWriter::WriteRaw(Span<const uint8_t> buf)
 
         case DestinationType::DirectFile: {
             while (buf.len) {
-#if defined(_WIN32)
-                unsigned int int_len = (unsigned int)std::min(buf.len, (Size)UINT_MAX);
-                Size write_len = _write(dest.u.file.fd, buf.ptr, int_len);
-#else
-                Size write_len = K_RESTART_EINTR(write(dest.u.file.fd, buf.ptr, (size_t)buf.len), < 0);
-#endif
-
+                Size write_len = WriteDirect(dest.u.file.fd, filename, buf);
                 if (write_len < 0) {
-                    LogError("Failed to write to '%1': %2", filename, strerror(errno));
                     error = true;
                     return false;
                 }
