@@ -8479,8 +8479,6 @@ Size StreamReader::Read(Span<uint8_t> out_buf)
 
     if (error) [[unlikely]]
         return -1;
-    if (!out_buf.len)
-        return 0;
 
     Size len = 0;
 
@@ -8491,9 +8489,11 @@ Size StreamReader::Read(Span<uint8_t> out_buf)
             return -1;
         }
     } else {
-        len = ReadRaw(out_buf.len, out_buf.ptr);
-        if (len < 0) [[unlikely]]
-            return -1;
+        if (out_buf.len) {
+            len = ReadRaw(out_buf.len, out_buf.ptr);
+            if (len < 0) [[unlikely]]
+                return -1;
+        }
         eof = source.eof;
     }
 
@@ -8518,7 +8518,7 @@ Size StreamReader::ReadFill(Span<uint8_t> out_buf)
 
     Size read_len = 0;
 
-    while (out_buf.len) {
+    do {
         Size len = 0;
 
         if (decoder) {
@@ -8528,9 +8528,11 @@ Size StreamReader::ReadFill(Span<uint8_t> out_buf)
                 return -1;
             }
         } else {
-            len = ReadRaw(out_buf.len, out_buf.ptr);
-            if (len < 0) [[unlikely]]
-                return -1;
+            if (out_buf.len) {
+                len = ReadRaw(out_buf.len, out_buf.ptr);
+                if (len < 0) [[unlikely]]
+                    return -1;
+            }
             eof = source.eof;
         }
 
@@ -8546,7 +8548,7 @@ Size StreamReader::ReadFill(Span<uint8_t> out_buf)
 
         if (eof)
             break;
-    }
+    } while (out_buf.len);
 
     read_total += read_len;
     return read_len;
