@@ -11,6 +11,7 @@
 #include "priv_tape.hh"
 #include "vendor/blake3/c/blake3.h"
 
+#include <semaphore>
 #if !defined(_WIN32)
     #include <fcntl.h>
 #endif
@@ -21,9 +22,9 @@ static const Size ChunkAverage = Kibibytes(2048);
 static const Size ChunkMin = Kibibytes(1024);
 static const Size ChunkMax = Kibibytes(8192);
 
-static const Size FileBigSize = Mebibytes(128);
-static const Size FileDefaultSize = 2 * ChunkMax;
-static const int FileBigLimit = 4;
+static const Size FileBigBuffer = Mebibytes(32);
+static const Size FileDefaultBuffer = 2 * ChunkMax;
+static const int FileBigLimit = 8;
 
 enum class PutResult {
     Success,
@@ -53,7 +54,7 @@ class PutContext {
 
     Async tasks;
 
-    std::atomic_int big_semaphore { FileBigLimit };
+    std::counting_semaphore<> big_semaphore { FileBigLimit };
 
 public:
     PutContext(rk_Repository *repo, rk_Cache *cache, const rk_SaveSettings &settings);
@@ -537,23 +538,40 @@ PutResult PutContext::PutFile(const char *src_filename, bool fake, rk_Hash *out_
     // Split the file
     {
         FastSplitter splitter(ChunkAverage, ChunkMin, ChunkMax, salt8);
+        bool big_buffer = false;
 
-        bool use_big_buffer = (--big_semaphore >= 0);
-        K_DEFER { big_semaphore++; };
+        K_DEFER {
+            if (big_buffer) {
+                big_semaphore.release();
+            }
+        };
 
         HeapArray<uint8_t> buf;
-        {
-            int64_t size = st.ComputeRawLen();
-            int64_t max = use_big_buffer ? FileBigSize : FileDefaultSize;
-
-            Size needed = (Size)std::min(size >= 0 ? size + 1 : (int64_t)FileDefaultSize, max);
-            buf.SetCapacity(needed);
-        }
 
         do {
             // We don't want to run other file tasks because that could cause us to allocate way
             // too much heap memory for the fill buffer.
             Async async(&tasks, (int)AsyncFlag::Selfish);
+
+            if (!buf.Available()) {
+                if (!buf.capacity) {
+                    int64_t needed = st.ComputeRawLen();
+
+                    if (needed >= 0) {
+                        big_buffer = (needed > FileDefaultBuffer) ? big_semaphore.try_acquire() : false;
+                        needed = std::min(needed + 1, big_buffer ? FileBigBuffer : FileDefaultBuffer);
+                    } else {
+                        needed = FileDefaultBuffer;
+                    }
+
+                    buf.SetCapacity(needed);
+                } else {
+                    // We need to read into a non-void buffer to detect EOF.
+                    // This should be rare, especially for small files, because we reserve
+                    // size + 1 capacity, see code above.
+                    buf.SetCapacity(buf.len + ChunkMax);
+                }
+            }
 
             // Fill buffer
             Size read = st.Read(buf.TakeAvailable());
@@ -561,12 +579,6 @@ PutResult PutContext::PutFile(const char *src_filename, bool fake, rk_Hash *out_
                 return PutResult::Error;
             buf.len += read;
             file_size += read;
-
-            if (!read && !buf.Available()) {
-                // We need to read into a non-0 buffer to detect EOF
-                buf.SetCapacity(buf.len + ChunkMax);
-                continue;
-            }
 
             Span<const uint8_t> remain = buf;
 
