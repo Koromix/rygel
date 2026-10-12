@@ -8715,6 +8715,7 @@ Size StreamReader::ReadRaw(Size max_len, void *out_buf)
                 error = true;
                 return -1;
             }
+            K_ASSERT(read_len <= max_len);
 
             source.eof = (read_len == 0);
         } break;
