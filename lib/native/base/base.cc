@@ -8283,8 +8283,7 @@ K_EXIT(FlushStd)
 
 void StreamReader::SetDecoder(StreamDecoder *decoder)
 {
-    K_ASSERT(decoder);
-    K_ASSERT(filename);
+    K_ASSERT(IsValid());
     K_ASSERT(!this->decoder);
 
     this->decoder = decoder;
@@ -8415,13 +8414,16 @@ bool StreamReader::Close(bool implicit)
 
     bool ret = !filename || !error;
 
-    filename = nullptr;
     error = true;
     source.type = SourceType::Memory;
     source.eof = false;
     eof = false;
     raw_len = -1;
-    str_alloc.Reset();
+
+    if (implicit) {
+        filename = nullptr;
+        str_alloc.Reset();
+    }
 
     return ret;
 }
@@ -8848,8 +8850,7 @@ static LinkAtMethod GetLinkAtMethod(const char *dirname)
 
 void StreamWriter::SetEncoder(StreamEncoder *encoder)
 {
-    K_ASSERT(encoder);
-    K_ASSERT(filename);
+    K_ASSERT(IsValid());
     K_ASSERT(!this->encoder);
 
     this->encoder = encoder;
@@ -9264,10 +9265,13 @@ bool StreamWriter::Close(bool implicit)
 
     bool ret = !filename || !error;
 
-    filename = nullptr;
     error = true;
     dest.type = DestinationType::Memory;
-    str_alloc.Reset();
+
+    if (implicit) {
+        filename = nullptr;
+        str_alloc.Reset();
+    }
 
     return ret;
 }
