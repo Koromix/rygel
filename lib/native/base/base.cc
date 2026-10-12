@@ -4339,11 +4339,13 @@ OpenResult OpenFile(const char *filename, unsigned int flags, unsigned int silen
 
     HANDLE h = nullptr;
     int fd = -1;
+
     K_DEFER_N(err_guard) {
         CloseDescriptor(fd);
         if (h) {
             CloseHandle(h);
         }
+        *out_fd = -1;
     };
 
     if (win32_utf8) {
@@ -4756,6 +4758,8 @@ OpenResult OpenFile(const char *filename, unsigned int flags, unsigned int silen
         if (!(silent & (int)ret)) {
             LogError("Cannot open '%1': %2", filename, strerror(errno));
         }
+
+        *out_fd = -1;
         return ret;
     }
 
@@ -8351,12 +8355,9 @@ OpenResult StreamReader::Open(const char *filename, CompressionType compression_
     K_ASSERT(filename);
     this->filename = DuplicateString(filename, &str_alloc).ptr;
 
+    if (OpenResult ret = OpenFile(filename, (int)OpenFlag::Read, &source.u.file.fd); ret != OpenResult::Success)
+        return ret;
     source.type = SourceType::File;
-    {
-        OpenResult ret = OpenFile(filename, (int)OpenFlag::Read, &source.u.file.fd);
-        if (ret != OpenResult::Success)
-            return ret;
-    }
     source.u.file.owned = true;
 
     if (!InitDecompressor(compression_type))
