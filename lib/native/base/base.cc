@@ -8498,7 +8498,7 @@ Size StreamReader::Read(Span<uint8_t> out_buf)
         eof = source.eof;
     }
 
-    if (!error && read_max >= 0 && len > read_max - read_total) [[unlikely]] {
+    if (read_max >= 0 && len > read_max - read_total) [[unlikely]] {
         LogError("Exceeded max stream size of %1", FmtDiskSize(read_max));
         error = true;
         return -1;
@@ -8539,7 +8539,7 @@ Size StreamReader::ReadFill(Span<uint8_t> out_buf)
         out_buf.len -= len;
         read_len += len;
 
-        if (!error && read_max >= 0 && read_len > read_max - read_total) [[unlikely]] {
+        if (read_max >= 0 && read_len > read_max - read_total) [[unlikely]] {
             LogError("Exceeded max stream size of %1", FmtDiskSize(read_max));
             error = true;
             return -1;
