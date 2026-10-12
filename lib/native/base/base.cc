@@ -8440,13 +8440,11 @@ bool StreamReader::Rewind()
         case SourceType::File: {
             if (lseek(source.u.file.fd, 0, SEEK_SET) < 0) {
                 LogError("Failed to rewind '%1': %2", filename, strerror(errno));
-                error = true;
                 return false;
             }
         } break;
         case SourceType::Function: {
             LogError("Cannot rewind stream '%1'", filename);
-            error = true;
             return false;
         } break;
     }
