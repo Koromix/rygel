@@ -8962,6 +8962,7 @@ bool StreamWriter::Open(const char *filename, unsigned int flags,
         }
 
         dest.u.file.rename_overwrite = !exclusive || placeholder;
+        dest.u.file.atomic_sync = !(flags & (int)StreamWriterFlag::NoSync);
     } else {
         K_ASSERT(!placeholder);
 
@@ -9141,7 +9142,7 @@ bool StreamWriter::Close(bool implicit)
                     if (implicit) {
                         LogDebug("Deleting implicitly closed file '%1'", filename);
                         error = true;
-                    } else if (!FlushFile(dest.u.file.fd, filename)) {
+                    } else if (dest.u.file.atomic_sync && !FlushFile(dest.u.file.fd, filename)) {
                         error = true;
                     }
                 }
@@ -9175,8 +9176,10 @@ bool StreamWriter::Close(bool implicit)
                         K_ASSERT(linkat_flags);
 
                         if (!linkat(linkat_fd, linkat_from, AT_FDCWD, filename, linkat_flags)) {
-                            Span<const char> directory = GetPathDirectory(filename);
-                            SyncDirectory(directory);
+                            if (dest.u.file.atomic_sync) {
+                                Span<const char> directory = GetPathDirectory(filename);
+                                SyncDirectory(directory);
+                            }
                         } else if (errno == EEXIST && dest.u.file.rename_overwrite) {
                             // The linkat() call cannot overwrite an existing file. If the file already exists,
                             // link to a temporary file and let RenameFile() handle the final step.
@@ -9205,7 +9208,10 @@ bool StreamWriter::Close(bool implicit)
                     }
 
                     if (dest.u.file.tmp_filename) {
-                        unsigned int flags = (int)RenameFlag::Sync | (dest.u.file.rename_overwrite ? (int)RenameFlag::Overwrite : 0);
+                        unsigned int flags = 0;
+
+                        flags |= (dest.u.file.atomic_sync ? (int)RenameFlag::Sync : 0);
+                        flags |= (dest.u.file.rename_overwrite ? (int)RenameFlag::Overwrite : 0);
 
                         if (RenameFile(dest.u.file.tmp_filename, filename, flags) == RenameResult::Success) {
                             dest.u.file.tmp_filename = nullptr;

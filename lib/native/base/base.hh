@@ -5521,9 +5521,10 @@ enum class StreamWriterFlag {
     Exclusive = 1 << 0, // Only for files
     Atomic = 1 << 1, // Only for files
     Placeholder = 1 << 2, // Only for files
+    NoSync = 1 << 3, // Only for files
 
-    NoBuffer = 1 << 3, // Only for files and descriptors
-    LineBuffer = 1 << 4 // Only for files and descriptors
+    NoBuffer = 1 << 4, // Only for files and descriptors
+    LineBuffer = 1 << 5 // Only for files and descriptors
 };
 
 class StreamWriter {
@@ -5558,6 +5559,7 @@ class StreamWriter {
                 bool atomic;
                 bool rename_overwrite;
                 bool unlink_on_error;
+                bool atomic_sync;
                 const char *tmp_filename;
             } file;
             std::function<bool(Span<const uint8_t>)> func;
