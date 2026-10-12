@@ -2172,6 +2172,16 @@ void LogFmt(LogLevel level, const char *ctx, const char *fmt, Span<const FmtArg>
     static bool log_debug;
 #endif
 
+    // Some code paths like to inspect errno, don't clobber it while logging
+#if defined(_WIN32)
+    K_DEFER_C(libc_err = errno, win32_err = GetLastError()) {
+        errno = libc_err;
+        SetLastError(win32_err);
+    };
+#else
+    K_DEFER_C(libc_err = errno) { errno = libc_err; };
+#endif
+
     if (!init) {
         // Do this first... GetDebugFlag() might log an error or something, in which
         // case we don't want to recurse forever and crash!
