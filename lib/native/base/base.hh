@@ -5399,7 +5399,6 @@ public:
     bool Rewind();
 
     const char *GetFileName() const { return filename; }
-    int64_t GetReadLimit() { return read_max; }
     bool IsValid() const { return filename && !error; }
     bool IsEOF() const { return eof; }
 
