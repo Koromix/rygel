@@ -8451,6 +8451,7 @@ bool StreamReader::Rewind()
         } break;
     }
 
+    read_total = 0;
     source.eof = false;
     raw_len = -1;
     raw_read = 0;
