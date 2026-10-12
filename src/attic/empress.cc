@@ -213,7 +213,7 @@ Available compression algorithms: %!..+%2%!0)", FelixTarget, FmtList(AvailableAl
             }
 
             if (dest_filename) {
-                unsigned int flags = (int)WriteFileFlag::Atomic | (force ? 0 : (int)WriteFileFlag::Exclusive);
+                unsigned int flags = force ? 0 : (int)WriteFileFlag::Exclusive;
 
                 if (!writer.Open(dest_filename, WriteBufferMode::None, flags, compression_type, compression_speed))
                     return false;
@@ -457,7 +457,7 @@ Available decompression algorithms: %!..+%2%!0)", FelixTarget, FmtList(Available
             ProgressHandle progress(dest_basename);
 
             if (dest.filename) {
-                unsigned int flags = (int)WriteFileFlag::Atomic | (force ? 0 : (int)WriteFileFlag::Exclusive);
+                unsigned int flags = force ? 0 : (int)WriteFileFlag::Exclusive;
 
                 if (!writer.Open(dest.filename, WriteBufferMode::None, flags))
                     return false;
