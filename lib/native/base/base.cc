@@ -2807,18 +2807,10 @@ bool ResizeFile(int fd, const char *filename, int64_t len)
 {
     HANDLE h = (HANDLE)_get_osfhandle(fd);
 
-    LARGE_INTEGER prev_pos = {};
-    if (!SetFilePointerEx(h, prev_pos, &prev_pos, FILE_CURRENT)) {
-        LogError("Failed to resize file '%1': %2", filename, GetWin32ErrorString());
-        return false;
-    }
-    K_DEFER { SetFilePointerEx(h, prev_pos, nullptr, FILE_BEGIN); };
+    FILE_END_OF_FILE_INFO eof = {};
+    eof.EndOfFile.QuadPart = len;
 
-    if (!SetFilePointerEx(h, { .QuadPart = len }, nullptr, FILE_BEGIN)) {
-        LogError("Failed to resize file '%1': %2", filename, GetWin32ErrorString());
-        return false;
-    }
-    if (!SetEndOfFile(h)) {
+    if (!SetFileInformationByHandle(h, FileEndOfFileInfo, &eof, K_SIZE(eof))) {
         LogError("Failed to resize file '%1': %2", filename, GetWin32ErrorString());
         return false;
     }
