@@ -644,7 +644,9 @@ int GetContext::GetFile(const rk_ObjectID &oid, bool chunked, Span<const uint8_t
     StreamWriter writer;
 
     if (!settings.fake) {
-        if (!writer.Open(dest_filename, WriteBufferMode::None, (int)StreamWriterFlag::Atomic))
+        unsigned int flags = (int)WriteFileFlag::Atomic | (int)WriteFileFlag::NoSync;
+
+        if (!writer.Open(dest_filename, WriteBufferMode::None, flags))
             return -1;
         writer.SetDescriptorOwned(false);
     }
