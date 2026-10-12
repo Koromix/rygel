@@ -546,7 +546,7 @@ PutResult PutContext::PutFile(const char *src_filename, bool fake, rk_Hash *out_
             int64_t size = st.ComputeRawLen();
             int64_t max = use_big_buffer ? FileBigSize : FileDefaultSize;
 
-            Size needed = (Size)std::min(size >= 0 ? size : (int64_t)FileDefaultSize, max);
+            Size needed = (Size)std::min(size >= 0 ? size + 1 : (int64_t)FileDefaultSize, max);
             buf.SetCapacity(needed);
         }
 
@@ -561,6 +561,12 @@ PutResult PutContext::PutFile(const char *src_filename, bool fake, rk_Hash *out_
                 return PutResult::Error;
             buf.len += read;
             file_size += read;
+
+            if (!read && !buf.Available()) {
+                // We need to read into a non-0 buffer to detect EOF
+                buf.SetCapacity(buf.len + ChunkMax);
+                continue;
+            }
 
             Span<const uint8_t> remain = buf;
 
