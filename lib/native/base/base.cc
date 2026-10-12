@@ -8574,19 +8574,26 @@ Size StreamReader::ReadAll(Size max_len, HeapArray<uint8_t> *out_buf)
     // is content inside, because these files are generated on demand. So we need to take
     // the slow path for apparently empty files.
     if (!decoder && ComputeRawLen() > 0) {
-        if (raw_len > max_len) {
+        Size max_read = std::clamp(raw_len - raw_read, (int64_t)0, (int64_t)K_SIZE_MAX);
+
+        if (max_read > max_len) {
             LogError("File '%1' is too large (limit = %2)", filename, FmtDiskSize(max_len));
             return -1;
         }
 
         // Count one trailing byte (if possible) to avoid reallocation for users
         // who need/want to append a NUL character.
-        out_buf->Grow((Size)raw_len + 1);
+        out_buf->Grow(max_read + 1);
 
-        Size read_len = ReadFill(out_buf->TakeAvailable());
+        Size read_len = ReadFill(max_read, out_buf->end());
         if (read_len < 0)
             return -1;
-        out_buf->len += (Size)std::min(raw_len, (int64_t)read_len);
+        out_buf->len += read_len;
+
+        // Unless the file has changed, we're read just enough to reach the end,
+        // but not enough to get read() == 0 so the EOF flag is not set. Set it manually.
+        source.eof = true;
+        eof = true;
 
         buf_guard.Disable();
         return read_len;
