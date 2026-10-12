@@ -8691,8 +8691,10 @@ Size StreamReader::ReadRaw(Size max_len, void *out_buf)
         } break;
 
         case SourceType::File: {
+            // Various platforms have various limits
+            max_len = std::min(max_len, (Size)INT_MAX);
+
 #if defined(_WIN32)
-            max_len = std::min(max_len, (Size)UINT_MAX);
             read_len = _read(source.u.file.fd, out_buf, (unsigned int)max_len);
 #else
             read_len = K_RESTART_EINTR(read(source.u.file.fd, out_buf, (size_t)max_len), < 0);
