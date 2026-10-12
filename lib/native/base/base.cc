@@ -8280,7 +8280,7 @@ K_EXIT(FlushStd)
 void StreamReader::SetDecoder(StreamDecoder *decoder)
 {
     K_ASSERT(decoder);
-    K_ASSERT(!filename);
+    K_ASSERT(filename);
     K_ASSERT(!this->decoder);
 
     this->decoder = decoder;

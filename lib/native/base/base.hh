@@ -5384,7 +5384,8 @@ public:
         : StreamReader() { Open(func, filename, compression_type); }
     ~StreamReader() { Close(true); }
 
-    // Call before Open. Takes ownership and deletes the decoder at the end.
+    // Call after Open (with CompressionType None).
+    // Takes ownership and deletes the encoder at the end.
     void SetDecoder(StreamDecoder *decoder);
 
     bool Open(Span<const uint8_t> buf, const char *filename, CompressionType compression_type = CompressionType::None);
