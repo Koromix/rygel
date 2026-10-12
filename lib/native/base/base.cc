@@ -8900,11 +8900,38 @@ bool StreamWriter::Open(const char *filename, unsigned int flags,
 
     InitFile(flags);
 
-    dest.u.file.atomic = (flags & (int)StreamWriterFlag::Atomic);
-    dest.u.file.exclusive = (flags & (int)StreamWriterFlag::Exclusive);
+    bool atomic = (flags & (int)StreamWriterFlag::Atomic);
+    bool exclusive = (flags & (int)StreamWriterFlag::Exclusive);
+    bool placeholder = (flags & (int)StreamWriterFlag::Placeholder);
 
-    if (dest.u.file.atomic) {
+    dest.u.file.atomic = atomic;
+
+    if (atomic) {
         Span<const char> directory = GetPathDirectory(filename);
+
+        if (placeholder) {
+            unsigned int open_flags = (int)OpenFlag::Write | (int)OpenFlag::Exclusive;
+            unsigned int silent = exclusive ? 0 : (int)OpenResult::FileExists;
+
+            int fd;
+            OpenResult ret = OpenFile(filename, open_flags, silent, &fd);
+
+            switch (ret) {
+                case OpenResult::Success: {
+                    dest.u.file.unlink_on_error = true;
+                    CloseDescriptor(fd);
+                } break;
+
+                case OpenResult::FileExists: {
+                    if (exclusive)
+                        return false;
+                } break;
+
+                case OpenResult::MissingPath:
+                case OpenResult::AccessDenied:
+                case OpenResult::OtherError: return false;
+            }
+        }
 
 #if defined(O_TMPFILE)
         {
@@ -8931,16 +8958,19 @@ bool StreamWriter::Open(const char *filename, unsigned int flags,
                 return false;
             dest.u.file.owned = true;
         }
+
+        dest.u.file.rename_overwrite = !exclusive || placeholder;
     } else {
-        unsigned int open_flags = (int)OpenFlag::Write;
-        open_flags |= dest.u.file.exclusive ? (int)OpenFlag::Exclusive : 0;
+        K_ASSERT(!placeholder);
+
+        unsigned int open_flags = (int)OpenFlag::Write | (exclusive ? (int)OpenFlag::Exclusive : 0);
 
         dest.u.file.fd = OpenFile(filename, open_flags);
         if (dest.u.file.fd < 0)
             return false;
         dest.u.file.owned = true;
 
-        dest.u.file.unlink_on_error = dest.u.file.exclusive;
+        dest.u.file.unlink_on_error = exclusive;
     }
     dest.vt100 = FileIsVt100(dest.u.file.fd);
 
@@ -9160,7 +9190,7 @@ bool StreamWriter::Close(bool implicit)
                         if (!linkat(linkat_fd, linkat_from, AT_FDCWD, filename, linkat_flags)) {
                             Span<const char> directory = GetPathDirectory(filename);
                             SyncDirectory(directory);
-                        } else if (errno == EEXIST && !dest.u.file.exclusive) {
+                        } else if (errno == EEXIST && dest.u.file.rename_overwrite) {
                             // The linkat() call cannot overwrite an existing file. If the file already exists,
                             // link to a temporary file and let RenameFile() handle the final step.
 
@@ -9188,7 +9218,7 @@ bool StreamWriter::Close(bool implicit)
                     }
 
                     if (dest.u.file.tmp_filename) {
-                        unsigned int flags = (int)RenameFlag::Sync | (dest.u.file.exclusive ? 0 : (int)RenameFlag::Overwrite);
+                        unsigned int flags = (int)RenameFlag::Sync | (dest.u.file.rename_overwrite ? (int)RenameFlag::Overwrite : 0);
 
                         if (RenameFile(dest.u.file.tmp_filename, filename, flags) == RenameResult::Success) {
                             dest.u.file.tmp_filename = nullptr;

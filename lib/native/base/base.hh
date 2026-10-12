@@ -5520,8 +5520,10 @@ public:
 enum class StreamWriterFlag {
     Exclusive = 1 << 0, // Only for files
     Atomic = 1 << 1, // Only for files
-    NoBuffer = 1 << 2, // Only for files and descriptors
-    LineBuffer = 1 << 3 // Only for files and descriptors
+    Placeholder = 1 << 2, // Only for files
+
+    NoBuffer = 1 << 3, // Only for files and descriptors
+    LineBuffer = 1 << 4 // Only for files and descriptors
 };
 
 class StreamWriter {
@@ -5552,8 +5554,9 @@ class StreamWriter {
                 Span<uint8_t> buf;
                 Size buf_used;
 
-                bool exclusive;
+                // For atomic mode
                 bool atomic;
+                bool rename_overwrite;
                 bool unlink_on_error;
                 const char *tmp_filename;
             } file;
