@@ -5366,7 +5366,7 @@ class StreamReader {
     StreamDecoder *decoder = nullptr;
 
     int64_t raw_len = -1;
-    Size raw_read = 0;
+    int64_t raw_read = 0;
     bool eof = false;
 
     BlockAllocator str_alloc;
