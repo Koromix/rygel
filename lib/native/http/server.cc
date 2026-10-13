@@ -789,9 +789,15 @@ void http_IO::Send(int status, CompressionType encoding, int64_t len, FunctionRe
     keepalive &= writer.Close();
 }
 
-void http_IO::SendEmpty(int status)
+bool http_IO::SendEmpty(int status)
 {
-    Send(status, 0, [](StreamWriter *) { return true; });
+    if (!StartResponse())
+        return false;
+
+    K_DEFER { daemon->EndWrite(socket); };
+
+    Span<const char> intro = PrepareResponse(status, CompressionType::None, -1, false);
+    return WriteDirect(intro.As<const uint8_t>());
 }
 
 void http_IO::SendText(int status, Span<const char> text, const char *mimetype)
@@ -830,7 +836,7 @@ void http_IO::SendAsset(int status, Span<const uint8_t> data, const char *mimety
         }
 
         if (request.head) {
-            SendEmpty(status);
+            SendBinary(status, {});
         } else {
             StreamReader reader(data, "<asset>", src_encoding);
             Send(status, dest_encoding, -1, [&](StreamWriter *writer) { return SpliceStream(&reader, -1, writer); });
@@ -890,10 +896,26 @@ void http_IO::ExtendTimeout(int64_t extend)
     } while (next > current && !timeout_at.compare_exchange_weak(current, next, std::memory_order_relaxed));
 }
 
+int http_IO::LeakSocket()
+{
+    int expected = 0;
+    int desired = -1;
+
+    if (!linger.compare_exchange_strong(expected, desired, std::memory_order_relaxed)) {
+        LogError("Socket is shutting down (timeout)");
+        return -1;
+    }
+
+    leak = true;
+    return daemon->GetDescriptor(socket);
+}
+
 bool http_IO::Init(http_Socket *socket, int64_t start, struct sockaddr *sa)
 {
     this->socket = socket;
+
     linger.store(0, std::memory_order_relaxed);
+    leak = false;
 
     switch (sa->sa_family) {
         case AF_INET: {
@@ -1428,7 +1450,21 @@ Span<const char> http_IO::PrepareResponse(int status, CompressionType encoding, 
     const char *details = http_ErrorMessages.FindValue(status, "Unknown");
     const char *connection = keepalive ? "keep-alive" : "close";
 
-    Fmt(&buf, "%1 %2 %3\r\nConnection: %4\r\n", protocol, status, details, connection);
+    Fmt(&buf, "%1 %2 %3\r\n", protocol, status, details);
+
+    for (const http_KeyValue &header: response.headers) {
+        K_ASSERT(!TestStrI(header.key, "Content-Length"));
+        K_ASSERT(!TestStrI(header.key, "Transfer-Encoding"));
+        K_ASSERT(!TestStrI(header.key, "Content-Encoding") || encoding == CompressionType::None);
+
+        // Header values are a mess, so the caller is responsible for proper encoding
+        // But we still want to avoid the possibility of response splitting.
+        Fmt(&buf, "%1: %2\r\n", header.key, FmtNoControl(header.value, " "));
+
+        if (TestStr(header.key, "Connection")) {
+            connection = nullptr;
+        }
+    }
 
     switch (encoding) {
         case CompressionType::None: {} break;
@@ -1437,12 +1473,8 @@ Span<const char> http_IO::PrepareResponse(int status, CompressionType encoding, 
         case CompressionType::Brotli: { Fmt(&buf, "Content-Encoding: br\r\n"); } break;
         case CompressionType::Zstd: { Fmt(&buf, "Content-Encoding: zstd\r\n"); } break;
     }
-
-    for (const http_KeyValue &header: response.headers) {
-        // Header values are a mess, so the caller is responsible for proper encoding
-        // But we still want to avoid the possibility of response splitting.
-
-        Fmt(&buf, "%1: %2\r\n", header.key, FmtNoControl(header.value, " "));
+    if (connection) {
+        Fmt(&buf, "Connection: %1\r\n", connection);
     }
 
     if (len >= 0) {
@@ -1567,15 +1599,21 @@ bool http_IO::WriteChunked(Span<const uint8_t> data)
     return daemon->WriteSocket(socket, parts);
 }
 
-void http_IO::StartLinger()
+bool http_IO::StartLinger()
 {
+    int expected = 0;
+    int desired = Mebibytes(1);
+
+    if (!linger.compare_exchange_strong(expected, desired, std::memory_order_relaxed))
+        return false;
+
     SetTimeout(GetMonotonicClock() + daemon->linger_timeout);
-    linger.store(Mebibytes(1), std::memory_order_relaxed);
+    return true;
 }
 
 bool http_IO::Rearm(int64_t now)
 {
-    bool reuse = keepalive && (now >= 0);
+    bool reuse = keepalive && !leak && (now >= 0);
 
     if (reuse) {
         // Make sure the client gets some extra time when in Keep-Alive time to avoid
@@ -1614,8 +1652,6 @@ bool http_IO::Rearm(int64_t now)
     response.headers.RemoveFrom(0);
     response.started = false;
     last_err = nullptr;
-
-    ws_opcode = 0;
 
     if (reuse) {
         allocator.Reset();

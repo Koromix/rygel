@@ -35,35 +35,31 @@ static void HandleRequest(http_IO *io)
 
         io->SendAsset(200, asset->data, "text/html", asset->compression_type);
     } else if (TestStr(request.path, "/save") && request.method == http_RequestMethod::Get) {
-        if (!io->UpgradeToWS(0))
+        http_WS ws(io, 0);
+        if (!ws.IsValid())
             return;
 
         int64_t now = GetUnixTime();
         TimeSpec spec = DecomposeTimeLocal(now);
         const char *filename = Fmt(io->Allocator(), "%1%/%2.webm", dest_directory, FmtTimeIso(spec)).ptr;
 
-        StreamReader reader;
-        StreamWriter writer;
-        StreamWriter playback;
-
-        io->OpenForReadWS(&reader);
-        if (!writer.Open(filename, WriteBufferMode::Block))
+        StreamWriter replay(filename, WriteBufferMode::Block);
+        if (!replay.IsValid())
             return;
-        io->OpenForWriteWS(&playback);
 
         // Big WebSocket messages get truncated silently
         Span<uint8_t> buf = AllocateSpan<uint8_t>(io->Allocator(), Mebibytes(4));
 
         do {
-            Size read_len = reader.Read(buf);
-            if (read_len < 0)
+            Size read_len = ws.Read(buf);
+            if (read_len <= 0)
                 return;
 
-            if (!playback.Write(buf.ptr, read_len))
+            if (!replay.Write(buf.ptr, read_len))
                 return;
-            if (!writer.Write(buf.ptr, read_len))
+            if (!ws.Write(buf.ptr, read_len))
                 return;
-        } while (!reader.IsEOF());
+        } while (!ws.IsEOF());
     } else {
         io->SendError(404);
     }

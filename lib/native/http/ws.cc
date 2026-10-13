@@ -3,8 +3,23 @@
 
 #include "lib/native/base/base.hh"
 #include "server.hh"
+#include "misc.hh"
+#include "ws.hh"
 #include "vendor/base64/include/libbase64.h"
 #include "vendor/sha1/sha1.h"
+
+#if defined(_WIN32)
+    #if !defined(NOMINMAX)
+        #define NOMINMAX
+    #endif
+    #if !defined(WIN32_LEAN_AND_MEAN)
+        #define WIN32_LEAN_AND_MEAN
+    #endif
+    #include <ws2tcpip.h>
+    #include <mswsock.h>
+#else
+    #include <sys/socket.h>
+#endif
 
 namespace K {
 
@@ -23,8 +38,139 @@ static bool CheckHeaderValue(const char *str, const char *needle)
     return false;
 }
 
-bool http_IO::IsWS() const
+#if defined(_WIN32)
+
+static Size ReadSocket(int sock, Span<uint8_t> buf)
 {
+    int len = (int)std::min(buf.len, (Size)INT_MAX);
+    Size bytes = recv((SOCKET)sock, (char *)buf.ptr, len, 0);
+
+    if (bytes < 0) {
+        int error = GetLastError();
+
+        if (error != WSAENOTCONN && error != WSAECONNRESET) {
+            LogError("Failed to read from client: %1", GetWin32ErrorString(error));
+        }
+
+        return -1;
+    }
+
+    return bytes;
+}
+
+static bool WriteSocket(int sock, Span<const uint8_t> header, Span<const uint8_t> data)
+{
+    K_ASSERT(header.len);
+
+    WSABUF parts[2] = {
+        { .len = (unsigned long)header.len, .buf = (char *)header.ptr },
+        { .len = (unsigned long)data.len, .buf = (char *)data.ptr }
+    };
+
+    DWORD sent = 0;
+    int ret = WSASend((SOCKET)sock, parts, data.len ? 2 : 1, &sent, 0, nullptr, nullptr);
+
+    if (ret) {
+        int error = GetLastError();
+
+        if (error != WSAENOTCONN && error != WSAECONNRESET) {
+            LogError("Failed to send to client: %1", GetWin32ErrorString(error));
+        }
+
+        return false;
+    }
+
+    // Windows does not apparently do partial writes, so don't bother dealing with that.
+    //
+    // From MSDN:
+    // For non-overlapped sockets [...] WSASend adopts the same blocking semantics as send.
+    // [...] Given the same buffer situation and a blocking socket, WSASend will block until
+    // all of the application's buffer contents have been consumed.
+
+    return true;
+}
+
+#else
+
+static Size ReadSocket(int sock, Span<uint8_t> buf)
+{
+restart:
+    Size bytes = recv(sock, buf.ptr, (size_t)buf.len, 0);
+
+    if (bytes < 0) {
+        if (errno == EINTR)
+            goto restart;
+
+        if (errno != EINVAL && errno != EPIPE && errno != ECONNRESET) {
+            LogError("Failed to read from WebSocket: %1", strerror(errno));
+        }
+
+        return -1;
+    }
+
+    return bytes;
+}
+
+static bool WriteSocket(int sock, Span<const uint8_t> header, Span<const uint8_t> data)
+{
+    K_ASSERT(header.len);
+
+    struct iovec parts[2] = {
+        { .iov_base = (char *)header.ptr, .iov_len = (size_t)header.len },
+        { .iov_base = (char *)data.ptr, .iov_len = (size_t)data.len },
+    };
+    struct msghdr msg = {
+        .msg_name = nullptr,
+        .msg_namelen = 0,
+        .msg_iov = parts,
+        .msg_iovlen = (decltype(msghdr::msg_iovlen))(data.len ? 2 : 1),
+        .msg_control = nullptr,
+        .msg_controllen = 0,
+        .msg_flags = 0
+    };
+
+    while (msg.msg_iovlen) {
+        Size sent = sendmsg(sock, &msg, MSG_NOSIGNAL);
+
+        if (sent < 0) {
+            if (errno == EINTR)
+                continue;
+
+            if (errno != EINVAL && errno != EPIPE && errno != ECONNRESET) {
+                LogError("Failed to send to client: %1", strerror(errno));
+            }
+
+            return false;
+        }
+
+        do {
+            struct iovec *part = msg.msg_iov;
+
+            if (part->iov_len > (size_t)sent) {
+                part->iov_base = (uint8_t *)part->iov_base + sent;
+                part->iov_len -= (size_t)sent;
+
+                break;
+            }
+
+            msg.msg_iov++;
+            msg.msg_iovlen--;
+            sent -= (Size)part->iov_len;
+        } while (msg.msg_iovlen);
+    }
+
+    return true;
+}
+
+#endif
+
+bool http_IsWS(http_IO *io)
+{
+    const http_RequestInfo &request = io->Request();
+
+    if (request.method != http_RequestMethod::Get || request.head || request.version < 11)
+        return false;
+
     if (!CheckHeaderValue(request.GetHeaderValue("Connection"), "upgrade"))
         return false;
     if (!CheckHeaderValue(request.GetHeaderValue("Upgrade"), "websocket"))
@@ -33,29 +179,48 @@ bool http_IO::IsWS() const
     return true;
 }
 
-bool http_IO::UpgradeToWS(unsigned int flags)
+static bool IsKeyValid(Span<const char> str)
 {
-    if (!IsWS()) {
+    if (str.len != 24)
+        return false;
+    if (!std::all_of(str.ptr, str.ptr + 22, [](int c) { return IsAsciiAlphaOrDigit(c) || c == '+' || c == '/'; }))
+        return false;
+    if (str[22] != '=' || str[23] != '=')
+        return false;
+
+    return true;
+}
+
+bool http_WS::Upgrade(http_IO *io, unsigned int flags)
+{
+    K_ASSERT(sock < 0);
+
+    const http_RequestInfo &request = io->Request();
+
+    // Safety precautions
+    if (!http_IsWS(io)) {
         LogError("Missing mandatory WebSocket headers");
-        SendError(400);
+        io->SendError(400);
         return false;
     }
+    if (!http_PreventCSRF(io))
+        return false;
 
     // Check WebSocket headers
-    const char *key_str;
+    Span<const char> key_str;
     {
         const char *version_str = request.GetHeaderValue("Sec-Websocket-Version");
         key_str = request.GetHeaderValue("Sec-Websocket-Key");
 
         if (!version_str || !TestStr(version_str, "13")) {
             LogError("Unsupported Websocket version '%1'", version_str);
-            AddHeader("Sec-Websocket-Version", "13");
-            SendError(426);
+            io->AddHeader("Sec-Websocket-Version", "13");
+            io->SendError(426);
             return false;
         }
-        if (!key_str) {
+        if (!IsKeyValid(key_str)) {
             LogError("Missing 'Sec-WebSocket-Key' header");
-            SendError(400);
+            io->SendError(400);
             return false;
         }
     }
@@ -74,33 +239,78 @@ bool http_IO::UpgradeToWS(unsigned int flags)
         accept_str[len] = 0;
     }
 
-    AddHeader("Connection", "upgrade");
-    AddHeader("Upgrade", "websocket");
-    AddHeader("Sec-Websocket-Accept", accept_str);
-    SendEmpty(101);
+    sock = io->LeakSocket();
+    if (sock < 0)
+        return false;
+
+    io->AddHeader("Connection", "upgrade");
+    io->AddHeader("Upgrade", "websocket");
+    io->AddHeader("Sec-Websocket-Accept", accept_str);
+
+    if (!io->SendEmpty(101))
+        return false;
 
     // Corking should be disabled once SendEmpty() returns.
     // And the socket will be in blocking mode, unless I've screwed something up ><
 
-    incoming.buf.len = 0;
-    keepalive = false;
-    ws_opcode = (flags & (int)http_WebSocketFlag::Text) ? 1 : 2;
+    text = flags & (int)http_WebSocketFlag::Text;
 
     return true;
 }
 
-void http_IO::OpenForReadWS(StreamReader *out_st)
+void http_WS::Close(int status)
 {
-    out_st->Open([this](Span<uint8_t> out_buf) { return ReadWS(out_buf); }, "<ws>");
+    if (sock < 0)
+        return;
+
+    if (status < 0) {
+        struct linger sl = { 1, 0 };
+#if defined(_WIN32)
+        setsockopt((SOCKET)sock, SOL_SOCKET, SO_LINGER, (char *)&sl, sizeof(sl));
+#else
+        setsockopt(sock, SOL_SOCKET, SO_LINGER, (char *)&sl, sizeof(sl));
+#endif
+    } else {
+        // Best effort! May fail, completely or partially, let the kernel handle the rest.
+        SetSocketNonBlock(sock, true);
+
+        if (status) {
+            uint8_t frame[4] = { 0x88, 0x02, (uint8_t)(status >> 8), (uint8_t)(status & 0xFF) };
+            WriteSocket(sock, frame, {});
+        } else {
+            uint8_t frame[2] = { 0x88, 0x00 };
+            WriteSocket(sock, frame, {});
+        }
+    };
+
+    CloseSocket(sock);
+    sock = -1;
 }
 
-bool http_IO::OpenForWriteWS(StreamWriter *out_st)
+static void Decode(const uint8_t *src, uint8_t mask[4], Size len, uint8_t *dest)
 {
-    bool success = out_st->Open([this](Span<const uint8_t> buf) { return WriteWS(buf); }, "<ws>");
-    return success;
+    Size len4 = len & ~(Size)0x3;
+    Size remain = len - len4;
+
+    for (Size i = 0; i < len4; i += 4) {
+        dest[0] = src[0] ^ mask[0];
+        dest[1] = src[1] ^ mask[1];
+        dest[2] = src[2] ^ mask[2];
+        dest[3] = src[3] ^ mask[3];
+
+        src += 4;
+        dest += 4;
+    }
+
+    switch (remain) {
+        case 3: { dest[2] = src[2] ^ mask[2]; } [[fallthrough]];
+        case 2: { dest[1] = src[1] ^ mask[1]; } [[fallthrough]];
+        case 1: { dest[0] = src[0] ^ mask[0]; } [[fallthrough]];
+        case 0: {} break;
+    }
 }
 
-Size http_IO::ReadWS(Span<uint8_t> out_buf)
+Size http_WS::Read(Span<uint8_t> out_buf)
 {
     bool begin = false;
     Size read_len = 0;
@@ -108,129 +318,181 @@ Size http_IO::ReadWS(Span<uint8_t> out_buf)
     while (out_buf.len) {
         // Decode message
         {
-            if (incoming.buf.len < 2)
+            if (buf.len < 2)
                 goto pump;
 
-            int bits = (incoming.buf[0] >> 4) & 0xF;
-            int opcode = incoming.buf[0] & 0xF;
+            int bits = (buf[0] >> 4) & 0xF;
+            int opcode = buf[0] & 0xF;
             bool fin = bits & 0x8;
 
-            if (opcode == 1 || opcode == 2) {
-                begin = true;
-                read_len = 0;
-            } else if (opcode == 8) {
-                return 0;
-            }
-            begin &= (opcode < 3);
-
-            bool masked = incoming.buf[1] & 0x80;
-            Size payload = incoming.buf[1] & 0x7F;
+            bool masked = buf[1] & 0x80;
+            Size payload = buf[1] & 0x7F;
 
             if (bits != 8 && bits != 0) {
                 LogError("Unsupported WebSocket RSV bits");
+                Close(1002);
                 return -1;
             }
             if (!masked) {
                 LogError("Client to server messages must be masked");
+                Close(1002);
                 return -1;
             }
 
-            Size offset;
-            uint8_t mask[4];
-            if (payload == 126) {
-                if (incoming.buf.len < 8)
-                    goto pump;
-
-                uint16_t payload16;
-                MemCpy(&payload16, incoming.buf.ptr + 2, 2);
-                MemCpy(mask, incoming.buf.ptr + 4, 4);
-
-                payload = BigEndian(payload16);
-                offset = 8;
-            } else if (payload == 127) {
-                if (incoming.buf.len < 14)
-                    goto pump;
-
-                uint64_t payload64;
-                MemCpy(&payload64, incoming.buf.ptr + 2, 8);
-                MemCpy(mask, incoming.buf.ptr + 10, 4);
-
-                payload64 = BigEndian(payload64);
-
-                if (uint64_t max = Mebibytes(4); payload64 > max) {
-                    LogError("Excessive WS packet length %1 (maximum = %2)", FmtMemSize(payload64), FmtMemSize(max));
+            if (opcode == 8) { // Close
+                if (!fin || payload == 1 || payload > 125) {
+                    LogError("Invalid close message");
+                    Close(1002);
                     return -1;
                 }
 
-                payload = (Size)payload64;
-                offset = 14;
-            } else {
-                if (incoming.buf.len < 6)
+                if (buf.len < 6)
                     goto pump;
 
-                MemCpy(mask, incoming.buf.ptr + 2, 4);
+                uint8_t mask[4];
+                MemCpy(mask, buf.ptr + 2, 4);
 
-                offset = 6;
-            }
-            if (incoming.buf.len - offset < payload)
-                goto pump;
+                if (buf.len - 6 < payload)
+                    goto pump;
 
-            if (begin) {
-                Size avail_len = std::min(payload, incoming.buf.len - offset);
-                Size copy_len = std::min(out_buf.len - read_len, avail_len);
+                if (payload) {
+                    K_ASSERT(payload >= 2);
 
-                Size copy4 = copy_len & ~(Size)0x3;
-                Size remain = copy_len - copy4;
-
-                for (Size i = 0; i < copy4; i += 4) {
-                    out_buf[read_len + 0] = incoming.buf[offset + i + 0] ^ mask[0];
-                    out_buf[read_len + 1] = incoming.buf[offset + i + 1] ^ mask[1];
-                    out_buf[read_len + 2] = incoming.buf[offset + i + 2] ^ mask[2];
-                    out_buf[read_len + 3] = incoming.buf[offset + i + 3] ^ mask[3];
-                    read_len += 4;
-                }
-                switch (remain) {
-                    default: { K_UNREACHABLE(); } break;
-                    case 3: { out_buf[read_len + 2] = incoming.buf[offset + copy4 + 2] ^ mask[2]; } [[fallthrough]];
-                    case 2: { out_buf[read_len + 1] = incoming.buf[offset + copy4 + 1] ^ mask[1]; } [[fallthrough]];
-                    case 1: { out_buf[read_len + 0] = incoming.buf[offset + copy4 + 0] ^ mask[0]; } [[fallthrough]];
-                    case 0: {} break;
+                    int status = ((int)(buf[6] ^ mask[0]) << 8) | (buf[7] ^ mask[1]);
+                    Close(status);
+                } else {
+                    Close(0);
                 }
 
-                read_len += remain;
+                eof = true;
+                return 0;
+            } else if (opcode == 9 || opcode == 10) { // Ping or Pong
+                if (!fin || payload > 125) {
+                    LogError("Invalid ping message");
+                    Close(1002);
+                    return -1;
+                }
+
+                if (buf.len < 6)
+                    goto pump;
+
+                uint8_t mask[4];
+                MemCpy(mask, buf.ptr + 2, 4);
+
+                if (buf.len - 6 < payload)
+                    goto pump;
+
+                if (opcode == 9) {
+                    LocalArray<uint8_t, 128> pong;
+
+                    pong.len = payload + 2;
+                    pong[0] = 0x8A;
+                    pong[1] = (uint8_t)payload;
+                    Decode(buf.ptr + 6, mask, payload, pong.data + 2);
+
+                    if (!WriteSocket(sock, pong, {})) {
+                        Close(1002);
+                        return -1;
+                    }
+                }
+
+                MemMove(buf.ptr, buf.ptr + 6 + payload, buf.len - 6 - payload);
+                buf.len -= 6 + payload;
+
+                continue;
+            } else if (opcode < 3) { // Data (or whatever)
+                if (opcode) {
+                    begin = true;
+                    read_len = 0;
+                }
+
+                Size offset;
+                uint8_t mask[4];
+                if (payload == 126) {
+                    if (buf.len < 8)
+                        goto pump;
+
+                    uint16_t payload16;
+                    MemCpy(&payload16, buf.ptr + 2, 2);
+                    MemCpy(mask, buf.ptr + 4, 4);
+
+                    payload = BigEndian(payload16);
+                    offset = 8;
+                } else if (payload == 127) {
+                    if (buf.len < 14)
+                        goto pump;
+
+                    uint64_t payload64;
+                    MemCpy(&payload64, buf.ptr + 2, 8);
+                    MemCpy(mask, buf.ptr + 10, 4);
+
+                    payload64 = BigEndian(payload64);
+
+                    if (uint64_t max = Mebibytes(4); payload64 > max) {
+                        LogError("Excessive WS packet length %1 (maximum = %2)", FmtMemSize(payload64), FmtMemSize(max));
+                        Close(1002);
+                        return -1;
+                    }
+
+                    payload = (Size)payload64;
+                    offset = 14;
+                } else {
+                    if (buf.len < 6)
+                        goto pump;
+
+                    MemCpy(mask, buf.ptr + 2, 4);
+
+                    offset = 6;
+                }
+                if (buf.len - offset < payload)
+                    goto pump;
+
+                if (begin) {
+                    Size avail_len = std::min(payload, buf.len - offset);
+                    Size copy_len = std::min(out_buf.len - read_len, avail_len);
+
+                    Decode(buf.ptr + offset, mask, copy_len, out_buf.ptr + read_len);
+                    read_len += copy_len;
+                }
+
+                buf.len = std::max(buf.len - offset - payload, (Size)0);
+                MemMove(buf.ptr, buf.ptr + offset + payload, buf.len);
+
+                // We can't return empty messages because this is a signal for EOF
+                // in the StreamReader code. Oups.
+                if (begin && fin && read_len)
+                    break;
+            } else {
+                LogError("Unsupported WebSocket opcode");
+                Close(1002);
+                return -1;
             }
-
-            incoming.buf.len = std::max(incoming.buf.len - offset - payload, (Size)0);
-            MemMove(incoming.buf.ptr, incoming.buf.ptr + offset + payload, incoming.buf.len);
-
-            // We can't return empty messages because this is a signal for EOF
-            // in the StreamReader code. Oups.
-            if (begin && fin && read_len)
-                break;
         }
 
 pump:
-        incoming.buf.Grow(Kibibytes(16));
+        buf.Grow(Kibibytes(16));
 
         // Pump more data from the OS/socket
         {
-            Size read = daemon->ReadSocket(socket, incoming.buf.TakeAvailable());
+            Size read = ReadSocket(sock, buf.TakeAvailable());
 
             if (read < 0)
-                return false;
-            if (!read)
+                return -1;
+            if (!read) {
+                eof = true;
                 break;
+            }
 
-            incoming.buf.len += read;
+            buf.len += read;
         }
     }
 
     return read_len;
 }
 
-bool http_IO::WriteWS(Span<const uint8_t> buf)
+bool http_WS::Write(Span<const uint8_t> buf)
 {
-    int opcode = ws_opcode;
+    int opcode = text ? 1 : 2;
 
     while (buf.len) {
         Size part_len = std::min(buf.len, (Size)4096 - 4);
@@ -239,6 +501,7 @@ bool http_IO::WriteWS(Span<const uint8_t> buf)
         buf = buf.Take(part_len, buf.len - part_len);
 
         LocalArray<uint8_t, 4> frame;
+
         frame.data[0] = (uint8_t)((buf.len ? 0 : 0x8 << 4) | opcode);
         if (part_len >= 126) {
             frame.data[1] = 126;
@@ -251,12 +514,7 @@ bool http_IO::WriteWS(Span<const uint8_t> buf)
         }
         opcode = 0;
 
-        Span<const uint8_t> vec[] = {
-            frame,
-            part
-        };
-
-        if (!daemon->WriteSocket(socket, vec))
+        if (!WriteSocket(sock, frame, part))
             return false;
     }
 

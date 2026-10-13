@@ -115,6 +115,7 @@ private:
     Size ReadSocket(http_Socket *socket, Span<uint8_t> buf);
     bool WriteSocket(http_Socket *socket, Span<const uint8_t> buf, bool nowait = false);
     bool WriteSocket(http_Socket *socket, Span<Span<const uint8_t>> bufs);
+    int GetDescriptor(http_Socket *socket);
 
     void RunHandler(http_IO *client);
 
@@ -212,6 +213,7 @@ class http_IO {
     http_Socket *socket;
     std::atomic_int linger { 0 };
     bool keepalive = false;
+    bool leak = false;
     char addr[65] = {};
 
     int64_t socket_start;
@@ -233,8 +235,6 @@ class http_IO {
         HeapArray<http_KeyValue> headers;
         bool started = false;
     } response;
-
-    int ws_opcode = 0;
 
     BlockAllocator allocator { Kibibytes(8) };
 
@@ -262,7 +262,8 @@ public:
     void Send(int status, int64_t len, FunctionRef<bool(StreamWriter *)> func)
         { Send(status, CompressionType::None, len, func); }
 
-    void SendEmpty(int status);
+    bool SendEmpty(int status); // Does not send Content-Length, use for 101 or stuff like that
+
     void SendText(int status, Span<const char> text, const char *mimetype = "text/plain");
     void SendBinary(int status, Span<const uint8_t> data, const char *mimetype = nullptr);
     void SendAsset(int status, Span<const uint8_t> data, const char *mimetype = nullptr,
@@ -278,10 +279,7 @@ public:
     bool HasResponded() const { return response.started; }
     const char *LastError() const { return last_err; }
 
-    bool IsWS() const;
-    bool UpgradeToWS(unsigned int flags);
-    void OpenForReadWS(StreamReader *out_st);
-    bool OpenForWriteWS(StreamWriter *out_st);
+    int LeakSocket();
 
 private:
     bool Init(http_Socket *socket, int64_t start, struct sockaddr *sa);
@@ -296,10 +294,7 @@ private:
     bool WriteDirect(Span<const uint8_t> buf);
     bool WriteChunked(Span<const uint8_t> buf);
 
-    Size ReadWS(Span<uint8_t> out_buf);
-    bool WriteWS(Span<const uint8_t> buf);
-
-    void StartLinger();
+    bool StartLinger();
 
     // Returns true if connection is Keep-Alive and still within limits
     bool Rearm(int64_t now);

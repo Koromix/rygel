@@ -56,13 +56,11 @@ public:
     bool Init();
     void Run();
 
-    void Wake(http_Socket *socket);
+    void Wake(http_Socket *socket, bool done);
 
 private:
     http_Socket *InitSocket(SOCKET sock, int64_t start, struct sockaddr *sa);
     void ParkSocket(http_Socket *socket, bool hard);
-
-    void StopWS();
 
     friend class http_Daemon;
 };
@@ -89,7 +87,7 @@ void http_Daemon::StopDispatcher(http_Dispatcher *dispatcher)
     // On Windows, the shutdown() does not wake up poll() so use the pipe to wake it up
     // and signal the ongoing shutdown.
 
-    dispatcher->Wake(nullptr);
+    dispatcher->Wake(nullptr, 0);
 }
 
 void http_Daemon::DestroyDispatcher(http_Dispatcher *dispatcher)
@@ -225,6 +223,11 @@ bool http_Daemon::WriteSocket(http_Socket *socket, Span<Span<const uint8_t>> par
     return true;
 }
 
+int http_Daemon::GetDescriptor(http_Socket *socket)
+{
+    return (int)socket->sock;
+}
+
 static bool CreateSocketPair(int out_pair[2])
 {
     for (int i = 0; i < 8; i++) {
@@ -328,24 +331,15 @@ void http_Dispatcher::Run()
 
     // Delete remaining clients when function exits
     K_DEFER {
-        StopWS();
-
         if (!async.Wait(100)) {
             LogInfo("Waiting up to %1 sec before shutting down clients...", (double)daemon->stop_timeout / 1000);
 
-            int64_t start = GetMonotonicClock();
-
-            do {
-                StopWS();
-
-                if (async.Wait(100))
-                    break;
-            } while (GetMonotonicClock() - start < daemon->stop_timeout);
-
-            for (http_Socket *socket: sockets) {
-                shutdown(socket->sock, SD_BOTH);
+            if (!async.Wait(daemon->stop_timeout)) {
+                for (http_Socket *socket: sockets) {
+                    shutdown(socket->sock, SD_BOTH);
+                }
+                async.Sync();
             }
-            async.Sync();
         }
 
         for (http_Socket *socket: sockets) {
@@ -389,14 +383,29 @@ void http_Dispatcher::Run()
                 return;
             }
 
-            http_Socket *socket = (http_Socket *)addr;
+            http_Socket *socket = (http_Socket *)(addr & ~1ull);
+            bool done = addr & 1;
 
             if (!socket) [[unlikely]]
                 return;
 
-            SetSocketNonBlock(socket->sock, true);
+            http_IO *client = &socket->client;
 
-            socket->poll = true;
+            if (client->leak) {
+                K_ASSERT(client->linger.load(std::memory_order_relaxed));
+
+                client->SetTimeout(GetMonotonicClock());
+                socket->sock = -1;
+            } else {
+                if (done) {
+                    client->StartLinger();
+                    shutdown(socket->sock, SD_SEND);
+                }
+
+                SetSocketNonBlock(socket->sock, true);
+                socket->poll = true;
+            }
+
             socket->handled = true;
         }
         for (Size i = 2; i < pfds.len; i++) {
@@ -488,7 +497,7 @@ void http_Dispatcher::Run()
                     if (linger) {
                         socket->lingered += (int)bytes;
 
-                        if (socket->lingered > client->linger) {
+                        if (socket->lingered > linger) {
                             ParkSocket(socket, true);
                             keep--;
 
@@ -542,11 +551,8 @@ void http_Dispatcher::Run()
                             status = client->ParseRequest();
                         } while (status == http_RequestStatus::Ready);
 
-                        if (status == http_RequestStatus::Shutdown) {
-                            client->StartLinger();
-                            shutdown(socket->sock, SD_SEND);
-                        }
-                        Wake(socket);
+                        bool done = (status == http_RequestStatus::Shutdown);
+                        Wake(socket, done);
 
                         return true;
                     });
@@ -561,10 +567,8 @@ void http_Dispatcher::Run()
             int delay = (int)(client->timeout_at.load(std::memory_order_relaxed) - clock);
 
             if (delay <= 0) {
-                if (!client->linger.load(std::memory_order_relaxed)) {
-                    client->StartLinger();
+                if (client->StartLinger()) {
                     shutdown(socket->sock, SD_BOTH);
-
                     delay = daemon->linger_timeout;
                 } else if (socket->handled) {
                     ParkSocket(socket, true);
@@ -572,9 +576,8 @@ void http_Dispatcher::Run()
 
                     continue;
                 } else {
-                    LogWarning("Handler for '%1' (%2) seems stuck", client->request.path, http_RequestMethodNames[(int)client->request.method]);
+                    LogWarning("Handler for '%1' seems stuck", client->addr);
                     client->ExtendTimeout(1000);
-
                     delay = 1000;
                 }
             }
@@ -607,9 +610,9 @@ void http_Dispatcher::Run()
     K_UNREACHABLE();
 }
 
-void http_Dispatcher::Wake(http_Socket *socket)
+void http_Dispatcher::Wake(http_Socket *socket, bool done)
 {
-    uintptr_t addr = (uintptr_t)socket;
+    uintptr_t addr = (uintptr_t)socket | (done ? 1 : 0);
     Size ret = send((SOCKET)pair_fd[1], (char *)&addr, K_SIZE(addr), 0);
     (void)ret;
 }
@@ -742,16 +745,6 @@ void http_IO::SendFile(int status, int fd, int64_t len)
 
         offset += send;
         remain -= send;
-    }
-}
-
-void http_Dispatcher::StopWS()
-{
-    for (http_Socket *socket: sockets) {
-        // Slight data race but it is harmless given the context
-        if (socket->client.ws_opcode) {
-            shutdown(socket->sock, SD_BOTH);
-        }
     }
 }
 

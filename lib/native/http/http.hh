@@ -5,5 +5,6 @@
 
 #include "server.hh"
 #include "misc.hh"
+#include "ws.hh"
 #include "session.hh"
 #include "event.hh"

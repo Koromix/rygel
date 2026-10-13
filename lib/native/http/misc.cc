@@ -243,7 +243,7 @@ bool http_SendJson(http_IO *io, int status, FunctionRef<void(json_Writer *json)>
 
     // Fast path for HEAD
     if (io->Request().head) {
-        io->SendEmpty(status);
+        io->SendBinary(status, {});
         return true;
     }
 
