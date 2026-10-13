@@ -319,7 +319,7 @@ Size http_WS::Read(Span<uint8_t> out_buf)
     bool begin = false;
     Size read_len = 0;
 
-    while (out_buf.len) {
+    for (;;) {
         // Decode message
         {
             if (buf.len < 2)
@@ -470,14 +470,8 @@ Size http_WS::Read(Span<uint8_t> out_buf)
                 buf.len = std::max(buf.len - offset - payload, (Size)0);
                 MemMove(buf.ptr, buf.ptr + offset + payload, buf.len);
 
-                if (fin) {
-                    // We can't return empty messages because this is a signal for EOF
-                    // in the StreamReader code. Oups.
-                    if (read_len)
-                        break;
-
-                    begin = false;
-                }
+                if (fin)
+                    break;
             } else {
                 LogError("Unsupported WebSocket opcode");
                 Close(1002);
@@ -516,7 +510,7 @@ bool http_WS::Send(int opcode, Span<const uint8_t> buf)
 {
     std::lock_guard<std::mutex> lock(mutex);
 
-    while (buf.len) {
+    do {
         Size part_len = std::min(buf.len, (Size)4096 - 4);
         Span<const uint8_t> part = buf.Take(0, part_len);
 
@@ -538,7 +532,7 @@ bool http_WS::Send(int opcode, Span<const uint8_t> buf)
 
         if (!WriteSocket(sock, frame, part))
             return false;
-    }
+    } while (buf.len);
 
     return true;
 }

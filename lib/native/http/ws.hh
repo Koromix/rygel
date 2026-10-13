@@ -32,6 +32,8 @@ public:
     bool IsEOF() const { return eof; }
 
     // Read from single thread!
+    // It will return 0 for empty messages, check EOF status separately.
+    // Be careful when using with StreamReader: you should loop and ignore empty messages.
     Size Read(Span<uint8_t> out_buf);
     Size Read(Span<char> out_buf) { return Read(out_buf.As<uint8_t>()); }
     Size Read(Size buf_len, void *out_buf) { return Read(MakeSpan((uint8_t *)out_buf, buf_len)); }
