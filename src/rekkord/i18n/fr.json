@@ -479,6 +479,7 @@
         "S3 endpoint URL:": "URL du point de terminaison S3 :",
         "S3 secret key:": "Clé secrète S3 :",
         "SQLite Error: %1": "Erreur SQLite : %1",
+        "SSH agent": "Agent SSH",
         "SSH authentication mode:": "Mode d'authentification SSH :",
         "SSH host:": "Hôte SSH :",
         "SSH keyfile:": "Fichier clé SSH :",

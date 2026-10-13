@@ -369,18 +369,13 @@ reenter:
             const char *path = nullptr;
             const char *fingerprint = nullptr;
 
-            bool use_password;
-            bool use_keyfile;
-            {
-                Size ret = PromptEnum(T("SSH authentication mode:"), {
-                    T("Password"),
-                    T("Keyfile")
-                });
-                if (ret < 0)
-                    return 1;
-                use_password = (ret == 0);
-                use_keyfile = (ret == 1);
-            }
+            Size auth = PromptEnum(T("SSH authentication mode:"), {
+                T("Password"),
+                T("Keyfile"),
+                T("SSH agent")
+            });
+            if (auth < 0)
+                return 1;
 
             host = PromptNonEmpty(T("SSH host:"), &temp_alloc);
             if (!host)
@@ -388,15 +383,17 @@ reenter:
             username = PromptNonEmpty(T("SSH user:"), &temp_alloc);
             if (!username)
                 return 1;
-            if (use_password) {
-                password = PromptNonEmpty(T("SSH password:"), nullptr, "*", &temp_alloc);
-                if (!password)
-                    return 1;
-            }
-            if (use_keyfile) {
-                keyfile = PromptNonEmpty(T("SSH keyfile:"), &temp_alloc);
-                if (!keyfile)
-                    return 1;
+            switch (auth) {
+                case 0: {
+                    password = PromptNonEmpty(T("SSH password:"), nullptr, "*", &temp_alloc);
+                    if (!password)
+                        return 1;
+                } break;
+                case 1: {
+                    keyfile = PromptNonEmpty(T("SSH keyfile:"), &temp_alloc);
+                    if (!keyfile)
+                        return 1;
+                }
             }
             path = PromptNonEmpty(T("SSH path:"), &temp_alloc);
             if (!path)
@@ -421,6 +418,7 @@ reenter:
             } else {
                 PrintLn(&st, "# Fingerprint =");
             }
+            PrintLn(&st, "UseAgent = %1", auth == 2 ? "Yes" : "No");
         } break;
     }
 
