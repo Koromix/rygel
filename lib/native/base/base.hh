@@ -5410,6 +5410,7 @@ public:
     // Thread safe methods
     Size Read(Span<uint8_t> out_buf);
     Size Read(Span<char> out_buf) { return Read(out_buf.As<uint8_t>()); }
+    Size Read(Size buf_len, void *out_buf) { return Read(MakeSpan((uint8_t *)out_buf, buf_len)); }
 
     // Thread safe methods
     Size ReadFill(Span<uint8_t> out_buf);
