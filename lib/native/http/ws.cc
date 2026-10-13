@@ -276,11 +276,10 @@ void http_WS::Close(int status)
         SetSocketNonBlock(sock, true);
 
         if (status) {
-            uint8_t frame[4] = { 0x88, 0x02, (uint8_t)(status >> 8), (uint8_t)(status & 0xFF) };
-            WriteSocket(sock, frame, {});
+            uint8_t payload[2] = { (uint8_t)(status >> 8), (uint8_t)(status & 0xFF) };
+            Send(8, payload);
         } else {
-            uint8_t frame[2] = { 0x88, 0x00 };
-            WriteSocket(sock, frame, {});
+            Send(8, {});
         }
     };
 
@@ -388,15 +387,11 @@ Size http_WS::Read(Span<uint8_t> out_buf)
                 if (opcode == 9) {
                     LocalArray<uint8_t, 128> pong;
 
-                    pong.len = payload + 2;
-                    pong[0] = 0x8A;
-                    pong[1] = (uint8_t)payload;
-                    Decode(buf.ptr + 6, mask, payload, pong.data + 2);
+                    pong.len = payload;
+                    Decode(buf.ptr + 6, mask, payload, pong.data);
 
-                    if (!WriteSocket(sock, pong, {})) {
-                        Close(1002);
+                    if (!Send(10, pong))
                         return -1;
-                    }
                 }
 
                 MemMove(buf.ptr, buf.ptr + 6 + payload, buf.len - 6 - payload);
@@ -512,6 +507,12 @@ pump:
 bool http_WS::Write(Span<const uint8_t> buf)
 {
     int opcode = text ? 1 : 2;
+    return Send(opcode, buf);
+}
+
+bool http_WS::Send(int opcode, Span<const uint8_t> buf)
+{
+    std::lock_guard<std::mutex> lock(mutex);
 
     while (buf.len) {
         Size part_len = std::min(buf.len, (Size)4096 - 4);

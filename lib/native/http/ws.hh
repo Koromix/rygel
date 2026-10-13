@@ -14,9 +14,11 @@ class http_WS {
 
     int sock = -1;
     bool text = false;
-    bool eof = false;
 
+    bool eof = false;
     HeapArray<uint8_t> buf;
+
+    std::mutex mutex;
 
 public:
     http_WS() = default;
@@ -29,19 +31,21 @@ public:
     bool IsValid() const { return sock >= 0; }
     bool IsEOF() const { return eof; }
 
+    // Read from single thread!
     Size Read(Span<uint8_t> out_buf);
     Size Read(Span<char> out_buf) { return Read(out_buf.As<uint8_t>()); }
     Size Read(Size buf_len, void *out_buf) { return Read(MakeSpan((uint8_t *)out_buf, buf_len)); }
 
+    // Writes are thread safe (mutex)
     bool Write(Span<const uint8_t> buf);
     bool Write(Span<const char> buf) { return Write(buf.As<const uint8_t>()); }
     bool Write(char buf) { return Write(MakeSpan(&buf, 1)); }
     bool Write(const void *buf, Size len) { return Write(MakeSpan((const uint8_t *)buf, len)); }
 
 private:
-    void Close(int status);
+    bool Send(int opcode, Span<const uint8_t> buf);
 
-    void SendClose();
+    void Close(int status);
 };
 
 bool http_IsWS(http_IO *io);
