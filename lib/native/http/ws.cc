@@ -404,13 +404,9 @@ Size http_WS::Read(Span<uint8_t> out_buf)
 
                 continue;
             } else if (opcode < 3) { // Data (or whatever)
-                if (opcode) {
-                    begin = true;
-                    read_len = 0;
-                }
-
-                Size offset;
+                Size offset = 0;
                 uint8_t mask[4];
+
                 if (payload == 126) {
                     if (buf.len < 8)
                         goto pump;
@@ -450,7 +446,23 @@ Size http_WS::Read(Span<uint8_t> out_buf)
                 if (buf.len - offset < payload)
                     goto pump;
 
-                if (begin) {
+                if (opcode) {
+                    if (begin) {
+                        LogError("Unfinished message in WebSocket stream");
+                        Close(1002);
+                        return -1;
+                    }
+
+                    begin = true;
+                    read_len = 0;
+                } else if (!begin) {
+                    LogError("Unexpected continuation frame in WebSocket stream");
+                    Close(1002);
+                    return -1;
+                }
+
+                // Decode payload
+                {
                     Size avail_len = std::min(payload, buf.len - offset);
                     Size copy_len = std::min(out_buf.len - read_len, avail_len);
 
@@ -461,10 +473,14 @@ Size http_WS::Read(Span<uint8_t> out_buf)
                 buf.len = std::max(buf.len - offset - payload, (Size)0);
                 MemMove(buf.ptr, buf.ptr + offset + payload, buf.len);
 
-                // We can't return empty messages because this is a signal for EOF
-                // in the StreamReader code. Oups.
-                if (begin && fin && read_len)
-                    break;
+                if (fin) {
+                    // We can't return empty messages because this is a signal for EOF
+                    // in the StreamReader code. Oups.
+                    if (read_len)
+                        break;
+
+                    begin = false;
+                }
             } else {
                 LogError("Unsupported WebSocket opcode");
                 Close(1002);
