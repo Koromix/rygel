@@ -254,6 +254,7 @@ bool http_WS::Upgrade(http_IO *io, unsigned int flags)
     // And the socket will be in blocking mode, unless I've screwed something up ><
 
     text = flags & (int)http_WebSocketFlag::Text;
+    eof = false;
 
     return true;
 }
@@ -285,6 +286,8 @@ void http_WS::Close(int status)
 
     CloseSocket(sock);
     sock = -1;
+
+    buf.Clear();
 }
 
 static void Decode(const uint8_t *src, uint8_t mask[4], Size len, uint8_t *dest)
