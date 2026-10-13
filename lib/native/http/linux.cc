@@ -553,13 +553,18 @@ void http_Dispatcher::Run()
             int delay = (int)(client->timeout_at.load(std::memory_order_relaxed) - clock);
 
             if (delay <= 0) {
-                if (client->StartLinger()) {
+                int linger = client->StartLinger();
+
+                if (!linger) {
                     shutdown(socket->sock, SHUT_RDWR);
                     delay = daemon->linger_timeout;
                 } else if (socket->handled) {
                     ParkSocket(socket, true);
                     keep--;
 
+                    continue;
+                } else if (linger < 0) {
+                    // Will leak once the handler finishes
                     continue;
                 } else {
                     LogWarning("Handler for '%1' seems stuck", client->addr);

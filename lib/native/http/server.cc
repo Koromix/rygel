@@ -1599,16 +1599,16 @@ bool http_IO::WriteChunked(Span<const uint8_t> data)
     return daemon->WriteSocket(socket, parts);
 }
 
-bool http_IO::StartLinger()
+int http_IO::StartLinger()
 {
     int expected = 0;
     int desired = Mebibytes(1);
 
     if (!linger.compare_exchange_strong(expected, desired, std::memory_order_relaxed))
-        return false;
+        return expected;
 
     SetTimeout(GetMonotonicClock() + daemon->linger_timeout);
-    return true;
+    return 0;
 }
 
 bool http_IO::Rearm(int64_t now)

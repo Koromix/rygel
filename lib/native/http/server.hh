@@ -294,7 +294,8 @@ private:
     bool WriteDirect(Span<const uint8_t> buf);
     bool WriteChunked(Span<const uint8_t> buf);
 
-    bool StartLinger();
+    // Returns previous value (CAS)
+    int StartLinger();
 
     // Returns true if connection is Keep-Alive and still within limits
     bool Rearm(int64_t now);
