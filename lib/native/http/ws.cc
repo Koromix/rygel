@@ -247,8 +247,10 @@ bool http_WS::Upgrade(http_IO *io, unsigned int flags)
     io->AddHeader("Upgrade", "websocket");
     io->AddHeader("Sec-Websocket-Accept", accept_str);
 
-    if (!io->SendEmpty(101))
+    if (!io->SendEmpty(101)) {
+        Close(-1);
         return false;
+    }
 
     // Corking should be disabled once SendEmpty() returns.
     // And the socket will be in blocking mode, unless I've screwed something up ><

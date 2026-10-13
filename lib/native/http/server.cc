@@ -482,7 +482,9 @@ void http_Daemon::RunHandler(http_IO *client)
 
     handle_func(client);
 
-    if (!client->response.started) [[unlikely]] {
+    if (!client->response.started && !client->leak) [[unlikely]] {
+        // A failed WebSocket upgrade might reach here with no started response,
+        // if something went wrong during the body drain. Don't touch it.
         client->SendError(500);
     }
 }
