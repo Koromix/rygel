@@ -219,7 +219,7 @@ bool http_WS::Upgrade(http_IO *io, unsigned int flags)
             return false;
         }
         if (!IsKeyValid(key_str)) {
-            LogError("Missing 'Sec-WebSocket-Key' header");
+            LogError("Missing or invalid 'Sec-WebSocket-Key' header");
             io->SendError(400);
             return false;
         }
