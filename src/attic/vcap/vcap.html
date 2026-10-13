@@ -46,7 +46,7 @@
         <video id="playback" autoplay></video>
 
         <script>
-            const MIMETYPE = 'video/webm; codecs="vp8, opus"';
+            const MIMETYPE = 'video/webm; codecs=vp8';
 
             let stream = null;
             let recorder = null;
@@ -61,7 +61,8 @@
                 if (stream != null)
                     throw new Error('Recording in progress');
 
-                document.querySelector('#record').disabled = true;
+                src = new MediaSource;
+                document.querySelector('#playback').src = URL.createObjectURL(src);
 
                 try {
                     stream = await navigator.mediaDevices.getUserMedia({ video: true });
@@ -92,7 +93,6 @@
                     ws.binaryType = 'arraybuffer';
 
                     queue = [];
-                    src = new MediaSource;
                     src.addEventListener('sourceopen', () => {
                         buf = src.addSourceBuffer(MIMETYPE);
 
@@ -108,11 +108,12 @@
 
                     recorder.start(1);
                 } catch (err) {
+                    document.querySelector('#playback').src = '';
                     throw err;
                 }
 
+                document.querySelector('#record').disabled = true;
                 document.querySelector('#stop').disabled = false;
-                document.querySelector('#playback').src = URL.createObjectURL(src);
             }
 
             async function stop() {
