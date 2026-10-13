@@ -837,12 +837,8 @@ void http_IO::SendAsset(int status, Span<const uint8_t> data, const char *mimety
             AddHeader("Content-Type", mimetype);
         }
 
-        if (request.head) {
-            SendBinary(status, {});
-        } else {
-            StreamReader reader(data, "<asset>", src_encoding);
-            Send(status, dest_encoding, -1, [&](StreamWriter *writer) { return SpliceStream(&reader, -1, writer); });
-        }
+        StreamReader reader(data, "<asset>", src_encoding);
+        Send(status, dest_encoding, -1, [&](StreamWriter *writer) { return SpliceStream(&reader, -1, writer); });
     } else {
         AddEncodingHeader(dest_encoding);
         SendBinary(status, data, mimetype);
