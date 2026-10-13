@@ -30,7 +30,7 @@ static void HandleRequest(http_IO *io)
 #endif
 
     if (TestStr(request.path, "/") && request.method == http_RequestMethod::Get) {
-        const AssetInfo *asset = FindEmbedAsset("vcap.html");
+        const AssetInfo *asset = FindEmbedAsset("src/attic/vcap/vcap.html");
         K_ASSERT(asset);
 
         io->SendAsset(200, asset->data, "text/html", asset->compression_type);
