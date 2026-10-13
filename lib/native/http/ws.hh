@@ -23,7 +23,7 @@ class http_WS {
 public:
     http_WS() = default;
     http_WS(http_IO *io, unsigned int flags) { Upgrade(io, flags); }
-    ~http_WS() { Close(-1); }
+    ~http_WS();
 
     bool Upgrade(http_IO *io, unsigned int flags);
     void Close() { Close(1000); };

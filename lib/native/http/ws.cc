@@ -191,6 +191,15 @@ static bool IsKeyValid(Span<const char> str)
     return true;
 }
 
+http_WS::~http_WS()
+{
+    if (sock < 0)
+        return;
+
+    LogDebug("Implicit close of WebSocket 0x%1 (%2)", this, sock);
+    Close(-1);
+}
+
 bool http_WS::Upgrade(http_IO *io, unsigned int flags)
 {
     K_ASSERT(sock < 0);
