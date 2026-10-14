@@ -289,10 +289,10 @@ bool http_WS::Upgrade(http_IO *io, unsigned int flags)
 
 void http_WS::Close(int status)
 {
+    std::lock_guard<std::mutex> lock(mutex);
+
     if (sock < 0)
         return;
-
-    std::lock_guard<std::mutex> lock(mutex);
 
     if (status < 0) {
         struct linger sl = { 1, 0 };
