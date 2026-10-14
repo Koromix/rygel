@@ -13,10 +13,11 @@ class http_WS {
     K_DELETE_COPY(http_WS)
 
     int sock = -1;
+    std::atomic_bool open { false };
     bool text = false;
 
     bool eof = false;
-    HeapArray<uint8_t> buf;
+    uint8_t buf[144];
 
     std::mutex mutex;
 
@@ -26,9 +27,9 @@ public:
     ~http_WS();
 
     bool Upgrade(http_IO *io, unsigned int flags);
-    void Close() { Close(1000); };
+    void Close(int status = 1000);
 
-    bool IsValid() const { return sock >= 0; }
+    bool IsValid() const { return open.load(std::memory_order_relaxed); }
     bool IsEOF() const { return eof; }
 
     // Read from single thread!
@@ -47,7 +48,7 @@ public:
 private:
     bool Send(int opcode, Span<const uint8_t> buf);
 
-    void Close(int status);
+    void Abort();
 };
 
 bool http_IsWS(http_IO *io);

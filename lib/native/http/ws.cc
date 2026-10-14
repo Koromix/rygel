@@ -195,16 +195,17 @@ static bool IsKeyValid(Span<const char> str)
 
 http_WS::~http_WS()
 {
-    if (sock < 0)
-        return;
+    if (IsValid()) {
+        LogDebug("Implicit close of WebSocket 0x%1 (%2)", this, sock);
+        Abort();
+    }
 
-    LogDebug("Implicit close of WebSocket 0x%1 (%2)", this, sock);
-    Close(-1);
+    CloseSocket(sock);
 }
 
 bool http_WS::Upgrade(http_IO *io, unsigned int flags)
 {
-    K_ASSERT(sock < 0);
+    K_ASSERT(!open);
 
     const http_RequestInfo &request = io->Request();
 
@@ -259,7 +260,11 @@ bool http_WS::Upgrade(http_IO *io, unsigned int flags)
     io->AddHeader("Sec-Websocket-Accept", accept_str);
 
     if (!io->SendEmpty(101)) {
-        Close(-1);
+        Abort();
+
+        CloseSocket(sock);
+        sock = -1;
+
         return false;
     }
 
@@ -281,6 +286,7 @@ bool http_WS::Upgrade(http_IO *io, unsigned int flags)
     // Corking should be disabled once SendEmpty() returns.
     // And the socket will be in blocking mode, unless I've screwed something up ><
 
+    open.store(true, std::memory_order_relaxed);
     text = flags & (int)http_WebSocketFlag::Text;
     eof = false;
 
@@ -289,34 +295,34 @@ bool http_WS::Upgrade(http_IO *io, unsigned int flags)
 
 void http_WS::Close(int status)
 {
-    std::lock_guard<std::mutex> lock(mutex);
+    K_ASSERT(status >= 0);
 
-    if (sock < 0)
+    std::unique_lock<std::mutex> lock(mutex, std::try_to_lock);
+
+    if (!lock.owns_lock()) {
+        Abort();
+        return;
+    }
+    if (!IsValid())
         return;
 
-    if (status < 0) {
-        struct linger sl = { 1, 0 };
-#if defined(_WIN32)
-        setsockopt((SOCKET)sock, SOL_SOCKET, SO_LINGER, (char *)&sl, sizeof(sl));
-#else
-        setsockopt(sock, SOL_SOCKET, SO_LINGER, (char *)&sl, sizeof(sl));
-#endif
+    // Best effort! May fail, completely or partially, let the kernel handle the rest.
+    SetSocketNonBlock(sock, true);
+
+    if (status) {
+        uint8_t payload[2] = { (uint8_t)(status >> 8), (uint8_t)(status & 0xFF) };
+        Send(8, payload);
     } else {
-        // Best effort! May fail, completely or partially, let the kernel handle the rest.
-        SetSocketNonBlock(sock, true);
+        Send(8, {});
+    }
 
-        if (status) {
-            uint8_t payload[2] = { (uint8_t)(status >> 8), (uint8_t)(status & 0xFF) };
-            Send(8, payload);
-        } else {
-            Send(8, {});
-        }
-    };
+#if defined(_WIN32)
+    shutdown((SOCKET)sock, SD_SEND);
+#else
+    shutdown(sock, SHUT_WR);
+#endif
 
-    CloseSocket(sock);
-    sock = -1;
-
-    buf.Clear();
+    open.store(false, std::memory_order_relaxed);
 }
 
 static void Decode(const uint8_t *src, uint8_t mask[4], Size len, uint8_t *dest)
@@ -356,6 +362,9 @@ static bool IsCloseStatusValid(int status)
 
 Size http_WS::Read(Span<uint8_t> out_buf)
 {
+    if (!IsValid())
+        return -1;
+
     bool begin = false;
     Size read_len = 0;
 
@@ -484,6 +493,7 @@ Size http_WS::Read(Span<uint8_t> out_buf)
 
                     offset = 6;
                 }
+
                 if (buf.len - offset < payload)
                     goto pump;
 
@@ -549,6 +559,9 @@ bool http_WS::Write(Span<const uint8_t> buf)
 {
     std::lock_guard<std::mutex> lock(mutex);
 
+    if (!IsValid())
+        return false;
+
     int opcode = text ? 1 : 2;
     return Send(opcode, buf);
 }
@@ -575,11 +588,28 @@ bool http_WS::Send(int opcode, Span<const uint8_t> buf)
         }
         opcode = 0;
 
-        if (!WriteSocket(sock, frame, part))
+        if (!WriteSocket(sock, frame, part)) {
+            Abort();
             return false;
+        }
     } while (buf.len);
 
     return true;
+}
+
+void http_WS::Abort()
+{
+#if defined(_WIN32)
+    struct linger sl = { 1, 0 };
+    setsockopt((SOCKET)sock, SOL_SOCKET, SO_LINGER, (char *)&sl, sizeof(sl));
+    shutdown((SOCKET)sock, SD_BOTH);
+#else
+    struct linger sl = { 1, 0 };
+    setsockopt(sock, SOL_SOCKET, SO_LINGER, (char *)&sl, sizeof(sl));
+    shutdown(sock, SHUT_RDWR);
+#endif
+
+    open.store(false, std::memory_order_relaxed);
 }
 
 }
