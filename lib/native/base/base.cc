@@ -3951,8 +3951,12 @@ const char *GetApplicationExecutable()
 
         if (PathIsAbsolute(argv[0])) {
             K_ASSERT(strlen(argv[0]) < K_SIZE(executable_path));
-
             CopyString(argv[0], executable_path);
+        } else if (strchr(argv[0], '/')) {
+            static_assert(K_SIZE(executable_path) >= PATH_MAX);
+
+            const char *path = realpath(argv[0], executable_path);
+            K_ASSERT(path);
         } else {
             const char *path;
             bool success = FindExecutableInPath(argv[0], &DefaultAllocator, &path);
