@@ -275,6 +275,8 @@ void http_WS::Close(int status)
     if (sock < 0)
         return;
 
+    std::lock_guard<std::mutex> lock(mutex);
+
     if (status < 0) {
         struct linger sl = { 1, 0 };
 #if defined(_WIN32)
@@ -410,6 +412,8 @@ Size http_WS::Read(Span<uint8_t> out_buf)
                     goto pump;
 
                 if (opcode == 9) {
+                    std::lock_guard<std::mutex> lock(mutex);
+
                     LocalArray<uint8_t, 128> pong;
 
                     pong.len = payload;
@@ -526,14 +530,14 @@ pump:
 
 bool http_WS::Write(Span<const uint8_t> buf)
 {
+    std::lock_guard<std::mutex> lock(mutex);
+
     int opcode = text ? 1 : 2;
     return Send(opcode, buf);
 }
 
 bool http_WS::Send(int opcode, Span<const uint8_t> buf)
 {
-    std::lock_guard<std::mutex> lock(mutex);
-
     do {
         Size part_len = std::min(buf.len, (Size)4096 - 4);
         Span<const uint8_t> part = buf.Take(0, part_len);

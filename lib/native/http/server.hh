@@ -213,7 +213,6 @@ class http_IO {
     http_Socket *socket;
     std::atomic_int linger { 0 };
     bool keepalive = false;
-    bool leak = false;
     char addr[65] = {};
 
     int64_t socket_start;

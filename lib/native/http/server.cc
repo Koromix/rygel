@@ -471,7 +471,7 @@ void http_Daemon::RunHandler(http_IO *client)
 
     handle_func(client);
 
-    if (!client->response.started && !client->leak) [[unlikely]] {
+    if (!client->response.started && client->linger.load(std::memory_order_relaxed) >= 0) [[unlikely]] {
         // A failed WebSocket upgrade might reach here with no started response,
         // if something went wrong during the body drain. Don't touch it.
         client->SendError(500);
@@ -909,7 +909,7 @@ int http_IO::LeakSocket()
         return -1;
     }
 
-    leak = true;
+    keepalive = false;
     return daemon->GetDescriptor(socket);
 }
 
@@ -918,7 +918,6 @@ bool http_IO::Init(http_Socket *socket, int64_t start, struct sockaddr *sa)
     this->socket = socket;
 
     linger.store(0, std::memory_order_relaxed);
-    leak = false;
 
     switch (sa->sa_family) {
         case AF_INET: {
@@ -1616,7 +1615,7 @@ int http_IO::StartLinger()
 
 bool http_IO::Rearm(int64_t now)
 {
-    bool reuse = keepalive && !leak && (now >= 0);
+    bool reuse = keepalive && (now >= 0);
 
     if (reuse) {
         // Make sure the client gets some extra time when in Keep-Alive time to avoid

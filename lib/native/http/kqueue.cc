@@ -37,7 +37,7 @@ struct http_Socket {
     http_IO client;
 
     http_Socket(http_Daemon *daemon) : client(daemon) {}
-    ~http_Socket() { CloseSocket(client.leak ? -1 : sock); }
+    ~http_Socket();
 };
 
 static const int MaxDispatcherClients = 128;
@@ -73,6 +73,14 @@ private:
 
     friend class http_Daemon;
 };
+
+http_Socket::~http_Socket()
+{
+    if (client.linger.load(std::memory_order_relaxed) < 0)
+        return;
+
+    CloseSocket(sock);
+}
 
 http_Dispatcher *http_Daemon::CreateDispatcher(int listener)
 {
@@ -383,7 +391,7 @@ void http_Dispatcher::Run()
 
             if (!async.Wait(daemon->stop_timeout)) {
                 for (http_Socket *socket: sockets) {
-                    if (socket->client.leak)
+                    if (socket->client.StartLinger() < 0)
                         continue;
 
                     shutdown(socket->sock, SHUT_RDWR);
@@ -449,22 +457,21 @@ void http_Dispatcher::Run()
 
                     http_IO *client = &socket->client;
 
-                    if (client->leak) {
-                        K_ASSERT(client->linger.load(std::memory_order_relaxed));
-                        client->SetTimeout(clock);
-                    } else {
-                        if (done) {
-                            client->StartLinger();
-                            shutdown(socket->sock, SHUT_WR);
+                    socket->handled = true;
+
+                    if (done) {
+                        if (client->StartLinger() < 0) {
+                            client->SetTimeout(clock);
+                            continue;
                         }
 
-#if !defined(MSG_DONTWAIT)
-                        SetSocketNonBlock(socket->sock, true);
-#endif
-                        AddEventChange(EVFILT_READ, socket->sock, EV_ENABLE, socket);
+                        shutdown(socket->sock, SHUT_WR);
                     }
 
-                    socket->handled = true;
+#if !defined(MSG_DONTWAIT)
+                    SetSocketNonBlock(socket->sock, true);
+#endif
+                    AddEventChange(EVFILT_READ, socket->sock, EV_ENABLE, socket);
                 }
 
                 if (exit)
@@ -719,7 +726,7 @@ http_Socket *http_Dispatcher::InitSocket(int sock, int64_t start, struct sockadd
 
 void http_Dispatcher::ParkSocket(http_Socket *socket, bool hard)
 {
-    if (socket->client.leak) {
+    if (socket->client.linger.load(std::memory_order_relaxed) < 0) {
         socket->sock = -1;
     }
 
