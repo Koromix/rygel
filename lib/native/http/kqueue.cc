@@ -447,7 +447,7 @@ void http_Dispatcher::Run()
                 if (client->leak) {
                     K_ASSERT(client->linger.load(std::memory_order_relaxed));
 
-                    client->SetTimeout(GetMonotonicClock());
+                    client->SetTimeout(clock);
                     socket->sock = -1;
                 } else {
                     if (done) {

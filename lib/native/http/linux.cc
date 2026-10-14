@@ -392,7 +392,7 @@ void http_Dispatcher::Run()
                 if (client->leak) {
                     K_ASSERT(client->linger.load(std::memory_order_relaxed));
 
-                    client->SetTimeout(GetMonotonicClock());
+                    client->SetTimeout(clock);
                     socket->sock = -1;
                 } else {
                     if (done) {
@@ -401,7 +401,7 @@ void http_Dispatcher::Run()
                     }
 
                     if (!AddEpollDescriptor(socket->sock, EPOLLIN, (uint64_t)(uintptr_t)socket)) [[unlikely]] {
-                        client->SetTimeout(GetMonotonicClock());
+                        client->SetTimeout(clock);
                         client->linger.store(-1, std::memory_order_relaxed); // Any value will do to trigger hard close
                     }
                 }
