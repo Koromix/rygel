@@ -744,8 +744,22 @@ bool http_IO::NegociateEncoding(CompressionType preferred, CompressionType *out_
     return false;
 }
 
+static bool NeedsContentLength(int status)
+{
+    if (status >= 100 && status < 200)
+        return false;
+    if (status == 204)
+        return false;
+    if (status == 304)
+        return false;
+
+    return true;
+}
+
 bool http_IO::OpenForWrite(int status, CompressionType encoding, int64_t len, StreamWriter *out_st)
 {
+    K_ASSERT(NeedsContentLength(status));
+
     if (!StartResponse())
         return false;
 
@@ -798,7 +812,9 @@ bool http_IO::SendEmpty(int status)
 
     K_DEFER { daemon->EndWrite(socket); };
 
-    Span<const char> intro = PrepareResponse(status, CompressionType::None, -1, false);
+    int64_t len = NeedsContentLength(status) ? 0 : -1;
+    Span<const char> intro = PrepareResponse(status, CompressionType::None, len, false);
+
     return WriteDirect(intro.As<const uint8_t>());
 }
 

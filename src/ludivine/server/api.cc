@@ -803,7 +803,7 @@ void HandleDownload(http_IO *io)
         previous = sqlite3_column_int64(stmt, 1);
 
         if (!generation) {
-            io->SendError(204);
+            io->SendEmpty(204);
             return;
         }
     }

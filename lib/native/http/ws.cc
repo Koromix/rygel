@@ -323,6 +323,18 @@ static void Decode(const uint8_t *src, uint8_t mask[4], Size len, uint8_t *dest)
     }
 }
 
+static bool IsCloseStatusValid(int status)
+{
+    if (status >= 1000 && status <= 1003)
+        return true;
+    if (status >= 1007 && status <= 1014)
+        return true;
+    if (status >= 3000 && status <= 4999)
+        return true;
+
+    return false;
+}
+
 Size http_WS::Read(Span<uint8_t> out_buf)
 {
     bool begin = false;
@@ -372,6 +384,8 @@ Size http_WS::Read(Span<uint8_t> out_buf)
                     K_ASSERT(payload >= 2);
 
                     int status = ((int)(buf[6] ^ mask[0]) << 8) | (buf[7] ^ mask[1]);
+
+                    status = IsCloseStatusValid(status) ? status : 1002;
                     Close(status);
                 } else {
                     Close(0);
