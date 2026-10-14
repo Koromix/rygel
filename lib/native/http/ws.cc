@@ -513,7 +513,8 @@ pump:
                 return -1;
             if (!read) {
                 eof = true;
-                break;
+                Close(1002);
+                return -1;
             }
 
             buf.len += read;
