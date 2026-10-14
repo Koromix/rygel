@@ -423,6 +423,8 @@ void http_Daemon::Stop()
         if (it.dispatcher) {
             StopDispatcher(it.dispatcher);
         }
+    }
+    for (DispatcherThread &it: dispatchers) {
         if (it.thread.joinable()) {
             it.thread.join();
         }
