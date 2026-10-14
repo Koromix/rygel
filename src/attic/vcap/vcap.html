@@ -61,7 +61,22 @@
                 if (stream != null)
                     throw new Error('Recording in progress');
 
+                queue = [];
+
                 src = new MediaSource;
+                src.addEventListener('sourceopen', () => {
+                    buf = src.addSourceBuffer(MIMETYPE);
+
+                    buf.addEventListener('updateend', () => {
+                        if (!queue.length)
+                            return;
+                        if (buf.updating)
+                            return;
+
+                        buf.appendBuffer(queue.shift());
+                    });
+                });
+
                 document.querySelector('#playback').src = URL.createObjectURL(src);
 
                 try {
@@ -84,27 +99,13 @@
                         ws.addEventListener('error', e => reject('Failed WebSocket connection'));
                     });
                     ws.onmessage = async e => {
-                        if (buf != null && !buf.updating) {
+                        if (src.readyState == 'open' && buf != null && !buf.updating) {
                             buf.appendBuffer(e.data);
                         } else {
                             queue.push(e.data);
                         }
                     };
                     ws.binaryType = 'arraybuffer';
-
-                    queue = [];
-                    src.addEventListener('sourceopen', () => {
-                        buf = src.addSourceBuffer(MIMETYPE);
-
-                        buf.addEventListener('updateend', () => {
-                            if (!queue.length)
-                                return;
-                            if (buf.updating)
-                                return;
-
-                            buf.appendBuffer(queue.shift());
-                        });
-                    });
 
                     recorder.start(1);
                 } catch (err) {
