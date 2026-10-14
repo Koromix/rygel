@@ -101,14 +101,22 @@ bool InitDomain()
     // Reuse or reload existing instances
     for (const LoadInfo &load: loads) {
         InstanceHolder *master = load.master_key ? domain->map.FindValue(load.master_key, nullptr) : nullptr;
+
+        if (!master)
+            continue;
+
         changes.Set(master);
     }
     for (Size i = domain->instances.len - 1; i >= 0; i--) {
         InstanceHolder *instance = domain->instances[i];
+        InstanceHolder *master = instance->master;
 
-        if (!keeps.Find(instance) || changes.Find(instance)) {
-            changes.Set(instance->master);
-        }
+        if (!master)
+            continue;
+        if (keeps.Find(instance) && !changes.Find(instance))
+            continue;
+
+        changes.Set(master);
     }
     for (InstanceHolder *instance: domain->instances) {
         if (!keeps.Find(instance))
