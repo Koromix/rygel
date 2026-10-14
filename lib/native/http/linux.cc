@@ -31,7 +31,7 @@ struct http_Socket {
     http_IO client;
 
     http_Socket(http_Daemon *daemon) : client(daemon) {}
-    ~http_Socket();
+    ~http_Socket() { CloseSocket(client.HasLeaked() ? -1 : sock); }
 };
 
 static const int MaxDispatcherClients = 128;
@@ -66,14 +66,6 @@ private:
 
     friend class http_Daemon;
 };
-
-http_Socket::~http_Socket()
-{
-    if (client.linger.load(std::memory_order_relaxed) < 0)
-        return;
-
-    CloseSocket(sock);
-}
 
 http_Dispatcher *http_Daemon::CreateDispatcher(int listener)
 {
@@ -648,7 +640,7 @@ http_Socket *http_Dispatcher::InitSocket(int sock, int64_t start, struct sockadd
 
 void http_Dispatcher::ParkSocket(http_Socket *socket, bool hard)
 {
-    if (socket->client.linger.load(std::memory_order_relaxed) < 0) {
+    if (socket->client.HasLeaked()) {
         socket->sock = -1;
     }
 

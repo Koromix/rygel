@@ -296,6 +296,7 @@ private:
 
     // Returns previous value (CAS)
     int StartLinger();
+    bool HasLeaked() const { return linger.load(std::memory_order_relaxed) < 0; }
 
     // Returns true if connection is Keep-Alive and still within limits
     bool Rearm(int64_t now);
