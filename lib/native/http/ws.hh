@@ -13,11 +13,12 @@ class http_WS {
     K_DELETE_COPY(http_WS)
 
     int sock = -1;
+
     std::atomic_bool open { false };
     bool text = false;
 
+    LocalArray<uint8_t, 144> buf;
     bool eof = false;
-    uint8_t buf[144];
 
     std::mutex mutex;
 
@@ -35,9 +36,9 @@ public:
     // Read from single thread!
     // It will return 0 for empty messages, check EOF status separately.
     // Be careful when using with StreamReader: you should loop and ignore empty messages.
-    Size Read(Span<uint8_t> out_buf);
-    Size Read(Span<char> out_buf) { return Read(out_buf.As<uint8_t>()); }
-    Size Read(Size buf_len, void *out_buf) { return Read(MakeSpan((uint8_t *)out_buf, buf_len)); }
+    Size Read(Span<uint8_t> out);
+    Size Read(Span<char> out) { return Read(out.As<uint8_t>()); }
+    Size Read(Size len, void *out) { return Read(MakeSpan((uint8_t *)out, len)); }
 
     // Writes are thread safe (mutex)
     bool Write(Span<const uint8_t> buf);

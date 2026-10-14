@@ -325,25 +325,24 @@ void http_WS::Close(int status)
     open.store(false, std::memory_order_relaxed);
 }
 
-static void Decode(const uint8_t *src, uint8_t mask[4], Size len, uint8_t *dest)
+static void Decode(Span<uint8_t> buf, uint8_t mask[4])
 {
-    Size len4 = len & ~(Size)0x3;
-    Size remain = len - len4;
+    uint8_t *ptr = buf.ptr;
+    Size len4 = buf.len & ~(Size)0x3;
+    Size remain = buf.len - len4;
 
     for (Size i = 0; i < len4; i += 4) {
-        dest[0] = src[0] ^ mask[0];
-        dest[1] = src[1] ^ mask[1];
-        dest[2] = src[2] ^ mask[2];
-        dest[3] = src[3] ^ mask[3];
-
-        src += 4;
-        dest += 4;
+        ptr[0] ^= mask[0];
+        ptr[1] ^= mask[1];
+        ptr[2] ^= mask[2];
+        ptr[3] ^= mask[3];
+        ptr += 4;
     }
 
     switch (remain) {
-        case 3: { dest[2] = src[2] ^ mask[2]; } [[fallthrough]];
-        case 2: { dest[1] = src[1] ^ mask[1]; } [[fallthrough]];
-        case 1: { dest[0] = src[0] ^ mask[0]; } [[fallthrough]];
+        case 3: { ptr[2] ^= mask[2]; } [[fallthrough]];
+        case 2: { ptr[1] ^= mask[1]; } [[fallthrough]];
+        case 1: { ptr[0] ^= mask[0]; } [[fallthrough]];
         case 0: {} break;
     }
 }
@@ -360,16 +359,16 @@ static bool IsCloseStatusValid(int status)
     return false;
 }
 
-Size http_WS::Read(Span<uint8_t> out_buf)
+Size http_WS::Read(Span<uint8_t> out)
 {
     if (!IsValid())
         return -1;
 
     bool begin = false;
-    Size read_len = 0;
+    Size message = 0;
 
     for (;;) {
-        // Decode message
+        // Decode pending message
         {
             if (buf.len < 2)
                 goto pump;
@@ -403,7 +402,7 @@ Size http_WS::Read(Span<uint8_t> out_buf)
                     goto pump;
 
                 uint8_t mask[4];
-                MemCpy(mask, buf.ptr + 2, 4);
+                MemCpy(mask, buf.data + 2, 4);
 
                 if (buf.len - 6 < payload)
                     goto pump;
@@ -432,7 +431,7 @@ Size http_WS::Read(Span<uint8_t> out_buf)
                     goto pump;
 
                 uint8_t mask[4];
-                MemCpy(mask, buf.ptr + 2, 4);
+                MemCpy(mask, buf.data + 2, 4);
 
                 if (buf.len - 6 < payload)
                     goto pump;
@@ -440,16 +439,14 @@ Size http_WS::Read(Span<uint8_t> out_buf)
                 if (opcode == 9) {
                     std::lock_guard<std::mutex> lock(mutex);
 
-                    LocalArray<uint8_t, 128> pong;
-
-                    pong.len = payload;
-                    Decode(buf.ptr + 6, mask, payload, pong.data);
+                    Span<uint8_t> pong = buf.Take(6, payload);
+                    Decode(pong, mask);
 
                     if (!Send(10, pong))
                         return -1;
                 }
 
-                MemMove(buf.ptr, buf.ptr + 6 + payload, buf.len - 6 - payload);
+                MemMove(buf.data, buf.data + 6 + payload, buf.len - 6 - payload);
                 buf.len -= 6 + payload;
 
                 continue;
@@ -462,8 +459,8 @@ Size http_WS::Read(Span<uint8_t> out_buf)
                         goto pump;
 
                     uint16_t payload16;
-                    MemCpy(&payload16, buf.ptr + 2, 2);
-                    MemCpy(mask, buf.ptr + 4, 4);
+                    MemCpy(&payload16, buf.data + 2, 2);
+                    MemCpy(mask, buf.data + 4, 4);
 
                     payload = BigEndian(payload16);
                     offset = 8;
@@ -472,13 +469,13 @@ Size http_WS::Read(Span<uint8_t> out_buf)
                         goto pump;
 
                     uint64_t payload64;
-                    MemCpy(&payload64, buf.ptr + 2, 8);
-                    MemCpy(mask, buf.ptr + 10, 4);
+                    MemCpy(&payload64, buf.data + 2, 8);
+                    MemCpy(mask, buf.data + 10, 4);
 
                     payload64 = BigEndian(payload64);
 
-                    if (uint64_t max = Mebibytes(4); payload64 > max) {
-                        LogError("Excessive WS packet length %1 (maximum = %2)", FmtMemSize(payload64), FmtMemSize(max));
+                    if (payload64 > K_SIZE_MAX) {
+                        LogError("Invalid WebSocket message length");
                         Close(1002);
                         return -1;
                     }
@@ -489,13 +486,10 @@ Size http_WS::Read(Span<uint8_t> out_buf)
                     if (buf.len < 6)
                         goto pump;
 
-                    MemCpy(mask, buf.ptr + 2, 4);
+                    MemCpy(mask, buf.data + 2, 4);
 
                     offset = 6;
                 }
-
-                if (buf.len - offset < payload)
-                    goto pump;
 
                 if (opcode) {
                     if (begin) {
@@ -505,27 +499,52 @@ Size http_WS::Read(Span<uint8_t> out_buf)
                     }
 
                     begin = true;
-                    read_len = 0;
                 } else if (!begin) {
                     LogError("Unexpected continuation frame in WebSocket stream");
                     Close(1002);
                     return -1;
                 }
-
-                // Decode payload
-                {
-                    Size avail_len = std::min(payload, buf.len - offset);
-                    Size copy_len = std::min(out_buf.len - read_len, avail_len);
-
-                    Decode(buf.ptr + offset, mask, copy_len, out_buf.ptr + read_len);
-                    read_len += copy_len;
+                if (payload > out.len) {
+                    LogError("Excessive WebSocket message length");
+                    Close(1009);
+                    return -1;
                 }
 
-                buf.len = std::max(buf.len - offset - payload, (Size)0);
-                MemMove(buf.ptr, buf.ptr + offset + payload, buf.len);
+                Size end = std::min(buf.len, offset + payload);
+                Size available = end - offset;
 
-                if (fin)
-                    break;
+                // Copy previously fetched data
+                MemCpy(out.ptr, buf.data + offset, available);
+                MemMove(buf.data, buf.data + end, buf.len - end);
+                buf.len -= end;
+
+                // Pump missing data (if any)
+                while (available < payload) {
+                    Span<uint8_t> span = out.Take(available, payload - available);
+                    Size read = ReadSocket(sock, span);
+
+                    if (read < 0)
+                        return -1;
+                    if (!read) {
+                        eof = true;
+                        Close(1002);
+                        return -1;
+                    }
+
+                    available += read;
+                }
+
+                Decode(out.Take(0, payload), mask);
+                message += payload;
+
+                if (!fin) {
+                    out.ptr += payload;
+                    out.len -= payload;
+
+                    continue;
+                }
+
+                return message;
             } else {
                 LogError("Unsupported WebSocket opcode");
                 Close(1002);
@@ -534,9 +553,6 @@ Size http_WS::Read(Span<uint8_t> out_buf)
         }
 
 pump:
-        buf.Grow(Kibibytes(16));
-
-        // Pump more data from the OS/socket
         {
             Size read = ReadSocket(sock, buf.TakeAvailable());
 
@@ -552,7 +568,7 @@ pump:
         }
     }
 
-    return read_len;
+    return message;
 }
 
 bool http_WS::Write(Span<const uint8_t> buf)
