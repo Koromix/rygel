@@ -304,6 +304,7 @@ private:
 
     friend class http_Daemon;
     friend class http_Dispatcher;
+    friend struct http_Socket;
 };
 
 }

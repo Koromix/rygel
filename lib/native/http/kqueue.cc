@@ -37,7 +37,7 @@ struct http_Socket {
     http_IO client;
 
     http_Socket(http_Daemon *daemon) : client(daemon) {}
-    ~http_Socket() { CloseDescriptor(sock); }
+    ~http_Socket() { CloseSocket(client.leak ? -1 : sock); }
 };
 
 static const int MaxDispatcherClients = 128;
@@ -93,9 +93,6 @@ void http_Daemon::RunDispatcher(http_Dispatcher *dispatcher)
 
 void http_Daemon::StopDispatcher(http_Dispatcher *dispatcher)
 {
-    // On macOS (and maybe others), the shutdown() does not wake up poll() so use the
-    // pipe to wake it up and signal the ongoing shutdown.
-
     dispatcher->Wake(nullptr, false);
 }
 
@@ -366,6 +363,7 @@ bool http_Dispatcher::Init()
 
     if (!CreatePipe(true, pair_fd))
         return false;
+    SetSocketNonBlock(pair_fd[0], true);
 
     return true;
 }
@@ -385,6 +383,9 @@ void http_Dispatcher::Run()
 
             if (!async.Wait(daemon->stop_timeout)) {
                 for (http_Socket *socket: sockets) {
+                    if (socket->client.leak)
+                        continue;
+
                     shutdown(socket->sock, SHUT_RDWR);
                 }
                 async.Sync();
@@ -417,51 +418,57 @@ void http_Dispatcher::Run()
 
         for (const struct kevent &ev: events) {
             if (ev.ident == (uintptr_t)listener) {
-                if (ev.flags & EV_EOF) [[unlikely]]
-                    return;
-
                 accepts = true;
             } else if (ev.ident == (uintptr_t)pair_fd[0]) {
-                uintptr_t addr = 0;
-                Size ret = read(pair_fd[0], &addr, K_SIZE(addr));
+                bool exit = false;
 
-                if (ret < 0) [[unlikely]] {
-                    if (errno == EINTR)
-                        continue;
+                for (;;) {
+                    uintptr_t addr = 0;
+                    Size ret = read(pair_fd[0], &addr, K_SIZE(addr));
 
-                    LogError("Unexpected error during pipe read: %1", strerror(errno));
-                    return;
-                } else if (ret != K_SIZE(addr)) [[unlikely]] {
-                    LogError("Unexpected empty or partial read during pipe read");
-                    return;
-                }
+                    if (ret < 0) [[unlikely]] {
+                        if (errno == EAGAIN || errno == EWOULDBLOCK)
+                            break;
+                        if (errno == EINTR)
+                            continue;
 
-                http_Socket *socket = (http_Socket *)(addr & ~1ull);
-                bool done = addr & 1;
-
-                if (!socket) [[unlikely]]
-                    return;
-
-                http_IO *client = &socket->client;
-
-                if (client->leak) {
-                    K_ASSERT(client->linger.load(std::memory_order_relaxed));
-
-                    client->SetTimeout(clock);
-                    socket->sock = -1;
-                } else {
-                    if (done) {
-                        client->StartLinger();
-                        shutdown(socket->sock, SHUT_WR);
+                        LogError("Unexpected error during pipe read: %1", strerror(errno));
+                        return;
+                    } else if (ret != K_SIZE(addr)) [[unlikely]] {
+                        LogError("Unexpected empty or partial read during pipe read");
+                        return;
                     }
 
+                    http_Socket *socket = (http_Socket *)(addr & ~1ull);
+                    bool done = addr & 1;
+
+                    if (!socket) [[unlikely]] {
+                        exit = true;
+                        continue;
+                    }
+
+                    http_IO *client = &socket->client;
+
+                    if (client->leak) {
+                        K_ASSERT(client->linger.load(std::memory_order_relaxed));
+                        client->SetTimeout(clock);
+                    } else {
+                        if (done) {
+                            client->StartLinger();
+                            shutdown(socket->sock, SHUT_WR);
+                        }
+
 #if !defined(MSG_DONTWAIT)
-                    SetSocketNonBlock(socket->sock, true);
+                        SetSocketNonBlock(socket->sock, true);
 #endif
-                    AddEventChange(EVFILT_READ, socket->sock, EV_ENABLE, socket);
+                        AddEventChange(EVFILT_READ, socket->sock, EV_ENABLE, socket);
+                    }
+
+                    socket->handled = true;
                 }
 
-                socket->handled = true;
+                if (exit)
+                    return;
             } else if (!(ev.flags & EV_ERROR)) {
                 http_Socket *socket = (http_Socket *)ev.udata;
                 socket->process = true;
@@ -503,7 +510,7 @@ void http_Dispatcher::Run()
 
                     struct linger sl = { 1, 0 };
                     setsockopt(sock, SOL_SOCKET, SO_LINGER, &sl, sizeof(sl));
-                    close(sock);
+                    CloseSocket(sock);
 
                     continue;
                 } else {
@@ -520,7 +527,7 @@ void http_Dispatcher::Run()
                 http_Socket *socket = InitSocket(sock, clock, (sockaddr *)&ss);
 
                 if (!socket) [[unlikely]] {
-                    close(sock);
+                    CloseSocket(sock);
                     continue;
                 }
 
@@ -642,10 +649,11 @@ void http_Dispatcher::Run()
                     keep--;
 
                     continue;
-                } else if (linger < 0) {
-                    // Will leak once the handler finishes
-                    continue;
                 } else {
+                    // Will leak once the handler finishes
+                    if (linger < 0)
+                        continue;
+
                     LogWarning("Handler for '%1' seems stuck", client->addr);
                     client->ExtendTimeout(1000);
                     delay = 1000;
@@ -711,13 +719,17 @@ http_Socket *http_Dispatcher::InitSocket(int sock, int64_t start, struct sockadd
 
 void http_Dispatcher::ParkSocket(http_Socket *socket, bool hard)
 {
+    if (socket->client.leak) {
+        socket->sock = -1;
+    }
+
     if (hard) {
         struct linger sl = { 1, 0 };
         setsockopt(socket->sock, SOL_SOCKET, SO_LINGER, &sl, sizeof(sl));
     }
 
     if (free_sockets.Available()) {
-        close(socket->sock);
+        CloseSocket(socket->sock);
         socket->sock = -1;
 
         socket->client.socket = nullptr;

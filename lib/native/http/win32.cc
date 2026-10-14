@@ -33,7 +33,7 @@ struct http_Socket {
     http_IO client;
 
     http_Socket(http_Daemon *daemon) : client(daemon) {}
-    ~http_Socket() { CloseSocket(sock); }
+    ~http_Socket() { CloseSocket(client.leak ? -1 : sock); }
 };
 
 static const int MaxDispatcherClients = 128;
@@ -84,10 +84,7 @@ void http_Daemon::RunDispatcher(http_Dispatcher *dispatcher)
 
 void http_Daemon::StopDispatcher(http_Dispatcher *dispatcher)
 {
-    // On Windows, the shutdown() does not wake up poll() so use the pipe to wake it up
-    // and signal the ongoing shutdown.
-
-    dispatcher->Wake(nullptr, 0);
+    dispatcher->Wake(nullptr, false);
 }
 
 void http_Daemon::DestroyDispatcher(http_Dispatcher *dispatcher)
@@ -317,6 +314,7 @@ bool http_Dispatcher::Init()
 
     if (!CreateSocketPair(pair_fd))
         return false;
+    SetSocketNonBlock(pair_fd[0], true);
 
     return true;
 }
@@ -336,6 +334,9 @@ void http_Dispatcher::Run()
 
             if (!async.Wait(daemon->stop_timeout)) {
                 for (http_Socket *socket: sockets) {
+                    if (socket->client.leak)
+                        continue;
+
                     shutdown(socket->sock, SD_BOTH);
                 }
                 async.Sync();
@@ -364,51 +365,54 @@ void http_Dispatcher::Run()
 
     for (;;) {
         int64_t clock = GetMonotonicClock();
-        bool accepts = false;
+        bool accepts = pfd_objs[0].revents;
 
-        // Handle poll events
-        if (pfd_objs[0].revents) {
-            if (pfd_objs[0].revents & POLLHUP) [[unlikely]]
-                return;
-
-            accepts = true;
-        }
         if (pfd_objs[1].revents) {
-            uintptr_t addr = 0;
-            Size ret = recv(pair_fd[0], (char *)&addr, K_SIZE(addr), 0);
+            bool exit = false;
 
-            if (ret < 0) [[unlikely]] {
-                LogError("Unexpected error during pipe read: %1", GetWin32ErrorString());
-                return;
-            } else if (ret != K_SIZE(addr)) [[unlikely]] {
-                LogError("Unexpected empty or partial read during pipe read");
-                return;
-            }
+            for (;;) {
+                uintptr_t addr = 0;
+                Size ret = recv(pair_fd[0], (char *)&addr, K_SIZE(addr), 0);
 
-            http_Socket *socket = (http_Socket *)(addr & ~1ull);
-            bool done = addr & 1;
+                if (ret < 0) [[unlikely]] {
+                    if (GetLastError() == WSAEWOULDBLOCK)
+                        break;
 
-            if (!socket) [[unlikely]]
-                return;
-
-            http_IO *client = &socket->client;
-
-            if (client->leak) {
-                K_ASSERT(client->linger.load(std::memory_order_relaxed));
-
-                client->SetTimeout(clock);
-                socket->sock = -1;
-            } else {
-                if (done) {
-                    client->StartLinger();
-                    shutdown(socket->sock, SD_SEND);
+                    LogError("Unexpected error during pipe read: %1", GetWin32ErrorString());
+                    return;
+                } else if (ret != K_SIZE(addr)) [[unlikely]] {
+                    LogError("Unexpected empty or partial read during pipe read");
+                    return;
                 }
 
-                SetSocketNonBlock(socket->sock, true);
-                socket->poll = true;
+                http_Socket *socket = (http_Socket *)(addr & ~1ull);
+                bool done = addr & 1;
+
+                if (!socket) [[unlikely]] {
+                    exit = true;
+                    continue;
+                }
+
+                http_IO *client = &socket->client;
+
+                if (client->leak) {
+                    K_ASSERT(client->linger.load(std::memory_order_relaxed));
+                    client->SetTimeout(clock);
+                } else {
+                    if (done) {
+                        client->StartLinger();
+                        shutdown(socket->sock, SD_SEND);
+                    }
+
+                    SetSocketNonBlock(socket->sock, true);
+                    socket->poll = true;
+                }
+
+                socket->handled = true;
             }
 
-            socket->handled = true;
+            if (exit)
+                return;
         }
         for (Size i = 2; i < pfd_objs.len; i++) {
             struct pollfd &pfd = pfd_objs[i];
@@ -448,7 +452,7 @@ void http_Dispatcher::Run()
 
                     struct linger sl = { 1, 0 };
                     setsockopt(sock, SOL_SOCKET, SO_LINGER, (char *)&sl, sizeof(sl));
-                    closesocket(sock);
+                    CloseSocket(sock);
 
                     continue;
                 } else {
@@ -460,7 +464,7 @@ void http_Dispatcher::Run()
                 http_Socket *socket = InitSocket(sock, clock, (sockaddr *)&ss);
 
                 if (!socket) [[unlikely]] {
-                    closesocket(sock);
+                    CloseSocket(sock);
                     continue;
                 }
 
@@ -573,10 +577,11 @@ void http_Dispatcher::Run()
                     keep--;
 
                     continue;
-                } else if (linger < 0) {
-                    // Will leak once the handler finishes
-                    continue;
                 } else {
+                    // Will leak once the handler finishes
+                    if (linger < 0)
+                        continue;
+
                     LogWarning("Handler for '%1' seems stuck", client->addr);
                     client->ExtendTimeout(1000);
                     delay = 1000;
@@ -642,13 +647,17 @@ http_Socket *http_Dispatcher::InitSocket(SOCKET sock, int64_t start, struct sock
 
 void http_Dispatcher::ParkSocket(http_Socket *socket, bool hard)
 {
+    if (socket->client.leak) {
+        socket->sock = -1;
+    }
+
     if (hard) {
         struct linger sl = { 1, 0 };
         setsockopt(socket->sock, SOL_SOCKET, SO_LINGER, (char *)&sl, sizeof(sl));
     }
 
     if (free_sockets.Available()) {
-        closesocket(socket->sock);
+        CloseSocket(socket->sock);
         socket->sock = -1;
 
         socket->client.socket = nullptr;

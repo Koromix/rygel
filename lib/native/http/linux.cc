@@ -31,7 +31,7 @@ struct http_Socket {
     http_IO client;
 
     http_Socket(http_Daemon *daemon) : client(daemon) {}
-    ~http_Socket() { CloseDescriptor(sock); }
+    ~http_Socket() { CloseSocket(client.leak ? -1 : sock); }
 };
 
 static const int MaxDispatcherClients = 128;
@@ -84,9 +84,9 @@ void http_Daemon::RunDispatcher(http_Dispatcher *dispatcher)
     dispatcher->Run();
 }
 
-void http_Daemon::StopDispatcher(http_Dispatcher *)
+void http_Daemon::StopDispatcher(http_Dispatcher *dispatcher)
 {
-    // On Linux the shutdown() call is enough to jolt dispatchers out of poll()
+    dispatcher->Wake(nullptr, false);
 }
 
 void http_Daemon::DestroyDispatcher(http_Dispatcher *dispatcher)
@@ -315,6 +315,7 @@ bool http_Dispatcher::Init()
 
     if (!CreatePipe(true, pair_fd))
         return false;
+    SetSocketNonBlock(pair_fd[0], true);
 
     if (!AddEpollDescriptor(listener, EPOLLIN | EPOLLET | EPOLLEXCLUSIVE, 0))
         return false;
@@ -339,6 +340,9 @@ void http_Dispatcher::Run()
 
             if (!async.Wait(daemon->stop_timeout)) {
                 for (http_Socket *socket: sockets) {
+                    if (socket->client.leak)
+                        continue;
+
                     shutdown(socket->sock, SHUT_RDWR);
                 }
                 async.Sync();
@@ -365,48 +369,57 @@ void http_Dispatcher::Run()
 
         for (const struct epoll_event &ev: events) {
             if (ev.data.u64 == 0) {
-                if (ev.events & EPOLLHUP) [[unlikely]]
-                    return;
-
                 accepts = true;
             } else if (ev.data.u64 == 1) {
-                uintptr_t addr = 0;
-                Size ret = read(pair_fd[0], &addr, K_SIZE(addr));
+                bool exit = false;
 
-                if (ret < 0) [[unlikely]] {
-                    if (errno == EINTR)
+                for (;;) {
+                    uintptr_t addr = 0;
+                    Size ret = read(pair_fd[0], &addr, K_SIZE(addr));
+
+                    if (ret < 0) [[unlikely]] {
+                        if (errno == EAGAIN || errno == EWOULDBLOCK)
+                            break;
+                        if (errno == EINTR)
+                            continue;
+
+                        LogError("Unexpected error during pipe read: %1", strerror(errno));
+                        return;
+                    } else if (ret != K_SIZE(addr)) [[unlikely]] {
+                        LogError("Unexpected empty or partial read during pipe read");
+                        return;
+                    }
+
+                    http_Socket *socket = (http_Socket *)(addr & ~1ull);
+                    bool done = addr & 1;
+
+                    if (!socket) [[unlikely]] {
+                        exit = true;
                         continue;
-
-                    LogError("Unexpected error during pipe read: %1", strerror(errno));
-                    return;
-                } else if (ret != K_SIZE(addr)) [[unlikely]] {
-                    LogError("Unexpected empty or partial read during pipe read");
-                    return;
-                }
-
-                http_Socket *socket = (http_Socket *)(addr & ~1ull);
-                bool done = addr & 1;
-
-                http_IO *client = &socket->client;
-
-                if (client->leak) {
-                    K_ASSERT(client->linger.load(std::memory_order_relaxed));
-
-                    client->SetTimeout(clock);
-                    socket->sock = -1;
-                } else {
-                    if (done) {
-                        client->StartLinger();
-                        shutdown(socket->sock, SHUT_WR);
                     }
 
-                    if (!AddEpollDescriptor(socket->sock, EPOLLIN, (uint64_t)(uintptr_t)socket)) [[unlikely]] {
+                    http_IO *client = &socket->client;
+
+                    if (client->leak) {
+                        K_ASSERT(client->linger.load(std::memory_order_relaxed));
                         client->SetTimeout(clock);
-                        client->linger.store(-1, std::memory_order_relaxed); // Any value will do to trigger hard close
+                    } else {
+                        if (done) {
+                            client->StartLinger();
+                            shutdown(socket->sock, SHUT_WR);
+                        }
+
+                        if (!AddEpollDescriptor(socket->sock, EPOLLIN, (uint64_t)(uintptr_t)socket)) [[unlikely]] {
+                            client->SetTimeout(clock);
+                            client->linger.store(-1, std::memory_order_relaxed); // Any value will do to trigger hard close
+                        }
                     }
+
+                    socket->handled = true;
                 }
 
-                socket->handled = true;
+                if (exit)
+                    return;
             } else {
                 http_Socket *socket = (http_Socket *)ev.data.ptr;
                 socket->process = true;
@@ -444,7 +457,7 @@ void http_Dispatcher::Run()
 
                     struct linger sl = { 1, 0 };
                     setsockopt(sock, SOL_SOCKET, SO_LINGER, &sl, sizeof(sl));
-                    close(sock);
+                    CloseSocket(sock);
 
                     continue;
                 } else {
@@ -454,7 +467,7 @@ void http_Dispatcher::Run()
                 http_Socket *socket = InitSocket(sock, clock, (sockaddr *)&ss);
 
                 if (!socket) [[unlikely]] {
-                    close(sock);
+                    CloseSocket(sock);
                     continue;
                 }
 
@@ -563,10 +576,11 @@ void http_Dispatcher::Run()
                     keep--;
 
                     continue;
-                } else if (linger < 0) {
-                    // Will leak once the handler finishes
-                    continue;
                 } else {
+                    // Will leak once the handler finishes
+                    if (linger < 0)
+                        continue;
+
                     LogWarning("Handler for '%1' seems stuck", client->addr);
                     client->ExtendTimeout(1000);
                     delay = 1000;
@@ -627,13 +641,17 @@ http_Socket *http_Dispatcher::InitSocket(int sock, int64_t start, struct sockadd
 
 void http_Dispatcher::ParkSocket(http_Socket *socket, bool hard)
 {
+    if (socket->client.leak) {
+        socket->sock = -1;
+    }
+
     if (hard) {
         struct linger sl = { 1, 0 };
         setsockopt(socket->sock, SOL_SOCKET, SO_LINGER, &sl, sizeof(sl));
     }
 
     if (free_sockets.Available()) {
-        close(socket->sock);
+        CloseSocket(socket->sock);
         socket->sock = -1;
 
         socket->client.socket = nullptr;
