@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SPDX-License-Identifier: CC0-1.0 -->
+<component type="web-application">
+  <id>org.goupile.goupile</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+
+  <name>Goupile</name>
+  <summary>Programmable electronic data capture application</summary>
+  <developer id="dev.koromix">
+    <name>Niels Martignène</name>
+  </developer>
+
+  <description>
+    <p>
+      Goupile is a free eCRF design tool that strives to make form creation and data entry both powerful and easy.
+    </p>
+    <ul>
+      <li>Create and test your forms on the fly with all kinds of widgets</li>
+      <li>Enter your data and easily export it, all from the same screen</li>
+      <li>Share your forms with colleagues and users to collect data</li>
+      <li>Conduct your assessments on tablet or mobile, online or offline</li>
+      <li>Manage your projects and users using the administration module</li>
+    </ul>
+    <p>
+      The Goupile server includes the database engine (SQLite), an HTTP server and the web client in a single binary. Each project runs in its own sandboxed process.
+    </p>
+  </description>
+
+  <launchable type="url">https://demo.goupile.fr/</launchable>
+  <icon type="remote" width="256" height="256">https://goupile.org/en/static/goupile.png</icon>
+
+  <categories>
+    <category>Office</category>
+    <category>Science</category>
+    <category>MedicalSoftware</category>
+  </categories>
+  <keywords>
+    <keyword>eCRF</keyword>
+    <keyword>EDC</keyword>
+    <keyword>form</keyword>
+    <keyword>survey</keyword>
+    <keyword>clinical research</keyword>
+  </keywords>
+
+  <url type="homepage">https://goupile.org/en</url>
+  <url type="bugtracker">https://codeberg.org/Koromix/goupile/issues</url>
+  <url type="vcs-browser">https://codeberg.org/Koromix/rygel/src/branch/master/src/goupile</url>
+  <url type="help">https://goupile.org/en/main</url>
+  <url type="contribute">https://goupile.org/en/contribute</url>
+  <url type="donation">https://liberapay.com/Koromix/donate</url>
+
+  <screenshots>
+    <screenshot type="default">
+      <caption>Create and test forms with the form editor</caption>
+      <image>https://codeberg.org/Koromix/rygel/raw/branch/master/web/goupile.org/en/static/screenshots/editor.webp</image>
+    </screenshot>
+    <screenshot>
+      <caption>Enter and export data from the same screen</caption>
+      <image>https://codeberg.org/Koromix/rygel/raw/branch/master/web/goupile.org/en/static/screenshots/data.webp</image>
+    </screenshot>
+    <screenshot>
+      <caption>Share forms with colleagues and users to collect data</caption>
+      <image>https://codeberg.org/Koromix/rygel/raw/branch/master/web/goupile.org/en/static/screenshots/overview.webp</image>
+    </screenshot>
+    <screenshot>
+      <caption>Data entry on a tablet</caption>
+      <image>https://codeberg.org/Koromix/rygel/raw/branch/master/web/goupile.org/en/static/screenshots/tablet.webp</image>
+    </screenshot>
+    <screenshot>
+      <caption>Administration module for projects and users</caption>
+      <image>https://codeberg.org/Koromix/rygel/raw/branch/master/web/goupile.org/en/static/screenshots/admin.webp</image>
+    </screenshot>
+  </screenshots>
+
+  <content_rating type="oars-1.1"/>
+</component>
