@@ -23,6 +23,8 @@
 
 namespace K {
 
+static const int SendTimeout = 20000;
+
 static bool CheckHeaderValue(const char *str, const char *needle)
 {
     if (!str)
@@ -259,6 +261,21 @@ bool http_WS::Upgrade(http_IO *io, unsigned int flags)
     if (!io->SendEmpty(101)) {
         Close(-1);
         return false;
+    }
+
+    // Don't block send forever
+    {
+#if defined(_WIN32)
+        DWORD timeout = SendTimeout;
+        setsockopt((SOCKET)sock, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout, K_SIZE(timeout));
+#else
+        struct timeval tv = {
+            .tv_sec = SendTimeout / 1000,
+            .tv_usec = (SendTimeout % 1000) * 1000
+        };
+
+        setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &tv, K_SIZE(tv));
+#endif
     }
 
     // Corking should be disabled once SendEmpty() returns.
