@@ -419,6 +419,14 @@ bool http_Daemon::Start(std::function<void(http_IO *io)> func)
 
 void http_Daemon::Stop()
 {
+    for (int listener: listeners) {
+#if defined(_WIN32)
+        shutdown((SOCKET)listener, SD_BOTH);
+#else
+        shutdown(listener, SHUT_RDWR);
+#endif
+    }
+
     for (DispatcherThread &it: dispatchers) {
         if (it.dispatcher) {
             StopDispatcher(it.dispatcher);
