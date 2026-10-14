@@ -262,7 +262,8 @@ public:
     void Send(int status, int64_t len, FunctionRef<bool(StreamWriter *)> func)
         { Send(status, CompressionType::None, len, func); }
 
-    bool SendEmpty(int status); // Does not send Content-Length, use for 101 or stuff like that
+    // Use for 101, 204, 301, 302, 304, stuff like that
+    bool SendEmpty(int status);
 
     void SendText(int status, Span<const char> text, const char *mimetype = "text/plain");
     void SendBinary(int status, Span<const uint8_t> data, const char *mimetype = nullptr);
