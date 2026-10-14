@@ -353,25 +353,27 @@ void http_Dispatcher::Run()
         free_sockets.Clear();
     };
 
-    HeapArray<struct pollfd> pfds;
+    HeapArray<struct pollfd> pfd_objs;
+    HeapArray<http_Socket *> pfd_sockets;
     bool shedding = false;
 
     // React to connections
-    pfds.Append({ (SOCKET)listener, POLLIN, 0 });
-    pfds.Append({ (SOCKET)pair_fd[0], POLLIN, 0 });
+    pfd_objs.Append({ (SOCKET)listener, POLLIN, 0 });
+    pfd_objs.Append({ (SOCKET)pair_fd[0], POLLIN, 0 });
+    pfd_sockets.AppendDefault(2);
 
     for (;;) {
         int64_t clock = GetMonotonicClock();
         bool accepts = false;
 
         // Handle poll events
-        if (pfds[0].revents) {
-            if (pfds[0].revents & POLLHUP) [[unlikely]]
+        if (pfd_objs[0].revents) {
+            if (pfd_objs[0].revents & POLLHUP) [[unlikely]]
                 return;
 
             accepts = true;
         }
-        if (pfds[1].revents) {
+        if (pfd_objs[1].revents) {
             uintptr_t addr = 0;
             Size ret = recv(pair_fd[0], (char *)&addr, K_SIZE(addr), 0);
 
@@ -408,11 +410,11 @@ void http_Dispatcher::Run()
 
             socket->handled = true;
         }
-        for (Size i = 2; i < pfds.len; i++) {
-            struct pollfd &pfd = pfds[i];
+        for (Size i = 2; i < pfd_objs.len; i++) {
+            struct pollfd &pfd = pfd_objs[i];
+            http_Socket *socket = pfd_sockets[i];
 
-            http_Socket *socket = sockets[i - 2];
-            socket->process |= socket->poll && !!pfd.revents;
+            socket->process |= !!pfd.revents;
         }
 
         // Process new connections
@@ -451,12 +453,6 @@ void http_Dispatcher::Run()
                     continue;
                 } else {
                     shedding = false;
-                }
-
-                // We use POLLRDBAND to disable poll processing, make sure URG bit does not break that
-                {
-                    BOOL oobinline = 1;
-                    setsockopt(sock, SOL_SOCKET, SO_OOBINLINE, (char *)&oobinline, K_SIZE(oobinline));
                 }
 
                 SetSocketNonBlock((int)sock, true);
@@ -591,20 +587,23 @@ void http_Dispatcher::Run()
         }
         sockets.len = keep;
 
-        pfds.RemoveFrom(2);
+        pfd_objs.RemoveFrom(2);
+        pfd_sockets.RemoveFrom(2);
 
         // Prepare poll descriptors
-        for (const http_Socket *socket: sockets) {
-            // Use POLLRDBAND to ignore input readiness while the worker is busy
-            short events = socket->poll ? POLLIN : POLLRDBAND;
-            struct pollfd pfd = { (SOCKET)socket->sock, events, 0 };
+        for (http_Socket *socket: sockets) {
+            if (!socket->poll)
+                continue;
 
-            pfds.Append(pfd);
+            struct pollfd pfd = { (SOCKET)socket->sock, POLLIN, 0 };
+
+            pfd_objs.Append(pfd);
+            pfd_sockets.Append(socket);
         }
 
         // The timeout is unsigned to make it easier to use with std::min() without dealing
         // with the default value -1. If it stays at UINT_MAX, the (int) cast results in -1.
-        int ready = WSAPoll(pfds.ptr, (unsigned long)pfds.len, (int)timeout);
+        int ready = WSAPoll(pfd_objs.ptr, (unsigned long)pfd_objs.len, (int)timeout);
 
         if (ready < 0) {
             LogError("Failed to poll descriptors: %1", GetWin32ErrorString());
