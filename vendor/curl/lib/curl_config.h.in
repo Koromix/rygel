@@ -158,9 +158,6 @@
 /* enable NTLM support */
 #undef CURL_ENABLE_NTLM
 
-/* to enable SMB */
-#undef CURL_ENABLE_SMB
-
 /* Definition to make a library symbol externally visible. */
 #undef CURL_EXTERN_SYMBOL
 
@@ -233,6 +230,9 @@
 
 /* Define to 1 if you have the `eventfd' function. */
 #undef HAVE_EVENTFD
+
+/* Define to 1 if you have the `fchmod' function. */
+#undef HAVE_FCHMOD
 
 /* Define to 1 if you have the fcntl function. */
 #undef HAVE_FCNTL

@@ -63,7 +63,7 @@ extern const struct entry_s s_entries[];
 #endif
 
 #include "curlx/base64.h" /* for curlx_base64* */
-#include "curlx/fopen.h" /* for curlx_f*() */
+#include "curlx/win32-fopen.h" /* for curlx_f*() */
 #include "curlx/inet_ntop.h" /* for curlx_inet_ntop() */
 #include "curlx/inet_pton.h" /* for curlx_inet_pton() */
 #include "curlx/nonblock.h" /* for curlx_nonblock() */
@@ -181,6 +181,8 @@ static const char *server_unix_socket = NULL;
 static uint16_t server_port = 0;
 static const char *socket_type = "IPv4";
 static int socket_domain = AF_INET;
+/* file in which additional instructions may be found */
+extern const char *cmdfile;
 
 #define SERVERLOGS_LOCKDIR "lock"  /* within logdir */
 

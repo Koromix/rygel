@@ -442,7 +442,7 @@ sub getreplydata {
     my $testpart = "";
 
     $num =~ s/^([^0-9]*)//;
-    if($num > 10000) {
+    if($num && $num > 10000) {
        $testpart = $num % 10000;
     }
 
@@ -2115,6 +2115,7 @@ sub LIST_ftp {
         my @ftpdir = ftp_contentlist($ftptargetdir);
         # old hard-coded style
         for(@ftpdir) {
+            logmsg "LIST: $_";
             senddata $_;
         }
     }

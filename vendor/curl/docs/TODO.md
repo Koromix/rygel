@@ -170,9 +170,15 @@ Make sure we do not ever loop because of non-blocking sockets returning
 - TELNET transfers
 - GSSAPI authentication for FTP transfers
 - The "DONE" operation (post transfer protocol-specific actions) for the
-protocols SFTP, SMTP, FTP. Fixing `multi_done()` for this is a worthy task.
+protocols SFTP, SCP, SMTP, IMAP, FTP. Fixing `multi_done()` for this is a
+worthy task.
+- The protocol disconnect handlers for FTP, IMAP, POP3, SMTP, SCP and SFTP,
+when a connection is closed instead of kept for reuse.
 - `curl_multi_remove_handle()` for any of the above.
 - Calling `curl_ws_send()` from a callback
+
+Several of these are also documented in the BLOCKING section
+of [`libcurl-multi`](https://curl.se/libcurl/c/libcurl-multi.html).
 
 ## Better support for same name resolves
 
@@ -448,23 +454,6 @@ keys (`PSK`). These pre-shared keys are symmetric keys shared in advance among
 the communicating parties.
 
 [curl issue 5081](https://github.com/curl/curl/issues/5081)
-
-## TLS channel binding
-
-TLS 1.2 and 1.3 provide the ability to extract some secret data from the TLS
-connection and use it in the client request (usually in some sort of
-authentication) to ensure that the data sent is bound to the specific TLS
-connection and cannot be successfully intercepted by a proxy. This
-functionality can be used in a standard authentication mechanism such as
-GSS-API or SCRAM, or in custom approaches like custom HTTP Authentication
-headers.
-
-For TLS 1.2, the binding type is usually `tls-unique`, and for TLS 1.3 it is
-`tls-exporter`.
-
-- https://datatracker.ietf.org/doc/html/rfc5929
-- https://datatracker.ietf.org/doc/html/rfc9266
-- [curl issue 9226](https://github.com/curl/curl/issues/9226)
 
 ## Defeat TLS fingerprinting
 
@@ -929,13 +918,6 @@ http operations (for which we have test servers).
 
 Make the test suite work on more platforms. OpenBSD and macOS. Remove fork()s
 and it should become even more portable.
-
-## write an SMB test server to replace impacket
-
-This would allow us to run SMB tests on more platforms and do better and more
-covering tests.
-
-See [curl issue 15697](https://github.com/curl/curl/issues/15697)
 
 ## Use the RFC 6265 test suite
 

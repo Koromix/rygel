@@ -38,7 +38,8 @@ log = logging.getLogger(__name__)
 class TestDownload:
 
     @pytest.fixture(autouse=True, scope='class')
-    def _class_scope(self, env, httpd):
+    @classmethod
+    def _class_scope(cls, env, httpd):
         indir = httpd.docs_dir
         env.make_data_file(indir=indir, fname="data-0k", fsize=0)
         env.make_data_file(indir=indir, fname="data-10k", fsize=10 * 1024)
@@ -317,10 +318,7 @@ class TestDownload:
             pytest.skip("fails in CI, but works locally for unknown reasons")
         count = 10
         max_parallel = 5
-        if proto in Env.http_mplx_protos():
-            pause_offset = 64 * 1024
-        else:
-            pause_offset = 12 * 1024
+        pause_offset = 1024 * (64 if proto in Env.http_mplx_protos() else 12)
         docname = 'data-1m'
         url = f'https://localhost:{env.https_port}/{docname}'
         client = LocalClient(name='cli_hx_download', env=env)
@@ -343,10 +341,7 @@ class TestDownload:
             pytest.skip("fails in CI, but works locally for unknown reasons")
         count = 10
         max_parallel = 5
-        if proto in Env.http_mplx_protos():
-            abort_offset = 64 * 1024
-        else:
-            abort_offset = 12 * 1024
+        abort_offset = 1024 * (64 if proto in Env.http_mplx_protos() else 12)
         docname = 'data-1m'
         url = f'https://localhost:{env.https_port}/{docname}'
         client = LocalClient(name='cli_hx_download', env=env)
@@ -369,10 +364,7 @@ class TestDownload:
             pytest.skip("fails in CI, but works locally for unknown reasons")
         count = 10
         max_parallel = 5
-        if proto in Env.http_mplx_protos():
-            fail_offset = 64 * 1024
-        else:
-            fail_offset = 12 * 1024
+        fail_offset = 1024 * (64 if proto in Env.http_mplx_protos() else 12)
         docname = 'data-1m'
         url = f'https://localhost:{env.https_port}/{docname}'
         client = LocalClient(name='cli_hx_download', env=env)
@@ -656,8 +648,8 @@ class TestDownload:
                     assert n <= max_total_conns
             assert matched_lines > 0
 
-    # 2 parallel transers, pause and resume. Load a 100 MB zip bomb from
-    # the server with "Content-Encoding: gzip" that gets exloded during
+    # 2 parallel transfers, pause and resume. Load a 100 MB zip bomb from
+    # the server with "Content-Encoding: gzip" that gets exploded during
     # response writing to the client. Client pauses after 1MB unzipped data
     # and causes buffers to fill while the server sends more response
     # data.
@@ -716,3 +708,30 @@ class TestDownload:
                                                f'got {r.exit_code}\n{r.dump_logs()}'
                 if r.exit_code == 0:
                     r.check_response(http_status=431)
+
+    # download 2 http/1.1 resources, limited to a single connection max
+    @pytest.mark.skipif(condition=not Env.curl_is_debug(), reason="needs curl debug")
+    def test_02_37_pending_timeout(self, env: Env, httpd):
+        # Run 2 http/1.1 transfers in parallel with a connection limit of 1
+        # - xfer 0 has a delay response, making xfer 1 pending during its run
+        # - xfer 1 will timeout while pending, waiting on the connection
+        proto = 'http/1.1'
+        run_env = os.environ.copy()
+        run_env['CURL_DBG_MAX_TOTAL_CONNECTIONS'] = '1'
+        curl = CurlClient(env=env, run_env=run_env)
+        url1 = f'https://{env.authority_for(env.domain1, proto)}' \
+            '/curltest/tweak/?&delay=3s'
+        url2 = f'https://{env.authority_for(env.domain1, proto)}/data.json'
+        r = curl.http_download(urls=[url1, url2], alpn_proto=proto, extra_args=[
+                               '--http1.1',  '--parallel'],
+                               url_options={
+                                    url1: ['--max-time', '10'],
+                                    url2: ['--max-time', '1']
+                               })
+        r.check_exit_code(28)
+        xfers = {stat['xfer_id']: stat for stat in r.stats}
+        assert xfers[0]['http_code'] == 200, f'{r.stats[0]}'  # succeeded
+        assert xfers[1]['exitcode'] == 28, f'{r.stats[1]}'    # timed out
+        m = re.search(r'timed out after (\d+) milliseconds', xfers[1]['errormsg'])
+        assert m, f'{r.stats[1]}'
+        assert int(m.group(1)) < 3000, f'{r.stats[1]}'

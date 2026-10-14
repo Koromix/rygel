@@ -64,7 +64,8 @@ class TLSDefs:
 class TestSSLUse:
 
     @pytest.fixture(autouse=True, scope='class')
-    def _class_scope(self, env, httpd, nghttpx):
+    @classmethod
+    def _class_scope(cls, env, httpd, nghttpx):
         env.make_data_file(indir=httpd.docs_dir, fname="data-10k", fsize=10 * 1024)
 
     def test_17_01_sslinfo_plain(self, env: Env, httpd):
@@ -231,8 +232,8 @@ class TestSSLUse:
                 'TLSv1.2': 'TLSv1.2'}.items():
             for [cid13, ciphers13, succeed13] in tls13_tests:
                 for [cid12, ciphers12, succeed12] in tls12_tests:
-                    id = f'{tls_id}-{cid13}-{cid12}'
-                    ret.append(pytest.param(tls_proto, ciphers13, ciphers12, succeed13, succeed12, id=id))
+                    testid = f'{tls_id}-{cid13}-{cid12}'
+                    ret.append(pytest.param(tls_proto, ciphers13, ciphers12, succeed13, succeed12, id=testid))
         return ret
 
     @pytest.mark.parametrize(
@@ -598,3 +599,29 @@ class TestSSLUse:
         ])
         # CURLE_PEER_FAILED_VERIFICATION or CURLE_SSL_CACERT_BADFILE
         assert r.exit_code in [60, 77], f'{r.dump_logs()}'
+
+    @pytest.mark.parametrize("proto", Env.http_protos())
+    def test_17_23_embedded_zero(self, env: Env, proto, httpd, nghttpx):
+        httpd.set_domain1_cred_name('embedded-zero')
+        httpd.reload_if_config_changed()
+        if proto == 'h3':
+            nghttpx.set_cred_name('embedded-zero')
+            nghttpx.reload_if_config_changed()
+        curl = CurlClient(env=env)
+        url = f'https://{env.authority_for(env.domain1, proto)}/curltest/sslinfo'
+        r = curl.http_get(url=url, alpn_proto=proto)
+        # CURLE_SSL_CONNECT_ERROR or CURLE_PEER_FAILED_VERIFICATION
+        assert r.exit_code in [35, 60], f'{r.dump_logs()}'
+
+    @pytest.mark.parametrize("proto", Env.http_protos())
+    def test_17_24_embedded_zero_wildcard(self, env: Env, proto, httpd, nghttpx):
+        httpd.set_domain1_cred_name('embedded-zero-wildcard')
+        httpd.reload_if_config_changed()
+        if proto == 'h3':
+            nghttpx.set_cred_name('embedded-zero-wildcard')
+            nghttpx.reload_if_config_changed()
+        curl = CurlClient(env=env)
+        url = f'https://{env.authority_for(env.domain1, proto)}/curltest/sslinfo'
+        r = curl.http_get(url=url, alpn_proto=proto)
+        # CURLE_SSL_CONNECT_ERROR or CURLE_PEER_FAILED_VERIFICATION
+        assert r.exit_code in [35, 60], f'{r.dump_logs()}'

@@ -35,7 +35,7 @@ UTILS_H =
 
 CURLX_C = \
   ../../lib/curlx/base64.c \
-  ../../lib/curlx/fopen.c \
+  ../../lib/curlx/win32-fopen.c \
   ../../lib/curlx/multibyte.c \
   ../../lib/curlx/strparse.c \
   ../../lib/curlx/timeval.c \
@@ -43,7 +43,13 @@ CURLX_C = \
 
 # All performance test programs
 TESTS_C = \
-  base64.c \
-  percent.c \
+  base64dec.c \
+  base64enc.c \
+  dateparser.c \
+  maprintf.c \
+  numparser.c \
+  simpleformat.c \
   snprintf.c \
+  urldecode.c \
+  urlencode.c \
   urlparser.c

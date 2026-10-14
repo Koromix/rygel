@@ -126,7 +126,10 @@ Introduced in 7.8. See curl_global_init(3).
 Introduced in 7.8. See curl_global_init(3).
 
 ## CURL_GLOBAL_WIN32
-Introduced in 7.8.1. See curl_global_init(3).
+Introduced in 7.8.1. Deprecated since 8.23.0.
+
+## CURL_GLOBAL_WINSOCK
+Introduced in 8.23.0. See curl_global_init(3).
 
 ## CURL_HAS_DECLSPEC_ATTRIBUTE
 Introduced in 8.13.0.
@@ -2967,10 +2970,10 @@ Introduced in 7.19.4. See CURLINFO_PROTOCOL(3).
 Introduced in 7.19.4. See CURLINFO_PROTOCOL(3).
 
 ## CURLPROTO_SMB
-Introduced in 7.40.0. See CURLINFO_PROTOCOL(3).
+Introduced in 7.40.0. Deprecated since 8.23.0.
 
 ## CURLPROTO_SMBS
-Introduced in 7.40.0. See CURLINFO_PROTOCOL(3).
+Introduced in 7.40.0. Deprecated since 8.23.0.
 
 ## CURLPROTO_SMTP
 Introduced in 7.20.0. See CURLINFO_PROTOCOL(3).

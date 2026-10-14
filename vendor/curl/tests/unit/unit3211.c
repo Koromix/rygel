@@ -24,7 +24,9 @@
 #include "unitcheck.h"
 #include "urldata.h"
 #include "uint-bset.h"
-#include "uint-hashset.h"
+#include "u8_strset.h"
+#include "u32_ptrset.h"
+#include "ptrarray.h"
 #include "curl_trc.h"
 
 static void t3211_check_bset(const char *name, uint32_t capacity,
@@ -130,7 +132,7 @@ static bool t3211_strcmp(const char *s1, const char *s2)
   return s1 == s2;
 }
 
-static void t3211_check_strset1(void)
+static void t3211_check_u8_strset(void)
 {
   struct u8_strset set;
   char buf[128];
@@ -141,11 +143,11 @@ static void t3211_check_strset1(void)
   Curl_u8_strset_init(&set);
   fail_unless(!Curl_u8_strset_count(&set), "initial strset not empty");
 
-  result = Curl_u8_strset_set(&set, 0, "123");
+  result = u8_strset_set(&set, 0, "123");
   fail_unless(!result, "add1 failed");
   fail_unless(Curl_u8_strset_get(&set, 0), "get failed");
   fail_unless(!t3211_strcmp("123", Curl_u8_strset_get(&set, 0)), "wrong get1");
-  result = Curl_u8_strset_set(&set, 0, "456");
+  result = u8_strset_set(&set, 0, "456");
   fail_unless(!result, "add2 failed");
   fail_unless(!t3211_strcmp("456", Curl_u8_strset_get(&set, 0)), "wrong get2");
   Curl_u8_strset_unset(&set, 0);
@@ -155,7 +157,7 @@ static void t3211_check_strset1(void)
   for(i = 0; i < 8; ++i) {
     idx = (uint8_t)((8 * i) + 3);
     curl_msnprintf(buf, sizeof(buf), "str-%d", idx);
-    result = Curl_u8_strset_set(&set, idx, buf);
+    result = u8_strset_set(&set, idx, buf);
     fail_unless(!result, "loop4-add failed");
     fail_unless(!t3211_strcmp(buf, Curl_u8_strset_get(&set, idx)),
                 "wrong get loop4");
@@ -177,7 +179,7 @@ static void t3211_check_strset1(void)
   /* Add entry 2 again, check */
   idx = (uint8_t)((8 * 2) + 3);
   curl_msnprintf(buf, sizeof(buf), "str-%d", idx);
-  result = Curl_u8_strset_set(&set, idx, buf);
+  result = u8_strset_set(&set, idx, buf);
   fail_unless(!result, "re-add 2 failed");
   fail_unless(!t3211_strcmp(buf, Curl_u8_strset_get(&set, idx)),
               "wrong re-add 2 get");
@@ -192,7 +194,7 @@ static void t3211_check_strset1(void)
   fail_unless(Curl_u8_strset_count(&set) == 8, "wrong count pre add 5");
   idx = (uint8_t)((9 * 4) + 3);
   curl_msnprintf(buf, sizeof(buf), "str-%d", idx);
-  result = Curl_u8_strset_set(&set, idx, buf);
+  result = u8_strset_set(&set, idx, buf);
   fail_unless(!result, "add4 failed");
   fail_unless(!t3211_strcmp(buf, Curl_u8_strset_get(&set, idx)),
               "wrong get4");
@@ -202,7 +204,7 @@ static void t3211_check_strset1(void)
     fail_unless(!t3211_strcmp(buf, Curl_u8_strset_get(&set, idx)),
                 "wrong get loop5");
   }
-  fail_unless(Curl_u8_strset_count(&set) == 9, "wrong count aftger add 5");
+  fail_unless(Curl_u8_strset_count(&set) == 9, "wrong count after add 5");
 
   Curl_u8_strset_clear(&set);
 
@@ -210,7 +212,7 @@ static void t3211_check_strset1(void)
   for(j = 0; j <= UINT8_MAX; ++j) {
     i = (uint8_t)j;
     curl_msnprintf(buf, sizeof(buf), "str-%d", i);
-    result = Curl_u8_strset_set(&set, i, buf);
+    result = u8_strset_set(&set, i, buf);
     fail_unless(!result, "loop256-add failed");
     fail_unless(!t3211_strcmp(buf, Curl_u8_strset_get(&set, i)),
                 "wrong get loop256");
@@ -218,6 +220,101 @@ static void t3211_check_strset1(void)
 
   Curl_u8_strset_clear(&set);
   fail_unless(!Curl_u8_strset_count(&set), "cleared strset not empty");
+}
+
+static void t3211_check_u32_ptrset(void)
+{
+  struct u32_ptrset set;
+  CURLcode result;
+  uint32_t i, idx;
+
+  Curl_u32_ptrset_init(&set, NULL);
+  fail_unless(!Curl_u32_ptrset_count(&set), "initial ptrset not empty");
+
+  result = Curl_u32_ptrset_set(&set, 0, CURL_UNCONST("123"));
+  fail_unless(!result, "ptrset add1 failed");
+  fail_unless(Curl_u32_ptrset_get(&set, 0), "ptrset get failed");
+  fail_unless(!t3211_strcmp("123", Curl_u32_ptrset_get(&set, 0)),
+              "ptrset wrong get1");
+  result = Curl_u32_ptrset_set(&set, 0, CURL_UNCONST("456"));
+  fail_unless(!result, "add2 failed");
+  fail_unless(!t3211_strcmp("456", Curl_u32_ptrset_get(&set, 0)),
+              "ptrset wrong get2");
+  Curl_u32_ptrset_unset(&set, 0);
+  fail_unless(!Curl_u32_ptrset_get(&set, 0), "ptrset unset failed");
+
+  /* Initial size is 64, add 64 hash collisions */
+  for(i = 0; i < 64; ++i) {
+    idx = (uint32_t)((64 * i) + 3);
+    result = Curl_u32_ptrset_set(&set, idx, CURL_UNCONST("loop64"));
+    fail_unless(!result, "ptrset loop64 add failed");
+    fail_unless(!t3211_strcmp("loop64", Curl_u32_ptrset_get(&set, idx)),
+                "ptrset wrong get loop64");
+  }
+
+  /* Remove collided entry 2, check again */
+  idx = (uint32_t)((64 * 2) + 3);
+  Curl_u32_ptrset_unset(&set, idx);
+  fail_unless(!Curl_u32_ptrset_get(&set, idx), "ptrset unset2 failed");
+
+  /* Add entry 2 again, check */
+  idx = (uint8_t)((64 * 2) + 3);
+  result = Curl_u32_ptrset_set(&set, idx, CURL_UNCONST("loop64b"));
+  fail_unless(!result, "ptrset re-add 2 failed");
+  fail_unless(!t3211_strcmp("loop64b", Curl_u32_ptrset_get(&set, idx)),
+              "ptrset wrong re-add 2 get");
+
+  /* Add a 65th, set grows */
+  fail_unless(Curl_u32_ptrset_count(&set) == 64,
+              "ptrset wrong count pre add 5");
+  idx = (uint32_t)((65 * 4) + 3);
+  result = Curl_u32_ptrset_set(&set, idx, CURL_UNCONST("add65"));
+  fail_unless(!result, "ptrset add65 failed");
+  fail_unless(!t3211_strcmp("add65", Curl_u32_ptrset_get(&set, idx)),
+              "ptrset wrong result after add65");
+  fail_unless(Curl_u32_ptrset_count(&set) == 65, "wrong count after add65");
+
+  Curl_u32_ptrset_clear(&set);
+  fail_unless(!Curl_u32_ptrset_count(&set), "ptrset cleared not empty");
+}
+
+static void t3211_check_ptrarray(void)
+{
+  struct ptrarray pa;
+  CURLcode result;
+  char d0 = '0', d1 = '1';
+  uint32_t i;
+
+  Curl_ptrarray_init(&pa);
+  fail_unless(!Curl_ptrarray_count(&pa), "ptrarray init not empty");
+
+  result = Curl_ptrarray_add(&pa, &d0);
+  fail_unless(!result, "ptrarray add0 failed");
+  fail_unless(Curl_ptrarray_get(&pa, 0) == &d0, "ptrarray get0 failed");
+  fail_unless(Curl_ptrarray_count(&pa) == 1, "ptrarray add0 count wrong");
+  result = Curl_ptrarray_add(&pa, &d1);
+  fail_unless(!result, "ptrarray add1 failed");
+  fail_unless(Curl_ptrarray_get(&pa, 1) == &d1, "ptrarray get1 failed");
+  fail_unless(Curl_ptrarray_count(&pa) == 2, "ptrarray add1 count wrong");
+  Curl_ptrarray_remove(&pa, 0);
+  fail_unless(Curl_ptrarray_count(&pa) == 1, "ptrarray rem count wrong");
+  fail_unless(Curl_ptrarray_get(&pa, 1) == NULL, "ptrarray rem+get1 not NULL");
+  fail_unless(Curl_ptrarray_get(&pa, 0) == &d1, "ptrarray rem+get0 failed");
+  Curl_ptrarray_remove(&pa, 0);
+  fail_unless(Curl_ptrarray_count(&pa) == 0, "ptrarray rem2 count wrong");
+
+  for(i = 0; i < 300; ++i) {
+    result = Curl_ptrarray_add(&pa, (i & 0x1) ? &d1 : &d0);
+    fail_unless(!result, "ptrarray loop add failed");
+  }
+  fail_unless(Curl_ptrarray_count(&pa) == 300, "ptrarray loop count wrong");
+  for(i = 0; i < 300; ++i) {
+    fail_unless(Curl_ptrarray_get(&pa, i) == ((i & 0x1) ? &d1 : &d0),
+                "ptrarray loop get failed");
+  }
+
+  Curl_ptrarray_clear(&pa);
+  fail_unless(!Curl_ptrarray_count(&pa), "ptrarray clear not empty");
 }
 
 static CURLcode test_unit3211(const char *arg)
@@ -243,7 +340,9 @@ static CURLcode test_unit3211(const char *arg)
   t3211_check_bset("s1", 100, s1, CURL_ARRAYSIZE(s1));
   t3211_check_bset("s2", 1000, s2, CURL_ARRAYSIZE(s2));
 
-  t3211_check_strset1();
+  t3211_check_u8_strset();
+  t3211_check_u32_ptrset();
+  t3211_check_ptrarray();
 
   UNITTEST_END_SIMPLE
 }

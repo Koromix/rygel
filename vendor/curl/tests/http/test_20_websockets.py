@@ -111,7 +111,8 @@ class WsServer:
 class TestWebsockets:
 
     @pytest.fixture(autouse=True, scope='class')
-    def ws_echo(self, env):
+    @classmethod
+    def ws_echo(cls, env):
         cmd = os.path.join(env.project_dir,
                            'tests/http/testenv/ws_echo_server.py')
         server = WsServer('ws_echo', env, cmd)
@@ -120,7 +121,8 @@ class TestWebsockets:
         server.shutdown()
 
     @pytest.fixture(autouse=True, scope='class')
-    def ws_4frames(self, env):
+    @classmethod
+    def ws_4frames(cls, env):
         cmd = os.path.join(env.project_dir,
                            'tests/http/testenv/ws_4frames_server.py')
         server = WsServer('ws_4frames', env, cmd)
@@ -273,12 +275,11 @@ class TestWebsockets:
                         hashlib.sha1(k + b"258EAFA5-E914-47DA-95CA-C5AB0DC85B11").digest()
                     ).decode()
                     c.sendall(
-                        (
-                            "HTTP/1.1 101 Switching Protocols\r\n"
-                            "Upgrade: websocket\r\n"
-                            "Connection: Upgrade\r\n"
-                            f"Sec-WebSocket-Accept: {a}\r\n\r\n"
-                        ).encode()
+                        "HTTP/1.1 101 Switching Protocols\r\n"
+                        "Upgrade: websocket\r\n"
+                        "Connection: Upgrade\r\n"
+                        f"Sec-WebSocket-Accept: {a}\r\n\r\n"
+                        .encode()
                     )
 
                     f = b"\x89\x00" * 65536  # PING frames, many
@@ -326,7 +327,7 @@ class TestWebsockets:
         assert r.exit_code in [55, 56], f'{r.dump_logs()}'  # SEND/RECV_ERROR
         assert r.profile, f'{r}'
         rss2 = r.profile.stats['rss-max'] / (1024 * 1024)
-        assert (rss1 * 1.2) > rss2, 'bad memory increase'
+        assert (rss1 * 1.23) > rss2, 'bad memory increase'
 
     # test small frames delivery when pausing
     def test_20_12_pause_frames_small(self, env: Env, ws_4frames):

@@ -1222,7 +1222,6 @@ enable_telnet
 enable_tftp
 enable_pop3
 enable_imap
-enable_smb
 enable_smtp
 enable_gopher
 enable_mqtt
@@ -2003,8 +2002,6 @@ Optional Features:
   --disable-pop3          Disable POP3 support
   --enable-imap           Enable IMAP support
   --disable-imap          Disable IMAP support
-  --enable-smb            Enable SMB support
-  --disable-smb           Disable SMB support
   --enable-smtp           Enable SMTP support
   --disable-smtp          Disable SMTP support
   --enable-gopher         Enable Gopher support
@@ -22670,7 +22667,7 @@ printf %s "checking to see if the compiler supports __builtin_available()... " >
 int main(void)
 {
 
-      if(__builtin_available(macOS 10.12, iOS 5.0, *)) {}
+      if(__builtin_available(macOS 10.12, iOS 5, *)) {}
 
   return 0;
 }
@@ -23163,32 +23160,6 @@ printf "%s\n" "yes" >&6; }
 else $as_nop
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 printf "%s\n" "yes" >&6; }
-
-fi
-
-
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether to support smb" >&5
-printf %s "checking whether to support smb... " >&6; }
-# Check whether --enable-smb was given.
-if test ${enable_smb+y}
-then :
-  enableval=$enable_smb;  case "$enableval" in
-  yes)
-    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-printf "%s\n" "yes" >&6; }
-
-printf "%s\n" "#define CURL_ENABLE_SMB 1" >>confdefs.h
-
-    CURL_ENABLE_SMB=1
-    ;;
-  *)
-    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
-printf "%s\n" "no" >&6; }
-    ;;
-  esac
-else $as_nop
-  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
-printf "%s\n" "no" >&6; }
 
 fi
 
@@ -28095,8 +28066,9 @@ printf %s "checking for LibreSSL... " >&6; }
 int main(void)
 {
 
-        int dummy = LIBRESSL_VERSION_NUMBER;
-        (void)dummy;
+        #ifndef LIBRESSL_VERSION_NUMBER
+        #error not LibreSSL
+        #endif
 
   return 0;
 }
@@ -40336,87 +40308,36 @@ printf "%s\n" "#define HAVE_TIME_T_UNSIGNED 1" >>confdefs.h
   *)
     { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking if time_t is unsigned" >&5
 printf %s "checking if time_t is unsigned... " >&6; }
-
-  if test "$curl_cv_apple" = "yes"; then
-    if test "$cross_compiling" = yes
-then :
-        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
-printf "%s\n" "no" >&6; }
-
-else $as_nop
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
-      #include <time.h>
-      int main(void)
-      {
-        time_t t = -1;
-        return t < 0;
-      }
+
+        #include <time.h>
+        static int time_t_is_unsigned[((time_t)-1 > 0) ? 1 : -1];
+        int main(void)
+        {
+          (void)time_t_is_unsigned;
+          return 0;
+        }
+
 
 _ACEOF
-if ac_fn_c_try_run "$LINENO"
+if ac_fn_c_try_compile "$LINENO"
 then :
-  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 printf "%s\n" "yes" >&6; }
 
 printf "%s\n" "#define HAVE_TIME_T_UNSIGNED 1" >>confdefs.h
 
 
 else $as_nop
-  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+
+      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
 printf "%s\n" "no" >&6; }
 
 fi
-rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
-  conftest.$ac_objext conftest.beam conftest.$ac_ext
-fi
-
-  else
-    oldcc=$CC
-    old=$LD_LIBRARY_PATH
-    CC="sh ./run-compiler"
-    LD_LIBRARY_PATH=$CURL_LIBRARY_PATH:$old
-    export LD_LIBRARY_PATH
-    if test "$cross_compiling" = yes
-then :
-        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
-printf "%s\n" "no" >&6; }
-
-else $as_nop
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-      #include <time.h>
-      int main(void)
-      {
-        time_t t = -1;
-        return t < 0;
-      }
-
-_ACEOF
-if ac_fn_c_try_run "$LINENO"
-then :
-  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-printf "%s\n" "yes" >&6; }
-
-printf "%s\n" "#define HAVE_TIME_T_UNSIGNED 1" >>confdefs.h
-
-
-else $as_nop
-  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
-printf "%s\n" "no" >&6; }
-
-fi
-rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
-  conftest.$ac_objext conftest.beam conftest.$ac_ext
-fi
-
-    # restore
-    LD_LIBRARY_PATH=$old
-    CC=$oldcc
-  fi
-
+rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
     ;;
 esac
 
@@ -46528,7 +46449,7 @@ fi
 
 
 if test "$curl_cv_apple" != "yes"; then
-        ac_fn_c_check_func "$LINENO" "pipe2" "ac_cv_func_pipe2"
+          ac_fn_c_check_func "$LINENO" "pipe2" "ac_cv_func_pipe2"
 if test "x$ac_cv_func_pipe2" = xyes
 then :
   printf "%s\n" "#define HAVE_PIPE2 1" >>confdefs.h
@@ -46538,7 +46459,13 @@ fi
 fi
 
 if test "$curl_cv_native_windows" != "yes"; then
-  ac_fn_c_check_func "$LINENO" "gettimeofday" "ac_cv_func_gettimeofday"
+  ac_fn_c_check_func "$LINENO" "fchmod" "ac_cv_func_fchmod"
+if test "x$ac_cv_func_fchmod" = xyes
+then :
+  printf "%s\n" "#define HAVE_FCHMOD 1" >>confdefs.h
+
+fi
+ac_fn_c_check_func "$LINENO" "gettimeofday" "ac_cv_func_gettimeofday"
 if test "x$ac_cv_func_gettimeofday" = xyes
 then :
   printf "%s\n" "#define HAVE_GETTIMEOFDAY 1" >>confdefs.h
@@ -49494,12 +49421,6 @@ if test "$CURL_DISABLE_IMAP" != "1"; then
   SUPPORT_PROTOCOLS="$SUPPORT_PROTOCOLS IMAP"
   if test "$SSL_ENABLED" = "1"; then
     SUPPORT_PROTOCOLS="$SUPPORT_PROTOCOLS IMAPS"
-  fi
-fi
-if test "$CURL_ENABLE_SMB" = "1" && test "$use_curl_ntlm_core" = "yes"; then
-  SUPPORT_PROTOCOLS="$SUPPORT_PROTOCOLS SMB"
-  if test "$SSL_ENABLED" = "1"; then
-    SUPPORT_PROTOCOLS="$SUPPORT_PROTOCOLS SMBS"
   fi
 fi
 if test "$CURL_DISABLE_SMTP" != "1"; then

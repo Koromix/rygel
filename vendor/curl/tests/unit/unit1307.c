@@ -43,8 +43,8 @@
 
 #define MAC_DIFFER    0x40
 #define MAC_SHIFT     16
-#if 0
 #define MAC_MATCH     ((CURL_FNMATCH_MATCH   << MAC_SHIFT) | MAC_DIFFER)
+#if 0
 #define MAC_NOMATCH   ((CURL_FNMATCH_NOMATCH << MAC_SHIFT) | MAC_DIFFER)
 #endif
 #define MAC_FAIL      ((CURL_FNMATCH_FAIL    << MAC_SHIFT) | MAC_DIFFER)
@@ -219,6 +219,9 @@ static CURLcode test_unit1307(const char *arg)
     { "***.txt",                  "t.txt",                  MATCH },
     { "****.txt",                 ".txt",                   MATCH },
 
+    /* custom matcher limits wildcard star groups */
+    { "*a*b*c",                  "abc", NOMATCH|LINUX_MATCH|MAC_MATCH },
+
     /* empty string or pattern */
     { "",                         "",                       MATCH },
     { "",                         "hello",                  NOMATCH },
@@ -259,7 +262,7 @@ static CURLcode test_unit1307(const char *arg)
     { "?*?*?.?",                  "abcdef.c",               MATCH },
     { "?*?*?.?",                  "abcdef.cd",              NOMATCH },
 
-    /* https://codepoints.net/U+00E4 Latin Small Letter A with Diaeresis */
+    /* U+00E4 Latin Small Letter A with Diaeresis */
     { "Lindm\xc3\xa4tarv",        "Lindm\xc3\xa4tarv",      MATCH },
 
     { "",                         "",                       MATCH},

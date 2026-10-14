@@ -156,27 +156,6 @@ static CURLcode test_unit1664(const char *arg)
   }
 
   {
-    static const char * const single[] = {
-      "a",
-      "aa",
-      "A",
-      "b",
-      "\\",
-      " ",
-      "",
-      NULL
-    };
-    curl_mprintf("curlx_str_single\n");
-    for(i = 0; single[i]; i++) {
-      const char *line = single[i];
-      const char *orgline = line;
-      int rc = curlx_str_single(&line, 'a');
-      curl_mprintf("%d: (\"%s\") %d, line %d\n",
-                   i, orgline, rc, (int)(line - orgline));
-    }
-  }
-
-  {
     static const char * const nums[] = {
       "1",
       "10000",
@@ -367,7 +346,16 @@ static CURLcode test_unit1664(const char *arg)
       const char *orgline = line;
       int rc = curlx_str_newline(&line);
       curl_mprintf("%d: (%%%02x) %d, line %d\n",
-                   i, (unsigned int)*orgline, rc, (int)(line - orgline));
+/* Workaround for the expression erroneously returning the byte from the next
+   address for inputs \n, \r and \r\n. Thus returning NUL, NUL, \n instead of
+   the expected \n, \r, \r. */
+#if defined(_MSC_VER) && _MSC_VER >= 1923 && _MSC_VER <= 1934 && \
+  defined(_WIN64)
+                   i, (unsigned int)newl[i][0],
+#else
+                   i, (unsigned int)*orgline,
+#endif
+                   rc, (int)(line - orgline));
     }
   }
 

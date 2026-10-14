@@ -1058,23 +1058,6 @@ AS_HELP_STRING([--disable-imap],[Disable IMAP support]),
     AC_MSG_RESULT(yes)
 )
 
-AC_MSG_CHECKING([whether to support smb])
-AC_ARG_ENABLE(smb,
-AS_HELP_STRING([--enable-smb],[Enable SMB support])
-AS_HELP_STRING([--disable-smb],[Disable SMB support]),
-[ case "$enableval" in
-  yes)
-    AC_MSG_RESULT(yes)
-    AC_DEFINE(CURL_ENABLE_SMB, 1, [to enable SMB])
-    CURL_ENABLE_SMB=1
-    ;;
-  *)
-    AC_MSG_RESULT(no)
-    ;;
-  esac ],
-    AC_MSG_RESULT(no)
-)
-
 AC_MSG_CHECKING([whether to support smtp])
 AC_ARG_ENABLE(smtp,
 AS_HELP_STRING([--enable-smtp],[Enable SMTP support])
@@ -4157,21 +4140,20 @@ case $host_os in
     ;;
   *)
     AC_MSG_CHECKING([if time_t is unsigned])
-    CURL_RUN_IFELSE(
-      [
-      #include <time.h>
-      int main(void)
-      {
-        time_t t = -1;
-        return t < 0;
-      }
-      ],[
+    AC_COMPILE_IFELSE([
+      AC_LANG_SOURCE([[
+        #include <time.h>
+        static int time_t_is_unsigned[((time_t)-1 > 0) ? 1 : -1];
+        int main(void)
+        {
+          (void)time_t_is_unsigned;
+          return 0;
+        }
+      ]])
+    ],[
       AC_MSG_RESULT([yes])
       AC_DEFINE(HAVE_TIME_T_UNSIGNED, 1, [Define this if time_t is unsigned])
     ],[
-      AC_MSG_RESULT([no])
-    ],[
-      dnl cross-compiling, most systems are signed
       AC_MSG_RESULT([no])
     ])
     ;;
@@ -4239,9 +4221,10 @@ AC_CHECK_FUNCS([\
 ])
 
 if test "$curl_cv_apple" != "yes"; then
-  dnl Apple platforms do not offer pipe2(), but the iPhone Simulator-specific
+  dnl Apple SDK <27 do not offer pipe2(), but the iPhone Simulator-specific
   dnl /usr/lib/system/libsystem_sim_kernel.dylib exports it. To avoid false
   dnl detection, omit this feature check for Apple targets.
+  dnl For 27+, detection is done in-source.
   AC_CHECK_FUNCS([\
     pipe2 \
   ])
@@ -4249,6 +4232,7 @@ fi
 
 if test "$curl_cv_native_windows" != "yes"; then
   AC_CHECK_FUNCS([\
+    fchmod \
     gettimeofday \
     if_nametoindex \
     realpath \
@@ -5475,12 +5459,6 @@ if test "$CURL_DISABLE_IMAP" != "1"; then
   SUPPORT_PROTOCOLS="$SUPPORT_PROTOCOLS IMAP"
   if test "$SSL_ENABLED" = "1"; then
     SUPPORT_PROTOCOLS="$SUPPORT_PROTOCOLS IMAPS"
-  fi
-fi
-if test "$CURL_ENABLE_SMB" = "1" && test "$use_curl_ntlm_core" = "yes"; then
-  SUPPORT_PROTOCOLS="$SUPPORT_PROTOCOLS SMB"
-  if test "$SSL_ENABLED" = "1"; then
-    SUPPORT_PROTOCOLS="$SUPPORT_PROTOCOLS SMBS"
   fi
 fi
 if test "$CURL_DISABLE_SMTP" != "1"; then

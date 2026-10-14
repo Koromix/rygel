@@ -193,8 +193,6 @@ Available substitute variables include:
 - `%RESOLVE` - server/resolve command
 - `%RTSP6PORT` - IPv6 port number of the RTSP server
 - `%RTSPPORT` - Port number of the RTSP server
-- `%SMBPORT` - Port number of the SMB server
-- `%SMBSPORT` - Port number of the SMBS server
 - `%SMTP6PORT` - IPv6 port number of the SMTP server
 - `%SMTPPORT` - Port number of the SMTP server
 - `%SOCKSPORT` - Port number of the SOCKS4/5 server
@@ -246,8 +244,9 @@ for users to skip certain classes of tests, if desired, but a few are treated
 specially by the test harness or build system.
 
 When running a unit test and the keywords include `unittest`, the `<tool>`
-section can be left empty to use the standard unit test tool name `unitN` where
-`N` is the test number.
+section can be left empty to use the standard unit test tool name `unitN`
+where `N` is the test number. Unit tests means *libcurl* unit tests. The
+command line tool's unit tests are marked as `tunittest`.
 
 The `test-ci` make target automatically skips test with the `flaky` keyword.
 
@@ -453,7 +452,6 @@ What server(s) this test case requires/uses. Available servers:
 - `rtsp-ipv6`
 - `scp`
 - `sftp`
-- `smb`
 - `smtp`
 - `socks4`
 - `socks5`
@@ -543,7 +541,7 @@ Features testable here are:
 - `typecheck`
 - `threadsafe`
 - `Unicode`
-- `unittest`
+- `unittest` - that feature needs to be enabled also for the tool unit tests marked as `tunittest`
 - `UnixSockets`
 - `verbose-strings`
 - `wakeup`
@@ -570,9 +568,19 @@ is skipped and the (single-line) output is displayed as reason for not running
 the test.
 
 ### `<tool>`
+
 Name of tool to invoke instead of "curl". This tool must be built and exist
 either in the `libtest/` directory (if the tool name starts with `lib`) or in
 the `unit/` directory (if the tool name starts with `unit`).
+
+If the keyword `unittest` is set in the test case, the default name for the
+tool is `unit%TESTNUMBER`.
+
+If the keyword `tunittest` is set in the test case, the default name for the
+tool is `tool%TESTNUMBER`.
+
+If the keyword `libtest` is set in the test case, the default name for the
+tool is `lib%TESTNUMBER`.
 
 ### `<name>`
 Brief test case description, shown when the test runs.

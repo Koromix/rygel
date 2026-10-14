@@ -130,6 +130,7 @@ my $args;           # command-line arguments
 
 my $uname_release = qx(uname -r);
 my $is_wsl = $uname_release =~ /Microsoft$/;
+my $uname_release_ver = $uname_release =~ /^(\d+)\.(\d+)\.(\d+)/ ? $1 * 10000 + $2 * 100 + $3 : 0;
 
 my $http_ipv6;      # set if HTTP server has IPv6 support
 my $http_unix;      # set if HTTP server has Unix sockets support
@@ -173,6 +174,7 @@ my %singletest_state;  # current state of singletest() by runner ID
 my %singletest_logs;   # log messages while in singletest array ref by runner
 my $singletest_bufferedrunner; # runner ID which is buffering logs
 my %runnerids;         # runner IDs by number
+my %runnernums;        # runner numbers by IDs (inverted %runnerids)
 my @runnersidle;       # runner IDs idle and ready to execute a test
 my %countforrunner;    # test count by runner ID
 my %runnersrunning;    # tests currently running by runner ID
@@ -269,11 +271,8 @@ sub catch_usr1 {
     print scalar(%runnersrunning) . " busy test runner(s) of " . scalar(keys %runnerids) . "\r\n";
     foreach my $rid (sort(keys(%runnersrunning))) {
         my $runnernum = "unknown";
-        foreach my $rnum (keys %runnerids) {
-            if($runnerids{$rnum} == $rid) {
-                $runnernum = $rnum;
-                last;
-            }
+        if(exists $runnernums{$rid}) {
+            $runnernum = $runnernums{$rid};
         }
         print "Runner $runnernum (id $rid) running test $runnersrunning{$rid} in state $singletest_state{$rid}\r\n";
     }
@@ -570,6 +569,11 @@ sub checksystemfeatures {
             }
             if($curl =~ /cygwin|msys/i) {
                 $feature{"cygwin"} = 1;
+            }
+            # Assume set but empty environment variables are supported, except
+            # by MSYS2 <3.4.2 (2022-12-16) processes starting non-Cygwin ones.
+            if(($^O ne 'cygwin' && $^O ne 'msys') || $curl =~ /cygwin|msys/i || $uname_release_ver >= 30605) {
+                $feature{"blank-env"} = 1;
             }
             if($libcurl =~ /\sschannel\b/i) {
                 $feature{"Schannel"} = 1;
@@ -1041,11 +1045,8 @@ sub getrunnerlogdir {
     if($jobs <= 1) {
         return $LOGDIR;
     }
-    # TODO: speed up this O(n) operation
-    for my $runnernum (keys %runnerids) {
-        if($runnerid eq $runnerids{$runnernum}) {
-            return "$LOGDIR/$runnernum";
-        }
+    if(exists $runnernums{$runnerid}) {
+        return "$LOGDIR/$runnernums{$runnerid}";
     }
     die "Internal error: runner ID $runnerid not found";
 }
@@ -1462,7 +1463,6 @@ sub singletest_check {
         if($res) {
             return -1;
         }
-
         $ok .= "p";
     }
     else {
@@ -1623,7 +1623,6 @@ sub singletest_check {
         if($res) {
             return -1;
         }
-
         $ok .= "P";
     }
     else {
@@ -2320,8 +2319,10 @@ sub createrunners {
         my $dir = getrunnernumlogdir($runnernum);
         cleardir($dir);
         mkdir($dir, 0777);
-        $runnerids{$runnernum} = runner_init($dir, $jobs);
-        runnerready($runnerids{$runnernum});
+        my $id = runner_init($dir, $jobs);
+        $runnerids{$runnernum} = $id;
+        $runnernums{$id} = $runnernum;
+        runnerready($id);
     }
 }
 
@@ -2695,14 +2696,6 @@ if($valgrind) {
         undef $valgrind;
     } else {
 
-        # since valgrind 2.1.x, '--tool' option is mandatory
-        # use it, if it is supported by the version installed on the system
-        # (this happened in 2003, so we could probably do not need to care about
-        # that old version any longer and delete this check)
-        runclient("valgrind --help 2>&1 | grep -- --tool >$dev_null 2>&1");
-        if(($? >> 8)) {
-            $valgrind_tool = "";
-        }
         open(my $curlh, "<", $CURL);
         my $l = <$curlh>;
         if($l =~ /^\#\!/) {
@@ -2710,20 +2703,6 @@ if($valgrind) {
             $valgrind = "../libtool --mode=execute $valgrind";
         }
         close($curlh);
-
-        # valgrind 3 renamed the --logfile option to --log-file!!!
-        # (this happened in 2005, so we could probably do not need to care about
-        # that old version any longer and delete this check)
-        my $ver = join(' ', runclientoutput("valgrind --version"));
-        # cut off all but digits and dots
-        $ver =~ s/[^0-9.]//g;
-
-        if($ver =~ /^(\d+)/) {
-            $ver = $1;
-            if($ver < 3) {
-                $valgrind_logfile = "--logfile";
-            }
-        }
     }
 }
 
@@ -2764,6 +2743,8 @@ if(!$mintotalany && $ENV{"CURL_TEST_MIN"}) {
     $mintotal = $ENV{"CURL_TEST_MIN"};
     if($useshares) {
         $mintotal /= $useshares;
+        # add safety margin to avoid potential underruns
+        $mintotal = $mintotal - 30 < 1 ? 1 : $mintotal - 30;
     }
 }
 
