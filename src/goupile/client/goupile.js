@@ -864,11 +864,10 @@ async function logout(e) {
         deleteLocal('lock');
 
         // Clear state and start from fresh as a precaution
-        let url = new URL(window.location.href);
-        let reload = Util.pasteURL(url.pathname, { login: 1 });
+        let home = Util.pasteURL(ENV.urls.instance, { login: 1 });
 
         window.onbeforeunload = null;
-        window.location.href = reload;
+        window.location.href = home;
         await Util.waitFor(2000);
     } catch (err) {
         throw err;
