@@ -598,7 +598,7 @@ async function runHistoryDialog(e, filename) {
 }
 
 async function loadFile(filename, version) {
-    let url = Util.pasteURL(`${ENV.urls.base}files/${version}/${filename}`, { bundle: 0 });
+    let url = Util.pasteURL(`${ENV.urls.base}files/${version}/${filename}`, { bundle: 0, buster: ENV.fs ? null : (new Date).valueOf() });
     let response = await Net.fetch(url);
 
     if (response.ok) {
@@ -2098,13 +2098,13 @@ async function fetchCode(filename) {
 
     // The server is our last hope
     {
-        let url = `${ENV.urls.files}${filename}`;
+        let url = Util.pasteURL(`${ENV.urls.files}${filename}`, { buster: ENV.fs ? null : (new Date).valueOf() });
         let response = await Net.fetch(url);
 
         if (response.status == 403) {
             // Try to circumvent annoying proxies (FortiGate) that block random JS (and other) assets
 
-            let url = `${ENV.urls.files}$/${mixer.Base64.toBase64Url(filename)}`;
+            let url = Util.pasteURL(`${ENV.urls.files}$/${mixer.Base64.toBase64Url(filename)}`, { buster: ENV.fs ? null : (new Date).valueOf() });
             response = await Net.fetch(url);
         }
 

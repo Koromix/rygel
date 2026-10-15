@@ -262,7 +262,7 @@ function InstancePublisher(bundler = null) {
     }
 
     async function fetchCode(filename) {
-        let url = `${ENV.urls.base}files/0/${filename}`;
+        let url = Util.pasteURL(`${ENV.urls.base}files/0/${filename}`, { buster: (new Date).valueOf() });
         let response = await Net.fetch(url);
 
         if (response.ok) {
