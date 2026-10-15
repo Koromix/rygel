@@ -441,7 +441,7 @@
 #define HAVE_MEMRCHR 1
 
 /* Define to 1 if you have the `memset_explicit' function. */
-#define HAVE_MEMSET_EXPLICIT 1
+/* #undef HAVE_MEMSET_EXPLICIT */
 
 /* Define to 1 if you have the memset_s function. */
 /* #undef HAVE_MEMSET_S */
