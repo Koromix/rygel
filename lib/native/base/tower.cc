@@ -582,9 +582,7 @@ bool TowerServer::Process(uint64_t ready)
 #if !defined(SOCK_CLOEXEC)
             fcntl(sock, F_SETFD, FD_CLOEXEC);
 #endif
-#if !defined(MSG_DONTWAIT)
             SetSocketNonBlock(sock, true);
-#endif
 
             if (sources.Available()) [[likely]] {
                 sources.Append({ sock, -1 });
@@ -615,6 +613,7 @@ bool TowerServer::Process(uint64_t ready)
 
         const auto read = [&](Span<uint8_t> out_buf) {
             Size received = recv(sock, out_buf.ptr, out_buf.len, 0);
+
             if (received < 0) {
                 if (errno == EAGAIN || errno == EWOULDBLOCK) {
                     if (IsReadable(sock, 1000)) {
