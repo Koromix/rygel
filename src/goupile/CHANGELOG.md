@@ -2,6 +2,16 @@
 
 ## Goupile 3.12
 
+### Goupile 3.12.9
+
+*Released on 2026-10-15*
+
+- Work around reverse proxies that cache unpublished files (despite explicit `Cache-Control: no-store`)
+- Improve HTTP code performance and security
+- Fix various session issues
+- Remove Secure attribute from cookies by default (set `[HTTP] SecureCookies = Yes` to restore)
+- Forget context and go back to home page after explicit user logout
+
 ### Goupile 3.12.8
 
 *Released on 2026-09-02*

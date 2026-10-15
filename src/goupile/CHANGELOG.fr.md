@@ -2,6 +2,16 @@
 
 ## Goupile 3.12
 
+### Goupile 3.12.9
+
+*Sortie le 15/10/2026*
+
+- Contournement des problèmes liés aux reverse proxies qui mettent en cache les fichiers non publiés (malgré l'en-tête `Cache-Control: no-store`)
+- Amélioration des performances et de la sécurité du code HTTP
+- Correction de divers problèmes liés aux sessions
+- Désactivation par défaut de l'attribut Secure des cookies (utilisez `[HTTP] SecureCookies = Yes` pour le réactiver)
+- Oubli du contexte et retour à la page initiale après une déconnexion explicit
+
 ### Goupile 3.12.8
 
 *Sortie le 02/09/2026*
