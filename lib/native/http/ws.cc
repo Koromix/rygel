@@ -19,10 +19,12 @@
     #include <mswsock.h>
 #else
     #include <sys/socket.h>
+    #include <poll.h>
 #endif
 
 namespace K {
 
+static const int ReceiveTimeout = 20000;
 static const int SendTimeout = 20000;
 
 static bool CheckHeaderValue(const char *str, const char *needle)
@@ -44,11 +46,21 @@ static bool CheckHeaderValue(const char *str, const char *needle)
 
 static Size ReadSocket(int sock, Span<uint8_t> buf)
 {
+restart:
     int len = (int)std::min(buf.len, (Size)INT_MAX);
     Size bytes = recv((SOCKET)sock, (char *)buf.ptr, len, 0);
 
     if (bytes < 0) {
         int error = GetLastError();
+
+        if (error == WSAEWOULDBLOCK) {
+            // We don't need really need this code path unless Close() has been called
+            WSAPOLLFD pfd = { (SOCKET)sock, POLLIN, 0 };
+            int ready = WSAPoll(&pfd, 1, ReceiveTimeout);
+
+            if (ready > 0)
+                goto restart;
+        }
 
         if (error != WSAENOTCONN && error != WSAECONNRESET) {
             LogError("Failed to read from client: %1", GetWin32ErrorString(error));
@@ -92,6 +104,12 @@ static bool WriteSocket(int sock, Span<const uint8_t> header, Span<const uint8_t
     return true;
 }
 
+static void SetSocketTimeout(int sock, int option, int value)
+{
+    DWORD timeout = (DWORD)value;
+    setsockopt((SOCKET)sock, SOL_SOCKET, option, (char *)&timeout, K_SIZE(timeout));
+}
+
 #else
 
 static Size ReadSocket(int sock, Span<uint8_t> buf)
@@ -102,6 +120,15 @@ restart:
     if (bytes < 0) {
         if (errno == EINTR)
             goto restart;
+
+        if (errno == EAGAIN || errno == EWOULDBLOCK) {
+            // We don't need really need this code path unless Close() has been called
+            struct pollfd pfd = { sock, POLLIN, 0 };
+            int ready = poll(&pfd, 1, ReceiveTimeout);
+
+            if (ready > 0)
+                goto restart;
+        }
 
         if (errno != EINVAL && errno != EPIPE && errno != ECONNRESET) {
             LogError("Failed to read from WebSocket: %1", strerror(errno));
@@ -162,6 +189,16 @@ static bool WriteSocket(int sock, Span<const uint8_t> header, Span<const uint8_t
     }
 
     return true;
+}
+
+static void SetSocketTimeout(int sock, int option, int value)
+{
+    struct timeval tv = {
+        .tv_sec = value / 1000,
+        .tv_usec = (value % 1000) * 1000
+    };
+
+    setsockopt(sock, SOL_SOCKET, option, &tv, K_SIZE(tv));
 }
 
 #endif
@@ -274,19 +311,8 @@ bool http_WS::Upgrade(http_IO *io, unsigned int flags)
     }
 
     // Don't block send forever
-    {
-#if defined(_WIN32)
-        DWORD timeout = SendTimeout;
-        setsockopt((SOCKET)sock, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout, K_SIZE(timeout));
-#else
-        struct timeval tv = {
-            .tv_sec = SendTimeout / 1000,
-            .tv_usec = (SendTimeout % 1000) * 1000
-        };
-
-        setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &tv, K_SIZE(tv));
-#endif
-    }
+    SetSocketTimeout(sock, SO_RCVTIMEO, ReceiveTimeout);
+    SetSocketTimeout(sock, SO_SNDTIMEO, SendTimeout);
 
     // Corking should be disabled once SendEmpty() returns.
     // And the socket will be in blocking mode, unless I've screwed something up ><
