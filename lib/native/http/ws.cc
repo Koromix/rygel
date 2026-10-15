@@ -617,7 +617,7 @@ Size http_WS::Read(Span<uint8_t> out, int timeout)
                 Size read = ReadSocket(sock, span, deadline);
 
                 if (read < 0) {
-                    Close(3008); // It it's not a timeout, send will fail anyway
+                    Abort();
                     return -1;
                 }
                 if (!read) {
