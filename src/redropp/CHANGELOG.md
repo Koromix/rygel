@@ -2,6 +2,17 @@
 
 ## Alpha versions
 
+### Redropp 0.9.13
+
+*Released on 2026-10-15*
+
+- Fix broken fragment reclaim when using S3 prefix
+- Fix URL encoding issues with bucket names and key prefixes
+- Retry S3 requests after error 408 (timeout) and 429 (too many requests)
+- Use S3_ENDPOINT_URL (and AWS_ENDPOINT_URL) instead of non-standard S3_ENDPOINT (AWS_ENDPOINT)
+- Improve S3 region discovery
+- Fix minor HTTP issues
+
 ### Redropp 0.9.12
 
 *Released on 2026-10-07*
