@@ -919,8 +919,6 @@ static bool SpliceWithChecksum(StreamReader *reader, StreamWriter *writer, uint8
         crypto_hash_sha256_update(&state, buf.data, buf.len);
     } while (!reader->IsEOF());
 
-    if (!writer->Close())
-        return false;
     crypto_hash_sha256_final(&state, out_hash);
 
     return true;
