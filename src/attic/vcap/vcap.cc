@@ -51,13 +51,13 @@ static void HandleRequest(http_IO *io)
         Span<uint8_t> buf = AllocateSpan<uint8_t>(io->Allocator(), Mebibytes(4));
 
         do {
-            Size read_len = ws.Read(buf);
+            Size read_len = ws.Read(buf, 5000);
             if (read_len <= 0)
                 return;
 
             if (!replay.Write(buf.ptr, read_len))
                 return;
-            if (!ws.Write(buf.ptr, read_len))
+            if (!ws.Write(buf.ptr, read_len, 5000))
                 return;
         } while (!ws.IsEOF());
     } else {

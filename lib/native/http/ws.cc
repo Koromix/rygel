@@ -22,10 +22,12 @@
     #include <poll.h>
 #endif
 
-namespace K {
+#if defined(__APPLE__)
+    // The flag may exist, but it does not seem to work with recv!
+    #undef MSG_DONTWAIT
+#endif
 
-static const int ReceiveTimeout = 20000;
-static const int SendTimeout = 20000;
+namespace K {
 
 static bool CheckHeaderValue(const char *str, const char *needle)
 {
@@ -44,7 +46,7 @@ static bool CheckHeaderValue(const char *str, const char *needle)
 
 #if defined(_WIN32)
 
-static Size ReadSocket(int sock, Span<uint8_t> buf)
+static Size ReadSocket(int sock, Span<uint8_t> buf, int64_t deadline)
 {
 restart:
     int len = (int)std::min(buf.len, (Size)INT_MAX);
@@ -54,9 +56,10 @@ restart:
         int error = GetLastError();
 
         if (error == WSAEWOULDBLOCK) {
-            // We don't need really need this code path unless Close() has been called
             WSAPOLLFD pfd = { (SOCKET)sock, POLLIN, 0 };
-            int ready = WSAPoll(&pfd, 1, ReceiveTimeout);
+
+            int timeout = (int)std::max((int64_t)0, deadline - GetMonotonicClock());
+            int ready = WSAPoll(&pfd, 1, timeout);
 
             if (ready > 0)
                 goto restart;
@@ -72,7 +75,7 @@ restart:
     return bytes;
 }
 
-static bool WriteSocket(int sock, Span<const uint8_t> header, Span<const uint8_t> data)
+static bool WriteSocket(int sock, Span<const uint8_t> header, Span<const uint8_t> data, int64_t deadline)
 {
     K_ASSERT(header.len);
 
@@ -80,53 +83,77 @@ static bool WriteSocket(int sock, Span<const uint8_t> header, Span<const uint8_t
         { .len = (unsigned long)header.len, .buf = (char *)header.ptr },
         { .len = (unsigned long)data.len, .buf = (char *)data.ptr }
     };
+    Span<WSABUF> buffers = MakeSpan(parts, data.len ? 2 : 1);
 
-    DWORD sent = 0;
-    int ret = WSASend((SOCKET)sock, parts, data.len ? 2 : 1, &sent, 0, nullptr, nullptr);
+    while (buffers.len) {
+        DWORD sent = 0;
+        int ret = WSASend((SOCKET)sock, buffers.ptr, buffers.len, &sent, 0, nullptr, nullptr);
 
-    if (ret) {
-        int error = GetLastError();
+        if (ret) {
+            int error = GetLastError();
 
-        if (error != WSAENOTCONN && error != WSAECONNRESET) {
-            LogError("Failed to send to client: %1", GetWin32ErrorString(error));
+            if (error == WSAEWOULDBLOCK) {
+                WSAPOLLFD pfd = { (SOCKET)sock, POLLOUT, 0 };
+
+                int timeout = (int)std::max((int64_t)0, deadline - GetMonotonicClock());
+                int ready = WSAPoll(&pfd, 1, timeout);
+
+                if (ready > 0)
+                    continue;
+            }
+
+            if (error != WSAENOTCONN && error != WSAECONNRESET) {
+                LogError("Failed to send to client: %1", GetWin32ErrorString(error));
+            }
+
+            return false;
         }
 
-        return false;
-    }
+        do {
+            WSABUF *part = buffers.ptr;
 
-    // Windows does not apparently do partial writes, so don't bother dealing with that.
-    //
-    // From MSDN:
-    // For non-overlapped sockets [...] WSASend adopts the same blocking semantics as send.
-    // [...] Given the same buffer situation and a blocking socket, WSASend will block until
-    // all of the application's buffer contents have been consumed.
+            if (part->len > (unsigned long)sent) {
+                part->buf = (char *)part->buf + sent;
+                part->len -= (unsigned long)sent;
+
+                break;
+            }
+
+            buffers.ptr++;
+            buffers.len--;
+            sent -= (DWORD)part->len;
+        } while (buffers.len);
+    }
 
     return true;
 }
 
-static void SetSocketTimeout(int sock, int option, int value)
-{
-    DWORD timeout = (DWORD)value;
-    setsockopt((SOCKET)sock, SOL_SOCKET, option, (char *)&timeout, K_SIZE(timeout));
-}
-
 #else
 
-static Size ReadSocket(int sock, Span<uint8_t> buf)
+static Size ReadSocket(int sock, Span<uint8_t> buf, int64_t deadline)
 {
+#if defined(MSG_DONTWAIT)
+    int flags = MSG_DONTWAIT;
+#else
+    int flags = 0;
+#endif
+
 restart:
-    Size bytes = recv(sock, buf.ptr, (size_t)buf.len, 0);
+    Size bytes = recv(sock, buf.ptr, (size_t)buf.len, flags);
 
     if (bytes < 0) {
         if (errno == EINTR)
             goto restart;
 
         if (errno == EAGAIN || errno == EWOULDBLOCK) {
-            // We don't need really need this code path unless Close() has been called
             struct pollfd pfd = { sock, POLLIN, 0 };
-            int ready = poll(&pfd, 1, ReceiveTimeout);
+
+            int timeout = (int)std::max((int64_t)0, deadline - GetMonotonicClock());
+            int ready = poll(&pfd, 1, timeout);
 
             if (ready > 0)
+                goto restart;
+            if (ready < 0 && errno == EINTR)
                 goto restart;
         }
 
@@ -140,7 +167,7 @@ restart:
     return bytes;
 }
 
-static bool WriteSocket(int sock, Span<const uint8_t> header, Span<const uint8_t> data)
+static bool WriteSocket(int sock, Span<const uint8_t> header, Span<const uint8_t> data, int64_t deadline)
 {
     K_ASSERT(header.len);
 
@@ -158,12 +185,30 @@ static bool WriteSocket(int sock, Span<const uint8_t> header, Span<const uint8_t
         .msg_flags = 0
     };
 
+#if defined(MSG_DONTWAIT)
+    int flags = MSG_NOSIGNAL | MSG_DONTWAIT;
+#else
+    int flags = MSG_NOSIGNAL;
+#endif
+
     while (msg.msg_iovlen) {
-        Size sent = sendmsg(sock, &msg, MSG_NOSIGNAL);
+        Size sent = sendmsg(sock, &msg, flags);
 
         if (sent < 0) {
             if (errno == EINTR)
                 continue;
+
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                struct pollfd pfd = { sock, POLLOUT, 0 };
+
+                int timeout = (int)std::max((int64_t)0, deadline - GetMonotonicClock());
+                int ready = poll(&pfd, 1, timeout);
+
+                if (ready > 0)
+                    continue;
+                if (ready < 0 && errno == EINTR)
+                    continue;
+            }
 
             if (errno != EINVAL && errno != EPIPE && errno != ECONNRESET) {
                 LogError("Failed to send to client: %1", strerror(errno));
@@ -186,19 +231,12 @@ static bool WriteSocket(int sock, Span<const uint8_t> header, Span<const uint8_t
             msg.msg_iovlen--;
             sent -= (Size)part->iov_len;
         } while (msg.msg_iovlen);
+
+        if (!msg.msg_iovlen)
+            break;
     }
 
     return true;
-}
-
-static void SetSocketTimeout(int sock, int option, int value)
-{
-    struct timeval tv = {
-        .tv_sec = value / 1000,
-        .tv_usec = (value % 1000) * 1000
-    };
-
-    setsockopt(sock, SOL_SOCKET, option, &tv, K_SIZE(tv));
 }
 
 #endif
@@ -310,9 +348,9 @@ bool http_WS::Upgrade(http_IO *io, unsigned int flags)
         return false;
     }
 
-    // Don't block send forever
-    SetSocketTimeout(sock, SO_RCVTIMEO, ReceiveTimeout);
-    SetSocketTimeout(sock, SO_SNDTIMEO, SendTimeout);
+#if !defined(MSG_DONTWAIT)
+    SetSocketNonBlock(sock, true);
+#endif
 
     // Corking should be disabled once SendEmpty() returns.
     // And the socket will be in blocking mode, unless I've screwed something up ><
@@ -338,14 +376,11 @@ void http_WS::Close(int status)
     if (!IsValid())
         return;
 
-    // Best effort! May fail, completely or partially, let the kernel handle the rest.
-    SetSocketNonBlock(sock, true);
-
     if (status) {
         uint8_t payload[2] = { (uint8_t)(status >> 8), (uint8_t)(status & 0xFF) };
-        Send(8, payload);
+        Send(8, payload, 0);
     } else {
-        Send(8, {});
+        Send(8, {}, 0);
     }
 
 #if defined(_WIN32)
@@ -391,17 +426,23 @@ static bool IsCloseStatusValid(int status)
     return false;
 }
 
-Size http_WS::Read(Span<uint8_t> out)
+Size http_WS::Read(Span<uint8_t> out, int timeout)
 {
+    K_ASSERT(timeout >= 0);
+
     if (!IsValid())
         return -1;
+    if (eof)
+        return 0;
+
+    int64_t deadline = GetMonotonicClock() + timeout;
 
     bool begin = false;
     Size message = 0;
 
     for (;;) {
         if (buf.len < 2) {
-            if (!Pump())
+            if (!Pump(deadline))
                 return -1;
             continue;
         }
@@ -432,7 +473,7 @@ Size http_WS::Read(Span<uint8_t> out)
             }
 
             if (buf.len < 6) {
-                if (!Pump())
+                if (!Pump(deadline))
                     return -1;
                 continue;
             }
@@ -441,7 +482,7 @@ Size http_WS::Read(Span<uint8_t> out)
             MemCpy(mask, buf.data + 2, 4);
 
             if (buf.len - 6 < payload) {
-                if (!Pump())
+                if (!Pump(deadline))
                     return -1;
                 continue;
             }
@@ -467,7 +508,7 @@ Size http_WS::Read(Span<uint8_t> out)
             }
 
             if (buf.len < 6) {
-                if (!Pump())
+                if (!Pump(deadline))
                     return -1;
                 continue;
             }
@@ -476,7 +517,7 @@ Size http_WS::Read(Span<uint8_t> out)
             MemCpy(mask, buf.data + 2, 4);
 
             if (buf.len - 6 < payload) {
-                if (!Pump())
+                if (!Pump(deadline))
                     return -1;
                 continue;
             }
@@ -487,7 +528,7 @@ Size http_WS::Read(Span<uint8_t> out)
                 Span<uint8_t> pong = buf.Take(6, payload);
                 Decode(pong, mask);
 
-                if (!Send(10, pong))
+                if (!Send(10, pong, 0))
                     return -1;
             }
 
@@ -499,7 +540,7 @@ Size http_WS::Read(Span<uint8_t> out)
 
             if (payload == 126) {
                 if (buf.len < 8) {
-                    if (!Pump())
+                    if (!Pump(deadline))
                         return -1;
                     continue;
                 }
@@ -512,7 +553,7 @@ Size http_WS::Read(Span<uint8_t> out)
                 offset = 8;
             } else if (payload == 127) {
                 if (buf.len < 14) {
-                    if (!Pump())
+                    if (!Pump(deadline))
                         return -1;
                     continue;
                 }
@@ -533,7 +574,7 @@ Size http_WS::Read(Span<uint8_t> out)
                 offset = 14;
             } else {
                 if (buf.len < 6) {
-                    if (!Pump())
+                    if (!Pump(deadline))
                         return -1;
                     continue;
                 }
@@ -573,10 +614,12 @@ Size http_WS::Read(Span<uint8_t> out)
             // Pump missing data (if any)
             while (available < payload) {
                 Span<uint8_t> span = out.Take(available, payload - available);
-                Size read = ReadSocket(sock, span);
+                Size read = ReadSocket(sock, span, deadline);
 
-                if (read < 0)
+                if (read < 0) {
+                    Close(3008); // It it's not a timeout, send will fail anyway
                     return -1;
+                }
                 if (!read) {
                     eof = true;
                     Close(1002);
@@ -602,25 +645,41 @@ Size http_WS::Read(Span<uint8_t> out)
     }
 }
 
-bool http_WS::Write(Span<const uint8_t> buf)
+bool http_WS::Write(Span<const uint8_t> buf, int timeout)
 {
+    K_ASSERT(timeout >= 0);
+
     std::lock_guard<std::mutex> lock(mutex);
 
     if (!IsValid())
         return false;
 
     int opcode = text ? 1 : 2;
-    return Send(opcode, buf);
+    int64_t deadline = GetMonotonicClock() + timeout;
+
+    return Send(opcode, buf, deadline);
 }
 
-bool http_WS::Pump()
+bool http_WS::Ping()
+{
+    std::lock_guard<std::mutex> lock(mutex);
+
+    if (!IsValid())
+        return false;
+
+    return Send(9, {}, 0);
+}
+
+bool http_WS::Pump(int64_t deadline)
 {
     K_ASSERT(buf.Available());
 
-    Size read = ReadSocket(sock, buf.TakeAvailable());
+    Size read = ReadSocket(sock, buf.TakeAvailable(), deadline);
 
-    if (read < 0)
+    if (read < 0) {
+        Abort();
         return false;
+    }
     if (!read) {
         eof = true;
         Close(1002);
@@ -632,9 +691,9 @@ bool http_WS::Pump()
     return true;
 }
 
-bool http_WS::Send(int opcode, Span<const uint8_t> buf)
+bool http_WS::Send(int opcode, Span<const uint8_t> buf, int64_t deadline)
 {
-    do {
+    for (;;) {
         Size part_len = std::min(buf.len, (Size)4096 - 4);
         Span<const uint8_t> part = buf.Take(0, part_len);
 
@@ -654,11 +713,14 @@ bool http_WS::Send(int opcode, Span<const uint8_t> buf)
         }
         opcode = 0;
 
-        if (!WriteSocket(sock, frame, part)) {
+        if (!WriteSocket(sock, frame, part, deadline)) {
             Abort();
             return false;
         }
-    } while (buf.len);
+
+        if (!buf.len)
+            break;
+    }
 
     return true;
 }
