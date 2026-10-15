@@ -368,207 +368,206 @@ Size http_WS::Read(Span<uint8_t> out)
     Size message = 0;
 
     for (;;) {
-        // Decode pending message
-        {
-            if (buf.len < 2)
-                goto pump;
+        if (buf.len < 2) {
+            if (!Pump())
+                return -1;
+            continue;
+        }
 
-            int bits = (buf[0] >> 4) & 0xF;
-            int opcode = buf[0] & 0xF;
-            bool fin = bits & 0x8;
+        int bits = (buf[0] >> 4) & 0xF;
+        int opcode = buf[0] & 0xF;
+        bool fin = bits & 0x8;
 
-            bool masked = buf[1] & 0x80;
-            Size payload = buf[1] & 0x7F;
+        bool masked = buf[1] & 0x80;
+        Size payload = buf[1] & 0x7F;
 
-            if (bits != 8 && bits != 0) {
-                LogError("Unsupported WebSocket RSV bits");
+        if (bits != 8 && bits != 0) {
+            LogError("Unsupported WebSocket RSV bits");
+            Close(1002);
+            return -1;
+        }
+        if (!masked) {
+            LogError("Client to server messages must be masked");
+            Close(1002);
+            return -1;
+        }
+
+        if (opcode == 8) { // Close
+            if (!fin || payload == 1 || payload > 125) {
+                LogError("Invalid close message");
                 Close(1002);
                 return -1;
             }
-            if (!masked) {
-                LogError("Client to server messages must be masked");
-                Close(1002);
-                return -1;
-            }
 
-            if (opcode == 8) { // Close
-                if (!fin || payload == 1 || payload > 125) {
-                    LogError("Invalid close message");
-                    Close(1002);
+            if (buf.len < 6) {
+                if (!Pump())
                     return -1;
-                }
-
-                if (buf.len < 6)
-                    goto pump;
-
-                uint8_t mask[4];
-                MemCpy(mask, buf.data + 2, 4);
-
-                if (buf.len - 6 < payload)
-                    goto pump;
-
-                if (payload) {
-                    K_ASSERT(payload >= 2);
-
-                    int status = ((int)(buf[6] ^ mask[0]) << 8) | (buf[7] ^ mask[1]);
-
-                    status = IsCloseStatusValid(status) ? status : 1002;
-                    Close(status);
-                } else {
-                    Close(0);
-                }
-
-                eof = true;
-                return 0;
-            } else if (opcode == 9 || opcode == 10) { // Ping or Pong
-                if (!fin || payload > 125) {
-                    LogError("Invalid ping message");
-                    Close(1002);
-                    return -1;
-                }
-
-                if (buf.len < 6)
-                    goto pump;
-
-                uint8_t mask[4];
-                MemCpy(mask, buf.data + 2, 4);
-
-                if (buf.len - 6 < payload)
-                    goto pump;
-
-                if (opcode == 9) {
-                    std::lock_guard<std::mutex> lock(mutex);
-
-                    Span<uint8_t> pong = buf.Take(6, payload);
-                    Decode(pong, mask);
-
-                    if (!Send(10, pong))
-                        return -1;
-                }
-
-                MemMove(buf.data, buf.data + 6 + payload, buf.len - 6 - payload);
-                buf.len -= 6 + payload;
-
                 continue;
-            } else if (opcode < 3) { // Data (or whatever)
-                Size offset = 0;
-                uint8_t mask[4];
+            }
 
-                if (payload == 126) {
-                    if (buf.len < 8)
-                        goto pump;
+            uint8_t mask[4];
+            MemCpy(mask, buf.data + 2, 4);
 
-                    uint16_t payload16;
-                    MemCpy(&payload16, buf.data + 2, 2);
-                    MemCpy(mask, buf.data + 4, 4);
-
-                    payload = BigEndian(payload16);
-                    offset = 8;
-                } else if (payload == 127) {
-                    if (buf.len < 14)
-                        goto pump;
-
-                    uint64_t payload64;
-                    MemCpy(&payload64, buf.data + 2, 8);
-                    MemCpy(mask, buf.data + 10, 4);
-
-                    payload64 = BigEndian(payload64);
-
-                    if (payload64 > K_SIZE_MAX) {
-                        LogError("Invalid WebSocket message length");
-                        Close(1002);
-                        return -1;
-                    }
-
-                    payload = (Size)payload64;
-                    offset = 14;
-                } else {
-                    if (buf.len < 6)
-                        goto pump;
-
-                    MemCpy(mask, buf.data + 2, 4);
-
-                    offset = 6;
-                }
-
-                if (opcode) {
-                    if (begin) {
-                        LogError("Unfinished message in WebSocket stream");
-                        Close(1002);
-                        return -1;
-                    }
-
-                    begin = true;
-                } else if (!begin) {
-                    LogError("Unexpected continuation frame in WebSocket stream");
-                    Close(1002);
+            if (buf.len - 6 < payload) {
+                if (!Pump())
                     return -1;
-                }
-                if (payload > out.len) {
-                    LogError("Excessive WebSocket message length");
-                    Close(1009);
+                continue;
+            }
+
+            if (payload) {
+                K_ASSERT(payload >= 2);
+
+                int status = ((int)(buf[6] ^ mask[0]) << 8) | (buf[7] ^ mask[1]);
+
+                status = IsCloseStatusValid(status) ? status : 1002;
+                Close(status);
+            } else {
+                Close(0);
+            }
+
+            eof = true;
+            return 0;
+        } else if (opcode == 9 || opcode == 10) { // Ping or Pong
+            if (!fin || payload > 125) {
+                LogError("Invalid ping message");
+                Close(1002);
+                return -1;
+            }
+
+            if (buf.len < 6) {
+                if (!Pump())
                     return -1;
-                }
+                continue;
+            }
 
-                Size end = std::min(buf.len, offset + payload);
-                Size available = end - offset;
+            uint8_t mask[4];
+            MemCpy(mask, buf.data + 2, 4);
 
-                // Copy previously fetched data
-                MemCpy(out.ptr, buf.data + offset, available);
-                MemMove(buf.data, buf.data + end, buf.len - end);
-                buf.len -= end;
+            if (buf.len - 6 < payload) {
+                if (!Pump())
+                    return -1;
+                continue;
+            }
 
-                // Pump missing data (if any)
-                while (available < payload) {
-                    Span<uint8_t> span = out.Take(available, payload - available);
-                    Size read = ReadSocket(sock, span);
+            if (opcode == 9) {
+                std::lock_guard<std::mutex> lock(mutex);
 
-                    if (read < 0)
+                Span<uint8_t> pong = buf.Take(6, payload);
+                Decode(pong, mask);
+
+                if (!Send(10, pong))
+                    return -1;
+            }
+
+            MemMove(buf.data, buf.data + 6 + payload, buf.len - 6 - payload);
+            buf.len -= 6 + payload;
+        } else if (opcode < 3) { // Data (or whatever)
+            Size offset = 0;
+            uint8_t mask[4];
+
+            if (payload == 126) {
+                if (buf.len < 8) {
+                    if (!Pump())
                         return -1;
-                    if (!read) {
-                        eof = true;
-                        Close(1002);
-                        return -1;
-                    }
-
-                    available += read;
-                }
-
-                Decode(out.Take(0, payload), mask);
-                message += payload;
-
-                if (!fin) {
-                    out.ptr += payload;
-                    out.len -= payload;
-
                     continue;
                 }
 
-                return message;
+                uint16_t payload16;
+                MemCpy(&payload16, buf.data + 2, 2);
+                MemCpy(mask, buf.data + 4, 4);
+
+                payload = BigEndian(payload16);
+                offset = 8;
+            } else if (payload == 127) {
+                if (buf.len < 14) {
+                    if (!Pump())
+                        return -1;
+                    continue;
+                }
+
+                uint64_t payload64;
+                MemCpy(&payload64, buf.data + 2, 8);
+                MemCpy(mask, buf.data + 10, 4);
+
+                payload64 = BigEndian(payload64);
+
+                if (payload64 > K_SIZE_MAX) {
+                    LogError("Invalid WebSocket message length");
+                    Close(1002);
+                    return -1;
+                }
+
+                payload = (Size)payload64;
+                offset = 14;
             } else {
-                LogError("Unsupported WebSocket opcode");
+                if (buf.len < 6) {
+                    if (!Pump())
+                        return -1;
+                    continue;
+                }
+
+                MemCpy(mask, buf.data + 2, 4);
+
+                offset = 6;
+            }
+
+            if (opcode) {
+                if (begin) {
+                    LogError("Unfinished message in WebSocket stream");
+                    Close(1002);
+                    return -1;
+                }
+
+                begin = true;
+            } else if (!begin) {
+                LogError("Unexpected continuation frame in WebSocket stream");
                 Close(1002);
                 return -1;
             }
-        }
-
-pump:
-        {
-            Size read = ReadSocket(sock, buf.TakeAvailable());
-
-            if (read < 0)
-                return -1;
-            if (!read) {
-                eof = true;
-                Close(1002);
+            if (payload > out.len) {
+                LogError("Excessive WebSocket message length");
+                Close(1009);
                 return -1;
             }
 
-            buf.len += read;
+            Size end = std::min(buf.len, offset + payload);
+            Size available = end - offset;
+
+            // Copy previously fetched data
+            MemCpy(out.ptr, buf.data + offset, available);
+            MemMove(buf.data, buf.data + end, buf.len - end);
+            buf.len -= end;
+
+            // Pump missing data (if any)
+            while (available < payload) {
+                Span<uint8_t> span = out.Take(available, payload - available);
+                Size read = ReadSocket(sock, span);
+
+                if (read < 0)
+                    return -1;
+                if (!read) {
+                    eof = true;
+                    Close(1002);
+                    return -1;
+                }
+
+                available += read;
+            }
+
+            Decode(out.Take(0, payload), mask);
+            message += payload;
+
+            if (fin)
+                return message;
+
+            out.ptr += payload;
+            out.len -= payload;
+        } else {
+            LogError("Unsupported WebSocket opcode");
+            Close(1002);
+            return -1;
         }
     }
-
-    return message;
 }
 
 bool http_WS::Write(Span<const uint8_t> buf)
@@ -580,6 +579,25 @@ bool http_WS::Write(Span<const uint8_t> buf)
 
     int opcode = text ? 1 : 2;
     return Send(opcode, buf);
+}
+
+bool http_WS::Pump()
+{
+    K_ASSERT(buf.Available());
+
+    Size read = ReadSocket(sock, buf.TakeAvailable());
+
+    if (read < 0)
+        return false;
+    if (!read) {
+        eof = true;
+        Close(1002);
+        return false;
+    }
+
+    buf.len += read;
+
+    return true;
 }
 
 bool http_WS::Send(int opcode, Span<const uint8_t> buf)

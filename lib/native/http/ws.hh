@@ -17,8 +17,8 @@ class http_WS {
     std::atomic_bool open { false };
     bool text = false;
 
-    LocalArray<uint8_t, 144> buf;
     bool eof = false;
+    LocalArray<uint8_t, 132> buf;
 
     std::mutex mutex;
 
@@ -47,6 +47,7 @@ public:
     bool Write(const void *buf, Size len) { return Write(MakeSpan((const uint8_t *)buf, len)); }
 
 private:
+    bool Pump();
     bool Send(int opcode, Span<const uint8_t> buf);
 
     void Abort();
