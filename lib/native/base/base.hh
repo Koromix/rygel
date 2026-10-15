@@ -211,7 +211,7 @@ void PrintAssertError(const char *filename, int line, const char *msg);
     #define K_DEBUG_BREAK() __builtin_trap()
 #endif
 
-#if defined(_MSC_VER) || __EXCEPTIONS
+#if (defined(_MSC_VER) && !defined(__clang__)) || __EXCEPTIONS
     #define K_BAD_ALLOC() \
         do { \
             throw std::bad_alloc(); \
