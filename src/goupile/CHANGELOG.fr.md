@@ -10,7 +10,7 @@
 - Amélioration des performances et de la sécurité du code HTTP
 - Correction de divers problèmes liés aux sessions
 - Désactivation par défaut de l'attribut Secure des cookies (utilisez `[HTTP] SecureCookies = Yes` pour le réactiver)
-- Oubli du contexte et retour à la page initiale après une déconnexion explicit
+- Oubli du contexte et retour à la page initiale après une déconnexion explicite
 
 ### Goupile 3.12.8
 
