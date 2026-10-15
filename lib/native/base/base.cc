@@ -8418,16 +8418,13 @@ bool StreamReader::Close(bool implicit)
 
     bool ret = !filename || !error;
 
+    filename = nullptr;
     error = true;
     source.type = SourceType::Memory;
     source.eof = false;
     eof = false;
     raw_len = -1;
-
-    if (implicit) {
-        filename = nullptr;
-        str_alloc.Reset();
-    }
+    str_alloc.Reset();
 
     return ret;
 }
@@ -9269,13 +9266,10 @@ bool StreamWriter::Close(bool implicit)
 
     bool ret = !filename || !error;
 
+    filename = nullptr;
     error = true;
     dest.type = DestinationType::Memory;
-
-    if (implicit) {
-        filename = nullptr;
-        str_alloc.Reset();
-    }
+    str_alloc.Reset();
 
     return ret;
 }
