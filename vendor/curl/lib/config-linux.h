@@ -196,10 +196,10 @@
 #define HAVE_BOOL_T 1
 
 /* if BROTLI is in use */
-#define HAVE_BROTLI 1
+/* #undef HAVE_BROTLI 
 
 /* Define to 1 if you have the <brotli/decode.h> header file. */
-#define HAVE_BROTLI_DECODE_H 1
+/* #undef HAVE_BROTLI_DECODE_H */
 
 /* Define to 1 if you have the __builtin_available function. */
 /* #undef HAVE_BUILTIN_AVAILABLE */
