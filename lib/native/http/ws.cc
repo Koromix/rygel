@@ -251,6 +251,11 @@ bool http_WS::Upgrade(http_IO *io, unsigned int flags)
         accept_str[len] = 0;
     }
 
+    if (sock >= 0) {
+        Abort();
+        CloseSocket(sock);
+    }
+
     sock = io->LeakSocket();
     if (sock < 0)
         return false;
@@ -289,6 +294,7 @@ bool http_WS::Upgrade(http_IO *io, unsigned int flags)
     open.store(true, std::memory_order_relaxed);
     text = flags & (int)http_WebSocketFlag::Text;
     eof = false;
+    buf.Clear();
 
     return true;
 }
