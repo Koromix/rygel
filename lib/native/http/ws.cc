@@ -430,10 +430,10 @@ Size http_WS::Read(Span<uint8_t> out, int timeout)
 {
     K_ASSERT(timeout >= 0);
 
-    if (!IsValid())
-        return -1;
     if (eof)
         return 0;
+    if (!IsValid())
+        return -1;
 
     int64_t deadline = GetMonotonicClock() + timeout;
 
@@ -621,7 +621,6 @@ Size http_WS::Read(Span<uint8_t> out, int timeout)
                     return -1;
                 }
                 if (!read) {
-                    eof = true;
                     Close(1002);
                     return -1;
                 }
@@ -681,7 +680,6 @@ bool http_WS::Pump(int64_t deadline)
         return false;
     }
     if (!read) {
-        eof = true;
         Close(1002);
         return false;
     }
