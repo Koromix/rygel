@@ -348,12 +348,11 @@ bool http_WS::Upgrade(http_IO *io, unsigned int flags)
         return false;
     }
 
+    // Corking should be disabled once SendEmpty() returns
+
 #if !defined(MSG_DONTWAIT)
     SetSocketNonBlock(sock, true);
 #endif
-
-    // Corking should be disabled once SendEmpty() returns.
-    // And the socket will be in blocking mode, unless I've screwed something up ><
 
     open.store(true, std::memory_order_relaxed);
     text = flags & (int)http_WebSocketFlag::Text;
