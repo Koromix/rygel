@@ -3608,9 +3608,9 @@ struct alignas(8) TaggedIndex {
 };
 static_assert(std::atomic<TaggedIndex>::is_always_lock_free, "Lock-free 64-bit atomics are required");
 
-template <typename T>
+template <typename T, Size Align = 64>
 class LockFreePool {
-    struct alignas(64) Slot {
+    struct alignas(Align) Slot {
         T obj;
         std::atomic_uint32_t next;
     };
