@@ -217,7 +217,7 @@ public:
 template <>
 class rcc_Vector<const char *> {
     rcc_AutoSexp xp;
-    Span<SEXP> span = {};
+    Span<const SEXP> span = {};
 
 public:
     class Iterator {
@@ -242,7 +242,7 @@ public:
         : xp(xp)
     {
         if (TYPEOF(xp) == STRSXP) {
-            span = MakeSpan(STRING_PTR(xp), Rf_xlength(xp));
+            span = MakeSpan(STRING_PTR_RO(xp), Rf_xlength(xp));
         } else if (xp == R_NilValue) {
             span = {};
         } else {
@@ -291,7 +291,7 @@ class rcc_Vector<LocalDate> {
     rcc_AutoSexp xp;
     Type type = Type::Date;
     union {
-        Span<SEXP> chr;
+        Span<const SEXP> chr;
         Span<double> num;
     } u;
 

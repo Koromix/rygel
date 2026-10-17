@@ -21,7 +21,7 @@ override OBJECTS := $(addprefix ./${R_ARCH}_, heimdallR.cc.o database.cc.o Rcc.c
 	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -Wno-pedantic -c -o $@ $<
 ./${R_ARCH}_base.cc.o: ../../../core/base/base.cc
 	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -Wno-pedantic -c -o $@ $<
-./${R_ARCH}_sqlite.cc.o: ../../../core/sqlite/sqlite.cc
+./${R_ARCH}_sqlite.cc.o: ../../../core/wrap/sqlite.cc
 	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -Wno-pedantic -c -o $@ $<
 ./${R_ARCH}_sqlite3.c.o: ../../../../vendor/sqlite3mc/sqlite3.c
 	$(CC) $(ALL_CPPFLAGS) $(ALL_CFLAGS) -Wno-pedantic -c -o $@ $<

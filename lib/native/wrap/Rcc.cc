@@ -20,7 +20,7 @@ void rcc_RedirectLog()
 
                 *ptr = DuplicateString(msg, alloc).ptr;
 
-                if (log_messages.count > 100) {
+                if (log_messages.Count() > 100) {
                     log_messages.RemoveFirst();
                     log_missing = true;
                 }
@@ -49,8 +49,8 @@ void rcc_DumpWarnings()
 
 void rcc_StopWithLastError()
 {
-    if (log_messages.count) {
-        std::string error_msg = log_messages[log_messages.count - 1];
+    if (log_messages.Count()) {
+        std::string error_msg = log_messages[log_messages.Count() - 1];
         log_messages.RemoveLast();
         rcc_DumpWarnings();
         Rcpp::stop(error_msg);
@@ -80,7 +80,7 @@ rcc_Vector<LocalDate>::rcc_Vector(SEXP xp)
 {
     if (Rf_isString(xp)) {
         type = Type::Character;
-        u.chr = MakeSpan(STRING_PTR(xp), Rf_xlength(xp));
+        u.chr = MakeSpan(STRING_PTR_RO(xp), Rf_xlength(xp));
     } else if (Rf_isReal(xp) && Rf_inherits(xp, "Date")) {
         type = Type::Date;
         u.num = MakeSpan(REAL(xp), Rf_xlength(xp));

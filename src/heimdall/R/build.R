@@ -74,7 +74,8 @@ bundle_heimdallR <- function(project_dir, version, build_dir) {
                  'src/heimdall/server/database.hh'), 'src/src/server')
     copy_files('src/heimdall/R/heimdallR.R', 'R')
     copy_files(list_files('lib/native/base'), 'src/lib/native/base')
-    copy_files(list_files('lib/native/sqlite'), 'src/lib/native/sqlite')
+    copy_files(c('lib/native/wrap/sqlite.cc',
+                 'lib/native/wrap/sqlite.hh'), 'src/lib/native/wrap')
     copy_files(c('lib/native/wrap/Rcc.cc',
                  'lib/native/wrap/Rcc.hh'), 'src/lib/native/wrap')
     copy_files('vendor/dragonbox/include/dragonbox/dragonbox.h', 'src/vendor/dragonbox/include/dragonbox')
