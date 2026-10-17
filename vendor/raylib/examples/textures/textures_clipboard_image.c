@@ -50,7 +50,7 @@ int main(void)
         if (IsKeyPressed(KEY_R))    // Reset image collection
         {
             // Unload textures to avoid memory leaks
-            for (int i = 0; i < MAX_TEXTURE_COLLECTION; i++) UnloadTexture(collection[i].texture);
+            for (int i = 0; i < currentCollectionIndex; i++) UnloadTexture(collection[i].texture);
 
             currentCollectionIndex = 0;
         }
@@ -82,8 +82,8 @@ int main(void)
                 if (IsTextureValid(collection[i].texture))
                 {
                     DrawTexturePro(collection[i].texture,
-                        (Rectangle){0,0,collection[i].texture.width, collection[i].texture.height},
-                        (Rectangle){collection[i].position.x,collection[i].position.y,collection[i].texture.width, collection[i].texture.height},
+                        (Rectangle){0,0,(float)collection[i].texture.width, (float)collection[i].texture.height},
+                        (Rectangle){collection[i].position.x,collection[i].position.y, (float)collection[i].texture.width, (float)collection[i].texture.height},
                         (Vector2){collection[i].texture.width*0.5f, collection[i].texture.height*0.5f},
                         0.0f, WHITE);
                 }
@@ -98,7 +98,7 @@ int main(void)
 
     // De-Initialization
     //--------------------------------------------------------------------------------------
-    for (int i = 0; i < MAX_TEXTURE_COLLECTION;i ++)
+    for (int i = 0; i < currentCollectionIndex; i++)
     {
         UnloadTexture(collection[i].texture);
     }

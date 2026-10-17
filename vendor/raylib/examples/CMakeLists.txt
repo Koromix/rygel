@@ -1,5 +1,17 @@
 # Setup the project and settings
+cmake_minimum_required(VERSION 3.22)
 project(examples)
+
+# Include raylib's cmake helper functions, so the examples can also be
+# configured standalone (`cd examples && cmake .`) and not only as part
+# of the raylib project.
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/../cmake")
+include(AddIfFlagCompiles)
+
+# Default to the Desktop platform when configured standalone.
+if (NOT DEFINED PLATFORM)
+    set(PLATFORM "Desktop" CACHE STRING "Platform to build examples for")
+endif ()
 
 # Directories that contain examples
 set(example_dirs
@@ -98,7 +110,6 @@ if (${PLATFORM} MATCHES "Android")
 
 elseif (${PLATFORM} MATCHES "Web")
     set(example_sources) # clear example_sources
-    list(APPEND example_sources others/web_basic_window.c)
     list(APPEND example_sources core/core_input_gestures_testbed.c)
 
 elseif ("${PLATFORM}" STREQUAL "DRM")
@@ -161,6 +172,14 @@ foreach (example_source ${example_sources})
         target_link_libraries(${example_name} m)
     endif()
 
+    # This example calls system OpenGL stencil functions directly.
+    if ("${example_name}" STREQUAL "gl_scissor_shapes")
+        if ("${PLATFORM}" MATCHES "Desktop" OR "${PLATFORM}" MATCHES "RGFW")
+            find_package(OpenGL REQUIRED)
+            target_link_libraries(${example_name} OpenGL::GL)
+        endif ()
+    endif ()
+
     string(REGEX MATCH ".*/.*/" resources_dir ${example_source})
     string(APPEND resources_dir "resources")
 
@@ -190,6 +209,7 @@ foreach (example_source ${example_sources})
             target_link_libraries(${example_name} "-framework IOKit")
             target_link_libraries(${example_name} "-framework Cocoa")
             target_link_libraries(${example_name} "-framework OpenGL")
+            target_link_libraries(${example_name} "-framework QuartzCore")
         endif()
 
     elseif (${PLATFORM} MATCHES "RGFW")
