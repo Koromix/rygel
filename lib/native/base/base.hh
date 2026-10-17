@@ -3610,16 +3610,16 @@ static_assert(std::atomic<TaggedIndex>::is_always_lock_free, "Lock-free 64-bit a
 
 template <typename T, Size Align = 64>
 class LockFreePool {
+    std::atomic<TaggedIndex> head {{ 0, 0 }};
+
+public:
     struct alignas(Align) Slot {
         T obj;
         std::atomic_uint32_t next;
     };
 
-    Span<Slot> slots;
+    alignas(64) Span<Slot> slots;
 
-    alignas(64) std::atomic<TaggedIndex> head {{ 0, 0 }};
-
-public:
     LockFreePool(Size capacity)
     {
         K_ASSERT(capacity > 0 && capacity < 0xFFFFFFFFu);
