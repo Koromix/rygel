@@ -208,6 +208,10 @@ if(PGO_GENERATE)
     target_compile_options(koffi PRIVATE "-fprofile-generate=${PGO_GENERATE}")
     target_link_options(koffi PRIVATE "-fprofile-generate=${PGO_GENERATE}")
 
+    if(APPLE)
+        target_compile_options(koffi PRIVATE -mllvm -vp-counters-per-site=20)
+    endif()
+
     message(STATUS "PGO: Building instrumented binary")
 elseif(PGO_PROFILE)
     if(NOT EXISTS "${PGO_PROFILE}")
