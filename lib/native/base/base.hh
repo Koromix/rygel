@@ -1430,56 +1430,48 @@ class RetainPtr {
     T *p = nullptr;
 
 public:
-    RetainPtr() = default;
-    RetainPtr(T *p, void (*delete_func)(std::remove_const_t<T> *))
-        : p(p)
-    {
-        K_ASSERT(p);
-        K_ASSERT(delete_func);
-        K_ASSERT(!p->delete_func || delete_func == p->delete_func);
-
-        p->Ref();
-        p->delete_func = delete_func;
-    }
-    RetainPtr(T *p, bool ref = true)
-        : p(p)
-    {
-        if (p) {
-            K_ASSERT(p->delete_func);
-
-            if (ref) {
-                p->Ref();
-            }
-        }
-    }
+    RetainPtr(T *p = nullptr)
+        : p(p ? p->Ref() : nullptr) { K_ASSERT(!p || p->deleter); }
+    RetainPtr(const RetainPtr &other)
+        : p(other.p ? other.p->Ref() : nullptr) {}
+    RetainPtr(RetainPtr &&other)
+        : p(other.p) { other.p = nullptr; }
 
     ~RetainPtr()
     {
-        if (p && !p->Unref()) {
-            p->delete_func((std::remove_const_t<T> *)p);
+        if (p) {
+            p->Unref();
         }
     }
 
-    RetainPtr(const RetainPtr &other)
-    {
-        p = other.p;
-        if (p) {
-            p->Ref();
-        }
-    }
     RetainPtr &operator=(const RetainPtr &other)
     {
         if (&other == this) [[unlikely]]
             return *this;
 
-        if (p && !p->Unref()) {
-            p->delete_func((std::remove_const_t<T> *)p);
+        T *replace = other.p ? other.p->Ref() : nullptr;
+
+        if (p) {
+            p->Unref();
         }
 
-        p = other.p;
+        p = replace;
+
+        return *this;
+    }
+    RetainPtr &operator=(RetainPtr &&other)
+    {
+        if (&other == this) [[unlikely]]
+            return *this;
+
+        T *replace = other.p;
+        other.p = nullptr;
+
         if (p) {
-            p->Ref();
+            p->Unref();
         }
+
+        p = replace;
 
         return *this;
     }
@@ -1500,20 +1492,52 @@ public:
     }
     T *operator->() const { return p; }
     T *GetRaw() const { return p; }
+
+    // Wrap only once!
+    static RetainPtr Wrap(T *p, void (*deleter)(std::remove_const_t<T> *))
+    {
+        RetainPtr ptr;
+
+        ptr.p = p->Ref();
+        p->deleter = deleter;
+
+        return ptr;
+    }
+
+    template<typename... Args>
+    static RetainPtr New(Args&&... args)
+    {
+        T *ptr = new T(std::forward<Args>(args)...);
+        return Wrap(ptr, [](T *ptr) { delete ptr; });
+    }
 };
 
 template <typename T>
 class RetainObject {
-    mutable void (*delete_func)(T *) = nullptr;
+    mutable void (*deleter)(T *) = nullptr;
     mutable std::atomic_int refcount { 0 };
 
 public:
-    void Ref() const { refcount++; }
-    bool Unref() const
+    T *Ref()
     {
-        int new_count = --refcount;
-        K_ASSERT(new_count >= 0);
-        return new_count;
+        refcount.fetch_add(1, std::memory_order_relaxed);
+        return (T *)this;
+    }
+    const T *Ref() const
+    {
+        refcount.fetch_add(1, std::memory_order_relaxed);
+        return (const T *)this;
+    }
+
+    void Unref() const
+    {
+        int old = refcount.fetch_sub(1, std::memory_order_acq_rel);
+        K_ASSERT(old > 0);
+
+        if (old == 1) {
+            K_ASSERT(deleter);
+            deleter((std::remove_const_t<T> *)this);
+        }
     }
 
     friend class RetainPtr<T>;

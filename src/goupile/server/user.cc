@@ -353,8 +353,7 @@ static RetainPtr<SessionInfo> CreateUserSession(SessionType type, int64_t userid
     SessionInfo *session = (SessionInfo *)AllocateRaw(nullptr, session_bytes);
     MemSet(session, 0, session_bytes);
 
-    new (session) SessionInfo;
-    RetainPtr<SessionInfo> ptr(session, [](SessionInfo *session) {
+    auto ptr = RetainPtr<SessionInfo>::Wrap(new (session) SessionInfo, [](SessionInfo *session) {
         session->~SessionInfo();
         ReleaseRaw(nullptr, session, -1);
     });
