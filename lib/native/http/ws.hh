@@ -7,25 +7,47 @@
 
 namespace K {
 
+class http_Daemon;
 class http_IO;
+class ws_Socket;
 
-class http_WS {
-    K_DELETE_COPY(http_WS)
+class ws_Registry: public RetainObject<ws_Registry> {
+    struct Link {
+        std::mutex mutex;
+        int sock = -1;
+    };
+
+    std::atomic_bool stop { false };
+    LockFreePool<Link> links;
+
+public:
+    ws_Registry(Size capacity) : links(capacity) {}
+
+    bool Give(int sock, ws_Socket *ws);
+    void Release(ws_Socket *ws, bool close);
+
+    void Shutdown();
+};
+
+class ws_Socket {
+    K_DELETE_COPY(ws_Socket)
+
+    RetainPtr<ws_Registry> registry;
+    uint32_t link = 0xFFFFFFFFu;
 
     int sock = -1;
-
     std::atomic_bool open { false };
     bool text = false;
-
     bool eof = false;
-    LocalArray<uint8_t, 132> buf;
 
     std::mutex mutex;
 
+    LocalArray<uint8_t, 132> buf;
+
 public:
-    http_WS() = default;
-    http_WS(http_IO *io, unsigned int flags) { Upgrade(io, flags); }
-    ~http_WS();
+    ws_Socket() = default;
+    ws_Socket(http_IO *io, unsigned int flags) { Upgrade(io, flags); }
+    ~ws_Socket();
 
     bool Upgrade(http_IO *io, unsigned int flags);
     void Close(int status = 1000);
@@ -53,6 +75,11 @@ private:
     bool Send(int opcode, Span<const uint8_t> buf, int64_t deadline);
 
     void Abort();
+
+    void Release(bool close);
+
+    friend class http_IO;
+    friend class ws_Registry;
 };
 
 bool http_IsWS(http_IO *io);

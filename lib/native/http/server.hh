@@ -57,11 +57,11 @@ struct http_Config {
     http_Config(int port) : port(port) {}
 };
 
-struct http_RequestInfo;
 class http_IO;
-
+struct http_RequestInfo;
 class http_Dispatcher;
 struct http_Socket;
+class ws_Socket;
 
 class http_Daemon {
     K_DELETE_COPY(http_Daemon)
@@ -103,7 +103,7 @@ public:
     void Stop();
 
 private:
-    http_Dispatcher *CreateDispatcher(int listener);
+    http_Dispatcher *CreateDispatcher(int idx, int listener);
     static void RunDispatcher(http_Dispatcher *dispatcher);
     static void StopDispatcher(http_Dispatcher *dispatcher);
     static void DestroyDispatcher(http_Dispatcher *dispatcher);
@@ -115,12 +115,13 @@ private:
     Size ReadSocket(http_Socket *socket, Span<uint8_t> buf);
     bool WriteSocket(http_Socket *socket, Span<const uint8_t> buf, bool nowait = false);
     bool WriteSocket(http_Socket *socket, Span<Span<const uint8_t>> bufs);
-    int GetDescriptor(http_Socket *socket);
+    bool GiveSocket(http_Socket *socket, ws_Socket *ws);
 
     void RunHandler(http_IO *client);
 
     friend class http_Dispatcher;
     friend class http_IO;
+    friend class ws_Socket;
 };
 
 enum class http_RequestMethod {
@@ -279,8 +280,6 @@ public:
     bool HasResponded() const { return response.started; }
     const char *LastError() const { return last_err; }
 
-    int LeakSocket();
-
 private:
     bool Init(http_Socket *socket, int64_t start, struct sockaddr *sa);
 
@@ -298,6 +297,8 @@ private:
     int StartLinger();
     bool HasLeaked() const { return linger.load(std::memory_order_relaxed) < 0; }
 
+    bool GiveSocket(ws_Socket *ws);
+
     // Returns true if connection is Keep-Alive and still within limits
     bool Rearm(int64_t now);
     bool IsBusy() const;
@@ -305,6 +306,7 @@ private:
     friend class http_Daemon;
     friend class http_Dispatcher;
     friend struct http_Socket;
+    friend class ws_Socket;
 };
 
 }

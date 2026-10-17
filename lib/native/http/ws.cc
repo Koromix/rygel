@@ -29,6 +29,76 @@
 
 namespace K {
 
+bool ws_Registry::Give(int sock, ws_Socket *ws)
+{
+    uint32_t key = links.Acquire();
+
+    if (key == 0xFFFFFFFFu) [[unlikely]]
+        return false;
+
+    Link *link = &links[key];
+
+    // Publish link to WebSocket
+    {
+        std::unique_lock<std::mutex> lock(link->mutex);
+
+        if (stop.load(std::memory_order_acquire)) [[unlikely]] {
+            lock.unlock();
+            links.Release(key);
+
+            return false;
+        }
+
+        ws->registry = this;
+        ws->link = key;
+        ws->sock = sock;
+
+        link->sock = sock;
+    }
+
+    return true;
+}
+
+void ws_Registry::Release(ws_Socket *ws, bool close)
+{
+    uint32_t key = ws->link;
+    Link *link = &links[key];
+
+    // Release and close (if wanted)
+    {
+        std::lock_guard<std::mutex> lock(link->mutex);
+
+        ws->link = 0xFFFFFFFFu;
+        if (close) {
+            CloseSocket(ws->sock);
+        }
+        ws->sock = -1;
+
+        link->sock = -1;
+    }
+
+    links.Release(key);
+}
+
+void ws_Registry::Shutdown()
+{
+    stop.store(true, std::memory_order_release);
+
+    for (auto &slot: links.slots) {
+        Link *link = &slot.obj;
+        std::lock_guard<std::mutex> lock(link->mutex);
+
+        if (link->sock < 0)
+            continue;
+
+#if defined(_WIN32)
+        shutdown((SOCKET)link->sock, SD_BOTH);
+#else
+        shutdown(link->sock, SHUT_RDWR);
+#endif
+    }
+}
+
 static bool CheckHeaderValue(const char *str, const char *needle)
 {
     if (!str)
@@ -268,19 +338,21 @@ static bool IsKeyValid(Span<const char> str)
     return true;
 }
 
-http_WS::~http_WS()
+ws_Socket::~ws_Socket()
 {
     if (IsValid()) {
         LogDebug("Implicit close of WebSocket 0x%1 (%2)", this, sock);
         Abort();
     }
 
-    CloseSocket(sock);
+    if (registry) {
+        Release(true);
+    }
 }
 
-bool http_WS::Upgrade(http_IO *io, unsigned int flags)
+bool ws_Socket::Upgrade(http_IO *io, unsigned int flags)
 {
-    K_ASSERT(!open);
+    K_ASSERT(!IsValid());
 
     const http_RequestInfo &request = io->Request();
 
@@ -326,14 +398,16 @@ bool http_WS::Upgrade(http_IO *io, unsigned int flags)
         accept_str[len] = 0;
     }
 
-    if (sock >= 0) {
+    if (registry) {
         Abort();
-        CloseSocket(sock);
+        Release(true);
     }
 
-    sock = io->LeakSocket();
-    if (sock < 0)
+    if (!io->GiveSocket(this)) {
+        LogError("Cannot register WebSocket (temporary)");
+        io->SendError(503);
         return false;
+    }
 
     io->AddHeader("Connection", "upgrade");
     io->AddHeader("Upgrade", "websocket");
@@ -341,9 +415,7 @@ bool http_WS::Upgrade(http_IO *io, unsigned int flags)
 
     if (!io->SendEmpty(101)) {
         Abort();
-
-        CloseSocket(sock);
-        sock = -1;
+        Release(true);
 
         return false;
     }
@@ -362,7 +434,7 @@ bool http_WS::Upgrade(http_IO *io, unsigned int flags)
     return true;
 }
 
-void http_WS::Close(int status)
+void ws_Socket::Close(int status)
 {
     K_ASSERT(status >= 0);
 
@@ -425,7 +497,7 @@ static bool IsCloseStatusValid(int status)
     return false;
 }
 
-Size http_WS::Read(Span<uint8_t> out, int timeout)
+Size ws_Socket::Read(Span<uint8_t> out, int timeout)
 {
     K_ASSERT(timeout >= 0);
 
@@ -643,7 +715,7 @@ Size http_WS::Read(Span<uint8_t> out, int timeout)
     }
 }
 
-bool http_WS::Write(Span<const uint8_t> buf, int timeout)
+bool ws_Socket::Write(Span<const uint8_t> buf, int timeout)
 {
     K_ASSERT(timeout >= 0);
 
@@ -658,7 +730,7 @@ bool http_WS::Write(Span<const uint8_t> buf, int timeout)
     return Send(opcode, buf, deadline);
 }
 
-bool http_WS::Ping()
+bool ws_Socket::Ping()
 {
     std::lock_guard<std::mutex> lock(mutex);
 
@@ -668,7 +740,7 @@ bool http_WS::Ping()
     return Send(9, {}, 0);
 }
 
-bool http_WS::Pump(int64_t deadline)
+bool ws_Socket::Pump(int64_t deadline)
 {
     K_ASSERT(buf.Available());
 
@@ -688,7 +760,7 @@ bool http_WS::Pump(int64_t deadline)
     return true;
 }
 
-bool http_WS::Send(int opcode, Span<const uint8_t> buf, int64_t deadline)
+bool ws_Socket::Send(int opcode, Span<const uint8_t> buf, int64_t deadline)
 {
     for (;;) {
         Size part_len = std::min(buf.len, (Size)4096 - 4);
@@ -722,7 +794,7 @@ bool http_WS::Send(int opcode, Span<const uint8_t> buf, int64_t deadline)
     return true;
 }
 
-void http_WS::Abort()
+void ws_Socket::Abort()
 {
 #if defined(_WIN32)
     struct linger sl = { 1, 0 };
@@ -735,6 +807,14 @@ void http_WS::Abort()
 #endif
 
     open.store(false, std::memory_order_relaxed);
+}
+
+void ws_Socket::Release(bool close)
+{
+    K_ASSERT(registry);
+
+    registry->Release(this, close);
+    registry = nullptr;
 }
 
 }

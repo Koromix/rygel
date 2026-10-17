@@ -4,6 +4,7 @@
 #include "lib/native/base/base.hh"
 #include "server.hh"
 #include "misc.hh"
+#include "ws.hh"
 
 #if defined(_WIN32)
     #if !defined(NOMINMAX)
@@ -401,7 +402,7 @@ bool http_Daemon::Start(std::function<void(http_IO *io)> func)
         K_ASSERT(!dispatchers[i].dispatcher);
 
         int listener = listeners[i % listeners.len];
-        http_Dispatcher *dispatcher = CreateDispatcher(listener);
+        http_Dispatcher *dispatcher = CreateDispatcher(i, listener);
 
         if (!dispatcher)
             return false;
@@ -907,20 +908,6 @@ void http_IO::ExtendTimeout(int64_t extend)
     do {
         next = GetMonotonicClock() + extend;
     } while (next > current && !timeout_at.compare_exchange_weak(current, next, std::memory_order_relaxed));
-}
-
-int http_IO::LeakSocket()
-{
-    int expected = 0;
-    int desired = -1;
-
-    if (!linger.compare_exchange_strong(expected, desired, std::memory_order_relaxed)) {
-        LogError("Socket is shutting down (timeout)");
-        return -1;
-    }
-
-    keepalive = false;
-    return daemon->GetDescriptor(socket);
 }
 
 bool http_IO::Init(http_Socket *socket, int64_t start, struct sockaddr *sa)
@@ -1621,6 +1608,24 @@ int http_IO::StartLinger()
 
     SetTimeout(GetMonotonicClock() + daemon->linger_timeout);
     return 0;
+}
+
+bool http_IO::GiveSocket(ws_Socket *ws)
+{
+    if (!daemon->GiveSocket(socket, ws))
+        return false;
+
+    int expected = 0;
+    int desired = -1;
+
+    if (!linger.compare_exchange_strong(expected, desired, std::memory_order_relaxed)) {
+        ws->Release(false);
+        return false;
+    }
+
+    keepalive = false;
+
+    return true;
 }
 
 bool http_IO::Rearm(int64_t now)

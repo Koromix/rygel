@@ -5,6 +5,7 @@
 
 #include "lib/native/base/base.hh"
 #include "server.hh"
+#include "ws.hh"
 
 #include <fcntl.h>
 #include <limits.h>
@@ -22,23 +23,27 @@
 namespace K {
 
 struct http_Socket {
-    int sock = -1;
+    int dispatcher;
 
+    int sock = -1;
     bool process = false;
     bool handled = true;
     int lingered = 0;
 
     http_IO client;
 
-    http_Socket(http_Daemon *daemon) : client(daemon) {}
+    http_Socket(http_Daemon *daemon, int dispatcher)
+        : dispatcher(dispatcher), client(daemon) {}
     ~http_Socket() { CloseSocket(client.HasLeaked() ? -1 : sock); }
 };
 
 static const int MaxDispatcherClients = 128;
+static const int MaxDispatcherWebSockets = 1024;
 static const Size MaxSend = Mebibytes(1);
 
 class http_Dispatcher {
     http_Daemon *daemon;
+    int dispatcher;
     int listener;
 
     int epoll_fd = -1;
@@ -46,10 +51,11 @@ class http_Dispatcher {
 
     HeapArray<http_Socket *> sockets;
     LocalArray<http_Socket *, 64> free_sockets;
+    RetainPtr<ws_Registry> websockets;
 
 public:
-    http_Dispatcher(http_Daemon *daemon, int listener)
-        : daemon(daemon), listener(listener) {}
+    http_Dispatcher(http_Daemon *daemon, int dispatcher, int listener)
+        : daemon(daemon), dispatcher(dispatcher), listener(listener) {}
     ~http_Dispatcher();
 
     bool Init();
@@ -67,9 +73,9 @@ private:
     friend class http_Daemon;
 };
 
-http_Dispatcher *http_Daemon::CreateDispatcher(int listener)
+http_Dispatcher *http_Daemon::CreateDispatcher(int idx, int listener)
 {
-    http_Dispatcher *dispatcher = new http_Dispatcher(this, listener);
+    http_Dispatcher *dispatcher = new http_Dispatcher(this, idx, listener);
 
     if (!dispatcher->Init()) {
         delete dispatcher;
@@ -218,9 +224,10 @@ bool http_Daemon::WriteSocket(http_Socket *socket, Span<Span<const uint8_t>> par
     return true;
 }
 
-int http_Daemon::GetDescriptor(http_Socket *socket)
+bool http_Daemon::GiveSocket(http_Socket *socket, ws_Socket *ws)
 {
-    return socket->sock;
+    http_Dispatcher *dispatcher = dispatchers[socket->dispatcher].dispatcher;
+    return dispatcher->websockets->Give(socket->sock, ws);
 }
 
 void http_IO::SendFile(int status, int fd, int64_t len)
@@ -322,6 +329,8 @@ bool http_Dispatcher::Init()
     if (!AddEpollDescriptor(pair_fd[0], EPOLLIN, 1))
         return false;
 
+    websockets = RetainPtr<ws_Registry>::New(MaxDispatcherWebSockets);
+
     return true;
 }
 
@@ -335,18 +344,24 @@ void http_Dispatcher::Run()
 
     // Delete remaining clients when function exits
     K_DEFER {
-        if (!async.Wait(100)) {
+        bool finished = async.Wait(100);
+
+        if (!finished) {
             LogInfo("Waiting up to %1 sec before shutting down clients...", (double)daemon->stop_timeout / 1000);
+            finished = async.Wait(daemon->stop_timeout);
+        }
 
-            if (!async.Wait(daemon->stop_timeout)) {
-                for (http_Socket *socket: sockets) {
-                    if (socket->client.StartLinger() < 0)
-                        continue;
+        websockets->Shutdown();
 
-                    shutdown(socket->sock, SHUT_RDWR);
-                }
-                async.Sync();
+        if (!finished) {
+            for (http_Socket *socket: sockets) {
+                if (socket->client.StartLinger() < 0)
+                    continue;
+
+                shutdown(socket->sock, SHUT_RDWR);
             }
+
+            async.Sync();
         }
 
         for (http_Socket *socket: sockets) {
@@ -621,7 +636,7 @@ void http_Dispatcher::Wake(http_Socket *socket, bool done)
 
 http_Socket *http_Dispatcher::InitSocket(int sock, int64_t start, struct sockaddr *sa)
 {
-    http_Socket *socket = free_sockets.len ? free_sockets.data[--free_sockets.len] : new http_Socket(daemon);
+    http_Socket *socket = free_sockets.len ? free_sockets.data[--free_sockets.len] : new http_Socket(daemon, dispatcher);
     K_DEFER_N(err_guard) { delete socket; };
 
     if (!socket->client.Init(socket, start, sa)) [[unlikely]]

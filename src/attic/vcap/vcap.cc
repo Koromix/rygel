@@ -35,7 +35,7 @@ static void HandleRequest(http_IO *io)
 
         io->SendAsset(200, asset->data, "text/html", asset->compression_type);
     } else if (TestStr(request.path, "/save") && request.method == http_RequestMethod::Get) {
-        http_WS ws(io, 0);
+        ws_Socket ws(io, 0);
         if (!ws.IsValid())
             return;
 
