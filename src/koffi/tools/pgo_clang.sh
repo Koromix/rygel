@@ -6,7 +6,11 @@ PGO_DIR="$(pwd)/../../bin/Koffi/pgo/clang"
 
 export CC="${CC:-clang}"
 export CXX="${CXX:-clang++}"
-export LLVM_PROFDATA="${LLVM_PROFDATA:-llvm-profdata}"
+if which xcrun >/dev/null 2>&1; then
+    export LLVM_PROFDATA="${LLVM_PROFDATA:-xcrun llvm-profdata}"
+else
+    export LLVM_PROFDATA="${LLVM_PROFDATA:-llvm-profdata}"
+fi
 
 rm -rf "$PGO_DIR"
 mkdir -p "$PGO_DIR"
