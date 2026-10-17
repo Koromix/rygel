@@ -1483,7 +1483,7 @@ public:
     }
 
     bool IsValid() const { return p; }
-    operator bool() const { return p; }
+    explicit operator bool() const { return p; }
 
     T &operator*() const
     {

@@ -67,8 +67,9 @@ public:
         return *this;
     }
 
-    operator bool() const { return xp; }
     operator SEXP() const { return xp; }
+
+    explicit operator bool() const { return xp; }
 };
 
 template <typename T>
