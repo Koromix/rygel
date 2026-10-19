@@ -7657,7 +7657,7 @@ class AsyncPool {
 
     // Manipulate with mutex locked
     int refcount = 0;
-    int async_count = 0;
+    int asyncs = 0;
 
     alignas(64) std::atomic_int pending_tasks { 0 };
 
@@ -7835,7 +7835,7 @@ void AsyncPool::RegisterAsync()
 {
     std::lock_guard<std::mutex> lock(mutex);
 
-    if (!async_count++) {
+    if (!asyncs++) {
         for (int i = 1; i < workers.len; i++) {
             WorkerData *worker = &workers[i];
 
@@ -7880,7 +7880,7 @@ void AsyncPool::UnregisterAsync()
 {
     std::unique_lock<std::mutex> lock(mutex);
 
-    if (!--async_count && !refcount) {
+    if (!--asyncs && !refcount) {
         lock.unlock();
         delete this;
     }
@@ -7946,7 +7946,7 @@ void AsyncPool::RunWorker(int worker_idx)
 
     std::unique_lock<std::mutex> lock(mutex);
 
-    while (async_count) {
+    while (asyncs) {
         lock.unlock();
         while (SweepTasks(worker_idx));
         lock.lock();
