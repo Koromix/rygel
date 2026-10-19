@@ -8172,6 +8172,13 @@ void AsyncPool::RunTask(Async *async, std::function<bool()> &func)
 bool AsyncPool::IsIdle()
 {
     if (!idle.load(std::memory_order_seq_cst)) {
+        for (const WorkerData &worker: workers) {
+            TaggedIndex slot = worker.head.load(std::memory_order_relaxed);
+
+            if (slot.idx != 0xFFFFFFFFu)
+                return false;
+        }
+
         // Stores are expensive
         idle.store(true, std::memory_order_seq_cst);
     }
