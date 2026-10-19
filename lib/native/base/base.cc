@@ -7659,7 +7659,7 @@ class AsyncPool {
     int refcount = 0;
     int asyncs = 0;
 
-    alignas(64) std::atomic_int pending_tasks { 0 };
+    alignas(64) std::atomic_bool idle { true };
 
 public:
     AsyncPool(int threads, bool background, int refcount, const char *name);
@@ -7684,6 +7684,9 @@ public:
 
     // Resets the function
     void RunTask(Async *async, std::function<bool()> &func);
+
+    bool IsIdle();
+    void WakeUp();
 };
 
 static thread_local AsyncPool *async_running_pool = nullptr;
@@ -7909,8 +7912,6 @@ void AsyncPool::AddTask(Async *async, int worker_idx, std::function<bool()> &&fu
         }
     }
 
-    bool first = !pending_tasks.fetch_add(1, std::memory_order_relaxed);
-
     TaskData *task = &worker->alloc[slot];
 
     task->async = async;
@@ -7924,15 +7925,10 @@ void AsyncPool::AddTask(Async *async, int worker_idx, std::function<bool()> &&fu
         do {
             task->next.store(head.idx, std::memory_order_relaxed);
             desired = { slot, head.tag + 1 };
-        } while (!worker->head.compare_exchange_weak(head, desired, std::memory_order_release, std::memory_order_relaxed));
+        } while (!worker->head.compare_exchange_weak(head, desired, std::memory_order_seq_cst, std::memory_order_relaxed));
     }
 
-    if (first) {
-        std::lock_guard<std::mutex> lock(mutex);
-
-        pending_cv.notify_all();
-        sync_cv.notify_all();
-    }
+    WakeUp();
 }
 
 void AsyncPool::RunWorker(int worker_idx)
@@ -7954,11 +7950,7 @@ void AsyncPool::RunWorker(int worker_idx)
         // C++ is beautiful
         {
             auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(K_ASYNC_MAX_IDLE_TIME);
-
-            while (!pending_tasks.load(std::memory_order_relaxed)) {
-                if (pending_cv.wait_until(lock, deadline) == std::cv_status::timeout)
-                    break;
-            }
+            while (IsIdle() && pending_cv.wait_until(lock, deadline) != std::cv_status::timeout);
         }
     }
 
@@ -7993,8 +7985,7 @@ void AsyncPool::SyncOn(Async *async)
         }
 
         std::unique_lock<std::mutex> lock(mutex);
-        while (!pending_tasks.load(std::memory_order_relaxed) &&
-               async->remaining_tasks.load(std::memory_order_relaxed)) {
+        while (async->remaining_tasks.load(std::memory_order_relaxed) && IsIdle()) {
             sync_cv.wait(lock);
         }
     }
@@ -8146,7 +8137,9 @@ int AsyncPool::RunTasks(int worker_idx, Async *only, int limit)
             do {
                 worker->alloc[skipped_tail].next.store(head.idx, std::memory_order_relaxed);
                 desired = { skipped_head, head.tag + 1 };
-            } while (!worker->head.compare_exchange_weak(head, desired, std::memory_order_release, std::memory_order_relaxed));
+            } while (!worker->head.compare_exchange_weak(head, desired, std::memory_order_seq_cst, std::memory_order_relaxed));
+
+            WakeUp();
         }
 
         if (!async)
@@ -8161,8 +8154,6 @@ int AsyncPool::RunTasks(int worker_idx, Async *only, int limit)
 
 void AsyncPool::RunTask(Async *async, std::function<bool()> &func)
 {
-    pending_tasks.fetch_sub(1, std::memory_order_relaxed);
-
     bool ret = func();
 
     // Destroy captures, etc
@@ -8176,6 +8167,36 @@ void AsyncPool::RunTask(Async *async, std::function<bool()> &func)
         std::lock_guard<std::mutex> lock_sync(mutex);
         sync_cv.notify_all();
     }
+}
+
+bool AsyncPool::IsIdle()
+{
+    if (!idle.load(std::memory_order_seq_cst)) {
+        // Stores are expensive
+        idle.store(true, std::memory_order_seq_cst);
+    }
+
+    for (const WorkerData &worker: workers) {
+        TaggedIndex slot = worker.head.load(std::memory_order_seq_cst);
+
+        if (slot.idx != 0xFFFFFFFFu)
+            return false;
+    }
+
+    return true;
+}
+
+void AsyncPool::WakeUp()
+{
+    if (!idle.load(std::memory_order_seq_cst))
+        return;
+    if (!idle.exchange(false, std::memory_order_seq_cst))
+        return;
+
+    std::lock_guard<std::mutex> lock(mutex);
+
+    pending_cv.notify_all();
+    sync_cv.notify_all();
 }
 
 #else
