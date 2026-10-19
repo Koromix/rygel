@@ -350,27 +350,33 @@ bool http_Daemon::Bind(const http_Config &config, bool log_addr)
         listeners.Clear();
     };
 
-#if defined(_WIN32)
+#if defined(SO_REUSEPORT_LB) || defined(__linux__)
+    // One cannot bind to the same UNIX socket multiple times
+    int threads = GetCoreCount();
+    int sockets = (config.sock_type != SocketType::Unix) ? threads : 1;
+#elif defined(_WIN32)
     // It is not possible to bind multiple sockets to a single TCP port on Windows
     // safely, because SO_EXCLUSIVEADDR must be set before bind(), so it cannot be used
     // and other processes can hijack us at any time (instead of during a small window).
     // In addition, running accept() from multiple threads on the same listening socket
     // will return the same socket to multiple threads which breaks everything.
     // Yes, this happens. In 2026.
-    dispatchers.AppendDefault(1);
+    int threads = 1;
+    int sockets = 1;
 #else
-    dispatchers.AppendDefault(GetCoreCount());
+    // On macOS (and probably OpenBSD, maybe others) only the first listening socket
+    // gets clients, SO_REUSEPORT is useless for load-balancing.
+    int threads = GetCoreCount();
+    int sockets = 1;
 #endif
 
-    for (Size i = 0; i < dispatchers.len; i++) {
+    dispatchers.AppendDefault(threads);
+
+    for (Size i = 0; i < sockets; i++) {
         int listener = CreateListenSocket(config, !i);
         if (listener < 0)
             return false;
         listeners.Append(listener);
-
-        // One cannot bind to the same UNIX socket multiple times
-        if (config.sock_type == SocketType::Unix)
-            break;
     }
 
     if (log_addr) {
