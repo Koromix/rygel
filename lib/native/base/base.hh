@@ -5323,7 +5323,6 @@ public:
     bool Wait(int timeout);
     bool IsSuccess() const { return success.load(std::memory_order_relaxed); }
 
-    static bool IsTaskRunning();
     static int GetWorkerIndex();
 
 private:

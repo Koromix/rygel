@@ -7688,7 +7688,6 @@ public:
 
 static thread_local AsyncPool *async_running_pool = nullptr;
 static thread_local int async_running_worker_idx = 0;
-static thread_local bool async_running_task = false;
 
 Async::Async()
 {
@@ -7755,11 +7754,6 @@ bool Async::Sync()
 bool Async::Wait(int timeout)
 {
     return pool->WaitOn(this, timeout);
-}
-
-bool Async::IsTaskRunning()
-{
-    return async_running_task;
 }
 
 int Async::GetWorkerIndex()
@@ -8167,9 +8161,6 @@ int AsyncPool::RunTasks(int worker_idx, Async *only, int limit)
 
 void AsyncPool::RunTask(Async *async, std::function<bool()> &func)
 {
-    K_DEFER_C(running = async_running_task) { async_running_task = running; };
-    async_running_task = true;
-
     pending_tasks.fetch_sub(1, std::memory_order_relaxed);
 
     bool ret = func();
@@ -8217,11 +8208,6 @@ void Async::Run(int, const std::function<bool()> &func)
 bool Async::Sync()
 {
     return success;
-}
-
-bool Async::IsTaskRunning()
-{
-    return false;
 }
 
 int Async::GetWorkerIndex()

@@ -2388,7 +2388,7 @@ Size mco_Classify(const mco_TableSet &table_set, const mco_AuthorizationSet &aut
     Size results_count;
     // Counting results on the main thread costs us some performance. If the caller is
     // already parallelizing (drdR for example) don't do it.
-    if (!Async::IsTaskRunning()) {
+    if (!(flags & (int)mco_ClassifyFlag::NoParallel)) {
         if (!mono_stays.len)
             return 0;
 

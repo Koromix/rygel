@@ -518,7 +518,7 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
     bool apply_coefficient = Rcpp::as<bool>(apply_coefficient_xp);
     const char *supplement_columns_str = Rcpp::as<const char *>(supplement_columns_xp);
 
-    unsigned int flags = 0;
+    unsigned int flags = (int)mco_ClassifyFlag::NoParallel;
     for (const char *opt: options_vec) {
         if (!OptionToFlagI(mco_ClassifyFlagOptions, opt, &flags)) {
             LogError("Unknown classifier option '%1'", opt);
