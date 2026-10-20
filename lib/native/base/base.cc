@@ -7686,7 +7686,7 @@ public:
     void RunWorker(int worker_idx);
     void Sync(Async *async);
     void SyncSelfish(Async *async);
-    bool WaitOn(Async *async, int timeout);
+    bool Wait(Async *async, int timeout);
 
     bool SweepTasks(int worker_idx);
     bool SweepTasks(int worker_idx, Async *only);
@@ -7772,7 +7772,7 @@ bool Async::Sync()
 
 bool Async::Wait(int timeout)
 {
-    return pool->WaitOn(this, timeout);
+    return pool->Wait(this, timeout);
 }
 
 void Async::Init(AsyncPool *pool, unsigned int flags)
@@ -8061,10 +8061,8 @@ void AsyncPool::SyncSelfish(Async *async)
     }
 }
 
-bool AsyncPool::WaitOn(Async *async, int timeout)
+bool AsyncPool::Wait(Async *async, int timeout)
 {
-    K_ASSERT(workers.len > 1);
-
     std::unique_lock<std::mutex> lock(mutex);
 
     if (timeout >= 0) {
