@@ -7659,7 +7659,7 @@ class AsyncPool {
     int refcount = 0;
     int asyncs = 0;
 
-    alignas(64) std::atomic_bool idle { true };
+    alignas(64) std::atomic_bool sleepy { true };
 
 public:
     AsyncPool(int threads, bool background, int refcount, const char *name);
@@ -8172,7 +8172,7 @@ void AsyncPool::RunTask(Async *async, std::function<bool()> &func)
 
 bool AsyncPool::IsIdle()
 {
-    if (!idle.load(std::memory_order_seq_cst)) {
+    if (!sleepy.load(std::memory_order_seq_cst)) {
         for (const WorkerData &worker: workers) {
             TaggedIndex slot = worker.head.load(std::memory_order_relaxed);
 
@@ -8181,7 +8181,7 @@ bool AsyncPool::IsIdle()
         }
 
         // Stores are expensive
-        idle.store(true, std::memory_order_seq_cst);
+        sleepy.store(true, std::memory_order_seq_cst);
     }
 
     for (const WorkerData &worker: workers) {
@@ -8196,9 +8196,9 @@ bool AsyncPool::IsIdle()
 
 void AsyncPool::WakeUp()
 {
-    if (!idle.load(std::memory_order_seq_cst))
+    if (!sleepy.load(std::memory_order_seq_cst))
         return;
-    if (!idle.exchange(false, std::memory_order_seq_cst))
+    if (!sleepy.exchange(false, std::memory_order_seq_cst))
         return;
 
     std::lock_guard<std::mutex> lock(mutex);
