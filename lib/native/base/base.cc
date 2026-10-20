@@ -7640,9 +7640,11 @@ struct alignas(64) WorkerData {
     int idx;
 
     std::atomic<TaggedIndex> head {{ 0xFFFFFFFFu, 0 }};
-    LockFreePool<TaskData> alloc { K_ASYNC_MAX_WORKER_TASKS };
+    LockFreePool<TaskData> alloc;
 
     std::mutex selfish;
+
+    WorkerData(Size capacity) : alloc(capacity) {}
 };
 
 enum class SleepState {
@@ -7797,7 +7799,11 @@ AsyncPool::AsyncPool(int threads, bool background, int refcount, const char *nam
         workers.len = threads;
 
         for (WorkerData &worker: workers) {
-            new (&worker) WorkerData();
+            // One thread means only the owner works, and no background worker exists
+            // Make a void task stack so that AddTask always fails to allocate a slot and
+            // runs the task directly.
+            // It's a bit stupid but running on one core should not happen anymore. Not in 2026.
+            new (&worker) WorkerData(threads > 1 ? K_ASYNC_MAX_WORKER_TASKS : 0);
         }
     }
 
@@ -7923,21 +7929,23 @@ void AsyncPool::AddTask(Async *async, int worker_idx, std::function<bool()> &&fu
         }
 
         for (;;) {
-            bool busy = false;
+            if (workers.len > 1) {
+                bool busy = false;
 
-            if (async->selfish) {
-                bool dummy;
-                busy = RunTasks(worker_idx, async, 4, &dummy);
-            } else {
-                busy = RunTasks(worker_idx, 4);
+                if (async->selfish) {
+                    bool dummy;
+                    busy = RunTasks(worker_idx, async, 4, &dummy);
+                } else {
+                    busy = RunTasks(worker_idx, 4);
+                }
+
+                slot = worker->alloc.Acquire();
+
+                if (slot != 0xFFFFFFFFu) [[likely]]
+                    break;
+                if (busy)
+                    continue;
             }
-
-            slot = worker->alloc.Acquire();
-
-            if (slot != 0xFFFFFFFFu) [[likely]]
-                break;
-            if (busy)
-                continue;
 
             // Just be done with it :)
             RunTask(async, func);

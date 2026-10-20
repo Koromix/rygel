@@ -3646,18 +3646,23 @@ public:
 
     LockFreePool(Size capacity)
     {
-        K_ASSERT(capacity > 0 && capacity < 0xFFFFFFFFu);
+        K_ASSERT(capacity >= 0 && capacity < 0xFFFFFFFFu);
         K_ASSERT(capacity <= K_SIZE_MAX / K_SIZE(Slot));
 
-        slots.ptr = (Slot *)AllocateAligned(capacity * K_SIZE(Slot), alignof(Slot));
-        slots.len = capacity;
+        if (capacity > 0) {
+            slots.ptr = (Slot *)AllocateAligned(capacity * K_SIZE(Slot), alignof(Slot));
+            slots.len = capacity;
 
-        for (Size i = 0; i < slots.len; i++) {
-            Slot *slot = new (slots.ptr + i) Slot();
-            slot->next.store((uint32_t)i + 1, std::memory_order_relaxed);
+            for (Size i = 0; i < slots.len; i++) {
+                Slot *slot = new (slots.ptr + i) Slot();
+                slot->next.store((uint32_t)i + 1, std::memory_order_relaxed);
+            }
+
+            slots[slots.len - 1].next.store(0xFFFFFFFFu, std::memory_order_relaxed);
+        } else {
+            slots = {};
+            head.store({ 0xFFFFFFFFu, 0 }, std::memory_order_relaxed);
         }
-
-        slots[slots.len - 1].next.store(0xFFFFFFFFu, std::memory_order_relaxed);
     }
 
     ~LockFreePool()
