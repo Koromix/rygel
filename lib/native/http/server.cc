@@ -1107,12 +1107,13 @@ http_RequestStatus http_IO::ParseRequest()
         uint8_t *end = (uint8_t *)MemMem(incoming.buf.ptr + incoming.pos, incoming.buf.len - incoming.pos, "\r\n\r\n", 4);
 
         if (!end) {
+            incoming.pos = std::max((Size)0, incoming.buf.len - 3);
+
             if (incoming.pos >= daemon->max_request_size) [[unlikely]] {
                 SendAbort(431, "Excessive request size");
                 return http_RequestStatus::Shutdown;
             }
 
-            incoming.pos = std::max((Size)0, incoming.buf.len - 3);
             return http_RequestStatus::Busy;
         }
 
