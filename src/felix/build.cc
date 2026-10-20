@@ -812,6 +812,7 @@ bool Builder::Build(int jobs, bool verbose)
     progress = total - nodes.len;
     workers.Clear();
     workers.AppendDefault(jobs);
+    worker_ptrs.Reset(workers);
 
     K_DEFER {
         // Update cache even if some tasks fail
@@ -1536,7 +1537,7 @@ bool Builder::RunNode(Async *async, Node *node, bool verbose)
 
     const Command &cmd = node->cmd;
 
-    WorkerState *worker = &workers[Async::GetWorkerIndex()];
+    WorkerState *worker = worker_ptrs.Acquire();
     const char *cmd_line = rsp_map.FindValue(node, cmd.cmd_line.ptr);
 
     // The lock is needed to guarantee ordering of progress counter. Atomics

@@ -122,6 +122,7 @@ class Builder {
     HashMap<const void *, const char *> rsp_map;
     Size progress;
     HeapArray<WorkerState> workers;
+    ThreadedPointer<WorkerState> worker_ptrs;
 
     HashTable<const char *, CacheEntry> cache_map;
     HeapArray<DependencyEntry> cache_dependencies;

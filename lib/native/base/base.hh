@@ -3699,6 +3699,55 @@ public:
     const T &operator[](uint32_t idx) const { return slots[idx].obj; }
 };
 
+template <>
+class HashTraits<std::thread::id> {
+public:
+    static uint64_t Hash(std::thread::id id) { return (uint64_t)std::hash<std::thread::id>()(id); }
+    static bool Test(std::thread::id id1, std::thread::id id2) { return id1 == id2; }
+};
+
+template<typename T>
+class ThreadedPointer {
+    Span<T> values = {};
+
+    std::shared_mutex mutex;
+    HashMap<std::thread::id, T *> map;
+    Size counter = 0;
+
+public:
+    ThreadedPointer() = default;
+    ThreadedPointer(Span<T> values) : values(values) {}
+
+    void Reset(Span<T> values)
+    {
+        this->values = values;
+
+        map.Clear();
+        counter = 0;
+    }
+
+    T *Acquire()
+    {
+        std::thread::id id = std::this_thread::get_id();
+
+        // Kinda fast path
+        {
+            std::shared_lock<std::shared_mutex> lock_shr(mutex);
+            T *ptr = map.FindValue(id, nullptr);
+
+            if (ptr)
+                return ptr;
+        }
+
+        std::lock_guard<std::shared_mutex> lock_excl(mutex);
+
+        T *ptr = &values[counter++];
+        map.Set(id, ptr);
+
+        return ptr;
+    }
+};
+
 // ------------------------------------------------------------------------
 // Date
 // ------------------------------------------------------------------------
@@ -5327,8 +5376,6 @@ public:
     bool Sync();
     bool Wait(int timeout);
     bool IsSuccess() const { return success.load(std::memory_order_relaxed); }
-
-    static int GetWorkerIndex();
 
 private:
     void Init(AsyncPool *pool, unsigned int flags);

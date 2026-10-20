@@ -7773,11 +7773,6 @@ bool Async::Wait(int timeout)
     return pool->WaitOn(this, timeout);
 }
 
-int Async::GetWorkerIndex()
-{
-    return async_running_worker_idx;
-}
-
 void Async::Init(AsyncPool *pool, unsigned int flags)
 {
     this->pool = pool;
@@ -8311,11 +8306,6 @@ void Async::Run(int, const std::function<bool()> &func)
 bool Async::Sync()
 {
     return success;
-}
-
-int Async::GetWorkerIndex()
-{
-    return 0;
 }
 
 #endif
