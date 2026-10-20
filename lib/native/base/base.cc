@@ -7947,10 +7947,10 @@ void AsyncPool::RunWorker(int worker_idx)
         while (SweepTasks(worker_idx));
         lock.lock();
 
-        if (IsIdle()) {
-            // C++ is beautiful
+        // C++ is beautiful
+        {
             auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(K_ASYNC_MAX_IDLE_TIME);
-            pending_cv.wait_until(lock, deadline);
+            while (IsIdle() && pending_cv.wait_until(lock, deadline) != std::cv_status::timeout);
         }
     }
 
@@ -7986,7 +7986,7 @@ void AsyncPool::SyncOn(Async *async)
 
         std::unique_lock<std::mutex> lock(mutex);
 
-        if (async->remaining_tasks.load(std::memory_order_relaxed) && IsIdle()) {
+        while (async->remaining_tasks.load(std::memory_order_relaxed) && IsIdle()) {
             sync_cv.wait(lock);
         }
     }
