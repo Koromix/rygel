@@ -5290,6 +5290,7 @@ enum class AsyncFlag {
     Background = 1 << 0,
 
     // Use this when you don't want Sync() to run tasks from other Async objects.
+    // Workers must not add tasks to a Selfish Async; only use for Async/Run()/Run()/Sync() workflows.
     // It can slow things down, and cause some busy spin. Use with care!
     Selfish = 1 << 1
 };
@@ -5304,6 +5305,10 @@ class Async {
     // Rarely written to or mostly-thread-specific so avoid separate cache line
     std::atomic_bool success { true };
     std::atomic_uint next_worker { 0 };
+
+#if defined(K_DEBUG)
+    std::atomic_bool closed { false };
+#endif
 
     alignas(64) std::atomic_int remaining_tasks { 0 };
 #else

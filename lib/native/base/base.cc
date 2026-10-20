@@ -7640,8 +7640,9 @@ struct alignas(64) WorkerData {
     int idx;
 
     std::atomic<TaggedIndex> head {{ 0xFFFFFFFFu, 0 }};
-
     LockFreePool<TaskData> alloc { K_ASYNC_MAX_WORKER_TASKS };
+
+    std::mutex selfish;
 };
 
 enum class SleepState {
@@ -7681,18 +7682,19 @@ public:
     void AddTask(Async *async, int worker_idx, std::function<bool()> &&func);
 
     void RunWorker(int worker_idx);
-    void SyncOn(Async *async);
+    void Sync(Async *async);
+    void SyncSelfish(Async *async);
     bool WaitOn(Async *async, int timeout);
 
     bool SweepTasks(int worker_idx);
     bool SweepTasks(int worker_idx, Async *only);
-    int RunTasks(int worker_idx, int limit);
-    int RunTasks(int worker_idx, Async *only, int limit);
+    bool RunTasks(int worker_idx, int limit);
+    bool RunTasks(int worker_idx, Async *only, int limit, bool *retry);
 
     // Resets the function
     void RunTask(Async *async, std::function<bool()> &func);
 
-    bool IsIdle(int worker_idx);
+    bool IsIdle();
     void WakeUp();
 };
 
@@ -7757,7 +7759,12 @@ void Async::Run(int worker, std::function<bool()> &&func)
 
 bool Async::Sync()
 {
-    pool->SyncOn(this);
+    if (selfish) {
+        pool->SyncSelfish(this);
+    } else {
+        pool->Sync(this);
+    }
+
     return success.load(std::memory_order_relaxed);
 }
 
@@ -7898,6 +7905,10 @@ void AsyncPool::UnregisterAsync()
 
 void AsyncPool::AddTask(Async *async, int worker_idx, std::function<bool()> &&func)
 {
+#if defined(K_DEBUG)
+    K_ASSERT(!async->closed.load(std::memory_order_relaxed));
+#endif
+
     WorkerData *worker = &workers[worker_idx];
 
     async->remaining_tasks.fetch_add(1, std::memory_order_relaxed);
@@ -7906,7 +7917,14 @@ void AsyncPool::AddTask(Async *async, int worker_idx, std::function<bool()> &&fu
     // Process pending tasks when there's too much to do
     if (slot == 0xFFFFFFFFu) {
         for (;;) {
-            bool busy = async->selfish ? RunTasks(worker_idx, async, 4) : RunTasks(worker_idx, 4);
+            bool busy = false;
+
+            if (async->selfish) {
+                bool dummy;
+                busy = RunTasks(worker_idx, async, 4, &dummy);
+            } else {
+                busy = RunTasks(worker_idx, 4);
+            }
 
             slot = worker->alloc.Acquire();
 
@@ -7915,7 +7933,9 @@ void AsyncPool::AddTask(Async *async, int worker_idx, std::function<bool()> &&fu
             if (busy)
                 continue;
 
-            std::this_thread::yield();
+            // Just be done with it :)
+            RunTask(async, func);
+            return;
         }
     }
 
@@ -7957,7 +7977,7 @@ void AsyncPool::RunWorker(int worker_idx)
         // C++ is beautiful
         {
             auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(K_ASYNC_MAX_IDLE_TIME);
-            while (IsIdle(worker_idx) && pending_cv.wait_until(lock, deadline) != std::cv_status::timeout);
+            while (IsIdle() && pending_cv.wait_until(lock, deadline) != std::cv_status::timeout);
         }
     }
 
@@ -7969,7 +7989,7 @@ void AsyncPool::RunWorker(int worker_idx)
     }
 }
 
-void AsyncPool::SyncOn(Async *async)
+void AsyncPool::Sync(Async *async)
 {
     K_DEFER_C(pool = async_running_pool,
               worker_idx = async_running_worker_idx) {
@@ -7981,19 +8001,47 @@ void AsyncPool::SyncOn(Async *async)
     async_running_worker_idx = 0;
 
     while (async->remaining_tasks.load(std::memory_order_acquire)) {
-        if (async->selfish) {
-            if (SweepTasks(0, async)) {
-                std::this_thread::yield();
-                continue;
-            }
-        } else {
-            if (SweepTasks(0))
-                continue;
-        }
+        if (SweepTasks(0))
+            continue;
 
         std::unique_lock<std::mutex> lock(mutex);
 
-        while (async->remaining_tasks.load(std::memory_order_relaxed) && IsIdle(0)) {
+        while (async->remaining_tasks.load(std::memory_order_relaxed) && IsIdle()) {
+            sync_cv.wait(lock);
+        }
+    }
+}
+
+void AsyncPool::SyncSelfish(Async *async)
+{
+#if defined(K_DEBUG)
+    async->closed.store(true, std::memory_order_relaxed);
+    K_DEFER { async->closed.store(false, std::memory_order_relaxed); };
+#endif
+
+    K_DEFER_C(pool = async_running_pool,
+              worker_idx = async_running_worker_idx) {
+        async_running_pool = pool;
+        async_running_worker_idx = worker_idx;
+    };
+
+    async_running_pool = this;
+    async_running_worker_idx = 0;
+
+    while (async->remaining_tasks.load(std::memory_order_acquire)) {
+        if (!SweepTasks(0, async))
+            break;
+
+        // Selfish Sync is inefficient, especially if few tasks belong to this Async object.
+        // It can starve the workers a bit and increase busy spin. Yield to reduce the burden.
+        std::this_thread::yield();
+    }
+
+    // All related tasks are done or running somewhere (in workers). Just wait!
+    {
+        std::unique_lock<std::mutex> lock(mutex);
+
+        while (async->remaining_tasks.load(std::memory_order_acquire)) {
             sync_cv.wait(lock);
         }
     }
@@ -8040,7 +8088,9 @@ bool AsyncPool::SweepTasks(int worker_idx)
 
 bool AsyncPool::SweepTasks(int worker_idx, Async *only)
 {
-    if (RunTasks(worker_idx, only, 4))
+    bool retry = false;
+
+    if (RunTasks(worker_idx, only, 4, &retry))
         return true;
 
     // Sweep other queues. Everyone starts from its own index, thread sheduling and task duration is not
@@ -8048,17 +8098,17 @@ bool AsyncPool::SweepTasks(int worker_idx, Async *only)
     for (int i = 1; i < workers.len; i++) {
         int queue = (worker_idx + i) % workers.len;
 
-        if (RunTasks(queue, only, 1))
+        if (RunTasks(queue, only, 1, &retry))
             return true;
     }
 
-    return false;
+    return retry;
 }
 
-int AsyncPool::RunTasks(int worker_idx, int limit)
+bool AsyncPool::RunTasks(int worker_idx, int limit)
 {
     WorkerData *worker = &workers[worker_idx];
-    int processed = 0;
+    bool busy = false;
 
     for (int i = 0; i < limit; i++) {
         Async *async;
@@ -8071,7 +8121,7 @@ int AsyncPool::RunTasks(int worker_idx, int limit)
 
             do {
                 if (slot.idx == 0xFFFFFFFFu)
-                    return processed;
+                    return busy;
 
                 desired = { worker->alloc[slot.idx].next.load(std::memory_order_relaxed), slot.tag + 1 };
             } while (!worker->head.compare_exchange_weak(slot, desired, std::memory_order_acquire, std::memory_order_acquire));
@@ -8085,16 +8135,16 @@ int AsyncPool::RunTasks(int worker_idx, int limit)
         }
 
         RunTask(async, func);
-        processed++;
+        busy = true;
     }
 
-    return processed;
+    return busy;
 }
 
-int AsyncPool::RunTasks(int worker_idx, Async *only, int limit)
+bool AsyncPool::RunTasks(int worker_idx, Async *only, int limit, bool *retry)
 {
     WorkerData *worker = &workers[worker_idx];
-    int processed = 0;
+    bool busy = false;
 
     for (int i = 0; i < limit; i++) {
         Async *async = nullptr;
@@ -8103,61 +8153,75 @@ int AsyncPool::RunTasks(int worker_idx, Async *only, int limit)
         uint32_t skipped_head = 0xFFFFFFFFu;
         uint32_t skipped_tail = 0xFFFFFFFFu;
 
-        // Pop from lock-free stack
-        for (;;) {
-            TaggedIndex slot = worker->head.load(std::memory_order_acquire);
-            TaggedIndex desired;
+        // The lock prevents concurrent selfish runs from hiding tasks from each other.
+        // It's slow, but it's the Selfish flag trade-off.
+        {
+            std::unique_lock<std::mutex> lock(worker->selfish, std::try_to_lock);
 
-            do {
-                if (slot.idx == 0xFFFFFFFFu)
-                    break;
-                desired = { worker->alloc[slot.idx].next.load(std::memory_order_relaxed), slot.tag + 1 };
-            } while (!worker->head.compare_exchange_weak(slot, desired, std::memory_order_acquire, std::memory_order_acquire));
-
-            if (slot.idx == 0xFFFFFFFFu)
-                break;
-
-            TaskData *task = &worker->alloc[slot.idx];
-
-            if (only && task->async != only) {
-                task->next.store(skipped_head, std::memory_order_relaxed);
-
-                if (skipped_tail == 0xFFFFFFFFu) {
-                    skipped_tail = slot.idx;
-                }
-                skipped_head = slot.idx;
-
-                continue;
+            if (!lock.owns_lock()) {
+                *retry = true;
+                return busy;
             }
 
-            async = task->async;
-            func.swap(task->func);
+            // Pop from lock-free stack
+            for (;;) {
+                TaggedIndex slot = worker->head.load(std::memory_order_acquire);
+                TaggedIndex desired;
 
-            worker->alloc.Release(slot.idx);
+                do {
+                    if (slot.idx == 0xFFFFFFFFu)
+                        break;
+                    desired = { worker->alloc[slot.idx].next.load(std::memory_order_relaxed), slot.tag + 1 };
+                } while (!worker->head.compare_exchange_weak(slot, desired, std::memory_order_acquire, std::memory_order_acquire));
 
-            break;
+                if (slot.idx == 0xFFFFFFFFu)
+                    break;
+
+                TaskData *task = &worker->alloc[slot.idx];
+
+                if (task->async != only) {
+                    task->next.store(skipped_head, std::memory_order_relaxed);
+
+                    if (skipped_tail == 0xFFFFFFFFu) {
+                        skipped_tail = slot.idx;
+                    }
+                    skipped_head = slot.idx;
+
+                    continue;
+                }
+
+                async = task->async;
+                func.swap(task->func);
+
+                worker->alloc.Release(slot.idx);
+
+                break;
+            }
+
+            if (skipped_head != 0xFFFFFFFFu) {
+                TaggedIndex head = worker->head.load(std::memory_order_relaxed);
+                TaggedIndex desired;
+
+                do {
+                    worker->alloc[skipped_tail].next.store(head.idx, std::memory_order_relaxed);
+                    desired = { skipped_head, head.tag + 1 };
+                } while (!worker->head.compare_exchange_weak(head, desired, std::memory_order_seq_cst, std::memory_order_relaxed));
+            }
         }
 
         if (skipped_head != 0xFFFFFFFFu) {
-            TaggedIndex head = worker->head.load(std::memory_order_relaxed);
-            TaggedIndex desired;
-
-            do {
-                worker->alloc[skipped_tail].next.store(head.idx, std::memory_order_relaxed);
-                desired = { skipped_head, head.tag + 1 };
-            } while (!worker->head.compare_exchange_weak(head, desired, std::memory_order_seq_cst, std::memory_order_relaxed));
-
+            // Non-selfish sweeps don't use the mutex, so they might have missed tasks.
             WakeUp();
         }
 
         if (!async)
-            return processed;
+            return busy;
 
         RunTask(async, func);
-        processed++;
+        busy = true;
     }
 
-    return processed;
+    return busy;
 }
 
 void AsyncPool::RunTask(Async *async, std::function<bool()> &func)
@@ -8175,13 +8239,15 @@ void AsyncPool::RunTask(Async *async, std::function<bool()> &func)
     }
 }
 
-bool AsyncPool::IsIdle(int worker_idx)
+bool AsyncPool::IsIdle()
 {
     if (sleepy.load(std::memory_order_seq_cst) == SleepState::Idle)
         return true;
 
-    if (workers[worker_idx].head.load(std::memory_order_relaxed).idx != 0xFFFFFFFFu)
-        return false;
+    for (const WorkerData &worker: workers) {
+        if (worker.head.load(std::memory_order_relaxed).idx != 0xFFFFFFFFu)
+            return false;
+    }
 
     sleepy.store(SleepState::Scanning, std::memory_order_seq_cst);
 
