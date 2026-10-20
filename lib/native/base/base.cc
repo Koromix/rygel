@@ -8248,7 +8248,7 @@ void AsyncPool::RunTask(Async *async, std::function<bool()> &func)
     // Destroy captures, etc
     func = {};
 
-    if (async->remaining_tasks.fetch_sub(1, std::memory_order_release) == 1) {
+    if (async->remaining_tasks.fetch_sub(1, std::memory_order_release) == 1 && workers.len > 1) {
         std::lock_guard<std::mutex> lock(mutex);
         sync_cv.notify_all();
     }
