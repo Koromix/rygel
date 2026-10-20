@@ -8155,17 +8155,15 @@ int AsyncPool::RunTasks(int worker_idx, Async *only, int limit)
 
 void AsyncPool::RunTask(Async *async, std::function<bool()> &func)
 {
-    bool ret = func();
+    if (!func()) {
+        async->success.store(false, std::memory_order_relaxed);
+    }
 
     // Destroy captures, etc
     func = {};
 
-    if (!ret) {
-        async->success.store(false, std::memory_order_relaxed);
-    }
-
     if (async->remaining_tasks.fetch_sub(1, std::memory_order_release) == 1) {
-        std::lock_guard<std::mutex> lock_sync(mutex);
+        std::lock_guard<std::mutex> lock(mutex);
         sync_cv.notify_all();
     }
 }
