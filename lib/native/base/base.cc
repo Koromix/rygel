@@ -7911,6 +7911,17 @@ void AsyncPool::AddTask(Async *async, int worker_idx, std::function<bool()> &&fu
 
     // Process pending tasks when there's too much to do
     if (slot == 0xFFFFFFFFu) {
+        K_DEFER_C(pool = async_running_pool,
+                  worker_idx = async_running_worker_idx) {
+            async_running_pool = pool;
+            async_running_worker_idx = worker_idx;
+        };
+
+        if (async_running_pool != this) {
+            async_running_pool = this;
+            async_running_worker_idx = worker_idx;
+        }
+
         for (;;) {
             bool busy = false;
 
@@ -8220,6 +8231,8 @@ bool AsyncPool::RunTasks(int worker_idx, Async *only, int limit, bool *retry)
 
 void AsyncPool::RunTask(Async *async, std::function<bool()> &func)
 {
+    K_ASSERT(async_running_pool == this);
+
     if (!func()) {
         async->success.store(false, std::memory_order_relaxed);
     }
