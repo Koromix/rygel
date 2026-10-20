@@ -1,0 +1,13 @@
+diff --git a/vendor/sqlite3mc/sqlite3mc.c b/vendor/sqlite3mc/sqlite3mc.c
+index 47e3defd54..d2cb24907d 100644
+--- a/vendor/sqlite3mc/sqlite3mc.c
++++ b/vendor/sqlite3mc/sqlite3mc.c
+@@ -293754,7 +293754,7 @@ u128_shr(uint128_t v, int shift)
+ /* #include "../private/common.h" */
+ 
+ 
+-#if !defined(_MSC_VER)
++#if !defined(SODIUM_MUL)
+ #define SODIUM_MUL(out, x, y) out = ((uint128_t) x * y)
+ #define SODIUM_ADD(out, in) out += in
+ #define SODIUM_ADDLO(out, in) out += in
