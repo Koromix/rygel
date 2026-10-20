@@ -404,7 +404,7 @@ bool http_Daemon::Start(std::function<void(http_IO *io)> func)
     int handlers = std::max(16, 4 * GetCoreCount());
     async = new Async(handlers, (int)AsyncFlag::Background, "HTTP handler");
 
-    for (Size i = 0; i < dispatchers.len; i++) {
+    for (int i = 0; i < (int)dispatchers.len; i++) {
         K_ASSERT(!dispatchers[i].dispatcher);
 
         int listener = listeners[i % listeners.len];
@@ -1608,7 +1608,7 @@ bool http_IO::WriteChunked(Span<const uint8_t> data)
 int http_IO::StartLinger()
 {
     int expected = 0;
-    int desired = Mebibytes(1);
+    int desired = (int)Mebibytes(1);
 
     if (!linger.compare_exchange_strong(expected, desired, std::memory_order_relaxed))
         return expected;

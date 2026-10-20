@@ -7676,7 +7676,7 @@ public:
     void RegisterAsync();
     void UnregisterAsync();
 
-    int GetWorkerCount() const { return workers.len; }
+    int GetWorkerCount() const { return (int)workers.len; }
     bool IsBackground() const { return background; }
 
     void AddTask(Async *async, int worker_idx, std::function<bool()> &&func);
@@ -7785,7 +7785,7 @@ void Async::Init(AsyncPool *pool, unsigned int flags)
 
     selfish = flags & (int)AsyncFlag::Selfish;
 
-    unsigned int next = HashInt((unsigned int)(uintptr_t)this);
+    unsigned int next = (unsigned int)HashInt((unsigned int)(uintptr_t)this);
     next_worker.store(next, std::memory_order_relaxed);
 }
 

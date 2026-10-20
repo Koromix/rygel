@@ -466,7 +466,7 @@ void http_Dispatcher::Run()
 
                     struct linger sl = { 1, 0 };
                     setsockopt(sock, SOL_SOCKET, SO_LINGER, (char *)&sl, sizeof(sl));
-                    CloseSocket(sock);
+                    CloseSocket((int)sock);
 
                     continue;
                 } else {
@@ -478,7 +478,7 @@ void http_Dispatcher::Run()
                 http_Socket *socket = InitSocket(sock, clock, (sockaddr *)&ss);
 
                 if (!socket) [[unlikely]] {
-                    CloseSocket(sock);
+                    CloseSocket((int)sock);
                     continue;
                 }
 

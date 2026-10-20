@@ -157,7 +157,7 @@ static bool WriteSocket(int sock, Span<const uint8_t> header, Span<const uint8_t
 
     while (buffers.len) {
         DWORD sent = 0;
-        int ret = WSASend((SOCKET)sock, buffers.ptr, buffers.len, &sent, 0, nullptr, nullptr);
+        int ret = WSASend((SOCKET)sock, buffers.ptr, (DWORD)buffers.len, &sent, 0, nullptr, nullptr);
 
         if (ret) {
             int error = GetLastError();
