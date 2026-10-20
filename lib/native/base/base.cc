@@ -8206,12 +8206,11 @@ bool AsyncPool::RunTasks(int worker_idx, Async *only, int limit, bool *retry)
                     worker->alloc[skipped_tail].next.store(head.idx, std::memory_order_relaxed);
                     desired = { skipped_head, head.tag + 1 };
                 } while (!worker->head.compare_exchange_weak(head, desired, std::memory_order_seq_cst, std::memory_order_relaxed));
-            }
-        }
 
-        if (skipped_head != 0xFFFFFFFFu) {
-            // Non-selfish sweeps don't use the mutex, so they might have missed tasks.
-            WakeUp();
+                // Non-selfish sweeps don't use the mutex, so they might have missed tasks.
+                lock.unlock();
+                WakeUp();
+            }
         }
 
         if (!async)
