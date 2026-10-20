@@ -3713,7 +3713,14 @@ public:
 
 template<typename T>
 class ThreadedPointer {
+    struct LastAccess {
+        ThreadedPointer *owner;
+        uint64_t generation;
+        T *ptr;
+    };
+
     Span<T> values = {};
+    uint64_t generation = 0;
 
     std::shared_mutex mutex;
     HashMap<std::thread::id, T *> map;
@@ -3721,11 +3728,12 @@ class ThreadedPointer {
 
 public:
     ThreadedPointer() = default;
-    ThreadedPointer(Span<T> values) : values(values) {}
+    ThreadedPointer(Span<T> values) : values(values), generation(BumpGeneration()) {}
 
     void Reset(Span<T> values)
     {
         this->values = values;
+        generation = BumpGeneration();
 
         map.Clear();
         counter = 0;
@@ -3733,23 +3741,44 @@ public:
 
     T *Acquire()
     {
+        K_ASSERT(values.len);
+
+        static thread_local LastAccess last = {};
+
+        // Fast path for the last ThreadedPointer accessed by this thread
+        if (last.owner == this && last.generation == generation)
+            return last.ptr;
+
         std::thread::id id = std::this_thread::get_id();
 
-        // Kinda fast path
+        // Kinda fast but slower
         {
             std::shared_lock<std::shared_mutex> lock_shr(mutex);
             T *ptr = map.FindValue(id, nullptr);
 
-            if (ptr)
+            if (ptr) {
+                last = { this, generation, ptr };
                 return ptr;
+            }
         }
 
-        std::lock_guard<std::shared_mutex> lock_excl(mutex);
+        // First access
+        {
+            std::lock_guard<std::shared_mutex> lock_excl(mutex);
 
-        T *ptr = &values[counter++];
-        map.Set(id, ptr);
+            T *ptr = &values[counter++];
+            map.Set(id, ptr);
 
-        return ptr;
+            last = { this, generation, ptr };
+            return ptr;
+        }
+    }
+
+private:
+    static uint64_t BumpGeneration()
+    {
+        static std::atomic_uint64_t generation { 0 };
+        return generation.fetch_add(1, std::memory_order_relaxed) + 1;
     }
 };
 
