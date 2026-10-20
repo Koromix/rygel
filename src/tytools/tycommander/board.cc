@@ -67,7 +67,7 @@ void Board::loadSettings(Monitor *monitor)
     auto tag = db_.get("tag", "").toString();
     int r = ty_board_set_tag(board_, tag.isEmpty() ? nullptr : tag.toLocal8Bit().constData());
     if (r < 0) {
-#if defined(_MSC_VER) || __EXCEPTIONS
+#if (defined(_MSC_VER) && !defined(__clang__)) || __EXCEPTIONS
         throw bad_alloc();
 #else
         std::terminate();
@@ -437,7 +437,7 @@ void Board::setTag(const QString &tag)
 
     int r = ty_board_set_tag(board_, tag.isEmpty() ? nullptr : tag.toLocal8Bit().constData());
     if (r < 0)
-#if defined(_MSC_VER) || __EXCEPTIONS
+#if (defined(_MSC_VER) && !defined(__clang__)) || __EXCEPTIONS
         throw bad_alloc();
 #else
         std::terminate();

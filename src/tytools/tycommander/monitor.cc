@@ -25,7 +25,7 @@ Monitor::Monitor(QObject *parent)
 {
     int r = ty_pool_new(&pool_);
     if (r < 0) {
-#if defined(_MSC_VER) || __EXCEPTIONS
+#if (defined(_MSC_VER) && !defined(__clang__)) || __EXCEPTIONS
         throw bad_alloc();
 #else
         std::terminate();
