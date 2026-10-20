@@ -7644,6 +7644,13 @@ struct alignas(64) WorkerData {
     LockFreePool<TaskData> alloc { K_ASYNC_MAX_WORKER_TASKS };
 };
 
+enum class SleepState {
+    Awake,
+    Scanning,
+    Idle
+};
+static_assert(std::atomic<SleepState>::is_always_lock_free);
+
 class AsyncPool {
     K_DELETE_COPY(AsyncPool)
 
@@ -7659,7 +7666,7 @@ class AsyncPool {
     int refcount = 0;
     int asyncs = 0;
 
-    alignas(64) std::atomic_bool sleepy { true };
+    alignas(64) std::atomic<SleepState> sleepy { SleepState::Awake };
 
 public:
     AsyncPool(int threads, bool background, int refcount, const char *name);
@@ -7685,7 +7692,7 @@ public:
     // Resets the function
     void RunTask(Async *async, std::function<bool()> &func);
 
-    bool IsIdle();
+    bool IsIdle(int worker_idx);
     void WakeUp();
 };
 
@@ -7950,7 +7957,7 @@ void AsyncPool::RunWorker(int worker_idx)
         // C++ is beautiful
         {
             auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(K_ASYNC_MAX_IDLE_TIME);
-            while (IsIdle() && pending_cv.wait_until(lock, deadline) != std::cv_status::timeout);
+            while (IsIdle(worker_idx) && pending_cv.wait_until(lock, deadline) != std::cv_status::timeout);
         }
     }
 
@@ -7986,7 +7993,7 @@ void AsyncPool::SyncOn(Async *async)
 
         std::unique_lock<std::mutex> lock(mutex);
 
-        while (async->remaining_tasks.load(std::memory_order_relaxed) && IsIdle()) {
+        while (async->remaining_tasks.load(std::memory_order_relaxed) && IsIdle(0)) {
             sync_cv.wait(lock);
         }
     }
@@ -8168,35 +8175,39 @@ void AsyncPool::RunTask(Async *async, std::function<bool()> &func)
     }
 }
 
-bool AsyncPool::IsIdle()
+bool AsyncPool::IsIdle(int worker_idx)
 {
-    if (!sleepy.load(std::memory_order_seq_cst)) {
-        for (const WorkerData &worker: workers) {
-            TaggedIndex slot = worker.head.load(std::memory_order_relaxed);
+    if (sleepy.load(std::memory_order_seq_cst) == SleepState::Idle)
+        return true;
 
-            if (slot.idx != 0xFFFFFFFFu)
-                return false;
-        }
+    if (workers[worker_idx].head.load(std::memory_order_relaxed).idx != 0xFFFFFFFFu)
+        return false;
 
-        // Stores are expensive
-        sleepy.store(true, std::memory_order_seq_cst);
-    }
+    sleepy.store(SleepState::Scanning, std::memory_order_seq_cst);
+
+    bool idle = true;
 
     for (const WorkerData &worker: workers) {
-        TaggedIndex slot = worker.head.load(std::memory_order_seq_cst);
-
-        if (slot.idx != 0xFFFFFFFFu)
-            return false;
+        if (worker.head.load(std::memory_order_seq_cst).idx != 0xFFFFFFFFu) {
+            idle = false;
+            break;
+        }
     }
 
-    return true;
+    SleepState expected = SleepState::Scanning;
+    SleepState next = idle ? SleepState::Idle : SleepState::Awake;
+
+    if (!sleepy.compare_exchange_weak(expected, next, std::memory_order_seq_cst, std::memory_order_relaxed))
+        return false;
+
+    return idle;
 }
 
 void AsyncPool::WakeUp()
 {
-    if (!sleepy.load(std::memory_order_seq_cst))
+    if (sleepy.load(std::memory_order_seq_cst) == SleepState::Awake)
         return;
-    if (!sleepy.exchange(false, std::memory_order_seq_cst))
+    if (sleepy.exchange(SleepState::Awake, std::memory_order_seq_cst) != SleepState::Idle)
         return;
 
     std::lock_guard<std::mutex> lock(mutex);
