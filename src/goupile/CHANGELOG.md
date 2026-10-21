@@ -2,6 +2,13 @@
 
 ## Goupile 3.12
 
+### Goupile 3.12.10
+
+*Released on 2026-10-21*
+
+- Update integrated CA store after compromission of eMudhra intermediate certificates
+- Improve HTTP performance
+
 ### Goupile 3.12.9
 
 *Released on 2026-10-15*

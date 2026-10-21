@@ -2,6 +2,13 @@
 
 ## Goupile 3.12
 
+### Goupile 3.12.10
+
+*Sortie le 21/10/2026*
+
+- Mise à jour des certificats d'autorités de certification (CA) intégrés, suite à la fuite des certificats intermédiaires d'eMudhra
+- Amélioration des performances HTTP
+
 ### Goupile 3.12.9
 
 *Sortie le 15/10/2026*
