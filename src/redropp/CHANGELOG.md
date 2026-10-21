@@ -2,6 +2,13 @@
 
 ## Alpha versions
 
+### Redropp 0.9.14
+
+*Released on 2026-10-21*
+
+- Update integrated CA store after compromission of eMudhra intermediate certificates
+- Improve HTTP performance
+
 ### Redropp 0.9.13
 
 *Released on 2026-10-15*
