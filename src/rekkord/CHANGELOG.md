@@ -5,6 +5,17 @@
 
 ## Alpha versions
 
+### Rekkord 0.110
+
+*Released on 2026-10-21*
+
+- Update integrated CA store after compromission of eMudhra intermediate certificates
+- Propose SSH agent during SFTP setup in `rekkord setup`
+- Don't use fsync() during `rekkord restore`
+- Adjust big file optimization in Rekkord save code
+- Fix wrong filename in keyfile overwrite confirmation prompt
+- Build deb packages for Debian 12
+
 ### Rekkord 0.109
 
 *Released on 2026-10-10*
