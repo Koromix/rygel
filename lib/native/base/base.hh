@@ -3723,7 +3723,7 @@ class ThreadedPointer {
     Span<T> values = {};
     int64_t generation = 0;
 
-    std::shared_mutex mutex;
+    std::mutex mutex;
     HashMap<std::thread::id, T *> map;
     Size counter = 0;
 
@@ -3752,27 +3752,16 @@ public:
 
         std::thread::id id = std::this_thread::get_id();
 
-        // Kinda fast but slower
-        {
-            std::shared_lock<std::shared_mutex> lock_shr(mutex);
-            T *ptr = map.FindValue(id, nullptr);
+        std::lock_guard<std::mutex> lock(mutex);
 
-            if (ptr) {
-                last = { generation, ptr };
-                return ptr;
-            }
-        }
+        bool inserted;
+        T *ptr = *map.InsertOrGet(id, &values.ptr[counter], &inserted);
+        last = { generation, ptr };
 
-        // First access
-        {
-            std::lock_guard<std::shared_mutex> lock_excl(mutex);
+        counter += inserted;
+        K_ASSERT(counter <= values.len);
 
-            T *ptr = &values[counter++];
-            map.Set(id, ptr);
-
-            last = { generation, ptr };
-            return ptr;
-        }
+        return ptr;
     }
 
 private:
