@@ -3713,14 +3713,15 @@ public:
 
 template<typename T>
 class ThreadedPointer {
+    K_DELETE_COPY(ThreadedPointer)
+
     struct LastAccess {
-        ThreadedPointer *owner;
-        uint64_t generation;
+        int64_t generation;
         T *ptr;
     };
 
     Span<T> values = {};
-    uint64_t generation = 0;
+    int64_t generation = 0;
 
     std::shared_mutex mutex;
     HashMap<std::thread::id, T *> map;
@@ -3746,7 +3747,7 @@ public:
         static thread_local LastAccess last = {};
 
         // Fast path for the last ThreadedPointer accessed by this thread
-        if (last.owner == this && last.generation == generation)
+        if (last.generation == generation)
             return last.ptr;
 
         std::thread::id id = std::this_thread::get_id();
@@ -3757,7 +3758,7 @@ public:
             T *ptr = map.FindValue(id, nullptr);
 
             if (ptr) {
-                last = { this, generation, ptr };
+                last = { generation, ptr };
                 return ptr;
             }
         }
@@ -3769,15 +3770,17 @@ public:
             T *ptr = &values[counter++];
             map.Set(id, ptr);
 
-            last = { this, generation, ptr };
+            last = { generation, ptr };
             return ptr;
         }
     }
 
 private:
-    static uint64_t BumpGeneration()
+    static int64_t BumpGeneration()
     {
-        static std::atomic_uint64_t generation { 0 };
+        // This cannot realistically wrap around
+        static std::atomic_int64_t generation { 0 };
+
         return generation.fetch_add(1, std::memory_order_relaxed) + 1;
     }
 };
