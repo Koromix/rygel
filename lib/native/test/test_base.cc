@@ -702,6 +702,306 @@ TEST_FUNCTION("base/LocalDate")
 #undef WEEKDAY
 }
 
+// Based on Google Fuchsia, under Apache license
+static bool ReferenceValidateUtf8(const char *buf, size_t len)
+{
+    const uint8_t *data = (const uint8_t *)buf;
+    uint64_t pos = 0;
+    uint64_t next_pos = 0;
+    uint32_t code_point = 0;
+
+    while (pos < len) {
+        unsigned char byte = data[pos];
+        if (byte < 0b10000000) {
+            pos++;
+            continue;
+        } else if ((byte & 0b11100000) == 0b11000000) {
+            next_pos = pos + 2;
+            if (next_pos > len) {
+                return false;
+            }
+            if ((data[pos + 1] & 0b11000000) != 0b10000000) {
+                return false;
+            }
+            // range check
+            code_point = (byte & 0b00011111) << 6 | (data[pos + 1] & 0b00111111);
+            if (code_point < 0x80 || 0x7ff < code_point) {
+                return false;
+            }
+        } else if ((byte & 0b11110000) == 0b11100000) {
+            next_pos = pos + 3;
+            if (next_pos > len) {
+                return false;
+            }
+            if ((data[pos + 1] & 0b11000000) != 0b10000000) {
+                return false;
+            }
+            if ((data[pos + 2] & 0b11000000) != 0b10000000) {
+                return false;
+            }
+            // range check
+            code_point = (byte & 0b00001111) << 12 |
+                                     (data[pos + 1] & 0b00111111) << 6 |
+                                     (data[pos + 2] & 0b00111111);
+            if (code_point < 0x800 || 0xffff < code_point ||
+                    (0xd7ff < code_point && code_point < 0xe000)) {
+                return false;
+            }
+        } else if ((byte & 0b11111000) == 0b11110000) { // 0b11110000
+            next_pos = pos + 4;
+            if (next_pos > len) {
+                return false;
+            }
+            if ((data[pos + 1] & 0b11000000) != 0b10000000) {
+                return false;
+            }
+            if ((data[pos + 2] & 0b11000000) != 0b10000000) {
+                return false;
+            }
+            if ((data[pos + 3] & 0b11000000) != 0b10000000) {
+                return false;
+            }
+            // range check
+            code_point =
+                    (byte & 0b00000111) << 18 | (data[pos + 1] & 0b00111111) << 12 |
+                    (data[pos + 2] & 0b00111111) << 6 | (data[pos + 3] & 0b00111111);
+            if (code_point < 0xffff || 0x10ffff < code_point) {
+                return false;
+            }
+        } else {
+            // we may have a continuation
+            return false;
+        }
+        pos = next_pos;
+    }
+
+    return true;
+}
+
+class CodePointGenerator {
+    FastRandom *rng;
+
+public:
+    CodePointGenerator(FastRandom *rng) : rng(rng) {}
+
+    int32_t GetCodePoint()
+    {
+        int len = rng->GetInt(1, 5);
+
+        switch (len) {
+            case 1: return rng->GetInt(1, 0x80);
+            case 2: return rng->GetInt(0x80, 0x800);
+            case 3: {
+                int c = 0;
+
+                do {
+                    c = rng->GetInt(0x800, 0x10000);
+                } while (c >= 0xD800 && c < 0xE000);
+
+                return c;
+            } break;
+            case 4: return rng->GetInt(0x10000, 0x110000);
+        }
+
+        K_UNREACHABLE();
+    }
+};
+
+TEST_FUNCTION("base/IsValidUtf8")
+{
+    // Hard-coded tests
+    // Adapted from: https://github.com/simdutf/is_utf8/blob/main/tests/unit.cpp
+    {
+        static const char *const ValidSequences[] = { "a", "abcde12345", "\x71", "\x75\x4c", "\x7f\x4c\x23\x3c\x3a\x6f\x5d\x44\x13\x70" };
+        static const char *const InvalidSequences[] = {
+            "\xc3\x28",
+            "\xa0\xa1",
+            "\xe2\x28\xa1",
+            "\xe2\x82\x28",
+            "\xf0\x28\x8c\xbc",
+            "\xf0\x90\x28\xbc",
+            "\xf0\x28\x8c\x28",
+            "\xc0\x9f",
+            "\xf5\xff\xff\xff",
+            "\xed\xa0\x81",
+            "\xf8\x90\x80\x80\x80",
+            "123456789012345\xed",
+            "123456789012345\xf1",
+            "123456789012345\xc2",
+            "\xC2\x7F",
+            "\xce",
+            "\xce\xba\xe1",
+            "\xce\xba\xe1\xbd",
+            "\xce\xba\xe1\xbd\xb9\xcf",
+            "\xce\xba\xe1\xbd\xb9\xcf\x83\xce",
+            "\xce\xba\xe1\xbd\xb9\xcf\x83\xce\xbc\xce",
+            "\xdf",
+            "\xef\xbf",
+            "\x80",
+            "\x91\x85\x95\x9e",
+            "\x6c\x02\x8e\x18",
+            "\x25\x5b\x6e\x2c\x32\x2c\x5b\x5b\x33\x2c\x34\x2c\x05\x29\x2c\x33\x01\x01"
+            "\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01"
+            "\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01"
+            "\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01"
+            "\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x5b\x5b\x5b\x5b\x5b\x5b\x5b\x5b"
+            "\x5b\x5b\x5b\x5b\x5b\x5b\x5b\x5b\x5b\x5d\x2c\x35\x2e\x33\x2c\x39\x2e\x33"
+            "\x2c\x37\x2e\x33\x2c\x39\x2e\x34\x2c\x37\x2e\x33\x2c\x39\x2e\x33\x2c\x37"
+            "\x2e\x33\x2c\x39\x2e\x34\x5d\x5d\x5d\x5d\x5d\x5d\x5d\x5d\x5d\x5d\x5d\x5d"
+            "\x5d\x5d\x5d\x5d\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01"
+            "\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x20\x01\x01"
+            "\x01\x01\x01\x02\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01"
+            "\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01"
+            "\x01\x23\x0a\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01"
+            "\x01\x01\x01\x01\x01\x01\x01\x01\x7e\x7e\x0a\x0a\x01\x01\x01\x01\x01\x01"
+            "\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x5b\x5b"
+            "\x5b\x5b\x5b\x5b\x5b\x5b\x5b\x5b\x5b\x5b\x5b\x5b\x5b\x5b\x5b\x5d\x2c\x37"
+            "\x2e\x33\x2c\x39\x2e\x33\x2c\x37\x2e\x33\x2c\x39\x2e\x34\x2c\x37\x2e\x33"
+            "\x2c\x39\x2e\x33\x2c\x37\x2e\x33\x2c\x39\x2e\x34\x5d\x5d\x5d\x5d\x5d\x5d"
+            "\x5d\x5d\x5d\x5d\x5d\x5d\x5d\x5d\x5d\x01\x01\x80\x01\x01\x01\x79\x01\x01"
+            "\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01"
+            "\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01"
+            "\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01"
+            "\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01"
+            "\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01"
+            "\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01"
+            "\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01"
+            "\x01\x01\x01\x01\x01\x01\x01\x01\x01",
+            "[[[[[[[[[[[[[[["
+            "\x80\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01"
+            "\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01"
+            "\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01"
+            "\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01"
+            "\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01"
+            "\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x010\x01\x01\x01\x01\x01\x01"
+            "\x01\x01\x01\x01\x01",
+            "\x20\x0b\x01\x01\x01\x64\x3a\x64\x3a\x64\x3a\x5b\x5b\x5b\x5b\x5b\x5b\x5b"
+            "\x5b\x5b\x5b\x5b\x5b\x5b\x5b\x5b\x5b\x5b\x5b\x5b\x5b\x5b\x5b\x5b\x5b\x5b"
+            "\x5b\x5b\x5b\x5b\x5b\x5b\x5b\x5b\x5b\x5b\x5b\x5b\x5b\x5b\x5b\x5b\x30\x01"
+            "\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01"
+            "\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01"
+            "\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01"
+            "\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01"
+            "\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01"
+            "\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01"
+            "\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x80\x01\x01\x01\x01\x01\x01\x01"
+            "\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01"
+            "\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01"
+            "\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01"
+            "\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01"
+            "\x01\x01\x01\x01\x01",
+            "\x80",
+            "\x90",
+            "\xa1",
+            "\xb2",
+            "\xc3",
+            "\xd4",
+            "\xe5",
+            "\xf6\xc3\xb1"
+        };
+
+        for (const char *good: ValidSequences) {
+            Span<const char> span = good;
+
+            TEST_EX(IsValidUtf8(good), "Wrongly detected as invalid UTF-8 sequence: %1", FmtHex(span.As<const uint8_t>()));
+            TEST_EX(IsValidUtf8(span), "Wrongly detected as invalid UTF-8 sequence: %1", FmtHex(span.As<const uint8_t>()));
+        }
+
+        for (const char *bad: InvalidSequences) {
+            Span<const char> span = bad;
+
+            TEST_EX(!IsValidUtf8(bad), "Wrongly detected as valid UTF-8 sequence: %1", FmtHex(span.As<const uint8_t>()));
+            TEST_EX(!IsValidUtf8(span), "Wrongly detected as valid UTF-8 sequence: %1", FmtHex(span.As<const uint8_t>()));
+        }
+    }
+
+    // Test all 1, 2 and 3-byte sequences against reference
+    {
+        LocalArray<char, 8> buf;
+
+        for (int i = 0; i <= 0xFFFFFF; i++) {
+            if (i <= 0xFF) {
+                buf.data[0] = (char)i;
+                buf.data[1] = 0;
+                buf.len = 1;
+            } else if (i <= 0xFFFF) {
+                buf.data[0] = (char)((i >> 8) & 0xFF);
+                buf.data[1] = (char)(i  & 0xFF);
+                buf.data[2] = 0;
+                buf.len = 2;
+            } else {
+                buf.data[0] = (char)((i >> 16) & 0xFF);
+                buf.data[1] = (char)((i >> 8)  & 0xFF);
+                buf.data[2] = (char)(i  & 0xFF);
+                buf.data[3] = 0;
+                buf.len = 3;
+            }
+
+            if (strlen(buf.data) == (size_t)buf.len) {
+                TEST_EQ(IsValidUtf8(buf.data), ReferenceValidateUtf8(buf.data, buf.len));
+            }
+            TEST_EQ(IsValidUtf8(buf), ReferenceValidateUtf8(buf.data, buf.len));
+        }
+    }
+
+    // Random byte sequences
+    {
+        FastRandom rng(42);
+        CodePointGenerator cp(&rng);
+
+        for (int i = 0; i < 10000; i++) {
+            int target = rng.GetInt(4, 256);
+            LocalArray<char, 4096> buf;
+
+            for (int j = 0; j < target; j++) {
+                int32_t c = cp.GetCodePoint();
+                buf.len += EncodeUtf8(c, buf.end());
+            }
+            buf.data[buf.len] = 0;
+
+            K_ASSERT(ReferenceValidateUtf8(buf.data, buf.len));
+
+            TEST_EX(IsValidUtf8(buf.data), "Wrongly detected as invalid UTF-8 string: %1", FmtHex(buf.As<const uint8_t>()));
+            TEST_EX(IsValidUtf8(buf), "Wrongly detected as invalid UTF-8 string: %1", FmtHex(buf.As<const uint8_t>()));
+
+            // Mutate single bits to invalidate
+            for (int j = 0; j < 100; j++) {
+                LocalArray<char, K_SIZE(buf.data)> mutated;
+                MemCpy(mutated.data, buf.data, buf.len);
+                mutated.len = buf.len;
+                mutated.data[mutated.len] = 0;
+
+                int pos = rng.GetInt(0, mutated.len * 8);
+                mutated[pos / 8] ^= 1 << (pos % 8);
+
+                while (ReferenceValidateUtf8(mutated.data, mutated.len) || !mutated[pos / 8]) {
+                    mutated[pos / 8] ^= 1 << (pos % 8);
+                    pos = rng.GetInt(0, mutated.len * 8);
+                    mutated[pos / 8] ^= 1 << (pos % 8);
+                }
+                K_ASSERT(!ReferenceValidateUtf8(mutated.data, mutated.len));
+
+                TEST_EX(!IsValidUtf8(mutated.data), "Wrongly detected as valid UTF-8 string: %1", FmtHex(mutated.As<const uint8_t>()));
+                TEST_EX(!IsValidUtf8(mutated), "Wrongly detected as valid UTF-8 string: %1", FmtHex(mutated.As<const uint8_t>()));
+            }
+
+            // Test truncation
+            {
+                int truncate = rng.GetInt(1, buf.len);
+
+                LocalArray<char, K_SIZE(buf.data)> truncated;
+                MemSet(truncated.data, 0x80, buf.len);
+                MemCpy(truncated.data, buf.data, truncate);
+                truncated.len = truncate;
+                truncated.data[truncated.len] = 0;
+
+                TEST_EQ(IsValidUtf8(truncated.data), ReferenceValidateUtf8(truncated.data, truncated.len));
+                TEST_EQ(IsValidUtf8(truncated), ReferenceValidateUtf8(truncated.data, truncated.len));
+            }
+        }
+    }
+}
+
 TEST_FUNCTION("base/ChaCha20")
 {
     struct TestCase {
