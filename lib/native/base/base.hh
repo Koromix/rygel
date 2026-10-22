@@ -6266,7 +6266,7 @@ bool CanCompressFile(const char *filename);
 // Unicode
 // ------------------------------------------------------------------------
 
-static inline int CountUtf8Bytes(char c)
+static inline int CountUtf8Lead(char c)
 {
     int ones = CountLeadingZeros((uint32_t)~c << 24);
     return std::min(std::max(ones, 1), 4);
@@ -6281,7 +6281,7 @@ static constexpr inline Size DecodeUtf8(const char *str, int32_t *out_c)
     if (BYTE(0) < 0x80) {
         *out_c = BYTE(0);
         return 1;
-    } else if (BYTE(0) - 0xC2 > 0xF4 - 0xC2) [[unlikely]] {
+    } else if (BYTE(0) < 0xC2 || BYTE(0) > 0xF4) [[unlikely]] {
         return 0;
     } else if (BYTE(1)) [[likely]] {
         if (BYTE(0) < 0xE0 && (BYTE(1) & 0xC0) == 0x80) {
@@ -6291,13 +6291,19 @@ static constexpr inline Size DecodeUtf8(const char *str, int32_t *out_c)
             if (BYTE(0) < 0xF0 &&
                    (BYTE(1) & 0xC0) == 0x80 &&
                    (BYTE(2) & 0xC0) == 0x80) {
-                *out_c = ((BYTE(0) & 0xF) << 12) | ((BYTE(1) & 0x3F) << 6) | (BYTE(2) & 0x3F);
+                int32_t c = ((BYTE(0) & 0xF) << 12) | ((BYTE(1) & 0x3F) << 6) | (BYTE(2) & 0x3F);
+                if (c < 0x800 || (c >= 0xD800 && c < 0xE000)) [[unlikely]]
+                    return 0;
+                *out_c = c;
                 return 3;
             } else if (BYTE(3)) [[likely]] {
                 if ((BYTE(1) & 0xC0) == 0x80 &&
                        (BYTE(2) & 0xC0) == 0x80 &&
                        (BYTE(3) & 0xC0) == 0x80) {
-                    *out_c = ((BYTE(0) & 0x7) << 18) | ((BYTE(1) & 0x3F) << 12) | ((BYTE(2) & 0x3F) << 6) | (BYTE(3) & 0x3F);
+                    int32_t c = ((BYTE(0) & 0x7) << 18) | ((BYTE(1) & 0x3F) << 12) | ((BYTE(2) & 0x3F) << 6) | (BYTE(3) & 0x3F);
+                    if (c < 0x10000 || c > 0x10FFFF) [[unlikely]]
+                        return 0;
+                    *out_c = c;
                     return 4;
                 }
             }
@@ -6320,19 +6326,25 @@ static constexpr inline Size DecodeUtf8(Span<const char> str, Size offset, int32
     if (BYTE(0) < 0x80) {
         *out_c = BYTE(0);
         return 1;
-    } else if (BYTE(0) - 0xC2 > 0xF4 - 0xC2) [[unlikely]] {
+    } else if (BYTE(0) < 0xC2 || BYTE(0) > 0xF4) [[unlikely]] {
         return 0;
     } else if (BYTE(0) < 0xE0 && str.len >= 2 && (BYTE(1) & 0xC0) == 0x80) {
         *out_c = ((BYTE(0) & 0x1F) << 6) | (BYTE(1) & 0x3F);
         return 2;
     } else if (BYTE(0) < 0xF0 && str.len >= 3 && (BYTE(1) & 0xC0) == 0x80 &&
                                                  (BYTE(2) & 0xC0) == 0x80) {
-        *out_c = ((BYTE(0) & 0xF) << 12) | ((BYTE(1) & 0x3F) << 6) | (BYTE(2) & 0x3F);
+        int32_t c = ((BYTE(0) & 0xF) << 12) | ((BYTE(1) & 0x3F) << 6) | (BYTE(2) & 0x3F);
+        if (c < 0x800 || (c >= 0xD800 && c < 0xE000)) [[unlikely]]
+            return 0;
+        *out_c = c;
         return 3;
     } else if (str.len >= 4 && (BYTE(1) & 0xC0) == 0x80 &&
                                (BYTE(2) & 0xC0) == 0x80 &&
                                (BYTE(3) & 0xC0) == 0x80) {
-        *out_c = ((BYTE(0) & 0x7) << 18) | ((BYTE(1) & 0x3F) << 12) | ((BYTE(2) & 0x3F) << 6) | (BYTE(3) & 0x3F);
+        int32_t c = ((BYTE(0) & 0x7) << 18) | ((BYTE(1) & 0x3F) << 12) | ((BYTE(2) & 0x3F) << 6) | (BYTE(3) & 0x3F);
+        if (c < 0x10000 || c > 0x10FFFF) [[unlikely]]
+            return 0;
+        *out_c = c;
         return 4;
     } else {
         return 0;
@@ -6350,6 +6362,8 @@ static constexpr inline int32_t DecodeUtf8(const char *str)
 
 static inline Size EncodeUtf8(int32_t c, char out_buf[4])
 {
+    K_ASSERT(c >= 0);
+
     if (c < 0x80) {
         out_buf[0] = (char)c;
         return 1;

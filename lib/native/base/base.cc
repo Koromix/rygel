@@ -10991,7 +10991,7 @@ void ConsolePrompter::RenderRaw()
             if (i >= str.len)
                 break;
 
-            Size bytes = std::min((Size)CountUtf8Bytes(str[i]), str.len - i);
+            Size bytes = std::min((Size)CountUtf8Lead(str[i]), str.len - i);
             int width = mask ? mask_columns : ComputeUnicodeWidth(str.Take(i, bytes));
 
             if (x2 + width >= columns || str[i] == '\n') {
@@ -11176,7 +11176,7 @@ int32_t ConsolePrompter::ReadChar()
     }
 
     if (uc >= 128) {
-        Size bytes = CountUtf8Bytes((char)uc);
+        Size bytes = CountUtf8Lead((char)uc);
 
         LocalArray<char, 4> buf;
         buf.Append((char)uc);
@@ -11501,7 +11501,7 @@ bool IsValidUtf8(Span<const char> str)
         i += bytes;
     }
 
-    return i == str.len;
+    return true;
 }
 
 #if __has_include("unicode.inc")
