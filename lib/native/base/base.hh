@@ -5334,7 +5334,7 @@ static const char *const SocketTypeNames[] = {
 };
 
 #if defined(_WIN32)
-    #define SOCK_OVERLAPPED 256
+    #define SOCK_NOT_OVERLAPPED 256
 #endif
 
 #if defined(_WIN32)

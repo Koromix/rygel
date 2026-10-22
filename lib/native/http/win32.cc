@@ -20,6 +20,12 @@
 #include <mswsock.h>
 #include <io.h>
 
+#define BEGIN_IGNORE_MISSING_FIELDS \
+   _Pragma("GCC diagnostic push") \
+   _Pragma("GCC diagnostic ignored \"-Wmissing-field-initializers\"")
+#define END_IGNORE_MISSING_FIELDS \
+   _Pragma("GCC diagnostic pop")
+
 namespace K {
 
 struct http_Socket {
@@ -32,11 +38,14 @@ struct http_Socket {
     bool nodelay = false;
     int lingered = 0;
 
+    HANDLE read_ev = nullptr;
+    HANDLE write_ev = nullptr;
+
     http_IO client;
 
     http_Socket(http_Daemon *daemon, int dispatcher)
         : dispatcher(dispatcher), client(daemon) {}
-    ~http_Socket() { CloseSocket(client.HasLeaked() ? -1 : sock); }
+    ~http_Socket();
 };
 
 static const int MaxDispatcherClients = 128;
@@ -98,14 +107,14 @@ void http_Daemon::DestroyDispatcher(http_Dispatcher *dispatcher)
     delete dispatcher;
 }
 
-void http_Daemon::StartRead(http_Socket *socket)
+void http_Daemon::StartRead(http_Socket *)
 {
-    SetSocketNonBlock(socket->sock, false);
+    // Nothing to do
 }
 
-void http_Daemon::StartWrite(http_Socket *socket, bool blocking)
+void http_Daemon::StartWrite(http_Socket *socket, bool)
 {
-    SetSocketNonBlock(socket->sock, !blocking);
+    // Nothing to do
 
     if (!socket->nodelay) {
         // Setting TCP_NODELAY just after accept() can fail, when the socket is still in CONNECTING state.
@@ -124,62 +133,93 @@ void http_Daemon::EndWrite(http_Socket *)
 
 Size http_Daemon::ReadSocket(http_Socket *socket, Span<uint8_t> buf)
 {
-    int len = (int)std::min(buf.len, (Size)INT_MAX);
-    Size bytes = recv((SOCKET)socket->sock, (char *)buf.ptr, len, 0);
+    int error = 0;
 
-    if (bytes < 0) {
-        int error = GetLastError();
+BEGIN_IGNORE_MISSING_FIELDS
+    WSAOVERLAPPED ov = { .hEvent = socket->read_ev };
+    WSABUF wbuf = { (unsigned long)std::min(buf.len, (Size)ULONG_MAX), (char *)buf.ptr };
+    DWORD flags = 0;
+    DWORD bytes = 0;
+END_IGNORE_MISSING_FIELDS
 
-        if (error != WSAENOTCONN && error != WSAECONNRESET) {
-            LogError("Failed to read from client: %1", GetWin32ErrorString(error));
+    if (WSARecv((SOCKET)socket->sock, &wbuf, 1, &bytes, &flags, &ov, nullptr) == SOCKET_ERROR) {
+        error = GetLastError();
+
+        if (error != WSA_IO_PENDING)
+            goto error;
+
+        if (!WSAGetOverlappedResult((SOCKET)socket->sock, &ov, &bytes, true, &flags)) {
+            error = GetLastError();
+            goto error;
         }
-
-        socket->client.keepalive = false;
-        return -1;
     }
 
     socket->client.ExtendTimeout(bytes / 4, max_timeout);
 
-    return bytes;
+    return (Size)bytes;
+
+error:
+    if (error != WSAENOTCONN && error != WSAECONNRESET && error != WSAESHUTDOWN && error != WSA_OPERATION_ABORTED) {
+        LogError("Failed to read from client: %1", GetWin32ErrorString(error));
+    }
+
+    socket->client.keepalive = false;
+    return -1;
 }
 
-bool http_Daemon::WriteSocket(http_Socket *socket, Span<const uint8_t> buf, bool)
+bool http_Daemon::WriteSocket(http_Socket *socket, Span<const uint8_t> buf, bool nowait)
 {
+    int error = 0;
+
     while (buf.len) {
-        int len = (int)std::min(buf.len, MaxSend);
+BEGIN_IGNORE_MISSING_FIELDS
+        WSAOVERLAPPED ov = { .hEvent = socket->write_ev };
+        WSABUF wbuf = { (unsigned long)std::min(buf.len, MaxSend), (char *)buf.ptr };
+        DWORD flags = 0;
+        DWORD bytes = 0;
+END_IGNORE_MISSING_FIELDS
 
         // Extend beforehand to prevent premature timeout
-        socket->client.ExtendTimeout(len / 4, max_timeout);
+        socket->client.ExtendTimeout(wbuf.len / 4, max_timeout);
 
-        int bytes = send(socket->sock, (char *)buf.ptr, len, 0);
+        if (WSASend((SOCKET)socket->sock, &wbuf, 1, &bytes, flags, nowait ? nullptr : &ov, nullptr) == SOCKET_ERROR) {
+            error = GetLastError();
 
-        if (bytes < 0) {
-            int error = GetLastError();
+            if (error != WSA_IO_PENDING)
+                goto error;
 
-            if (error != WSAENOTCONN && error != WSAECONNRESET) {
-                LogError("Failed to send to client: %1", GetWin32ErrorString(error));
+            if (!WSAGetOverlappedResult((SOCKET)socket->sock, &ov, &bytes, true, &flags)) {
+                error = GetLastError();
+                goto error;
             }
-
-            socket->client.keepalive = false;
-            return false;
         }
 
-        buf.ptr += bytes;
-        buf.len -= bytes;
+        buf.ptr += (Size)bytes;
+        buf.len -= (Size)bytes;
     }
 
     return true;
+
+error:
+    if (error != WSAENOTCONN && error != WSAECONNRESET && error != WSAESHUTDOWN && error != WSA_OPERATION_ABORTED) {
+        LogError("Failed to send to client: %1", GetWin32ErrorString(error));
+    }
+
+    socket->client.keepalive = false;
+    return false;
 }
 
 bool http_Daemon::WriteSocket(http_Socket *socket, Span<Span<const uint8_t>> parts)
 {
+    int error = 0;
+
     while (parts.len) {
-        LocalArray<WSABUF, 64> bufs;
+        LocalArray<WSABUF, 64> buffers;
         Size send = 0;
 
-        bufs.len = std::min(parts.len, bufs.Available());
+        buffers.len = std::min(parts.len, K_LEN(buffers.data));
 
-        for (Size i = 0; i < bufs.len; i++) {
+        for (Size i = 0; i < buffers.len; i++) {
             const Span<const uint8_t> &part = parts[i];
 
             if (part.len > (Size)INT_MAX) [[unlikely]] {
@@ -189,8 +229,8 @@ bool http_Daemon::WriteSocket(http_Socket *socket, Span<Span<const uint8_t>> par
                 return false;
             }
 
-            bufs[i].buf = (char *)part.ptr;
-            bufs[i].len = (unsigned long)part.len;
+            buffers[i].buf = (char *)part.ptr;
+            buffers[i].len = (unsigned long)part.len;
 
             send += part.len;
         }
@@ -198,32 +238,49 @@ bool http_Daemon::WriteSocket(http_Socket *socket, Span<Span<const uint8_t>> par
         // Extend beforehand to prevent premature timeout
         socket->client.ExtendTimeout(send / 4, max_timeout);
 
+BEGIN_IGNORE_MISSING_FIELDS
+        WSAOVERLAPPED ov = { .hEvent = socket->write_ev };
+        DWORD flags = 0;
         DWORD sent = 0;
-        int ret = WSASend((SOCKET)socket->sock, bufs.data, (DWORD)bufs.len, &sent, 0, nullptr, nullptr);
+END_IGNORE_MISSING_FIELDS
 
-        if (ret) {
-            int error = GetLastError();
+        if (WSASend((SOCKET)socket->sock, buffers.data, (DWORD)buffers.len, &sent, flags, &ov, nullptr) == SOCKET_ERROR) {
+            error = GetLastError();
 
-            if (error != WSAENOTCONN && error != WSAECONNRESET) {
-                LogError("Failed to send to client: %1", GetWin32ErrorString(error));
+            if (error != WSA_IO_PENDING)
+                goto error;
+
+            if (!WSAGetOverlappedResult((SOCKET)socket->sock, &ov, &sent, true, &flags)) {
+                error = GetLastError();
+                goto error;
             }
-
-            socket->client.keepalive = false;
-            return false;
         }
 
-        // Windows does not apparently do partial writes, so don't bother dealing with that.
-        //
-        // From MSDN:
-        // For non-overlapped sockets [...] WSASend adopts the same blocking semantics as send.
-        // [...] Given the same buffer situation and a blocking socket, WSASend will block until
-        // all of the application's buffer contents have been consumed.
+        do {
+            Span<const uint8_t> *part = parts.ptr;
 
-        parts.ptr += bufs.len;
-        parts.len -= bufs.len;
+            if (part->len > (Size)sent) {
+                part->ptr += sent;
+                part->len -= (Size)sent;
+
+                break;
+            }
+
+            parts.ptr++;
+            parts.len--;
+            sent -= (DWORD)part->len;
+        } while (parts.len);
     }
 
     return true;
+
+error:
+    if (error != WSAENOTCONN && error != WSAECONNRESET && error != WSAESHUTDOWN && error != WSA_OPERATION_ABORTED) {
+        LogError("Failed to send to client: %1", GetWin32ErrorString(error));
+    }
+
+    socket->client.keepalive = false;
+    return false;
 }
 
 bool http_Daemon::GiveSocket(http_Socket *socket, ws_Socket *ws)
@@ -309,6 +366,18 @@ static bool CreateSocketPair(int out_pair[2])
     return false;
 }
 
+http_Socket::~http_Socket()
+{
+    CloseSocket(client.HasLeaked() ? -1 : sock);
+
+    if (read_ev) {
+        CloseHandle(read_ev);
+    }
+    if (write_ev) {
+        CloseHandle(write_ev);
+    }
+}
+
 http_Dispatcher::~http_Dispatcher()
 {
     CloseSocket(pair_fd[0]);
@@ -352,10 +421,20 @@ void http_Dispatcher::Run()
                 if (socket->client.StartLinger() < 0)
                     continue;
 
-                shutdown(socket->sock, SD_BOTH);
+                shutdown((SOCKET)socket->sock, SD_BOTH);
+                CancelIoEx((HANDLE)(SOCKET)socket->sock, nullptr);
             }
 
-            async.Sync();
+            // I/O submission runs in worker threads, and can race with shutdown/cancellation,
+            // so keep canceling overlapped I/O operations until all handlers have exited.
+            while (!async.Wait(100)) {
+                for (http_Socket *socket: sockets) {
+                    if (socket->client.StartLinger() < 0)
+                        continue;
+
+                   CancelIoEx((HANDLE)(SOCKET)socket->sock, nullptr);
+                }
+            }
         }
 
         for (http_Socket *socket: sockets) {
@@ -418,10 +497,9 @@ void http_Dispatcher::Run()
                         continue;
                     }
 
-                    shutdown(socket->sock, SD_SEND);
+                    shutdown((SOCKET)socket->sock, SD_SEND);
                 }
 
-                SetSocketNonBlock(socket->sock, true);
                 socket->poll = true;
             }
 
@@ -477,10 +555,8 @@ void http_Dispatcher::Run()
 
                 http_Socket *socket = InitSocket(sock, clock, (sockaddr *)&ss);
 
-                if (!socket) [[unlikely]] {
-                    CloseSocket((int)sock);
+                if (!socket) [[unlikely]]
                     continue;
-                }
 
                 sockets.Append(socket);
             }
@@ -574,7 +650,7 @@ void http_Dispatcher::Run()
 
                 case http_RequestStatus::Shutdown: {
                     client->StartLinger();
-                    shutdown(socket->sock, SD_SEND);
+                    shutdown((SOCKET)socket->sock, SD_SEND);
                 } break;
             }
 
@@ -584,7 +660,7 @@ void http_Dispatcher::Run()
                 int linger = client->StartLinger();
 
                 if (!linger) {
-                    shutdown(socket->sock, SD_BOTH);
+                    shutdown((SOCKET)socket->sock, SD_BOTH);
                     delay = daemon->linger_timeout;
                 } else if (socket->handled) {
                     ParkSocket(socket, true);
@@ -645,15 +721,27 @@ http_Socket *http_Dispatcher::InitSocket(SOCKET sock, int64_t start, struct sock
     http_Socket *socket = free_sockets.len ? free_sockets.data[--free_sockets.len] : new http_Socket(daemon, dispatcher);
     K_DEFER_N(err_guard) { delete socket; };
 
-    if (!socket->client.Init(socket, start, sa)) [[unlikely]]
-        return nullptr;
-
     socket->sock = (int)sock;
     socket->process = true;
     socket->poll = true;
     socket->handled = true;
     socket->nodelay = false;
     socket->lingered = 0;
+
+    if (!socket->read_ev) {
+        K_ASSERT(!socket->write_ev);
+
+        socket->read_ev = CreateEvent(nullptr, true, false, nullptr);
+        socket->write_ev = CreateEvent(nullptr, true, false, nullptr);
+
+        if (!socket->read_ev || !socket->write_ev) [[unlikely]] {
+            LogError("Failed to create event HANDLE: %1", GetWin32ErrorString());
+            return nullptr;
+        }
+    }
+
+    if (!socket->client.Init(socket, start, sa)) [[unlikely]]
+        return nullptr;
 
     err_guard.Disable();
     return socket;
@@ -685,6 +773,8 @@ void http_Dispatcher::ParkSocket(http_Socket *socket, bool hard)
 
 void http_IO::SendFile(int status, int fd, int64_t len)
 {
+    int error = 0;
+
     if (len < 0) {
         HANDLE h = (HANDLE)_get_osfhandle(fd);
 
@@ -737,14 +827,24 @@ void http_IO::SendFile(int status, int fd, int64_t len)
         int64_t bytes = intro.len + send;
         ExtendTimeout(bytes / 4, daemon->max_timeout);
 
-        // Needed to provide offset = 0
-        OVERLAPPED ov = {};
+BEGIN_IGNORE_MISSING_FIELDS
+        OVERLAPPED ov = { .hEvent = socket->write_ev };
+END_IGNORE_MISSING_FIELDS
 
-        if (!TransmitFile((SOCKET)socket->sock, h, send, 0, &ov, &tbuf, 0)) [[unlikely]] {
-            LogError("Failed to send file: %1", GetWin32ErrorString());
+        if (!TransmitFile((SOCKET)socket->sock, h, send, 0, &ov, &tbuf, 0)) {
+            error = GetLastError();
 
-            keepalive = false;
-            return;
+            if (error != WSA_IO_PENDING)
+                goto error;
+
+            // Don't care but WSAGetOverlappedResult wants those
+            DWORD sent;
+            DWORD flags;
+
+            if (!WSAGetOverlappedResult((SOCKET)socket->sock, &ov, &sent, true, &flags)) {
+                error = GetLastError();
+                goto error;
+            }
         }
 
         offset += send;
@@ -753,26 +853,47 @@ void http_IO::SendFile(int status, int fd, int64_t len)
 
     // Send remaining file content
     while (remain) {
-        OVERLAPPED ov = {};
-
-        ov.OffsetHigh = (DWORD)(offset >> 32);
-        ov.Offset = (DWORD)(offset & 0xFFFFFFFFu);
+BEGIN_IGNORE_MISSING_FIELDS
+        OVERLAPPED ov = {
+            .Offset = (DWORD)(offset & 0xFFFFFFFFu),
+            .OffsetHigh = (DWORD)(offset >> 32),
+            .hEvent = socket->write_ev
+        };
+END_IGNORE_MISSING_FIELDS
 
         DWORD send = (DWORD)std::min(remain, (int64_t)MaxSend);
 
         // Extend beforehand to prevent premature timeout
         ExtendTimeout(send / 4, daemon->max_timeout);
 
-        if (!TransmitFile((SOCKET)socket->sock, h, send, 0, &ov, nullptr, 0)) [[unlikely]] {
-            LogError("Failed to send file: %1", GetWin32ErrorString());
+        if (!TransmitFile((SOCKET)socket->sock, h, send, 0, &ov, nullptr, 0)) {
+            error = GetLastError();
 
-            keepalive = false;
-            return;
+            if (error != WSA_IO_PENDING)
+                goto error;
+
+            // Don't care but WSAGetOverlappedResult wants those
+            DWORD sent;
+            DWORD flags;
+
+            if (!WSAGetOverlappedResult((SOCKET)socket->sock, &ov, &sent, true, &flags)) {
+                error = GetLastError();
+                goto error;
+            }
         }
 
         offset += send;
         remain -= send;
     }
+
+    return;
+
+error:
+    if (error != WSAENOTCONN && error != WSAECONNRESET && error != WSAESHUTDOWN && error != WSA_OPERATION_ABORTED) {
+        LogError("Failed to send file: %1", GetWin32ErrorString(error));
+    }
+
+    keepalive = false;
 }
 
 }

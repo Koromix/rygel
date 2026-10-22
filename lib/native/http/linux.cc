@@ -480,10 +480,8 @@ void http_Dispatcher::Run()
 
                 http_Socket *socket = InitSocket(sock, clock, (sockaddr *)&ss);
 
-                if (!socket) [[unlikely]] {
-                    CloseSocket(sock);
+                if (!socket) [[unlikely]]
                     continue;
-                }
 
                 sockets.Append(socket);
             }
@@ -639,15 +637,15 @@ http_Socket *http_Dispatcher::InitSocket(int sock, int64_t start, struct sockadd
     http_Socket *socket = free_sockets.len ? free_sockets.data[--free_sockets.len] : new http_Socket(daemon, dispatcher);
     K_DEFER_N(err_guard) { delete socket; };
 
-    if (!socket->client.Init(socket, start, sa)) [[unlikely]]
-        return nullptr;
-    if (!AddEpollDescriptor(sock, EPOLLIN, (uint64_t)(uintptr_t)socket)) [[unlikely]]
-        return nullptr;
-
     socket->sock = sock;
     socket->process = true;
     socket->handled = true;
     socket->lingered = 0;
+
+    if (!socket->client.Init(socket, start, sa)) [[unlikely]]
+        return nullptr;
+    if (!AddEpollDescriptor(sock, EPOLLIN, (uint64_t)(uintptr_t)socket)) [[unlikely]]
+        return nullptr;
 
     err_guard.Disable();
     return socket;

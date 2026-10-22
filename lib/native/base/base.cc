@@ -7308,10 +7308,10 @@ int CreateSocket(SocketType type, int flags)
         case SocketType::Unix: { family = AF_UNIX; } break;
     }
 
-    bool overlapped = (flags & SOCK_OVERLAPPED);
+    bool overlapped = !(flags & SOCK_NOT_OVERLAPPED);
     int wsa_flags = WSA_FLAG_NO_HANDLE_INHERIT | (overlapped ? WSA_FLAG_OVERLAPPED : 0);
 
-    flags &= ~SOCK_OVERLAPPED; // Remove fake non-Win32 flag
+    flags &= ~SOCK_NOT_OVERLAPPED; // Remove fake non-Win32 flag
 
     SOCKET sock = WSASocketW(family, flags, 0, nullptr, 0, wsa_flags);
     if (sock == INVALID_SOCKET) {
