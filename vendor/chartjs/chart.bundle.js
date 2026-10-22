@@ -555,7 +555,7 @@ var Color = class _Color {
   }
 };
 
-// node_modules/chart.js/dist/chunks/helpers.dataset.js
+// node_modules/chart.js/dist/chunks/index.js
 function noop() {
 }
 var uid = /* @__PURE__ */ (() => {
@@ -2530,10 +2530,12 @@ function retinaScale(chart, forceRatio, forceStyle) {
     canvas.style.height = `${chart.height}px`;
     canvas.style.width = `${chart.width}px`;
   }
-  if (chart.currentDevicePixelRatio !== pixelRatio || canvas.height !== deviceHeight || canvas.width !== deviceWidth) {
+  const canvasHeight = Math.floor(deviceHeight);
+  const canvasWidth = Math.floor(deviceWidth);
+  if (chart.currentDevicePixelRatio !== pixelRatio || canvas.height !== canvasHeight || canvas.width !== canvasWidth) {
     chart.currentDevicePixelRatio = pixelRatio;
-    canvas.height = deviceHeight;
-    canvas.width = deviceWidth;
+    canvas.height = canvasHeight;
+    canvas.width = canvasWidth;
     chart.ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
     return true;
   }
@@ -3516,7 +3518,7 @@ function clearStacks(meta, items) {
   for (const parsed of items) {
     const stacks = parsed._stacks;
     if (!stacks || stacks[axis] === void 0 || stacks[axis][datasetIndex] === void 0) {
-      return;
+      continue;
     }
     delete stacks[axis][datasetIndex];
     if (stacks[axis]._visualValues !== void 0 && stacks[axis]._visualValues[datasetIndex] !== void 0) {
@@ -4798,11 +4800,12 @@ var DoughnutController = class extends DatasetController {
     circumference: 360,
     radius: "100%",
     spacing: 0,
+    spacingMode: "angular",
     indexAxis: "r"
   };
   static descriptors = {
-    _scriptable: (name) => name !== "spacing",
-    _indexable: (name) => name !== "spacing" && !name.startsWith("borderDash") && !name.startsWith("hoverBorderDash")
+    _scriptable: (name) => name !== "spacing" && name !== "spacingMode",
+    _indexable: (name) => name !== "spacing" && name !== "spacingMode" && !name.startsWith("borderDash") && !name.startsWith("hoverBorderDash")
   };
   static overrides = {
     aspectRatio: 1,
@@ -5168,7 +5171,9 @@ var PolarAreaController = class extends DatasetController {
       }
     },
     indexAxis: "r",
-    startAngle: 0
+    startAngle: 0,
+    spacing: 0,
+    spacingMode: "proportional"
   };
   static overrides = {
     aspectRatio: 1,
@@ -5311,6 +5316,12 @@ var PolarAreaController = class extends DatasetController {
         endAngle,
         options: this.resolveDataElementOptions(i, arc.active ? "active" : mode)
       };
+      if (properties.options.spacing === 0) {
+        properties.options.spacing = this.options.spacing;
+      }
+      if (properties.options.spacingMode === "angular") {
+        properties.options.spacingMode = this.options.spacingMode;
+      }
       this.updateElement(arc, i, properties, mode);
     }
   }
@@ -7792,7 +7803,9 @@ var Scale = class _Scale extends Element {
       translation: [
         titleX,
         titleY
-      ]
+      ],
+      strokeColor: title.strokeColor,
+      strokeWidth: title.strokeWidth
     });
   }
   draw(chartArea) {
@@ -8496,7 +8509,7 @@ function needContext(proxy, names2) {
   }
   return false;
 }
-var version = "4.5.1";
+var version = "4.6.1";
 var KNOWN_POSITIONS = [
   "top",
   "bottom",
@@ -9459,32 +9472,75 @@ function rThetaToXY(r, theta, x, y) {
     y: y + r * Math.sin(theta)
   };
 }
-function pathArc(ctx, element, offset, spacing, end, circular) {
+function pathFullCircle(ctx, element, offset, spacing) {
   const { x, y, startAngle: start, pixelMargin, innerRadius: innerR } = element;
   const outerRadius = Math.max(element.outerRadius + spacing + offset - pixelMargin, 0);
   const innerRadius = innerR > 0 ? innerR + spacing + offset + pixelMargin : 0;
-  let spacingOffset = 0;
+  ctx.beginPath();
+  ctx.arc(x, y, outerRadius, start, start + TAU);
+  if (innerRadius > 0) {
+    ctx.moveTo(x + Math.cos(start) * innerRadius, y + Math.sin(start) * innerRadius);
+    ctx.arc(x, y, innerRadius, start + TAU, start, true);
+  }
+  ctx.closePath();
+}
+function pathArc(ctx, element, offset, spacing, end, circular) {
+  const { x, y, startAngle: start, pixelMargin, innerRadius: innerR } = element;
+  const { spacingMode = "angular" } = element.options;
   const alpha2 = end - start;
+  if (circular && element.options.selfJoin && Math.abs(alpha2) >= TAU - 1e-4) {
+    pathFullCircle(ctx, element, offset, spacing);
+    return;
+  }
+  const outerRadius = Math.max(element.outerRadius + spacing + offset - pixelMargin, 0);
+  let innerRadius = innerR > 0 ? innerR + spacing + offset + pixelMargin : 0;
+  let outerSpacingOffset = 0;
+  let innerSpacingOffset = 0;
+  const beta = outerRadius > 0 ? Math.max(1e-3, alpha2 * outerRadius - offset / PI) / outerRadius : 1e-3;
+  const angleOffset = (alpha2 - beta) / 2;
   if (spacing) {
     const noSpacingInnerRadius = innerR > 0 ? innerR - spacing : 0;
     const noSpacingOuterRadius = outerRadius > 0 ? outerRadius - spacing : 0;
-    const avNogSpacingRadius = (noSpacingInnerRadius + noSpacingOuterRadius) / 2;
-    const adjustedAngle = avNogSpacingRadius !== 0 ? alpha2 * avNogSpacingRadius / (avNogSpacingRadius + spacing) : alpha2;
-    spacingOffset = (alpha2 - adjustedAngle) / 2;
+    const avgNoSpacingRadius = (noSpacingInnerRadius + noSpacingOuterRadius) / 2;
+    const proportionalOffset = (() => {
+      const adjustedAngle = avgNoSpacingRadius !== 0 ? alpha2 * avgNoSpacingRadius / (avgNoSpacingRadius + spacing) : alpha2;
+      return (alpha2 - adjustedAngle) / 2;
+    })();
+    const angularOffset = avgNoSpacingRadius > 0 ? Math.asin(Math.min(1, spacing / avgNoSpacingRadius)) : 0;
+    const maxOffset = Math.max(0, beta / 2 - 1e-3);
+    const maxOffsetSin = Math.sin(maxOffset);
+    if (spacingMode === "parallel") {
+      if (innerRadius === 0 && maxOffsetSin > 0) {
+        const minInnerRadius = spacing / maxOffsetSin;
+        const maxInnerRadius = Math.max(0, outerRadius - 1e-3);
+        innerRadius = Math.min(minInnerRadius, maxInnerRadius);
+      }
+      const maxParallelSpacing = Math.min(outerRadius > 0 ? outerRadius * maxOffsetSin : Number.POSITIVE_INFINITY, innerRadius > 0 ? innerRadius * maxOffsetSin : Number.POSITIVE_INFINITY);
+      const parallelSpacing = Math.min(spacing, maxParallelSpacing);
+      outerSpacingOffset = outerRadius > 0 ? Math.asin(Math.min(1, parallelSpacing / outerRadius)) : Math.min(maxOffset, angularOffset);
+      innerSpacingOffset = innerRadius > 0 ? Math.asin(Math.min(1, parallelSpacing / innerRadius)) : outerSpacingOffset;
+    } else if (spacingMode === "proportional") {
+      outerSpacingOffset = Math.min(maxOffset, proportionalOffset);
+      innerSpacingOffset = Math.min(maxOffset, proportionalOffset);
+    } else {
+      outerSpacingOffset = Math.min(maxOffset, angularOffset);
+      innerSpacingOffset = Math.min(maxOffset, angularOffset);
+    }
   }
-  const beta = Math.max(1e-3, alpha2 * outerRadius - offset / PI) / outerRadius;
-  const angleOffset = (alpha2 - beta) / 2;
-  const startAngle = start + angleOffset + spacingOffset;
-  const endAngle = end - angleOffset - spacingOffset;
-  const { outerStart, outerEnd, innerStart, innerEnd } = parseBorderRadius$1(element, innerRadius, outerRadius, endAngle - startAngle);
+  const outerStartAngle = start + angleOffset + outerSpacingOffset;
+  const outerEndAngle = end - angleOffset - outerSpacingOffset;
+  const innerStartAngle = start + angleOffset + innerSpacingOffset;
+  const innerEndAngle = end - angleOffset - innerSpacingOffset;
+  const angleDelta = Math.min(outerEndAngle - outerStartAngle, innerEndAngle - innerStartAngle);
+  const { outerStart, outerEnd, innerStart, innerEnd } = parseBorderRadius$1(element, innerRadius, outerRadius, angleDelta);
   const outerStartAdjustedRadius = outerRadius - outerStart;
   const outerEndAdjustedRadius = outerRadius - outerEnd;
-  const outerStartAdjustedAngle = startAngle + outerStart / outerStartAdjustedRadius;
-  const outerEndAdjustedAngle = endAngle - outerEnd / outerEndAdjustedRadius;
+  const outerStartAdjustedAngle = outerStartAngle + outerStart / outerStartAdjustedRadius;
+  const outerEndAdjustedAngle = outerEndAngle - outerEnd / outerEndAdjustedRadius;
   const innerStartAdjustedRadius = innerRadius + innerStart;
   const innerEndAdjustedRadius = innerRadius + innerEnd;
-  const innerStartAdjustedAngle = startAngle + innerStart / innerStartAdjustedRadius;
-  const innerEndAdjustedAngle = endAngle - innerEnd / innerEndAdjustedRadius;
+  const innerStartAdjustedAngle = innerStartAngle + innerStart / innerStartAdjustedRadius;
+  const innerEndAdjustedAngle = innerEndAngle - innerEnd / innerEndAdjustedRadius;
   ctx.beginPath();
   if (circular) {
     const outerMidAdjustedAngle = (outerStartAdjustedAngle + outerEndAdjustedAngle) / 2;
@@ -9492,26 +9548,26 @@ function pathArc(ctx, element, offset, spacing, end, circular) {
     ctx.arc(x, y, outerRadius, outerMidAdjustedAngle, outerEndAdjustedAngle);
     if (outerEnd > 0) {
       const pCenter = rThetaToXY(outerEndAdjustedRadius, outerEndAdjustedAngle, x, y);
-      ctx.arc(pCenter.x, pCenter.y, outerEnd, outerEndAdjustedAngle, endAngle + HALF_PI);
+      ctx.arc(pCenter.x, pCenter.y, outerEnd, outerEndAdjustedAngle, outerEndAngle + HALF_PI);
     }
-    const p4 = rThetaToXY(innerEndAdjustedRadius, endAngle, x, y);
+    const p4 = rThetaToXY(innerEndAdjustedRadius, innerEndAngle, x, y);
     ctx.lineTo(p4.x, p4.y);
     if (innerEnd > 0) {
       const pCenter = rThetaToXY(innerEndAdjustedRadius, innerEndAdjustedAngle, x, y);
-      ctx.arc(pCenter.x, pCenter.y, innerEnd, endAngle + HALF_PI, innerEndAdjustedAngle + Math.PI);
+      ctx.arc(pCenter.x, pCenter.y, innerEnd, innerEndAngle + HALF_PI, innerEndAdjustedAngle + Math.PI);
     }
-    const innerMidAdjustedAngle = (endAngle - innerEnd / innerRadius + (startAngle + innerStart / innerRadius)) / 2;
-    ctx.arc(x, y, innerRadius, endAngle - innerEnd / innerRadius, innerMidAdjustedAngle, true);
-    ctx.arc(x, y, innerRadius, innerMidAdjustedAngle, startAngle + innerStart / innerRadius, true);
+    const innerMidAdjustedAngle = (innerEndAngle - innerEnd / innerRadius + (innerStartAngle + innerStart / innerRadius)) / 2;
+    ctx.arc(x, y, innerRadius, innerEndAngle - innerEnd / innerRadius, innerMidAdjustedAngle, true);
+    ctx.arc(x, y, innerRadius, innerMidAdjustedAngle, innerStartAngle + innerStart / innerRadius, true);
     if (innerStart > 0) {
       const pCenter = rThetaToXY(innerStartAdjustedRadius, innerStartAdjustedAngle, x, y);
-      ctx.arc(pCenter.x, pCenter.y, innerStart, innerStartAdjustedAngle + Math.PI, startAngle - HALF_PI);
+      ctx.arc(pCenter.x, pCenter.y, innerStart, innerStartAdjustedAngle + Math.PI, innerStartAngle - HALF_PI);
     }
-    const p8 = rThetaToXY(outerStartAdjustedRadius, startAngle, x, y);
+    const p8 = rThetaToXY(outerStartAdjustedRadius, outerStartAngle, x, y);
     ctx.lineTo(p8.x, p8.y);
     if (outerStart > 0) {
       const pCenter = rThetaToXY(outerStartAdjustedRadius, outerStartAdjustedAngle, x, y);
-      ctx.arc(pCenter.x, pCenter.y, outerStart, startAngle - HALF_PI, outerStartAdjustedAngle);
+      ctx.arc(pCenter.x, pCenter.y, outerStart, outerStartAngle - HALF_PI, outerStartAdjustedAngle);
     }
   } else {
     ctx.moveTo(x, y);
@@ -9557,6 +9613,7 @@ function drawBorder(ctx, element, offset, spacing, circular) {
     ctx.lineJoin = borderJoinStyle || "bevel";
   }
   let endAngle = element.endAngle;
+  const isFullCircle = Math.abs(endAngle - startAngle) >= TAU - 1e-4;
   if (fullCircles) {
     pathArc(ctx, element, offset, spacing, endAngle, circular);
     for (let i = 0; i < fullCircles; ++i) {
@@ -9569,7 +9626,8 @@ function drawBorder(ctx, element, offset, spacing, circular) {
   if (inner) {
     clipArc(ctx, element, endAngle);
   }
-  if (options.selfJoin && endAngle - startAngle >= PI && borderRadius === 0 && borderJoinStyle !== "miter") {
+  const skipSelfClip = isFullCircle && element.innerRadius > 0;
+  if (!skipSelfClip && options.selfJoin && endAngle - startAngle >= PI && borderRadius === 0 && borderJoinStyle !== "miter") {
     clipSelf(ctx, element, endAngle);
   }
   if (!fullCircles) {
@@ -9589,6 +9647,7 @@ var ArcElement = class extends Element {
     borderWidth: 2,
     offset: 0,
     spacing: 0,
+    spacingMode: "angular",
     angle: void 0,
     circular: true,
     selfJoin: false
@@ -9607,6 +9666,7 @@ var ArcElement = class extends Element {
   outerRadius;
   pixelMargin;
   startAngle;
+  circular;
   constructor(cfg) {
     super();
     this.options = void 0;
@@ -9617,6 +9677,7 @@ var ArcElement = class extends Element {
     this.outerRadius = void 0;
     this.pixelMargin = 0;
     this.fullCircles = 0;
+    this.circular = false;
     if (cfg) {
       Object.assign(this, cfg);
     }
@@ -10917,7 +10978,7 @@ function _drawfill(ctx, source, area) {
   const meta = chart.getDatasetMeta(index2);
   const clip = getDatasetClipArea(chart, meta);
   if (target && line.points.length) {
-    clipArea(ctx, area);
+    clipArea(ctx, clipToIndexBounds(area, meta.iScale));
     doFill(ctx, {
       line,
       target,
@@ -10930,6 +10991,24 @@ function _drawfill(ctx, source, area) {
     });
     unclipArea(ctx);
   }
+}
+function clipToIndexBounds(area, iScale) {
+  if (!iScale || iScale.getPointPositionForValue) {
+    return area;
+  }
+  const p1 = iScale.getPixelForValue(iScale.min);
+  const p2 = iScale.getPixelForValue(iScale.max);
+  const lo = Math.min(p1, p2);
+  const hi = Math.max(p1, p2);
+  return iScale.isHorizontal() ? {
+    ...area,
+    left: Math.max(area.left, lo),
+    right: Math.min(area.right, hi)
+  } : {
+    ...area,
+    top: Math.max(area.top, lo),
+    bottom: Math.min(area.bottom, hi)
+  };
 }
 function doFill(ctx, cfg) {
   const { line, target, above, below, area, scale, clip } = cfg;
@@ -15668,13 +15747,13 @@ export {
    * Released under the MIT License
    *)
 
-chart.js/dist/chunks/helpers.dataset.js:
+chart.js/dist/chunks/index.js:
 chart.js/dist/chart.js:
 chart.js/dist/helpers.js:
   (*!
-   * Chart.js v4.5.1
+   * Chart.js v4.6.1
    * https://www.chartjs.org
-   * (c) 2025 Chart.js Contributors
+   * (c) 2026 Chart.js Contributors
    * Released under the MIT License
    *)
 
