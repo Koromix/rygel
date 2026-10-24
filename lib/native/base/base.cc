@@ -9403,7 +9403,11 @@ static Size WriteDirect(int fd, const char *filename, Span<const uint8_t> buf)
 #endif
 
     if (write_len < 0) {
-        LogError("Failed to write to '%1': %2", filename, strerror(errno));
+        // Don't try to log an error that happens during a log!
+        // It would cause a double mutex lock in StreamWriter.
+        if (fd != STDERR_FILENO) {
+            LogError("Failed to write to '%1': %2", filename, strerror(errno));
+        }
         return -1;
     }
 
