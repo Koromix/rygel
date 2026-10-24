@@ -7,6 +7,15 @@
 
 ### Koffi 3.3
 
+#### Koffi 3.3.4
+
+*Released on 2026-10-24*
+
+- Reduce overhead when issuing async calls
+- Restore error when trying to change config after loading library (regression introduced in Koffi 3.2.0)
+- Increase resident async pools default and maximum
+- Fix build error with some GCC versions
+
 #### Koffi 3.3.3
 
 *Released on 2026-10-10*
