@@ -26,6 +26,9 @@ for x in {1..100}; do
     node test/sync.js --no_slow >/dev/null
 done
 for x in {1..100}; do
+    node test/async.js --no_slow >/dev/null
+done
+for x in {1..100}; do
     node test/callbacks.js --no_poll >/dev/null
 done
 
