@@ -3648,7 +3648,7 @@ public:
 
     LockFreePool(Size capacity)
     {
-        K_ASSERT(capacity >= 0 && capacity < 0xFFFFFFFFu);
+        K_ASSERT(capacity >= 0 && capacity < 0xFFFFFFFF);
         K_ASSERT(capacity <= K_SIZE_MAX / K_SIZE(Slot));
 
         if (capacity > 0) {

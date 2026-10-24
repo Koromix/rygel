@@ -5358,7 +5358,7 @@ bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
                     }
 
                     if (write_buf.len) {
-                        K_ASSERT(write_buf.len < UINT_MAX);
+                        K_ASSERT(write_buf.len < (Size)UINT_MAX);
 
                         if (!WriteFileEx(in_pipe[1], write_buf.ptr, (DWORD)write_buf.len,
                                          &proc_in.ov, PendingIO::CompletionHandler)) {
@@ -8679,7 +8679,7 @@ Size StreamReader::ReadAll(Size max_len, HeapArray<uint8_t> *out_buf)
     // is content inside, because these files are generated on demand. So we need to take
     // the slow path for apparently empty files.
     if (!decoder && ComputeRawLen() > 0) {
-        Size max_read = std::clamp(raw_len - raw_read, (int64_t)0, (int64_t)K_SIZE_MAX);
+        Size max_read = (Size)std::clamp(raw_len - raw_read, (int64_t)0, (int64_t)K_SIZE_MAX);
 
         if (max_read > max_len) {
             LogError("File '%1' is too large (limit = %2)", filename, FmtDiskSize(max_len));
