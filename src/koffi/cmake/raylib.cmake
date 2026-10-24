@@ -13,7 +13,7 @@ target_include_directories(raylib PRIVATE ../../../vendor/raylib/src/external/gl
 target_compile_definitions(raylib PRIVATE PLATFORM_MEMORY GRAPHICS_API_OPENGL_SOFTWARE BUILD_LIBTYPE_SHARED NDEBUG)
 
 if(MSVC)
-    target_compile_options(raylib PRIVATE /wd4244 /wd4305)
+    target_compile_options(raylib PRIVATE /Zc:preprocessor /wd4244 /wd4305)
 else()
     target_compile_options(raylib PRIVATE -Wno-sign-compare -Wno-old-style-declaration
                                           -Wno-unused-function -Wno-missing-field-initializers
