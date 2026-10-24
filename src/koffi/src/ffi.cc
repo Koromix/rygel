@@ -100,7 +100,7 @@ static napi_value GetSetConfig(napi_env env, napi_callback_info info)
     NAPI_OK(napi_get_cb_info(env, info, &count, &arg, nullptr, (void **)&instance));
 
     if (count >= 1) {
-        if (instance->memories.len) {
+        if (instance->sync_memory.IsAllocated()) {
             ThrowError<Napi::Error>(env, "Cannot change Koffi configuration once a library has been loaded");
             return GetNull(env);
         }
