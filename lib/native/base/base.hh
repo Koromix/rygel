@@ -3634,7 +3634,9 @@ static_assert(std::atomic<TaggedIndex>::is_always_lock_free, "Lock-free 64-bit a
 
 template <typename T, Size Align = 64>
 class LockFreePool {
-    std::atomic<TaggedIndex> head {{ 0, 0 }};
+    K_DELETE_COPY(LockFreePool)
+
+    std::atomic<TaggedIndex> head;
 
 public:
     struct alignas(Align) Slot {
@@ -3642,7 +3644,7 @@ public:
         std::atomic_uint32_t next;
     };
 
-    alignas(64) Span<Slot> slots;
+    alignas(64) Span<Slot> slots = {};
 
     LockFreePool(Size capacity)
     {
@@ -3657,21 +3659,38 @@ public:
                 Slot *slot = new (slots.ptr + i) Slot();
                 slot->next.store((uint32_t)i + 1, std::memory_order_relaxed);
             }
-
             slots[slots.len - 1].next.store(0xFFFFFFFFu, std::memory_order_relaxed);
+
+            head.store({ 0, 0 }, std::memory_order_relaxed);
         } else {
-            slots = {};
             head.store({ 0xFFFFFFFFu, 0 }, std::memory_order_relaxed);
         }
     }
-
     ~LockFreePool()
     {
         for (Slot &slot: slots) {
             slot.~Slot();
         }
-
         ReleaseAligned(slots.ptr);
+    }
+
+    LockFreePool(LockFreePool &&other) { *this = std::move(other); }
+    LockFreePool &operator=(LockFreePool &&other)
+    {
+        if (&other == this) [[unlikely]]
+            return *this;
+
+        for (Slot &slot: slots) {
+            slot.~Slot();
+        }
+        ReleaseAligned(slots.ptr);
+
+        slots = other.slots;
+        head.store(other.head.load(std::memory_order_relaxed), std::memory_order_relaxed);
+        other.slots = {};
+        other.head.store({ 0xFFFFFFFFu, 0 }, std::memory_order_relaxed);
+
+        return *this;
     }
 
     uint32_t Acquire()
