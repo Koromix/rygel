@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
 import { render, html, unsafeHTML } from 'vendor/lit-html/lit-html.bundle.js';
-import MarkdownIt from '../../node_modules/markdown-it/dist/markdown-it.js';
+import MarkdownIt from '../../node_modules/markdown-it/dist/markdown-it.mjs';
 import { Util, Log, Net } from 'lib/web/base/base.js';
 import * as UI from 'lib/web/ui/ui.js';
 import { AppRunner } from 'lib/web/base/runner.js';
