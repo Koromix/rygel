@@ -250,7 +250,7 @@
         }
     },
     "darwin_arm64": {
-        "title": "macOS ARM64 (Apple M2)",
+        "title": "macOS ARM64 (MacBook Neo)",
         "results": {
             "atoi": {
                 "Node-API": {
