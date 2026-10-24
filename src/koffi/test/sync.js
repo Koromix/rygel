@@ -332,6 +332,9 @@ async function test() {
 
     free_ptr = CallFree;
 
+    // Make sure changing config fails after koffi.load()
+    assert.throws(() => koffi.config({ resident_async_pools: 8 }), /Cannot change Koffi configuration once a library has been loaded/);
+
     // Simple signed value returns
     assert.equal(GetMinusOne1(), -1);
     assert.equal(GetMinusOne2(), -1);
