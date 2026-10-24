@@ -33,11 +33,11 @@ static const Size DefaultSyncStackSize = Mebibytes(2);
 static const Size DefaultSyncHeapSize = Mebibytes(1);
 static const Size DefaultAsyncStackSize = Kibibytes(128);
 static const Size DefaultAsyncHeapSize = Kibibytes(128);
-static const int DefaultResidentAsyncPools = 4;
+static const int DefaultResidentAsyncPools = 8;
 static const int DefaultMaxAsyncCalls = 256;
 static const Size DefaultMaxTypeSize = Mebibytes(64);
 
-static const int MaxResidentAsyncPools = 16;
+static const int MaxResidentAsyncPools = 32;
 static const int MaxAsyncCalls = 4096;
 static const Size MaxParameters = 64;
 static const Size MaxTrampolines = 8192;
