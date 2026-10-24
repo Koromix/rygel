@@ -133,7 +133,7 @@ static napi_value GetSetConfig(napi_env env, napi_callback_info info)
                 if (!ChangeSize(instance, key.c_str(), value, 0, Mebibytes(16), &new_config.async_heap_size))
                     return GetNull(env);
             } else if (key == "resident_async_pools") {
-                if (!ChangeAsyncLimit(instance, key.c_str(), value, K_LEN(instance->memories.data), &new_config.resident_async_pools))
+                if (!ChangeAsyncLimit(instance, key.c_str(), value, MaxResidentAsyncPools, &new_config.resident_async_pools))
                     return GetNull(env);
             } else if (key == "max_async_calls") {
                 if (!ChangeAsyncLimit(instance, key.c_str(), value, MaxAsyncCalls, &max_async_calls))
@@ -1548,60 +1548,50 @@ static napi_value GetMemberOffset(napi_env env, napi_callback_info info)
     return NewInt(env, member->offset);
 }
 
-static void InitSyncMemory(InstanceData *instance)
+static void InitMemories(InstanceData *instance)
 {
     if (instance->sync_memory.IsAllocated()) [[likely]]
         return;
 
     instance->sync_memory.Allocate(instance->config.sync_stack_size, instance->config.sync_heap_size);
+    instance->async_memories = LockFreePool<InstanceMemory>(instance->config.resident_async_pools);
 }
 
 InstanceMemory *AllocateAsyncMemory(InstanceData *instance)
 {
-    std::lock_guard<std::mutex> lock(instance->mem_mutex);
+    uint32_t slot = instance->async_memories.Acquire();
 
-    for (Size i = 0; i < instance->memories.len; i++) {
-        InstanceMemory *mem = instance->memories[i];
+    if (slot != 0xFFFFFFFFu) [[likely]] {
+        InstanceMemory *mem = &instance->async_memories[slot];
 
-        if (!mem->busy) {
-            mem->busy = true;
-            return mem;
+        if (!mem->IsAllocated()) [[unlikely]] {
+            mem->Allocate(instance->config.async_stack_size, instance->config.async_heap_size);
+            mem->slot = slot;
         }
+
+        return mem;
     }
 
-    bool temporary = (instance->memories.len >= instance->config.resident_async_pools);
-
-    if (temporary && instance->temporaries >= instance->config.max_temporaries)
+    if (instance->temporaries.fetch_add(1, std::memory_order_relaxed) >= instance->config.max_temporaries) {
+        instance->temporaries.fetch_sub(1, std::memory_order_relaxed);
         return nullptr;
+    }
 
     InstanceMemory *mem = new InstanceMemory();
-    K_DEFER_N(mem_guard) { delete mem; };
 
     mem->Allocate(instance->config.async_stack_size, instance->config.async_heap_size);
+    mem->slot = 0xFFFFFFFFu;
 
-    if (temporary) {
-        instance->temporaries++;
-        mem->temporary = true;
-    } else {
-        instance->memories.Append(mem);
-        mem->temporary = false;
-    }
-
-    mem->busy = true;
-
-    mem_guard.Disable();
     return mem;
 }
 
 void ReleaseAsyncMemory(InstanceData *instance, InstanceMemory *mem)
 {
-    std::lock_guard<std::mutex> lock(instance->mem_mutex);
-
-    if (mem->temporary) {
-        instance->temporaries--;
-        delete mem;
+    if (mem->slot != 0xFFFFFFFFu) {
+        instance->async_memories.Release(mem->slot);
     } else {
-        mem->busy = false;
+        instance->temporaries.fetch_sub(1, std::memory_order_relaxed);
+        delete mem;
     }
 }
 
@@ -1816,7 +1806,7 @@ static napi_value LoadSharedLibrary(napi_env env, napi_callback_info info)
 #endif
     }
 
-    InitSyncMemory(instance);
+    InitMemories(instance);
 
     // Load shared library
     void *module = nullptr;
@@ -1878,7 +1868,7 @@ static napi_value RegisterCallback(napi_env env, napi_callback_info info)
 
     if (!InitAsyncBroker(instance)) [[unlikely]]
         return GetNull(env);
-    InitSyncMemory(instance);
+    InitMemories(instance);
 
     napi_value func = args[0];
 
@@ -2505,10 +2495,9 @@ static napi_value ResetKoffi(napi_env env, napi_callback_info info)
 
     instance->callbacks.Clear();
 
-    for (InstanceMemory *mem: instance->memories) {
-        delete mem;
+    for (auto &slot: instance->async_memories.slots) {
+        slot.obj.Release();
     }
-    instance->memories.Clear();
 
     return GetUndefined(env);
 }
@@ -2538,25 +2527,6 @@ FunctionInfo::~FunctionInfo()
     if (lib) {
         lib->Unref();
     }
-}
-
-InstanceMemory::~InstanceMemory()
-{
-#if defined(_WIN32)
-    if (stack0.ptr) {
-        VirtualFree(stack0.ptr, 0, MEM_RELEASE);
-    }
-    if (heap.ptr) {
-        VirtualFree(heap.ptr, 0, MEM_RELEASE);
-    }
-#else
-    if (stack0.ptr) {
-        munmap(stack0.ptr, stack0.end - stack0.ptr);
-    }
-    if (heap.ptr) {
-        munmap(heap.ptr, heap.end - heap.ptr);
-    }
-#endif
 }
 
 void InstanceMemory::Allocate(Size stack_size, Size heap_size)
@@ -2616,6 +2586,29 @@ void InstanceMemory::Allocate(Size stack_size, Size heap_size)
 
     K_CRITICAL(heap.ptr != MAP_FAILED, "Failed to allocate %1 of memory", heap_size);
 #endif
+}
+
+void InstanceMemory::Release()
+{
+#if defined(_WIN32)
+    if (stack0.ptr) {
+        VirtualFree(stack0.ptr, 0, MEM_RELEASE);
+    }
+    if (heap.ptr) {
+        VirtualFree(heap.ptr, 0, MEM_RELEASE);
+    }
+#else
+    if (stack0.ptr) {
+        munmap(stack0.ptr, stack0.end - stack0.ptr);
+    }
+    if (heap.ptr) {
+        munmap(heap.ptr, heap.end - heap.ptr);
+    }
+#endif
+
+    stack0 = {};
+    stack = {};
+    heap = {};
 }
 
 static void RegisterPrimitiveType(InstanceData *instance, Napi::Object map, std::initializer_list<const char *> names,
@@ -3065,10 +3058,6 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
 InstanceData::~InstanceData()
 {
     delete variadic_func;
-
-    for (InstanceMemory *mem: memories) {
-        delete mem;
-    }
 
     // Clean-up leftover trampoline references
     {

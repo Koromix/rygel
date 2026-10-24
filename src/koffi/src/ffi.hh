@@ -37,6 +37,7 @@ static const int DefaultResidentAsyncPools = 4;
 static const int DefaultMaxAsyncCalls = 256;
 static const Size DefaultMaxTypeSize = Mebibytes(64);
 
+static const int MaxResidentAsyncPools = 16;
 static const int MaxAsyncCalls = 4096;
 static const Size MaxParameters = 64;
 static const Size MaxTrampolines = 8192;
@@ -244,17 +245,19 @@ struct MemoryRange {
 };
 
 struct InstanceMemory {
-    MemoryRange<uint8_t> stack0;
-    MemoryRange<uint8_t> stack;
-    MemoryRange<uint8_t> heap;
+    MemoryRange<uint8_t> stack0 = {};
+    MemoryRange<uint8_t> stack = {};
+    MemoryRange<uint8_t> heap = {};
 
-    bool busy;
-    bool temporary;
+    // Used by async lock-free pool
+    uint32_t slot = 0;
 
-    ~InstanceMemory();
+    ~InstanceMemory() { Release(); }
 
     void Allocate(Size stack_size, Size heap_size);
-    bool IsAllocated() const { return stack.ptr; }
+    void Release();
+
+    bool IsAllocated() const { return stack0.ptr; }
 };
 
 struct InstanceData {
@@ -280,10 +283,9 @@ struct InstanceData {
     Napi::FunctionReference construct_poll;
     Napi::Reference<Napi::Symbol> active_symbol;
 
-    std::mutex mem_mutex;
     InstanceMemory sync_memory;
-    LocalArray<InstanceMemory *, 16> memories;
-    int temporaries = 0;
+    LockFreePool<InstanceMemory> async_memories { 0 };
+    std::atomic_int temporaries { 0 };
 
     // Variadic cache
     FunctionInfo *variadic_func = nullptr;
@@ -318,7 +320,7 @@ struct InstanceData {
 
     ~InstanceData();
 };
-static_assert(DefaultResidentAsyncPools <= K_LEN(InstanceData::memories.data));
+static_assert(MaxResidentAsyncPools >= DefaultResidentAsyncPools);
 static_assert(DefaultMaxAsyncCalls >= DefaultResidentAsyncPools);
 static_assert(MaxAsyncCalls >= DefaultMaxAsyncCalls);
 
