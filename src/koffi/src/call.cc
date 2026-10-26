@@ -335,9 +335,7 @@ Size CallData::PushStringValue(napi_value value, const char **out_str)
 
     // Fast path for small strings
     {
-        size_t small = std::min(available, (size_t)4096);
-
-        napi_status status = napi_get_value_string_utf8(env, value, ptr, small, &len);
+        napi_status status = napi_get_value_string_utf8(env, value, ptr, available, &len);
         if (status == napi_string_expected)
             return -1;
         K_ASSERT(status == napi_ok);
@@ -349,7 +347,7 @@ Size CallData::PushStringValue(napi_value value, const char **out_str)
         // So len < len - 4 should be enough, but exagerate a bit "just in case" :)
         // Avoid substraction because we're using size_t (unsigned).
 
-        if (len + 8 < small) {
+        if (len + 8 < available) {
             heap.ptr += (Size)AlignLen(len, 16);
 
             *out_str = ptr;
