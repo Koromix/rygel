@@ -364,6 +364,11 @@ bool ws_Socket::Upgrade(http_IO *io, unsigned int flags)
     }
     if (!http_PreventCSRF(io))
         return false;
+    if (io->incoming.buf.len > io->incoming.pos) {
+        LogError("Unexpected data received before WebSocket upgrade");
+        io->SendError(400);
+        return false;
+    }
 
     // Check WebSocket headers
     Span<const char> key_str;
