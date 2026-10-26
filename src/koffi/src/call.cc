@@ -1334,7 +1334,9 @@ static TRANSLATE_FUNC napi_value TranslateZeroCall(napi_env env, napi_callback_i
     InstanceData *instance = func->instance;
     CallData call(env, instance, &instance->sync_memory);
 
+#if defined(K_DEBUG)
     K_DEFER_C(prev_call = instance->sync_call) { instance->sync_call = prev_call; };
+#endif
     instance->sync_call = &call;
 
     call.DebugCall(func);
@@ -1363,7 +1365,9 @@ static TRANSLATE_FUNC napi_value TranslateFastCall(napi_env env, napi_callback_i
     InstanceData *instance = func->instance;
     call.Init(instance, &instance->sync_memory);
 
+#if defined(K_DEBUG)
     K_DEFER_C(prev_call = instance->sync_call) { instance->sync_call = prev_call; };
+#endif
     instance->sync_call = &call;
 
     call.DebugCall(func);
@@ -1384,7 +1388,9 @@ static TRANSLATE_FUNC K_FORCE_INLINE napi_value TranslateNormalCall(CallData *ca
     InstanceData *instance = func->instance;
     call->Init(instance, &instance->sync_memory);
 
+#if defined(K_DEBUG)
     K_DEFER_C(prev_call = instance->sync_call) { instance->sync_call = prev_call; };
+#endif
     instance->sync_call = call;
 
     call->DebugCall(func);
@@ -1435,7 +1441,9 @@ static TRANSLATE_FUNC napi_value TranslateNormalCallDebugAsync(napi_env env, nap
     InstanceData *instance = func->instance;
     call.Init(instance, &instance->sync_memory);
 
+#if defined(K_DEBUG)
     K_DEFER_C(prev_call = instance->sync_call) { instance->sync_call = prev_call; };
+#endif
     instance->sync_call = &call;
 
     call.DebugCall(func);
@@ -1541,7 +1549,9 @@ static TRANSLATE_FUNC K_FORCE_INLINE napi_value TranslateVariadicCall(CallData *
             return GetNull(env);
     }
 
+#if defined(K_DEBUG)
     K_DEFER_C(prev_call = instance->sync_call) { instance->sync_call = prev_call; };
+#endif
     instance->sync_call = call;
 
     call->DebugCall(func);
@@ -2042,6 +2052,9 @@ extern "C" void RelayCallback(Size idx, uint8_t *sp)
 
         K_DEFER_C(prev_stack = mem0->stack.end,
                   prev_heap = mem0->heap.ptr) {
+            // Further forward calls will clobber the existing value
+            instance->sync_call = call;
+
             mem0->stack.end = prev_stack;
             mem0->heap.ptr = prev_heap;
         };
