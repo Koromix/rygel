@@ -431,7 +431,10 @@ static void darwin_devices_detached(void *udata, io_iterator_t it)
         if (r) {
             char key[32];
 
-            sprintf(key, "%" PRIx64, session);
+            // sprintf is enough but we don't want the warning that comes with it
+            snprintf(key, sizeof(key), "%" PRIx64, session);
+            key[sizeof(key) - 1] = 0;
+
             _hs_monitor_remove(&monitor->devices, key, monitor->callback, monitor->callback_udata);
         }
 
