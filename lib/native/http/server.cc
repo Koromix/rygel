@@ -1380,7 +1380,12 @@ void http_IO::SendAbort(int status, const char *msg)
         LogError("%1", msg);
     }
 #else
-    Log(LogLevel::Error, addr, "%1", msg);
+    {
+        char ctx_buf[512];
+        Fmt(ctx_buf, "Error: %1: ", addr);
+
+        Log(LogLevel::Error, ctx_buf, "%1", msg);
+    }
 #endif
 
     incoming.buf.len = 0;
