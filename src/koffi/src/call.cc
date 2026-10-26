@@ -1773,8 +1773,7 @@ static napi_value TranslateAsyncCall(napi_env env, napi_callback_info info)
 
     InstanceData *instance = func->instance;
 
-    Napi::Value callback = Napi::Value(env, args[func->required_parameters]);
-
+    Napi::Value callback(env, args[func->required_parameters]);
     if (!callback.IsFunction()) {
         ThrowError<Napi::TypeError>(env, "Expected callback function as last argument, got %1", GetValueType(instance, callback));
         return GetNull(env);
@@ -1792,7 +1791,7 @@ static napi_value TranslateAsyncCall(napi_env env, napi_callback_info info)
     async->Queue();
     err_guard.Disable();
 
-    return GetUndefined(env);
+    return nullptr;
 }
 
 static bool DetectDeno(Napi::Env env)
