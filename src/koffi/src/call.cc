@@ -356,24 +356,13 @@ Size CallData::PushStringValue(napi_value value, const char **out_str)
     }
 
     NAPI_OK(napi_get_value_string_utf8(env, value, nullptr, 0, &len));
-
     len++;
 
-    if (len <= available) {
-        NAPI_OK(napi_get_value_string_utf8(env, value, ptr, len, nullptr));
+    Span<char> buf = allocator->AllocateSpan<char>((Size)len);
+    NAPI_OK(napi_get_value_string_utf8(env, value, buf.ptr, len, nullptr));
 
-        heap.ptr += (Size)AlignLen(len, 16);
-
-        *out_str = ptr;
-        return (Size)len;
-    } else {
-        Span<char> buf = allocator->AllocateSpan<char>((Size)len);
-
-        NAPI_OK(napi_get_value_string_utf8(env, value, buf.ptr, len, nullptr));
-
-        *out_str = buf.ptr;
-        return (Size)len;
-    }
+    *out_str = buf.ptr;
+    return (Size)len;
 }
 
 Size CallData::PushString16Value(napi_value value, const char16_t **out_str16)
