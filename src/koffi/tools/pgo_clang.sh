@@ -6,10 +6,15 @@ PGO_DIR="$(pwd)/../../bin/Koffi/pgo/clang"
 
 export CC="${CC:-clang}"
 export CXX="${CXX:-clang++}"
-if which xcrun >/dev/null 2>&1; then
-    export LLVM_PROFDATA="${LLVM_PROFDATA:-xcrun llvm-profdata}"
-else
-    export LLVM_PROFDATA="${LLVM_PROFDATA:-llvm-profdata}"
+if [ -z "$LLVM_PROFDATA" ]; then
+    if command -v llvm-profdata >/dev/null; then
+        export LLVM_PROFDATA=llvm-profdata
+    elif command -v xcrun >/dev/null; then
+        export LLVM_PROFDATA="xcrun llvm-profdata"
+    else
+        # Won't work but will make for clear failure
+        export LLVM_PROFDATA=llvm-profdata
+    fi
 fi
 
 rm -rf "$PGO_DIR"
