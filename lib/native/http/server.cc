@@ -488,9 +488,8 @@ void http_Daemon::RunHandler(http_IO *client)
 
     handle_func(client);
 
-    if (!client->response.started && client->linger.load(std::memory_order_relaxed) >= 0) [[unlikely]] {
-        // A failed WebSocket upgrade might reach here with no started response,
-        // if something went wrong during the body drain. Don't touch it.
+    if (!client->response.started) [[unlikely]] {
+        K_ASSERT(!client->HasLeaked());
         client->SendError(500);
     }
 }
