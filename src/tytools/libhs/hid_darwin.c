@@ -219,7 +219,7 @@ int _hs_darwin_open_hid_port(hs_device *dev, hs_port_mode mode, hs_port **rport)
     port->path = dev->path;
     port->dev = hs_device_ref(dev);
 
-    hid->service = IORegistryEntryFromPath(kIOMasterPortDefault, dev->path);
+    hid->service = IORegistryEntryFromPath(kIOMainPortDefault, dev->path);
     if (!hid->service) {
         r = hs_error(HS_ERROR_NOT_FOUND, "Device '%s' not found", dev->path);
         goto error;

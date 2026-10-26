@@ -473,7 +473,7 @@ int hs_enumerate(const hs_match_spec *matches, unsigned int count, hs_enumerate_
         if (_hs_match_helper_has_type(&match_helper, device_classes[i].type)) {
             const char *cls = device_classes[i].stacks[get_stack_version()];
 
-            kret = IOServiceGetMatchingServices(kIOMasterPortDefault, IOServiceMatching(cls), &it);
+            kret = IOServiceGetMatchingServices(kIOMainPortDefault, IOServiceMatching(cls), &it);
             if (kret != kIOReturnSuccess) {
                 r = hs_error(HS_ERROR_SYSTEM, "IOServiceGetMatchingServices('%s') failed", cls);
                 goto cleanup;
@@ -542,7 +542,7 @@ int hs_monitor_new(const hs_match_spec *matches, unsigned int count, hs_monitor 
     if (r < 0)
         goto error;
 
-    monitor->notify_port = IONotificationPortCreate(kIOMasterPortDefault);
+    monitor->notify_port = IONotificationPortCreate(kIOMainPortDefault);
     if (!monitor->notify_port) {
         r = hs_error(HS_ERROR_SYSTEM, "IONotificationPortCreate() failed");
         goto error;
