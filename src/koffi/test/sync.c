@@ -1224,3 +1224,10 @@ EXPORT int AllocStack(int len)
 
     return sum;
 }
+
+EXPORT double Int8ToDouble(int8_t v) { return (double)v; }
+EXPORT double UInt8ToDouble(uint8_t v) { return (double)v; }
+EXPORT double Int16ToDouble(int16_t v) { return (double)v; }
+EXPORT double UInt16ToDouble(uint16_t v) { return (double)v; }
+EXPORT double Int32ToDouble(int32_t v) { return (double)v; }
+EXPORT double UInt32ToDouble(uint32_t v) { return (double)v; }

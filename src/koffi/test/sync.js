@@ -329,6 +329,12 @@ async function test() {
     const CopyEndian64B = lib.func('void CopyBuffer(int64_le_t *in, int len, _Out_ int64_be_t *out)');
     const ReverseAndSumBE = lib.func('int32_t ReverseAndSum(_Inout_ int32_be_t *ptr, int len)');
     const AllocStack = lib.func('int AllocStack(int len)');
+    const Int8ToDouble = lib.func('double Int8ToDouble(int8_t v);');
+    const UInt8ToDouble = lib.func('double UInt8ToDouble(uint8_t v);');
+    const Int16ToDouble = lib.func('double Int16ToDouble(int16_t v);');
+    const UInt16ToDouble = lib.func('double UInt16ToDouble(uint16_t v);');
+    const Int32ToDouble = lib.func('double Int32ToDouble(int32_t v);');
+    const UInt32ToDouble = lib.func('double UInt32ToDouble(uint32_t v);');
 
     free_ptr = CallFree;
 
@@ -1229,6 +1235,13 @@ async function test() {
 
         assert.equal(AllocStack(stack), stack * 2);
     }
+
+    assert.equal(Int8ToDouble(-1), -1);
+    assert.equal(Int16ToDouble(-2), -2);
+    assert.equal(Int32ToDouble(-3), -3);
+    assert.equal(UInt8ToDouble(0xFF), 0xFF);
+    assert.equal(UInt16ToDouble(0xFFFF), 0xFFFF);
+    assert.equal(UInt32ToDouble(0xFFFFFFFF), 0xFFFFFFFF);
 
     lib.unload();
 }

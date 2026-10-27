@@ -123,48 +123,43 @@ static K_FORCE_INLINE uint32_t GetArrayLength(napi_env env, napi_value array)
     return length;
 }
 
-template <typename T>
-static K_FORCE_INLINE bool TryNumber(napi_env env, napi_value value, T *out_value)
-{
-    T v;
-    napi_status status;
-
-    // Assume number first
-    if constexpr (std::is_same_v<T, double>) {
-        status = napi_get_value_double(env, value, &v);
-    } else if constexpr (std::is_same_v<T, float>) {
-        double d;
-        status = napi_get_value_double(env, value, &d);
-        v = (float)d;
-    } else {
-        int64_t i64;
-        status = napi_get_value_int64(env, value, &i64);
-        v = (T)i64;
-    }
-    if (status == napi_ok) [[likely]] {
-        *out_value = v;
-        return true;
-    }
-
-    // Maybe a BigInt?
-    if constexpr (std::is_signed_v<T>) {
-        int64_t i64;
-        bool lossless;
-        status = napi_get_value_bigint_int64(env, value, &i64, &lossless);
-        v = (T)i64;
-    } else {
-        uint64_t u64;
-        bool lossless;
-        status = napi_get_value_bigint_uint64(env, value, &u64, &lossless);
-        v = (T)u64;
-    }
-    if (status == napi_ok) {
-        *out_value = v;
-        return true;
+#define TRY_NUMBER(CType, NumberFunc, NumberType, BigIntFunc, BigIntType) \
+    static K_FORCE_INLINE bool TryNumber(napi_env env, napi_value value, CType *out_value) \
+    { \
+        { \
+            NumberType v; \
+             \
+            if (NumberFunc(env, value, &v) == napi_ok) [[likely]] { \
+                *out_value = (CType)v; \
+                return true; \
+            } \
+        } \
+         \
+        { \
+            BigIntType v; \
+            bool lossless; \
+             \
+            if (BigIntFunc(env, value, &v, &lossless) == napi_ok) { \
+                *out_value = (CType)v; \
+                return true; \
+            } \
+        } \
+         \
+        return false; \
     }
 
-    return false;
-}
+TRY_NUMBER(int8_t, napi_get_value_int32, int32_t, napi_get_value_bigint_int64, int64_t)
+TRY_NUMBER(uint8_t, napi_get_value_int32, int32_t, napi_get_value_bigint_int64, int64_t)
+TRY_NUMBER(int16_t, napi_get_value_int32, int32_t, napi_get_value_bigint_int64, int64_t)
+TRY_NUMBER(uint16_t, napi_get_value_int32, int32_t, napi_get_value_bigint_int64, int64_t)
+TRY_NUMBER(int32_t, napi_get_value_int32, int32_t, napi_get_value_bigint_int64, int64_t)
+TRY_NUMBER(uint32_t, napi_get_value_uint32, uint32_t, napi_get_value_bigint_int64, int64_t)
+TRY_NUMBER(int64_t, napi_get_value_int64, int64_t, napi_get_value_bigint_int64, int64_t)
+TRY_NUMBER(uint64_t, napi_get_value_int64, int64_t, napi_get_value_bigint_uint64, uint64_t)
+TRY_NUMBER(float, napi_get_value_double, double, napi_get_value_bigint_int64, int64_t)
+TRY_NUMBER(double, napi_get_value_double, double, napi_get_value_bigint_int64, int64_t)
+
+#undef TRY_NUMBER
 
 static K_FORCE_INLINE bool TryPointer(napi_env env, napi_value value, void **out_ptr)
 {
