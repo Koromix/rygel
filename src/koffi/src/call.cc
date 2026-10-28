@@ -1485,7 +1485,7 @@ static TRANSLATE_FUNC K_FORCE_INLINE napi_value TranslateVariadicCall(CallData *
 
                 for (Size i = prev->required_parameters, j = prev->required_parameters; i < (Size)count; i += 2, j++) {
                     int directions;
-                    const TypeInfo *type = ResolveType(instance, call->args[i], &directions);
+                    const TypeInfo *type = ResolveType(instance, call->args[i], true, &directions);
 
                     if (type != prev->parameters[j].type || directions != prev->parameters[j].directions) [[unlikely]] {
                         match = false;
@@ -1526,7 +1526,7 @@ static TRANSLATE_FUNC K_FORCE_INLINE napi_value TranslateVariadicCall(CallData *
         for (Size i = variadic->required_parameters; i < count; i += 2) {
             ParameterInfo param = {};
 
-            param.type = ResolveType(instance, call->args[i], &param.directions);
+            param.type = ResolveType(instance, call->args[i], true, &param.directions);
 
             if (!param.type) [[unlikely]]
                 return GetNull(env);

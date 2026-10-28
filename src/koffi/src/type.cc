@@ -29,13 +29,19 @@ TypeObject::TypeObject(const Napi::CallbackInfo &info)
     }
 
     Napi::External<TypeInfo> external = info[0u].As<Napi::External<TypeInfo>>();
-    type = external.Data();
+
+    type = AlignDown(external.Data(), 2);
+    temporary = (uintptr_t)external.Data() & 1;
 }
 
 void TypeObject::Finalize(Napi::BasicEnv env)
 {
     node_api_delete_reference(env, *this);
     SuppressDestruct();
+
+    if (temporary) {
+        delete type;
+    }
 }
 
 static inline bool IsIdentifierStart(char c)
@@ -77,7 +83,45 @@ int ResolveDirections(Span<const char> str)
     }
 }
 
-const TypeInfo *ResolveType(InstanceData *instance, napi_value value, int *out_directions)
+static BufferConversion SelectBufferConversion(const TypeInfo *ref)
+{
+    switch (ref->primitive) {
+        case PrimitiveKind::Void:
+        case PrimitiveKind::Bool:
+        case PrimitiveKind::Int8:
+        case PrimitiveKind::UInt8:
+        case PrimitiveKind::Int16:
+        case PrimitiveKind::UInt16:
+        case PrimitiveKind::Int32:
+        case PrimitiveKind::UInt32:
+        case PrimitiveKind::Int64:
+        case PrimitiveKind::UInt64:
+        case PrimitiveKind::String:
+        case PrimitiveKind::String16:
+        case PrimitiveKind::String32:
+        case PrimitiveKind::Float32:
+        case PrimitiveKind::Float64:
+        case PrimitiveKind::Array:
+        case PrimitiveKind::Pointer:
+        case PrimitiveKind::Record:
+        case PrimitiveKind::Union:
+        case PrimitiveKind::Prototype:
+        case PrimitiveKind::Callback: return BufferConversion::None;
+
+        case PrimitiveKind::Int16S:
+        case PrimitiveKind::UInt16S: return BufferConversion::Swap16;
+
+        case PrimitiveKind::Int32S:
+        case PrimitiveKind::UInt32S: return BufferConversion::Swap32;
+
+        case PrimitiveKind::Int64S:
+        case PrimitiveKind::UInt64S: return BufferConversion::Swap64;
+    }
+
+    K_UNREACHABLE();
+}
+
+const TypeInfo *ResolveType(InstanceData *instance, napi_value value, bool permanent, int *out_directions)
 {
     Napi::Env env = instance->env;
 
@@ -153,10 +197,38 @@ const TypeInfo *ResolveType(InstanceData *instance, napi_value value, int *out_d
         TypeObject *defn = nullptr;
         NAPI_OK(napi_unwrap(env, value, (void **)&defn));
 
+        const TypeInfo *type = defn->GetType();
+        bool copy = permanent && defn->IsTemporary();
+
+        if (copy) {
+            bool reusable = !type->countedby;
+            auto bucket = reusable ? instance->types_map.InsertOrGetDefault(type->name) : nullptr;
+            TypeInfo *copy = reusable ? (TypeInfo *)bucket->value : nullptr;
+
+            if (!copy) {
+                copy = instance->types.AppendDefault();
+
+                memcpy((void *)copy, (const void *)type, K_SIZE(*type));
+                copy->name = DuplicateString(type->name, &instance->str_alloc).ptr;
+                copy->defn = nullptr;
+                copy->countedby = type->countedby ? DuplicateString(type->countedby, &instance->str_alloc).ptr : nullptr;
+                K_ASSERT(!type->members.len);
+
+                static_assert(!std::is_polymorphic_v<Napi::ObjectReference>);
+
+                if (reusable) {
+                    bucket->key = copy->name;
+                    bucket->value = copy;
+                }
+            }
+
+            type = copy;
+        }
+
         if (out_directions) {
             *out_directions = 1;
         }
-        return defn->GetType();
+        return type;
     } else {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value as type specifier, expected string or type", GetValueType(instance, value));
         return nullptr;
@@ -319,8 +391,34 @@ const TypeInfo *ResolveType(InstanceData *instance, Span<const char> str)
                 return nullptr;
             }
 
-            type = MakeArrayType(instance, type, len);
-            K_ASSERT(type);
+            // Can't really use MakeArrayType which creates temporary types
+            {
+                char name_buf[512];
+                Fmt(name_buf, "%1[%2]", type->name, len);
+
+                auto bucket = instance->types_map.InsertOrGetDefault(name_buf);
+                TypeInfo *array = (TypeInfo *)bucket->value;
+
+                if (!array) {
+                    array = instance->types.AppendDefault();
+
+                    array->instance = instance;
+                    array->name = DuplicateString(name_buf, &instance->str_alloc).ptr;
+
+                    array->primitive = PrimitiveKind::Array;
+                    array->align = type->align;
+                    array->size = (int32_t)(len * type->size);
+                    array->ref.type = type;
+                    array->ref.stride = type->size;
+                    array->ref.conversion = SelectBufferConversion(type);
+                    array->hint = type->hint;
+
+                    bucket->key = array->name;
+                    bucket->value = array;
+                }
+
+                type = array;
+            }
         } else {
             K_ASSERT(!len);
 
@@ -330,44 +428,6 @@ const TypeInfo *ResolveType(InstanceData *instance, Span<const char> str)
     }
 
     return type;
-}
-
-static BufferConversion SelectBufferConversion(const TypeInfo *ref)
-{
-    switch (ref->primitive) {
-        case PrimitiveKind::Void:
-        case PrimitiveKind::Bool:
-        case PrimitiveKind::Int8:
-        case PrimitiveKind::UInt8:
-        case PrimitiveKind::Int16:
-        case PrimitiveKind::UInt16:
-        case PrimitiveKind::Int32:
-        case PrimitiveKind::UInt32:
-        case PrimitiveKind::Int64:
-        case PrimitiveKind::UInt64:
-        case PrimitiveKind::String:
-        case PrimitiveKind::String16:
-        case PrimitiveKind::String32:
-        case PrimitiveKind::Float32:
-        case PrimitiveKind::Float64:
-        case PrimitiveKind::Array:
-        case PrimitiveKind::Pointer:
-        case PrimitiveKind::Record:
-        case PrimitiveKind::Union:
-        case PrimitiveKind::Prototype:
-        case PrimitiveKind::Callback: return BufferConversion::None;
-
-        case PrimitiveKind::Int16S:
-        case PrimitiveKind::UInt16S: return BufferConversion::Swap16;
-
-        case PrimitiveKind::Int32S:
-        case PrimitiveKind::UInt32S: return BufferConversion::Swap32;
-
-        case PrimitiveKind::Int64S:
-        case PrimitiveKind::UInt64S: return BufferConversion::Swap64;
-    }
-
-    K_UNREACHABLE();
 }
 
 TypeInfo *MakePointerType(InstanceData *instance, const TypeInfo *ref, int count)
@@ -439,132 +499,158 @@ static const char *NameArrayHint(ArrayHint hint)
     K_UNREACHABLE();
 }
 
-TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len)
+std::unique_ptr<TypeInfo> MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len, const char *countedby)
 {
-    return MakeArrayType(instance, ref, len, ref->hint);
+    return MakeArrayType(instance, ref, len, countedby, ref->hint);
 }
 
-TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len, ArrayHint hint)
+std::unique_ptr<TypeInfo> MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len, const char *countedby, ArrayHint hint)
 {
     K_ASSERT(len >= 0);
     K_ASSERT(len <= instance->config.max_type_size / ref->size);
 
-    char name_buf[512];
+    LocalArray<char, 512> name_buf;
     if (hint != ref->hint) {
-        Fmt(name_buf, "%1[%2]:%3", ref->name, len, NameArrayHint(hint));
+        name_buf.len = Fmt(name_buf.data, "%1[%2]:%3", ref->name, len, NameArrayHint(hint)).len;
     } else {
-        Fmt(name_buf, "%1[%2]", ref->name, len);
+        name_buf.len = Fmt(name_buf.data, "%1[%2]", ref->name, len).len;
     }
 
-    auto bucket = instance->types_map.InsertOrGetDefault(name_buf);
-    TypeInfo *type = (TypeInfo *)bucket->value;
+    Size extra = name_buf.len + 1 + (countedby ? strlen(countedby) + 1 : 0);
+    TypeInfo *type = new (extra) TypeInfo();
 
-    if (!type) {
-        type = instance->types.AppendDefault();
+    type->instance = instance;
+    type->name = (const char *)MemCpy((char *)type + K_SIZE(*type), name_buf.data, name_buf.len + 1);
 
-        type->instance = instance;
-        type->name = DuplicateString(name_buf, &instance->str_alloc).ptr;
+    type->primitive = PrimitiveKind::Array;
+    type->align = ref->align;
+    type->size = (int32_t)(len * ref->size);
+    type->ref.type = ref;
+    type->ref.stride = ref->size;
+    type->ref.conversion = SelectBufferConversion(ref);
+    type->hint = hint;
 
-        type->primitive = PrimitiveKind::Array;
-        type->align = ref->align;
-        type->size = (int32_t)(len * ref->size);
-        type->ref.type = ref;
-        type->ref.stride = ref->size;
-        type->ref.conversion = SelectBufferConversion(ref);
-        type->hint = hint;
-
-        bucket->key = type->name;
-        bucket->value = type;
+    if (countedby) {
+        char *dest = (char *)type->name + name_buf.len + 1;
+        type->countedby = strcpy(dest, countedby);
     }
 
-    return type;
+    return std::unique_ptr<TypeInfo>(type);
+}
+
+static napi_value InitTypeDefinition(InstanceData *instance, const TypeInfo *type, bool temporary)
+{
+    K_ASSERT(!type->defn);
+
+    Napi::Env env = instance->env;
+
+    // Encode temporary information in unused pointer bits
+    TypeInfo *ptr = (TypeInfo *)((uint8_t *)type + temporary);
+
+    Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, ptr);
+    Napi::Object defn = instance->construct_type.New({ external });
+    SetValueTag(env, defn, &TypeObjectMarker);
+
+    defn.Set("name", NewString(env, type->name));
+    defn.Set("primitive", PrimitiveKindNames[(int)type->primitive]);
+    defn.Set("size", NewInt(env, type->size));
+    defn.Set("alignment", NewInt(env, type->align));
+    defn.Set("disposable", NewBool(env, !!type->dispose));
+
+    if (!temporary) {
+        // Assign before to avoid possible recursion crash
+        NAPI_OK(napi_create_reference(env, defn, 1, &type->defn));
+    }
+
+    switch (type->primitive) {
+        case PrimitiveKind::Void:
+        case PrimitiveKind::Bool:
+        case PrimitiveKind::Int8:
+        case PrimitiveKind::UInt8:
+        case PrimitiveKind::Int16:
+        case PrimitiveKind::Int16S:
+        case PrimitiveKind::UInt16:
+        case PrimitiveKind::UInt16S:
+        case PrimitiveKind::Int32:
+        case PrimitiveKind::Int32S:
+        case PrimitiveKind::UInt32:
+        case PrimitiveKind::UInt32S:
+        case PrimitiveKind::Int64:
+        case PrimitiveKind::Int64S:
+        case PrimitiveKind::UInt64:
+        case PrimitiveKind::UInt64S:
+        case PrimitiveKind::String:
+        case PrimitiveKind::String16:
+        case PrimitiveKind::String32:
+        case PrimitiveKind::Float32:
+        case PrimitiveKind::Float64: {} break;
+
+        case PrimitiveKind::Array: {
+            uint32_t len = type->size / type->ref.type->size;
+            defn.Set("length", NewInt(env, len));
+            defn.Set("hint", NameArrayHint(type->hint));
+        } [[fallthrough]];
+        case PrimitiveKind::Pointer: {
+            napi_value ref = WrapType(instance, type->ref.type);
+            defn.Set("ref", ref);
+        } break;
+        case PrimitiveKind::Record:
+        case PrimitiveKind::Union: {
+            Napi::Object members = Napi::Object::New(env);
+
+            for (const RecordMember &member: type->members) {
+                Napi::Object obj = Napi::Object::New(env);
+
+                obj.Set("name", member.name);
+                obj.Set("type", WrapType(instance, member.type));
+                obj.Set("offset", member.offset);
+                if (type->primitive == PrimitiveKind::Record && member.type->countedby) {
+                    obj.Set("countedBy", member.type->countedby);
+                }
+
+                members.Set(member.name, obj);
+            }
+
+            members.Freeze();
+            defn.Set("members", members);
+        } break;
+
+        case PrimitiveKind::Prototype:
+        case PrimitiveKind::Callback: {
+            napi_value meta = DescribeFunction(instance, type->proto);
+            defn.Set("proto", meta);
+        } break;
+    }
+
+    return defn;
 }
 
 napi_value WrapType(InstanceData *instance, const TypeInfo *type, bool freeze)
 {
     Napi::Env env = instance->env;
 
-    if (!type->defn) {
-        Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, (TypeInfo *)type);
-        Napi::Object defn = instance->construct_type.New({ external });
-        SetValueTag(env, defn, &TypeObjectMarker);
+    if (type->defn) {
+        napi_value defn;
+        NAPI_OK(napi_get_reference_value(env, type->defn, &defn));
 
-        defn.Set("name", NewString(env, type->name));
-        defn.Set("primitive", PrimitiveKindNames[(int)type->primitive]);
-        defn.Set("size", NewInt(env, type->size));
-        defn.Set("alignment", NewInt(env, type->align));
-        defn.Set("disposable", NewBool(env, !!type->dispose));
-
-        // Assign before to avoid possible recursion crash
-        NAPI_OK(napi_create_reference(env, defn, 1, &type->defn));
-
-        switch (type->primitive) {
-            case PrimitiveKind::Void:
-            case PrimitiveKind::Bool:
-            case PrimitiveKind::Int8:
-            case PrimitiveKind::UInt8:
-            case PrimitiveKind::Int16:
-            case PrimitiveKind::Int16S:
-            case PrimitiveKind::UInt16:
-            case PrimitiveKind::UInt16S:
-            case PrimitiveKind::Int32:
-            case PrimitiveKind::Int32S:
-            case PrimitiveKind::UInt32:
-            case PrimitiveKind::UInt32S:
-            case PrimitiveKind::Int64:
-            case PrimitiveKind::Int64S:
-            case PrimitiveKind::UInt64:
-            case PrimitiveKind::UInt64S:
-            case PrimitiveKind::String:
-            case PrimitiveKind::String16:
-            case PrimitiveKind::String32:
-            case PrimitiveKind::Float32:
-            case PrimitiveKind::Float64: {} break;
-
-            case PrimitiveKind::Array: {
-                uint32_t len = type->size / type->ref.type->size;
-                defn.Set("length", NewInt(env, len));
-                defn.Set("hint", NameArrayHint(type->hint));
-            } [[fallthrough]];
-            case PrimitiveKind::Pointer: {
-                napi_value ref = WrapType(instance, type->ref.type);
-                defn.Set("ref", ref);
-            } break;
-            case PrimitiveKind::Record:
-            case PrimitiveKind::Union: {
-                Napi::Object members = Napi::Object::New(env);
-
-                for (const RecordMember &member: type->members) {
-                    Napi::Object obj = Napi::Object::New(env);
-
-                    obj.Set("name", member.name);
-                    obj.Set("type", WrapType(instance, member.type));
-                    obj.Set("offset", member.offset);
-                    if (type->primitive == PrimitiveKind::Record && member.type->countedby) {
-                        obj.Set("countedBy", member.type->countedby);
-                    }
-
-                    members.Set(member.name, obj);
-                }
-
-                members.Freeze();
-                defn.Set("members", members);
-            } break;
-
-            case PrimitiveKind::Prototype:
-            case PrimitiveKind::Callback: {
-                napi_value meta = DescribeFunction(instance, type->proto);
-                defn.Set("proto", meta);
-            } break;
-        }
+        return defn;
+    } else {
+        napi_value defn = InitTypeDefinition(instance, type, false);
 
         if (freeze) {
-            defn.Freeze();
+            NAPI_OK(napi_object_freeze(env, defn));
         }
-    }
 
-    napi_value defn;
-    NAPI_OK(napi_get_reference_value(env, type->defn, &defn));
+        return defn;
+    }
+}
+
+napi_value WrapType(InstanceData *instance, std::unique_ptr<TypeInfo> type)
+{
+    K_ASSERT(!type->defn);
+
+    napi_value defn = InitTypeDefinition(instance, type.release(), true);
+    NAPI_OK(napi_object_freeze(instance->env, defn));
 
     return defn;
 }

@@ -927,9 +927,7 @@ async function test() {
         GetSymbolInt3(out3);
         assert.deepEqual(out3, [4, 2, 42]);
 
-        assert.equal(koffi.stats().types, prev_types + 1);
-        koffi.encode(sym_int3, 'int', [4, 2, 42], 3);
-        assert.equal(koffi.stats().types, prev_types + 1);
+        assert.equal(koffi.stats().types, prev_types);
     }
 
     // Allow self-referencing structs and unions
@@ -1265,7 +1263,7 @@ async function test() {
         assert.equal(koffi.array('char', 42, 'String').name, 'char[42]');
         assert.equal(koffi.array('char', 42, 'Array').name, 'char[42]:Array');
 
-        assert.equal(koffi.stats().types, prev_types + 4);
+        assert.equal(koffi.stats().types, prev_types);
     }
 
     // Regression test for array countedBy confusion

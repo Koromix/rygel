@@ -886,7 +886,7 @@ static napi_value CallAlloc(napi_env env, napi_callback_info info)
         return GetNull(env);
     }
 
-    const TypeInfo *type = ResolveType(instance, args[0]);
+    const TypeInfo *type = ResolveType(instance, args[0], false);
     if (!type)
         return GetNull(env);
     if (!type->size) [[unlikely]] {
@@ -1044,7 +1044,10 @@ static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
         return env.Null();
     }
 
-    TypeInfo *type = nullptr;
+    // Bit ugly but that works
+    std::string countedby = dynamic ? info[1].As<Napi::String>() : std::string();
+
+    std::unique_ptr<TypeInfo> type;
 
     if (info.Length() >= 3u + dynamic && !IsNullOrUndefined(env, info[2 + dynamic])) {
         if (!info[2 + dynamic].IsString()) {
@@ -1087,26 +1090,12 @@ static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
             return env.Null();
         }
 
-        type = MakeArrayType(instance, ref, (Size)len, hint);
+        type = MakeArrayType(instance, ref, (Size)len, dynamic ? countedby.c_str() : nullptr, hint);
     } else {
-        type = MakeArrayType(instance, ref, (Size)len);
+        type = MakeArrayType(instance, ref, (Size)len, dynamic ? countedby.c_str() : nullptr);
     }
 
-    if (dynamic) {
-        TypeInfo *copy = instance->types.AppendDefault();
-
-        memcpy((void *)copy, type, K_SIZE(*type));
-        copy->defn = nullptr;
-
-        static_assert(!std::is_polymorphic_v<Napi::ObjectReference>);
-
-        Napi::String str = info[1].As<Napi::String>();
-        copy->countedby = DuplicateString(str.Utf8Value().c_str(), &instance->str_alloc).ptr;
-
-        type = copy;
-    }
-
-    napi_value wrapper = WrapType(instance, type);
+    napi_value wrapper = WrapType(instance, std::move(type));
     return Napi::Value(env, wrapper);
 }
 
@@ -1185,7 +1174,7 @@ static bool ParseClassicFunction(const Napi::CallbackInfo &info, bool concrete, 
     for (uint32_t j = 0; j < parameters_len; j++) {
         ParameterInfo param = {};
 
-        param.type = ResolveType(instance, parameters[j].AsValue(), &param.directions);
+        param.type = ResolveType(instance, parameters[j].AsValue(), true, &param.directions);
 
         if (!param.type)
             return false;
@@ -1305,7 +1294,7 @@ static Napi::Value CreateEnumType(const Napi::CallbackInfo &info)
 
     // Determine needed storage type
     if (typed) {
-        const TypeInfo *storage = ResolveType(instance, info[1 + named]);
+        const TypeInfo *storage = ResolveType(instance, info[1 + named], false);
         if (!storage)
             return env.Null();
 
@@ -1493,7 +1482,7 @@ static napi_value GetTypeSize(napi_env env, napi_callback_info info)
         return GetNull(env);
     }
 
-    const TypeInfo *type = ResolveType(instance, arg);
+    const TypeInfo *type = ResolveType(instance, arg, false);
     if (!type)
         return GetNull(env);
 
@@ -1513,7 +1502,7 @@ static napi_value GetTypeAlign(napi_env env, napi_callback_info info)
         return GetNull(env);
     }
 
-    const TypeInfo *type = ResolveType(instance, arg);
+    const TypeInfo *type = ResolveType(instance, arg, false);
     if (!type)
         return GetNull(env);
 
@@ -2031,36 +2020,38 @@ static napi_value DecodeValue(napi_env env, napi_callback_info info)
         return GetNull(env);
     }
 
-    src = (const void *)((const uint8_t *)src + offset);
-
-    const TypeInfo *type = ResolveType(instance, args[1 + has_offset]);
+    const TypeInfo *type = ResolveType(instance, args[1 + has_offset], false);
     if (!type) [[unlikely]]
         return GetNull(env);
 
+    src = (const void *)((const uint8_t *)src + offset);
+
+    std::unique_ptr<TypeInfo> array;
+
     if (has_len) {
         if (len >= 0) {
-            type = MakeArrayType(instance, type, len);
+            array = MakeArrayType(instance, type, len);
         } else {
             switch (type->primitive) {
                 case PrimitiveKind::Int8:
                 case PrimitiveKind::UInt8: {
                     Size count = (src_len >= 0) ? strnlen((const char *)src, (size_t)src_len) : strlen((const char *)src);
-                    type = MakeArrayType(instance, type, count);
+                    array = MakeArrayType(instance, type, count);
                 } break;
                 case PrimitiveKind::Int16:
                 case PrimitiveKind::UInt16: {
                     Size count = (src_len >= 0) ? NullTerminatedLength((const char16_t *)src, src_len) : NullTerminatedLength((const char16_t *)src);
-                    type = MakeArrayType(instance, type, count);
+                    array = MakeArrayType(instance, type, count);
                 } break;
                 case PrimitiveKind::Int32:
                 case PrimitiveKind::UInt32: {
                     Size count = (src_len >= 0) ? NullTerminatedLength((const char32_t *)src, src_len) : NullTerminatedLength((const char32_t *)src);
-                    type = MakeArrayType(instance, type, count);
+                    array = MakeArrayType(instance, type, count);
                 } break;
 
                 case PrimitiveKind::Pointer: {
                     Size count = (src_len >= 0) ? NullTerminatedLength((const void **)src, src_len) : NullTerminatedLength((const void **)src);
-                    type = MakeArrayType(instance, type, count);
+                    array = MakeArrayType(instance, type, count);
                 } break;
 
                 default: {
@@ -2069,6 +2060,8 @@ static napi_value DecodeValue(napi_env env, napi_callback_info info)
                 } break;
             }
         }
+
+        type = array.get();
     }
 
     if (src_len >= 0) {
@@ -2382,7 +2375,7 @@ static napi_value EncodeValue(napi_env env, napi_callback_info info)
         return GetNull(env);
     }
 
-    const TypeInfo *type = ResolveType(instance, args[1 + has_offset]);
+    const TypeInfo *type = ResolveType(instance, args[1 + has_offset], false);
     if (!type) [[unlikely]]
         return GetNull(env);
 
@@ -2397,16 +2390,20 @@ static napi_value EncodeValue(napi_env env, napi_callback_info info)
 
     dest = (void *)((uint8_t *)dest + offset);
 
+    std::unique_ptr<TypeInfo> array;
+
     if (has_len) {
         if (len >= 0) {
-            type = MakeArrayType(instance, type, len);
+            array = MakeArrayType(instance, type, len);
         } else if (dest_len >= 0 && type->size > 0) {
             Size len = dest_len / type->size;
-            type = MakeArrayType(instance, type, len);
+            array = MakeArrayType(instance, type, len);
         } else {
             ThrowError<Napi::TypeError>(env, "Automatic (negative) length cannot work with slim pointers");
             return GetNull(env);
         }
+
+        type = array.get();
     }
 
     if (dest_len >= 0) {

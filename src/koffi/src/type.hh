@@ -12,6 +12,7 @@ namespace K {
 
 class TypeObject: public Napi::ObjectWrap<TypeObject> {
     const TypeInfo *type;
+    bool temporary = false;
 
     mutable Napi::Object members;
 
@@ -22,7 +23,8 @@ public:
 
     void Finalize(Napi::BasicEnv env) override;
 
-    const TypeInfo *GetType() { return type; }
+    const TypeInfo *GetType() const { return type; }
+    bool IsTemporary() const { return temporary; }
 };
 
 static K_FORCE_INLINE bool IsInteger(const TypeInfo *type)
@@ -53,14 +55,15 @@ static K_FORCE_INLINE bool IsRegularSize(Size size, Size max)
 }
 
 int ResolveDirections(Span<const char> str);
-const TypeInfo *ResolveType(InstanceData *instance, napi_value value, int *out_directions = nullptr);
+const TypeInfo *ResolveType(InstanceData *instance, napi_value value, bool permanent = true, int *out_directions = nullptr);
 const TypeInfo *ResolveType(InstanceData *instance, Span<const char> str);
 
 TypeInfo *MakePointerType(InstanceData *instance, const TypeInfo *ref, int count = 1);
-TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len);
-TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len, ArrayHint hint);
+std::unique_ptr<TypeInfo> MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len, const char *countedby = nullptr);
+std::unique_ptr<TypeInfo> MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len, const char *countedby, ArrayHint hint);
 
 napi_value WrapType(InstanceData *instance, const TypeInfo *type, bool freeze = true);
+napi_value WrapType(InstanceData *instance, std::unique_ptr<TypeInfo> type);
 
 int AnalyseFlat(const TypeInfo *type, FunctionRef<void(const TypeInfo *type, int offset, int count)> func);
 

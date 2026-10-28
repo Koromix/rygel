@@ -134,6 +134,10 @@ struct TypeInfo {
     TypeInfo(TypeInfo &&other) = default;
     TypeInfo &operator=(TypeInfo &&other) = default;
 
+    static void *operator new(size_t, void *p) { return p; }
+    static void *operator new(size_t size, Size extra) { return ::operator new(size + (size_t)extra); }
+    static void operator delete(void *p) noexcept { ::operator delete(p); }
+
     K_HASHTABLE_HANDLER(TypeInfo, name);
 };
 
