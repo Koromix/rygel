@@ -1244,6 +1244,35 @@ async function test() {
     assert.equal(UInt16ToDouble(0xFFFF), 0xFFFF);
     assert.equal(UInt32ToDouble(0xFFFFFFFF), 0xFFFFFFFF);
 
+    // Regression test for array countedBy confusion
+    {
+        let prev_types = koffi.stats().types;
+
+        const Confused1 = koffi.struct({
+            len: 'int',
+            array: koffi.array('int', 'len', 42)
+        });
+        const Confused2 = koffi.struct({
+            count: 'int',
+            array: koffi.array('int', 42)
+        });
+        const Confused3 = koffi.struct({
+            count: 'int',
+            array: koffi.array('int', 'count', 42)
+        });
+        const Confused4 = koffi.struct({
+            len: 'int',
+            array: koffi.array('int', 42)
+        });
+
+        assert.equal(Confused1.members.array.countedBy, 'len');
+        assert.equal(Confused2.members.array.countedBy, undefined);
+        assert.equal(Confused3.members.array.countedBy, 'count');
+        assert.equal(Confused4.members.array.countedBy, undefined);
+
+        assert.equal(koffi.stats().types, prev_types + 7);
+    }
+
     lib.unload();
 }
 
