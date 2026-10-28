@@ -913,6 +913,8 @@ async function test() {
 
     // Encode variables
     {
+        let prev_types = koffi.stats().types;
+
         koffi.encode(sym_int, 'int', 12);
         koffi.encode(sym_str, 'const char *', 'I think...');
         koffi.encode(sym_str, 'const char *', 'I can encode!');
@@ -924,6 +926,10 @@ async function test() {
         let out3 = [0, 0, 0];
         GetSymbolInt3(out3);
         assert.deepEqual(out3, [4, 2, 42]);
+
+        assert.equal(koffi.stats().types, prev_types + 1);
+        koffi.encode(sym_int3, 'int', [4, 2, 42], 3);
+        assert.equal(koffi.stats().types, prev_types + 1);
     }
 
     // Allow self-referencing structs and unions
@@ -1243,6 +1249,24 @@ async function test() {
     assert.equal(UInt8ToDouble(0xFF), 0xFF);
     assert.equal(UInt16ToDouble(0xFFFF), 0xFFFF);
     assert.equal(UInt32ToDouble(0xFFFFFFFF), 0xFFFFFFFF);
+
+    // Array types names
+    {
+        let prev_types = koffi.stats().types;
+
+        assert.equal(koffi.array('int16_t', 42).name, 'int16_t[42]');
+        assert.equal(koffi.array('int16_t', 42, 'String').name, 'int16_t[42]:String');
+        assert.equal(koffi.array('char', 42, 'String').name, 'char[42]');
+        assert.equal(koffi.array('char', 42, 'Array').name, 'char[42]:Array');
+
+        // Should not result in duplicated types
+        assert.equal(koffi.array('int16_t', 42).name, 'int16_t[42]');
+        assert.equal(koffi.array('int16_t', 42, 'String').name, 'int16_t[42]:String');
+        assert.equal(koffi.array('char', 42, 'String').name, 'char[42]');
+        assert.equal(koffi.array('char', 42, 'Array').name, 'char[42]:Array');
+
+        assert.equal(koffi.stats().types, prev_types + 4);
+    }
 
     // Regression test for array countedBy confusion
     {

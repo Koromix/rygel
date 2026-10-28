@@ -375,15 +375,16 @@ TypeInfo *MakePointerType(InstanceData *instance, const TypeInfo *ref, int count
     K_ASSERT(count >= 1);
 
     for (int i = 0; i < count; i++) {
-        char name_buf[256];
+        char name_buf[512];
         Fmt(name_buf, "%1%2*", ref->name, EndsWith(ref->name, "*") ? "" : " ");
 
-        bool inserted;
-        auto bucket = instance->types_map.InsertOrGetDefault(name_buf, &inserted);
+        auto bucket = instance->types_map.InsertOrGetDefault(name_buf);
+        TypeInfo *type = (TypeInfo *)bucket->value;
 
-        if (inserted) {
-            TypeInfo *type = instance->types.AppendDefault();
+        if (!type) {
+            type = instance->types.AppendDefault();
 
+            type->instance = instance;
             type->name = DuplicateString(name_buf, &instance->str_alloc).ptr;
 
             if (ref->primitive != PrimitiveKind::Prototype) {
@@ -412,42 +413,6 @@ TypeInfo *MakePointerType(InstanceData *instance, const TypeInfo *ref, int count
     return (TypeInfo *)ref;
 }
 
-static TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len, ArrayHint hint, bool insert)
-{
-    K_ASSERT(len >= 0);
-    K_ASSERT(len <= instance->config.max_type_size / ref->size);
-
-    TypeInfo *type = instance->types.AppendDefault();
-
-    type->name = Fmt(&instance->str_alloc, "%1[%2]", ref->name, len).ptr;
-
-    type->primitive = PrimitiveKind::Array;
-    type->align = ref->align;
-    type->size = (int32_t)(len * ref->size);
-    type->ref.type = ref;
-    type->ref.stride = ref->size;
-    type->ref.conversion = SelectBufferConversion(ref);
-    type->hint = hint;
-
-    if (insert) {
-        bool inserted;
-        type = (TypeInfo *)*instance->types_map.InsertOrGet(type->name, type, &inserted);
-        instance->types.RemoveLast(!inserted);
-    }
-
-    return type;
-}
-
-TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len)
-{
-    return MakeArrayType(instance, ref, len, ref->hint, true);
-}
-
-TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len, ArrayHint hint)
-{
-    return MakeArrayType(instance, ref, len, hint, false);
-}
-
 static const char *NameArrayHint(ArrayHint hint)
 {
     switch (hint) {
@@ -472,6 +437,47 @@ static const char *NameArrayHint(ArrayHint hint)
     }
 
     K_UNREACHABLE();
+}
+
+TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len)
+{
+    return MakeArrayType(instance, ref, len, ref->hint);
+}
+
+TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len, ArrayHint hint)
+{
+    K_ASSERT(len >= 0);
+    K_ASSERT(len <= instance->config.max_type_size / ref->size);
+
+    char name_buf[512];
+    if (hint != ref->hint) {
+        Fmt(name_buf, "%1[%2]:%3", ref->name, len, NameArrayHint(hint));
+    } else {
+        Fmt(name_buf, "%1[%2]", ref->name, len);
+    }
+
+    auto bucket = instance->types_map.InsertOrGetDefault(name_buf);
+    TypeInfo *type = (TypeInfo *)bucket->value;
+
+    if (!type) {
+        type = instance->types.AppendDefault();
+
+        type->instance = instance;
+        type->name = DuplicateString(name_buf, &instance->str_alloc).ptr;
+
+        type->primitive = PrimitiveKind::Array;
+        type->align = ref->align;
+        type->size = (int32_t)(len * ref->size);
+        type->ref.type = ref;
+        type->ref.stride = ref->size;
+        type->ref.conversion = SelectBufferConversion(ref);
+        type->hint = hint;
+
+        bucket->key = type->name;
+        bucket->value = type;
+    }
+
+    return type;
 }
 
 napi_value WrapType(InstanceData *instance, const TypeInfo *type, bool freeze)
