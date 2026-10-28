@@ -405,13 +405,7 @@ const TypeInfo *ResolveType(InstanceData *instance, Span<const char> str)
                     array->instance = instance;
                     array->name = DuplicateString(name_buf, &instance->str_alloc).ptr;
 
-                    array->primitive = PrimitiveKind::Array;
-                    array->align = type->align;
-                    array->size = (int32_t)(len * type->size);
-                    array->ref.type = type;
-                    array->ref.stride = type->size;
-                    array->ref.conversion = SelectBufferConversion(type);
-                    array->hint = type->hint;
+                    InitArrayAttributes(array, type, len);
 
                     bucket->key = array->name;
                     bucket->value = array;
@@ -506,9 +500,6 @@ std::unique_ptr<TypeInfo> MakeArrayType(InstanceData *instance, const TypeInfo *
 
 std::unique_ptr<TypeInfo> MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len, const char *countedby, ArrayHint hint)
 {
-    K_ASSERT(len >= 0);
-    K_ASSERT(len <= instance->config.max_type_size / ref->size);
-
     LocalArray<char, 512> name_buf;
     if (hint != ref->hint) {
         name_buf.len = Fmt(name_buf.data, "%1[%2]:%3", ref->name, len, NameArrayHint(hint)).len;
@@ -522,12 +513,7 @@ std::unique_ptr<TypeInfo> MakeArrayType(InstanceData *instance, const TypeInfo *
     type->instance = instance;
     type->name = (const char *)MemCpy((char *)type + K_SIZE(*type), name_buf.data, name_buf.len + 1);
 
-    type->primitive = PrimitiveKind::Array;
-    type->align = ref->align;
-    type->size = (int32_t)(len * ref->size);
-    type->ref.type = ref;
-    type->ref.stride = ref->size;
-    type->ref.conversion = SelectBufferConversion(ref);
+    InitArrayAttributes(type, ref, len);
     type->hint = hint;
 
     if (countedby) {
@@ -536,6 +522,20 @@ std::unique_ptr<TypeInfo> MakeArrayType(InstanceData *instance, const TypeInfo *
     }
 
     return std::unique_ptr<TypeInfo>(type);
+}
+
+void InitArrayAttributes(TypeInfo *type, const TypeInfo *ref, Size len)
+{
+    K_ASSERT(len >= 0);
+    K_ASSERT(len <= type->instance->config.max_type_size / ref->size);
+
+    type->primitive = PrimitiveKind::Array;
+    type->align = ref->align;
+    type->size = (int32_t)(len * ref->size);
+    type->ref.type = ref;
+    type->ref.stride = ref->size;
+    type->ref.conversion = SelectBufferConversion(ref);
+    type->hint = ref->hint;
 }
 
 static napi_value InitTypeDefinition(InstanceData *instance, const TypeInfo *type, bool temporary)

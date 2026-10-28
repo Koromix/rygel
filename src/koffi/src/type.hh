@@ -59,8 +59,10 @@ const TypeInfo *ResolveType(InstanceData *instance, napi_value value, bool perma
 const TypeInfo *ResolveType(InstanceData *instance, Span<const char> str);
 
 TypeInfo *MakePointerType(InstanceData *instance, const TypeInfo *ref, int count = 1);
+
 std::unique_ptr<TypeInfo> MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len, const char *countedby = nullptr);
 std::unique_ptr<TypeInfo> MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len, const char *countedby, ArrayHint hint);
+void InitArrayAttributes(TypeInfo *type, const TypeInfo *ref, Size len); // Be careful
 
 napi_value WrapType(InstanceData *instance, const TypeInfo *type, bool freeze = true);
 napi_value WrapType(InstanceData *instance, std::unique_ptr<TypeInfo> type);

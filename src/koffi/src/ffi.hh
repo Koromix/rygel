@@ -103,8 +103,8 @@ struct TypeInfo {
     K_DELETE_COPY(TypeInfo)
 
     InstanceData *instance = nullptr;
+    const char *name = nullptr;
 
-    const char *name;
     alignas(8) PrimitiveKind primitive;
     int32_t size;
     int16_t align;

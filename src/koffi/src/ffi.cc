@@ -1990,6 +1990,21 @@ static napi_value CastValue(napi_env env, napi_callback_info info)
     return external;
 }
 
+static bool CheckAccessLength(napi_env env, const TypeInfo *type, Size available, Size offset)
+{
+    if (offset < 0) [[unlikely]] {
+        ThrowError<Napi::Error>(env, "Offset must be >= 0");
+        return false;
+    }
+    if (available - offset < type->size) [[unlikely]] {
+        ThrowError<Napi::Error>(env, "Expected buffer with size superior or equal to type %1 (%2 bytes)",
+                                type->name, type->size + offset);
+        return false;
+    }
+
+    return true;
+}
+
 static napi_value DecodeValue(napi_env env, napi_callback_info info)
 {
     napi_value args[4];
@@ -2026,32 +2041,24 @@ static napi_value DecodeValue(napi_env env, napi_callback_info info)
 
     src = (const void *)((const uint8_t *)src + offset);
 
-    std::unique_ptr<TypeInfo> array;
-
     if (has_len) {
-        if (len >= 0) {
-            array = MakeArrayType(instance, type, len);
-        } else {
+        if (len < 0) {
             switch (type->primitive) {
                 case PrimitiveKind::Int8:
                 case PrimitiveKind::UInt8: {
-                    Size count = (src_len >= 0) ? strnlen((const char *)src, (size_t)src_len) : strlen((const char *)src);
-                    array = MakeArrayType(instance, type, count);
+                    len = (src_len >= 0) ? strnlen((const char *)src, (size_t)src_len) : strlen((const char *)src);
                 } break;
                 case PrimitiveKind::Int16:
                 case PrimitiveKind::UInt16: {
-                    Size count = (src_len >= 0) ? NullTerminatedLength((const char16_t *)src, src_len) : NullTerminatedLength((const char16_t *)src);
-                    array = MakeArrayType(instance, type, count);
+                    len = (src_len >= 0) ? NullTerminatedLength((const char16_t *)src, src_len) : NullTerminatedLength((const char16_t *)src);
                 } break;
                 case PrimitiveKind::Int32:
                 case PrimitiveKind::UInt32: {
-                    Size count = (src_len >= 0) ? NullTerminatedLength((const char32_t *)src, src_len) : NullTerminatedLength((const char32_t *)src);
-                    array = MakeArrayType(instance, type, count);
+                    len = (src_len >= 0) ? NullTerminatedLength((const char32_t *)src, src_len) : NullTerminatedLength((const char32_t *)src);
                 } break;
 
                 case PrimitiveKind::Pointer: {
-                    Size count = (src_len >= 0) ? NullTerminatedLength((const void **)src, src_len) : NullTerminatedLength((const void **)src);
-                    array = MakeArrayType(instance, type, count);
+                    len = (src_len >= 0) ? NullTerminatedLength((const void **)src, src_len) : NullTerminatedLength((const void **)src);
                 } break;
 
                 default: {
@@ -2061,22 +2068,22 @@ static napi_value DecodeValue(napi_env env, napi_callback_info info)
             }
         }
 
-        type = array.get();
-    }
+        // We make a fake type when the user passes a length
+        TypeInfo array = {};
+        array.instance = instance;
+        array.name = "array";
+        InitArrayAttributes(&array, type, len);
 
-    if (src_len >= 0) {
-        if (offset < 0) [[unlikely]] {
-            ThrowError<Napi::Error>(env, "Offset must be >= 0");
+        if (src_len >= 0 && !CheckAccessLength(env, &array, src_len, offset)) [[unlikely]]
             return GetNull(env);
-        }
-        if (src_len - offset < type->size) [[unlikely]] {
-            ThrowError<Napi::Error>(env, "Expected buffer with size superior or equal to type %1 (%2 bytes)",
-                                    type->name, type->size + offset);
-            return GetNull(env);
-        }
-    }
 
-    return Decode(instance, (const uint8_t *)src, type);
+        return Decode(instance, (const uint8_t *)src, &array);
+    } else {
+        if (src_len >= 0 && !CheckAccessLength(env, type, src_len, offset)) [[unlikely]]
+            return GetNull(env);
+
+        return Decode(instance, (const uint8_t *)src, type);
+    }
 }
 
 template <typename T>
@@ -2390,36 +2397,34 @@ static napi_value EncodeValue(napi_env env, napi_callback_info info)
 
     dest = (void *)((uint8_t *)dest + offset);
 
-    std::unique_ptr<TypeInfo> array;
-
     if (has_len) {
-        if (len >= 0) {
-            array = MakeArrayType(instance, type, len);
-        } else if (dest_len >= 0 && type->size > 0) {
-            Size len = dest_len / type->size;
-            array = MakeArrayType(instance, type, len);
-        } else {
-            ThrowError<Napi::TypeError>(env, "Automatic (negative) length cannot work with slim pointers");
-            return GetNull(env);
+        if (len < 0) {
+            if (dest_len >= 0 && type->size > 0) {
+                len = dest_len / type->size;
+            } else {
+                ThrowError<Napi::TypeError>(env, "Automatic (negative) length cannot work with slim pointers");
+                return GetNull(env);
+            }
         }
 
-        type = array.get();
+        // We make a fake type when the user passes a length
+        TypeInfo array = {};
+        array.instance = instance;
+        array.name = "array";
+        InitArrayAttributes(&array, type, len);
+
+        if (dest_len >= 0 && !CheckAccessLength(env, &array, dest_len, offset)) [[unlikely]]
+            return GetNull(env);
+
+        if (!Encode(instance, (uint8_t *)dest, args[2 + has_offset], &array))
+            return GetNull(env);
+    } else {
+        if (dest_len >= 0 && !CheckAccessLength(env, type, dest_len, offset)) [[unlikely]]
+            return GetNull(env);
+
+        if (!Encode(instance, (uint8_t *)dest, args[2 + has_offset], type))
+            return GetNull(env);
     }
-
-    if (dest_len >= 0) {
-        if (offset < 0) [[unlikely]] {
-            ThrowError<Napi::Error>(env, "Offset must be >= 0");
-            return GetNull(env);
-        }
-        if (dest_len - offset < type->size) [[unlikely]] {
-            ThrowError<Napi::Error>(env, "Expected buffer with size superior or equal to type %1 (%2 bytes)",
-                                    type->name, type->size + offset);
-            return GetNull(env);
-        }
-    }
-
-    if (!Encode(instance, (uint8_t *)dest, args[2 + has_offset], type))
-        return GetNull(env);
 
     return GetUndefined(env);
 }
