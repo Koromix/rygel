@@ -1093,8 +1093,17 @@ static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
     }
 
     if (dynamic) {
+        TypeInfo *copy = instance->types.AppendDefault();
+
+        memcpy((void *)copy, type, K_SIZE(*type));
+        copy->defn = nullptr;
+
+        static_assert(!std::is_polymorphic_v<Napi::ObjectReference>);
+
         Napi::String str = info[1].As<Napi::String>();
-        type->countedby = DuplicateString(str.Utf8Value().c_str(), &instance->str_alloc).ptr;
+        copy->countedby = DuplicateString(str.Utf8Value().c_str(), &instance->str_alloc).ptr;
+
+        type = copy;
     }
 
     napi_value wrapper = WrapType(instance, type);
