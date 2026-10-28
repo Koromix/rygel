@@ -16,6 +16,13 @@ type PrototypeInfo = {
 interface IKoffiDirectionMarker { __brand: 'IKoffiDirectionMarker' }
 interface IKoffiPointerCast { __brand: 'IKoffiPointerCast' }
 
+export type RecordMember = {
+    name: string,
+    type: TypeObject,
+    offset: number,
+    countedBy?: string
+};
+
 export type TypeObject = {
     name: string;
     primitive: PrimitiveKind;
@@ -25,7 +32,7 @@ export type TypeObject = {
     length?: number;
     hint?: ArrayHint;
     ref?: TypeObject;
-    members?: Record<string, { name: string, type: TypeObject, offset: number }>;
+    members?: Record<string, RecordMember>;
     proto?: PrototypeInfo;
     values?: Record<string, number | bigint>;
 };

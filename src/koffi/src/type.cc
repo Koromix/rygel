@@ -534,6 +534,9 @@ napi_value WrapType(InstanceData *instance, const TypeInfo *type, bool freeze)
                     obj.Set("name", member.name);
                     obj.Set("type", WrapType(instance, member.type));
                     obj.Set("offset", member.offset);
+                    if (type->primitive == PrimitiveKind::Record && member.type->countedby) {
+                        obj.Set("countedBy", member.type->countedby);
+                    }
 
                     members.Set(member.name, obj);
                 }
