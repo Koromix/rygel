@@ -7,6 +7,19 @@
 
 ### Koffi 3.3
 
+#### Koffi 3.3.5
+
+*Released on 2026-10-28*
+
+- Fix string memory leak with array types and encode/decode of arrays
+- Fix countedBy confusion for similar array types
+- Embed non-default array conversion hint in type name (e.g. `char[16]:Array`)
+- Export countedBy name for record types with flexible pointer or array members
+- Dump count of known types in `koffi.stats()`
+- Reduce overhead when pushing char/short/int parameters
+- Reduce overhead when pushing mid-size (from 4K to 1M) string parameters
+- Reduce systematic callback preparation overhead in call code
+
 #### Koffi 3.3.4
 
 *Released on 2026-10-24*
