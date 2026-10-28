@@ -1236,6 +1236,7 @@ async function test() {
         assert.equal(AllocStack(stack), stack * 2);
     }
 
+    // Test simple number decoding
     assert.equal(Int8ToDouble(-1), -1);
     assert.equal(Int16ToDouble(-2), -2);
     assert.equal(Int32ToDouble(-3), -3);
