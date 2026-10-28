@@ -182,6 +182,7 @@ static napi_value GetStats(napi_env env, napi_callback_info info)
 
     Napi::Object obj = Napi::Object::New(env);
 
+    obj.Set("types", instance->types.Count());
     obj.Set("disposed", instance->stats.disposed);
     obj.Set("callbacks", callbacks);
 
