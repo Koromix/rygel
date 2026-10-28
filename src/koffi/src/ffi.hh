@@ -250,7 +250,7 @@ struct InstanceMemory {
     MemoryRange<uint8_t> heap = {};
 
     // Used by async lock-free pool
-    uint32_t slot = 0;
+    bool resident = false;
 
     ~InstanceMemory() { Release(); }
 

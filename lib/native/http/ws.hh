@@ -33,7 +33,7 @@ class ws_Socket {
     K_DELETE_COPY(ws_Socket)
 
     RetainPtr<ws_Registry> registry;
-    uint32_t link = 0xFFFFFFFFu;
+    void *link = nullptr;
 
     int sock = -1;
     std::atomic_bool open { false };

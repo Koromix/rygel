@@ -1569,14 +1569,12 @@ static void InitMemories(InstanceData *instance)
 
 InstanceMemory *AllocateAsyncMemory(InstanceData *instance)
 {
-    uint32_t slot = instance->async_memories.Acquire();
+    InstanceMemory *mem = instance->async_memories.AcquireObject();
 
-    if (slot != 0xFFFFFFFFu) [[likely]] {
-        InstanceMemory *mem = &instance->async_memories[slot];
-
+    if (mem) [[likely]] {
         if (!mem->IsAllocated()) [[unlikely]] {
             mem->Allocate(instance->config.async_stack_size, instance->config.async_heap_size);
-            mem->slot = slot;
+            mem->resident = true;
         }
 
         return mem;
@@ -1587,18 +1585,16 @@ InstanceMemory *AllocateAsyncMemory(InstanceData *instance)
         return nullptr;
     }
 
-    InstanceMemory *mem = new InstanceMemory();
-
+    mem = new InstanceMemory();
     mem->Allocate(instance->config.async_stack_size, instance->config.async_heap_size);
-    mem->slot = 0xFFFFFFFFu;
 
     return mem;
 }
 
 void ReleaseAsyncMemory(InstanceData *instance, InstanceMemory *mem)
 {
-    if (mem->slot != 0xFFFFFFFFu) {
-        instance->async_memories.Release(mem->slot);
+    if (mem->resident) {
+        instance->async_memories.Release(mem);
     } else {
         instance->temporaries.fetch_sub(1, std::memory_order_relaxed);
         delete mem;

@@ -3693,7 +3693,7 @@ public:
         return *this;
     }
 
-    uint32_t Acquire()
+    uint32_t AcquireSlot()
     {
         TaggedIndex free = head.load(std::memory_order_acquire);
         TaggedIndex desired;
@@ -3708,19 +3708,47 @@ public:
         return free.idx;
     }
 
-    void Release(uint32_t idx)
+    template <typename U = Slot, std::enable_if_t<std::is_same_v<U, Slot> && std::is_standard_layout_v<U>, int> = 0>
+    T *AcquireObject()
+    {
+        TaggedIndex free = head.load(std::memory_order_acquire);
+        TaggedIndex desired;
+
+        do {
+            if (free.idx == 0xFFFFFFFFu)
+                return nullptr;
+
+            desired = { slots[free.idx].next.load(std::memory_order_relaxed), free.tag + 1 };
+        } while (!head.compare_exchange_weak(free, desired, std::memory_order_acquire, std::memory_order_acquire));
+
+        return &slots[free.idx].obj;
+    }
+
+    void Release(uint32_t slot)
     {
         TaggedIndex free = head.load(std::memory_order_relaxed);
         TaggedIndex desired;
 
         do {
-            slots[idx].next.store(free.idx, std::memory_order_relaxed);
-            desired = { idx, free.tag + 1 };
+            slots[slot].next.store(free.idx, std::memory_order_relaxed);
+            desired = { slot, free.tag + 1 };
         } while (!head.compare_exchange_weak(free, desired, std::memory_order_release, std::memory_order_relaxed));
     }
 
-    T &operator[](uint32_t idx) { return slots[idx].obj; }
-    const T &operator[](uint32_t idx) const { return slots[idx].obj; }
+    template <typename U = Slot, std::enable_if_t<std::is_same_v<U, Slot> && std::is_standard_layout_v<U>, int> = 0>
+    void Release(T *obj)
+    {
+        static_assert(offsetof(Slot, obj) == 0);
+
+        Slot *slot = (Slot *)obj;
+        K_ASSERT(slot >= slots.ptr && slot < slots.end());
+
+        uint32_t idx = (uint32_t)((Slot *)obj - slots.ptr);
+        Release(idx);
+    }
+
+    T *GetPointer(uint32_t idx) { return &slots[idx].obj; }
+    const T *GetPointer(uint32_t idx) const { return &slots[idx].obj; }
 };
 
 template <>

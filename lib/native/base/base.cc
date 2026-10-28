@@ -7913,7 +7913,7 @@ void AsyncPool::AddTask(Async *async, int worker_idx, std::function<bool()> &&fu
     WorkerData *worker = &workers[worker_idx];
 
     async->remaining_tasks.fetch_add(1, std::memory_order_relaxed);
-    uint32_t slot = worker->alloc.Acquire();
+    uint32_t slot = worker->alloc.AcquireSlot();
 
     // Process pending tasks when there's too much to do
     if (slot == 0xFFFFFFFFu) {
@@ -7939,7 +7939,7 @@ void AsyncPool::AddTask(Async *async, int worker_idx, std::function<bool()> &&fu
                     busy = RunTasks(worker_idx, 4);
                 }
 
-                slot = worker->alloc.Acquire();
+                slot = worker->alloc.AcquireSlot();
 
                 if (slot != 0xFFFFFFFFu) [[likely]]
                     break;
@@ -7953,7 +7953,7 @@ void AsyncPool::AddTask(Async *async, int worker_idx, std::function<bool()> &&fu
         }
     }
 
-    TaskData *task = &worker->alloc[slot];
+    TaskData *task = worker->alloc.GetPointer(slot);
 
     task->async = async;
     task->func = std::move(func);
@@ -8135,10 +8135,10 @@ bool AsyncPool::RunTasks(int worker_idx, int limit)
                 if (slot.idx == 0xFFFFFFFFu)
                     return busy;
 
-                desired = { worker->alloc[slot.idx].next.load(std::memory_order_relaxed), slot.tag + 1 };
+                desired = { worker->alloc.GetPointer(slot.idx)->next.load(std::memory_order_relaxed), slot.tag + 1 };
             } while (!worker->head.compare_exchange_weak(slot, desired, std::memory_order_acquire, std::memory_order_acquire));
 
-            TaskData *task = &worker->alloc[slot.idx];
+            TaskData *task = worker->alloc.GetPointer(slot.idx);
 
             async = task->async;
             func.swap(task->func);
@@ -8183,13 +8183,13 @@ bool AsyncPool::RunTasks(int worker_idx, Async *only, int limit, bool *retry)
                 do {
                     if (slot.idx == 0xFFFFFFFFu)
                         break;
-                    desired = { worker->alloc[slot.idx].next.load(std::memory_order_relaxed), slot.tag + 1 };
+                    desired = { worker->alloc.GetPointer(slot.idx)->next.load(std::memory_order_relaxed), slot.tag + 1 };
                 } while (!worker->head.compare_exchange_weak(slot, desired, std::memory_order_acquire, std::memory_order_acquire));
 
                 if (slot.idx == 0xFFFFFFFFu)
                     break;
 
-                TaskData *task = &worker->alloc[slot.idx];
+                TaskData *task = worker->alloc.GetPointer(slot.idx);
 
                 if (task->async != only) {
                     task->next.store(skipped_head, std::memory_order_relaxed);
@@ -8215,7 +8215,7 @@ bool AsyncPool::RunTasks(int worker_idx, Async *only, int limit, bool *retry)
                 TaggedIndex desired;
 
                 do {
-                    worker->alloc[skipped_tail].next.store(head.idx, std::memory_order_relaxed);
+                    worker->alloc.GetPointer(skipped_tail)->next.store(head.idx, std::memory_order_relaxed);
                     desired = { skipped_head, head.tag + 1 };
                 } while (!worker->head.compare_exchange_weak(head, desired, std::memory_order_seq_cst, std::memory_order_relaxed));
 

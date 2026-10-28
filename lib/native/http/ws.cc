@@ -31,12 +31,9 @@ namespace K {
 
 bool ws_Registry::Give(int sock, ws_Socket *ws)
 {
-    uint32_t key = links.Acquire();
-
-    if (key == 0xFFFFFFFFu) [[unlikely]]
+    Link *link = links.AcquireObject();
+    if (!link) [[unlikely]]
         return false;
-
-    Link *link = &links[key];
 
     // Publish link to WebSocket
     {
@@ -44,13 +41,13 @@ bool ws_Registry::Give(int sock, ws_Socket *ws)
 
         if (stop.load(std::memory_order_acquire)) [[unlikely]] {
             lock.unlock();
-            links.Release(key);
+            links.Release(link);
 
             return false;
         }
 
         ws->registry = this;
-        ws->link = key;
+        ws->link = link;
         ws->sock = sock;
 
         link->sock = sock;
@@ -61,14 +58,13 @@ bool ws_Registry::Give(int sock, ws_Socket *ws)
 
 void ws_Registry::Release(ws_Socket *ws, bool close)
 {
-    uint32_t key = ws->link;
-    Link *link = &links[key];
+    Link *link = (Link *)ws->link;
 
     // Release and close (if wanted)
     {
         std::lock_guard<std::mutex> lock(link->mutex);
 
-        ws->link = 0xFFFFFFFFu;
+        ws->link = nullptr;
         if (close) {
             CloseSocket(ws->sock);
         }
@@ -77,7 +73,7 @@ void ws_Registry::Release(ws_Socket *ws, bool close)
         link->sock = -1;
     }
 
-    links.Release(key);
+    links.Release(link);
 }
 
 void ws_Registry::Shutdown()
