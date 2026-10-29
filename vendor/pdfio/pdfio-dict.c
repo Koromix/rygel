@@ -8,6 +8,7 @@
 //
 
 #include "pdfio-private.h"
+#include <limits.h>
 
 
 //
@@ -364,6 +365,27 @@ pdfioDictGetDict(pdfio_dict_t *dict,	// I - Dictionary
 
 
 //
+// '_pdfioDictGetInteger()' - Get an integer value from a dictionary.
+//
+
+int					// O - Value
+_pdfioDictGetInteger(
+    pdfio_dict_t *dict,			// I - Dictionary
+    const char   *key)			// I - Key
+{
+  _pdfio_value_t *value = _pdfioDictGetValue(dict, key);
+					// Key value
+  int		intvalue;		// Integer value
+
+
+  if (value && value->type == PDFIO_VALTYPE_NUMBER && value->value.number >= (double)INT_MIN && value->value.number <= (double)INT_MAX && (double)(intvalue = (int)value->value.number) == value->value.number)
+    return (intvalue);
+  else
+    return (0);
+}
+
+
+//
 // 'pdfioDictGetKey()' - Get the key for the specified pair.
 //
 // @since PDFio v1.4@
@@ -473,6 +495,27 @@ pdfioDictGetRect(pdfio_dict_t *dict,	// I - Dictionary
 
 
 //
+// '_pdfioDictGetSize()' - Get a size_t value from a dictionary.
+//
+
+size_t					// O - Value
+_pdfioDictGetSize(
+    pdfio_dict_t *dict,			// I - Dictionary
+    const char   *key)			// I - Key
+{
+  _pdfio_value_t *value = _pdfioDictGetValue(dict, key);
+					// Key value
+  size_t	sizevalue;		// Size value
+
+
+  if (value && value->type == PDFIO_VALTYPE_NUMBER && value->value.number >= (double)0 && value->value.number <= (double)SIZE_MAX && (double)(sizevalue = (size_t)value->value.number) == value->value.number)
+    return (sizevalue);
+  else
+    return (0);
+}
+
+
+//
 // 'pdfioDictGetString()' - Get a key string value from a dictionary.
 //
 
@@ -491,7 +534,12 @@ pdfioDictGetString(pdfio_dict_t *dict,	// I - Dictionary
     PDFIO_DEBUG("pdfioDictGetString: Returning \"%s\".\n", value->value.string);
     return (value->value.string);
   }
-  else if (value && value->type == PDFIO_VALTYPE_BINARY && value->value.binary.datalen < 4096)
+  else if (value && value->type == PDFIO_VALTYPE_BINARY && value->value.binary.datalen == 0)
+  {
+    PDFIO_DEBUG("pdfioDictGetString: Returning \"\".\n");
+    return ("");
+  }
+  else if (value && value->type == PDFIO_VALTYPE_BINARY && value->value.binary.datalen > 3 && value->value.binary.datalen < 4096)
   {
     // Convert binary string to regular string...
     char	temp[4096];		// Temporary UTF-8 string

@@ -2,10 +2,25 @@ Changes in PDFio
 ================
 
 
+v1.6.6 - 2026-10-28
+-------------------
+
+- Fixed reading of the last cross-reference table in a PDF file (Issue #181)
+- Fixed some memory leaks (Issue #182, Issue #193)
+- Fixed potential issues in the PNG fallback code (Issue #187)
+- Fixed number validation for integer dictionary values (Issue #189)
+- Fixed a potential loop when repairing a broken PDF file (Issue #190)
+- Fixed an error decoding short UTF-16 hex strings (Issue #194)
+- Fixed an error decoding strings with escaped NUL characters (Issue #195)
+- Fixed some memory leaks (Issue #196)
+- Fixed date/time value offset issues on some platforms (Issue #196)
+
+
 v1.6.5 - 2026-08-20
 -------------------
 
-- CVE-2016-NNNNN: Fixed reading of invalid empty AES-encrypted strings.
+- SECURITY-4.0: Fixed reading of invalid empty AES-encrypted strings
+  (GHSA-527h-2p2v-g388)
 - Fixed `pdfioContentTextXxx` output with Unicode characters past U+FFFF
   (Issue #171)
 - Fixed `pdfioPageCopy` with a damaged input PDF file (Issue #174)
@@ -187,8 +202,8 @@ v1.3.2 - 2024-08-15
 v1.3.1 - 2024-08-05
 -------------------
 
-- CVE 2024-42358: Updated TrueType font reader to avoid large memory
-  allocations.
+- SECURITY-6.2: Updated TrueType font reader to avoid large memory
+  allocations (CVE-2024-42358)
 - Fixed some documentation errors and added examples (Issue #68, Issue #69)
 
 
@@ -262,14 +277,16 @@ v1.1.2 - 2023-10-10
 v1.1.1 - 2023-03-20
 -------------------
 
-- CVE-2023-28428: Fixed a potential denial-of-service with corrupt PDF files.
+- SECURITY-4.0: Fixed a potential denial-of-service with corrupt PDF files
+  (CVE-2023-28428)
 - Fixed a few build issues.
 
 
 v1.1.0 - 2023-02-06
 -------------------
 
-- CVE-2023-24808: Fixed a potential denial-of-service with corrupt PDF files.
+- SECURITY-4.0: Fixed a potential denial-of-service with corrupt PDF files
+  (CVE-2023-24808)
 - Added `pdfioFileCreateTemporary` function (Issue #29)
 - Added `pdfioDictIterateKeys` function (Issue #31)
 - Added `pdfioContentPathEnd` function.

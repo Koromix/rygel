@@ -1203,13 +1203,20 @@ pdfioFileOpen(
   line[bytes] = '\0';
   end = line + bytes - 9;
 
-  for (ptr = line; ptr < end; ptr ++)
+  for (ptr = line, xref_offset = 0; ptr < end; ptr ++)
   {
-    if (!strncmp(ptr, "startxref", 9) && !strstr(ptr + 9, "startxref") && strtol(ptr + 9, NULL, 10) > 0)
-      break;
+    char	*temp_ptr;		// Pointer to characters after offset
+    off_t	temp_offset;		// Temporary offset value
+
+    if (!strncmp(ptr, "startxref", 9) && (temp_offset = strtol(ptr + 9, &temp_ptr, 10)) > 0 && temp_ptr)
+    {
+      PDFIO_DEBUG("pdfioFileOpen: startxref %lu\n", (unsigned long)temp_offset);
+      xref_offset = temp_offset;
+      ptr         = temp_ptr;
+    }
   }
 
-  if (ptr >= end)
+  if (xref_offset == 0)
   {
     if (!_pdfioFileError(pdf, "WARNING: Unable to find start of cross-reference table, will attempt to rebuild."))
       goto error;
@@ -1219,12 +1226,6 @@ pdfioFileOpen(
   }
   else
   {
-    PDFIO_DEBUG("pdfioFileOpen: line=%p,ptr=%p(\"%s\")\n", (void *)line, (void *)ptr, ptr);
-
-    xref_offset = (off_t)strtol(ptr + 9, NULL, 10);
-
-    PDFIO_DEBUG("pdfioFileOpen: xref_offset=%lu\n", (unsigned long)xref_offset);
-
     if (!load_xref(pdf, xref_offset, password_cb, password_cbdata))
       goto error;
   }
@@ -1846,7 +1847,7 @@ load_obj_stream(pdfio_obj_t *obj)	// I - Object to load
     return (false);
   }
 
-  count = (int)pdfioDictGetNumber(pdfioObjGetDict(obj), "N");
+  count = _pdfioDictGetInteger(pdfioObjGetDict(obj), "N");
 
   PDFIO_DEBUG("load_obj_stream: N=%d\n", count);
 
@@ -1889,12 +1890,22 @@ load_obj_stream(pdfio_obj_t *obj)	// I - Object to load
   // Read the objects themselves...
   for (cur_obj = 0; cur_obj < num_objs; cur_obj ++)
   {
-    if (!_pdfioValueRead(obj->pdf, obj, &tb, &(objs[cur_obj]->value), 0))
+    _pdfio_value_t v, *vptr;		// Value
+
+    if (objs[cur_obj]->value.type == PDFIO_VALTYPE_NONE)
+      vptr = &(objs[cur_obj]->value);
+    else
+      vptr = &v;
+
+    if (!_pdfioValueRead(obj->pdf, obj, &tb, vptr, 0))
     {
       _pdfioFileError(obj->pdf, "Unable to read compressed object.");
       pdfioStreamClose(st);
       return (false);
     }
+
+    if (vptr == &v)
+      _pdfioValueDelete(vptr);
   }
 
   // Close the stream and return
@@ -2096,6 +2107,7 @@ load_xref(
       else if (trailer.type != PDFIO_VALTYPE_DICT)
       {
         PDFIO_DEBUG("load_xref: Expected dictionary for cross-reference object (type=%d).", trailer.type);
+        _pdfioValueDelete(&trailer);
         goto repair;
       }
 
@@ -2156,8 +2168,8 @@ load_xref(
 	}
 	else
 	{
-          number = (intmax_t)pdfioArrayGetNumber(index_array, index_n);
-          count  = (size_t)pdfioArrayGetNumber(index_array, index_n + 1);
+          number = (intmax_t)_pdfioArrayGetSize(index_array, index_n);
+          count  = _pdfioArrayGetSize(index_array, index_n + 1);
 	}
 
 	while (count > 0 && pdfioStreamRead(st, buffer, w_total) > 0)
@@ -2165,8 +2177,12 @@ load_xref(
 	  count --;
 
 #ifdef DEBUG
-          if (w_total > 5)
-	    PDFIO_DEBUG("load_xref: number=%u %02X%02X%02X%02X%02X...\n", (unsigned)number, buffer[0], buffer[1], buffer[2], buffer[3], buffer[4]);
+          if (w_total > 7)
+	    PDFIO_DEBUG("load_xref: number=%u %02X%02X%02X%02X%02X%02X%02X%02X...\n", (unsigned)number, buffer[0], buffer[1], buffer[2], buffer[3], buffer[4], buffer[5], buffer[6], buffer[7]);
+	  else if (w_total == 7)
+	    PDFIO_DEBUG("load_xref: number=%u %02X%02X%02X%02X%02X%02X%02X\n", (unsigned)number, buffer[0], buffer[1], buffer[2], buffer[3], buffer[4], buffer[5], buffer[6]);
+	  else if (w_total == 6)
+	    PDFIO_DEBUG("load_xref: number=%u %02X%02X%02X%02X%02X%02X\n", (unsigned)number, buffer[0], buffer[1], buffer[2], buffer[3], buffer[4], buffer[5]);
 	  else if (w_total == 5)
 	    PDFIO_DEBUG("load_xref: number=%u %02X%02X%02X%02X%02X\n", (unsigned)number, buffer[0], buffer[1], buffer[2], buffer[3], buffer[4]);
 	  else if (w_total == 4)
@@ -2190,8 +2206,8 @@ load_xref(
 	    }
 	  }
 
-          // Offset
-	  for (i = 1, offset = buffer[w_2]; i < w[1]; i ++)
+          // Offset (only support 2^63-1 maximum)
+	  for (i = 1, offset = w[1] == 8 ? buffer[w_2] & 127 : buffer[w_2]; i < w[1]; i ++)
 	    offset = (offset << 8) | buffer[w_2 + i];
 
           // Generation number
@@ -2207,19 +2223,23 @@ load_xref(
 		generation = (buffer[w_3] << 8) | buffer[w_3 + 1];
 		break;
 	    case 3 :
-	        // Issue #46: Stupid Microsoft PDF generator using 3 bytes to
-	        // encode 16-bit generation numbers == 0 (probably a lazy coder
-	        // stuffing things into an array of 64-bit unsigned integers)
-		generation = (buffer[w_3] << 16) | (buffer[w_3 + 1] << 8) | buffer[w_3 + 2];
-		if (generation > 65535)
+		// Issue #46: Stupid Microsoft PDF generator using 3 bytes to
+		// encode 16-bit generation numbers == 0 (probably a lazy coder
+		// stuffing things into an array of 64-bit unsigned integers)
+		if (buffer[w_3])
 		  generation = 65535;
+		else
+		  generation = (buffer[w_3 + 1] << 8) | buffer[w_3 + 2];
 		break;
 	    case 4 : // Even stupider :)
-		generation = (buffer[w_3] << 24) | (buffer[w_3 + 1] << 16) | (buffer[w_3 + 2] << 8) | buffer[w_3 + 3];
-		if (generation > 65535)
+		if (buffer[w_3] || buffer[w_3 + 1])
 		  generation = 65535;
+		else
+		  generation = (buffer[w_3 + 2] << 8) | buffer[w_3 + 3];
 		break;
 	  }
+
+          PDFIO_DEBUG("load_xref: number=%u type=%u offset=%lu generation=%u\n", (unsigned)number, w[0] ? buffer[0] : 0, (unsigned long)offset, (unsigned)generation);
 
 	  // Create a placeholder for the object in memory...
 	  if ((current = pdfioFileFindObj(pdf, (size_t)number)) != NULL)
@@ -2229,7 +2249,7 @@ load_xref(
             if (generation > current->generation)
             {
               // Newer version of an existing object - update the references...
-              current->generation = generation;
+              current->generation = (unsigned short)generation;
 
 	      if (w[0] == 0 || buffer[0] == 1)
 	      {
@@ -2360,6 +2380,12 @@ load_xref(
 	  goto repair;
 	}
 
+        if (number < 0 || num_objects < 1 || number > (INTMAX_MAX - num_objects))
+        {
+          PDFIO_DEBUG("load_xref: Start or count out-of-range.\n");
+          goto repair;
+        }
+
 	// Read this group of objects...
 	for (; num_objects > 0; num_objects --, number ++)
 	{
@@ -2436,6 +2462,7 @@ load_xref(
       else if (trailer.type != PDFIO_VALTYPE_DICT)
       {
         PDFIO_DEBUG("load_xref: Trailer not a dictionary (type=%d).\n", trailer.type);
+        _pdfioValueDelete(&trailer);
 	goto repair;
       }
 
@@ -2472,7 +2499,7 @@ load_xref(
     PDFIO_DEBUG_VALUE(&trailer);
     PDFIO_DEBUG("\n");
 
-    off_t new_offset = (off_t)pdfioDictGetNumber(trailer.value.dict, "Prev");
+    off_t new_offset = _pdfioDictGetSize(trailer.value.dict, "Prev");
 
     if (new_offset <= 0)
     {
@@ -2594,6 +2621,12 @@ repair_xref(
           if ((obj = pdfioFileFindObj(pdf, (size_t)number)) != NULL)
           {
             obj->offset = line_offset;
+
+            if (obj->value.type != PDFIO_VALTYPE_NONE)
+            {
+              _pdfioValueDelete(&obj->value);
+              memset(&obj->value, 0, sizeof(obj->value));
+            }
           }
           else if ((obj = add_obj(pdf, (size_t)number, (unsigned short)generation, line_offset)) == NULL)
 	  {
@@ -2614,8 +2647,11 @@ repair_xref(
 	  {
 	    if (!_pdfioFileError(pdf, "WARNING: Unable to read object dictionary/value."))
 	      return (false);
-	    else
-	      continue;
+
+            // Continue reading from the current file position, otherwise we'll
+            // just keep reading the same bad value...
+            line_offset = _pdfioFileTell(pdf);
+	    continue;
 	  }
 
 	  if (_pdfioTokenGet(&tb, line, sizeof(line)))
@@ -2695,6 +2731,7 @@ repair_xref(
       else if (trailer.type != PDFIO_VALTYPE_DICT)
       {
 	_pdfioFileError(pdf, "Trailer is not a dictionary.");
+	_pdfioValueDelete(&trailer);
 	return (false);
       }
 

@@ -237,13 +237,13 @@ _pdfioStreamCreate(
     // Flate compression
     pdfio_dict_t *params = pdfioDictGetDict(obj->value.value.dict, "DecodeParms");
 					// Decoding parameters
-    int bpc = (int)pdfioDictGetNumber(params, "BitsPerComponent");
+    int bpc = _pdfioDictGetInteger(params, "BitsPerComponent");
 					// Bits per component
-    int colors = (int)pdfioDictGetNumber(params, "Colors");
+    int colors = _pdfioDictGetInteger(params, "Colors");
 					// Number of colors
-    int columns = (int)pdfioDictGetNumber(params, "Columns");
+    int columns = _pdfioDictGetInteger(params, "Columns");
 					// Number of columns
-    int predictor = (int)pdfioDictGetNumber(params, "Predictor");
+    int predictor = _pdfioDictGetInteger(params, "Predictor");
 					// Predictory value, if any
     int status;				// ZLIB status code
 
@@ -514,13 +514,13 @@ _pdfioStreamOpen(pdfio_obj_t *obj,	// I - Object
       // Flate compression
       pdfio_dict_t *params = pdfioDictGetDict(dict, "DecodeParms");
 					// Decoding parameters
-      int bpc = (int)pdfioDictGetNumber(params, "BitsPerComponent");
+      int bpc = _pdfioDictGetInteger(params, "BitsPerComponent");
 					// Bits per component
-      int colors = (int)pdfioDictGetNumber(params, "Colors");
+      int colors = _pdfioDictGetInteger(params, "Colors");
 					// Number of colors
-      int columns = (int)pdfioDictGetNumber(params, "Columns");
+      int columns = _pdfioDictGetInteger(params, "Columns");
 					// Number of columns
-      int predictor = (int)pdfioDictGetNumber(params, "Predictor");
+      int predictor = _pdfioDictGetInteger(params, "Predictor");
 					// Predictory value, if any
       int status;			// ZLIB status
       ssize_t rbytes;			// Bytes read
@@ -795,9 +795,12 @@ pdfioStreamRead(
   // Loop until we have the requested bytes or hit the end of the stream...
   while ((remaining = (size_t)(st->bufend - st->bufptr)) < bytes)
   {
-    memcpy(bufptr, st->bufptr, remaining);
-    bufptr += remaining;
-    bytes -= remaining;
+    if (remaining > 0)
+    {
+      memcpy(bufptr, st->bufptr, remaining);
+      bufptr += remaining;
+      bytes  -= remaining;
+    }
 
     if (bytes >= sizeof(st->buffer))
     {

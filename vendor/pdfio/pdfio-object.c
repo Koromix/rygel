@@ -65,7 +65,7 @@ pdfioObjCopy(pdfio_file_t *pdf,		// I - PDF file
   pdfio_obj_t	*dstobj;		// Destination object
   pdfio_stream_t *srcst,		// Source stream
 		*dstst;			// Destination stream
-  char		buffer[32768];		// Copy buffer
+  char		*buffer;		// Copy buffer
   ssize_t	bytes;			// Bytes read
 
 
@@ -104,20 +104,28 @@ pdfioObjCopy(pdfio_file_t *pdf,		// I - PDF file
   if (srcobj->stream_offset)
   {
     // Copy stream data...
+    if ((buffer = malloc(PDFIO_BUF_SIZE)) == NULL)
+    {
+      pdfioObjClose(dstobj);
+      return (NULL);
+    }
+
     if ((srcst = pdfioObjOpenStream(srcobj, false)) == NULL)
     {
+      free(buffer);
       pdfioObjClose(dstobj);
       return (NULL);
     }
 
     if ((dstst = pdfioObjCreateStream(dstobj, PDFIO_FILTER_NONE)) == NULL)
     {
+      free(buffer);
       pdfioStreamClose(srcst);
       pdfioObjClose(dstobj);
       return (NULL);
     }
 
-    while ((bytes = pdfioStreamRead(srcst, buffer, sizeof(buffer))) > 0)
+    while ((bytes = pdfioStreamRead(srcst, buffer, PDFIO_BUF_SIZE)) > 0)
     {
       if (!pdfioStreamWrite(dstst, buffer, (size_t)bytes))
       {
@@ -126,6 +134,7 @@ pdfioObjCopy(pdfio_file_t *pdf,		// I - PDF file
       }
     }
 
+    free(buffer);
     pdfioStreamClose(srcst);
     pdfioStreamClose(dstst);
 
@@ -133,7 +142,9 @@ pdfioObjCopy(pdfio_file_t *pdf,		// I - PDF file
       return (NULL);
   }
   else
+  {
     pdfioObjClose(dstobj);
+  }
 
   return (dstobj);
 }
@@ -225,6 +236,8 @@ _pdfioObjDelete(pdfio_obj_t *obj)	// I - Object
 
     if (obj->datafree)
       (obj->datafree)(obj->data);
+
+    _pdfioValueDelete(&obj->value);
   }
 
   free(obj);
@@ -300,40 +313,39 @@ pdfioObjGetGeneration(pdfio_obj_t *obj)	// I - Object
 size_t					// O - Length in bytes or `0` for none
 pdfioObjGetLength(pdfio_obj_t *obj)	// I - Object
 {
-  size_t	length;			// Length of stream
+  size_t	length = 0;		// Length of stream
   pdfio_obj_t	*lenobj;		// Length object
 
 
   // Range check input...
   if (!obj || !obj->stream_offset || obj->value.type != PDFIO_VALTYPE_DICT)
-    return (0);
+    goto done;
 
   // Try getting the length, directly or indirectly
-  if ((length = (size_t)pdfioDictGetNumber(obj->value.value.dict, "Length")) > 0)
-  {
-    PDFIO_DEBUG("pdfioObjGetLength(obj=%p) returning %lu.\n", (void *)obj, (unsigned long)length);
-    return (length);
-  }
+  if ((length = _pdfioDictGetSize(obj->value.value.dict, "Length")) > 0)
+    goto done;
 
   if ((lenobj = pdfioDictGetObj(obj->value.value.dict, "Length")) == NULL)
   {
     if (!_pdfioDictGetValue(obj->value.value.dict, "Length"))
       _pdfioFileError(obj->pdf, "Unable to get length of stream.");
-    return (0);
+    goto done;
   }
 
   if (lenobj->value.type == PDFIO_VALTYPE_NONE)
     _pdfioObjLoad(lenobj);
 
-  if (lenobj->value.type != PDFIO_VALTYPE_NUMBER || lenobj->value.value.number <= 0.0)
+  if (lenobj->value.type != PDFIO_VALTYPE_NUMBER || lenobj->value.value.number <= 0.0 || lenobj->value.value.number > (double)SIZE_MAX || (double)(length = (size_t)lenobj->value.value.number) != lenobj->value.value.number)
   {
     _pdfioFileError(obj->pdf, "Unable to get length of stream.");
-    return (0);
+    length = 0;
   }
 
-  PDFIO_DEBUG("pdfioObjGetLength(obj=%p) returning %lu.\n", (void *)obj, (unsigned long)lenobj->value.value.number);
+  done:
 
-  return ((size_t)lenobj->value.value.number);
+  PDFIO_DEBUG("pdfioObjGetLength(obj=%p) returning %lu.\n", (void *)obj, (unsigned long)length);
+
+  return (length);
 }
 
 
@@ -491,6 +503,12 @@ _pdfioObjLoad(pdfio_obj_t *obj)		// I - Object
 
   // Then grab the object value...
   _pdfioTokenInit(&tb, obj->pdf, (_pdfio_tconsume_cb_t)_pdfioFileConsume, (_pdfio_tpeek_cb_t)_pdfioFilePeek, obj->pdf);
+
+  if (obj->value.type != PDFIO_VALTYPE_NONE)
+  {
+    _pdfioValueDelete(&obj->value);
+    memset(&obj->value, 0, sizeof(obj->value));
+  }
 
   if (!_pdfioValueRead(obj->pdf, obj, &tb, &obj->value, 0))
   {

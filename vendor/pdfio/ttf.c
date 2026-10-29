@@ -3,7 +3,7 @@
 //
 //     https://github.com/michaelrsweet/ttf
 //
-// Copyright © 2018-2025 by Michael R Sweet.
+// Copyright © 2018-2026 by Michael R Sweet.
 //
 // Licensed under Apache License v2.0.  See the file "LICENSE" for more
 // information.
@@ -635,7 +635,7 @@ ttfGetExtents(
   TTF_DEBUG("ttfGetExtents: width=%d\n", width);
 
   extents->bottom = size * font->y_min / font->units;
-  extents->right  = size * width / font->units + extents->left;
+  extents->right  = size * (float)width / font->units + extents->left;
   extents->top    = size * font->y_max / font->units;
 
   return (extents);
@@ -858,7 +858,7 @@ copy_name(ttf_t    *font,		// I - Font
 	else if (bpc == 2)
 	  ch = ((storptr[0] & 255) << 8) | (storptr[1] & 255);
 	else
-	  ch = ((storptr[0] & 255) << 24) | ((storptr[1] & 255) << 16) | ((storptr[2] & 255) << 8) | (storptr[3] & 255);
+	  ch = (int)(((unsigned)(storptr[0] & 255) << 24) | ((unsigned)(storptr[1] & 255) << 16) | ((unsigned)(storptr[2] & 255) << 8) | (unsigned)(storptr[3] & 255));
 
         // Convert to UTF-8...
         if (ch < 0x80)
@@ -1017,6 +1017,9 @@ create_font(const char   *filename,	// I - Filename of `NULL`
     goto error;
 
   if (!read_head(font, &head))
+    goto error;
+
+  if (head.unitsPerEm == 0)
     goto error;
 
   font->units = (float)head.unitsPerEm;
@@ -2046,7 +2049,7 @@ read_post(ttf_t           *font,	// I - Font
     return (false);
 
   /* version            = */read_ulong(font);
-  post->italicAngle     = (int)read_ulong(font) / 65536.0f;
+  post->italicAngle     = (float)read_ulong(font) / 65536.0f;
   /* underlinePosition  = */read_ushort(font);
   /* underlineThickness = */read_ushort(font);
   post->isFixedPitch    = read_ulong(font);
@@ -2217,7 +2220,7 @@ read_ulong(ttf_t *font)			// I - Font
   if ((font->read_cb)(font, buffer, sizeof(buffer)) != sizeof(buffer))
     return ((unsigned)EOF);
   else
-    return ((unsigned)((buffer[0] << 24) | (buffer[1] << 16) | (buffer[2] << 8) | buffer[3]));
+    return ((unsigned)(((unsigned)buffer[0] << 24) | ((unsigned)buffer[1] << 16) | ((unsigned)buffer[2] << 8) | (unsigned)buffer[3]));
 }
 
 
