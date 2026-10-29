@@ -7,7 +7,7 @@ mkdir config
 docker run koromix/redropp:latest /app/redropp init > config/redropp.ini
 ```
 
-You mount configure mandatory settings (title, URL, S3) inside `config/redropp.ini` before you can run it.
+You must configure mandatory settings (title, URL, S3) inside `config/redropp.ini` before you can run it.
 
 > [!NOTE]
 > You can use an environment file instead, if you prefer:
