@@ -236,16 +236,31 @@ bool LoadConfig(StreamReader *st, Config *out_config)
         return false;
 
     // Default values
-    if (!config.database_filename) {
-        config.database_filename = NormalizePath("redropp.db", data_directory, &config.str_alloc).ptr;
-    }
-    if (!config.tmp_directory) {
-        config.tmp_directory = NormalizePath("tmp", data_directory, &config.str_alloc).ptr;
-    }
-    if (!config.durations.len) {
-        config.durations.Append(DefaultDurations);
-        config.default_duration = DefaultDuration;
-        config.allow_infinite = false;
+    {
+#if defined(DEFAULT_DIRECTORY)
+        Span<const char> default_dir = K_STRINGIFY(DEFAULT_DIRECTORY);
+#else
+        Span<const char> default_dir = data_directory;
+#endif
+
+        if (!config.database_filename) {
+            const char *compat_filename = NormalizePath("redropp.db", default_dir, &config.str_alloc).ptr;
+
+            if (TestFile(compat_filename)) {
+                config.database_filename = compat_filename;
+            } else {
+                config.database_filename = NormalizePath("data/redropp.db", default_dir, &config.str_alloc).ptr;
+            }
+        }
+        if (!config.tmp_directory) {
+            config.tmp_directory = NormalizePath("tmp", default_dir, &config.str_alloc).ptr;
+        }
+
+        if (!config.durations.len) {
+            config.durations.Append(DefaultDurations);
+            config.default_duration = DefaultDuration;
+            config.allow_infinite = false;
+        }
     }
 
     // Finalize OIDC providers

@@ -757,16 +757,30 @@ For help about those commands, type: %!..+%1 command --help%!0)"),
     }
 
     LogInfo("Init data");
-    if (!db.Open(config.database_filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
-        return 1;
-    if (!db.SetWAL(true))
-        return 1;
-    if (!AddDatabaseFunctions(&db))
-        return 1;
-    if (!MigrateDatabase(&db))
-        return 1;
-    if (!MakeDirectory(config.tmp_directory, false))
-        return 1;
+    {
+        const char *database_directory = DuplicateString(GetPathDirectory(config.database_filename), &temp_alloc).ptr;
+
+        if (!TestFile(database_directory, FileType::Directory)) {
+            if (!MakeDirectory(database_directory))
+                return 1;
+
+#if !defined(_WIN32)
+            chmod(database_directory, 0700);
+#endif
+        }
+
+        if (!db.Open(config.database_filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
+            return 1;
+        if (!db.SetWAL(true))
+            return 1;
+        if (!AddDatabaseFunctions(&db))
+            return 1;
+        if (!MigrateDatabase(&db))
+            return 1;
+
+        if (!MakeDirectory(config.tmp_directory, false))
+            return 1;
+    }
 
     LogInfo("Init messaging");
     if (!InitSMTP(config.smtp))
