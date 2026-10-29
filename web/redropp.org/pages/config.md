@@ -1,10 +1,17 @@
 # Main configuration
 
-You can create the default configuration file with the following command:
+You can create a new profile and configuration file with the following command:
 
 ```sh
-redropp init > redropp.ini
+# This will create the directory mydrop (in the current directory) and the config file mydrop/redropp.ini
+# Choose any name you want!
+redropp init mydrop
 ```
+
+You must edit `mydrop/redropp.ini` and configure the mandatory settings before you are able to continue. See below for more information.
+
+> [!NOTE]
+> If you use the Debian or RPM package, edit `/etc/redropp/redropp.ini` instead. Start (or restart) the service with `systemctl restart redropp`. 
 
 ## Mandatory settings
 
