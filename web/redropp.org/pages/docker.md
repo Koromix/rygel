@@ -64,7 +64,7 @@ services:
     ports:
       - 8894:80
     volumes:
-      - ./config:config
+      - ./config:/config
       - ./data:/data
 ```
 
@@ -83,15 +83,15 @@ After=local-fs.target
 [Container]
 Image=docker.io/koromix/redropp:latest
 PublishPort=8894:80
-Volume=/srv/redropp:/data
-EnvironmentFile=/path/to/env/file
+Volume=/srv/redropp/config:/config
+Volume=/srv/redropp/data:/data
 
 [Install]
 WantedBy=multi-user.target
 ```
 
 > [!NOTE]
-> This unit stores data in `/srv/redropp`, change it or make sure this directory exists.
+> This unit reads the config file from `/srv/redropp/config/redropp.ini`, and stores the database in `/srv/redropp/data`. Change the corresponding Quadlet settings if needed. Make sure the config file and the data directory exist.
 
 Save this file somewhere the quadlet systemd generator can find it, such as `/etc/containers/systemd/redropp.container`.
 
