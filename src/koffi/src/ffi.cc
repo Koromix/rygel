@@ -1004,99 +1004,97 @@ static ArrayHint SelectTypedHint(const TypeInfo *ref)
     K_UNREACHABLE();
 }
 
-static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
+static napi_value CreateArrayType(napi_env env, napi_callback_info info)
 {
-    Napi::Env env = info.Env();
-    InstanceData *instance = (InstanceData *)info.Data();
+    napi_value args[4];
+    size_t count = 4;
+    InstanceData *instance;
 
-    if (info.Length() < 2) {
-        ThrowError<Napi::TypeError>(env, "Expected 2 to 4 arguments, got %1", info.Length());
-        return env.Null();
+    NAPI_OK(napi_get_cb_info(env, info, &count, args, nullptr, (void **)&instance));
+
+    if (count < 2) {
+        ThrowError<Napi::TypeError>(env, "Expected 2 to 4 arguments, got %1", count);
+        return GetNull(env);
     }
 
-    const TypeInfo *ref = ResolveType(instance, info[0]);
+    const TypeInfo *ref = ResolveType(instance, args[0]);
     if (!ref)
-        return env.Null();
+        return GetNull(env);
 
-    bool dynamic = (info.Length() >= 3) && info[1].IsString();
+    char countedby[256];
+    bool dynamic = (napi_get_value_string_utf8(env, args[1], countedby, K_SIZE(countedby), nullptr) == napi_ok);
 
-    if (dynamic && !info[1].IsString()) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for countedBy, expected string", GetValueType(instance, info[1]));
-        return env.Null();
-    }
-    if (!info[1 + dynamic].IsNumber()) {
-        if (info.Length() == 2 && info[1].IsString()) {
+    Size len;
+    if (!TryNumber(env, args[1 + dynamic], &len)) [[unlikely]] {
+        if (count == 2 && dynamic) {
             ThrowError<Napi::TypeError>(env, "Missing maxLen argument");
+        } else if (dynamic) {
+            ThrowError<Napi::TypeError>(env, "Unexpected %1 value for maxLen, expected integer", GetValueType(instance, args[1 + dynamic]));
         } else {
-            ThrowError<Napi::TypeError>(env, "Unexpected %1 value for %2, expected integer", GetValueType(instance, info[1]), dynamic ? "maxLen" : "len");
+            ThrowError<Napi::TypeError>(env, "Unexpected %1 value for len, expected integer", GetValueType(instance, args[1 + dynamic]));
         }
-        return env.Null();
+        return GetNull(env);
     }
-
-    int64_t len = info[1 + dynamic].As<Napi::Number>().Int64Value();
 
     if (len <= 0) {
         ThrowError<Napi::TypeError>(env, "Array length must be positive and non-zero");
-        return env.Null();
+        return GetNull(env);
     }
     if (len > instance->config.max_type_size / ref->size) {
         ThrowError<Napi::TypeError>(env, "Array length is too high (max = %1)", instance->config.max_type_size / ref->size);
-        return env.Null();
+        return GetNull(env);
     }
 
-    // Bit ugly but that works
-    std::string countedby = dynamic ? info[1].As<Napi::String>() : std::string();
+    ArrayHint hint = ref->hint;
 
-    std::unique_ptr<TypeInfo> type;
+    if (count >= 3u + dynamic) {
+        char hint_str[256];
+        bool hinted = (napi_get_value_string_utf8(env, args[2 + dynamic], hint_str, K_SIZE(hint_str), nullptr) == napi_ok);
 
-    if (info.Length() >= 3u + dynamic && !IsNullOrUndefined(env, info[2 + dynamic])) {
-        if (!info[2 + dynamic].IsString()) {
-            ThrowError<Napi::TypeError>(env, "Unexpected %1 value for hint, expected string", GetValueType(instance, info[2]));
-            return env.Null();
-        }
+        if (hinted) {
+            hint_str[0] = UpperAscii(hint_str[0]);
 
-        std::string str = info[2 + dynamic].As<Napi::String>();
-        ArrayHint hint = {};
+            if (TestStr(hint_str, "Typed")) {
+                if (ref->hint == ArrayHint::Array) {
+                    ThrowError<Napi::Error>(env, "Array hint 'Typed' cannot be used with type %1", ref->name);
+                    return GetNull(env);
+                }
 
-        if (str == "Typed" || str == "typed") {
-            if (ref->hint == ArrayHint::Array) {
-                ThrowError<Napi::Error>(env, "Array hint 'Typed' cannot be used with type %1", ref->name);
-                return env.Null();
-            }
+                hint = SelectTypedHint(ref);
+            } else if (TestStr(hint_str, "Buffer")) {
+                if (ref->hint == ArrayHint::Array) {
+                    ThrowError<Napi::Error>(env, "Array hint 'Buffer' cannot be used with type %1", ref->name);
+                    return GetNull(env);
+                }
 
-            hint = SelectTypedHint(ref);
-        } else if (str == "Buffer" || str == "buffer") {
-            if (ref->hint == ArrayHint::Array) {
-                ThrowError<Napi::Error>(env, "Array hint 'Buffer' cannot be used with type %1", ref->name);
-                return env.Null();
-            }
-
-            hint = ArrayHint::Buffer;
-        } else if (str == "Array" || str == "array") {
-            hint = ArrayHint::Array;
-        } else if (str == "String" || str == "string") {
-            if (ref->primitive == PrimitiveKind::Int8) {
-                hint = ArrayHint::String8;
-            } else if (ref->primitive == PrimitiveKind::Int16) {
-                hint = ArrayHint::String16;
-            } else if (ref->primitive == PrimitiveKind::Int32) {
-                hint = ArrayHint::String32;
+                hint = ArrayHint::Buffer;
+            } else if (TestStr(hint_str, "Array")) {
+                hint = ArrayHint::Array;
+            } else if (TestStr(hint_str,"String")) {
+                if (ref->primitive == PrimitiveKind::Int8) {
+                    hint = ArrayHint::String8;
+                } else if (ref->primitive == PrimitiveKind::Int16) {
+                    hint = ArrayHint::String16;
+                } else if (ref->primitive == PrimitiveKind::Int32) {
+                    hint = ArrayHint::String32;
+                } else {
+                    ThrowError<Napi::Error>(env, "Array hint 'String' can only be used with 8, 16 and 32-bit signed integer types");
+                    return GetNull(env);
+                }
             } else {
-                ThrowError<Napi::Error>(env, "Array hint 'String' can only be used with 8, 16 and 32-bit signed integer types");
-                return env.Null();
+                ThrowError<Napi::Error>(env, "Array conversion hint must be 'Typed', 'Array' or 'String'");
+                return GetNull(env);
             }
-        } else {
-            ThrowError<Napi::Error>(env, "Array conversion hint must be 'Typed', 'Array' or 'String'");
-            return env.Null();
+        } else if (!IsNullOrUndefined(env, args[2 + dynamic])) {
+            ThrowError<Napi::TypeError>(env, "Unexpected %1 value for hint, expected string", GetValueType(instance, args[2 + dynamic]));
+            return GetNull(env);
         }
-
-        type = MakeArrayType(instance, ref, (Size)len, dynamic ? countedby.c_str() : nullptr, hint);
-    } else {
-        type = MakeArrayType(instance, ref, (Size)len, dynamic ? countedby.c_str() : nullptr);
     }
 
-    napi_value wrapper = WrapType(instance, std::move(type));
-    return Napi::Value(env, wrapper);
+    // Make the damn thing
+    std::unique_ptr<TypeInfo> type = MakeArrayType(instance, ref, (Size)len, dynamic ? countedby : nullptr, hint);
+
+    return WrapType(instance, std::move(type));
 }
 
 static bool ParseClassicFunction(const Napi::CallbackInfo &info, bool concrete, FunctionInfo *out_func)
@@ -1420,33 +1418,36 @@ static Napi::Value CreateEnumType(const Napi::CallbackInfo &info)
     return Napi::Value(env, wrapper);
 }
 
-static Napi::Value CreateTypeAlias(const Napi::CallbackInfo &info)
+static napi_value CreateTypeAlias(napi_env env, napi_callback_info info)
 {
-    Napi::Env env = info.Env();
-    InstanceData *instance = (InstanceData *)info.Data();
+    napi_value args[2];
+    size_t count = 2;
+    InstanceData *instance;
 
-    if (info.Length() < 2) {
-        ThrowError<Napi::TypeError>(env, "Expected 2 arguments, got %1", info.Length());
-        return env.Null();
+    NAPI_OK(napi_get_cb_info(env, info, &count, args, nullptr, (void **)&instance));
+
+    if (count < 2) {
+        ThrowError<Napi::TypeError>(env, "Expected 2 arguments, got %1", count);
+        return GetNull(env);
     }
-    if (!info[0].IsString()) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string", GetValueType(instance, info[0]));
-        return env.Null();
+
+    char name[512];
+    if (napi_get_value_string_utf8(env, args[0], name, K_SIZE(name), nullptr) != napi_ok) {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string", GetValueType(instance, args[0]));
+        return GetNull(env);
     }
 
-    std::string name = info[0].As<Napi::String>();
-    const char *alias = DuplicateString(name.c_str(), &instance->str_alloc).ptr;
-
-    const TypeInfo *type = ResolveType(instance, info[1]);
+    const TypeInfo *type = ResolveType(instance, args[1]);
     if (!type)
-        return env.Null();
+        return GetNull(env);
+
+    const char *alias = DuplicateString(name, &instance->str_alloc).ptr;
 
     // Alias the type
     if (!MapType(env, instance, type, alias))
-        return env.Null();
+        return GetNull(env);
 
-    napi_value wrapper = WrapType(instance, type);
-    return Napi::Value(env, wrapper);
+    return WrapType(instance, type);
 }
 
 static napi_value GetResolvedType(napi_env env, napi_callback_info info)
@@ -2839,10 +2840,10 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
     exports.Set("opaque", Napi::Function::New(env, CreateOpaqueType, "opaque", instance));
     exports.Set("pointer", Napi::Function::New(env, CreatePointerType, "pointer", instance));
     exports.Set("disposable", Napi::Function::New(env, CreateDisposableType, "disposable", instance));
-    exports.Set("array", Napi::Function::New(env, CreateArrayType, "array", instance));
+    exports.Set("array", CreateFunction(instance, CreateArrayType, "array"));
     exports.Set("proto", Napi::Function::New(env, CreateFunctionType, "proto", instance));
-    exports.Set("alias", Napi::Function::New(env, CreateTypeAlias, "alias", instance));
     exports.Set("enumeration", Napi::Function::New(env, CreateEnumType, "enumeration", instance));
+    exports.Set("alias", CreateFunction(instance, CreateTypeAlias, "alias"));
 
     exports.Set("type", CreateFunction(instance, GetResolvedType, "type"));
     exports.Set("sizeof", CreateFunction(instance, GetTypeSize, "sizeof"));
