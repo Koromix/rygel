@@ -7,7 +7,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const tty = require('node:tty');
 
-const TSC_OPTIONS = '--target es2020 --module node16 --allowJs --checkJs --noEmit --resolveJsonModule --strict false'.split(' ');
+const TSC_OPTIONS = '--target es2021 --module node16 --allowJs --checkJs --noEmit --resolveJsonModule --strict false'.split(' ');
 
 main();
 
@@ -45,7 +45,7 @@ function test() {
         let env = scripts[key].env ?? {}
 
         let filename = path.join(__dirname, script);
-        success &= run('Test', key, ['--no-deprecation', filename, ...args], env);
+        success &= run('Test', key, ['--no-deprecation', '--expose-gc', filename, ...args], env);
     }
 
     // Make sure tests compile in TypeScript mode

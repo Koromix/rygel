@@ -14,14 +14,14 @@
         "test": {
             "build": "node ../../cnoke.cjs --ccache -D test",
             "commands": {
-                "Test Sync": "node --no-deprecation test/sync.js",
-                "Test Sync (debug async)": "DEBUG_ASYNC=1 node --no-deprecation test/sync.js",
-                "Test Union": "node --no-deprecation test/union.js",
-                "Test Async": "node --no-deprecation test/async.js",
-                "Test Callbacks": "node --no-deprecation test/callbacks.js",
-                "Test Raylib": "node --no-deprecation test/raylib.js",
-                "Test SQLite": "node --no-deprecation test/sqlite.js",
-                "Test POSIX": "node --no-deprecation test/posix.js"
+                "Test Sync": "node --no-deprecation --expose-gc test/sync.js",
+                "Test Sync (debug async)": "DEBUG_ASYNC=1 node --no-deprecation --expose-gc test/sync.js",
+                "Test Union": "node --no-deprecation --expose-gc test/union.js",
+                "Test Async": "node --no-deprecation --expose-gc test/async.js",
+                "Test Callbacks": "node --no-deprecation --expose-gc test/callbacks.js",
+                "Test Raylib": "node --no-deprecation --expose-gc test/raylib.js",
+                "Test SQLite": "node --no-deprecation --expose-gc test/sqlite.js",
+                "Test POSIX": "node --no-deprecation --expose-gc test/posix.js"
             }
         }
     },
@@ -41,14 +41,14 @@
         "test": {
             "build": "CC=clang-21 CXX=clang++-21 node ../../cnoke.cjs --ccache -D test",
             "commands": {
-                "Test Sync": "node --no-deprecation test/sync.js",
-                "Test Sync (debug async)": "DEBUG_ASYNC=1 node --no-deprecation test/sync.js",
-                "Test Union": "node --no-deprecation test/union.js",
-                "Test Async": "node --no-deprecation test/async.js",
-                "Test Callbacks": "node --no-deprecation test/callbacks.js",
-                "Test Raylib": "node --no-deprecation test/raylib.js",
-                "Test SQLite": "node --no-deprecation test/sqlite.js",
-                "Test POSIX": "node --no-deprecation test/posix.js"
+                "Test Sync": "node --no-deprecation --expose-gc test/sync.js",
+                "Test Sync (debug async)": "DEBUG_ASYNC=1 node --no-deprecation --expose-gc test/sync.js",
+                "Test Union": "node --no-deprecation --expose-gc test/union.js",
+                "Test Async": "node --no-deprecation --expose-gc test/async.js",
+                "Test Callbacks": "node --no-deprecation --expose-gc test/callbacks.js",
+                "Test Raylib": "node --no-deprecation --expose-gc test/raylib.js",
+                "Test SQLite": "node --no-deprecation --expose-gc test/sqlite.js",
+                "Test POSIX": "node --no-deprecation --expose-gc test/posix.js"
             }
         }
     },
@@ -68,14 +68,14 @@
         "test": {
             "build": "node ../../cnoke.cjs --ccache -D test",
             "commands": {
-                "Test Sync": "node --no-deprecation test/sync.js",
-                "Test Sync (debug async)": "DEBUG_ASYNC=1 node --no-deprecation test/sync.js",
-                "Test Union": "node --no-deprecation test/union.js",
-                "Test Async": "node --no-deprecation test/async.js",
-                "Test Callbacks": "node --no-deprecation test/callbacks.js",
-                "Test Raylib": "node --no-deprecation test/raylib.js",
-                "Test SQLite": "node --no-deprecation test/sqlite.js",
-                "Test POSIX": "node --no-deprecation test/posix.js"
+                "Test Sync": "node --no-deprecation --expose-gc test/sync.js",
+                "Test Sync (debug async)": "DEBUG_ASYNC=1 node --no-deprecation --expose-gc test/sync.js",
+                "Test Union": "node --no-deprecation --expose-gc test/union.js",
+                "Test Async": "node --no-deprecation --expose-gc test/async.js",
+                "Test Callbacks": "node --no-deprecation --expose-gc test/callbacks.js",
+                "Test Raylib": "node --no-deprecation --expose-gc test/raylib.js",
+                "Test SQLite": "node --no-deprecation --expose-gc test/sqlite.js",
+                "Test POSIX": "node --no-deprecation --expose-gc test/posix.js"
             }
         }
     },
@@ -96,14 +96,14 @@
         "test": {
             "build": "CC=clang-21 CXX=clang++-21 node ../../cnoke.cjs --ccache -D test",
             "commands": {
-                "Test Sync": "node --no-deprecation test/sync.js",
-                "Test Sync (debug async)": "DEBUG_ASYNC=1 node --no-deprecation test/sync.js",
-                "Test Union": "node --no-deprecation test/union.js",
-                "Test Async": "node --no-deprecation test/async.js",
-                "Test Callbacks": "node --no-deprecation test/callbacks.js",
-                "Test Raylib": "node --no-deprecation test/raylib.js",
-                "Test SQLite": "node --no-deprecation test/sqlite.js",
-                "Test POSIX": "node --no-deprecation test/posix.js"
+                "Test Sync": "node --no-deprecation --expose-gc test/sync.js",
+                "Test Sync (debug async)": "DEBUG_ASYNC=1 node --no-deprecation --expose-gc test/sync.js",
+                "Test Union": "node --no-deprecation --expose-gc test/union.js",
+                "Test Async": "node --no-deprecation --expose-gc test/async.js",
+                "Test Callbacks": "node --no-deprecation --expose-gc test/callbacks.js",
+                "Test Raylib": "node --no-deprecation --expose-gc test/raylib.js",
+                "Test SQLite": "node --no-deprecation --expose-gc test/sqlite.js",
+                "Test POSIX": "node --no-deprecation --expose-gc test/posix.js"
             }
         }
     },
@@ -123,14 +123,14 @@
         "test": {
             "build": "node ../../cnoke.cjs --ccache -D test",
             "commands": {
-                "Test Sync": "node --no-deprecation test/sync.js",
-                "Test Sync (debug async)": "DEBUG_ASYNC=1 node --no-deprecation test/sync.js",
-                "Test Union": "node --no-deprecation test/union.js",
-                "Test Async": "node --no-deprecation test/async.js",
-                "Test Callbacks": "node --no-deprecation test/callbacks.js",
-                "Test Raylib": "node --no-deprecation test/raylib.js",
-                "Test SQLite": "node --no-deprecation test/sqlite.js",
-                "Test POSIX": "node --no-deprecation test/posix.js"
+                "Test Sync": "node --no-deprecation --expose-gc test/sync.js",
+                "Test Sync (debug async)": "DEBUG_ASYNC=1 node --no-deprecation --expose-gc test/sync.js",
+                "Test Union": "node --no-deprecation --expose-gc test/union.js",
+                "Test Async": "node --no-deprecation --expose-gc test/async.js",
+                "Test Callbacks": "node --no-deprecation --expose-gc test/callbacks.js",
+                "Test Raylib": "node --no-deprecation --expose-gc test/raylib.js",
+                "Test SQLite": "node --no-deprecation --expose-gc test/sqlite.js",
+                "Test POSIX": "node --no-deprecation --expose-gc test/posix.js"
             }
         }
     },
@@ -150,14 +150,14 @@
         "test": {
             "build": "node ../../cnoke.cjs --ccache -D test",
             "commands": {
-                "Test Sync": "node --no-deprecation test/sync.js",
-                "Test Sync (debug async)": "DEBUG_ASYNC=1 node --no-deprecation test/sync.js",
-                "Test Union": "node --no-deprecation test/union.js",
-                "Test Async": "node --no-deprecation test/async.js",
-                "Test Callbacks": "node --no-deprecation test/callbacks.js",
-                "Test Raylib": "node --no-deprecation test/raylib.js",
-                "Test SQLite": "node --no-deprecation test/sqlite.js",
-                "Test POSIX": "node --no-deprecation test/posix.js"
+                "Test Sync": "node --no-deprecation --expose-gc test/sync.js",
+                "Test Sync (debug async)": "DEBUG_ASYNC=1 node --no-deprecation --expose-gc test/sync.js",
+                "Test Union": "node --no-deprecation --expose-gc test/union.js",
+                "Test Async": "node --no-deprecation --expose-gc test/async.js",
+                "Test Callbacks": "node --no-deprecation --expose-gc test/callbacks.js",
+                "Test Raylib": "node --no-deprecation --expose-gc test/raylib.js",
+                "Test SQLite": "node --no-deprecation --expose-gc test/sqlite.js",
+                "Test POSIX": "node --no-deprecation --expose-gc test/posix.js"
             }
         }
     },
@@ -177,14 +177,14 @@
         "test": {
             "build": "node ../../cnoke.cjs --ccache -D test",
             "commands": {
-                "Test Sync": "node --no-deprecation test/sync.js",
-                "Test Sync (debug async)": "DEBUG_ASYNC=1 node --no-deprecation test/sync.js",
-                "Test Union": "node --no-deprecation test/union.js",
-                "Test Async": "node --no-deprecation test/async.js",
-                "Test Callbacks": "node --no-deprecation test/callbacks.js",
-                "Test Raylib": "node --no-deprecation test/raylib.js",
-                "Test SQLite": "node --no-deprecation test/sqlite.js",
-                "Test POSIX": "node --no-deprecation test/posix.js"
+                "Test Sync": "node --no-deprecation --expose-gc test/sync.js",
+                "Test Sync (debug async)": "DEBUG_ASYNC=1 node --no-deprecation --expose-gc test/sync.js",
+                "Test Union": "node --no-deprecation --expose-gc test/union.js",
+                "Test Async": "node --no-deprecation --expose-gc test/async.js",
+                "Test Callbacks": "node --no-deprecation --expose-gc test/callbacks.js",
+                "Test Raylib": "node --no-deprecation --expose-gc test/raylib.js",
+                "Test SQLite": "node --no-deprecation --expose-gc test/sqlite.js",
+                "Test POSIX": "node --no-deprecation --expose-gc test/posix.js"
             }
         }
     },
@@ -204,14 +204,14 @@
         "test": {
             "build": "node ../../cnoke.cjs --ccache -D test",
             "commands": {
-                "Test Sync": "node --no-deprecation test/sync.js",
-                "Test Sync (debug async)": "DEBUG_ASYNC=1 node --no-deprecation test/sync.js",
-                "Test Union": "node --no-deprecation test/union.js",
-                "Test Async": "node --no-deprecation test/async.js",
-                "Test Callbacks": "node --no-deprecation test/callbacks.js",
-                "Test Raylib": "node --no-deprecation test/raylib.js",
-                "Test SQLite": "node --no-deprecation test/sqlite.js",
-                "Test POSIX": "node --no-deprecation test/posix.js"
+                "Test Sync": "node --no-deprecation --expose-gc test/sync.js",
+                "Test Sync (debug async)": "DEBUG_ASYNC=1 node --no-deprecation --expose-gc test/sync.js",
+                "Test Union": "node --no-deprecation --expose-gc test/union.js",
+                "Test Async": "node --no-deprecation --expose-gc test/async.js",
+                "Test Callbacks": "node --no-deprecation --expose-gc test/callbacks.js",
+                "Test Raylib": "node --no-deprecation --expose-gc test/raylib.js",
+                "Test SQLite": "node --no-deprecation --expose-gc test/sqlite.js",
+                "Test POSIX": "node --no-deprecation --expose-gc test/posix.js"
             }
         }
     },
@@ -230,14 +230,14 @@
         "test": {
             "build": "node ../../cnoke.cjs --ccache -D test",
             "commands": {
-                "Test Sync": "node --no-deprecation test/sync.js --no_slow",
-                "Test Sync (debug async)": "DEBUG_ASYNC=1 node --no-deprecation test/sync.js --no_slow",
-                "Test Union": "node --no-deprecation test/union.js",
-                "Test Async": "node --no-deprecation test/async.js",
-                "Test Callbacks": "node --no-deprecation test/callbacks.js",
-                "Test Raylib": "node --no-deprecation test/raylib.js",
-                "Test SQLite": "node --no-deprecation test/sqlite.js",
-                "Test POSIX": "node --no-deprecation test/posix.js"
+                "Test Sync": "node --no-deprecation --expose-gc test/sync.js --no_slow",
+                "Test Sync (debug async)": "DEBUG_ASYNC=1 node --no-deprecation --expose-gc test/sync.js --no_slow",
+                "Test Union": "node --no-deprecation --expose-gc test/union.js",
+                "Test Async": "node --no-deprecation --expose-gc test/async.js",
+                "Test Callbacks": "node --no-deprecation --expose-gc test/callbacks.js",
+                "Test Raylib": "node --no-deprecation --expose-gc test/raylib.js",
+                "Test SQLite": "node --no-deprecation --expose-gc test/sqlite.js",
+                "Test POSIX": "node --no-deprecation --expose-gc test/posix.js"
             }
         }
     },
@@ -256,14 +256,14 @@
         "test": {
             "build": "node ../../cnoke.cjs --ccache -D test",
             "commands": {
-                "Test Sync": "node --no-deprecation test/sync.js",
-                "Test Sync (debug async)": "DEBUG_ASYNC=1 node --no-deprecation test/sync.js",
-                "Test Union": "node --no-deprecation test/union.js",
-                "Test Async": "node --no-deprecation test/async.js",
-                "Test Callbacks": "node --no-deprecation test/callbacks.js",
-                "Test Raylib": "node --no-deprecation test/raylib.js",
-                "Test SQLite": "node --no-deprecation test/sqlite.js",
-                "Test POSIX": "node --no-deprecation test/posix.js"
+                "Test Sync": "node --no-deprecation --expose-gc test/sync.js",
+                "Test Sync (debug async)": "DEBUG_ASYNC=1 node --no-deprecation --expose-gc test/sync.js",
+                "Test Union": "node --no-deprecation --expose-gc test/union.js",
+                "Test Async": "node --no-deprecation --expose-gc test/async.js",
+                "Test Callbacks": "node --no-deprecation --expose-gc test/callbacks.js",
+                "Test Raylib": "node --no-deprecation --expose-gc test/raylib.js",
+                "Test SQLite": "node --no-deprecation --expose-gc test/sqlite.js",
+                "Test POSIX": "node --no-deprecation --expose-gc test/posix.js"
             }
         }
     },
@@ -282,15 +282,15 @@
         "test": {
             "build": "C:\\Node32\\node32.cmd node ../../cnoke.cjs -D test",
             "commands": {
-                "Test Sync": "C:\\Node32\\node32.cmd node --no-deprecation test/sync.js",
-                "Test Sync (debug async)": "set DEBUG_ASYNC=1 && C:\\Node32\\node32.cmd node --no-deprecation test/sync.js",
-                "Test Union": "C:\\Node32\\node32.cmd node --no-deprecation test/union.js",
-                "Test Async": "C:\\Node32\\node32.cmd node --no-deprecation test/async.js",
-                "Test Callbacks": "C:\\Node32\\node32.cmd node --no-deprecation test/callbacks.js",
-                "Test Raylib": "C:\\Node32\\node32.cmd node --no-deprecation test/raylib.js",
-                "Test SQLite": "C:\\Node32\\node32.cmd node --no-deprecation test/sqlite.js",
+                "Test Sync": "C:\\Node32\\node32.cmd node --no-deprecation --expose-gc test/sync.js",
+                "Test Sync (debug async)": "set DEBUG_ASYNC=1 && C:\\Node32\\node32.cmd node --no-deprecation --expose-gc test/sync.js",
+                "Test Union": "C:\\Node32\\node32.cmd node --no-deprecation --expose-gc test/union.js",
+                "Test Async": "C:\\Node32\\node32.cmd node --no-deprecation --expose-gc test/async.js",
+                "Test Callbacks": "C:\\Node32\\node32.cmd node --no-deprecation --expose-gc test/callbacks.js",
+                "Test Raylib": "C:\\Node32\\node32.cmd node --no-deprecation --expose-gc test/raylib.js",
+                "Test SQLite": "C:\\Node32\\node32.cmd node --no-deprecation --expose-gc test/sqlite.js",
                 "Test Win32": {
-                    "command": "C:\\Node32\\node32.cmd node --no-deprecation test/win32.js",
+                    "command": "C:\\Node32\\node32.cmd node --no-deprecation --expose-gc test/win32.js",
                     "repeat": 8
                 }
             }
@@ -311,15 +311,15 @@
         "test": {
             "build": "C:\\Node64\\node64.cmd node ../../cnoke.cjs --clang -D test",
             "commands": {
-                "Test Sync": "C:\\Node64\\node64.cmd node --no-deprecation test/sync.js",
-                "Test Sync (debug async)": "set DEBUG_ASYNC=1 && C:\\Node64\\node64.cmd node --no-deprecation test/sync.js",
-                "Test Union": "C:\\Node64\\node64.cmd node --no-deprecation test/union.js",
-                "Test Async": "C:\\Node64\\node64.cmd node --no-deprecation test/async.js",
-                "Test Callbacks": "C:\\Node64\\node64.cmd node --no-deprecation test/callbacks.js",
-                "Test Raylib": "C:\\Node64\\node64.cmd node --no-deprecation test/raylib.js",
-                "Test SQLite": "C:\\Node64\\node64.cmd node --no-deprecation test/sqlite.js",
+                "Test Sync": "C:\\Node64\\node64.cmd node --no-deprecation --expose-gc test/sync.js",
+                "Test Sync (debug async)": "set DEBUG_ASYNC=1 && C:\\Node64\\node64.cmd node --no-deprecation --expose-gc test/sync.js",
+                "Test Union": "C:\\Node64\\node64.cmd node --no-deprecation --expose-gc test/union.js",
+                "Test Async": "C:\\Node64\\node64.cmd node --no-deprecation --expose-gc test/async.js",
+                "Test Callbacks": "C:\\Node64\\node64.cmd node --no-deprecation --expose-gc test/callbacks.js",
+                "Test Raylib": "C:\\Node64\\node64.cmd node --no-deprecation --expose-gc test/raylib.js",
+                "Test SQLite": "C:\\Node64\\node64.cmd node --no-deprecation --expose-gc test/sqlite.js",
                 "Test Win32": {
-                    "command": "C:\\Node64\\node64.cmd node --no-deprecation test/win32.js",
+                    "command": "C:\\Node64\\node64.cmd node --no-deprecation --expose-gc test/win32.js",
                     "repeat": 8
                 }
             }
@@ -352,13 +352,13 @@
         "test": {
             "build": "PATH=/usr/local/bin:/usr/bin:/bin SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX11.3.sdk node ../../cnoke.cjs --ccache -D test",
             "commands": {
-                "Test Sync": "PATH=/usr/local/bin:/usr/bin:/bin node --no-deprecation test/sync.js",
-                "Test Sync (debug async)": "DEBUG_ASYNC=1 PATH=/usr/local/bin:/usr/bin:/bin node --no-deprecation test/sync.js",
-                "Test Union": "PATH=/usr/local/bin:/usr/bin:/bin node --no-deprecation test/union.js",
-                "Test Async": "PATH=/usr/local/bin:/usr/bin:/bin node --no-deprecation test/async.js",
-                "Test Callbacks": "PATH=/usr/local/bin:/usr/bin:/bin node --no-deprecation test/callbacks.js",
-                "Test Raylib": "PATH=/usr/local/bin:/usr/bin:/bin node --no-deprecation test/raylib.js",
-                "Test SQLite": "PATH=/usr/local/bin:/usr/bin:/bin node --no-deprecation test/sqlite.js"
+                "Test Sync": "PATH=/usr/local/bin:/usr/bin:/bin node --no-deprecation --expose-gc test/sync.js",
+                "Test Sync (debug async)": "DEBUG_ASYNC=1 PATH=/usr/local/bin:/usr/bin:/bin node --no-deprecation --expose-gc test/sync.js",
+                "Test Union": "PATH=/usr/local/bin:/usr/bin:/bin node --no-deprecation --expose-gc test/union.js",
+                "Test Async": "PATH=/usr/local/bin:/usr/bin:/bin node --no-deprecation --expose-gc test/async.js",
+                "Test Callbacks": "PATH=/usr/local/bin:/usr/bin:/bin node --no-deprecation --expose-gc test/callbacks.js",
+                "Test Raylib": "PATH=/usr/local/bin:/usr/bin:/bin node --no-deprecation --expose-gc test/raylib.js",
+                "Test SQLite": "PATH=/usr/local/bin:/usr/bin:/bin node --no-deprecation --expose-gc test/sqlite.js"
             }
         }
     },
@@ -390,13 +390,13 @@
         "test": {
             "build": "node ../../cnoke.cjs --ccache -D test",
             "commands": {
-                "Test Sync": "node --no-deprecation test/sync.js",
-                "Test Sync (debug async)": "DEBUG_ASYNC=1 node --no-deprecation test/sync.js",
-                "Test Union": "node --no-deprecation test/union.js",
-                "Test Async": "node --no-deprecation test/async.js",
-                "Test Callbacks": "node --no-deprecation test/callbacks.js",
-                "Test Raylib": "node --no-deprecation test/raylib.js",
-                "Test SQLite": "node --no-deprecation test/sqlite.js"
+                "Test Sync": "node --no-deprecation --expose-gc test/sync.js",
+                "Test Sync (debug async)": "DEBUG_ASYNC=1 node --no-deprecation --expose-gc test/sync.js",
+                "Test Union": "node --no-deprecation --expose-gc test/union.js",
+                "Test Async": "node --no-deprecation --expose-gc test/async.js",
+                "Test Callbacks": "node --no-deprecation --expose-gc test/callbacks.js",
+                "Test Raylib": "node --no-deprecation --expose-gc test/raylib.js",
+                "Test SQLite": "node --no-deprecation --expose-gc test/sqlite.js"
             }
         }
     },
@@ -416,14 +416,14 @@
         "test": {
             "build": "node ../../cnoke.cjs --ccache -D test",
             "commands": {
-                "Test Sync": "node --no-deprecation test/sync.js",
-                "Test Sync (debug async)": "DEBUG_ASYNC=1 node --no-deprecation test/sync.js",
-                "Test Union": "node --no-deprecation test/union.js",
-                "Test Async": "node --no-deprecation test/async.js",
-                "Test Callbacks": "node --no-deprecation test/callbacks.js",
-                "Test Raylib": "node --no-deprecation test/raylib.js",
-                "Test SQLite": "node --no-deprecation test/sqlite.js",
-                "Test POSIX": "node --no-deprecation test/posix.js"
+                "Test Sync": "node --no-deprecation --expose-gc test/sync.js",
+                "Test Sync (debug async)": "DEBUG_ASYNC=1 node --no-deprecation --expose-gc test/sync.js",
+                "Test Union": "node --no-deprecation --expose-gc test/union.js",
+                "Test Async": "node --no-deprecation --expose-gc test/async.js",
+                "Test Callbacks": "node --no-deprecation --expose-gc test/callbacks.js",
+                "Test Raylib": "node --no-deprecation --expose-gc test/raylib.js",
+                "Test SQLite": "node --no-deprecation --expose-gc test/sqlite.js",
+                "Test POSIX": "node --no-deprecation --expose-gc test/posix.js"
             }
         }
     },
@@ -443,13 +443,13 @@
         "test": {
             "build": "node ../../cnoke.cjs --ccache -D test",
             "commands": {
-                "Test Sync": "node --no-deprecation test/sync.js",
-                "Test Sync (debug async)": "DEBUG_ASYNC=1 node --no-deprecation test/sync.js",
-                "Test Union": "node --no-deprecation test/union.js",
-                "Test Async": "node --no-deprecation test/async.js",
-                "Test Callbacks": "node --no-deprecation test/callbacks.js",
-                "Test Raylib": "node --no-deprecation test/sqlite.js",
-                "Test SQLite": "node --no-deprecation test/sqlite.js"
+                "Test Sync": "node --no-deprecation --expose-gc test/sync.js",
+                "Test Sync (debug async)": "DEBUG_ASYNC=1 node --no-deprecation --expose-gc test/sync.js",
+                "Test Union": "node --no-deprecation --expose-gc test/union.js",
+                "Test Async": "node --no-deprecation --expose-gc test/async.js",
+                "Test Callbacks": "node --no-deprecation --expose-gc test/callbacks.js",
+                "Test Raylib": "node --no-deprecation --expose-gc test/sqlite.js",
+                "Test SQLite": "node --no-deprecation --expose-gc test/sqlite.js"
             }
         }
     },
@@ -489,14 +489,14 @@
         "test": {
             "build": "node ../../cnoke.cjs --ccache -D test",
             "commands": {
-                "Test Sync": "node --no-deprecation test/sync.js",
-                "Test Sync (debug async)": "DEBUG_ASYNC=1 node --no-deprecation test/sync.js",
-                "Test Union": "node --no-deprecation test/union.js",
-                "Test Async": "node --no-deprecation test/async.js",
-                "Test Callbacks": "node --no-deprecation test/callbacks.js",
-                "Test Raylib": "node --no-deprecation test/raylib.js",
-                "Test SQLite": "node --no-deprecation test/sqlite.js",
-                "Test POSIX": "node --no-deprecation test/posix.js"
+                "Test Sync": "node --no-deprecation --expose-gc test/sync.js",
+                "Test Sync (debug async)": "DEBUG_ASYNC=1 node --no-deprecation --expose-gc test/sync.js",
+                "Test Union": "node --no-deprecation --expose-gc test/union.js",
+                "Test Async": "node --no-deprecation --expose-gc test/async.js",
+                "Test Callbacks": "node --no-deprecation --expose-gc test/callbacks.js",
+                "Test Raylib": "node --no-deprecation --expose-gc test/raylib.js",
+                "Test SQLite": "node --no-deprecation --expose-gc test/sqlite.js",
+                "Test POSIX": "node --no-deprecation --expose-gc test/posix.js"
             }
         }
     },
@@ -515,14 +515,14 @@
         "test": {
             "build": "node ../../cnoke.cjs --ccache -D test",
             "commands": {
-                "Test Sync": "node --no-deprecation test/sync.js",
-                "Test Sync (debug async)": "DEBUG_ASYNC=1 node --no-deprecation test/sync.js",
-                "Test Union": "node --no-deprecation test/union.js",
-                "Test Async": "node --no-deprecation test/async.js",
-                "Test Callbacks": "node --no-deprecation test/callbacks.js",
-                "Test Raylib": "node --no-deprecation test/raylib.js",
-                "Test SQLite": "node --no-deprecation test/sqlite.js",
-                "Test POSIX": "node --no-deprecation test/posix.js"
+                "Test Sync": "node --no-deprecation --expose-gc test/sync.js",
+                "Test Sync (debug async)": "DEBUG_ASYNC=1 node --no-deprecation --expose-gc test/sync.js",
+                "Test Union": "node --no-deprecation --expose-gc test/union.js",
+                "Test Async": "node --no-deprecation --expose-gc test/async.js",
+                "Test Callbacks": "node --no-deprecation --expose-gc test/callbacks.js",
+                "Test Raylib": "node --no-deprecation --expose-gc test/raylib.js",
+                "Test SQLite": "node --no-deprecation --expose-gc test/sqlite.js",
+                "Test POSIX": "node --no-deprecation --expose-gc test/posix.js"
             }
         }
     }
