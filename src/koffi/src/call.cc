@@ -71,7 +71,9 @@ bool CallData::PrepareAsync(const FunctionInfo *func)
     async_base = base;
 
     const OpData *first = func->plan.async.ptr;
-    return !RunForward(this, base, nullptr, first); // Yield returns nullptr
+    napi_value ret = RunForward(this, base, nullptr, first);
+
+    return ret == (napi_value)-1; // Should have reached Yield
 }
 
 void CallData::ExecuteAsync(void *native)
@@ -1359,7 +1361,7 @@ static TRANSLATE_FUNC napi_value TranslateFastCall(napi_env env, napi_callback_i
 
     if (count < (size_t)func->required_parameters) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected %1 arguments, got %2", func->parameters.len, count);
-        return GetNull(env);
+        return nullptr;
     }
 
     InstanceData *instance = func->instance;
@@ -1382,7 +1384,7 @@ static TRANSLATE_FUNC K_FORCE_INLINE napi_value TranslateNormalCall(CallData *ca
 {
     if (count < func->required_parameters) [[unlikely]] {
         ThrowError<Napi::TypeError>(call->env, "Expected %1 arguments, got %2", func->parameters.len, count);
-        return call->env.Null();
+        return nullptr;
     }
 
     InstanceData *instance = func->instance;
@@ -1435,7 +1437,7 @@ static TRANSLATE_FUNC napi_value TranslateNormalCallDebugAsync(napi_env env, nap
     }
     if (count < (size_t)func->required_parameters) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected %1 arguments, got %2", func->parameters.len, count);
-        return GetNull(env);
+        return nullptr;
     }
 
     InstanceData *instance = func->instance;
@@ -1452,12 +1454,10 @@ static TRANSLATE_FUNC napi_value TranslateNormalCallDebugAsync(napi_env env, nap
     // get used for normal sync calls. To exercise them, we also run the sync tests using async
     // instructions, by setting DEBUG_ASYNC=1.
 
-    napi_value ret;
+    napi_value ret = nullptr;
     if (call.PrepareAsync(func)) {
         call.ExecuteAsync(func->native);
         ret = call.EndAsync();
-    } else {
-        ret = GetNull(env);
     }
     call.Finalize();
 
@@ -1516,11 +1516,11 @@ static TRANSLATE_FUNC K_FORCE_INLINE napi_value TranslateVariadicCall(CallData *
 
         if (count < variadic->required_parameters) [[unlikely]] {
             ThrowError<Napi::TypeError>(env, "Expected %1 arguments or more, got %2", variadic->parameters.len, count);
-            return GetNull(env);
+            return nullptr;
         }
         if ((count - variadic->required_parameters) % 2) [[unlikely]] {
             ThrowError<Napi::Error>(env, "Missing value argument for variadic call");
-            return GetNull(env);
+            return nullptr;
         }
 
         for (Size i = variadic->required_parameters; i < count; i += 2) {
@@ -1529,14 +1529,14 @@ static TRANSLATE_FUNC K_FORCE_INLINE napi_value TranslateVariadicCall(CallData *
             param.type = ResolveType(instance, call->args[i], true, &param.directions);
 
             if (!param.type) [[unlikely]]
-                return GetNull(env);
+                return nullptr;
             if (!CanPassType(param.type, param.directions)) [[unlikely]] {
                 ThrowError<Napi::TypeError>(env, "Type %1 cannot be used as a parameter", param.type->name);
-                return GetNull(env);
+                return nullptr;
             }
             if (variadic->parameters.len >= MaxParameters) [[unlikely]] {
                 ThrowError<Napi::TypeError>(env, "Functions cannot have more than %1 parameters", MaxParameters);
-                return GetNull(env);
+                return nullptr;
             }
 
             param.variadic = true;
@@ -1546,7 +1546,7 @@ static TRANSLATE_FUNC K_FORCE_INLINE napi_value TranslateVariadicCall(CallData *
         }
 
         if (!PreparePlan(instance, variadic)) [[unlikely]]
-            return GetNull(env);
+            return nullptr;
     }
 
 #if defined(K_DEBUG)
@@ -1710,11 +1710,10 @@ void AsyncCall::Complete()
     napi_value ret = call->EndAsync();
     call->Finalize();
 
-    napi_value recv;
-    napi_value func;
-    napi_value args[] = { env.Null(), ret ? ret : env.Undefined() };
+    napi_value recv = GetUndefined(env);
+    napi_value args[] = { GetNull(env), ret ? ret : GetUndefined(env) };
 
-    NAPI_OK(napi_get_undefined(env, &recv));
+    napi_value func;
     NAPI_OK(napi_get_reference_value(env, callback, &func));
 
 #if defined(_WIN32)
@@ -1768,7 +1767,7 @@ static napi_value TranslateAsyncCall(napi_env env, napi_callback_info info)
     }
     if (count <= (size_t)func->required_parameters) {
         ThrowError<Napi::TypeError>(env, "Expected %1 arguments, got %2", func->required_parameters + 1, count);
-        return GetNull(env);
+        return nullptr;
     }
 
     InstanceData *instance = func->instance;
@@ -1776,17 +1775,17 @@ static napi_value TranslateAsyncCall(napi_env env, napi_callback_info info)
     Napi::Value callback(env, args[func->required_parameters]);
     if (!callback.IsFunction()) {
         ThrowError<Napi::TypeError>(env, "Expected callback function as last argument, got %1", GetValueType(instance, callback));
-        return GetNull(env);
+        return nullptr;
     }
 
     InstanceMemory *mem = AllocateAsyncMemory(instance);
     if (!mem) [[unlikely]] {
         ThrowError<Napi::Error>(env, "Too many asynchronous calls are running");
-        return GetNull(env);
+        return nullptr;
     }
 
     if (!async->Prepare(instance, mem, func, callback))
-        return GetNull(env);
+        return nullptr;
 
     async->Queue();
     err_guard.Disable();

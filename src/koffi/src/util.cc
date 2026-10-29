@@ -845,7 +845,7 @@ napi_value Decode(InstanceData *instance, const uint8_t *ptr, const TypeInfo *ty
     switch (type->primitive) {
         case PrimitiveKind::Void: {
             ThrowError<Napi::TypeError>(env, "Cannot decode value of type %1", type->name);
-            return env.Null();
+            return nullptr;
         } break;
 
         case PrimitiveKind::Bool: {
@@ -929,7 +929,8 @@ napi_value Decode(InstanceData *instance, const uint8_t *ptr, const TypeInfo *ty
 #undef RETURN_INT_SWAP
 #undef RETURN_INT
 
-    return env.Null();
+    K_UNREACHABLE();
+    return nullptr;
 }
 
 bool DetectCallConvention(Span<const char> name, CallConvention *out_convention)

@@ -102,12 +102,12 @@ static napi_value GetSetConfig(napi_env env, napi_callback_info info)
     if (count >= 1) {
         if (instance->sync_memory.IsAllocated()) {
             ThrowError<Napi::Error>(env, "Cannot change Koffi configuration once a library has been loaded");
-            return GetNull(env);
+            return nullptr;
         }
 
         if (!IsObject(env, arg)) {
             ThrowError<Napi::TypeError>(env, "Unexpected %1 value for config, expected object", GetValueType(instance, arg));
-            return GetNull(env);
+            return nullptr;
         }
 
         decltype(instance->config) new_config = instance->config;
@@ -122,34 +122,34 @@ static napi_value GetSetConfig(napi_env env, napi_callback_info info)
 
             if (key == "sync_stack_size") {
                 if (!ChangeSize(instance, key.c_str(), value, Kibibytes(64), Mebibytes(16), &new_config.sync_stack_size))
-                    return GetNull(env);
+                    return nullptr;
             } else if (key == "sync_heap_size") {
                 if (!ChangeSize(instance, key.c_str(), value, 0, Mebibytes(16), &new_config.sync_heap_size))
-                    return GetNull(env);
+                    return nullptr;
             } else if (key == "async_stack_size") {
                 if (!ChangeSize(instance, key.c_str(), value, Kibibytes(64), Mebibytes(16), &new_config.async_stack_size))
-                    return GetNull(env);
+                    return nullptr;
             } else if (key == "async_heap_size") {
                 if (!ChangeSize(instance, key.c_str(), value, 0, Mebibytes(16), &new_config.async_heap_size))
-                    return GetNull(env);
+                    return nullptr;
             } else if (key == "resident_async_pools") {
                 if (!ChangeAsyncLimit(instance, key.c_str(), value, MaxResidentAsyncPools, &new_config.resident_async_pools))
-                    return GetNull(env);
+                    return nullptr;
             } else if (key == "max_async_calls") {
                 if (!ChangeAsyncLimit(instance, key.c_str(), value, MaxAsyncCalls, &max_async_calls))
-                    return GetNull(env);
+                    return nullptr;
             } else if (key == "max_type_size") {
                 if (!ChangeSize(instance, key.c_str(), value, 32, Mebibytes(512), &new_config.max_type_size))
-                    return GetNull(env);
+                    return nullptr;
             } else {
                 ThrowError<Napi::Error>(env, "Unexpected config member '%1'", key.c_str());
-                return GetNull(env);
+                return nullptr;
             }
         }
 
         if (max_async_calls < new_config.resident_async_pools) {
             ThrowError<Napi::Error>(env, "Setting max_async_calls must be >= to resident_async_pools");
-            return GetNull(env);
+            return nullptr;
         }
 
         new_config.max_temporaries =  max_async_calls - new_config.resident_async_pools;
@@ -753,19 +753,19 @@ static napi_value MarkPointer(napi_env env, napi_callback_info info, int directi
 
     if (count < 1) {
         ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", count);
-        return GetNull(env);
+        return nullptr;
     }
 
     const TypeInfo *type = ResolveType(instance, arg);
     if (!type)
-        return GetNull(env);
+        return nullptr;
 
     if (type->primitive != PrimitiveKind::Pointer &&
             type->primitive != PrimitiveKind::String &&
             type->primitive != PrimitiveKind::String16 &&
             type->primitive != PrimitiveKind::String32) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 type, expected pointer or string type", type->name);
-        return GetNull(env);
+        return nullptr;
     }
 
     // Embed direction in unused pointer bits
@@ -883,29 +883,29 @@ static napi_value CallAlloc(napi_env env, napi_callback_info info)
 
     if (count < 2) {
         ThrowError<Napi::TypeError>(env, "Expected 2 arguments, got %1", count);
-        return GetNull(env);
+        return nullptr;
     }
 
     const TypeInfo *type = ResolveType(instance, args[0], false);
     if (!type)
-        return GetNull(env);
+        return nullptr;
     if (!type->size) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Cannot allocate memory for zero-sized type %1", type->name);
-        return GetNull(env);
+        return nullptr;
     }
 
     Size len;
     if (!TryNumber(env, args[1], &len)) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for length, expected number", GetValueType(instance, args[1]));
-        return GetNull(env);
+        return nullptr;
     }
     if (len <= 0) [[unlikely]] {
         ThrowError<Napi::Error>(env, "Size must be greater than 0");
-        return GetNull(env);
+        return nullptr;
     }
     if (len > INT32_MAX / type->size) [[unlikely]] {
         ThrowError<Napi::Error>(env, "Cannot allocate more than %1 objects of type %2", INT32_MAX / type->size, type->name);
-        return GetNull(env);
+        return nullptr;
     }
 
     void *ptr = calloc((size_t)len, (size_t)type->size);
@@ -915,7 +915,7 @@ static napi_value CallAlloc(napi_env env, napi_callback_info info)
         Size size = (Size)(len * type->size);
 
         ThrowError<Napi::Error>(env, "Failed to allocate %1 of memory", FmtMemSize((Size)size));
-        return GetNull(env);
+        return nullptr;
     }
 
     return WrapPointer(env, ptr);
@@ -931,13 +931,13 @@ static napi_value CallFree(napi_env env, napi_callback_info info)
 
     if (count < 1) {
         ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", count);
-        return GetNull(env);
+        return nullptr;
     }
 
     void *ptr = nullptr;
     if (!TryPointer(env, arg, &ptr)) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected pointer", GetValueType(instance, arg));
-        return GetNull(env);
+        return nullptr;
     }
 
     free(ptr);
@@ -958,7 +958,7 @@ static napi_value GetOrSetErrno(napi_env env, napi_callback_info info)
     if (count >= 1) {
         if (!TryNumber(env, arg, &value)) {
             ThrowError<Napi::TypeError>(env, "Unexpected %1 value for errno, expected integer", GetValueType(instance, arg));
-            return GetNull(env);
+            return nullptr;
         }
         errno = value;
     } else {
@@ -1014,12 +1014,12 @@ static napi_value CreateArrayType(napi_env env, napi_callback_info info)
 
     if (count < 2) {
         ThrowError<Napi::TypeError>(env, "Expected 2 to 4 arguments, got %1", count);
-        return GetNull(env);
+        return nullptr;
     }
 
     const TypeInfo *ref = ResolveType(instance, args[0]);
     if (!ref)
-        return GetNull(env);
+        return nullptr;
 
     char countedby[256];
     bool dynamic = (napi_get_value_string_utf8(env, args[1], countedby, K_SIZE(countedby), nullptr) == napi_ok);
@@ -1033,16 +1033,16 @@ static napi_value CreateArrayType(napi_env env, napi_callback_info info)
         } else {
             ThrowError<Napi::TypeError>(env, "Unexpected %1 value for len, expected integer", GetValueType(instance, args[1 + dynamic]));
         }
-        return GetNull(env);
+        return nullptr;
     }
 
     if (len <= 0) {
         ThrowError<Napi::TypeError>(env, "Array length must be positive and non-zero");
-        return GetNull(env);
+        return nullptr;
     }
     if (len > instance->config.max_type_size / ref->size) {
         ThrowError<Napi::TypeError>(env, "Array length is too high (max = %1)", instance->config.max_type_size / ref->size);
-        return GetNull(env);
+        return nullptr;
     }
 
     ArrayHint hint = ref->hint;
@@ -1057,14 +1057,14 @@ static napi_value CreateArrayType(napi_env env, napi_callback_info info)
             if (TestStr(hint_str, "Typed")) {
                 if (ref->hint == ArrayHint::Array) {
                     ThrowError<Napi::Error>(env, "Array hint 'Typed' cannot be used with type %1", ref->name);
-                    return GetNull(env);
+                    return nullptr;
                 }
 
                 hint = SelectTypedHint(ref);
             } else if (TestStr(hint_str, "Buffer")) {
                 if (ref->hint == ArrayHint::Array) {
                     ThrowError<Napi::Error>(env, "Array hint 'Buffer' cannot be used with type %1", ref->name);
-                    return GetNull(env);
+                    return nullptr;
                 }
 
                 hint = ArrayHint::Buffer;
@@ -1079,15 +1079,15 @@ static napi_value CreateArrayType(napi_env env, napi_callback_info info)
                     hint = ArrayHint::String32;
                 } else {
                     ThrowError<Napi::Error>(env, "Array hint 'String' can only be used with 8, 16 and 32-bit signed integer types");
-                    return GetNull(env);
+                    return nullptr;
                 }
             } else {
                 ThrowError<Napi::Error>(env, "Array conversion hint must be 'Typed', 'Array' or 'String'");
-                return GetNull(env);
+                return nullptr;
             }
         } else if (!IsNullOrUndefined(env, args[2 + dynamic])) {
             ThrowError<Napi::TypeError>(env, "Unexpected %1 value for hint, expected string", GetValueType(instance, args[2 + dynamic]));
-            return GetNull(env);
+            return nullptr;
         }
     }
 
@@ -1428,24 +1428,24 @@ static napi_value CreateTypeAlias(napi_env env, napi_callback_info info)
 
     if (count < 2) {
         ThrowError<Napi::TypeError>(env, "Expected 2 arguments, got %1", count);
-        return GetNull(env);
+        return nullptr;
     }
 
     char name[512];
     if (napi_get_value_string_utf8(env, args[0], name, K_SIZE(name), nullptr) != napi_ok) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string", GetValueType(instance, args[0]));
-        return GetNull(env);
+        return nullptr;
     }
 
     const TypeInfo *type = ResolveType(instance, args[1]);
     if (!type)
-        return GetNull(env);
+        return nullptr;
 
     const char *alias = DuplicateString(name, &instance->str_alloc).ptr;
 
     // Alias the type
     if (!MapType(env, instance, type, alias))
-        return GetNull(env);
+        return nullptr;
 
     return WrapType(instance, type);
 }
@@ -1460,12 +1460,12 @@ static napi_value GetResolvedType(napi_env env, napi_callback_info info)
 
     if (count < 1) {
         ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", count);
-        return GetNull(env);
+        return nullptr;
     }
 
     const TypeInfo *type = ResolveType(instance, arg);
     if (!type)
-        return GetNull(env);
+        return nullptr;
 
     return WrapType(instance, type);
 }
@@ -1480,12 +1480,12 @@ static napi_value GetTypeSize(napi_env env, napi_callback_info info)
 
     if (count < 1) {
         ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", count);
-        return GetNull(env);
+        return nullptr;
     }
 
     const TypeInfo *type = ResolveType(instance, arg, false);
     if (!type)
-        return GetNull(env);
+        return nullptr;
 
     return NewInt(env, type->size);
 }
@@ -1500,12 +1500,12 @@ static napi_value GetTypeAlign(napi_env env, napi_callback_info info)
 
     if (count < 1) {
         ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", count);
-        return GetNull(env);
+        return nullptr;
     }
 
     const TypeInfo *type = ResolveType(instance, arg, false);
     if (!type)
-        return GetNull(env);
+        return nullptr;
 
     return NewInt(env, type->align);
 }
@@ -1520,21 +1520,21 @@ static napi_value GetMemberOffset(napi_env env, napi_callback_info info)
 
     if (count < 2) {
         ThrowError<Napi::TypeError>(env, "Expected 2 arguments, got %1", count);
-        return GetNull(env);
+        return nullptr;
     }
 
     const TypeInfo *type = ResolveType(instance, args[0]);
     if (!type)
-        return GetNull(env);
+        return nullptr;
     if (type->primitive != PrimitiveKind::Record) {
         ThrowError<Napi::TypeError>(env, "The offsetof() function can only be used with record types");
-        return GetNull(env);
+        return nullptr;
     }
 
     char name[256];
     if (napi_get_value_string_utf8(env, args[1], name, K_SIZE(name), nullptr) != napi_ok) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for member, expected string", GetValueType(instance, args[1]));
-        return GetNull(env);
+        return nullptr;
     }
 
     const RecordMember *member = std::find_if(type->members.begin(), type->members.end(),
@@ -1542,7 +1542,7 @@ static napi_value GetMemberOffset(napi_env env, napi_callback_info info)
 
     if (member == type->members.end()) {
         ThrowError<Napi::TypeError>(env, "Record type %1 does not have member '%2'", type->name, name);
-        return GetNull(env);
+        return nullptr;
     }
 
     return NewInt(env, member->offset);
@@ -1768,7 +1768,7 @@ static napi_value LoadSharedLibrary(napi_env env, napi_callback_info info)
 
     if (count < 1) {
         ThrowError<Napi::TypeError>(env, "Expected 1 or 2 arguments, got %1", count);
-        return GetNull(env);
+        return nullptr;
     }
 
     char filename[4096];
@@ -1779,14 +1779,14 @@ static napi_value LoadSharedLibrary(napi_env env, napi_callback_info info)
             filename[0] = 0;
         } else {
             ThrowError<Napi::TypeError>(env, "Unexpected %1 value for filename, expected string or null", GetValueType(instance, args[0]));
-            return GetNull(env);
+            return nullptr;
         }
     }
 
     if (count >= 2) {
         if (!IsObject(env, args[1])) {
             ThrowError<Napi::TypeError>(env, "Unexpected %1 value for options, expected object", GetValueType(instance, args[1]));
-            return GetNull(env);
+            return nullptr;
         }
 
 #if !defined(_WIN32)
@@ -1812,7 +1812,7 @@ static napi_value LoadSharedLibrary(napi_env env, napi_callback_info info)
         module = LoadWindowsLibrary(env, filename);
 
         if (!module)
-            return GetNull(env);
+            return nullptr;
     } else {
         module = GetModuleHandle(nullptr);
         K_ASSERT(module);
@@ -1833,7 +1833,7 @@ static napi_value LoadSharedLibrary(napi_env env, napi_callback_info info)
             }
 
             ThrowError<Napi::Error>(env, "Failed to load shared library: %1", msg);
-            return GetNull(env);
+            return nullptr;
         }
     } else {
         module = RTLD_DEFAULT;
@@ -1859,26 +1859,26 @@ static napi_value RegisterCallback(napi_env env, napi_callback_info info)
 
     if (count < 2) {
         ThrowError<Napi::TypeError>(env, "Expected 2 arguments, got %1", count);
-        return GetNull(env);
+        return nullptr;
     }
 
     if (!InitAsyncBroker(instance)) [[unlikely]]
-        return GetNull(env);
+        return nullptr;
     InitMemories(instance);
 
     napi_value func = args[0];
 
     if (GetKindOf(env, func) != napi_function) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for func, expected function", GetValueType(instance, args[0]));
-        return GetNull(env);
+        return nullptr;
     }
 
     const TypeInfo *type = ResolveType(instance, args[1]);
     if (!type)
-        return GetNull(env);
+        return nullptr;
     if (type->primitive != PrimitiveKind::Callback) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 type, expected <callback> * type", type->name);
-        return GetNull(env);
+        return nullptr;
     }
 
     int16_t idx;
@@ -1887,7 +1887,7 @@ static napi_value RegisterCallback(napi_env env, napi_callback_info info)
 
         if (!shared.available.len) [[unlikely]] {
             ThrowError<Napi::Error>(env, "Too many callbacks are in use (max = %1)", MaxTrampolines);
-            return GetNull(env);
+            return nullptr;
         }
 
         idx = shared.available.data[--shared.available.len];
@@ -1917,20 +1917,20 @@ static napi_value UnregisterCallback(napi_env env, napi_callback_info info)
 
     if (count < 1) {
         ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", count);
-        return GetNull(env);
+        return nullptr;
     }
 
     void *ptr;
     if (!TryPointer(env, arg, &ptr)) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for id, expected registered callback", GetValueType(instance, arg));
-        return GetNull(env);
+        return nullptr;
     }
 
     Size idx = GetTrampolineIndex(ptr);
 
     if (idx < 0 || idx >= MaxTrampolines) [[unlikely]] {
         ThrowError<Napi::Error>(env, "Could not find matching registered callback");
-        return GetNull(env);
+        return nullptr;
     }
 
     // Release shared trampoline safely
@@ -1941,7 +1941,7 @@ static napi_value UnregisterCallback(napi_env env, napi_callback_info info)
 
         if (trampoline->instance != instance || !trampoline->func) [[unlikely]] {
             ThrowError<Napi::Error>(env, "Could not find matching registered callback");
-            return GetNull(env);
+            return nullptr;
         }
 
         trampoline->state = 0;
@@ -1964,19 +1964,19 @@ static napi_value CastValue(napi_env env, napi_callback_info info)
 
     if (count < 2) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected 2 arguments, got %1", count);
-        return GetNull(env);
+        return nullptr;
     }
 
     const TypeInfo *type = ResolveType(instance, args[1]);
     if (!type) [[unlikely]]
-        return GetNull(env);
+        return nullptr;
     if (type->primitive != PrimitiveKind::Pointer &&
             type->primitive != PrimitiveKind::Callback &&
             type->primitive != PrimitiveKind::String &&
             type->primitive != PrimitiveKind::String16 &&
             type->primitive != PrimitiveKind::String32) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Only pointer or string types can be used for casting");
-        return GetNull(env);
+        return nullptr;
     }
 
     ValueCast *cast = new ValueCast();
@@ -2024,21 +2024,21 @@ static napi_value DecodeValue(napi_env env, napi_callback_info info)
 
     if (count < 2u + has_offset) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected %1 to 4 arguments, got %2", 2 + has_offset, count);
-        return GetNull(env);
+        return nullptr;
     }
 
     if (!TryPointer(env, args[0], (void **)&src, &src_len)) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for reference, expected pointer", GetValueType(instance, args[0]));
-        return GetNull(env);
+        return nullptr;
     }
     if (!src) [[unlikely]] {
         ThrowError<Napi::Error>(env, "Cannot encode data in NULL pointer");
-        return GetNull(env);
+        return nullptr;
     }
 
     const TypeInfo *type = ResolveType(instance, args[1 + has_offset], false);
     if (!type) [[unlikely]]
-        return GetNull(env);
+        return nullptr;
 
     src = (const void *)((const uint8_t *)src + offset);
 
@@ -2064,7 +2064,7 @@ static napi_value DecodeValue(napi_env env, napi_callback_info info)
 
                 default: {
                     ThrowError<Napi::TypeError>(env, "Cannot determine null-terminated length for type %1", type->name);
-                    return GetNull(env);
+                    return nullptr;
                 } break;
             }
         }
@@ -2076,12 +2076,12 @@ static napi_value DecodeValue(napi_env env, napi_callback_info info)
         InitArrayAttributes(&array, type, len);
 
         if (src_len >= 0 && !CheckAccessLength(env, &array, src_len, offset)) [[unlikely]]
-            return GetNull(env);
+            return nullptr;
 
         return Decode(instance, (const uint8_t *)src, &array);
     } else {
         if (src_len >= 0 && !CheckAccessLength(env, type, src_len, offset)) [[unlikely]]
-            return GetNull(env);
+            return nullptr;
 
         return Decode(instance, (const uint8_t *)src, type);
     }
@@ -2098,13 +2098,13 @@ static K_FORCE_INLINE napi_value DecodeInteger(napi_env env, napi_callback_info 
 
     if (count < 1) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", count);
-        return GetNull(env);
+        return nullptr;
     }
 
     void *ptr = nullptr;
     if (!TryPointer(env, arg, &ptr)) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected pointer", GetValueType(instance, arg));
-        return GetNull(env);
+        return nullptr;
     }
 
     T i;
@@ -2124,13 +2124,13 @@ static K_FORCE_INLINE napi_value DecodeIntegerSwap(napi_env env, napi_callback_i
 
     if (count < 1) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", count);
-        return GetNull(env);
+        return nullptr;
     }
 
     void *ptr = nullptr;
     if (!TryPointer(env, arg, &ptr)) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected pointer", GetValueType(instance, arg));
-        return GetNull(env);
+        return nullptr;
     }
 
     T i;
@@ -2165,13 +2165,13 @@ static napi_value DecodeFloat(napi_env env, napi_callback_info info)
 
     if (count < 1) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", count);
-        return GetNull(env);
+        return nullptr;
     }
 
     void *ptr = nullptr;
     if (!TryPointer(env, arg, &ptr)) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected pointer", GetValueType(instance, arg));
-        return GetNull(env);
+        return nullptr;
     }
 
     float f;
@@ -2190,13 +2190,13 @@ static napi_value DecodeDouble(napi_env env, napi_callback_info info)
 
     if (count < 1) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", count);
-        return GetNull(env);
+        return nullptr;
     }
 
     void *ptr = nullptr;
     if (!TryPointer(env, arg, &ptr)) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected pointer", GetValueType(instance, arg));
-        return GetNull(env);
+        return nullptr;
     }
 
     double d;
@@ -2215,20 +2215,20 @@ static napi_value DecodeString(napi_env env, napi_callback_info info)
 
     if (count < 1) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected 1 to 2 arguments, got %1", count);
-        return GetNull(env);
+        return nullptr;
     }
 
     void *ptr = nullptr;
     if (!TryPointer(env, args[0], &ptr)) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected pointer", GetValueType(instance, args[0]));
-        return GetNull(env);
+        return nullptr;
     }
 
     if (count >= 2) {
         Size len;
         if (!TryNumber(env, args[1], &len)) [[unlikely]] {
             ThrowError<Napi::TypeError>(env, "Unexpected %1 value for length, expected number", GetValueType(instance, args[1]));
-            return GetNull(env);
+            return nullptr;
         }
 
         return NewString(env, (const char *)ptr, (size_t)len);
@@ -2247,20 +2247,20 @@ static napi_value DecodeString16(napi_env env, napi_callback_info info)
 
     if (count < 1) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected 1 to 2 arguments, got %1", count);
-        return GetNull(env);
+        return nullptr;
     }
 
     void *ptr = nullptr;
     if (!TryPointer(env, args[0], &ptr)) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected pointer", GetValueType(instance, args[0]));
-        return GetNull(env);
+        return nullptr;
     }
 
     if (count >= 2) {
         Size len;
         if (!TryNumber(env, args[1], &len)) [[unlikely]] {
             ThrowError<Napi::TypeError>(env, "Unexpected %1 value for length, expected number", GetValueType(instance, args[1]));
-            return GetNull(env);
+            return nullptr;
         }
 
         return NewString(env, (const char16_t *)ptr, (size_t)len);
@@ -2279,20 +2279,20 @@ static napi_value DecodeString32(napi_env env, napi_callback_info info)
 
     if (count < 1) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected 1 to 2 arguments, got %1", count);
-        return GetNull(env);
+        return nullptr;
     }
 
     void *ptr = nullptr;
     if (!TryPointer(env, args[0], &ptr)) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected pointer", GetValueType(instance, args[0]));
-        return GetNull(env);
+        return nullptr;
     }
 
     if (count >= 2) {
         Size len;
         if (!TryNumber(env, args[1], &len)) [[unlikely]] {
             ThrowError<Napi::TypeError>(env, "Unexpected %1 value for length, expected number", GetValueType(instance, args[1]));
-            return GetNull(env);
+            return nullptr;
         }
 
         return NewString(env, (const char32_t *)ptr, len);
@@ -2311,13 +2311,13 @@ static napi_value GetPointerAddress(napi_env env, napi_callback_info info)
 
     if (count < 1) {
         ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", count);
-        return GetNull(env);
+        return nullptr;
     }
 
     void *ptr = nullptr;
     if (!TryPointer(env, arg, &ptr)) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected pointer", GetValueType(instance, arg));
-        return GetNull(env);
+        return nullptr;
     }
 
     napi_value value;
@@ -2342,21 +2342,21 @@ static napi_value CallPointerSync(napi_env env, napi_callback_info info)
     }
     if (count < 2) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected 2 or more arguments, got %1", count);
-        return GetNull(env);
+        return nullptr;
     }
 
     void *ptr = nullptr;
     if (!TryPointer(env, args[0], &ptr)) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected pointer", GetValueType(instance, args[0]));
-        return GetNull(env);
+        return nullptr;
     }
 
     const TypeInfo *type = ResolveType(instance, args[1]);
     if (!type) [[unlikely]]
-        return GetNull(env);
+        return nullptr;
     if (type->primitive != PrimitiveKind::Prototype) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for type, expected function type", GetValueType(instance, args[1]));
-        return GetNull(env);
+        return nullptr;
     }
 
     return CallPointer(env, type->proto, ptr, args + 2, count - 2);
@@ -2380,20 +2380,20 @@ static napi_value EncodeValue(napi_env env, napi_callback_info info)
 
     if (count < 3u + has_offset) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected %1 to 5 arguments, got %2", 3 + has_offset, count);
-        return GetNull(env);
+        return nullptr;
     }
 
     const TypeInfo *type = ResolveType(instance, args[1 + has_offset], false);
     if (!type) [[unlikely]]
-        return GetNull(env);
+        return nullptr;
 
     if (!TryPointer(env, args[0], &dest, &dest_len)) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for reference, expected pointer", GetValueType(instance, args[0]));
-        return GetNull(env);
+        return nullptr;
     }
     if (!dest) [[unlikely]] {
         ThrowError<Napi::Error>(env, "Cannot encode data in NULL pointer");
-        return GetNull(env);
+        return nullptr;
     }
 
     dest = (void *)((uint8_t *)dest + offset);
@@ -2404,7 +2404,7 @@ static napi_value EncodeValue(napi_env env, napi_callback_info info)
                 len = dest_len / type->size;
             } else {
                 ThrowError<Napi::TypeError>(env, "Automatic (negative) length cannot work with slim pointers");
-                return GetNull(env);
+                return nullptr;
             }
         }
 
@@ -2415,19 +2415,17 @@ static napi_value EncodeValue(napi_env env, napi_callback_info info)
         InitArrayAttributes(&array, type, len);
 
         if (dest_len >= 0 && !CheckAccessLength(env, &array, dest_len, offset)) [[unlikely]]
-            return GetNull(env);
+            return nullptr;
 
-        if (!Encode(instance, (uint8_t *)dest, args[2 + has_offset], &array))
-            return GetNull(env);
+        Encode(instance, (uint8_t *)dest, args[2 + has_offset], &array);
+        return nullptr;
     } else {
         if (dest_len >= 0 && !CheckAccessLength(env, type, dest_len, offset)) [[unlikely]]
-            return GetNull(env);
+            return nullptr;
 
-        if (!Encode(instance, (uint8_t *)dest, args[2 + has_offset], type))
-            return GetNull(env);
+        Encode(instance, (uint8_t *)dest, args[2 + has_offset], type);
+        return nullptr;
     }
-
-    return GetUndefined(env);
 }
 
 static napi_value CreateView(napi_env env, napi_callback_info info)
@@ -2440,7 +2438,7 @@ static napi_value CreateView(napi_env env, napi_callback_info info)
 
     if (count < 2) {
         ThrowError<Napi::TypeError>(env, "Expected 2 arguments, got %1", count);
-        return GetNull(env);
+        return nullptr;
     }
 
     void *ptr = nullptr;
@@ -2448,11 +2446,11 @@ static napi_value CreateView(napi_env env, napi_callback_info info)
 
     if (!TryPointer(env, args[0], &ptr)) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected pointer", GetValueType(instance, args[0]));
-        return GetNull(env);
+        return nullptr;
     }
     if (!TryNumber(env, args[1], &len)) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for length, expected integer", GetValueType(instance, args[1]));
-        return GetNull(env);
+        return nullptr;
     }
 
     if (len > 0) [[likely]] {
@@ -2460,7 +2458,7 @@ static napi_value CreateView(napi_env env, napi_callback_info info)
 
         if (!view.ByteLength()) {
             ThrowError<Napi::Error>(env, "This runtime does not support external buffers");
-            return GetNull(env);
+            return nullptr;
         }
 
         return view;
@@ -2468,7 +2466,7 @@ static napi_value CreateView(napi_env env, napi_callback_info info)
         return Napi::ArrayBuffer::New(env, 0);
     } else {
         ThrowError<Napi::TypeError>(env, "Array length must be positive and non-zero");
-        return GetNull(env);
+        return nullptr;
     }
 }
 

@@ -108,7 +108,7 @@ napi_value RunForward(CallData *call, uint8_t *base, void *native, const OpData 
             CType v; \
             if (!TryNumber(call->env, arg, &v)) [[unlikely]] { \
                 ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected number", GetValueType(call->instance, call->args[op->s1])); \
-                return call->env.Null(); \
+                return nullptr; \
             } \
              \
             *(uintptr_t *)(base + op->i) = (uintptr_t)v; \
@@ -120,7 +120,7 @@ napi_value RunForward(CallData *call, uint8_t *base, void *native, const OpData 
             CType v; \
             if (!TryNumber(call->env, arg, &v)) [[unlikely]] { \
                 ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected number", GetValueType(call->instance, call->args[op->s1])); \
-                return call->env.Null(); \
+                return nullptr; \
             } \
              \
             *(uintptr_t *)(base + op->i) = (uintptr_t)ReverseBytes(v); \
@@ -132,7 +132,7 @@ napi_value RunForward(CallData *call, uint8_t *base, void *native, const OpData 
             CType v; \
             if (!TryNumber(call->env, arg, &v)) [[unlikely]] { \
                 ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected number", GetValueType(call->instance, call->args[op->s1])); \
-                return call->env.Null(); \
+                return nullptr; \
             } \
              \
             *(uint64_t *)(base + op->i) = (uint64_t)v; \
@@ -144,20 +144,20 @@ napi_value RunForward(CallData *call, uint8_t *base, void *native, const OpData 
             CType v; \
             if (!TryNumber(call->env, arg, &v)) [[unlikely]] { \
                 ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected number", GetValueType(call->instance, call->args[op->s1])); \
-                return call->env.Null(); \
+                return nullptr; \
             } \
              \
             *(uint64_t *)(base + op->i) = (uint64_t)ReverseBytes(v); \
         } while (false)
 
-    FWD(PushVoid) { K_UNREACHABLE(); return call->env.Null(); }
+    FWD(PushVoid) { K_UNREACHABLE(); return nullptr; }
     FWD(PushBool) {
         napi_value arg = call->args[op->s1];
 
         bool b;
         if (napi_get_value_bool(call->env, arg, &b) != napi_ok) [[unlikely]] {
             ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected boolean", GetValueType(call->instance, call->args[op->s1]));
-            return call->env.Null();
+            return nullptr;
         }
 
         *(uintptr_t *)(base + op->i) = (uintptr_t)b;
@@ -183,7 +183,7 @@ napi_value RunForward(CallData *call, uint8_t *base, void *native, const OpData 
 
         const char *str;
         if (!call->PushString(arg, op->s2, &str)) [[unlikely]]
-            return call->env.Null();
+            return nullptr;
 
         *(const char **)(base + op->i) = str;
 
@@ -194,7 +194,7 @@ napi_value RunForward(CallData *call, uint8_t *base, void *native, const OpData 
 
         const char16_t *str16;
         if (!call->PushString16(arg, op->s2, &str16)) [[unlikely]]
-            return call->env.Null();
+            return nullptr;
 
         *(const char16_t **)(base + op->i) = str16;
 
@@ -205,7 +205,7 @@ napi_value RunForward(CallData *call, uint8_t *base, void *native, const OpData 
 
         const char32_t *str32;
         if (!call->PushString32(arg, op->s2, &str32)) [[unlikely]]
-            return call->env.Null();
+            return nullptr;
 
         *(const char32_t **)(base + op->i) = str32;
 
@@ -216,22 +216,22 @@ napi_value RunForward(CallData *call, uint8_t *base, void *native, const OpData 
 
         void *ptr;
         if (!call->PushPointer(arg, op->type, op->s2, &ptr)) [[unlikely]]
-            return call->env.Null();
+            return nullptr;
 
         *(void **)(base + op->i) = ptr;
 
         NEXT();
     }
-    FWD(PushRecord) { K_UNREACHABLE(); return call->env.Null(); }
-    FWD(PushUnion) { K_UNREACHABLE(); return call->env.Null(); }
-    FWD(PushArray) { K_UNREACHABLE(); return call->env.Null(); }
+    FWD(PushRecord) { K_UNREACHABLE(); return nullptr; }
+    FWD(PushUnion) { K_UNREACHABLE(); return nullptr; }
+    FWD(PushArray) { K_UNREACHABLE(); return nullptr; }
     FWD(PushFloat32) {
         napi_value arg = call->args[op->s1];
 
         float f;
         if (!TryNumber(call->env, arg, &f)) [[unlikely]] {
             ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected number", GetValueType(call->instance, call->args[op->s1]));
-            return call->env.Null();
+            return nullptr;
         }
 
 #if K_SIZE_MAX == INT64_MAX
@@ -247,7 +247,7 @@ napi_value RunForward(CallData *call, uint8_t *base, void *native, const OpData 
         double d;
         if (!TryNumber(call->env, arg, &d)) [[unlikely]] {
             ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected number", GetValueType(call->instance, call->args[op->s1]));
-            return call->env.Null();
+            return nullptr;
         }
 
         *(double *)(base + op->i) = d;
@@ -259,20 +259,20 @@ napi_value RunForward(CallData *call, uint8_t *base, void *native, const OpData 
 
         void *ptr;
         if (!call->PushCallback(arg, op->type, &ptr)) [[unlikely]]
-            return call->env.Null();
+            return nullptr;
 
         *(void **)(base + op->i) = ptr;
 
         NEXT();
     }
-    FWD(PushPrototype) { K_UNREACHABLE(); return call->env.Null(); }
+    FWD(PushPrototype) { K_UNREACHABLE(); return nullptr; }
     FWD(PushAggregateReg) {
         napi_value arg = call->args[op->s1];
 
         uint8_t *ptr = base + op->i;
 
         if (!call->PushObject(arg, op->type, ptr)) [[unlikely]]
-            return call->env.Null();
+            return nullptr;
 
         NEXT();
     }
@@ -281,7 +281,7 @@ napi_value RunForward(CallData *call, uint8_t *base, void *native, const OpData 
 
         uintptr_t buf[2];
         if (!call->PushObject(arg, op->type, (uint8_t *)buf)) [[unlikely]]
-            return call->env.Null();
+            return nullptr;
 
         *(uintptr_t *)(base + op->s3) = buf[0];
         *(uintptr_t *)(base + op->s4) = buf[1];
@@ -296,7 +296,7 @@ napi_value RunForward(CallData *call, uint8_t *base, void *native, const OpData 
         uint8_t *buf = call->AllocHeap(size); // Wasteful, but rare
 
         if (!call->PushObject(arg, op->type, buf)) [[unlikely]]
-            return call->env.Null();
+            return nullptr;
 
         memcpy(base + op->s3, buf, split);
         memcpy(base + op->s4, buf + split, size - split);
@@ -310,7 +310,7 @@ napi_value RunForward(CallData *call, uint8_t *base, void *native, const OpData 
         *(uint8_t **)(base + op->i) = ptr;
 
         if (!call->PushObject(arg, op->type, ptr)) [[unlikely]]
-            return call->env.Null();
+            return nullptr;
 
         NEXT();
     }
@@ -422,9 +422,9 @@ napi_value RunForward(CallData *call, uint8_t *base, void *native, const OpData 
         uint64_t ret = WRAP(CallG(native, base, &call->saved_sp));
         return WrapPointer(call->env, (void *)ret);
     }
-    FWD(RunRecord) { K_UNREACHABLE(); return call->env.Null(); }
-    FWD(RunUnion) { K_UNREACHABLE(); return call->env.Null(); }
-    FWD(RunArray) { K_UNREACHABLE(); return call->env.Null(); }
+    FWD(RunRecord) { K_UNREACHABLE(); return nullptr; }
+    FWD(RunUnion) { K_UNREACHABLE(); return nullptr; }
+    FWD(RunArray) { K_UNREACHABLE(); return nullptr; }
     FWD(RunFloat32) {
         float f = WRAP(CallF(native, base, &call->saved_sp));
         return NewFloat(call->env, f);
@@ -433,7 +433,7 @@ napi_value RunForward(CallData *call, uint8_t *base, void *native, const OpData 
         double d = WRAP(CallD(native, base, &call->saved_sp));
         return NewFloat(call->env, d);
     }
-    FWD(RunPrototype) { K_UNREACHABLE(); return call->env.Null(); }
+    FWD(RunPrototype) { K_UNREACHABLE(); return nullptr; }
     FWD(RunAggregateG) {
         auto ret = WRAP(CallG(native, base, &call->saved_sp));
         return DecodeObject(call->instance, (const uint8_t *)&ret, op->type);
@@ -522,9 +522,9 @@ napi_value RunForward(CallData *call, uint8_t *base, void *native, const OpData 
         uint64_t ret = WRAP(CallGX(native, base, &call->saved_sp));
         return WrapPointer(call->env, (void *)ret);
     }
-    FWD(RunRecordX) { K_UNREACHABLE(); return call->env.Null(); }
-    FWD(RunUnionX) { K_UNREACHABLE(); return call->env.Null(); }
-    FWD(RunArrayX) { K_UNREACHABLE(); return call->env.Null(); }
+    FWD(RunRecordX) { K_UNREACHABLE(); return nullptr; }
+    FWD(RunUnionX) { K_UNREACHABLE(); return nullptr; }
+    FWD(RunArrayX) { K_UNREACHABLE(); return nullptr; }
     FWD(RunFloat32X) {
         float f = WRAP(CallFX(native, base, &call->saved_sp));
         return NewFloat(call->env, f);
@@ -533,7 +533,7 @@ napi_value RunForward(CallData *call, uint8_t *base, void *native, const OpData 
         double d = WRAP(CallDX(native, base, &call->saved_sp));
         return NewFloat(call->env, d);
     }
-    FWD(RunPrototypeX) { K_UNREACHABLE(); return call->env.Null(); }
+    FWD(RunPrototypeX) { K_UNREACHABLE(); return nullptr; }
     FWD(RunAggregateGX) {
         auto ret = WRAP(CallGX(native, base, &call->saved_sp));
         return DecodeObject(call->instance, (const uint8_t *)&ret, op->type);
@@ -602,7 +602,7 @@ napi_value RunForward(CallData *call, uint8_t *base, void *native, const OpData 
 
     FWD(Yield) {
         call->async_ip = op + 1;
-        return nullptr;
+        return (napi_value)-1;
     }
 
     FWD(CallG) { CALL(G); return nullptr; }
@@ -683,9 +683,9 @@ napi_value RunForward(CallData *call, uint8_t *base, void *native, const OpData 
         uintptr_t ret = *(uintptr_t *)base;
         return WrapPointer(call->env, (void *)ret);
     }
-    FWD(ReturnRecord) { K_UNREACHABLE(); return call->env.Null(); }
-    FWD(ReturnUnion) { K_UNREACHABLE(); return call->env.Null(); }
-    FWD(ReturnArray) { K_UNREACHABLE(); return call->env.Null(); }
+    FWD(ReturnRecord) { K_UNREACHABLE(); return nullptr; }
+    FWD(ReturnUnion) { K_UNREACHABLE(); return nullptr; }
+    FWD(ReturnArray) { K_UNREACHABLE(); return nullptr; }
     FWD(ReturnFloat32) {
         float f = *(float *)base;
         return NewFloat(call->env, f);
@@ -694,7 +694,7 @@ napi_value RunForward(CallData *call, uint8_t *base, void *native, const OpData 
         double d = *(double *)base;
         return NewFloat(call->env, d);
     }
-    FWD(ReturnPrototype) { K_UNREACHABLE(); return call->env.Null(); }
+    FWD(ReturnPrototype) { K_UNREACHABLE(); return nullptr; }
     FWD(ReturnAggregateReg) { return DecodeObject(call->instance, base, op->type); }
     FWD(ReturnAggregateMem) {
         uintptr_t ret = *(uintptr_t *)base;
