@@ -165,7 +165,8 @@ SYMBOL(SwitchAndRelay):
     movl %esp, %ebp
     .cfi_def_cfa ebp, 8
     movl 24(%esp), %ecx
-    movl %esp, 0(%ecx)
+    leal -8(%esp), %edx
+    movl %edx, 0(%ecx)
     movl 20(%esp), %esp
     subl $24, %esp
     movl 8(%ebp), %eax
