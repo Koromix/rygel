@@ -105,23 +105,23 @@ struct TypeInfo {
     InstanceData *instance = nullptr;
     const char *name = nullptr;
 
-    alignas(8) PrimitiveKind primitive;
-    int32_t size;
-    int16_t align;
-    uint8_t fill; // Aggregates
-    ArrayHint hint;
+    alignas(8) PrimitiveKind primitive = PrimitiveKind::Void;
+    int32_t size = 0;
+    int16_t align = 0;
+    uint8_t fill = 0; // Aggregates
+    ArrayHint hint = ArrayHint::Array;
 
     DisposeFunc *dispose = nullptr;
     napi_ref dispose_ref = nullptr;
 
     HeapArray<RecordMember> members; // Record or Union
     struct {
-        const TypeInfo *type; // Pointer or array
+        const TypeInfo *type = nullptr; // Pointer or array
         int32_t stride; // Array only
         BufferConversion conversion; // Array or pointer
     } ref;
-    const FunctionInfo *proto; // Callback only
-    const char *countedby; // Pointer or array
+    const FunctionInfo *proto = nullptr; // Callback only
+    const char *countedby = nullptr; // Pointer or array
 
     mutable napi_ref construct = nullptr; // Union only
     mutable napi_ref defn = nullptr;
