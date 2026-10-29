@@ -2072,7 +2072,7 @@ static napi_value DecodeValue(napi_env env, napi_callback_info info)
         // We make a fake type when the user passes a length
         TypeInfo array = {};
         array.instance = instance;
-        array.name = "array";
+        array.name = "<temporary>";
         InitArrayAttributes(&array, type, len);
 
         if (src_len >= 0 && !CheckAccessLength(env, &array, src_len, offset)) [[unlikely]]
@@ -2411,7 +2411,7 @@ static napi_value EncodeValue(napi_env env, napi_callback_info info)
         // We make a fake type when the user passes a length
         TypeInfo array = {};
         array.instance = instance;
-        array.name = "array";
+        array.name = "<temporary>";
         InitArrayAttributes(&array, type, len);
 
         if (dest_len >= 0 && !CheckAccessLength(env, &array, dest_len, offset)) [[unlikely]]
