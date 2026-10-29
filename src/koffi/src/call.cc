@@ -1200,11 +1200,11 @@ void *CallData::ReserveTrampoline(const FunctionInfo *proto, Napi::Function func
 
         if (!shared.available.len) [[unlikely]] {
             ThrowError<Napi::Error>(env, "Too many callbacks are in use (max = %1)", MaxTrampolines);
-            return env.Null();
+            return nullptr;
         }
         if (!used_trampolines.Available()) [[unlikely]] {
             ThrowError<Napi::Error>(env, "This call uses too many temporary callbacks (max = %1)", K_LEN(used_trampolines.data));
-            return env.Null();
+            return nullptr;
         }
 
         idx = shared.available.data[--shared.available.len];
