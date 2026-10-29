@@ -2,6 +2,21 @@
 
 ## Alpha versions
 
+### Redropp 0.9.15
+
+*Released on 2026-10-29*
+
+- Change default Redropp database filename
+- Keep using `/data` when using custom config file with docker image
+- Restore support for `S3_LOCATION` environment variable
+- Fix permissive HTTP UTF-8 validation
+- Fix ugly error log context of early HTTP aborts
+- Update brotli dependency
+- Build deb packages for Debian 12
+
+> [!NOTE]
+> Redropp does not accept compressed request bodies, so the brotli security flaw (*Broccoli2Shell*) does not impact this application.
+
 ### Redropp 0.9.14
 
 *Released on 2026-10-21*
