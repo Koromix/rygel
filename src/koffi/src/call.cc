@@ -502,7 +502,7 @@ bool CallData::PushObject(napi_value obj, const TypeInfo *type, uint8_t *origin)
                 return false;
             }
 
-            char name[256];
+            char name[512];
             {
                 napi_value value;
                 NAPI_OK(napi_get_element(env, props, 0, &value));

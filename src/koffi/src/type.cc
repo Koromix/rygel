@@ -328,8 +328,8 @@ const TypeInfo *ResolveType(InstanceData *instance, Span<const char> str)
 
     if (!type) {
         // Try with cleaned up spaces
-        if (name.len < 256) {
-            LocalArray<char, 256> buf;
+        if (name.len < 512) {
+            LocalArray<char, 512> buf;
             for (Size i = 0; i < name.len; i++) {
                 char c = name[i];
 

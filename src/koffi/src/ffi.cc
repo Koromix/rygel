@@ -1021,7 +1021,7 @@ static napi_value CreateArrayType(napi_env env, napi_callback_info info)
     if (!ref)
         return nullptr;
 
-    char countedby[256];
+    char countedby[512];
     bool dynamic = (napi_get_value_string_utf8(env, args[1], countedby, K_SIZE(countedby), nullptr) == napi_ok);
 
     Size len;
@@ -1048,7 +1048,7 @@ static napi_value CreateArrayType(napi_env env, napi_callback_info info)
     ArrayHint hint = ref->hint;
 
     if (count >= 3u + dynamic) {
-        char hint_str[256];
+        char hint_str[32];
         bool hinted = (napi_get_value_string_utf8(env, args[2 + dynamic], hint_str, K_SIZE(hint_str), nullptr) == napi_ok);
 
         if (hinted) {
@@ -1531,7 +1531,7 @@ static napi_value GetMemberOffset(napi_env env, napi_callback_info info)
         return nullptr;
     }
 
-    char name[256];
+    char name[512];
     if (napi_get_value_string_utf8(env, args[1], name, K_SIZE(name), nullptr) != napi_ok) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for member, expected string", GetValueType(instance, args[1]));
         return nullptr;
