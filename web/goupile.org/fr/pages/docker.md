@@ -56,7 +56,7 @@ services:
 ```
 
 > [!TIP]
-> Il est recommandé d'utiliser une **étiquette de version spécifique** (comme *3.11*) au lieu de `latest` et de mettre à jour manuellement, même si ce tag est utilisé dans la documentation pour simplifier.
+> Il est recommandé d'utiliser une **étiquette de version spécifique** au lieu de `latest` et de mettre à jour manuellement, même si ce tag est utilisé dans la documentation pour simplifier.
 
 ## Podman Quadlet
 

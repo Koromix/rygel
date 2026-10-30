@@ -55,7 +55,7 @@ services:
 ```
 
 > [!TIP]
-> It is recommended to use a **specific version tag** (such as *3.11*) instead of `latest` and update manually, even though it is used in the documentation to make things simpler.
+> It is recommended to use a **specific version tag** instead of `latest` and update manually, even though it is used in the documentation to make things simpler.
 
 ## Podman Quadlet
 
