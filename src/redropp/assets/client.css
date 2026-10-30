@@ -451,7 +451,7 @@ form {
         min-width: 500px;
 
         & > span:first-child {
-            width: 200px;
+            width: 220px;
             flex: 1;
         }
     }
