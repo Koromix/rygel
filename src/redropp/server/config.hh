@@ -36,7 +36,11 @@ struct Config {
 
     s3_Config s3;
 
+#if defined(DEFAULT_PORT)
+    http_Config http { DEFAULT_PORT };
+#else
     http_Config http { 8894 };
+#endif
     bool secure_cookies = false;
 
     smtp_Config smtp;
