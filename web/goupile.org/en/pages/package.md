@@ -111,6 +111,17 @@ server {
 }
 ```
 
+> [!IMPORTANT]
+> When using Goupile behind a reverse proxy, you should make sure that the `X-Forwarded-For` header is correctly set by the proxy.
+>
+> You should also set the following settings in goupile.ini:
+>
+> ```
+> [HTTP]
+> ClientAddress = X-Forwarded-For
+> SecureCookies = Yes
+> ```
+
 ## Apache 2
 
 Edit your Apache 2 configuration (directly or in a server file in `/etc/apache2/sites-available`) to set it up as a reverse proxy for Goupile.
@@ -124,7 +135,20 @@ The VirtualHost block should look something like this:
     LimitRequestBody 268435456
 
     ProxyPreserveHost On
+    ProxyAddHeaders On
     ProxyPass "/" "http://127.0.0.1:8889/"
     ProxyPassReverse "/" "http://127.0.0.1:8889/"
 </VirtualHost>
 ```
+
+> [!IMPORTANT]
+> When using Goupile behind a reverse proxy, you should make sure that the `X-Forwarded-For` header is correctly set by the proxy.
+>
+> You should also set the following settings in goupile.ini:
+>
+> ```
+> [HTTP]
+> ClientAddress = X-Forwarded-For
+> SecureCookies = Yes
+> ```
+

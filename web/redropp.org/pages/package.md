@@ -89,6 +89,17 @@ server {
 }
 ```
 
+> [!IMPORTANT]
+> When using Redropp behind a reverse proxy, you should make sure that the `X-Forwarded-For` header is correctly set by the proxy.
+>
+> You should also set the following settings in redropp.ini:
+>
+> ```
+> [HTTP]
+> ClientAddress = X-Forwarded-For
+> SecureCookies = Yes
+> ```
+
 ## Apache 2
 
 Edit your Apache 2 configuration (directly or in a server file in `/etc/apache2/sites-available`) to set it up as a reverse proxy for Redropp.
@@ -102,7 +113,19 @@ The VirtualHost block should look something like this:
     LimitRequestBody 67108864
 
     ProxyPreserveHost On
+    ProxyAddHeaders On
     ProxyPass "/" "http://127.0.0.1:8894/"
     ProxyPassReverse "/" "http://127.0.0.1:8894/"
 </VirtualHost>
 ```
+
+> [!IMPORTANT]
+> When using Redropp behind a reverse proxy, you should make sure that the `X-Forwarded-For` header is correctly set by the proxy.
+>
+> You should also set the following settings in redropp.ini:
+>
+> ```
+> [HTTP]
+> ClientAddress = X-Forwarded-For
+> SecureCookies = Yes
+> ```
