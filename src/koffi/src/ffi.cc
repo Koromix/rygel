@@ -1523,7 +1523,7 @@ static napi_value GetMemberOffset(napi_env env, napi_callback_info info)
         return nullptr;
     }
 
-    const TypeInfo *type = ResolveType(instance, args[0]);
+    const TypeInfo *type = ResolveType(instance, args[0], false);
     if (!type)
         return nullptr;
     if (type->primitive != PrimitiveKind::Record) {
