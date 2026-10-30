@@ -202,7 +202,7 @@ bool LoadConfig(StreamReader *st, Config *out_config)
                 if (prop.key == "SecureCookies") {
                     valid &= ParseBool(prop.value, &config.secure_cookies);
                 } else {
-                   valid &= config.http.SetProperty(prop.key, prop.value, root_directory);
+                    valid &= config.http.SetProperty(prop.key, prop.value, root_directory);
                 }
             } else if (prop.section == "SMTP") {
                 valid &= config.smtp.SetProperty(prop.key, prop.value, root_directory);
