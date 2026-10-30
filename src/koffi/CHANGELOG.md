@@ -7,6 +7,18 @@
 
 ### Koffi 3.3
 
+#### Koffi 3.3.6
+
+*Released on 2026-10-31*
+
+- Fix crash (JS abort) when the maximum number of callbacks is reached
+- Allow garbage collection of non-referenced array types
+- Avoid array type creation overhead when encoding or decoding with length argument
+- Keep i386 stack 16-byte aligned for consistency with other platforms
+
+> [!NOTE]
+> The change around array types means that separate koffi.array() calls now return distinct objects, even when called with the same parameters. This means that `koffi.array('int', 42) === koffi.array('int', 42)` now returns false.
+
 #### Koffi 3.3.5
 
 *Released on 2026-10-28*
