@@ -2,6 +2,15 @@
 
 ## Alpha versions
 
+### Redropp 0.9.16
+
+*Released on 2026-10-30*
+
+- Change footer content and style
+- Fix minor style and translation issues
+- Adjust default port in docker build
+- Reorganize default config file
+
 ### Redropp 0.9.15
 
 *Released on 2026-10-29*
