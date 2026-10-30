@@ -356,6 +356,7 @@ static AssetInfo PatchAsset(AssetInfo asset, Span<const char> nonce, Allocator *
             json.Key("title"); json.String(config.title);
             json.Key("url"); json.String(config.url);
             json.Key("logo"); json.StringOrNull(asset_logo);
+            json.Key("contact"); json.StringOrNull(config.contact);
 
             json.Key("durations"); json.StartArray();
             for (int64_t duration: config.durations) {

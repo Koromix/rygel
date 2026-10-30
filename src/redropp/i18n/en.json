@@ -111,6 +111,7 @@
         "password_reset_successful": "Your password has been changed, please login to continue.",
         "password_suffix": "PASSWORD",
         "pending": "Pending",
+        "project_website": "Project website",
         "protected": "Protected",
         "provider": "Provider",
         "published": "Published",

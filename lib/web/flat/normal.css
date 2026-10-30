@@ -309,7 +309,7 @@ hr {
     border-bottom: 1px solid #ededf0;
 }
 
-button {
+:is(button, [role=button]) {
     padding: 0.35em 1em 0.45em 1em;
     background: var(--button_color);
     border: none;
@@ -318,19 +318,19 @@ button {
     cursor: pointer;
 }
 button::-moz-focus-inner { border: 0; }
-button:not(:disabled):not(.active):hover { background: color-mix(in srgb, var(--button_color) 90%, black); }
-button:disabled {
+:is(button, [role=button]):not(:disabled):not(.active):hover { background: color-mix(in srgb, var(--button_color) 90%, black); }
+:is(button, [role=button]):disabled {
     filter: saturate(10%) brightness(80%);
     cursor: not-allowed;
 }
-button:disabled > * { opacity: 0.3; }
-button.active { background: color-mix(in srgb, var(--button_color) 50%, black); }
-button > img {
+:is(button, [role=button]):disabled > * { opacity: 0.3; }
+:is(button, [role=button]).active { background: color-mix(in srgb, var(--button_color) 50%, black); }
+:is(button, [role=button]) > img {
     width: 16px;
     height: 16px;
     transform: translateY(2px);
 }
-button > img:only-child {
+:is(button, [role=button]) > img:only-child {
     width: 32px;
     height: 32px;
     transform: translateY(4px);

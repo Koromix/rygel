@@ -126,42 +126,42 @@ main.dialog {
 }
 * + .actions { margin-top: 1.5em; }
 
-button {
+:is(button, [role=button]) {
     font-size: 0.9em;
     font-weight: normal !important;
     color: var(--color) !important;
     --color: white;
 }
-button.secondary {
+:is(button, [role=button]).secondary {
     --button_color: #ddd;
     --color: black;
 }
-button.danger {
+:is(button, [role=button]).danger {
     --button_color: #d33410;
     --color: white;
 }
-button.small {
+:is(button, [role=button]).small {
     --button_color: #ddd;
     --color: black;
     font-size: 0.7em;
 }
-button.small > img {
+:is(button, [role=button]).small > img {
     top: 2px;
     width: 12px;
     height: 12px;
 }
-button.active { filter: invert(100%); }
-button.insist {
+:is(button, [role=button]).active { filter: invert(100%); }
+:is(button, [role=button]).insist {
     filter: invert(100%);
     transform: scale(1.1);
     transition: filter 0.2s ease, transform 0.1s ease;
 }
-button.flash {
+:is(button, [role=button]).flash {
     position: relative;
     color: #00000000 !important;
     pointer-events: none;
 }
-button.flash::after {
+:is(button, [role=button]).flash::after {
     position: absolute;
     content: var(--text);
     left: 50%;
@@ -173,7 +173,7 @@ button.flash::after {
 }
 button:disabled { filter: saturate(0%) contrast(50%); }
 
-button.highlight { animation: highlight 1.4s ease-in-out infinite alternate; }
+:is(button, [role=button]).highlight { animation: highlight 1.4s ease-in-out infinite alternate; }
 @keyframes highlight {
     0% {
         filter: contrast(100%);

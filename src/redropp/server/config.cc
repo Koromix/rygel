@@ -182,7 +182,9 @@ bool LoadConfig(StreamReader *st, Config *out_config)
                     valid = false;
                 }
             } else if (prop.section == "Customize") {
-                if (prop.key == "IconFile") {
+                if (prop.key == "Contact") {
+                    config.contact = DuplicateString(prop.value, &config.str_alloc).ptr;
+                } else if (prop.key == "IconFile") {
                     config.custom_icon = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
                 } else if (prop.key == "LogoFile") {
                     config.custom_logo = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;

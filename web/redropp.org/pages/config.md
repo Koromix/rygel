@@ -133,6 +133,9 @@ To do so, change the settings in the `[Customize]` section of the INI config fil
 ```ini
 [Customize]
 
+# Show contact mail in main footer
+# Contact =
+
 # Replace the favicon with another image (PNG or WEBP)
 # IconFile =
 

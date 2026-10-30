@@ -29,6 +29,7 @@ struct Config {
     int64_t default_duration = 0; // 7 days
     bool allow_infinite = false;
 
+    const char *contact = nullptr;
     const char *custom_icon = nullptr;
     const char *custom_logo = nullptr;
     HeapArray<const char *> custom_styles;

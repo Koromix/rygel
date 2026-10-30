@@ -64,10 +64,11 @@ li + .picture { margin-left: -1em; }
 footer {
     position: relative;
     font-size: 1.1em;
+    padding: 12px;
 
-    & .legal {
+    & > div {
         display: block;
-        font-size: 0.8em;
+        text-align: right;
     }
 }
 
@@ -93,6 +94,7 @@ footer {
         text-align: left;
         font-size: 0.8em;
 
-        & .legal { display: none; }
+        & > div { text-align: left; }
+        & > a { display: none; }
     }
 }

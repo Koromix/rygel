@@ -341,11 +341,11 @@ function renderApp(el) {
                 ${Object.keys(languages).map(lang =>
                     html`<option value=${lang} .selected=${lang == document.documentElement.lang}>${lang.toUpperCase()}</option>`)}
             </select>
-            <div>${ENV.title}</div>
-            <div style="font-size: 0.8em;">
-                Niels Martignène (<a href="https://koromix.dev/" target="_blank">Koromix</a>)<br>
-                <a href="mailto:niels.martignene@protonmail.com" style="font-weight: bold; color: inherit;">niels.martignene@protonmail.com</a>
+            <div>
+                <div style="line-height: 1;">${ENV.title}</div>
+                ${ENV.contact != null ? html`<a href=${'mailto:' + ENV.contact} style="font-size: 0.8em; font-weight: bold; color: inherit;">${ENV.contact}</a>`: ''}
             </div>
+            <a href="https://redropp.org" target="_blank" role="button" class="small">${T.project_website}</a>
         </footer>
     `, root_el);
 }
