@@ -12,7 +12,6 @@
         "allowed": "Autorisé",
         "already_have_account": "Vous avez déjà un compte ?",
         "apply": "Appliquer",
-        "browse_for_file": "Parcourir",
         "browse_for_image": "Parcourir",
         "cancel": "Annuler",
         "change_picture": "Changer l'image",
@@ -32,22 +31,13 @@
         "copied_flash": "Copié !",
         "copy": "Copier",
         "copy_download_link": "Copier le lien de téléchargement",
-        "count_files": {
-            "1": "1 fichier",
-            "odd": "{1} fichiers",
-            "even": "{1} fichiers"
-        },
         "create_password": "Créer un mot de passe",
         "create_your_account": "Créez votre compte",
         "current_password": "Mot de passe actuel",
-        "day_names": {
-            "friday": "Vendredi",
-            "monday": "Lundi",
-            "saturday": "Samedi",
-            "sunday": "Dimanche",
-            "thursday": "Jeudi",
-            "tuesday": "Mardi",
-            "wednesday": "Mercredi"
+        "day_units": {
+            "1": "1 jour",
+            "even": "{1} jours",
+            "odd": "{1} jours"
         },
         "delete": "Supprimer",
         "delete_file": "Supprimer le fichier",
@@ -62,17 +52,10 @@
         "drops": "Envois",
         "enable_direct_login_with_password": "Je souhaite créer un mot de passe pour pouvoir me connecter directement",
         "expiration": "Expiration",
-        "day_units": {
-            "1": "1 jour",
-            "even": "{1} jours",
-            "odd": "{1} jours"
-        },
         "expired": "Expiré",
         "expires_in_x": "Expire dans {1}",
         "expires_on_x": "Expire le {1}",
         "external_identities": "Identifiants externes",
-        "file": "Fichier",
-        "files": "Fichiers",
         "hour_units": {
             "1": "1 heure",
             "even": "{1} heures",
@@ -95,6 +78,7 @@
             "even": "{1} minutes",
             "odd": "{1} minutes"
         },
+        "move": "Déplacer",
         "name": "Nom",
         "never": "Jamais",
         "never_expires": "N'expire jamais",
@@ -182,12 +166,14 @@
         "Failed to recover link for this drop": "Impossible de récupérer le lien correspondant à cet envoi",
         "Failed to register service worker. Refresh the page and try again.": "Échec de l'enregistrement du service worker. Actualisez la page et réessayez.",
         "Failed to upload file fragment": "Échec de l'envoi d'un fragment de fichier",
+        "Incomplete drop '{1}'": "Pli incomplet '{1}'",
         "Init HTTP server": "Initialisation du serveur HTTP",
         "Init assets": "Initialisation des assets",
         "Init data": "Initialisation des données",
         "Init drops": "Initialisation des envois",
         "Init messaging": "Initialisation des messages",
         "Init sandbox": "Initialisation de la sandbox",
+        "Init users": "Initialisation des utilisateurs",
         "Internal authentication is disabled": "L'authentification interne est désactivée",
         "Invalid 'fragment' parameter": null,
         "Invalid 'header' parameter": null,

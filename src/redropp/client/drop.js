@@ -931,7 +931,7 @@ async function* readChunks(stream) {
 async function runUpload() {
     let status = getUploadStatus(cache.drop.kid);
     if (status == null)
-        throw new Error(T.message(`Incomplete drop '${cache.drop.kid}'`));
+        throw new Error(T.message(`Incomplete drop '{1}'`, cache.drop.kid));
 
     let stat = status.meter.measure();
 

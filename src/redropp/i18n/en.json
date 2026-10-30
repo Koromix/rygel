@@ -12,7 +12,6 @@
         "allowed": "Allowed",
         "already_have_account": "Already have an account?",
         "apply": "Apply",
-        "browse_for_file": "Browse for file",
         "browse_for_image": "Browse for image",
         "cancel": "Cancel",
         "change_picture": "Change picture",
@@ -32,22 +31,13 @@
         "copied_flash": "Copied!",
         "copy": "Copy",
         "copy_download_link": "Copy download link",
-        "count_files": {
-            "1": "1 file",
-            "odd": "{1} files",
-            "even": "{1} files"
-        },
         "create_password": "Create password",
         "create_your_account": "Create your account",
         "current_password": "Current password",
-        "day_names": {
-            "friday": "Friday",
-            "monday": "Monday",
-            "saturday": "Saturday",
-            "sunday": "Sunday",
-            "thursday": "Thursday",
-            "tuesday": "Tuesday",
-            "wednesday": "Wednesday"
+        "day_units": {
+            "1": "1 day",
+            "even": "{1} days",
+            "odd": "{1} days"
         },
         "delete": "Delete",
         "delete_file": "Delete file",
@@ -62,17 +52,10 @@
         "drops": "Drops",
         "enable_direct_login_with_password": "I want to create a password to be able to sign in directly",
         "expiration": "Expiration",
-        "day_units": {
-            "1": "1 day",
-            "even": "{1} days",
-            "odd": "{1} days"
-        },
         "expired": "Expired",
         "expires_in_x": "Expires in {1}",
         "expires_on_x": "Expires on {1}",
         "external_identities": "External identifiers",
-        "file": "File",
-        "files": "Files",
         "hour_units": {
             "1": "1 hour",
             "even": "{1} hours",
@@ -95,6 +78,7 @@
             "even": "{1} minutes",
             "odd": "{1} minutes"
         },
+        "move": "Move",
         "name": "Name",
         "never": "Never",
         "never_expires": "Never expires",
@@ -158,7 +142,6 @@
         "use_age_to_decrypt_the_file": "Decrypt the file with <a href=\"https://age-encryption.org/\" target=\"_blank\">age</a> with the following command:",
         "use_curl_to_download_encrypted_file": "Use curl to download the encrypted file:",
         "use_passphrase_to_decrypt_with_age": "Paste the following passphrase to decrypt when prompted:",
-        "x_files": "{1} files",
         "you_can_login_with": "You can also sign in with...",
         "zoom": "Zoom"
     },
