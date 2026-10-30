@@ -1309,8 +1309,13 @@ async function test() {
         }
 
         for (let i = 0; i < 10000; i++) {
+            let prev_types = koffi.stats().types;
+
             let rnd = 1 + Math.floor(Math.random() * 1000000);
             let type = koffi.array('short', rnd);
+
+            assert.equal(type, koffi.type(type));
+            assert.equal(koffi.stats().types, prev_types);
 
             temporary_types.push(new WeakRef(type));
         }

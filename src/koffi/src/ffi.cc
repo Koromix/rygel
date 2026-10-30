@@ -1463,7 +1463,7 @@ static napi_value GetResolvedType(napi_env env, napi_callback_info info)
         return nullptr;
     }
 
-    const TypeInfo *type = ResolveType(instance, arg);
+    const TypeInfo *type = ResolveType(instance, arg, false);
     if (!type)
         return nullptr;
 

@@ -32,6 +32,12 @@ TypeObject::TypeObject(const Napi::CallbackInfo &info)
 
     type = AlignDown(external.Data(), 2);
     temporary = (uintptr_t)external.Data() & 1;
+
+    if (temporary) {
+        // Keep weak reference around for future WrapType() calls
+        // For permanent types, a strong reference is created inside InitTypeDefinition().
+        type->defn = *this;
+    }
 }
 
 void TypeObject::Finalize(Napi::BasicEnv env)
@@ -40,6 +46,8 @@ void TypeObject::Finalize(Napi::BasicEnv env)
     SuppressDestruct();
 
     if (temporary) {
+        // Avoid double free (see TypeObject constructor)
+        type->defn = nullptr;
         delete type;
     }
 }
@@ -558,9 +566,11 @@ static napi_value InitTypeDefinition(InstanceData *instance, const TypeInfo *typ
     defn.Set("disposable", NewBool(env, !!type->dispose));
 
     if (!temporary) {
-        // Assign before to avoid possible recursion crash
+        // Assign before to avoid possible recursion crash.
+        // Temporary types borrow the result from napi_wrap, see TypeObject constructor.
         NAPI_OK(napi_create_reference(env, defn, 1, &type->defn));
     }
+    K_ASSERT(type->defn);
 
     switch (type->primitive) {
         case PrimitiveKind::Void:
@@ -632,6 +642,7 @@ napi_value WrapType(InstanceData *instance, const TypeInfo *type, bool freeze)
     if (type->defn) {
         napi_value defn;
         NAPI_OK(napi_get_reference_value(env, type->defn, &defn));
+        K_ASSERT(defn);
 
         return defn;
     } else {
