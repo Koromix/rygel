@@ -163,7 +163,7 @@
 
 #define FASTFLOAT_VERSION_MAJOR 8
 #define FASTFLOAT_VERSION_MINOR 3
-#define FASTFLOAT_VERSION_PATCH 2
+#define FASTFLOAT_VERSION_PATCH 3
 
 #define FASTFLOAT_STRINGIZE_IMPL(x) #x
 #define FASTFLOAT_STRINGIZE(x) FASTFLOAT_STRINGIZE_IMPL(x)
@@ -2276,10 +2276,22 @@ parse_number_string(UC const *p, UC const *pend, parse_options_t<UC> options,
   // JSON and JavaScript are mutually exclusive, so only the non-JSON
   // instantiation has to look at the flag.
   FASTFLOAT_IF_CONSTEXPR17(!basic_json_fmt) {
+    // We have to disable -Wc++20-extensions for the [[unlikely]] attribute
+    // See comment for @jwakely at
+    // https://github.com/fastfloat/fast_float/pull/387#discussion_r3366943539
+#ifdef __clang__
+#pragma clang diagnostic push
+#if (!defined(__APPLE_CC__) && __clang_major__ >= 10) || (__clang_major__ >= 13)
+#pragma clang diagnostic ignored "-Wc++20-extensions"
+#endif
+#endif
     if fastfloat_unlikely (uint64_t(options.format &
                                     detail::basic_javascript_fmt)) {
       return parse_number_string_javascript<UC>(p, pend, options, store_spans);
     }
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
   }
   return parse_number_string_impl<basic_json_fmt, false, UC>(p, pend, options,
                                                              store_spans);
@@ -3335,9 +3347,15 @@ namespace detail {
  *   -ceil(p) + q
  * where
  *   p = log(5**-q)/log(2) = -q * log(5)/log(2)
+ *
+ * The shift must floor towards negative infinity, as an arithmetic right
+ * shift does, but right-shifting a negative value is implementation-defined
+ * before C++20. Biasing the product by 2048 * 65536 keeps the shifted value
+ * non-negative without changing the result: the bias is a multiple of 2^16
+ * and is removed again after the shift.
  */
 constexpr fastfloat_really_inline int32_t power(int32_t q) noexcept {
-  return (((152170 + 65536) * q) >> 16) + 63;
+  return (((152170 + 65536) * q + (2048 * 65536)) >> 16) - 2048 + 63;
 }
 } // namespace detail
 
@@ -4753,7 +4771,10 @@ template <> struct from_chars_caller<std::float32_t> {
     // float32_t
     float val = 0.0f;
     auto ret = from_chars_advanced(first, last, val, options);
-    value = val;
+    // If no characters match the pattern, value must be left unmodified.
+    if (ret.ec != std::errc::invalid_argument) {
+      value = val;
+    }
     return ret;
   }
 };
@@ -4770,7 +4791,10 @@ template <> struct from_chars_caller<std::float64_t> {
     // float64_t
     double val = 0.0;
     auto ret = from_chars_advanced(first, last, val, options);
-    value = val;
+    // If no characters match the pattern, value must be left unmodified.
+    if (ret.ec != std::errc::invalid_argument) {
+      value = val;
+    }
     return ret;
   }
 };
@@ -4980,9 +5004,19 @@ from_chars_float_advanced(UC const *first, UC const *last, T &value,
   // Leave for the javascript conversion before anything else is live, so this
   // compiles to a tail call and the common path keeps its registers. The cold
   // function repeats the leading-whitespace and empty-input handling below.
+  // See the comment on -Wc++20-extensions further down in this function.
+#ifdef __clang__
+#pragma clang diagnostic push
+#if (!defined(__APPLE_CC__) && __clang_major__ >= 10) || (__clang_major__ >= 13)
+#pragma clang diagnostic ignored "-Wc++20-extensions"
+#endif
+#endif
   if fastfloat_unlikely (uint64_t(fmt & detail::basic_javascript_fmt)) {
     return from_chars_float_javascript<T, UC>(first, last, value, options);
   }
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 
   from_chars_result_t<UC> answer;
   if (uint64_t(fmt & chars_format::skip_white_space)) {
@@ -5124,38 +5158,42 @@ integer_times_pow10(int64_t mantissa, int decimal_exponent) noexcept {
 // the following overloads are here to avoid surprising ambiguity for int,
 // unsigned, etc.
 template <typename T, typename Int>
-FASTFLOAT_CONSTEXPR20
-    typename std::enable_if<is_supported_float_type<T>::value &&
-                                std::is_integral<Int>::value &&
-                                !std::is_signed<Int>::value,
-                            T>::type
-    integer_times_pow10(Int mantissa, int decimal_exponent) noexcept {
+FASTFLOAT_CONSTEXPR20 typename std::enable_if<
+    is_supported_float_type<T>::value && std::is_integral<Int>::value &&
+        sizeof(Int) <= sizeof(uint64_t) && !std::is_signed<Int>::value,
+    T>::type
+integer_times_pow10(Int mantissa, int decimal_exponent) noexcept {
   return integer_times_pow10<T>(static_cast<uint64_t>(mantissa),
                                 decimal_exponent);
 }
 
 template <typename T, typename Int>
-FASTFLOAT_CONSTEXPR20
-    typename std::enable_if<is_supported_float_type<T>::value &&
-                                std::is_integral<Int>::value &&
-                                std::is_signed<Int>::value,
-                            T>::type
-    integer_times_pow10(Int mantissa, int decimal_exponent) noexcept {
+FASTFLOAT_CONSTEXPR20 typename std::enable_if<
+    is_supported_float_type<T>::value && std::is_integral<Int>::value &&
+        sizeof(Int) <= sizeof(int64_t) && std::is_signed<Int>::value,
+    T>::type
+integer_times_pow10(Int mantissa, int decimal_exponent) noexcept {
   return integer_times_pow10<T>(static_cast<int64_t>(mantissa),
                                 decimal_exponent);
 }
 
 template <typename Int>
-FASTFLOAT_CONSTEXPR20 typename std::enable_if<
-    std::is_integral<Int>::value && !std::is_signed<Int>::value, double>::type
-integer_times_pow10(Int mantissa, int decimal_exponent) noexcept {
+FASTFLOAT_CONSTEXPR20
+    typename std::enable_if<std::is_integral<Int>::value &&
+                                sizeof(Int) <= sizeof(uint64_t) &&
+                                !std::is_signed<Int>::value,
+                            double>::type
+    integer_times_pow10(Int mantissa, int decimal_exponent) noexcept {
   return integer_times_pow10(static_cast<uint64_t>(mantissa), decimal_exponent);
 }
 
 template <typename Int>
-FASTFLOAT_CONSTEXPR20 typename std::enable_if<
-    std::is_integral<Int>::value && std::is_signed<Int>::value, double>::type
-integer_times_pow10(Int mantissa, int decimal_exponent) noexcept {
+FASTFLOAT_CONSTEXPR20
+    typename std::enable_if<std::is_integral<Int>::value &&
+                                sizeof(Int) <= sizeof(int64_t) &&
+                                std::is_signed<Int>::value,
+                            double>::type
+    integer_times_pow10(Int mantissa, int decimal_exponent) noexcept {
   return integer_times_pow10(static_cast<int64_t>(mantissa), decimal_exponent);
 }
 
