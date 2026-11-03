@@ -53,7 +53,6 @@ CallData::~CallData()
 {
     K_ASSERT(!out_arguments.len);
     K_ASSERT(!used_trampolines.len);
-    K_ASSERT(!allocator->IsUsed());
 }
 #endif
 
@@ -136,8 +135,6 @@ static K_FORCE_INLINE void ConvertBuffer(BufferConversion conversion, void *ptr,
 
 void CallData::Finalize()
 {
-    FinalizeFast();
-
     if (out_arguments.len) {
         if (!env.IsExceptionPending()) {
             for (const OutArgument &out: out_arguments) {
@@ -234,16 +231,6 @@ void CallData::Finalize()
     out_arguments.len = 0;
     used_trampolines.len = 0;
 #endif
-}
-
-void CallData::FinalizeFast()
-{
-#if defined(K_DEBUG)
-    K_ASSERT(!finalized);
-    K_DEFER { finalized = true; };
-#endif
-
-    allocator->ReleaseAll();
 }
 
 void CallData::RelayAsync(Size idx, uint8_t *base)
@@ -360,7 +347,7 @@ Size CallData::PushStringValue(napi_value value, const char **out_str)
     NAPI_OK(napi_get_value_string_utf8(env, value, nullptr, 0, &len));
     len++;
 
-    Span<char> buf = allocator->AllocateSpan<char>((Size)len);
+    Span<char> buf = GetAllocator()->AllocateSpan<char>((Size)len);
     NAPI_OK(napi_get_value_string_utf8(env, value, buf.ptr, len, nullptr));
 
     *out_str = buf.ptr;
@@ -387,7 +374,7 @@ Size CallData::PushString16Value(napi_value value, const char16_t **out_str16)
 
         heap.ptr += (Size)AlignLen(len * 2, 16);
     } else {
-        buf = allocator->AllocateSpan<char16_t>((Size)len);
+        buf = GetAllocator()->AllocateSpan<char16_t>((Size)len);
 
         NAPI_OK(napi_get_value_string_utf16(env, value, buf.ptr, len, nullptr));
     }
@@ -413,7 +400,7 @@ Size CallData::PushString32Value(napi_value value, const char32_t **out_str32)
     if (buf16.len < buf.len) [[likely]] {
         heap.ptr += AlignLen(buf16.len * 4, 16);
     } else {
-        buf = allocator->AllocateSpan<char32_t>(buf16.len);
+        buf = GetAllocator()->AllocateSpan<char32_t>(buf16.len);
     }
 
     Size j = 0;
@@ -1225,6 +1212,42 @@ void *CallData::ReserveTrampoline(const FunctionInfo *proto, Napi::Function func
     return GetTrampolinePointer(idx);
 }
 
+HeapChain *CallData::GetAllocator()
+{
+    if (!allocator) {
+        allocator = &instance->sync_allocator;
+
+        if (instance->pending_release) {
+            // The pending release has not run yet, which means the Node event loop has not run yet.
+            // If this is the first call (we're not inside a callback), release early. And keep the
+            // pending finalizer for the allocations we're about to make.
+
+            if (stack.end == instance->sync_memory.stack0.end) {
+                instance->sync_allocator.ReleaseAll();
+            }
+        } else {
+            // Without node_api_post_finalizer, we can't defer allocator release (not this way anyway)... but:
+            //  - It's probably an old barely supported Node version.
+            //  - This memory will be released eventually, either when a new call occurs (see above) or
+            //    when Koffi is unloaded and InstanceData gets destroyed.
+            // No real leak either way. So it's fine.
+
+            if (node_api_post_finalizer) [[likely]] {
+                node_api_post_finalizer((napi_env)env, [](napi_env env, void *data, void *) {
+                    InstanceData *instance = (InstanceData *)data;
+
+                    instance->sync_allocator.ReleaseAll();
+                    instance->pending_release = false;
+                }, instance, nullptr);
+            }
+
+            instance->pending_release = true;
+        }
+    }
+
+    return allocator;
+}
+
 bool CallData::CheckDynamicLength(napi_value obj, Size element, const char *countedby, napi_value value)
 {
     int64_t expected = -1;
@@ -1334,7 +1357,7 @@ static TRANSLATE_FUNC napi_value TranslateZeroCall(napi_env env, napi_callback_i
     FunctionInfo *func = (FunctionInfo *)(*ptr)->data;
 
     InstanceData *instance = func->instance;
-    CallData call(env, instance, &instance->sync_memory);
+    CallData call(env, instance, &instance->sync_memory, nullptr);
 
 #if defined(K_DEBUG)
     K_DEFER_C(prev_call = instance->sync_call) { instance->sync_call = prev_call; };
@@ -1343,14 +1366,43 @@ static TRANSLATE_FUNC napi_value TranslateZeroCall(napi_env env, napi_callback_i
 
     call.DebugCall(func);
 
-    napi_value ret = call.Run(func, func->native);
-    call.FinalizeFast();
-
-    return ret;
+    return call.Run(func, func->native);
 }
 
-static TRANSLATE_FUNC napi_value TranslateFastCall(napi_env env, napi_callback_info info)
+template <size_t N>
+TRANSLATE_FUNC napi_value TranslateDirectCall(napi_env env, napi_callback_info info)
 {
+    static_assert(N <= 6);
+    static_assert(MaxParameters >= 6);
+
+    CallData call(env);
+    size_t count = N;
+    FunctionInfo *func;
+
+    NAPI_OK(napi_get_cb_info(env, info, &count, call.args, nullptr, (void **)&func));
+
+    if (count < N) [[unlikely]] {
+        ThrowError<Napi::TypeError>(env, "Expected %1 arguments, got %2", N, count);
+        return nullptr;
+    }
+
+    InstanceData *instance = func->instance;
+    call.Init(instance, &instance->sync_memory, nullptr);
+
+#if defined(K_DEBUG)
+    K_DEFER_C(prev_call = instance->sync_call) { instance->sync_call = prev_call; };
+#endif
+    instance->sync_call = &call;
+
+    call.DebugCall(func);
+
+    return call.Run(func, func->native);
+}
+
+template <size_t N>
+TRANSLATE_FUNC napi_value TranslateFinalizedCall(napi_env env, napi_callback_info info)
+{
+    static_assert(N <= 6);
     static_assert(MaxParameters >= 6);
 
     CallData call(env);
@@ -1365,7 +1417,7 @@ static TRANSLATE_FUNC napi_value TranslateFastCall(napi_env env, napi_callback_i
     }
 
     InstanceData *instance = func->instance;
-    call.Init(instance, &instance->sync_memory);
+    call.Init(instance, &instance->sync_memory, nullptr);
 
 #if defined(K_DEBUG)
     K_DEFER_C(prev_call = instance->sync_call) { instance->sync_call = prev_call; };
@@ -1375,7 +1427,7 @@ static TRANSLATE_FUNC napi_value TranslateFastCall(napi_env env, napi_callback_i
     call.DebugCall(func);
 
     napi_value ret = call.Run(func, func->native);
-    call.FinalizeFast();
+    call.Finalize();
 
     return ret;
 }
@@ -1388,7 +1440,7 @@ static TRANSLATE_FUNC K_FORCE_INLINE napi_value TranslateNormalCall(CallData *ca
     }
 
     InstanceData *instance = func->instance;
-    call->Init(instance, &instance->sync_memory);
+    call->Init(instance, &instance->sync_memory, nullptr);
 
 #if defined(K_DEBUG)
     K_DEFER_C(prev_call = instance->sync_call) { instance->sync_call = prev_call; };
@@ -1405,10 +1457,10 @@ static TRANSLATE_FUNC K_FORCE_INLINE napi_value TranslateNormalCall(CallData *ca
 
 static TRANSLATE_FUNC napi_value TranslateNormalCall(napi_env env, napi_callback_info info)
 {
-    static_assert(MaxParameters >= 6);
+    static_assert(MaxParameters >= 8);
 
     CallData call(env);
-    size_t count = 6;
+    size_t count = 8;
     FunctionInfo *func;
 
     NAPI_OK(napi_get_cb_info(env, info, &count, call.args, nullptr, (void **)&func));
@@ -1441,7 +1493,7 @@ static TRANSLATE_FUNC napi_value TranslateNormalCallDebugAsync(napi_env env, nap
     }
 
     InstanceData *instance = func->instance;
-    call.Init(instance, &instance->sync_memory);
+    call.Init(instance, &instance->sync_memory, nullptr);
 
 #if defined(K_DEBUG)
     K_DEFER_C(prev_call = instance->sync_call) { instance->sync_call = prev_call; };
@@ -1467,7 +1519,7 @@ static TRANSLATE_FUNC napi_value TranslateNormalCallDebugAsync(napi_env env, nap
 static TRANSLATE_FUNC K_FORCE_INLINE napi_value TranslateVariadicCall(CallData *call, const FunctionInfo *func, void *native, Size count)
 {
     InstanceData *instance = func->instance;
-    call->Init(instance, &instance->sync_memory);
+    call->Init(instance, &instance->sync_memory, nullptr);
 
     FunctionInfo *variadic = nullptr;
     K_DEFER_N(err_guard) { delete variadic; };
@@ -1597,7 +1649,9 @@ class AsyncCall {
 
     const FunctionInfo *func = nullptr;
     InstanceMemory *mem = nullptr;
-    NoDestroy<CallData> call;
+
+    CallData call;
+    HeapChain allocator;
 
     bool prepared = false;
 
@@ -1610,7 +1664,7 @@ public:
     AsyncCall(Napi::Env env) : env(env), call(env) {}
     ~AsyncCall();
 
-    napi_value *Args() { return call->args; }
+    napi_value *Args() { return call.args; }
 
     bool Prepare(InstanceData *instance, InstanceMemory *mem, const FunctionInfo *func, napi_value callback);
     void Queue();
@@ -1641,12 +1695,8 @@ void AsyncCall::HandleComplete(napi_env, napi_status status, void *udata)
 
 AsyncCall::~AsyncCall()
 {
-#if defined(K_DEBUG)
-    call->~CallData();
-#endif
-
     if (func) {
-        ReleaseAsyncMemory(call->instance, mem);
+        ReleaseAsyncMemory(call.instance, mem);
         func->Unref();
     }
 
@@ -1670,11 +1720,11 @@ bool AsyncCall::Prepare(InstanceData *instance, InstanceMemory *mem, const Funct
     // Keep together (see destructor)
     this->func = func->Ref();
     this->mem = mem;
-    call->Init(instance, mem);
+    call.Init(instance, mem, &allocator);
 
-    call->DebugCall(func);
+    call.DebugCall(func);
 
-    prepared = call->PrepareAsync(func);
+    prepared = call.PrepareAsync(func);
 
     if (!prepared) [[unlikely]] {
         Napi::Error err = env.GetAndClearPendingException();
@@ -1693,7 +1743,7 @@ void AsyncCall::Queue()
 void AsyncCall::Execute()
 {
     K_ASSERT(prepared);
-    call->ExecuteAsync(func->native);
+    call.ExecuteAsync(func->native);
 
     last_errno = errno;
 
@@ -1707,8 +1757,8 @@ void AsyncCall::Complete()
 {
     K_ASSERT(prepared);
 
-    napi_value ret = call->EndAsync();
-    call->Finalize();
+    napi_value ret = call.EndAsync();
+    call.Finalize();
 
     napi_value recv = GetUndefined(env);
     napi_value args[] = { GetNull(env), ret ? ret : GetUndefined(env) };
@@ -1736,7 +1786,7 @@ void AsyncCall::Complete()
 
 void AsyncCall::Fail(napi_value err)
 {
-    call->Finalize();
+    call.Finalize();
 
     napi_value recv;
     napi_value func;
@@ -1812,7 +1862,7 @@ static bool DetectBun(Napi::Env env)
 void InitTranslateZeroCall(Napi::Env env)
 {
     if (DetectDeno(env) || DetectBun(env)) {
-        translate_zero_call = TranslateFastCall;
+        translate_zero_call = TranslateDirectCall<0>;
         return;
     }
 
@@ -1830,7 +1880,7 @@ void InitTranslateZeroCall(Napi::Env env)
         if (ptr[0] != self && ptr[1] != self) {
             translate_zero_call = TranslateZeroCall;
         } else {
-            translate_zero_call = TranslateFastCall;
+            translate_zero_call = TranslateDirectCall<0>;
         }
 
         return self;
@@ -1913,14 +1963,12 @@ static bool CanTypeAcceptFunctions(const TypeInfo *type)
     return false;
 }
 
-static bool CanUseFastCall(const FunctionInfo *func)
+static bool CanSkipFinalization(const FunctionInfo *func)
 {
-    if (func->parameters.len > 6)
-        return false;
-
-    // Fast calls basically skip CallData::Finalize(), which handles output arguments and
+    // Direct calls skip CallData::Finalize(), which handles output arguments and
     // temporary callback trampolines. If the function does not use any output argument
-    // and cannot accept JS functions (so no pointer/callback argument), we can skip finalization!
+    // and cannot accept JS functions (so no pointer/callback argument), we can skip
+    // finalization!
 
     for (const ParameterInfo &param: func->parameters) {
         if (param.directions & 2)
@@ -1985,12 +2033,19 @@ napi_value WrapFunction(InstanceData *instance, const FunctionInfo *func)
             NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateVariadicCall, (void *)func->Ref(), &value));
         } else if (IsDebugAsyncEnabled()) {
             NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateNormalCallDebugAsync, (void *)func->Ref(), &value));
-        } else if (!func->parameters.len) {
-            NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, translate_zero_call, (void *)func->Ref(), &value));
-        } else if (CanUseFastCall(func)) {
-            NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateFastCall, (void *)func->Ref(), &value));
         } else {
-            NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateNormalCall, (void *)func->Ref(), &value));
+            switch (func->parameters.len) {
+                case 0: { NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, translate_zero_call, (void *)func->Ref(), &value)); } break;
+
+                case 1: { NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, CanSkipFinalization(func) ? TranslateDirectCall<1> : TranslateFinalizedCall<1>, (void *)func->Ref(), &value)); } break;
+                case 2: { NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, CanSkipFinalization(func) ? TranslateDirectCall<2> : TranslateFinalizedCall<2>, (void *)func->Ref(), &value)); } break;
+                case 3: { NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, CanSkipFinalization(func) ? TranslateDirectCall<3> : TranslateFinalizedCall<3>, (void *)func->Ref(), &value)); } break;
+                case 4: { NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, CanSkipFinalization(func) ? TranslateDirectCall<4> : TranslateFinalizedCall<4>, (void *)func->Ref(), &value)); } break;
+                case 5: { NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, CanSkipFinalization(func) ? TranslateDirectCall<5> : TranslateFinalizedCall<5>, (void *)func->Ref(), &value)); } break;
+                case 6: { NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, CanSkipFinalization(func) ? TranslateDirectCall<6> : TranslateFinalizedCall<6>, (void *)func->Ref(), &value)); } break;
+
+                default: { NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateNormalCall, (void *)func->Ref(), &value)); } break;
+            }
         }
 
         wrapper = Napi::Function(env, value);
@@ -2080,16 +2135,19 @@ extern "C" void RelayCallback(Size idx, uint8_t *sp)
     K_DEFER { ReleaseAsyncMemory(instance, mem); };
 
     if (std::this_thread::get_id() == instance->main_thread_id) {
-        CallData call(env, instance, mem);
-        K_DEFER { call.Finalize(); };
+        HeapChain allocator;
+        CallData call(env, instance, mem, &allocator);
 
         napi_handle_scope scope;
         NAPI_OK(napi_open_handle_scope(env, &scope));
         K_DEFER { napi_close_handle_scope(env, scope); };
 
         call.Relay(idx, sp);
+        call.Finalize();
     } else {
-        CallData call(env, instance, mem);
+        HeapChain allocator;
+        CallData call(env, instance, mem, &allocator);
+
         call.RelayAsync(idx, sp);
     }
 }
@@ -2135,7 +2193,8 @@ bool Encode(InstanceData *instance, uint8_t *origin, napi_value value, const Typ
     Napi::Env env = instance->env;
 
     InstanceMemory mem = {};
-    CallData call(env, instance, &mem);
+    HeapChain allocator;
+    CallData call(env, instance, &mem, &allocator);
 
 #define PUSH_INTEGER(CType) \
         do { \
@@ -2268,7 +2327,7 @@ bool Encode(InstanceData *instance, uint8_t *origin, napi_value value, const Typ
 #undef PUSH_INTEGER
 
     // Keep memory around if any was allocated
-    if (call.allocator->IsUsed()) {
+    if (allocator.IsUsed()) {
         HeapChain *copy = instance->encode_map.FindValue(origin, nullptr);
 
         if (!copy) {
@@ -2276,8 +2335,8 @@ bool Encode(InstanceData *instance, uint8_t *origin, napi_value value, const Typ
             instance->encode_map.Set(origin, copy);
         }
 
-        std::swap(*call.allocator, *copy);
-        call.allocator->ReleaseAll();
+        std::swap(allocator, *copy);
+        allocator.ReleaseAll();
     }
 
     return true;

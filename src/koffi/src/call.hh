@@ -39,13 +39,11 @@ struct alignas(8) CallData {
 
     MemoryRange<uint8_t> stack;
     MemoryRange<uint8_t> heap;
+    HeapChain *allocator;
 #if defined(K_DEBUG)
     uint8_t *new_stack;
     uint8_t *prev_heap;
 #endif
-
-    // For big allocations
-    NoDestroy<HeapChain> allocator;
 
     napi_value args[MaxParameters];
 
@@ -58,30 +56,27 @@ struct alignas(8) CallData {
     LocalArray<OutArgument, MaxParameters> out_arguments;
 
 #if defined(K_DEBUG)
-    bool finalized = false;
-#endif
-
-#if defined(K_DEBUG)
     CallData(napi_env env)
-        : env(env), instance(nullptr), stack({}), heap({}),
+        : env(env), instance(nullptr), stack({}), heap({}), allocator(nullptr),
           new_stack(nullptr), prev_heap(nullptr) {} // Partial initialization, use Init()
-    CallData(napi_env env, InstanceData *instance, InstanceMemory *mem)
-        : env(env), instance(instance), stack(mem->stack), heap(mem->heap),
+    CallData(napi_env env, InstanceData *instance, InstanceMemory *mem, HeapChain *allocator)
+        : env(env), instance(instance), stack(mem->stack), heap(mem->heap), allocator(allocator),
           new_stack(mem->stack.end), prev_heap(mem->heap.ptr) {}
     ~CallData();
 #else
     CallData(napi_env env) : env(env) {} // Partial initialization, use Init()
-    CallData(napi_env env, InstanceData *instance, InstanceMemory *mem)
-        : env(env), instance(instance), stack(mem->stack), heap(mem->heap) {}
+    CallData(napi_env env, InstanceData *instance, InstanceMemory *mem, HeapChain *allocator)
+        : env(env), instance(instance), stack(mem->stack), heap(mem->heap), allocator(allocator) {}
 #endif
 
-    K_FORCE_INLINE void Init(InstanceData *instance, InstanceMemory *mem)
+    K_FORCE_INLINE void Init(InstanceData *instance, InstanceMemory *mem, HeapChain *allocator)
     {
         K_ASSERT(!this->instance);
 
         this->instance = instance;
         this->stack = mem->stack;
         this->heap = mem->heap;
+        this->allocator = allocator;
 
 #if defined(K_DEBUG)
         new_stack = mem->stack.end;
@@ -96,7 +91,6 @@ struct alignas(8) CallData {
     napi_value EndAsync();
 
     INLINE_UNITY void Finalize();
-    INLINE_UNITY void FinalizeFast();
 
     INLINE_UNITY void Relay(Size idx, uint8_t *base);
     void RelayAsync(Size idx, uint8_t *base);
@@ -127,6 +121,8 @@ struct alignas(8) CallData {
     T *AllocStack(Size size);
     template <typename T = uint8_t>
     T *AllocHeap(Size size);
+
+    HeapChain *GetAllocator();
 
     bool CheckDynamicLength(napi_value obj, Size element, const char *countedby, napi_value value);
 
@@ -173,7 +169,7 @@ inline T *CallData::AllocHeap(Size size)
 
         return ptr;
     } else {
-        ptr = (uint8_t *)allocator->Allocate(size);
+        ptr = (uint8_t *)GetAllocator()->Allocate(size);
         K_ASSERT(ptr == AlignUp(ptr, 16));
 
         FillMemory(ptr, size);

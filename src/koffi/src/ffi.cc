@@ -44,10 +44,10 @@ const napi_type_tag CastMarker = { 0x77f459614a0a412f, 0x80b3dda1341dc8df };
 SharedData shared;
 
 // Some Node-API functions are loaded dynamically to work around bugs or because they are recent
+napi_status (NAPI_CDECL *node_api_post_finalizer)(node_api_basic_env env, napi_finalize finalize_cb, void* finalize_data, void* finalize_hint);
 napi_status (NAPI_CDECL *node_api_delete_reference)(node_api_basic_env env, napi_ref ref);
 napi_status (NAPI_CDECL *node_api_get_buffer_info)(napi_env env, napi_value value, void **data, size_t *length);
 napi_status (NAPI_CDECL *node_api_create_property_key_utf8)(napi_env env, const char* str, size_t length, napi_value* result);
-napi_status (NAPI_CDECL *node_api_post_finalizer)(node_api_basic_env env, napi_finalize finalize_cb, void* finalize_data, void* finalize_hint);
 napi_status (NAPI_CDECL *node_api_create_object_with_properties)(napi_env env, napi_value prototype_or_null, const napi_value *property_names,
                                                                  const napi_value *property_values, size_t property_count, napi_value *result);
 
@@ -2544,6 +2544,7 @@ void InstanceMemory::Allocate(Size stack_size, Size heap_size)
     Size page_size = GetPageSize();
 
     stack_size = AlignLen(stack_size, page_size);
+    heap_size = AlignLen(heap_size, page_size);
 
 #if defined(_WIN32)
     {
@@ -2553,10 +2554,7 @@ void InstanceMemory::Allocate(Size stack_size, Size heap_size)
         K_CRITICAL(base, "Failed to allocate %1 of memory", FmtMemSize(alloc));
         K_CRITICAL(VirtualAlloc(base + page_size, stack_size, MEM_COMMIT, PAGE_READWRITE), "Failed to initialize stack memory");
 
-        stack0.ptr = base;
-        stack0.end = stack0.ptr + alloc;
-        stack.ptr = base + page_size;
-        stack.end = stack.ptr + stack_size;
+        mappings[0] = { base, alloc };
     }
 #else
     {
@@ -2575,47 +2573,54 @@ void InstanceMemory::Allocate(Size stack_size, Size heap_size)
         mprotect(base, page_size, PROT_NONE);
 #endif
 
-        stack0.ptr = base;
-        stack0.end = stack0.ptr + alloc;
-        stack.ptr = base + page_size;
-        stack.end = stack.ptr + stack_size;
+        mappings[0] = { base, alloc };
     }
 #endif
 
 #if defined(_WIN32)
-    heap.ptr = (uint8_t *)VirtualAlloc(nullptr, heap_size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-    heap.end = heap.ptr + heap_size;
+    {
+        uint8_t *heap = (uint8_t *)VirtualAlloc(nullptr, heap_size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+        K_CRITICAL(heap, "Failed to allocate %1 of memory", heap_size);
 
-    K_CRITICAL(heap.ptr, "Failed to allocate %1 of memory", heap_size);
+        mappings[1] = { heap, heap_size };
+    }
 #else
-    heap.ptr = (uint8_t *)mmap(nullptr, heap_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
-    heap.end = heap.ptr + heap_size;
+    {
+        uint8_t *heap = (uint8_t *)mmap(nullptr, heap_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+        K_CRITICAL(heap != MAP_FAILED, "Failed to allocate %1 of memory", heap_size);
 
-    K_CRITICAL(heap.ptr != MAP_FAILED, "Failed to allocate %1 of memory", heap_size);
+        mappings[1] = { heap, heap_size };
+    }
 #endif
+
+    stack.ptr = mappings[0].ptr + page_size;
+    stack.end = stack.ptr + stack_size;
+    heap.ptr = mappings[1].ptr;
+    heap.end = heap.ptr + heap_size;
+    stack0 = stack;
 }
 
 void InstanceMemory::Release()
 {
+    for (Size i = 0; i < K_LEN(mappings); i++) {
+        Span<uint8_t> &mapping = mappings[i];
+
 #if defined(_WIN32)
-    if (stack0.ptr) {
-        VirtualFree(stack0.ptr, 0, MEM_RELEASE);
-    }
-    if (heap.ptr) {
-        VirtualFree(heap.ptr, 0, MEM_RELEASE);
-    }
+        if (mapping.ptr) {
+            VirtualFree(mapping.ptr, 0, MEM_RELEASE);
+        }
 #else
-    if (stack0.ptr) {
-        munmap(stack0.ptr, stack0.end - stack0.ptr);
-    }
-    if (heap.ptr) {
-        munmap(heap.ptr, heap.end - heap.ptr);
-    }
+        if (mapping.ptr) {
+            munmap(mapping.ptr, mapping.len);
+        }
 #endif
 
-    stack0 = {};
+        mapping = {};
+    }
+
     stack = {};
     heap = {};
+    stack0 = {};
 }
 
 static void RegisterPrimitiveType(InstanceData *instance, Napi::Object map, std::initializer_list<const char *> names,
@@ -2769,6 +2774,8 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
             napi_get_node_version(env, &node_version);
             napi_get_version(env, &napi_version);
 
+            node_api_post_finalizer = SYMBOL(node_api_post_finalizer);
+
             if (CanCallNapiGetBufferInfoDirectly(*node_version, napi_version)) {
                 node_api_get_buffer_info = napi_get_buffer_info;
             } else {
@@ -2793,7 +2800,6 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
                 // napi_delete_reference cannot be safely used in older Node versions because it
                 // errors out (or even asserts) if it gets called in a finalizer. In this case,
                 // use experimental API to try to run it later.
-                node_api_post_finalizer = SYMBOL(node_api_post_finalizer);
 
                 if (node_api_post_finalizer) {
                     node_api_delete_reference = [](node_api_basic_env env, napi_ref ref) {

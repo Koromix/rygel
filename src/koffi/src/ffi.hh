@@ -249,19 +249,19 @@ struct MemoryRange {
 };
 
 struct InstanceMemory {
-    MemoryRange<uint8_t> stack0 = {};
     MemoryRange<uint8_t> stack = {};
     MemoryRange<uint8_t> heap = {};
+    MemoryRange<uint8_t> stack0 = {};
 
-    // Used by async lock-free pool
-    bool resident = false;
+    Span<uint8_t> mappings[2] = {};
+    bool resident = false; // Used by async lock-free pool
 
     ~InstanceMemory() { Release(); }
 
     void Allocate(Size stack_size, Size heap_size);
     void Release();
 
-    bool IsAllocated() const { return stack0.ptr; }
+    bool IsAllocated() const { return stack.ptr; }
 };
 
 struct InstanceData {
@@ -298,6 +298,9 @@ struct InstanceData {
     napi_threadsafe_function broker = nullptr;
 
     CallData *sync_call = nullptr;
+
+    HeapChain sync_allocator;
+    bool pending_release = false;
 
 #if defined(_WIN32)
     MemoryRange<void> real_stack;
@@ -373,10 +376,10 @@ extern const napi_type_tag CastMarker;
 extern SharedData shared;
 
 // Some Node-API functions are loaded dynamically to work around bugs or because they are recent
+extern napi_status (NAPI_CDECL *node_api_post_finalizer)(node_api_basic_env env, napi_finalize finalize_cb, void* finalize_data, void* finalize_hint);
 extern napi_status (NAPI_CDECL *node_api_delete_reference)(node_api_basic_env env, napi_ref ref);
 extern napi_status (NAPI_CDECL *node_api_get_buffer_info)(napi_env env, napi_value value, void **data, size_t *length);
 extern napi_status (NAPI_CDECL *node_api_create_property_key_utf8)(napi_env env, const char* str, size_t length, napi_value* result);
-extern napi_status (NAPI_CDECL *node_api_post_finalizer)(node_api_basic_env env, napi_finalize finalize_cb, void* finalize_data, void* finalize_hint);
 extern napi_status (NAPI_CDECL *node_api_create_object_with_properties)(napi_env env, napi_value prototype_or_null, const napi_value *property_names,
                                                                         const napi_value *property_values, size_t property_count, napi_value *result);
 
