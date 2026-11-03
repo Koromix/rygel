@@ -227,7 +227,12 @@ elseif(PGO_PROFILE)
     endif()
 
     message(STATUS "PGO: Building optimized binary with profile data")
-else()
+endif()
+
+# Enable Unity builds when it actually gives us some performance
+if(NOT PGO_GENERATE AND NOT PGO_PROFILE)
+    enable_unity_build(koffi)
+elseif("src/abi/arm64.cc" IN_LIST KOFFI_SRC)
     enable_unity_build(koffi)
 endif()
 
