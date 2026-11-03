@@ -6,7 +6,7 @@
     "@napi-ffi/ref-struct-di": "^1.1.1",
     "ffi-rs": "^1.3.2",
     "koffi": "^2.16.2",
-    "node-ctypes": "^2.3.0",
+    "node-ctypes": "^2.7.0",
     "raylib": "^0.14.0"
   },
   "cnoke": {
