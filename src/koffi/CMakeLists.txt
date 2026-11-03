@@ -208,7 +208,7 @@ if(PGO_GENERATE)
     target_compile_options(koffi PRIVATE "-fprofile-generate=${PGO_GENERATE}")
     target_link_options(koffi PRIVATE "-fprofile-generate=${PGO_GENERATE}")
 
-    if(APPLE)
+    if(APPLE AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
         target_compile_options(koffi PRIVATE -mllvm -vp-counters-per-site=20)
     endif()
 
