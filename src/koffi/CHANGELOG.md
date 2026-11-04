@@ -7,6 +7,15 @@
 
 ### Koffi 3.3
 
+#### Koffi 3.3.7
+
+*Released on 2026-11-05*
+
+- Reduce overhead of simple calls with up to 8 arguments
+- Defer allocator release for calls that require extra heap allocation (rare)
+- Clean up shutdown and reset logic
+- BUild macOS ARM64 binary with Homebrew Clang and PGO
+
 #### Koffi 3.3.6
 
 *Released on 2026-10-31*
