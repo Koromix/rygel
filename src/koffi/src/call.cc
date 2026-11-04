@@ -1400,7 +1400,7 @@ TRANSLATE_FUNC napi_value TranslateFinalizedCall(napi_env env, napi_callback_inf
     static_assert(MaxParameters >= 6);
 
     CallData call(env);
-    size_t count = 6;
+    size_t count = N;
     FunctionInfo *func;
 
     NAPI_OK(napi_get_cb_info(env, info, &count, call.args, nullptr, (void **)&func));
