@@ -1,5 +1,10 @@
 name: Koffi PGO for macOS ARM64
 
+env:
+  MACOSX_DEPLOYMENT_TARGET: '11.0'
+
+run-name: PGO ARM64 ${{ inputs.request }}
+
 on:
   workflow_dispatch:
     inputs:
@@ -10,8 +15,39 @@ on:
         type: string
         required: true
 
+permissions:
+  contents: read
+
 jobs:
-  placeholder:
-    runs-on: ubuntu-latest
+  build:
+    runs-on: macos-15
+    timeout-minutes: 120
+
     steps:
-      - run: echo "Placeholder workflow"
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.commit }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Build Koffi with PGO
+        run: |
+          src/koffi/tools/pgo_clang.sh
+
+      - name: Inspect binary
+        run: |
+          file bin/Koffi/darwin_arm64/koffi.node
+          lipo bin/Koffi/darwin_arm64/koffi.node -verify_arch arm64
+          otool -L bin/Koffi/darwin_arm64/koffi.node
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: koffi_pgo_macos_arm64
+          path: bin/Koffi/darwin_arm64/koffi.node
+          if-no-files-found: error
+          retention-days: 7
