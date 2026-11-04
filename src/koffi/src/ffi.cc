@@ -942,7 +942,7 @@ static napi_value CallFree(napi_env env, napi_callback_info info)
 
     free(ptr);
 
-    return GetUndefined(env);
+    return nullptr;
 }
 
 static napi_value GetOrSetErrno(napi_env env, napi_callback_info info)
@@ -1951,7 +1951,7 @@ static napi_value UnregisterCallback(napi_env env, napi_callback_info info)
         shared.available.Append((int16_t)idx);
     }
 
-    return GetUndefined(env);
+    return nullptr;
 }
 
 static napi_value CastValue(napi_env env, napi_callback_info info)
@@ -2506,7 +2506,7 @@ static napi_value ResetKoffi(napi_env env, napi_callback_info info)
         slot.obj.Release();
     }
 
-    return GetUndefined(env);
+    return nullptr;
 }
 
 void LibraryHolder::Unload()
