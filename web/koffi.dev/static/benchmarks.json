@@ -254,40 +254,40 @@
         "results": {
             "atoi": {
                 "Node-API": {
-                    "time": 8014,
-                    "iterations": 268000000,
+                    "time": 8020,
+                    "iterations": 271000000,
                     "ratio": 1,
                     "overhead": 0
                 },
                 "Koffi v3": {
-                    "time": 8026,
-                    "iterations": 255000000,
-                    "ratio": 0.950069922007208,
-                    "overhead": 0.05255410874107569
+                    "time": 8004,
+                    "iterations": 259000000,
+                    "ratio": 0.957630041068027,
+                    "overhead": 0.04424460085307946
                 },
                 "node-ctypes": {
-                    "time": 8028,
-                    "iterations": 210000000,
-                    "ratio": 0.782215603596368,
-                    "overhead": 0.2784199080181111
+                    "time": 8022,
+                    "iterations": 165000000,
+                    "ratio": 0.6087042919793446,
+                    "overhead": 0.6428338245295853
                 },
                 "Koffi v2": {
-                    "time": 8053,
-                    "iterations": 147000000,
-                    "ratio": 0.5458510872929528,
-                    "overhead": 0.8320014804024929
+                    "time": 8040,
+                    "iterations": 148000000,
+                    "ratio": 0.5447669402067155,
+                    "overhead": 0.8356473680663208
                 },
                 "node:ffi": {
-                    "time": 8015,
-                    "iterations": 98000000,
-                    "ratio": 0.36562601837971714,
-                    "overhead": 1.7350351171164746
+                    "time": 8067,
+                    "iterations": 87000000,
+                    "ratio": 0.31916280486717097,
+                    "overhead": 2.1331971794651308
                 },
                 "ffi-rs": {
-                    "time": 8820,
+                    "time": 8886,
                     "iterations": 6000000,
-                    "ratio": 0.020342166717433243,
-                    "overhead": 48.158971799351136
+                    "ratio": 0.01998250907559717,
+                    "overhead": 49.043765586034915
                 }
             },
             "memset": {
