@@ -1,0 +1,17 @@
+name: Koffi PGO for macOS ARM64
+
+on:
+  workflow_dispatch:
+    inputs:
+      request:
+        type: string
+        required: true
+      commit:
+        type: string
+        required: true
+
+jobs:
+  placeholder:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Placeholder workflow"
