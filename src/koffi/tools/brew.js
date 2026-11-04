@@ -227,12 +227,14 @@ async function build() {
                             cwd: build.info.directory + '/src/koffi'
                         };
                     } else {
-                        let command = root_dir + `/${build.build.release.command}`;
-                        let dest_dir = root_dir + `/bin/Koffi/release/cross/${build.key}/${build.target}`;
+                        let build_dir = root_dir + `/bin/Koffi/release/cross/${build.key}`;
+
+                        unlinkRecursive(build_dir);
+                        fs.mkdirSync(build_dir, { mode: 0o755, recursive: true });
 
                         return {
                             local: true,
-                            cmd: [command, dest_dir],
+                            cmd: [root_dir + `/${build.build.release.command}`, build_dir],
                             cwd: snapshot_dir + '/src/koffi'
                         };
                     }
