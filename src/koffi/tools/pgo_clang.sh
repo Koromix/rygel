@@ -33,13 +33,13 @@ node benchmark/memset.js Koffi >/dev/null
 node benchmark/qsort.js Koffi >/dev/null
 node benchmark/raylib.js Koffi >/dev/null
 for x in {1..100}; do
-    node test/sync.js --no_slow >/dev/null
+    node --no-deprecation test/sync.js --no_slow >/dev/null
 done
 for x in {1..100}; do
-    node test/async.js --no_poll >/dev/null
+    node --no-deprecation test/async.js --no_poll >/dev/null
 done
 for x in {1..100}; do
-    node test/callbacks.js --no_poll >/dev/null
+    node --no-deprecation test/callbacks.js --no_poll >/dev/null
 done
 
 $LLVM_PROFDATA merge -output="$PGO_DIR/koffi.profdata" "$PGO_DIR/"*.profraw
