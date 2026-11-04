@@ -5,10 +5,13 @@
         "info": {
             "arch": "armhf",
             "machine": "debian_arm32",
-            "directory": "/home/debian/luigi",
+            "directory": "/home/debian/luigi"
+        },
+
+        "build": {
             "target": "linux_armhf",
-            "build": "node ../../cnoke.cjs --ccache",
-            "package": "linux-arm"
+            "package": "linux-arm",
+            "default": "node ../../cnoke.cjs --ccache"
         },
 
         "test": {
@@ -32,10 +35,13 @@
         "info": {
             "arch": "arm64",
             "machine": "debian_arm64",
-            "directory": "/home/debian/luigi",
+            "directory": "/home/debian/luigi"
+        },
+
+        "build": {
             "target": "linux_arm64",
-            "build": "CC=clang-21 CXX=clang++-21 node ../../cnoke.cjs --ccache",
-            "package": "linux-arm64"
+            "package": "linux-arm64",
+            "default": "CC=clang-21 CXX=clang++-21 node ../../cnoke.cjs --ccache"
         },
 
         "test": {
@@ -59,10 +65,13 @@
         "info": {
             "arch": "ia32",
             "machine": "debian_i386",
-            "directory": "/home/debian/luigi",
+            "directory": "/home/debian/luigi"
+        },
+
+        "build": {
             "target": "linux_ia32",
-            "build": "node ../../cnoke.cjs --ccache",
-            "package": "linux-ia32"
+            "package": "linux-ia32",
+            "default": "node ../../cnoke.cjs --ccache"
         },
 
         "test": {
@@ -86,11 +95,17 @@
         "info": {
             "arch": "x64",
             "machine": "debian_x64",
-            "directory": "/home/debian/luigi",
+            "directory": "/home/debian/luigi"
+        },
+
+        "build": {
             "target": "linux_x64",
-            "build": "CC=clang-21 CXX=clang++-21 node ../../cnoke.cjs --ccache",
-            "release": "CC=clang-21 CXX=clang++-21 LLVM_PROFDATA=llvm-profdata-21 sh ./tools/pgo_clang.sh",
-            "package": "linux-x64"
+            "package": "linux-x64",
+            "default": "CC=clang-21 CXX=clang++-21 node ../../cnoke.cjs --ccache",
+            "release": {
+                "command": "CC=clang-21 CXX=clang++-21 LLVM_PROFDATA=llvm-profdata-21 sh ./tools/pgo_clang.sh",
+                "remote": true
+            }
         },
 
         "test": {
@@ -114,10 +129,13 @@
         "info": {
             "arch": "riscv64d",
             "machine": "debian_riscv64",
+            "directory": "/home/debian/luigi"
+        },
+
+        "build": {
             "target": "linux_riscv64d",
-            "directory": "/home/debian/luigi",
-            "build": "node ../../cnoke.cjs --ccache",
-            "package": "linux-riscv64"
+            "package": "linux-riscv64",
+            "default": "node ../../cnoke.cjs --ccache"
         },
 
         "test": {
@@ -141,10 +159,13 @@
         "info": {
             "arch": "ia32",
             "machine": "freebsd_i386",
-            "directory": "/home/freebsd/luigi",
+            "directory": "/home/freebsd/luigi"
+        },
+
+        "build": {
             "target": "freebsd_i386",
-            "build": "node ../../cnoke.cjs --ccache",
-            "package": "freebsd-ia32"
+            "package": "freebsd-ia32",
+            "default": "node ../../cnoke.cjs --ccache"
         },
 
         "test": {
@@ -168,10 +189,13 @@
         "info": {
             "arch": "x64",
             "machine": "freebsd_x64",
-            "directory": "/home/freebsd/luigi",
+            "directory": "/home/freebsd/luigi"
+        },
+
+        "build": {
             "target": "freebsd_x64",
-            "build": "node ../../cnoke.cjs --ccache",
-            "package": "freebsd-x64"
+            "package": "freebsd-x64",
+            "default": "node ../../cnoke.cjs --ccache"
         },
 
         "test": {
@@ -195,10 +219,13 @@
         "info": {
             "arch": "arm64",
             "machine": "freebsd_arm64",
-            "directory": "/home/freebsd/luigi",
+            "directory": "/home/freebsd/luigi"
+        },
+
+        "build": {
             "target": "freebsd_arm64",
-            "build": "node ../../cnoke.cjs --ccache",
-            "package": "freebsd-arm64"
+            "package": "freebsd-arm64",
+            "default": "node ../../cnoke.cjs --ccache"
         },
 
         "test": {
@@ -222,9 +249,12 @@
         "info": {
             "arch": "ia32",
             "machine": "openbsd_i386",
-            "directory": "/home/openbsd/luigi",
-            "build": "node ../../cnoke.cjs --ccache",
-            "package": "openbsd-ia32"
+            "directory": "/home/openbsd/luigi"
+        },
+
+        "build": {
+            "package": "openbsd-ia32",
+            "default": "node ../../cnoke.cjs --ccache"
         },
 
         "test": {
@@ -248,9 +278,12 @@
         "info": {
             "arch": "x64",
             "machine": "openbsd_x64",
-            "directory": "/home/openbsd/luigi",
-            "build": "node ../../cnoke.cjs --ccache",
-            "package": "openbsd-x64"
+            "directory": "/home/openbsd/luigi"
+        },
+
+        "build": {
+            "package": "openbsd-x64",
+            "default": "node ../../cnoke.cjs --ccache"
         },
 
         "test": {
@@ -274,9 +307,12 @@
         "info": {
             "arch": "ia32",
             "machine": "windows_x64",
-            "directory": "C:/Users/windows/Desktop/luigi_ia32",
-            "build": "C:\\Node32\\node32.cmd node ../../cnoke.cjs",
-            "package": "win32-ia32"
+            "directory": "C:/Users/windows/Desktop/luigi_ia32"
+        },
+
+        "build": {
+            "package": "win32-ia32",
+            "default": "C:\\Node32\\node32.cmd node ../../cnoke.cjs"
         },
 
         "test": {
@@ -303,9 +339,12 @@
         "info": {
             "arch": "x64",
             "machine": "windows_x64",
-            "directory": "C:/Users/windows/Desktop/luigi_x64",
-            "build": "C:\\Node64\\node64.cmd node ../../cnoke.cjs --clang",
-            "package": "win32-x64"
+            "directory": "C:/Users/windows/Desktop/luigi_x64"
+        },
+
+        "build": {
+            "package": "win32-x64",
+            "default": "C:\\Node64\\node64.cmd node ../../cnoke.cjs --clang"
         },
 
         "test": {
@@ -332,9 +371,12 @@
         "info": {
             "arch": "arm64",
             "machine": "windows_x64",
-            "directory": "C:/Users/windows/Desktop/luigi_arm64",
-            "build": "C:\\Node64\\node64.cmd node ../../cnoke.cjs -t win32_arm64",
-            "package": "win32-arm64"
+            "directory": "C:/Users/windows/Desktop/luigi_arm64"
+        },
+
+        "build": {
+            "package": "win32-arm64",
+            "default": "C:\\Node64\\node64.cmd node ../../cnoke.cjs -t win32_arm64"
         }
     },
 
@@ -344,9 +386,12 @@
         "info": {
             "arch": "x64",
             "machine": "macos_x64",
-            "directory": "/Users/macos/luigi",
-            "build": "PATH=/usr/local/bin:/usr/bin:/bin SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX11.3.sdk node ../../cnoke.cjs --ccache",
-            "package": "darwin-x64"
+            "directory": "/Users/macos/luigi"
+        },
+
+        "build": {
+            "package": "darwin-x64",
+            "default": "PATH=/usr/local/bin:/usr/bin:/bin SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX11.3.sdk node ../../cnoke.cjs --ccache"
         },
 
         "test": {
@@ -369,9 +414,16 @@
         "info": {
             "arch": "arm64",
             "machine": "macos_x64",
-            "directory": "/Users/macos/luigi_arm64",
-            "build": "PATH=/usr/local/bin:/usr/bin:/bin SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX11.3.sdk node ../../cnoke.cjs --ccache -t darwin_arm64",
-            "package": "darwin-arm64"
+            "directory": "/Users/macos/luigi_arm64"
+        },
+
+        "build": {
+            "package": "darwin-arm64",
+            "default": "PATH=/usr/local/bin:/usr/bin:/bin SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX11.3.sdk node ../../cnoke.cjs --ccache -t darwin_arm64",
+            "release": {
+                "command": "src/koffi/tools/ci/gh_pgo_macos_arm64.sh",
+                "remote": false
+            }
         }
     },
 
@@ -381,10 +433,13 @@
         "info": {
             "arch": "x64",
             "machine": "alpine_x64",
-            "directory": "/home/alpine/luigi",
+            "directory": "/home/alpine/luigi"
+        },
+
+        "build": {
             "target": "musl_x64",
-            "build": "node ../../cnoke.cjs --ccache",
-            "package": "linux-x64"
+            "package": "linux-x64",
+            "default": "node ../../cnoke.cjs --ccache"
         },
 
         "test": {
@@ -407,10 +462,13 @@
         "info": {
             "arch": "loong64",
             "machine": "debian_loong64",
-            "directory": "/home/debian/luigi",
+            "directory": "/home/debian/luigi"
+        },
+
+        "build": {
             "target": "linux_loong64",
-            "build": "node ../../cnoke.cjs --ccache",
-            "package": "linux-loong64"
+            "package": "linux-loong64",
+            "default": "node ../../cnoke.cjs --ccache"
         },
 
         "test": {
@@ -434,10 +492,13 @@
         "info": {
             "arch": "arm64",
             "machine": "alpine_arm64",
-            "directory": "/home/alpine/luigi",
+            "directory": "/home/alpine/luigi"
+        },
+
+        "build": {
             "target": "musl_arm64",
-            "build": "node ../../cnoke.cjs --ccache",
-            "package": "linux-arm64"
+            "package": "linux-arm64",
+            "default": "node ../../cnoke.cjs --ccache"
         },
 
         "test": {
@@ -458,7 +519,10 @@
         "title": "Android ARM64",
 
         "info": {
-            "arch": "arm64",
+            "arch": "arm64"
+        },
+
+        "build": {
             "target": "android_arm64",
             "package": "android-arm64"
         }
@@ -468,7 +532,10 @@
         "title": "Android x64",
 
         "info": {
-            "arch": "x64",
+            "arch": "x64"
+        },
+
+        "build": {
             "target": "android_x64",
             "package": "android-x64"
         }
@@ -480,10 +547,13 @@
         "info": {
             "arch": "ppc64le",
             "machine": "debian_ppc64el",
+            "directory": "/home/debian/luigi"
+        },
+
+        "build": {
             "target": "linux_ppc64le",
-            "directory": "/home/debian/luigi",
-            "build": "node ../../cnoke.cjs --ccache",
-            "package": "linux-ppc64"
+            "package": "linux-ppc64",
+            "default": "node ../../cnoke.cjs --ccache"
         },
 
         "test": {
@@ -507,9 +577,12 @@
         "info": {
             "arch": "arm64",
             "machine": "openbsd_arm64",
-            "directory": "/home/openbsd/luigi",
-            "build": "node ../../cnoke.cjs --ccache",
-            "package": "openbsd-arm64"
+            "directory": "/home/openbsd/luigi"
+        },
+
+        "build": {
+            "package": "openbsd-arm64",
+            "default": "node ../../cnoke.cjs --ccache"
         },
 
         "test": {

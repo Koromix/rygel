@@ -3,7 +3,7 @@ name: Koffi PGO for macOS ARM64
 env:
   MACOSX_DEPLOYMENT_TARGET: '11.0'
 
-run-name: PGO ARM64 ${{ inputs.request }}
+run-name: ${{ inputs.request }}
 
 on:
   workflow_dispatch:
@@ -53,7 +53,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: koffi_pgo_macos_arm64
+          name: koffi_pgo_darwin_arm64
           path: bin/Koffi/darwin_arm64/koffi.node
           if-no-files-found: error
           retention-days: 7

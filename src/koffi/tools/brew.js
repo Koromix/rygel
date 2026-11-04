@@ -175,12 +175,12 @@ async function build() {
         let needed_machines = new Set;
 
         for (let build of builds) {
-            if (build.info.package == null) {
+            if (build.build.package == null) {
                 ignore_builds.add(build);
                 continue;
             }
 
-            let binary_filename = build_dir + `/qemu/${version}/${build.key}/koffi.node`;
+            let binary_filename = build_dir + `/release/${version}/${build.key}/koffi.node`;
 
             if (fs.existsSync(binary_filename)) {
                 runner.logSuccess(null, `${build.title} > Status`);
@@ -188,7 +188,9 @@ async function build() {
             } else {
                 runner.logError(null, `${build.title} > Status`, 'missing');
 
-                if (build.info.release != null || build.info.target == null) {
+                let remote = build.build.release?.remote ?? (build.build.target == null);
+
+                if (remote) {
                     let machine = runner.machine(build.info.machine);
                     needed_machines.add(machine);
                 }
@@ -217,40 +219,53 @@ async function build() {
 
             console.log('>> Run build commands...');
             await compile(build => {
-                if (build.info.release != null) {
-                    return {
-                        local: false,
-                        cmd: build.info.release,
-                        cwd: build.info.directory + '/src/koffi'
-                    };
-                } else if (build.info.target == null) {
-                    return {
-                        local: false,
-                        cmd: build.info.build + ' --release',
-                        cwd: build.info.directory + '/src/koffi'
-                    };
+                if (build.build.release != null) {
+                    if (build.build.release.remote) {
+                        return {
+                            local: false,
+                            cmd: build.build.release.command,
+                            cwd: build.info.directory + '/src/koffi'
+                        };
+                    } else {
+                        let command = root_dir + `/${build.build.release.command}`;
+                        let dest_dir = root_dir + `/bin/Koffi/release/cross/${build.key}/${build.target}`;
+
+                        return {
+                            local: true,
+                            cmd: [command, dest_dir],
+                            cwd: snapshot_dir + '/src/koffi'
+                        };
+                    }
                 } else {
-                    let build_dir = root_dir + `/bin/Koffi/cross/release/${build.key}`;
+                    if (build.build.target == null) {
+                        return {
+                            local: false,
+                            cmd: build.build.default + ' --release',
+                            cwd: build.info.directory + '/src/koffi'
+                        };
+                    } else {
+                        let build_dir = root_dir + `/bin/Koffi/release/cross/${build.key}`;
 
-                    unlinkRecursive(build_dir);
-                    fs.mkdirSync(build_dir, { mode: 0o755, recursive: true });
+                        unlinkRecursive(build_dir);
+                        fs.mkdirSync(build_dir, { mode: 0o755, recursive: true });
 
-                    return {
-                        local: true,
-                        cmd: [process.execPath, '../../cnoke.cjs', '--clang', '-O', build_dir, '-t', build.info.target, '--release'],
-                        cwd: snapshot_dir + '/src/koffi'
-                    };
+                        return {
+                            local: true,
+                            cmd: [process.execPath, '../../cnoke.cjs', '--clang', '-O', build_dir, '-t', build.build.target, '--release'],
+                            cwd: snapshot_dir + '/src/koffi'
+                        };
+                    }
                 }
             });
         }
 
         console.log('>> Fetch build artifacts');
         await Promise.all(builds.map(async build => {
-            let dest_dir = build_dir + `/qemu/${version}/${build.key}`;
+            let dest_dir = build_dir + `/release/${version}/${build.key}`;
 
-            if (build.info.package != null) {
+            if (build.build.package != null) {
                 let artifact =  {
-                    package: build.info.package,
+                    package: build.build.package,
                     build: dest_dir
                 };
                 artifacts.push(artifact);
@@ -259,7 +274,9 @@ async function build() {
             if (ignore_builds.has(build))
                 return;
 
-            if (build.info.release != null || build.info.target == null) {
+            let remote = build.build.release?.remote ?? (build.build.target == null);
+
+            if (remote) {
                 let machine = runner.machine(build.info.machine);
 
                 let src_name = machine.platform + '_' + build.info.arch;
@@ -288,7 +305,7 @@ async function build() {
                     success = false;
                 }
             } else {
-                let src_dir = root_dir + `/bin/Koffi/cross/release/${build.key}`;
+                let src_dir = root_dir + `/bin/Koffi/release/cross/${build.key}`;
 
                 unlinkRecursive(dest_dir);
                 fs.mkdirSync(dest_dir, { mode: 0o755, recursive: true });
@@ -943,21 +960,21 @@ async function test(debug = false) {
     await compile(build => {
         let mode = debug ? '--debug' : '--release';
 
-        if (build.info.target == null) {
+        if (build.build.target == null) {
             return {
                 local: false,
-                cmd: `${build.info.build} ${mode}`,
+                cmd: `${build.build.default} ${mode}`,
                 cwd: build.info.directory + '/src/koffi'
             };
         } else {
-            let build_dir = root_dir + `/bin/Koffi/cross/release/${build.key}`;
+            let build_dir = root_dir + `/bin/Koffi/release/cross/${build.key}`;
 
             unlinkRecursive(build_dir);
             fs.mkdirSync(build_dir, { mode: 0o755, recursive: true });
 
             return {
                 local: true,
-                cmd: [process.execPath, '../../cnoke.cjs', '--clang', '-O', build_dir, '-t', build.info.target, mode],
+                cmd: [process.execPath, '../../cnoke.cjs', '--clang', '-O', build_dir, '-t', build.build.target, mode],
                 cwd: snapshot_dir + '/src/koffi'
             };
         }
@@ -965,7 +982,7 @@ async function test(debug = false) {
 
     console.log('>> Upload local builds...');
     await Promise.all(builds.map(async build => {
-        if (build.info.target == null)
+        if (build.build.target == null)
             return;
 
         let machine = runner.machine(build.info.machine);
@@ -979,7 +996,7 @@ async function test(debug = false) {
 
         try {
             let src_name = machine.platform + '_' + build.info.arch;
-            let src_dir = root_dir + `/bin/Koffi/cross/release/${build.key}`;
+            let src_dir = root_dir + `/bin/Koffi/release/cross/${build.key}`;
             let dest_dir = build.info.directory + `/bin/Koffi/${src_name}`;
 
             await ssh.putDirectory(src_dir, dest_dir, {
