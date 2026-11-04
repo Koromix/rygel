@@ -34,8 +34,13 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Install Homebrew Clang
+        run: |
+          brew install llvm
+
       - name: Build Koffi with PGO
         run: |
+          export PATH=/opt/homebrew/opt/llvm/bin:$PATH
           src/koffi/tools/pgo_clang.sh
 
       - name: Inspect binary
@@ -43,6 +48,7 @@ jobs:
           file bin/Koffi/darwin_arm64/koffi.node
           lipo bin/Koffi/darwin_arm64/koffi.node -verify_arch arm64
           otool -L bin/Koffi/darwin_arm64/koffi.node
+          xcrun vtool -show-build bin/Koffi/darwin_arm64/koffi.node
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
