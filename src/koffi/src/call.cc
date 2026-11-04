@@ -1369,8 +1369,8 @@ static TRANSLATE_FUNC napi_value TranslateZeroCall(napi_env env, napi_callback_i
 template <size_t N>
 TRANSLATE_FUNC napi_value TranslateDirectCall(napi_env env, napi_callback_info info)
 {
-    static_assert(N <= 6);
-    static_assert(MaxParameters >= 6);
+    static_assert(N <= 8);
+    static_assert(MaxParameters >= 8);
 
     CallData call(env);
     size_t count = N;
@@ -1396,8 +1396,8 @@ TRANSLATE_FUNC napi_value TranslateDirectCall(napi_env env, napi_callback_info i
 template <size_t N>
 TRANSLATE_FUNC napi_value TranslateFinalizedCall(napi_env env, napi_callback_info info)
 {
-    static_assert(N <= 6);
-    static_assert(MaxParameters >= 6);
+    static_assert(N <= 8);
+    static_assert(MaxParameters >= 8);
 
     CallData call(env);
     size_t count = N;
@@ -1445,15 +1445,15 @@ static TRANSLATE_FUNC K_FORCE_INLINE napi_value TranslateNormalCall(CallData *ca
 
 static TRANSLATE_FUNC napi_value TranslateNormalCall(napi_env env, napi_callback_info info)
 {
-    static_assert(MaxParameters >= 8);
+    static_assert(MaxParameters >= 12);
 
     CallData call(env);
-    size_t count = 8;
+    size_t count = 12;
     FunctionInfo *func;
 
     NAPI_OK(napi_get_cb_info(env, info, &count, call.args, nullptr, (void **)&func));
 
-    if (count > 8) {
+    if (count > 12) {
         count = std::min(count, (size_t)MaxParameters);
         NAPI_OK(napi_get_cb_info(env, info, &count, call.args, nullptr, nullptr));
     }
@@ -1463,15 +1463,15 @@ static TRANSLATE_FUNC napi_value TranslateNormalCall(napi_env env, napi_callback
 
 static TRANSLATE_FUNC napi_value TranslateNormalCallDebugAsync(napi_env env, napi_callback_info info)
 {
-    static_assert(MaxParameters >= 8);
+    static_assert(MaxParameters >= 12);
 
     CallData call(env);
-    size_t count = 8;
+    size_t count = 12;
     FunctionInfo *func;
 
     NAPI_OK(napi_get_cb_info(env, info, &count, call.args, nullptr, (void **)&func));
 
-    if (count > 8) {
+    if (count > 12) {
         count = std::min(count, (size_t)MaxParameters);
         NAPI_OK(napi_get_cb_info(env, info, &count, call.args, nullptr, nullptr));
     }
@@ -2025,6 +2025,8 @@ napi_value WrapFunction(InstanceData *instance, const FunctionInfo *func)
                 case 4: { NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, CanSkipFinalization(func) ? TranslateDirectCall<4> : TranslateFinalizedCall<4>, (void *)func->Ref(), &value)); } break;
                 case 5: { NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, CanSkipFinalization(func) ? TranslateDirectCall<5> : TranslateFinalizedCall<5>, (void *)func->Ref(), &value)); } break;
                 case 6: { NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, CanSkipFinalization(func) ? TranslateDirectCall<6> : TranslateFinalizedCall<6>, (void *)func->Ref(), &value)); } break;
+                case 7: { NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, CanSkipFinalization(func) ? TranslateDirectCall<7> : TranslateFinalizedCall<7>, (void *)func->Ref(), &value)); } break;
+                case 8: { NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, CanSkipFinalization(func) ? TranslateDirectCall<8> : TranslateFinalizedCall<8>, (void *)func->Ref(), &value)); } break;
 
                 default: { NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateNormalCall, (void *)func->Ref(), &value)); } break;
             }
