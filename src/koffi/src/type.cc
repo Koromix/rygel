@@ -10,6 +10,26 @@
 
 namespace K {
 
+static void ReleaseTypeReferences(Napi::BasicEnv env, TypeInfo *type)
+{
+    for (RecordMember &member: type->members) {
+        node_api_delete_reference(env, member.key);
+        member.key = nullptr;
+    }
+
+    node_api_delete_reference(env, type->dispose_ref);
+    node_api_delete_reference(env, type->construct);
+    node_api_delete_reference(env, type->defn);
+}
+
+TypeInfo::~TypeInfo()
+{
+    if (!instance)
+        return;
+
+    ReleaseTypeReferences(instance->env, this);
+}
+
 Napi::Function TypeObject::InitClass(InstanceData *instance)
 {
     Napi::Env env = instance->env;
@@ -46,8 +66,13 @@ void TypeObject::Finalize(Napi::BasicEnv env)
     SuppressDestruct();
 
     if (temporary) {
+        TypeInfo *mut = (TypeInfo *)type;
+
         // Avoid double free (see TypeObject constructor)
-        type->defn = nullptr;
+        mut->defn = nullptr;
+        mut->instance = nullptr;
+
+        ReleaseTypeReferences(env, mut);
         delete type;
     }
 }

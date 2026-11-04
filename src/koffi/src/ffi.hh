@@ -324,8 +324,6 @@ struct InstanceData {
     struct {
         int64_t disposed = 0;
     } stats;
-
-    ~InstanceData();
 };
 static_assert(MaxResidentAsyncPools >= DefaultResidentAsyncPools);
 static_assert(DefaultMaxAsyncCalls >= DefaultResidentAsyncPools);
@@ -385,5 +383,7 @@ extern napi_status (NAPI_CDECL *node_api_create_object_with_properties)(napi_env
 
 InstanceMemory *AllocateAsyncMemory(InstanceData *instance);
 void ReleaseAsyncMemory(InstanceData *instance, InstanceMemory *mem);
+
+void ReleaseInstance(InstanceData *instance, bool reusable);
 
 }

@@ -1591,23 +1591,6 @@ void ReleaseAsyncMemory(InstanceData *instance, InstanceMemory *mem)
     }
 }
 
-TypeInfo::~TypeInfo()
-{
-    if (!instance)
-        return;
-
-    Napi::Env env = instance->env;
-
-    for (RecordMember &member: members) {
-        node_api_delete_reference(env, member.key);
-        member.key = nullptr;
-    }
-
-    node_api_delete_reference(env, dispose_ref);
-    node_api_delete_reference(env, construct);
-    node_api_delete_reference(env, defn);
-}
-
 Napi::Function LibraryHandle::InitClass(InstanceData *instance)
 {
     Napi::Env env = instance->env;
@@ -2475,36 +2458,7 @@ static napi_value ResetKoffi(napi_env env, napi_callback_info info)
     InstanceData *instance;
     NAPI_OK(napi_get_cb_info(env, info, nullptr, nullptr, nullptr, (void **)&instance));
 
-    if (instance->broker) {
-        napi_release_threadsafe_function(instance->broker, napi_tsfn_abort);
-        instance->broker = nullptr;
-    }
-
-    instance->types.RemoveFrom(instance->base_types_count);
-
-    // Reset type map
-    {
-        HashSet<const void *> base_types;
-        HashMap<const char *, const TypeInfo *> new_map;
-
-        for (const TypeInfo &type: instance->types) {
-            base_types.Set(&type);
-        }
-
-        for (const auto &bucket: instance->types_map.table) {
-            if (base_types.Find(bucket.value)) {
-                new_map.Set(bucket.key, bucket.value);
-            }
-        }
-
-        std::swap(instance->types_map, new_map);
-    }
-
-    instance->callbacks.Clear();
-
-    for (auto &slot: instance->async_memories.slots) {
-        slot.obj.Release();
-    }
+    ReleaseInstance(instance, true);
 
     return nullptr;
 }
@@ -2803,6 +2757,9 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
 
                 if (node_api_post_finalizer) {
                     node_api_delete_reference = [](node_api_basic_env env, napi_ref ref) {
+                        if (!ref)
+                            return napi_ok;
+
                         node_api_post_finalizer((napi_env)env, [](napi_env env, void *data, void *) {
                             napi_ref ref = (napi_ref)data;
                             napi_delete_reference(env, ref);
@@ -3057,20 +3014,28 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
     napi_add_env_cleanup_hook(env, [](void *udata) {
         InstanceData *instance = (InstanceData *)udata;
 
-        if (instance->broker) {
-            // This deadlocks if we try to do this when the module is destroyed, when
-            // the InstanceData destructor runs, so run in the env cleanup hook instead,
-            // where it seems to go okay.
-            napi_release_threadsafe_function(instance->broker, napi_tsfn_abort);
-        }
+        ReleaseInstance(instance, false);
+        delete instance;
     }, instance);
 
     return exports;
 }
 
-InstanceData::~InstanceData()
+void ReleaseInstance(InstanceData *instance, bool reusable)
 {
-    delete variadic_func;
+    Napi::Env env = instance->env;
+
+    if (instance->broker) {
+        // This deadlocks if we try to do this when the module is destroyed, when
+        // the InstanceData destructor runs, so run in the env cleanup hook instead,
+        // where it seems to go okay.
+        napi_release_threadsafe_function(instance->broker, napi_tsfn_abort);
+        instance->broker = nullptr;
+    }
+
+    // Clear variadic cache
+    delete instance->variadic_func;
+    instance->variadic_func = nullptr;
 
     // Clean-up leftover trampoline references
     {
@@ -3079,7 +3044,7 @@ InstanceData::~InstanceData()
         for (int16_t idx = 0; idx < MaxTrampolines; idx++) {
             TrampolineInfo *trampoline = &shared.trampolines[idx];
 
-            if (trampoline->instance == this) {
+            if (trampoline->instance == instance) {
                 trampoline->instance = nullptr;
                 if (trampoline->func) {
                     node_api_delete_reference(env, trampoline->func);
@@ -3088,6 +3053,36 @@ InstanceData::~InstanceData()
                 trampoline->state = 0;
             }
         }
+    }
+
+    // Clean up types
+    if (reusable) {
+        instance->types.RemoveFrom(instance->base_types_count);
+        instance->callbacks.Clear();
+
+        HashSet<const void *> base_types;
+        HashMap<const char *, const TypeInfo *> new_map;
+
+        for (const TypeInfo &type: instance->types) {
+            base_types.Set(&type);
+        }
+
+        for (const auto &bucket: instance->types_map.table) {
+            if (base_types.Find(bucket.value)) {
+                new_map.Set(bucket.key, bucket.value);
+            }
+        }
+
+        std::swap(instance->types_map, new_map);
+    } else {
+        instance->types.Clear();
+        instance->callbacks.Clear();
+        instance->types_map.Clear();
+    }
+
+    // Clear resident async pool
+    for (auto &slot: instance->async_memories.slots) {
+        slot.obj.Release();
     }
 }
 
