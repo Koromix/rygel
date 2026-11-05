@@ -3726,16 +3726,14 @@ bool MatchPathName(const char *path, const char *spec, bool case_sensitive)
     return true;
 }
 
-bool MatchPathSpec(const char *path, const char *spec, bool case_sensitive)
+bool MatchPathSpec(Span<const char> path, const char *spec, bool case_sensitive)
 {
-    Span<const char> path2 = path;
-
     do {
-        const char *it = SplitStrReverseAny(path2, K_PATH_SEPARATORS, &path2).ptr;
+        const char *it = SplitStrReverseAny(path, K_PATH_SEPARATORS, &path).ptr;
 
         if (MatchPathName(it, spec, case_sensitive))
             return true;
-    } while (path2.len);
+    } while (path.len);
 
     return false;
 }

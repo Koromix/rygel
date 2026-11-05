@@ -117,21 +117,28 @@ static void AppendListValues(Span<const char> str, Allocator *alloc, HeapArray<c
 #undef APPEND_ITEM
 }
 
-static bool EnumerateSortedFiles(const char *name, Span<const char> root, const char *filter,
-                                 bool recursive, Allocator *alloc, HeapArray<const char *> *out_filenames)
+static bool EnumerateSortedFiles(const char *name, Span<const char> root, bool recursive,
+                                 FunctionRef<bool(const char *)> ignore,
+                                 Allocator *alloc, HeapArray<const char *> *out_filenames)
 {
     K_ASSERT(alloc);
 
     Size start_idx = out_filenames->len;
-    const char *dirname = Fmt(alloc, "%1%/%2", root, name).ptr;
+    Span<const char> dirname = Fmt(alloc, "%1%/%2", root, name);
 
-    if (!EnumerateFiles(dirname, filter, recursive ? -1  : 0, 1024, alloc, out_filenames))
+    if (!EnumerateFiles(dirname.ptr, nullptr, recursive ? -1  : 0, 4096, alloc, out_filenames))
         return false;
 
-    // Remove root directory prefix from collected filenames
+    Size j = start_idx;
     for (Size i = start_idx; i < out_filenames->len; i++) {
-        (*out_filenames)[i] += root.len + 1;
+        const char *filename = (*out_filenames)[i];
+
+        // Remove root directory prefix from collected filenames
+        (*out_filenames)[j] = filename + root.len + 1;
+
+        j += !ignore(filename + dirname.len + 1);
     }
+    out_filenames->len = j;
 
     std::sort(out_filenames->begin() + start_idx, out_filenames->end(),
               [](const char *filename1, const char *filename2) {
@@ -148,13 +155,23 @@ static bool ResolveFileSet(const FileSet &file_set, Span<const char> root, const
 
     K_DEFER_NC(out_guard, len = out_filenames->len) { out_filenames->RemoveFrom(len); };
 
+    const auto ignore = [&](const char *name) {
+        if (filter && !MatchPathName(name, filter))
+            return true;
+        if (std::any_of(file_set.ignore.begin(), file_set.ignore.end(),
+                        [&](const char *pattern) { return MatchPathSpec(name, pattern); }))
+            return true;
+
+        return false;
+    };
+
     // List directories
     for (const char *directory: file_set.directories) {
-        if (!EnumerateSortedFiles(directory, root, filter, false, alloc, out_filenames))
+        if (!EnumerateSortedFiles(directory, root, false, ignore, alloc, out_filenames))
             return false;
     }
     for (const char *directory: file_set.directories_rec) {
-        if (!EnumerateSortedFiles(directory, root, filter, true, alloc, out_filenames))
+        if (!EnumerateSortedFiles(directory, root, true, ignore, alloc, out_filenames))
             return false;
     }
 
@@ -168,12 +185,6 @@ static bool ResolveFileSet(const FileSet &file_set, Span<const char> root, const
         }
     }
     out_filenames->Append(file_set.filenames);
-
-    out_filenames->RemoveFrom(std::remove_if(out_filenames->begin(), out_filenames->end(),
-                                             [&](const char *filename) {
-        return std::any_of(file_set.ignore.begin(), file_set.ignore.end(),
-                           [&](const char *pattern) { return MatchPathSpec(filename, pattern); });
-    }) - out_filenames->begin());
 
     out_guard.Disable();
     return true;

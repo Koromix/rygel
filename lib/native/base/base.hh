@@ -4877,10 +4877,10 @@ bool IsDirectory(const char *filename);
 
 #if defined(_WIN32)
 bool MatchPathName(const char *path, const char *spec, bool case_sensitive = false);
-bool MatchPathSpec(const char *path, const char *spec, bool case_sensitive = false);
+bool MatchPathSpec(Span<const char> path, const char *spec, bool case_sensitive = false);
 #else
 bool MatchPathName(const char *path, const char *spec, bool case_sensitive = true);
-bool MatchPathSpec(const char *path, const char *spec, bool case_sensitive = true);
+bool MatchPathSpec(Span<const char> path, const char *spec, bool case_sensitive = true);
 #endif
 
 bool FindExecutableInPath(const char *path, const char *name,
