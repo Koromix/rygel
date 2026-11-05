@@ -14,7 +14,7 @@
 - Reduce overhead of simple calls with up to 8 arguments
 - Defer allocator release for calls that require extra heap allocation (rare)
 - Clean up shutdown and reset logic
-- BUild macOS ARM64 binary with Homebrew Clang and PGO
+- Build macOS ARM64 binary with Homebrew Clang and PGO
 
 #### Koffi 3.3.6
 
