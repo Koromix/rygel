@@ -1185,7 +1185,7 @@ public:
     {
         K_ASSERT(alloc);
 
-        EmbedMode mode = (gcc_ver >= 150000 && platform == NativePlatform) ? EmbedMode::Embed : EmbedMode::Literals;
+        EmbedMode mode = (gcc_ver >= 150000 && platform == NativePlatform && architecture == NativeArchitecture) ? EmbedMode::Embed : EmbedMode::Literals;
         K::MakeEmbedCommand(embed_filenames, mode, embed_options, features, dest_filename, alloc, out_cmd);
     }
 
