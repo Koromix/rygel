@@ -334,14 +334,6 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
                         target_config.icon_filename = DuplicateString(prop.value, &set.str_alloc).ptr;
                     } else if (prop.key == "SourceDirectory") {
                         AppendNormalizedPath(prop.value, &set.str_alloc, &target_config.src_file_set.directories);
-                    } else if (prop.key == "SourceDirectoryInc") {
-                        HeapArray<const char *> *directories = &target_config.src_file_set.directories;
-                        Size start_len = directories->len;
-
-                        AppendNormalizedPath(prop.value, &set.str_alloc, directories);
-
-                        Span<const char *> copy = directories->Take(start_len, directories->len - start_len);
-                        target_config.include_directories.Append(copy);
                     } else if (prop.key == "SourceDirectoryRec") {
                         AppendNormalizedPath(prop.value, &set.str_alloc, &target_config.src_file_set.directories_rec);
                     } else if (prop.key == "SourceFile") {
