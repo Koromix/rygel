@@ -224,7 +224,7 @@ async function fillWorkbook(wb, stores, threads, tables, counters, sheets) {
             let ws = wb.createSheet();
 
             let header = [
-                '__tid', '__sequence', '__hid',
+                '__tid', '__sequence', '__hid', '__ctime', '__mtime',
                 ...table.columns.map(column => column.name)
             ];
             wb.writeSpan(ws, refNextRow(ws), header);
@@ -254,6 +254,8 @@ async function fillWorkbook(wb, stores, threads, tables, counters, sheets) {
                 '__tid': thread.tid,
                 '__sequence': thread.sequence,
                 '__hid': thread.hid,
+                '__ctime': new Date(entry.ctime),
+                '__mtime': new Date(entry.mtime),
 
                 ...Object.fromEntries(table.columns.map(column => {
                     let result = column.read(entry.data);
