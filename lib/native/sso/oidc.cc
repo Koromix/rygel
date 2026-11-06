@@ -890,7 +890,8 @@ bool oidc_DecodeIdToken(const oidc_Provider &provider, Span<const char> token, S
         int64_t iat = -1;
         int64_t nbf = -1;
         int64_t exp = -1;
-        HashSet<const char *> audiences;
+        Size audiences = 0;
+        const char *audience = nullptr;
         Span<const char> nonce2 = {};
 
         // Parse JSON
@@ -917,14 +918,16 @@ bool oidc_DecodeIdToken(const oidc_Provider &provider, Span<const char> token, S
                         const char *aud = json.ParseString().ptr;
 
                         if (aud) [[likely]] {
-                            audiences.Set(aud);
+                            audiences += !audience || !TestStr(aud, audience);
+                            audience = aud;
                         }
                     } else {
                         for (json.ParseArray(); json.InArray(); ) {
                             const char *aud = json.ParseString().ptr;
 
                             if (aud) [[likely]] {
-                                audiences.Set(aud);
+                                audiences += !audience || !TestStr(aud, audience);
+                                audience = aud;
                             }
                         }
                     }
@@ -947,7 +950,7 @@ bool oidc_DecodeIdToken(const oidc_Provider &provider, Span<const char> token, S
                 return false;
         }
 
-        if (iat < 0 || exp < 0 || !iss || !audiences.table.count || !nonce2.ptr || !identity.sub) {
+        if (iat < 0 || exp < 0 || !iss || !audiences || !nonce2.ptr || !identity.sub) {
             LogError("Missing or invalid JWT payload values");
             return false;
         }
@@ -968,8 +971,11 @@ bool oidc_DecodeIdToken(const oidc_Provider &provider, Span<const char> token, S
             LogError("JWT issuer mismatch with OIDC configuration");
             return false;
         }
-        if (!audiences.Find(provider.client_id)) {
-            LogError("JWT client ID mismatch with OIDC configuration");
+        if (audiences > 1) {
+            LogError("JWT contains multiple audiences values");
+            return false;
+        } else if (!TestStr(audience, provider.client_id)) {
+            LogError("JWT client ID mismatch with OIDC configuration (aud field)");
             return false;
         }
 
