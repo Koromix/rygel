@@ -464,8 +464,13 @@ static bool ImportRsaSigningKey(Span<const char> n, Span<const char> e, EVP_PKEY
         BN_free(big_n);
         BN_free(big_e);
     };
+
     if (!big_n || !big_e || BN_is_zero(big_n) || BN_is_zero(big_e)) {
         LogError("Invalid RSA key modulus or exponent");
+        return false;
+    }
+    if (BN_num_bits(big_n) < 2048) {
+        LogError("RSA signing key must be at least 2048 bits");
         return false;
     }
 
