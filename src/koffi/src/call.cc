@@ -1416,7 +1416,7 @@ TRANSLATE_FUNC napi_value TranslateOutputCall(napi_env env, napi_callback_info i
 
     NAPI_OK(napi_get_cb_info(env, info, &count, call.args, nullptr, (void **)&func));
 
-    if (count < (size_t)func->required_parameters) [[unlikely]] {
+    if (count < N) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected %1 arguments, got %2", func->parameters.len, count);
         return nullptr;
     }
