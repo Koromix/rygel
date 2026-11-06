@@ -181,8 +181,8 @@ static bool CheckURL(const char *url)
             K_BAD_ALLOC();
         K_DEFER { curl_free(scheme); };
 
-        if (scheme && !TestStr(scheme, "http") && !TestStr(scheme, "https")) {
-            LogError("Unsupported OIDC scheme '%1'", scheme);
+        if (!scheme || !TestStr(scheme, "https")) {
+            LogError("Unsupported OIDC scheme '%1' (HTTPS is required)", scheme);
             return false;
         }
     }
