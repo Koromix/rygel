@@ -819,7 +819,7 @@ bool oidc_DecodeIdToken(const oidc_Provider &provider, Span<const char> token, S
                 return false;
         }
 
-        if (!type || !TestStrI(type, "JWT")) {
+        if (type && !TestStrI(type, "JWT")) {
             LogError("Invalid JWT type '%1'", type);
             return false;
         }
