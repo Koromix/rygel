@@ -25,7 +25,9 @@ enum class HostPlatform {
     Teensy36,
     Teensy40,
     Teensy41,
-    TeensyMM
+    TeensyMM,
+
+    Unknown
 };
 static const char *const HostPlatformNames[] = {
     "Desktop/Windows",
@@ -45,7 +47,9 @@ static const char *const HostPlatformNames[] = {
     "Embedded/Teensy/ARM/Teensy36",
     "Embedded/Teensy/ARM/Teensy40",
     "Embedded/Teensy/ARM/Teensy41",
-    "Embedded/Teensy/ARM/TeensyMM"
+    "Embedded/Teensy/ARM/TeensyMM",
+
+    "Unknown"
 };
 
 #if defined(_WIN32)
@@ -268,7 +272,7 @@ struct KnownCompiler {
 };
 
 struct HostSpecifier {
-    HostPlatform platform = NativePlatform;
+    HostPlatform platform = HostPlatform::Unknown;
     HostArchitecture architecture = HostArchitecture::Unknown;
     const char *cc = nullptr;
     const char *ld = nullptr;

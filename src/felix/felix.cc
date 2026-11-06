@@ -114,20 +114,9 @@ static bool ParseHostString(Span<const char> str, Allocator *alloc, HostSpecifie
         out_spec->platform = NativePlatform;
 
         platform = "";
+        architecture = "";
         ld = cc;
         cc = architecture;
-        architecture = "";
-    }
-
-    if (architecture.len) {
-        if (TestStrI(architecture, "Native")) {
-            out_spec->architecture = NativeArchitecture;
-        } else if (!ParseArchitecture(architecture, &out_spec->architecture)) {
-            out_spec->architecture = HostArchitecture::Unknown;
-
-            ld = cc;
-            cc = architecture;
-        }
     }
 
     if (platform.len) {
@@ -146,6 +135,17 @@ static bool ParseHostString(Span<const char> str, Allocator *alloc, HostSpecifie
                 int ctz = CountTrailingZeros(platforms);
                 out_spec->platform = (HostPlatform)ctz;
             }
+        }
+    }
+
+    if (architecture.len) {
+        if (TestStrI(architecture, "Native")) {
+            out_spec->architecture = NativeArchitecture;
+        } else if (!ParseArchitecture(architecture, &out_spec->architecture)) {
+            out_spec->architecture = HostArchitecture::Unknown;
+
+            ld = cc;
+            cc = architecture;
         }
     }
 

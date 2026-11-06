@@ -106,10 +106,30 @@ static int ParseVersion(const char *cmd, Span<const char> output, const char *ma
     return -1;
 }
 
-static HostArchitecture ParseTarget(Span<const char> output, Span<const char> *out_target = nullptr)
+static HostArchitecture ParseTriplet(Span<const char> output, Span<const char> *out_remain = nullptr)
 {
-    Span<const char> target = {};
-    HostArchitecture architecture = HostArchitecture::Unknown;
+    struct ArchitecturePair {
+        Span<const char> prefix;
+        HostArchitecture architecture;
+    };
+
+    static const ArchitecturePair KnownArchitectures[] = {
+        { "x86_64-", HostArchitecture::x86_64 },
+        { "x86-64-", HostArchitecture::x86_64 },
+        { "amd64-", HostArchitecture::x86_64 },
+        { "i386-", HostArchitecture::x86 },
+        { "i486-", HostArchitecture::x86 },
+        { "i586-", HostArchitecture::x86 },
+        { "i686-", HostArchitecture::x86 },
+        { "x86-", HostArchitecture::x86 },
+        { "aarch64-", HostArchitecture::ARM64 },
+        { "arm64-", HostArchitecture::ARM64 },
+        { "riscv64-", HostArchitecture::RISCV64 },
+        { "loongarch64-", HostArchitecture::Loong64 },
+        { "wasm32-", HostArchitecture::Web32 },
+    };
+
+    Span<const char> triplet = {};
 
     while (output.len) {
         Span<const char> line = SplitStrLine(output, &output);
@@ -122,32 +142,22 @@ static HostArchitecture ParseTarget(Span<const char> output, Span<const char> *o
             continue;
 
         if (key == "Target") {
-            target = value;
+            triplet = SplitStr(value, ' ');
             break;
         }
     }
 
-    if (StartsWith(target, "x86_64-") || StartsWith(target, "x86-64-")  || StartsWith(target, "amd64-")) {
-        architecture = HostArchitecture::x86_64;
-    } else if (StartsWith(target, "i386-") || StartsWith(target, "i486-") || StartsWith(target, "i586-") ||
-               StartsWith(target, "i686-") || StartsWith(target, "x86-")) {
-        architecture = HostArchitecture::x86;
-    } else if (StartsWith(target, "aarch64-") || StartsWith(target, "arm64-")) {
-        architecture = HostArchitecture::ARM64;
-    } else if (StartsWith(target, "arm-")) {
-        architecture = HostArchitecture::ARM32;
-    } else if (StartsWith(target, "riscv64-")) {
-        architecture = HostArchitecture::RISCV64;
-    } else if (StartsWith(target, "loongarch64-")) {
-        architecture = HostArchitecture::Loong64;
-    } else if (StartsWith(target, "wasm32-")) {
-        architecture = HostArchitecture::Web32;
-    }
+    const ArchitecturePair *pair =
+        std::find_if(std::begin(KnownArchitectures), std::end(KnownArchitectures),
+                     [&](const ArchitecturePair &pair) { return StartsWith(triplet, pair.prefix); });
 
-    if (out_target) {
-        *out_target = target;
+    if (pair == std::end(KnownArchitectures))
+        return HostArchitecture::Unknown;
+
+    if (out_remain) {
+        *out_remain = triplet.Take(pair->prefix.len - 1, triplet.len - pair->prefix.len - 1);
     }
-    return architecture;
+    return pair->architecture;
 }
 
 static bool IdentifyCompiler(const char *bin, const char *needle)
@@ -201,6 +211,10 @@ public:
     {
         std::unique_ptr<ClangCompiler> compiler = std::make_unique<ClangCompiler>(platform, architecture);
 
+        if (compiler->platform == HostPlatform::Unknown) {
+            compiler->platform = NativePlatform;
+        }
+
         // Prefer LLD
         if (!ld && FindExecutableInPath("ld.lld")) {
             ld = "lld";
@@ -239,37 +253,31 @@ public:
 
             compiler->clang_ver = ParseVersion(cmd, output, "version");
 
-            Span<const char> target;
-            HostArchitecture architecture = ParseTarget(output, &target);
+            // Parse compiler triplet
+            {
+                Span<const char> remain;
+                HostArchitecture architecture = ParseTriplet(output, &remain);
 
-            if (architecture == HostArchitecture::Unknown) {
-                LogError("Cannot determine default Clang architecture");
-                return nullptr;
+                if (architecture == HostArchitecture::Unknown) {
+                    LogError("Cannot determine default Clang architecture");
+                    return nullptr;
+                }
+                if (compiler->architecture == HostArchitecture::Unknown) {
+                    if (compiler->platform != NativePlatform) {
+                        LogError("Cross-compilation requires an explicit architecture");
+                        return nullptr;
+                    }
+
+                    compiler->architecture = architecture;
+                }
+
+                compiler->mingw = (remain == "-w64-windows-gnu");
             }
 
-            compiler->mingw = EndsWith(target, "-w64-windows-gnu");
-
-            if (compiler->architecture == HostArchitecture::Unknown) {
-                compiler->architecture = architecture;
-#if defined(_WIN32)
-            } else {
-                switch (compiler->architecture) {
-                    case HostArchitecture::x86: { compiler->target = "-m32"; } break;
-                    case HostArchitecture::x86_64: { compiler->target = "-m64"; } break;
-
-                    case HostArchitecture::ARM64:
-                    case HostArchitecture::RISCV64:
-                    case HostArchitecture::Loong64:
-                    case HostArchitecture::ARM32:
-                    case HostArchitecture::Web32: {
-                        LogError("Cannot use Clang (Windows) to build for '%1'", HostArchitectureNames[(int)compiler->architecture]);
-                        return nullptr;
-                    } break;
-
-                    case HostArchitecture::Unknown: { K_UNREACHABLE(); } break;
-                }
-#elif defined(__APPLE__)
-            } else {
+            if (compiler->platform == NativePlatform && compiler->architecture == NativeArchitecture) {
+                // Nothing to do :)
+#if defined(__APPLE__)
+            } else if (compiler->platform == NativePlatform) {
                 switch (compiler->architecture) {
                     case HostArchitecture::x86_64: { compiler->target = "-arch x86_64"; } break;
                     case HostArchitecture::ARM64: { compiler->target = "-arch arm64"; } break;
@@ -285,6 +293,28 @@ public:
 
                     case HostArchitecture::Unknown: { K_UNREACHABLE(); } break;
                 }
+#endif
+#if defined(_WIN32)
+            } else if (compiler->platform == NativePlatform) {
+                switch (compiler->architecture) {
+                    case HostArchitecture::x86: { compiler->target = "-m32"; } break;
+                    case HostArchitecture::x86_64: { compiler->target = "-m64"; } break;
+
+                    case HostArchitecture::ARM64:
+                    case HostArchitecture::RISCV64:
+                    case HostArchitecture::Loong64:
+                    case HostArchitecture::ARM32:
+                    case HostArchitecture::Web32: {
+                        LogError("Cannot use Clang (Windows) to build for '%1'", HostArchitectureNames[(int)compiler->architecture]);
+                        return nullptr;
+                    } break;
+
+                    case HostArchitecture::Unknown: { K_UNREACHABLE(); } break;
+                }
+            } else  {
+                LogError("Cannot use Clang (Windows) to build for '%1'", HostPlatformNames[(int)compiler->platform]);
+                return nullptr;
+            }
 #else
             } else {
                 const char *prefix = nullptr;
@@ -307,7 +337,7 @@ public:
                 }
 
                 switch (compiler->platform) {
-                    case HostPlatform::Linux: { suffix = "pc-linux-gnu"; } break;
+                    case HostPlatform::Linux: { suffix = "linux-gnu"; } break;
                     case HostPlatform::FreeBSD: { suffix = "freebsd-unknown"; } break;
                     case HostPlatform::OpenBSD: { suffix = "openbsd-unknown"; } break;
 
@@ -1054,11 +1084,40 @@ public:
 
             compiler->gcc_ver = ParseVersion(cmd, output, "version");
 
-            HostArchitecture architecture = ParseTarget(output);
+            // Parse compiler triplet
+            {
+                Span<const char> remain;
+                HostArchitecture architecture = ParseTriplet(output, &remain);
+
+                if (architecture == HostArchitecture::Unknown) {
+                    LogError("Cannot determine default GCC platform and architecture");
+                    return nullptr;
+                }
+
+                if (compiler->platform == HostPlatform::Unknown) {
+                    if (StartsWith(remain, "-w64-mingw")) {
+                        compiler->platform = HostPlatform::Windows;
+                    } else if (StartsWith(remain, "-apple-darwin")) {
+                        compiler->platform = HostPlatform::macOS;
+                    } else {
+                        LogError("Unknown GCC triplet platform suffix '%1'", remain);
+                        return nullptr;
+                    }
+                }
+                if (compiler->architecture == HostArchitecture::Unknown) {
+                    compiler->architecture = architecture;
+                }
+            }
+
+            HostArchitecture architecture = ParseTriplet(output);
 
             if (architecture == HostArchitecture::Unknown) {
                 LogError("Cannot determine default GCC architecture");
                 return nullptr;
+            }
+
+            if (compiler->platform == HostPlatform::Unknown) {
+                compiler->platform = NativePlatform;
             }
 
             if (compiler->architecture == HostArchitecture::Unknown) {
@@ -2748,7 +2807,7 @@ std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
 {
     static BlockAllocator str_alloc;
 
-    if (spec.platform == NativePlatform) {
+    if (spec.platform == NativePlatform || spec.platform == HostPlatform::Unknown) {
         if (!spec.cc) {
             if (spec.architecture == NativeArchitecture ||
                     spec.architecture == HostArchitecture::Unknown) {
