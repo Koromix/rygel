@@ -85,7 +85,7 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
                     gpr_index = 36 + AlignLen(param.type->size - split, 8) / 8;
 
                     // This is probably broken if there are unused GPRs
-                    out_plan->sync.Append({ .o = Code2Op(Opcode::PushAggregateSplit), .s1 = (int16_t)param.offset, .s2 = (int16_t)split, .s3 = (int16_t)offsets[0], .s4 = (int16_t)offsets[1], .type = type });
+                    out_plan->sync.Append({ .o = Code2Op(Opcode::PushAggregateSplit), .s2 = (int16_t)split, .s3 = (int16_t)offsets[0], .s4 = (int16_t)offsets[1], .type = type });
                 } else {
                     int offset = 8 * 8 + 8 * vec_index;
 
@@ -98,7 +98,7 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
                         gpr_index += gprs;
                     }
 
-                    out_plan->sync.Append({ .o = Code2Op(Opcode::PushAggregateReg), .s1 = (int16_t)param.offset, .i = offset, .type = type });
+                    out_plan->sync.Append({ .o = Code2Op(Opcode::PushAggregateReg), .i = offset, .type = type });
                 }
             } else {
                 int gprs = AlignLen(param.type->size, 8) / 8;
@@ -109,14 +109,14 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
 
                     gpr_index = 36 + AlignLen(param.type->size - split, 8) / 8;
 
-                    out_plan->sync.Append({ .o = Code2Op(Opcode::PushAggregateSplit), .s1 = (int16_t)param.offset, .s2 = (int16_t)split, .s3 = (int16_t)offsets[0], .s4 = (int16_t)offsets[1], .type = param.type });
+                    out_plan->sync.Append({ .o = Code2Op(Opcode::PushAggregateSplit), .s2 = (int16_t)split, .s3 = (int16_t)offsets[0], .s4 = (int16_t)offsets[1], .type = param.type });
                 } else {
                     int offset = 8 * gpr_index;
 
                     gpr_index += gprs;
                     gpr_index = (gpr_index == gpr_max) ? 36 : gpr_index;
 
-                    out_plan->sync.Append({ .o = Code2Op(Opcode::PushAggregateReg), .s1 = (int16_t)param.offset, .i = offset, .type = param.type });
+                    out_plan->sync.Append({ .o = Code2Op(Opcode::PushAggregateReg), .i = offset, .type = param.type });
                 }
             }
         } else {
@@ -136,7 +136,7 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
             gpr_index++;
             gpr_index = (gpr_index == gpr_max) ? 36 : gpr_index;
 
-            out_plan->sync.Append({ .o = Code2Op(code), .s1 = (int16_t)param.offset, .s2 = (int16_t)param.directions, .i = offset, .type = param.type });
+            out_plan->sync.Append({ .o = Code2Op(code), .s2 = (int16_t)param.directions, .i = offset, .type = param.type });
         }
     }
 

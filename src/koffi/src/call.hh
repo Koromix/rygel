@@ -45,8 +45,6 @@ struct alignas(8) CallData {
     uint8_t *prev_heap;
 #endif
 
-    napi_value args[MaxParameters];
-
     uint8_t *saved_sp;
 
     uint8_t *async_base;
@@ -55,37 +53,18 @@ struct alignas(8) CallData {
     LocalArray<OutArgument, MaxParameters> out_arguments;
 
 #if defined(K_DEBUG)
-    CallData(napi_env env)
-        : env(env), instance(nullptr), stack({}), heap({}), transient(nullptr),
-          new_stack(nullptr), prev_heap(nullptr) {} // Partial initialization, use Init()
     CallData(napi_env env, InstanceData *instance, InstanceMemory *mem, TransientAllocator *transient)
         : env(env), instance(instance), stack(mem->stack), heap(mem->heap), transient(transient),
           new_stack(mem->stack.end), prev_heap(mem->heap.ptr) {}
     ~CallData();
 #else
-    CallData(napi_env env) : env(env) {} // Partial initialization, use Init()
     CallData(napi_env env, InstanceData *instance, InstanceMemory *mem, TransientAllocator *transient)
         : env(env), instance(instance), stack(mem->stack), heap(mem->heap), transient(transient) {}
 #endif
 
-    K_FORCE_INLINE void Init(InstanceData *instance, InstanceMemory *mem, TransientAllocator *transient)
-    {
-        K_ASSERT(!this->instance);
+    INLINE_UNITY napi_value Run(const FunctionInfo *func, napi_value *args);
 
-        this->instance = instance;
-        this->stack = mem->stack;
-        this->heap = mem->heap;
-        this->transient = transient;
-
-#if defined(K_DEBUG)
-        new_stack = mem->stack.end;
-        prev_heap = mem->heap.ptr;
-#endif
-    }
-
-    INLINE_UNITY napi_value Run(const FunctionInfo *func, void *native);
-
-    bool PrepareAsync(const FunctionInfo *func);
+    bool PrepareAsync(const FunctionInfo *func, napi_value *args);
     void ExecuteAsync(void *native);
     napi_value EndAsync();
 
@@ -94,7 +73,7 @@ struct alignas(8) CallData {
     INLINE_UNITY void Relay(Size idx, uint8_t *base);
     void RelayAsync(Size idx, uint8_t *base);
 
-    INLINE_UNITY napi_value CallCallback(const TrampolineInfo *trampoline, const napi_value *args, Size count);
+    INLINE_UNITY napi_value CallCallback(napi_value *argp, Size count);
 
     INLINE_UNITY bool PushString(napi_value value, int directions, const char **out_str);
     INLINE_UNITY bool PushString16(napi_value value, int directions, const char16_t **out_str16);
@@ -185,7 +164,8 @@ napi_value DescribeFunction(InstanceData *instance, const FunctionInfo *func);
 napi_value WrapFunction(InstanceData *instance, const FunctionInfo *func);
 bool DetectCallConvention(Span<const char> name, CallConvention *out_convention);
 
-napi_value CallPointer(Napi::Env env, const FunctionInfo *proto, void *native, napi_value *args, Size count);
+// Mutates the array of arguments
+napi_value CallPointer(Napi::Env env, const FunctionInfo *proto, napi_value *args, Size count);
 
 bool InitAsyncBroker(InstanceData *instance);
 

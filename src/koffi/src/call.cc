@@ -55,29 +55,35 @@ CallData::~CallData()
 }
 #endif
 
-napi_value CallData::Run(const FunctionInfo *func, void *native)
+napi_value CallData::Run(const FunctionInfo *func, napi_value *args)
 {
+    DebugCall(func);
+
     uint8_t *base = AllocStack<uint8_t>(func->plan.stk_size);
 
     const OpData *first = func->plan.sync.ptr;
-    return RunForward(this, base, native, first);
+    return RunForward(this, base, args, first);
 }
 
-bool CallData::PrepareAsync(const FunctionInfo *func)
+bool CallData::PrepareAsync(const FunctionInfo *func, napi_value *args)
 {
+    DebugCall(func);
+
     uint8_t *base = AllocStack<uint8_t>(func->plan.stk_size);
     async_base = base;
 
     const OpData *first = func->plan.async.ptr;
-    napi_value ret = RunForward(this, base, nullptr, first);
+    napi_value ret = RunForward(this, base, args, first);
 
     return ret == (napi_value)-1; // Should have reached Yield
 }
 
 void CallData::ExecuteAsync(void *native)
 {
+    napi_value arg = (napi_value)native;
+
     const OpData *next = async_ip++;
-    RunForward(this, async_base, native, next);
+    RunForward(this, async_base, &arg, next);
 }
 
 napi_value CallData::EndAsync()
@@ -91,8 +97,11 @@ void CallData::Relay(Size idx, uint8_t *base)
     TrampolineInfo *trampoline = &shared.trampolines[idx];
     const FunctionInfo *proto = trampoline->proto;
 
+    napi_value args[MaxParameters + 1];
+    args[proto->parameters.len] = (napi_value)trampoline;
+
     const OpData *first = proto->plan.relay.ptr;
-    trampoline->state = RunRelay(this, trampoline, base, first);
+    trampoline->state = RunRelay(this, base, args, first);
 }
 
 static K_FORCE_INLINE void ConvertBuffer(BufferConversion conversion, void *ptr, Size len, Size stride)
@@ -233,8 +242,11 @@ void CallData::RelayAsync(Size idx, uint8_t *base)
     }
 }
 
-napi_value CallData::CallCallback(const TrampolineInfo *trampoline, const napi_value *args, Size count)
+napi_value CallData::CallCallback(napi_value *argp, Size count)
 {
+    const TrampolineInfo *trampoline = (const TrampolineInfo *)*argp;
+    napi_value *args = argp - count;
+
     napi_value recv;
     napi_value func;
     napi_value value;
@@ -1366,15 +1378,14 @@ static TRANSLATE_FUNC napi_value TranslateZeroCall(napi_env env, napi_callback_i
 
     CallbackBundle **ptr = (CallbackBundle **)((uint8_t *)info + K_SIZE(void *));
     FunctionInfo *func = (FunctionInfo *)(*ptr)->data;
+    napi_value arg = (napi_value)func->native;
 
     InstanceData *instance = func->instance;
     CallData call(env, instance, &instance->sync_memory, nullptr);
 
     instance->sync_call = &call;
 
-    call.DebugCall(func);
-
-    return call.Run(func, func->native);
+    return call.Run(func, &arg);
 }
 
 template <size_t N>
@@ -1383,25 +1394,24 @@ TRANSLATE_FUNC napi_value TranslateDirectCall(napi_env env, napi_callback_info i
     static_assert(N <= 8);
     static_assert(MaxParameters >= 8);
 
-    CallData call(env);
+    napi_value args[N + 1];
     size_t count = N;
     FunctionInfo *func;
 
-    NAPI_OK(napi_get_cb_info(env, info, &count, call.args, nullptr, (void **)&func));
+    NAPI_OK(napi_get_cb_info(env, info, &count, args, nullptr, (void **)&func));
 
     if (count < N) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected %1 arguments, got %2", N, count);
         return nullptr;
     }
+    args[N] = (napi_value)func->native;
 
     InstanceData *instance = func->instance;
-    call.Init(instance, &instance->sync_memory, nullptr);
+    CallData call(env, instance, &instance->sync_memory, nullptr);
 
     instance->sync_call = &call;
 
-    call.DebugCall(func);
-
-    return call.Run(func, func->native);
+    return call.Run(func, args);
 }
 
 template <size_t N>
@@ -1410,46 +1420,38 @@ TRANSLATE_FUNC napi_value TranslateOutputCall(napi_env env, napi_callback_info i
     static_assert(N <= 8);
     static_assert(MaxParameters >= 8);
 
-    CallData call(env);
+    napi_value args[N + 1];
     size_t count = N;
     FunctionInfo *func;
 
-    NAPI_OK(napi_get_cb_info(env, info, &count, call.args, nullptr, (void **)&func));
+    NAPI_OK(napi_get_cb_info(env, info, &count, args, nullptr, (void **)&func));
 
     if (count < N) [[unlikely]] {
-        ThrowError<Napi::TypeError>(env, "Expected %1 arguments, got %2", func->parameters.len, count);
+        ThrowError<Napi::TypeError>(env, "Expected %1 arguments, got %2", N, count);
         return nullptr;
     }
+    args[N] = (napi_value)func->native;
 
     InstanceData *instance = func->instance;
-    call.Init(instance, &instance->sync_memory, nullptr);
+    CallData call(env, instance, &instance->sync_memory, nullptr);
 
     instance->sync_call = &call;
 
-    call.DebugCall(func);
-
-    napi_value ret = call.Run(func, func->native);
+    napi_value ret = call.Run(func,  args);
     call.PopOutputArguments();
 
     return ret;
 }
 
-static TRANSLATE_FUNC K_FORCE_INLINE napi_value TranslateNormalCall(CallData *call, const FunctionInfo *func, void *native, Size count)
+static TRANSLATE_FUNC K_FORCE_INLINE napi_value TranslateNormalCall(napi_env env, const FunctionInfo *func, napi_value *args)
 {
-    if (count < func->required_parameters) [[unlikely]] {
-        ThrowError<Napi::TypeError>(call->env, "Expected %1 arguments, got %2", func->parameters.len, count);
-        return nullptr;
-    }
-
     InstanceData *instance = func->instance;
-    call->Init(instance, &instance->sync_memory, nullptr);
+    CallData call(env, instance, &instance->sync_memory, nullptr);
 
-    instance->sync_call = call;
+    instance->sync_call = &call;
 
-    call->DebugCall(func);
-
-    napi_value ret = call->Run(func, native);
-    call->PopOutputArguments();
+    napi_value ret = call.Run(func, args);
+    call.PopOutputArguments();
 
     return ret;
 }
@@ -1458,52 +1460,59 @@ static TRANSLATE_FUNC napi_value TranslateNormalCall(napi_env env, napi_callback
 {
     static_assert(MaxParameters >= 12);
 
-    CallData call(env);
+    napi_value args[MaxParameters + 1];
     size_t count = 12;
     FunctionInfo *func;
 
-    NAPI_OK(napi_get_cb_info(env, info, &count, call.args, nullptr, (void **)&func));
+    NAPI_OK(napi_get_cb_info(env, info, &count, args, nullptr, (void **)&func));
 
     if (count > 12) {
         count = std::min(count, (size_t)MaxParameters);
-        NAPI_OK(napi_get_cb_info(env, info, &count, call.args, nullptr, nullptr));
-    }
 
-    return TranslateNormalCall(&call, func, func->native, (Size)count);
+        size_t copy = count;
+        NAPI_OK(napi_get_cb_info(env, info, &copy, args, nullptr, nullptr));
+    }
+    if (count < (size_t)func->required_parameters) [[unlikely]] {
+        ThrowError<Napi::TypeError>(env, "Expected %1 arguments, got %2", func->required_parameters, count);
+        return nullptr;
+    }
+    args[func->required_parameters] = (napi_value)func->native;
+
+    return TranslateNormalCall(env, func, args);
 }
 
 static TRANSLATE_FUNC napi_value TranslateNormalCallDebugAsync(napi_env env, napi_callback_info info)
 {
     static_assert(MaxParameters >= 12);
 
-    CallData call(env);
+    napi_value args[MaxParameters];
     size_t count = 12;
     FunctionInfo *func;
 
-    NAPI_OK(napi_get_cb_info(env, info, &count, call.args, nullptr, (void **)&func));
+    NAPI_OK(napi_get_cb_info(env, info, &count, args, nullptr, (void **)&func));
 
     if (count > 12) {
         count = std::min(count, (size_t)MaxParameters);
-        NAPI_OK(napi_get_cb_info(env, info, &count, call.args, nullptr, nullptr));
+
+        size_t copy = count;
+        NAPI_OK(napi_get_cb_info(env, info, &copy, args, nullptr, nullptr));
     }
     if (count < (size_t)func->required_parameters) [[unlikely]] {
-        ThrowError<Napi::TypeError>(env, "Expected %1 arguments, got %2", func->parameters.len, count);
+        ThrowError<Napi::TypeError>(env, "Expected %1 arguments, got %2", func->required_parameters, count);
         return nullptr;
     }
 
     InstanceData *instance = func->instance;
-    call.Init(instance, &instance->sync_memory, nullptr);
+    CallData call(env, instance, &instance->sync_memory, nullptr);
 
     instance->sync_call = &call;
-
-    call.DebugCall(func);
 
     // The async call code partly works differently, with Yield and Return instructions which do not
     // get used for normal sync calls. To exercise them, we also run the sync tests using async
     // instructions, by setting DEBUG_ASYNC=1.
 
     napi_value ret = nullptr;
-    if (call.PrepareAsync(func)) {
+    if (call.PrepareAsync(func, args)) {
         call.ExecuteAsync(func->native);
         ret = call.EndAsync();
     }
@@ -1512,10 +1521,11 @@ static TRANSLATE_FUNC napi_value TranslateNormalCallDebugAsync(napi_env env, nap
     return ret;
 }
 
-static TRANSLATE_FUNC K_FORCE_INLINE napi_value TranslateVariadicCall(CallData *call, const FunctionInfo *func, void *native, Size count)
+static TRANSLATE_FUNC K_FORCE_INLINE napi_value TranslateVariadicCall(napi_env env, const FunctionInfo *func, napi_value *args, Size count)
 {
+    K_ASSERT(count >= func->required_parameters);
+
     InstanceData *instance = func->instance;
-    call->Init(instance, &instance->sync_memory, nullptr);
 
     FunctionInfo *variadic = nullptr;
     K_DEFER_N(err_guard) { delete variadic; };
@@ -1524,7 +1534,7 @@ static TRANSLATE_FUNC K_FORCE_INLINE napi_value TranslateVariadicCall(CallData *
     {
         FunctionInfo *prev = instance->variadic_func;
 
-        if (prev && prev->native == native) {
+        if (prev && prev->native == args[count]) {
             Size specified = (count - prev->required_parameters);
             Size processed = (prev->parameters.len - prev->required_parameters) * 2;
 
@@ -1533,7 +1543,7 @@ static TRANSLATE_FUNC K_FORCE_INLINE napi_value TranslateVariadicCall(CallData *
 
                 for (Size i = prev->required_parameters, j = prev->required_parameters; i < (Size)count; i += 2, j++) {
                     int directions;
-                    const TypeInfo *type = ResolveType(instance, call->args[i], true, &directions);
+                    const TypeInfo *type = ResolveType(instance, args[i], true, &directions);
 
                     if (type != prev->parameters[j].type || directions != prev->parameters[j].directions) [[unlikely]] {
                         match = false;
@@ -1552,8 +1562,6 @@ static TRANSLATE_FUNC K_FORCE_INLINE napi_value TranslateVariadicCall(CallData *
     }
 
     if (!variadic) {
-        Napi::Env env = call->env;
-
         variadic = new FunctionInfo();
 
         memcpy((void *)variadic, func, K_SIZE(*func));
@@ -1562,10 +1570,6 @@ static TRANSLATE_FUNC K_FORCE_INLINE napi_value TranslateVariadicCall(CallData *
         variadic->parameters = func->parameters;
         variadic->lib = nullptr;
 
-        if (count < variadic->required_parameters) [[unlikely]] {
-            ThrowError<Napi::TypeError>(env, "Expected %1 arguments or more, got %2", variadic->parameters.len, count);
-            return nullptr;
-        }
         if ((count - variadic->required_parameters) % 2) [[unlikely]] {
             ThrowError<Napi::Error>(env, "Missing value argument for variadic call");
             return nullptr;
@@ -1574,7 +1578,7 @@ static TRANSLATE_FUNC K_FORCE_INLINE napi_value TranslateVariadicCall(CallData *
         for (Size i = variadic->required_parameters; i < count; i += 2) {
             ParameterInfo param = {};
 
-            param.type = ResolveType(instance, call->args[i], true, &param.directions);
+            param.type = ResolveType(instance, args[i], true, &param.directions);
 
             if (!param.type) [[unlikely]]
                 return nullptr;
@@ -1588,7 +1592,6 @@ static TRANSLATE_FUNC K_FORCE_INLINE napi_value TranslateVariadicCall(CallData *
             }
 
             param.variadic = true;
-            param.offset = (int8_t)(i + 1);
 
             variadic->parameters.Append(param);
         }
@@ -1597,12 +1600,24 @@ static TRANSLATE_FUNC K_FORCE_INLINE napi_value TranslateVariadicCall(CallData *
             return nullptr;
     }
 
-    instance->sync_call = call;
+    // Regroup proper arguments
+    {
+        napi_value *ptr = args + variadic->required_parameters;
+        Size varargs = (count - variadic->required_parameters) / 2;
 
-    call->DebugCall(func);
+        for (Size i = 0; i < varargs; i++) {
+            ptr[i] = ptr[2 * i + 1];
+        }
 
-    napi_value ret = call->Run(variadic, native);
-    call->PopOutputArguments();
+        ptr[varargs] = args[count];
+    }
+
+    CallData call(env, instance, &instance->sync_memory, nullptr);
+
+    instance->sync_call = &call;
+
+    napi_value ret = call.Run(variadic, args);
+    call.PopOutputArguments();
 
     if (variadic != instance->variadic_func) {
         err_guard.Disable();
@@ -1618,18 +1633,25 @@ static TRANSLATE_FUNC napi_value TranslateVariadicCall(napi_env env, napi_callba
 {
     static_assert(MaxParameters >= 16);
 
-    CallData call(env);
-    size_t count = 16;
+    napi_value args[MaxParameters * 2 + 1];
+    size_t count = 12;
     FunctionInfo *func;
 
-    NAPI_OK(napi_get_cb_info(env, info, &count, call.args, nullptr, (void **)&func));
+    NAPI_OK(napi_get_cb_info(env, info, &count, args, nullptr, (void **)&func));
 
-    if (count > 16) {
-        count = std::min(count, (size_t)MaxParameters);
-        NAPI_OK(napi_get_cb_info(env, info, &count, call.args, nullptr, nullptr));
+    if (count > 12) {
+        count = std::min(count, (size_t)MaxParameters * 2);
+
+        size_t copy = count;
+        NAPI_OK(napi_get_cb_info(env, info, &copy, args, nullptr, nullptr));
     }
+    if (count < (size_t)func->required_parameters) [[unlikely]] {
+        ThrowError<Napi::TypeError>(env, "Expected %1 arguments or more, got %2", func->required_parameters, count);
+        return nullptr;
+    }
+    args[count] = (napi_value)func->native;
 
-    return TranslateVariadicCall(&call, func, func->native, (Size)count);
+    return TranslateVariadicCall(env, func, args, (Size)count);
 }
 
 #undef TRANSLATE_FUNC
@@ -1654,12 +1676,11 @@ class AsyncCall {
 #endif
 
 public:
-    AsyncCall(Napi::Env env) : env(env), call(env) {}
+    AsyncCall(Napi::Env env, InstanceData *instance, InstanceMemory *mem, const FunctionInfo *func)
+        : env(env), func(func->Ref()), mem(mem), call(env, instance, mem, &transient) {}
     ~AsyncCall();
 
-    napi_value *Args() { return call.args; }
-
-    bool Prepare(InstanceData *instance, InstanceMemory *mem, const FunctionInfo *func, napi_value callback);
+    bool Prepare(napi_value *args);
     void Queue();
 
     void Execute();
@@ -1670,36 +1691,17 @@ public:
     static void HandleComplete(napi_env env, napi_status status, void *udata);
 };
 
-void AsyncCall::HandleExecute(napi_env, void *udata)
-{
-    AsyncCall *async = (AsyncCall *)udata;
-    async->Execute();
-}
-
-void AsyncCall::HandleComplete(napi_env, napi_status status, void *udata)
-{
-    AsyncCall *async = (AsyncCall *)udata;
-
-    K_ASSERT(status == napi_ok);
-    async->Complete();
-
-    delete async;
-}
-
 AsyncCall::~AsyncCall()
 {
-    if (func) {
-        ReclaimTransient(call.instance, &transient);
-        ReleaseAsyncMemory(call.instance, mem);
-
-        func->Unref();
-    }
+    ReclaimTransient(call.instance, &transient);
+    ReleaseAsyncMemory(call.instance, mem);
+    func->Unref();
 
     node_api_delete_reference(env, callback);
     napi_delete_async_work(env, work);
 }
 
-bool AsyncCall::Prepare(InstanceData *instance, InstanceMemory *mem, const FunctionInfo *func, napi_value callback)
+bool AsyncCall::Prepare(napi_value *args)
 {
     K_ASSERT(!work);
 
@@ -1709,17 +1711,10 @@ bool AsyncCall::Prepare(InstanceData *instance, InstanceMemory *mem, const Funct
         NAPI_OK(napi_create_string_utf8(env, func->name, NAPI_AUTO_LENGTH, &name));
 
         NAPI_OK(napi_create_async_work(env, nullptr, name, &AsyncCall::HandleExecute, &AsyncCall::HandleComplete, this, &work));
-        NAPI_OK(napi_create_reference(env, callback, 1, &this->callback));
+        NAPI_OK(napi_create_reference(env, args[func->required_parameters], 1, &this->callback));
     }
 
-    // Keep together (see destructor)
-    this->func = func->Ref();
-    this->mem = mem;
-    call.Init(instance, mem, &transient);
-
-    call.DebugCall(func);
-
-    prepared = call.PrepareAsync(func);
+    prepared = call.PrepareAsync(func, args);
 
     if (!prepared) [[unlikely]] {
         Napi::Error err = env.GetAndClearPendingException();
@@ -1793,22 +1788,37 @@ void AsyncCall::Fail(napi_value err)
     napi_call_function(env, recv, func, K_LEN(args), args, nullptr);
 }
 
+void AsyncCall::HandleExecute(napi_env, void *udata)
+{
+    AsyncCall *async = (AsyncCall *)udata;
+    async->Execute();
+}
+
+void AsyncCall::HandleComplete(napi_env, napi_status status, void *udata)
+{
+    AsyncCall *async = (AsyncCall *)udata;
+
+    K_ASSERT(status == napi_ok);
+    async->Complete();
+
+    delete async;
+}
+
 static napi_value TranslateAsyncCall(napi_env env, napi_callback_info info)
 {
     static_assert(MaxParameters >= 6);
 
-    AsyncCall *async = new AsyncCall(env);
-    K_DEFER_N(err_guard) { delete async; };
-
-    napi_value *args = async->Args();
-    size_t count = 6;
+    napi_value args[MaxParameters + 1];
+    size_t count = 8;
     FunctionInfo *func;
 
     NAPI_OK(napi_get_cb_info(env, info, &count, args, nullptr, (void **)&func));
 
-    if (count > 6) {
-        count = std::min(count, (size_t)MaxParameters);
-        NAPI_OK(napi_get_cb_info(env, info, &count, args, nullptr, nullptr));
+    if (count > 8) {
+        count = std::min(count, (size_t)MaxParameters + 1);
+
+        size_t copy = count;
+        NAPI_OK(napi_get_cb_info(env, info, &copy, args, nullptr, nullptr));
     }
     if (count <= (size_t)func->required_parameters) {
         ThrowError<Napi::TypeError>(env, "Expected %1 arguments, got %2", func->required_parameters + 1, count);
@@ -1817,9 +1827,8 @@ static napi_value TranslateAsyncCall(napi_env env, napi_callback_info info)
 
     InstanceData *instance = func->instance;
 
-    Napi::Value callback(env, args[func->required_parameters]);
-    if (!callback.IsFunction()) {
-        ThrowError<Napi::TypeError>(env, "Expected callback function as last argument, got %1", GetValueType(instance, callback));
+    if (GetKindOf(env, args[func->required_parameters]) != napi_function) {
+        ThrowError<Napi::TypeError>(env, "Expected callback function as last argument, got %1", GetValueType(instance, args[func->required_parameters]));
         return nullptr;
     }
 
@@ -1829,11 +1838,12 @@ static napi_value TranslateAsyncCall(napi_env env, napi_callback_info info)
         return nullptr;
     }
 
-    if (!async->Prepare(instance, mem, func, callback))
+    AsyncCall *async = new AsyncCall(env, instance, mem, func);
+    if (!async->Prepare(args)) {
+        delete async;
         return nullptr;
-
+    }
     async->Queue();
-    err_guard.Disable();
 
     return nullptr;
 }
@@ -1885,17 +1895,18 @@ void InitTranslateZeroCall(Napi::Env env)
     NAPI_OK(napi_call_function(env, self, func, 0, nullptr, &ret));
 }
 
-napi_value CallPointer(Napi::Env env, const FunctionInfo *proto, void *native, napi_value *args, Size count)
+napi_value CallPointer(Napi::Env env, const FunctionInfo *proto, napi_value *args, Size count)
 {
-    CallData call(env);
-
-    Size copy = std::min(count * K_SIZE(*call.args), K_SIZE(call.args));
-    MemCpy(call.args, args, copy);
+    if (count < proto->required_parameters) [[unlikely]] {
+        ThrowError<Napi::TypeError>(env, "Expected %1 arguments or more, got %2", proto->required_parameters, count);
+        return nullptr;
+    }
 
     if (proto->variadic) {
-        return TranslateVariadicCall(&call, proto, native, count);
+        return TranslateVariadicCall(env, proto, args, count);
     } else {
-        return TranslateNormalCall(&call, proto, native, count);
+        args[proto->required_parameters] = args[count];
+        return TranslateNormalCall(env, proto, args);
     }
 }
 

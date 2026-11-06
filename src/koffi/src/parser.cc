@@ -63,8 +63,6 @@ bool PrototypeParser::Parse(const char *str, bool concrete, FunctionInfo *out_fu
                 return false;
             }
 
-            param.offset = (int8_t)out_func->parameters.len;
-
             out_func->parameters.Append(param);
 
             offset += (offset < tokens.len && IsIdentifier(tokens[offset]));

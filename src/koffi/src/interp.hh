@@ -114,24 +114,24 @@ void FillAsyncPlan(Span<const OpData> sync, HeapArray<OpData> *out_async);
 
 #if defined(MUST_TAIL)
 
-PRESERVE_NONE typedef napi_value ForwardFunc(CallData *call, uint8_t *base, void *native, const OpData *op);
-PRESERVE_NONE typedef int RelayFunc(CallData *call, TrampolineInfo *trampoline, uint8_t *base, const OpData *op);
+PRESERVE_NONE typedef napi_value ForwardFunc(CallData *call, uint8_t *base, napi_value *argp, const OpData *op);
+PRESERVE_NONE typedef int RelayFunc(CallData *call, uint8_t *base, napi_value *argp, const OpData *op);
 
-static K_FORCE_INLINE napi_value RunForward(CallData *call, uint8_t *base, void *native, const OpData *op)
+static K_FORCE_INLINE napi_value RunForward(CallData *call, uint8_t *base, napi_value *argp, const OpData *op)
 {
-    return ((ForwardFunc *)op->o)(call, base, native, op);
+    return ((ForwardFunc *)op->o)(call, base, argp, op);
 }
 
-static K_FORCE_INLINE int RunRelay(CallData *call, TrampolineInfo *trampoline, uint8_t *base, const OpData *op)
+static K_FORCE_INLINE int RunRelay(CallData *call, uint8_t *base, napi_value *argp, const OpData *op)
 {
-    return ((RelayFunc *)op->o)(call, trampoline, base, op);
+    return ((RelayFunc *)op->o)(call, base, argp, op);
 
 }
 
 #else
 
-napi_value RunForward(CallData *call, uint8_t *base, void *native, const OpData *op);
-int RunRelay(CallData *call, TrampolineInfo *trampoline, uint8_t *base, const OpData *op);
+napi_value RunForward(CallData *call, uint8_t *base, napi_value *argp, const OpData *op);
+int RunRelay(CallData *call, uint8_t *base, napi_value *argp, const OpData *op);
 
 #endif
 

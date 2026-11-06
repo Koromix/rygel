@@ -23,19 +23,19 @@ void AnalyseFunction(InstanceData *, const FunctionInfo *func, ExecutionPlan *ou
             Opcode code = IsRegularSize(param.type->size, 8) ? Opcode::PushAggregateReg : Opcode::PushAggregateMem;
             int offset = 8 * arg + (arg >= 4 ? 80 : 0);
 
-            out_plan->sync.Append({ .o = Code2Op(code), .s1 = (int16_t)param.offset, .i = offset, .type = param.type });
+            out_plan->sync.Append({ .o = Code2Op(code), .i = offset, .type = param.type });
         } else if (IsFloat(param.type) && !param.variadic) {
             int delta = (int)Opcode::PushVoid - (int)PrimitiveKind::Void;
             Opcode code = (Opcode)((int)param.type->primitive + delta);
             int offset = 32 + 8 * arg + (arg >= 4 ? 48 : 0);
 
-            out_plan->sync.Append({ .o = Code2Op(code), .s1 = (int16_t)param.offset, .s2 = (int16_t)param.directions, .i = offset, .type = param.type });
+            out_plan->sync.Append({ .o = Code2Op(code), .s2 = (int16_t)param.directions, .i = offset, .type = param.type });
         } else {
             int delta = (int)Opcode::PushVoid - (int)PrimitiveKind::Void;
             Opcode code = (Opcode)((int)param.type->primitive + delta);
             int offset = 8 * arg + (arg >= 4 ? 80 : 0);
 
-            out_plan->sync.Append({ .o = Code2Op(code), .s1 = (int16_t)param.offset, .s2 = (int16_t)param.directions, .i = offset, .type = param.type });
+            out_plan->sync.Append({ .o = Code2Op(code), .s2 = (int16_t)param.directions, .i = offset, .type = param.type });
         }
 
         forward_fp |= IsFloat(param.type);

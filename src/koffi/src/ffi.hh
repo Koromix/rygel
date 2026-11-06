@@ -199,7 +199,6 @@ struct ParameterInfo {
     const TypeInfo *type;
     int directions;
     bool variadic;
-    int8_t offset;
 };
 
 // Also used for callbacks, even though many members are not used in this case

@@ -104,7 +104,7 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
                 int delta = (int)Opcode::PushVoid - (int)PrimitiveKind::Void;
                 Opcode code = (Opcode)((int)param.type->primitive + delta);
 
-                out_plan->sync.Append({ .o = Code2Op(code), .s1 = (int16_t)param.offset, .s2 = (int16_t)param.directions, .i = offset, .type = param.type });
+                out_plan->sync.Append({ .o = Code2Op(code), .s2 = (int16_t)param.directions, .i = offset, .type = param.type });
             } break;
 
             case PrimitiveKind::Record:
@@ -128,7 +128,7 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
                             stack_offset += registers * 8;
                         }
 
-                        out_plan->sync.Append({ .o = Code2Op(Opcode::PushAggregateReg), .s1 = (int16_t)param.offset, .i = offset, .type = param.type });
+                        out_plan->sync.Append({ .o = Code2Op(Opcode::PushAggregateReg), .i = offset, .type = param.type });
                     } else {
                         int offset = 0;
 
@@ -141,7 +141,7 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
                             stack_offset += 8;
                         }
 
-                        out_plan->sync.Append({ .o = Code2Op(Opcode::PushAggregateMem), .s1 = (int16_t)param.offset, .i = offset, .type = param.type });
+                        out_plan->sync.Append({ .o = Code2Op(Opcode::PushAggregateMem), .i = offset, .type = param.type });
                     }
 
                     break;
@@ -165,7 +165,7 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
                         fpr_index += hfa.count;
 
                         const TypeInfo *type = hfa.float32 ? ReshapeAggregate(instance, param.type, { .stride = 8 }) : param.type;
-                        out_plan->sync.Append({ .o = Code2Op(Opcode::PushAggregateReg), .s1 = (int16_t)param.offset, .i = offset, .type = type });
+                        out_plan->sync.Append({ .o = Code2Op(Opcode::PushAggregateReg), .i = offset, .type = type });
                     } else {
                         fpr_index = fpr_max;
 
@@ -175,7 +175,7 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
                         offset = 19 * 8 + stack_offset;
                         stack_offset += 8;
 
-                        out_plan->sync.Append({ .o = Code2Op(Opcode::PushAggregateReg), .s1 = (int16_t)param.offset, .i = offset, .type = param.type });
+                        out_plan->sync.Append({ .o = Code2Op(Opcode::PushAggregateReg), .i = offset, .type = param.type });
                     }
                 } else if (param.type->size <= 16) {
                     int registers = (param.type->size + 7) / 8;
@@ -196,7 +196,7 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
                         stack_offset += registers * 8;
                     }
 
-                    out_plan->sync.Append({ .o = Code2Op(Opcode::PushAggregateReg), .s1 = (int16_t)param.offset, .i = offset, .type = param.type });
+                    out_plan->sync.Append({ .o = Code2Op(Opcode::PushAggregateReg), .i = offset, .type = param.type });
                 } else {
                     int offset = 0;
 
@@ -212,7 +212,7 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
                         stack_offset += 8;
                     }
 
-                    out_plan->sync.Append({ .o = Code2Op(Opcode::PushAggregateMem), .s1 = (int16_t)param.offset, .i = offset, .type = param.type });
+                    out_plan->sync.Append({ .o = Code2Op(Opcode::PushAggregateMem), .i = offset, .type = param.type });
                 }
             } break;
             case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
@@ -230,7 +230,7 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
                         stack_offset += 8;
                     }
 
-                    out_plan->sync.Append({ .o = Code2Op(Opcode::PushFloat32), .s1 = (int16_t)param.offset, .s2 = (int16_t)param.directions, .i = offset, .type = param.type });
+                    out_plan->sync.Append({ .o = Code2Op(Opcode::PushFloat32), .s2 = (int16_t)param.directions, .i = offset, .type = param.type });
 
                     break;
                 }
@@ -250,7 +250,7 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
 #endif
                 }
 
-                out_plan->sync.Append({ .o = Code2Op(Opcode::PushFloat32), .s1 = (int16_t)param.offset, .s2 = (int16_t)param.directions, .i = offset, .type = param.type });
+                out_plan->sync.Append({ .o = Code2Op(Opcode::PushFloat32), .s2 = (int16_t)param.directions, .i = offset, .type = param.type });
             } break;
             case PrimitiveKind::Float64: {
                 int offset = 0;
@@ -265,7 +265,7 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
                         stack_offset += 8;
                     }
 
-                    out_plan->sync.Append({ .o = Code2Op(Opcode::PushFloat64), .s1 = (int16_t)param.offset, .s2 = (int16_t)param.directions, .i = offset, .type = param.type });
+                    out_plan->sync.Append({ .o = Code2Op(Opcode::PushFloat64), .s2 = (int16_t)param.directions, .i = offset, .type = param.type });
 
                     break;
                 }
@@ -282,7 +282,7 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
                     stack_offset += 8;
                 }
 
-                out_plan->sync.Append({ .o = Code2Op(Opcode::PushFloat64), .s1 = (int16_t)param.offset, .s2 = (int16_t)param.directions, .i = offset, .type = param.type });
+                out_plan->sync.Append({ .o = Code2Op(Opcode::PushFloat64), .s2 = (int16_t)param.directions, .i = offset, .type = param.type });
             } break;
 
             case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;

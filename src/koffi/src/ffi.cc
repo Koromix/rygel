@@ -1185,8 +1185,6 @@ static bool ParseClassicFunction(const Napi::CallbackInfo &info, bool concrete, 
             return false;
         }
 
-        param.offset = (int8_t)j;
-
         out_func->parameters.Append(param);
     }
 
@@ -2313,7 +2311,7 @@ static napi_value CallPointerSync(napi_env env, napi_callback_info info)
 {
     static_assert(MaxParameters >= 8);
 
-    napi_value args[MaxParameters + 2];
+    napi_value args[MaxParameters + 3];
     size_t count = 8;
     InstanceData *instance;
 
@@ -2321,7 +2319,9 @@ static napi_value CallPointerSync(napi_env env, napi_callback_info info)
 
     if (count > 8) {
         count = std::min(count, (size_t)MaxParameters + 2);
-        NAPI_OK(napi_get_cb_info(env, info, &count, args, nullptr, nullptr));
+
+        size_t copy = count;
+        NAPI_OK(napi_get_cb_info(env, info, &copy, args, nullptr, nullptr));
     }
     if (count < 2) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected 2 or more arguments, got %1", count);
@@ -2342,7 +2342,10 @@ static napi_value CallPointerSync(napi_env env, napi_callback_info info)
         return nullptr;
     }
 
-    return CallPointer(env, type->proto, ptr, args + 2, count - 2);
+    // The native function pointer shall come just after arguments
+    args[count] = (napi_value)ptr;
+
+    return CallPointer(env, type->proto, args + 2, count - 2);
 }
 
 static napi_value EncodeValue(napi_env env, napi_callback_info info)

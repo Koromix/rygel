@@ -97,7 +97,7 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
                     stack_offset += 4;
                 }
 
-                out_plan->sync.Append({ .o = Code2Op(code), .s1 = (int16_t)param.offset, .s2 = (int16_t)param.directions, .i = offset, .type = param.type });
+                out_plan->sync.Append({ .o = Code2Op(code), .s2 = (int16_t)param.directions, .i = offset, .type = param.type });
             } break;
 
             case PrimitiveKind::Int64:
@@ -119,7 +119,7 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
                     stack_offset += 8;
                 }
 
-                out_plan->sync.Append({ .o = Code2Op(code), .s1 = (int16_t)param.offset, .i = offset, .type = param.type });
+                out_plan->sync.Append({ .o = Code2Op(code), .i = offset, .type = param.type });
             } break;
 
             case PrimitiveKind::Record:
@@ -132,12 +132,12 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
                     int offset = 4 * 4 + 4 * fpr_index;
                     fpr_index += hfa;
 
-                    out_plan->sync.Append({ .o = Code2Op(Opcode::PushAggregateReg), .s1 = (int16_t)param.offset, .i = offset, .type = param.type });
+                    out_plan->sync.Append({ .o = Code2Op(Opcode::PushAggregateReg), .i = offset, .type = param.type });
                 } else if (!hfa && gpr0 + gprs <= gpr_max) {
                     int offset = 4 * gpr0;
                     gpr_index = gpr0 + gprs;
 
-                    out_plan->sync.Append({ .o = Code2Op(Opcode::PushAggregateReg), .s1 = (int16_t)param.offset, .i = offset, .type = param.type });
+                    out_plan->sync.Append({ .o = Code2Op(Opcode::PushAggregateReg), .i = offset, .type = param.type });
                 } else if (!hfa && gpr0 < gpr_max && !stack_offset) {
                     int split = 4 * (gpr_max - gpr0);
                     int offsets[2] = { 4 * gpr0, 24 * 4 };
@@ -145,14 +145,14 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
                     gpr_index = gpr_max;
                     stack_offset = AlignLen(param.type->size - split, 4);
 
-                    out_plan->sync.Append({ .o = Code2Op(Opcode::PushAggregateSplit), .s1 = (int16_t)param.offset, .s2 = (int16_t)split, .s3 = (int16_t)offsets[0], .s4 = (int16_t)offsets[1], .type = param.type });
+                    out_plan->sync.Append({ .o = Code2Op(Opcode::PushAggregateSplit), .s2 = (int16_t)split, .s3 = (int16_t)offsets[0], .s4 = (int16_t)offsets[1], .type = param.type });
                 } else {
                     stack_offset = AlignLen(stack_offset, param.type->align == 8 ? 8 : 4);
 
                     int offset = 24 * 4 + stack_offset;
                     stack_offset += AlignLen(param.type->size, 4);
 
-                    out_plan->sync.Append({ .o = Code2Op(Opcode::PushAggregateReg), .s1 = (int16_t)param.offset, .i = offset, .type = param.type });
+                    out_plan->sync.Append({ .o = Code2Op(Opcode::PushAggregateReg), .i = offset, .type = param.type });
                 }
             } break;
             case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
@@ -184,7 +184,7 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
                     }
                 }
 
-                out_plan->sync.Append({ .o = Code2Op(Opcode::PushFloat32), .s1 = (int16_t)param.offset, .s2 = (int16_t)param.directions, .i = offset, .type = param.type });
+                out_plan->sync.Append({ .o = Code2Op(Opcode::PushFloat32), .s2 = (int16_t)param.directions, .i = offset, .type = param.type });
             } break;
             case PrimitiveKind::Float64: {
 #if defined(__ARM_PCS_VFP)
@@ -218,7 +218,7 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
                     }
                 }
 
-                out_plan->sync.Append({ .o = Code2Op(Opcode::PushFloat64), .s1 = (int16_t)param.offset, .s2 = (int16_t)param.directions, .i = offset, .type = param.type });
+                out_plan->sync.Append({ .o = Code2Op(Opcode::PushFloat64), .s2 = (int16_t)param.directions, .i = offset, .type = param.type });
             } break;
 
             case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;

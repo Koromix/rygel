@@ -214,10 +214,10 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
 
             if (IsAggregate(type)) {
                 if (split) {
-                    out_plan->sync.Append({ .o = Code2Op(Opcode::PushAggregatePair), .s1 = (int16_t)param.offset, .s3 = (int16_t)offsets[0], .s4 = (int16_t)offsets[1], .type = type });
+                    out_plan->sync.Append({ .o = Code2Op(Opcode::PushAggregatePair), .s3 = (int16_t)offsets[0], .s4 = (int16_t)offsets[1], .type = type });
                 } else {
                     Opcode code = (ret.method != AbiMethod::Memory) ? Opcode::PushAggregateReg : Opcode::PushAggregateMem;
-                    out_plan->sync.Append({ .o = Code2Op(code), .s1 = (int16_t)param.offset, .i = offsets[0], .type = type });
+                    out_plan->sync.Append({ .o = Code2Op(code), .i = offsets[0], .type = type });
                 }
             } else {
                 K_ASSERT(!split);
@@ -225,7 +225,7 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
                 int delta = (int)Opcode::PushVoid - (int)PrimitiveKind::Void;
                 Opcode code = (Opcode)((int)type->primitive + delta);
 
-                out_plan->sync.Append({ .o = Code2Op(code), .s1 = (int16_t)param.offset, .s2 = (int16_t)param.directions, .i = offsets[0], .type = type });
+                out_plan->sync.Append({ .o = Code2Op(code), .s2 = (int16_t)param.directions, .i = offsets[0], .type = type });
             }
         }
 
