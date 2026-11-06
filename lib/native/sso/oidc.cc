@@ -626,9 +626,9 @@ static EVP_PKEY *FetchJwksKey(const oidc_Provider &provider, const char *kid)
                             }
                         }
 
-                        if (!kid || !kty || !use)
+                        if (!kid || !kty)
                             continue;
-                        if (!TestStr(use, "sig"))
+                        if (use && !TestStr(use, "sig"))
                             continue;
 
                         if (TestStr(kty, "RSA")) {
