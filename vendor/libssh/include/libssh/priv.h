@@ -36,6 +36,16 @@
 #include <string.h>
 #include <time.h>
 
+#ifdef _WIN32
+#include <winsock2.h>
+#undef X509_NAME
+#undef X509_EXTENSIONS
+#undef PKCS7_ISSUER_AND_SERIAL
+#undef PKCS7_SIGNER_INFO
+#undef OCSP_REQUEST
+#undef OCSP_RESPONSE
+#endif
+
 #if !defined(HAVE_STRTOULL)
 # if defined(HAVE___STRTOULL)
 #  define strtoull __strtoull

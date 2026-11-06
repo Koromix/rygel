@@ -558,12 +558,12 @@ static Size HashFile(StreamReader *reader, HashAlgorithm algorithm, Span<uint8_t
         case HashAlgorithm::SHA1: {
             K_ASSERT(out_hash.len >= 32);
 
-            SHA1_CTX ctx;
-            SHA1Init(&ctx);
+            sha1_CTX ctx;
+            sha1_Init(&ctx);
 
-            PROCESS({ SHA1Update(&ctx, bytes.ptr, (size_t)bytes.len); });
+            PROCESS({ sha1_Update(&ctx, bytes.ptr, (size_t)bytes.len); });
 
-            SHA1Final(out_hash.ptr, &ctx);
+            sha1_Final(out_hash.ptr, &ctx);
             return 20;
         } break;
 

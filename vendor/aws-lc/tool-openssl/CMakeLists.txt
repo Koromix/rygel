@@ -1,0 +1,198 @@
+add_executable(
+    openssl
+
+    ../tool/args.cc
+    ../tool/file.cc
+    ../tool/fd.cc
+    ../tool/client.cc
+    ../tool/transport_common.cc
+
+    txt_db/txt_db.cc
+
+    asn1parse.cc
+    ca.cc
+    ca_req_common.cc
+    crl.cc
+    dgst.cc
+    dhparam.cc
+    ecparam.cc
+    ec.cc
+    enc.cc
+    genpkey.cc
+    genrsa.cc
+    ocsp.cc
+    pass_util.cc
+    pkcs8.cc
+    pkcs12.cc
+    pkey.cc
+    pkeyutl.cc
+    rand.cc
+    rehash.cc
+    req.cc
+    ordered_args.cc
+    rsa.cc
+    s_client.cc
+    tool.cc
+    tool_util.cc
+    verify.cc
+    version.cc
+    x509.cc
+)
+
+target_compile_options(openssl PUBLIC -DINTERNAL_TOOL)
+
+if(WIN32)
+    target_link_libraries(openssl ws2_32)
+endif()
+
+if(APPLE OR WIN32 OR ANDROID)
+    target_link_libraries(openssl ssl crypto)
+    set(LIBRT_FLAG "")
+else()
+    find_library(FOUND_LIBRT rt)
+    if(FOUND_LIBRT)
+        target_link_libraries(openssl ssl crypto -lrt)
+        set(LIBRT_FLAG "-lrt")
+    else()
+        target_link_libraries(openssl ssl crypto)
+        set(LIBRT_FLAG "")
+    endif()
+endif()
+
+target_add_awslc_include_paths(TARGET openssl SCOPE PRIVATE)
+
+if(COHABITANT_BINARIES)
+  set_target_properties(openssl PROPERTIES OUTPUT_NAME "${AWSLC_BIN_PREFIX}openssl")
+endif()
+
+install(TARGETS openssl
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+        BUNDLE DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
+
+file(INSTALL
+    ${CMAKE_CURRENT_SOURCE_DIR}/c_rehash.sh
+    DESTINATION
+    ${CMAKE_CURRENT_BINARY_DIR}
+    NO_SOURCE_PERMISSIONS
+    FILE_PERMISSIONS
+    OWNER_READ OWNER_WRITE OWNER_EXECUTE
+    GROUP_READ GROUP_EXECUTE
+    WORLD_READ WORLD_EXECUTE
+    RENAME
+    c_rehash
+)
+
+set(C_REHASH_INSTALL_NAME "c_rehash")
+
+if(COHABITANT_BINARIES)
+  set(C_REHASH_INSTALL_NAME "${AWSLC_BIN_PREFIX}c_rehash")
+endif()
+
+install(
+  PROGRAMS ${CMAKE_CURRENT_SOURCE_DIR}/c_rehash.sh
+  RENAME ${C_REHASH_INSTALL_NAME}
+  DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
+
+if(MSVC AND CMAKE_BUILD_TYPE_LOWER MATCHES "relwithdebinfo" AND FIPS)
+    install (FILES $<TARGET_FILE_DIR:openssl>/openssl.pdb DESTINATION ${CMAKE_INSTALL_LIBDIR})
+endif()
+
+if(BUILD_TESTING)
+    add_executable(
+        tool_openssl_test
+
+        ../tool/args.cc
+        ../tool/file.cc
+        ../tool/fd.cc
+        ../tool/client.cc
+        ../tool/transport_common.cc
+
+        txt_db/txt_db.cc
+        txt_db/txt_db_test.cc
+
+        asn1parse.cc
+        asn1parse_test.cc
+        ca.cc
+        ca_test.cc
+        ca_req_common.cc
+        crl.cc
+        crl_test.cc
+        dgst.cc
+        dgst_test.cc
+        dhparam.cc
+        dhparam_test.cc
+        ec.cc
+        ec_test.cc
+        ecparam.cc
+        ecparam_test.cc
+        enc.cc
+        enc_test.cc
+        genrsa.cc
+        genrsa_test.cc
+        genpkey.cc
+        genpkey_test.cc
+        ocsp.cc
+        ocsp_test.cc
+        ordered_args.cc
+        ordered_args_test.cc
+        pass_util.cc
+        pass_util_test.cc
+        pkcs8.cc
+        pkcs8_test.cc
+        pkcs12.cc
+        pkcs12_test.cc
+        pkey.cc
+        pkey_test.cc
+        pkeyutl.cc
+        pkeyutl_test.cc
+        rand.cc
+        rand_test.cc
+        rehash.cc
+        rehash_test.cc
+        req.cc
+        req_test.cc
+        rsa.cc
+        rsa_test.cc
+        s_client.cc
+        s_client_test.cc
+        test_util.cc
+        tool_test.cc
+        tool_util.cc
+        verify.cc
+        verify_test.cc
+        x509.cc
+        x509_test.cc
+    )
+
+    target_add_awslc_include_paths(TARGET tool_openssl_test SCOPE PRIVATE)
+
+    file(INSTALL
+            ${CMAKE_CURRENT_SOURCE_DIR}/c_rehash_test.sh
+            DESTINATION
+            ${CMAKE_CURRENT_BINARY_DIR}
+            NO_SOURCE_PERMISSIONS
+            FILE_PERMISSIONS
+            OWNER_READ OWNER_WRITE OWNER_EXECUTE
+            GROUP_READ GROUP_EXECUTE
+            WORLD_READ WORLD_EXECUTE
+            RENAME
+            c_rehash_test
+    )
+
+    target_link_libraries(tool_openssl_test boringssl_gtest_main ssl crypto)
+    add_dependencies(all_tests tool_openssl_test)
+    add_dependencies(tool_openssl_test openssl)
+    set_test_location(tool_openssl_test)
+endif()
+
+# Create binary symlinks for OpenSSL compatibility
+if(INSTALL_OPENSSL_SHIM AND COHABITANT_BINARIES)
+  install(CODE "
+    execute_process(COMMAND \${CMAKE_COMMAND} -E create_symlink
+      \"${AWSLC_BIN_PREFIX}openssl\" \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}/openssl\")
+    execute_process(COMMAND \${CMAKE_COMMAND} -E create_symlink
+      \"${AWSLC_BIN_PREFIX}c_rehash\" \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}/c_rehash\")
+  ")
+endif()

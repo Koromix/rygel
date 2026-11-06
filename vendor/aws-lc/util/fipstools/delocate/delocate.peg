@@ -1,0 +1,123 @@
+# Copyright (c) 2017, Google Inc.
+# SPDX-License-Identifier: ISC */
+
+# This is a rough parser for x86-64 and ppc64le assembly designed to work with
+# https://github.com/pointlander/peg. delocate.go has a go:generate line for
+# rebuilding delocate.peg.go from this file.
+
+# To regenerate delocate.peg.go:
+#
+# go install github.com/pointlander/peg@latest
+# ~/go/bin/peg <path-to-this-file>
+#
+# this will generate delocate.peg.go next to delocate.peg.
+
+package main
+
+type Asm Peg {}
+
+AsmFile <- Statement* !.
+Statement <- WS? (Label / ((GlobalDirective /
+                            LocationDirective /
+                            LabelContainingDirective /
+                            ZeroDirective /
+                            Instruction /
+                            Directive /
+                            Comment / ) WS? ((Comment? '\n') / ';')))
+GlobalDirective <- (".global" / ".globl") WS SymbolName
+Directive <- '.' DirectiveName (WS Args)?
+DirectiveName <- [[A-Z0-9_]]+
+LocationDirective <- FileDirective / LocDirective
+ZeroDirective <- ".zero" WS [^#\n]+
+FileDirective <- ".file" WS [^#\n]+
+LocDirective <- ".loc" WS [^#/\n]+
+Args <- Arg ((WS? ',' WS?) Arg)*
+Arg <- QuotedArg / [[0-9a-z%+\-*_@.]]*
+QuotedArg <- '"' QuotedText '"'
+QuotedText <- (EscapedChar / [^"])*
+LabelContainingDirective <- LabelContainingDirectiveName WS SymbolArgs
+LabelContainingDirectiveName <- ".xword" / ".word" / ".hword" / ".long" / ".set" / ".byte" / ".8byte" / ".4byte" / ".quad" / ".tc" / ".localentry" / ".size" / ".type" / ".uleb128" / ".sleb128"
+SymbolArgs <- SymbolArg ((WS? ',' WS?) SymbolArg)*
+SymbolArg <- SymbolExpr
+SymbolExpr <- SymbolAtom (WS? SymbolOperator WS? SymbolExpr)?
+SymbolAtom <- Offset / SymbolType / LocalLabelRef / LocalSymbol TCMarker? / SymbolName Offset / SymbolName TCMarker? / Dot / OpenParen WS? SymbolExpr WS? CloseParen
+SymbolOperator <- '+' / '-' / '|' / '<<' / '>>' / '/'
+
+OpenParen <- '('
+CloseParen <- ')'
+
+SymbolType <- [@%] ('function' / 'object')
+Dot <- '.'
+TCMarker <- '[TC]'
+EscapedChar <- '\\' .
+WS <- [ \t]+
+Comment <- ("//" / '#') [^\n]*
+Label <- (LocalSymbol / LocalLabel / SymbolName) ':'
+SymbolName <- [[A-Z._]][[A-Z.0-9$_]]*
+LocalSymbol <- '.L' [[A-Za-z.0-9$_]]+
+LocalLabel <- [0-9][0-9$]*
+LocalLabelRef <- [0-9][0-9$]*[bf]
+Instruction <- InstructionName (WS InstructionArg ((WS? ','? WS?) InstructionArg)*)?
+InstructionName <- [[A-Z]][[A-Z.0-9]]* [.+\-]?
+InstructionArg <- IndirectionIndicator? (ARMConstantTweak / RegisterOrConstant / LocalLabelRef / TOCRefHigh / TOCRefLow / GOTLocation / GOTSymbolOffset / MemoryRef / AVX512Token)
+GOTLocation <- '$_GLOBAL_OFFSET_TABLE_-' LocalSymbol
+GOTSymbolOffset <- ('$' SymbolName '@GOT' 'OFF'?) / (":got:" SymbolName)
+AVX512Token <- WS? '{' '%'? [0-9a-z]* '}'
+TOCRefHigh <- '.TOC.-' ('0b' / ('.L' [a-zA-Z_0-9]+)) "@ha"
+TOCRefLow <- '.TOC.-' ('0b' / ('.L' [a-zA-Z_0-9]+)) "@l"
+IndirectionIndicator <- '*'
+RegisterOrConstant <- (('%'[[A-Z]][[A-Z0-9]]*) /
+                       ('$' [0-9]+ WS? '*' WS? '(' [0-9]+ WS? '-' WS? [0-9]+ ')' ) /
+                       ('$'? ((Offset Offset) / Offset)) /
+                       ('#' '-'? [0-9]+ '.' [0-9]+ ([eE] [+\-]? [0-9]+)? ) /
+                       ('#' Offset ('*' [0-9]+ ('-' [0-9] [0-9]*)?)? ) /
+                       ('#' '~'? '(' [0-9] WS? "<<" WS? [0-9] [0-9]? ')' ) /
+                       (('#' / '$') '~'? '0x'? [[0-9A-F]]+ ) /
+                       ('$(-' [0-9]+ ')') /
+                       ('#(' [0-9]+ ')') /
+                       ARMRegister)
+                      ![fb:(+\-]
+ARMConstantTweak <- ((([us] "xt" [xwhb]) / ("lsl" / "lsr" / "ror" / "rol" / "asr" / "asl" / "msl") ![A-Za-z0-9_]) (WS '#'? Offset)?) /
+                    "mul vl"  # multiply offset by the hardware's vector length
+ARMRegister <- "sp" / ([xwdqshb] [0-9] [0-9]? !(ARMRegisterBoundary)) / "xzr" / "wzr" / "NZCV" / ARMVectorRegister / SVE2PredicateRegister /
+ ('{' WS? ARMVectorRegister WS? ([,\-] WS? ARMVectorRegister)* WS? '}' ('[' [0-9] [0-9]? ']')? )
+ARMVectorRegister <- [vz] [0-9] [0-9]? ('.' [0-9]* [bsdhqBSDHQ] ('[' [0-9] [0-9]? ']')? )?
+SVE2PredicateRegister <- "p" [0-9] [0-9]? "/" [mMzZ]
+ARMRegisterBoundary <- [a-zA-Z0-9_]
+# Compilers only output a very limited number of expression forms. Rather than
+# implement a full expression parser, this enumerate those forms plus a few
+# that appear in our hand-written assembly.
+MemoryRef <- (SymbolRef BaseIndexScale /
+              SymbolRef /
+              Low12BitsSymbolRef /
+              Offset* BaseIndexScale /
+              SegmentRegister Offset BaseIndexScale /
+              SegmentRegister BaseIndexScale /
+              SegmentRegister Offset /
+              ARMBaseIndexScale /
+              BaseIndexScale)
+SymbolRef <- (Offset* '+')? (LocalSymbol / SymbolName) Offset* ('@' Section Offset*)?
+Low12BitsSymbolRef <- ":lo12:" (LocalSymbol / SymbolName) Offset?
+ARMBaseIndexScale <- '[' ARMRegister (',' WS? (('#'? Offset (('*' [0-9]+) / ('*' '(' [0-9]+ Operator [0-9]+ ')') / (('+' [0-9]+)*))? ) / ('#'? ARMGOTLow12) / ('#'? Low12BitsSymbolRef) / ARMRegister) (',' WS? ARMConstantTweak)?)? ']' ARMPostincrement?
+ARMGOTLow12 <- ":got_lo12:" SymbolName
+ARMPostincrement <- '!'
+BaseIndexScale <- '(' RegisterOrConstant? WS? (',' WS? RegisterOrConstant WS? (',' [0-9]+)? )? ')'
+Operator <- [+\-]
+OffsetOperator <- '+' / '-' / '*'
+# s2n-bignum code has a lot of different and complex ways to compute an offset.
+# For example, (7*72)+(3*72)*(5-1)+8+0*72. We define S2nBignumHelper in an attempt
+# to simplofy the expressions for Offset.
+S2nBignumHelper <- '(' [0-9]+ WS? OffsetOperator WS? [0-9]+ ')' WS? OffsetOperator? WS?
+Offset <- '+'? '-'? (("0b" [01]+) /
+                     ("0x" [[0-9A-F]]+) /
+                     ([0-9]+ WS OffsetOperator [0-9]+ /
+                      [0-9]+ ( OffsetOperator '(' [0-9]+ OffsetOperator [0-9]+ ')' )? /
+                      [0-9]+ ( OffsetOperator [0-9]+ OffsetOperator [0-9]+ )? /
+                      [0-9]+ ( OffsetOperator [0-9]+ )? /
+                      S2nBignumHelper S2nBignumHelper (S2nBignumHelper ([0-9]+ OffsetOperator)? [0-9]+ OffsetOperator)? [0-9]+ /
+                      S2nBignumHelper [0-9]+ ((WS? OffsetOperator [0-9]+ (WS? OffsetOperator [0-9]+)?) / (!'x')) /
+                      S2nBignumHelper /
+                      '(' [0-9]+ WS? OffsetOperator WS? [0-9]+ WS? OffsetOperator WS? [0-9]+')')![[A-Z]]
+                    )
+Section <- [[A-Z@]]+
+SegmentRegister <- '%' [c-gs] 's:'

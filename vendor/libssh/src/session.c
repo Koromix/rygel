@@ -28,6 +28,12 @@
 
 #ifdef _WIN32
 #include <winsock2.h>
+#undef X509_NAME
+#undef X509_EXTENSIONS
+#undef PKCS7_ISSUER_AND_SERIAL
+#undef PKCS7_SIGNER_INFO
+#undef OCSP_REQUEST
+#undef OCSP_RESPONSE
 #endif
 
 #include "libssh/priv.h"
@@ -1224,16 +1230,16 @@ int ssh_get_pubkey_hash(ssh_session session, unsigned char **hash)
         return SSH_ERROR;
     }
 
-    ctx = md5_ctx_init();
+    ctx = md5_init();
     if (ctx == NULL) {
         SSH_STRING_FREE(pubkey_blob);
         SAFE_FREE(h);
         return SSH_ERROR;
     }
 
-    rc = md5_ctx_update(ctx,
-                        ssh_string_data(pubkey_blob),
-                        ssh_string_len(pubkey_blob));
+    rc = md5_update(ctx,
+                    ssh_string_data(pubkey_blob),
+                    ssh_string_len(pubkey_blob));
     if (rc != SSH_OK) {
         SSH_STRING_FREE(pubkey_blob);
         md5_ctx_free(ctx);
@@ -1241,7 +1247,7 @@ int ssh_get_pubkey_hash(ssh_session session, unsigned char **hash)
         return rc;
     }
     SSH_STRING_FREE(pubkey_blob);
-    rc = md5_ctx_final(h, ctx);
+    rc = md5_final(h, ctx);
     if (rc != SSH_OK) {
         SAFE_FREE(h);
         return rc;
@@ -1351,11 +1357,11 @@ int ssh_get_publickey_hash(const ssh_key key,
 
     switch (type) {
     case SSH_PUBLICKEY_HASH_SHA1:
-        digest = sha1_direct;
+        digest = sha1;
         *hlen = SHA_DIGEST_LEN;
         break;
     case SSH_PUBLICKEY_HASH_SHA256:
-        digest = sha256_direct;
+        digest = sha256;
         *hlen = SHA256_DIGEST_LEN;
         break;
     case SSH_PUBLICKEY_HASH_MD5:
@@ -1368,7 +1374,7 @@ int ssh_get_publickey_hash(const ssh_key key,
             goto out;
         }
 #endif
-        digest = md5_direct;
+        digest = md5;
         *hlen = MD5_DIGEST_LEN;
         break;
     default:

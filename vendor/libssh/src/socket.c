@@ -28,6 +28,12 @@
 #ifdef _WIN32
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#undef X509_NAME
+#undef X509_EXTENSIONS
+#undef PKCS7_ISSUER_AND_SERIAL
+#undef PKCS7_SIGNER_INFO
+#undef OCSP_REQUEST
+#undef OCSP_RESPONSE
 #ifndef UNIX_PATH_MAX
  /* Inlining the key portions of afunix.h in Windows 10 SDK;
   * that header isn't available in the mingw environment. */

@@ -1,0 +1,88 @@
+// Copyright (c) 2015, Google Inc.
+// SPDX-License-Identifier: ISC
+
+#include <string>
+#include <vector>
+
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+#include <openssl/rand.h>
+
+#include "internal.h"
+
+
+static const argument_t kArguments[] = {
+    {
+     "-hex", kBooleanArgument,
+     "Hex encoded output."
+    },
+    {
+     "", kOptionalArgument, "",
+    },
+};
+
+bool Rand(const std::vector<std::string> &args) {
+  bool forever = true, hex = false;
+  size_t len = 0;
+
+  if (!args.empty()) {
+    std::vector<std::string> args_copy(args);
+    const std::string &last_arg = args.back();
+
+    if (!last_arg.empty() && last_arg[0] != '-') {
+      char *endptr;
+      unsigned long long num = strtoull(last_arg.c_str(), &endptr, 10);
+      if (*endptr == 0) {
+        len = num;
+        forever = false;
+        args_copy.pop_back();
+      }
+    }
+
+    std::map<std::string, std::string> args_map;
+    args_list_t extra_args;
+    if (!ParseKeyValueArguments(args_map, extra_args, args_copy,
+                                kArguments) ||
+        extra_args.size() > 0) {
+      PrintUsage(kArguments);
+      return false;
+    }
+
+    hex = args_map.count("-hex") > 0;
+  }
+
+  uint8_t buf[4096];
+  uint8_t hex_buf[8192];
+
+  size_t done = 0;
+  while (forever || done < len) {
+    size_t todo = sizeof(buf);
+    if (!forever && todo > len - done) {
+      todo = len - done;
+    }
+    RAND_bytes(buf, todo);
+    if (hex) {
+      static const char hextable[16 + 1] = "0123456789abcdef";
+      for (unsigned i = 0; i < todo; i++) {
+        hex_buf[i*2] = hextable[buf[i] >> 4];
+        hex_buf[i*2 + 1] = hextable[buf[i] & 0xf];
+      }
+      if (fwrite(hex_buf, todo*2, 1, stdout) != 1) {
+        return false;
+      }
+    } else {
+      if (fwrite(buf, todo, 1, stdout) != 1) {
+        return false;
+      }
+    }
+    done += todo;
+  }
+
+  if (hex && fwrite("\n", 1, 1, stdout) != 1) {
+    return false;
+  }
+
+  return true;
+}

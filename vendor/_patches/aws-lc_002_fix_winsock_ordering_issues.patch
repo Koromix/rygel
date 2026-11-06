@@ -1,0 +1,42 @@
+diff --git a/vendor/aws-lc/crypto/err/err.c b/vendor/aws-lc/crypto/err/err.c
+index acce54cddb..ab09c3b30f 100644
+--- a/vendor/aws-lc/crypto/err/err.c
++++ b/vendor/aws-lc/crypto/err/err.c
+@@ -29,6 +29,9 @@
+ 
+ #if defined(OPENSSL_WINDOWS)
+ OPENSSL_MSVC_PRAGMA(warning(push, 3))
++#define NOMINMAX
++#define WIN32_LEAN_AND_MEAN
++#include <winsock2.h>
+ #include <windows.h>
+ OPENSSL_MSVC_PRAGMA(warning(pop))
+ #endif
+diff --git a/vendor/aws-lc/crypto/internal.h b/vendor/aws-lc/crypto/internal.h
+index 2ebc0c596c..c809e46b1f 100644
+--- a/vendor/aws-lc/crypto/internal.h
++++ b/vendor/aws-lc/crypto/internal.h
+@@ -45,6 +45,9 @@
+     defined(OPENSSL_WINDOWS)
+ #define OPENSSL_WINDOWS_THREADS
+ OPENSSL_MSVC_PRAGMA(warning(push, 3))
++#define NOMINMAX
++#define WIN32_LEAN_AND_MEAN
++#include <winsock2.h>
+ #include <windows.h>
+ OPENSSL_MSVC_PRAGMA(warning(pop))
+ // Cleanup wincrypt.h mess
+diff --git a/vendor/aws-lc/crypto/mem.c b/vendor/aws-lc/crypto/mem.c
+index a9d9eca3b2..28caac09b9 100644
+--- a/vendor/aws-lc/crypto/mem.c
++++ b/vendor/aws-lc/crypto/mem.c
+@@ -14,6 +14,9 @@
+ 
+ #if defined(OPENSSL_WINDOWS)
+ OPENSSL_MSVC_PRAGMA(warning(push, 3))
++#define NOMINMAX
++#define WIN32_LEAN_AND_MEAN
++#include <winsock2.h>
+ #include <windows.h>
+ OPENSSL_MSVC_PRAGMA(warning(pop))
+ #endif

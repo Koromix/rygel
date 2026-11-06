@@ -1,0 +1,2453 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0 OR ISC
+
+#include <openssl/base.h>
+#include <openssl/err.h>
+#include <openssl/evp.h>
+#include <openssl/rsa.h>
+#include <openssl/x509.h>
+#include <openssl/x509v3.h>
+#include <stdio.h>
+#include <string.h>
+#if defined(OPENSSL_WINDOWS)
+#include <direct.h>
+#include <io.h>
+#include <windows.h>
+#else
+#include <dirent.h>
+#include <signal.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#endif
+#include "../tool/internal.h"
+
+#include <gtest/gtest.h>
+#include <openssl/pem.h>
+#include "../crypto/test/test_util.h"
+#include "internal.h"
+#include "test_util.h"
+
+class CATest : public ::testing::Test {
+ protected:
+  void SetUp() override {
+    ASSERT_GT(createTempFILEpath(config_path), 0u);
+    ASSERT_GT(createTempFILEpath(csr_path), 0u);
+    ASSERT_GT(createTempFILEpath(cert_path), 0u);
+    ASSERT_GT(createTempFILEpath(ca_key_path), 0u);
+    ASSERT_GT(createTempFILEpath(ca_cert_path), 0u);
+    ASSERT_GT(createTempFILEpath(db_path), 0u);
+    ASSERT_GT(createTempFILEpath(serial_path), 0u);
+    ASSERT_GT(createTempFILEpath(protected_key_path), 0u);
+    ASSERT_GT(createTempFILEpath(output_path), 0u);
+
+    // Create ED25519 temp file paths
+    ASSERT_GT(createTempFILEpath(ed25519_key_path), 0u);
+    ASSERT_GT(createTempFILEpath(ed25519_cert_path), 0u);
+    ASSERT_GT(createTempFILEpath(ed25519_csr_path), 0u);
+
+    // Create temp directory for new certificates
+    ASSERT_GT(createTempDirPath(new_certs_dir), 0u);
+
+    // Create a test CA key and certificate first (needed for CSR)
+    CreateTestCAKeyAndCert();
+    
+    // Create a test CSR using the same key (self-signed)
+    CreateTestCSR();
+
+    // Create ED25519 test infrastructure
+    CreateTestED25519KeyAndCert();
+    CreateTestED25519CSR();
+    
+    // Create initial database files
+    CreateTestDatabase();
+  }
+
+  void TearDown() override {
+    RemoveFile(config_path);
+    RemoveFile(csr_path);
+    RemoveFile(cert_path);
+    RemoveFile(ca_key_path);
+    RemoveFile(ca_cert_path);
+    RemoveFile(db_path);
+    RemoveFile(serial_path);
+    RemoveFile(protected_key_path);
+    RemoveFile(output_path);
+
+    // Clean up ED25519 files
+    RemoveFile(ed25519_key_path);
+    RemoveFile(ed25519_cert_path);
+    RemoveFile(ed25519_csr_path);
+
+    // Remove database auxiliary files created by the CA tool
+    std::string db_attr_path = std::string(db_path) + ".attr";
+    RemoveFile(db_attr_path.c_str());
+    std::string db_old_path = std::string(db_path) + ".old";
+    RemoveFile(db_old_path.c_str());
+    std::string db_attr_old_path = std::string(db_path) + ".attr.old";
+    RemoveFile(db_attr_old_path.c_str());
+    std::string db_new_path = std::string(db_path) + ".new";
+    RemoveFile(db_new_path.c_str());
+    std::string db_attr_new_path = std::string(db_path) + ".attr.new";
+    RemoveFile(db_attr_new_path.c_str());
+    std::string serial_old_path = std::string(serial_path) + ".old";
+    RemoveFile(serial_old_path.c_str());
+    std::string serial_new_path = std::string(serial_path) + ".new";
+    RemoveFile(serial_new_path.c_str());
+
+    // Clean up temp directory and its contents
+    CleanupTempDir(new_certs_dir);
+  }
+
+  // Remove all files in a directory and then remove the directory itself
+  static void CleanupTempDir(const char *dir_path) {
+    if (dir_path[0] == '\0') {
+      return;
+    }
+#if defined(OPENSSL_WINDOWS)
+    std::string pattern = std::string(dir_path) + "\\*";
+    WIN32_FIND_DATAA find_data;
+    HANDLE hFind = FindFirstFileA(pattern.c_str(), &find_data);
+    if (hFind != INVALID_HANDLE_VALUE) {
+      do {
+        if (strcmp(find_data.cFileName, ".") != 0 &&
+            strcmp(find_data.cFileName, "..") != 0) {
+          std::string file_path =
+              std::string(dir_path) + "\\" + find_data.cFileName;
+          DeleteFileA(file_path.c_str());
+        }
+      } while (FindNextFileA(hFind, &find_data));
+      FindClose(hFind);
+    }
+    RemoveDirectoryA(dir_path);
+#else
+    DIR *d = opendir(dir_path);
+    if (d) {
+      struct dirent *entry = nullptr;
+      while ((entry = readdir(d)) != nullptr) {
+        if (strcmp(entry->d_name, ".") != 0 &&
+            strcmp(entry->d_name, "..") != 0) {
+          std::string file_path =
+              std::string(dir_path) + "/" + entry->d_name;
+          unlink(file_path.c_str());
+        }
+      }
+      closedir(d);
+    }
+    rmdir(dir_path);
+#endif
+  }
+
+  void CreateTestCAKeyAndCert() {
+    // Create CA private key - this will be used for both CA and CSR signing
+    bssl::UniquePtr<EVP_PKEY> ca_pkey(EVP_PKEY_new());
+    ASSERT_TRUE(ca_pkey);
+    bssl::UniquePtr<RSA> ca_rsa(RSA_new());
+    ASSERT_TRUE(ca_rsa);
+    bssl::UniquePtr<BIGNUM> ca_bn(BN_new());
+    ASSERT_TRUE(ca_bn && BN_set_word(ca_bn.get(), RSA_F4) &&
+                RSA_generate_key_ex(ca_rsa.get(), 2048, ca_bn.get(), nullptr));
+    ASSERT_TRUE(EVP_PKEY_assign_RSA(ca_pkey.get(), ca_rsa.release()));
+
+    // Write CA key (unencrypted)
+    ScopedFILE ca_key_file(fopen(ca_key_path, "wb"));
+    ASSERT_TRUE(ca_key_file);
+    ASSERT_TRUE(PEM_write_PrivateKey(ca_key_file.get(), ca_pkey.get(), nullptr,
+                                     nullptr, 0, nullptr, nullptr));
+    
+    // Write CA key (encrypted for password tests)
+    ScopedFILE protected_key_file(fopen(protected_key_path, "wb"));
+    ASSERT_TRUE(protected_key_file);
+    ASSERT_TRUE(PEM_write_PrivateKey(protected_key_file.get(), ca_pkey.get(), 
+                                     EVP_aes_256_cbc(),
+                                     (unsigned char*)"testpassword", 12, nullptr, nullptr));
+
+    // Create CA certificate (self-signed)
+    bssl::UniquePtr<X509> ca_cert(X509_new());
+    ASSERT_TRUE(ca_cert);
+    
+    ASSERT_TRUE(X509_set_version(ca_cert.get(), 2)); // v3
+    
+    // Set serial number
+    bssl::UniquePtr<ASN1_INTEGER> serial(ASN1_INTEGER_new());
+    ASSERT_TRUE(serial && ASN1_INTEGER_set(serial.get(), 1));
+    ASSERT_TRUE(X509_set_serialNumber(ca_cert.get(), serial.get()));
+    
+    // Set validity period
+    ASSERT_TRUE(X509_gmtime_adj(X509_getm_notBefore(ca_cert.get()), 0));
+    ASSERT_TRUE(X509_gmtime_adj(X509_getm_notAfter(ca_cert.get()), 365 * 24 * 60 * 60));
+    
+    // Set subject and issuer (same for self-signed)
+    bssl::UniquePtr<X509_NAME> ca_name(X509_NAME_new());
+    ASSERT_TRUE(ca_name);
+    ASSERT_TRUE(X509_NAME_add_entry_by_txt(ca_name.get(), "CN", MBSTRING_ASC,
+                                           (unsigned char*)"Test CA", -1, -1, 0));
+    ASSERT_TRUE(X509_set_subject_name(ca_cert.get(), ca_name.get()));
+    ASSERT_TRUE(X509_set_issuer_name(ca_cert.get(), ca_name.get()));
+    
+    // Set public key
+    ASSERT_TRUE(X509_set_pubkey(ca_cert.get(), ca_pkey.get()));
+    
+    // Sign certificate
+    ASSERT_TRUE(X509_sign(ca_cert.get(), ca_pkey.get(), EVP_sha256()));
+
+    ScopedFILE ca_cert_file(fopen(ca_cert_path, "wb"));
+    ASSERT_TRUE(ca_cert_file);
+    ASSERT_TRUE(PEM_write_X509(ca_cert_file.get(), ca_cert.get()));
+
+    test_ca_key_ = std::move(ca_pkey);
+    test_ca_cert_ = std::move(ca_cert);
+  }
+
+  void CreateTestCSR() {
+    // For self-signed certificates, the CSR must be signed with the same key as the CA
+    // Use the CA key that was created in CreateTestCAKeyAndCert()
+    ASSERT_TRUE(test_ca_key_) << "CA key must be created before CSR";
+
+    // Create a certificate signing request
+    bssl::UniquePtr<X509_REQ> req(X509_REQ_new());
+    ASSERT_TRUE(req);
+    
+    // Set subject name
+    bssl::UniquePtr<X509_NAME> name(X509_NAME_new());
+    ASSERT_TRUE(name);
+    ASSERT_TRUE(X509_NAME_add_entry_by_txt(name.get(), "CN", MBSTRING_ASC,
+                                           (unsigned char*)"test.example.com", -1, -1, 0));
+    ASSERT_TRUE(X509_REQ_set_subject_name(req.get(), name.get()));
+    
+    // Set public key (same as CA key for self-signed)
+    ASSERT_TRUE(X509_REQ_set_pubkey(req.get(), test_ca_key_.get()));
+    
+    // Sign the CSR with the same key (self-signed requirement)
+    ASSERT_TRUE(X509_REQ_sign(req.get(), test_ca_key_.get(), EVP_sha256()));
+
+    // Write CSR to file
+    ScopedFILE csr_file(fopen(csr_path, "wb"));
+    ASSERT_TRUE(csr_file);
+    ASSERT_TRUE(PEM_write_X509_REQ(csr_file.get(), req.get()));
+  }
+
+  void CreateTestDatabase() {
+    // Create empty database file
+    ScopedFILE db_file(fopen(db_path, "w"));
+    ASSERT_TRUE(db_file);
+    // Empty database - no entries initially
+    
+    // Create database attribute file
+    std::string db_attr_path = std::string(db_path) + ".attr";
+    ScopedFILE db_attr_file(fopen(db_attr_path.c_str(), "w"));
+    ASSERT_TRUE(db_attr_file);
+    fprintf(db_attr_file.get(), "unique_subject = yes\n");
+    
+    // Create serial number file
+    ScopedFILE serial_file(fopen(serial_path, "w"));
+    ASSERT_TRUE(serial_file);
+    fprintf(serial_file.get(), "01\n");
+  }
+
+  // Helper function to escape backslashes in file paths for configuration files
+  std::string EscapeConfigPath(const char* path) {
+    std::string result(path);
+    // Replace all backslashes with double backslashes
+    size_t pos = 0;
+    while ((pos = result.find('\\', pos)) != std::string::npos) {
+      result.replace(pos, 1, "\\\\");
+      pos += 2; // Skip the newly inserted backslashes
+    }
+    return result;
+  }
+
+  // Writes a single revoked entry to the database. |rev_field| is the index's
+  // revocation-date column (a timestamp, optionally followed by ",reason" and
+  // any reason argument). Serial "AA" avoids colliding with the serial file,
+  // which starts at 01.
+  void WriteSingleRevokedEntry(const char *rev_field) {
+    // Format: type\texp_date\trev_date\tserial\tfile\tname
+    ScopedFILE db_file(fopen(db_path, "w"));
+    ASSERT_TRUE(db_file);
+    fprintf(db_file.get(),
+            "R\t251231235959Z\t%s\tAA\tunknown\t/CN=revoked.example.com\n",
+            rev_field);
+  }
+
+  void CreateBasicConfig() {
+    ScopedFILE config_file(fopen(config_path, "w"));
+    ASSERT_TRUE(config_file);
+    
+    std::string config_content = R"(
+[ ca ]
+default_ca = CA_default
+
+[ CA_default ]
+database = )" + EscapeConfigPath(db_path) + R"(
+serial = )" + EscapeConfigPath(serial_path) + R"(
+private_key = )" + EscapeConfigPath(ca_key_path) + R"(
+certificate = )" + EscapeConfigPath(ca_cert_path) + R"(
+new_certs_dir = )" + EscapeConfigPath(new_certs_dir) + R"(
+default_md = sha256
+policy = policy_anything
+x509_extensions = v3_ca
+copy_extensions = none
+preserve = no
+days = 365
+
+[ policy_anything ]
+countryName = optional
+stateOrProvinceName = optional
+localityName = optional
+organizationName = optional
+organizationalUnitName = optional
+commonName = supplied
+
+[ v3_ca ]
+basicConstraints = CA:FALSE
+keyUsage = digitalSignature, keyEncipherment
+)";
+    
+    fprintf(config_file.get(), "%s", config_content.c_str());
+  }
+
+  void CreateConfigWithExtensions() {
+    ScopedFILE config_file(fopen(config_path, "w"));
+    ASSERT_TRUE(config_file);
+    
+    std::string config_content = R"(
+[ ca ]
+default_ca = CA_default
+
+[ CA_default ]
+database = )" + EscapeConfigPath(db_path) + R"(
+serial = )" + EscapeConfigPath(serial_path) + R"(
+private_key = )" + EscapeConfigPath(ca_key_path) + R"(
+certificate = )" + EscapeConfigPath(ca_cert_path) + R"(
+new_certs_dir = )" + EscapeConfigPath(new_certs_dir) + R"(
+default_md = sha256
+policy = policy_anything
+x509_extensions = usr_cert
+copy_extensions = copy
+preserve = no
+days = 365
+
+[ policy_anything ]
+countryName = optional
+stateOrProvinceName = optional
+localityName = optional
+organizationName = optional
+organizationalUnitName = optional
+commonName = supplied
+
+[ usr_cert ]
+basicConstraints = CA:FALSE
+keyUsage = nonRepudiation, digitalSignature, keyEncipherment
+subjectAltName = DNS:alt.example.com
+)";
+    
+    fprintf(config_file.get(), "%s", config_content.c_str());
+  }
+
+  char config_path[PATH_MAX];
+  char csr_path[PATH_MAX];
+  char cert_path[PATH_MAX];
+  char ca_key_path[PATH_MAX];
+  char ca_cert_path[PATH_MAX];
+  char db_path[PATH_MAX];
+  char serial_path[PATH_MAX];
+  char protected_key_path[PATH_MAX];
+  char output_path[PATH_MAX];
+  char new_certs_dir[PATH_MAX];
+  
+  // CA key used for both CA operations and CSR signing (self-signed)
+  bssl::UniquePtr<EVP_PKEY> test_ca_key_;
+  bssl::UniquePtr<X509> test_ca_cert_;
+  
+  // ED25519 key for testing DEF_DGST_REQUIRED behavior
+  bssl::UniquePtr<EVP_PKEY> test_ed25519_key_;
+  char ed25519_key_path[PATH_MAX];
+  char ed25519_cert_path[PATH_MAX];
+  char ed25519_csr_path[PATH_MAX];
+
+  void CreateTestED25519KeyAndCert() {
+    // Generate ED25519 private key from seed
+    uint8_t ed25519_seed[32] = {
+      0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+      0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10,
+      0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18,
+      0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, 0x20
+    };
+
+    bssl::UniquePtr<EVP_PKEY> ed25519_pkey(
+        EVP_PKEY_new_raw_private_key(EVP_PKEY_ED25519, nullptr, ed25519_seed, 32));
+    ASSERT_TRUE(ed25519_pkey);
+
+    // Write ED25519 key to file
+    ScopedFILE ed25519_key_file(fopen(ed25519_key_path, "wb"));
+    ASSERT_TRUE(ed25519_key_file);
+    ASSERT_TRUE(PEM_write_PrivateKey(ed25519_key_file.get(), ed25519_pkey.get(), nullptr,
+                                     nullptr, 0, nullptr, nullptr));
+
+    // Create ED25519 CA certificate (self-signed)
+    bssl::UniquePtr<X509> ed25519_cert(X509_new());
+    ASSERT_TRUE(ed25519_cert);
+    
+    ASSERT_TRUE(X509_set_version(ed25519_cert.get(), 2)); // v3
+    
+    // Set serial number
+    bssl::UniquePtr<ASN1_INTEGER> serial(ASN1_INTEGER_new());
+    ASSERT_TRUE(serial && ASN1_INTEGER_set(serial.get(), 1));
+    ASSERT_TRUE(X509_set_serialNumber(ed25519_cert.get(), serial.get()));
+    
+    // Set validity period
+    ASSERT_TRUE(X509_gmtime_adj(X509_getm_notBefore(ed25519_cert.get()), 0));
+    ASSERT_TRUE(X509_gmtime_adj(X509_getm_notAfter(ed25519_cert.get()), 365 * 24 * 60 * 60));
+    
+    // Set subject and issuer (same for self-signed)
+    bssl::UniquePtr<X509_NAME> ed25519_name(X509_NAME_new());
+    ASSERT_TRUE(ed25519_name);
+    ASSERT_TRUE(X509_NAME_add_entry_by_txt(ed25519_name.get(), "CN", MBSTRING_ASC,
+                                           (unsigned char*)"Test ED25519 CA", -1, -1, 0));
+    ASSERT_TRUE(X509_set_subject_name(ed25519_cert.get(), ed25519_name.get()));
+    ASSERT_TRUE(X509_set_issuer_name(ed25519_cert.get(), ed25519_name.get()));
+    
+    // Set public key
+    ASSERT_TRUE(X509_set_pubkey(ed25519_cert.get(), ed25519_pkey.get()));
+    
+    // Sign certificate (ED25519 doesn't use explicit digest)
+    ASSERT_TRUE(X509_sign(ed25519_cert.get(), ed25519_pkey.get(), nullptr));
+
+    // Write ED25519 CA certificate
+    ScopedFILE ed25519_cert_file(fopen(ed25519_cert_path, "wb"));
+    ASSERT_TRUE(ed25519_cert_file);
+    ASSERT_TRUE(PEM_write_X509(ed25519_cert_file.get(), ed25519_cert.get()));
+
+    // Store the key for CSR creation
+    test_ed25519_key_ = std::move(ed25519_pkey);
+  }
+
+  void CreateTestED25519CSR() {
+    // For self-signed certificates, the CSR must be signed with the same key as the CA
+    ASSERT_TRUE(test_ed25519_key_) << "ED25519 key must be created before CSR";
+
+    // Create a certificate signing request
+    bssl::UniquePtr<X509_REQ> req(X509_REQ_new());
+    ASSERT_TRUE(req);
+    
+    // Set subject name
+    bssl::UniquePtr<X509_NAME> name(X509_NAME_new());
+    ASSERT_TRUE(name);
+    ASSERT_TRUE(X509_NAME_add_entry_by_txt(name.get(), "CN", MBSTRING_ASC,
+                                           (unsigned char*)"ed25519.example.com", -1, -1, 0));
+    ASSERT_TRUE(X509_REQ_set_subject_name(req.get(), name.get()));
+    
+    // Set public key (same as ED25519 key for self-signed)
+    ASSERT_TRUE(X509_REQ_set_pubkey(req.get(), test_ed25519_key_.get()));
+    
+    // Sign the CSR with the same key (self-signed requirement, ED25519 doesn't use explicit digest)
+    ASSERT_TRUE(X509_REQ_sign(req.get(), test_ed25519_key_.get(), nullptr));
+
+    // Write CSR to file
+    ScopedFILE csr_file(fopen(ed25519_csr_path, "wb"));
+    ASSERT_TRUE(csr_file);
+    ASSERT_TRUE(PEM_write_X509_REQ(csr_file.get(), req.get()));
+  }
+};
+
+// Basic certificate signing tests
+TEST_F(CATest, BasicCertificateSigning) {
+  CreateBasicConfig();
+
+  args_list_t args = {
+      "-config", config_path,
+      "-selfsign",
+      "-in", csr_path,
+      "-out", output_path
+  };
+
+  ASSERT_EQ(kToolExitSuccess, caTool(args));
+
+  // Verify certificate was created
+  auto cert = LoadPEMCertificate(output_path);
+  ASSERT_TRUE(cert);
+  
+  // Verify subject name contains expected CN
+  X509_NAME *subject = X509_get_subject_name(cert.get());
+  char subject_str[256];
+  X509_NAME_oneline(subject, subject_str, sizeof(subject_str));
+  EXPECT_TRUE(strstr(subject_str, "test.example.com") != nullptr);
+
+  // NEW: Verify certificate-private key pair consistency
+  ASSERT_TRUE(ValidateCertificateKeyPair(cert.get(), test_ca_key_.get()));
+}
+
+TEST_F(CATest, VerboseOutput) {
+  CreateBasicConfig();
+
+  args_list_t args = {
+      "-config", config_path,
+      "-verbose",
+      "-selfsign", 
+      "-in", csr_path,
+      "-out", output_path
+  };
+
+  ASSERT_EQ(kToolExitSuccess, caTool(args));
+
+  // Verify certificate was created
+  auto cert = LoadPEMCertificate(output_path);
+  ASSERT_TRUE(cert);
+
+  // Verify certificate-private key pair consistency
+  ASSERT_TRUE(ValidateCertificateKeyPair(cert.get(), test_ca_key_.get()));
+}
+
+TEST_F(CATest, NoTextOutput) {
+  CreateBasicConfig();
+
+  args_list_t args = {
+      "-config", config_path,
+      "-notext",
+      "-selfsign",
+      "-in", csr_path,
+      "-out", output_path
+  };
+
+  ASSERT_EQ(kToolExitSuccess, caTool(args));
+
+  // Verify certificate was created and check format
+  std::string cert_content = ReadFileToString(output_path);
+  EXPECT_TRUE(cert_content.find("-----BEGIN CERTIFICATE-----") != std::string::npos);
+  EXPECT_TRUE(cert_content.find("-----END CERTIFICATE-----") != std::string::npos);
+  
+  // With -notext, should not contain certificate text details
+  EXPECT_TRUE(cert_content.find("Certificate:") == std::string::npos);
+
+  // Verify certificate-private key pair consistency
+  auto cert = LoadPEMCertificate(output_path);
+  ASSERT_TRUE(cert);
+  ASSERT_TRUE(ValidateCertificateKeyPair(cert.get(), test_ca_key_.get()));
+}
+
+TEST_F(CATest, OutputToStdout) {
+  CreateBasicConfig();
+
+  args_list_t args = {
+      "-config", config_path,
+      "-selfsign",
+      "-in", csr_path
+      // No -out argument, should output to stdout
+  };
+
+  ASSERT_EQ(kToolExitSuccess, caTool(args));
+}
+
+#if !defined(OPENSSL_WINDOWS)
+// A failure writing the issued certificate (here: a broken pipe on stdout)
+// fails the tool and leaves the index unrotated, so the database never claims
+// an issuance whose certificate was lost.
+TEST_F(CATest, CertificateWriteFailureLeavesDatabaseUnchanged) {
+  CreateBasicConfig();
+
+  args_list_t args = {
+      "-config", config_path,
+      "-selfsign",
+      "-in", csr_path
+      // No -out argument, so the certificate goes to stdout.
+  };
+
+  ASSERT_TRUE(ReadFileToString(db_path).empty());
+
+  int pipefd[2];
+  ASSERT_EQ(pipe(pipefd), 0);
+  close(pipefd[0]);  // No reader: writes and flushes below fail with EPIPE.
+
+  auto old_sigpipe = signal(SIGPIPE, SIG_IGN);
+  fflush(stdout);
+  int old_stdout = dup(STDOUT_FILENO);
+  ASSERT_GE(old_stdout, 0);
+  ASSERT_GE(dup2(pipefd[1], STDOUT_FILENO), 0);
+  close(pipefd[1]);
+
+  int result = caTool(args);
+
+  dup2(old_stdout, STDOUT_FILENO);
+  close(old_stdout);
+  signal(SIGPIPE, old_sigpipe);
+  // Clear the error indicator the failed writes left on |stdout|.
+  clearerr(stdout);
+
+  EXPECT_EQ(kToolExitFailure, result);
+  EXPECT_TRUE(ReadFileToString(db_path).empty());
+  EXPECT_EQ("01\n", ReadFileToString(serial_path));
+}
+
+// Isolates the explicit flush. Routing -out at a reader-less pipe by path gives
+// the tool a fresh, fully buffered stream, and -notext keeps the certificate
+// under one buffer, so no write syscall happens until the flush. Dropping the
+// BIO_flush makes this case pass silently, because the BIO's fclose discards
+// the error.
+TEST_F(CATest, CertificateFlushFailureIsReported) {
+  CreateBasicConfig();
+
+  int pipefd[2];
+  ASSERT_EQ(pipe(pipefd), 0);
+  close(pipefd[0]);  // No reader: the flush below fails with EPIPE.
+
+  char out_path[32];
+  snprintf(out_path, sizeof(out_path), "/dev/fd/%d", pipefd[1]);
+  if (access(out_path, W_OK) != 0) {
+    close(pipefd[1]);
+    GTEST_SKIP() << "no /dev/fd support";
+  }
+
+  args_list_t args = {
+      "-config", config_path,
+      "-notext",
+      "-selfsign",
+      "-in", csr_path,
+      "-out", out_path
+  };
+
+  auto old_sigpipe = signal(SIGPIPE, SIG_IGN);
+  int result = caTool(args);
+  signal(SIGPIPE, old_sigpipe);
+  close(pipefd[1]);
+
+  EXPECT_EQ(kToolExitFailure, result);
+  EXPECT_TRUE(ReadFileToString(db_path).empty());
+  EXPECT_EQ("01\n", ReadFileToString(serial_path));
+}
+#endif  // !OPENSSL_WINDOWS
+
+// Configuration file handling tests
+TEST_F(CATest, MissingConfigFile) {
+  args_list_t args = {
+      "-config", "nonexistent_config.conf",
+      "-selfsign",
+      "-in", csr_path,
+      "-out", output_path
+  };
+
+  ASSERT_EQ(kToolExitFailure, caTool(args));
+}
+
+TEST_F(CATest, ConfigWithExtensions) {
+  CreateConfigWithExtensions();
+
+  args_list_t args = {
+      "-config", config_path,
+      "-selfsign",
+      "-in", csr_path,
+      "-out", output_path
+  };
+
+  ASSERT_EQ(kToolExitSuccess, caTool(args));
+
+  auto cert = LoadPEMCertificate(output_path);
+  ASSERT_TRUE(cert);
+  
+  // Verify extensions were added
+  int ext_count = X509_get_ext_count(cert.get());
+  EXPECT_GT(ext_count, 0);
+
+  // Verify certificate-private key pair consistency
+  ASSERT_TRUE(ValidateCertificateKeyPair(cert.get(), test_ca_key_.get()));
+}
+
+TEST_F(CATest, MissingPrivateKey) {
+  ScopedFILE config_file(fopen(config_path, "w"));
+  ASSERT_TRUE(config_file);
+  
+  std::string config_content = R"(
+[ ca ]
+default_ca = CA_default
+
+[ CA_default ]
+database = )" + EscapeConfigPath(db_path) + R"(
+serial = )" + EscapeConfigPath(serial_path) + R"(
+private_key = nonexistent_key.pem
+certificate = )" + EscapeConfigPath(ca_cert_path) + R"(
+new_certs_dir = )" + EscapeConfigPath(new_certs_dir) + R"(
+default_md = sha256
+policy = policy_anything
+
+[ policy_anything ]
+commonName = supplied
+)";
+  
+  fprintf(config_file.get(), "%s", config_content.c_str());
+  fflush(config_file.get());
+  config_file.reset();
+
+  args_list_t args = {
+      "-config", config_path,
+      "-selfsign",
+      "-in", csr_path,
+      "-out", output_path
+  };
+
+  ASSERT_EQ(kToolExitFailure, caTool(args));
+}
+
+// Argument parsing tests
+TEST_F(CATest, HelpArgument) {
+  args_list_t args = {"-help"};
+  
+  // Help should not fail but should return false (as it's not doing actual work)
+  ASSERT_EQ(kToolExitFailure, caTool(args));
+}
+
+TEST_F(CATest, MissingRequiredArguments) {
+  CreateBasicConfig();
+
+  // Missing -in argument
+  args_list_t args1 = {
+      "-config", config_path,
+      "-selfsign",
+      "-out", output_path
+  };
+  ASSERT_EQ(kToolExitFailure, caTool(args1));
+
+  // Missing -config argument  
+  args_list_t args2 = {
+      "-selfsign",
+      "-in", csr_path,
+      "-out", output_path
+  };
+  ASSERT_EQ(kToolExitFailure, caTool(args2));
+}
+
+// Password handling tests
+TEST_F(CATest, PasswordProtectedKey) {
+  // Create config that uses the password-protected key
+  ScopedFILE config_file(fopen(config_path, "w"));
+  ASSERT_TRUE(config_file);
+  
+  std::string config_content = R"(
+[ ca ]
+default_ca = CA_default
+
+[ CA_default ]
+database = )" + EscapeConfigPath(db_path) + R"(
+serial = )" + EscapeConfigPath(serial_path) + R"(
+private_key = )" + EscapeConfigPath(protected_key_path) + R"(
+certificate = )" + EscapeConfigPath(ca_cert_path) + R"(
+new_certs_dir = )" + EscapeConfigPath(new_certs_dir) + R"(
+default_md = sha256
+policy = policy_anything
+days = 365
+
+[ policy_anything ]
+commonName = supplied
+)";
+  
+  fprintf(config_file.get(), "%s", config_content.c_str());
+  fflush(config_file.get());  // Ensure content is written to disk
+  config_file.reset();        // Close the file explicitly
+
+  args_list_t args = {
+      "-config", config_path,
+      "-passin", "pass:testpassword",
+      "-selfsign",
+      "-in", csr_path,
+      "-out", output_path
+  };
+
+  ASSERT_EQ(kToolExitSuccess, caTool(args));
+
+  auto cert = LoadPEMCertificate(output_path);
+  ASSERT_TRUE(cert);
+
+  // NEW: Verify certificate-private key pair consistency
+  ASSERT_TRUE(ValidateCertificateKeyPair(cert.get(), test_ca_key_.get()));
+}
+
+TEST_F(CATest, WrongPassword) {
+  // Create config that uses the password-protected key  
+  ScopedFILE config_file(fopen(config_path, "w"));
+  ASSERT_TRUE(config_file);
+  
+  std::string config_content = R"(
+[ ca ]
+default_ca = CA_default
+
+[ CA_default ]
+database = )" + EscapeConfigPath(db_path) + R"(
+serial = )" + EscapeConfigPath(serial_path) + R"(
+private_key = )" + EscapeConfigPath(protected_key_path) + R"(
+certificate = )" + EscapeConfigPath(ca_cert_path) + R"(
+new_certs_dir = )" + EscapeConfigPath(new_certs_dir) + R"(
+default_md = sha256
+policy = policy_anything
+days = 365
+
+[ policy_anything ]
+commonName = supplied
+)";
+  
+  fprintf(config_file.get(), "%s", config_content.c_str());
+  fflush(config_file.get());
+  config_file.reset();
+
+  args_list_t args = {
+      "-config", config_path,
+      "-passin", "pass:wrongpassword",
+      "-selfsign",
+      "-in", csr_path,
+      "-out", output_path
+  };
+
+  ASSERT_EQ(kToolExitFailure, caTool(args));
+}
+
+// Date handling tests
+TEST_F(CATest, CustomStartDate) {
+  CreateBasicConfig();
+
+  args_list_t args = {
+      "-config", config_path,
+      "-startdate", "20240101000000Z",
+      "-selfsign",
+      "-in", csr_path,
+      "-out", output_path
+  };
+
+  ASSERT_EQ(kToolExitSuccess, caTool(args));
+
+  auto cert = LoadPEMCertificate(output_path);
+  ASSERT_TRUE(cert);
+  
+  // Verify the start date
+  const ASN1_TIME *not_before = X509_get0_notBefore(cert.get());
+  ASSERT_TRUE(not_before);
+
+  // Verify certificate-private key pair consistency
+  ASSERT_TRUE(ValidateCertificateKeyPair(cert.get(), test_ca_key_.get()));
+}
+
+TEST_F(CATest, CustomEndDate) {
+  CreateBasicConfig();
+
+  args_list_t args = {
+      "-config", config_path,
+      "-enddate", "20251231235959Z",
+      "-selfsign",
+      "-in", csr_path,
+      "-out", output_path
+  };
+
+  ASSERT_EQ(kToolExitSuccess, caTool(args));
+
+  auto cert = LoadPEMCertificate(output_path);
+  ASSERT_TRUE(cert);
+  
+  // Verify the end date
+  const ASN1_TIME *not_after = X509_get0_notAfter(cert.get());
+  ASSERT_TRUE(not_after);
+
+  // Verify certificate-private key pair consistency
+  ASSERT_TRUE(ValidateCertificateKeyPair(cert.get(), test_ca_key_.get()));
+}
+
+TEST_F(CATest, InvalidDateFormat) {
+  CreateBasicConfig();
+
+  args_list_t args = {
+      "-config", config_path,
+      "-startdate", "invalid-date",
+      "-selfsign",
+      "-in", csr_path,
+      "-out", output_path
+  };
+
+  ASSERT_EQ(kToolExitFailure, caTool(args));
+}
+
+// Database operation tests
+TEST_F(CATest, DatabaseUpdating) {
+  CreateBasicConfig();
+
+  args_list_t args = {
+      "-config", config_path,
+      "-selfsign",
+      "-in", csr_path,
+      "-out", output_path
+  };
+
+  // Check database is initially empty
+  std::string initial_db_content = ReadFileToString(db_path);
+  EXPECT_TRUE(initial_db_content.empty());
+
+  ASSERT_EQ(kToolExitSuccess, caTool(args));
+
+  // Check database was updated
+  std::string updated_db_content = ReadFileToString(db_path);
+  EXPECT_FALSE(updated_db_content.empty());
+  EXPECT_TRUE(updated_db_content.find("V\t") != std::string::npos); // V for valid
+}
+
+TEST_F(CATest, SerialNumberIncrement) {
+  CreateBasicConfig();
+
+  // Check initial serial number
+  std::string initial_serial = ReadFileToString(serial_path);
+  EXPECT_TRUE(initial_serial.find("01") != std::string::npos);
+
+  args_list_t args = {
+      "-config", config_path,
+      "-selfsign",
+      "-in", csr_path,
+      "-out", output_path
+  };
+
+  ASSERT_EQ(kToolExitSuccess, caTool(args));
+
+  // Check serial number was incremented
+  std::string updated_serial = ReadFileToString(serial_path);
+  EXPECT_TRUE(updated_serial.find("02") != std::string::npos);
+}
+
+// Policy tests
+TEST_F(CATest, PolicyValidation) {
+  // Create config with strict policy
+  ScopedFILE config_file(fopen(config_path, "w"));
+  ASSERT_TRUE(config_file);
+  
+  std::string config_content = R"(
+[ ca ]
+default_ca = CA_default
+
+[ CA_default ]
+database = )" + EscapeConfigPath(db_path) + R"(
+serial = )" + EscapeConfigPath(serial_path) + R"(
+private_key = )" + EscapeConfigPath(ca_key_path) + R"(
+certificate = )" + EscapeConfigPath(ca_cert_path) + R"(
+new_certs_dir = )" + EscapeConfigPath(new_certs_dir) + R"(
+default_md = sha256
+policy = policy_strict
+
+[ policy_strict ]
+countryName = supplied
+stateOrProvinceName = supplied
+organizationName = supplied
+commonName = supplied
+)";
+  
+  fprintf(config_file.get(), "%s", config_content.c_str());
+
+  args_list_t args = {
+      "-config", config_path,
+      "-selfsign",
+      "-in", csr_path,
+      "-out", output_path
+  };
+
+  // Should fail because CSR doesn't have all required fields
+  ASSERT_EQ(kToolExitFailure, caTool(args));
+}
+
+// Extension copy tests
+TEST_F(CATest, CopyExtensionsNone) {
+  // Create config with copy_extensions = none
+  ScopedFILE config_file(fopen(config_path, "w"));
+  ASSERT_TRUE(config_file);
+  
+  std::string config_content = R"(
+[ ca ]
+default_ca = CA_default
+
+[ CA_default ]
+database = )" + EscapeConfigPath(db_path) + R"(
+serial = )" + EscapeConfigPath(serial_path) + R"(
+private_key = )" + EscapeConfigPath(ca_key_path) + R"(
+certificate = )" + EscapeConfigPath(ca_cert_path) + R"(
+new_certs_dir = )" + EscapeConfigPath(new_certs_dir) + R"(
+default_md = sha256
+policy = policy_anything
+copy_extensions = none
+days = 365
+
+[ policy_anything ]
+commonName = supplied
+)";
+  
+  fprintf(config_file.get(), "%s", config_content.c_str());
+  fflush(config_file.get());
+  config_file.reset();
+
+  args_list_t args = {
+      "-config", config_path,
+      "-selfsign",
+      "-in", csr_path,
+      "-out", output_path
+  };
+
+  ASSERT_EQ(kToolExitSuccess, caTool(args));
+
+  auto cert = LoadPEMCertificate(output_path);
+  ASSERT_TRUE(cert);
+
+  // Verify certificate-private key pair consistency
+  ASSERT_TRUE(ValidateCertificateKeyPair(cert.get(), test_ca_key_.get()));
+}
+
+TEST_F(CATest, CopyExtensionsCopy) {
+  // Create config with copy_extensions = copy
+  ScopedFILE config_file(fopen(config_path, "w"));
+  ASSERT_TRUE(config_file);
+  
+  std::string config_content = R"(
+[ ca ]
+default_ca = CA_default
+
+[ CA_default ]
+database = )" + EscapeConfigPath(db_path) + R"(
+serial = )" + EscapeConfigPath(serial_path) + R"(
+private_key = )" + EscapeConfigPath(ca_key_path) + R"(
+certificate = )" + EscapeConfigPath(ca_cert_path) + R"(
+new_certs_dir = )" + EscapeConfigPath(new_certs_dir) + R"(
+default_md = sha256
+policy = policy_anything
+copy_extensions = copy
+days = 365
+
+[ policy_anything ]
+commonName = supplied
+)";
+  
+  fprintf(config_file.get(), "%s", config_content.c_str());
+  fflush(config_file.get());
+  config_file.reset();
+
+  args_list_t args = {
+      "-config", config_path,
+      "-selfsign",
+      "-in", csr_path,
+      "-out", output_path
+  };
+
+  ASSERT_EQ(kToolExitSuccess, caTool(args));
+
+  auto cert = LoadPEMCertificate(output_path);
+  ASSERT_TRUE(cert);
+
+  // Verify certificate-private key pair consistency
+  ASSERT_TRUE(ValidateCertificateKeyPair(cert.get(), test_ca_key_.get()));
+}
+
+// Error condition tests
+TEST_F(CATest, CorruptedCSR) {
+  CreateBasicConfig();
+
+  // Create a corrupted CSR file
+  ScopedFILE corrupted_csr(fopen(csr_path, "w"));
+  ASSERT_TRUE(corrupted_csr);
+  fprintf(corrupted_csr.get(), "This is not a valid CSR\n");
+  fclose(corrupted_csr.release());
+
+  args_list_t args = {
+      "-config", config_path,
+      "-selfsign",
+      "-in", csr_path,
+      "-out", output_path
+  };
+
+  ASSERT_EQ(kToolExitFailure, caTool(args));
+}
+
+TEST_F(CATest, MissingInputFile) {
+  CreateBasicConfig();
+
+  args_list_t args = {
+      "-config", config_path,
+      "-selfsign",
+      "-in", "nonexistent_csr.pem",
+      "-out", output_path
+  };
+
+  ASSERT_EQ(kToolExitFailure, caTool(args));
+}
+
+// Different digest algorithm tests  
+TEST_F(CATest, CustomDigestAlgorithm) {
+  // Create config with SHA-384
+  ScopedFILE config_file(fopen(config_path, "w"));
+  ASSERT_TRUE(config_file);
+  
+  std::string config_content = R"(
+[ ca ]
+default_ca = CA_default
+
+[ CA_default ]
+database = )" + EscapeConfigPath(db_path) + R"(
+serial = )" + EscapeConfigPath(serial_path) + R"(
+private_key = )" + EscapeConfigPath(ca_key_path) + R"(
+certificate = )" + EscapeConfigPath(ca_cert_path) + R"(
+new_certs_dir = )" + EscapeConfigPath(new_certs_dir) + R"(
+default_md = sha384
+policy = policy_anything
+days = 365
+
+[ policy_anything ]
+commonName = supplied
+)";
+  
+  fprintf(config_file.get(), "%s", config_content.c_str());
+  fflush(config_file.get());
+  config_file.reset();
+
+  args_list_t args = {
+      "-config", config_path,
+      "-selfsign",
+      "-in", csr_path,
+      "-out", output_path
+  };
+
+  ASSERT_EQ(kToolExitSuccess, caTool(args));
+
+  auto cert = LoadPEMCertificate(output_path);
+  ASSERT_TRUE(cert);
+
+  // NEW: Verify certificate-private key pair consistency
+  ASSERT_TRUE(ValidateCertificateKeyPair(cert.get(), test_ca_key_.get()));
+}
+
+// Random serial number test
+TEST_F(CATest, RandomSerialNumber) {
+  // Create config with random serial
+  ScopedFILE config_file(fopen(config_path, "w"));
+  ASSERT_TRUE(config_file);
+  
+  std::string config_content = R"(
+[ ca ]
+default_ca = CA_default
+
+[ CA_default ]
+database = )" + EscapeConfigPath(db_path) + R"(
+rand_serial = yes
+private_key = )" + EscapeConfigPath(ca_key_path) + R"(
+certificate = )" + EscapeConfigPath(ca_cert_path) + R"(
+new_certs_dir = )" + EscapeConfigPath(new_certs_dir) + R"(
+default_md = sha256
+policy = policy_anything
+days = 365
+
+[ policy_anything ]
+commonName = supplied
+)";
+  
+  fprintf(config_file.get(), "%s", config_content.c_str());
+  fflush(config_file.get());
+  config_file.reset();
+
+  args_list_t args = {
+      "-config", config_path,
+      "-selfsign",
+      "-in", csr_path,
+      "-out", output_path
+  };
+
+  ASSERT_EQ(kToolExitSuccess, caTool(args));
+
+  auto cert = LoadPEMCertificate(output_path);
+  ASSERT_TRUE(cert);
+
+  // Verify certificate-private key pair consistency
+  ASSERT_TRUE(ValidateCertificateKeyPair(cert.get(), test_ca_key_.get()));
+}
+
+// Multi-certificate signing test
+TEST_F(CATest, MultipleCertificatesSigning) {
+  // Create config that works with self-signed certificates (using same key for CA and CSR)
+  ScopedFILE config_file(fopen(config_path, "w"));
+  ASSERT_TRUE(config_file);
+  
+  std::string config_content = R"(
+[ ca ]
+default_ca = CA_default
+
+[ CA_default ]
+database = )" + EscapeConfigPath(db_path) + R"(
+serial = )" + EscapeConfigPath(serial_path) + R"(
+private_key = )" + EscapeConfigPath(ca_key_path) + R"(
+certificate = )" + EscapeConfigPath(ca_cert_path) + R"(
+new_certs_dir = )" + EscapeConfigPath(new_certs_dir) + R"(
+default_md = sha256
+policy = policy_anything
+days = 365
+
+[ policy_anything ]
+commonName = supplied
+)";
+  
+  fprintf(config_file.get(), "%s", config_content.c_str());
+  fflush(config_file.get());
+  config_file.reset();
+
+  // Create additional CSR files using the same CA key (for self-signed)
+  char csr_path2[PATH_MAX];
+  char output_path2[PATH_MAX];
+  ASSERT_GT(createTempFILEpath(csr_path2), 0u);
+  ASSERT_GT(createTempFILEpath(output_path2), 0u);
+
+  // Create second CSR with different subject but same key (self-signed requirement)
+  bssl::UniquePtr<X509_REQ> req2(X509_REQ_new());
+  ASSERT_TRUE(req2);
+  
+  bssl::UniquePtr<X509_NAME> name2(X509_NAME_new());
+  ASSERT_TRUE(name2);
+  ASSERT_TRUE(X509_NAME_add_entry_by_txt(name2.get(), "CN", MBSTRING_ASC,
+                                         (unsigned char*)"second.example.com", -1, -1, 0));
+  ASSERT_TRUE(X509_REQ_set_subject_name(req2.get(), name2.get()));
+  ASSERT_TRUE(X509_REQ_set_pubkey(req2.get(), test_ca_key_.get()));
+  ASSERT_TRUE(X509_REQ_sign(req2.get(), test_ca_key_.get(), EVP_sha256()));
+
+  ScopedFILE csr_file2(fopen(csr_path2, "wb"));
+  ASSERT_TRUE(csr_file2);
+  ASSERT_TRUE(PEM_write_X509_REQ(csr_file2.get(), req2.get()));
+  csr_file2.reset();
+
+  // Sign first certificate
+  args_list_t args1 = {
+      "-config", config_path,
+      "-selfsign",
+      "-in", csr_path,
+      "-out", output_path
+  };
+  ASSERT_EQ(kToolExitSuccess, caTool(args1));
+
+  // Sign second certificate
+  args_list_t args2 = {
+      "-config", config_path,
+      "-selfsign",
+      "-in", csr_path2,
+      "-out", output_path2
+  };
+  ASSERT_EQ(kToolExitSuccess, caTool(args2));
+
+  // Verify both certificates
+  auto cert1 = LoadPEMCertificate(output_path);
+  auto cert2 = LoadPEMCertificate(output_path2);
+  ASSERT_TRUE(cert1);
+  ASSERT_TRUE(cert2);
+
+  // Verify different serial numbers
+  ASN1_INTEGER *serial1 = X509_get_serialNumber(cert1.get());
+  ASN1_INTEGER *serial2 = X509_get_serialNumber(cert2.get());
+  EXPECT_NE(ASN1_INTEGER_cmp(serial1, serial2), 0);
+
+  // Verify certificate-private key pair consistency for both certificates
+  ASSERT_TRUE(ValidateCertificateKeyPair(cert1.get(), test_ca_key_.get()));
+
+  // Clean up temporary files
+  RemoveFile(csr_path2);
+  RemoveFile(output_path2);
+}
+
+// Multi-certificate signing with positional arguments test
+TEST_F(CATest, MultipleCertificatesSigningPositional) {
+  // Test passing multiple CSRs: first via -in, rest as positional arguments
+  ScopedFILE config_file(fopen(config_path, "w"));
+  ASSERT_TRUE(config_file);
+  
+  std::string config_content = R"(
+[ ca ]
+default_ca = CA_default
+
+[ CA_default ]
+database = )" + EscapeConfigPath(db_path) + R"(
+serial = )" + EscapeConfigPath(serial_path) + R"(
+private_key = )" + EscapeConfigPath(ca_key_path) + R"(
+certificate = )" + EscapeConfigPath(ca_cert_path) + R"(
+new_certs_dir = )" + EscapeConfigPath(new_certs_dir) + R"(
+default_md = sha256
+policy = policy_anything
+days = 365
+
+[ policy_anything ]
+commonName = supplied
+)";
+  
+  fprintf(config_file.get(), "%s", config_content.c_str());
+  fflush(config_file.get());
+  config_file.reset();
+
+  // Create additional CSR files using the same CA key (for self-signed)
+  char csr_path2[PATH_MAX];
+  char csr_path3[PATH_MAX];
+  char output_path2[PATH_MAX];
+  char output_path3[PATH_MAX];
+  ASSERT_GT(createTempFILEpath(csr_path2), 0u);
+  ASSERT_GT(createTempFILEpath(csr_path3), 0u);
+  ASSERT_GT(createTempFILEpath(output_path2), 0u);
+  ASSERT_GT(createTempFILEpath(output_path3), 0u);
+
+  // Create second CSR with different subject but same key (self-signed requirement)
+  {
+    bssl::UniquePtr<X509_REQ> req2(X509_REQ_new());
+    ASSERT_TRUE(req2);
+    
+    bssl::UniquePtr<X509_NAME> name2(X509_NAME_new());
+    ASSERT_TRUE(name2);
+    ASSERT_TRUE(X509_NAME_add_entry_by_txt(name2.get(), "CN", MBSTRING_ASC,
+                                           (unsigned char*)"second.example.com", -1, -1, 0));
+    ASSERT_TRUE(X509_REQ_set_subject_name(req2.get(), name2.get()));
+    ASSERT_TRUE(X509_REQ_set_pubkey(req2.get(), test_ca_key_.get()));
+    ASSERT_TRUE(X509_REQ_sign(req2.get(), test_ca_key_.get(), EVP_sha256()));
+
+    ScopedFILE csr_file2(fopen(csr_path2, "wb"));
+    ASSERT_TRUE(csr_file2);
+    ASSERT_TRUE(PEM_write_X509_REQ(csr_file2.get(), req2.get()));
+  }
+
+  // Create third CSR with different subject but same key (self-signed requirement)
+  {
+    bssl::UniquePtr<X509_REQ> req3(X509_REQ_new());
+    ASSERT_TRUE(req3);
+    
+    bssl::UniquePtr<X509_NAME> name3(X509_NAME_new());
+    ASSERT_TRUE(name3);
+    ASSERT_TRUE(X509_NAME_add_entry_by_txt(name3.get(), "CN", MBSTRING_ASC,
+                                           (unsigned char*)"third.example.com", -1, -1, 0));
+    ASSERT_TRUE(X509_REQ_set_subject_name(req3.get(), name3.get()));
+    ASSERT_TRUE(X509_REQ_set_pubkey(req3.get(), test_ca_key_.get()));
+    ASSERT_TRUE(X509_REQ_sign(req3.get(), test_ca_key_.get(), EVP_sha256()));
+
+    ScopedFILE csr_file3(fopen(csr_path3, "wb"));
+    ASSERT_TRUE(csr_file3);
+    ASSERT_TRUE(PEM_write_X509_REQ(csr_file3.get(), req3.get()));
+  }
+
+  // Sign all certificates in a single call: first via -in, rest as positional args
+  // Note: -out file will be overwritten for each certificate, so we don't use it here
+  args_list_t args = {
+      "-config", config_path,
+      "-selfsign",
+      "-in", csr_path,
+      csr_path2,  // positional argument
+      csr_path3   // positional argument
+  };
+  ASSERT_EQ(kToolExitSuccess, caTool(args));
+
+  // Verify serial numbers are different (checking via database update)
+  std::string updated_serial = ReadFileToString(serial_path);
+  // After signing 3 certificates starting from 01, serial should be 04
+  EXPECT_TRUE(updated_serial.find("04") != std::string::npos);
+
+  // Verify database has 3 entries
+  std::string db_content = ReadFileToString(db_path);
+  // Count the number of "V\t" entries (valid certificates)
+  size_t count = 0;
+  size_t pos = 0;
+  while ((pos = db_content.find("V\t", pos)) != std::string::npos) {
+    count++;
+    pos += 2;
+  }
+  EXPECT_EQ(count, 3u);
+
+  // Verify each subject is in the database
+  EXPECT_TRUE(db_content.find("test.example.com") != std::string::npos);
+  EXPECT_TRUE(db_content.find("second.example.com") != std::string::npos);
+  EXPECT_TRUE(db_content.find("third.example.com") != std::string::npos);
+
+  // Clean up temporary files
+  RemoveFile(csr_path2);
+  RemoveFile(csr_path3);
+  RemoveFile(output_path2);
+  RemoveFile(output_path3);
+}
+
+// Today date handling test
+TEST_F(CATest, TodayDateHandling) {
+  CreateBasicConfig();
+
+  args_list_t args = {
+      "-config", config_path,
+      "-startdate", "today",
+      "-selfsign",
+      "-in", csr_path,
+      "-out", output_path
+  };
+
+  ASSERT_EQ(kToolExitSuccess, caTool(args));
+
+  auto cert = LoadPEMCertificate(output_path);
+  ASSERT_TRUE(cert);
+
+  // Verify certificate-private key pair consistency
+  ASSERT_TRUE(ValidateCertificateKeyPair(cert.get(), test_ca_key_.get()));
+}
+
+// Preserve DN test
+TEST_F(CATest, PreserveDN) {
+  // Create config with preserve = yes
+  ScopedFILE config_file(fopen(config_path, "w"));
+  ASSERT_TRUE(config_file);
+  
+  std::string config_content = R"(
+[ ca ]
+default_ca = CA_default
+
+[ CA_default ]
+database = )" + EscapeConfigPath(db_path) + R"(
+serial = )" + EscapeConfigPath(serial_path) + R"(
+private_key = )" + EscapeConfigPath(ca_key_path) + R"(
+certificate = )" + EscapeConfigPath(ca_cert_path) + R"(
+new_certs_dir = )" + EscapeConfigPath(new_certs_dir) + R"(
+default_md = sha256
+policy = policy_anything
+preserve = yes
+days = 365
+
+[ policy_anything ]
+commonName = supplied
+)";
+  
+  fprintf(config_file.get(), "%s", config_content.c_str());
+  fflush(config_file.get());
+  config_file.reset();
+
+  args_list_t args = {
+      "-config", config_path,
+      "-selfsign",
+      "-in", csr_path,
+      "-out", output_path
+  };
+
+  ASSERT_EQ(kToolExitSuccess, caTool(args));
+
+  auto cert = LoadPEMCertificate(output_path);
+  ASSERT_TRUE(cert);
+
+  // Verify certificate-private key pair consistency
+  ASSERT_TRUE(ValidateCertificateKeyPair(cert.get(), test_ca_key_.get()));
+}
+
+// Invalid digest algorithm test
+TEST_F(CATest, InvalidDigestAlgorithm) {
+  // Create config with invalid digest
+  ScopedFILE config_file(fopen(config_path, "w"));
+  ASSERT_TRUE(config_file);
+  
+  std::string config_content = R"(
+[ ca ]
+default_ca = CA_default
+
+[ CA_default ]
+database = )" + EscapeConfigPath(db_path) + R"(
+serial = )" + EscapeConfigPath(serial_path) + R"(
+private_key = )" + EscapeConfigPath(ca_key_path) + R"(
+certificate = )" + EscapeConfigPath(ca_cert_path) + R"(
+new_certs_dir = )" + EscapeConfigPath(new_certs_dir) + R"(
+default_md = invalid_digest
+policy = policy_anything
+
+[ policy_anything ]
+commonName = supplied
+)";
+  
+  fprintf(config_file.get(), "%s", config_content.c_str());
+
+  args_list_t args = {
+      "-config", config_path,
+      "-selfsign",
+      "-in", csr_path,
+      "-out", output_path
+  };
+
+  ASSERT_EQ(kToolExitFailure, caTool(args));
+}
+
+// Copy extensions copyall test
+TEST_F(CATest, CopyExtensionsCopyAll) {
+  // Create config with copy_extensions = copyall
+  ScopedFILE config_file(fopen(config_path, "w"));
+  ASSERT_TRUE(config_file);
+  
+  std::string config_content = R"(
+[ ca ]
+default_ca = CA_default
+
+[ CA_default ]
+database = )" + EscapeConfigPath(db_path) + R"(
+serial = )" + EscapeConfigPath(serial_path) + R"(
+private_key = )" + EscapeConfigPath(ca_key_path) + R"(
+certificate = )" + EscapeConfigPath(ca_cert_path) + R"(
+new_certs_dir = )" + EscapeConfigPath(new_certs_dir) + R"(
+default_md = sha256
+policy = policy_anything
+copy_extensions = copyall
+days = 365
+
+[ policy_anything ]
+commonName = supplied
+)";
+  
+  fprintf(config_file.get(), "%s", config_content.c_str());
+  fflush(config_file.get());
+  config_file.reset();
+
+  args_list_t args = {
+      "-config", config_path,
+      "-selfsign",
+      "-in", csr_path,
+      "-out", output_path
+  };
+
+  ASSERT_EQ(kToolExitSuccess, caTool(args));
+
+  auto cert = LoadPEMCertificate(output_path);
+  ASSERT_TRUE(cert);
+
+  // Verify certificate-private key pair consistency
+  ASSERT_TRUE(ValidateCertificateKeyPair(cert.get(), test_ca_key_.get()));
+}
+
+// Invalid copy extensions value test
+TEST_F(CATest, InvalidCopyExtensionsValue) {
+  // Create config with invalid copy_extensions value
+  ScopedFILE config_file(fopen(config_path, "w"));
+  ASSERT_TRUE(config_file);
+  
+  std::string config_content = R"(
+[ ca ]
+default_ca = CA_default
+
+[ CA_default ]
+database = )" + EscapeConfigPath(db_path) + R"(
+serial = )" + EscapeConfigPath(serial_path) + R"(
+private_key = )" + EscapeConfigPath(ca_key_path) + R"(
+certificate = )" + EscapeConfigPath(ca_cert_path) + R"(
+new_certs_dir = )" + EscapeConfigPath(new_certs_dir) + R"(
+default_md = sha256
+policy = policy_anything
+copy_extensions = invalid_value
+
+[ policy_anything ]
+commonName = supplied
+)";
+  
+  fprintf(config_file.get(), "%s", config_content.c_str());
+
+  args_list_t args = {
+      "-config", config_path,
+      "-selfsign",
+      "-in", csr_path,
+      "-out", output_path
+  };
+
+  ASSERT_EQ(kToolExitFailure, caTool(args));
+}
+
+// Database integrity test
+TEST_F(CATest, DatabaseIntegrityChecks) {
+  CreateBasicConfig();
+
+  // Create corrupted database with invalid entry
+  ScopedFILE corrupted_db(fopen(db_path, "w"));
+  ASSERT_TRUE(corrupted_db);
+  fprintf(corrupted_db.get(), "V\tinvalid_date\t\t01\tunknown\t/CN=corrupted\n");
+  fclose(corrupted_db.release());
+
+  args_list_t args = {
+      "-config", config_path,
+      "-selfsign",
+      "-in", csr_path,
+      "-out", output_path
+  };
+
+  ASSERT_EQ(kToolExitFailure, caTool(args));
+}
+
+// Missing database directory test
+TEST_F(CATest, MissingDatabaseDirectory) {
+  // Create config pointing to non-existent directory
+  ScopedFILE config_file(fopen(config_path, "w"));
+  ASSERT_TRUE(config_file);
+  
+  std::string config_content = R"(
+[ ca ]
+default_ca = CA_default
+
+[ CA_default ]
+database = /nonexistent/path/database
+serial = )" + EscapeConfigPath(serial_path) + R"(
+private_key = )" + EscapeConfigPath(ca_key_path) + R"(
+certificate = )" + EscapeConfigPath(ca_cert_path) + R"(
+new_certs_dir = )" + EscapeConfigPath(new_certs_dir) + R"(
+default_md = sha256
+policy = policy_anything
+
+[ policy_anything ]
+commonName = supplied
+)";
+  
+  fprintf(config_file.get(), "%s", config_content.c_str());
+
+  args_list_t args = {
+      "-config", config_path,
+      "-selfsign",
+      "-in", csr_path,
+      "-out", output_path
+  };
+
+  ASSERT_EQ(kToolExitFailure, caTool(args));
+}
+
+// Test unique subject constraint
+TEST_F(CATest, UniqueSubjectConstraint) {
+  CreateBasicConfig();
+
+  // Sign first certificate
+  args_list_t args1 = {
+      "-config", config_path,
+      "-selfsign",
+      "-in", csr_path,
+      "-out", output_path
+  };
+  ASSERT_EQ(kToolExitSuccess, caTool(args1));
+
+  // Try to sign another certificate with same subject - should fail
+  char output_path2[PATH_MAX];
+  ASSERT_GT(createTempFILEpath(output_path2), 0u);
+  
+  args_list_t args2 = {
+      "-config", config_path,
+      "-selfsign", 
+      "-in", csr_path,
+      "-out", output_path2
+  };
+  ASSERT_EQ(kToolExitFailure, caTool(args2));
+
+  RemoveFile(output_path2);
+}
+
+// Test policy match requirement
+TEST_F(CATest, PolicyMatchRequirement) {
+  // Create CA cert with specific subject for matching
+  bssl::UniquePtr<EVP_PKEY> ca_pkey(EVP_PKEY_new());
+  ASSERT_TRUE(ca_pkey);
+  bssl::UniquePtr<RSA> ca_rsa(RSA_new());
+  ASSERT_TRUE(ca_rsa);
+  bssl::UniquePtr<BIGNUM> ca_bn(BN_new());
+  ASSERT_TRUE(ca_bn && BN_set_word(ca_bn.get(), RSA_F4) &&
+              RSA_generate_key_ex(ca_rsa.get(), 2048, ca_bn.get(), nullptr));
+  ASSERT_TRUE(EVP_PKEY_assign_RSA(ca_pkey.get(), ca_rsa.release()));
+
+  bssl::UniquePtr<X509> match_ca_cert(X509_new());
+  ASSERT_TRUE(match_ca_cert);
+  ASSERT_TRUE(X509_set_version(match_ca_cert.get(), 2));
+  
+  bssl::UniquePtr<ASN1_INTEGER> serial(ASN1_INTEGER_new());
+  ASSERT_TRUE(serial && ASN1_INTEGER_set(serial.get(), 1));
+  ASSERT_TRUE(X509_set_serialNumber(match_ca_cert.get(), serial.get()));
+  
+  ASSERT_TRUE(X509_gmtime_adj(X509_getm_notBefore(match_ca_cert.get()), 0));
+  ASSERT_TRUE(X509_gmtime_adj(X509_getm_notAfter(match_ca_cert.get()), 365 * 24 * 60 * 60));
+  
+  bssl::UniquePtr<X509_NAME> match_ca_name(X509_NAME_new());
+  ASSERT_TRUE(match_ca_name);
+  ASSERT_TRUE(X509_NAME_add_entry_by_txt(match_ca_name.get(), "C", MBSTRING_ASC,
+                                         (unsigned char*)"US", -1, -1, 0));
+  ASSERT_TRUE(X509_NAME_add_entry_by_txt(match_ca_name.get(), "CN", MBSTRING_ASC,
+                                         (unsigned char*)"Match CA", -1, -1, 0));
+  ASSERT_TRUE(X509_set_subject_name(match_ca_cert.get(), match_ca_name.get()));
+  ASSERT_TRUE(X509_set_issuer_name(match_ca_cert.get(), match_ca_name.get()));
+  ASSERT_TRUE(X509_set_pubkey(match_ca_cert.get(), ca_pkey.get()));
+  ASSERT_TRUE(X509_sign(match_ca_cert.get(), ca_pkey.get(), EVP_sha256()));
+
+  // Write new CA key and cert
+  char match_ca_key_path[PATH_MAX];
+  char match_ca_cert_path[PATH_MAX];
+  ASSERT_GT(createTempFILEpath(match_ca_key_path), 0u);
+  ASSERT_GT(createTempFILEpath(match_ca_cert_path), 0u);
+
+  ScopedFILE match_ca_key_file(fopen(match_ca_key_path, "wb"));
+  ASSERT_TRUE(match_ca_key_file);
+  ASSERT_TRUE(PEM_write_PrivateKey(match_ca_key_file.get(), ca_pkey.get(), nullptr,
+                                   nullptr, 0, nullptr, nullptr));
+  match_ca_key_file.reset();
+
+  ScopedFILE match_ca_cert_file(fopen(match_ca_cert_path, "wb"));
+  ASSERT_TRUE(match_ca_cert_file);
+  ASSERT_TRUE(PEM_write_X509(match_ca_cert_file.get(), match_ca_cert.get()));
+  match_ca_cert_file.reset();
+
+  // Create config with match policy for country
+  ScopedFILE config_file(fopen(config_path, "w"));
+  ASSERT_TRUE(config_file);
+  
+  std::string config_content = R"(
+[ ca ]
+default_ca = CA_default
+
+[ CA_default ]
+database = )" + EscapeConfigPath(db_path) + R"(
+serial = )" + EscapeConfigPath(serial_path) + R"(
+private_key = )" + EscapeConfigPath(match_ca_key_path) + R"(
+certificate = )" + EscapeConfigPath(match_ca_cert_path) + R"(
+new_certs_dir = )" + EscapeConfigPath(new_certs_dir) + R"(
+default_md = sha256
+policy = policy_match
+days = 365
+
+[ policy_match ]
+countryName = match
+commonName = supplied
+)";
+  
+  fprintf(config_file.get(), "%s", config_content.c_str());
+  fflush(config_file.get());
+  config_file.reset();
+
+  // Create CSR with matching country using the CA key (for self-signed)
+  bssl::UniquePtr<X509_REQ> match_req(X509_REQ_new());
+  ASSERT_TRUE(match_req);
+  
+  bssl::UniquePtr<X509_NAME> match_req_name(X509_NAME_new());
+  ASSERT_TRUE(match_req_name);
+  ASSERT_TRUE(X509_NAME_add_entry_by_txt(match_req_name.get(), "C", MBSTRING_ASC,
+                                         (unsigned char*)"US", -1, -1, 0)); // Match CA's country
+  ASSERT_TRUE(X509_NAME_add_entry_by_txt(match_req_name.get(), "CN", MBSTRING_ASC,
+                                         (unsigned char*)"match.example.com", -1, -1, 0));
+  ASSERT_TRUE(X509_REQ_set_subject_name(match_req.get(), match_req_name.get()));
+  ASSERT_TRUE(X509_REQ_set_pubkey(match_req.get(), ca_pkey.get())); // Use CA key for self-signed
+  ASSERT_TRUE(X509_REQ_sign(match_req.get(), ca_pkey.get(), EVP_sha256())); // Sign with CA key
+
+  char match_csr_path[PATH_MAX];
+  ASSERT_GT(createTempFILEpath(match_csr_path), 0u);
+  
+  ScopedFILE match_csr_file(fopen(match_csr_path, "wb"));
+  ASSERT_TRUE(match_csr_file);
+  ASSERT_TRUE(PEM_write_X509_REQ(match_csr_file.get(), match_req.get()));
+  match_csr_file.reset();
+
+  args_list_t args = {
+      "-config", config_path,
+      "-selfsign",
+      "-in", match_csr_path,
+      "-out", output_path
+  };
+
+  // This should succeed because countries match
+  ASSERT_EQ(kToolExitSuccess, caTool(args));
+
+  auto cert = LoadPEMCertificate(output_path);
+  ASSERT_TRUE(cert);
+
+  ASSERT_TRUE(ValidateCertificateKeyPair(cert.get(), ca_pkey.get()));
+
+  // Clean up
+  RemoveFile(match_ca_key_path);
+  RemoveFile(match_ca_cert_path);
+  RemoveFile(match_csr_path);
+}
+
+// ED25519 Tests - DEF_DGST_REQUIRED behavior validation
+
+TEST_F(CATest, ED25519BasicCertificateSigning) {
+  // Create config without default_md for ED25519 key (should succeed)
+  ScopedFILE config_file(fopen(config_path, "w"));
+  ASSERT_TRUE(config_file);
+  
+  std::string config_content = R"(
+[ ca ]
+default_ca = CA_default
+
+[ CA_default ]
+database = )" + EscapeConfigPath(db_path) + R"(
+serial = )" + EscapeConfigPath(serial_path) + R"(
+private_key = )" + EscapeConfigPath(ed25519_key_path) + R"(
+certificate = )" + EscapeConfigPath(ed25519_cert_path) + R"(
+new_certs_dir = )" + EscapeConfigPath(new_certs_dir) + R"(
+policy = policy_anything
+days = 365
+
+[ policy_anything ]
+commonName = supplied
+)";
+  
+  fprintf(config_file.get(), "%s", config_content.c_str());
+  fflush(config_file.get());
+  config_file.reset();
+
+  args_list_t args = {
+      "-config", config_path,
+      "-selfsign",
+      "-in", ed25519_csr_path,
+      "-out", output_path
+  };
+
+  ASSERT_EQ(kToolExitSuccess, caTool(args));
+
+  // Verify certificate was created
+  auto cert = LoadPEMCertificate(output_path);
+  ASSERT_TRUE(cert);
+  
+  // Verify subject name contains expected CN
+  X509_NAME *subject = X509_get_subject_name(cert.get());
+  char subject_str[256];
+  X509_NAME_oneline(subject, subject_str, sizeof(subject_str));
+  EXPECT_TRUE(strstr(subject_str, "ed25519.example.com") != nullptr);
+
+  // Verify certificate-private key pair consistency
+  ASSERT_TRUE(ValidateCertificateKeyPair(cert.get(), test_ed25519_key_.get()));
+}
+
+TEST_F(CATest, ED25519WithDefaultDigest) {
+  // Create config with default_md = default for ED25519 key (should succeed)
+  ScopedFILE config_file(fopen(config_path, "w"));
+  ASSERT_TRUE(config_file);
+  
+  std::string config_content = R"(
+[ ca ]
+default_ca = CA_default
+
+[ CA_default ]
+database = )" + EscapeConfigPath(db_path) + R"(
+serial = )" + EscapeConfigPath(serial_path) + R"(
+private_key = )" + EscapeConfigPath(ed25519_key_path) + R"(
+certificate = )" + EscapeConfigPath(ed25519_cert_path) + R"(
+new_certs_dir = )" + EscapeConfigPath(new_certs_dir) + R"(
+default_md = default
+policy = policy_anything
+days = 365
+
+[ policy_anything ]
+commonName = supplied
+)";
+  
+  fprintf(config_file.get(), "%s", config_content.c_str());
+  fflush(config_file.get());
+  config_file.reset();
+
+  args_list_t args = {
+      "-config", config_path,
+      "-selfsign",
+      "-in", ed25519_csr_path,
+      "-out", output_path
+  };
+
+  ASSERT_EQ(kToolExitSuccess, caTool(args));
+
+  // Verify certificate was created
+  auto cert = LoadPEMCertificate(output_path);
+  ASSERT_TRUE(cert);
+
+  // Verify certificate-private key pair consistency
+  ASSERT_TRUE(ValidateCertificateKeyPair(cert.get(), test_ed25519_key_.get()));
+}
+
+TEST_F(CATest, ED25519WithExplicitDigestFails) {
+  // Create config with explicit digest algorithm for ED25519 key (should fail due to DEF_DGST_REQUIRED)
+  ScopedFILE config_file(fopen(config_path, "w"));
+  ASSERT_TRUE(config_file);
+  
+  std::string config_content = R"(
+[ ca ]
+default_ca = CA_default
+
+[ CA_default ]
+database = )" + EscapeConfigPath(db_path) + R"(
+serial = )" + EscapeConfigPath(serial_path) + R"(
+private_key = )" + EscapeConfigPath(ed25519_key_path) + R"(
+certificate = )" + EscapeConfigPath(ed25519_cert_path) + R"(
+new_certs_dir = )" + EscapeConfigPath(new_certs_dir) + R"(
+default_md = sha256
+policy = policy_anything
+days = 365
+
+[ policy_anything ]
+commonName = supplied
+)";
+  
+  fprintf(config_file.get(), "%s", config_content.c_str());
+  fflush(config_file.get());
+  config_file.reset();
+
+  args_list_t args = {
+      "-config", config_path,
+      "-selfsign",
+      "-in", ed25519_csr_path,
+      "-out", output_path
+  };
+
+  // This should fail because ED25519 has DEF_DGST_REQUIRED and explicit digest is not allowed
+  ASSERT_EQ(kToolExitFailure, caTool(args));
+}
+
+// MakeRevoked and UnpackRevinfo Tests - Exercised through database validation in caTool
+
+// Valid revocation-info fields (the index's rev_date column) parse and load,
+// so signing against such a database succeeds. Covers a bare timestamp, each
+// reason code, and the holdInstruction/keyTime/CAkeyTime argument forms.
+TEST_F(CATest, DatabaseRevokedEntryValidFields) {
+  const char *const valid_fields[] = {
+      "240101120000Z",
+      "240101120000Z,unspecified",
+      "240101120000Z,keyCompromise",
+      "240101120000Z,CACompromise",
+      "240101120000Z,affiliationChanged",
+      "240101120000Z,superseded",
+      "240101120000Z,cessationOfOperation",
+      "240101120000Z,certificateHold",
+      "240101120000Z,removeFromCRL",
+      "240101120000Z,holdInstruction,1.2.840.10040.2.1",
+      "240101120000Z,keyTime,20240101120000Z",
+      "240101120000Z,CAkeyTime,20240101120000Z",
+  };
+  for (const char *field : valid_fields) {
+    SCOPED_TRACE(field);
+    CreateBasicConfig();
+    WriteSingleRevokedEntry(field);
+    args_list_t args = {"-config", config_path, "-selfsign", "-in", csr_path,
+                        "-out",    output_path};
+    ASSERT_EQ(kToolExitSuccess, caTool(args));
+    ASSERT_TRUE(LoadPEMCertificate(output_path));
+  }
+}
+
+// Malformed revocation-info fields fail during database validation: a bad
+// timestamp, an unknown reason, a missing holdInstruction OID or key-time
+// argument, and invalid OID/time arguments.
+TEST_F(CATest, DatabaseRevokedEntryRejectsMalformedFields) {
+  const char *const invalid_fields[] = {
+      "invalid_timestamp",
+      "240101120000Z,invalidReason",
+      "240101120000Z,holdInstruction",
+      "240101120000Z,keyTime",
+      "240101120000Z,CAkeyTime",
+      "240101120000Z,holdInstruction,not.a.valid.oid",
+      "240101120000Z,keyTime,invalid_time",
+  };
+  for (const char *field : invalid_fields) {
+    SCOPED_TRACE(field);
+    CreateBasicConfig();
+    WriteSingleRevokedEntry(field);
+    args_list_t args = {"-config", config_path, "-selfsign", "-in", csr_path,
+                        "-out",    output_path};
+    ASSERT_EQ(kToolExitFailure, caTool(args));
+  }
+}
+
+TEST_F(CATest, DatabaseWithMultipleRevokedEntries) {
+  // Test database with multiple revoked entries using different reason codes
+  // Exercises MakeRevoked and UnpackRevinfo with various inputs in sequence
+  CreateBasicConfig();
+
+  ScopedFILE db_file(fopen(db_path, "w"));
+  ASSERT_TRUE(db_file);
+  // Use serials "AA", "AB", "AC" to avoid conflict with serial file starting at "01"
+  fprintf(db_file.get(), "R\t251231235959Z\t240101120000Z,keyCompromise\tAA\tunknown\t/CN=revoked1.example.com\n");
+  fprintf(db_file.get(), "R\t251231235959Z\t240201120000Z,CACompromise\tAB\tunknown\t/CN=revoked2.example.com\n");
+  fprintf(db_file.get(), "R\t251231235959Z\t240301120000Z,superseded\tAC\tunknown\t/CN=revoked3.example.com\n");
+  fclose(db_file.release());
+
+  args_list_t args = {
+      "-config", config_path,
+      "-selfsign",
+      "-in", csr_path,
+      "-out", output_path
+  };
+
+  ASSERT_EQ(kToolExitSuccess, caTool(args));
+
+  auto cert = LoadPEMCertificate(output_path);
+  ASSERT_TRUE(cert);
+}
+
+TEST_F(CATest, DatabaseWithMixedValidAndRevokedEntries) {
+  // Test database with both valid and revoked entries
+  // Verifies that MakeRevoked is only called for revoked entries
+  CreateBasicConfig();
+
+  ScopedFILE db_file(fopen(db_path, "w"));
+  ASSERT_TRUE(db_file);
+  // V = Valid entry (should not trigger MakeRevoked validation)
+  // Use serials "AA", "AB" to avoid conflict with serial file starting at "01"
+  fprintf(db_file.get(), "V\t251231235959Z\t\tAA\tunknown\t/CN=valid.example.com\n");
+  // R = Revoked entry (triggers MakeRevoked validation)
+  fprintf(db_file.get(), "R\t251231235959Z\t240101120000Z,keyCompromise\tAB\tunknown\t/CN=revoked.example.com\n");
+  fclose(db_file.release());
+
+  args_list_t args = {
+      "-config", config_path,
+      "-selfsign",
+      "-in", csr_path,
+      "-out", output_path
+  };
+
+  ASSERT_EQ(kToolExitSuccess, caTool(args));
+
+  auto cert = LoadPEMCertificate(output_path);
+  ASSERT_TRUE(cert);
+}
+
+TEST_F(CATest, DatabaseWithValidEntryAndRevocationDate) {
+  // Test that valid entries with non-empty revocation date are rejected
+  // The database validation should catch this inconsistency
+  CreateBasicConfig();
+
+  ScopedFILE db_file(fopen(db_path, "w"));
+  ASSERT_TRUE(db_file);
+  // V = Valid but has revocation date (invalid state)
+  // Use serial "AA" to avoid conflict with serial file starting at "01"
+  fprintf(db_file.get(), "V\t251231235959Z\t240101120000Z\tAA\tunknown\t/CN=invalid.example.com\n");
+  fclose(db_file.release());
+
+  args_list_t args = {
+      "-config", config_path,
+      "-selfsign",
+      "-in", csr_path,
+      "-out", output_path
+  };
+
+  // Should fail - valid entry should not have revocation date
+  ASSERT_EQ(kToolExitFailure, caTool(args));
+}
+
+TEST_F(CATest, DatabaseWithEmptyTypeFieldRejected) {
+  CreateBasicConfig();
+
+  ScopedFILE db_file(fopen(db_path, "w"));
+  ASSERT_TRUE(db_file);
+  // Leading tab => empty type field; everything else is valid.
+  fprintf(db_file.get(),
+          "\t251231235959Z\t\tAA\tunknown\t/CN=empty-type.example.com\n");
+  fclose(db_file.release());
+
+  args_list_t args = {
+      "-config", config_path,
+      "-selfsign",
+      "-in", csr_path,
+      "-out", output_path
+  };
+
+  ASSERT_EQ(kToolExitFailure, caTool(args));
+}
+
+TEST_F(CATest, RevokeMarksEntryRevoked) {
+  CreateBasicConfig();
+
+  args_list_t sign = {"-config", config_path, "-in", csr_path, "-out",
+                      output_path};
+  ASSERT_EQ(kToolExitSuccess, caTool(sign));
+
+  std::string db_before = ReadFileToString(db_path);
+  ASSERT_FALSE(db_before.empty());
+  ASSERT_EQ('V', db_before[0]) << "newly issued entry should be valid";
+
+  args_list_t revoke = {"-config", config_path, "-revoke", output_path};
+  ASSERT_EQ(kToolExitSuccess, caTool(revoke));
+
+  std::string db_after = ReadFileToString(db_path);
+  ASSERT_FALSE(db_after.empty());
+  EXPECT_EQ('R', db_after[0]) << "entry should be marked revoked";
+}
+
+TEST_F(CATest, RevokeCertificateNotInDatabase) {
+  CreateBasicConfig();
+
+  args_list_t revoke = {"-config", config_path, "-revoke", ca_cert_path};
+  ASSERT_EQ(kToolExitFailure, caTool(revoke));
+}
+
+TEST_F(CATest, RevokeAlreadyRevokedCertificate) {
+  CreateBasicConfig();
+
+  args_list_t sign = {"-config", config_path, "-in", csr_path, "-out",
+                      output_path};
+  ASSERT_EQ(kToolExitSuccess, caTool(sign));
+
+  args_list_t revoke = {"-config", config_path, "-revoke", output_path};
+  ASSERT_EQ(kToolExitSuccess, caTool(revoke));
+  ASSERT_EQ(kToolExitFailure, caTool(revoke));
+}
+
+// Negative: -revoke must not revoke an unrelated certificate that merely shares
+// a serial number with a database entry. The fixture CA cert is serial 01, the
+// same serial as the first issued certificate, but its subject differs, so
+// revocation must be rejected rather than corrupting the issued cert's entry.
+TEST_F(CATest, RevokeRejectsCollidingSerialDifferentName) {
+  CreateBasicConfig();
+
+  args_list_t sign = {"-config", config_path, "-in", csr_path, "-out",
+                      output_path};
+  ASSERT_EQ(kToolExitSuccess, caTool(sign));
+
+  const std::string db_before = ReadFileToString(db_path);
+  ASSERT_FALSE(db_before.empty());
+  ASSERT_EQ('V', db_before[0]);
+
+  // ca_cert_path is self-signed with serial 01 and subject "Test CA",
+  // colliding with the issued cert's serial 01 / subject "test.example.com".
+  args_list_t revoke = {"-config", config_path, "-revoke", ca_cert_path};
+  ASSERT_EQ(kToolExitFailure, caTool(revoke));
+
+  // The issued cert's entry is untouched: still valid, database unchanged.
+  const std::string db_after = ReadFileToString(db_path);
+  EXPECT_EQ(db_before, db_after);
+}
+
+TEST_F(CATest, GenerateEmptyCRL) {
+  CreateBasicConfig();
+
+  char crl_path[PATH_MAX];
+  ASSERT_GT(createTempFILEpath(crl_path), 0u);
+
+  args_list_t gencrl = {"-config",  config_path, "-gencrl",
+                        "-crldays", "1",         "-out",     crl_path};
+  ASSERT_EQ(kToolExitSuccess, caTool(gencrl));
+
+  bssl::UniquePtr<BIO> bio(BIO_new_file(crl_path, "r"));
+  ASSERT_TRUE(bio);
+  bssl::UniquePtr<X509_CRL> crl(
+      PEM_read_bio_X509_CRL(bio.get(), nullptr, nullptr, nullptr));
+  ASSERT_TRUE(crl);
+
+  EXPECT_EQ(0, X509_NAME_cmp(X509_CRL_get_issuer(crl.get()),
+                             X509_get_subject_name(test_ca_cert_.get())));
+  EXPECT_EQ(static_cast<size_t>(0),
+            sk_X509_REVOKED_num(X509_CRL_get_REVOKED(crl.get())));
+  EXPECT_EQ(1, X509_CRL_verify(crl.get(), test_ca_key_.get()));
+
+  RemoveFile(crl_path);
+}
+
+TEST_F(CATest, GenerateCRLWithRevokedCertificate) {
+  CreateBasicConfig();
+
+  args_list_t sign = {"-config", config_path, "-in", csr_path, "-out",
+                      output_path};
+  ASSERT_EQ(kToolExitSuccess, caTool(sign));
+  args_list_t revoke = {"-config", config_path, "-revoke", output_path};
+  ASSERT_EQ(kToolExitSuccess, caTool(revoke));
+
+  char crl_path[PATH_MAX];
+  ASSERT_GT(createTempFILEpath(crl_path), 0u);
+  args_list_t gencrl = {"-config",  config_path, "-gencrl",
+                        "-crldays", "1",         "-out",     crl_path};
+  ASSERT_EQ(kToolExitSuccess, caTool(gencrl));
+
+  bssl::UniquePtr<BIO> bio(BIO_new_file(crl_path, "r"));
+  ASSERT_TRUE(bio);
+  bssl::UniquePtr<X509_CRL> crl(
+      PEM_read_bio_X509_CRL(bio.get(), nullptr, nullptr, nullptr));
+  ASSERT_TRUE(crl);
+
+  STACK_OF(X509_REVOKED) *revoked = X509_CRL_get_REVOKED(crl.get());
+  ASSERT_EQ(static_cast<size_t>(1), sk_X509_REVOKED_num(revoked));
+
+  // The first issued certificate uses serial 0x01 (serial file starts at 01).
+  const ASN1_INTEGER *serial =
+      X509_REVOKED_get0_serialNumber(sk_X509_REVOKED_value(revoked, 0));
+  bssl::UniquePtr<BIGNUM> bn(ASN1_INTEGER_to_BN(serial, nullptr));
+  ASSERT_TRUE(bn);
+  EXPECT_TRUE(BN_is_one(bn.get()));
+
+  // -revoke stores no reason code, so the CRL carries no entry extensions and
+  // stays v1 (X509_CRL_get_version returns 0).
+  EXPECT_EQ(0L, X509_CRL_get_version(crl.get()));
+
+  EXPECT_EQ(1, X509_CRL_verify(crl.get(), test_ca_key_.get()));
+
+  RemoveFile(crl_path);
+}
+
+TEST_F(CATest, GenCRLRequiresCrlDays) {
+  CreateBasicConfig();
+
+  char crl_path[PATH_MAX];
+  ASSERT_GT(createTempFILEpath(crl_path), 0u);
+
+  args_list_t gencrl = {"-config", config_path, "-gencrl", "-out", crl_path};
+  ASSERT_EQ(kToolExitFailure, caTool(gencrl));
+
+  RemoveFile(crl_path);
+}
+
+// -gencrl must emit a v2 CRL when an entry carries a CRL entry extension (here
+// a reason code); RFC 5280 requires v2 whenever crlEntryExtensions are present.
+// X509_CRL_get_version returns X509_CRL_VERSION_2 (1) for v2.
+TEST_F(CATest, GenCRLIsV2WithEntryReasonCode) {
+  CreateBasicConfig();
+  {
+    ScopedFILE db_file(fopen(db_path, "w"));
+    ASSERT_TRUE(db_file);
+    fprintf(db_file.get(),
+            "R\t251231235959Z\t240101120000Z,keyCompromise\tAA\tunknown\t"
+            "/CN=revoked.example.com\n");
+  }
+
+  char crl_path[PATH_MAX];
+  ASSERT_GT(createTempFILEpath(crl_path), 0u);
+  args_list_t gencrl = {"-config",  config_path, "-gencrl",
+                        "-crldays", "1",         "-out",     crl_path};
+  ASSERT_EQ(kToolExitSuccess, caTool(gencrl));
+
+  bssl::UniquePtr<BIO> bio(BIO_new_file(crl_path, "r"));
+  ASSERT_TRUE(bio);
+  bssl::UniquePtr<X509_CRL> crl(
+      PEM_read_bio_X509_CRL(bio.get(), nullptr, nullptr, nullptr));
+  ASSERT_TRUE(crl);
+  EXPECT_EQ(static_cast<long>(X509_CRL_VERSION_2),
+            X509_CRL_get_version(crl.get()));
+
+  RemoveFile(crl_path);
+}
+
+// -crldays must reject non-numeric input rather than silently falling back to
+// the config default.
+TEST_F(CATest, GenCRLRejectsInvalidCrlDays) {
+  CreateBasicConfig();
+
+  char crl_path[PATH_MAX];
+  ASSERT_GT(createTempFILEpath(crl_path), 0u);
+  args_list_t gencrl = {"-config",  config_path, "-gencrl",
+                        "-crldays", "abc",       "-out",     crl_path};
+  ASSERT_EQ(kToolExitFailure, caTool(gencrl));
+
+  RemoveFile(crl_path);
+}
+
+// -revoke and -gencrl are mutually exclusive: combining them must fail rather
+// than revoking without writing the CRL.
+TEST_F(CATest, RejectsRevokeCombinedWithGencrl) {
+  CreateBasicConfig();
+
+  args_list_t sign = {"-config", config_path, "-in", csr_path, "-out",
+                      output_path};
+  ASSERT_EQ(kToolExitSuccess, caTool(sign));
+
+  char crl_path[PATH_MAX];
+  ASSERT_GT(createTempFILEpath(crl_path), 0u);
+  args_list_t both = {"-config", config_path, "-revoke",  output_path, "-gencrl",
+                      "-crldays", "1",        "-out",     crl_path};
+  ASSERT_EQ(kToolExitFailure, caTool(both));
+
+  RemoveFile(crl_path);
+}
+
+TEST_F(CATest, SigningRejectsMismatchedCaKeyAndCert) {
+  char other_key_path[PATH_MAX];
+  ASSERT_GT(createTempFILEpath(other_key_path), 0u);
+  {
+    bssl::UniquePtr<EVP_PKEY> other(EVP_PKEY_new());
+    bssl::UniquePtr<RSA> rsa(RSA_new());
+    bssl::UniquePtr<BIGNUM> e(BN_new());
+    ASSERT_TRUE(e && BN_set_word(e.get(), RSA_F4) &&
+                RSA_generate_key_ex(rsa.get(), 2048, e.get(), nullptr));
+    ASSERT_TRUE(EVP_PKEY_assign_RSA(other.get(), rsa.release()));
+    ScopedFILE f(fopen(other_key_path, "wb"));
+    ASSERT_TRUE(f);
+    ASSERT_TRUE(PEM_write_PrivateKey(f.get(), other.get(), nullptr, nullptr, 0,
+                                     nullptr, nullptr));
+  }
+
+  // private_key does not correspond to the CA certificate.
+  {
+    ScopedFILE config_file(fopen(config_path, "w"));
+    ASSERT_TRUE(config_file);
+    std::string content = R"(
+[ ca ]
+default_ca = CA_default
+
+[ CA_default ]
+database = )" + EscapeConfigPath(db_path) + R"(
+serial = )" + EscapeConfigPath(serial_path) + R"(
+private_key = )" + EscapeConfigPath(other_key_path) + R"(
+certificate = )" + EscapeConfigPath(ca_cert_path) + R"(
+new_certs_dir = )" + EscapeConfigPath(new_certs_dir) + R"(
+default_md = sha256
+policy = policy_anything
+default_days = 365
+
+[ policy_anything ]
+commonName = supplied
+)";
+    fprintf(config_file.get(), "%s", content.c_str());
+  }
+
+  args_list_t sign = {"-config", config_path, "-in", csr_path, "-out",
+                      output_path};
+  ASSERT_EQ(kToolExitFailure, caTool(sign));
+
+  RemoveFile(other_key_path);
+}
+
+// Positive: supply the CA key and certificate via -keyfile/-cert on the
+// command line rather than through the config file.
+TEST_F(CATest, SignWithCliKeyAndCert) {
+  {
+    ScopedFILE config_file(fopen(config_path, "w"));
+    ASSERT_TRUE(config_file);
+    std::string content = R"(
+[ ca ]
+default_ca = CA_default
+
+[ CA_default ]
+database = )" + EscapeConfigPath(db_path) + R"(
+serial = )" + EscapeConfigPath(serial_path) + R"(
+new_certs_dir = )" + EscapeConfigPath(new_certs_dir) + R"(
+default_md = sha256
+policy = policy_anything
+default_days = 365
+
+[ policy_anything ]
+commonName = supplied
+)";
+    fprintf(config_file.get(), "%s", content.c_str());
+  }
+
+  args_list_t sign = {"-config", config_path,   "-keyfile", ca_key_path,
+                      "-cert",   ca_cert_path,  "-in",      csr_path,
+                      "-out",    output_path};
+  ASSERT_EQ(kToolExitSuccess, caTool(sign));
+
+  bssl::UniquePtr<BIO> bio(BIO_new_file(output_path, "r"));
+  ASSERT_TRUE(bio);
+  bssl::UniquePtr<X509> issued(
+      PEM_read_bio_X509(bio.get(), nullptr, nullptr, nullptr));
+  ASSERT_TRUE(issued);
+  EXPECT_EQ(0, X509_NAME_cmp(X509_get_issuer_name(issued.get()),
+                             X509_get_subject_name(test_ca_cert_.get())));
+}
+
+// Positive: issue a certificate for a CSR whose key differs from the CA key --
+// the headline "sign for someone else" use case. Assert the issued certificate
+// verifies under the CA and carries the requester's public key, not the CA's.
+TEST_F(CATest, SignCsrWithSeparateKey) {
+  CreateBasicConfig();
+
+  // Fresh requester key, distinct from the CA key.
+  bssl::UniquePtr<EVP_PKEY> leaf_key(EVP_PKEY_new());
+  {
+    bssl::UniquePtr<RSA> rsa(RSA_new());
+    bssl::UniquePtr<BIGNUM> e(BN_new());
+    ASSERT_TRUE(e && BN_set_word(e.get(), RSA_F4) &&
+                RSA_generate_key_ex(rsa.get(), 2048, e.get(), nullptr));
+    ASSERT_TRUE(EVP_PKEY_assign_RSA(leaf_key.get(), rsa.release()));
+  }
+
+  char leaf_csr_path[PATH_MAX];
+  ASSERT_GT(createTempFILEpath(leaf_csr_path), 0u);
+  {
+    bssl::UniquePtr<X509_REQ> req(X509_REQ_new());
+    ASSERT_TRUE(req);
+    bssl::UniquePtr<X509_NAME> name(X509_NAME_new());
+    ASSERT_TRUE(name && X509_NAME_add_entry_by_txt(
+                            name.get(), "CN", MBSTRING_ASC,
+                            (unsigned char *)"leaf.example.com", -1, -1, 0));
+    ASSERT_TRUE(X509_REQ_set_subject_name(req.get(), name.get()));
+    ASSERT_TRUE(X509_REQ_set_pubkey(req.get(), leaf_key.get()));
+    ASSERT_TRUE(X509_REQ_sign(req.get(), leaf_key.get(), EVP_sha256()));
+    ScopedFILE f(fopen(leaf_csr_path, "wb"));
+    ASSERT_TRUE(f);
+    ASSERT_TRUE(PEM_write_X509_REQ(f.get(), req.get()));
+  }
+
+  args_list_t sign = {"-config", config_path, "-in", leaf_csr_path, "-out",
+                      output_path};
+  ASSERT_EQ(kToolExitSuccess, caTool(sign));
+
+  bssl::UniquePtr<BIO> bio(BIO_new_file(output_path, "r"));
+  ASSERT_TRUE(bio);
+  bssl::UniquePtr<X509> issued(
+      PEM_read_bio_X509(bio.get(), nullptr, nullptr, nullptr));
+  ASSERT_TRUE(issued);
+
+  // Issued under the CA, and carrying the requester's key, not the CA's.
+  EXPECT_EQ(1, X509_verify(issued.get(), X509_get0_pubkey(test_ca_cert_.get())));
+  EXPECT_EQ(1, EVP_PKEY_cmp(X509_get0_pubkey(issued.get()), leaf_key.get()));
+  EXPECT_EQ(0,
+            EVP_PKEY_cmp(X509_get0_pubkey(issued.get()), test_ca_key_.get()));
+
+  RemoveFile(leaf_csr_path);
+}
+
+// Positive: -subj overrides the subject of the issued certificate.
+TEST_F(CATest, SignWithSubjOverride) {
+  CreateBasicConfig();
+
+  args_list_t sign = {"-config", config_path,
+                      "-in",     csr_path,
+                      "-subj",   "/CN=overridden.example.com",
+                      "-out",    output_path};
+  ASSERT_EQ(kToolExitSuccess, caTool(sign));
+
+  bssl::UniquePtr<BIO> bio(BIO_new_file(output_path, "r"));
+  ASSERT_TRUE(bio);
+  bssl::UniquePtr<X509> issued(
+      PEM_read_bio_X509(bio.get(), nullptr, nullptr, nullptr));
+  ASSERT_TRUE(issued);
+
+  bssl::UniquePtr<X509_NAME> want(X509_NAME_new());
+  ASSERT_TRUE(want && X509_NAME_add_entry_by_txt(
+                          want.get(), "CN", MBSTRING_ASC,
+                          (unsigned char *)"overridden.example.com", -1, -1, 0));
+  EXPECT_EQ(0, X509_NAME_cmp(X509_get_subject_name(issued.get()), want.get()));
+}
+
+// Positive: the CA certificate is a "TRUSTED CERTIFICATE" (X509 AUX) PEM block,
+// which LoadCertificate must accept just like a plain certificate.
+TEST_F(CATest, SignWithTrustedCaCertificate) {
+  CreateBasicConfig();
+
+  char trusted_cert_path[PATH_MAX];
+  ASSERT_GT(createTempFILEpath(trusted_cert_path), 0u);
+  {
+    uint8_t *der = nullptr;
+    const int len = i2d_X509_AUX(test_ca_cert_.get(), &der);
+    ASSERT_GT(len, 0);
+    bssl::UniquePtr<uint8_t> der_owner(der);
+    bssl::UniquePtr<BIO> bio(BIO_new_file(trusted_cert_path, "w"));
+    ASSERT_TRUE(bio);
+    ASSERT_TRUE(PEM_write_bio(bio.get(), "TRUSTED CERTIFICATE", "", der, len));
+  }
+
+  args_list_t sign = {"-config", config_path, "-cert", trusted_cert_path,
+                      "-in",     csr_path,    "-out",  output_path};
+  ASSERT_EQ(kToolExitSuccess, caTool(sign));
+
+  RemoveFile(trusted_cert_path);
+}
+
+// Positive: the <index>.attr sidecar is optional; signing must succeed when it
+// is absent.
+TEST_F(CATest, SignsWithoutAttrFile) {
+  std::string db_attr_path = std::string(db_path) + ".attr";
+  RemoveFile(db_attr_path.c_str());
+
+  CreateBasicConfig();
+
+  args_list_t sign = {"-config", config_path, "-in", csr_path, "-out",
+                      output_path};
+  ASSERT_EQ(kToolExitSuccess, caTool(sign));
+}
+
+// Negative: with neither default_days/days in the config nor -enddate, the tool
+// cannot determine the validity period and must fail.
+TEST_F(CATest, FailsWhenNoDaysConfigured) {
+  {
+    ScopedFILE config_file(fopen(config_path, "w"));
+    ASSERT_TRUE(config_file);
+    std::string content = R"(
+[ ca ]
+default_ca = CA_default
+
+[ CA_default ]
+database = )" + EscapeConfigPath(db_path) + R"(
+serial = )" + EscapeConfigPath(serial_path) + R"(
+private_key = )" + EscapeConfigPath(ca_key_path) + R"(
+certificate = )" + EscapeConfigPath(ca_cert_path) + R"(
+new_certs_dir = )" + EscapeConfigPath(new_certs_dir) + R"(
+default_md = sha256
+policy = policy_anything
+
+[ policy_anything ]
+commonName = supplied
+)";
+    fprintf(config_file.get(), "%s", content.c_str());
+  }
+
+  args_list_t sign = {"-config", config_path, "-in", csr_path, "-out",
+                      output_path};
+  ASSERT_EQ(kToolExitFailure, caTool(sign));
+}

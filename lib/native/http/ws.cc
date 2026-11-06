@@ -392,7 +392,7 @@ bool ws_Socket::Upgrade(http_IO *io, unsigned int flags)
         uint8_t hash[20];
 
         full_key.len = Fmt(full_key.data, "%1%2", key_str, "258EAFA5-E914-47DA-95CA-C5AB0DC85B11").len;
-        SHA1((unsigned char *)hash, (const unsigned char *)full_key.data, (size_t)full_key.len);
+        sha1_Hash((unsigned char *)hash, (const unsigned char *)full_key.data, (size_t)full_key.len);
 
         size_t len = 0;
         base64_encode((const char *)hash, K_SIZE(hash), accept_str, &len, 0);

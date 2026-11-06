@@ -128,12 +128,12 @@ static int derive_hybrid_secret(ssh_session session,
     switch (crypto->kex_type) {
     case SSH_KEX_MLKEM768X25519_SHA256:
     case SSH_KEX_MLKEM768NISTP256_SHA256:
-        digest = sha256_direct;
+        digest = sha256;
         digest_len = SHA256_DIGEST_LEN;
         break;
 #ifdef HAVE_MLKEM1024
     case SSH_KEX_MLKEM1024NISTP384_SHA384:
-        digest = sha384_direct;
+        digest = sha384;
         digest_len = SHA384_DIGEST_LEN;
         break;
 #endif

@@ -170,13 +170,13 @@ static const EVP_MD *sshkdf_digest_to_md(enum ssh_kdf_digest digest_type)
 {
     switch (digest_type) {
     case SSH_KDF_SHA1:
-        return EVP_sha1_direct();
+        return EVP_sha1();
     case SSH_KDF_SHA256:
-        return EVP_sha256_direct();
+        return EVP_sha256();
     case SSH_KDF_SHA384:
-        return EVP_sha384_direct();
+        return EVP_sha384();
     case SSH_KDF_SHA512:
-        return EVP_sha512_direct();
+        return EVP_sha512();
     }
     return NULL;
 }
@@ -358,16 +358,16 @@ HMACCTX hmac_init(const void *key, size_t len, enum ssh_hmac_e type)
 
     switch (type) {
     case SSH_HMAC_SHA1:
-        rc = EVP_DigestSignInit(ctx, NULL, EVP_sha1_direct(), NULL, pkey);
+        rc = EVP_DigestSignInit(ctx, NULL, EVP_sha1(), NULL, pkey);
         break;
     case SSH_HMAC_SHA256:
-        rc = EVP_DigestSignInit(ctx, NULL, EVP_sha256_direct(), NULL, pkey);
+        rc = EVP_DigestSignInit(ctx, NULL, EVP_sha256(), NULL, pkey);
         break;
     case SSH_HMAC_SHA512:
-        rc = EVP_DigestSignInit(ctx, NULL, EVP_sha512_direct(), NULL, pkey);
+        rc = EVP_DigestSignInit(ctx, NULL, EVP_sha512(), NULL, pkey);
         break;
     case SSH_HMAC_MD5:
-        rc = EVP_DigestSignInit(ctx, NULL, EVP_md5_direct(), NULL, pkey);
+        rc = EVP_DigestSignInit(ctx, NULL, EVP_md5(), NULL, pkey);
         break;
     default:
         rc = -1;

@@ -37,6 +37,12 @@
 
 #ifdef _WIN32
 #include <winsock2.h>
+#undef X509_NAME
+#undef X509_EXTENSIONS
+#undef PKCS7_ISSUER_AND_SERIAL
+#undef PKCS7_SIGNER_INFO
+#undef OCSP_REQUEST
+#undef OCSP_RESPONSE
 #endif
 #include <errno.h>
 #include <ctype.h>
@@ -3052,24 +3058,24 @@ int pki_sk_signature_buffer_prepare(const ssh_key key,
     *sk_buffer_out = NULL;
 
     /* Calculate application hash */
-    ctx = sha256_ctx_init();
+    ctx = sha256_init();
     if (ctx == NULL) {
         SSH_LOG(SSH_LOG_TRACE, "Can not create SHA256CTX for application hash");
         return SSH_ERROR;
     }
-    sha256_ctx_update(ctx,
+    sha256_update(ctx,
                   ssh_string_data(key->sk_application),
                   ssh_string_len(key->sk_application));
-    sha256_ctx_final(application_hash, ctx);
+    sha256_final(application_hash, ctx);
 
     /* Calculate input hash */
-    ctx = sha256_ctx_init();
+    ctx = sha256_init();
     if (ctx == NULL) {
         SSH_LOG(SSH_LOG_TRACE, "Can not create SHA256CTX for input hash");
         goto out;
     }
-    sha256_ctx_update(ctx, input, input_len);
-    sha256_ctx_final(input_hash, ctx);
+    sha256_update(ctx, input, input_len);
+    sha256_final(input_hash, ctx);
 
     /* Create and pack the sk_buffer */
     sk_buffer = ssh_buffer_new();
@@ -3369,10 +3375,10 @@ static int sshsig_prepare_data(const void *data,
 
     if (strcmp(hash_alg, "sha256") == 0) {
         hash_len = SHA256_DIGEST_LEN;
-        rc = sha256_direct(data, data_length, (unsigned char *)hash);
+        rc = sha256(data, data_length, (unsigned char *)hash);
     } else if (strcmp(hash_alg, "sha512") == 0) {
         hash_len = SHA512_DIGEST_LEN;
-        rc = sha512_direct(data, data_length, (unsigned char *)hash);
+        rc = sha512(data, data_length, (unsigned char *)hash);
     } else {
         SSH_LOG(SSH_LOG_TRACE, "Unsupported hash algorithm: %s", hash_alg);
         goto cleanup;

@@ -1,0 +1,184 @@
+diff --git a/vendor/sha1/sha1.c b/vendor/sha1/sha1.c
+index c985168175..3dbc62f94a 100644
+--- a/vendor/sha1/sha1.c
++++ b/vendor/sha1/sha1.c
+@@ -13,9 +13,9 @@ A million repetitions of "a"
+ */
+ 
+ /* #define LITTLE_ENDIAN * This should be #define'd already, if true. */
+-/* #define SHA1HANDSOFF * Copies data before messing with it. */
++/* #define sha1_SHA1HANDSOFF * Copies data before messing with it. */
+ 
+-#define SHA1HANDSOFF
++#define sha1_SHA1HANDSOFF
+ 
+ #include <stdio.h>
+ #include <string.h>
+@@ -41,7 +41,7 @@ A million repetitions of "a"
+ #define blk(i) (block->l[i&15] = rol(block->l[(i+13)&15]^block->l[(i+8)&15] \
+     ^block->l[(i+2)&15]^block->l[i&15],1))
+ 
+-/* (R0+R1), R2, R3, R4 are the different operations used in SHA1 */
++/* (R0+R1), R2, R3, R4 are the different operations used in sha1_SHA1 */
+ #define R0(v,w,x,y,z,i) z+=((w&(x^y))^y)+blk0(i)+0x5A827999+rol(v,5);w=rol(w,30);
+ #define R1(v,w,x,y,z,i) z+=((w&(x^y))^y)+blk(i)+0x5A827999+rol(v,5);w=rol(w,30);
+ #define R2(v,w,x,y,z,i) z+=(w^x^y)+blk(i)+0x6ED9EBA1+rol(v,5);w=rol(w,30);
+@@ -51,7 +51,7 @@ A million repetitions of "a"
+ 
+ /* Hash a single 512-bit block. This is the core of the algorithm. */
+ 
+-void SHA1Transform(
++void sha1_Transform(
+     uint32_t state[5],
+     const unsigned char buffer[64]
+ )
+@@ -64,7 +64,7 @@ void SHA1Transform(
+         uint32_t l[16];
+     } CHAR64LONG16;
+ 
+-#ifdef SHA1HANDSOFF
++#ifdef sha1_SHA1HANDSOFF
+     CHAR64LONG16 block[1];      /* use array to appear as a pointer */
+ 
+     memcpy(block, buffer, 64);
+@@ -171,19 +171,19 @@ void SHA1Transform(
+     state[4] += e;
+     /* Wipe variables */
+     a = b = c = d = e = 0;
+-#ifdef SHA1HANDSOFF
++#ifdef sha1_SHA1HANDSOFF
+     memset(block, '\0', sizeof(block));
+ #endif
+ }
+ 
+ 
+-/* SHA1Init - Initialize new context */
++/* sha1_Init - Initialize new context */
+ 
+-void SHA1Init(
+-    SHA1_CTX * context
++void sha1_Init(
++    sha1_CTX * context
+ )
+ {
+-    /* SHA1 initialization constants */
++    /* sha1_SHA1 initialization constants */
+     context->state[0] = 0x67452301;
+     context->state[1] = 0xEFCDAB89;
+     context->state[2] = 0x98BADCFE;
+@@ -195,8 +195,8 @@ void SHA1Init(
+ 
+ /* Run your data through this. */
+ 
+-void SHA1Update(
+-    SHA1_CTX * context,
++void sha1_Update(
++    sha1_CTX * context,
+     const unsigned char *data,
+     size_t len
+ )
+@@ -213,10 +213,10 @@ void SHA1Update(
+     if ((j + len) > 63)
+     {
+         memcpy(&context->buffer[j], data, (i = 64 - j));
+-        SHA1Transform(context->state, context->buffer);
++        sha1_Transform(context->state, context->buffer);
+         for (; i + 63 < len; i += 64)
+         {
+-            SHA1Transform(context->state, &data[i]);
++            sha1_Transform(context->state, &data[i]);
+         }
+         j = 0;
+     }
+@@ -228,9 +228,9 @@ void SHA1Update(
+ 
+ /* Add padding and return the message digest. */
+ 
+-void SHA1Final(
++void sha1_Final(
+     unsigned char digest[20],
+-    SHA1_CTX * context
++    sha1_CTX * context
+ )
+ {
+     unsigned i;
+@@ -262,13 +262,13 @@ void SHA1Final(
+     }
+ #endif
+     c = 0200;
+-    SHA1Update(context, &c, 1);
++    sha1_Update(context, &c, 1);
+     while ((context->count[0] & 504) != 448)
+     {
+         c = 0000;
+-        SHA1Update(context, &c, 1);
++        sha1_Update(context, &c, 1);
+     }
+-    SHA1Update(context, finalcount, 8); /* Should cause a SHA1Transform() */
++    sha1_Update(context, finalcount, 8); /* Should cause a sha1_Transform() */
+     for (i = 0; i < 20; i++)
+     {
+         digest[i] = (unsigned char)
+@@ -279,14 +279,14 @@ void SHA1Final(
+     memset(&finalcount, '\0', sizeof(finalcount));
+ }
+ 
+-void SHA1(
++void sha1_Hash(
+     unsigned char digest[20],
+     const unsigned char *data,
+     size_t len)
+ {
+-    SHA1_CTX ctx;
++    sha1_CTX ctx;
+ 
+-    SHA1Init(&ctx);
+-    SHA1Update(&ctx, data, len);
+-    SHA1Final(digest, &ctx);
++    sha1_Init(&ctx);
++    sha1_Update(&ctx, data, len);
++    sha1_Final(digest, &ctx);
+ }
+diff --git a/vendor/sha1/sha1.h b/vendor/sha1/sha1.h
+index e229c6e01a..60c9147f6d 100644
+--- a/vendor/sha1/sha1.h
++++ b/vendor/sha1/sha1.h
+@@ -18,29 +18,29 @@ typedef struct
+     uint32_t state[5];
+     size_t count[2];
+     unsigned char buffer[64];
+-} SHA1_CTX;
++} sha1_CTX;
+ 
+-void SHA1Transform(
++void sha1_Transform(
+     uint32_t state[5],
+     const unsigned char buffer[64]
+     );
+ 
+-void SHA1Init(
+-    SHA1_CTX * context
++void sha1_Init(
++    sha1_CTX * context
+     );
+ 
+-void SHA1Update(
+-    SHA1_CTX * context,
++void sha1_Update(
++    sha1_CTX * context,
+     const unsigned char *data,
+     size_t len
+     );
+ 
+-void SHA1Final(
++void sha1_Final(
+     unsigned char digest[20],
+-    SHA1_CTX * context
++    sha1_CTX * context
+     );
+ 
+-void SHA1(
++void sha1_Hash(
+     unsigned char digest[20],
+     const unsigned char *data,
+     size_t len);

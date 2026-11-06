@@ -30,6 +30,12 @@
 
 #ifdef _WIN32
 #include <winsock2.h>
+#undef X509_NAME
+#undef X509_EXTENSIONS
+#undef PKCS7_ISSUER_AND_SERIAL
+#undef PKCS7_SIGNER_INFO
+#undef OCSP_REQUEST
+#undef OCSP_RESPONSE
 #endif
 
 #include "libssh/priv.h"
@@ -119,6 +125,12 @@ static poll_fn ssh_poll_emu;
 #include <time.h>
 #include <windows.h>
 #include <winsock2.h>
+#undef X509_NAME
+#undef X509_EXTENSIONS
+#undef PKCS7_ISSUER_AND_SERIAL
+#undef PKCS7_SIGNER_INFO
+#undef OCSP_REQUEST
+#undef OCSP_RESPONSE
 #else /* _WIN32 */
 #include <sys/select.h>
 #include <sys/socket.h>

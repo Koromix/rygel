@@ -60,25 +60,25 @@ static ssh_mac_ctx ssh_mac_ctx_init(enum ssh_kdf_digest type)
     ctx->digest_type = type;
     switch (type) {
     case SSH_KDF_SHA1:
-        ctx->ctx.sha1_ctx = sha1_ctx_init();
+        ctx->ctx.sha1_ctx = sha1_init();
         if (ctx->ctx.sha1_ctx == NULL) {
             goto err;
         }
         return ctx;
     case SSH_KDF_SHA256:
-        ctx->ctx.sha256_ctx = sha256_ctx_init();
+        ctx->ctx.sha256_ctx = sha256_init();
         if (ctx->ctx.sha256_ctx == NULL) {
             goto err;
         }
         return ctx;
     case SSH_KDF_SHA384:
-        ctx->ctx.sha384_ctx = sha384_ctx_init();
+        ctx->ctx.sha384_ctx = sha384_init();
         if (ctx->ctx.sha384_ctx == NULL) {
             goto err;
         }
         return ctx;
     case SSH_KDF_SHA512:
-        ctx->ctx.sha512_ctx = sha512_ctx_init();
+        ctx->ctx.sha512_ctx = sha512_init();
         if (ctx->ctx.sha512_ctx == NULL) {
             goto err;
         }
@@ -116,13 +116,13 @@ static int ssh_mac_update(ssh_mac_ctx ctx, const void *data, size_t len)
 {
     switch (ctx->digest_type) {
     case SSH_KDF_SHA1:
-        return sha1_ctx_update(ctx->ctx.sha1_ctx, data, len);
+        return sha1_update(ctx->ctx.sha1_ctx, data, len);
     case SSH_KDF_SHA256:
-        return sha256_ctx_update(ctx->ctx.sha256_ctx, data, len);
+        return sha256_update(ctx->ctx.sha256_ctx, data, len);
     case SSH_KDF_SHA384:
-        return sha384_ctx_update(ctx->ctx.sha384_ctx, data, len);
+        return sha384_update(ctx->ctx.sha384_ctx, data, len);
     case SSH_KDF_SHA512:
-        return sha512_ctx_update(ctx->ctx.sha512_ctx, data, len);
+        return sha512_update(ctx->ctx.sha512_ctx, data, len);
     }
     return SSH_ERROR;
 }
@@ -133,16 +133,16 @@ static int ssh_mac_final(unsigned char *md, ssh_mac_ctx ctx)
 
     switch (ctx->digest_type) {
     case SSH_KDF_SHA1:
-        rc = sha1_ctx_final(md, ctx->ctx.sha1_ctx);
+        rc = sha1_final(md, ctx->ctx.sha1_ctx);
         break;
     case SSH_KDF_SHA256:
-        rc = sha256_ctx_final(md, ctx->ctx.sha256_ctx);
+        rc = sha256_final(md, ctx->ctx.sha256_ctx);
         break;
     case SSH_KDF_SHA384:
-        rc = sha384_ctx_final(md, ctx->ctx.sha384_ctx);
+        rc = sha384_final(md, ctx->ctx.sha384_ctx);
         break;
     case SSH_KDF_SHA512:
-        rc = sha512_ctx_final(md, ctx->ctx.sha512_ctx);
+        rc = sha512_final(md, ctx->ctx.sha512_ctx);
         break;
     }
     SAFE_FREE(ctx);

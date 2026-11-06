@@ -1,0 +1,471 @@
+diff --git a/vendor/libssh/src/agent.c b/vendor/libssh/src/agent.c
+index bb1669c345..66dd1b6519 100644
+--- a/vendor/libssh/src/agent.c
++++ b/vendor/libssh/src/agent.c
+@@ -51,6 +51,12 @@
+ #else
+ #include <winsock2.h>
+ #include <ws2tcpip.h>
++#undef X509_NAME
++#undef X509_EXTENSIONS
++#undef PKCS7_ISSUER_AND_SERIAL
++#undef PKCS7_SIGNER_INFO
++#undef OCSP_REQUEST
++#undef OCSP_RESPONSE
+ #endif
+ 
+ #include "libssh/agent.h"
+diff --git a/vendor/libssh/src/bind.c b/vendor/libssh/src/bind.c
+index 97feaac268..457589a34f 100644
+--- a/vendor/libssh/src/bind.c
++++ b/vendor/libssh/src/bind.c
+@@ -51,6 +51,12 @@
+ #include <io.h>
+ #include <winsock2.h>
+ #include <ws2tcpip.h>
++#undef X509_NAME
++#undef X509_EXTENSIONS
++#undef PKCS7_ISSUER_AND_SERIAL
++#undef PKCS7_SIGNER_INFO
++#undef OCSP_REQUEST
++#undef OCSP_RESPONSE
+ 
+ /*
+  * <wspiapi.h> is necessary for getaddrinfo before Windows XP, but it isn't
+diff --git a/vendor/libssh/src/buffer.c b/vendor/libssh/src/buffer.c
+index caab6334de..18e9acee2c 100644
+--- a/vendor/libssh/src/buffer.c
++++ b/vendor/libssh/src/buffer.c
+@@ -30,6 +30,12 @@
+ 
+ #ifdef _WIN32
+ #include <winsock2.h>
++#undef X509_NAME
++#undef X509_EXTENSIONS
++#undef PKCS7_ISSUER_AND_SERIAL
++#undef PKCS7_SIGNER_INFO
++#undef OCSP_REQUEST
++#undef OCSP_RESPONSE
+ #else
+ #include <netinet/in.h>
+ #include <arpa/inet.h>
+diff --git a/vendor/libssh/src/channels.c b/vendor/libssh/src/channels.c
+index 838f144872..117cbe9c91 100644
+--- a/vendor/libssh/src/channels.c
++++ b/vendor/libssh/src/channels.c
+@@ -36,6 +36,12 @@
+ 
+ #ifdef _WIN32
+ #include <winsock2.h>
++#undef X509_NAME
++#undef X509_EXTENSIONS
++#undef PKCS7_ISSUER_AND_SERIAL
++#undef PKCS7_SIGNER_INFO
++#undef OCSP_REQUEST
++#undef OCSP_RESPONSE
+ #else
+ #include <netinet/in.h>
+ #include <arpa/inet.h>
+diff --git a/vendor/libssh/src/connect.c b/vendor/libssh/src/connect.c
+index 43dce95ba8..612285fa27 100644
+--- a/vendor/libssh/src/connect.c
++++ b/vendor/libssh/src/connect.c
+@@ -56,6 +56,12 @@
+ 
+ #include <winsock2.h>
+ #include <ws2tcpip.h>
++#undef X509_NAME
++#undef X509_EXTENSIONS
++#undef PKCS7_ISSUER_AND_SERIAL
++#undef PKCS7_SIGNER_INFO
++#undef OCSP_REQUEST
++#undef OCSP_RESPONSE
+ 
+ /* <wspiapi.h> is necessary for getaddrinfo before Windows XP, but it isn't
+  * available on some platforms like MinGW. */
+diff --git a/vendor/libssh/src/connector.c b/vendor/libssh/src/connector.c
+index 2aa39fbb89..5212babf20 100644
+--- a/vendor/libssh/src/connector.c
++++ b/vendor/libssh/src/connector.c
+@@ -36,6 +36,12 @@
+ 
+ #ifdef _WIN32
+ # include <winsock2.h>
++# undef X509_NAME
++# undef X509_EXTENSIONS
++# undef PKCS7_ISSUER_AND_SERIAL
++# undef PKCS7_SIGNER_INFO
++# undef OCSP_REQUEST
++# undef OCSP_RESPONSE
+ #else
+ # include <sys/types.h>
+ # include <sys/socket.h>
+diff --git a/vendor/libssh/src/init.c b/vendor/libssh/src/init.c
+index e516c33180..eb46a7c960 100644
+--- a/vendor/libssh/src/init.c
++++ b/vendor/libssh/src/init.c
+@@ -33,6 +33,12 @@
+ 
+ #ifdef _WIN32
+ #include <winsock2.h>
++#undef X509_NAME
++#undef X509_EXTENSIONS
++#undef PKCS7_ISSUER_AND_SERIAL
++#undef PKCS7_SIGNER_INFO
++#undef OCSP_REQUEST
++#undef OCSP_RESPONSE
+ #endif
+ 
+ #ifdef HAVE_CONSTRUCTOR_ATTRIBUTE
+diff --git a/vendor/libssh/src/legacy.c b/vendor/libssh/src/legacy.c
+index d8899d24cd..03117655f4 100644
+--- a/vendor/libssh/src/legacy.c
++++ b/vendor/libssh/src/legacy.c
+@@ -28,6 +28,12 @@
+ 
+ #ifdef _WIN32
+ #include <winsock2.h>
++#undef X509_NAME
++#undef X509_EXTENSIONS
++#undef PKCS7_ISSUER_AND_SERIAL
++#undef PKCS7_SIGNER_INFO
++#undef OCSP_REQUEST
++#undef OCSP_RESPONSE
+ #endif
+ #include <errno.h>
+ #include <stdio.h>
+diff --git a/vendor/libssh/src/log.c b/vendor/libssh/src/log.c
+index d08778fc2f..f45c5ef41e 100644
+--- a/vendor/libssh/src/log.c
++++ b/vendor/libssh/src/log.c
+@@ -36,6 +36,12 @@
+ 
+ #ifdef _WIN32
+ #include <winsock2.h>
++#undef X509_NAME
++#undef X509_EXTENSIONS
++#undef PKCS7_ISSUER_AND_SERIAL
++#undef PKCS7_SIGNER_INFO
++#undef OCSP_REQUEST
++#undef OCSP_RESPONSE
+ #endif
+ 
+ #include "libssh/priv.h"
+diff --git a/vendor/libssh/src/messages.c b/vendor/libssh/src/messages.c
+index f02b676a0e..792aeddca7 100644
+--- a/vendor/libssh/src/messages.c
++++ b/vendor/libssh/src/messages.c
+@@ -28,6 +28,12 @@
+ 
+ #ifdef _WIN32
+ #include <winsock2.h>
++#undef X509_NAME
++#undef X509_EXTENSIONS
++#undef PKCS7_ISSUER_AND_SERIAL
++#undef PKCS7_SIGNER_INFO
++#undef OCSP_REQUEST
++#undef OCSP_RESPONSE
+ #else
+ #include <netinet/in.h>
+ #include <arpa/inet.h>
+diff --git a/vendor/libssh/src/misc.c b/vendor/libssh/src/misc.c
+index eaaf50fa99..7db3d4b4ca 100644
+--- a/vendor/libssh/src/misc.c
++++ b/vendor/libssh/src/misc.c
+@@ -62,6 +62,12 @@
+ #include <shlobj.h>
+ #include <direct.h>
+ #include <netioapi.h>
++#undef X509_NAME
++#undef X509_EXTENSIONS
++#undef PKCS7_ISSUER_AND_SERIAL
++#undef PKCS7_SIGNER_INFO
++#undef OCSP_REQUEST
++#undef OCSP_RESPONSE
+ 
+ #ifdef HAVE_IO_H
+ #include <io.h>
+diff --git a/vendor/libssh/src/options.c b/vendor/libssh/src/options.c
+index 1563c907be..ce25ce38f1 100644
+--- a/vendor/libssh/src/options.c
++++ b/vendor/libssh/src/options.c
+@@ -30,6 +30,12 @@
+ #include <pwd.h>
+ #else
+ #include <winsock2.h>
++#undef X509_NAME
++#undef X509_EXTENSIONS
++#undef PKCS7_ISSUER_AND_SERIAL
++#undef PKCS7_SIGNER_INFO
++#undef OCSP_REQUEST
++#undef OCSP_RESPONSE
+ #endif
+ #include "libssh/config.h"
+ #include "libssh/config_parser.h"
+diff --git a/vendor/libssh/src/packet_cb.c b/vendor/libssh/src/packet_cb.c
+index 162b9dbb67..b87c5f8c67 100644
+--- a/vendor/libssh/src/packet_cb.c
++++ b/vendor/libssh/src/packet_cb.c
+@@ -26,6 +26,12 @@
+ #include <stdlib.h>
+ #ifdef _WIN32
+ #include <winsock2.h>
++#undef X509_NAME
++#undef X509_EXTENSIONS
++#undef PKCS7_ISSUER_AND_SERIAL
++#undef PKCS7_SIGNER_INFO
++#undef OCSP_REQUEST
++#undef OCSP_RESPONSE
+ #endif
+ #ifdef HAVE_ARPA_INET_H
+ #include <arpa/inet.h>
+diff --git a/vendor/libssh/src/packet_crypt.c b/vendor/libssh/src/packet_crypt.c
+index 02a3454b4c..9738fab571 100644
+--- a/vendor/libssh/src/packet_crypt.c
++++ b/vendor/libssh/src/packet_crypt.c
+@@ -29,6 +29,12 @@
+ 
+ #ifdef _WIN32
+ #include <winsock2.h>
++#undef X509_NAME
++#undef X509_EXTENSIONS
++#undef PKCS7_ISSUER_AND_SERIAL
++#undef PKCS7_SIGNER_INFO
++#undef OCSP_REQUEST
++#undef OCSP_RESPONSE
+ #else
+ #include <netinet/in.h>
+ #include <arpa/inet.h>
+diff --git a/vendor/libssh/src/pcap.c b/vendor/libssh/src/pcap.c
+index 1a98e1cd19..d728372c15 100644
+--- a/vendor/libssh/src/pcap.c
++++ b/vendor/libssh/src/pcap.c
+@@ -27,6 +27,12 @@
+ #ifdef _WIN32
+ #include <winsock2.h>
+ #include <ws2tcpip.h>
++#undef X509_NAME
++#undef X509_EXTENSIONS
++#undef PKCS7_ISSUER_AND_SERIAL
++#undef PKCS7_SIGNER_INFO
++#undef OCSP_REQUEST
++#undef OCSP_RESPONSE
+ #else
+ #include <netinet/in.h>
+ #include <sys/socket.h>
+diff --git a/vendor/libssh/src/pki.c b/vendor/libssh/src/pki.c
+index 77ea150495..bb8ad86226 100644
+--- a/vendor/libssh/src/pki.c
++++ b/vendor/libssh/src/pki.c
+@@ -37,6 +37,12 @@
+ 
+ #ifdef _WIN32
+ #include <winsock2.h>
++#undef X509_NAME
++#undef X509_EXTENSIONS
++#undef PKCS7_ISSUER_AND_SERIAL
++#undef PKCS7_SIGNER_INFO
++#undef OCSP_REQUEST
++#undef OCSP_RESPONSE
+ #endif
+ #include <errno.h>
+ #include <ctype.h>
+diff --git a/vendor/libssh/src/poll.c b/vendor/libssh/src/poll.c
+index 4e183546ab..ab8487be89 100644
+--- a/vendor/libssh/src/poll.c
++++ b/vendor/libssh/src/poll.c
+@@ -30,6 +30,12 @@
+ 
+ #ifdef _WIN32
+ #include <winsock2.h>
++#undef X509_NAME
++#undef X509_EXTENSIONS
++#undef PKCS7_ISSUER_AND_SERIAL
++#undef PKCS7_SIGNER_INFO
++#undef OCSP_REQUEST
++#undef OCSP_RESPONSE
+ #endif
+ 
+ #include "libssh/priv.h"
+@@ -119,6 +125,12 @@ static poll_fn ssh_poll_emu;
+ #include <time.h>
+ #include <windows.h>
+ #include <winsock2.h>
++#undef X509_NAME
++#undef X509_EXTENSIONS
++#undef PKCS7_ISSUER_AND_SERIAL
++#undef PKCS7_SIGNER_INFO
++#undef OCSP_REQUEST
++#undef OCSP_RESPONSE
+ #else /* _WIN32 */
+ #include <sys/select.h>
+ #include <sys/socket.h>
+diff --git a/vendor/libssh/src/server.c b/vendor/libssh/src/server.c
+index 7873666f12..6d53ea577b 100644
+--- a/vendor/libssh/src/server.c
++++ b/vendor/libssh/src/server.c
+@@ -32,6 +32,12 @@
+ #ifdef _WIN32
+ # include <winsock2.h>
+ # include <ws2tcpip.h>
++# undef X509_NAME
++# undef X509_EXTENSIONS
++# undef PKCS7_ISSUER_AND_SERIAL
++# undef PKCS7_SIGNER_INFO
++# undef OCSP_REQUEST
++# undef OCSP_RESPONSE
+ 
+   /*
+    * <wspiapi.h> is necessary for getaddrinfo before Windows XP, but it isn't
+diff --git a/vendor/libssh/src/session.c b/vendor/libssh/src/session.c
+index e9e91f54d7..ddf17d38fe 100644
+--- a/vendor/libssh/src/session.c
++++ b/vendor/libssh/src/session.c
+@@ -28,6 +28,12 @@
+ 
+ #ifdef _WIN32
+ #include <winsock2.h>
++#undef X509_NAME
++#undef X509_EXTENSIONS
++#undef PKCS7_ISSUER_AND_SERIAL
++#undef PKCS7_SIGNER_INFO
++#undef OCSP_REQUEST
++#undef OCSP_RESPONSE
+ #endif
+ 
+ #include "libssh/priv.h"
+diff --git a/vendor/libssh/src/sftp.c b/vendor/libssh/src/sftp.c
+index 24a4777650..8f31cc96f7 100644
+--- a/vendor/libssh/src/sftp.c
++++ b/vendor/libssh/src/sftp.c
+@@ -41,6 +41,12 @@
+ 
+ #ifdef _WIN32
+ #include <winsock2.h>
++#undef X509_NAME
++#undef X509_EXTENSIONS
++#undef PKCS7_ISSUER_AND_SERIAL
++#undef PKCS7_SIGNER_INFO
++#undef OCSP_REQUEST
++#undef OCSP_RESPONSE
+ #else
+ #include <netinet/in.h>
+ #include <arpa/inet.h>
+diff --git a/vendor/libssh/src/sftp_aio.c b/vendor/libssh/src/sftp_aio.c
+index 6361f115b8..31f52f29f5 100644
+--- a/vendor/libssh/src/sftp_aio.c
++++ b/vendor/libssh/src/sftp_aio.c
+@@ -27,6 +27,12 @@
+ 
+ #ifdef _WIN32
+ #include <winsock2.h>
++#undef X509_NAME
++#undef X509_EXTENSIONS
++#undef PKCS7_ISSUER_AND_SERIAL
++#undef PKCS7_SIGNER_INFO
++#undef OCSP_REQUEST
++#undef OCSP_RESPONSE
+ #endif
+ 
+ #include "libssh/sftp.h"
+diff --git a/vendor/libssh/src/sftp_common.c b/vendor/libssh/src/sftp_common.c
+index 08c48505d5..dc0d2f4c08 100644
+--- a/vendor/libssh/src/sftp_common.c
++++ b/vendor/libssh/src/sftp_common.c
+@@ -28,6 +28,12 @@
+ 
+ #ifdef _WIN32
+ #include <winsock2.h>
++#undef X509_NAME
++#undef X509_EXTENSIONS
++#undef PKCS7_ISSUER_AND_SERIAL
++#undef PKCS7_SIGNER_INFO
++#undef OCSP_REQUEST
++#undef OCSP_RESPONSE
+ #endif
+ #include <ctype.h>
+ 
+diff --git a/vendor/libssh/src/socket.c b/vendor/libssh/src/socket.c
+index bd11d0bd4c..2e2ef42070 100644
+--- a/vendor/libssh/src/socket.c
++++ b/vendor/libssh/src/socket.c
+@@ -28,6 +28,12 @@
+ #ifdef _WIN32
+ #include <winsock2.h>
+ #include <ws2tcpip.h>
++#undef X509_NAME
++#undef X509_EXTENSIONS
++#undef PKCS7_ISSUER_AND_SERIAL
++#undef PKCS7_SIGNER_INFO
++#undef OCSP_REQUEST
++#undef OCSP_RESPONSE
+ #ifndef UNIX_PATH_MAX
+  /* Inlining the key portions of afunix.h in Windows 10 SDK;
+   * that header isn't available in the mingw environment. */
+diff --git a/vendor/libssh/src/string.c b/vendor/libssh/src/string.c
+index c3164f7703..da3ebc183b 100644
+--- a/vendor/libssh/src/string.c
++++ b/vendor/libssh/src/string.c
+@@ -28,6 +28,12 @@
+ 
+ #ifdef _WIN32
+ #include <winsock2.h>
++#undef X509_NAME
++#undef X509_EXTENSIONS
++#undef PKCS7_ISSUER_AND_SERIAL
++#undef PKCS7_SIGNER_INFO
++#undef OCSP_REQUEST
++#undef OCSP_RESPONSE
+ #else
+ #include <arpa/inet.h>
+ #include <netinet/in.h>
+diff --git a/vendor/libssh/src/ttyopts.c b/vendor/libssh/src/ttyopts.c
+index 0d01fba1ac..2c19594ba1 100644
+--- a/vendor/libssh/src/ttyopts.c
++++ b/vendor/libssh/src/ttyopts.c
+@@ -29,18 +29,17 @@
+ 
+ #ifdef _WIN32
+ #include <winsock2.h>
++#undef X509_NAME
++#undef X509_EXTENSIONS
++#undef PKCS7_ISSUER_AND_SERIAL
++#undef PKCS7_SIGNER_INFO
++#undef OCSP_REQUEST
++#undef OCSP_RESPONSE
+ #endif
+ 
+ #include <libssh/priv.h>
+ #include <string.h>
+ 
+-#ifdef _WIN32
+-#include <winsock2.h>
+-#endif
+-#ifdef HAVE_TERMIOS_H
+-#include <termios.h>
+-#endif
+-
+ /** Terminal mode opcodes */
+ enum {
+     TTY_OP_END = 0,
+diff --git a/vendor/libssh/include/libssh/priv.h b/vendor/libssh/include/libssh/priv.h
+index ee7fbe40e3..8e3accb82a 100644
+--- a/vendor/libssh/include/libssh/priv.h
++++ b/vendor/libssh/include/libssh/priv.h
+@@ -36,6 +36,16 @@
+ #include <string.h>
+ #include <time.h>
+ 
++#ifdef _WIN32
++#include <winsock2.h>
++#undef X509_NAME
++#undef X509_EXTENSIONS
++#undef PKCS7_ISSUER_AND_SERIAL
++#undef PKCS7_SIGNER_INFO
++#undef OCSP_REQUEST
++#undef OCSP_RESPONSE
++#endif
++
+ #if !defined(HAVE_STRTOULL)
+ # if defined(HAVE___STRTOULL)
+ #  define strtoull __strtoull

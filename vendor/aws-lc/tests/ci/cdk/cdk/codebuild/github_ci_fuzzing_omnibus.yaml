@@ -1,0 +1,52 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0 OR ISC
+
+version: 0.2
+
+# Doc for batch https://docs.aws.amazon.com/codebuild/latest/userguide/batch-build-buildspec.html#build-spec.batch.build-list
+batch:
+  build-list:
+
+    - identifier: al2023_clang15_x86_64_fuzz
+      buildspec: ./tests/ci/codebuild/common/run_simple_target.yml
+      env:
+        type: LINUX_CONTAINER
+        privileged-mode: true
+        compute-type: BUILD_GENERAL1_LARGE
+        image: 620771051181.dkr.ecr.us-west-2.amazonaws.com/aws-lc/amazonlinux:2023
+        variables:
+          AWS_LC_CI_COMPILER_ENV: clang-15
+          AWS_LC_CI_TARGET: "tests/ci/run_fuzz_tests.sh"
+
+    - identifier: al2023_clang14_arm_fuzz
+      buildspec: ./tests/ci/codebuild/common/run_simple_target.yml
+      env:
+        type: ARM_CONTAINER
+        privileged-mode: true
+        compute-type: BUILD_GENERAL1_LARGE
+        image: 620771051181.dkr.ecr.us-west-2.amazonaws.com/aws-lc/amazonlinux:2023
+        variables:
+          AWS_LC_CI_COMPILER_ENV: clang-15
+          AWS_LC_CI_TARGET: "tests/ci/run_fuzz_tests.sh"
+
+    - identifier: al2023_clang15_x86_64_cryptofuzz
+      buildspec: ./tests/ci/codebuild/common/run_simple_target.yml
+      env:
+        type: LINUX_CONTAINER
+        privileged-mode: true
+        compute-type: BUILD_GENERAL1_LARGE
+        image: 620771051181.dkr.ecr.us-west-2.amazonaws.com/aws-lc/amazonlinux:2023
+        variables:
+          AWS_LC_CI_COMPILER_ENV: clang-15
+          AWS_LC_CI_TARGET: "tests/ci/run_cryptofuzz.sh"
+
+    - identifier: al2023_clang15_arm_cryptofuzz
+      buildspec: ./tests/ci/codebuild/common/run_simple_target.yml
+      env:
+        type: ARM_CONTAINER
+        privileged-mode: true
+        compute-type: BUILD_GENERAL1_LARGE
+        image: 620771051181.dkr.ecr.us-west-2.amazonaws.com/aws-lc/amazonlinux:2023
+        variables:
+          AWS_LC_CI_COMPILER_ENV: clang-15
+          AWS_LC_CI_TARGET: "tests/ci/run_cryptofuzz.sh"

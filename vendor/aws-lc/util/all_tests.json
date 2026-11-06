@@ -1,0 +1,186 @@
+[
+  {
+    "cmd": ["crypto/crypto_test"],
+    "valgrind_supp": ["valgrind_suppressions_crypto_test.supp"],
+    "shard": true
+  },
+  {
+    "cmd": ["crypto/crypto_test", "--gtest_also_run_disabled_tests", "--gtest_filter=BNTest.DISABLED_WycheproofPrimality"],
+    "skip_valgrind": true
+  },
+  {
+    "cmd": ["crypto/crypto_test", "--gtest_also_run_disabled_tests", "--gtest_filter=RSATest.DISABLED_BlindingCacheConcurrency"],
+    "skip_sde": true,
+    "skip_valgrind": true
+  },
+  {
+    "cmd": ["crypto/crypto_test"],
+    "env": ["OPENSSL_armcap=0x0"],
+    "target_arch": "arm",
+    "skip_valgrind": true,
+    "shard": true
+  },
+  {
+    "cmd": ["crypto/crypto_test"],
+    "env": ["OPENSSL_armcap=0x1"],
+    "target_arch": "arm",
+    "skip_valgrind": true,
+    "shard": true
+  },
+  {
+    "cmd": ["crypto/crypto_test"],
+    "env": ["OPENSSL_armcap=0x3D"],
+    "target_arch": "arm",
+    "skip_valgrind": true,
+    "shard": true
+  },
+  {
+    "comment": "Test algorithm dispatch without CPU indicator bits",
+    "cmd": ["crypto/crypto_test"],
+    "env": ["OPENSSL_armcap=~0x47080"],
+    "target_arch": "arm",
+    "skip_valgrind": true,
+    "shard": true
+  },
+  {
+    "comment": "Test algorithm dispatch without CPU indicator or Neon extension capability bits",
+    "cmd": ["crypto/crypto_test"],
+    "env": ["OPENSSL_armcap=~0x478fc"],
+    "target_arch": "arm",
+    "skip_valgrind": true,
+    "shard": true
+  },
+  {
+    "comment": "Test OPENSSL_ia32cap on crypto_test for x86, as urandom_test is disabled for shared builds on x86",
+    "cmd": ["crypto/crypto_test", "--gtest_filter=Crypto.OnDemandIntegrityTest"],
+    "env": ["OPENSSL_ia32cap=0:0"],
+    "target_arch": "x86"
+  },
+  {
+    "comment": "AEAD concurrency natively on down-level dispatch paths (skipped under SDE): no AVX-512/VAES/VPCLMULQDQ",
+    "cmd": ["crypto/crypto_test", "--gtest_filter=All/PerAEADTest.ConcurrentStability/*"],
+    "env": ["OPENSSL_ia32cap=~0:~0x60000010000"],
+    "skip_sde": true,
+    "skip_valgrind": true,
+    "target_arch": "x86"
+  },
+  {
+    "comment": "AEAD concurrency natively on down-level dispatch paths (skipped under SDE): no AES-NI/PCLMUL/AVX/AVX2/AVX-512",
+    "cmd": ["crypto/crypto_test", "--gtest_filter=All/PerAEADTest.ConcurrentStability/*"],
+    "env": ["OPENSSL_ia32cap=~0x1200000200000000:~0x60000010020"],
+    "skip_sde": true,
+    "skip_valgrind": true,
+    "target_arch": "x86"
+  },
+  {
+    "comment": "AEAD concurrency natively on down-level dispatch paths (skipped under SDE): additionally no SSSE3",
+    "cmd": ["crypto/crypto_test", "--gtest_filter=All/PerAEADTest.ConcurrentStability/*"],
+    "env": ["OPENSSL_ia32cap=~0x1200020200000000:~0x60000010020"],
+    "skip_sde": true,
+    "skip_valgrind": true,
+    "target_arch": "x86"
+  },
+  {
+    "cmd": ["crypto/urandom_test"],
+    "skip_valgrind": true
+  },
+  {
+    "comment": "Without RDRAND",
+    "cmd": ["crypto/urandom_test"],
+    "env": ["OPENSSL_ia32cap=~0x4000000000000000"],
+    "skip_valgrind": true,
+    "target_arch": "x86"
+  },
+  {
+    "comment": "Run VM UBE detection test suite",
+    "cmd": ["crypto/crypto_test",  "--gtest_also_run_disabled_tests", "--gtest_filter=VmUbeGenerationTest.*"],
+    "skip_valgrind": true,
+    "shard": false
+  },
+  {
+    "comment": "Potentially with RDRAND, but not Intel",
+    "cmd": ["crypto/urandom_test"],
+    "env": ["OPENSSL_ia32cap=~0x0000000040000000"],
+    "skip_valgrind": true,
+    "target_arch": "x86"
+  },
+  {
+    "comment": "Potentially with RDRAND, and forced to Intel",
+    "cmd": ["crypto/urandom_test"],
+    "env": ["OPENSSL_ia32cap=|0x0000000040000000"],
+    "skip_valgrind": true,
+    "target_arch": "x86"
+  },
+  {
+    "comment": "No RDRAND and without fork UBE detection",
+    "cmd": ["crypto/urandom_test"],
+    "env": ["OPENSSL_ia32cap=~0x4000000000000000", "AWSLC_IGNORE_FORK_UBE_DETECTION=1"],
+    "skip_valgrind": true,
+    "target_arch": "x86"
+  },
+  {
+    "comment": "Potentially with RDRAND, but not Intel, and without fork UBE detection",
+    "cmd": ["crypto/urandom_test"],
+    "env": ["OPENSSL_ia32cap=~0x0000000040000000", "AWSLC_IGNORE_FORK_UBE_DETECTION=1"],
+    "skip_valgrind": true,
+    "target_arch": "x86"
+  },
+  {
+    "comment": "Run RAND test suite without fork UBE detection",
+    "cmd": ["crypto/crypto_test", "--gtest_filter=RandTest.*:-RandTest.Fork"],
+    "env": ["AWSLC_IGNORE_FORK_UBE_DETECTION=1"],
+    "skip_valgrind": true
+  },
+  {
+    "comment": "Run RAND test suite without MADV_WIPEONFORK enabled",
+    "cmd": ["crypto/crypto_test", "--gtest_filter=RandTest.*"],
+    "env": ["AWSLC_IGNORE_FORK_UBE_DETECTION=1"],
+    "skip_valgrind": true
+  },
+  {
+    "comment": "Run fork detection test suite without MADV_WIPEONFORK enabled",
+    "cmd": ["crypto/crypto_test", "--gtest_filter=ForkDetect.*"],
+    "env": ["AWSLC_IGNORE_FORK_UBE_DETECTION=1"],
+    "skip_valgrind": true
+  },
+  {
+    "cmd": ["ssl/ssl_test"],
+    "shard": true
+  },
+  {
+    "cmd": ["crypto/mem_test"]
+  },
+  {
+    "cmd": ["crypto/mem_set_test"]
+  },
+  {
+    "cmd": [
+      "crypto/dynamic_loading_test"
+    ]
+  },
+  {
+    "comment": "Run randomness generation tests in isolated process",
+    "cmd": ["crypto/rand_isolated_test"]
+  },
+  {
+    "comment": "Run tree-DRBG with Jitter Entropy tests in isolated process",
+    "cmd": ["crypto/tree_drbg_jitter_entropy_isolated_test"]
+  },
+  {
+    "cmd": [
+      "crypto/rwlock_static_init"
+    ]
+  },
+  {
+    "comment": "tool_openssl_test generates 100+ RSA keys across its test suite (ca_test, req_test, genrsa_test, etc.). Sharding is required to keep Valgrind runtime manageable.",
+    "cmd": [
+      "tool-openssl/tool_openssl_test"
+    ],
+    "shard": true
+  },
+  {
+    "cmd": [
+      "tool/bssl_tool_test"
+    ]
+  }
+]

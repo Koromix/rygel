@@ -216,7 +216,7 @@ static int ssh_sntrup761x25519_build_k(ssh_session session)
     ssh_log_hexdump("kem key", ssk, SNTRUP761_SIZE);
 #endif
 
-    sha512_direct(ssk, sizeof ssk, hss);
+    sha512(ssk, sizeof ssk, hss);
 
     bignum_bin2bn(hss, sizeof hss, &session->next_crypto->shared_secret);
     if (session->next_crypto->shared_secret == NULL) {

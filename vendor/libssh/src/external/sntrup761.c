@@ -27,7 +27,7 @@ sntrup761_enc (uint8_t *c, uint8_t *k, const uint8_t *pk,
 void
 sntrup761_dec (uint8_t *k, const uint8_t *c, const uint8_t *sk);
 
-extern int sha512_direct(const unsigned char *digest, size_t len, unsigned char *hash);
+extern int sha512(const unsigned char *digest, size_t len, unsigned char *hash);
 
 #define MAX_LEN 761
 
@@ -699,7 +699,7 @@ Hash_prefix (unsigned char *out, int b, const unsigned char *in, int inlen)
   x[0] = b;
   for (i = 0; i < inlen; ++i)
     x[i + 1] = in[i];
-  sha512_direct (x, inlen + 1, h);
+  sha512 (x, inlen + 1, h);
   for (i = 0; i < 32; ++i)
     out[i] = h[i];
 }

@@ -76,7 +76,7 @@ extern "C" {
  * @param[out] sk generated secret key
  * @return     0 on success, -1 on error.
  */
-int _ssh_crypto_sign_ed25519_keypair(ed25519_pubkey pk, ed25519_privkey sk);
+int crypto_sign_ed25519_keypair(ed25519_pubkey pk, ed25519_privkey sk);
 
 /** @internal
  * @brief sign a message with ed25519
@@ -88,7 +88,7 @@ int _ssh_crypto_sign_ed25519_keypair(ed25519_pubkey pk, ed25519_privkey sk);
  * @param[in] sk secret key to sign the message with
  * @return    0 on success.
  */
-int _ssh_crypto_sign_ed25519(
+int crypto_sign_ed25519(
     unsigned char *sm, uint64_t *smlen,
     const unsigned char *m, uint64_t mlen,
     const ed25519_privkey sk);
@@ -103,7 +103,7 @@ int _ssh_crypto_sign_ed25519(
  * @param[in] pk public key used to sign the message
  * @returns   0 on success (supposedly).
  */
-int _ssh_crypto_sign_ed25519_open(
+int crypto_sign_ed25519_open(
     unsigned char *m, uint64_t *mlen,
     const unsigned char *sm, uint64_t smlen,
     const ed25519_pubkey pk);

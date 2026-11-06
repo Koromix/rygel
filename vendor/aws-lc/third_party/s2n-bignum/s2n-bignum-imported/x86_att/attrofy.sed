@@ -1,0 +1,187 @@
+#############################################################################
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+#############################################################################
+
+ ############################################################################
+ #                         * * * NOTE * * *                                 #
+ #                                                                          #
+ # This is a primitive script to automate conversion of certain particular  #
+ # x86 assembler files from Intel to AT&T syntax. It is *not* a general     #
+ # conversion and is very tied to the specific limitations and conventions  #
+ # in the intended targets. Even in that setting we only use it with an     #
+ # additional sanity check that the object code generated is the same in    #
+ # both original and translated code according to the GNU assembler.        #
+ ############################################################################
+
+s/\.intel_syntax *noprefix//
+s/_internal_s2n_bignum_x86/_internal_s2n_bignum_x86_att/
+
+# Swap zero-extending loads to AT&T size-suffixed form BEFORE memory-operand
+# reshaping. We rewrite the mnemonic and strip the WORD/BYTE PTR hint so the
+# remaining rules just translate the memory operand and swap register order.
+s/ movzx  +([a-z][a-z_0-9]*d?), *WORD PTR/ movzwl \1,/g
+s/ movzx  +([a-z][a-z_0-9]*d?), *word ptr/ movzwl \1,/g
+s/ movzx  +([a-z][a-z_0-9]*d?), *BYTE PTR/ movzbl \1,/g
+s/ movzx  +([a-z][a-z_0-9]*d?), *byte ptr/ movzbl \1,/g
+
+# Don't make any transforms on lines with most argument-taking macros
+# We need to be more careful with those taking ymm register arguments
+
+/ addrow .+,/b
+/ mulpadd .+,/b
+/ mulpadda .+,/b
+/ mulpade .+,/b
+/ mulrow .+,/b
+
+# Don't transform macro definitions and calls except that the
+# butterfly macros get the ymm default replacement done
+
+/^\.macro butterfly/ s/=ymm/=%ymm/g
+/^\.macro/b
+/^\.endm/b
+
+# Reverse the argument order for binary, ternary and quaternary instructions
+# Skip all other macros for this step even if we later do ymm replacement.
+
+/shuffle|butterfly|caddq_vector|chknorm_vector|decompose_vector|zunpack17_block|zunpack19_block/! s/^(([a-z_0-9]+\:)* +[a-z_0-9]+ +)([^ (][^,/]*), *([^ ][^/,;]*)([/;].*)*$/\1\4, \3 \5/
+/shuffle|butterfly|caddq_vector|chknorm_vector|decompose_vector|zunpack17_block|zunpack19_block/! s/^(([a-z_0-9]+\:)* +[a-z_0-9]+ +)([^ (][^,/]*), *([^ ][^/,]*), *([^ ][^/,;]*)([/;].*)*$/\1\5, \4, \3 \6/
+/shuffle|butterfly|caddq_vector|chknorm_vector|decompose_vector|zunpack17_block|zunpack19_block/! s/^(([a-z_0-9]+\:)* +[a-z_0-9]+ +)([^ (][^,/]*), *([^ ][^/,]*), *([^ ][^/,]*), *([^ ][^/,;]*)([/;].*)*$/\1\6, \5, \4, \3 \7/
+
+# Fix up whitespace just in case
+
+s/ +,/,/
+
+# Decorate literals with $
+
+/butterfly|caddq_vector|chknorm_vector|decompose_vector|zunpack17_block|zunpack19_block/! s/^(([a-z_0-9]+\:)* +[a-z_0-9]+ +)(([-~+*/()A-Z0-9]*(0x[a-zA-Z0-9]*)*)* *\,)/\1$\3/
+
+# Translate relative addresses with uppercase base variable
+# Turn defined offset fields into explicit indirections to match
+
+s/^([^/][^[]+)[[]([A-Z_0-9]+)[]]/\1\2/
+s/^([^/][^[]+)[[]([A-Z][A-Z_0-9]*) *\+ *([^]]+)[]]/\1\3\+\2/
+
+s/^\#define *([a-z][a-z_0-9]*) *([a-z][a-z_0-9]*) *\+(.*)/\#define \1 \3\(\2\)/
+
+# Translate relative addresses
+
+# Handle [offset + register] and [offset - register] patterns
+s/^([^/][^[]+)[[]([A-Z0-9* ]+) *\+ *([a-z][a-z_0-9]*)[]]/\1\2\(\3\)/
+s/^([^/][^[]+)[[]([A-Z0-9* ]+) *\- *([a-z][a-z_0-9]*)[]]/\1-\2\(\3\)/
+s/^([^/][^[]+)[[]([0-9]+) *\+ *([a-z][a-z_0-9]*)[]]/\1\2\(\3\)/
+s/^([^/][^[]+)[[]([0-9]+) *\- *([a-z][a-z_0-9]*)[]]/\1-\2\(\3\)/
+
+s/^([^/][^[]+)[[]([a-z_0-9]+)[]]/\1\(\2\)/
+s/^([^/][^[]+)[[]([a-z][a-z_0-9]*) *\+ *8\*([a-z][a-z_0-9]*) *\+ *([a-z_A-Z0-9]+)[]]/\1\4\(\2,\3,8\)/
+s/^([^/][^[]+)[[]([a-z][a-z_0-9]*) *\+ *([a-z][a-z_0-9]*) *\+ *([a-z_A-Z0-9]+)[]]/\1\4\(\2,\3,1\)/
+s/^([^/][^[]+)[[]([a-z][a-z_0-9]*) *\+ *8\*([a-z][a-z_0-9]*) *\- *([a-z_A-Z0-9]+)[]]/\1\-\4\(\2,\3,8\)/
+s/^([^/][^[]+)[[]([a-z][a-z_0-9]*) *\+ *([a-z][a-z_0-9]*) *\- *([a-z_A-Z0-9]+)[]]/\1\-\4\(\2,\3,1\)/
+s/^([^/][^[]+)[[](rip) *\+ *([a-z_A-Z0-9* ]+)[]]/\1\3\(\2\)/
+s/^([^/][^[]+)[[]([a-z][a-z_0-9]*) *\+ *([A-Z0-9* ]+)[]]/\1\3\(\2\)/
+s/^([^/][^[]+)[[]([a-z][a-z_0-9]*) *\- *([A-Z0-9* ]+)[]]/\1\-\3\(\2\)/
+s/^([^/][^[]+)[[]([a-z][a-z_0-9]*) *\+ *8\*([a-z][a-z_0-9]*)[]]/\1\(\2,\3,8\)/
+s/^([^/][^[]+)[[]([a-z][a-z_0-9]*) *\+ *4\*([a-z][a-z_0-9]*)[]]/\1\(\2,\3,4\)/
+s/^([^/][^[]+)[[]([a-z][a-z_0-9]*) *\+ *2\*([a-z][a-z_0-9]*)[]]/\1\(\2,\3,2\)/
+s/^([^/][^[]+)[[]([a-z][a-z_0-9]*) *\+ *([a-z][a-z_0-9]*)[]]/\1\(\2,\3\)/
+s/^([^/][^[]+)[[]([a-z][a-z_0-9]*) *\+ *([^]]+)[]]/\1\3\(\2\)/
+s/^([^/][^[]+)[[]([a-z][a-z_0-9]*) *\- *([^]]+)[]]/\1-\3\(\2\)/
+s/^([^/][^[]+)[[]([^]]+)[]]/\1\(\2\)/
+
+# Put % in front of register names
+
+s/ ax *$/ %ax/
+s/ ax,/ %ax,/
+s/ cl *$/ %cl/
+s/ cl,/ %cl,/
+s/ al *$/ %al/
+s/ al,/ %al,/
+s/ bl *$/ %bl/
+s/ bl,/ %bl,/
+s/ dl *$/ %dl/
+s/ dl,/ %dl,/
+s/([[(,.;: ])([re][abcd]x)/\1\%\2/g
+s/([[(,.;: ])([re]sp)/\1\%\2/g
+s/([[(,.;: ])([re]bp)/\1\%\2/g
+s/([[(,.;: ])([re]si)/\1\%\2/g
+s/([[(,.;: ])([re]si)/\1\%\2/g
+s/([[(,.;: ])([re]di)/\1\%\2/g
+s/([[(,.;: ])(r8d*)/\1\%\2/g
+s/([[(,.;: ])(r9d*)/\1\%\2/g
+s/([[(,.;: ])(r1[0-5]d*)/\1\%\2/g
+s/([[(,.;: ])([re]ip)/\1\%\2/g
+s/([[(,.;: ])([xyz]mm[0-9]*)/\1\%\2/g
+
+# Add explicit sizes to instructions
+
+# Byte-sized zero-extending load: "movzx BYTE PTR mem, reg" -> "movzbl mem, reg".
+# The BYTE PTR size annotation is dropped and the mnemonic is given an explicit
+# operand-size suffix, as GNU as cannot otherwise infer the memory operand size.
+# This must run before the generic "BYTE PTR" strip below.
+s/^(([a-z_0-9]+\:)* +)movzx( +)BYTE PTR /\1movzbl\3/
+
+s/YMMWORD PTR//g
+s/ymmword ptr//g
+s/XMMWORD PTR//g
+s/xmmword ptr//g
+s/QWORD PTR//g
+s/qword ptr//g
+s/DWORD PTR//g
+s/dword ptr//g
+s/WORD PTR//g
+s/word ptr//g
+s/BYTE PTR//g
+s/byte ptr//g
+
+s/ adc  / adcq /g
+s/ adcx  / adcxq /g
+s/ add  / addq /g
+s/ adox  / adoxq /g
+s/ and  / andq /g
+s/ bsf  / bsfq /g
+s/ bsr  / bsrq /g
+s/ bswap  / bswapq /g
+s/ bt  / btq /g
+s/ call  / callq /g
+s/ cmovae  / cmovaeq /g
+s/ cmovb  / cmovbq /g
+s/ cmovc  / cmovcq /g
+s/ cmove  / cmoveq /g
+s/ cmovnc  / cmovncq /g
+s/ cmovne  / cmovneq /g
+s/ cmovnz  / cmovnzq /g
+s/ cmovz  / cmovzq /g
+s/ cmp  / cmpq /g
+s/ dec  / decq /g
+s/ imul  / imulq /g
+s/ inc  / incq /g
+s/ lea  / leaq /g
+s/ mov  / movq /g
+s/ movabs  / movabsq /g
+s/ mul  / mulq /g
+s/ mulx  / mulxq /g
+s/ neg  / negq /g
+s/ not  / notq /g
+s/ or  / orq /g
+s/ pop  / popq /g
+s/ push  / pushq /g
+s/ sar  / sarq /g
+s/ sbb  / sbbq /g
+s/ shl  / shlq /g
+s/ shld  / shldq /g
+s/ shr  / shrq /g
+s/ shrd  / shrdq /g
+s/ sub  / subq /g
+s/ test  / testq /g
+s/ xor  / xorq /g
+
+s/q(  .*zeroe)/l\1/
+s/q(  .*plus2e)/l\1/
+s/q(  .*short)/l\1/
+s/q( .*%e)/l\1/
+s/q( .*%r[0-9]+d)/l\1/
+s/q( .*%ax)/w\1/
+
+# Eliminate any trailing spaces, just to be tidy
+
+s/ +$//

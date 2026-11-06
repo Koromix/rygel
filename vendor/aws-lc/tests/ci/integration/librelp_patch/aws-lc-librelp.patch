@@ -1,0 +1,137 @@
+diff --git a/src/tcp.c b/src/tcp.c
+index 18cffda..110fcd0 100644
+--- a/src/tcp.c
++++ b/src/tcp.c
+@@ -276,7 +276,7 @@ int opensslh_THREAD_cleanup(void)
+  * alorbach, 2018-06-11
+  */
+ 
+-#if OPENSSL_VERSION_NUMBER >= 0x30000000L && !defined(LIBRESSL_VERSION_NUMBER)
++#if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(LIBRESSL_VERSION_NUMBER)
+ long BIO_debug_callback_ex(BIO *bio, int cmd, const char LIBRELP_ATTR_UNUSED *argp,
+ 			   size_t LIBRELP_ATTR_UNUSED len, int argi, long LIBRELP_ATTR_UNUSED argl,
+ 			   int ret, size_t LIBRELP_ATTR_UNUSED *processed)
+@@ -1230,10 +1230,19 @@ relpTcpTLSSetPrio_ossl(relpTcp_t *const pThis)
+ {
+ 	char pristringBuf[4096];
+ 	char *pristring;
++	char errmsg[1024];
+ 	ENTER_RELPFUNC;
+ 	/* Compute priority string (in simple cases where the user does not care...) */
+ 	if(pThis->pristring == NULL) {
+ 		if (pThis->authmode == eRelpAuthMode_None) {
+-			#if OPENSSL_VERSION_NUMBER >= 0x10100000L \
++			#if defined(OPENSSL_IS_AWSLC)
++			if(isAnonAuth(pThis->pSrv == NULL ? pThis : pThis->pSrv->pTcp)) {
++				snprintf(errmsg, sizeof(errmsg),
++					"Warning: AWS-LC does not support anonymous ciphersuites.");
++				callOnErr(pThis, errmsg, RELP_RET_ERR_TLS);
++				ABORT_FINALIZE(RELP_RET_ERR_TLS_SETUP);
++			}
++			strncpy(pristringBuf, "DEFAULT", sizeof(pristringBuf));
++			#elif OPENSSL_VERSION_NUMBER >= 0x10100000L \
+ 				&& !defined(LIBRESSL_VERSION_NUMBER)
+ 			 /* NOTE: do never use: +eNULL, it DISABLES encryption! */
+@@ -1362,7 +1370,7 @@ relpTcpInitTLS(relpTcp_t *const pThis)
+ 
+ 	/* Load readable error strings */
+ 	SSL_load_error_strings();
+-#if OPENSSL_VERSION_NUMBER >= 0x30000000L && !defined(LIBRESSL_VERSION_NUMBER)
++#if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(LIBRESSL_VERSION_NUMBER)
+ 	/*
+ 	* ERR_load_*(), ERR_func_error_string(), ERR_get_error_line(), ERR_get_error_line_data(), ERR_get_state()
+ 	* OpenSSL now loads error strings automatically so these functions are not needed.
+@@ -1660,7 +1668,7 @@ relpTcpSetSslConfCmd_ossl(relpTcp_t *const pThis, char *tlsConfigCmd)
+ 	} else {
+ 		pThis->pEngine->dbgprint((char*)"relpTcpSetSslConfCmd_ossl: set to '%s'\n", tlsConfigCmd);
+ 		char errmsg[1424];
+-#if OPENSSL_VERSION_NUMBER >= 0x10002000L && !defined(LIBRESSL_VERSION_NUMBER)
++#if OPENSSL_VERSION_NUMBER >= 0x10002000L && !defined(LIBRESSL_VERSION_NUMBER) && !defined(OPENSSL_IS_AWSLC)
+ 		char *pCurrentPos;
+ 		char *pNextPos;
+ 		char *pszCmd;
+@@ -1803,7 +1811,7 @@ relpTcpAcceptConnReqInitTLS_ossl(relpTcp_t *const pThis, relpSrv_t *const pSrv)
+ 	pThis->pEngine->dbgprint((char*)"relpTcpAcceptConnReqInitTLS_ossl: Init client BIO[%p] done\n", (void *)client);
+ 
+ 	/* Set debug Callback for client BIO as well! */
+-#if OPENSSL_VERSION_NUMBER >= 0x30000000L && !defined(LIBRESSL_VERSION_NUMBER)
++#if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(LIBRESSL_VERSION_NUMBER)
+ 	BIO_set_callback_ex(client, BIO_debug_callback_ex);
+ #else
+ 	BIO_set_callback(client, BIO_debug_callback);
+@@ -1909,7 +1917,7 @@ relpTcpConnectTLSInit_ossl(relpTcp_t *const pThis)
+ 	pThis->pEngine->dbgprint((char*)"relpTcpConnectTLSInit: Init conn BIO[%p] done\n", (void *)conn);
+ 
+ 	/* Set debug Callback for client BIO as well! */
+-#if OPENSSL_VERSION_NUMBER >= 0x30000000L && !defined(LIBRESSL_VERSION_NUMBER)
++#if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(LIBRESSL_VERSION_NUMBER)
+ 	BIO_set_callback_ex(conn, BIO_debug_callback_ex);
+ #else
+ 	BIO_set_callback(conn, BIO_debug_callback);
+diff --git a/tests/Makefile.am b/tests/Makefile.am
+index 45ef7e1..59a534b 100644
+--- a/tests/Makefile.am
++++ b/tests/Makefile.am
+@@ -13,7 +13,7 @@ else
+ check_PROGRAMS+=tls_ossl_retry_state
+ tls_ossl_retry_state_SOURCES=tls-ossl-retry-state.c
+ tls_ossl_retry_state_LDADD=../src/.libs/librelp.a $(GNUTLS_LIBS) $(OPENSSL_LIBS) $(rt_libs) $(socket_libs) $(pthread_libs)
+-tls_ossl_retry_state_LDFLAGS=-Wl,--wrap=SSL_write -Wl,--wrap=SSL_read -Wl,--wrap=SSL_get_error
++tls_ossl_retry_state_LDFLAGS=-Wl,--wrap=SSL_write -Wl,--wrap=SSL_read -Wl,--wrap=SSL_get_error -Wl,--wrap=SSL_get_shutdown
+ tls_ossl_retry_state_CFLAGS=$(AM_CFLAGS) -I${top_srcdir}/src $(WARN_CFLAGS)
+ endif
+ endif
+diff --git a/tests/tls-ossl-retry-state.c b/tests/tls-ossl-retry-state.c
+index ccc04ca..7bb38ef 100644
+--- a/tests/tls-ossl-retry-state.c
++++ b/tests/tls-ossl-retry-state.c
+@@ -31,6 +31,7 @@ static enum operation current_operation;
+ int __wrap_SSL_write(SSL *ssl, const void *buf, int num);
+ int __wrap_SSL_read(SSL *ssl, void *buf, int num);
+ int __wrap_SSL_get_error(const SSL *ssl, int ret);
++int __wrap_SSL_get_shutdown(const SSL *ssl);
+ 
+ int
+ __wrap_SSL_write(SSL *const ssl __attribute__((unused)), const void *const buf __attribute__((unused)), const int num)
+@@ -54,6 +55,12 @@ __wrap_SSL_get_error(const SSL *const ssl __attribute__((unused)), const int ret
+ 	return current_operation == OP_SEND_WANT ? SSL_ERROR_WANT_WRITE : SSL_ERROR_WANT_READ;
+ }
+ 
++int
++__wrap_SSL_get_shutdown(const SSL *const ssl __attribute__((unused)))
++{
++	return 0;
++}
++
+ static void
+ discard_debug(char *const fmt __attribute__((unused)), ...)
+ {
+diff --git a/tests/tls-basic-anon.sh b/tests/tls-basic-anon.sh
+index 32b6682..fa1f327 100755
+--- a/tests/tls-basic-anon.sh
++++ b/tests/tls-basic-anon.sh
+@@ -14,6 +14,13 @@ function actual_test() {
+ 		printf "\nDEBUG: content of ${OUTFILE}\n"
+ 		cat $FILE_TO_CHECK
+ 
++		terminate
++		exit 77;
++	elif check_output_only "AWS-LC does not support anonymous ciphersuites"; then
++		printf "\nSKIP: AWS-LC does not support anonymous ciphersuites.\n"
++		printf "\nDEBUG: content of ${OUTFILE}\n"
++		cat $FILE_TO_CHECK
++
+ 		terminate
+ 		exit 77; 
+ 	fi
+diff --git a/tests/tls-wrong-signedcert.sh b/tests/tls-wrong-signedcert.sh
+index 81b5390..3dd8d69 100755
+--- a/tests/tls-wrong-signedcert.sh
++++ b/tests/tls-wrong-signedcert.sh
+@@ -9,5 +9,5 @@ echo 'Send Message...'
+ 
+ stop_receiver
+ # Perform multiline GREP with -z
+-check_output "authentication error.*signed certificate in certificate chain" $TESTDIR/$errorlog -z
++check_output "authentication error.*signed certificate in certificate chain\|authentication error.*unable to get local issuer certificate" $TESTDIR/$errorlog -z
+ terminate

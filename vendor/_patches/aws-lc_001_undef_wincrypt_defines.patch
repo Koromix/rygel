@@ -1,0 +1,54 @@
+diff --git a/vendor/aws-lc/ssl/internal.h b/vendor/aws-lc/ssl/internal.h
+index 2be6d14c4d..e666279de8 100644
+--- a/vendor/aws-lc/ssl/internal.h
++++ b/vendor/aws-lc/ssl/internal.h
+@@ -47,6 +47,13 @@
+ OPENSSL_MSVC_PRAGMA(warning(push, 3))
+ #include <winsock2.h>
+ OPENSSL_MSVC_PRAGMA(warning(pop))
++// Cleanup wincrypt.h mess
++#undef X509_NAME
++#undef X509_EXTENSIONS
++#undef PKCS7_ISSUER_AND_SERIAL
++#undef PKCS7_SIGNER_INFO
++#undef OCSP_REQUEST
++#undef OCSP_RESPONSE
+ #else
+ #include <sys/time.h>
+ #endif
+diff --git a/vendor/aws-lc/crypto/bio/internal.h b/vendor/aws-lc/crypto/bio/internal.h
+index 92736e32bf..b9334a7c76 100644
+--- a/vendor/aws-lc/crypto/bio/internal.h
++++ b/vendor/aws-lc/crypto/bio/internal.h
+@@ -22,6 +22,13 @@ OPENSSL_MSVC_PRAGMA(warning(push, 3))
+ #include <winsock2.h>
+ #include <ws2ipdef.h>
+ OPENSSL_MSVC_PRAGMA(warning(pop))
++// Cleanup wincrypt.h mess
++#undef X509_NAME
++#undef X509_EXTENSIONS
++#undef PKCS7_ISSUER_AND_SERIAL
++#undef PKCS7_SIGNER_INFO
++#undef OCSP_REQUEST
++#undef OCSP_RESPONSE
+ typedef int socklen_t;
+ #if !defined(_SSIZE_T_DEFINED)
+ typedef SSIZE_T ssize_t;
+diff --git a/vendor/aws-lc/crypto/internal.h b/vendor/aws-lc/crypto/internal.h
+index 1f7ad67816..2ebc0c596c 100644
+--- a/vendor/aws-lc/crypto/internal.h
++++ b/vendor/aws-lc/crypto/internal.h
+@@ -47,6 +47,13 @@
+ OPENSSL_MSVC_PRAGMA(warning(push, 3))
+ #include <windows.h>
+ OPENSSL_MSVC_PRAGMA(warning(pop))
++// Cleanup wincrypt.h mess
++#undef X509_NAME
++#undef X509_EXTENSIONS
++#undef PKCS7_ISSUER_AND_SERIAL
++#undef PKCS7_SIGNER_INFO
++#undef OCSP_REQUEST
++#undef OCSP_RESPONSE
+ #endif
+ 
+ #include <stdbool.h>

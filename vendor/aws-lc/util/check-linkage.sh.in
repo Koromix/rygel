@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0 OR ISC
+
+set -euxo pipefail
+
+CRYPTO_LIB_NAME="lib@CRYPTO_LIB_NAME@.so"
+SSL_LIB_NAME="lib@SSL_LIB_NAME@.so"
+ABI_VERSION="@ABI_VERSION@"
+INSTALL_LIBDIR="@CMAKE_INSTALL_PREFIX@/@CMAKE_INSTALL_LIBDIR@"
+
+IS_SONAME_BUILD="@SET_LIB_SONAME@"
+
+# If this is a SONAME build, append ABI_VERSION to library names
+if [ "${IS_SONAME_BUILD}" = "1" ]; then
+  CRYPTO_LIB_NAME="${CRYPTO_LIB_NAME}.${ABI_VERSION}"
+  SSL_LIB_NAME="${SSL_LIB_NAME}.${ABI_VERSION}"
+fi
+
+if [ $# -ne 2 ]; then
+  echo "Error: Exactly two arguments must be provided."
+  echo "Usage: $0 <shared-object-path> <library-type>"
+  echo "  where <library-type> is 'crypto' or 'ssl'"
+  exit 1
+fi
+
+FILE_TO_CHECK="$1"
+LIBRARY_TYPE="$2"
+
+if [ ! -f "${FILE_TO_CHECK}" ]; then
+  echo "Error: '${FILE_TO_CHECK}' does not exist."
+  exit 1
+fi
+
+case "${LIBRARY_TYPE}" in
+  "crypto") LIB_NAME="${CRYPTO_LIB_NAME}" ;;
+  "ssl") LIB_NAME="${SSL_LIB_NAME}" ;;
+  *)
+    echo "Error: Unknown library type '${LIBRARY_TYPE}'. Must be 'crypto' or 'ssl'."
+    exit 1
+    ;;
+esac
+
+# Capture ldd's output before searching it rather than piping it into grep -q,
+# which may close the pipe early and cause SIGPIPE and a failed pipeline under
+# pipefail even when the library was found.
+# Keep the capture in the condition so non-zero ldd exits (e.g. for a static
+# executable) reach the failure report without triggering set -e. Require ldd
+# to succeed, since loader errors can also contain the expected library path.
+if LDD_OUTPUT=$(ldd "${FILE_TO_CHECK}") &&
+  grep -qF "${INSTALL_LIBDIR}/${LIB_NAME}" <<< "${LDD_OUTPUT}"; then
+  echo "Success: ${LIB_NAME} found in linkage of ${FILE_TO_CHECK}"
+  exit 0
+fi
+
+echo "Error: ${LIB_NAME} not found in linkage of ${FILE_TO_CHECK}"
+echo "${LDD_OUTPUT}"
+exit 1

@@ -241,8 +241,8 @@ int pki_key_generate_ed25519(ssh_key key)
         goto error;
     }
 
-    rc = _ssh_crypto_sign_ed25519_keypair(*key->ed25519_pubkey,
-                                          *key->ed25519_privkey);
+    rc = crypto_sign_ed25519_keypair(*key->ed25519_pubkey,
+                                     *key->ed25519_privkey);
     if (rc != 0) {
         goto error;
     }
@@ -269,11 +269,11 @@ int pki_ed25519_sign(const ssh_key privkey,
         return SSH_ERROR;
     }
 
-    rc = _ssh_crypto_sign_ed25519(buffer,
-                                  &dlen,
-                                  hash,
-                                  hlen,
-                                 *privkey->ed25519_privkey);
+    rc = crypto_sign_ed25519(buffer,
+                             &dlen,
+                             hash,
+                             hlen,
+                             *privkey->ed25519_privkey);
     if (rc != 0) {
         goto error;
     }
@@ -325,11 +325,11 @@ int pki_ed25519_verify(const ssh_key pubkey,
     memcpy(buffer, sig->ed25519_sig, ED25519_SIG_LEN);
     memcpy(buffer + ED25519_SIG_LEN, hash, hlen);
 
-    rc = _ssh_crypto_sign_ed25519_open(buffer2,
-                                       &mlen,
-                                       buffer,
-                                       hlen + ED25519_SIG_LEN,
-                                       *pubkey->ed25519_pubkey);
+    rc = crypto_sign_ed25519_open(buffer2,
+                                  &mlen,
+                                  buffer,
+                                  hlen + ED25519_SIG_LEN,
+                                  *pubkey->ed25519_pubkey);
 
     ssh_burn(buffer, hlen + ED25519_SIG_LEN);
     ssh_burn(buffer2, hlen);

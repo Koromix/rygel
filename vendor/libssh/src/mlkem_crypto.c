@@ -31,15 +31,15 @@
 #include <openssl/ml_kem.h>
 
 const struct mlkem_type_info MLKEM768_INFO = {
-    .pubkey_size = OSSL_ML_KEM_768_PUBLIC_KEY_BYTES,
-    .ciphertext_size = OSSL_ML_KEM_768_CIPHERTEXT_BYTES,
-    .name = LN_ML_KEM_768,
+    .pubkey_size = MLKEM768_PUBLIC_KEY_BYTES,
+    .ciphertext_size = MLKEM768_CIPHERTEXT_BYTES,
+    .name = "ML_KEM_768",
 };
 
 const struct mlkem_type_info MLKEM1024_INFO = {
-    .pubkey_size = OSSL_ML_KEM_1024_PUBLIC_KEY_BYTES,
-    .ciphertext_size = OSSL_ML_KEM_1024_CIPHERTEXT_BYTES,
-    .name = LN_ML_KEM_1024,
+    .pubkey_size = MLKEM1024_PUBLIC_KEY_BYTES,
+    .ciphertext_size = MLKEM1024_CIPHERTEXT_BYTES,
+    .name = "ML_KEM_1024",
 };
 
 static const char *ssh_mlkem_get_propq(const struct mlkem_type_info *mlkem_info)

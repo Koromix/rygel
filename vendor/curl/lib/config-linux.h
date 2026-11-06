@@ -846,7 +846,7 @@
 /* #undef USE_LIBUV */
 
 /* if mbedTLS is enabled */
-#define USE_MBEDTLS 1
+/* #undef USE_MBEDTLS */
 
 /* if nghttp2 is in use */
 /* #undef USE_NGHTTP2 */

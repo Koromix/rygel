@@ -1736,7 +1736,7 @@ int ssh_make_sessionid(ssh_session session)
             ssh_set_error_oom(session);
             goto error;
         }
-        sha1_direct(ssh_buffer_get(buf), ssh_buffer_get_len(buf),
+        sha1(ssh_buffer_get(buf), ssh_buffer_get_len(buf),
                                    session->next_crypto->secret_hash);
         break;
     case SSH_KEX_DH_GROUP14_SHA256:
@@ -1758,7 +1758,7 @@ int ssh_make_sessionid(ssh_session session)
             ssh_set_error_oom(session);
             goto error;
         }
-        sha256_direct(ssh_buffer_get(buf), ssh_buffer_get_len(buf),
+        sha256(ssh_buffer_get(buf), ssh_buffer_get_len(buf),
                                      session->next_crypto->secret_hash);
         break;
     case SSH_KEX_ECDH_SHA2_NISTP384:
@@ -1772,7 +1772,7 @@ int ssh_make_sessionid(ssh_session session)
             ssh_set_error_oom(session);
             goto error;
         }
-        sha384_direct(ssh_buffer_get(buf), ssh_buffer_get_len(buf),
+        sha384(ssh_buffer_get(buf), ssh_buffer_get_len(buf),
                                      session->next_crypto->secret_hash);
         break;
     case SSH_KEX_DH_GROUP16_SHA512:
@@ -1788,7 +1788,7 @@ int ssh_make_sessionid(ssh_session session)
             ssh_set_error_oom(session);
             goto error;
         }
-        sha512_direct(ssh_buffer_get(buf),
+        sha512(ssh_buffer_get(buf),
                ssh_buffer_get_len(buf),
                session->next_crypto->secret_hash);
         break;

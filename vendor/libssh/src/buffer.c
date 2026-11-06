@@ -30,6 +30,12 @@
 
 #ifdef _WIN32
 #include <winsock2.h>
+#undef X509_NAME
+#undef X509_EXTENSIONS
+#undef PKCS7_ISSUER_AND_SERIAL
+#undef PKCS7_SIGNER_INFO
+#undef OCSP_REQUEST
+#undef OCSP_RESPONSE
 #else
 #include <netinet/in.h>
 #include <arpa/inet.h>

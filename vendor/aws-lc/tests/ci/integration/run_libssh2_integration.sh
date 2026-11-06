@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0 OR ISC
+
+set -exu
+
+source tests/ci/common_posix_setup.sh
+
+# Optional first argument: the libssh2 git ref (tag or branch) to test against.
+# Defaults to the default branch (main) when unset so local runs keep working.
+LIBSSH2_REF="${1:-}"
+
+# Set up environment.
+
+# SYS_ROOT
+#  |
+#  - SRC_ROOT(aws-lc)
+#  |
+#  - SCRATCH_FOLDER
+#    |
+#    - libssh2
+#    - LIBSSH2_BUILD_FOLDER
+#    - LIBSSH2_INSTALL_FOLDER
+#    - AWS_LC_BUILD_FOLDER
+#    - AWS_LC_INSTALL_FOLDER
+
+# Assumes script is executed from the root of aws-lc directory
+SCRATCH_FOLDER=${SYS_ROOT}/"LIBSSH2_SCRATCH"
+LIBSSH2_SRC_FOLDER="${SCRATCH_FOLDER}/libssh2"
+LIBSSH2_BUILD_FOLDER="${SCRATCH_FOLDER}/libssh2-build"
+LIBSSH2_INSTALL_FOLDER="${SCRATCH_FOLDER}/libssh2-install"
+AWS_LC_BUILD_FOLDER="${SCRATCH_FOLDER}/aws-lc-build"
+AWS_LC_INSTALL_FOLDER="${SCRATCH_FOLDER}/aws-lc-install"
+
+mkdir -p "${SCRATCH_FOLDER}"
+rm -rf "${SCRATCH_FOLDER:?}"/*
+
+function libssh2_build() {
+  cmake "${LIBSSH2_SRC_FOLDER}" -B "${LIBSSH2_BUILD_FOLDER}" -DCRYPTO_BACKEND=OpenSSL -DBUILD_TESTS=1 -DCMAKE_INSTALL_PREFIX="${LIBSSH2_INSTALL_FOLDER}" -DOPENSSL_ROOT_DIR="${AWS_LC_INSTALL_FOLDER}" -DENABLE_WERROR=ON -DENABLE_DEBUG_LOGGING=ON
+  cmake --build "${LIBSSH2_BUILD_FOLDER}" --target install
+  ${SCRATCH_FOLDER}/check-linkage.sh "${LIBSSH2_INSTALL_FOLDER}/lib/libssh2.so" crypto || exit 1
+}
+
+function libssh2_run_tests() {
+  pushd "${LIBSSH2_BUILD_FOLDER}"
+  ctest -VV --output-on-failure
+  popd
+}
+
+pushd "${SCRATCH_FOLDER}"
+
+# Clone libssh2. When LIBSSH2_REF is set (e.g. a release tag), check out that
+# ref; otherwise track the default branch (main).
+if [[ -n "${LIBSSH2_REF}" ]]; then
+  git clone --depth 1 --branch "${LIBSSH2_REF}" https://github.com/libssh2/libssh2.git "${LIBSSH2_SRC_FOLDER}"
+else
+  git clone https://github.com/libssh2/libssh2.git "${LIBSSH2_SRC_FOLDER}"
+fi
+
+# Older libssh2 releases use a floating debian:testing-slim base image in the
+# openssh_server test fixture, which no longer ships the `adduser` package.
+# Patch the Dockerfile to install it explicitly so ctest can build the fixture.
+# NOTE: this patch is keyed to the release pinned in
+# .github/workflows/integrations.yml; revisit it if that pin changes.
+OPENSSH_DOCKERFILE="${LIBSSH2_SRC_FOLDER}/tests/openssh_server/Dockerfile"
+if grep -q "debian:testing-slim" "${OPENSSH_DOCKERFILE}" 2>/dev/null; then
+  sed -i 's/install -y openssh-server/install -y openssh-server adduser/' "${OPENSSH_DOCKERFILE}"
+fi
+mkdir -p "${AWS_LC_BUILD_FOLDER}" "${AWS_LC_INSTALL_FOLDER}" "${LIBSSH2_BUILD_FOLDER}" "${LIBSSH2_INSTALL_FOLDER}"
+ls
+
+aws_lc_build "$SRC_ROOT" "$AWS_LC_BUILD_FOLDER" "$AWS_LC_INSTALL_FOLDER" -DBUILD_TESTING=OFF -DBUILD_TOOL=OFF -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_SHARED_LIBS=1
+cp "${AWS_LC_BUILD_FOLDER}/check-linkage.sh" ${SCRATCH_FOLDER}/
+aws_lc_build "$SRC_ROOT" "$AWS_LC_BUILD_FOLDER" "$AWS_LC_INSTALL_FOLDER" -DBUILD_TESTING=OFF -DBUILD_TOOL=OFF -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_SHARED_LIBS=0
+export LD_LIBRARY_PATH="${AWS_LC_INSTALL_FOLDER}/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+
+libssh2_build
+libssh2_run_tests
+
+popd
+

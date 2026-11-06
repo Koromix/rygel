@@ -62,6 +62,12 @@
 #include <shlobj.h>
 #include <direct.h>
 #include <netioapi.h>
+#undef X509_NAME
+#undef X509_EXTENSIONS
+#undef PKCS7_ISSUER_AND_SERIAL
+#undef PKCS7_SIGNER_INFO
+#undef OCSP_REQUEST
+#undef OCSP_RESPONSE
 
 #ifdef HAVE_IO_H
 #include <io.h>
@@ -1261,7 +1267,7 @@ static char *get_connection_hash(ssh_session session)
 {
     unsigned char conn_hash[SHA_DIGEST_LENGTH];
     char *local_hostname = NULL;
-    SHACTX ctx = sha1_ctx_init();
+    SHACTX ctx = sha1_init();
     char strport[10] = {0};
     unsigned int port;
     char *username = NULL;
@@ -1280,7 +1286,7 @@ static char *get_connection_hash(ssh_session session)
     if (local_hostname == NULL) {
         goto err;
     }
-    rc = sha1_ctx_update(ctx, local_hostname, strlen(local_hostname));
+    rc = sha1_update(ctx, local_hostname, strlen(local_hostname));
     if (rc != SSH_OK) {
         goto err;
     }
@@ -1290,7 +1296,7 @@ static char *get_connection_hash(ssh_session session)
     if (session->opts.host == NULL) {
         goto err;
     }
-    rc = sha1_ctx_update(ctx, session->opts.host, strlen(session->opts.host));
+    rc = sha1_update(ctx, session->opts.host, strlen(session->opts.host));
     if (rc != SSH_OK) {
         goto err;
     }
@@ -1298,7 +1304,7 @@ static char *get_connection_hash(ssh_session session)
     /* Remote port %p */
     ssh_options_get_port(session, &port);
     snprintf(strport, sizeof(strport), "%d", port);
-    rc = sha1_ctx_update(ctx, strport, strlen(strport));
+    rc = sha1_update(ctx, strport, strlen(strport));
     if (rc != SSH_OK) {
         goto err;
     }
@@ -1312,7 +1318,7 @@ static char *get_connection_hash(ssh_session session)
             goto err;
         }
     }
-    rc = sha1_ctx_update(ctx, username, strlen(username));
+    rc = sha1_update(ctx, username, strlen(username));
     if (username != session->opts.username) {
         free(username);
     }
@@ -1322,16 +1328,16 @@ static char *get_connection_hash(ssh_session session)
 
     /* ProxyJump */
     if (session->opts.proxy_jumps_str != NULL) {
-        rc = sha1_ctx_update(ctx,
-                             session->opts.proxy_jumps_str,
-                             strlen(session->opts.proxy_jumps_str));
+        rc = sha1_update(ctx,
+                         session->opts.proxy_jumps_str,
+                         strlen(session->opts.proxy_jumps_str));
     }
     if (rc != SSH_OK) {
         goto err;
     }
 
     /* Frees context */
-    rc = sha1_ctx_final(conn_hash, ctx);
+    rc = sha1_final(conn_hash, ctx);
     if (rc != SSH_OK) {
         goto err;
     }

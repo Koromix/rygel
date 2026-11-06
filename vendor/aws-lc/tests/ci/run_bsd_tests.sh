@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0 OR ISC
+
+set -ex
+
+source tests/ci/common_posix_setup.sh
+
+# AWS_LC_NO_SLOW_TESTS: when set to "1", reduces test scope on all platforms.
+# - ARM64: skips disabled (slow) tests
+# - x86-64: skips FIPS build configurations
+
+if [ "$PLATFORM" != "amd64" ] && [ "$PLATFORM" != "x86_64" ]; then
+    # ARM64 platforms are tested via emulation.
+    # We narrow testing to libcrypto to avoid exceeding 1 hour duration
+    SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+    SCRIPT_DIR="$(readlink -f "${SCRIPT_DIR}")"
+    source "${SCRIPT_DIR}/gtest_util.sh"
+
+    run_build all
+
+    if [[ "${AWS_LC_NO_SLOW_TESTS:-0}" == "0" ]]; then
+        shard_gtest "${BUILD_ROOT}/crypto/crypto_test --gtest_also_run_disabled_tests"
+    else
+        shard_gtest ${BUILD_ROOT}/crypto/crypto_test
+    fi
+    shard_gtest ${BUILD_ROOT}/crypto/urandom_test
+    shard_gtest ${BUILD_ROOT}/crypto/mem_test
+    shard_gtest ${BUILD_ROOT}/crypto/mem_set_test
+    shard_gtest ${BUILD_ROOT}/crypto/rand_isolated_test
+    shard_gtest ${BUILD_ROOT}/crypto/tree_drbg_jitter_entropy_isolated_test
+
+    shard_gtest ${BUILD_ROOT}/ssl/ssl_test
+
+    # Does not use GoogleTest
+    ${BUILD_ROOT}/crypto/rwlock_static_init
+
+    # Due to its special linkage, this does not use GoogleTest
+    ${BUILD_ROOT}/crypto/dynamic_loading_test
+
+    echo "Skipping further testing for $KERNEL_NAME $PLATFORM"
+    exit 0
+fi
+
+echo "Testing AWS-LC shared library in release mode."
+build_and_test -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=1
+
+echo "Testing AWS-LC static library in release mode."
+build_and_test -DCMAKE_BUILD_TYPE=Release
+
+if [[ "${AWS_LC_NO_SLOW_TESTS:-0}" != "0" ]]; then
+    echo "AWS_LC_NO_SLOW_TESTS is set, skipping FIPS builds."
+    exit 0
+fi
+
+# The FIPS builds fail on NetBSD
+if [[ "$KERNEL_NAME" != "NetBSD" ]]; then
+  echo "Testing AWS-LC shared library in FIPS Release mode."
+  fips_build_and_test -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=1
+
+  echo "Testing AWS-LC static library in FIPS Release mode."
+  fips_build_and_test -DCMAKE_BUILD_TYPE=Release
+fi

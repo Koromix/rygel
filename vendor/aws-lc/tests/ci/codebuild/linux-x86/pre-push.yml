@@ -1,0 +1,19 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0 OR ISC
+
+version: 0.2
+
+env:
+  variables:
+    GOPROXY: https://proxy.golang.org,direct
+
+phases:
+  build:
+    commands:
+      - ./tests/check_objects_and_errors.sh
+      - ./tests/check_cmake_configure.sh
+      - go run ./tests/check_licenses.go
+      - ./tests/check_go_vet.sh
+      - ./tests/check_generated_src.sh
+      - ./tests/coding_guidelines/style.sh
+      - (cd util && go run ./doc.go)

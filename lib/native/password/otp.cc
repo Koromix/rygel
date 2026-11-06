@@ -132,7 +132,7 @@ static Size HmacSha1(Span<const uint8_t> key, Span<const uint8_t> message, uint8
 
     // Hash and/or pad key
     if (key.len > K_SIZE(padded_key)) {
-        SHA1(padded_key, key.ptr, (size_t)key.len);
+        sha1_Hash(padded_key, key.ptr, (size_t)key.len);
         MemSet(padded_key + 20, 0, K_SIZE(padded_key) - 20);
     } else {
         MemCpy(padded_key, key.ptr, key.len);
@@ -142,31 +142,31 @@ static Size HmacSha1(Span<const uint8_t> key, Span<const uint8_t> message, uint8
     // Inner hash
     uint8_t inner_hash[20];
     {
-        SHA1_CTX ctx;
-        SHA1Init(&ctx);
+        sha1_CTX ctx;
+        sha1_Init(&ctx);
 
         for (Size i = 0; i < K_SIZE(padded_key); i++) {
             padded_key[i] ^= 0x36;
         }
 
-        SHA1Update(&ctx, padded_key, K_SIZE(padded_key));
-        SHA1Update(&ctx, message.ptr, (uint32_t)message.len);
-        SHA1Final((unsigned char *)inner_hash, &ctx);
+        sha1_Update(&ctx, padded_key, K_SIZE(padded_key));
+        sha1_Update(&ctx, message.ptr, (uint32_t)message.len);
+        sha1_Final((unsigned char *)inner_hash, &ctx);
     }
 
     // Outer hash
     {
-        SHA1_CTX ctx;
-        SHA1Init(&ctx);
+        sha1_CTX ctx;
+        sha1_Init(&ctx);
 
         for (Size i = 0; i < K_SIZE(padded_key); i++) {
             padded_key[i] ^= 0x36; // IPAD is still there
             padded_key[i] ^= 0x5C;
         }
 
-        SHA1Update(&ctx, padded_key, K_SIZE(padded_key));
-        SHA1Update(&ctx, inner_hash, K_SIZE(inner_hash));
-        SHA1Final((unsigned char *)out_digest, &ctx);
+        sha1_Update(&ctx, padded_key, K_SIZE(padded_key));
+        sha1_Update(&ctx, inner_hash, K_SIZE(inner_hash));
+        sha1_Final((unsigned char *)out_digest, &ctx);
     }
 
     return 20;
