@@ -890,7 +890,7 @@ bool oidc_DecodeIdToken(const oidc_Provider &provider, Span<const char> token, S
         int64_t iat = -1;
         int64_t nbf = -1;
         int64_t exp = -1;
-        Size audiences = 0;
+        bool ambiguous = false;
         const char *audience = nullptr;
         const char *azp = nullptr;
         Span<const char> nonce2 = {};
@@ -919,7 +919,7 @@ bool oidc_DecodeIdToken(const oidc_Provider &provider, Span<const char> token, S
                         const char *aud = json.ParseString().ptr;
 
                         if (aud) [[likely]] {
-                            audiences += !audience || !TestStr(aud, audience);
+                            ambiguous |= audience && !TestStr(aud, audience);
                             audience = aud;
                         }
                     } else {
@@ -927,7 +927,7 @@ bool oidc_DecodeIdToken(const oidc_Provider &provider, Span<const char> token, S
                             const char *aud = json.ParseString().ptr;
 
                             if (aud) [[likely]] {
-                                audiences += !audience || !TestStr(aud, audience);
+                                ambiguous |= audience && !TestStr(aud, audience);
                                 audience = aud;
                             }
                         }
@@ -953,7 +953,7 @@ bool oidc_DecodeIdToken(const oidc_Provider &provider, Span<const char> token, S
                 return false;
         }
 
-        if (iat < 0 || exp < 0 || !iss || !audiences || !nonce2.ptr || !identity.sub) {
+        if (iat < 0 || exp < 0 || !iss || !audience || !nonce2.ptr || !identity.sub) {
             LogError("Missing or invalid JWT payload values");
             return false;
         }
@@ -974,7 +974,7 @@ bool oidc_DecodeIdToken(const oidc_Provider &provider, Span<const char> token, S
             LogError("JWT issuer mismatch with OIDC configuration");
             return false;
         }
-        if (audiences > 1) {
+        if (ambiguous) {
             LogError("JWT contains multiple audiences values");
             return false;
         } else if (!TestStr(audience, provider.client_id)) {
