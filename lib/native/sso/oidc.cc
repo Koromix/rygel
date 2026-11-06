@@ -892,6 +892,7 @@ bool oidc_DecodeIdToken(const oidc_Provider &provider, Span<const char> token, S
         int64_t exp = -1;
         Size audiences = 0;
         const char *audience = nullptr;
+        const char *azp = nullptr;
         Span<const char> nonce2 = {};
 
         // Parse JSON
@@ -931,6 +932,8 @@ bool oidc_DecodeIdToken(const oidc_Provider &provider, Span<const char> token, S
                             }
                         }
                     }
+                } else if (key == "azp") {
+                    json.ParseString(&azp);
                 } else if (key == "nonce") {
                     json.ParseString(&nonce2);
                 } else if (key == "sub") {
@@ -976,6 +979,10 @@ bool oidc_DecodeIdToken(const oidc_Provider &provider, Span<const char> token, S
             return false;
         } else if (!TestStr(audience, provider.client_id)) {
             LogError("JWT client ID mismatch with OIDC configuration (aud field)");
+            return false;
+        }
+        if (azp && !TestStr(azp, provider.client_id)) {
+            LogError("JWT client ID mismatch with OIDC configuration (azp field)");
             return false;
         }
 
