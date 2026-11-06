@@ -40,7 +40,7 @@ struct JwksCacheEntry {
 };
 
 static const int TimestampTolerance = 120 * 1000; // 2 minutes
-static const int JwksExpirationDelay = 6 * 3600 * 1000; // Fetch new JWKS files every 6 hours
+static const int JwksExpirationDelay = 1 * 3600 * 1000; // Fetch new JWKS files every hour
 
 static std::shared_mutex jwks_mutex;
 static int64_t jwks_timestamp;
