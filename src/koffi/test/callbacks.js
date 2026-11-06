@@ -193,7 +193,10 @@ async function test() {
     // Persistent callback
     {
         SetIndirect(x => -x);
-        assert.throws(() => CallIndirect(27), { message: /non-registered callback/ });
+
+        // Since Koffi 3.3.8 transient callbacks are not released deterministically, so
+        // this exception cannot reliably happen.
+        // assert.throws(() => CallIndirect(27), { message: /non-registered callback/ });
 
         let cb = koffi.register(x => -x, koffi.pointer(IntCallback));
         SetIndirect(cb);

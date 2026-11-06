@@ -3053,6 +3053,8 @@ void ReleaseInstance(InstanceData *instance, bool reusable)
                 trampoline->state = 0;
             }
         }
+
+        instance->sync_transient.trampolines.len = 0;
     }
 
     // Clean up types

@@ -264,6 +264,19 @@ struct InstanceMemory {
     bool IsAllocated() const { return stack.ptr; }
 };
 
+struct TransientAllocator {
+    NoDestroy<HeapChain> heap;
+    LocalArray<int16_t, 64> trampolines;
+
+#if defined(K_DEBUG)
+    ~TransientAllocator()
+    {
+        K_ASSERT(!heap->IsUsed());
+        K_ASSERT(!trampolines.len);
+    }
+#endif
+};
+
 struct InstanceData {
     napi_env env;
 
@@ -299,8 +312,8 @@ struct InstanceData {
 
     CallData *sync_call = nullptr;
 
-    HeapChain sync_allocator;
-    bool pending_release = false;
+    TransientAllocator sync_transient;
+    bool pending_reclaim = false;
 
 #if defined(_WIN32)
     MemoryRange<void> real_stack;
