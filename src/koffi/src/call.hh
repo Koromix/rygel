@@ -45,12 +45,12 @@ struct alignas(8) CallData {
     uint8_t *prev_heap;
 #endif
 
-    uint8_t *saved_sp;
+    LocalArray<OutArgument, MaxParameters> out_arguments;
 
     uint8_t *async_base;
     const OpData *async_ip;
 
-    LocalArray<OutArgument, MaxParameters> out_arguments;
+    uint8_t *saved_sp;
 
 #if defined(K_DEBUG)
     CallData(napi_env env, InstanceData *instance, InstanceMemory *mem, TransientAllocator *transient)

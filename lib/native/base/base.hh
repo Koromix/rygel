@@ -2139,8 +2139,8 @@ int CmpNaturalI(Span<const char> str1, Span<const char> str2);
 template <typename T, Size N>
 class LocalArray {
 public:
+    Size len = 0; // Put length first to improve data locality
     T data[N];
-    Size len = 0;
 
     typedef T value_type;
     typedef T *iterator;
