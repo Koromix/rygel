@@ -55,14 +55,12 @@ CallData::~CallData()
 }
 #endif
 
-napi_value CallData::Run(const FunctionInfo *func, napi_value *args)
+napi_value CallData::Run(const FunctionInfo *func, napi_value *args, const OpData *inst)
 {
     DebugCall(func);
 
     uint8_t *base = AllocStack<uint8_t>(func->plan.stk_size);
-
-    const OpData *first = func->plan.sync.ptr;
-    return RunForward(this, base, args, first);
+    return RunForward(this, base, args, inst);
 }
 
 bool CallData::PrepareAsync(const FunctionInfo *func, napi_value *args)
@@ -1385,14 +1383,14 @@ static TRANSLATE_FUNC napi_value TranslateZeroCall(napi_env env, napi_callback_i
 
     instance->sync_call = &call;
 
-    return call.Run(func, &arg);
+    return call.Run(func, &arg, func->small_sync);
 }
 
 template <size_t N>
 TRANSLATE_FUNC napi_value TranslateDirectCall(napi_env env, napi_callback_info info)
 {
-    static_assert(N <= 8);
-    static_assert(MaxParameters >= 8);
+    static_assert(N <= MaxDirectCallSize);
+    static_assert(MaxParameters >= N);
 
     napi_value args[N + 1];
     size_t count = N;
@@ -1411,14 +1409,14 @@ TRANSLATE_FUNC napi_value TranslateDirectCall(napi_env env, napi_callback_info i
 
     instance->sync_call = &call;
 
-    return call.Run(func, args);
+    return call.Run(func, args, func->small_sync);
 }
 
 template <size_t N>
 TRANSLATE_FUNC napi_value TranslateOutputCall(napi_env env, napi_callback_info info)
 {
-    static_assert(N <= 8);
-    static_assert(MaxParameters >= 8);
+    static_assert(N <= MaxDirectCallSize);
+    static_assert(MaxParameters >= N);
 
     napi_value args[N + 1];
     size_t count = N;
@@ -1437,7 +1435,7 @@ TRANSLATE_FUNC napi_value TranslateOutputCall(napi_env env, napi_callback_info i
 
     instance->sync_call = &call;
 
-    napi_value ret = call.Run(func,  args);
+    napi_value ret = call.Run(func, args, func->small_sync);
     call.PopOutputArguments();
 
     return ret;

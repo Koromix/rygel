@@ -1372,6 +1372,12 @@ bool PreparePlan(InstanceData *instance, FunctionInfo *func)
     }
 #endif
 
+    if (func->plan.sync.len <= K_LEN(func->small_sync)) {
+        MemCpy(func->small_sync, func->plan.sync.ptr, func->plan.sync.len * K_SIZE(OpData));
+    } else {
+        MemSet(func->small_sync, 0, K_SIZE(func->small_sync));
+    }
+
     return true;
 }
 

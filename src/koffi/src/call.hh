@@ -62,7 +62,8 @@ struct alignas(8) CallData {
         : env(env), instance(instance), stack(mem->stack), heap(mem->heap), transient(transient) {}
 #endif
 
-    INLINE_UNITY napi_value Run(const FunctionInfo *func, napi_value *args);
+    napi_value Run(const FunctionInfo *func, napi_value *args) { return Run(func, args, func->plan.sync.ptr); }
+    INLINE_UNITY napi_value Run(const FunctionInfo *func, napi_value *args, const OpData *first);
 
     bool PrepareAsync(const FunctionInfo *func, napi_value *args);
     void ExecuteAsync(void *native);

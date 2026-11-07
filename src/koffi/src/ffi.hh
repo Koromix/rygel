@@ -41,6 +41,7 @@ static const int MaxResidentAsyncPools = 32;
 static const int MaxAsyncCalls = 4096;
 static const Size MaxParameters = 64;
 static const Size MaxTrampolines = 8192;
+static const Size MaxDirectCallSize = 8;
 
 enum class PrimitiveKind {
     #define PRIMITIVE(Name) Name,
@@ -228,6 +229,7 @@ struct FunctionInfo {
     bool variadic;
 
     ExecutionPlan plan;
+    OpData small_sync[MaxDirectCallSize + 1];
 
     ~FunctionInfo();
 
