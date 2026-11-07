@@ -1381,7 +1381,7 @@ static TRANSLATE_FUNC napi_value TranslateZeroCall(napi_env env, napi_callback_i
     napi_value arg = (napi_value)func->native;
 
     InstanceData *instance = func->instance;
-    CallData call(env, instance, &instance->sync_memory, nullptr);
+    CallData call(env, instance, func->sync_memory, nullptr);
 
     instance->sync_call = &call;
 
@@ -1407,7 +1407,7 @@ TRANSLATE_FUNC napi_value TranslateDirectCall(napi_env env, napi_callback_info i
     args[N] = (napi_value)func->native;
 
     InstanceData *instance = func->instance;
-    CallData call(env, instance, &instance->sync_memory, nullptr);
+    CallData call(env, instance, func->sync_memory, nullptr);
 
     instance->sync_call = &call;
 
@@ -1433,7 +1433,7 @@ TRANSLATE_FUNC napi_value TranslateOutputCall(napi_env env, napi_callback_info i
     args[N] = (napi_value)func->native;
 
     InstanceData *instance = func->instance;
-    CallData call(env, instance, &instance->sync_memory, nullptr);
+    CallData call(env, instance, func->sync_memory, nullptr);
 
     instance->sync_call = &call;
 
@@ -1446,7 +1446,7 @@ TRANSLATE_FUNC napi_value TranslateOutputCall(napi_env env, napi_callback_info i
 static TRANSLATE_FUNC K_FORCE_INLINE napi_value TranslateNormalCall(napi_env env, const FunctionInfo *func, napi_value *args)
 {
     InstanceData *instance = func->instance;
-    CallData call(env, instance, &instance->sync_memory, nullptr);
+    CallData call(env, instance, func->sync_memory, nullptr);
 
     instance->sync_call = &call;
 
@@ -1503,7 +1503,7 @@ static TRANSLATE_FUNC napi_value TranslateNormalCallDebugAsync(napi_env env, nap
     }
 
     InstanceData *instance = func->instance;
-    CallData call(env, instance, &instance->sync_memory, nullptr);
+    CallData call(env, instance, func->sync_memory, nullptr);
 
     instance->sync_call = &call;
 
@@ -1602,8 +1602,8 @@ static TRANSLATE_FUNC K_FORCE_INLINE napi_value TranslateVariadicCall(napi_env e
 
     // Regroup proper arguments
     {
-        napi_value *ptr = args + variadic->required_parameters;
-        Size varargs = (count - variadic->required_parameters) / 2;
+        napi_value *ptr = args + func->required_parameters;
+        Size varargs = (count - func->required_parameters) / 2;
 
         for (Size i = 0; i < varargs; i++) {
             ptr[i] = ptr[2 * i + 1];
@@ -1612,7 +1612,7 @@ static TRANSLATE_FUNC K_FORCE_INLINE napi_value TranslateVariadicCall(napi_env e
         ptr[varargs] = args[count];
     }
 
-    CallData call(env, instance, &instance->sync_memory, nullptr);
+    CallData call(env, instance, func->sync_memory, nullptr);
 
     instance->sync_call = &call;
 

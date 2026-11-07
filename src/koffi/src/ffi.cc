@@ -1204,6 +1204,9 @@ static Napi::Value CreateFunctionType(const Napi::CallbackInfo &info)
     func->env = env;
     func->instance = instance;
 
+    // Helps reduce dependent pointer chasing during call preparation
+    func->sync_memory = &instance->sync_memory;
+
     if (info.Length() >= 2) {
         if (!ParseClassicFunction(info, false, func))
             return env.Null();
@@ -1639,9 +1642,12 @@ Napi::Value LibraryHandle::Func(const Napi::CallbackInfo &info)
     FunctionInfo *func = new FunctionInfo();
     K_DEFER { func->Unref(); };
 
+    func->lib = lib->Ref();
     func->env = env;
     func->instance = instance;
-    func->lib = lib->Ref();
+
+    // Helps reduce dependent pointer chasing during call preparation
+    func->sync_memory = &instance->sync_memory;
 
     if (info.Length() >= 2) {
         if (!ParseClassicFunction(info, true, func))

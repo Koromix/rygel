@@ -52,6 +52,7 @@ static const char *const PrimitiveKindNames[] = {
 };
 
 struct InstanceData;
+struct InstanceMemory;
 struct TypeInfo;
 struct RecordMember;
 struct FunctionInfo;
@@ -205,9 +206,12 @@ struct ParameterInfo {
 struct FunctionInfo {
     mutable int refcount = 1;
 
+    const LibraryHolder *lib = nullptr;
     napi_env env;
     InstanceData *instance;
-    const LibraryHolder *lib = nullptr;
+
+    // Reduce dependent pointer chasing during call preparation with instance->sync_memory pointer copy
+    InstanceMemory *sync_memory = nullptr;
 
     const char *name;
     const char *decorated_name; // Only set for some platforms/calling conventions
