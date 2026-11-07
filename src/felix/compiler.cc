@@ -155,7 +155,7 @@ static HostArchitecture ParseTriplet(Span<const char> output, Span<const char> *
         return HostArchitecture::Unknown;
 
     if (out_remain) {
-        *out_remain = triplet.Take(pair->prefix.len - 1, triplet.len - pair->prefix.len - 1);
+        *out_remain = triplet.Take(pair->prefix.len, triplet.len - pair->prefix.len);
     }
     return pair->architecture;
 }
@@ -271,7 +271,7 @@ public:
                     compiler->architecture = architecture;
                 }
 
-                compiler->mingw = (remain == "-w64-windows-gnu");
+                compiler->mingw = (remain == "w64-windows-gnu");
             }
 
             if (compiler->platform == NativePlatform && compiler->architecture == NativeArchitecture) {
@@ -1095,10 +1095,12 @@ public:
                 }
 
                 if (compiler->platform == HostPlatform::Unknown) {
-                    if (StartsWith(remain, "-w64-mingw")) {
+                    if (StartsWith(remain, "w64-mingw")) {
                         compiler->platform = HostPlatform::Windows;
-                    } else if (StartsWith(remain, "-apple-darwin")) {
+                    } else if (StartsWith(remain, "apple-darwin")) {
                         compiler->platform = HostPlatform::macOS;
+                    } else if (StartsWith(remain, "linux-")) {
+                        compiler->platform = HostPlatform::Linux;
                     } else {
                         LogError("Unknown GCC triplet platform suffix '%1'", remain);
                         return nullptr;
