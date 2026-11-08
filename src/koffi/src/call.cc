@@ -2013,10 +2013,11 @@ napi_value WrapFunction(InstanceData *instance, const FunctionInfo *func)
             NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateVariadicCall, (void *)func->Ref(), &value));
         } else if (IsDebugAsyncEnabled()) {
             NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateNormalCallDebugAsync, (void *)func->Ref(), &value));
-        } else {
+        } else if (func->parameters.len <= MaxDirectCallSize) {
+            K_ASSERT(func->plan.sync.len <= K_LEN(func->small_sync));
+
             switch (func->parameters.len) {
                 case 0: { NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, translate_zero_call, (void *)func->Ref(), &value)); } break;
-
                 case 1: { NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, HasOutputArguments(func) ? TranslateOutputCall<1> : TranslateDirectCall<1>, (void *)func->Ref(), &value)); } break;
                 case 2: { NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, HasOutputArguments(func) ? TranslateOutputCall<2> : TranslateDirectCall<2>, (void *)func->Ref(), &value)); } break;
                 case 3: { NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, HasOutputArguments(func) ? TranslateOutputCall<3> : TranslateDirectCall<3>, (void *)func->Ref(), &value)); } break;
@@ -2026,8 +2027,10 @@ napi_value WrapFunction(InstanceData *instance, const FunctionInfo *func)
                 case 7: { NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, HasOutputArguments(func) ? TranslateOutputCall<7> : TranslateDirectCall<7>, (void *)func->Ref(), &value)); } break;
                 case 8: { NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, HasOutputArguments(func) ? TranslateOutputCall<8> : TranslateDirectCall<8>, (void *)func->Ref(), &value)); } break;
 
-                default: { NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateNormalCall, (void *)func->Ref(), &value)); } break;
+                default: { K_UNREACHABLE(); } break;
             }
+        } else {
+            NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateNormalCall, (void *)func->Ref(), &value));
         }
 
         wrapper = Napi::Function(env, value);

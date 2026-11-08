@@ -229,7 +229,9 @@ struct FunctionInfo {
     bool variadic;
 
     ExecutionPlan plan;
-    OpData small_sync[MaxDirectCallSize + 1];
+
+    // One instruction per argument, one for the native call, and three spares (just in case)
+    OpData small_sync[MaxDirectCallSize + 4];
 
     ~FunctionInfo();
 
