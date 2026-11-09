@@ -311,7 +311,7 @@ public:
 
                     case HostArchitecture::Unknown: { K_UNREACHABLE(); } break;
                 }
-            } else  {
+            } else {
                 LogError("Cannot use Clang (Windows) to build for '%1'", HostPlatformNames[(int)compiler->platform]);
                 return nullptr;
             }
@@ -353,8 +353,8 @@ public:
                 }
 
                 compiler->target = Fmt(&compiler->str_alloc, "--target=%1-%2", prefix, suffix).ptr;
-#endif
             }
+#endif
         }
 
         // Determine LLD version
