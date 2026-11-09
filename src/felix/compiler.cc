@@ -155,7 +155,7 @@ static HostArchitecture ParseTriplet(Span<const char> output, Span<const char> *
         return HostArchitecture::Unknown;
 
     if (out_remain) {
-        *out_remain = triplet.Take(pair->prefix.len, triplet.len - pair->prefix.len);
+        *out_remain = triplet.Take(pair->prefix.len - 1, triplet.len - pair->prefix.len + 1);
     }
     return pair->architecture;
 }
@@ -271,7 +271,7 @@ public:
                     compiler->architecture = architecture;
                 }
 
-                compiler->mingw = (remain == "w64-windows-gnu");
+                compiler->mingw = EndsWith(remain, "-windows-gnu");
             }
 
             if (compiler->platform == NativePlatform && compiler->architecture == NativeArchitecture) {
@@ -1095,12 +1095,18 @@ public:
                 }
 
                 if (compiler->platform == HostPlatform::Unknown) {
-                    if (StartsWith(remain, "w64-mingw")) {
+                    Span<const char> system = TrimStrRight(remain, "0123456789.");
+
+                    if (EndsWith(system, "-mingw")) {
                         compiler->platform = HostPlatform::Windows;
-                    } else if (StartsWith(remain, "apple-darwin")) {
+                    } else if (system == "-apple-darwin") {
                         compiler->platform = HostPlatform::macOS;
-                    } else if (StartsWith(remain, "linux-")) {
+                    } else if (EndsWith(system, "-linux") || MemMem(system.ptr, system.len, "-linux-", 7)) {
                         compiler->platform = HostPlatform::Linux;
+                    } else if (EndsWith(system, "-freebsd")) {
+                        compiler->platform = HostPlatform::FreeBSD;
+                    } else if (EndsWith(system, "-openbsd")) {
+                        compiler->platform = HostPlatform::OpenBSD;
                     } else {
                         LogError("Unknown GCC triplet platform suffix '%1'", remain);
                         return nullptr;
