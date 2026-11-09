@@ -8,7 +8,8 @@ namespace K {
 
 static const int64_t DefaultDurations[] = {
     1 * 86400000ll, // 1 day
-    7 * 86400000ll, // 7 day
+    3 * 86400000ll, // 3 days
+    7 * 86400000ll, // 7 days
     30 * 86400000ll, // 30 days
     90 * 86400000ll // 90 days
 };
