@@ -106,31 +106,8 @@ static int ParseVersion(const char *cmd, Span<const char> output, const char *ma
     return -1;
 }
 
-static HostArchitecture ParseTriplet(Span<const char> output, Span<const char> *out_remain = nullptr)
+static Span<const char> ExtractGnuTriplet(Span<const char> output)
 {
-    struct ArchitecturePair {
-        Span<const char> prefix;
-        HostArchitecture architecture;
-    };
-
-    static const ArchitecturePair KnownArchitectures[] = {
-        { "x86_64-", HostArchitecture::x86_64 },
-        { "x86-64-", HostArchitecture::x86_64 },
-        { "amd64-", HostArchitecture::x86_64 },
-        { "i386-", HostArchitecture::x86 },
-        { "i486-", HostArchitecture::x86 },
-        { "i586-", HostArchitecture::x86 },
-        { "i686-", HostArchitecture::x86 },
-        { "x86-", HostArchitecture::x86 },
-        { "aarch64-", HostArchitecture::ARM64 },
-        { "arm64-", HostArchitecture::ARM64 },
-        { "riscv64-", HostArchitecture::RISCV64 },
-        { "loongarch64-", HostArchitecture::Loong64 },
-        { "wasm32-", HostArchitecture::Web32 },
-    };
-
-    Span<const char> triplet = {};
-
     while (output.len) {
         Span<const char> line = SplitStrLine(output, &output);
 
@@ -141,23 +118,86 @@ static HostArchitecture ParseTriplet(Span<const char> output, Span<const char> *
         if (!value.len)
             continue;
 
-        if (key == "Target") {
-            triplet = SplitStr(value, ' ');
-            break;
+        if (key == "Target")
+            return SplitStr(value, ' ');
+    }
+
+    return {};
+}
+
+static bool ParseTriplet(Span<const char> triplet, HostPlatform *out_platform, HostArchitecture *out_architecture)
+{
+    struct ArchitecturePair {
+        Span<const char> prefix;
+        HostArchitecture architecture;
+    };
+
+    HostPlatform platform;
+    HostArchitecture architecture;
+
+    Span<const char> remain = triplet;
+
+    // Consume triplet architecture
+    {
+        static const ArchitecturePair KnownArchitectures[] = {
+            { "x86_64-", HostArchitecture::x86_64 },
+            { "x86-64-", HostArchitecture::x86_64 },
+            { "amd64-", HostArchitecture::x86_64 },
+            { "i386-", HostArchitecture::x86 },
+            { "i486-", HostArchitecture::x86 },
+            { "i586-", HostArchitecture::x86 },
+            { "i686-", HostArchitecture::x86 },
+            { "x86-", HostArchitecture::x86 },
+            { "aarch64-", HostArchitecture::ARM64 },
+            { "arm64-", HostArchitecture::ARM64 },
+            { "riscv64-", HostArchitecture::RISCV64 },
+            { "loongarch64-", HostArchitecture::Loong64 },
+            { "wasm32-", HostArchitecture::Web32 },
+        };
+
+        const ArchitecturePair *pair =
+            std::find_if(std::begin(KnownArchitectures), std::end(KnownArchitectures),
+                         [&](const ArchitecturePair &pair) { return StartsWith(remain, pair.prefix); });
+
+        if (pair == std::end(KnownArchitectures)) {
+            LogError("Cannot determine default compiler architecture from triplet '%1'", triplet);
+            return false;
+        }
+
+        architecture = pair->architecture;
+
+        remain.ptr += pair->prefix.len - 1;
+        remain.len -= pair->prefix.len - 1;
+    }
+
+    // Determine platform from remaining triplet string
+    {
+        Span<const char> system = TrimStrRight(remain, "0123456789.");
+
+        if (MemMem(system.ptr, system.len, "-windows-", 9) || EndsWith(system, "-mingw")) {
+            platform = HostPlatform::Windows;
+        } else if (MemMem(system.ptr, system.len, "-linux-", 7) || EndsWith(system, "-linux")) {
+            platform = HostPlatform::Linux;
+        } else if (system == "-apple-darwin" || system == "-apple-macosx") {
+            platform = HostPlatform::macOS;
+        } else if (EndsWith(system, "-freebsd")) {
+            platform = HostPlatform::FreeBSD;
+        } else if (EndsWith(system, "-openbsd")) {
+            platform = HostPlatform::OpenBSD;
+        } else if (EndsWith(system, "-emscripten")) {
+            platform = HostPlatform::EmscriptenWeb;
+        } else if (EndsWith(system, "-wasi") || EndsWith(system, "-wasip") || EndsWith(system, "-wasip1-threads")) {
+            platform = HostPlatform::WasmWasi;
+        } else {
+            LogError("Cannot determine default compiler platform from triplet '%1'", triplet);
+            return false;
         }
     }
 
-    const ArchitecturePair *pair =
-        std::find_if(std::begin(KnownArchitectures), std::end(KnownArchitectures),
-                     [&](const ArchitecturePair &pair) { return StartsWith(triplet, pair.prefix); });
+    *out_platform = platform;
+    *out_architecture = architecture;
 
-    if (pair == std::end(KnownArchitectures))
-        return HostArchitecture::Unknown;
-
-    if (out_remain) {
-        *out_remain = triplet.Take(pair->prefix.len - 1, triplet.len - pair->prefix.len + 1);
-    }
-    return pair->architecture;
+    return true;
 }
 
 static bool IdentifyCompiler(const char *bin, const char *needle)
@@ -255,23 +295,16 @@ public:
 
             // Parse compiler triplet
             {
-                Span<const char> remain;
-                HostArchitecture architecture = ParseTriplet(output, &remain);
+                Span<const char> triplet = ExtractGnuTriplet(output);
 
-                if (architecture == HostArchitecture::Unknown) {
-                    LogError("Cannot determine default Clang architecture");
+                HostPlatform platform;
+                HostArchitecture architecture;
+                if (!ParseTriplet(triplet, &platform, &architecture))
                     return nullptr;
-                }
-                if (compiler->architecture == HostArchitecture::Unknown) {
-                    if (compiler->platform != NativePlatform) {
-                        LogError("Cross-compilation requires an explicit architecture");
-                        return nullptr;
-                    }
 
-                    compiler->architecture = architecture;
-                }
-
-                compiler->mingw = EndsWith(remain, "-windows-gnu");
+                compiler->platform = (compiler->platform == HostPlatform::Unknown) ? platform : compiler->platform;
+                compiler->architecture = (compiler->architecture == HostArchitecture::Unknown) ? architecture : compiler->architecture;
+                compiler->mingw = EndsWith(triplet, "-windows-gnu");
             }
 
             if (compiler->platform == NativePlatform && compiler->architecture == NativeArchitecture) {
@@ -1090,59 +1123,20 @@ public:
 
             // Parse compiler triplet
             {
-                Span<const char> remain;
-                HostArchitecture architecture = ParseTriplet(output, &remain);
+                Span<const char> triplet = ExtractGnuTriplet(output);
 
-                if (architecture == HostArchitecture::Unknown) {
-                    LogError("Cannot determine default GCC platform and architecture");
+                HostPlatform platform;
+                HostArchitecture architecture;
+                if (!ParseTriplet(triplet, &platform, &architecture))
                     return nullptr;
-                }
 
-                if (compiler->platform == HostPlatform::Unknown) {
-                    Span<const char> system = TrimStrRight(remain, "0123456789.");
-
-                    if (EndsWith(system, "-mingw")) {
-                        compiler->platform = HostPlatform::Windows;
-                    } else if (system == "-apple-darwin") {
-                        compiler->platform = HostPlatform::macOS;
-                    } else if (EndsWith(system, "-linux") || MemMem(system.ptr, system.len, "-linux-", 7)) {
-                        compiler->platform = HostPlatform::Linux;
-                    } else if (EndsWith(system, "-freebsd")) {
-                        compiler->platform = HostPlatform::FreeBSD;
-                    } else if (EndsWith(system, "-openbsd")) {
-                        compiler->platform = HostPlatform::OpenBSD;
-                    } else {
-                        LogError("Unknown GCC triplet platform suffix '%1'", remain);
-                        return nullptr;
-                    }
-                }
-                if (compiler->architecture == HostArchitecture::Unknown) {
-                    compiler->architecture = architecture;
-                }
-            }
-
-            HostArchitecture architecture = ParseTriplet(output);
-
-            if (architecture == HostArchitecture::Unknown) {
-                LogError("Cannot determine default GCC architecture");
-                return nullptr;
-            }
-
-            if (compiler->platform == HostPlatform::Unknown) {
-                compiler->platform = NativePlatform;
-            }
-
-            if (compiler->architecture == HostArchitecture::Unknown) {
-                compiler->architecture = architecture;
-#if defined(__x86_64__)
-            } else if (architecture == HostArchitecture::x86_64 &&
+                if (architecture == HostArchitecture::x86_64 &&
                        compiler->architecture == HostArchitecture::x86) {
-                compiler->m32 = true;
-#endif
-            } else if (compiler->architecture != architecture) {
-                LogError("Cannot use GCC (%1) compiler to build for '%2'",
-                         HostArchitectureNames[(int)architecture], HostArchitectureNames[(int)compiler->architecture]);
-                return nullptr;
+                    compiler->m32 = true;
+                }
+
+                compiler->platform = (compiler->platform == HostPlatform::Unknown) ? platform : compiler->platform;
+                compiler->architecture = (compiler->architecture == HostArchitecture::Unknown) ? architecture : compiler->architecture;
             }
         };
 
