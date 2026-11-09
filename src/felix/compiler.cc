@@ -358,21 +358,19 @@ public:
         }
 
         // Determine LLD version
-        {
-            if (compiler->ld && IdentifyCompiler(compiler->ld, "lld")) {
-                char cmd[4096];
-                if (PathIsAbsolute(compiler->ld)) {
-                    Fmt(cmd, "\"%1\" --version", compiler->ld);
-                } else if (compiler->platform == HostPlatform::Windows && !compiler->mingw) {
-                    Fmt(cmd, "\"%1-link\" --version", compiler->ld);
-                } else {
-                    Fmt(cmd, "\"ld.%1%2\" --version", compiler->ld, K_EXECUTABLE_EXTENSION);
-                }
+        if (compiler->ld && IdentifyCompiler(compiler->ld, "lld")) {
+            char cmd[4096];
+            if (PathIsAbsolute(compiler->ld)) {
+                Fmt(cmd, "\"%1\" --version", compiler->ld);
+            } else if (compiler->platform == HostPlatform::Windows && !compiler->mingw) {
+                Fmt(cmd, "\"%1-link\" --version", compiler->ld);
+            } else {
+                Fmt(cmd, "\"ld.%1%2\" --version", compiler->ld, K_EXECUTABLE_EXTENSION);
+            }
 
-                HeapArray<char> output;
-                if (ReadCommandOutput(cmd, &output)) {
-                    compiler->lld_ver = ParseVersion(cmd, output, "LLD");
-                }
+            HeapArray<char> output;
+            if (ReadCommandOutput(cmd, &output)) {
+                compiler->lld_ver = ParseVersion(cmd, output, "LLD");
             }
         }
 
