@@ -53,11 +53,9 @@ struct Config {
 
     BlockAllocator str_alloc;
 
-    bool Complete();
     bool Validate() const;
 };
 
 bool LoadConfig(StreamReader *st, Config *out_config);
-bool LoadConfig(const char *filename, Config *out_config);
 
 }

@@ -26,7 +26,7 @@ bool rk_Config::Complete()
 
     switch (type) {
         case rk_DiskType::Local: return true;
-        case rk_DiskType::S3: return s3.remote.Complete();
+        case rk_DiskType::S3: return s3.remote.Complete(true);
         case rk_DiskType::SFTP: return ssh.Complete();
     }
 

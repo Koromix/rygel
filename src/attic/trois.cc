@@ -11,7 +11,7 @@ static bool ConnectToS3(s3_Client *s3, const char *url)
     s3_Config config;
     if (!s3_DecodeURL(url, &config))
         return false;
-    if (!config.Complete())
+    if (!config.Complete(true))
         return false;
     if (!config.Validate())
         return false;

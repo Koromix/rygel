@@ -25,6 +25,7 @@ struct oidc_Provider {
     const char *client_id = nullptr;
     const char *client_secret = nullptr;
     oidc_JwtSigningAlgorithm jwt_algorithm = oidc_JwtSigningAlgorithm::RS256;
+    bool explicit_algorithm = false;
 
     // Auto-discovery
     const char *issuer = nullptr;
@@ -37,6 +38,7 @@ struct oidc_Provider {
     bool SetProperty(Span<const char> key, Span<const char> value, Span<const char> root_directory);
     bool Discover();
 
+    bool Complete();
     bool Validate() const;
 };
 

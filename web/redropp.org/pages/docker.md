@@ -1,6 +1,50 @@
 # Configure Redropp
 
-Full configuration requires the use of an INI file. You can create a default configuration file with the following command:
+Redropp can be configured with environment variables or with a configuration file.
+
+## Environment variables
+
+Use the following template to configure Redropp with environment variables.
+
+```ini
+# Name/title of this instance
+TITLE=
+
+# Public URL
+URL=
+
+# Drop settings: per-user quota
+# DROP_QUOTA=10G
+# DROP_DELAYS=1d *7d 30d 90d
+
+# SMTP information, read the CURL documentation for supported URLs: https://everything.curl.dev/usingcurl/smtp.html
+SMTP_URL=
+SMTP_USERNAME=
+SMTP_PASSWORD=
+SMTP_FROM=
+
+# S3 location should look something like this: https://sos-de-fra-1.exo.io/bucket
+S3_LOCATION=
+S3_ACCESS_KEY_ID=
+S3_SECRET_ACCESS_KEY=
+
+# Internal authentication settings
+# AUTH_INTERNAL=Yes
+# AUTH_REGISTER=Yes
+
+# Configure SSO support
+# SSO_TITLE=
+# SSO_URL=https://dev-stpsilwgnjk561dj.eu.auth0.com
+# SSO_CLIENT_ID=r11Ah7sLNB0AN5FphbRCkNVEyK7XsQ9i
+# SSO_CLIENT_SECRET=sTd6h6TywNolfTnHGKBDE37ys6rmZCnQabNvkvBmVZqOKb5Ncpn75ELkTpfp-wma
+```
+
+> [!NOTE]
+> Environment variables are limited. Some advanced settings (such as multiple SSO providers) can only be changed with a configuration file.
+
+## Configuration file
+
+You can create a default configuration file with the following command:
 
 ```sh
 mkdir config
@@ -8,33 +52,6 @@ docker run koromix/redropp:latest /app/redropp init > config/redropp.ini
 ```
 
 You must configure mandatory settings (title, URL, S3) inside `config/redropp.ini` before you can run it.
-
-> [!NOTE]
-> You can use an environment file instead, if you prefer:
->
-> ```
-> # Name/title of this instance
-> TITLE=
-> 
-> # Public URL
-> URL=
-> 
-> # Drop settings : per-user quota
-> DROP_QUOTA=1G
-> 
-> # SMTP information, read the CURL documentation for supported URLs: https://everything.curl.dev/usingcurl/smtp.html
-> SMTP_URL=
-> SMTP_USERNAME=
-> SMTP_PASSWORD=
-> SMTP_FROM=
-> 
-> # S3 location should look something like this: https://sos-de-fra-1.exo.io/bucket
-> S3_LOCATION=
-> S3_ACCESS_KEY_ID=
-> S3_SECRET_ACCESS_KEY=
-> ```
->
-> Environment variables are limited. Some settings (such as SSO authentication) can only be changed through a configuration file.
 
 # Run Docker image
 
@@ -44,10 +61,19 @@ Run the most recent release with the following command:
 
 ```sh
 mkdir -p data
-docker run -p 8894:80 -v $PWD/config:/config -v $PWD/data:/data koromix/redropp:latest
+docker run --env-file=ENV -p 8894:80 -v $PWD/data:/data koromix/redropp:latest
 ```
 
 Once Redropp is running, open http://localhost:8894/ in your browser. That's it!
+
+> [!NOTE]
+> This docker command (and the Docker Compose file below) assumes the use of an environment file (named `ENV`).
+>
+> In order to use a configuration file (such as `config/redropp.ini`), you need to mount the config directory and run Redropp with the path to the config file, like this:
+>
+> ```sh
+> docker run -p 8894:80 -v $PWD/data:/data -v $PWD/config:/config koromix/redropp:latest /app/redropp -C /config/redropp.ini
+> ```
 
 ## Docker Compose
 
@@ -61,11 +87,13 @@ services:
 
     restart: on-failure:3
 
+    env_file: ENV
+
     ports:
       - 8894:80
     volumes:
-      - ./config:/config
       - ./data:/data
+      # - ./config:/config
 ```
 
 > [!TIP]
@@ -80,11 +108,14 @@ Here is a sample Quadlet unit file for use with Podman Quadlet:
 Description=Redropp file transers
 After=local-fs.target
 
+[Service]
+EnvironmentFile=/srv/redropp/ENV
+
 [Container]
 Image=docker.io/koromix/redropp:latest
 PublishPort=8894:80
-Volume=/srv/redropp/config:/config
 Volume=/srv/redropp/data:/data
+# Volume=/srv/redropp/config:/config
 
 [Install]
 WantedBy=multi-user.target

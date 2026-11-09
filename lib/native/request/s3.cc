@@ -69,8 +69,10 @@ bool s3_Config::SetProperty(Span<const char> key, Span<const char> value, Span<c
     return false;
 }
 
-bool s3_Config::Complete()
+bool s3_Config::Complete(bool interactive)
 {
+    interactive &= FileIsVt100(STDERR_FILENO);
+
     if (!host) {
         const char *str1 = GetS3Env("LOCATION");
         const char *str2 = GetS3Env("ENDPOINT_URL");
@@ -94,7 +96,7 @@ bool s3_Config::Complete()
 
         if (str) {
             access_key = DuplicateString(str, &str_alloc).ptr;
-        } else if (access_id && FileIsVt100(STDERR_FILENO)) {
+        } else if (access_id && interactive) {
             access_key = Prompt(T("AWS secret key:"), nullptr, "*", &str_alloc);
             if (!access_key)
                 return false;

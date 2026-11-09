@@ -24,7 +24,7 @@ struct s3_Config {
 
     bool SetProperty(Span<const char> key, Span<const char> value, Span<const char> root_directory = {});
 
-    bool Complete();
+    bool Complete(bool interactive);
     bool Validate() const;
 
     void Clone(s3_Config *out_config) const;

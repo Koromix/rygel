@@ -78,7 +78,9 @@ bool oidc_Provider::SetProperty(Span<const char> key, Span<const char> value, Sp
         client_secret = DuplicateString(value, &str_alloc).ptr;
         return true;
     } else if (key == "JwtAlgorithm") {
-        if (!OptionToEnumI(oidc_JwtSigningAlgorithmNames, value, &jwt_algorithm)) {
+        if (OptionToEnumI(oidc_JwtSigningAlgorithmNames, value, &jwt_algorithm)) {
+            explicit_algorithm = true;
+        } else {
             LogError("Unsupported JWT signing algorithm '%1'", value);
             return false;
         }
@@ -183,6 +185,46 @@ static bool CheckURL(const char *url)
 
         if (!scheme || !TestStr(scheme, "https")) {
             LogError("Unsupported OIDC scheme '%1' (HTTPS is required)", scheme);
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool oidc_Provider::Complete()
+{
+    if (!title) {
+        const char *str = GetEnv("SSO_TITLE");
+        title = str ? DuplicateString(str, &str_alloc).ptr : nullptr;
+    }
+
+    if (!discovery_url) {
+        const char *str1 = GetEnv("SSO_DISCOVERY_URL");
+        const char *str2 = GetEnv("SSO_URL");
+
+        if (str1) {
+            discovery_url = DuplicateString(str1, &str_alloc).ptr;
+        } else if (str2) {
+            Span<const char> trimmed = TrimStrRight(str2, '/');
+            discovery_url = Fmt(&str_alloc, "%1/.well-known/openid-configuration", trimmed).ptr;
+        }
+    }
+
+    if (!client_id) {
+        const char *str = GetEnv("SSO_CLIENT_ID");
+        client_id = str ? DuplicateString(str, &str_alloc).ptr : nullptr;
+    }
+    if (!client_secret) {
+        const char *str = GetEnv("SSO_CLIENT_SECRET");
+        client_secret = str ? DuplicateString(str, &str_alloc).ptr : nullptr;
+    }
+
+    if (!explicit_algorithm) {
+        const char *str = GetEnv("SSO_JWT_ALGORITHM");
+
+        if (str && !OptionToEnumI(oidc_JwtSigningAlgorithmNames, str, &jwt_algorithm)) {
+            LogError("Unsupported JWT signing algorithm '%1'", str);
             return false;
         }
     }

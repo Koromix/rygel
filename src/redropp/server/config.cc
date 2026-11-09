@@ -15,36 +15,6 @@ static const int64_t DefaultDurations[] = {
 };
 static const int64_t DefaultDuration = 7 * 86400000ll;
 
-bool Config::Complete()
-{
-    if (!title) {
-        const char *str = GetEnv("TITLE");
-        title = str ? DuplicateString(str, &str_alloc).ptr : nullptr;
-    }
-    if (!url) {
-        const char *str = GetEnv("URL");
-        url = str ? DuplicateString(str, &str_alloc).ptr : nullptr;
-    }
-
-    if (!explicit_quota) {
-        const char *str = GetEnv("DROP_QUOTA");
-
-        if (str) {
-            if (!ParseSize(str, &quota))
-                return false;
-            explicit_quota = true;
-        }
-    }
-
-    if (!s3.Complete())
-        return false;
-
-    if (!smtp.Complete())
-        return false;
-
-    return true;
-}
-
 bool Config::Validate() const
 {
     bool valid = true;
@@ -74,22 +44,117 @@ bool Config::Validate() const
     return valid;
 }
 
+static bool ParseExpirationDelays(Span<const char> str, HeapArray<int64_t> *out_durations, int64_t *out_default, bool *out_infinite)
+{
+    HeapArray<int64_t> durations;
+    int64_t default_duration = 0;
+    bool allow_infinite = false;
+
+    Span<const char> first_duration = {};
+
+    while (str.len) {
+        Span<const char> part = TrimStr(SplitStrAny(str, " ,", &str));
+
+        if (TestStrI(part, "Never")) {
+            allow_infinite = true;
+        } else if (part.len) {
+            int64_t duration = 0;
+            bool set_default = false;
+
+            if (part[0] == '*') {
+                part = part.Take(1, part.len - 1);
+                set_default = true;
+            }
+
+            if (ParseDuration(part, &duration)) {
+                durations.Append(duration);
+
+                if (set_default) {
+                    if (!default_duration) {
+                        default_duration = duration;
+                    } else {
+                        LogError("Cannot set default delay multiple times");
+                        return false;
+                    }
+                }
+            } else {
+                return false;
+            }
+
+            if (!first_duration.len) {
+                first_duration = part;
+            }
+        }
+    }
+
+    if (!durations.len) {
+        LogError("Empty/invalid value for delays");
+        return false;
+    } else if (!default_duration) {
+        LogWarning("Missing default expiration delay, set to first choice");
+        default_duration = durations[0];
+    }
+
+    std::swap(*out_durations, durations);
+    *out_default = default_duration;
+    *out_infinite = allow_infinite;
+
+    return true;
+}
+
 bool LoadConfig(StreamReader *st, Config *out_config)
 {
     Config config;
 
-    const char *config_filename = NormalizePath(st->GetFileName(), GetWorkingDirectory(), &config.str_alloc).ptr;
-    Span<const char> root_directory = GetPathDirectory(config_filename);
-    Span<const char> data_directory = root_directory;
-
-    IniParser ini(st);
-    ini.PushLogFilter();
-    K_DEFER { PopLogFilter(); };
-
+    Span<const char> data_directory = {};
     bool valid = true;
+
+    // Read environment config
     {
-        IniProperty prop;
-        while (ini.Next(&prop)) {
+        if (const char *str = GetEnv("TITLE")) {
+            config.title = DuplicateString(str, &config.str_alloc).ptr;
+        }
+        if (const char *str = GetEnv("URL")) {
+            config.url = DuplicateString(str, &config.str_alloc).ptr;
+        }
+
+        if (const char *str = GetEnv("DROP_QUOTA")) {
+            valid &= ParseSize(str, &config.quota);
+        }
+        if (const char *str = GetEnv("DROP_DELAYS")) {
+            valid &= ParseExpirationDelays(str, &config.durations, &config.default_duration, &config.allow_infinite);
+        }
+
+        if (const char *str = GetEnv("AUTH_INTERNAL")) {
+            valid &= ParseBool(str, &config.internal_auth);
+        }
+        if (const char *str = GetEnv("AUTH_REGISTER")) {
+            valid &= ParseBool(str, &config.allow_register);
+        }
+        if (GetEnv("SSO_TITLE")) {
+            OidcConfig *oidc = config.oidc_configs.AppendDefault();
+            valid &= oidc->provider.Complete();
+        }
+
+        valid &= config.s3.Complete(false);
+        valid &= config.smtp.Complete();
+
+        if (const char *str = GetEnv("HTTP_PORT")) {
+            valid &= config.http.SetPortOrPath(str);
+        }
+    }
+
+    if (st) {
+        const char *config_filename = NormalizePath(st->GetFileName(), GetWorkingDirectory(), &config.str_alloc).ptr;
+        Span<const char> root_directory = GetPathDirectory(config_filename);
+
+        data_directory = root_directory;
+
+        IniParser ini(st);
+        ini.PushLogFilter();
+        K_DEFER { PopLogFilter(); };
+
+        for (IniProperty prop; ini.Next(&prop); ) {
             if (prop.section == "General") {
                 if (prop.key == "Title") {
                     config.title = DuplicateString(prop.value, &config.str_alloc).ptr;
@@ -130,54 +195,7 @@ bool LoadConfig(StreamReader *st, Config *out_config)
                         valid = false;
                     }
                 } else if (prop.key == "ExpirationDelays") {
-                    config.durations.Clear();
-                    config.default_duration = 0;
-                    config.allow_infinite = false;
-
-                    Span<const char> first_duration = {};
-
-                    while (prop.value.len) {
-                        Span<const char> part = TrimStr(SplitStrAny(prop.value, " ,", &prop.value));
-
-                        if (TestStrI(part, "Never")) {
-                            config.allow_infinite = true;
-                        } else if (part.len) {
-                            int64_t duration = 0;
-                            bool set_default = false;
-
-                            if (part[0] == '*') {
-                                part = part.Take(1, part.len - 1);
-                                set_default = true;
-                            }
-
-                            if (ParseDuration(part, &duration)) {
-                                config.durations.Append(duration);
-
-                                if (set_default) {
-                                    if (!config.default_duration) {
-                                        config.default_duration = duration;
-                                    } else {
-                                        LogError("Cannot set default delay multiple times");
-                                        valid = false;
-                                    }
-                                }
-                            } else {
-                                valid = false;
-                            }
-
-                            if (!first_duration.len) {
-                                first_duration = part;
-                            }
-                        }
-                    }
-
-                    if (!config.durations.len) {
-                        LogError("Empty/invalid value for delays");
-                        valid = false;
-                    } else if (!config.default_duration) {
-                        LogWarning("Missing default expiration delay, set to first choice");
-                        config.default_duration = config.durations[0];
-                    }
+                    valid &= ParseExpirationDelays(prop.value, &config.durations, &config.default_duration, &config.allow_infinite);
                 } else {
                     LogError("Unknown attribute '%1'", prop.key);
                     valid = false;
@@ -234,29 +252,26 @@ bool LoadConfig(StreamReader *st, Config *out_config)
                 valid = false;
             }
         }
+        if (!ini.IsValid())
+            return false;
     }
-    if (!ini.IsValid() || !valid)
+
+    if (!valid)
         return false;
 
     // Default values
     {
-#if defined(DEFAULT_DIRECTORY)
-        Span<const char> default_dir = K_STRINGIFY(DEFAULT_DIRECTORY);
-#else
-        Span<const char> default_dir = data_directory;
-#endif
-
         if (!config.database_filename) {
-            const char *compat_filename = NormalizePath("redropp.db", default_dir, &config.str_alloc).ptr;
+            const char *compat_filename = NormalizePath("redropp.db", data_directory, &config.str_alloc).ptr;
 
             if (TestFile(compat_filename)) {
                 config.database_filename = compat_filename;
             } else {
-                config.database_filename = NormalizePath("data/redropp.db", default_dir, &config.str_alloc).ptr;
+                config.database_filename = NormalizePath("data/redropp.db", data_directory, &config.str_alloc).ptr;
             }
         }
         if (!config.tmp_directory) {
-            config.tmp_directory = NormalizePath("tmp", default_dir, &config.str_alloc).ptr;
+            config.tmp_directory = NormalizePath("tmp", data_directory, &config.str_alloc).ptr;
         }
 
         if (!config.durations.len) {
@@ -268,6 +283,8 @@ bool LoadConfig(StreamReader *st, Config *out_config)
 
     // Finalize OIDC providers
     {
+        bool valid = true;
+
         for (OidcConfig &oidc: config.oidc_configs) {
             valid &= oidc.provider.Discover();
         }
@@ -283,12 +300,6 @@ bool LoadConfig(StreamReader *st, Config *out_config)
 
     std::swap(*out_config, config);
     return true;
-}
-
-bool LoadConfig(const char *filename, Config *out_config)
-{
-    StreamReader st(filename);
-    return LoadConfig(&st, out_config);
 }
 
 }
