@@ -503,6 +503,7 @@ class RecordExporter {
 
     struct Row {
         const char *root_ulid;
+        const char *parent_ulid;
         const char *ulid;
         const char *hid;
         Size idx;
@@ -561,16 +562,16 @@ class RecordExporter {
 public:
     RecordExporter(InstanceHolder *instance);
 
-    bool Parse(const char *root_ulid, const char *ulid, const char *hid,
-               const char *form, const char *mtime, Span<const char> data);
+    bool Parse(const char *root_ulid, const char *parent_ulid, const char *ulid, const char *hid,
+               const char *mtime, const char *form, Span<const char> data);
     bool Export(const char *filename);
 
 private:
-    bool ParseObject(const char *root_ulid, const char *form, const char *ulid, const char *hid,
-                     const char *mtime, const char *prefix, int depth);
+    bool ParseObject(const char *root_ulid, const char *parent_ulid, const char *ulid, const char *hid,
+                     const char *mtime, const char *form, const char *prefix, int depth);
 
     Table *GetTable(const char *name, bool root);
-    Row *GetRow(Table *table, const char *root_ulid, const char *ulid, const char *hid, const char *mtime);
+    Row *GetRow(Table *table, const char *root_ulid, const char *parent_ulid, const char *ulid, const char *hid, const char *mtime);
     Column *GetColumn(Table *table, const char *prefix, const char *key, const char *suffix);
 };
 
@@ -607,15 +608,15 @@ static void EncodeSqlName(const char *name, HeapArray<char> *out_buf)
     out_buf->ptr[out_buf->len] = 0;
 }
 
-bool RecordExporter::Parse(const char *root_ulid, const char *ulid, const char *hid, const char *form,
-                           const char *mtime, Span<const char> data)
+bool RecordExporter::Parse(const char *root_ulid, const char *parent_ulid, const char *ulid, const char *hid,
+                           const char *mtime, const char *form, Span<const char> data)
 {
     StreamReader reader(MakeSpan((const uint8_t *)data.ptr, data.len), "<json>");
     json_Parser json(&reader, &str_alloc);
 
     this->json = &json;
 
-    if (!ParseObject(root_ulid, form, ulid, hid, mtime, nullptr, 0))
+    if (!ParseObject(root_ulid, parent_ulid, ulid, hid, mtime, form, nullptr, 0))
         return false;
 
     return true;
@@ -673,7 +674,7 @@ bool RecordExporter::Export(const char *filename)
         for (const Table &table: tables) {
             HeapArray<char> sql(&str_alloc);
 
-            Fmt(&sql, "CREATE TABLE "); EncodeSqlName(table.name, &sql); Fmt(&sql, " (__ROOT TEXT, __ULID TEXT,");
+            Fmt(&sql, "CREATE TABLE "); EncodeSqlName(table.name, &sql); Fmt(&sql, " (__ROOT TEXT, __ULID TEXT, __PARENT TEXT,");
             if (table.root) {
                 Fmt(&sql, "__HID, ");
             }
@@ -701,12 +702,12 @@ bool RecordExporter::Export(const char *filename)
 
             Fmt(&sql, "INSERT INTO "); EncodeSqlName(table.name, &sql); Fmt(&sql, " VALUES (?1, ?2");
             if (table.root) {
-                Fmt(&sql, ", ?3, ?4, ?5");
+                Fmt(&sql, ", ?3, ?4, ?5, ?6");
             } else {
-                Fmt(&sql, ", ?3, ?4");
+                Fmt(&sql, ", ?3, ?4, ?5");
             }
             for (Size i = 0; i < table.ordered_columns.len; i++) {
-                Fmt(&sql, ", ?%1", i + 5 + table.root);
+                Fmt(&sql, ", ?%1", i + 6 + table.root);
             }
             Fmt(&sql, ")");
 
@@ -719,14 +720,17 @@ bool RecordExporter::Export(const char *filename)
 
                 sqlite3_bind_text(stmt, 1, table.rows[i].root_ulid, -1, SQLITE_STATIC);
                 sqlite3_bind_text(stmt, 2, table.rows[i].ulid, -1, SQLITE_STATIC);
-                if (table.root) {
-                    sqlite3_bind_text(stmt, 3, table.rows[i].hid, -1, SQLITE_STATIC);
+                if (table.rows[i].parent_ulid) {
+                    sqlite3_bind_text(stmt, 3, table.rows[i].parent_ulid, -1, SQLITE_STATIC);
                 }
-                sqlite3_bind_text(stmt, 3 + table.root, table.rows[i].ctime, -1, SQLITE_STATIC);
-                sqlite3_bind_text(stmt, 4 + table.root, table.rows[i].mtime, -1, SQLITE_STATIC);
+                if (table.root) {
+                    sqlite3_bind_text(stmt, 4, table.rows[i].hid, -1, SQLITE_STATIC);
+                }
+                sqlite3_bind_text(stmt, 4 + table.root, table.rows[i].ctime, -1, SQLITE_STATIC);
+                sqlite3_bind_text(stmt, 5 + table.root, table.rows[i].mtime, -1, SQLITE_STATIC);
                 for (Size j = 0; j < table.ordered_columns.len; j++) {
                     const Column *col = table.ordered_columns[j];
-                    sqlite3_bind_text(stmt, (int)j + 5 + table.root, col->values[i], -1, SQLITE_STATIC);
+                    sqlite3_bind_text(stmt, (int)j + 6 + table.root, col->values[i], -1, SQLITE_STATIC);
                 }
 
                 if (!stmt.Run())
@@ -759,12 +763,12 @@ bool RecordExporter::Export(const char *filename)
     return true;
 }
 
-bool RecordExporter::ParseObject(const char *root_ulid, const char *form, const char *ulid,
-                                 const char *hid, const char *mtime, const char *prefix, int depth)
+bool RecordExporter::ParseObject(const char *root_ulid, const char *parent_ulid, const char *ulid,
+                                 const char *hid, const char *mtime, const char *form, const char *prefix, int depth)
 {
     bool root = TestStr(root_ulid, ulid) && !prefix;
     Table *table = GetTable(form, root);
-    Row *row = GetRow(table, root_ulid, ulid, hid, mtime);
+    Row *row = GetRow(table, root_ulid, parent_ulid, ulid, hid, mtime);
 
     for (json->ParseObject(); json->InObject(); ) {
         Span<const char> key = json->ParseKey();
@@ -884,15 +888,15 @@ bool RecordExporter::ParseObject(const char *root_ulid, const char *form, const 
                     const char *form2 = Fmt(&str_alloc, "%1.%2", form, prefix).ptr;
                     const char *ulid2 = Fmt(&str_alloc, "%1.%2", ulid, key).ptr;
 
-                    if (!ParseObject(root_ulid, form2, ulid2, nullptr, mtime, nullptr, depth + 1))
+                    if (!ParseObject(root_ulid, ulid, ulid2, nullptr, mtime, form2, nullptr, depth + 1))
                         return false;
                 } else if (prefix) {
                     const char *prefix2 = Fmt(&str_alloc, "%1.%2", prefix, key).ptr;
 
-                    if (!ParseObject(root_ulid, form, ulid, nullptr, mtime, prefix2, depth + 1))
+                    if (!ParseObject(root_ulid, parent_ulid, ulid, nullptr, mtime, form, prefix2, depth + 1))
                         return false;
                 } else {
-                    if (!ParseObject(root_ulid, form, ulid, nullptr, mtime, key.ptr, depth + 1))
+                    if (!ParseObject(root_ulid, parent_ulid, ulid, nullptr, mtime, form, key.ptr, depth + 1))
                         return false;
                 }
             } break;
@@ -1014,7 +1018,8 @@ RecordExporter::Table *RecordExporter::GetTable(const char *name, bool root)
     return table;
 }
 
-RecordExporter::Row *RecordExporter::GetRow(RecordExporter::Table *table, const char *root_ulid,
+RecordExporter::Row *RecordExporter::GetRow(RecordExporter::Table *table,
+                                            const char *root_ulid, const char *parent_ulid,
                                             const char *ulid, const char *hid, const char *mtime)
 {
     Row *row = table->rows_map.FindValue(ulid, nullptr);
@@ -1023,6 +1028,7 @@ RecordExporter::Row *RecordExporter::GetRow(RecordExporter::Table *table, const 
         row = table->rows.AppendDefault();
 
         row->root_ulid = DuplicateString(root_ulid, &str_alloc).ptr;
+        row->parent_ulid = parent_ulid ? DuplicateString(parent_ulid, &str_alloc).ptr : nullptr;
         row->ulid = DuplicateString(ulid, &str_alloc).ptr;
         row->hid = hid && hid[0] ? DuplicateString(hid, &str_alloc).ptr : nullptr;
         row->idx = table->rows.Count() - 1;
@@ -1057,7 +1063,8 @@ void HandleLegacyExport(http_IO *io, InstanceHolder *instance)
     }
 
     sq_Statement stmt;
-    if (!instance->db->Prepare(R"(SELECT e.root_ulid, e.ulid, e.hid, lower(e.form), f.type, f.mtime, f.json FROM rec_entries e
+    if (!instance->db->Prepare(R"(SELECT e.root_ulid, e.parent_ulid, e.ulid, e.hid,
+                                         lower(e.form), f.type, f.mtime, f.json FROM rec_entries e
                                   INNER JOIN rec_entries r ON (r.ulid = e.root_ulid)
                                   INNER JOIN rec_fragments f ON (f.ulid = e.ulid)
                                   WHERE r.deleted = 0
@@ -1074,16 +1081,18 @@ void HandleLegacyExport(http_IO *io, InstanceHolder *instance)
 
     while (stmt.Step()) {
         const char *root_ulid = (const char *)sqlite3_column_text(stmt, 0);
-        const char *ulid = (const char *)sqlite3_column_text(stmt, 1);
-        const char *hid = (const char *)sqlite3_column_text(stmt, 2);
-        const char *form = (const char *)sqlite3_column_text(stmt, 3);
-        const char *type = (const char *)sqlite3_column_text(stmt, 4);
-        const char *mtime = (const char *)sqlite3_column_text(stmt, 5);
+        const char *parent_ulid = (const char *)sqlite3_column_text(stmt, 1);
+        const char *ulid = (const char *)sqlite3_column_text(stmt, 2);
+        const char *hid = (const char *)sqlite3_column_text(stmt, 3);
+        const char *form = (const char *)sqlite3_column_text(stmt, 4);
+        const char *type = (const char *)sqlite3_column_text(stmt, 5);
+        const char *mtime = (const char *)sqlite3_column_text(stmt, 6);
 
         if (TestStr(type, "save")) {
-            Span<const char> data = MakeSpan((const char *)sqlite3_column_blob(stmt, 6),
-                                             sqlite3_column_bytes(stmt, 6));
-            if (!exporter.Parse(root_ulid, ulid, hid, form, mtime, data))
+            Span<const char> data = MakeSpan((const char *)sqlite3_column_blob(stmt, 7),
+                                             sqlite3_column_bytes(stmt, 7));
+
+            if (!exporter.Parse(root_ulid, parent_ulid, ulid, hid, mtime, form, data))
                 return;
         }
     }
