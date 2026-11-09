@@ -2,6 +2,15 @@
 
 ## Alpha versions
 
+### Redropp 0.9.17
+
+*Released on 2026-11-09*
+
+- Improve configuration through environment variables
+- Change default list of expiration delays (*1, 3, 7, 30 and 90 days*)
+- Improve OIDC conformance and security
+- Replace mbedTLS dependency with AWS-LC for S3 (and SMTP) connection
+
 ### Redropp 0.9.16
 
 *Released on 2026-10-30*
