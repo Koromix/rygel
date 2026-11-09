@@ -113,10 +113,10 @@ static bool ParseHostString(Span<const char> str, Allocator *alloc, HostSpecifie
     } else if (ParseArchitecture(platform, &out_spec->architecture)) {
         out_spec->platform = NativePlatform;
 
-        platform = "";
-        architecture = "";
         ld = cc;
         cc = architecture;
+        platform = "";
+        architecture = "";
     }
 
     if (platform.len) {
