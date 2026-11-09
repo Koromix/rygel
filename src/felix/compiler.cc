@@ -632,6 +632,12 @@ public:
         Span<const char> dest_directory = GetPathDirectory(dest_filename);
         Fmt(&buf, " \"-I%1\"", dest_directory);
 
+        // Embed directory
+        if (clang_ver >= 190000) {
+            const char *cwd = GetWorkingDirectory();
+            Fmt(&buf, " \"--embed-dir=%1\"", cwd);
+        }
+
         switch (architecture) {
             case HostArchitecture::x86_64: {
                 Fmt(&buf, " -march=x86-64-v2");
@@ -1252,7 +1258,7 @@ public:
     {
         K_ASSERT(alloc);
 
-        EmbedMode mode = (gcc_ver >= 150000 && platform == NativePlatform && architecture == NativeArchitecture) ? EmbedMode::Embed : EmbedMode::Literals;
+        EmbedMode mode = (gcc_ver >= 150000) ? EmbedMode::Embed : EmbedMode::Literals;
         K::MakeEmbedCommand(embed_filenames, mode, embed_options, features, dest_filename, alloc, out_cmd);
     }
 
@@ -1363,6 +1369,12 @@ public:
         }
         if (features & (int)CompileFeature::HotAssets) {
             Fmt(&buf, " -DFELIX_HOT_ASSETS");
+        }
+
+        // Embed directory
+        if (gcc_ver >= 150000) {
+            const char *cwd = GetWorkingDirectory();
+            Fmt(&buf, " \"--embed-dir=%1\"", cwd);
         }
 
         // Include build directory (for generated files)
