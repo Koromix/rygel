@@ -392,3 +392,8 @@ EXPORT void WriteSocket(int fd, const void *buf, int len)
 }
 
 #endif
+
+EXPORT size_t StringLength(const char *str)
+{
+    return strlen(str);
+}

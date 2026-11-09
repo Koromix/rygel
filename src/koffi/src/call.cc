@@ -1208,31 +1208,6 @@ void *CallData::ReserveTrampoline(const FunctionInfo *proto, Napi::Function func
     return GetTrampolinePointer(idx);
 }
 
-static void ReclaimTransient(InstanceData *instance, TransientAllocator *transient)
-{
-    transient->heap->ReleaseAll();
-
-    if (transient->trampolines.len) {
-        std::lock_guard<std::mutex> lock(shared.mutex);
-
-        for (Size i = transient->trampolines.len - 1; i >= 0; i--) {
-            int16_t idx = transient->trampolines[i];
-            TrampolineInfo *trampoline = &shared.trampolines[idx];
-
-            K_ASSERT(trampoline->instance == instance);
-            K_ASSERT(trampoline->func);
-
-            trampoline->state = 0;
-            node_api_delete_reference(instance->env, trampoline->func);
-            trampoline->func = nullptr;
-
-            shared.available.Append(idx);
-        }
-
-        transient->trampolines.len = 0;
-    }
-}
-
 TransientAllocator *CallData::GetTransient()
 {
     if (!transient) {
@@ -1244,7 +1219,7 @@ TransientAllocator *CallData::GetTransient()
             // pending finalizer for the allocations we're about to make.
 
             if (stack.end == instance->sync_memory.stack0.end) {
-                ReclaimTransient(instance, transient);
+                transient->Reclaim();
             }
         } else {
             // Without node_api_post_finalizer, we can't defer allocator release (not this way anyway)... but:
@@ -1257,7 +1232,7 @@ TransientAllocator *CallData::GetTransient()
                 node_api_post_finalizer((napi_env)env, [](napi_env env, void *data, void *) {
                     InstanceData *instance = (InstanceData *)data;
 
-                    ReclaimTransient(instance, &instance->sync_transient);
+                    instance->sync_transient.Reclaim();
                     instance->pending_reclaim = false;
                 }, instance, nullptr);
             }
@@ -1675,7 +1650,7 @@ class AsyncCall {
 
 public:
     AsyncCall(Napi::Env env, InstanceData *instance, InstanceMemory *mem, const FunctionInfo *func)
-        : env(env), func(func->Ref()), mem(mem), call(env, instance, mem, &transient) {}
+        : env(env), func(func->Ref()), mem(mem), call(env, instance, mem, &transient), transient(instance) {}
     ~AsyncCall();
 
     bool Prepare(napi_value *args);
@@ -1691,7 +1666,7 @@ public:
 
 AsyncCall::~AsyncCall()
 {
-    ReclaimTransient(call.instance, &transient);
+    transient.Reclaim();
     ReleaseAsyncMemory(call.instance, mem);
     func->Unref();
 
@@ -1914,7 +1889,7 @@ static void PerformAsyncRelay(napi_env, napi_value, void *, void *udata)
     CallData *call = ctx->call;
 
     call->Relay(ctx->idx, ctx->base);
-    ReclaimTransient(call->instance, call->transient);
+    call->transient->Reclaim();
 
     // We're done!
     std::lock_guard<std::mutex> lock(ctx->mutex);
@@ -2120,7 +2095,7 @@ extern "C" void RelayCallback(Size idx, uint8_t *sp)
     K_DEFER { ReleaseAsyncMemory(instance, mem); };
 
     if (std::this_thread::get_id() == instance->main_thread_id) {
-        TransientAllocator transient;
+        TransientAllocator transient(instance);
         CallData call(env, instance, mem, &transient);
 
         napi_handle_scope scope;
@@ -2128,9 +2103,9 @@ extern "C" void RelayCallback(Size idx, uint8_t *sp)
         K_DEFER { napi_close_handle_scope(env, scope); };
 
         call.Relay(idx, sp);
-        ReclaimTransient(instance, &transient);
+        transient.Reclaim();
     } else {
-        TransientAllocator transient;
+        TransientAllocator transient(instance);
         CallData call(env, instance, mem, &transient);
 
         call.RelayAsync(idx, sp);
@@ -2178,8 +2153,8 @@ bool Encode(InstanceData *instance, uint8_t *origin, napi_value value, const Typ
     Napi::Env env = instance->env;
 
     InstanceMemory mem;
-    TransientAllocator transient;
-    K_DEFER { ReclaimTransient(instance, &transient); };
+    TransientAllocator transient(instance);
+    K_DEFER { transient.Reclaim(); };
 
     CallData call(env, instance, &mem, &transient);
 

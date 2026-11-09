@@ -92,6 +92,7 @@ async function test() {
     const SocketPair = lib.func('void SocketPair(_Out_ int *pfd)');
     const ReadSocket = lib.func('int ReadSocket(int fd, _Out_ void *buf, int size)');
     const WriteSocket = lib.func('void WriteSocket(int fd, const void *buf, int len)');
+    const StringLength = lib.func('size_t StringLength(const char *str)');
 
     free_ptr = CallFree;
 
@@ -377,6 +378,9 @@ async function test() {
         handle.stop();
     }
 
-    // Count registered callbacks to make register/unregister works
+    // Count registered callbacks to make sure register/unregister works.
+    // Because trampoline reclaim might be deferred, we want to trigger it first.
+    // A call that requires extra allocation (big string) does the job!
+    assert.equal(StringLength('HelloWorld'.repeat(200000)), 2000000);
     assert.equal(koffi.stats().callbacks, 3);
 }

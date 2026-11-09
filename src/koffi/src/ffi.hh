@@ -272,8 +272,12 @@ struct InstanceMemory {
 };
 
 struct TransientAllocator {
+    InstanceData *instance;
+
     NoDestroy<HeapChain> heap;
     LocalArray<int16_t, 64> trampolines;
+
+    TransientAllocator(InstanceData *instance) : instance(instance) {}
 
 #if defined(K_DEBUG)
     ~TransientAllocator()
@@ -282,6 +286,8 @@ struct TransientAllocator {
         K_ASSERT(!trampolines.len);
     }
 #endif
+
+    void Reclaim();
 };
 
 struct InstanceData {
@@ -319,7 +325,7 @@ struct InstanceData {
 
     CallData *sync_call = nullptr;
 
-    TransientAllocator sync_transient;
+    TransientAllocator sync_transient { this };
     bool pending_reclaim = false;
 
 #if defined(_WIN32)

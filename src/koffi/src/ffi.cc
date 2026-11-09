@@ -2586,6 +2586,31 @@ void InstanceMemory::Release()
     stack0 = {};
 }
 
+void TransientAllocator::Reclaim()
+{
+    heap->ReleaseAll();
+
+    if (trampolines.len) {
+        std::lock_guard<std::mutex> lock(shared.mutex);
+
+        for (Size i = trampolines.len - 1; i >= 0; i--) {
+            int16_t idx = trampolines[i];
+            TrampolineInfo *trampoline = &shared.trampolines[idx];
+
+            K_ASSERT(trampoline->instance == instance);
+            K_ASSERT(trampoline->func);
+
+            trampoline->state = 0;
+            node_api_delete_reference(instance->env, trampoline->func);
+            trampoline->func = nullptr;
+
+            shared.available.Append(idx);
+        }
+
+        trampolines.len = 0;
+    }
+}
+
 static void RegisterPrimitiveType(InstanceData *instance, Napi::Object map, std::initializer_list<const char *> names,
                                   PrimitiveKind primitive, int32_t size, int16_t align, const char *ref = nullptr)
 {
@@ -3045,6 +3070,10 @@ void ReleaseInstance(InstanceData *instance, bool reusable)
     // Clear variadic cache
     delete instance->variadic_func;
     instance->variadic_func = nullptr;
+
+    // Clean-up leftover sync allocations
+    instance->sync_transient.Reclaim();
+    instance->pending_reclaim = false;
 
     // Clean-up leftover trampoline references
     {
