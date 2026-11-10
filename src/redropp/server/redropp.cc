@@ -724,6 +724,13 @@ For help about those commands, type: %!..+%1 command --help%!0)"),
         }
     }
 
+#if defined(DEFAULT_CONFIG)
+    if (const char *filename = K_STRINGIFY(DEFAULT_CONFIG); !config_filename && TestFile(filename)) {
+        K_ASSERT(PathIsAbsolute(filename));
+        config_filename = filename;
+    }
+#endif
+
     // Load config
     if (config_filename) {
         StreamReader st(config_filename);

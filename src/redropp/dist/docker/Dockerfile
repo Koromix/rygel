@@ -3,7 +3,7 @@ ADD repo.tar repo
 RUN repo/bootstrap.sh
 COPY versions.txt repo/versions.txt
 ARG TARGETARCH
-RUN CPPFLAGS="-DDEFAULT_PORT=80" repo/felix -C repo/FelixBuild.ini -ve -pParanoid --version_file repo/versions.txt --host=$TARGETARCH:clang-18:lld-18 redropp
+RUN CPPFLAGS="-DDEFAULT_CONFIG=/config/redropp.ini -DDEFAULT_PORT=80" repo/felix -C repo/FelixBuild.ini -ve -pParanoid --version_file repo/versions.txt --host=$TARGETARCH:clang-18:lld-18 redropp
 COPY isolate.py isolate.py
 RUN ./isolate.py -p /app -O app repo/bin/Paranoid/redropp
 RUN mkdir empty
