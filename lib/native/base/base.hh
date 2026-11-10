@@ -802,7 +802,7 @@ public:
         friend bool operator==(const Iterator &a, const Iterator &b)
         {
             K_ASSERT(a.bitset == b.bitset);
-            return a.offset == b.offset && a.ctz == b.ctz;
+            return a.offset == b.offset && a.bits == b.bits;
         }
         friend bool operator!=(const Iterator &a, const Iterator &b) { return !(a == b); }
 
