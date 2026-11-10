@@ -15,7 +15,8 @@ const { spawnSync } = require('node:child_process');
 const path = require('node:path');
 const { performance } = require('node:perf_hooks');
 
-const TIME = 8000;
+const ITERATIONS = 8;
+const ITERATION_TIME = 250;
 
 main();
 
@@ -30,17 +31,32 @@ function main() {
         'ffi-napi': ffi_napi ? time => runFfiNapi(time) : undefined
     };
 
-    let perf = Object.fromEntries(Object.keys(tests).map(key => {
+    let keys = Object.keys(tests).filter(key => {
         let [engine] = key.split(' ');
-        let func = tests[key];
 
-        if (func == null)
-            return [key, undefined];
+        if (tests[key] == null)
+            return false;
         if (args.length && !args.includes(engine))
-            return [key, undefined];
+            return false;
 
-        return [key, func(TIME)];
-    }));
+        return true;
+    });
+
+    let perf = Object.fromEntries(keys.map(key => [key, { iterations: 0, time: 0 }]));
+
+    for (let i = 0; i < ITERATIONS; i++) {
+        for (let key of shuffle(keys)) {
+            let func = tests[key];
+            let result = func(ITERATION_TIME);
+
+            // Ignore warm-up results
+            if (!i)
+                continue;
+
+            perf[key].iterations += result.iterations;
+            perf[key].time += result.time;
+        }
+    }
 
     console.log(JSON.stringify(perf, null, 4));
 }
@@ -76,7 +92,7 @@ function runNapi(time) {
     while (performance.now() - start < time) {
         r.ImageClearBackground(img, { r: 0, g: 0, b: 0, a: 255 });
 
-        for (let i = 0; i < 3600; i++) {
+        for (let i = 0; i < 360; i++) {
             let text = 'Hello World!';
             let text_width = r.MeasureTextEx(font, text, 10, 1).x;
 
@@ -95,7 +111,7 @@ function runNapi(time) {
             r.ImageDrawTextEx(img, font, text, pos, 10, 1, color);
         }
 
-        iterations += 3600;
+        iterations += 360;
     }
 
     time = performance.now() - start;
@@ -103,6 +119,8 @@ function runNapi(time) {
 }
 
 function runKoffi(koffi, time) {
+    koffi.reset();
+
     const Color = koffi.struct('Color', {
         r: 'uchar',
         g: 'uchar',
@@ -180,7 +198,7 @@ function runKoffi(koffi, time) {
     while (performance.now() - start < time) {
         ImageClearBackground(img, { r: 0, g: 0, b: 0, a: 255 });
 
-        for (let i = 0; i < 3600; i++) {
+        for (let i = 0; i < 360; i++) {
             let text = 'Hello World!';
             let text_width = MeasureTextEx(font, text, 10, 1).x;
 
@@ -199,7 +217,7 @@ function runKoffi(koffi, time) {
             ImageDrawTextEx(img, font, text, pos, 10, 1, color);
         }
 
-        iterations += 3600;
+        iterations += 360;
     }
 
     time = performance.now() - start;
@@ -299,7 +317,7 @@ function runFfiNapi(time) {
     while (performance.now() - start < time) {
         r.ImageClearBackground(imgp, new Color({ r: 0, g: 0, b: 0, a: 255 }));
 
-        for (let i = 0; i < 3600; i++) {
+        for (let i = 0; i < 360; i++) {
             let text = 'Hello World!';
             let text_width = r.MeasureTextEx(font, text, 10, 1).x;
 
@@ -318,7 +336,7 @@ function runFfiNapi(time) {
             r.ImageDrawTextEx(imgp, font, text, pos, 10, 1, color);
         }
 
-        iterations += 3600;
+        iterations += 360;
     }
 
     time = performance.now() - start;
@@ -334,4 +352,28 @@ function optional(mod) {
     } catch (err) {
         return null;
     }
+}
+
+function shuffle(array) {
+    let copy = array.slice();
+    let shuffled = [];
+
+    while (copy.length) {
+        let idx = randInt(0, copy.length);
+
+        shuffled.push(copy[idx]);
+
+        copy[idx] = copy[copy.length - 1];
+        copy.length--;
+    }
+
+    return shuffled;
+}
+
+function randInt(min, max) {
+    min = Math.ceil(min);
+    max = Math.floor(max);
+
+    let rnd = Math.floor(Math.random() * (max - min)) + min;
+    return rnd;
 }

@@ -14,7 +14,8 @@ const ref = optional('@napi-ffi/ref-napi');
 const struct = optional('@napi-ffi/ref-struct-di')?.(ref);
 const { performance } = require('perf_hooks');
 
-const TIME = 8000;
+const ITERATIONS = 8;
+const ITERATION_TIME = 250;
 
 const STRINGS = [
     '424242',
@@ -37,17 +38,32 @@ function main() {
         'ffi-napi': ffi_napi ? time => runFfiNapi(time) : undefined
     };
 
-    let perf = Object.fromEntries(Object.keys(tests).map(key => {
+    let keys = Object.keys(tests).filter(key => {
         let [engine] = key.split(' ');
-        let func = tests[key];
 
-        if (func == null)
-            return [key, undefined];
+        if (tests[key] == null)
+            return false;
         if (args.length && !args.includes(engine))
-            return [key, undefined];
+            return false;
 
-        return [key, func(TIME)];
-    }));
+        return true;
+    });
+
+    let perf = Object.fromEntries(keys.map(key => [key, { iterations: 0, time: 0 }]));
+
+    for (let i = 0; i < ITERATIONS; i++) {
+        for (let key of shuffle(keys)) {
+            let func = tests[key];
+            let result = func(ITERATION_TIME);
+
+            // Ignore warm-up results
+            if (!i)
+                continue;
+
+            perf[key].iterations += result.iterations;
+            perf[key].time += result.time;
+        }
+    }
 
     console.log(JSON.stringify(perf, null, 4));
 }
@@ -57,10 +73,10 @@ function runNapi(time) {
     let iterations = 0;
 
     while (performance.now() - start < time) {
-        for (let i = 0; i < 1000000; i++)
+        for (let i = 0; i < 100000; i++)
             napi.atoi(STRINGS[i % STRINGS.length]);
 
-        iterations += 1000000;
+        iterations += 100000;
     }
 
     time = performance.now() - start;
@@ -76,10 +92,10 @@ function runKoffi(koffi, time) {
     let iterations = 0;
 
     while (performance.now() - start < time) {
-        for (let i = 0; i < 1000000; i++)
+        for (let i = 0; i < 100000; i++)
             atoi(STRINGS[i % STRINGS.length]);
 
-        iterations += 1000000;
+        iterations += 100000;
     }
 
     time = performance.now() - start;
@@ -95,10 +111,10 @@ function runNodeCTypes(time) {
     let iterations = 0;
 
     while (performance.now() - start < time) {
-        for (let i = 0; i < 1000000; i++)
+        for (let i = 0; i < 100000; i++)
             atoi(STRINGS[i % STRINGS.length]);
 
-        iterations += 1000000;
+        iterations += 100000;
     }
 
     time = performance.now() - start;
@@ -123,10 +139,10 @@ function runFfiRs(time) {
     let iterations = 0;
 
     while (performance.now() - start < time) {
-        for (let i = 0; i < 1000000; i++)
+        for (let i = 0; i < 100000; i++)
             lib.atoi([STRINGS[i % STRINGS.length]]);
 
-        iterations += 1000000;
+        iterations += 100000;
     }
 
     time = performance.now() - start;
@@ -145,10 +161,10 @@ function runNodeFfi(time) {
     let iterations = 0;
 
     while (performance.now() - start < time) {
-        for (let i = 0; i < 1000000; i++)
+        for (let i = 0; i < 100000; i++)
             atoi(STRINGS[i % STRINGS.length]);
 
-        iterations += 1000000;
+        iterations += 100000;
     }
 
     time = performance.now() - start;
@@ -164,10 +180,10 @@ function runFfiNapi(time) {
     let iterations = 0;
 
     while (performance.now() - start < time) {
-        for (let i = 0; i < 1000000; i++)
+        for (let i = 0; i < 100000; i++)
             lib.atoi(STRINGS[i % STRINGS.length]);
 
-        iterations += 1000000;
+        iterations += 100000;
     }
 
     time = performance.now() - start;
@@ -183,4 +199,28 @@ function optional(mod) {
     } catch (err) {
         return null;
     }
+}
+
+function shuffle(array) {
+    let copy = array.slice();
+    let shuffled = [];
+
+    while (copy.length) {
+        let idx = randInt(0, copy.length);
+
+        shuffled.push(copy[idx]);
+
+        copy[idx] = copy[copy.length - 1];
+        copy.length--;
+    }
+
+    return shuffled;
+}
+
+function randInt(min, max) {
+    min = Math.ceil(min);
+    max = Math.floor(max);
+
+    let rnd = Math.floor(Math.random() * (max - min)) + min;
+    return rnd;
 }

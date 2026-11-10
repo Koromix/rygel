@@ -9,7 +9,8 @@ const ctypes = optional('node-ctypes');
 const ffi = optional('node:ffi');
 const { performance } = require('perf_hooks');
 
-const TIME = 8000;
+const ITERATIONS = 8;
+const ITERATION_TIME = 250;
 
 const RANDOM_INTS = Array.from({ length: 200 }, () => Math.floor(Math.random() * 1000) + 1);
 
@@ -29,17 +30,32 @@ function main() {
         'node:ffi': ffi ? time => runNodeFfi(time) : undefined
     };
 
-    let perf = Object.fromEntries(Object.keys(tests).map(key => {
+    let keys = Object.keys(tests).filter(key => {
         let [engine] = key.split(' ');
-        let func = tests[key];
 
-        if (func == null)
-            return [key, undefined];
+        if (tests[key] == null)
+            return false;
         if (args.length && !args.includes(engine))
-            return [key, undefined];
+            return false;
 
-        return [key, func(TIME)];
-    }));
+        return true;
+    });
+
+    let perf = Object.fromEntries(keys.map(key => [key, { iterations: 0, time: 0 }]));
+
+    for (let i = 0; i < ITERATIONS; i++) {
+        for (let key of shuffle(keys)) {
+            let func = tests[key];
+            let result = func(ITERATION_TIME);
+
+            // Ignore warm-up results
+            if (!i)
+                continue;
+
+            perf[key].iterations += result.iterations;
+            perf[key].time += result.time;
+        }
+    }
 
     console.log(JSON.stringify(perf, null, 4));
 }
@@ -56,13 +72,13 @@ function runNapi(time) {
     };
 
     while (performance.now() - start < time) {
-        for (let i = 0; i < 10000; i++) {
+        for (let i = 0; i < 1000; i++) {
             let array = new Int32Array(RANDOM_INTS);
             napi.qsort(array, array.length, array.BYTES_PER_ELEMENT, cmp);
             let sorted = Array.from(array);
         }
 
-        iterations += 10000;
+        iterations += 1000;
     }
 
     time = performance.now() - start;
@@ -89,14 +105,14 @@ function runKoffiArray(time) {
     let iterations = 0;
 
     while (performance.now() - start < time) {
-        for (let i = 0; i < 10000; i++) {
+        for (let i = 0; i < 1000; i++) {
             let array = RANDOM_INTS.slice();
             let cast = koffi.as(array, 'int *');
 
             qsort(cast, array.length, koffi.sizeof('int'), callback);
         }
 
-        iterations += 10000;
+        iterations += 1000;
     }
 
     koffi.unregister(callback);
@@ -125,13 +141,13 @@ function runKoffiBuffer(time) {
     let iterations = 0;
 
     while (performance.now() - start < time) {
-        for (let i = 0; i < 10000; i++) {
+        for (let i = 0; i < 1000; i++) {
             let array = new Int32Array(RANDOM_INTS);
             qsort(array, array.length, koffi.sizeof('int'), callback);
             let sorted = Array.from(array);
         }
 
-        iterations += 10000;
+        iterations += 1000;
     }
 
     koffi.unregister(callback);
@@ -158,13 +174,13 @@ function runNodeCTypes(time) {
     let iterations = 0;
 
     while (performance.now() - start < time) {
-        for (let i = 0; i < 10000; i++) {
+        for (let i = 0; i < 1000; i++) {
             let array = IntArray.create(RANDOM_INTS);
             qsort(ctypes.byref(array), RANDOM_INTS.length, ctypes.sizeof(ctypes.c_int32), callback.pointer);
             let sorted = Array.from({ length: RANDOM_INTS.length }, (_, i) => array[i]);
         }
 
-        iterations += 10000;
+        iterations += 1000;
     }
 
     callback.release();
@@ -195,13 +211,13 @@ function runNodeFfi(time) {
     while (performance.now() - start < time) {
         let items = BigInt(RANDOM_INTS.length);
 
-        for (let i = 0; i < 10000; i++) {
+        for (let i = 0; i < 1000; i++) {
             let array = new Int32Array(RANDOM_INTS);
             qsort(array, items, 4n, callback);
             let sorted = Array.from({ length: RANDOM_INTS.length }, (_, i) => array[i]);
         }
 
-        iterations += 10000;
+        iterations += 1000;
     }
 
     lib.unregisterCallback(callback);
@@ -219,4 +235,28 @@ function optional(mod) {
     } catch (err) {
         return null;
     }
+}
+
+function shuffle(array) {
+    let copy = array.slice();
+    let shuffled = [];
+
+    while (copy.length) {
+        let idx = randInt(0, copy.length);
+
+        shuffled.push(copy[idx]);
+
+        copy[idx] = copy[copy.length - 1];
+        copy.length--;
+    }
+
+    return shuffled;
+}
+
+function randInt(min, max) {
+    min = Math.ceil(min);
+    max = Math.floor(max);
+
+    let rnd = Math.floor(Math.random() * (max - min)) + min;
+    return rnd;
 }
