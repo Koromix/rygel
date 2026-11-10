@@ -1436,6 +1436,8 @@ http_RequestStatus http_IO::ParseRequest()
                     }
                 }
             }
+        } else if (StartsWith(key, "X-Forwarded-")) {
+            // Ignore and throw away
         } else if (key == "Transfer-Encoding") [[unlikely]] {
             SendAbort(501, "Requests with Transfer-Encoding are not supported");
             return http_RequestStatus::Shutdown;
