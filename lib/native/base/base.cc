@@ -10836,7 +10836,7 @@ Size ConsolePrompter::ReadBufferedEnum(Span<const PromptChoice> choices)
             return -1;
 
         if (c == '\n') {
-            Span<const char> end = TrimStr(SplitStrReverse(str, '\n'));
+            Span<const char> end = TrimStr(SplitStrReverse(str.As<const char>(), '\n'));
 
             if (end.len == 1) {
                 const auto it = std::find_if(choices.begin(), choices.end(),

@@ -2013,8 +2013,7 @@ static inline Span<const char> SplitStrAny(Span<const char> str, const char *spl
 static inline Span<const char> SplitStrAny(const char *str, const char *split_chars, const char **out_remainder = nullptr)
     { return SplitStrAny((char *)str, split_chars, (char **)out_remainder); }
 
-static inline Span<const char> SplitStrReverse(Span<const char> str, char split_char,
-                                               Span<const char> *out_remainder = nullptr)
+static inline Span<char> SplitStrReverse(Span<char> str, char split_char, Span<char> *out_remainder = nullptr)
 {
     Size remainder_len = str.len - 1;
     while (remainder_len >= 0) {
@@ -2032,12 +2031,12 @@ static inline Span<const char> SplitStrReverse(Span<const char> str, char split_
     }
     return str;
 }
-static inline Span<const char> SplitStrReverse(const char *str, char split_char,
-                                               Span<const char> *out_remainder = nullptr)
+static inline Span<const char> SplitStrReverse(Span<const char> str, char split_char, Span<const char> *out_remainder = nullptr)
+    { return SplitStrReverse(MakeSpan((char *)str.ptr, str.len), split_char, (Span<char> *)out_remainder); }
+static inline Span<const char> SplitStrReverse(const char *str, char split_char, Span<const char> *out_remainder = nullptr)
     { return SplitStrReverse(MakeSpan(str, strlen(str)), split_char, out_remainder); }
 
-static inline Span<const char> SplitStrReverseAny(Span<const char> str, const char *split_chars,
-                                                  Span<const char> *out_remainder = nullptr)
+static inline Span<const char> SplitStrReverseAny(Span<char> str, const char *split_chars, Span<char> *out_remainder = nullptr)
 {
     Bitset<256> split_mask;
     for (Size i = 0; split_chars[i]; i++) {
@@ -2063,8 +2062,9 @@ static inline Span<const char> SplitStrReverseAny(Span<const char> str, const ch
     }
     return str;
 }
-static inline Span<const char> SplitStrReverseAny(const char *str, const char *split_chars,
-                                                  Span<const char> *out_remainder = nullptr)
+static inline Span<const char> SplitStrReverseAny(Span<const char> str, const char *split_chars, Span<const char> *out_remainder = nullptr)
+    { return SplitStrReverseAny(MakeSpan((char *)str.ptr, str.len), split_chars, (Span<char> *)out_remainder); }
+static inline Span<const char> SplitStrReverseAny(const char *str, const char *split_chars, Span<const char> *out_remainder = nullptr)
     { return SplitStrReverseAny(MakeSpan(str, strlen(str)), split_chars, out_remainder); }
 
 static inline Span<char> TrimStrLeft(Span<char> str, char trim_char)
