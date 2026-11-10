@@ -971,12 +971,12 @@ TEST_FUNCTION("base/IsValidUtf8")
                 mutated.len = buf.len;
                 mutated.data[mutated.len] = 0;
 
-                int pos = rng.GetInt(0, mutated.len * 8);
+                int pos = rng.GetInt(0, (int)mutated.len * 8);
                 mutated[pos / 8] ^= 1 << (pos % 8);
 
                 while (ReferenceValidateUtf8(mutated.data, mutated.len) || !mutated[pos / 8]) {
                     mutated[pos / 8] ^= 1 << (pos % 8);
-                    pos = rng.GetInt(0, mutated.len * 8);
+                    pos = rng.GetInt(0, (int)mutated.len * 8);
                     mutated[pos / 8] ^= 1 << (pos % 8);
                 }
                 K_ASSERT(!ReferenceValidateUtf8(mutated.data, mutated.len));
@@ -987,7 +987,7 @@ TEST_FUNCTION("base/IsValidUtf8")
 
             // Test truncation
             {
-                int truncate = rng.GetInt(1, buf.len);
+                int truncate = rng.GetInt(1, (int)buf.len);
 
                 LocalArray<char, K_SIZE(buf.data)> truncated;
                 MemSet(truncated.data, 0x80, buf.len);
@@ -1483,7 +1483,7 @@ struct StrBucket {
 TEST_FUNCTION("base/Bitset")
 {
     for (int i = 0; i < 256; i++) {
-        HashSet<int> values;
+        HashSet<Size> values;
         Bitset<4242> bitset;
 
         for (int j = 0; j < 256; j++) {
@@ -1503,11 +1503,11 @@ TEST_FUNCTION("base/Bitset")
         }
 
         // Test iterator (1)
-        TEST_EQ(std::count_if(bitset.begin(), bitset.end(), [&](int v) { return values.Find(v); }), values.table.count);
+        TEST_EQ(std::count_if(bitset.begin(), bitset.end(), [&](Size v) { return values.Find(v); }), values.table.count);
 
         // Test iterator (2)
         {
-            HashSet<int> copy(values);
+            HashSet<Size> copy(values);
             TEST_EQ(copy.table.count, values.table.count);
 
             for (Size bit: bitset) {

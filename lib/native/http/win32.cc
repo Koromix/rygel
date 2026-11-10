@@ -20,11 +20,16 @@
 #include <mswsock.h>
 #include <io.h>
 
-#define BEGIN_IGNORE_MISSING_FIELDS \
-   _Pragma("GCC diagnostic push") \
-   _Pragma("GCC diagnostic ignored \"-Wmissing-field-initializers\"")
-#define END_IGNORE_MISSING_FIELDS \
-   _Pragma("GCC diagnostic pop")
+#if defined(__clang__)
+    #define BEGIN_IGNORE_MISSING_FIELDS \
+       _Pragma("GCC diagnostic push") \
+       _Pragma("GCC diagnostic ignored \"-Wmissing-field-initializers\"")
+    #define END_IGNORE_MISSING_FIELDS \
+       _Pragma("GCC diagnostic pop")
+#else
+    #define BEGIN_IGNORE_MISSING_FIELDS
+    #define END_IGNORE_MISSING_FIELDS
+#endif
 
 namespace K {
 

@@ -1462,7 +1462,7 @@ http_RequestStatus http_IO::ParseRequest()
     }
 
     if (xffs.len) {
-        int family;
+        int family = 0;
         uint8_t bytes[16];
 
         for (Size i = xffs.len - 1; i >= 0; i--) {
