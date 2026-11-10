@@ -2,6 +2,13 @@
 
 ## Alpha versions
 
+### Redropp 0.9.18
+
+*Released on 2026-11-10*
+
+- Load default config file if it exists in docker build
+- Replace HTTP ClientAddress setting with TrustedProxies
+
 ### Redropp 0.9.17
 
 *Released on 2026-11-09*
