@@ -263,7 +263,7 @@ napi_value CallData::CallCallback(napi_value *argp, Size count)
 bool CallData::PushString(napi_value value, int directions, const char **out_str)
 {
     // Fast path
-    if (PushStringValue(value, out_str) >= 0) {
+    if (PushStringValue(value, out_str) >= 0) [[likely]] {
         if (directions & 2) [[unlikely]] {
             ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected [string]", GetValueType(instance, value));
             return false;
@@ -278,7 +278,7 @@ bool CallData::PushString(napi_value value, int directions, const char **out_str
 bool CallData::PushString16(napi_value value, int directions, const char16_t **out_str16)
 {
     // Fast path
-    if (PushString16Value(value, out_str16) >= 0) {
+    if (PushString16Value(value, out_str16) >= 0) [[likely]] {
         if (directions & 2) [[unlikely]] {
             ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected [string]", GetValueType(instance, value));
             return false;
@@ -293,7 +293,7 @@ bool CallData::PushString16(napi_value value, int directions, const char16_t **o
 bool CallData::PushString32(napi_value value, int directions, const char32_t **out_str32)
 {
     // Fast path
-    if (PushString32Value(value, out_str32) >= 0) {
+    if (PushString32Value(value, out_str32) >= 0) [[likely]] {
         if (directions & 2) [[unlikely]] {
             ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected [string]", GetValueType(instance, value));
             return false;
@@ -326,7 +326,7 @@ Size CallData::PushStringValue(napi_value value, const char **out_str)
         // So len < len - 4 should be enough, but exagerate a bit "just in case" :)
         // Avoid substraction because we're using size_t (unsigned).
 
-        if (len + 8 < available) {
+        if (len + 8 < available) [[likely]] {
             heap.ptr += (Size)AlignLen(len, 16);
 
             *out_str = ptr;
@@ -361,7 +361,7 @@ Size CallData::PushString16Value(napi_value value, const char16_t **out_str16)
     buf.ptr = (char16_t *)heap.ptr;
     buf.len = (heap.end - heap.ptr) / 2;
 
-    if (len <= (size_t)buf.len) {
+    if (len <= (size_t)buf.len) [[likely]] {
         NAPI_OK(napi_get_value_string_utf16(env, value, buf.ptr, len, nullptr));
 
         heap.ptr += (Size)AlignLen(len * 2, 16);
