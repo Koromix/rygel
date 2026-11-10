@@ -40,7 +40,7 @@ S3_SECRET_ACCESS_KEY=
 ```
 
 > [!NOTE]
-> Environment variables are limited. Some advanced settings (such as multiple SSO providers) can only be changed with a configuration file.
+> Environment variables are limited. Some settings (such as customization, multiple SSO providers) can only be changed with a configuration file.
 
 ## Configuration file
 
@@ -51,7 +51,7 @@ mkdir config
 docker run koromix/redropp:latest /app/redropp init > config/redropp.ini
 ```
 
-You must configure mandatory settings (title, URL, S3) inside `config/redropp.ini` before you can run it.
+You must configure mandatory settings (title, URL, S3) inside `config/redropp.ini` before you can run Redropp.
 
 # Run Docker image
 
@@ -69,10 +69,10 @@ Once Redropp is running, open http://localhost:8894/ in your browser. That's it!
 > [!NOTE]
 > This docker command (and the Docker Compose file below) assumes the use of an environment file (named `ENV`).
 >
-> In order to use a configuration file (such as `config/redropp.ini`), you need to mount the config directory and run Redropp with the path to the config file, like this:
+> In order to use a configuration file (such as `config/redropp.ini`), you need to mount the config directory, like this:
 >
 > ```sh
-> docker run -p 8894:80 -v $PWD/data:/data -v $PWD/config:/config koromix/redropp:latest /app/redropp -C /config/redropp.ini
+> docker run -p 8894:80 -v $PWD/data:/data -v $PWD/config:/config koromix/redropp:latest
 > ```
 
 ## Docker Compose
@@ -122,7 +122,7 @@ WantedBy=multi-user.target
 ```
 
 > [!NOTE]
-> This unit reads the config file from `/srv/redropp/config/redropp.ini`, and stores the database in `/srv/redropp/data`. Change the corresponding Quadlet settings if needed. Make sure the config file and the data directory exist.
+> This unit stores the database in `/srv/redropp/data`. Change the corresponding Quadlet settings if needed. Make sure the data directory exists.
 
 Save this file somewhere the quadlet systemd generator can find it, such as `/etc/containers/systemd/redropp.container`.
 

@@ -56,11 +56,8 @@ Redropp provides several settings to adjust the storage allowed for each registe
 # Change maximum per-user storage
 Quota = 1G
 
-# Change maximum expiration delay of drops
-MaxDuration = 90d
-
-# Allow drops without expiration delay (infinite duration)
-AllowInfinite = No
+# Customize list of expiration delays, add Never to allow infinite drops, and use '*' to set the default
+ExpirationDelays = 1d 3d *7d 30d 90d
 ```
 
 # Authentication methods
@@ -121,8 +118,6 @@ ClientSecret =
 # [SSO]
 # Repeat SSO section and settings to add multiple providers
 ```
-> [!NOTE]
-> Configuring SSO requires the use of a configuration file. It is not possible to configure SSO through environment variables.
 
 # Customization
 
@@ -150,3 +145,6 @@ To do so, change the settings in the `[Customize]` section of the INI config fil
 ```
 
 These settings and the additional files are loaded into memory on startup. You must restart Redropp after any change to these settings or to the custom script and style files for them to take effect.
+
+> [!NOTE]
+> Customization requires the use of a configuration file. It is not possible to configure these settings through environment variables.
