@@ -666,7 +666,7 @@ void http_Dispatcher::Run()
                     if (linger < 0)
                         continue;
 
-                    LogWarning("Handler for '%1' seems stuck", client->addr);
+                    LogWarning("Handler for '%1' seems stuck", client->request.client_addr);
                     client->ExtendTimeout(1000);
                     delay = 1000;
                 }

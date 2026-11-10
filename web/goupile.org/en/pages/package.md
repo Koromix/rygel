@@ -118,7 +118,7 @@ server {
 >
 > ```
 > [HTTP]
-> ClientAddress = X-Forwarded-For
+> TrustedProxies = 127.0.0.1/32 ::1/128 Unix
 > SecureCookies = Yes
 > ```
 
@@ -148,7 +148,7 @@ The VirtualHost block should look something like this:
 >
 > ```
 > [HTTP]
-> ClientAddress = X-Forwarded-For
+> TrustedProxies = 127.0.0.1/32 ::1/128 Unix
 > SecureCookies = Yes
 > ```
 

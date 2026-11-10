@@ -547,6 +547,19 @@ static inline void *MemSet(void *dest, int c, Size len)
 #endif
     return dest;
 }
+static inline int MemCmp(const void *a, const void *b, Size len)
+{
+    K_ASSERT(len >= 0);
+
+#if defined(__clang__)
+    // LLVM guarantees sane behavior
+    return __builtin_memcmp(a, b, (size_t)len);
+#else
+    if (!len)
+        return 0;
+    return memcmp(a, b, (size_t)len);
+#endif
+}
 
 #if defined(_WIN32)
 

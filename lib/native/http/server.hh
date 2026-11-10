@@ -9,18 +9,13 @@ struct sockaddr;
 
 namespace K {
 
-enum class http_AddressMode {
-    Socket,
-    XForwardedFor,
-    XRealIP
-};
-static const char *const http_AddressModeNames[] = {
-    "Socket",
-    "X-Forwarded-For",
-    "X-Real-Ip"
-};
-
 extern const HashMap<int, const char *> http_ErrorMessages;
+
+struct http_TrustedProxy {
+    int family;
+    uint8_t addr[16];
+    int bits;
+};
 
 struct http_Config {
 #if defined(__OpenBSD__)
@@ -32,7 +27,8 @@ struct http_Config {
     int port = 8888;
     const char *unix_path = nullptr;
 
-    http_AddressMode addr_mode = http_AddressMode::Socket;
+    LocalArray<http_TrustedProxy, 16> trusted_proxies;
+    bool explicit_trusted = false;
 
     int idle_timeout = 10000;
     int keepalive_time = 20000;
@@ -75,8 +71,8 @@ class http_Daemon {
     HeapArray<int> listeners;
 
     SocketType sock_type;
-    http_AddressMode addr_mode;
 
+    LocalArray<http_TrustedProxy, 16> trusted_proxies;
     int idle_timeout;
     int keepalive_time;
     int handle_timeout;
@@ -118,6 +114,8 @@ private:
     bool GiveSocket(http_Socket *socket, ws_Socket *ws);
 
     void RunHandler(http_IO *client);
+
+    bool IsTrustedProxy(int family, const uint8_t *bytes) const;
 
     friend class http_Dispatcher;
     friend class http_IO;
@@ -215,7 +213,10 @@ class http_IO {
     http_Socket *socket;
     std::atomic_int linger { 0 };
     bool keepalive = false;
-    char addr[65] = {};
+
+    char peer[46] = {};
+    char addr[46] = {};
+    bool trust_addr = false;
 
     int64_t socket_start;
     std::atomic_int64_t timeout_at;

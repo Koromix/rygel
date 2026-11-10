@@ -100,6 +100,48 @@ const HashMap<int, const char *> http_ErrorMessages = {
     { 511, "Network Authentication Required" }
 };
 
+static int DecodeAddress(const char *str, uint8_t out_bytes[16])
+{
+    if (strchr(str, ':')) {
+        if (inet_pton(AF_INET6, str, out_bytes) <= 0) {
+            LogError("Invalid IP address '%1'", str);
+            return -1;
+        }
+
+        const in6_addr *addr6 = (const in6_addr *)out_bytes;
+
+        if (IN6_IS_ADDR_V4MAPPED(addr6)) {
+            MemMove(out_bytes, out_bytes + 12, 4);
+            return AF_INET;
+        } else {
+            return AF_INET6;
+        }
+    } else {
+        if (inet_pton(AF_INET, str, out_bytes) <= 0) {
+            LogError("Invalid IP address '%1'", str);
+            return -1;
+        }
+
+        return AF_INET;
+    }
+}
+
+static void FormatAddress(int family, const uint8_t *bytes, Span<char> out_addr)
+{
+    switch (family) {
+        case AF_INET: { Fmt(out_addr, "%1.%2.%3.%4", bytes[0], bytes[1], bytes[2], bytes[3]);  } break;
+
+        case AF_INET6: {
+            const char *ret = inet_ntop(AF_INET6, bytes, out_addr.ptr, out_addr.len);
+            K_ASSERT(ret);
+        } break;
+
+        case AF_UNIX: { CopyString("unix", out_addr); } break;
+
+        default: { K_UNREACHABLE(); } break;
+    }
+}
+
 bool http_Config::SetProperty(Span<const char> key, Span<const char> value, Span<const char> root_directory)
 {
     if (key == "SocketType" || key == "IPStack") {
@@ -123,9 +165,60 @@ bool http_Config::SetProperty(Span<const char> key, Span<const char> value, Span
         unix_path = NormalizePath(value, root_directory, &str_alloc).ptr;
         return true;
     } else if (key == "ClientAddress") {
-        if (!OptionToEnumI(http_AddressModeNames, value, &addr_mode)) {
-            LogError("Unknown client address mode '%1'", value);
-            return false;
+        LogWarning("HTTP ClientAddress is not supported anymore, configure TrustedProxies instead");
+        return true;
+    } else if (key == "TrustedProxies") {
+        trusted_proxies.len = 0;
+        explicit_trusted = true;
+
+        while (value.len) {
+            Span<const char> part = TrimStr(SplitStrAny(value, " ,", &value));
+
+            if (part.len) {
+                http_TrustedProxy trusted = {};
+
+                if (TestStrI(part, "unix")) {
+                    trusted.family = AF_UNIX;
+                } else {
+                    Span<const char> mask;
+                    Span<const char> addr = SplitStr(part, '/', &mask);
+
+                    char addr0[128];
+                    CopyString(addr, addr0);
+
+                    trusted.family = DecodeAddress(addr0, trusted.addr);
+
+                    switch (trusted.family) {
+                        case AF_INET: { trusted.bits = 32; } break;
+                        case AF_INET6: { trusted.bits = 128; } break;
+
+                        default: {
+                            K_ASSERT(trusted.family < 0);
+                            return false;
+                        } break;
+                    }
+
+                    if (mask.ptr > addr.end()) {
+                        int bits;
+
+                        if (!ParseInt(mask, &bits))
+                            return false;
+                        if (bits < 0 || bits > trusted.bits) {
+                            LogError("Invalid address mask in '%1'", part);
+                            return false;
+                        }
+
+                        trusted.bits = bits;
+                    }
+                }
+
+                if (!trusted_proxies.Available()) [[unlikely]] {
+                    LogError("Too many trusted proxies (max = %1)", K_LEN(trusted_proxies.data));
+                    return false;
+                }
+
+                trusted_proxies.Append(trusted);
+            }
         }
 
         return true;
@@ -318,14 +411,18 @@ bool http_Daemon::Bind(const http_Config &config, bool log_addr)
     if (!config.Validate())
         return false;
 
-    if (config.addr_mode == http_AddressMode::Socket) {
-        LogWarning("You may want to %!.._set HTTP.ClientAddress%!0 to X-Forwarded-For or X-Real-Ip "
-                   "if you run this behind a reverse proxy that sets one of these headers.");
+    sock_type = config.sock_type;
+
+    if (config.explicit_trusted) {
+        trusted_proxies = config.trusted_proxies;
+    } else {
+        trusted_proxies = {
+            { AF_INET, { 0x7F, 0, 0, 1 }, 32 },
+            { AF_INET6, { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 }, 128 },
+            { AF_UNIX, {}, 0 }
+        };
     }
 
-    // Copy main confg values
-    sock_type = config.sock_type;
-    addr_mode = config.addr_mode;
     idle_timeout = config.idle_timeout;
     keepalive_time = config.keepalive_time;
     handle_timeout = config.handle_timeout;
@@ -492,6 +589,40 @@ void http_Daemon::RunHandler(http_IO *client)
         K_ASSERT(!client->HasLeaked());
         client->SendError(500);
     }
+}
+
+static bool MatchAddressPrefix(const uint8_t *a, const uint8_t *b, int bits)
+{
+    int bytes = bits / 8;
+    int remain = bits % 8;
+
+    if (MemCmp(a, b, bytes))
+        return false;
+
+    if (remain) {
+        uint8_t mask = (uint8_t)(0xFFu << (8 - remain));
+
+        if ((a[bytes] & mask) != (b[bytes] & mask))
+            return false;
+    }
+
+    return true;
+}
+
+bool http_Daemon::IsTrustedProxy(int family, const uint8_t *bytes) const
+{
+    static_assert(AF_INET >= 0 && AF_INET6 >= 0 && AF_UNIX >= 0);
+
+    for (const http_TrustedProxy &trusted: trusted_proxies) {
+        if (trusted.family != family)
+            continue;
+        if (!MatchAddressPrefix(bytes, trusted.addr, trusted.bits))
+            continue;
+
+        return true;
+    }
+
+    return false;
 }
 
 static inline bool IsFieldKeyValid(Span<const char> key)
@@ -917,6 +1048,10 @@ void http_IO::ExtendTimeout(int64_t extend)
 
 bool http_IO::Init(http_Socket *socket, int64_t start, struct sockaddr *sa)
 {
+#if !defined(_WIN32)
+    static_assert(K_SIZE(peer) >= INET6_ADDRSTRLEN);
+#endif
+
     this->socket = socket;
 
     linger.store(0, std::memory_order_relaxed);
@@ -924,26 +1059,31 @@ bool http_IO::Init(http_Socket *socket, int64_t start, struct sockaddr *sa)
     switch (sa->sa_family) {
         case AF_INET: {
             uint8_t *bytes = (uint8_t *)&((sockaddr_in *)sa)->sin_addr;
-            Fmt(addr, "%1.%2.%3.%4", bytes[0], bytes[1], bytes[2], bytes[3]);
+
+            FormatAddress(AF_INET, bytes, peer);
+            trust_addr = daemon->IsTrustedProxy(AF_INET, bytes);
         } break;
 
         case AF_INET6: {
-#if !defined(_WIN32)
-            K_ASSERT(K_SIZE(addr) >= INET6_ADDRSTRLEN + 2);
-#endif
-
             auto *ptr = &((sockaddr_in6 *)sa)->sin6_addr;
 
             if (IN6_IS_ADDR_V4MAPPED(ptr)) {
                 uint8_t *bytes = (uint8_t *)ptr + 12;
-                Fmt(addr, "%1.%2.%3.%4", bytes[0], bytes[1], bytes[2], bytes[3]);
+
+                FormatAddress(AF_INET, bytes, peer);
+                trust_addr = daemon->IsTrustedProxy(AF_INET, bytes);
             } else {
-                const char *ret = inet_ntop(AF_INET6, ptr, addr, K_SIZE(addr));
-                K_ASSERT(ret);
+                uint8_t *bytes = (uint8_t *)ptr;
+
+                FormatAddress(AF_INET6, bytes, peer);
+                trust_addr = daemon->IsTrustedProxy(AF_INET6, (uint8_t *)ptr);
             }
         } break;
 
-        case AF_UNIX: { CopyString("unix", addr); } break;
+        case AF_UNIX: {
+            FormatAddress(AF_UNIX, nullptr, peer);
+            trust_addr = daemon->IsTrustedProxy(AF_UNIX, nullptr);
+        } break;
 
         default: { K_UNREACHABLE(); } break;
     }
@@ -1101,7 +1241,7 @@ http_RequestStatus http_IO::ParseRequest()
     Span<const char> host = {};
     int64_t body_len = 0;
     bool explicit_len = false;
-    bool known_addr = (daemon->addr_mode == http_AddressMode::Socket);
+    LocalArray<const char *, 16> xffs;
 
     // Find end of request headers (CRLF+CRLF)
     {
@@ -1171,7 +1311,7 @@ http_RequestStatus http_IO::ParseRequest()
             SendAbort(501, "Unsupported HTTP method");
             return http_RequestStatus::Shutdown;
         }
-        request.client_addr = addr;
+        request.client_addr = peer;
 
         Span<char> query;
         Span<char> path = SplitStr(url, '?', &query);
@@ -1286,32 +1426,22 @@ http_RequestStatus http_IO::ParseRequest()
 
             body_len = len;
             explicit_len = true;
-        } else if (daemon->addr_mode == http_AddressMode::XForwardedFor && key == "X-Forwarded-For") {
-            Span<const char> trimmed = TrimStr(SplitStrReverse(value, ','));
+        } else if (key == "X-Forwarded-For") {
+            if (trust_addr) {
+                while (value.len) {
+                    Span<char> part = TrimStr(SplitStr(value, ',', &value));
 
-            if (!trimmed.len) [[unlikely]] {
-                SendAbort(400, "Empty client address in X-Forwarded-For header");
-                return http_RequestStatus::Shutdown;
-            }
-            if (!CopyString(trimmed, addr)) [[unlikely]] {
-                SendAbort(400, "Excessively long client address in X-Forwarded-For header");
-                return http_RequestStatus::Shutdown;
-            }
+                    if (part.len) {
+                        if (!xffs.Available()) [[unlikely]] {
+                            SendAbort(400, "Request has too many X-Forwarded-For values");
+                            return http_RequestStatus::Shutdown;
+                        }
 
-            known_addr = true;
-        } else if (daemon->addr_mode == http_AddressMode::XRealIP && key == "X-Real-Ip") {
-            Span<const char> trimmed = TrimStr(value);
-
-            if (!trimmed.len) [[unlikely]] {
-                SendAbort(400, "Empty client address in X-Real-Ip header");
-                return http_RequestStatus::Shutdown;
+                        part.ptr[part.len] = 0;
+                        xffs.Append(part.ptr);
+                    }
+                }
             }
-            if (!CopyString(trimmed, addr)) [[unlikely]] {
-                SendAbort(400, "Excessively long client address in X-Real-Ip header");
-                return http_RequestStatus::Shutdown;
-            }
-
-            known_addr = true;
         } else if (key == "Transfer-Encoding") [[unlikely]] {
             SendAbort(501, "Requests with Transfer-Encoding are not supported");
             return http_RequestStatus::Shutdown;
@@ -1330,12 +1460,32 @@ http_RequestStatus http_IO::ParseRequest()
         SendAbort(400, "Missing Host header in HTTP/1.1 request");
         return http_RequestStatus::Shutdown;
     }
-    if (!known_addr) [[unlikely]] {
-        char buf[128];
-        Fmt(buf, "Missing expected address header '%1'", http_AddressModeNames[(int)daemon->addr_mode]);
 
-        SendAbort(400, buf);
-        return http_RequestStatus::Shutdown;
+    if (xffs.len) {
+        int family;
+        uint8_t bytes[16];
+
+        for (Size i = xffs.len - 1; i >= 0; i--) {
+            family = DecodeAddress(xffs[i], bytes);
+
+            if (family < 0) [[unlikely]] {
+                SendAbort(400, "Malformed address in X-Forwarded-For header");
+                return http_RequestStatus::Shutdown;
+            }
+
+            if (!daemon->IsTrustedProxy(family, bytes)) {
+                FormatAddress(family, bytes, addr);
+                request.client_addr = addr;
+
+                break;
+            }
+        }
+
+        if (request.client_addr != addr) {
+            // If all addresses are trusted, pick the leftmost one
+            FormatAddress(family, bytes, addr);
+            request.client_addr = addr;
+        }
     }
 
     // Map keys for faster access
@@ -1370,7 +1520,7 @@ void http_IO::SendAbort(int status, const char *msg)
     {
         PushLogFilter([&](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
             char ctx_buf[512];
-            Fmt(ctx_buf, "%1%2: ", ctx ? ctx : "", addr);
+            Fmt(ctx_buf, "%1%2: ", ctx ? ctx : "", peer);
 
             func(level, ctx_buf, msg);
         });
@@ -1381,7 +1531,7 @@ void http_IO::SendAbort(int status, const char *msg)
 #else
     {
         char ctx_buf[512];
-        Fmt(ctx_buf, "Error: %1: ", addr);
+        Fmt(ctx_buf, "Error: %1: ", peer);
 
         Log(LogLevel::Error, ctx_buf, "%1", msg);
     }
