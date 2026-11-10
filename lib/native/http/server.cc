@@ -102,12 +102,10 @@ const HashMap<int, const char *> http_ErrorMessages = {
 
 static int DecodeAddress(const char *str, uint8_t out_bytes[16])
 {
-    if (strchr(str, ':')) {
-        if (inet_pton(AF_INET6, str, out_bytes) <= 0) {
-            LogError("Invalid IP address '%1'", str);
-            return -1;
-        }
+    if (inet_pton(AF_INET, str, out_bytes) > 0)
+        return AF_INET;
 
+    if (inet_pton(AF_INET6, str, out_bytes) > 0) {
         const in6_addr *addr6 = (const in6_addr *)out_bytes;
 
         if (IN6_IS_ADDR_V4MAPPED(addr6)) {
@@ -116,14 +114,10 @@ static int DecodeAddress(const char *str, uint8_t out_bytes[16])
         } else {
             return AF_INET6;
         }
-    } else {
-        if (inet_pton(AF_INET, str, out_bytes) <= 0) {
-            LogError("Invalid IP address '%1'", str);
-            return -1;
-        }
-
-        return AF_INET;
     }
+
+    LogError("Invalid IP address '%1'", str);
+    return -1;
 }
 
 static void FormatAddress(int family, const uint8_t *bytes, Span<char> out_addr)
