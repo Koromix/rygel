@@ -1096,6 +1096,8 @@ http_RequestStatus http_IO::ParseRequest()
     Span<char> intro = {};
     bool keepalive = false;
     bool close = false;
+    bool upgrade = false;
+    Size headers = 0;
     Span<const char> host = {};
     int64_t body_len = 0;
     bool explicit_len = false;
@@ -1212,25 +1214,16 @@ http_RequestStatus http_IO::ParseRequest()
             SendAbort(400, "Malformed header value");
             return http_RequestStatus::Shutdown;
         }
+        if (++headers > daemon->max_request_headers) {
+            SendAbort(431, "Too many headers");
+            return http_RequestStatus::Shutdown;
+        }
 
         // Canonicalize header key
         bool upper = true;
         for (char &c: key.As<char>()) {
             c = upper ? UpperAscii(c) : LowerAscii(c);
             upper = (c == '-');
-        }
-
-        // Append to list of headers
-        {
-            key.ptr[key.len] = 0;
-            value.ptr[value.len] = 0;
-
-            if (request.headers.len >= daemon->max_request_headers) [[unlikely]] {
-                SendAbort(431, "Too many headers");
-                return http_RequestStatus::Shutdown;
-            }
-
-            request.headers.Append({ key.ptr, value.ptr, nullptr });
         }
 
         // Handle special headers
@@ -1273,6 +1266,7 @@ http_RequestStatus http_IO::ParseRequest()
 
                 keepalive |= TestStrI(part, "keep-alive");
                 close |= TestStrI(part, "close");
+                upgrade |= TestStrI(part, "upgrade");
             }
         } else if (key == "Content-Length") {
             int64_t len;
@@ -1324,6 +1318,11 @@ http_RequestStatus http_IO::ParseRequest()
         } else if (key == "Content-Encoding") [[unlikely]] {
             SendAbort(415, "Requests with Content-Encoding are not supported");
             return http_RequestStatus::Shutdown;
+        } else {
+            key.ptr[key.len] = 0;
+            value.ptr[value.len] = 0;
+
+            request.headers.Append({ key.ptr, value.ptr, nullptr });
         }
     }
 
@@ -1345,6 +1344,7 @@ http_RequestStatus http_IO::ParseRequest()
     MapKeys(request.cookies, &request.cookies_map);
 
     // Set at the end so any error before would lead to "Connection: close"
+    request.upgrade = upgrade;
     request.body_len = body_len;
     this->keepalive = keepalive && !close;
 
@@ -1676,6 +1676,7 @@ bool http_IO::Rearm(int64_t now)
     request.headers_map.RemoveAll();
     request.cookies_map.RemoveAll();
     request.body_len = 0;
+    request.upgrade = false;
 
     response.headers.RemoveFrom(0);
     response.started = false;

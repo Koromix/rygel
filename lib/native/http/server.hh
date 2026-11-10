@@ -163,6 +163,7 @@ struct http_RequestInfo {
     int version = 10;
     http_RequestMethod method = http_RequestMethod::Get;
     bool head = false;
+    bool upgrade = false;
     const char *client_addr = nullptr;
     const char *path = nullptr;
     int64_t body_len = 0;

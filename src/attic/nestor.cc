@@ -638,14 +638,10 @@ static HandlerResult HandleLocal(http_IO *io, const char *dirname)
 static HandlerResult HandleProxy(http_IO *io, const char *proxy_url, bool relay404)
 {
     static const char *const OmitHeaders[] = {
-        "Host",
         "Referer",
         "Sec-*",
-        "server",
-        "Connection",
-        "Keep-Alive",
-        "Content-Length",
-        "Transfer-Encoding"
+        "Server",
+        "Keep-Alive"
     };
 
     const http_RequestInfo &request = io->Request();

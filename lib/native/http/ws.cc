@@ -95,21 +95,6 @@ void ws_Registry::Shutdown()
     }
 }
 
-static bool CheckHeaderValue(const char *str, const char *needle)
-{
-    if (!str)
-        return false;
-
-    while (str[0]) {
-        Span<const char> part = TrimStr(SplitStr(str, ',', &str));
-
-        if (TestStrI(part, needle))
-            return true;
-    }
-
-    return false;
-}
-
 #if defined(_WIN32)
 
 static Size ReadSocket(int sock, Span<uint8_t> buf, int64_t deadline)
@@ -307,6 +292,21 @@ static bool WriteSocket(int sock, Span<const uint8_t> header, Span<const uint8_t
 
 #endif
 
+static bool CheckHeaderValue(const char *str, const char *needle)
+{
+    if (!str)
+        return false;
+
+    while (str[0]) {
+        Span<const char> part = TrimStr(SplitStr(str, ',', &str));
+
+        if (TestStrI(part, needle))
+            return true;
+    }
+
+    return false;
+}
+
 bool http_IsWS(http_IO *io)
 {
     const http_RequestInfo &request = io->Request();
@@ -314,7 +314,7 @@ bool http_IsWS(http_IO *io)
     if (request.method != http_RequestMethod::Get || request.head || request.version < 11)
         return false;
 
-    if (!CheckHeaderValue(request.GetHeaderValue("Connection"), "upgrade"))
+    if (!request.upgrade)
         return false;
     if (!CheckHeaderValue(request.GetHeaderValue("Upgrade"), "websocket"))
         return false;
