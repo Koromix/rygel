@@ -114,7 +114,7 @@ server {
 > [!IMPORTANT]
 > When using Goupile behind a reverse proxy, you should make sure that the `X-Forwarded-For` header is correctly set by the proxy.
 >
-> You should also set the following settings in goupile.ini:
+> You should also adjust the following settings in goupile.ini:
 >
 > ```
 > [HTTP]
@@ -144,7 +144,7 @@ The VirtualHost block should look something like this:
 > [!IMPORTANT]
 > When using Goupile behind a reverse proxy, you should make sure that the `X-Forwarded-For` header is correctly set by the proxy.
 >
-> You should also set the following settings in goupile.ini:
+> You should also adjust the following settings in goupile.ini:
 >
 > ```
 > [HTTP]

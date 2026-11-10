@@ -92,7 +92,7 @@ server {
 > [!IMPORTANT]
 > When using Redropp behind a reverse proxy, you should make sure that the `X-Forwarded-For` header is correctly set by the proxy.
 >
-> You should also set the following settings in redropp.ini:
+> You should also adjust the following settings in redropp.ini:
 >
 > ```
 > [HTTP]
@@ -122,7 +122,7 @@ The VirtualHost block should look something like this:
 > [!IMPORTANT]
 > When using Redropp behind a reverse proxy, you should make sure that the `X-Forwarded-For` header is correctly set by the proxy.
 >
-> You should also set the following settings in redropp.ini:
+> You should also adjust the following settings in redropp.ini:
 >
 > ```
 > [HTTP]
