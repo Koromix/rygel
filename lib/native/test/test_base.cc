@@ -265,39 +265,74 @@ TEST_FUNCTION("base/FastRandom")
 
 TEST_FUNCTION("base/CmpStr")
 {
-    TEST_GT(CmpStr("b", "a"), 0);
-    TEST_LT(CmpStr("a", "b"), 0);
-    TEST_LT(CmpStr("aa", "b"), 0);
-    TEST_GT(CmpStr("abc", "ab"), 0);
-    TEST_LT(CmpStr("ab", "abc"), 0);
+#define CMP_GT(Str1, Str2) \
+        do { \
+            Span<const char> span1 = (Str1); \
+            Span<const char> span2 = (Str2); \
+             \
+            TEST_GT(CmpStr(span1.ptr, span2.ptr), 0); \
+            TEST_GT(CmpStr(span1, span2.ptr), 0); \
+            TEST_GT(CmpStr(span1.ptr, span2), 0); \
+            TEST_GT(CmpStr(span1, span2), 0); \
+        } while (false)
+#define CMP_LT(Str1, Str2) \
+        do { \
+            Span<const char> span1 = (Str1); \
+            Span<const char> span2 = (Str2); \
+             \
+            TEST_LT(CmpStr(span1.ptr, span2.ptr), 0); \
+            TEST_LT(CmpStr(span1, span2.ptr), 0); \
+            TEST_LT(CmpStr(span1.ptr, span2), 0); \
+            TEST_LT(CmpStr(span1, span2), 0); \
+        } while (false)
+#define CMP_EQ(Str1, Str2) \
+        do { \
+            Span<const char> span1 = (Str1); \
+            Span<const char> span2 = (Str2); \
+             \
+            TEST_EQ(CmpStr(span1.ptr, span2.ptr), 0); \
+            TEST_EQ(CmpStr(span1, span2.ptr), 0); \
+            TEST_EQ(CmpStr(span1.ptr, span2), 0); \
+            TEST_EQ(CmpStr(span1, span2), 0); \
+        } while (false)
 
-    TEST_GT(CmpStr("10", "1"), 0);
-    TEST_LT(CmpStr("10", "2"), 0);
-    TEST_LT(CmpStr("ab-10", "ab-2"), 0);
-    TEST_LT(CmpStr("ab-10", "ac-10"), 0);
+    CMP_GT("b", "a");
+    CMP_LT("a", "b");
+    CMP_LT("aa", "b");
+    CMP_GT("abc", "ab");
+    CMP_LT("ab", "abc");
 
-    TEST_LT(CmpStr("1", "10"), 0);
-    TEST_GT(CmpStr("2", "10"), 0);
-    TEST_GT(CmpStr("ab-2", "ab-10"), 0);
-    TEST_GT(CmpStr("ac-10", "ab-10"), 0);
+    CMP_GT("10", "1");
+    CMP_LT("10", "2");
+    CMP_LT("ab-10", "ab-2");
+    CMP_LT("ab-10", "ac-10");
 
-    TEST_LT(CmpStr("00001", "02"), 0);
-    TEST_LT(CmpStr("00002", "02"), 0);
-    TEST_LT(CmpStr("00003", "02"), 0);
-    TEST_LT(CmpStr("P00001", "P02"), 0);
-    TEST_LT(CmpStr("P00002", "P02"), 0);
-    TEST_LT(CmpStr("P00003", "P02"), 0);
+    CMP_LT("1", "10");
+    CMP_GT("2", "10");
+    CMP_GT("ab-2", "ab-10");
+    CMP_GT("ac-10", "ab-10");
 
-    TEST_EQ(CmpStr("01", "01"), 0);
-    TEST_EQ(CmpStr("02", "02"), 0);
-    TEST_EQ(CmpStr("01ab", "01ab"), 0);
-    TEST_LT(CmpStr("01ab", "01ac"), 0);
-    TEST_GT(CmpStr("01ac", "01ab"), 0);
+    CMP_LT("00001", "02");
+    CMP_LT("00002", "02");
+    CMP_LT("00003", "02");
+    CMP_LT("P00001", "P02");
+    CMP_LT("P00002", "P02");
+    CMP_LT("P00003", "P02");
 
-    TEST_GT(CmpStr("20", "10"), 0);
-    TEST_LT(CmpStr("10", "20"), 0);
-    TEST_GT(CmpStr("X20", "X10"), 0);
-    TEST_LT(CmpStr("X10", "X20"), 0);
+    CMP_EQ("01", "01");
+    CMP_EQ("02", "02");
+    CMP_EQ("01ab", "01ab");
+    CMP_LT("01ab", "01ac");
+    CMP_GT("01ac", "01ab");
+
+    CMP_GT("20", "10");
+    CMP_LT("10", "20");
+    CMP_GT("X20", "X10");
+    CMP_LT("X10", "X20");
+
+#undef CMP_EQ
+#undef CMP_LT
+#undef CMP_GT
 }
 
 TEST_FUNCTION("base/CmpNatural")
