@@ -1723,7 +1723,7 @@ static constexpr inline int CmpStr(const char *str1, const char *str2)
             if (delta)
                 return delta;
         }
-        return str2[i] - str1[i];
+        return str1[i] - str2[i];
 #endif
 }
 
