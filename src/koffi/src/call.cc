@@ -213,11 +213,9 @@ void CallData::PopOutputArguments()
         for (const OutArgument &out: out_arguments) {
             node_api_delete_reference(env, out.ref);
         }
-    }
 
-#if defined(K_DEBUG)
-    out_arguments.len = 0;
-#endif
+        out_arguments.len = 0;
+    }
 }
 
 void CallData::RelayAsync(Size idx, uint8_t *base)
@@ -1369,7 +1367,7 @@ TRANSLATE_FUNC napi_value TranslateDirectCall(napi_env env, napi_callback_info i
 
     napi_value args[N + 1];
     size_t count = N;
-    FunctionInfo *func;
+    const FunctionInfo *func;
 
     NAPI_OK(napi_get_cb_info(env, info, &count, args, nullptr, (void **)&func));
 
@@ -1395,7 +1393,7 @@ TRANSLATE_FUNC napi_value TranslateOutputCall(napi_env env, napi_callback_info i
 
     napi_value args[N + 1];
     size_t count = N;
-    FunctionInfo *func;
+    const FunctionInfo *func;
 
     NAPI_OK(napi_get_cb_info(env, info, &count, args, nullptr, (void **)&func));
 
@@ -1435,7 +1433,7 @@ static TRANSLATE_FUNC napi_value TranslateNormalCall(napi_env env, napi_callback
 
     napi_value args[MaxParameters + 1];
     size_t count = 12;
-    FunctionInfo *func;
+    const FunctionInfo *func;
 
     NAPI_OK(napi_get_cb_info(env, info, &count, args, nullptr, (void **)&func));
 
@@ -1460,7 +1458,7 @@ static TRANSLATE_FUNC napi_value TranslateNormalCallDebugAsync(napi_env env, nap
 
     napi_value args[MaxParameters];
     size_t count = 12;
-    FunctionInfo *func;
+    const FunctionInfo *func;
 
     NAPI_OK(napi_get_cb_info(env, info, &count, args, nullptr, (void **)&func));
 
@@ -1608,7 +1606,7 @@ static TRANSLATE_FUNC napi_value TranslateVariadicCall(napi_env env, napi_callba
 
     napi_value args[MaxParameters * 2 + 1];
     size_t count = 12;
-    FunctionInfo *func;
+    const FunctionInfo *func;
 
     NAPI_OK(napi_get_cb_info(env, info, &count, args, nullptr, (void **)&func));
 
@@ -1629,83 +1627,71 @@ static TRANSLATE_FUNC napi_value TranslateVariadicCall(napi_env env, napi_callba
 
 #undef TRANSLATE_FUNC
 
-class AsyncCall {
-    Napi::Env env;
-
-    napi_async_work work = nullptr;
-    napi_ref callback = nullptr;
-
-    const FunctionInfo *func = nullptr;
-    InstanceMemory *mem = nullptr;
-
-    CallData call;
-    TransientAllocator transient;
-
-    bool prepared = false;
-
-    int last_errno = 0;
-#if defined(_WIN32)
-    void *last_error = nullptr;
-#endif
-
-public:
-    AsyncCall(Napi::Env env, InstanceData *instance, InstanceMemory *mem, const FunctionInfo *func)
-        : env(env), func(func->Ref()), mem(mem), call(env, instance, &transient, mem), transient(instance) {}
-    ~AsyncCall();
-
-    bool Prepare(napi_value *args);
-    void Queue();
-
-    void Execute();
-    void Complete();
-    void Fail(napi_value err);
-
-    static void HandleExecute(napi_env env, void *udata);
-    static void HandleComplete(napi_env env, napi_status status, void *udata);
-};
-
-AsyncCall::~AsyncCall()
+void AsyncCall::Init(InstanceData *instance, bool resident)
 {
-    transient.Reclaim();
-    ReleaseAsyncMemory(call.instance, mem);
-    func->Unref();
-
-    node_api_delete_reference(env, callback);
-    napi_delete_async_work(env, work);
-}
-
-bool AsyncCall::Prepare(napi_value *args)
-{
+    K_ASSERT(!call.instance);
+    K_ASSERT(!callback);
     K_ASSERT(!work);
 
-    // Init async work
-    {
-        napi_value name;
-        NAPI_OK(napi_create_string_utf8(env, func->name, NAPI_AUTO_LENGTH, &name));
+    transient.instance = instance;
+    mem.Allocate(instance->config.async_stack_size, instance->config.async_heap_size);
 
-        NAPI_OK(napi_create_async_work(env, nullptr, name, &AsyncCall::HandleExecute, &AsyncCall::HandleComplete, this, &work));
-        NAPI_OK(napi_create_reference(env, args[func->required_parameters], 1, &this->callback));
-    }
+    call.env = instance->env;
+    call.instance = instance;
+    call.transient = &transient;
 
-    prepared = call.PrepareAsync(func, args);
-
-    if (!prepared) [[unlikely]] {
-        Napi::Error err = env.GetAndClearPendingException();
-        Fail(err.Value());
-    }
-
-    return prepared;
+    this->resident = resident;
 }
 
-void AsyncCall::Queue()
+void AsyncCall::Release()
 {
-    K_ASSERT(prepared);
-    NAPI_OK(napi_queue_async_work(env, work));
+    K_ASSERT(!func);
+
+    if (!call.instance)
+        return;
+
+    transient.Reclaim();
+    mem.Release();
+
+    call.instance = nullptr;
+    call.env = nullptr;
+}
+
+void AsyncCall::Queue(const FunctionInfo *func, napi_value *args)
+{
+    K_ASSERT(!callback);
+    K_ASSERT(!work);
+    K_ASSERT(!this->func);
+
+    call.stack = mem.stack;
+    call.heap = mem.heap;
+#if defined(K_DEBUG)
+    call.new_stack = mem.stack.end;
+    call.prev_heap = mem.heap.ptr;
+#endif
+
+    if (!call.PrepareAsync(func, args)) [[unlikely]] {
+        Napi::Error err = call.env.GetAndClearPendingException();
+        Fail(err.Value(), args[func->required_parameters]);
+
+        return;
+    }
+
+    NAPI_OK(napi_create_reference(call.env, args[func->required_parameters], 1, &this->callback));
+
+    napi_value name;
+    NAPI_OK(napi_create_string_utf8(call.env, func->name, NAPI_AUTO_LENGTH, &name));
+    NAPI_OK(napi_create_async_work(call.env, nullptr, name, &AsyncCall::HandleExecute, &AsyncCall::HandleComplete, this, &work));
+
+    // Go!
+    this->func = func->Ref();
+    NAPI_OK(napi_queue_async_work(call.env, work));
 }
 
 void AsyncCall::Execute()
 {
-    K_ASSERT(prepared);
+    K_ASSERT(func);
+
     call.ExecuteAsync(func->native);
 
     last_errno = errno;
@@ -1718,16 +1704,16 @@ void AsyncCall::Execute()
 
 void AsyncCall::Complete()
 {
-    K_ASSERT(prepared);
+    K_ASSERT(this->func);
 
     napi_value ret = call.EndAsync();
     call.PopOutputArguments();
 
-    napi_value recv = GetUndefined(env);
-    napi_value args[] = { GetNull(env), ret ? ret : GetUndefined(env) };
+    napi_value undefined = GetUndefined(call.env);
+    napi_value args[] = { GetNull(call.env), ret ? ret : undefined };
 
     napi_value func;
-    NAPI_OK(napi_get_reference_value(env, callback, &func));
+    NAPI_OK(napi_get_reference_value(call.env, callback, &func));
 
 #if defined(_WIN32)
     TEB *teb = GetTEB();
@@ -1744,21 +1730,39 @@ void AsyncCall::Complete()
     errno = last_errno;
 #endif
 
-    napi_call_function(env, recv, func, K_LEN(args), args, nullptr);
+    napi_call_function(call.env, undefined, func, K_LEN(args), args, nullptr);
+
+    Rearm();
+    ReleaseAsyncCall(call.instance, this);
 }
 
-void AsyncCall::Fail(napi_value err)
+void AsyncCall::Fail(napi_value err, napi_value func)
 {
     call.PopOutputArguments();
 
-    napi_value recv;
-    napi_value func;
-    napi_value args[] = { err, env.Undefined() };
+    napi_value undefined;
+    NAPI_OK(napi_get_undefined(call.env, &undefined));
 
-    NAPI_OK(napi_get_undefined(env, &recv));
-    NAPI_OK(napi_get_reference_value(env, callback, &func));
+    napi_value args[] = { err, undefined };
+    napi_call_function(call.env, undefined, func, K_LEN(args), args, nullptr);
 
-    napi_call_function(env, recv, func, K_LEN(args), args, nullptr);
+    Rearm();
+    ReleaseAsyncCall(call.instance, this);
+}
+
+void AsyncCall::Rearm()
+{
+    if (func) [[likely]] {
+        func->Unref();
+        func = nullptr;
+
+        node_api_delete_reference(call.env, callback);
+        napi_delete_async_work(call.env, work);
+        callback = nullptr;
+        work = nullptr;
+    }
+
+    transient.Reclaim();
 }
 
 void AsyncCall::HandleExecute(napi_env, void *udata)
@@ -1773,8 +1777,6 @@ void AsyncCall::HandleComplete(napi_env, napi_status status, void *udata)
 
     K_ASSERT(status == napi_ok);
     async->Complete();
-
-    delete async;
 }
 
 static napi_value TranslateAsyncCall(napi_env env, napi_callback_info info)
@@ -1783,7 +1785,7 @@ static napi_value TranslateAsyncCall(napi_env env, napi_callback_info info)
 
     napi_value args[MaxParameters + 1];
     size_t count = 8;
-    FunctionInfo *func;
+    const FunctionInfo *func;
 
     NAPI_OK(napi_get_cb_info(env, info, &count, args, nullptr, (void **)&func));
 
@@ -1805,18 +1807,14 @@ static napi_value TranslateAsyncCall(napi_env env, napi_callback_info info)
         return nullptr;
     }
 
-    InstanceMemory *mem = AllocateAsyncMemory(instance);
-    if (!mem) [[unlikely]] {
+    AsyncCall *async = AllocateAsyncCall(instance);
+
+    if (!async) [[unlikely]] {
         ThrowError<Napi::Error>(env, "Too many asynchronous calls are running");
         return nullptr;
     }
 
-    AsyncCall *async = new AsyncCall(env, instance, mem, func);
-    if (!async->Prepare(args)) {
-        delete async;
-        return nullptr;
-    }
-    async->Queue();
+    async->Queue(func, args);
 
     return nullptr;
 }

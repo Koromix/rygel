@@ -34,12 +34,12 @@ struct alignas(8) CallData {
         const TypeInfo *type;
     };
 
-    Napi::Env env;
-    InstanceData *instance;
+    Napi::Env env = nullptr;
+    InstanceData *instance = nullptr;
 
-    MemoryRange<uint8_t> stack;
-    MemoryRange<uint8_t> heap;
-    TransientAllocator *transient;
+    MemoryRange<uint8_t> stack = {};
+    MemoryRange<uint8_t> heap = {};
+    TransientAllocator *transient = nullptr;
 #if defined(K_DEBUG)
     uint8_t *new_stack;
     uint8_t *prev_heap;
@@ -52,8 +52,9 @@ struct alignas(8) CallData {
 
     uint8_t *saved_sp;
 
+    CallData() = default;
     CallData(napi_env env, InstanceData *instance, TransientAllocator *transient)
-        : env(env), instance(instance), stack({}), heap({}), transient(transient) {}
+        : env(env), instance(instance), transient(transient) {}
 #if defined(K_DEBUG)
     CallData(napi_env env, InstanceData *instance, TransientAllocator *transient, InstanceMemory *mem)
         : env(env), instance(instance), stack(mem->stack), heap(mem->heap), transient(transient),
@@ -160,6 +161,45 @@ inline T *CallData::AllocHeap(Size size)
         return ptr;
     }
 }
+
+class AsyncCall {
+    CallData call;
+    bool resident = false;
+
+    TransientAllocator transient;
+    InstanceMemory mem;
+
+    napi_async_work work = nullptr;
+    napi_ref callback = nullptr;
+    const FunctionInfo *func = nullptr;
+
+    int last_errno = 0;
+#if defined(_WIN32)
+    void *last_error = nullptr;
+#endif
+
+public:
+    AsyncCall() = default;
+    ~AsyncCall() { K_ASSERT(!IsReady()); }
+
+    void Init(InstanceData *instance, bool resident);
+    void Release();
+
+    bool IsReady() const { return call.instance; }
+    bool IsResident() const { return resident; }
+
+    void Queue(const FunctionInfo *func, napi_value *args);
+
+private:
+    void Execute();
+    void Complete();
+    void Fail(napi_value err, napi_value func);
+
+    void Rearm();
+
+    static void HandleExecute(napi_env env, void *udata);
+    static void HandleComplete(napi_env env, napi_status status, void *udata);
+};
 
 void InitTranslateZeroCall(Napi::Env env);
 

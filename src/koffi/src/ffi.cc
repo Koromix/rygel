@@ -1555,20 +1555,20 @@ static void InitMemories(InstanceData *instance)
         return;
 
     instance->sync_memory.Allocate(instance->config.sync_stack_size, instance->config.sync_heap_size);
-    instance->async_memories = ObjectPool<InstanceMemory>(instance->config.resident_async_pools);
+    instance->async_calls = new ObjectPool<AsyncCall>(instance->config.resident_async_pools);
 }
 
-InstanceMemory *AllocateAsyncMemory(InstanceData *instance)
+AsyncCall *AllocateAsyncCall(InstanceData *instance)
 {
-    InstanceMemory *mem = instance->async_memories.AcquireObject();
+    K_ASSERT(instance->async_calls);
 
-    if (mem) [[likely]] {
-        if (!mem->IsAllocated()) [[unlikely]] {
-            mem->Allocate(instance->config.async_stack_size, instance->config.async_heap_size);
-            mem->resident = true;
+    AsyncCall *async = instance->async_calls->AcquireObject();
+
+    if (async) [[likely]] {
+        if (!async->IsReady()) {
+            async->Init(instance, true);
         }
-
-        return mem;
+        return async;
     }
 
     if (instance->async_temporaries++ >= instance->config.max_temporaries) {
@@ -1576,19 +1576,21 @@ InstanceMemory *AllocateAsyncMemory(InstanceData *instance)
         return nullptr;
     }
 
-    mem = new InstanceMemory();
-    mem->Allocate(instance->config.async_stack_size, instance->config.async_heap_size);
+    async = new AsyncCall();
+    async->Init(instance, false);
 
-    return mem;
+    return async;
 }
 
-void ReleaseAsyncMemory(InstanceData *instance, InstanceMemory *mem)
+void ReleaseAsyncCall(InstanceData *instance, AsyncCall *async)
 {
-    if (mem->resident) {
-        instance->async_memories.Release(mem);
+    if (async->IsResident()) {
+        instance->async_calls->Release(async);
     } else {
         instance->async_temporaries--;
-        delete mem;
+
+        async->Release();
+        delete async;
     }
 }
 
@@ -3121,8 +3123,15 @@ void ReleaseInstance(InstanceData *instance, bool reusable)
     }
 
     // Clear resident async pool
-    for (auto &slot: instance->async_memories.slots) {
-        slot.obj.Release();
+    if (instance->async_calls) {
+        for (auto &slot: instance->async_calls->slots) {
+            slot.obj.Release();
+        }
+
+        if (!reusable) {
+            delete instance->async_calls;
+            instance->async_calls = nullptr;
+        }
     }
 }
 

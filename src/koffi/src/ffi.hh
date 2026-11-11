@@ -58,6 +58,7 @@ struct TypeInfo;
 struct RecordMember;
 struct FunctionInfo;
 struct CallData;
+class AsyncCall;
 
 typedef void DisposeFunc (InstanceData *instance, const TypeInfo *type, const void *ptr);
 
@@ -261,7 +262,6 @@ struct InstanceMemory {
     MemoryRange<uint8_t> stack0 = {};
 
     Span<uint8_t> mappings[2] = {};
-    bool resident = false; // Used by async lock-free pool
 
     ~InstanceMemory() { Release(); }
 
@@ -272,11 +272,12 @@ struct InstanceMemory {
 };
 
 struct TransientAllocator {
-    InstanceData *instance;
+    InstanceData *instance = nullptr;
 
     NoDestroy<HeapChain> heap;
     LocalArray<int16_t, 64> trampolines;
 
+    TransientAllocator() = default;
     TransientAllocator(InstanceData *instance) : instance(instance) {}
 
 #if defined(K_DEBUG)
@@ -314,19 +315,18 @@ struct InstanceData {
     Napi::Reference<Napi::Symbol> active_symbol;
 
     InstanceMemory sync_memory;
-    ObjectPool<InstanceMemory> async_memories { 0 };
-    int async_temporaries = 0;
+    CallData *sync_call = nullptr;
+    TransientAllocator sync_transient { this };
+    bool pending_reclaim = false;
 
     // Variadic cache
     FunctionInfo *variadic_func = nullptr;
 
+    ObjectPool<AsyncCall> *async_calls = nullptr;
+    int async_temporaries = 0;
+
     std::thread::id main_thread_id;
     napi_threadsafe_function broker = nullptr;
-
-    CallData *sync_call = nullptr;
-
-    TransientAllocator sync_transient { this };
-    bool pending_reclaim = false;
 
 #if defined(_WIN32)
     MemoryRange<void> real_stack;
@@ -407,8 +407,8 @@ extern napi_status (NAPI_CDECL *node_api_create_property_key_utf8)(napi_env env,
 extern napi_status (NAPI_CDECL *node_api_create_object_with_properties)(napi_env env, napi_value prototype_or_null, const napi_value *property_names,
                                                                         const napi_value *property_values, size_t property_count, napi_value *result);
 
-InstanceMemory *AllocateAsyncMemory(InstanceData *instance);
-void ReleaseAsyncMemory(InstanceData *instance, InstanceMemory *mem);
+AsyncCall *AllocateAsyncCall(InstanceData *instance);
+void ReleaseAsyncCall(InstanceData *instance, AsyncCall *async);
 
 void ReleaseInstance(InstanceData *instance, bool reusable);
 
