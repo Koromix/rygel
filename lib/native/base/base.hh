@@ -3639,6 +3639,105 @@ public:
     void Trim() { table.Trim(); }
 };
 
+template <typename T>
+class ObjectPool {
+    K_DELETE_COPY(ObjectPool)
+
+    uint32_t head = 0xFFFFFFFFu;
+
+public:
+    struct Slot {
+        T obj;
+        uint32_t next;
+    };
+
+    Span<Slot> slots = {};
+
+    ObjectPool(Size capacity)
+    {
+        K_ASSERT(capacity >= 0 && capacity < 0xFFFFFFFF);
+        K_ASSERT(capacity <= K_SIZE_MAX / K_SIZE(Slot));
+
+        if (capacity > 0) {
+            slots = AllocateSpan<Slot>(nullptr, capacity);
+
+            for (Size i = 0; i < slots.len; i++) {
+                Slot *slot = new (slots.ptr + i) Slot();
+                slot->next = (uint32_t)i + 1;
+            }
+            slots[slots.len - 1].next = 0xFFFFFFFFu;
+
+            head = 0;
+        }
+    }
+    ~ObjectPool()
+    {
+        for (Slot &slot: slots) {
+            slot.~Slot();
+        }
+        ReleaseSpan(nullptr, slots);
+    }
+
+    ObjectPool(ObjectPool &&other) { *this = std::move(other); }
+    ObjectPool &operator=(ObjectPool &&other)
+    {
+        if (&other == this) [[unlikely]]
+            return *this;
+
+        for (Slot &slot: slots) {
+            slot.~Slot();
+        }
+        ReleaseSpan(nullptr, slots);
+
+        slots = other.slots;
+        head = other.head;
+        other.slots = {};
+        other.head = 0xFFFFFFFFu;
+
+        return *this;
+    }
+
+    uint32_t AcquireSlot()
+    {
+        uint32_t free = head;
+        if (free == 0xFFFFFFFFu)
+            return 0xFFFFFFFFu;
+        head = slots[free].next;
+
+        return free;
+    }
+
+    template <typename U = Slot, std::enable_if_t<std::is_same_v<U, Slot> && std::is_standard_layout_v<U>, int> = 0>
+    T *AcquireObject()
+    {
+        uint32_t free = AcquireSlot();
+        if (free == 0xFFFFFFFFu)
+            return nullptr;
+        return &slots[free].obj;
+    }
+
+    void Release(uint32_t slot)
+    {
+        slots[slot].next = head;
+        head = slot;
+    }
+
+    template <typename U = Slot, std::enable_if_t<std::is_same_v<U, Slot> && std::is_standard_layout_v<U>, int> = 0>
+    void Release(T *obj)
+    {
+        static_assert(offsetof(Slot, obj) == 0);
+
+        Slot *slot = (Slot *)obj;
+        K_ASSERT(slot >= slots.ptr && slot < slots.end());
+
+        uint32_t idx = (uint32_t)((Slot *)obj - slots.ptr);
+        Release(idx);
+    }
+
+    T *GetPointer(uint32_t idx) { return &slots[idx].obj; }
+    const T *GetPointer(uint32_t idx) const { return &slots[idx].obj; }
+};
+
 struct alignas(8) TaggedIndex {
     uint32_t idx;
     uint32_t tag;
