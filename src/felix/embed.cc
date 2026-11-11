@@ -393,7 +393,7 @@ bool PackAssets(Span<const EmbedAsset> assets, unsigned int flags, const char *o
                         return true;
                     });
 
-                    PrintLn(&c, "static const uint8_t raw%1[] = {\n    #embed \"%2\"\n};", i, bin_filename);
+                    PrintLn(&c, "static const uint8_t raw%1[] = {\n    #embed <%2>\n};", i, bin_filename);
                 } else {
                     FileInfo file_info;
                     if (StatFile(asset.src_filename, &file_info) != StatResult::Success)
@@ -401,7 +401,7 @@ bool PackAssets(Span<const EmbedAsset> assets, unsigned int flags, const char *o
                     blob->len = file_info.size;
 
                     if (file_info.size) {
-                        PrintLn(&c, "static const uint8_t raw%1[] = {\n    #embed \"%2\" suffix(, 0)\n};", i, asset.src_filename);
+                        PrintLn(&c, "static const uint8_t raw%1[] = {\n    #embed <%2> suffix(, 0)\n};", i, asset.src_filename);
                     } else {
                         PrintLn(&c, "static const uint8_t raw%1[] = { 0 };", i, asset.src_filename);
                     }
