@@ -1,2 +1,0 @@
-./util/fipstools/acvp/acvptool/testmodulewrapper
-./util/fipstools/delocate
