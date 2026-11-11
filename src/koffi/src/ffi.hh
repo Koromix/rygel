@@ -314,7 +314,7 @@ struct InstanceData {
     Napi::Reference<Napi::Symbol> active_symbol;
 
     InstanceMemory sync_memory;
-    LockFreePool<InstanceMemory> async_memories { 0 };
+    ObjectPool<InstanceMemory> async_memories { 0 };
     std::atomic_int temporaries { 0 };
 
     // Variadic cache

@@ -52,13 +52,15 @@ struct alignas(8) CallData {
 
     uint8_t *saved_sp;
 
+    CallData(napi_env env, InstanceData *instance, TransientAllocator *transient)
+        : env(env), instance(instance), stack({}), heap({}), transient(transient) {}
 #if defined(K_DEBUG)
-    CallData(napi_env env, InstanceData *instance, InstanceMemory *mem, TransientAllocator *transient)
+    CallData(napi_env env, InstanceData *instance, TransientAllocator *transient, InstanceMemory *mem)
         : env(env), instance(instance), stack(mem->stack), heap(mem->heap), transient(transient),
           new_stack(mem->stack.end), prev_heap(mem->heap.ptr) {}
     ~CallData();
 #else
-    CallData(napi_env env, InstanceData *instance, InstanceMemory *mem, TransientAllocator *transient)
+    CallData(napi_env env, InstanceData *instance, TransientAllocator *transient, InstanceMemory *mem)
         : env(env), instance(instance), stack(mem->stack), heap(mem->heap), transient(transient) {}
 #endif
 

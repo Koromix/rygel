@@ -1354,7 +1354,7 @@ static TRANSLATE_FUNC napi_value TranslateZeroCall(napi_env env, napi_callback_i
     napi_value arg = (napi_value)func->native;
 
     InstanceData *instance = func->instance;
-    CallData call(env, instance, func->sync_memory, nullptr);
+    CallData call(env, instance, nullptr, func->sync_memory);
 
     instance->sync_call = &call;
 
@@ -1380,7 +1380,7 @@ TRANSLATE_FUNC napi_value TranslateDirectCall(napi_env env, napi_callback_info i
     args[N] = (napi_value)func->native;
 
     InstanceData *instance = func->instance;
-    CallData call(env, instance, func->sync_memory, nullptr);
+    CallData call(env, instance, nullptr, func->sync_memory);
 
     instance->sync_call = &call;
 
@@ -1406,7 +1406,7 @@ TRANSLATE_FUNC napi_value TranslateOutputCall(napi_env env, napi_callback_info i
     args[N] = (napi_value)func->native;
 
     InstanceData *instance = func->instance;
-    CallData call(env, instance, func->sync_memory, nullptr);
+    CallData call(env, instance, nullptr, func->sync_memory);
 
     instance->sync_call = &call;
 
@@ -1419,7 +1419,7 @@ TRANSLATE_FUNC napi_value TranslateOutputCall(napi_env env, napi_callback_info i
 static TRANSLATE_FUNC K_FORCE_INLINE napi_value TranslateNormalCall(napi_env env, const FunctionInfo *func, napi_value *args)
 {
     InstanceData *instance = func->instance;
-    CallData call(env, instance, func->sync_memory, nullptr);
+    CallData call(env, instance, nullptr, func->sync_memory);
 
     instance->sync_call = &call;
 
@@ -1476,7 +1476,7 @@ static TRANSLATE_FUNC napi_value TranslateNormalCallDebugAsync(napi_env env, nap
     }
 
     InstanceData *instance = func->instance;
-    CallData call(env, instance, func->sync_memory, nullptr);
+    CallData call(env, instance, nullptr, func->sync_memory);
 
     instance->sync_call = &call;
 
@@ -1585,7 +1585,7 @@ static TRANSLATE_FUNC K_FORCE_INLINE napi_value TranslateVariadicCall(napi_env e
         ptr[varargs] = args[count];
     }
 
-    CallData call(env, instance, func->sync_memory, nullptr);
+    CallData call(env, instance, nullptr, func->sync_memory);
 
     instance->sync_call = &call;
 
@@ -1650,7 +1650,7 @@ class AsyncCall {
 
 public:
     AsyncCall(Napi::Env env, InstanceData *instance, InstanceMemory *mem, const FunctionInfo *func)
-        : env(env), func(func->Ref()), mem(mem), call(env, instance, mem, &transient), transient(instance) {}
+        : env(env), func(func->Ref()), mem(mem), call(env, instance, &transient, mem), transient(instance) {}
     ~AsyncCall();
 
     bool Prepare(napi_value *args);
@@ -2087,17 +2087,10 @@ extern "C" void RelayCallback(Size idx, uint8_t *sp)
 
     Napi::Env env = trampoline->env;
 
-    InstanceMemory *mem = AllocateAsyncMemory(instance);
-    if (!mem) [[unlikely]] {
-        ThrowError<Napi::Error>(env, "Too many asynchronous calls are running");
-        return;
-    }
-    K_DEFER { ReleaseAsyncMemory(instance, mem); };
+    TransientAllocator transient(instance);
+    CallData call(env, instance, &transient);
 
     if (std::this_thread::get_id() == instance->main_thread_id) {
-        TransientAllocator transient(instance);
-        CallData call(env, instance, mem, &transient);
-
         napi_handle_scope scope;
         NAPI_OK(napi_open_handle_scope(env, &scope));
         K_DEFER { napi_close_handle_scope(env, scope); };
@@ -2105,9 +2098,6 @@ extern "C" void RelayCallback(Size idx, uint8_t *sp)
         call.Relay(idx, sp);
         transient.Reclaim();
     } else {
-        TransientAllocator transient(instance);
-        CallData call(env, instance, mem, &transient);
-
         call.RelayAsync(idx, sp);
     }
 }
@@ -2152,11 +2142,10 @@ bool Encode(InstanceData *instance, uint8_t *origin, napi_value value, const Typ
 {
     Napi::Env env = instance->env;
 
-    InstanceMemory mem;
     TransientAllocator transient(instance);
     K_DEFER { transient.Reclaim(); };
 
-    CallData call(env, instance, &mem, &transient);
+    CallData call(env, instance, &transient);
 
 #define PUSH_INTEGER(CType) \
         do { \

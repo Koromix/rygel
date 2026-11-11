@@ -1555,7 +1555,7 @@ static void InitMemories(InstanceData *instance)
         return;
 
     instance->sync_memory.Allocate(instance->config.sync_stack_size, instance->config.sync_heap_size);
-    instance->async_memories = LockFreePool<InstanceMemory>(instance->config.resident_async_pools);
+    instance->async_memories = ObjectPool<InstanceMemory>(instance->config.resident_async_pools);
 }
 
 InstanceMemory *AllocateAsyncMemory(InstanceData *instance)
