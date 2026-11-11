@@ -18,6 +18,7 @@
 #include <time.h>
 #include <unistd.h>
 #include <termios.h>
+#include <sys/ttydefaults.h>
 #if defined(__APPLE__)
     #include <mach/mach_time.h>
     #include <mach-o/dyld.h>
