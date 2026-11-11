@@ -2901,6 +2901,10 @@ private:
     }
 };
 
+// ------------------------------------------------------------------------
+// Hash
+// ------------------------------------------------------------------------
+
 template <typename KeyType, typename ValueType,
           typename Handler = typename std::remove_pointer<ValueType>::type::HashHandler>
 class HashTable {
@@ -3638,6 +3642,10 @@ public:
 
     void Trim() { table.Trim(); }
 };
+
+// ------------------------------------------------------------------------
+// Pools
+// ------------------------------------------------------------------------
 
 template <typename T>
 class ObjectPool {
