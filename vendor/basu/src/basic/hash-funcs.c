@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: LGPL-2.1+ */
 
 #include <string.h>
+#include <sys/types.h>
 
 #include "hash-funcs.h"
 #include "path-util.h"

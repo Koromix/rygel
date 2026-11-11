@@ -1,0 +1,12 @@
+diff --git a/vendor/basu/src/basic/hash-funcs.c b/vendor/basu/src/basic/hash-funcs.c
+index 79380a834d..8007660fee 100644
+--- a/vendor/basu/src/basic/hash-funcs.c
++++ b/vendor/basu/src/basic/hash-funcs.c
+@@ -1,6 +1,7 @@
+ /* SPDX-License-Identifier: LGPL-2.1+ */
+ 
+ #include <string.h>
++#include <sys/types.h>
+ 
+ #include "hash-funcs.h"
+ #include "path-util.h"
