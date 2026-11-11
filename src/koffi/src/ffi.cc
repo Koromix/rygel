@@ -1571,8 +1571,8 @@ InstanceMemory *AllocateAsyncMemory(InstanceData *instance)
         return mem;
     }
 
-    if (instance->temporaries.fetch_add(1, std::memory_order_relaxed) >= instance->config.max_temporaries) {
-        instance->temporaries.fetch_sub(1, std::memory_order_relaxed);
+    if (instance->async_temporaries++ >= instance->config.max_temporaries) {
+        instance->async_temporaries--;
         return nullptr;
     }
 
@@ -1587,7 +1587,7 @@ void ReleaseAsyncMemory(InstanceData *instance, InstanceMemory *mem)
     if (mem->resident) {
         instance->async_memories.Release(mem);
     } else {
-        instance->temporaries.fetch_sub(1, std::memory_order_relaxed);
+        instance->async_temporaries--;
         delete mem;
     }
 }

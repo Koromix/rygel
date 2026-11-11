@@ -315,7 +315,7 @@ struct InstanceData {
 
     InstanceMemory sync_memory;
     ObjectPool<InstanceMemory> async_memories { 0 };
-    std::atomic_int temporaries { 0 };
+    int async_temporaries = 0;
 
     // Variadic cache
     FunctionInfo *variadic_func = nullptr;
