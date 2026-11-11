@@ -13,11 +13,42 @@ import shutil
 import subprocess
 import tempfile
 import threading
+from urllib.request import Request, urlopen
 
 REPOSITORY_NAME = 'koromix'
 GPG_SIGNING_USER = 'niels.martignene@protonmail.com'
 
 DEFAULT_IMPORT_DIR = '../../bin/Packages'
+
+CODEBERG_URL = 'https://codeberg.org/'
+CODEBERG_REPOSITORY = 'Koromix/rygel'
+CODEBERG_KEY_GPG = '../package/repo/codeberg.key.gpg'
+CODEBERG_PROJECTS = {
+    'goupile': {
+        'title': 'Goupile',
+        'changelog': '../../src/goupile/CHANGELOG.md'
+    },
+    'koffi': {
+        'title': 'Koffi',
+        'changelog': '../../src/koffi/CHANGELOG.md'
+    },
+    'meestic': {
+        'title': 'Meestic',
+        'changelog': '../../src/meestic/CHANGELOG.md'
+    },
+    'redropp': {
+        'title': 'Redropp',
+        'changelog': '../../src/redropp/CHANGELOG.md'
+    },
+    'rekkord': {
+        'title': 'Rekkord',
+        'changelog': '../../src/rekkord/CHANGELOG.md'
+    },
+    'tytools': {
+        'title': 'TyTools',
+        'changelog': '../../src/tytools/CHANGELOG.md'
+    }
+}
 
 def import_packages(src, dest, ext):
     names = os.listdir(src)
@@ -128,6 +159,72 @@ def process_releases(root):
         run_command('gzip', ['-f', manifest])
         minisign(minisign_key_gpg, manifest + '.gz')
 
+def update_forgejo_releases(url, repo, token, projects):
+    url = url.rstrip('/')
+
+    output = capture_command('git', ['-C', os.path.dirname(__file__), 'tag', '--sort=*authordate'])
+    tags = [tag.strip() for tag in output.split('\n')]
+
+    releases = []
+    page = 1
+    while True:
+        with make_request(f'{url}/api/v1/repos/{repo}/releases?page={page}',
+                          headers = { 'Authorization': 'token ' + token }) as response:
+            items = json.loads(response.read().decode('utf-8'))
+            if not items:
+                break
+            releases.extend((item["tag_name"] for item in items))
+            page = page + 1
+
+    for tag in tags:
+        prefix, version = tag.split('/')
+        project = projects.get(prefix)
+
+        if project is None:
+            continue
+        if '-' in version:
+            continue
+        if tag in releases:
+            continue
+
+        changelog = os.path.dirname(__file__) + '/' + project['changelog']
+        entry = extract_changelog_entry(changelog, project['title'], version)
+
+        if entry is None:
+            continue
+
+        print(f'  - Releasing {project["title"]} version {version}...')
+
+        body = {
+            "tag_name": tag,
+            "name": f'{project["title"]} {version}',
+            "draft": False,
+            "body": entry
+        }
+        make_request(f'{url}/api/v1/repos/{repo}/releases', body = json.dumps(body),
+                     headers = { 'Authorization': 'token ' + token, 'Content-Type': 'application/json' })
+
+def extract_changelog_entry(filename, title, version):
+    with open(filename, 'r') as f:
+        markdown = f.read()
+    lines = [line.strip() for line in markdown.split('\n')]
+
+    start = None
+    end = len(lines)
+    for idx, line in enumerate(lines):
+        if f'# {title} {version}' in line:
+            start = idx + 1
+            break
+    if start is None:
+        return None
+    for idx, line in enumerate(lines[start:]):
+        if line.startswith('#'):
+            end = start + idx
+            break
+
+    changes = '\n'.join(lines[start:end]).strip()
+    return changes if changes else None
+
 def minisign(key_gpg, filename):
     key = capture_command('gpg', ['--decrypt', key_gpg])
     fifo = create_secret_fifo(key)
@@ -225,13 +322,25 @@ def capture_command(cmd, args, cwd = None):
 
         raise RuntimeError(f'Command {cmd} failed with status {ret.returncode}')
 
-    output = ret.stdout.decode('utf-8')
+    output = ret.stdout.decode('utf-8').strip()
     return output
+
+def make_request(url, body = None, headers = {}):
+    req = Request(url)
+
+    for key, value in headers.items():
+        req.add_header(key, value)
+
+    if body is not None:
+        req.method = 'POST'
+        req.data = body.encode('utf-8')
+
+    return urlopen(req)
 
 if __name__ == '__main__':
     script_dir = os.path.dirname(__file__)
 
-    parser = argparse.ArgumentParser(description = 'Update package repositories')
+    parser = argparse.ArgumentParser(description = 'Update downloadable files and package repositories')
     parser.add_argument('directory', metavar = 'directory', type = str,
                         help = 'Root download/package directory')
     parser.add_argument('--debian', const = 'debian', dest = 'types', action = 'append_const',
@@ -240,6 +349,8 @@ if __name__ == '__main__':
                         help = 'Update RPM repository directory in rpm subdirectory')
     parser.add_argument('--releases', const = 'releases', dest = 'types', action = 'append_const',
                         help = 'Update releases for manual downloads')
+    parser.add_argument('--codeberg', const = 'codeberg', dest = 'types', action = 'append_const',
+                        help = 'Update Codeberg tag releases')
     parser.add_argument('--import', metavar = 'path', dest = 'imports', nargs = '?',
                         type = str, default = [], const = None, action = 'append',
                         help = 'import additional packages')
@@ -253,6 +364,7 @@ if __name__ == '__main__':
             args.types.append('rpm')
         if os.path.isdir(args.directory + '/releases'):
             args.types.append('releases')
+        args.types.append('codeberg')
 
     if None in args.imports:
         default_import = script_dir + '/' + DEFAULT_IMPORT_DIR
@@ -286,3 +398,9 @@ if __name__ == '__main__':
             import_releases(path, args.directory + '/releases', shutil.copyfile)
         import_releases(args.directory + '/releases', args.directory + '/releases', shutil.move)
         process_releases(args.directory + '/releases')
+
+    if 'codeberg' in args.types:
+        print('>> Updating Codeberg releases...')
+        codeberg_key_gpg = os.path.dirname(__file__) + '/' + CODEBERG_KEY_GPG
+        codeberg_token = capture_command('gpg', ['--decrypt', codeberg_key_gpg])
+        update_forgejo_releases(CODEBERG_URL, CODEBERG_REPOSITORY, codeberg_token, CODEBERG_PROJECTS)
