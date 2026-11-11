@@ -5626,7 +5626,7 @@ bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
         }
 
         if (info.work_dir) {
-#if (defined(__linux__) && !defined(__GLIBC__)) || defined(__OpenBSD__)
+#if defined(__OpenBSD__)
             errno = posix_spawn_file_actions_addchdir(&file_actions, info.work_dir);
 #else
     #pragma GCC diagnostic push
