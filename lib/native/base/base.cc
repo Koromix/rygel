@@ -5621,19 +5621,10 @@ bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
         }
 
         if (info.work_dir) {
-            const char *argv[] = { "env", "-C", info.work_dir, "sh", "-c", cmd_line, nullptr };
-            errno = posix_spawn(&pid, "/bin/env", &file_actions, nullptr, const_cast<char **>(argv), new_env.ptr ? new_env.ptr : environ);
-        }
-
-        if (info.work_dir) {
-#if defined(__OpenBSD__)
-            errno = posix_spawn_file_actions_addchdir(&file_actions, info.work_dir);
-#else
-    #pragma GCC diagnostic push
-    #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             errno = posix_spawn_file_actions_addchdir_np(&file_actions, info.work_dir);
-    #pragma GCC diagnostic pop
-#endif
+#pragma GCC diagnostic pop
 
             if (errno) {
                 LogError("Failed to change process working directory: %1", strerror(errno));
