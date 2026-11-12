@@ -5620,19 +5620,25 @@ bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
             return false;
         }
 
+        const char *args[] = { "sh", "-c", cmd_line, nullptr };
+        const char **argv = args;
+
+#if defined(__OpenBSD__)
+        const char *chdir[] = { "sh", "-c", "CDPATH= cd -- \"$1\" && exec /bin/sh -c \"$2\"", "sh", info.work_dir, cmd_line, nullptr };
+        argv = info.work_dir ? chdir : argv;
+#else
         if (info.work_dir) {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
             errno = posix_spawn_file_actions_addchdir_np(&file_actions, info.work_dir);
-#pragma GCC diagnostic pop
+    #pragma GCC diagnostic pop
 
             if (errno) {
                 LogError("Failed to change process working directory: %1", strerror(errno));
                 return false;
             }
         }
-
-        const char *argv[] = { "sh", "-c", cmd_line, nullptr };
+#endif
 
         if ((errno = posix_spawn(&pid, "/bin/sh", &file_actions, nullptr, const_cast<char **>(argv), new_env.ptr ? new_env.ptr : environ))) {
             LogError("Failed to start process: %1", strerror(errno));
