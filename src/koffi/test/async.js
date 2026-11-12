@@ -62,6 +62,16 @@ async function test() {
         assert.equal(ConcatenateToInt1(5, 6, 1, 2, 3, 9, 4, 4, 0, 6, 8, 7), 561239440687n);
         assert.equal(ConcatenateToInt1(5, 6, 1, 2, 3, 9, 4, 4, 0, 6, 8, 7), 561239440687n);
 
+        // Failed calls
+        for (let j = 0; j < 8; j++) {
+            await assert.rejects(promisify(ConcatenateToInt1.async)(5, 6, 1, 2, 'hello', 9, 4, 4, 0, 6, 8, 7), /expected number/);
+            await assert.rejects(promisify(MakePackedBFG.async)(null, null, null, null), /expected number/);
+
+            let p1 = assert.rejects(new Promise((resolve, reject) => queueMicrotask(() => promisify(ConcatenateToInt1.async)(5, 6, 1, 2, 'hello', 9, 4, 4, 0, 6, 8, 7).then(resolve, reject))), /expected number/);
+            let p2 = assert.rejects(new Promise((resolve, reject) => setTimeout(() => promisify(MakePackedBFG.async)(null, null, null, null).then(resolve, reject), 0)), /expected number/);
+            promises.push(p1, p2);
+        }
+
         // Async complex call
         {
             let out = {};
