@@ -312,11 +312,11 @@
 
         "build": {
             "package": "win32-ia32",
-            "default": "C:\\Node32\\node32.cmd node ../../cnoke.cjs"
+            "default": "C:\\Node32\\node32.cmd node ../../cnoke.cjs --toolset v143"
         },
 
         "test": {
-            "build": "C:\\Node32\\node32.cmd node ../../cnoke.cjs -D test",
+            "build": "C:\\Node32\\node32.cmd node ../../cnoke.cjs --toolset v143 -D test",
             "commands": {
                 "Test Sync": "C:\\Node32\\node32.cmd node --no-deprecation --expose-gc test/sync.js",
                 "Test Sync (debug async)": "set DEBUG_ASYNC=1 && C:\\Node32\\node32.cmd node --no-deprecation --expose-gc test/sync.js",
@@ -344,11 +344,11 @@
 
         "build": {
             "package": "win32-x64",
-            "default": "C:\\Node64\\node64.cmd node ../../cnoke.cjs --clang"
+            "default": "C:\\Node64\\node64.cmd node ../../cnoke.cjs --toolset \"ClangCL,version=14.44\""
         },
 
         "test": {
-            "build": "C:\\Node64\\node64.cmd node ../../cnoke.cjs --clang -D test",
+            "build": "C:\\Node64\\node64.cmd node ../../cnoke.cjs --toolset \"ClangCL,version=14.44\" -D test",
             "commands": {
                 "Test Sync": "C:\\Node64\\node64.cmd node --no-deprecation --expose-gc test/sync.js",
                 "Test Sync (debug async)": "set DEBUG_ASYNC=1 && C:\\Node64\\node64.cmd node --no-deprecation --expose-gc test/sync.js",
