@@ -1214,6 +1214,28 @@ static bool DecodeQuery(Span<char> str, int max_values, HeapArray<http_KeyValue>
     return true;
 }
 
+static int64_t DecodeContentLength(Span<const char> str)
+{
+    if (!str.len) [[unlikely]]
+        return -1;
+
+    int64_t len = 0;
+
+    for (char c: str) {
+        int digit = c - '0';
+
+        // The overflow check below is overly strict and rejects valid values near INT64_MAX
+        if ((unsigned int)digit > 9) [[unlikely]]
+            return -1;
+        if (len > (INT64_MAX - 9) / 10) [[unlikely]]
+            return -1;
+
+        len = len * 10 + digit;
+    }
+
+    return len;
+}
+
 static void MapKeys(Span<http_KeyValue> pairs, HashTable<const char *, http_KeyHead> *out_map)
 {
     for (http_KeyValue &pair: pairs) {
@@ -1407,8 +1429,9 @@ http_RequestStatus http_IO::ParseRequest()
                 upgrade |= TestStrI(part, "upgrade");
             }
         } else if (key == "Content-Length") {
-            int64_t len;
-            if (!ParseInt(value, &len, K_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log) || len < 0) [[unlikely]] {
+            int64_t len = DecodeContentLength(value);
+
+            if (len < 0) [[unlikely]] {
                 SendAbort(400, "Invalid Content-Length value");
                 return http_RequestStatus::Shutdown;
             }
