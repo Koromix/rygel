@@ -5623,7 +5623,7 @@ bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
         const char *args[] = { "sh", "-c", cmd_line, nullptr };
         const char **argv = args;
 
-#if defined(__OpenBSD__)
+#if defined(__OpenBSD__) || (defined(__BIONIC__) && __ANDROID_API__ < 34)
         const char *chdir[] = { "sh", "-c", "CDPATH= cd -- \"$1\" && exec /bin/sh -c \"$2\"", "sh", info.work_dir, cmd_line, nullptr };
         argv = info.work_dir ? chdir : argv;
 #else
