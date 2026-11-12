@@ -1365,8 +1365,8 @@ http_RequestStatus http_IO::ParseRequest()
                 SendAbort(400, "Refusing empty Host value");
                 return http_RequestStatus::Shutdown;
             }
-            if (request.host && !TestStr(request.host, value)) [[unlikely]] {
-                SendAbort(400, "Refusing mismatched Host values");
+            if (request.host) [[unlikely]] {
+                SendAbort(400, "Refusing multiple Host headers");
                 return http_RequestStatus::Shutdown;
             }
 
