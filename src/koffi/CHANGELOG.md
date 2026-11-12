@@ -7,6 +7,17 @@
 
 ### Koffi 3.3
 
+#### Koffi 3.3.8
+
+*Released on 2026-11-12*
+
+- Reduce overhead of sync call preparation and release
+- Reduce overhead of async call preparation and release
+- Reduce argument access overhead during call preparation
+- Defer reclamation of temporary trampolines
+- Enforce 16-byte stack alignment on all x86 32-bit platforms (bis repetita)
+- Use MSVC v143 toolset to keep Koffi compatible with Windows 7
+
 #### Koffi 3.3.7
 
 *Released on 2026-11-05*
