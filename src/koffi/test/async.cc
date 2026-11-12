@@ -5,6 +5,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <inttypes.h>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
 
 #if defined(_WIN32)
     #define EXPORT __declspec(dllexport)
@@ -23,6 +26,8 @@
     #define FASTCALL
     #define STDCALL
 #endif
+
+extern "C" {
 
 #pragma pack(push, 1)
 typedef struct PackedBFG {
@@ -98,4 +103,36 @@ EXPORT BinaryIntFunc *GetBinaryIntFunction(const char *type)
     } else {
         return NULL;
     }
+}
+
+static std::mutex trigger_mutex;
+static std::condition_variable trigger_cv;
+static int trigger_waiters = 0;
+static bool trigger_go = false;
+
+EXPORT void WaitForTrigger()
+{
+    std::unique_lock<std::mutex> lock(trigger_mutex);
+
+    trigger_waiters++;
+
+    while (!trigger_go) {
+        trigger_cv.wait(lock);
+    }
+}
+
+EXPORT void Trigger()
+{
+    std::unique_lock<std::mutex> lock(trigger_mutex);
+
+    while (!trigger_waiters) {
+        lock.unlock();
+        std::this_thread::yield();
+        lock.lock();
+    }
+
+    trigger_go = true;
+    trigger_cv.notify_all();
+}
+
 }

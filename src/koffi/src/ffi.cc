@@ -2499,6 +2499,13 @@ FunctionInfo::~FunctionInfo()
     if (lib) {
         lib->Unref();
     }
+
+#if defined(K_DEBUG)
+    MemSet(plan.sync.ptr, 0, plan.sync.len * K_SIZE(*plan.sync.ptr));
+    MemSet(plan.async.ptr, 0, plan.async.len * K_SIZE(*plan.async.ptr));
+    MemSet(plan.relay.ptr, 0, plan.relay.len * K_SIZE(*plan.relay.ptr));
+    MemSet(small_sync, 0, K_SIZE(small_sync));
+#endif
 }
 
 void InstanceMemory::Allocate(Size stack_size, Size heap_size)

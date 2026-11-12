@@ -36,6 +36,38 @@ async function main() {
 }
 
 async function test() {
+    let promises = [];
+
+    if (global.gc != null)
+        console.log('Heap usage before tests:', formatMib(process.memoryUsage().heapUsed));
+
+    // Run a bunch of stuff, inside block so most function references disappear after and become GC-eligible
+    const Trigger = await stress(promises);
+
+    if (global.gc != null) {
+        for (let i = 0; i < 3; i++) {
+            global.gc();
+            await new Promise(resolve => setTimeout(resolve, 0));
+        }
+    }
+
+    Trigger();
+
+    if (global.gc != null) {
+        for (let i = 0; i < 3; i++) {
+            global.gc();
+            await new Promise(resolve => setTimeout(resolve, 0));
+        }
+    }
+
+    await Promise.all(promises);
+
+    if (global.gc != null)
+        console.log('Heap usage after tests:', formatMib(process.memoryUsage().heapUsed));
+}
+
+async function stress(promises)
+{
     const lib_filename = path.join(__dirname, cnoke.output, 'async' + koffi.extension);
     const lib = koffi.load(lib_filename);
 
@@ -43,9 +75,12 @@ async function test() {
     const MakePackedBFG = lib.func('PackedBFG __fastcall MakePackedBFG(int x, double y, _Out_ PackedBFG *p, const char *str)');
     const CallMeChar = lib.func('int CallMeChar(CharCallback *func)');
     const GetBinaryIntFunction = lib.func('BinaryIntFunc *GetBinaryIntFunction(const char *name)');
+    const WaitForTrigger = lib.func('void WaitForTrigger()');
+    const Trigger = lib.func('void Trigger()');
 
     for (let i = 0; i < 100; i++) {
-        let promises = [];
+        await Promise.all(promises);
+        promises.length = 0;
 
         // Issue several async calls
         for (let i = 0; i < 32; i++) {
@@ -102,7 +137,19 @@ async function test() {
                 promises.push(p);
             }
         }
-
-        await Promise.all(promises);
     }
+
+    // Add blocked calls (until Trigger), we want to make sure FunctionInfo remains alive even if
+    // nothing in JS references it, until call is finished.
+    // Don't use promisify it seems to prevent collection while the call is running.
+    for (let i = 0; i < 8; i++) {
+        let p = new Promise(resolve => WaitForTrigger.async(resolve));
+        promises.push(p);
+    }
+
+    return Trigger;
+}
+
+function formatMib(size) {
+    return (size / 1024 / 1024).toFixed(1) + ' MiB';
 }

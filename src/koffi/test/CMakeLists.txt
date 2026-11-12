@@ -23,7 +23,7 @@ elseif(WIN32)
     target_sources(sync PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/sync.def")
 endif()
 
-add_library(async SHARED async.c)
+add_library(async SHARED async.cc)
 set_target_properties(async PROPERTIES PREFIX "")
 
 add_library(callbacks SHARED callbacks.c)
