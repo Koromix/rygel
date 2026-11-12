@@ -41,6 +41,7 @@ function Builder(config = {}) {
     let targets = config.targets || [];
     let verbose = config.verbose || false;
     let prebuild = config.prebuild || false;
+    let toolset = config.toolset || null;
 
     if (runtime_version == null)
         runtime_version = process.version;
@@ -249,6 +250,8 @@ function Builder(config = {}) {
             for (let suffix of ['', '_DEBUG', '_RELEASE', '_RELWITHDEBINFO'])
                 args.push(`-DCMAKE_${type}_OUTPUT_DIRECTORY${suffix}=${output_dir}`);
         }
+        if (toolset != null)
+            args.push('-T', toolset);
         args.push('--no-warn-unused-cli');
 
         console.log('>> Running configuration');

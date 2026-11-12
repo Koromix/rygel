@@ -99,6 +99,11 @@ async function main() {
                 config.mode = 'Debug';
             } else if ((command == 'build' || command == 'configure') && arg == '--release') {
                 config.mode = 'Release';
+            } else if ((command == 'build' || command == 'configure') && arg == '--toolset') {
+                if (value == null)
+                    throw new Error(`Missing value for ${arg}`);
+
+                config.toolset = value;
             } else if (command == 'build' && arg == '--prebuild') {
                 config.prebuild = true;
             } else if (command == 'build' && arg == '--target') {
@@ -154,6 +159,8 @@ Options:
         --runtime <VERSION>              Change node version
                                          (default: ${process.version})
         --clang                          Use Clang instead of default CMake compiler
+
+        --toolset <TOOLSET>              Pass custom toolset (-T) option to CMake
 
         --prebuild                       Use prebuilt binary if available
         --target <TARGET>                Only build the specified target
