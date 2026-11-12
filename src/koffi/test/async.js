@@ -44,53 +44,55 @@ async function test() {
     const CallMeChar = lib.func('int CallMeChar(CharCallback *func)');
     const GetBinaryIntFunction = lib.func('BinaryIntFunc *GetBinaryIntFunction(const char *name)');
 
-    let promises = [];
+    for (let i = 0; i < 100; i++) {
+        let promises = [];
 
-    // Issue several async calls
-    for (let i = 0; i < 32; i++) {
-        let p = (async () => {
-            let res = await promisify(ConcatenateToInt1.async)(5, 6, 1, 2, 3, 9, 4, 4, 0, 6, 8, 7);
-            assert.equal(res, 561239440687n);
-        })();
-
-        promises.push(p);
-    }
-
-    // Make a few synchronous calls while the asynchronous ones are still in the air
-    assert.equal(ConcatenateToInt1(5, 6, 1, 2, 3, 9, 4, 4, 0, 6, 8, 7), 561239440687n);
-    assert.equal(ConcatenateToInt1(5, 6, 1, 2, 3, 9, 4, 4, 0, 6, 8, 7), 561239440687n);
-    assert.equal(ConcatenateToInt1(5, 6, 1, 2, 3, 9, 4, 4, 0, 6, 8, 7), 561239440687n);
-
-    // Async complex call
-    {
-        let out = {};
-        let p = (async () => {
-            let res = await promisify(MakePackedBFG.async)(2, 7, out, '__Hello123456789++++foobarFOOBAR!__');
-
-            assert.deepEqual(res, { a: 2, b: 4, c: -25, d: 'X/__Hello123456789++++foobarFOOBAR!__/X', e: 54, inner: { f: 14, g: 5 } });
-            assert.deepEqual(out, res);
-        })();
-        promises.push(p);
-    }
-
-    // Call function pointers
-    {
-        test_binary('add', 4, 5, 9);
-        test_binary('substract', 4, 5, -1);
-        test_binary('multiply', 3, 8, 24);
-        test_binary('divide', 100, 2, 50);
-
-        function test_binary(type, a, b, expected) {
+        // Issue several async calls
+        for (let i = 0; i < 32; i++) {
             let p = (async () => {
-                let ptr = GetBinaryIntFunction(type);
-                let func = koffi.decode(ptr, BinaryIntFunc);
+                let res = await promisify(ConcatenateToInt1.async)(5, 6, 1, 2, 3, 9, 4, 4, 0, 6, 8, 7);
+                assert.equal(res, 561239440687n);
+            })();
 
-                let res = await promisify(func.async)(a, b)
-                assert.equal(res, expected);
+            promises.push(p);
+        }
+
+        // Make a few synchronous calls while the asynchronous ones are still in the air
+        assert.equal(ConcatenateToInt1(5, 6, 1, 2, 3, 9, 4, 4, 0, 6, 8, 7), 561239440687n);
+        assert.equal(ConcatenateToInt1(5, 6, 1, 2, 3, 9, 4, 4, 0, 6, 8, 7), 561239440687n);
+        assert.equal(ConcatenateToInt1(5, 6, 1, 2, 3, 9, 4, 4, 0, 6, 8, 7), 561239440687n);
+
+        // Async complex call
+        {
+            let out = {};
+            let p = (async () => {
+                let res = await promisify(MakePackedBFG.async)(2, 7, out, '__Hello123456789++++foobarFOOBAR!__');
+
+                assert.deepEqual(res, { a: 2, b: 4, c: -25, d: 'X/__Hello123456789++++foobarFOOBAR!__/X', e: 54, inner: { f: 14, g: 5 } });
+                assert.deepEqual(out, res);
             })();
             promises.push(p);
         }
-    }
 
-    await Promise.all(promises);
+        // Call function pointers
+        {
+            test_binary('add', 4, 5, 9);
+            test_binary('substract', 4, 5, -1);
+            test_binary('multiply', 3, 8, 24);
+            test_binary('divide', 100, 2, 50);
+
+            function test_binary(type, a, b, expected) {
+                let p = (async () => {
+                    let ptr = GetBinaryIntFunction(type);
+                    let func = koffi.decode(ptr, BinaryIntFunc);
+
+                    let res = await promisify(func.async)(a, b)
+                    assert.equal(res, expected);
+                })();
+                promises.push(p);
+            }
+        }
+
+        await Promise.all(promises);
+    }
 }
