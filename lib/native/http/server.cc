@@ -1232,7 +1232,6 @@ http_RequestStatus http_IO::ParseRequest()
     bool close = false;
     bool upgrade = false;
     Size headers = 0;
-    Span<const char> host = {};
     int64_t body_len = 0;
     bool explicit_len = false;
     LocalArray<const char *, 16> xffs;
@@ -1362,12 +1361,17 @@ http_RequestStatus http_IO::ParseRequest()
 
         // Handle special headers
         if (key == "Host") {
-            if (host.len && !TestStr(host, value)) [[unlikely]] {
+            if (!value.len) [[unlikely]] {
+                SendAbort(400, "Refusing empty Host value");
+                return http_RequestStatus::Shutdown;
+            }
+            if (request.host && !TestStr(request.host, value)) [[unlikely]] {
                 SendAbort(400, "Refusing mismatched Host values");
                 return http_RequestStatus::Shutdown;
             }
 
-            host = value;
+            value.ptr[value.len] = 0;
+            request.host = value.ptr;
         } else if (key == "Cookie") {
             Span<char> remain = value;
 
@@ -1452,7 +1456,7 @@ http_RequestStatus http_IO::ParseRequest()
         }
     }
 
-    if (request.version >= 11 && !host.len) [[unlikely]] {
+    if (request.version >= 11 && !request.host) [[unlikely]] {
         SendAbort(400, "Missing Host header in HTTP/1.1 request");
         return http_RequestStatus::Shutdown;
     }
@@ -1815,6 +1819,7 @@ bool http_IO::Rearm(int64_t now)
     incoming.reading = false;
 
     request.version = 10;
+    request.host = nullptr;
     request.values.RemoveFrom(0);
     request.headers.RemoveFrom(0);
     request.cookies.RemoveFrom(0);

@@ -159,6 +159,7 @@ struct http_KeyHead {
 
 struct http_RequestInfo {
     int version = 10;
+    const char *host = nullptr;
     http_RequestMethod method = http_RequestMethod::Get;
     bool head = false;
     bool upgrade = false;
