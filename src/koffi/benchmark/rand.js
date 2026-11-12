@@ -25,9 +25,9 @@ function main() {
     let tests = {
         'Node-API': time => runNapi(time),
         'Koffi v3': time => runKoffi(koffi, time),
-        'Koffi v2': time => koffi2 ? runKoffi(koffi2, time) : undefined,
-        'node-ctypes': time => ctypes ? runNodeCTypes(time) : undefined,
-        'ffi-rs': time => ffi_rs ? runFfiRs(time) : undefined,
+        'Koffi v2': koffi2 ? time => runKoffi(koffi2, time) : undefined,
+        'node-ctypes': ctypes ? time => runNodeCTypes(time) : undefined,
+        'ffi-rs': ffi_rs ? time => runFfiRs(time) : undefined,
         'node:ffi': ffi ? time => runNodeFfi(time) : undefined,
         'ffi-napi': ffi_napi ? time => runFfiNapi(time) : undefined
     };
