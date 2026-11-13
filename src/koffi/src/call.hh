@@ -207,7 +207,9 @@ napi_value DescribeFunction(InstanceData *instance, const FunctionInfo *func);
 napi_value WrapFunction(InstanceData *instance, const FunctionInfo *func);
 bool DetectCallConvention(Span<const char> name, CallConvention *out_convention);
 
-// Mutates the array of arguments
+// Requires args[count] to contain the native function pointer (so just behind the actual
+// call arguments), with count being the number of arguments.
+// This function can mutate the array of arguments.
 napi_value CallPointer(Napi::Env env, const FunctionInfo *proto, napi_value *args, Size count);
 
 bool InitAsyncBroker(InstanceData *instance);
