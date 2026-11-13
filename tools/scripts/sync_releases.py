@@ -23,7 +23,12 @@ DEFAULT_IMPORT_DIR = '../../bin/Packages'
 CODEBERG_URL = 'https://codeberg.org/'
 CODEBERG_REPOSITORY = 'Koromix/rygel'
 CODEBERG_KEY_GPG = '../package/repo/codeberg.key.gpg'
-CODEBERG_PROJECTS = {
+
+GITHUB_URL = 'https://api.github.com/'
+GITHUB_REPOSITORY = 'Koromix/rygel'
+GITHUB_KEY_GPG = '../package/repo/github.key.gpg'
+
+PROJECTS = {
     'goupile': {
         'title': 'Goupile',
         'changelog': '../../src/goupile/CHANGELOG.md'
@@ -159,7 +164,7 @@ def process_releases(root):
         run_command('gzip', ['-f', manifest])
         minisign(minisign_key_gpg, manifest + '.gz')
 
-def update_forgejo_releases(url, repo, token, projects):
+def update_forgejo_releases(url, repo, token):
     url = url.rstrip('/')
 
     output = capture_command('git', ['-C', os.path.dirname(__file__), 'tag', '--sort=*authordate'])
@@ -178,7 +183,7 @@ def update_forgejo_releases(url, repo, token, projects):
 
     for tag in tags:
         prefix, version = tag.split('/')
-        project = projects.get(prefix)
+        project = PROJECTS.get(prefix)
 
         if project is None:
             continue
@@ -203,6 +208,52 @@ def update_forgejo_releases(url, repo, token, projects):
         }
         make_request(f'{url}/api/v1/repos/{repo}/releases', body = json.dumps(body),
                      headers = { 'Authorization': 'token ' + token, 'Content-Type': 'application/json' })
+
+def update_github_releases(url, repo, token):
+    url = url.rstrip('/')
+
+    output = capture_command('git', ['-C', os.path.dirname(__file__), 'tag', '--sort=*authordate'])
+    tags = [tag.strip() for tag in output.split('\n')]
+
+    releases = []
+    page = 1
+    while True:
+        with make_request(f'{url}/repos/{repo}/releases?page={page}',
+                          headers = { 'X-GitHub-Api-Version': '2026-03-10', 'Authorization': 'token ' + token }) as response:
+            items = json.loads(response.read().decode('utf-8'))
+            if not items:
+                break
+            releases.extend((item["tag_name"] for item in items))
+            page = page + 1
+
+    for tag in tags:
+        prefix, version = tag.split('/')
+        project = PROJECTS.get(prefix)
+
+        if project is None:
+            continue
+        if '-' in version:
+            continue
+        if tag in releases:
+            continue
+
+        changelog = os.path.dirname(__file__) + '/' + project['changelog']
+        entry = extract_changelog_entry(changelog, project['title'], version)
+
+        if entry is None:
+            continue
+
+        print(f'  - Releasing {project["title"]} version {version}...')
+
+        body = {
+            "tag_name": tag,
+            "name": f'{project["title"]} {version}',
+            "draft": False,
+            "body": entry
+        }
+        make_request(f'{url}/repos/{repo}/releases', body = json.dumps(body),
+                     headers = { 'X-GitHub-Api-Version': '2026-03-10', 'Authorization': 'token ' + token,
+                                 'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json' })
 
 def extract_changelog_entry(filename, title, version):
     with open(filename, 'r') as f:
@@ -351,6 +402,8 @@ if __name__ == '__main__':
                         help = 'Update releases for manual downloads')
     parser.add_argument('--codeberg', const = 'codeberg', dest = 'types', action = 'append_const',
                         help = 'Update Codeberg tag releases')
+    parser.add_argument('--github', const = 'github', dest = 'types', action = 'append_const',
+                        help = 'Update GitHub tag releases')
     parser.add_argument('--import', metavar = 'path', dest = 'imports', nargs = '?',
                         type = str, default = [], const = None, action = 'append',
                         help = 'import additional packages')
@@ -365,6 +418,7 @@ if __name__ == '__main__':
         if os.path.isdir(args.directory + '/releases'):
             args.types.append('releases')
         args.types.append('codeberg')
+        args.types.append('github')
 
     if None in args.imports:
         default_import = script_dir + '/' + DEFAULT_IMPORT_DIR
@@ -403,4 +457,10 @@ if __name__ == '__main__':
         print('>> Updating Codeberg releases...')
         codeberg_key_gpg = os.path.dirname(__file__) + '/' + CODEBERG_KEY_GPG
         codeberg_token = capture_command('gpg', ['--decrypt', codeberg_key_gpg])
-        update_forgejo_releases(CODEBERG_URL, CODEBERG_REPOSITORY, codeberg_token, CODEBERG_PROJECTS)
+        update_forgejo_releases(CODEBERG_URL, CODEBERG_REPOSITORY, codeberg_token)
+
+    if 'github' in args.types:
+        print('>> Updating GitHub releases...')
+        github_key_gpg = os.path.dirname(__file__) + '/' + GITHUB_KEY_GPG
+        github_token = capture_command('gpg', ['--decrypt', github_key_gpg])
+        update_github_releases(GITHUB_URL, GITHUB_REPOSITORY, github_token)
