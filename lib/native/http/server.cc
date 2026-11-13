@@ -136,6 +136,61 @@ static void FormatAddress(int family, const uint8_t *bytes, Span<char> out_addr)
     }
 }
 
+static bool ParseTrustedProxies(Span<const char> str, LocalArray<http_TrustedProxy, 16> *out_trusted_proxies)
+{
+    while (str.len) {
+        Span<const char> part = TrimStr(SplitStrAny(str, " ,", &str));
+
+        if (part.len) {
+            http_TrustedProxy trusted = {};
+
+            if (TestStrI(part, "unix")) {
+                trusted.family = AF_UNIX;
+            } else {
+                Span<const char> mask;
+                Span<const char> addr = SplitStr(part, '/', &mask);
+
+                char addr0[128];
+                CopyString(addr, addr0);
+
+                trusted.family = DecodeAddress(addr0, trusted.addr);
+
+                switch (trusted.family) {
+                    case AF_INET: { trusted.bits = 32; } break;
+                    case AF_INET6: { trusted.bits = 128; } break;
+
+                    default: {
+                        K_ASSERT(trusted.family < 0);
+                        return false;
+                    } break;
+                }
+
+                if (mask.ptr > addr.end()) {
+                    int bits;
+
+                    if (!ParseInt(mask, &bits))
+                        return false;
+                    if (bits < 0 || bits > trusted.bits) {
+                        LogError("Invalid address mask in '%1'", part);
+                        return false;
+                    }
+
+                    trusted.bits = bits;
+                }
+            }
+
+            if (!out_trusted_proxies->Available()) [[unlikely]] {
+                LogError("Too many trusted proxies (max = %1)", K_LEN(out_trusted_proxies->data));
+                return false;
+            }
+
+            out_trusted_proxies->Append(trusted);
+        }
+    }
+
+    return true;
+}
+
 bool http_Config::SetProperty(Span<const char> key, Span<const char> value, Span<const char> root_directory)
 {
     if (key == "SocketType" || key == "IPStack") {
@@ -154,7 +209,12 @@ bool http_Config::SetProperty(Span<const char> key, Span<const char> value, Span
 
         return true;
     } else if (key == "Port") {
-        return ParseInt(value, &port);
+        if (ParseInt(value, &port)) {
+            explicit_port = true;
+            return true;
+        } else {
+            return false;
+        }
     } else if (key == "UnixPath") {
         unix_path = NormalizePath(value, root_directory, &str_alloc).ptr;
         return true;
@@ -165,57 +225,7 @@ bool http_Config::SetProperty(Span<const char> key, Span<const char> value, Span
         trusted_proxies.len = 0;
         explicit_trusted = true;
 
-        while (value.len) {
-            Span<const char> part = TrimStr(SplitStrAny(value, " ,", &value));
-
-            if (part.len) {
-                http_TrustedProxy trusted = {};
-
-                if (TestStrI(part, "unix")) {
-                    trusted.family = AF_UNIX;
-                } else {
-                    Span<const char> mask;
-                    Span<const char> addr = SplitStr(part, '/', &mask);
-
-                    char addr0[128];
-                    CopyString(addr, addr0);
-
-                    trusted.family = DecodeAddress(addr0, trusted.addr);
-
-                    switch (trusted.family) {
-                        case AF_INET: { trusted.bits = 32; } break;
-                        case AF_INET6: { trusted.bits = 128; } break;
-
-                        default: {
-                            K_ASSERT(trusted.family < 0);
-                            return false;
-                        } break;
-                    }
-
-                    if (mask.ptr > addr.end()) {
-                        int bits;
-
-                        if (!ParseInt(mask, &bits))
-                            return false;
-                        if (bits < 0 || bits > trusted.bits) {
-                            LogError("Invalid address mask in '%1'", part);
-                            return false;
-                        }
-
-                        trusted.bits = bits;
-                    }
-                }
-
-                if (!trusted_proxies.Available()) [[unlikely]] {
-                    LogError("Too many trusted proxies (max = %1)", K_LEN(trusted_proxies.data));
-                    return false;
-                }
-
-                trusted_proxies.Append(trusted);
-            }
-        }
-
-        return true;
+        return ParseTrustedProxies(value, &trusted_proxies);
     } else if (key == "IdleTimeout") {
         return ParseDuration(value, &idle_timeout);
     } else if (key == "KeepAliveTime") {
@@ -264,10 +274,40 @@ bool http_Config::SetPortOrPath(Span<const char> str)
         if (sock_type != SocketType::IPv4 && sock_type != SocketType::IPv6 && sock_type != SocketType::Dual) {
             sock_type = SocketType::Dual;
         }
+
         port = new_port;
+        explicit_port = true;
     } else {
         sock_type = SocketType::Unix;
+
         unix_path = NormalizePath(str, &str_alloc).ptr;
+        explicit_port = true;
+    }
+
+    return true;
+}
+
+bool http_Config::Complete()
+{
+    if (!explicit_port) {
+        const char *str = GetEnv("HTTP_PORT");
+
+        if (str) {
+            if (!ParseInt(str, &port))
+                return false;
+            explicit_trusted = true;
+        }
+    }
+
+    if (!explicit_trusted) {
+        const char *str = GetEnv("HTTP_TRUSTED_PROXIES");
+
+        if (str) {
+            trusted_proxies.len = 0;
+            if (!ParseTrustedProxies(str, &trusted_proxies))
+                return false;
+            explicit_trusted = true;
+        }
     }
 
     return true;

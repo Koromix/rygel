@@ -138,10 +138,7 @@ bool LoadConfig(StreamReader *st, Config *out_config)
 
         valid &= config.s3.Complete(false);
         valid &= config.smtp.Complete();
-
-        if (const char *str = GetEnv("HTTP_PORT")) {
-            valid &= config.http.SetPortOrPath(str);
-        }
+        valid &= config.http.Complete();
     }
 
     if (st) {

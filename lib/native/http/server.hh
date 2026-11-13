@@ -26,6 +26,7 @@ struct http_Config {
     const char *bind_addr = nullptr;
     int port = 8888;
     const char *unix_path = nullptr;
+    bool explicit_port = false;
 
     LocalArray<http_TrustedProxy, 16> trusted_proxies;
     bool explicit_trusted = false;
@@ -47,6 +48,8 @@ struct http_Config {
 
     bool SetProperty(Span<const char> key, Span<const char> value, Span<const char> root_directory = {});
     bool SetPortOrPath(Span<const char> str);
+
+    bool Complete();
     bool Validate() const;
 
     http_Config() = default;
