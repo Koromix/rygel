@@ -30,10 +30,10 @@
 #define SQLITE3MC_VERSION_H_
 
 #define SQLITE3MC_VERSION_MAJOR      2
-#define SQLITE3MC_VERSION_MINOR      6
-#define SQLITE3MC_VERSION_RELEASE    1
+#define SQLITE3MC_VERSION_MINOR      7
+#define SQLITE3MC_VERSION_RELEASE    0
 #define SQLITE3MC_VERSION_SUBRELEASE 0
-#define SQLITE3MC_VERSION_STRING     "SQLite3 Multiple Ciphers 2.6.1"
+#define SQLITE3MC_VERSION_STRING     "SQLite3 Multiple Ciphers 2.7.0"
 
 #endif /* SQLITE3MC_VERSION_H_ */
 /*** End of #include "sqlite3mc_version.h" ***/
@@ -192,12 +192,12 @@ extern "C" {
 ** [sqlite3_libversion_number()], [sqlite3_sourceid()],
 ** [sqlite_version()] and [sqlite_source_id()].
 */
-#define SQLITE_VERSION        "3.54.0"
-#define SQLITE_VERSION_NUMBER 3054000
-#define SQLITE_SOURCE_ID      "2026-10-09 15:46:58 be8d059e9a49089ab2dce5ed26dd87aaf598fdc5fbe0b107c0dd758464bcd5e3"
-#define SQLITE_SCM_BRANCH     "trunk"
-#define SQLITE_SCM_TAGS       "release major-release version-3.54.0"
-#define SQLITE_SCM_DATETIME   "2026-10-09T15:46:58.543Z"
+#define SQLITE_VERSION        "3.54.1"
+#define SQLITE_VERSION_NUMBER 3054001
+#define SQLITE_SOURCE_ID      "2026-10-16 14:45:20 555e07ef33f69a0957d24d8e555b702464a131d6f1607f4c3c1e4551e8e6ca76"
+#define SQLITE_SCM_BRANCH     "branch-3.54"
+#define SQLITE_SCM_TAGS       "release version-3.54.1"
+#define SQLITE_SCM_DATETIME   "2026-10-16T14:45:20.546Z"
 
 /*
 ** CAPI3REF: Run-Time Library Version Numbers
@@ -14642,7 +14642,7 @@ typedef int   (*GetLegacy_t)(void* cipher);
 typedef int   (*GetPageSize_t)(void* cipher);
 typedef int   (*GetReserved_t)(void* cipher);
 typedef unsigned char* (*GetSalt_t)(void* cipher);
-typedef void  (*GenerateKey_t)(void* cipher, char* userPassword, int passwordLength, int rekey, unsigned char* cipherSalt);
+typedef int   (*GenerateKey_t)(void* cipher, char* userPassword, int passwordLength, int rekey, unsigned char* cipherSalt);
 typedef int   (*EncryptPage_t)(void* cipher, int page, unsigned char* data, int len, int reserved);
 typedef int   (*DecryptPage_t)(void* cipher, int page, unsigned char* data, int len, int reserved, int hmacCheck);
 

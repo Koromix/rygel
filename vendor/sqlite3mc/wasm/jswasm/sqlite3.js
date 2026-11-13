@@ -27,9 +27,9 @@
 /* @preserve
 ** This code was built from sqlite3 version...
 **
-** SQLITE_VERSION "3.54.0"
-** SQLITE_VERSION_NUMBER 3054000
-** SQLITE_SOURCE_ID "2026-10-09 15:46:58 be8d059e9a49089ab2dce5ed26dd87aaf598fdc5fbe0b107c0dd758464bcd5e3"
+** SQLITE_VERSION "3.54.1"
+** SQLITE_VERSION_NUMBER 3054001
+** SQLITE_SOURCE_ID "2026-10-16 14:45:20 555e07ef33f69a0957d24d8e555b702464a131d6f1607f4c3c1e4551e8e6ca76"
 **
 ** Emscripten SDK: 6.0.3
 */
@@ -4160,7 +4160,7 @@ if (Module['printErr']) err = Module['printErr'];
 
 
 
-function wasm_crypto_getrandom(buf,n) { if (typeof crypto === 'undefined' || !crypto.getRandomValues) return -1; try { var view = new Uint8Array(HEAPU8.buffer, buf, n); var chunk = 65536; for (var i = 0; i < n; i += chunk) { crypto.getRandomValues(view.subarray(i, Math.min(i + chunk, n))); } return 0; } catch (e) { return -1; } }
+function wasm_crypto_getrandom(buf,n) { if (typeof crypto === 'undefined' || !crypto.getRandomValues) return -1; try { var chunk = 65536; var tmp = new Uint8Array(Math.min(n, chunk)); for (var i = 0; i < n; i += chunk) { var len = Math.min(chunk, n - i); var part = (len === tmp.length) ? tmp : tmp.subarray(0, len); crypto.getRandomValues(part); HEAPU8.set(part, buf + i); } return 0; } catch (e) { return -1; } }
 
 
 var _sqlite3_status64,
@@ -5867,7 +5867,7 @@ globalThis.sqlite3ApiBootstrap.defaultConfig = Object.create(null);
 
 globalThis.sqlite3ApiBootstrap.sqlite3 = undefined;
 globalThis.sqlite3ApiBootstrap.initializers.push(function(sqlite3){
-  sqlite3.version = {"libVersion": "3.54.0", "libVersionNumber": 3054000, "sourceId": "2026-10-09 15:46:58 be8d059e9a49089ab2dce5ed26dd87aaf598fdc5fbe0b107c0dd758464bcd5e3","downloadVersion": 3540000,"scm":{ "sha3-256": "be8d059e9a49089ab2dce5ed26dd87aaf598fdc5fbe0b107c0dd758464bcd5e3","branch": "trunk","tags": "release major-release version-3.54.0","datetime": "2026-10-09T15:46:58.543Z"}};
+  sqlite3.version = {"libVersion": "3.54.1", "libVersionNumber": 3054001, "sourceId": "2026-10-16 14:45:20 555e07ef33f69a0957d24d8e555b702464a131d6f1607f4c3c1e4551e8e6ca76","downloadVersion": 3540100,"scm":{ "sha3-256": "555e07ef33f69a0957d24d8e555b702464a131d6f1607f4c3c1e4551e8e6ca76","branch": "branch-3.54","tags": "release version-3.54.1","datetime": "2026-10-16T14:45:20.546Z"}};
 });
 
 
@@ -14119,7 +14119,7 @@ globalThis.sqlite3ApiBootstrap.initializers.push(function(sqlite3){
     }
 
     
-    setAssociatedPath(sah, path, flags){
+    setAssociatedPath(sah, path, flags, nameToRemove){
       const enc = textEncoder.encodeInto(path, this.#apBody);
       if(HEADER_MAX_PATH_SIZE <= enc.written + 1){
         toss("Path too long:",path);
@@ -14133,6 +14133,10 @@ globalThis.sqlite3ApiBootstrap.initializers.push(function(sqlite3){
       const digest = this.computeDigest(this.#apBody, flags);
       
       sah.write(this.#apBody, {at: 0});
+      if(nameToRemove){
+        
+        this.#mapFilenameToSAH.delete(nameToRemove);
+      }
       sah.write(digest, {at: HEADER_OFFSET_DIGEST});
       sah.flush();
 
@@ -14194,9 +14198,7 @@ globalThis.sqlite3ApiBootstrap.initializers.push(function(sqlite3){
     deletePath(path) {
       const sah = this.#mapFilenameToSAH.get(path);
       if(sah) {
-        
-        this.#mapFilenameToSAH.delete(path);
-        this.setAssociatedPath(sah, '', 0);
+        this.setAssociatedPath(sah, '', 0, path);
       }
       return !!sah;
     }
