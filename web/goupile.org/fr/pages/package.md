@@ -105,6 +105,7 @@ server {
 
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme; # Utilisez $http_x_forwarded_proto si NGINX est derrière un autre proxy inversé qui ajoute X-Forwarded-Proto
 
         proxy_pass http://127.0.0.1:8889/;
     }
@@ -112,15 +113,12 @@ server {
 ```
 
 > [!IMPORTANT]
-> Lors de l’utilisation de Goupile derrière un proxy inverse (reverse proxy), vous devez vous assurer que l’en-tête `X-Forwarded-For` est correctement défini par le proxy.
+> Lorsque Goupile est utilisé derrière un reverse proxy, assurez-vous que celui-ci renseigne correctement les en-têtes `X-Forwarded-For` et `X-Forwarded-Proto`.
 >
-> Vous devriez également ajouter les réglages suivants dans le fichier goupile.ini :
+> Si le reverse proxy est sur une autre machine, vous devez modifier le réglage `TrustedProxies` dans la section *HTTP* du fichier de configuration, afin d'y inclure l'adresse (ou le réseau) du ou des reverse proxies.
 >
-> ```
-> [HTTP]
-> TrustedProxies = 127.0.0.1/32 ::1/128 Unix
-> SecureCookies = Yes
-> ```
+> Goupile n'utilise les en-têtes de *forwarding*, notamment `X-Forwarded-For` et `X-Forwarded-Proto`, que lorsqu'ils proviennent d’un proxy déclaré comme fiable. Ces informations sont utilisées pour limiter certaines attaques, par exemple en bloquant les tentatives de connexion répétées, et pour renforcer la sécurité des cookies.
+
 
 ## Apache 2
 
@@ -136,18 +134,16 @@ Le bloc `VirtualHost` devrait ressembler à ceci :
 
     ProxyPreserveHost On
     ProxyAddHeaders On
+    RequestHeader set "X-Forwarded-Proto" expr=%{REQUEST_SCHEME}
+
     ProxyPass "/" "http://127.0.0.1:8889/"
     ProxyPassReverse "/" "http://127.0.0.1:8889/"
 </VirtualHost>
 ```
 
 > [!IMPORTANT]
-> Lors de l’utilisation de Goupile derrière un proxy inverse (reverse proxy), vous devez vous assurer que l’en-tête `X-Forwarded-For` est correctement défini par le proxy.
+> Lorsque Goupile est utilisé derrière un reverse proxy, assurez-vous que celui-ci renseigne correctement les en-têtes `X-Forwarded-For` et `X-Forwarded-Proto`.
 >
-> Vous devriez également ajouter les réglages suivants dans le fichier goupile.ini :
+> Si le reverse proxy est sur une autre machine, vous devez modifier le réglage `TrustedProxies` dans la section *HTTP* du fichier de configuration, afin d'y inclure l'adresse (ou le réseau) du ou des reverse proxies.
 >
-> ```
-> [HTTP]
-> TrustedProxies = 127.0.0.1/32 ::1/128 Unix
-> SecureCookies = Yes
-> ```
+> Goupile n'utilise les en-têtes de *forwarding*, notamment `X-Forwarded-For` et `X-Forwarded-Proto`, que lorsqu'ils proviennent d’un proxy déclaré comme fiable. Ces informations sont utilisées pour limiter certaines attaques, par exemple en bloquant les tentatives de connexion répétées, et pour renforcer la sécurité des cookies.

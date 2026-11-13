@@ -105,6 +105,7 @@ server {
 
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme; # Use $http_x_forwarded_proto if NGINX is behind another trusted reverse proxy that sets X-Forwarded-Proto
 
         proxy_pass http://127.0.0.1:8889/;
     }
@@ -112,15 +113,11 @@ server {
 ```
 
 > [!IMPORTANT]
-> When using Goupile behind a reverse proxy, you should make sure that the `X-Forwarded-For` header is correctly set by the proxy.
+> When Goupile is used behind a reverse proxy, make sure the proxy correctly sets the `X-Forwarded-For` and `X-Forwarded-Proto` headers.
 >
-> You should also adjust the following settings in goupile.ini:
+> If the reverse proxy is running on another machine, you will need to change the `TrustedProxies` setting in the *HTTP* section of the configuration file to include the address or network of your reverse proxy or proxies.
 >
-> ```
-> [HTTP]
-> TrustedProxies = 127.0.0.1/32 ::1/128 Unix
-> SecureCookies = Yes
-> ```
+> Goupile only uses forwarding headers such as `X-Forwarded-For` and `X-Forwarded-Proto` when they come from a proxy declared as trusted. This information is used, among other things, to mitigate certain attacks, for example by blocking repeated login attempts, and to strengthen cookie security.
 
 ## Apache 2
 
@@ -136,19 +133,16 @@ The VirtualHost block should look something like this:
 
     ProxyPreserveHost On
     ProxyAddHeaders On
+    RequestHeader set "X-Forwarded-Proto" expr=%{REQUEST_SCHEME}
+
     ProxyPass "/" "http://127.0.0.1:8889/"
     ProxyPassReverse "/" "http://127.0.0.1:8889/"
 </VirtualHost>
 ```
 
 > [!IMPORTANT]
-> When using Goupile behind a reverse proxy, you should make sure that the `X-Forwarded-For` header is correctly set by the proxy.
+> When Goupile is used behind a reverse proxy, make sure the proxy correctly sets the `X-Forwarded-For` and `X-Forwarded-Proto` headers.
 >
-> You should also adjust the following settings in goupile.ini:
+> If the reverse proxy is running on another machine, you will need to change the `TrustedProxies` setting in the *HTTP* section of the configuration file to include the address or network of your reverse proxy or proxies.
 >
-> ```
-> [HTTP]
-> TrustedProxies = 127.0.0.1/32 ::1/128 Unix
-> SecureCookies = Yes
-> ```
-
+> Goupile only uses forwarding headers such as `X-Forwarded-For` and `X-Forwarded-Proto` when they come from a proxy declared as trusted. This information is used, among other things, to mitigate certain attacks, for example by blocking repeated login attempts, and to strengthen cookie security.
