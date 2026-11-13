@@ -5794,46 +5794,52 @@ var ZipWriter = class {
     }
     return false;
   }
-  async close(comment = EMPTY_UINT8_ARRAY, options = {}) {
+  close(comment = EMPTY_UINT8_ARRAY, options = {}) {
     const zipWriter = this;
-    const { pendingAddFileCalls, writer } = this;
-    const { writable } = writer;
     if (zipWriter.archiveClosed) {
-      return getWriterData(writer);
+      return Promise.resolve(getWriterData(zipWriter.writer));
     }
-    if (!(comment instanceof Uint8Array)) {
-      throw new Error(ERR_INVALID_COMMENT_TYPE);
+    if (!zipWriter.pendingClose) {
+      zipWriter.pendingClose = closeArchive(zipWriter, comment, options).finally(() => zipWriter.pendingClose = UNDEFINED_VALUE);
     }
-    if (getLength(comment) > MAX_16_BITS) {
-      throw new Error(ERR_INVALID_COMMENT);
-    }
-    while (pendingAddFileCalls.size) {
-      await Promise.allSettled(Array.from(pendingAddFileCalls));
-    }
-    await Promise.allSettled(zipWriter.pendingErrors.map((watcher) => watcher.recorded));
-    const unobservedWatchers = zipWriter.pendingErrors.filter((watcher) => watcher.failed && !watcher.observed);
-    if (unobservedWatchers.length) {
-      const unobservedErrors = unobservedWatchers.map((watcher) => watcher.error);
-      unobservedWatchers.forEach((watcher) => watcher.observed = true);
-      const [error] = unobservedErrors;
-      try {
-        error.entryErrors = unobservedErrors;
-      } catch {
-      }
-      throw error;
-    }
-    await closeFile(zipWriter, comment, options);
-    zipWriter.archiveClosed = true;
-    const preventClose = !ownsWritable(writer) && getOptionValue2(zipWriter, options, OPTION_PREVENT_CLOSE);
-    if (!preventClose) {
-      await writable.getWriter().close();
-    }
-    return getWriterData(writer);
+    return zipWriter.pendingClose;
   }
   [SYMBOL_ASYNC_DISPOSE]() {
     return this.close();
   }
 };
+async function closeArchive(zipWriter, comment, options) {
+  const { pendingAddFileCalls, writer } = zipWriter;
+  const { writable } = writer;
+  if (!(comment instanceof Uint8Array)) {
+    throw new Error(ERR_INVALID_COMMENT_TYPE);
+  }
+  if (getLength(comment) > MAX_16_BITS) {
+    throw new Error(ERR_INVALID_COMMENT);
+  }
+  while (pendingAddFileCalls.size) {
+    await Promise.allSettled(Array.from(pendingAddFileCalls));
+  }
+  await Promise.allSettled(zipWriter.pendingErrors.map((watcher) => watcher.recorded));
+  const unobservedWatchers = zipWriter.pendingErrors.filter((watcher) => watcher.failed && !watcher.observed);
+  if (unobservedWatchers.length) {
+    const unobservedErrors = unobservedWatchers.map((watcher) => watcher.error);
+    unobservedWatchers.forEach((watcher) => watcher.observed = true);
+    const [error] = unobservedErrors;
+    try {
+      error.entryErrors = unobservedErrors;
+    } catch {
+    }
+    throw error;
+  }
+  await closeFile(zipWriter, comment, options);
+  zipWriter.archiveClosed = true;
+  const preventClose = !ownsWritable(writer) && getOptionValue2(zipWriter, options, OPTION_PREVENT_CLOSE);
+  if (!preventClose) {
+    await writable.getWriter().close();
+  }
+  return getWriterData(writer);
+}
 var ZipWriterStream = class {
   constructor(options = {}) {
     const { readable, writable } = new TransformStream();
@@ -5848,11 +5854,11 @@ var ZipWriterStream = class {
       start(controller) {
         streamController = controller;
       },
-      flush: () => void closeArchive()
+      flush: () => void closeArchive2()
     });
     watchAddFileCall(this, this.zipWriter.add(path, readable), (error) => streamController.error(error));
     return { readable: this.readable, writable };
-    async function closeArchive() {
+    async function closeArchive2() {
       try {
         await zipWriter.close();
       } catch (error) {
@@ -8153,7 +8159,7 @@ function formatSupported(StreamClass, format) {
 }
 
 // node_modules/@zip.js/zip.js/lib/core/version.js
-var VERSION = "2.24.0";
+var VERSION = "2.25.0";
 
 // node_modules/@zip.js/zip.js/lib/core/util/opfs-temp-stream.js
 var DEFAULT_THRESHOLD = 1024 * 1024;
@@ -9136,6 +9142,7 @@ var ZipFileEntry = class _ZipFileEntry extends ZipEntry2 {
     if (!writer || writer.constructor == zipEntry.Writer && zipEntry.data && keepsContentType(writer, zipEntry.data)) {
       return zipEntry.data;
     } else {
+      writer = new GenericWriter(writer);
       const reader = zipEntry.reader = createReader(zipEntry.Reader, zipEntry.data, options);
       const dataSize = zipEntry.uncompressedSize || reader.size;
       await Promise.all([initStream(reader), initStream(writer, dataSize)]);
@@ -10162,11 +10169,19 @@ async function exportFileSystemHandle(zipEntry, directoryHandle, options) {
           await callHandler(onprogress, writtenSize, totalSize);
         }
       },
-      close() {
-        return writer.close();
+      async close() {
+        try {
+          await writer.close();
+        } finally {
+          writer.releaseLock();
+        }
       },
-      abort(reason) {
-        return writer.abort(reason);
+      async abort(reason) {
+        try {
+          await writer.abort(reason);
+        } finally {
+          writer.releaseLock();
+        }
       }
     });
   }
@@ -10199,10 +10214,11 @@ async function exportFileSystemHandle(zipEntry, directoryHandle, options) {
         await exportChildren(child, childDirectoryHandle);
       } else {
         const fileHandle = await parentHandle.getFileHandle(child.name, { create: true });
-        const writable = await fileHandle.createWritable();
+        const writable = createProgressWritable(await fileHandle.createWritable());
         try {
-          await child.getData({ writable: createProgressWritable(writable) }, getDataOptions);
+          await child.getData({ writable }, getDataOptions);
         } catch (error) {
+          await abortWritable2(writable, error);
           throw exportAborted ? new Error(ERR_ABORT_EXPORT) : error;
         }
         exportedEntryNames.push(child.getRelativeName(zipEntry));
@@ -10218,6 +10234,14 @@ async function exportFileSystemHandle(zipEntry, directoryHandle, options) {
       } catch {
       }
       throw error;
+    }
+  }
+}
+async function abortWritable2(writable, reason) {
+  if (!writable.locked) {
+    try {
+      await writable.abort(reason);
+    } catch {
     }
   }
 }
@@ -10240,13 +10264,17 @@ async function transformToFileSystemhandles(entry) {
   const entries = [];
   function readEntries(directoryReader, resolve, reject) {
     directoryReader.readEntries(async (entriesPart) => {
-      if (!entriesPart.length) {
-        resolve(entries);
-      } else {
-        for (const entry2 of entriesPart) {
-          entries.push(await transformToFileSystemhandle(entry2));
+      try {
+        if (!entriesPart.length) {
+          resolve(entries);
+        } else {
+          for (const entry2 of entriesPart) {
+            entries.push(await transformToFileSystemhandle(entry2));
+          }
+          readEntries(directoryReader, resolve, reject);
         }
-        readEntries(directoryReader, resolve, reject);
+      } catch (error) {
+        reject(error);
       }
     }, reject);
   }
