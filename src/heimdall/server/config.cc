@@ -16,18 +16,24 @@ bool LoadConfig(StreamReader *st, Config *out_config)
 {
     Config config;
 
-    const char *config_filename = NormalizePath(st->GetFileName(), GetWorkingDirectory(), &config.str_alloc).ptr;
-    Span<const char> root_directory = GetPathDirectory(config_filename);
-    Span<const char> data_directory = root_directory;
-
-    IniParser ini(st);
-    ini.PushLogFilter();
-    K_DEFER { PopLogFilter(); };
-
+    Span<const char> data_directory = {};
     bool valid = true;
-    {
-        IniProperty prop;
-        while (ini.Next(&prop)) {
+
+    // Read environment config
+    valid &= config.http.Complete();
+
+    if (st) {
+        Config config;
+
+        const char *config_filename = NormalizePath(st->GetFileName(), GetWorkingDirectory(), &config.str_alloc).ptr;
+        Span<const char> root_directory = GetPathDirectory(config_filename);
+        Span<const char> data_directory = root_directory;
+
+        IniParser ini(st);
+        ini.PushLogFilter();
+        K_DEFER { PopLogFilter(); };
+
+        for (IniProperty prop; ini.Next(&prop); ) {
             if (prop.section == "Data") {
                 bool first = true;
 
@@ -58,8 +64,11 @@ bool LoadConfig(StreamReader *st, Config *out_config)
                 valid = false;
             }
         }
+        if (!ini.IsValid())
+            return false;
     }
-    if (!ini.IsValid() || !valid)
+
+    if (!valid)
         return false;
 
     // Default values
@@ -69,17 +78,9 @@ bool LoadConfig(StreamReader *st, Config *out_config)
     if (!config.tmp_directory) {
         config.tmp_directory = NormalizePath("tmp", data_directory, &config.str_alloc).ptr;
     }
-    if (!config.Validate())
-        return false;
 
     std::swap(*out_config, config);
     return true;
-}
-
-bool LoadConfig(const char *filename, Config *out_config)
-{
-    StreamReader st(filename);
-    return LoadConfig(&st, out_config);
 }
 
 }

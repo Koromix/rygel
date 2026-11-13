@@ -13,7 +13,11 @@ struct Config {
     const char *project_directory = nullptr;
     const char *tmp_directory = nullptr;
 
+#if defined(DEFAULT_PORT)
+    http_Config http { DEFAULT_PORT };
+#else
     http_Config http { 8892 };
+#endif
 
     BlockAllocator str_alloc;
 
@@ -21,6 +25,5 @@ struct Config {
 };
 
 bool LoadConfig(StreamReader *st, Config *out_config);
-bool LoadConfig(const char *filename, Config *out_config);
 
 }

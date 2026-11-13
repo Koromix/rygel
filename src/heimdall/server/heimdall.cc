@@ -538,7 +538,7 @@ static int RunServe(Span<const char *> arguments)
     BlockAllocator temp_alloc;
 
     // Options
-    const char *config_filename = "heimdall.ini";
+    const char *config_filename = nullptr;
     bool sandbox = false;
 
     const auto print_usage = [=](StreamWriter *st) {
@@ -548,10 +548,9 @@ T(R"(Usage: %!..+%1 [serve] [option...]%!0
 Options:
 
     %!..+-C, --config_file filename%!0     Set configuration file
-                                   %!D..(default: %2)%!0
 
     %!..+-p, --port port%!0                Change web server port
-                                   %!D..(default: %3)%!0
+                                   %!D..(default: %2)%!0
         %!..+--bind IP%!0                  Bind to specific IP
 
         %!..+--sandbox%!0                  Run sandboxed (on supported platforms)
@@ -559,7 +558,7 @@ Options:
 Other commands:
 
     %!..+migrate%!0                        Create or migrate project database)"),
-                FelixTarget, config_filename, config.http.port);
+                FelixTarget, config.http.port);
     };
 
     // Find config filename
@@ -582,9 +581,23 @@ Other commands:
         }
     }
 
+#if defined(DEFAULT_CONFIG)
+    if (const char *filename = K_STRINGIFY(DEFAULT_CONFIG); !config_filename && TestFile(filename)) {
+        K_ASSERT(PathIsAbsolute(filename));
+        config_filename = filename;
+    }
+#endif
+
     // Load config file
-    if (!LoadConfig(config_filename, &config))
-        return 1;
+    if (config_filename) {
+        StreamReader st(config_filename);
+
+        if (!LoadConfig(&st, &config))
+            return 1;
+    } else {
+        if (!LoadConfig(nullptr, &config))
+            return 1;
+    }
 
     // Parse arguments
     {
