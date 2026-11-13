@@ -1463,8 +1463,15 @@ http_RequestStatus http_IO::ParseRequest()
                     }
                 }
             }
-        } else if (StartsWith(key, "X-Forwarded-")) {
-            // Ignore and throw away
+        } else if (key == "X-Forwarded-Proto") {
+            if (trust_addr) {
+                while (value.len) {
+                    Span<const char> part = TrimStr(SplitStr(value, ',', &value));
+                    request.secure |= TestStrI(part, "https");
+                }
+            }
+        } else if (StartsWith(key, "X-Forwarded-") || key == "X-Real-Ip" || key == "Forwarded") {
+            // Untrusted headers, drop them
         } else if (key == "Transfer-Encoding") [[unlikely]] {
             SendAbort(501, "Requests with Transfer-Encoding are not supported");
             return http_RequestStatus::Shutdown;
@@ -1843,6 +1850,7 @@ bool http_IO::Rearm(int64_t now)
 
     request.version = 10;
     request.host = nullptr;
+    request.secure = false;
     request.values.RemoveFrom(0);
     request.headers.RemoveFrom(0);
     request.cookies.RemoveFrom(0);

@@ -49,6 +49,8 @@ public:
     {
         std::lock_guard<std::shared_mutex> lock_excl(mutex);
 
+        const http_RequestInfo &request = io->Request();
+
         SessionHandle *handle = CreateHandle();
         if (!handle)
             return;
@@ -61,8 +63,8 @@ public:
         handle->udata = udata;
 
         // Set session cookies
-        io->AddCookieHeader(cookie_path, "session_key", handle->session_key, cookie_flags | (int)http_CookieFlag::HttpOnly);
-        io->AddCookieHeader(cookie_path, "session_rnd", handle->session_rnd, cookie_flags);
+        io->AddCookieHeader(cookie_path, "session_key", handle->session_key, GetCookieFlags(request.secure) | (int)http_CookieFlag::HttpOnly);
+        io->AddCookieHeader(cookie_path, "session_rnd", handle->session_rnd, GetCookieFlags(request.secure));
     }
 
     void Close(http_IO *io)
@@ -120,9 +122,9 @@ public:
                 handle->udata = udata;
 
                 // Set session cookies
-                io->AddCookieHeader(cookie_path, "session_key", handle->session_key, cookie_flags | (int)http_CookieFlag::HttpOnly);
+                io->AddCookieHeader(cookie_path, "session_key", handle->session_key, GetCookieFlags(request.secure) | (int)http_CookieFlag::HttpOnly);
                 if (!locked) {
-                    io->AddCookieHeader(cookie_path, "session_rnd", handle->session_rnd, cookie_flags);
+                    io->AddCookieHeader(cookie_path, "session_rnd", handle->session_rnd, GetCookieFlags(request.secure));
                 }
             }
 
@@ -241,6 +243,11 @@ private:
         *out_mismatch = false;
         *out_locked = !session_rnd;
         return ptr;
+    }
+
+    unsigned int GetCookieFlags(bool secure)
+    {
+        return cookie_flags | (secure ? (int)http_CookieFlag::Secure : 0);
     }
 
     void DeleteSessionCookies(http_IO *io)

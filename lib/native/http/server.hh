@@ -161,6 +161,7 @@ struct http_RequestInfo {
     int version = 10;
     const char *host = nullptr;
     http_RequestMethod method = http_RequestMethod::Get;
+    bool secure = false;
     bool head = false;
     bool upgrade = false;
     const char *client_addr = nullptr;
