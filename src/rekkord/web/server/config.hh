@@ -27,7 +27,11 @@ struct Config {
     int64_t mail_delay = 1 * 3600000;
     int64_t repeat_delay = 24 * 3600000;
 
+#if defined(DEFAULT_PORT)
+    http_Config http { DEFAULT_PORT };
+#else
     http_Config http { 8891 };
+#endif
     bool secure_cookies = false;
 
     smtp_Config smtp;
@@ -39,11 +43,9 @@ struct Config {
 
     BlockAllocator str_alloc;
 
-    bool Complete();
     bool Validate() const;
 };
 
 bool LoadConfig(StreamReader *st, Config *out_config);
-bool LoadConfig(const char *filename, Config *out_config);
 
 }

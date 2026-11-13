@@ -20,8 +20,6 @@ namespace K {
 Config config;
 sq_Database db;
 
-static const char *const DefaultConfigName = "RekkordWeb.ini";
-
 static HashMap<const char *, const AssetInfo *> asset_map;
 static const AssetInfo *asset_index = nullptr;
 static const char *asset_js = nullptr;
@@ -94,7 +92,7 @@ T(R"(Usage: %!..+%1 init [option...] [directory]%!0)"), FelixTarget);
         K_ASSERT(asset);
 
         if (dirname) {
-            const char *filename = Fmt(&temp_alloc, "%1%/%2", dirname, DefaultConfigName).ptr;
+            const char *filename = Fmt(&temp_alloc, "%1%/RekkordWeb.ini", dirname).ptr;
             files.Append(filename);
 
             StreamReader reader(asset->data, "<asset>", asset->compression_type);
@@ -121,7 +119,7 @@ T(R"(Usage: %!..+%1 init [option...] [directory]%!0)"), FelixTarget);
     if (dirname) {
         LogInfo("Please configure mandatory settings in:");
         LogInfo();
-        LogInfo(("    %!..+%1%/%2%!0"), dirname, DefaultConfigName);
+        LogInfo(("    %!..+%1%/RekkordWeb.ini%!0"), dirname);
 
         LogInfo();
         LogInfo("Once this is done, run RekkordWeb with:");
@@ -596,7 +594,7 @@ static int RunServe(Span<const char *> arguments)
     BlockAllocator temp_alloc;
 
     // Options
-    const char *config_filename = DefaultConfigName;
+    const char *config_filename = nullptr;
     bool sandbox = false;
 
     const auto print_usage = [=](StreamWriter *st) {
@@ -606,10 +604,9 @@ T(R"(Usage: %!..+%1 [option...]%!0
 Options:
 
     %!..+-C, --config_file filename%!0     Set configuration file
-                                   %!D..(default: %2)%!0
 
     %!..+-p, --port port%!0                Change web server port
-                                   %!D..(default: %3)%!0
+                                   %!D..(default: %2)%!0
         %!..+--bind IP%!0                  Bind to specific IP
 
         %!..+--sandbox%!0                  Run sandboxed (on supported platforms)
@@ -618,7 +615,7 @@ Other commands:
     %!..+init%!0                           Create new instance and configuration
 
 For help about those commands, type: %!..+%1 command --help%!0)"),
-                FelixTarget, config_filename, config.http.port);
+                FelixTarget, config.http.port);
     };
 
     // Find config filename
@@ -631,7 +628,7 @@ For help about those commands, type: %!..+%1 command --help%!0)"),
                 return 0;
             } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 if (IsDirectory(opt.current_value)) {
-                    config_filename = Fmt(&temp_alloc, "%1%/%2", TrimStrRight(opt.current_value, K_PATH_SEPARATORS), DefaultConfigName).ptr;
+                    config_filename = Fmt(&temp_alloc, "%1%/RekkordWeb.ini", TrimStrRight(opt.current_value, K_PATH_SEPARATORS)).ptr;
                 } else {
                     config_filename = opt.current_value;
                 }
@@ -641,9 +638,23 @@ For help about those commands, type: %!..+%1 command --help%!0)"),
         }
     }
 
-    // Load config file
-    if (!LoadConfig(config_filename, &config))
-        return 1;
+#if defined(DEFAULT_CONFIG)
+    if (const char *filename = K_STRINGIFY(DEFAULT_CONFIG); !config_filename && TestFile(filename)) {
+        K_ASSERT(PathIsAbsolute(filename));
+        config_filename = filename;
+    }
+#endif
+
+    // Load config
+    if (config_filename) {
+        StreamReader st(config_filename);
+
+        if (!LoadConfig(&st, &config))
+            return 1;
+    } else {
+        if (!LoadConfig(nullptr, &config))
+            return 1;
+    }
 
     // Parse arguments
     {
@@ -665,8 +676,6 @@ For help about those commands, type: %!..+%1 command --help%!0)"),
             }
         }
 
-        if (!config.Complete())
-            return 1;
         if (!config.Validate())
             return 1;
     }
