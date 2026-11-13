@@ -13,7 +13,6 @@
 namespace K {
 
 struct Config {
-    const char *config_filename = nullptr;
     const char *database_filename = nullptr;
     const char *database_directory = nullptr;
     const char *instances_directory = nullptr;
@@ -29,7 +28,11 @@ struct Config {
 
     bool demo_mode = false;
 
+#if defined(DEFAULT_PORT)
+    http_Config http { DEFAULT_PORT };
+#else
     http_Config http { 8889 };
+#endif
     bool secure_cookies = false;
 
     smtp_Config smtp;
@@ -41,6 +44,5 @@ struct Config {
 };
 
 bool LoadConfig(StreamReader *st, Config *out_config);
-bool LoadConfig(const char *filename, Config *out_config);
 
 }
