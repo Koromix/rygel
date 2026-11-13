@@ -1175,7 +1175,7 @@ void *CallData::ReserveTrampoline(const FunctionInfo *proto, Napi::Function func
     if (!InitAsyncBroker(instance)) [[unlikely]]
         return nullptr;
 
-    TransientAllocator *allocator = GetTransient();
+    TransientAllocator *transient = GetTransient();
 
     int16_t idx;
     {
@@ -1185,13 +1185,13 @@ void *CallData::ReserveTrampoline(const FunctionInfo *proto, Napi::Function func
             ThrowError<Napi::Error>(env, "Too many callbacks are in use (max = %1)", MaxTrampolines);
             return nullptr;
         }
-        if (!allocator->trampolines.Available()) [[unlikely]] {
-            ThrowError<Napi::Error>(env, "This call uses too many temporary callbacks (max = %1)", K_LEN(allocator->trampolines.data));
+        if (!transient->trampolines.Available()) [[unlikely]] {
+            ThrowError<Napi::Error>(env, "This call uses too many temporary callbacks (max = %1)", K_LEN(transient->trampolines.data));
             return nullptr;
         }
 
         idx = shared.available.data[--shared.available.len];
-        allocator->trampolines.Append(idx);
+        transient->trampolines.Append(idx);
     }
 
     TrampolineInfo *trampoline = &shared.trampolines[idx];
