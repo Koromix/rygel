@@ -1432,7 +1432,7 @@ InstanceMemory *AllocateMemory(InstanceData *instance, Size stack_size, Size hea
     mem->stack0 = mem->stack;
 
 #if defined(_WIN32) && !defined(_WIN64)
-    mem->stack.len -= K_SIZE(SehFrame);
+    mem->stack.len -= SehFrameReserve;
 
     // Prepare at the top SEH frame record
     {

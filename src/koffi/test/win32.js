@@ -31,12 +31,17 @@ async function test() {
     let lib_filename = cnoke.output + '/win32.dll';
     let lib = koffi.load(lib_filename);
 
-    let kernel32 = koffi.load('kernel32.dll');
+    // Child process modes for the SEHOP test below
+    if (process.argv[2] == '--sehop-seh') {
+        await testSeh(lib);
+        return;
+    } else if (process.argv[2] == '--sehop-crash') {
+        lib.func('void SetCrashFilter()')();
+        lib.func('void CrashNow()')();
+        return;
+    }
 
-    const DivideBySafe1 = lib.cdecl('DivideBySafe1', 'int', ['int', 'int']);
-    const DivideBySafe2 = lib.cdecl('DivideBySafe2', 'int', ['int', 'int']);
-    const CallThrough1 = lib.func('int CallThrough(CallThroughFunc1 *func, int value)');
-    const CallThrough2 = lib.func('int CallThrough(CallThroughFunc2 *func, int value)');
+    let kernel32 = koffi.load('kernel32.dll');
 
     const Sleep = kernel32.func('void __stdcall Sleep(uint32_t dwMilliseconds)');
     const GetLastError = kernel32.func('uint32_t __stdcall GetLastError()');
@@ -49,6 +54,51 @@ async function test() {
         assert.equal(GetLastError(), i);
         assert.equal(GetLastError(), i);
     }
+
+    await testSeh(lib);
+
+    // Test that UnhandledExceptionFilter is called when a native function crashes.
+    // This must run in a child process because the crash terminates the process.
+    {
+        let child = spawnSync(process.execPath, ['-e', `
+            const koffi = require('..');
+            const lib = koffi.load('${cnoke.output}/win32.dll');
+            lib.func('void SetCrashFilter()')();
+            lib.func('void CrashNow()')();
+        `], { timeout: 10000 });
+
+        let stderr = child.stderr.toString();
+
+        assert.ok(stderr.includes('FILTER_CALLED'), 'UnhandledExceptionFilter was not called on crash');
+        assert.equal(child.status, 42);
+    }
+
+    // Run the SEH checks again in child processes with SEHOP forced on. By default SEHOP does not
+    // reliably apply to Node, so the checks above cannot detect an invalid exception chain.
+    if (process.arch == 'ia32') {
+        const RunWithSehop = lib.func('int RunWithSehop(str16 cmdline)');
+
+        let cmd = `"${process.execPath}" "${__filename}" --sehop-seh`;
+        let ret = RunWithSehop(cmd);
+
+        if (ret == -1) {
+            console.log('Skipping SEHOP test (cannot force SEHOP on this system)');
+        } else {
+            assert.equal(ret, 0, 'SEH checks failed with SEHOP enabled');
+
+            cmd = `"${process.execPath}" "${__filename}" --sehop-crash`;
+            ret = RunWithSehop(cmd);
+
+            assert.equal(ret, 42, 'UnhandledExceptionFilter was not called on crash with SEHOP enabled');
+        }
+    }
+}
+
+async function testSeh(lib) {
+    const DivideBySafe1 = lib.cdecl('DivideBySafe1', 'int', ['int', 'int']);
+    const DivideBySafe2 = lib.cdecl('DivideBySafe2', 'int', ['int', 'int']);
+    const CallThrough1 = lib.func('int CallThrough(CallThroughFunc1 *func, int value)');
+    const CallThrough2 = lib.func('int CallThrough(CallThroughFunc2 *func, int value)');
 
     // Sync SEH and exception support
     assert.equal(DivideBySafe1(12, 3), 4);
@@ -90,21 +140,5 @@ async function test() {
         assert.equal(results[1], -42);
         assert.equal(results[2], -15);
         assert.equal(results[3], -42);
-    }
-
-    // Test that UnhandledExceptionFilter is called when a native function crashes.
-    // This must run in a child process because the crash terminates the process.
-    {
-        let child = spawnSync(process.execPath, ['-e', `
-            const koffi = require('..');
-            const lib = koffi.load('${cnoke.output}/win32.dll');
-            lib.func('void SetCrashFilter()')();
-            lib.func('void CrashNow()')();
-        `], { timeout: 10000 });
-
-        let stderr = child.stderr.toString();
-
-        assert.ok(stderr.includes('FILTER_CALLED'), 'UnhandledExceptionFilter was not called on crash');
-        assert.equal(child.status, 42);
     }
 }

@@ -313,7 +313,7 @@ void CallData::Execute(const FunctionInfo *func, void *native)
     };
 
     // Adjust stack limits so SEH works correctly
-    teb->ExceptionList = mem->stack0.end() - K_SIZE(SehFrame);
+    teb->ExceptionList = mem->stack0.end() - SehFrameReserve;
     teb->StackBase = mem->stack0.end();
     teb->StackLimit = mem->stack0.ptr;
     teb->DeallocationStack = mem->stack0.ptr;

@@ -92,6 +92,9 @@ struct SehFrame {
     void *Handler;
 };
 
+// With SEHOP, RtlpIsValidExceptionChain rejects any record at or above StackBase - 8
+static constexpr Size SehFrameReserve = 16;
+
 #endif
 
 static inline TEB *GetTEB()
