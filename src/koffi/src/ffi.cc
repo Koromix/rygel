@@ -2003,7 +2003,7 @@ static napi_value DecodeValue(napi_env env, napi_callback_info info)
 
     NAPI_OK(napi_get_cb_info(env, info, &count, args, nullptr, (void **)&instance));
 
-    int64_t offset = 0;
+    Size offset = 0;
     Size len = 0;
     const void *src = nullptr;
     Size src_len = 0;
@@ -2364,7 +2364,7 @@ static napi_value EncodeValue(napi_env env, napi_callback_info info)
 
     NAPI_OK(napi_get_cb_info(env, info, &count, args, nullptr, (void **)&instance));
 
-    int64_t offset = 0;
+    Size offset = 0;
     Size len = 0;
     void *dest = nullptr;
     Size dest_len = 0;
