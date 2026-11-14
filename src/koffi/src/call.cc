@@ -1227,7 +1227,7 @@ TransientAllocator *CallData::GetTransient()
             // No real leak either way. So it's fine.
 
             if (node_api_post_finalizer) [[likely]] {
-                node_api_post_finalizer((napi_env)env, [](napi_env env, void *data, void *) {
+                node_api_post_finalizer((napi_env)env, [](napi_env, void *data, void *) {
                     InstanceData *instance = (InstanceData *)data;
 
                     instance->sync_transient.Reclaim();
