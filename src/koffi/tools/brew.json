@@ -247,11 +247,11 @@
             "arch": "ia32",
             "machine": "windows_x64",
             "directory": "C:/Users/windows/Desktop/luigi_ia32",
-            "build": "C:\\Node32\\node32.cmd node ../cnoke/cnoke.js"
+            "build": "C:\\Node32\\node32.cmd node ../cnoke/cnoke.js --toolset v143"
         },
 
         "test": {
-            "build": "C:\\Node32\\node32.cmd node ../cnoke/cnoke.js -D test",
+            "build": "C:\\Node32\\node32.cmd node ../cnoke/cnoke.js --toolset v143 -D test",
             "commands": {
                 "Test Sync": "C:\\Node32\\node32.cmd node test/sync.js",
                 "Test Union": "C:\\Node32\\node32.cmd node test/union.js",
@@ -274,11 +274,11 @@
             "arch": "x64",
             "machine": "windows_x64",
             "directory": "C:/Users/windows/Desktop/luigi_x64",
-            "build": "C:\\Node64\\node64.cmd node ../cnoke/cnoke.js"
+            "build": "C:\\Node64\\node64.cmd node ../cnoke/cnoke.js --toolset v143"
         },
 
         "test": {
-            "build": "C:\\Node64\\node64.cmd node ../cnoke/cnoke.js -D test",
+            "build": "C:\\Node64\\node64.cmd node ../cnoke/cnoke.js --toolset v143 -D test",
             "commands": {
                 "Test Sync": "C:\\Node64\\node64.cmd node test/sync.js",
                 "Test Union": "C:\\Node64\\node64.cmd node test/union.js",
