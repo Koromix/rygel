@@ -6146,6 +6146,9 @@ void ExitApp()
         finalize->Run();
         finalize = finalize->next;
     }
+
+    StdOut->Flush();
+    StdErr->Flush();
 }
 
 // ------------------------------------------------------------------------
@@ -7820,12 +7823,6 @@ extern StreamWriter *const StdErr = StdErrStream.Get();
 
 static CreateDecompressorFunc *DecompressorFunctions[K_LEN(CompressionTypeNames)];
 static CreateCompressorFunc *CompressorFunctions[K_LEN(CompressionTypeNames)];
-
-K_EXIT(FlushStd)
-{
-    StdOut->Flush();
-    StdErr->Flush();
-}
 
 void StreamReader::SetDecoder(StreamDecoder *decoder)
 {
