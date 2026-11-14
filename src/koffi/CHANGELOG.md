@@ -16,7 +16,7 @@
 - Reduce argument access overhead during call preparation
 - Defer reclamation of temporary trampolines
 - Enforce 16-byte stack alignment on all x86 32-bit platforms (bis repetita)
-- Use MSVC v143 toolset to keep Koffi compatible with Windows 7
+- Use MSVC v143 toolset to keep Koffi compatible with Windows 7 (best effort)
 
 #### Koffi 3.3.7
 
@@ -250,6 +250,14 @@ Consult the [migration guide](migration) for more information.
 ## Koffi 2
 
 ### Koffi 2.16
+
+#### Koffi 2.16.4
+
+*Released on 2026-11-14*
+
+- Fix Windows 32-bit crash when SEHOP mitigation is enabled ([https://github.com/longhun12346](@longhun12346))
+- Avoid "Failed to sync '<stdout>'" messages when module is unloaded on Windows
+- Use MSVC v143 toolset to keep Koffi compatible with Windows 7 (best effort)
 
 #### Koffi 2.16.3
 
