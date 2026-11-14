@@ -7,6 +7,14 @@
 
 ### Koffi 2.16
 
+#### Koffi 2.16.4
+
+*Released on 2026-11-14*
+
+- Fix Windows 32-bit crash when SEHOP mitigation is enabled ([https://github.com/longhun12346](@longhun12346))
+- Avoid "Failed to sync '<stdout>'" messages when module is unloaded on Windows
+- Use MSVC v143 toolset to keep Koffi compatible with Windows 7 (best effort)
+
 #### Koffi 2.16.3
 
 *Released on 2026-07-20*
