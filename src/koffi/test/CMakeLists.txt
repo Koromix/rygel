@@ -44,7 +44,7 @@ if(MSVC)
 
     add_library(win32 SHARED win32.c)
     target_link_libraries(win32 PRIVATE win32_dep)
-    set_target_properties(win32 PROPERTIES PREFIX "")
+    set_target_properties(win32 PROPERTIES PREFIX "" C_STANDARD 11)
 endif()
 
 if(UNIX AND NOT APPLE)
