@@ -125,18 +125,21 @@ static inline TEB *GetTEB()
         K_DEFER_C(base = (Teb)->StackBase, \
                   limit = (Teb)->StackLimit, \
                   dealloc = (Teb)->DeallocationStack, \
+                  flags = (Teb)->SameTebFlags, \
                   seh = (Teb)->ExceptionList) { \
             (Teb)->StackBase = base; \
             (Teb)->StackLimit = limit; \
             (Teb)->DeallocationStack = dealloc; \
+            (Teb)->SameTebFlags = flags; \
             (Teb)->ExceptionList = seh; \
         }; \
         (Teb)->StackBase = (High); \
         (Teb)->StackLimit = (Low); \
         (Teb)->DeallocationStack = (Low); \
-        (Teb)->ExceptionList = High - 8; \
-        ((void **)(High))[-2] = (void *)-1; \
-        ((void **)(High))[-1] = (void *)SehHandler;
+        (Teb)->ExceptionList = High - 16; \
+        (Teb)->SameTebFlags &= ~0x200; \
+        ((void **)(High))[-4] = (void *)-1; \
+        ((void **)(High))[-3] = (void *)SehHandler;
 #endif
 
 extern const HashMap<int, const char *> WindowsMachineNames;
