@@ -33,6 +33,7 @@ async function test() {
 
     let kernel32 = koffi.load('kernel32.dll');
 
+    const ExecuteWithSehop = lib.func('bool ExecuteWithSehop(wchar_t *cmd, _Out_ int *out_code)');
     const DivideBySafe1 = lib.cdecl('DivideBySafe1', 'int', ['int', 'int']);
     const DivideBySafe2 = lib.cdecl('DivideBySafe2', 'int', ['int', 'int']);
     const CallThrough1 = lib.func('int CallThrough(CallThroughFunc1 *func, int value)');
@@ -41,6 +42,19 @@ async function test() {
     const Sleep = kernel32.func('void __stdcall Sleep(uint32_t dwMilliseconds)');
     const GetLastError = kernel32.func('uint32_t __stdcall GetLastError()');
     const SetLastError = kernel32.func('void __stdcall SetLastError(uint32_t dwErrorCode)');
+
+    if (process.arch == 'ia32' && !process.argv.includes('--has_sehop')) {
+        let cmd = `"${process.execPath}" "${__filename}" --has_sehop`;
+
+        let code = [null];
+        let success = ExecuteWithSehop(cmd, code);
+
+        if (success) {
+            process.exit(code[0]);
+        } else {
+            console.log('Failed to run with SEHOP, ignoring');
+        }
+    }
 
     // Try to make sure GetLastError() survives across Koffi calls
     for (let i = 0; i < 100; i++) {
