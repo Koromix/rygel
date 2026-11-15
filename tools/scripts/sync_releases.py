@@ -111,13 +111,13 @@ def process_releases(root):
         directory = root + '/' + pkg
         subdirs = os.scandir(directory)
 
-        prune_old_versions(directory)
+        prune_old_versions(directory, False)
 
         for subdir in subdirs:
             if not subdir.is_dir():
                 continue
 
-            prune_old_versions(subdir.path)
+            prune_old_versions(subdir.path, False)
             names = os.listdir(subdir.path)
 
             for name in names:
@@ -153,20 +153,19 @@ def process_releases(root):
                     'hash': hash_file(subdir.path + '/' + name)
                 })
 
-    if not fake:
-        minisign_key_gpg = os.path.dirname(__file__) + '/../package/repo/minisign.key.gpg'
+    minisign_key_gpg = os.path.dirname(__file__) + '/../package/repo/minisign.key.gpg'
 
-        with open(root + '/manifest.json', 'w') as f:
-            json.dump(packages, f, indent = 4)
-        run_command('gzip', ['-f', root + '/manifest.json'])
-        minisign(minisign_key_gpg, root + '/manifest.json.gz')
+    with open(root + '/manifest.json', 'w') as f:
+        json.dump(packages, f, indent = 4)
+    run_command('gzip', ['-f', root + '/manifest.json'])
+    minisign(minisign_key_gpg, root + '/manifest.json.gz')
 
-        for pkg, files in packages.items():
-            manifest = f'{root}/{pkg}/{pkg}.json'
-            with open(manifest, 'w') as f:
-                json.dump(files, f, indent = 4)
-            run_command('gzip', ['-f', manifest])
-            minisign(minisign_key_gpg, manifest + '.gz')
+    for pkg, files in packages.items():
+        manifest = f'{root}/{pkg}/{pkg}.json'
+        with open(manifest, 'w') as f:
+            json.dump(files, f, indent = 4)
+        run_command('gzip', ['-f', manifest])
+        minisign(minisign_key_gpg, manifest + '.gz')
 
 def update_forgejo_releases(url, repo, token, fake):
     url = url.rstrip('/')
