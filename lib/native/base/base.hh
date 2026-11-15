@@ -4816,7 +4816,7 @@ Size ConvertWin32WideToUtf8(const wchar_t *str_w, Span<char> out_str);
 char *GetWin32ErrorString(uint32_t error_code = UINT32_MAX);
 #endif
 
-static inline bool IsPathSeparator(char c)
+constexpr bool IsPathSeparator(char c)
 {
 #if defined(_WIN32)
     return c == '/' || c == '\\';
@@ -4865,10 +4865,50 @@ static inline Span<char> NormalizePath(Span<const char> path, unsigned int flags
 static inline Span<char> NormalizePath(Span<const char> path, Allocator *alloc)
     { return NormalizePath(path, {}, 0, alloc); }
 
-bool PathIsAbsolute(const char *path);
-bool PathIsAbsolute(Span<const char> path);
-bool PathContainsDotDot(const char *path);
-bool PathContainsDotDot(Span<const char> path);
+static constexpr inline bool PathIsAbsolute(const char *path)
+{
+#if defined(_WIN32)
+    if (IsAsciiAlpha(path[0]) && path[1] == ':')
+        return true;
+#endif
+
+    return IsPathSeparator(path[0]);
+}
+static constexpr inline bool PathIsAbsolute(Span<const char> path)
+{
+#if defined(_WIN32)
+    if (path.len >= 2 && IsAsciiAlpha(path[0]) && path[1] == ':')
+        return true;
+#endif
+
+    return path.len && IsPathSeparator(path[0]);
+}
+
+static inline bool PathContainsDotDot(const char *path)
+{
+    const char *ptr = path;
+
+    while ((ptr = strstr(ptr, ".."))) {
+        if ((ptr == path || IsPathSeparator(ptr[-1])) && (IsPathSeparator(ptr[2]) || !ptr[2]))
+            return true;
+        ptr += 2;
+    }
+
+    return false;
+}
+static inline bool PathContainsDotDot(Span<const char> path)
+{
+    const char *ptr = path.ptr;
+    const char *end = path.end();
+
+    while ((ptr = (const char *)MemMem(ptr, end - ptr, "..", 2))) {
+        if ((ptr == path.ptr || IsPathSeparator(ptr[-1])) && (ptr + 2 == end || IsPathSeparator(ptr[2])))
+            return true;
+        ptr += 2;
+    }
+
+    return false;
+}
 
 enum class StatFlag {
     SilentMissing = 1 << 0,

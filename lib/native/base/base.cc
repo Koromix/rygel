@@ -4206,52 +4206,6 @@ Span<char> NormalizePath(Span<const char> path, Span<const char> root_directory,
     return buf.Leak();
 }
 
-bool PathIsAbsolute(const char *path)
-{
-#if defined(_WIN32)
-    if (IsAsciiAlpha(path[0]) && path[1] == ':')
-        return true;
-#endif
-
-    return IsPathSeparator(path[0]);
-}
-bool PathIsAbsolute(Span<const char> path)
-{
-#if defined(_WIN32)
-    if (path.len >= 2 && IsAsciiAlpha(path[0]) && path[1] == ':')
-        return true;
-#endif
-
-    return path.len && IsPathSeparator(path[0]);
-}
-
-bool PathContainsDotDot(const char *path)
-{
-    const char *ptr = path;
-
-    while ((ptr = strstr(ptr, ".."))) {
-        if ((ptr == path || IsPathSeparator(ptr[-1])) && (IsPathSeparator(ptr[2]) || !ptr[2]))
-            return true;
-        ptr += 2;
-    }
-
-    return false;
-}
-
-bool PathContainsDotDot(Span<const char> path)
-{
-    const char *ptr = path.ptr;
-    const char *end = path.end();
-
-    while ((ptr = (const char *)MemMem(ptr, end - ptr, "..", 2))) {
-        if ((ptr == path.ptr || IsPathSeparator(ptr[-1])) && (ptr + 2 == end || IsPathSeparator(ptr[2])))
-            return true;
-        ptr += 2;
-    }
-
-    return false;
-}
-
 static bool CheckForDumbTerm()
 {
     static bool dumb = ([]() {

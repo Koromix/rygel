@@ -1050,7 +1050,14 @@ static int RunServe(Span<const char *> arguments)
 {
     BlockAllocator temp_alloc;
 
-    const char *config_filename = nullptr;
+    // Options
+#if defined(DEFAULT_CONFIG)
+    const char *config_filename = K_STRINGIFY(DEFAULT_CONFIG);
+    static_assert(PathIsAbsolute(K_STRINGIFY(DEFAULT_CONFIG)));
+#else
+    const char *config_filename = "./goupile.ini";
+#endif
+    bool explicit_config = false;
     bool sandbox = false;
 
     const auto print_usage = [=](StreamWriter *st) {
@@ -1060,9 +1067,10 @@ T(R"(Usage: %!..+%1 [serve] [option...]%!0
 Options:
 
     %!..+-C, --config_file filename%!0     Set configuration file
+                                   %!D..(default if it exists: %2)%!0
 
     %!..+-p, --port port%!0                Change web server port
-                                   %!D..(default: %2)%!0
+                                   %!D..(default: %3)%!0
         %!..+--bind IP%!0                  Bind to specific IP
 
         %!..+--sandbox%!0                  Run sandboxed (on supported platforms)
@@ -1074,7 +1082,7 @@ Other commands:
     %!..+unseal%!0                         Unseal domain archive
 
 For help about those commands, type: %!..+%1 command --help%!0)"),
-                FelixTarget, gp_config.http.port);
+                FelixTarget, config_filename, gp_config.http.port);
     };
 
     // Find config filename
@@ -1091,6 +1099,7 @@ For help about those commands, type: %!..+%1 command --help%!0)"),
                 } else {
                     config_filename = opt.current_value;
                 }
+                explicit_config = true;
             } else if (opt.TestHasFailed()) {
                 return 1;
             }
@@ -1102,15 +1111,8 @@ For help about those commands, type: %!..+%1 command --help%!0)"),
     RaiseMaximumOpenFiles(4096);
 #endif
 
-#if defined(DEFAULT_CONFIG)
-    if (const char *filename = K_STRINGIFY(DEFAULT_CONFIG); !config_filename && TestFile(filename)) {
-        K_ASSERT(PathIsAbsolute(filename));
-        config_filename = filename;
-    }
-#endif
-
     LogInfo("Init config");
-    if (config_filename) {
+    if (explicit_config || TestFile(config_filename)) {
         StreamReader st(config_filename);
 
         if (!LoadConfig(&st, &gp_config))
