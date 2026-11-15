@@ -2,6 +2,16 @@
 
 ## Alpha versions
 
+### Redropp 0.9.19
+
+*Released on 2026-11-15*
+
+- Support trusted proxy configuration with `HTTP_TRUSTED_PROXIES` environment variable
+- Automatically use secure cookies if trusted `X-Forwarded-Proto` header includes https
+- Use stricter HTTP parsing (Content-Length values)
+- Fix broken compilation with musl libc
+- Fix broken compilation in OpenBSD
+
 ### Redropp 0.9.18
 
 *Released on 2026-11-10*
