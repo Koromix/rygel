@@ -4142,7 +4142,7 @@ if (Module['printErr']) err = Module['printErr'];
 
 
 
-function wasm_crypto_getrandom(buf,n) { if (typeof crypto === 'undefined' || !crypto.getRandomValues) return -1; try { var chunk = 65536; var tmp = new Uint8Array(Math.min(n, chunk)); for (var i = 0; i < n; i += chunk) { var len = Math.min(chunk, n - i); var part = (len === tmp.length) ? tmp : tmp.subarray(0, len); crypto.getRandomValues(part); HEAPU8.set(part, buf + i); } return 0; } catch (e) { return -1; } }
+function wasm_crypto_getrandom(buf,n) { if (typeof crypto === 'undefined' || !crypto.getRandomValues) return -1; try { buf = Number(buf); n = Number(n); var chunk = 65536; var tmp = new Uint8Array(Math.min(n, chunk)); for (var i = 0; i < n; i += chunk) { var len = Math.min(chunk, n - i); var part = (len === tmp.length) ? tmp : tmp.subarray(0, len); crypto.getRandomValues(part); HEAPU8.set(part, buf + i); } return 0; } catch (e) { return -1; } }
 
 
 var _sqlite3_status64,

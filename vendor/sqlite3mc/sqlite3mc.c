@@ -271637,9 +271637,9 @@ SQLITE_API const char *sqlite3_sourceid(void){ return SQLITE_SOURCE_ID; }
 
 #define SQLITE3MC_VERSION_MAJOR      2
 #define SQLITE3MC_VERSION_MINOR      7
-#define SQLITE3MC_VERSION_RELEASE    0
+#define SQLITE3MC_VERSION_RELEASE    1
 #define SQLITE3MC_VERSION_SUBRELEASE 0
-#define SQLITE3MC_VERSION_STRING     "SQLite3 Multiple Ciphers 2.7.0"
+#define SQLITE3MC_VERSION_STRING     "SQLite3 Multiple Ciphers 2.7.1"
 
 #endif /* SQLITE3MC_VERSION_H_ */
 /*** End of #include "sqlite3mc_version.h" ***/
@@ -296076,6 +296076,11 @@ EM_JS(int, wasm_crypto_getrandom, (uint8_t* buf, size_t n),
     return -1;
   try
   {
+    /* With -sMEMORY64=1, pointers and size_t arrive as BigInt.
+     * Number() accepts both Number and BigInt. */
+    buf = Number(buf);
+    n = Number(n);
+
     var chunk = 65536;
     /* Temporary buffer is never shared, so this also works when
      * HEAPU8.buffer is a SharedArrayBuffer (e.g. -pthread). */
@@ -346289,6 +346294,21 @@ sqlite3mcSetupWriteCipher(Codec* codec, int cipherType, char* userPassword, int 
   if (codec->m_writeCipher != NULL)
   {
     /*
+    ** The spare write cipher was allocated as a copy of the read cipher using the current cipher
+    ** parameters (which were potentially transient only). If the new write cipher is of the same
+    ** type, transient parameters were replaced by the default parameter values already. Thus, the
+    ** wrong set of parameter values would be used for the new write cipher.
+    ** Therefore the parameter values of the spare write cipher will be copied to the new write cipher,
+    ** so that the correct parameter values will be used, independent of whether the cipher configuration
+    ** was transient or default.
+    ** This is only necessary, if the database is actually encrypted.
+    */
+    if (codec->m_spareWrite.m_cipher != NULL && codec->m_writeCipherType == codec->m_spareWrite.m_cipherType)
+    {
+      globalCodecDescriptorTable[codec->m_writeCipherType - 1].m_cloneCipher(codec->m_writeCipher, codec->m_spareWrite.m_cipher);
+    }
+
+    /*
     ** Check for salt
     ** 1. rekey salt (via pragma)
     ** 2. cipher_salt (via pragma or URI parameter)
@@ -347999,7 +348019,7 @@ sqlite3mcFileControlPragma(sqlite3* db, const char* zDbName, int op, void* pArg)
       int nValue = sqlite3Strlen30(pragmaValue);
       if (((nValue & 1) == 0) && (sqlite3mcIsHexKey((const unsigned char*) pragmaValue, nValue) != 0))
       {
-        unsigned char* zHexKey = sqlite3_malloc(nValue/2);
+        unsigned char* zHexKey = sqlite3_malloc(nValue/2+1);
         if (zHexKey != NULL)
         {
           sqlite3mcConvertHex2Bin((const unsigned char*)pragmaValue, nValue, zHexKey);
@@ -348057,7 +348077,7 @@ sqlite3mcFileControlPragma(sqlite3* db, const char* zDbName, int op, void* pArg)
       int nValue = sqlite3Strlen30(pragmaValue);
       if (((nValue & 1) == 0) && (sqlite3mcIsHexKey((const unsigned char*) pragmaValue, nValue) != 0))
       {
-        unsigned char* zHexKey = sqlite3_malloc(nValue/2);
+        unsigned char* zHexKey = sqlite3_malloc(nValue/2+1);
         if (zHexKey != NULL)
         {
           sqlite3mcConvertHex2Bin((const unsigned char*)pragmaValue, nValue, zHexKey);
@@ -348223,9 +348243,10 @@ sqlite3mcCodecQueryParameters(sqlite3* db, const char* zDb, const char* zUri, in
     int nKey = sqlite3Strlen30(zKey);
     if (((nKey & 1) == 0) && (sqlite3mcIsHexKey((const unsigned char*)zKey, nKey) != 0))
     {
-      char* zDecoded = sqlite3_malloc(nKey);
+      char* zDecoded = sqlite3_malloc(nKey+1);
       if (zDecoded != NULL)
       {
+        zDecoded[0] = '\0';
         for (i = 0, iByte = 0; i < nKey && sqlite3Isxdigit(zKey[i]); i++)
         {
           iByte = (iByte << 4) + sqlite3HexToInt(zKey[i]);
@@ -373204,7 +373225,7 @@ static Codec* mcGetCodecFromBtree(Btree* pBt)
   Pager* pPager = sqlite3BtreePager(pBt);
   if (pPager->fd && pPager->fd->pMethods)   /* corresponds to isOpen(fd) */
   {
-    sqlite3OsFileControl(pPager->fd, SQLITE3MC_FCNTL_PCODEC, &codec);
+    sqlite3OsFileControlHint(pPager->fd, SQLITE3MC_FCNTL_PCODEC, &codec);
   }
   return codec;
 }
@@ -374636,12 +374657,9 @@ sqlite3mcPagerHasCodec(PagerMC* pPager)
   if (pPager->fd && pPager->fd->pMethods)   /* corresponds to isOpen(fd) */
   {
     Codec* codec = NULL;
-    int rc = sqlite3OsFileControl(pPager->fd, SQLITE3MC_FCNTL_PCODEC, &codec);
-    if (rc == SQLITE_OK)
-    {
-      /* Check whether codec is enabled for associated database file */
-      hasCodec = (codec != 0 && sqlite3mcIsEncrypted(codec));
-    }
+    sqlite3OsFileControlHint(pPager->fd, SQLITE3MC_FCNTL_PCODEC, &codec);
+    /* Check whether codec is enabled for associated database file */
+    hasCodec = (codec != 0 && sqlite3mcIsEncrypted(codec));
   }
   return hasCodec;
 }
