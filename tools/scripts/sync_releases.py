@@ -400,7 +400,7 @@ if __name__ == '__main__':
     script_dir = os.path.dirname(__file__)
 
     parser = argparse.ArgumentParser(description = 'Update downloadable files and package repositories')
-    parser.add_argument('directory', metavar = 'directory', type = str,
+    parser.add_argument('directory', metavar = 'directory', type = str, nargs = '?', default = '.',
                         help = 'Root download/package directory')
     parser.add_argument('--debian', const = 'debian', dest = 'types', action = 'append_const',
                         help = 'Update Debian repository in debian subdirectory')
