@@ -195,4 +195,24 @@ extern "C" int __cdecl SehHandler(void *ptr, void *, void *ctx, void *)
 
 }
 
+#if defined(_MSC_VER) && defined(_M_IX86)
+
+// Target of the __imp__GetSystemTimePreciseAsFileTime@4 slot defined in win32_compat_x86.asm
+extern "C" void __stdcall KoffiGetSystemTimePrecise(FILETIME *out)
+{
+    typedef void (__stdcall *PreciseFunc)(FILETIME *);
+    static PreciseFunc func = nullptr;
+
+    if (!func) {
+        HMODULE kernel32 = GetModuleHandleW(L"kernel32.dll");
+        FARPROC proc = kernel32 ? GetProcAddress(kernel32, "GetSystemTimePreciseAsFileTime") : nullptr;
+
+        func = proc ? (PreciseFunc)(void *)proc : GetSystemTimeAsFileTime;
+    }
+
+    func(out);
+}
+
+#endif
+
 #endif
