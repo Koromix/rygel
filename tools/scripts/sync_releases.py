@@ -55,7 +55,7 @@ PROJECTS = {
     }
 }
 
-def import_packages(src, dest, ext):
+def import_packages(src, dest, ext, fake):
     names = os.listdir(src)
 
     for name in names:
@@ -66,9 +66,11 @@ def import_packages(src, dest, ext):
         dest_filename = os.path.join(dest, name)
 
         print(f'  - Importing {os.path.basename(src_filename)}...')
-        shutil.copyfile(src_filename, dest_filename)
 
-def import_releases(src, root, func):
+        if not fake:
+            shutil.copyfile(src_filename, dest_filename)
+
+def import_releases(src, root, func, fake):
     names = os.listdir(src)
 
     for name in names:
@@ -92,13 +94,14 @@ def import_releases(src, root, func):
             continue
 
         directory = root + '/' + pkg + suffix
-        os.makedirs(directory, exist_ok = True)
-
         filename = src + '/' + name
         dest = directory + '/' + name
 
         print(f'  - Importing {name}...')
-        func(filename, dest)
+
+        if not fake:
+            os.makedirs(directory, exist_ok = True)
+            func(filename, dest)
 
 def process_releases(root):
     dirs = (pkg.name for pkg in os.scandir(root) if pkg.is_dir())
@@ -150,21 +153,22 @@ def process_releases(root):
                     'hash': hash_file(subdir.path + '/' + name)
                 })
 
-    minisign_key_gpg = os.path.dirname(__file__) + '/../package/repo/minisign.key.gpg'
+    if not fake:
+        minisign_key_gpg = os.path.dirname(__file__) + '/../package/repo/minisign.key.gpg'
 
-    with open(root + '/manifest.json', 'w') as f:
-        json.dump(packages, f, indent = 4)
-    run_command('gzip', ['-f', root + '/manifest.json'])
-    minisign(minisign_key_gpg, root + '/manifest.json.gz')
+        with open(root + '/manifest.json', 'w') as f:
+            json.dump(packages, f, indent = 4)
+        run_command('gzip', ['-f', root + '/manifest.json'])
+        minisign(minisign_key_gpg, root + '/manifest.json.gz')
 
-    for pkg, files in packages.items():
-        manifest = f'{root}/{pkg}/{pkg}.json'
-        with open(manifest, 'w') as f:
-            json.dump(files, f, indent = 4)
-        run_command('gzip', ['-f', manifest])
-        minisign(minisign_key_gpg, manifest + '.gz')
+        for pkg, files in packages.items():
+            manifest = f'{root}/{pkg}/{pkg}.json'
+            with open(manifest, 'w') as f:
+                json.dump(files, f, indent = 4)
+            run_command('gzip', ['-f', manifest])
+            minisign(minisign_key_gpg, manifest + '.gz')
 
-def update_forgejo_releases(url, repo, token):
+def update_forgejo_releases(url, repo, token, fake):
     url = url.rstrip('/')
 
     output = capture_command('git', ['-C', os.path.dirname(__file__), 'tag', '--sort=*authordate'])
@@ -200,16 +204,17 @@ def update_forgejo_releases(url, repo, token):
 
         print(f'  - Releasing {project["title"]} version {version}...')
 
-        body = {
-            "tag_name": tag,
-            "name": f'{project["title"]} {version}',
-            "draft": False,
-            "body": entry
-        }
-        make_request(f'{url}/api/v1/repos/{repo}/releases', body = json.dumps(body),
-                     headers = { 'Authorization': 'token ' + token, 'Content-Type': 'application/json' })
+        if not fake:
+            body = {
+                "tag_name": tag,
+                "name": f'{project["title"]} {version}',
+                "draft": False,
+                "body": entry
+            }
+            make_request(f'{url}/api/v1/repos/{repo}/releases', body = json.dumps(body),
+                         headers = { 'Authorization': 'token ' + token, 'Content-Type': 'application/json' })
 
-def update_github_releases(url, repo, token):
+def update_github_releases(url, repo, token, fake):
     url = url.rstrip('/')
 
     output = capture_command('git', ['-C', os.path.dirname(__file__), 'tag', '--sort=*authordate'])
@@ -245,15 +250,16 @@ def update_github_releases(url, repo, token):
 
         print(f'  - Releasing {project["title"]} version {version}...')
 
-        body = {
-            "tag_name": tag,
-            "name": f'{project["title"]} {version}',
-            "draft": False,
-            "body": entry
-        }
-        make_request(f'{url}/repos/{repo}/releases', body = json.dumps(body),
-                     headers = { 'X-GitHub-Api-Version': '2026-03-10', 'Authorization': 'token ' + token,
-                                 'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json' })
+        if not fake:
+            body = {
+                "tag_name": tag,
+                "name": f'{project["title"]} {version}',
+                "draft": False,
+                "body": entry
+            }
+            make_request(f'{url}/repos/{repo}/releases', body = json.dumps(body),
+                         headers = { 'X-GitHub-Api-Version': '2026-03-10', 'Authorization': 'token ' + token,
+                                     'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json' })
 
 def extract_changelog_entry(filename, title, version):
     with open(filename, 'r') as f:
@@ -324,7 +330,7 @@ def hash_file(filename):
         digest = hashlib.file_digest(f, 'sha256')
     return digest.hexdigest()
 
-def prune_old_versions(directory):
+def prune_old_versions(directory, fake):
     files = [entry for entry in os.scandir(directory) if entry.is_file()]
 
     packages = {}
@@ -345,7 +351,9 @@ def prune_old_versions(directory):
 
         if pkg in packages and version != packages[pkg]:
             print(f'  - Deleting {os.path.basename(entry.path)}...')
-            os.remove(entry.path)
+
+            if not fake:
+                os.remove(entry.path)
 
 def is_greater_nat(a, b):
     a = [int(t) if t.isdigit() else t.lower() for t in re.split(r'(\d+)', a)]
@@ -407,6 +415,8 @@ if __name__ == '__main__':
     parser.add_argument('--import', metavar = 'path', dest = 'imports', nargs = '?',
                         type = str, default = [], const = None, action = 'append',
                         help = 'import additional packages')
+    parser.add_argument('-n', '--dry_run', action = 'store_true',
+                        help = 'Simulate actions without running them')
     args = parser.parse_args()
 
     if not args.types:
@@ -433,34 +443,37 @@ if __name__ == '__main__':
         os.makedirs(args.directory + '/debian', exist_ok = True)
         os.makedirs(args.directory + '/debian/pool', exist_ok = True)
         for path in args.imports:
-            import_packages(path, args.directory + '/debian/pool', '.deb')
-        prune_old_versions(args.directory + '/debian/pool')
-        run_command(script_dir + '/../package/repo/apt/update.sh', [REPOSITORY_NAME, GPG_SIGNING_USER], cwd = args.directory + '/debian')
+            import_packages(path, args.directory + '/debian/pool', '.deb', args.dry_run)
+        prune_old_versions(args.directory + '/debian/pool', args.dry_run)
+        if not args.dry_run:
+            run_command(script_dir + '/../package/repo/apt/update.sh', [REPOSITORY_NAME, GPG_SIGNING_USER], cwd = args.directory + '/debian')
 
     if 'rpm' in args.types:
         print('>> Processing RPM repository...')
         os.makedirs(args.directory + '/rpm', exist_ok = True)
         for path in args.imports:
-            import_packages(path, args.directory + '/rpm', '.rpm')
-        prune_old_versions(args.directory + '/rpm')
-        run_command(script_dir + '/../package/repo/rpm/update.sh', [REPOSITORY_NAME, GPG_SIGNING_USER], cwd = args.directory + '/rpm')
+            import_packages(path, args.directory + '/rpm', '.rpm', args.dry_run)
+        prune_old_versions(args.directory + '/rpm', args.dry_run)
+        if not args.dry_run:
+            run_command(script_dir + '/../package/repo/rpm/update.sh', [REPOSITORY_NAME, GPG_SIGNING_USER], cwd = args.directory + '/rpm')
 
     if 'releases' in args.types:
         print('>> Processing releases...')
         os.makedirs(args.directory + '/releases', exist_ok = True)
         for path in args.imports:
-            import_releases(path, args.directory + '/releases', shutil.copyfile)
-        import_releases(args.directory + '/releases', args.directory + '/releases', shutil.move)
-        process_releases(args.directory + '/releases')
+            import_releases(path, args.directory + '/releases', shutil.copyfile, args.dry_run)
+        import_releases(args.directory + '/releases', args.directory + '/releases', shutil.move, args.dry_run)
+        if not args.dry_run:
+            process_releases(args.directory + '/releases')
 
     if 'codeberg' in args.types:
         print('>> Updating Codeberg releases...')
         codeberg_key_gpg = os.path.dirname(__file__) + '/' + CODEBERG_KEY_GPG
         codeberg_token = capture_command('gpg', ['--decrypt', codeberg_key_gpg])
-        update_forgejo_releases(CODEBERG_URL, CODEBERG_REPOSITORY, codeberg_token)
+        update_forgejo_releases(CODEBERG_URL, CODEBERG_REPOSITORY, codeberg_token, args.dry_run)
 
     if 'github' in args.types:
         print('>> Updating GitHub releases...')
         github_key_gpg = os.path.dirname(__file__) + '/' + GITHUB_KEY_GPG
         github_token = capture_command('gpg', ['--decrypt', github_key_gpg])
-        update_github_releases(GITHUB_URL, GITHUB_REPOSITORY, github_token)
+        update_github_releases(GITHUB_URL, GITHUB_REPOSITORY, github_token, args.dry_run)
