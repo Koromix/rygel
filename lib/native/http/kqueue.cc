@@ -21,7 +21,7 @@
 #include <sys/uio.h>
 
 #if defined(__APPLE__)
-    // The flag may exist, but it does not seem to work with recv!
+    // Buggy when used in with send/sendmsg so avoid it and rely on O_NONBLOCK code paths instead
     #undef MSG_DONTWAIT
 #endif
 
