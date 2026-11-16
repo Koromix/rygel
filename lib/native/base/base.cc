@@ -6788,7 +6788,9 @@ bool ParseDuration(Span<const char> str, int64_t *out_duration, unsigned int fla
     if (!ParseInt(str, &duration, flags & ~(int)ParseFlag::End, &str))
         return false;
     if (duration < 0) [[unlikely]] {
-        LogError("Duration values must be positive");
+        if (flags & (int)ParseFlag::Log) {
+            LogError("Duration values must be positive");
+        }
         return false;
     }
 
@@ -6818,12 +6820,16 @@ bool ParseDuration(Span<const char> str, int64_t *out_duration, unsigned int fla
         goto overflow;
 #else
     {
-        uint64_t total = duration * multiplier;
+        uint64_t total = (uint64_t)duration * (uint64_t)multiplier;
         if ((duration && total / duration != (uint64_t)multiplier) || total > INT64_MAX) [[unlikely]]
             goto overflow;
         duration = (int64_t)total;
     }
 #endif
+
+    // Reject absurdly high values to prevent overflows in various places
+    if (duration > 2000 * 365 * 86400000ll) [[unlikely]]
+        goto overflow;
 
     *out_duration = duration;
     if (out_remaining) {
