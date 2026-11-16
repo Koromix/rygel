@@ -199,7 +199,15 @@ async function runDrop() {
     if (route.drop != null) {
         try {
             let url = Util.pasteURL('/api/drop/info', { kid: route.drop });
-            cache.drop = await Net.cache('drop', url);
+
+            cache.drop = await Net.cache('drop', url, drop => {
+                if (isEditable(drop) && !secret_map.has(drop.kid) && route.hash) {
+                    let secret = route.hash;
+                    secret_map.set(drop.kid, secret);
+                }
+
+                return drop;
+            });
         } catch (err) {
             cache.drop = null;
 
@@ -261,9 +269,75 @@ async function runShare(secret) {
 
         <div class="actions">
             <button @click=${UI.wrap(e => copyClipboard(e, ENV.url + url))}>${T.copy_download_link}</button>
-            <a @click=${UI.wrap(e => unshareLink(cache.drop.kid, secret))}>${T.show_download_page}</button>
+            <a @click=${UI.wrap(e => unshareLink(cache.drop.kid, secret))}>${T.show_download_page}</a>
+            ${isEditable(cache.drop) ? html`<a @click=${UI.wrap(e => editDrop(cache.drop))}>${T.edit_settings}</a>` : ''}
         </div>
     `);
+}
+
+async function editDrop(drop) {
+    let delay = (drop.expire ?? undefined) - drop.ctime;
+    let delay_mismatch = Number.isNaN(delay) ? !ENV.allow_infinite : !ENV.durations.includes(delay);
+
+    await UI.dialog({
+        run: (render, close) => html`
+            <div class="title">${T.send_files}</div>
+
+            <div class="main">
+                <label>
+                    <span>${T.title}</span>
+                    <input type="text" name="name" value=${drop.name} />
+                </label>
+                <label>
+                    <span>${T.expiration}</span>
+                    <select name="expiration">
+                        ${delay_mismatch ? html`
+                            <option value="-1" selected>
+                                ${Number.isNaN(delay) ? T.no_expiration : formatDuration(delay)}
+                                (${T.change_required.toLowerCase()})
+                            </option>
+                        ` : ''}
+                        ${ENV.durations.map(duration => html`<option value=${duration} ?selected=${duration == delay}>${formatDuration(duration)}</option>`)}
+                        ${ENV.allow_infinite ? html`<option value="0" ?selected=${drop.expire == null}>${T.no_expiration}</option>` : ''}
+                    </select>
+                </label>
+            </div>
+
+            <div class="footer">
+                <button type="button" class="secondary" @click=${UI.wrap(close)}>${T.cancel}</button>
+                <button type="submit">${T.confirm}</button>
+            </div>
+        `,
+
+        submit: async (elements) => {
+            let name = elements.name.value.trim();
+            let expiration = parseInt(elements.expiration.value, 10) || null;
+
+            if (!name)
+                throw new Error(T.message(`Missing drop name`));
+            if (expiration < 0)
+                throw new Error(T.message(`Please select a new expiration delay`));
+
+            let url = Util.pasteURL('/api/drop/save', { kid: drop.kid });
+
+            await Net.post(url, {
+                name: name,
+                expiration: expiration
+            });
+
+            Net.invalidate('drop');
+            Net.invalidate('drops');
+        }
+    });
+}
+
+function isEditable(drop) {
+    if (!drop.complete)
+        return true;
+    if (drop.edit != null && drop.edit > (new Date).valueOf())
+        return true;
+
+    return false;
 }
 
 async function runDownload(secret) {
@@ -744,7 +818,7 @@ async function runSend() {
         let elements = form.elements;
 
         let sources = send_files.slice();
-        let name = elements.name.value || (sources.length > 1 ? send_codename : sources[0].name);
+        let name = elements.name.value.trim() || (sources.length > 1 ? send_codename : sources[0].name);
         let expiration = parseInt(elements.expiration.value, 10) || null;
         let password = elements.password.value.trim();
 
@@ -861,7 +935,7 @@ function makePassphrase(secret, password) {
 }
 
 async function createDrop(name, expiration, protect) {
-    let drop = await Net.post('/api/drop/create', {
+    let drop = await Net.post('/api/drop/save', {
         name: name,
         expiration: expiration,
         protect: protect

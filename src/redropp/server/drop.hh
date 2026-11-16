@@ -14,7 +14,7 @@ bool PruneDrops();
 void HandleDropList(http_IO *io);
 void HandleDropInfo(http_IO *io);
 
-void HandleDropCreate(http_IO *io);
+void HandleDropSave(http_IO *io);
 void HandleDropPopulate(http_IO *io);
 void HandleDropMark(http_IO *io);
 void HandleDropComplete(http_IO *io);

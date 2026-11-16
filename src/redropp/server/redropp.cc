@@ -600,8 +600,8 @@ static void HandleRequest(http_IO *io)
             HandleDropList(io);
         } else if (url == "/api/drop/info" && method == http_RequestMethod::Get) {
             HandleDropInfo(io);
-        } else if (url == "/api/drop/create" && method == http_RequestMethod::Post) {
-            HandleDropCreate(io);
+        } else if (url == "/api/drop/save" && method == http_RequestMethod::Post) {
+            HandleDropSave(io);
         } else if (url == "/api/drop/populate" && method == http_RequestMethod::Post) {
             HandleDropPopulate(io);
         } else if (url == "/api/drop/mark" && method == http_RequestMethod::Post) {

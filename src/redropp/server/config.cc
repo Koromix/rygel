@@ -124,6 +124,9 @@ bool LoadConfig(StreamReader *st, Config *out_config)
         if (const char *str = GetEnv("DROP_DELAYS")) {
             valid &= ParseExpirationDelays(str, &config.durations, &config.default_duration, &config.allow_infinite);
         }
+        if (const char *str = GetEnv("DROP_EDIT_WINDOW")) {
+            valid &= ParseDuration(str, &config.edit_window);
+        }
 
         if (const char *str = GetEnv("AUTH_INTERNAL")) {
             valid &= ParseBool(str, &config.internal_auth);
@@ -193,6 +196,8 @@ bool LoadConfig(StreamReader *st, Config *out_config)
                     }
                 } else if (prop.key == "ExpirationDelays") {
                     valid &= ParseExpirationDelays(prop.value, &config.durations, &config.default_duration, &config.allow_infinite);
+                } else if (prop.key == "EditWindow") {
+                    valid &= ParseDuration(prop.value, &config.edit_window);
                 } else {
                     LogError("Unknown attribute '%1'", prop.key);
                     valid = false;

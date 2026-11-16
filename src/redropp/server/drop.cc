@@ -111,7 +111,7 @@ static void CleanupFragments(int64_t now)
 
     // Clean empty drops
     db.Run(R"(DELETE FROM drops
-              WHERE complete = 1 AND
+              WHERE complete IS NOT NULL AND
                     id NOT IN (SELECT parent FROM files))");
 
     // Recompute per-user usage just in case
@@ -203,7 +203,7 @@ void HandleDropList(http_IO *io)
                 const char *name = (const char *)sqlite3_column_text(stmt, 2);
                 bool protect = sqlite3_column_int(stmt, 3);
                 int64_t expire = sqlite3_column_int64(stmt, 4);
-                bool complete = sqlite3_column_int(stmt, 5);
+                int64_t complete = sqlite3_column_int64(stmt, 5);
                 int files = sqlite3_column_int(stmt, 6);
                 int64_t total = sqlite3_column_int64(stmt, 7);
 
@@ -222,6 +222,9 @@ void HandleDropList(http_IO *io)
                     json->Key("expire"); json->Null();
                 }
                 json->Key("complete"); json->Bool(complete);
+                if (complete) {
+                    json->Key("edit"); json->Int64(complete + config.edit_window);
+                }
                 json->Key("files"); json->Int(files);
                 json->Key("total"); json->Int64(total);
 
@@ -239,6 +242,7 @@ void HandleDropList(http_IO *io)
 void HandleDropInfo(http_IO *io)
 {
     const http_RequestInfo &request = io->Request();
+    RetainPtr<const SessionInfo> session = GetNormalSession(io);
 
     KID kid;
 
@@ -275,18 +279,16 @@ void HandleDropInfo(http_IO *io)
     const char *name = (const char *)sqlite3_column_text(stmt, 2);
     bool protect = sqlite3_column_int(stmt, 3);
     int64_t expire = sqlite3_column_int64(stmt, 4);
-    bool complete = sqlite3_column_int(stmt, 5);
+    int64_t complete = sqlite3_column_int64(stmt, 5);
+    int64_t owner = sqlite3_column_int64(stmt, 6);
     int64_t total = sqlite3_column_int64(stmt, 7);
 
-    if (!complete) {
-        RetainPtr<const SessionInfo> session = GetNormalSession(io);
-        int64_t owner = sqlite3_column_int64(stmt, 6);
+    bool owned = session && (session->userid == owner);
 
-        if (!session || session->userid != owner) {
-            LogError("Unknown drop KID '%1'", kid);
-            io->SendError(404);
-            return;
-        }
+    if (!complete && !owned) {
+        LogError("Unknown drop KID '%1'", kid);
+        io->SendError(404);
+        return;
     }
 
     http_SendJson(io, 200, [&](json_Writer *json) {
@@ -302,6 +304,9 @@ void HandleDropInfo(http_IO *io)
         }
         json->Key("protect"); json->Bool(protect);
         json->Key("complete"); json->Bool(complete);
+        if (complete && owned) {
+            json->Key("edit"); json->Int64(complete + config.edit_window);
+        }
 
         json->Key("files"); json->StartArray();
         if (sqlite3_column_type(stmt, 8) != SQLITE_NULL) {
@@ -333,14 +338,30 @@ void HandleDropInfo(http_IO *io)
     });
 }
 
-void HandleDropCreate(http_IO *io)
+void HandleDropSave(http_IO *io)
 {
+    const http_RequestInfo &request = io->Request();
     RetainPtr<const SessionInfo> session = GetNormalSession(io);
 
     if (!session) {
         LogError("User is not logged in");
         io->SendError(401);
         return;
+    }
+
+    KID kid;
+    bool update = false;
+
+    if (const char *str = request.GetQueryValue("kid")) {
+        if (!ParseKID(str, KIDType::Drop, &kid)) {
+            io->SendError(422);
+            return;
+        }
+
+        update = true;
+    } else {
+        FillKID(KIDType::Drop, &kid);
+        update = false;
     }
 
     const char *name = nullptr;
@@ -392,14 +413,30 @@ void HandleDropCreate(http_IO *io)
     int64_t now = GetUnixTime();
     int64_t expire = (expiration >= 0) ? now + expiration : -1;
 
-    KID kid;
-    FillKID(KIDType::Drop, &kid);
-
-    if (!db.Run(R"(INSERT INTO drops (kid, owner, ctime, name, expire, protect, total, complete, deleted)
-                   VALUES (?1, ?2, ?3, ?4, ?5, ?6, 0, 0, 0))",
-                sq_Binding(kid.raw), session->userid, now, name,
-                expire >= 0 ? sq_Binding(expire) : sq_Binding(), 0 + protect))
-        return;
+    // Create or update
+    {
+        sq_Statement stmt;
+        if (!db.Prepare(R"(INSERT INTO drops (kid, owner, ctime, name, expire, protect, total, complete, deleted)
+                           VALUES (?1, IIF(?2 = 0, ?4, -1), ?5, ?6, ?7, ?8, 0, NULL, 0)
+                           ON CONFLICT (kid) DO UPDATE SET name = excluded.name,
+                                                           expire = IIF(excluded.expire IS NOT NULL, ctime - excluded.ctime + excluded.expire, NULL)
+                                             WHERE ?2 = 1 AND
+                                                   owner = ?4 AND
+                                                   deleted = 0 AND
+                                                   (complete IS NULL OR excluded.ctime < complete + ?3)
+                           RETURNING kid)",
+                    &stmt, sq_Binding(kid.raw), 0 + update, config.edit_window,
+                    session->userid, now, name, expire >= 0 ? sq_Binding(expire) : sq_Binding(), 0 + protect)) {
+            return;
+        }
+        if (!stmt.Step()) {
+            if (stmt.IsValid() || stmt.Status() == SQLITE_CONSTRAINT) {
+                LogError("Your at not allowed to edit this drop");
+                io->SendError(403);
+            }
+            return;
+        }
+    }
 
     http_SendJson(io, 200, [&](json_Writer *json) {
         json->StartObject();
@@ -520,7 +557,7 @@ void HandleDropPopulate(http_IO *io)
                                WHERE kid = ?1 AND
                                      owner = ?2 AND
                                      deleted = 0 AND
-                                     complete = 0)",
+                                     complete IS NULL)",
                             &stmt, sq_Binding(kid.raw), session->userid))
                 return false;
 
@@ -671,7 +708,7 @@ void HandleDropMark(http_IO *io)
                                WHERE f.kid = ?1 AND
                                      d.owner = ?2 AND
                                      d.deleted = 0 AND
-                                     d.complete = 0)",
+                                     d.complete IS NULL)",
                             &stmt, sq_Binding(kid.raw), session->userid))
                 return false;
 
@@ -717,13 +754,15 @@ void HandleDropComplete(http_IO *io)
 
     // Mark drop as complete
     {
+        int64_t now = GetUnixTime();
+
         sq_Statement stmt;
-        if (!db.Prepare(R"(UPDATE drops SET complete = 1
+        if (!db.Prepare(R"(UPDATE drops SET complete = IFNULL(complete, ?3)
                            WHERE kid = ?1 AND
                                  owner = ?2 AND
                                  deleted = 0
                            RETURNING id)",
-                        &stmt, sq_Binding(kid.raw), session->userid))
+                        &stmt, sq_Binding(kid.raw), session->userid, now))
             return;
 
         if (!stmt.Step()) {
@@ -824,7 +863,7 @@ void HandleFragmentDownload(http_IO *io)
                        WHERE f.kid = ?1 AND
                              IIF(d.expire IS NOT NULL, d.expire > ?2, 1) AND
                              d.deleted = 0 AND
-                             d.complete = 1)",
+                             d.complete IS NOT NULL)",
                     &stmt, sq_Binding(kid.raw), now))
         return;
 
@@ -904,7 +943,7 @@ void HandleFragmentUpload(http_IO *io)
                              d.owner = ?2 AND
                              IIF(d.expire IS NOT NULL, d.expire > ?3, 1) AND
                              d.deleted = 0 AND
-                             d.complete = 0)",
+                             d.complete IS NULL)",
                     &stmt, sq_Binding(kid.raw), session->userid, now))
         return;
 
@@ -1025,7 +1064,7 @@ void HandleFileDownload(http_IO *io)
                        WHERE f.kid = ?1 AND
                              IIF(d.expire IS NOT NULL, d.expire > ?2, 1) AND
                              d.deleted = 0 AND
-                             d.complete = 1)",
+                             d.complete IS NOT NULL)",
                     &stmt, sq_Binding(kid.raw), now))
         return;
 

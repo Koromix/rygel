@@ -28,6 +28,7 @@ struct Config {
     HeapArray<int64_t> durations; // See DEFAULT_DURATIONS in config.cc
     int64_t default_duration = 0; // 7 days
     bool allow_infinite = false;
+    int64_t edit_window = 15 * 60000; // 15 minutes
 
     const char *contact = nullptr;
     const char *custom_icon = nullptr;
