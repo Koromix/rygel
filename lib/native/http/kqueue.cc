@@ -425,7 +425,7 @@ void http_Dispatcher::Run()
 
     HeapArray<struct kevent> changes;
     HeapArray<struct kevent> events;
-    bool accepts = false;
+    int accepts = 0;
     bool shedding = false;
 
     for (;;) {
@@ -433,7 +433,7 @@ void http_Dispatcher::Run()
 
         for (const struct kevent &ev: events) {
             if (ev.ident == (uintptr_t)listener) {
-                accepts = true;
+                accepts = (int)ev.data;
             } else if (ev.ident == (uintptr_t)pair_fd[0]) {
                 bool exit = false;
 
@@ -490,61 +490,59 @@ void http_Dispatcher::Run()
         }
 
         // Process new connections
-        if (accepts) {
-            for (int i = 0; i < 32; i++) {
-                sockaddr_storage ss;
-                socklen_t ss_len = K_SIZE(ss);
+        for (int min = std::max(accepts - 32, 0); accepts > min; accepts--) {
+            sockaddr_storage ss;
+            socklen_t ss_len = K_SIZE(ss);
 
 #if defined(SOCK_CLOEXEC)
-                int sock = accept4(listener, (sockaddr *)&ss, &ss_len, SOCK_CLOEXEC);
+            int sock = accept4(listener, (sockaddr *)&ss, &ss_len, SOCK_CLOEXEC);
 #else
-                int sock = accept(listener, (sockaddr *)&ss, &ss_len);
+            int sock = accept(listener, (sockaddr *)&ss, &ss_len);
 #endif
 
-                if (sock < 0) {
-                    if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                        accepts = false;
-                        break;
-                    }
-                    if (errno == EINVAL)
-                        return;
-
-                    // Assume transient error (such as too many open files)
-                    LogError("Failed to accept client: %1", strerror(errno));
-                    WaitDelay(20);
-
+            if (sock < 0) {
+                if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                    accepts = 0;
                     break;
                 }
+                if (errno == EINVAL)
+                    return;
 
-                if (sockets.len >= MaxDispatcherClients) [[unlikely]] {
-                    if (!shedding) {
-                        LogWarning("Shedding HTTP connections (capacity overload)");
-                        shedding = true;
-                    }
+                // Assume transient error (such as too many open files)
+                LogError("Failed to accept client: %1", strerror(errno));
+                WaitDelay(20);
 
-                    struct linger sl = { 1, 0 };
-                    setsockopt(sock, SOL_SOCKET, SO_LINGER, &sl, sizeof(sl));
-                    CloseSocket(sock);
+                break;
+            }
 
-                    continue;
-                } else {
-                    shedding = false;
+            if (sockets.len >= MaxDispatcherClients) [[unlikely]] {
+                if (!shedding) {
+                    LogWarning("Shedding HTTP connections (capacity overload)");
+                    shedding = true;
                 }
 
+                struct linger sl = { 1, 0 };
+                setsockopt(sock, SOL_SOCKET, SO_LINGER, &sl, sizeof(sl));
+                CloseSocket(sock);
+
+                continue;
+            } else {
+                shedding = false;
+            }
+
 #if !defined(SOCK_CLOEXEC)
-                fcntl(sock, F_SETFD, FD_CLOEXEC);
+            fcntl(sock, F_SETFD, FD_CLOEXEC);
 #endif
 #if !defined(MSG_DONTWAIT)
-                SetSocketNonBlock(sock, true);
+            SetSocketNonBlock(sock, true);
 #endif
 
-                http_Socket *socket = InitSocket(sock, clock, (sockaddr *)&ss);
+            http_Socket *socket = InitSocket(sock, clock, (sockaddr *)&ss);
 
-                if (!socket) [[unlikely]]
-                    continue;
+            if (!socket) [[unlikely]]
+                continue;
 
-                sockets.Append(socket);
-            }
+            sockets.Append(socket);
         }
 
         Size keep = 0;
