@@ -36,6 +36,10 @@ static const char *SsoClaims = R"({"id_token":{"email":{"essential":true},"email
 static const int SsoCookieFlags = (int)http_CookieFlag::SameSiteStrict | (int)http_CookieFlag::Secure | (int)http_CookieFlag::HttpOnly;
 static const int SsoCookieMaxAge = 10 * 60000; // 10 minutes
 
+static std::mutex sso_mutex;
+static HashTable<const char *, SessionInfo *, SessionInfo::SubHandler> sso_subs;
+static HashTable<const char *, SessionInfo *, SessionInfo::SidHandler> sso_sids;
+
 static http_SessionManager<SessionInfo> sessions;
 static http_EventCounter events(BanTime);
 
@@ -170,27 +174,98 @@ static bool HashPassword(Span<const char> password, char out_hash[PasswordHashBy
     return true;
 }
 
+// I like destruction code to sit below construction code
+static void DestroyUserSession(SessionInfo *session);
+
 static RetainPtr<SessionInfo> CreateUserSession(int64_t userid, bool authorize,
-                                                const char *username, int picture)
+                                                const char *username, int picture,
+                                                const oidc_IdentityInfo *identity = nullptr)
 {
     Size username_bytes = strlen(username) + 1;
-    Size session_bytes = K_SIZE(SessionInfo) + username_bytes;
+    Size provider_bytes = identity ? strlen(identity->provider->key) + 1 : 0;
+    Size sub_bytes = identity ? (provider_bytes + strlen(identity->sub) + 1) : 0;
+    Size sid_bytes = identity && identity->sid ? (provider_bytes + strlen(identity->sid) + 1) : 0;
+    Size session_bytes = K_SIZE(SessionInfo) + username_bytes + sub_bytes + sid_bytes;
 
     SessionInfo *session = (SessionInfo *)AllocateRaw(nullptr, session_bytes);
     MemSet(session, 0, session_bytes);
 
-    auto ptr = RetainPtr<SessionInfo>::Wrap(new (session) SessionInfo, [](SessionInfo *session) {
-        session->~SessionInfo();
-        ReleaseRaw(nullptr, session, -1);
-    });
+    auto ptr = RetainPtr<SessionInfo>::Wrap(new (session) SessionInfo, DestroyUserSession);
 
     session->userid = userid;
-    session->authorized = authorize;
+    session->status.store(authorize ? SessionStatus::Authorized : SessionStatus::Confirm, std::memory_order_relaxed);
 
-    CopyString(username, MakeSpan((char *)session->username, username_bytes));
+    session->username = (const char *)session + K_SIZE(SessionInfo);
     session->picture = picture;
+    MemCpy((char *)session->username, username, username_bytes);
+
+    if (identity) {
+        std::lock_guard<std::mutex> lock(sso_mutex);
+
+        // Insert into chain of subs
+        {
+            session->sub = (const char *)session + K_SIZE(SessionInfo) + username_bytes;
+            Fmt(MakeSpan((char *)session->sub, sub_bytes), "%1/%2", identity->provider->key, identity->sub);
+
+            bool inserted;
+            SessionInfo **ptr = sso_subs.InsertOrGet(session, &inserted);
+
+            if (!inserted) {
+                session->next = *ptr;
+                *ptr = session;
+            }
+        }
+
+        if (identity->sid) {
+            session->sid = (const char *)session + K_SIZE(SessionInfo) + username_bytes + sub_bytes;
+            Fmt(MakeSpan((char *)session->sid, sid_bytes), "%1/%2", identity->provider->key, identity->sid);
+
+            bool inserted;
+            SessionInfo **ptr = sso_sids.InsertOrGet(session, &inserted);
+
+            if (!inserted) {
+                SessionInfo *prev = *ptr;
+                prev->status.store(SessionStatus::Closed, std::memory_order_relaxed);
+
+                *ptr = session;
+            }
+        }
+    }
 
     return ptr;
+}
+
+static void DestroyUserSession(SessionInfo *session)
+{
+    if (session->sub) {
+        std::lock_guard<std::mutex> lock(sso_mutex);
+
+        if (session->sub) {
+            SessionInfo **ptr = sso_subs.Find(session->sub);
+            SessionInfo *it = *ptr;
+
+            if (it->next) {
+                while (it != session) {
+                    ptr = &it->next;
+                    it = *ptr;
+                }
+                *ptr = session->next;
+            } else {
+                sso_subs.Remove(ptr);
+            }
+        }
+
+        if (session->sid) {
+            SessionInfo **ptr = sso_sids.Find(session->sid);
+
+            if (ptr && session == *ptr) {
+                sso_sids.Remove(ptr);
+            }
+        }
+    }
+
+    session->~SessionInfo();
+    ReleaseRaw(nullptr, session, -1);
 }
 
 static bool CheckPasswordComplexity(const char *username, Span<const char> password)
@@ -229,16 +304,21 @@ void PruneSessions()
     events.Prune();
 }
 
+static bool IsSessionAuthorized(const SessionInfo *session)
+{
+    SessionStatus status = session->status.load(std::memory_order_relaxed);
+    return status == SessionStatus::Authorized;
+}
+
+static bool IsSessionOpen(const SessionInfo *session)
+{
+    SessionStatus status = session->status.load(std::memory_order_relaxed);
+    return status != SessionStatus::Closed;
+}
+
 RetainPtr<SessionInfo> GetNormalSession(http_IO *io)
 {
-    RetainPtr<SessionInfo> session = sessions.Find(io);
-
-    if (!session)
-        return nullptr;
-    if (!session->authorized.load(std::memory_order_acquire))
-        return nullptr;
-
-    return session;
+    return sessions.Find(io, IsSessionAuthorized);
 }
 
 int64_t ValidateApiKey(http_IO *io, int64_t *out_owner)
@@ -300,7 +380,7 @@ static void ExportSession(const SessionInfo *session, json_Writer *json)
         json->Key("userid"); json->Int64(session->userid);
         json->Key("username"); json->String(session->username);
 
-        if (session->authorized.load(std::memory_order_acquire)) {
+        if (IsSessionAuthorized(session)) {
             json->Key("authorized"); json->Bool(true);
             json->Key("picture"); json->Int(session->picture.load(std::memory_order_relaxed));
         } else {
@@ -315,7 +395,7 @@ static void ExportSession(const SessionInfo *session, json_Writer *json)
 
 void HandleSessionInfo(http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = sessions.Find(io);
+    RetainPtr<const SessionInfo> session = sessions.Find(io, IsSessionOpen);
 
     http_SendJson(io, 200, [&](json_Writer *json) {
         ExportSession(session.GetRaw(), json);
@@ -325,7 +405,7 @@ void HandleSessionInfo(http_IO *io)
 void HandleSessionPing(http_IO *io)
 {
     // Do this to renew session and clear invalid session cookies
-    sessions.Find(io);
+    sessions.Find(io, IsSessionOpen);
 
     io->SendText(200, "{}", "application/json");
 }
@@ -614,7 +694,28 @@ void HandleUserRecover(http_IO *io)
 
 void HandleUserLogout(http_IO *io)
 {
+    RetainPtr<SessionInfo> session = sessions.Find(io, IsSessionOpen);
+
     sessions.Close(io);
+
+    if (session) {
+        session->status.store(SessionStatus::Closed, std::memory_order_relaxed);
+
+        if (session->sub) {
+            Span<const char> provider = SplitStr(session->sub, '/');
+            const OidcConfig *oidc = config.oidc_map.FindValue(provider, nullptr);
+
+            if (oidc && oidc->provider.logout_url) {
+                const char *url = oidc_FormatLogoutUrl(oidc->provider, config.url, io->Allocator());
+
+                Span<const char> json = Fmt(io->Allocator(), "{\"url\": \"%1\"}", FmtEscape(url, '"'));
+                io->SendText(200, json, "application/json");
+
+                return;
+            }
+        }
+    }
+
     io->SendText(200, "{}", "application/json");
 }
 
@@ -909,7 +1010,7 @@ void HandleUserSecurity(http_IO *io)
 
 void HandleSsoLogin(http_IO *io)
 {
-    const char *type = nullptr;
+    const char *provider = nullptr;
     const char *redirect = nullptr;
     {
         bool success = http_ParseJson(io, Kibibytes(1), [&](json_Parser *json) {
@@ -919,7 +1020,7 @@ void HandleSsoLogin(http_IO *io)
                 Span<const char> key = json->ParseKey();
 
                 if (key == "provider") {
-                    json->ParseString(&type);
+                    json->ParseString(&provider);
                 } else if (key == "redirect") {
                     json->ParseString(&redirect);
                 } else {
@@ -930,8 +1031,8 @@ void HandleSsoLogin(http_IO *io)
             valid &= json->IsValid();
 
             if (valid) {
-                if (!IsStringValid(type)) {
-                    LogError("Missing or invalid 'type' parameter");
+                if (!IsStringValid(provider)) {
+                    LogError("Missing or invalid 'provider' parameter");
                     valid = false;
                 }
                 if (!IsStringValid(redirect)) {
@@ -949,9 +1050,9 @@ void HandleSsoLogin(http_IO *io)
         }
     }
 
-    const OidcConfig *oidc = config.oidc_map.FindValue(type, nullptr);
+    const OidcConfig *oidc = config.oidc_map.FindValue(provider, nullptr);
     if (!oidc) {
-        LogError("Unknown provider type '%1'", type);
+        LogError("Unknown provider '%1'", provider);
         io->SendError(404);
         return;
     }
@@ -1026,9 +1127,9 @@ void HandleSsoOidc(http_IO *io)
         return;
     }
 
-    const OidcConfig *oidc = config.oidc_map.FindValue(info.issuer, nullptr);
+    const OidcConfig *oidc = config.oidc_map.FindValue(info.key, nullptr);
     if (!oidc) [[unlikely]] {
-        LogError("SSO provider '%1' is gone!", info.issuer);
+        LogError("SSO provider '%1' is gone!", info.key);
         return;
     }
 
@@ -1075,7 +1176,7 @@ void HandleSsoOidc(http_IO *io)
             const char *username = (const char *)sqlite3_column_text(stmt, 1);
             int picture = sqlite3_column_int(stmt, 2);
 
-            session = CreateUserSession(userid, true, username, picture);
+            session = CreateUserSession(userid, true, username, picture, &identity);
         }
         if (!stmt.IsValid())
             return;
@@ -1100,7 +1201,7 @@ void HandleSsoOidc(http_IO *io)
                 sq_Statement stmt;
                 if (!db.Prepare(R"(INSERT INTO users (mail, username, creation, confirmed, version)
                                    VALUES (?1, ?2, ?3, ?4, 1)
-                                   ON CONFLICT DO UPDATE SET confirmed = confirmed
+                                   ON CONFLICT DO UPDATE SET confirmed = MAX(confirmed, excluded.confirmed)
                                    RETURNING id, creation, username, version)",
                                 &stmt, identity.email, identity.email, now, 0 + verified))
                     return false;
@@ -1165,7 +1266,7 @@ void HandleSsoOidc(http_IO *io)
             return;
 
         if (allowed) {
-            session = CreateUserSession(userid, true, username, picture);
+            session = CreateUserSession(userid, true, username, picture, &identity);
         } else {
             if (!SendLinkIdentityMail(identity.email, oidc->provider, token, io->Allocator()))
                 return;
@@ -1192,6 +1293,98 @@ void HandleSsoOidc(http_IO *io)
 
         json->EndObject();
     });
+}
+
+// The OP expects 400 or 200 return status
+void HandleSsoClose(http_IO *io)
+{
+    const http_RequestInfo &request = io->Request();
+
+    K_ASSERT(StartsWith(request.path, "/api/sso/close/"));
+    Span<const char> provider = TrimStrRight(request.path + 15, '/');
+
+    const OidcConfig *oidc = config.oidc_map.FindValue(provider, nullptr);
+    if (!oidc) {
+        LogError("Unknown provider '%1'", provider);
+        io->SendError(400);
+        return;
+    }
+
+    // Read HTTP request body
+    LocalArray<char, 4096> body;
+    {
+        StreamReader reader;
+        if (!io->OpenForRead(K_SIZE(body.data), &reader))
+            return;
+
+        body.len = reader.ReadFill(body.data);
+        if (body.len < 0)
+            return;
+    }
+
+    Span<const char> token = {};
+    {
+        bool duplicates = false;
+
+        bool success = http_ParseQueryString(body, 32, [&](Span<const char> key, Span<const char> value) {
+            if (key == "logout_token") {
+                duplicates = token.ptr;
+                token = value;
+            }
+            return true;
+        });
+        if (!success) {
+            io->SendError(400);
+            return;
+        }
+
+        if (!token.ptr) {
+            LogError("Missing logout token");
+            io->SendError(400);
+            return;
+        } else if (duplicates) {
+            LogError("Duplicate logout token");
+            io->SendError(400);
+            return;
+        }
+    }
+
+    oidc_LogoutInfo logout;
+    if (!oidc_DecodeLogoutToken(oidc->provider, token, io->Allocator(), &logout)) {
+        io->SendError(400);
+        return;
+    }
+
+    const char *sub = logout.sub ? Fmt(io->Allocator(), "%1/%2", oidc->provider.key, logout.sub).ptr : nullptr;
+    const char *sid = logout.sid ? Fmt(io->Allocator(), "%1/%2", oidc->provider.key, logout.sid).ptr : nullptr;
+
+    // Perform disconnect
+    {
+        std::lock_guard<std::mutex> lock(sso_mutex);
+
+        if (sid) {
+            SessionInfo *session = sso_sids.FindValue(sid, nullptr);
+
+            if (session) {
+                if (sub && !TestStr(session->sub, sub)) {
+                    LogError("Refusing back-channel disconnect due to sub/sid mismatch");
+                    io->SendError(400);
+                    return;
+                }
+
+                session->status.store(SessionStatus::Closed, std::memory_order_relaxed);
+            }
+        } else {
+            SessionInfo *session = sso_subs.FindValue(sub, nullptr);
+
+            while (session) {
+                session->status.store(SessionStatus::Closed, std::memory_order_relaxed);
+                session = session->next;
+            }
+        }
+    }
+
+    io->SendText(200, "{}", "application/json");
 }
 
 void HandleSsoLink(http_IO *io)
@@ -1381,14 +1574,14 @@ void HandleTotpConfirm(http_IO *io)
         return;
     }
 
-    RetainPtr<SessionInfo> session = sessions.Find(io);
+    RetainPtr<SessionInfo> session = sessions.Find(io, IsSessionOpen);
 
     if (!session) {
         LogError("User is not logged in");
         io->SendError(401);
         return;
     }
-    if (session->authorized.load(std::memory_order_acquire)) {
+    if (session->status.load(std::memory_order_relaxed) != SessionStatus::Confirm) {
         LogError("Session does not need TOTP check");
         io->SendError(403);
         return;
@@ -1448,7 +1641,8 @@ void HandleTotpConfirm(http_IO *io)
     WaitDelay(800);
 
     if (CheckTotp(io, session->userid, secret, code)) {
-        session->authorized = true;
+        SessionStatus expected = SessionStatus::Confirm;
+        session->status.compare_exchange_strong(expected, SessionStatus::Authorized, std::memory_order_relaxed);
 
         http_SendJson(io, 200, [&](json_Writer *json) {
             ExportSession(session.GetRaw(), json);

@@ -19,6 +19,7 @@ static const char *const oidc_JwtSigningAlgorithmNames[] = {
 };
 
 struct oidc_Provider {
+    const char *key = nullptr;
     const char *title = nullptr;
 
     const char *discovery_url = nullptr;
@@ -33,6 +34,7 @@ struct oidc_Provider {
     const char *issuer = nullptr;
     const char *auth_url = nullptr;
     const char *token_url = nullptr;
+    const char *logout_url = nullptr;
     const char *jwks_url = nullptr;
 
     BlockAllocator str_alloc;
@@ -41,7 +43,7 @@ struct oidc_Provider {
     bool Discover();
 
     bool Complete();
-    bool Validate() const;
+    bool Validate(bool partial = false) const;
 };
 
 struct oidc_AuthorizationInfo {
@@ -50,7 +52,7 @@ struct oidc_AuthorizationInfo {
 };
 
 struct oidc_CookieInfo {
-    const char *issuer = nullptr;
+    const char *key = nullptr;
     const char *redirect = nullptr;
     Span<const char> nonce = {};
 };
@@ -62,11 +64,17 @@ struct oidc_TokenSet {
 
 struct oidc_IdentityInfo {
     const char *sub = nullptr;
+    const char *sid = nullptr;
 
     const char *email = nullptr;
     bool email_verified = false;
 
-    HashMap<const char *, const char *> claims;
+    const oidc_Provider *provider = nullptr;
+};
+
+struct oidc_LogoutInfo {
+    const char *sub = nullptr;
+    const char *sid = nullptr;
 };
 
 void oidc_PrepareAuthorization(const oidc_Provider &provider, const char *scopes,
@@ -78,5 +86,8 @@ bool oidc_ExchangeCode(const oidc_Provider &provider, const char *callback_url, 
                         Allocator *alloc, oidc_TokenSet *out_set);
 bool oidc_DecodeIdToken(const oidc_Provider &provider, Span<const char> token, Span<const char> nonce,
                         Allocator *alloc, oidc_IdentityInfo *out_identity);
+
+bool oidc_DecodeLogoutToken(const oidc_Provider &provider, Span<const char> token, Allocator *alloc, oidc_LogoutInfo *out_logout);
+const char *oidc_FormatLogoutUrl(const oidc_Provider &provider, const char *redirect, Allocator *alloc);
 
 }

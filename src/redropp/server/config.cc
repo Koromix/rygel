@@ -134,7 +134,7 @@ bool LoadConfig(StreamReader *st, Config *out_config)
         if (const char *str = GetEnv("AUTH_REGISTER")) {
             valid &= ParseBool(str, &config.allow_register);
         }
-        if (GetEnv("SSO_TITLE")) {
+        if (GetEnv("SSO_NAME")) {
             OidcConfig *oidc = config.oidc_configs.AppendDefault();
             valid &= oidc->provider.Complete();
         }
@@ -248,6 +248,9 @@ bool LoadConfig(StreamReader *st, Config *out_config)
                         valid &= oidc->provider.SetProperty(prop.key, prop.value, root_directory);
                     }
                 } while (ini.NextInSection(&prop));
+
+                // Do a partial SSO config validation to report with INI line
+                valid &= oidc->provider.Validate(true);
             } else {
                 LogError("Unknown section '%1'", prop.section);
                 while (ini.NextInSection(&prop));
@@ -290,14 +293,21 @@ bool LoadConfig(StreamReader *st, Config *out_config)
         for (OidcConfig &oidc: config.oidc_configs) {
             valid &= oidc.provider.Discover();
         }
-        if (!valid)
-            return false;
 
         for (const OidcConfig &oidc: config.oidc_configs) {
-            if (oidc.provider.issuer) {
-                config.oidc_map.Set(oidc.provider.issuer, &oidc);
+            if (oidc.provider.key) {
+                bool inserted;
+                config.oidc_map.InsertOrGet(oidc.provider.key, &oidc, &inserted);
+
+                if (!inserted) {
+                    LogError("Duplicate SSO provider '%1'", oidc.provider.key);
+                    valid = false;
+                }
             }
         }
+
+        if (!valid)
+            return false;
     }
 
     std::swap(*out_config, config);

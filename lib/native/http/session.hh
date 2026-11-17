@@ -80,7 +80,7 @@ public:
         DeleteSessionCookies(io);
     }
 
-    RetainPtr<T> Find(http_IO *io)
+    RetainPtr<T> Find(http_IO *io, FunctionRef<bool(const T *)> check = [](const T *) { return true; })
     {
         std::shared_lock<std::shared_mutex> lock_shr(mutex);
 
@@ -92,6 +92,10 @@ public:
 
         if (ptr) {
             SessionHandle *handle = *ptr;
+
+            if (!check(handle->udata.GetRaw()))
+                return nullptr;
+
             RetainPtr<T> udata = handle->udata;
             int64_t clock = GetMonotonicClock();
 

@@ -36,7 +36,7 @@ async function runRegister() {
 
                         <div class="actions">
                             ${ENV.auth.providers.map(provider =>
-                                html`<button type="button" @click=${UI.wrap(e => App.sso(provider.issuer, '/'))}>${T.format(T.login_with_x, provider.title)}</button>`)}
+                                html`<button type="button" @click=${UI.wrap(e => App.sso(provider.key, '/'))}>${T.format(T.login_with_x, provider.title)}</button>`)}
                         </div>
                     </div>
                 ` : ''}
@@ -157,7 +157,7 @@ async function runLogin() {
 
                             <div class="actions">
                                 ${ENV.auth.providers.map(provider =>
-                                    html`<button type="button" @click=${UI.wrap(e => App.sso(provider.issuer, window.location.pathname))}>${T.format(T.login_with_x, provider.title)}</button>`)}
+                                    html`<button type="button" @click=${UI.wrap(e => App.sso(provider.key, window.location.pathname))}>${T.format(T.login_with_x, provider.title)}</button>`)}
                             </div>
                         </div>
                     ` : ''}

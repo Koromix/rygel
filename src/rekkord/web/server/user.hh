@@ -11,12 +11,26 @@ namespace K {
 struct oidc_Provider;
 struct smtp_Config;
 
+enum class SessionStatus {
+    Authorized,
+    Confirm,
+    Closed
+};
+
 struct SessionInfo: public RetainObject<SessionInfo> {
     int64_t userid;
-    std::atomic_bool authorized;
+    std::atomic<SessionStatus> status;
 
+    const char *username;
     std::atomic_int picture;
-    char username[];
+
+    // SSO-specific
+    const char *sub;
+    const char *sid;
+    SessionInfo *next;
+
+    K_HASHTABLE_HANDLER_N(SubHandler, SessionInfo, sub);
+    K_HASHTABLE_HANDLER_N(SidHandler, SessionInfo, sid);
 };
 
 void InitUsers();
@@ -40,6 +54,7 @@ void HandleUserSecurity(http_IO *io);
 
 void HandleSsoLogin(http_IO *io);
 void HandleSsoOidc(http_IO *io);
+void HandleSsoClose(http_IO *io);
 void HandleSsoLink(http_IO *io);
 void HandleSsoUnlink(http_IO *io);
 
@@ -51,7 +66,5 @@ void HandleTotpDisable(http_IO *io);
 void HandlePictureGet(http_IO *io);
 void HandlePictureSave(http_IO *io);
 void HandlePictureDelete(http_IO *io);
-
-
 
 }

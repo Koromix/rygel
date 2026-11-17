@@ -60,7 +60,10 @@ K_EXIT(ClearJwtKeys)
 
 bool oidc_Provider::SetProperty(Span<const char> key, Span<const char> value, Span<const char>)
 {
-    if (key == "Title") {
+    if (key == "Name") {
+        this->key = DuplicateString(value, &str_alloc).ptr;
+        return true;
+    } else if (key == "Title") {
         title = DuplicateString(value, &str_alloc).ptr;
         return true;
     } else if (key == "URL") {
@@ -149,6 +152,8 @@ bool oidc_Provider::Discover()
                 json.ParseString(&auth_url);
             } else if (key == "token_endpoint") {
                 json.ParseString(&token_url);
+            } else if (key == "end_session_endpoint") {
+                json.ParseString(&logout_url);
             } else if (key == "jwks_uri") {
                 json.ParseString(&jwks_url);
             } else {
@@ -157,6 +162,26 @@ bool oidc_Provider::Discover()
         }
         if (!json.IsValid())
             return false;
+    }
+
+    return true;
+}
+
+static bool CheckKey(Span<const char> key)
+{
+    const auto test_char = [](char c) { return IsAsciiAlphaOrDigit(c) || c == '_'; };
+
+    if (!key.len) {
+        LogError("Empty OIDC provider name");
+        return false;
+    }
+    if (key.len > 32) {
+        LogError("OIDC provider name '%1' is too long (max 32 characters)", key);
+        return false;
+    }
+    if (!std::all_of(key.begin(), key.end(), test_char)) {
+        LogError("Invalid OIDC name characters (use a-z, 0-9 and '_')");
+        return false;
     }
 
     return true;
@@ -199,6 +224,10 @@ static bool CheckURL(const char *url)
 
 bool oidc_Provider::Complete()
 {
+    if (!key) {
+        const char *str = GetEnv("SSO_NAME");
+        key = str ? DuplicateString(str, &str_alloc).ptr : nullptr;
+    }
     if (!title) {
         const char *str = GetEnv("SSO_TITLE");
         title = str ? DuplicateString(str, &str_alloc).ptr : nullptr;
@@ -243,10 +272,16 @@ bool oidc_Provider::Complete()
     return true;
 }
 
-bool oidc_Provider::Validate() const
+bool oidc_Provider::Validate(bool partial) const
 {
     bool valid = true;
 
+    if (key) {
+        valid &= CheckKey(key);
+    } else {
+        LogError("OIDC provider name is not set");
+        valid = false;
+    }
     if (!title) {
         LogError("OIDC provider title is not set");
         valid = false;
@@ -268,21 +303,23 @@ bool oidc_Provider::Validate() const
         valid = false;
     }
 
-    if (!issuer) {
-        LogError("Could not find OIDC issuer value");
-        valid = false;
-    }
-    if (!auth_url) {
-        LogError("Could not find OIDC authorization endpoint");
-        valid = false;
-    }
-    if (!token_url) {
-        LogError("Could not find OIDC token endpoint");
-        valid = false;
-    }
-    if (!jwks_url) {
-        LogError("Could not find OIDC JWKS endpoint");
-        valid = false;
+    if (!partial) {
+        if (!issuer) {
+            LogError("Could not find OIDC issuer value");
+            valid = false;
+        }
+        if (!auth_url) {
+            LogError("Could not find OIDC authorization endpoint");
+            valid = false;
+        }
+        if (!token_url) {
+            LogError("Could not find OIDC token endpoint");
+            valid = false;
+        }
+        if (!jwks_url) {
+            LogError("Could not find OIDC JWKS endpoint");
+            valid = false;
+        }
     }
 
     return valid;
@@ -306,7 +343,7 @@ void oidc_PrepareAuthorization(const oidc_Provider &provider, const char *scopes
 {
     BlockAllocator temp_alloc;
 
-    Span<const char> state = Fmt(&temp_alloc, "%1|%2|%3", FmtRandom(24), provider.issuer, redirect);
+    Span<const char> state = Fmt(&temp_alloc, "%1|%2|%3", FmtRandom(24), provider.key, redirect);
     Span<const char> nonce = Fmt(&temp_alloc, "%1", FmtRandom(24));
 
     // Prepare URL
@@ -381,7 +418,7 @@ bool oidc_CheckCookie(Span<const char> cookie, Span<const char> rnd, Allocator *
         return false;
     }
 
-    Span<const char> issuer;
+    Span<const char> key;
     Span<const char> redirect;
     {
         Span<const char> remain = state;
@@ -389,11 +426,11 @@ bool oidc_CheckCookie(Span<const char> cookie, Span<const char> rnd, Allocator *
         // Skip random part
         SplitStr(remain, '|', &remain);
 
-        issuer = SplitStr(remain, '|', &remain);
+        key = SplitStr(remain, '|', &remain);
         redirect = SplitStr(remain, '|', &remain);
     }
 
-    out_info->issuer = DuplicateString(issuer, alloc).ptr;
+    out_info->key = DuplicateString(key, alloc).ptr;
     out_info->redirect = DuplicateString(redirect, alloc).ptr;
     out_info->nonce = DuplicateString(nonce, alloc).ptr;
 
@@ -812,8 +849,8 @@ static void HmacSha256(Span<const uint8_t> key, Span<const uint8_t> message, uin
     }
 }
 
-bool oidc_DecodeIdToken(const oidc_Provider &provider, Span<const char> token, Span<const char> nonce,
-                        Allocator *alloc, oidc_IdentityInfo *out_identity)
+static bool ParseToken(const oidc_Provider &provider, Span<const char> token,
+                       Allocator *alloc, FunctionRef<void(json_Parser *, Span<const char>)> func)
 {
     BlockAllocator temp_alloc;
 
@@ -936,8 +973,7 @@ bool oidc_DecodeIdToken(const oidc_Provider &provider, Span<const char> token, S
 
     int64_t now = GetUnixTime();
 
-    // Decode and check payload
-    oidc_IdentityInfo identity = {};
+    // Parse and validate payload
     {
         const char *iss = nullptr;
         int64_t iat = -1;
@@ -947,29 +983,32 @@ bool oidc_DecodeIdToken(const oidc_Provider &provider, Span<const char> token, S
         bool matched_aud = false;
         bool ambiguous_aud = false;
         const char *azp = nullptr;
-        Span<const char> nonce2 = {};
 
-        // Parse JSON
-        {
-            StreamReader st(payload.As<const uint8_t>(), "<jwt>");
-            json_Parser json(&st, alloc);
+        StreamReader st(payload.As<const uint8_t>(), "<jwt>");
+        json_Parser json(&st, alloc);
 
-            for (json.ParseObject(); json.InObject(); ) {
-                Span<const char> key = json.ParseKey();
+        for (json.ParseObject(); json.InObject(); ) {
+            Span<const char> key = json.ParseKey();
 
-                if (key == "iss") {
-                    json.ParseString(&iss);
-                } else if (key == "jti") {
-                    // We don't care about this one
-                    json.Skip();
-                } else if (key == "iat") {
-                    json.ParseInt(&iat);
-                } else if (key == "nbf") {
-                    json.ParseInt(&nbf);
-                } else if (key == "exp") {
-                    json.ParseInt(&exp);
-                } else if (key == "aud") {
-                    if (json.PeekToken() == json_TokenType::String) {
+            if (key == "iss") {
+                json.ParseString(&iss);
+            } else if (key == "iat") {
+                json.ParseInt(&iat);
+            } else if (key == "nbf") {
+                json.ParseInt(&nbf);
+            } else if (key == "exp") {
+                json.ParseInt(&exp);
+            } else if (key == "aud") {
+                if (json.PeekToken() == json_TokenType::String) {
+                    const char *value = json.ParseString().ptr;
+
+                    if (value) [[likely]] {
+                        matched_aud |= TestStr(value, provider.client_id);
+                        ambiguous_aud |= aud && !TestStr(value, aud);
+                        aud = value;
+                    }
+                } else {
+                    for (json.ParseArray(); json.InArray(); ) {
                         const char *value = json.ParseString().ptr;
 
                         if (value) [[likely]] {
@@ -977,43 +1016,22 @@ bool oidc_DecodeIdToken(const oidc_Provider &provider, Span<const char> token, S
                             ambiguous_aud |= aud && !TestStr(value, aud);
                             aud = value;
                         }
-                    } else {
-                        for (json.ParseArray(); json.InArray(); ) {
-                            const char *value = json.ParseString().ptr;
-
-                            if (value) [[likely]] {
-                                matched_aud |= TestStr(value, provider.client_id);
-                                ambiguous_aud |= aud && !TestStr(value, aud);
-                                aud = value;
-                            }
-                        }
                     }
-                } else if (key == "azp") {
-                    json.ParseString(&azp);
-                } else if (key == "nonce") {
-                    json.ParseString(&nonce2);
-                } else if (key == "sub") {
-                    json.ParseString(&identity.sub);
-                } else if (key == "email") {
-                    json.ParseString(&identity.email);
-                } else if (key == "email_verified") {
-                    json.ParseBool(&identity.email_verified);
-                } else if (json.PeekToken() == json_TokenType::String) {
-                    const char *str = json.ParseString().ptr;
-                    identity.claims.Set(key.ptr, str);
-                } else {
-                    json.Skip();
                 }
+            } else if (key == "azp") {
+                json.ParseString(&azp);
+            } else {
+                func(&json, key);
             }
-            if (!json.IsValid())
-                return false;
         }
+        if (!json.IsValid())
+            return false;
 
-        if (iat < 0 || exp < 0 || !iss || !aud || !nonce2.ptr || !identity.sub) {
+        // Safety checks
+        if (iat < 0 || exp < 0 || !iss || !aud) {
             LogError("Missing or invalid JWT payload values");
             return false;
         }
-
         if (iat > (now + TimestampTolerance) / 1000) {
             LogError("Cannot use JWT token with future issue timestamp");
             return false;
@@ -1041,17 +1059,122 @@ bool oidc_DecodeIdToken(const oidc_Provider &provider, Span<const char> token, S
             LogError("JWT client ID mismatch with OIDC configuration (azp field)");
             return false;
         }
-
-        if (nonce2.len != nonce.len || sodium_memcmp(nonce2.ptr, nonce.ptr, nonce.len) != 0) {
-            LogError("Invalid OIDC nonce in JWT payload");
-            return false;
-        }
-
-        identity.email_verified &= !!identity.email;
     }
+
+    return true;
+}
+
+bool oidc_DecodeIdToken(const oidc_Provider &provider, Span<const char> token, Span<const char> nonce,
+                        Allocator *alloc, oidc_IdentityInfo *out_identity)
+{
+    oidc_IdentityInfo identity = {};
+    Span<const char> nonce2 = {};
+
+    bool success = ParseToken(provider, token, alloc, [&](json_Parser *json, Span<const char> key) {
+        if (key == "sub") {
+            json->ParseString(&identity.sub);
+        } else if (key == "sid") {
+            json->ParseString(&identity.sid);
+        } else if (key == "nonce") {
+            json->ParseString(&nonce2);
+        } else if (key == "email") {
+            json->ParseString(&identity.email);
+        } else if (key == "email_verified") {
+            json->ParseBool(&identity.email_verified);
+        } else {
+            json->Skip();
+        }
+    });
+    if (!success)
+        return false;
+
+    if (!nonce2.ptr || !identity.sub) {
+        LogError("Missing ID token values");
+        return false;
+    }
+    if (nonce2.len != nonce.len || sodium_memcmp(nonce2.ptr, nonce.ptr, nonce.len) != 0) {
+        LogError("Invalid OIDC nonce in JWT payload");
+        return false;
+    }
+
+    identity.email_verified &= !!identity.email;
+    identity.provider = &provider;
 
     std::swap(*out_identity, identity);
     return true;
+}
+
+bool oidc_DecodeLogoutToken(const oidc_Provider &provider, Span<const char> token, Allocator *alloc, oidc_LogoutInfo *out_logout)
+{
+    const char *jti = "";
+    oidc_LogoutInfo logout = {};
+    bool nonce = false;
+    int events = 0;
+    bool backchannel = false;
+
+    bool success = ParseToken(provider, token, alloc, [&](json_Parser *json, Span<const char> key) {
+        if (key == "jti") {
+            json->ParseString(&jti);
+        } else if (key == "sub") {
+            json->ParseString(&logout.sub);
+        } else if (key == "sid") {
+            json->ParseString(&logout.sid);
+        } else if (key == "nonce") {
+            nonce = true;
+            json->Skip();
+        } else if (key == "events") {
+            for (json->ParseObject(); json->InObject(); ) {
+                Span<const char> evt = json->ParseKey();
+
+                backchannel = (evt == "http://schemas.openid.net/event/backchannel-logout");
+                events++;
+
+                // Object expected
+                for (json->ParseObject(); json->InObject(); ) {
+                    json->ParseKey();
+                    json->Skip();
+                }
+            }
+        } else {
+            json->Skip();
+        }
+    });
+    if (!success)
+        return false;
+
+    if (logout.sub && !logout.sub[0]) {
+        LogError("Unexpected empty sub value");
+        return false;
+    }
+    if (logout.sid && !logout.sid[0]) {
+        LogError("Unexpected empty sid value");
+        return false;
+    }
+    if (!jti[0] || (!logout.sub && !logout.sid)) {
+        LogError("Missing logout token values");
+        return false;
+    }
+    if (nonce) {
+        LogError("Unexpected nonce in logout token");
+        return false;
+    }
+    if (events != 1 || !backchannel) {
+        LogError("Unexpected events in logout token");
+        return false;
+    }
+
+    std::swap(*out_logout, logout);
+    return true;
+}
+
+const char *oidc_FormatLogoutUrl(const oidc_Provider &provider, const char *redirect, Allocator *alloc)
+{
+    K_ASSERT(provider.logout_url);
+
+    const char *url = Fmt(alloc, "%1?client_id=%2&post_logout_redirect_uri=%3",
+                          provider.logout_url, FmtUrlSafe(provider.client_id, "-._~@"), FmtUrlSafe(redirect, "-._~@")).ptr;
+
+    return url;
 }
 
 }

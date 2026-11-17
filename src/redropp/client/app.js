@@ -387,12 +387,13 @@ async function confirm(code) {
 }
 
 async function logout() {
-    await Net.post('/api/user/logout');
+    let ret = await Net.post('/api/user/logout');
+    let redirect = ret.url ?? '/';
 
     session = null;
 
     window.onbeforeunload = null;
-    window.location.href = '/';
+    window.location.href = redirect;
     await Util.waitFor(2000);
 
     poisoned = true;

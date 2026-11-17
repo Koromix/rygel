@@ -371,7 +371,7 @@ static AssetInfo PatchAsset(AssetInfo asset, Span<const char> nonce, Allocator *
             for (const OidcConfig &oidc: config.oidc_configs) {
                 json.StartObject();
 
-                json.Key("issuer"); json.String(oidc.provider.issuer);
+                json.Key("key"); json.String(oidc.provider.key);
                 json.Key("title"); json.String(oidc.provider.title);
 
                 json.EndObject();
@@ -578,6 +578,8 @@ static void HandleRequest(http_IO *io)
             HandleSsoLogin(io);
         } else if (url == "/api/sso/oidc" && method == http_RequestMethod::Post) {
             HandleSsoOidc(io);
+        } else if (StartsWith(url, "/api/sso/close/") && method == http_RequestMethod::Post) {
+            HandleSsoClose(io);
         } else if (url == "/api/sso/link" && method == http_RequestMethod::Post) {
             HandleSsoLink(io);
         } else if (url == "/api/sso/unlink" && method == http_RequestMethod::Post) {
