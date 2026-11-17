@@ -1141,7 +1141,7 @@ static inline int ParseHexadecimalChar(char c)
     }
 }
 
-static Size DecodePath(Span<char> str)
+static Size ParsePath(Span<char> str)
 {
     Size j = 0;
     for (Size i = 0; i < str.len; i++, j++) {
@@ -1165,7 +1165,7 @@ static Size DecodePath(Span<char> str)
         }
 
         if (IsAsciiControl(str[j]) || str[j] == '\\') [[unlikely]] {
-            LogError("Unexpected control character in HTTP request line");
+            LogError("Unexpected control character in request path");
             return -1;
         }
     }
@@ -1179,7 +1179,7 @@ static Size DecodePath(Span<char> str)
     return str.len;
 }
 
-static Size DecodeQueryComponent(Span<char> str)
+static Size ParseQueryComponent(Span<char> str)
 {
     Size j = 0;
     for (Size i = 0; i < str.len; i++, j++) {
@@ -1205,7 +1205,7 @@ static Size DecodeQueryComponent(Span<char> str)
         }
 
         if (IsAsciiControl(str[j])) [[unlikely]] {
-            LogError("Unexpected control character in HTTP request line");
+            LogError("Unexpected control character in query string");
             return -1;
         }
     }
@@ -1219,7 +1219,7 @@ static Size DecodeQueryComponent(Span<char> str)
     return str.len;
 }
 
-static bool DecodeQuery(Span<char> str, int max_values, HeapArray<http_KeyValue> *out_values)
+static bool ParseQueryString(Span<char> str, int max_values, FunctionRef<bool(Span<const char>, Span<const char>)> func)
 {
     str = SplitStr(str, '#');
 
@@ -1227,53 +1227,54 @@ static bool DecodeQuery(Span<char> str, int max_values, HeapArray<http_KeyValue>
         Span<char> frag = SplitStr(str, '&', &str);
 
         if (frag.len) {
-            if (max_values-- <= 0) [[unlikely]] {
+            if (max_values-- <= 0) {
                 LogError("Too many query string values");
                 return false;
             }
 
-            http_KeyValue pair;
-
             Span<char> value;
             Span<char> key = SplitStr(frag, '=', &value);
 
-            key.len = DecodeQueryComponent(key);
-            value.len = DecodeQueryComponent(value);
+            key.len = ParseQueryComponent(key);
+            value.len = ParseQueryComponent(value);
             if (key.len < 0 || value.len < 0)
                 return false;
 
             key.ptr[key.len] = 0;
             value.ptr[value.len] = 0;
-            pair.key = key.ptr;
-            pair.value = value.ptr;
 
-            out_values->Append(pair);
+            if (!func(key, value))
+                break;
         }
     }
 
     return true;
 }
 
-static int64_t DecodeContentLength(Span<const char> str)
+static int64_t ParseContentLength(Span<const char> str)
 {
-    if (!str.len) [[unlikely]]
-        return -1;
-
     int64_t len = 0;
+
+    if (!str.len) [[unlikely]]
+        goto error;
 
     for (char c: str) {
         int digit = c - '0';
 
         // The overflow check below is overly strict and rejects valid values near INT64_MAX
         if ((unsigned int)digit > 9) [[unlikely]]
-            return -1;
+            goto error;
         if (len > (INT64_MAX - 9) / 10) [[unlikely]]
-            return -1;
+            goto error;
 
         len = len * 10 + digit;
     }
 
     return len;
+
+error:
+    LogError("Invalid Content-Length value '%1'", str);
+    return -1;
 }
 
 static void MapKeys(Span<http_KeyValue> pairs, HashTable<const char *, http_KeyHead> *out_map)
@@ -1371,7 +1372,7 @@ http_RequestStatus http_IO::ParseRequest()
         Span<char> query;
         Span<char> path = SplitStr(url, '?', &query);
 
-        path.len = DecodePath(path);
+        path.len = ParsePath(path);
         if (path.len < 0) {
             SendAbort(400, "Unsafe URL path");
             return http_RequestStatus::Shutdown;
@@ -1384,9 +1385,18 @@ http_RequestStatus http_IO::ParseRequest()
             return http_RequestStatus::Shutdown;
         }
 
-        if (!DecodeQuery(query, daemon->max_query_values, &request.values)) {
-            SendAbort(400, "Unsafe URL query string");
-            return http_RequestStatus::Shutdown;
+        // Parse query string
+        {
+            bool success = ParseQueryString(query, daemon->max_query_values, [&](Span<const char> key, Span<const char> value) {
+                http_KeyValue pair = { key.ptr, value.ptr, nullptr };
+                request.values.Append(pair);
+
+                return true;
+            });
+            if (!success) {
+                SendAbort(400, "Unsafe URL query string");
+                return http_RequestStatus::Shutdown;
+            }
         }
     }
 
@@ -1469,7 +1479,7 @@ http_RequestStatus http_IO::ParseRequest()
                 upgrade |= TestStrI(part, "upgrade");
             }
         } else if (key == "Content-Length") {
-            int64_t len = DecodeContentLength(value);
+            int64_t len = ParseContentLength(value);
 
             if (len < 0) [[unlikely]] {
                 SendAbort(400, "Invalid Content-Length value");
@@ -1924,5 +1934,9 @@ bool http_IO::IsBusy() const
 
     return true;
 }
+
+Size http_ParsePath(Span<char> str) { return ParsePath(str); }
+bool http_ParseQueryString(Span<char> str, int max_values, FunctionRef<bool(Span<const char>, Span<const char>)> func)
+    { return ParseQueryString(str, max_values, func); }
 
 }

@@ -316,4 +316,8 @@ private:
     friend class ws_Socket;
 };
 
+// Thse functions modify their buffer in-place
+Size http_ParsePath(Span<char> str);
+bool http_ParseQueryString(Span<char> str, int max_values, FunctionRef<bool(Span<const char>, Span<const char>)> func);
+
 }
