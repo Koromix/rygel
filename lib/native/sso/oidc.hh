@@ -26,6 +26,8 @@ struct oidc_Provider {
     const char *client_secret = nullptr;
     oidc_JwtSigningAlgorithm jwt_algorithm = oidc_JwtSigningAlgorithm::RS256;
     bool explicit_algorithm = false;
+    bool tolerate_unknown_audiences = false;
+    bool explicit_tolerate = false;
 
     // Auto-discovery
     const char *issuer = nullptr;

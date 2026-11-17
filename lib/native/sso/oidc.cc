@@ -78,12 +78,17 @@ bool oidc_Provider::SetProperty(Span<const char> key, Span<const char> value, Sp
         client_secret = DuplicateString(value, &str_alloc).ptr;
         return true;
     } else if (key == "JwtAlgorithm") {
-        if (OptionToEnumI(oidc_JwtSigningAlgorithmNames, value, &jwt_algorithm)) {
-            explicit_algorithm = true;
-        } else {
+        if (!OptionToEnumI(oidc_JwtSigningAlgorithmNames, value, &jwt_algorithm)) {
             LogError("Unsupported JWT signing algorithm '%1'", value);
             return false;
         }
+        explicit_algorithm = true;
+
+        return true;
+    } else if (key == "TolerateUnknownAudiences") {
+        if (!ParseBool(value, &tolerate_unknown_audiences))
+            return false;
+        explicit_tolerate = true;
 
         return true;
     }
@@ -227,6 +232,12 @@ bool oidc_Provider::Complete()
             LogError("Unsupported JWT signing algorithm '%1'", str);
             return false;
         }
+    }
+    if (!explicit_tolerate) {
+        const char *str = GetEnv("SSO_TOLERATE_UNKNOWN_AUDIENCES");
+
+        if (str && !ParseBool(str, &tolerate_unknown_audiences))
+            return false;
     }
 
     return true;
@@ -932,8 +943,9 @@ bool oidc_DecodeIdToken(const oidc_Provider &provider, Span<const char> token, S
         int64_t iat = -1;
         int64_t nbf = -1;
         int64_t exp = -1;
-        bool ambiguous = false;
-        const char *audience = nullptr;
+        const char *aud = nullptr;
+        bool matched_aud = false;
+        bool ambiguous_aud = false;
         const char *azp = nullptr;
         Span<const char> nonce2 = {};
 
@@ -958,19 +970,21 @@ bool oidc_DecodeIdToken(const oidc_Provider &provider, Span<const char> token, S
                     json.ParseInt(&exp);
                 } else if (key == "aud") {
                     if (json.PeekToken() == json_TokenType::String) {
-                        const char *aud = json.ParseString().ptr;
+                        const char *value = json.ParseString().ptr;
 
-                        if (aud) [[likely]] {
-                            ambiguous |= audience && !TestStr(aud, audience);
-                            audience = aud;
+                        if (value) [[likely]] {
+                            matched_aud |= TestStr(value, provider.client_id);
+                            ambiguous_aud |= aud && !TestStr(value, aud);
+                            aud = value;
                         }
                     } else {
                         for (json.ParseArray(); json.InArray(); ) {
-                            const char *aud = json.ParseString().ptr;
+                            const char *value = json.ParseString().ptr;
 
-                            if (aud) [[likely]] {
-                                ambiguous |= audience && !TestStr(aud, audience);
-                                audience = aud;
+                            if (value) [[likely]] {
+                                matched_aud |= TestStr(value, provider.client_id);
+                                ambiguous_aud |= aud && !TestStr(value, aud);
+                                aud = value;
                             }
                         }
                     }
@@ -995,7 +1009,7 @@ bool oidc_DecodeIdToken(const oidc_Provider &provider, Span<const char> token, S
                 return false;
         }
 
-        if (iat < 0 || exp < 0 || !iss || !audience || !nonce2.ptr || !identity.sub) {
+        if (iat < 0 || exp < 0 || !iss || !aud || !nonce2.ptr || !identity.sub) {
             LogError("Missing or invalid JWT payload values");
             return false;
         }
@@ -1016,10 +1030,10 @@ bool oidc_DecodeIdToken(const oidc_Provider &provider, Span<const char> token, S
             LogError("JWT issuer mismatch with OIDC configuration");
             return false;
         }
-        if (ambiguous) {
+        if (ambiguous_aud && !provider.tolerate_unknown_audiences) {
             LogError("JWT contains multiple audiences values");
             return false;
-        } else if (!TestStr(audience, provider.client_id)) {
+        } else if (!matched_aud) {
             LogError("JWT client ID mismatch with OIDC configuration (aud field)");
             return false;
         }
