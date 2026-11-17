@@ -98,6 +98,11 @@ This requires a provider that provides a discovery URL, which usually lives at `
 ```ini
 [SSO]
 
+# The name is used internally and must contain only alphanumeric characters or '_' (no space), the title will be shown to users
+# on th login screen and in the account security panel.
+Name = example
+Title = Example
+
 # URL to the SSO provider, to which Redropp will append /.well-known/openid-configuration in order to fetch
 # the OIDC configuration. You can instead specify the full discovery URL with the DiscoveryURL= setting.
 URL = https://example.com
@@ -118,6 +123,8 @@ ClientSecret =
 # [SSO]
 # Repeat SSO section and settings to add multiple providers
 ```
+
+Redropp supports OIDC back-channel logout. To enable this feature, you must set the back-channel URL in your OpenID provider to `https://<redropp URL>/api/sso/close/<SSO name>`.
 
 # Customization
 

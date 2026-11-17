@@ -33,10 +33,11 @@ S3_SECRET_ACCESS_KEY=
 # AUTH_REGISTER=Yes
 
 # Configure SSO support
-# SSO_TITLE=
+# SSO_NAME=auth0
+# SSO_TITLE=Auth0
 # SSO_URL=https://dev-stpsilwgnjk561dj.eu.auth0.com
-# SSO_CLIENT_ID=r11Ah7sLNB0AN5FphbRCkNVEyK7XsQ9i
-# SSO_CLIENT_SECRET=sTd6h6TywNolfTnHGKBDE37ys6rmZCnQabNvkvBmVZqOKb5Ncpn75ELkTpfp-wma
+# SSO_CLIENT_ID=
+# SSO_CLIENT_SECRET=
 ```
 
 > [!NOTE]
