@@ -8804,10 +8804,8 @@ StreamDecompressorHelper::StreamDecompressorHelper(CompressionType compression_t
 // XXX: Maximum line length
 bool LineReader::Next(Span<char> *out_line)
 {
-    if (eof) {
-        line_number = 0;
+    if (eof)
         return false;
-    }
     if (error) [[unlikely]]
         return false;
 
