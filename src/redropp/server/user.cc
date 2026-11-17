@@ -422,7 +422,7 @@ void HandleUserRegister(http_IO *io)
         sq_Statement stmt;
         if (!db.Prepare(R"(INSERT INTO users (mail, username, creation, confirmed, version, ckey)
                            VALUES (?1, ?2, ?3, 0, 1, rnd_safe(32))
-                           ON CONFLICT DO UPDATE SET confirmed = confirmed
+                           ON CONFLICT (mail) DO UPDATE SET confirmed = confirmed
                            RETURNING id, confirmed)",
                         &stmt, mail, mail, GetUnixTime()))
             return false;
@@ -1156,9 +1156,10 @@ void HandleSsoOidc(http_IO *io)
                 sq_Statement stmt;
                 if (!db.Prepare(R"(INSERT INTO users (mail, username, creation, confirmed, version, ckey)
                                    VALUES (?1, ?2, ?3, ?4, 1, rnd_safe(32))
-                                   ON CONFLICT DO UPDATE SET confirmed = MAX(confirmed, excluded.confirmed)
+                                   ON CONFLICT (mail) DO UPDATE SET confirmed =
+                                       IIF(password_hash IS NULL OR ?5 = 1, MAX(confirmed, excluded.confirmed), confirmed)
                                    RETURNING id, creation, username, version, base64(ckey))",
-                                &stmt, identity.email, identity.email, now, 0 + verified))
+                                &stmt, identity.email, identity.email, now, 0 + verified, 0 + oidc->auto_link))
                     return false;
 
                 if (!stmt.Step()) {
