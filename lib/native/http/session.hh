@@ -52,9 +52,6 @@ public:
         const http_RequestInfo &request = io->Request();
 
         SessionHandle *handle = CreateHandle();
-        if (!handle)
-            return;
-
         int64_t clock = GetMonotonicClock();
 
         handle->login_time = clock;
@@ -111,10 +108,6 @@ public:
                 std::lock_guard<std::shared_mutex> lock_excl(mutex);
 
                 handle = CreateHandle(locked ? session_rnd : nullptr);
-                if (!handle) {
-                    DeleteSessionCookies(io);
-                    return nullptr;
-                }
 
                 handle->login_time = login_time;
                 handle->register_time = clock;
