@@ -58,6 +58,9 @@ Quota = 1G
 
 # Customize list of expiration delays, add Never to allow infinite drops, and use '*' to set the default
 ExpirationDelays = 1d 3d *7d 30d 90d
+
+# Allow users to edit drop settings (name, expiration delay) within a short window after creation
+EditWindow = 15m
 ```
 
 # Authentication methods

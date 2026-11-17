@@ -2,6 +2,20 @@
 
 ## Alpha versions
 
+### Redropp 0.10.0
+
+*Released on 2026-11-18*
+
+- Improve SSO logout support:
+  * Open provider end session URL during logout
+  * Implement OIDC back-channel logout
+- Allow users to change drop settings (name, expiration delay) within a short window after creation
+- Add OIDC setting `TolerateUnknownAudiences` to tolerate additional aud values
+- Load local config file by default if it exists
+
+> [!IMPORTANT]
+> This release adds a new mandatory SSO provider setting called `Name` (`SSO_NAME`). If you use SSO, you need to set it or Redropp won't start.
+
 ### Redropp 0.9.19
 
 *Released on 2026-11-15*
