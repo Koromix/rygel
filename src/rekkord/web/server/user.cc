@@ -1191,19 +1191,23 @@ void HandleSsoOidc(http_IO *io)
         FillRandomSafe(token, K_SIZE(token));
 
         int64_t userid = 0;
-        bool created = false;
-        bool allowed = false;
         const char *username = nullptr;
         int picture = 0;
+        bool created = false;
+        bool allowed = false;
 
         bool success = db.Transaction([&]() {
             {
+                // The last insert rowid will change if an INSERT happens, but not if it's an UPDATE
+                // We can use that to detect row insertion.
+                sqlite3_set_last_insert_rowid(db, 0);
+
                 sq_Statement stmt;
                 if (!db.Prepare(R"(INSERT INTO users (mail, username, creation, confirmed, version)
                                    VALUES (?1, ?2, ?3, ?4, 1)
                                    ON CONFLICT (mail) DO UPDATE SET confirmed =
                                        IIF(password_hash IS NULL OR ?5 = 1, MAX(confirmed, excluded.confirmed), confirmed)
-                                   RETURNING id, creation, username, version)",
+                                   RETURNING id, username, version)",
                                 &stmt, identity.email, identity.email, now, 0 + verified, 0 + oidc->auto_link))
                     return false;
 
@@ -1213,9 +1217,16 @@ void HandleSsoOidc(http_IO *io)
                 }
 
                 userid = sqlite3_column_int64(stmt, 0);
-                created = (sqlite3_column_int64(stmt, 1) == now);
-                username = DuplicateString((const char *)sqlite3_column_text(stmt, 2), io->Allocator()).ptr;
-                picture = sqlite3_column_int(stmt, 3);
+                username = DuplicateString((const char *)sqlite3_column_text(stmt, 1), io->Allocator()).ptr;
+                picture = sqlite3_column_int(stmt, 2);
+
+                // Detect insertion
+                {
+                    int64_t rowid = sqlite3_last_insert_rowid(db);
+                    K_ASSERT(rowid == 0 || rowid == userid);
+
+                    created = !!rowid;
+                }
 
                 if (verified && created) {
                     // Automatically allow the provider that resulted in user creation if address mail is verified
