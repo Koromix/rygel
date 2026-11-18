@@ -545,6 +545,7 @@ static void HandleRequest(http_IO *io)
 
                         json.Key("key"); json.String(oidc.provider.key);
                         json.Key("title"); json.String(oidc.provider.title);
+                        json.Key("issuer"); json.String(oidc.provider.issuer);
 
                         json.EndObject();
                     }

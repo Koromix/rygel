@@ -373,6 +373,7 @@ static AssetInfo PatchAsset(AssetInfo asset, Span<const char> nonce, Allocator *
 
                 json.Key("key"); json.String(oidc.provider.key);
                 json.Key("title"); json.String(oidc.provider.title);
+                json.Key("issuer"); json.String(oidc.provider.issuer);
 
                 json.EndObject();
             }
