@@ -2,6 +2,12 @@
 
 ## Alpha versions
 
+### Redropp 0.10.1
+
+*Released on 2026-11-18*
+
+- Fix broken identiy provider unlinking in security dialog (regression introduced in Redropp 0.10.0)
+
 ### Redropp 0.10.0
 
 *Released on 2026-11-18*
