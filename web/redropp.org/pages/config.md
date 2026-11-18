@@ -102,7 +102,7 @@ This requires a provider that provides a discovery URL, which usually lives at `
 [SSO]
 
 # The name is used internally and must contain only alphanumeric characters or '_' (no space), the title will be shown to users
-# on th login screen and in the account security panel.
+# on the login screen and in the account security panel.
 Name = example
 Title = Example
 
@@ -119,7 +119,7 @@ ClientSecret =
 
 # Set to Yes to transparently link a new SSO account to an existing account (if any), if the mail
 # addresses match.
-# By default, this is disabled, but it is still possible to link to an exisiting account, but it
+# By default, this is disabled. It is still possible to link to an existing account, but it
 # requires that the user validates this by mail.
 # AutoLink = No
 
