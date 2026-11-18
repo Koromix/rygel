@@ -2,7 +2,7 @@
 
 La stimulation magnétique transcrânienne répétitive (rTMS) est une technique médicale de neuromodulation non invasive. Elle repose sur l’application d’un champ magnétique focalisé sur le cortex cérébral, permettant de moduler l’activité de régions cérébrales spécifiques sans recourir à la chirurgie ni à l’anesthésie générale.
 
-La rTMS utilise une bobine électromagnétique placée contre le crâne, qui génère des impulsions magnétiques brèves et intenses. Ces impulsions induisent un courant électrique localisé dans le cerveau, capable de stimuler ou d’inhiber l’activité neuronale selon les paramètres utilisés (fréquence, intensité, durée, localisation).
+La rTMS utilise une **bobine électromagnétique placée contre le crâne**, qui génère des impulsions magnétiques brèves et intenses. Ces impulsions induisent un courant électrique localisé dans le cerveau, capable de stimuler ou d’inhiber l’activité neuronale selon les paramètres utilisés (fréquence, intensité, durée, localisation).
 
 > [!NOTE]
 > Cette méthode a été développée dans les années 1980 pour devenir une alternative ou un complément aux traitements médicamenteux, notamment dans les pathologies psychiatriques résistantes aux thérapies conventionnelles.

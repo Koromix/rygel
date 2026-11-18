@@ -1,6 +1,6 @@
 # Qu’est ce que la stimulation cérébrale profonde ? ^ Introduction
 
-La stimulation cérébrale profonde (SCP) est une technique de neurostimulation nécessitant une implantation chirurgicale. Un stimulateur implanté sous la peau et relié à des électrodes placées dans des zones cérébrales spécifiques. Il envoie des impulsions électriques à ces régions afin de moduler leur activité.
+La stimulation cérébrale profonde (SCP) est une technique de neurostimulation nécessitant une implantation chirurgicale. Un **stimulateur implanté sous la peau et relié à des électrodes placées dans des zones cérébrales spécifiques**. Il envoie des impulsions électriques à ces régions afin de moduler leur activité.
 
 Cette stimulation électrique permet de réduire l'activité anormale de certaines régions du cerveau impliquées dans les symptômes.
 

@@ -25,6 +25,6 @@ Plusieurs séances peuvent avoir lieu le même jour.
 > - Picotements
 > - Maux de tête
 > - Inconfort
-> - Brûlures cutanées (très rare).
+> - Brûlures cutanées (très rare)
 >
 > *Ces effets indésirables sont limités et facilement contrôlables.*
