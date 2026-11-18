@@ -840,9 +840,13 @@ static bool RenderTemplate(const char *base, const char *template_filename,
             writer->Write(page.title);
         } else if (key == "DESCRIPTION") {
             writer->Write(page.description);
-        } else if (key == "MENU" && page.menu) {
-            Span<const char> menu = TrimStr(SplitStrReverse(page.menu, '>'));
-            writer->Write(menu);
+        } else if (key == "MENU") {
+            if (page.menu) {
+                Span<const char> menu = TrimStr(SplitStrReverse(page.menu, '>'));
+                writer->Write(menu);
+            } else {
+                writer->Write(page.title);
+            }
         } else if (key == "RANDOM") {
             Print(writer, "%1", FmtRandom(8));
         } else if (key == "URL") {
