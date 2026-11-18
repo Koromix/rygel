@@ -97,7 +97,7 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
                     stack_offset += 4;
                 }
 
-                out_plan->sync.Append({ .o = Code2Op(code), .s2 = (int16_t)param.directions, .i = offset, .type = param.type });
+                out_plan->sync.Append({ .o = Code2Op(code), .s1 = (int16_t)param.directions, .i = offset, .type = param.type });
             } break;
 
             case PrimitiveKind::Int64:
@@ -145,7 +145,7 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
                     gpr_index = gpr_max;
                     stack_offset = AlignLen(param.type->size - split, 4);
 
-                    out_plan->sync.Append({ .o = Code2Op(Opcode::PushAggregateSplit), .s2 = (int16_t)split, .s3 = (int16_t)offsets[0], .s4 = (int16_t)offsets[1], .type = param.type });
+                    out_plan->sync.Append({ .o = Code2Op(Opcode::PushAggregateSplit), .s1 = (int16_t)split, .s3 = (int16_t)offsets[0], .s4 = (int16_t)offsets[1], .type = param.type });
                 } else {
                     stack_offset = AlignLen(stack_offset, param.type->align == 8 ? 8 : 4);
 
@@ -184,7 +184,7 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
                     }
                 }
 
-                out_plan->sync.Append({ .o = Code2Op(Opcode::PushFloat32), .s2 = (int16_t)param.directions, .i = offset, .type = param.type });
+                out_plan->sync.Append({ .o = Code2Op(Opcode::PushFloat32), .s1 = (int16_t)param.directions, .i = offset, .type = param.type });
             } break;
             case PrimitiveKind::Float64: {
 #if defined(__ARM_PCS_VFP)
@@ -218,7 +218,7 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
                     }
                 }
 
-                out_plan->sync.Append({ .o = Code2Op(Opcode::PushFloat64), .s2 = (int16_t)param.directions, .i = offset, .type = param.type });
+                out_plan->sync.Append({ .o = Code2Op(Opcode::PushFloat64), .s1 = (int16_t)param.directions, .i = offset, .type = param.type });
             } break;
 
             case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;

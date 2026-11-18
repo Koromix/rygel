@@ -282,7 +282,7 @@ void AnalyseFunction(InstanceData *, const FunctionInfo *func, ExecutionPlan *ou
 
                 int delta = (int)Opcode::PushVoid - (int)PrimitiveKind::Void;
                 Opcode code = (Opcode)((int)param.type->primitive + delta);
-                out_plan->sync.Append({ .o = Code2Op(code), .s2 = (int16_t)param.directions, .i = offsets[0], .type = param.type });
+                out_plan->sync.Append({ .o = Code2Op(code), .s1 = (int16_t)param.directions, .i = offsets[0], .type = param.type });
             }
         }
 

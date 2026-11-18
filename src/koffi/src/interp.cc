@@ -182,7 +182,7 @@ napi_value RunForward(CallData *call, uint8_t *base, napi_value *argp, const OpD
         napi_value arg = *argp++;
 
         const char *str;
-        if (!call->PushString(arg, op->s2, &str)) [[unlikely]]
+        if (!call->PushString(arg, op->s1, &str)) [[unlikely]]
             return nullptr;
 
         *(const char **)(base + op->i) = str;
@@ -193,7 +193,7 @@ napi_value RunForward(CallData *call, uint8_t *base, napi_value *argp, const OpD
         napi_value arg = *argp++;
 
         const char16_t *str16;
-        if (!call->PushString16(arg, op->s2, &str16)) [[unlikely]]
+        if (!call->PushString16(arg, op->s1, &str16)) [[unlikely]]
             return nullptr;
 
         *(const char16_t **)(base + op->i) = str16;
@@ -204,7 +204,7 @@ napi_value RunForward(CallData *call, uint8_t *base, napi_value *argp, const OpD
         napi_value arg = *argp++;
 
         const char32_t *str32;
-        if (!call->PushString32(arg, op->s2, &str32)) [[unlikely]]
+        if (!call->PushString32(arg, op->s1, &str32)) [[unlikely]]
             return nullptr;
 
         *(const char32_t **)(base + op->i) = str32;
@@ -215,7 +215,7 @@ napi_value RunForward(CallData *call, uint8_t *base, napi_value *argp, const OpD
         napi_value arg = *argp++;
 
         void *ptr;
-        if (!call->PushPointer(arg, op->type, op->s2, &ptr)) [[unlikely]]
+        if (!call->PushPointer(arg, op->type, op->s1, &ptr)) [[unlikely]]
             return nullptr;
 
         *(void **)(base + op->i) = ptr;
@@ -292,7 +292,7 @@ napi_value RunForward(CallData *call, uint8_t *base, napi_value *argp, const OpD
         napi_value arg = *argp++;
 
         int size = op->type->size;
-        int split = op->s2;
+        int split = op->s1;
         uint8_t *buf = call->AllocHeap(size); // Wasteful, but rare
 
         if (!call->PushObject(arg, op->type, buf)) [[unlikely]]
@@ -860,7 +860,7 @@ int RunRelay(CallData *call, uint8_t *base, napi_value *argp, const OpData *op)
     }
     RELAY(PushAggregateSplit) {
         int size = op->type->size;
-        int split = op->s2;
+        int split = op->s1;
         uint8_t *buf = call->AllocHeap(size); // Wasteful, but rare
 
         memcpy(buf, base + op->s3, split);

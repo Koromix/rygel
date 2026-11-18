@@ -225,7 +225,7 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
                 int delta = (int)Opcode::PushVoid - (int)PrimitiveKind::Void;
                 Opcode code = (Opcode)((int)type->primitive + delta);
 
-                out_plan->sync.Append({ .o = Code2Op(code), .s2 = (int16_t)param.directions, .i = offsets[0], .type = type });
+                out_plan->sync.Append({ .o = Code2Op(code), .s1 = (int16_t)param.directions, .i = offsets[0], .type = type });
             }
         }
 
