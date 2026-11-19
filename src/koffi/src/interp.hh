@@ -46,6 +46,9 @@ enum class Opcode {
     PushAggregateMem,
     PushPair,
 
+    // Optimized routines selected by interp.cc, don't pick them in ABI code
+    PushPointerFast,
+
     #define PRIMITIVE(Name) Run ## Name,
     #include "primitives.inc"
     RunAggregateG,

@@ -919,8 +919,6 @@ bool CallData::PushPointer(napi_value value, const TypeInfo *type, int direction
     void *ptr = nullptr;
     Size len = 0;
 
-restart:
-
     if (TryPointer(env, value, &ptr, &len)) {
         if (type->ref.conversion == BufferConversion::None) [[likely]] {
             *out_ptr = ptr;
@@ -956,6 +954,29 @@ restart:
     // When TryPointer fails, it stuffs the napi_valuetype (kind) in out_len to help
     napi_valuetype kind = (napi_valuetype)len;
 
+    return PushPointerFallback(value, kind, type, directions, out_ptr);
+}
+
+bool CallData::TryPointerFast(napi_value value, void **out_ptr, napi_valuetype *out_kind)
+{
+    void *ptr = nullptr;
+    Size len = 0;
+
+    if (TryPointer(env, value, &ptr, &len)) {
+        *out_ptr = ptr;
+        return true;
+    }
+
+    // Set upon failure to help caller
+    *out_kind = (napi_valuetype)len;
+
+    return false;
+}
+
+bool CallData::PushPointerFallback(napi_value value, napi_valuetype kind, const TypeInfo *type, int directions, void **out_ptr)
+{
+    const TypeInfo *ref = type->ref.type;
+
     if (kind == napi_external && CheckValueTag(env, value, &CastMarker)) {
         Napi::External<ValueCast> external = Napi::External<ValueCast>(env, value);
         ValueCast *cast = external.Data();
@@ -963,15 +984,8 @@ restart:
         napi_get_reference_value(env, cast->ref, &value);
         type = cast->type;
 
-        goto restart;
+        return PushPointer(value, type, directions, out_ptr);
     }
-
-    return PushPointerSlow(value, kind, type, directions, out_ptr);
-}
-
-bool CallData::PushPointerSlow(napi_value value, napi_valuetype kind, const TypeInfo *type, int directions, void **out_ptr)
-{
-    const TypeInfo *ref = type->ref.type;
 
     void *ptr = nullptr;
 

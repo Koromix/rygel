@@ -324,6 +324,22 @@ napi_value RunForward(CallData *call, uint8_t *base, napi_value *argp, const OpD
         NEXT();
     }
 
+    FWD(PushPointerFast) {
+        napi_value arg = *argp++;
+
+        void *ptr;
+        napi_valuetype kind;
+
+        if (!call->TryPointerFast(arg, &ptr, &kind)) [[unlikely]] {
+            if (!call->PushPointerFallback(arg, kind, op->type, op->s1, &ptr))
+                return nullptr;
+        }
+
+        *(void **)(base + op->i) = ptr;
+
+        NEXT();
+    }
+
 #undef INTEGER64_SWAP
 #undef INTEGER64
 #undef INTEGER_SWAP
@@ -886,6 +902,8 @@ int RunRelay(CallData *call, uint8_t *base, napi_value *argp, const OpData *op)
         NEXT();
     }
 
+    RELAY(PushPointerFast) { K_UNREACHABLE(); }
+
 #undef DISPOSE
 #undef INTEGER_SWAP
 #undef INTEGER
@@ -1231,6 +1249,8 @@ int RunRelay(CallData *call, uint8_t *base, napi_value *argp, const OpData *op)
     #pragma warning(pop)
 #endif
 
+static inline Opcode Op2Code(void *o) { return (Opcode)(uintptr_t)o; }
+
 bool PreparePlan(InstanceData *instance, FunctionInfo *func)
 {
     K_ASSERT(!func->plan.sync.len);
@@ -1250,6 +1270,16 @@ bool PreparePlan(InstanceData *instance, FunctionInfo *func)
     K_ASSERT(func->plan.relay.len);
     K_ASSERT(func->plan.stk_size);
 
+    // Use optimized operations where possible
+    for (OpData &op: func->plan.sync) {
+        K_ASSERT(Op2Code(op.o) != Opcode::PushPointerFast);
+
+        if (Op2Code(op.o) == Opcode::PushPointer &&
+                op.type->ref.conversion == BufferConversion::None) {
+            op.o = Code2Op(Opcode::PushPointerFast);
+        }
+    }
+
 #if defined(MUST_TAIL)
     static ForwardFunc *const ForwardDispatch[256] = {
         #define PRIMITIVE(Name) ForwardPush ## Name,
@@ -1259,6 +1289,7 @@ bool PreparePlan(InstanceData *instance, FunctionInfo *func)
         ForwardPushAggregateSplit,
         ForwardPushAggregateMem,
         ForwardPushPair,
+        ForwardPushPointerFast,
         #define PRIMITIVE(Name) ForwardRun ## Name,
         #include "primitives.inc"
         ForwardRunAggregateG,
@@ -1314,6 +1345,7 @@ bool PreparePlan(InstanceData *instance, FunctionInfo *func)
         RelayPushAggregateSplit,
         RelayPushAggregateMem,
         RelayPushPair,
+        RelayPushPointerFast,
         #define PRIMITIVE(Name) RelayRun ## Name,
         #include "primitives.inc"
         RelayRunAggregateG,
@@ -1416,7 +1448,8 @@ void FillAsyncPlan(Span<const OpData> sync, HeapArray<OpData> *out_async)
             case Opcode::PushAggregatePair:
             case Opcode::PushAggregateSplit:
             case Opcode::PushAggregateMem:
-            case Opcode::PushPair: { out_async->Append(op); } break;
+            case Opcode::PushPair:
+            case Opcode::PushPointerFast: { out_async->Append(op); } break;
 
             case Opcode::RunVoid:
             case Opcode::RunBool:
