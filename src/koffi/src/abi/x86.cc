@@ -204,8 +204,6 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
     out_plan->stk_size += 16;
 #endif
 
-    FillAsyncPlan(out_plan->sync, &out_plan->async);
-
     if (out_decorated) {
         switch (func->convention) {
             case CallConvention::Cdecl: {

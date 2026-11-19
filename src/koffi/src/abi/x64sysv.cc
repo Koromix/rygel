@@ -377,7 +377,6 @@ void AnalyseFunction(InstanceData *, const FunctionInfo *func, ExecutionPlan *ou
 
     out_plan->stk_size = stk_size;
 
-    FillAsyncPlan(out_plan->sync, &out_plan->async);
     out_plan->relay = out_plan->sync;
 }
 

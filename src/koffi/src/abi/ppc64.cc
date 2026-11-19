@@ -213,7 +213,6 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
     Size needed = 8 * std::max(36, gpr_index);
     out_plan->stk_size = AlignLen(needed, 16);
 
-    FillAsyncPlan(out_plan->sync, &out_plan->async);
     out_plan->relay = out_plan->sync;
 }
 

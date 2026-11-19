@@ -359,7 +359,6 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
 
     out_plan->stk_size = AlignLen(19 * 8 + stack_offset, 16) + 8;
 
-    FillAsyncPlan(out_plan->sync, &out_plan->async);
     out_plan->relay = out_plan->sync;
 }
 

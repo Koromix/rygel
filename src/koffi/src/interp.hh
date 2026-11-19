@@ -30,11 +30,11 @@ struct OpData {
 };
 
 struct ExecutionPlan {
-    HeapArray<OpData> sync;
-    HeapArray<OpData> async;
-    HeapArray<OpData> relay;
-
     Size stk_size = 0;
+
+    HeapArray<OpData> sync;
+    HeapArray<OpData> relay;
+    HeapArray<OpData> async;
 };
 
 enum class Opcode {
@@ -102,8 +102,6 @@ enum class Opcode {
 bool PreparePlan(InstanceData *instance, FunctionInfo *func);
 
 static inline void *Code2Op(Opcode code) { return (void *)code; }
-
-void FillAsyncPlan(Span<const OpData> sync, HeapArray<OpData> *out_async);
 
 #if defined(__GNUC__) || defined(__clang__)
     #if defined(__x86_64__) || defined(__aarch64__)
