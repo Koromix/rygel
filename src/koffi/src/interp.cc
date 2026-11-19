@@ -72,6 +72,8 @@ extern "C" {
 #undef WEAK_CALL
 }
 
+static inline Opcode Op2Code(void *o) { return (Opcode)(uintptr_t)o; }
+
 #if defined(__GNUC__) || defined(__clang__)
     #pragma GCC diagnostic push
     #pragma GCC diagnostic ignored "-Wunused-parameter"
@@ -91,14 +93,14 @@ extern "C" {
         } while (false)
 #else
     #define FWD(Code) \
-        case (int)Opcode::Code:
+        case Opcode::Code:
     #define NEXT() \
         break
 
 napi_value RunForward(CallData *call, uint8_t *base, napi_value *argp, const OpData *op)
 {
     for (;; ++op) {
-        switch ((intptr_t)op->o) {
+        switch (Op2Code(op->o)) {
 #endif
 
 #define INTEGER(CType) \
@@ -747,7 +749,7 @@ napi_value RunForward(CallData *call, uint8_t *base, napi_value *argp, const OpD
 #else
     #define RELAY(Code) \
         Code: \
-        case (int)Opcode::Code:
+        case Opcode::Code:
     #define NEXT() \
         break
     #define ALIAS(From, To) \
@@ -756,7 +758,7 @@ napi_value RunForward(CallData *call, uint8_t *base, napi_value *argp, const OpD
 int RunRelay(CallData *call, uint8_t *base, napi_value *argp, const OpData *op)
 {
     for (;; ++op) {
-        switch ((intptr_t)op->o) {
+        switch (Op2Code(op->o)) {
 #endif
 
 #define INTEGER(CType) \
@@ -1249,8 +1251,6 @@ int RunRelay(CallData *call, uint8_t *base, napi_value *argp, const OpData *op)
     #pragma warning(pop)
 #endif
 
-static inline Opcode Op2Code(void *o) { return (Opcode)(uintptr_t)o; }
-
 bool PreparePlan(InstanceData *instance, FunctionInfo *func)
 {
     K_ASSERT(!func->plan.sync.len);
@@ -1279,7 +1279,7 @@ bool PreparePlan(InstanceData *instance, FunctionInfo *func)
             op.o = Code2Op(Opcode::PushPointerFast);
         }
 
-        switch ((Opcode)(intptr_t)op.o) {
+        switch (Op2Code(op.o)) {
             case Opcode::PushVoid:
             case Opcode::PushBool:
             case Opcode::PushInt8:
