@@ -47,6 +47,7 @@ enum class Opcode {
     PushPair,
 
     // Optimized routines selected by interp.cc, don't pick them in ABI code
+    PushStringFast,
     PushPointerFast,
 
     #define PRIMITIVE(Name) Run ## Name,

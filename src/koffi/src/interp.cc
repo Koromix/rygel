@@ -326,6 +326,17 @@ napi_value RunForward(CallData *call, uint8_t *base, napi_value *argp, const OpD
         NEXT();
     }
 
+    FWD(PushStringFast) {
+        napi_value arg = *argp++;
+
+        const char *str;
+        if (!call->PushString(arg, 1, &str)) [[unlikely]]
+            return nullptr;
+
+        *(const char **)(base + op->i) = str;
+
+        NEXT();
+    }
     FWD(PushPointerFast) {
         napi_value arg = *argp++;
 
@@ -904,6 +915,7 @@ int RunRelay(CallData *call, uint8_t *base, napi_value *argp, const OpData *op)
         NEXT();
     }
 
+    RELAY(PushStringFast) { K_UNREACHABLE(); }
     RELAY(PushPointerFast) { K_UNREACHABLE(); }
 
 #undef DISPOSE
@@ -1272,10 +1284,13 @@ bool PreparePlan(InstanceData *instance, FunctionInfo *func)
 
     // Use optimized instructions (when possible) and prepare async plan
     for (OpData &op: func->plan.sync) {
+        K_ASSERT(Op2Code(op.o) != Opcode::PushStringFast);
         K_ASSERT(Op2Code(op.o) != Opcode::PushPointerFast);
 
-        if (Op2Code(op.o) == Opcode::PushPointer &&
-                op.type->ref.conversion == BufferConversion::None) {
+        if (Op2Code(op.o) == Opcode::PushString && op.s1 == 1) {
+            op.o = Code2Op(Opcode::PushStringFast);
+        }
+        if (Op2Code(op.o) == Opcode::PushPointer && op.type->ref.conversion == BufferConversion::None) {
             op.o = Code2Op(Opcode::PushPointerFast);
         }
 
@@ -1312,6 +1327,7 @@ bool PreparePlan(InstanceData *instance, FunctionInfo *func)
             case Opcode::PushAggregateSplit:
             case Opcode::PushAggregateMem:
             case Opcode::PushPair:
+            case Opcode::PushStringFast:
             case Opcode::PushPointerFast: { func->plan.async.Append(op); } break;
 
             case Opcode::RunVoid:
@@ -1501,6 +1517,7 @@ bool PreparePlan(InstanceData *instance, FunctionInfo *func)
         ForwardPushAggregateSplit,
         ForwardPushAggregateMem,
         ForwardPushPair,
+        ForwardPushStringFast,
         ForwardPushPointerFast,
         #define PRIMITIVE(Name) ForwardRun ## Name,
         #include "primitives.inc"
@@ -1557,6 +1574,7 @@ bool PreparePlan(InstanceData *instance, FunctionInfo *func)
         RelayPushAggregateSplit,
         RelayPushAggregateMem,
         RelayPushPair,
+        RelayPushStringFast,
         RelayPushPointerFast,
         #define PRIMITIVE(Name) RelayRun ## Name,
         #include "primitives.inc"
