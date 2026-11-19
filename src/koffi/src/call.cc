@@ -313,7 +313,7 @@ Size CallData::PushStringValue(napi_value value, const char **out_str)
     // Fast path for small strings
     {
         napi_status status = napi_get_value_string_utf8(env, value, ptr, available, &len);
-        if (status == napi_string_expected)
+        if (status == napi_string_expected) [[unlikely]]
             return -1;
         K_ASSERT(status == napi_ok);
 
@@ -350,7 +350,7 @@ Size CallData::PushString16Value(napi_value value, const char16_t **out_str16)
     Span<char16_t> buf;
 
     napi_status status = napi_get_value_string_utf16(env, value, nullptr, 0, &len);
-    if (status == napi_string_expected)
+    if (status == napi_string_expected) [[unlikely]]
         return -1;
     K_ASSERT(status == napi_ok);
 
