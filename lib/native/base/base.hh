@@ -2730,6 +2730,26 @@ public:
     }
     T &operator[](Size idx) { return (T &)(*(const BucketList *)this)[idx]; }
 
+    // Slow (needs to scan buckets), use with care
+    Size FindIndex(const T *ptr) const
+    {
+        Size start = -offset;
+
+        for (const Bucket *bucket: buckets) {
+            if (ptr >= bucket->values && ptr < bucket->values + BucketSize) {
+                Size idx = start + (ptr - bucket->values);
+                K_ASSERT(idx >= 0);
+
+                return idx;
+            }
+
+            start += BucketSize;
+        }
+
+        // This functions assume ptr belongs to BucketList
+        K_UNREACHABLE();
+    }
+
     T *AppendDefault(Allocator **out_alloc = nullptr)
     {
         Size bucket_idx = (offset + count) / BucketSize;

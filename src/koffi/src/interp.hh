@@ -12,22 +12,34 @@ namespace K {
 struct InstanceData;
 struct FunctionInfo;
 struct TypeInfo;
+struct ParameterInfo;
 struct CallData;
 struct TrampolineInfo;
 
 struct OpData {
     void *o;
-    int16_t s1 = 0;
-    int16_t s2 = 0;
     union {
-        int32_t i = 0;
+        int32_t a;
         struct {
-            int16_t s3;
-            int16_t s4;
+            union {
+                int16_t a1;
+                struct {
+                    uint8_t a1l;
+                    uint8_t a1h;
+                };
+            };
+            int16_t a2;
         };
     };
-    const TypeInfo *type = nullptr;
+    union {
+        uint32_t b;
+        struct {
+            int16_t b1;
+            int16_t b2;
+        };
+    };
 };
+static_assert(K_SIZE(OpData) == K_SIZE(void *) + 8);
 
 struct ExecutionPlan {
     Size stk_size = 0;
@@ -102,7 +114,9 @@ enum class Opcode {
 
 bool PreparePlan(InstanceData *instance, FunctionInfo *func);
 
-static inline void *Code2Op(Opcode code) { return (void *)code; }
+void *Code2Op(Opcode code);
+uint32_t PackType(InstanceData *instance, const ParameterInfo &param);
+uint32_t PackType(InstanceData *instance, const TypeInfo *type, int directions = 0);
 
 #if defined(__GNUC__) || defined(__clang__)
     #if defined(__x86_64__) || defined(__aarch64__)

@@ -10,7 +10,7 @@
 
 namespace K {
 
-void AnalyseFunction(InstanceData *, const FunctionInfo *func, ExecutionPlan *out_plan, const char **)
+void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, ExecutionPlan *out_plan, const char **)
 {
     bool regular_ret = IsRegularSize(func->ret->size, 8);
     bool forward_fp = false;
@@ -23,19 +23,19 @@ void AnalyseFunction(InstanceData *, const FunctionInfo *func, ExecutionPlan *ou
             Opcode code = IsRegularSize(param.type->size, 8) ? Opcode::PushAggregateReg : Opcode::PushAggregateMem;
             int offset = 8 * arg + (arg >= 4 ? 80 : 0);
 
-            out_plan->sync.Append({ .o = Code2Op(code), .i = offset, .type = param.type });
+            out_plan->sync.Append({ .o = Code2Op(code), .a = offset, .b = PackType(instance, param) });
         } else if (IsFloat(param.type) && !param.variadic) {
             int delta = (int)Opcode::PushVoid - (int)PrimitiveKind::Void;
             Opcode code = (Opcode)((int)param.type->primitive + delta);
             int offset = 32 + 8 * arg + (arg >= 4 ? 48 : 0);
 
-            out_plan->sync.Append({ .o = Code2Op(code), .s1 = (int16_t)param.directions, .i = offset, .type = param.type });
+            out_plan->sync.Append({ .o = Code2Op(code), .a = offset, .b = PackType(instance, param) });
         } else {
             int delta = (int)Opcode::PushVoid - (int)PrimitiveKind::Void;
             Opcode code = (Opcode)((int)param.type->primitive + delta);
             int offset = 8 * arg + (arg >= 4 ? 80 : 0);
 
-            out_plan->sync.Append({ .o = Code2Op(code), .s1 = (int16_t)param.directions, .i = offset, .type = param.type });
+            out_plan->sync.Append({ .o = Code2Op(code), .a = offset, .b = PackType(instance, param) });
         }
 
         forward_fp |= IsFloat(param.type);
@@ -67,12 +67,12 @@ void AnalyseFunction(InstanceData *, const FunctionInfo *func, ExecutionPlan *ou
                 int delta = (int)Opcode::RunVoidX - (int)PrimitiveKind::Void;
                 Opcode run = (Opcode)((int)func->ret->primitive + delta);
 
-                out_plan->sync.Append({ .o = Code2Op(run), .s1 = -32, .i = (int32_t)func->parameters.len, .type = func->ret });
+                out_plan->sync.Append({ .o = Code2Op(run), .a1 = 32, .a2 = (int16_t)func->parameters.len, .b = PackType(instance, func->ret) });
             } else {
                 int delta = (int)Opcode::RunVoid - (int)PrimitiveKind::Void;
                 Opcode run = (Opcode)((int)func->ret->primitive + delta);
 
-                out_plan->sync.Append({ .o = Code2Op(run), .s1 = -32, .i = (int32_t)func->parameters.len, .type = func->ret });
+                out_plan->sync.Append({ .o = Code2Op(run), .a1 = 32, .a2 = (int16_t)func->parameters.len, .b = PackType(instance, func->ret) });
             }
         } break;
 
@@ -80,21 +80,21 @@ void AnalyseFunction(InstanceData *, const FunctionInfo *func, ExecutionPlan *ou
         case PrimitiveKind::Union: {
             if (regular_ret) {
                 Opcode run = forward_fp ? Opcode::RunAggregateGX : Opcode::RunAggregateG;
-                out_plan->sync.Append({ .o = Code2Op(run), .s1 = -32, .i = (int32_t)func->parameters.len, .type = func->ret });
+                out_plan->sync.Append({ .o = Code2Op(run), .a1 = 32, .a2 = (int16_t)func->parameters.len, .b = PackType(instance, func->ret) });
             } else {
                 Opcode run = forward_fp ? Opcode::RunAggregateMemX : Opcode::RunAggregateMem;
-                out_plan->sync.Append({ .o = Code2Op(run), .s1 = 0, .s2 = -32, .i = (int32_t)func->parameters.len, .type = func->ret });
+                out_plan->sync.Append({ .o = Code2Op(run), .a1l = 0, .a1h = 32, .a2 = (int16_t)func->parameters.len, .b = PackType(instance, func->ret) });
             }
         } break;
         case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
 
         case PrimitiveKind::Float32: {
             Opcode run = forward_fp ? Opcode::RunFloat32X : Opcode::RunFloat32;
-            out_plan->sync.Append({ .o = Code2Op(run), .s1 = -32 + 8, .i = (int32_t)func->parameters.len, .type = func->ret });
+            out_plan->sync.Append({ .o = Code2Op(run), .a1 = 32 - 8, .a2 = (int16_t)func->parameters.len, .b = PackType(instance, func->ret) });
         } break;
         case PrimitiveKind::Float64: {
             Opcode run = forward_fp ? Opcode::RunFloat64X : Opcode::RunFloat64;
-            out_plan->sync.Append({ .o = Code2Op(run), .s1 = -32 + 8, .i = (int32_t)func->parameters.len, .type = func->ret });
+            out_plan->sync.Append({ .o = Code2Op(run), .a1 = 32 - 8, .a2 = (int16_t)func->parameters.len, .b = PackType(instance, func->ret) });
         } break;
 
         case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;

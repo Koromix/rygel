@@ -243,6 +243,7 @@ const TypeInfo *ResolveType(InstanceData *instance, napi_value value, bool perma
 
                 memcpy((void *)copy, (const void *)type, K_SIZE(*type));
                 copy->name = DuplicateString(type->name, &instance->str_alloc).ptr;
+                copy->type_idx = 0;
                 copy->defn = nullptr;
                 copy->countedby = type->countedby ? DuplicateString(type->countedby, &instance->str_alloc).ptr : nullptr;
                 K_ASSERT(!type->members.len);
@@ -396,6 +397,7 @@ const TypeInfo *ResolveType(InstanceData *instance, Span<const char> str)
 
             memcpy((void *)copy, (const void *)type, K_SIZE(*type));
             copy->name = Fmt(&instance->str_alloc, "<anonymous_%1>", instance->types.Count()).ptr;
+            copy->type_idx = 0;
             copy->defn = nullptr;
             K_ASSERT(!type->members.len);
 
@@ -742,6 +744,7 @@ const TypeInfo *ReshapeAggregate(InstanceData *instance, const TypeInfo *type, c
 
                 memcpy((void *)reshaped, (const void *)type, K_SIZE(*type));
                 memset((void *)&reshaped->members, 0, K_SIZE(reshaped->members));
+                reshaped->type_idx = 0;
                 reshaped->members.Reserve(type->members.len);
                 reshaped->size = 0;
                 reshaped->fill = (uint8_t)config.fill;
@@ -772,6 +775,7 @@ const TypeInfo *ReshapeAggregate(InstanceData *instance, const TypeInfo *type, c
 
                 memcpy((void *)reshaped, (const void *)type, K_SIZE(*type));
                 memset((void *)&reshaped->members, 0, K_SIZE(reshaped->members));
+                reshaped->type_idx = 0;
                 reshaped->members.Reserve(type->members.len);
                 reshaped->size = 0;
                 reshaped->fill = (uint8_t)config.fill;
@@ -803,6 +807,7 @@ const TypeInfo *ReshapeAggregate(InstanceData *instance, const TypeInfo *type, c
                 NAPI_OK(napi_get_reference_value(env, type->defn, &defn));
 
                 memcpy((void *)reshaped, (const void *)type, K_SIZE(*type));
+                reshaped->type_idx = 0;
                 reshaped->ref.type = ReshapeAggregate(instance, reshaped->ref.type, config);
                 reshaped->ref.stride = config.stride;
                 reshaped->ref.conversion = config.f2d ? BufferConversion::FloatToDouble : reshaped->ref.conversion;

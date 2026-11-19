@@ -72,7 +72,51 @@ extern "C" {
 #undef WEAK_CALL
 }
 
+void *Code2Op(Opcode code) { return (void *)code; }
+
+static uint32_t GetTypeIndex(InstanceData *instance, const TypeInfo *type)
+{
+    uint32_t idx = type->type_idx;
+
+    if (!idx--) {
+        idx = instance->types.FindIndex(type);
+        K_ASSERT(idx < (1u << 29));
+
+        type->type_idx = idx + 1;
+    }
+
+    K_ASSERT(&instance->types[idx] == type);
+
+    return idx;
+}
+
+uint32_t PackType(InstanceData *instance, const ParameterInfo &param)
+{
+    return PackType(instance, param.type, param.directions);
+}
+
+uint32_t PackType(InstanceData *instance, const TypeInfo *type, int directions)
+{
+    K_ASSERT(directions >= 0 && directions < 4);
+
+    uint32_t packed = GetTypeIndex(instance, type);
+
+    packed |= directions << 29;
+    packed |= type->dispose ? (1u << 31) : 0;
+
+    return packed;
+}
+
 static inline Opcode Op2Code(void *o) { return (Opcode)(uintptr_t)o; }
+
+static K_FORCE_INLINE const TypeInfo *GetType(const InstanceData *instance, uint32_t packed)
+{
+    uint32_t idx = packed & ((1u << 29) - 1);
+    return &instance->types[idx];
+}
+
+static K_FORCE_INLINE int GetTypeDirections(uint32_t packed) { return (packed >> 29) & 3; }
+static K_FORCE_INLINE bool IsTypeDisposable(uint32_t packed) {  return packed & (1u << 31); }
 
 #if defined(__GNUC__) || defined(__clang__)
     #pragma GCC diagnostic push
@@ -113,7 +157,7 @@ napi_value RunForward(CallData *call, uint8_t *base, napi_value *argp, const OpD
                 return nullptr; \
             } \
              \
-            *(uintptr_t *)(base + op->i) = (uintptr_t)v; \
+            *(uintptr_t *)(base + op->a) = (uintptr_t)v; \
         } while (false)
 #define INTEGER_SWAP(CType) \
         do { \
@@ -125,7 +169,7 @@ napi_value RunForward(CallData *call, uint8_t *base, napi_value *argp, const OpD
                 return nullptr; \
             } \
              \
-            *(uintptr_t *)(base + op->i) = (uintptr_t)ReverseBytes(v); \
+            *(uintptr_t *)(base + op->a) = (uintptr_t)ReverseBytes(v); \
         } while (false)
 #define INTEGER64(CType) \
         do { \
@@ -137,7 +181,7 @@ napi_value RunForward(CallData *call, uint8_t *base, napi_value *argp, const OpD
                 return nullptr; \
             } \
              \
-            *(uint64_t *)(base + op->i) = (uint64_t)v; \
+            *(uint64_t *)(base + op->a) = (uint64_t)v; \
         } while (false)
 #define INTEGER64_SWAP(CType) \
         do { \
@@ -149,7 +193,7 @@ napi_value RunForward(CallData *call, uint8_t *base, napi_value *argp, const OpD
                 return nullptr; \
             } \
              \
-            *(uint64_t *)(base + op->i) = (uint64_t)ReverseBytes(v); \
+            *(uint64_t *)(base + op->a) = (uint64_t)ReverseBytes(v); \
         } while (false)
 
     FWD(PushVoid) { K_UNREACHABLE(); return nullptr; }
@@ -162,7 +206,7 @@ napi_value RunForward(CallData *call, uint8_t *base, napi_value *argp, const OpD
             return nullptr;
         }
 
-        *(uintptr_t *)(base + op->i) = (uintptr_t)b;
+        *(uintptr_t *)(base + op->a) = (uintptr_t)b;
 
         NEXT();
     }
@@ -184,10 +228,10 @@ napi_value RunForward(CallData *call, uint8_t *base, napi_value *argp, const OpD
         napi_value arg = *argp++;
 
         const char *str;
-        if (!call->PushString(arg, op->s1, &str)) [[unlikely]]
+        if (!call->PushString(arg, GetTypeDirections(op->b), &str)) [[unlikely]]
             return nullptr;
 
-        *(const char **)(base + op->i) = str;
+        *(const char **)(base + op->a) = str;
 
         NEXT();
     }
@@ -195,10 +239,10 @@ napi_value RunForward(CallData *call, uint8_t *base, napi_value *argp, const OpD
         napi_value arg = *argp++;
 
         const char16_t *str16;
-        if (!call->PushString16(arg, op->s1, &str16)) [[unlikely]]
+        if (!call->PushString16(arg, GetTypeDirections(op->b), &str16)) [[unlikely]]
             return nullptr;
 
-        *(const char16_t **)(base + op->i) = str16;
+        *(const char16_t **)(base + op->a) = str16;
 
         NEXT();
     }
@@ -206,21 +250,24 @@ napi_value RunForward(CallData *call, uint8_t *base, napi_value *argp, const OpD
         napi_value arg = *argp++;
 
         const char32_t *str32;
-        if (!call->PushString32(arg, op->s1, &str32)) [[unlikely]]
+        if (!call->PushString32(arg, GetTypeDirections(op->b), &str32)) [[unlikely]]
             return nullptr;
 
-        *(const char32_t **)(base + op->i) = str32;
+        *(const char32_t **)(base + op->a) = str32;
 
         NEXT();
     }
     FWD(PushPointer) {
         napi_value arg = *argp++;
 
+        const TypeInfo *type = GetType(call->instance, op->b);
+        int directions = GetTypeDirections(op->b);
+
         void *ptr;
-        if (!call->PushPointer(arg, op->type, op->s1, &ptr)) [[unlikely]]
+        if (!call->PushPointer(arg, type, directions, &ptr)) [[unlikely]]
             return nullptr;
 
-        *(void **)(base + op->i) = ptr;
+        *(void **)(base + op->a) = ptr;
 
         NEXT();
     }
@@ -237,9 +284,9 @@ napi_value RunForward(CallData *call, uint8_t *base, napi_value *argp, const OpD
         }
 
 #if K_SIZE_MAX == INT64_MAX
-        memset(base + op->i, 0xFF, 8);
+        memset(base + op->a, 0xFF, 8);
 #endif
-        *(float *)(base + op->i) = f;
+        *(float *)(base + op->a) = f;
 
         NEXT();
     }
@@ -252,7 +299,7 @@ napi_value RunForward(CallData *call, uint8_t *base, napi_value *argp, const OpD
             return nullptr;
         }
 
-        *(double *)(base + op->i) = d;
+        *(double *)(base + op->a) = d;
 
         NEXT();
     }
@@ -260,10 +307,10 @@ napi_value RunForward(CallData *call, uint8_t *base, napi_value *argp, const OpD
         napi_value arg = *argp++;
 
         void *ptr;
-        if (!call->PushCallback(arg, op->type, &ptr)) [[unlikely]]
+        if (!call->PushCallback(arg, GetType(call->instance, op->b), &ptr)) [[unlikely]]
             return nullptr;
 
-        *(void **)(base + op->i) = ptr;
+        *(void **)(base + op->a) = ptr;
 
         NEXT();
     }
@@ -271,9 +318,9 @@ napi_value RunForward(CallData *call, uint8_t *base, napi_value *argp, const OpD
     FWD(PushAggregateReg) {
         napi_value arg = *argp++;
 
-        uint8_t *ptr = base + op->i;
+        uint8_t *ptr = base + op->a;
 
-        if (!call->PushObject(arg, op->type, ptr)) [[unlikely]]
+        if (!call->PushObject(arg, GetType(call->instance, op->b), ptr)) [[unlikely]]
             return nullptr;
 
         NEXT();
@@ -282,46 +329,48 @@ napi_value RunForward(CallData *call, uint8_t *base, napi_value *argp, const OpD
         napi_value arg = *argp++;
 
         uintptr_t buf[2];
-        if (!call->PushObject(arg, op->type, (uint8_t *)buf)) [[unlikely]]
+        if (!call->PushObject(arg, GetType(call->instance, op->b), (uint8_t *)buf)) [[unlikely]]
             return nullptr;
 
-        *(uintptr_t *)(base + op->s3) = buf[0];
-        *(uintptr_t *)(base + op->s4) = buf[1];
+        *(uintptr_t *)(base + op->a1) = buf[0];
+        *(uintptr_t *)(base + op->a2) = buf[1];
 
         NEXT();
     }
     FWD(PushAggregateSplit) {
         napi_value arg = *argp++;
 
-        int size = op->type->size;
-        int split = op->s1;
+        const TypeInfo *type = GetType(call->instance, op->b);
+        int size = type->size;
+        int split = op->a1l;
         uint8_t *buf = call->AllocHeap(size); // Wasteful, but rare
 
-        if (!call->PushObject(arg, op->type, buf)) [[unlikely]]
+        if (!call->PushObject(arg, type, buf)) [[unlikely]]
             return nullptr;
 
-        memcpy(base + op->s3, buf, split);
-        memcpy(base + op->s4, buf + split, size - split);
+        memcpy(base + op->a1h, buf, split);
+        memcpy(base + op->a2, buf + split, size - split);
 
         NEXT();
     }
     FWD(PushAggregateMem) {
         napi_value arg = *argp++;
 
-        uint8_t *ptr = call->AllocHeap(op->type->size);
-        *(uint8_t **)(base + op->i) = ptr;
+        const TypeInfo *type = GetType(call->instance, op->b);
+        uint8_t *ptr = call->AllocHeap(type->size);
+        *(uint8_t **)(base + op->a) = ptr;
 
-        if (!call->PushObject(arg, op->type, ptr)) [[unlikely]]
+        if (!call->PushObject(arg, type, ptr)) [[unlikely]]
             return nullptr;
 
         NEXT();
     }
 
     FWD(PushPair) {
-        int *ptr = (int *)(base + op->i);
+        int *ptr = (int *)(base + op->a);
 
-        ptr[0] = op->s1;
-        ptr[1] = op->s2;
+        ptr[0] = op->b1;
+        ptr[1] = op->b2;
 
         NEXT();
     }
@@ -333,7 +382,7 @@ napi_value RunForward(CallData *call, uint8_t *base, napi_value *argp, const OpD
         if (!call->PushString(arg, 1, &str)) [[unlikely]]
             return nullptr;
 
-        *(const char **)(base + op->i) = str;
+        *(const char **)(base + op->a) = str;
 
         NEXT();
     }
@@ -344,11 +393,14 @@ napi_value RunForward(CallData *call, uint8_t *base, napi_value *argp, const OpD
         napi_valuetype kind;
 
         if (!call->TryPointerFast(arg, &ptr, &kind)) [[unlikely]] {
-            if (!call->PushPointerFallback(arg, kind, op->type, op->s1, &ptr))
+            const TypeInfo *type = GetType(call->instance, op->b);
+            int directions = GetTypeDirections(op->b);
+
+            if (!call->PushPointerFallback(arg, kind, type, directions, &ptr))
                 return nullptr;
         }
 
-        *(void **)(base + op->i) = ptr;
+        *(void **)(base + op->a) = ptr;
 
         NEXT();
     }
@@ -396,8 +448,9 @@ napi_value RunForward(CallData *call, uint8_t *base, napi_value *argp, const OpD
         } while (false)
 #define DISPOSE(Ptr) \
         do { \
-            if (op->type->dispose) { \
-                op->type->dispose(call->instance, op->type, (Ptr)); \
+            if (IsTypeDisposable(op->b)) { \
+                const TypeInfo *type = GetType(call->instance, op->b); \
+                type->dispose(call->instance, type, (Ptr)); \
             } \
         } while (false)
 
@@ -465,41 +518,60 @@ napi_value RunForward(CallData *call, uint8_t *base, napi_value *argp, const OpD
     FWD(RunPrototype) { K_UNREACHABLE(); return nullptr; }
     FWD(RunAggregateG) {
         auto ret = WRAP(CallG(*argp, base, &call->saved_sp));
-        return DecodeObject(call->instance, (const uint8_t *)&ret, op->type);
+        const TypeInfo *type = GetType(call->instance, op->b);
+
+        return DecodeObject(call->instance, (const uint8_t *)&ret, type);
     }
     FWD(RunAggregateF) {
         auto ret = WRAP(CallF(*argp, base, &call->saved_sp));
-        return DecodeObject(call->instance, (const uint8_t *)&ret, op->type);
+        const TypeInfo *type = GetType(call->instance, op->b);
+
+        return DecodeObject(call->instance, (const uint8_t *)&ret, type);
     }
     FWD(RunAggregateD) {
         auto ret = WRAP(CallD(*argp, base, &call->saved_sp));
-        return DecodeObject(call->instance, (const uint8_t *)&ret, op->type);
+        const TypeInfo *type = GetType(call->instance, op->b);
+
+        return DecodeObject(call->instance, (const uint8_t *)&ret, type);
     }
     FWD(RunAggregateGG) {
         auto ret = WRAP(CallGG(*argp, base, &call->saved_sp));
-        return DecodeObject(call->instance, (const uint8_t *)&ret, op->type);
+        const TypeInfo *type = GetType(call->instance, op->b);
+
+        return DecodeObject(call->instance, (const uint8_t *)&ret, type);
     }
     FWD(RunAggregateDD) {
         auto ret = WRAP(CallDD(*argp, base, &call->saved_sp));
-        return DecodeObject(call->instance, (const uint8_t *)&ret, op->type);
+        const TypeInfo *type = GetType(call->instance, op->b);
+
+        return DecodeObject(call->instance, (const uint8_t *)&ret, type);
     }
     FWD(RunAggregateGD) {
         auto ret = WRAP(CallGD(*argp, base, &call->saved_sp));
-        return DecodeObject(call->instance, (const uint8_t *)&ret, op->type);
+        const TypeInfo *type = GetType(call->instance, op->b);
+
+        return DecodeObject(call->instance, (const uint8_t *)&ret, type);
     }
     FWD(RunAggregateDG) {
         auto ret = WRAP(CallDG(*argp, base, &call->saved_sp));
-        return DecodeObject(call->instance, (const uint8_t *)&ret, op->type);
+        const TypeInfo *type = GetType(call->instance, op->b);
+
+        return DecodeObject(call->instance, (const uint8_t *)&ret, type);
     }
     FWD(RunAggregateHfa) {
         WRAP(CallHfa(*argp, base, &call->saved_sp));
-        return DecodeObject(call->instance, base, op->type);
+        const TypeInfo *type = GetType(call->instance, op->b);
+
+        return DecodeObject(call->instance, base, type);
     }
     FWD(RunAggregateMem) {
-        uint8_t *ptr = call->AllocHeap(op->type->size);
-        *(uint8_t **)(base + op->s1) = ptr;
+        const TypeInfo *type = GetType(call->instance, op->b);
+        uint8_t *ptr = call->AllocHeap(type->size);
+
+        *(uint8_t **)(base + op->a1l) = ptr;
         WRAP(CallG(*argp, base, &call->saved_sp));
-        return DecodeObject(call->instance, ptr, op->type);
+
+        return DecodeObject(call->instance, ptr, type);
     }
     FWD(RunVoidX) {
         WRAP(CallGX(*argp, base, &call->saved_sp));
@@ -565,41 +637,60 @@ napi_value RunForward(CallData *call, uint8_t *base, napi_value *argp, const OpD
     FWD(RunPrototypeX) { K_UNREACHABLE(); return nullptr; }
     FWD(RunAggregateGX) {
         auto ret = WRAP(CallGX(*argp, base, &call->saved_sp));
-        return DecodeObject(call->instance, (const uint8_t *)&ret, op->type);
+        const TypeInfo *type = GetType(call->instance, op->b);
+
+        return DecodeObject(call->instance, (const uint8_t *)&ret, type);
     }
     FWD(RunAggregateFX) {
         auto ret = WRAP(CallFX(*argp, base, &call->saved_sp));
-        return DecodeObject(call->instance, (const uint8_t *)&ret, op->type);
+        const TypeInfo *type = GetType(call->instance, op->b);
+
+        return DecodeObject(call->instance, (const uint8_t *)&ret, type);
     }
     FWD(RunAggregateDX) {
         auto ret = WRAP(CallDX(*argp, base, &call->saved_sp));
-        return DecodeObject(call->instance, (const uint8_t *)&ret, op->type);
+        const TypeInfo *type = GetType(call->instance, op->b);
+
+        return DecodeObject(call->instance, (const uint8_t *)&ret, type);
     }
     FWD(RunAggregateGGX) {
         auto ret = WRAP(CallGGX(*argp, base, &call->saved_sp));
-        return DecodeObject(call->instance, (const uint8_t *)&ret, op->type);
+        const TypeInfo *type = GetType(call->instance, op->b);
+
+        return DecodeObject(call->instance, (const uint8_t *)&ret, type);
     }
     FWD(RunAggregateDDX) {
         auto ret = WRAP(CallDDX(*argp, base, &call->saved_sp));
-        return DecodeObject(call->instance, (const uint8_t *)&ret, op->type);
+        const TypeInfo *type = GetType(call->instance, op->b);
+
+        return DecodeObject(call->instance, (const uint8_t *)&ret, type);
     }
     FWD(RunAggregateGDX) {
         auto ret = WRAP(CallGDX(*argp, base, &call->saved_sp));
-        return DecodeObject(call->instance, (const uint8_t *)&ret, op->type);
+        const TypeInfo *type = GetType(call->instance, op->b);
+
+        return DecodeObject(call->instance, (const uint8_t *)&ret, type);
     }
     FWD(RunAggregateDGX) {
         auto ret = WRAP(CallDGX(*argp, base, &call->saved_sp));
-        return DecodeObject(call->instance, (const uint8_t *)&ret, op->type);
+        const TypeInfo *type = GetType(call->instance, op->b);
+
+        return DecodeObject(call->instance, (const uint8_t *)&ret, type);
     }
     FWD(RunAggregateHfaX) {
         WRAP(CallHfaX(*argp, base, &call->saved_sp));
-        return DecodeObject(call->instance, base, op->type);
+        const TypeInfo *type = GetType(call->instance, op->b);
+
+        return DecodeObject(call->instance, base, type);
     }
     FWD(RunAggregateMemX) {
-        uint8_t *ptr = call->AllocHeap(op->type->size);
-        *(uint8_t **)(base + op->s1) = ptr;
+        const TypeInfo *type = GetType(call->instance, op->b);
+        uint8_t *ptr = call->AllocHeap(type->size);
+
+        *(uint8_t **)(base + op->a1l) = ptr;
         WRAP(CallGX(*argp, base, &call->saved_sp));
-        return DecodeObject(call->instance, ptr, op->type);
+
+        return DecodeObject(call->instance, ptr, type);
     }
 
 #undef DISPOSE
@@ -613,9 +704,11 @@ napi_value RunForward(CallData *call, uint8_t *base, napi_value *argp, const OpD
         } while (false)
 #define DISPOSE() \
         do { \
-            if (op->type->dispose) { \
+            if (IsTypeDisposable(op->b)) { \
+                const TypeInfo *type = GetType(call->instance, op->b); \
                 void *ptr = *(void **)base; \
-                op->type->dispose(call->instance, op->type, ptr); \
+                 \
+                type->dispose(call->instance, type, ptr); \
             } \
         } while (false)
 #define INTEGER(CType) \
@@ -643,10 +736,12 @@ napi_value RunForward(CallData *call, uint8_t *base, napi_value *argp, const OpD
     FWD(CallDG) { CALL(DG); return nullptr; }
     FWD(CallHfa) { WRAP(CallHfa(*argp, base, &call->saved_sp)); return nullptr; }
     FWD(CallMem) {
-        uint8_t *ptr = call->AllocHeap(op->type->size);
-        *(uint8_t **)(base + op->s1) = ptr;
+        uint8_t *ptr = call->AllocHeap(op->b);
+        *(uint8_t **)(base + op->a1l) = ptr;
+
         WRAP(CallG(*argp, base, &call->saved_sp));
         *(uint8_t **)base = ptr;
+
         return nullptr;
     }
     FWD(CallGX) { CALL(GX); return nullptr; }
@@ -658,10 +753,12 @@ napi_value RunForward(CallData *call, uint8_t *base, napi_value *argp, const OpD
     FWD(CallDGX) { CALL(DGX); return nullptr; }
     FWD(CallHfaX) { WRAP(CallHfaX(*argp, base, &call->saved_sp)); return nullptr; }
     FWD(CallMemX) {
-        uint8_t *ptr = call->AllocHeap(op->type->size);
-        *(uint8_t **)(base + op->s1) = ptr;
+        uint8_t *ptr = call->AllocHeap(op->b);
+        *(uint8_t **)(base + op->a1l) = ptr;
+
         WRAP(CallGX(*argp, base, &call->saved_sp));
         *(uint8_t **)base = ptr;
+
         return nullptr;
     }
 
@@ -724,10 +821,15 @@ napi_value RunForward(CallData *call, uint8_t *base, napi_value *argp, const OpD
         return NewFloat(call->env, d);
     }
     FWD(ReturnPrototype) { K_UNREACHABLE(); return nullptr; }
-    FWD(ReturnAggregateReg) { return DecodeObject(call->instance, base, op->type); }
+    FWD(ReturnAggregateReg) {
+        const TypeInfo *type = GetType(call->instance, op->b);
+        return DecodeObject(call->instance, base, type);
+    }
     FWD(ReturnAggregateMem) {
+        const TypeInfo *type = GetType(call->instance, op->b);
         uintptr_t ret = *(uintptr_t *)base;
-        return DecodeObject(call->instance, (const uint8_t *)ret, op->type);
+
+        return DecodeObject(call->instance, (const uint8_t *)ret, type);
     }
 
 #undef INTEGER_SWAP
@@ -774,28 +876,29 @@ int RunRelay(CallData *call, uint8_t *base, napi_value *argp, const OpData *op)
 
 #define INTEGER(CType) \
         do { \
-            const uint8_t *src = base + op->i; \
+            const uint8_t *src = base + op->a; \
             CType v = *(const CType *)src; \
              \
             *argp++ = NewInt(call->env, v); \
         } while (false)
 #define INTEGER_SWAP(CType) \
         do { \
-            const uint8_t *src = base + op->i; \
+            const uint8_t *src = base + op->a; \
             CType v = *(const CType *)src; \
              \
             *argp++ = NewInt(call->env, ReverseBytes(v)); \
         } while (false)
 #define DISPOSE(Ptr) \
         do { \
-            if (op->type->dispose) { \
-                op->type->dispose(call->instance, op->type, (Ptr)); \
+            if (IsTypeDisposable(op->b)) { \
+                const TypeInfo *type = GetType(call->instance, op->b); \
+                type->dispose(call->instance, type, (Ptr)); \
             } \
         } while (false)
 
     RELAY(PushVoid) { K_UNREACHABLE(); }
     RELAY(PushBool) {
-        const uint8_t *src = base + op->i;
+        const uint8_t *src = base + op->a;
         *argp++ = NewBool(call->env, *(bool *)src);
 
         NEXT();
@@ -815,7 +918,7 @@ int RunRelay(CallData *call, uint8_t *base, napi_value *argp, const OpData *op)
     RELAY(PushUInt64) { INTEGER(int64_t); NEXT(); }
     RELAY(PushUInt64S) { INTEGER_SWAP(int64_t); NEXT(); }
     RELAY(PushString) {
-        const uint8_t *src = base + op->i;
+        const uint8_t *src = base + op->a;
         const char *str = *(const char **)src;
 
         *argp++ = NewString(call->env, str);
@@ -824,7 +927,7 @@ int RunRelay(CallData *call, uint8_t *base, napi_value *argp, const OpData *op)
         NEXT();
     }
     RELAY(PushString16) {
-        const uint8_t *src = base + op->i;
+        const uint8_t *src = base + op->a;
         const char16_t *str16 = *(const char16_t **)src;
 
         *argp++ = NewString(call->env, str16);
@@ -833,7 +936,7 @@ int RunRelay(CallData *call, uint8_t *base, napi_value *argp, const OpData *op)
         NEXT();
     }
     RELAY(PushString32) {
-        const uint8_t *src = base + op->i;
+        const uint8_t *src = base + op->a;
         const char32_t *str32 = *(const char32_t **)src;
 
         *argp++ = NewString(call->env, str32);
@@ -842,7 +945,7 @@ int RunRelay(CallData *call, uint8_t *base, napi_value *argp, const OpData *op)
         NEXT();
     }
     RELAY(PushPointer) {
-        const uint8_t *src = base + op->i;
+        const uint8_t *src = base + op->a;
         void *ptr2 = *(void **)src;
 
         *argp++ = WrapPointer(call->env, ptr2);
@@ -854,63 +957,70 @@ int RunRelay(CallData *call, uint8_t *base, napi_value *argp, const OpData *op)
     RELAY(PushUnion) { K_UNREACHABLE(); }
     RELAY(PushArray) { K_UNREACHABLE(); }
     RELAY(PushFloat32) {
-        const uint8_t *src = base + op->i;
+        const uint8_t *src = base + op->a;
         *argp++ = NewFloat(call->env, *(float *)src);
 
         NEXT();
     }
     RELAY(PushFloat64) {
-        const uint8_t *src = base + op->i;
+        const uint8_t *src = base + op->a;
         *argp++ = NewFloat(call->env, *(double *)src);
 
         NEXT();
     }
     RELAY(PushCallback) {
-        const uint8_t *src = base + op->i;
+        const uint8_t *src = base + op->a;
         *argp++ = WrapPointer(call->env, *(void **)src);
 
         NEXT();
     }
     RELAY(PushPrototype) { K_UNREACHABLE(); }
     RELAY(PushAggregateReg) {
-        const uint8_t *src = base + op->i;
-        *argp++ = DecodeObject(call->instance, src, op->type);
+        const uint8_t *src = base + op->a;
+        const TypeInfo *type = GetType(call->instance, op->b);
+
+        *argp++ = DecodeObject(call->instance, src, type);
 
         NEXT();
     }
     RELAY(PushAggregatePair) {
         uintptr_t buf[2] = {
-            *(uintptr_t *)(base + op->s3),
-            *(uintptr_t *)(base + op->s4)
+            *(uintptr_t *)(base + op->a1),
+            *(uintptr_t *)(base + op->a2)
         };
-        *argp++ = DecodeObject(call->instance, (const uint8_t *)buf, op->type);
+        const TypeInfo *type = GetType(call->instance, op->b);
+
+        *argp++ = DecodeObject(call->instance, (const uint8_t *)buf, type);
 
         NEXT();
     }
     RELAY(PushAggregateSplit) {
-        int size = op->type->size;
-        int split = op->s1;
+        const TypeInfo *type = GetType(call->instance, op->b);
+        int size = type->size;
+        int split = op->a1l;
         uint8_t *buf = call->AllocHeap(size); // Wasteful, but rare
 
-        memcpy(buf, base + op->s3, split);
-        memcpy(buf + split, base + op->s4, size - split);
+        memcpy(buf, base + op->a1h, split);
+        memcpy(buf + split, base + op->a2, size - split);
 
-        *argp++ = DecodeObject(call->instance, (const uint8_t *)buf, op->type);
+        *argp++ = DecodeObject(call->instance, (const uint8_t *)buf, type);
 
         NEXT();
     }
     RELAY(PushAggregateMem) {
-        const uint8_t *src = *(const uint8_t **)(base + op->i);
-        *argp++ = DecodeObject(call->instance, src, op->type);
+        const uint8_t *src = *(const uint8_t **)(base + op->a);
+        const TypeInfo *type = GetType(call->instance, op->b);
+
+        *argp++ = DecodeObject(call->instance, src, type);
 
         NEXT();
     }
 
     RELAY(PushPair) {
-        int *ptr = (int *)(base + op->i);
+        int *ptr = (int *)(base + op->a);
 
-        ptr[0] = op->s1;
-        ptr[1] = op->s2;
+        ptr[0] = op->b1;
+        ptr[1] = op->b2;
 
         NEXT();
     }
@@ -924,7 +1034,7 @@ int RunRelay(CallData *call, uint8_t *base, napi_value *argp, const OpData *op)
 
 #define INTEGER(Suffix, CType) \
         do { \
-            napi_value value = call->CallCallback(argp, op->i); \
+            napi_value value = call->CallCallback(argp, op->a2); \
             if (!value) [[unlikely]] \
                 return -1; \
              \
@@ -934,12 +1044,12 @@ int RunRelay(CallData *call, uint8_t *base, napi_value *argp, const OpData *op)
                 return -1; \
             } \
              \
-            *(uintptr_t *)(base + op->s1) = (uintptr_t)v; \
+            *(uintptr_t *)(base - op->a1) = (uintptr_t)v; \
             return 1; \
         } while (false)
 #define INTEGER_SWAP(Suffix, CType) \
         do { \
-            napi_value value = call->CallCallback(argp, op->i); \
+            napi_value value = call->CallCallback(argp, op->a2); \
             if (!value) [[unlikely]] \
                 return -1; \
              \
@@ -949,12 +1059,12 @@ int RunRelay(CallData *call, uint8_t *base, napi_value *argp, const OpData *op)
                 return -1; \
             } \
              \
-            *(uintptr_t *)(base + op->s1) = (uintptr_t)ReverseBytes(v); \
+            *(uintptr_t *)(base - op->a1) = (uintptr_t)ReverseBytes(v); \
             return 1; \
         } while (false)
 #define INTEGER64(Suffix, CType) \
         do { \
-            napi_value value = call->CallCallback(argp, op->i); \
+            napi_value value = call->CallCallback(argp, op->a2); \
             if (!value) [[unlikely]] \
                 return -1; \
              \
@@ -964,12 +1074,12 @@ int RunRelay(CallData *call, uint8_t *base, napi_value *argp, const OpData *op)
                 return -1; \
             } \
              \
-            *(uint64_t *)(base + op->s1) = (uint64_t)v; \
+            *(uint64_t *)(base - op->a1) = (uint64_t)v; \
             return 1; \
         } while (false)
 #define INTEGER64_SWAP(Suffix, CType) \
         do { \
-            napi_value value = call->CallCallback(argp, op->i); \
+            napi_value value = call->CallCallback(argp, op->a2); \
             if (!value) [[unlikely]] \
                 return -1; \
              \
@@ -979,16 +1089,16 @@ int RunRelay(CallData *call, uint8_t *base, napi_value *argp, const OpData *op)
                 return -1; \
             } \
              \
-            *(uint64_t *)(base + op->s1) = (uint64_t)ReverseBytes(v); \
+            *(uint64_t *)(base - op->a1) = (uint64_t)ReverseBytes(v); \
             return 1; \
         } while (false)
 
     RELAY(RunVoid) {
-        call->CallCallback(argp, op->i);
+        call->CallCallback(argp, op->a2);
         return 1;
     }
     RELAY(RunBool) {
-        napi_value value = call->CallCallback(argp, op->i);
+        napi_value value = call->CallCallback(argp, op->a2);
         bool b;
 
         if (napi_get_value_bool(call->env, value, &b) == napi_boolean_expected) [[unlikely]] {
@@ -996,7 +1106,7 @@ int RunRelay(CallData *call, uint8_t *base, napi_value *argp, const OpData *op)
             return -1;
         }
 
-        *(uintptr_t *)(base + op->s1) = (uintptr_t)b;
+        *(uintptr_t *)(base - op->a1) = (uintptr_t)b;
         return 1;
     }
     RELAY(RunInt8) { INTEGER(G, int8_t); }
@@ -1014,7 +1124,7 @@ int RunRelay(CallData *call, uint8_t *base, napi_value *argp, const OpData *op)
     RELAY(RunUInt64) { INTEGER64(G, uint64_t); }
     RELAY(RunUInt64S) { INTEGER64_SWAP(G, uint64_t); }
     RELAY(RunString) {
-        napi_value value = call->CallCallback(argp, op->i);
+        napi_value value = call->CallCallback(argp, op->a2);
         const char *str;
 
         if (!value) [[unlikely]]
@@ -1022,11 +1132,11 @@ int RunRelay(CallData *call, uint8_t *base, napi_value *argp, const OpData *op)
         if (!call->PushString(value, 1, &str)) [[unlikely]]
             return -1;
 
-        *(uintptr_t *)(base + op->s1) = (uintptr_t)str;
+        *(uintptr_t *)(base - op->a1) = (uintptr_t)str;
         return 1;
     }
     RELAY(RunString16) {
-        napi_value value = call->CallCallback(argp, op->i);
+        napi_value value = call->CallCallback(argp, op->a2);
         const char16_t *str16;
 
         if (!value) [[unlikely]]
@@ -1034,11 +1144,11 @@ int RunRelay(CallData *call, uint8_t *base, napi_value *argp, const OpData *op)
         if (!call->PushString16(value, 1, &str16)) [[unlikely]]
             return -1;
 
-        *(uintptr_t *)(base + op->s1) = (uintptr_t)str16;
+        *(uintptr_t *)(base - op->a1) = (uintptr_t)str16;
         return 1;
     }
     RELAY(RunString32) {
-        napi_value value = call->CallCallback(argp, op->i);
+        napi_value value = call->CallCallback(argp, op->a2);
         const char32_t *str32;
 
         if (!value) [[unlikely]]
@@ -1046,38 +1156,42 @@ int RunRelay(CallData *call, uint8_t *base, napi_value *argp, const OpData *op)
         if (!call->PushString32(value, 1, &str32)) [[unlikely]]
             return -1;
 
-        *(uintptr_t *)(base + op->s1) = (uintptr_t)str32;
+        *(uintptr_t *)(base - op->a1) = (uintptr_t)str32;
         return 1;
     }
     RELAY(RunPointer) {
-        napi_value value = call->CallCallback(argp, op->i);
+        napi_value value = call->CallCallback(argp, op->a2);
         void *ptr;
+
+        const TypeInfo *type = GetType(call->instance, op->b);
 
         if (!value) [[unlikely]]
             return -1;
-        if (!call->PushPointer(value, op->type, 1, &ptr)) [[unlikely]]
+        if (!call->PushPointer(value, type, 1, &ptr)) [[unlikely]]
             return -1;
 
-        *(uintptr_t *)(base + op->s1) = (uintptr_t)ptr;
+        *(uintptr_t *)(base - op->a1) = (uintptr_t)ptr;
         return 1;
     }
     RELAY(RunCallback) {
-        napi_value value = call->CallCallback(argp, op->i);
+        napi_value value = call->CallCallback(argp, op->a2);
         void *ptr;
+
+        const TypeInfo *type = GetType(call->instance, op->b);
 
         if (!value) [[unlikely]]
             return -1;
-        if (!call->PushCallback(value, op->type, &ptr)) [[unlikely]]
+        if (!call->PushCallback(value, type, &ptr)) [[unlikely]]
             return -1;
 
-        *(uintptr_t *)(base + op->s1) = (uintptr_t)ptr;
+        *(uintptr_t *)(base - op->a1) = (uintptr_t)ptr;
         return 1;
     }
     RELAY(RunRecord) { K_UNREACHABLE(); }
     RELAY(RunUnion) { K_UNREACHABLE(); }
     RELAY(RunArray) { K_UNREACHABLE(); }
     RELAY(RunFloat32) {
-        napi_value value = call->CallCallback(argp, op->i);
+        napi_value value = call->CallCallback(argp, op->a2);
         float f;
 
         if (!value) [[unlikely]]
@@ -1088,14 +1202,14 @@ int RunRelay(CallData *call, uint8_t *base, napi_value *argp, const OpData *op)
         }
 
 #if K_SIZE_MAX == INT64_MAX
-        memset(base + op->s1, 0xFF, 8);
+        memset(base - op->a1, 0xFF, 8);
 #endif
-        *(float *)(base + op->s1) = f;
+        *(float *)(base - op->a1) = f;
 
         return 1;
     }
     RELAY(RunFloat64) {
-        napi_value value = call->CallCallback(argp, op->i);
+        napi_value value = call->CallCallback(argp, op->a2);
         double d;
 
         if (!value) [[unlikely]]
@@ -1105,16 +1219,19 @@ int RunRelay(CallData *call, uint8_t *base, napi_value *argp, const OpData *op)
             return -1;
         }
 
-        *(double *)(base + op->s1) = d;
+        *(double *)(base - op->a1) = d;
         return 1;
     }
     RELAY(RunPrototype) { K_UNREACHABLE(); }
     RELAY(RunAggregateG) {
-        napi_value value = call->CallCallback(argp, op->i);
+        napi_value value = call->CallCallback(argp, op->a2);
+
+        uint8_t *ptr = base - op->a1;
+        const TypeInfo *type = GetType(call->instance, op->b);
 
         if (!value) [[unlikely]]
             return -1;
-        if (!call->PushObject(value, op->type, base + op->s1)) [[unlikely]]
+        if (!call->PushObject(value, type, ptr)) [[unlikely]]
             return -1;
 
         return 1;
@@ -1124,31 +1241,35 @@ int RunRelay(CallData *call, uint8_t *base, napi_value *argp, const OpData *op)
     ALIAS(RunAggregateGG, RunAggregateG)
     ALIAS(RunAggregateDD, RunAggregateG)
     RELAY(RunAggregateGD) {
-        napi_value value = call->CallCallback(argp, op->i);
+        napi_value value = call->CallCallback(argp, op->a2);
+
         uintptr_t buf[2] = {};
+        const TypeInfo *type = GetType(call->instance, op->b);
 
         if (!value) [[unlikely]]
             return -1;
-        if (!call->PushObject(value, op->type, (uint8_t *)buf)) [[unlikely]]
+        if (!call->PushObject(value, type, (uint8_t *)buf)) [[unlikely]]
             return -1;
 
-        memcpy(base + op->s1, buf + 0, K_SIZE(uintptr_t));
-        memcpy(base + op->s2, buf + 1, K_SIZE(uintptr_t));
+        memcpy(base - op->a1l, buf + 0, K_SIZE(uintptr_t));
+        memcpy(base - op->a1h, buf + 1, K_SIZE(uintptr_t));
 
         return 1;
     }
     ALIAS(RunAggregateDG, RunAggregateGD)
     ALIAS(RunAggregateHfa, RunAggregateG)
     RELAY(RunAggregateMem) {
-        napi_value value = call->CallCallback(argp, op->i);
-        uint8_t *ptr = *(uint8_t **)(base + op->s1);
+        napi_value value = call->CallCallback(argp, op->a2);
+
+        uint8_t *ptr = *(uint8_t **)(base + op->a1l);
+        const TypeInfo *type = GetType(call->instance, op->b);
 
         if (!value) [[unlikely]]
             return -1;
-        if (!call->PushObject(value, op->type, ptr)) [[unlikely]]
+        if (!call->PushObject(value, type, ptr)) [[unlikely]]
             return -1;
 
-        *(uintptr_t *)(base + op->s2) = (uintptr_t)ptr;
+        *(uintptr_t *)(base - op->a1h) = (uintptr_t)ptr;
         return 1;
     }
 
@@ -1287,10 +1408,10 @@ bool PreparePlan(InstanceData *instance, FunctionInfo *func)
         K_ASSERT(Op2Code(op.o) != Opcode::PushStringFast);
         K_ASSERT(Op2Code(op.o) != Opcode::PushPointerFast);
 
-        if (Op2Code(op.o) == Opcode::PushString && op.s1 == 1) {
+        if (Op2Code(op.o) == Opcode::PushString && GetTypeDirections(op.b) == 1) {
             op.o = Code2Op(Opcode::PushStringFast);
         }
-        if (Op2Code(op.o) == Opcode::PushPointer && op.type->ref.conversion == BufferConversion::None) {
+        if (Op2Code(op.o) == Opcode::PushPointer && GetType(instance, op.b)->ref.conversion == BufferConversion::None) {
             op.o = Code2Op(Opcode::PushPointerFast);
         }
 
@@ -1356,7 +1477,7 @@ bool PreparePlan(InstanceData *instance, FunctionInfo *func)
 
                 func->plan.async.Append({ .o = Code2Op(Opcode::Yield) });
                 func->plan.async.Append({ .o = Code2Op(Opcode::CallG) });
-                func->plan.async.Append({ .o = Code2Op(ret), .type = op.type });
+                func->plan.async.Append({ .o = Code2Op(ret), .b = op.b });
             } break;
             case Opcode::RunRecord:
             case Opcode::RunUnion:
@@ -1364,12 +1485,12 @@ bool PreparePlan(InstanceData *instance, FunctionInfo *func)
             case Opcode::RunFloat32: {
                 func->plan.async.Append({ .o = Code2Op(Opcode::Yield) });
                 func->plan.async.Append({ .o = Code2Op(Opcode::CallF) });
-                func->plan.async.Append({ .o = Code2Op(Opcode::ReturnFloat32), .type = op.type });
+                func->plan.async.Append({ .o = Code2Op(Opcode::ReturnFloat32), .b = op.b });
             } break;
             case Opcode::RunFloat64: {
                 func->plan.async.Append({ .o = Code2Op(Opcode::Yield) });
                 func->plan.async.Append({ .o = Code2Op(Opcode::CallD) });
-                func->plan.async.Append({ .o = Code2Op(Opcode::ReturnFloat64), .type = op.type });
+                func->plan.async.Append({ .o = Code2Op(Opcode::ReturnFloat64), .b = op.b });
             } break;
             case Opcode::RunPrototype: { K_UNREACHABLE(); } break;
             case Opcode::RunAggregateG:
@@ -1385,12 +1506,14 @@ bool PreparePlan(InstanceData *instance, FunctionInfo *func)
 
                 func->plan.async.Append({ .o = Code2Op(Opcode::Yield) });
                 func->plan.async.Append({ .o = Code2Op(call) });
-                func->plan.async.Append({ .o = Code2Op(Opcode::ReturnAggregateReg), .type = op.type });
+                func->plan.async.Append({ .o = Code2Op(Opcode::ReturnAggregateReg), .b = op.b });
             } break;
             case Opcode::RunAggregateMem: {
+                const TypeInfo *type = GetType(instance, op.b);
+
                 func->plan.async.Append({ .o = Code2Op(Opcode::Yield) });
-                func->plan.async.Append({ .o = Code2Op(Opcode::CallMem), .s1 = op.s1, .type = op.type });
-                func->plan.async.Append({ .o = Code2Op(Opcode::ReturnAggregateMem), .type = op.type });
+                func->plan.async.Append({ .o = Code2Op(Opcode::CallMem), .a1l = op.a1l, .b = (uint32_t)type->size });
+                func->plan.async.Append({ .o = Code2Op(Opcode::ReturnAggregateMem), .b = op.b });
             } break;
             case Opcode::RunVoidX:
             case Opcode::RunBoolX:
@@ -1418,7 +1541,7 @@ bool PreparePlan(InstanceData *instance, FunctionInfo *func)
 
                 func->plan.async.Append({ .o = Code2Op(Opcode::Yield) });
                 func->plan.async.Append({ .o = Code2Op(Opcode::CallGX) });
-                func->plan.async.Append({ .o = Code2Op(ret), .type = op.type });
+                func->plan.async.Append({ .o = Code2Op(ret), .b = op.b });
             } break;
             case Opcode::RunRecordX:
             case Opcode::RunUnionX:
@@ -1426,12 +1549,12 @@ bool PreparePlan(InstanceData *instance, FunctionInfo *func)
             case Opcode::RunFloat32X: {
                 func->plan.async.Append({ .o = Code2Op(Opcode::Yield) });
                 func->plan.async.Append({ .o = Code2Op(Opcode::CallFX) });
-                func->plan.async.Append({ .o = Code2Op(Opcode::ReturnFloat32), .type = op.type });
+                func->plan.async.Append({ .o = Code2Op(Opcode::ReturnFloat32), .b = op.b });
             } break;
             case Opcode::RunFloat64X: {
                 func->plan.async.Append({ .o = Code2Op(Opcode::Yield) });
                 func->plan.async.Append({ .o = Code2Op(Opcode::CallDX) });
-                func->plan.async.Append({ .o = Code2Op(Opcode::ReturnFloat64), .type = op.type });
+                func->plan.async.Append({ .o = Code2Op(Opcode::ReturnFloat64), .b = op.b });
             } break;
             case Opcode::RunPrototypeX: { K_UNREACHABLE(); } break;
             case Opcode::RunAggregateGX:
@@ -1447,12 +1570,14 @@ bool PreparePlan(InstanceData *instance, FunctionInfo *func)
 
                 func->plan.async.Append({ .o = Code2Op(Opcode::Yield) });
                 func->plan.async.Append({ .o = Code2Op(call) });
-                func->plan.async.Append({ .o = Code2Op(Opcode::ReturnAggregateReg), .type = op.type });
+                func->plan.async.Append({ .o = Code2Op(Opcode::ReturnAggregateReg), .b = op.b });
             } break;
             case Opcode::RunAggregateMemX: {
+                const TypeInfo *type = GetType(instance, op.b);
+
                 func->plan.async.Append({ .o = Code2Op(Opcode::Yield) });
-                func->plan.async.Append({ .o = Code2Op(Opcode::CallMemX), .s1 = op.s1, .type = op.type });
-                func->plan.async.Append({ .o = Code2Op(Opcode::ReturnAggregateMem), .type = op.type });
+                func->plan.async.Append({ .o = Code2Op(Opcode::CallMemX), .a1l = op.a1l, .b = (uint32_t)type->size });
+                func->plan.async.Append({ .o = Code2Op(Opcode::ReturnAggregateMem), .b = op.b });
             } break;
 
             case Opcode::Yield: { K_UNREACHABLE(); } break;

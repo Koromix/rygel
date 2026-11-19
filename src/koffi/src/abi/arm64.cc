@@ -104,7 +104,7 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
                 int delta = (int)Opcode::PushVoid - (int)PrimitiveKind::Void;
                 Opcode code = (Opcode)((int)param.type->primitive + delta);
 
-                out_plan->sync.Append({ .o = Code2Op(code), .s1 = (int16_t)param.directions, .i = offset, .type = param.type });
+                out_plan->sync.Append({ .o = Code2Op(code), .a = offset, .b = PackType(instance, param) });
             } break;
 
             case PrimitiveKind::Record:
@@ -128,7 +128,7 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
                             stack_offset += registers * 8;
                         }
 
-                        out_plan->sync.Append({ .o = Code2Op(Opcode::PushAggregateReg), .i = offset, .type = param.type });
+                        out_plan->sync.Append({ .o = Code2Op(Opcode::PushAggregateReg), .a = offset, .b = PackType(instance, param) });
                     } else {
                         int offset = 0;
 
@@ -141,7 +141,7 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
                             stack_offset += 8;
                         }
 
-                        out_plan->sync.Append({ .o = Code2Op(Opcode::PushAggregateMem), .i = offset, .type = param.type });
+                        out_plan->sync.Append({ .o = Code2Op(Opcode::PushAggregateMem), .a = offset, .b = PackType(instance, param) });
                     }
 
                     break;
@@ -165,7 +165,7 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
                         fpr_index += hfa.count;
 
                         const TypeInfo *type = hfa.float32 ? ReshapeAggregate(instance, param.type, { .stride = 8 }) : param.type;
-                        out_plan->sync.Append({ .o = Code2Op(Opcode::PushAggregateReg), .i = offset, .type = type });
+                        out_plan->sync.Append({ .o = Code2Op(Opcode::PushAggregateReg), .a = offset, .b = PackType(instance, type, param.directions) });
                     } else {
                         fpr_index = fpr_max;
 
@@ -175,7 +175,7 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
                         offset = 19 * 8 + stack_offset;
                         stack_offset += 8;
 
-                        out_plan->sync.Append({ .o = Code2Op(Opcode::PushAggregateReg), .i = offset, .type = param.type });
+                        out_plan->sync.Append({ .o = Code2Op(Opcode::PushAggregateReg), .a = offset, .b = PackType(instance, param) });
                     }
                 } else if (param.type->size <= 16) {
                     int registers = (param.type->size + 7) / 8;
@@ -196,7 +196,7 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
                         stack_offset += registers * 8;
                     }
 
-                    out_plan->sync.Append({ .o = Code2Op(Opcode::PushAggregateReg), .i = offset, .type = param.type });
+                    out_plan->sync.Append({ .o = Code2Op(Opcode::PushAggregateReg), .a = offset, .b = PackType(instance, param) });
                 } else {
                     int offset = 0;
 
@@ -212,7 +212,7 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
                         stack_offset += 8;
                     }
 
-                    out_plan->sync.Append({ .o = Code2Op(Opcode::PushAggregateMem), .i = offset, .type = param.type });
+                    out_plan->sync.Append({ .o = Code2Op(Opcode::PushAggregateMem), .a = offset, .b = PackType(instance, param) });
                 }
             } break;
             case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
@@ -230,7 +230,7 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
                         stack_offset += 8;
                     }
 
-                    out_plan->sync.Append({ .o = Code2Op(Opcode::PushFloat32), .s1 = (int16_t)param.directions, .i = offset, .type = param.type });
+                    out_plan->sync.Append({ .o = Code2Op(Opcode::PushFloat32), .a = offset, .b = PackType(instance, param) });
 
                     break;
                 }
@@ -250,7 +250,7 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
 #endif
                 }
 
-                out_plan->sync.Append({ .o = Code2Op(Opcode::PushFloat32), .s1 = (int16_t)param.directions, .i = offset, .type = param.type });
+                out_plan->sync.Append({ .o = Code2Op(Opcode::PushFloat32), .a = offset, .b = PackType(instance, param) });
             } break;
             case PrimitiveKind::Float64: {
                 int offset = 0;
@@ -265,7 +265,7 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
                         stack_offset += 8;
                     }
 
-                    out_plan->sync.Append({ .o = Code2Op(Opcode::PushFloat64), .s1 = (int16_t)param.directions, .i = offset, .type = param.type });
+                    out_plan->sync.Append({ .o = Code2Op(Opcode::PushFloat64), .a = offset, .b = PackType(instance, param) });
 
                     break;
                 }
@@ -282,7 +282,7 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
                     stack_offset += 8;
                 }
 
-                out_plan->sync.Append({ .o = Code2Op(Opcode::PushFloat64), .s1 = (int16_t)param.directions, .i = offset, .type = param.type });
+                out_plan->sync.Append({ .o = Code2Op(Opcode::PushFloat64), .a = offset, .b = PackType(instance, param) });
             } break;
 
             case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;
@@ -315,12 +315,12 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
                 int delta = (int)Opcode::RunVoidX - (int)PrimitiveKind::Void;
                 Opcode run = (Opcode)((int)func->ret->primitive + delta);
 
-                out_plan->sync.Append({ .o = Code2Op(run), .s1 = -48, .i = (int32_t)func->parameters.len, .type = func->ret });
+                out_plan->sync.Append({ .o = Code2Op(run), .a1 = 48, .a2 = (int16_t)func->parameters.len, .b = PackType(instance, func->ret) });
             } else {
                 int delta = (int)Opcode::RunVoid - (int)PrimitiveKind::Void;
                 Opcode run = (Opcode)((int)func->ret->primitive + delta);
 
-                out_plan->sync.Append({ .o = Code2Op(run), .s1 = -48, .i = (int32_t)func->parameters.len, .type = func->ret });
+                out_plan->sync.Append({ .o = Code2Op(run), .a1 = 48, .a2 = (int16_t)func->parameters.len, .b = PackType(instance, func->ret) });
             }
         } break;
 
@@ -332,26 +332,26 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
                 Opcode run = fpr_index ? Opcode::RunAggregateHfaX : Opcode::RunAggregateHfa;
 
                 const TypeInfo *type = hfa.float32 ? ReshapeAggregate(instance, func->ret, { .stride = 8 }) : func->ret;
-                out_plan->sync.Append({ .o = Code2Op(run), .s1 = -48 + 16, .i = (int32_t)func->parameters.len, .type = type });
+                out_plan->sync.Append({ .o = Code2Op(run), .a1 = 48 - 16, .a2 = (int16_t)func->parameters.len, .b = PackType(instance, type) });
             } else if (func->ret->size <= 16) {
                 Opcode run = fpr_index ? Opcode::RunAggregateGGX : Opcode::RunAggregateGG;
-                out_plan->sync.Append({ .o = Code2Op(run), .s1 = -48, .i = (int32_t)func->parameters.len, .type = func->ret });
+                out_plan->sync.Append({ .o = Code2Op(run), .a1 = 48, .a2 = (int16_t)func->parameters.len, .b = PackType(instance, func->ret) });
             } else {
                 Opcode run = fpr_index ? Opcode::RunAggregateMemX : Opcode::RunAggregateMem;
-                int16_t x8 = 8 * 8;
+                uint8_t x8 = 8 * 8;
 
-                out_plan->sync.Append({ .o = Code2Op(run), .s1 = x8, .s2 = -48, .i = (int32_t)func->parameters.len, .type = func->ret });
+                out_plan->sync.Append({ .o = Code2Op(run), .a1l = x8, .a1h = 48, .a2 = (int16_t)func->parameters.len, .b = PackType(instance, func->ret) });
             }
         } break;
         case PrimitiveKind::Array: { K_UNREACHABLE(); } break;
 
         case PrimitiveKind::Float32: {
             Opcode run = fpr_index ? Opcode::RunFloat32X : Opcode::RunFloat32;
-            out_plan->sync.Append({ .o = Code2Op(run), .s1 = -48 + 16, .i = (int32_t)func->parameters.len, .type = func->ret });
+            out_plan->sync.Append({ .o = Code2Op(run), .a1 = 48 - 16, .a2 = (int16_t)func->parameters.len, .b = PackType(instance, func->ret) });
         } break;
         case PrimitiveKind::Float64: {
             Opcode run = fpr_index ? Opcode::RunFloat64X : Opcode::RunFloat64;
-            out_plan->sync.Append({ .o = Code2Op(run), .s1 = -48 + 16, .i = (int32_t)func->parameters.len, .type = func->ret });
+            out_plan->sync.Append({ .o = Code2Op(run), .a1 = 48 - 16, .a2 = (int16_t)func->parameters.len, .b = PackType(instance, func->ret) });
         } break;
 
         case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;

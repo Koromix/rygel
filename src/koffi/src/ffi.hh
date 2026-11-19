@@ -126,6 +126,7 @@ struct TypeInfo {
     const FunctionInfo *proto = nullptr; // Callback only
     const char *countedby = nullptr; // Pointer or array
 
+    mutable uint32_t type_idx = 0;
     mutable napi_ref construct = nullptr; // Union only
     mutable napi_ref defn = nullptr;
 
@@ -232,7 +233,7 @@ struct FunctionInfo {
     ExecutionPlan plan;
 
     // One instruction per argument, one for the native call, and three spares (just in case)
-    OpData small_sync[MaxDirectCallSize + 4];
+    alignas(64) OpData small_sync[MaxDirectCallSize + 4];
 
     ~FunctionInfo();
 
