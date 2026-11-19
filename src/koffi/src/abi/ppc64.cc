@@ -79,7 +79,7 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
             if (hfa.count && vec_index < vec_max) {
                 if (vec_index + hfa.count > vec_max) {
                     int split = 8 * (vec_max - vec_index);
-                    int offsets[2] = { 8 * vec_index, 36 * 8 };
+                    int offsets[2] = { 8 * 8 + 8 * vec_index, 36 * 8 };
 
                     vec_index = vec_max;
                     gpr_index = 36 + AlignLen(param.type->size - split, 8) / 8;
