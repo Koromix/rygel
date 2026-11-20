@@ -1527,6 +1527,16 @@ bool PreparePlan(InstanceData *instance, FunctionInfo *func)
         }
     }
 
+    if (func->variadic) {
+#if defined(MUST_TAIL)
+        for (OpData &op: func->plan.sync) {
+            op.o = (void *)ForwardDispatch[(uintptr_t)op.o];
+        }
+#endif
+
+        return true;
+    }
+
     func->plan.relay = func->plan.sync;
 
     for (OpData &op: func->plan.sync) {
