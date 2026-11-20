@@ -55,8 +55,8 @@ index 000000000..cf4dfee03
 +#ifndef CMARK_GFM_VERSION_H
 +#define CMARK_GFM_VERSION_H
 +
-+#define CMARK_GFM_VERSION ((0 << 24) | (29 << 16) | (0 << 8) | 13)
-+#define CMARK_GFM_VERSION_STRING "0.29.0.gfm.13"
++#define CMARK_GFM_VERSION ((0 << 24) | (29 << 16) | (0 << 8) | 14)
++#define CMARK_GFM_VERSION_STRING "0.29.0.gfm.14"
 +
 +#endif
 diff --git a/vendor/cmark-gfm/src/config.h b/vendor/cmark-gfm/src/config.h
