@@ -1602,9 +1602,9 @@ Napi::Function LibraryHandle::InitClass(InstanceData *instance)
 
     // node-addon-api wants std::vector
     std::vector<Napi::ClassPropertyDescriptor<LibraryHandle>> properties = {
-        InstanceMethod("func", &LibraryHandle::Func, napi_default, instance),
-        InstanceMethod("symbol", &LibraryHandle::Symbol, napi_default, instance),
-        InstanceMethod("unload", &LibraryHandle::Unload, napi_default, instance)
+        InstanceMethod("func", &LibraryHandle::Func, napi_default_method, instance),
+        InstanceMethod("symbol", &LibraryHandle::Symbol, napi_default_method, instance),
+        InstanceMethod("unload", &LibraryHandle::Unload, napi_default_method, instance)
     };
 
     if (Napi::Value dispose = env.RunScript("Symbol.dispose"); !IsNullOrUndefined(env, dispose)) {
