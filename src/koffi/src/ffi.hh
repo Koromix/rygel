@@ -314,14 +314,12 @@ struct InstanceData {
     Napi::FunctionReference construct_type;
     Napi::FunctionReference construct_poll;
     Napi::Reference<Napi::Symbol> active_symbol;
+    Napi::FunctionReference wrap_variadic;
 
     InstanceMemory sync_memory;
     CallData *sync_call = nullptr;
     TransientAllocator sync_transient { this };
     bool pending_reclaim = false;
-
-    // Variadic cache
-    FunctionInfo *variadic_func = nullptr;
 
     ObjectPool<AsyncCall> *async_calls = nullptr;
     int async_temporaries = 0;

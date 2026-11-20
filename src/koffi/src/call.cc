@@ -1461,7 +1461,7 @@ static TRANSLATE_FUNC napi_value TranslateNormalCall(napi_env env, napi_callback
         ThrowError<Napi::TypeError>(env, "Expected %1 arguments, got %2", func->required_parameters, count);
         return nullptr;
     }
-    args[func->required_parameters] = (napi_value)func->native;
+    args[func->parameters.len] = (napi_value)func->native;
 
     return TranslateNormalCall(env, func, args);
 }
@@ -1506,140 +1506,82 @@ static TRANSLATE_FUNC napi_value TranslateNormalCallDebugAsync(napi_env env, nap
     return ret;
 }
 
-static TRANSLATE_FUNC K_FORCE_INLINE napi_value TranslateVariadicCall(napi_env env, const FunctionInfo *func, napi_value *args, Size count)
+#undef TRANSLATE_FUNC
+
+static bool SpecializeVariadicFunction(napi_env env, const FunctionInfo *func, napi_value *args, Size count, FunctionInfo *out_variadic)
 {
-    K_ASSERT(count >= func->required_parameters);
+    K_ASSERT(func->variadic);
 
     InstanceData *instance = func->instance;
 
-    FunctionInfo *variadic = nullptr;
-    K_DEFER_N(err_guard) { delete variadic; };
+    memcpy((void *)out_variadic, func, K_SIZE(*func));
+    memset((void *)&out_variadic->parameters, 0, K_SIZE(out_variadic->parameters));
+    out_variadic->parameters = func->parameters;
+    out_variadic->lib = func->lib ? func->lib->Ref() : nullptr;
 
-    // Try cached function
-    {
-        FunctionInfo *prev = instance->variadic_func;
+    for (Size i = 0; i < (Size)count; i++) {
+        ParameterInfo param = {};
 
-        if (prev && prev->native == args[count]) {
-            Size specified = (count - prev->required_parameters);
-            Size processed = (prev->parameters.len - prev->required_parameters) * 2;
+        param.type = ResolveType(instance, args[i], true, &param.directions);
 
-            if (specified == processed) {
-                bool match = true;
-
-                for (Size i = prev->required_parameters, j = prev->required_parameters; i < (Size)count; i += 2, j++) {
-                    int directions;
-                    const TypeInfo *type = ResolveType(instance, args[i], true, &directions);
-
-                    if (type != prev->parameters[j].type || directions != prev->parameters[j].directions) [[unlikely]] {
-                        match = false;
-                        break;
-                    }
-                }
-
-                if (match) [[likely]] {
-                    variadic = prev;
-
-                    // If an error happens it'll get destroyed, so don't keep it around
-                    instance->variadic_func = nullptr;
-                }
-            }
+        if (!param.type) [[unlikely]]
+            return false;
+        if (!CanPassType(param.type, param.directions)) [[unlikely]] {
+            ThrowError<Napi::TypeError>(env, "Type %1 cannot be used as a parameter", param.type->name);
+            return false;
         }
-    }
-
-    if (!variadic) {
-        variadic = new FunctionInfo();
-
-        memcpy((void *)variadic, func, K_SIZE(*func));
-        memset((void *)&variadic->parameters, 0, K_SIZE(variadic->parameters));
-
-        variadic->parameters = func->parameters;
-        variadic->lib = nullptr;
-
-        if ((count - variadic->required_parameters) % 2) [[unlikely]] {
-            ThrowError<Napi::Error>(env, "Missing value argument for variadic call");
-            return nullptr;
+        if (out_variadic->parameters.len >= MaxParameters) [[unlikely]] {
+            ThrowError<Napi::TypeError>(env, "Functions cannot have more than %1 parameters", MaxParameters);
+            return false;
         }
 
-        for (Size i = variadic->required_parameters; i < count; i += 2) {
-            ParameterInfo param = {};
+        param.variadic = true;
 
-            param.type = ResolveType(instance, args[i], true, &param.directions);
-
-            if (!param.type) [[unlikely]]
-                return nullptr;
-            if (!CanPassType(param.type, param.directions)) [[unlikely]] {
-                ThrowError<Napi::TypeError>(env, "Type %1 cannot be used as a parameter", param.type->name);
-                return nullptr;
-            }
-            if (variadic->parameters.len >= MaxParameters) [[unlikely]] {
-                ThrowError<Napi::TypeError>(env, "Functions cannot have more than %1 parameters", MaxParameters);
-                return nullptr;
-            }
-
-            param.variadic = true;
-
-            variadic->parameters.Append(param);
-        }
-
-        if (!PreparePlan(instance, variadic)) [[unlikely]]
-            return nullptr;
+        out_variadic->parameters.Append(param);
     }
 
-    // Regroup proper arguments
-    {
-        napi_value *ptr = args + func->required_parameters;
-        Size varargs = (count - func->required_parameters) / 2;
+    out_variadic->required_parameters = out_variadic->parameters.len;
 
-        for (Size i = 0; i < varargs; i++) {
-            ptr[i] = ptr[2 * i + 1];
-        }
-
-        ptr[varargs] = args[count];
-    }
-
-    CallData call(env, instance, nullptr, func->sync_memory);
-
-    instance->sync_call = &call;
-
-    napi_value ret = call.Run(variadic, args);
-    call.PopOutputArguments();
-
-    if (variadic != instance->variadic_func) {
-        err_guard.Disable();
-
-        delete instance->variadic_func;
-        instance->variadic_func = variadic;
-    }
-
-    return ret;
+    return PreparePlan(instance, out_variadic);
 }
 
-static TRANSLATE_FUNC napi_value TranslateVariadicCall(napi_env env, napi_callback_info info)
+static napi_value SpecializeVariadicFunction(napi_env env, napi_callback_info info)
 {
-    static_assert(MaxParameters >= 16);
-
-    napi_value args[MaxParameters * 2 + 1];
-    size_t count = 12;
+    napi_value args[MaxParameters];
+    size_t count = 6;
     const FunctionInfo *func;
 
     NAPI_OK(napi_get_cb_info(env, info, &count, args, nullptr, (void **)&func));
 
-    if (count > 12) {
-        count = std::min(count, (size_t)MaxParameters * 2);
+    if (count > 6) {
+        count = std::min(count, (size_t)MaxParameters);
 
         size_t copy = count;
         NAPI_OK(napi_get_cb_info(env, info, &copy, args, nullptr, nullptr));
     }
-    if (count < (size_t)func->required_parameters) [[unlikely]] {
-        ThrowError<Napi::TypeError>(env, "Expected %1 arguments or more, got %2", func->required_parameters, count);
+
+    FunctionInfo *variadic = new FunctionInfo();
+    K_DEFER { variadic->Unref(); };
+
+    if (!SpecializeVariadicFunction(env, func, args, count, variadic))
         return nullptr;
+
+    InstanceData *instance = func->instance;
+
+    Napi::Function wrapper;
+    {
+        napi_value value;
+        NAPI_OK(napi_create_function(env, variadic->name, NAPI_AUTO_LENGTH, TranslateNormalCall, (void *)variadic->Ref(), &value));
+
+        wrapper = Napi::Function(env, value);
+        wrapper.AddFinalizer([](Napi::BasicEnv, FunctionInfo *func) { func->Unref(); }, (FunctionInfo *)variadic);
     }
-    args[count] = (napi_value)func->native;
 
-    return TranslateVariadicCall(env, func, args, (Size)count);
+    napi_value meta = DescribeFunction(instance, variadic);
+    wrapper.Set("info", meta);
+
+    return wrapper;
 }
-
-#undef TRANSLATE_FUNC
 
 void AsyncCall::Init(InstanceData *instance, bool resident)
 {
@@ -1888,7 +1830,29 @@ napi_value CallPointer(Napi::Env env, const FunctionInfo *proto, napi_value *arg
     }
 
     if (proto->variadic) {
-        return TranslateVariadicCall(env, proto, args, count);
+        FunctionInfo variadic;
+
+        if ((count - proto->required_parameters) % 2) {
+            ThrowError<Napi::Error>(env, "Missing value argument for variadic call");
+            return nullptr;
+        }
+
+        // Create temporary on-stack specialized function
+        {
+            napi_value types[MaxParameters];
+            Size extra = 0;
+
+            for (Size i = proto->required_parameters, j = i; i < count; i += 2) {
+                types[extra++] = args[i];
+                args[j++] = args[i + 1];
+            }
+
+            if (!SpecializeVariadicFunction(env, proto, types, extra, &variadic))
+                return nullptr;
+        }
+
+        args[variadic.required_parameters] = args[count];
+        return TranslateNormalCall(env, &variadic, args);
     } else {
         args[proto->required_parameters] = args[count];
         return TranslateNormalCall(env, proto, args);
@@ -1964,6 +1928,7 @@ napi_value DescribeFunction(InstanceData *instance, const FunctionInfo *func)
     NAPI_OK(napi_create_array_with_length(env, (size_t)func->parameters.len, &arguments));
 
     meta.Set("name", NewString(env, func->name));
+    meta.Set("variadic", NewBool(env, func->variadic));
     meta.Set("arguments", arguments);
     meta.Set("result", WrapType(instance, func->ret));
 
@@ -1973,6 +1938,7 @@ napi_value DescribeFunction(InstanceData *instance, const FunctionInfo *func)
 
         obj.Set("type", WrapType(instance, param.type));
         obj.Set("direction", NewString(env, DirectionNames[param.directions]));
+        obj.Set("variadic", NewBool(env, param.variadic));
 
         NAPI_OK(napi_set_element(env, arguments, (uint32_t)i, obj));
     }
@@ -1992,13 +1958,25 @@ napi_value WrapFunction(InstanceData *instance, const FunctionInfo *func)
 {
     Napi::Env env = instance->env;
 
+    napi_value meta = DescribeFunction(instance, func);
+
     Napi::Function wrapper;
-    {
+
+    if (func->variadic) {
+        napi_value specialize;
+        NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, SpecializeVariadicFunction, (void *)func->Ref(), &specialize));
+        NAPI_OK(napi_add_finalizer(env, specialize, (void *)func, [](node_api_basic_env, void *data, void *) { ((FunctionInfo *)data)->Unref(); }, nullptr, nullptr));
+
+        napi_value args[] = { meta, specialize };
+        napi_value call = instance->wrap_variadic.Call(env.Undefined(), K_LEN(args), args);
+
+        wrapper = Napi::Function(env, call);
+
+        wrapper.Set("specialize", specialize);
+    } else {
         napi_value value;
 
-        if (func->variadic) {
-            NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateVariadicCall, (void *)func->Ref(), &value));
-        } else if (IsDebugAsyncEnabled()) {
+        if (IsDebugAsyncEnabled()) {
             NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateNormalCallDebugAsync, (void *)func->Ref(), &value));
         } else if (func->parameters.len <= MaxDirectCallSize) {
             K_ASSERT(func->plan.sync.len <= K_LEN(func->small_sync));
@@ -2022,19 +2000,17 @@ napi_value WrapFunction(InstanceData *instance, const FunctionInfo *func)
 
         wrapper = Napi::Function(env, value);
         wrapper.AddFinalizer([](Napi::BasicEnv, FunctionInfo *func) { func->Unref(); }, (FunctionInfo *)func);
+
+        // Async async variant
+        {
+            napi_value async;
+            NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateAsyncCall, (void *)func->Ref(), &async));
+            NAPI_OK(napi_add_finalizer(env, async, (void *)func, [](node_api_basic_env, void *data, void *) { ((FunctionInfo *)data)->Unref(); }, nullptr, nullptr));
+
+            wrapper.Set("async", async);
+        }
     }
 
-    if (!func->variadic) {
-        napi_value value;
-        NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateAsyncCall, (void *)func->Ref(), &value));
-
-        Napi::Function async = Napi::Function(env, value);
-        async.AddFinalizer([](Napi::BasicEnv, FunctionInfo *func) { func->Unref(); }, (FunctionInfo *)func);
-
-        wrapper.Set("async", async);
-    }
-
-    napi_value meta = DescribeFunction(instance, func);
     wrapper.Set("info", meta);
 
     return wrapper;

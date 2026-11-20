@@ -2961,6 +2961,52 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
         exports.Set("TypeObject", instance->construct_type.Value());
     }
 
+    // Init internal JS functions
+    {
+        napi_value wrap_variadic = env.RunScript(R"(
+            function wrap(info, specialize) {
+                let required = info.arguments.length;
+
+                let cache_func = null;
+                let cache_types = [Symbol()];
+
+                let func = function (...args) {
+                    let extra = args.length - required;
+                    let match = (extra == cache_types.length * 2) &&
+                                cache_types.every((type, idx) => type === args[required + idx * 2]);
+
+                    if (match) {
+                        for (let i = required + 1, j = required; i < args.length; i += 2)
+                            args[j++] = args[i];
+                    } else {
+                        if (extra % 2)
+                            throw new Error("Missing value argument for variadic call");
+
+                        let types = [];
+
+                        for (let i = required, j = required; i < args.length; i += 2) {
+                            types.push(args[i]);
+                            args[j++] = args[i + 1];
+                        }
+
+                        cache_func = specialize(...types);
+                        cache_types = types;
+                    }
+
+                    return cache_func(...args);
+                };
+
+                func.info = info;
+
+                return func;
+            }
+
+            wrap
+        )");
+
+        instance->wrap_variadic = Napi::Persistent(Napi::Function(env, wrap_variadic));
+    }
+
     // Init base types
     {
         Napi::Object types = Napi::Object::New(env);
@@ -3077,10 +3123,6 @@ void ReleaseInstance(InstanceData *instance, bool reusable)
         napi_release_threadsafe_function(instance->broker, napi_tsfn_abort);
         instance->broker = nullptr;
     }
-
-    // Clear variadic cache
-    delete instance->variadic_func;
-    instance->variadic_func = nullptr;
 
     // Clean-up leftover sync allocations
     instance->sync_transient.Reclaim();
