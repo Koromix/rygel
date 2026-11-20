@@ -321,8 +321,6 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
     }
 
     out_plan->stk_size = stk_size;
-
-    out_plan->relay = out_plan->sync;
 }
 
 }

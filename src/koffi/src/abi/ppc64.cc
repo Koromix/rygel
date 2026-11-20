@@ -212,8 +212,6 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
     // Compute required stack size
     Size needed = 8 * std::max(36, gpr_index);
     out_plan->stk_size = AlignLen(needed, 16);
-
-    out_plan->relay = out_plan->sync;
 }
 
 }

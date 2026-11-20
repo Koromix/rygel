@@ -107,8 +107,6 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
 
         out_plan->stk_size = AlignLen(needed, 16);
     }
-
-    out_plan->relay = out_plan->sync;
 }
 
 }

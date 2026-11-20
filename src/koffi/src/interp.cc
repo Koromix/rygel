@@ -366,15 +366,6 @@ napi_value RunForward(CallData *call, uint8_t *base, napi_value *argp, const OpD
         NEXT();
     }
 
-    FWD(PushPair) {
-        int *ptr = (int *)(base + op->a);
-
-        ptr[0] = op->b1;
-        ptr[1] = op->b2;
-
-        NEXT();
-    }
-
     FWD(PushStringFast) {
         napi_value arg = *argp++;
 
@@ -404,6 +395,8 @@ napi_value RunForward(CallData *call, uint8_t *base, napi_value *argp, const OpD
 
         NEXT();
     }
+
+    FWD(ConfigRelay) { NEXT(); }
 
 #undef INTEGER64_SWAP
 #undef INTEGER64
@@ -1016,7 +1009,10 @@ int RunRelay(CallData *call, uint8_t *base, napi_value *argp, const OpData *op)
         NEXT();
     }
 
-    RELAY(PushPair) {
+    ALIAS(PushStringFast, PushString)
+    ALIAS(PushPointerFast, PushPointer)
+
+    RELAY(ConfigRelay) {
         int *ptr = (int *)(base + op->a);
 
         ptr[0] = op->b1;
@@ -1024,9 +1020,6 @@ int RunRelay(CallData *call, uint8_t *base, napi_value *argp, const OpData *op)
 
         NEXT();
     }
-
-    RELAY(PushStringFast) { K_UNREACHABLE(); }
-    RELAY(PushPointerFast) { K_UNREACHABLE(); }
 
 #undef DISPOSE
 #undef INTEGER_SWAP
@@ -1384,6 +1377,124 @@ int RunRelay(CallData *call, uint8_t *base, napi_value *argp, const OpData *op)
     #pragma warning(pop)
 #endif
 
+#if defined(MUST_TAIL)
+
+static ForwardFunc *const ForwardDispatch[256] = {
+    #define PRIMITIVE(Name) ForwardPush ## Name,
+    #include "primitives.inc"
+    ForwardPushAggregateReg,
+    ForwardPushAggregatePair,
+    ForwardPushAggregateSplit,
+    ForwardPushAggregateMem,
+    ForwardPushStringFast,
+    ForwardPushPointerFast,
+    ForwardConfigRelay,
+    #define PRIMITIVE(Name) ForwardRun ## Name,
+    #include "primitives.inc"
+    ForwardRunAggregateG,
+    ForwardRunAggregateF,
+    ForwardRunAggregateD,
+    ForwardRunAggregateGG,
+    ForwardRunAggregateDD,
+    ForwardRunAggregateGD,
+    ForwardRunAggregateDG,
+    ForwardRunAggregateHfa,
+    ForwardRunAggregateMem,
+    #define PRIMITIVE(Name) ForwardRun ## Name ## X,
+    #include "primitives.inc"
+    ForwardRunAggregateGX,
+    ForwardRunAggregateFX,
+    ForwardRunAggregateDX,
+    ForwardRunAggregateGGX,
+    ForwardRunAggregateDDX,
+    ForwardRunAggregateGDX,
+    ForwardRunAggregateDGX,
+    ForwardRunAggregateHfaX,
+    ForwardRunAggregateMemX,
+    ForwardYield,
+    ForwardCallG,
+    ForwardCallF,
+    ForwardCallD,
+    ForwardCallGG,
+    ForwardCallDD,
+    ForwardCallGD,
+    ForwardCallDG,
+    ForwardCallHfa,
+    ForwardCallMem,
+    ForwardCallGX,
+    ForwardCallFX,
+    ForwardCallDX,
+    ForwardCallGGX,
+    ForwardCallDDX,
+    ForwardCallGDX,
+    ForwardCallDGX,
+    ForwardCallHfaX,
+    ForwardCallMemX,
+    #define PRIMITIVE(Name) ForwardReturn ## Name,
+    #include "primitives.inc"
+    ForwardReturnAggregateReg,
+    ForwardReturnAggregateMem
+};
+
+static RelayFunc *const RelayDispatch[256] = {
+    #define PRIMITIVE(Name) RelayPush ## Name,
+    #include "primitives.inc"
+    RelayPushAggregateReg,
+    RelayPushAggregatePair,
+    RelayPushAggregateSplit,
+    RelayPushAggregateMem,
+    RelayPushStringFast,
+    RelayPushPointerFast,
+    RelayConfigRelay,
+    #define PRIMITIVE(Name) RelayRun ## Name,
+    #include "primitives.inc"
+    RelayRunAggregateG,
+    RelayRunAggregateF,
+    RelayRunAggregateD,
+    RelayRunAggregateGG,
+    RelayRunAggregateDD,
+    RelayRunAggregateGD,
+    RelayRunAggregateDG,
+    RelayRunAggregateHfa,
+    RelayRunAggregateMem,
+    #define PRIMITIVE(Name) RelayRun ## Name ## X,
+    #include "primitives.inc"
+    RelayRunAggregateGX,
+    RelayRunAggregateFX,
+    RelayRunAggregateDX,
+    RelayRunAggregateGGX,
+    RelayRunAggregateDDX,
+    RelayRunAggregateGDX,
+    RelayRunAggregateDGX,
+    RelayRunAggregateHfaX,
+    RelayRunAggregateMemX,
+    RelayYield,
+    RelayCallG,
+    RelayCallF,
+    RelayCallD,
+    RelayCallGG,
+    RelayCallDD,
+    RelayCallGD,
+    RelayCallDG,
+    RelayCallHfa,
+    RelayCallMem,
+    RelayCallGX,
+    RelayCallFX,
+    RelayCallDX,
+    RelayCallGGX,
+    RelayCallDDX,
+    RelayCallGDX,
+    RelayCallDGX,
+    RelayCallHfaX,
+    RelayCallMemX,
+    #define PRIMITIVE(Name) RelayReturn ## Name,
+    #include "primitives.inc"
+    RelayReturnAggregateReg,
+    RelayReturnAggregateMem
+};
+
+#endif
+
 bool PreparePlan(InstanceData *instance, FunctionInfo *func)
 {
     K_ASSERT(!func->plan.sync.len);
@@ -1399,11 +1510,11 @@ bool PreparePlan(InstanceData *instance, FunctionInfo *func)
     AnalyseFunction(instance, func, &func->plan, &func->decorated_name);
 
     K_ASSERT(func->plan.sync.len);
-    K_ASSERT(func->plan.relay.len);
+    K_ASSERT(!func->plan.relay.len);
     K_ASSERT(!func->plan.async.len);
     K_ASSERT(func->plan.stk_size);
 
-    // Use optimized instructions (when possible) and prepare async plan
+    // Use optimized instructions (when possible)
     for (OpData &op: func->plan.sync) {
         K_ASSERT(Op2Code(op.o) != Opcode::PushStringFast);
         K_ASSERT(Op2Code(op.o) != Opcode::PushPointerFast);
@@ -1414,7 +1525,11 @@ bool PreparePlan(InstanceData *instance, FunctionInfo *func)
         if (Op2Code(op.o) == Opcode::PushPointer && GetType(instance, op.b)->ref.conversion == BufferConversion::None) {
             op.o = Code2Op(Opcode::PushPointerFast);
         }
+    }
 
+    func->plan.relay = func->plan.sync;
+
+    for (OpData &op: func->plan.sync) {
         switch (Op2Code(op.o)) {
             case Opcode::PushVoid:
             case Opcode::PushBool:
@@ -1447,9 +1562,10 @@ bool PreparePlan(InstanceData *instance, FunctionInfo *func)
             case Opcode::PushAggregatePair:
             case Opcode::PushAggregateSplit:
             case Opcode::PushAggregateMem:
-            case Opcode::PushPair:
             case Opcode::PushStringFast:
             case Opcode::PushPointerFast: { func->plan.async.Append(op); } break;
+
+            case Opcode::ConfigRelay: {} break;
 
             case Opcode::RunVoid:
             case Opcode::RunBool:
@@ -1634,120 +1750,6 @@ bool PreparePlan(InstanceData *instance, FunctionInfo *func)
     }
 
 #if defined(MUST_TAIL)
-    static ForwardFunc *const ForwardDispatch[256] = {
-        #define PRIMITIVE(Name) ForwardPush ## Name,
-        #include "primitives.inc"
-        ForwardPushAggregateReg,
-        ForwardPushAggregatePair,
-        ForwardPushAggregateSplit,
-        ForwardPushAggregateMem,
-        ForwardPushPair,
-        ForwardPushStringFast,
-        ForwardPushPointerFast,
-        #define PRIMITIVE(Name) ForwardRun ## Name,
-        #include "primitives.inc"
-        ForwardRunAggregateG,
-        ForwardRunAggregateF,
-        ForwardRunAggregateD,
-        ForwardRunAggregateGG,
-        ForwardRunAggregateDD,
-        ForwardRunAggregateGD,
-        ForwardRunAggregateDG,
-        ForwardRunAggregateHfa,
-        ForwardRunAggregateMem,
-        #define PRIMITIVE(Name) ForwardRun ## Name ## X,
-        #include "primitives.inc"
-        ForwardRunAggregateGX,
-        ForwardRunAggregateFX,
-        ForwardRunAggregateDX,
-        ForwardRunAggregateGGX,
-        ForwardRunAggregateDDX,
-        ForwardRunAggregateGDX,
-        ForwardRunAggregateDGX,
-        ForwardRunAggregateHfaX,
-        ForwardRunAggregateMemX,
-        ForwardYield,
-        ForwardCallG,
-        ForwardCallF,
-        ForwardCallD,
-        ForwardCallGG,
-        ForwardCallDD,
-        ForwardCallGD,
-        ForwardCallDG,
-        ForwardCallHfa,
-        ForwardCallMem,
-        ForwardCallGX,
-        ForwardCallFX,
-        ForwardCallDX,
-        ForwardCallGGX,
-        ForwardCallDDX,
-        ForwardCallGDX,
-        ForwardCallDGX,
-        ForwardCallHfaX,
-        ForwardCallMemX,
-        #define PRIMITIVE(Name) ForwardReturn ## Name,
-        #include "primitives.inc"
-        ForwardReturnAggregateReg,
-        ForwardReturnAggregateMem
-    };
-
-    static RelayFunc *const RelayDispatch[256] = {
-        #define PRIMITIVE(Name) RelayPush ## Name,
-        #include "primitives.inc"
-        RelayPushAggregateReg,
-        RelayPushAggregatePair,
-        RelayPushAggregateSplit,
-        RelayPushAggregateMem,
-        RelayPushPair,
-        RelayPushStringFast,
-        RelayPushPointerFast,
-        #define PRIMITIVE(Name) RelayRun ## Name,
-        #include "primitives.inc"
-        RelayRunAggregateG,
-        RelayRunAggregateF,
-        RelayRunAggregateD,
-        RelayRunAggregateGG,
-        RelayRunAggregateDD,
-        RelayRunAggregateGD,
-        RelayRunAggregateDG,
-        RelayRunAggregateHfa,
-        RelayRunAggregateMem,
-        #define PRIMITIVE(Name) RelayRun ## Name ## X,
-        #include "primitives.inc"
-        RelayRunAggregateGX,
-        RelayRunAggregateFX,
-        RelayRunAggregateDX,
-        RelayRunAggregateGGX,
-        RelayRunAggregateDDX,
-        RelayRunAggregateGDX,
-        RelayRunAggregateDGX,
-        RelayRunAggregateHfaX,
-        RelayRunAggregateMemX,
-        RelayYield,
-        RelayCallG,
-        RelayCallF,
-        RelayCallD,
-        RelayCallGG,
-        RelayCallDD,
-        RelayCallGD,
-        RelayCallDG,
-        RelayCallHfa,
-        RelayCallMem,
-        RelayCallGX,
-        RelayCallFX,
-        RelayCallDX,
-        RelayCallGGX,
-        RelayCallDDX,
-        RelayCallGDX,
-        RelayCallDGX,
-        RelayCallHfaX,
-        RelayCallMemX,
-        #define PRIMITIVE(Name) RelayReturn ## Name,
-        #include "primitives.inc"
-        RelayReturnAggregateReg,
-        RelayReturnAggregateMem
-    };
-
     for (OpData &op: func->plan.sync) {
         op.o = (void *)ForwardDispatch[(uintptr_t)op.o];
     }
