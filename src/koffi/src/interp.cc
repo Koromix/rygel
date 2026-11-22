@@ -1706,7 +1706,6 @@ bool PreparePlan(InstanceData *instance, FunctionInfo *func)
         for (OpData &op: func->plan.async) {
             op.o = (void *)ForwardDispatch[(uintptr_t)op.o];
         }
-
         for (OpData &op: func->plan.relay) {
             op.o = (void *)RelayDispatch[(uintptr_t)op.o];
         }
