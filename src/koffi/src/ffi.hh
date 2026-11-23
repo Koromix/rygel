@@ -41,7 +41,7 @@ static const int MaxResidentAsyncPools = 32;
 static const int MaxAsyncCalls = 4096;
 static const Size MaxParameters = 64;
 static const Size MaxTrampolines = 8192;
-static const Size MaxDirectCallSize = 8;
+static const Size MaxDirectCallSize = 12;
 
 enum class PrimitiveKind {
     #define PRIMITIVE(Name) Name,
@@ -239,8 +239,8 @@ struct FunctionInfo {
 
     ExecutionPlan plan;
 
-    // One instruction per argument, one for the native call, and three spares (just in case)
-    alignas(64) OpData small_sync[MaxDirectCallSize + 4];
+    // One instruction per argument, one for the native call, and one spare (just in case)
+    alignas(64) OpData small_sync[MaxDirectCallSize + 2];
 
     ~FunctionInfo();
 
