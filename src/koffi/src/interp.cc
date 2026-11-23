@@ -429,6 +429,14 @@ napi_value RunForward(CallData *call, uint8_t *base, napi_value *argp, const OpD
     #define WRAP(Expr) (call->DebugForward(), (Expr))
 #endif
 
+#define DISPOSE(Ptr) \
+        do { \
+            if (IsTypeDisposable(op->b)) { \
+                const TypeInfo *type = GetType(call->instance, op->b); \
+                type->dispose(call->instance, type, (Ptr)); \
+            } \
+        } while (false)
+
 #define INTEGER(Suffix, CType) \
         do { \
             uint64_t ret = WRAP(Call ## Suffix(*argp, base, &call->saved_sp)); \
@@ -438,13 +446,6 @@ napi_value RunForward(CallData *call, uint8_t *base, napi_value *argp, const OpD
         do { \
             uint64_t ret = WRAP(Call ## Suffix(*argp, base, &call->saved_sp)); \
             return NewInt(call->env, ReverseBytes((CType)ret)); \
-        } while (false)
-#define DISPOSE(Ptr) \
-        do { \
-            if (IsTypeDisposable(op->b)) { \
-                const TypeInfo *type = GetType(call->instance, op->b); \
-                type->dispose(call->instance, type, (Ptr)); \
-            } \
         } while (false)
 
     FWD(RunVoid) {
@@ -686,7 +687,6 @@ napi_value RunForward(CallData *call, uint8_t *base, napi_value *argp, const OpD
         return DecodeObject(call->instance, ptr, type);
     }
 
-#undef DISPOSE
 #undef INTEGER_SWAP
 #undef INTEGER
 
@@ -717,7 +717,33 @@ napi_value RunForward(CallData *call, uint8_t *base, napi_value *argp, const OpD
     FWD(Int64ToInt64) { INTEGER_TO_INTEGER(int64_t, int64_t); }
     FWD(UInt64ToUInt64) { INTEGER_TO_INTEGER(uint64_t, uint64_t); }
 
+    FWD(StringToInt32) {
+        napi_value arg = *argp++;
+
+        const char *str;
+        if (!call->PushString(arg, 1, &str)) [[unlikely]]
+            return nullptr;
+        *(const char **)(base + op->a) = str;
+
+        uint64_t ret = WRAP(CallG(*argp, base, &call->saved_sp)); \
+        return NewInt(call->env, (int32_t)ret); \
+    }
+    FWD(Int32ToString) {
+        napi_value arg = *argp++;
+
+        if (!TryNumber(call->env, arg, (int32_t *)(base + op->a))) [[unlikely]] {
+            ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected number", GetValueType(call->instance, arg));
+            return nullptr;
+        }
+
+        uint64_t ret = WRAP(CallG(*argp, base, &call->saved_sp));
+        napi_value value = NewString(call->env, (const char *)ret);
+        DISPOSE((void *)ret);
+        return value;
+    }
+
 #undef INTEGER_TO_INTEGER
+#undef DISPOSE
 
 #define CALL(Suffix) \
         do { \
@@ -1340,6 +1366,8 @@ int RunRelay(CallData *call, uint8_t *base, napi_value *argp, const OpData *op)
     RELAY(UInt32ToUInt32) { K_UNREACHABLE(); }
     RELAY(Int64ToInt64) { K_UNREACHABLE(); }
     RELAY(UInt64ToUInt64) { K_UNREACHABLE(); }
+    RELAY(StringToInt32) { K_UNREACHABLE(); }
+    RELAY(Int32ToString) { K_UNREACHABLE(); }
 
     RELAY(Yield) { K_UNREACHABLE(); }
 
@@ -1633,7 +1661,9 @@ bool PreparePlan(InstanceData *instance, FunctionInfo *func)
                 case Opcode::Int32ToInt32:
                 case Opcode::UInt32ToUInt32:
                 case Opcode::Int64ToInt64:
-                case Opcode::UInt64ToUInt64: { K_UNREACHABLE(); } break;
+                case Opcode::UInt64ToUInt64:
+                case Opcode::StringToInt32:
+                case Opcode::Int32ToString: { K_UNREACHABLE(); } break;
 
                 case Opcode::Yield: { K_UNREACHABLE(); } break;
 
@@ -1720,6 +1750,8 @@ bool PreparePlan(InstanceData *instance, FunctionInfo *func)
         FUSE(PushUInt32, RunUInt32, UInt32ToUInt32);
         FUSE(PushInt64, RunInt64, Int64ToInt64);
         FUSE(PushUInt64, RunUInt64, UInt64ToUInt64);
+        FUSE(PushInt32, RunString, Int32ToString);
+        FUSE(PushStringFast, RunInt32, StringToInt32);
 
 #undef FUSE
     }
