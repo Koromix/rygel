@@ -580,6 +580,14 @@ napi_value K_CONCAT(RunForward, RUN_SUFFIX)(CallData *call, uint8_t *base, napi_
     FWD(UInt64ToUInt64) { NUMBER_TO_NUMBER(G, uint64_t, uint64_t); }
     FWD(Float32ToFloat32) { NUMBER_TO_NUMBER(FX, float, float); }
     FWD(Float64ToFloat64) { NUMBER_TO_NUMBER(DX, double, double); }
+    FWD(Int64ToFloat64) { NUMBER_TO_NUMBER(D, int64_t, double); }
+    FWD(Float64ToInt64) { NUMBER_TO_NUMBER(GX, double, int64_t); }
+    FWD(Int32ToFloat32) { NUMBER_TO_NUMBER(F, int32_t, float); }
+    FWD(Float32ToInt32) { NUMBER_TO_NUMBER(GX, float, int32_t); }
+    FWD(Int64ToFloat32) { NUMBER_TO_NUMBER(F, int64_t, float); }
+    FWD(Float32ToInt64) { NUMBER_TO_NUMBER(GX, float, int64_t); }
+    FWD(Int32ToFloat64) { NUMBER_TO_NUMBER(D, int32_t, double); }
+    FWD(Float64ToInt32) { NUMBER_TO_NUMBER(GX, double, int32_t); }
 
     FWD(StringToInt32) {
         napi_value arg = *argp++;
@@ -1263,6 +1271,14 @@ int K_CONCAT(RunRelay, RUN_SUFFIX)(CallData *call, uint8_t *base, napi_value *ar
     RELAY(Int32ToString) { K_UNREACHABLE(); }
     RELAY(PointerToInt32) { K_UNREACHABLE(); }
     RELAY(Int32ToPointer) { K_UNREACHABLE(); }
+    RELAY(Int64ToFloat64) { K_UNREACHABLE(); }
+    RELAY(Float64ToInt64) { K_UNREACHABLE(); }
+    RELAY(Int32ToFloat32) { K_UNREACHABLE(); }
+    RELAY(Float32ToInt32) { K_UNREACHABLE(); }
+    RELAY(Int64ToFloat32) { K_UNREACHABLE(); }
+    RELAY(Float32ToInt64) { K_UNREACHABLE(); }
+    RELAY(Int32ToFloat64) { K_UNREACHABLE(); }
+    RELAY(Float64ToInt32) { K_UNREACHABLE(); }
 
     RELAY(Yield) { K_UNREACHABLE(); }
 

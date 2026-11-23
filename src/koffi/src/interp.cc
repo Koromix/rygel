@@ -355,7 +355,15 @@ bool PreparePlan(InstanceData *instance, FunctionInfo *func)
                 case Opcode::StringToInt32:
                 case Opcode::Int32ToString:
                 case Opcode::PointerToInt32:
-                case Opcode::Int32ToPointer: { K_UNREACHABLE(); } break;
+                case Opcode::Int32ToPointer:
+                case Opcode::Int64ToFloat64:
+                case Opcode::Float64ToInt64:
+                case Opcode::Int32ToFloat32:
+                case Opcode::Float32ToInt32:
+                case Opcode::Int64ToFloat32:
+                case Opcode::Float32ToInt64:
+                case Opcode::Int32ToFloat64:
+                case Opcode::Float64ToInt32: { K_UNREACHABLE(); } break;
 
                 case Opcode::Yield: { K_UNREACHABLE(); } break;
 
@@ -447,6 +455,14 @@ bool PreparePlan(InstanceData *instance, FunctionInfo *func)
         FUSE(PushStringFast, RunInt32, StringToInt32);
         FUSE(PushInt32, RunPointer, Int32ToPointer);
         FUSE(PushPointerFast, RunInt32, PointerToInt32);
+        FUSE(PushInt64, RunFloat64, Int64ToFloat64);
+        FUSE(PushFloat64, RunInt64, Float64ToInt64);
+        FUSE(PushInt32, RunFloat32, Int32ToFloat32);
+        FUSE(PushFloat32, RunInt32, Float32ToInt32);
+        FUSE(PushInt64, RunFloat32, Int64ToFloat32);
+        FUSE(PushFloat32, RunInt64, Float32ToInt64);
+        FUSE(PushInt32, RunFloat64, Int32ToFloat64);
+        FUSE(PushFloat64, RunInt32, Float64ToInt32);
 
 #undef FUSE
     }
