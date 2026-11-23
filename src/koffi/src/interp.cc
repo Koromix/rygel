@@ -700,13 +700,11 @@ napi_value RunForward(CallData *call, uint8_t *base, napi_value *argp, const OpD
     FWD(StringToInt32) {
         napi_value arg = *argp++;
 
-        const char *str;
-        if (!call->PushString(arg, 1, &str)) [[unlikely]]
+        if (!call->PushString(arg, 1, (const char **)(base + op->a))) [[unlikely]]
             return nullptr;
-        *(const char **)(base + op->a) = str;
 
-        uint64_t ret = WRAP(CallG(*argp, base, &call->saved_sp)); \
-        return NewNumber(call->env, (int32_t)ret); \
+        uint64_t ret = WRAP(CallG(*argp, base, &call->saved_sp));
+        return NewNumber(call->env, (int32_t)ret);
     }
     FWD(Int32ToString) {
         napi_value arg = *argp++;
@@ -718,6 +716,39 @@ napi_value RunForward(CallData *call, uint8_t *base, napi_value *argp, const OpD
 
         uint64_t ret = WRAP(CallG(*argp, base, &call->saved_sp));
         napi_value value = NewString(call->env, (const char *)ret);
+        DISPOSE((void *)ret);
+        return value;
+    }
+
+    FWD(PointerToInt32) {
+        napi_value arg = *argp++;
+
+        {
+            // Needed for fallback path
+            napi_valuetype kind;
+
+            if (!call->TryPointerFast(arg, (void **)(base + op->a), &kind)) [[unlikely]] {
+                const TypeInfo *type = GetType(call->instance, op->b);
+                int directions = GetTypeDirections(op->b);
+
+                if (!call->PushPointerFallback(arg, kind, type, directions, (void **)(base + op->a)))
+                    return nullptr;
+            }
+        }
+
+        uint64_t ret = WRAP(CallG(*argp, base, &call->saved_sp));
+        return NewNumber(call->env, (int32_t)ret);
+    }
+    FWD(Int32ToPointer) {
+        napi_value arg = *argp++;
+
+        if (!TryNumber(call->env, arg, (int32_t *)(base + op->a))) [[unlikely]] {
+            ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected number", GetValueType(call->instance, arg));
+            return nullptr;
+        }
+
+        uint64_t ret = WRAP(CallG(*argp, base, &call->saved_sp));
+        napi_value value = WrapPointer(call->env, (void *)ret);
         DISPOSE((void *)ret);
         return value;
     }
@@ -1350,6 +1381,8 @@ int RunRelay(CallData *call, uint8_t *base, napi_value *argp, const OpData *op)
     RELAY(Float64ToFloat64) { K_UNREACHABLE(); }
     RELAY(StringToInt32) { K_UNREACHABLE(); }
     RELAY(Int32ToString) { K_UNREACHABLE(); }
+    RELAY(PointerToInt32) { K_UNREACHABLE(); }
+    RELAY(Int32ToPointer) { K_UNREACHABLE(); }
 
     RELAY(Yield) { K_UNREACHABLE(); }
 
@@ -1647,7 +1680,9 @@ bool PreparePlan(InstanceData *instance, FunctionInfo *func)
                 case Opcode::Float32ToFloat32:
                 case Opcode::Float64ToFloat64:
                 case Opcode::StringToInt32:
-                case Opcode::Int32ToString: { K_UNREACHABLE(); } break;
+                case Opcode::Int32ToString:
+                case Opcode::PointerToInt32:
+                case Opcode::Int32ToPointer: { K_UNREACHABLE(); } break;
 
                 case Opcode::Yield: { K_UNREACHABLE(); } break;
 
@@ -1737,6 +1772,8 @@ bool PreparePlan(InstanceData *instance, FunctionInfo *func)
         FUSE(PushFloat64, RunFloat64, Float64ToFloat64);
         FUSE(PushInt32, RunString, Int32ToString);
         FUSE(PushStringFast, RunInt32, StringToInt32);
+        FUSE(PushInt32, RunPointer, Int32ToPointer);
+        FUSE(PushPointerFast, RunInt32, PointerToInt32);
 
 #undef FUSE
     }
