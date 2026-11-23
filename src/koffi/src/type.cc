@@ -588,8 +588,8 @@ static napi_value InitTypeDefinition(InstanceData *instance, const TypeInfo *typ
 
     defn.Set("name", NewString(env, type->name));
     defn.Set("primitive", PrimitiveKindNames[(int)type->primitive]);
-    defn.Set("size", NewInt(env, type->size));
-    defn.Set("alignment", NewInt(env, type->align));
+    defn.Set("size", NewNumber(env, type->size));
+    defn.Set("alignment", NewNumber(env, type->align));
     defn.Set("disposable", NewBool(env, !!type->dispose));
 
     if (!temporary) {
@@ -624,7 +624,7 @@ static napi_value InitTypeDefinition(InstanceData *instance, const TypeInfo *typ
 
         case PrimitiveKind::Array: {
             uint32_t len = type->size / type->ref.type->size;
-            defn.Set("length", NewInt(env, len));
+            defn.Set("length", NewNumber(env, len));
             defn.Set("hint", NameArrayHint(type->hint));
         } [[fallthrough]];
         case PrimitiveKind::Pointer: {

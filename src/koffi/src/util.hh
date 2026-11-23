@@ -267,20 +267,20 @@ static K_FORCE_INLINE napi_value GetNull(Napi::Env env) { napi_value value; NAPI
 
 static K_FORCE_INLINE napi_value NewBool(Napi::Env env, bool b) { napi_value value; NAPI_OK(napi_get_boolean(env, b, &value)); return value; }
 
-static K_FORCE_INLINE napi_value NewInt(Napi::Env env, char i) { napi_value value; NAPI_OK(napi_create_int32(env, (int32_t)i, &value)); return value; }
-static K_FORCE_INLINE napi_value NewInt(Napi::Env env, signed char i) { napi_value value; NAPI_OK(napi_create_int32(env, (int32_t)i, &value)); return value; }
-static K_FORCE_INLINE napi_value NewInt(Napi::Env env, unsigned char i) { napi_value value; NAPI_OK(napi_create_uint32(env, (uint32_t)i, &value)); return value; }
-static K_FORCE_INLINE napi_value NewInt(Napi::Env env, short i) { napi_value value; NAPI_OK(napi_create_int32(env, (int32_t)i, &value)); return value; }
-static K_FORCE_INLINE napi_value NewInt(Napi::Env env, unsigned short i) { napi_value value; NAPI_OK(napi_create_uint32(env, (uint32_t)i, &value)); return value; }
-static K_FORCE_INLINE napi_value NewInt(Napi::Env env, int i) { napi_value value; NAPI_OK(napi_create_int32(env, (int32_t)i, &value)); return value; }
-static K_FORCE_INLINE napi_value NewInt(Napi::Env env, unsigned int i) { napi_value value; NAPI_OK(napi_create_uint32(env, (uint32_t)i, &value)); return value; }
+static K_FORCE_INLINE napi_value NewNumber(Napi::Env env, char i) { napi_value value; NAPI_OK(napi_create_int32(env, (int32_t)i, &value)); return value; }
+static K_FORCE_INLINE napi_value NewNumber(Napi::Env env, signed char i) { napi_value value; NAPI_OK(napi_create_int32(env, (int32_t)i, &value)); return value; }
+static K_FORCE_INLINE napi_value NewNumber(Napi::Env env, unsigned char i) { napi_value value; NAPI_OK(napi_create_uint32(env, (uint32_t)i, &value)); return value; }
+static K_FORCE_INLINE napi_value NewNumber(Napi::Env env, short i) { napi_value value; NAPI_OK(napi_create_int32(env, (int32_t)i, &value)); return value; }
+static K_FORCE_INLINE napi_value NewNumber(Napi::Env env, unsigned short i) { napi_value value; NAPI_OK(napi_create_uint32(env, (uint32_t)i, &value)); return value; }
+static K_FORCE_INLINE napi_value NewNumber(Napi::Env env, int i) { napi_value value; NAPI_OK(napi_create_int32(env, (int32_t)i, &value)); return value; }
+static K_FORCE_INLINE napi_value NewNumber(Napi::Env env, unsigned int i) { napi_value value; NAPI_OK(napi_create_uint32(env, (uint32_t)i, &value)); return value; }
 #if LONG_MAX == INT32_MAX
-static K_FORCE_INLINE napi_value NewInt(Napi::Env env, long i) { napi_value value; NAPI_OK(napi_create_int32(env, (int32_t)i, &value)); return value; }
-static K_FORCE_INLINE napi_value NewInt(Napi::Env env, unsigned long i) { napi_value value; NAPI_OK(napi_create_uint32(env, (uint32_t)i, &value)); return value; }
+static K_FORCE_INLINE napi_value NewNumber(Napi::Env env, long i) { napi_value value; NAPI_OK(napi_create_int32(env, (int32_t)i, &value)); return value; }
+static K_FORCE_INLINE napi_value NewNumber(Napi::Env env, unsigned long i) { napi_value value; NAPI_OK(napi_create_uint32(env, (uint32_t)i, &value)); return value; }
 #endif
 
 template <typename T>
-static K_FORCE_INLINE napi_value NewInt(Napi::Env env, T i)
+static K_FORCE_INLINE napi_value NewNumber(Napi::Env env, T i)
 {
     static_assert(sizeof(T) == 8);
 
@@ -305,8 +305,8 @@ static K_FORCE_INLINE napi_value NewInt(Napi::Env env, T i)
     }
 }
 
-static K_FORCE_INLINE napi_value NewFloat(Napi::Env env, float f) { napi_value value; NAPI_OK(napi_create_double(env, (double)f, &value)); return value; }
-static K_FORCE_INLINE napi_value NewFloat(Napi::Env env, double d) { napi_value value; NAPI_OK(napi_create_double(env, d, &value)); return value; }
+static K_FORCE_INLINE napi_value NewNumber(Napi::Env env, float f) { napi_value value; NAPI_OK(napi_create_double(env, (double)f, &value)); return value; }
+static K_FORCE_INLINE napi_value NewNumber(Napi::Env env, double d) { napi_value value; NAPI_OK(napi_create_double(env, d, &value)); return value; }
 
 template <typename T>
 static K_FORCE_INLINE Size NullTerminatedLength(const T *ptr)

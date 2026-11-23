@@ -179,7 +179,7 @@ void PollHandle::OnPoll(uv_poll_t *h, int status, int events)
     obj.Set("writable", !!(events & UV_WRITABLE));
     obj.Set("disconnect", !!(events & UV_DISCONNECT));
 
-    napi_value args[] = { NewInt(env, (int32_t)status), obj };
+    napi_value args[] = { NewNumber(env, (int32_t)status), obj };
     poll->callback.Call(poll->Value(), K_LEN(args), args);
 }
 

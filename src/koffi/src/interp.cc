@@ -440,12 +440,12 @@ napi_value RunForward(CallData *call, uint8_t *base, napi_value *argp, const OpD
 #define INTEGER(Suffix, CType) \
         do { \
             uint64_t ret = WRAP(Call ## Suffix(*argp, base, &call->saved_sp)); \
-            return NewInt(call->env, (CType)ret); \
+            return NewNumber(call->env, (CType)ret); \
         } while (false)
 #define INTEGER_SWAP(Suffix, CType) \
         do { \
             uint64_t ret = WRAP(Call ## Suffix(*argp, base, &call->saved_sp)); \
-            return NewInt(call->env, ReverseBytes((CType)ret)); \
+            return NewNumber(call->env, ReverseBytes((CType)ret)); \
         } while (false)
 
     FWD(RunVoid) {
@@ -503,11 +503,11 @@ napi_value RunForward(CallData *call, uint8_t *base, napi_value *argp, const OpD
     FWD(RunArray) { K_UNREACHABLE(); return nullptr; }
     FWD(RunFloat32) {
         float f = WRAP(CallF(*argp, base, &call->saved_sp));
-        return NewFloat(call->env, f);
+        return NewNumber(call->env, f);
     }
     FWD(RunFloat64) {
         double d = WRAP(CallD(*argp, base, &call->saved_sp));
-        return NewFloat(call->env, d);
+        return NewNumber(call->env, d);
     }
     FWD(RunPrototype) { K_UNREACHABLE(); return nullptr; }
     FWD(RunAggregateG) {
@@ -622,11 +622,11 @@ napi_value RunForward(CallData *call, uint8_t *base, napi_value *argp, const OpD
     FWD(RunArrayX) { K_UNREACHABLE(); return nullptr; }
     FWD(RunFloat32X) {
         float f = WRAP(CallFX(*argp, base, &call->saved_sp));
-        return NewFloat(call->env, f);
+        return NewNumber(call->env, f);
     }
     FWD(RunFloat64X) {
         double d = WRAP(CallDX(*argp, base, &call->saved_sp));
-        return NewFloat(call->env, d);
+        return NewNumber(call->env, d);
     }
     FWD(RunPrototypeX) { K_UNREACHABLE(); return nullptr; }
     FWD(RunAggregateGX) {
@@ -695,7 +695,7 @@ napi_value RunForward(CallData *call, uint8_t *base, napi_value *argp, const OpD
         return (napi_value)-1;
     }
 
-#define INTEGER_TO_INTEGER(SrcType, DestType) \
+#define NUMBER_TO_NUMBER(Suffix, SrcType, DestType) \
         do { \
             napi_value arg = *argp++; \
              \
@@ -704,18 +704,20 @@ napi_value RunForward(CallData *call, uint8_t *base, napi_value *argp, const OpD
                 return nullptr; \
             } \
              \
-            uint64_t ret = WRAP(CallG(*argp, base, &call->saved_sp)); \
-            return NewInt(call->env, (DestType)ret); \
+            auto ret = WRAP(Call ## Suffix(*argp, base, &call->saved_sp)); \
+            return NewNumber(call->env, (DestType)ret); \
         } while (false)
 
-    FWD(Int8ToInt8) { INTEGER_TO_INTEGER(int8_t, int8_t); }
-    FWD(UInt8ToUInt8) { INTEGER_TO_INTEGER(uint8_t, uint8_t); }
-    FWD(Int16ToInt16) { INTEGER_TO_INTEGER(int16_t, int16_t); }
-    FWD(UInt16ToUInt16) { INTEGER_TO_INTEGER(uint16_t, uint16_t); }
-    FWD(Int32ToInt32) { INTEGER_TO_INTEGER(int32_t, int32_t); }
-    FWD(UInt32ToUInt32) { INTEGER_TO_INTEGER(uint32_t, uint32_t); }
-    FWD(Int64ToInt64) { INTEGER_TO_INTEGER(int64_t, int64_t); }
-    FWD(UInt64ToUInt64) { INTEGER_TO_INTEGER(uint64_t, uint64_t); }
+    FWD(Int8ToInt8) { NUMBER_TO_NUMBER(G, int8_t, int8_t); }
+    FWD(UInt8ToUInt8) { NUMBER_TO_NUMBER(G, uint8_t, uint8_t); }
+    FWD(Int16ToInt16) { NUMBER_TO_NUMBER(G, int16_t, int16_t); }
+    FWD(UInt16ToUInt16) { NUMBER_TO_NUMBER(G, uint16_t, uint16_t); }
+    FWD(Int32ToInt32) { NUMBER_TO_NUMBER(G, int32_t, int32_t); }
+    FWD(UInt32ToUInt32) { NUMBER_TO_NUMBER(G, uint32_t, uint32_t); }
+    FWD(Int64ToInt64) { NUMBER_TO_NUMBER(G, int64_t, int64_t); }
+    FWD(UInt64ToUInt64) { NUMBER_TO_NUMBER(G, uint64_t, uint64_t); }
+    FWD(Float32ToFloat32) { NUMBER_TO_NUMBER(FX, float, float); }
+    FWD(Float64ToFloat64) { NUMBER_TO_NUMBER(DX, double, double); }
 
     FWD(StringToInt32) {
         napi_value arg = *argp++;
@@ -726,7 +728,7 @@ napi_value RunForward(CallData *call, uint8_t *base, napi_value *argp, const OpD
         *(const char **)(base + op->a) = str;
 
         uint64_t ret = WRAP(CallG(*argp, base, &call->saved_sp)); \
-        return NewInt(call->env, (int32_t)ret); \
+        return NewNumber(call->env, (int32_t)ret); \
     }
     FWD(Int32ToString) {
         napi_value arg = *argp++;
@@ -762,12 +764,12 @@ napi_value RunForward(CallData *call, uint8_t *base, napi_value *argp, const OpD
 #define INTEGER(CType) \
         do { \
             uint64_t ret = *(uint64_t *)base; \
-            return NewInt(call->env, (CType)ret); \
+            return NewNumber(call->env, (CType)ret); \
         } while (false)
 #define INTEGER_SWAP(CType) \
         do { \
             uint64_t ret = *(uint64_t *)base; \
-            return NewInt(call->env, ReverseBytes((CType)ret)); \
+            return NewNumber(call->env, ReverseBytes((CType)ret)); \
         } while (false)
 
     FWD(CallG) { CALL(G); return nullptr; }
@@ -857,11 +859,11 @@ napi_value RunForward(CallData *call, uint8_t *base, napi_value *argp, const OpD
     FWD(ReturnArray) { K_UNREACHABLE(); return nullptr; }
     FWD(ReturnFloat32) {
         float f = *(float *)base;
-        return NewFloat(call->env, f);
+        return NewNumber(call->env, f);
     }
     FWD(ReturnFloat64) {
         double d = *(double *)base;
-        return NewFloat(call->env, d);
+        return NewNumber(call->env, d);
     }
     FWD(ReturnPrototype) { K_UNREACHABLE(); return nullptr; }
     FWD(ReturnAggregateReg) {
@@ -922,14 +924,14 @@ int RunRelay(CallData *call, uint8_t *base, napi_value *argp, const OpData *op)
             const uint8_t *src = base + op->a; \
             CType v = *(const CType *)src; \
              \
-            *argp++ = NewInt(call->env, v); \
+            *argp++ = NewNumber(call->env, v); \
         } while (false)
 #define INTEGER_SWAP(CType) \
         do { \
             const uint8_t *src = base + op->a; \
             CType v = *(const CType *)src; \
              \
-            *argp++ = NewInt(call->env, ReverseBytes(v)); \
+            *argp++ = NewNumber(call->env, ReverseBytes(v)); \
         } while (false)
 #define DISPOSE(Ptr) \
         do { \
@@ -1001,13 +1003,13 @@ int RunRelay(CallData *call, uint8_t *base, napi_value *argp, const OpData *op)
     RELAY(PushArray) { K_UNREACHABLE(); }
     RELAY(PushFloat32) {
         const uint8_t *src = base + op->a;
-        *argp++ = NewFloat(call->env, *(float *)src);
+        *argp++ = NewNumber(call->env, *(float *)src);
 
         NEXT();
     }
     RELAY(PushFloat64) {
         const uint8_t *src = base + op->a;
-        *argp++ = NewFloat(call->env, *(double *)src);
+        *argp++ = NewNumber(call->env, *(double *)src);
 
         NEXT();
     }
@@ -1366,6 +1368,8 @@ int RunRelay(CallData *call, uint8_t *base, napi_value *argp, const OpData *op)
     RELAY(UInt32ToUInt32) { K_UNREACHABLE(); }
     RELAY(Int64ToInt64) { K_UNREACHABLE(); }
     RELAY(UInt64ToUInt64) { K_UNREACHABLE(); }
+    RELAY(Float32ToFloat32) { K_UNREACHABLE(); }
+    RELAY(Float64ToFloat64) { K_UNREACHABLE(); }
     RELAY(StringToInt32) { K_UNREACHABLE(); }
     RELAY(Int32ToString) { K_UNREACHABLE(); }
 
@@ -1662,6 +1666,8 @@ bool PreparePlan(InstanceData *instance, FunctionInfo *func)
                 case Opcode::UInt32ToUInt32:
                 case Opcode::Int64ToInt64:
                 case Opcode::UInt64ToUInt64:
+                case Opcode::Float32ToFloat32:
+                case Opcode::Float64ToFloat64:
                 case Opcode::StringToInt32:
                 case Opcode::Int32ToString: { K_UNREACHABLE(); } break;
 
@@ -1750,6 +1756,8 @@ bool PreparePlan(InstanceData *instance, FunctionInfo *func)
         FUSE(PushUInt32, RunUInt32, UInt32ToUInt32);
         FUSE(PushInt64, RunInt64, Int64ToInt64);
         FUSE(PushUInt64, RunUInt64, UInt64ToUInt64);
+        FUSE(PushFloat32, RunFloat32, Float32ToFloat32);
+        FUSE(PushFloat64, RunFloat64, Float64ToFloat64);
         FUSE(PushInt32, RunString, Int32ToString);
         FUSE(PushStringFast, RunInt32, StringToInt32);
 

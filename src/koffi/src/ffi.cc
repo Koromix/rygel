@@ -967,7 +967,7 @@ static napi_value GetOrSetErrno(napi_env env, napi_callback_info info)
         value = (int32_t)errno;
     }
 
-    return NewInt(env, value);
+    return NewNumber(env, value);
 }
 
 static ArrayHint SelectTypedHint(const TypeInfo *ref)
@@ -1491,7 +1491,7 @@ static napi_value GetTypeSize(napi_env env, napi_callback_info info)
     if (!type)
         return nullptr;
 
-    return NewInt(env, type->size);
+    return NewNumber(env, type->size);
 }
 
 static napi_value GetTypeAlign(napi_env env, napi_callback_info info)
@@ -1511,7 +1511,7 @@ static napi_value GetTypeAlign(napi_env env, napi_callback_info info)
     if (!type)
         return nullptr;
 
-    return NewInt(env, type->align);
+    return NewNumber(env, type->align);
 }
 
 static napi_value GetMemberOffset(napi_env env, napi_callback_info info)
@@ -1549,7 +1549,7 @@ static napi_value GetMemberOffset(napi_env env, napi_callback_info info)
         return nullptr;
     }
 
-    return NewInt(env, member->offset);
+    return NewNumber(env, member->offset);
 }
 
 static void InitMemories(InstanceData *instance)
@@ -2103,7 +2103,7 @@ static K_FORCE_INLINE napi_value DecodeInteger(napi_env env, napi_callback_info 
     T i;
     memcpy(&i, ptr, K_SIZE(i));
 
-    return NewInt(env, i);
+    return NewNumber(env, i);
 }
 
 template <typename T>
@@ -2129,7 +2129,7 @@ static K_FORCE_INLINE napi_value DecodeIntegerSwap(napi_env env, napi_callback_i
     T i;
     memcpy(&i, ptr, K_SIZE(i));
 
-    return NewInt(env, ReverseBytes(i));
+    return NewNumber(env, ReverseBytes(i));
 }
 
 #if defined(K_BIG_ENDIAN)
@@ -2170,7 +2170,7 @@ static napi_value DecodeFloat(napi_env env, napi_callback_info info)
     float f;
     memcpy(&f, ptr, K_SIZE(f));
 
-    return NewFloat(env, f);
+    return NewNumber(env, f);
 }
 
 static napi_value DecodeDouble(napi_env env, napi_callback_info info)
@@ -2195,7 +2195,7 @@ static napi_value DecodeDouble(napi_env env, napi_callback_info info)
     double d;
     memcpy(&d, ptr, K_SIZE(d));
 
-    return NewFloat(env, d);
+    return NewNumber(env, d);
 }
 
 static napi_value DecodeString(napi_env env, napi_callback_info info)
@@ -2835,7 +2835,7 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
 #if defined(__clang__)
     // First call to napi_create_double() does some weird stuff I can't explain
     // in clang-cl builds. I don't like this... but this fixes it, somehow ><
-    NewFloat(env, 0.0);
+    NewNumber(env, 0.0);
 #endif
 
     exports.Set("config", CreateFunction(instance, GetSetConfig, "config"));
@@ -2937,7 +2937,7 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
         Napi::Object codes = Napi::Object::New(env);
 
         for (const ErrnoCodeInfo &info: ErrnoCodes) {
-            codes.Set(info.name, NewInt(env, (int32_t)info.value));
+            codes.Set(info.name, NewNumber(env, (int32_t)info.value));
         }
 
         os.Set("errno", codes);

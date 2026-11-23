@@ -303,71 +303,71 @@ static K_FORCE_INLINE void DecodeObject(InstanceData *instance, const uint8_t *o
             } break;
             case PrimitiveKind::Int8: {
                 int8_t v = *(int8_t *)src;
-                set(i, member, NewInt(env, v));
+                set(i, member, NewNumber(env, v));
             } break;
             case PrimitiveKind::UInt8: {
                 uint8_t v = *(uint8_t *)src;
-                set(i, member, NewInt(env, v));
+                set(i, member, NewNumber(env, v));
             } break;
             case PrimitiveKind::Int16: {
                 int16_t v;
                 memcpy(&v, src, 2);
-                set(i, member, NewInt(env, v));
+                set(i, member, NewNumber(env, v));
             } break;
             case PrimitiveKind::Int16S: {
                 int16_t v;
                 memcpy(&v, src, 2);
-                set(i, member, NewInt(env, ReverseBytes(v)));
+                set(i, member, NewNumber(env, ReverseBytes(v)));
             } break;
             case PrimitiveKind::UInt16: {
                 uint16_t v;
                 memcpy(&v, src, 2);
-                set(i, member, NewInt(env, v));
+                set(i, member, NewNumber(env, v));
             } break;
             case PrimitiveKind::UInt16S: {
                 uint16_t v;
                 memcpy(&v, src, 2);
-                set(i, member, NewInt(env, ReverseBytes(v)));
+                set(i, member, NewNumber(env, ReverseBytes(v)));
             } break;
             case PrimitiveKind::Int32: {
                 int32_t v;
                 memcpy(&v, src, 4);
-                set(i, member, NewInt(env, v));
+                set(i, member, NewNumber(env, v));
             } break;
             case PrimitiveKind::Int32S: {
                 int32_t v;
                 memcpy(&v, src, 4);
-                set(i, member, NewInt(env, ReverseBytes(v)));
+                set(i, member, NewNumber(env, ReverseBytes(v)));
             } break;
             case PrimitiveKind::UInt32: {
                 uint32_t v;
                 memcpy(&v, src, 4);
-                set(i, member, NewInt(env, v));
+                set(i, member, NewNumber(env, v));
             } break;
             case PrimitiveKind::UInt32S: {
                 uint32_t v;
                 memcpy(&v, src, 4);
-                set(i, member, NewInt(env, ReverseBytes(v)));
+                set(i, member, NewNumber(env, ReverseBytes(v)));
             } break;
             case PrimitiveKind::Int64: {
                 int64_t v;
                 memcpy(&v, src, 8);
-                set(i, member, NewInt(env, v));
+                set(i, member, NewNumber(env, v));
             } break;
             case PrimitiveKind::Int64S: {
                 int64_t v;
                 memcpy(&v, src, 8);
-                set(i, member, NewInt(env, ReverseBytes(v)));
+                set(i, member, NewNumber(env, ReverseBytes(v)));
             } break;
             case PrimitiveKind::UInt64: {
                 uint64_t v;
                 memcpy(&v, src, 8);
-                set(i, member, NewInt(env, v));
+                set(i, member, NewNumber(env, v));
             } break;
             case PrimitiveKind::UInt64S: {
                 uint64_t v;
                 memcpy(&v, src, 8);
-                set(i, member, NewInt(env, ReverseBytes(v)));
+                set(i, member, NewNumber(env, ReverseBytes(v)));
             } break;
             case PrimitiveKind::String: {
                 const char *str;
@@ -447,12 +447,12 @@ static K_FORCE_INLINE void DecodeObject(InstanceData *instance, const uint8_t *o
             case PrimitiveKind::Float32: {
                 float f;
                 memcpy(&f, src, 4);
-                set(i, member, NewFloat(env, f));
+                set(i, member, NewNumber(env, f));
             } break;
             case PrimitiveKind::Float64: {
                 double d;
                 memcpy(&d, src, 8);
-                set(i, member, NewFloat(env, d));
+                set(i, member, NewNumber(env, d));
             } break;
 
             case PrimitiveKind::Prototype: { K_UNREACHABLE(); } break;
@@ -639,14 +639,14 @@ void DecodeElements(InstanceData *instance, napi_value array, const uint8_t *ori
         do { \
             POP_ARRAY({ \
                 CType v = *(CType *)src; \
-                napi_set_element(env, array, i, NewInt(env, v)); \
+                napi_set_element(env, array, i, NewNumber(env, v)); \
             }); \
         } while (false)
 #define POP_INTEGERS_SWAP(CType) \
         do { \
             POP_ARRAY({ \
                 CType v = *(CType *)src; \
-                napi_set_element(env, array, i, NewInt(env, ReverseBytes(v))); \
+                napi_set_element(env, array, i, NewNumber(env, ReverseBytes(v))); \
             }); \
         } while (false)
 
@@ -745,7 +745,7 @@ void DecodeElements(InstanceData *instance, napi_value array, const uint8_t *ori
                 float f;
                 memcpy(&f, src, 4);
 
-                napi_set_element(env, array, i, NewFloat(env, f));
+                napi_set_element(env, array, i, NewNumber(env, f));
             });
         } break;
         case PrimitiveKind::Float64: {
@@ -753,7 +753,7 @@ void DecodeElements(InstanceData *instance, napi_value array, const uint8_t *ori
                 double d;
                 memcpy(&d, src, 8);
 
-                napi_set_element(env, array, i, NewFloat(env, d));
+                napi_set_element(env, array, i, NewNumber(env, d));
             });
         } break;
 
@@ -852,20 +852,20 @@ napi_value Decode(InstanceData *instance, const uint8_t *ptr, const TypeInfo *ty
             bool v = *(bool *)ptr;
             return NewBool(env, v);
         } break;
-        case PrimitiveKind::Int8: { RETURN_INT(int8_t, NewInt); } break;
-        case PrimitiveKind::UInt8: { RETURN_INT(uint8_t, NewInt); } break;
-        case PrimitiveKind::Int16: { RETURN_INT(int16_t, NewInt); } break;
-        case PrimitiveKind::Int16S: { RETURN_INT_SWAP(int16_t, NewInt); } break;
-        case PrimitiveKind::UInt16: { RETURN_INT(uint16_t, NewInt); } break;
-        case PrimitiveKind::UInt16S: { RETURN_INT_SWAP(uint16_t, NewInt); } break;
-        case PrimitiveKind::Int32: { RETURN_INT(int32_t, NewInt); } break;
-        case PrimitiveKind::Int32S: { RETURN_INT_SWAP(int32_t, NewInt); } break;
-        case PrimitiveKind::UInt32: { RETURN_INT(uint32_t, NewInt); } break;
-        case PrimitiveKind::UInt32S: { RETURN_INT_SWAP(uint32_t, NewInt); } break;
-        case PrimitiveKind::Int64: { RETURN_INT(int64_t, NewInt); } break;
-        case PrimitiveKind::Int64S: { RETURN_INT_SWAP(int64_t, NewInt); } break;
-        case PrimitiveKind::UInt64: { RETURN_INT(uint64_t, NewInt); } break;
-        case PrimitiveKind::UInt64S: { RETURN_INT_SWAP(uint64_t, NewInt); } break;
+        case PrimitiveKind::Int8: { RETURN_INT(int8_t, NewNumber); } break;
+        case PrimitiveKind::UInt8: { RETURN_INT(uint8_t, NewNumber); } break;
+        case PrimitiveKind::Int16: { RETURN_INT(int16_t, NewNumber); } break;
+        case PrimitiveKind::Int16S: { RETURN_INT_SWAP(int16_t, NewNumber); } break;
+        case PrimitiveKind::UInt16: { RETURN_INT(uint16_t, NewNumber); } break;
+        case PrimitiveKind::UInt16S: { RETURN_INT_SWAP(uint16_t, NewNumber); } break;
+        case PrimitiveKind::Int32: { RETURN_INT(int32_t, NewNumber); } break;
+        case PrimitiveKind::Int32S: { RETURN_INT_SWAP(int32_t, NewNumber); } break;
+        case PrimitiveKind::UInt32: { RETURN_INT(uint32_t, NewNumber); } break;
+        case PrimitiveKind::UInt32S: { RETURN_INT_SWAP(uint32_t, NewNumber); } break;
+        case PrimitiveKind::Int64: { RETURN_INT(int64_t, NewNumber); } break;
+        case PrimitiveKind::Int64S: { RETURN_INT_SWAP(int64_t, NewNumber); } break;
+        case PrimitiveKind::UInt64: { RETURN_INT(uint64_t, NewNumber); } break;
+        case PrimitiveKind::UInt64S: { RETURN_INT_SWAP(uint64_t, NewNumber); } break;
         case PrimitiveKind::String: {
             const char *str = *(const char **)ptr;
             return NewString(env, str);
@@ -896,13 +896,13 @@ napi_value Decode(InstanceData *instance, const uint8_t *ptr, const TypeInfo *ty
             float f;
             memcpy(&f, ptr, 4);
 
-            return NewFloat(env, f);
+            return NewNumber(env, f);
         } break;
         case PrimitiveKind::Float64: {
             double d;
             memcpy(&d, ptr, 8);
 
-            return NewFloat(env, d);
+            return NewNumber(env, d);
         } break;
 
         case PrimitiveKind::Prototype: {
