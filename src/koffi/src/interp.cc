@@ -690,6 +690,35 @@ napi_value RunForward(CallData *call, uint8_t *base, napi_value *argp, const OpD
 #undef INTEGER_SWAP
 #undef INTEGER
 
+    FWD(Yield) {
+        call->async_ip = op + 1;
+        return (napi_value)-1;
+    }
+
+#define INTEGER_TO_INTEGER(SrcType, DestType) \
+        do { \
+            napi_value arg = *argp++; \
+             \
+            if (!TryNumber(call->env, arg, (SrcType *)(base + op->a))) [[unlikely]] { \
+                ThrowError<Napi::TypeError>(call->env, "Unexpected %1 value, expected number", GetValueType(call->instance, arg)); \
+                return nullptr; \
+            } \
+             \
+            uint64_t ret = WRAP(CallG(*argp, base, &call->saved_sp)); \
+            return NewInt(call->env, (DestType)ret); \
+        } while (false)
+
+    FWD(Int8ToInt8) { INTEGER_TO_INTEGER(int8_t, int8_t); }
+    FWD(UInt8ToUInt8) { INTEGER_TO_INTEGER(uint8_t, uint8_t); }
+    FWD(Int16ToInt16) { INTEGER_TO_INTEGER(int16_t, int16_t); }
+    FWD(UInt16ToUInt16) { INTEGER_TO_INTEGER(uint16_t, uint16_t); }
+    FWD(Int32ToInt32) { INTEGER_TO_INTEGER(int32_t, int32_t); }
+    FWD(UInt32ToUInt32) { INTEGER_TO_INTEGER(uint32_t, uint32_t); }
+    FWD(Int64ToInt64) { INTEGER_TO_INTEGER(int64_t, int64_t); }
+    FWD(UInt64ToUInt64) { INTEGER_TO_INTEGER(uint64_t, uint64_t); }
+
+#undef INTEGER_TO_INTEGER
+
 #define CALL(Suffix) \
         do { \
             auto ret = WRAP(Call ## Suffix(*argp, base, &call->saved_sp)); \
@@ -714,11 +743,6 @@ napi_value RunForward(CallData *call, uint8_t *base, napi_value *argp, const OpD
             uint64_t ret = *(uint64_t *)base; \
             return NewInt(call->env, ReverseBytes((CType)ret)); \
         } while (false)
-
-    FWD(Yield) {
-        call->async_ip = op + 1;
-        return (napi_value)-1;
-    }
 
     FWD(CallG) { CALL(G); return nullptr; }
     FWD(CallF) { CALL(F); return nullptr; }
@@ -1308,6 +1332,15 @@ int RunRelay(CallData *call, uint8_t *base, napi_value *argp, const OpData *op)
     ALIAS(RunAggregateHfaX, RunAggregateHfa)
     ALIAS(RunAggregateMemX, RunAggregateMem)
 
+    RELAY(Int8ToInt8) { K_UNREACHABLE(); }
+    RELAY(UInt8ToUInt8) { K_UNREACHABLE(); }
+    RELAY(Int16ToInt16) { K_UNREACHABLE(); }
+    RELAY(UInt16ToUInt16) { K_UNREACHABLE(); }
+    RELAY(Int32ToInt32) { K_UNREACHABLE(); }
+    RELAY(UInt32ToUInt32) { K_UNREACHABLE(); }
+    RELAY(Int64ToInt64) { K_UNREACHABLE(); }
+    RELAY(UInt64ToUInt64) { K_UNREACHABLE(); }
+
     RELAY(Yield) { K_UNREACHABLE(); }
 
     RELAY(CallG) { K_UNREACHABLE(); }
@@ -1423,247 +1456,277 @@ bool PreparePlan(InstanceData *instance, FunctionInfo *func)
         }
     }
 
-    if (func->variadic) {
-#if defined(MUST_TAIL)
+    if (!func->variadic) {
+        func->plan.relay = func->plan.sync;
+
         for (OpData &op: func->plan.sync) {
+            switch (Op2Code(op.o)) {
+                case Opcode::PushVoid:
+                case Opcode::PushBool:
+                case Opcode::PushInt8:
+                case Opcode::PushUInt8:
+                case Opcode::PushInt16:
+                case Opcode::PushInt16S:
+                case Opcode::PushUInt16:
+                case Opcode::PushUInt16S:
+                case Opcode::PushInt32:
+                case Opcode::PushInt32S:
+                case Opcode::PushUInt32:
+                case Opcode::PushUInt32S:
+                case Opcode::PushInt64:
+                case Opcode::PushInt64S:
+                case Opcode::PushUInt64:
+                case Opcode::PushUInt64S:
+                case Opcode::PushString:
+                case Opcode::PushString16:
+                case Opcode::PushString32:
+                case Opcode::PushPointer:
+                case Opcode::PushRecord:
+                case Opcode::PushUnion:
+                case Opcode::PushArray:
+                case Opcode::PushFloat32:
+                case Opcode::PushFloat64:
+                case Opcode::PushCallback:
+                case Opcode::PushPrototype:
+                case Opcode::PushAggregateReg:
+                case Opcode::PushAggregatePair:
+                case Opcode::PushAggregateSplit:
+                case Opcode::PushAggregateMem:
+                case Opcode::PushStringFast:
+                case Opcode::PushPointerFast: { func->plan.async.Append(op); } break;
+
+                case Opcode::ConfigRelay: {} break;
+
+                case Opcode::RunVoid:
+                case Opcode::RunBool:
+                case Opcode::RunInt8:
+                case Opcode::RunUInt8:
+                case Opcode::RunInt16:
+                case Opcode::RunInt16S:
+                case Opcode::RunUInt16:
+                case Opcode::RunUInt16S:
+                case Opcode::RunInt32:
+                case Opcode::RunInt32S:
+                case Opcode::RunUInt32:
+                case Opcode::RunUInt32S:
+                case Opcode::RunInt64:
+                case Opcode::RunInt64S:
+                case Opcode::RunUInt64:
+                case Opcode::RunUInt64S:
+                case Opcode::RunString:
+                case Opcode::RunString16:
+                case Opcode::RunString32:
+                case Opcode::RunPointer:
+                case Opcode::RunCallback: {
+                    int delta = (int)Opcode::ReturnVoid - (int)Opcode::RunVoid;
+                    Opcode ret = (Opcode)((intptr_t)op.o + delta);
+
+                    func->plan.async.Append({ .o = Code2Op(Opcode::Yield) });
+                    func->plan.async.Append({ .o = Code2Op(Opcode::CallG) });
+                    func->plan.async.Append({ .o = Code2Op(ret), .b = op.b });
+                } break;
+                case Opcode::RunRecord:
+                case Opcode::RunUnion:
+                case Opcode::RunArray: { K_UNREACHABLE(); } break;
+                case Opcode::RunFloat32: {
+                    func->plan.async.Append({ .o = Code2Op(Opcode::Yield) });
+                    func->plan.async.Append({ .o = Code2Op(Opcode::CallF) });
+                    func->plan.async.Append({ .o = Code2Op(Opcode::ReturnFloat32), .b = op.b });
+                } break;
+                case Opcode::RunFloat64: {
+                    func->plan.async.Append({ .o = Code2Op(Opcode::Yield) });
+                    func->plan.async.Append({ .o = Code2Op(Opcode::CallD) });
+                    func->plan.async.Append({ .o = Code2Op(Opcode::ReturnFloat64), .b = op.b });
+                } break;
+                case Opcode::RunPrototype: { K_UNREACHABLE(); } break;
+                case Opcode::RunAggregateG:
+                case Opcode::RunAggregateF:
+                case Opcode::RunAggregateD:
+                case Opcode::RunAggregateGG:
+                case Opcode::RunAggregateDD:
+                case Opcode::RunAggregateGD:
+                case Opcode::RunAggregateDG:
+                case Opcode::RunAggregateHfa: {
+                    int delta = (int)Opcode::CallG - (int)Opcode::RunAggregateG;
+                    Opcode call = (Opcode)((intptr_t)op.o + delta);
+
+                    func->plan.async.Append({ .o = Code2Op(Opcode::Yield) });
+                    func->plan.async.Append({ .o = Code2Op(call) });
+                    func->plan.async.Append({ .o = Code2Op(Opcode::ReturnAggregateReg), .b = op.b });
+                } break;
+                case Opcode::RunAggregateMem: {
+                    const TypeInfo *type = GetType(instance, op.b);
+
+                    func->plan.async.Append({ .o = Code2Op(Opcode::Yield) });
+                    func->plan.async.Append({ .o = Code2Op(Opcode::CallMem), .a1l = op.a1l, .b = (uint32_t)type->size });
+                    func->plan.async.Append({ .o = Code2Op(Opcode::ReturnAggregateMem), .b = op.b });
+                } break;
+                case Opcode::RunVoidX:
+                case Opcode::RunBoolX:
+                case Opcode::RunInt8X:
+                case Opcode::RunUInt8X:
+                case Opcode::RunInt16X:
+                case Opcode::RunInt16SX:
+                case Opcode::RunUInt16X:
+                case Opcode::RunUInt16SX:
+                case Opcode::RunInt32X:
+                case Opcode::RunInt32SX:
+                case Opcode::RunUInt32X:
+                case Opcode::RunUInt32SX:
+                case Opcode::RunInt64X:
+                case Opcode::RunInt64SX:
+                case Opcode::RunUInt64X:
+                case Opcode::RunUInt64SX:
+                case Opcode::RunStringX:
+                case Opcode::RunString16X:
+                case Opcode::RunString32X:
+                case Opcode::RunPointerX:
+                case Opcode::RunCallbackX: {
+                    int delta = (int)Opcode::ReturnVoid - (int)Opcode::RunVoidX;
+                    Opcode ret = (Opcode)((intptr_t)op.o + delta);
+
+                    func->plan.async.Append({ .o = Code2Op(Opcode::Yield) });
+                    func->plan.async.Append({ .o = Code2Op(Opcode::CallGX) });
+                    func->plan.async.Append({ .o = Code2Op(ret), .b = op.b });
+                } break;
+                case Opcode::RunRecordX:
+                case Opcode::RunUnionX:
+                case Opcode::RunArrayX: { K_UNREACHABLE(); } break;
+                case Opcode::RunFloat32X: {
+                    func->plan.async.Append({ .o = Code2Op(Opcode::Yield) });
+                    func->plan.async.Append({ .o = Code2Op(Opcode::CallFX) });
+                    func->plan.async.Append({ .o = Code2Op(Opcode::ReturnFloat32), .b = op.b });
+                } break;
+                case Opcode::RunFloat64X: {
+                    func->plan.async.Append({ .o = Code2Op(Opcode::Yield) });
+                    func->plan.async.Append({ .o = Code2Op(Opcode::CallDX) });
+                    func->plan.async.Append({ .o = Code2Op(Opcode::ReturnFloat64), .b = op.b });
+                } break;
+                case Opcode::RunPrototypeX: { K_UNREACHABLE(); } break;
+                case Opcode::RunAggregateGX:
+                case Opcode::RunAggregateFX:
+                case Opcode::RunAggregateDX:
+                case Opcode::RunAggregateGGX:
+                case Opcode::RunAggregateDDX:
+                case Opcode::RunAggregateGDX:
+                case Opcode::RunAggregateDGX:
+                case Opcode::RunAggregateHfaX: {
+                    int delta = (int)Opcode::CallGX - (int)Opcode::RunAggregateGX;
+                    Opcode call = (Opcode)((intptr_t)op.o + delta);
+
+                    func->plan.async.Append({ .o = Code2Op(Opcode::Yield) });
+                    func->plan.async.Append({ .o = Code2Op(call) });
+                    func->plan.async.Append({ .o = Code2Op(Opcode::ReturnAggregateReg), .b = op.b });
+                } break;
+                case Opcode::RunAggregateMemX: {
+                    const TypeInfo *type = GetType(instance, op.b);
+
+                    func->plan.async.Append({ .o = Code2Op(Opcode::Yield) });
+                    func->plan.async.Append({ .o = Code2Op(Opcode::CallMemX), .a1l = op.a1l, .b = (uint32_t)type->size });
+                    func->plan.async.Append({ .o = Code2Op(Opcode::ReturnAggregateMem), .b = op.b });
+                } break;
+
+                case Opcode::Int8ToInt8:
+                case Opcode::UInt8ToUInt8:
+                case Opcode::Int16ToInt16:
+                case Opcode::UInt16ToUInt16:
+                case Opcode::Int32ToInt32:
+                case Opcode::UInt32ToUInt32:
+                case Opcode::Int64ToInt64:
+                case Opcode::UInt64ToUInt64: { K_UNREACHABLE(); } break;
+
+                case Opcode::Yield: { K_UNREACHABLE(); } break;
+
+                case Opcode::CallG:
+                case Opcode::CallF:
+                case Opcode::CallD:
+                case Opcode::CallGG:
+                case Opcode::CallDD:
+                case Opcode::CallGD:
+                case Opcode::CallDG:
+                case Opcode::CallHfa:
+                case Opcode::CallMem:
+                case Opcode::CallGX:
+                case Opcode::CallFX:
+                case Opcode::CallDX:
+                case Opcode::CallGGX:
+                case Opcode::CallDDX:
+                case Opcode::CallGDX:
+                case Opcode::CallDGX:
+                case Opcode::CallHfaX:
+                case Opcode::CallMemX: { K_UNREACHABLE(); } break;
+
+                case Opcode::ReturnVoid:
+                case Opcode::ReturnBool:
+                case Opcode::ReturnInt8:
+                case Opcode::ReturnUInt8:
+                case Opcode::ReturnInt16:
+                case Opcode::ReturnInt16S:
+                case Opcode::ReturnUInt16:
+                case Opcode::ReturnUInt16S:
+                case Opcode::ReturnInt32:
+                case Opcode::ReturnInt32S:
+                case Opcode::ReturnUInt32:
+                case Opcode::ReturnUInt32S:
+                case Opcode::ReturnInt64:
+                case Opcode::ReturnInt64S:
+                case Opcode::ReturnUInt64:
+                case Opcode::ReturnUInt64S:
+                case Opcode::ReturnString:
+                case Opcode::ReturnString16:
+                case Opcode::ReturnString32:
+                case Opcode::ReturnPointer:
+                case Opcode::ReturnCallback:
+                case Opcode::ReturnRecord:
+                case Opcode::ReturnUnion:
+                case Opcode::ReturnArray:
+                case Opcode::ReturnFloat32:
+                case Opcode::ReturnFloat64:
+                case Opcode::ReturnPrototype:
+                case Opcode::ReturnAggregateReg:
+                case Opcode::ReturnAggregateMem: { K_UNREACHABLE(); } break;
+            }
+        }
+
+#if defined(MUST_TAIL)
+        for (OpData &op: func->plan.async) {
             op.o = (void *)ForwardDispatch[(uintptr_t)op.o];
         }
-#endif
 
-        return true;
+        for (OpData &op: func->plan.relay) {
+            op.o = (void *)RelayDispatch[(uintptr_t)op.o];
+        }
+#endif
     }
 
-    func->plan.relay = func->plan.sync;
+    // Use fused push-return instructions where relevant
+    if (func->plan.sync.len >= 2) {
+        OpData &a = func->plan.sync[func->plan.sync.len - 2];
+        OpData &b = func->plan.sync[func->plan.sync.len - 1];
 
-    for (OpData &op: func->plan.sync) {
-        switch (Op2Code(op.o)) {
-            case Opcode::PushVoid:
-            case Opcode::PushBool:
-            case Opcode::PushInt8:
-            case Opcode::PushUInt8:
-            case Opcode::PushInt16:
-            case Opcode::PushInt16S:
-            case Opcode::PushUInt16:
-            case Opcode::PushUInt16S:
-            case Opcode::PushInt32:
-            case Opcode::PushInt32S:
-            case Opcode::PushUInt32:
-            case Opcode::PushUInt32S:
-            case Opcode::PushInt64:
-            case Opcode::PushInt64S:
-            case Opcode::PushUInt64:
-            case Opcode::PushUInt64S:
-            case Opcode::PushString:
-            case Opcode::PushString16:
-            case Opcode::PushString32:
-            case Opcode::PushPointer:
-            case Opcode::PushRecord:
-            case Opcode::PushUnion:
-            case Opcode::PushArray:
-            case Opcode::PushFloat32:
-            case Opcode::PushFloat64:
-            case Opcode::PushCallback:
-            case Opcode::PushPrototype:
-            case Opcode::PushAggregateReg:
-            case Opcode::PushAggregatePair:
-            case Opcode::PushAggregateSplit:
-            case Opcode::PushAggregateMem:
-            case Opcode::PushStringFast:
-            case Opcode::PushPointerFast: { func->plan.async.Append(op); } break;
+#define FUSE(A, B, C) \
+            do { \
+                if (Op2Code(a.o) == Opcode::A && Op2Code(b.o) == Opcode::B) { \
+                    a.o = Code2Op(Opcode::C); \
+                    func->plan.sync.len--; \
+                } \
+            } while (false)
 
-            case Opcode::ConfigRelay: {} break;
+        FUSE(PushInt8, RunInt8, Int8ToInt8);
+        FUSE(PushUInt8, RunUInt8, UInt8ToUInt8);
+        FUSE(PushInt16, RunInt16, Int16ToInt16);
+        FUSE(PushUInt16, RunUInt16, UInt16ToUInt16);
+        FUSE(PushInt32, RunInt32, Int32ToInt32);
+        FUSE(PushUInt32, RunUInt32, UInt32ToUInt32);
+        FUSE(PushInt64, RunInt64, Int64ToInt64);
+        FUSE(PushUInt64, RunUInt64, UInt64ToUInt64);
 
-            case Opcode::RunVoid:
-            case Opcode::RunBool:
-            case Opcode::RunInt8:
-            case Opcode::RunUInt8:
-            case Opcode::RunInt16:
-            case Opcode::RunInt16S:
-            case Opcode::RunUInt16:
-            case Opcode::RunUInt16S:
-            case Opcode::RunInt32:
-            case Opcode::RunInt32S:
-            case Opcode::RunUInt32:
-            case Opcode::RunUInt32S:
-            case Opcode::RunInt64:
-            case Opcode::RunInt64S:
-            case Opcode::RunUInt64:
-            case Opcode::RunUInt64S:
-            case Opcode::RunString:
-            case Opcode::RunString16:
-            case Opcode::RunString32:
-            case Opcode::RunPointer:
-            case Opcode::RunCallback: {
-                int delta = (int)Opcode::ReturnVoid - (int)Opcode::RunVoid;
-                Opcode ret = (Opcode)((intptr_t)op.o + delta);
-
-                func->plan.async.Append({ .o = Code2Op(Opcode::Yield) });
-                func->plan.async.Append({ .o = Code2Op(Opcode::CallG) });
-                func->plan.async.Append({ .o = Code2Op(ret), .b = op.b });
-            } break;
-            case Opcode::RunRecord:
-            case Opcode::RunUnion:
-            case Opcode::RunArray: { K_UNREACHABLE(); } break;
-            case Opcode::RunFloat32: {
-                func->plan.async.Append({ .o = Code2Op(Opcode::Yield) });
-                func->plan.async.Append({ .o = Code2Op(Opcode::CallF) });
-                func->plan.async.Append({ .o = Code2Op(Opcode::ReturnFloat32), .b = op.b });
-            } break;
-            case Opcode::RunFloat64: {
-                func->plan.async.Append({ .o = Code2Op(Opcode::Yield) });
-                func->plan.async.Append({ .o = Code2Op(Opcode::CallD) });
-                func->plan.async.Append({ .o = Code2Op(Opcode::ReturnFloat64), .b = op.b });
-            } break;
-            case Opcode::RunPrototype: { K_UNREACHABLE(); } break;
-            case Opcode::RunAggregateG:
-            case Opcode::RunAggregateF:
-            case Opcode::RunAggregateD:
-            case Opcode::RunAggregateGG:
-            case Opcode::RunAggregateDD:
-            case Opcode::RunAggregateGD:
-            case Opcode::RunAggregateDG:
-            case Opcode::RunAggregateHfa: {
-                int delta = (int)Opcode::CallG - (int)Opcode::RunAggregateG;
-                Opcode call = (Opcode)((intptr_t)op.o + delta);
-
-                func->plan.async.Append({ .o = Code2Op(Opcode::Yield) });
-                func->plan.async.Append({ .o = Code2Op(call) });
-                func->plan.async.Append({ .o = Code2Op(Opcode::ReturnAggregateReg), .b = op.b });
-            } break;
-            case Opcode::RunAggregateMem: {
-                const TypeInfo *type = GetType(instance, op.b);
-
-                func->plan.async.Append({ .o = Code2Op(Opcode::Yield) });
-                func->plan.async.Append({ .o = Code2Op(Opcode::CallMem), .a1l = op.a1l, .b = (uint32_t)type->size });
-                func->plan.async.Append({ .o = Code2Op(Opcode::ReturnAggregateMem), .b = op.b });
-            } break;
-            case Opcode::RunVoidX:
-            case Opcode::RunBoolX:
-            case Opcode::RunInt8X:
-            case Opcode::RunUInt8X:
-            case Opcode::RunInt16X:
-            case Opcode::RunInt16SX:
-            case Opcode::RunUInt16X:
-            case Opcode::RunUInt16SX:
-            case Opcode::RunInt32X:
-            case Opcode::RunInt32SX:
-            case Opcode::RunUInt32X:
-            case Opcode::RunUInt32SX:
-            case Opcode::RunInt64X:
-            case Opcode::RunInt64SX:
-            case Opcode::RunUInt64X:
-            case Opcode::RunUInt64SX:
-            case Opcode::RunStringX:
-            case Opcode::RunString16X:
-            case Opcode::RunString32X:
-            case Opcode::RunPointerX:
-            case Opcode::RunCallbackX: {
-                int delta = (int)Opcode::ReturnVoid - (int)Opcode::RunVoidX;
-                Opcode ret = (Opcode)((intptr_t)op.o + delta);
-
-                func->plan.async.Append({ .o = Code2Op(Opcode::Yield) });
-                func->plan.async.Append({ .o = Code2Op(Opcode::CallGX) });
-                func->plan.async.Append({ .o = Code2Op(ret), .b = op.b });
-            } break;
-            case Opcode::RunRecordX:
-            case Opcode::RunUnionX:
-            case Opcode::RunArrayX: { K_UNREACHABLE(); } break;
-            case Opcode::RunFloat32X: {
-                func->plan.async.Append({ .o = Code2Op(Opcode::Yield) });
-                func->plan.async.Append({ .o = Code2Op(Opcode::CallFX) });
-                func->plan.async.Append({ .o = Code2Op(Opcode::ReturnFloat32), .b = op.b });
-            } break;
-            case Opcode::RunFloat64X: {
-                func->plan.async.Append({ .o = Code2Op(Opcode::Yield) });
-                func->plan.async.Append({ .o = Code2Op(Opcode::CallDX) });
-                func->plan.async.Append({ .o = Code2Op(Opcode::ReturnFloat64), .b = op.b });
-            } break;
-            case Opcode::RunPrototypeX: { K_UNREACHABLE(); } break;
-            case Opcode::RunAggregateGX:
-            case Opcode::RunAggregateFX:
-            case Opcode::RunAggregateDX:
-            case Opcode::RunAggregateGGX:
-            case Opcode::RunAggregateDDX:
-            case Opcode::RunAggregateGDX:
-            case Opcode::RunAggregateDGX:
-            case Opcode::RunAggregateHfaX: {
-                int delta = (int)Opcode::CallGX - (int)Opcode::RunAggregateGX;
-                Opcode call = (Opcode)((intptr_t)op.o + delta);
-
-                func->plan.async.Append({ .o = Code2Op(Opcode::Yield) });
-                func->plan.async.Append({ .o = Code2Op(call) });
-                func->plan.async.Append({ .o = Code2Op(Opcode::ReturnAggregateReg), .b = op.b });
-            } break;
-            case Opcode::RunAggregateMemX: {
-                const TypeInfo *type = GetType(instance, op.b);
-
-                func->plan.async.Append({ .o = Code2Op(Opcode::Yield) });
-                func->plan.async.Append({ .o = Code2Op(Opcode::CallMemX), .a1l = op.a1l, .b = (uint32_t)type->size });
-                func->plan.async.Append({ .o = Code2Op(Opcode::ReturnAggregateMem), .b = op.b });
-            } break;
-
-            case Opcode::Yield: { K_UNREACHABLE(); } break;
-
-            case Opcode::CallG:
-            case Opcode::CallF:
-            case Opcode::CallD:
-            case Opcode::CallGG:
-            case Opcode::CallDD:
-            case Opcode::CallGD:
-            case Opcode::CallDG:
-            case Opcode::CallHfa:
-            case Opcode::CallMem:
-            case Opcode::CallGX:
-            case Opcode::CallFX:
-            case Opcode::CallDX:
-            case Opcode::CallGGX:
-            case Opcode::CallDDX:
-            case Opcode::CallGDX:
-            case Opcode::CallDGX:
-            case Opcode::CallHfaX:
-            case Opcode::CallMemX: { K_UNREACHABLE(); } break;
-
-            case Opcode::ReturnVoid:
-            case Opcode::ReturnBool:
-            case Opcode::ReturnInt8:
-            case Opcode::ReturnUInt8:
-            case Opcode::ReturnInt16:
-            case Opcode::ReturnInt16S:
-            case Opcode::ReturnUInt16:
-            case Opcode::ReturnUInt16S:
-            case Opcode::ReturnInt32:
-            case Opcode::ReturnInt32S:
-            case Opcode::ReturnUInt32:
-            case Opcode::ReturnUInt32S:
-            case Opcode::ReturnInt64:
-            case Opcode::ReturnInt64S:
-            case Opcode::ReturnUInt64:
-            case Opcode::ReturnUInt64S:
-            case Opcode::ReturnString:
-            case Opcode::ReturnString16:
-            case Opcode::ReturnString32:
-            case Opcode::ReturnPointer:
-            case Opcode::ReturnCallback:
-            case Opcode::ReturnRecord:
-            case Opcode::ReturnUnion:
-            case Opcode::ReturnArray:
-            case Opcode::ReturnFloat32:
-            case Opcode::ReturnFloat64:
-            case Opcode::ReturnPrototype:
-            case Opcode::ReturnAggregateReg:
-            case Opcode::ReturnAggregateMem: { K_UNREACHABLE(); } break;
-        }
+#undef FUSE
     }
 
 #if defined(MUST_TAIL)
     for (OpData &op: func->plan.sync) {
         op.o = (void *)ForwardDispatch[(uintptr_t)op.o];
-    }
-    for (OpData &op: func->plan.async) {
-        op.o = (void *)ForwardDispatch[(uintptr_t)op.o];
-    }
-    for (OpData &op: func->plan.relay) {
-        op.o = (void *)RelayDispatch[(uintptr_t)op.o];
     }
 #endif
 
