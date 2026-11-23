@@ -227,33 +227,24 @@ napi_value RunForward(CallData *call, uint8_t *base, napi_value *argp, const OpD
     FWD(PushString) {
         napi_value arg = *argp++;
 
-        const char *str;
-        if (!call->PushString(arg, GetTypeDirections(op->b), &str)) [[unlikely]]
+        if (!call->PushString(arg, GetTypeDirections(op->b), (const char **)(base + op->a))) [[unlikely]]
             return nullptr;
-
-        *(const char **)(base + op->a) = str;
 
         NEXT();
     }
     FWD(PushString16) {
         napi_value arg = *argp++;
 
-        const char16_t *str16;
-        if (!call->PushString16(arg, GetTypeDirections(op->b), &str16)) [[unlikely]]
+        if (!call->PushString16(arg, GetTypeDirections(op->b), (const char16_t **)(base + op->a))) [[unlikely]]
             return nullptr;
-
-        *(const char16_t **)(base + op->a) = str16;
 
         NEXT();
     }
     FWD(PushString32) {
         napi_value arg = *argp++;
 
-        const char32_t *str32;
-        if (!call->PushString32(arg, GetTypeDirections(op->b), &str32)) [[unlikely]]
+        if (!call->PushString32(arg, GetTypeDirections(op->b), (const char32_t **)(base + op->a))) [[unlikely]]
             return nullptr;
-
-        *(const char32_t **)(base + op->a) = str32;
 
         NEXT();
     }
@@ -263,11 +254,8 @@ napi_value RunForward(CallData *call, uint8_t *base, napi_value *argp, const OpD
         const TypeInfo *type = GetType(call->instance, op->b);
         int directions = GetTypeDirections(op->b);
 
-        void *ptr;
-        if (!call->PushPointer(arg, type, directions, &ptr)) [[unlikely]]
+        if (!call->PushPointer(arg, type, directions, (void **)(base + op->a))) [[unlikely]]
             return nullptr;
-
-        *(void **)(base + op->a) = ptr;
 
         NEXT();
     }
@@ -306,11 +294,8 @@ napi_value RunForward(CallData *call, uint8_t *base, napi_value *argp, const OpD
     FWD(PushCallback) {
         napi_value arg = *argp++;
 
-        void *ptr;
-        if (!call->PushCallback(arg, GetType(call->instance, op->b), &ptr)) [[unlikely]]
+        if (!call->PushCallback(arg, GetType(call->instance, op->b), (void **)(base + op->a))) [[unlikely]]
             return nullptr;
-
-        *(void **)(base + op->a) = ptr;
 
         NEXT();
     }
@@ -318,9 +303,7 @@ napi_value RunForward(CallData *call, uint8_t *base, napi_value *argp, const OpD
     FWD(PushAggregateReg) {
         napi_value arg = *argp++;
 
-        uint8_t *ptr = base + op->a;
-
-        if (!call->PushObject(arg, GetType(call->instance, op->b), ptr)) [[unlikely]]
+        if (!call->PushObject(arg, GetType(call->instance, op->b), (uint8_t *)(base + op->a))) [[unlikely]]
             return nullptr;
 
         NEXT();
@@ -369,29 +352,24 @@ napi_value RunForward(CallData *call, uint8_t *base, napi_value *argp, const OpD
     FWD(PushStringFast) {
         napi_value arg = *argp++;
 
-        const char *str;
-        if (!call->PushString(arg, 1, &str)) [[unlikely]]
+        if (!call->PushString(arg, 1, (const char **)(base + op->a))) [[unlikely]]
             return nullptr;
-
-        *(const char **)(base + op->a) = str;
 
         NEXT();
     }
     FWD(PushPointerFast) {
         napi_value arg = *argp++;
 
-        void *ptr;
+        // Needed for fallback path
         napi_valuetype kind;
 
-        if (!call->TryPointerFast(arg, &ptr, &kind)) [[unlikely]] {
+        if (!call->TryPointerFast(arg, (void **)(base + op->a), &kind)) [[unlikely]] {
             const TypeInfo *type = GetType(call->instance, op->b);
             int directions = GetTypeDirections(op->b);
 
-            if (!call->PushPointerFallback(arg, kind, type, directions, &ptr))
+            if (!call->PushPointerFallback(arg, kind, type, directions, (void **)(base + op->a)))
                 return nullptr;
         }
-
-        *(void **)(base + op->a) = ptr;
 
         NEXT();
     }
