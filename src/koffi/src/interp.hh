@@ -50,67 +50,8 @@ struct ExecutionPlan {
 };
 
 enum class Opcode {
-    #define PRIMITIVE(Name) Push ## Name,
-    #include "primitives.inc"
-    PushAggregateReg,
-    PushAggregatePair,
-    PushAggregateSplit,
-    PushAggregateMem,
-
-    // Optimized routines selected by interp.cc, don't pick them in ABI code
-    PushStringFast,
-    PushPointerFast,
-
-    ConfigRelay,
-
-    #define PRIMITIVE(Name) Run ## Name,
-    #include "primitives.inc"
-    RunAggregateG,
-    RunAggregateF,
-    RunAggregateD,
-    RunAggregateGG,
-    RunAggregateDD,
-    RunAggregateGD,
-    RunAggregateDG,
-    RunAggregateHfa,
-    RunAggregateMem,
-    #define PRIMITIVE(Name) Run ## Name ## X,
-    #include "primitives.inc"
-    RunAggregateGX,
-    RunAggregateFX,
-    RunAggregateDX,
-    RunAggregateGGX,
-    RunAggregateDDX,
-    RunAggregateGDX,
-    RunAggregateDGX,
-    RunAggregateHfaX,
-    RunAggregateMemX,
-
-    Yield,
-
-    CallG,
-    CallF,
-    CallD,
-    CallGG,
-    CallDD,
-    CallGD,
-    CallDG,
-    CallHfa,
-    CallMem,
-    CallGX,
-    CallFX,
-    CallDX,
-    CallGGX,
-    CallDDX,
-    CallGDX,
-    CallDGX,
-    CallHfaX,
-    CallMemX,
-
-    #define PRIMITIVE(Name) Return ## Name,
-    #include "primitives.inc"
-    ReturnAggregateReg,
-    ReturnAggregateMem
+    #define INSTRUCTION(Inst) Inst,
+    #include "instructions.inc"
 };
 
 bool PreparePlan(InstanceData *instance, FunctionInfo *func);
